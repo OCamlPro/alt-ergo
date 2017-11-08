@@ -1,6 +1,6 @@
 exit_if_error(){
     if [ "$?" -ne "0" ] ; then
-        echo "exit if error triggered !"
+        echo "!!! exit if error triggered !!!"
         exit 1
     fi
 }
@@ -9,7 +9,7 @@ local_install_dir=`pwd`/___local
 
 git_repo=`pwd`
 
-for ocaml_version in 4.06.0 4.05.0 4.04.0
+for ocaml_version in 4.05.0 4.04.0 4.06.0
 do
     cd $git_repo/
     git clean -dfx
@@ -52,9 +52,9 @@ do
     echo "which alt-ergo == `which alt-ergo`"
     echo "alt-ergo -version == `alt-ergo -version`"
 
-    sh ./run_valid.sh "alt-ergo" "0.5" ; exit_if_error
+    # sh ./run_valid.sh "alt-ergo" "0.5" ; exit_if_error
 
-    sh ./run_invalid.sh "alt-ergo" "0.5" ; exit_if_error
+    # sh ./run_invalid.sh "alt-ergo" "0.5" ; exit_if_error
 
     # - make non-regression
 done
