@@ -1,0 +1,10 @@
+
+
+logic h,g,f: int,int -> int
+logic a, b:int
+
+goal g9:
+  a = b ->
+  g(f(b,b) - f(b,a),
+    f(a,b) - f(a,a)) = g(0,0) 
+

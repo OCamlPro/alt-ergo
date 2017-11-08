@@ -1,0 +1,8 @@
+
+type g
+
+logic R : g -> prop
+
+axiom a3: forall x:g. R(x)
+
+goal g9: forall v:g. R(v)

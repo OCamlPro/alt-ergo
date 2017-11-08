@@ -1,0 +1,28 @@
+type t
+
+logic g : t -> t
+
+logic ac f : t, t -> t
+
+logic a, b, z : t
+
+goal g:
+
+g(f(a,z)) <> a  ->
+
+a = g(f(b,z))  ->
+
+(*
+Here although the pivot is a |-> g(f(b,z)), 
+f(a,z) |-> f(g(f(b,z)),z) should also be considered as a pivot
+to correctly update use table. In fact, entry
+f(a,z) ---> { g(f(a,z)) } should become
+f(g(f(b,z)),z) ---> { g(f(a,z)) } , otherwise the congruence
+
+g(f(a,z)) = g(f(b,z)) will not be deduced with the equality below,
+and we will not conclude.
+*)
+
+f(a,z) = f(b,z)  ->
+
+false

@@ -1,0 +1,3 @@
+
+logic A,B : prop
+goal g4: (A -> B) -> (not A -> not B)

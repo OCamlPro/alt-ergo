@@ -1,0 +1,15 @@
+
+goal g15 :
+  forall a1,a2,a3,a4,b1,b2 : int farray.
+  forall i1,i2,i3,e1,e2,e3,e4,e5,e6,k:int.
+  a1=b1[i1<-e1] ->
+  a2=b2[i1<-e2] ->
+  a3=a1[i2<-e3] ->
+  a4=a2[i2<-e4] ->
+  e1=b2[i1] ->
+  e2=b1[i1] ->
+  e3=a2[i2] ->
+  e4=a1[i2] ->
+  b2[i3] = b1[i3]
+
+

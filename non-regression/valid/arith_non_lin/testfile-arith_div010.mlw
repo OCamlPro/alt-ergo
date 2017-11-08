@@ -1,0 +1,9 @@
+logic f : real -> real
+
+goal g_valid_202 :
+  forall a, b: real.
+  f(0.) = b   -> (*useless for the proof but, AE says unknown if present *)
+  f(0.) > 2. ->
+  a = 1. ->
+  f(0.) / a < 2. ->
+  false

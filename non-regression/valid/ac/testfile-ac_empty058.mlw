@@ -1,0 +1,11 @@
+
+
+logic a, b, c, x,y,z : int
+logic ac g : int, int -> int
+
+goal g58: 
+  
+  g(a,b) = g(x,y) -> 
+  g(a,c)=g(x,z) -> 
+  g(b,g(x,z)) = g(c,g(x,y)) 
+  

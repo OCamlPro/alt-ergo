@@ -1,0 +1,10 @@
+
+
+goal g5:
+  forall i,j:int.
+  forall v : 'a.
+  forall a,b : 'a farray.
+  i = 1 ->
+  j = 2 -> 
+  a[i] = a[j<-v][i]
+

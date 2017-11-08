@@ -1,0 +1,12 @@
+
+
+logic  b, c,a, d,z,  subst : int
+logic ac f : int, int -> int
+logic g : int -> int
+
+goal g61 : 
+  f(a,c) = a ->
+  f(c, g (f (b, c))) = b -> 
+  g(f (b, c)) = f (b, c) -> 
+  f(b,b) = f(f(b,c),f(b,c))
+

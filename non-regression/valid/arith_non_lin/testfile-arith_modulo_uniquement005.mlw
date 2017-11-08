@@ -1,0 +1,2 @@
+
+goal g5: forall a:int. a % 8 = 6 -> a % 4 = 2 and a % 2 = 0

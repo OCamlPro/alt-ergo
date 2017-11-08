@@ -1,0 +1,9 @@
+logic v1, o17, o14, o20 : real
+
+goal g :
+  0. > o20  ->
+  v1 <= 0. ->
+  o14 <= v1 ->
+  o20 = o14 * o17 ->
+  o17 <= v1 ->
+  false

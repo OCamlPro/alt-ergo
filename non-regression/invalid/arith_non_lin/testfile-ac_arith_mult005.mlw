@@ -1,0 +1,7 @@
+
+logic x:int
+goal g5 : x*x = 25 -> x = 5
+
+
+
+

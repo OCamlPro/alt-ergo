@@ -1,0 +1,93 @@
+type integer
+type 'a map
+type us_t
+
+logic a : integer
+logic b : integer
+logic to_int : integer -> int
+
+logic attr__ATTRIBUTE_FIRST : int
+logic set : 'a map, int, 'a -> 'a map
+logic of_int : int -> integer
+logic mk___t : integer map, int -> us_t
+
+predicate in_range(x: int) = (((-2147483648) <= x) and (x <= 2147483647))
+
+axiom range_axiom : (forall x:integer. in_range(to_int(x)))
+
+
+(***********************)
+
+
+
+(* non utile mais perturbe old_sat ***)
+axiom coerce_axiom :
+  (forall x:int [to_int(of_int(x)) | in_range(x), of_int(x)]. (in_range(x) ->
+  (to_int(of_int(x)) = x)))
+
+
+
+(*********************)
+
+
+
+goal WP_parameter_def :
+  (forall tab:integer map. forall tab1:int. forall ustemp_p_0:int.
+  forall ustemp_p_2:int. forall ustemp_p_1:int. forall ustemp_p_4:int.
+  forall ustemp_p_3:int. forall ustemp_p_31:int. forall tab2:integer map.
+  forall tab3:int. forall j:integer. forall tab4:integer map.
+  forall tab5:int. forall j1:integer. forall ustemp_p_01:int.
+  forall tab6:integer map. forall tab7:int. forall j2:integer.
+  forall ustemp_p_02:int. forall j3:integer. forall k:integer.
+  forall tab8:integer map. forall tab9:int. forall j4:integer.
+  forall k1:integer. forall ustemp_p_21:int. forall ustemp_p_11:int.
+  forall tab10:integer map. forall tab11:int. forall j5:integer.
+  forall k2:integer. forall ustemp_p_22:int. forall ustemp_p_12:int.
+  forall j6:integer. forall k3:integer. forall tab12:integer map.
+  forall tab13:int. forall j7:integer. forall k4:integer.
+  forall ustemp_p_32:int. forall ustemp_p_41:int. forall tab14:integer map.
+  forall tab15:int. forall j8:integer. forall k5:integer.
+  forall ustemp_p_33:int. forall ustemp_p_42:int. forall j9:integer.
+  forall k6:integer. forall tab16:integer map. forall tab17:int.
+  forall j10:integer. forall k7:integer. forall ustemp_p_5:int.
+  forall ustemp_p_6:int. forall tab18:integer map. forall tab19:int.
+  ((j = a) -> ((((to_int(j) <= to_int(b)) and ((0 = ustemp_p_0) and
+  ((to_int(j1) <= to_int(b)) and ((ustemp_p_01 = to_int(j1)) and (((set(tab4,
+  ((to_int(j1) + tab5) - attr__ATTRIBUTE_FIRST), j1) = tab6) and
+  (tab5 = tab7)) and ((j2 = of_int((to_int(j1) + 1))) and
+  ((ustemp_p_01 <  to_int(j2)) and ((ustemp_p_02 = to_int(j2)) and
+  (not (to_int(j2) <= to_int(b))))))))))) or
+  ((not (to_int(j) <= to_int(b))) and (((j2 = j) and ((tab = tab6) and
+  (tab1 = tab7))) and ((j2 = j) and ((tab2 = tab6) and (tab3 = tab7)))))) ->
+  ((j3 = a) -> ((k = of_int(0)) ->
+  (((((to_int(j3) + to_int(k)) <= to_int(b)) and ((0 = ustemp_p_2) and
+  ((0 = ustemp_p_1) and (((to_int(j4) + to_int(k1)) <= to_int(b)) and
+  (((ustemp_p_21 = to_int(j4)) and (ustemp_p_11 = to_int(k1))) and
+  (((((set(tab8,
+  (((to_int(j4) + to_int(k1)) + tab9) - attr__ATTRIBUTE_FIRST),
+  of_int(0)) = tab10) and (tab9 = tab11)) and ((((to_int(j4) <  100) and
+  ((j5 = of_int((to_int(j4) + 1))) and (k2 = k1))) or
+  ((not (to_int(j4) <  100)) and ((k2 = of_int((to_int(k1) + 1))) and
+  (j5 = j4)))) and ((ustemp_p_21 <  to_int(j5)) or
+  ((to_int(j5) = ustemp_p_21) and (ustemp_p_11 <  to_int(k2)))))) and
+  ((ustemp_p_22 = to_int(j5)) and (ustemp_p_12 = to_int(k2)))) and
+  (not ((to_int(j5) + to_int(k2)) <= to_int(b))))))))) or
+  ((not ((to_int(j3) + to_int(k)) <= to_int(b))) and ((k2 = k) and
+  ((j5 = j3) and ((tab6 = tab10) and (tab7 = tab11)))))) -> ((j6 = a) ->
+  ((k3 = of_int(0)) -> ((((to_int(j6) <= to_int(b)) and ((0 = ustemp_p_4) and
+  ((ustemp_p_3 = 0) and ((0 = ustemp_p_31) and ((to_int(j7) <= to_int(b)) and
+  (((ustemp_p_32 = to_int(j7)) and (ustemp_p_41 = to_int(k4))) and
+  ((((set(tab12, ((to_int(j7) + tab13) - attr__ATTRIBUTE_FIRST),
+  j7) = tab14) and (tab13 = tab15)) and ((j8 = of_int((to_int(j7) + 1))) and
+  ((k5 = of_int((to_int(k4) + 1))) and ((ustemp_p_32 <  to_int(j8)) and
+  ((ustemp_p_33 = to_int(j8)) and ((ustemp_p_41 <  to_int(k5)) and
+  (ustemp_p_42 = to_int(k5)))))))) and
+  (not (to_int(j8) <= to_int(b)))))))))) or
+  ((not (to_int(j6) <= to_int(b))) and ((k5 = k3) and ((j8 = j6) and
+  (mk___t(tab14, tab15) = mk___t(tab10, tab11)))))) -> ((j9 = a) ->
+  ((k6 = of_int(0)) -> ((to_int(j9) <= to_int(b)) ->
+  ((to_int(j10) <= to_int(b)) -> (((ustemp_p_5 = to_int(j10)) and
+  (ustemp_p_6 = to_int(k7))) -> (((set(tab16,
+  ((to_int(j10) + tab17) - attr__ATTRIBUTE_FIRST), j10) = tab18) and
+  (tab17 = tab19)) -> in_range((to_int(j10) + 1)))))))))))))))))
+

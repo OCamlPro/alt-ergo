@@ -1,0 +1,8 @@
+
+logic P : 'a -> prop
+type t
+type 'a u
+logic Q : 'a u -> prop
+
+axiom a2: forall x:'a u. Q(x)
+goal g8: forall b:'c u. Q(b)

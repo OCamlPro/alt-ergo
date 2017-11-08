@@ -1,0 +1,1 @@
+goal g1: forall x:int. x<=x

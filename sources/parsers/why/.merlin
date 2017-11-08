@@ -1,0 +1,23 @@
+S main
+B main
+S gui
+B gui
+S parsing
+B parsing
+S preprocess
+B preprocess
+S theories
+B theories
+S sat
+B sat
+S structures
+B structures
+S util
+B util
+
+FLG -short-paths
+FLG -strict-sequence
+
+PKG zarith
+PKG camlzip
+PKG ocplib-simplex

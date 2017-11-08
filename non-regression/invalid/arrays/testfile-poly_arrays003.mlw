@@ -1,0 +1,7 @@
+
+goal g3 :
+  forall i,j:'a.
+  forall v : 'b.
+  forall a,b : ('a,'b) farray.
+  v = a[j<-v][i]
+

@@ -1,0 +1,4 @@
+
+logic A,B,C,P,Q,R,S: prop
+(* De morgan *)
+goal g18: not(A and B) <-> (not A or not B)

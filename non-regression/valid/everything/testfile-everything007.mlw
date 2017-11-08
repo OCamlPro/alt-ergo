@@ -1,0 +1,2 @@
+
+goal g7 : forall x:int. x=0 -> x+1=1

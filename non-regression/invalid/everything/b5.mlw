@@ -1,0 +1,12 @@
+type t
+
+logic f : int, t -> prop
+
+goal WP_parameter_insert :
+  forall t:t. 
+  forall n:int.
+  forall result:t.
+  (exists n:int. f(n, t)) ->
+  f(n, result)
+
+

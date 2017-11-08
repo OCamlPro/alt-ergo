@@ -1,0 +1,9 @@
+
+logic f, g : int -> int
+logic h: int,int -> int
+logic a, b:int
+
+goal g6:
+  h(g(a),g(b)) = g(b) ->
+  f(h(g(a),g(b))) - f(g(b)) = 0
+

@@ -1,0 +1,28 @@
+#!/bin/sh
+
+#####
+# This file should be copied to .git/hooks/pre-commit to be used as a
+# pre-commit hook.
+#
+# You should also compile the file 'RemoveTrailingWhiteSpacesEOL.ml'
+# (eg. with ocamlopt.opt -o rtws-eol RemoveTrailingWhiteSpacesEOL.ml)
+# and copy the resulting binary to .git/hooks/rtws-eol
+###
+
+files=`find ./ -regex .*[.]ml[ily]?`
+
+cpt=0
+
+for f in $files ; do
+    .git/hooks/rtws-eol $f
+    if ! [ "$?" -eq "0" ] ; then
+        cpt=$((cpt+1))
+    fi
+done
+
+if [ $cpt -eq 0 ] ; then
+    exit 0
+else
+    echo "White spaces detected and removed in *.ml* files"
+    exit 1
+fi

@@ -1,0 +1,2 @@
+
+goal g12: forall a:int. a % 2 = (a + 2) % 2

@@ -1,0 +1,2 @@
+
+goal g1: forall a:int. a % 2 = 1 -> (a + 1) % 2 = 1 -> false

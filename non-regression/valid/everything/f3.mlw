@@ -1,0 +1,18 @@
+type t
+logic f : t -> t
+logic x0 : t
+logic iter : int, t -> t
+
+axiom iter_1 : forall x:t. iter(1, x) = f(x)
+
+logic mu : int
+logic lambda : int
+
+
+
+logic dist : int, int -> int
+
+
+goal g :
+exists t1:int. f(x0) = iter(t1, x0) 
+

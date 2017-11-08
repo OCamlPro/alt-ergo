@@ -1,0 +1,6 @@
+goal WP_parameter_def1 :
+forall x1, y1, z1 : real.
+  0. <= x1 <= 180. ->
+  -180. <= y1 <= 0. ->
+  0. <= z1 <= 1. ->
+  y1 <= y1 * z1

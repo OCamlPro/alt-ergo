@@ -1,0 +1,6 @@
+
+goal g6: forall x,y,z:int.
+  y = 6 -> 
+  x = 4 ->
+  x*x*x * y*y * z = 23040 ->
+  4 * y * y * z * z =  360 * z * x

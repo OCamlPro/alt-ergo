@@ -1,0 +1,3 @@
+
+logic P:prop
+goal g13: 1=2 -> P

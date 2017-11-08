@@ -1,0 +1,11 @@
+
+
+(* gamma |-> b et beta |-> c *)
+logic a, b, c : int
+logic ac f : int,int -> int
+
+goal g40 : 
+  c = f(a,b) ->  
+  b = f(a,c) -> 
+  f(c,c) = f(b,b)
+

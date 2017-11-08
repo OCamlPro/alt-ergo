@@ -1,0 +1,6 @@
+logic X, Y : real
+
+goal g :
+  Y > 0. ->
+  X >= 0. ->
+  X/Y > 0. (* a counter-example is X = 0 *)

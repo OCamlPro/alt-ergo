@@ -1,0 +1,11 @@
+(* [BugFix#6] in Why_typing.freevars_term: The case (- 'var') and
+others, such as let, were covered with a pattern matching | _ -> acc,
+which is a bug *)
+
+logic f : int -> int
+
+axiom ax : forall x:int. f(-x) = -f(x)
+
+axiom ax2 : forall x: int. (let y = x in -y) = x
+
+goal g : true

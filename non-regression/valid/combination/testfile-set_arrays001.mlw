@@ -1,0 +1,17 @@
+type b = T | F
+(*type 'a set = ('a,b) farray*)
+
+logic union : ('a,b) farray, ('a,b) farray -> ('a,b) farray
+logic for : b, b -> b
+
+axiom for : for(T,T) = T and for(T,F) = T and for(F,T) = T and for(F,F) = F
+
+axiom union : forall s1,s2:('a,b) farray. forall k: 'a.
+      union(s1,s2)[k] = for(s1[k],s2[k])
+
+goal g1 :
+     forall s1,s2 : ('a,b) farray.
+     forall k : 'a.
+     union(s1,s2)[k] = T ->
+     s1[k] = T or s2[k] = T
+

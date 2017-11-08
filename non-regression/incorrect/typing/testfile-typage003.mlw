@@ -1,0 +1,6 @@
+
+logic Q : 'a tab -> prop
+
+axiom a2 : forall x:'a tab. Q(x)
+
+goal g4: forall a:int. Q(a)

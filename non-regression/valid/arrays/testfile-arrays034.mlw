@@ -1,0 +1,13 @@
+
+logic t1,t2 : int farray
+logic P: 'a -> prop
+logic x:int
+
+axiom a : forall t1: 'a farray. forall i,j:int. forall v:'a.
+  P(t1[i <- v][j])
+
+goal g34 :
+  t2 = t1[0 <- 2] ->
+  x = t2[36] ->
+    P(x)
+

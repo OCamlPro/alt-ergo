@@ -1,0 +1,6 @@
+
+type t
+logic a,b,c,d,e,f: t
+	
+goal g2: 
+  a=c and c=e and a<>b and b=f and d <> b -> c<>d

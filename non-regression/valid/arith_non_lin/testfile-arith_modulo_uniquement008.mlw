@@ -1,0 +1,2 @@
+
+goal g9: forall a,m,n,k:int. k = m + n -> a % k = a % (m+n)

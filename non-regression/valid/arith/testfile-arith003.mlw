@@ -1,0 +1,2 @@
+
+goal g3: forall x:int. 0<=x -> 0=x-x and 0<=x and x<=x

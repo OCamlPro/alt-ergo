@@ -1,0 +1,3 @@
+
+logic a:int
+goal g2: a+0 = a+1

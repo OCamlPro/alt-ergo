@@ -1,0 +1,15 @@
+
+
+(* passe grace a la congruence sur les termes touches par recriture et
+non pas par simple substitution *)
+logic ac u : int, int -> int
+logic f : int -> int
+
+goal g83:
+  forall a, b, c, x, gamma, beta, zz, zzz:int.
+    zz = f(u(gamma,u(c,x)))  ->
+    zzz = f(u(beta,u(b,x))) ->
+    u(a,b) = gamma ->
+    u(a,c) = beta ->
+    zz = zzz
+

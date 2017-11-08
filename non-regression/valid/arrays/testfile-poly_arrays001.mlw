@@ -1,0 +1,21 @@
+type a
+logic fi : int -> a
+logic ti : a -> int
+
+axiom Inj : forall x :int [fi(x)]. ti(fi(x))=x
+
+goal g1:
+  forall a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11 : a.
+  forall t1: (a,int) farray.
+  forall t2: (a,int) farray. t2 = t1[ fi(1) <- 1] ->
+  forall t3: (a,int) farray. t3 = t2[ fi(2) <- 2] ->
+  forall t4: (a,int) farray. t4 = t3[ fi(3) <- 3] ->
+  forall t5: (a,int) farray. t5 = t4[ fi(4) <- 4] ->
+  forall t6: (a,int) farray. t6 = t5[ fi(5) <- 5] ->
+  forall t7: (a,int) farray. t7 = t6[ fi(6) <- 6] ->
+  forall t8: (a,int) farray. t8 = t7[ fi(7) <- 7] ->
+  forall t9: (a,int) farray. t9 = t8[ fi(8) <- 8] ->
+  forall t10: (a,int) farray. t10 = t9[ fi(9) <- 9] ->
+  forall t11: (a,int) farray. t11 = t10[ fi(10) <- 10] ->
+  t11[fi(1)] = 1
+

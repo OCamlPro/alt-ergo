@@ -1,0 +1,5 @@
+
+logic Q,P: prop
+
+goal g3:
+  forall c,v:int. (Q and c<=v and v<=c) ->P 

@@ -1,0 +1,13 @@
+
+
+type set
+type 'a pair = {fst : 'a ; snd : 'a}
+logic ac u : set pair, set pair -> set pair 
+logic a,b,c,d,e,f:set
+
+goal g3 : 
+  {fst=u({fst=a;snd=a},{fst=a;snd=b});snd={fst=a;snd=b}}= 
+  {fst=u({fst=a;snd=a},{fst=a;snd=b});snd={fst=a;snd=c}} ->
+  b = c 
+
+

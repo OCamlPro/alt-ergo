@@ -1,0 +1,8 @@
+
+
+logic P,Q : int -> prop
+
+goal g3 : 
+     forall x:int. 
+     P(0) -> P(1) -> Q(0) -> Q(1) -> 0 <= x <= 1 -> (P(x) and Q(x))
+

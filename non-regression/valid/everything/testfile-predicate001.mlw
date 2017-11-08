@@ -1,0 +1,9 @@
+logic f : int -> prop
+logic r : int -> prop
+
+predicate p (x : int) = f(x)
+
+axiom a : forall x : int [p(x) ]. p(x) -> r (x)
+
+goal g1 : forall a : int. f(a) -> r(a)
+

@@ -1,0 +1,11 @@
+
+
+
+goal g26:
+  forall a,b : int farray.
+  forall i,j,v,w:int.
+  v = a[i] ->
+  w = b[i] ->
+  a[i<-w] = b[i<-v] ->
+  a[j] = b[j]
+

@@ -1,0 +1,11 @@
+
+logic p:int
+
+goal g5: 
+(* 1 *) p <> 0 and p <> 1 and p <= 9 and
+(*      p ∈ ]-∞; -1] U [2; 3] U [5; 9]          *)
+(* 2 *) p >= 4 and p <= 10 and p <> 5 and
+(*      p ∈ [4; 4] U [6; 10]          *)
+(* 3 *) p >= 1 and p <= 4 -> false
+
+

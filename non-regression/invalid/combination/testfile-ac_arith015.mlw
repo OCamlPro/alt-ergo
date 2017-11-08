@@ -1,0 +1,7 @@
+
+
+logic ac f : int,int -> int
+
+goal g16 : (forall v,w:int[v,w]. f(v,w) = w) -> (exists v,w:int. v <> w)
+
+

@@ -1,0 +1,4 @@
+
+
+goal g30_2 : forall x:int. 0 <= x <= 1 -> x=0 or x=1 
+

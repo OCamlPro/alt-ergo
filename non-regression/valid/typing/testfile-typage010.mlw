@@ -1,0 +1,13 @@
+
+logic P : 'a -> prop
+type t
+type 'a u
+logic Q : 'a u -> prop
+
+type g
+
+logic R : g -> prop
+
+predicate H(x:int) = x=10
+
+goal g10: H(10)

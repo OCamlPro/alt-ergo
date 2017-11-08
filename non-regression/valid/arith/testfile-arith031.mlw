@@ -1,0 +1,40 @@
+
+type 't pointer
+
+type ('t, 'v) memory
+
+logic select : ('a2, 'a1) memory, 'a2 pointer -> 'a1
+
+logic store : ('a1, 'a2) memory, 'a1 pointer, 'a2 -> ('a1, 'a2) memory
+
+axiom select_store_eq:
+  (forall m:('a1, 'a2) memory.
+    (forall p1:'a1 pointer.
+      (forall p2:'a1 pointer.
+        (forall a:'a2 [store(m, p1, a), p2].
+          ((p1 = p2) -> (select(store(m, p1, a), p2) = a))))))
+
+axiom select_store_neq:
+  (forall m:('a1, 'a2) memory.
+    (forall p1:'a1 pointer.
+      (forall p2:'a1 pointer.
+        (forall a:'a2 [store(m, p1, a), p2].
+          ((p1 <> p2) -> (select(store(m, p1, a), p2) = select(m, p2)))))))
+
+type int32
+
+logic f : int32 -> int
+
+type int_P
+
+logic aa:int
+
+goal f_ensures_default_po_1:
+  forall p:int_P pointer.
+  forall m1:(int_P, int32) memory.
+  forall result:int32.
+  f(result) = 1 ->
+  forall m2:(int_P, int32) memory.
+  m2 = store(m1, p, result) ->
+  f(select(m2, p)) = 1
+

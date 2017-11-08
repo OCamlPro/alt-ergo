@@ -1,0 +1,6 @@
+logic P,Q,R : int -> prop
+
+axiom a1: forall x:int[P(x)]. P(x) -> R(x)
+axiom a2: forall x:int[Q(x)]. Q(x) -> R(x)
+
+goal g: (P(1) or Q(1)) -> R(1)

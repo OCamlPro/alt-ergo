@@ -1,0 +1,11 @@
+
+
+logic x,y:int
+
+goal g14:
+     (x / y) - (x / y) = 0 ->
+     x / y = 1 ->
+     false
+
+
+

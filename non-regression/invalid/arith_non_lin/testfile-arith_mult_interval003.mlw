@@ -1,0 +1,11 @@
+(* There was a bug in Intervals.root (an explanation
+was lost when removing an empty interval) =>
+fixed (temporarily ?) by adding a global explanation
+in Intervals.point *)
+logic p : prop
+
+goal g:
+ (* bug if decision on a*a = 3 first.
+    model: p *)
+ forall a: int.
+ (a * a = 3 or p) -> false

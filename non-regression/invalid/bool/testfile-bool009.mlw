@@ -1,0 +1,5 @@
+
+logic a,b,c:prop
+goal g9 : not ((a->(a or b or c) and (not a or not b or not c))
+           and (b -> (a and b and c) or (not a and not b and not c))
+           and (c -> a and b))

@@ -1,0 +1,10 @@
+
+
+logic a,b,c,gamma,beta,x,y : int
+logic ac f : int , int -> int
+
+goal g53 : 
+  f(a,b) = f(x,gamma) ->
+  f(a,c) = f(y,beta) ->
+  f(x,f(gamma,c)) = f(y,f(beta,b))
+

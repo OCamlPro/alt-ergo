@@ -1,0 +1,5 @@
+
+logic x:int
+logic P,Q: int -> prop
+goal g9 : P(0/x) -> P(0)
+

@@ -1,0 +1,12 @@
+
+
+logic a,b,c,s : int
+logic g : int -> int
+logic ac f : int,int -> int
+
+goal g50: 
+  f(b,c)    = s ->
+  f(g(s),c) = b ->
+  g(s) = s ->
+  f(s,s) = f(b,b)
+

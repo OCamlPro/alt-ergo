@@ -1,0 +1,6 @@
+
+logic f : int -> 'a
+goal g10:
+  forall x,z:int. 
+  forall u,t:'a.
+   f(x+3)=u and f(z+2)=t and x=z-1 -> u=t

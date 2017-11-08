@@ -1,0 +1,7 @@
+
+type 'a pair = {fst : 'a ; snd : 'a}
+
+goal g10: 
+ forall x : int pair. forall y : int. 
+ y = x.snd -> x.fst + x.snd = x.fst + y
+

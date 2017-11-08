@@ -1,0 +1,14 @@
+
+type 'a pointer
+type 'a pset
+
+logic P : int -> prop
+logic Q : int , int -> prop
+
+axiom a:
+  (forall x:int.
+     (P(x) <-> 
+	(exists i:int. 
+	   exists r: int. Q(r,i))))
+
+goal g8: Q(1,2) -> P(4)

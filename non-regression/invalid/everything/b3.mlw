@@ -1,0 +1,7 @@
+logic P, Q : int -> prop
+
+axiom a:
+ forall x : int.
+  (forall i:int.  Q(i)) -> P(x)
+
+goal g : P(0)

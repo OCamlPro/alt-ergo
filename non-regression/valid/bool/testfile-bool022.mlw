@@ -1,0 +1,4 @@
+
+logic A,B,C,D : prop
+goal g22: (A or B) -> (B or A)
+

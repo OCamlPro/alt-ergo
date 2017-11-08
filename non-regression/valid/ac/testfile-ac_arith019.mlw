@@ -1,0 +1,11 @@
+
+
+logic ac f : int,int -> int
+logic a,b,c,gamma,beta,x:int
+
+goal g19:
+  f(a,b) = gamma ->
+  f(a,c) = beta + x -> 
+  x = 0 -> 
+  f(c,gamma) = f(b,beta)
+

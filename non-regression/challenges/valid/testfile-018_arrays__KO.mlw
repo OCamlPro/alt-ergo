@@ -1,0 +1,21 @@
+logic a, ta : (int, (int, real) farray) farray
+logic r : real
+logic e1, e2 : int
+logic v : (int, real) farray
+
+axiom axx: 
+      forall x1, x2: int[a[x1][x2]].
+      r = a[x1][x2]
+
+goal g : 
+
+     ta = a[0<-a[0]] -> 
+(*
+     ( e1 <> 0 -> ta[e1] = a[e1] ) ->
+     ( e1 = 0 ->  ta[e1] = a[0]  ) -> 
+*)
+
+     (* r = ta[e1][0] ->  devrait être generee a partir de axx
+       apres avoir montre que ta[e1] = a[e1] *)
+
+     r = ta[e1][0]

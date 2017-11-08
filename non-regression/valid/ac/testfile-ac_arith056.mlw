@@ -1,0 +1,11 @@
+
+logic ac f,h : int,int -> int
+logic a,b,c,d,x,y,z,beta,gamma : int
+
+goal g56 : 
+  y = 1 ->
+  f(a,b) = gamma ->
+  f(a,c+y) = beta  ->
+  h(f(f(a,b),c+1),d) = f(gamma,beta) ->
+  h(f(gamma,c+y),d) = f(gamma,beta) 
+

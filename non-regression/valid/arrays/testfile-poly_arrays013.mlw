@@ -1,0 +1,11 @@
+
+
+goal g13:
+  forall i,j:'a.
+  forall v,w : 'b.
+  forall a,b : ('a,'b) farray.
+  a = b ->
+  b = b[j<-v, i<-w]->
+  i <> j ->
+  a[j]= v
+

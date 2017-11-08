@@ -1,0 +1,7 @@
+type t
+logic a,b,c,d,e: t
+logic f,h : 'a -> 'a
+logic g: 'a , 'a -> 'a
+
+goal g1: 
+  forall x:t. h(x)=x and g(a,x)=a ->  g(g(x,g(a,h(x))),x)=a

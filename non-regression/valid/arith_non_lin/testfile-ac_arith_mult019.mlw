@@ -1,0 +1,4 @@
+
+logic x:int      
+goal g19 : 2 <= x*x <= 9 ->  x= -2 or x = -3 or 2 <= x <= 3  
+

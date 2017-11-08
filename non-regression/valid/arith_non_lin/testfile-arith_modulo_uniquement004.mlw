@@ -1,0 +1,2 @@
+
+goal g4: forall a:int. a % 2 = (a + 0)% (1+1)

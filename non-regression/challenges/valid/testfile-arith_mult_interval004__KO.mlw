@@ -1,0 +1,9 @@
+logic a , b : int
+
+goal g:
+ (
+   b = a + 1 and
+   a >= 0 and
+   a >= (a+1)*(a+1)
+  ) ->
+  false

@@ -1,0 +1,11 @@
+(* This example is actually not valid.
+For instance, for x = 1, we get 1 / (-2) = -1
+which is not true. In fact, 1 = (-2) * (-1) + (-1) !!! the rest is negative
+*)
+
+logic x,y,z:int
+
+goal g36: 
+
+x <> 0 -> x / (-2*x) = -1
+

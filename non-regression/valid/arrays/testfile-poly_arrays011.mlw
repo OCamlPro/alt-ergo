@@ -1,0 +1,9 @@
+
+
+goal g11 :
+  forall i,j:'a.
+  forall v : 'b.
+  forall b : ('a,'b) farray.
+  i = j ->
+  b = b[j <- b[i]]
+

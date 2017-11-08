@@ -1,0 +1,23 @@
+
+logic P: 'a,'a,int,int -> prop
+logic f: 'a , int -> 'a
+
+axiom sym: 
+  forall x,y:'a. forall l,r:int. P(x,y,l,r) -> P(y,x,l,r)
+
+axiom trans: 
+  forall x,y,z:'a. forall l,r:int. P(x,y,l,r) -> P(y,z,l,r) -> P(x,z,l,r)
+
+axiom swap: 
+  forall x:'a. 
+  forall i:int.
+  forall l,r:int. 
+    P(x,f(x,i),l,r) 
+
+goal g: 
+  forall t,t0,t1:'a. 
+  forall i:int.
+  P(t0,t,0,0) -> t1=f(t0,i) -> P(t1,t,0,0)
+
+
+

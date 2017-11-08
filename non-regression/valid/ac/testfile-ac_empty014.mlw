@@ -1,0 +1,10 @@
+
+
+logic a,b,c, beta,gamma,lambda : int
+logic ac f : int,int -> int
+
+goal g14 : 
+  gamma = f(a,b)->  
+  f(a,c) = beta  -> 
+  f(gamma,f(lambda,f(b,beta))) = f(f(c,gamma),f(lambda,gamma)) 
+

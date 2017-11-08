@@ -1,0 +1,7 @@
+
+goal g1 : (*goal sqrt_po_10*)
+  forall x,y:int.
+  x > 3 ->
+  y = (x + 1) / 2 ->
+  x < (y + 1) * (y + 1)
+

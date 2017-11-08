@@ -1,0 +1,4 @@
+type 'a pair = {fst : 'a ; snd : 'a}
+type elt
+
+goal g1: forall a,b:elt. {fst=a;snd=b}.fst = a

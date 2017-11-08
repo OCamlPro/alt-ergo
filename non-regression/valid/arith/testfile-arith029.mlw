@@ -1,0 +1,7 @@
+
+
+logic f : int -> int
+logic u,t,x : int
+
+goal g29: u=f(0) -> t=f(x) -> x=0 -> u=t
+

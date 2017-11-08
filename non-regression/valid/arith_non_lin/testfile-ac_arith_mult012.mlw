@@ -1,0 +1,5 @@
+
+logic x,z : int
+
+goal g12 : x*x = 0 ->  x + z = 3 -> z = 3
+

@@ -1,0 +1,9 @@
+ 
+
+type t
+logic P : int -> prop
+logic Q: t->prop
+
+goal g10 : forall x:t. P(let x=3 in x+x) -> Q(x)
+
+

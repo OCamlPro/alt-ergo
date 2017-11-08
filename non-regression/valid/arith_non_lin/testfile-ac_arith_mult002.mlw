@@ -1,0 +1,8 @@
+
+
+logic x,y,z,t1,t2,t3,t4 :int
+goal g2:
+  x * y = t1 * t2 ->
+  x * z = t3 * t4 ->
+  z * (t1 * t2) = (y * t3) * t4
+

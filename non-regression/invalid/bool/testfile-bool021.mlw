@@ -1,0 +1,3 @@
+
+logic A,B,C,P,Q,R,S: prop
+goal g21: not ((A and (B or C)) -> ((A and B) or (A and C)))

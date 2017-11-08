@@ -1,0 +1,12 @@
+
+logic q : int
+logic p : int
+logic b : int
+logic a : int
+
+axiom a1: forall x:int. x*0 = 0
+axiom a2: forall x:int. 0*x = 0
+
+axiom x9 : q = a
+axiom x10 : p = 0
+goal g28 : a = p * b + q

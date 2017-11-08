@@ -1,0 +1,5 @@
+
+
+goal g2: 
+     let x = 3 in x+2 = 5
+

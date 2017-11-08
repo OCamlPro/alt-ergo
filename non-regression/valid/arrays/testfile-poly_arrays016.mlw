@@ -1,0 +1,9 @@
+
+
+goal g16:
+  forall a,b : ('a,'b) farray.
+  forall i,j : 'a.
+  forall v,w : 'b.
+  a[i<-b[i]] = b[i<-a[i]] ->
+  a[j] = b[j]
+

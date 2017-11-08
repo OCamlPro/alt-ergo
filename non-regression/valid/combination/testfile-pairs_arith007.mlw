@@ -1,0 +1,5 @@
+
+type 'a pair = {fst : 'a ; snd : 'a}
+
+goal g8: forall x,y,z:int. {fst={fst=x+3;snd=y}.fst; snd=z}.fst + 2 = 5 -> x=0
+

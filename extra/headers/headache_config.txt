@@ -1,0 +1,17 @@
+# Objective Caml source 
+| ".*\\.ml[il4]?" -> frame open:"(*" line:"*" close:"*)"
+| ".*\\.mly"      -> frame open:"/*" line:"*" close:"*/"
+# Alt-Ergo input files
+| ".*\\.why" -> frame open:"(*" line:"*" close:"*)"
+| ".*\\.mlw" -> frame open:"(*" line:"*" close:"*)"
+# C source 
+| ".*\\.c"      -> frame open:"/*" line:"*" close:"*/"
+# Java source 
+| ".*\\.java"      -> frame open:"/*" line:"*" close:"*/"
+# LaTeX source 
+| ".*\\.tex"      -> frame open:"%" line:"%" close:"%"
+# Misc
+| "configure.in" -> frame open:"#"  line:"#" close:"#"
+| "Makefile.*" -> frame open:"#"  line:"#" close:"#"
+| "README.md"   -> frame open:"*"  line:"*" close:"*"
+| "INSTALL.md"   -> frame open:"*"  line:"*" close:"*"

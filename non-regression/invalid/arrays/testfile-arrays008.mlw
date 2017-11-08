@@ -1,0 +1,9 @@
+
+
+goal g8 :
+  forall i,j:int.
+  forall v : 'a.
+  forall a,b : 'a farray.
+  b = a[j<-v] ->
+  v = b[i]
+

@@ -1,0 +1,5 @@
+
+type 'a pair = {fst : 'a ; snd : 'a}
+
+goal g9: forall x,y,z:int. {fst={fst=x-x;snd=y}.fst;snd=z}.fst + 2 = x -> x=2
+

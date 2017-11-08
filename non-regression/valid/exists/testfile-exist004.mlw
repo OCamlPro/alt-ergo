@@ -1,0 +1,2 @@
+
+goal g4: forall x:int. exists y:int. x=y

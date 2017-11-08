@@ -1,0 +1,9 @@
+
+(* exemple necessitant un case-split *)
+
+goal g14:
+  forall i,j:'a.
+  forall a,b : ('a,'b) farray.
+  a=b ->
+  a[i] = b[j<-a[i]][i]
+

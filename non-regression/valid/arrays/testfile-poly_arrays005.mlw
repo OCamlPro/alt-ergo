@@ -1,0 +1,15 @@
+
+type a
+logic fi : int -> a
+logic ti : a -> int
+
+axiom Inj : forall x :int [fi(x)]. ti(fi(x))=x
+
+goal g5:
+  forall i,j:a.
+  forall v : 'b.
+  forall a,b : (a,'b) farray.
+  i = fi(1) ->
+  j = fi(2) ->
+  a[i] = a[j<-v][i]
+

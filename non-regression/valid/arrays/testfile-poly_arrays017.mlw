@@ -1,0 +1,12 @@
+
+
+
+goal g17:
+  forall a,b : ('a,'b) farray.
+  forall i,j : 'a.
+  forall v,w : 'b.
+  v = a[i] ->
+  w = b[i] ->
+  a[i<-w] = b[i<-v] ->
+  a[j] = b[j]
+

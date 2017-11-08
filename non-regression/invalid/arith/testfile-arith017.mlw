@@ -1,0 +1,6 @@
+
+
+logic x,y,z : int
+ 
+goal g17 : x>=0 -> y >=0 -> x/y = z -> y = 0 -> x/y>=0
+

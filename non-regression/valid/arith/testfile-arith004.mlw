@@ -1,0 +1,2 @@
+
+goal g4: forall x,y,z:int. x<=y and y+z<=x and 0<=z -> x=y

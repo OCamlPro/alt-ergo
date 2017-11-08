@@ -1,0 +1,12 @@
+
+logic f:int ->int
+
+goal g27:
+  forall n:int.
+  forall count:int.
+  forall sum:int.
+  sum = (f(count) * f(count)) ->
+  (sum <= n) ->
+  forall count0:int.
+  (count0 = f(count)) ->
+  (n >= count0 * count0)

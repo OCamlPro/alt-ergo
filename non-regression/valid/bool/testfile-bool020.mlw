@@ -1,0 +1,4 @@
+
+logic A,B,C,P,Q,R,S: prop
+(* Distributivite *)
+goal g20: (A or (B and C)) <-> ((A or B) and (A or C))

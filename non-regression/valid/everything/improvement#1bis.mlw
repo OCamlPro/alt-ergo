@@ -1,0 +1,1042 @@
+(* this is a prelude for Alt-Ergo*)
+(* this is a prelude for Alt-Ergo integer arithmetic *)
+logic safe_comp_div: int, int -> int
+axiom safe_comp_div_def: forall x, y:int. x >= 0 and y > 0 -> safe_comp_div(x,y) = x / y
+logic safe_comp_mod: int, int -> int
+axiom safe_comp_mod_def: forall x, y:int. x >= 0 and y > 0 -> safe_comp_mod(x,y) = x % y
+logic safe_eucl_div: int, int -> int
+axiom safe_eucl_div_def: forall x, y:int. x >= 0 and y > 0 -> safe_eucl_div(x,y) = x / y
+logic safe_eucl_mod: int, int -> int
+axiom safe_eucl_mod_def: forall x, y:int. x >= 0 and y > 0 -> safe_eucl_mod(x,y) = x % y
+logic match_bool : bool, 'a, 'a -> 'a
+
+axiom match_bool_True :
+  (forall z:'a. forall z1:'a. (match_bool(true, z, z1) = z))
+
+axiom match_bool_False :
+  (forall z:'a. forall z1:'a. (match_bool(false, z, z1) = z1))
+
+type qtmark
+
+type 'a ref
+
+logic mk_ref : 'a -> 'a ref
+
+logic contents : 'a ref -> 'a
+
+axiom contents_def : (forall u:'a. (contents(mk_ref(u)) = u))
+
+axiom ref_inversion :
+  (forall u:'a ref [contents(u)]. (u = mk_ref(contents(u))))
+
+function andb(x: bool, y: bool) : bool = match_bool(x, y, false)
+
+function orb(x: bool, y: bool) : bool = match_bool(x, true, y)
+
+function xorb(x: bool, y: bool) : bool = match_bool(y, match_bool(x, false,
+  true), match_bool(x, true, false))
+
+function notb(x: bool) : bool = match_bool(x, false, true)
+
+function implb(x: bool, y: bool) : bool = match_bool(y, true, match_bool(x,
+  false, true))
+
+logic us__ignore : 'a -> unit
+
+type us_private
+
+logic us_null_ext__ : us_private
+
+type us_type_of_heap
+
+type us_image
+
+logic bool_eq : int, int -> bool
+
+logic bool_ne : int, int -> bool
+
+logic bool_lt : int, int -> bool
+
+logic bool_le : int, int -> bool
+
+logic bool_gt : int, int -> bool
+
+logic bool_ge : int, int -> bool
+
+axiom bool_eq_axiom :
+  (forall x:int. (forall y:int. ((bool_eq(x, y) = true) <-> (x = y))))
+
+axiom bool_ne_axiom :
+  (forall x:int. (forall y:int. ((bool_ne(x, y) = true) <-> (not (x = y)))))
+
+axiom bool_lt_axiom :
+  (forall x:int. (forall y:int. ((bool_lt(x, y) = true) <-> (x <  y))))
+
+axiom bool_int__le_axiom :
+  (forall x:int. (forall y:int. ((bool_le(x, y) = true) <-> (x <= y))))
+
+axiom bool_gt_axiom :
+  (forall x:int. (forall y:int. ((bool_gt(x, y) = true) <-> (y <  x))))
+
+axiom bool_ge_axiom :
+  (forall x:int. (forall y:int. ((bool_ge(x, y) = true) <-> (y <= x))))
+
+logic abs : int -> int
+
+axiom abs_def :
+  (forall x:int [abs(x)]. (((0 <= x) -> (abs(x) = x)) and ((not (0 <= x)) ->
+  (abs(x) = (-x)))))
+
+axiom Abs_le :
+  (forall x:int. forall y:int. ((abs(x) <= y) <-> (((-y) <= x) and
+  (x <= y))))
+
+axiom Abs_pos : (forall x:int. (0 <= abs(x)))
+
+axiom Div_mod :
+  (forall x:int. forall y:int. ((not (y = 0)) ->
+  (x = ((y * safe_comp_div(x,y)) + safe_comp_mod(x,y)))))
+
+axiom Div_bound :
+  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) ->
+  ((0 <= safe_comp_div(x,y)) and (safe_comp_div(x,y) <= x))))
+
+axiom Mod_bound :
+  (forall x:int. forall y:int. ((not (y = 0)) ->
+  (((-abs(y)) <  safe_comp_mod(x,y)) and (safe_comp_mod(x,y) <  abs(y)))))
+
+axiom Div_sign_pos :
+  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) ->
+  (0 <= safe_comp_div(x,y))))
+
+axiom Div_sign_neg :
+  (forall x:int. forall y:int. (((x <= 0) and (0 <  y)) ->
+  (safe_comp_div(x,y) <= 0)))
+
+axiom Mod_sign_pos :
+  (forall x:int. forall y:int. (((0 <= x) and (not (y = 0))) ->
+  (0 <= safe_comp_mod(x,y))))
+
+axiom Mod_sign_neg :
+  (forall x:int. forall y:int. (((x <= 0) and (not (y = 0))) ->
+  (safe_comp_mod(x,y) <= 0)))
+
+axiom Rounds_toward_zero :
+  (forall x:int. forall y:int. ((not (y = 0)) ->
+  (abs((safe_comp_div(x,y) * y)) <= abs(x))))
+
+axiom Div_1 : (forall x:int. (safe_comp_div(x,1) = x))
+
+axiom Mod_1 : (forall x:int. (safe_comp_mod(x,1) = 0))
+
+axiom Div_inf :
+  (forall x:int. forall y:int. (((0 <= x) and (x <  y)) ->
+  (safe_comp_div(x,y) = 0)))
+
+axiom Mod_inf :
+  (forall x:int. forall y:int. (((0 <= x) and (x <  y)) ->
+  (safe_comp_mod(x,y) = x)))
+
+axiom Div_mult :
+  (forall x:int. forall y:int. forall z:int [safe_comp_div(((x * y) + z),x)].
+  (((0 <  x) and ((0 <= y) and (0 <= z))) ->
+  (safe_comp_div(((x * y) + z),x) = (y + safe_comp_div(z,x)))))
+
+axiom Mod_mult :
+  (forall x:int. forall y:int. forall z:int [safe_comp_mod(((x * y) + z),x)].
+  (((0 <  x) and ((0 <= y) and (0 <= z))) ->
+  (safe_comp_mod(((x * y) + z),x) = safe_comp_mod(z,x))))
+
+axiom Div_mod1 :
+  (forall x:int. forall y:int. ((not (y = 0)) ->
+  (x = ((y * safe_eucl_div(x,y)) + safe_eucl_mod(x,y)))))
+
+axiom Div_bound1 :
+  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) ->
+  ((0 <= safe_eucl_div(x,y)) and (safe_eucl_div(x,y) <= x))))
+
+axiom Mod_bound1 :
+  (forall x:int. forall y:int. ((not (y = 0)) ->
+  ((0 <= safe_eucl_mod(x,y)) and (safe_eucl_mod(x,y) <  abs(y)))))
+
+axiom Mod_11 : (forall x:int. (safe_eucl_mod(x,1) = 0))
+
+axiom Div_11 : (forall x:int. (safe_eucl_div(x,1) = x))
+
+axiom Div_inf1 :
+  (forall x:int. forall y:int. (((0 <= x) and (x <  y)) ->
+  (safe_eucl_div(x,y) = 0)))
+
+axiom Div_inf_neg :
+  (forall x:int. forall y:int. (((0 <  x) and (x <= y)) ->
+  (safe_eucl_div((-x),y) = (-1))))
+
+axiom Mod_0 : (forall y:int. ((not (y = 0)) -> (safe_eucl_mod(0,y) = 0)))
+
+axiom Div_1_left : (forall y:int. ((1 <  y) -> (safe_eucl_div(1,y) = 0)))
+
+axiom Div_minus1_left :
+  (forall y:int. ((1 <  y) -> (safe_eucl_div((-1),y) = (-1))))
+
+axiom Mod_1_left : (forall y:int. ((1 <  y) -> (safe_eucl_mod(1,y) = 1)))
+
+axiom Mod_minus1_left :
+  (forall y:int [safe_eucl_mod((-1),y)]. ((1 <  y) ->
+  (safe_eucl_mod((-1),y) = (y - 1))))
+
+axiom Div_mult1 :
+  (forall x:int. forall y:int. forall z:int [safe_eucl_div(((x * y) + z),x)].
+  ((0 <  x) -> (safe_eucl_div(((x * y) + z),x) = (y + safe_eucl_div(z,x)))))
+
+axiom Mod_mult1 :
+  (forall x:int. forall y:int. forall z:int [safe_eucl_mod(((x * y) + z),x)].
+  ((0 <  x) -> (safe_eucl_mod(((x * y) + z),x) = safe_eucl_mod(z,x))))
+
+logic mod : int, int -> int
+
+axiom mod_def :
+  (forall x:int. forall y:int [mod(x, y)]. (((0 <  y) -> (mod(x,
+  y) = safe_eucl_mod(x,y))) and ((not (0 <  y)) -> (mod(x,
+  y) = (safe_eucl_mod(x,y) + y)))))
+
+type 'a map
+
+logic get : 'a map, int -> 'a
+
+logic set : 'a map, int, 'a -> 'a map
+
+axiom Select_eq :
+  (forall m:'a map.
+  (forall i:int.
+  (forall a1:'a [set(m, i, a1)]. (get(set(m, i, a1), i) = a1))))
+
+axiom Select_neq :
+  (forall m:'a map.
+  (forall i:int. forall j:int.
+  (forall a1:'a [get(set(m, i, a1), j)| set(m, i, a1), get(m, j)].
+  ((not (i = j)) -> (get(set(m, i, a1), j) = get(m, j))))))
+
+logic bool_eq1 : 'a map, int, int, 'a map, int, int -> bool
+
+axiom T__ada_array___equal_def :
+  (forall a:'a1 map.
+  (forall af:int.
+  (forall al:int.
+  (forall b:'a1 map.
+  (forall bf:int.
+  (forall bl:int [bool_eq1(a, af, al, b, bf, bl)]. ((((((af <= al) and
+  (((al - af) + 1) = ((bl - bf) + 1))) or ((not (af <= al)) and
+  (bl <  bf))) and
+  (forall i:int [get(a, i)]. (((af <= i) and (i <= al)) -> (get(a,
+  i) = get(b, ((bf - af) + i)))))) -> (bool_eq1(a, af, al, b, bf,
+  bl) = true)) and ((bool_eq1(a, af, al, b, bf, bl) = true) ->
+  ((((af <= al) -> (((al - af) + 1) = ((bl - bf) + 1))) and
+  ((not (af <= al)) -> (bl <  bf))) and
+  (forall i:int [get(a, i)]. (((af <= i) and (i <= al)) -> (get(a,
+  i) = get(b, ((bf - af) + i))))))))))))))
+
+logic slide : 'a map, int, int -> 'a map
+
+axiom slide_eq :
+  (forall a:'a1 map.
+  (forall first:int [slide(a, first, first)]. (slide(a, first, first) = a)))
+
+axiom slide_def :
+  (forall a:'a1 map.
+  (forall old_first:int.
+  (forall new_first:int.
+  (forall i:int [get(slide(a, old_first, new_first), i)]. (get(slide(a,
+  old_first, new_first), i) = get(a, (i - (new_first - old_first))))))))
+
+logic concat : 'a map, int, int, 'a map, int, int -> 'a map
+
+axiom concat_def :
+  (forall a:'a1 map. forall b:'a1 map.
+  (forall a_first:int. forall a_last:int. forall b_first:int.
+  forall b_last:int.
+  (forall i:int [get(concat(a, a_first, a_last, b, b_first, b_last), i)].
+  ((((a_first <= i) and (i <= a_last)) -> (get(concat(a, a_first, a_last, b,
+  b_first, b_last), i) = get(a, i))) and ((a_last <  i) -> (get(concat(a,
+  a_first, a_last, b, b_first, b_last), i) = get(b,
+  (((i - a_last) + b_first) - 1))))))))
+
+logic compare : 'a map, int, int, 'a map, int, int -> int
+
+logic xorb1 : 'a map, int, int, 'a map, int, int -> 'a map
+
+logic andb1 : 'a map, int, int, 'a map, int, int -> 'a map
+
+logic orb1 : 'a map, int, int, 'a map, int, int -> 'a map
+
+logic notb1 : 'a map, int, int -> 'a map
+
+logic singleton : 'a, int -> 'a map
+
+axiom singleton_def :
+  (forall v:'a.
+  (forall i:int [get(singleton(v, i), i)]. (get(singleton(v, i), i) = v)))
+
+type natural
+
+predicate in_range(x: int) = ((0 <= x) and (x <= 2147483647))
+
+logic bool_eq2 : int, int -> bool
+
+axiom bool_eq_def :
+  (forall x:int. forall y:int [bool_eq2(x, y)]. (((x = y) -> (bool_eq2(x,
+  y) = true)) and ((not (x = y)) -> (bool_eq2(x, y) = false))))
+
+logic attr__ATTRIBUTE_IMAGE : int -> us_image
+
+logic attr__ATTRIBUTE_VALUE__pre_check : us_image -> prop
+
+logic attr__ATTRIBUTE_VALUE : us_image -> int
+
+logic to_int : natural -> int
+
+logic of_int : int -> natural
+
+logic user_eq : natural, natural -> bool
+
+axiom inversion_axiom :
+  (forall x:natural [to_int(x)]. (of_int(to_int(x)) = x))
+
+logic dummy : natural
+
+axiom range_axiom : (forall x:natural. in_range(to_int(x)))
+
+axiom coerce_axiom :
+  (forall x:int [to_int(of_int(x))]. (in_range(x) ->
+  (to_int(of_int(x)) = x)))
+
+type tdigit_index_typeB
+
+predicate in_range1(x: int) = (((-2147483648) <= x) and (x <= 2147483647))
+
+logic attr__ATTRIBUTE_IMAGE1 : int -> us_image
+
+logic attr__ATTRIBUTE_VALUE__pre_check1 : us_image -> prop
+
+logic attr__ATTRIBUTE_VALUE1 : us_image -> int
+
+logic to_int1 : tdigit_index_typeB -> int
+
+logic of_int1 : int -> tdigit_index_typeB
+
+logic user_eq1 : tdigit_index_typeB, tdigit_index_typeB -> bool
+
+axiom inversion_axiom1 :
+  (forall x:tdigit_index_typeB [to_int1(x)]. (of_int1(to_int1(x)) = x))
+
+logic dummy1 : tdigit_index_typeB
+
+axiom range_axiom1 : (forall x:tdigit_index_typeB. in_range1(to_int1(x)))
+
+axiom coerce_axiom1 :
+  (forall x:int [to_int1(of_int1(x))]. (in_range1(x) ->
+  (to_int1(of_int1(x)) = x)))
+
+type digit_index_type
+
+predicate in_range2(x: int) = ((1 <= x) and (x <= 2147483647))
+
+logic attr__ATTRIBUTE_IMAGE2 : int -> us_image
+
+logic attr__ATTRIBUTE_VALUE__pre_check2 : us_image -> prop
+
+logic attr__ATTRIBUTE_VALUE2 : us_image -> int
+
+logic to_int2 : digit_index_type -> int
+
+logic of_int2 : int -> digit_index_type
+
+logic user_eq2 : digit_index_type, digit_index_type -> bool
+
+axiom inversion_axiom2 :
+  (forall x:digit_index_type [to_int2(x)]. (of_int2(to_int2(x)) = x))
+
+logic dummy2 : digit_index_type
+
+axiom range_axiom2 : (forall x:digit_index_type. in_range2(to_int2(x)))
+
+axiom coerce_axiom2 :
+  (forall x:int [to_int2(of_int2(x))]. (in_range2(x) ->
+  (to_int2(of_int2(x)) = x)))
+
+type octet
+
+predicate in_range3(x: int) = ((0 <= x) and (x <= 255))
+
+logic attr__ATTRIBUTE_IMAGE3 : int -> us_image
+
+logic attr__ATTRIBUTE_VALUE__pre_check3 : us_image -> prop
+
+logic attr__ATTRIBUTE_VALUE3 : us_image -> int
+
+logic to_int3 : octet -> int
+
+logic of_int3 : int -> octet
+
+logic user_eq3 : octet, octet -> bool
+
+axiom inversion_axiom3 :
+  (forall x:octet [to_int3(x)]. (of_int3(to_int3(x)) = x))
+
+logic dummy3 : octet
+
+axiom range_axiom3 : (forall x:octet. in_range3(to_int3(x)))
+
+axiom coerce_axiom3 :
+  (forall x:int [to_int3(of_int3(x))].
+  (to_int3(of_int3(x)) = safe_eucl_mod(x,256)))
+
+predicate dynamic_property(first: int, last: int, x: int) = ((first <= x) and
+  (x <= last))
+
+logic dummy4 : tdigit_index_typeB
+
+type t
+
+logic first : t -> tdigit_index_typeB
+
+logic last : t -> tdigit_index_typeB
+
+logic mk : int, int -> t
+
+axiom mk_def :
+  (forall f:int. forall l:int [mk(f, l)]. (in_range1(f) -> (in_range1(l) ->
+  ((to_int1(first(mk(f, l))) = f) and (to_int1(last(mk(f, l))) = l)))))
+
+predicate dynamic_property1(range_first: int, range_last: int, low: int,
+  high: int) = (in_range1(low) and (in_range1(high) and ((low <= high) ->
+  (dynamic_property(range_first, range_last, low) and
+  dynamic_property(range_first, range_last, high)))))
+
+type us_t
+
+logic mk___t : octet map, t -> us_t
+
+logic elts : us_t -> octet map
+
+axiom elts_def : (forall u:octet map. forall u1:t. (elts(mk___t(u, u1)) = u))
+
+logic rt : us_t -> t
+
+axiom rt_def : (forall u:octet map. forall u1:t. (rt(mk___t(u, u1)) = u1))
+
+axiom us_t_inversion :
+  (forall u:us_t [elts(u)| rt(u)]. (u = mk___t(elts(u), rt(u))))
+
+function of_array(a: octet map, f: int, l: int) : us_t = mk___t(a, mk(f, l))
+
+function first1(a: us_t) : int = to_int1(first(rt(a)))
+
+function last1(a: us_t) : int = to_int1(last(rt(a)))
+
+logic length : us_t -> int
+
+axiom length_def :
+  (forall a:us_t [length(a)]. (((first1(a) <= last1(a)) ->
+  (length(a) = ((last1(a) - first1(a)) + 1))) and
+  ((not (first1(a) <= last1(a))) -> (length(a) = 0))))
+
+function bool_eq3(x: us_t, y: us_t) : bool = bool_eq1(elts(x),
+  to_int1(first(rt(x))), to_int1(last(rt(x))), elts(y),
+  to_int1(first(rt(y))), to_int1(last(rt(y))))
+
+logic user_eq4 : us_t, us_t -> bool
+
+logic dummy5 : octet map
+
+logic dummy6 : t
+
+axiom compare_def :
+  (forall a:octet map. forall b:octet map.
+  (forall a_first:int. forall a_last:int. forall b_first:int.
+  forall b_last:int [compare(a, a_first, a_last, b, b_first, b_last)].
+  (((compare(a, a_first, a_last, b, b_first, b_last) = 0) <-> (bool_eq1(a,
+  a_first, a_last, b, b_first, b_last) = true)) and (((compare(a, a_first,
+  a_last, b, b_first, b_last) <  0) <->
+  (exists i:int. exists j:int. ((i <= a_last) and ((j <  b_last) and
+  ((bool_eq1(a, a_first, i, b, b_first, j) = true) and ((i = a_last) or
+  ((i <  a_last) and (to_int3(get(a, (i + 1))) <  to_int3(get(b,
+  (j + 1))))))))))) and ((0 <  compare(a, a_first, a_last, b, b_first,
+  b_last)) <->
+  (exists i:int. exists j:int. ((i <= b_last) and ((j <  a_last) and
+  ((bool_eq1(a, a_first, j, b, b_first, i) = true) and ((i = b_last) or
+  ((i <  b_last) and (to_int3(get(b, (i + 1))) <  to_int3(get(a,
+  (j + 1)))))))))))))))
+
+type us_split_discrs
+
+logic mk___split_discrs : digit_index_type -> us_split_discrs
+
+logic rec__digit_length : us_split_discrs -> digit_index_type
+
+axiom rec__digit_length_def :
+  (forall u:digit_index_type. (rec__digit_length(mk___split_discrs(u)) = u))
+
+axiom us_split_discrs_inversion :
+  (forall u:us_split_discrs [rec__digit_length(u)].
+  (u = mk___split_discrs(rec__digit_length(u))))
+
+type us_split_fields
+
+logic mk___split_fields : us_t -> us_split_fields
+
+logic rec__long_digits : us_split_fields -> us_t
+
+axiom rec__long_digits_def :
+  (forall u:us_t. (rec__long_digits(mk___split_fields(u)) = u))
+
+axiom us_split_fields_inversion :
+  (forall u:us_split_fields [rec__long_digits(u)].
+  (u = mk___split_fields(rec__long_digits(u))))
+
+type very_long
+
+logic mk_very_long : us_split_discrs, us_split_fields -> very_long
+
+logic us_split_discrs1 : very_long -> us_split_discrs
+
+axiom us_split_discrs_def :
+  (forall u:us_split_discrs. forall u1:us_split_fields.
+  (us_split_discrs1(mk_very_long(u, u1)) = u))
+
+logic us_split_fields1 : very_long -> us_split_fields
+
+axiom us_split_fields_def :
+  (forall u:us_split_discrs. forall u1:us_split_fields.
+  (us_split_fields1(mk_very_long(u, u1)) = u1))
+
+axiom very_long_inversion :
+  (forall u:very_long [us_split_discrs1(u)| us_split_fields1(u)].
+  (u = mk_very_long(us_split_discrs1(u), us_split_fields1(u))))
+
+logic bool_eq4 : very_long, very_long -> bool
+
+axiom bool_eq_def1 :
+  (forall a:very_long. forall b:very_long [bool_eq4(a, b)].
+  ((((to_int2(rec__digit_length(us_split_discrs1(a))) = to_int2(rec__digit_length(us_split_discrs1(b)))) and
+  (bool_eq3(rec__long_digits(us_split_fields1(a)),
+  rec__long_digits(us_split_fields1(b))) = true)) -> (bool_eq4(a,
+  b) = true)) and
+  ((not ((to_int2(rec__digit_length(us_split_discrs1(a))) = to_int2(rec__digit_length(us_split_discrs1(b)))) and
+  (bool_eq3(rec__long_digits(us_split_fields1(a)),
+  rec__long_digits(us_split_fields1(b))) = true))) -> (bool_eq4(a,
+  b) = false))))
+
+logic user_eq5 : very_long, very_long -> bool
+
+logic dummy7 : digit_index_type
+
+logic dummy8 : octet map
+
+logic dummy9 : t
+
+logic number : natural
+
+logic digit_length : digit_index_type
+
+predicate dynamic_property2(first2: int, last2: int, x: int) =
+  ((first2 <= x) and (x <= last2))
+
+logic dummy10 : tdigit_index_typeB
+
+type t1
+
+logic first2 : t1 -> tdigit_index_typeB
+
+logic last2 : t1 -> tdigit_index_typeB
+
+logic mk1 : int, int -> t1
+
+axiom mk_def1 :
+  (forall f:int. forall l:int [mk1(f, l)]. (in_range1(f) -> (in_range1(l) ->
+  ((to_int1(first2(mk1(f, l))) = f) and (to_int1(last2(mk1(f, l))) = l)))))
+
+predicate dynamic_property3(range_first: int, range_last: int, low: int,
+  high: int) = (in_range1(low) and (in_range1(high) and ((low <= high) ->
+  (dynamic_property2(range_first, range_last, low) and
+  dynamic_property2(range_first, range_last, high)))))
+
+type us_t1
+
+logic mk___t1 : octet map, t1 -> us_t1
+
+logic elts1 : us_t1 -> octet map
+
+axiom elts_def1 :
+  (forall u:octet map. forall u1:t1. (elts1(mk___t1(u, u1)) = u))
+
+logic rt1 : us_t1 -> t1
+
+axiom rt_def1 :
+  (forall u:octet map. forall u1:t1. (rt1(mk___t1(u, u1)) = u1))
+
+axiom us_t_inversion1 :
+  (forall u:us_t1 [elts1(u)| rt1(u)]. (u = mk___t1(elts1(u), rt1(u))))
+
+function of_array1(a: octet map, f: int, l: int) : us_t1 = mk___t1(a, mk1(f,
+  l))
+
+function first3(a: us_t1) : int = to_int1(first2(rt1(a)))
+
+function last3(a: us_t1) : int = to_int1(last2(rt1(a)))
+
+logic length1 : us_t1 -> int
+
+axiom length_def1 :
+  (forall a:us_t1 [length1(a)]. (((first3(a) <= last3(a)) ->
+  (length1(a) = ((last3(a) - first3(a)) + 1))) and
+  ((not (first3(a) <= last3(a))) -> (length1(a) = 0))))
+
+function bool_eq5(x: us_t1, y: us_t1) : bool = bool_eq1(elts1(x),
+  to_int1(first2(rt1(x))), to_int1(last2(rt1(x))), elts1(y),
+  to_int1(first2(rt1(y))), to_int1(last2(rt1(y))))
+
+logic user_eq6 : us_t1, us_t1 -> bool
+
+logic dummy11 : octet map
+
+logic dummy12 : t1
+
+axiom compare_def1 :
+  (forall a:octet map. forall b:octet map.
+  (forall a_first:int. forall a_last:int. forall b_first:int.
+  forall b_last:int [compare(a, a_first, a_last, b, b_first, b_last)].
+  (((compare(a, a_first, a_last, b, b_first, b_last) = 0) <-> (bool_eq1(a,
+  a_first, a_last, b, b_first, b_last) = true)) and (((compare(a, a_first,
+  a_last, b, b_first, b_last) <  0) <->
+  (exists i:int. exists j:int. ((i <= a_last) and ((j <  b_last) and
+  ((bool_eq1(a, a_first, i, b, b_first, j) = true) and ((i = a_last) or
+  ((i <  a_last) and (to_int3(get(a, (i + 1))) <  to_int3(get(b,
+  (j + 1))))))))))) and ((0 <  compare(a, a_first, a_last, b, b_first,
+  b_last)) <->
+  (exists i:int. exists j:int. ((i <= b_last) and ((j <  a_last) and
+  ((bool_eq1(a, a_first, j, b, b_first, i) = true) and ((i = b_last) or
+  ((i <  b_last) and (to_int3(get(b, (i + 1))) <  to_int3(get(a,
+  (j + 1)))))))))))))))
+
+type us_split_fields2
+
+logic mk___split_fields1 : us_t1 -> us_split_fields2
+
+logic rec__long_digits1 : us_split_fields2 -> us_t1
+
+axiom rec__long_digits_def1 :
+  (forall u:us_t1. (rec__long_digits1(mk___split_fields1(u)) = u))
+
+axiom us_split_fields_inversion1 :
+  (forall u:us_split_fields2 [rec__long_digits1(u)].
+  (u = mk___split_fields1(rec__long_digits1(u))))
+
+type tresultS
+
+logic mk_tresultS : us_split_discrs, us_split_fields2 -> tresultS
+
+logic us_split_discrs2 : tresultS -> us_split_discrs
+
+axiom us_split_discrs_def1 :
+  (forall u:us_split_discrs. forall u1:us_split_fields2.
+  (us_split_discrs2(mk_tresultS(u, u1)) = u))
+
+logic us_split_fields3 : tresultS -> us_split_fields2
+
+axiom us_split_fields_def1 :
+  (forall u:us_split_discrs. forall u1:us_split_fields2.
+  (us_split_fields3(mk_tresultS(u, u1)) = u1))
+
+axiom tresultS_inversion :
+  (forall u:tresultS [us_split_discrs2(u)| us_split_fields3(u)].
+  (u = mk_tresultS(us_split_discrs2(u), us_split_fields3(u))))
+
+logic extract__ext__ : us_private -> us_private
+
+logic hide_ext__ : us_private -> us_private
+
+function to_base(a: tresultS) : very_long =
+  mk_very_long(mk___split_discrs(rec__digit_length(us_split_discrs2(a))),
+  mk___split_fields(of_array(elts1(rec__long_digits1(us_split_fields3(a))),
+  first3(rec__long_digits1(us_split_fields3(a))),
+  last3(rec__long_digits1(us_split_fields3(a))))))
+
+function of_base(a: very_long) : tresultS =
+  mk_tresultS(mk___split_discrs(rec__digit_length(us_split_discrs1(a))),
+  mk___split_fields1(of_array1(elts(rec__long_digits(us_split_fields1(a))),
+  first1(rec__long_digits(us_split_fields1(a))),
+  last1(rec__long_digits(us_split_fields1(a))))))
+
+logic bool_eq6 : tresultS, tresultS -> bool
+
+axiom bool_eq_def2 :
+  (forall a:tresultS. forall b:tresultS [bool_eq6(a, b)].
+  ((((to_int2(rec__digit_length(us_split_discrs2(a))) = to_int2(rec__digit_length(us_split_discrs2(b)))) and
+  (bool_eq5(rec__long_digits1(us_split_fields3(a)),
+  rec__long_digits1(us_split_fields3(b))) = true)) -> (bool_eq6(a,
+  b) = true)) and
+  ((not ((to_int2(rec__digit_length(us_split_discrs2(a))) = to_int2(rec__digit_length(us_split_discrs2(b)))) and
+  (bool_eq5(rec__long_digits1(us_split_fields3(a)),
+  rec__long_digits1(us_split_fields3(b))) = true))) -> (bool_eq6(a,
+  b) = false))))
+
+logic user_eq7 : tresultS, tresultS -> bool
+
+predicate in_range4(rec__digit_length1: int, a: very_long) =
+  (rec__digit_length1 = to_int2(rec__digit_length(us_split_discrs1(a))))
+
+logic dummy13 : digit_index_type
+
+logic dummy14 : octet map
+
+logic dummy15 : t1
+
+predicate dynamic_property4(first4: int, last4: int, x: int) =
+  ((first4 <= x) and (x <= last4))
+
+logic dummy16 : tdigit_index_typeB
+
+type t2
+
+logic first4 : t2 -> tdigit_index_typeB
+
+logic last4 : t2 -> tdigit_index_typeB
+
+logic mk2 : int, int -> t2
+
+axiom mk_def2 :
+  (forall f:int. forall l:int [mk2(f, l)]. (in_range1(f) -> (in_range1(l) ->
+  ((to_int1(first4(mk2(f, l))) = f) and (to_int1(last4(mk2(f, l))) = l)))))
+
+predicate dynamic_property5(range_first: int, range_last: int, low: int,
+  high: int) = (in_range1(low) and (in_range1(high) and ((low <= high) ->
+  (dynamic_property4(range_first, range_last, low) and
+  dynamic_property4(range_first, range_last, high)))))
+
+type us_t2
+
+logic mk___t2 : octet map, t2 -> us_t2
+
+logic elts2 : us_t2 -> octet map
+
+axiom elts_def2 :
+  (forall u:octet map. forall u1:t2. (elts2(mk___t2(u, u1)) = u))
+
+logic rt2 : us_t2 -> t2
+
+axiom rt_def2 :
+  (forall u:octet map. forall u1:t2. (rt2(mk___t2(u, u1)) = u1))
+
+axiom us_t_inversion2 :
+  (forall u:us_t2 [elts2(u)| rt2(u)]. (u = mk___t2(elts2(u), rt2(u))))
+
+function of_array2(a: octet map, f: int, l: int) : us_t2 = mk___t2(a, mk2(f,
+  l))
+
+function first5(a: us_t2) : int = to_int1(first4(rt2(a)))
+
+function last5(a: us_t2) : int = to_int1(last4(rt2(a)))
+
+logic length2 : us_t2 -> int
+
+axiom length_def2 :
+  (forall a:us_t2 [length2(a)]. (((first5(a) <= last5(a)) ->
+  (length2(a) = ((last5(a) - first5(a)) + 1))) and
+  ((not (first5(a) <= last5(a))) -> (length2(a) = 0))))
+
+function bool_eq7(x: us_t2, y: us_t2) : bool = bool_eq1(elts2(x),
+  to_int1(first4(rt2(x))), to_int1(last4(rt2(x))), elts2(y),
+  to_int1(first4(rt2(y))), to_int1(last4(rt2(y))))
+
+logic user_eq8 : us_t2, us_t2 -> bool
+
+logic dummy17 : octet map
+
+logic dummy18 : t2
+
+axiom compare_def2 :
+  (forall a:octet map. forall b:octet map.
+  (forall a_first:int. forall a_last:int. forall b_first:int.
+  forall b_last:int [compare(a, a_first, a_last, b, b_first, b_last)].
+  (((compare(a, a_first, a_last, b, b_first, b_last) = 0) <-> (bool_eq1(a,
+  a_first, a_last, b, b_first, b_last) = true)) and (((compare(a, a_first,
+  a_last, b, b_first, b_last) <  0) <->
+  (exists i:int. exists j:int. ((i <= a_last) and ((j <  b_last) and
+  ((bool_eq1(a, a_first, i, b, b_first, j) = true) and ((i = a_last) or
+  ((i <  a_last) and (to_int3(get(a, (i + 1))) <  to_int3(get(b,
+  (j + 1))))))))))) and ((0 <  compare(a, a_first, a_last, b, b_first,
+  b_last)) <->
+  (exists i:int. exists j:int. ((i <= b_last) and ((j <  a_last) and
+  ((bool_eq1(a, a_first, j, b, b_first, i) = true) and ((i = b_last) or
+  ((i <  b_last) and (to_int3(get(b, (i + 1))) <  to_int3(get(a,
+  (j + 1)))))))))))))))
+
+logic r4b : tdigit_index_typeB
+
+predicate dynamic_property6(first6: int, last6: int, x: int) =
+  ((first6 <= x) and (x <= last6))
+
+logic dummy19 : tdigit_index_typeB
+
+logic temp___standard__very_longs_2 : octet -> us_t2
+
+axiom def_axiom :
+  (forall temp___standard__very_longs_4:octet
+  [temp___standard__very_longs_2(temp___standard__very_longs_4)].
+  (forall temp___standard__very_longs_5:int.
+  (get(elts2(temp___standard__very_longs_2(temp___standard__very_longs_4)),
+  temp___standard__very_longs_5) = temp___standard__very_longs_4)))
+
+ (* File "/Users/moy/tns/N715-044/gnatprove/very_longs/../very_longs.mlw", line 1644, characters 5-8 *)
+goal WP_parameter_def :
+  (forall first6:tdigit_index_typeB. forall last6:tdigit_index_typeB.
+  forall result__:digit_index_type. forall result__1:octet map.
+  forall result__2:t1. forall index:int. forall o:octet.
+  forall temp___standard__very_longs_6:octet map.
+  forall temp___standard__very_longs_61:t2.
+  forall temp___standard__very_longs_7:octet map.
+  forall temp___standard__very_longs_71:t2.
+  forall temp___standard__very_longs_8:octet map.
+  forall temp___standard__very_longs_81:t1. forall o1:octet map.
+  forall o2:t1. forall o3:octet map. forall o4:t1.
+  forall o5:digit_index_type. forall o6:octet map. forall o7:t1.
+  forall very_longs__make_from_natural__L_1__R4b__assume:tdigit_index_typeB.
+  forall o8:octet. forall o9:int. forall o10:octet map. forall o11:octet map.
+  forall o12:t1. forall o13:octet map. forall o14:t1.
+  forall o15:digit_index_type. forall o16:octet map. forall o17:t1.
+  forall o18:natural. forall result__3:digit_index_type.
+  forall result__4:octet map. forall result__5:t1. forall temp:natural.
+  forall index1:int. forall result__6:digit_index_type.
+  forall result__7:octet map. forall result__8:t1. forall temp1:natural.
+  forall index2:int. forall result__9:digit_index_type.
+  forall result__10:octet map. forall result__11:t1. forall temp2:natural.
+  forall index3:int. forall result__12:digit_index_type.
+  forall result__13:octet map. forall result__14:t1. forall temp3:natural.
+  forall index4:int. forall result__15:digit_index_type.
+  forall result__16:octet map. forall result__17:t1. forall temp4:natural.
+  forall index5:int.
+  forall very_longs__make_from_natural__result:digit_index_type.
+  forall very_longs__make_from_natural__result1:octet map.
+  forall very_longs__make_from_natural__result2:t.
+  forall result__18:digit_index_type. forall result__19:octet map.
+  forall result__20:t1. forall temp5:natural. forall index6:int.
+  forall very_longs__make_from_natural__result3:digit_index_type.
+  forall very_longs__make_from_natural__result4:octet map.
+  forall very_longs__make_from_natural__result5:t.
+  forall result__21:digit_index_type. forall result__22:octet map.
+  forall result__23:t1. forall temp6:natural. forall index7:int.
+  forall very_longs__make_from_natural__result6:digit_index_type.
+  forall very_longs__make_from_natural__result7:octet map.
+  forall very_longs__make_from_natural__result8:t.
+  (forall result:digit_index_type. forall result1:octet map.
+  forall result2:t.
+  (((((to_int2(digit_length) = to_int2(rec__digit_length(us_split_discrs1(to_base(mk_tresultS(mk___split_discrs(result__),
+  mk___split_fields1(mk___t1(result__1, result__2)))))))) and
+  (dynamic_property3(1, to_int2(digit_length), to_int1(first2(result__2)),
+  to_int1(last2(result__2))) and ((to_int1(first2(result__2)) = 1) and
+  (to_int1(last2(result__2)) = to_int2(digit_length))))) and
+  dynamic_property6(to_int1(first6), to_int1(last6), index)) and
+  ((((result__ = digit_length) and
+  ((((((very_longs__make_from_natural__result3 = very_longs__make_from_natural__result) and
+  ((very_longs__make_from_natural__result4 = very_longs__make_from_natural__result1) and
+  (very_longs__make_from_natural__result5 = very_longs__make_from_natural__result2))) and
+  ((mk_ref(index6) = mk_ref(index4)) and ((mk_ref(temp5) = mk_ref(temp3)) and
+  (mk_ref(mk_tresultS(mk___split_discrs(result__18),
+  mk___split_fields1(mk___t1(result__19,
+  result__20)))) = mk_ref(mk_tresultS(mk___split_discrs(result__12),
+  mk___split_fields1(mk___t1(result__13, result__14)))))))) and
+  ((mk_very_long(mk___split_discrs(very_longs__make_from_natural__result6),
+  mk___split_fields(mk___t(very_longs__make_from_natural__result7,
+  very_longs__make_from_natural__result8))) = mk_very_long(mk___split_discrs(very_longs__make_from_natural__result),
+  mk___split_fields(mk___t(very_longs__make_from_natural__result1,
+  very_longs__make_from_natural__result2)))) and ((index7 = index5) and
+  ((temp6 = temp4) and (mk_tresultS(mk___split_discrs(result__21),
+  mk___split_fields1(mk___t1(result__22,
+  result__23))) = mk_tresultS(mk___split_discrs(result__15),
+  mk___split_fields1(mk___t1(result__16, result__17)))))))) and
+  (((((((((to_int3(o) = 0) and (mk___t2(temp___standard__very_longs_6,
+  temp___standard__very_longs_61) = temp___standard__very_longs_2(o))) and
+  ((to_int1(first4(temp___standard__very_longs_61)) = 1) and
+  ((to_int1(last4(temp___standard__very_longs_61)) = to_int2(digit_length)) and
+  (mk___t2(temp___standard__very_longs_7,
+  temp___standard__very_longs_71) = mk___t2(temp___standard__very_longs_6,
+  temp___standard__very_longs_61))))) and
+  ((((to_int1(first4(temp___standard__very_longs_71)) <= to_int1(last4(temp___standard__very_longs_71))) and
+  (((1 <= to_int2(digit_length)) and
+  (((to_int1(last4(temp___standard__very_longs_71)) - to_int1(first4(temp___standard__very_longs_71))) + 1) = ((to_int2(digit_length) - 1) + 1))) or
+  ((not (1 <= to_int2(digit_length))) and
+  (((to_int1(last4(temp___standard__very_longs_71)) - to_int1(first4(temp___standard__very_longs_71))) + 1) = 0)))) or
+  ((not (to_int1(first4(temp___standard__very_longs_71)) <= to_int1(last4(temp___standard__very_longs_71)))) and
+  (((1 <= to_int2(digit_length)) and
+  (0 = ((to_int2(digit_length) - 1) + 1))) or
+  ((not (1 <= to_int2(digit_length))) and true)))) and
+  ((temp___standard__very_longs_7 = temp___standard__very_longs_8) and
+  (mk1(to_int1(first4(temp___standard__very_longs_71)),
+  to_int1(last4(temp___standard__very_longs_71))) = temp___standard__very_longs_81)))) and
+  ((((to_int1(first2(temp___standard__very_longs_81)) <= to_int1(last2(temp___standard__very_longs_81))) and
+  (((to_int1(first2(result__2)) <= to_int1(last2(result__2))) and
+  (((to_int1(last2(temp___standard__very_longs_81)) - to_int1(first2(temp___standard__very_longs_81))) + 1) = ((to_int1(last2(result__2)) - to_int1(first2(result__2))) + 1))) or
+  ((not (to_int1(first2(result__2)) <= to_int1(last2(result__2)))) and
+  (((to_int1(last2(temp___standard__very_longs_81)) - to_int1(first2(temp___standard__very_longs_81))) + 1) = 0)))) or
+  ((not (to_int1(first2(temp___standard__very_longs_81)) <= to_int1(last2(temp___standard__very_longs_81)))) and
+  (((to_int1(first2(result__2)) <= to_int1(last2(result__2))) and
+  (0 = ((to_int1(last2(result__2)) - to_int1(first2(result__2))) + 1))) or
+  ((not (to_int1(first2(result__2)) <= to_int1(last2(result__2)))) and
+  true)))) and (mk___t1(o1, o2) = mk___t1(temp___standard__very_longs_8,
+  temp___standard__very_longs_81)))) and ((o3 = o1) and (o4 = o2))) and
+  ((result__ = o5) and ((o6 = o3) and (o7 = o4)))) and
+  (mk_tresultS(mk___split_discrs(result__3),
+  mk___split_fields1(mk___t1(result__4,
+  result__5))) = mk_tresultS(mk___split_discrs(o5),
+  mk___split_fields1(mk___t1(o6, o7))))) and ((temp = number) and
+  (((to_int1(very_longs__make_from_natural__L_1__R4b__assume) = to_int1(last2(result__5))) and
+  (very_longs__make_from_natural__L_1__R4b__assume = r4b)) and
+  (((index1 = 1) and ((((1 <= index1) and (index1 <= to_int1(r4b))) and
+  (((((to_int2(digit_length) = to_int2(rec__digit_length(us_split_discrs1(to_base(mk_tresultS(mk___split_discrs(result__6),
+  mk___split_fields1(mk___t1(result__7, result__8)))))))) and
+  (dynamic_property3(1, to_int2(digit_length), to_int1(first2(result__8)),
+  to_int1(last2(result__8))) and ((to_int1(first2(result__8)) = 1) and
+  (to_int1(last2(result__8)) = to_int2(digit_length))))) and
+  ((1 <= index2) and (index2 <= to_int1(r4b)))) and
+  (((((((to_int3(o8) = safe_comp_mod(to_int(temp1),256)) and
+  ((((to_int1(first2(result__8)) <= index2) and
+  (index2 <= to_int1(last2(result__8)))) and (o9 = index2)) and
+  (o10 = set(result__7, o9, o8)))) and ((o10 = o11) and
+  (result__8 = o12))) and ((o13 = o11) and (o14 = o12))) and
+  ((result__6 = o15) and ((o16 = o13) and (o17 = o14)))) and
+  (mk_tresultS(mk___split_discrs(result__9),
+  mk___split_fields1(mk___t1(result__10,
+  result__11))) = mk_tresultS(mk___split_discrs(o15),
+  mk___split_fields1(mk___t1(o16, o17))))) and
+  (((to_int(o18) = safe_comp_div(to_int(temp1),256)) and (temp2 = o18)) and
+  ((index3 = (index2 + 1)) and (not (index3 <= to_int1(r4b))))))) and
+  (((index3 = index4) and ((temp2 = temp3) and ((result__12 = result__9) and
+  ((result__13 = result__10) and (result__14 = result__11))))) and
+  ((index5 = index3) and ((temp4 = temp2) and
+  (mk_tresultS(mk___split_discrs(result__15),
+  mk___split_fields1(mk___t1(result__16,
+  result__17))) = mk_tresultS(mk___split_discrs(result__9),
+  mk___split_fields1(mk___t1(result__10, result__11))))))))) or
+  ((not ((1 <= index1) and (index1 <= to_int1(r4b)))) and
+  (((index1 = index4) and ((temp = temp3) and ((result__12 = result__3) and
+  ((result__13 = result__4) and (result__14 = result__5))))) and
+  ((index5 = index1) and ((temp4 = temp) and
+  (mk_tresultS(mk___split_discrs(result__15),
+  mk___split_fields1(mk___t1(result__16,
+  result__17))) = mk_tresultS(mk___split_discrs(result__3),
+  mk___split_fields1(mk___t1(result__4, result__5)))))))))) and
+  ((to_int2(result__12) = to_int2(digit_length)) and
+  (mk_very_long(mk___split_discrs(very_longs__make_from_natural__result),
+  mk___split_fields(mk___t(very_longs__make_from_natural__result1,
+  very_longs__make_from_natural__result2))) = to_base(mk_tresultS(mk___split_discrs(result__12),
+  mk___split_fields1(mk___t1(result__13, result__14))))))))))) or
+  ((((((((((to_int3(o) = 0) and (mk___t2(temp___standard__very_longs_6,
+  temp___standard__very_longs_61) = temp___standard__very_longs_2(o))) and
+  ((to_int1(first4(temp___standard__very_longs_61)) = 1) and
+  ((to_int1(last4(temp___standard__very_longs_61)) = to_int2(digit_length)) and
+  (mk___t2(temp___standard__very_longs_7,
+  temp___standard__very_longs_71) = mk___t2(temp___standard__very_longs_6,
+  temp___standard__very_longs_61))))) and
+  ((((to_int1(first4(temp___standard__very_longs_71)) <= to_int1(last4(temp___standard__very_longs_71))) and
+  (((1 <= to_int2(digit_length)) and
+  (((to_int1(last4(temp___standard__very_longs_71)) - to_int1(first4(temp___standard__very_longs_71))) + 1) = ((to_int2(digit_length) - 1) + 1))) or
+  ((not (1 <= to_int2(digit_length))) and
+  (((to_int1(last4(temp___standard__very_longs_71)) - to_int1(first4(temp___standard__very_longs_71))) + 1) = 0)))) or
+  ((not (to_int1(first4(temp___standard__very_longs_71)) <= to_int1(last4(temp___standard__very_longs_71)))) and
+  (((1 <= to_int2(digit_length)) and
+  (0 = ((to_int2(digit_length) - 1) + 1))) or
+  ((not (1 <= to_int2(digit_length))) and true)))) and
+  ((temp___standard__very_longs_7 = temp___standard__very_longs_8) and
+  (mk1(to_int1(first4(temp___standard__very_longs_71)),
+  to_int1(last4(temp___standard__very_longs_71))) = temp___standard__very_longs_81)))) and
+  ((((to_int1(first2(temp___standard__very_longs_81)) <= to_int1(last2(temp___standard__very_longs_81))) and
+  (((to_int1(first2(result__2)) <= to_int1(last2(result__2))) and
+  (((to_int1(last2(temp___standard__very_longs_81)) - to_int1(first2(temp___standard__very_longs_81))) + 1) = ((to_int1(last2(result__2)) - to_int1(first2(result__2))) + 1))) or
+  ((not (to_int1(first2(result__2)) <= to_int1(last2(result__2)))) and
+  (((to_int1(last2(temp___standard__very_longs_81)) - to_int1(first2(temp___standard__very_longs_81))) + 1) = 0)))) or
+  ((not (to_int1(first2(temp___standard__very_longs_81)) <= to_int1(last2(temp___standard__very_longs_81)))) and
+  (((to_int1(first2(result__2)) <= to_int1(last2(result__2))) and
+  (0 = ((to_int1(last2(result__2)) - to_int1(first2(result__2))) + 1))) or
+  ((not (to_int1(first2(result__2)) <= to_int1(last2(result__2)))) and
+  true)))) and (mk___t1(o1, o2) = mk___t1(temp___standard__very_longs_8,
+  temp___standard__very_longs_81)))) and ((o3 = o1) and (o4 = o2))) and
+  ((result__ = o5) and ((o6 = o3) and (o7 = o4)))) and
+  (mk_tresultS(mk___split_discrs(result__3),
+  mk___split_fields1(mk___t1(result__4,
+  result__5))) = mk_tresultS(mk___split_discrs(o5),
+  mk___split_fields1(mk___t1(o6, o7))))) and ((temp = number) and
+  (((to_int1(very_longs__make_from_natural__L_1__R4b__assume) = to_int1(last2(result__5))) and
+  (very_longs__make_from_natural__L_1__R4b__assume = r4b)) and
+  (((index1 = 1) and ((((1 <= index1) and (index1 <= to_int1(r4b))) and
+  (((((to_int2(digit_length) = to_int2(rec__digit_length(us_split_discrs1(to_base(mk_tresultS(mk___split_discrs(result__6),
+  mk___split_fields1(mk___t1(result__7, result__8)))))))) and
+  (dynamic_property3(1, to_int2(digit_length), to_int1(first2(result__8)),
+  to_int1(last2(result__8))) and ((to_int1(first2(result__8)) = 1) and
+  (to_int1(last2(result__8)) = to_int2(digit_length))))) and
+  ((1 <= index2) and (index2 <= to_int1(r4b)))) and
+  (((((((to_int3(o8) = safe_comp_mod(to_int(temp1),256)) and
+  ((((to_int1(first2(result__8)) <= index2) and
+  (index2 <= to_int1(last2(result__8)))) and (o9 = index2)) and
+  (o10 = set(result__7, o9, o8)))) and ((o10 = o11) and
+  (result__8 = o12))) and ((o13 = o11) and (o14 = o12))) and
+  ((result__6 = o15) and ((o16 = o13) and (o17 = o14)))) and
+  (mk_tresultS(mk___split_discrs(result__9),
+  mk___split_fields1(mk___t1(result__10,
+  result__11))) = mk_tresultS(mk___split_discrs(o15),
+  mk___split_fields1(mk___t1(o16, o17))))) and
+  (((to_int(o18) = safe_comp_div(to_int(temp1),256)) and (temp2 = o18)) and
+  ((index3 = (index2 + 1)) and (not (index3 <= to_int1(r4b))))))) and
+  (((index3 = index4) and ((temp2 = temp3) and ((result__12 = result__9) and
+  ((result__13 = result__10) and (result__14 = result__11))))) and
+  ((index5 = index3) and ((temp4 = temp2) and
+  (mk_tresultS(mk___split_discrs(result__15),
+  mk___split_fields1(mk___t1(result__16,
+  result__17))) = mk_tresultS(mk___split_discrs(result__9),
+  mk___split_fields1(mk___t1(result__10, result__11))))))))) or
+  ((not ((1 <= index1) and (index1 <= to_int1(r4b)))) and
+  (((index1 = index4) and ((temp = temp3) and ((result__12 = result__3) and
+  ((result__13 = result__4) and (result__14 = result__5))))) and
+  ((index5 = index1) and ((temp4 = temp) and
+  (mk_tresultS(mk___split_discrs(result__15),
+  mk___split_fields1(mk___t1(result__16,
+  result__17))) = mk_tresultS(mk___split_discrs(result__3),
+  mk___split_fields1(mk___t1(result__4, result__5)))))))))) and
+  ((to_int2(result__12) = to_int2(digit_length)) and false))))) and
+  ((((very_longs__make_from_natural__result3 = very_longs__make_from_natural__result) and
+  ((very_longs__make_from_natural__result4 = very_longs__make_from_natural__result1) and
+  (very_longs__make_from_natural__result5 = very_longs__make_from_natural__result2))) and
+  ((mk_ref(index6) = mk_ref(index4)) and ((mk_ref(temp5) = mk_ref(temp3)) and
+  (mk_ref(mk_tresultS(mk___split_discrs(result__18),
+  mk___split_fields1(mk___t1(result__19,
+  result__20)))) = mk_ref(mk_tresultS(mk___split_discrs(result__12),
+  mk___split_fields1(mk___t1(result__13, result__14)))))))) and
+  ((mk_very_long(mk___split_discrs(very_longs__make_from_natural__result6),
+  mk___split_fields(mk___t(very_longs__make_from_natural__result7,
+  very_longs__make_from_natural__result8))) = mk_very_long(mk___split_discrs(very_longs__make_from_natural__result),
+  mk___split_fields(mk___t(very_longs__make_from_natural__result1,
+  very_longs__make_from_natural__result2)))) and ((index7 = index5) and
+  ((temp6 = temp4) and (mk_tresultS(mk___split_discrs(result__21),
+  mk___split_fields1(mk___t1(result__22,
+  result__23))) = mk_tresultS(mk___split_discrs(result__15),
+  mk___split_fields1(mk___t1(result__16, result__17))))))))))) and
+  ((((very_longs__make_from_natural__result3 = very_longs__make_from_natural__result) and
+  ((very_longs__make_from_natural__result4 = very_longs__make_from_natural__result1) and
+  (very_longs__make_from_natural__result5 = very_longs__make_from_natural__result2))) and
+  ((mk_ref(index4) = mk_ref(index6)) and ((mk_ref(temp3) = mk_ref(temp5)) and
+  (mk_ref(mk_tresultS(mk___split_discrs(result__12),
+  mk___split_fields1(mk___t1(result__13,
+  result__14)))) = mk_ref(mk_tresultS(mk___split_discrs(result__18),
+  mk___split_fields1(mk___t1(result__19, result__20)))))))) and
+  ((mk_very_long(mk___split_discrs(very_longs__make_from_natural__result),
+  mk___split_fields(mk___t(very_longs__make_from_natural__result1,
+  very_longs__make_from_natural__result2))) = mk_very_long(mk___split_discrs(very_longs__make_from_natural__result6),
+  mk___split_fields(mk___t(very_longs__make_from_natural__result7,
+  very_longs__make_from_natural__result8)))) and ((index5 = index7) and
+  ((temp4 = temp6) and (mk_tresultS(mk___split_discrs(result__15),
+  mk___split_fields1(mk___t1(result__16,
+  result__17))) = mk_tresultS(mk___split_discrs(result__21),
+  mk___split_fields1(mk___t1(result__22, result__23))))))))) and
+  ((result = very_longs__make_from_natural__result) and
+  ((result1 = very_longs__make_from_natural__result1) and
+  (result2 = very_longs__make_from_natural__result2))))) ->
+  (to_int2(very_longs__make_from_natural__result) = to_int2(digit_length)))))

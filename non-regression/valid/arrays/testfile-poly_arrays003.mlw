@@ -1,0 +1,13 @@
+
+type a
+logic fi : int -> a
+logic ti : a -> int
+
+axiom Inj : forall x :int [fi(x)]. ti(fi(x))=x
+
+goal g3:
+  forall t1: (a,int) farray.
+  t1[fi(1)<-1,
+     fi(2)<-2,fi(3)<-3,fi(4)<-4,fi(5)<-5,
+     fi(6)<-6,fi(7)<-7,fi(8)<-8,fi(9)<-9,
+     fi(10)<-10][fi(5)] = 5

@@ -1,0 +1,7 @@
+
+goal g13:
+  forall i,j:int.
+  forall a,b : int farray.
+  a=b ->
+  a[i] = b[i<-a[j]][i]
+

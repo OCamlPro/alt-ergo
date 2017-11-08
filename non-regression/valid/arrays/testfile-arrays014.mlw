@@ -1,0 +1,12 @@
+
+
+goal g14 :
+  forall i,j,k:int.
+  forall v,w : 'a.
+  forall b : 'a farray.
+  i = 1 ->
+  j = 2 -> 
+  k = 3 -> 
+  b = b[j<-b[i],k<-w] ->
+  b[i] = b[j]
+

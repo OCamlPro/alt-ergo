@@ -1,0 +1,13 @@
+logic a : (int,int) farray
+logic i, j : int
+logic v, w : int
+
+logic K : int
+
+goal pas_prouve_car_on_ne_voit_pas_l_egalite_des_tableaux :
+  i <> j ->
+  K < i ->
+  K <> j ->
+  a[i <- v][j <- w][K] = 100 ->
+  a[j <- w][i <- v][K] = 200 ->
+  false

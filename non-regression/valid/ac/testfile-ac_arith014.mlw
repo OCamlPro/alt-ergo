@@ -1,0 +1,8 @@
+
+
+logic a,b,c,x:real
+logic ac f : real,real -> real
+goal g14 : 
+  2. * a = 3. * b -> 
+  f(x,2./3. * a) = f(b,x)
+

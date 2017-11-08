@@ -1,0 +1,12 @@
+
+
+type t = A | B
+
+logic f: t , int -> int
+
+goal g8:
+  exists x:t.
+  exists y:int.
+  f(x,y) = f(A,y) and f(x,y) = f(B,y)
+
+    

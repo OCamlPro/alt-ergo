@@ -1,0 +1,4 @@
+
+logic x:int
+goal g5 : x <> 0 -> x/x = 1 
+

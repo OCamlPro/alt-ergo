@@ -1,0 +1,8 @@
+
+logic f:int -> int
+logic g:int,int -> int
+
+axiom a11 : forall x:int. let y = f(x) in  y = 1
+
+goal g11 : f(2) = 1
+

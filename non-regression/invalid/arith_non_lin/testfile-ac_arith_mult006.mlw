@@ -1,0 +1,11 @@
+logic A, B: int
+
+logic x, y : int
+
+goal WP_parameter_def2 :
+  1 <= B <= 3 ->
+  4 <= x <= 4*B ->
+  4*B = (A+B) * x ->
+  y <= 4 ->
+  y = 4*B ->
+  false

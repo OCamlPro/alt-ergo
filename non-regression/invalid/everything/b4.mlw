@@ -1,0 +1,16 @@
+type 'a13 t
+
+logic Nil : int t
+
+logic f : int t, int t -> int t
+logic g : int t -> int t
+
+axiom x :
+  forall l1:int t. forall l2:int t [f(l1, l2)]. 
+  (f(Nil, l2) = l2) and
+  (forall x:int t. (f(Nil, l2) = f(x, l2)))
+
+
+goal WP_tail :
+  f(Nil, g(Nil)) = Nil
+

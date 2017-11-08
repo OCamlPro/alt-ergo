@@ -1,0 +1,16 @@
+
+type b = T | F
+
+logic inter : ('a,b) farray, ('a,b) farray -> ('a,b) farray
+logic fand : b, b -> b
+
+axiom fand : fand(T,T) = T and fand(T,F) = F and fand(F,T) = F and fand(F,F) = F
+
+axiom inter : forall s1,s2:('a,b) farray. forall k: 'a.
+      inter(s1,s2)[k] = fand(s1[k],s2[k])
+
+goal g1 :
+     forall s1,s2 : ('a,b) farray.
+     forall k : 'a.
+     inter(s1,s2)[k] = T ->
+     s1[k] = T and s2[k] = T

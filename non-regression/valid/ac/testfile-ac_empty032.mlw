@@ -1,0 +1,11 @@
+
+
+type a
+logic a,b,c, beta,gamma : a
+logic ac f : a,a -> a
+
+goal g32 : 
+  f(a,b) = gamma ->  
+  beta   = f(a,c) -> 
+  f(b,beta) = f(c,gamma) 
+

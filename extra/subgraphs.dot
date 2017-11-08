@@ -1,0 +1,120 @@
+//############################################################################
+
+//#Why_parser
+subgraph cluster_parsers__why {
+        label="parsers / why";
+        style=filled;
+	color=lightgrey;
+        "Why_parser";
+        "Why_lexer";
+}
+
+
+//# tools / text
+//subgraph cluster_tools__text {
+//        label="tools / text";
+//        style=filled;
+//	color=lightgrey;
+//}
+
+//# tools
+subgraph cluster_tools__text_gui {
+        label="tools / text+gui";
+        style=filled;
+	color=lightgrey;
+        "Main_text";
+        "Main_gui";
+        "Gui_replay";
+        "Gui_session";
+        "Gui_config";
+        "Annoted_ast";
+        "Connected_ast";
+}
+
+//#reasoners
+subgraph cluster_lib__reasoners {
+        label="lib / reasoners";
+        style=filled;
+	color=lightgrey;
+        "Ac";
+        "Arith";
+        "Arrays";
+        "Bitv";
+        "Theory";
+        "Ccx";
+        "Combine";
+        "Intervals";
+        "Inequalities";
+        "IntervalCalculus";
+        "Polynome";
+        "Records";
+        "Sig";
+        "Sum";
+        "Uf";
+        "Use";
+        "Matching";
+        "Instances";
+        "Sat_solver_sig";
+        "Fun_sat";
+        "Sat_solver";
+        "Matching_types";
+}
+
+//#structures
+subgraph cluster_lib__structures {
+        label="lib / structures";
+        style=filled;
+	color=lightgrey;
+        "Exception";
+        "Explanation";
+        "Formula";
+        "Symbols";
+        "Term";
+        "Literal";
+        "Ty";
+        "Parsed";
+        "Typed";
+        "Commands";
+        "Errors";
+        "Fpa_rounding";
+        "Profiling";
+}
+
+//#frontend
+subgraph cluster_lib__frontend {
+        label="lib / frontend";
+        style=filled;
+	color=lightgrey;
+        "Frontend";
+        "Cnf";
+        "Triggers";
+        "Typechecker";
+        "Parsed_interface";
+        "Parsers";
+}
+
+//#util
+subgraph cluster_lib__util {
+        label="lib / util";
+        style=filled;
+	color=lightgrey;
+        "Gc_debug";
+        "Emap";
+        "Options";
+        "Cmdline_parser";
+        "Timers";
+        "Config";
+        "Version";
+        "Util";
+        "Lists";
+        "Loc";
+        "Hconsing";
+        "Hstring";
+        "Numbers";
+        "NumsNumbers";
+        "ZarithNumbers";
+        "NumbersInterface";
+        "MyUnix";
+        "MyZip";
+        "MyDynlink"
+}

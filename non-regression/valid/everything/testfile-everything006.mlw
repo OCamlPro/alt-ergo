@@ -1,0 +1,8 @@
+
+type t
+
+logic c : t
+logic f : t -> t
+logic p,q : t -> prop
+
+goal g6 : p(c) -> forall x:t. x=c -> p(x)

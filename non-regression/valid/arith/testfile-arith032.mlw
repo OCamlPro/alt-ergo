@@ -1,0 +1,4 @@
+
+
+goal g30_1: forall x:int. x<>1 and 1 <= x and  x <= 2  -> x=2 
+

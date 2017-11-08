@@ -1,0 +1,5 @@
+
+type t = A | B | C
+
+goal g6:
+  forall x:t. (x = A or x = B or x = C)

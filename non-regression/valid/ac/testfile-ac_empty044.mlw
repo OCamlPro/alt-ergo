@@ -1,0 +1,12 @@
+
+
+(* une pc car f(a1,a2,a3) = f(b1,b2)*)
+logic a1, a2, a3, b1, b2, y ,beta, gamma : int
+logic ac f : int,int -> int
+
+goal g44 : 
+  f(a1,f(a2,a3)) = gamma ->
+  f(b1,f(b2,y))  = beta   -> (* boucle ici*)
+  f(b1,b2) = f(a1,f(a2,a3)) ->
+  f(gamma,y) = beta
+

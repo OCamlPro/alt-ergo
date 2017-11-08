@@ -1,0 +1,6 @@
+goal A : 
+  forall x : real. forall y : real.
+  0. <= x -> 
+  1. <= y -> 
+  x/y <= 0. ->
+  false

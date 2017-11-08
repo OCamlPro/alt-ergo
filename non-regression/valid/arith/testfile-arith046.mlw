@@ -1,0 +1,6 @@
+
+goal g40 (*sqrt_po_8*):
+  forall x,y:int.
+  x <> 0 ->
+  (x + 1) / 2 = ((x / x) + x) / 2
+

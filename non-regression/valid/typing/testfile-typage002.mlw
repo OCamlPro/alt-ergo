@@ -1,0 +1,5 @@
+
+logic P : 'a -> prop
+axiom a1 : forall x:'a. P(x)
+goal g2: forall a:real. P(a)
+

@@ -1,0 +1,5 @@
+logic f : 'a -> 'a
+
+axiom a : exists x:'a. x = f(x)
+
+goal G : false

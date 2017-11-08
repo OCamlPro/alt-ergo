@@ -1,0 +1,8 @@
+
+logic ite : bool, 'a1, 'a1 -> 'a1
+
+axiom ite_true: (forall x:'a1. (forall y:'a1. (ite(true, x, y) = x)))
+
+axiom ite_false: (forall x:'a1. (forall y:'a1. (ite(false, x, y) = y)))
+
+goal g11 : 1 = if true then 1 else 2

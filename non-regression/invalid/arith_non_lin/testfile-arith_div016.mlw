@@ -1,0 +1,12 @@
+logic f : real -> real
+
+logic P, Q, R : prop
+
+goal invalid_202 :
+  forall a, b: real.
+  forall B, C, D : bool.
+  (*f(0.) = b   -> useless for the proof but, AE says unknown if present *)
+  (f(0.) > 2.)->
+  (0. < a <= 1.) ->
+  f(0.) / a < 2. or (P and Q) ->
+  false

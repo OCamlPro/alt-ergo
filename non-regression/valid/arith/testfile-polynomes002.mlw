@@ -1,0 +1,9 @@
+
+
+goal g2 :
+  forall x,y,z,t:int.
+    0 <= y + z <= 1  -> 
+    x + t + y + z = 1 -> 
+    y + z <> 0 -> 
+    x + t = 0 
+

@@ -1,0 +1,37 @@
+type 'a tableau
+
+logic acc : 'a tableau, int -> 'a
+
+logic upd : 'a tableau, int , 'a -> 'a tableau
+
+axiom acc_upd_neq:
+ forall m : 'a tableau.
+ forall p1:int.
+ forall p2:int.
+ forall a:'a [acc(upd(m, p1, a), p2)].
+ (p1 <> p2) ->(acc(upd(m, p1, a), p2) = acc(m, p2))
+
+type pset
+
+logic pset_singleton : int -> pset
+logic not_in_pset : int, pset -> prop
+logic not_assigns : 'a tableau , 'a tableau , pset -> prop
+
+axiom not_not_in_singleton:
+  (forall p:int [pset_singleton(p)].
+     (not not_in_pset(p, pset_singleton(p))))
+
+axiom a1:
+  forall m1: 'a tableau.
+  forall m2: 'a tableau.
+  forall l: pset. 
+  ( forall p:int.
+    (not_in_pset(p, l) -> (acc(m2, p) = acc(m1, p)))) -> not_assigns(m1,m2,l)
+
+goal g:
+  forall i:int.
+  forall a:'a.
+  forall t1:'a tableau.
+  forall t2:'a tableau.
+  t2 = upd(t1,i,a) -> 
+  not_assigns(t1,t2,pset_singleton(i))

@@ -1,0 +1,6 @@
+
+logic P : int,int -> prop
+
+axiom a: forall i:int[i]. i<>0 -> exists x:int. P(x,i)
+
+goal g2: forall x:int. x>0 -> exists y:int. P(y,x)

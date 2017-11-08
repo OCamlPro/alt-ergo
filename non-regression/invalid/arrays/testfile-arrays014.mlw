@@ -1,0 +1,7 @@
+
+goal g14 :
+  forall i,j:int.
+  forall v1,v2 : 'a.
+  forall a : 'a farray.
+  a[i<-v1, j<-v2] = a[j<-v2, i<-v1]
+

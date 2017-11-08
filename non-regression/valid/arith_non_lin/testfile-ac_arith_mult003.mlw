@@ -1,0 +1,10 @@
+
+
+logic x,y,z:int
+
+goal g3:
+  x * y  * z = 12 ->
+  x = 2 -> 
+  y = 3 -> 
+  z = 2
+

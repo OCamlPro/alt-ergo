@@ -1,0 +1,9 @@
+logic P, Q : int -> prop
+
+axiom a: forall x:int. P(x) -> false
+
+axiom b: forall x:int. Q(x) -> forall q:int. P(x)
+
+goal g :
+  (P(1) or Q(1) or false) -> false
+

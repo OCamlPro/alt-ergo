@@ -1,0 +1,10 @@
+
+type t
+logic a,b,c,d,e: t
+logic f : 'a -> 'a
+logic g,h: 'a , 'a -> 'a
+
+goal g3: 
+  forall x,y:t. f(f(f(a)))=a and f(f(f(f(f(a)))))=a and g(x,y)=x -> 
+  h(g(g(x,y),y),a)=h(x,f(a))
+

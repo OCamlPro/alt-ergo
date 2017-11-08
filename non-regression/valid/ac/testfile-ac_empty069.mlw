@@ -1,0 +1,11 @@
+
+
+logic a,b,aa,x : int
+logic ac f : int,int -> int
+
+goal g69:
+  a = a ->
+  b = b ->
+  aa = aa ->
+  a = aa -> f(a,b) = f(aa,b)
+

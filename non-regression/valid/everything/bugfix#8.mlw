@@ -1,0 +1,8 @@
+logic f : int -> int
+logic a, b, c, d: int
+
+goal g:
+f(a-b) = 2 ->
+a = b ->
+f(0) = 1 ->
+false

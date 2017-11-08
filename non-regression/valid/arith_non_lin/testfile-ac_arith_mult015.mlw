@@ -1,0 +1,8 @@
+
+logic a,b,c,d,x,y,z:int
+logic ac f : int,int -> int
+goal g15 : 
+  4 * a*b*c*d = z * y * x -> 
+  x * y = 4 ->
+  4 * a*b*c*d = 4 * z
+

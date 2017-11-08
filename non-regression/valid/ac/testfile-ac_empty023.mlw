@@ -1,0 +1,11 @@
+
+
+logic aa,a,b,c, beta,gamma : int
+logic ac f : int,int -> int
+
+goal g23 : 
+  f(a,b) = gamma ->  
+  beta   = f(aa,c) -> 
+  a = aa ->
+  f(b,beta) = f(c,gamma) 
+

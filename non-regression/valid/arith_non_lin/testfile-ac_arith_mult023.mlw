@@ -1,0 +1,4 @@
+
+logic x:int
+goal g23 : x*x*x = 64 -> x = 4
+

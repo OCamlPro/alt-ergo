@@ -1,0 +1,7 @@
+
+goal g2 : forall x,y,z:int.
+   3 * y - 8*x - 6 <= 0 -> 
+  -y + 12*x +3 <= 0 ->
+  -y*y*y <= 0 ->
+  false
+

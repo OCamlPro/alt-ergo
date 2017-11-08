@@ -1,0 +1,2 @@
+
+goal g3: forall a,b:int. a % 2 = 1 -> a = b  -> b % 2 = 1 

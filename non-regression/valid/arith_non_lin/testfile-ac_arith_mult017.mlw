@@ -1,0 +1,5 @@
+
+
+logic x,y:int
+goal g17: x*x*x = -1 -> x + y = 4 -> y = 5
+

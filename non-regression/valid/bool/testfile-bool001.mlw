@@ -1,0 +1,3 @@
+logic A,B,C,P,Q,R,S: prop
+
+goal g1: A or not A

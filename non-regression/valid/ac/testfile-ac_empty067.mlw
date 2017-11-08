@@ -1,0 +1,12 @@
+
+
+logic a,b,c,d,e,f,g,h,x,y,z,t : int
+logic ac k : int, int -> int
+ 
+goal g67: 
+  k(a,b)  =x ->
+  k(b,g)  =y ->
+  k(k(a,c),e)=z ->
+  k(g,h)  =t ->
+  k(z,(k(k(t,y),x)))=k(k(a,b),k(k(k(g,e),k(b,k(a,c))),k(h,g)))
+

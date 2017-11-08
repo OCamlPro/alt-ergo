@@ -1,0 +1,20 @@
+
+logic t1,t2,t3,t4,t5 : int farray
+logic P: 'a -> prop
+logic x:int
+
+axiom a : forall t1: 'a farray. forall i,j:int. forall v:'a.
+  P(t1[i <- v, 2 <- 3, j <- v][0 <- 1][36])
+
+goal g36:
+  forall i,j : int.
+  forall t1: (int,int) farray.
+  forall t2: (int,int) farray. 
+  forall t3: (int,int) farray. 
+  t2 = t1[ i <- 1] ->
+  t3 = t2[ j <- 2] ->
+  t3[i] <> 1 ->
+  j=2 ->
+  i=1 ->
+  false
+

@@ -1,0 +1,2 @@
+
+goal mult_po_4: forall a,b:int. a > 0  -> a % 2 = 1 -> b + (a / 2) * (2 * b) = a * b 

@@ -1,0 +1,14 @@
+
+
+logic a,b,c,d,e,gamma,beta,x,y,t:int
+logic ac f,g : int,int -> int
+
+goal g51 :
+  f(a,b) = gamma ->
+  f(a,c+t) = beta ->
+  (* f(gamma,c) = f(beta,b) est déduit *)
+  t = 1 -> 
+  g(f(gamma,c+t),d) = x ->
+  g(f(beta,b),e) = y ->
+  g(x,e) = g(y,d)
+

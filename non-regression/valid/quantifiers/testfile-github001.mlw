@@ -1,0 +1,20 @@
+type memory
+type uint16
+logic integer_of_uint16 : uint16 -> int
+logic uint16_of_integer : int -> uint16
+
+axiom uint16_coerce :
+(forall x:int. (((0 <= x) and (x <= 65535)) ->
+(integer_of_uint16(uint16_of_integer(x)) = x)))
+axiom uint16_extensionality :
+(forall x:uint16.
+(forall y:uint16. ((integer_of_uint16(x) = integer_of_uint16(y)) ->
+(x = y))))
+
+logic is1 : uint16, memory -> prop
+axiom itis : (forall m:memory. is1(uint16_of_integer(1), m))
+logic ptr : memory
+logic return : uint16
+axiom ok : integer_of_uint16(return) = 1
+
+goal g1 : return = uint16_of_integer(1)

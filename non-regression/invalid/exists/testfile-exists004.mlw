@@ -1,0 +1,6 @@
+
+logic P: int -> prop
+goal g4 : 
+     (exists x:int. P(x)) -> forall x:int. (exists y:int. x=y and P(y))
+
+

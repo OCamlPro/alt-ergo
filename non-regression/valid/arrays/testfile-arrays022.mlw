@@ -1,0 +1,8 @@
+
+    
+goal g22:
+ forall a:int farray. forall i,v:int.
+ a[i] = v ->
+ a = a[i<-v] ->
+ true
+

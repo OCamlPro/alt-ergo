@@ -1,0 +1,11 @@
+
+
+logic ac f : int,int -> int
+logic a,b,c,u,v,w,x:int
+
+goal g43: 
+  f(a,c) = w -> 
+  f(a,b) + x = b -> 
+  x = 0 -> 
+  f(b,c) = f(w,b)
+

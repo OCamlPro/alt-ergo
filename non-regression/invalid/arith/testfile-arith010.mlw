@@ -1,0 +1,2 @@
+
+goal g10: forall x:int. 0<=x<=1 -> x=1

@@ -1,0 +1,4 @@
+
+goal g21:  
+  forall size:int. (0 <= size) -> (size <= size) and (0 = (size - size))
+

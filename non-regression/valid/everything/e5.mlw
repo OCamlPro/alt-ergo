@@ -1,0 +1,5 @@
+logic p, q : int -> prop
+
+axiom a: forall x : int. not p(x) or forall y:int. q(y)
+
+goal g : p(1) -> q(2)

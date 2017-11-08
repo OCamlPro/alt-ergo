@@ -1,0 +1,4 @@
+
+logic x,y,z,t:int
+goal g6 : -4*x+2*y-z*t <> 0 ->  (12*x-6*y+3*z*t)/(8*x-4*y+2*z*t) = 1
+

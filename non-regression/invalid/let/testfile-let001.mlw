@@ -1,0 +1,4 @@
+
+goal g1: 
+     let x = 3 in let y = 1 in x = y
+

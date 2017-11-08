@@ -1,0 +1,10 @@
+
+
+logic a,b :int
+logic ac f : int,int -> int
+
+axiom idem : forall x,X: int. f (f(x,x),X)=f(x,X)
+
+goal g78 :
+ f(f(a,f(a,f(b,a))),f(a,b)) = f(f(a,b),f(b,b))
+

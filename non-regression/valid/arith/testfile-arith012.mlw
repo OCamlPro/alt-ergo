@@ -1,0 +1,2 @@
+
+goal g12:forall x,z,v,u:int. v<=z+4 and u<=v+2 and z+6<=u -> u+v=z+u+4

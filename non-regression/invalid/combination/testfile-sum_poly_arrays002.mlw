@@ -1,0 +1,6 @@
+type t = A | B | C | D
+
+goal g1 :
+     forall a : (t,int) farray.
+     a[A <- 1, B <- 2][C] = 1
+

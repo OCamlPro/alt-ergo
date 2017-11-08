@@ -1,0 +1,44 @@
+
+type bag
+
+type btree
+
+logic empty_tree :  -> btree
+
+logic is_heap : btree -> prop
+
+type 'a marray
+
+logic access : 'a1 marray, int -> 'a1
+
+logic update : 'a1 marray, int, 'a1 -> 'a1 marray
+
+logic array_length : 'a1 marray -> int
+
+logic tree_of_array : int marray, int, int -> btree
+
+axiom tree_of_array_empty:
+  (forall a:int marray.
+    (forall root:int.
+      (forall bound:int.
+        (((bound <= root) or (root < 0)) -> (tree_of_array(a, root,
+         bound) = empty_tree)))))
+
+
+axiom div2: (forall i:int. ((0 < i) -> (((i - 1) / 2) < i)))
+
+axiom div2gen:
+  (forall i:int.
+    (forall j:int. (((0 < i) and (i <= j)) -> (((i - 1) / 2) < j))))
+
+
+goal correctness_HeapImpl_pop_po_27:
+  forall size:int.
+  forall t:int marray.
+  ( 0 < array_length(t) and is_heap(tree_of_array(t, 0, size))) ->
+  false
+
+
+
+
+

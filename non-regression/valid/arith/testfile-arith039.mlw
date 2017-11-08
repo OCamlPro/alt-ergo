@@ -1,0 +1,5 @@
+
+logic x,y : int
+ 
+goal g33 : x > 0 -> y > 0 -> x/y >=0
+

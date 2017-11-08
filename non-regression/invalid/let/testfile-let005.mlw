@@ -1,0 +1,5 @@
+
+logic P : int -> prop
+
+goal g5 : forall y:int. P(let y=4 in y+y) -> P(y)
+

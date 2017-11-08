@@ -1,0 +1,14 @@
+
+
+(* pc sur a1 = a1 
+   ou seulement pc sur f(a1,a2,a3) = f(a1,b2)*)
+
+logic a1, a11, a2, a3, b1, b2, x,y,z ,beta, gamma : int
+logic ac f : int,int -> int
+
+goal g48 : 
+  f(a1,f(a2,f(a3,x))) = gamma ->
+  f(a11,f(b2,f(y,z)))  = beta   ->
+  f(a2,f(a3,a1)) = f(b2,a11) ->
+  f(gamma,f(y,z)) = f(beta,x)
+

@@ -1,0 +1,8 @@
+
+
+type set
+logic ac u: set,set -> set
+
+axiom idem : forall x,X: set. u(u(x,x),X)=u(x,X)
+goal g3: forall r,s,t: set. u(t,u(t,s)) = u(s,t)
+

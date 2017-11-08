@@ -1,0 +1,11 @@
+type t
+logic P,R,T,H,Q: 'a -> prop
+logic G,toto: 'a , 'a -> prop
+logic a,b:t
+logic f: 'a -> 'a
+logic g: 'a,'a -> 'a
+
+axiom a4: forall x:'a. H(x) -> forall y:'a. G(x,y)
+
+goal g3: 
+  H(a) -> G(a,b)

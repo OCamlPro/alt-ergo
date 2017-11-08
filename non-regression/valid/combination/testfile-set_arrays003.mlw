@@ -1,0 +1,15 @@
+
+type b
+logic is_true : b -> prop
+
+logic union : ('a,b) farray, ('a,b) farray -> ('a,b) farray
+
+axiom union : forall s1,s2:('a,b) farray. forall k: 'a.
+      is_true (union(s1,s2)[k]) <-> (is_true(s1[k]) or is_true(s2[k]))
+
+goal g1 :
+     forall s1,s2 : ('a,b) farray.
+     forall k : 'a.
+     is_true(union(s1,s2)[k]) ->
+     is_true(s1[k]) or is_true(s2[k])
+

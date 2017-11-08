@@ -1,0 +1,6 @@
+
+(* prouvé grace à la cooperation des intervalles,
+   de arith (solve et subst) et de AC (collapse) *)
+goal g24_bis:
+  forall x:int. x*x*x = x*x -> x*x = 1 -> x = 1
+

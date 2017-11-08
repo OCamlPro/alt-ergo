@@ -1,0 +1,10 @@
+
+
+
+goal g15 :
+  forall i,j:'a.
+  forall v1,v2 : 'b.
+  forall a : ('a,'b) farray.
+  i <> j ->
+  a[i<-v1, j<-v2] = a[j<-v2, i<-v1]
+

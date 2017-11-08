@@ -1,0 +1,11 @@
+
+
+logic a,b,c, beta,gamma,x : int
+logic ac f : int,int -> int
+
+goal g29 : 
+  f(b,a) = f(b+x,f(a+x,a+x)) ->  
+  x = 1 ->
+  f(b,c) = beta  -> 
+  f(b+1,f(a+1, f(a+1, c))) = f(a,beta) 
+

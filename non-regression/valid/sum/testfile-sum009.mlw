@@ -1,0 +1,11 @@
+
+type t = A | B 
+
+logic ac u : t, t -> t
+
+goal g9:
+forall x,y : t.
+  x = u(A,y) ->
+  y <> B ->
+  x = u(A,A)
+    

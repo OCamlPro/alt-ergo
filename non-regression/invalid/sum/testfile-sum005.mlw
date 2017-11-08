@@ -1,0 +1,6 @@
+
+type t = A | B | C
+
+goal g5:
+  exists x:t. x <> A and x <> B and x <> C
+

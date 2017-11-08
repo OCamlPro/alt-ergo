@@ -1,0 +1,12 @@
+
+
+logic a,b,c,d, x, y , beta , gamma : int
+
+logic ac f : int,int -> int
+
+goal g80 : 
+  (*1*) f(f(a,b),c) = gamma ->
+  (*2*) f(a,b) = x ->
+  (*3*) f(x,y) = beta ->
+  (*4*) f(gamma,y) = f(beta,c)
+

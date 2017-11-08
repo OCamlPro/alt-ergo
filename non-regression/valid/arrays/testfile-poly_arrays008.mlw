@@ -1,0 +1,8 @@
+
+goal g8 :
+  forall i,j:'a.
+  forall v : 'b.
+  forall a,b : ('a,'b) farray.
+  i = j ->
+  v = a[j<-v][i]
+

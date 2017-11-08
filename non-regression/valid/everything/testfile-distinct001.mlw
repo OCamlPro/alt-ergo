@@ -1,0 +1,10 @@
+logic P,Q: int -> prop
+logic f: int -> int
+
+axiom a : forall x:int[P(f(x))].  P(f(x)) -> Q(x)
+
+goal g4:
+    forall a,b,c:int.
+    P(a) -> a= f(b) -> Q(b)
+
+

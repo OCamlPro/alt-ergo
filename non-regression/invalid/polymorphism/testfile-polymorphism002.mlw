@@ -1,0 +1,13 @@
+
+
+type 'a t
+logic P,P': int -> prop
+logic Q,S: 'a t -> prop
+logic Q': int, int -> prop
+logic R: prop
+logic a: bool t
+
+axiom a2: forall x:int. P(x) -> (exists y:'a t. Q(y)) and R
+
+goal g2: P(1) -> R
+

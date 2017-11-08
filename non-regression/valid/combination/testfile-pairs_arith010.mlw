@@ -1,0 +1,11 @@
+
+type 'a pair = {fst : 'a ; snd : 'a}
+type elt
+logic f : elt,elt  -> elt
+
+goal g18 : 
+  forall x,y,z,t,x2:elt. 
+  f(y,y)=f(t,t) -> f(z,x2)<>f(x,x2) -> {fst=z;snd=t}<>{fst=x;snd=y}
+
+
+

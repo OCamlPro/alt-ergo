@@ -1,0 +1,4 @@
+
+logic A,B,C,P,Q,R,S: prop
+goal g26: not (((P -> (Q and R and S)) and not S) -> not P)
+

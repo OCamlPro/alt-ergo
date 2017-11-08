@@ -1,0 +1,29 @@
+type loc
+
+type 'a list
+
+logic Nil : 'a list
+logic Cons : 'a, 'a list -> 'a list
+
+logic edge: loc, loc, (loc,loc) farray, (loc,loc) farray -> prop
+
+logic path : (loc,loc) farray, (loc,loc) farray, loc, loc, loc list -> prop
+
+axiom path_nil :
+  (forall x:loc. forall l:(loc,loc) farray. forall r:(loc,loc) farray.
+  path(l, r, x, x, (Nil : loc list)))
+
+axiom path_cons :
+  (forall x:loc. forall y:loc. forall z:loc. forall l:(loc,loc) farray.
+  forall r:(loc,loc) farray. forall p:loc list
+  (*
+    proved valid with this trigger
+    [edge(x, z, l, r), path(l, r, x, y, Cons(x, p))]
+  *).
+  (edge(x, z, l, r) -> (path(l,
+  r, z, y, p) -> path(l, r, x, y, Cons(x, p)))))
+
+goal path_edge :
+  (forall x:loc. forall y:loc. forall left:(loc,loc) farray.
+  forall right:(loc,loc) farray. (edge(x, y, left, right) -> path(left,
+  right, x, y, Cons(x, (Nil : loc list)))))

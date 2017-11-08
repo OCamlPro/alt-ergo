@@ -1,0 +1,16 @@
+
+logic t1,t2,t3: 'a farray
+logic P: 'a,'b -> prop
+type 'a t
+logic x,y:int t
+logic z : bool farray t
+
+axiom a : forall t1: 'a farray. forall i,j:int. forall v,w:'a.
+  P(t1[i <- v, 2 <- w][j <- v],z)
+
+goal g2 :
+  forall a,b:int.
+  t2 = t1[a <- x] ->
+  t3 = t2[2 <- y, b <- x] ->
+    P(t3, z)
+

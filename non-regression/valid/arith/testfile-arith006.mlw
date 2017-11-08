@@ -1,0 +1,3 @@
+
+logic f: int -> int
+goal g6: forall x,y:int. x+1=y -> f(x+2)=f(y+1)

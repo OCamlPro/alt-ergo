@@ -1,0 +1,7 @@
+logic a, b, x, y:int
+logic a1,b1 , x1, y1:int
+
+goal WP_parameter_cubic_root :
+  y + 3 * b + 1 = 0 ->
+  b1 = b + 1 ->
+  1 = b1 * b1

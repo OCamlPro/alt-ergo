@@ -1,0 +1,13 @@
+
+type t
+logic P:prop
+logic T: 'a -> prop
+logic a:t
+logic f: 'a -> 'a
+
+axiom a2: P -> forall x:'a. T(f(f(f(x))))
+
+axiom a3: f(a)=a
+
+goal g8: P -> T(a)
+

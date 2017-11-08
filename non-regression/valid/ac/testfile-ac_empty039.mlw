@@ -1,0 +1,11 @@
+
+
+(* c = beta *)
+logic a,b,c, gamma : int
+logic ac f : int,int -> int
+
+goal g39 : 
+  f(a,c) = c  -> 
+  f(a,b) = gamma ->  
+  f(b,c) = f(c,gamma)
+    

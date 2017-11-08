@@ -1,0 +1,7 @@
+
+logic ac u : bitv[4],bitv[4] -> bitv[4]
+logic a,b,c,gamma : bitv[4]
+goal g1:
+  u(a,u(a,b)) @ a = u(a,b) @ gamma ->
+  u(gamma,u(gamma,b)) = u(gamma,b)
+

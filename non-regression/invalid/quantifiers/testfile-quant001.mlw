@@ -1,0 +1,6 @@
+
+type 'a t
+logic P,Q: 'a t -> prop
+
+goal g1: forall y:int t. P(y) -> ((forall x:'a t. P(x) -> Q(x)) -> Q(y))
+

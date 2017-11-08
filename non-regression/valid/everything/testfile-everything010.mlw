@@ -1,0 +1,9 @@
+
+type t
+type list
+logic nbocc : t, list -> int
+
+predicate equiv(l1:list, l2:list) = forall x:t. nbocc(x,l1) = nbocc(x,l2)
+
+goal g10 :
+  forall l1,l2,l3:list. equiv(l1,l2) -> equiv(l2,l3) -> equiv(l1,l3)

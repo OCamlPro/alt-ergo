@@ -1,0 +1,18 @@
+
+
+logic ac f : int,int -> int
+logic a,b,c,d,beta,gamma : int
+
+goal g79 : 
+  f(a,b) = gamma ->            (* 1 *)
+  f(a,d) = beta ->             (* 2 *)
+  f(a,c) = gamma ->            (* 3 *)
+  f(b,c) = beta ->             (* 4 *)
+
+    f(gamma , d) = f(beta , b)       (* 1 & 2 *)
+and f(gamma , c) = f(gamma , b)      (* 1 & 3 *) 
+and f(gamma , c) = f(beta , a)       (* 1 & 4 *)
+and f(beta , c)  = f(gamma , d)      (* 2 & 3 *)
+and true                             (* 2 & 4 *)
+and f(gamma , b) = f(beta , a)       (* 3 & 4 *)
+

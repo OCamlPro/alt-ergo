@@ -1,0 +1,5 @@
+
+
+goal g30: forall x:int. x = 3*x+4 -> x = -2
+
+

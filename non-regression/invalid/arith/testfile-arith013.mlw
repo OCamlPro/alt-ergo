@@ -1,0 +1,7 @@
+
+logic P : int -> prop
+
+logic x,y : int
+ 
+goal g13 : y = 0 -> P(x/y) -> false
+

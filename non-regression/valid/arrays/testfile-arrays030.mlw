@@ -1,0 +1,8 @@
+
+logic t : int farray
+
+axiom a : forall t : 'a farray.
+   t[0] = 1
+
+goal g30 : t[0] = 1
+

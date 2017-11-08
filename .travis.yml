@@ -1,0 +1,18 @@
+# branches:
+#   only:
+#   - master
+language: ocaml
+sudo: required
+
+before_install:
+- sudo apt-get update -qq
+- sudo apt-get install -y git -qq ocaml ocaml-native-compilers libgmp-dev libgtksourceview2.0-dev zlib1g-dev libgtk2.0-dev libexpat1-dev
+- git status
+
+install:
+- wget -qq https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin
+- export OPAMYES=1
+- opam init
+
+script:
+- sh ./travis.sh

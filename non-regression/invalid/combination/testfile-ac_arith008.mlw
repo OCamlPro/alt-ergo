@@ -1,0 +1,8 @@
+
+
+logic a,b,c,x:int
+logic ac f : int,int -> int
+
+goal g8 : 
+  f(a+1,a) = f(a+1,b)
+

@@ -1,0 +1,4 @@
+
+logic x:int
+goal g4 : 0 <= x*x <= 4 -> 0 <= x <= 2
+

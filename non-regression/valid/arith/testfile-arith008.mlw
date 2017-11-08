@@ -1,0 +1,5 @@
+
+logic f: int -> int
+goal g8:
+  forall x,y,u,v,z:int. 
+    u=v and u<=x+y and x+y<=u and v<=z+x+4 and z+x+4<=v -> f(x+y) = f(z+x+4)

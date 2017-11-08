@@ -1,0 +1,6 @@
+logic x:int
+
+goal g36: 
+x = -3 -> (-20) / x = 6
+(* correst result is 7 *)
+

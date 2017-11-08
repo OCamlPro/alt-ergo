@@ -1,0 +1,3 @@
+
+logic P:prop
+goal g5: forall x:int. x=10 and (3<x -> P) -> P

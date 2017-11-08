@@ -1,0 +1,3 @@
+
+logic f: int -> int
+goal g9: forall x:int. f(x) = x -> f(2*x - f(x)) = x

@@ -1,0 +1,15 @@
+
+logic ac f,g,h : int,int -> int
+logic a,b,c,d,e,x,y,z,t,m,n,alpha,beta,gamma,delta : int
+
+goal g57 : 
+  f(a+x+y, b+z) = gamma ->
+  f(a+x+1, c+y) = beta  ->
+  h(f(f(a+x+1,b),c+1),d+z) = f(beta,f(a+x+y, b+z)) ->
+  h(f(beta,b+y-1),g(h(z,x),y)) = h(delta,h(delta,beta)) ->
+  x + y = x + 1 ->
+  z + 1 = y ->
+  x = 100 ->
+  h(d+z,h(delta,h(delta,beta))) = h(f(f(a+x+y, b+z),f(a+x+1, c+y)),g(h(x,z),y))
+
+

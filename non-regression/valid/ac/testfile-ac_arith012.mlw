@@ -1,0 +1,9 @@
+
+
+logic a,b,c,x:int
+logic ac f : int,int -> int
+
+goal g12 : 
+  a + 1 = b + 2 -> 
+  f(a,a-1) = f(a,b)
+

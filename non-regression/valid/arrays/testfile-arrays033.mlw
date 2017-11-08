@@ -1,0 +1,8 @@
+
+logic t1,t2 : int farray
+
+axiom a : forall t1,t2 : 'a farray.
+  forall a:int. t1[a] = t2[a]
+
+goal g33 : forall i:int.
+     t2[i] = t1[i]

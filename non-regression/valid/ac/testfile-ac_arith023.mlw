@@ -1,0 +1,14 @@
+
+
+logic ac f : int,int -> int
+logic a,b,c,gamma,beta,x:int
+
+(* axiome special pour corriger le pb de matching AC *)
+axiom neutre : forall u,v:int. f(u,f(v,0))= f(u,v)
+
+goal g23:
+  f(a,b) = gamma ->
+  f(a,c) = beta -> 
+  x = 0 -> 
+  f(c,gamma) = f(f(b,x),beta)
+

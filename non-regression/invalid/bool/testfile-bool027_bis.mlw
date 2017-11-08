@@ -1,0 +1,15 @@
+logic p , q : int -> prop 
+logic A1,A2: bool
+
+axiom a1: not A1 or (forall y:int. not p(1)) (* k1 *)
+
+axiom a2: not A2 or (forall z:int. q(z)) (* k2 *)
+
+(* model with (not A2), A1 *)
+goal g8: 
+(not p(1)) -> 
+(not q(1)) -> 
+(A1 or A2) ->
+
+false
+

@@ -1,0 +1,6 @@
+goal B : 
+  forall x : real. forall y : real.
+  0. <= x -> 
+  1. <= y -> 
+  x / y = x * 1. / y -> 
+  0. < x 

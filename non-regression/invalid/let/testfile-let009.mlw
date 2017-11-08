@@ -1,0 +1,5 @@
+
+logic P : 'a, int -> prop
+
+goal g9 : forall x:int. (let x=3 in P(x,x)) ->P(x,3)
+

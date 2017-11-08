@@ -1,0 +1,11 @@
+
+type t = A | B | C
+
+goal g1: 
+  A <> B and
+  A <> C and 
+  B <> C and 
+  A  = A and 
+  B  = B and 
+  C  = C
+    

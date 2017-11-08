@@ -1,0 +1,5 @@
+REC
+B +threads
+
+PKG lablgtk2
+PKG lablgtk2.sourceview2

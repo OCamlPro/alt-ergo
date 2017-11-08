@@ -1,0 +1,12 @@
+logic x, y, a, b, c, d : int
+
+goal g_31 :
+(
+  b + a <= c and
+  b >= c  and
+  a - x * y >= 10  and
+  0 <= y and
+  1 <= x
+) ->
+false
+

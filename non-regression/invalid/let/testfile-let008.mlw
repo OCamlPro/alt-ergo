@@ -1,0 +1,3 @@
+
+goal g8 : let x = 1 in x = (let x = 2 in x)
+

@@ -1,0 +1,10 @@
+ goal g12:
+ forall diff:int.
+ forall left:int.
+ forall right:int.
+ diff = right - left ->
+ diff > 0 ->
+ forall r6:int. r6 = diff / 2 ->
+ forall r8:int. r8 = left + r6 ->
+ right - r8 < diff 
+

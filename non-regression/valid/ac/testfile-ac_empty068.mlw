@@ -1,0 +1,11 @@
+
+
+logic a, b, c, d, x, y,t : int
+logic ac f : int, int -> int
+
+goal g68 : 
+  f(a,a) = a      -> 
+  f(a,b) = c      -> 
+  f(f(a,a),b) = a -> 
+  f(a,f(f(a,a),a)) = f(a,c)
+

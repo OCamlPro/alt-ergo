@@ -1,0 +1,6 @@
+logic P, Q, R : int -> prop
+
+axiom a: forall x : int. P(x) and (forall y : int. Q(y))
+
+goal WP_enqueue :
+     Q(1) and P(1)

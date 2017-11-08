@@ -1,0 +1,3 @@
+logic A,B,C : prop
+
+goal g1 : A -> A

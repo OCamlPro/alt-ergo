@@ -1,0 +1,7 @@
+
+
+logic f : int -> int
+logic t,u,x,y,z : int
+
+goal g22:t=f(0)   -> u=f(4*x+5*y-3*z-3) ->  8*x+10*y=6*z+6 -> t=u
+

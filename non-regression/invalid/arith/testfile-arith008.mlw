@@ -1,0 +1,4 @@
+
+logic b,a,c: int
+
+goal g8:   b<=c -> (b<>a)-> a+1<=b  -> false

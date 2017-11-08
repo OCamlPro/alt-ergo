@@ -1,0 +1,13 @@
+
+
+logic P,Q : int -> prop
+axiom a1: forall x:int. x <= 1 -> Q(x)
+axiom a2: forall x:int. P(x)  -> Q(x)
+axiom a3: forall x:int. x >= 6 -> P(x)
+axiom a4: P(5)
+axiom a6: P(4)
+axiom a7: Q(2)
+axiom a8: Q(3)
+
+goal g31 : forall x:int. 0 <= x <= 7 -> Q(x)
+

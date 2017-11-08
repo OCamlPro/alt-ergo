@@ -1,0 +1,9 @@
+logic P : int, int -> prop
+
+axiom Injective_surjective :
+  forall x,i:int. not P(x, i)
+
+
+goal WP_inverting :
+  P(0, 1) ->
+  false

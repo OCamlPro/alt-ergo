@@ -1,0 +1,27 @@
+(* this should be invalid (model below) *)
+goal g:
+forall a, b, b1, y, y1 : int.
+(* model:
+  a  = -1 ->
+  b  = 0 ->
+  b1 = 1 ->
+  y  = 0 ->
+  y1 = -2 ->
+*)
+y = ((b * b) * b)  ->
+
+y <= 65 ->
+
+y1 = (((y + (3 * a)) + (3 * b)) + 1)  ->
+
+b1 = (b + 1)  ->
+
+y > (y1 - 1)  ->
+
+a <= -1 ->
+b >= 0 ->
+b1 >= 1 ->
+y >= 0 ->
+y1 <= 0 ->
+
+false 

@@ -1,0 +1,10 @@
+
+
+logic ac f : int,int -> int
+logic a,b,c,x,y:int
+
+goal g16: 
+  f(a,b) + x = b -> 
+  x = 0 -> 
+  f(a,f(b,y)) = f(b,y)
+

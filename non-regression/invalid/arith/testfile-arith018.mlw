@@ -1,0 +1,11 @@
+
+
+logic a, b, c :int
+
+goal g18:
+ 3*c -2 = 8*a and
+ c  <= 0 and 
+ - b - c  <= 0 and 
+ 2*b + c - 2  <= 0
+ -> false
+

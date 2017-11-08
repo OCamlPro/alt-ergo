@@ -1,0 +1,12 @@
+
+
+logic a,b,c,gamma,beta,x,u,v : int
+logic f : int , int -> int
+
+goal g3 : 
+  f(a,b)     = u ->
+  f(a,c)     = v ->
+  f(x,gamma) = u ->
+  f(x,beta)  = v ->
+  f(gamma,c) = f(beta,b)
+

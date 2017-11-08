@@ -1,0 +1,4 @@
+
+logic x:int
+goal g21 : x >= 0 -> x*x = 9 -> x = 3
+

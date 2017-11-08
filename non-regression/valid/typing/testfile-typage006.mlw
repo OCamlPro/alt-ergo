@@ -1,0 +1,7 @@
+
+logic P : 'a -> prop
+type t
+type 'a u
+axiom a1 : forall x:'a. P(x)
+goal g6: forall a:'a u. P(a)
+

@@ -1,0 +1,4 @@
+
+logic A,B,C,D : prop
+goal g11: (A or B or C) -> A
+

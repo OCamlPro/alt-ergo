@@ -1,0 +1,7 @@
+
+logic x, a: int
+logic p,q,r : prop
+
+goal g3 : 
+a<5 -> (x *a > 6 or r) ->  (x=1 or x*a<=2) -> (x = -1 or a*x>5) -> (p or q) -> false
+

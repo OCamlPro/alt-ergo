@@ -1,0 +1,7 @@
+
+
+logic a,b,c,x:int
+logic ac f : int,int -> int
+
+goal g59 : (forall v,w:int[v,w]. f(v,w) = w) -> a = b
+

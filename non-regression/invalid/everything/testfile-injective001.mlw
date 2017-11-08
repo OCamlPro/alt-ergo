@@ -1,0 +1,10 @@
+
+type a
+logic fi : 'b -> a
+logic ti : a -> 'b
+
+axiom Inj : forall x :a. ti(fi(x))=x
+
+goal inj : exists x,y:a. fi(x)=fi(y) -> x <> y
+
+

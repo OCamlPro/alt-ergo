@@ -1,0 +1,14 @@
+
+type  ilist
+logic ICons : int, ilist -> ilist
+logic INil : ilist
+
+axiom a :
+  (forall x : ilist[x].
+     (exists x1 : int.exists x2 : ilist.
+	(ICons (x1, x2) = x) or (INil = x))
+   and
+     (forall y : int.forall x1 : ilist.(not (INil = ICons (y, x1)))))
+  
+goal g10 : (not (INil = ICons (1, INil)))
+

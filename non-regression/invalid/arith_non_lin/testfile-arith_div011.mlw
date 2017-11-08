@@ -1,0 +1,4 @@
+
+logic x,y:int
+goal g11 : y >= 1 -> (x/y)*y = x
+

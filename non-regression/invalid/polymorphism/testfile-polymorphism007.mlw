@@ -1,0 +1,10 @@
+
+type t
+logic Q:prop
+logic R: 'a -> prop
+logic a:t
+
+axiom a7: Q -> forall x:'a. R(x)
+
+goal g7: Q -> R(a)
+

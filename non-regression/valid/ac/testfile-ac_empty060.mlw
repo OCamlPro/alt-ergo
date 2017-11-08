@@ -1,0 +1,10 @@
+
+
+logic x,y,z,t,gamma,beta : int
+logic ac f,g : int,int -> int
+
+goal g60:
+  f(x,g(y,z)) = gamma ->
+  f(x,t)      = beta ->
+  f(gamma,t) = f(beta,g(y,z))
+

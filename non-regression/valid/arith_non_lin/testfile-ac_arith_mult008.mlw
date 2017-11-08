@@ -1,0 +1,6 @@
+
+goal g8: forall x,y,z:int.
+  x * (5 + y) = 4* (z + 5) ->
+  x = 4 ->
+  y = z
+

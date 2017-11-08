@@ -1,0 +1,6 @@
+
+goal g4:
+  forall t1: int farray.
+  forall x1, x2: int.
+  t1[x1<-1,x2<-2][x1] = 1
+

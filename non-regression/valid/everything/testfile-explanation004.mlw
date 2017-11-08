@@ -1,0 +1,6 @@
+
+
+goal g4: 
+  forall x,y:int. 
+    0 <= x <= 1 -> y<>0 -> -1 <= x/y <= 1
+    

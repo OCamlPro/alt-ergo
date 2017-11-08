@@ -1,0 +1,6 @@
+
+type 'a pair = {fst : 'a ; snd : 'a}
+type elt
+
+goal g3: forall a,b,a',b':elt. {fst=a;snd=b} = {fst=a';snd=b'} -> a=a'
+

@@ -1,0 +1,11 @@
+type 'a list
+
+logic nil : 'a list
+logic cons : 'a, 'a list -> 'a list
+logic hd : 'a list -> 'a
+logic tl : 'a list -> 'a list
+
+axiom hd_cons : forall x:'a. forall l:'a list. hd (cons(x,l)) = x
+axiom tl_cons : forall x:'a. forall l:'a list. tl (cons(x,l)) = l
+
+goal g1 : forall x,y:int. hd(tl(cons(x, cons(y, nil)))) = y

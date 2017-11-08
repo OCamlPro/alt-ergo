@@ -1,0 +1,19 @@
+
+type 'a list
+
+logic nil : 'a list
+logic cons : 'a, 'a list -> 'a list
+
+logic length : 'a list -> int
+
+axiom length_def_1 : length(nil) = 0
+
+logic mem : 'a, 'a list -> prop
+
+
+axiom mem_def_2 : 
+  forall x:'a. forall y:'a. forall l:'a list[mem(x,l),cons(y,l)].
+  mem(x, cons(y,l))  <->   (x = y or mem(x,l))
+
+goal g2 : 2 = 1 or mem(2, nil)
+

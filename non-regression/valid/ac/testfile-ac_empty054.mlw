@@ -1,0 +1,14 @@
+
+
+logic a,b,x,y,z : int
+logic ac f: int,int -> int
+
+goal g54:
+ f(a,x) = f(a,y) -> 
+ f(a,z) = b ->
+ f(z,f(a,y)) = f(x,b) and f(z,f(a,x)) = f(y,b)
+
+
+
+
+

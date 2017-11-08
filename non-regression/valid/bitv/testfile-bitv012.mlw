@@ -1,0 +1,7 @@
+
+goal g12 : 
+  forall x : bitv[32]. forall y : bitv[32]. forall s : bitv[32]. 
+  s = y^{0,15} @ x^{16,31} -> (s^{16,31} = y^{0,15}  and s^{0,15} = x^{16,31}) 
+
+
+

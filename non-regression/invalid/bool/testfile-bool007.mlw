@@ -1,0 +1,3 @@
+
+logic A,B : prop
+goal g7: (A -> A) <-> A

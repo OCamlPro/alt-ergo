@@ -1,0 +1,11 @@
+
+
+logic ac f : int,int -> int
+logic a,b,c,gamma,beta,x:int
+
+goal g42:
+  f(a,b) = gamma + x ->
+  x = 0 -> 
+  f(a,c) = beta -> 
+  f(c,gamma) = f(b,beta)
+

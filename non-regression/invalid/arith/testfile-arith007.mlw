@@ -1,0 +1,4 @@
+
+logic Q,P: prop
+goal g7: 
+  forall x:int. x=3 and (3<x -> P) -> P

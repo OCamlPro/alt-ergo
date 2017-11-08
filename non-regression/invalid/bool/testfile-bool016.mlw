@@ -1,0 +1,4 @@
+
+logic A,B,C,D : prop
+goal g16: not ((A or B) -> (B or A))
+

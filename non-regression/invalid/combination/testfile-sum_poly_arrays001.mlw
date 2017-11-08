@@ -1,0 +1,8 @@
+type t = A | B | C | D
+
+goal g1 : forall a : ('a,t) farray.
+     forall j : 'a. forall v : t.
+     a[j] <> A and a[j] <> B
+     and a[j] <> C and a[j] <> D
+
+

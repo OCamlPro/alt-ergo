@@ -1,0 +1,2 @@
+
+goal g10: forall x,y:bitv[2]. x@y=y@x -> x = y

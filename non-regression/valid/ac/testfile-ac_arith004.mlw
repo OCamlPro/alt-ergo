@@ -1,0 +1,5 @@
+
+
+logic ac f : int,int -> int
+goal g4 : forall a,b,c,x:int. c = a + x  -> a = f(c,b) -> x=0 ->  f(c,b)=c
+

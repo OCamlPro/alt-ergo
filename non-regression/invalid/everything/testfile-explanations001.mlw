@@ -1,0 +1,15 @@
+type t
+
+logic P : prop
+
+logic a, b, c: t
+
+logic f : t -> t
+
+axiom a :
+  forall x: t. f(x) = c 
+
+goal g:
+ a <> c ->
+ (a = f(b) or P) ->
+ false

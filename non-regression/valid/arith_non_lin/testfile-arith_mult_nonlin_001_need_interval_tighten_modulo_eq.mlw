@@ -1,0 +1,6 @@
+goal g:
+  forall a, b, c : real.
+  c = a*a + b*b ->
+  c < 0. ->
+  false
+

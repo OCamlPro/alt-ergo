@@ -1,0 +1,7 @@
+
+
+type t
+logic P : t, int -> prop
+
+goal g4 : forall x:t. forall y:int. (let y=3 in P(x,y)) -> P(x,y)
+

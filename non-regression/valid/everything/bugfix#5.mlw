@@ -1,0 +1,21 @@
+(* [BugFix#5] in Formula.mk_forall: when we reuse existing lemmas ==>
+buggy because some additional tests were missing *)
+
+type list
+type set
+
+logic f : list -> int
+logic g : set -> int
+
+predicate pigeon_set(xs: set) =
+  forall xl : list.
+  f(xl) <= g(xs)
+
+axiom pigeonhole :
+  forall xs : set. forall xl:list.
+  f(xl) <= g(xs)
+
+goal g :
+  forall s : set.
+  forall l:list.
+  f(l) <=  g(s)

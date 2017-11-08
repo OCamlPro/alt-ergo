@@ -1,0 +1,27 @@
+logic f: int -> int
+logic a, b: int
+
+axiom D11:
+  forall x : int[x / 2].
+  (x <= 0 or 2 <= 1) or f(x) = (x / 2)
+
+axiom D12:
+  forall x : int[(-x) / 2].
+  x <= 0 -> (f(x) = ((-x) / 2))
+
+axiom D21:
+  forall x : int[x / b].
+  (x <= 0 or b <= 1) or f(x) = (x / b)
+
+axiom D22:
+  forall x : int[(-x) / b].
+  x <= 0 -> (f(x) = ((-x) / b))
+
+logic P : int -> prop
+logic Q : int -> prop
+
+
+goal g:
+ b = 2 ->
+ P(4/2) ->
+ false

@@ -1,0 +1,379 @@
+ARCH = $(shell uname -m)
+
+VERSION=$(shell grep "=" lib/util/version.ml | cut -d"=" -f2 | head -n 1)
+
+LOCAL_INC = -I lib/util -I lib/structures -I lib/reasoners \
+    -I lib/frontend -I tools/text -I tools/gui \
+    -I parsers/why \
+    -I plugins/common -I plugins/satML \
+    -I plugins/fm-simplex
+
+INCLUDES = $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(LOCAL_INC)
+#for coverage # -I /usr/local/lib/ocaml/3.12.1/bisect -pp "camlp4o str.cma /usr/local/lib/ocaml/3.12.1/bisect/bisect_pp.cmo"
+
+BFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g $(INCLUDES)
+OFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g -inline 100 $(INCLUDES) -for-pack AltErgo
+
+BIBBYTE = zarith.cma nums.cma unix.cma dynlink.cma str.cma zip.cma ocplibSimplex.cma
+# for coverage bisect.cma 
+
+BIBOPT = $(BIBBYTE:.cma=.cmxa)
+
+BIBGUIBYTE = zarith.cma threads.cma lablgtk.cma lablgtksourceview2.cma \
+    gtkThread.cmo
+
+BIBGUIOPT = zarith.cmxa threads.cmxa lablgtk.cmxa lablgtksourceview2.cmxa \
+    gtkThread.cmx
+
+# main target
+#############
+
+NAME = alt-ergo
+GUINAME=altgr-ergo
+LIBNAME = altErgo
+BYTE=$(NAME).byte
+OPT=$(NAME).opt
+
+all: alt-ergo gui satML fm-simplex
+
+ifeq ($(OCAMLBEST),opt)
+alt-ergo: opt
+else
+alt-ergo: byte
+endif
+
+GENERATED = lib/util/config.ml \
+            lib/util/cmdline_parser.ml \
+            parsers/why/why_parser.ml \
+            parsers/why/why_parser.mli \
+            parsers/why/why_lexer.ml
+
+# bytecode and native-code compilation
+######################################
+
+CMO = lib/util/config.cmo \
+      lib/util/version.cmo \
+      lib/util/emap.cmo \
+      lib/util/myUnix.cmo \
+      lib/util/myDynlink.cmo \
+      lib/util/myZip.cmo \
+      lib/util/util.cmo \
+      lib/util/lists.cmo \
+      lib/util/numsNumbers.cmo \
+      lib/util/zarithNumbers.cmo \
+      lib/util/numbers.cmo \
+      lib/util/options.cmo \
+      lib/util/cmdline_parser.cmo \
+      lib/util/timers.cmo \
+      lib/util/gc_debug.cmo \
+      lib/util/loc.cmo \
+      lib/util/hconsing.cmo \
+      lib/util/hstring.cmo \
+      lib/structures/exception.cmo \
+      lib/structures/symbols.cmo \
+      lib/structures/ty.cmo \
+      lib/structures/parsed.cmo \
+      lib/structures/errors.cmo \
+      lib/structures/typed.cmo \
+      lib/structures/term.cmo \
+      lib/structures/fpa_rounding.cmo \
+      lib/structures/literal.cmo \
+      lib/structures/formula.cmo \
+      lib/structures/explanation.cmo \
+      lib/structures/commands.cmo \
+      lib/structures/profiling.cmo \
+      lib/reasoners/matching.cmo \
+      lib/reasoners/instances.cmo \
+      lib/reasoners/polynome.cmo \
+      lib/reasoners/ac.cmo \
+      lib/reasoners/uf.cmo \
+      lib/reasoners/use.cmo \
+      lib/reasoners/intervals.cmo \
+      lib/reasoners/inequalities.cmo \
+      lib/reasoners/intervalCalculus.cmo \
+      lib/reasoners/arith.cmo \
+      lib/reasoners/records.cmo \
+      lib/reasoners/bitv.cmo \
+      lib/reasoners/arrays.cmo \
+      lib/reasoners/sum.cmo \
+      lib/reasoners/combine.cmo \
+      lib/reasoners/ccx.cmo \
+      lib/reasoners/theory.cmo \
+      lib/reasoners/fun_sat.cmo \
+      lib/reasoners/sat_solver.cmo \
+      lib/frontend/triggers.cmo \
+      lib/frontend/typechecker.cmo \
+      lib/frontend/cnf.cmo \
+      lib/frontend/parsed_interface.cmo \
+      lib/frontend/frontend.cmo \
+      lib/frontend/parsers.cmo
+
+CMOFRONT = parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
+
+# parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
+
+MAINCMO = $(CMO) $(CMOFRONT) tools/text/main_text.cmo
+
+ifeq ($(ENABLEGUI),yes)
+	GUICMO = $(CMO) $(CMOFRONT) \
+                 tools/gui/gui_session.cmo \
+                 tools/gui/gui_config.cmo \
+                 tools/gui/annoted_ast.cmo \
+	         tools/gui/connected_ast.cmo \
+                 tools/gui/gui_replay.cmo \
+                 tools/gui/main_gui.cmo
+else 
+	GUICMO = 
+endif
+
+CMX = $(CMO:.cmo=.cmx)
+CMXFRONT = $(CMOFRONT:.cmo=.cmx)
+MAINCMX = $(MAINCMO:.cmo=.cmx)
+GUICMX = $(GUICMO:.cmo=.cmx)
+
+byte: $(NAME).byte
+opt: $(NAME).opt
+
+
+#### LIBRARY
+$(LIBNAME).cmo: $(CMO) $(CMOFRONT) lib/reasoners/sig.cmi
+	$(OCAMLC) $(BFLAGS) -pack -o $(LIBNAME).cmo $^
+
+$(LIBNAME).cmx: $(CMX) $(CMXFRONT) lib/reasoners/sig.cmi
+	$(OCAMLOPT) $(INCLUDES)  -pack -o $(LIBNAME).cmx $^
+
+
+
+####
+$(NAME).byte: $(MAINCMO) 
+	$(OCAMLC) $(BFLAGS) -o $@ $(BIBBYTE) $^
+
+$(NAME).opt: $(MAINCMX)
+	$(OCAMLOPT) $(OFLAGS) -o $@ $(BIBOPT) $^
+
+####
+$(GUINAME).byte: $(GUICMO)
+	$(OCAMLC) $(BFLAGS) -o $(GUINAME).byte $(BIBBYTE) $(BIBGUIBYTE) $^
+
+$(GUINAME).opt: $(GUICMX)
+	$(OCAMLOPT) $(OFLAGS) -o $(GUINAME).opt $(BIBOPT) $(BIBGUIOPT) $^
+
+ifeq ($(ENABLEGUI),yes)
+gui: $(GUINAME).$(OCAMLBEST)
+else
+gui:
+	@echo "gui compilation skipped (lablgtksourceview not detected)"
+endif
+
+
+.PHONY: gui
+
+lib/util/config.ml: config.status
+	@echo "let bindir = \""$(BINDIR)"\"" >> lib/util/config.ml
+	@echo "let libdir = \""$(LIBDIR)"\"" >> lib/util/config.ml
+	@echo "let pluginsdir = \""$(PLUGINSDIR)"\"" >> lib/util/config.ml
+	@echo "let preludesdir = \""$(PRELUDESDIR)"\"" >> lib/util/config.ml
+	@echo "let datadir = \""$(DATADIR)"\"" >> lib/util/config.ml
+	@echo "let mandir = \""$(MANDIR)"\"" >> lib/util/config.ml
+
+lib/util/cmdline_parser.ml: config.status
+	@echo "(* parse_args () should be called as soon as possible (put earlier" > lib/util/cmdline_parser.ml
+	@echo "   when linking) because some choices during compilation depend on" >> lib/util/cmdline_parser.ml
+	@echo "   given options (e.g. dfs-sat)" >> lib/util/cmdline_parser.ml
+	@echo "\n   -> The following call:" >> lib/util/cmdline_parser.ml
+	@echo "   1 - should be kept when builtind Alt-Ergo tools" >> lib/util/cmdline_parser.ml
+	@echo "   2 - should be removed to build and use only the library." >> lib/util/cmdline_parser.ml
+	@echo "\n   Alternatively to 2, one can just remove cmdline_parser.cmo/cmx in" >> lib/util/cmdline_parser.ml
+	@echo "   Makefile.users *)" >> lib/util/cmdline_parser.ml
+	@echo "\nlet () = Options.parse_cmdline_arguments ()" >> lib/util/cmdline_parser.ml
+
+META: config.status
+	@echo "description = \"API of Alt-Ergo: An automatic theorem prover dedicated to program verification\"" > META
+	@echo "version = \""$(VERSION)"\"" >> META
+#	@echo "archive(byte) = \"altErgo.cmo\"" >> META
+#	@echo "archive(native) = \"altErgo.cmx\"" >> META
+	@echo "requires = \"unix num zarith\"" >> META
+
+
+
+# installation
+##############
+
+install-byte: install-man install-preludes
+	mkdir -p $(BINDIR)
+	cp -f $(NAME).byte $(BINDIR)/$(NAME)$(EXE)
+
+install-opt: install-man install-preludes
+	mkdir -p $(BINDIR)
+	cp -f $(NAME).opt $(BINDIR)/$(NAME)$(EXE)
+
+install-man:
+	mkdir -p $(MANDIR)/man1
+	cp -f doc/*.1 $(MANDIR)/man1
+
+install-preludes:
+	mkdir -p $(PRELUDESDIR)
+	cp -f preludes/fpa-theory-2017-01-04-16h00.why $(PRELUDESDIR)/
+
+install: install-man install-preludes
+	mkdir -p $(BINDIR)
+	cp -f $(NAME).$(OCAMLBEST) $(BINDIR)/$(NAME)$(EXE)
+
+install-gui:
+	cp -f $(GUINAME).$(OCAMLBEST) $(BINDIR)/$(GUINAME)$(EXE)
+	mkdir -p $(DATADIR)/gtksourceview-2.0/language-specs
+	cp -f doc/gtk-lang/alt-ergo.lang $(DATADIR)/gtksourceview-2.0/language-specs/alt-ergo.lang
+
+# install-pack-opt: xpack
+# 	mkdir -p $(LIBDIR)
+# 	cp -f $(LIBNAME).cmx $(LIBDIR)
+# 	cp -f $(LIBNAME).o $(LIBDIR)
+
+# install-pack-byte: pack META
+# 	mkdir -p $(LIBDIR)
+# 	cp -f $(LIBNAME).cmo $(LIBDIR)
+# 	cp -f $(LIBNAME).cmi $(LIBDIR)
+# 	cp -f META $(LIBDIR)
+
+# install-pack:: install-pack-byte
+# ifeq ($(OCAMLBEST),opt)
+# install-pack:: install-pack-opt
+# endif
+
+# generic rules
+###############
+
+.SUFFIXES: .mli .ml .cmi .cmo .cmx .mll .mly .tex .dvi .ps .html
+
+.mli.cmi:
+	$(OCAMLC) -c $(BFLAGS) $<
+
+.ml.cmo:
+	$(OCAMLC) -c $(BFLAGS) $<
+
+.ml.o:
+	$(OCAMLOPT) -c $(OFLAGS) $<
+
+.ml.cmx:
+	$(OCAMLOPT) -c $(OFLAGS) $<
+
+.mll.ml:
+	$(OCAMLLEX) $< > /dev/null
+
+.mly.ml:
+	$(MENHIR) -v $< 
+
+.mly.mli:
+	$(MENHIR) -v $< 
+
+
+# clean
+#######
+
+clean:
+	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/why plugins/common plugins/satML plugins/common plugins/common plugins/fm-simplex ; do \
+	rm -f $$dd/*.cm[ioxtp] $$dd/*.cmti $$dd/*.o $$dd/*~ $$dd/*.annot $$dd/*.owz;\
+	rm -f $(GENERATED) $$dd/*.output META ; \
+	rm -f $(NAME).byte $(NAME).opt $(GUINAME).opt $(GUINAME).byte *~; \
+	done
+	@rm -rf altErgo.cm* altErgo.o *.log archi.dot archi.pdf lib/*~ *.cmxs *.cmos alt-ergo-static* *.cmxs *.cma essentiel essentiel.tar.bz2 alt-ergo-$(VERSION)-$(ARCH)
+
+
+# depend
+########
+
+.depend depend: $(GENERATED)
+	$(OCAMLDEP) -slash $(LOCAL_INC) lib/util/*.ml* lib/structures/*.ml* lib/reasoners/*.ml* lib/frontend/*.ml* tools/text/*.ml* \
+        tools/gui/*.ml* parsers/why/*.ml* plugins/common/*ml* plugins/satML/*ml* plugins/fm-simplex/*ml* > .depend
+
+include .depend
+
+#### BUILD & INSTALL additional plugins
+
+SATML-CMO = plugins/common/vec.cmo \
+            plugins/satML/satml.cmo \
+            plugins/satML/satml_frontend.cmo
+
+SATML-CMX = $(SATML-CMO:.cmo=.cmx)
+
+satML-plugin.cmxs: $(CMX) $(SATML-CMX)
+	$(if $(QUIET),@echo 'Library $@' &&) $(OCAMLOPT) $(INCLUDES)  -shared -o $@ $(SATML-CMX)
+
+satML-plugin.cma: $(CMO) $(SATML-CMO)
+	$(if $(QUIET),@echo 'Library $@' &&) $(OCAMLC) $(INCLUDES)  -a        -o $@ $(SATML-CMO)
+
+ifeq ($(OCAMLBEST),opt)
+satML: satML-plugin.cmxs
+else
+satML: satML-plugin.cma
+endif
+
+install-satML: satML
+ifeq ($(OCAMLBEST),opt)
+	mkdir -p $(PLUGINSDIR)
+	cp -f satML-plugin.cmxs $(PLUGINSDIR)
+else
+	mkdir -p $(PLUGINSDIR)
+	cp -f satML-plugin.cma $(PLUGINSDIR)
+endif
+
+
+FM-SIMPLEX-CMO = plugins/common/vec.cmo \
+                 plugins/fm-simplex/simplex_cache.cmo \
+                 plugins/fm-simplex/simplex.cmo \
+                 plugins/fm-simplex/fmSimplexIneqs.cmo
+
+FM-SIMPLEX-CMX = $(FM-SIMPLEX-CMO:.cmo=.cmx)
+
+fm-simplex-plugin.cmxs: $(CMX) $(FM-SIMPLEX-CMX)
+	$(if $(QUIET),@echo 'Library $@' &&) $(OCAMLOPT) $(INCLUDES)  -shared -o $@ $(FM-SIMPLEX-CMX)
+
+fm-simplex-plugin.cma: $(CMO) $(FM-SIMPLEX-CMO)
+	$(if $(QUIET),@echo 'Library $@' &&) $(OCAMLC) $(INCLUDES)  -a        -o $@ $(FM-SIMPLEX-CMO)
+
+ifeq ($(OCAMLBEST),opt)
+fm-simplex: fm-simplex-plugin.cmxs
+else
+fm-simplex: fm-simplex-plugin.cma
+endif
+
+install-fm-simplex: fm-simplex
+ifeq ($(OCAMLBEST),opt)
+	mkdir -p $(PLUGINSDIR)
+	cp -f fm-simplex-plugin.cmxs $(PLUGINSDIR)
+else
+	mkdir -p $(PLUGINSDIR)
+	cp -f fm-simplex-plugin.cma $(PLUGINSDIR)
+endif
+
+
+show-dest-dirs:
+	@echo BINDIR      = $(BINDIR)
+	@echo LIBDIR      = $(LIBDIR)
+	@echo PLUGINSDIR  = $(PLUGINSDIR)
+	@echo PRELUDESDIR = $(PRELUDESDIR)
+	@echo DATADIR     = $(DATADIR)
+	@echo MANDIR      = $(MANDIR)
+
+# Makefile.configurable is rebuilt whenever Makefile.configurable.in 
+# or configure.in is modified
+######################################################################
+
+configure: configure.in
+	autoconf 
+	./configure
+
+Makefile.configurable: Makefile.configurable.in configure.in
+	./config.status
+
+config.status: configure
+	./config.status --recheck
+
+# stripped-arch-binary
+
+stripped-arch-binary: $(OPT)
+	cp $(OPT) alt-ergo-$(VERSION)-$(ARCH)
+	strip alt-ergo-$(VERSION)-$(ARCH)
+
+opam-deps:
+	opam install zarith camlzip conf-gtksourceview ocplib-simplex menhir

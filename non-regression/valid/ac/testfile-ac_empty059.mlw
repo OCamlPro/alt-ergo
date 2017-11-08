@@ -1,0 +1,10 @@
+
+
+logic x,y,z,t,b : int
+logic ac f,g : int,int -> int
+
+goal g59:
+  f(z,g(y,x)) = t ->
+  y = b ->
+  f(z,g(x,b)) = t
+

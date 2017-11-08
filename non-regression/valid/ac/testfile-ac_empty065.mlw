@@ -1,0 +1,7 @@
+
+
+logic a,b,c :int
+logic ac f :int,int-> int
+
+goal g65 : a = b -> f(c,a) = f(c,b)
+

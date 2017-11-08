@@ -1,0 +1,10 @@
+
+logic t1,t2 : int farray
+
+axiom a : forall t1,t2 : 'a farray.
+  forall a:int. forall b:'a.
+   t1[a <- b][a] = t2[a]
+
+goal g32 :
+     t2[0 <- 1][0] = t1[0]
+

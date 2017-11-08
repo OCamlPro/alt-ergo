@@ -1,0 +1,9 @@
+
+logic ac v,u : int,int -> int
+logic f: int -> int
+
+goal g84_loops_without_ac_rpo_or_v_abst:
+  forall a,b,c,d,e:int.
+    u(a,u(b,c)) = v(u(a,u(b,c)),a) ->
+  f(u(a,u(b,c))) = f(v(u(a,u(b,c)),a))
+

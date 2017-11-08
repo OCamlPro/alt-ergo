@@ -1,0 +1,11 @@
+
+
+type t = A | B
+
+logic f: t , int -> int
+
+goal g8:
+  forall x:t.
+  forall y:int.
+  f(x,y) = f(A,y) or f(x,y) = f(B,y)
+

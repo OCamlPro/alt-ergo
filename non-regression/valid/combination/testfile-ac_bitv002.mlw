@@ -1,0 +1,13 @@
+
+
+(* assert false dans combine.ml *)
+
+logic ac u : 'a, 'a -> 'a
+logic a,b,c : bitv[1]
+
+goal g2:
+  u(c,u(c,b)) @ c = u(c,b) @ c ->
+  u(c,u(c,b)) = u(a,b) ->
+  true
+
+

@@ -1,0 +1,8 @@
+
+logic ac m: int,int -> int
+logic t1,t2,t3,t4,t5,t6,t7,t8:int
+
+goal g1: 
+  m(m(m(m(m(m(m(t1,t2),t3),t4),t5),t6),t7),t8) =
+  m(t1,m(t2,m(t3,m(t4,m(t5,m(t6,m(t7,t8)))))))
+

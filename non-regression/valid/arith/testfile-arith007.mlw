@@ -1,0 +1,3 @@
+
+logic Q:int -> prop
+goal g7: forall x,y:int. Q(y) -> (y<=x and x<=y) -> Q(x)

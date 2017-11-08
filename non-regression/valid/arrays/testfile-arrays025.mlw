@@ -1,0 +1,9 @@
+
+
+
+goal g25:
+  forall a,b : int farray.
+  forall i,j,v,w:int.
+  a[i<-b[i]] = b[i<-a[i]] ->
+  a[j] = b[j]
+

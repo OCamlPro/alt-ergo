@@ -1,0 +1,13 @@
+
+
+logic a,b,c,d,e,gamma,beta,x,y:int
+logic ac f : int,int -> int
+logic g : int,int -> int
+
+axiom commut : forall x,y:int. g(x,y) = g(y,x)
+goal g75 :
+  f(a,b) = gamma ->
+  f(a,c) = beta ->
+  g(a,f(gamma,c)) = g(f(a,f(c,b)),a)
+
+

@@ -1,0 +1,9 @@
+
+logic t1,t2 : int farray
+
+axiom a : forall t1,t2 : 'a farray.
+  forall a,b:int.
+   t1[a+b] = t2[a-b]
+
+goal g31 : forall x,y:int. t1[3+x] = t2[3-x]
+

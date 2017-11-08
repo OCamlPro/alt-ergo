@@ -1,0 +1,10 @@
+
+
+
+goal g24 :
+  forall i,j:int.
+  forall v1,v2 : 'a.
+  forall a : 'a farray.
+  i <> j ->
+  a[i<-v1, j<-v2] = a[j<-v2, i<-v1]
+

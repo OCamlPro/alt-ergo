@@ -1,0 +1,4 @@
+
+logic x:int
+goal g7 : 0/0 = 0/0 -> false
+

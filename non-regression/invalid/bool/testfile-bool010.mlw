@@ -1,0 +1,5 @@
+
+logic f : bool -> bool
+axiom a: ((f(true) = true) <-> (true <> true)) 
+goal g10: false
+

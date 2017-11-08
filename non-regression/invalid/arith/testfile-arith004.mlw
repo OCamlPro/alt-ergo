@@ -1,0 +1,4 @@
+
+logic f: int -> int
+goal g4: 
+  forall x,y:int. f(x-1) = x + 2 and f(y) = y - 2 and y + 1 = x

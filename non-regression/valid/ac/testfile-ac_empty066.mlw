@@ -1,0 +1,9 @@
+
+
+logic a, b, c, d, x, y : int
+logic ac g : int, int -> int
+
+goal g66: 
+  g(x,g(a,b)) = g(c,g(y,d)) -> 
+  g(g(a,b),g(b,x)) = g(g(c,d),g(y,b))
+

@@ -1,0 +1,10 @@
+
+
+
+goal g13 :
+  forall i,j:int.
+  forall v : 'a.
+  forall b : 'a farray.
+  i = j -> 
+  b = b[j <- b[i]]
+

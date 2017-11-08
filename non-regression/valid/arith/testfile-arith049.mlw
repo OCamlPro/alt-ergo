@@ -1,0 +1,6 @@
+logic f : int , int -> int 
+
+axiom a: forall x: int. f(-1,x) = 0
+
+goal g: 
+     f(0-1,-1) = 0

@@ -1,0 +1,5 @@
+
+logic P: int -> prop
+goal g3 : 
+     (exists x:int. P(x)) -> forall x:int. P(x)
+

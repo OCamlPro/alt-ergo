@@ -1,0 +1,8 @@
+logic f : int,int -> int
+logic a : int
+
+goal g:
+ a = f(a,1) ->
+ f(a,2) = a * f(a,1) ->
+ 0 > f(a,2) ->
+ false

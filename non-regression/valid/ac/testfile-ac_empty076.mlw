@@ -1,0 +1,12 @@
+
+
+type set
+
+logic a,b :set
+logic ac union : set,set -> set
+
+axiom idem : forall x,X: set. union (union(x,x),X)=union(x,X)
+
+goal g76 : union(a,union(b,a)) = union(a,b)
+
+

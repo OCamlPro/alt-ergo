@@ -1,0 +1,31 @@
+
+type 'a list
+
+logic nil : 'a list
+logic cons : 'a, 'a list -> 'a list
+logic hd : 'a list -> 'a
+logic tl : 'a list -> 'a list
+
+axiom hd_cons : forall x:'a. forall l:'a list. hd (cons(x,l)) = x
+axiom tl_cons : forall x:'a. forall l:'a list. tl (cons(x,l)) = l
+
+logic length : 'a list -> int
+
+axiom length_def_1 : length(nil) = 0
+
+axiom length_def_2 : 
+  forall x:'a. forall l:'a list. 
+  length(cons(x,l)) = 1 + length(l)
+
+
+
+logic nth : 'a list, int -> 'a
+
+axiom nth_def_1 : 
+  forall x:'a. forall l:'a list. nth(cons(x,l),0) = x
+
+axiom nth_def_2 : 
+  forall x:'a. forall l:'a list. forall n:int.
+  n > 0 -> nth(cons(x,l),n) = nth(l,n-1)
+
+goal g3 : nth(cons(1,cons(2,cons(3,nil))), 1) = 3

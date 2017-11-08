@@ -1,0 +1,4 @@
+goal g:
+   forall a:real. 
+   1. / a > 0. ->
+   a > 0.

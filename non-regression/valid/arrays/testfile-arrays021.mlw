@@ -1,0 +1,13 @@
+
+
+goal g21:
+  forall i,j:int.
+  forall v,w : 'a.
+  forall a,b : 'a farray.
+  a = b -> 
+  b = b[j<-v, i<-w]->
+  i <> j -> 
+  i = 1 -> 
+  j = 2 ->  
+  a[j]= v
+

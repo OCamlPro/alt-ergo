@@ -1,0 +1,15 @@
+
+
+type 'a t
+logic P,P': int -> prop
+logic Q,S: 'a t -> prop
+logic Q': int, int -> prop
+logic R: prop
+logic a: bool t
+
+logic c: 'a t
+
+axiom a3: forall x:int. P(x) -> let y = c in  P'(x)
+
+goal g3: P(1) -> P'(1)
+

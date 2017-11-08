@@ -1,0 +1,35 @@
+logic min : int, int -> int
+logic P, Q : int -> prop
+
+logic A : int
+logic Z : int
+logic E:int
+
+logic y : int
+logic j:int
+
+
+goal g_35 :
+
+0 <= A  ->
+
+Z <= 20  ->
+
+y <= Z - A + 1  ->
+
+1 <= E  ->
+
+0 <= j  ->
+
+not P(y - (j * E)) ->
+
+y - (j * E) > 20  ->
+
+y - (j * E) = y - (j * E)  ->
+
+(
+ (* 1 , 3 *)  min(min(E,E),(y - (j * E))) = min(E,y - (j * E))  and
+
+ (* 1 , 5 *)  P(y) ) ->
+false
+ 

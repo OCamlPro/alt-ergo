@@ -1,0 +1,6 @@
+
+logic g: int -> int
+
+axiom a : forall x,y:int[g(x),y]. y=g(x)
+
+goal g10: 0=g(1)

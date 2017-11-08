@@ -1,0 +1,6 @@
+
+type t = A | B | C
+
+goal g3:
+  forall x:t. x = A -> x = B -> false
+

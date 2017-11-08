@@ -1,0 +1,4 @@
+
+goal g1 : 
+     (exists x:int. x=2) -> (exists x:int. x=3) -> false
+

@@ -1,0 +1,12 @@
+
+
+logic a,b,c,gamma,beta,t3,t1:int
+logic ac f,g : int,int -> int
+
+goal g53 :
+  f(g(a,b+1)+t1,c+2) + t3 = gamma ->
+  g(a+t3,b+1) = beta ->
+  t3 = t1 ->
+  t1 = 0 ->
+  f(beta,c+2)= gamma
+  

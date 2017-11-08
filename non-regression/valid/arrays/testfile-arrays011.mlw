@@ -1,0 +1,11 @@
+
+
+goal g11 :
+  forall i,j:int.
+  forall v : 'a.
+  forall b : 'a farray.
+  i = 1 ->
+  j = 2 ->  
+  v = b[j<-v][i] ->
+  b[i]=v
+

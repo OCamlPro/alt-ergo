@@ -1,0 +1,7 @@
+type 'a list
+logic nil : 'a list
+logic length: 'a list -> int
+
+axiom a: length(nil : 'a list) = 0
+
+goal G : false

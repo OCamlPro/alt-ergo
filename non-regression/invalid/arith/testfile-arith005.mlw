@@ -1,0 +1,5 @@
+
+logic f: int -> int
+goal g5: 
+  forall u,v,x,y:int.
+  u<=v and v<=u and 2*x +1 <= 2*y and x=f(u) and y=f(v)

@@ -1,0 +1,12 @@
+
+
+logic f : int -> int
+
+(*bresenham_po_4 : risque de boucler si on relache
+ Arith.color *)
+goal g3 :
+  forall a,b,x,y,z,t:int.
+  x * x  = f(z) + 2 ->
+  x * y = f(t) + 2 ->
+  false
+

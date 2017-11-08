@@ -1,0 +1,7 @@
+
+
+type 'a pair = {fst : 'a ; snd : 'a}
+type elt
+
+goal g6: forall x,y:int. {fst=x; snd=y}.fst = 2 -> x=2
+

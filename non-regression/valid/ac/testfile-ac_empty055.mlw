@@ -1,0 +1,11 @@
+
+
+logic a,b,c,d,x,y,gamma,beta : int
+logic ac f,g:int,int -> int
+
+goal g55 :
+  g(x,y) = f(a,b) ->
+  f(g(x,y),d) = gamma ->
+  f(a,c)      = beta ->
+  f(gamma,c) = f(beta,f(b,d))
+

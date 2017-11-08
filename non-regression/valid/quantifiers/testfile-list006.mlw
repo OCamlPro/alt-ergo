@@ -1,0 +1,54 @@
+
+type 'a list
+
+logic nil : 'a list
+logic cons : 'a, 'a list -> 'a list
+logic hd : 'a list -> 'a
+logic tl : 'a list -> 'a list
+
+axiom hd_cons : forall x:'a. forall l:'a list. hd (cons(x,l)) = x
+axiom tl_cons : forall x:'a. forall l:'a list. tl (cons(x,l)) = l
+
+logic length : 'a list -> int
+
+axiom length_def_1 : length(nil) = 0
+
+axiom length_def_2 : 
+  forall x:'a. forall l:'a list. 
+  length(cons(x,l)) = 1 + length(l)
+
+logic nth : 'a list, int -> 'a
+
+axiom nth_def_1 : 
+  forall x:'a. forall l:'a list. nth(cons(x,l),0) = x
+
+axiom nth_def_2 : 
+  forall x:'a. forall l:'a list. forall n:int.
+  n > 0 -> nth(cons(x,l),n) = nth(l,n-1)
+
+logic mem : 'a, 'a list -> prop
+
+axiom mem_def_1 : forall x:'a. not mem(x,nil)
+
+axiom mem_def_2 : 
+  forall x:'a. forall y:'a. forall l:'a list.
+  mem(x, cons(y,l)) <-> (x = y or mem(x,l))
+
+logic append : 'a list, 'a list -> 'a list
+
+axiom append_def_1 : 
+  forall l:'a list. append(nil,l) = l
+
+axiom append_def_2 : 
+  forall x:'a. forall l1,l2:'a list.
+  append(cons(x,l1),l2) = cons(x,append(l1,l2))
+
+logic rev : 'a list -> 'a list
+
+axiom rev_def_1 : rev(nil) = nil
+
+axiom rev_def_2 : 
+  forall x:'a. forall l:'a list.
+  rev(cons(x,l)) = append(rev(l), cons(x,nil))
+
+goal g6 : rev(cons(1,cons(2,nil))) = cons(2,cons(1,nil))

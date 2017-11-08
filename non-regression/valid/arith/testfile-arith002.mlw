@@ -1,0 +1,2 @@
+
+goal g2: forall x:int. x-x = 0

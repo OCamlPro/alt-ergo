@@ -1,0 +1,5 @@
+
+goal mult_po_11: forall a:int. a > 0 -> a % 2 <> 1 -> a/2 < a
+
+
+

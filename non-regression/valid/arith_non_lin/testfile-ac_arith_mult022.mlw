@@ -1,0 +1,4 @@
+
+logic x:int
+goal g22 : 10 <= x*x*x <= 27 -> x = 3
+

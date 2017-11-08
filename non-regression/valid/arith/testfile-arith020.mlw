@@ -1,0 +1,8 @@
+
+logic p,q : int -> prop
+logic a,b : int
+
+goal g20 : 
+  (forall k:int. a <= k <= b -> (p(k) and q(k))) ->
+  p(b+1) -> q(b+1) ->
+  forall k:int. a <= k <= b+1 -> (p(k) and q(k))

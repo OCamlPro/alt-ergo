@@ -1,0 +1,9 @@
+
+goal g20:
+  forall a,min, max,k : int.
+  min = a ->
+  min <= k <= max ->
+  max - min <= 10 ->
+  max - min = 0 ->
+  false
+
