@@ -153,9 +153,10 @@ public-release: # test-everything
 	mkdir -p $(FILES_DEST)
 	cp configure $(FILES_DEST)
 	git clean -dfx
-	cp License.OCamlPro OCamlPro-Non-Commercial-License.pdf LGPL-License.txt Apache-License-2.0.txt $(FILES_DEST)/
+	cp ../License.OCamlPro ../OCamlPro-Non-Commercial-License.pdf ../LGPL-License.txt ../Apache-License-2.0.txt $(FILES_DEST)/
+        cp ../README.md ../LICENSE.md ../COPYING.md $(FILES_DEST)/
 	cp configure.in Makefile.configurable.in Makefile.users Makefile Makefile.developers $(FILES_DEST)/
-	cp LICENSE.md COPYING.md  INSTALL.md opam README.md CHANGES $(FILES_DEST)/
+	cp INSTALL.md opam CHANGES $(FILES_DEST)/
 	cp -rf lib tools parsers plugins preludes examples doc $(FILES_DEST)/
 	#echo "let version=\"$(PUBLIC_VERSION)\"" >> $(FILES_DEST)/lib/util/version.ml
 	echo "let release_commit = \"$(COMMIT_ID)\"" >> $(FILES_DEST)/lib/util/version.ml

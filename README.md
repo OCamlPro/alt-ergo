@@ -17,7 +17,7 @@ See enclosed LICENSE.md file
 
 ## Build, Installation and Usage
 
-See enclosed INSTALL.md file
+See enclosed sources/INSTALL.md file
 
 
 ## Support
