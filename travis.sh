@@ -40,7 +40,10 @@ do
     echo "alt-ergo -version == `alt-ergo -version`"
 
     sh ./run_valid.sh "alt-ergo" "0.5"
+    echo RETURN_CODE is $?
+
     sh ./run_invalid.sh "alt-ergo" "0.5"
+    echo RETURN_CODE is $?
 
     cd ..
     # - make non-regression
