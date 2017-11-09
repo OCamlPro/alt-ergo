@@ -220,6 +220,7 @@ install: install-man install-preludes
 	cp -f $(NAME).$(OCAMLBEST) $(BINDIR)/$(NAME)$(EXE)
 
 install-gui:
+	mkdir -p $(BINDIR)
 	cp -f $(GUINAME).$(OCAMLBEST) $(BINDIR)/$(GUINAME)$(EXE)
 	mkdir -p $(DATADIR)/gtksourceview-2.0/language-specs
 	cp -f doc/gtk-lang/alt-ergo.lang $(DATADIR)/gtksourceview-2.0/language-specs/alt-ergo.lang
