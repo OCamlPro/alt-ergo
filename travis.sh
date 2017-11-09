@@ -76,7 +76,7 @@ do
     echo "=+= [travis.sh] building and installing ... =+="
 
     make -j4 alt-ergo ; exit_if_error
-    make install ; exit_if_error
+    make install-ae ; exit_if_error
     make clean ; exit_if_error
 
     make -j4 gui ; exit_if_error
