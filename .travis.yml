@@ -10,9 +10,9 @@ before_install:
 - git status
 
 install:
-- wget -qq https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin
+- wget -qq https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin system
 - export OPAMYES=1
-- opam init
+- opam init --comp system
 
 script:
 - sh ./travis.sh

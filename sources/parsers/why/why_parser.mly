@@ -488,7 +488,10 @@ named_ident:
      let res = aux_fun token lexbuf in
      Parsing.clear_parser ();
      res
-   with Parsing.Parse_error | MenhirBasics.Error ->
+   with
+   | Parsing.Parse_error
+   | (*Basics. | MenhirBasics.*)Error ->
+     (* not fully qualified ! backward incompat. in Menhir !!*)
      let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
      let lex = Lexing.lexeme lexbuf in
      Parsing.clear_parser ();
