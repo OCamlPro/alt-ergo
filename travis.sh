@@ -63,7 +63,7 @@ do
     opam sw $ocaml_version ; exit_if_error
     eval `opam config env`
 
-    opam install ocamlfind camlzip zarith ocplib-simplex lablgtk menhir ; exit_if_error
+    opam install ocamlfind camlzip zarith ocplib-simplex lablgtk menhir --y ; exit_if_error
 
     cd $git_repo/
     git clean -dfx
