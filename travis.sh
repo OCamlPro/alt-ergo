@@ -12,9 +12,9 @@ non_regression(){
 
     cd ../non-regression
 
-    # sh ./run_valid.sh "alt-ergo" "0.5" ; exit_if_error
+    sh ./run_valid.sh "alt-ergo" "0.5" ; exit_if_error
 
-    # sh ./run_invalid.sh "alt-ergo" "0.5" ; exit_if_error
+    sh ./run_invalid.sh "alt-ergo" "0.5" ; exit_if_error
 
     # - make non-regression
 }
@@ -63,7 +63,7 @@ do
     opam sw $ocaml_version ; exit_if_error
     eval `opam config env`
 
-    opam install ocamlfind camlzip zarith ocplib-simplex lablgtk menhir ; exit_if_error
+    opam install ocamlfind camlzip zarith ocplib-simplex lablgtk menhir --y ; exit_if_error
 
     cd $git_repo/
     git clean -dfx
