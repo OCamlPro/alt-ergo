@@ -20,19 +20,19 @@ do
 done
 echo "[run_valid > default test] $cpt files considered"
 
-cpt=0
-for f in $files
-do
-    cpt=`expr $cpt + 1`
-    res=`$alt_ergo_bin -timelimit $timelimit -sat-plugin satML-plugin.cmxs $f`
-    if [ "`echo $res | grep -c ":Valid"`" -eq "0" ]
-    then
-        echo "[run_valid > satML-plugin test] issue with file $f"
-        echo "Result is $res"
-        exit 1
-    fi
-done
-echo "[run_valid > satML-plugin test] $cpt files considered"
+# cpt=0
+# for f in $files
+# do
+#     cpt=`expr $cpt + 1`
+#     res=`$alt_ergo_bin -timelimit $timelimit -sat-plugin satML-plugin.cmxs $f`
+#     if [ "`echo $res | grep -c ":Valid"`" -eq "0" ]
+#     then
+#         echo "[run_valid > satML-plugin test] issue with file $f"
+#         echo "Result is $res"
+#         exit 1
+#     fi
+# done
+# echo "[run_valid > satML-plugin test] $cpt files considered"
 
 # cpt=0
 # for f in $files
