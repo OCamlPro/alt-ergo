@@ -12,9 +12,9 @@ non_regression(){
 
     cd ../non-regression
 
-    # sh ./run_valid.sh "alt-ergo" "0.5" ; exit_if_error
+    sh ./run_valid.sh "alt-ergo" "0.5" ; exit_if_error
 
-    # sh ./run_invalid.sh "alt-ergo" "0.5" ; exit_if_error
+    sh ./run_invalid.sh "alt-ergo" "0.5" ; exit_if_error
 
     # - make non-regression
 }
