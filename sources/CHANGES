@@ -1,3 +1,56 @@
+version 2.0.0, November 14, 2017
+================================
+
+* integration of floating-point arithmetic reasoning: this is done via
+  the support of the rounding operator as done in the Gappa tool. FPA
+  reasoning can be enabled by calling Alt-Ergo as follows:
+
+  alt-ergo -use-fpa -prelude fpa-theory-2017-01-04-16h00.why file.why
+
+  where fpa-theory-2017-01-04-16h00.why is a prelude distributed with
+  Alt-Ergo. More details about the integration are given in this
+  paper: https://hal.inria.fr/hal-01522770, and dditional benchmarks
+  can be found here:
+  https://gitlab.com/OCamlPro-Iguernlala/Three-Tier-FPA-Benchs
+
+* a new lightweight reasoning step before SAT solving that enables a
+  kind of backward reasoning/goal unfolding (can be disabled with
+  option -no-backward)
+
+* integration of a simple cache mechanism for unit facts in the SAT
+  (learnt clauses, assumed facts, instances, theory deductions, ...)
+  to improve BCP (can be disabled with option -no-sat-learning)
+
+* the code of the profiler is now integrated in Alt-Ergo and is
+  statically linked
+
+* deep code refactoring. In particular, one can easily build an
+  Alt-Ergo library or define/register a new parser
+
+* add the ability to parse preludes with -prelude <prelude_1.why> ...
+  -prelude <prelude_n.why>
+
+* add the ability to disable weak pointers in hash-consing module
+  using option -disable-weaks (useful for more determinism)
+
+* GUI: goals are now shown in positive form
+
+* bugfix related to -timelimit option (use of ITIMER_VIRTUAL instead
+  of ITIMER_REAL except for the GUI)
+
+* bugfix in UF related to normalization of terms in presence of AC
+  symbols
+
+* new options -no-decisions and -no-fm to disable decisions in the SAT
+  and the Fourier-Motzkin algorithm, respectively
+
+* new improvements and heuristics in the SAT, terms, formulas,
+  congruence closure, profiler, ...
+
+* update licensing: most files are now licensed under the terms of the
+  Apache license v2. Some recent OCamlPro additions are licensed under
+  the terms of the OCamlPro Non-Commercial Purpose License v1
+
 version 1.30, November 21, 2016
 ==============================
 
