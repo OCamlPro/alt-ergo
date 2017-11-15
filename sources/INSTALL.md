@@ -20,20 +20,28 @@
 The steps below will build and install native or bytecode binaries
 depending on whether ocamlopt is installed or only ocamlc is detected.
 
-#### Alt-Ergo
+#### Everything (binaries, plugins, ...)
 
   1. Compile with "make"
 
   2. Install with "make install"
  
-#### AltGr-Ergo
+  3. Uninstall with "make uninstall"
+
+#### Alt-Ergo binary
+
+  1. Compile with "make alt-ergo"
+
+  2. Install with "make install-ae"
+ 
+#### AltGr-Ergo binary
 
   1. Compile with "make gui"
   
   2. Install with "make install-gui"
 
 
-The steps below will build and install OCamlPro plugins (extension
+The steps below will build and install additional plugins (extension
 .cmxs if ocamlopt is installed or .cma if only ocamlc is detected).
 
 #### The SatML Plugin

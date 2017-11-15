@@ -209,20 +209,23 @@ install-opt: install-man install-preludes
 
 install-man:
 	mkdir -p $(MANDIR)/man1
-	cp -f doc/*.1 $(MANDIR)/man1
+	cp -f doc/alt-ergo.1 $(MANDIR)/man1
 
 install-preludes:
 	mkdir -p $(PRELUDESDIR)
 	cp -f preludes/fpa-theory-2017-01-04-16h00.why $(PRELUDESDIR)/
 
-install: install-man install-preludes
+install-ae: install-man install-preludes
 	mkdir -p $(BINDIR)
 	cp -f $(NAME).$(OCAMLBEST) $(BINDIR)/$(NAME)$(EXE)
 
 install-gui:
+ifeq ($(ENABLEGUI),yes)
+	mkdir -p $(BINDIR)
 	cp -f $(GUINAME).$(OCAMLBEST) $(BINDIR)/$(GUINAME)$(EXE)
 	mkdir -p $(DATADIR)/gtksourceview-2.0/language-specs
 	cp -f doc/gtk-lang/alt-ergo.lang $(DATADIR)/gtksourceview-2.0/language-specs/alt-ergo.lang
+endif
 
 # install-pack-opt: xpack
 # 	mkdir -p $(LIBDIR)
@@ -239,6 +242,18 @@ install-gui:
 # ifeq ($(OCAMLBEST),opt)
 # install-pack:: install-pack-opt
 # endif
+
+install: install-ae install-gui install-fm-simplex install-satML
+
+uninstall:
+	@rm $(BINDIR)/$(NAME)$(EXE)
+	@rm $(MANDIR)/man1/alt-ergo.1
+	-@rm $(BINDIR)/$(GUINAME)$(EXE)
+	-@rm $(DATADIR)/gtksourceview-2.0/language-specs/alt-ergo.lang
+	@rm $(PLUGINSDIR)/satML-plugin.cm*
+	@rm $(PLUGINSDIR)/fm-simplex-plugin.cm*
+	@rm $(PRELUDESDIR)/fpa-theory-2017-01-04-16h00.why
+
 
 # generic rules
 ###############
