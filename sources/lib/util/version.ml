@@ -29,7 +29,7 @@
 (* WARNING: a "cut" is performed on the following file in the Makefile.
    DO NOT CHANGE its format *)
 
-let version="2.0.0"
+let version="2.0.0+"
 
 let release_commit = "(not released)"
 
