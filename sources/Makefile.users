@@ -391,4 +391,4 @@ stripped-arch-binary: $(OPT)
 	strip alt-ergo-$(VERSION)-$(ARCH)
 
 opam-deps:
-	opam install zarith camlzip conf-gtksourceview ocplib-simplex menhir
+	opam install ocamlfind camlzip zarith ocplib-simplex lablgtk menhir
