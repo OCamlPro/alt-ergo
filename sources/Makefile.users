@@ -11,8 +11,34 @@ LOCAL_INC = -I lib/util -I lib/structures -I lib/reasoners \
 INCLUDES = $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(LOCAL_INC)
 #for coverage # -I /usr/local/lib/ocaml/3.12.1/bisect -pp "camlp4o str.cma /usr/local/lib/ocaml/3.12.1/bisect/bisect_pp.cmo"
 
-BFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g $(INCLUDES)
-OFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g -inline 100 $(INCLUDES) -for-pack AltErgo
+# TODO : enable these warnings one by one and fix the code
+
+WARNINGS= -w +A-22-27-4-9-44-32-48-33-41-60-6-39-35-38-50-34-37-45-29-42
+
+# xxxx: Warning 22: user warnings
+# x623: Warning 27: unused variable binders
+# x619: Warning 4 : this pattern-matching is fragile.
+# x291: Warning 9 : the following labels are not bound in this record pattern:
+# x161: Warning 44: this open statement shadows the value identifier = (which is later used)
+# x134: Warning 32: unused value take_max.
+# x37 : Warning 48: implicit elimination of optional argument ?kind
+# x35 : Warning 33: unused open Lexing.
+# x35 : Warning 41: Other belongs to several types: abstract Sig.lit_origin
+# x28 : Warning 60: unused module MyNums.
+# x26 : Warning 6 : label is_le was omitted in the application of this function.
+# x9  : Warning 39: unused rec flag.
+# x8  : Warning 35: unused for-loop index cpt.
+# x6  : Warning 38: unused exception Error
+# x5  : Warning 50: ambiguous documentation comment
+# x4  : Warning 34: unused type t.
+# x2  : Warning 37: unused constructor Yes.
+# x2  : Warning 45: this open statement shadows the constructor Bitv (which is later used)
+# x1  : Warning 29: unescaped end-of-line in a string constant (non-portable code)
+# x1  : Warning 42: this use of Other relies on type-directed disambiguation,
+
+
+BFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g $(WARNINGS) $(INCLUDES)
+OFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g $(WARNINGS) -inline 100 $(INCLUDES) -for-pack AltErgo
 
 BIBBYTE = zarith.cma nums.cma unix.cma dynlink.cma str.cma zip.cma ocplibSimplex.cma
 # for coverage bisect.cma 
