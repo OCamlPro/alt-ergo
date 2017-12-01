@@ -34,7 +34,6 @@ open Matching_types
 module T = Term
 module F = Formula
 module MF = F.Map
-module Ex = Explanation
 module MT = T.Map
 module SubstT = Term.Subst
 

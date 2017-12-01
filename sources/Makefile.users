@@ -13,9 +13,11 @@ INCLUDES = $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(LOCA
 
 # TODO : enable these warnings one by one and fix the code
 
-WARNINGS= -w +A-45-22-27-4-9-44-32-48-33-41-60-6
+WARNINGS= -w +A-45-22-27-4-9-44-32-48-33-41-6
 
 # xxxx: Warning 22: user warnings
+# x6 : Warning 60: unused module MyNums. ==> pb with recursive modules
+
 # x623: Warning 27: unused variable binders
 # x619: Warning 4 : this pattern-matching is fragile.
 # x291: Warning 9 : the following labels are not bound in this record pattern:
@@ -24,7 +26,6 @@ WARNINGS= -w +A-45-22-27-4-9-44-32-48-33-41-60-6
 # x37 : Warning 48: implicit elimination of optional argument ?kind
 # x35 : Warning 33: unused open Lexing.
 # x35 : Warning 41: Other belongs to several types: abstract Sig.lit_origin
-# x28 : Warning 60: unused module MyNums.
 # x26 : Warning 6 : label is_le was omitted in the application of this function.
 
 

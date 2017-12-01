@@ -359,8 +359,6 @@ module LT : S_Term = struct
     Term.Set.fold
       (fun t z -> Term.subterms z t)(terms_nonrec a) Term.Set.empty
 
-  module SM = Symbols.Map
-
   let vars_of a acc = Term.Set.fold Term.vars_of (terms_nonrec a) acc
 
   let is_ground a = Term.Set.for_all Term.is_ground (terms_nonrec a)

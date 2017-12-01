@@ -301,8 +301,6 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   let m_predicates env tbox selector ilvl backward =
     mround env env.predicates tbox selector ilvl "predicates" backward
 
-  module MI = Map.Make (struct type t = int let compare = compare end)
-
   let retrieve_used_context env dep =
     let deps = Ex.formulas_of dep in
     let used, unlems, unpreds =

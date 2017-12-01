@@ -32,6 +32,7 @@ open Sig
 
 (*** Combination module of Shostak theories ***)
 
+[@@@ocaml.warning "-60"]
 module rec CX : sig
   include Sig.X
 
@@ -615,7 +616,6 @@ and X3 : Sig.SHOSTAK
             let extract = extract3
             let embed = embed3
            end)
-
 
 and X4 : Sig.SHOSTAK
  with type r = CX.r

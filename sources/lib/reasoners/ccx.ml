@@ -33,7 +33,6 @@ open Exception
 
 module X = Combine.Shostak
 module Ex = Explanation
-module SetF = Formula.Set
 module T = Term
 module A = Literal
 module LR = A.Make(struct type t = X.r let compare = X.str_cmp include X end)
@@ -99,7 +98,6 @@ module Main : S = struct
   module Uf = Combine.Uf
   module Rel = Combine.Relation
   module Q = Queue
-  module MX = Map.Make(struct type t = X.r let compare = X.hash_cmp end)
 
   type t = {
     use : Use.t;

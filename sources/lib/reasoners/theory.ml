@@ -33,7 +33,6 @@ open Exception
 
 module X = Combine.Shostak
 module Ex = Explanation
-module SetF = Formula.Set
 module T = Term
 module A = Literal
 module LR = A.Make(struct type t = X.r let compare = X.str_cmp include X end)

@@ -40,7 +40,6 @@ module MF = F.Map
 module MA = Literal.LT.Map
 module Ex = Explanation
 
-module H = Hashtbl.Make(Formula)
 exception No_suitable_decision
 
 

@@ -35,7 +35,6 @@ module T  = Term
 module A  = Literal
 module L  = List
 module Hs = Hstring
-module Ex = Explanation
 
 type 'a abstract = Cons of Hs.t * Ty.t |  Alien of 'a
 

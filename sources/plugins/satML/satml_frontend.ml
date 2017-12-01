@@ -20,16 +20,11 @@ module Main : Sat_solver_sig.S = struct
   module Ex = Explanation
   module F = Formula
   module MF = F.Map
-  module SF = F.Set
   module A = Literal.LT
-  module T = Term
   module Types = Satml.Types
-  module Hs = Hstring
-
 
   module FF = Satml.Flat_Formula
   module MFF = FF.Map
-  module SFF = FF.Set
 
   let reset_refs () = SAT.reset_steps ()
   let get_steps () = SAT.get_steps ()

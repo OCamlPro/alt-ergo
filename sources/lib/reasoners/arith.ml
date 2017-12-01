@@ -69,8 +69,6 @@ module Shostak
 
     type r = P.r
 
-    module Ac = Ac.Make(X)
-
     let name = "arith"
 
     (*BISECT-IGNORE-BEGIN*)
