@@ -103,9 +103,6 @@ module Container : Container_SIG = struct
       module SX = Set.Make(struct type t = X.r let compare = X.hash_cmp end)
       module MX = Map.Make(struct type t = X.r let compare = X.hash_cmp end)
 
-      type r = P.r
-      type uf = Uf.t
-
       let age_cpt = ref Z.zero
 
       let current_age () = !age_cpt

@@ -32,8 +32,6 @@ open Sig
 module Hs = Hstring
 module T = Term
 
-type ('a, 'b) mine = Yes of 'a | No of 'b
-
 type 'a abstract =
   | Record of (Hs.t * 'a abstract) list * Ty.t
   | Access of Hs.t * 'a abstract * Ty.t
