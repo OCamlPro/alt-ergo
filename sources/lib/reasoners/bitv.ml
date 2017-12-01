@@ -790,7 +790,7 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   type r = X.r
   type t = unit
   type uf = Uf.t
-  exception Inconsistent
+
   let empty _ = ()
   let assume _ _ _ =
     (), { assume = []; remove = []}

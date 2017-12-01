@@ -13,7 +13,7 @@ INCLUDES = $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(LOCA
 
 # TODO : enable these warnings one by one and fix the code
 
-WARNINGS= -w +A-45-22-27-4-9-44-32-48-33-41-60-6-35-38-37
+WARNINGS= -w +A-45-22-27-4-9-44-32-48-33-41-60-6-35
 
 # xxxx: Warning 22: user warnings
 # x623: Warning 27: unused variable binders
@@ -27,8 +27,6 @@ WARNINGS= -w +A-45-22-27-4-9-44-32-48-33-41-60-6-35-38-37
 # x28 : Warning 60: unused module MyNums.
 # x26 : Warning 6 : label is_le was omitted in the application of this function.
 # x8  : Warning 35: unused for-loop index cpt.
-# x6  : Warning 38: unused exception Error
-# x2  : Warning 37: unused constructor Yes.
 
 
 BFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g $(WARNINGS) $(INCLUDES)

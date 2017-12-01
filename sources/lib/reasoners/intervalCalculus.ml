@@ -45,8 +45,6 @@ module L = Literal
 module Sy = Symbols
 module I = Intervals
 
-exception NotConsistent of Literal.LT.Set.t
-
 module OracleContainer =
   (val (Inequalities.get_current ()) : Inequalities.Container_SIG)
 

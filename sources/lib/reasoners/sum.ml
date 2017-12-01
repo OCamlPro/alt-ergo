@@ -205,8 +205,6 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   module Sh = Shostak(X)
   open Sh
 
-  exception Not_Cons
-
   module Ex = Explanation
 
   module MX = Map.Make(struct type t = X.r let compare = X.hash_cmp end)

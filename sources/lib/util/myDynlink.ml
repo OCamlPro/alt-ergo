@@ -16,6 +16,7 @@ module DummyDL = struct
 
   type error = string
 
+  [@@@ocaml.warning "-38"]
   exception Error of error
 
   let error_message s = s

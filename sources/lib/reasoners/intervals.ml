@@ -45,7 +45,6 @@ type t = {
   expl: Ex.t
 }
 
-exception EmptyInterval of Ex.t
 exception NotConsistent of Ex.t
 exception No_finite_bound
 
