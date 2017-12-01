@@ -660,13 +660,13 @@ module Simplex (C : Coef_Type) = struct
     (*fin utile *)
 
 
-    (*** coeur du simplex ********************************************************)
+    (*** coeur du simplex *****************************************************)
 
     exception Choose_index of int
 
     let choose_var ctx co (q,lines) =
       try
-        for j = 0 to !len - 1 do
+        for _ = 0 to !len - 1 do
           let i = Queue.pop q in
           Queue.push i q;
           if C.compare co.a2.(i) C.zero > 0 then raise (Choose_index i)

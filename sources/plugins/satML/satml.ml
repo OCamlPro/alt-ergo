@@ -614,7 +614,7 @@ module Flat_Formula : FF_SIG = struct
 
   let cpt = ref 0
 
-  let sp() = let s = ref "" in for i = 1 to !cpt do s := " " ^ !s done; !s ^ !s
+  let sp() = String.make (!cpt * 2) ' '
 
   let rec print fmt fa = match fa.pos with
     | UNIT a -> fprintf fmt "%a" Types.pr_atom a
