@@ -616,7 +616,7 @@ let rec print_string_sep sep fmt = function
   | [s] -> fprintf fmt "%s" s
   | s::r -> fprintf fmt "%s%s%a" s sep (print_string_sep sep) r
 
-let rec print_string_list fmt = print_string_sep ", " fmt
+let print_string_list fmt = print_string_sep ", " fmt
 
 let print_astring_list fmt l =
   let rec aux fmt = function

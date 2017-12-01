@@ -593,7 +593,7 @@ let force_interrupt old_action_ref n =
 
 
 
-let rec kill_thread thread () =
+let kill_thread thread () =
   match !thread with
     | Some r ->
       interrupt :=  Some (Thread.id r);

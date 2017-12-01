@@ -285,7 +285,7 @@ module Container : Container_SIG = struct
         cross_rec mp cneg, !nb_inqs
 
       let split x mp =
-        let rec split_rec _ (ineq, _) (cp, cn, co, nb_pos, nb_neg) =
+        let split_rec _ (ineq, _) (cp, cn, co, nb_pos, nb_neg) =
           try
 	    let a = find_coefficient x ineq in
 	    if Q.sign a > 0 then ineq::cp, cn, co, nb_pos+1, nb_neg

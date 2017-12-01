@@ -213,7 +213,7 @@ module Main : S = struct
   let one, _ = X.make (Term.make (Sy.name "@bottom") [] Ty.Tint)
 
   let concat_leaves uf l =
-    let rec concat_rec acc t =
+    let concat_rec acc t =
       match  X.leaves (fst (Uf.find uf t)) , acc with
 	  [] , _ -> one::acc
 	| res, [] -> res
@@ -565,7 +565,7 @@ module Main : S = struct
     facts.touched <- Util.MI.empty;
     acc
 
-  let rec assume_inequalities env choices facts =
+  let assume_inequalities env choices facts =
     Options.tool_req 3 "TR-CCX-Builtin";
     if Q.is_empty facts.ineqs then env, choices
     else begin
