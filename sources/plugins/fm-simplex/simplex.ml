@@ -983,7 +983,7 @@ module Simplex (C : Coef_Type) = struct
     end
 
   let partial_restart res (max_ctt: (int*Q.t) list) =
-    (**XXXTimer.Simplex_main.start();**)
+    (*XXXTimer.Simplex_main.start();*)
     if !dsimplex then fprintf fmt "new:   ";
     if !dsimplex then List.iter
       (fun (i,q) ->
