@@ -425,14 +425,26 @@ let eventual_particular_inst =
     match free_vty with
     | _::_ -> None
     | [] ->
-      match Sy.Map.bindings binders with
-      | [] -> assert false
-      | _::_::_ -> None
-      | [v, (ty,_)] ->
+      assert (not (Sy.Map.is_empty binders));
+      begin
         try
-          aux v (Term.make v [] ty) f; None
-        with Particuar_instance (x, t) ->
-          Some (Sy.Map.singleton x t, Ty.esubst)
+          let acc =
+            Sy.Map.fold
+              (fun v (ty, _) acc ->
+                try aux v (Term.make v [] ty) f; raise Exit
+                with Particuar_instance (x, t) ->
+                  if not (Term.is_ground t) then begin
+                    raise Exit
+                      [@ocaml.ppwarning
+                          "TODO: handle other cases (exists x, y: x=1 and y=x)"]
+                    ;
+                  end;
+                  Sy.Map.add x t acc
+              )binders Sy.Map.empty
+          in
+          Some (acc, Ty.esubst)
+        with Exit -> None
+      end
 
 
 let resolution_of_literal a binders free_vty acc =
