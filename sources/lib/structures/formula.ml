@@ -437,6 +437,7 @@ let eventual_particular_inst =
                     raise Exit
                       [@ocaml.ppwarning
                           "TODO: handle other cases (exists x, y: x=1 and y=x)"]
+                      [@ocaml.ppwarning "Should not fail if some matchs fail !"]
                     ;
                   end;
                   Sy.Map.add x t acc
@@ -584,9 +585,6 @@ let mk_forall =
         F_Htbl.add env f res;
         res
 
-
-let mk_exists name loc binders triggers f id ext_free =
-  mk_not (mk_forall name loc binders triggers (mk_not f) id ext_free)
 
 (* forall up. let bv = t in f *)
 let mk_let _up bv t f id =
@@ -767,6 +765,25 @@ and iapply_subst ((s_t,s_ty) as subst) p n = match p, n with
     Let se, Let sne, false
 
   | _ -> assert false
+
+and mk_exists name loc binders triggers f id ext_free =
+  let res =
+    mk_not (mk_forall name loc binders triggers (mk_not f) id ext_free)
+  in
+  match view res with
+  | Skolem ({ simple_inst = Some sbs ; main ; free_v; free_vty } as q) ->
+    (*currently simple_inst generated for formulas without type variables *)
+    assert (free_vty == []);
+    let main = apply_subst sbs main in
+    (* this assert is not true, because res may have free variables *)
+    (*assert (Sy.Map.is_empty (free_vars main)); *)
+    main
+      [@ocaml.ppwarning "TODO: consider partial instantiation !"]
+
+  | _ -> res
+    [@ocaml.ppwarning
+        "TODO: adapt this to eg. 'forall x. x<>1 or P(x)' as well ?"]
+
 
 let add_label lbl f =
   match view f with
