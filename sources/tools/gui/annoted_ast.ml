@@ -28,8 +28,6 @@
 
 open Parsed
 open Typed
-open Loc
-open Lexing
 open Format
 open Options
 

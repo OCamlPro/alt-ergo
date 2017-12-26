@@ -28,7 +28,6 @@
 
 open Options
 open Format
-open Sig
 
 module Sy = Symbols
 module T  = Term

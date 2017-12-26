@@ -29,7 +29,6 @@
 open Format
 open Options
 open Sig
-open Exception
 
 module X = Combine.Shostak
 module Ex = Explanation

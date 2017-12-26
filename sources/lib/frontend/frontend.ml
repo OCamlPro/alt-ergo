@@ -28,7 +28,6 @@
 
 open Typed
 open Commands
-open Lexing
 open Format
 open Options
 

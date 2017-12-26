@@ -26,10 +26,10 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
+[@@@ocaml.warning "-33"]
 open Options
+
 open Sig
-open Exception
 
 module type S = sig
 
