@@ -118,6 +118,9 @@ CMO = lib/util/config.cmo \
       lib/reasoners/theory.cmo \
       lib/reasoners/fun_sat.cmo \
       lib/reasoners/sat_solver.cmo \
+      plugins/common/vec.cmo \
+      plugins/satML/satml.cmo \
+      plugins/satML/satml_frontend.cmo \
       lib/frontend/triggers.cmo \
       lib/frontend/typechecker.cmo \
       lib/frontend/cnf.cmo \
