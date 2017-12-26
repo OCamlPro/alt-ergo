@@ -44,8 +44,9 @@ let is_empty t = t.sz = 0
 let grow_to t new_capa =
   let data = t.data in
   let capa = Array.length data in
-  t.data <-
-    Array.init new_capa
+  if new_capa > capa then
+    t.data <-
+      Array.init new_capa
       (fun i -> if i < capa then data.(i) else t.dummy)
 
 let grow_to_double_size t =
@@ -54,7 +55,7 @@ let grow_to_double_size t =
 let grow_to_by_double t new_capa =
   let new_capa = max 1 new_capa in
   let data = t.data in
-  let capa = ref (Array.length data + 1) in
+  let capa = ref (max 1 (Array.length data)) in
   while !capa < new_capa do capa := 2 * !capa done;
   grow_to t !capa
 

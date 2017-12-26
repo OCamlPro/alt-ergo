@@ -88,6 +88,9 @@ module M = struct
   let debug_matching = ref 0
   let debug_explanations = ref false
   let sat_plugin = ref ""
+  let use_satml = ref false
+  let lazy_sat = ref false
+  let disable_flat_formulas_simplification = ref false
   let inequalities_plugin = ref ""
   let profiling_plugin = ref ""
   let cumulative_time_profiling = ref false
@@ -96,6 +99,8 @@ module M = struct
   let tighten_vars = ref false
   let no_tcp = ref false
   let no_decisions = ref false
+  let minimal_bj = ref false
+  let smt2_output = ref false
 
   let no_decisions_on = ref Util.SS.empty
   let no_fm = ref false
@@ -110,6 +115,7 @@ module M = struct
   let instantiate_after_backjump = ref false
   let disable_weaks = ref false
   let default_input_lang = ref ".why"
+  let enable_restarts = ref false
 
   let show_where s=
     match s with
@@ -304,6 +310,15 @@ module M = struct
     "-interpretation-timelimit", Arg.Float (set_limit interpretation_timelimit), "n set the time limit to n seconds for model generation (not supported on Windows). Default value is 1. sec";
     "-sat-plugin" , Arg.String set_sat_plugin,
     " use the given SAT-solver instead of the default DFS-based SAT solver";
+    "-use-satml" , Arg.Set use_satml,
+    " enable satML";
+    "-minimal-bj" , Arg.Set minimal_bj, " activate minimal backjump";
+    "-smt2-output" , Arg.Set smt2_output,
+    " print unsat/unknown instead of Valid/ I don't know";
+    "-lazy-sat", Arg.Set lazy_sat, " use lazy sat model if sat-plugin is used";
+    "-disable-flat-formulas-simplification", Arg.Set disable_flat_formulas_simplification, " disable facts simplifications in satML's flat formulas";
+
+
     "-inequalities-plugin" , Arg.String set_inequalities_plugin,
     " use the given module to handle inequalities of linear arithmetic";
     "-profiling", Arg.String parse_profiling, "<delay> activate the profiling module with the given frequency. Use Ctrl-C to switch between different views and \"Ctrl + AltGr + \\\" to exit.";
@@ -329,6 +344,9 @@ module M = struct
     ;
     "-disable-weaks", Arg.Set disable_weaks,
     " Prevent the GC from collecting hashconsed data structrures that are not reachable (useful for more determinism)"
+    ;
+    "-enable-restarts", Arg.Set enable_restarts,
+    " For satML: enable restarts or not. Default behavior is 'false'"
     ;
     "-default-lang", Arg.String set_default_input_lang,
     " Set the default input language to 'lang'. Useful when the extension does not allow to automatically select a parser (eg. JS mode, GUI mode, ...)"
@@ -415,6 +433,8 @@ let set_bottom_classes b = M.bottom_classes := b
 let set_timelimit b = M.timelimit := b
 let set_model_timelimit b = M.timelimit := b
 let set_timers b = M.timers := b
+let set_minimal_bj b = M.minimal_bj := b
+let set_lazy_sat b = M.lazy_sat := b
 
 let set_profiling f b =
   M.profiling := b;
@@ -500,6 +520,13 @@ let timers () = !M.timers || !M.profiling
 let case_split_policy () = !M.case_split_policy
 let instantiate_after_backjump () = !M.instantiate_after_backjump
 let disable_weaks () = !M.disable_weaks
+let minimal_bj () = !M.minimal_bj
+let smt2_output () = !M.smt2_output
+let lazy_sat () = !M.lazy_sat
+let disable_flat_formulas_simplification () =
+  !M.disable_flat_formulas_simplification
+
+let enable_restarts () = !M.enable_restarts
 
 let replay () = !M.replay
 let replay_used_context () = !M.replay_used_context
@@ -510,6 +537,7 @@ let get_file () = !M.file
 let get_session_file () = !M.session_file
 let get_used_context_file () = !M.used_context_file
 let sat_plugin () = !M.sat_plugin
+let use_satml () = !M.use_satml
 let inequalities_plugin () = !M.inequalities_plugin
 let profiling_plugin () = !M.profiling_plugin
 let normalize_instances () = !M.normalize_instances

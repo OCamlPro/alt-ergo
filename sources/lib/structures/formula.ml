@@ -866,6 +866,24 @@ let ground_terms_rec =
       terms (T.Set.union st acc) lf
   in terms T.Set.empty
 
+let atoms_rec =
+  let rec atoms only_ground acc f = match view f with
+    | Literal a ->
+      if not only_ground || Literal.LT.is_ground a then
+        Literal.LT.Set.add a acc
+      else acc
+
+    | Lemma {main = f} | Skolem {main = f} ->
+      atoms only_ground acc f
+        [@ocaml.ppwarning "is this what we want ?"]
+
+    | Unit(f1,f2) -> atoms only_ground (atoms only_ground acc f1) f2
+    | Clause(f1,f2,_) -> atoms only_ground (atoms only_ground acc f1) f2
+    | Let {let_term=t; let_f=lf} -> atoms only_ground acc lf
+  in
+  fun ~only_ground f acc ->
+    atoms only_ground acc f
+
 let skolemize {main=f; binders=binders; free_v=free_v; free_vty=free_vty} =
   let tyvars =
     ignore (flush_str_formatter ());
