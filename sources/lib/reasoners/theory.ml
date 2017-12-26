@@ -79,6 +79,8 @@ module type S = sig
   val retrieve_used_context :
     t -> Explanation.t -> Formula.t list * Formula.t list
 
+  val get_assumed : t -> (Literal.LT.t * int * int) list list
+
 end
 
 module Main_Default : S = struct
@@ -684,6 +686,8 @@ module Main_Default : S = struct
   let retrieve_used_context env dep =
     CC_X.retrieve_used_context env.gamma dep
 
+  let get_assumed env = env.assumed
+
 end
 
 module Main_Empty : S = struct
@@ -713,6 +717,7 @@ module Main_Empty : S = struct
   let assume_th_elt e _ = e
   let theories_instances ~do_syntactic_matching _ e _ _ _ = e, []
   let retrieve_used_context _ _ = [], []
+  let get_assumed _ = []
 end
 
 module Main =

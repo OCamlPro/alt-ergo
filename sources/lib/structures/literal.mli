@@ -98,6 +98,9 @@ module type S_Term = sig
 
   val terms_nonrec : t -> Term.Set.t
   val terms_rec : t -> Term.Set.t
+
+  val ground_terms : t -> Term.Set.t
+
   val vars_of : t -> Ty.t Symbols.Map.t -> Ty.t Symbols.Map.t
   val is_ground : t -> bool
   val is_in_model : t -> bool

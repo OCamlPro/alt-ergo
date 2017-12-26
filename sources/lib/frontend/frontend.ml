@@ -212,25 +212,31 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     let loc = d.st_loc in
     match status with
     | Unsat dep ->
-      if js_mode () then
-        printf "# [answer] Valid (%2.4f seconds) (%Ld steps)@." time steps
-      else begin
-        printf "%aValid (%2.4f) (%Ld steps)@." Loc.report loc time steps;
-        if proof () && not (debug_proof ()) && not (save_used_context ()) then
-          printf "Proof:\n%a@." Explanation.print_proof dep
-      end
+      if Options.smt2_output () then printf "unsat@."
+      else
+        if js_mode () then
+          printf "# [answer] Valid (%2.4f seconds) (%Ld steps)@." time steps
+        else begin
+          printf "%aValid (%2.4f) (%Ld steps)@." Loc.report loc time steps;
+          if proof () && not (debug_proof ()) && not (save_used_context ()) then
+            printf "Proof:\n%a@." Explanation.print_proof dep
+        end
 
     | Inconsistent ->
-      if Options.verbose () then
-        if js_mode () then
-          printf "# [message] Inconsistent assumption \n@."
-        else
-          eprintf "%aInconsistent assumption@." Loc.report loc;
+      ()
+      (*
+      if js_mode () then
+        printf "# [message] Inconsistent assumption \n@."
+      else
+        eprintf "%aInconsistent assumption@." Loc.report loc;
+      *)
 
     | Unknown t | Sat t ->
-      if js_mode () then
-        printf "# [answer] unknown (%2.4f seconds) (%Ld steps)@." time steps
+      if Options.smt2_output () then printf "unknown@."
       else
-        printf "%aI don't know (%2.4f) (%Ld steps)@." Loc.report loc time steps
+        if js_mode () then
+          printf "# [answer] unknown (%2.4f seconds) (%Ld steps)@." time steps
+        else
+          printf "%aI don't know (%2.4f) (%Ld steps)@." Loc.report loc time steps
 
 end
