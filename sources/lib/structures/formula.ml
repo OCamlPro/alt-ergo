@@ -55,9 +55,6 @@ and quantified = {
   name : string;
   main : t;
 
-  (*simplified quantified formula, or immediate inst*)
-  simple_inst : (Term.t Symbols.Map.t * Ty.subst) option;
-
   triggers : trigger list;
   backward_triggers : trigger list Lazy.t;
   forward_triggers : trigger list Lazy.t;
@@ -397,55 +394,54 @@ let type_variables f =
     (aux Ty.Svty.empty f) Ty.Set.empty
 
 
-exception Particuar_instance of Sy.t * Term.t
 
-let eventual_particular_inst =
-  let rec aux v tv f =
+let has_semantic_triggers trs =
+  List.exists (fun tr -> tr.semantic != []) trs
+
+let has_hypotheses trs =
+  List.exists (fun tr -> tr.hyp != []) trs
+
+let find_particular_subst =
+  let exception Out of Sy.t * T.t in
+  (* ex: in "forall x, y : int. x <> 1 or f(y) = x+1 or P(x,y)",
+     x can be replaced with 1 *)
+  let rec find_subst v tv f =
     match view f with
     | Unit _ | Lemma _ | Skolem _ | Let _ -> ()
-    | Clause(f1, f2,_) -> aux v tv f1; aux v tv f2
+    | Clause(f1, f2,_) -> find_subst v tv f1; find_subst v tv f2
     | Literal a ->
-      begin
-        match Literal.LT.view a with
-        | Literal.Distinct (false, [a;b]) when Term.equal tv a ->
-          if not (Sy.Map.mem v (T.vars_of b Sy.Map.empty)) then
-            raise (Particuar_instance (v, b))
+      match Literal.LT.view a with
+      | Literal.Distinct (false, [a;b]) when T.equal tv a && T.is_ground b ->
+        raise (Out (v, b))
 
-        | Literal.Distinct (false, [a;b]) when Term.equal tv b ->
-          if not (Sy.Map.mem v (T.vars_of a Sy.Map.empty)) then
-            raise (Particuar_instance (v, a))
+      | Literal.Distinct (false, [a;b]) when T.equal tv b && T.is_ground a ->
+        raise (Out (v, a))
 
-        | Literal.Pred (t, is_neg) when Term.equal tv t ->
-          raise (Particuar_instance (v, if is_neg then T.vrai else T.faux))
+      | Literal.Pred (t, is_neg) when T.equal tv t ->
+        raise (Out (v, if is_neg then T.vrai else T.faux))
 
-        | _ -> ()
-      end
+      | _ -> ()
   in
-  fun binders free_vty f ->
-    match free_vty with
-    | _::_ -> None
-    | [] ->
-      assert (not (Sy.Map.is_empty binders));
-      begin
-        try
-          let acc =
-            Sy.Map.fold
-              (fun v (ty, _) acc ->
-                try aux v (Term.make v [] ty) f; raise Exit
-                with Particuar_instance (x, t) ->
-                  if not (Term.is_ground t) then begin
-                    raise Exit
-                      [@ocaml.ppwarning
-                          "TODO: handle other cases (exists x, y: x=1 and y=x)"]
-                      [@ocaml.ppwarning "Should not fail if some matchs fail !"]
-                    ;
-                  end;
-                  Sy.Map.add x t acc
-              )binders Sy.Map.empty
-          in
-          Some (acc, Ty.esubst)
-        with Exit -> None
-      end
+  fun binders free_vty trs f ->
+    if not (Ty.Set.is_empty free_vty) || has_hypotheses trs ||
+      has_semantic_triggers trs
+    then None
+    else
+      try
+        assert (not (Sy.Map.is_empty binders));
+        let acc, full =
+          Sy.Map.fold
+            (fun v (ty, _) (acc, full) ->
+              try
+                find_subst v (T.make v [] ty) f;
+                  (*TODO: (re-) test partial substs: acc, false*)
+                raise Exit
+              with Out (x, t) ->
+                Sy.Map.add x t acc, full
+            )binders (Sy.Map.empty, true)
+        in
+        if Sy.Map.is_empty acc then None else Some (acc, full)
+      with Exit -> None
 
 
 let resolution_of_literal a binders free_vty acc =
@@ -531,20 +527,10 @@ let resolution_triggers is_back f name binders free_vty =
     )cand []
 
 
-let mk_forall =
+let mk_forall_aux =
   let env = F_Htbl.create 101 in
   (*fun up bv trs f name id ->*)
-  fun name loc binders triggers f id ext_free ->
-    let free_vty = type_variables f in (* type variables of f*)
-    let free_v_f = free_vars f in (* free variables of f *)
-    let binders =  (* ignore binders that are not used in f *)
-      Sy.Map.filter (fun sy _ -> Sy.Map.mem sy free_v_f) binders in
-    if Sy.Map.is_empty binders && Ty.Set.is_empty free_vty then
-      (* not quantified ==> should fix save-used-context to be able to
-         save "non-quantified axioms", or use a cache to save the name
-         of axioms as labels, but they should be unique in this case *)
-      f
-    else
+  fun name loc binders triggers f id ext_free free_v_f free_vty ->
       let bkw_trs = lazy (resolution_triggers true  f name binders free_vty) in
       let frw_trs = lazy (resolution_triggers false f name binders free_vty) in
       let free_v, free_vty = match ext_free with
@@ -558,12 +544,10 @@ let mk_forall =
           in
           free_v, Ty.Set.elements free_vty
       in
-      let simple_inst = eventual_particular_inst binders free_vty f in
       let new_q = {
         name = name;
         backward_triggers = bkw_trs;
         forward_triggers = frw_trs;
-        simple_inst = simple_inst;
         main = f;
         triggers = triggers;
         binders = binders;
@@ -781,22 +765,45 @@ and iapply_subst ((s_t,s_ty) as subst) p n = match p, n with
   | _ -> assert false
 
 and mk_exists name loc binders triggers f id ext_free =
-  let res =
-    mk_not (mk_forall name loc binders triggers (mk_not f) id ext_free)
-  in
-  match view res with
-  | Skolem ({ simple_inst = Some sbs ; main ; free_v; free_vty } as q) ->
-    (*currently simple_inst generated for formulas without type variables *)
-    assert (free_vty == []);
-    let main = apply_subst sbs main in
-    (* this assert is not true, because res may have free variables *)
-    (*assert (Sy.Map.is_empty (free_vars main)); *)
-    main
-      [@ocaml.ppwarning "TODO: consider partial instantiation !"]
+  mk_not (mk_forall name loc binders triggers (mk_not f) id ext_free)
 
-  | _ -> res
-    [@ocaml.ppwarning
-        "TODO: adapt this to eg. 'forall x. x<>1 or P(x)' as well ?"]
+and mk_forall name loc binders triggers f id ext_free =
+  let free_vty = type_variables f in (* type variables of f*)
+  let free_v_f = free_vars f in (* free variables of f *)
+  let binders =  (* ignore binders that are not used in f *)
+    Sy.Map.filter (fun sy _ -> Sy.Map.mem sy free_v_f) binders
+  in
+  if Sy.Map.is_empty binders && Ty.Set.is_empty free_vty
+  then
+    (* not quantified ==> should fix save-used-context to be able to
+       save "non-quantified axioms", or use a cache to save the name
+       of axioms as labels, but they should be unique in this case *)
+    f
+  else
+    match find_particular_subst binders free_vty triggers f with
+    | None ->
+      mk_forall_aux name loc binders triggers f id ext_free free_v_f free_vty
+
+    | Some (sbs, covers_all_binders) ->
+      assert (Ty.Set.is_empty free_vty);
+      let subst = sbs, Ty.esubst in
+      let triggers =
+        List.map (apply_subst_trigger subst) triggers
+      in
+      let f = apply_subst subst f in
+
+      if covers_all_binders
+      then f
+      else
+        let binders =
+          Sy.Map.filter (fun x _ -> not (Sy.Map.mem x sbs)) binders
+        in
+        let ext_free = match ext_free with
+          | None -> None
+          | Some (fr_v, fvty) ->
+            Some (List.map (T.apply_subst subst) fr_v, fvty)
+        in
+        mk_forall name loc binders triggers f id ext_free
 
 
 let apply_subst =

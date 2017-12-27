@@ -782,9 +782,8 @@ let rec asm_aux acc list =
 
 	| F.Lemma l ->
 	  Options.tool_req 2 "TR-Sat-Assume-Ax";
-          let inst_env, direct_insts = Inst.add_lemma env.inst ff dep in
-          let env = {env with inst = inst_env} in
-          asm_aux (env, true, tcp, ap_delta, lits) direct_insts
+          let inst_env = Inst.add_lemma env.inst ff dep in
+          {env with inst = inst_env}, true, tcp, ap_delta, lits
 
 	| F.Literal a ->
           let lits = (a, ff, dep, env.dlevel, env.plevel)::lits in

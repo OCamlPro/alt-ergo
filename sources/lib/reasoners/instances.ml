@@ -45,7 +45,7 @@ module type S = sig
 
   val empty : t
   val add_terms : t -> T.Set.t -> F.gformula -> t
-  val add_lemma : t -> F.gformula -> Ex.t -> t * instances
+  val add_lemma : t -> F.gformula -> Ex.t -> t
   val add_predicate : t -> F.gformula -> t
 
   val m_lemmas :
@@ -323,7 +323,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 
   let add_lemma env gf dep =
     let {F.f=orig;age=age;gf=b} = gf in
-    if (*not (Ex.is_empty dep) ||*) EM.unused_context orig then env, []
+    if (*not (Ex.is_empty dep) ||*) EM.unused_context orig then env
     else
       let age, dep =
         try
@@ -331,38 +331,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
           min age age' , Ex.union dep dep'
         with Not_found -> age, dep
       in
-      let env = { env with lemmas = MF.add orig (age,dep) env.lemmas } in
-      match F.view orig with
-      | F.Lemma {F.simple_inst = Some sbs; main; name} ->
-        let nf = F.apply_subst sbs main in
-	let p =
-	  { F.f = nf;
-            origin_name = name;
-            gdist = -1;
-            hdist = -1;
-            trigger_depth = max_int;
-            nb_reductions = 0;
-	    age = age+1;
-	    mf = true;
-	    gf = b;
-	    lem = Some orig;
-	    from_terms = [];
-	    theory_elim = true;
-	  }
-        in
-        let dep =
-          if not (Options.proof() || Options.profiling()) then dep
-          else
-                (* Dep lorig used to track conflicted instances
-                   in profiling mode *)
-            Ex.union dep (Ex.singleton (Ex.Dep orig))
-        in
-        let insts = add_accepted_to_acc orig nf (p, dep, sbs, []) MF.empty in
-        let gd, ngd = split_and_filter_insts env insts in
-        env, List.rev_append gd ngd
-
-      | _ -> env, []
-
+      { env with lemmas = MF.add orig (age,dep) env.lemmas }
 
   (*** add wrappers to profile exported functions ***)
 
