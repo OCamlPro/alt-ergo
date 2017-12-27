@@ -26,7 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Hconsing
 open Options
 
 type t = { content : string ; id : int}

@@ -9,8 +9,9 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
+[@@@ocaml.warning "-33"]
 open Options
+
 open Parsed
 
 (* helper functions *)

@@ -32,7 +32,6 @@ open Gui_config
 open Annoted_ast
 open Connected_ast
 
-open Lexing
 open Format
 open Options
 

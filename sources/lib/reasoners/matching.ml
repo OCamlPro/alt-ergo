@@ -28,7 +28,6 @@
 
 open Format
 open Options
-open Sig
 open Matching_types
 
 module T = Term

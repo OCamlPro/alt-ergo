@@ -1864,8 +1864,6 @@ module Make
 
     (*** part dedicated to FPA reasoning ************************************)
 
-    open Matching
-
     let best_interval_of optimized env p =
       (* p is supposed to be in normal_form_pos *)
       match P.is_const p with

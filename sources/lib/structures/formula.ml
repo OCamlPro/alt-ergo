@@ -658,6 +658,20 @@ let mk_if t f2 f3 id =
 let no_capture_issue s_t binders =
   true (* TODO *)
 
+module Msbt =
+  Map.Make
+    (struct
+      type t = Term.t T.Subst.t
+      let compare a b = T.Subst.compare T.compare a b
+     end)
+
+module Msbty =
+  Map.Make
+    (struct
+      type t = Ty.t Ty.M.t
+      let compare a b = Ty.M.compare Ty.compare a b
+     end)
+
 module Set = Set.Make(struct type t'=t type t=t' let compare=compare end)
 module Map = Map.Make(struct type t'=t type t=t' let compare=compare end)
 
@@ -783,6 +797,19 @@ and mk_exists name loc binders triggers f id ext_free =
   | _ -> res
     [@ocaml.ppwarning
         "TODO: adapt this to eg. 'forall x. x<>1 or P(x)' as well ?"]
+
+
+let apply_subst =
+  let (cache : t Msbty.t Msbt.t Map.t ref) = ref Map.empty in
+  fun ((sbt, sbty) as s) f ->
+    let ch = !cache in
+    try Map.find f ch |> Msbt.find sbt |> Msbty.find sbty
+    with Not_found ->
+      let nf = apply_subst s f in
+      let c_sbt = try Map.find f ch with Not_found -> Msbt.empty in
+      let c_sbty = try Msbt.find sbt c_sbt with Not_found -> Msbty.empty in
+      cache := Map.add f (Msbt.add sbt (Msbty.add sbty nf c_sbty) c_sbt) ch;
+      nf
 
 
 let add_label lbl f =

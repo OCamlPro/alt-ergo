@@ -27,8 +27,9 @@
 (******************************************************************************)
 
 {
-  open Format
+  [@@@ocaml.warning "-33"]
   open Options
+
   open Lexing
   open Why_parser
 

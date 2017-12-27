@@ -27,7 +27,6 @@
 (******************************************************************************)
 
 open Options
-open Format
 open Typed
 module Sy = Symbols
 

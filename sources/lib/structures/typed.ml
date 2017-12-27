@@ -28,6 +28,8 @@
 
 open Format
 open Parsed
+
+[@@@ocaml.warning "-33"]
 open Options
 
 type ('a, 'b) annoted =

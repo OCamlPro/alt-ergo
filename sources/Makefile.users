@@ -13,7 +13,7 @@ INCLUDES = $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(LOCA
 
 # TODO : enable these warnings one by one and fix the code
 
-WARNINGS= -w +A-45-22-27-4-9-44-32-48-33-41-6
+WARNINGS= -w +A-45-22-27-4-9-44-32-48-41-6
 
 # xxxx: Warning 22: user warnings
 # x6 : Warning 60: unused module MyNums. ==> pb with recursive modules
@@ -24,7 +24,6 @@ WARNINGS= -w +A-45-22-27-4-9-44-32-48-33-41-6
 # x161: Warning 44: this open statement shadows the value identifier = (which is later used)
 # x134: Warning 32: unused value take_max.
 # x37 : Warning 48: implicit elimination of optional argument ?kind
-# x35 : Warning 33: unused open Lexing.
 # x35 : Warning 41: Other belongs to several types: abstract Sig.lit_origin
 # x26 : Warning 6 : label is_le was omitted in the application of this function.
 
