@@ -79,7 +79,7 @@ module type S = sig
   val retrieve_used_context :
     t -> Explanation.t -> Formula.t list * Formula.t list
 
-  val get_assumed : t -> (Literal.LT.t * int * int) list list
+  val get_assumed : t -> Literal.LT.Set.t
 
 end
 
@@ -304,6 +304,7 @@ module Main_Default : S = struct
 
 
   type t = {
+    assumed_set : Literal.LT.Set.t;
     assumed : (Literal.LT.t * int * int) list list;
     cs_pending_facts : (Literal.LT.t * Ex.t * int * int) list list;
     terms : Term.Set.t;
@@ -487,14 +488,21 @@ module Main_Default : S = struct
   (* facts are sorted in decreasing order with respect to (dlvl, plvl) *)
   let assume ordered in_facts t =
     let facts = CC_X.empty_facts () in
-    let assumed, cpt =
+    let assumed, assumed_set, cpt =
       List.fold_left
-        (fun (assumed, cpt) ((a, ex, dlvl, plvl)) ->
-          CC_X.add_fact facts (LTerm a, ex, Sig.Other);
-          (a, dlvl, plvl) :: assumed, cpt+1
-        )([], 0) in_facts
+        (fun ((assumed, assumed_set, cpt) as accu) ((a, ex, dlvl, plvl)) ->
+          if Literal.LT.Set.mem a assumed_set
+          then accu
+          else
+            begin
+              CC_X.add_fact facts (LTerm a, ex, Sig.Other);
+              (a, dlvl, plvl) :: assumed,
+              Literal.LT.Set.add a assumed_set,
+              cpt+1
+            end
+        )([], t.assumed_set, 0) in_facts
     in
-    let t = {t with assumed = assumed :: t.assumed;
+    let t = {t with assumed_set; assumed = assumed :: t.assumed;
                     cs_pending_facts = in_facts :: t.cs_pending_facts} in
     if Options.profiling() then Profiling.assume cpt;
     Debug.assumed t.assumed;
@@ -620,6 +628,7 @@ module Main_Default : S = struct
       { gamma = env;
         gamma_finite = env;
         choices = [];
+        assumed_set = Literal.LT.Set.empty;
         assumed = [];
         cs_pending_facts = [];
         terms = Term.Set.empty }
@@ -686,17 +695,27 @@ module Main_Default : S = struct
   let retrieve_used_context env dep =
     CC_X.retrieve_used_context env.gamma dep
 
-  let get_assumed env = env.assumed
+  let get_assumed env = env.assumed_set
 
 end
 
 module Main_Empty : S = struct
 
-  type t = int
+  type t =
+    { assumed_set : Literal.LT.Set.t }
 
-  let empty () = -1
+  let empty () = { assumed_set = Literal.LT.Set.empty }
 
-  let assume ?(ordered=true) _ _ = 0, T.Set.empty, 0
+  let assume ?(ordered=true) in_facts t =
+    let assumed_set =
+      List.fold_left
+        (fun assumed_set ((a, ex, dlvl, plvl)) ->
+          if Literal.LT.Set.mem a assumed_set then assumed_set
+          else Literal.LT.Set.add a assumed_set
+        ) t.assumed_set in_facts
+    in
+    {assumed_set}, T.Set.empty, 0
+
   let query a t = No
   let class_of env t = [t]
   let are_equal env t1 t2 ~add_terms =
@@ -709,7 +728,7 @@ module Main_Empty : S = struct
   let empty_ccx = CC_X.empty ()
   let get_real_env _ = empty_ccx
   let get_case_split_env _ = empty_ccx
-  let do_case_split _ = 0, T.Set.empty
+  let do_case_split env = env, T.Set.empty
   let add_term env t ~add_in_cs = env
   let compute_concrete_model e = e
   let terms_in_repr e = Term.Set.empty
@@ -717,7 +736,7 @@ module Main_Empty : S = struct
   let assume_th_elt e _ = e
   let theories_instances ~do_syntactic_matching _ e _ _ _ = e, []
   let retrieve_used_context _ _ = [], []
-  let get_assumed _ = []
+  let get_assumed env = env.assumed_set
 end
 
 module Main =
