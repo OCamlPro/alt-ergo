@@ -646,10 +646,10 @@ module Main : Sat_solver_sig.S = struct
     in
     fun ~frugal env ->
       let sa =
-        List.fold_left (fun accu l ->
-          List.fold_left (fun accu (a,_,_) ->
-            SA.add (Types.get_atom a) accu) accu l
-        ) SA.empty (SAT.theory_assumed ())
+        Literal.LT.Set.fold
+          (fun a accu ->
+            SA.add (Types.get_atom a) accu
+          )(SAT.theory_assumed ()) SA.empty
       in
       let sa =
         if frugal then sa

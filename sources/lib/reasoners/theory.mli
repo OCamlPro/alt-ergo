@@ -63,7 +63,7 @@ module type S = sig
   val retrieve_used_context :
     t -> Explanation.t -> Formula.t list * Formula.t list
 
-  val get_assumed : t -> (Literal.LT.t * int * int) list list
+  val get_assumed : t -> Literal.LT.Set.t
 end
 
 module Main : S
