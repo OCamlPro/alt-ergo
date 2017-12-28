@@ -444,21 +444,13 @@ module Main : Sat_solver_sig.S = struct
       end
 
   let axiom_def env gf ex =
-    let inst, deds = Inst.add_lemma env.inst gf ex in
-    {env with inst}, deds
+    {env with inst = Inst.add_lemma env.inst gf ex}
 
-  let internal_axiom_def ax a (inst, acc) =
+  let internal_axiom_def ax a inst =
     Debug.internal_axiom_def ax a;
     let gax = mk_gf ax in
     let ex = Ex.singleton (Ex.Literal a) in
-    let inst, deds = Inst.add_lemma inst gax ex in
-    let acc =
-      List.fold_left (fun acc (gf, dep) ->
-        let res = F.mk_or gf.F.f (F.mk_lit (A.neg a) 0) false 0 in
-        {gf with F.f = res} :: acc
-      )acc deds
-    in
-    inst, acc
+    Inst.add_lemma inst gax ex
 
   let register_abstraction (env, acc) (f, (af, at)) =
     if debug_sat () && verbose () then
@@ -477,13 +469,7 @@ module Main : Sat_solver_sig.S = struct
     in
     if Types.level at = 0 then (* at is necessarily assigned *)
       if Types.is_true at then
-        let env, deds = axiom_def env (mk_gf f) Ex.empty in
-        let acc =
-          List.fold_left (fun acc (gf, ex) -> (gf(*, None*))::acc
-            [@ocaml.ppwarning "TODO: is None OK ? analyze the situation ?"])
-            acc deds
-        in
-        env, acc
+        axiom_def env (mk_gf f) Ex.empty, acc
       else
         let () = assert (Types.is_true (Types.neg at)) in
 
@@ -536,7 +522,7 @@ module Main : Sat_solver_sig.S = struct
         (* ax <-> a, if ax exists in axs_of_abstr *)
         try
           let ax = MA.find a env.axs_of_abstr in
-          internal_axiom_def ax a (inst, acc)
+          internal_axiom_def ax a inst, acc
         with Not_found -> inst, acc
       ) (env.inst, acc) sa
 
@@ -758,11 +744,8 @@ module Main : Sat_solver_sig.S = struct
               gamma = MF.add f (env.nb_mrounds, None)  env.gamma;
               conj  = MFF.add ff (env.nb_mrounds, SF.add f old_sf) env.conj }
           in
-          let env, deds = axiom_def env gf Ex.empty in
           (* This assert is not true assert (dec_lvl = 0); *)
-          let acc = {acc with updated = true} in
-          List.fold_left
-            (fun accu (gf, _) -> pre_assume accu gf) (env, acc) deds
+          axiom_def env gf Ex.empty, {acc with updated = true}
 
         | _ ->
           let ff, axs, new_vars =
