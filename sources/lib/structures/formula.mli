@@ -53,9 +53,6 @@ type quantified = {
   name : string;
   main : t;
 
-  (*simplified quantified formula, or immediate inst*)
-  simple_inst : (Term.t Symbols.Map.t * Ty.subst) option;
-
   triggers : trigger list;
   backward_triggers : trigger list Lazy.t;
   forward_triggers : trigger list Lazy.t;

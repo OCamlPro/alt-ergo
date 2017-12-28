@@ -33,7 +33,7 @@ module type S = sig
 
   val empty : t
   val add_terms : t -> Term.Set.t -> Formula.gformula -> t
-  val add_lemma : t -> Formula.gformula -> Explanation.t -> t * instances
+  val add_lemma : t -> Formula.gformula -> Explanation.t -> t
   val add_predicate : t -> Formula.gformula -> t
 
   val m_lemmas :
