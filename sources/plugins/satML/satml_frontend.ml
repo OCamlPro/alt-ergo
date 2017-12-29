@@ -452,7 +452,7 @@ module Main : Sat_solver_sig.S = struct
     let ex = Ex.singleton (Ex.Literal a) in
     Inst.add_lemma inst gax ex
 
-  let register_abstraction (env, acc, new_abstr_vars) (f, (af, at)) =
+  let register_abstraction (env, new_abstr_vars) (f, (af, at)) =
     if debug_sat () && verbose () then
       fprintf fmt "abstraction of %a is %a@.@." F.print f FF.print af;
     let lat = Types.literal at in
@@ -470,26 +470,16 @@ module Main : Sat_solver_sig.S = struct
           abstr_of_axs = MF.add f (af, at) env.abstr_of_axs;
           axs_of_abstr = MA.add lat f env.axs_of_abstr }
     in
-    if Types.level at = 0 then (* at is necessarily assigned *)
+    if Types.level at = 0 then (* at is necessarily assigned if lvl = 0 *)
       if Types.is_true at then
-        axiom_def env (mk_gf f) Ex.empty, acc, new_abstr_vars
-      else
-        let () = assert (Types.is_true (Types.neg at)) in
-
-        (* these two asserts are here because this seems to be dead code.
-           Should fix FF.simplify to enable it *)
-        assert (not (Types.eq_atom at Types.vrai_atom));
-        assert false; (* not present in old version *)
-        let ded = match F.mk_not f |> F.view with
-          | F.Skolem q -> F.skolemize q
-          | _ -> assert false
-        in
-        (*(not f or at) is true, ie. (not f) is true bcs at is false *)
-        (* ded's lazy should be added at level 0 --> add it dynamically. *)
-        (* XXX: see warning at the end of the function *)
-        env, (mk_gf ded(*, Some Types.faux_atom*)) :: acc, new_abstr_vars
-          [@ocaml.ppwarning "Lazy should be added at level 0 ! How ?"]
-    else
+        axiom_def env (mk_gf f) Ex.empty, new_abstr_vars
+      else begin
+        assert (Types.is_true (Types.neg at));
+        assert false (* FF.simplify invariant: should not happen *)
+      end
+    else begin
+      (* FF.simplify invariant: should not happen *)
+      assert (Types.level at < 0);
       let ded = match F.mk_not f |> F.view with
         | F.Skolem q -> F.skolemize q
         | _ -> assert false
@@ -497,12 +487,10 @@ module Main : Sat_solver_sig.S = struct
       (*XXX TODO: internal skolems*)
       let f = F.mk_or (F.mk_lit lat 0) ded false 0 in
       let nlat = A.neg lat in
-      assert (not (A.Map.mem nlat env.skolems));
-      assert (not (A.Map.mem lat env.skolems));
-      {env with skolems = A.Map.add nlat (mk_gf f) env.skolems}, acc,
+      (* semantics: nlat ==> f *)
+      {env with skolems = A.Map.add nlat (mk_gf f) env.skolems},
       new_abstr_vars
-        [@ocaml.ppwarning "Lazy should be dynamic, attached to at ! But, what happends if at is true at level L and we are at level N > L ? information lost in lazy_cnf in case of backjump to a level M such that N > M > L"]
-
+    end
 
   let expand_skolems env acc sa =
     List.fold_left
@@ -715,7 +703,7 @@ module Main : Sat_solver_sig.S = struct
     updated : bool;
   }
 
-  let rec pre_assume (env, acc) gf =
+  let pre_assume (env, acc) gf =
     let {F.f=f} = gf in
     if debug_sat() then
       fprintf fmt "Entry of pre_assume: Given %a@.@." F.print f;
@@ -767,9 +755,8 @@ module Main : Sat_solver_sig.S = struct
               conj  = MFF.add ff (env.nb_mrounds, SF.add f old_sf) env.conj }
           in
           Debug.simplified_form f ff;
-          let env, deds, new_abstr_vars =
-            List.fold_left register_abstraction
-              (env, [], acc.new_abstr_vars) axs
+          let env, new_abstr_vars =
+            List.fold_left register_abstraction (env, acc.new_abstr_vars) axs
           in
           let acc = { acc with new_abstr_vars } in
 
@@ -801,7 +788,7 @@ module Main : Sat_solver_sig.S = struct
                   updated = true
                 }
               in
-              List.fold_left pre_assume (env, acc) deds
+              env, acc
 
   let cdcl_assume env pending ~dec_lvl =
     let { seen_f; activate; new_vars; unit; nunit; updated } = pending in
