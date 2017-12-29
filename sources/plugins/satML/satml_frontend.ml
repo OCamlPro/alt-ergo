@@ -452,10 +452,13 @@ module Main : Sat_solver_sig.S = struct
     let ex = Ex.singleton (Ex.Literal a) in
     Inst.add_lemma inst gax ex
 
-  let register_abstraction (env, acc) (f, (af, at)) =
+  let register_abstraction (env, acc, new_abstr_vars) (f, (af, at)) =
     if debug_sat () && verbose () then
       fprintf fmt "abstraction of %a is %a@.@." F.print f FF.print af;
     let lat = Types.literal at in
+    let new_abstr_vars =
+      if not (Types.is_true at) then at :: new_abstr_vars else new_abstr_vars
+    in
     assert (not (MF.mem f env.abstr_of_axs));
     assert (not (MA.mem lat env.axs_of_abstr));
     let env =
@@ -469,7 +472,7 @@ module Main : Sat_solver_sig.S = struct
     in
     if Types.level at = 0 then (* at is necessarily assigned *)
       if Types.is_true at then
-        axiom_def env (mk_gf f) Ex.empty, acc
+        axiom_def env (mk_gf f) Ex.empty, acc, new_abstr_vars
       else
         let () = assert (Types.is_true (Types.neg at)) in
 
@@ -484,7 +487,7 @@ module Main : Sat_solver_sig.S = struct
         (*(not f or at) is true, ie. (not f) is true bcs at is false *)
         (* ded's lazy should be added at level 0 --> add it dynamically. *)
         (* XXX: see warning at the end of the function *)
-        env, (mk_gf ded(*, Some Types.faux_atom*)) :: acc
+        env, (mk_gf ded(*, Some Types.faux_atom*)) :: acc, new_abstr_vars
           [@ocaml.ppwarning "Lazy should be added at level 0 ! How ?"]
     else
       let ded = match F.mk_not f |> F.view with
@@ -496,7 +499,8 @@ module Main : Sat_solver_sig.S = struct
       let nlat = A.neg lat in
       assert (not (A.Map.mem nlat env.skolems));
       assert (not (A.Map.mem lat env.skolems));
-      {env with skolems = A.Map.add nlat (mk_gf f) env.skolems}, acc
+      {env with skolems = A.Map.add nlat (mk_gf f) env.skolems}, acc,
+      new_abstr_vars
         [@ocaml.ppwarning "Lazy should be dynamic, attached to at ! But, what happends if at is true at level L and we are at level N > L ? information lost in lazy_cnf in case of backjump to a level M such that N > M > L"]
 
 
@@ -707,6 +711,7 @@ module Main : Sat_solver_sig.S = struct
     new_vars : Types.var list;
     unit : Types.atom list list;
     nunit : Types.atom list list;
+    new_abstr_vars : Types.atom list;
     updated : bool;
   }
 
@@ -762,9 +767,12 @@ module Main : Sat_solver_sig.S = struct
               conj  = MFF.add ff (env.nb_mrounds, SF.add f old_sf) env.conj }
           in
           Debug.simplified_form f ff;
-          let env, deds =
-            List.fold_left register_abstraction (env, []) axs
+          let env, deds, new_abstr_vars =
+            List.fold_left register_abstraction
+              (env, [], acc.new_abstr_vars) axs
           in
+          let acc = { acc with new_abstr_vars } in
+
           if FF.equal ff FF.vrai then env, acc
           else
             if cnf_is_in_cdcl then
@@ -824,16 +832,37 @@ module Main : Sat_solver_sig.S = struct
       | Satml.Sat -> assert false
 
 
-  let assume_aux ~dec_lvl env l =
+  let assume_aux_bis ~dec_lvl env l =
     let pending = {
       seen_f = SF.empty; activate = MFF.empty;
-      new_vars = []; unit = []; nunit = []; updated = false
+      new_vars = []; unit = []; nunit = []; updated = false;
+      new_abstr_vars = [];
     }
     in
     (*fprintf fmt "@.assume aux: %d@." (List.length l);*)
     let env, pending = List.fold_left pre_assume (env, pending) l in
     cdcl_assume env pending ~dec_lvl;
-    env, pending.updated
+    env, pending.updated, pending.new_abstr_vars
+
+
+  let rec assume_aux ~dec_lvl env l =
+    let env, updated, new_abstr_vars = assume_aux_bis ~dec_lvl env l in
+    let bot_abstr_vars = (* try to immediately expand newly added skolems *)
+      List.fold_left (fun acc at ->
+        let neg_at = Types.neg at in
+        if Types.is_true neg_at then (Types.literal neg_at) :: acc else acc
+      )[] new_abstr_vars
+    in
+    match bot_abstr_vars with
+    | [] -> env, updated
+    | _ ->
+      let res = expand_skolems env [] bot_abstr_vars in
+      if res == [] then env, updated
+      else
+        let env, updated' = assume_aux ~dec_lvl env res in
+        env, updated || updated'
+
+
 
   let frugal_instantiation env ~dec_lvl =
     Debug.new_instances "frugal-inst" env;
