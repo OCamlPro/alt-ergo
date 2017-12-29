@@ -141,6 +141,8 @@ val id : t -> int
 val print : Format.formatter -> t -> unit
 
 val ground_terms_rec : t -> Term.Set.t
+val atoms_rec :
+  only_ground:bool -> t -> Literal.LT.Set.t -> Literal.LT.Set.t
 val free_vars : t -> Ty.t Symbols.Map.t
 
 val apply_subst : Term.subst -> t -> t

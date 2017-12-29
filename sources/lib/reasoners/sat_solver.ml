@@ -16,7 +16,9 @@ let current = ref (module Fun_sat : Sat_solver_sig.S)
 
 let initialized = ref false
 
-let set_current sat = current := sat
+let set_current sat =
+  if use_satml() then
+    current := sat
 
 let load_current_sat () =
   match sat_plugin () with
