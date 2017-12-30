@@ -2518,7 +2518,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         ) mff (env.lazy_cnf, s)
       in
       env.lazy_cnf <- lz;
-      env.lvl_ff <- Util.MI.add dec_lvl s env.lvl_ff
+      env.lvl_ff <- Util.MI.add dec_lvl s env.lvl_ff;
+      propagate_and_stabilize (*theory_propagate_opt*)
+        all_propagations (ref 0)
     end
 
   let exists_in_lazy_cnf f' =
