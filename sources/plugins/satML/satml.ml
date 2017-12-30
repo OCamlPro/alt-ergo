@@ -1441,7 +1441,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let satisfied c =
     try
       for i = 0 to Vec.size c.atoms - 1 do
-        if (Vec.get c.atoms i).is_true then raise Exit
+        let a = Vec.get c.atoms i in
+        if a.is_true && a.var.level ==0 then raise Exit
       done;
       false
     with Exit -> true
@@ -2372,6 +2373,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     with
       | Sat ->
         (*check_model ();*)
+        remove_satisfied env.clauses;
+        remove_satisfied env.learnts;
         raise Sat
       | (Unsat cl) as e ->
         (* check_unsat_core cl; *)
