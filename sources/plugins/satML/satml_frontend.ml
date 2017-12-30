@@ -812,8 +812,11 @@ module Main : Sat_solver_sig.S = struct
         let f = F.vrai
           [@ocaml.ppwarning "TODO: should fix for unsat cores generation"]
         in
-        SAT.assume unit nunit f new_vars env.proxies ~cnumber:0;
-        SAT.update_lazy_cnf activate ~dec_lvl;
+        SAT.set_new_proxies env.proxies;
+        let unit, nunit = SAT.new_vars new_vars unit nunit in
+        (*update_lazy_cnf done inside assume at the right place *)
+        (*SAT.update_lazy_cnf activate ~dec_lvl;*)
+        SAT.assume unit nunit f ~cnumber:0 activate ~dec_lvl;
       with
       | Satml.Unsat (lc)  -> raise (IUnsat (env, make_explanation lc))
       | Satml.Sat -> assert false
