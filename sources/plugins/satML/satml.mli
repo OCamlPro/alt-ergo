@@ -138,10 +138,20 @@ module type SAT_ML = sig
   type th
 
   val solve : unit -> unit
+
+  val set_new_proxies :
+    (Types.atom * Types.atom list * bool) Util.MI.t -> unit
+
+  val new_vars :
+    Types.var list ->
+    Types.atom list list -> Types.atom list list ->
+    Types.atom list list * Types.atom list list
+
   val assume :
     Types.atom list list -> Types.atom list list -> Formula.t ->
-    Types.var list ->
-    (Types.atom * Types.atom list * bool) Util.MI.t -> cnumber : int -> unit
+    cnumber : int ->
+    Types.atom option Flat_Formula.Map.t -> dec_lvl:int ->
+    unit
 
   val boolean_model : unit -> Types.atom list
   val theory_assumed : unit -> Literal.LT.Set.t
@@ -161,6 +171,7 @@ module type SAT_ML = sig
   val cancel_until : int -> unit
 
   val update_lazy_cnf :
+    do_bcp : bool ->
     Types.atom option Flat_Formula.Map.t -> dec_lvl:int -> unit
 
   val exists_in_lazy_cnf : Flat_Formula.t -> bool
