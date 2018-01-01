@@ -2517,6 +2517,26 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let set_new_proxies proxies =
     env.proxies <- proxies
 
+  let try_to_backjump_further =
+    let rec better_bj mf =
+      let old_dlvl = decision_level () in
+      let old_lazy = env.lazy_cnf in
+      let old_tenv = env.tenv in
+      let fictive_lazy = MFF.fold (fun ff _ acc -> ff::acc) mf old_lazy in
+      env.lazy_cnf <- fictive_lazy;
+      propagate_and_stabilize all_propagations (ref 0);
+      let new_dlvl = decision_level () in
+      if old_dlvl > new_dlvl then better_bj mf
+      else
+        begin
+          assert (old_dlvl == new_dlvl);
+          env.lazy_cnf <- old_lazy;
+          env.tenv     <- old_tenv
+        end
+    in
+    fun mff -> if Options.lazy_sat () then better_bj mff
+
+
   let assume unit_cnf nunit_cnf f ~cnumber mff ~dec_lvl =
     begin
       match unit_cnf, nunit_cnf with
@@ -2538,7 +2558,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     end;
     (* do it after add clause and before T-propagate, disable bcp*)
     update_lazy_cnf ~do_bcp:false mff ~dec_lvl;
-    propagate_and_stabilize all_propagations (ref 0) (* do bcp globally *)
+    propagate_and_stabilize all_propagations (ref 0); (* do bcp globally *)
+    if dec_lvl > decision_level () then (*dec_lvl <> 0 and a bj have been made*)
+      try_to_backjump_further mff
 
   let exists_in_lazy_cnf f' =
     not (Options.lazy_sat ()) || MFF.mem f' env.ff_lvl
