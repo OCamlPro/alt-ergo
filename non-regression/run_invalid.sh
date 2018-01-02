@@ -6,6 +6,8 @@ files="$files `find invalid/ -name '*'.mlw`"
 files="$files `find invalid/ -name '*'.why`"
 files="$files `find invalid/ -name '*'.zip`"
 
+
+## run Alt-Ergo with functional SAT solver on invalid tests
 cpt=0
 for f in $files
 do
@@ -20,20 +22,27 @@ do
 done
 echo "[run_invalid > default test] $cpt files considered"
 
-cpt=0
-for f in $files
-do
-    cpt=`expr $cpt + 1`
-    res=`$alt_ergo_bin -timelimit $timelimit -sat-plugin satML-plugin.cmxs $f`
-    if [ "`echo $res | grep -c ":I don't know"`" -eq "0" ]
-    then
-        echo "[run_invalid > satML-plugin test] issue with file $f"
-        echo "Result is $res"
-        exit 1
-    fi
-done
-echo "[run_invalid > satML-plugin test] $cpt files considered"
 
+## run Alt-Ergo with imperative SAT solver on invalid tests
+for options in "" "-minimal-bj" "-lazy-sat" "-minimal-bj -lazy-sat"
+do
+    cpt=0
+    for f in $files
+    do
+        cpt=`expr $cpt + 1`
+        res=`$alt_ergo_bin -timelimit $timelimit -sat-plugin satML-plugin.cmxs $f`
+        if [ "`echo $res | grep -c ":I don't know"`" -eq "0" ]
+        then
+            echo "[run_invalid > satML-plugin test] issue with file $f"
+            echo "Result is $res"
+            exit 1
+        fi
+    done
+    echo "[run_invalid > satML-plugin test with options '$options'] $cpt files considered"
+done
+
+
+## run Alt-Ergo with FM-Simplex on invalid tests
 cpt=0
 for f in $files
 do
@@ -48,6 +57,8 @@ do
 done
 echo "[run_invalid > fm-simplex-plugin test] $cpt files considered"
 
+
+## run Alt-Ergo with imperative SAT solver and FM-Simplex on invalid tests
 cpt=0
 for f in $files
 do
