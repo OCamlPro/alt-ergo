@@ -180,12 +180,12 @@ lib/util/cmdline_parser.ml: config.status
 	@echo "(* parse_args () should be called as soon as possible (put earlier" > lib/util/cmdline_parser.ml
 	@echo "   when linking) because some choices during compilation depend on" >> lib/util/cmdline_parser.ml
 	@echo "   given options (e.g. dfs-sat)" >> lib/util/cmdline_parser.ml
-	@echo "\n   -> The following call:" >> lib/util/cmdline_parser.ml
+	@echo "   -> The following call:" >> lib/util/cmdline_parser.ml
 	@echo "   1 - should be kept when builtind Alt-Ergo tools" >> lib/util/cmdline_parser.ml
 	@echo "   2 - should be removed to build and use only the library." >> lib/util/cmdline_parser.ml
-	@echo "\n   Alternatively to 2, one can just remove cmdline_parser.cmo/cmx in" >> lib/util/cmdline_parser.ml
+	@echo "   Alternatively to 2, one can just remove cmdline_parser.cmo/cmx in" >> lib/util/cmdline_parser.ml
 	@echo "   Makefile.users *)" >> lib/util/cmdline_parser.ml
-	@echo "\nlet () = Options.parse_cmdline_arguments ()" >> lib/util/cmdline_parser.ml
+	@echo "let () = Options.parse_cmdline_arguments ()" >> lib/util/cmdline_parser.ml
 
 META: config.status
 	@echo "description = \"API of Alt-Ergo: An automatic theorem prover dedicated to program verification\"" > META
