@@ -34,6 +34,10 @@ done
 
 echo -n "$limit"
 
+main_script_out=$(mktemp)
+main_script_err=$(mktemp)
+trap "rm $main_script_out $main_script_err" EXIT
+
 ## Valid
 ################################################################################################
 
@@ -50,13 +54,13 @@ do
         tput hpa 25
         total=`expr $total + 1`
         echo -n "$total / $big_total"
-        timeout 2 $pr $mlw $opt 1> /tmp/main_script.out 2> /tmp/main_script.err
-        if grep -q -w Valid /tmp/main_script.out ; then
+        timeout 2 $pr $mlw $opt 1> $main_script_out 2> $main_script_err
+        if grep -q -w Valid $main_script_out ; then
 	    score=`expr $score + 1`
         else 
             echo ../non-regression/$mlw >> main_script.log
-            cat /tmp/main_script.out >> main_script.log
-            cat /tmp/main_script.err >> main_script.log
+            cat $main_script_out >> main_script.log
+            cat $main_script_err >> main_script.log
             echo "" >> main_script.log
             echo "    > [KO] ../non-regression/$mlw"
         fi
@@ -87,13 +91,13 @@ do
         tput hpa 25
         total=`expr $total + 1`
         echo -n "$total / $big_total"
-        timeout 2 $pr $mlw $opt 1> /tmp/main_script.out 2> /tmp/main_script.err
-        if grep -q -w "I don't know" /tmp/main_script.out ; then
+        timeout 2 $pr $mlw $opt 1> $main_script_out 2> $main_script_err
+        if grep -q -w "I don't know" $main_script_out ; then
 	    score=`expr $score + 1`
         else 
             echo ../non-regression/$mlw >> main_script.log
-            cat /tmp/main_script.out >> main_script.log
-            cat /tmp/main_script.err >> main_script.log
+            cat $main_script_out >> main_script.log
+            cat $main_script_err >> main_script.log
             echo "" >> main_script.log
             echo "    > [KO] ../non-regression/$mlw"
         fi
@@ -124,11 +128,11 @@ do
         tput hpa 25
         total=`expr $total + 1`
         echo -n "$total / $big_total"
-        timeout 2 $pr $mlw $opt 1> /tmp/main_script.out 2> /tmp/main_script.err
+        timeout 2 $pr $mlw $opt 1> $main_script_out 2> $main_script_err
         if [ $? -eq 0 ] ; then
             echo ../non-regression/$mlw >> main_script.log
-            cat /tmp/main_script.out >> main_script.log
-            cat /tmp/main_script.err >> main_script.log
+            cat $main_script_out >> main_script.log
+            cat $main_script_err >> main_script.log
             echo "" >> main_script.log
             echo "    > [KO] ../non-regression/$mlw"
         else
