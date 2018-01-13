@@ -12,10 +12,12 @@
 (** A wrapper of the Dynlink module: we use Dynlink except when we want to
 generate a static (native) binary **)
 
+[@@@ocaml.warning "-60"]
 module DummyDL = struct
 
   type error = string
 
+  [@@@ocaml.warning "-38"]
   exception Error of error
 
   let error_message s = s

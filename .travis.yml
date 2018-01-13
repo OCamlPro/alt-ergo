@@ -1,6 +1,10 @@
-# branches:
-#   only:
-#   - master
+# safelist
+branches:
+  only:
+  - master
+  - next
+  - next+
+
 language: ocaml
 sudo: required
 

@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Typed
-open Lexing
-open Format
 open Options
 
 module SAT = (val (Sat_solver.get_current ()) : Sat_solver_sig.S)

@@ -99,12 +99,7 @@ module Container : Container_SIG = struct
 
       module P = P
       module MP = Map.Make(P)
-      module SP = Set.Make(P)
-      module SX = Set.Make(struct type t = X.r let compare = X.hash_cmp end)
       module MX = Map.Make(struct type t = X.r let compare = X.hash_cmp end)
-
-      type r = P.r
-      type uf = Uf.t
 
       let age_cpt = ref Z.zero
 
@@ -288,7 +283,7 @@ module Container : Container_SIG = struct
         cross_rec mp cneg, !nb_inqs
 
       let split x mp =
-        let rec split_rec _ (ineq, _) (cp, cn, co, nb_pos, nb_neg) =
+        let split_rec _ (ineq, _) (cp, cn, co, nb_pos, nb_neg) =
           try
 	    let a = find_coefficient x ineq in
 	    if Q.sign a > 0 then ineq::cp, cn, co, nb_pos+1, nb_neg

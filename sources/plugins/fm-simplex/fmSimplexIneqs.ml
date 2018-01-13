@@ -12,7 +12,6 @@
 open Format
 open Options
 
-module Z = Numbers.Z
 module Q = Numbers.Q
 
 module Container : Inequalities.Container_SIG = struct

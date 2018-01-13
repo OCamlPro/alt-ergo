@@ -13,8 +13,6 @@ open Format
 open Options
 
 module F = Formula
-module MF = F.Map
-module SF = F.Set
 module A = Literal.LT
 module T = Term
 module Hs = Hstring
@@ -490,17 +488,6 @@ module Types (*: STT*) = struct
 
 
 
-  module Clause = struct
-
-    let size c = Vec.size c.atoms
-    let pop c = Vec.pop c.atoms
-    let shrink c i = Vec.shrink c.atoms i true
-    let last c = Vec.last c.atoms
-    let get c i = Vec.get c.atoms i
-    let set c i v = Vec.set c.atoms i v
-
-  end
-
   let to_float i = float_of_int i
 
   let to_int f = int_of_float f
@@ -614,7 +601,7 @@ module Flat_Formula : FF_SIG = struct
 
   let cpt = ref 0
 
-  let sp() = let s = ref "" in for i = 1 to !cpt do s := " " ^ !s done; !s ^ !s
+  let sp() = String.make (!cpt * 2) ' '
 
   let rec print fmt fa = match fa.pos with
     | UNIT a -> fprintf fmt "%a" Types.pr_atom a

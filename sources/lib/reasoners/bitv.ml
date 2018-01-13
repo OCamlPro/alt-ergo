@@ -451,7 +451,7 @@ module Shostak(X : ALIEN) = struct
       in List.fold_left add [] l
 
 
-    let rec slicing_pattern s_l =
+    let slicing_pattern s_l =
       let rec f_aux l1 l2 = match (l1,l2) with
 	|[],[] -> []
 	|a::r1,b::r2 when a = b -> a::(f_aux r1 r2)
@@ -501,7 +501,7 @@ module Shostak(X : ALIEN) = struct
 	            in f_aux (List.rev eq'::acc) (c_subs@subs) eqs
       in f_aux [] [] vls
 
-    let rec apply_subs subs sys =
+    let apply_subs subs sys =
       let rec f_aux = function
 	|[] -> assert false
 	|v::r -> try let (v1,v2) = List.assoc v subs in v1::v2::(f_aux r)
@@ -536,7 +536,7 @@ module Shostak(X : ALIEN) = struct
 	  if ok = [] then st::union_sets tl
 	  else union_sets ((List.fold_left ST_Set.union st ok)::ko)
 
-    let rec init_sets vals =
+    let init_sets vals =
       let acc = List.map (fun at -> ST_Set.singleton at) (List.hd vals) in
       let tl = (List.tl vals) in
       let f_aux = List.map2 (fun ac_e e -> ST_Set.add e ac_e)
@@ -790,7 +790,7 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   type r = X.r
   type t = unit
   type uf = Uf.t
-  exception Inconsistent
+
   let empty _ = ()
   let assume _ _ _ =
     (), { assume = []; remove = []}

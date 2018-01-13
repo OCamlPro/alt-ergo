@@ -32,8 +32,6 @@ open Sig
 module Hs = Hstring
 module T = Term
 
-type ('a, 'b) mine = Yes of 'a | No of 'b
-
 type 'a abstract =
   | Record of (Hs.t * 'a abstract) list * Ty.t
   | Access of Hs.t * 'a abstract * Ty.t
@@ -450,7 +448,7 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   type r = X.r
   type uf = Uf.t
   type t = unit
-  exception Inconsistent
+
   let empty _ = ()
   let assume _ _ _ =
     (), { assume = []; remove = []}

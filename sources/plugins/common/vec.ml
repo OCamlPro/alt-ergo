@@ -51,7 +51,7 @@ let grow_to t new_capa =
 let grow_to_double_size t =
   let n = max 1 (Array.length t.data) in grow_to t (2 * n)
 
-let rec grow_to_by_double t new_capa =
+let grow_to_by_double t new_capa =
   let new_capa = max 1 new_capa in
   let data = t.data in
   let capa = ref (Array.length data + 1) in

@@ -1083,8 +1083,6 @@ module Make (X : Sig.X) : S with type r = X.r = struct
             | Invalid_argument _ -> List.length l1 - List.length l2
        end)
 
-    type t =  V.t P.t
-
     let add p v mp =
       let prof_p = try P.find p mp with Not_found -> V.empty in
       if V.mem v prof_p then mp

@@ -27,6 +27,5 @@
 (******************************************************************************)
 
 open Annoted_ast
-open Gui_session
 
 val replay_session : env -> unit

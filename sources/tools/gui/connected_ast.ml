@@ -29,7 +29,6 @@
 open Gui_config
 open Annoted_ast
 
-open Lexing
 open Format
 open Options
 open Gui_session

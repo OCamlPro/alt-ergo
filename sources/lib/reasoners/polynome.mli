@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Numbers.Z
-open Numbers.Q
-
 exception Not_a_num
 exception Maybe_zero
 

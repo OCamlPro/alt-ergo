@@ -33,7 +33,6 @@ open Exception
 
 module X = Combine.Shostak
 module Ex = Explanation
-module SetF = Formula.Set
 module T = Term
 module A = Literal
 module LR = A.Make(struct type t = X.r let compare = X.str_cmp include X end)
@@ -343,7 +342,7 @@ module Main_Default : S = struct
 	  let base_env, ch = CC_X.assume_literals base_env ch facts in
 	  aux ch bad_last (a::dl) base_env l
 
-        (** This optimisation is not correct with the current explanation *)
+        (* This optimisation is not correct with the current explanation *)
         (* | [(c, lit_orig, CPos exp, ex_c)], Yes (dep,_) -> *)
         (*     let neg_c = CC_X.Rel.choice_mk_not c in *)
         (*     let ex_c = Ex.union ex_c dep in *)

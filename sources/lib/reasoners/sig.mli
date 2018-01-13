@@ -101,10 +101,13 @@ module type SHOSTAK = sig
 
   (**Type of terms of the theory*)
   type t
+
   (**Type of representants of terms of the theory*)
   type r
+
   (** Name of the theory*)
   val name : string
+
   (** return true if the symbol is owned by the theory*)
   val is_mine_symb : Symbols.t -> bool
 

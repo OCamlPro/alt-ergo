@@ -161,7 +161,7 @@ module Make (X : Sig.X) = struct
 
   let expand =
     List.fold_left
-      (fun l (x,n) -> let l= ref l in for i=1 to n do l:=x::!l done; !l) []
+      (fun l (x,n) -> let l= ref l in for _=1 to n do l:=x::!l done; !l) []
 
   let abstract2 sy t r acc =
     match X.ac_extract r with

@@ -32,7 +32,6 @@ open Gui_config
 open Annoted_ast
 open Connected_ast
 
-open Lexing
 open Format
 open Options
 
@@ -593,7 +592,7 @@ let force_interrupt old_action_ref n =
 
 
 
-let rec kill_thread thread () =
+let kill_thread thread () =
   match !thread with
     | Some r ->
       interrupt :=  Some (Thread.id r);

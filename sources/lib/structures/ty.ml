@@ -26,7 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Hconsing
 open Format
 open Options
 
@@ -294,35 +293,38 @@ let rec matching s pat t =
     | _ , _ ->
       raise (TypeClash(pat,t))
 
-let rec apply_subst s ty =
-  match ty with
-  | Tvar {v=n} ->
-    (try M.find n s with Not_found -> ty)
+let apply_subst =
+  let rec apply_subst s ty =
+    match ty with
+    | Tvar {v=n} ->
+      (try M.find n s with Not_found -> ty)
 
-  | Text (l,e) ->
-    let l, same = Lists.apply (apply_subst s) l in
-    if same then ty else Text(l, e)
+    | Text (l,e) ->
+      let l, same = Lists.apply (apply_subst s) l in
+      if same then ty else Text(l, e)
 
-  | Tfarray (t1,t2) ->
-    let t1' = apply_subst s t1 in
-    let t2' = apply_subst s t2 in
-    if t1 == t1' && t2 == t2' then ty else Tfarray (t1', t2')
+    | Tfarray (t1,t2) ->
+      let t1' = apply_subst s t1 in
+      let t2' = apply_subst s t2 in
+      if t1 == t1' && t2 == t2' then ty else Tfarray (t1', t2')
 
-  | Trecord r ->
-    let lbs,  same1 = Lists.apply_right (apply_subst s) r.lbs in
-    let args, same2 = Lists.apply (apply_subst s) r.args in
-    if same1 && same2 then ty
-    else
-      Trecord
-        {args = args;
-         name = r.name;
-         lbs = lbs}
+    | Trecord r ->
+      let lbs,  same1 = Lists.apply_right (apply_subst s) r.lbs in
+      let args, same2 = Lists.apply (apply_subst s) r.args in
+      if same1 && same2 then ty
+      else
+        Trecord
+          {args = args;
+           name = r.name;
+           lbs = lbs}
 
-  | Tnext t ->
-    let t' = apply_subst s t in
-    if t == t' then ty else Tnext t'
+    | Tnext t ->
+      let t' = apply_subst s t in
+      if t == t' then ty else Tnext t'
 
-  | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum (_, _) -> ty
+    | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum (_, _) -> ty
+  in
+  fun s ty -> if M.is_empty s then ty else apply_subst s ty
 
 let instantiate lvar lty ty =
   let s =

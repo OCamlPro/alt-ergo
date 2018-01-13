@@ -28,7 +28,6 @@
 
 open Typed
 open Commands
-open Lexing
 open Format
 open Options
 
@@ -222,10 +221,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       end
 
     | Inconsistent ->
-      if js_mode () then
-        printf "# [message] Inconsistent assumption \n@."
-      else
-        eprintf "%aInconsistent assumption@." Loc.report loc;
+      if Options.verbose () then
+        if js_mode () then
+          printf "# [message] Inconsistent assumption \n@."
+        else
+          eprintf "%aInconsistent assumption@." Loc.report loc;
 
     | Unknown t | Sat t ->
       if js_mode () then

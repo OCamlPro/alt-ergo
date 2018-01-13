@@ -250,16 +250,8 @@ let nb_prints = ref max_nb_prints
 let initial_info = ref true
 
 let string_resize s i =
-  let tmp = ref s in
-  for cpt = String.length s + 1 to i do tmp := sprintf "%s " !tmp done;
-  if false && not (String.length !tmp = i) then begin
-    fprintf fmt "i        = %d@." i;
-    fprintf fmt "s in     = \"%s\"@." s;
-    fprintf fmt "s out    = \"%s\"@." !tmp;
-    fprintf fmt "size out = %d@." (String.length !tmp);
-    assert false
-  end;
-  !tmp
+  let tmp = String.make (i - (String.length s)) ' ' in
+  s ^ tmp
 
 let int_resize n i = string_resize (sprintf "%d" n) i
 
@@ -440,7 +432,7 @@ let print_initial_info () =
 let stats_limit, timers_limit =
   let aux tmp sz =
     tmp := sprintf "%s|" !tmp;
-    for i = 1 to sz do tmp := sprintf "%s-" !tmp done
+    for _ = 1 to sz do tmp := sprintf "%s-" !tmp done
   in
   let tmp_s = ref "" in
   let tmp_t = ref "" in
@@ -651,7 +643,7 @@ let line_of_module arr f =
 
 
 let line_of_sum_module timers =
-  for i = 0 to 206 do fprintf fmt "-" done;
+  for _ = 0 to 206 do fprintf fmt "-" done;
   fprintf fmt "|@.";
   fprintf fmt "%s " (string_resize "" 13);
   List.iter
@@ -670,7 +662,7 @@ let timers_table forced timers =
       fprintf fmt"| %s" (string_resize (Timers.string_of_ty_module f) 9))
     Timers.all_modules;
   fprintf fmt "|@.";
-  for i = 0 to 206 do fprintf fmt "-" done;
+  for _ = 0 to 206 do fprintf fmt "-" done;
   fprintf fmt "|@.";
   let arr_timers = Timers.get_timers_array timers in
   List.iter

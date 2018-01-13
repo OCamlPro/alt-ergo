@@ -35,7 +35,6 @@ module T  = Term
 module A  = Literal
 module L  = List
 module Hs = Hstring
-module Ex = Explanation
 
 type 'a abstract = Cons of Hs.t * Ty.t |  Alien of 'a
 
@@ -204,8 +203,6 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
 
   module Sh = Shostak(X)
   open Sh
-
-  exception Not_Cons
 
   module Ex = Explanation
 

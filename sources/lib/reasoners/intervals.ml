@@ -29,7 +29,6 @@
 open Format
 open Options
 
-module Z = Numbers.Z
 module Q = Numbers.Q
 
 module Ex = Explanation
@@ -45,7 +44,6 @@ type t = {
   expl: Ex.t
 }
 
-exception EmptyInterval of Ex.t
 exception NotConsistent of Ex.t
 exception No_finite_bound
 

@@ -20,16 +20,11 @@ module Main : Sat_solver_sig.S = struct
   module Ex = Explanation
   module F = Formula
   module MF = F.Map
-  module SF = F.Set
   module A = Literal.LT
-  module T = Term
   module Types = Satml.Types
-  module Hs = Hstring
-
 
   module FF = Satml.Flat_Formula
   module MFF = FF.Map
-  module SFF = FF.Set
 
   let reset_refs () = SAT.reset_steps ()
   let get_steps () = SAT.get_steps ()
@@ -403,8 +398,8 @@ module Main : Sat_solver_sig.S = struct
       {env with inst = Inst.add_predicate env.inst gf}
 
   let axiom_def env gf ex =
-    let inst, deds = Inst.add_lemma env.inst gf ex in
-    {env with inst}, deds
+    let inst = Inst.add_lemma env.inst gf ex in
+    {env with inst}
 
   let register_abstraction env (f, (af, at)) =
     if debug_sat () && verbose () then
@@ -419,8 +414,8 @@ module Main : Sat_solver_sig.S = struct
       end;
     end;
     let gf = mk_gf f in
-    let inst, deds =
-      if not (Types.is_true at) then env.inst, []
+    let inst =
+      if not (Types.is_true at) then env.inst
       else Inst.add_lemma env.inst gf Ex.empty
     in
     { env with
@@ -432,7 +427,7 @@ module Main : Sat_solver_sig.S = struct
   let internal_axiom_def ax fa inst =
     Debug.internal_axiom_def ax fa;
     let gax = mk_gf ax in
-    let inst, deds = Inst.add_lemma inst gax Ex.empty in
+    let inst = Inst.add_lemma inst gax Ex.empty in
     (* !!! eventual particular instances in deds are ignored !!! *)
     inst
 
@@ -601,7 +596,7 @@ module Main : Sat_solver_sig.S = struct
     let acc = List.rev_append acc l in
     instantiate_ground_preds env acc
 
-  let rec assume_aux (env, updated) gf =
+  let assume_aux (env, updated) gf =
     let {F.f=f} = gf in
     if MF.mem f env.gamma then env, updated
     else
@@ -609,9 +604,7 @@ module Main : Sat_solver_sig.S = struct
       Debug.assume gf;
       match F.view f with
       | F.Lemma _ ->
-        let env, deds = axiom_def env gf Ex.empty in
-        List.fold_left (fun acc (gf, _) -> assume_aux acc gf)
-          (env, true) deds
+        axiom_def env gf Ex.empty, true
 
       | _ ->
         let f', axs = FF.simplify f (fun f -> MF.find f env.abstr1) in

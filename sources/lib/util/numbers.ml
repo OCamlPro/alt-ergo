@@ -27,6 +27,7 @@
 (******************************************************************************)
 
 module MyZarith = ZarithNumbers
+[@@@ocaml.warning "-60"]
 module MyNums = NumsNumbers
 
 module Z = MyZarith.Z

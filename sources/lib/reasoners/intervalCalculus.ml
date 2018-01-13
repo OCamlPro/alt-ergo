@@ -45,8 +45,6 @@ module L = Literal
 module Sy = Symbols
 module I = Intervals
 
-exception NotConsistent of Literal.LT.Set.t
-
 module OracleContainer =
   (val (Inequalities.get_current ()) : Inequalities.Container_SIG)
 
@@ -1394,7 +1392,7 @@ module Make
       else
         match origin_eq with
         | CS _ | NCS _ -> env
-        | Subst | Other ->
+        | Subst | Sig.Other ->
           (* Subst is needed, but is Other needed ?? or is it subsumed ? *)
           let i1, us1, is_mon_1 = generic_find r1 env in
           let i2, us2, is_mon_2 = generic_find r2 env in
@@ -1865,8 +1863,6 @@ module Make
 
 
     (*** part dedicated to FPA reasoning ************************************)
-
-    open Matching
 
     let best_interval_of optimized env p =
       (* p is supposed to be in normal_form_pos *)
