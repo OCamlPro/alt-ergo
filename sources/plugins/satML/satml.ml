@@ -2249,24 +2249,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   with Exception.Inconsistent _ -> ()
 *)
 
-  exception TopClause
-  exception BotClause
-
-  let partial_model () =
-    Options.partial_bmodel () &&
-      try
-        for i = 0 to Vec.size env.clauses - 1 do
-          let c = Vec.get env.clauses i in
-          try
-            for j = 0 to Vec.size c.atoms - 1 do
-              if (Vec.get c.atoms j).is_true then raise TopClause
-            done;
-            raise BotClause
-          with TopClause -> ()
-        done;
-        true
-      with BotClause -> false
-
   let rec propagate_and_stabilize propagator conflictC =
     match propagator () with
     | C_none -> ()
@@ -2312,7 +2294,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     while true do
       propagate_and_stabilize all_propagations conflictC;
 
-      if nb_assigns () = env.nb_init_vars || partial_model () ||
+      if nb_assigns () = env.nb_init_vars ||
         (Options.lazy_sat () && env.lazy_cnf == []) then
         raise Sat;
       if Options.enable_restarts ()
