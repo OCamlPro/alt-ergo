@@ -88,7 +88,6 @@ val set_thread_yield : (unit -> unit) -> unit
 val set_minimal_bj : bool -> unit
 
 val set_timeout : (unit -> unit) -> unit
-val set_partial_bmodel : bool -> unit
 val set_save_used_context : bool -> unit
 val set_default_input_lang : string -> unit
 
@@ -190,7 +189,6 @@ val use_satml : unit -> bool
 val inequalities_plugin : unit -> string
 val profiling_plugin : unit -> string
 val normalize_instances : unit -> bool
-val partial_bmodel : unit -> bool
 val use_fpa : unit -> bool
 val minimal_bj : unit -> bool
 val smt2_output : unit -> bool
