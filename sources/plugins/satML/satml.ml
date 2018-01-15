@@ -1674,45 +1674,33 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let compute_facts_for_theory_propagate () =
     let open Flat_Formula in
-    let tat = ref SA.empty in
-    let accu = ref [] in
-      accu := env.lazy_cnf;
-      let continue = ref true in
-      while !continue do
-        continue := false;
-        let next =
-          List.fold_left (fun next f ->
-              let proxy_f = get_atom_or_proxy f env.proxies in
-                if not proxy_f.Types.is_true then f :: next
-                else
-                  match view f with
-                  | UNIT a ->
-                    tat := SA.add a !tat;
-                    next
-
-                  | AND l ->
-                    continue := true;
-                    List.fold_left (fun next e -> e :: next) next l
-
-                  | OR l ->
-                    let res =
-                      List.find_opt (fun e ->
-                          let proxy_e = get_atom_or_proxy e env.proxies in
-                          proxy_e.Types.is_true
-                        ) l in
-                    match res with
-                    | None -> f ::next
-                    | Some e ->
-                      continue := true;
-                      e :: next
-            ) [] !accu
-        in
-        accu := next
-      done;
-      let tatoms_queue = Queue.create () in
-      SA.iter (fun a -> Queue.push a tatoms_queue) !tat;
-      env.lazy_cnf <- !accu;
-      tatoms_queue
+    let rec aux ls accu tat =
+      match ls with
+        [] -> tat, accu
+      | f :: ls ->
+        let proxy_f = get_atom_or_proxy f env.proxies in
+        if not proxy_f.Types.is_true then aux ls (f :: accu) tat
+        else
+          match view f with
+          | UNIT a ->
+            aux ls accu (SA.add a tat)
+          | AND l ->
+            aux (List.rev_append l ls) accu tat
+          | OR l ->
+            let res =
+              List.find_opt (fun e ->
+                  let proxy_e = get_atom_or_proxy e env.proxies in
+                  proxy_e.Types.is_true
+                ) l in
+            match res with
+            | None -> aux ls (f :: accu) tat
+            | Some e -> aux (e::ls) accu tat
+    in
+    let tat, accu = aux env.lazy_cnf [] SA.empty in
+    let tatoms_queue = Queue.create () in
+    SA.iter (fun a -> Queue.push a tatoms_queue) tat;
+    env.lazy_cnf <- accu;
+    tatoms_queue
 
   let expensive_theory_propagate () = None
 (* try *)
