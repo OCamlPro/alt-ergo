@@ -2411,7 +2411,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         | [] ->
           report_b_unsat init0;
 
-        | a::_::_ ->
+        | a::b::_ ->
           let name = fresh_name () in
           let clause = make_clause name atoms vraie_form size false init in
           attach_clause clause;
@@ -2419,11 +2419,19 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           if debug_sat () && verbose () then
             fprintf fmt "[satML] add_clause: %a@." Types.pr_clause clause;
 
-	  if a.neg.is_true then begin
-	    let lvl = List.fold_left (fun m a -> max m a.var.level) 0 atoms in
-	    cancel_until lvl;
+	  if a.neg.is_true then begin (* clause is false *)
+            let lvl = List.fold_left (fun m a -> max m a.var.level) 0 atoms in
+            cancel_until lvl;
             conflict_analyze_and_fix (C_bool clause)
-	  end
+          end
+          else
+            if not a.is_true && b.neg.is_true then begin (* clause is unit *)
+              let mlvl = best_propagation_level clause in
+              enqueue a mlvl (Some clause);
+            end
+              [@ocaml.ppwarning "TODO: add a heavy assert that checks \
+that clauses are not redundant, watchs are well set, unit and bottom \
+are detected ..."]
 
         | [a]   ->
           if debug_sat () && verbose () then
