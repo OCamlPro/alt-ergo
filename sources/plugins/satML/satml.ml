@@ -1679,22 +1679,21 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         [] -> tat, accu
       | f :: ls ->
         let proxy_f = get_atom_or_proxy f env.proxies in
-        if not proxy_f.Types.is_true then aux ls (f :: accu) tat
-        else
-          match view f with
-          | UNIT a ->
-            aux ls accu (SA.add a tat)
-          | AND l ->
-            aux (List.rev_append l ls) accu tat
-          | OR l ->
-            let res =
-              List.find_opt (fun e ->
-                  let proxy_e = get_atom_or_proxy e env.proxies in
-                  proxy_e.Types.is_true
-                ) l in
-            match res with
-            | None -> aux ls (f :: accu) tat
-            | Some e -> aux (e::ls) accu tat
+        assert (proxy_f.Types.is_true);
+        match view f with
+        | UNIT a ->
+          aux ls accu (SA.add a tat)
+        | AND l ->
+          aux (List.rev_append l ls) accu tat
+        | OR l ->
+          let res =
+            List.find_opt (fun e ->
+                let proxy_e = get_atom_or_proxy e env.proxies in
+                proxy_e.Types.is_true
+              ) l in
+          match res with
+          | None -> aux ls (f :: accu) tat
+          | Some e -> aux (e::ls) accu tat
     in
     let tat, accu = aux env.lazy_cnf [] SA.empty in
     let tatoms_queue = Queue.create () in
