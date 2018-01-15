@@ -154,7 +154,7 @@ module type SAT_ML = sig
     unit
 
   val boolean_model : unit -> Types.atom list
-  val theory_assumed : unit -> Literal.LT.Set.t
+  val assumed : unit -> Literal.LT.Set.t
   val current_tbox : unit -> th
   val set_current_tbox : th -> unit
   val empty : unit -> unit
