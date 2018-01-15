@@ -1,0 +1,12 @@
+S lib/**
+B lib/**
+
+S plugins/**
+B plugins/**
+
+FLG -short-paths
+FLG -strict-sequence
+
+PKG zarith
+PKG camlzip
+PKG ocplib-simplex
