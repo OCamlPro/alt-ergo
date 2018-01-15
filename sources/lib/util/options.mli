@@ -172,6 +172,8 @@ val instantiate_after_backjump : unit -> bool
 val disable_weaks : unit -> bool
 val default_input_lang : unit -> string
 val lazy_sat : unit -> bool
+val lazy_th : unit -> bool
+val lazy_inst : unit -> bool
 val disable_flat_formulas_simplification : unit -> bool
 val enable_restarts : unit -> bool
 

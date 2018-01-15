@@ -90,6 +90,8 @@ module M = struct
   let sat_plugin = ref ""
   let use_satml = ref false
   let lazy_sat = ref false
+  let lazy_th = ref false
+  let lazy_inst = ref false
   let disable_flat_formulas_simplification = ref false
   let inequalities_plugin = ref ""
   let profiling_plugin = ref ""
@@ -316,6 +318,8 @@ module M = struct
     "-smt2-output" , Arg.Set smt2_output,
     " print unsat/unknown instead of Valid/ I don't know";
     "-lazy-sat", Arg.Set lazy_sat, " use lazy sat model if sat-plugin is used";
+    "-lazy-th", Arg.Set lazy_th, " use lazy sat model for theory";
+    "-lazy-inst", Arg.Set lazy_th, " use lazy sat model for instantation";
     "-disable-flat-formulas-simplification", Arg.Set disable_flat_formulas_simplification, " disable facts simplifications in satML's flat formulas";
 
 
@@ -435,6 +439,8 @@ let set_model_timelimit b = M.timelimit := b
 let set_timers b = M.timers := b
 let set_minimal_bj b = M.minimal_bj := b
 let set_lazy_sat b = M.lazy_sat := b
+let set_lazy_th b = M.lazy_th := b
+let set_lazy_inst b = M.lazy_inst := b
 
 let set_profiling f b =
   M.profiling := b;
@@ -523,6 +529,8 @@ let disable_weaks () = !M.disable_weaks
 let minimal_bj () = !M.minimal_bj
 let smt2_output () = !M.smt2_output
 let lazy_sat () = !M.lazy_sat
+let lazy_th () = !M.lazy_th
+let lazy_inst () = !M.lazy_inst
 let disable_flat_formulas_simplification () =
   !M.disable_flat_formulas_simplification
 
