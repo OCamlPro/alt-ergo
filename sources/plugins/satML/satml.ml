@@ -1678,8 +1678,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       match ls with
         [] -> tat, accu
       | f :: ls ->
-        let proxy_f = get_atom_or_proxy f env.proxies in
-        assert (proxy_f.Types.is_true);
+        assert ((get_atom_or_proxy f env.proxies).Types.is_true);
         match view f with
         | UNIT a ->
           aux ls accu (SA.add a tat)
