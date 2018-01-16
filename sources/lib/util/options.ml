@@ -318,7 +318,7 @@ module M = struct
     " print unsat/unknown instead of Valid/ I don't know";
     "-lazy-sat", Arg.Set lazy_sat, " use lazy sat model if sat-plugin is used";
     "-lazy-th", Arg.Set lazy_th, " use lazy sat model for theory";
-    "-lazy-inst", Arg.Set lazy_th, " use lazy sat model for instantation";
+    "-lazy-inst", Arg.Set lazy_inst, " use lazy sat model for instantation";
     "-disable-flat-formulas-simplification", Arg.Set disable_flat_formulas_simplification, " disable facts simplifications in satML's flat formulas";
 
 
@@ -526,9 +526,8 @@ let instantiate_after_backjump () = !M.instantiate_after_backjump
 let disable_weaks () = !M.disable_weaks
 let minimal_bj () = !M.minimal_bj
 let smt2_output () = !M.smt2_output
-let lazy_sat () = !M.lazy_sat
-let lazy_th () = !M.lazy_th
-let lazy_inst () = !M.lazy_inst
+let lazy_th () =  !M.lazy_sat || !M.lazy_th
+let lazy_inst () = !M.lazy_sat || !M.lazy_inst
 let disable_flat_formulas_simplification () =
   !M.disable_flat_formulas_simplification
 
