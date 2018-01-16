@@ -97,7 +97,6 @@ module M = struct
   let profiling_plugin = ref ""
   let cumulative_time_profiling = ref false
   let normalize_instances = ref false
-  let partial_bmodel = ref true
   let tighten_vars = ref false
   let no_tcp = ref false
   let no_decisions = ref false
@@ -448,7 +447,6 @@ let set_profiling f b =
 
 let set_thread_yield f = M.thread_yield := f
 let set_timeout f = M.timeout := f
-let set_partial_bmodel b = M.partial_bmodel := b
 let set_save_used_context b = M.save_used_context := b
 let set_default_input_lang lang = M.set_default_input_lang lang
 
@@ -549,7 +547,6 @@ let use_satml () = !M.use_satml
 let inequalities_plugin () = !M.inequalities_plugin
 let profiling_plugin () = !M.profiling_plugin
 let normalize_instances () = !M.normalize_instances
-let partial_bmodel () = !M.partial_bmodel
 let use_fpa () = !M.use_fpa
 let preludes () = List.rev !M.reversed_preludes
 

@@ -1676,45 +1676,31 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let compute_facts_for_theory_propagate () =
     let open Flat_Formula in
-    let tat = ref SA.empty in
-    let accu = ref [] in
-      accu := env.lazy_cnf;
-      let continue = ref true in
-      while !continue do
-        continue := false;
-        let next =
-          List.fold_left (fun next f ->
-              let proxy_f = get_atom_or_proxy f env.proxies in
-                if not proxy_f.Types.is_true then f :: next
-                else
-                  match view f with
-                  | UNIT a ->
-                    tat := SA.add a !tat;
-                    next
-
-                  | AND l ->
-                    continue := true;
-                    List.fold_left (fun next e -> e :: next) next l
-
-                  | OR l ->
-                    let res =
-                      List.find_opt (fun e ->
-                          let proxy_e = get_atom_or_proxy e env.proxies in
-                          proxy_e.Types.is_true
-                        ) l in
-                    match res with
-                    | None -> f ::next
-                    | Some e ->
-                      continue := true;
-                      e :: next
-            ) [] !accu
-        in
-        accu := next
-      done;
-      let tatoms_queue = Queue.create () in
-      SA.iter (fun a -> Queue.push a tatoms_queue) !tat;
-      env.lazy_cnf <- !accu;
-      tatoms_queue
+    let rec aux ls accu tat =
+      match ls with
+        [] -> tat, accu
+      | f :: ls ->
+        assert ((get_atom_or_proxy f env.proxies).Types.is_true);
+        match view f with
+        | UNIT a ->
+          aux ls accu (SA.add a tat)
+        | AND l ->
+          aux (List.rev_append l ls) accu tat
+        | OR l ->
+          let res =
+            List.find_opt (fun e ->
+                let proxy_e = get_atom_or_proxy e env.proxies in
+                proxy_e.Types.is_true
+              ) l in
+          match res with
+          | None -> aux ls (f :: accu) tat
+          | Some e -> aux (e::ls) accu tat
+    in
+    let tat, accu = aux env.lazy_cnf [] SA.empty in
+    let tatoms_queue = Queue.create () in
+    SA.iter (fun a -> Queue.push a tatoms_queue) tat;
+    env.lazy_cnf <- accu;
+    tatoms_queue
 
   let lazy_atoms () =
    let open Flat_Formula in
@@ -2294,24 +2280,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   with Exception.Inconsistent _ -> ()
 *)
 
-  exception TopClause
-  exception BotClause
-
-  let partial_model () =
-    Options.partial_bmodel () &&
-      try
-        for i = 0 to Vec.size env.clauses - 1 do
-          let c = Vec.get env.clauses i in
-          try
-            for j = 0 to Vec.size c.atoms - 1 do
-              if (Vec.get c.atoms j).is_true then raise TopClause
-            done;
-            raise BotClause
-          with TopClause -> ()
-        done;
-        true
-      with BotClause -> false
-
   let rec propagate_and_stabilize propagator conflictC =
     match propagator () with
     | C_none -> ()
@@ -2357,8 +2325,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     while true do
       propagate_and_stabilize all_propagations conflictC;
 
-      if nb_assigns () = env.nb_init_vars || partial_model () ||
-        ((Options.lazy_sat () || Options.lazy_th () || Options.lazy_inst ())
+      if nb_assigns () = env.nb_init_vars ||
+         ((Options.lazy_sat () || Options.lazy_th () || Options.lazy_inst ())
          && env.lazy_cnf == []) then
         raise Sat;
       if Options.enable_restarts ()
@@ -2475,7 +2443,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         | [] ->
           report_b_unsat init0;
 
-        | a::_::_ ->
+        | a::b::_ ->
           let name = fresh_name () in
           let clause = make_clause name atoms vraie_form size false init in
           attach_clause clause;
@@ -2483,11 +2451,19 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           if debug_sat () && verbose () then
             fprintf fmt "[satML] add_clause: %a@." Types.pr_clause clause;
 
-	  if a.neg.is_true then begin
-	    let lvl = List.fold_left (fun m a -> max m a.var.level) 0 atoms in
-	    cancel_until lvl;
+	  if a.neg.is_true then begin (* clause is false *)
+            let lvl = List.fold_left (fun m a -> max m a.var.level) 0 atoms in
+            cancel_until lvl;
             conflict_analyze_and_fix (C_bool clause)
-	  end
+          end
+          else
+            if not a.is_true && b.neg.is_true then begin (* clause is unit *)
+              let mlvl = best_propagation_level clause in
+              enqueue a mlvl (Some clause);
+            end
+              [@ocaml.ppwarning "TODO: add a heavy assert that checks \
+that clauses are not redundant, watchs are well set, unit and bottom \
+are detected ..."]
 
         | [a]   ->
           if debug_sat () && verbose () then
