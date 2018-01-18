@@ -591,17 +591,34 @@ end
 module Flat_Formula : FF_SIG = struct
 
   type view = UNIT of Types.atom | AND  of t list | OR of t list
-  and t = { pos : view ; neg : view; tpos : int; tneg : int }
+  and t =
+    {view : view;
+     tag : int;
+     neg : t
+    }
 
-  let mk_not {pos=pos; neg=neg;tpos=tpos; tneg=tneg} =
-    {pos=neg; neg=pos;tpos=tneg; tneg=tpos}
+  let mk_not f = f.neg
 
   module HC =
     Hconsing.Make
       (struct
         type elt = t
 
-        let set_id tag f = { f with tpos = 2*tag; tneg = 2*tag+1 }
+        let set_id tag {view=pos_view ; neg = {view=neg_view}} =
+          let rec p =
+            {
+              view = pos_view;
+              tag  = 2*tag;
+              neg  = n;
+            }
+          and n =
+            {
+              view = neg_view;
+              tag  = 2*tag+1;
+              neg  = p;
+            }
+          in
+          p
 
         let eq f1 f2 =
           let eq_aux c1 c2 = match c1, c2 with
@@ -609,7 +626,7 @@ module Flat_Formula : FF_SIG = struct
             | AND u  , AND v | OR u , OR v  ->
               (try
                  List.iter2
-                   (fun x y -> if x.tpos <> y.tpos then raise Exit) u v; true
+                   (fun x y -> if x.tag <> y.tag then raise Exit) u v; true
                with
                | Exit -> false
                | Invalid_argument s ->
@@ -618,16 +635,16 @@ module Flat_Formula : FF_SIG = struct
 
             | _, _ -> false
 	  in
-          eq_aux f1.pos f2.pos
+          eq_aux f1.view f2.view
 
         let hash f =
           let h_aux f = match f with
             | UNIT a -> Types.hash_atom a
-            | AND l  -> List.fold_left (fun acc f -> acc * 19 + f.tpos) 1 l
-            | OR l   -> List.fold_left (fun acc f -> acc * 23 + f.tpos) 1 l
+            | AND l  -> List.fold_left (fun acc f -> acc * 19 + f.tag) 1 l
+            | OR l   -> List.fold_left (fun acc f -> acc * 23 + f.tag) 1 l
           in
-          let h = h_aux f.pos in
-          match f.pos with
+          let h = h_aux f.view in
+          match f.view with
             | UNIT _ -> abs (3 * h)
             | AND _  -> abs (3 * h + 1)
             | OR _   -> abs (3 * h + 2)
@@ -642,7 +659,7 @@ module Flat_Formula : FF_SIG = struct
 
   let sp() = let s = ref "" in for _ = 1 to !cpt do s := " " ^ !s done; !s ^ !s
 
-  let rec print fmt fa = match fa.pos with
+  let rec print fmt fa = match fa.view with
     | UNIT a -> fprintf fmt "%a" Types.pr_atom a
     | AND s  ->
       incr cpt;
@@ -668,12 +685,12 @@ module Flat_Formula : FF_SIG = struct
 
   let print_stats fmt = ()
 
-  let compare f1 f2 = f1.tpos - f2.tpos
+  let compare f1 f2 = f1.tag - f2.tag
 
-  let equal f1 f2 = f1.tpos - f2.tpos = 0
-  let hash f = f.tpos
-  let tag  f = f.tpos
-  let view f = f.pos
+  let equal f1 f2 = f1.tag == f2.tag
+  let hash f = f.tag
+  let tag  f = f.tag
+  let view f = f.view
 
   let is_positive pos = match pos with
     | AND _ -> true
@@ -682,12 +699,26 @@ module Flat_Formula : FF_SIG = struct
 
   let make pos neg =
     let is_pos = is_positive pos in
-    if is_pos then HC.make {pos=pos ; neg=neg; tpos= -1; tneg= -1 (*dump*)}
-    else mk_not (HC.make {pos=neg ; neg=pos; tpos= -1; tneg= -1 (*dump*)})
+    let pos, neg = if is_pos then pos, neg else neg, pos in
+    let rec p =
+      {
+        view = pos;
+        tag  = -1; (*dummy*)
+        neg  = n;
+      }
+    and n =
+      {
+        view = neg;
+        tag  = -1; (*dummy*)
+        neg  = p;
+      }
+    in
+    let res = HC.make p in
+    if is_pos then res else mk_not res
 
   let aaz a = assert (a.Types.var.Types.level = 0)
 
-  let complements f1 f2 = f1.tpos - f2.tneg = 0
+  let complements f1 f2 = f1.tag == f2.neg.tag
 
   let mk_lit a acc =
     let at, acc = Types.add_atom a acc in
@@ -741,7 +772,7 @@ module Flat_Formula : FF_SIG = struct
       let so, nso =
         List.fold_left
           (fun ((so,nso) as acc) e ->
-            match e.pos with
+            match e.view with
               | AND l -> merge_and_check so l, nso
               | UNIT a when
                   not (disable_flat_formulas_simplification ()) &&
@@ -858,7 +889,7 @@ module Flat_Formula : FF_SIG = struct
       let so, nso =
         List.fold_left
           (fun ((so,nso) as acc) e ->
-            match e.pos with
+            match e.view with
               | OR l  -> merge_and_check so l, nso
               | UNIT a  when
                   not (disable_flat_formulas_simplification ()) &&
@@ -892,7 +923,7 @@ module Flat_Formula : FF_SIG = struct
           match extract_common l with
             | None ->
               begin match l with
-                | [{pos=UNIT _} as fa;{pos=AND ands}] ->
+                | [{view=UNIT _} as fa;{view=AND ands}] ->
                   begin
                     try mk_or [fa ; (mk_and (remove_elt (mk_not fa) ands))]
                     with Not_included ->
@@ -944,7 +975,7 @@ module Flat_Formula : FF_SIG = struct
         | F.Unit(f1, f2) ->
           let x1 = simp topl f1 in
           let x2 = simp topl f2 in
-          begin match x1.pos , x2.pos with
+          begin match x1.view , x2.view with
             | AND l1, AND l2 -> mk_and (List.rev_append l1 l2)
             | AND l1, _      -> mk_and (x2 :: l1)
             | _     , AND l2 -> mk_and (x1 :: l2)
@@ -954,7 +985,7 @@ module Flat_Formula : FF_SIG = struct
         | F.Clause(f1, f2, _) ->
           let x1 = simp false f1 in
           let x2 = simp false f2 in
-          begin match x1.pos, x2.pos with
+          begin match x1.view, x2.view with
             | OR l1, OR l2 -> mk_or (List.rev_append l1 l2)
             | OR l1, _     -> mk_or (x2 :: l1)
             | _    , OR l2 -> mk_or (x1 :: l2)
@@ -968,7 +999,7 @@ module Flat_Formula : FF_SIG = struct
           let at, new_v = mk_lit (A.mk_eq v lterm) !new_vars in
           new_vars := new_v;
           let res = simp topl f' in
-          begin match res.pos with
+          begin match res.view with
             | AND l -> mk_and (at :: l)
             | _     -> mk_and [at; res]
           end
@@ -989,9 +1020,9 @@ module Flat_Formula : FF_SIG = struct
     A.mk_pred (Term.make sy [] Ty.Tbool) false
 
   let get_proxy_of f proxies_mp =
-    try let p, _, _ = Util.MI.find f.tpos proxies_mp in Some p
+    try let p, _, _ = Util.MI.find f.tag proxies_mp in Some p
     with Not_found ->
-      try let p, _, _ = Util.MI.find f.tneg proxies_mp in Some p.Types.neg
+      try let p, _, _ = Util.MI.find f.neg.tag proxies_mp in Some p.Types.neg
       with Not_found -> None
 
 
@@ -1011,19 +1042,19 @@ module Flat_Formula : FF_SIG = struct
     let proxies_mp = ref proxies_mp in
     let new_proxies = ref [] in
     let new_vars = ref new_vars in
-    let rec abstr f = match f.pos with
+    let rec abstr f = match f.view with
       | UNIT a -> a
       | AND l | OR l ->
         match get_proxy_of f !proxies_mp with
         | Some p -> p
         | None ->
           let l = List.rev (List.rev_map abstr l) in
-          let p = atom_of_lit (mk_new_proxy f.tpos) false new_vars in
-          let is_and = match f.pos with
+          let p = atom_of_lit (mk_new_proxy f.tag) false new_vars in
+          let is_and = match f.view with
             | AND _ -> true | OR _ -> false | UNIT _ -> assert false
           in
           new_proxies := (p, l, is_and) :: !new_proxies;
-          proxies_mp := Util.MI.add f.tpos (p, l, is_and) !proxies_mp;
+          proxies_mp := Util.MI.add f.tag (p, l, is_and) !proxies_mp;
           p
     in
     let abstr_f = abstr f in
