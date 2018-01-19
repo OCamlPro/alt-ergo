@@ -310,7 +310,7 @@ module Main : Sat_solver_sig.S = struct
     )Ex.empty lc*)
 
   let selector env f orig =
-    (lazy_sat () || not (MF.mem f env.gamma))
+    (lazy_inst () || not (MF.mem f env.gamma))
     && begin match F.view orig with
       | F.Lemma _ -> env.add_inst orig
       | _ -> true
@@ -499,7 +499,7 @@ module Main : Sat_solver_sig.S = struct
           fprintf fmt "expand skolem of %a@.@." Literal.LT.print a;
         try
           let {F.f} as gf = A.Map.find a env.skolems in
-          if not (lazy_sat ()) && MF.mem f env.gamma then acc
+          if not (lazy_inst ()) && MF.mem f env.gamma then acc
           else gf :: acc
         with Not_found -> acc
       ) acc sa
@@ -627,7 +627,7 @@ module Main : Sat_solver_sig.S = struct
         Literal.LT.Set.fold
           (fun a accu ->
             SA.add (Types.get_atom a) accu
-          )(SAT.theory_assumed ()) SA.empty
+          )(SAT.assumed ()) SA.empty
       in
       let sa =
         if frugal then sa
@@ -663,7 +663,7 @@ module Main : Sat_solver_sig.S = struct
       env.gamma A.Set.empty
 
   let atoms_from_sat_branches env ~greedy_round ~frugal =
-    let sa = match greedy_round || greedy (), lazy_sat () with
+    let sa = match greedy_round || greedy (), lazy_inst () with
       | false, false -> atoms_from_sat_branches env
       | false, true  -> atoms_from_lazy_sat ~frugal env
       | true , false -> atoms_from_bmodel env

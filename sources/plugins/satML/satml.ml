@@ -1101,7 +1101,7 @@ module type SAT_ML = sig
     unit
 
   val boolean_model : unit -> Types.atom list
-  val theory_assumed : unit -> Literal.LT.Set.t
+  val assumed : unit -> Literal.LT.Set.t
   val current_tbox : unit -> th
   val set_current_tbox : th -> unit
   val empty : unit -> unit
@@ -1446,7 +1446,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     Vec.push env.trail_lim (Vec.size env.trail);
     if Options.profiling() then Profiling.decision (decision_level()) "<none>";
     Vec.push env.tenv_queue env.tenv; (* save the current tenv *)
-    if Options.lazy_sat () then Vec.push env.lazy_cnf_queue env.lazy_cnf
+    if Options.lazy_th () || Options.lazy_inst () then
+      Vec.push env.lazy_cnf_queue env.lazy_cnf
 
   let attach_clause c =
     Vec.push (Vec.get c.atoms 0).neg.watched c;
@@ -1521,11 +1522,12 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       done;
       Queue.clear env.tatoms_queue;
       env.tenv <- Vec.get env.tenv_queue lvl; (* recover the right tenv *)
-      if Options.lazy_sat () then env.lazy_cnf <- Vec.get env.lazy_cnf_queue lvl;
+      if Options.lazy_th () || Options.lazy_inst () then
+        env.lazy_cnf <- Vec.get env.lazy_cnf_queue lvl;
       Vec.shrink env.trail ((Vec.size env.trail) - env.qhead) true;
       Vec.shrink env.trail_lim ((Vec.size env.trail_lim) - lvl) true;
       Vec.shrink env.tenv_queue ((Vec.size env.tenv_queue) - lvl) true;
-      if Options.lazy_sat () then
+      if Options.lazy_th () || Options.lazy_inst () then
         Vec.shrink env.lazy_cnf_queue ((Vec.size env.lazy_cnf_queue) - lvl) true;
       (try
          let last_dec =
@@ -1703,7 +1705,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       | Some a -> a
       | None -> assert false
 
-  let compute_facts_for_theory_propagate () =
+  let compute_facts () =
     let open Flat_Formula in
     let rec aux ls accu tat =
       match ls with
@@ -1726,10 +1728,18 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           | Some e -> aux (e::ls) accu tat
     in
     let tat, accu = aux env.lazy_cnf [] SA.empty in
-    let tatoms_queue = Queue.create () in
-    SA.iter (fun a -> Queue.push a tatoms_queue) tat;
     env.lazy_cnf <- accu;
+    tat
+
+  let compute_facts_for_theory_propagate () =
+    let tatoms_queue = Queue.create () in
+    SA.iter (fun a -> Queue.push a tatoms_queue) (compute_facts ());
     tatoms_queue
+
+  let lazy_atoms () =
+    SA.fold (fun a acc ->
+        A.Set.add a.lit acc
+      ) (compute_facts ()) A.Set.empty
 
   let expensive_theory_propagate () = None
 (* try *)
@@ -1780,7 +1790,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     let facts = ref [] in
     let dlvl = decision_level () in
     let tatoms_queue =
-      if Options.lazy_sat () then compute_facts_for_theory_propagate ()
+      if Options.lazy_th () then
+        compute_facts_for_theory_propagate ()
       else env.tatoms_queue
     in
     match unit_theory_propagate env.tatoms_queue tatoms_queue with
@@ -1812,7 +1823,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         (*let full_model = nb_assigns() = env.nb_init_vars in*)
         (* XXX what to do with the other results of Th.assume ? *)
         let t,_,cpt =
-          Th.assume ~ordered:(not (Options.lazy_sat ()))
+          Th.assume ~ordered:(not (Options.lazy_th ()))
             (List.rev !facts) env.tenv
         in
         steps := Int64.add (Int64.of_int cpt) !steps;
@@ -2312,7 +2323,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       propagate_and_stabilize all_propagations conflictC;
 
       if nb_assigns () = env.nb_init_vars ||
-        (Options.lazy_sat () && env.lazy_cnf == []) then
+         ((Options.lazy_th () || Options.lazy_inst ())
+         && env.lazy_cnf == []) then
         raise Sat;
       if Options.enable_restarts ()
         && n_of_conflicts >= 0 && !conflictC >= n_of_conflicts then begin
@@ -2468,7 +2480,8 @@ are detected ..."]
 
 
   let update_lazy_cnf ~do_bcp mff ~dec_lvl =
-    if Options.lazy_sat () && dec_lvl <= decision_level () then begin
+    if (Options.lazy_th () || Options.lazy_inst ())
+    && dec_lvl <= decision_level () then begin
       let s =
         try Util.MI.find dec_lvl env.lvl_ff
         with Not_found -> SFF.empty
@@ -2541,7 +2554,9 @@ are detected ..."]
           env.tenv     <- old_tenv
         end
     in
-    fun mff -> if Options.lazy_sat () then better_bj mff
+    fun mff ->
+      if (Options.lazy_th () || Options.lazy_inst ())
+      then better_bj mff
 
 
   let assume unit_cnf nunit_cnf f ~cnumber mff ~dec_lvl =
@@ -2570,7 +2585,8 @@ are detected ..."]
       try_to_backjump_further mff
 
   let exists_in_lazy_cnf f' =
-    not (Options.lazy_sat ()) || MFF.mem f' env.ff_lvl
+    not (Options.lazy_th () || Options.lazy_inst ())
+    || MFF.mem f' env.ff_lvl
 
   let boolean_model () =
     let l = ref [] in
@@ -2579,7 +2595,12 @@ are detected ..."]
     done;
     !l
 
-  let theory_assumed () = Th.get_assumed env.tenv
+  let assumed () =
+    if Options.lazy_th () then
+      Th.get_assumed env.tenv
+    else if Options.lazy_inst () then
+      lazy_atoms ()
+    else assert false
 
   let current_tbox () = env.tenv
   let set_current_tbox tb = env.tenv <- tb
