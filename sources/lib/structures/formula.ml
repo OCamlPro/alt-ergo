@@ -805,6 +805,32 @@ and mk_forall name loc binders triggers f id ext_free =
         in
         mk_forall name loc binders triggers f id ext_free
 
+(* this function removes "big triggers" that are subsumed by smaller ones *)
+let filter_subsumed_triggers triggers =
+  List.fold_left
+    (fun acc tr ->
+      match tr.content with
+      | [t] ->
+        let subterms = Term.subterms Term.Set.empty t in
+        if List.exists (fun tr ->
+          match tr.content with
+          | [s] -> s != t && Term.Set.mem s subterms
+          | _ -> false
+        )triggers
+        then
+          acc
+        else
+          tr :: acc
+      | _ -> tr :: acc
+    )[] triggers |> List.rev
+
+let mk_forall name loc binders triggers f id ext_free =
+  let triggers = filter_subsumed_triggers triggers in
+  mk_forall name loc binders triggers f id ext_free
+
+let mk_exists name loc binders triggers f id ext_free =
+  let triggers = filter_subsumed_triggers triggers in
+  mk_exists name loc binders triggers f id ext_free
 
 let apply_subst =
   let (cache : t Msbty.t Msbt.t Map.t ref) = ref Map.empty in
