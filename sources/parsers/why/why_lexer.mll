@@ -251,8 +251,11 @@ and parse_string str_buf = parse
     let trigger = Why_parser.trigger_parser parse_token
   end
 
-  let () = (* register this parser in Input_lang *)
-    Parsers.register_parser ~lang:".why" (module Parser);
-    Parsers.register_parser ~lang:".mlw" (module Parser)
+  let () =
+    (*register this parser in Input_lang: 3 different extensions recognized *)
+    let p = (module Parser : Parsers.PARSER_INTERFACE) in
+    Parsers.register_parser ~lang:".why" p;
+    Parsers.register_parser ~lang:".mlw" p;
+    Parsers.register_parser ~lang:".ae" p
 
 }
