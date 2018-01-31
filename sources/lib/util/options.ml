@@ -198,17 +198,7 @@ module M = struct
       | "after-matching" -> Util.AfterMatching
       | _ -> raise (Arg.Bad ("Bad value '"^s^"' for option -case-split-policy"))
 
-  let check_file_extension s =
-    if not (Filename.check_suffix s ".mlw"
-            || Filename.check_suffix s ".why"
-            || Filename.check_suffix s ".zip")
-    then begin
-      Format.fprintf fmt "Bad extension for file %S@." s;
-      raise (Arg.Bad "no .mlw, .why or .zip extension")
-    end
-
   let add_prelude p =
-    check_file_extension p;
     reversed_preludes := p :: !reversed_preludes
 
   let set_default_input_lang lang = default_input_lang := "." ^ lang
@@ -346,7 +336,7 @@ end
 
 let parse_cmdline_arguments () =
   let ofile = ref None in
-  let set_file s = M.check_file_extension s; ofile := Some s in
+  let set_file s = ofile := Some s in
   Arg.parse M.spec set_file M.usage;
   match !ofile with
     | Some f ->
