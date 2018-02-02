@@ -75,38 +75,68 @@ let () =
 	(Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
     with Invalid_argument _ -> ()
 
-let () =
-  try
-    Options.set_is_gui false;
-    Options.Time.start ();
-    Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
-    if Options.profiling () then begin
-      Timers.reset timers;
-      assert (Options.timers());
-      Timers.set_timer_start (Timers.start timers);
-      Timers.set_timer_pause (Timers.pause timers);
-      Profiling.init ();
-    end;
+let init_profiling () =
+  if Options.profiling () then begin
+    Timers.reset timers;
+    assert (Options.timers());
+    Timers.set_timer_start (Timers.start timers);
+    Timers.set_timer_pause (Timers.pause timers);
+    Profiling.init ();
+  end
 
-  (*Options.parse_args ();*)
-    let filename = get_file () in
-    let preludes = Options.preludes () in
-    let pfile = Parsers.parse_problem ~filename ~preludes in
-    let d, _ = Typechecker.file pfile in
-    let d = Typechecker.split_goals d in
-    let d =
+let () =
+  let d =
+    try
+      Options.Time.start ();
+      Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
+      Options.set_is_gui false;
+      init_profiling ();
+
+      (*Options.parse_args ();*)
+      let filename = get_file () in
+      let preludes = Options.preludes () in
+      let pfile = Parsers.parse_problem ~filename ~preludes in
+      let d, _ = Typechecker.file pfile in
+      let d = Typechecker.split_goals d
+        [@ocaml.ppwarning "TODO: implement a more efficient split"]
+      in
       List.map
         (fun d ->  Cnf.make (List.map (fun (f, env) -> f, true) d)) d
-    in
+    with Util.Timeout ->
+      FE.print_status (FE.Timeout None) 0L;
+      exit 142
+  in
+  match d with
+  | [] -> ()
+  | [cnf] ->
+    begin
+      try
+        SAT.reset_refs ();
+        ignore
+          (Queue.fold (FE.process_decl FE.print_status)
+	     (SAT.empty (), true, Explanation.empty) cnf);
+        Options.Time.unset_timeout ~is_gui:false;
+        if Options.profiling() then
+          Profiling.print true (SAT.get_steps ()) timers fmt;
+      with Util.Timeout -> ()
+    end
+  | _ ->
+    if Options.timelimit_per_goal() then FE.print_status FE.Preprocess 0L;
     List.iter
       (fun cnf ->
-        SAT.reset_refs ();
-        ignore (Queue.fold (FE.process_decl FE.print_status)
-		  (SAT.empty (), true, Explanation.empty) cnf)
+        init_profiling ();
+        try
+          if Options.timelimit_per_goal() then
+            begin
+              Options.Time.start ();
+              Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
+            end;
+          SAT.reset_refs ();
+          ignore
+            (Queue.fold (FE.process_decl FE.print_status)
+	       (SAT.empty (), true, Explanation.empty) cnf)
+        with Util.Timeout ->
+          if not (Options.timelimit_per_goal()) then exit 142
       ) d;
     Options.Time.unset_timeout ~is_gui:false;
-    if Options.profiling() then
-      Profiling.print true (SAT.get_steps ()) timers fmt;
-  with Util.Timeout ->
-    Format.eprintf "Timeout@.";
-    exit 142
+

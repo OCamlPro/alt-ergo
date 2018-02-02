@@ -160,6 +160,7 @@ val rules : unit -> int
 val restricted : unit -> bool
 val bottom_classes : unit -> bool
 val timelimit : unit -> float
+val timelimit_per_goal : unit -> bool
 val interpretation_timelimit : unit -> float
 val profiling : unit -> bool
 val cumulative_time_profiling : unit -> bool
@@ -170,6 +171,7 @@ val preludes : unit -> string list
 val instantiate_after_backjump : unit -> bool
 val disable_weaks : unit -> bool
 val default_input_lang : unit -> string
+val answers_with_locs  : unit -> bool
 
 (** this option also yields true if profiling is set to true **)
 val timers : unit -> bool

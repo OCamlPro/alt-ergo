@@ -473,10 +473,10 @@ let empty_sat_inst inst_model =
 
 exception Abort_thread
 
-let update_status image label buttonclean env d s steps =
+let update_status image label buttonclean env s steps =
   let satmode = (* smtfile() || smt2file() ||  satmode()*) false in
   match s with
-    | FE.Unsat dep ->
+    | FE.Unsat (d,dep) ->
       let time = Options.Time.value () in
       if not satmode then Loc.report std_formatter d.st_loc;
       if satmode then printf "@{<C.F_Red>unsat@}@."
@@ -491,7 +491,7 @@ let update_status image label buttonclean env d s steps =
       ignore(buttonclean#connect#clicked
 	       ~callback:(fun () -> prune_unused env))
 
-    | FE.Inconsistent ->
+    | FE.Inconsistent d ->
       if not satmode then
 	(Loc.report std_formatter d.st_loc;
 	 fprintf fmt "Inconsistent assumption@.")
@@ -499,7 +499,7 @@ let update_status image label buttonclean env d s steps =
       image#set_stock `EXECUTE;
       label#set_text "  Inconsistent assumption"
 
-    | FE.Unknown t ->
+    | FE.Unknown (d, t) ->
       if not satmode then
 	(Loc.report std_formatter d.st_loc; printf "I don't know.@.")
       else printf "unknown@.";
@@ -508,7 +508,7 @@ let update_status image label buttonclean env d s steps =
 			(Options.Time.value()));
       if model () then pop_model t ()
 
-    | FE.Sat t ->
+    | FE.Sat (d, t) ->
       if not satmode then Loc.report std_formatter d.st_loc;
       if satmode then printf "unknown (sat)@."
       else printf "I don't know@.";
@@ -516,6 +516,12 @@ let update_status image label buttonclean env d s steps =
       label#set_text
 	(sprintf "  I don't know (sat) (%2.2f s)" (Options.Time.value()));
       if model () then pop_model t ()
+
+    | FE.Timeout _ ->
+      assert false (* should not happen in GUI ? *)
+
+    | FE.Preprocess ->
+      assert false (* should not happen in GUI ! *)
 
 let update_aborted image label buttonstop buttonrun timers_model = function
   | Abort_thread ->
@@ -549,9 +555,9 @@ let update_aborted image label buttonstop buttonrun timers_model = function
 
 
 
-let wrapper_update_status image label buttonclean env d s steps =
+let wrapper_update_status image label buttonclean env s steps =
   GtkThread.sync (fun () ->
-    update_status image label buttonclean env d s steps
+    update_status image label buttonclean env s steps
   ) ()
 
 let wrapper_update_aborted image label buttonstop buttonrun timers_model e =

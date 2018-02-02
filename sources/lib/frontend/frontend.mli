@@ -30,15 +30,20 @@ module type S = sig
 
   type sat_env
 
-  type output = Unsat of Explanation.t | Inconsistent
-	        | Sat of sat_env | Unknown of sat_env
+  type status =
+  | Unsat of Commands.sat_tdecl * Explanation.t
+  | Inconsistent of Commands.sat_tdecl
+  | Sat of Commands.sat_tdecl * sat_env
+  | Unknown of Commands.sat_tdecl * sat_env
+  | Timeout of Commands.sat_tdecl option
+  | Preprocess
 
   val process_decl:
-    (Commands.sat_tdecl -> output -> int64 -> unit) ->
+    (status -> int64 -> unit) ->
     sat_env * bool * Explanation.t -> Commands.sat_tdecl ->
     sat_env * bool * Explanation.t
 
-  val print_status : Commands.sat_tdecl -> output -> int64 -> unit
+  val print_status : status -> int64 -> unit
 end
 
 module Make (SAT: Sat_solver_sig.S) : S with type sat_env = SAT.t

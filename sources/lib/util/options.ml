@@ -84,6 +84,7 @@ module M = struct
   let restricted = ref false
   let bottom_classes = ref false
   let timelimit = ref 0.
+  let timelimit_per_goal = ref false
   let interpretation_timelimit = ref (if Sys.win32 then 0. else 1.)
   let debug_matching = ref 0
   let debug_explanations = ref false
@@ -111,6 +112,7 @@ module M = struct
   let instantiate_after_backjump = ref false
   let disable_weaks = ref false
   let default_input_lang = ref ".why"
+  let no_locs_in_answers = ref false
 
   let show_where s=
     match s with
@@ -294,6 +296,11 @@ module M = struct
     "-save-used-context", Arg.Set save_used_context, " save used axioms and predicates in a .used file. This options implies -proof";
     "-replay-satml-dfs", Arg.Set replay_satml_dfs, " debug option for the satML plugin. Replays proven (valid) goals (with generated ground instances) using the functional SAT solver";
     "-timelimit", Arg.Float (set_limit timelimit), "n set the time limit to n seconds (not supported on Windows)";
+
+    "-timelimit-per-goal", Arg.Set timelimit_per_goal,
+    " Set the given timelimit for each goal, in case of multiple goals per \
+file. In this case, time spent in preprocessing is separated from resolution \
+time. Not relevant for GUI-mode.";
     "-interpretation-timelimit", Arg.Float (set_limit interpretation_timelimit), "n set the time limit to n seconds for model generation (not supported on Windows). Default value is 1. sec";
     "-sat-plugin" , Arg.String set_sat_plugin,
     " use the given SAT-solver instead of the default DFS-based SAT solver";
@@ -328,6 +335,9 @@ module M = struct
     "-default-lang", Arg.String set_default_input_lang,
     " Set the default input language to 'lang'. Useful when the extension does not allow to automatically select a parser (eg. JS mode, GUI mode, ...)"
     ;
+
+    "-no-locs-in-answers", Arg.Set no_locs_in_answers,
+    " Do not show the locations of goals when printing solver's answers."
   ]
 
   let spec = Arg.align spec
@@ -487,6 +497,7 @@ let rules () = !M.rules
 let restricted () = !M.restricted
 let bottom_classes () = !M.bottom_classes
 let timelimit () = !M.timelimit
+let timelimit_per_goal () = !M.timelimit_per_goal
 let interpretation_timelimit () = !M.interpretation_timelimit
 let enable_assertions () = !M.enable_assertions
 let profiling () =  !M.profiling
@@ -519,6 +530,7 @@ let can_decide_on s =
 let no_decisions_on__is_empty () = !M.no_decisions_on == Util.SS.empty
 
 let default_input_lang () = !M.default_input_lang
+let answers_with_locs ()  = not !M.no_locs_in_answers
 
 (** particular getters : functions that are immediately executed **************)
 let exec_thread_yield () = !M.thread_yield ()
