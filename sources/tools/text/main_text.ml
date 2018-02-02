@@ -92,8 +92,8 @@ let () =
     let filename = get_file () in
     let preludes = Options.preludes () in
     let pfile = Parsers.parse_problem ~filename ~preludes in
-    let d = FE.typecheck_file pfile in
-
+    let d, _ = Typechecker.file pfile in
+    let d = Typechecker.split_goals d in
     let d =
       List.map
         (fun d ->  Cnf.make (List.map (fun (f, env) -> f, true) d)) d

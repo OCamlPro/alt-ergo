@@ -44,10 +44,6 @@ module type S = sig
     sat_env * bool * Explanation.t -> Commands.sat_tdecl ->
     sat_env * bool * Explanation.t
 
-  val typecheck_file :
-    Parsed.file ->
-    ((int tdecl, int) annoted * Typechecker.env) list list
-
   val print_status : Commands.sat_tdecl -> output -> int64 -> unit
 end
 
@@ -194,18 +190,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         print_status d (Unknown t) (SAT.get_steps ());
         if model () then SAT.print_model ~header:true std_formatter t;
         env , consistent, dep
-
-  let typecheck_file (pfile : Parsed.file) =
-      try
-        let ltd, typ_env = Typechecker.file false Typechecker.empty_env pfile in
-        let d = Typechecker.split_goals ltd in
-        if type_only () then exit 0;
-        d
-      with
-      | Errors.Error(e,l) ->
-        Loc.report err_formatter l;
-        eprintf "typing error: %a\n@." Errors.report e;
-        exit 1
 
   let print_status d status steps =
     let time = Time.value() in

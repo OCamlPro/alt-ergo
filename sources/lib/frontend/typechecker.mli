@@ -31,9 +31,7 @@ open Typed
 
 type env
 
-val empty_env : env
-
-val file : bool -> env -> file ->
+val file : file ->
   ((int tdecl, int) annoted * env) list * env
 
 val split_goals :
