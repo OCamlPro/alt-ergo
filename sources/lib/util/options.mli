@@ -182,6 +182,7 @@ val get_file : unit -> string
 val get_session_file : unit -> string
 val get_used_context_file : unit -> string
 val sat_plugin : unit -> string
+val parsers : unit -> string list
 val inequalities_plugin : unit -> string
 val profiling_plugin : unit -> string
 val normalize_instances : unit -> bool

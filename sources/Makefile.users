@@ -123,7 +123,8 @@ CMO = lib/util/config.cmo \
       lib/frontend/cnf.cmo \
       lib/frontend/parsed_interface.cmo \
       lib/frontend/frontend.cmo \
-      lib/frontend/parsers.cmo
+      lib/frontend/parsers.cmo \
+      lib/frontend/parsers_loader.cmo
 
 CMOFRONT = parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
 

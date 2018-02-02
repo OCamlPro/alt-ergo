@@ -88,6 +88,7 @@ module M = struct
   let debug_matching = ref 0
   let debug_explanations = ref false
   let sat_plugin = ref ""
+  let parsers = ref []
   let inequalities_plugin = ref ""
   let profiling_plugin = ref ""
   let cumulative_time_profiling = ref false
@@ -155,6 +156,8 @@ module M = struct
       ) !no_decisions_on (Str.split (Str.regexp ",") s)
 
   let set_sat_plugin s = sat_plugin := s
+
+  let add_parser p = parsers := p :: !parsers
 
   let set_inequalities_plugin s = inequalities_plugin := s
 
@@ -296,6 +299,8 @@ module M = struct
     " use the given SAT-solver instead of the default DFS-based SAT solver";
     "-inequalities-plugin" , Arg.String set_inequalities_plugin,
     " use the given module to handle inequalities of linear arithmetic";
+    "-parser" , Arg.String add_parser,
+    " register a new parser for Alt-Ergo";
     "-profiling", Arg.String parse_profiling, "<delay> activate the profiling module with the given frequency. Use Ctrl-C to switch between different views and \"Ctrl + AltGr + \\\" to exit.";
     "-profiling-plugin" , Arg.String set_profiling_plugin,
     " use the given profiling plugin";
@@ -500,6 +505,7 @@ let get_file () = !M.file
 let get_session_file () = !M.session_file
 let get_used_context_file () = !M.used_context_file
 let sat_plugin () = !M.sat_plugin
+let parsers () = List.rev !M.parsers
 let inequalities_plugin () = !M.inequalities_plugin
 let profiling_plugin () = !M.profiling_plugin
 let normalize_instances () = !M.normalize_instances
