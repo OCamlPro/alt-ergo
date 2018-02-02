@@ -42,8 +42,8 @@ let register_parser ~lang new_parser =
   if List.mem_assoc lang !parsers then
     begin
       eprintf
-        "error: A parser is already registered for extension %S@." lang;
-      exit 1
+        "Warning: A parser for extension %S is already registered. \
+It will be hidden !@." lang;
     end;
   parsers := (lang, new_parser) :: !parsers
 
