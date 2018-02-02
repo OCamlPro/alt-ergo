@@ -1714,13 +1714,22 @@ let type_decl keep_triggers (acc, env) d =
     Loc.report std_formatter loc;
     acc, env
 
-let file keep_triggers env ld =
-  let ltd, env =
-    List.fold_left
-      (fun acc d -> type_decl keep_triggers acc d)
-      ([], env) ld
-  in
-  List.rev ltd, env
+let file ld =
+  let env = Env.empty in
+  let keep_triggers = false (* ??? *) in
+  try
+    let ltd, env =
+      List.fold_left
+        (fun acc d -> type_decl keep_triggers acc d)
+        ([], env) ld
+    in
+    if type_only () then exit 0;
+    List.rev ltd, env
+  with
+  | Errors.Error(e,l) ->
+    Loc.report err_formatter l;
+    eprintf "typing error: %a\n@." Errors.report e;
+    exit 1
 
 let is_local_hyp s =
   try Pervasives.(=) (String.sub s 0 2) "@L" with Invalid_argument _ -> false
@@ -1761,5 +1770,3 @@ let term env vars t =
   type_term env t
 
 type env = Env.t
-
-let empty_env = Env.empty

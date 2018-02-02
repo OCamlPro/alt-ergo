@@ -26,8 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Typed
-
 module type S = sig
 
   type sat_env
@@ -39,10 +37,6 @@ module type S = sig
     (Commands.sat_tdecl -> output -> int64 -> unit) ->
     sat_env * bool * Explanation.t -> Commands.sat_tdecl ->
     sat_env * bool * Explanation.t
-
-  val typecheck_file :
-    Parsed.file ->
-    ((int tdecl, int) annoted * Typechecker.env) list list
 
   val print_status : Commands.sat_tdecl -> output -> int64 -> unit
 end
