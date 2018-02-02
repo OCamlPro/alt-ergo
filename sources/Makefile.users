@@ -123,17 +123,17 @@ CMO = lib/util/config.cmo \
       lib/frontend/cnf.cmo \
       lib/frontend/parsed_interface.cmo \
       lib/frontend/frontend.cmo \
-      lib/frontend/parsers.cmo \
-      lib/frontend/parsers_loader.cmo
+      lib/frontend/parsers.cmo
 
 CMOFRONT = parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
 
 # parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
 
-MAINCMO = $(CMO) $(CMOFRONT) tools/text/main_text.cmo
+MAINCMO = $(CMO) $(CMOFRONT) lib/frontend/parsers_loader.cmo tools/text/main_text.cmo
 
 ifeq ($(ENABLEGUI),yes)
 	GUICMO = $(CMO) $(CMOFRONT) \
+                 lib/frontend/parsers_loader.cmo \
                  tools/gui/gui_session.cmo \
                  tools/gui/gui_config.cmo \
                  tools/gui/annoted_ast.cmo \
