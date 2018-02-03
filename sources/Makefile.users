@@ -8,7 +8,7 @@ LOCAL_INC = -I lib/util -I lib/structures -I lib/reasoners \
     -I plugins/common -I plugins/satML \
     -I plugins/fm-simplex
 
-INCLUDES = $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(LOCAL_INC)
+INCLUDES = $(NUMLIB) $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(LOCAL_INC)
 #for coverage # -I /usr/local/lib/ocaml/3.12.1/bisect -pp "camlp4o str.cma /usr/local/lib/ocaml/3.12.1/bisect/bisect_pp.cmo"
 
 # TODO : enable these warnings one by one and fix the code
