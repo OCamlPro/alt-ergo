@@ -218,7 +218,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     match status with
     | Unsat (d, dep) ->
       let loc = d.st_loc in
-      printf "%aValid (%2.4f secs) (%Ld steps)%s@."
+      printf "%aValid (%2.4f) (%Ld steps)%s@."
         report_loc loc time steps (goal_name d);
       if proof () && not (debug_proof ()) && not (save_used_context ()) then
         printf "Proof:\n%a@." Explanation.print_proof dep
@@ -230,19 +230,19 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
     | Unknown (d, t) | Sat (d, t) ->
       let loc = d.st_loc in
-      printf "%aI don't know (%2.4f secs) (%Ld steps)%s@."
+      printf "%aI don't know (%2.4f) (%Ld steps)%s@."
         report_loc loc time steps (goal_name d)
 
     | Timeout (Some d) ->
       let loc = d.st_loc in
-      printf "%aTimeout (%2.4f secs) (%Ld steps)%s@."
+      printf "%aTimeout (%2.4f) (%Ld steps)%s@."
         report_loc loc time steps (goal_name d);
 
     | Timeout None ->
-      printf "%aTimeout (%2.4f secs) (%Ld steps)@."
+      printf "%aTimeout (%2.4f) (%Ld steps)@."
         report_loc Loc.dummy time steps;
 
     | Preprocess ->
-      printf "%aPreprocessing (%2.4f secs) (%Ld steps)@."
+      printf "%aPreprocessing (%2.4f) (%Ld steps)@."
         report_loc Loc.dummy time steps;
 end
