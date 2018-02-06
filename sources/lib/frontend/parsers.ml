@@ -36,7 +36,6 @@ module type PARSER_INTERFACE = sig
 end
 
 let parsers = ref ([] : (string * (module PARSER_INTERFACE)) list)
-  [@ocaml.ppwarning "TODO: add the ability to add parsers dynamically"]
 
 let register_parser ~lang new_parser =
   if List.mem_assoc lang !parsers then

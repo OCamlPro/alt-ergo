@@ -36,23 +36,33 @@ module type S = sig
 
   type sat_env
 
-  type output = Unsat of Explanation.t | Inconsistent
-	        | Sat of sat_env | Unknown of sat_env
+  type status =
+  | Unsat of Commands.sat_tdecl * Explanation.t
+  | Inconsistent of Commands.sat_tdecl
+  | Sat of Commands.sat_tdecl * sat_env
+  | Unknown of Commands.sat_tdecl * sat_env
+  | Timeout of Commands.sat_tdecl option
+  | Preprocess
 
   val process_decl:
-    (Commands.sat_tdecl -> output -> int64 -> unit) ->
+    (status -> int64 -> unit) ->
     sat_env * bool * Explanation.t -> Commands.sat_tdecl ->
     sat_env * bool * Explanation.t
 
-  val print_status : Commands.sat_tdecl -> output -> int64 -> unit
+  val print_status : status -> int64 -> unit
 end
 
 module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   type sat_env = SAT.t
 
-  type output = Unsat of Explanation.t | Inconsistent
-	        | Sat of sat_env | Unknown of sat_env
+  type status =
+  | Unsat of Commands.sat_tdecl * Explanation.t
+  | Inconsistent of Commands.sat_tdecl
+  | Sat of Commands.sat_tdecl * sat_env
+  | Unknown of Commands.sat_tdecl * sat_env
+  | Timeout of Commands.sat_tdecl option
+  | Preprocess
 
   let check_produced_proof dep =
     if verbose () then
@@ -167,7 +177,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           in
           if debug_proof () then check_produced_proof dep;
           if save_used_context () then do_save_used_context env dep;
-	  print_status d (Unsat dep) (SAT.get_steps ());
+	  print_status (Unsat (d, dep)) (SAT.get_steps ());
 	  env, consistent, dep
 
       | ThAssume th_elt ->
@@ -178,43 +188,61 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
     with
       | SAT.Sat t ->
-        print_status d (Sat t) (SAT.get_steps ());
+        print_status (Sat (d,t)) (SAT.get_steps ());
         if model () then SAT.print_model ~header:true std_formatter t;
         env , consistent, dep
       | SAT.Unsat dep' ->
         let dep = Explanation.union dep dep' in
         if debug_proof () then check_produced_proof dep;
-        print_status d Inconsistent (SAT.get_steps ());
+        print_status (Inconsistent d) (SAT.get_steps ());
         env , false, dep
       | SAT.I_dont_know t ->
-        print_status d (Unknown t) (SAT.get_steps ());
+        print_status (Unknown (d, t)) (SAT.get_steps ());
         if model () then SAT.print_model ~header:true std_formatter t;
         env , consistent, dep
+      | Util.Timeout as e ->
+        print_status (Timeout (Some d)) (SAT.get_steps ());
+        raise e
 
-  let print_status d status steps =
+  let goal_name d =
+    match d.st_decl with
+    | Query(n,_,_,_) -> sprintf " (goal %s)" n
+    | _ -> ""
+
+  let print_status status steps =
     let time = Time.value() in
-    let loc = d.st_loc in
+    let report_loc fmt loc =
+      if js_mode () then fprintf fmt "# [answer] "
+      else if Options.answers_with_locs () then Loc.report fmt loc
+    in
     match status with
-    | Unsat dep ->
-      if js_mode () then
-        printf "# [answer] Valid (%2.4f seconds) (%Ld steps)@." time steps
-      else begin
-        printf "%aValid (%2.4f) (%Ld steps)@." Loc.report loc time steps;
-        if proof () && not (debug_proof ()) && not (save_used_context ()) then
-          printf "Proof:\n%a@." Explanation.print_proof dep
-      end
+    | Unsat (d, dep) ->
+      let loc = d.st_loc in
+      printf "%aValid (%2.4f secs) (%Ld steps)%s@."
+        report_loc loc time steps (goal_name d);
+      if proof () && not (debug_proof ()) && not (save_used_context ()) then
+        printf "Proof:\n%a@." Explanation.print_proof dep
 
-    | Inconsistent ->
+    | Inconsistent d ->
+      let loc = d.st_loc in
       if Options.verbose () then
-        if js_mode () then
-          printf "# [message] Inconsistent assumption \n@."
-        else
-          eprintf "%aInconsistent assumption@." Loc.report loc;
+        eprintf "%aInconsistent assumption@." report_loc loc
 
-    | Unknown t | Sat t ->
-      if js_mode () then
-        printf "# [answer] unknown (%2.4f seconds) (%Ld steps)@." time steps
-      else
-        printf "%aI don't know (%2.4f) (%Ld steps)@." Loc.report loc time steps
+    | Unknown (d, t) | Sat (d, t) ->
+      let loc = d.st_loc in
+      printf "%aI don't know (%2.4f secs) (%Ld steps)%s@."
+        report_loc loc time steps (goal_name d)
 
+    | Timeout (Some d) ->
+      let loc = d.st_loc in
+      printf "%aTimeout (%2.4f secs) (%Ld steps)%s@."
+        report_loc loc time steps (goal_name d);
+
+    | Timeout None ->
+      printf "%aTimeout (%2.4f secs) (%Ld steps)@."
+        report_loc Loc.dummy time steps;
+
+    | Preprocess ->
+      printf "%aPreprocessing (%2.4f secs) (%Ld steps)@."
+        report_loc Loc.dummy time steps;
 end
