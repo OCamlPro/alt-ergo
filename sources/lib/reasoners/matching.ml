@@ -424,12 +424,16 @@ module Make (X : Arg) : S with type theory = X.t = struct
     Debug.match_pats_modulo pat lsubsts;
     List.fold_left (match_one_pat env tbox pat) [] lsubsts
 
+  let trig_weight s t =
+    match T.view s, T.view t with
+    | {T.f=Symbols.Name _}, {T.f=Symbols.Op _}   -> -1
+    | {T.f=Symbols.Op _}  , {T.f=Symbols.Name _} -> 1
+    | _ -> (T.view t).T.depth - (T.view s).T.depth
+
+
   let matching env tbox pat_info =
     let pats = pat_info.trigger in
-    let pats_list =
-      List.stable_sort
-        (fun s t -> (T.view t).T.depth - (T.view s).T.depth) pats.F.content
-    in
+    let pats_list = List.stable_sort trig_weight pats.F.content in
     Debug.matching pats;
     let egs =
       { sbs = SubstT.empty;
