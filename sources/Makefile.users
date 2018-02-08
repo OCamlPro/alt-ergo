@@ -7,7 +7,8 @@ LOCAL_INC = -I lib/util -I lib/structures -I lib/reasoners \
     -I parsers/why \
     -I parsers/smt2 \
     -I parsers/common \
-    -I plugins/fm-simplex
+    -I plugins/fm-simplex \
+    -I plugins/AB-Why3
 
 INCLUDES = $(NUMLIB) $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(PSMT2FELIB) $(LOCAL_INC)
 #for coverage # -I /usr/local/lib/ocaml/3.12.1/bisect -pp "camlp4o str.cma /usr/local/lib/ocaml/3.12.1/bisect/bisect_pp.cmo"
@@ -57,7 +58,7 @@ LIBNAME = altErgoLib
 BYTE=$(NAME).byte
 OPT=$(NAME).opt
 
-all: alt-ergo gui fm-simplex
+all: alt-ergo gui fm-simplex AB-Why3
 
 ifeq ($(OCAMLBEST),opt)
 alt-ergo: opt
@@ -65,10 +66,15 @@ else
 alt-ergo: byte
 endif
 
+GENERATED_WHY3 = plugins/AB-Why3/why3_lexer.ml \
+	    plugins/AB-Why3/why3_parser.ml \
+	    plugins/AB-Why3/why3_parser.mli
+
 GENERATED = lib/util/config.ml \
             parsers/why/why_parser.ml \
             parsers/why/why_parser.mli \
-            parsers/why/why_lexer.ml
+            parsers/why/why_lexer.ml \
+	    $(GENERATED_WHY3)
 
 # bytecode and native-code compilation
 ######################################
@@ -138,10 +144,10 @@ CMO-LIB = lib/util/config.cmo \
 CMO-PARSERS = \
       parsers/common/cmdline_parser.cmo \
       parsers/common/parsers.cmo \
-      parsers/common/parsers_loader.cmo \
       parsers/why/why_parser.cmo \
       parsers/why/why_lexer.cmo \
-      parsers/smt2/psmt2_to_alt_ergo.cmo
+      parsers/smt2/psmt2_to_alt_ergo.cmo \
+      parsers/common/parsers_loader.cmo
 
 
 # parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
@@ -323,9 +329,10 @@ uninstall: uninstall-lib
 #######
 
 clean:
-	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/common parsers/why parsers/smt2 plugins/fm-simplex ; do \
+	rm -f $(GENERATED)
+	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/common parsers/why parsers/smt2 plugins/fm-simplex plugins/AB-Why3 ; do \
 	rm -f $$dd/*.cm[ioxtp] $$dd/*.cmti $$dd/*.o $$dd/*~ $$dd/*.annot $$dd/*.owz;\
-	rm -f $(GENERATED) $$dd/*.output META $(LIBNAME).*; \
+	rm -f $$dd/*.output META $$dd/*.automaton $(LIBNAME).*; \
 	rm -f $(NAME).byte $(NAME).opt $(GUINAME).opt $(GUINAME).byte *~; \
 	done
 	@rm -rf *.log archi.dot archi.pdf lib/*~ *.cmxs *.cmos alt-ergo-static* *.cmxs *.cma essentiel essentiel.tar.bz2 alt-ergo-$(VERSION)-$(ARCH)
@@ -336,7 +343,7 @@ clean:
 
 .depend depend: $(GENERATED)
 	$(OCAMLDEP) -slash $(LOCAL_INC) lib/util/*.ml* lib/structures/*.ml* lib/reasoners/*.ml* lib/frontend/*.ml* tools/text/*.ml* \
-        tools/gui/*.ml* parsers/why/*.ml* parsers/smt2/*.ml* parsers/common/*.ml* plugins/fm-simplex/*ml* > .depend
+        tools/gui/*.ml* parsers/why/*.ml* parsers/smt2/*.ml* parsers/common/*.ml* plugins/fm-simplex/*ml*  plugins/AB-Why3/*ml* > .depend
 
 include .depend
 
@@ -369,6 +376,33 @@ else
 	cp -f fm-simplex-plugin.cma $(PLUGINSDIR)
 endif
 
+AB-WHY3-CMO = plugins/AB-Why3/why3_loc.cmo \
+	  plugins/AB-Why3/why3_ptree.cmo \
+	  plugins/AB-Why3/why3_parser.cmo \
+	  plugins/AB-Why3/why3_lexer.cmo \
+
+AB-WHY3-CMX = $(AB-WHY3-CMO:.cmo=.cmx)
+
+AB-Why3-plugin.cmxs: $(CMX) $(AB-WHY3-CMX)
+	$(if $(QUIET),@echo 'Library $@' &&) $(OCAMLOPT) $(INCLUDES)  -shared -o $@ $(AB-WHY3-CMX)
+
+AB-Why3-plugin.cma: $(CMO) $(AB-WHY3-CMO)
+	$(if $(QUIET),@echo 'Library $@' &&) $(OCAMLC) $(INCLUDES)  -a        -o $@ $(AB-WHY3-CMO)
+
+ifeq ($(OCAMLBEST),opt)
+AB-Why3: AB-Why3-plugin.cmxs
+else
+AB-Why3: AB-Why3-plugin.cma
+endif
+
+install-AB-Why3: AB-Why3
+ifeq ($(OCAMLBEST),opt)
+	mkdir -p $(PLUGINSDIR)
+	cp -f AB-Why3-plugin.cmxs $(PLUGINSDIR)
+else
+	mkdir -p $(PLUGINSDIR)
+	cp -f AB-Why3-plugin.cma $(PLUGINSDIR)
+endif
 
 show-dest-dirs:
 	@echo BINDIR      = $(BINDIR)
