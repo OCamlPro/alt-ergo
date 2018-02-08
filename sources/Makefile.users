@@ -379,6 +379,8 @@ endif
 
 W34AE-CMO = plugins/w34ae/why3_loc.cmo \
 	  plugins/w34ae/why3_opt.cmo \
+	  plugins/w34ae/why3_decl.cmo \
+	  plugins/w34ae/why3_ptree.cmo \
 	  plugins/w34ae/why3_hashcons.cmo \
 	  plugins/w34ae/why3_exn_printer.cmo \
 	  plugins/w34ae/why3_bigInt.cmo \
