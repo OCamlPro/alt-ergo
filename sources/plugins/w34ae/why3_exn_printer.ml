@@ -9,12 +9,23 @@
 (*                                                                  *)
 (********************************************************************)
 
+(* From stdlib Stack Module  *)
+type 'a stackt = { mutable c : 'a list; mutable len : int; }
+
+let create () = { c = []; len = 0; }
+
+let iter f s = List.iter f s.c
+
+let push x s = s.c <- x :: s.c; s.len <- s.len + 1
+
+
+
 type exn_printer = Format.formatter -> exn -> unit
 
 let exn_printers =
-  (Stack.create () : (Format.formatter -> exn -> unit) Stack.t)
+  (create () : (Format.formatter -> exn -> unit) stackt)
 
-let register exn_printer = Stack.push exn_printer exn_printers
+let register exn_printer = push exn_printer exn_printers
 
 let () =
   let all_exn_printer fmt exn =
@@ -32,6 +43,6 @@ let exn_printer fmt exn =
       | Exit_loop -> raise Exit_loop
       | _ -> ()
   in
-  try Stack.iter test exn_printers
+  try iter test exn_printers
   with Exit_loop -> ()
 

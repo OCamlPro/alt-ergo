@@ -242,6 +242,12 @@ end
 %start <unit> logic_file program_file*)
 %start <(Why3_ptree.ident * (Why3_ptree.decl option * Why3_loc.position) list) list> logic_file
 
+%type <Parsed.lexpr list * bool> trigger_parser
+%start trigger_parser
+
+%type <Parsed.lexpr> lexpr_parser
+%start lexpr_parser
+
 %type <Parsed.file> file_parser
 %start file_parser
 %%
@@ -249,6 +255,11 @@ end
 file_parser:
 | logic_file { AstConversion.file_parser $1 }
 
+lexpr_parser:
+| expr { AstConversion.lexpr_parser $1 }
+
+trigger_parser:
+| lexpr_parser {$1, true}
 
 (* Theories, modules, namespaces *)
 

@@ -261,8 +261,8 @@ rule token = parse
 
   module Parser : Parsers.PARSER_INTERFACE = struct
     let file    = Why3_parser.file_parser     token
-    let expr    = Format.eprintf "TODO@."; assert false
-    let trigger = Format.eprintf "TODO@."; assert false
+    let expr    = Why3_parser.lexpr_parser    token
+    let trigger = Why3_parser.trigger_parser  token
   end
 
   let () = (* register this parser in Input_lang *)
