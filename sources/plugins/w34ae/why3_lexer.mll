@@ -267,6 +267,7 @@ rule token = parse
 
   let () = (* register this parser in Input_lang *)
     let p = (module Parser : Parsers.PARSER_INTERFACE) in
+    Parsers.register_parser ~lang:".why" p;
     Parsers.register_parser ~lang:".why3" p;
     
  }
