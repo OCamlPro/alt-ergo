@@ -66,7 +66,7 @@ module M = struct
   let nb_triggers = ref 2
   let enable_assertions = ref false
   let no_Ematching = ref false
-  let arith_matching = ref false
+  let arith_matching = ref true
   let no_backjumping = ref false
   let nocontracongru = ref false
   let term_like_pp = ref true
@@ -265,7 +265,7 @@ module M = struct
     " number of redondant (multi)triggers (default: 2)";
     "-triggers-var" , Arg.Set triggers_var , " allows variables as triggers";
     "-no-Ematching", Arg.Set no_Ematching, " disable matching modulo ground equalities";
-    "-arith-matching", Arg.Set arith_matching, " enable a weak form of matching modulo linear arithmetic";
+    "-no-arith-matching", Arg.Clear arith_matching, " disable (the weak form of) matching modulo linear arithmetic";
     "-no-backjumping", Arg.Set no_backjumping, " disable backjumping mechanism in the functional SAT solver";
     "-no-NLA", Arg.Set no_NLA, " disable non-linear arithmetic reasoning (i.e. non-linear multplication, division and modulo on integers and rationals). Non-linear multiplication remains AC";
     "-no-ac", Arg.Set no_ac, " Disable the AC theory of Associative and Commutative function symbols";
