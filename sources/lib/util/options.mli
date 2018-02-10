@@ -139,6 +139,7 @@ val nb_triggers : unit -> int
 val verbose : unit -> bool
 val greedy : unit -> bool
 val no_Ematching : unit -> bool
+val arith_matching : unit -> bool
 val no_backjumping : unit -> bool
 val no_NLA : unit -> bool
 val no_ac : unit -> bool

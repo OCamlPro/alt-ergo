@@ -329,6 +329,27 @@ module Make (X : Arg) : S with type theory = X.t = struct
       in
       SLT.elements mtl
 
+  let plus_of_minus t d ty =
+    [T.make (Symbols.Op Symbols.Minus) [t; d] ty ; d]
+
+  let minus_of_plus t d ty =
+    [T.make (Symbols.Op Symbols.Plus)  [t; d] ty ; d]
+
+  let linear_arithmetic_matching f_pat pats ty_pat t =
+    let {T.f=f ; xs; ty} = T.view t in
+    if not (Options.arith_matching ()) ||
+         ty != Ty.Tint && ty != Ty.Treal then []
+    else
+      match f_pat, pats with
+      | Symbols.Op Symbols.Plus, [p1; p2] ->
+         if T.is_ground p2 then [plus_of_minus t p2 ty]
+         else if T.is_ground p1 then [plus_of_minus t p1 ty] else []
+
+      | Symbols.Op Symbols.Minus, [p1; p2] ->
+         if T.is_ground p2 then [minus_of_plus t p2 ty]
+         else if T.is_ground p1 then [minus_of_plus t p1 ty] else []
+      | _ -> []
+
   let rec match_term env tbox ({sty=s_ty;gen=g;goal=b} as sg) pat t =
     Options.exec_thread_yield ();
     Debug.match_term sg t pat;
@@ -370,6 +391,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
 	        )[] cl
             in
             let cl = filter_classes cl tbox in
+            let cl =
+              if cl != [] then cl
+              else linear_arithmetic_matching f_pat pats ty_pat t
+            in
             List.fold_left
               (fun acc xs ->
                 try (match_list env tbox gsb pats xs) -@ acc
