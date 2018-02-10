@@ -100,17 +100,22 @@ let () =
       let d = Typechecker.split_goals d
         [@ocaml.ppwarning "TODO: implement a more efficient split"]
       in
-      List.map
-        (fun d ->  Cnf.make (List.map (fun (f, env) -> f, true) d)) d
+      d
     with Util.Timeout ->
       FE.print_status (FE.Timeout None) 0L;
       exit 142
   in
   match d with
   | [] -> ()
-  | [cnf] ->
+  | [d] ->
     begin
       try
+        let cnf =
+          try Cnf.make (List.map (fun (f, env) -> f, true) d)
+          with Util.Timeout ->
+            FE.print_status (FE.Timeout None) 0L;
+            exit 142
+        in
         SAT.reset_refs ();
         ignore
           (Queue.fold (FE.process_decl FE.print_status)
@@ -121,9 +126,10 @@ let () =
       with Util.Timeout -> ()
     end
   | _ ->
-    if Options.timelimit_per_goal() then FE.print_status FE.Preprocess 0L;
+    if Options.timelimit_per_goal() then
+      FE.print_status FE.Preprocess 0L;
     List.iter
-      (fun cnf ->
+      (fun d ->
         init_profiling ();
         try
           if Options.timelimit_per_goal() then
@@ -131,6 +137,7 @@ let () =
               Options.Time.start ();
               Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
             end;
+          let cnf = Cnf.make (List.map (fun (f, env) -> f, true) d) in
           SAT.reset_refs ();
           ignore
             (Queue.fold (FE.process_decl FE.print_status)
