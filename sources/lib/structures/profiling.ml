@@ -250,7 +250,8 @@ let nb_prints = ref max_nb_prints
 let initial_info = ref true
 
 let string_resize s i =
-  let tmp = String.make (i - (String.length s)) ' ' in
+  let sz = max 0 (i - (String.length s)) in
+  let tmp = String.make sz ' ' in
   s ^ tmp
 
 let int_resize n i = string_resize (sprintf "%d" n) i
