@@ -334,17 +334,3 @@ let rec translate_theory_decls (dcls : decls) acc : Parsed.decl list =
        | Dmeta (i, ml) -> Format.eprintf "TODO@."; assert false
        end in
      translate_theory_decls t (acc @ trad_d)
-	 
-let translate_theory (id, decls)  = print_theory decls false; translate_theory_decls decls []
-
-let translate_aux (f : ast)  =
-  match f with
-  | [] -> []
-  | [th] -> translate_theory th
-  | _::_ -> Format.eprintf "TODO@."; assert false
-
-let translate logic_file debug =
-  let trad = translate_aux logic_file in 
-  if debug then Why_printer.main (trad) else trad
-
-let file_parser logic_file = translate logic_file false

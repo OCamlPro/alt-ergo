@@ -47,7 +47,3 @@ val translate_pty2 :
   Why3_ptree.pty -> (Loc.t * string * Parsed.ppure_type) list
 val translate_logic_decl : Why3_ptree.logic_decl -> Parsed.decl
 val translate_theory_decls : decls -> Parsed.decl list -> Parsed.decl list
-val translate_theory : 'a * decls -> Parsed.decl list
-val translate_aux : ast -> Parsed.decl list
-val translate : ast -> bool -> Parsed.decl list
-val file_parser : ast -> Parsed.decl list
