@@ -93,12 +93,13 @@ let translate_theory (id, decls)  = "\ntheory " ^ (translate_theory_head id) ^ (
 
 let translate (f : ast) = String.concat "" (List.map translate_theory f)
 
-let main filename =
-    let cin = open_in filename in
+let main filename = Format.eprintf "TODO@."; assert false
+    (*let cin = open_in filename in
     let lexbuf = Lexing.from_channel cin in
     let f :  (Why3_ptree.ident * (Why3_ptree.decl option * Why3_loc.position) list) list = Why3_parser.logic_file Why3_lexer.token lexbuf in
     let transl = translate f in
-    print_string transl
+    print_string transl*)
+
 
 let debug = false
 

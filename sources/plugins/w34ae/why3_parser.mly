@@ -240,27 +240,27 @@ end
 
 (*%start <Why3_ptree.incremental -> unit> open_file
 %start <unit> logic_file program_file*)
-%start <(Why3_ptree.ident * (Why3_ptree.decl option * Why3_loc.position) list) list> logic_file
-
+%start <Parsed.file> logic_file
+(*
 %type <Parsed.lexpr list * bool> trigger_parser
 %start trigger_parser
 
 %type <Parsed.lexpr> lexpr_parser
 %start lexpr_parser
-
+ *)
 %type <Parsed.file> file_parser
 %start file_parser
 %%
 
 file_parser:
-| logic_file { AstConversion.file_parser $1 }
-
+| logic_file { $1 }
+(*
 lexpr_parser:
 | expr { AstConversion.lexpr_parser $1 }
 
 trigger_parser:
 | lexpr_parser {$1, true}
-
+ *)
 (* Theories, modules, namespaces *)
 
 open_file:
@@ -269,14 +269,14 @@ open_file:
 
 logic_file:
 (*| theory* EOF   { Increment.close_file () }*)
-| theory* EOF   { Increment.close_file (); $1 }
+| theory EOF   { Increment.close_file (); $1 }
 
 program_file:
 | theory_or_module* EOF { Increment.close_file () }
 
 theory:
 (*| theory_head theory_decl* END  { Increment.close_theory () }*)
-| theory_head theory_decl* END  { Increment.close_theory (); ($1, $2) }
+| theory_head theory_decl* END  { AstConversion.translate_theory_decls $2 [] }
 
 theory_or_module:
 | theory                        { () }
@@ -296,9 +296,9 @@ theory_decl:
     { Increment.close_namespace (floc $startpos($1) $endpos($1)) $1 }
 *)
     | decl { Increment.new_decl (floc $startpos $endpos) $1; (Some $1, (floc $startpos $endpos)) }
-    | use_clone       { Increment.use_clone (floc $startpos $endpos) $1; (None, (floc $startpos $endpos)) }
+     | use_clone       { Increment.use_clone (floc $startpos $endpos) $1; (None, (floc $startpos $endpos)) }
 | namespace_head theory_decl* END
-    { Increment.close_namespace (floc $startpos($1) $endpos($1)) $1; (None, (floc $startpos($1) $endpos($1))) }
+{ Increment.close_namespace (floc $startpos($1) $endpos($1)) $1; (None, (floc $startpos($1) $endpos($1))) }
 
 
 module_decl:
