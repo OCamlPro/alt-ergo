@@ -114,6 +114,7 @@ CMO = lib/util/config.cmo \
       lib/reasoners/records.cmo \
       lib/reasoners/bitv.cmo \
       lib/reasoners/arrays.cmo \
+      lib/reasoners/sets.cmo \
       lib/reasoners/sum.cmo \
       lib/reasoners/combine.cmo \
       lib/reasoners/ccx.cmo \
