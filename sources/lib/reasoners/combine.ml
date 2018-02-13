@@ -74,14 +74,16 @@ struct
     let set_id tag r = { r with id=tag }
 
     let hash r =
-      match r.v with
-      | X1 x   -> 1 + 8 * X1.hash x
-      | X2 x   -> 2 + 8 * X2.hash x
-      | X3 x   -> 3 + 8 * X3.hash x
-      | X4 x   -> 4 + 8 * X4.hash x
-      | X5 x   -> 5 + 8 * X5.hash x
-      | Ac ac  -> 7 + 8 * AC.hash ac
-      | Term t -> 6 + 8 * Term.hash t
+      let res = match r.v with
+        | X1 x   -> 1 + 8 * X1.hash x
+        | X2 x   -> 2 + 8 * X2.hash x
+        | X3 x   -> 3 + 8 * X3.hash x
+        | X4 x   -> 4 + 8 * X4.hash x
+        | X5 x   -> 5 + 8 * X5.hash x
+        | Ac ac  -> 7 + 8 * AC.hash ac
+        | Term t -> 6 + 8 * Term.hash t
+      in
+      abs res
 
     let eq  r1 r2 =
       match r1.v, r2.v with
@@ -104,7 +106,7 @@ struct
 
   let hcons v = HC.make v
 
-  (* end: Hconsinging modules and functions *)
+  (* end: Hconsing modules and functions *)
 
   let embed1 x = hcons {v = X1 x; id = -1000 (* dummy *)}
   let embed2 x = hcons {v = X2 x; id = -1000 (* dummy *)}
@@ -341,8 +343,8 @@ struct
         | X1 t    -> fprintf fmt "X1(%s):[%a]" X1.name X1.print t
         | X2 t    -> fprintf fmt "X2(%s):[%a]" X2.name X2.print t
         | X3 t    -> fprintf fmt "X3(%s):[%a]" X3.name X3.print t
-        | X4 t    -> fprintf fmt "X3(%s):[%a]" X4.name X4.print t
-        | X5 t    -> fprintf fmt "X3(%s):[%a]" X5.name X5.print t
+        | X4 t    -> fprintf fmt "X4(%s):[%a]" X4.name X4.print t
+        | X5 t    -> fprintf fmt "X5(%s):[%a]" X5.name X5.print t
         | Term t  -> fprintf fmt "FT:[%a]" Term.print t
         | Ac t    -> fprintf fmt "Ac:[%a]" AC.print t
 
