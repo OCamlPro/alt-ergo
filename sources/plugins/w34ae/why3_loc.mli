@@ -9,8 +9,6 @@
 (*                                                                  *)
 (********************************************************************)
 
-open Format
-
 (* Lexing locations *)
 (*
 val current_offset : int ref
@@ -21,7 +19,7 @@ val transfer_loc : Lexing.lexbuf -> Lexing.lexbuf -> unit
  *)
 (* locations in files *)
 
-type position
+type position = Loc.t
 
 val extract : Lexing.position * Lexing.position -> position
 val join : position -> position -> position

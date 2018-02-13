@@ -10,8 +10,6 @@
 (*                                                                             *)
 (*******************************************************************************)
 
-open Lexing
-
 open Parsed
 open Parsed_interface
 
@@ -32,18 +30,7 @@ let str_of_label = function
 let str_of_labs labs =
   String.concat " " (List.filter (fun x -> x <> "") (List.map str_of_label labs))
 
-(* TODO/FIXME : compute right location *)
-let translate_loc (l : Why3_loc.position) : Loc.t =
-  match Why3_loc.get l with
-    | (fname,lnum,cnum1,cnum2) ->
-  let translate_locLeft f l fc lc =
-    {pos_fname = f; pos_lnum = l; pos_bol = fc ; pos_cnum = lc} in
-  let  translate_locRight =  translate_locLeft in
-  let lloc = translate_locLeft fname lnum cnum1 cnum2 in
-  let rloc = translate_locRight fname lnum cnum1 cnum2 in
-  (lloc , rloc)
-
-let dummy_loc = translate_loc Why3_loc.dummy_position
+let dummy_loc = Why3_loc.dummy_position
 
 (* TRANSLATORS  *)
 let translate_quant quant =
@@ -90,10 +77,10 @@ let rec translate_pty =
             | "real" -> real_type
             | "set" ->
                let l = List.map translate_pty pl in
-               mk_external_type (translate_loc i.id_loc) l i.id_str
+               mk_external_type ( i.id_loc) l i.id_str
             | _ ->
                let l = List.map translate_pty pl in
-               mk_external_type (translate_loc i.id_loc) l i.id_str
+               mk_external_type ( i.id_loc) l i.id_str
 	  end
        | _ -> Format.eprintf "TODO@."; assert false
      end
@@ -148,7 +135,7 @@ let translate_const (c : Why3_ptree.constant) loc : Parsed.lexpr =
 
 let translate_qualid = function
   | Qident i ->
-     let loc = translate_loc i.id_loc in
+     let loc =  i.id_loc in
      begin
        match i.id_str with
        | "True" -> mk_true_const loc
@@ -156,7 +143,7 @@ let translate_qualid = function
        | _ -> mk_var loc i.id_str
      end
   | Qdot (q, i) -> (* ignore module prefix, functions in prelude *)
-     let loc = translate_loc i.id_loc in
+     let loc =  i.id_loc in
      mk_var loc i.id_str
 
 let translate_apply {pp_loc; pp_desc} tradt1 loc =
@@ -190,7 +177,7 @@ let translate_unop = function
 
 
 let rec translate_term (t : Why3_ptree.term) : Parsed.lexpr  =
-  let loc = translate_loc t.term_loc in
+  let loc =  t.term_loc in
   let translate_term_list tl = List.map translate_term tl in
   match t.term_desc with
   | Ttrue -> mk_true_const loc
@@ -240,12 +227,12 @@ let rec translate_term (t : Why3_ptree.term) : Parsed.lexpr  =
 let translate_param (loc, id_op, _, pty) =
   match id_op with
   | None -> Format.eprintf "TODO@."; assert false
-  | Some id -> (translate_loc loc, id.id_str, translate_pty pty)
+  | Some id -> ( loc, id.id_str, translate_pty pty)
 
 let translate_type_decl
       {td_loc; td_ident; td_params; td_model; td_vis; td_def; td_inv}
   =  
-  let loc = translate_loc td_loc in
+  let loc =  td_loc in
   let ty_vars = List.map (fun i -> i.id_str) td_params in
   match td_def with
   | TDabstract -> mk_abstract_type_decl loc ty_vars td_ident.id_str
@@ -263,7 +250,7 @@ let translate_pty2 = function
      begin
        match q with
        | Qident i ->
-          let loc = translate_loc i.id_loc in
+          let loc =  i.id_loc in
           let ppure_t =
             match i.id_str with
             | "int" -> int_type
@@ -280,7 +267,7 @@ let translate_pty2 = function
 
 let translate_logic_decl
       {ld_loc; ld_ident; ld_params; ld_type; ld_def} : Parsed.decl =
-  let loc =  translate_loc ld_loc in
+  let loc =   ld_loc in
   let named_ident =
     (ld_ident.id_str, str_of_labs ld_ident.id_lab) in
   match ld_def with
@@ -323,7 +310,7 @@ let rec translate_theory_decls (dcls : decls) acc : Parsed.decl list =
   | [] -> acc
   | (None, _)::t -> translate_theory_decls t acc
   | (Some d,l)::t ->
-     let loc = translate_loc l in
+     let loc =  l in
      let trad_d =
        begin
        match d with

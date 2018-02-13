@@ -13,7 +13,7 @@
 type decls = (Why3_ptree.decl option * Why3_loc.position) list
 type theory = Why3_ptree.ident * decls
 type ast = theory list
-val translate_loc : Why3_loc.position -> Loc.t
+
 val dummy_loc : Loc.t
 val translate_quant :
   Why3_ptree.quant ->
