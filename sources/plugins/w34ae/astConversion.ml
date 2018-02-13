@@ -17,13 +17,20 @@ open Parsed_interface
 
 open Why3_ptree
 open Why3_number
-open Why3_debug
-
 
 type decls = (Why3_ptree.decl option * Why3_loc.position) list
 type theory = (Why3_ptree.ident * decls )
 type ast = theory list
 
+let get_infix_ident i =
+  List.hd (List.rev (String.split_on_char ' ' i.id_str))
+
+let str_of_label = function
+  | Lstr l -> l.lab_string
+  | _ -> ""
+
+let str_of_labs labs =
+  String.concat " " (List.filter (fun x -> x <> "") (List.map str_of_label labs))
 
 (* TODO/FIXME : compute right location *)
 let translate_loc (l : Why3_loc.position) : Loc.t =
@@ -323,13 +330,13 @@ let rec translate_theory_decls (dcls : decls) acc : Parsed.decl list =
        | Dtype t -> List.map translate_type_decl t
        | Dlogic l -> List.map translate_logic_decl l
        | Dind (_, _) ->  Format.eprintf "TODO@."; assert false
-       | Dprop (Why3_decl.Pgoal,  {id_str; id_lab; id_loc}, term) ->
+       | Dprop (Why3_ptree.Pgoal,  {id_str; id_lab; id_loc}, term) ->
           [mk_goal loc id_str (translate_term term)]
-       | Dprop (Why3_decl.Plemma,  {id_str; id_lab; id_loc}, term) ->
+       | Dprop (Why3_ptree.Plemma,  {id_str; id_lab; id_loc}, term) ->
           Format.eprintf "TODO@."; assert false
-       | Dprop (Why3_decl.Paxiom,  {id_str; id_lab; id_loc}, term) ->
+       | Dprop (Why3_ptree.Paxiom,  {id_str; id_lab; id_loc}, term) ->
           [mk_generic_axiom loc id_str (translate_term term)]
-       | Dprop (Why3_decl.Pskip,  {id_str; id_lab; id_loc}, term) ->
+       | Dprop (Why3_ptree.Pskip,  {id_str; id_lab; id_loc}, term) ->
           Format.eprintf "TODO@."; assert false
        | Dmeta (i, ml) -> Format.eprintf "TODO@."; assert false
        end in

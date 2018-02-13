@@ -10,11 +10,22 @@
 (*                                                                             *)
 (*******************************************************************************)
 
+open Big_int
+
+type ind_sign = Ind | Coind
+
+type prop_kind =
+  | Plemma    
+  | Paxiom    
+  | Pgoal     
+  | Pskip     
+
 type loc = Why3_loc.position
 type integer_constant = Why3_number.integer_constant
 type real_constant = Why3_number.real_constant
 type constant = Why3_number.constant
-type label = Lstr of Why3_ident.label | Lpos of Why3_loc.position
+type w3idlabel = { lab_string : string }                  
+type label = Lstr of w3idlabel | Lpos of Why3_loc.position
 type quant = Tforall | Texists | Tlambda
 type binop = Tand | Tand_asym | Tor | Tor_asym | Timplies | Tiff | Tby | Tso
 type unop = Tnot
@@ -82,7 +93,7 @@ type type_def =
   | TDalias of pty
   | TDalgebraic of (loc * ident * param list) list
   | TDrecord of field list
-  | TDrange of Why3_bigInt.t * Why3_bigInt.t
+  | TDrange of big_int * big_int
   | TDfloat of int * int
 type visibility = Public | Private | Abstract
 type invariant = term list
@@ -119,8 +130,8 @@ type use_clone = use * clone_subst list option
 type decl =
     Dtype of type_decl list
   | Dlogic of logic_decl list
-  | Dind of Why3_decl.ind_sign * ind_decl list
-  | Dprop of Why3_decl.prop_kind * ident * term
+  | Dind of ind_sign * ind_decl list
+  | Dprop of prop_kind * ident * term
   | Dmeta of ident * metarg list
 type assertion_kind = Aassert | Aassume | Acheck
 type lazy_op = LazyAnd | LazyOr

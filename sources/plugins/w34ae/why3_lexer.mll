@@ -10,14 +10,15 @@
 (********************************************************************)
 
 {
-  open Format
   open Why3_parser
 
   exception IllegalCharacter of char
 
-  let () = Why3_exn_printer.register (fun fmt e -> match e with
+  let optmap f = function None -> None | Some x -> Some (f x)
+
+  (*let () = Why3_exn_printer.register (fun fmt e -> match e with
     | IllegalCharacter c -> fprintf fmt "illegal character %c" c
-    | _ -> raise e)
+    | _ -> raise e)*)
 
   let keywords = Hashtbl.create 97
   let () =
@@ -158,14 +159,14 @@ rule token = parse
   | (digit+ as i) '.' (digit* as f) (['e' 'E'] (['-' '+']? digit+ as e))?
   | (digit* as i) '.' (digit+ as f) (['e' 'E'] (['-' '+']? digit+ as e))?
       { REAL (Why3_number.real_const_dec i f
-          (Why3_opt.map Why3_lexlib.remove_leading_plus e)) }
+          (optmap Why3_lexlib.remove_leading_plus e)) }
   | '0' ['x' 'X'] (hexadigit+ as i) ("" as f) ['p' 'P'] (['-' '+']? digit+ as e)
   | '0' ['x' 'X'] (hexadigit+ as i) '.' (hexadigit* as f)
         (['p' 'P'] (['-' '+']? digit+ as e))?
   | '0' ['x' 'X'] (hexadigit* as i) '.' (hexadigit+ as f)
         (['p' 'P'] (['-' '+']? digit+ as e))?
       { REAL (Why3_number.real_const_hex i f
-          (Why3_opt.map Why3_lexlib.remove_leading_plus e)) }
+          (optmap Why3_lexlib.remove_leading_plus e)) }
   | "(*)"
       { LEFTPAR_STAR_RIGHTPAR }
   | "(*"

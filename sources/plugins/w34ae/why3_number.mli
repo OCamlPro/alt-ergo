@@ -10,7 +10,7 @@
 (********************************************************************)
 
 (*open Format*)
-
+open Big_int
 (** Construction *)
 
 exception InvalidConstantLiteral of int * string
@@ -38,7 +38,7 @@ val int_const_bin : string -> integer_constant
     InvalidConstantLiteral(base,s) is raised if [s] contains invalid
     characters for the given base.**)
  
-val compute_int : integer_constant -> Why3_bigInt.t
+val compute_int : integer_constant -> big_int
 
 val real_const_dec : string -> string -> string option -> real_constant
 val real_const_hex : string -> string -> string option -> real_constant

@@ -11,6 +11,8 @@
 
 (*open Format*)
 
+open Big_int
+
 (** Construction *)
 
 type integer_constant =
@@ -62,16 +64,18 @@ let check_exp e =
   let e = if e.[0] = '-' then String.sub e 1 (String.length e - 1) else e in
   check_integer_literal 10 is_dec e
 
+let iter f = function None -> () | Some x -> f x
+                        
 let real_const_dec i f e =
   if i <> "" then check_integer_literal 10 is_dec i;
   if f <> "" then check_integer_literal 10 is_dec f;
-  Why3_opt.iter check_exp e;
+  iter check_exp e;
   RConstDec (i,f,e)
 
 let real_const_hex i f e =
   if i <> "" then check_integer_literal 16 is_hex i;
   if f <> "" then check_integer_literal 16 is_hex f;
-  Why3_opt.iter check_exp e;
+  iter check_exp e;
   RConstHex (i,f,e)
  
 let compute_any radix s =
@@ -86,9 +90,9 @@ let compute_any radix s =
         | 'a'..'z' as c -> 10 + Char.code c - Char.code 'a'
         | _ -> assert false in
       assert (v < radix);
-      compute (Why3_bigInt.add_int v (Why3_bigInt.mul_int radix acc)) (i + 1)
+      compute (add_int_big_int v (mult_int_big_int radix acc)) (i + 1)
     end in
-  (compute Why3_bigInt.zero 0)
+  (compute zero_big_int 0)
 
 (** Printing *)
 

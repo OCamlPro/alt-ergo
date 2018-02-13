@@ -10,42 +10,9 @@
 (********************************************************************)
 
 %{
-(*module Increment = struct
-  let stack = Stack.create ()
-  let open_file inc = Stack.push inc stack
-  let close_file () = ignore (Stack.pop stack)
-  let open_theory id = (Stack.top stack).Why3_ptree.open_theory id
-  let close_theory () = (Stack.top stack).Why3_ptree.close_theory ()
-  let open_module id = (Stack.top stack).Why3_ptree.open_module id
-  let close_module () = (Stack.top stack).Why3_ptree.close_module ()
-  let open_namespace n = (Stack.top stack).Why3_ptree.open_namespace n
-  let close_namespace l b = (Stack.top stack).Why3_ptree.close_namespace l b
-  let new_decl loc d = (Stack.top stack).Why3_ptree.new_decl loc d
-  let new_pdecl loc d = (Stack.top stack).Why3_ptree.new_pdecl loc d
-  let use_clone loc use = (Stack.top stack).Why3_ptree.use_clone loc use
-end
- *)
 
 open Lexing
-
-module Increment = struct
-  (*let stack = Stack.create ()*)
-  let debug = false
-  let open_file inc = if debug then print_string "open_file\n" else ()
-  let close_file () = if debug then print_string "close_file\n" else ()
-  let open_theory id = if debug then print_string "open_theory\n" else () 
-  let close_theory () = if debug then print_string "close_theory\n" else ()
-  let open_module id =  if debug then print_string "open_module\n" else ()
-  let close_module () = if debug then print_string "close_module\n" else ()
-  let open_namespace n = if debug then print_string "open_namespace\n" else ()
-  let close_namespace l b = if debug then print_string "close_namespace\n" else ()
-  let new_decl loc d = if debug then print_string "new_decl\n" else ()
-  let new_pdecl loc d = if debug then print_string "new_pdecl\n" else ()
-  let use_clone loc use = if debug then print_string "use_clone\n" else ()
-end
-
-
-  open Why3_ptree
+open Why3_ptree
 
   let infix  s = "infix "  ^ s
   let prefix s = "prefix " ^ s
@@ -55,8 +22,8 @@ end
 
   let floc s e = Why3_loc.extract (s,e)
 
-  let model_label = Why3_ident.create_label "model"
-  let model_projected = Why3_ident.create_label "model_projected"
+  let model_label = { lab_string = "model" }
+  let model_projected = { lab_string = "model_projected" }
 
   let is_model_label l =
     match l with
@@ -79,7 +46,7 @@ end
     | Lpos _ -> false
     | Lstr lab ->
       try
-	ignore(Str.search_forward model_trace_regexp lab.Why3_ident.lab_string 0);
+	ignore(Str.search_forward model_trace_regexp lab.lab_string 0);
 	true
       with Not_found -> false
 
@@ -92,7 +59,7 @@ end
 
   let add_model_trace name labels =
     if (model_lab_present labels) && (not (model_trace_lab_present labels)) then
-      (Lstr (Why3_ident.create_label ("model_trace:" ^ name)))::labels
+      (Lstr ({lab_string = "model_trace:" ^ name}))::labels
     else
       labels
 
@@ -161,9 +128,9 @@ end
 
   let error_loc loc = Why3_loc.error ~loc Error
 
-  let () = Why3_exn_printer.register (fun fmt exn -> match exn with
+  (*let () = Why3_exn_printer.register (fun fmt exn -> match exn with
     | Error -> Format.fprintf fmt "syntax error"
-    | _ -> raise exn)
+    | _ -> raise exn)*)
 
 %}
 
@@ -263,55 +230,20 @@ trigger_parser:
  
 (* Theories, modules, namespaces *)
 
-open_file:
-(* Dummy token. Menhir does not accept epsilon. *)
-| EOF { Increment.open_file }
-
 logic_file:
-(*| theory* EOF   { Increment.close_file () }*)
-| theory EOF   { Increment.close_file (); $1 }
-
-program_file:
-| theory_or_module* EOF { Increment.close_file () }
+| theory EOF   {  $1 }
 
 theory:
-(*| theory_head theory_decl* END  { Increment.close_theory () }*)
 | theory_head theory_decl* END  { AstConversion.translate_theory_decls
                                   $2 []}
 
-theory_or_module:
-| theory                        { () }
-| module_head module_decl* END  { Increment.close_module () }
-
 theory_head:
-(*| THEORY labels(uident_nq)  { Increment.open_theory $2 }*)
-| THEORY labels(uident_nq)  { Increment.open_theory $2;  $2 }
-
-module_head:
-| MODULE labels(uident_nq)  { Increment.open_module $2 }
+| THEORY labels(uident_nq)  {  $2 }
 
 theory_decl:
-(*| decl            { Increment.new_decl  (floc $startpos $endpos) $1 }
-| use_clone       { Increment.use_clone (floc $startpos $endpos) $1 }
-| namespace_head theory_decl* END
-    { Increment.close_namespace (floc $startpos($1) $endpos($1)) $1 }
-*)
-    | decl { Increment.new_decl (floc $startpos $endpos) $1; (Some $1, (floc $startpos $endpos)) }
-    | use_clone       { Increment.use_clone (floc $startpos $endpos) $1; (None, (floc $startpos $endpos)) }
-| namespace_head theory_decl* END
-{ Increment.close_namespace (floc $startpos($1) $endpos($1)) $1; (None, (floc $startpos($1) $endpos($1))) }
+    | decl { (Some $1, (floc $startpos $endpos)) }
+    | use_clone { (None, (floc $startpos $endpos)) }
 
-
-module_decl:
-| decl            { Increment.new_decl  (floc $startpos $endpos) $1 }
-| pdecl           { Increment.new_pdecl (floc $startpos $endpos) $1 }
-| use_clone       { Increment.use_clone (floc $startpos $endpos) $1 }
-| namespace_head module_decl* END
-    { Increment.close_namespace (floc $startpos($1) $endpos($1)) $1 }
-
-namespace_head:
-| NAMESPACE boption(IMPORT) uident_nq
-   { Increment.open_namespace $3.id_str; $2 }
 
 (* Use and clone *)
 
@@ -350,12 +282,12 @@ decl:
 | CONSTANT  constant_decl                   { Dlogic [$2] }
 | FUNCTION  function_decl  with_logic_decl* { Dlogic ($2::$3) }
 | PREDICATE predicate_decl with_logic_decl* { Dlogic ($2::$3) }
-| INDUCTIVE   with_list1(inductive_decl)    { Dind (Why3_decl.Ind, $2) }
-| COINDUCTIVE with_list1(inductive_decl)    { Dind (Why3_decl.Coind, $2) }
-| AXIOM labels(ident_nq) COLON term         { Dprop (Why3_decl.Paxiom, $2, $4) }
-| LEMMA labels(ident_nq) COLON term         { Dprop (Why3_decl.Plemma, $2, $4) }
-| GOAL  labels(ident_nq) COLON term         { Dprop (Why3_decl.Pgoal, $2, $4) }
-| META sident comma_list1(meta_arg)         { Dmeta ($2, $3) }
+| INDUCTIVE   with_list1(inductive_decl)    { Format.eprintf "TODO@."; assert false }
+| COINDUCTIVE with_list1(inductive_decl)    { Format.eprintf "TODO@."; assert false }
+| AXIOM labels(ident_nq) COLON term         { Dprop (Why3_ptree.Paxiom, $2, $4) }
+| LEMMA labels(ident_nq) COLON term         { Format.eprintf "TODO@."; assert false }
+| GOAL  labels(ident_nq) COLON term         { Dprop (Why3_ptree.Pgoal, $2, $4) }
+| META sident comma_list1(meta_arg)         { Format.eprintf "TODO@."; assert false }
 
 meta_arg:
 | TYPE      ty      { Mty $2 }
@@ -696,13 +628,6 @@ numeral:
 
 (* Program declarations *)
 
-pdecl:
-| VAL top_ghost labels(lident_rich) type_v          { Dval ($3, $2, $4) }
-| LET top_ghost labels(lident_rich) fun_defn        { Dfun ($3, $2, $4) }
-| LET top_ghost labels(lident_rich) EQUAL fun_expr  { Dfun ($3, $2, $5) }
-| LET REC with_list1(rec_defn)                      { Drec $3 }
-| EXCEPTION labels(uident_nq)                       { Dexn ($2, PTtuple []) }
-| EXCEPTION labels(uident_nq) ty                    { Dexn ($2, $3) }
 
 top_ghost:
 | (* epsilon *) { Gnone  }
@@ -1115,7 +1040,7 @@ sident:
 labels(X): X label* { add_lab $1 $2 }
 
 label:
-| STRING    { Lstr (Why3_ident.create_label $1) }
+| STRING    { Lstr ({lab_string = $1}) }
 | POSITION  { Lpos $1 }
 
 (* Miscellaneous *)

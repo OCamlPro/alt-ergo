@@ -18,10 +18,10 @@
   exception UnterminatedComment
   exception UnterminatedString
 
-  let () = Why3_exn_printer.register (fun fmt e -> match e with
+  (*let () = Why3_exn_printer.register (fun fmt e -> match e with
     | UnterminatedComment -> fprintf fmt "unterminated comment"
     | UnterminatedString -> fprintf fmt "unterminated string"
-    | _ -> raise e)
+    | _ -> raise e)*)
 
   let newline lexbuf =
     let pos = lexbuf.lex_curr_p in
