@@ -14,27 +14,24 @@ open Lexing
 type position = Loc.t
 
 let user_position fname lnum cnum1 cnum2 =
-  let lloc =  {pos_fname = fname; pos_lnum = lnum; pos_bol = cnum1 ;
+  let upos =  {pos_fname = fname; pos_lnum = lnum; pos_bol = cnum1 ;
                pos_cnum = cnum2} in
-  (lloc, lloc)
+  (upos, upos)
 
 let get ({pos_fname; pos_lnum; pos_bol; pos_cnum}, _) =
   (pos_fname, pos_lnum, pos_bol, pos_cnum) 
 
 let dummy_position =
-  let lloc =  {pos_fname = ""; pos_lnum = 0; pos_bol = 0 ;
+  let dpos =  {pos_fname = ""; pos_lnum = 0; pos_bol = 0 ;
                pos_cnum = 0} in
-  (lloc, lloc)
+  (dpos, dpos)
  
-let join lp1 lp2 =
-  assert false 
-      (*(f1,l1,b1,e1) (f2,_,b2,e2) =
-  assert (f1 = f2); (f1,l1,b1,e1+e2-b2)*)
- 
-let extract (b,e) =
-  (b, e)
-
-(* located exceptions *)
+let join (p1 : position) (p2 : position) =
+  match (get p1, get p2) with
+    ((f1, l1, b1, e1), (f2, _, b2, e2 )) ->
+    let pos =  {pos_fname = f1; pos_lnum = l1; pos_bol = b1 ;
+                pos_cnum = e1 + e2 - b2} in
+    (pos, pos)
 
 exception Why3_located of position * exn
  

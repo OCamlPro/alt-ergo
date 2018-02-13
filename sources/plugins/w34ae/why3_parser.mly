@@ -20,7 +20,7 @@ open Why3_ptree
 
   let qualid_last = function Qident x | Qdot (_, x) -> x.id_str
 
-  let floc s e = Why3_loc.extract (s,e)
+  let floc s e = (s,e)
 
   let model_label = { lab_string = "model" }
   let model_projected = { lab_string = "model_projected" }
@@ -636,10 +636,10 @@ top_ghost:
 
 (* Function declarations *)
 
-type_v:
+(*type_v:
 | arrow_type_v  { $1 }
 | cast          { PTpure $1 }
-
+ *)
 arrow_type_v:
 | param params tail_type_c  { PTfunc ($1 @ $2, $3) }
 

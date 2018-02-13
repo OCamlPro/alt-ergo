@@ -71,7 +71,7 @@ and string = parse
       { Buffer.add_char string_buf c; string lexbuf }
 
 {
-  let loc lb = Why3_loc.extract (lexeme_start_p lb, lexeme_end_p lb)
+  let loc lb = (lexeme_start_p lb, lexeme_end_p lb)
 
   let comment lexbuf = comment_start_loc := loc lexbuf; comment lexbuf
 

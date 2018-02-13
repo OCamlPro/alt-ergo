@@ -97,6 +97,7 @@
         "while", WHILE;
         "writes", WRITES;
       ]
+
 }
 
 let space = [' ' '\t' '\r']
@@ -243,22 +244,6 @@ rule token = parse
       { raise (IllegalCharacter c) }
 
 {
-  (*let parse_logic_file env path lb =
-    open_file token (Lexing.from_string "") (Typing.open_file env path);
-    Why3_loc.with_location (logic_file token) lb;
-    Typing.close_file ()
-
-  let parse_program_file inc lb =
-    open_file token (Lexing.from_string "") inc;
-    Why3_loc.with_location (program_file token) lb
-
-  let read_channel env path file c =
-    let lb = Lexing.from_channel c in
-    Why3_loc.set_file file lb;
-    parse_logic_file env path lb
-
-  let () = Env.register_format Env.base_language "why" ["why"] read_channel
-    ~desc:"WhyML@ logical@ language"*)
 
   module Parser : Parsers.PARSER_INTERFACE = struct
     let file    = Why3_parser.file_parser     token
