@@ -303,28 +303,3 @@ let translate_logic_decl
         let spp_list = translate_pty2 pty in
         let ppure_t = translate_pty pty in
         mk_function_def loc named_ident spp_list ppure_t expr
-
-
-let rec translate_theory_decls (dcls : decls) acc : Parsed.decl list =
-  match dcls with
-  | [] -> acc
-  | (None, _)::t -> translate_theory_decls t acc
-  | (Some d,l)::t ->
-     let loc =  l in
-     let trad_d =
-       begin
-       match d with
-       | Dtype t -> List.map translate_type_decl t
-       | Dlogic l -> List.map translate_logic_decl l
-       | Dind (_, _) ->  Format.eprintf "TODO@."; assert false
-       | Dprop (Why3_ptree.Pgoal,  {id_str; id_lab; id_loc}, term) ->
-          [mk_goal loc id_str (translate_term term)]
-       | Dprop (Why3_ptree.Plemma,  {id_str; id_lab; id_loc}, term) ->
-          Format.eprintf "TODO@."; assert false
-       | Dprop (Why3_ptree.Paxiom,  {id_str; id_lab; id_loc}, term) ->
-          [mk_generic_axiom loc id_str (translate_term term)]
-       | Dprop (Why3_ptree.Pskip,  {id_str; id_lab; id_loc}, term) ->
-          Format.eprintf "TODO@."; assert false
-       | Dmeta (i, ml) -> Format.eprintf "TODO@."; assert false
-       end in
-     translate_theory_decls t (acc @ trad_d)

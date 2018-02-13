@@ -13,6 +13,7 @@
 
 open Lexing
 open Why3_ptree
+open Parsed_interface
 
   let infix  s = "infix "  ^ s
   let prefix s = "prefix " ^ s
@@ -132,6 +133,9 @@ open Why3_ptree
     | Error -> Format.fprintf fmt "syntax error"
     | _ -> raise exn)*)
 
+  let id_str {id_str} = id_str
+                          
+
 %}
 
 (* Tokens *)
@@ -234,15 +238,14 @@ logic_file:
 | theory EOF   {  $1 }
 
 theory:
-| theory_head theory_decl* END  { AstConversion.translate_theory_decls
-                                  $2 []}
+| theory_head theory_decl* END  { List.concat (List.map (fun (Some x) -> x) (List.filter (fun x -> x <> None) $2)) }
 
 theory_head:
 | THEORY labels(uident_nq)  {  $2 }
 
 theory_decl:
-    | decl { (Some $1, (floc $startpos $endpos)) }
-    | use_clone { (None, (floc $startpos $endpos)) }
+    | decl { Some $1 }
+    | use_clone { None }
 
 
 (* Use and clone *)
@@ -277,16 +280,25 @@ ns:
 (* Theory declarations *)
 
 decl:
-| TYPE with_list1(type_decl)                { Dtype $2 }
-| TYPE late_invariant                       { Dtype [$2] }
-| CONSTANT  constant_decl                   { Dlogic [$2] }
-| FUNCTION  function_decl  with_logic_decl* { Dlogic ($2::$3) }
-| PREDICATE predicate_decl with_logic_decl* { Dlogic ($2::$3) }
+| TYPE with_list1(type_decl)
+    { List.map AstConversion.translate_type_decl $2 }
+| TYPE late_invariant
+    { List.map AstConversion.translate_type_decl [$2] }
+| CONSTANT  constant_decl
+    { List.map AstConversion.translate_logic_decl [$2] }
+| FUNCTION  function_decl  with_logic_decl*
+    { List.map AstConversion.translate_logic_decl ($2::$3) }
+| PREDICATE predicate_decl with_logic_decl*
+    { List.map AstConversion.translate_logic_decl  ($2::$3) }
 | INDUCTIVE   with_list1(inductive_decl)    { Format.eprintf "TODO@."; assert false }
 | COINDUCTIVE with_list1(inductive_decl)    { Format.eprintf "TODO@."; assert false }
-| AXIOM labels(ident_nq) COLON term         { Dprop (Why3_ptree.Paxiom, $2, $4) }
+| AXIOM labels(ident_nq) COLON term
+    { [mk_generic_axiom  (floc $startpos $endpos) (id_str $2)
+        ( AstConversion.translate_term $4)] }
 | LEMMA labels(ident_nq) COLON term         { Format.eprintf "TODO@."; assert false }
-| GOAL  labels(ident_nq) COLON term         { Dprop (Why3_ptree.Pgoal, $2, $4) }
+| GOAL  labels(ident_nq) COLON term
+    { [mk_goal (floc $startpos $endpos) (id_str $2)
+        ( AstConversion.translate_term $4)] }
 | META sident comma_list1(meta_arg)         { Format.eprintf "TODO@."; assert false }
 
 meta_arg:
