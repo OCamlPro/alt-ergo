@@ -281,11 +281,11 @@ ns:
 
 decl:
 | TYPE with_list1(type_decl)
-    { List.map AstConversion.translate_type_decl $2 }
+    { $2 }
 | TYPE late_invariant
-    { List.map AstConversion.translate_type_decl [$2] }
+    { [$2] }
 | CONSTANT  constant_decl
-    { List.map AstConversion.translate_logic_decl [$2] }
+    { [$2] }
 | FUNCTION  function_decl  with_logic_decl*
     { List.map AstConversion.translate_logic_decl ($2::$3) }
 | PREDICATE predicate_decl with_logic_decl*
@@ -293,12 +293,11 @@ decl:
 | INDUCTIVE   with_list1(inductive_decl)    { Format.eprintf "TODO@."; assert false }
 | COINDUCTIVE with_list1(inductive_decl)    { Format.eprintf "TODO@."; assert false }
 | AXIOM labels(ident_nq) COLON term
-    { [mk_generic_axiom  (floc $startpos $endpos) (id_str $2)
-        ( AstConversion.translate_term $4)] }
+    { [mk_generic_axiom  (floc $startpos $endpos) (id_str $2) (AstConversion.translate_term $4)] }
 | LEMMA labels(ident_nq) COLON term         { Format.eprintf "TODO@."; assert false }
 | GOAL  labels(ident_nq) COLON term
     { [mk_goal (floc $startpos $endpos) (id_str $2)
-        ( AstConversion.translate_term $4)] }
+         (AstConversion.translate_term $4)] }
 | META sident comma_list1(meta_arg)         { Format.eprintf "TODO@."; assert false }
 
 meta_arg:
@@ -316,13 +315,13 @@ type_decl:
 | labels(lident_nq) ty_var* typedefn
   { let model, vis, def, inv = $3 in
     let vis = if model then Abstract else vis in
-    { td_ident = $1; td_params = $2;
+    AstConversion.translate_type_decl { td_ident = $1; td_params = $2;
       td_model = model; td_vis = vis; td_def = def;
       td_inv = inv; td_loc = floc $startpos $endpos } }
 
 late_invariant:
 | labels(lident_nq) ty_var* invariant+
-  { { td_ident = $1; td_params = $2;
+  { AstConversion.translate_type_decl { td_ident = $1; td_params = $2;
       td_model = false; td_vis = Public; td_def = TDabstract;
       td_inv = $3; td_loc = floc $startpos $endpos } }
 
@@ -374,7 +373,7 @@ type_case:
 
 constant_decl:
 | labels(lident_rich) cast preceded(EQUAL,term)?
-  { { ld_ident = $1; ld_params = []; ld_type = Some $2;
+  { AstConversion.translate_logic_decl { ld_ident = $1; ld_params = []; ld_type = Some $2;
       ld_def = $3; ld_loc = floc $startpos $endpos } }
 
 function_decl:
@@ -532,7 +531,8 @@ term: t = mk_term(term_) { t }
 term_:
 | term_arg_
     { match $1 with (* break the infix relation chain *)
-      | Tinfix (l,o,r) -> Tinnfix (l,o,r) | d -> d }
+      | Tinfix (l,o,r) ->
+        Tinnfix (l,o,r) | d -> d }
 | NOT term
     { Tunop (Tnot, $2) }
 | prefix_op term %prec prec_prefix_op
