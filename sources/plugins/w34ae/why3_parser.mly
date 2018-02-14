@@ -287,9 +287,9 @@ decl:
 | CONSTANT  constant_decl
     { [$2] }
 | FUNCTION  function_decl  with_logic_decl*
-    { List.map AstConversion.translate_logic_decl ($2::$3) }
+    { ($2::$3) }
 | PREDICATE predicate_decl with_logic_decl*
-    { List.map AstConversion.translate_logic_decl  ($2::$3) }
+    { ($2::$3) }
 | INDUCTIVE   with_list1(inductive_decl)    { Format.eprintf "TODO@."; assert false }
 | COINDUCTIVE with_list1(inductive_decl)    { Format.eprintf "TODO@."; assert false }
 | AXIOM labels(ident_nq) COLON term
@@ -315,15 +315,19 @@ type_decl:
 | labels(lident_nq) ty_var* typedefn
   { let model, vis, def, inv = $3 in
     let vis = if model then Abstract else vis in
-    AstConversion.translate_type_decl { td_ident = $1; td_params = $2;
-      td_model = model; td_vis = vis; td_def = def;
-      td_inv = inv; td_loc = floc $startpos $endpos } }
+    let loc = floc $startpos $endpos in
+    let ty_vars = List.map id_str $2 in  
+    match def with
+    | TDabstract -> mk_abstract_type_decl loc ty_vars (id_str $1)
+    | TDalgebraic l ->
+       let ls = List.map (fun (_, i, _) -> id_str i) l in
+       mk_enum_type_decl loc ty_vars (id_str $1) ls }
 
 late_invariant:
 | labels(lident_nq) ty_var* invariant+
-  { AstConversion.translate_type_decl { td_ident = $1; td_params = $2;
-      td_model = false; td_vis = Public; td_def = TDabstract;
-      td_inv = $3; td_loc = floc $startpos $endpos } }
+    { let loc = floc $startpos $endpos in
+      let ty_vars = List.map id_str $2 in      
+      mk_abstract_type_decl loc ty_vars (id_str $1) }
 
 ty_var:
 | labels(quote_lident) { $1 }
@@ -333,18 +337,16 @@ typedefn:
     { false, Public, TDabstract, [] }
 | model abstract bar_list1(type_case) invariant*
     { $1, $2, TDalgebraic $3, $4 }
-| model abstract LEFTBRC semicolon_list1(type_field) RIGHTBRC invariant*
-    { $1, $2, TDrecord $4, $6 }
+(*| model abstract LEFTBRC semicolon_list1(type_field) RIGHTBRC invariant*
+    { Format.eprintf "TODO@."; assert false }
 | model abstract ty invariant*
-    { $1, $2, TDalias $3, $4 }
+    { Format.eprintf "TODO@."; assert false }
 (* FIXME: allow negative bounds *)
 | EQUAL LT RANGE INTEGER INTEGER GT
-    { false, Public,
-      TDrange (Why3_number.compute_int $4, Why3_number.compute_int $5), [] }
+    { Format.eprintf "TODO@."; assert false }
 | EQUAL LT FLOAT INTEGER INTEGER GT
-    { false, Public,
-      TDfloat (small_integer $4, small_integer $5), [] }
-
+    {Format.eprintf "TODO@."; assert false }
+ *)
 model:
 | EQUAL         { false }
 | MODEL         { true }
@@ -378,17 +380,17 @@ constant_decl:
 
 function_decl:
 | labels(lident_rich) params cast preceded(EQUAL,term)?
-  { { ld_ident = $1; ld_params = $2; ld_type = Some $3;
+  { AstConversion.translate_logic_decl { ld_ident = $1; ld_params = $2; ld_type = Some $3;
       ld_def = $4; ld_loc = floc $startpos $endpos } }
 
 predicate_decl:
 | labels(lident_rich) params preceded(EQUAL,term)?
-  { { ld_ident = $1; ld_params = $2; ld_type = None;
+  { AstConversion.translate_logic_decl { ld_ident = $1; ld_params = $2; ld_type = None;
       ld_def = $3; ld_loc = floc $startpos $endpos } }
 
 with_logic_decl:
 | WITH labels(lident_rich) params cast? preceded(EQUAL,term)?
-  { { ld_ident = $2; ld_params = $3; ld_type = $4;
+  { AstConversion.translate_logic_decl { ld_ident = $2; ld_params = $3; ld_type = $4;
       ld_def = $5; ld_loc = floc $startpos $endpos } }
 
 (* Inductive declarations *)
@@ -526,7 +528,7 @@ anon_binder:
 
 mk_term(X): d = X { mk_term d $startpos $endpos }
 
-term: t = mk_term(term_) { t }
+term: t = mk_term(term_) { t }                  
 
 term_:
 | term_arg_

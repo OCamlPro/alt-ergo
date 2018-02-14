@@ -229,21 +229,6 @@ let translate_param (loc, id_op, _, pty) =
   | None -> Format.eprintf "TODO@."; assert false
   | Some id -> ( loc, id.id_str, translate_pty pty)
 
-let translate_type_decl
-      {td_loc; td_ident; td_params; td_model; td_vis; td_def; td_inv}
-  =  
-  let loc =  td_loc in
-  let ty_vars = List.map (fun i -> i.id_str) td_params in
-  match td_def with
-  | TDabstract -> mk_abstract_type_decl loc ty_vars td_ident.id_str
-  | TDalias pty -> Format.eprintf "TODO@."; assert false
-  | TDalgebraic l  ->
-     let ls = List.map (fun (_, i, _) -> i.id_str) l in
-     mk_enum_type_decl loc ty_vars td_ident.id_str ls
-  | TDrecord fl  -> Format.eprintf "TODO@."; assert false
-  | TDrange (bi0, bi1) -> Format.eprintf "TODO@."; assert false
-  | TDfloat (i1, i2) -> Format.eprintf "TODO@."; assert false
-
 let translate_pty2 = function
   | PTtyvar (i, _) -> Format.eprintf "TODO@."; assert false
   | PTtyapp (q, pl) ->
