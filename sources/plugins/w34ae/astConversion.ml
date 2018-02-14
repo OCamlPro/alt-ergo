@@ -249,15 +249,7 @@ let translate_pty2 = function
   | PTarrow (p0, p1) ->  Format.eprintf "TODO@."; assert false
   | PTparen p  ->Format.eprintf "TODO@."; assert false
 
-
-let translate_logic_decl
-      {ld_loc; ld_ident; ld_params; ld_type; ld_def} : Parsed.decl =
-  let loc =   ld_loc in
-  let named_ident =
-    (ld_ident.id_str, str_of_labs ld_ident.id_lab) in
-  match ld_def with
-  | None ->
-     begin
+let translate_logic_aux ld_params ld_type named_ident loc  =
        let ppure_type_list =
          List.map (fun (_, _, _, pty) -> translate_pty pty ) ld_params
        in
@@ -272,7 +264,16 @@ let translate_logic_decl
        (*!!! TODO/CHECK : ss_list is always a singleton ???*)
        let ss_list = [named_ident] in
        mk_logic loc name_k ss_list logic_type
-     end
+                                                 
+
+let translate_logic_decl
+      {ld_loc; ld_ident; ld_params; ld_type; ld_def} : Parsed.decl =
+  let loc =   ld_loc in
+  let named_ident =
+    (ld_ident.id_str, str_of_labs ld_ident.id_lab) in
+  match ld_def with
+  | None ->
+     translate_logic_aux ld_params ld_type named_ident loc
   | Some t ->
      let expr = translate_term t in
      match ld_type with

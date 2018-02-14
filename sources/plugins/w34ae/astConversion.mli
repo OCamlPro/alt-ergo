@@ -1,20 +1,10 @@
-(*******************************************************************************)
-(*                                                                             *)
-(*   W34AE: A parser of Why3 logic for Alt-Ergo                                *)
-(*                                                                             *)
-(*   Copyright 2011-2017 OCamlPro SAS                                          *)
-(*                                                                             *)
-(*   All rights reserved.  This file is distributed under the terms of         *)
-(*   the GNU Lesser General Public License version 2.1, with the               *)
-(*   special exception on linking described in the file LICENSE.               *)
-(*                                                                             *)
-(*******************************************************************************)
-
 type decls = (Why3_ptree.decl option * Why3_loc.position) list
 type theory = Why3_ptree.ident * decls
 type ast = theory list
-
-val dummy_loc : Loc.t
+val get_infix_ident : Why3_ptree.ident -> string
+val str_of_label : Why3_ptree.label -> string
+val str_of_labs : Why3_ptree.label list -> string
+val dummy_loc : Why3_loc.position
 val translate_quant :
   Why3_ptree.quant ->
   Loc.t ->
@@ -40,8 +30,11 @@ val translate_idapp :
 val translate_unop : Why3_ptree.unop -> Loc.t -> Parsed.lexpr -> Parsed.lexpr
 val translate_term : Why3_ptree.term -> Parsed.lexpr
 val translate_param :
-  Why3_loc.position * Why3_ptree.ident option * 'a * Why3_ptree.pty ->
-  Loc.t * string * Parsed.ppure_type
+  'a * Why3_ptree.ident option * 'b * Why3_ptree.pty ->
+  'a * string * Parsed.ppure_type
 val translate_pty2 :
-  Why3_ptree.pty -> (Loc.t * string * Parsed.ppure_type) list
+  Why3_ptree.pty -> (Why3_ptree.loc * string * Parsed.ppure_type) list
+val translate_logic_aux :
+  ('a * 'b * 'c * Why3_ptree.pty) list ->
+  Why3_ptree.pty option -> string * string -> Loc.t -> Parsed.decl
 val translate_logic_decl : Why3_ptree.logic_decl -> Parsed.decl

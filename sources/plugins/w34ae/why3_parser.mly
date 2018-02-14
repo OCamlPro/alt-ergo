@@ -134,7 +134,8 @@ open Parsed_interface
     | _ -> raise exn)*)
 
   let id_str {id_str} = id_str
-                          
+
+  let id_lab {id_lab} = id_lab                          
 
 %}
 
@@ -337,16 +338,7 @@ typedefn:
     { false, Public, TDabstract, [] }
 | model abstract bar_list1(type_case) invariant*
     { $1, $2, TDalgebraic $3, $4 }
-(*| model abstract LEFTBRC semicolon_list1(type_field) RIGHTBRC invariant*
-    { Format.eprintf "TODO@."; assert false }
-| model abstract ty invariant*
-    { Format.eprintf "TODO@."; assert false }
-(* FIXME: allow negative bounds *)
-| EQUAL LT RANGE INTEGER INTEGER GT
-    { Format.eprintf "TODO@."; assert false }
-| EQUAL LT FLOAT INTEGER INTEGER GT
-    {Format.eprintf "TODO@."; assert false }
- *)
+
 model:
 | EQUAL         { false }
 | MODEL         { true }
@@ -380,13 +372,32 @@ constant_decl:
 
 function_decl:
 | labels(lident_rich) params cast preceded(EQUAL,term)?
-  { AstConversion.translate_logic_decl { ld_ident = $1; ld_params = $2; ld_type = Some $3;
-      ld_def = $4; ld_loc = floc $startpos $endpos } }
+    { let loc = floc $startpos $endpos in
+      let named_ident =
+        (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
+      match $4 with
+      | None -> AstConversion.translate_logic_aux
+                $2 (Some $3) named_ident loc
+      | Some t ->
+         let expr = AstConversion.translate_term t in
+         let spp_list = AstConversion.translate_pty2 $3 in
+         let ppure_t = AstConversion.translate_pty $3 in
+         mk_function_def loc named_ident spp_list ppure_t expr }
 
 predicate_decl:
 | labels(lident_rich) params preceded(EQUAL,term)?
-  { AstConversion.translate_logic_decl { ld_ident = $1; ld_params = $2; ld_type = None;
-      ld_def = $3; ld_loc = floc $startpos $endpos } }
+    { let loc = floc $startpos $endpos in
+      let named_ident =
+        (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
+      match $3 with
+      | None -> AstConversion.translate_logic_aux $2 None named_ident loc
+      | Some t ->
+         let expr = AstConversion.translate_term t in
+         match $2 with
+          | [] ->  mk_ground_predicate_def loc named_ident expr
+          | _ ->
+             let args = List.map AstConversion.translate_param $2 in
+             mk_non_ground_predicate_def loc named_ident args expr }
 
 with_logic_decl:
 | WITH labels(lident_rich) params cast? preceded(EQUAL,term)?
