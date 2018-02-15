@@ -70,7 +70,7 @@ try-alt-ergo-mini:
 # TESTS
 ##########################################################################################
 
-non-regression:$(OPT) satML fm-simplex
+non-regression:$(OPT) fm-simplex
 	cp alt-ergo.opt ../non-regression/alt-ergo.opt
 	cd ../non-regression &&  ./non-regression.sh
 	rm ../non-regression/alt-ergo.opt
@@ -96,11 +96,8 @@ test-everything:
 	make altgr-ergo.opt
 	make byte
 	make altgr-ergo.byte
-	make satML
 	make fm-simplex
-	make satML-plugin.cma
 	make fm-simplex-plugin.cma
-	make satML-plugin.cmxs
 	make fm-simplex-plugin.cmxs
 	make non-regression
 	make archi
@@ -108,7 +105,6 @@ test-everything:
 	make install-opt
 	make install
 	make install-byte
-	make install-satML
 	make install-fm-simplex
 	make install-gui
 	make install-man

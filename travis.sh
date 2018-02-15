@@ -83,8 +83,8 @@ do
     make install-gui ; exit_if_error
     make clean ; exit_if_error
 
-    make -j4 satML fm-simplex ; exit_if_error
-    make install-satML install-fm-simplex ; exit_if_error
+    make -j4 fm-simplex ; exit_if_error
+    make install-fm-simplex ; exit_if_error
     make clean ; exit_if_error
 
     echo "=+= [travis.sh] installed files in $local_install_dir ... =+="

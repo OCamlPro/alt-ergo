@@ -9,6 +9,20 @@
 (*                                                                            *)
 (******************************************************************************)
 
+let get_current () =
+  match Options.sat_solver () with
+  | Util.Tableaux ->
+    if Options.verbose() then
+      Format.eprintf "[bool reasoning] use Tableaux-like solver@.";
+    (module Fun_sat : Sat_solver_sig.S)
+  | Util.CDCL_satML ->
+    if Options.verbose() then
+      Format.eprintf "[bool reasoning] use CDCL solver@.";
+    (module Satml_frontend.Main : Sat_solver_sig.S)
+
+(*
+(*+ no dynamic loading of SAT solvers anymore +*)
+
 open Options
 open Format
 
@@ -16,7 +30,9 @@ let current = ref (module Fun_sat : Sat_solver_sig.S)
 
 let initialized = ref false
 
-let set_current sat = current := sat
+let set_current sat =
+  if use_satml() then
+    current := sat
 
 let load_current_sat () =
   match sat_plugin () with
@@ -66,3 +82,4 @@ let get_current () =
       initialized := true;
     end;
   !current
+ *)

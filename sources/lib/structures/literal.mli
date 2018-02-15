@@ -98,6 +98,11 @@ module type S_Term = sig
 
   val terms_nonrec : t -> Term.Set.t
   val terms_rec : t -> Term.Set.t
+
+  (** tries to return maximal ground terms in an atom. Returns all
+  ground subterms if maximal terms of the atom are not ground *)
+  val ground_terms : t -> Term.Set.t
+
   val vars_of : t -> Ty.t Symbols.Map.t -> Ty.t Symbols.Map.t
   val is_ground : t -> bool
   val is_in_model : t -> bool

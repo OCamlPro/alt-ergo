@@ -95,7 +95,13 @@ module M = struct
   let profiling_plugin = ref ""
   let cumulative_time_profiling = ref false
   let normalize_instances = ref false
-  let partial_bmodel = ref true
+
+  let sat_solver = ref Util.CDCL_satML
+  let tableaux_cdcl = ref true
+  let minimal_bj = ref true
+  let enable_restarts = ref false
+  let disable_flat_formulas_simplification = ref false
+
   let tighten_vars = ref false
   let no_tcp = ref false
   let no_decisions = ref false
@@ -213,6 +219,16 @@ module M = struct
 
   let usage = "usage: alt-ergo [options] file.<why|mlw>"
 
+  let set_sat_solver s =
+    match s with
+    | "tableaux" | "Tableaux" | "tableaux-like" | "Tableaux-like" ->
+       sat_solver := Util.Tableaux
+    |  "CDCL" | "satML" ->
+       sat_solver := Util.CDCL_satML
+    | _ ->
+      Format.eprintf "Args parsing error: unkown SAT solver %S@." s;
+      exit 1
+
   let spec = [
     (*
       "-stats", Arg.Set stats, " activate statistics recording and printing (use Ctrl-C to print them in the terminal)";
@@ -306,6 +322,13 @@ time. Not relevant for GUI-mode.";
     "-interpretation-timelimit", Arg.Float (set_limit interpretation_timelimit), "n set the time limit to n seconds for model generation (not supported on Windows). Default value is 1. sec";
     "-sat-plugin" , Arg.String set_sat_plugin,
     " use the given SAT-solver instead of the default DFS-based SAT solver";
+    "-sat-solver" , Arg.String set_sat_solver,
+    " choose the SAT solver to use. Default value is CDCL (i.e. satML solver). value 'Tableaux' will enable the Tableaux-like solver";
+    "-no-minimal-bj" , Arg.Clear minimal_bj, " disable minimal backjumping in satML CDCL solver";
+    "-no-tableaux-cdcl", Arg.Clear tableaux_cdcl, " when satML is used, this disables the use of a tableaux-like method together with the CDCL solver";
+    "-disable-flat-formulas-simplification", Arg.Set disable_flat_formulas_simplification, " disable facts simplifications in satML's flat formulas";
+
+
     "-inequalities-plugin" , Arg.String set_inequalities_plugin,
     " use the given module to handle inequalities of linear arithmetic";
     "-parser" , Arg.String add_parser,
@@ -333,6 +356,9 @@ time. Not relevant for GUI-mode.";
     ;
     "-disable-weaks", Arg.Set disable_weaks,
     " Prevent the GC from collecting hashconsed data structrures that are not reachable (useful for more determinism)"
+    ;
+    "-enable-restarts", Arg.Set enable_restarts,
+    " For satML: enable restarts or not. Default behavior is 'false'"
     ;
     "-default-lang", Arg.String set_default_input_lang,
     " Set the default input language to 'lang'. Useful when the extension does not allow to automatically select a parser (eg. JS mode, GUI mode, ...)"
@@ -422,6 +448,7 @@ let set_bottom_classes b = M.bottom_classes := b
 let set_timelimit b = M.timelimit := b
 let set_model_timelimit b = M.timelimit := b
 let set_timers b = M.timers := b
+let set_minimal_bj b = M.minimal_bj := b
 
 let set_profiling f b =
   M.profiling := b;
@@ -429,7 +456,6 @@ let set_profiling f b =
 
 let set_thread_yield f = M.thread_yield := f
 let set_timeout f = M.timeout := f
-let set_partial_bmodel b = M.partial_bmodel := b
 let set_save_used_context b = M.save_used_context := b
 let set_default_input_lang lang = M.set_default_input_lang lang
 
@@ -509,6 +535,12 @@ let timers () = !M.timers || !M.profiling
 let case_split_policy () = !M.case_split_policy
 let instantiate_after_backjump () = !M.instantiate_after_backjump
 let disable_weaks () = !M.disable_weaks
+let minimal_bj () = !M.minimal_bj
+let tableaux_cdcl () = !M.tableaux_cdcl
+let disable_flat_formulas_simplification () =
+  !M.disable_flat_formulas_simplification
+
+let enable_restarts () = !M.enable_restarts
 
 let replay () = !M.replay
 let replay_used_context () = !M.replay_used_context
@@ -520,10 +552,10 @@ let get_session_file () = !M.session_file
 let get_used_context_file () = !M.used_context_file
 let sat_plugin () = !M.sat_plugin
 let parsers () = List.rev !M.parsers
+let sat_solver () = !M.sat_solver
 let inequalities_plugin () = !M.inequalities_plugin
 let profiling_plugin () = !M.profiling_plugin
 let normalize_instances () = !M.normalize_instances
-let partial_bmodel () = !M.partial_bmodel
 let use_fpa () = !M.use_fpa
 let preludes () = List.rev !M.reversed_preludes
 

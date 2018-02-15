@@ -56,6 +56,8 @@ subgraph cluster_lib__reasoners {
         "Instances";
         "Sat_solver_sig";
         "Fun_sat";
+        "Satml";
+        "Satml_frontend";
         "Sat_solver";
         "Matching_types";
 }
@@ -107,6 +109,7 @@ subgraph cluster_lib__util {
         "Config";
         "Version";
         "Util";
+        "Vec";
         "Lists";
         "Loc";
         "Hconsing";

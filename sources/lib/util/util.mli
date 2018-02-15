@@ -27,6 +27,10 @@ type case_split_policy =
 
 type inst_kind = Normal | Forward | Backward
 
+type sat_solver =
+  | Tableaux
+  | CDCL_satML
+
 (*
 (** This function is intended to be used with Map.merge in order to perform a
     union of two maps. The first argument is an equality function used to
