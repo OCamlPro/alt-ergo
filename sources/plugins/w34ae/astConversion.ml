@@ -65,7 +65,6 @@ let translate_tuple exp_list loc =
 let rec translate_pty =
   let translate_pty_list l = List.map translate_pty l in
   function
-  | PTtyvar (i, _) -> Format.eprintf "TODO@."; assert false
   | PTtyapp (q, pl) ->
      begin
        match q with
@@ -75,9 +74,6 @@ let rec translate_pty =
 	    | "int" -> int_type
             | "bool" -> bool_type
             | "real" -> real_type
-            | "set" ->
-               let l = List.map translate_pty pl in
-               mk_external_type ( i.id_loc) l i.id_str
             | _ ->
                let l = List.map translate_pty pl in
                mk_external_type ( i.id_loc) l i.id_str
@@ -90,8 +86,8 @@ let rec translate_pty =
      let loc = dummy_loc in
      let ptyl = translate_pty_list pl in
      mk_external_type loc ptyl name
-  | PTarrow (p0, p1) ->  Format.eprintf "TODO@."; assert false
   | PTparen pty  -> translate_pty pty
+  | _ ->  Format.eprintf "TODO@."; assert false                                
 
 let translate_binder (b : Why3_ptree.binder) : string * string * Parsed.ppure_type  =
   match b with
@@ -229,25 +225,8 @@ let translate_param (loc, id_op, _, pty) =
   | None -> Format.eprintf "TODO@."; assert false
   | Some id -> ( loc, id.id_str, translate_pty pty)
 
-let translate_pty2 = function
-  | PTtyvar (i, _) -> Format.eprintf "TODO@."; assert false
-  | PTtyapp (q, pl) ->
-     begin
-       match q with
-       | Qident i ->
-          let loc =  i.id_loc in
-          let ppure_t =
-            match i.id_str with
-            | "int" -> int_type
-            | "bool" -> bool_type
-	    | _ -> Format.eprintf "TODO@."; assert false in
-          [(loc, i.id_str,  ppure_t)] (* !!! TODO/CHECK : recursive
-                                 * function + accumulator ??? *)
-       | _ -> Format.eprintf "TODO@."; assert false
-     end
-  | PTtuple pl ->  Format.eprintf "TODO@."; assert false
-  | PTarrow (p0, p1) ->  Format.eprintf "TODO@."; assert false
-  | PTparen p  ->Format.eprintf "TODO@."; assert false
+
+
 
 let translate_logic_aux ld_params ld_type named_ident loc  =
        let ppure_type_list =
@@ -265,27 +244,3 @@ let translate_logic_aux ld_params ld_type named_ident loc  =
        let ss_list = [named_ident] in
        mk_logic loc name_k ss_list logic_type
                                                  
-
-let translate_logic_decl
-      {ld_loc; ld_ident; ld_params; ld_type; ld_def} : Parsed.decl =
-  let loc =   ld_loc in
-  let named_ident =
-    (ld_ident.id_str, str_of_labs ld_ident.id_lab) in
-  match ld_def with
-  | None ->
-     translate_logic_aux ld_params ld_type named_ident loc
-  | Some t ->
-     let expr = translate_term t in
-     match ld_type with
-     | None ->
-        begin
-          match ld_params with
-          | [] ->  mk_ground_predicate_def loc named_ident expr
-          | _ ->
-             let args = List.map translate_param ld_params in
-             mk_non_ground_predicate_def loc named_ident args expr
-        end
-     | Some pty ->
-        let spp_list = translate_pty2 pty in
-        let ppure_t = translate_pty pty in
-        mk_function_def loc named_ident spp_list ppure_t expr

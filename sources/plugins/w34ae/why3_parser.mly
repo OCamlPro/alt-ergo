@@ -133,9 +133,21 @@ open Parsed_interface
     | Error -> Format.fprintf fmt "syntax error"
     | _ -> raise exn)*)
 
+                                     
   let id_str {id_str} = id_str
+  let id_lab {id_lab} = id_lab
 
-  let id_lab {id_lab} = id_lab                          
+  let mk_function t ty loc named_ident =
+    let translate_pty2 = function
+      | PTtyapp (Qident {id_str = "int"; id_loc}, _) ->
+         [(id_loc, "int",  int_type)]
+      | PTtyapp (Qident {id_str = "bool"; id_loc}, _) ->
+         [(id_loc, "bool",  bool_type)]
+      | _ ->  Format.eprintf "TODO@."; assert false in                                              
+    let expr = AstConversion.translate_term t in
+    let spp_list = translate_pty2 ty in
+    let ppure_t = AstConversion.translate_pty ty in
+    mk_function_def loc named_ident spp_list ppure_t expr                    
 
 %}
 
@@ -367,8 +379,13 @@ type_case:
 
 constant_decl:
 | labels(lident_rich) cast preceded(EQUAL,term)?
-  { AstConversion.translate_logic_decl { ld_ident = $1; ld_params = []; ld_type = Some $2;
-      ld_def = $3; ld_loc = floc $startpos $endpos } }
+    { let loc = floc $startpos $endpos in
+      let named_ident =
+        (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
+      match $3 with
+      | None -> AstConversion.translate_logic_aux [] (Some $2)
+                  named_ident loc 
+      | Some t -> mk_function t $2 loc named_ident }
 
 function_decl:
 | labels(lident_rich) params cast preceded(EQUAL,term)?
@@ -378,11 +395,7 @@ function_decl:
       match $4 with
       | None -> AstConversion.translate_logic_aux
                 $2 (Some $3) named_ident loc
-      | Some t ->
-         let expr = AstConversion.translate_term t in
-         let spp_list = AstConversion.translate_pty2 $3 in
-         let ppure_t = AstConversion.translate_pty $3 in
-         mk_function_def loc named_ident spp_list ppure_t expr }
+      | Some t -> mk_function t $3 loc named_ident }
 
 predicate_decl:
 | labels(lident_rich) params preceded(EQUAL,term)?
@@ -401,8 +414,31 @@ predicate_decl:
 
 with_logic_decl:
 | WITH labels(lident_rich) params cast? preceded(EQUAL,term)?
-  { AstConversion.translate_logic_decl { ld_ident = $2; ld_params = $3; ld_type = $4;
-      ld_def = $5; ld_loc = floc $startpos $endpos } }
+    { let loc = floc $startpos $endpos in
+      let named_ident =
+        (id_str $2, AstConversion.str_of_labs (id_lab $2)) in
+      match $4 with
+      | None ->
+         begin
+           match $5 with
+           | None -> AstConversion.translate_logic_aux
+                     $3 None named_ident loc
+           | Some t ->
+              let expr = AstConversion.translate_term t in
+              match $3 with
+              | [] ->  mk_ground_predicate_def loc
+                         named_ident expr
+              | _ ->
+                 let args =
+                   List.map AstConversion.translate_param $3 in
+                 mk_non_ground_predicate_def loc
+                   named_ident args expr                   
+         end
+      | Some t_cast ->
+         match $5 with
+         |  None ->
+             AstConversion.translate_logic_aux $3 $4 named_ident loc
+         | Some t -> mk_function t t_cast loc named_ident }
 
 (* Inductive declarations *)
 
