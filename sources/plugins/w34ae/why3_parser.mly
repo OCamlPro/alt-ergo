@@ -240,10 +240,10 @@ file_parser:
 | logic_file { $1 }
 
 lexpr_parser:
-| expr { $1 }
+| logic_file { Format.eprintf "TODO@."; assert false }
 
 trigger_parser:
-| lexpr_parser {$1, true}
+| logic_file  { Format.eprintf "TODO@."; assert false }
  
 (* Theories, modules, namespaces *)
 
@@ -327,14 +327,15 @@ meta_arg:
 type_decl:
 | labels(lident_nq) ty_var* typedefn
   { let model, vis, def, inv = $3 in
-    let vis = if model then Abstract else vis in
+    (*let vis = if model then Abstract else vis in*)
     let loc = floc $startpos $endpos in
     let ty_vars = List.map id_str $2 in  
     match def with
     | TDabstract -> mk_abstract_type_decl loc ty_vars (id_str $1)
     | TDalgebraic l ->
        let ls = List.map (fun (_, i, _) -> id_str i) l in
-       mk_enum_type_decl loc ty_vars (id_str $1) ls }
+       mk_enum_type_decl loc ty_vars (id_str $1) ls
+    | _ -> Format.eprintf "TODO@."; assert false }
 
 late_invariant:
 | labels(lident_nq) ty_var* invariant+
@@ -608,9 +609,9 @@ term_:
           Tlet (id, { $4 with term_desc = Tcast ($4, ty) }, $6)
       | _ -> Tmatch ($4, [$2, $6]) }
 | MATCH term WITH match_cases(term) END
-    { Tmatch ($2, $4) }
+    { Format.eprintf "TODO@."; assert false (*Tmatch ($2, $4)*) }
 | MATCH comma_list2(term) WITH match_cases(term) END
-    { Tmatch (mk_term (Ttuple $2) $startpos($2) $endpos($2), $4) }
+    { Format.eprintf "TODO@."; assert false (* Tmatch (mk_term (Ttuple $2) $startpos($2) $endpos($2), $4)*) }
 | quant comma_list1(quant_vars) triggers DOT term
     { Tquant ($1, List.concat $2, $3, $5) }
 | EPSILON
@@ -642,8 +643,10 @@ term_sub_:
 | LEFTPAR term RIGHTPAR                             { $2.term_desc }
 | LEFTPAR RIGHTPAR                                  { Ttuple [] }
 | LEFTPAR comma_list2(term) RIGHTPAR                { Ttuple $2 }
-| LEFTBRC field_list1(term) RIGHTBRC                { Trecord $2 }
-| LEFTBRC term_arg WITH field_list1(term) RIGHTBRC  { Tupdate ($2,$4) }
+| LEFTBRC field_list1(term) RIGHTBRC
+    { Format.eprintf "TODO@."; assert false (*Trecord $2*) }
+| LEFTBRC term_arg WITH field_list1(term) RIGHTBRC
+    { Format.eprintf "TODO@."; assert false (*Tupdate ($2,$4)*) }
 | term_arg LEFTSQ term RIGHTSQ
     { Tidapp (get_op $startpos($2) $endpos($2), [$1;$3]) }
 | term_arg LEFTSQ term LARROW term RIGHTSQ
@@ -700,19 +703,19 @@ top_ghost:
 (*type_v:
 | arrow_type_v  { $1 }
 | cast          { PTpure $1 }
- *)
+
 arrow_type_v:
 | param params tail_type_c  { PTfunc ($1 @ $2, $3) }
 
 tail_type_c:
 | single_spec spec arrow_type_v { $3, spec_union $1 $2 }
 | COLON simple_type_c           { $2 }
-
+ 
 simple_type_c:
 | ty spec { PTpure $1, $2 }
-
+ *)
 (* Function definitions *)
-
+(*
 rec_defn:
 | top_ghost labels(lident_rich) binders cast? spec EQUAL spec seq_expr
     { $2, $1, ($3, $4, $8, spec_union $5 $7) }
@@ -722,9 +725,9 @@ fun_defn:
 
 fun_expr:
 | FUN binders spec ARROW spec seq_expr { ($2, None, $6, spec_union $3 $5) }
-
+ *)
 (* Program expressions *)
-
+(*
 mk_expr(X): d = X { mk_expr d $startpos $endpos }
 
 seq_expr:
@@ -884,9 +887,9 @@ assertion_kind:
 for_direction:
 | TO      { To }
 | DOWNTO  { Downto }
-
+ *)
 (* Specification *)
-
+(*
 spec:
 | (* epsilon *)     { empty_spec }
 | single_spec spec  { spec_union $1 $2 }
@@ -925,16 +928,16 @@ raises:
 xsymbol:
 | uqualid
     { $1, mk_pat Pwild $startpos $endpos, mk_term Ttrue $startpos $endpos }
-
+ *)
 invariant:
 | INVARIANT LEFTBRC term RIGHTBRC { $3 }
-
+(*
 variant:
 | VARIANT LEFTBRC comma_list1(single_variant) RIGHTBRC { $3 }
 
 single_variant:
 | term preceded(WITH,lqualid)? { $1, $2 }
-
+ *)
 (* Patterns *)
 
 mk_pat(X): X { mk_pat $1 $startpos $endpos }
