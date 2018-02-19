@@ -37,17 +37,14 @@ let translate_quant quant =
     match quant with
     | Tforall -> mk_forall
     | Texists -> mk_exists
-    | Tlambda -> Format.eprintf "TODO@."; assert false
+    | _ -> Format.eprintf "TODO@."; assert false
     
 let translate_binop = function
   | Tand -> mk_and
-  | Tand_asym -> Format.eprintf "TODO@."; assert false
   | Tor -> mk_or
-  | Tor_asym -> Format.eprintf "TODO@."; assert false
   | Timplies -> mk_implies
   | Tiff -> mk_iff
-  | Tby -> Format.eprintf "TODO@."; assert false
-  | Tso -> Format.eprintf "TODO@."; assert false
+  | _ -> Format.eprintf "TODO@."; assert false
 
 let translate_tuple exp_list loc =
   let length = string_of_int (List.length exp_list) in
@@ -65,21 +62,11 @@ let translate_tuple exp_list loc =
 let rec translate_pty =
   let translate_pty_list l = List.map translate_pty l in
   function
-  | PTtyapp (q, pl) ->
-     begin
-       match q with
-       | Qident i ->
-	  begin (* ??? Add any other type ???  *)
-	    match i.id_str with
-	    | "int" -> int_type
-            | "bool" -> bool_type
-            | "real" -> real_type
-            | _ ->
-               let l = List.map translate_pty pl in
-               mk_external_type ( i.id_loc) l i.id_str
-	  end
-       | _ -> Format.eprintf "TODO@."; assert false
-     end
+  | PTtyapp (Qident {id_str = "int"}, _) -> int_type
+  | PTtyapp (Qident {id_str = "bool"}, _) -> bool_type
+  | PTtyapp (Qident {id_str = "real"}, _) -> real_type
+  | PTtyapp (Qident {id_str; id_loc}, pl) ->
+     mk_external_type id_loc (List.map translate_pty pl) id_str
   | PTtuple pl ->
      let length =  string_of_int (List.length pl) in
      let name = "tuple" ^ length in
@@ -87,7 +74,8 @@ let rec translate_pty =
      let ptyl = translate_pty_list pl in
      mk_external_type loc ptyl name
   | PTparen pty  -> translate_pty pty
-  | _ ->  Format.eprintf "TODO@."; assert false                                
+  | _ ->  Format.eprintf "TODO@."; assert false                     
+
 
 let translate_binder (b : Why3_ptree.binder) : string * string * Parsed.ppure_type  =
   match b with
@@ -117,60 +105,30 @@ let translate_innfix_ident i loc t1 t2=
 (* ??? CHECK with infix dans innfix semantic  *)
 let translate_infix_ident = translate_innfix_ident
 
-let translate_const_int = function
-  | IConstDec s -> s
-  | IConstHex s -> Format.eprintf "TODO@."; assert false
-  | IConstOct s -> Format.eprintf "TODO@."; assert false
-  | IConstBin s -> Format.eprintf "TODO@."; assert false
-
-(* Warning Why3_number.constant and Parsed.constant share constructors  *)
-let translate_const (c : Why3_ptree.constant) loc : Parsed.lexpr =
-  match c with
-  | ConstInt i -> mk_int_const loc (translate_const_int i)
-  | ConstReal r -> Format.eprintf "TODO@."; assert false
-
 let translate_qualid = function
-  | Qident i ->
-     let loc =  i.id_loc in
-     begin
-       match i.id_str with
-       | "True" -> mk_true_const loc
-       | "False" -> mk_false_const loc
-       | _ -> mk_var loc i.id_str
-     end
+  | Qident { id_str = "True"; id_loc} -> mk_true_const id_loc
+  | Qident { id_str = "False"; id_loc} -> mk_false_const id_loc
+  | Qident { id_str; id_loc} -> mk_var id_loc id_str                 
   | Qdot (q, i) -> (* ignore module prefix, functions in prelude *)
-     let loc =  i.id_loc in
-     mk_var loc i.id_str
+     mk_var i.id_loc i.id_str
 
 let translate_apply {pp_loc; pp_desc} tradt1 loc =
-    match pp_desc with
-    | PPvar s ->
-       begin
-         match s with
-         | "singleton" ->
-            let empty = mk_application loc "empty" [] in
-            mk_application loc "add" [tradt1; empty]
-         | _ -> mk_application loc s [tradt1]
-       end
-    | PPapp (s, ll) -> mk_application loc s (ll @ [tradt1])
-    | _ ->  Format.eprintf "TODO@."; assert false
+  match pp_desc with
+  | PPvar "singleton" ->
+     let empty = mk_application loc "empty" [] in
+     mk_application loc "add" [tradt1; empty]
+  | PPvar s ->  mk_application loc s [tradt1]                             
+  | PPapp (s, ll) -> mk_application loc s (ll @ [tradt1])                                    
+  | _ ->  Format.eprintf "TODO@."; assert false
+                                          
 
-let translate_idapp q tradtl loc =
-  match q with
-  | Qdot (q, i) -> Format.eprintf "TODO@."; assert false
-  | Qident i ->
-     match get_infix_ident i with
-     | "-" ->
-        begin
-          match tradtl with
-          | [le] -> mk_minus loc le
-          | _ -> Format.eprintf "TODO@."; assert false
-        end
-     | _ -> Format.eprintf "TODO@."; assert false
-
-let translate_unop = function
-  | Tnot -> mk_not
-
+let translate_idapp q [le] loc =
+  match q  with
+  | Qident {id_str = "prefix -"} ->
+     mk_minus loc le
+  | Qident {id_str = "infix -"} ->
+     mk_minus loc le
+  | _  -> Format.eprintf "TODO@."; assert false
 
 let rec translate_term (t : Why3_ptree.term) : Parsed.lexpr  =
   let loc =  t.term_loc in
@@ -178,8 +136,9 @@ let rec translate_term (t : Why3_ptree.term) : Parsed.lexpr  =
   match t.term_desc with
   | Ttrue -> mk_true_const loc
   | Tfalse -> mk_false_const loc
-  | Tconst c -> translate_const c loc
-  | Tident q -> translate_qualid q
+  | Tconst (ConstInt (IConstDec s)) -> mk_int_const loc s                         
+  | Tconst c -> Format.eprintf "TODO@."; assert false
+  | Tident q -> translate_qualid q  
   | Tidapp (q, tl) -> translate_idapp q (translate_term_list tl) loc
   | Tapply ({term_desc = Tapply ({term_desc = Tident (Qident {id_str = "mod"})}, t0)},t1) ->
      mk_application loc "comp_mod" [(translate_term t0); (translate_term t1)]
@@ -202,7 +161,7 @@ let rec translate_term (t : Why3_ptree.term) : Parsed.lexpr  =
          (translate_term tr)
   | Tbinop (tl, bo, tr) ->
      translate_binop bo loc (translate_term tl) (translate_term tr) 
-  | Tunop (u, t) -> (translate_unop u) loc (translate_term t)
+  | Tunop (u, t) -> mk_not loc (translate_term t)
   | Tif (t0, t1, t2) ->
      mk_ite loc (translate_term t0) (translate_term t1) (translate_term t2)
   | Tquant (quant, binder_list, term_list_list, term) ->
@@ -219,12 +178,6 @@ let rec translate_term (t : Why3_ptree.term) : Parsed.lexpr  =
   | Ttuple tl -> translate_tuple (translate_term_list tl) loc
   | Trecord _ -> Format.eprintf "TODO@."; assert false
   | Tupdate (_, _) -> Format.eprintf "TODO@."; assert false
-
-let translate_param (loc, id_op, _, pty) =
-  match id_op with
-  | None -> Format.eprintf "TODO@."; assert false
-  | Some id -> ( loc, id.id_str, translate_pty pty)
-
 
 
 

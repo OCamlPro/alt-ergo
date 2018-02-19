@@ -72,23 +72,23 @@ open Parsed_interface
 
   let mk_id id s e = { id_str = id; id_lab = []; id_loc = floc s e }
 
-  let get_op s e = Qident (mk_id (mixfix "[]") s e)
+  (*let get_op s e = Qident (mk_id (mixfix "[]") s e)
   let set_op s e = Qident (mk_id (mixfix "[<-]") s e)
   let sub_op s e = Qident (mk_id (mixfix "[_.._]") s e)
   let above_op s e = Qident (mk_id (mixfix "[_..]") s e)
-  let below_op s e = Qident (mk_id (mixfix "[.._]") s e)
+  let below_op s e = Qident (mk_id (mixfix "[.._]") s e)*)
 
   let mk_pat  d s e = { pat_desc  = d; pat_loc  = floc s e }
   let mk_term d s e = { term_desc = d; term_loc = floc s e }
   let mk_expr d s e = { expr_desc = d; expr_loc = floc s e }
 
-  let variant_union v1 v2 = match v1, v2 with
+  (*let variant_union v1 v2 = match v1, v2 with
     | _, [] -> v1
     | [], _ -> v2
     | _, ({term_loc = loc},_)::_ -> Why3_loc.errorm ~loc
         "multiple `variant' clauses are not allowed"
-
-  let empty_spec = {
+   *)
+  (*let empty_spec = {
     sp_pre     = [];
     sp_post    = [];
     sp_xpost   = [];
@@ -97,9 +97,9 @@ open Parsed_interface
     sp_variant = [];
     sp_checkrw = false;
     sp_diverge = false;
-  }
+  }*)
 
-  let spec_union s1 s2 = {
+  (*let spec_union s1 s2 = {
     sp_pre     = s1.sp_pre @ s2.sp_pre;
     sp_post    = s1.sp_post @ s2.sp_post;
     sp_xpost   = s1.sp_xpost @ s2.sp_xpost;
@@ -108,7 +108,7 @@ open Parsed_interface
     sp_variant = variant_union s1.sp_variant s2.sp_variant;
     sp_checkrw = s1.sp_checkrw || s2.sp_checkrw;
     sp_diverge = s1.sp_diverge || s2.sp_diverge;
-  }
+  }*)
 
 (* dead code
   let add_init_mark e =
@@ -147,7 +147,23 @@ open Parsed_interface
     let expr = AstConversion.translate_term t in
     let spp_list = translate_pty2 ty in
     let ppure_t = AstConversion.translate_pty ty in
-    mk_function_def loc named_ident spp_list ppure_t expr                    
+    mk_function_def loc named_ident spp_list ppure_t expr
+
+  let mk_ng_pred params loc named_ident expr =
+    let prams =
+      List.filter (function (_, Some {id_str}, _, _) -> true | _ -> false) params in
+    let tradp =
+      fun (loc, Some id, _, pty)
+      -> ( loc, id.id_str, AstConversion.translate_pty pty) in
+    let args = List.map tradp prams  in
+    mk_non_ground_predicate_def loc named_ident args expr 
+
+  let mk_pred term params loc named_ident =
+    let expr = AstConversion.translate_term term in
+    match params with
+    | [] ->  mk_ground_predicate_def loc named_ident expr
+    | _ -> mk_ng_pred params loc named_ident expr
+              
 
 %}
 
@@ -405,55 +421,44 @@ predicate_decl:
         (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
       match $3 with
       | None -> AstConversion.translate_logic_aux $2 None named_ident loc
-      | Some t ->
-         let expr = AstConversion.translate_term t in
+      | Some t -> mk_pred t $2 loc named_ident
+         (*let expr = AstConversion.translate_term t in
          match $2 with
           | [] ->  mk_ground_predicate_def loc named_ident expr
-          | _ ->
-             let args = List.map AstConversion.translate_param $2 in
-             mk_non_ground_predicate_def loc named_ident args expr }
+          | _ -> mk_ng_pred $2 loc named_ident expr*) }
 
 with_logic_decl:
 | WITH labels(lident_rich) params cast? preceded(EQUAL,term)?
     { let loc = floc $startpos $endpos in
       let named_ident =
         (id_str $2, AstConversion.str_of_labs (id_lab $2)) in
-      match $4 with
-      | None ->
-         begin
-           match $5 with
-           | None -> AstConversion.translate_logic_aux
-                     $3 None named_ident loc
-           | Some t ->
-              let expr = AstConversion.translate_term t in
-              match $3 with
-              | [] ->  mk_ground_predicate_def loc
-                         named_ident expr
-              | _ ->
-                 let args =
-                   List.map AstConversion.translate_param $3 in
-                 mk_non_ground_predicate_def loc
-                   named_ident args expr                   
-         end
-      | Some t_cast ->
-         match $5 with
-         |  None ->
-             AstConversion.translate_logic_aux $3 $4 named_ident loc
-         | Some t -> mk_function t t_cast loc named_ident }
+      match $4, $5 with
+      | None, None ->
+         AstConversion.translate_logic_aux $3 None named_ident loc
+      | None, Some t -> mk_pred t $3 loc named_ident
+         (*let expr = AstConversion.translate_term t in
+         (match $3 with
+         | [] ->  mk_ground_predicate_def loc named_ident expr
+         | _ -> mk_ng_pred $3 loc named_ident expr)*)
+      | Some t, None ->
+         AstConversion.translate_logic_aux $3 $4 named_ident loc    
+      | Some t0, Some t1 -> mk_function t1 t0 loc named_ident }
 
 (* Inductive declarations *)
 
 inductive_decl:
 | labels(lident_rich) params ind_defn
-  { { in_ident = $1; in_params = $2;
-      in_def = $3; in_loc = floc $startpos $endpos } }
+    { Format.eprintf "TODO@."; assert false
+      (*{ in_ident = $1; in_params = $2;
+      in_def = $3; in_loc = floc $startpos $endpos }*) }
 
 ind_defn:
 | (* epsilon *)             { [] }
-| EQUAL bar_list1(ind_case) { $2 }
+| EQUAL bar_list1(ind_case) { Format.eprintf "TODO@."; assert false (*$2*) }
 
 ind_case:
-| labels(ident_nq) COLON term  { floc $startpos $endpos, $1, $3 }
+| labels(ident_nq) COLON term  { Format.eprintf "TODO@."; assert false
+                                 (*floc $startpos $endpos, $1, $3*) }
 
 (* Type expressions *)
 
@@ -644,20 +649,27 @@ term_sub_:
 | LEFTPAR RIGHTPAR                                  { Ttuple [] }
 | LEFTPAR comma_list2(term) RIGHTPAR                { Ttuple $2 }
 | LEFTBRC field_list1(term) RIGHTBRC
-    { Format.eprintf "TODO@."; assert false (*Trecord $2*) }
+    { Format.eprintf "TODO@."; assert false
+      (*Trecord $2*) }
 | LEFTBRC term_arg WITH field_list1(term) RIGHTBRC
-    { Format.eprintf "TODO@."; assert false (*Tupdate ($2,$4)*) }
+    { Format.eprintf "TODO@."; assert false
+      (*Tupdate ($2,$4)*) }
 | term_arg LEFTSQ term RIGHTSQ
-    { Tidapp (get_op $startpos($2) $endpos($2), [$1;$3]) }
+    { Format.eprintf "TODO@."; assert false 
+      (*Tidapp (get_op $startpos($2) $endpos($2), [$1;$3])*) }
 | term_arg LEFTSQ term LARROW term RIGHTSQ
-    { Tidapp (set_op $startpos($2) $endpos($2), [$1;$3;$5]) }
+    { Format.eprintf "TODO@."; assert false 
+      (*Tidapp (set_op $startpos($2) $endpos($2), [$1;$3;$5])*) }
 | term_arg LEFTSQ term DOTDOT term RIGHTSQ
-    { Tidapp (sub_op $startpos($2) $endpos($2), [$1;$3;$5]) }
+    { Format.eprintf "TODO@."; assert false 
+      (*Tidapp (sub_op $startpos($2) $endpos($2), [$1;$3;$5])*) }
 | term_arg LEFTSQ term DOTDOT RIGHTSQ
-    { Tidapp (above_op $startpos($2) $endpos($2), [$1;$3]) }
+    { Format.eprintf "TODO@."; assert false 
+      (*Tidapp (above_op $startpos($2) $endpos($2), [$1;$3])*) }
 | term_arg LEFTSQ DOTDOT term RIGHTSQ
-    { Tidapp (below_op $startpos($2) $endpos($2), [$1;$4]) }
-
+    { Format.eprintf "TODO@."; assert false 
+      (*Tidapp (below_op $startpos($2) $endpos($2), [$1;$4])*) }
+ 
 field_list1(X):
 | fl = semicolon_list1(separated_pair(lqualid, EQUAL, X)) { fl }
 
@@ -1105,7 +1117,7 @@ labels(X): X label* { add_lab $1 $2 }
 
 label:
 | STRING    { Lstr ({lab_string = $1}) }
-| POSITION  { Lpos $1 }
+| POSITION  { Format.eprintf "TODO@."; assert false (*Lpos $1*) }
 
 (* Miscellaneous *)
 

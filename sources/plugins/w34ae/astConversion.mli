@@ -21,18 +21,11 @@ val translate_innfix_ident :
   Why3_ptree.ident -> Loc.t -> Parsed.lexpr -> Parsed.lexpr -> Parsed.lexpr
 val translate_infix_ident :
   Why3_ptree.ident -> Loc.t -> Parsed.lexpr -> Parsed.lexpr -> Parsed.lexpr
-val translate_const_int : Why3_number.integer_constant -> string
-val translate_const : Why3_ptree.constant -> Loc.t -> Parsed.lexpr
 val translate_qualid : Why3_ptree.qualid -> Parsed.lexpr
 val translate_apply : Parsed.lexpr -> Parsed.lexpr -> Loc.t -> Parsed.lexpr
 val translate_idapp :
   Why3_ptree.qualid -> Parsed.lexpr list -> Loc.t -> Parsed.lexpr
-val translate_unop : Why3_ptree.unop -> Loc.t -> Parsed.lexpr -> Parsed.lexpr
 val translate_term : Why3_ptree.term -> Parsed.lexpr
-val translate_param :
-  'a * Why3_ptree.ident option * 'b * Why3_ptree.pty ->
-  'a * string * Parsed.ppure_type
-
 val translate_logic_aux :
   ('a * 'b * 'c * Why3_ptree.pty) list ->
   Why3_ptree.pty option -> string * string -> Loc.t -> Parsed.decl
