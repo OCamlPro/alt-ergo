@@ -79,7 +79,7 @@ let rec translate_pty =
 
 let translate_binder (b : Why3_ptree.binder) : string * string * Parsed.ppure_type  =
   match b with
-  | (_, Some i, false, Some pty) -> (i.id_str, "", translate_pty pty)
+  | (_, Some i, Some pty) -> (i.id_str, "", pty)
   | _ -> Format.eprintf "TODO@."; assert false
 
 let translate_innfix_ident i loc t1 t2=

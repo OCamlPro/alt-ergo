@@ -64,7 +64,7 @@ type pty =
 
 type ghost = bool
 
-type binder = loc * ident option * ghost * pty option
+type binder = loc * ident option * Parsed.ppure_type option
 type param  = loc * ident option * Parsed.ppure_type
 
 type pattern = {

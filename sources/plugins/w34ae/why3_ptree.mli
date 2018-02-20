@@ -39,9 +39,8 @@ type pty =
   | PTarrow of pty * pty
   | PTparen of pty
 type ghost = bool
-type binder = loc * ident option * ghost * pty option
-type param = loc * ident option *  Parsed.ppure_type
-                                     
+type binder = loc * ident option * Parsed.ppure_type option
+type param = loc * ident option * Parsed.ppure_type 
 type pattern = { pat_desc : pat_desc; pat_loc : loc; }
 and pat_desc =
     Pwild

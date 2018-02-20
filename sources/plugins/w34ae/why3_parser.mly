@@ -485,18 +485,20 @@ binder:
     { match $1 with
       | PTtyapp (Qident id, [])
       | PTparen (PTtyapp (Qident id, [])) ->
-             [floc $startpos $endpos, Some id, false, None]
-      | _ -> [floc $startpos $endpos, None, false, Some $1] }
+             [floc $startpos $endpos, Some id, None]
+      | _ -> [floc $startpos $endpos, None,
+              Some (AstConversion.translate_pty $1)] }
 | LEFTPAR GHOST ty RIGHTPAR
     { match $3 with
       | PTtyapp (Qident id, []) ->
-             [floc $startpos $endpos, Some id, true, None]
-      | _ -> [floc $startpos $endpos, None, true, Some $3] }
+             [floc $startpos $endpos, Some id, None]
+      | _ -> [floc $startpos $endpos, None,
+              Some (AstConversion.translate_pty $3)] }
 | ty_arg label label*
     { match $1 with
       | PTtyapp (Qident id, []) ->
              let id = add_lab id ($2::$3) in
-             [floc $startpos $endpos, Some id, false, None]
+             [floc $startpos $endpos, Some id, None]
       | _ -> error_loc (floc $startpos($2) $endpos($2)) }
 | LEFTPAR binder_vars_rest RIGHTPAR
     { match $2 with [l,i] -> [l, i, false, None]
@@ -505,9 +507,9 @@ binder:
     { match $3 with [l,i] -> [l, i, true, None]
       | _ -> error_loc (floc $startpos($4) $endpos($4)) }
 | LEFTPAR binder_vars cast RIGHTPAR
-    { List.map (fun (l,i) -> l, i, false, Some $3) $2 }
+    { List.map (fun (l,i) -> l, i, Some (AstConversion.translate_pty $3)) $2 }
 | LEFTPAR GHOST binder_vars cast RIGHTPAR
-    { List.map (fun (l,i) -> l, i, true, Some $4) $3 }
+    { List.map (fun (l,i) -> l, i, Some (AstConversion.translate_pty $4)) $3 }
 
 binder_vars:
 | binder_vars_head  { List.rev $1 }
@@ -642,7 +644,11 @@ match_cases(X):
 | cl = bar_list1(separated_pair(pattern, ARROW, X)) { cl }
 
 quant_vars:
-| binder_var+ cast? { List.map (fun (l,i) -> l, i, false, $2) $1 }
+| binder_var+ cast? { List.map (fun (l,i) ->
+                          match $2 with
+                            Some pty ->
+                            l, i, Some (AstConversion.translate_pty pty)
+                                  | _ -> l, i, None) $1 }
 
 triggers:
 | (* epsilon *)                                                 { [] }
