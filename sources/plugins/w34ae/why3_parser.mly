@@ -136,6 +136,7 @@ open Parsed_interface
                                      
   let id_str {id_str} = id_str
   let id_lab {id_lab} = id_lab
+                          
 (*
   let mk_function t ty loc named_ident =
     let translate_pty2 = function
@@ -149,6 +150,16 @@ open Parsed_interface
     let ppure_t = AstConversion.translate_pty ty in
     mk_function_def loc named_ident spp_list ppure_t expr
  *)
+  let mk_function t ty loc named_ident params =
+    let expr = AstConversion.translate_term t in
+    let ppure_t = AstConversion.translate_pty ty in
+    let translate_param (loc, Some id, _, pty) =
+      (loc, id.id_str, AstConversion.translate_pty pty) in
+    let spp_list = List.map translate_param params in
+    mk_function_def loc named_ident  spp_list  ppure_t expr
+                    
+    
+                          
   let mk_ng_pred params loc named_ident expr =
     let prams =
       List.filter (function (_, Some {id_str}, _, _) -> true | _ -> false) params in
@@ -402,10 +413,7 @@ constant_decl:
       match $3 with
       | None -> AstConversion.translate_logic_aux [] (Some $2)
                   named_ident loc 
-      | Some t ->
-         let expr = AstConversion.translate_term t in
-         let ppure_t = AstConversion.translate_pty $2 in
-         mk_function_def loc named_ident []  ppure_t expr }
+      | Some t -> mk_function t $2 loc named_ident [] }
 
 function_decl:
 | labels(lident_rich) params cast preceded(EQUAL,term)?
@@ -415,13 +423,7 @@ function_decl:
       match $4 with
       | None -> AstConversion.translate_logic_aux
                 $2 (Some $3) named_ident loc
-      | Some t ->
-         let expr = AstConversion.translate_term t in
-         let ppure_t = AstConversion.translate_pty $3 in
-         let translate_param (loc, Some id, _, pty) =
-           (loc, id.id_str, AstConversion.translate_pty pty) in
-         let spp_list = List.map translate_param $2 in
-         mk_function_def loc named_ident  spp_list  ppure_t expr }
+      | Some t -> mk_function t $3 loc named_ident $2 }
 
 predicate_decl:
 | labels(lident_rich) params preceded(EQUAL,term)?
@@ -443,13 +445,7 @@ with_logic_decl:
       | None, Some t -> mk_pred t $3 loc named_ident
       | Some t, None ->
          AstConversion.translate_logic_aux $3 $4 named_ident loc    
-      | Some t0, Some t1 ->
-         let expr = AstConversion.translate_term t1 in
-         let ppure_t = AstConversion.translate_pty t0 in
-         let translate_param (loc, Some id, _, pty) =
-           (loc, id.id_str, AstConversion.translate_pty pty) in
-         let spp_list = List.map translate_param $3 in
-         mk_function_def loc named_ident  spp_list  ppure_t expr }
+      | Some t0, Some t1 -> mk_function t1 t0 loc named_ident $3 }
 
 (* Inductive declarations *)
 
