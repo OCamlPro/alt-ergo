@@ -183,7 +183,7 @@ let rec translate_term (t : Why3_ptree.term) : Parsed.lexpr  =
 
 let translate_logic_aux ld_params ld_type named_ident loc  =
        let ppure_type_list =
-         List.map (fun (_, _, _, pty) -> translate_pty pty ) ld_params
+         List.map (fun (_, _, pty) -> pty ) ld_params
        in
        let ppure_type_option =
          match ld_type with

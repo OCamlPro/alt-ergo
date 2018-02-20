@@ -65,7 +65,7 @@ type pty =
 type ghost = bool
 
 type binder = loc * ident option * ghost * pty option
-type param  = loc * ident option * ghost * pty
+type param  = loc * ident option * Parsed.ppure_type
 
 type pattern = {
   pat_desc : pat_desc;

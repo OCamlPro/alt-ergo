@@ -82,40 +82,6 @@ open Parsed_interface
   let mk_term d s e = { term_desc = d; term_loc = floc s e }
   let mk_expr d s e = { expr_desc = d; expr_loc = floc s e }
 
-  (*let variant_union v1 v2 = match v1, v2 with
-    | _, [] -> v1
-    | [], _ -> v2
-    | _, ({term_loc = loc},_)::_ -> Why3_loc.errorm ~loc
-        "multiple `variant' clauses are not allowed"
-   *)
-  (*let empty_spec = {
-    sp_pre     = [];
-    sp_post    = [];
-    sp_xpost   = [];
-    sp_reads   = [];
-    sp_writes  = [];
-    sp_variant = [];
-    sp_checkrw = false;
-    sp_diverge = false;
-  }*)
-
-  (*let spec_union s1 s2 = {
-    sp_pre     = s1.sp_pre @ s2.sp_pre;
-    sp_post    = s1.sp_post @ s2.sp_post;
-    sp_xpost   = s1.sp_xpost @ s2.sp_xpost;
-    sp_reads   = s1.sp_reads @ s2.sp_reads;
-    sp_writes  = s1.sp_writes @ s2.sp_writes;
-    sp_variant = variant_union s1.sp_variant s2.sp_variant;
-    sp_checkrw = s1.sp_checkrw || s2.sp_checkrw;
-    sp_diverge = s1.sp_diverge || s2.sp_diverge;
-  }*)
-
-(* dead code
-  let add_init_mark e =
-    let init = { id_str = "Init"; id_lab = []; id_loc = e.expr_loc } in
-    { e with expr_desc = Emark (init, e) }
-*)
-
   let small_integer i =
     try match i with
       | Why3_number.IConstDec s -> int_of_string s
@@ -128,53 +94,32 @@ open Parsed_interface
     Why3_loc.errorm ~loc "cannot determine the type of the parameter"
 
   let error_loc loc = Why3_loc.error ~loc Error
-
-  (*let () = Why3_exn_printer.register (fun fmt exn -> match exn with
-    | Error -> Format.fprintf fmt "syntax error"
-    | _ -> raise exn)*)
-
                                      
   let id_str {id_str} = id_str
   let id_lab {id_lab} = id_lab
+
+  let translate_param (loc, id_op, pty) =
+    match id_op with
+    | Some id -> (loc, id.id_str, pty)
+    | None -> (loc, "",  pty)
                           
-(*
-  let mk_function t ty loc named_ident =
-    let translate_pty2 = function
-      | PTtyapp (Qident {id_str = "int"; id_loc}, _) ->
-         [(id_loc, "int",  int_type)]
-      | PTtyapp (Qident {id_str = "bool"; id_loc}, _) ->
-         [(id_loc, "bool",  bool_type)]
-      | _ ->  Format.eprintf "TODO@."; assert false in                                              
-    let expr = AstConversion.translate_term t in
-    let spp_list = translate_pty2 ty in
-    let ppure_t = AstConversion.translate_pty ty in
-    mk_function_def loc named_ident spp_list ppure_t expr
- *)
   let mk_function t ty loc named_ident params =
     let expr = AstConversion.translate_term t in
-    let ppure_t = AstConversion.translate_pty ty in
-    let translate_param (loc, Some id, _, pty) =
-      (loc, id.id_str, AstConversion.translate_pty pty) in
-    let spp_list = List.map translate_param params in
-    mk_function_def loc named_ident  spp_list  ppure_t expr
-                    
-    
+    (*let ppure_t = ty in
+    let spp_list = params in*)
+    mk_function_def loc named_ident  (List.map translate_param params)  ty expr              
                           
   let mk_ng_pred params loc named_ident expr =
-    let prams =
-      List.filter (function (_, Some {id_str}, _, _) -> true | _ -> false) params in
-    let tradp =
-      fun (loc, Some id, _, pty)
-      -> ( loc, id.id_str, AstConversion.translate_pty pty) in
-    let args = List.map tradp prams  in
-    mk_non_ground_predicate_def loc named_ident args expr 
+   (* let prams = params in
+   let args =
+      List.filter (function (_, "", _) -> false | _ -> true) prams in*)
+    mk_non_ground_predicate_def loc named_ident params expr 
 
   let mk_pred term params loc named_ident =
     let expr = AstConversion.translate_term term in
     match params with
     | [] ->  mk_ground_predicate_def loc named_ident expr
-    | _ -> mk_ng_pred params loc named_ident expr
-              
+    | _ -> mk_ng_pred (List.map translate_param params) loc named_ident expr         
 
 %}
 
@@ -278,7 +223,8 @@ logic_file:
 | theory EOF   {  $1 }
 
 theory:
-| theory_head theory_decl* END  { List.concat (List.map (fun (Some x) -> x) (List.filter (fun x -> x <> None) $2)) }
+| theory_head theory_decl* END
+  { List.concat (List.map (fun (Some x) -> x) (List.filter (fun x -> x <> None) $2)) }
 
 theory_head:
 | THEORY labels(uident_nq)  {  $2 }
@@ -407,45 +353,61 @@ type_case:
 
 constant_decl:
 | labels(lident_rich) cast preceded(EQUAL,term)?
-    { let loc = floc $startpos $endpos in
+    {
+      let loc = floc $startpos $endpos in
       let named_ident =
         (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
       match $3 with
-      | None -> AstConversion.translate_logic_aux [] (Some $2)
-                  named_ident loc 
-      | Some t -> mk_function t $2 loc named_ident [] }
+      | None ->
+         AstConversion.translate_logic_aux [] (Some $2) named_ident loc 
+      | Some t ->
+         mk_function t (AstConversion.translate_pty $2) loc named_ident []
+    }
 
 function_decl:
 | labels(lident_rich) params cast preceded(EQUAL,term)?
-    { let loc = floc $startpos $endpos in
+    {
+      let loc = floc $startpos $endpos in
       let named_ident =
         (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
       match $4 with
-      | None -> AstConversion.translate_logic_aux
-                $2 (Some $3) named_ident loc
-      | Some t -> mk_function t $3 loc named_ident $2 }
+      | None ->
+         AstConversion.translate_logic_aux $2 (Some $3) named_ident loc
+      | Some t ->
+         mk_function t (AstConversion.translate_pty $3) loc
+           named_ident $2
+    }
 
 predicate_decl:
 | labels(lident_rich) params preceded(EQUAL,term)?
-    { let loc = floc $startpos $endpos in
+    {
+      let loc = floc $startpos $endpos in
       let named_ident =
         (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
       match $3 with
-      | None -> AstConversion.translate_logic_aux $2 None named_ident loc
-      | Some t -> mk_pred t $2 loc named_ident }
+      | None ->
+         AstConversion.translate_logic_aux $2 None named_ident loc
+      | Some t ->
+         mk_pred t $2 loc named_ident
+    }
 
 with_logic_decl:
 | WITH labels(lident_rich) params cast? preceded(EQUAL,term)?
-    { let loc = floc $startpos $endpos in
+    {
+      let loc = floc $startpos $endpos in
       let named_ident =
         (id_str $2, AstConversion.str_of_labs (id_lab $2)) in
       match $4, $5 with
       | None, None ->
          AstConversion.translate_logic_aux $3 None named_ident loc
-      | None, Some t -> mk_pred t $3 loc named_ident
+      | None, Some t ->
+         mk_pred t $3 loc named_ident
       | Some t, None ->
-         AstConversion.translate_logic_aux $3 $4 named_ident loc    
-      | Some t0, Some t1 -> mk_function t1 t0 loc named_ident $3 }
+         AstConversion.translate_logic_aux  $3 $4 named_ident loc    
+      | Some t0, Some t1 ->
+         mk_function t1 (AstConversion.translate_pty t0) loc
+           named_ident $3
+    }
 
 (* Inductive declarations *)
 
@@ -468,7 +430,7 @@ ind_case:
 ty:
 | ty_arg          { $1 }
 | lqualid ty_arg+ { PTtyapp ($1, $2) }
-| ty ARROW ty     { PTarrow ($1, $3) }
+| ty ARROW ty     { Format.eprintf "TODO@."; assert false     (*PTarrow ($1, $3)*) }
 
 ty_arg:
 | lqualid                           { PTtyapp ($1, []) }
@@ -491,15 +453,15 @@ cast:
 
 params:  param*  { List.concat $1 }
 
-binders: binder+ { List.concat $1 }
+binders: binder+ { List.concat $1  }
 
 param:
 | anon_binder
     { error_param (floc $startpos $endpos) }
 | ty_arg
-    { [floc $startpos $endpos, None, false, $1] }
+    { [ (floc $startpos $endpos, None, AstConversion.translate_pty $1)] }
 | LEFTPAR GHOST ty RIGHTPAR
-    { [floc $startpos $endpos, None, true, $3] }
+    { [ (floc $startpos $endpos, None, AstConversion.translate_pty $3)] }
 | ty_arg label label*
     { match $1 with
       | PTtyapp (Qident _, []) ->
@@ -512,9 +474,9 @@ param:
     { match $3 with [l,_] -> error_param l
       | _ -> error_loc (floc $startpos($4) $endpos($4)) }
 | LEFTPAR binder_vars cast RIGHTPAR
-    { List.map (fun (l,i) -> l, i, false, $3) $2 }
+    { List.map (fun (l,i) ->  (l, i, AstConversion.translate_pty $3)) $2 }
 | LEFTPAR GHOST binder_vars cast RIGHTPAR
-    { List.map (fun (l,i) -> l, i, true, $4) $3 }
+    { List.map (fun (l,i) ->  (l, i, AstConversion.translate_pty $4)) $3 }
 
 binder:
 | anon_binder
