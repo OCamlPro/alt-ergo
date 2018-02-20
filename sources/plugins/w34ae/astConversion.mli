@@ -26,7 +26,4 @@ val translate_apply : Parsed.lexpr -> Parsed.lexpr -> Loc.t -> Parsed.lexpr
 val translate_idapp :
   Why3_ptree.qualid -> Parsed.lexpr list -> Loc.t -> Parsed.lexpr
 val translate_term : Why3_ptree.term -> Parsed.lexpr
-val translate_logic_aux :
-  ('a * 'b * Parsed.ppure_type) list ->
-  Why3_ptree.pty option -> string * string -> Loc.t -> Parsed.decl
 

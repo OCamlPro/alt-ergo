@@ -105,21 +105,21 @@ open Parsed_interface
                           
   let mk_function t ty loc named_ident params =
     let expr = AstConversion.translate_term t in
-    (*let ppure_t = ty in
-    let spp_list = params in*)
-    mk_function_def loc named_ident  (List.map translate_param params)  ty expr              
-                          
-  let mk_ng_pred params loc named_ident expr =
-   (* let prams = params in
-   let args =
-      List.filter (function (_, "", _) -> false | _ -> true) prams in*)
-    mk_non_ground_predicate_def loc named_ident params expr 
-
+    mk_function_def loc named_ident  (List.map translate_param params)ty expr
+      
   let mk_pred term params loc named_ident =
     let expr = AstConversion.translate_term term in
     match params with
     | [] ->  mk_ground_predicate_def loc named_ident expr
-    | _ -> mk_ng_pred (List.map translate_param params) loc named_ident expr         
+    | _ -> mk_non_ground_predicate_def loc named_ident
+             (List.map translate_param params) expr
+
+  let mak_logic loc ssl pptyop params =
+    let ppure_type_list =
+      List.map (fun (_, _, pty) -> pty ) params in
+    let logic_type =
+      mk_logic_type ppure_type_list pptyop in
+    mk_logic loc Symbols.Other ssl logic_type
 
 %}
 
@@ -359,7 +359,7 @@ constant_decl:
         (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
       match $3 with
       | None ->
-         AstConversion.translate_logic_aux [] (Some $2) named_ident loc 
+         mak_logic loc [named_ident] (Some (AstConversion.translate_pty $2)) []   
       | Some t ->
          mk_function t (AstConversion.translate_pty $2) loc named_ident []
     }
@@ -372,7 +372,7 @@ function_decl:
         (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
       match $4 with
       | None ->
-         AstConversion.translate_logic_aux $2 (Some $3) named_ident loc
+         mak_logic loc [named_ident] (Some (AstConversion.translate_pty $3)) $2
       | Some t ->
          mk_function t (AstConversion.translate_pty $3) loc
            named_ident $2
@@ -386,7 +386,7 @@ predicate_decl:
         (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
       match $3 with
       | None ->
-         AstConversion.translate_logic_aux $2 None named_ident loc
+         mak_logic loc [named_ident] None $2                                              
       | Some t ->
          mk_pred t $2 loc named_ident
     }
@@ -399,11 +399,11 @@ with_logic_decl:
         (id_str $2, AstConversion.str_of_labs (id_lab $2)) in
       match $4, $5 with
       | None, None ->
-         AstConversion.translate_logic_aux $3 None named_ident loc
+         mak_logic loc [named_ident] None $3                                             
       | None, Some t ->
          mk_pred t $3 loc named_ident
       | Some t, None ->
-         AstConversion.translate_logic_aux  $3 $4 named_ident loc    
+         mak_logic loc [named_ident] (Some (AstConversion.translate_pty t)) $3 
       | Some t0, Some t1 ->
          mk_function t1 (AstConversion.translate_pty t0) loc
            named_ident $3

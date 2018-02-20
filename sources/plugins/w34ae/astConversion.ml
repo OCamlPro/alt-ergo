@@ -179,21 +179,4 @@ let rec translate_term (t : Why3_ptree.term) : Parsed.lexpr  =
   | Trecord _ -> Format.eprintf "TODO@."; assert false
   | Tupdate (_, _) -> Format.eprintf "TODO@."; assert false
 
-
-
-let translate_logic_aux ld_params ld_type named_ident loc  =
-       let ppure_type_list =
-         List.map (fun (_, _, pty) -> pty ) ld_params
-       in
-       let ppure_type_option =
-         match ld_type with
-         | None -> None
-         | Some pty -> Some (translate_pty pty)
-       in
-       let logic_type =
-         mk_logic_type ppure_type_list ppure_type_option in
-       let name_k = Symbols.Other in
-       (*!!! TODO/CHECK : ss_list is always a singleton ???*)
-       let ss_list = [named_ident] in
-       mk_logic loc name_k ss_list logic_type
                                                  
