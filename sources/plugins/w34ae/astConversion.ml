@@ -54,24 +54,7 @@ let translate_tuple exp_list loc =
   in
   let str_exp_list = trad exp_list 1 in
   mk_record loc str_exp_list
-(*
-let rec translate_pty =
-  let translate_pty_list l = List.map translate_pty l in
-  function
-  | PTtyapp (Qident {id_str = "int"}, _) -> int_type
-  | PTtyapp (Qident {id_str = "bool"}, _) -> bool_type
-  | PTtyapp (Qident {id_str = "real"}, _) -> real_type
-  | PTtyapp (Qident {id_str; id_loc}, pl) ->
-     mk_external_type id_loc (List.map translate_pty pl) id_str
-  | PTtuple pl ->
-     let length =  string_of_int (List.length pl) in
-     let name = "tuple" ^ length in
-     let loc = dummy_loc in
-     let ptyl = translate_pty_list pl in
-     mk_external_type loc ptyl name
-  | PTparen pty  -> translate_pty pty
-  | _ ->  Format.eprintf "TODO@."; assert false                     
- *)
+
 
 let translate_binder (b : Why3_ptree.binder) : string * string * Parsed.ppure_type  =
   match b with
@@ -125,52 +108,3 @@ let translate_idapp q [le] loc =
   | Qident {id_str = "infix -"} ->
      mk_minus loc le
   | _  -> Format.eprintf "TODO@."; assert false
-
-let rec translate_term (t : Why3_ptree.term) : Parsed.lexpr  =
-  let loc =  t.term_loc in
-  let translate_term_list tl = List.map translate_term tl in
-  match t.term_desc with
-  | Ttrue -> mk_true_const loc
-  | Tfalse -> mk_false_const loc
-  | Tconst (ConstInt (IConstDec s)) -> mk_int_const loc s                         
-  | Tconst c -> Format.eprintf "TODO@."; assert false
-  | Tident q -> translate_qualid q  
-  | Tidapp (q, tl) -> translate_idapp q (translate_term_list tl) loc
-  | Tapply ({term_desc = Tapply ({term_desc = Tident (Qident {id_str = "mod"})}, t0)},t1) ->
-     mk_application loc "comp_mod" [(translate_term t0); (translate_term t1)]
-  | Tapply ({term_desc = Tapply ({term_desc = Tident (Qident {id_str = "div"})}, t0)},t1) ->
-     mk_application loc "comp_div" [(translate_term t0); (translate_term t1)]
-  | Tapply ({term_desc = Tapply ({term_desc = Tident (Qident {id_str = "domain_restriction"})}, t0)},t1) ->
-     mk_application loc "infix_lsbr" [(translate_term t0); (translate_term t1)]
-  | Tapply ({term_desc = Tapply ({term_desc = Tident (Qident {id_str = "domain_substraction"})}, t0)},t1) ->
-     mk_application loc "infix_lslsbr" [(translate_term t0); (translate_term t1)]
-  | Tapply ({term_desc = Tapply ({term_desc = Tident (Qident {id_str = "range_substraction"})}, t0)},t1) ->
-     mk_application loc "infix_brgtgt" [(translate_term t0); (translate_term t1)]
-| Tapply ({term_desc = Tapply ({term_desc = Tident (Qident {id_str = "range_restriction"})}, t0)},t1) ->
-     mk_application loc "infix_brgt" [(translate_term t0); (translate_term t1)]
-  | Tapply (t0, t1) ->
-       translate_apply (translate_term t0) (translate_term t1) loc
-  | Tinfix (tl, i, tr) -> (* ??? TO CHECK  *)
-     translate_infix_ident i loc (translate_term tl) (translate_term tr)
-  | Tinnfix (tl, i, tr) ->
-       translate_innfix_ident i loc (translate_term tl)
-         (translate_term tr)
-  | Tbinop (tl, bo, tr) ->
-     translate_binop bo loc (translate_term tl) (translate_term tr) 
-  | Tunop (u, t) -> mk_not loc (translate_term t)
-  | Tif (t0, t1, t2) ->
-     mk_ite loc (translate_term t0) (translate_term t1) (translate_term t2)
-  | Tquant (quant, binder_list, term_list_list, term) ->
-     let vs_ty = List.map translate_binder binder_list in
-     let triggers =
-       List.map (fun tl -> ((translate_term_list tl), true))
-         term_list_list in
-     let filters = [] in (* ??? FIX OR NOT  ???  *)
-     translate_quant quant loc vs_ty triggers filters (translate_term term)
-  | Tnamed (lab, t) -> mk_named loc (str_of_label lab) (translate_term t)
-  | Tlet (id, t0, t1) -> mk_let loc id.id_str (translate_term t0) (translate_term t1)
-  | Tmatch (_, _) -> Format.eprintf "TODO@."; assert false
-  | Tcast (t, pty) -> mk_type_cast loc (translate_term t) pty
-  | Ttuple tl -> translate_tuple (translate_term_list tl) loc
-  | Trecord _ -> Format.eprintf "TODO@."; assert false
-  | Tupdate (_, _) -> Format.eprintf "TODO@."; assert false

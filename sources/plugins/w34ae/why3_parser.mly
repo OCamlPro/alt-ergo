@@ -73,7 +73,7 @@ open Parsed_interface
   let mk_id id s e = { id_str = id; id_lab = []; id_loc = floc s e }
 
   let mk_pat  d s e = { pat_desc  = d; pat_loc  = floc s e }
-  let mk_term d s e = { term_desc = d; term_loc = floc s e }
+  let mk_term d s e = d (*{ term_desc = d; term_loc = floc s e }*)
   (*let mk_expr d s e = { expr_desc = d; expr_loc = floc s e }*)
 
   let small_integer i =
@@ -98,11 +98,11 @@ open Parsed_interface
     | None -> (loc, "",  pty)
                           
   let mk_function t ty loc named_ident params =
-    let expr = AstConversion.translate_term t in
+    let expr = t in
     mk_function_def loc named_ident  (List.map translate_param params)ty expr
       
   let mk_pred term params loc named_ident =
-    let expr = AstConversion.translate_term term in
+    let expr = term in
     match params with
     | [] ->  mk_ground_predicate_def loc named_ident expr
     | _ -> mk_non_ground_predicate_def loc named_ident
@@ -128,7 +128,22 @@ open Parsed_interface
     | Qident {id_str; id_loc} ->
        mk_external_type id_loc pl id_str
     | _ -> Format.eprintf "TODO@."; assert false
-           
+
+  let rec mk_apply loc (f : Parsed.lexpr) a =                                 
+    match f with
+    | { pp_desc = Parsed.PPapp ("mod", le) } ->
+       mk_application loc "comp_mod" (le @ [a])
+    | { pp_desc = Parsed.PPapp ("div", le) } ->
+       mk_application loc "comp_div" (le @ [a])
+    | { pp_desc = Parsed.PPapp ("domain_restriction", le) } ->
+       mk_application loc "infix_lsbr" (le @ [a])
+    | { pp_desc = Parsed.PPapp ("domain_substraction", le) } ->
+       mk_application loc "infix_lslsbr" (le @ [a])
+    | { pp_desc = Parsed.PPapp ("range_substraction", le) } ->
+       mk_application loc "infix_brgtgt" (le @ [a])
+    | { pp_desc = Parsed.PPapp ("range_restriction", le) } ->
+       mk_application loc "infix_brgt" (le @ [a])                  
+    | _ -> AstConversion.translate_apply f a loc           
 
 %}
 
@@ -285,24 +300,10 @@ decl:
     { ($2::$3) }
 | PREDICATE predicate_decl with_logic_decl*
     { ($2::$3) }
-| INDUCTIVE   with_list1(inductive_decl)    { Format.eprintf "TODO@."; assert false }
-| COINDUCTIVE with_list1(inductive_decl)    { Format.eprintf "TODO@."; assert false }
 | AXIOM labels(ident_nq) COLON term
-    { [mk_generic_axiom  (floc $startpos $endpos) (id_str $2) (AstConversion.translate_term $4)] }
-| LEMMA labels(ident_nq) COLON term         { Format.eprintf "TODO@."; assert false }
+    { [mk_generic_axiom  (floc $startpos $endpos) (id_str $2) $4] }
 | GOAL  labels(ident_nq) COLON term
-    { [mk_goal (floc $startpos $endpos) (id_str $2)
-         (AstConversion.translate_term $4)] }
-| META sident comma_list1(meta_arg)         { Format.eprintf "TODO@."; assert false }
-
-meta_arg:
-| TYPE      ty      { Format.eprintf "TODO@."; assert false }
-| CONSTANT  qualid  { Format.eprintf "TODO@."; assert false }
-| FUNCTION  qualid  { Format.eprintf "TODO@."; assert false }
-| PREDICATE qualid  { Format.eprintf "TODO@."; assert false }
-| PROP      qualid  { Format.eprintf "TODO@."; assert false }
-| STRING            { Format.eprintf "TODO@."; assert false }
-| INTEGER           { Format.eprintf "TODO@."; assert false }
+    { [mk_goal (floc $startpos $endpos) (id_str $2) $4] }
 
 (* Type declarations *)
 
@@ -342,17 +343,6 @@ abstract:
 | (* epsilon *) { Public }
 | PRIVATE       { Private }
 | ABSTRACT      { Abstract }
-
-type_field:
-| field_modifiers labels(lident_nq) cast
-  { Format.eprintf "TODO@."; assert false }
-
-field_modifiers:
-| (* epsilon *) { false, false }
-| MUTABLE       { true,  false }
-| GHOST         { false, true  }
-| GHOST MUTABLE { true,  true  }
-| MUTABLE GHOST { true,  true  }
 
 type_case:
 | labels(uident_nq) params { floc $startpos $endpos, $1, $2 }
@@ -552,90 +542,95 @@ term: t = mk_term(term_) { t }
 
 term_:
 | term_arg_
-    { match $1 with (* break the infix relation chain *)
-      | Tinfix (l,o,r) ->
-        Tinnfix (l,o,r) | d -> d }
+    { $1 }
 | NOT term
-    { Tunop (Tnot, $2) }
+    { mk_not (floc $startpos $endpos) $2 }
 | prefix_op term %prec prec_prefix_op
-    { Tidapp (Qident $1, [$2]) }
+    { AstConversion.translate_idapp (Qident $1) [$2] (floc $startpos $endpos) }
 | l = term ; o = bin_op ; r = term
-    { Tbinop (l, o, r) }
+    { AstConversion.translate_binop o (floc $startpos $endpos) l r }
 | l = term ; o = infix_op ; r = term
-    { Tinfix (l, o, r) }
+    { AstConversion.translate_infix_ident o (floc $startpos $endpos) l r }
 | term_arg located(term_arg)+ (* FIXME/TODO: "term term_arg" *)
-    { let join f (a,_,e) = mk_term (Tapply (f,a)) $startpos e in
-      (List.fold_left join $1 $2).term_desc }
+    { let join f (a,_,e) =
+        mk_term (mk_apply (floc $startpos $endpos) f a) $startpos e in
+      (List.fold_left join $1 $2) }
 | IF term THEN term ELSE term
-    { Tif ($2, $4, $6) }
+    { mk_ite (floc $startpos $endpos) $2 $4 $6 }
 | LET pattern EQUAL term IN term
-    { match $2.pat_desc with
-      | Pvar id -> Tlet (id, $4, $6)
-      | Pwild -> Tlet (id_anonymous $2.pat_loc, $4, $6)
-      | Ptuple [] -> Tlet (id_anonymous $2.pat_loc,
-          { $4 with term_desc = Tcast ($4, mk_tuple [] (floc $startpos $endpos)) }, $6)
+    {
+      let loc =  (floc $startpos $endpos) in
+      match $2.pat_desc with
+      | Pvar id ->
+         mk_let loc id.id_str $4 $6
+      | Pwild ->
+         mk_let  loc (id_anonymous $2.pat_loc).id_str $4 $6
+      | Ptuple [] ->         
+         mk_let  loc (id_anonymous $2.pat_loc).id_str
+           (mk_type_cast loc $4 (mk_tuple [] loc)) $6
       | Pcast ({pat_desc = Pvar id}, ty) ->
-          Tlet (id, { $4 with term_desc = Tcast ($4, ty) }, $6)
+         mk_let loc id.id_str (mk_type_cast loc $4 ty) $6
       | Pcast ({pat_desc = Pwild}, ty) ->
-          let id = id_anonymous $2.pat_loc in
-          Tlet (id, { $4 with term_desc = Tcast ($4, ty) }, $6)
-      | _ -> Tmatch ($4, [$2, $6]) }
-| MATCH term WITH match_cases(term) END
-    { Format.eprintf "TODO@."; assert false (*Tmatch ($2, $4)*) }
-| MATCH comma_list2(term) WITH match_cases(term) END
-    { Format.eprintf "TODO@."; assert false (* Tmatch (mk_term (Ttuple $2) $startpos($2) $endpos($2), $4)*) }
+         let id = id_anonymous $2.pat_loc in
+         mk_let loc id.id_str (mk_type_cast loc $4 ty) $6
+      | _ -> Format.eprintf "TODO@."; assert false  }
 | quant comma_list1(quant_vars) triggers DOT term
-    { Tquant ($1, List.concat $2, $3, $5) }
+    {
+      let qua =
+      match $1 with
+      | Tforall -> mk_forall 
+      | Texists -> mk_exists
+      | _ -> Format.eprintf "TODO@."; assert false in
+      let vs_ty =
+        List.map AstConversion.translate_binder (List.concat $2) in
+      let triggers =
+        List.map (fun tl -> (tl, true)) $3 in
+      qua (floc $startpos $endpos) vs_ty triggers [] $5
+    }
 | EPSILON
     { Why3_loc.errorm "Epsilon terms are currently not supported in WhyML" }
 | label term %prec prec_named
-    { Tnamed ($1, $2) }
+    { mk_named (floc $startpos $endpos) (AstConversion.str_of_label $1) $2 }
 | term cast
-    { Tcast ($1, $2) }
+    { mk_type_cast (floc $startpos $endpos) $1 $2 }
 
 term_arg: mk_term(term_arg_) { $1 }
 term_dot: mk_term(term_dot_) { $1 }
 
 term_arg_:
-| qualid                    { Tident $1 }
-| numeral                   { Tconst $1 }
-| TRUE                      { Ttrue }
-| FALSE                     { Tfalse }
-| quote_uident              { Tident (Qident $1) }
-| o = oppref ; a = term_arg { Tidapp (Qident o, [a]) }
+| qualid
+    { AstConversion.translate_qualid $1 }
+| numeral
+    {
+      match  $1 with
+      | Why3_number.ConstInt (Why3_number.IConstDec s) ->
+         mk_int_const (floc $startpos $endpos) s
+      | _ -> Format.eprintf "TODO@."; assert false                                               
+    }
+| TRUE                      { mk_true_const (floc $startpos $endpos) }
+| FALSE                     { mk_false_const (floc $startpos $endpos) }
+| quote_uident
+    { AstConversion.translate_qualid (Qident $1) }
+| o = oppref ; a = term_arg
+    { AstConversion.translate_idapp (Qident o) [a] (floc $startpos $endpos) }
 | term_sub_                 { $1 }
 
 term_dot_:
-| lqualid                   { Tident $1 }
-| o = oppref ; a = term_dot { Tidapp (Qident o, [a]) }
-| term_sub_                 { $1 }
+  | lqualid
+      { AstConversion.translate_qualid $1 }
+  | o = oppref ; a = term_dot
+      { AstConversion.translate_idapp (Qident o) [a] (floc $startpos $endpos) }
+| term_sub_ { $1 }
 
 term_sub_:
-| term_dot DOT lqualid_rich                         { Tidapp ($3,[$1]) }
-| LEFTPAR term RIGHTPAR                             { $2.term_desc }
-| LEFTPAR RIGHTPAR                                  { Ttuple [] }
-| LEFTPAR comma_list2(term) RIGHTPAR                { Ttuple $2 }
-| LEFTBRC field_list1(term) RIGHTBRC
-    { Format.eprintf "TODO@."; assert false
-      (*Trecord $2*) }
-| LEFTBRC term_arg WITH field_list1(term) RIGHTBRC
-    { Format.eprintf "TODO@."; assert false
-      (*Tupdate ($2,$4)*) }
-| term_arg LEFTSQ term RIGHTSQ
-    { Format.eprintf "TODO@."; assert false 
-      (*Tidapp (get_op $startpos($2) $endpos($2), [$1;$3])*) }
-| term_arg LEFTSQ term LARROW term RIGHTSQ
-    { Format.eprintf "TODO@."; assert false 
-      (*Tidapp (set_op $startpos($2) $endpos($2), [$1;$3;$5])*) }
-| term_arg LEFTSQ term DOTDOT term RIGHTSQ
-    { Format.eprintf "TODO@."; assert false 
-      (*Tidapp (sub_op $startpos($2) $endpos($2), [$1;$3;$5])*) }
-| term_arg LEFTSQ term DOTDOT RIGHTSQ
-    { Format.eprintf "TODO@."; assert false 
-      (*Tidapp (above_op $startpos($2) $endpos($2), [$1;$3])*) }
-| term_arg LEFTSQ DOTDOT term RIGHTSQ
-    { Format.eprintf "TODO@."; assert false 
-      (*Tidapp (below_op $startpos($2) $endpos($2), [$1;$4])*) }
+  | term_dot DOT lqualid_rich
+      { AstConversion.translate_idapp $3 [$1] (floc $startpos $endpos) }
+| LEFTPAR term RIGHTPAR                             { $2 }
+| LEFTPAR RIGHTPAR
+    { AstConversion.translate_tuple [] (floc $startpos $endpos) }
+| LEFTPAR comma_list2(term) RIGHTPAR
+    { AstConversion.translate_tuple $2(floc $startpos $endpos) }
+
  
 field_list1(X):
 | fl = semicolon_list1(separated_pair(lqualid, EQUAL, X)) { fl }
@@ -644,11 +639,15 @@ match_cases(X):
 | cl = bar_list1(separated_pair(pattern, ARROW, X)) { cl }
 
 quant_vars:
-| binder_var+ cast? { List.map (fun (l,i) ->
-                          match $2 with
-                            Some pty ->
-                            l, i, Some pty
-                                  | _ -> l, i, None) $1 }
+| binder_var+ cast?
+                {
+                  List.map
+                    (fun (l,i) ->
+                      match $2 with
+                      | Some pty -> l, i, Some pty
+                      | _ -> l, i, None)
+                  $1
+                }
 
 triggers:
 | (* epsilon *)                                                 { [] }

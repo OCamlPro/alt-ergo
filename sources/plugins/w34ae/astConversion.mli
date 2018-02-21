@@ -13,7 +13,6 @@ val translate_quant :
 val translate_binop :
   Why3_ptree.binop -> Loc.t -> Parsed.lexpr -> Parsed.lexpr -> Parsed.lexpr
 val translate_tuple : Parsed.lexpr list -> Loc.t -> Parsed.lexpr
-(*val translate_pty : Why3_ptree.pty -> Parsed.ppure_type*)
 val translate_binder :
   Why3_ptree.binder -> string * string * Parsed.ppure_type
 val translate_innfix_ident :
@@ -24,5 +23,3 @@ val translate_qualid : Why3_ptree.qualid -> Parsed.lexpr
 val translate_apply : Parsed.lexpr -> Parsed.lexpr -> Loc.t -> Parsed.lexpr
 val translate_idapp :
   Why3_ptree.qualid -> Parsed.lexpr list -> Loc.t -> Parsed.lexpr
-val translate_term : Why3_ptree.term -> Parsed.lexpr
-

@@ -31,13 +31,9 @@ type binop = Tand | Tand_asym | Tor | Tor_asym | Timplies | Tiff | Tby | Tso
 type unop = Tnot
 type ident = { id_str : string; id_lab : label list; id_loc : loc; }
 type qualid = Qident of ident | Qdot of qualid * ident
-type opacity = bool
 type pty = Parsed.ppure_type
-   (* PTtyvar of ident * opacity
-  | PTtyapp of qualid * pty list
-  | PTtuple of pty list
-  | PTarrow of pty * pty
-  | PTparen of pty*)
+
+             
 type ghost = bool
 type binder = loc * ident option * Parsed.ppure_type option
 type param = loc * ident option * Parsed.ppure_type 
@@ -51,27 +47,7 @@ and pat_desc =
   | Por of pattern * pattern
   | Pas of pattern * ident
   | Pcast of pattern * pty
-type term = { term_desc : term_desc; term_loc : loc; }
-and term_desc =
-    Ttrue
-  | Tfalse
-  | Tconst of constant
-  | Tident of qualid
-  | Tidapp of qualid * term list
-  | Tapply of term * term
-  | Tinfix of term * ident * term
-  | Tinnfix of term * ident * term
-  | Tbinop of term * binop * term
-  | Tunop of unop * term
-  | Tif of term * term * term
-  | Tquant of quant * binder list * term list list * term
-  | Tnamed of label * term
-  | Tlet of ident * term * term
-  | Tmatch of term * (pattern * term) list
-  | Tcast of term * pty
-  | Ttuple of term list
-  | Trecord of (qualid * term) list
-  | Tupdate of term * (qualid * term) list
+type term =  Parsed.lexpr 
 type use = { use_theory : qualid; use_import : (bool * string) option; }
 type clone_subst =
     CSns of loc * qualid option * qualid option
