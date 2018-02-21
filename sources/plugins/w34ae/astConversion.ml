@@ -16,10 +16,6 @@ open Parsed_interface
 open Why3_ptree
 open Why3_number
 
-type decls = (Why3_ptree.decl option * Why3_loc.position) list
-type theory = (Why3_ptree.ident * decls )
-type ast = theory list
-
 let get_infix_ident i =
   List.hd (List.rev (String.split_on_char ' ' i.id_str))
 
@@ -178,5 +174,3 @@ let rec translate_term (t : Why3_ptree.term) : Parsed.lexpr  =
   | Ttuple tl -> translate_tuple (translate_term_list tl) loc
   | Trecord _ -> Format.eprintf "TODO@."; assert false
   | Tupdate (_, _) -> Format.eprintf "TODO@."; assert false
-
-                                                 

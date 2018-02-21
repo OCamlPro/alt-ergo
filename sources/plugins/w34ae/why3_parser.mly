@@ -72,15 +72,9 @@ open Parsed_interface
 
   let mk_id id s e = { id_str = id; id_lab = []; id_loc = floc s e }
 
-  (*let get_op s e = Qident (mk_id (mixfix "[]") s e)
-  let set_op s e = Qident (mk_id (mixfix "[<-]") s e)
-  let sub_op s e = Qident (mk_id (mixfix "[_.._]") s e)
-  let above_op s e = Qident (mk_id (mixfix "[_..]") s e)
-  let below_op s e = Qident (mk_id (mixfix "[.._]") s e)*)
-
   let mk_pat  d s e = { pat_desc  = d; pat_loc  = floc s e }
   let mk_term d s e = { term_desc = d; term_loc = floc s e }
-  let mk_expr d s e = { expr_desc = d; expr_loc = floc s e }
+  (*let mk_expr d s e = { expr_desc = d; expr_loc = floc s e }*)
 
   let small_integer i =
     try match i with
@@ -287,13 +281,13 @@ decl:
 | META sident comma_list1(meta_arg)         { Format.eprintf "TODO@."; assert false }
 
 meta_arg:
-| TYPE      ty      { Mty $2 }
-| CONSTANT  qualid  { Mfs $2 }
-| FUNCTION  qualid  { Mfs $2 }
-| PREDICATE qualid  { Mps $2 }
-| PROP      qualid  { Mpr $2 }
-| STRING            { Mstr $1 }
-| INTEGER           { Mint (small_integer $1) }
+| TYPE      ty      { Format.eprintf "TODO@."; assert false }
+| CONSTANT  qualid  { Format.eprintf "TODO@."; assert false }
+| FUNCTION  qualid  { Format.eprintf "TODO@."; assert false }
+| PREDICATE qualid  { Format.eprintf "TODO@."; assert false }
+| PROP      qualid  { Format.eprintf "TODO@."; assert false }
+| STRING            { Format.eprintf "TODO@."; assert false }
+| INTEGER           { Format.eprintf "TODO@."; assert false }
 
 (* Type declarations *)
 
@@ -336,8 +330,7 @@ abstract:
 
 type_field:
 | field_modifiers labels(lident_nq) cast
-  { { f_ident = $2; f_mutable = fst $1; f_ghost = snd $1;
-      f_pty = $3; f_loc = floc $startpos $endpos } }
+  { Format.eprintf "TODO@."; assert false }
 
 field_modifiers:
 | (* epsilon *) { false, false }
@@ -413,9 +406,7 @@ with_logic_decl:
 
 inductive_decl:
 | labels(lident_rich) params ind_defn
-    { Format.eprintf "TODO@."; assert false
-      (*{ in_ident = $1; in_params = $2;
-      in_def = $3; in_loc = floc $startpos $endpos }*) }
+    { Format.eprintf "TODO@."; assert false }
 
 ind_defn:
 | (* epsilon *)             { [] }
@@ -675,252 +666,15 @@ numeral:
 
 (* Program declarations *)
 
-
 top_ghost:
 | (* epsilon *) { Gnone  }
 | GHOST         { Gghost }
 | LEMMA         { Glemma }
-
-(* Function declarations *)
-
-(*type_v:
-| arrow_type_v  { $1 }
-| cast          { PTpure $1 }
-
-arrow_type_v:
-| param params tail_type_c  { PTfunc ($1 @ $2, $3) }
-
-tail_type_c:
-| single_spec spec arrow_type_v { $3, spec_union $1 $2 }
-| COLON simple_type_c           { $2 }
- 
-simple_type_c:
-| ty spec { PTpure $1, $2 }
- *)
-(* Function definitions *)
-(*
-rec_defn:
-| top_ghost labels(lident_rich) binders cast? spec EQUAL spec seq_expr
-    { $2, $1, ($3, $4, $8, spec_union $5 $7) }
-
-fun_defn:
-| binders cast? spec EQUAL spec seq_expr { ($1, $2, $6, spec_union $3 $5) }
-
-fun_expr:
-| FUN binders spec ARROW spec seq_expr { ($2, None, $6, spec_union $3 $5) }
- *)
-(* Program expressions *)
-(*
-mk_expr(X): d = X { mk_expr d $startpos $endpos }
-
-seq_expr:
-| expr %prec below_SEMI   { $1 }
-| expr SEMICOLON          { $1 }
-| expr SEMICOLON seq_expr { mk_expr (Esequence ($1, $3)) $startpos $endpos }
-
-expr: e = mk_expr(expr_) { e }
-
-expr_:
-| expr_arg_
-    { match $1 with (* break the infix relation chain *)
-      | Einfix (l,o,r) -> Einnfix (l,o,r) | d -> d }
-| NOT expr %prec prec_prefix_op
-    { Enot $2 }
-| prefix_op expr %prec prec_prefix_op
-    { Eidapp (Qident $1, [$2]) }
-| l = expr ; o = lazy_op ; r = expr
-    { Elazy (l,o,r) }
-| l = expr ; o = infix_op ; r = expr
-    { Einfix (l,o,r) }
-| expr_arg located(expr_arg)+ (* FIXME/TODO: "expr expr_arg" *)
-    { let join f (a,_,e) = mk_expr (Eapply (f,a)) $startpos e in
-      (List.fold_left join $1 $2).expr_desc }
-| IF seq_expr THEN expr ELSE expr
-    { Eif ($2, $4, $6) }
-| IF seq_expr THEN expr %prec prec_no_else
-    { Eif ($2, $4, mk_expr (Etuple []) $startpos $endpos) }
-| expr LARROW expr
-    { match $1.expr_desc with
-      | Eidapp (q, [e1]) -> Eassign (e1, q, $3)
-      | Eidapp (Qident id, [e1;e2]) when id.id_str = mixfix "[]" ->
-          Eidapp (Qident {id with id_str = mixfix "[]<-"}, [e1;e2;$3])
-      | _ -> raise Error }
-| LET top_ghost pattern EQUAL seq_expr IN seq_expr
-    { match $3.pat_desc with
-      | Pvar id -> Elet (id, $2, $5, $7)
-      | Pwild -> Elet (id_anonymous $3.pat_loc, $2, $5, $7)
-      | Ptuple [] -> Elet (id_anonymous $3.pat_loc, $2,
-          { $5 with expr_desc = Ecast ($5, PTtuple []) }, $7)
-      | Pcast ({pat_desc = Pvar id}, ty) ->
-          Elet (id, $2, { $5 with expr_desc = Ecast ($5, ty) }, $7)
-      | Pcast ({pat_desc = Pwild}, ty) ->
-          let id = id_anonymous $3.pat_loc in
-          Elet (id, $2, { $5 with expr_desc = Ecast ($5, ty) }, $7)
-      | _ ->
-          let e = match $2 with
-            | Glemma -> Why3_loc.errorm ~loc:($3.pat_loc)
-                "`let lemma' cannot be used with complex patterns"
-            | Gghost -> { $5 with expr_desc = Eghost $5 }
-            | Gnone -> $5 in
-          Ematch (e, [$3, $7]) }
-| LET top_ghost labels(lident_op_id) EQUAL seq_expr IN seq_expr
-    { Elet ($3, $2, $5, $7) }
-| LET top_ghost labels(lident_nq) fun_defn IN seq_expr
-    { Efun ($3, $2, $4, $6) }
-| LET top_ghost labels(lident_op_id) fun_defn IN seq_expr
-    { Efun ($3, $2, $4, $6) }
-| LET REC with_list1(rec_defn) IN seq_expr
-    { Erec ($3, $5) }
-| fun_expr
-    { Elam $1 }
-| VAL top_ghost labels(lident_rich) mk_expr(val_expr) IN seq_expr
-    { Elet ($3, $2, $4, $6) }
-| MATCH seq_expr WITH match_cases(seq_expr) END
-    { Ematch ($2, $4) }
-| MATCH comma_list2(expr) WITH match_cases(seq_expr) END
-    { Ematch (mk_expr (Etuple $2) $startpos($2) $endpos($2), $4) }
-| quote_uident COLON seq_expr
-    { Emark ($1, $3) }
-| LOOP loop_annotation seq_expr END
-    { Eloop ($2, $3) }
-| WHILE seq_expr DO loop_annotation seq_expr DONE
-    { Ewhile ($2, $4, $5) }
-| FOR lident EQUAL seq_expr for_direction seq_expr DO invariant* seq_expr DONE
-    { Efor ($2, $4, $5, $6, $8, $9) }
-| ABSURD
-    { Eabsurd }
-| RAISE uqualid
-    { Eraise ($2, None) }
-| RAISE LEFTPAR uqualid seq_expr RIGHTPAR
-    { Eraise ($3, Some $4) }
-| TRY seq_expr WITH bar_list1(exn_handler) END
-    { Etry ($2, $4) }
-| ANY simple_type_c
-    { Eany $2 }
-| GHOST expr
-    { Eghost $2 }
-| ABSTRACT spec seq_expr END
-    { Eabstract($3, $2) }
-| assertion_kind LEFTBRC term RIGHTBRC
-    { Eassert ($1, $3) }
-| label expr %prec prec_named
-    { Enamed ($1, $2) }
-| expr cast
-    { Ecast ($1, $2) }
-
-expr_arg: e = mk_expr(expr_arg_) { e }
-expr_dot: e = mk_expr(expr_dot_) { e }
-
-expr_arg_:
-| qualid                    { Eident $1 }
-| numeral                   { Econst $1 }
-| TRUE                      { Etrue }
-| FALSE                     { Efalse }
-| o = oppref ; a = expr_arg { Eidapp (Qident o, [a]) }
-| expr_sub                  { $1 }
-
-expr_dot_:
-| lqualid                   { Eident $1 }
-| o = oppref ; a = expr_dot { Eidapp (Qident o, [a]) }
-| expr_sub                  { $1 }
-
-expr_sub:
-| expr_dot DOT lqualid_rich                         { Eidapp ($3, [$1]) }
-| BEGIN seq_expr END                                { $2.expr_desc }
-| LEFTPAR seq_expr RIGHTPAR                         { $2.expr_desc }
-| BEGIN END                                         { Etuple [] }
-| LEFTPAR RIGHTPAR                                  { Etuple [] }
-| LEFTPAR comma_list2(expr) RIGHTPAR                { Etuple $2 }
-| LEFTBRC field_list1(expr) RIGHTBRC                { Erecord $2 }
-| LEFTBRC expr_arg WITH field_list1(expr) RIGHTBRC  { Eupdate ($2, $4) }
-| expr_arg LEFTSQ expr RIGHTSQ
-    { Eidapp (get_op $startpos($2) $endpos($2), [$1;$3]) }
-| expr_arg LEFTSQ expr LARROW expr RIGHTSQ
-    { Eidapp (set_op $startpos($2) $endpos($2), [$1;$3;$5]) }
-| expr_arg LEFTSQ expr DOTDOT expr RIGHTSQ
-    { Eidapp (sub_op $startpos($2) $endpos($2), [$1;$3;$5]) }
-| expr_arg LEFTSQ expr DOTDOT RIGHTSQ
-    { Eidapp (above_op $startpos($2) $endpos($2), [$1;$3]) }
-| expr_arg LEFTSQ DOTDOT expr RIGHTSQ
-    { Eidapp (below_op $startpos($2) $endpos($2), [$1;$4]) }
-
-loop_annotation:
-| (* epsilon *)
-    { { loop_invariant = []; loop_variant = [] } }
-| invariant loop_annotation
-    { let a = $2 in { a with loop_invariant = $1 :: a.loop_invariant } }
-| variant loop_annotation
-    { let a = $2 in { a with loop_variant = variant_union $1 a.loop_variant } }
-
-exn_handler:
-| uqualid pat_arg? ARROW seq_expr { $1, $2, $4 }
-
-val_expr:
-| tail_type_c { Eany $1 }
-
-%inline lazy_op:
-| AMPAMP  { LazyAnd }
-| BARBAR  { LazyOr }
-
-assertion_kind:
-| ASSERT  { Aassert }
-| ASSUME  { Aassume }
-| CHECK   { Acheck }
-
-for_direction:
-| TO      { To }
-| DOWNTO  { Downto }
- *)
-(* Specification *)
-(*
-spec:
-| (* epsilon *)     { empty_spec }
-| single_spec spec  { spec_union $1 $2 }
-
-single_spec:
-| REQUIRES LEFTBRC term RIGHTBRC
-    { { empty_spec with sp_pre = [$3] } }
-| ENSURES LEFTBRC ensures RIGHTBRC
-    { { empty_spec with sp_post = [floc $startpos($3) $endpos($3), $3] } }
-| RETURNS LEFTBRC match_cases(term) RIGHTBRC
-    { { empty_spec with sp_post = [floc $startpos($3) $endpos($3), $3] } }
-| RAISES LEFTBRC bar_list1(raises) RIGHTBRC
-    { { empty_spec with sp_xpost = [floc $startpos($3) $endpos($3), $3] } }
-| READS  LEFTBRC comma_list0(lqualid) RIGHTBRC
-    { { empty_spec with sp_reads = $3; sp_checkrw = true } }
-| WRITES LEFTBRC comma_list0(term) RIGHTBRC
-    { { empty_spec with sp_writes = $3; sp_checkrw = true } }
-| RAISES LEFTBRC comma_list1(xsymbol) RIGHTBRC
-    { { empty_spec with sp_xpost = [floc $startpos($3) $endpos($3), $3] } }
-| DIVERGES
-    { { empty_spec with sp_diverge = true } }
-| variant
-    { { empty_spec with sp_variant = $1 } }
-
-ensures:
-| term
-    { let id = mk_id "result" $startpos $endpos in
-      [mk_pat (Pvar id) $startpos $endpos, $1] }
-
-raises:
-| uqualid ARROW term
-    { $1, mk_pat (Ptuple []) $startpos($1) $endpos($1), $3 }
-| uqualid pat_arg ARROW term
-    { $1, $2, $4 }
-
-xsymbol:
-| uqualid
-    { $1, mk_pat Pwild $startpos $endpos, mk_term Ttrue $startpos $endpos }
- *)
+    
 invariant:
 | INVARIANT LEFTBRC term RIGHTBRC { $3 }
-(*
-variant:
-| VARIANT LEFTBRC comma_list1(single_variant) RIGHTBRC { $3 }
 
-single_variant:
-| term preceded(WITH,lqualid)? { $1, $2 }
- *)
+    
 (* Patterns *)
 
 mk_pat(X): X { mk_pat $1 $startpos $endpos }

@@ -1,6 +1,5 @@
-type decls = (Why3_ptree.decl option * Why3_loc.position) list
-type theory = Why3_ptree.ident * decls
-type ast = theory list
+
+
 val get_infix_ident : Why3_ptree.ident -> string
 val str_of_label : Why3_ptree.label -> string
 val str_of_labs : Why3_ptree.label list -> string
