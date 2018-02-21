@@ -29,18 +29,7 @@ let str_of_labs labs =
 let dummy_loc = Why3_loc.dummy_position
 
 (* TRANSLATORS  *)
-let translate_quant quant =
-    match quant with
-    | Tforall -> mk_forall
-    | Texists -> mk_exists
-    | _ -> Format.eprintf "TODO@."; assert false
-    
-let translate_binop = function
-  | Tand -> mk_and
-  | Tor -> mk_or
-  | Timplies -> mk_implies
-  | Tiff -> mk_iff
-  | _ -> Format.eprintf "TODO@."; assert false
+   
 
 let translate_tuple exp_list loc =
   let length = string_of_int (List.length exp_list) in
@@ -54,12 +43,6 @@ let translate_tuple exp_list loc =
   in
   let str_exp_list = trad exp_list 1 in
   mk_record loc str_exp_list
-
-
-let translate_binder (b : Why3_ptree.binder) : string * string * Parsed.ppure_type  =
-  match b with
-  | (_, Some i, Some pty) -> (i.id_str, "", pty)
-  | _ -> Format.eprintf "TODO@."; assert false
 
 let translate_innfix_ident i loc t1 t2=
   let inf_id_str = get_infix_ident i in
@@ -89,17 +72,7 @@ let translate_qualid = function
   | Qident { id_str = "False"; id_loc} -> mk_false_const id_loc
   | Qident { id_str; id_loc} -> mk_var id_loc id_str                 
   | Qdot (q, i) -> (* ignore module prefix, functions in prelude *)
-     mk_var i.id_loc i.id_str
-
-let translate_apply {pp_loc; pp_desc} tradt1 loc =
-  match pp_desc with
-  | PPvar "singleton" ->
-     let empty = mk_application loc "empty" [] in
-     mk_application loc "add" [tradt1; empty]
-  | PPvar s ->  mk_application loc s [tradt1]                             
-  | PPapp (s, ll) -> mk_application loc s (ll @ [tradt1])                                    
-  | _ ->  Format.eprintf "TODO@."; assert false
-                                          
+     mk_var i.id_loc i.id_str                                      
 
 let translate_idapp q [le] loc =
   match q  with

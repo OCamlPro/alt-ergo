@@ -26,15 +26,12 @@ type real_constant = Why3_number.real_constant
 type constant = Why3_number.constant
 type w3idlabel = { lab_string : string }                  
 type label = Lstr of w3idlabel | Lpos of Why3_loc.position
-type quant = Tforall | Texists | Tlambda
-type binop = Tand | Tand_asym | Tor | Tor_asym | Timplies | Tiff | Tby | Tso
-type unop = Tnot
+
+
 type ident = { id_str : string; id_lab : label list; id_loc : loc; }
 type qualid = Qident of ident | Qdot of qualid * ident
 type pty = Parsed.ppure_type
 
-             
-type ghost = bool
 type binder = loc * ident option * Parsed.ppure_type option
 type param = loc * ident option * Parsed.ppure_type 
 type pattern = { pat_desc : pat_desc; pat_loc : loc; }

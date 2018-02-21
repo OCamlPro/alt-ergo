@@ -34,15 +34,6 @@ type label =
   | Lstr of w3idlabel
   | Lpos of Why3_loc.position
 
-type quant =
-  | Tforall | Texists | Tlambda
-
-type binop =
-  | Tand | Tand_asym | Tor | Tor_asym | Timplies | Tiff | Tby | Tso
-
-type unop =
-  | Tnot
-
 type ident = {
   id_str : string;
   id_lab : label list;
@@ -54,8 +45,6 @@ type qualid =
   | Qdot of qualid * ident
 
 type pty = Parsed.ppure_type
-
-type ghost = bool
 
 type binder = loc * ident option * Parsed.ppure_type option
 type param  = loc * ident option * Parsed.ppure_type

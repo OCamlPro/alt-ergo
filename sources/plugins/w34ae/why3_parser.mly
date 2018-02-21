@@ -142,8 +142,13 @@ open Parsed_interface
     | { pp_desc = Parsed.PPapp ("range_substraction", le) } ->
        mk_application loc "infix_brgtgt" (le @ [a])
     | { pp_desc = Parsed.PPapp ("range_restriction", le) } ->
-       mk_application loc "infix_brgt" (le @ [a])                  
-    | _ -> AstConversion.translate_apply f a loc           
+       mk_application loc "infix_brgt" (le @ [a])
+    | { pp_desc = PPvar "singleton" } ->
+       let empty = mk_application loc "empty" [] in
+       mk_application loc "add" [a; empty]
+    | { pp_desc = PPvar s } -> mk_application loc s [a]
+    | { pp_desc = PPapp (s, l) } -> mk_application loc s (l @ [a])
+    | _ ->  Format.eprintf "TODO@."; assert false          
 
 %}
 
@@ -548,7 +553,7 @@ term_:
 | prefix_op term %prec prec_prefix_op
     { AstConversion.translate_idapp (Qident $1) [$2] (floc $startpos $endpos) }
 | l = term ; o = bin_op ; r = term
-    { AstConversion.translate_binop o (floc $startpos $endpos) l r }
+    { o (floc $startpos $endpos) l r }
 | l = term ; o = infix_op ; r = term
     { AstConversion.translate_infix_ident o (floc $startpos $endpos) l r }
 | term_arg located(term_arg)+ (* FIXME/TODO: "term term_arg" *)
@@ -576,16 +581,11 @@ term_:
       | _ -> Format.eprintf "TODO@."; assert false  }
 | quant comma_list1(quant_vars) triggers DOT term
     {
-      let qua =
-      match $1 with
-      | Tforall -> mk_forall 
-      | Texists -> mk_exists
-      | _ -> Format.eprintf "TODO@."; assert false in
       let vs_ty =
-        List.map AstConversion.translate_binder (List.concat $2) in
+        List.map (fun (_, Some i, Some pty) -> (i.id_str, "", pty)) (List.concat $2) in
       let triggers =
         List.map (fun tl -> (tl, true)) $3 in
-      qua (floc $startpos $endpos) vs_ty triggers [] $5
+      $1 (floc $startpos $endpos) vs_ty triggers [] $5
     }
 | EPSILON
     { Why3_loc.errorm "Epsilon terms are currently not supported in WhyML" }
@@ -654,19 +654,14 @@ triggers:
 | LEFTSQ separated_nonempty_list(BAR,comma_list1(term)) RIGHTSQ { $2 }
 
 %inline bin_op:
-| ARROW   { Timplies }
-| LRARROW { Tiff }
-| OR      { Tor }
-| BARBAR  { Tor_asym }
-| AND     { Tand }
-| AMPAMP  { Tand_asym }
-| BY      { Tby }
-| SO      { Tso }
+| ARROW   { mk_implies }
+| LRARROW { mk_iff }
+| OR      { mk_or }
+| AND     { mk_and }
 
 quant:
-| FORALL  { Tforall }
-| EXISTS  { Texists }
-| LAMBDA  { Tlambda }
+| FORALL  { mk_forall }
+| EXISTS  { mk_exists }
 
 numeral:
 | INTEGER { Why3_number.ConstInt $1 }
