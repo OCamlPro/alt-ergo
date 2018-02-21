@@ -73,11 +73,3 @@ let translate_qualid = function
   | Qident { id_str; id_loc} -> mk_var id_loc id_str                 
   | Qdot (q, i) -> (* ignore module prefix, functions in prelude *)
      mk_var i.id_loc i.id_str                                      
-
-let translate_idapp q [le] loc =
-  match q  with
-  | Qident {id_str = "prefix -"} ->
-     mk_minus loc le
-  | Qident {id_str = "infix -"} ->
-     mk_minus loc le
-  | _  -> Format.eprintf "TODO@."; assert false

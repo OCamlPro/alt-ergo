@@ -551,7 +551,12 @@ term_:
 | NOT term
     { mk_not (floc $startpos $endpos) $2 }
 | prefix_op term %prec prec_prefix_op
-    { AstConversion.translate_idapp (Qident $1) [$2] (floc $startpos $endpos) }
+                    { match $1 with
+                      | {id_str = "prefix -"}
+                      | {id_str = "infix -"} ->
+                         mk_minus (floc $startpos $endpos) $2
+                      | _ -> Format.eprintf "TODO@."; assert false
+                    }                    
 | l = term ; o = bin_op ; r = term
     { o (floc $startpos $endpos) l r }
 | l = term ; o = infix_op ; r = term
@@ -612,19 +617,34 @@ term_arg_:
 | quote_uident
     { AstConversion.translate_qualid (Qident $1) }
 | o = oppref ; a = term_arg
-    { AstConversion.translate_idapp (Qident o) [a] (floc $startpos $endpos) }
+                     { match o with                         
+                      | {id_str = "prefix -"}
+                      | {id_str = "infix -"} ->
+                         mk_minus (floc $startpos $endpos) a
+                      | _ -> Format.eprintf "TODO@."; assert false
+                    }     
 | term_sub_                 { $1 }
 
 term_dot_:
   | lqualid
       { AstConversion.translate_qualid $1 }
   | o = oppref ; a = term_dot
-      { AstConversion.translate_idapp (Qident o) [a] (floc $startpos $endpos) }
+                       { match o with                           
+                      | {id_str = "prefix -"}
+                      | {id_str = "infix -"} ->
+                         mk_minus (floc $startpos $endpos) a
+                      | _ -> Format.eprintf "TODO@."; assert false
+                    }     
 | term_sub_ { $1 }
 
 term_sub_:
   | term_dot DOT lqualid_rich
-      { AstConversion.translate_idapp $3 [$1] (floc $startpos $endpos) }
+        { match $3 with                           
+                      | Qident {id_str = "prefix -"}
+                      | Qident {id_str = "infix -"} ->
+                         mk_minus (floc $startpos $endpos) $1
+                      | _ -> Format.eprintf "TODO@."; assert false
+                    }    
 | LEFTPAR term RIGHTPAR                             { $2 }
 | LEFTPAR RIGHTPAR
     { AstConversion.translate_tuple [] (floc $startpos $endpos) }

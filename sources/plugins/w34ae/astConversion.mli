@@ -12,5 +12,4 @@ val translate_innfix_ident :
 val translate_infix_ident :
   Why3_ptree.ident -> Loc.t -> Parsed.lexpr -> Parsed.lexpr -> Parsed.lexpr
 val translate_qualid : Why3_ptree.qualid -> Parsed.lexpr
-val translate_idapp :
-  Why3_ptree.qualid -> Parsed.lexpr list -> Loc.t -> Parsed.lexpr
+
