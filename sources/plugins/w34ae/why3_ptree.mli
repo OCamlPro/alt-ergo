@@ -32,12 +32,12 @@ type unop = Tnot
 type ident = { id_str : string; id_lab : label list; id_loc : loc; }
 type qualid = Qident of ident | Qdot of qualid * ident
 type opacity = bool
-type pty =
-    PTtyvar of ident * opacity
+type pty = Parsed.ppure_type
+   (* PTtyvar of ident * opacity
   | PTtyapp of qualid * pty list
   | PTtuple of pty list
   | PTarrow of pty * pty
-  | PTparen of pty
+  | PTparen of pty*)
 type ghost = bool
 type binder = loc * ident option * Parsed.ppure_type option
 type param = loc * ident option * Parsed.ppure_type 

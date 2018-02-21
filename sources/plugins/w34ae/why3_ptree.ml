@@ -55,12 +55,12 @@ type qualid =
 
 type opacity = bool
 
-type pty =
-  | PTtyvar of ident * opacity
+type pty = Parsed.ppure_type
+  (*| PTtyvar of ident * opacity
   | PTtyapp of qualid * pty list
   | PTtuple of pty list
   | PTarrow of pty * pty
-  | PTparen of pty
+  | PTparen of pty*)
 
 type ghost = bool
 

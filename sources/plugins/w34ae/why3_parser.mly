@@ -115,6 +115,21 @@ open Parsed_interface
       mk_logic_type ppure_type_list pptyop in
     mk_logic loc Symbols.Other ssl logic_type
 
+  let mk_tuple pl loc =
+    let length =  string_of_int (List.length pl) in
+    let name = "tuple" ^ length in 
+    mk_external_type loc pl name
+
+  let mk_tyapp q pl =
+    match q with
+    | Qident {id_str = "int"} -> int_type
+    | Qident {id_str = "bool"} -> bool_type
+    | Qident {id_str = "real"} -> real_type
+    | Qident {id_str; id_loc} ->
+       mk_external_type id_loc pl id_str
+    | _ -> Format.eprintf "TODO@."; assert false
+           
+
 %}
 
 (* Tokens *)
@@ -352,9 +367,9 @@ constant_decl:
         (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
       match $3 with
       | None ->
-         mak_logic loc [named_ident] (Some (AstConversion.translate_pty $2)) []   
+         mak_logic loc [named_ident] (Some $2) []   
       | Some t ->
-         mk_function t (AstConversion.translate_pty $2) loc named_ident []
+         mk_function t $2 loc named_ident []
     }
 
 function_decl:
@@ -365,9 +380,9 @@ function_decl:
         (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
       match $4 with
       | None ->
-         mak_logic loc [named_ident] (Some (AstConversion.translate_pty $3)) $2
+         mak_logic loc [named_ident] (Some $3) $2
       | Some t ->
-         mk_function t (AstConversion.translate_pty $3) loc
+         mk_function t $3 loc
            named_ident $2
     }
 
@@ -396,9 +411,9 @@ with_logic_decl:
       | None, Some t ->
          mk_pred t $3 loc named_ident
       | Some t, None ->
-         mak_logic loc [named_ident] (Some (AstConversion.translate_pty t)) $3 
+         mak_logic loc [named_ident] (Some t) $3 
       | Some t0, Some t1 ->
-         mk_function t1 (AstConversion.translate_pty t0) loc
+         mk_function t1 t0 loc
            named_ident $3
     }
 
@@ -420,16 +435,19 @@ ind_case:
 
 ty:
 | ty_arg          { $1 }
-| lqualid ty_arg+ { PTtyapp ($1, $2) }
+| lqualid ty_arg+ { mk_tyapp $1 $2 }
 | ty ARROW ty     { Format.eprintf "TODO@."; assert false     (*PTarrow ($1, $3)*) }
 
 ty_arg:
-| lqualid                           { PTtyapp ($1, []) }
-| quote_lident                      { PTtyvar ($1, false) }
-| opaque_quote_lident               { PTtyvar ($1, true) }
-| LEFTPAR comma_list2(ty) RIGHTPAR  { PTtuple $2 }
-| LEFTPAR RIGHTPAR                  { PTtuple [] }
-| LEFTPAR ty RIGHTPAR               { PTparen $2 }
+| lqualid                           { mk_tyapp $1 [] }
+| quote_lident
+    { Format.eprintf "TODO@."; assert false  (*PTtyvar ($1, false)*) }
+| opaque_quote_lident
+    { Format.eprintf "TODO@."; assert false  (*PTtyvar ($1, true)*) }
+| LEFTPAR comma_list2(ty) RIGHTPAR  { mk_tuple $2 (floc $startpos $endpos) }
+| LEFTPAR RIGHTPAR
+    { mk_tuple [] (floc $startpos $endpos) }
+| LEFTPAR ty RIGHTPAR               { $2 }
 
 cast:
 | COLON ty  { $2 }
@@ -450,14 +468,11 @@ param:
 | anon_binder
     { error_param (floc $startpos $endpos) }
 | ty_arg
-    { [ (floc $startpos $endpos, None, AstConversion.translate_pty $1)] }
+    { [ floc $startpos $endpos, None, $1] }
 | LEFTPAR GHOST ty RIGHTPAR
-    { [ (floc $startpos $endpos, None, AstConversion.translate_pty $3)] }
+    { [ floc $startpos $endpos, None, $3] }
 | ty_arg label label*
-    { match $1 with
-      | PTtyapp (Qident _, []) ->
-             error_param (floc $startpos $endpos)
-      | _ -> error_loc (floc $startpos($2) $endpos($2)) }
+    { error_loc (floc $startpos $endpos) }
 | LEFTPAR binder_vars_rest RIGHTPAR
     { match $2 with [l,_] -> error_param l
       | _ -> error_loc (floc $startpos($3) $endpos($3)) }
@@ -465,31 +480,24 @@ param:
     { match $3 with [l,_] -> error_param l
       | _ -> error_loc (floc $startpos($4) $endpos($4)) }
 | LEFTPAR binder_vars cast RIGHTPAR
-    { List.map (fun (l,i) ->  (l, i, AstConversion.translate_pty $3)) $2 }
+    { List.map (fun (l,i) ->  (l, i, $3)) $2 }
 | LEFTPAR GHOST binder_vars cast RIGHTPAR
-    { List.map (fun (l,i) ->  (l, i, AstConversion.translate_pty $4)) $3 }
+    { List.map (fun (l,i) ->  (l, i, $4)) $3 }
 
 binder:
 | anon_binder
     { error_param (floc $startpos $endpos) }
 | ty_arg
     { match $1 with
-      | PTtyapp (Qident id, [])
-      | PTparen (PTtyapp (Qident id, [])) ->
-             [floc $startpos $endpos, Some id, None]
-      | _ -> [floc $startpos $endpos, None,
-              Some (AstConversion.translate_pty $1)] }
+      | [floc $startpos $endpos, None, Some $1] }
 | LEFTPAR GHOST ty RIGHTPAR
-    { match $3 with
-      | PTtyapp (Qident id, []) ->
-             [floc $startpos $endpos, Some id, None]
-      | _ -> [floc $startpos $endpos, None,
-              Some (AstConversion.translate_pty $3)] }
+    { [floc $startpos $endpos, None, Some $3] }
 | ty_arg label label*
     { match $1 with
-      | PTtyapp (Qident id, []) ->
-             let id = add_lab id ($2::$3) in
-             [floc $startpos $endpos, Some id, None]
+      |  PPTint | PPTbool  PPTreal | PPTunit
+         | PPTbitv _
+         | PPTvarid (_,_) | PPTexternal (_, _,_)
+         -> [floc $startpos $endpos, None, None]              
       | _ -> error_loc (floc $startpos($2) $endpos($2)) }
 | LEFTPAR binder_vars_rest RIGHTPAR
     { match $2 with [l,i] -> [l, i, false, None]
@@ -498,9 +506,9 @@ binder:
     { match $3 with [l,i] -> [l, i, true, None]
       | _ -> error_loc (floc $startpos($4) $endpos($4)) }
 | LEFTPAR binder_vars cast RIGHTPAR
-    { List.map (fun (l,i) -> l, i, Some (AstConversion.translate_pty $3)) $2 }
+    { List.map (fun (l,i) -> l, i, Some $3) $2 }
 | LEFTPAR GHOST binder_vars cast RIGHTPAR
-    { List.map (fun (l,i) -> l, i, Some (AstConversion.translate_pty $4)) $3 }
+    { List.map (fun (l,i) -> l, i, Some $4) $3 }
 
 binder_vars:
 | binder_vars_head  { List.rev $1 }
@@ -522,10 +530,11 @@ binder_vars_head:
 | ty {
     let of_id id = id.id_loc, Some id in
     let push acc = function
-      | PTtyapp (Qident id, []) -> of_id id :: acc
+      | Parsed.PPTexternal ([], s, _)
+        -> (of_id (mk_id s $startpos $endpos)):: acc
       | _ -> Why3_loc.error ~loc:(floc $startpos $endpos) Error in
     match $1 with
-      | PTtyapp (Qident id, l) -> List.fold_left push [of_id id] l
+      | Parsed.PPTexternal (l, s, _) -> List.fold_left push [of_id (mk_id s $startpos $endpos)] l
       | _ -> Why3_loc.error ~loc:(floc $startpos $endpos) Error }
 
 binder_var:
@@ -564,7 +573,7 @@ term_:
       | Pvar id -> Tlet (id, $4, $6)
       | Pwild -> Tlet (id_anonymous $2.pat_loc, $4, $6)
       | Ptuple [] -> Tlet (id_anonymous $2.pat_loc,
-          { $4 with term_desc = Tcast ($4, PTtuple []) }, $6)
+          { $4 with term_desc = Tcast ($4, mk_tuple [] (floc $startpos $endpos)) }, $6)
       | Pcast ({pat_desc = Pvar id}, ty) ->
           Tlet (id, { $4 with term_desc = Tcast ($4, ty) }, $6)
       | Pcast ({pat_desc = Pwild}, ty) ->
@@ -638,7 +647,7 @@ quant_vars:
 | binder_var+ cast? { List.map (fun (l,i) ->
                           match $2 with
                             Some pty ->
-                            l, i, Some (AstConversion.translate_pty pty)
+                            l, i, Some pty
                                   | _ -> l, i, None) $1 }
 
 triggers:

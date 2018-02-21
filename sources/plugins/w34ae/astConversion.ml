@@ -54,7 +54,7 @@ let translate_tuple exp_list loc =
   in
   let str_exp_list = trad exp_list 1 in
   mk_record loc str_exp_list
-
+(*
 let rec translate_pty =
   let translate_pty_list l = List.map translate_pty l in
   function
@@ -71,7 +71,7 @@ let rec translate_pty =
      mk_external_type loc ptyl name
   | PTparen pty  -> translate_pty pty
   | _ ->  Format.eprintf "TODO@."; assert false                     
-
+ *)
 
 let translate_binder (b : Why3_ptree.binder) : string * string * Parsed.ppure_type  =
   match b with
@@ -170,7 +170,7 @@ let rec translate_term (t : Why3_ptree.term) : Parsed.lexpr  =
   | Tnamed (lab, t) -> mk_named loc (str_of_label lab) (translate_term t)
   | Tlet (id, t0, t1) -> mk_let loc id.id_str (translate_term t0) (translate_term t1)
   | Tmatch (_, _) -> Format.eprintf "TODO@."; assert false
-  | Tcast (t, pty) -> mk_type_cast loc (translate_term t) (translate_pty pty)
+  | Tcast (t, pty) -> mk_type_cast loc (translate_term t) pty
   | Ttuple tl -> translate_tuple (translate_term_list tl) loc
   | Trecord _ -> Format.eprintf "TODO@."; assert false
   | Tupdate (_, _) -> Format.eprintf "TODO@."; assert false
