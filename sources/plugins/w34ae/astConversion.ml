@@ -29,7 +29,7 @@ let dummy_loc = Why3_loc.dummy_position
 (* TRANSLATORS  *)
   
 
-
+(*
 
 let translate_qualid = function
   | Qident { id_str = "True"; id_loc} -> mk_true_const id_loc
@@ -37,4 +37,4 @@ let translate_qualid = function
   | Qident { id_str; id_loc} -> mk_var id_loc id_str                 
   | Qdot (q, i) -> (* ignore module prefix, functions in prelude *)
      mk_var i.id_loc i.id_str 
-                                     
+ *)      

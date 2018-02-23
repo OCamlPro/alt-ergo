@@ -29,7 +29,7 @@ type label = Lstr of w3idlabel | Lpos of Why3_loc.position
 
 
 type ident = { id_str : string; id_lab : label list; id_loc : loc; }
-type qualid = Qident of ident | Qdot of qualid * ident
+type qualid = Parsed.lexpr
 type pty = Parsed.ppure_type
 
 type binder = loc * ident option * Parsed.ppure_type option

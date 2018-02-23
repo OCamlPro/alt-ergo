@@ -7,5 +7,4 @@ val dummy_loc : Why3_loc.position
 
 
 
-val translate_qualid : Why3_ptree.qualid -> Parsed.lexpr
 

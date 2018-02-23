@@ -40,9 +40,9 @@ type ident = {
   id_loc : loc;
 }
 
-type qualid = 
-  | Qident of ident
-  | Qdot of qualid * ident
+type qualid = Parsed.lexpr
+  (*| Qident of ident
+  | Qdot of qualid * ident*)
 
 type pty = Parsed.ppure_type
 

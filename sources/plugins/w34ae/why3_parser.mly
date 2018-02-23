@@ -15,11 +15,15 @@ open Lexing
 open Why3_ptree
 open Parsed_interface
 
+       
+
   let infix  s = "infix "  ^ s
   let prefix s = "prefix " ^ s
   let mixfix s = "mixfix " ^ s
 
-  let qualid_last = function Qident x | Qdot (_, x) -> x.id_str
+  let qualid_last = function
+    |  {Parsed.pp_desc = PPvar s} -> s
+    | _ -> Format.eprintf "TODO@."; assert false
 
   let floc s e = (s,e)
 
@@ -122,11 +126,10 @@ open Parsed_interface
 
   let mk_tyapp q pl =
     match q with
-    | Qident {id_str = "int"} -> int_type
-    | Qident {id_str = "bool"} -> bool_type
-    | Qident {id_str = "real"} -> real_type
-    | Qident {id_str; id_loc} ->
-       mk_external_type id_loc pl id_str
+    | {Parsed.pp_desc = PPvar "int"} -> int_type
+    | {Parsed.pp_desc = PPvar "bool"} -> bool_type
+    | {Parsed.pp_desc = PPvar "real"} -> real_type
+    | {Parsed.pp_desc = PPvar s; pp_loc } ->  mk_external_type pp_loc pl s
     | _ -> Format.eprintf "TODO@."; assert false
 
   let rec mk_apply loc (f : Parsed.lexpr) a =                                 
@@ -183,6 +186,11 @@ open Parsed_interface
   in
   let str_exp_list = trad exp_list 1 in
   mk_record loc str_exp_list
+
+  let mk_qualid = function
+  | { id_str = "True"; id_loc} -> mk_true_const id_loc
+  | { id_str = "False"; id_loc} -> mk_false_const id_loc
+  | { id_str; id_loc} -> mk_var id_loc id_str            
 
 %}
 
@@ -411,8 +419,7 @@ function_decl:
       | None ->
          mak_logic loc [named_ident] (Some $3) $2
       | Some t ->
-         mk_function t $3 loc
-           named_ident $2
+         mk_function t $3 loc named_ident $2
     }
 
 predicate_decl:
@@ -638,7 +645,7 @@ term_dot: mk_term(term_dot_) { $1 }
 
 term_arg_:
 | qualid
-    { AstConversion.translate_qualid $1 }
+    { $1 }
 | numeral
     {
       match  $1 with
@@ -649,7 +656,7 @@ term_arg_:
 | TRUE                      { mk_true_const (floc $startpos $endpos) }
 | FALSE                     { mk_false_const (floc $startpos $endpos) }
 | quote_uident
-    { AstConversion.translate_qualid (Qident $1) }
+    { mk_qualid $1 }
 | o = oppref ; a = term_arg
                      { match o with                         
                       | {id_str = "prefix -"}
@@ -661,7 +668,7 @@ term_arg_:
 
 term_dot_:
   | lqualid
-      { AstConversion.translate_qualid $1 }
+      { $1 }
   | o = oppref ; a = term_dot
                        { match o with                           
                       | {id_str = "prefix -"}
@@ -674,8 +681,8 @@ term_dot_:
 term_sub_:
   | term_dot DOT lqualid_rich
         { match $3 with                           
-                      | Qident {id_str = "prefix -"}
-                      | Qident {id_str = "infix -"} ->
+                      | {Parsed.pp_desc = PPvar "prefix -"}
+                      | {Parsed.pp_desc = PPvar "infix -"} ->
                          mk_minus (floc $startpos $endpos) $1
                       | _ -> Format.eprintf "TODO@."; assert false
                     }    
@@ -858,40 +865,40 @@ prefix_op:
 (* Qualified idents *)
 
 qualid:
-| uident                    { Qident $1 }
-| lident                    { Qident $1 }
-| lident_op_id              { Qident $1 }
-| uqualid DOT uident        { Qdot ($1, $3) }
-| uqualid DOT lident        { Qdot ($1, $3) }
-| uqualid DOT lident_op_id  { Qdot ($1, $3) }
+| uident                    { mk_qualid $1 }
+| lident                    { mk_qualid $1 }
+| lident_op_id              { mk_qualid $1 }
+| uqualid DOT uident        { mk_qualid $3 }
+| uqualid DOT lident        { mk_qualid $3 }
+| uqualid DOT lident_op_id  { mk_qualid $3 }
 
 lqualid_rich:
-| lident                    { Qident $1 }
-| lident_op_id              { Qident $1 }
-| uqualid DOT lident        { Qdot ($1, $3) }
-| uqualid DOT lident_op_id  { Qdot ($1, $3) }
+| lident                    { mk_qualid $1 }
+| lident_op_id              { mk_qualid $1 }
+| uqualid DOT lident        { mk_qualid $3 }
+| uqualid DOT lident_op_id  { mk_qualid $3 }
 
 lqualid:
-| lident              { Qident $1 }
-| uqualid DOT lident  { Qdot ($1, $3) }
+| lident              { mk_qualid $1 }
+| uqualid DOT lident  { mk_qualid $3 }
 
 uqualid:
-| uident              { Qident $1 }
-| uqualid DOT uident  { Qdot ($1, $3) }
+| uident              { mk_qualid $1 }
+| uqualid DOT uident  { mk_qualid $3 }
 
 (* Theory/Module names *)
 
 tqualid:
-| uident                { Qident $1 }
-| any_qualid DOT uident { Qdot ($1, $3) }
+| uident                { mk_qualid $1 }
+| any_qualid DOT uident { mk_qualid $3 }
 
 any_qualid:
-| sident                { Qident $1 }
-| any_qualid DOT sident { Qdot ($1, $3) }
+| sident                { $1 }
+| any_qualid DOT sident { $3 }
 
 sident:
-| ident   { $1 }
-| STRING  { mk_id $1 $startpos $endpos }
+| ident   { mk_qualid $1 }
+| STRING  { mk_qualid (mk_id $1 $startpos $endpos) }
 
 (* Labels and position markers *)
 
