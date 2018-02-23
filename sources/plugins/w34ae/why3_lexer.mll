@@ -149,25 +149,25 @@ rule token = parse
   | uident_quote as id
       { UIDENT_QUOTE id }
   | ['0'-'9'] ['0'-'9' '_']* as s
-      { INTEGER (Why3_number.int_const_dec (Why3_lexlib.remove_underscores s)) }
-  | '0' ['x' 'X'] (['0'-'9' 'A'-'F' 'a'-'f']['0'-'9' 'A'-'F' 'a'-'f' '_']* as s)
+      { INTEGER ((Why3_lexlib.remove_underscores s)) }
+  (*| '0' ['x' 'X'] (['0'-'9' 'A'-'F' 'a'-'f']['0'-'9' 'A'-'F' 'a'-'f' '_']* as s)
       { INTEGER (Why3_number.int_const_hex (Why3_lexlib.remove_underscores s)) }
   | '0' ['o' 'O'] (['0'-'7'] ['0'-'7' '_']* as s)
       { INTEGER (Why3_number.int_const_oct (Why3_lexlib.remove_underscores s)) }
   | '0' ['b' 'B'] (['0'-'1'] ['0'-'1' '_']* as s)
-      { INTEGER (Why3_number.int_const_bin (Why3_lexlib.remove_underscores s)) }
+      { INTEGER (Why3_number.int_const_bin (Why3_lexlib.remove_underscores s)) }*)
   | (digit+ as i) ("" as f) ['e' 'E'] (['-' '+']? digit+ as e)
   | (digit+ as i) '.' (digit* as f) (['e' 'E'] (['-' '+']? digit+ as e))?
-  | (digit* as i) '.' (digit+ as f) (['e' 'E'] (['-' '+']? digit+ as e))?
+  (*| (digit* as i) '.' (digit+ as f) (['e' 'E'] (['-' '+']? digit+ as e))?
       { REAL (Why3_number.real_const_dec i f
-          (optmap Why3_lexlib.remove_leading_plus e)) }
+          (optmap Why3_lexlib.remove_leading_plus e)) }*)
   | '0' ['x' 'X'] (hexadigit+ as i) ("" as f) ['p' 'P'] (['-' '+']? digit+ as e)
   | '0' ['x' 'X'] (hexadigit+ as i) '.' (hexadigit* as f)
         (['p' 'P'] (['-' '+']? digit+ as e))?
-  | '0' ['x' 'X'] (hexadigit* as i) '.' (hexadigit+ as f)
+  (*| '0' ['x' 'X'] (hexadigit* as i) '.' (hexadigit+ as f)
         (['p' 'P'] (['-' '+']? digit+ as e))?
       { REAL (Why3_number.real_const_hex i f
-          (optmap Why3_lexlib.remove_leading_plus e)) }
+          (optmap Why3_lexlib.remove_leading_plus e)) }*)
   | "(*)"
       { LEFTPAR_STAR_RIGHTPAR }
   | "(*"

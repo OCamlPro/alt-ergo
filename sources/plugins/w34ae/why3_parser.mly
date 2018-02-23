@@ -79,7 +79,7 @@ open Parsed_interface
   let mk_pat  d s e = { pat_desc  = d; pat_loc  = floc s e }
   let mk_term d s e = d (*{ term_desc = d; term_loc = floc s e }*)
   (*let mk_expr d s e = { expr_desc = d; expr_loc = floc s e }*)
-
+(*
   let small_integer i =
     try match i with
       | Why3_number.IConstDec s -> int_of_string s
@@ -87,7 +87,7 @@ open Parsed_interface
       | Why3_number.IConstOct s -> int_of_string ("0o"^s)
       | Why3_number.IConstBin s -> int_of_string ("0b"^s)
     with Failure _ -> raise Error
-
+ *)
   let error_param loc =
     Why3_loc.errorm ~loc "cannot determine the type of the parameter"
 
@@ -209,9 +209,9 @@ open Parsed_interface
 (* Tokens *)
 
 %token <string> LIDENT LIDENT_QUOTE UIDENT UIDENT_QUOTE
-%token <Why3_ptree.integer_constant> INTEGER
+%token <string> INTEGER
 %token <string> OP1 OP2 OP3 OP4 OPPREF
-%token <Why3_ptree.real_constant> REAL
+                (*token <Why3_ptree.real_constant> REAL*)
 %token <string> STRING
 %token <Why3_loc.position> POSITION
 %token <string> QUOTE_UIDENT QUOTE_LIDENT OPAQUE_QUOTE_LIDENT
@@ -660,10 +660,7 @@ term_arg_:
     { $1 }
 | numeral
     {
-      match  $1 with
-      | Why3_number.ConstInt (Why3_number.IConstDec s) ->
-         mk_int_const (floc $startpos $endpos) s
-      | _ -> Format.eprintf "TODO@."; assert false                                               
+         mk_int_const (floc $startpos $endpos) $1                                              
     }
 | TRUE                      { mk_true_const (floc $startpos $endpos) }
 | FALSE                     { mk_false_const (floc $startpos $endpos) }
@@ -737,8 +734,7 @@ quant:
 | EXISTS  { mk_exists }
 
 numeral:
-| INTEGER { Why3_number.ConstInt $1 }
-| REAL    { Why3_number.ConstReal $1 }
+| INTEGER { $1 }
 
 (* Program declarations *)
 
