@@ -27,20 +27,7 @@ let str_of_labs labs =
 let dummy_loc = Why3_loc.dummy_position
 
 (* TRANSLATORS  *)
-   
-
-let translate_tuple exp_list loc =
-  let length = string_of_int (List.length exp_list) in
-  let field_name = "Tuple" ^ length ^ "_proj_" in
-  let rec trad l n =
-    match l with
-    | [] -> []
-    | h::t ->
-       let fn = field_name ^ string_of_int n in
-       (fn ,h)::(trad t (n + 1))
-  in
-  let str_exp_list = trad exp_list 1 in
-  mk_record loc str_exp_list
+  
 
 
 

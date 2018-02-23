@@ -171,6 +171,19 @@ open Parsed_interface
       | ">->" -> mk_application loc "infix_gtmngt" [t1; t2]
       | _ ->  Format.eprintf "TODO@."; assert false
 
+  let mk_tuple_record exp_list loc =    
+  let length = string_of_int (List.length exp_list) in
+  let field_name = "Tuple" ^ length ^ "_proj_" in
+  let rec trad l n =
+    match l with
+    | [] -> []
+    | h::t ->
+       let fn = field_name ^ string_of_int n in
+       (fn ,h)::(trad t (n + 1))
+  in
+  let str_exp_list = trad exp_list 1 in
+  mk_record loc str_exp_list
+
 %}
 
 (* Tokens *)
@@ -668,9 +681,9 @@ term_sub_:
                     }    
 | LEFTPAR term RIGHTPAR                             { $2 }
 | LEFTPAR RIGHTPAR
-    { AstConversion.translate_tuple [] (floc $startpos $endpos) }
+    { mk_tuple_record [] (floc $startpos $endpos) }
 | LEFTPAR comma_list2(term) RIGHTPAR
-    { AstConversion.translate_tuple $2(floc $startpos $endpos) }
+    { mk_tuple_record $2(floc $startpos $endpos) }
 
  
 field_list1(X):
