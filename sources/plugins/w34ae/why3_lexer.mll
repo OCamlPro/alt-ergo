@@ -11,7 +11,10 @@
 
 {
   open Why3_parser
-
+  open Lexing
+         
+  exception UnterminatedComment
+  exception UnterminatedString
   exception IllegalCharacter of char
 
   let optmap f = function None -> None | Some x -> Some (f x)
@@ -98,8 +101,46 @@
         "writes", WRITES;
       ]
 
-}
+        let update_loc lexbuf file line chars =
+    let pos = lexbuf.lex_curr_p in
+    let new_file = match file with None -> pos.pos_fname | Some s -> s in
+    lexbuf.lex_curr_p <-
+      { pos with
+          pos_fname = new_file;
+          pos_lnum = line;
+          pos_bol = pos.pos_cnum - chars;
+      }
 
+          let newline lexbuf =
+    let pos = lexbuf.lex_curr_p in
+    lexbuf.lex_curr_p <-
+      { pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum }
+
+          let remove_underscores s =
+    if String.contains s '_' then begin
+      let count =
+        let nb = ref 0 in
+        String.iter (fun c -> if c = '_' then incr nb) s;
+        !nb in
+      let t = Bytes.create (String.length s - count) in
+      let i = ref 0 in
+      String.iter (fun c -> if c <> '_' then (Bytes.set t !i c; incr i)) s;
+      Bytes.unsafe_to_string t
+      end else s
+
+                   let loc lb = (lexeme_start_p lb, lexeme_end_p lb)
+
+let string_start_loc = ref Why3_loc.dummy_position
+  let string_buf = Buffer.create 1024
+
+  let comment_start_loc = ref Why3_loc.dummy_position
+                                  
+  let char_for_backslash = function
+    | 'n' -> '\n'
+    | 't' -> '\t'
+    | c -> c
+}
+let newline = '\n'
 let space = [' ' '\t' '\r']
 let lalpha = ['a'-'z' '_']
 let ualpha = ['A'-'Z']
@@ -127,7 +168,7 @@ let op_char_pref = ['!' '?']
 rule token = parse
   | "##" space* ("\"" ([^ '\010' '\013' '"' ]* as file) "\"")?
     space* (digit+ as line) space* (digit+ as char) space* "##"
-      { Why3_lexlib.update_loc lexbuf file (int_of_string line) (int_of_string char);
+      { update_loc lexbuf file (int_of_string line) (int_of_string char);
         token lexbuf }
   | "#" space* "\"" ([^ '\010' '\013' '"' ]* as file) "\""
     space* (digit+ as line) space* (digit+ as bchar) space*
@@ -135,7 +176,7 @@ rule token = parse
       { POSITION (Why3_loc.user_position file (int_of_string line)
                  (int_of_string bchar) (int_of_string echar)) }
   | '\n'
-      { Why3_lexlib.newline lexbuf; token lexbuf }
+      { newline lexbuf; token lexbuf }
   | space+
       { token lexbuf }
   | '_'
@@ -149,29 +190,29 @@ rule token = parse
   | uident_quote as id
       { UIDENT_QUOTE id }
   | ['0'-'9'] ['0'-'9' '_']* as s
-      { INTEGER ((Why3_lexlib.remove_underscores s)) }
+      { INTEGER ((remove_underscores s)) }
   (*| '0' ['x' 'X'] (['0'-'9' 'A'-'F' 'a'-'f']['0'-'9' 'A'-'F' 'a'-'f' '_']* as s)
       { INTEGER (Why3_number.int_const_hex (Why3_lexlib.remove_underscores s)) }
   | '0' ['o' 'O'] (['0'-'7'] ['0'-'7' '_']* as s)
       { INTEGER (Why3_number.int_const_oct (Why3_lexlib.remove_underscores s)) }
   | '0' ['b' 'B'] (['0'-'1'] ['0'-'1' '_']* as s)
       { INTEGER (Why3_number.int_const_bin (Why3_lexlib.remove_underscores s)) }*)
-  | (digit+ as i) ("" as f) ['e' 'E'] (['-' '+']? digit+ as e)
+ (* | (digit+ as i) ("" as f) ['e' 'E'] (['-' '+']? digit+ as e)
   | (digit+ as i) '.' (digit* as f) (['e' 'E'] (['-' '+']? digit+ as e))?
-  (*| (digit* as i) '.' (digit+ as f) (['e' 'E'] (['-' '+']? digit+ as e))?
+ | (digit* as i) '.' (digit+ as f) (['e' 'E'] (['-' '+']? digit+ as e))?
       { REAL (Why3_number.real_const_dec i f
           (optmap Why3_lexlib.remove_leading_plus e)) }*)
-  | '0' ['x' 'X'] (hexadigit+ as i) ("" as f) ['p' 'P'] (['-' '+']? digit+ as e)
+   (*| '0' ['x' 'X'] (hexadigit+ as i) ("" as f) ['p' 'P'] (['-' '+']? digit+ as e)
   | '0' ['x' 'X'] (hexadigit+ as i) '.' (hexadigit* as f)
         (['p' 'P'] (['-' '+']? digit+ as e))?
-  (*| '0' ['x' 'X'] (hexadigit* as i) '.' (hexadigit+ as f)
+ | '0' ['x' 'X'] (hexadigit* as i) '.' (hexadigit+ as f)
         (['p' 'P'] (['-' '+']? digit+ as e))?
       { REAL (Why3_number.real_const_hex i f
           (optmap Why3_lexlib.remove_leading_plus e)) }*)
   | "(*)"
       { LEFTPAR_STAR_RIGHTPAR }
   | "(*"
-      { Why3_lexlib.comment lexbuf; token lexbuf }
+      { comment lexbuf; token lexbuf }
   | "~'" (lident as id)
       { OPAQUE_QUOTE_LIDENT id }
   | "'" (lident as id)
@@ -237,13 +278,44 @@ rule token = parse
   | op_char_4+ as s
       { OP4 s }
   | "\""
-      { STRING (Why3_lexlib.string lexbuf) }
+      { STRING (string lexbuf) }
   | eof
       { EOF }
   | _ as c
       { raise (IllegalCharacter c) }
+and comment = parse
+  | "(*)"
+      { comment lexbuf }
+  | "*)"
+      { () }
+  | "(*"
+      { comment lexbuf; comment lexbuf }
+  | newline
+      { newline lexbuf; comment lexbuf }
+  | eof
+      { raise (Why3_loc.Why3_located (!comment_start_loc, UnterminatedComment)) }
+  | _
+      { comment lexbuf }
+
+and string = parse
+  | "\""
+      { let s = Buffer.contents string_buf in
+        Buffer.clear string_buf;
+        s }
+  | "\\" (_ as c)
+      { if c = '\n' then newline lexbuf;
+        Buffer.add_char string_buf (char_for_backslash c); string lexbuf }
+  | newline
+      { newline lexbuf; Buffer.add_char string_buf '\n'; string lexbuf }
+  | eof
+      { raise (Why3_loc.Why3_located (!string_start_loc, UnterminatedString)) }
+  | _ as c
+      { Buffer.add_char string_buf c; string lexbuf }
 
 {
+          let comment lexbuf = comment_start_loc := loc lexbuf; comment lexbuf
+
+  let string lexbuf = string_start_loc := loc lexbuf; string lexbuf
 
   module Parser : Parsers.PARSER_INTERFACE = struct
     let file    = Why3_parser.file_parser     token
