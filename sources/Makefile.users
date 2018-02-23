@@ -381,7 +381,6 @@ W34AE-CMO = plugins/w34ae/why3_loc.cmo \
 	  plugins/w34ae/why3_ptree.cmo \
 	  plugins/w34ae/why3_number.cmo \
 	  plugins/w34ae/why3_lexlib.cmo \
-	  plugins/w34ae/astConversion.cmo \
 	  plugins/w34ae/why3_parser.cmo \
 	  plugins/w34ae/why3_lexer.cmo \
 

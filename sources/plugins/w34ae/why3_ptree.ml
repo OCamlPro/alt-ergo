@@ -41,8 +41,6 @@ type ident = {
 }
 
 type qualid = Parsed.lexpr
-  (*| Qident of ident
-  | Qdot of qualid * ident*)
 
 type pty = Parsed.ppure_type
 

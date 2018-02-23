@@ -92,9 +92,21 @@ open Parsed_interface
     Why3_loc.errorm ~loc "cannot determine the type of the parameter"
 
   let error_loc loc = Why3_loc.error ~loc Error
+
+                                     
+  (* Added  *)
                                      
   let id_str {id_str} = id_str
   let id_lab {id_lab} = id_lab
+
+  let str_of_label = function
+  | Lstr l -> l.lab_string
+  | _ -> ""
+
+ let str_of_labs labs =
+  String.concat " " (List.filter (fun x -> x <> "") (List.map str_of_label labs))
+
+ let dummy_loc = Why3_loc.dummy_position
 
   let translate_param (loc, id_op, pty) =
     match id_op with
@@ -401,7 +413,7 @@ constant_decl:
     {
       let loc = floc $startpos $endpos in
       let named_ident =
-        (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
+        (id_str $1, str_of_labs (id_lab $1)) in
       match $3 with
       | None ->
          mak_logic loc [named_ident] (Some $2) []   
@@ -414,7 +426,7 @@ function_decl:
     {
       let loc = floc $startpos $endpos in
       let named_ident =
-        (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
+        (id_str $1, str_of_labs (id_lab $1)) in
       match $4 with
       | None ->
          mak_logic loc [named_ident] (Some $3) $2
@@ -427,7 +439,7 @@ predicate_decl:
     {
       let loc = floc $startpos $endpos in
       let named_ident =
-        (id_str $1, AstConversion.str_of_labs (id_lab $1)) in
+        (id_str $1, str_of_labs (id_lab $1)) in
       match $3 with
       | None ->
          mak_logic loc [named_ident] None $2                                              
@@ -440,7 +452,7 @@ with_logic_decl:
     {
       let loc = floc $startpos $endpos in
       let named_ident =
-        (id_str $2, AstConversion.str_of_labs (id_lab $2)) in
+        (id_str $2, str_of_labs (id_lab $2)) in
       match $4, $5 with
       | None, None ->
          mak_logic loc [named_ident] None $3                                             
@@ -636,7 +648,7 @@ term_:
 | EPSILON
     { Why3_loc.errorm "Epsilon terms are currently not supported in WhyML" }
 | label term %prec prec_named
-    { mk_named (floc $startpos $endpos) (AstConversion.str_of_label $1) $2 }
+    { mk_named (floc $startpos $endpos) (str_of_label $1) $2 }
 | term cast
     { mk_type_cast (floc $startpos $endpos) $1 $2 }
 
