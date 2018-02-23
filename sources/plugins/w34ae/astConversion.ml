@@ -16,8 +16,6 @@ open Parsed_interface
 open Why3_ptree
 open Why3_number
 
-let get_infix_ident i =
-  List.hd (List.rev (String.split_on_char ' ' i.id_str))
 
 let str_of_label = function
   | Lstr l -> l.lab_string
@@ -44,32 +42,12 @@ let translate_tuple exp_list loc =
   let str_exp_list = trad exp_list 1 in
   mk_record loc str_exp_list
 
-let translate_innfix_ident i loc t1 t2=
-  let inf_id_str = get_infix_ident i in
-  match inf_id_str with
-  | "+" -> mk_add loc t1 t2
-  | "-" -> mk_sub  loc t1 t2
-  | "*" ->  mk_mul  loc t1 t2
-  | "<" -> mk_pred_lt  loc t1 t2
-  | "<=" -> mk_pred_le  loc t1 t2
-  | ">" -> mk_pred_gt  loc t1 t2
-  | ">=" -> mk_pred_gt  loc t1 t2
-  | "=" -> mk_pred_eq loc t1 t2
-  | "==" -> mk_application loc "infix_eqeq" [t1; t2]
-  | "+->" -> mk_application loc "infix_plmngt" [t1; t2]
-  | "-->" -> mk_application loc "infix_mnmngt" [t1; t2]
-  | "<+" -> mk_application loc "infix_lspl" [t1; t2]
-  | "-->>" -> mk_application loc "infix_mnmngtgt" [t1; t2]
-  | ">->>" -> mk_application loc "infix_gtmngtgt" [t1; t2]
-  | ">->" -> mk_application loc "infix_gtmngt" [t1; t2]
-  | _ ->  Format.eprintf "TODO@."; assert false
 
-(* ??? CHECK with infix dans innfix semantic  *)
-let translate_infix_ident = translate_innfix_ident
 
 let translate_qualid = function
   | Qident { id_str = "True"; id_loc} -> mk_true_const id_loc
   | Qident { id_str = "False"; id_loc} -> mk_false_const id_loc
   | Qident { id_str; id_loc} -> mk_var id_loc id_str                 
   | Qdot (q, i) -> (* ignore module prefix, functions in prelude *)
-     mk_var i.id_loc i.id_str                                      
+     mk_var i.id_loc i.id_str 
+                                     

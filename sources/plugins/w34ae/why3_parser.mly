@@ -148,7 +148,28 @@ open Parsed_interface
        mk_application loc "add" [a; empty]
     | { pp_desc = PPvar s } -> mk_application loc s [a]
     | { pp_desc = PPapp (s, l) } -> mk_application loc s (l @ [a])
-    | _ ->  Format.eprintf "TODO@."; assert false          
+    | _ ->  Format.eprintf "TODO@."; assert false
+
+  let mk_infix_ident id loc t1 t2 =    
+    let get_infix_ident i =
+      List.hd (List.rev (String.split_on_char ' ' i.id_str)) in
+    match get_infix_ident id with
+      | "+" -> mk_add loc t1 t2
+      | "-" -> mk_sub  loc t1 t2
+      | "*" ->  mk_mul  loc t1 t2
+      | "<" -> mk_pred_lt  loc t1 t2
+      | "<=" -> mk_pred_le  loc t1 t2
+      | ">" -> mk_pred_gt  loc t1 t2
+      | ">=" -> mk_pred_gt  loc t1 t2
+      | "=" -> mk_pred_eq loc t1 t2
+      | "==" -> mk_application loc "infix_eqeq" [t1; t2]
+      | "+->" -> mk_application loc "infix_plmngt" [t1; t2]
+      | "-->" -> mk_application loc "infix_mnmngt" [t1; t2]
+      | "<+" -> mk_application loc "infix_lspl" [t1; t2]
+      | "-->>" -> mk_application loc "infix_mnmngtgt" [t1; t2]
+      | ">->>" -> mk_application loc "infix_gtmngtgt" [t1; t2]
+      | ">->" -> mk_application loc "infix_gtmngt" [t1; t2]
+      | _ ->  Format.eprintf "TODO@."; assert false
 
 %}
 
@@ -560,7 +581,7 @@ term_:
 | l = term ; o = bin_op ; r = term
     { o (floc $startpos $endpos) l r }
 | l = term ; o = infix_op ; r = term
-    { AstConversion.translate_infix_ident o (floc $startpos $endpos) l r }
+    { mk_infix_ident o (floc $startpos $endpos) l r }
 | term_arg located(term_arg)+ (* FIXME/TODO: "term term_arg" *)
     { let join f (a,_,e) =
         mk_term (mk_apply (floc $startpos $endpos) f a) $startpos e in

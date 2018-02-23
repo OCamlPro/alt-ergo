@@ -40,7 +40,7 @@ type ident = {
   id_loc : loc;
 }
 
-type qualid =
+type qualid = 
   | Qident of ident
   | Qdot of qualid * ident
 
