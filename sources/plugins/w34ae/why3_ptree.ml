@@ -24,9 +24,8 @@ type loc = Why3_loc.position
 
 (*s Logical terms and formulas *)
 
-type integer_constant = Why3_number.integer_constant
-type real_constant = Why3_number.real_constant
-type constant = Why3_number.constant
+type integer_constant = string
+type constant = string
 
 type w3idlabel = { lab_string : string }
 

@@ -21,9 +21,8 @@ type prop_kind =
   | Pskip     
 
 type loc = Why3_loc.position
-type integer_constant = Why3_number.integer_constant
-type real_constant = Why3_number.real_constant
-type constant = Why3_number.constant
+type integer_constant = string
+type constant = string
 type w3idlabel = { lab_string : string }                  
 type label = Lstr of w3idlabel | Lpos of Why3_loc.position
 
