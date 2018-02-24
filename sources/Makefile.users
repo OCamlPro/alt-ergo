@@ -69,7 +69,6 @@ endif
 GENERATED_WHY3 = plugins/w34ae/why3_lexer.ml \
 	    plugins/w34ae/why3_parser.ml \
 	    plugins/w34ae/why3_parser.mli \
-	    plugins/w34ae/why3_lexlib.ml \
 	    plugins/w34ae/why3_parser.automaton
 
 GENERATED = lib/util/config.ml \
