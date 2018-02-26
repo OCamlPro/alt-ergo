@@ -10,28 +10,20 @@
 (********************************************************************)
 
 (*s Parse trees. *)
-open Big_int
 
-type ind_sign = Ind | Coind
-
-type prop_kind =
-  | Plemma    
-  | Paxiom    
-  | Pgoal     
-  | Pskip 
-
-type loc = Why3_loc.position
+type loc = Loc.t
 
 (*s Logical terms and formulas *)
 
 type integer_constant = string
+                          
 type constant = string
 
 type w3idlabel = { lab_string : string }
 
 type label =
   | Lstr of w3idlabel
-  | Lpos of Why3_loc.position
+  | Lpos of Loc.t
 
 type ident = {
   id_str : string;
@@ -44,6 +36,7 @@ type qualid = Parsed.lexpr
 type pty = Parsed.ppure_type
 
 type binder = loc * ident option * Parsed.ppure_type option
+                                                     
 type param  = loc * ident option * Parsed.ppure_type
 
 type pattern = {
@@ -80,39 +73,6 @@ type clone_subst =
   | CSlemma of loc * qualid
   | CSgoal  of loc * qualid
 
-
-type type_def =
-  | TDabstract
-  | TDalias     of pty
-  | TDalgebraic of (loc * ident * param list) list
-  | TDrange     of big_int * big_int
-  | TDfloat     of int * int
-
-type visibility = Public | Private | Abstract
-
-type invariant = term list
-
-type type_decl = {
-  td_loc    : loc;
-  td_ident  : ident;
-  td_params : ident list;
-  td_model  : bool;
-  td_vis    : visibility;
-  td_def    : type_def;
-  td_inv    : invariant;
-}
-
-type logic_decl = {
-  ld_loc    : loc;
-  ld_ident  : ident;
-  ld_params : param list;
-  ld_type   : pty option;
-  ld_def    : term option;
-}
+type invariant = term list                     
 
 type use_clone = use * clone_subst list option
-
-type decl =
-  | Dtype of type_decl list
-  | Dlogic of logic_decl list
-  | Dprop of prop_kind * ident * term

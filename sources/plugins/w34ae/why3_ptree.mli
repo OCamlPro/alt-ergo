@@ -10,21 +10,12 @@
 (*                                                                             *)
 (*******************************************************************************)
 
-open Big_int
 
-type ind_sign = Ind | Coind
-
-type prop_kind =
-  | Plemma    
-  | Paxiom    
-  | Pgoal     
-  | Pskip     
-
-type loc = Why3_loc.position
+type loc = Loc.t
 type integer_constant = string
 type constant = string
 type w3idlabel = { lab_string : string }                  
-type label = Lstr of w3idlabel | Lpos of Why3_loc.position
+type label = Lstr of w3idlabel | Lpos of Loc.t
 
 
 type ident = { id_str : string; id_lab : label list; id_loc : loc; }
@@ -53,34 +44,7 @@ type clone_subst =
   | CSvsym of loc * qualid * qualid
   | CSlemma of loc * qualid
   | CSgoal of loc * qualid
-
-type type_def =
-    TDabstract
-  | TDalias of pty
-  | TDalgebraic of (loc * ident * param list) list
-  | TDrange of big_int * big_int
-  | TDfloat of int * int
-type visibility = Public | Private | Abstract
-type invariant = term list
-type type_decl = {
-  td_loc : loc;
-  td_ident : ident;
-  td_params : ident list;
-  td_model : bool;
-  td_vis : visibility;
-  td_def : type_def;
-  td_inv : invariant;
-}
-type logic_decl = {
-  ld_loc : loc;
-  ld_ident : ident;
-  ld_params : param list;
-  ld_type : pty option;
-  ld_def : term option;
-}
+                                              
+type invariant = term list                      
                   
 type use_clone = use * clone_subst list option
-type decl =
-    Dtype of type_decl list
-  | Dlogic of logic_decl list
-  | Dprop of prop_kind * ident * term

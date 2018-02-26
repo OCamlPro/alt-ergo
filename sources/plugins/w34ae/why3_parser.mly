@@ -13,13 +13,10 @@
 
 open Lexing
 open Why3_ptree
-open Parsed_interface
-
-       
+open Parsed_interface      
 
   let infix  s = "infix "  ^ s
   let prefix s = "prefix " ^ s
-  let mixfix s = "mixfix " ^ s
 
   let qualid_last = function
     |  {Parsed.pp_desc = PPvar s} -> s
@@ -27,49 +24,7 @@ open Parsed_interface
 
   let floc s e = (s,e)
 
-  let model_label = { lab_string = "model" }
-  let model_projected = { lab_string = "model_projected" }
-
-  let is_model_label l =
-    match l with
-    | Lpos _ -> false
-    | Lstr lab ->
-      (lab = model_label) || (lab = model_projected)
-
-
-  let model_lab_present labels =
-    try
-      ignore(List.find is_model_label labels);
-      true
-    with Not_found ->
-      false
-
-  let model_trace_regexp = Str.regexp "model_trace:"
-
-  let is_model_trace_label l =
-    match l with
-    | Lpos _ -> false
-    | Lstr lab ->
-      try
-	ignore(Str.search_forward model_trace_regexp lab.lab_string 0);
-	true
-      with Not_found -> false
-
-  let model_trace_lab_present labels =
-    try
-      ignore(List.find is_model_trace_label labels);
-      true
-    with Not_found ->
-      false
-
-  let add_model_trace name labels =
-    if (model_lab_present labels) && (not (model_trace_lab_present labels)) then
-      (Lstr ({lab_string = "model_trace:" ^ name}))::labels
-    else
-      labels
-
   let add_lab id l =
-    let l = add_model_trace id.id_str l in
     { id with id_lab = l }
 
   let id_anonymous loc = { id_str = "_"; id_lab = []; id_loc = loc }
@@ -77,27 +32,14 @@ open Parsed_interface
   let mk_id id s e = { id_str = id; id_lab = []; id_loc = floc s e }
 
   let mk_pat  d s e = { pat_desc  = d; pat_loc  = floc s e }
-  let mk_term d s e = d (*{ term_desc = d; term_loc = floc s e }*)
-  (*let mk_expr d s e = { expr_desc = d; expr_loc = floc s e }*)
-(*
-  let small_integer i =
-    try match i with
-      | Why3_number.IConstDec s -> int_of_string s
-      | Why3_number.IConstHex s -> int_of_string ("0x"^s)
-      | Why3_number.IConstOct s -> int_of_string ("0o"^s)
-      | Why3_number.IConstBin s -> int_of_string ("0b"^s)
-    with Failure _ -> raise Error
- *)
+  let mk_term d s e = d 
+                        
   let error_param loc =
     Why3_loc.errorm ~loc "cannot determine the type of the parameter"
 
   let error_loc loc = Why3_loc.error ~loc Error
-
                                      
   (* Added  *)
-                                     
-  let id_str {id_str} = id_str
-  let id_lab {id_lab} = id_lab
 
   let str_of_label = function
   | Lstr l -> l.lab_string
@@ -211,9 +153,9 @@ open Parsed_interface
 %token <string> LIDENT LIDENT_QUOTE UIDENT UIDENT_QUOTE
 %token <string> INTEGER
 %token <string> OP1 OP2 OP3 OP4 OPPREF
-                (*token <Why3_ptree.real_constant> REAL*)
+              
 %token <string> STRING
-%token <Why3_loc.position> POSITION
+%token <Loc.t> POSITION
 %token <string> QUOTE_UIDENT QUOTE_LIDENT OPAQUE_QUOTE_LIDENT
 
 (* keywords *)
@@ -277,10 +219,6 @@ open Parsed_interface
 
 (* Entry points *)
 
-(*%start <Why3_ptree.incremental -> unit> open_file
-%start <unit> logic_file program_file*)
-%start <Parsed.file> logic_file
-
 %type <Parsed.lexpr list * bool> trigger_parser
 %start trigger_parser
 
@@ -299,7 +237,8 @@ lexpr_parser:
 
 trigger_parser:
 | logic_file  { Format.eprintf "TODO@."; assert false }
- 
+
+    
 (* Theories, modules, namespaces *)
 
 logic_file:
@@ -360,51 +299,43 @@ decl:
 | PREDICATE predicate_decl with_logic_decl*
     { ($2::$3) }
 | AXIOM labels(ident_nq) COLON term
-    { [mk_generic_axiom  (floc $startpos $endpos) (id_str $2) $4] }
+    { [mk_generic_axiom  (floc $startpos $endpos) $2.id_str $4] }
 | GOAL  labels(ident_nq) COLON term
-    { [mk_goal (floc $startpos $endpos) (id_str $2) $4] }
+    { [mk_goal (floc $startpos $endpos) $2.id_str $4] }
 
 (* Type declarations *)
 
 type_decl:
 | labels(lident_nq) ty_var* typedefn
-  { let model, vis, def, inv = $3 in
-    (*let vis = if model then Abstract else vis in*)
+  { let model, def, inv = $3 in
     let loc = floc $startpos $endpos in
-    let ty_vars = List.map id_str $2 in  
+    let ty_vars = List.map (fun i -> i.id_str) $2 in  
     match def with
-    | TDabstract -> mk_abstract_type_decl loc ty_vars (id_str $1)
-    | TDalgebraic l ->
-       let ls = List.map (fun (_, i, _) -> id_str i) l in
-       mk_enum_type_decl loc ty_vars (id_str $1) ls
-    | _ -> Format.eprintf "TODO@."; assert false }
+    | None -> mk_abstract_type_decl loc ty_vars $1.id_str
+    | Some l ->  mk_enum_type_decl loc ty_vars $1.id_str l
+   }
 
 late_invariant:
 | labels(lident_nq) ty_var* invariant+
     { let loc = floc $startpos $endpos in
-      let ty_vars = List.map id_str $2 in      
-      mk_abstract_type_decl loc ty_vars (id_str $1) }
+      let ty_vars = List.map (fun i -> i.id_str) $2 in      
+      mk_abstract_type_decl loc ty_vars $1.id_str }
 
 ty_var:
 | labels(quote_lident) { $1 }
 
 typedefn:
 | (* epsilon *)
-    { false, Public, TDabstract, [] }
-| model abstract bar_list1(type_case) invariant*
-    { $1, $2, TDalgebraic $3, $4 }
+    { false, None, [] }
+| model bar_list1(type_case) invariant*
+    { $1, Some $2, $3 }
 
 model:
 | EQUAL         { false }
 | MODEL         { true }
 
-abstract:
-| (* epsilon *) { Public }
-| PRIVATE       { Private }
-| ABSTRACT      { Abstract }
-
 type_case:
-| labels(uident_nq) params { floc $startpos $endpos, $1, $2 }
+| labels(uident_nq) { $1.id_str }
 
 (* Logic declarations *)
 
@@ -413,7 +344,7 @@ constant_decl:
     {
       let loc = floc $startpos $endpos in
       let named_ident =
-        (id_str $1, str_of_labs (id_lab $1)) in
+        ($1.id_str, str_of_labs $1.id_lab) in
       match $3 with
       | None ->
          mak_logic loc [named_ident] (Some $2) []   
@@ -426,7 +357,7 @@ function_decl:
     {
       let loc = floc $startpos $endpos in
       let named_ident =
-        (id_str $1, str_of_labs (id_lab $1)) in
+        ($1.id_str, str_of_labs $1.id_lab) in
       match $4 with
       | None ->
          mak_logic loc [named_ident] (Some $3) $2
@@ -439,7 +370,7 @@ predicate_decl:
     {
       let loc = floc $startpos $endpos in
       let named_ident =
-        (id_str $1, str_of_labs (id_lab $1)) in
+        ($1.id_str, str_of_labs $1.id_lab) in
       match $3 with
       | None ->
          mak_logic loc [named_ident] None $2                                              
@@ -452,7 +383,7 @@ with_logic_decl:
     {
       let loc = floc $startpos $endpos in
       let named_ident =
-        (id_str $2, str_of_labs (id_lab $2)) in
+        ($2.id_str, str_of_labs $2.id_lab) in
       match $4, $5 with
       | None, None ->
          mak_logic loc [named_ident] None $3                                             
@@ -465,34 +396,19 @@ with_logic_decl:
            named_ident $3
     }
 
-(* Inductive declarations *)
-
-inductive_decl:
-| labels(lident_rich) params ind_defn
-    { Format.eprintf "TODO@."; assert false }
-
-ind_defn:
-| (* epsilon *)             { [] }
-| EQUAL bar_list1(ind_case) { Format.eprintf "TODO@."; assert false (*$2*) }
-
-ind_case:
-| labels(ident_nq) COLON term  { Format.eprintf "TODO@."; assert false
-                                 (*floc $startpos $endpos, $1, $3*) }
 
 (* Type expressions *)
 
 ty:
 | ty_arg          { $1 }
 | lqualid ty_arg+ { mk_tyapp $1 $2 }
-| ty ARROW ty     { Format.eprintf "TODO@."; assert false     (*PTarrow ($1, $3)*) }
+
 
 ty_arg:
-| lqualid                           { mk_tyapp $1 [] }
-| quote_lident
-    { Format.eprintf "TODO@."; assert false  (*PTtyvar ($1, false)*) }
-| opaque_quote_lident
-    { Format.eprintf "TODO@."; assert false  (*PTtyvar ($1, true)*) }
-| LEFTPAR comma_list2(ty) RIGHTPAR  { mk_tuple $2 (floc $startpos $endpos) }
+| lqualid
+    { mk_tyapp $1 [] }
+| LEFTPAR comma_list2(ty) RIGHTPAR
+    { mk_tuple $2 (floc $startpos $endpos) }
 | LEFTPAR RIGHTPAR
     { mk_tuple [] (floc $startpos $endpos) }
 | LEFTPAR ty RIGHTPAR               { $2 }
@@ -582,7 +498,8 @@ binder_vars_head:
         -> (of_id (mk_id s $startpos $endpos)):: acc
       | _ -> Why3_loc.error ~loc:(floc $startpos $endpos) Error in
     match $1 with
-      | Parsed.PPTexternal (l, s, _) -> List.fold_left push [of_id (mk_id s $startpos $endpos)] l
+    | Parsed.PPTexternal (l, s, _) ->
+       List.fold_left push [of_id (mk_id s $startpos $endpos)] l
       | _ -> Why3_loc.error ~loc:(floc $startpos $endpos) Error }
 
 binder_var:
@@ -797,19 +714,13 @@ uident_nq:
 
 lident:
 | LIDENT          { mk_id $1 $startpos $endpos }
-| lident_keyword  { mk_id $1 $startpos $endpos }
 | LIDENT_QUOTE    { mk_id $1 $startpos $endpos }
 
 lident_nq:
 | LIDENT          { mk_id $1 $startpos $endpos }
-| lident_keyword  { mk_id $1 $startpos $endpos }
 | LIDENT_QUOTE    { let loc = floc $startpos($1) $endpos($1) in
                     Why3_loc.errorm ~loc "Symbol %s cannot be user-defined" $1 }
 
-lident_keyword:
-| MODEL           { "model" }
-| RANGE           { "range" }
-| FLOAT           { "float" }
 
 quote_uident:
 | QUOTE_UIDENT  { mk_id ("'" ^ $1) $startpos $endpos }
@@ -839,12 +750,6 @@ lident_op:
 | op_symbol UNDERSCORE    { prefix $1 }
 | EQUAL                   { infix "=" }
 | OPPREF                  { prefix $1 }
-| LEFTSQ RIGHTSQ          { mixfix "[]" }
-| LEFTSQ LARROW RIGHTSQ   { mixfix "[<-]" }
-| LEFTSQ RIGHTSQ LARROW   { mixfix "[]<-" }
-| LEFTSQ UNDERSCORE DOTDOT UNDERSCORE RIGHTSQ { mixfix "[_.._]" }
-| LEFTSQ            DOTDOT UNDERSCORE RIGHTSQ { mixfix "[.._]" }
-| LEFTSQ UNDERSCORE DOTDOT            RIGHTSQ { mixfix "[_..]" }
 
 op_symbol:
 | OP1 { $1 }

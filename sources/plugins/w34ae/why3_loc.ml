@@ -53,7 +53,7 @@ let errorm ?loc f =
        Buffer.clear buf;
        error ?loc (Message s))
     fmt ("@[" ^^ f ^^ "@]")
-
+(*
 let loc lb =  (Lexing.lexeme_start_p lb, Lexing.lexeme_end_p lb)
 
 let with_location f lb =
@@ -61,3 +61,4 @@ let with_location f lb =
     try f lb with
     | Why3_located _ as e -> raise e
     | e -> raise (Why3_located (loc lb, e))
+ *)
