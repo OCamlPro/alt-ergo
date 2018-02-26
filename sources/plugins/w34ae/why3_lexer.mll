@@ -30,9 +30,7 @@
       [
         "as", AS;
         "axiom", AXIOM;
-        "by", BY;
         "clone", CLONE;
-        "coinductive", COINDUCTIVE;
         "constant", CONSTANT;
         "else", ELSE;
         "end", END;
@@ -40,24 +38,17 @@
         "exists", EXISTS;
         "export", EXPORT;
         "false", FALSE;
-        "float", FLOAT;
         "forall", FORALL;
         "function", FUNCTION;
         "goal", GOAL;
         "if", IF;
         "import", IMPORT;
         "in", IN;
-        "inductive", INDUCTIVE;
         "lemma", LEMMA;
         "let", LET;
-        "match", MATCH;
-        "meta", META;
         "namespace", NAMESPACE;
         "not", NOT;
         "predicate", PREDICATE;
-        "prop", PROP;
-        "range", RANGE;
-        "so", SO;
         "then", THEN;
         "theory", THEORY;
         "true", TRUE;
@@ -65,40 +56,10 @@
         "use", USE;
         "with", WITH;
         (* programs *)
-        "abstract", ABSTRACT;
-        "absurd", ABSURD;
-        "any", ANY;
-        "assert", ASSERT;
-        "assume", ASSUME;
-        "begin", BEGIN;
-        "check", CHECK;
-        "diverges", DIVERGES;
-        "do", DO;
-        "done", DONE;
-        "downto", DOWNTO;
-        "ensures", ENSURES;
-        "exception", EXCEPTION;
-        "for", FOR;
-        "fun", FUN;
         "ghost", GHOST;
         "invariant", INVARIANT;
-        "loop", LOOP;
         "model", MODEL;
-        "module", MODULE;
-        "mutable", MUTABLE;
-        "private", PRIVATE;
-        "raise", RAISE;
-        "raises", RAISES;
-        "reads", READS;
-        "rec", REC;
-        "requires", REQUIRES;
-        "returns", RETURNS;
-        "to", TO;
-        "try", TRY;
-        "val", VAL;
-        "variant", VARIANT;
-        "while", WHILE;
-        "writes", WRITES;
+        "val", VAL
       ]
 
         let update_loc lexbuf file line chars =
@@ -130,10 +91,10 @@
 
                    let loc lb = (lexeme_start_p lb, lexeme_end_p lb)
 
-let string_start_loc = ref Why3_loc.dummy_position
+let string_start_loc = ref Loc.dummy
   let string_buf = Buffer.create 1024
 
-  let comment_start_loc = ref Why3_loc.dummy_position
+  let comment_start_loc = ref Loc.dummy
                                   
   let char_for_backslash = function
     | 'n' -> '\n'
@@ -170,11 +131,6 @@ rule token = parse
     space* (digit+ as line) space* (digit+ as char) space* "##"
       { update_loc lexbuf file (int_of_string line) (int_of_string char);
         token lexbuf }
-  | "#" space* "\"" ([^ '\010' '\013' '"' ]* as file) "\""
-    space* (digit+ as line) space* (digit+ as bchar) space*
-    (digit+ as echar) space* "#"
-      { POSITION (Why3_loc.user_position file (int_of_string line)
-                 (int_of_string bchar) (int_of_string echar)) }
   | '\n'
       { newline lexbuf; token lexbuf }
   | space+
@@ -235,24 +191,14 @@ rule token = parse
       { SEMICOLON }
   | "->"
       { ARROW }
-  | "<-"
-      { LARROW }
   | "<->"
       { LRARROW }
-  | "&&"
-      { AMPAMP }
-  | "||"
-      { BARBAR }
   | "/\\"
       { AND }
   | "\\/"
       { OR }
-  | "\\"
-      { LAMBDA }
   | "."
       { DOT }
-  | ".."
-      { DOTDOT }
   | "|"
       { BAR }
   | "<"

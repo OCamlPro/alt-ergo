@@ -15,8 +15,6 @@ type position = Loc.t
 
 val join : position -> position -> position
 
-val dummy_position : position
-
 val user_position : string -> int -> int -> int -> position
 
 val get : position -> string * int * int * int

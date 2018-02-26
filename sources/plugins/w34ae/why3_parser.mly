@@ -13,7 +13,9 @@
 
 open Lexing
 open Why3_ptree
-open Parsed_interface      
+open Parsed_interface
+open Parsed
+       
 
   let infix  s = "infix "  ^ s
   let prefix s = "prefix " ^ s
@@ -39,7 +41,7 @@ open Parsed_interface
  let str_of_labs labs =
   String.concat " " labs
 
- let dummy_loc = Why3_loc.dummy_position
+ let dummy_loc = Loc.dummy
 
   let translate_param (loc, id_op, pty) =
     match id_op with
@@ -77,7 +79,7 @@ open Parsed_interface
     | {Parsed.pp_desc = PPvar s; pp_loc } ->  mk_external_type pp_loc pl s
     | _ -> Format.eprintf "TODO@."; assert false
 
-  let rec mk_apply loc (f : Parsed.lexpr) a =                                 
+  let mk_apply loc (f : Parsed.lexpr) a =                                 
     match f with
     | { pp_desc = Parsed.PPapp ("mod", le) } ->
        mk_application loc "comp_mod" (le @ [a])
@@ -140,39 +142,35 @@ open Parsed_interface
 %}
 
 (* Tokens *)
-
+ 
 %token <string> LIDENT LIDENT_QUOTE UIDENT UIDENT_QUOTE
 %token <string> INTEGER
 %token <string> OP1 OP2 OP3 OP4 OPPREF
               
 %token <string> STRING
-%token <Loc.t> POSITION
-%token <string> QUOTE_UIDENT QUOTE_LIDENT OPAQUE_QUOTE_LIDENT
+%token <string> QUOTE_UIDENT QUOTE_LIDENT
 
 (* keywords *)
 
-%token AS AXIOM BY CLONE COINDUCTIVE CONSTANT
-%token ELSE END EPSILON EXISTS EXPORT FALSE FLOAT FORALL FUNCTION
-%token GOAL IF IMPORT IN INDUCTIVE LEMMA
-%token LET MATCH META NAMESPACE NOT PROP PREDICATE RANGE
-%token SO THEN THEORY TRUE TYPE USE WITH
+%token AS AXIOM CLONE CONSTANT
+%token ELSE END EPSILON EXISTS EXPORT FALSE FORALL FUNCTION
+%token GOAL IF IMPORT IN LEMMA
+%token LET NAMESPACE NOT PREDICATE
+%token THEN THEORY TRUE TYPE USE WITH
 
 (* program keywords *)
-
-%token ABSTRACT ABSURD ANY ASSERT ASSUME BEGIN CHECK
-%token DIVERGES DO DONE DOWNTO ENSURES EXCEPTION FOR
-%token FUN GHOST INVARIANT LOOP MODEL MODULE MUTABLE
-%token PRIVATE RAISE RAISES READS REC REQUIRES RETURNS
-%token TO TRY VAL VARIANT WHILE WRITES
+ 
+%token GHOST INVARIANT MODEL
+%token VAL
 
 (* symbols *)
 
 %token AND ARROW
 %token BAR
 %token COLON COMMA
-%token DOT DOTDOT EQUAL LAMBDA LT GT LTGT
+%token DOT EQUAL LT GT LTGT
 %token LEFTPAR LEFTPAR_STAR_RIGHTPAR LEFTSQ
-%token LARROW LRARROW OR
+%token LRARROW OR
 %token RIGHTPAR RIGHTSQ
 %token UNDERSCORE
 
@@ -180,32 +178,22 @@ open Parsed_interface
 
 (* program symbols *)
 
-%token AMPAMP BARBAR LEFTBRC RIGHTBRC SEMICOLON
+%token LEFTBRC RIGHTBRC SEMICOLON
 
 (* Precedences *)
 
 %nonassoc IN
-%nonassoc below_SEMI
-%nonassoc SEMICOLON
-%nonassoc LET VAL
-%nonassoc prec_no_else
-%nonassoc DOT ELSE GHOST
+%nonassoc DOT ELSE
 %nonassoc prec_named
 %nonassoc COLON
 
 %right ARROW LRARROW
-%right BY SO
-%right OR BARBAR
-%right AND AMPAMP
 %nonassoc NOT
 %left EQUAL LTGT LT GT OP1
-%nonassoc LARROW
-%nonassoc RIGHTSQ    (* stronger than <- for e1[e2 <- e3] *)
 %left OP2
 %left OP3
 %left OP4
 %nonassoc prec_prefix_op
-%nonassoc LEFTSQ
 %nonassoc OPPREF
 
 (* Entry points *)
@@ -237,7 +225,7 @@ logic_file:
 
 theory:
 | theory_head theory_decl* END
-  { List.concat (List.map (fun (Some x) -> x) (List.filter (fun x -> x <> None) $2)) }
+  { List.concat (List.map (function Some x -> x | _ -> assert false) (List.filter (fun x -> x <> None) $2)) }
 
 theory_head:
 | THEORY labels(uident_nq)  {  $2 }
@@ -544,11 +532,13 @@ term_:
       | Pcast (Pwild, ty) ->
          let id = id_anonymous loc in
          mk_let loc id.id_str (mk_type_cast loc $4 ty) $6
+      | _ -> assert false
     }
 | quant comma_list1(quant_vars) triggers DOT term
     {
       let vs_ty =
-        List.map (fun (_, Some i, Some pty) -> (i.id_str, "", pty)) (List.concat $2) in
+        List.map (function (_, Some i, Some pty) -> (i.id_str, "", pty
+          ) | _ -> assert false) (List.concat $2) in
       let triggers =
         List.map (fun tl -> (tl, true)) $3 in
       $1 (floc $startpos $endpos) vs_ty triggers [] $5
@@ -644,12 +634,6 @@ quant:
 numeral:
 | INTEGER { $1 }
 
-(* Program declarations *)
-
-top_ghost:
-| (* epsilon *) { Gnone  }
-| GHOST         { Gghost }
-| LEMMA         { Glemma }
     
 invariant:
 | INVARIANT LEFTBRC term RIGHTBRC { $3 }
@@ -712,9 +696,6 @@ quote_uident:
 
 quote_lident:
 | QUOTE_LIDENT  { mk_id $1 $startpos $endpos }
-
-opaque_quote_lident:
-| OPAQUE_QUOTE_LIDENT { mk_id $1 $startpos $endpos }
 
 (* Why3_idents + symbolic operation names *)
 
