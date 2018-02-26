@@ -19,11 +19,7 @@ type integer_constant = string
                           
 type constant = string
 
-type w3idlabel = { lab_string : string }
-
-type label =
-  | Lstr of w3idlabel
-  | Lpos of Loc.t
+type label = string
 
 type ident = {
   id_str : string;
@@ -39,40 +35,11 @@ type binder = loc * ident option * Parsed.ppure_type option
                                                      
 type param  = loc * ident option * Parsed.ppure_type
 
-type pattern = {
-  pat_desc : pat_desc;
-  pat_loc  : loc;
-}
-
-and pat_desc =
+type pattern =
   | Pwild
   | Pvar of ident
-  | Papp of qualid * pattern list
-  | Prec of (qualid * pattern) list
   | Ptuple of pattern list
-  | Por of pattern * pattern
-  | Pas of pattern * ident
   | Pcast of pattern * pty
 
 type term =  Parsed.lexpr
-               
 
-(*s Why3_declarations. *)
-
-type use = {
-  use_theory : qualid;
-  use_import : (bool (* import *) * string (* as *)) option;
-}
-
-type clone_subst =
-  | CSns    of loc * qualid option * qualid option
-  | CStsym  of loc * qualid * ident list * pty
-  | CSfsym  of loc * qualid * qualid
-  | CSpsym  of loc * qualid * qualid
-  | CSvsym  of loc * qualid * qualid
-  | CSlemma of loc * qualid
-  | CSgoal  of loc * qualid
-
-type invariant = term list                     
-
-type use_clone = use * clone_subst list option

@@ -31,7 +31,7 @@ open Parsed_interface
 
   let mk_id id s e = { id_str = id; id_lab = []; id_loc = floc s e }
 
-  let mk_pat  d s e = { pat_desc  = d; pat_loc  = floc s e }
+  let mk_pat  d s e = d
   let mk_term d s e = d 
                         
   let error_param loc =
@@ -41,12 +41,10 @@ open Parsed_interface
                                      
   (* Added  *)
 
-  let str_of_label = function
-  | Lstr l -> l.lab_string
-  | _ -> ""
+  let str_of_label l = l  
 
  let str_of_labs labs =
-  String.concat " " (List.filter (fun x -> x <> "") (List.map str_of_label labs))
+  String.concat " " (List.map str_of_label labs)
 
  let dummy_loc = Why3_loc.dummy_position
 
@@ -265,21 +263,21 @@ use_clone:
 
 use:
 | boption(IMPORT) tqualid
-    { { use_theory = $2; use_import = Some ($1, qualid_last $2) } }
+    { None }
 | boption(IMPORT) tqualid AS uident
-    { { use_theory = $2; use_import = Some ($1, $4.id_str) } }
+    { None }
 | EXPORT tqualid
-    { { use_theory = $2; use_import = None } }
+    { None }
 
 clone_subst:
-| NAMESPACE ns EQUAL ns         { CSns    (floc $startpos $endpos, $2,$4) }
-| TYPE qualid ty_var* EQUAL ty  { CStsym  (floc $startpos $endpos, $2,$3,$5) }
-| CONSTANT  qualid EQUAL qualid { CSfsym  (floc $startpos $endpos, $2,$4) }
-| FUNCTION  qualid EQUAL qualid { CSfsym  (floc $startpos $endpos, $2,$4) }
-| PREDICATE qualid EQUAL qualid { CSpsym  (floc $startpos $endpos, $2,$4) }
-| VAL       qualid EQUAL qualid { CSvsym  (floc $startpos $endpos, $2,$4) }
-| LEMMA     qualid              { CSlemma (floc $startpos $endpos, $2) }
-| GOAL      qualid              { CSgoal  (floc $startpos $endpos, $2) }
+| NAMESPACE ns EQUAL ns         { None }
+| TYPE qualid ty_var* EQUAL ty  { None }
+| CONSTANT  qualid EQUAL qualid { None }
+| FUNCTION  qualid EQUAL qualid { None }
+| PREDICATE qualid EQUAL qualid { None }
+| VAL       qualid EQUAL qualid { None }
+| LEMMA     qualid              { None }
+| GOAL      qualid              { None }
 
 ns:
 | uqualid { Some $1 }
@@ -540,20 +538,20 @@ term_:
 | LET pattern EQUAL term IN term
     {
       let loc =  (floc $startpos $endpos) in
-      match $2.pat_desc with
+      match $2 with
       | Pvar id ->
          mk_let loc id.id_str $4 $6
       | Pwild ->
-         mk_let  loc (id_anonymous $2.pat_loc).id_str $4 $6
+         mk_let  loc (id_anonymous loc).id_str $4 $6
       | Ptuple [] ->         
-         mk_let  loc (id_anonymous $2.pat_loc).id_str
+         mk_let  loc (id_anonymous loc).id_str
            (mk_type_cast loc $4 (mk_tuple [] loc)) $6
-      | Pcast ({pat_desc = Pvar id}, ty) ->
+      | Pcast (Pvar id, ty) ->
          mk_let loc id.id_str (mk_type_cast loc $4 ty) $6
-      | Pcast ({pat_desc = Pwild}, ty) ->
-         let id = id_anonymous $2.pat_loc in
+      | Pcast (Pwild, ty) ->
+         let id = id_anonymous loc in
          mk_let loc id.id_str (mk_type_cast loc $4 ty) $6
-      | _ -> Format.eprintf "TODO@."; assert false  }
+    }
 | quant comma_list1(quant_vars) triggers DOT term
     {
       let vs_ty =
@@ -673,25 +671,19 @@ pat_arg: mk_pat(pat_arg_) { $1 }
 
 pattern_:
 | pat_conj_                             { $1 }
-| mk_pat(pat_conj_) BAR pattern         { Por ($1,$3) }
 
 pat_conj_:
 | pat_uni_                              { $1 }
-| comma_list2(mk_pat(pat_uni_))         { Ptuple $1 }
 
 pat_uni_:
 | pat_arg_                              { $1 }
-| uqualid pat_arg+                      { Papp ($1,$2) }
-| mk_pat(pat_uni_) AS labels(lident_nq) { Pas ($1,$3) }
 | mk_pat(pat_uni_) cast                 { Pcast($1,$2) }
 
 pat_arg_:
 | UNDERSCORE                            { Pwild }
 | labels(lident_nq)                     { Pvar $1 }
-| uqualid                               { Papp ($1,[]) }
 | LEFTPAR RIGHTPAR                      { Ptuple [] }
 | LEFTPAR pattern_ RIGHTPAR             { $2 }
-| LEFTBRC field_list1(pattern) RIGHTBRC { Prec $2 }
 
 (* Why3_idents *)
 
@@ -818,8 +810,7 @@ sident:
 labels(X): X label* { add_lab $1 $2 }
 
 label:
-| STRING    { Lstr ({lab_string = $1}) }
-| POSITION  { Format.eprintf "TODO@."; assert false (*Lpos $1*) }
+| STRING    { $1 }
 
 (* Miscellaneous *)
 
