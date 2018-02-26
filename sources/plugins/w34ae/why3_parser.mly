@@ -18,14 +18,9 @@ open Parsed_interface
   let infix  s = "infix "  ^ s
   let prefix s = "prefix " ^ s
 
-  let qualid_last = function
-    |  {Parsed.pp_desc = PPvar s} -> s
-    | _ -> Format.eprintf "TODO@."; assert false
-
   let floc s e = (s,e)
 
-  let add_lab id l =
-    { id with id_lab = l }
+  let add_lab id l = { id with id_lab = l }
 
   let id_anonymous loc = { id_str = "_"; id_lab = []; id_loc = loc }
 
@@ -39,12 +34,10 @@ open Parsed_interface
 
   let error_loc loc = Why3_loc.error ~loc Error
                                      
-  (* Added  *)
-
-  let str_of_label l = l  
+  (* Added  *)  
 
  let str_of_labs labs =
-  String.concat " " (List.map str_of_label labs)
+  String.concat " " labs
 
  let dummy_loc = Why3_loc.dummy_position
 
@@ -563,7 +556,7 @@ term_:
 | EPSILON
     { Why3_loc.errorm "Epsilon terms are currently not supported in WhyML" }
 | label term %prec prec_named
-    { mk_named (floc $startpos $endpos) (str_of_label $1) $2 }
+    { mk_named (floc $startpos $endpos) $1 $2 }
 | term cast
     { mk_type_cast (floc $startpos $endpos) $1 $2 }
 
