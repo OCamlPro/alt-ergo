@@ -169,8 +169,6 @@ rule token = parse
       { LEFTPAR_STAR_RIGHTPAR }
   | "(*"
       { comment lexbuf; token lexbuf }
-  | "~'" (lident as id)
-      { OPAQUE_QUOTE_LIDENT id }
   | "'" (lident as id)
       { QUOTE_LIDENT id }
   | "'" (uident as id)
