@@ -1737,27 +1737,35 @@ let is_local_hyp s =
 let is_global_hyp s =
   try Pervasives.(=) (String.sub s 0 2) "@H" with Invalid_argument _ -> false
 
-let split_goals l =
+let split_goals_aux f l =
   let _, _, _, ret =
     List.fold_left
-      (fun (ctx, global_hyp, local_hyp, ret) ( (td, env) as x) ->
-	match td.c with
-	  | TGoal (_, (Check | Cut), _, _) ->
-	    ctx, global_hyp, [], (x::(local_hyp@global_hyp@ctx))::ret
+      (fun (ctx, global_hyp, local_hyp, ret) (td, env) ->
+	 match td.c with
+         | TGoal (_, (Check | Cut), _, _) ->
+           ctx, global_hyp, [], (f td env (local_hyp@global_hyp@ctx)) :: ret
 
-	  | TGoal (_, _, _, _) ->
-	    ctx, [], [], (x::(local_hyp@global_hyp@ctx))::ret
+         | TGoal (_, _, _, _) ->
+           ctx, [], [], (f td env (local_hyp@global_hyp@ctx)) :: ret
 
-	  | TAxiom (_, s, _, _) when is_global_hyp s ->
-	    ctx, x::global_hyp, local_hyp, ret
+         | TAxiom (_, s, _, _) when is_global_hyp s ->
+           ctx, (f td env global_hyp), local_hyp, ret
 
-	  | TAxiom (_, s, _, _) when is_local_hyp s ->
-	    ctx, global_hyp, x::local_hyp, ret
+         | TAxiom (_, s, _, _) when is_local_hyp s ->
+           ctx, global_hyp, (f td env local_hyp), ret
 
-	  | _ -> x::ctx, global_hyp, local_hyp, ret
+         | _ ->
+           (f td env ctx), global_hyp, local_hyp, ret
+
       ) ([],[],[],[]) l
   in
   List.rev_map List.rev ret
+
+let split_goals l =
+  split_goals_aux (fun e env acc -> (e, env) :: acc) l
+
+let split_goals_and_cnf l =
+  split_goals_aux (fun td env acc -> Cnf.make acc td) l
 
 let term env vars t =
   let vmap =

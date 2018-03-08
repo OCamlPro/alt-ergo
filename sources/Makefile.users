@@ -119,8 +119,8 @@ CMO = lib/util/config.cmo \
       lib/reasoners/fun_sat.cmo \
       lib/reasoners/sat_solver.cmo \
       lib/frontend/triggers.cmo \
-      lib/frontend/typechecker.cmo \
       lib/frontend/cnf.cmo \
+      lib/frontend/typechecker.cmo \
       lib/frontend/parsed_interface.cmo \
       lib/frontend/frontend.cmo \
       lib/frontend/parsers.cmo

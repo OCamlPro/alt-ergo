@@ -97,7 +97,7 @@ let () =
       let preludes = Options.preludes () in
       let pfile = Parsers.parse_problem ~filename ~preludes in
       let d, _ = Typechecker.file pfile in
-      let d = Typechecker.split_goals d
+      let d = Typechecker.split_goals_and_cnf d
         [@ocaml.ppwarning "TODO: implement a more efficient split"]
       in
       d
@@ -107,18 +107,12 @@ let () =
   in
   match d with
   | [] -> ()
-  | [d] ->
+  | [cnf] ->
     begin
       try
-        let cnf =
-          try Cnf.make (List.map (fun (f, env) -> f, true) d)
-          with Util.Timeout ->
-            FE.print_status (FE.Timeout None) 0L;
-            exit 142
-        in
         SAT.reset_refs ();
         ignore
-          (Queue.fold (FE.process_decl FE.print_status)
+          (List.fold_left (FE.process_decl FE.print_status)
 	     (SAT.empty (), true, Explanation.empty) cnf);
         Options.Time.unset_timeout ~is_gui:false;
         if Options.profiling() then
@@ -129,7 +123,7 @@ let () =
     if Options.timelimit_per_goal() then
       FE.print_status FE.Preprocess 0L;
     List.iter
-      (fun d ->
+      (fun cnf ->
         init_profiling ();
         try
           if Options.timelimit_per_goal() then
@@ -137,10 +131,9 @@ let () =
               Options.Time.start ();
               Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
             end;
-          let cnf = Cnf.make (List.map (fun (f, env) -> f, true) d) in
           SAT.reset_refs ();
           ignore
-            (Queue.fold (FE.process_decl FE.print_status)
+            (List.fold_left (FE.process_decl FE.print_status)
 	       (SAT.empty (), true, Explanation.empty) cnf)
         with Util.Timeout ->
           if not (Options.timelimit_per_goal()) then exit 142

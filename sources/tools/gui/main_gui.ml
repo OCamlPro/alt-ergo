@@ -611,14 +611,14 @@ let run_replay env =
   let ast = to_ast env.ast in
   if debug () then fprintf fmt "AST : \n-----\n%a@." print_typed_decl_list ast;
 
-  let ast_pruned = [List.map (fun f -> f,true) ast] in
+  let ast_pruned = [ast] in
 
   Options.Time.start ();
   Options.Time.set_timeout ~is_gui:true (Options.timelimit ());
   List.iter
     (fun dcl ->
-      let cnf = Cnf.make dcl in
-      ignore (Queue.fold
+      let cnf = Cnf.make_list dcl in
+      ignore (List.fold_left
 		(FE.process_decl FE.print_status)
 		(empty_sat_inst env.insts, true, Explanation.empty) cnf)
     ) ast_pruned;
@@ -646,7 +646,7 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
   let ast = to_ast env.ast in
   if debug () then fprintf fmt "AST : \n-----\n%a@." print_typed_decl_list ast;
 
-  let ast_pruned = [List.map (fun f -> f,true) ast] in
+  let ast_pruned = [ast] in
 
   (* refresh instances *)
   let to_id =
@@ -670,8 +670,8 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
 
 	  List.iter
 	    (fun dcl ->
-	      let cnf = Cnf.make dcl in
-	      ignore (Queue.fold
+	      let cnf = Cnf.make_list dcl in
+	      ignore (List.fold_left
 			(FE.process_decl
 			   (wrapper_update_status image label buttonclean env))
 			(empty_sat_inst inst_model, true, Explanation.empty)
