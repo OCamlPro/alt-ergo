@@ -34,9 +34,17 @@ type env
 val file : file ->
   ((int tdecl, int) annoted * env) list * env
 
+(* two functions split_goals to minimize useless changes in the GUI *)
+
+(* used by main_gui *)
 val split_goals :
   ((int tdecl, int) annoted * env) list ->
   ((int tdecl, int) annoted * env) list list
+
+(* used by main_text *)
+val split_goals_and_cnf :
+  ((int tdecl, int) annoted * env) list ->
+  Commands.sat_tdecl list list
 
 val term : env -> (Symbols.t * Ty.t) list -> Parsed.lexpr ->
   (int tterm, int) annoted

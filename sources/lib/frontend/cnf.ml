@@ -346,24 +346,24 @@ let make_form name_base f loc =
   in
   make_form true [] f.c f.annot
 
-let push_assume queue f name loc match_flag =
+let mk_assume acc f name loc =
   let ff , _ = make_form name f loc in
-  Queue.push {st_decl=Assume(name, ff, match_flag) ; st_loc=loc} queue
+  {st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
-let push_preddef queue f name loc match_flag =
+let mk_preddef acc f name loc =
   let ff , _ = make_form name f loc  in
-  Queue.push {st_decl=PredDef (ff, name) ; st_loc=loc} queue
+  {st_decl=PredDef (ff, name) ; st_loc=loc} :: acc
 
-let push_query queue n f loc sort =
+let mk_query acc n f loc sort =
   let ff, lits = make_form "" f loc in
-  Queue.push {st_decl=Query(n, ff, lits, sort) ; st_loc=loc} queue
+  {st_decl=Query(n, ff, lits, sort) ; st_loc=loc} :: acc
 
 let make_rule ({rwt_left = t1; rwt_right = t2} as r) =
   { r with rwt_left = make_term t1; rwt_right = make_term t2 }
 
-let push_theory queue l th_name extends loc b =
-  List.iter
-    (fun e ->
+let mk_theory acc l th_name extends loc =
+  List.fold_left
+    (fun acc e ->
       let loc, name, f, axiom_kind =
         match e.c with
         | TAxiom (loc, name, ax_kd, f) -> loc, name, f, ax_kd
@@ -371,22 +371,21 @@ let push_theory queue l th_name extends loc b =
       in
       let th_form, _ = make_form name f loc in
       let th_elt = {th_name; axiom_kind; extends; th_form} in
-      Queue.push {st_decl=ThAssume th_elt ; st_loc=loc} queue
-    )l
+      {st_decl=ThAssume th_elt ; st_loc=loc} :: acc
+    )acc l
 
-let make l =
-  let queue = Queue.create () in
-  List.iter
-    (fun (d,b) -> match d.c with
-    | TTheory(loc, name, ext, l) -> push_theory queue l name ext loc b
-    | TAxiom(loc, name, Parsed.Default, f) ->  push_assume queue f name loc b
-    | TAxiom(loc, name, Parsed.Propagator, f) -> assert false
-    | TRewriting(loc, name, lr) ->
-      Queue.push
-	{st_decl=RwtDef(List.map make_rule lr); st_loc=loc} queue
-    | TGoal(loc, sort, n, f) -> push_query queue n f loc sort
-    (*| TPredicate_def(loc, n, [], f) -> push_preddef queue f n loc b*)
-    | TPredicate_def(loc, n, _, f) -> push_preddef queue f n loc b
-    | TFunction_def(loc, n, _, _, f) -> push_assume queue f n loc b
-    | TTypeDecl _ | TLogic _  -> ()) l;
-  queue
+let make acc d =
+  match d.c with
+  | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
+  | TAxiom(loc, name, Parsed.Default, f) ->  mk_assume acc f name loc
+  | TAxiom(loc, name, Parsed.Propagator, f) -> assert false
+  | TRewriting(loc, name, lr) ->
+    {st_decl=RwtDef(List.map make_rule lr); st_loc=loc} :: acc
+  | TGoal(loc, sort, n, f) -> mk_query acc n f loc sort
+  (*| TPredicate_def(loc, n, [], f) -> mk_preddef acc f n loc b*)
+  | TPredicate_def(loc, n, _, f) -> mk_preddef acc f n loc
+  | TFunction_def(loc, n, _, _, f) -> mk_assume acc f n loc
+  | TTypeDecl _ | TLogic _  -> acc
+
+
+let make_list l = List.fold_left make [] (List.rev l)
