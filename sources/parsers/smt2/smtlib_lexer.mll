@@ -7,7 +7,6 @@
 {
 open Lexing
 open Smtlib_parser
-open Smtlib_syntax
 open Smtlib_error
 
 let newline lexbuf =
@@ -136,3 +135,18 @@ and comment acc = parse
 | "\"\"" { comment (Printf.sprintf "%s\"" acc) lexbuf }
 | '"' { STRINGLIT(acc)}
 | _ as c { comment (Printf.sprintf "%s%c" acc c) lexbuf }
+
+
+{
+  module Parser : Parsers.PARSER_INTERFACE = struct
+    let file    = Smtlib_parser.file_parser    token
+    let expr    = Smtlib_parser.lexpr_parser   token
+    let trigger = Smtlib_parser.trigger_parser token
+  end
+
+  let () =
+    (*register this parser in Input_lang: 2 different extensions recognized *)
+    let p = (module Parser : Parsers.PARSER_INTERFACE) in
+    Parsers.register_parser ~lang:".smt2" p;
+    Parsers.register_parser ~lang:".psmt2" p;
+}
