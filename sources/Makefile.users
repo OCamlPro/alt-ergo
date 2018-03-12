@@ -5,6 +5,7 @@ VERSION=$(shell grep "=" lib/util/version.ml | cut -d"=" -f2 | head -n 1)
 LOCAL_INC = -I lib/util -I lib/structures -I lib/reasoners \
     -I lib/frontend -I tools/text -I tools/gui \
     -I parsers/why \
+    -I parsers/smt2 \
     -I plugins/fm-simplex
 
 INCLUDES = $(NUMLIB) $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(LOCAL_INC)
@@ -66,7 +67,10 @@ endif
 GENERATED = lib/util/config.ml \
             parsers/why/why_parser.ml \
             parsers/why/why_parser.mli \
-            parsers/why/why_lexer.ml
+            parsers/why/why_lexer.ml \
+            parsers/smt2/smtlib_parser.ml \
+            parsers/smt2/smtlib_parser.mli \
+            parsers/smt2/smtlib_lexer.ml
 
 # bytecode and native-code compilation
 ######################################
@@ -132,9 +136,16 @@ CMO = lib/util/config.cmo \
       lib/frontend/typechecker.cmo \
       lib/frontend/parsed_interface.cmo \
       lib/frontend/frontend.cmo \
-      lib/frontend/parsers.cmo
+      lib/frontend/parsers.cmo \
+      parsers/smt2/smtlib_error.cmo \
+      parsers/smt2/smtlib_ty.cmo \
+      parsers/smt2/smtlib_typed_env.cmo \
+      parsers/smt2/smtlib_typed_logic.cmo \
+      parsers/smt2/smtlib_typing.cmo \
+      parsers/smt2/smtlib_printer.cmo \
+      parsers/smt2/smtlib_translate.cmo
 
-CMOFRONT = parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
+CMOFRONT = parsers/why/why_parser.cmo parsers/why/why_lexer.cmo parsers/smt2/smtlib_parser.cmo parsers/smt2/smtlib_lexer.cmo
 
 # parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
 
@@ -316,7 +327,7 @@ uninstall: uninstall-lib
 #######
 
 clean:
-	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/why plugins/fm-simplex ; do \
+	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/why parsers/smt2 plugins/fm-simplex ; do \
 	rm -f $$dd/*.cm[ioxtp] $$dd/*.cmti $$dd/*.o $$dd/*~ $$dd/*.annot $$dd/*.owz;\
 	rm -f $(GENERATED) $$dd/*.output META $(LIBNAME).*; \
 	rm -f $(NAME).byte $(NAME).opt $(GUINAME).opt $(GUINAME).byte *~; \
@@ -329,7 +340,7 @@ clean:
 
 .depend depend: $(GENERATED)
 	$(OCAMLDEP) -slash $(LOCAL_INC) lib/util/*.ml* lib/structures/*.ml* lib/reasoners/*.ml* lib/frontend/*.ml* tools/text/*.ml* \
-        tools/gui/*.ml* parsers/why/*.ml* plugins/fm-simplex/*ml* > .depend
+        tools/gui/*.ml* parsers/why/*.ml* parsers/smt2/*.ml* plugins/fm-simplex/*ml* > .depend
 
 include .depend
 

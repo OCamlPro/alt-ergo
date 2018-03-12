@@ -221,7 +221,7 @@ module M = struct
 
   let timers = ref false
 
-  let usage = "usage: alt-ergo [options] file.<why|mlw>"
+  let usage = "usage: alt-ergo [options] file.<why|mlw|smt2|psmt2>"
 
   let set_sat_solver s =
     match s with
