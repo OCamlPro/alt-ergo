@@ -49,7 +49,26 @@ SYMBOL
 %type <Smtlib_syntax.key_info> key_info
 %type <Smtlib_syntax.key_term> key_term
 %type <Smtlib_syntax.keyword> keyword
+
+/**************Entry points ********************************************/
+%type <Parsed.lexpr list * bool> trigger_parser
+%start trigger_parser
+
+%type <Parsed.lexpr> lexpr_parser
+%start lexpr_parser
+
+%type <Parsed.file> file_parser
+%start file_parser
 %%
+
+file_parser:
+| commands { Smtlib_translate.file_parser $1 }
+
+lexpr_parser:
+| term { Smtlib_translate.lexpr_parser $1 }
+
+trigger_parser:
+| list(lexpr_parser) {$1, true}
 
 /*************************************************************************/
 constant:
@@ -292,3 +311,25 @@ command:
 commands:
     | EOF              { [] }
     | command commands { $1::$2 }
+
+
+%%
+ let aux aux_fun token lexbuf =
+   try
+     let res = aux_fun token lexbuf in
+     Parsing.clear_parser ();
+     res
+   with
+   | Parsing.Parse_error
+   | (*Basics. | MenhirBasics.*)Error ->
+     (* not fully qualified ! backward incompat. in Menhir !!*)
+     let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
+     let lex = Lexing.lexeme lexbuf in
+     Parsing.clear_parser ();
+     raise (Errors.Syntax_error (loc, lex))
+
+ let file_parser token lexbuf = aux file_parser token lexbuf
+
+ let lexpr_parser token lexbuf = aux lexpr_parser token lexbuf
+
+ let trigger_parser token lexbuf = aux trigger_parser token lexbuf
