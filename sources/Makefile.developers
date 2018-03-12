@@ -11,7 +11,7 @@ poor-archi: .depend
 
 rich-archi:opt gui
 	ocamldoc.opt $(INCLUDES) -dot -dot-reduce -dot-include-all lib/util/*.ml lib/structures/*.ml lib/reasoners/*.ml lib/frontend/*.ml tools/text/*.ml tools/gui/*.ml \
-        parsers/why/*.ml lib/util/*.mli lib/structures/*.mli lib/reasoners/*.mli lib/frontend/*.mli tools/text/*.mli tools/gui/*.mli parsers/why/*.mli -verbose
+        parsers/why/*.ml parsers/smt2/*.ml lib/util/*.mli lib/structures/*.mli lib/reasoners/*.mli lib/frontend/*.mli tools/text/*.mli tools/gui/*.mli parsers/why/*.mli parsers/smt2/*.mli -verbose
 	grep -v "}" ocamldoc.out > archi.dot
 	rm ocamldoc.out
 	cat ../extra/subgraphs.dot >> archi.dot
@@ -20,7 +20,7 @@ rich-archi:opt gui
 
 archi:$(NAME).byte $(GUINAME).byte
 	ocamldoc.opt $(INCLUDES) -dot -dot-reduce lib/util/*.ml lib/structures/*.ml lib/reasoners/*.ml lib/frontend/*.ml tools/text/*.ml tools/gui/*.ml \
-        parsers/why/*.ml lib/util/*.mli lib/structures/*.mli lib/reasoners/*.mli lib/frontend/*.mli tools/text/*.mli tools/gui/*.mli parsers/why/*.mli -verbose
+        parsers/why/*.ml parsers/smt2/*.ml lib/util/*.mli lib/structures/*.mli lib/reasoners/*.mli lib/frontend/*.mli tools/text/*.mli tools/gui/*.mli parsers/why/*.mli parsers/smt2/*.mli -verbose
 	grep -v "}" ocamldoc.out > archi.dot
 	rm ocamldoc.out
 	cat ../extra/subgraphs.dot >> archi.dot
