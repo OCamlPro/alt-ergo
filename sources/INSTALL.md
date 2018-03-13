@@ -72,14 +72,6 @@ allow to enable the old Tableaux-like SAT-solver:
         $ alt-ergo   [options] -sat-solver Tableaux file.why
         $ altgr-ergo [options] -sat-solver Tableaux file.why
 
-   Alt-Ergo will try to load a local plugin called
-   "satML-plugin.cmxs". If this fails, Alt-Ergo tries to load it from
-   the default plugins directory (run "alt-ergo -where plugins" to
-   see its absolute path). You can also provide a relative or an
-   absolute path as shown by the second command above. Also, you
-   should replace ".cmxs" by ".cma" if you are working with bytcode
-   binaries.
-
 - The Fm-Simplex plugin can be used as follows:
 
         $ alt-ergo -inequalities-plugin fm-simplex-plugin.cmxs [other-options] file.why

@@ -1,3 +1,35 @@
+version 2.1.0, March 14, 2018
+================================
+
+* SAT-solving:
+
+  - important improvements in the CDCL SAT engine, which is now the
+    default SAT-solver. Proofs are models generation are currently not
+    available with CDCL. The old SAT-solver can be activated with option
+    "-sat-solver Tableaux"
+
+* Instantiation:
+
+  - Add a very weak form of matching modulo arithmetic. This can be
+    disabled with option "-no-arith-matching"
+
+  - [Formula.mk_forall/exists] remove (big) triggers that are subsumed by smaller ones
+
+  - Simplify quantified formulas when relevant instances/skolems can be deduced
+    from the formulas (eg. exists x : int. x = 1 and P(x) ~~> P(1),
+    and forall x : int. x <> 1 or P(x) ~~> P(1))
+
+* Frontend:
+
+  - improve handling of multiple goals per file. Add the ability to
+    set a timelimit per goal in this case with option
+    "-timelimit-per-goal"
+
+  - add the ability to dynamically load new parsers with option
+    "-parser".
+
+
+
 version 2.0.0, November 14, 2017
 ================================
 
