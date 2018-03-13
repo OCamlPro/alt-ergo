@@ -29,6 +29,10 @@ type case_split_policy =
 
 type inst_kind = Normal | Forward | Backward
 
+type sat_solver =
+  | Tableaux
+  | CDCL_satML
+
 (*
 let map_merge_is_union eq k a b =
   match a, b with

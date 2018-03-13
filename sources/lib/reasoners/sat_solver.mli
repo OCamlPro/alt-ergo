@@ -9,11 +9,16 @@
 (*                                                                            *)
 (******************************************************************************)
 
-val get_current : unit -> (module Sat_solver_sig.S)
-(** returns the current activated SAT-solver. The default value is Fun_sat.
-    When the selected SAT-solver is an external plugin, the first call of this
-    function will attemp to dynamically load it **)
 
+val get_current : unit -> (module Sat_solver_sig.S)
+(** returns the current activated SAT-solver depending on the value of
+    `Options.sat_solver ()`. See command-line option `-sat-solver` for
+    more details **)
+
+
+(*
+(*+ no dynamic loading of SAT solvers anymore +*)
 val set_current : (module Sat_solver_sig.S) -> unit
 (** sets a new SAT-solver. This function is intended to be used by dynamically
     loaded plugins **)
+*)

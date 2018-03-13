@@ -87,7 +87,6 @@ val set_timelimit : float -> unit
 val set_thread_yield : (unit -> unit) -> unit
 
 val set_timeout : (unit -> unit) -> unit
-val set_partial_bmodel : bool -> unit
 val set_save_used_context : bool -> unit
 val set_default_input_lang : string -> unit
 
@@ -189,7 +188,13 @@ val parsers : unit -> string list
 val inequalities_plugin : unit -> string
 val profiling_plugin : unit -> string
 val normalize_instances : unit -> bool
-val partial_bmodel : unit -> bool
+
+val sat_solver : unit -> Util.sat_solver
+val tableaux_cdcl : unit -> bool
+val minimal_bj : unit -> bool
+val enable_restarts : unit -> bool
+val disable_flat_formulas_simplification : unit -> bool
+
 val use_fpa : unit -> bool
 
 (** particular getters : functions that are immediately executed **************)

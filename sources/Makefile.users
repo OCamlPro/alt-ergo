@@ -5,7 +5,6 @@ VERSION=$(shell grep "=" lib/util/version.ml | cut -d"=" -f2 | head -n 1)
 LOCAL_INC = -I lib/util -I lib/structures -I lib/reasoners \
     -I lib/frontend -I tools/text -I tools/gui \
     -I parsers/why \
-    -I plugins/common -I plugins/satML \
     -I plugins/fm-simplex
 
 INCLUDES = $(NUMLIB) $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(LOCAL_INC)
@@ -51,7 +50,7 @@ LIBNAME = altErgo
 BYTE=$(NAME).byte
 OPT=$(NAME).opt
 
-all: alt-ergo gui satML fm-simplex
+all: alt-ergo gui fm-simplex
 
 ifeq ($(OCAMLBEST),opt)
 alt-ergo: opt
@@ -80,6 +79,7 @@ CMO = lib/util/config.cmo \
       lib/util/zarithNumbers.cmo \
       lib/util/numbers.cmo \
       lib/util/options.cmo \
+      lib/util/vec.cmo \
       lib/util/cmdline_parser.cmo \
       lib/util/timers.cmo \
       lib/util/gc_debug.cmo \
@@ -117,6 +117,8 @@ CMO = lib/util/config.cmo \
       lib/reasoners/ccx.cmo \
       lib/reasoners/theory.cmo \
       lib/reasoners/fun_sat.cmo \
+      lib/reasoners/satml.cmo \
+      lib/reasoners/satml_frontend.cmo \
       lib/reasoners/sat_solver.cmo \
       lib/frontend/triggers.cmo \
       lib/frontend/cnf.cmo \
@@ -261,14 +263,13 @@ endif
 # install-pack:: install-pack-opt
 # endif
 
-install: install-ae install-gui install-fm-simplex install-satML
+install: install-ae install-gui install-fm-simplex
 
 uninstall:
 	@rm $(BINDIR)/$(NAME)$(EXE)
 	@rm $(MANDIR)/man1/alt-ergo.1
 	-@rm $(BINDIR)/$(GUINAME)$(EXE)
 	-@rm $(DATADIR)/gtksourceview-2.0/language-specs/alt-ergo.lang
-	@rm $(PLUGINSDIR)/satML-plugin.cm*
 	@rm $(PLUGINSDIR)/fm-simplex-plugin.cm*
 	@rm $(PRELUDESDIR)/fpa-theory-2017-01-04-16h00.why
 
@@ -304,7 +305,7 @@ uninstall:
 #######
 
 clean:
-	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/why plugins/common plugins/satML plugins/common plugins/common plugins/fm-simplex ; do \
+	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/why plugins/fm-simplex ; do \
 	rm -f $$dd/*.cm[ioxtp] $$dd/*.cmti $$dd/*.o $$dd/*~ $$dd/*.annot $$dd/*.owz;\
 	rm -f $(GENERATED) $$dd/*.output META ; \
 	rm -f $(NAME).byte $(NAME).opt $(GUINAME).opt $(GUINAME).byte *~; \
@@ -317,42 +318,13 @@ clean:
 
 .depend depend: $(GENERATED)
 	$(OCAMLDEP) -slash $(LOCAL_INC) lib/util/*.ml* lib/structures/*.ml* lib/reasoners/*.ml* lib/frontend/*.ml* tools/text/*.ml* \
-        tools/gui/*.ml* parsers/why/*.ml* plugins/common/*ml* plugins/satML/*ml* plugins/fm-simplex/*ml* > .depend
+        tools/gui/*.ml* parsers/why/*.ml* plugins/fm-simplex/*ml* > .depend
 
 include .depend
 
 #### BUILD & INSTALL additional plugins
 
-SATML-CMO = plugins/common/vec.cmo \
-            plugins/satML/satml.cmo \
-            plugins/satML/satml_frontend.cmo
-
-SATML-CMX = $(SATML-CMO:.cmo=.cmx)
-
-satML-plugin.cmxs: $(CMX) $(SATML-CMX)
-	$(if $(QUIET),@echo 'Library $@' &&) $(OCAMLOPT) $(INCLUDES)  -shared -o $@ $(SATML-CMX)
-
-satML-plugin.cma: $(CMO) $(SATML-CMO)
-	$(if $(QUIET),@echo 'Library $@' &&) $(OCAMLC) $(INCLUDES)  -a        -o $@ $(SATML-CMO)
-
-ifeq ($(OCAMLBEST),opt)
-satML: satML-plugin.cmxs
-else
-satML: satML-plugin.cma
-endif
-
-install-satML: satML
-ifeq ($(OCAMLBEST),opt)
-	mkdir -p $(PLUGINSDIR)
-	cp -f satML-plugin.cmxs $(PLUGINSDIR)
-else
-	mkdir -p $(PLUGINSDIR)
-	cp -f satML-plugin.cma $(PLUGINSDIR)
-endif
-
-
-FM-SIMPLEX-CMO = plugins/common/vec.cmo \
-                 plugins/fm-simplex/simplex_cache.cmo \
+FM-SIMPLEX-CMO = plugins/fm-simplex/simplex_cache.cmo \
                  plugins/fm-simplex/simplex.cmo \
                  plugins/fm-simplex/fmSimplexIneqs.cmo
 

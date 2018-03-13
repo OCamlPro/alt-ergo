@@ -177,6 +177,7 @@ module type STT = sig
         neg : atom;
         mutable watched : clause Vec.t;
         mutable is_true : bool;
+        mutable timp : bool;
         aid : int }
 
   and clause =
@@ -211,6 +212,7 @@ module type STT = sig
   val make_var : Literal.LT.t -> var * bool
 
   val add_atom : Literal.LT.t -> atom
+  val get_atom : Literal.LT.t -> atom (* get existing atom of a lit *)
   val vrai_atom  : atom
   val faux_atom  : atom
 
@@ -278,6 +280,7 @@ module Types (*: STT*) = struct
         neg : atom;
         mutable watched : clause Vec.t;
         mutable is_true : bool;
+        mutable timp : bool;
         aid : int }
 
   and clause =
@@ -312,6 +315,7 @@ module Types (*: STT*) = struct
       vpremise = [] }
   and dummy_atom =
     { var = dummy_var;
+      timp = false;
       lit = dummy_lit;
       watched = {Vec.dummy=dummy_clause; data=[||]; sz=0};
       neg = dummy_atom;
@@ -404,14 +408,16 @@ module Types (*: STT*) = struct
   let index a = a.var.index
   let neg a = a.neg
 
-  let cpt_mk_var = ref 0
+  (* tag -1 will be used for variable "vrai" *)
+  let cpt_mk_var = ref (-1)
+
   let ma = ref MA.empty
   let make_var =
-    fun lit ->
+    fun lit acc ->
       let lit, negated = normal_form lit in
-      try MA.find lit !ma, negated
+      try MA.find lit !ma, negated, acc
       with Not_found ->
-        let cpt_fois_2 = !cpt_mk_var lsl 1 in
+        let cpt_fois_2 = !cpt_mk_var * 2 in
         let rec var  =
 	  { vid = !cpt_mk_var;
 	    pa = pa;
@@ -430,6 +436,7 @@ module Types (*: STT*) = struct
 	    watched = Vec.make 10 dummy_clause;
 	    neg = na;
 	    is_true = false;
+            timp = false;
 	    aid = cpt_fois_2 (* aid = vid*2 *) }
         and na =
 	  { var = var;
@@ -437,30 +444,36 @@ module Types (*: STT*) = struct
 	    watched = Vec.make 10 dummy_clause;
 	    neg = pa;
 	    is_true = false;
+            timp = false;
 	    aid = cpt_fois_2 + 1 (* aid = vid*2+1 *) } in
         ma := MA.add lit var !ma;
         incr cpt_mk_var;
-        var, negated
+        var, negated, var :: acc
+
+  let add_atom lit acc =
+    let var, negated, acc = make_var lit acc in
+    (if negated then var.na else var.pa), acc
+
+  let vrai_atom =
+    let a, _ = add_atom Literal.LT.vrai [] in
+    assert (!cpt_mk_var = 0);
+    a.is_true <- true;
+    a.var.level <- 0;
+    a.var.reason <- None;
+    a
+
+  let get_atom lit =
+    try (MA.find lit !ma).pa
+    with Not_found ->
+      try (MA.find (Literal.LT.neg lit) !ma).na with Not_found -> assert false
 
   let made_vars_info () =
     !cpt_mk_var, MA.fold (fun lit var acc -> var::acc)!ma []
-
-  let add_atom lit =
-    let var, negated = make_var lit in
-    if negated then var.na else var.pa
-
 
   let get_var lit =
     let lit, negated = normal_form lit in
     try MA.find lit !ma, negated
     with Not_found -> assert false
-
-  let vrai_atom =
-    let a = add_atom Literal.LT.vrai in
-    a.is_true <- true;
-    a.var.level <- 0;
-    a.var.reason <- None;
-    a
 
   let faux_atom = vrai_atom.neg
 
@@ -487,7 +500,6 @@ module Types (*: STT*) = struct
     fun () -> incr cpt; "C" ^ (string_of_int !cpt)
 
 
-
   let to_float i = float_of_int i
 
   let to_int f = int_of_float f
@@ -511,6 +523,26 @@ module Types (*: STT*) = struct
   let iter_atoms_of_clauses cls f =
     Vec.iter cls (fun c -> Vec.iter c.atoms f)
 
+
+  let reason_atoms a =
+    match a.var.reason with
+      None -> []
+    | Some c ->
+      let cpt = ref 0 in
+      let l = ref [] in
+      for i = 0 to Vec.size c.atoms - 1 do
+        let b = Vec.get c.atoms i in
+        if eq_atom a b then incr cpt
+        else l := b :: !l
+      done;
+      if !cpt <> 1 then begin
+        fprintf fmt "cpt = %d@." !cpt;
+        fprintf fmt "a = %a@." pr_atom a;
+        fprintf fmt "c = %a@." pr_clause c;
+        assert false
+      end;
+      !l
+
 end
 
 (******************************************************************************)
@@ -525,7 +557,7 @@ module type FF_SIG = sig
   val vrai    : t
   val faux    : t
   val view    : t -> view
-  val mk_lit  : Literal.LT.t -> t
+  val mk_lit  : Literal.LT.t -> Types.var list -> t * Types.var list
   val mk_and  : t list -> t
   val mk_or   : t list -> t
   val mk_not  : t -> t
@@ -533,13 +565,20 @@ module type FF_SIG = sig
   val simplify :
     Formula.t ->
     (Formula.t -> t * 'a) ->
+    Types.var list ->
     t * (Formula.t * (t * Types.atom)) list
+    * Types.var list
+
+  val get_proxy_of : t ->
+    (Types.atom * Types.atom list * bool) Util.MI.t -> Types.atom option
 
   val cnf_abstr : t ->
     (Types.atom * Types.atom list * bool) Util.MI.t ->
+    Types.var list ->
     Types.atom
     * (Types.atom * Types.atom list * bool) list
     * (Types.atom * Types.atom list * bool) Util.MI.t
+    * Types.var list
 
   val expand_proxy_defn :
     Types.atom list list ->
@@ -552,17 +591,34 @@ end
 module Flat_Formula : FF_SIG = struct
 
   type view = UNIT of Types.atom | AND  of t list | OR of t list
-  and t = { pos : view ; neg : view; tpos : int; tneg : int }
+  and t =
+    {view : view;
+     tag : int;
+     neg : t
+    }
 
-  let mk_not {pos=pos; neg=neg;tpos=tpos; tneg=tneg} =
-    {pos=neg; neg=pos;tpos=tneg; tneg=tpos}
+  let mk_not f = f.neg
 
   module HC =
     Hconsing.Make
       (struct
         type elt = t
 
-        let set_id tag f = { f with tpos = 2*tag; tneg = 2*tag+1 }
+        let set_id tag {view=pos_view ; neg = {view=neg_view}} =
+          let rec p =
+            {
+              view = pos_view;
+              tag  = 2*tag;
+              neg  = n;
+            }
+          and n =
+            {
+              view = neg_view;
+              tag  = 2*tag+1;
+              neg  = p;
+            }
+          in
+          p
 
         let eq f1 f2 =
           let eq_aux c1 c2 = match c1, c2 with
@@ -570,7 +626,7 @@ module Flat_Formula : FF_SIG = struct
             | AND u  , AND v | OR u , OR v  ->
               (try
                  List.iter2
-                   (fun x y -> if x.tpos <> y.tpos then raise Exit) u v; true
+                   (fun x y -> if x.tag <> y.tag then raise Exit) u v; true
                with
                | Exit -> false
                | Invalid_argument s ->
@@ -579,16 +635,16 @@ module Flat_Formula : FF_SIG = struct
 
             | _, _ -> false
 	  in
-          eq_aux f1.pos f2.pos
+          eq_aux f1.view f2.view
 
         let hash f =
           let h_aux f = match f with
             | UNIT a -> Types.hash_atom a
-            | AND l  -> List.fold_left (fun acc f -> acc * 19 + f.tpos) 1 l
-            | OR l   -> List.fold_left (fun acc f -> acc * 23 + f.tpos) 1 l
+            | AND l  -> List.fold_left (fun acc f -> acc * 19 + f.tag) 1 l
+            | OR l   -> List.fold_left (fun acc f -> acc * 23 + f.tag) 1 l
           in
-          let h = h_aux f.pos in
-          match f.pos with
+          let h = h_aux f.view in
+          match f.view with
             | UNIT _ -> abs (3 * h)
             | AND _  -> abs (3 * h + 1)
             | OR _   -> abs (3 * h + 2)
@@ -601,9 +657,9 @@ module Flat_Formula : FF_SIG = struct
 
   let cpt = ref 0
 
-  let sp() = String.make (!cpt * 2) ' '
+  let sp() = let s = ref "" in for _ = 1 to !cpt do s := " " ^ !s done; !s ^ !s
 
-  let rec print fmt fa = match fa.pos with
+  let rec print fmt fa = match fa.view with
     | UNIT a -> fprintf fmt "%a" Types.pr_atom a
     | AND s  ->
       incr cpt;
@@ -629,12 +685,12 @@ module Flat_Formula : FF_SIG = struct
 
   let print_stats fmt = ()
 
-  let compare f1 f2 = f1.tpos - f2.tpos
+  let compare f1 f2 = f1.tag - f2.tag
 
-  let equal f1 f2 = f1.tpos - f2.tpos = 0
-  let hash f = f.tpos
-  let tag  f = f.tpos
-  let view f = f.pos
+  let equal f1 f2 = f1.tag == f2.tag
+  let hash f = f.tag
+  let tag  f = f.tag
+  let view f = f.view
 
   let is_positive pos = match pos with
     | AND _ -> true
@@ -643,18 +699,42 @@ module Flat_Formula : FF_SIG = struct
 
   let make pos neg =
     let is_pos = is_positive pos in
-    if is_pos then HC.make {pos=pos ; neg=neg; tpos= -1; tneg= -1 (*dump*)}
-    else mk_not (HC.make {pos=neg ; neg=pos; tpos= -1; tneg= -1 (*dump*)})
+    let pos, neg = if is_pos then pos, neg else neg, pos in
+    let rec p =
+      {
+        view = pos;
+        tag  = -1; (*dummy*)
+        neg  = n;
+      }
+    and n =
+      {
+        view = neg;
+        tag  = -1; (*dummy*)
+        neg  = p;
+      }
+    in
+    let res = HC.make p in
+    if is_pos then res else mk_not res
 
   let aaz a = assert (a.Types.var.Types.level = 0)
 
-  let complements f1 f2 = f1.tpos - f2.tneg = 0
+  let complements f1 f2 = f1.tag == f2.neg.tag
 
-  let mk_lit a =
-    let at = Types.add_atom a in
-    make (UNIT at) (UNIT at.Types.neg)
+  let mk_lit a acc =
+    let at, acc = Types.add_atom a acc in
+    let at =
+      if disable_flat_formulas_simplification () then at
+      else
+        if at.Types.var.Types.level = 0 then
+          if at.Types.is_true then Types.vrai_atom
+          else begin
+            if at.Types.neg.Types.is_true then Types.faux_atom else at
+          end
+        else at
+    in
+    make (UNIT at) (UNIT at.Types.neg), acc
 
-  let vrai = mk_lit Literal.LT.vrai
+  let vrai = mk_lit Literal.LT.vrai [] |> fst
   let faux = mk_not vrai
 
   let merge_and_check l1 l2 =
@@ -692,12 +772,16 @@ module Flat_Formula : FF_SIG = struct
       let so, nso =
         List.fold_left
           (fun ((so,nso) as acc) e ->
-            match e.pos with
+            match e.view with
               | AND l -> merge_and_check so l, nso
-              | UNIT a when a.Types.var.Types.level = 0 ->
-                if a.Types.neg.Types.is_true then (aaz a; raise Exit); (* XXX*)
-                if a.Types.is_true then (aaz a; acc)
-                else so, e::nso
+              | UNIT a when
+                  not (disable_flat_formulas_simplification ()) &&
+                    a.Types.var.Types.level = 0 ->
+                begin
+                  if a.Types.neg.Types.is_true then (aaz a; raise Exit); (* XXX*)
+                  if a.Types.is_true then (aaz a; acc)
+                  else so, e::nso
+                end
               | _     -> so, e::nso
           )([],[]) l
       in
@@ -805,12 +889,16 @@ module Flat_Formula : FF_SIG = struct
       let so, nso =
         List.fold_left
           (fun ((so,nso) as acc) e ->
-            match e.pos with
+            match e.view with
               | OR l  -> merge_and_check so l, nso
-              | UNIT a  when a.Types.var.Types.level = 0 ->
-                if a.Types.is_true then (aaz a; raise Exit); (* XXX *)
-                if a.Types.neg.Types.is_true then (aaz a; acc)
-                else so, e::nso
+              | UNIT a  when
+                  not (disable_flat_formulas_simplification ()) &&
+                    a.Types.var.Types.level = 0 ->
+                begin
+                  if a.Types.is_true then (aaz a; raise Exit); (* XXX *)
+                  if a.Types.neg.Types.is_true then (aaz a; acc)
+                  else so, e::nso
+                end
               | _     -> so, e::nso
           )([],[]) l
       in
@@ -835,7 +923,7 @@ module Flat_Formula : FF_SIG = struct
           match extract_common l with
             | None ->
               begin match l with
-                | [{pos=UNIT _} as fa;{pos=AND ands}] ->
+                | [{view=UNIT _} as fa;{view=AND ands}] ->
                   begin
                     try mk_or [fa ; (mk_and (remove_elt (mk_not fa) ands))]
                     with Not_included ->
@@ -850,7 +938,7 @@ module Flat_Formula : FF_SIG = struct
 
   (* translation from Formula.t *)
 
-  let abstract_lemma abstr f tl lem =
+  let abstract_lemma abstr f tl lem new_vars =
     try fst (abstr f)
     with Not_found ->
       try fst (List.assoc f !lem)
@@ -861,16 +949,25 @@ module Flat_Formula : FF_SIG = struct
         end
         else
           let lit = A.mk_pred (T.fresh_name Ty.Tbool) false in
-          let xlit = mk_lit lit in
-          lem := (f, (xlit, Types.add_atom lit)) :: !lem;
+          let xlit, new_v = mk_lit lit !new_vars in
+          let at_lit, new_v = Types.add_atom lit new_v in
+          new_vars := new_v;
+          lem := (f, (xlit, at_lit)) :: !lem
+            [@ocaml.ppwarning "xlit or at_lit is probably redundant"]
+          ;
           xlit
 
-  let simplify f abstr =
+  let simplify f abstr new_vars =
     let lem = ref [] in
+    let new_vars = ref new_vars in
     let rec simp topl f =
       match F.view f with
-        | F.Literal a -> mk_lit a
-        | F.Lemma _   -> abstract_lemma abstr f topl lem
+        | F.Literal a ->
+          let ff, l = mk_lit a !new_vars in
+          new_vars := l;
+          ff
+
+        | F.Lemma _   -> abstract_lemma abstr f topl lem new_vars
 
         | F.Skolem _ ->
           mk_not (simp false (F.mk_not f))
@@ -878,7 +975,7 @@ module Flat_Formula : FF_SIG = struct
         | F.Unit(f1, f2) ->
           let x1 = simp topl f1 in
           let x2 = simp topl f2 in
-          begin match x1.pos , x2.pos with
+          begin match x1.view , x2.view with
             | AND l1, AND l2 -> mk_and (List.rev_append l1 l2)
             | AND l1, _      -> mk_and (x2 :: l1)
             | _     , AND l2 -> mk_and (x1 :: l2)
@@ -888,7 +985,7 @@ module Flat_Formula : FF_SIG = struct
         | F.Clause(f1, f2, _) ->
           let x1 = simp false f1 in
           let x2 = simp false f2 in
-          begin match x1.pos, x2.pos with
+          begin match x1.view, x2.view with
             | OR l1, OR l2 -> mk_or (List.rev_append l1 l2)
             | OR l1, _     -> mk_or (x2 :: l1)
             | _    , OR l2 -> mk_or (x1 :: l2)
@@ -899,19 +996,23 @@ module Flat_Formula : FF_SIG = struct
         | F.Let {F.let_var=lvar; let_term=lterm; let_subst=s; let_f=lf} ->
           let f' = F.apply_subst s lf in
           let v = Symbols.Map.find lvar (fst s) in
-          let at = mk_lit (A.mk_eq v lterm) in
+          let at, new_v = mk_lit (A.mk_eq v lterm) !new_vars in
+          new_vars := new_v;
           let res = simp topl f' in
-          begin match res.pos with
+          begin match res.view with
             | AND l -> mk_and (at :: l)
             | _     -> mk_and [at; res]
           end
     in
-    simp true f, !lem
+    let res = simp true f in
+    res, !lem, !new_vars
 
   (* CNF_ABSTR a la Tseitin *)
 
-  let atom_of_lit lit is_neg =
-    let a = Types.add_atom lit in if is_neg then a.Types.neg else a
+  let atom_of_lit lit is_neg new_vars =
+    let a, l = Types.add_atom lit !new_vars in
+    new_vars := l;
+    if is_neg then a.Types.neg else a
 
   let mk_new_proxy n =
     let hs = Hs.make ("PROXY__" ^ (string_of_int n)) in
@@ -919,9 +1020,9 @@ module Flat_Formula : FF_SIG = struct
     A.mk_pred (Term.make sy [] Ty.Tbool) false
 
   let get_proxy_of f proxies_mp =
-    try let p, _, _ = Util.MI.find f.tpos !proxies_mp in Some p
+    try let p, _, _ = Util.MI.find f.tag proxies_mp in Some p
     with Not_found ->
-      try let p, _, _ = Util.MI.find f.tneg !proxies_mp in Some p.Types.neg
+      try let p, _, _ = Util.MI.find f.neg.tag proxies_mp in Some p.Types.neg
       with Not_found -> None
 
 
@@ -937,26 +1038,27 @@ module Flat_Formula : FF_SIG = struct
       let acc = List.fold_left (fun acc a -> [p;a.Types.neg]::acc) acc l in
       ((p.Types.neg) :: l) :: acc
 
-  let cnf_abstr f proxies_mp =
+  let cnf_abstr f proxies_mp new_vars =
     let proxies_mp = ref proxies_mp in
     let new_proxies = ref [] in
-    let rec abstr f = match f.pos with
+    let new_vars = ref new_vars in
+    let rec abstr f = match f.view with
       | UNIT a -> a
       | AND l | OR l ->
-        match get_proxy_of f proxies_mp with
+        match get_proxy_of f !proxies_mp with
         | Some p -> p
         | None ->
           let l = List.rev (List.rev_map abstr l) in
-          let p = atom_of_lit (mk_new_proxy f.tpos) false in
-          let is_and = match f.pos with
+          let p = atom_of_lit (mk_new_proxy f.tag) false new_vars in
+          let is_and = match f.view with
             | AND _ -> true | OR _ -> false | UNIT _ -> assert false
           in
           new_proxies := (p, l, is_and) :: !new_proxies;
-          proxies_mp := Util.MI.add f.tpos (p, l, is_and) !proxies_mp;
+          proxies_mp := Util.MI.add f.tag (p, l, is_and) !proxies_mp;
           p
     in
     let abstr_f = abstr f in
-    abstr_f, !new_proxies, !proxies_mp
+    abstr_f, !new_proxies, !proxies_mp, !new_vars
 
 
   module Set = Set.Make(struct type t'=t type t=t' let compare=compare end)
@@ -971,7 +1073,7 @@ open Types
 module Ex = Explanation
 
 exception Sat
-exception Unsat of clause list
+exception Unsat of clause list option
 exception Restart
 
 let vraie_form = Formula.vrai
@@ -983,9 +1085,23 @@ module type SAT_ML = sig
   type th
 
   val solve : unit -> unit
-  val assume : Types.atom list list -> Formula.t -> cnumber : int -> unit
+
+  val set_new_proxies :
+    (Types.atom * Types.atom list * bool) Util.MI.t -> unit
+
+  val new_vars :
+    var list ->
+    atom list list -> atom list list ->
+    atom list list * atom list list
+
+  val assume :
+    Types.atom list list -> Types.atom list list -> Formula.t ->
+    cnumber : int ->
+    Types.atom option Flat_Formula.Map.t -> dec_lvl:int ->
+    unit
 
   val boolean_model : unit -> Types.atom list
+  val theory_assumed : unit -> Literal.LT.Set.t
   val current_tbox : unit -> th
   val set_current_tbox : th -> unit
   val empty : unit -> unit
@@ -1001,11 +1117,21 @@ module type SAT_ML = sig
   val decision_level : unit -> int
   val cancel_until : int -> unit
 
+  val update_lazy_cnf :
+    do_bcp : bool ->
+    Types.atom option Flat_Formula.Map.t -> dec_lvl:int -> unit
+  val exists_in_lazy_cnf : Flat_Formula.t -> bool
+
+  val known_lazy_formulas : unit -> int Flat_Formula.Map.t
 (*end*)
 end
 
+module MFF = Flat_Formula.Map
+module SFF = Flat_Formula.Set
+
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
+  module Matoms = Map.Make (struct type t = atom let compare = cmp_atom end)
 
   type th = Th.t
   type env =
@@ -1013,7 +1139,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       (* si vrai, les contraintes sont deja fausses *)
         mutable is_unsat : bool;
 
-        mutable unsat_core : clause list;
+        mutable unsat_core : clause list option;
 
       (* clauses du probleme *)
         mutable clauses : clause Vec.t;
@@ -1107,14 +1233,35 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
         mutable tenv : Th.t;
 
+        mutable unit_tenv : Th.t;
+
         mutable tenv_queue : Th.t Vec.t;
 
         mutable tatoms_queue : atom Queue.t;
+        mutable th_tableaux : atom Queue.t;
 
         mutable cpt_current_propagations : int;
+
+        mutable proxies : (Types.atom * Types.atom list * bool) Util.MI.t;
+
+        mutable lazy_cnf :
+          (Flat_Formula.t list MFF.t * Flat_Formula.t) Matoms.t;
+
+        lazy_cnf_queue :
+          (Flat_Formula.t list MFF.t * Flat_Formula.t) Matoms.t Vec.t;
+
+        mutable relevants : SFF.t;
+        relevants_queue : SFF.t Vec.t;
+
+        mutable ff_lvl : int MFF.t;
+
+        mutable lvl_ff : SFF.t Util.MI.t;
       }
 
-
+  type conflict_origin =
+    | C_none
+    | C_bool of clause
+    | C_theory of Ex.t
 
   exception Conflict of clause
   (*module Make (Dummy : sig end) = struct*)
@@ -1140,7 +1287,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     {
       is_unsat = false;
 
-      unsat_core = [] ;
+      unsat_core = None;
 
       clauses = Vec.make 0 dummy_clause; (*sera mis a jour lors du parsing*)
 
@@ -1208,12 +1355,31 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       tenv = Th.empty();
 
+      unit_tenv = Th.empty();
+
       tenv_queue = Vec.make 100 (Th.empty());
 
       tatoms_queue = Queue.create ();
 
+      th_tableaux = Queue.create ();
+
       cpt_current_propagations = 0;
-    }
+
+      proxies = Util.MI.empty;
+
+      lazy_cnf = Matoms.empty;
+
+      lazy_cnf_queue =
+        Vec.make 100
+          (Matoms.singleton (faux_atom) (MFF.empty, Flat_Formula.faux));
+
+      relevants = SFF.empty;
+      relevants_queue = Vec.make 100 (SFF.singleton (Flat_Formula.faux));
+
+      ff_lvl = MFF.empty;
+
+      lvl_ff = Util.MI.empty;
+}
 
 
 (*
@@ -1293,7 +1459,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     env.decisions <- env.decisions + 1;
     Vec.push env.trail_lim (Vec.size env.trail);
     if Options.profiling() then Profiling.decision (decision_level()) "<none>";
-    Vec.push env.tenv_queue env.tenv (* save the current tenv *)
+    Vec.push env.tenv_queue env.tenv; (* save the current tenv *)
+    if Options.tableaux_cdcl () then begin
+      Vec.push env.lazy_cnf_queue env.lazy_cnf;
+      Vec.push env.relevants_queue env.relevants
+    end
 
   let attach_clause c =
     Vec.push (Vec.get c.atoms 0).neg.watched c;
@@ -1319,30 +1489,69 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let satisfied c =
     try
       for i = 0 to Vec.size c.atoms - 1 do
-        if (Vec.get c.atoms i).is_true then raise Exit
+        let a = Vec.get c.atoms i in
+        if a.is_true && a.var.level ==0 then raise Exit
       done;
       false
     with Exit -> true
 
+  let unassign_atom a =
+    a.is_true <- false;
+    a.neg.is_true <- false;
+    a.timp <- false;
+    a.neg.timp <- false;
+    a.var.level <- -1;
+    a.var.index <- -1;
+    a.var.reason <- None;
+    a.var.vpremise <- []
+
+  let enqueue_assigned a =
+    assert (a.is_true || a.neg.is_true);
+    assert (a.var.level >= 0);
+    Vec.push env.trail a
+
+  let cancel_ff_lvls_until lvl =
+    for i = decision_level () downto lvl + 1 do
+      try
+        let s = Util.MI.find i env.lvl_ff in
+        SFF.iter (fun f' -> env.ff_lvl <- MFF.remove f' env.ff_lvl) s;
+        env.lvl_ff <- Util.MI.remove i env.lvl_ff;
+      with Not_found -> ()
+    done
+
 (* annule tout jusqu'a lvl *exclu*  *)
   let cancel_until lvl =
+    cancel_ff_lvls_until lvl;
+    let repush = ref [] in
     if decision_level () > lvl then begin
       env.qhead <- Vec.get env.trail_lim lvl;
       for c = Vec.size env.trail - 1 downto env.qhead do
         let a = Vec.get env.trail c in
-        a.is_true <- false;
-        a.neg.is_true <- false;
-        a.var.level <- -1;
-        a.var.index <- -1;
-        a.var.reason <- None;
-        a.var.vpremise <- [];
-        insert_var_order a.var
+        if Options.minimal_bj () && a.var.level <= lvl then begin
+          assert (a.var.level = 0 || a.var.reason != None);
+          repush := a :: !repush
+        end
+        else begin
+          unassign_atom a;
+          insert_var_order a.var
+        end
       done;
       Queue.clear env.tatoms_queue;
+      Queue.clear env.th_tableaux;
       env.tenv <- Vec.get env.tenv_queue lvl; (* recover the right tenv *)
+      if Options.tableaux_cdcl () then begin
+        env.lazy_cnf <- Vec.get env.lazy_cnf_queue lvl;
+        env.relevants <- Vec.get env.relevants_queue lvl;
+      end;
       Vec.shrink env.trail ((Vec.size env.trail) - env.qhead) true;
       Vec.shrink env.trail_lim ((Vec.size env.trail_lim) - lvl) true;
       Vec.shrink env.tenv_queue ((Vec.size env.tenv_queue) - lvl) true;
+      if Options.tableaux_cdcl () then begin
+        Vec.shrink env.lazy_cnf_queue ((Vec.size env.lazy_cnf_queue) - lvl) true;
+        Vec.shrink env.relevants_queue
+          ((Vec.size env.relevants_queue) - lvl) true
+          [@ocaml.ppwarning "TODO: try to disable 'fill_with_dummy'"]
+      end;
       (try
          let last_dec =
            if Vec.size env.trail_lim = 0 then 0 else Vec.last env.trail_lim in
@@ -1351,7 +1560,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       );
     end;
     if Options.profiling() then Profiling.reset_dlevel (decision_level());
-    assert (Vec.size env.trail_lim = Vec.size env.tenv_queue)
+    assert (Vec.size env.trail_lim = Vec.size env.tenv_queue);
+    assert (Options.minimal_bj () || (!repush == []));
+    List.iter enqueue_assigned !repush
 
   let rec pick_branch_var () =
     if Iheap.size env.order = 0 then raise Sat;
@@ -1367,6 +1578,23 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     let v = pick_branch_var () in
     v.na
 
+  let debug_enqueue_level a lvl reason =
+    match reason with
+    | None -> ()
+    | Some c ->
+      let maxi = ref min_int in
+      for i = 0 to Vec.size c.atoms - 1 do
+        let b = Vec.get c.atoms i in
+        if not (eq_atom a b) then maxi := max !maxi b.var.level
+      done;
+      assert (!maxi = lvl)
+
+  let max_level_in_clause c =
+    let max_lvl = ref 0 in
+    Vec.iter c.atoms (fun a ->
+        max_lvl := max !max_lvl a.var.level);
+    !max_lvl
+
   let enqueue a lvl reason =
     assert (not a.is_true && not a.neg.is_true &&
               a.var.level < 0 && a.var.reason == None && lvl >= 0);
@@ -1377,7 +1605,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     a.var.reason <- reason;
   (*eprintf "enqueue: %a@." Debug.atom a; *)
     Vec.push env.trail a;
-    a.var.index <- Vec.size env.trail
+    a.var.index <- Vec.size env.trail;
+    if Options.enable_assertions() then  debug_enqueue_level a lvl reason
 
   let progress_estimate () =
     let prg = ref 0. in
@@ -1393,10 +1622,22 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     done;
     !prg /. nbv
 
+  let check_levels propag_lvl current_lvl =
+    assert (propag_lvl <= current_lvl);
+    assert (propag_lvl == current_lvl || (Options.minimal_bj ()))
+
+  let best_propagation_level c =
+    let mlvl =
+      if Options.minimal_bj () then max_level_in_clause c
+      else decision_level ()
+    in
+    check_levels mlvl (decision_level ());
+    mlvl
+
   let propagate_in_clause a c i watched new_sz =
     let atoms = c.atoms in
     let first = Vec.get atoms 0 in
-    if first == a.neg then begin (* le litiral faux doit etre dans .(1) *)
+    if first == a.neg then begin (* le literal faux doit etre dans .(1) *)
       Vec.set atoms 0 (Vec.get atoms 1);
       Vec.set atoms 1 first
     end;
@@ -1434,7 +1675,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             (* la clause est unitaire *)
             Vec.set watched !new_sz c;
             incr new_sz;
-            enqueue first (decision_level ()) (Some c);
+            let mlvl = best_propagation_level c in
+            enqueue first mlvl (Some c);
             if Options.profiling() then Profiling.red true;
           end
       with Exit -> ()
@@ -1448,7 +1690,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           let c = Vec.get watched i in
           if not c.removed then propagate_in_clause a c i watched new_sz_w
         done;
-      with Conflict c -> assert (!res == None); res := Some c
+      with Conflict c -> assert (!res == C_none); res := C_bool c
     end;
     let dead_part = Vec.size watched - !new_sz_w in
     Vec.shrink watched dead_part true
@@ -1462,10 +1704,101 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       try
         let tenv, _ = Th.do_case_split env.tenv in
         env.tenv <- tenv;
-        None
+        C_none
       with Exception.Inconsistent (expl, classes) ->
-        Some expl
-    else None
+        C_theory expl
+    else C_none
+
+  module SA =
+    Set.Make
+      (struct
+        type t = Types.atom
+        let compare a b =
+          let c = a.var.level - b.var.level in
+          if c <> 0 then c
+          else Types.cmp_atom a b
+      end)
+
+  let get_atom_or_proxy f proxies =
+    let open Flat_Formula in
+    match view f with
+    | UNIT a -> a
+    | _ ->
+      match get_proxy_of f proxies with
+      | Some a -> a
+      | None -> assert false
+
+
+
+
+let add_form_to_lazy_cnf =
+  let open Flat_Formula in
+  let add_disj ma f_a l =
+    List.fold_left
+      (fun ma fchild ->
+        let child = get_atom_or_proxy fchild env.proxies in
+        let ctt = try Matoms.find child ma |> fst with Not_found -> MFF.empty in
+        Matoms.add child (MFF.add f_a l ctt, fchild) ma
+      )ma l
+  in
+  let rec add_aux ma (f_a : t) =
+    if SFF.mem f_a env.relevants then ma
+    else
+      begin
+        env.relevants <- SFF.add f_a env.relevants;
+        match view f_a with
+        | UNIT a ->
+          Queue.push a env.th_tableaux;
+          ma
+
+        | AND l ->
+          List.fold_left add_aux ma l
+
+        | OR l  ->
+          match List.find_opt (fun e ->
+            let p = get_atom_or_proxy e env.proxies in
+            p.is_true) l
+          with
+          | None   -> add_disj ma f_a l
+          | Some e -> add_aux ma e
+      end
+  in
+  fun ma f_a -> add_aux ma f_a
+
+
+let relevancy_propagation ma a =
+  try
+    let parents, f_a = Matoms.find a ma in
+    let ma = Matoms.remove a ma in
+    let ma =
+      MFF.fold
+        (fun fp lp ma ->
+          List.fold_left
+            (fun ma bf ->
+              let b = get_atom_or_proxy bf env.proxies in
+              if eq_atom a b then ma
+              else
+                let mf_b, fb =
+                  try Matoms.find b ma with Not_found -> assert false in
+                assert (Flat_Formula.equal bf fb);
+                let mf_b = MFF.remove fp mf_b in
+                if MFF.is_empty mf_b then Matoms.remove b ma
+                else Matoms.add b (mf_b, fb) ma
+            )ma lp
+        )parents ma
+    in
+    assert (let a = get_atom_or_proxy f_a env.proxies in a.is_true);
+    add_form_to_lazy_cnf ma f_a
+  with Not_found -> ma
+
+
+let compute_facts_for_theory_propagate () =
+  (*let a = SFF.cardinal env.relevants in*)
+  env.lazy_cnf <-
+    Queue.fold relevancy_propagation env.lazy_cnf env.tatoms_queue;
+  if Options.enable_assertions() then (*debug *)
+    Matoms.iter (fun a _ -> assert (not a.is_true)) env.lazy_cnf
+
 
   let expensive_theory_propagate () = None
 (* try *)
@@ -1477,11 +1810,57 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 (*   if D1.d then eprintf "expensive_theory_propagate => Inconsistent@."; *)
 (*   Some dep *)
 
+  let unit_theory_propagate full_q lazy_q =
+    let facts =
+      Queue.fold
+        (fun acc ta ->
+          assert (ta.is_true);
+          assert (ta.var.level >= 0);
+          if ta.var.level = 0 then
+            (ta.lit, Ex.empty, 0, env.cpt_current_propagations) :: acc
+          else acc
+        )[] lazy_q
+    in
+    if facts == [] then C_none
+    else
+      try
+        (*let full_model = nb_assigns() = env.nb_init_vars in*)
+        (* XXX what to do with the other results of Th.assume ? *)
+        let t,_,cpt =
+          Th.assume ~ordered:false
+            (List.rev facts) env.unit_tenv
+        in
+        steps := Int64.add (Int64.of_int cpt) !steps;
+        if steps_bound () <> -1
+	  && Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
+	  begin
+	    printf "Steps limit reached: %Ld@." !steps;
+	    exit 1
+	  end;
+        env.unit_tenv <- t;
+        C_none
+      with Exception.Inconsistent (dep, terms) ->
+        (* XXX what to do with terms ? *)
+	(* eprintf "th inconsistent : %a @." Ex.print dep; *)
+        if Options.profiling() then Profiling.theory_conflict();
+        C_theory dep
+
   let theory_propagate () =
     let facts = ref [] in
     let dlvl = decision_level () in
-    while not (Queue.is_empty env.tatoms_queue) do
-      let a = Queue.pop env.tatoms_queue in
+    let tatoms_queue =
+      if Options.tableaux_cdcl () then begin
+        compute_facts_for_theory_propagate ();
+        env.th_tableaux
+      end
+      else env.tatoms_queue
+    in
+    match unit_theory_propagate env.tatoms_queue tatoms_queue with
+    | C_theory dep as res -> res
+    | C_bool _ -> assert false
+    | C_none ->
+    while not (Queue.is_empty tatoms_queue) do
+      let a = Queue.pop tatoms_queue in
       let ta =
         if a.is_true then a
         else if a.neg.is_true then a.neg (* TODO: useful ?? *)
@@ -1492,33 +1871,44 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         else Ex.empty
       in
       assert (Literal.LT.is_ground ta.lit);
-      facts := (ta.lit, ex, dlvl,env.cpt_current_propagations) :: !facts;
+      if ta.timp then
+        ()
+          [@ocaml.ppwarning "XXX: only do this for instantiation ?"]
+      else
+        facts := (ta.lit, ex, dlvl,env.cpt_current_propagations) :: !facts;
       env.cpt_current_propagations <- env.cpt_current_propagations + 1
     done;
-    try
-      (*let full_model = nb_assigns() = env.nb_init_vars in*)
-      (* XXX what to do with the other results of Th.assume ? *)
-      let t,_,cpt = Th.assume (List.rev !facts) env.tenv in
-      steps := Int64.add (Int64.of_int cpt) !steps;
-      if steps_bound () <> -1
-	&& Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
-	begin
-	  printf "Steps limit reached: %Ld@." !steps;
-	  exit 1
-	end;
-      env.tenv <- t;
-      do_case_split Util.AfterTheoryAssume
+    Queue.clear env.tatoms_queue;
+    Queue.clear env.th_tableaux;
+    if !facts == [] then C_none
+    else
+      try
+        (*let full_model = nb_assigns() = env.nb_init_vars in*)
+        (* XXX what to do with the other results of Th.assume ? *)
+        let t,_,cpt =
+          Th.assume ~ordered:(not (Options.tableaux_cdcl ()))
+            (List.rev !facts) env.tenv
+        in
+        steps := Int64.add (Int64.of_int cpt) !steps;
+        if steps_bound () <> -1
+	  && Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
+	  begin
+	    printf "Steps limit reached: %Ld@." !steps;
+	    exit 1
+	  end;
+        env.tenv <- t;
+        do_case_split Util.AfterTheoryAssume
       (*if full_model then expensive_theory_propagate ()
-      else None*)
-    with Exception.Inconsistent (dep, terms) ->
-    (* XXX what to do with terms ? *)
-    (* eprintf "th inconsistent : %a @." Ex.print dep; *)
-      if Options.profiling() then Profiling.theory_conflict();
-      Some dep
+        else None*)
+      with Exception.Inconsistent (dep, terms) ->
+        (* XXX what to do with terms ? *)
+	(* eprintf "th inconsistent : %a @." Ex.print dep; *)
+        if Options.profiling() then Profiling.theory_conflict();
+        C_theory dep
 
   let propagate () =
     let num_props = ref 0 in
-    let res = ref None in
+    let res = ref C_none in
     (*assert (Queue.is_empty env.tqueue);*)
     while env.qhead < Vec.size env.trail do
       let a = Vec.get env.trail env.qhead in
@@ -1530,53 +1920,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     env.propagations <- env.propagations + !num_props;
     env.simpDB_props <- env.simpDB_props - !num_props;
     !res
-
-
-  let analyze c_clause =
-    let pathC  = ref 0 in
-    let learnt = ref [] in
-    let cond   = ref true in
-    let blevel = ref 0 in
-    let seen   = ref [] in
-    let c      = ref c_clause in
-    let tr_ind = ref (Vec.size env.trail - 1) in
-    let size   = ref 1 in
-    let history = ref [] in
-    while !cond do
-      if !c.learnt then clause_bump_activity !c;
-      history := !c :: !history;
-    (* visit the current predecessors *)
-      for j = 0 to Vec.size !c.atoms - 1 do
-        let q = Vec.get !c.atoms j in
-      (*printf "I visit %a@." D1.atom q;*)
-        assert (q.is_true || q.neg.is_true && q.var.level >= 0); (* Pas sur *)
-        if not q.var.seen && q.var.level > 0 then begin
-          var_bump_activity q.var;
-          q.var.seen <- true;
-          seen := q :: !seen;
-          if q.var.level >= decision_level () then incr pathC
-          else begin
-            learnt := q :: !learnt;
-            incr size;
-            blevel := max !blevel q.var.level
-          end
-        end
-      done;
-
-    (* look for the next node to expand *)
-      while not (Vec.get env.trail !tr_ind).var.seen do decr tr_ind done;
-      decr pathC;
-      let p = Vec.get env.trail !tr_ind in
-      decr tr_ind;
-      match !pathC, p.var.reason with
-        | 0, _ ->
-          cond := false;
-          learnt := p.neg :: (List.rev !learnt)
-        | n, None   -> assert false
-        | n, Some cl -> c := cl
-    done;
-    List.iter (fun q -> q.var.seen <- false) !seen;
-    !blevel, !learnt, !history, !size
 
   let f_sort_db c1 c2 =
     let sz1 = Vec.size c1.atoms in
@@ -1639,75 +1982,95 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     (struct type t = clause let equal = (==) let hash = Hashtbl.hash end)
 
 
-  let report_b_unsat ({atoms=atoms} as confl) =
-    let l = ref [confl] in
-    for i = 0 to Vec.size atoms - 1 do
-      let v = (Vec.get atoms i).var in
-      l := List.rev_append v.vpremise !l;
-      match v.reason with None -> () | Some c -> l := c :: !l
-    done;
-    if false then begin
-      eprintf "@.>>UNSAT Deduction made from:@.";
-      List.iter
-        (fun hc ->
-          eprintf "    %a@." Types.pr_clause hc
-        )!l;
-    end;
-    let uc = HUC.create 17 in
-    let rec roots todo =
-      match todo with
-        | [] -> ()
-        | c::r ->
-	  for i = 0 to Vec.size c.atoms - 1 do
-	    let v = (Vec.get c.atoms i).var in
-	    if not v.seen then begin
-	      v.seen <- true;
-	      roots v.vpremise;
-	      match v.reason with None -> () | Some r -> roots [r];
-	    end
-	  done;
-          match c.cpremise with
+  let report_b_unsat linit =
+    if not (Options.proof ()) then begin
+      env.is_unsat <- true;
+      env.unsat_core <- None;
+      raise (Unsat None)
+    end
+    else
+      match linit with
+      | [] | _::_::_ ->
+        (* currently, report_b_unsat called with a singleton if proof = true *)
+        assert false
+
+      | [{atoms=atoms}] ->
+        assert (Options.proof ());
+        let l = ref linit in
+        for i = 0 to Vec.size atoms - 1 do
+          let v = (Vec.get atoms i).var in
+          l := List.rev_append v.vpremise !l;
+          match v.reason with None -> () | Some c -> l := c :: !l
+        done;
+        if false then begin
+          eprintf "@.>>UNSAT Deduction made from:@.";
+          List.iter
+            (fun hc ->
+              eprintf "    %a@." Types.pr_clause hc
+            )!l;
+        end;
+        let uc = HUC.create 17 in
+        let rec roots todo =
+          match todo with
+          | [] -> ()
+          | c::r ->
+	    for i = 0 to Vec.size c.atoms - 1 do
+	      let v = (Vec.get c.atoms i).var in
+	      if not v.seen then begin
+	        v.seen <- true;
+	        roots v.vpremise;
+	        match v.reason with None -> () | Some r -> roots [r];
+	      end
+	    done;
+            match c.cpremise with
             | []    -> if not (HUC.mem uc c) then HUC.add uc c (); roots r
             | prems -> roots prems; roots r
-    in roots !l;
-    let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
-    if false then begin
-      eprintf "@.>>UNSAT_CORE:@.";
-      List.iter
-        (fun hc ->
-          eprintf "    %a@." Types.pr_clause hc
-        )unsat_core;
-    end;
-    env.is_unsat <- true;
-    env.unsat_core <- unsat_core;
-    raise (Unsat unsat_core)
+        in roots !l;
+        let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
+        if false then begin
+          eprintf "@.>>UNSAT_CORE:@.";
+          List.iter
+            (fun hc ->
+              eprintf "    %a@." Types.pr_clause hc
+            )unsat_core;
+        end;
+        env.is_unsat <- true;
+        let unsat_core = Some unsat_core in
+        env.unsat_core <- unsat_core;
+        raise (Unsat unsat_core)
 
 
   let report_t_unsat dep =
-    let l =
-      Ex.fold_atoms
-        (fun ex l ->
-          match ex with
+    if not (Options.proof ()) then begin
+      env.is_unsat <- true;
+      env.unsat_core <- None;
+      raise (Unsat None)
+    end
+    else
+      let l =
+        Ex.fold_atoms
+          (fun ex l ->
+            match ex with
             | Ex.Literal lit ->
-              let {var=v} = Types.add_atom lit in
+              let {var=v} = Types.get_atom lit in
               let l = List.rev_append v.vpremise l in
               begin match v.reason with
-                | None -> l
-                | Some c -> c :: l
+              | None -> l
+              | Some c -> c :: l
               end
             | _ -> assert false (* TODO *)
-        ) dep []
-    in
-    if false then begin
-      eprintf "@.>>T-UNSAT Deduction made from:@.";
-      List.iter
-        (fun hc ->
-          eprintf "    %a@." Types.pr_clause hc
-        )l;
-    end;
-    let uc = HUC.create 17 in
-    let rec roots todo =
-      match todo with
+          ) dep []
+      in
+      if false then begin
+        eprintf "@.>>T-UNSAT Deduction made from:@.";
+        List.iter
+          (fun hc ->
+            eprintf "    %a@." Types.pr_clause hc
+          )l;
+      end;
+      let uc = HUC.create 17 in
+      let rec roots todo =
+        match todo with
         | [] -> ()
         | c::r ->
 	  for i = 0 to Vec.size c.atoms - 1 do
@@ -1719,20 +2082,21 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 	    end
 	  done;
           match c.cpremise with
-            | []    -> if not (HUC.mem uc c) then HUC.add uc c (); roots r
-            | prems -> roots prems; roots r
-    in roots l;
-    let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
-    if false then begin
-      eprintf "@.>>T-UNSAT_CORE:@.";
-      List.iter
-        (fun hc ->
-          eprintf "    %a@." Types.pr_clause hc
-        ) unsat_core;
-    end;
-    env.is_unsat <- true;
-    env.unsat_core <- unsat_core;
-    raise (Unsat unsat_core)
+          | []    -> if not (HUC.mem uc c) then HUC.add uc c (); roots r
+          | prems -> roots prems; roots r
+      in roots l;
+      let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
+      if false then begin
+        eprintf "@.>>T-UNSAT_CORE:@.";
+        List.iter
+          (fun hc ->
+            eprintf "    %a@." Types.pr_clause hc
+          ) unsat_core;
+      end;
+      env.is_unsat <- true;
+      let unsat_core = Some unsat_core in
+      env.unsat_core <- unsat_core;
+      raise (Unsat unsat_core)
 
 (*** experimental: taken from ctrl-ergo-2 ********************
 
@@ -1768,17 +2132,27 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
      end
 *)
 
+  let all_propagations () =
+    match propagate () with
+    | C_bool c -> C_bool c
+    | C_theory _ -> assert false
+    | C_none ->
+      match theory_propagate () with
+      | C_bool _ -> assert false
+      | C_theory dep -> C_theory dep
+      | C_none -> C_none
+
+  let report_conflict c =
+    match c with
+    | C_bool confl -> report_b_unsat [confl]
+    | C_theory dep -> report_t_unsat dep
+    | C_none -> ()
+
   let simplify () =
     assert (decision_level () = 0);
     if env.is_unsat then raise (Unsat env.unsat_core);
-    begin
-      match propagate () with
-        | Some confl -> report_b_unsat confl
-        | None ->
-          match theory_propagate () with
-              Some dep -> report_t_unsat dep
-            | None -> ()
-    end;
+    (* report possible propagation conflict *)
+    report_conflict (all_propagations ());
     if nb_assigns() <> env.simpDB_assigns && env.simpDB_props <= 0 then begin
       if debug () then fprintf fmt "simplify@.";
     (*theory_simplify ();*)
@@ -1790,11 +2164,14 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     end
 
 
-  let record_learnt_clause blevel learnt history size =
-    begin match learnt with
+  let record_learnt_clause ~is_T_learn blevel learnt history size =
+    let curr_level = decision_level () in
+    if not is_T_learn || Options.minimal_bj () ||
+       blevel = curr_level then begin
+      check_levels blevel curr_level;
+      match learnt with
       | [] -> assert false
       | [fuip] ->
-        assert (blevel = 0);
         fuip.var.vpremise <- history;
         enqueue fuip 0 None
       | fuip :: _ ->
@@ -1803,10 +2180,151 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         Vec.push env.learnts lclause;
         attach_clause lclause;
         clause_bump_activity lclause;
-        enqueue fuip blevel (Some lclause)
+        let propag_lvl = best_propagation_level lclause in
+        enqueue fuip propag_lvl (Some lclause)
     end;
-    var_decay_activity ();
-    clause_decay_activity()
+    if not is_T_learn then begin
+      var_decay_activity ();
+      clause_decay_activity()
+    end
+
+  let conflict_analyze_aux c_clause max_lvl =
+    let pathC = ref 0 in
+    let learnt = ref SA.empty in
+    let cond = ref true in
+    let blevel = ref 0 in
+    let seen = ref [] in
+    let c = ref c_clause in
+    let tr_ind = ref (Vec.size env.trail -1) in
+    let history = ref [] in
+    while !cond do
+      if !c.learnt then clause_bump_activity !c;
+      history := !c :: !history;
+      Vec.iter !c.atoms (fun a ->
+          assert (a.is_true || a.neg.is_true && a.var.level >= 0);
+          if not a.var.seen && a.var.level > 0 then begin
+            var_bump_activity a.var;
+            a.var.seen <- true;
+            seen := a :: !seen;
+            if a.var.level >= max_lvl then incr pathC
+            else begin
+              learnt := SA.add a !learnt;
+              blevel := max !blevel a.var.level
+            end
+          end
+      );
+
+      while assert (!tr_ind >= 0);
+        let v = (Vec.get env.trail !tr_ind).var in
+        not v.seen || ((Options.minimal_bj ()) && v.level < max_lvl) do
+        decr tr_ind
+      done;
+
+      decr pathC;
+      let p = Vec.get env.trail !tr_ind in
+      decr tr_ind;
+      match !pathC,p.var.reason with
+      | 0, _ ->
+        cond := false;
+        learnt := SA.add p.neg !learnt
+      | n, None -> assert false
+      | n, Some cl -> c := cl
+    done;
+    List.iter (fun q -> q.var.seen <- false) !seen;
+    let learnt = SA.elements !learnt in
+    let learnt = List.fast_sort (fun a b -> b.var.level - a.var.level) learnt in
+    let size = List.length learnt in
+    let bj_level =
+      if Options.minimal_bj () then
+        match learnt with
+          [] -> 0
+        | a :: _ -> max 0 (a.var.level - 1)
+      else !blevel
+    in
+    bj_level, learnt, !history, size
+
+  let fixable_with_simple_backjump confl max_lvl lv =
+    if not (Options.minimal_bj ()) then None
+    else
+      try
+        let max_v = ref None in
+        let snd_max = ref (-1) in
+        List.iter
+          (fun v ->
+            let lvl = v.level in
+            if lvl == max_lvl then begin
+              if !max_v != None then raise Exit;
+              max_v := Some v
+            end
+            else begin
+              assert (lvl < max_lvl);
+              snd_max := max !snd_max lvl
+            end
+          )lv;
+        match !max_v with
+        | None -> assert false
+        | Some v ->
+          let snd_max = !snd_max in
+          assert (snd_max >= 0);
+          assert (snd_max < max_lvl);
+          assert (not confl.removed); (* do something otherwise ?*)
+          let a = if v.pa.is_true then v.na else v.pa in
+          assert (a.neg.is_true);
+          assert (max_lvl > 0);
+          Some (a, max_lvl - 1, snd_max)
+      with Exit -> None
+
+  let conflict_analyze_and_fix confl =
+    match confl with
+    | C_none -> assert false
+    | C_theory dep ->
+      let atoms, sz, max_lvl, c_hist =
+        Ex.fold_atoms
+          (fun ex (acc, sz, max_lvl, c_hist) ->
+             match ex with
+             | Ex.Literal lit ->
+               let a = Types.get_atom lit in
+	       let c_hist = List.rev_append a.var.vpremise c_hist in
+	       let c_hist = match a.var.reason with
+	         | None -> c_hist | Some r -> r:: c_hist
+               in
+	       if a.var.level = 0 then acc, sz, max_lvl, c_hist
+	       else a.neg :: acc, sz + 1, max max_lvl a.var.level, c_hist
+             | _ -> assert false (* TODO *)
+          ) dep ([], 0, 0, [])
+      in
+      if atoms == [] || max_lvl == 0 then begin
+        (* check_inconsistence_of dep; *)
+        report_t_unsat dep
+        (* une conjonction de faits unitaires etaient deja unsat *)
+      end;
+      let name = fresh_dname() in
+      let c = make_clause name atoms vraie_form sz false c_hist in
+      c.removed <- true;
+      let blevel, learnt, history, size = conflict_analyze_aux c max_lvl in
+      cancel_until blevel;
+      record_learnt_clause ~is_T_learn:false blevel learnt history size
+
+    | C_bool c ->
+      let max_lvl = ref 0 in
+      let lv = ref [] in
+      Vec.iter c.atoms (fun a ->
+        max_lvl := max !max_lvl a.var.level;
+        lv := a.var :: !lv
+      );
+      if !max_lvl == 0 then report_b_unsat [c];
+      match fixable_with_simple_backjump c !max_lvl !lv with
+      | None  ->
+        let blevel, learnt, history, size = conflict_analyze_aux c !max_lvl in
+        cancel_until blevel;
+        record_learnt_clause ~is_T_learn:false blevel learnt history size
+      | Some (a, blevel, propag_lvl) ->
+        assert (a.neg.is_true);
+        cancel_until blevel;
+        assert (not a.neg.is_true);
+        assert (propag_lvl >= 0 && propag_lvl <= blevel);
+        enqueue a propag_lvl (Some c)
+
 
   let check_inconsistence_of dep = ()
 (*
@@ -1822,156 +2340,78 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   with Exception.Inconsistent _ -> ()
 *)
 
-  let theory_analyze dep =
-    let atoms, sz, max_lvl, c_hist =
+  let rec propagate_and_stabilize propagator conflictC =
+    match propagator () with
+    | C_none -> ()
+    | (C_bool _ | C_theory _ ) as confl -> (* Conflict *)
+      incr conflictC;
+      env.conflicts <- env.conflicts + 1;
+      if decision_level() = 0 then report_conflict confl;
+      conflict_analyze_and_fix confl;
+      propagate_and_stabilize propagator conflictC
+
+  let clause_of_dep d fuip =
+    let cpt = ref 0 in
+    let l =
       Ex.fold_atoms
-        (fun ex (acc, sz, max_lvl, c_hist) ->
-          match ex with
-              Ex.Literal lit ->
-                let a = Types.add_atom lit in
-	        let c_hist = List.rev_append a.var.vpremise c_hist in
-	        let c_hist = match a.var.reason with
-	          | None -> c_hist | Some r -> r:: c_hist
-                in
-	        if a.var.level = 0 then acc, sz, max_lvl, c_hist
-	        else a.neg :: acc, sz + 1, max max_lvl a.var.level, c_hist
-            | _ -> assert false (* TODO *)
-        ) dep ([], 0, 0, [])
+        (fun e acc ->
+          match e with
+          | Ex.Literal a ->
+            incr cpt;
+            (Types.get_atom a).neg :: acc
+          | _ -> assert false
+        )d []
     in
-    if atoms == [] then begin
-    (* check_inconsistence_of dep; *)
-      report_t_unsat dep
-  (* une conjonction de faits unitaires etaient deja unsat *)
-    end;
-    let name = fresh_dname() in
-    let c_clause = make_clause name atoms vraie_form sz false c_hist in
-  (* eprintf "c_clause: %a@." Types.pr_clause c_clause; *)
-    c_clause.removed <- true;
+    fuip :: l, !cpt + 1
 
-    let pathC  = ref 0 in
-    let learnt = ref [] in
-    let cond   = ref true in
-    let blevel = ref 0 in
-    let seen   = ref [] in
-    let c      = ref c_clause in
-    let tr_ind = ref (Vec.size env.trail - 1) in
-    let size   = ref 1 in
-    let history = ref [] in
-    while !cond do
-      if !c.learnt then clause_bump_activity !c;
-      history := !c :: !history;
-    (* visit the current predecessors *)
-      for j = 0 to Vec.size !c.atoms - 1 do
-        let q = Vec.get !c.atoms j in
-      (*printf "I visit %a@." D1.atom q;*)
-        assert (q.is_true || q.neg.is_true && q.var.level >= 0); (* Pas sur *)
-        if not q.var.seen && q.var.level > 0 then begin
-        (*(try
-          fprintf fmt "%a -> %f@."
-          Types.pr_atom q q.var.weight;
-          var_bump_activity q.var;
-          with Not_found ->
-          fprintf fmt "%a -> %f NOT found@."
-          Types.pr_atom q q.var.weight;
-          assert false
-          );*)
-          q.var.seen <- true;
-          seen := q :: !seen;
-          if q.var.level >= max_lvl then incr pathC
-          else begin
-            learnt := q :: !learnt;
-            incr size;
-            blevel := max !blevel q.var.level
-          end
-        end
-      done;
-
-    (* look for the next node to expand *)
-      while not (Vec.get env.trail !tr_ind).var.seen do decr tr_ind done;
-      decr pathC;
-      let p = Vec.get env.trail !tr_ind in
-      decr tr_ind;
-      match !pathC, p.var.reason with
-        | 0, _ ->
-          cond := false;
-          learnt := p.neg :: (List.rev !learnt)
-        | n, None   -> assert false
-        | n, Some cl -> c := cl
-    done;
-    List.iter (fun q -> q.var.seen <- false) !seen;
-    !blevel, !learnt, !history, !size
-
-
-
-  let add_boolean_conflict confl =
-    env.conflicts <- env.conflicts + 1;
-    if decision_level() = 0 then report_b_unsat confl; (* Top-level conflict *)
-    let blevel, learnt, history, size = analyze confl in
-    cancel_until blevel;
-    record_learnt_clause blevel learnt history size
-
-
-  exception TopClause
-  exception BotClause
-
-  let partial_model () =
-    Options.partial_bmodel () &&
-      try
-        for i = 0 to Vec.size env.clauses - 1 do
-          let c = Vec.get env.clauses i in
-          try
-            for j = 0 to Vec.size c.atoms - 1 do
-              if (Vec.get c.atoms j).is_true then raise TopClause
-            done;
-            raise BotClause
-          with TopClause -> ()
-        done;
-        true
-      with BotClause -> false
+  let th_entailed tenv a =
+    if Options.no_tcp () || not (Options.minimal_bj ()) then None
+    else
+      let lit = Types.literal a in
+      match Th.query lit tenv with
+      | Sig.Yes (d,_) ->
+        a.timp <- true;
+        Some (clause_of_dep d a)
+      | Sig.No  ->
+        match Th.query (A.neg lit) tenv with
+        | Sig.Yes (d,_) ->
+          a.neg.timp <- true;
+          Some (clause_of_dep d a.Types.neg)
+        | Sig.No -> None
 
   let search n_of_conflicts n_of_learnts =
     let conflictC = ref 0 in
     env.starts <- env.starts + 1;
-    while (true) do
-      match propagate () with
-        | Some confl -> (* Conflict *)
-          incr conflictC;
-	  add_boolean_conflict confl
+    while true do
+      propagate_and_stabilize all_propagations conflictC;
 
-        | None -> (* No Conflict *)
-	  match theory_propagate () with
-	    | Some dep ->
-	      incr conflictC;
-	      env.conflicts <- env.conflicts + 1;
-	      if decision_level() = 0 then report_t_unsat dep;
-                (* T-L conflict *)
+      if nb_assigns () = env.nb_init_vars ||
+        (Options.tableaux_cdcl () && Matoms.is_empty env.lazy_cnf) then
+        raise Sat;
+      if Options.enable_restarts ()
+        && n_of_conflicts >= 0 && !conflictC >= n_of_conflicts then begin
+          env.progress_estimate <- progress_estimate();
+          cancel_until 0;
+          raise Restart
+        end;
+      if decision_level() = 0 then simplify ();
 
-	      let blevel, learnt, history, size = theory_analyze dep in
-	      cancel_until blevel;
-	      record_learnt_clause blevel learnt history size
+      if n_of_learnts >= 0 &&
+        Vec.size env.learnts - nb_assigns() >= n_of_learnts then
+        reduce_db();
 
-	    | None ->
-	      if nb_assigns () = env.nb_init_vars || partial_model ()
-              then raise Sat;
-	      if n_of_conflicts >= 0 && !conflictC >= n_of_conflicts then
-		begin
-		  env.progress_estimate <- progress_estimate();
-		  cancel_until 0;
-		  raise Restart
-		end;
-	      if decision_level() = 0 then simplify ();
-
-	      if n_of_learnts >= 0 &&
-		Vec.size env.learnts - nb_assigns() >= n_of_learnts then
-		reduce_db();
-
-	      new_decision_level();
-	      let next = pick_branch_lit () in
-	      let current_level = decision_level () in
-              env.cpt_current_propagations <- 0;
-	      assert (next.var.level < 0);
-	      (* eprintf "decide: %a@." Types.pr_atom next; *)
-	      enqueue next current_level None
+      let next = pick_branch_lit () in
+      match th_entailed env.tenv next with
+      | None ->
+        new_decision_level();
+        let current_level = decision_level () in
+        env.cpt_current_propagations <- 0;
+        assert (next.var.level < 0);
+        (* eprintf "decide: %a@." Types.pr_atom next; *)
+        enqueue next current_level None
+      | Some(c,sz) ->
+        record_learnt_clause ~is_T_learn:true (decision_level ()) c [] sz
+        (* right decision level will be set inside record_learnt_clause *)
     done
 
   let check_clause c =
@@ -2005,6 +2445,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     with
       | Sat ->
         (*check_model ();*)
+        remove_satisfied env.clauses;
+        remove_satisfied env.learnts;
         raise Sat
       | (Unsat cl) as e ->
         (* check_unsat_core cl; *)
@@ -2031,10 +2473,14 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let add_clause f ~cnumber atoms =
     if env.is_unsat then raise (Unsat env.unsat_core);
-  (*if not (clause_exists atoms) then XXX TODO *)
+    (*if not (clause_exists atoms) then XXX TODO *)
     let init_name = string_of_int cnumber in
     let init0 =
-      make_clause init_name atoms f (List.length atoms) false [] in
+      if Options.proof () then
+        [make_clause init_name atoms f (List.length atoms) false []]
+      else
+        [] (* no deps if proofs generation is not enabled *)
+    in
     try
       let atoms, init =
         if decision_level () = 0 then
@@ -2046,16 +2492,16 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 	        atoms, (List.rev_append (a.var.vpremise) init)
               end
 	      else a::atoms, init
-	    ) ([], [init0]) atoms in
+	    ) ([], init0) atoms in
 	  List.fast_sort (fun a b -> a.var.vid - b.var.vid) atoms, init
-        else partition atoms [init0]
+        else partition atoms init0
       in
       let size = List.length atoms in
       match atoms with
         | [] ->
           report_b_unsat init0;
 
-        | a::_::_ ->
+        | a::b::_ ->
           let name = fresh_name () in
           let clause = make_clause name atoms vraie_form size false init in
           attach_clause clause;
@@ -2063,60 +2509,146 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           if debug_sat () && verbose () then
             fprintf fmt "[satML] add_clause: %a@." Types.pr_clause clause;
 
-	  if a.neg.is_true then begin
-	    let lvl = List.fold_left (fun m a -> max m a.var.level) 0 atoms in
-	    cancel_until lvl;
-	    add_boolean_conflict clause
-	  end
+	  if a.neg.is_true then begin (* clause is false *)
+            let lvl = List.fold_left (fun m a -> max m a.var.level) 0 atoms in
+            cancel_until lvl;
+            conflict_analyze_and_fix (C_bool clause)
+          end
+          else
+            if not a.is_true && b.neg.is_true then begin (* clause is unit *)
+              let mlvl = best_propagation_level clause in
+              enqueue a mlvl (Some clause);
+            end
+              [@ocaml.ppwarning "TODO: add a heavy assert that checks \
+that clauses are not redundant, watchs are well set, unit and bottom \
+are detected ..."]
 
         | [a]   ->
           if debug_sat () && verbose () then
             fprintf fmt "[satML] add_atom: %a@." Types.pr_atom a;
-
-          cancel_until 0;
+          let lvl = a.var.level in
+          assert (lvl <> 0);
+          begin
+            if not (minimal_bj ()) then cancel_until 0
+            else if a.is_true || a.neg.is_true then cancel_until (lvl - 1)
+          end;
           a.var.vpremise <- init;
           enqueue a 0 None;
-            match propagate () with
-              None -> () | Some confl -> report_b_unsat confl
+          propagate_and_stabilize propagate (ref 0)
+
     with Trivial ->
       if Options.profiling() then Profiling.elim true
 
 
-  let add_clauses cnf f ~cnumber =
-    List.iter (add_clause f ~cnumber) cnf;
-    match theory_propagate () with
-        None -> () | Some dep -> report_t_unsat dep
+  let update_lazy_cnf ~do_bcp mff ~dec_lvl =
+    if Options.tableaux_cdcl () && dec_lvl <= decision_level () then begin
+      let s =
+        try Util.MI.find dec_lvl env.lvl_ff
+        with Not_found -> SFF.empty
+      in
+      let lz, s =
+        MFF.fold (fun ff lz_kd (l, s) ->
+          match lz_kd with
+          | None ->
+            assert (not (MFF.mem ff env.ff_lvl));
+            assert (not (SFF.mem ff s));
+            env.ff_lvl <- MFF.add ff dec_lvl env.ff_lvl;
+            add_form_to_lazy_cnf l ff, SFF.add ff s
+          | Some a ->
+            (* TODO for case 'Some a' *)
+            assert false
 
-  let init_solver cnf f ~cnumber =
-    let nbv, _ = made_vars_info () in
-    let nbc = env.nb_init_clauses + List.length cnf in
-    Vec.grow_to_by_double env.vars nbv;
-    Iheap.grow_to_by_double env.order nbv;
-    List.iter
-      (List.iter
-         (fun a ->
-	   Vec.set env.vars a.var.vid a.var;
-	   insert_var_order a.var
-         )
-      ) cnf;
-    env.nb_init_vars <- nbv;
-    Vec.grow_to_by_double env.model nbv;
-    Vec.grow_to_by_double env.clauses nbc;
-    Vec.grow_to_by_double env.learnts nbc;
-    env.nb_init_clauses <- nbc;
-    add_clauses cnf f ~cnumber
+        ) mff (env.lazy_cnf, s)
+      in
+      env.lazy_cnf <- lz;
+      env.lvl_ff <- Util.MI.add dec_lvl s env.lvl_ff;
+      if do_bcp then
+        propagate_and_stabilize (*theory_propagate_opt*)
+          all_propagations (ref 0);
+    end
+
+  let new_vars new_v unit_cnf nunit_cnf  =
+    match new_v with
+    | [] -> unit_cnf, nunit_cnf
+    | _ ->
+      let tenv0 = env.unit_tenv in
+      let nbv, _ = made_vars_info () in
+      Vec.grow_to_by_double env.vars nbv;
+      Iheap.grow_to_by_double env.order nbv;
+      let accu =
+        List.fold_left
+          (fun ((unit_cnf, nunit_cnf) as accu) v ->
+            Vec.set env.vars v.vid v;
+            insert_var_order v;
+            match th_entailed tenv0 v.pa with
+            | None -> accu
+            | Some (c, sz) ->
+              assert (sz >= 1);
+              if sz = 1 then c :: unit_cnf, nunit_cnf
+              else unit_cnf, c :: nunit_cnf
+                [@ocaml.ppwarning
+                    "Issue: BAD decision_level, in particular, if minimal-bj is ON"]
+          ) (unit_cnf, nunit_cnf) new_v
+      in
+      env.nb_init_vars <- nbv;
+      Vec.grow_to_by_double env.model nbv;
+      accu
+
+  let set_new_proxies proxies =
+    env.proxies <- proxies
+
+  let try_to_backjump_further =
+    let rec better_bj mf =
+      let old_dlvl = decision_level () in
+      let old_lazy = env.lazy_cnf in
+      let old_relevants = env.relevants in
+      let old_tenv = env.tenv in
+      let fictive_lazy =
+        MFF.fold (fun ff _ acc -> add_form_to_lazy_cnf acc ff)
+          mf old_lazy
+      in
+      env.lazy_cnf <- fictive_lazy;
+      propagate_and_stabilize all_propagations (ref 0);
+      let new_dlvl = decision_level () in
+      if old_dlvl > new_dlvl then better_bj mf
+      else
+        begin
+          assert (old_dlvl == new_dlvl);
+          env.lazy_cnf <- old_lazy;
+          env.relevants <- old_relevants;
+          env.tenv     <- old_tenv
+        end
+    in
+    fun mff -> if Options.tableaux_cdcl () then better_bj mff
 
 
-  let assume cnf f ~cnumber =
-    match cnf with
-      | [] -> ()
-      | _ ->
-      (*let cnf = List.map (List.map Solver_types.add_atom) cnf in*)
-        init_solver cnf f ~cnumber;
+  let assume unit_cnf nunit_cnf f ~cnumber mff ~dec_lvl =
+    begin
+      match unit_cnf, nunit_cnf with
+      | [], [] -> ()
+      | _, _ ->
+        let nbc =
+          env.nb_init_clauses + List.length unit_cnf + List.length nunit_cnf in
+        Vec.grow_to_by_double env.clauses nbc;
+        Vec.grow_to_by_double env.learnts nbc;
+        env.nb_init_clauses <- nbc;
+
+        List.iter (add_clause f ~cnumber) unit_cnf;
+        List.iter (add_clause f ~cnumber) nunit_cnf;
+
         if verbose () then  begin
           fprintf fmt "%d clauses@." (Vec.size env.clauses);
           fprintf fmt "%d learnts@." (Vec.size env.learnts);
         end
+    end;
+    (* do it after add clause and before T-propagate, disable bcp*)
+    update_lazy_cnf ~do_bcp:false mff ~dec_lvl;
+    propagate_and_stabilize all_propagations (ref 0); (* do bcp globally *)
+    if dec_lvl > decision_level () then (*dec_lvl <> 0 and a bj have been made*)
+      try_to_backjump_further mff
+
+  let exists_in_lazy_cnf f' =
+    not (Options.tableaux_cdcl ()) || MFF.mem f' env.ff_lvl
 
   let boolean_model () =
     let l = ref [] in
@@ -2124,6 +2656,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       l := (Vec.get env.trail i) :: !l
     done;
     !l
+
+  let theory_assumed () = Th.get_assumed env.tenv
 
   let current_tbox () = env.tenv
   let set_current_tbox tb = env.tenv <- tb
@@ -2145,7 +2679,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       with Not_found -> ()
     done;
     env.is_unsat <- false;
-    env.unsat_core <- [];
+    env.unsat_core <- None;
     env.clauses <- Vec.make 0 dummy_clause;
     env.learnts <- Vec.make 0 dummy_clause;
     env.clause_inc <- 1.;
@@ -2172,7 +2706,16 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     env.trail <- Vec.make 601 dummy_atom;
     env.trail_lim <- Vec.make 601 (-105);
     env.tenv_queue <- Vec.make 100 (Th.empty ());
-    env.tatoms_queue <- Queue.create ()
+    env.tatoms_queue <- Queue.create ();
+    env.th_tableaux <- Queue.create ();
+    env.lazy_cnf <- Matoms.empty;
+    Vec.clear env.lazy_cnf_queue;
+
+    env.relevants <- SFF.empty;
+    Vec.clear env.relevants_queue;
+
+    env.ff_lvl <- MFF.empty;
+    env.lvl_ff <- Util.MI.empty
 
   let clear () =
     empty ();
@@ -2219,10 +2762,12 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     env.trail_lim <- s_env.trail_lim;
     env.tenv_queue <- s_env.tenv_queue;
     env.tatoms_queue <- s_env.tatoms_queue;
+    env.th_tableaux <- s_env.th_tableaux;
     env.learntsize_factor <- s_env.learntsize_factor;
     Solver_types.cpt_mk_var := st_cpt_mk_var;
     Solver_types.ma := st_ma
 
 
+  let known_lazy_formulas () = env.ff_lvl
 (*end*)
 end

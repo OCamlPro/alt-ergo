@@ -46,9 +46,7 @@ The steps below will build and install additional plugins (extension
 
 #### The SatML Plugin
 
-  1. Compile with "make satML"
-
-  2. Install with "make install-satML"
+  (satML is now inlined and compiled directly with Alt-Ergo's source code)
 
 #### The Fm-Simplex Plugin
 
@@ -68,10 +66,11 @@ This plugin has been "inlined" in Alt-Ergo sources.
         $ alt-ergo   [options] file.why
         $ altgr-ergo [options] file.why
 
-- The SatML plugin can be used as follows: 
+The CDCL solver is now the default SAT engine. The commands below
+allow to enable the old Tableaux-like SAT-solver:
 
-        $ alt-ergo -sat-plugin satML-plugin.cmxs [other-options] file.why
-        $ alt-ergo -sat-plugin some-path/satML-plugin.cmxs [other-options] file.why
+        $ alt-ergo   [options] -sat-solver Tableaux file.why
+        $ altgr-ergo [options] -sat-solver Tableaux file.why
 
    Alt-Ergo will try to load a local plugin called
    "satML-plugin.cmxs". If this fails, Alt-Ergo tries to load it from

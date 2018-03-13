@@ -313,6 +313,7 @@ module type S_Term = sig
 
   val terms_nonrec : t -> Term.Set.t
   val terms_rec : t -> Term.Set.t
+  val ground_terms : t -> Term.Set.t
 
   val vars_of : t -> Ty.t Symbols.Map.t -> Ty.t Symbols.Map.t
   val is_ground : t -> bool
@@ -354,6 +355,17 @@ module LT : S_Term = struct
       | PR a, _    -> Term.Set.singleton a
       | BT (_,l), _ | EQ_LIST l, _ ->
         List.fold_left (fun z t -> Term.Set.add t z) Term.Set.empty l
+
+  let ground_terms a =
+    let res = terms_nonrec a in
+    let tmp =
+      Term.Set.fold
+        (fun t acc ->
+          if Term.is_ground t then Term.Set.add t acc
+          else Term.subterms acc t
+        )res Term.Set.empty
+    in
+    Term.Set.filter Term.is_ground tmp
 
   let terms_rec a =
     Term.Set.fold
