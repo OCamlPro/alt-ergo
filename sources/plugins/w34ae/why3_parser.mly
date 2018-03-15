@@ -183,11 +183,12 @@ open Parsed
 (* Precedences *)
 
 %nonassoc IN
-%nonassoc DOT ELSE
+%nonassoc DOT ELSE 
 %nonassoc prec_named
 %nonassoc COLON
-
 %right ARROW LRARROW
+%right OR 
+%right AND
 %nonassoc NOT
 %left EQUAL LTGT LT GT OP1
 %left OP2
