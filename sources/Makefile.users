@@ -80,6 +80,7 @@ CMO = lib/util/config.cmo \
       lib/util/numbers.cmo \
       lib/util/options.cmo \
       lib/util/vec.cmo \
+      lib/util/iheap.cmo \
       lib/util/cmdline_parser.cmo \
       lib/util/timers.cmo \
       lib/util/gc_debug.cmo \

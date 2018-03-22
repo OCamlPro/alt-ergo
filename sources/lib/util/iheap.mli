@@ -9,32 +9,16 @@
 (*                                                                            *)
 (******************************************************************************)
 
-let apply f l =
-  let res, same =
-    List.fold_left
-      (fun (acc, same) a ->
-        let b = f a in
-        b :: acc, same && a == b
-      )([], true) l
-  in
-  (if same then l else List.rev res), same
+type t
 
-let apply_right f l =
-  let res, same =
-    List.fold_left
-      (fun (acc, same) (v, a) ->
-        let b = f a in
-        (v, b) :: acc, same && a == b
-      )([], true) l
-  in
-  (if same then l else List.rev res), same
-
-let rrmap f l = List.rev (List.map f l)
-
-let rec find_opt pred l =
-  match l with
-  | [] -> None
-  | e :: r ->
-    if pred e then Some e
-    else find_opt pred r
-
+val init : int -> t
+val in_heap : t -> int -> bool
+val decrease : (int -> int -> bool) -> t -> int -> unit
+(*val increase : (int -> int -> bool) -> t -> int -> unit*)
+val size : t -> int
+val is_empty : t -> bool
+val insert : (int -> int -> bool) -> t -> int -> unit
+val grow_to_by_double: t -> int -> unit
+(*val update : (int -> int -> bool) -> t -> int -> unit*)
+val remove_min : (int -> int -> bool) -> t -> int
+val filter : t -> (int -> bool) -> (int -> int -> bool) -> unit

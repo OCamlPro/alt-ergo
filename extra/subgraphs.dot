@@ -110,6 +110,7 @@ subgraph cluster_lib__util {
         "Version";
         "Util";
         "Vec";
+        "Iheap";
         "Lists";
         "Loc";
         "Hconsing";
