@@ -32,6 +32,7 @@ module Main : Sat_solver_sig.S = struct
   let get_steps () = SAT.get_steps ()
 
   type t = {
+    satml : SAT.t;
     nb_mrounds : int;
     gamma : (int * FF.t option) MF.t;
     conj : (int * SF.t) MFF.t;
@@ -45,8 +46,8 @@ module Main : Sat_solver_sig.S = struct
   }
 
   let empty () =
-    SAT.empty (); (*(* Soundness issue due to bad hash-consing *) *)
     { gamma = MF.empty;
+      satml = SAT.empty ();
       nb_mrounds = 0;
       conj = MFF.empty;
       abstr_of_axs = MF.empty;
@@ -187,9 +188,9 @@ module Main : Sat_solver_sig.S = struct
           )non_unit
       end
 
-    let model ()=
+    let model env =
       if debug_sat () then
-        let model = SAT.boolean_model () in
+        let model = SAT.boolean_model env.satml in
         eprintf "@.(2) satML's model:@.";
         List.iter
           (fun a ->
@@ -210,7 +211,7 @@ module Main : Sat_solver_sig.S = struct
         MFF.iter (fun f (md, _) ->
           eprintf "-> %d : %a@." md FF.print f) env.conj;
         fprintf fmt "@.Gamma:@.";
-        model ();
+        model env;
       end
 
     let generated_instances l =
@@ -283,8 +284,8 @@ module Main : Sat_solver_sig.S = struct
   (*BISECT-IGNORE-END*)
 
 
-  let print_propositional_model () =
-    let model = SAT.boolean_model () in
+  let print_propositional_model env =
+    let model = SAT.boolean_model env.satml in
     fprintf fmt "Propositional:";
     List.iter
       (fun at ->
@@ -295,8 +296,8 @@ module Main : Sat_solver_sig.S = struct
   let print_model ~header fmt env =
     Format.print_flush ();
     if header then fprintf fmt "\nModel\n@.";
-    print_propositional_model ();
-    Th.print_model fmt (SAT.current_tbox ())
+    print_propositional_model env;
+    Th.print_model fmt (SAT.current_tbox env.satml)
 
   let make_explanation lc = Ex.empty
   (*
@@ -331,7 +332,7 @@ module Main : Sat_solver_sig.S = struct
 
   let mk_theories_instances do_synt_ma remove_clauses env acc =
     let t_match = Inst.matching_terms_info env.inst in
-    let tbox = SAT.current_tbox () in
+    let tbox = SAT.current_tbox env.satml in
     let tbox, l =
       Th.theories_instances
         do_synt_ma t_match tbox (selector env) env.nb_mrounds 0
@@ -368,7 +369,7 @@ module Main : Sat_solver_sig.S = struct
       ) ex []
 
   let mround env acc =
-    let tbox = SAT.current_tbox () in
+    let tbox = SAT.current_tbox env.satml in
     let gd2, ngd2 =
       Inst.m_predicates ~backward:Util.Normal
         env.inst tbox (selector env) env.nb_mrounds
@@ -627,7 +628,7 @@ module Main : Sat_solver_sig.S = struct
         Literal.LT.Set.fold
           (fun a accu ->
             SA.add (Types.get_atom a) accu
-          )(SAT.theory_assumed ()) SA.empty
+          )(SAT.theory_assumed env.satml) SA.empty
       in
       let sa =
         if frugal then sa
@@ -651,7 +652,7 @@ module Main : Sat_solver_sig.S = struct
     let accu =
       FF.Map.fold
         (fun ff _ accu -> aux accu ff)
-        (SAT.known_lazy_formulas ()) A.Set.empty
+        (SAT.known_lazy_formulas env.satml) A.Set.empty
     in
     A.Set.union (atoms_from_lazy_sat ~frugal:true env)
       (*otherwise, we loose atoms that abstract internal axioms *)
@@ -673,7 +674,7 @@ module Main : Sat_solver_sig.S = struct
       [@ocaml.ppwarning "Issue for greedy: terms inside lemmas not extracted"]
 
   let terms_from_dec_proc env =
-    let terms = Th.extract_ground_terms (SAT.current_tbox ()) in
+    let terms = Th.extract_ground_terms (SAT.current_tbox env.satml) in
     Debug.add_terms_of "terms_from_dec_proc" terms;
     let gf = mk_gf F.vrai in
     Inst.add_terms env.inst terms gf
@@ -718,7 +719,7 @@ module Main : Sat_solver_sig.S = struct
           [@ocaml.ppwarning "TODO: should be assert failure?"]
 
         | Some ff ->
-          if SAT.exists_in_lazy_cnf ff then env, acc
+          if SAT.exists_in_lazy_cnf env.satml ff then env, acc
           else
             env,
             {acc with
@@ -765,7 +766,7 @@ module Main : Sat_solver_sig.S = struct
             if cnf_is_in_cdcl then
               (* this means that there exists another F.t that is
                  equivalent to f. These two formulas have the same ff *)
-              if SAT.exists_in_lazy_cnf ff then env, acc
+              if SAT.exists_in_lazy_cnf env.satml ff then env, acc
               else
                 env,
                 {acc with
@@ -812,11 +813,11 @@ module Main : Sat_solver_sig.S = struct
         let f = F.vrai
           [@ocaml.ppwarning "TODO: should fix for unsat cores generation"]
         in
-        SAT.set_new_proxies env.proxies;
-        let unit, nunit = SAT.new_vars new_vars unit nunit in
+        SAT.set_new_proxies env.satml env.proxies;
+        let unit, nunit = SAT.new_vars env.satml new_vars unit nunit in
         (*update_lazy_cnf done inside assume at the right place *)
         (*SAT.update_lazy_cnf activate ~dec_lvl;*)
-        SAT.assume unit nunit f ~cnumber:0 activate ~dec_lvl;
+        SAT.assume env.satml unit nunit f ~cnumber:0 activate ~dec_lvl;
       with
       | Satml.Unsat (lc)  -> raise (IUnsat (env, make_explanation lc))
       | Satml.Sat -> assert false
@@ -874,7 +875,7 @@ module Main : Sat_solver_sig.S = struct
 
 
   let greedy_instantiation env ~dec_lvl =
-    assert (dec_lvl == SAT.decision_level ());
+    assert (dec_lvl == SAT.decision_level env.satml);
     if greedy () then raise (I_dont_know env);
 
     Debug.new_instances "greedy-inst" env;
@@ -890,7 +891,7 @@ module Main : Sat_solver_sig.S = struct
 
 
   let rec unsat_rec env ~first_call : unit =
-    try SAT.solve (); assert false
+    try SAT.solve env.satml; assert false
     with
       | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
       | Satml.Sat ->
@@ -900,7 +901,7 @@ module Main : Sat_solver_sig.S = struct
               "TODO: first intantiation a la DfsSAT before searching ..."]
         in
         if Options.profiling() then Profiling.instantiation env.nb_mrounds;
-        let dec_lvl = SAT.decision_level () in
+        let dec_lvl = SAT.decision_level env.satml in
 
         let env, updated = frugal_instantiation env ~dec_lvl in
         let env, updated =
@@ -945,7 +946,7 @@ module Main : Sat_solver_sig.S = struct
       {env with inst =
 	  Inst.add_terms env.inst (F.ground_terms_rec gf.F.f) gf} in
     try
-      assert (SAT.decision_level () == 0);
+      assert (SAT.decision_level env.satml == 0);
       let env, updated = assume_aux ~dec_lvl:0 env [gf] in
       let max_t = max_term_depth_in_sat env in
       let env = {env with inst = Inst.register_max_term_depth env.inst max_t} in
@@ -956,7 +957,7 @@ module Main : Sat_solver_sig.S = struct
       dep
 
   let assume env gf =
-    assert (SAT.decision_level () == 0);
+    assert (SAT.decision_level env.satml == 0);
     try fst (assume_aux ~dec_lvl:0 env [gf])
     with IUnsat (env, dep) -> raise (Unsat dep)
 
@@ -990,7 +991,7 @@ module Main : Sat_solver_sig.S = struct
         Timers.exec_timer_pause Timers.M_Sat Timers.F_unsat;
         raise exn
 
-  let assume_th_elt env th_elt = SAT.assume_th_elt th_elt; env
+  let assume_th_elt env th_elt = SAT.assume_th_elt env.satml th_elt; env
 
 end
 
