@@ -630,7 +630,7 @@ module Main : Sat_solver_sig.S = struct
       let sa =
         Literal.LT.Set.fold
           (fun a accu ->
-            SA.add (Atom.get_atom a) accu
+            SA.add (FF.get_atom env.ff_hcons_env a) accu
           )(SAT.theory_assumed env.satml) SA.empty
       in
       let sa =
@@ -778,7 +778,7 @@ module Main : Sat_solver_sig.S = struct
                   updated = true}
             else
               let ff_abstr,new_proxies,proxies_mp, new_vars =
-                FF.cnf_abstr ff env.proxies acc.new_vars
+                FF.cnf_abstr env.ff_hcons_env ff env.proxies acc.new_vars
               in
               let env = {env with proxies = proxies_mp} in
               let nunit =
@@ -818,7 +818,8 @@ module Main : Sat_solver_sig.S = struct
           [@ocaml.ppwarning "TODO: should fix for unsat cores generation"]
         in
         SAT.set_new_proxies env.satml env.proxies;
-        let unit, nunit = SAT.new_vars env.satml new_vars unit nunit in
+        let nbv = FF.nb_made_vars env.ff_hcons_env in
+        let unit, nunit = SAT.new_vars env.satml ~nbv new_vars unit nunit in
         (*update_lazy_cnf done inside assume at the right place *)
         (*SAT.update_lazy_cnf activate ~dec_lvl;*)
         SAT.assume env.satml unit nunit f ~cnumber:0 activate ~dec_lvl;

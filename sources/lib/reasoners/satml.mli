@@ -27,6 +27,7 @@ module type SAT_ML = sig
 
   val new_vars :
     t ->
+    nbv : int -> (* nb made vars *)
     Satml_types.Atom.var list ->
     Satml_types.Atom.atom list list -> Satml_types.Atom.atom list list ->
     Satml_types.Atom.atom list list * Satml_types.Atom.atom list list

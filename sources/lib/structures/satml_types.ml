@@ -55,10 +55,15 @@ module type ATOM = sig
 
   and premise = clause list
 
+  type hcons_env
+
+  val empty_hcons_env : unit -> hcons_env
+  val copy_hcons_env : hcons_env -> hcons_env
+  val nb_made_vars : hcons_env -> int
 
   val pr_atom : Format.formatter -> atom -> unit
   val pr_clause : Format.formatter -> clause -> unit
-  val get_atom : Literal.LT.t ->  atom
+  val get_atom : hcons_env -> Literal.LT.t ->  atom
 
   val literal : atom -> Literal.LT.t
   val weight : atom -> float
@@ -88,14 +93,14 @@ module type ATOM = sig
   val make_clause : string -> atom list -> Formula.t -> int -> bool ->
     premise-> clause
 
-  val made_vars_info : unit -> int * var list
+  (*val made_vars_info : unit -> int * var list*)
 
   val cmp_atom : atom -> atom -> int
   val eq_atom   : atom -> atom -> bool
   val hash_atom  : atom -> int
   val tag_atom   : atom -> int
 
-  val add_atom : Literal.LT.t -> var list -> atom * var list
+  val add_atom : hcons_env -> Literal.LT.t -> var list -> atom * var list
 
 end
 
@@ -295,18 +300,17 @@ module Atom : ATOM = struct
   let index a = a.var.index
   let neg a = a.neg
 
-  (* tag -1 will be used for variable "vrai" *)
-  let cpt_mk_var = ref (-1)
+  type hcons_env = { ma : var MA.t ref ; cpt : int ref }
 
-  let ma = ref MA.empty
   let make_var =
-    fun lit acc ->
+    fun hcons lit acc ->
       let lit, negated = normal_form lit in
-      try MA.find lit !ma, negated, acc
+      try MA.find lit !(hcons.ma), negated, acc
       with Not_found ->
-        let cpt_fois_2 = !cpt_mk_var * 2 in
+        let cpt = !(hcons.cpt) in
+        let cpt_fois_2 = cpt * 2 in
         let rec var  =
-	  { vid = !cpt_mk_var;
+	  { vid = cpt;
 	    pa = pa;
 	    na = na;
 	    level = -1;
@@ -333,36 +337,37 @@ module Atom : ATOM = struct
 	    is_true = false;
             timp = false;
 	    aid = cpt_fois_2 + 1 (* aid = vid*2+1 *) } in
-        ma := MA.add lit var !ma;
-        incr cpt_mk_var;
+        hcons.ma := MA.add lit var !(hcons.ma);
+        incr hcons.cpt;
         var, negated, var :: acc
 
-  let add_atom lit acc =
-    let var, negated, acc = make_var lit acc in
+  let add_atom hcons lit acc =
+    let var, negated, acc = make_var hcons lit acc in
     (if negated then var.na else var.pa), acc
 
-  let vrai_atom =
-    let a, _ = add_atom Literal.LT.vrai [] in
-    assert (!cpt_mk_var = 0);
+  (* with this code, all envs created with empty_hcons_env () will be
+     initialized with the good reference to "vrai" *)
+  let copy_hcons_env hcons =
+    { ma = ref !(hcons.ma) ; cpt = ref !(hcons.cpt) }
+
+  let empty_hcons_env, vrai_atom =
+    let empty_hcons = { ma = ref MA.empty ; cpt = ref (-1) } in
+    let a, _ = add_atom empty_hcons Literal.LT.vrai [] in
     a.is_true <- true;
     a.var.level <- 0;
     a.var.reason <- None;
-    a
-
-  let get_atom lit =
-    try (MA.find lit !ma).pa
-    with Not_found ->
-      try (MA.find (Literal.LT.neg lit) !ma).na with Not_found -> assert false
-
-  let made_vars_info () =
-    !cpt_mk_var, MA.fold (fun lit var acc -> var::acc)!ma []
-
-  let get_var lit =
-    let lit, negated = normal_form lit in
-    try MA.find lit !ma, negated
-    with Not_found -> assert false
+    let f_empty_hashcons () = copy_hcons_env empty_hcons in
+    f_empty_hashcons, a
 
   let faux_atom = vrai_atom.neg
+
+  let nb_made_vars hcons = !(hcons.cpt)
+
+  let get_atom hcons lit =
+    let ma = !(hcons.ma) in
+    try (MA.find lit ma).pa
+    with Not_found ->
+      try (MA.find (Literal.LT.neg lit) ma).na with Not_found -> assert false
 
   let make_clause name ali f sz_ali is_learnt premise =
     let atoms = Vec.from_list ali sz_ali dummy_atom in
@@ -390,12 +395,6 @@ module Atom : ATOM = struct
   let to_float i = float_of_int i
 
   let to_int f = int_of_float f
-
-  let clear () =
-    cpt_mk_var := 0;
-    ma := MA.empty
-
-  (*end*)
 
   let cmp_var v1 v2 = v1.vid - v2.vid
   let eq_var v1 v2 = v1.vid - v2.vid = 0
@@ -450,7 +449,10 @@ module type FLAT_FORMULA = sig
   val mk_and  : hcons_env -> t list -> t
   val mk_or   : hcons_env -> t list -> t
   val mk_not  : t -> t
+
   val empty_hcons_env : unit -> hcons_env
+  val nb_made_vars : hcons_env -> int
+  val get_atom : hcons_env -> Literal.LT.t -> Atom.atom
 
   val simplify :
     hcons_env ->
@@ -463,7 +465,9 @@ module type FLAT_FORMULA = sig
   val get_proxy_of : t ->
     (Atom.atom * Atom.atom list * bool) Util.MI.t -> Atom.atom option
 
-  val cnf_abstr : t ->
+  val cnf_abstr :
+    hcons_env ->
+    t ->
     (Atom.atom * Atom.atom list * bool) Util.MI.t ->
     Atom.var list ->
     Atom.atom
@@ -623,7 +627,8 @@ module Flat_Formula : FLAT_FORMULA = struct
         let disable_weaks () = Options.disable_weaks ()
        end)
     *)
-  type hcons_env = { tbl : t HT.t ; cpt : int ref }
+  type hcons_env = { tbl : t HT.t ; cpt : int ref ;
+                     atoms : Atom.hcons_env}
 
   let make hcons pos neg =
     let is_pos = is_positive pos in
@@ -655,7 +660,7 @@ module Flat_Formula : FLAT_FORMULA = struct
   let complements f1 f2 = f1.tag == f2.neg.tag
 
   let mk_lit hcons a acc =
-    let at, acc = Atom.add_atom a acc in
+    let at, acc = Atom.add_atom hcons.atoms a acc in
     let at =
       if disable_flat_formulas_simplification () then at
       else
@@ -671,14 +676,22 @@ module Flat_Formula : FLAT_FORMULA = struct
   (* with this code, all envs created with empty_hcons_env () will be
      initialized with the good reference to "vrai" *)
   let empty_hcons_env, vrai =
-    let empty_hcons = { tbl = HT.create 4096 ; cpt = ref 0 } in
+    let empty_hcons =
+      { tbl = HT.create 4096 ;
+        cpt = ref 0 ;
+        atoms = Atom.empty_hcons_env () }
+    in
     let vrai = mk_lit empty_hcons Literal.LT.vrai [] |> fst in
-    let f_empty_hcons = fun () ->
-      { tbl = HT.copy empty_hcons.tbl ; cpt = ref !(empty_hcons.cpt) }
+    let f_empty_hcons () =
+      { tbl = HT.copy empty_hcons.tbl ;
+        cpt = ref !(empty_hcons.cpt) ;
+        atoms = Atom.copy_hcons_env empty_hcons.atoms }
     in
     f_empty_hcons, vrai
 
   let faux = mk_not vrai
+
+  let nb_made_vars hcons = Atom.nb_made_vars hcons.atoms
 
   let merge_and_check l1 l2 =
     let rec merge_rec l1 l2 hd =
@@ -895,7 +908,7 @@ module Flat_Formula : FLAT_FORMULA = struct
         else
           let lit = A.mk_pred (T.fresh_name Ty.Tbool) false in
           let xlit, new_v = mk_lit hcons lit !new_vars in
-          let at_lit, new_v = Atom.add_atom lit new_v in
+          let at_lit, new_v = Atom.add_atom hcons.atoms lit new_v in
           new_vars := new_v;
           lem := (f, (xlit, at_lit)) :: !lem
             [@ocaml.ppwarning "xlit or at_lit is probably redundant"]
@@ -954,8 +967,8 @@ module Flat_Formula : FLAT_FORMULA = struct
 
   (* CNF_ABSTR a la Tseitin *)
 
-  let atom_of_lit lit is_neg new_vars =
-    let a, l = Atom.add_atom lit !new_vars in
+  let atom_of_lit hcons lit is_neg new_vars =
+    let a, l = Atom.add_atom hcons.atoms lit !new_vars in
     new_vars := l;
     if is_neg then a.Atom.neg else a
 
@@ -983,7 +996,7 @@ module Flat_Formula : FLAT_FORMULA = struct
       let acc = List.fold_left (fun acc a -> [p;a.Atom.neg]::acc) acc l in
       ((p.Atom.neg) :: l) :: acc
 
-  let cnf_abstr f proxies_mp new_vars =
+  let cnf_abstr hcons f proxies_mp new_vars =
     let proxies_mp = ref proxies_mp in
     let new_proxies = ref [] in
     let new_vars = ref new_vars in
@@ -994,7 +1007,7 @@ module Flat_Formula : FLAT_FORMULA = struct
         | Some p -> p
         | None ->
           let l = List.rev (List.rev_map abstr l) in
-          let p = atom_of_lit (mk_new_proxy f.tag) false new_vars in
+          let p = atom_of_lit hcons (mk_new_proxy f.tag) false new_vars in
           let is_and = match f.view with
             | AND _ -> true | OR _ -> false | UNIT _ -> assert false
           in
@@ -1005,6 +1018,7 @@ module Flat_Formula : FLAT_FORMULA = struct
     let abstr_f = abstr f in
     abstr_f, !new_proxies, !proxies_mp, !new_vars
 
+  let get_atom hcons a = Atom.get_atom hcons.atoms a
 
   module Set = Set.Make(struct type t'=t type t=t' let compare=compare end)
   module Map = Map.Make(struct type t'=t type t=t' let compare=compare end)

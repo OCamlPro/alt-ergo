@@ -38,6 +38,7 @@ module type SAT_ML = sig
 
   val new_vars :
     t ->
+    nbv : int -> (* nb made vars *)
     var list ->
     atom list list -> atom list list ->
     atom list list * atom list list
@@ -1504,12 +1505,11 @@ are detected ..."]
           env all_propagations (ref 0);
     end
 
-  let new_vars env new_v unit_cnf nunit_cnf  =
+  let new_vars env ~nbv new_v unit_cnf nunit_cnf  =
     match new_v with
     | [] -> unit_cnf, nunit_cnf
     | _ ->
       let tenv0 = env.unit_tenv in
-      let nbv, _ = made_vars_info () in
       Vec.grow_to_by_double env.vars nbv;
       Iheap.grow_to_by_double env.order nbv;
       let accu =
