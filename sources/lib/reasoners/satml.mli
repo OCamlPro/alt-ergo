@@ -134,48 +134,47 @@ exception Unsat of Types.clause list option
 module type SAT_ML = sig
 
   (*module Make (Dummy : sig end) : sig*)
-  type state
   type th
+  type t
 
-  val solve : unit -> unit
+  val solve : t -> unit
 
   val set_new_proxies :
-    (Types.atom * Types.atom list * bool) Util.MI.t -> unit
+    t -> (Types.atom * Types.atom list * bool) Util.MI.t -> unit
 
   val new_vars :
+    t ->
     Types.var list ->
     Types.atom list list -> Types.atom list list ->
     Types.atom list list * Types.atom list list
 
   val assume :
+    t ->
     Types.atom list list -> Types.atom list list -> Formula.t ->
     cnumber : int ->
     Types.atom option Flat_Formula.Map.t -> dec_lvl:int ->
     unit
 
-  val boolean_model : unit -> Types.atom list
-  val theory_assumed : unit -> Literal.LT.Set.t
-  val current_tbox : unit -> th
-  val set_current_tbox : th -> unit
-  val empty : unit -> unit
-  val clear : unit -> unit
-
-  val save : unit -> state
-  val restore : state -> unit
+  val boolean_model : t -> Types.atom list
+  val theory_assumed : t -> Literal.LT.Set.t
+  val current_tbox : t -> th
+  val set_current_tbox : t -> th -> unit
+  val empty : unit -> t
 
   val reset_steps : unit -> unit
   val get_steps : unit -> int64
 
-  val assume_th_elt : Commands.th_elt -> unit
-  val decision_level : unit -> int
-  val cancel_until : int -> unit
+  val assume_th_elt : t -> Commands.th_elt -> unit
+  val decision_level : t -> int
+  val cancel_until : t -> int -> unit
 
   val update_lazy_cnf :
+    t ->
     do_bcp : bool ->
     Types.atom option Flat_Formula.Map.t -> dec_lvl:int -> unit
 
-  val exists_in_lazy_cnf : Flat_Formula.t -> bool
-  val known_lazy_formulas : unit -> int Flat_Formula.Map.t
+  val exists_in_lazy_cnf : t -> Flat_Formula.t -> bool
+  val known_lazy_formulas : t -> int Flat_Formula.Map.t
 
 (*end*)
 end
