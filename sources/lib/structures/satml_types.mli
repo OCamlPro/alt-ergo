@@ -94,6 +94,7 @@ module Atom : ATOM
 module type FLAT_FORMULA = sig
   type t
   type view = private UNIT of Atom.atom | AND of t list | OR of t list
+  type hcons_env
 
   val equal   : t -> t -> bool
   val compare : t -> t -> int
@@ -102,12 +103,14 @@ module type FLAT_FORMULA = sig
   val vrai    : t
   val faux    : t
   val view    : t -> view
-  val mk_lit  : Literal.LT.t -> Atom.var list -> t * Atom.var list
-  val mk_and  : t list -> t
-  val mk_or   : t list -> t
+  val mk_lit  : hcons_env -> Literal.LT.t -> Atom.var list -> t * Atom.var list
+  val mk_and  : hcons_env -> t list -> t
+  val mk_or   : hcons_env -> t list -> t
   val mk_not  : t -> t
+  val empty_hcons_env : unit -> hcons_env
 
   val simplify :
+    hcons_env ->
     Formula.t ->
     (Formula.t -> t * 'a) ->
     Atom.var list ->

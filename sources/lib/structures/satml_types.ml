@@ -437,6 +437,7 @@ end
 module type FLAT_FORMULA = sig
   type t
   type view = private UNIT of Atom.atom | AND of t list | OR of t list
+  type hcons_env
 
   val equal   : t -> t -> bool
   val compare : t -> t -> int
@@ -445,12 +446,14 @@ module type FLAT_FORMULA = sig
   val vrai    : t
   val faux    : t
   val view    : t -> view
-  val mk_lit  : Literal.LT.t -> Atom.var list -> t * Atom.var list
-  val mk_and  : t list -> t
-  val mk_or   : t list -> t
+  val mk_lit  : hcons_env -> Literal.LT.t -> Atom.var list -> t * Atom.var list
+  val mk_and  : hcons_env -> t list -> t
+  val mk_or   : hcons_env -> t list -> t
   val mk_not  : t -> t
+  val empty_hcons_env : unit -> hcons_env
 
   val simplify :
+    hcons_env ->
     Formula.t ->
     (Formula.t -> t * 'a) ->
     Atom.var list ->
@@ -487,6 +490,83 @@ module Flat_Formula : FLAT_FORMULA = struct
 
   let mk_not f = f.neg
 
+  let cpt = ref 0
+
+  let sp() = let s = ref "" in for _ = 1 to !cpt do s := " " ^ !s done; !s ^ !s
+
+  let rec print fmt fa = match fa.view with
+    | UNIT a -> fprintf fmt "%a" Atom.pr_atom a
+    | AND s  ->
+      incr cpt;
+      fprintf fmt "(and%a" print_list s;
+      decr cpt;
+      fprintf fmt "@.%s)" (sp())
+
+    | OR s   ->
+      incr cpt;
+      fprintf fmt "(or%a" print_list s;
+      decr cpt;
+      fprintf fmt "@.%s)" (sp())
+
+  and print_list fmt l =
+    match l with
+      | [] -> assert false
+      | e::l ->
+        fprintf fmt "@.%s%a" (sp()) print e;
+        List.iter(fprintf fmt "@.%s%a" (sp()) print) l
+
+
+  let print fmt f = cpt := 0; print fmt f
+
+  let print_stats fmt = ()
+
+  let compare f1 f2 = f1.tag - f2.tag
+
+  let equal f1 f2 = f1.tag == f2.tag
+  let hash f = f.tag
+  let tag  f = f.tag
+  let view f = f.view
+
+  let is_positive pos = match pos with
+    | AND _ -> true
+    | OR  _ -> false
+    | UNIT at -> at == at.Atom.var.Atom.pa
+
+  module HT =
+    Hashtbl.Make
+      (struct
+        type nonrec t = t
+
+        let hash f =
+          let h_aux f = match f with
+            | UNIT a -> Atom.hash_atom a
+            | AND l  -> List.fold_left (fun acc f -> acc * 19 + f.tag) 1 l
+            | OR l   -> List.fold_left (fun acc f -> acc * 23 + f.tag) 1 l
+          in
+          let h = h_aux f.view in
+          match f.view with
+          | UNIT _ -> abs (3 * h)
+          | AND _  -> abs (3 * h + 1)
+          | OR _   -> abs (3 * h + 2)
+
+        let equal f1 f2 =
+          let eq_aux c1 c2 = match c1, c2 with
+            | UNIT x , UNIT y -> Atom.eq_atom x y
+            | AND u  , AND v | OR u , OR v  ->
+              (try
+                 List.iter2
+                   (fun x y -> if x.tag <> y.tag then raise Exit) u v; true
+               with
+               | Exit -> false
+               | Invalid_argument s ->
+                 assert (String.compare s "List.iter2" = 0);
+                 false)
+
+            | _, _ -> false
+	  in
+          eq_aux f1.view f2.view
+      end)
+(*
   module HC =
     Hconsing.Make
       (struct
@@ -542,73 +622,39 @@ module Flat_Formula : FLAT_FORMULA = struct
         let initial_size = 4096
         let disable_weaks () = Options.disable_weaks ()
        end)
+    *)
+  type hcons_env = { tbl : t HT.t ; cpt : int ref }
 
-  let cpt = ref 0
-
-  let sp() = let s = ref "" in for _ = 1 to !cpt do s := " " ^ !s done; !s ^ !s
-
-  let rec print fmt fa = match fa.view with
-    | UNIT a -> fprintf fmt "%a" Atom.pr_atom a
-    | AND s  ->
-      incr cpt;
-      fprintf fmt "(and%a" print_list s;
-      decr cpt;
-      fprintf fmt "@.%s)" (sp())
-
-    | OR s   ->
-      incr cpt;
-      fprintf fmt "(or%a" print_list s;
-      decr cpt;
-      fprintf fmt "@.%s)" (sp())
-
-  and print_list fmt l =
-    match l with
-      | [] -> assert false
-      | e::l ->
-        fprintf fmt "@.%s%a" (sp()) print e;
-        List.iter(fprintf fmt "@.%s%a" (sp()) print) l
-
-
-  let print fmt f = cpt := 0; print fmt f
-
-  let print_stats fmt = ()
-
-  let compare f1 f2 = f1.tag - f2.tag
-
-  let equal f1 f2 = f1.tag == f2.tag
-  let hash f = f.tag
-  let tag  f = f.tag
-  let view f = f.view
-
-  let is_positive pos = match pos with
-    | AND _ -> true
-    | OR  _ -> false
-    | UNIT at -> at == at.Atom.var.Atom.pa
-
-  let make pos neg =
+  let make hcons pos neg =
     let is_pos = is_positive pos in
     let pos, neg = if is_pos then pos, neg else neg, pos in
     let rec p =
       {
         view = pos;
-        tag  = -1; (*dummy*)
+        tag  = 2 * !(hcons.cpt);
         neg  = n;
       }
     and n =
       {
         view = neg;
-        tag  = -1; (*dummy*)
+        tag  = 2 * !(hcons.cpt) + 1;
         neg  = p;
       }
     in
-    let res = HC.make p in
+    let res =
+      try HT.find hcons.tbl p
+      with Not_found ->
+        incr hcons.cpt;
+        HT.add hcons.tbl p p;
+        p
+    in
     if is_pos then res else mk_not res
 
   let aaz a = assert (a.Atom.var.Atom.level = 0)
 
   let complements f1 f2 = f1.tag == f2.neg.tag
 
-  let mk_lit a acc =
+  let mk_lit hcons a acc =
     let at, acc = Atom.add_atom a acc in
     let at =
       if disable_flat_formulas_simplification () then at
@@ -620,9 +666,18 @@ module Flat_Formula : FLAT_FORMULA = struct
           end
         else at
     in
-    make (UNIT at) (UNIT at.Atom.neg), acc
+    make hcons (UNIT at) (UNIT at.Atom.neg), acc
 
-  let vrai = mk_lit Literal.LT.vrai [] |> fst
+  (* with this code, all envs created with empty_hcons_env () will be
+     initialized with the good reference to "vrai" *)
+  let empty_hcons_env, vrai =
+    let empty_hcons = { tbl = HT.create 4096 ; cpt = ref 0 } in
+    let vrai = mk_lit empty_hcons Literal.LT.vrai [] |> fst in
+    let f_empty_hcons = fun () ->
+      { tbl = HT.copy empty_hcons.tbl ; cpt = ref !(empty_hcons.cpt) }
+    in
+    f_empty_hcons, vrai
+
   let faux = mk_not vrai
 
   let merge_and_check l1 l2 =
@@ -655,7 +710,7 @@ module Flat_Formula : FLAT_FORMULA = struct
           then merge_rec l1 l2 h1
           else merge_rec l1 l2 h2
 
-  let mk_and l =
+  let mk_and hcons l =
     try
       let so, nso =
         List.fold_left
@@ -690,7 +745,7 @@ module Flat_Formula : FLAT_FORMULA = struct
       match merge_and_check so delta_u with
         | [] -> vrai
         | [e]-> e
-        | l -> make (AND l) (OR (List.rev (List.rev_map mk_not l)))
+        | l -> make hcons (AND l) (OR (List.rev (List.rev_map mk_not l)))
     with Exit -> faux
 
   (* res = l1 inter l2 *)
@@ -772,7 +827,7 @@ module Flat_Formula : FLAT_FORMULA = struct
             try Some (common, List.rev_map (diff_list common) ands)
             with Not_included -> assert false
 
-  let rec mk_or l =
+  let rec mk_or hcons l =
     try
       let so, nso =
         List.fold_left
@@ -813,20 +868,22 @@ module Flat_Formula : FLAT_FORMULA = struct
               begin match l with
                 | [{view=UNIT _} as fa;{view=AND ands}] ->
                   begin
-                    try mk_or [fa ; (mk_and (remove_elt (mk_not fa) ands))]
+                    try
+                      mk_or hcons
+                        [fa ; (mk_and hcons (remove_elt (mk_not fa) ands))]
                     with Not_included ->
-                      make (OR l) (AND (List.rev (List.rev_map mk_not l)))
+                      make hcons (OR l) (AND (List.rev (List.rev_map mk_not l)))
                   end
-                | _ -> make (OR l) (AND (List.rev (List.rev_map mk_not l)))
+                | _ -> make hcons (OR l) (AND (List.rev (List.rev_map mk_not l)))
               end
             | Some (com,ands) ->
-              let ands = List.rev_map mk_and ands in
-              mk_and ((mk_or ands) :: com)
+              let ands = List.rev_map (mk_and hcons) ands in
+              mk_and hcons ((mk_or hcons ands) :: com)
     with Exit -> vrai
 
   (* translation from Formula.t *)
 
-  let abstract_lemma abstr f tl lem new_vars =
+  let abstract_lemma hcons abstr f tl lem new_vars =
     try fst (abstr f)
     with Not_found ->
       try fst (List.assoc f !lem)
@@ -837,7 +894,7 @@ module Flat_Formula : FLAT_FORMULA = struct
         end
         else
           let lit = A.mk_pred (T.fresh_name Ty.Tbool) false in
-          let xlit, new_v = mk_lit lit !new_vars in
+          let xlit, new_v = mk_lit hcons lit !new_vars in
           let at_lit, new_v = Atom.add_atom lit new_v in
           new_vars := new_v;
           lem := (f, (xlit, at_lit)) :: !lem
@@ -845,17 +902,17 @@ module Flat_Formula : FLAT_FORMULA = struct
           ;
           xlit
 
-  let simplify f abstr new_vars =
+  let simplify hcons f abstr new_vars =
     let lem = ref [] in
     let new_vars = ref new_vars in
     let rec simp topl f =
       match F.view f with
         | F.Literal a ->
-          let ff, l = mk_lit a !new_vars in
+          let ff, l = mk_lit hcons a !new_vars in
           new_vars := l;
           ff
 
-        | F.Lemma _   -> abstract_lemma abstr f topl lem new_vars
+        | F.Lemma _   -> abstract_lemma hcons abstr f topl lem new_vars
 
         | F.Skolem _ ->
           mk_not (simp false (F.mk_not f))
@@ -864,32 +921,32 @@ module Flat_Formula : FLAT_FORMULA = struct
           let x1 = simp topl f1 in
           let x2 = simp topl f2 in
           begin match x1.view , x2.view with
-            | AND l1, AND l2 -> mk_and (List.rev_append l1 l2)
-            | AND l1, _      -> mk_and (x2 :: l1)
-            | _     , AND l2 -> mk_and (x1 :: l2)
-            | _              -> mk_and [x1; x2]
+            | AND l1, AND l2 -> mk_and hcons (List.rev_append l1 l2)
+            | AND l1, _      -> mk_and hcons (x2 :: l1)
+            | _     , AND l2 -> mk_and hcons (x1 :: l2)
+            | _              -> mk_and hcons [x1; x2]
           end
 
         | F.Clause(f1, f2, _) ->
           let x1 = simp false f1 in
           let x2 = simp false f2 in
           begin match x1.view, x2.view with
-            | OR l1, OR l2 -> mk_or (List.rev_append l1 l2)
-            | OR l1, _     -> mk_or (x2 :: l1)
-            | _    , OR l2 -> mk_or (x1 :: l2)
-            | _            -> mk_or [x1; x2]
+            | OR l1, OR l2 -> mk_or hcons (List.rev_append l1 l2)
+            | OR l1, _     -> mk_or hcons (x2 :: l1)
+            | _    , OR l2 -> mk_or hcons (x1 :: l2)
+            | _            -> mk_or hcons [x1; x2]
           end
 
 
         | F.Let {F.let_var=lvar; let_term=lterm; let_subst=s; let_f=lf} ->
           let f' = F.apply_subst s lf in
           let v = Symbols.Map.find lvar (fst s) in
-          let at, new_v = mk_lit (A.mk_eq v lterm) !new_vars in
+          let at, new_v = mk_lit hcons (A.mk_eq v lterm) !new_vars in
           new_vars := new_v;
           let res = simp topl f' in
           begin match res.view with
-            | AND l -> mk_and (at :: l)
-            | _     -> mk_and [at; res]
+            | AND l -> mk_and hcons (at :: l)
+            | _     -> mk_and hcons [at; res]
           end
     in
     let res = simp true f in

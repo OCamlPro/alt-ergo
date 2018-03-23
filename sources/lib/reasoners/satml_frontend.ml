@@ -32,6 +32,7 @@ module Main : Sat_solver_sig.S = struct
 
   type t = {
     satml : SAT.t;
+    ff_hcons_env : FF.hcons_env;
     nb_mrounds : int;
     gamma : (int * FF.t option) MF.t;
     conj : (int * SF.t) FF.Map.t;
@@ -47,6 +48,7 @@ module Main : Sat_solver_sig.S = struct
   let empty () =
     { gamma = MF.empty;
       satml = SAT.empty ();
+      ff_hcons_env = FF.empty_hcons_env ();
       nb_mrounds = 0;
       conj = FF.Map.empty;
       abstr_of_axs = MF.empty;
@@ -744,7 +746,8 @@ module Main : Sat_solver_sig.S = struct
 
         | _ ->
           let ff, axs, new_vars =
-            FF.simplify f (fun f -> MF.find f env.abstr_of_axs) acc.new_vars
+            FF.simplify env.ff_hcons_env f
+              (fun f -> MF.find f env.abstr_of_axs) acc.new_vars
           in
           let acc = {acc with new_vars = new_vars} in
           let cnf_is_in_cdcl = FF.Map.mem ff env.conj in
