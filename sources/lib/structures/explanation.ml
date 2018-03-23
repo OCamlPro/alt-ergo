@@ -32,7 +32,7 @@ open Options
 module F = Formula
 
 type exp =
-  | Literal of Literal.LT.t
+  | Literal of Satml_types.Atom.atom
   | Fresh of int
   | Bj of F.t
   | Dep of F.t
@@ -43,7 +43,7 @@ module S =
       type t = exp
       let compare a b = match a,b with
 	| Fresh i1, Fresh i2 -> i1 - i2
-	| Literal a  , Literal b   -> Literal.LT.compare a b
+	| Literal a  , Literal b   -> Satml_types.Atom.cmp_atom a b
         | Dep e1  , Dep e2   -> Formula.compare e1 e2
         | Bj e1   , Bj e2    -> Formula.compare e1 e2
 
@@ -98,7 +98,7 @@ let print fmt ex =
   if Options.debug_explanations () then begin
     fprintf fmt "{";
     S.iter (function
-      | Literal a -> fprintf fmt "{Literal:%a}, " Literal.LT.print a
+      | Literal a -> fprintf fmt "{Literal:%a}, " Satml_types.Atom.pr_atom a
       | Fresh i -> Format.fprintf fmt "{Fresh:%i}" i;
       | Dep f -> Format.fprintf fmt "{Dep:%a}" Formula.print f
       | Bj f -> Format.fprintf fmt "{BJ:%a}" Formula.print f

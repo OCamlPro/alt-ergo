@@ -29,7 +29,7 @@
 type t
 
 type exp =
-  | Literal of Literal.LT.t
+  | Literal of Satml_types.Atom.atom
   | Fresh of int
   | Bj of Formula.t
   | Dep of Formula.t
