@@ -97,6 +97,7 @@ CMO = lib/util/config.cmo \
       lib/structures/fpa_rounding.cmo \
       lib/structures/literal.cmo \
       lib/structures/formula.cmo \
+      lib/structures/satml_types.cmo \
       lib/structures/explanation.cmo \
       lib/structures/commands.cmo \
       lib/structures/profiling.cmo \
