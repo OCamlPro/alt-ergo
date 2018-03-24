@@ -46,9 +46,15 @@ module type ATOM = sig
 
   and premise = clause list
 
+  type hcons_env
+
+  val empty_hcons_env : unit -> hcons_env
+  val copy_hcons_env : hcons_env -> hcons_env
+  val nb_made_vars : hcons_env -> int
+
   val pr_atom : Format.formatter -> atom -> unit
   val pr_clause : Format.formatter -> clause -> unit
-  val get_atom : Literal.LT.t ->  atom
+  val get_atom : hcons_env -> Literal.LT.t ->  atom
 
   val literal : atom -> Literal.LT.t
   val weight : atom -> float
@@ -78,14 +84,14 @@ module type ATOM = sig
   val make_clause : string -> atom list -> Formula.t -> int -> bool ->
     premise-> clause
 
-  val made_vars_info : unit -> int * var list
+  (*val made_vars_info : unit -> int * var list*)
 
   val cmp_atom : atom -> atom -> int
   val eq_atom   : atom -> atom -> bool
   val hash_atom  : atom -> int
   val tag_atom   : atom -> int
 
-  val add_atom : Literal.LT.t -> var list -> atom * var list
+  val add_atom : hcons_env -> Literal.LT.t -> var list -> atom * var list
 
 end
 
@@ -94,6 +100,7 @@ module Atom : ATOM
 module type FLAT_FORMULA = sig
   type t
   type view = private UNIT of Atom.atom | AND of t list | OR of t list
+  type hcons_env
 
   val equal   : t -> t -> bool
   val compare : t -> t -> int
@@ -102,12 +109,16 @@ module type FLAT_FORMULA = sig
   val vrai    : t
   val faux    : t
   val view    : t -> view
-  val mk_lit  : Literal.LT.t -> Atom.var list -> t * Atom.var list
-  val mk_and  : t list -> t
-  val mk_or   : t list -> t
+  val mk_lit  : hcons_env -> Literal.LT.t -> Atom.var list -> t * Atom.var list
+  val mk_and  : hcons_env -> t list -> t
+  val mk_or   : hcons_env -> t list -> t
   val mk_not  : t -> t
+  val empty_hcons_env : unit -> hcons_env
+  val nb_made_vars : hcons_env -> int
+  val get_atom : hcons_env -> Literal.LT.t -> Atom.atom
 
   val simplify :
+    hcons_env ->
     Formula.t ->
     (Formula.t -> t * 'a) ->
     Atom.var list ->
@@ -117,7 +128,9 @@ module type FLAT_FORMULA = sig
   val get_proxy_of : t ->
     (Atom.atom * Atom.atom list * bool) Util.MI.t -> Atom.atom option
 
-  val cnf_abstr : t ->
+  val cnf_abstr :
+    hcons_env ->
+    t ->
     (Atom.atom * Atom.atom list * bool) Util.MI.t ->
     Atom.var list ->
     Atom.atom
