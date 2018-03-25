@@ -133,6 +133,7 @@ CMO = lib/util/config.cmo \
       parsers/smt2/smtlib_typed_env.cmo \
       parsers/smt2/smtlib_typed_logic.cmo \
       parsers/smt2/smtlib_typing.cmo \
+      parsers/smt2/smtlib_printer.cmo \
       parsers/smt2/smtlib_translate.cmo
 
 CMOFRONT = parsers/why/why_parser.cmo parsers/why/why_lexer.cmo parsers/smt2/smtlib_parser.cmo parsers/smt2/smtlib_lexer.cmo
