@@ -104,6 +104,11 @@ and identifier_aux =
 | IdUnderscoreSymNum of symbol * index list
 and identifier = identifier_aux data
 
+and prop_literal_aux =
+| PropLit of symbol
+| PropLitNot of symbol
+and prop_literal = prop_literal_aux data
+
 (* sorts and polymorphism *)
 and sort_aux =
 | SortIdentifier of identifier
@@ -176,7 +181,7 @@ and assert_dec = assert_dec_aux data
 type command_aux =
 | Cmd_Assert of assert_dec
 | Cmd_CheckSat
-| Cmd_CheckSatAssum
+| Cmd_CheckSatAssum of prop_literal list
 | Cmd_DeclareConst of symbol * const_dec
 | Cmd_DeclareDataType of symbol * datatype_dec
 | Cmd_DeclareDataTypes of sort_dec list * datatype_dec list
