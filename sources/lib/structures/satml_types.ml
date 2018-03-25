@@ -300,12 +300,14 @@ module Atom : ATOM = struct
   let index a = a.var.index
   let neg a = a.neg
 
-  type hcons_env = { ma : var MA.t ref ; cpt : int ref }
+  module HT = Hashtbl.Make(Literal.LT)
+
+  type hcons_env = { tbl : var HT.t ; cpt : int ref }
 
   let make_var =
     fun hcons lit acc ->
       let lit, negated = normal_form lit in
-      try MA.find lit !(hcons.ma), negated, acc
+      try HT.find hcons.tbl lit, negated, acc
       with Not_found ->
         let cpt = !(hcons.cpt) in
         let cpt_fois_2 = cpt * 2 in
@@ -337,7 +339,7 @@ module Atom : ATOM = struct
 	    is_true = false;
             timp = false;
 	    aid = cpt_fois_2 + 1 (* aid = vid*2+1 *) } in
-        hcons.ma := MA.add lit var !(hcons.ma);
+        HT.add hcons.tbl lit var;
         incr hcons.cpt;
         var, negated, var :: acc
 
@@ -348,10 +350,10 @@ module Atom : ATOM = struct
   (* with this code, all envs created with empty_hcons_env () will be
      initialized with the good reference to "vrai" *)
   let copy_hcons_env hcons =
-    { ma = ref !(hcons.ma) ; cpt = ref !(hcons.cpt) }
+    { tbl = HT.copy hcons.tbl ; cpt = ref !(hcons.cpt) }
 
   let empty_hcons_env, vrai_atom =
-    let empty_hcons = { ma = ref MA.empty ; cpt = ref (-1) } in
+    let empty_hcons = { tbl= HT.create 5048 ; cpt = ref (-1) } in
     let a, _ = add_atom empty_hcons Literal.LT.vrai [] in
     a.is_true <- true;
     a.var.level <- 0;
@@ -364,10 +366,10 @@ module Atom : ATOM = struct
   let nb_made_vars hcons = !(hcons.cpt)
 
   let get_atom hcons lit =
-    let ma = !(hcons.ma) in
-    try (MA.find lit ma).pa
+    try (HT.find hcons.tbl lit).pa
     with Not_found ->
-      try (MA.find (Literal.LT.neg lit) ma).na with Not_found -> assert false
+    try (HT.find hcons.tbl (Literal.LT.neg lit)).na
+    with Not_found -> assert false
 
   let make_clause name ali f sz_ali is_learnt premise =
     let atoms = Vec.from_list ali sz_ali dummy_atom in
