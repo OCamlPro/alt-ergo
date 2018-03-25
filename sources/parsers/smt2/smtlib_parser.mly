@@ -62,7 +62,7 @@ SYMBOL
 %%
 
 file_parser:
-| commands { Smtlib_translate.file_parser $1 }
+| commands { (Smtlib_translate.file_parser $1) }
 
 lexpr_parser:
 | term { Smtlib_translate.lexpr_parser $1 }
@@ -90,6 +90,13 @@ identifier:
     | symbol { mk_data ($startpos,$endpos) (IdSymbol $1) }
     | LP UNDERSCORE symbol nonempty_list(index) RP
 	{ mk_data ($startpos,$endpos) (IdUnderscoreSymNum($3, $4)) }
+
+prop_literal:
+    | symbol
+     	{ mk_data ($startpos,$endpos) (PropLit $1) }
+    | LP symbol symbol RP
+    	{ mk_data ($startpos,$endpos) (if $2.c <> "not" then raise Error; PropLitNot $3) }
+
 sort:
     | identifier { mk_data ($startpos,$endpos) (SortIdentifier $1) }
     | LP identifier nonempty_list(sort) RP
@@ -250,8 +257,8 @@ command:
         {mk_data ($startpos,$endpos) (Cmd_Assert $3) }
     | LP CHECKSAT RP
         {mk_data ($startpos,$endpos) (Cmd_CheckSat) }
-    | LP CHECKSATASSUMING list(symbol) RP
-        {mk_data ($startpos,$endpos) (Cmd_CheckSatAssum) }
+    | LP CHECKSATASSUMING LP list(prop_literal) RP RP
+        {mk_data ($startpos,$endpos) (Cmd_CheckSatAssum $4) }
     | LP DECLARECONST symbol const_dec RP
         {mk_data ($startpos,$endpos) (Cmd_DeclareConst ($3,$4)) }
     | LP DECLAREDATATYPE symbol datatype_dec RP

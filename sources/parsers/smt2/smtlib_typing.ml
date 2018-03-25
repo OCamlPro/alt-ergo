@@ -194,7 +194,7 @@ let type_command (env,locals) c =
     env
   | Cmd_CheckSat ->
     if assert_mode then assert false; env
-  | Cmd_CheckSatAssum ->
+  | Cmd_CheckSatAssum prop_lit ->
     if assert_mode then assert false; env
   | Cmd_DeclareConst (symbol,const_dec) ->
     Smtlib_typed_env.mk_const (env,locals) (symbol,const_dec)
