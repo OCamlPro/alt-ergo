@@ -16,7 +16,7 @@ type loc = Loc.t
 (*s Logical terms and formulas *)
 
 type integer_constant = string
-                          
+
 type constant = string
 
 type label = string
@@ -32,7 +32,7 @@ type qualid = Parsed.lexpr
 type pty = Parsed.ppure_type
 
 type binder = loc * ident option * Parsed.ppure_type option
-                                                     
+
 type param  = loc * ident option * Parsed.ppure_type
 
 type pattern =

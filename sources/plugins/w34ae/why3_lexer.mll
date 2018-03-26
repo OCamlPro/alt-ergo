@@ -12,7 +12,7 @@
 {
   open Why3_parser
   open Lexing
-         
+
   exception UnterminatedComment
   exception UnterminatedString
   exception IllegalCharacter of char
@@ -95,7 +95,7 @@ let string_start_loc = ref Loc.dummy
   let string_buf = Buffer.create 1024
 
   let comment_start_loc = ref Loc.dummy
-                                  
+
   let char_for_backslash = function
     | 'n' -> '\n'
     | 't' -> '\t'
@@ -271,5 +271,5 @@ and string = parse
     let p = (module Parser : Parsers.PARSER_INTERFACE) in
     Parsers.register_parser ~lang:".why" p;
     Parsers.register_parser ~lang:".why3" p;
-    
+
  }

@@ -13,7 +13,7 @@ open Lexing
 
 
 type position = Loc.t
-                  
+
 let user_position fname lnum cnum1 cnum2 =
   let upos =
     {pos_fname = fname; pos_lnum = lnum; pos_bol = cnum1;
@@ -21,9 +21,9 @@ let user_position fname lnum cnum1 cnum2 =
   (upos, upos)
 
 let get ({pos_fname; pos_lnum; pos_bol; pos_cnum}, _) =
-  (pos_fname, pos_lnum, pos_bol, pos_cnum) 
+  (pos_fname, pos_lnum, pos_bol, pos_cnum)
 
- 
+
 let join (p1 : position) (p2 : position) =
   match (get p1, get p2) with
     ((f1, l1, b1, e1), (f2, _, b2, e2 )) ->
@@ -32,13 +32,13 @@ let join (p1 : position) (p2 : position) =
     (pos, pos)
 
 exception Why3_located of position * exn
- 
+
 let error ?loc e = match loc with
   | Some loc -> raise (Why3_located (loc, e))
   | None -> raise e
 
 (* located messages *)
- 
+
 exception Message of string
 
 let errorm ?loc f =
