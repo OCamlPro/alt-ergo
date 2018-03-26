@@ -78,7 +78,7 @@ let translate_constant cst loc =
   | Const_Hex(s) -> mk_int_const loc s
   | Const_Bin(s) -> mk_int_const loc s
 
-let translate_identifier id params =
+let translate_identifier id params raw_params =
   let name = Smtlib_typed_env.get_identifier id in
   match name.c with
   | "true" -> mk_true_const name.p
@@ -101,7 +101,18 @@ let translate_identifier id params =
   | "<=" -> translate_chainable_assoc mk_pred_le name params
   | ">" -> translate_chainable_assoc mk_pred_gt name params
   | ">=" -> translate_chainable_assoc mk_pred_ge name params
-  | "=" -> translate_chainable_assoc mk_pred_eq name params
+  | "=" ->
+    let res = List.for_all (fun par ->
+        let _, ty = Smtlib_ty.inst Smtlib_typed_env.SMap.empty Smtlib_ty.IMap.empty par.ty in
+        try Smtlib_ty.unify (Smtlib_ty.new_type Smtlib_ty.TBool) ty name.p;
+          true
+        with _ -> false
+      ) raw_params
+    in
+    if res then
+      translate_chainable_assoc mk_iff name params
+    else
+      translate_chainable_assoc mk_pred_eq name params
   | "=>" -> translate_right_assoc mk_implies name params
   | "and" -> translate_left_assoc mk_and name params
   | "or" -> translate_left_assoc mk_or name params
@@ -126,7 +137,11 @@ let translate_identifier id params =
       | [t;i;j] -> mk_array_set name.p t i j
       | _ -> assert false
     end
-  | _ ->  mk_application name.p name.c params
+  | _ ->
+    if name.is_quantif then
+      mk_var name.p name.c
+    else
+      mk_application name.p name.c params
 
 let translate_qual_identifier qid params =
   match qid.c with
@@ -136,10 +151,10 @@ let translate_qual_identifier qid params =
 let rec translate_term pars term =
   match term.c with
   | TermSpecConst(cst) -> translate_constant cst term.p
-  | TermQualIdentifier(qid) -> translate_qual_identifier qid []
+  | TermQualIdentifier(qid) -> translate_qual_identifier qid [] []
   | TermQualIdTerm(qid,term_list) ->
     let params = List.map (translate_term pars) term_list in
-    translate_qual_identifier qid params
+    translate_qual_identifier qid params term_list
   | TermLetTerm(varbinding_list,term) ->
     List.fold_left (fun t varbinding ->
         let s,term = varbinding.c in

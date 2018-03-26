@@ -7,7 +7,7 @@
    open Smtlib_syntax
 
    let mk_data p c =
-       {p;c;ty= Smtlib_ty.new_type Smtlib_ty.TDummy}
+       {p;c;ty= Smtlib_ty.new_type Smtlib_ty.TDummy;is_quantif=false}
 %}
 
 %start commands

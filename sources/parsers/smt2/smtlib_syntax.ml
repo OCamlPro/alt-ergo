@@ -4,7 +4,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type 'a data = { p : (Lexing.position * Lexing.position) ; c : 'a ; ty : Smtlib_ty.ty}
+type 'a data = { p : (Lexing.position * Lexing.position) ; c : 'a ; ty : Smtlib_ty.ty; mutable is_quantif : bool}
 
 type constant =
 | Const_Dec of string
