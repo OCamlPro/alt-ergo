@@ -635,9 +635,8 @@ let mk_lit a id = match Literal.LT.view a with
 
   | _ -> make (Literal a) (Literal (Literal.LT.neg a)) 1 id
 
-let mk_if t f2 f3 id =
-  let lit = mk_lit (Literal.LT.mk_pred t false) id in
-  mk_or (mk_and lit f2 true id) (mk_and (mk_not lit) f3 true id) false id
+let mk_if cond f2 f3 id =
+  mk_or (mk_and cond f2 true id) (mk_and (mk_not cond) f3 true id) false id
 
 let no_capture_issue s_t binders =
   true (* TODO *)
