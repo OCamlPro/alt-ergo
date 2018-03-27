@@ -839,10 +839,10 @@ let rec type_form ?(in_theory=false) env f =
       let f, fv = type_form env f in TFop(OPnot,[f]),fv
     | PPif(f1,f2,f3) ->
       Options.tool_req 1 "TR-Typing-Ite$_F$";
-      let f1 = type_term env f1 in
+      let f1,fv1 = type_form env f1 in
       let f2,fv2 = type_form env f2 in
       let f3,fv3 = type_form env f3 in
-      TFop(OPif f1,[f2;f3]), Sy.union fv2 fv3
+      TFop(OPif, [f1; f2;f3]), Sy.union fv1 (Sy.union fv2 fv3)
     | PPnamed(lbl,f) ->
       let f, fv = type_form env f in
       let lbl = Hstring.make lbl in

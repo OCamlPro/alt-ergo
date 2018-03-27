@@ -292,11 +292,11 @@ let make_form name_base f loc =
     | TFop(OPnot,[f]) ->
       let ff , lit = make_form false acc f.c f.annot in
       F.mk_not ff , lit
-    | TFop(OPif t,[f2;f3]) ->
-      let tt = make_term t in
-      let ff2 , lit2 = make_form false acc f2.c f2.annot in
+    | TFop(OPif, [cond; f2;f3]) ->
+      let cond, lit1 = make_form false acc cond.c cond.annot in
+      let ff2 , lit2 = make_form false lit1 f2.c f2.annot in
       let ff3 , lit3 = make_form false lit2 f3.c f3.annot in
-      F.mk_if tt ff2 ff3 id, lit3
+      F.mk_if cond ff2 ff3 id, lit3
     | TFop(OPiff,[f1;f2]) ->
       let ff1 , lit1 = make_form false acc f1.c f1.annot in
       let ff2 , lit2 = make_form false lit1 f2.c f2.annot in
