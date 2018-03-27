@@ -270,8 +270,6 @@ module Atom : ATOM = struct
   let pr_atom = Debug.atom
   let pr_clause = Debug.clause
 
-  module MA = Literal.LT.Map
-
   let ale = Hstring.make "<="
   let alt = Hstring.make "<"
   let agt = Hstring.make ">"
