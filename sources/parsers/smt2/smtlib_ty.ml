@@ -59,7 +59,7 @@ module SMap = Map.Make(String)
 
 let rec shorten ty =
   match ty.desc with
-  | TLink(t) -> shorten t
+  | TLink(t) -> ty.desc <- (shorten t).desc;ty
   | _ -> ty
 
 let rec fun_ret ty =
