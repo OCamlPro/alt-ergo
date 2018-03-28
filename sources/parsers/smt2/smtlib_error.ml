@@ -52,8 +52,6 @@ type error =
 
 exception Error of error * (Lexing.position * Lexing.position)
 
-let error e p = raise (Error (e,p))
-
 let report_loc fmt file (b,e) =
   if b = dummy_pos || e = dummy_pos then
     fprintf fmt "File \"%s\"\nerror : " file
@@ -85,4 +83,8 @@ let print fmt f e p =
   end;
   fprintf fmt "\n@."
 
+
+let error e p =
+  print err_formatter "" e p;
+  raise (Error (e,p))
 
