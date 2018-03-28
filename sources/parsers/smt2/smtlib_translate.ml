@@ -4,37 +4,29 @@ open Smtlib_syntax
 
 (******************************************************************************)
 let translate_left_assoc f id params =
-  let rec aux acc params =
-    match params with
-    | [] -> acc
-    | t :: tl ->
-      aux (f id.p acc t) tl
-  in
-  if params == [] then
-    assert false
-  else
-    aux (List.hd params) params
+  match params with
+  | [] | [_] -> assert false
+  | t :: l ->
+    List.fold_left (fun acc t ->
+        f id.p acc t
+      ) t l
 
 let translate_right_assoc f id params =
-  let rec aux acc params =
-    match params with
-    | [] -> acc
-    | t :: tl ->
-      aux (f id.p t acc) tl
-  in
-  if params == [] then
-    assert false
-  else
-    aux (List.hd params) params
+  match List.rev params with
+  | [] | [_] -> assert false
+  | t :: l ->
+    List.fold_left (fun acc t ->
+        f id.p t acc
+      ) t l
 
 let rec translate_chainable_assoc f id params =
   match params with
-  | [] -> assert false
-  | [t] -> t
-  | [t1;t2] -> f id.p t1 t2
-  | t1 :: ((t2 :: _) as tl) ->
-    let eq = f id.p t1 t2 in
-    mk_and id.p eq (translate_chainable_assoc f id tl)
+  | [] | [_] -> assert false
+  | a::b::l ->
+    let (res,_) = List.fold_left (fun (acc,curr) next ->
+        mk_and id.p acc (f id.p curr next), next
+      ) ((f id.p a b),b) l
+    in res
 
 (******************************************************************************)
 
@@ -53,7 +45,7 @@ let get_sort_symb s pars =
   | "Bool" -> bool_type
   | "Real" -> real_type
   | _ ->
-    if List.mem s pars then
+    if List.mem s.c pars then
       mk_var_type s.p s.c
     else
       mk_external_type s.p [] s.c
@@ -102,17 +94,14 @@ let translate_identifier id params raw_params =
   | ">" -> translate_chainable_assoc mk_pred_gt name params
   | ">=" -> translate_chainable_assoc mk_pred_ge name params
   | "=" ->
-    let res = List.for_all (fun par ->
-        let _, ty = Smtlib_ty.inst Smtlib_typed_env.SMap.empty Smtlib_ty.IMap.empty par.ty in
-        try Smtlib_ty.unify (Smtlib_ty.new_type Smtlib_ty.TBool) ty name.p;
-          true
-        with _ -> false
-      ) raw_params
+    let f = match raw_params with
+      | [] -> assert false
+      | par :: _ ->
+        if Smtlib_ty.is_bool par.ty then mk_iff
+        else mk_pred_eq
     in
-    if res then
-      translate_chainable_assoc mk_iff name params
-    else
-      translate_chainable_assoc mk_pred_eq name params
+    translate_chainable_assoc f name params
+
   | "=>" -> translate_right_assoc mk_implies name params
   | "and" -> translate_left_assoc mk_and name params
   | "or" -> translate_left_assoc mk_or name params
@@ -173,7 +162,8 @@ let rec translate_term pars term =
       ) sorted_var_list in
     mk_exists term.p svl [] [] (translate_term pars term)
   | TermExclimationPt(term,key_term_list) ->
-    Printf.eprintf "[Warning] (! :pattern and :named not yet supported)\n%!";
+    if Options.verbose () then
+      Printf.eprintf "[Warning] (! :pattern and :named not yet supported)\n%!";
     translate_term pars term
   | TermMatch(term,pattern_term_list) -> assert false
 
@@ -181,6 +171,7 @@ let translate_assert_term at =
   let t = match at.c with
     | Assert_dec(term) -> translate_term [] term
     | Assert_dec_par(pars,term) ->
+      let pars = List.map (fun par -> par.c) pars in
       translate_term pars term
   in
   mk_generic_axiom at.p "a" t
@@ -190,7 +181,9 @@ let translate_assert_term at =
 let translate_const_dec cst =
   match cst.c with
   | Const_dec_sort t -> get_sort [] t
-  | Const_dec_par (pars,t) -> get_sort pars t
+  | Const_dec_par (pars,t) ->
+    let pars = List.map (fun par -> par.c) pars in
+    get_sort pars t
 
 let translate_decl_fun f params ret =
   let logic_type = mk_logic_type params (Some ret) in
@@ -200,6 +193,7 @@ let translate_fun_dec fun_dec =
   match fun_dec.c with
   | Fun_dec (sl,s) -> List.map (get_sort []) sl, get_sort [] s
   | Fun_dec_par (pars,sl,s) ->
+    let pars = List.map (fun par -> par.c) pars in
     List.map (get_sort pars) sl, get_sort pars s
 
 let translate_fun_def fun_def =
@@ -209,6 +203,7 @@ let translate_fun_def fun_def =
     List.map (fun sv -> let p,s = sv.c in p.p,p.c,get_sort [] s) svl,
     get_sort [] sort, []
   | Fun_def_par (symb,pars,svl,sort) ->
+    let pars = List.map (fun par -> par.c) pars in
     symb,
     List.map (fun sv -> let p,s = sv.c in p.p,p.c,get_sort pars s) svl,
     get_sort pars sort,pars
@@ -263,13 +258,17 @@ let translate_command acc command =
 
 let file_parser commands =
   Smtlib_typing.typing commands;
-  Printf.printf "Smt Typing OK \n%!";
+
+  if Options.verbose () then
+    Printf.printf "Smt Typing OK \n%!";
 
   (* Smtlib_printer.print commands; *)
 
   let l = List.fold_left translate_command [] (List.rev commands) in
-  Printf.printf "Conversion OK \n%!";
-  l
+
+ if Options.verbose () then
+   Printf.printf "Conversion OK \n%!";
+ l
 
 let lexpr_parser l = assert false
 let trigger_parser t = assert false

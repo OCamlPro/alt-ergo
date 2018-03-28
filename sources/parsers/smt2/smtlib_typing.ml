@@ -147,7 +147,8 @@ and type_term (env,locals) t =
 
   | TermExclimationPt (term, key_term_list) ->
     let ty = type_term (env,locals) term in
-    Printf.eprintf ":named and :pattern not yet implemented\n%!";
+    if Options.verbose () then
+      Printf.eprintf ":named and :pattern not yet implemented\n%!";
     ty
 
   | TermMatch (term, match_case_list) ->

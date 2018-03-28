@@ -147,9 +147,9 @@ let set_logic env s =
   if all || contains logic "UF" then
     set_is_uf true;
 
-  if all || contains logic "BV" then
+  if contains logic "BV" then
     Printf.eprintf "[Warning] Bitvector not yet implemented\n%!";
-  if all || contains logic "FP" then
+  if contains logic "FP" then
     Printf.eprintf "[Warning] Floating point not yet implemented\n%!";
 
   if all || contains logic "AX" || contains logic "A" then
