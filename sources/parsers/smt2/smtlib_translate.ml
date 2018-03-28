@@ -19,7 +19,7 @@ let translate_right_assoc f id params =
         f id.p t acc
       ) t l
 
-let rec translate_chainable_assoc f id params =
+let translate_chainable_assoc f id params =
   match params with
   | [] | [_] -> assert false
   | a::b::l ->
@@ -62,9 +62,22 @@ let rec get_sort pars s =
     let id = Smtlib_typed_env.get_identifier id in
     mk_external_type s.p (List.map (get_sort pars) sl) id.c
 
+let better_num_of_string s =
+  begin match String.split_on_char '.' s with
+    | [n] | [n;""] -> Num.num_of_string n
+    | [n; d] ->
+      let l = String.length d in
+      let n = if (String.length n) = 0 then Num.Int 0
+        else Num.num_of_string n in
+      let d = Num.num_of_string d in
+      let e = Num.power_num (Num.Int 10) (Num.Int l) in
+      Num.add_num n (Num.div_num d e)
+    | _ -> assert false
+  end
+
 let translate_constant cst loc =
   match cst with
-  | Const_Dec(s) -> mk_real_const loc (Num.num_of_string s)
+  | Const_Dec(s) -> mk_real_const loc (better_num_of_string s)
   | Const_Num(s) -> mk_int_const loc s
   | Const_Str(s) -> assert false (* to do *)
   | Const_Hex(s) -> mk_int_const loc s
@@ -97,7 +110,7 @@ let translate_identifier id params raw_params =
     let f = match raw_params with
       | [] -> assert false
       | par :: _ ->
-        if Smtlib_ty.is_bool par.ty then mk_iff
+        if Smtlib_ty.is_bool (Smtlib_ty.shorten par.ty) then mk_iff
         else mk_pred_eq
     in
     translate_chainable_assoc f name params
@@ -211,7 +224,9 @@ let translate_fun_def fun_def =
 let translate_fun_def fun_def term =
   let symb,params,ret,pars = translate_fun_def fun_def in
   let t_expr = translate_term pars term in
-  mk_function_def symb.p (symb.c,symb.c) params ret t_expr
+  if Smtlib_ty.is_bool (Smtlib_ty.shorten term.ty) then
+    mk_non_ground_predicate_def  symb.p (symb.c,symb.c) params t_expr
+  else mk_function_def symb.p (symb.c,symb.c) params ret t_expr
 
 let translate_command acc command =
   match command.c with
