@@ -193,7 +193,7 @@ let get_fun_def_locals (env,locals) fun_def =
 (************************************ Commands ********************************)
 let type_command (env,locals) c =
   match c.c with
-  | Cmd_Assert(term) ->
+  | Cmd_Assert(term) | Cmd_CheckEntailment(term) ->
     Smtlib_ty.unify (Smtlib_ty.new_type Smtlib_ty.TBool) (get_term (env,locals) term) term.p;
     env
   | Cmd_CheckSat ->

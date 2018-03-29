@@ -96,6 +96,7 @@ rule token = parse
 | "assert" { ASSERT }
 | "check-sat" { CHECKSAT }
 | "check-sat-assuming" { CHECKSATASSUMING }
+| "check-entailment" { CHECKENTAILMENT }
 | "get-assertions" { GETASSERT }
 | "get-proof" { GETPROOF }
 | "get-unsat-core" { GETUNSATCORE }

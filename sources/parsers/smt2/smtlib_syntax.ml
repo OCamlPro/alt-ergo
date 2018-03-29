@@ -182,6 +182,7 @@ type command_aux =
 | Cmd_Assert of assert_dec
 | Cmd_CheckSat
 | Cmd_CheckSatAssum of prop_literal list
+| Cmd_CheckEntailment of assert_dec
 | Cmd_DeclareConst of symbol * const_dec
 | Cmd_DeclareDataType of symbol * datatype_dec
 | Cmd_DeclareDataTypes of sort_dec list * datatype_dec list

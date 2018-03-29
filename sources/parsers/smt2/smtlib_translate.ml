@@ -181,13 +181,17 @@ let rec translate_term pars term =
   | TermMatch(term,pattern_term_list) -> assert false
 
 let translate_assert_term at =
-  let t = match at.c with
-    | Assert_dec(term) -> translate_term [] term
-    | Assert_dec_par(pars,term) ->
-      let pars = List.map (fun par -> par.c) pars in
-      translate_term pars term
-  in
-  mk_generic_axiom at.p "a" t
+  match at.c with
+  | Assert_dec(term) -> translate_term [] term
+  | Assert_dec_par(pars,term) ->
+    let pars = List.map (fun par -> par.c) pars in
+    translate_term pars term
+
+let translate_goal at =
+  mk_goal at.p "g" (translate_assert_term at)
+
+let translate_assert at =
+  mk_generic_axiom at.p "a" (translate_assert_term at)
 
 (* get_sort_id s sl@pars *)
 
@@ -231,7 +235,9 @@ let translate_fun_def fun_def term =
 let translate_command acc command =
   match command.c with
   | Cmd_Assert(assert_term) ->
-    (translate_assert_term assert_term) :: acc
+    (translate_assert assert_term) :: acc
+  | Cmd_CheckEntailment(assert_term) ->
+    (translate_goal assert_term) :: acc
   | Cmd_CheckSat -> (mk_goal command.p "g" (mk_false_const command.p)) :: acc
   | Cmd_CheckSatAssum prop_lit_list  -> assert false
   | Cmd_DeclareConst(symbol,const_dec) ->
