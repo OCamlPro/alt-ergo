@@ -743,7 +743,7 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
       let f2', trs2 = make_rec keep_triggers pol gopt vterm'' vtype'' f2 in
       let trs12 =
 	if keep_triggers then check_triggers qf.qf_triggers (vterm', vtype')
-	else if Options.notriggers () || qf.qf_triggers == [] then
+	else if Options.no_user_triggers () || qf.qf_triggers == [] then
 	  begin
 	    (make_triggers false vterm' vtype' (STRS.elements trs1))@
 	      (make_triggers false vterm' vtype' (STRS.elements trs2))
@@ -782,7 +782,7 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
 	  (Vterm.union vterm vterm') (Vtype.union vtype vtype') qf.qf_form in
       let trs' =
 	if keep_triggers then check_triggers qf.qf_triggers (vterm', vtype')
-	else if Options.notriggers () || qf.qf_triggers == [] then
+	else if Options.no_user_triggers () || qf.qf_triggers == [] then
 	  make_triggers gopt vterm' vtype' (STRS.elements trs)
 	else
 	  let lf = filter_good_triggers (vterm',vtype') qf.qf_triggers in
