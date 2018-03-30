@@ -145,18 +145,30 @@ let translate_identifier id params raw_params =
     else
       mk_application name.p name.c params
 
-let translate_qual_identifier qid params =
+let translate_qual_identifier qid params raw_params=
   match qid.c with
-  | QualIdentifierId(id) -> translate_identifier id params
-  | QualIdentifierAs(id,sort) -> translate_identifier id params (* to check *)
+  | QualIdentifierId(id) -> translate_identifier id params raw_params, None
+  | QualIdentifierAs(id,sort) ->
+    translate_identifier id params raw_params, Some sort
 
 let rec translate_term pars term =
   match term.c with
   | TermSpecConst(cst) -> translate_constant cst term.p
-  | TermQualIdentifier(qid) -> translate_qual_identifier qid [] []
+  | TermQualIdentifier(qid) ->
+    let q,s = translate_qual_identifier qid [] [] in
+    begin
+      match s with
+      | None -> q
+      | Some s -> mk_type_cast term.p q (get_sort pars s)
+    end
   | TermQualIdTerm(qid,term_list) ->
     let params = List.map (translate_term pars) term_list in
-    translate_qual_identifier qid params term_list
+    let q,s = translate_qual_identifier qid params term_list in
+    begin
+      match s with
+      | None -> q
+      | Some s -> mk_type_cast term.p q (get_sort pars s)
+    end
   | TermLetTerm(varbinding_list,term) ->
     List.fold_left (fun t varbinding ->
         let s,term = varbinding.c in
