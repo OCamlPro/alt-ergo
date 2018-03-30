@@ -62,7 +62,7 @@ val set_parse_only : bool -> unit
 val set_verbose : bool -> unit
 val set_steps_bound : int -> unit
 val set_age_bound : int -> unit
-val set_notriggers : bool -> unit
+val set_no_user_triggers : bool -> unit
 val set_triggers_var : bool -> unit
 val set_nb_triggers : int -> unit
 val set_greedy : bool -> unit
@@ -132,7 +132,7 @@ val no_fm : unit -> bool
 val no_theory : unit -> bool
 val tighten_vars : unit -> bool
 val age_bound : unit -> int
-val notriggers : unit -> bool
+val no_user_triggers : unit -> bool
 val triggers_var : unit -> bool
 val nb_triggers : unit -> int
 val verbose : unit -> bool
