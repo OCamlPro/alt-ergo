@@ -41,7 +41,7 @@ module M = struct
   let age_bound = ref 50
   let debug = ref false
   let debug_warnings = ref false
-  let notriggers = ref false
+  let no_user_triggers = ref false
   let debug_cc = ref false
   let debug_gc = ref false
   let debug_use = ref false
@@ -235,7 +235,7 @@ module M = struct
     *)
     "-parse-only", Arg.Set parse_only, " stop after parsing";
     "-type-only", Arg.Set type_only , " stop after typing";
-    "-notriggers", Arg.Set notriggers, " disable triggers inference";
+    "-no-user-triggers", Arg.Set no_user_triggers, " ignore triggers given by the user, except for triggers of theories axioms";
     "-debug", Arg.Set debug, "  sets the debugging flag";
     "-dwarnings", Arg.Set debug_warnings, "  sets the debugging flag of warnings";
     "-dcc", Arg.Set debug_cc, "  sets the debugging flag of cc";
@@ -317,8 +317,8 @@ module M = struct
 
     "-timelimit-per-goal", Arg.Set timelimit_per_goal,
     " Set the given timelimit for each goal, in case of multiple goals per \
-file. In this case, time spent in preprocessing is separated from resolution \
-time. Not relevant for GUI-mode.";
+     file. In this case, time spent in preprocessing is separated from resolution \
+     time. Not relevant for GUI-mode.";
     "-interpretation-timelimit", Arg.Float (set_limit interpretation_timelimit), "n set the time limit to n seconds for model generation (not supported on Windows). Default value is 1. sec";
     "-sat-plugin" , Arg.String set_sat_plugin,
     " use the given SAT-solver instead of the default DFS-based SAT solver";
@@ -367,6 +367,9 @@ time. Not relevant for GUI-mode.";
     "-no-locs-in-answers", Arg.Set no_locs_in_answers,
     " Do not show the locations of goals when printing solver's answers."
   ]
+
+  let spec =
+    List.fast_sort (fun (s1,_,_) (s2,_,_) -> String.compare s1 s2) spec
 
   let spec = Arg.align spec
 
@@ -423,7 +426,7 @@ let set_type_only b = M.type_only := b
 let set_parse_only b = M.parse_only := b
 let set_steps_bound b = M.steps_bound := b
 let set_age_bound b = M.age_bound := b
-let set_notriggers b = M.notriggers := b
+let set_no_user_triggers b = M.no_user_triggers := b
 let set_verbose b = M.verbose := b
 let set_greedy b = M.greedy := b
 let set_triggers_var b = M.triggers_var := b
@@ -497,7 +500,7 @@ let no_fm () = !M.no_fm
 let no_theory () = !M.no_theory
 let tighten_vars () = !M.tighten_vars
 let age_bound () = !M.age_bound
-let notriggers () = !M.notriggers
+let no_user_triggers () = !M.no_user_triggers
 let verbose () = !M.verbose
 let greedy () = !M.greedy
 let triggers_var () = !M.triggers_var
