@@ -738,33 +738,35 @@ let rec type_form ?(in_theory=false) env f =
 
     | PPapp(p,args ) ->
       Options.tool_req 1 "TR-Typing-App$_F$";
-      let r =
-	begin
-	  let te_args = List.map (type_term env) args in
-	  let lt_args =  List.map (fun {c={tt_ty=t}} -> t) te_args in
-	  match Env.fresh_type env p f.pp_loc with
-	    | s , { Env.args = lt; result = Ty.Tbool} ->
-	      begin
-		try
-		  List.iter2 Ty.unify lt lt_args;
-		  if Pervasives.(=) p "<=" || Pervasives.(=) p "<" then
-		    TFatom { c = TAbuilt(Hstring.make p,te_args);
-			     annot=new_id ()}
-		  else
-		    let t1 = {
-		      c = {tt_desc=TTapp(s,te_args); tt_ty=Ty.Tbool};
-		      annot=new_id (); }
-		    in
-		    TFatom { c = TApred t1; annot=new_id () }
-		with
-		  | Ty.TypeClash(t1,t2) ->
-		    error (Unification(t1,t2)) f.pp_loc
-		  | Invalid_argument _ ->
-		    error (WrongNumberofArgs p) f.pp_loc
-	      end
-	    | _ -> error (NotAPredicate p) f.pp_loc
-	end
-      in r, freevars_form r
+      let te_args = List.map (type_term env) args in
+      let lt_args =  List.map (fun {c={tt_ty=t}} -> t) te_args in
+      let s , { Env.args = lt; result } = Env.fresh_type env p f.pp_loc in
+      begin
+        try
+          if result != Ty.Tbool then
+            (* consider polymorphic functions *)
+            Ty.unify result Ty.Tbool;
+          try
+            List.iter2 Ty.unify lt lt_args;
+            let r =
+              if Pervasives.(=) p "<=" || Pervasives.(=) p "<" then
+                TFatom { c = TAbuilt(Hstring.make p,te_args);
+		         annot=new_id ()}
+              else
+                let t1 = {
+	          c = {tt_desc=TTapp(s,te_args); tt_ty=Ty.Tbool};
+	          annot=new_id (); }
+                in
+                TFatom { c = TApred t1; annot=new_id () }
+            in
+            r, freevars_form r
+          with
+          | Ty.TypeClash(t1,t2) ->
+            error (Unification(t1,t2)) f.pp_loc
+          | Invalid_argument _ ->
+            error (WrongNumberofArgs p) f.pp_loc
+        with Ty.TypeClash(t1,t2) -> error (NotAPredicate p) f.pp_loc
+      end
 
     | PPdistinct (args) ->
       Options.tool_req 1 "TR-Typing-Distinct$_F$";
