@@ -143,7 +143,7 @@ type aatom =
   | AAbuilt of Hstring.t * aterm annoted list
 
 type aoplogic =
-    AOPand |AOPor | AOPimp | AOPnot | AOPif of aterm | AOPiff
+    AOPand |AOPor |AOPxor | AOPimp | AOPnot | AOPif of aterm | AOPiff
 
 type aquant_form = {
   aqf_bvars : (Symbols.t * Ty.t) list ;
@@ -706,6 +706,7 @@ let print_tatom fmt a = match a.Typed.c with
 let print_oplogic fmt = function
   | OPand -> fprintf fmt "and"
   | OPor -> fprintf fmt "or"
+  | OPxor -> fprintf fmt "xor"
   | OPimp -> fprintf fmt "->"
   | OPnot -> fprintf fmt "not"
   | OPif t -> fprintf fmt "%a ->" print_tterm t
@@ -1000,6 +1001,7 @@ let of_tatom (buffer:sbuffer) a = match a.Typed.c with
 let of_oplogic (buffer:sbuffer)  = function
   | OPand -> AOPand
   | OPor -> AOPor
+  | OPxor -> AOPxor
   | OPimp -> AOPimp
   | OPnot -> AOPnot
   | OPif t -> AOPif (of_tterm buffer  t)
@@ -1139,6 +1141,7 @@ let to_tatom aa id =
 let to_oplogic = function
   | AOPand -> OPand
   | AOPor -> OPor
+  | AOPxor -> OPxor
   | AOPimp  -> OPimp
   | AOPnot -> OPnot
   | AOPif at -> OPif (to_tterm 0 at)
@@ -1387,6 +1390,7 @@ let add_oplogic (buffer:sbuffer) indent tags op =
   match op with
     | AOPand -> append_buf buffer ~tags "and "
     | AOPor -> append_buf buffer ~tags "or "
+    | AOPxor -> append_buf buffer ~tags "xor "
     | AOPimp  -> append_buf buffer ~tags "-> "
     | AOPnot -> append_buf buffer ~tags "not "
     | AOPif at ->

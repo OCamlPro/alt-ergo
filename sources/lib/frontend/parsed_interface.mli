@@ -144,6 +144,8 @@ val mk_and : Loc.t -> lexpr -> lexpr -> lexpr
 
 val mk_or : Loc.t -> lexpr -> lexpr -> lexpr
 
+val mk_xor : Loc.t -> lexpr -> lexpr -> lexpr
+
 val mk_iff : Loc.t -> lexpr -> lexpr -> lexpr
 
 val mk_implies : Loc.t -> lexpr -> lexpr -> lexpr

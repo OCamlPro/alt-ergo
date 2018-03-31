@@ -77,7 +77,7 @@ type 'a tatom =
   | TAbuilt of Hstring.t * ('a tterm, 'a) annoted list
 
 type 'a oplogic =
-    OPand |OPor | OPimp | OPnot | OPiff
+    OPand |OPor  | OPxor | OPimp | OPnot | OPiff
   | OPif of ('a tterm, 'a) annoted
 
 type 'a quant_form = {
