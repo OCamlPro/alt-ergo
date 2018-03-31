@@ -61,6 +61,7 @@
         "logic"      , LOGIC;
         "not"        , NOT;
         "or"         , OR;
+        "xor"         , XOR;
         "predicate"  , PRED;
         "prop"       , PROP;
         "real"       , REAL;

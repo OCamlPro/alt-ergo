@@ -841,6 +841,7 @@ let rec type_form ?(in_theory=false) env f =
 	  | PPand ->
 	    TFop(OPand,[f1;f2])
 	  | PPor -> TFop(OPor,[f1;f2])
+	  | PPxor -> TFop(OPxor,[f1;f2])
 	  | PPimplies -> TFop(OPimp,[f1;f2])
 	  | PPiff -> TFop(OPiff,[f1;f2])
 	  | _ -> assert false), Sy.union fv1 fv2)
