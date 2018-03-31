@@ -118,6 +118,7 @@ let translate_identifier id params raw_params =
   | "=>" -> translate_right_assoc mk_implies name params
   | "and" -> translate_left_assoc mk_and name params
   | "or" -> translate_left_assoc mk_or name params
+  | "xor" -> translate_left_assoc mk_xor name params
   | "ite" -> begin
       match params with
       | [b;e1;e2] -> mk_ite name.p b e1 e2
