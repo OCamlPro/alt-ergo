@@ -130,7 +130,7 @@ type aatom =
   | AAbuilt of Hstring.t * aterm annoted list
 
 type aoplogic =
-    AOPand |AOPor | AOPimp | AOPnot | AOPif of aterm | AOPiff
+    AOPand |AOPor |AOPxor | AOPimp | AOPnot | AOPif of aterm | AOPiff
 
 type aquant_form = {
   aqf_bvars : (Symbols.t * Ty.t) list ;

@@ -46,7 +46,7 @@
 %token BOOL COLON COMMA PV DISTINCT DOT ELSE EOF EQUAL
 %token EXISTS FALSE VOID FORALL FUNC GE GOAL GT CHECK CUT
 %token IF IN INT BITV MAPS_TO
-%token LE LET LEFTPAR LEFTSQ LEFTBR LOGIC LRARROW LT MINUS
+%token LE LET LEFTPAR LEFTSQ LEFTBR LOGIC LRARROW XOR LT MINUS
 %token NOT NOTEQ OR PERCENT PLUS PRED PROP
 %token QUOTE REAL UNIT
 %token RIGHTPAR RIGHTSQ RIGHTBR
@@ -231,6 +231,9 @@ lexpr:
 
 | se1 = lexpr OR se2 = lexpr
    { mk_or ($startpos, $endpos) se1 se2 }
+
+| se1 = lexpr XOR se2 = lexpr
+   { mk_xor ($startpos, $endpos) se1 se2 }
 
 | se1 = lexpr LRARROW se2 = lexpr
    { mk_iff ($startpos, $endpos) se1 se2 }

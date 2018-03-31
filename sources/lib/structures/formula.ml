@@ -613,6 +613,9 @@ let mk_iff f1 f2 id = (* try to interpret iff as a double implication *)
   let b = mk_or (mk_not f2) f1 true id in
   mk_and a b false id
 
+let mk_xor f1 f2 is_impl id =
+  mk_not (mk_iff f1 f2 id)
+
 let translate_eq_to_iff s t =
   (T.view s).T.ty == Ty.Tbool &&
   not
