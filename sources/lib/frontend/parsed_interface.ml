@@ -198,6 +198,9 @@ let mk_and loc e1 e2 =
 let mk_or loc e1 e2 =
   mk_localized loc (mk_infix e1 PPor e2)
 
+let mk_xor loc e1 e2 =
+  mk_localized loc (mk_infix e1 PPxor e2)
+
 let mk_iff loc e1 e2 =
   mk_localized loc (mk_infix e1 PPiff e2)
 

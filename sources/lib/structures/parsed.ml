@@ -38,7 +38,7 @@ type constant =
   | ConstVoid
 
 type pp_infix =
-  | PPand | PPor | PPimplies | PPiff
+  | PPand | PPor | PPxor | PPimplies | PPiff
   | PPlt | PPle | PPgt | PPge | PPeq | PPneq
   | PPadd | PPsub | PPmul | PPdiv | PPmod
 

@@ -278,12 +278,15 @@ let make_form name_base f loc =
 	| _ -> assert false
       in F.mk_lit a id, lit
 
-    | TFop(((OPand | OPor) as op),[f1;f2]) ->
+    | TFop(((OPand | OPor | OPxor) as op),[f1;f2]) ->
       let ff1 , lit1 = make_form false acc f1.c f1.annot in
       let ff2 , lit2 = make_form false lit1 f2.c f2.annot in
       let mkop = match op with
 	| OPand -> F.mk_and ff1 ff2 false id
-	| _ -> F.mk_or ff1 ff2 false id in
+        | OPor -> F.mk_or ff1 ff2 false id
+        | OPxor -> F.mk_xor ff1 ff2 false id
+        | _ -> assert false
+      in
       mkop , lit2
     | TFop(OPimp,[f1;f2]) ->
       let ff1 , _ = make_form false acc f1.c f1.annot in
