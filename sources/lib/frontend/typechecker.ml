@@ -714,16 +714,27 @@ let rec type_form ?(in_theory=false) env f =
       TFatom {c=TAfalse; annot=new_id ()}, Sy.empty
     | PPvar p ->
       Options.tool_req 1 "TR-Typing-Var$_F$";
-      let r = begin
-	match Env.fresh_type env p f.pp_loc with
-	  | s, { Env.args = []; result = Ty.Tbool} ->
-	    let t2 = {c = {tt_desc=TTconst Ttrue;tt_ty=Ty.Tbool};
-		      annot = new_id ()} in
-	    let t1 = {c = {tt_desc=TTvar s; tt_ty=Ty.Tbool};
-		      annot = new_id ()} in
-	    TFatom {c = TAeq [t1;t2]; annot=new_id ()}
-	  | _ -> error (NotAPropVar p) f.pp_loc
-      end in r, freevars_form r
+      let res =
+        try
+          (* allow type cast bool to predicate in some simple situations *)
+          let s, ty = Env.find env p in
+          Options.tool_req 1 (append_type "TR-Typing-Var$_\\Gamma$ type" ty);
+          s, { Env.args = []; result = ty}
+        with Not_found ->
+          Env.fresh_type env p f.pp_loc
+      in
+      let r =
+	match res with
+	| s, { Env.args = []; result = Ty.Tbool} ->
+	  let t2 = {c = {tt_desc=TTconst Ttrue;tt_ty=Ty.Tbool};
+		    annot = new_id ()} in
+	  let t1 = {c = {tt_desc=TTvar s; tt_ty=Ty.Tbool};
+		    annot = new_id ()} in
+	  TFatom {c = TAeq [t1;t2]; annot=new_id ()}
+        | s, { Env.args ; result} ->
+          error (NotAPropVar p) f.pp_loc
+      in
+      r, freevars_form r
 
     | PPapp(p,args ) ->
       Options.tool_req 1 "TR-Typing-App$_F$";
