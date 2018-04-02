@@ -152,7 +152,26 @@ let translate_qual_identifier qid params raw_params=
   | QualIdentifierAs(id,sort) ->
     translate_identifier id params raw_params, Some sort
 
-let rec translate_term pars term =
+let rec translate_key_term pars acc k =
+  match k.c with
+  | Pattern(term_list) ->
+    let tl = List.map (translate_term pars) term_list in
+    (tl, false) :: acc
+  | Named(symb) ->
+    if Options.verbose () then
+      Printf.eprintf "[Warning] (! :named not yet supported)\n%!";
+    acc
+
+and translate_quantif f svl pars t =
+  match t.c with
+  | TermExclimationPt(term,key_term_list) ->
+    let triggers = List.fold_left (fun acc key_term ->
+        translate_key_term pars acc key_term
+      ) [] key_term_list in
+    f t.p svl triggers [] (translate_term pars t)
+  | _ -> f t.p svl [] [] (translate_term pars t)
+
+and translate_term pars term =
   match term.c with
   | TermSpecConst(cst) -> translate_constant cst term.p
   | TermQualIdentifier(qid) ->
@@ -178,18 +197,16 @@ let rec translate_term pars term =
   | TermForAllTerm(sorted_var_list,t) ->
     let svl = List.map (fun sv ->
         let v,s = sv.c in
-        v.c, "", get_sort pars s
+        v.c, v.c, get_sort pars s
       ) sorted_var_list in
-    mk_forall term.p svl [] [] (translate_term pars t)
-  | TermExistsTerm(sorted_var_list,term) ->
+    translate_quantif mk_forall svl pars t
+  | TermExistsTerm(sorted_var_list,t) ->
     let svl = List.map (fun sv ->
         let v,s = sv.c in
         v.c, "", get_sort pars s
       ) sorted_var_list in
-    mk_exists term.p svl [] [] (translate_term pars term)
+    translate_quantif mk_exists svl pars t
   | TermExclimationPt(term,key_term_list) ->
-    if Options.verbose () then
-      Printf.eprintf "[Warning] (! :pattern and :named not yet supported)\n%!";
     translate_term pars term
   | TermMatch(term,pattern_term_list) -> assert false
 
