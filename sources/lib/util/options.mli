@@ -89,6 +89,7 @@ val set_thread_yield : (unit -> unit) -> unit
 val set_timeout : (unit -> unit) -> unit
 val set_save_used_context : bool -> unit
 val set_default_input_lang : string -> unit
+val set_unsat_mode : bool -> unit
 
 (* updates the filename to be parsed and sets a js_mode flag *)
 val set_file_for_js : string -> unit
@@ -172,6 +173,7 @@ val instantiate_after_backjump : unit -> bool
 val disable_weaks : unit -> bool
 val default_input_lang : unit -> string
 val answers_with_locs  : unit -> bool
+val unsat_mode : unit -> bool
 
 (** this option also yields true if profiling is set to true **)
 val timers : unit -> bool
