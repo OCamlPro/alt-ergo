@@ -121,6 +121,8 @@ module M = struct
   let default_input_lang = ref ".why"
   let no_locs_in_answers = ref false
 
+  let unsat_mode = ref false
+
   let show_where s=
     match s with
     | "" -> ()
@@ -366,6 +368,11 @@ module M = struct
 
     "-no-locs-in-answers", Arg.Set no_locs_in_answers,
     " Do not show the locations of goals when printing solver's answers."
+    ;
+
+    "-unsat-mode", Arg.Set unsat_mode,
+    " answer unsat / sat / unknown instead of Valid / Invalid / I don't know"
+
   ]
 
   let spec =
@@ -461,6 +468,7 @@ let set_thread_yield f = M.thread_yield := f
 let set_timeout f = M.timeout := f
 let set_save_used_context b = M.save_used_context := b
 let set_default_input_lang lang = M.set_default_input_lang lang
+let set_unsat_mode b = M.unsat_mode := b
 
 (** getter functions **********************************************************)
 
@@ -569,6 +577,7 @@ let no_decisions_on__is_empty () = !M.no_decisions_on == Util.SS.empty
 
 let default_input_lang () = !M.default_input_lang
 let answers_with_locs ()  = not !M.no_locs_in_answers
+let unsat_mode ()  = !M.unsat_mode
 
 (** particular getters : functions that are immediately executed **************)
 let exec_thread_yield () = !M.thread_yield ()
