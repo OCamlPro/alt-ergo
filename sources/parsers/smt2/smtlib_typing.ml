@@ -105,6 +105,15 @@ let rec type_match_case (env,locals) ty (pattern,term) =
   let locals = SMap.union (fun k v1 v2 -> Some v2) locals pars in
   type_term (env,locals) term
 
+and type_key_term (env,locals) key_term =
+  match key_term.c with
+  | Pattern(term_list) ->
+    let _ = List.map (type_term (env,locals)) term_list in
+    ()
+  | Named(symb) ->
+    if Options.verbose () then
+      Printf.eprintf "[Warning] (! :named not yet supported)\n%!";
+
 and type_term (env,locals) t =
   if print_mode then
     print_term t.c;
@@ -146,6 +155,7 @@ and type_term (env,locals) t =
     Smtlib_ty.unify t.ty (type_term (env,locals) term) t.p; t.ty
 
   | TermExclimationPt (term, key_term_list) ->
+    let _ = List.iter (type_key_term (env,locals)) key_term_list in
     let ty = type_term (env,locals) term in
     if Options.verbose () then
       Printf.eprintf ":named and :pattern not yet implemented\n%!";
