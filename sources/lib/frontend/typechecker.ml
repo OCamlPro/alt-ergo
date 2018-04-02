@@ -669,40 +669,6 @@ let type_bound env bnd ty =
   with Invalid_argument s when String.equal s "index out of bounds" ->
     assert false
 
-let type_trigger in_theory env l =
-  List.map
-    (fun t ->
-      match in_theory, t.pp_desc with
-      | false, PPinInterval _ -> error ThSemTriggerError t.pp_loc
-      | false, PPmapsTo _ -> error ThSemTriggerError t.pp_loc
-      | true, PPinInterval (e, a,b, c, d) ->
-        let te = type_term env e in
-        let tt_ty = te.c.tt_ty in
-        let tb = type_bound env b tt_ty in
-        if not (Ty.equal tt_ty tb.c.tt_ty) then
-          error (ShouldHaveType(tb.c.tt_ty,tt_ty)) b.pp_loc;
-
-        let tc = type_bound env c tt_ty in
-        if not (Ty.equal tt_ty tc.c.tt_ty) then
-          error (ShouldHaveType(tc.c.tt_ty, tt_ty)) c.pp_loc;
-
-        { c = { tt_desc = TTinInterval(te, a, tb , tc, d) ; tt_ty = Ty.Tbool};
-          annot = new_id ()}
-
-      | true, PPmapsTo (x, e) ->
-        let vx, ty_x = type_var_desc env x t.pp_loc in
-        let hs_x =
-          match vx with TTvar Symbols.Var hs -> hs | _ -> assert false
-        in
-        let te = type_term env e in
-        let tt_ty = te.c.tt_ty in
-        if not (Ty.equal tt_ty ty_x) then
-          error (ShouldHaveType(ty_x,tt_ty)) t.pp_loc;
-        { c = { tt_desc = TTmapsTo(hs_x, te) ; tt_ty = Ty.Tbool};
-          annot = new_id ()}
-
-      | _ -> type_term env t
-    )l
 
 let rec type_form ?(in_theory=false) env f =
   let rec type_pp_desc pp_desc = match pp_desc with
@@ -939,6 +905,48 @@ let rec type_form ?(in_theory=false) env f =
   let form, vars = type_pp_desc f.pp_desc in
   {c = form; annot = new_id ()}, vars
 
+and type_trigger in_theory env l =
+  List.map
+    (fun t ->
+      match in_theory, t.pp_desc with
+      | false, PPinInterval _ -> error ThSemTriggerError t.pp_loc
+      | false, PPmapsTo _ -> error ThSemTriggerError t.pp_loc
+      | true, PPinInterval (e, a,b, c, d) ->
+        let te = type_term env e in
+        let tt_ty = te.c.tt_ty in
+        let tb = type_bound env b tt_ty in
+        if not (Ty.equal tt_ty tb.c.tt_ty) then
+          error (ShouldHaveType(tb.c.tt_ty,tt_ty)) b.pp_loc;
+
+        let tc = type_bound env c tt_ty in
+        if not (Ty.equal tt_ty tc.c.tt_ty) then
+          error (ShouldHaveType(tc.c.tt_ty, tt_ty)) c.pp_loc;
+
+        { c = { tt_desc = TTinInterval(te, a, tb , tc, d) ; tt_ty = Ty.Tbool};
+          annot = new_id ()}
+
+      | true, PPmapsTo (x, e) ->
+        let vx, ty_x = type_var_desc env x t.pp_loc in
+        let hs_x =
+          match vx with TTvar Symbols.Var hs -> hs | _ -> assert false
+        in
+        let te = type_term env e in
+        let tt_ty = te.c.tt_ty in
+        if not (Ty.equal tt_ty ty_x) then
+          error (ShouldHaveType(ty_x,tt_ty)) t.pp_loc;
+        { c = { tt_desc = TTmapsTo(hs_x, te) ; tt_ty = Ty.Tbool};
+          annot = new_id ()}
+
+      | _ ->
+        try type_term env t
+        with Error _ ->
+          ignore (type_form env t);
+          if Options.verbose () then
+            fprintf fmt "; %a The given trigger is not a term and is ignored@."
+              Loc.report t.pp_loc;
+          (* hack to typecheck *)
+          type_term env {t with pp_desc = PPconst ConstVoid}
+    )l
 
 let make_rules loc f = match f.c with
   | TFforall {qf_bvars = vars; qf_form = {c = TFatom {c = TAeq [t1; t2]}}} ->
