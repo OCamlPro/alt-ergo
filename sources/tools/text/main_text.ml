@@ -38,7 +38,11 @@ let () =
   Sys.set_signal Sys.sigint(*-6*)
     (Sys.Signal_handle (fun _ ->
       if Options.profiling() then Profiling.switch ()
-      else (print_endline "User wants me to stop."; exit 1)
+      else begin
+        Format.eprintf "; User wants me to stop.\n";
+        Format.printf "unknown@.";
+        exit 1
+      end
      )
     )
 
