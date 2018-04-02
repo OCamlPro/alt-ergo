@@ -250,9 +250,14 @@ let translate_command acc command =
   | Cmd_Assert(assert_term) ->
     (translate_assert assert_term) :: acc
   | Cmd_CheckEntailment(assert_term) ->
+    Options.set_unsat_mode false;
     (translate_goal assert_term) :: acc
-  | Cmd_CheckSat -> (mk_goal command.p "g" (mk_false_const command.p)) :: acc
-  | Cmd_CheckSatAssum prop_lit_list  -> assert false
+  | Cmd_CheckSat ->
+    Options.set_unsat_mode true;
+    (mk_goal command.p "g" (mk_false_const command.p)) :: acc
+  | Cmd_CheckSatAssum prop_lit_list  ->
+    Options.set_unsat_mode true;
+    assert false
   | Cmd_DeclareConst(symbol,const_dec) ->
     (translate_decl_fun symbol [] (translate_const_dec const_dec)) :: acc
   | Cmd_DeclareDataType(symbol,datatype_dec) -> assert false
