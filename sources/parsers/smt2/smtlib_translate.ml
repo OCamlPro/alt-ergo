@@ -168,7 +168,7 @@ and translate_quantif f svl pars t =
     let triggers = List.fold_left (fun acc key_term ->
         translate_key_term pars acc key_term
       ) [] key_term_list in
-    f t.p svl triggers [] (translate_term pars t)
+    f t.p svl triggers [] (translate_term pars term)
   | _ -> f t.p svl [] [] (translate_term pars t)
 
 and translate_term pars term =
