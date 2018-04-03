@@ -14,8 +14,7 @@
 open Lexing
 open Why3_ptree
 open Parsed_interface
-open Parsed
-
+open Parsed       
 
   let infix  s = "infix "  ^ s
   let prefix s = "prefix " ^ s
@@ -28,15 +27,14 @@ open Parsed
 
   let mk_id id s e = { id_str = id; id_lab = []; id_loc = floc s e }
 
-  let mk_pat  d s e = d
-  let mk_term d s e = d
-
+  let mk_term d s e = d 
+                        
   let error_param loc =
     Why3_loc.errorm ~loc "cannot determine the type of the parameter"
 
   let error_loc loc = Why3_loc.error ~loc Error
-
-  (* Added  *)
+                                     
+  (* Added  *)  
 
  let str_of_labs labs =
   String.concat " " labs
@@ -47,11 +45,11 @@ open Parsed
     match id_op with
     | Some id -> (loc, id.id_str, pty)
     | None -> (loc, "",  pty)
-
+                          
   let mk_function t ty loc named_ident params =
     let expr = t in
     mk_function_def loc named_ident  (List.map translate_param params)ty expr
-
+      
   let mk_pred term params loc named_ident =
     let expr = term in
     match params with
@@ -68,7 +66,7 @@ open Parsed
 
   let mk_tuple pl loc =
     let length =  string_of_int (List.length pl) in
-    let name = "tuple" ^ length in
+    let name = "tuple" ^ length in 
     mk_external_type loc pl name
 
   let mk_tyapp q pl =
@@ -79,7 +77,7 @@ open Parsed
     | {Parsed.pp_desc = PPvar s; pp_loc } ->  mk_external_type pp_loc pl s
     | _ -> Format.eprintf "TODO@."; assert false
 
-  let mk_apply loc (f : Parsed.lexpr) a =
+  let mk_apply loc (f : Parsed.lexpr) a =                                 
     match f with
     | { pp_desc = Parsed.PPapp ("mod", le) } ->
        mk_application loc "comp_mod" (le @ [a])
@@ -100,7 +98,7 @@ open Parsed
     | { pp_desc = PPapp (s, l) } -> mk_application loc s (l @ [a])
     | _ ->  Format.eprintf "TODO@."; assert false
 
-  let mk_infix_ident id loc t1 t2 =
+  let mk_infix_ident id loc t1 t2 =    
     let get_infix_ident i =
       List.hd (List.rev (String.split_on_char ' ' i.id_str)) in
     match get_infix_ident id with
@@ -121,7 +119,7 @@ open Parsed
       | ">->" -> mk_application loc "infix_gtmngt" [t1; t2]
       | _ ->  Format.eprintf "TODO@."; assert false
 
-  let mk_tuple_record exp_list loc =
+  let mk_tuple_record exp_list loc =    
   let length = string_of_int (List.length exp_list) in
   let field_name = "Tuple" ^ length ^ "_proj_" in
   let rec trad l n =
@@ -137,16 +135,16 @@ open Parsed
   let mk_qualid = function
   | { id_str = "True"; id_loc} -> mk_true_const id_loc
   | { id_str = "False"; id_loc} -> mk_false_const id_loc
-  | { id_str; id_loc} -> mk_var id_loc id_str
+  | { id_str; id_loc} -> mk_var id_loc id_str            
 
 %}
 
 (* Tokens *)
-
+ 
 %token <string> LIDENT LIDENT_QUOTE UIDENT UIDENT_QUOTE
 %token <string> INTEGER
 %token <string> OP1 OP2 OP3 OP4 OPPREF
-
+              
 %token <string> STRING
 %token <string> QUOTE_UIDENT QUOTE_LIDENT
 
@@ -159,7 +157,7 @@ open Parsed
 %token THEN THEORY TRUE TYPE USE WITH
 
 (* program keywords *)
-
+ 
 %token GHOST INVARIANT MODEL
 %token VAL
 
@@ -183,11 +181,11 @@ open Parsed
 (* Precedences *)
 
 %nonassoc IN
-%nonassoc DOT ELSE
+%nonassoc DOT ELSE 
 %nonassoc prec_named
 %nonassoc COLON
 %right ARROW LRARROW
-%right OR
+%right OR 
 %right AND
 %nonassoc NOT
 %left EQUAL LTGT LT GT OP1
@@ -218,7 +216,7 @@ lexpr_parser:
 trigger_parser:
 | logic_file  { Format.eprintf "TODO@."; assert false }
 
-
+    
 (* Theories, modules, namespaces *)
 
 logic_file:
@@ -289,7 +287,7 @@ type_decl:
 | labels(lident_nq) ty_var* typedefn
   { let model, def, inv = $3 in
     let loc = floc $startpos $endpos in
-    let ty_vars = List.map (fun i -> i.id_str) $2 in
+    let ty_vars = List.map (fun i -> i.id_str) $2 in  
     match def with
     | None -> mk_abstract_type_decl loc ty_vars $1.id_str
     | Some l ->  mk_enum_type_decl loc ty_vars $1.id_str l
@@ -298,7 +296,7 @@ type_decl:
 late_invariant:
 | labels(lident_nq) ty_var* invariant+
     { let loc = floc $startpos $endpos in
-      let ty_vars = List.map (fun i -> i.id_str) $2 in
+      let ty_vars = List.map (fun i -> i.id_str) $2 in      
       mk_abstract_type_decl loc ty_vars $1.id_str }
 
 ty_var:
@@ -327,7 +325,7 @@ constant_decl:
         ($1.id_str, str_of_labs $1.id_lab) in
       match $3 with
       | None ->
-         mak_logic loc [named_ident] (Some $2) []
+         mak_logic loc [named_ident] (Some $2) []   
       | Some t ->
          mk_function t $2 loc named_ident []
     }
@@ -353,7 +351,7 @@ predicate_decl:
         ($1.id_str, str_of_labs $1.id_lab) in
       match $3 with
       | None ->
-         mak_logic loc [named_ident] None $2
+         mak_logic loc [named_ident] None $2                                              
       | Some t ->
          mk_pred t $2 loc named_ident
     }
@@ -366,11 +364,11 @@ with_logic_decl:
         ($2.id_str, str_of_labs $2.id_lab) in
       match $4, $5 with
       | None, None ->
-         mak_logic loc [named_ident] None $3
+         mak_logic loc [named_ident] None $3                                             
       | None, Some t ->
          mk_pred t $3 loc named_ident
       | Some t, None ->
-         mak_logic loc [named_ident] (Some t) $3
+         mak_logic loc [named_ident] (Some t) $3 
       | Some t0, Some t1 ->
          mk_function t1 t0 loc
            named_ident $3
@@ -406,7 +404,7 @@ cast:
 
 params:  param*  { List.concat $1 }
 
-binders: binder+ { List.concat $1  }
+                   (*binders: binder+ { List.concat $1  }*)
 
 param:
 | anon_binder
@@ -427,32 +425,6 @@ param:
     { List.map (fun (l,i) ->  (l, i, $3)) $2 }
 | LEFTPAR GHOST binder_vars cast RIGHTPAR
     { List.map (fun (l,i) ->  (l, i, $4)) $3 }
-
-binder:
-| anon_binder
-    { error_param (floc $startpos $endpos) }
-| ty_arg
-    { match $1 with
-      | [floc $startpos $endpos, None, Some $1] }
-| LEFTPAR GHOST ty RIGHTPAR
-    { [floc $startpos $endpos, None, Some $3] }
-| ty_arg label label*
-    { match $1 with
-      |  PPTint | PPTbool  PPTreal | PPTunit
-         | PPTbitv _
-         | PPTvarid (_,_) | PPTexternal (_, _,_)
-         -> [floc $startpos $endpos, None, None]
-      | _ -> error_loc (floc $startpos($2) $endpos($2)) }
-| LEFTPAR binder_vars_rest RIGHTPAR
-    { match $2 with [l,i] -> [l, i, false, None]
-      | _ -> error_loc (floc $startpos($3) $endpos($3)) }
-| LEFTPAR GHOST binder_vars_rest RIGHTPAR
-    { match $3 with [l,i] -> [l, i, true, None]
-      | _ -> error_loc (floc $startpos($4) $endpos($4)) }
-| LEFTPAR binder_vars cast RIGHTPAR
-    { List.map (fun (l,i) -> l, i, Some $3) $2 }
-| LEFTPAR GHOST binder_vars cast RIGHTPAR
-    { List.map (fun (l,i) -> l, i, Some $4) $3 }
 
 binder_vars:
 | binder_vars_head  { List.rev $1 }
@@ -493,7 +465,7 @@ anon_binder:
 
 mk_term(X): d = X { mk_term d $startpos $endpos }
 
-term: t = mk_term(term_) { t }
+term: t = mk_term(term_) { t }                  
 
 term_:
 | term_arg_
@@ -506,7 +478,7 @@ term_:
                       | {id_str = "infix -"} ->
                          mk_minus (floc $startpos $endpos) $2
                       | _ -> Format.eprintf "TODO@."; assert false
-                    }
+                    }                    
 | l = term ; o = bin_op ; r = term
     { o (floc $startpos $endpos) l r }
 | l = term ; o = infix_op ; r = term
@@ -525,7 +497,7 @@ term_:
          mk_let loc id.id_str $4 $6
       | Pwild ->
          mk_let  loc (id_anonymous loc).id_str $4 $6
-      | Ptuple [] ->
+      | Ptuple [] ->         
          mk_let  loc (id_anonymous loc).id_str
            (mk_type_cast loc $4 (mk_tuple [] loc)) $6
       | Pcast (Pvar id, ty) ->
@@ -559,48 +531,48 @@ term_arg_:
     { $1 }
 | numeral
     {
-         mk_int_const (floc $startpos $endpos) $1
+         mk_int_const (floc $startpos $endpos) $1                                              
     }
 | TRUE                      { mk_true_const (floc $startpos $endpos) }
 | FALSE                     { mk_false_const (floc $startpos $endpos) }
 | quote_uident
     { mk_qualid $1 }
 | o = oppref ; a = term_arg
-                     { match o with
+                     { match o with                         
                       | {id_str = "prefix -"}
                       | {id_str = "infix -"} ->
                          mk_minus (floc $startpos $endpos) a
                       | _ -> Format.eprintf "TODO@."; assert false
-                    }
+                    }     
 | term_sub_                 { $1 }
 
 term_dot_:
   | lqualid
       { $1 }
   | o = oppref ; a = term_dot
-                       { match o with
+                       { match o with                           
                       | {id_str = "prefix -"}
                       | {id_str = "infix -"} ->
                          mk_minus (floc $startpos $endpos) a
                       | _ -> Format.eprintf "TODO@."; assert false
-                    }
+                    }     
 | term_sub_ { $1 }
 
 term_sub_:
   | term_dot DOT lqualid_rich
-        { match $3 with
+        { match $3 with                           
                       | {Parsed.pp_desc = PPvar "prefix -"}
                       | {Parsed.pp_desc = PPvar "infix -"} ->
                          mk_minus (floc $startpos $endpos) $1
                       | _ -> Format.eprintf "TODO@."; assert false
-                    }
+                    }    
 | LEFTPAR term RIGHTPAR                             { $2 }
 | LEFTPAR RIGHTPAR
     { mk_tuple_record [] (floc $startpos $endpos) }
 | LEFTPAR comma_list2(term) RIGHTPAR
     { mk_tuple_record $2(floc $startpos $endpos) }
 
-
+ 
 field_list1(X):
 | fl = semicolon_list1(separated_pair(lqualid, EQUAL, X)) { fl }
 
@@ -635,17 +607,14 @@ quant:
 numeral:
 | INTEGER { $1 }
 
-
+    
 invariant:
 | INVARIANT LEFTBRC term RIGHTBRC { $3 }
 
-
+    
 (* Patterns *)
 
-mk_pat(X): X { mk_pat $1 $startpos $endpos }
-
-pattern: mk_pat(pattern_) { $1 }
-pat_arg: mk_pat(pat_arg_) { $1 }
+pattern: pattern_ { $1 }
 
 pattern_:
 | pat_conj_                             { $1 }
@@ -655,14 +624,14 @@ pat_conj_:
 
 pat_uni_:
 | pat_arg_                              { $1 }
-| mk_pat(pat_uni_) cast                 { Pcast($1,$2) }
+| pat_uni_ cast                 { Pcast($1,$2) }
 
 pat_arg_:
 | UNDERSCORE                            { Pwild }
 | labels(lident_nq)                     { Pvar $1 }
 | LEFTPAR RIGHTPAR                      { Ptuple [] }
 | LEFTPAR pattern_ RIGHTPAR             { $2 }
-
+ 
 (* Why3_idents *)
 
 ident:
