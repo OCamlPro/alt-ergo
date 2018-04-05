@@ -68,8 +68,7 @@ endif
 
 GENERATED_WHY3 = plugins/w34ae/why3_lexer.ml \
 	    plugins/w34ae/why3_parser.ml \
-	    plugins/w34ae/why3_parser.mli \
-	    plugins/w34ae/why3_parser.automaton
+	    plugins/w34ae/why3_parser.mli
 
 GENERATED = lib/util/config.ml \
             parsers/why/why_parser.ml \
@@ -332,7 +331,7 @@ uninstall: uninstall-lib
 clean:
 	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/common parsers/why parsers/smt2 plugins/fm-simplex plugins/w34ae ; do \
 	rm -f $$dd/*.cm[ioxtp] $$dd/*.cmti $$dd/*.o $$dd/*~ $$dd/*.annot $$dd/*.owz;\
-	rm -f $(GENERATED) $$dd/*.output META $(LIBNAME).*; \
+	rm -f $(GENERATED) $$dd/*.output META $$dd/*.automaton $(LIBNAME).*; \
 	rm -f $(NAME).byte $(NAME).opt $(GUINAME).opt $(GUINAME).byte *~; \
 	done
 	@rm -rf *.log archi.dot archi.pdf lib/*~ *.cmxs *.cmos alt-ergo-static* *.cmxs *.cma essentiel essentiel.tar.bz2 alt-ergo-$(VERSION)-$(ARCH)
