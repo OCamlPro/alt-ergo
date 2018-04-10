@@ -124,7 +124,6 @@ open Parsed
       | "|>>" -> mk_application loc "infix_brgtgt" [t1; t2]
       | "<|" -> mk_application loc "infix_lsbr" [t1; t2]
       | "<<|" -> mk_application loc "infix_lslsbr" [t1; t2]
-      (* "/|\" -> "/|" and "\|/" -> "|/" *)
       | "/|\\" | "/|" -> mk_application loc "infix_slbr" [t1; t2]
       | "\\|/" | "|/" -> mk_application loc "infix_brsl" [t1; t2]
       | s ->  Format.eprintf "TODO: translate symbols %S@." s; assert false
