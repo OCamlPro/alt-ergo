@@ -118,6 +118,15 @@ open Parsed
       | ">->>" -> mk_application loc "infix_gtmngtgt" [t1; t2]
       | ">->" -> mk_application loc "infix_gtmngt" [t1; t2]
       | ">+>" -> mk_application loc "infix_gtplgt" [t1; t2]
+      | "+->>" -> mk_application loc "infix_plmngtgt" [t1; t2]
+      | ">+>>" -> mk_application loc "infix_gtplgtgt" [t1; t2]
+      | "|>" -> mk_application loc "infix_brgt" [t1; t2]
+      | "|>>" -> mk_application loc "infix_brgtgt" [t1; t2]
+      | "<|" -> mk_application loc "infix_lsbr" [t1; t2]
+      | "<<|" -> mk_application loc "infix_lslsbr" [t1; t2]
+      (* "/|\" -> "/|" and "\|/" -> "|/" *)
+      | "/|\\" | "/|" -> mk_application loc "infix_slbr" [t1; t2]
+      | "\\|/" | "|/" -> mk_application loc "infix_brsl" [t1; t2]
       | s ->  Format.eprintf "TODO: translate symbols %S@." s; assert false
 
   let mk_tuple_record exp_list loc =
