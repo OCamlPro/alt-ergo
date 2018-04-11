@@ -44,6 +44,7 @@ let get_sort_symb s pars =
   | "Int" -> int_type
   | "Bool" -> bool_type
   | "Real" -> real_type
+  | "Array" -> mk_external_type s.p [] "farray"
   | _ ->
     if List.mem s.c pars then
       mk_var_type s.p s.c
@@ -60,7 +61,9 @@ let rec get_sort pars s =
   | SortIdentifier s -> get_sort_id s pars
   | SortIdMulti(id,sl) ->
     let id = Smtlib_typed_env.get_identifier id in
-    mk_external_type s.p (List.map (get_sort pars) sl) id.c
+    match id.c with
+    | "Array" -> mk_external_type s.p (List.map (get_sort pars) sl) "farray"
+    | _ ->  mk_external_type s.p (List.map (get_sort pars) sl) id.c
 
 let better_num_of_string s =
   begin match String.split_on_char '.' s with
