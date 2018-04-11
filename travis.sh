@@ -5,11 +5,16 @@ exit_if_error(){
     fi
 }
 
+local_install_dir=`pwd`/___local
+
+git_repo=`pwd`
+
+
 non_regression(){
     echo "=+= [travis.sh] non-regression tests ... =+="
     echo "which alt-ergo == `which alt-ergo`"
     echo "alt-ergo -version == `alt-ergo -version`"
-
+    here=`pwd`
     cd ../non-regression
 
     sh ./run_valid.sh "alt-ergo" "0.5" ; exit_if_error
@@ -17,11 +22,29 @@ non_regression(){
     sh ./run_invalid.sh "alt-ergo" "0.5" ; exit_if_error
 
     # - make non-regression
+    cd $pwd
 }
 
-local_install_dir=`pwd`/___local
-
-git_repo=`pwd`
+library(){
+    echo "=+= [travis.sh] build and test library example ... =+="
+    echo "which alt-ergo == `which alt-ergo`"
+    echo "alt-ergo -version == `alt-ergo -version`"
+    echo "path to lib == `ocamlfind query alt-ergo`"
+    cd $git_repo/sources/examples
+    here=`pwd`
+    echo "here is $here"
+    ocamlopt -o lib_usage \
+             -I `ocamlfind query num` \
+             -I `ocamlfind query zarith` \
+             -I `ocamlfind query ocplib-simplex` \
+             -I `ocamlfind query camlzip` \
+             -I `ocamlfind query alt-ergo` \
+             nums.cmxa zarith.cmxa ocplibSimplex.cmxa \
+             unix.cmxa str.cmxa zip.cmxa dynlink.cmxa \
+             altErgoLib.cmxa lib_usage.ml ; exit_if_error
+    ./lib_usage ; exit_if_error
+    cd $pwd
+}
 
 ## dummy switch
 opam sw DUMMY --alias system
@@ -49,6 +72,7 @@ do
     opam pin add alt-ergo . --y ; exit_if_error
 
     non_regression
+    library
 
     opam remove alt-ergo
 
@@ -92,5 +116,6 @@ do
     export PATH=$PATH:$local_install_dir/bin
 
     non_regression
+    library
 
 done
