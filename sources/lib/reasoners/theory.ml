@@ -738,11 +738,3 @@ module Main_Empty : S = struct
   let retrieve_used_context _ _ = [], []
   let get_assumed env = env.assumed_set
 end
-
-module Main =
-  (val
-      (
-        if Options.no_theory() then (module Main_Empty : S)
-        else (module Main_Default : S)
-      ) : S
-  )
