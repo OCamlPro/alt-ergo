@@ -146,6 +146,11 @@ open Parsed
   | { id_str = "False"; id_loc} -> mk_false_const id_loc
   | { id_str; id_loc} -> mk_var id_loc id_str
 
+  let hack_mod var { id_str; id_loc}  =
+    match var.pp_desc, id_str with
+    | PPvar "Power", "power" ->  (*Format.eprintf "%s\n" "hack";*) mk_var id_loc "power1"
+    | _ -> mk_var id_loc id_str 
+
 %}
 
 (* Tokens *)
@@ -727,7 +732,7 @@ qualid:
 | lident                    { mk_qualid $1 }
 | lident_op_id              { mk_qualid $1 }
 | uqualid DOT uident        { mk_qualid $3 }
-| uqualid DOT lident        { mk_qualid $3 }
+| uqualid DOT lident        { hack_mod $1 $3 }
 | uqualid DOT lident_op_id  { mk_qualid $3 }
 
 lqualid_rich:

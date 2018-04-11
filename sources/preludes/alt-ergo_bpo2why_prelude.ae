@@ -22,6 +22,86 @@ function xorb(x: bool, y: bool) : bool = match_bool(x, notb(y), y)
 
 function implb(x: bool, y: bool) : bool = match_bool(x, y, true)
 
+axiom CompatOrderMult :
+  (forall x:int. forall y:int. forall z:int. ((x <= y) -> ((0 <= z) ->
+  ((x * z) <= (y * z)))))
+
+logic abs : int -> int
+
+axiom abs_def : (forall x:int. ((0 <= x) -> (abs(x) = x)))
+
+axiom abs_def1 : (forall x:int. ((not (0 <= x)) -> (abs(x) = (-x))))
+
+axiom Abs_le : (forall x:int. forall y:int. ((abs(x) <= y) -> ((-y) <= x)))
+
+axiom Abs_le1 : (forall x:int. forall y:int. ((abs(x) <= y) -> (x <= y)))
+
+axiom Abs_le2 :
+  (forall x:int. forall y:int. ((((-y) <= x) and (x <= y)) -> (abs(x) <= y)))
+
+axiom Abs_pos : (forall x:int. (0 <= abs(x)))
+
+axiom Div_mod :
+  (forall x:int. forall y:int. ((not (y = 0)) ->
+  (x = ((y * comp_div(x,y)) + comp_mod(x,y)))))
+
+axiom Div_bound :
+  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) ->
+  (0 <= comp_div(x,y))))
+
+axiom Div_bound1 :
+  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) ->
+  (comp_div(x,y) <= x)))
+
+axiom Mod_bound :
+  (forall x:int. forall y:int. ((not (y = 0)) ->
+  ((-abs(y)) <  comp_mod(x,y))))
+
+axiom Mod_bound1 :
+  (forall x:int. forall y:int. ((not (y = 0)) -> (comp_mod(x,y) <  abs(y))))
+
+axiom Div_sign_pos :
+  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) ->
+  (0 <= comp_div(x,y))))
+
+axiom Div_sign_neg :
+  (forall x:int. forall y:int. (((x <= 0) and (0 <  y)) ->
+  (comp_div(x,y) <= 0)))
+
+axiom Mod_sign_pos :
+  (forall x:int. forall y:int. (((0 <= x) and (not (y = 0))) ->
+  (0 <= comp_mod(x,y))))
+
+axiom Mod_sign_neg :
+  (forall x:int. forall y:int. (((x <= 0) and (not (y = 0))) ->
+  (comp_mod(x,y) <= 0)))
+
+axiom Rounds_toward_zero :
+  (forall x:int. forall y:int. ((not (y = 0)) ->
+  (abs((comp_div(x,y) * y)) <= abs(x))))
+
+axiom Div_1 : (forall x:int. (comp_div(x,1) = x))
+
+axiom Mod_1 : (forall x:int. (comp_mod(x,1) = 0))
+
+axiom Div_inf :
+  (forall x:int. forall y:int. (((0 <= x) and (x <  y)) ->
+  (comp_div(x,y) = 0)))
+
+axiom Mod_inf :
+  (forall x:int. forall y:int. (((0 <= x) and (x <  y)) ->
+  (comp_mod(x,y) = x)))
+
+axiom Div_mult :
+  (forall x:int. forall y:int. forall z:int [comp_div(((x * y) + z),x)].
+  (((0 <  x) and ((0 <= y) and (0 <= z))) ->
+  (comp_div(((x * y) + z),x) = (y + comp_div(z,x)))))
+
+axiom Mod_mult :
+  (forall x:int. forall y:int. forall z:int [comp_mod(((x * y) + z),x)].
+  (((0 <  x) and ((0 <= y) and (0 <= z))) ->
+  (comp_mod(((x * y) + z),x) = comp_mod(z,x))))
+
 type 'a set
 
 logic mem : 'a, 'a set -> prop
@@ -598,10 +678,6 @@ axiom id_fun : (forall s:'a set. mem(id(s), infix_plmngt(s, s)))
 
 axiom id_total_fun : (forall s:'a set. mem(id(s), infix_mnmngt(s, s)))
 
-axiom CompatOrderMult :
-  (forall x:int. forall y:int. forall z:int. ((x <= y) -> ((0 <= z) ->
-  ((x * z) <= (y * z)))))
-
 logic string : (int, int) tuple2 set set
 
 logic integer : int set
@@ -777,57 +853,6 @@ axiom card_Union :
   (is_empty(inter(s1, s2)) -> (card(union(s1,
   s2)) = (card(s1) + card(s2)))))))
 
-logic iterate : ('a, 'a) tuple2 set, int -> ('a, 'a) tuple2 set
-
-axiom iterate_zero :
-  (forall r:('a, 'a) tuple2 set. (iterate(r, 0) = id(dom(r))))
-
-axiom iterate_succ :
-  (forall r:('a, 'a) tuple2 set. forall n:int. ((0 <  n) -> (iterate(r,
-  n) = semicolon(r, iterate(r, (n - 1))))))
-
-logic closure : ('a, 'a) tuple2 set -> ('a, 'a) tuple2 set
-
-axiom closure_def :
-  (forall r:('a, 'a) tuple2 set. forall u:('a, 'a) tuple2. (mem(u,
-  closure(r)) -> (exists x:int. ((0 <= x) and mem(u, iterate(r, x))))))
-
-axiom closure_def1 :
-  (forall r:('a, 'a) tuple2 set. forall u:('a, 'a) tuple2.
-  ((exists x:int. ((0 <= x) and mem(u, iterate(r, x)))) -> mem(u,
-  closure(r))))
-
-logic closure1 : ('a, 'a) tuple2 set -> ('a, 'a) tuple2 set
-
-axiom closure1_def :
-  (forall r:('a, 'a) tuple2 set. forall u:('a, 'a) tuple2. (mem(u,
-  closure1(r)) -> (exists x:int. ((0 <  x) and mem(u, iterate(r, x))))))
-
-axiom closure1_def1 :
-  (forall r:('a, 'a) tuple2 set. forall u:('a, 'a) tuple2.
-  ((exists x:int. ((0 <  x) and mem(u, iterate(r, x)))) -> mem(u,
-  closure1(r))))
-
-logic min : int set -> int
-
-axiom min_belongs :
-  (forall s:int set. (subset(s, natural) -> ((not (s = (empty : int set))) ->
-  mem(min(s), s))))
-
-axiom min_is_min :
-  (forall s:int set. (subset(s, natural) -> ((not (s = (empty : int set))) ->
-  (forall x:int. (mem(x, s) -> (min(s) <= x))))))
-
-logic max : int set -> int
-
-axiom max_belongs :
-  (forall s:int set. (mem(s, non_empty_finite_subsets(natural)) ->
-  mem(max(s), s)))
-
-axiom max_is_max :
-  (forall s:int set. (mem(s, non_empty_finite_subsets(natural)) ->
-  (forall x:int. (mem(x, s) -> (x <= max(s))))))
-
 logic infix_lspl : ('a, 'b) tuple2 set, ('a, 'b) tuple2 set -> ('a,
   'b) tuple2 set
 
@@ -967,19 +992,39 @@ axiom apply_times :
   (empty : 'b set))), x)]. (mem(x, s) -> (apply(times(s, add(y,
   (empty : 'b set))), x) = y)))
 
-logic prj1 : ('a set, 'b set) tuple2 -> (('a, 'b) tuple2, 'a) tuple2 set
+logic power1 : int, int -> int
 
-axiom prj1_def :
-  (forall a:'a1 set. forall b:'b1 set. forall x:'a1. forall y:'b1. ((mem(x,
-  a) and mem(y, b)) -> (apply(prj1({ Tuple2_proj_1 = a; Tuple2_proj_2 = b }),
-  { Tuple2_proj_1 = x; Tuple2_proj_2 = y }) = x)))
+axiom Power_0 : (forall x:int. (power1(x, 0) = 1))
 
-logic prj2 : ('a set, 'b set) tuple2 -> (('a, 'b) tuple2, 'b) tuple2 set
+axiom Power_s :
+  (forall x:int. forall n:int. ((0 <= n) -> (power1(x,
+  (n + 1)) = (x * power1(x, n)))))
 
-axiom prj2_def :
-  (forall a:'a1 set. forall b:'b1 set. forall x:'a1. forall y:'b1. ((mem(x,
-  a) and mem(y, b)) -> (apply(prj2({ Tuple2_proj_1 = a; Tuple2_proj_2 = b }),
-  { Tuple2_proj_1 = x; Tuple2_proj_2 = y }) = y)))
+axiom Power_s_alt :
+  (forall x:int. forall n:int. ((0 <  n) -> (power1(x, n) = (x * power1(x,
+  (n - 1))))))
+
+axiom Power_1 : (forall x:int. (power1(x, 1) = x))
+
+axiom Power_sum :
+  (forall x:int. forall n:int. forall m:int. ((0 <= n) -> ((0 <= m) ->
+  (power1(x, (n + m)) = (power1(x, n) * power1(x, m))))))
+
+axiom Power_mult :
+  (forall x:int. forall n:int. forall m:int. ((0 <= n) -> ((0 <= m) ->
+  (power1(x, (n * m)) = power1(power1(x, n), m)))))
+
+axiom Power_mult2 :
+  (forall x:int. forall y:int. forall n:int. ((0 <= n) -> (power1((x * y),
+  n) = (power1(x, n) * power1(y, n)))))
+
+axiom Power_non_neg :
+  (forall x:int. forall y:int. (((0 <= x) and (0 <= y)) -> (0 <= power1(x,
+  y))))
+
+axiom Power_monotonic :
+  (forall x:int. forall n:int. forall m:int. (((0 <  x) and ((0 <= n) and
+  (n <= m))) -> (power1(x, n) <= power1(x, m))))
 
 logic infix_brgt : ('a, 'b) tuple2 set, 'b set -> ('a, 'b) tuple2 set
 
@@ -1133,112 +1178,138 @@ axiom tail_restriction_def1 :
   x }, s) -> mem({ Tuple2_proj_1 = i; Tuple2_proj_2 = x }, infix_brsl(s,
   n))))))
 
-logic abs : int -> int
+logic min : int set -> int
 
-axiom abs_def : (forall x:int. ((0 <= x) -> (abs(x) = x)))
+axiom min_belongs :
+  (forall s:int set. (subset(s, natural) -> ((not (s = (empty : int set))) ->
+  mem(min(s), s))))
 
-axiom abs_def1 : (forall x:int. ((not (0 <= x)) -> (abs(x) = (-x))))
+axiom min_is_min :
+  (forall s:int set. (subset(s, natural) -> ((not (s = (empty : int set))) ->
+  (forall x:int. (mem(x, s) -> (min(s) <= x))))))
 
-axiom Abs_le : (forall x:int. forall y:int. ((abs(x) <= y) -> ((-y) <= x)))
+logic max : int set -> int
 
-axiom Abs_le1 : (forall x:int. forall y:int. ((abs(x) <= y) -> (x <= y)))
+axiom max_belongs :
+  (forall s:int set. (mem(s, non_empty_finite_subsets(natural)) ->
+  mem(max(s), s)))
 
-axiom Abs_le2 :
-  (forall x:int. forall y:int. ((((-y) <= x) and (x <= y)) -> (abs(x) <= y)))
+axiom max_is_max :
+  (forall s:int set. (mem(s, non_empty_finite_subsets(natural)) ->
+  (forall x:int. (mem(x, s) -> (x <= max(s))))))
 
-axiom Abs_pos : (forall x:int. (0 <= abs(x)))
+logic iterate : ('a, 'a) tuple2 set, int -> ('a, 'a) tuple2 set
 
-axiom Div_mod :
-  (forall x:int. forall y:int. ((not (y = 0)) ->
-  (x = ((y * comp_div(x,y)) + comp_mod(x,y)))))
+axiom iterate_zero :
+  (forall r:('a, 'a) tuple2 set. (iterate(r, 0) = id(dom(r))))
 
-axiom Div_bound :
-  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) ->
-  (0 <= comp_div(x,y))))
+axiom iterate_succ :
+  (forall r:('a, 'a) tuple2 set. forall n:int. ((0 <  n) -> (iterate(r,
+  n) = semicolon(r, iterate(r, (n - 1))))))
 
-axiom Div_bound1 :
-  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) ->
-  (comp_div(x,y) <= x)))
+logic closure : ('a, 'a) tuple2 set -> ('a, 'a) tuple2 set
 
-axiom Mod_bound :
-  (forall x:int. forall y:int. ((not (y = 0)) ->
-  ((-abs(y)) <  comp_mod(x,y))))
+axiom closure_def :
+  (forall r:('a, 'a) tuple2 set. forall u:('a, 'a) tuple2. (mem(u,
+  closure(r)) -> (exists x:int. ((0 <= x) and mem(u, iterate(r, x))))))
 
-axiom Mod_bound1 :
-  (forall x:int. forall y:int. ((not (y = 0)) -> (comp_mod(x,y) <  abs(y))))
+axiom closure_def1 :
+  (forall r:('a, 'a) tuple2 set. forall u:('a, 'a) tuple2.
+  ((exists x:int. ((0 <= x) and mem(u, iterate(r, x)))) -> mem(u,
+  closure(r))))
 
-axiom Div_sign_pos :
-  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) ->
-  (0 <= comp_div(x,y))))
+logic closure1 : ('a, 'a) tuple2 set -> ('a, 'a) tuple2 set
 
-axiom Div_sign_neg :
-  (forall x:int. forall y:int. (((x <= 0) and (0 <  y)) ->
-  (comp_div(x,y) <= 0)))
+axiom closure1_def :
+  (forall r:('a, 'a) tuple2 set. forall u:('a, 'a) tuple2. (mem(u,
+  closure1(r)) -> (exists x:int. ((0 <  x) and mem(u, iterate(r, x))))))
 
-axiom Mod_sign_pos :
-  (forall x:int. forall y:int. (((0 <= x) and (not (y = 0))) ->
-  (0 <= comp_mod(x,y))))
+axiom closure1_def1 :
+  (forall r:('a, 'a) tuple2 set. forall u:('a, 'a) tuple2.
+  ((exists x:int. ((0 <  x) and mem(u, iterate(r, x)))) -> mem(u,
+  closure1(r))))
 
-axiom Mod_sign_neg :
-  (forall x:int. forall y:int. (((x <= 0) and (not (y = 0))) ->
-  (comp_mod(x,y) <= 0)))
+logic prj1 : ('a set, 'b set) tuple2 -> (('a, 'b) tuple2, 'a) tuple2 set
 
-axiom Rounds_toward_zero :
-  (forall x:int. forall y:int. ((not (y = 0)) ->
-  (abs((comp_div(x,y) * y)) <= abs(x))))
+axiom prj1_def :
+  (forall a:'a1 set. forall b:'b1 set. forall x:'a1. forall y:'b1. ((mem(x,
+  a) and mem(y, b)) -> (apply(prj1({ Tuple2_proj_1 = a; Tuple2_proj_2 = b }),
+  { Tuple2_proj_1 = x; Tuple2_proj_2 = y }) = x)))
 
-axiom Div_1 : (forall x:int. (comp_div(x,1) = x))
+logic prj2 : ('a set, 'b set) tuple2 -> (('a, 'b) tuple2, 'b) tuple2 set
 
-axiom Mod_1 : (forall x:int. (comp_mod(x,1) = 0))
+axiom prj2_def :
+  (forall a:'a1 set. forall b:'b1 set. forall x:'a1. forall y:'b1. ((mem(x,
+  a) and mem(y, b)) -> (apply(prj2({ Tuple2_proj_1 = a; Tuple2_proj_2 = b }),
+  { Tuple2_proj_1 = x; Tuple2_proj_2 = y }) = y)))
 
-axiom Div_inf :
-  (forall x:int. forall y:int. (((0 <= x) and (x <  y)) ->
-  (comp_div(x,y) = 0)))
+logic generalized_union : 'a set set -> 'a set
 
-axiom Mod_inf :
-  (forall x:int. forall y:int. (((0 <= x) and (x <  y)) ->
-  (comp_mod(x,y) = x)))
+axiom generalized_union_def :
+  (forall s:'a set set. forall x:'a. (mem(x, generalized_union(s)) ->
+  (exists y:'a set. (mem(x, y) and mem(y, s)))))
 
-axiom Div_mult :
-  (forall x:int. forall y:int. forall z:int [comp_div(((x * y) + z),x)].
-  (((0 <  x) and ((0 <= y) and (0 <= z))) ->
-  (comp_div(((x * y) + z),x) = (y + comp_div(z,x)))))
+axiom generalized_union_def1 :
+  (forall s:'a set set. forall x:'a.
+  ((exists y:'a set. (mem(x, y) and mem(y, s))) -> mem(x,
+  generalized_union(s))))
 
-axiom Mod_mult :
-  (forall x:int. forall y:int. forall z:int [comp_mod(((x * y) + z),x)].
-  (((0 <  x) and ((0 <= y) and (0 <= z))) ->
-  (comp_mod(((x * y) + z),x) = comp_mod(z,x))))
+type ('a,
+'b) func
 
-logic power1 : int, int -> int
+logic infix_at : ('a, 'b) func, 'a -> 'b
 
-axiom Power_0 : (forall x:int. (power1(x, 0) = 1))
+logic comprehension : ('a, bool) func -> 'a set
 
-axiom Power_s :
-  (forall x:int. forall n:int. ((0 <= n) -> (power1(x,
-  (n + 1)) = (x * power1(x, n)))))
+axiom comprehension_def :
+  (forall p:('a, bool) func.
+  (forall x:'a. (mem(x, comprehension(p)) -> (infix_at(p, x) = true))))
 
-axiom Power_s_alt :
-  (forall x:int. forall n:int. ((0 <  n) -> (power1(x, n) = (x * power1(x,
-  (n - 1))))))
+axiom comprehension_def1 :
+  (forall p:('a, bool) func.
+  (forall x:'a. ((infix_at(p, x) = true) -> mem(x, comprehension(p)))))
 
-axiom Power_1 : (forall x:int. (power1(x, 1) = x))
+logic fc : ('a, bool) func, 'a set -> ('a, bool) func
 
-axiom Power_sum :
-  (forall x:int. forall n:int. forall m:int. ((0 <= n) -> ((0 <= m) ->
-  (power1(x, (n + m)) = (power1(x, n) * power1(x, m))))))
+axiom fc_def :
+  (forall p:('a, bool) func. forall u:'a set. forall x:'a. ((infix_at(fc(p,
+  u), x) = true) -> (infix_at(p, x) = true)))
 
-axiom Power_mult :
-  (forall x:int. forall n:int. forall m:int. ((0 <= n) -> ((0 <= m) ->
-  (power1(x, (n * m)) = power1(power1(x, n), m)))))
+axiom fc_def1 :
+  (forall p:('a, bool) func. forall u:'a set. forall x:'a. ((infix_at(fc(p,
+  u), x) = true) -> mem(x, u)))
 
-axiom Power_mult2 :
-  (forall x:int. forall y:int. forall n:int. ((0 <= n) -> (power1((x * y),
-  n) = (power1(x, n) * power1(y, n)))))
+axiom fc_def2 :
+  (forall p:('a, bool) func. forall u:'a set. forall x:'a. (((infix_at(p,
+  x) = true) and mem(x, u)) -> (infix_at(fc(p, u), x) = true)))
 
-axiom Power_non_neg :
-  (forall x:int. forall y:int. (((0 <= x) and (0 <= y)) -> (0 <= power1(x,
-  y))))
+function filter(p: ('a, bool) func, u: 'a set) : 'a set = comprehension(fc(p,
+  u))
 
-axiom Power_monotonic :
-  (forall x:int. forall n:int. forall m:int. (((0 <  x) and ((0 <= n) and
-  (n <= m))) -> (power1(x, n) <= power1(x, m))))
+logic fc1 : ('a, 'b) func, 'a set -> ('b, bool) func
+
+axiom fc_def3 :
+  (forall f:('a, 'b) func. forall u:'a set. forall y:'b. ((infix_at(fc1(f,
+  u), y) = true) -> (exists x:'a. (mem(x, u) and (y = infix_at(f, x))))))
+
+axiom fc_def4 :
+  (forall f:('a, 'b) func. forall u:'a set. forall y:'b.
+  ((exists x:'a. (mem(x, u) and (y = infix_at(f, x)))) -> (infix_at(fc1(f,
+  u), y) = true)))
+
+function map(f: ('a, 'b) func, u: 'a set) : 'b set = comprehension(fc1(f, u))
+
+axiom map_def :
+  (forall f:('a, 'b) func. forall u:'a set.
+  (forall x:'a. (mem(x, u) -> mem(infix_at(f, x), map(f, u)))))
+
+logic sum : int set -> int
+
+axiom sum_def0 : (sum((empty : int set)) = 0)
+
+axiom sum_def1 :
+  (forall s:int set. forall x:int. (mem(x, s) -> (sum(s) = (x + sum(remove(x,
+  s))))))
+
+function sigma(p: ('a, bool) func, f: ('a, int) func) : int = sum(map(f,
+  comprehension(p)))
