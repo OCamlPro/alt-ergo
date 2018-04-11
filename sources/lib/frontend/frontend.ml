@@ -178,7 +178,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           if debug_proof () then check_produced_proof dep;
           if save_used_context () then do_save_used_context env dep;
 	  print_status (Unsat (d, dep)) (SAT.get_steps ());
-	  env, consistent, dep
+	  env, false, dep
 
       | ThAssume th_elt ->
         if consistent then
