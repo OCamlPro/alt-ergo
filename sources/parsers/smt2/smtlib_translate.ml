@@ -126,14 +126,24 @@ let translate_identifier id params raw_params =
     translate_chainable_assoc f name params
 
   | "=>" -> translate_right_assoc mk_implies name params
-  | "and" -> translate_left_assoc mk_and name params
-  | "or" -> translate_left_assoc mk_or name params
-  | "xor" -> translate_left_assoc mk_xor name params
-  | "ite" -> begin
+  | "and" -> begin
       match params with
-      | [b;e1;e2] -> mk_ite name.p b e1 e2
-      | _ -> assert false
+      | [p] -> p
+      | _ -> translate_left_assoc mk_and name params
     end
+  | "or" -> begin
+      match params with
+      | [p] -> p
+      | _ -> translate_left_assoc mk_or name params
+    end
+  | "xor" -> translate_left_assoc mk_xor name params
+  | "ite" ->
+    assert false
+    (* begin
+     *   match params with
+     *   | [b;e1;e2] -> mk_ite name.p b e1 e2
+     *   | _ -> assert false
+     * end *)
   | "not" -> begin
       match params with
       | [t] -> mk_not name.p t
@@ -325,16 +335,12 @@ let translate_command acc command =
 let file_parser commands =
   Smtlib_typing.typing commands;
 
-  if Options.verbose () then
-    Printf.printf "Smt Typing OK \n%!";
-
-  (* Smtlib_printer.print commands; *)
-
-  let l = List.fold_left translate_command [] (List.rev commands) in
-
- if Options.verbose () then
-   Printf.printf "Conversion OK \n%!";
- l
+  if Options.type_smt2 () then
+    []
+  else begin
+    let l = List.fold_left translate_command [] (List.rev commands) in
+    l
+  end
 
 let lexpr_parser l = assert false
 let trigger_parser t = assert false
