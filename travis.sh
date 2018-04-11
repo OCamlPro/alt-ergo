@@ -31,8 +31,6 @@ library(){
     echo "alt-ergo -version == `alt-ergo -version`"
     echo "path to lib == `ocamlfind query alt-ergo`"
     cd $git_repo/sources/examples
-    here=`pwd`
-    echo "here is $here"
     ocamlopt -o lib_usage \
              -I `ocamlfind query num` \
              -I `ocamlfind query zarith` \
