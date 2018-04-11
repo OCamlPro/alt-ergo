@@ -81,7 +81,10 @@ let better_num_of_string s =
 let translate_constant cst loc =
   match cst with
   | Const_Dec(s) -> mk_real_const loc (better_num_of_string s)
-  | Const_Num(s) -> mk_int_const loc s
+  | Const_Num(s) ->
+    if Smtlib_error.get_is_real () then
+      mk_real_const loc (better_num_of_string s)
+    else mk_int_const loc s
   | Const_Str(s) -> assert false (* to do *)
   | Const_Hex(s) -> mk_int_const loc s
   | Const_Bin(s) -> mk_int_const loc s
@@ -91,7 +94,11 @@ let translate_identifier id params raw_params =
   match name.c with
   | "true" -> mk_true_const name.p
   | "false" -> mk_false_const name.p
-  | "+" -> translate_left_assoc mk_add name params
+  | "+" -> begin
+      match params with
+      | [p] -> p
+      | _ -> translate_left_assoc mk_add name params
+    end
   | "-" -> begin
       match params with
       | [t] -> mk_minus name.p t
