@@ -14,11 +14,11 @@ let get_current () =
   | Util.Tableaux ->
     if Options.verbose() then
       Format.eprintf "[bool reasoning] use Tableaux-like solver@.";
-    (module Fun_sat : Sat_solver_sig.S)
+    (module Fun_sat : Sat_solver_sig.SatContainer)
   | Util.CDCL_satML ->
     if Options.verbose() then
       Format.eprintf "[bool reasoning] use CDCL solver@.";
-    (module Satml_frontend.Main : Sat_solver_sig.S)
+    (module Satml_frontend : Sat_solver_sig.SatContainer)
 
 (*
 (*+ no dynamic loading of SAT solvers anymore +*)

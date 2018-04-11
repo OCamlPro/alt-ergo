@@ -64,7 +64,6 @@ alt-ergo: byte
 endif
 
 GENERATED = lib/util/config.ml \
-            lib/util/cmdline_parser.ml \
             parsers/why/why_parser.ml \
             parsers/why/why_parser.mli \
             parsers/why/why_lexer.ml
@@ -86,7 +85,6 @@ CMO = lib/util/config.cmo \
       lib/util/options.cmo \
       lib/util/vec.cmo \
       lib/util/iheap.cmo \
-      lib/util/cmdline_parser.cmo \
       lib/util/timers.cmo \
       lib/util/gc_debug.cmo \
       lib/util/loc.cmo \
@@ -211,17 +209,6 @@ lib/util/config.ml: config.status
 	@echo "let preludesdir = \""$(PRELUDESDIR)"\"" >> lib/util/config.ml
 	@echo "let datadir = \""$(DATADIR)"\"" >> lib/util/config.ml
 	@echo "let mandir = \""$(MANDIR)"\"" >> lib/util/config.ml
-
-lib/util/cmdline_parser.ml: config.status
-	@printf "(* parse_args () should be called as soon as possible (put earlier" > lib/util/cmdline_parser.ml
-	@printf "   when linking) because some choices during compilation depend on" >> lib/util/cmdline_parser.ml
-	@printf "   given options (e.g. dfs-sat)" >> lib/util/cmdline_parser.ml
-	@printf "\n   -> The following call:" >> lib/util/cmdline_parser.ml
-	@printf "   1 - should be kept when builtind Alt-Ergo tools" >> lib/util/cmdline_parser.ml
-	@printf "   2 - should be removed to build and use only the library." >> lib/util/cmdline_parser.ml
-	@printf "\n   Alternatively to 2, one can just remove cmdline_parser.cmo/cmx in" >> lib/util/cmdline_parser.ml
-	@printf "   Makefile.users *)" >> lib/util/cmdline_parser.ml
-	@printf "\nlet () = Options.parse_cmdline_arguments ()" >> lib/util/cmdline_parser.ml
 
 META: config.status
 	@echo "description = \"Alt-Ergo: An SMT Solver for Software Verification >> Library files\"" > META

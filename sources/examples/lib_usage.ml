@@ -56,12 +56,13 @@ let typed, env = Typechecker.file parsed
 
 let pbs = Typechecker.split_goals_and_cnf typed
 
-module FE = Frontend.Make(Fun_sat)
+module SAT = Fun_sat.Make(Theory.Main_Default)
+module FE = Frontend.Make(SAT)
 
 let () =
   List.iter
     (fun pb ->
-       let acc0 = Fun_sat.empty (), true, Explanation.empty in
+       let acc0 = SAT.empty (), true, Explanation.empty in
        let _, consistent, ex =
          List.fold_left
            (fun acc d ->

@@ -26,4 +26,4 @@
 (*                                                                            *)
 (******************************************************************************)
 
-include Sat_solver_sig.S
+include Sat_solver_sig.SatContainer

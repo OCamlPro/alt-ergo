@@ -29,8 +29,7 @@
 open Options
 open Format
 
-
-module Th = Theory.Main
+module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 open Sig
 module A = Literal
 module F = Formula
@@ -1455,3 +1454,4 @@ let retrieve_used_context env dep =
 
 let assume_th_elt env th_elt =
   {env with tbox = Th.assume_th_elt env.tbox th_elt}
+end

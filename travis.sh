@@ -26,10 +26,11 @@ non_regression(){
 }
 
 library(){
+    lib_path=$1
     echo "=+= [travis.sh] build and test library example ... =+="
     echo "which alt-ergo == `which alt-ergo`"
     echo "alt-ergo -version == `alt-ergo -version`"
-    echo "path to lib == `ocamlfind query alt-ergo`"
+    echo "path to lib == $lib_path"
     cd $git_repo/sources/examples
     ocamlopt -o lib_usage \
              -I `ocamlfind query num` \
@@ -70,7 +71,7 @@ do
     opam pin add alt-ergo . --y ; exit_if_error
 
     non_regression
-    library
+    library `ocamlfind query alt-ergo`
 
     opam remove alt-ergo
 
@@ -113,7 +114,7 @@ do
     ls -R $local_install_dir
     export PATH=$PATH:$local_install_dir/bin
 
-    non_regression
+    non_regression $local_install_dir/lib/alt-ergo
     library
 
 done
