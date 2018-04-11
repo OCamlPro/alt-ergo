@@ -161,7 +161,7 @@ keyword :
     | SMTLIBVERSION {mk_data ($startpos,$endpos) Smtlibversion }
     | SOURCE {mk_data ($startpos,$endpos) Source }
     | STATUTS symbol
-        {Smtlib_error.set_status $2.c;mk_data ($startpos,$endpos) (Statuts $2) }
+        {Util.set_status $2.c;mk_data ($startpos,$endpos) (Statuts $2) }
     | LICENSE {mk_data ($startpos,$endpos) License }
     | NOTES {mk_data ($startpos,$endpos) Notes }
     | AXIOMS {mk_data ($startpos,$endpos) Axioms }
