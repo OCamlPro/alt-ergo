@@ -17,6 +17,7 @@
 DESTDIR=
 prefix=@prefix@
 exec_prefix=@exec_prefix@
+BASELIBDIR=$(DESTDIR)@libdir@
 BINDIR=$(DESTDIR)@bindir@
 LIBDIR=$(DESTDIR)@libdir@/alt-ergo
 PLUGINSDIR=$(LIBDIR)/plugins
