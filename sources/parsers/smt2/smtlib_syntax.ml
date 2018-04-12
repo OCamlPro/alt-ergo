@@ -60,9 +60,12 @@ and key_info_aux =
 | Allstats
 | Assertionstacklvl
 | Authors
+| Difficulty
 | Errorbehav
+| Instance
 | Name
 | Reasonunknown
+| Series
 | Version
 | Key_info of keyword
 and key_info = key_info_aux data
