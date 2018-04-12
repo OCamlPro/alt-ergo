@@ -27,8 +27,13 @@ WARNINGS= -w +A-45-27-4-9-44-32-48-41-6
 # x26 : Warning 6 : label is_le was omitted in the application of this function.
 
 
-BFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g $(WARNINGS) $(INCLUDES)
-OFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g $(WARNINGS) -inline 100 $(INCLUDES) -for-pack AltErgo
+LIGHT_BFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g $(WARNINGS) $(INCLUDES)
+LIGHT_OFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g $(WARNINGS) -inline 100 $(INCLUDES)
+
+BFLAGS = $(LIGHT_BFLAGS) -for-pack AltErgoLib
+OFLAGS = $(LIGHT_BFLAGS) -for-pack AltErgoLib
+
+LIBDEPS=num camlzip zarith ocplib-simplex
 
 BIBBYTE = zarith.cma nums.cma unix.cma dynlink.cma str.cma zip.cma ocplibSimplex.cma
 # for coverage bisect.cma 
@@ -46,7 +51,7 @@ BIBGUIOPT = zarith.cmxa threads.cmxa lablgtk.cmxa lablgtksourceview2.cmxa \
 
 NAME = alt-ergo
 GUINAME=altgr-ergo
-LIBNAME = altErgo
+LIBNAME = altErgoLib
 BYTE=$(NAME).byte
 OPT=$(NAME).opt
 
@@ -59,7 +64,6 @@ alt-ergo: byte
 endif
 
 GENERATED = lib/util/config.ml \
-            lib/util/cmdline_parser.ml \
             parsers/why/why_parser.ml \
             parsers/why/why_parser.mli \
             parsers/why/why_lexer.ml
@@ -81,7 +85,6 @@ CMO = lib/util/config.cmo \
       lib/util/options.cmo \
       lib/util/vec.cmo \
       lib/util/iheap.cmo \
-      lib/util/cmdline_parser.cmo \
       lib/util/timers.cmo \
       lib/util/gc_debug.cmo \
       lib/util/loc.cmo \
@@ -118,6 +121,7 @@ CMO = lib/util/config.cmo \
       lib/reasoners/combine.cmo \
       lib/reasoners/ccx.cmo \
       lib/reasoners/theory.cmo \
+      lib/reasoners/sat_solver_sig.cmo \
       lib/reasoners/fun_sat.cmo \
       lib/reasoners/satml.cmo \
       lib/reasoners/satml_frontend.cmo \
@@ -159,11 +163,19 @@ opt: $(NAME).opt
 
 #### LIBRARY
 $(LIBNAME).cmo: $(CMO) $(CMOFRONT) lib/reasoners/sig.cmi
-	$(OCAMLC) $(BFLAGS) -pack -o $(LIBNAME).cmo $^
+	$(OCAMLC) $(LIGHT_BFLAGS) -pack -o $(LIBNAME).cmo $^
 
 $(LIBNAME).cmx: $(CMX) $(CMXFRONT) lib/reasoners/sig.cmi
-	$(OCAMLOPT) $(INCLUDES)  -pack -o $(LIBNAME).cmx $^
+	$(OCAMLOPT) $(LIGHT_OFLAGS)  -pack -o $(LIBNAME).cmx $^
 
+
+ifeq ($(OCAMLBEST),opt)
+$(LIBNAME): $(LIBNAME).cma $(LIBNAME).cmxa $(LIBNAME).cmxs
+else
+$(LIBNAME): $(LIBNAME).cma
+endif
+
+lib: $(LIBNAME)
 
 
 ####
@@ -198,24 +210,15 @@ lib/util/config.ml: config.status
 	@echo "let datadir = \""$(DATADIR)"\"" >> lib/util/config.ml
 	@echo "let mandir = \""$(MANDIR)"\"" >> lib/util/config.ml
 
-lib/util/cmdline_parser.ml: config.status
-	@printf "(* parse_args () should be called as soon as possible (put earlier" > lib/util/cmdline_parser.ml
-	@printf "   when linking) because some choices during compilation depend on" >> lib/util/cmdline_parser.ml
-	@printf "   given options (e.g. dfs-sat)" >> lib/util/cmdline_parser.ml
-	@printf "\n   -> The following call:" >> lib/util/cmdline_parser.ml
-	@printf "   1 - should be kept when builtind Alt-Ergo tools" >> lib/util/cmdline_parser.ml
-	@printf "   2 - should be removed to build and use only the library." >> lib/util/cmdline_parser.ml
-	@printf "\n   Alternatively to 2, one can just remove cmdline_parser.cmo/cmx in" >> lib/util/cmdline_parser.ml
-	@printf "   Makefile.users *)" >> lib/util/cmdline_parser.ml
-	@printf "\nlet () = Options.parse_cmdline_arguments ()" >> lib/util/cmdline_parser.ml
-
 META: config.status
-	@echo "description = \"API of Alt-Ergo: An automatic theorem prover dedicated to program verification\"" > META
+	@echo "description = \"Alt-Ergo: An SMT Solver for Software Verification >> Library files\"" > META
 	@echo "version = \""$(VERSION)"\"" >> META
-#	@echo "archive(byte) = \"altErgo.cmo\"" >> META
-#	@echo "archive(native) = \"altErgo.cmx\"" >> META
-	@echo "requires = \"unix num zarith\"" >> META
-
+	@echo "archive(byte) = \"$(LIBNAME).cma\"" >> META
+	@echo "archive(native) = \"$(LIBNAME).cmxa\"" >> META
+	@echo "archive(native, plugin) = \"$(LIBNAME).cmxs\"" >> META
+	@echo "archive(byte, plugin) = \"$(LIBNAME).cma\"" >> META
+	@echo "requires = \"$(LIBDEPS)\"" >> META
+	@echo "exists_if = \"$(LIBNAME).cma\"" >> META
 
 
 # installation
@@ -249,37 +252,42 @@ ifeq ($(ENABLEGUI),yes)
 	cp -f doc/gtk-lang/alt-ergo.lang $(DATADIR)/gtksourceview-2.0/language-specs/alt-ergo.lang
 endif
 
-# install-pack-opt: xpack
-# 	mkdir -p $(LIBDIR)
-# 	cp -f $(LIBNAME).cmx $(LIBDIR)
-# 	cp -f $(LIBNAME).o $(LIBDIR)
+install-lib: lib META
+	OCAMLFIND_DESTDIR=$(BASELIBDIR) \
+	  ocamlfind install alt-ergo $(LIBNAME).* META
+#mkdir -p $(LIBDIR)
+#	cp -f $(LIBNAME).* $(LIBDIR)
+#	cp -f META $(LIBDIR)
 
-# install-pack-byte: pack META
-# 	mkdir -p $(LIBDIR)
-# 	cp -f $(LIBNAME).cmo $(LIBDIR)
-# 	cp -f $(LIBNAME).cmi $(LIBDIR)
-# 	cp -f META $(LIBDIR)
+uninstall-lib:
+	ocamlfind remove alt-ergo-lib
 
-# install-pack:: install-pack-byte
-# ifeq ($(OCAMLBEST),opt)
-# install-pack:: install-pack-opt
-# endif
+install: install-ae install-gui install-fm-simplex install-lib
 
-install: install-ae install-gui install-fm-simplex
-
-uninstall:
+uninstall: uninstall-lib
 	@rm $(BINDIR)/$(NAME)$(EXE)
 	@rm $(MANDIR)/man1/alt-ergo.1
 	-@rm $(BINDIR)/$(GUINAME)$(EXE)
 	-@rm $(DATADIR)/gtksourceview-2.0/language-specs/alt-ergo.lang
 	@rm $(PLUGINSDIR)/fm-simplex-plugin.cm*
 	@rm $(PRELUDESDIR)/fpa-theory-2017-01-04-16h00.why
-
+#	-@rm $(LIBDIR)/$(LIBNAME).*
+#	-@rm $(LIBDIR)/META
+#	-@rm $(LIBDIR)
 
 # generic rules
 ###############
 
-.SUFFIXES: .mli .ml .cmi .cmo .cmx .mll .mly .tex .dvi .ps .html
+.SUFFIXES: .mli .ml .cmi .cmo .cmx .mll .mly .tex .dvi .ps .html .cma .cmxa .cmxs
+
+.cmo.cma:
+	$(OCAMLC) -a $(LIGHT_BFLAGS) -o $@ $^
+
+.cmx.cmxa:
+	$(OCAMLOPT) -a $(LIGHT_OFLAGS) -o $@ $^
+
+.cmx.cmxs:
+	$(OCAMLOPT) -shared $(LIGHT_OFLAGS) -o $@ $^
 
 .mli.cmi:
 	$(OCAMLC) -c $(BFLAGS) $<
@@ -309,10 +317,10 @@ uninstall:
 clean:
 	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/why plugins/fm-simplex ; do \
 	rm -f $$dd/*.cm[ioxtp] $$dd/*.cmti $$dd/*.o $$dd/*~ $$dd/*.annot $$dd/*.owz;\
-	rm -f $(GENERATED) $$dd/*.output META ; \
+	rm -f $(GENERATED) $$dd/*.output META $(LIBNAME).*; \
 	rm -f $(NAME).byte $(NAME).opt $(GUINAME).opt $(GUINAME).byte *~; \
 	done
-	@rm -rf altErgo.cm* altErgo.o *.log archi.dot archi.pdf lib/*~ *.cmxs *.cmos alt-ergo-static* *.cmxs *.cma essentiel essentiel.tar.bz2 alt-ergo-$(VERSION)-$(ARCH)
+	@rm -rf *.log archi.dot archi.pdf lib/*~ *.cmxs *.cmos alt-ergo-static* *.cmxs *.cma essentiel essentiel.tar.bz2 alt-ergo-$(VERSION)-$(ARCH)
 
 
 # depend
@@ -383,4 +391,4 @@ stripped-arch-binary: $(OPT)
 	strip alt-ergo-$(VERSION)-$(ARCH)
 
 opam-deps:
-	opam install ocamlfind camlzip zarith ocplib-simplex lablgtk menhir
+	opam install ocamlfind $(LIBDEPS) lablgtk menhir

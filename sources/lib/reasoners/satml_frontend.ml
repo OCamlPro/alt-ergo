@@ -9,11 +9,10 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module Main : Sat_solver_sig.S = struct
+module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   open Options
   open Format
-  module Th = Theory.Main
 
   module SAT = Satml.Make(Th)
   module Inst = Instances.Make(Th)
@@ -24,8 +23,8 @@ module Main : Sat_solver_sig.S = struct
   module A = Literal.LT
   module MA = A.Map
   module Atom = Satml_types.Atom
-
   module FF = Satml_types.Flat_Formula
+  module Fun_sat = Fun_sat.Make (Th)
 
   let reset_refs () = SAT.reset_steps ()
   let get_steps () = SAT.get_steps ()

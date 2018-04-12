@@ -28,7 +28,18 @@
 
 open Options
 
-module SAT = (val (Sat_solver.get_current ()) : Sat_solver_sig.S)
+(* done here to initialize options *)
+let () = Options.parse_cmdline_arguments ()
+
+module SatCont = (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer)
+
+module TH =
+  (val
+    (if Options.no_theory() then (module Theory.Main_Empty : Theory.S)
+     else (module Theory.Main_Default : Theory.S)) : Theory.S )
+
+module SAT = SatCont.Make(TH)
+
 module FE = Frontend.Make (SAT)
 
 let timers = Timers.empty ()
