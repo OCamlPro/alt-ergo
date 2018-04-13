@@ -32,6 +32,9 @@ altErgo.o
 */*/*/why_lexer.ml
 */*/*/why_parser.ml*
 */*/*/why_parser.automaton
+*/*/*/smtlib_lexer.ml
+*/*/*/smtlib_parser.ml*
+*/*/*/smtlib_parser.automaton
 */*/*/config.ml*
 alt-ergo/lib/util/cmdline_parser.ml
 essentiel*

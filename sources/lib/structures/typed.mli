@@ -76,9 +76,11 @@ type 'a tatom =
   | TApred of ('a tterm, 'a) annoted
   | TAbuilt of Hstring.t * ('a tterm, 'a) annoted list
 
+
 type oplogic =
     OPand |OPor | OPxor | OPimp | OPnot | OPiff
   | OPif
+
 
 type 'a quant_form = {
   (* quantified variables that appear in the formula *)

@@ -35,6 +35,7 @@ module M = struct
   let used_context_file = ref ""
   let rewriting = ref false
   let type_only = ref false
+  let type_smt2 = ref false
   let parse_only = ref false
   let steps_bound = ref (-1)
   let age_bound = ref 50
@@ -218,7 +219,7 @@ module M = struct
 
   let timers = ref false
 
-  let usage = "usage: alt-ergo [options] file.<why|mlw>"
+  let usage = "usage: alt-ergo [options] file.<why|mlw|smt2|psmt2>"
 
   let set_sat_solver s =
     match s with
@@ -236,6 +237,7 @@ module M = struct
     *)
     "-parse-only", Arg.Set parse_only, " stop after parsing";
     "-type-only", Arg.Set type_only , " stop after typing";
+    "-type-smt2", Arg.Set type_smt2 , " stop after typing smt2";
     "-no-user-triggers", Arg.Set no_user_triggers, " ignore triggers given by the user, except for triggers of theories axioms";
     "-debug", Arg.Set debug, "  sets the debugging flag";
     "-dwarnings", Arg.Set debug_warnings, "  sets the debugging flag of warnings";
@@ -429,6 +431,7 @@ let set_debug_explanations b = M.debug_explanations := b
 
 (** additional setters *)
 let set_type_only b = M.type_only := b
+let set_type_smt2 b = M.type_smt2 := b
 let set_parse_only b = M.parse_only := b
 let set_steps_bound b = M.steps_bound := b
 let set_age_bound b = M.age_bound := b
@@ -499,6 +502,7 @@ let debug_explanations () = !M.debug_explanations
 (** additional getters *)
 let js_mode () = !M.js_mode
 let type_only () = !M.type_only
+let type_smt2 () = !M.type_smt2
 let parse_only () = !M.parse_only
 let steps_bound () = !M.steps_bound
 let no_tcp () = !M.no_tcp

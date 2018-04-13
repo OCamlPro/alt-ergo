@@ -58,6 +58,7 @@ val set_profiling : float -> bool -> unit
 (** additional setters *)
 
 val set_type_only : bool -> unit
+val set_type_smt2 : bool -> unit
 val set_parse_only : bool -> unit
 val set_verbose : bool -> unit
 val set_steps_bound : int -> unit
@@ -125,6 +126,7 @@ val debug_explanations : unit -> bool
 (** additional getters *)
 val enable_assertions : unit -> bool
 val type_only : unit -> bool
+val type_smt2 : unit -> bool
 val parse_only : unit -> bool
 val steps_bound : unit -> int
 val no_tcp : unit -> bool

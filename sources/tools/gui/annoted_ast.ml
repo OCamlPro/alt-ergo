@@ -145,6 +145,7 @@ type aatom =
 type aoplogic =
     AOPand |AOPor | AOPxor | AOPimp | AOPnot | AOPif | AOPiff
 
+
 type aquant_form = {
   aqf_bvars : (Symbols.t * Ty.t) list ;
   aqf_upvars : (Symbols.t * Ty.t) list ;
