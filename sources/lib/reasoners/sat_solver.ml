@@ -51,7 +51,8 @@ let load_current_sat () =
         eprintf
           "[Dynlink] Loading the SAT-solver in plugin \"%s\" failed!@."
           path;
-        Format.eprintf ">> Failure message: %s@.@." (MyDynlink.error_message m1);
+        Format.eprintf ">> Failure message: %s@.@."
+                             (MyDynlink.error_message m1);
       end;
       let prefixed_path = sprintf "%s/%s" Config.pluginsdir path in
       if debug_sat () then
@@ -72,7 +73,8 @@ let load_current_sat () =
         eprintf
           "[Dynlink] Trying to load the plugin from \"%s\" failed too!@."
           prefixed_path;
-        Format.eprintf ">> Failure message: %s@.@." (MyDynlink.error_message m2);
+        Format.eprintf ">> Failure message: %s@.@."
+                             (MyDynlink.error_message m2);
         exit 1
 
 let get_current () =

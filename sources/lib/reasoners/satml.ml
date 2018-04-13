@@ -1524,7 +1524,8 @@ are detected ..."]
               if sz = 1 then c :: unit_cnf, nunit_cnf
               else unit_cnf, c :: nunit_cnf
                 [@ocaml.ppwarning
-                    "Issue: BAD decision_level, in particular, if minimal-bj is ON"]
+                  "Issue: BAD decision_level, in particular, \
+                   if minimal-bj is ON"]
           ) (unit_cnf, nunit_cnf) new_v
       in
       env.nb_init_vars <- nbv;

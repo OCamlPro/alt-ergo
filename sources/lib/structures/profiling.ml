@@ -230,9 +230,9 @@ let register_produced_terms axiom loc consumed all produced _new =
   in
   state.instances_map := MS.add axiom ii !(state.instances_map)
 
-(*******************************************************************************
-                                                                                printing the internal state
-*******************************************************************************)
+(******************************************************************************
+printing the internal state
+******************************************************************************)
 
 type mode =
 | Stats

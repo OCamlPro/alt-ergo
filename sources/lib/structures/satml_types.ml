@@ -887,7 +887,8 @@ module Flat_Formula : FLAT_FORMULA = struct
                     with Not_included ->
                       make hcons (OR l) (AND (List.rev (List.rev_map mk_not l)))
                   end
-                | _ -> make hcons (OR l) (AND (List.rev (List.rev_map mk_not l)))
+                | _ ->
+                  make hcons (OR l) (AND (List.rev (List.rev_map mk_not l)))
               end
             | Some (com,ands) ->
               let ands = List.rev_map (mk_and hcons) ands in
