@@ -71,6 +71,9 @@ let rec fun_ret ty =
 let is_bool ty =
   ty.desc == TBool
 
+let is_dummy ty =
+  ty.desc == TDummy
+
 let rec inst links m t =
   try m, IMap.find t.id m
   with Not_found ->
