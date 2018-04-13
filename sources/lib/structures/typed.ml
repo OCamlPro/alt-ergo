@@ -80,9 +80,9 @@ type 'a tatom =
   | TApred of ('a tterm, 'a) annoted
   | TAbuilt of Hstring.t * ('a tterm, 'a) annoted list
 
-type 'a oplogic =
-    OPand |OPor | OPxor | OPimp | OPnot | OPiff
-  | OPif of ('a tterm, 'a) annoted
+type oplogic =
+    OPand | OPor | OPxor | OPimp | OPnot | OPiff
+  | OPif
 
 type 'a quant_form = {
   (* quantified variables that appear in the formula *)
@@ -95,7 +95,7 @@ type 'a quant_form = {
 
 and 'a tform =
   | TFatom of ('a tatom, 'a) annoted
-  | TFop of 'a oplogic * (('a tform, 'a) annoted) list
+  | TFop of oplogic * (('a tform, 'a) annoted) list
   | TFforall of 'a quant_form
   | TFexists of 'a quant_form
   | TFlet of (Symbols.t * Ty.t) list * Symbols.t *
@@ -238,9 +238,9 @@ let rec print_formula fmt f =
       print_atom fmt a
     | TFop(OPnot, [f]) ->
       fprintf fmt "not %a" print_formula f
-    | TFop(OPif(t), [f1;f2]) ->
+    | TFop(OPif, [cond; f1;f2]) ->
       fprintf fmt "if %a then %a else %a"
-	print_term t print_formula f1 print_formula f2
+	print_formula cond print_formula f1 print_formula f2
     | TFop(op, [f1; f2]) ->
       fprintf fmt "%a %s %a" print_formula f1 (string_of_op op) print_formula f2
     | TFforall {qf_bvars = l; qf_triggers = t; qf_form = f} ->

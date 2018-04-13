@@ -76,9 +76,11 @@ type 'a tatom =
   | TApred of ('a tterm, 'a) annoted
   | TAbuilt of Hstring.t * ('a tterm, 'a) annoted list
 
-type 'a oplogic =
-    OPand |OPor  | OPxor | OPimp | OPnot | OPiff
-  | OPif of ('a tterm, 'a) annoted
+
+type oplogic =
+    OPand |OPor | OPxor | OPimp | OPnot | OPiff
+  | OPif
+
 
 type 'a quant_form = {
   (* quantified variables that appear in the formula *)
@@ -91,7 +93,7 @@ type 'a quant_form = {
 
 and 'a tform =
   | TFatom of ('a tatom, 'a) annoted
-  | TFop of 'a oplogic * (('a tform, 'a) annoted) list
+  | TFop of oplogic * (('a tform, 'a) annoted) list
   | TFforall of 'a quant_form
   | TFexists of 'a quant_form
   | TFlet of (Symbols.t * Ty.t) list * Symbols.t *

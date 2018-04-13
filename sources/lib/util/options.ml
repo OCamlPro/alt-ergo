@@ -27,7 +27,6 @@
 (******************************************************************************)
 
 let fmt = Format.err_formatter
-  [@ocaml.ppwarning "Options: should not parse args here in 'lib mod'"]
 
 module M = struct
 

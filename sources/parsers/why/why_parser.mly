@@ -57,7 +57,7 @@
 
 %nonassoc IN
 %nonassoc prec_forall prec_exists
-%right RIGHTARROW LRARROW
+%right RIGHTARROW LRARROW XOR
 %right OR
 %right AND
 %nonassoc prec_ite

@@ -143,7 +143,8 @@ type aatom =
   | AAbuilt of Hstring.t * aterm annoted list
 
 type aoplogic =
-    AOPand |AOPor |AOPxor | AOPimp | AOPnot | AOPif of aterm | AOPiff
+    AOPand |AOPor | AOPxor | AOPimp | AOPnot | AOPif | AOPiff
+
 
 type aquant_form = {
   aqf_bvars : (Symbols.t * Ty.t) list ;
@@ -708,9 +709,8 @@ let print_oplogic fmt = function
   | OPor -> fprintf fmt "or"
   | OPxor -> fprintf fmt "xor"
   | OPimp -> fprintf fmt "->"
-  | OPnot -> fprintf fmt "not"
-  | OPif t -> fprintf fmt "%a ->" print_tterm t
   | OPiff -> fprintf fmt "<->"
+  | OPif | OPnot -> assert false (* handled differently *)
 
 let print_rwt fmt { rwt_vars = rv; rwt_left = rl; rwt_right = rr } =
   fprintf fmt "forall %a. %a = %a"
@@ -734,6 +734,9 @@ and print_triggers fmt = function
 and print_tform2 fmt f = match f.Typed.c with
   | TFatom a -> print_tatom fmt a
   | TFop (OPnot, [tf]) -> fprintf fmt "not %a" print_tform tf
+  | TFop (OPif, [c; f1; f2]) ->
+    fprintf fmt "(if %a then %a else %a)"
+      print_tform c  print_tform f1  print_tform f2
   | TFop (op, tfl) -> print_tform_list op fmt tfl
   | TFforall qf -> fprintf fmt "forall %a" print_quant_form qf
   | TFexists qf -> fprintf fmt "exists %a" print_quant_form qf
@@ -893,7 +896,7 @@ let make_dep_aatom d ex dep = function
   | AAbuilt (h, atl) -> List.fold_left (make_dep_aaterm d ex) dep atl
 
 let make_dep_oplogic d ex dep = function
-  | AOPif at -> make_dep_aterm d ex dep at
+  (*| AOPif at -> make_dep_aterm d ex dep at*)
   | _ -> dep
 
 let rec make_dep_quant_form d ex dep
@@ -1004,7 +1007,7 @@ let of_oplogic (buffer:sbuffer)  = function
   | OPxor -> AOPxor
   | OPimp -> AOPimp
   | OPnot -> AOPnot
-  | OPif t -> AOPif (of_tterm buffer  t)
+  | OPif -> AOPif
   | OPiff -> AOPiff
 
 let rec change_polarity_aform f =
@@ -1037,7 +1040,7 @@ and of_tform (buffer:sbuffer) f = match f.Typed.c with
   | TFatom a -> AFatom (of_tatom buffer a)
   | TFop (op, tfl) ->
     let afl = List.map (annot_of_tform buffer ) tfl in
-    assert (let l = List.length afl in l >= 1 && l <= 2);
+    assert (let l = List.length afl in l >= 1 && l <= 3);
     if op == OPnot || op == OPimp then
       change_polarity_aform (List.hd afl);
     AFop (of_oplogic buffer  op, afl)
@@ -1144,7 +1147,7 @@ let to_oplogic = function
   | AOPxor -> OPxor
   | AOPimp  -> OPimp
   | AOPnot -> OPnot
-  | AOPif at -> OPif (to_tterm 0 at)
+  | AOPif -> OPif
   | AOPiff -> OPiff
 
 let rec to_quant_form
@@ -1393,12 +1396,8 @@ let add_oplogic (buffer:sbuffer) indent tags op =
     | AOPxor -> append_buf buffer ~tags "xor "
     | AOPimp  -> append_buf buffer ~tags "-> "
     | AOPnot -> append_buf buffer ~tags "not "
-    | AOPif at ->
-      append_buf buffer (String.make indent ' ');
-      append_buf buffer ~tags "if ";
-      add_aterm buffer tags at;
-      append_buf buffer ~tags " then "
     | AOPiff -> append_buf buffer ~tags "<-> "
+    | AOPif -> assert false (* done in a different way in add_aform *)
 
 let add_rwt (buffer:sbuffer) indent tags r =
   let { rwt_vars = rv; rwt_left = rl; rwt_right = rr } = r.c in
@@ -1504,6 +1503,15 @@ and add_aform errors (buffer:sbuffer) indent tags
     ?parent_op ?(paren=false) aform =
   match aform with
     | AFatom a -> add_aatom buffer 0 tags a
+    | AFop (AOPif, [cond; th; el]) ->
+      append_buf buffer (String.make indent ' ');
+      append_buf buffer ~tags "if ";
+      add_aform errors buffer indent tags cond.c;
+      append_buf buffer ~tags " then ";
+      add_aform errors buffer indent tags th.c;
+      append_buf buffer ~tags " else ";
+      add_aform errors buffer indent tags el.c
+
     | AFop (op, afl) ->
       add_aaform_list errors buffer indent tags ?parent_op op afl
     | AFforall qf ->
@@ -1552,7 +1560,7 @@ and add_aaform_list_aux
           | Some AOPor, AOPor
           | Some AOPand, AOPand
           | Some (AOPimp | AOPiff), (AOPor | AOPand)
-          | Some (AOPif _), (AOPor | AOPand | AOPimp | AOPiff) -> false
+          | Some AOPif, (AOPor | AOPand | AOPimp | AOPiff) -> false
           | _ -> true
       in
       if paren then append_buf buffer ~tags "(";

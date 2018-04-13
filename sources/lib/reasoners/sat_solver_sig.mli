@@ -61,3 +61,8 @@ module type S = sig
     t -> Explanation.t -> Formula.t list * Formula.t list
 
 end
+
+
+module type SatContainer = sig
+  module Make (Th : Theory.S) : S
+end
