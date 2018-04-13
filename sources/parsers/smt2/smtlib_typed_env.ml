@@ -222,10 +222,13 @@ let find_simpl_sort_symb (env,locals) symb params =
 (******************************************************************************)
 (*********************************** Datatypes ********************************)
 let extract_pars locals pars =
-  List.fold_left (fun locals par ->
+  let pars = List.fold_left (fun pars par ->
       let symb = par.c in
-      SMap.add symb (Smtlib_ty.new_type (Smtlib_ty.TVar(symb))) locals
-    ) locals pars
+      if SMap.mem symb pars then
+        error (Typing_error ("Type variable already declared : " ^ symb)) par.p;
+      SMap.add symb (Smtlib_ty.new_type (Smtlib_ty.TVar(symb))) pars
+    ) SMap.empty pars; in
+  SMap.union (fun k v1 v2 -> Some v2) locals pars
 
 let mk_const (env,locals) (name,const_dec) =
   match const_dec.c with
