@@ -69,7 +69,7 @@ type quantified = {
 and llet = {
   let_var: Symbols.t;
   let_subst : Term.subst;
-  let_term : Term.t;
+  let_form : t;
   let_f : t;
 }
 
@@ -129,7 +129,7 @@ val mk_exists :
   (* free_vars and free_vty: they are computed if None is given *)
   t
 
-val mk_let : Term.Set.t -> Symbols.t -> Term.t -> t -> int -> t
+val mk_let : Term.Set.t -> Symbols.t -> t -> t -> int -> t
 
 val add_label : Hstring.t -> t -> unit
 val label : t -> Hstring.t

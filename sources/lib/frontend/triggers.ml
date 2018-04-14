@@ -534,15 +534,17 @@ let rec vty_form acc f = match f.c with
   | TFatom {c=(TAeq l | TAneq l | TAdistinct l
 	          | TAle l | TAlt l | TAbuilt(_,l))}->
     List.fold_left vty_term acc l
-  | TFatom {c=TApred t} -> vty_term acc t
+  | TFatom {c=TApred (t,_)} -> vty_term acc t
   | TFop(_,l) -> List.fold_left vty_form acc l
   | TFforall qf | TFexists qf ->
     let acc =
       List.fold_left (fun acc (_, ty) -> vty_ty acc ty) acc qf.qf_bvars in
     vty_form acc qf.qf_form
   | TFnamed (_, f) -> vty_form acc f
-  | TFlet (ls, s, e, f') ->
+  | TFlet (ls, s, TletTerm e, f') ->
     vty_form (vty_term acc e) f'
+  | TFlet (ls, s, TletForm e, f') ->
+    vty_form (vty_form acc e) f'
   | _ -> acc
 
 let csort = Sy.name "c_sort"
@@ -703,7 +705,7 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
 	      in
 	      [ { c = v; annot = a.annot } ]
 	    | TAle l | TAlt l | TAeq l | TAneq l | TAbuilt(_,l) -> l
-	    | TApred t -> [t]
+	    | TApred (t,_) -> [t]
 	    | _ -> assert false
 	  in
 	  f.c, potential_triggers (vterm, vtype) l
@@ -799,11 +801,18 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
 	| TFforall _ -> TFforall r , trs
 	| _ -> TFexists r , trs)
 
-    | TFlet (up, v, t, f) ->
+    | TFlet (up, v, tau, f) ->
       let f, trs = make_rec keep_triggers pol gopt vterm vtype f in
-      let trs = STRS.union trs (potential_triggers (vterm, vtype) [t]) in
+      let tau, delta_trs = match tau with
+        | TletTerm t ->
+          tau, (potential_triggers (vterm, vtype) [t])
+        | TletForm flet ->
+          let flet', trs' = make_rec keep_triggers pol gopt vterm vtype flet in
+          TletForm flet, trs'
+      in
+      let trs = STRS.union trs delta_trs in
       (* XXX correct for terms *)
-      TFlet (up, v, t, f), trs
+      TFlet (up, v, tau, f), trs
 
     | TFnamed(lbl, f) ->
       let f, trs = make_rec keep_triggers pol gopt vterm vtype f in

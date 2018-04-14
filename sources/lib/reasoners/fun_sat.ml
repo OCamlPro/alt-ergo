@@ -222,9 +222,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | F.Lemma _  -> fprintf fmt "%d-atom lemma \"%a\"@."
                             (F.size f) F.print f
           | F.Skolem _ -> fprintf fmt "skolem %a@." F.print f
-          | F.Let {F.let_var=lvar; let_term=lterm; let_f=lf} ->
+          | F.Let {F.let_var=lvar; let_form=lform; let_f=lf} ->
 	    fprintf fmt "let %a = %a in %a@."
-	      Symbols.print lvar Term.print lterm F.print lf
+	      Symbols.print lvar F.print lform F.print lf
         end;
         if verbose () then
           fprintf fmt "with explanations : %a@." Explanation.print dep
@@ -803,14 +803,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 	     let f' = F.skolemize quantif  in
 	     asm_aux (env, true, tcp, ap_delta, lits) [{ff with F.f=f'},dep]
 
-           | F.Let {F.let_var=lvar; let_term=lterm; let_subst=s; let_f=lf} ->
+           | F.Let {F.let_var=lvar; let_form=lform; let_subst=s; let_f=lf} ->
 	     Options.tool_req 2 "TR-Sat-Assume-Let";
              let f' = F.apply_subst s lf in
 	     let id = F.id f' in
              let v = Symbols.Map.find lvar (fst s) in
-             let lst = [{ff with F.f=F.mk_lit (A.LT.mk_eq v lterm) id}, dep;
-                        {ff with F.f=f'}, dep] in
-             asm_aux (env, true, tcp, ap_delta, lits) lst
+             let pv = F.mk_lit (A.LT.mk_pred v false) id in
+             let equiv = F.mk_iff pv lform id in
+             let elim_let = F.mk_and equiv f' false id in
+             let ff = {ff with F.f = elim_let} in
+             asm_aux (env, true, tcp, ap_delta, lits) [ff, dep]
       ) acc list
 
   let rec assume env list =

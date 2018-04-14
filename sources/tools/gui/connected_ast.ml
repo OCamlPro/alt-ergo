@@ -308,7 +308,7 @@ let unquantify_aatom (buffer:sbuffer) = function
   | AAdistinct aatl -> AAdistinct (List.map (unquantify_aaterm buffer) aatl)
   | AAle aatl -> AAle (List.map (unquantify_aaterm buffer) aatl)
   | AAlt aatl -> AAlt (List.map (unquantify_aaterm buffer) aatl)
-  | AApred a -> AApred a
+  | AApred _ as e -> e
   | AAbuilt (h,aatl) -> AAbuilt (h, (List.map (unquantify_aaterm buffer) aatl))
 
 
@@ -389,7 +389,7 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
       let add_lets afc lets =
 	List.fold_left
 	  (fun af (u, s, at) ->
-	    new_annot buffer (AFlet (u, s, at.c, af))
+	    new_annot buffer (AFlet (u, s, ATletTerm at, af))
 	      (Typechecker.new_id ()) (tag buffer))
 	  afc lets in
       if nbv == [] then (add_lets aform lets).c, ve, goal_used
@@ -878,7 +878,7 @@ and connect_aatom env sbuf aa =
     | AAlt atl
     | AAbuilt (_, atl) -> connect_aaterm_list env sbuf connect_tag atl
 
-    | AApred at -> connect_aterm env sbuf at
+    | AApred (at, _) -> connect_aterm env sbuf at
 
 and connect_quant_form env sbuf
     {aqf_triggers = trs; aqf_hyp; aqf_form = aaf } =
@@ -896,8 +896,11 @@ and connect_aform env sbuf = function
   | AFexists aqf ->
     connect_trigger_tag env sbuf aqf.tag aqf.id;
     connect_quant_form env sbuf aqf.c
-  | AFlet (vs, s, t, aaf) ->
-    connect_aterm env sbuf t;
+  | AFlet (vs, s, ATletTerm t, aaf) ->
+    connect_aterm env sbuf t.c;
+    connect_aform env sbuf aaf.c
+  | AFlet (vs, s, ATletForm f, aaf) ->
+    connect_aform env sbuf f.c;
     connect_aform env sbuf aaf.c
   | AFnamed (_, aaf) ->
     connect_aform env sbuf aaf.c

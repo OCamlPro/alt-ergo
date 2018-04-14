@@ -77,7 +77,7 @@ type 'a tatom =
   | TAneq of ('a tterm, 'a) annoted list
   | TAle of ('a tterm, 'a) annoted list
   | TAlt of ('a tterm, 'a) annoted list
-  | TApred of ('a tterm, 'a) annoted
+  | TApred of ('a tterm, 'a) annoted * bool (* true <-> negated *)
   | TAbuilt of Hstring.t * ('a tterm, 'a) annoted list
 
 type oplogic =
@@ -99,9 +99,12 @@ and 'a tform =
   | TFforall of 'a quant_form
   | TFexists of 'a quant_form
   | TFlet of (Symbols.t * Ty.t) list * Symbols.t *
-      ('a tterm, 'a) annoted * ('a tform, 'a) annoted
+             'a tlet_kind * ('a tform, 'a) annoted
   | TFnamed of Hstring.t * ('a tform, 'a) annoted
 
+and 'a tlet_kind =
+  | TletTerm of ('a tterm, 'a) annoted
+  | TletForm of ('a tform, 'a) annoted
 
 type 'a rwt_rule = {
   rwt_vars : (Symbols.t * Ty.t) list;
@@ -210,8 +213,9 @@ let print_atom fmt a =
       fprintf fmt "%a <= %a" print_term t1 print_term t2
     | TAlt [t1; t2] ->
       fprintf fmt "%a < %a" print_term t1 print_term t2
-    | TApred t ->
-      print_term fmt t
+    | TApred (t, negated) ->
+      if negated then fprintf fmt "(not (%a))" print_term t
+      else print_term fmt t
     | TAbuilt(s, l) ->
       fprintf fmt "%s(%a)" (Hstring.view s) print_term_list l
     | _ -> assert false

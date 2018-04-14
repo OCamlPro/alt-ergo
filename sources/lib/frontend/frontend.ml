@@ -155,7 +155,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
         | RwtDef r -> assert false
 
-        | Query(n, f, lits, sort) ->
+        | Query(n, f, sort) ->
 	  let dep =
 	    if consistent then
 	      let dep' = SAT.unsat env
@@ -206,7 +206,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let goal_name d =
     match d.st_decl with
-    | Query(n,_,_,_) -> sprintf " (goal %s)" n
+    | Query(n,_,_) -> sprintf " (goal %s)" n
     | _ -> ""
 
   let print_status_unsat_mode status steps =
