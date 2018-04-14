@@ -332,4 +332,5 @@ let typing parsed_ast =
         type_command (env,SMap.empty)  c
       ) env parsed_ast
   in if false then
+    Smtlib_printer.print parsed_ast;
     Smtlib_typed_env.print_env env;
