@@ -140,7 +140,6 @@ let rec compare_fun_assoc (env,locals) symb ty f assoc =
     | Chainable | Pairwise -> Smtlib_ty.new_type (Smtlib_ty.TBool)
   in
   let def = Smtlib_ty.new_type (TFun (params,ret)) in
-  let _,ty = Smtlib_ty.inst locals Smtlib_ty.IMap.empty ty in
   let _,def = Smtlib_ty.inst SMap.empty Smtlib_ty.IMap.empty def in
   Smtlib_ty.unify ty def symb.p;
   Some (Smtlib_ty.fun_ret ty)
@@ -154,7 +153,6 @@ and compare_fun_def (env,locals) symb ty funs =
         match def.assoc with
         | None ->
           let def = def.params in
-          let _,ty = Smtlib_ty.inst locals Smtlib_ty.IMap.empty ty in
           let _,def = Smtlib_ty.inst locals Smtlib_ty.IMap.empty def in
           Smtlib_ty.unify ty def symb.p;
           Some (Smtlib_ty.fun_ret ty)
@@ -198,9 +196,13 @@ let add_fun_def (env,locals) ?(init=false) name params return assoc =
 
 let mk_fun_dec (env,locals) (name,pars,return) =
   let pars = List.map (fun par ->
-      find_sort (env,locals) par) pars in
-  let return = find_sort (env,locals) return in
-  add_fun_def (env,locals) name pars return
+      let s = find_sort (env,locals) par in
+      Smtlib_ty.unify par.ty s par.p;
+      s
+    ) pars in
+  let s_return = find_sort (env,locals) return in
+  Smtlib_ty.unify return.ty s_return return.p;
+  add_fun_def (env,locals) name pars s_return
 
 let mk_fun_def (env,locals) (name,params,return) =
   let params = List.map (fun par ->
@@ -226,7 +228,9 @@ let extract_pars locals pars =
       let symb = par.c in
       if SMap.mem symb pars then
         error (Typing_error ("Type variable already declared : " ^ symb)) par.p;
-      SMap.add symb (Smtlib_ty.new_type (Smtlib_ty.TVar(symb))) pars
+      let ty = Smtlib_ty.new_type (Smtlib_ty.TVar(symb)) in
+      Smtlib_ty.unify par.ty ty par.p;
+      SMap.add symb ty pars
     ) SMap.empty pars; in
   SMap.union (fun k v1 v2 -> Some v2) locals pars
 

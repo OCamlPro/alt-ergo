@@ -67,8 +67,9 @@ let check_if_dummy t l =
 
 let check_if_escaped l =
   List.iter (fun d ->
-      if Smtlib_ty.is_dummy d.ty then
+      if Smtlib_ty.is_dummy d.ty then begin
         error (Typing_error ("Escaped type variables")) d.p;
+      end;
     ) l
 
 let type_cst c =
@@ -89,9 +90,10 @@ let type_qualidentifier (env,locals) q pars =
   | QualIdentifierAs (id, sort) ->
     let symb = get_identifier id in
     let ty = find_par_ty (env,locals) symb pars in
-    let sort = find_sort (env,locals) sort in
-    inst_and_unify (env,locals) Smtlib_ty.IMap.empty sort ty symb.p;
-    q.ty.desc <- ty.desc;
+    let ty_sort = find_sort (env,locals) sort in
+    inst_and_unify (env,locals) Smtlib_ty.IMap.empty ty ty_sort symb.p;
+    Smtlib_ty.unify sort.ty ty_sort sort.p;
+    Smtlib_ty.unify q.ty ty q.p;
     ty
 
 let type_pattern (env,locals) ty pat =
@@ -138,7 +140,8 @@ and type_term (env,locals,dums) t =
     t.ty, dums
 
   | TermQualIdentifier (qualid) ->
-    Smtlib_ty.unify t.ty (type_qualidentifier (env,locals) qualid [] ) t.p;
+    let ty_q = type_qualidentifier (env,locals) qualid [] in
+    Smtlib_ty.unify t.ty ty_q t.p;
     t.ty, check_if_dummy t dums
 
   | TermQualIdTerm (qualid,term_list) ->
