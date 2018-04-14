@@ -126,7 +126,7 @@ type aatom =
   | AAdistinct of aterm annoted list
   | AAle of aterm annoted list
   | AAlt of aterm annoted list
-  | AApred of aterm
+  | AApred of aterm * bool (* true <-> negated *)
   | AAbuilt of Hstring.t * aterm annoted list
 
 type aoplogic =
@@ -145,8 +145,12 @@ and aform =
   | AFop of aoplogic * aform annoted list
   | AFforall of aquant_form annoted
   | AFexists of aquant_form annoted
-  | AFlet of (Symbols.t * Ty.t) list * Symbols.t * aterm * aform annoted
+  | AFlet of (Symbols.t * Ty.t) list * Symbols.t * atlet_kind * aform annoted
   | AFnamed of Hstring.t * aform annoted
+
+and atlet_kind =
+  | ATletTerm of aterm annoted
+  | ATletForm of aform annoted
 
 type atyped_decl =
   | ATheory of Loc.t * string * theories_extensions * atyped_decl annoted list

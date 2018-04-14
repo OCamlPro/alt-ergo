@@ -73,7 +73,7 @@ type 'a tatom =
   | TAneq of ('a tterm, 'a) annoted list
   | TAle of ('a tterm, 'a) annoted list
   | TAlt of ('a tterm, 'a) annoted list
-  | TApred of ('a tterm, 'a) annoted
+  | TApred of ('a tterm, 'a) annoted * bool (* true <-> negated *)
   | TAbuilt of Hstring.t * ('a tterm, 'a) annoted list
 
 type oplogic =
@@ -95,9 +95,12 @@ and 'a tform =
   | TFforall of 'a quant_form
   | TFexists of 'a quant_form
   | TFlet of (Symbols.t * Ty.t) list * Symbols.t *
-      ('a tterm, 'a) annoted * ('a tform, 'a) annoted
+             'a tlet_kind * ('a tform, 'a) annoted
   | TFnamed of Hstring.t * ('a tform, 'a) annoted
 
+and 'a tlet_kind =
+  | TletTerm of ('a tterm, 'a) annoted
+  | TletForm of ('a tform, 'a) annoted
 
 type 'a rwt_rule = {
   rwt_vars : (Symbols.t * Ty.t) list;
