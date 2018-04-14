@@ -82,6 +82,8 @@ and view =
   | Lemma of quantified
   | Skolem of quantified
   | Let of llet
+  [@ocaml.ppwarning "TODO: 'Let' is currently not used.
+                     Remove it or reuse it for let x = form in form"]
 
 and iview = { pos : view ; neg : view ; size : int; tag : int ;
               negation : iview}

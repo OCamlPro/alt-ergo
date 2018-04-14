@@ -1,0 +1,9 @@
+goal g:
+  (let x = 1 in
+  (forall x : int.
+   x = 100 ->
+   let x = x + 3 in
+   2 * x = 206
+  ) and
+  x = 103)
+  
