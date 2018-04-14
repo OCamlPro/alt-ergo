@@ -104,7 +104,7 @@ val mk_and : t -> t -> bool -> int -> t (* bool <-> is implication (neg) *)
 val mk_or : t -> t -> bool -> int -> t (* bool <-> is implication *)
 val mk_xor : t -> t -> bool -> int -> t (* bool <-> is implication *)
 val mk_imp : t -> t -> int -> t
-val mk_if : Term.t -> t -> t -> int -> t
+val mk_if : t -> t -> t -> int -> t
 val mk_iff : t -> t -> int -> t
 val mk_lit : Literal.LT.t -> int -> t
 val mk_forall :
