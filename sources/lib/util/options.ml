@@ -232,146 +232,406 @@ module M = struct
       exit 1
 
   let spec = [
-    (*
-      "-stats", Arg.Set stats, " activate statistics recording and printing (use Ctrl-C to print them in the terminal)";
-    *)
-    "-parse-only", Arg.Set parse_only, " stop after parsing";
-    "-type-only", Arg.Set type_only , " stop after typing";
-    "-type-smt2", Arg.Set type_smt2 , " stop after typing smt2";
-    "-no-user-triggers", Arg.Set no_user_triggers, " ignore triggers given by the user, except for triggers of theories axioms";
-    "-debug", Arg.Set debug, "  sets the debugging flag";
-    "-dwarnings", Arg.Set debug_warnings, "  sets the debugging flag of warnings";
-    "-dcc", Arg.Set debug_cc, "  sets the debugging flag of cc";
-    "-dgc", Arg.Set debug_gc, "  prints some debug info about the GC's activity";
-    "-duse", Arg.Set debug_use, "  sets the debugging flag of use";
-    "-duf", Arg.Set debug_uf, "  sets the debugging flag of uf";
-    "-dfm", Arg.Set debug_fm, "  sets the debugging flag of inequalities";
-    "-dfpa", Arg.Set_int debug_fpa,
+    "-parse-only",
+    Arg.Set parse_only,
+    " stop after parsing";
+
+    "-type-only",
+    Arg.Set type_only,
+    " stop after typing";
+
+    "-type-smt2",
+    Arg.Set type_smt2 ,
+    " stop after typing smt2";
+
+    "-no-user-triggers",
+    Arg.Set no_user_triggers,
+    " ignore user triggers, except for triggers of theories axioms";
+
+    "-debug",
+    Arg.Set debug,
+    "  sets the debugging flag";
+
+    "-dwarnings",
+    Arg.Set debug_warnings,
+    "  sets the debugging flag of warnings";
+
+    "-dcc",
+    Arg.Set debug_cc,
+    "  sets the debugging flag of cc";
+
+    "-dgc",
+    Arg.Set debug_gc,
+    "  prints some debug info about the GC's activity";
+
+    "-duse",
+    Arg.Set debug_use,
+    "  sets the debugging flag of use";
+
+    "-duf",
+    Arg.Set debug_uf,
+    "  sets the debugging flag of uf";
+
+    "-dfm",
+    Arg.Set debug_fm,
+    "  sets the debugging flag of inequalities";
+
+    "-dfpa",
+    Arg.Set_int debug_fpa,
     "  sets the debugging flag of floating-point";
-    "-dsum", Arg.Set debug_sum, "  sets the debugging flag of Sum";
-    "-darith", Arg.Set debug_arith,
+
+    "-dsum",
+    Arg.Set debug_sum,
+    "  sets the debugging flag of Sum";
+
+    "-darith",
+    Arg.Set debug_arith,
     " sets the debugging flag of Arith (without fm)";
-    "-dbitv", Arg.Set debug_bitv, "  sets the debugging flag of bitv";
-    "-dac", Arg.Set debug_ac, "  sets the debugging flag of ac";
-    "-dsat", Arg.Set debug_sat, "  sets the debugging flag of sat";
-    "-dsats", Arg.Set debug_sat_simple,
+
+    "-dbitv",
+    Arg.Set debug_bitv,
+    "  sets the debugging flag of bitv";
+
+    "-dac",
+    Arg.Set debug_ac,
+    "  sets the debugging flag of ac";
+
+    "-dsat",
+    Arg.Set debug_sat,
+    "  sets the debugging flag of sat";
+
+    "-dsats",
+    Arg.Set debug_sat_simple,
     "  sets the debugging flag of sat (simple output)";
-    "-dtyping", Arg.Set debug_typing, "  sets the debugging flag of typing";
-    "-types", Arg.Set debug_types, "  sets the debugging flag of types";
-    "-dconstr", Arg.Set debug_constr,
+
+    "-dtyping",
+    Arg.Set debug_typing,
+    "  sets the debugging flag of typing";
+
+    "-types",
+    Arg.Set debug_types,
+    "  sets the debugging flag of types";
+
+    "-dconstr",
+    Arg.Set debug_constr,
     "  sets the debugging flag of constructors";
-    "-darrays", Arg.Set debug_arrays, "  sets the debugging flag of arrays";
-    "-dcombine", Arg.Set debug_combine, "  sets the debugging flag of combine";
-    "-dsplit", Arg.Set debug_split, "  sets the debugging flag of case-split analysis";
-    "-dmatching", Arg.Set_int debug_matching, "  sets the debugging flag of E-matching (0 = disabled, 1 = light, 2 = full)";
-    "-dexplanations", Arg.Set debug_explanations, "  sets the debugging flag of explanations";
-    "-verbose", Arg.Set verbose, "  sets the verbose mode";
-    "-version", Arg.Unit show_version, "  prints the version number";
-    "-version-info", Arg.Unit show_version_info, "  prints some info about this version";
-    "-where", Arg.String show_where, "  prints the directory of its argument. Possible arguments are: \"bin\", \"lib\", \"plugins\", \"data\" and \"man\"";
-    "-steps-bound", Arg.Set_int steps_bound, " <n> set the maximum number of steps";
-    "-enable-assertions", Arg.Set enable_assertions, " Enable verification of some heavy invariants";
-    "-no-tcp", Arg.Set no_tcp, " Deactivate BCP modulo theories";
-    "-no-decisions", Arg.Set no_decisions, " Disable decisions at the SAT level";
-    "-no-decisions-on", Arg.String update_no_decisions_on, " Disable decisions at the SAT level for the instances generated from the given axioms. Arguments should be separated with a comma";
-    "-no-fm", Arg.Set no_fm, " Disable Fourier-Motzkin algorithm";
-    "-tighten-vars", Arg.Set tighten_vars, " Compute the best bounds for arithmetic variables";
-    "-no-theory", Arg.Set no_theory, " Completely deactivate theory reasoning";
-    "-age-bound", Arg.Set_int age_bound, "<n> set the age limite bound";
-    "-greedy" , Arg.Set greedy,
+
+    "-darrays",
+    Arg.Set debug_arrays,
+    "  sets the debugging flag of arrays";
+
+    "-dcombine",
+    Arg.Set debug_combine,
+    "  sets the debugging flag of combine";
+
+    "-dsplit",
+    Arg.Set debug_split,
+    "  sets the debugging flag of case-split analysis";
+
+    "-dmatching",
+    Arg.Set_int debug_matching,
+    "  sets the debugging flag of E-matching (0=disabled, 1=light, 2=full)";
+
+    "-dexplanations",
+    Arg.Set debug_explanations,
+    "  sets the debugging flag of explanations";
+
+    "-verbose",
+    Arg.Set verbose,
+    "  sets the verbose mode";
+
+    "-version",
+    Arg.Unit show_version,
+    "  prints the version number";
+
+    "-version-info",
+    Arg.Unit show_version_info,
+    "  prints some info about this version";
+
+    "-where",
+    Arg.String show_where,
+    "  prints the directory of its argument. Possible arguments are: \
+     'bin', 'lib', 'plugins', 'data' and 'man'";
+
+    "-steps-bound",
+    Arg.Set_int steps_bound,
+    " <n> set the maximum number of steps";
+
+    "-enable-assertions",
+    Arg.Set enable_assertions,
+    " Enable verification of some heavy invariants";
+
+    "-no-tcp",
+    Arg.Set no_tcp,
+    " Deactivate BCP modulo theories";
+
+    "-no-decisions",
+    Arg.Set no_decisions,
+    " Disable decisions at the SAT level";
+
+    "-no-decisions-on",
+    Arg.String update_no_decisions_on,
+    " Disable decisions at the SAT level for the instances generated \
+     from the given axioms. Arguments should be separated with a comma";
+
+    "-no-fm",
+    Arg.Set no_fm,
+    " Disable Fourier-Motzkin algorithm";
+
+    "-tighten-vars",
+    Arg.Set tighten_vars,
+    " Compute the best bounds for arithmetic variables";
+
+    "-no-theory",
+    Arg.Set no_theory,
+    " Completely deactivate theory reasoning";
+
+    "-age-bound",
+    Arg.Set_int age_bound,
+    "<n> set the age limite bound";
+
+    "-greedy" ,
+    Arg.Set greedy,
     " use all available ground terms in instantiation";
-    "-nb-triggers" , Arg.Set_int nb_triggers,
-    " number of redondant (multi)triggers (default: 2)";
-    "-triggers-var" , Arg.Set triggers_var , " allows variables as triggers";
-    "-no-Ematching", Arg.Set no_Ematching, " disable matching modulo ground equalities";
-    "-no-arith-matching", Arg.Clear arith_matching, " disable (the weak form of) matching modulo linear arithmetic";
-    "-no-backjumping", Arg.Set no_backjumping, " disable backjumping mechanism in the functional SAT solver";
-    "-no-NLA", Arg.Set no_NLA, " disable non-linear arithmetic reasoning (i.e. non-linear multplication, division and modulo on integers and rationals). Non-linear multiplication remains AC";
-    "-no-ac", Arg.Set no_ac, " Disable the AC theory of Associative and Commutative function symbols";
-    "-nocontracongru", Arg.Set nocontracongru, "";
-    "-term-like-pp", Arg.Set term_like_pp, " output semantic values as terms";
-    "-all-models", Arg.Set all_models, " experimental support for all models";
-    "-model", Arg.Set model, " experimental support for models on labeled terms";
-    "-complete-model", Arg.Set complete_model, " experimental support for complete model";
-    "-dinterpretation", Arg.Set debug_interpretation, " set debug flag for interpretation generatation";
-    "-interpretation", Arg.Set_int interpretation, " experimental support for counter-example generation. Possible values are 1, 2, or 3 to compute an interpretation before returning Unknown, before instantiation, or before every decision or instantiation. A negative value (-1, -2, or -3) will disable interpretation display. Note that -max-split limitation will be ignored in model generation phase";
-    "-proof", Arg.Set proof, " experimental support for succinct proof";
-    "-debug-proof", Arg.Set debug_proof, " replay unsatisfiable core produced by -proof. This options implies -proof";
-    "-rules", Arg.String set_rules, "tr (tr in <parsing|typing|sat|cc|arith>) output rules used on stderr";
-    "-max-split", Arg.String set_max_split,
+
+    "-nb-triggers" ,
+    Arg.Set_int nb_triggers,
+    " number of (multi)triggers (default: 2)";
+
+    "-triggers-var" ,
+    Arg.Set triggers_var ,
+    " allows variables as triggers";
+
+    "-no-Ematching",
+    Arg.Set no_Ematching,
+    " disable matching modulo ground equalities";
+
+    "-no-arith-matching",
+    Arg.Clear arith_matching,
+    " disable (the weak form of) matching modulo linear arithmetic";
+
+    "-no-backjumping",
+    Arg.Set no_backjumping,
+    " disable backjumping mechanism in the functional SAT solver";
+
+    "-no-NLA",
+    Arg.Set no_NLA,
+    " disable non-linear arithmetic reasoning (i.e. non-linear \
+     multplication, division and modulo on integers and rationals). \
+     Non-linear multiplication remains AC";
+
+    "-no-ac",
+    Arg.Set no_ac,
+    " Disable the AC theory of Associative and Commutative function symbols";
+
+    "-nocontracongru",
+    Arg.Set nocontracongru,
+    "";
+
+    "-term-like-pp",
+    Arg.Set term_like_pp,
+    " output semantic values as terms";
+
+    "-all-models",
+    Arg.Set all_models,
+    " experimental support for all models";
+
+    "-model",
+    Arg.Set model,
+    " experimental support for models on labeled terms";
+
+    "-complete-model",
+    Arg.Set complete_model,
+    " experimental support for complete model";
+
+    "-dinterpretation",
+    Arg.Set debug_interpretation,
+    " set debug flag for interpretation generatation";
+
+    "-interpretation",
+    Arg.Set_int interpretation,
+    " experimental support for counter-example generation. Possible values \
+     are 1, 2, or 3 to compute an interpretation before returning Unknown, \
+     before instantiation, or before every decision or instantiation. \
+     A negative value (-1, -2, or -3) will disable interpretation display. \
+     Note that -max-split limitation will be ignored in model generation phase";
+
+    "-proof",
+    Arg.Set proof,
+    " experimental support for succinct proof";
+
+    "-debug-proof",
+    Arg.Set debug_proof,
+    " replay unsat-cores produced by -proof. The option implies -proof";
+
+    "-rules",
+    Arg.String set_rules,
+    "tr (tr in <parsing|typing|sat|cc|arith>) output rules used on stderr";
+
+    "-max-split",
+    Arg.String set_max_split,
     (Format.sprintf " maximum size of case-split (default value : %s)"
        (Numbers.Q.to_string !max_split));
 
-    "-fm-cross-limit", Arg.String set_fm_cross_limit,
-    (Format.sprintf " skip Fourier-Motzkin variables elimination steps that may produce a number of inequalities that is greater than the given limit (default value : %s). However, unit eliminations are always done" (Numbers.Q.to_string !fm_cross_limit));
 
-    "-case-split-policy", Arg.String set_case_split_policy_option,
-    " case-split policy. Set the case-split policy to use. Possible values are: after-theory-assume (default), before-matching, after-matching"
-    ;
-    "-restricted", Arg.Set restricted,
+    "-fm-cross-limit",
+    Arg.String set_fm_cross_limit,
+    (Format.sprintf
+       " skip Fourier-Motzkin variables elimination steps that may produce \
+        a number of inequalities that is greater than the given limit \
+        (default value : %s). However, unit eliminations are always done"
+       (Numbers.Q.to_string !fm_cross_limit));
+
+    "-case-split-policy",
+    Arg.String set_case_split_policy_option,
+    " case-split policy. Set the case-split policy to use. Possible values \
+     are: after-theory-assume (default), before-matching, after-matching";
+
+    "-restricted",
+    Arg.Set restricted,
     " restrict set of decision procedures (equality, arithmetic and AC)";
-    "-bottom-classes", Arg.Set bottom_classes, " show equivalence classes at each bottom of the sat";
-    "-replay", Arg.Set replay, " replay session saved in .agr";
-    "-replay-used-context", Arg.Set replay_used_context, " replay with axioms and predicates saved in .used file";
-    "-replay-all-used-context", Arg.Set replay_all_used_context, " replay with all axioms and predicates saved in .used files of the current directory";
-    "-save-used-context", Arg.Set save_used_context, " save used axioms and predicates in a .used file. This options implies -proof";
-    "-replay-satml-dfs", Arg.Set replay_satml_dfs, " debug option for the satML plugin. Replays proven (valid) goals (with generated ground instances) using the functional SAT solver";
-    "-timelimit", Arg.Float (set_limit timelimit), "n set the time limit to n seconds (not supported on Windows)";
 
-    "-timelimit-per-goal", Arg.Set timelimit_per_goal,
+    "-bottom-classes",
+    Arg.Set bottom_classes,
+    " show equivalence classes at each bottom of the sat";
+
+    "-replay",
+    Arg.Set replay,
+    " replay session saved in .agr";
+
+    "-replay-used-context",
+    Arg.Set replay_used_context,
+    " replay with axioms and predicates saved in .used file";
+
+    "-replay-all-used-context",
+    Arg.Set replay_all_used_context,
+    " replay with all axioms and predicates saved in .used files of the \
+     current directory";
+
+    "-save-used-context",
+    Arg.Set save_used_context,
+    " save used axioms and predicates in a .used file. This option implies \
+     -proof";
+
+    "-replay-satml-dfs",
+    Arg.Set replay_satml_dfs,
+    " debug option for the satML plugin. Replays proven (valid) goals \
+     (with generated ground instances) using the functional SAT solver";
+
+    "-timelimit",
+    Arg.Float (set_limit timelimit),
+    "n set the time limit to n seconds (not supported on Windows)";
+
+    "-timelimit-per-goal",
+    Arg.Set timelimit_per_goal,
     " Set the given timelimit for each goal, in case of multiple goals per \
-     file. In this case, time spent in preprocessing is separated from resolution \
-     time. Not relevant for GUI-mode.";
-    "-interpretation-timelimit", Arg.Float (set_limit interpretation_timelimit), "n set the time limit to n seconds for model generation (not supported on Windows). Default value is 1. sec";
-    "-sat-plugin" , Arg.String set_sat_plugin,
+     file. In this case, time spent in preprocessing is separated from \
+     resolution time. Not relevant for GUI-mode.";
+
+    "-interpretation-timelimit",
+    Arg.Float (set_limit interpretation_timelimit),
+    "n set the time limit to n seconds for model generation (not supported \
+     on Windows). Default value is 1. sec";
+
+    "-sat-plugin" ,
+    Arg.String set_sat_plugin,
     " use the given SAT-solver instead of the default DFS-based SAT solver";
-    "-sat-solver" , Arg.String set_sat_solver,
-    " choose the SAT solver to use. Default value is CDCL (i.e. satML solver). value 'Tableaux' will enable the Tableaux-like solver";
-    "-no-minimal-bj" , Arg.Clear minimal_bj, " disable minimal backjumping in satML CDCL solver";
-    "-no-tableaux-cdcl", Arg.Clear tableaux_cdcl, " when satML is used, this disables the use of a tableaux-like method together with the CDCL solver";
-    "-disable-flat-formulas-simplification", Arg.Set disable_flat_formulas_simplification, " disable facts simplifications in satML's flat formulas";
 
+    "-sat-solver" ,
+    Arg.String set_sat_solver,
+    " choose the SAT solver to use. Default value is CDCL (i.e. satML \
+     solver). value 'Tableaux' will enable the Tableaux-like solver";
 
-    "-inequalities-plugin" , Arg.String set_inequalities_plugin,
+    "-no-minimal-bj" ,
+    Arg.Clear minimal_bj,
+    " disable minimal backjumping in satML CDCL solver";
+
+    "-no-tableaux-cdcl",
+    Arg.Clear tableaux_cdcl,
+    " when satML is used, this disables the use of a tableaux-like method \
+     together with the CDCL solver";
+
+    "-disable-flat-formulas-simplification",
+    Arg.Set disable_flat_formulas_simplification,
+    " disable facts simplifications in satML's flat formulas";
+
+    "-inequalities-plugin" ,
+    Arg.String set_inequalities_plugin,
     " use the given module to handle inequalities of linear arithmetic";
-    "-parser" , Arg.String add_parser,
+
+    "-parser" ,
+    Arg.String add_parser,
     " register a new parser for Alt-Ergo";
-    "-profiling", Arg.String parse_profiling, "<delay> activate the profiling module with the given frequency. Use Ctrl-C to switch between different views and \"Ctrl + AltGr + \\\" to exit.";
-    "-profiling-plugin" , Arg.String set_profiling_plugin,
+
+    "-profiling",
+    Arg.String parse_profiling,
+    "<delay> activate the profiling module with the given frequency. \
+     Use Ctrl-C to switch between different views and \"Ctrl + AltGr + \\\" \
+     to exit.";
+
+    "-profiling-plugin" ,
+    Arg.String set_profiling_plugin,
     " use the given profiling plugin";
-    "-cumulative-time-profiling", Arg.Set cumulative_time_profiling, " the time spent in called functions is also recorded in callers";
 
-    "-rwt", Arg.Set rewriting, " use rewriting instead of axiomatic approach";
-    "-normalize-instances" , Arg.Set normalize_instances,
-    " normalize generated substitutions by matching w.r.t. the state of the theory. Default value is false. This means that only terms that are greater (w.r.t. depth) than the initial terms of the problem are normalized.";
-    "-use-fpa", Arg.Set use_fpa, " enable support for floating-point arithmetic";
-    "-prelude", Arg.String add_prelude, " add a file that will be loaded as a prelude. The command is cumulative, and the order of successive preludes is presrved.";
+    "-cumulative-time-profiling",
+    Arg.Set cumulative_time_profiling,
+    " the time spent in called functions is also recorded in callers";
 
-    "-inst-after-bj", Arg.Set instantiate_after_backjump,
-    " make a (normal) instantiation round after every backjump/backtrack"
-    ;
-    "-no-backward", Arg.Set no_backward,
-    " Disable backward reasoning step (starting from the goal) done in the default SAT solver before deciding"
-    ;
+    "-rwt",
+    Arg.Set rewriting,
+    " use rewriting instead of axiomatic approach";
 
-    "-no-sat-learning", Arg.Set no_sat_learning,
-    " Disable learning/caching of unit facts in the Default SAT. These facts are used to improve bcp"
-    ;
-    "-disable-weaks", Arg.Set disable_weaks,
-    " Prevent the GC from collecting hashconsed data structrures that are not reachable (useful for more determinism)"
-    ;
-    "-enable-restarts", Arg.Set enable_restarts,
-    " For satML: enable restarts or not. Default behavior is 'false'"
-    ;
-    "-default-lang", Arg.String set_default_input_lang,
-    " Set the default input language to 'lang'. Useful when the extension does not allow to automatically select a parser (eg. JS mode, GUI mode, ...)"
-    ;
+    "-normalize-instances" ,
+    Arg.Set normalize_instances,
+    " normalize generated substitutions by matching w.r.t. the state of \
+     the theory. Default value is false. This means that only terms that \
+     are greater (w.r.t. depth) than the initial terms of the problem are \
+     normalized.";
 
-    "-no-locs-in-answers", Arg.Set no_locs_in_answers,
-    " Do not show the locations of goals when printing solver's answers."
-    ;
+    "-use-fpa",
+    Arg.Set use_fpa,
+    " enable support for floating-point arithmetic";
 
-    "-unsat-mode", Arg.Set unsat_mode,
+    "-prelude",
+    Arg.String add_prelude,
+    " add a file that will be loaded as a prelude. The command is \
+     cumulative, and the order of successive preludes is presrved.";
+
+    "-inst-after-bj",
+    Arg.Set instantiate_after_backjump,
+    " make a (normal) instantiation round after every backjump/backtrack";
+
+    "-no-backward",
+    Arg.Set no_backward,
+    " Disable backward reasoning step (starting from the goal) done in \
+     the default SAT solver before deciding";
+
+    "-no-sat-learning",
+    Arg.Set no_sat_learning,
+    " Disable learning/caching of unit facts in the Default SAT. These \
+     facts are used to improve bcp";
+
+    "-disable-weaks",
+    Arg.Set disable_weaks,
+    " Prevent the GC from collecting hashconsed data structrures that are \
+     not reachable (useful for more determinism)";
+
+    "-enable-restarts",
+    Arg.Set enable_restarts,
+    " For satML: enable restarts or not. Default behavior is 'false'";
+
+    "-default-lang",
+    Arg.String set_default_input_lang,
+    " Set the default input language to 'lang'. Useful when the extension \
+     does not allow to automatically select a parser (eg. JS mode, GUI \
+     mode, ...)";
+
+    "-no-locs-in-answers",
+    Arg.Set no_locs_in_answers,
+    " Do not show the locations of goals when printing solver's answers.";
+
+    "-unsat-mode",
+    Arg.Set unsat_mode,
     " answer unsat / sat / unknown instead of Valid / Invalid / I don't know"
 
   ]

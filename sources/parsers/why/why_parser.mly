@@ -354,7 +354,8 @@ simple_expr :
 	| [] -> assert false
 	| (i, v)::l -> mk_array_set ($startpos, $endpos) se i v, l
       in
-      List.fold_left (fun acc (i,v) -> mk_array_set ($startpos, $endpos) acc i v) acc l
+      List.fold_left (fun acc (i,v) ->
+          mk_array_set ($startpos, $endpos) acc i v) acc l
     }
 
 | LEFTPAR e = lexpr RIGHTPAR

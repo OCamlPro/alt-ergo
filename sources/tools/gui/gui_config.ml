@@ -31,7 +31,7 @@ open Format
 (* let x_dpi = Sys.command *)
 (*     "(exit `xrdb -query | grep dpi | cut -d':' -f2 | xargs`)" *)
 (* let serv_dpi = Sys.command *)
-(*     "(exit `xdpyinfo | grep dots | cut -d':' -f2 | cut -d'x' -f1 | xargs`)" *)
+(*     "(exit `xdpyinfo | grep dots | cut -d':' -f2 | cut -d'x' -f1 | xargs`)"*)
 (* let scale = x_dpi / serv_dpi *)
 (* let scale = if scale > 0 then scale else 1 *)
 

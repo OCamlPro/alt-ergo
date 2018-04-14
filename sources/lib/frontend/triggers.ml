@@ -661,12 +661,14 @@ let make_triggers gopt vterm vtype trs =
 
 let check_triggers trs (bv, vty) =
   if trs == [] then
-    failwith "There should be a trigger for every quantified formula in a theory.";
+    failwith "There should be a trigger for every quantified formula \
+              in a theory.";
   List.iter (fun (l, _) ->
     let s1 = List.fold_left (vars_of_term bv) Vterm.empty l in
     let s2 = List.fold_left vty_term Vtype.empty l in
     if not (Vtype.subset vty s2) || not (Vterm.subset bv s1) then
-      failwith "Triggers of a theory should contain every quantified types and variables.")
+      failwith "Triggers of a theory should contain every quantified \
+                types and variables.")
     trs;
   trs
 

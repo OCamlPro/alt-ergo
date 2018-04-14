@@ -728,7 +728,8 @@ let rec print_quant_form fmt
 and print_triggers fmt = function
   | [] -> ()
   | [ts,_] -> print_tterm_list ", " fmt ts
-  | (ts,_)::l -> fprintf fmt "%a | %a" (print_tterm_list ", ") ts print_triggers l
+  | (ts,_)::l ->
+    fprintf fmt "%a | %a" (print_tterm_list ", ") ts print_triggers l
 
 and print_tform2 fmt f = match f.Typed.c with
   | TFatom a -> print_tatom fmt a

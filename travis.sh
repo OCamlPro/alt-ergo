@@ -47,12 +47,20 @@ library(){
     cd $pwd
 }
 
+pre_merge_style_checker(){
+    cd extra/
+    echo "call ./extra/pre_merge_style_checker.sh ...."
+    ./pre-merge-style-checker.sh
+    cd ..
+}
+
 ## dummy switch
 opam sw DUMMY --alias system
 eval `opam config env`
 opam update
-
 # in travis, 'system' compiler is currently < 4.04.0
+
+pre_merge_style_checker ; exit_if_error
 
 for ocaml_version in 4.06.0 4.04.0 # 4.05.0
 do

@@ -659,7 +659,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     A.Set.union (atoms_from_lazy_sat ~frugal:true env)
       (*otherwise, we loose atoms that abstract internal axioms *)
       (aux accu FF.vrai)
-      [@ocaml.ppwarning "improve terms / atoms extraction in lazy/non-lazy and greedy/non-greedy mode. Separate atoms from terms !"]
+      [@ocaml.ppwarning
+        "improve terms / atoms extraction in lazy/non-lazy \
+         and greedy/non-greedy mode. Separate atoms from terms !"]
 
   let atoms_from_bmodel env =
     MF.fold (fun f _ sa -> (F.atoms_rec ~only_ground:false) f sa)
@@ -687,7 +689,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         try (A.Map.find a env.ground_preds) :: acc
         with Not_found -> acc
       )acc sa
-      [@ocaml.ppwarning "!!! Possibles issues du to replacement of atoms that are facts with TRUE by mk_lit (and simplify)"]
+      [@ocaml.ppwarning "!!! Possibles issues du to replacement of atoms \
+                         that are facts with TRUE by mk_lit (and simplify)"]
 
 
   let new_instances env sa acc =

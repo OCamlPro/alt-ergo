@@ -34,7 +34,7 @@ let () =
            (fun () ->
             let e = quick_stat () in
             let d = !tmp in
-            fprintf fmt "[GC infos]==========================================@.";
+            fprintf fmt "[GC infos]========================================@.";
             fprintf fmt "[major collections] %d th@." e.major_collections;
             fprintf fmt "[minor collections] %d th@." e.minor_collections;
             fprintf fmt "[stack used] %d words@." e.stack_size;

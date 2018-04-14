@@ -383,7 +383,8 @@ let load_current_inequalities_reasoner () =
         eprintf
           "[Dynlink] Loading the 'inequalities' reasoner in \"%s\" failed!@."
           path;
-        Format.eprintf ">> Failure message: %s@.@." (MyDynlink.error_message m1);
+        Format.eprintf ">> Failure message: %s@.@."
+          (MyDynlink.error_message m1);
       end;
       let prefixed_path = sprintf "%s/%s" Config.pluginsdir path in
       if Options.debug_fm () then
@@ -405,7 +406,8 @@ let load_current_inequalities_reasoner () =
         eprintf
           "[Dynlink] Trying to load the plugin from \"%s\" failed too!@."
           prefixed_path;
-        Format.eprintf ">> Failure message: %s@.@." (MyDynlink.error_message m2);
+        Format.eprintf ">> Failure message: %s@.@."
+          (MyDynlink.error_message m2);
         exit 1
 
 let get_current () =

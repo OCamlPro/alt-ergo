@@ -71,7 +71,8 @@ module Simplex (C : Coef_Type) = struct
     let concrete c = c, C.zero
     let abstract c = c, C.m_one (* -1, car on a p + (-eps) > 0 *)
 
-    let to_string (c,k) = "(" ^ (C.to_string c) ^ " + " ^ (C.to_string k) ^ "*e)"
+    let to_string (c,k) =
+      "(" ^ (C.to_string c) ^ " + " ^ (C.to_string k) ^ "*e)"
     let add (c1,k1) (c2,k2)   = C.add c1 c2, C.add k1 k2
     let mult c1 (c2,k2)  = C.mult c1 c2, C.mult c1 k2
     let is_zero (c, k) = C.is_zero c && C.is_zero k
@@ -589,7 +590,8 @@ module Simplex (C : Coef_Type) = struct
       let len = nb_vars + 2 in (* ghost + one slack var *)
       let co, matrix, zsbt = make_problem co eqs s_neq len in
       let new_len = len - (List.length matrix) - (List.length zsbt) in
-      if !dsimplex then fprintf fmt "new_len = %d (excluant les pivots)@." new_len;
+      if !dsimplex then
+        fprintf fmt "new_len = %d (excluant les pivots)@." new_len;
       compact_problem co matrix len new_len zsbt
 
   end
@@ -742,9 +744,9 @@ module Simplex (C : Coef_Type) = struct
         List.iter (fun (i,p) -> fprintf fmt "%d    = %a" i ppoly p) ctx;
         fprintf fmt "cost = %a@." ppoly co
         in
-        fprintf fmt "@.#########################################################@.";
+        fprintf fmt "@.####################################################@.";
         fprintf fmt "%a" psystem (ctx, co, distr);
-        fprintf fmt "@.#########################################################@.";
+        fprintf fmt "@.####################################################@.";
       *)
 
       if !main_simplex && loops distr order co.c2 then raise (E_max(ctx,co));
@@ -781,9 +783,9 @@ module Simplex (C : Coef_Type) = struct
       subst co sbt.lhs sbt.rhs;
       simplex ctx co distr order
 
-    (*** / coeur du simplex ******************************************************)
+    (*** / coeur du simplex **************************************************)
 
-    (***   coeur du simplex_init *************************************************)
+    (***   coeur du simplex_init *********************************************)
 
     let delete_ghost ghost ghost_p ctx distr order =
       let ch_vr = ref 0 in
@@ -824,7 +826,8 @@ module Simplex (C : Coef_Type) = struct
       if ghost < !len then begin
         List.iter (fun (_,p) ->
           if not ((Array.length p.a2) == !len) then
-            failwith (sprintf "len = %d but plen = %d" !len (Array.length p.a2));
+            failwith (
+              sprintf "len = %d but plen = %d" !len (Array.length p.a2));
           p.a2.(ghost) <- C.zero) ctx;
         ctx, false
       end
@@ -868,7 +871,7 @@ module Simplex (C : Coef_Type) = struct
             co
 
 
-    (*** / coeur du simplex_init *************************************************)
+    (*** / coeur du simplex_init *********************************************)
 
     let solve co ctx distr order =
       D.given_problem2 ctx co distr;
@@ -916,13 +919,15 @@ module Simplex (C : Coef_Type) = struct
           D.result_extraction "max" ctx_ex co_ex distr;
 
           let res = infos_of distr q co_ex ctx_ex in
-          if !dsimplex then fprintf fmt ">result size %d@." (List.length res.vals);
+          if !dsimplex then
+            fprintf fmt ">result size %d@." (List.length res.vals);
           Max res
 
       | I_unbound (ctx_ex,co_ex) ->
           D.result_extraction "unbound" ctx_ex co_ex distr;
           let res = infos_of distr q co_ex ctx_ex in
-          if !dsimplex then fprintf fmt ">result size %d@." (List.length res.vals);
+          if !dsimplex then
+            fprintf fmt ">result size %d@." (List.length res.vals);
           Unbound res
 
       | I_unsat (ctx_ex,co_ex) ->
@@ -1011,7 +1016,8 @@ module Simplex (C : Coef_Type) = struct
                   (fun i ld ->
                      if !dsimplex then fprintf fmt "> AVANT: cost: %a@."
                        (D.ppoly (D.max_poly cost)) cost;
-                     if !dsimplex then fprintf fmt "traitement de l'index %d@." i;
+                     if !dsimplex then
+                       fprintf fmt "traitement de l'index %d@." i;
                      begin
                        try
                          let q = List.assoc ld max_ctt in
@@ -1021,14 +1027,16 @@ module Simplex (C : Coef_Type) = struct
                            cost.a2.(i) <- Q.add cost.a2.(i) q
                          with Invalid_argument s ->
                            assert (String.compare s "index out of bounds" = 0);
-                           if !dsimplex then fprintf fmt "L%d out of bounds@." ld;
+                           if !dsimplex then
+                             fprintf fmt "L%d out of bounds@." ld;
                            try
                              let rhs = List.assoc i rr.ctx in
                              subst_spec cost q rhs
 
                            with Not_found -> () (*vaut zero ? assert false*)
                        with Not_found ->
-                         if !dsimplex then fprintf fmt "L%d associe a RIEN@." ld
+                         if !dsimplex then
+                           fprintf fmt "L%d associe a RIEN@." ld
                      end;
 
                   )rr.distr;
@@ -1042,7 +1050,8 @@ module Simplex (C : Coef_Type) = struct
                 (* XXX *)
                 let res =
                   Core_Simplex.solve cost rr.ctx rr.distr (rr.order, []) in
-                let res = Core_Simplex.result_extraction rr.distr rr.order res in
+                let res =
+                  Core_Simplex.result_extraction rr.distr rr.order res in
                 (*XXX*Timer.Simplex_main.stop();*)
                 res
 
