@@ -19,7 +19,7 @@ let translate_right_assoc f id params =
         f id.p t acc
       ) t l
 
-let rec translate_chainable_assoc f id params =
+let translate_chainable_assoc f id params =
   match params with
   | [] | [_] -> assert false
   | a::b::l ->
@@ -62,9 +62,22 @@ let rec get_sort pars s =
     let id = Smtlib_typed_env.get_identifier id in
     mk_external_type s.p (List.map (get_sort pars) sl) id.c
 
+let better_num_of_string s =
+  begin match String.split_on_char '.' s with
+    | [n] | [n;""] -> Num.num_of_string n
+    | [n; d] ->
+      let l = String.length d in
+      let n = if (String.length n) = 0 then Num.Int 0
+        else Num.num_of_string n in
+      let d = Num.num_of_string d in
+      let e = Num.power_num (Num.Int 10) (Num.Int l) in
+      Num.add_num n (Num.div_num d e)
+    | _ -> assert false
+  end
+
 let translate_constant cst loc =
   match cst with
-  | Const_Dec(s) -> mk_real_const loc (Num.num_of_string s)
+  | Const_Dec(s) -> mk_real_const loc (better_num_of_string s)
   | Const_Num(s) -> mk_int_const loc s
   | Const_Str(s) -> assert false (* to do *)
   | Const_Hex(s) -> mk_int_const loc s
@@ -97,14 +110,14 @@ let translate_identifier id params raw_params =
     let f = match raw_params with
       | [] -> assert false
       | par :: _ ->
-        if Smtlib_ty.is_bool par.ty then mk_iff
+        if Smtlib_ty.is_bool (Smtlib_ty.shorten par.ty) then mk_iff
         else mk_pred_eq
     in
     translate_chainable_assoc f name params
-
   | "=>" -> translate_right_assoc mk_implies name params
   | "and" -> translate_left_assoc mk_and name params
   | "or" -> translate_left_assoc mk_or name params
+  | "xor" -> translate_left_assoc mk_xor name params
   | "ite" -> begin
       match params with
       | [b;e1;e2] -> mk_ite name.p b e1 e2
@@ -132,18 +145,49 @@ let translate_identifier id params raw_params =
     else
       mk_application name.p name.c params
 
-let translate_qual_identifier qid params =
+let translate_qual_identifier qid params raw_params=
   match qid.c with
-  | QualIdentifierId(id) -> translate_identifier id params
-  | QualIdentifierAs(id,sort) -> translate_identifier id params (* to check *)
+  | QualIdentifierId(id) -> translate_identifier id params raw_params, None
+  | QualIdentifierAs(id,sort) ->
+    translate_identifier id params raw_params, Some sort
 
-let rec translate_term pars term =
+let rec translate_key_term pars acc k =
+  match k.c with
+  | Pattern(term_list) ->
+    let tl = List.map (translate_term pars) term_list in
+    (tl, false) :: acc
+  | Named(symb) ->
+    if Options.verbose () then
+      Printf.eprintf "[Warning] (! :named not yet supported)\n%!";
+    acc
+
+and translate_quantif f svl pars t =
+  match t.c with
+  | TermExclimationPt(term,key_term_list) ->
+    let triggers = List.fold_left (fun acc key_term ->
+        translate_key_term pars acc key_term
+      ) [] key_term_list in
+    f t.p svl triggers [] (translate_term pars term)
+  | _ -> f t.p svl [] [] (translate_term pars t)
+
+and translate_term pars term =
   match term.c with
   | TermSpecConst(cst) -> translate_constant cst term.p
-  | TermQualIdentifier(qid) -> translate_qual_identifier qid [] []
+  | TermQualIdentifier(qid) ->
+    let q,s = translate_qual_identifier qid [] [] in
+    begin
+      match s with
+      | None -> q
+      | Some s -> mk_type_cast term.p q (get_sort pars s)
+    end
   | TermQualIdTerm(qid,term_list) ->
     let params = List.map (translate_term pars) term_list in
-    translate_qual_identifier qid params term_list
+    let q,s = translate_qual_identifier qid params term_list in
+    begin
+      match s with
+      | None -> q
+      | Some s -> mk_type_cast term.p q (get_sort pars s)
+    end
   | TermLetTerm(varbinding_list,term) ->
     List.fold_left (fun t varbinding ->
         let s,term = varbinding.c in
@@ -152,29 +196,31 @@ let rec translate_term pars term =
   | TermForAllTerm(sorted_var_list,t) ->
     let svl = List.map (fun sv ->
         let v,s = sv.c in
-        v.c, "", get_sort pars s
+        v.c, v.c, get_sort pars s
       ) sorted_var_list in
-    mk_forall term.p svl [] [] (translate_term pars t)
-  | TermExistsTerm(sorted_var_list,term) ->
+    translate_quantif mk_forall svl pars t
+  | TermExistsTerm(sorted_var_list,t) ->
     let svl = List.map (fun sv ->
         let v,s = sv.c in
         v.c, "", get_sort pars s
       ) sorted_var_list in
-    mk_exists term.p svl [] [] (translate_term pars term)
+    translate_quantif mk_exists svl pars t
   | TermExclimationPt(term,key_term_list) ->
-    if Options.verbose () then
-      Printf.eprintf "[Warning] (! :pattern and :named not yet supported)\n%!";
     translate_term pars term
   | TermMatch(term,pattern_term_list) -> assert false
 
 let translate_assert_term at =
-  let t = match at.c with
-    | Assert_dec(term) -> translate_term [] term
-    | Assert_dec_par(pars,term) ->
-      let pars = List.map (fun par -> par.c) pars in
-      translate_term pars term
-  in
-  mk_generic_axiom at.p "a" t
+  match at.c with
+  | Assert_dec(term) -> translate_term [] term
+  | Assert_dec_par(pars,term) ->
+    let pars = List.map (fun par -> par.c) pars in
+    translate_term pars term
+
+let translate_goal at =
+  mk_goal at.p "g" (translate_assert_term at)
+
+let translate_assert at =
+  mk_generic_axiom at.p "a" (translate_assert_term at)
 
 (* get_sort_id s sl@pars *)
 
@@ -211,14 +257,23 @@ let translate_fun_def fun_def =
 let translate_fun_def fun_def term =
   let symb,params,ret,pars = translate_fun_def fun_def in
   let t_expr = translate_term pars term in
-  mk_function_def symb.p (symb.c,symb.c) params ret t_expr
+  if Smtlib_ty.is_bool (Smtlib_ty.shorten term.ty) then
+    mk_non_ground_predicate_def  symb.p (symb.c,symb.c) params t_expr
+  else mk_function_def symb.p (symb.c,symb.c) params ret t_expr
 
 let translate_command acc command =
   match command.c with
   | Cmd_Assert(assert_term) ->
-    (translate_assert_term assert_term) :: acc
-  | Cmd_CheckSat -> (mk_goal command.p "g" (mk_false_const command.p)) :: acc
-  | Cmd_CheckSatAssum prop_lit_list  -> assert false
+    (translate_assert assert_term) :: acc
+  | Cmd_CheckEntailment(assert_term) ->
+    Options.set_unsat_mode false;
+    (translate_goal assert_term) :: acc
+  | Cmd_CheckSat ->
+    Options.set_unsat_mode true;
+    (mk_goal command.p "g" (mk_false_const command.p)) :: acc
+  | Cmd_CheckSatAssum prop_lit_list  ->
+    Options.set_unsat_mode true;
+    assert false
   | Cmd_DeclareConst(symbol,const_dec) ->
     (translate_decl_fun symbol [] (translate_const_dec const_dec)) :: acc
   | Cmd_DeclareDataType(symbol,datatype_dec) -> assert false
