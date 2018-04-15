@@ -213,7 +213,6 @@ and type_term (env,locals,dums) t =
 let get_term (env,locals) term =
   match term.c with
   | Assert_dec t ->
-    print_term t.c;
     let ty,dums = type_term (env,locals,[]) t in
     check_if_escaped dums;
     ty
