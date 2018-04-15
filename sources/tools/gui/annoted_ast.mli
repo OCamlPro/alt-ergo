@@ -110,7 +110,7 @@ and at_desc =
   | ATset of aterm * aterm * aterm
   | ATextract of aterm * aterm * aterm
   | ATconcat of aterm * aterm
-  | ATlet of Symbols.t * aterm * aterm
+  | ATlet of (Symbols.t * aterm) list * aterm
   | ATdot of aterm * Hstring.t
   | ATrecord of (Hstring.t * aterm) list
   | ATnamed of Hstring.t * aterm
@@ -145,7 +145,8 @@ and aform =
   | AFop of aoplogic * aform annoted list
   | AFforall of aquant_form annoted
   | AFexists of aquant_form annoted
-  | AFlet of (Symbols.t * Ty.t) list * Symbols.t * atlet_kind * aform annoted
+  | AFlet of
+      (Symbols.t * Ty.t) list * (Symbols.t * atlet_kind) list * aform annoted
   | AFnamed of Hstring.t * aform annoted
 
 and atlet_kind =

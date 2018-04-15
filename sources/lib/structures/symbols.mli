@@ -78,7 +78,7 @@ val print_clean : Format.formatter -> t -> unit
 
 val dummy : t
 
-val fresh : string -> t
+val fresh : ?mk_var:bool -> string -> t
 
 val is_get : t -> bool
 val is_set : t -> bool

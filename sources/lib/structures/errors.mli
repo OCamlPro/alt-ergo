@@ -56,6 +56,7 @@ type error =
   | ShouldHaveTypeProp
   | NoRecordType of Hstring.t
   | DuplicateLabel of Hstring.t
+  | DuplicatePattern of string
   | WrongLabel of Hstring.t * Ty.t
   | WrongNumberOfLabels
   | Notrigger

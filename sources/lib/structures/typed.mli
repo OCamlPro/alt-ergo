@@ -62,7 +62,7 @@ and 'a tt_desc =
   | TTconcat of ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
   | TTdot of ('a tterm, 'a) annoted * Hstring.t
   | TTrecord of (Hstring.t * ('a tterm, 'a) annoted) list
-  | TTlet of Symbols.t * ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
+  | TTlet of (Symbols.t * ('a tterm, 'a) annoted) list * ('a tterm, 'a) annoted
   | TTnamed of Hstring.t * ('a tterm, 'a) annoted
 
 type 'a tatom =
@@ -94,8 +94,8 @@ and 'a tform =
   | TFop of oplogic * (('a tform, 'a) annoted) list
   | TFforall of 'a quant_form
   | TFexists of 'a quant_form
-  | TFlet of (Symbols.t * Ty.t) list * Symbols.t *
-             'a tlet_kind * ('a tform, 'a) annoted
+  | TFlet of (Symbols.t * Ty.t) list *
+             (Symbols.t * 'a tlet_kind) list * ('a tform, 'a) annoted
   | TFnamed of Hstring.t * ('a tform, 'a) annoted
 
 and 'a tlet_kind =

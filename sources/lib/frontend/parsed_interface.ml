@@ -253,8 +253,8 @@ let mk_application loc app args =
 let mk_ite loc cond th el =
   mk_localized loc (PPif (cond, th, el))
 
-let mk_let loc var  e1 e2 =
-  mk_localized loc (PPlet (var, e1, e2))
+let mk_let loc binders e =
+  mk_localized loc (PPlet (binders, e))
 
 let mk_void loc =
   mk_localized loc (PPconst ConstVoid)

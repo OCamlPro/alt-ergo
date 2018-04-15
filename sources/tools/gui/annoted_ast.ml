@@ -121,7 +121,7 @@ and at_desc =
   | ATset of aterm * aterm * aterm
   | ATextract of aterm * aterm * aterm
   | ATconcat of aterm * aterm
-  | ATlet of Symbols.t * aterm * aterm
+  | ATlet of (Symbols.t * aterm) list * aterm
   | ATdot of aterm * Hstring.t
   | ATrecord of (Hstring.t * aterm) list
   | ATnamed of Hstring.t * aterm
@@ -158,7 +158,8 @@ and aform =
   | AFop of aoplogic * aform annoted list
   | AFforall of aquant_form annoted
   | AFexists of aquant_form annoted
-  | AFlet of (Symbols.t * Ty.t) list * Symbols.t * atlet_kind * aform annoted
+  | AFlet of
+      (Symbols.t * Ty.t) list * (Symbols.t * atlet_kind) list * aform annoted
   | AFnamed of Hstring.t * aform annoted
 
 and atlet_kind =
@@ -416,9 +417,18 @@ and findin_at_desc tag buffer = function
   | ATconst _
   | ATvar _ -> None
   | ATapp (s, atl) -> findin_aterm_list tag buffer atl
-  | ATinfix (t1, _, t2) | ATget (t1,t2)
-  | ATconcat (t1, t2) | ATlet (_, t1, t2) ->
+  | ATinfix (t1, _, t2) | ATget (t1,t2) | ATconcat (t1, t2) ->
     let r = findin_aterm tag buffer t1 in
+    if r == None then findin_aterm tag buffer t2
+    else r
+  | ATlet (l , t2) ->
+    let r =
+      List.fold_left
+        (fun r (_, t) ->
+           if r == None then findin_aterm tag buffer t
+           else r
+        )None l
+    in
     if r == None then findin_aterm tag buffer t2
     else r
   | ATdot (t, _) | ATprefix (_,t) -> findin_aterm tag buffer t
@@ -480,10 +490,16 @@ and findin_aform tag buffer parent aform =
       if goodbuf && c = 0 then Some (QF qf)
       else if goodbuf && c > 0 then None
       else findin_quant_form tag buffer parent qf.c
-    | AFlet (vs, s, t, aaf) ->
-      let r = match t with
-        | ATletTerm t -> findin_aterm tag buffer t.c
-        | ATletForm f -> findin_aform tag buffer parent f.c
+    | AFlet (vs, l , aaf) ->
+      let r =
+        List.fold_left
+          (fun r (_,e) ->
+             if r == None then
+               match e with
+               | ATletTerm t -> findin_aterm tag buffer t.c
+               | ATletForm f -> findin_aform tag buffer parent f.c
+             else r
+          ) None l
       in
       if r == None then findin_aaform tag buffer parent aaf
       else r
@@ -672,9 +688,8 @@ and print_tt_desc fmt = function
     fprintf fmt "%a %a %a" print_tterm t1 Symbols.print_clean s print_tterm t2
   | TTprefix (s, t) ->
     fprintf fmt "%a %a" Symbols.print_clean s print_tterm t
-  | TTlet (s, t1, t2) ->
-    fprintf fmt "let %a = %a in %a"
-      Symbols.print_clean s print_tterm t1 print_tterm t2
+  | TTlet (binders , t2) ->
+    fprintf fmt "let %a in %a" print_term_binders binders print_tterm t2
   | TTconcat (t1, t2) ->
     fprintf fmt "%a@%a" print_tterm t1 print_tterm t2
   | TTextract (t, t1, t2) ->
@@ -697,6 +712,14 @@ and print_tt_desc fmt = function
 
   | TTmapsTo(x,e) ->
     fprintf fmt "%s |-> %a" (Hstring.view x) print_term e
+
+and print_term_binders fmt l =
+  match l with
+  | [] -> assert false
+  | (sy, t) :: l ->
+    fprintf fmt "%a = %a" Symbols.print_clean sy print_term t;
+    List.iter (fun (sy, t) ->
+        fprintf fmt ",\n%a = %a" Symbols.print_clean sy print_term t) l
 
 let print_tatom fmt a = match a.Typed.c with
   | TAtrue -> fprintf fmt "true"
@@ -750,13 +773,23 @@ and print_tform2 fmt f = match f.Typed.c with
   | TFop (op, tfl) -> print_tform_list op fmt tfl
   | TFforall qf -> fprintf fmt "forall %a" print_quant_form qf
   | TFexists qf -> fprintf fmt "exists %a" print_quant_form qf
-  | TFlet (vs, s, TletTerm t, tf) ->
-    fprintf fmt "let %a = %a in\n %a"
-      Symbols.print_clean s print_tterm t print_tform tf
-  | TFlet (vs, s, TletForm g, tf) ->
-    fprintf fmt "let %a = %a in\n %a"
-      Symbols.print_clean s print_tform g print_tform tf
+  | TFlet (vs, binders, tf) ->
+    fprintf fmt "let %a in\n %a" print_mixed_binders binders print_tform tf
   | TFnamed (_, tf) -> print_tform fmt tf
+
+and print_mixed_binders =
+  let aux fmt e =
+    match e with
+    | TletTerm t -> fprintf fmt "%a" print_term t
+    | TletForm f -> fprintf fmt "%a" print_tform2 f
+  in fun fmt binders ->
+    match binders with
+    | [] -> assert false
+    | (sy, e) :: l ->
+      fprintf fmt "%a = %a" Symbols.print_clean sy aux e;
+      List.iter (fun (sy, e) ->
+          fprintf fmt ",\n%a = %a" Symbols.print_clean sy aux e) l
+
 
 and print_tform fmt f = fprintf fmt " (id:%d)%a" f.Typed.annot print_tform2 f
 
@@ -883,9 +916,14 @@ and make_dep_at_desc d ex dep = function
     let dep = make_dep_aterm d ex dep t1 in
     let dep = make_dep_aterm d ex dep t2 in
     make_dep_aterm d ex dep t3
-  | ATlet (s, t1, t2) ->
-    let dep = make_dep_string d ex dep (Symbols.to_string_clean s) in
-    let dep = make_dep_aterm d ex dep t1 in
+  | ATlet (l, t2) ->
+    let dep =
+      List.fold_left
+        (fun dep (s, t1) ->
+           let dep = make_dep_string d ex dep (Symbols.to_string_clean s) in
+           make_dep_aterm d ex dep t1
+        )dep l
+    in
     make_dep_aterm d ex dep t2
   | ATdot (t, c) ->
     let dep = make_dep_string d ex dep (Hstring.view c) in
@@ -923,10 +961,14 @@ and make_dep_aform d ex dep = function
     List.fold_left (make_dep_aaform d ex) dep afl
   | AFforall qf -> make_dep_quant_form d ex dep qf.c
   | AFexists qf -> make_dep_quant_form d ex dep qf.c
-  | AFlet (vs, s, t, aaf) ->
-    let dep = match t with
-      | ATletTerm t -> make_dep_aterm d ex dep t.c
-      | ATletForm f -> make_dep_aform d ex dep f.c
+  | AFlet (vs, l , aaf) ->
+    let dep =
+      List.fold_left
+        (fun dep (_, e) ->
+           match e with
+           | ATletTerm t -> make_dep_aterm d ex dep t.c
+           | ATletForm f -> make_dep_aform d ex dep f.c
+        )dep l
     in
     make_dep_aaform d ex dep aaf
   | AFnamed (_, aaf) ->
@@ -991,7 +1033,7 @@ and of_tt_desc (buffer:sbuffer) = function
   | TTextract (t, t1, t2) ->
     ATextract (of_tterm buffer t, of_tterm buffer t1, of_tterm buffer t2)
   | TTconcat (t1, t2) -> ATconcat (of_tterm buffer t1, of_tterm buffer t2)
-  | TTlet (s, t1, t2) -> ATlet (s, of_tterm buffer t1, of_tterm buffer t2)
+  | TTlet (l, t2) -> ATlet (of_term_binders buffer l, of_tterm buffer t2)
   | TTdot (t, c) -> ATdot (of_tterm buffer t, c)
   | TTrecord r -> ATrecord (List.map (fun (c,t) -> (c, of_tterm buffer t)) r)
   | TTnamed (lbl, t) -> ATnamed (lbl, of_tterm buffer t)
@@ -1004,7 +1046,8 @@ and of_tt_desc (buffer:sbuffer) = function
       of_tterm buffer j,
       ub
     )
-
+and of_term_binders buffer l =
+  List.rev_map (fun (s, t) -> s, of_tterm buffer t) (List.rev l)
 
 let of_tatom (buffer:sbuffer) a = match a.Typed.c with
   | TAtrue -> AAtrue
@@ -1034,7 +1077,7 @@ let rec change_polarity_aform f =
     | AFforall aaqf | AFexists aaqf ->
       aaqf.polarity <- not aaqf.polarity;
       change_polarity_aform aaqf.c.aqf_form
-    | AFlet (_,_,_,af) | AFnamed (_, af) -> change_polarity_aform af
+    | AFlet (_,_,af) | AFnamed (_, af) -> change_polarity_aform af
 
 
 let rec of_quant_form (buffer:sbuffer)
@@ -1062,10 +1105,10 @@ and of_tform (buffer:sbuffer) f = match f.Typed.c with
     AFop (of_oplogic buffer  op, afl)
   | TFforall qf -> AFforall (annot_of_quant_form buffer qf f.Typed.annot)
   | TFexists qf -> AFexists (annot_of_quant_form buffer qf f.Typed.annot)
-  | TFlet (vs, s, TletTerm t, tf) ->
-    AFlet (vs, s, ATletTerm (annot_of_tterm buffer t), annot_of_tform buffer tf)
-  | TFlet (vs, s, TletForm g, tf) ->
-    AFlet (vs, s, ATletForm (annot_of_tform buffer g), annot_of_tform buffer tf)
+
+  | TFlet (vs, l, tf) ->
+    AFlet (vs, (annot_of_mixed_binders buffer l), annot_of_tform buffer tf)
+
   | TFnamed (n, tf) ->
     AFnamed (n, annot_of_tform buffer tf)
 
@@ -1073,6 +1116,13 @@ and annot_of_tform (buffer:sbuffer) t =
   let ptag = tag buffer in
   let c = of_tform buffer t in
   new_annot buffer c t.Typed.annot ptag
+
+and annot_of_mixed_binders buffer l =
+  List.rev_map
+    (fun (sy, e) -> match e with
+       | TletTerm t -> sy, ATletTerm (annot_of_tterm buffer t)
+       | TletForm f -> sy, ATletForm (annot_of_tform buffer f)
+    )(List.rev l)
 
 let rec annot_of_typed_decl (buffer:sbuffer) td =
   let ptag = tag buffer in
@@ -1130,7 +1180,7 @@ and to_tt_desc = function
   | ATextract (t1, t2, t3) ->
     TTextract (to_tterm 0 t1, to_tterm 0 t2, to_tterm 0 t3)
   | ATconcat (t1, t2) -> TTconcat (to_tterm 0 t1, to_tterm 0 t2)
-  | ATlet (s, t1, t2) -> TTlet (s, to_tterm 0 t1, to_tterm 0 t2)
+  | ATlet (l, t2) -> TTlet (to_tterm_binders l, to_tterm 0 t2)
   | ATdot (t, c) -> TTdot (to_tterm 0 t, c)
   | ATrecord r -> TTrecord (List.map (fun (c, t) -> (c, to_tterm 0 t)) r)
   | ATnamed (lbl, t) -> TTnamed (lbl, to_tterm 0 t)
@@ -1143,6 +1193,9 @@ and to_tt_desc = function
       to_tterm 0 j,
       ub
     )
+
+and to_tterm_binders l =
+  List.rev_map (fun (sy, t) -> sy, to_tterm 0 t) (List.rev l)
 
 let to_tatom aa id =
   let c = match aa with
@@ -1200,14 +1253,21 @@ and void_to_tform af id =
       end
     | AFforall qf -> TFforall (to_quant_form qf.c)
     | AFexists qf -> TFexists (to_quant_form qf.c)
-    | AFlet (vs, s, ATletTerm t, aaf) ->
-      TFlet (vs, s, TletTerm (to_tterm 0 t.c), to_tform aaf)
-    | AFlet (vs, s, ATletForm t, aaf) ->
-      TFlet (vs, s, TletForm (to_tform t), to_tform aaf)
+
+    | AFlet (vs, l, aaf) ->
+      TFlet (vs, to_mixed_expr l, to_tform aaf)
+
     | AFnamed (n, aaf) -> TFnamed (n, to_tform aaf)
   in
   { Typed.c = c;
     Typed.annot = id }
+
+and to_mixed_expr l =
+  List.rev_map
+    (fun (sy, e) -> match e with
+       | ATletTerm t -> sy, TletTerm (to_tterm 0 t.c)
+       | ATletForm f -> sy, TletForm (to_tform f)
+    )(List.rev l)
 
 and to_tform aaf = void_to_tform aaf.c aaf.id
 
@@ -1363,10 +1423,9 @@ and add_at_desc_at (buffer:sbuffer) tags iter at =
       add_aterm_at buffer tags iter t1;
       append_buf buffer ~iter ~tags "@";
       add_aterm_at buffer tags iter t2
-    | ATlet (s, t1, t2) ->
-      append_buf buffer ~iter ~tags
-	(sprintf "let %s = " (Symbols.to_string_clean s));
-      add_aterm_at buffer tags iter t1;
+    | ATlet (l, t2) ->
+      append_buf buffer ~iter ~tags "let ";
+      add_term_binders_to_buf buffer tags iter l;
       append_buf buffer ~iter ~tags " in ";
       add_aterm_at buffer tags iter t2
     | ATdot (t, c) ->
@@ -1392,6 +1451,20 @@ and add_at_desc_at (buffer:sbuffer) tags iter at =
       append_buf buffer ~iter ~tags " , ";
       add_aterm_at buffer tags iter t3;
       append_buf buffer ~iter ~tags (if ub then "[" else "]")
+
+and add_term_binders_to_buf buffer tags iter l =
+  match l with
+  | [] -> assert false
+  | (sy, t) :: l ->
+    append_buf buffer ~tags (sprintf "%s = " (Symbols.to_string_clean sy));
+
+    add_aterm_at buffer tags iter t;
+    List.iter
+      (fun (sy, t) ->
+         append_buf buffer ~tags
+           (sprintf ", %s = " (Symbols.to_string_clean sy));
+         add_aterm_at buffer tags iter t;
+      )l
 
 let add_aatom (buffer:sbuffer) indent tags aa =
   append_indent buffer indent;
@@ -1550,14 +1623,9 @@ and add_aform errors (buffer:sbuffer) indent tags
       let offset = buffer#end_iter#line_offset in
       append_buf buffer ~tags "exists ";
       add_quant_form errors buffer indent offset tags qf
-    | AFlet (vs, s, t, aaf) ->
-      append_buf buffer ~tags
-	(sprintf "let %s = " (Symbols.to_string_clean s));
-      begin
-        match t with
-        | ATletTerm t -> add_aterm buffer tags t.c
-        | ATletForm f -> add_aform errors buffer indent tags f.c
-      end;
+    | AFlet (vs, l, aaf) ->
+      append_buf buffer ~tags (sprintf "let ");
+      add_mixed_binders_to_buf buffer errors indent tags l;
       append_buf buffer ~tags " in";
       append_buf buffer "\n";
       append_indent buffer indent;
@@ -1566,6 +1634,23 @@ and add_aform errors (buffer:sbuffer) indent tags
       append_buf buffer ~tags (sprintf "%s: " (Hstring.view n));
       add_aform errors buffer indent tags ?parent_op aaf.c
 
+and add_mixed_binders_to_buf buffer errors indent tags l =
+  let aux t =
+    match t with
+    | ATletTerm t -> add_aterm buffer tags t.c
+    | ATletForm f -> add_aform errors buffer indent tags f.c
+  in
+  match l with
+  | [] -> assert false
+  | (sy, t) :: l ->
+    append_buf buffer ~tags (sprintf "%s = " (Symbols.to_string_clean sy));
+    aux t;
+    List.iter
+      (fun (sy, t) ->
+         append_buf buffer ~tags
+           (sprintf ", %s = " (Symbols.to_string_clean sy));
+         aux t;
+      )l
 
 and add_aaform_list
     errors (buffer:sbuffer) indent tags ?parent_op op l =
@@ -1754,9 +1839,10 @@ let rec isin_aterm sl { at_desc = at_desc } =
       List.mem (Symbols.to_string_clean sy) sl
     | ATapp (sy, atl) ->
       List.mem (Symbols.to_string_clean sy) sl || isin_aterm_list sl atl
-    | ATinfix (t1, _, t2) | ATget (t1,t2)
-    | ATconcat (t1, t2) | ATlet (_, t1, t2) ->
+    | ATinfix (t1, _, t2) | ATget (t1,t2) | ATconcat (t1, t2) ->
       isin_aterm sl t1 || isin_aterm sl t2
+    | ATlet (l, t2) ->
+      isin_aterm sl t2 || List.exists (fun (_,t1) -> isin_aterm sl t1) l
     | ATdot (t, _ ) | ATprefix (_,t) | ATnamed (_, t)
     | ATmapsTo (_, t) -> isin_aterm sl t
     | ATset (t1, t2, t3) | ATextract (t1, t2, t3)
@@ -1777,9 +1863,12 @@ and findtags_aaterm sl aat acc =
     | ATapp (sy, atl) ->
       if List.mem (Symbols.to_string_clean sy) sl || isin_aterm_list sl atl
       then aat.tag::acc else acc
-    | ATinfix (t1, _, t2) | ATget (t1,t2)
-    | ATconcat (t1, t2) | ATlet (_, t1, t2) ->
+    | ATinfix (t1, _, t2) | ATget (t1,t2) | ATconcat (t1, t2) ->
       if isin_aterm sl t1 || isin_aterm sl t2 then aat.tag::acc else acc
+    | ATlet (l, t2) ->
+      if isin_aterm sl t2 || List.exists (fun (_,t1) -> isin_aterm sl t1) l
+      then aat.tag::acc
+      else acc
     | ATdot (t, _) | ATprefix (_,t) | ATnamed (_, t)
     | ATmapsTo (_, t) ->
       if isin_aterm sl t then aat.tag::acc else acc
@@ -1830,12 +1919,14 @@ and findtags_aform sl aform acc =
     | AFop (op, afl) -> findtags_aaform_list sl afl acc
     | AFforall qf
     | AFexists qf -> findtags_quant_form sl qf.c acc
-    | AFlet (vs, sy, t, aaf) ->
-        (* let acc = findtags_aterm sl t acc in *)
-      let s = Symbols.to_string_clean sy in
+    | AFlet (vs, l, aaf) ->
       let sl =
         List.fold_left
-          (fun l s' -> if Pervasives.(=) s' s then l else s'::l) [] sl
+          (fun sl (sy, _) ->
+             let s = Symbols.to_string_clean sy in
+             List.fold_left
+               (fun l s' -> if Pervasives.(=) s' s then l else s'::l) [] sl
+          )sl l
       in
       findtags_aform sl aaf.c acc
     | AFnamed (_, aaf) ->
@@ -1902,9 +1993,11 @@ let rec listsymbols at acc =
     | ATapp (sy, atl) ->
       List.fold_left (fun acc at -> listsymbols at acc)
 	((Symbols.to_string_clean sy)::acc) atl
-    | ATinfix (t1, _, t2) | ATget (t1,t2)
-    | ATconcat (t1, t2) | ATlet (_, t1, t2) ->
+    | ATinfix (t1, _, t2) | ATget (t1,t2) | ATconcat (t1, t2) ->
       listsymbols t1 (listsymbols t2 acc)
+    | ATlet (l, t2) ->
+      List.fold_left (fun acc (_,t1) -> listsymbols t1 acc)
+        (listsymbols t2 acc) l
     | ATdot (t, _) | ATprefix (_,t) | ATnamed (_, t) -> listsymbols t acc
     | ATset (t1, t2, t3) | ATextract (t1, t2, t3)  ->
       listsymbols t1 (listsymbols t2 (listsymbols t3 acc))
@@ -1929,10 +2022,15 @@ and listsymbols_aform af acc =
     List.fold_left (fun acc (aatl ,_) ->
         List.fold_left (fun acc aat -> listsymbols aat.c acc) acc aatl
       ) acc aqf.c.aqf_triggers
-  | AFlet (_, _, ATletTerm at, aaf) ->
-    listsymbols_aform aaf.c (listsymbols at.c acc)
-  | AFlet (_, _, ATletForm at, aaf) ->
-    listsymbols_aform aaf.c (listsymbols_aform at.c acc)
+
+  | AFlet (_, l, aaf) ->
+    List.fold_left
+      (fun acc (_,e) ->
+         match e with
+         | ATletTerm at -> listsymbols at.c acc
+         | ATletForm at -> listsymbols_aform at.c acc
+      ) (listsymbols_aform aaf.c acc) l
+
   | AFnamed (_, aaf) -> listsymbols_aform aaf.c acc
 
 and listsymbols_atom a acc =
@@ -2005,7 +2103,7 @@ let rec findproof_aform ids af acc depth found =
 	  findproof_aaform ids aaf acc depth found)
 	(acc,found) aaqf.c.aqf_hyp in
       findproof_aaform ids aaqf.c.aqf_form acc depth found
-    | AFlet (_,_,_, aaf) | AFnamed (_, aaf) ->
+    | AFlet (_,_, aaf) | AFnamed (_, aaf) ->
       findproof_aaform ids aaf acc depth found
 
 and findproof_aaform ids aaf acc depth found =
@@ -2059,7 +2157,7 @@ let rec find_line_id_aform id af =
     | AFforall aaqf | AFexists aaqf ->
       if aaqf.id = id then raise (FoundLine (aaqf.line, aaqf.tag))
       else find_line_id_aaform id aaqf.c.aqf_form
-    | AFlet (_,_,_, aaf) | AFnamed (_, aaf) ->
+    | AFlet (_,_, aaf) | AFnamed (_, aaf) ->
       find_line_id_aaform id aaf
 
 and find_line_id_aaform id aaf =
@@ -2140,7 +2238,7 @@ let rec findbyid_aform id af =
       List.iter (findbyid_aaform id) aaqf.c.aqf_hyp;
       if aaqf.id = id then raise (Foundannot (QF aaqf))
       else findbyid_aaform id aaqf.c.aqf_form
-    | AFlet (_,_,_, aaf) | AFnamed (_, aaf) ->
+    | AFlet (_,_, aaf) | AFnamed (_, aaf) ->
       findbyid_aaform id aaf
 
 and findbyid_aaform id aaf =

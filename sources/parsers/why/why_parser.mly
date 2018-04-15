@@ -309,14 +309,18 @@ lexpr:
 | name = STRING COLON e = lexpr %prec prec_named
    { mk_named ($startpos, $endpos) name e }
 
-| LET binder = ident EQUAL e1 = lexpr IN e2 = lexpr
-   { mk_let ($startpos, $endpos) binder e1 e2 }
+| LET binders = let_binders IN e2 = lexpr
+   { mk_let ($startpos, $endpos) binders e2 }
 
 | CHECK e = lexpr
    { mk_check ($startpos, $endpos) e }
 
 | CUT e = lexpr
    { mk_cut ($startpos, $endpos) e }
+
+let_binders:
+| binder = ident EQUAL e = lexpr { [binder, e] }
+| binder = ident EQUAL e = lexpr COMMA l = let_binders { (binder, e) :: l }
 
 simple_expr :
 | i = INTEGER { mk_int_const ($startpos, $endpos) i }

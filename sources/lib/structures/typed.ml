@@ -66,7 +66,7 @@ and 'a tt_desc =
   | TTconcat of ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
   | TTdot of ('a tterm, 'a) annoted * Hstring.t
   | TTrecord of (Hstring.t * ('a tterm, 'a) annoted) list
-  | TTlet of Symbols.t * ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
+  | TTlet of (Symbols.t * ('a tterm, 'a) annoted) list * ('a tterm, 'a) annoted
   | TTnamed of Hstring.t * ('a tterm, 'a) annoted
 
 type 'a tatom =
@@ -98,8 +98,8 @@ and 'a tform =
   | TFop of oplogic * (('a tform, 'a) annoted) list
   | TFforall of 'a quant_form
   | TFexists of 'a quant_form
-  | TFlet of (Symbols.t * Ty.t) list * Symbols.t *
-             'a tlet_kind * ('a tform, 'a) annoted
+  | TFlet of (Symbols.t * Ty.t) list *
+             (Symbols.t * 'a tlet_kind) list * ('a tform, 'a) annoted
   | TFnamed of Hstring.t * ('a tform, 'a) annoted
 
 and 'a tlet_kind =
@@ -180,8 +180,8 @@ let rec print_term fmt t = match t.c.tt_desc with
     List.iter
       (fun (s, t) -> fprintf fmt "%s = %a" (Hstring.view s) print_term t) l;
     fprintf fmt " }"
-  | TTlet (s, t1, t2) ->
-    fprintf fmt "let %a=%a in %a" Symbols.print s print_term t1 print_term t2
+  | TTlet (binders, t2) ->
+    fprintf fmt "let %a in %a" print_term_binders binders print_term t2
   | TTnamed (lbl, t) ->
     fprintf fmt "%a" print_term t
 
@@ -196,6 +196,13 @@ let rec print_term fmt t = match t.c.tt_desc with
   | TTmapsTo(x,e) ->
     fprintf fmt "%s |-> %a" (Hstring.view x) print_term e
 
+and print_term_binders fmt l =
+  match l with
+  | [] -> assert false
+  | (sy, t) :: l ->
+    fprintf fmt "%a = %a" Symbols.print sy print_term t;
+    List.iter (fun (sy, t) ->
+        fprintf fmt ", %a = %a" Symbols.print sy print_term t) l
 
 and print_term_list fmt = List.iter (fprintf fmt "%a," print_term)
 

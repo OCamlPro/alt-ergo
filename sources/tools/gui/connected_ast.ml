@@ -249,7 +249,7 @@ let rec list_uquant_vars_in_form = function
     if not aqf.polarity then
       aqf.c.aqf_bvars@l
     else l
-  | AFlet (upvars, s, at, aaf) ->
+  | AFlet (upvars, _, aaf) ->
     list_uquant_vars_in_form aaf.c
   | AFnamed (_, aaf) ->
     list_uquant_vars_in_form aaf.c
@@ -260,7 +260,7 @@ let rec list_vars_in_form = function
     List.fold_left (fun l aaf -> l@(list_vars_in_form aaf.c)) [] aafl
   | AFforall aqf | AFexists aqf ->
     aqf.c.aqf_bvars@(list_vars_in_form aqf.c.aqf_form.c)
-  | AFlet (upvars, s, at, aaf) ->
+  | AFlet (upvars, _, aaf) ->
     list_vars_in_form aaf.c
   | AFnamed (_, aaf) ->
     list_vars_in_form aaf.c
@@ -288,10 +288,14 @@ let rec is_quantified_term vars at =
       is_quantified_term vars at1
       || is_quantified_term vars at2
       || is_quantified_term vars at3
-    | ATlet (s', at1, at2) ->
+    | ATlet (l, at2) ->
       let nvars =
-	List.filter (fun (s'',_) -> not (Symbols.equal s' s'')) vars in
-      is_quantified_term vars at1
+        List.fold_left
+          (fun vars (s', _) ->
+	     List.filter (fun (s'',_) -> not (Symbols.equal s' s'')) vars
+          )vars l
+      in
+      List.exists (fun (_, at1) -> is_quantified_term vars at1) l
       || is_quantified_term nvars at2
     | ATrecord r ->
       List.fold_left
@@ -320,7 +324,7 @@ let rec aterm_used_vars goal_vars at =
        with Not_found ->  [])
     | ATapp (_, atl) ->
       List.fold_left (fun l at -> aterm_used_vars goal_vars at @ l) [] atl
-    | ATdot (at, _) | ATprefix (_, at) | ATlet (_, _, at) | ATnamed (_, at)
+    | ATdot (at, _) | ATprefix (_, at) | ATlet (_, at) | ATnamed (_, at)
     | ATmapsTo (_, at) ->
       aterm_used_vars goal_vars at
     | ATinfix (at1, _, at2) | ATget (at1, at2) | ATconcat (at1, at2) ->
@@ -389,7 +393,7 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
       let add_lets afc lets =
 	List.fold_left
 	  (fun af (u, s, at) ->
-	    new_annot buffer (AFlet (u, s, ATletTerm at, af))
+	    new_annot buffer (AFlet (u, [s, ATletTerm at], af))
 	      (Typechecker.new_id ()) (tag buffer))
 	  afc lets in
       if nbv == [] then (add_lets aform lets).c, ve, goal_used
@@ -433,12 +437,12 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
 	  ve, goal_used
 	| _ -> assert false)
 
-    | AFlet (uv, s, at, aaf), _ ->
+    | AFlet (uv, l, aaf), _ ->
       let naaf, ve, goal_used =
 	unquantify_aform buffer tyenv vars_entries used_vars goal_vars
 	  aaf.c aaf.polarity
       in
-      AFlet (List.filter (fun v -> not (List.mem v used_vars)) uv, s, at, naaf),
+      AFlet (List.filter (fun v -> not (List.mem v used_vars)) uv, l, naaf),
       ve, goal_used
 
     | AFnamed (n, aaf), _ ->
@@ -494,7 +498,7 @@ let rec least_nested_form used_vars af =
 	) [] used_vars in
       if not_covered == [] then Exists aqf.c.aqf_form
       else least_nested_form not_covered aqf.c.aqf_form
-    | _, AFlet (upvars, s, at, af) ->
+    | _, AFlet (upvars, _, af) ->
       least_nested_form used_vars af
     | _, AFnamed (_, af) ->
       least_nested_form used_vars af
@@ -851,9 +855,11 @@ and connect_at_desc env sbuf = function
   | ATconst _ | ATvar _ -> ()
   | ATapp (s, atl) -> connect_aterm_list env sbuf atl
   | ATinfix (t1, _, t2) | ATget (t1, t2)
-  | ATconcat (t1, t2) | ATlet (_, t1, t2) ->
+  | ATconcat (t1, t2) ->
     connect_aterm env sbuf t1;
     connect_aterm env sbuf t2
+  | ATlet (l, t2) ->
+    List.iter (fun (_, t1) -> connect_aterm env sbuf t1) l;
   | ATdot (t, _) | ATprefix (_, t) | ATnamed (_, t)
   | ATmapsTo (_, t) ->
     connect_aterm env sbuf t
@@ -896,11 +902,12 @@ and connect_aform env sbuf = function
   | AFexists aqf ->
     connect_trigger_tag env sbuf aqf.tag aqf.id;
     connect_quant_form env sbuf aqf.c
-  | AFlet (vs, s, ATletTerm t, aaf) ->
-    connect_aterm env sbuf t.c;
-    connect_aform env sbuf aaf.c
-  | AFlet (vs, s, ATletForm f, aaf) ->
-    connect_aform env sbuf f.c;
+  | AFlet (vs, l, aaf) ->
+    List.iter (fun (_,e) ->
+        match e with
+        | ATletTerm t -> connect_aterm env sbuf t.c
+        | ATletForm f -> connect_aform env sbuf f.c
+      ) l;
     connect_aform env sbuf aaf.c
   | AFnamed (_, aaf) ->
     connect_aform env sbuf aaf.c
