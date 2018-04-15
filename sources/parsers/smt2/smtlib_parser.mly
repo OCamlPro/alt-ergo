@@ -319,7 +319,6 @@ commands:
     | EOF              { [] }
     | command commands { $1::$2 }
 
-
 %%
  let aux aux_fun token lexbuf =
    try
