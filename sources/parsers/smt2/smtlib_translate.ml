@@ -239,8 +239,12 @@ let translate_assert_term at =
 let translate_goal at =
   mk_goal at.p "g" (translate_assert_term at)
 
-let translate_assert at =
-  mk_generic_axiom at.p "a" (translate_assert_term at)
+let translate_assert =
+  let cpt = ref 0 in
+  fun at ->
+    incr cpt;
+    let name = Printf.sprintf "ax__%d" !cpt in
+    mk_generic_axiom at.p name (translate_assert_term at)
 
 (* get_sort_id s sl@pars *)
 
