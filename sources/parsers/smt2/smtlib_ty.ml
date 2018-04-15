@@ -59,17 +59,19 @@ module SMap = Map.Make(String)
 
 let rec shorten ty =
   match ty.desc with
-  | TLink(t) -> ty.desc <- (shorten t).desc;ty
+  | TLink(t) -> shorten t
   | _ -> ty
 
 let rec fun_ret ty =
-  match ty.desc with
-  | TLink(t) -> fun_ret t
+  match (shorten ty).desc with
   | TFun(_,ret) -> ret
   | _ -> ty
 
 let is_bool ty =
-  ty.desc == TBool
+  (shorten ty).desc == TBool
+
+let is_dummy ty =
+  (shorten ty).desc == TDummy
 
 let rec inst links m t =
   try m, IMap.find t.id m
@@ -153,14 +155,14 @@ let rec unify t1 t2 pos =
   (* Printf.printf "Unification de (%s) et (%s) \n%!" (to_string t1) (to_string t2); *)
   if t1.id <> t2.id then
     begin  match t1.desc, t2.desc with
-      | TDummy, TDummy -> ()
+      | TLink(t), _ -> unify (shorten t) t2 pos
+      | _, TLink(t) -> unify t1 (shorten t) pos
+      | TDummy, TDummy -> t1.desc <- (TLink t2)
       | TDummy, _ -> t1.desc <- (TLink(shorten t2))
       | _, TDummy -> t2.desc <- (TLink(shorten t1))
       | TVar(s1), TVar(s2) ->
         if t1.id <> t2.id then
           (error (Type_clash_error( to_string t1, to_string t2)) pos)
-      | TLink(t), _ -> unify (shorten t) t2 pos
-      | _, TLink(t) -> unify t1 (shorten t) pos
       | TInt, TInt | TReal, TReal | TBool, TBool | TString, TString -> ()
       | TInt, TReal | TReal, TInt ->
         assert false

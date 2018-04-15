@@ -44,6 +44,7 @@ let get_sort_symb s pars =
   | "Int" -> int_type
   | "Bool" -> bool_type
   | "Real" -> real_type
+  | "Array" -> mk_external_type s.p [] "farray"
   | _ ->
     if List.mem s.c pars then
       mk_var_type s.p s.c
@@ -60,7 +61,9 @@ let rec get_sort pars s =
   | SortIdentifier s -> get_sort_id s pars
   | SortIdMulti(id,sl) ->
     let id = Smtlib_typed_env.get_identifier id in
-    mk_external_type s.p (List.map (get_sort pars) sl) id.c
+    match id.c with
+    | "Array" -> mk_external_type s.p (List.map (get_sort pars) sl) "farray"
+    | _ ->  mk_external_type s.p (List.map (get_sort pars) sl) id.c
 
 let better_num_of_string s =
   begin match String.split_on_char '.' s with
@@ -78,7 +81,10 @@ let better_num_of_string s =
 let translate_constant cst loc =
   match cst with
   | Const_Dec(s) -> mk_real_const loc (better_num_of_string s)
-  | Const_Num(s) -> mk_int_const loc s
+  | Const_Num(s) ->
+    if Smtlib_error.get_is_real () then
+      mk_real_const loc (better_num_of_string s)
+    else mk_int_const loc s
   | Const_Str(s) -> assert false (* to do *)
   | Const_Hex(s) -> mk_int_const loc s
   | Const_Bin(s) -> mk_int_const loc s
@@ -88,7 +94,11 @@ let translate_identifier id params raw_params =
   match name.c with
   | "true" -> mk_true_const name.p
   | "false" -> mk_false_const name.p
-  | "+" -> translate_left_assoc mk_add name params
+  | "+" -> begin
+      match params with
+      | [p] -> p
+      | _ -> translate_left_assoc mk_add name params
+    end
   | "-" -> begin
       match params with
       | [t] -> mk_minus name.p t
@@ -115,14 +125,24 @@ let translate_identifier id params raw_params =
     in
     translate_chainable_assoc f name params
   | "=>" -> translate_right_assoc mk_implies name params
-  | "and" -> translate_left_assoc mk_and name params
-  | "or" -> translate_left_assoc mk_or name params
-  | "xor" -> translate_left_assoc mk_xor name params
-  | "ite" -> begin
+  | "and" -> begin
       match params with
-      | [b;e1;e2] -> mk_ite name.p b e1 e2
-      | _ -> assert false
+      | [p] -> p
+      | _ -> translate_left_assoc mk_and name params
     end
+  | "or" -> begin
+      match params with
+      | [p] -> p
+      | _ -> translate_left_assoc mk_or name params
+    end
+  | "xor" -> translate_left_assoc mk_xor name params
+  | "ite" ->
+    assert false
+    (* begin
+     *   match params with
+     *   | [b;e1;e2] -> mk_ite name.p b e1 e2
+     *   | _ -> assert false
+     * end *)
   | "not" -> begin
       match params with
       | [t] -> mk_not name.p t
@@ -189,10 +209,11 @@ and translate_term pars term =
       | Some s -> mk_type_cast term.p q (get_sort pars s)
     end
   | TermLetTerm(varbinding_list,term) ->
-    List.fold_left (fun t varbinding ->
-        let s,term = varbinding.c in
-        mk_let s.p s.c (translate_term pars term) t
-      ) (translate_term pars term) (List.rev varbinding_list)
+    assert false;
+    (* List.fold_left (fun t varbinding ->
+     *     let s,term = varbinding.c in
+     *     mk_let s.p s.c (translate_term pars term) t
+     *   ) (translate_term pars term) (List.rev varbinding_list) *)
   | TermForAllTerm(sorted_var_list,t) ->
     let svl = List.map (fun sv ->
         let v,s = sv.c in
@@ -314,16 +335,12 @@ let translate_command acc command =
 let file_parser commands =
   Smtlib_typing.typing commands;
 
-  if Options.verbose () then
-    Printf.printf "Smt Typing OK \n%!";
-
-  (* Smtlib_printer.print commands; *)
-
-  let l = List.fold_left translate_command [] (List.rev commands) in
-
- if Options.verbose () then
-   Printf.printf "Conversion OK \n%!";
- l
+  if Options.type_smt2 () then
+    []
+  else begin
+    let l = List.fold_left translate_command [] (List.rev commands) in
+    l
+  end
 
 let lexpr_parser l = assert false
 let trigger_parser t = assert false

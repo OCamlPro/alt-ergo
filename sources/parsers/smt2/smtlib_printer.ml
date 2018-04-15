@@ -20,7 +20,7 @@ let print_identifier id =
 let rec print_sort s =
   match s.c with
   | SortIdentifier id ->
-    if print_ty then
+    if true || print_ty then
       sprintf "%s:%s" (print_identifier id) (to_string s.ty)
     else
       (print_identifier id)
@@ -49,23 +49,26 @@ and print_var_bindings varbindings =
   List.fold_left (fun acc varbinding -> sprintf "%s %s" acc (print_var_binding varbinding.c)) "" varbindings
 
 and print_term t =
-  match t.c with
-  | TermSpecConst cst -> print_constant cst
-  | TermQualIdentifier qid -> print_qualid qid
-  | TermQualIdTerm (qid,tl) ->
-    let tl = List.map print_term tl in
-    sprintf "(%s %s)" (print_qualid qid) (String.concat " " tl)
-  | TermLetTerm (varbinding_list,term) ->
-    sprintf "(let (%s) %s)" (print_var_bindings varbinding_list) (print_term term)
-  | TermForAllTerm (sorted_vars,term) ->
-    sprintf "(forall (%s) %s)" (print_sorted_vars sorted_vars) (print_term term)
-  | TermExistsTerm (sorted_vars,term) ->
-    sprintf "(exists (%s) %s)" (print_sorted_vars sorted_vars) (print_term term)
-  | TermExclimationPt (term,key_term_list) -> (print_term term)
-  | TermMatch (term,pattern_term_list) -> assert false
+  let s =
+    match t.c with
+    | TermSpecConst cst -> print_constant cst
+    | TermQualIdentifier qid -> print_qualid qid
+    | TermQualIdTerm (qid,tl) ->
+      let tl = List.map print_term tl in
+      sprintf "(%s %s)" (print_qualid qid) (String.concat " " tl)
+    | TermLetTerm (varbinding_list,term) ->
+      sprintf "(let (%s) %s)" (print_var_bindings varbinding_list) (print_term term)
+    | TermForAllTerm (sorted_vars,term) ->
+      sprintf "(forall (%s) %s)" (print_sorted_vars sorted_vars) (print_term term)
+    | TermExistsTerm (sorted_vars,term) ->
+      sprintf "(exists (%s) %s)" (print_sorted_vars sorted_vars) (print_term term)
+    | TermExclimationPt (term,key_term_list) -> (print_term term)
+    | TermMatch (term,pattern_term_list) -> assert false
+  in
+  sprintf "%s:%s " s ((to_string t.ty))
 
 and print_pars pars =
-  List.fold_left (fun acc par -> sprintf "%s %s" acc par.c) "" pars
+  List.fold_left (fun acc par -> sprintf "%s %s:%s" acc par.c (to_string par.ty)) "" pars
 
 and print_sorts sorts =
   List.fold_left (fun acc sort -> sprintf "%s %s" acc (print_sort sort)) "" sorts

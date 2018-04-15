@@ -25,15 +25,18 @@ let () =
     [ ":all-statistics", ALLSTATS;
       ":assertion-stack-levels", ASSERTIONSTACKLVL;
       ":authors", AUTHORS;
+      ":author", AUTHORS;
       ":axioms", AXIOMS;
       ":category",CATEGORY;
       ":definition", DEFINITIO;
       ":diagnostic-output-channel", DIAGNOOUTPUTCHAN;
+      ":difficulty", DIFFICULTY;
       ":error-behavior", ERRORBEHAV;
       ":extensions",EXTENSIONS;
       ":funs",FUNS;
       ":funs-description",FUNSDESCRIPT;
       ":global-declarations", GLOBALDECLARATIONS;
+      ":instance", INSTANCE;
       ":interactive-mode", INTERACTIVE;
       ":language",LANGUAGE;
       ":license", LICENSE;
@@ -52,6 +55,7 @@ let () =
       ":reason-unknown",REASONUNKNOWN;
       ":reproducible-ressource-limit",RESSOURCELIMIT;
       ":regular-output-channel",REGULAROUTPUTCHAN;
+      ":series",SERIES;
       ":smt-lib-version",SMTLIBVERSION;
       ":sorts",SORTS;
       ":sorts-description",SORTSDESCRIPTION;

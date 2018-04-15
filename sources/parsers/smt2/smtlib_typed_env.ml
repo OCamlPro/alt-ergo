@@ -1,6 +1,14 @@
 open Smtlib_error
 module SMap = Map.Make(String)
 
+let init len f =
+  let rec init_aux i n f =
+    if i >= n then []
+    else
+      let r = f i in
+      r :: init_aux (i+1) n f
+  in init_aux 0 len f
+
 type assoc =
   | Right
   | Left
@@ -64,7 +72,7 @@ let get_identifier id =
 let check_identifier id arit =
 match id.c with
   | IdSymbol(symb) -> assert (arit = 0);
-  | IdUnderscoreSymNum(symb,index_list) -> assert (0 = List.compare_length_with index_list arit)
+  | IdUnderscoreSymNum(symb,index_list) -> assert (List.length index_list = arit)
 
 (******************************************************************************)
 (*********************************** Sorts ************************************)
@@ -81,9 +89,9 @@ let check_sort_exist (env,locals) symb =
 
 let mk_sort_definition arit_s arit_t is_dt =
   if is_dt then
-    ((arit_s,arit_t),(fun s (l,_) -> assert (0 = List.compare_length_with l arit_s); Smtlib_ty.TDatatype(s,l)))
+    ((arit_s,arit_t),(fun s (l,_) -> assert (List.length l = arit_s); Smtlib_ty.TDatatype(s,l)))
   else
-    ((arit_s,arit_t),(fun s (l,_) -> assert (0 = List.compare_length_with l arit_s); Smtlib_ty.TSort(s,l)))
+    ((arit_s,arit_t),(fun s (l,_) -> assert (List.length l =  arit_s); Smtlib_ty.TSort(s,l)))
 
 let mk_sort (env,locals) symb sort_def =
   check_sort_already_exist (env,locals) symb;
@@ -108,7 +116,7 @@ let rec find_sort_symb (env,locals) symb pars =
   try SMap.find symb.c locals
   with Not_found ->
     let (arit_s,arit_t),fun_sort = find_sort_def env symb in
-    assert (0 = List.compare_length_with pars arit_s);
+    assert (List.length pars = arit_s);
     Smtlib_ty.new_type (fun_sort symb.c (pars,[]))
 
 and find_sort (env,locals) sort =
@@ -133,14 +141,13 @@ let extract_arit_ty_assoc ty =
 let rec compare_fun_assoc (env,locals) symb ty f assoc =
   let arit,t_fun = extract_arit_ty_assoc ty in
   let _,t_fun = Smtlib_ty.inst locals Smtlib_ty.IMap.empty t_fun in
-  let params = List.init arit (fun i -> t_fun) in
+  let params = init arit (fun i -> t_fun) in
   let ret =
     match assoc with
     | Right | Left -> t_fun
     | Chainable | Pairwise -> Smtlib_ty.new_type (Smtlib_ty.TBool)
   in
   let def = Smtlib_ty.new_type (TFun (params,ret)) in
-  let _,ty = Smtlib_ty.inst locals Smtlib_ty.IMap.empty ty in
   let _,def = Smtlib_ty.inst SMap.empty Smtlib_ty.IMap.empty def in
   Smtlib_ty.unify ty def symb.p;
   Some (Smtlib_ty.fun_ret ty)
@@ -154,7 +161,6 @@ and compare_fun_def (env,locals) symb ty funs =
         match def.assoc with
         | None ->
           let def = def.params in
-          let _,ty = Smtlib_ty.inst locals Smtlib_ty.IMap.empty ty in
           let _,def = Smtlib_ty.inst locals Smtlib_ty.IMap.empty def in
           Smtlib_ty.unify ty def symb.p;
           Some (Smtlib_ty.fun_ret ty)
@@ -198,9 +204,13 @@ let add_fun_def (env,locals) ?(init=false) name params return assoc =
 
 let mk_fun_dec (env,locals) (name,pars,return) =
   let pars = List.map (fun par ->
-      find_sort (env,locals) par) pars in
-  let return = find_sort (env,locals) return in
-  add_fun_def (env,locals) name pars return
+      let s = find_sort (env,locals) par in
+      Smtlib_ty.unify par.ty s par.p;
+      s
+    ) pars in
+  let s_return = find_sort (env,locals) return in
+  Smtlib_ty.unify return.ty s_return return.p;
+  add_fun_def (env,locals) name pars s_return
 
 let mk_fun_def (env,locals) (name,params,return) =
   let params = List.map (fun par ->
@@ -222,10 +232,15 @@ let find_simpl_sort_symb (env,locals) symb params =
 (******************************************************************************)
 (*********************************** Datatypes ********************************)
 let extract_pars locals pars =
-  List.fold_left (fun locals par ->
+  let pars = List.fold_left (fun pars par ->
       let symb = par.c in
-      SMap.add symb (Smtlib_ty.new_type (Smtlib_ty.TVar(symb))) locals
-    ) locals pars
+      if SMap.mem symb pars then
+        error (Typing_error ("Type variable already declared : " ^ symb)) par.p;
+      let ty = Smtlib_ty.new_type (Smtlib_ty.TVar(symb)) in
+      Smtlib_ty.unify par.ty ty par.p;
+      SMap.add symb ty pars
+    ) SMap.empty pars; in
+  SMap.union (fun k v1 v2 -> Some v2) locals pars
 
 let mk_const (env,locals) (name,const_dec) =
   match const_dec.c with
@@ -257,7 +272,7 @@ let mk_sort_def (env,locals) symb pars sort =
   let sort =  find_sort (env,locals) sort in
   let arit = List.length pars in
   let sort_def = (arit,0), (fun s (l,_) ->
-      assert (0 = List.compare_length_with l arit);
+      assert (List.length l = arit);
       let links = List.fold_left2 (fun links t1 t2 ->
           let links, t2 = Smtlib_ty.inst locals_old links t2 in
           Smtlib_ty.unify t1 t2 symb.p;
@@ -275,7 +290,7 @@ let mk_sort_def (env,locals) symb pars sort =
 let find_constr env symb =
   try
     let cstrs = SMap.find symb.c env.funs in
-    if (1 = List.compare_length_with cstrs 1) then
+    if (List.length cstrs > 1) then
       error (Typing_error ("Constructor have mutliple signatures : " ^ symb.c)) symb.p;
     (try (List.hd cstrs).params with e ->
        assert false;

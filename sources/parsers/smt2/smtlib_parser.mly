@@ -22,9 +22,9 @@ GETASSERT GETASSIGN GETINFO GETOPTION GETPROOF GETUNSATCORE
 GETVALUE GETMODEL GETUNSATASSUMPTIONS
 SETINFO SETLOGIC SETOPTION
 
-%token ALLSTATS AUTHORS AXIOMS CATEGORY DEFINITIO
+%token ALLSTATS AUTHORS AUTHOR AXIOMS CATEGORY DEFINITIO DIFFICULTY INSTANCE
 DIAGNOOUTPUTCHAN ERRORBEHAV EXTENSIONS FUNS FUNSDESCRIPT GLOBALDECLARATIONS
-INTERACTIVE LANGUAGE LICENSE NAME NAMED NOTES
+INTERACTIVE LANGUAGE LICENSE NAME NAMED NOTES SERIES
 PRODUCEASSERTIONS PRINTSUCCESS PRODUCEUNSATASSUMPTIONS PRODUCEASSIGNEMENT
 PRODUCEMODELS PRODUCEPROOFS PRODUCEUNSATCORES
 RANDOMSEED REASONUNKNOWN REGULAROUTPUTCHAN
@@ -161,7 +161,7 @@ keyword :
     | SMTLIBVERSION {mk_data ($startpos,$endpos) Smtlibversion }
     | SOURCE {mk_data ($startpos,$endpos) Source }
     | STATUTS symbol
-        {Smtlib_error.set_status $2.c;mk_data ($startpos,$endpos) (Statuts $2) }
+        {Util.set_status $2.c;mk_data ($startpos,$endpos) (Statuts $2) }
     | LICENSE {mk_data ($startpos,$endpos) License }
     | NOTES {mk_data ($startpos,$endpos) Notes }
     | AXIOMS {mk_data ($startpos,$endpos) Axioms }
@@ -199,9 +199,13 @@ key_info:
     | ALLSTATS {mk_data ($startpos,$endpos) Allstats }
     | ASSERTIONSTACKLVL {mk_data ($startpos,$endpos) Assertionstacklvl }
     | AUTHORS {mk_data ($startpos,$endpos) Authors }
+    | AUTHOR {mk_data ($startpos,$endpos) Authors }
+    | DIFFICULTY {mk_data ($startpos,$endpos) Difficulty }
     | ERRORBEHAV {mk_data ($startpos,$endpos) Errorbehav }
+    | INSTANCE {mk_data ($startpos,$endpos) Instance }
     | NAME {mk_data ($startpos,$endpos) Name }
     | REASONUNKNOWN {mk_data ($startpos,$endpos) Reasonunknown }
+    | SERIES {mk_data ($startpos,$endpos) Series }
     | VERSION {mk_data ($startpos,$endpos) Version }
     | keyword {mk_data ($startpos,$endpos) (Key_info $1) }
 

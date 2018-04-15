@@ -139,6 +139,7 @@ CMO = lib/util/config.cmo \
       lib/frontend/parsers.cmo \
       parsers/smt2/smtlib_error.cmo \
       parsers/smt2/smtlib_ty.cmo \
+      parsers/smt2/smtlib_printer.cmo \
       parsers/smt2/smtlib_typed_env.cmo \
       parsers/smt2/smtlib_typed_logic.cmo \
       parsers/smt2/smtlib_typing.cmo \
