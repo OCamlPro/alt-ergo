@@ -2,7 +2,10 @@ open Smtlib_typed_env
 open Smtlib_error
 
 type th_def = {
-  sorts : (string * ((int * int) * (string -> (Smtlib_ty.ty list * int list)  -> Smtlib_ty.desc))) list;
+  sorts :
+    (string *
+     ((int * int) *
+      (string -> (Smtlib_ty.ty list * int list)  -> Smtlib_ty.desc))) list;
   funs : (string * (Smtlib_ty.ty list) * Smtlib_ty.ty * assoc option) list
 }
 
@@ -19,60 +22,141 @@ let new_fun name  params return assoc =
   name, params, return, assoc
 
 let core = {
-  sorts = [ "Bool",((0,0),(fun s (l1,l2) -> assert (l1 == [] && l2 == []); Smtlib_ty.TBool))];
+  sorts = [ "Bool",((0,0),(fun s (l1,l2) ->
+      assert (l1 == [] && l2 == []); Smtlib_ty.TBool))];
   funs = [
     new_fun "true" [] (Smtlib_ty.new_type Smtlib_ty.TBool) None;
     new_fun "false" [] (Smtlib_ty.new_type Smtlib_ty.TBool) None;
-    new_fun "not" [(Smtlib_ty.new_type Smtlib_ty.TBool)] (Smtlib_ty.new_type Smtlib_ty.TBool) None;
-    new_fun  "=>" [(Smtlib_ty.new_type Smtlib_ty.TBool); (Smtlib_ty.new_type Smtlib_ty.TBool)] (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Right);
-    new_fun "and" [(Smtlib_ty.new_type Smtlib_ty.TBool); (Smtlib_ty.new_type Smtlib_ty.TBool)] (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Left);
-    new_fun "or" [(Smtlib_ty.new_type Smtlib_ty.TBool); (Smtlib_ty.new_type Smtlib_ty.TBool)] (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Left);
-    new_fun "xor" [(Smtlib_ty.new_type Smtlib_ty.TBool); (Smtlib_ty.new_type Smtlib_ty.TBool)] (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Left);
+    new_fun "not"
+      [(Smtlib_ty.new_type Smtlib_ty.TBool)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) None;
+    new_fun  "=>"
+      [(Smtlib_ty.new_type Smtlib_ty.TBool);
+       (Smtlib_ty.new_type Smtlib_ty.TBool)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Right);
+    new_fun "and"
+      [(Smtlib_ty.new_type Smtlib_ty.TBool);
+       (Smtlib_ty.new_type Smtlib_ty.TBool)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Left);
+    new_fun "or"
+      [(Smtlib_ty.new_type Smtlib_ty.TBool);
+       (Smtlib_ty.new_type Smtlib_ty.TBool)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Left);
+    new_fun "xor"
+      [(Smtlib_ty.new_type Smtlib_ty.TBool);
+       (Smtlib_ty.new_type Smtlib_ty.TBool)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Left);
     (let a = Smtlib_ty.new_type(TVar("A")) in new_fun "=" [a;a]
       (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable));
     (let a = Smtlib_ty.new_type(TVar("A")) in new_fun "distinct" [a;a]
        (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Pairwise));
-    (let a = Smtlib_ty.new_type(TVar("A")) in new_fun "ite" [(Smtlib_ty.new_type Smtlib_ty.TBool); a; a] a None);
+    (let a = Smtlib_ty.new_type(TVar("A")) in new_fun "ite"
+       [(Smtlib_ty.new_type Smtlib_ty.TBool); a; a] a None);
   ]
 }
 
 let ints = {
-  sorts = ["Int",((0,0),(fun s (l1,l2) -> assert (l1 == [] && l2 == []); Smtlib_ty.TInt))];
+  sorts = ["Int",((0,0),(fun s (l1,l2) ->
+      assert (l1 == [] && l2 == []); Smtlib_ty.TInt))];
   funs = [
-    new_fun "-" [(Smtlib_ty.new_type Smtlib_ty.TInt)] (Smtlib_ty.new_type Smtlib_ty.TInt) None;
-    new_fun "-" [(Smtlib_ty.new_type Smtlib_ty.TInt); (Smtlib_ty.new_type Smtlib_ty.TInt)] (Smtlib_ty.new_type Smtlib_ty.TInt) (Some Left);
-    new_fun "+" [(Smtlib_ty.new_type Smtlib_ty.TInt); (Smtlib_ty.new_type Smtlib_ty.TInt)] (Smtlib_ty.new_type Smtlib_ty.TInt) (Some Left);
-    new_fun "*" [(Smtlib_ty.new_type Smtlib_ty.TInt); (Smtlib_ty.new_type Smtlib_ty.TInt)] (Smtlib_ty.new_type Smtlib_ty.TInt) (Some Left);
-    new_fun "div" [(Smtlib_ty.new_type Smtlib_ty.TInt); (Smtlib_ty.new_type Smtlib_ty.TInt)] (Smtlib_ty.new_type Smtlib_ty.TInt) (Some Left);
-    new_fun "mod" [(Smtlib_ty.new_type Smtlib_ty.TInt); (Smtlib_ty.new_type Smtlib_ty.TInt)] (Smtlib_ty.new_type Smtlib_ty.TInt) None;
-    new_fun "abs" [(Smtlib_ty.new_type Smtlib_ty.TInt)] (Smtlib_ty.new_type Smtlib_ty.TInt) None;
-    new_fun "<=" [(Smtlib_ty.new_type Smtlib_ty.TInt); (Smtlib_ty.new_type Smtlib_ty.TInt)] (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
-    new_fun "<" [(Smtlib_ty.new_type Smtlib_ty.TInt); (Smtlib_ty.new_type Smtlib_ty.TInt)] (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
-    new_fun ">=" [(Smtlib_ty.new_type Smtlib_ty.TInt); (Smtlib_ty.new_type Smtlib_ty.TInt)] (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
-    new_fun ">" [(Smtlib_ty.new_type Smtlib_ty.TInt); (Smtlib_ty.new_type Smtlib_ty.TInt)] (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
+    new_fun "-"
+      [(Smtlib_ty.new_type Smtlib_ty.TInt)]
+      (Smtlib_ty.new_type Smtlib_ty.TInt) None;
+    new_fun "-"
+      [(Smtlib_ty.new_type Smtlib_ty.TInt);
+       (Smtlib_ty.new_type Smtlib_ty.TInt)]
+      (Smtlib_ty.new_type Smtlib_ty.TInt) (Some Left);
+    new_fun "+"
+      [(Smtlib_ty.new_type Smtlib_ty.TInt);
+       (Smtlib_ty.new_type Smtlib_ty.TInt)]
+      (Smtlib_ty.new_type Smtlib_ty.TInt) (Some Left);
+    new_fun "*"
+      [(Smtlib_ty.new_type Smtlib_ty.TInt);
+       (Smtlib_ty.new_type Smtlib_ty.TInt)]
+      (Smtlib_ty.new_type Smtlib_ty.TInt) (Some Left);
+    new_fun "div"
+      [(Smtlib_ty.new_type Smtlib_ty.TInt);
+       (Smtlib_ty.new_type Smtlib_ty.TInt)]
+      (Smtlib_ty.new_type Smtlib_ty.TInt) (Some Left);
+    new_fun "mod"
+      [(Smtlib_ty.new_type Smtlib_ty.TInt);
+       (Smtlib_ty.new_type Smtlib_ty.TInt)]
+      (Smtlib_ty.new_type Smtlib_ty.TInt) None;
+    new_fun "abs"
+      [(Smtlib_ty.new_type Smtlib_ty.TInt)]
+      (Smtlib_ty.new_type Smtlib_ty.TInt) None;
+    new_fun "<="
+      [(Smtlib_ty.new_type Smtlib_ty.TInt);
+       (Smtlib_ty.new_type Smtlib_ty.TInt)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
+    new_fun "<"
+      [(Smtlib_ty.new_type Smtlib_ty.TInt);
+       (Smtlib_ty.new_type Smtlib_ty.TInt)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
+    new_fun ">="
+      [(Smtlib_ty.new_type Smtlib_ty.TInt);
+       (Smtlib_ty.new_type Smtlib_ty.TInt)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
+    new_fun ">"
+      [(Smtlib_ty.new_type Smtlib_ty.TInt);
+       (Smtlib_ty.new_type Smtlib_ty.TInt)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
   ]
 }
 
 let reals = {
-  sorts = ["Real",((0,0),(fun s (l1,l2) -> assert (l1 == [] && l2 == []); Smtlib_ty.TReal))];
+  sorts = ["Real",((0,0),(fun s (l1,l2) ->
+      assert (l1 == [] && l2 == []); Smtlib_ty.TReal))];
   funs = [
-    new_fun "-" [(Smtlib_ty.new_type Smtlib_ty.TReal)] (Smtlib_ty.new_type Smtlib_ty.TReal) None;
-    new_fun "-" [(Smtlib_ty.new_type Smtlib_ty.TReal); (Smtlib_ty.new_type Smtlib_ty.TReal)] (Smtlib_ty.new_type Smtlib_ty.TReal) (Some Left);
-    new_fun "+" [(Smtlib_ty.new_type Smtlib_ty.TReal); (Smtlib_ty.new_type Smtlib_ty.TReal)] (Smtlib_ty.new_type Smtlib_ty.TReal) (Some Left);
-    new_fun "*" [(Smtlib_ty.new_type Smtlib_ty.TReal); (Smtlib_ty.new_type Smtlib_ty.TReal)] (Smtlib_ty.new_type Smtlib_ty.TReal) (Some Left);
-    new_fun "/" [(Smtlib_ty.new_type Smtlib_ty.TReal); (Smtlib_ty.new_type Smtlib_ty.TReal)] (Smtlib_ty.new_type Smtlib_ty.TReal) (Some Left);
-    new_fun "<=" [(Smtlib_ty.new_type Smtlib_ty.TReal); (Smtlib_ty.new_type Smtlib_ty.TReal)] (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
-    new_fun "<" [(Smtlib_ty.new_type Smtlib_ty.TReal); (Smtlib_ty.new_type Smtlib_ty.TReal)] (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
-    new_fun ">=" [(Smtlib_ty.new_type Smtlib_ty.TReal); (Smtlib_ty.new_type Smtlib_ty.TReal)] (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
-    new_fun ">" [(Smtlib_ty.new_type Smtlib_ty.TReal); (Smtlib_ty.new_type Smtlib_ty.TReal)] (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
+    new_fun "-"
+      [(Smtlib_ty.new_type Smtlib_ty.TReal)]
+      (Smtlib_ty.new_type Smtlib_ty.TReal) None;
+    new_fun "-"
+      [(Smtlib_ty.new_type Smtlib_ty.TReal);
+       (Smtlib_ty.new_type Smtlib_ty.TReal)]
+      (Smtlib_ty.new_type Smtlib_ty.TReal) (Some Left);
+    new_fun "+"
+      [(Smtlib_ty.new_type Smtlib_ty.TReal);
+       (Smtlib_ty.new_type Smtlib_ty.TReal)]
+      (Smtlib_ty.new_type Smtlib_ty.TReal) (Some Left);
+    new_fun "*"
+      [(Smtlib_ty.new_type Smtlib_ty.TReal);
+       (Smtlib_ty.new_type Smtlib_ty.TReal)]
+      (Smtlib_ty.new_type Smtlib_ty.TReal) (Some Left);
+    new_fun "/"
+      [(Smtlib_ty.new_type Smtlib_ty.TReal);
+       (Smtlib_ty.new_type Smtlib_ty.TReal)]
+      (Smtlib_ty.new_type Smtlib_ty.TReal) (Some Left);
+    new_fun "<="
+      [(Smtlib_ty.new_type Smtlib_ty.TReal);
+       (Smtlib_ty.new_type Smtlib_ty.TReal)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
+    new_fun "<"
+      [(Smtlib_ty.new_type Smtlib_ty.TReal);
+       (Smtlib_ty.new_type Smtlib_ty.TReal)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
+    new_fun ">="
+      [(Smtlib_ty.new_type Smtlib_ty.TReal);
+       (Smtlib_ty.new_type Smtlib_ty.TReal)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
+    new_fun ">"
+      [(Smtlib_ty.new_type Smtlib_ty.TReal);
+       (Smtlib_ty.new_type Smtlib_ty.TReal)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable);
   ]
 }
 let reals_ints = {
   sorts = List.rev_append ints.sorts reals.sorts;
   funs = List.rev_append (List.rev_append ints.funs reals.funs) [
-    new_fun "to_real" [(Smtlib_ty.new_type Smtlib_ty.TInt)] (Smtlib_ty.new_type Smtlib_ty.TReal) None;
-    new_fun "to_int" [(Smtlib_ty.new_type Smtlib_ty.TReal)] (Smtlib_ty.new_type Smtlib_ty.TInt) None;
-    new_fun "is_int" [(Smtlib_ty.new_type Smtlib_ty.TReal)] (Smtlib_ty.new_type Smtlib_ty.TBool) None;
+    new_fun "to_real"
+      [(Smtlib_ty.new_type Smtlib_ty.TInt)]
+      (Smtlib_ty.new_type Smtlib_ty.TReal) None;
+    new_fun "to_int"
+      [(Smtlib_ty.new_type Smtlib_ty.TReal)]
+      (Smtlib_ty.new_type Smtlib_ty.TInt) None;
+    new_fun "is_int"
+      [(Smtlib_ty.new_type Smtlib_ty.TReal)]
+      (Smtlib_ty.new_type Smtlib_ty.TBool) None;
   ] }
 
 let arrays =
@@ -88,7 +172,9 @@ let arrays =
        new_fun "select" [Smtlib_ty.new_type (Smtlib_ty.TArray (x,y));x] y None);
       (let x = Smtlib_ty.new_type(TVar("X")) in
        let y = Smtlib_ty.new_type(TVar("Y")) in
-       new_fun "store" [Smtlib_ty.new_type (Smtlib_ty.TArray (x,y));x;y] (Smtlib_ty.new_type (Smtlib_ty.TArray (x,y))) None);
+       new_fun "store"
+         [Smtlib_ty.new_type (Smtlib_ty.TArray (x,y));x;y]
+         (Smtlib_ty.new_type (Smtlib_ty.TArray (x,y))) None);
     ] }
 
 
@@ -113,7 +199,8 @@ let add_theories env ths c =
       | Ints -> ints.sorts,ints.funs
       | Reals ->
         let sorts = if get_is_real () then
-            ("Int",((0,0),(fun s (l1,l2) -> assert (l1 == [] && l2 == []); Smtlib_ty.TReal)))
+            ("Int",((0,0),(fun s (l1,l2) ->
+                 assert (l1 == [] && l2 == []); Smtlib_ty.TReal)))
             :: reals.sorts
           else reals.sorts
         in
@@ -163,7 +250,8 @@ let set_logic env s =
     set_is_real true;
     theories := Reals :: !theories;
 
-  if all || contains logic "LIRA" || contains logic "LIA" || contains logic "LRA" then
+  if all || contains logic "LIRA" || contains logic "LIA" ||
+     contains logic "LRA" then
     set_is_linear true;
   if contains logic "NIRA" || contains logic "NIA" || contains logic "NRA" then
     set_is_non_linear true;

@@ -27,7 +27,8 @@ let rec print_sort s =
   | SortIdMulti (id,sl) ->
     let sl = List.map print_sort sl in
     if print_ty then
-      sprintf "(%s:%s %s)" (print_identifier id) (to_string s.ty) (String.concat " " sl)
+      sprintf "(%s:%s %s)"
+        (print_identifier id) (to_string s.ty) (String.concat " " sl)
     else
       sprintf "(%s %s)" (print_identifier id) (String.concat " " sl)
 
@@ -46,7 +47,8 @@ let rec print_var_binding (var,bind) =
   sprintf "(%s %s)" var.c (print_term bind)
 
 and print_var_bindings varbindings =
-  List.fold_left (fun acc varbinding -> sprintf "%s %s" acc (print_var_binding varbinding.c)) "" varbindings
+  List.fold_left (fun acc varbinding ->
+      sprintf "%s %s" acc (print_var_binding varbinding.c)) "" varbindings
 
 and print_term t =
   let s =
@@ -57,24 +59,30 @@ and print_term t =
       let tl = List.map print_term tl in
       sprintf "(%s %s)" (print_qualid qid) (String.concat " " tl)
     | TermLetTerm (varbinding_list,term) ->
-      sprintf "(let (%s) %s)" (print_var_bindings varbinding_list) (print_term term)
+      sprintf "(let (%s) %s)"
+        (print_var_bindings varbinding_list) (print_term term)
     | TermForAllTerm (sorted_vars,term) ->
-      sprintf "(forall (%s) %s)" (print_sorted_vars sorted_vars) (print_term term)
+      sprintf "(forall (%s) %s)"
+        (print_sorted_vars sorted_vars) (print_term term)
     | TermExistsTerm (sorted_vars,term) ->
-      sprintf "(exists (%s) %s)" (print_sorted_vars sorted_vars) (print_term term)
+      sprintf "(exists (%s) %s)"
+        (print_sorted_vars sorted_vars) (print_term term)
     | TermExclimationPt (term,key_term_list) -> (print_term term)
     | TermMatch (term,pattern_term_list) -> assert false
   in
   sprintf "%s:%s " s ((to_string t.ty))
 
 and print_pars pars =
-  List.fold_left (fun acc par -> sprintf "%s %s:%s" acc par.c (to_string par.ty)) "" pars
+  List.fold_left (fun acc par ->
+      sprintf "%s %s:%s" acc par.c (to_string par.ty)) "" pars
 
 and print_sorts sorts =
-  List.fold_left (fun acc sort -> sprintf "%s %s" acc (print_sort sort)) "" sorts
+  List.fold_left (fun acc sort ->
+      sprintf "%s %s" acc (print_sort sort)) "" sorts
 
 and print_sorted_vars sorted_vars =
-  List.fold_left (fun acc sort -> sprintf "%s %s" acc (print_sorted_var sort.c)) "" sorted_vars
+  List.fold_left (fun acc sort ->
+      sprintf "%s %s" acc (print_sorted_var sort.c)) "" sorted_vars
 
 
 
@@ -87,17 +95,23 @@ let print_assert t =
 let print_const_dec cst =
   match cst.c with
   | Const_dec_sort s -> print_sort s
-  | Const_dec_par (pars,s) -> sprintf "(par (%s) %s)" (print_pars pars) (print_sort s)
+  | Const_dec_par (pars,s) ->
+    sprintf "(par (%s) %s)" (print_pars pars) (print_sort s)
 
 let print_fun_dec fun_dec =
   match fun_dec.c with
   | Fun_dec (sl,s) -> sprintf "(%s) %s" (print_sorts sl) (print_sort s)
-  | Fun_dec_par (pars,sl,s) -> sprintf "(par (%s) (%s) %s)" (print_pars pars) (print_sorts sl) (print_sort s)
+  | Fun_dec_par (pars,sl,s) ->
+    sprintf "(par (%s) (%s) %s)"
+      (print_pars pars) (print_sorts sl) (print_sort s)
 
 let print_fun_def fun_def =
   match fun_def.c with
-  | Fun_def (symb,svl,s) -> sprintf "%s (%s) %s" symb.c (print_sorted_vars svl) (print_sort s)
-  | Fun_def_par (symb,pars,svl,s) -> sprintf "%s (par (%s) (%s) %s)" symb.c (print_pars pars) (print_sorted_vars svl) (print_sort s)
+  | Fun_def (symb,svl,s) ->
+    sprintf "%s (%s) %s" symb.c (print_sorted_vars svl) (print_sort s)
+  | Fun_def_par (symb,pars,svl,s) ->
+    sprintf "%s (par (%s) (%s) %s)"
+      symb.c (print_pars pars) (print_sorted_vars svl) (print_sort s)
 
 let print_command c =
   match c.c with
@@ -118,10 +132,12 @@ let print_command c =
   | Cmd_DefineFun(fun_def,term) ->
     printf "(define-fun %s %s)\n%!" (print_fun_def fun_def) (print_term term)
   | Cmd_DefineFunRec(fun_def,term) ->
-    printf "(define-fun-rec %s %s)\n%!" (print_fun_def fun_def) (print_term term)
+    printf "(define-fun-rec %s %s)\n%!"
+      (print_fun_def fun_def) (print_term term)
   | Cmd_DefineFunsRec(fun_def_list,term_list) -> assert false
   | Cmd_DefineSort(symbol,symbol_list,sort) ->
-    printf "(define-sort %s (%s) %s)\n" symbol.c (print_pars symbol_list) (print_sort sort)
+    printf "(define-sort %s (%s) %s)\n"
+      symbol.c (print_pars symbol_list) (print_sort sort)
   | Cmd_Echo(attribute_value) -> assert false
   | Cmd_GetAssert -> assert false
   | Cmd_GetProof -> assert false

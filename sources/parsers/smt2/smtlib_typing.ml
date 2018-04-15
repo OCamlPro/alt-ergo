@@ -75,10 +75,16 @@ let check_if_escaped l =
 let type_cst c =
   match c with
   | Const_Dec (s) -> Smtlib_ty.new_type Smtlib_ty.TReal
-  | Const_Num (s) -> Smtlib_ty.new_type (if get_is_real () then Smtlib_ty.TReal else Smtlib_ty.TInt)
+  | Const_Num (s) ->
+    Smtlib_ty.new_type
+      (if get_is_real () then Smtlib_ty.TReal else Smtlib_ty.TInt)
   | Const_Str (s) -> Smtlib_ty.new_type Smtlib_ty.TString
-  | Const_Hex (s) -> Smtlib_ty.new_type (if get_is_real () then Smtlib_ty.TReal else Smtlib_ty.TInt)
-  | Const_Bin (s) -> Smtlib_ty.new_type (if get_is_real () then Smtlib_ty.TReal else Smtlib_ty.TInt)
+  | Const_Hex (s) ->
+    Smtlib_ty.new_type
+      (if get_is_real () then Smtlib_ty.TReal else Smtlib_ty.TInt)
+  | Const_Bin (s) ->
+    Smtlib_ty.new_type
+      (if get_is_real () then Smtlib_ty.TReal else Smtlib_ty.TInt)
 
 let type_qualidentifier (env,locals) q pars =
   match q.c with
@@ -241,7 +247,8 @@ let get_fun_def_locals (env,locals) fun_def =
 let type_command (env,locals) c =
   match c.c with
   | Cmd_Assert(term) | Cmd_CheckEntailment(term) ->
-    Smtlib_ty.unify (Smtlib_ty.new_type Smtlib_ty.TBool) (get_term (env,locals) term) term.p;
+    Smtlib_ty.unify
+      (Smtlib_ty.new_type Smtlib_ty.TBool) (get_term (env,locals) term) term.p;
     env
   | Cmd_CheckSat ->
     if assert_mode then assert false; env
@@ -326,7 +333,8 @@ let typing parsed_ast =
     if not (get_logic ()) then
       try
         let c = List.hd parsed_ast in
-        Smtlib_typed_logic.set_logic (Smtlib_typed_env.empty ()) {c with c="ALL"}
+        Smtlib_typed_logic.set_logic
+          (Smtlib_typed_env.empty ()) {c with c="ALL"}
       with _ -> assert false
     else Smtlib_typed_env.empty ()
   in

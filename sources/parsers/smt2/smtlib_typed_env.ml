@@ -21,7 +21,9 @@ type fun_def = {
 }
 
 type env = {
-  sorts : ((int * int) * (string -> (Smtlib_ty.ty list * int list) -> Smtlib_ty.desc)) SMap.t;
+  sorts : ((int * int) *
+           (string ->
+            (Smtlib_ty.ty list * int list) -> Smtlib_ty.desc)) SMap.t;
   funs : fun_def list SMap.t;
 }
 
@@ -54,7 +56,8 @@ open Smtlib_syntax
 
 let get_arit symb arit =
   try int_of_string arit
-  with  _ -> error (Typing_error "This expression is not an int") symb.Smtlib_syntax.p
+  with  _ ->
+    error (Typing_error "This expression is not an int") symb.Smtlib_syntax.p
 
 let get_index i =
   match i.c with
@@ -72,26 +75,32 @@ let get_identifier id =
 let check_identifier id arit =
 match id.c with
   | IdSymbol(symb) -> assert (arit = 0);
-  | IdUnderscoreSymNum(symb,index_list) -> assert (List.length index_list = arit)
+  | IdUnderscoreSymNum(symb,index_list) ->
+    assert (List.length index_list = arit)
 
 (******************************************************************************)
 (*********************************** Sorts ************************************)
 let check_sort_already_exist (env,locals) symb =
   if SMap.mem symb.c locals then
-    error (Sort_declaration_error ("sort " ^ symb.c ^ " already declared/defined")) symb.p
+    error (Sort_declaration_error
+             ("sort " ^ symb.c ^ " already declared/defined")) symb.p
   else if SMap.mem symb.c env.sorts then
-    error (Sort_declaration_error ("sort " ^ symb.c ^ " already declared/defined")) symb.p
+    error (Sort_declaration_error
+             ("sort " ^ symb.c ^ " already declared/defined")) symb.p
 
 let check_sort_exist (env,locals) symb =
   if not (SMap.mem symb.c locals) then
     if not (SMap.mem symb.c env.sorts) then
-      error (Sort_declaration_error ("sort " ^ symb.c ^ " undeclared/undefined")) symb.p
+      error (Sort_declaration_error
+               ("sort " ^ symb.c ^ " undeclared/undefined")) symb.p
 
 let mk_sort_definition arit_s arit_t is_dt =
   if is_dt then
-    ((arit_s,arit_t),(fun s (l,_) -> assert (List.length l = arit_s); Smtlib_ty.TDatatype(s,l)))
+    ((arit_s,arit_t),(fun s (l,_) ->
+         assert (List.length l = arit_s); Smtlib_ty.TDatatype(s,l)))
   else
-    ((arit_s,arit_t),(fun s (l,_) -> assert (List.length l =  arit_s); Smtlib_ty.TSort(s,l)))
+    ((arit_s,arit_t),(fun s (l,_) ->
+         assert (List.length l =  arit_s); Smtlib_ty.TSort(s,l)))
 
 let mk_sort (env,locals) symb sort_def =
   check_sort_already_exist (env,locals) symb;
@@ -135,7 +144,9 @@ and find_sort (env,locals) sort =
 (************************************ Funs ************************************)
 let extract_arit_ty_assoc ty =
   match ty.Smtlib_ty.desc with
-  | Smtlib_ty.TFun(params,_) -> List.length params, (try List.hd params with _ -> Smtlib_ty.new_type (Smtlib_ty.TDummy))
+  | Smtlib_ty.TFun(params,_) ->
+    List.length params,
+    (try List.hd params with _ -> Smtlib_ty.new_type (Smtlib_ty.TDummy))
   | _ -> assert false
 
 let rec compare_fun_assoc (env,locals) symb ty f assoc =
@@ -177,7 +188,9 @@ let find_fun (env,locals) symb params =
     let res = compare_fun_def (env,locals) symb ty defs in
     match res with
     | Some def -> def
-    | None -> error (Typing_error (Printf.sprintf "Undefined fun definition %s : %s" symb.c (Smtlib_ty.to_string ty))) symb.p
+    | None ->
+      error (Typing_error (Printf.sprintf "Undefined fun definition %s : %s"
+                             symb.c (Smtlib_ty.to_string ty))) symb.p
   with Not_found -> error (Typing_error ("Undefined fun : " ^ symb.c)) symb.p
 
 let check_fun_exists (env,locals) symb params =
@@ -186,7 +199,9 @@ let check_fun_exists (env,locals) symb params =
     let defs = SMap.find symb.c env.funs in
     let res = compare_fun_def (env,locals) symb ty defs in
     match res with
-    | Some _ -> error (Fun_declaration_error ("Function already declared/defined : " ^ symb.c)) symb.p
+    | Some _ ->
+      error (Fun_declaration_error
+               ("Function already declared/defined : " ^ symb.c)) symb.p
     | None -> ()
   with Not_found -> ()
 
@@ -200,7 +215,8 @@ let add_fun_def (env,locals) ?(init=false) name params return assoc =
     try SMap.find name.c env.funs
     with Not_found -> []
   in
-  {env with funs = SMap.add name.c ((mk_fun_ty params return assoc) :: funs) env.funs}
+  {env with funs = SMap.add name.c
+                ((mk_fun_ty params return assoc) :: funs) env.funs}
 
 let mk_fun_dec (env,locals) (name,pars,return) =
   let pars = List.map (fun par ->
@@ -221,13 +237,15 @@ let mk_fun_def (env,locals) (name,params,return) =
 
 let add_funs env funs c =
   List.fold_left (fun env (name,params,return,assoc) ->
-        add_fun_def (env,SMap.empty) ~init:true {c with c=name} params return assoc
+        add_fun_def (env,SMap.empty) ~init:true
+          {c with c=name} params return assoc
     ) env funs
 
 let find_simpl_sort_symb (env,locals) symb params =
   let (ar_s,ar_t),fun_sort = find_sort_def env symb in
   assert (ar_s = (SMap.cardinal params));
-  Smtlib_ty.new_type (fun_sort symb.c ((SMap.fold (fun s t l -> t :: l ) params []),[]))
+  Smtlib_ty.new_type (fun_sort symb.c
+                        ((SMap.fold (fun s t l -> t :: l ) params []),[]))
 
 (******************************************************************************)
 (*********************************** Datatypes ********************************)
@@ -291,11 +309,13 @@ let find_constr env symb =
   try
     let cstrs = SMap.find symb.c env.funs in
     if (List.length cstrs > 1) then
-      error (Typing_error ("Constructor have mutliple signatures : " ^ symb.c)) symb.p;
+      error (Typing_error
+               ("Constructor have mutliple signatures : " ^ symb.c)) symb.p;
     (try (List.hd cstrs).params with e ->
        assert false;
        error (Typing_error ("Undefined Constructor : " ^ symb.c)) symb.p;)
-  with Not_found -> error (Typing_error ("Undefined Constructor : " ^ symb.c)) symb.p
+  with Not_found ->
+    error (Typing_error ("Undefined Constructor : " ^ symb.c)) symb.p
 
 let mk_constr_decs (env,locals) dt dt_sort constr_decs =
   let env = List.fold_left (fun env (symb_cstr,selector_dec_list) ->
@@ -303,14 +323,19 @@ let mk_constr_decs (env,locals) dt dt_sort constr_decs =
         (* Add all destructors *)
         List.fold_left (fun (env,destr_list) (symb_destr,sort_destr) ->
             let return = find_sort (env,locals) sort_destr in
-            let env, l = add_fun_def (env,locals) symb_destr [dt_sort] return None, return :: destr_list in
+            let env, l =
+              add_fun_def (env,locals) symb_destr [dt_sort] return None,
+              return :: destr_list in
             env, l
           ) (env,[]) selector_dec_list in
-      let env = add_fun_def (env,locals) symb_cstr (List.rev destr_list) dt_sort None in
+      let env =
+        add_fun_def (env,locals) symb_cstr (List.rev destr_list) dt_sort None in
 
       (* tester of constructor *)
       let is_cstr = { symb_cstr with c = Printf.sprintf "is %s" symb_cstr.c } in
-      let env = add_fun_def (env,locals) is_cstr [(Smtlib_ty.new_type (Smtlib_ty.TDatatype("",[])))] (Smtlib_ty.new_type Smtlib_ty.TBool) None in
+      let env = add_fun_def (env,locals) is_cstr
+          [(Smtlib_ty.new_type (Smtlib_ty.TDatatype("",[])))]
+          (Smtlib_ty.new_type Smtlib_ty.TBool) None in
       env
     ) env constr_decs
   in
@@ -350,4 +375,3 @@ let mk_datatypes (env,locals) sort_decs datatype_decs =
       mk_dt_dec (env,locals) symb dt_dec
     ) env sort_decs datatype_decs in
   env
-

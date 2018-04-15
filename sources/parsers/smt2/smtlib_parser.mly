@@ -15,7 +15,8 @@
 %token EOF AS EXISTS FORALL  LET LP POP PUSH ECHO RP UNDERSCORE PAR  PATTERN
 MATCH EXCLIMATIONPT
 
-%token ASSERT CHECKSAT EXIT RESET RESETASSERTIONS CHECKSATASSUMING CHECKENTAILMENT
+%token ASSERT CHECKSAT EXIT RESET RESETASSERTIONS CHECKSATASSUMING
+ CHECKENTAILMENT
 DECLAREFUN DECLARESORT DECLARECONST  DECLAREDATATYPES DECLAREDATATYPE
 DEFINEFUN DEFINEFUNREC DEFINEFUNSREC DEFINESORT
 GETASSERT GETASSIGN GETINFO GETOPTION GETPROOF GETUNSATCORE
@@ -89,18 +90,19 @@ index:
 identifier:
     | symbol { mk_data ($startpos,$endpos) (IdSymbol $1) }
     | LP UNDERSCORE symbol nonempty_list(index) RP
-	{ mk_data ($startpos,$endpos) (IdUnderscoreSymNum($3, $4)) }
+      { mk_data ($startpos,$endpos) (IdUnderscoreSymNum($3, $4)) }
 
 prop_literal:
     | symbol
-     	{ mk_data ($startpos,$endpos) (PropLit $1) }
+      { mk_data ($startpos,$endpos) (PropLit $1) }
     | LP symbol symbol RP
-    	{ mk_data ($startpos,$endpos) (if $2.c <> "not" then raise Error; PropLitNot $3) }
+      { mk_data ($startpos,$endpos)
+        (if $2.c <> "not" then raise Error; PropLitNot $3) }
 
 sort:
     | identifier { mk_data ($startpos,$endpos) (SortIdentifier $1) }
     | LP identifier nonempty_list(sort) RP
-	{ mk_data ($startpos,$endpos) (SortIdMulti($2, $3)) }
+      { mk_data ($startpos,$endpos) (SortIdMulti($2, $3)) }
 
 /*************************************************************************/
 attribute_value:
@@ -129,7 +131,7 @@ sorted_var:
 qualidentifier:
     | identifier { mk_data ($startpos,$endpos) (QualIdentifierId $1) }
     | LP AS identifier sort RP
-	{ mk_data ($startpos,$endpos) (QualIdentifierAs($3, $4)) }
+      { mk_data ($startpos,$endpos) (QualIdentifierAs($3, $4)) }
 
 pattern:
     | symbol { mk_data ($startpos,$endpos) (PatternSymb $1) }
@@ -143,17 +145,17 @@ term:
     | constant { mk_data ($startpos,$endpos) (TermSpecConst $1) }
     | qualidentifier { mk_data ($startpos,$endpos) (TermQualIdentifier $1) }
     | LP qualidentifier nonempty_list(term) RP
-	{ mk_data ($startpos,$endpos) (TermQualIdTerm ($2, $3)) }
+       { mk_data ($startpos,$endpos) (TermQualIdTerm ($2, $3)) }
     | LP LET LP nonempty_list(varbinding) RP term RP
-	{ mk_data ($startpos,$endpos) (TermLetTerm ($4, $6)) }
+       { mk_data ($startpos,$endpos) (TermLetTerm ($4, $6)) }
     | LP FORALL LP nonempty_list(sorted_var) RP term RP
-	{ mk_data ($startpos,$endpos) (TermForAllTerm ($4, $6)) }
+       { mk_data ($startpos,$endpos) (TermForAllTerm ($4, $6)) }
     | LP EXISTS LP nonempty_list(sorted_var) RP term RP
-	{ mk_data ($startpos,$endpos) (TermExistsTerm ($4, $6)) }
+       { mk_data ($startpos,$endpos) (TermExistsTerm ($4, $6)) }
     | LP MATCH term LP nonempty_list(match_case) RP RP
-	{ mk_data ($startpos,$endpos) (TermMatch ($3, $5)) }
+       { mk_data ($startpos,$endpos) (TermMatch ($3, $5)) }
     | LP EXCLIMATIONPT term list(key_term) RP
-	{ mk_data ($startpos,$endpos) (TermExclimationPt ($3, $4)) }
+       { mk_data ($startpos,$endpos) (TermExclimationPt ($3, $4)) }
 
 /** keyword *******************************************/
 keyword :
@@ -184,7 +186,8 @@ key_option:
     | PRODUCEASSIGNEMENT {mk_data ($startpos,$endpos) Produceassignement }
     | PRODUCEMODELS {mk_data ($startpos,$endpos) Producemodels }
     | PRODUCEPROOFS {mk_data ($startpos,$endpos) Produceproofs }
-    | PRODUCEUNSATASSUMPTIONS {mk_data ($startpos,$endpos) Produceunsatassumptions }
+    | PRODUCEUNSATASSUMPTIONS
+      {mk_data ($startpos,$endpos) Produceunsatassumptions }
     | PRODUCEUNSATCORES {mk_data ($startpos,$endpos) Produceunsatcores }
     | RANDOMSEED {mk_data ($startpos,$endpos) Randomseed }
     | REGULAROUTPUTCHAN {mk_data ($startpos,$endpos) Regularoutputchan }
@@ -210,7 +213,8 @@ key_info:
     | keyword {mk_data ($startpos,$endpos) (Key_info $1) }
 
 key_term:
-    | PATTERN LP nonempty_list(term) RP { mk_data ($startpos,$endpos) (Pattern $3) }
+    | PATTERN LP nonempty_list(term) RP
+      { mk_data ($startpos,$endpos) (Pattern $3) }
     | NAMED symbol { mk_data ($startpos,$endpos) (Named $2) }
 
 /*** Datatypes ************************************************************/
@@ -317,7 +321,8 @@ command:
     | LP SETINFO attribute RP
         {mk_data ($startpos,$endpos) (Cmd_SetInfo $3) }
     | LP SETLOGIC symbol RP
-        {Smtlib_error.set_logic true; mk_data ($startpos,$endpos) (Cmd_SetLogic $3) }
+        {Smtlib_error.set_logic true;
+         mk_data ($startpos,$endpos) (Cmd_SetLogic $3) }
     | LP SETOPTION option RP
         {mk_data ($startpos,$endpos) (Cmd_SetOption $3) }
 

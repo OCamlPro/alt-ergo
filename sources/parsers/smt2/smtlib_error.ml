@@ -79,7 +79,8 @@ let print fmt f e p =
   | Quantifier_error s -> fprintf fmt "Quantifier error : %s \n" s
   | Ambiguity_error s -> fprintf fmt "Ambiguity error : %s \n" s
   | No_match_error s -> fprintf fmt "No match for : %s\n" s
-  | Type_clash_error(t1,t2) -> fprintf fmt "Clash type between : %s / %s \n" t1 t2
+  | Type_clash_error(t1,t2) ->
+    fprintf fmt "Clash type between : %s / %s \n" t1 t2
   end;
   fprintf fmt "\n@."
 

@@ -49,9 +49,11 @@ let rec to_string t =
          (List.fold_left
             (fun acc t -> acc^" "^(to_string t)) "" (List.rev tl))) ^ ")"
   | TVar(s) -> Printf.sprintf "(%s:%d)" s t.id
-  | TFun(pars,ret) -> Printf.sprintf "Fun : %s %s"
-                        (List.fold_left (fun acc par ->
-                           Printf.sprintf "%s -> %s" (to_string par) acc) "" (List.rev pars)) (to_string ret)
+  | TFun(pars,ret) ->
+    Printf.sprintf "Fun : %s %s"
+      (List.fold_left (fun acc par ->
+           Printf.sprintf "%s -> %s"
+             (to_string par) acc) "" (List.rev pars)) (to_string ret)
   | TLink(t) -> Printf.sprintf "Link(%s)" (to_string t)
 
 module IMap = Map.Make(struct type t = int let compare = compare end)
@@ -152,7 +154,8 @@ let rec subst m t =
 
 
 let rec unify t1 t2 pos =
-  (* Printf.printf "Unification de (%s) et (%s) \n%!" (to_string t1) (to_string t2); *)
+  (* Printf.printf "Unification de (%s) et (%s) \n%!"
+     (to_string t1) (to_string t2); *)
   if t1.id <> t2.id then
     begin  match t1.desc, t2.desc with
       | TLink(t), _ -> unify (shorten t) t2 pos
