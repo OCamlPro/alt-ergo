@@ -46,11 +46,11 @@ let core = {
       [(Smtlib_ty.new_type Smtlib_ty.TBool);
        (Smtlib_ty.new_type Smtlib_ty.TBool)]
       (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Left);
-    (let a = Smtlib_ty.new_type(TVar("A")) in new_fun "=" [a;a]
+    (let a = Smtlib_ty.new_type(Smtlib_ty.TVar("A")) in new_fun "=" [a;a]
       (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Chainable));
-    (let a = Smtlib_ty.new_type(TVar("A")) in new_fun "distinct" [a;a]
+    (let a = Smtlib_ty.new_type(Smtlib_ty.TVar("A")) in new_fun "distinct" [a;a]
        (Smtlib_ty.new_type Smtlib_ty.TBool) (Some Pairwise));
-    (let a = Smtlib_ty.new_type(TVar("A")) in new_fun "ite"
+    (let a = Smtlib_ty.new_type(Smtlib_ty.TVar("A")) in new_fun "ite"
        [(Smtlib_ty.new_type Smtlib_ty.TBool); a; a] a None);
   ]
 }
@@ -167,11 +167,11 @@ let arrays =
                          assert (List.length l1 = 2 && l2 == []);
                          Smtlib_ty.TArray (t1,t2)))];
     funs = [
-      (let x = Smtlib_ty.new_type(TVar("X")) in
-       let y = Smtlib_ty.new_type(TVar("Y")) in
+      (let x = Smtlib_ty.new_type(Smtlib_ty.TVar("X")) in
+       let y = Smtlib_ty.new_type(Smtlib_ty.TVar("Y")) in
        new_fun "select" [Smtlib_ty.new_type (Smtlib_ty.TArray (x,y));x] y None);
-      (let x = Smtlib_ty.new_type(TVar("X")) in
-       let y = Smtlib_ty.new_type(TVar("Y")) in
+      (let x = Smtlib_ty.new_type(Smtlib_ty.TVar("X")) in
+       let y = Smtlib_ty.new_type(Smtlib_ty.TVar("Y")) in
        new_fun "store"
          [Smtlib_ty.new_type (Smtlib_ty.TArray (x,y));x;y]
          (Smtlib_ty.new_type (Smtlib_ty.TArray (x,y))) None);

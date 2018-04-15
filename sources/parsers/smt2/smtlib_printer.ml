@@ -115,7 +115,7 @@ let print_fun_def fun_def =
 
 let print_command c =
   match c.c with
-  | Cmd_Assert(t) ->
+  | Cmd_Assert(t) | Cmd_CheckEntailment(t) ->
     printf "(assert %s)\n%!" (print_assert t)
   | Cmd_CheckSat ->
     printf "(checksat)\n%!"

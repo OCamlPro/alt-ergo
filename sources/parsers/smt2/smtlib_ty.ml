@@ -64,7 +64,7 @@ let rec shorten ty =
   | TLink(t) -> shorten t
   | _ -> ty
 
-let rec fun_ret ty =
+let fun_ret ty =
   match (shorten ty).desc with
   | TFun(_,ret) -> ret
   | _ -> ty

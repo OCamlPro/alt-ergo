@@ -158,7 +158,7 @@ let rec compare_fun_assoc (env,locals) symb ty f assoc =
     | Right | Left -> t_fun
     | Chainable | Pairwise -> Smtlib_ty.new_type (Smtlib_ty.TBool)
   in
-  let def = Smtlib_ty.new_type (TFun (params,ret)) in
+  let def = Smtlib_ty.new_type (Smtlib_ty.TFun (params,ret)) in
   let _,def = Smtlib_ty.inst SMap.empty Smtlib_ty.IMap.empty def in
   Smtlib_ty.unify ty def symb.p;
   Some (Smtlib_ty.fun_ret ty)
@@ -183,7 +183,8 @@ and compare_fun_def (env,locals) symb ty funs =
 
 let find_fun (env,locals) symb params =
   try
-    let ty = Smtlib_ty.new_type (TFun (params,Smtlib_ty.new_type TDummy)) in
+    let ty = Smtlib_ty.new_type
+        (Smtlib_ty.TFun (params,Smtlib_ty.new_type Smtlib_ty.TDummy)) in
     let defs = SMap.find symb.c env.funs in
     let res = compare_fun_def (env,locals) symb ty defs in
     match res with
@@ -195,7 +196,8 @@ let find_fun (env,locals) symb params =
 
 let check_fun_exists (env,locals) symb params =
   try
-    let ty = Smtlib_ty.new_type (TFun (params,Smtlib_ty.new_type TDummy)) in
+    let ty = Smtlib_ty.new_type
+        (Smtlib_ty.TFun (params,Smtlib_ty.new_type Smtlib_ty.TDummy)) in
     let defs = SMap.find symb.c env.funs in
     let res = compare_fun_def (env,locals) symb ty defs in
     match res with
@@ -278,7 +280,7 @@ let mk_fun_dec (env,locals) (name,fun_dec) =
     let locals = extract_pars locals pars in
     mk_fun_dec (env,locals) (name,params,return) None
 
-let rec find_sort_name sort =
+let find_sort_name sort =
   match sort.c with
   | SortIdentifier id -> get_identifier id
   | SortIdMulti (id, _) -> get_identifier id
@@ -298,7 +300,7 @@ let mk_sort_def (env,locals) symb pars sort =
         ) (Smtlib_ty.IMap.empty) l pars
       in
       let sort = Smtlib_ty.subst links sort in
-      sort.desc
+      sort.Smtlib_ty.desc
     )
   in
   {env with sorts = SMap.add symb.c sort_def env.sorts}
@@ -312,7 +314,6 @@ let find_constr env symb =
       error (Typing_error
                ("Constructor have mutliple signatures : " ^ symb.c)) symb.p;
     (try (List.hd cstrs).params with e ->
-       assert false;
        error (Typing_error ("Undefined Constructor : " ^ symb.c)) symb.p;)
   with Not_found ->
     error (Typing_error ("Undefined Constructor : " ^ symb.c)) symb.p

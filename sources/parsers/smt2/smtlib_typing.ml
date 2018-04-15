@@ -1,6 +1,5 @@
 open Smtlib_error
 open Smtlib_syntax
-open Smtlib_typed_logic
 open Smtlib_typed_env
 
 let assert_mode = false
@@ -22,10 +21,12 @@ let print_qualidentifier q =
   match q.c with
   | QualIdentifierId (id) ->
     let symb = get_identifier id in
-    Printf.printf "(%s(%d):%s)" symb.c symb.ty.id (Smtlib_ty.to_string q.ty)
+    Printf.printf "(%s(%d):%s)"
+      symb.c symb.ty.Smtlib_ty.id (Smtlib_ty.to_string q.ty)
   | QualIdentifierAs (id, sort) ->
     let symb = get_identifier id in
-    Printf.printf "(%s(%d):%s)" symb.c symb.ty.id (Smtlib_ty.to_string q.ty)
+    Printf.printf "(%s(%d):%s)"
+      symb.c symb.ty.Smtlib_ty.id (Smtlib_ty.to_string q.ty)
 
 let rec print_term t =
   match t with
