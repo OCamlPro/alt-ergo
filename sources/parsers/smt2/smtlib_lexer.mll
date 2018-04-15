@@ -7,7 +7,6 @@
 {
 open Lexing
 open Smtlib_parser
-open Smtlib_syntax
 open Smtlib_error
 
 let newline lexbuf =
