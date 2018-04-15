@@ -36,37 +36,44 @@ module F = Formula
 module A = Literal
 module Sy = Symbols
 
-type expr = Term of Term.t | Form of Formula.t
+type expr = Term of T.t | Form of F.t * Sy.t * T.t
 
 type let_info = { expr : expr; nb_failed : int ref }
 
 type let_defns = let_info Sy.Map.t
 
-let add_term_defn x t defns =
-  Sy.Map.add x {expr = Term t ; nb_failed = ref 0} defns
+let add_terms_defn binders defns =
+  List.fold_left
+    (fun defns (x, t) ->
+       Sy.Map.add x {expr = Term t ; nb_failed = ref 0} defns
+    )defns binders
 
-let add_form_defn x f defns =
-  Sy.Map.add x {expr = Form f ; nb_failed = ref 0} defns
+let add_defns binders defns =
+  List.fold_left
+    (fun defns (x, e) ->
+       Sy.Map.add x {expr = e ; nb_failed = ref 0} defns
+    )defns binders
 
 let find_term_defn x defns =
   try match Sy.Map.find x defns with
-    | {expr = Term t} ->
-      Some t
-    | {expr = Form f ; nb_failed} ->
+    | {expr = Term t} -> Some t
+    | {expr = Form (f, sy, t) ; nb_failed} ->
       (* we cannot substitute formulas inside terms.
              We will keep corresponding lets *)
-      incr nb_failed; None
-  with Not_found -> None
-
-let find_form_defn x defns =
-  try match Sy.Map.find x defns with
-    | {expr = Term _} -> None
-    | {expr = Form f} -> Some f
+      incr nb_failed;
+      Some t (* fresh term *)
   with Not_found -> None
 
 let find_any_defn x defns =
   try Some (Sy.Map.find x defns).expr
   with Not_found -> None
+
+let filter_out_fully_replaced binders defns =
+  List.filter
+    (fun (sy, _) ->
+       try !((Sy.Map.find sy defns).nb_failed) <> 0
+       with Not_found -> assert false
+    ) binders
 
 let remove_defn x defns = Sy.Map.remove x defns
 
@@ -225,10 +232,14 @@ let rec make_term (defns:let_defns) {c = { tt_ty = ty; tt_desc = tt }} =
       let lbs = List.map (fun (_, t) -> make_term defns t) lbs in
       T.make (Sy.Op Sy.Record) lbs ty
 
-    | TTlet (s, t1, t2) ->
-      let t1 = make_term defns t1 in
-      let defns = add_term_defn s t1 defns in
-      make_term defns t2
+    | TTlet (binders, t2) ->
+      let binders =
+        List.rev_map (fun (s, t1) -> s, make_term defns t1) (List.rev binders)
+      in
+      let defns = add_terms_defn binders defns in
+      let res = make_term defns t2 in
+      assert (filter_out_fully_replaced binders defns == []);
+      res
 
     | TTnamed(lbl, t) ->
       let t = make_term defns t in
@@ -282,7 +293,7 @@ let make_pred defns ({c = { tt_ty = ty; tt_desc = tt }} as z) id =
   match tt with
   | TTvar x ->
     begin match find_any_defn x defns with
-      | Some (Form f) -> f
+      | Some (Form (f,_,_)) -> f
       | Some (Term t) -> F.mk_lit (A.LT.mk_pred t false) id
       | None -> F.mk_lit (A.LT.mk_pred (make_term defns z) false) id
     end
@@ -398,18 +409,37 @@ let make_form name_base f loc =
         | _ -> assert false
       end
 
-    | TFlet(up,lvar, TletTerm lterm,lf) ->
-      let t = make_term defns lterm in
-      let defns = add_term_defn lvar t defns in
-      make_form defns false lf.c lf.annot
-
-    | TFlet(up,lvar, TletForm lform,lf) ->
-      let g = make_form defns false lform.c lform.annot in
-      let defns = add_form_defn lvar g defns in
+    | TFlet(up,binders,lf) ->
+      let binders =
+        List.rev_map
+          (fun (sy, e) ->
+             match e with
+             | TletTerm t -> sy, Term (make_term defns t)
+             | TletForm g ->
+               let fresh_sy = Sy.name (Hstring.fresh_string()) in
+               let fresh_t = T.make fresh_sy [] Ty.Tbool in
+               let gg = make_form defns false g.c g.annot in
+               sy, Form (gg, fresh_sy, fresh_t)
+          )(List.rev binders)
+      in
+      let defns = add_defns binders defns in
       let res = make_form defns false lf.c lf.annot in
-      let data = try Sy.Map.find lvar defns with Not_found -> assert false in
-      if !(data.nb_failed) = 0 then res
-      else F.mk_let (varset_of_list up) lvar g res id
+      let remaining = filter_out_fully_replaced binders defns in
+      if remaining == [] then res
+      else
+        (* should use F.mk_let: renaming needed to avoid captures when
+           transforming let x = ... and y = ... to let x = ... in let
+           y = ... *)
+        let up = (varset_of_list up) in
+        List.fold_left
+          (fun acc (sy, e) ->
+             match e with
+             | Term t ->
+               assert false (* should be fully replaced *)
+             | Form (gg, sy_gg, t_gg) ->
+               (* not sy, but sy_gg, a fresh replacement of sy *)
+               F.mk_let up sy_gg gg acc id
+          )res remaining
 
     | TFnamed(lbl, f) ->
       let ff = make_form defns false f.c f.annot in

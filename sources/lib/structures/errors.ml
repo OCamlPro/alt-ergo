@@ -58,6 +58,7 @@ type error =
   | ShouldHaveTypeProp
   | NoRecordType of Hstring.t
   | DuplicateLabel of Hstring.t
+  | DuplicatePattern of string
   | WrongLabel of Hstring.t * Ty.t
   | WrongNumberOfLabels
   | Notrigger
@@ -142,6 +143,8 @@ let report fmt = function
     fprintf fmt "no record type has label %s" (Hstring.view s)
   | DuplicateLabel s ->
     fprintf fmt "label %s is defined several times" (Hstring.view s)
+  | DuplicatePattern s ->
+    fprintf fmt "pattern %s is bound several times" s
   | WrongLabel (s, ty) ->
     fprintf fmt "wrong label %s in type %a" (Hstring.view s) Ty.print ty
   | WrongNumberOfLabels ->

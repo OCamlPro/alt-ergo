@@ -1,0 +1,8 @@
+logic x, y, z : int
+
+goal g:
+(let x = x,
+     y = y + x,
+     z = z in
+     x + y + z
+) = 2*x + y + z

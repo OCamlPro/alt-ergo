@@ -93,8 +93,9 @@ let rec depth_tterm t =
 	     (fun acc (lb, t) -> max (depth_tterm t) acc) 0 lbs)
     | TTset (t1, t2, t3) | TTextract (t1, t2, t3) ->
       max (depth_tterm t1) (max (depth_tterm t2) (depth_tterm t3))
-    | TTlet (s, t1, t2) ->
-      max (depth_tterm t1 + 1) (depth_tterm t2)
+    | TTlet (l, t2) ->
+      List.fold_left
+        (fun z (_, t1) -> max (depth_tterm t1 + 1)  z) (depth_tterm t2) l
     | TTnamed (_, t) | TTinInterval (t,_,_,_,_) | TTmapsTo(_,t) -> depth_tterm t
 
 exception Out of int
@@ -214,11 +215,24 @@ let rec compare_tterm t1 t2 =
 	end
     | TTrecord _, _ -> -1
     | _, TTrecord _ -> 1
-    | TTlet (s1, t1, u1) , TTlet (s2, t2, u2) ->
-      let c = Sy.compare s1 s2 in
-      if c<>0 then c else
-	let c = compare_tterm t1 u1 in
-	if c<>0 then c else compare_tterm u1 u2
+    | TTlet (l1, u1) , TTlet (l2, u2) ->
+      let c = compare_tterm u1 u2 in
+      if c <> 0 then c
+      else
+        begin
+          try
+            List.iter2 (fun (s1, v1) (s2, v2) ->
+                let c = Sy.compare s1 s2 in
+                if c<>0 then raise (Out c);
+                let c = compare_tterm v1 v2 in
+                if c<>0 then raise (Out c)
+              )l1 l2;
+            0
+          with
+          | Out c -> c
+          | _ -> List.length l1 - List.length l2
+        end
+
     | TTnamed (_, t), _ -> compare_tterm t t2
     | _, TTnamed (_, t) -> compare_tterm t1 t
 
@@ -449,7 +463,10 @@ let rec vars_of_term bv acc t = match t.c.tt_desc with
   | TTinfix (t1,_,t2) -> List.fold_left (vars_of_term bv) acc [t1;t2]
   | TTset (t1, t2, t3) -> List.fold_left (vars_of_term bv) acc [t1;t2;t3]
   | TTget (t1, t2) -> List.fold_left (vars_of_term bv) acc [t1;t2]
-  | TTlet (_, t1, t2) -> List.fold_left (vars_of_term bv) acc [t1;t2]
+  | TTlet (l , t2) ->
+    List.fold_left
+      (fun acc (_, t) -> vars_of_term bv acc t)
+      (vars_of_term bv acc t2) l
   | TTdot (t1, _) -> vars_of_term bv acc t1
   | TTrecord lbs ->
     List.fold_left (fun acc (_, t) -> vars_of_term bv acc t) acc lbs
@@ -527,7 +544,8 @@ let rec vty_term acc t =
     | TTget (t1, t2) -> List.fold_left vty_term acc [t1;t2]
     | TTdot (t1, _) -> vty_term acc t1
     | TTrecord lbs -> List.fold_left (fun acc (_, t) -> vty_term acc t) acc lbs
-    | TTlet (_, t1, t2) -> List.fold_left vty_term acc [t1;t2]
+    | TTlet (l, t2) ->
+      List.fold_left (fun acc (_, t) -> vty_term acc t) (vty_term acc t2) l
     | _ -> acc
 
 let rec vty_form acc f = match f.c with
@@ -541,10 +559,15 @@ let rec vty_form acc f = match f.c with
       List.fold_left (fun acc (_, ty) -> vty_ty acc ty) acc qf.qf_bvars in
     vty_form acc qf.qf_form
   | TFnamed (_, f) -> vty_form acc f
-  | TFlet (ls, s, TletTerm e, f') ->
-    vty_form (vty_term acc e) f'
-  | TFlet (ls, s, TletForm e, f') ->
-    vty_form (vty_form acc e) f'
+
+  | TFlet (ls, binders, f') ->
+    List.fold_left
+      (fun acc (sy, e) ->
+         match e with
+         | TletTerm t -> vty_term acc t
+         | TletForm f -> vty_form acc f
+      )(vty_form acc f') binders
+
   | _ -> acc
 
 let csort = Sy.name "c_sort"
@@ -594,13 +617,23 @@ let potential_triggers =
 	  List.fold_left (potential_rec vars)
 	    (STRS.add (t, bv_lf, vty_lf) acc) lf
 	else acc
-      | TTinfix(t1,_,t2) | TTlet (_, t1, t2) -> (* XXX TTlet ? *)
+      | TTinfix(t1,_,t2) ->
 	let vty_lf = List.fold_left vty_term vty_t [t1;t2] in
 	let bv_lf = List.fold_left (vars_of_term bv) Vterm.empty [t1;t2] in
 	if as_bv bv bv_lf || as_tyv vty vty_lf then
 	  List.fold_left
 	    (potential_rec vars) (STRS.add (t, bv_lf, vty_lf) acc) [t1;t2]
 	else acc
+
+      | TTlet (l, t2) ->
+        let l = List.fold_left (fun acc (_, t) -> t :: acc) [t2] l in
+	let vty_lf = List.fold_left vty_term vty_t l in
+	let bv_lf = List.fold_left (vars_of_term bv) Vterm.empty l in
+	if as_bv bv bv_lf || as_tyv vty vty_lf then
+	  List.fold_left
+	    (potential_rec vars) (STRS.add (t, bv_lf, vty_lf) acc) l
+	else acc
+
       | TTset (t1, t2, t3) ->
 	let vty_lf = List.fold_left vty_term vty_t [t1;t2;t3] in
 	let bv_lf = List.fold_left (vars_of_term bv) Vterm.empty [t1;t2;t3] in
@@ -802,18 +835,24 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
 	| TFforall _ -> TFforall r , trs
 	| _ -> TFexists r , trs)
 
-    | TFlet (up, v, tau, f) ->
+    | TFlet (up, binders, f) ->
       let f, trs = make_rec keep_triggers pol gopt vterm vtype f in
-      let tau, delta_trs = match tau with
-        | TletTerm t ->
-          tau, (potential_triggers (vterm, vtype) [t])
-        | TletForm flet ->
-          let flet', trs' = make_rec keep_triggers pol gopt vterm vtype flet in
-          TletForm flet, trs'
+      let binders, trs =
+        List.fold_left
+          (fun (binders, trs) (sy, e) ->
+             match e with
+             | TletTerm t ->
+               (sy, e) :: binders,
+               STRS.union trs (potential_triggers (vterm, vtype) [t])
+             | TletForm flet ->
+               let flet', trs' =
+                 make_rec keep_triggers pol gopt vterm vtype flet
+               in
+               (sy, TletForm flet') :: binders,
+               STRS.union trs trs'
+          )([], trs) (List.rev binders)
       in
-      let trs = STRS.union trs delta_trs in
-      (* XXX correct for terms *)
-      TFlet (up, v, tau, f), trs
+      TFlet (up, binders, f), trs
 
     | TFnamed(lbl, f) ->
       let f, trs = make_rec keep_triggers pol gopt vterm vtype f in

@@ -194,12 +194,13 @@ let print fmt s = Format.fprintf fmt "%s" (to_string s)
 
 let dummy = Name (Hstring.make "_one", Other)
 
-let fresh =
+let fresh ?(mk_var=false) =
   let cpt = ref 0 in
   fun s ->
     incr cpt;
     (* garder le suffixe "__" car cela influence l'ordre *)
-    name (Format.sprintf "!?__%s%i" s (!cpt))
+    let s = (Format.sprintf "!?__%s%i" s (!cpt)) in
+    if mk_var then var s else name s
 
 let is_get f = equal f (Op Get)
 let is_set f = equal f (Op Set)
