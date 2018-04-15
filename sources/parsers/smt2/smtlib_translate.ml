@@ -137,12 +137,11 @@ let translate_identifier id params raw_params =
     end
   | "xor" -> translate_left_assoc mk_xor name params
   | "ite" ->
-    assert false
-    (* begin
-     *   match params with
-     *   | [b;e1;e2] -> mk_ite name.p b e1 e2
-     *   | _ -> assert false
-     * end *)
+    begin
+      match params with
+      | [b;e1;e2] -> mk_ite name.p b e1 e2
+      | _ -> assert false
+    end
   | "not" -> begin
       match params with
       | [t] -> mk_not name.p t
@@ -209,11 +208,10 @@ and translate_term pars term =
       | Some s -> mk_type_cast term.p q (get_sort pars s)
     end
   | TermLetTerm(varbinding_list,term) ->
-    assert false;
-    (* List.fold_left (fun t varbinding ->
-     *     let s,term = varbinding.c in
-     *     mk_let s.p s.c (translate_term pars term) t
-     *   ) (translate_term pars term) (List.rev varbinding_list) *)
+    List.fold_left (fun t varbinding ->
+        let s,term = varbinding.c in
+        mk_let s.p s.c (translate_term pars term) t
+      ) (translate_term pars term) (List.rev varbinding_list)
   | TermForAllTerm(sorted_var_list,t) ->
     let svl = List.map (fun sv ->
         let v,s = sv.c in
