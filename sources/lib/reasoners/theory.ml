@@ -583,7 +583,9 @@ module Main_Default : S = struct
 	 CC_X.are_distinct t.gamma t1 t2
 
       | A.Distinct _ ->
-	 assert false (* devrait etre capture par une analyse statique *)
+        (* we only assume toplevel distinct with more that one arg.
+           not interesting to do a query in this case *)
+        No
 
       | A.Pred (t1,b) ->
 	 let t = add_and_process_conseqs a t in
