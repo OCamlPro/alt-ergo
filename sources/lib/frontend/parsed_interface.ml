@@ -210,15 +210,16 @@ let mk_implies loc e1 e2 =
 let mk_not loc e =
   mk_localized loc (mk_prefix PPnot e)
 
-let mk_distinct loc e2 =
-  mk_localized loc (PPdistinct e2)
-
 let mk_pred_eq loc e1 e2 =
   mk_localized loc (mk_infix e1 PPeq e2)
 
 let mk_pred_not_eq loc e1 e2 =
   mk_localized loc (mk_infix e1 PPneq e2)
 
+let mk_distinct loc e2 =
+  match e2 with
+  | [a; b] -> mk_pred_not_eq loc a b
+  | _ -> mk_localized loc (PPdistinct e2)
 
 (** Making quantified formulas **)
 
