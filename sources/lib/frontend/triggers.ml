@@ -689,7 +689,7 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
 		{tt_desc = TTapp(Sy.fake_eq, l); tt_ty = Ty.Tbool}
 	      in
 	      [ { c = v; annot = a.annot } ]
-	    | TAneq ([t1; t2] as l) when pol == Neg ->
+	    | TAneq l when pol == Neg ->
 	      let v =
 		{ tt_desc = TTapp(Sy.fake_neq, l); tt_ty = Ty.Tbool}
 	      in
@@ -706,7 +706,8 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
 	      [ { c = v; annot = a.annot } ]
 	    | TAle l | TAlt l | TAeq l | TAneq l | TAbuilt(_,l) -> l
 	    | TApred (t,_) -> [t]
-	    | _ -> assert false
+	    | TAdistinct l when pol == Neg -> l
+	    | _ -> []
 	  in
 	  f.c, potential_triggers (vterm, vtype) l
 	end
