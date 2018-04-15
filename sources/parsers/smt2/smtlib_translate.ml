@@ -208,10 +208,11 @@ and translate_term pars term =
       | Some s -> mk_type_cast term.p q (get_sort pars s)
     end
   | TermLetTerm(varbinding_list,term) ->
-    List.fold_left (fun t varbinding ->
-        let s,term = varbinding.c in
-        mk_let s.p s.c (translate_term pars term) t
-      ) (translate_term pars term) (List.rev varbinding_list)
+    let varbind = List.map (fun varb ->
+        let s,term = varb.c in
+        s.c, (translate_term pars term)
+      ) varbinding_list in
+    mk_let term.p varbind (translate_term pars term)
   | TermForAllTerm(sorted_var_list,t) ->
     let svl = List.map (fun sv ->
         let v,s = sv.c in
