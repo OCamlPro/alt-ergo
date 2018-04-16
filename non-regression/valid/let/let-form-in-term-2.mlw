@@ -1,0 +1,6 @@
+logic P : bool -> prop
+
+goal g:
+P(true) ->
+let a = (1 <= 10) in
+P(a)

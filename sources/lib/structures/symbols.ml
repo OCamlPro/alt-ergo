@@ -194,9 +194,9 @@ let print fmt s = Format.fprintf fmt "%s" (to_string s)
 
 let dummy = Name (Hstring.make "_one", Other)
 
-let fresh ?(mk_var=false) =
+let fresh =
   let cpt = ref 0 in
-  fun s ->
+  fun ?(mk_var=false) s ->
     incr cpt;
     (* garder le suffixe "__" car cela influence l'ordre *)
     let s = (Format.sprintf "!?__%s%i" s (!cpt)) in

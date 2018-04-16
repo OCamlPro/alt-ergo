@@ -416,7 +416,7 @@ let make_form name_base f loc =
              match e with
              | TletTerm t -> sy, Term (make_term defns t)
              | TletForm g ->
-               let fresh_sy = Sy.name (Hstring.fresh_string()) in
+               let fresh_sy = Sy.fresh ~mk_var:true (Hstring.fresh_string()) in
                let fresh_t = T.make fresh_sy [] Ty.Tbool in
                let gg = make_form defns false g.c g.annot in
                sy, Form (gg, fresh_sy, fresh_t)
