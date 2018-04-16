@@ -5,6 +5,11 @@ open Printf
 let print_ty = false
 let fmt = stderr
 
+let print_list f l =
+  (List.fold_left (fun acc a ->
+       sprintf "%s %s" acc (f a)
+     ) "" l)
+
 let print_constant cst =
   match cst with
   | Const_Dec s | Const_Num s | Const_Str s | Const_Hex s | Const_Bin s -> s
@@ -108,47 +113,81 @@ let print_fun_def fun_def =
     sprintf "%s (par (%s) (%s) %s)"
       symb.c (print_pars pars) (print_sorted_vars svl) (print_sort s)
 
-let print_pro_lit p = assert false
+let print_sort_dec (s,n) =
+  sprintf "(%s %s)" s.c n
+
+let print_selector (s,sort) =
+  sprintf "(%s %s)" s.c (print_sort sort)
+
+let print_cst_dec (s,selector_list) =
+  sprintf "(%s %s)"
+    s.c
+    (print_list print_selector selector_list)
+
+let print_dt_dec dt_dec =
+  match dt_dec.c with
+  | Datatype_dec_constr cst_dec_list ->
+    sprintf "(%s)" (print_list print_cst_dec cst_dec_list)
+  | Datatype_dec_par (pars,cst_dec_list) ->
+    sprintf "(par (%s) (%s))"
+      (print_pars pars)
+      (print_list print_cst_dec cst_dec_list)
+
+let print_pro_lit p =
+  match p.c with
+  | PropLit(s) -> sprintf "%s" s.c
+  | PropLitNot(s) -> sprintf "(not %s)" s.c
+
 let print_option o = assert false
 let print_info key_info = assert false
 let print_attribute a = assert false
 
 let print_command c =
   match c.c with
-  | Cmd_Assert(t) | Cmd_CheckEntailment(t) ->
-    printf "(assert %s)\n%!" (print_assert t)
+  | Cmd_Assert(t) -> printf "(assert %s)\n%!" (print_assert t)
+  | Cmd_CheckEntailment(t) ->     printf "(assert %s)\n%!" (print_assert t)
+
   | Cmd_CheckSat ->
     printf "(checksat)\n%!"
   | Cmd_CheckSatAssum prop_lit_list ->
     printf "(check-sat-assuming %s)\n%!"
-      (List.fold_left (fun acc p ->
-           sprintf "%s %s" acc (print_pro_lit p)
-         ) "" prop_lit_list)
+      (print_list print_pro_lit prop_lit_list)
+
   | Cmd_DeclareConst(symbol,const_dec) ->
     printf "(declare-const %s %s)\n%!" symbol.c (print_const_dec const_dec)
-  | Cmd_DeclareDataType(symbol,datatype_dec) -> assert false
-  | Cmd_DeclareDataTypes(sort_dec_list,datatype_dec_list) -> assert false
+
+  | Cmd_DeclareDataType(symbol,dt_dec) ->
+    printf "(declare-datatype %s %s)\n%!" symbol.c (print_dt_dec dt_dec)
+  | Cmd_DeclareDataTypes(sort_dec_list,dt_dec_list) ->
+    printf "(declare-datatypes %s %s)\n%!"
+    (print_list print_sort_dec sort_dec_list)
+    (print_list print_dt_dec dt_dec_list)
+
   | Cmd_DeclareFun(symbol,fun_dec) ->
     printf "(declare-fun %s %s)\n%!" symbol.c (print_fun_dec fun_dec)
   | Cmd_DeclareSort(symbol,s) ->
     printf "(declare-sort %s %s)\n%!" symbol.c s
+
   | Cmd_DefineFun(fun_def,term) ->
     printf "(define-fun %s %s)\n%!" (print_fun_def fun_def) (print_term term)
   | Cmd_DefineFunRec(fun_def,term) ->
     printf "(define-fun-rec %s %s)\n%!"
       (print_fun_def fun_def) (print_term term)
-  | Cmd_DefineFunsRec(fun_def_list,term_list) -> assert false
+  | Cmd_DefineFunsRec(fun_def_list,term_list) ->
+    printf "(define-fun-rec %s %s)\n%!"
+      (print_list print_fun_def fun_def_list)
+      (print_list print_term term_list)
+
   | Cmd_DefineSort(symbol,symbol_list,sort) ->
     printf "(define-sort %s (%s) %s)\n"
       symbol.c (print_pars symbol_list) (print_sort sort)
+
   | Cmd_Echo(s) -> printf "(echo %s)\n" s.c
   | Cmd_GetAssert -> printf "(get-assertions)\n"
   | Cmd_GetProof -> printf "(get-proof)\n"
   | Cmd_GetUnsatCore -> printf "(get-unsat-core)\n"
   | Cmd_GetValue(term_list) ->
-    printf "(get-value %s)\n" (List.fold_left (fun acc t ->
-        sprintf "%s %s" acc (print_term t)
-      ) "" term_list)
+    printf "(get-value %s)\n" (print_list print_term term_list)
   | Cmd_GetAssign -> printf "(get-assignement)\n"
   | Cmd_GetOption(o) -> printf "(get-option %s)\n" (print_option o)
   | Cmd_GetInfo(key_info) -> printf "(get-info %s)\n" (print_info key_info)
