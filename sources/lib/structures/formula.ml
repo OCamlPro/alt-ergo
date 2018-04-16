@@ -573,7 +573,7 @@ let mk_forall_aux =
 
 
 (* forall up. let bv = lf in f *)
-let mk_let _up bv lf f id =
+let mk_let bv lf f id =
   let up = free_vars lf in
   let up = Sy.Map.fold (fun sy ty acc -> (Term.make sy [] ty)::acc) up [] in
   let subst =

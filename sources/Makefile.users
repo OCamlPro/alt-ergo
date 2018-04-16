@@ -12,7 +12,7 @@ INCLUDES = $(NUMLIB) $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXL
 
 # TODO : enable these warnings one by one and fix the code
 
-WARNINGS= -w +A-45-27-4-9-44-32-48-41-6
+WARNINGS= -w +A-45-27-4-9-44-32-48-41-6-22
 
 # xxxx: Warning 22: user warnings
 # x6 : Warning 60: unused module MyNums. ==> pb with recursive modules

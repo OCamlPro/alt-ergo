@@ -310,14 +310,17 @@ let rec freevars_term acc t = match t.c.tt_desc with
          else Sy.remove sy acc  (* the symbol sy is not a free var *)
       )acc_t2 l
 
-let freevars_atom a = match a.c with
+  | TTite (cond,t1,t2) ->
+    List.fold_left freevars_term (Sy.union (freevars_form cond.c) acc) [t1;t2]
+
+and freevars_atom a = match a.c with
   | TAeq lt | TAneq lt | TAle lt
   | TAlt lt | TAbuilt(_,lt) | TAdistinct lt ->
     List.fold_left freevars_term Sy.empty lt
   | TApred (t,_) -> freevars_term  Sy.empty t
   | _ -> Sy.empty
 
-let rec freevars_form f = match f with
+and freevars_form f = match f with
   | TFatom a -> freevars_atom a
   | TFop (_,lf) ->
     List.fold_left Sy.union Sy.empty
@@ -521,12 +524,10 @@ and type_term_desc env loc = function
 	| Ty.TypeClash(t, t') ->
 	  error (Unification(t, t')) loc
     end
-  | PPif(t1,t2,t3) ->
+  | PPif(cond,t2,t3) ->
     begin
-      let te1 = type_term env t1 in
-      let ty1 = Ty.shorten te1.c.tt_ty in
-      if not (Ty.equal ty1 Ty.Tbool) then
-	error (ShouldHaveType(ty1,Ty.Tbool)) t1.pp_loc;
+      let cond, _fv = type_form env cond in
+      (* TODO : should use _fv somewhere ? *)
       let te2 = type_term env t2 in
       let te3 = type_term env t3 in
       let ty2 = Ty.shorten te2.c.tt_ty in
@@ -534,7 +535,7 @@ and type_term_desc env loc = function
       if not (Ty.equal ty2 ty3) then
 	error (ShouldHaveType(ty3,ty2)) t3.pp_loc;
       Options.tool_req 1 (append_type "TR-Typing-Ite type" ty2);
-      TTapp(Symbols.name "ite",[te1;te2;te3]) , ty2
+      TTite (cond, te2, te3) , ty2
     end
   | PPdot(t, a) ->
     begin
@@ -651,7 +652,7 @@ and type_term_desc env loc = function
   | _ -> error SyntaxError loc
 
 
-let rec join_forall f = match f.pp_desc with
+and join_forall f = match f.pp_desc with
   | PPforall(vs_ty, trs1, hyp1, f) ->
     let tyvars,trs2,hyp2, f = join_forall f in
     vs_ty @ tyvars , trs1@trs2 , hyp1@hyp2, f
@@ -662,7 +663,7 @@ let rec join_forall f = match f.pp_desc with
     join_forall f
   | _ -> [] , [] , [], f
 
-let rec join_exists f = match f.pp_desc with
+and join_exists f = match f.pp_desc with
   | PPexists (vs_ty, trs1, hyp1, f) ->
     let tyvars,trs2, hyp2,f = join_exists f in
     vs_ty @ tyvars , trs1@trs2, hyp1@hyp2,  f
@@ -673,7 +674,7 @@ let rec join_exists f = match f.pp_desc with
   | _ -> [] , [] , [], f
 
 
-let type_bound env bnd ty =
+and type_bound env bnd ty =
   try
     match bnd.pp_desc with
     | PPvar s ->
@@ -695,7 +696,7 @@ let type_bound env bnd ty =
   with Invalid_argument s when String.equal s "index out of bounds" ->
     assert false
 
-let mk_ta_eq t1 t2 =
+and mk_ta_eq t1 t2 =
   let c =
     if t1.c.tt_ty != Ty.Tbool then TAeq [t1; t2]
     else
@@ -708,7 +709,7 @@ let mk_ta_eq t1 t2 =
   in
   {c ; annot=new_id ()}
 
-let mk_ta_neq t1 t2 =
+and mk_ta_neq t1 t2 =
   let c =
     if t1.c.tt_ty != Ty.Tbool then TAneq [t1; t2]
     else
@@ -721,7 +722,7 @@ let mk_ta_neq t1 t2 =
   in
   {c ; annot=new_id ()}
 
-let rec type_form ?(in_theory=false) env f =
+and type_form ?(in_theory=false) env f =
   let rec type_pp_desc pp_desc = match pp_desc with
     | PPconst ConstTrue ->
       Options.tool_req 1 "TR-Typing-True$_F$";
@@ -1585,6 +1586,8 @@ let rec max_terms acc f =
 
 let max_terms f = try max_terms [] f with Exit -> []
 
+let monomorphize_var (s,ty) = s, Ty.monomorphize ty
+
 let rec mono_term {c = {tt_ty=tt_ty; tt_desc=tt_desc}; annot = id} =
   let tt_desc = match tt_desc with
     | TTconst _ | TTvar _ ->
@@ -1616,11 +1619,13 @@ let rec mono_term {c = {tt_ty=tt_ty; tt_desc=tt_desc}; annot = id} =
       TTlet (l, mono_term t2)
     | TTnamed (lbl, t)->
       TTnamed (lbl, mono_term t)
+    | TTite (cond, t1, t2) ->
+      TTite (monomorphize_form cond, mono_term t1, mono_term t2)
   in
   { c = {tt_ty = Ty.monomorphize tt_ty; tt_desc=tt_desc}; annot = id}
 
 
-let monomorphize_atom tat =
+and monomorphize_atom tat =
   let c = match tat.c with
     | TAtrue | TAfalse -> tat.c
     | TAeq tl -> TAeq (List.map mono_term tl)
@@ -1633,9 +1638,7 @@ let monomorphize_atom tat =
   in
   { tat with c = c }
 
-let monomorphize_var (s,ty) = s, Ty.monomorphize ty
-
-let rec monomorphize_form tf =
+and monomorphize_form tf =
   let c = match tf.c with
     | TFatom tat -> TFatom (monomorphize_atom tat)
     | TFop (oplogic , tfl) ->

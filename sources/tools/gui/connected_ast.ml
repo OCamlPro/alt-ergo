@@ -301,6 +301,11 @@ let rec is_quantified_term vars at =
       List.fold_left
 	(fun b (_, at) -> b || is_quantified_term vars at) false r
 
+    | ATite (f, t1, t2) ->
+      (* XXX : f ignored here *)
+      is_quantified_term vars t1
+      || is_quantified_term vars t2
+
 let unquantify_aaterm (buffer:sbuffer) at =
   new_annot buffer at.c (Typechecker.new_id ()) (tag buffer)
 
@@ -337,6 +342,8 @@ let rec aterm_used_vars goal_vars at =
     | ATrecord r ->
       List.fold_left (fun l (_, at) -> aterm_used_vars goal_vars at @ l) [] r
 
+    | ATite (_, t1, t2) ->
+      (aterm_used_vars goal_vars t1)@(aterm_used_vars goal_vars t2)
 
 let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
     used_vars goal_vars f pol =
@@ -708,7 +715,7 @@ and add_trigger ?(register=true) t qid env str offset (sbuf:sbuffer) =
 		) lexprs [] in
 	      if qf.c.aqf_triggers != [] then
 		sbuf#insert ~iter ~tags " | ";
-	      add_aaterm_list_at sbuf tags iter "," atl;
+	      add_aaterm_list_at env.errors 0 sbuf tags iter "," atl;
 	      qf.c.aqf_triggers <- qf.c.aqf_triggers@[atl,true];
 	      if register then
 		save env.actions
@@ -871,6 +878,10 @@ and connect_at_desc env sbuf = function
   | ATrecord r ->
     let atl = List.map snd r in
     connect_aterm_list env sbuf atl
+  | ATite (f,t1,t2) ->
+    connect_aform env sbuf f.c;
+    connect_aterm env sbuf t1;
+    connect_aterm env sbuf t2
 
 and connect_aatom env sbuf aa =
   match aa with
