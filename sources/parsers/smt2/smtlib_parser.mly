@@ -288,7 +288,7 @@ command:
         {mk_data ($startpos,$endpos) (Cmd_DefineFunsRec ($4,$7)) }
     | LP DEFINESORT symbol LP list(symbol) RP sort RP
         {mk_data ($startpos,$endpos) (Cmd_DefineSort($3, $5, $7)) }
-    | LP ECHO attribute_value RP
+    | LP ECHO symbol RP
         {mk_data ($startpos,$endpos) (Cmd_Echo $3) }
     | LP EXIT RP
         {mk_data ($startpos,$endpos) (Cmd_Exit) }

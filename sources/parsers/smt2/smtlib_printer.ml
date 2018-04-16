@@ -3,10 +3,7 @@ open Smtlib_ty
 open Printf
 
 let print_ty = false
-
 let fmt = stderr
-
-let plop = "."
 
 let print_constant cst =
   match cst with
@@ -84,8 +81,6 @@ and print_sorted_vars sorted_vars =
   List.fold_left (fun acc sort ->
       sprintf "%s %s" acc (print_sorted_var sort.c)) "" sorted_vars
 
-
-
 let print_assert t =
   match t.c with
   | Assert_dec(t) -> print_term t
@@ -113,6 +108,11 @@ let print_fun_def fun_def =
     sprintf "%s (par (%s) (%s) %s)"
       symb.c (print_pars pars) (print_sorted_vars svl) (print_sort s)
 
+let print_pro_lit p = assert false
+let print_option o = assert false
+let print_info key_info = assert false
+let print_attribute a = assert false
+
 let print_command c =
   match c.c with
   | Cmd_Assert(t) | Cmd_CheckEntailment(t) ->
@@ -120,7 +120,10 @@ let print_command c =
   | Cmd_CheckSat ->
     printf "(checksat)\n%!"
   | Cmd_CheckSatAssum prop_lit_list ->
-    printf "(check-sat-assuming %s)\n%!" (assert false)
+    printf "(check-sat-assuming %s)\n%!"
+      (List.fold_left (fun acc p ->
+           sprintf "%s %s" acc (print_pro_lit p)
+         ) "" prop_lit_list)
   | Cmd_DeclareConst(symbol,const_dec) ->
     printf "(declare-const %s %s)\n%!" symbol.c (print_const_dec const_dec)
   | Cmd_DeclareDataType(symbol,datatype_dec) -> assert false
@@ -138,23 +141,26 @@ let print_command c =
   | Cmd_DefineSort(symbol,symbol_list,sort) ->
     printf "(define-sort %s (%s) %s)\n"
       symbol.c (print_pars symbol_list) (print_sort sort)
-  | Cmd_Echo(attribute_value) -> assert false
-  | Cmd_GetAssert -> assert false
-  | Cmd_GetProof -> assert false
-  | Cmd_GetUnsatCore -> assert false
-  | Cmd_GetValue(term_list) -> assert false
-  | Cmd_GetAssign -> assert false
-  | Cmd_GetOption(keyword) -> assert false
-  | Cmd_GetInfo(key_info) -> assert false
-  | Cmd_GetModel -> assert false
-  | Cmd_GetUnsatAssumptions -> assert false
-  | Cmd_Reset -> assert false
-  | Cmd_ResetAssert -> assert false
-  | Cmd_SetLogic(symbol) -> assert false
-  | Cmd_SetOption(option) -> assert false
-  | Cmd_SetInfo(attribute) -> assert false
-  | Cmd_Push(string) -> assert false
-  | Cmd_Pop(string) -> assert false
+  | Cmd_Echo(s) -> printf "(echo %s)\n" s.c
+  | Cmd_GetAssert -> printf "(get-assertions)\n"
+  | Cmd_GetProof -> printf "(get-proof)\n"
+  | Cmd_GetUnsatCore -> printf "(get-unsat-core)\n"
+  | Cmd_GetValue(term_list) ->
+    printf "(get-value %s)\n" (List.fold_left (fun acc t ->
+        sprintf "%s %s" acc (print_term t)
+      ) "" term_list)
+  | Cmd_GetAssign -> printf "(get-assignement)\n"
+  | Cmd_GetOption(o) -> printf "(get-option %s)\n" (print_option o)
+  | Cmd_GetInfo(key_info) -> printf "(get-info %s)\n" (print_info key_info)
+  | Cmd_GetModel -> printf "(get-model)\n"
+  | Cmd_GetUnsatAssumptions -> printf "(get-unsat-assumptions)\n"
+  | Cmd_Reset -> printf "(reset)\n"
+  | Cmd_ResetAssert -> printf "(reset-assertions)\n"
+  | Cmd_SetLogic(s) -> printf "(set-logic %s)\n%!" s.c
+  | Cmd_SetOption(o) -> printf "(set-option %s)\n%!" (print_option o)
+  | Cmd_SetInfo(a) -> printf "(set-info %s)\n%!" (print_attribute a)
+  | Cmd_Push(n) -> printf "(push %s)\n%!" n
+  | Cmd_Pop(n) -> printf "(pop %s)\n%!" n
   | Cmd_Exit -> printf "(exit)\n"
 
 let print commands =

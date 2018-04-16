@@ -197,7 +197,7 @@ type command_aux =
 | Cmd_DefineFunRec of fun_def * term
 | Cmd_DefineFunsRec of fun_def list * term list
 | Cmd_DefineSort of symbol * symbol list * sort
-| Cmd_Echo of attribute_value
+| Cmd_Echo of symbol
 | Cmd_GetAssert
 | Cmd_GetProof
 | Cmd_GetUnsatCore

@@ -5,47 +5,6 @@ open Smtlib_typed_env
 let assert_mode = false
 let print_mode = false
 
-(*********************************** Printers *********************************)
-let print_cst cst =
-  let cst,ty =
-    match cst with
-  | Const_Dec (s) -> s,"Real"
-  | Const_Num (s) -> s,"Int"
-  | Const_Str (s) -> s,"String"
-  | Const_Hex (s) -> s,"Int"
-  | Const_Bin (s) -> s,"Int"
-  in
-  Printf.printf "(%s:%s)" cst ty
-
-let print_qualidentifier q =
-  match q.c with
-  | QualIdentifierId (id) ->
-    let symb = get_identifier id in
-    Printf.printf "(%s(%d):%s)"
-      symb.c symb.ty.Smtlib_ty.id (Smtlib_ty.to_string q.ty)
-  | QualIdentifierAs (id, sort) ->
-    let symb = get_identifier id in
-    Printf.printf "(%s(%d):%s)"
-      symb.c symb.ty.Smtlib_ty.id (Smtlib_ty.to_string q.ty)
-
-let rec print_term t =
-  match t with
-  | TermSpecConst (cst) ->
-    print_cst cst
-  | TermQualIdentifier (qualid) ->
-    print_qualidentifier qualid
-  | TermQualIdTerm (qualid,term_list) ->
-    Printf.printf " (";
-    print_qualidentifier qualid;
-    List.iter (fun t -> print_term t.c) term_list;
-    Printf.printf ") ";
-  | TermForAllTerm (sorted_var_list, term) -> ()
-  | _ -> assert false
-
-let print_term t =
-  print_term t;
-  Printf.printf "\n%!"
-
 (******************************************************************************)
 let inst_and_unify (env,locals) m a b pos =
   let m, a = Smtlib_ty.inst locals m a in
@@ -139,8 +98,6 @@ and type_key_term (env,locals,dums) key_term =
     dums
 
 and type_term (env,locals,dums) t =
-  if print_mode then
-    print_term t.c;
   match t.c with
   | TermSpecConst (cst) ->
     Smtlib_ty.unify t.ty (type_cst cst) t.p;
@@ -340,7 +297,9 @@ let typing parsed_ast =
   in
   let env =
     List.fold_left (fun env c ->
-        type_command (env,SMap.empty)  c
+        let env = type_command (env,SMap.empty)  c in
+        if print_mode then Smtlib_printer.print_command c;
+        env
       ) env parsed_ast
   in if false then begin
     Smtlib_printer.print parsed_ast;
