@@ -78,13 +78,20 @@ let better_num_of_string s =
     | _ -> assert false
   end
 
-let translate_constant cst loc =
+let translate_constant cst t =
+  let loc = t.p in
   match cst with
   | Const_Dec(s) -> mk_real_const loc (better_num_of_string s)
   | Const_Num(s) ->
-    if Smtlib_error.get_is_real () then
-      mk_real_const loc (better_num_of_string s)
-    else mk_int_const loc s
+    let open Smtlib_ty in
+    let ty = shorten t.ty in
+    begin match ty.desc with (*TODO: do shorten earlier and better*)
+      | TInt  -> mk_int_const loc s
+      | TReal -> mk_real_const loc (better_num_of_string s)
+      | _ ->
+        Format.eprintf "%s@." (to_string ty);
+        assert false
+    end
   | Const_Str(s) -> assert false (* to do *)
   | Const_Hex(s) -> mk_int_const loc s
   | Const_Bin(s) -> mk_int_const loc s
@@ -191,7 +198,7 @@ and translate_quantif f svl pars t =
 
 and translate_term pars term =
   match term.c with
-  | TermSpecConst(cst) -> translate_constant cst term.p
+  | TermSpecConst(cst) -> translate_constant cst term
   | TermQualIdentifier(qid) ->
     let q,s = translate_qual_identifier qid [] [] in
     begin

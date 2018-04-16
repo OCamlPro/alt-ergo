@@ -198,13 +198,13 @@ let add_theories env ths c =
       | Core -> core.sorts,core.funs
       | Ints -> ints.sorts,ints.funs
       | Reals ->
-        let sorts = if get_is_real () then
+        (*let sorts = if get_is_real () then
             ("Int",((0,0),(fun s (l1,l2) ->
                  assert (l1 == [] && l2 == []); Smtlib_ty.TReal)))
             :: reals.sorts
           else reals.sorts
-        in
-          sorts ,reals.funs
+        in sorts*)
+        reals.sorts ,reals.funs
       | Reals_Ints -> reals_ints.sorts,reals_ints.funs
       | FloatingPoint -> floating_point.sorts,floating_point.funs
       | Arrays -> arrays.sorts,arrays.funs
@@ -242,13 +242,13 @@ let set_logic env s =
   if all || contains logic "AX" || contains logic "A" then
       theories := Arrays :: !theories;
 
-  if contains logic "IRA" then begin
+  if all || contains logic "IRA" then begin
     set_is_int_real true;
     theories := Reals_Ints :: !theories
   end
   else if contains logic "IA" || contains logic "IDL" then
     theories := Ints :: !theories
-  else if all || contains logic "RA" || contains logic "RDL" then begin
+  else if contains logic "RA" || contains logic "RDL" then begin
     set_is_real true;
     theories := Reals :: !theories
   end;
