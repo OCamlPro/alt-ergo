@@ -331,6 +331,23 @@ let translate_command acc command =
   | Cmd_Pop(string) -> acc
   | Cmd_Exit -> acc
 
+let init () =
+  if Smtlib_error.get_is_int_real () then
+    let dummy_pos = Lexing.dummy_pos,Lexing.dummy_pos in
+
+    (* assert false; *)
+    let logic_type = mk_logic_type [real_type] (Some int_type) in
+    let to_int =
+      mk_logic dummy_pos Symbols.Other [("to_int","to_int")] logic_type in
+    let logic_type = mk_logic_type [int_type] (Some real_type) in
+    let to_real =
+      mk_logic dummy_pos Symbols.Other [("to_real","to_real")] logic_type in
+    let logic_type = mk_logic_type [real_type] (Some bool_type) in
+    let is_int =
+      mk_logic dummy_pos Symbols.Other [("is_int","is_int")] logic_type in
+    [to_int;to_real;is_int]
+  else []
+
 let file_parser commands =
   Smtlib_typing.typing commands;
 
@@ -338,7 +355,7 @@ let file_parser commands =
     []
   else begin
     let l = List.fold_left translate_command [] (List.rev commands) in
-    l
+    (init ()) @ l
   end
 
 let lexpr_parser l = assert false

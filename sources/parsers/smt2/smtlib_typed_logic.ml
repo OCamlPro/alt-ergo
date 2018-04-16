@@ -242,13 +242,16 @@ let set_logic env s =
   if all || contains logic "AX" || contains logic "A" then
       theories := Arrays :: !theories;
 
-  if contains logic "IRA" then
+  if contains logic "IRA" then begin
+    set_is_int_real true;
     theories := Reals_Ints :: !theories
+  end
   else if contains logic "IA" || contains logic "IDL" then
     theories := Ints :: !theories
-  else if all || contains logic "RA" || contains logic "RDL" then
+  else if all || contains logic "RA" || contains logic "RDL" then begin
     set_is_real true;
-    theories := Reals :: !theories;
+    theories := Reals :: !theories
+  end;
 
   if all || contains logic "LIRA" || contains logic "LIA" ||
      contains logic "LRA" then
