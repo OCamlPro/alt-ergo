@@ -77,13 +77,16 @@ let filter_out_fully_replaced binders defns =
 
 let remove_defn x defns = Sy.Map.remove x defns
 
-let abstract_form_in_term f abstr =
-  try F.Map.find f !abstr |> snd
-  with Not_found ->
-    let fresh_sy = Sy.fresh ~mk_var:true (Hstring.fresh_string()) in
-    let fresh_t = T.make fresh_sy [] Ty.Tbool in
-    abstr := F.Map.add f (fresh_sy, fresh_t) !abstr;
-    fresh_t
+let abstract_form_in_term =
+  let cpt = ref 0 in
+  fun f abstr ->
+    try let _, abstr_t, _ = F.Map.find f !abstr in abstr_t
+    with Not_found ->
+      incr cpt;
+      let fresh_sy = Sy.fresh ~mk_var:true (Hstring.fresh_string()) in
+      let fresh_t = T.make fresh_sy [] Ty.Tbool in
+      abstr := F.Map.add f (fresh_sy, fresh_t, !cpt) !abstr;
+      fresh_t
 
 let ale = Hstring.make "<="
 let alt = Hstring.make "<"
@@ -325,6 +328,7 @@ and make_pred defns abstr ({c = { tt_ty = ty; tt_desc = tt }} as z) id =
 and make_form ~in_term defns abstr name_base f loc =
   let name_tag = ref 0 in
   let rec mk_form (defns:let_defns) toplevel c id =
+    let parent_abstr = !abstr in
     let tmp = match c with
     | TFatom a ->
       begin match a.c with
@@ -474,18 +478,22 @@ and make_form ~in_term defns abstr name_base f loc =
       ff
 
     | _ -> assert false
-  in
-    if !abstr == F.Map.empty || in_term then tmp
+    in
+    if in_term then tmp
     else
       let id = F.id tmp in
-      let res =
+      let l_abstr =
         F.Map.fold
-          (fun f (sy, t) acc ->
-             F.mk_let sy f acc id
-          )!abstr tmp
+          (fun f e acc ->
+             if F.Map.mem f parent_abstr then acc else (f, e) :: acc
+          )!abstr []
       in
-      abstr := F.Map.empty;
-      res
+      let l_abstr =
+        List.fast_sort (fun (_,(_,_,x)) (_,(_,_,y)) -> y - x) l_abstr
+      in
+      abstr := parent_abstr;
+      List.fold_left
+        (fun acc (f, (sy, t, _)) -> F.mk_let sy f acc id) tmp l_abstr
   in
   mk_form defns true f.c f.annot
 

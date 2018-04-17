@@ -62,7 +62,7 @@ opam update
 
 pre_merge_style_checker
 
-for ocaml_version in 4.06.0 4.04.0 # 4.05.0
+for ocaml_version in 4.04.0 #4.06.0 # 4.05.0
 do
     echo "=+= [travis.sh] testing with OCaml version '$ocaml_version' =+="
 
