@@ -148,6 +148,8 @@ term:
        { mk_data ($startpos,$endpos) (TermQualIdTerm ($2, $3)) }
     | LP LET LP nonempty_list(varbinding) RP term RP
        { mk_data ($startpos,$endpos) (TermLetTerm ($4, $6)) }
+    | LP LET LP RP term RP
+       { $5 }
     | LP FORALL LP nonempty_list(sorted_var) RP term RP
        { mk_data ($startpos,$endpos) (TermForAllTerm ($4, $6)) }
     | LP EXISTS LP nonempty_list(sorted_var) RP term RP
