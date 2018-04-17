@@ -13,6 +13,7 @@ let inst_and_unify (env,locals) m a b pos =
 let find_par_ty (env,locals) symb pars =
   let ty = try
       let res = SMap.find symb.c locals in
+      assert (List.length pars = 0);
       symb.is_quantif <- true;
       res
     with Not_found -> find_fun (env,locals) symb pars
