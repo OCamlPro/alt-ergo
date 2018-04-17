@@ -45,6 +45,7 @@ module M = struct
   let debug_gc = ref false
   let debug_use = ref false
   let debug_arrays = ref false
+  let debug_ite = ref false
   let debug_uf = ref false
   let debug_sat = ref false
   let debug_sat_simple = ref false
@@ -61,6 +62,7 @@ module M = struct
   let debug_split = ref false
   let options = ref false
   let greedy = ref false
+  let disable_ites = ref false
   let triggers_var = ref false
   let nb_triggers = ref 2
   let enable_assertions = ref false
@@ -315,6 +317,10 @@ module M = struct
     Arg.Set debug_arrays,
     "  sets the debugging flag of arrays";
 
+    "-dite",
+    Arg.Set debug_ite,
+    "  sets the debugging flag of ite";
+
     "-dcombine",
     Arg.Set debug_combine,
     "  sets the debugging flag of combine";
@@ -347,6 +353,10 @@ module M = struct
     Arg.String show_where,
     "  prints the directory of its argument. Possible arguments are: \
      'bin', 'lib', 'plugins', 'data' and 'man'";
+
+    "-disable-ites",
+    Arg.Set disable_ites,
+    "  disable handling of ite(s) on terms in the backend";
 
     "-steps-bound",
     Arg.Set_int steps_bound,
@@ -677,6 +687,7 @@ let set_debug_sat_simple b = M.debug_sat_simple := b
 let set_debug_typing b = M.debug_typing := b
 let set_debug_constr b = M.debug_constr := b
 let set_debug_arrays b = M.debug_arrays := b
+let set_debug_ite b = M.debug_ite := b
 let set_debug_types b = M.debug_types := b
 let set_debug_combine b = M.debug_combine := b
 let set_debug_proof b = M.debug_proof := b
@@ -746,6 +757,7 @@ let debug_sat_simple () = !M.debug_sat_simple
 let debug_typing () = !M.debug_typing
 let debug_constr () = !M.debug_constr
 let debug_arrays () = !M.debug_arrays
+let debug_ite () = !M.debug_ite
 let debug_types () = !M.debug_types
 let debug_combine () = !M.debug_combine
 let debug_proof () = !M.debug_proof
@@ -754,6 +766,7 @@ let debug_matching () = !M.debug_matching
 let debug_explanations () = !M.debug_explanations
 
 (** additional getters *)
+let disable_ites () = !M.disable_ites
 let js_mode () = !M.js_mode
 let type_only () = !M.type_only
 let parse_only () = !M.parse_only
