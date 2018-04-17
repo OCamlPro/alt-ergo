@@ -46,6 +46,7 @@ val set_debug_sat_simple : bool -> unit
 val set_debug_typing : bool -> unit
 val set_debug_constr : bool -> unit
 val set_debug_arrays : bool -> unit
+val set_debug_ite : bool -> unit
 val set_debug_types : bool -> unit
 val set_debug_combine : bool -> unit
 val set_debug_proof : bool -> unit
@@ -115,6 +116,7 @@ val debug_sat_simple : unit -> bool
 val debug_typing : unit -> bool
 val debug_constr : unit -> bool
 val debug_arrays : unit -> bool
+val debug_ite : unit -> bool
 val debug_types : unit -> bool
 val debug_combine : unit -> bool
 val debug_proof : unit -> bool
@@ -124,6 +126,7 @@ val debug_explanations : unit -> bool
 
 (** additional getters *)
 val enable_assertions : unit -> bool
+val disable_ites : unit -> bool
 val type_only : unit -> bool
 val parse_only : unit -> bool
 val steps_bound : unit -> int
