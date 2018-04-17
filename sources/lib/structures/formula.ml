@@ -572,9 +572,12 @@ let mk_forall_aux =
         res
 
 
-(* forall up. let bv = lf in f *)
-let mk_let bv lf f id =
+(* forall quant_vars. let bv = lf in f *)
+let mk_let quant_vars bv lf f id =
   let up = free_vars lf in
+  (* only keep up vars that are bound with forall or exists, not those
+     bound with a let *)
+  let up = Sy.Map.filter (fun x _ -> Sy.Set.mem x quant_vars) up in
   let up = Sy.Map.fold (fun sy ty acc -> (Term.make sy [] ty)::acc) up [] in
   let subst =
     Sy.Map.add bv (T.make (Sy.fresh "_let") up Ty.Tbool) Sy.Map.empty
