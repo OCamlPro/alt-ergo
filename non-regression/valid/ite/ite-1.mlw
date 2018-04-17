@@ -1,0 +1,4 @@
+goal g:
+ let x = 1 in
+ let y = (1 <= 3 or 2 = 5) in
+ if y then x <= 10 else (not y)

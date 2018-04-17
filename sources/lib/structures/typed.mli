@@ -40,8 +40,14 @@ type tconstant =
   | Tfalse
   | Tvoid
 
+
+type oplogic =
+    OPand |OPor | OPxor | OPimp | OPnot | OPiff
+  | OPif
+
 type 'a tterm =
-    { tt_ty : Ty.t; tt_desc : 'a tt_desc }
+  { tt_ty : Ty.t; tt_desc : 'a tt_desc }
+
 and 'a tt_desc =
   | TTconst of tconstant
   | TTvar of Symbols.t
@@ -64,8 +70,10 @@ and 'a tt_desc =
   | TTrecord of (Hstring.t * ('a tterm, 'a) annoted) list
   | TTlet of (Symbols.t * ('a tterm, 'a) annoted) list * ('a tterm, 'a) annoted
   | TTnamed of Hstring.t * ('a tterm, 'a) annoted
+  | TTite of ('a tform, 'a) annoted *
+             ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
 
-type 'a tatom =
+and 'a tatom =
   | TAtrue
   | TAfalse
   | TAeq of ('a tterm, 'a) annoted list
@@ -76,11 +84,7 @@ type 'a tatom =
   | TApred of ('a tterm, 'a) annoted * bool (* true <-> negated *)
   | TAbuilt of Hstring.t * ('a tterm, 'a) annoted list
 
-type oplogic =
-    OPand |OPor | OPxor | OPimp | OPnot | OPiff
-  | OPif
-
-type 'a quant_form = {
+and 'a quant_form = {
   (* quantified variables that appear in the formula *)
   qf_bvars : (Symbols.t * Ty.t) list ;
   qf_upvars : (Symbols.t * Ty.t) list ;

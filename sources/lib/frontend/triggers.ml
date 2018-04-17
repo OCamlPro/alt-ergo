@@ -97,6 +97,7 @@ let rec depth_tterm t =
       List.fold_left
         (fun z (_, t1) -> max (depth_tterm t1 + 1)  z) (depth_tterm t2) l
     | TTnamed (_, t) | TTinInterval (t,_,_,_,_) | TTmapsTo(_,t) -> depth_tterm t
+    | TTite(_, t1, t2) -> max (depth_tterm t1) (depth_tterm t2)
 
 exception Out of int
 
@@ -235,6 +236,12 @@ let rec compare_tterm t1 t2 =
 
     | TTnamed (_, t), _ -> compare_tterm t t2
     | _, TTnamed (_, t) -> compare_tterm t1 t
+
+    | TTite (_,s1,s2), TTite (_,t1,t2) ->(*cannot compare forms *)
+      let c = compare_tterm s1 t1 in
+      if c <> 0 then c else compare_tterm s2 t2
+    | TTite _, _ -> -1
+    | _, TTite _ -> 1
 
 
 let compare_tterm_list tl2 tl1 =
@@ -486,6 +493,7 @@ let rec vars_of_term bv acc t = match t.c.tt_desc with
       else acc
     in
     vars_of_term bv acc e
+  | TTite (_, t1, t2) -> List.fold_left (vars_of_term bv) acc [t1;t2]
 
 let underscoring_term mvars underscores t =
   let rec under_rec t =

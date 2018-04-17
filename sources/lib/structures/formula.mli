@@ -129,7 +129,7 @@ val mk_exists :
   (* free_vars and free_vty: they are computed if None is given *)
   t
 
-val mk_let : Term.Set.t -> Symbols.t -> t -> t -> int -> t
+val mk_let : Symbols.t -> t -> t -> int -> t
 
 val add_label : Hstring.t -> t -> unit
 val label : t -> Hstring.t
