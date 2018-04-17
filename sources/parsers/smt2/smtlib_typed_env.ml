@@ -132,13 +132,18 @@ and find_sort (env,locals) sort =
   match sort.c with
     | SortIdentifier id ->
       let symb = get_identifier id in
-      find_sort_symb (env,locals) symb []
+      let s_ty = find_sort_symb (env,locals) symb [] in
+      Smtlib_ty.unify sort.ty s_ty sort.p;
+      s_ty
     | SortIdMulti (id, sort_list) ->
       let symb = get_identifier id in
       let arg_sort = List.map (fun s ->
-          find_sort (env,locals) s
+          let s_ty = find_sort (env,locals) s in
+          s_ty
         ) sort_list in
-      find_sort_symb (env,locals) symb arg_sort
+      let s_ty = find_sort_symb (env,locals) symb arg_sort in
+      Smtlib_ty.unify sort.ty s_ty sort.p;
+      s_ty
 
 (******************************************************************************)
 (************************************ Funs ************************************)

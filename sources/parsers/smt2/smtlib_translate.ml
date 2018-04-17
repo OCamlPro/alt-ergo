@@ -29,7 +29,6 @@ let translate_chainable_assoc f id params =
     in res
 
 (******************************************************************************)
-
 let init n f =
   let rec init_aux i n f =
     if i >= n then []
@@ -39,31 +38,24 @@ let init n f =
   in
   init_aux 0 n f
 
-let get_sort_symb s pars =
-  match s.c with
-  | "Int" -> int_type
-  | "Bool" -> bool_type
-  | "Real" -> real_type
-  | "Array" -> mk_external_type s.p [] "farray"
-  | _ ->
-    if List.mem s.c pars then
-      mk_var_type s.p s.c
-    else
-      mk_external_type s.p [] s.c
-
-let get_sort_id id pars =
-  match id.c with
-  | IdSymbol s -> get_sort_symb s pars
-  | IdUnderscoreSymNum (s,index_list) -> assert false
-
-let rec get_sort pars s =
-  match s.c with
-  | SortIdentifier s -> get_sort_id s pars
-  | SortIdMulti(id,sl) ->
-    let id = Smtlib_typed_env.get_identifier id in
-    match id.c with
-    | "Array" -> mk_external_type s.p (List.map (get_sort pars) sl) "farray"
-    | _ ->  mk_external_type s.p (List.map (get_sort pars) sl) id.c
+let translate_sort sort =
+  let open Smtlib_ty in
+  let rec aux ty =
+    match (shorten ty).desc with
+  | TDummy -> assert false
+  | TInt -> int_type
+  | TReal -> real_type
+  | TBool -> bool_type
+  | TString -> assert false
+  | TArray (t1,t2) -> mk_external_type sort.p [aux t1;aux t2] "farray"
+  | TBitVec (n) -> assert false
+  | TSort (s,t_list) -> mk_external_type sort.p (List.map aux t_list) s
+  | TDatatype (d,t_list) -> assert false
+  | TVar (s) -> mk_var_type sort.p s
+  | TFun (t_list,t) -> assert false
+  | TLink(t) -> assert false
+  in
+  aux sort.ty
 
 let better_num_of_string s =
   begin match String.split_on_char '.' s with
@@ -204,7 +196,7 @@ and translate_term pars term =
     begin
       match s with
       | None -> q
-      | Some s -> mk_type_cast term.p q (get_sort pars s)
+      | Some s -> mk_type_cast term.p q (translate_sort s)
     end
   | TermQualIdTerm(qid,term_list) ->
     let params = List.map (translate_term pars) term_list in
@@ -212,7 +204,7 @@ and translate_term pars term =
     begin
       match s with
       | None -> q
-      | Some s -> mk_type_cast term.p q (get_sort pars s)
+      | Some s -> mk_type_cast term.p q (translate_sort s)
     end
   | TermLetTerm(varbinding_list,term) ->
     let varbind = List.map (fun varb ->
@@ -223,13 +215,13 @@ and translate_term pars term =
   | TermForAllTerm(sorted_var_list,t) ->
     let svl = List.map (fun sv ->
         let v,s = sv.c in
-        v.c, v.c, get_sort pars s
+        v.c, v.c, translate_sort s
       ) sorted_var_list in
     translate_quantif mk_forall svl pars t
   | TermExistsTerm(sorted_var_list,t) ->
     let svl = List.map (fun sv ->
         let v,s = sv.c in
-        v.c, "", get_sort pars s
+        v.c, "", translate_sort s
       ) sorted_var_list in
     translate_quantif mk_exists svl pars t
   | TermExclimationPt(term,key_term_list) ->
@@ -253,14 +245,10 @@ let translate_assert =
     let name = Printf.sprintf "ax__%d" !cpt in
     mk_generic_axiom at.p name (translate_assert_term at)
 
-(* get_sort_id s sl@pars *)
-
 let translate_const_dec cst =
   match cst.c with
-  | Const_dec_sort t -> get_sort [] t
-  | Const_dec_par (pars,t) ->
-    let pars = List.map (fun par -> par.c) pars in
-    get_sort pars t
+  | Const_dec_sort t -> translate_sort t
+  | Const_dec_par (_,t) -> translate_sort t
 
 let translate_decl_fun f params ret =
   let logic_type = mk_logic_type params (Some ret) in
@@ -268,22 +256,21 @@ let translate_decl_fun f params ret =
 
 let translate_fun_dec fun_dec =
   match fun_dec.c with
-  | Fun_dec (sl,s) -> List.map (get_sort []) sl, get_sort [] s
-  | Fun_dec_par (pars,sl,s) ->
-    let pars = List.map (fun par -> par.c) pars in
-    List.map (get_sort pars) sl, get_sort pars s
+  | Fun_dec (sl,s) -> List.map translate_sort sl, translate_sort s
+  | Fun_dec_par (_,sl,s) ->
+    List.map translate_sort sl, translate_sort s
 
 let translate_fun_def fun_def =
   match fun_def.c with
   | Fun_def (symb,svl,sort) ->
     symb,
-    List.map (fun sv -> let p,s = sv.c in p.p,p.c,get_sort [] s) svl,
-    get_sort [] sort, []
+    List.map (fun sv -> let p,s = sv.c in p.p,p.c,translate_sort s) svl,
+    translate_sort sort, []
   | Fun_def_par (symb,pars,svl,sort) ->
     let pars = List.map (fun par -> par.c) pars in
     symb,
-    List.map (fun sv -> let p,s = sv.c in p.p,p.c,get_sort pars s) svl,
-    get_sort pars sort,pars
+    List.map (fun sv -> let p,s = sv.c in p.p,p.c,translate_sort s) svl,
+    translate_sort sort,pars
 
 let translate_fun_def fun_def term =
   let symb,params,ret,pars = translate_fun_def fun_def in
@@ -322,7 +309,7 @@ let translate_command acc command =
   | Cmd_DefineFunsRec(fun_def_list,term_list) ->
     let l = List.map2 translate_fun_def fun_def_list term_list in
     l @ acc
-  | Cmd_DefineSort(symbol,symbol_list,sort) -> assert false
+  | Cmd_DefineSort(symbol,symbol_list,sort) -> acc
   | Cmd_Echo(attribute_value) -> acc
   | Cmd_GetAssert -> acc
   | Cmd_GetProof -> acc
