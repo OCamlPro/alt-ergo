@@ -1484,13 +1484,12 @@ and add_at_desc_at errors indent (buffer:sbuffer) tags iter at =
       append_buf buffer ~iter ~tags (if ub then "[" else "]")
 
     | ATite(f, t1, t2) ->
-      append_buf buffer ~tags "(if ";
+      append_buf buffer ~tags "if ";
       add_aaform errors buffer indent tags f;
       append_buf buffer ~tags " then ";
-      add_aterm_at errors indent buffer tags iter t1;
+      add_aterm errors indent buffer tags t1;
       append_buf buffer ~tags " else ";
-      add_aterm_at errors indent buffer tags iter t2;
-      append_buf buffer ~tags ")"
+      add_aterm errors indent buffer tags t2
 
 and add_term_binders_to_buf errors indent buffer tags iter l =
   match l with
@@ -1879,9 +1878,10 @@ let rec isin_aterm sl { at_desc = at_desc } =
     | ATinInterval(t1, _, t2, t3, _) ->
       isin_aterm sl t1 || isin_aterm sl t2 || isin_aterm sl t3
     | ATrecord rt -> let atl = List.map snd rt in isin_aterm_list sl atl
-    | ATite (_f, t1, t2) ->
-      (* XXX : _f ignored *)
-      isin_aterm sl t1 || isin_aterm sl t2
+    | ATite (f, t1, t2) ->
+      (match findtags_aaform sl f [] with [] -> false | _ -> true)
+      || isin_aterm sl t1
+      || isin_aterm sl t2
 
 and isin_aterm_list sl atl =
   List.fold_left
@@ -1913,10 +1913,12 @@ and findtags_aaterm sl aat acc =
       let atl = List.map snd r in
       if isin_aterm_list sl atl then aat.tag::acc else acc
 
-    | ATite (_f, t1, t2) ->
-      (* XXX : formula _f ignored *)
-      if isin_aterm sl t1 || isin_aterm sl t2 then aat.tag::acc else acc
-
+    | ATite (f, t1, t2) ->
+      if (match findtags_aaform sl f [] with [] -> false | _ -> true)
+        || isin_aterm sl t1
+        || isin_aterm sl t2
+      then aat.tag::acc
+      else acc
 
 and findtags_aaterm_list sl aatl acc =
   List.fold_left
@@ -1924,7 +1926,7 @@ and findtags_aaterm_list sl aatl acc =
       findtags_aaterm sl aat acc
     ) acc aatl
 
-let findtags_aatom sl aa acc =
+and findtags_aatom sl aa acc =
   match aa with
     | AAtrue
     | AAfalse -> acc
@@ -1939,7 +1941,7 @@ let findtags_aatom sl aa acc =
     | AApred (at, _) -> acc
 
 
-let rec findtags_quant_form
+and findtags_quant_form
     sl {aqf_triggers = trs; aqf_form = aaf ; aqf_hyp } acc =
   let acc = findtags_triggers sl trs acc in
   let acc = findtags_aaform_list sl aqf_hyp acc in
@@ -1975,7 +1977,7 @@ and findtags_aaform_list sl aafl acc =
     (fun acc aaf -> findtags_aaform sl aaf acc
     ) acc aafl
 
-and findtags_aaform sl aaf acc =
+and findtags_aaform sl aaf (acc : GText.tag list) : GText.tag list =
   match aaf.c with
     | AFatom (AApred (at, _)) when isin_aterm sl at -> aaf.tag::acc
     | _ -> findtags_aform sl aaf.c acc
