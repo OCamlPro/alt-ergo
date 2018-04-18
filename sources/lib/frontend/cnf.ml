@@ -173,6 +173,23 @@ let bound_of_term (t: T.t) =
   | Name _ | True | False | Void | Bitv _ | Op _ | In _ | MapsTo _ ->
     assert false
 
+let inline_abstractions in_term parent_abstr abstr up_qv tmp =
+  if in_term then tmp
+  else
+    let id = F.id tmp in
+    let l_abstr =
+      F.Map.fold
+        (fun f e acc ->
+           if F.Map.mem f parent_abstr then acc else (f, e) :: acc
+        )!abstr []
+    in
+    let l_abstr =
+      List.fast_sort (fun (_,(_,_,x)) (_,(_,_,y)) -> y - x) l_abstr
+    in
+    abstr := parent_abstr;
+    List.fold_left
+      (fun acc (f, (sy, t, _)) -> F.mk_let up_qv sy f acc id) tmp l_abstr
+
 
 let rec make_term up_qv (defns:let_defns) abstr {c = {tt_ty=ty; tt_desc=tt}} =
   let ty = Ty.shorten ty in
@@ -433,6 +450,9 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
             mk_form up_qv defns false f.c f.annot) qf.qf_hyp in
       let trs = List.map (make_trigger up_qv defns abstr hyp) qf.qf_triggers in
       let ff = mk_form up_qv defns false qf.qf_form.c qf.qf_form.annot in
+      (* for for_all, we should eventually inline some introduced abstractions
+         before constructing the quantified formulas *)
+      let ff = inline_abstractions in_term parent_abstr abstr up_qv ff in
       begin
         match f with
 	| TFforall _ ->
@@ -490,21 +510,7 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
 
     | _ -> assert false
     in
-    if in_term then tmp
-    else
-      let id = F.id tmp in
-      let l_abstr =
-        F.Map.fold
-          (fun f e acc ->
-             if F.Map.mem f parent_abstr then acc else (f, e) :: acc
-          )!abstr []
-      in
-      let l_abstr =
-        List.fast_sort (fun (_,(_,_,x)) (_,(_,_,y)) -> y - x) l_abstr
-      in
-      abstr := parent_abstr;
-      List.fold_left
-        (fun acc (f, (sy, t, _)) -> F.mk_let up_qv sy f acc id) tmp l_abstr
+    inline_abstractions in_term parent_abstr abstr up_qv tmp
   in
   mk_form up_qv defns true f.c f.annot
 

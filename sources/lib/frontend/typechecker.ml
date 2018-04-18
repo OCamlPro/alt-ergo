@@ -532,8 +532,10 @@ and type_term_desc env loc = function
       let te3 = type_term env t3 in
       let ty2 = Ty.shorten te2.c.tt_ty in
       let ty3 = Ty.shorten te3.c.tt_ty in
-      if not (Ty.equal ty2 ty3) then
-	error (ShouldHaveType(ty3,ty2)) t3.pp_loc;
+      begin
+        try Ty.unify ty2 ty3
+        with Ty.TypeClash(t1,t2) -> error (ShouldHaveType(ty3,ty2)) t3.pp_loc;
+      end;
       Options.tool_req 1 (append_type "TR-Typing-Ite type" ty2);
       TTite (cond, te2, te3) , ty2
     end
