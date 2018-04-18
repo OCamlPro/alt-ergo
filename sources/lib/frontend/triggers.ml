@@ -589,6 +589,32 @@ let filter_mono vterm vtype (t, bv_t, vty_t) =
 let as_bv bv s = not (Vterm.is_empty (Vterm.inter bv s))
 let as_tyv vty s = not (Vtype.is_empty (Vtype.inter vty s))
 
+let rec contains_ite t = match t.c.tt_desc with
+  | TTconst _
+  | TTvar _ -> false
+
+  | TTnamed (_, t)
+  | TTdot (t, _)
+  | TTmapsTo (_, t)
+  | TTprefix (_, t) -> contains_ite t
+
+  | TTget (s, t)
+  | TTconcat (s, t)
+  | TTinfix (s, _, t) -> contains_ite s || contains_ite t
+
+  | TTapp (_, l) -> List.exists contains_ite l
+
+  | TTrecord l -> List.exists (fun (_, t) -> contains_ite t) l
+  | TTlet (l, t) ->
+    List.exists (fun (_, t) -> contains_ite t) l || contains_ite t
+
+  | TTset (s, t, u)
+  | TTextract (s, t, u)
+  | TTinInterval (s, _, t, u, _) ->
+    contains_ite s || contains_ite t || contains_ite u
+
+  | TTite _ -> true
+
 let potential_triggers =
   let rec potential_rec ( (bv, vty) as vars) acc t =
     let vty_t = vty_term Vtype.empty t in
@@ -673,16 +699,27 @@ let potential_triggers =
 	    (STRS.add (t, bv_lf, vty_lf) acc) lt
 	else acc
 
-      | _ -> acc
+      | TTprefix (_, _)
+      | TTconst _
+      | TTmapsTo (_, _)
+      | TTinInterval (_, _, _, _, _)
+      | TTextract (_, _, _)
+      | TTconcat (_, _)
+      | TTnamed (_, _) -> acc
+      | TTite _ -> assert false
 
-  in fun vars -> List.fold_left (potential_rec vars) STRS.empty
+  in fun vars l ->
+    List.fold_left
+      (fun acc t -> if contains_ite t then acc else potential_rec vars acc t)
+      STRS.empty l
 
 let filter_good_triggers (bv, vty) =
   List.filter
     (fun (l, _) ->
-      let s1 = List.fold_left (vars_of_term bv) Vterm.empty l in
-      let s2 = List.fold_left vty_term Vtype.empty l in
-      Vterm.subset bv s1 && Vtype.subset vty s2 )
+       not (List.exists contains_ite l) &&
+       let s1 = List.fold_left (vars_of_term bv) Vterm.empty l in
+       let s2 = List.fold_left vty_term Vtype.empty l in
+       Vterm.subset bv s1 && Vtype.subset vty s2 )
 
 let make_triggers gopt vterm vtype trs =
   let l = match List.filter (filter_mono vterm vtype) trs with
@@ -707,11 +744,13 @@ let check_triggers trs (bv, vty) =
     failwith "There should be a trigger for every quantified formula \
               in a theory.";
   List.iter (fun (l, _) ->
-    let s1 = List.fold_left (vars_of_term bv) Vterm.empty l in
-    let s2 = List.fold_left vty_term Vtype.empty l in
-    if not (Vtype.subset vty s2) || not (Vterm.subset bv s1) then
-      failwith "Triggers of a theory should contain every quantified \
-                types and variables.")
+      if List.exists contains_ite l then
+        failwith "If-Then-Else are not allowed in (theory triggers)";
+      let s1 = List.fold_left (vars_of_term bv) Vterm.empty l in
+      let s2 = List.fold_left vty_term Vtype.empty l in
+      if not (Vtype.subset vty s2) || not (Vterm.subset bv s1) then
+        failwith "Triggers of a theory should contain every quantified \
+                  types and variables.")
     trs;
   trs
 
