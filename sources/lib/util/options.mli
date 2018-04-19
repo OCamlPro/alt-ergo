@@ -139,6 +139,7 @@ val age_bound : unit -> int
 val no_user_triggers : unit -> bool
 val triggers_var : unit -> bool
 val nb_triggers : unit -> int
+val max_multi_triggers_size : unit -> int
 val verbose : unit -> bool
 val greedy : unit -> bool
 val no_Ematching : unit -> bool

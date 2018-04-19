@@ -65,6 +65,7 @@ module M = struct
   let disable_ites = ref false
   let triggers_var = ref false
   let nb_triggers = ref 2
+  let max_multi_triggers_size = ref max_int
   let enable_assertions = ref false
   let no_Ematching = ref false
   let arith_matching = ref true
@@ -402,6 +403,10 @@ module M = struct
     "-nb-triggers" ,
     Arg.Set_int nb_triggers,
     " number of (multi)triggers (default: 2)";
+
+    "-max-multi-triggers-size" ,
+    Arg.Set_int max_multi_triggers_size,
+    " max number of terms allowed in multi-triggers (default: max_int)";
 
     "-triggers-var" ,
     Arg.Set triggers_var ,
@@ -782,6 +787,7 @@ let verbose () = !M.verbose
 let greedy () = !M.greedy
 let triggers_var () = !M.triggers_var
 let nb_triggers () = !M.nb_triggers
+let max_multi_triggers_size () = !M.max_multi_triggers_size
 let no_Ematching () = !M.no_Ematching
 let arith_matching () = !M.arith_matching
 let no_backjumping () = !M.no_backjumping
