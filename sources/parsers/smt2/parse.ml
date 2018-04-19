@@ -17,13 +17,13 @@ let aux aux_fun token lexbuf =
     raise (Errors.Syntax_error (loc, lex))
 
 let file_parser token lexbuf =
-  Translate.file_parser (SmtlibParser.commands token lexbuf)
+  Translate.file (SmtlibParser.commands token lexbuf)
 
 let lexpr_parser token lexbuf =
-  Translate.trigger_parser (SmtlibParser.commands token lexbuf)
+  Translate.lexpr (SmtlibParser.term token lexbuf)
 
 let trigger_parser token lexbuf =
-  Translate.lexpr_parser (SmtlibParser.commands token lexbuf)
+  Translate.trigger (SmtlibParser.term_list token lexbuf)
 
 module Parser : Parsers.PARSER_INTERFACE = struct
   let file    = aux file_parser    SmtlibLexer.token
