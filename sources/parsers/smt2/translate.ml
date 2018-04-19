@@ -233,49 +233,34 @@ and translate_term pars term =
     translate_term pars term
   | TermMatch(term,pattern_term_list) -> assert false
 
-let translate_assert_term at =
-  match at.c with
-  | Assert_dec(term) -> translate_term [] term
-  | Assert_dec_par(pars,term) ->
-    let pars = List.map (fun par -> par.c) pars in
-    translate_term pars term
+let translate_assert_term (pars,term) =
+  translate_term pars term
 
-let translate_goal at =
-  mk_goal at.p "g" (translate_assert_term at)
+let translate_goal pos (pars,term) =
+  mk_goal pos "g" (translate_assert_term (pars,term))
 
 let translate_assert =
   let cpt = ref 0 in
-  fun at ->
+  fun pos (pars,term) ->
     incr cpt;
     let name = Printf.sprintf "ax__%d" !cpt in
-    mk_generic_axiom at.p name (translate_assert_term at)
+    mk_generic_axiom pos name (translate_assert_term (pars,term))
 
-let translate_const_dec cst =
-  match cst.c with
-  | Const_dec_sort t -> translate_sort t
-  | Const_dec_par (_,t) -> translate_sort t
+let translate_const_dec (_,sort) =
+  translate_sort sort
 
 let translate_decl_fun f params ret =
   let logic_type = mk_logic_type params (Some ret) in
   mk_logic f.p Symbols.Other [(f.c,f.c)] logic_type
 
-let translate_fun_dec fun_dec =
-  match fun_dec.c with
-  | Fun_dec (sl,s) -> List.map translate_sort sl, translate_sort s
-  | Fun_dec_par (_,sl,s) ->
-    List.map translate_sort sl, translate_sort s
+let translate_fun_dec (_,sl,s) =
+  List.map translate_sort sl, translate_sort s
 
-let translate_fun_def fun_def =
-  match fun_def.c with
-  | Fun_def (symb,svl,sort) ->
-    symb,
-    List.map (fun sv -> let p,s = sv.c in p.p,p.c,translate_sort s) svl,
-    translate_sort sort, []
-  | Fun_def_par (symb,pars,svl,sort) ->
-    let pars = List.map (fun par -> par.c) pars in
-    symb,
-    List.map (fun sv -> let p,s = sv.c in p.p,p.c,translate_sort s) svl,
-    translate_sort sort,pars
+let translate_fun_def (symb,pars,svl,sort) =
+  let pars = List.map (fun par -> par.c) pars in
+  symb,
+  List.map (fun sv -> let p,s = sv.c in p.p,p.c,translate_sort s) svl,
+  translate_sort sort,pars
 
 let translate_fun_def fun_def term =
   let symb,params,ret,pars = translate_fun_def fun_def in
@@ -287,10 +272,10 @@ let translate_fun_def fun_def term =
 let translate_command acc command =
   match command.c with
   | Cmd_Assert(assert_term) ->
-    (translate_assert assert_term) :: acc
+    (translate_assert command.p assert_term) :: acc
   | Cmd_CheckEntailment(assert_term) ->
     Options.set_unsat_mode false;
-    (translate_goal assert_term) :: acc
+    (translate_goal command.p assert_term) :: acc
   | Cmd_CheckSat ->
     Options.set_unsat_mode true;
     (mk_goal command.p "g" (mk_false_const command.p)) :: acc
