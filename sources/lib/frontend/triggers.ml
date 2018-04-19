@@ -750,12 +750,12 @@ let check_triggers trs (bv, vty) =
   trs
 
 let rec make_rec keep_triggers pol gopt vterm vtype f =
-  let c, trs = match f.c with
+  let c, trs, full_trs = match f.c with
     | TFatom {c = (TAfalse | TAtrue)} ->
-      f.c, STRS.empty
+      f.c, STRS.empty, STRS.empty
     | TFatom a ->
       if Vterm.is_empty vterm && Vtype.is_empty vtype then
-	f.c, STRS.empty
+	f.c, STRS.empty, STRS.empty
       else
 	begin
 	  let l = match a.c with
@@ -783,32 +783,35 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
 	    | TApred (t,_) -> [t]
 	    | TAdistinct l when pol == Neg -> l
 	    | _ -> []
-	  in
-	  f.c, potential_triggers (vterm, vtype) l
+          in
+          let res = potential_triggers (vterm, vtype) l in
+	  f.c, res, res
 	end
     | TFop (OPimp, [f1; f2]) ->
 
-      let f1, trs1  =
+      let f1, trs1, f_trs1 =
         make_rec keep_triggers (neg_pol pol) gopt vterm vtype f1 in
-      let f2, trs2  = make_rec keep_triggers pol gopt vterm vtype f2 in
-      let trs = STRS.union trs1 trs2 in
-      TFop(OPimp, [f1; f2]), trs
+      let f2, trs2, f_trs2 = make_rec keep_triggers pol gopt vterm vtype f2 in
+      TFop(OPimp, [f1; f2]), STRS.union trs1 trs2, STRS.union f_trs1 f_trs2
 
     | TFop (OPnot, [f1]) ->
-      let f1, trs1  =
+      let f1, trs1, f_trs1 =
         make_rec keep_triggers (neg_pol pol) gopt vterm vtype f1 in
-      TFop(OPnot, [f1]), trs1
+      TFop(OPnot, [f1]), trs1, f_trs1
 
     (* | OPiff
        | OPif of ('a tterm, 'a) annoted *)
 
     | TFop (op, lf) ->
-      let lf, trs =
+      let lf, trs, f_trs =
 	List.fold_left
-	  (fun (lf, trs1) f ->
-	    let f, trs2 = make_rec keep_triggers pol gopt vterm vtype f in
-	    f::lf, STRS.union trs1 trs2) ([], STRS.empty) lf in
-      TFop(op,List.rev lf), trs
+	  (fun (lf, trs1, f_trs1) f ->
+             let f, trs2, f_trs2 =
+               make_rec keep_triggers pol gopt vterm vtype f in
+             f::lf, STRS.union trs1 trs2, STRS.union f_trs1 f_trs2
+          ) ([], STRS.empty, STRS.empty) lf
+      in
+      TFop(op,List.rev lf), trs, f_trs
 
     | TFforall ({ qf_form= {c = TFop(OPiff,[{c=TFatom _} as f1;f2]);
 			    annot = ido}} as qf) ->
@@ -819,8 +822,12 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
 
       let vterm'' = Vterm.union vterm vterm' in
       let vtype'' = Vtype.union vtype vtype' in
-      let f1', trs1 = make_rec keep_triggers pol gopt vterm'' vtype'' f1 in
-      let f2', trs2 = make_rec keep_triggers pol gopt vterm'' vtype'' f2 in
+      let f1', trs1, f_trs1 =
+        make_rec keep_triggers pol gopt vterm'' vtype'' f1
+      in
+      let f2', trs2, f_trs2 =
+        make_rec keep_triggers pol gopt vterm'' vtype'' f2
+      in
       let trs12 =
 	if keep_triggers then check_triggers qf.qf_triggers (vterm', vtype')
 	else if Options.no_user_triggers () || qf.qf_triggers == [] then
@@ -837,10 +844,19 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
 		(make_triggers false vterm' vtype' (STRS.elements trs2))
 	  end
       in
+      let trs12 =
+        if trs12 != [] then trs12
+        else (* allow vars to escape their scope *)
+	  (make_triggers false vterm' vtype' (STRS.elements f_trs1))@
+	  (make_triggers false vterm' vtype' (STRS.elements f_trs2))
+      in
+      let trs = STRS.union trs1 trs2 in
+      let f_trs = STRS.union trs (STRS.union f_trs1 f_trs2) in
       let trs =
 	STRS.filter
 	  (fun (_, bvt, _) -> Vterm.is_empty (Vterm.inter bvt vterm'))
-	  (STRS.union trs1 trs2) in
+          trs
+      in
       let r  =
 	{ qf with
 	  qf_triggers = trs12 ;
@@ -848,8 +864,8 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
       in
       begin
 	match f.c with
-	  | TFforall _ -> TFforall r, trs
-	  | _ -> TFexists r , trs
+	| TFforall _ -> TFforall r, trs, f_trs
+	| _ -> TFexists r , trs, f_trs
       end
 
     | TFforall qf | TFexists qf ->
@@ -857,7 +873,7 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
       let vterm' =
 	List.fold_left
 	  (fun b (s,_) -> Vterm.add s b) Vterm.empty qf.qf_bvars in
-      let f', trs =
+      let f', trs, f_trs =
 	make_rec keep_triggers pol gopt
 	  (Vterm.union vterm vterm') (Vtype.union vtype vtype') qf.qf_form in
       let trs' =
@@ -869,52 +885,68 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
 	  if lf != [] then lf
 	  else make_triggers gopt vterm' vtype' (STRS.elements trs)
       in
+      let trs' = (* allow vars to escape their scope *)
+        if trs' != [] then trs'
+        else make_triggers gopt vterm' vtype' (STRS.elements f_trs)
+      in
+      let f_trs = STRS.union trs f_trs in
       let trs =
 	STRS.filter
 	  (fun (_, bvt, _) -> Vterm.is_empty (Vterm.inter bvt vterm')) trs in
       let r  = {qf with qf_triggers = trs' ; qf_form = f'} in
-      (match f.c with
-	| TFforall _ -> TFforall r , trs
-	| _ -> TFexists r , trs)
+      begin
+        match f.c with
+	| TFforall _ -> TFforall r , trs, f_trs
+        | _ -> TFexists r , trs, f_trs
+      end
 
     | TFlet (up, binders, f) ->
-      let f, trs = make_rec keep_triggers pol gopt vterm vtype f in
-      let binders, trs =
+      let f, trs, f_trs = make_rec keep_triggers pol gopt vterm vtype f in
+      let binders, trs, f_trs =
         List.fold_left
-          (fun (binders, trs) (sy, e) ->
+          (fun (binders, trs, f_trs) (sy, e) ->
              match e with
              | TletTerm t ->
+               let res = potential_triggers (vterm, vtype) [t] in
                (sy, e) :: binders,
-               STRS.union trs (potential_triggers (vterm, vtype) [t])
+               STRS.union trs res,
+               STRS.union f_trs res
              | TletForm flet ->
-               let flet', trs' =
+               let flet', trs', f_trs' =
                  make_rec keep_triggers pol gopt vterm vtype flet
                in
                (sy, TletForm flet') :: binders,
-               STRS.union trs trs'
-          )([], trs) (List.rev binders)
+               STRS.union trs trs',
+               STRS.union f_trs f_trs'
+          )([], trs, f_trs) (List.rev binders)
       in
-      TFlet (up, binders, f), trs
+      TFlet (up, binders, f), trs, f_trs
 
     | TFnamed(lbl, f) ->
-      let f, trs = make_rec keep_triggers pol gopt vterm vtype f in
-      TFnamed(lbl, f), trs
+      let f, trs, f_trs = make_rec keep_triggers pol gopt vterm vtype f in
+      TFnamed(lbl, f), trs, f_trs
   in
-  { f with c = c }, trs
+  { f with c = c }, trs, full_trs
 
 let make keep_triggers gopt f = match f.c with
   | TFforall _ | TFexists _ ->
-    let f, _ = make_rec keep_triggers Pos gopt Vterm.empty Vtype.empty f in
+    let f, _, _ =
+      make_rec keep_triggers Pos gopt Vterm.empty Vtype.empty f
+    in
     f
   | _  ->
     let vty = vty_form Vtype.empty f in
-    let f, trs = make_rec keep_triggers Pos gopt Vterm.empty vty f in
+    let f, trs, f_trs = make_rec keep_triggers Pos gopt Vterm.empty vty f in
     if Vtype.is_empty vty then f
     else
       let trs = STRS.elements trs in
       if keep_triggers then
         failwith "No polymorphism in use-defined theories.";
       let trs = make_triggers gopt Vterm.empty vty trs in
+      let trs =
+        if trs != [] then trs
+        else make_triggers gopt Vterm.empty vty (STRS.elements f_trs)
+      in
       { f with c = TFforall
 	  {qf_bvars=[]; qf_upvars=[]; qf_triggers=trs; qf_form=f; qf_hyp=[] }}
 
