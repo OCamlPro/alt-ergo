@@ -578,13 +578,8 @@ let rec vty_form acc f = match f.c with
 
   | _ -> acc
 
-let csort = Sy.name "c_sort"
-
 let filter_mono vterm vtype (t, bv_t, vty_t) =
-  Vterm.subset vterm bv_t && Vtype.subset vtype vty_t &&
-    match t.c.tt_desc with
-      | TTapp(s, _) -> not (Sy.equal s csort)
-      | _ -> true
+  Vterm.subset vterm bv_t && Vtype.subset vtype vty_t
 
 let as_bv bv s = not (Vterm.is_empty (Vterm.inter bv s))
 let as_tyv vty s = not (Vtype.is_empty (Vtype.inter vty s))
