@@ -133,11 +133,10 @@ CMO = lib/util/config.cmo \
       lib/frontend/typechecker.cmo \
       lib/frontend/parsed_interface.cmo \
       lib/frontend/frontend.cmo \
-      lib/frontend/parsers.cmo \
-      parsers/smt2/translate.cmo \
-      parsers/smt2/parse.cmo
+      lib/frontend/parsers.cmo
 
-CMOFRONT = parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
+CMOFRONT = parsers/why/why_parser.cmo parsers/why/why_lexer.cmo parsers/smt2/psmt2_to_alt_ergo.cmo
+
 
 # parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
 

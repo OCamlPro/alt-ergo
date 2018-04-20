@@ -7,6 +7,7 @@ subgraph cluster_parsers__why {
 	color=lightgrey;
         "Why_parser";
         "Why_lexer";
+        "Psmt2_to_alt_ergo";
 }
 
 
