@@ -212,20 +212,17 @@ and translate_term pars term =
       | Some s -> mk_type_cast term.p q (translate_sort s)
     end
   | TermLetTerm(varbinding_list,term) ->
-    let varbind = List.map (fun varb ->
-        let s,term = varb.c in
+    let varbind = List.map (fun (s,term) ->
         s.c, (translate_term pars term)
       ) varbinding_list in
     mk_let term.p varbind (translate_term pars term)
   | TermForAllTerm(sorted_var_list,t) ->
-    let svl = List.map (fun sv ->
-        let v,s = sv.c in
+    let svl = List.map (fun (v,s) ->
         v.c, v.c, translate_sort s
       ) sorted_var_list in
     translate_quantif mk_forall svl pars t
   | TermExistsTerm(sorted_var_list,t) ->
-    let svl = List.map (fun sv ->
-        let v,s = sv.c in
+    let svl = List.map (fun (v,s) ->
         v.c, "", translate_sort s
       ) sorted_var_list in
     translate_quantif mk_exists svl pars t
@@ -259,7 +256,7 @@ let translate_fun_dec (_,sl,s) =
 let translate_fun_def (symb,pars,svl,sort) =
   let pars = List.map (fun par -> par.c) pars in
   symb,
-  List.map (fun sv -> let p,s = sv.c in p.p,p.c,translate_sort s) svl,
+  List.map (fun (p,s) -> p.p,p.c,translate_sort s) svl,
   translate_sort sort,pars
 
 let translate_fun_def fun_def term =
