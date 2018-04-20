@@ -1857,12 +1857,19 @@ let file ld =
   let env = Env.empty in
   let keep_triggers = false (* ??? *) in
   try
+    if type_smt2 () then begin
+      printf "%s@." (Util.get_status ());
+      exit 0;
+    end;
     let ltd, env =
       List.fold_left
         (fun acc d -> type_decl keep_triggers acc d)
         ([], env) ld
     in
-    if type_only () then exit 0;
+    if type_only () then begin
+      printf "%s@." (Util.get_status ());
+      exit 0;
+    end;
     List.rev ltd, env
   with
   | Errors.Error(e,l) ->

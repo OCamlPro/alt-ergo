@@ -33,6 +33,10 @@ type sat_solver =
   | Tableaux
   | CDCL_satML
 
+let status = ref "undef"
+let set_status s = status := s
+let get_status () = !status
+
 (*
 let map_merge_is_union eq k a b =
   match a, b with

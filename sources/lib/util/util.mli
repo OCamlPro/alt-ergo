@@ -31,6 +31,10 @@ type sat_solver =
   | Tableaux
   | CDCL_satML
 
+
+val set_status : string -> unit
+val get_status : unit -> string
+
 (*
 (** This function is intended to be used with Map.merge in order to perform a
     union of two maps. The first argument is an equality function used to
