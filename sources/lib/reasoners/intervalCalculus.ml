@@ -70,12 +70,14 @@ module Make
     module Ex = Explanation
 
     module EM = Matching.Make
-      (struct
-        include Uf
-        let add_term env t = fst (Uf.add env t)
-        let are_equal env s t ~add_terms =
-          Uf.are_equal env s t ~added_terms:false
-      end)
+        (struct
+          include Uf
+          let add_term2 env t ~add_to_cs = fst (Uf.add env t)
+          let are_equal env s t ~init_terms =
+            Uf.are_equal env s t ~added_terms:false
+          let class_of2 = Uf.class_of
+          let term_repr env t ~init_term = Uf.term_repr env t
+        end)
 
     type r = P.r
     type uf = Uf.t

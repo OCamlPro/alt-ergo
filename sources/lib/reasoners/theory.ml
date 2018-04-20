@@ -29,7 +29,6 @@
 open Format
 open Options
 open Sig
-open Exception
 
 module X = Combine.Shostak
 module Ex = Explanation
@@ -56,11 +55,8 @@ module type S = sig
     t * Term.Set.t * int
 
   val query : Literal.LT.t -> t -> answer
-  val class_of : t -> Term.t -> Term.t list
-  val are_equal : t -> Term.t -> Term.t -> add_terms:bool -> Sig.answer
   val print_model : Format.formatter -> t -> unit
   val cl_extract : t -> Term.Set.t list
-  val term_repr : t -> Term.t -> Term.t
   val extract_ground_terms : t -> Term.Set.t
   val get_real_env : t -> Ccx.Main.t
   val get_case_split_env : t -> Ccx.Main.t
@@ -515,8 +511,6 @@ module Main_Default : S = struct
       {t with gamma = gamma; terms = Term.Set.union t.terms new_terms},
       new_terms, cpt
 
-  let class_of t term = CC_X.class_of t.gamma term
-
   let debug_theories_instances th_instances ilvl dlvl =
     let module MF = Formula.Map in
     fprintf fmt "===========================================================@.";
@@ -577,7 +571,7 @@ module Main_Default : S = struct
       match A.LT.view a with
       | A.Eq (t1, t2)  ->
 	 let t = add_and_process_conseqs a t in
-         CC_X.are_equal t.gamma t1 t2 ~added_terms:true
+         CC_X.are_equal t.gamma t1 t2 ~init_terms:false
 
       | A.Distinct (false, [t1; t2]) ->
 	 let na = A.LT.neg a in
@@ -593,7 +587,7 @@ module Main_Default : S = struct
 	 let t = add_and_process_conseqs a t in
          if b
          then CC_X.are_distinct t.gamma t1 (Term.top())
-         else CC_X.are_equal t.gamma t1 (Term.top()) ~added_terms:true
+         else CC_X.are_equal t.gamma t1 (Term.top()) ~init_terms:false
 
       | _ ->
 	 let na = A.LT.neg a in
@@ -601,18 +595,6 @@ module Main_Default : S = struct
          CC_X.query t.gamma na
     with Exception.Inconsistent (d, classes) ->
       Yes (d, classes)
-
-  let are_equal t t1 t2 add_terms =
-    if add_terms then
-      let facts = CC_X.empty_facts() in
-      let gamma, facts = CC_X.add_term t.gamma facts t1 Ex.empty in
-      let gamma, facts = CC_X.add_term gamma facts t2 Ex.empty in
-      try
-        let gamma, _ = CC_X.assume_literals gamma [] facts in
-        CC_X.are_equal gamma t1 t2 ~added_terms:true
-      with Inconsistent (ex,cl) -> Yes(ex, cl)
-    else
-      CC_X.are_equal t.gamma t1 t2 ~added_terms:false
 
   let add_term_in_gm gm t =
     let facts = CC_X.empty_facts() in
@@ -645,8 +627,6 @@ module Main_Default : S = struct
 
   let cl_extract env = CC_X.cl_extract env.gamma
 
-  let term_repr env t = CC_X.term_repr env.gamma t
-
   let assume ?(ordered=true) facts t =
     if Options.timers() then
       try
@@ -675,19 +655,6 @@ module Main_Default : S = struct
 
   let get_real_env t = t.gamma
   let get_case_split_env t = t.gamma_finite
-
-
-  let are_equal env t1 t2 ~add_terms =
-    if Options.timers() then
-      try
-	Timers.exec_timer_start Timers.M_CC Timers.F_are_equal;
-	let res = are_equal env t1 t2 add_terms in
-	Timers.exec_timer_pause Timers.M_CC Timers.F_are_equal;
-	res
-      with e ->
-	Timers.exec_timer_pause Timers.M_CC Timers.F_are_equal;
-	raise e
-    else are_equal env t1 t2 add_terms
 
   let compute_concrete_model env =
     fst (try_it env (CC_X.empty_facts ()) ~for_model:true)
@@ -721,12 +688,9 @@ module Main_Empty : S = struct
     {assumed_set}, T.Set.empty, 0
 
   let query a t = No
-  let class_of env t = [t]
-  let are_equal env t1 t2 ~add_terms =
-    if T.equal t1 t2 then Yes(Ex.empty, []) else No
+
   let print_model _ _ = ()
   let cl_extract _ = []
-  let term_repr _ t = t
   let extract_ground_terms _ = Term.Set.empty
 
   let empty_ccx = CC_X.empty ()

@@ -106,7 +106,6 @@ CMO = lib/util/config.cmo \
       lib/structures/commands.cmo \
       lib/structures/profiling.cmo \
       lib/reasoners/matching.cmo \
-      lib/reasoners/instances.cmo \
       lib/reasoners/polynome.cmo \
       lib/reasoners/ac.cmo \
       lib/reasoners/uf.cmo \
@@ -123,6 +122,7 @@ CMO = lib/util/config.cmo \
       lib/reasoners/combine.cmo \
       lib/reasoners/ccx.cmo \
       lib/reasoners/theory.cmo \
+      lib/reasoners/instances.cmo \
       lib/reasoners/sat_solver_sig.cmo \
       lib/reasoners/fun_sat.cmo \
       lib/reasoners/satml.cmo \

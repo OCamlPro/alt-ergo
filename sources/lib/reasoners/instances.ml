@@ -76,11 +76,7 @@ end
 
 module Make(X : Theory.S) : S with type tbox = X.t = struct
 
-  module EM = Matching.Make(
-    struct
-      include X
-      let add_term env t = X.add_term env t ~add_in_cs:false
-    end)
+  module EM = Matching.Make(Ccx.Main)
 
   type tbox = X.t
   type instances = (F.gformula * Ex.t) list
@@ -290,7 +286,8 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     Options.tool_req 2 "TR-Sat-Mround";
     let env =
       {env with matching = EM.add_triggers ~backward env.matching axs} in
-    let substs = EM.query env.matching tbox in
+    let ccx_tbox = X.get_real_env tbox in
+    let substs = EM.query env.matching ccx_tbox in
     let insts = new_facts env tbox selector substs in
     let gd, ngd = split_and_filter_insts env insts in
     sort_facts gd, sort_facts ngd
