@@ -321,16 +321,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | _ -> true
     end
 
-  let inst_predicates backward env inst tbox selector ilvl =
-    try Inst.m_predicates ~backward inst tbox selector ilvl
+  let inst_predicates use_cs backward env inst tbox selector ilvl =
+    try Inst.m_predicates ~use_cs ~backward inst tbox selector ilvl
     with Exception.Inconsistent (expl, classes) ->
       Debug.inconsistent expl env;
       Options.tool_req 2 "TR-Sat-Conflict-2";
       env.heuristics := Heuristics.bump_activity !(env.heuristics) expl;
       raise (IUnsat (expl, classes))
 
-  let inst_lemmas backward env inst tbox selector ilvl =
-    try Inst.m_lemmas ~backward inst tbox selector ilvl
+  let inst_lemmas use_cs backward env inst tbox selector ilvl =
+    try Inst.m_lemmas ~use_cs ~backward inst tbox selector ilvl
     with Exception.Inconsistent (expl, classes) ->
       Debug.inconsistent expl env;
       Options.tool_req 2 "TR-Sat-Conflict-2";
@@ -853,9 +853,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         None
 
   (* returns the (new) env and true if some new instances are made *)
-  let inst_and_assume backward env inst_function inst_env =
+  let inst_and_assume force_grd backward env inst_function inst_env =
     let gd, ngd =
-      inst_function backward env inst_env env.tbox (selector env) env.ilevel in
+      inst_function
+        force_grd backward env inst_env env.tbox (selector env) env.ilevel
+    in
     let l = List.rev_append (List.rev gd) ngd in
 
     (* do this to avoid loosing instances when a conflict is detected
@@ -1088,8 +1090,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         env.gamma env.inst
     in
     let env = new_inst_level env in
-    let env, ok1 = inst_and_assume Util.Normal env inst_predicates gre_inst in
-    let env, ok2 = inst_and_assume Util.Normal env inst_lemmas gre_inst in
+    let env, ok1 =
+      inst_and_assume true Util.Normal env inst_predicates gre_inst
+    in
+    let env, ok2 = inst_and_assume true Util.Normal env inst_lemmas gre_inst
+    in
     let env, ok3 = syntactic_th_inst env gre_inst ~rm_clauses:false in
     let env, ok4 = semantic_th_inst  env gre_inst ~rm_clauses:false ~loop:4 in
     let env = do_case_split env Util.AfterMatching in
@@ -1101,8 +1106,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let env = do_case_split env Util.BeforeMatching in
     let env = compute_concrete_model env 2 in
     let env = new_inst_level env in
-    let env, ok1 = inst_and_assume Util.Normal env inst_predicates env.inst in
-    let env, ok2 = inst_and_assume Util.Normal env inst_lemmas env.inst in
+    let env, ok1 =
+      inst_and_assume true Util.Normal env inst_predicates env.inst
+    in
+    let env, ok2 =
+      inst_and_assume true Util.Normal env inst_lemmas env.inst
+    in
     let env, ok3 = syntactic_th_inst env env.inst ~rm_clauses:false in
     let env, ok4 = semantic_th_inst  env env.inst ~rm_clauses:false ~loop:4 in
     let env = do_case_split env Util.AfterMatching in
@@ -1254,10 +1263,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if verbose () || debug_sat () then
         fprintf fmt "[sat.backward] round %d / %d@." rnd max_rnd;
       let env, new_i1 =
-        inst_and_assume Util.Backward env inst_predicates env.inst
+        inst_and_assume false Util.Backward env inst_predicates env.inst
       in
       let env, new_i2 =
-        inst_and_assume Util.Backward env inst_lemmas env.inst
+        inst_and_assume false Util.Backward env inst_lemmas env.inst
       in
       let nb2 = env.nb_related_to_goal in
       if verbose () || debug_sat () then
@@ -1346,14 +1355,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env, _ = syntactic_th_inst env env.inst ~rm_clauses:true in
       let env, _ = semantic_th_inst  env env.inst ~rm_clauses:true ~loop:4 in
 
-      let env, _ = inst_and_assume Util.Normal env inst_predicates env.inst in
+      let env, _ =
+        inst_and_assume false Util.Normal env inst_predicates env.inst
+      in
 
       let env, _ = syntactic_th_inst env env.inst ~rm_clauses:true in
       let env, _ = semantic_th_inst  env env.inst ~rm_clauses:true ~loop:4 in
 
       (* goal directed for lemmas *)
       let gd, _ =
-        inst_lemmas Util.Normal env env.inst env.tbox (selector env) env.ilevel
+        inst_lemmas
+          false Util.Normal env env.inst env.tbox (selector env) env.ilevel
       in
       if Options.profiling() then Profiling.instances gd;
       let env = assume env gd in

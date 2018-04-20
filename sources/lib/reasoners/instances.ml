@@ -49,6 +49,7 @@ module type S = sig
   val add_predicate : t -> F.gformula -> t
 
   val m_lemmas :
+    use_cs : bool ->
     backward:Util.inst_kind ->
     t ->
     tbox ->
@@ -57,6 +58,7 @@ module type S = sig
     instances * instances (* goal_directed, others *)
 
   val m_predicates :
+    use_cs : bool ->
     backward:Util.inst_kind ->
     t ->
     tbox ->
@@ -281,22 +283,25 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 	raise e
     else new_facts env tbox selector substs
 
-  let mround env axs tbox selector ilvl kind backward =
+  let mround env axs tbox selector ilvl kind backward use_cs =
     Debug.new_mround ilvl kind;
     Options.tool_req 2 "TR-Sat-Mround";
     let env =
       {env with matching = EM.add_triggers ~backward env.matching axs} in
-    let ccx_tbox = X.get_real_env tbox in
+    let ccx_tbox =
+      if use_cs || Options.greedy () then X.get_case_split_env tbox
+      else X.get_real_env tbox
+    in
     let substs = EM.query env.matching ccx_tbox in
     let insts = new_facts env tbox selector substs in
     let gd, ngd = split_and_filter_insts env insts in
     sort_facts gd, sort_facts ngd
 
-  let m_lemmas env tbox selector ilvl backward =
-    mround env env.lemmas tbox selector ilvl "axioms" backward
+  let m_lemmas env tbox selector ilvl backward use_cs =
+    mround env env.lemmas tbox selector ilvl "axioms" backward use_cs
 
-  let m_predicates env tbox selector ilvl backward =
-    mround env env.predicates tbox selector ilvl "predicates" backward
+  let m_predicates env tbox selector ilvl backward use_cs =
+    mround env env.predicates tbox selector ilvl "predicates" backward use_cs
 
   let retrieve_used_context env dep =
     let deps = Ex.formulas_of dep in
@@ -368,29 +373,29 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 	raise e
     else add_predicate env gf
 
-  let m_lemmas ~backward env tbox selector ilvl =
+  let m_lemmas ~use_cs ~backward env tbox selector ilvl =
     if Options.timers() then
       try
 	Timers.exec_timer_start Timers.M_Match Timers.F_m_lemmas;
-	let res = m_lemmas env tbox selector ilvl backward in
+	let res = m_lemmas env tbox selector ilvl backward use_cs in
 	Timers.exec_timer_pause Timers.M_Match Timers.F_m_lemmas;
 	res
       with e ->
 	Timers.exec_timer_pause Timers.M_Match Timers.F_m_lemmas;
 	raise e
-    else m_lemmas env tbox selector ilvl backward
+    else m_lemmas env tbox selector ilvl backward use_cs
 
-  let m_predicates ~backward env tbox selector ilvl =
+  let m_predicates ~use_cs ~backward env tbox selector ilvl =
     if Options.timers() then
       try
 	Timers.exec_timer_start Timers.M_Match Timers.F_m_predicates;
-	let res = m_predicates env tbox selector ilvl backward in
+	let res = m_predicates env tbox selector ilvl backward use_cs in
 	Timers.exec_timer_pause Timers.M_Match Timers.F_m_predicates;
 	res
       with e ->
 	Timers.exec_timer_pause Timers.M_Match Timers.F_m_predicates;
 	raise e
-    else m_predicates env tbox selector ilvl backward
+    else m_predicates env tbox selector ilvl backward use_cs
 
   let matching_terms_info env = EM.terms_info env.matching
 

@@ -37,6 +37,7 @@ module type S = sig
   val add_predicate : t -> Formula.gformula -> t
 
   val m_lemmas :
+    use_cs : bool ->
     backward:Util.inst_kind ->
     t ->
     tbox ->
@@ -45,6 +46,7 @@ module type S = sig
     instances * instances (* goal_directed, others *)
 
   val m_predicates :
+    use_cs : bool ->
     backward:Util.inst_kind ->
     t ->
     tbox ->
