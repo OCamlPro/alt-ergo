@@ -190,6 +190,10 @@ let inline_abstractions in_term parent_abstr abstr up_qv tmp =
     List.fold_left
       (fun acc (f, (sy, t, _)) -> F.mk_let up_qv sy f acc id) tmp l_abstr
 
+let merge_ret_defns d1 d2 =
+  (* best effort in case of captures ! ret_defns used to substitute in
+     triggers only !! *)
+  Sy.Map.union (fun k a b  -> Some a) d1 d2
 
 let rec make_term up_qv (defns:let_defns) abstr {c = {tt_ty=ty; tt_desc=tt}} =
   let ty = Ty.shorten ty in
@@ -279,7 +283,8 @@ let rec make_term up_qv (defns:let_defns) abstr {c = {tt_ty=ty; tt_desc=tt}} =
       t
 
     | TTite(cond, t1, t2) ->
-      let cond = make_form up_qv ~in_term:true defns abstr "" cond Loc.dummy in
+      let cond, _ =
+        make_form up_qv ~in_term:true defns abstr "" cond Loc.dummy in
       let t_cond = abstract_form_in_term cond abstr in
       let t1 = make_term up_qv defns abstr t1 in
       let t2 = make_term up_qv defns abstr t2 in
@@ -350,9 +355,9 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
   let name_tag = ref 0 in
   let rec mk_form up_qv (defns:let_defns) toplevel c id =
     let parent_abstr = !abstr in
-    let tmp = match c with
+    let tmp, defns = match c with
       | TFatom a ->
-        begin match a.c with
+        let res = match a.c with
 	  | TAtrue ->
 	    F.vrai
 	  | TAfalse ->
@@ -370,7 +375,8 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
           | TAle [t1;t2] ->
 	    let lit =
               A.LT.mk_builtin true ale
-                [make_term up_qv defns abstr t1; make_term up_qv defns abstr t2]
+                [make_term up_qv defns abstr t1;
+                 make_term up_qv defns abstr t2]
             in
             F.mk_lit lit id
  	  | TAlt [t1;t2] ->
@@ -401,38 +407,39 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
               (A.LT.mk_builtin true n
                  (List.map (make_term up_qv defns abstr) lt)) id
 	  | _ -> assert false
-        end
+        in
+        res, defns
 
     | TFop(((OPand | OPor | OPxor) as op),[f1;f2]) ->
-      let ff1 = mk_form up_qv defns false f1.c f1.annot in
-      let ff2 = mk_form up_qv defns false f2.c f2.annot in
+      let ff1, d1 = mk_form up_qv defns false f1.c f1.annot in
+      let ff2, d2 = mk_form up_qv defns false f2.c f2.annot in
       let mkop = match op with
 	| OPand -> F.mk_and ff1 ff2 false id
         | OPor -> F.mk_or ff1 ff2 false id
         | OPxor -> F.mk_xor ff1 ff2 false id
         | _ -> assert false
       in
-      mkop
+      mkop, merge_ret_defns d1 d2
     | TFop(OPimp,[f1;f2]) ->
-      let ff1 = mk_form up_qv defns false f1.c f1.annot in
-      let ff2 = mk_form up_qv defns false f2.c f2.annot in
-      F.mk_imp ff1 ff2 id
+      let ff1, d1 = mk_form up_qv defns false f1.c f1.annot in
+      let ff2, d2 = mk_form up_qv defns false f2.c f2.annot in
+      F.mk_imp ff1 ff2 id, merge_ret_defns d1 d2
     | TFop(OPnot,[f]) ->
-      let ff = mk_form up_qv defns false f.c f.annot in
-      F.mk_not ff
+      let ff, d = mk_form up_qv defns false f.c f.annot in
+      F.mk_not ff, d
     | TFop(OPif, [cond; f2;f3]) ->
-      let cond = mk_form up_qv defns false cond.c cond.annot in
-      let ff2  = mk_form up_qv defns false f2.c f2.annot in
-      let ff3  = mk_form up_qv defns false f3.c f3.annot in
-      F.mk_if cond ff2 ff3 id
+      let cond,d1 = mk_form up_qv defns false cond.c cond.annot in
+      let ff2, d2  = mk_form up_qv defns false f2.c f2.annot in
+      let ff3, d3  = mk_form up_qv defns false f3.c f3.annot in
+      F.mk_if cond ff2 ff3 id, merge_ret_defns d1 (merge_ret_defns d2 d3)
     | TFop(OPiff,[f1;f2]) ->
-      let ff1 = mk_form up_qv defns false f1.c f1.annot in
-      let ff2 = mk_form up_qv defns false f2.c f2.annot in
-      F.mk_iff ff1 ff2 id
+      let ff1, d1 = mk_form up_qv defns false f1.c f1.annot in
+      let ff2, d2 = mk_form up_qv defns false f2.c f2.annot in
+      F.mk_iff ff1 ff2 id, merge_ret_defns d1 d2
     | (TFforall qf | TFexists qf) as f ->
       let name =
-        if !name_tag = 0 then name_base else
-          sprintf "#%s#sub-%d" name_base !name_tag
+        if !name_tag = 0 then name_base
+        else sprintf "#%s#sub-%d" name_base !name_tag
       in
       incr name_tag;
       let defns =
@@ -445,18 +452,24 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
       let qvars = varset_of_list qf.qf_bvars in
       let binders = F.mk_binders qvars in
       (*let upvars = varset_of_list qf.qf_upvars in*)
+      let ff, ret_d =
+        mk_form up_qv defns false qf.qf_form.c qf.qf_form.annot in
+      let ff = inline_abstractions in_term parent_abstr abstr up_qv ff in
+
+      (* One of them should be empty. Otherwise, there may be a bug if
+         we eventually substitute with the bad binding *)
+      assert (qf.qf_hyp == [] || Sy.Map.is_empty ret_d);
       let hyp =
         List.map (fun f ->
-            mk_form up_qv defns false f.c f.annot) qf.qf_hyp in
-      let trs = List.map (make_trigger up_qv defns abstr hyp) qf.qf_triggers in
-      let ff = mk_form up_qv defns false qf.qf_form.c qf.qf_form.annot in
+            mk_form up_qv defns false f.c f.annot |> fst ) qf.qf_hyp in
+      let trs =
+        List.map (make_trigger up_qv ret_d abstr hyp) qf.qf_triggers in
       (* for for_all, we should eventually inline some introduced abstractions
          before constructing the quantified formulas *)
-      let ff = inline_abstractions in_term parent_abstr abstr up_qv ff in
       begin
         match f with
 	| TFforall _ ->
-          F.mk_forall name loc binders trs ff id None
+          F.mk_forall name loc binders trs ff id None, ret_d
         | TFexists _ ->
           if toplevel && not (Ty.Set.is_empty (F.type_variables ff)) then
             (* If there is type variables in a toplevel exists:
@@ -467,8 +480,8 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
             *)
             let nm = sprintf "#%s#sub-%d" name_base 0 in
             let gg = F.mk_exists nm loc binders trs ff id None in
-            F.mk_forall name loc Symbols.Map.empty trs gg id None
-          else F.mk_exists name loc binders trs ff id None
+            F.mk_forall name loc Symbols.Map.empty trs gg id None, ret_d
+          else F.mk_exists name loc binders trs ff id None, ret_d
         | _ -> assert false
       end
 
@@ -481,14 +494,14 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
              | TletForm g ->
                let fresh_sy = Sy.fresh ~mk_var:true (Hstring.fresh_string()) in
                let fresh_t = T.make fresh_sy [] Ty.Tbool in
-               let gg = mk_form up_qv defns false g.c g.annot in
+               let gg, _ = mk_form up_qv defns false g.c g.annot in
                sy, Form (gg, fresh_sy, fresh_t)
           )(List.rev binders)
       in
       let defns = add_defns binders defns in
-      let res = mk_form up_qv defns false lf.c lf.annot in
+      let res, ret_d = mk_form up_qv defns false lf.c lf.annot in
       let remaining = filter_out_fully_replaced binders defns in
-      if remaining == [] then res
+      if remaining == [] then res, ret_d
       else
         (* should use F.mk_let: renaming needed to avoid captures when
            transforming let x = ... and y = ... to let x = ... in let
@@ -501,22 +514,22 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
              | Form (gg, sy_gg, t_gg) ->
                (* not sy, but sy_gg, a fresh replacement of sy *)
                F.mk_let up_qv sy_gg gg acc id
-          )res remaining
+          )res remaining, ret_d
 
     | TFnamed(lbl, f) ->
-      let ff = mk_form up_qv defns false f.c f.annot in
+      let ff, ret_d = mk_form up_qv defns false f.c f.annot in
       F.add_label lbl ff;
-      ff
+      ff, ret_d
 
     | _ -> assert false
     in
-    inline_abstractions in_term parent_abstr abstr up_qv tmp
+    inline_abstractions in_term parent_abstr abstr up_qv tmp, defns
   in
   mk_form up_qv defns true f.c f.annot
 
 let mk_assume acc f name loc =
   let abstr = ref F.Map.empty in
-  let ff =
+  let ff, _ =
     make_form Sy.Set.empty ~in_term:false Sy.Map.empty abstr name f loc
   in
   assert (F.Map.is_empty !abstr);
@@ -524,7 +537,7 @@ let mk_assume acc f name loc =
 
 let mk_preddef acc f name loc =
   let abstr = ref F.Map.empty in
-  let ff =
+  let ff, _ =
     make_form Sy.Set.empty ~in_term:false Sy.Map.empty abstr name f loc
   in
   assert (F.Map.is_empty !abstr);
@@ -532,7 +545,7 @@ let mk_preddef acc f name loc =
 
 let mk_query acc n f loc sort =
   let abstr = ref F.Map.empty in
-  let ff =
+  let ff, _ =
     make_form Sy.Set.empty ~in_term:false Sy.Map.empty abstr "" f loc
   in
   assert (F.Map.is_empty !abstr);
@@ -558,7 +571,7 @@ let mk_theory acc l th_name extends loc =
         | _ -> assert false
       in
       let abstr = ref F.Map.empty in
-      let th_form =
+      let th_form, _ =
         make_form Sy.Set.empty ~in_term:false Sy.Map.empty abstr name f loc
       in
       assert (F.Map.is_empty !abstr);
