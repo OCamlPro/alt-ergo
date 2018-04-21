@@ -474,7 +474,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
         (fun dep r -> Ex.union dep (snd (find_or_normal_form env r))) dep l
 
     (* r1 = r2 => neqs(r1) \uplus neqs(r2) *)
-    let update_neqs r1 r2 dep env =
+    let update_neqs x repr_x dep env =
       let merge_disjoint_maps l1 ex1 mapl =
         try
 	  let ex2 = MapL.find l1 mapl in
@@ -487,14 +487,16 @@ module Make (X : Sig.X) : S with type r = X.r = struct
 	     don't need to propagate dep to ex1 here *)
 	  MapL.add l1 ex1 mapl
       in
-      let nq_r1 = lookup_for_neqs env r1 in
-      let nq_r2 = lookup_for_neqs env r2 in
+      let nq_r1 = lookup_for_neqs env x in
+      let nq_r2 = lookup_for_neqs env repr_x in
       let small, big =
         if MapL.height nq_r1 < MapL.height nq_r2 then nq_r1, nq_r2
         else nq_r2, nq_r1
       in
       let mapl = MapL.fold merge_disjoint_maps small big in
-      MapX.add r2 mapl (MapX.add r1 mapl env.neqs)
+      (* remove x from the map to avoid eventual bugs if call this
+         function again with x == repr_x *)
+      MapX.add repr_x mapl (MapX.remove x env.neqs)
 
     let init_leaf env p =
       Debug.init_leaf p;

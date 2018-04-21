@@ -502,16 +502,18 @@ module Main_Default : S = struct
             end
         )([], t.assumed_set, 0) in_facts
     in
-    let t = {t with assumed_set; assumed = assumed :: t.assumed;
-                    cs_pending_facts = in_facts :: t.cs_pending_facts} in
-    if Options.profiling() then Profiling.assume cpt;
-    Debug.assumed t.assumed;
-    assert (not ordered || is_ordered_list t.assumed);
+    if assumed == [] then t, T.Set.empty, 0
+    else
+      let t = {t with assumed_set; assumed = assumed :: t.assumed;
+                      cs_pending_facts = in_facts :: t.cs_pending_facts} in
+      if Options.profiling() then Profiling.assume cpt;
+      Debug.assumed t.assumed;
+      assert (not ordered || is_ordered_list t.assumed);
 
-    let gamma, ch = CC_X.assume_literals t.gamma [] facts in
-    let new_terms = CC_X.new_terms gamma in
-    {t with gamma = gamma; terms = Term.Set.union t.terms new_terms},
-    new_terms, cpt
+      let gamma, ch = CC_X.assume_literals t.gamma [] facts in
+      let new_terms = CC_X.new_terms gamma in
+      {t with gamma = gamma; terms = Term.Set.union t.terms new_terms},
+      new_terms, cpt
 
   let class_of t term = CC_X.class_of t.gamma term
 
