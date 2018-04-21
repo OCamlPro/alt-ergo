@@ -44,7 +44,7 @@ type sat_decl_aux =
   | Assume of string * Formula.t * bool
   | PredDef of Formula.t * string (*name of the predicate*)
   | RwtDef of (Term.t rwt_rule) list
-  | Query of string *  Formula.t * Literal.LT.t list * goal_sort
+  | Query of string *  Formula.t * goal_sort
   | ThAssume of th_elt
 
 type sat_tdecl = {

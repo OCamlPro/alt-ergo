@@ -1,0 +1,17 @@
+(*****************************
+these are now builtin
+****
+axiom tmp_before_builtin_1:
+ forall y, z : 'a[if true then y else z].
+ y = if true then y else z
+
+axiom tmp_before_builtin_2:
+ forall y, z : 'a[if false then y else z].
+ z = if false then y else z
+************************************)
+
+goal g:
+100 >=
+  if 1 <= 2 then
+     (if 3 <= 4 then 100 else 0)
+  else 1

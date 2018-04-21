@@ -144,6 +144,8 @@ val mk_and : Loc.t -> lexpr -> lexpr -> lexpr
 
 val mk_or : Loc.t -> lexpr -> lexpr -> lexpr
 
+val mk_xor : Loc.t -> lexpr -> lexpr -> lexpr
+
 val mk_iff : Loc.t -> lexpr -> lexpr -> lexpr
 
 val mk_implies : Loc.t -> lexpr -> lexpr -> lexpr
@@ -186,7 +188,7 @@ val mk_application : Loc.t -> string -> lexpr list -> lexpr
 
 val mk_ite : Loc.t -> lexpr -> lexpr -> lexpr -> lexpr
 
-val mk_let : Loc.t -> string -> lexpr -> lexpr -> lexpr
+val mk_let : Loc.t -> (string * lexpr) list -> lexpr -> lexpr
 
 val mk_void : Loc.t -> lexpr
 

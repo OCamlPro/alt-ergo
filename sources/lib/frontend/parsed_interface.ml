@@ -198,6 +198,9 @@ let mk_and loc e1 e2 =
 let mk_or loc e1 e2 =
   mk_localized loc (mk_infix e1 PPor e2)
 
+let mk_xor loc e1 e2 =
+  mk_localized loc (mk_infix e1 PPxor e2)
+
 let mk_iff loc e1 e2 =
   mk_localized loc (mk_infix e1 PPiff e2)
 
@@ -207,15 +210,16 @@ let mk_implies loc e1 e2 =
 let mk_not loc e =
   mk_localized loc (mk_prefix PPnot e)
 
-let mk_distinct loc e2 =
-  mk_localized loc (PPdistinct e2)
-
 let mk_pred_eq loc e1 e2 =
   mk_localized loc (mk_infix e1 PPeq e2)
 
 let mk_pred_not_eq loc e1 e2 =
   mk_localized loc (mk_infix e1 PPneq e2)
 
+let mk_distinct loc e2 =
+  match e2 with
+  | [a; b] -> mk_pred_not_eq loc a b
+  | _ -> mk_localized loc (PPdistinct e2)
 
 (** Making quantified formulas **)
 
@@ -249,8 +253,8 @@ let mk_application loc app args =
 let mk_ite loc cond th el =
   mk_localized loc (PPif (cond, th, el))
 
-let mk_let loc var  e1 e2 =
-  mk_localized loc (PPlet (var, e1, e2))
+let mk_let loc binders e =
+  mk_localized loc (PPlet (binders, e))
 
 let mk_void loc =
   mk_localized loc (PPconst ConstVoid)

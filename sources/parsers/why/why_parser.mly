@@ -46,7 +46,7 @@
 %token BOOL COLON COMMA PV DISTINCT DOT ELSE EOF EQUAL
 %token EXISTS FALSE VOID FORALL FUNC GE GOAL GT CHECK CUT
 %token IF IN INT BITV MAPS_TO
-%token LE LET LEFTPAR LEFTSQ LEFTBR LOGIC LRARROW LT MINUS
+%token LE LET LEFTPAR LEFTSQ LEFTBR LOGIC LRARROW XOR LT MINUS
 %token NOT NOTEQ OR PERCENT PLUS PRED PROP
 %token QUOTE REAL UNIT
 %token RIGHTPAR RIGHTSQ RIGHTBR
@@ -57,7 +57,7 @@
 
 %nonassoc IN
 %nonassoc prec_forall prec_exists
-%right RIGHTARROW LRARROW
+%right RIGHTARROW LRARROW XOR
 %right OR
 %right AND
 %nonassoc prec_ite
@@ -232,6 +232,9 @@ lexpr:
 | se1 = lexpr OR se2 = lexpr
    { mk_or ($startpos, $endpos) se1 se2 }
 
+| se1 = lexpr XOR se2 = lexpr
+   { mk_xor ($startpos, $endpos) se1 se2 }
+
 | se1 = lexpr LRARROW se2 = lexpr
    { mk_iff ($startpos, $endpos) se1 se2 }
 
@@ -306,14 +309,18 @@ lexpr:
 | name = STRING COLON e = lexpr %prec prec_named
    { mk_named ($startpos, $endpos) name e }
 
-| LET binder = ident EQUAL e1 = lexpr IN e2 = lexpr
-   { mk_let ($startpos, $endpos) binder e1 e2 }
+| LET binders = let_binders IN e2 = lexpr
+   { mk_let ($startpos, $endpos) binders e2 }
 
 | CHECK e = lexpr
    { mk_check ($startpos, $endpos) e }
 
 | CUT e = lexpr
    { mk_cut ($startpos, $endpos) e }
+
+let_binders:
+| binder = ident EQUAL e = lexpr { [binder, e] }
+| binder = ident EQUAL e = lexpr COMMA l = let_binders { (binder, e) :: l }
 
 simple_expr :
 | i = INTEGER { mk_int_const ($startpos, $endpos) i }
@@ -351,7 +358,8 @@ simple_expr :
 	| [] -> assert false
 	| (i, v)::l -> mk_array_set ($startpos, $endpos) se i v, l
       in
-      List.fold_left (fun acc (i,v) -> mk_array_set ($startpos, $endpos) acc i v) acc l
+      List.fold_left (fun acc (i,v) ->
+          mk_array_set ($startpos, $endpos) acc i v) acc l
     }
 
 | LEFTPAR e = lexpr RIGHTPAR

@@ -66,4 +66,5 @@ module type S = sig
   val get_assumed : t -> Literal.LT.Set.t
 end
 
-module Main : S
+module Main_Default : S
+module Main_Empty : S

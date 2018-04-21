@@ -1,0 +1,6 @@
+logic a, b, c, d : real
+
+goal g:
+ let a = 1.1 in
+ let b = c in
+ b = if a < 1.0 then c else d

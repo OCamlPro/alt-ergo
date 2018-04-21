@@ -155,7 +155,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
         | RwtDef r -> assert false
 
-        | Query(n, f, lits, sort) ->
+        | Query(n, f, sort) ->
 	  let dep =
 	    if consistent then
 	      let dep' = SAT.unsat env
@@ -178,7 +178,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           if debug_proof () then check_produced_proof dep;
           if save_used_context () then do_save_used_context env dep;
 	  print_status (Unsat (d, dep)) (SAT.get_steps ());
-	  env, consistent, dep
+	  env, false, dep
 
       | ThAssume th_elt ->
         if consistent then
@@ -206,10 +206,56 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let goal_name d =
     match d.st_decl with
-    | Query(n,_,_,_) -> sprintf " (goal %s)" n
+    | Query(n,_,_) -> sprintf " (goal %s)" n
     | _ -> ""
 
-  let print_status status steps =
+  let print_status_unsat_mode status steps =
+    let time = Time.value() in
+    match status with
+    | Unsat (d, dep) ->
+      let loc = d.st_loc in
+      if Options.answers_with_locs () then
+        eprintf "; %aValid (%2.4f) (%Ld steps)%s@."
+          Loc.report loc time steps (goal_name d);
+      (*if proof () && not (debug_proof ()) && not (save_used_context ()) then
+        eprintf "Proof:\n%a@." Explanation.print_proof dep;*)
+      printf "unsat@."
+
+    | Inconsistent d ->
+      ()
+      (*
+      let loc = d.st_loc in
+      if Options.verbose () && Options.answers_with_locs () then
+        eprintf "; %aInconsistent assumption@." report_loc loc
+*)
+
+    | Unknown (d, t) | Sat (d, t) ->
+      let loc = d.st_loc in
+      if Options.answers_with_locs () then
+        eprintf "; %aI don't know (%2.4f) (%Ld steps)%s@."
+          Loc.report loc time steps (goal_name d);
+      printf "unknown@."
+
+    | Timeout (Some d) ->
+      let loc = d.st_loc in
+      if Options.answers_with_locs () then
+        eprintf "; %aTimeout (%2.4f) (%Ld steps)%s@."
+          Loc.report loc time steps (goal_name d);
+      printf "timeout@."
+
+    | Timeout None ->
+      if Options.answers_with_locs () then
+        eprintf "; %aTimeout (%2.4f) (%Ld steps)@."
+          Loc.report Loc.dummy time steps;
+      printf "timeout@."
+
+    | Preprocess ->
+      if Options.answers_with_locs () then
+        eprintf "; %aPreprocessing (%2.4f) (%Ld steps)@."
+          Loc.report Loc.dummy time steps
+
+
+  let print_status_valid_mode status steps =
     let time = Time.value() in
     let report_loc fmt loc =
       if js_mode () then fprintf fmt "# [answer] "
@@ -244,5 +290,10 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
     | Preprocess ->
       printf "%aPreprocessing (%2.4f) (%Ld steps)@."
-        report_loc Loc.dummy time steps;
+        report_loc Loc.dummy time steps
+
+  let print_status status steps =
+    if Options.unsat_mode () then print_status_unsat_mode status steps
+    else print_status_valid_mode status steps
 end
+

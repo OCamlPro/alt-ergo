@@ -1,0 +1,5 @@
+logic b : bool
+logic p : prop
+goal g:
+b ->
+if not b then 1 <= 1 else 2 <= 1

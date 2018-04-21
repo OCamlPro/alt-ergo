@@ -69,7 +69,7 @@ type quantified = {
 and llet = {
   let_var: Symbols.t;
   let_subst : Term.subst;
-  let_term : Term.t;
+  let_form : t;
   let_f : t;
 }
 
@@ -102,8 +102,9 @@ val mk_binders : Term.Set.t -> binders
 val mk_not : t -> t
 val mk_and : t -> t -> bool -> int -> t (* bool <-> is implication (neg) *)
 val mk_or : t -> t -> bool -> int -> t (* bool <-> is implication *)
+val mk_xor : t -> t -> bool -> int -> t (* bool <-> is implication *)
 val mk_imp : t -> t -> int -> t
-val mk_if : Term.t -> t -> t -> int -> t
+val mk_if : t -> t -> t -> int -> t
 val mk_iff : t -> t -> int -> t
 val mk_lit : Literal.LT.t -> int -> t
 val mk_forall :
@@ -128,7 +129,7 @@ val mk_exists :
   (* free_vars and free_vty: they are computed if None is given *)
   t
 
-val mk_let : Term.Set.t -> Symbols.t -> Term.t -> t -> int -> t
+val mk_let : Symbols.Set.t -> Symbols.t -> t -> t -> int -> t
 
 val add_label : Hstring.t -> t -> unit
 val label : t -> Hstring.t

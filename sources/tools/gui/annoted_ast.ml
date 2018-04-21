@@ -108,6 +108,9 @@ type 'a annoted =
       mutable line : int;
     }
 
+type aoplogic =
+    AOPand |AOPor | AOPxor | AOPimp | AOPnot | AOPif | AOPiff
+
 type aterm =
     { at_ty : Ty.t; at_desc : at_desc }
 
@@ -121,17 +124,16 @@ and at_desc =
   | ATset of aterm * aterm * aterm
   | ATextract of aterm * aterm * aterm
   | ATconcat of aterm * aterm
-  | ATlet of Symbols.t * aterm * aterm
+  | ATlet of (Symbols.t * aterm) list * aterm
   | ATdot of aterm * Hstring.t
   | ATrecord of (Hstring.t * aterm) list
   | ATnamed of Hstring.t * aterm
   | ATmapsTo of Hstring.t * aterm
   | ATinInterval of aterm * bool * aterm * aterm *  bool
-(* bool = true <-> interval is_open *)
+  (* bool = true <-> interval is_open *)
+  | ATite of aform annoted * aterm * aterm
 
-
-
-type aatom =
+and aatom =
   | AAtrue
   | AAfalse
   | AAeq of aterm annoted list
@@ -139,13 +141,10 @@ type aatom =
   | AAdistinct of aterm annoted list
   | AAle of aterm annoted list
   | AAlt of aterm annoted list
-  | AApred of aterm
+  | AApred of aterm * bool (* true <-> negated *)
   | AAbuilt of Hstring.t * aterm annoted list
 
-type aoplogic =
-    AOPand |AOPor | AOPimp | AOPnot | AOPif of aterm | AOPiff
-
-type aquant_form = {
+and aquant_form = {
   aqf_bvars : (Symbols.t * Ty.t) list ;
   aqf_upvars : (Symbols.t * Ty.t) list ;
   mutable aqf_triggers : (aterm annoted list * bool) list ;
@@ -158,8 +157,13 @@ and aform =
   | AFop of aoplogic * aform annoted list
   | AFforall of aquant_form annoted
   | AFexists of aquant_form annoted
-  | AFlet of (Symbols.t * Ty.t) list * Symbols.t * aterm * aform annoted
+  | AFlet of
+      (Symbols.t * Ty.t) list * (Symbols.t * atlet_kind) list * aform annoted
   | AFnamed of Hstring.t * aform annoted
+
+and atlet_kind =
+  | ATletTerm of aterm annoted
+  | ATletForm of aform annoted
 
 type atyped_decl =
   | ATheory of Loc.t * string * theories_extensions * atyped_decl annoted list
@@ -384,53 +388,70 @@ let new_annot (buffer:sbuffer) c id ptag =
     line = buffer#line_count }
 
 
-let rec findin_aterm tag buffer { at_desc = at_desc } =
-  findin_at_desc tag buffer at_desc
+let rec findin_aterm tag buffer parent { at_desc = at_desc } =
+  findin_at_desc tag buffer parent at_desc
 
-and findin_aterm_list tag buffer atl =
+and findin_aterm_list tag buffer parent atl =
   List.fold_left
     (fun r at -> match r with
-      | None -> findin_aterm tag buffer at
+      | None -> findin_aterm tag buffer parent at
       | Some _ -> r
     ) None atl
 
-and findin_aaterm tag buffer aat =
+and findin_aaterm tag buffer parent aat =
   let goodbuf =  aat.buf#get_oid = buffer#get_oid in
   let c = compare tag#priority aat.tag#priority in
   if goodbuf && c = 0 then Some (AT aat)
   else if goodbuf && c > 0 then None
-  else findin_aterm tag buffer aat.c
+  else findin_aterm tag buffer parent aat.c
 
-and findin_aaterm_list tag buffer aatl =
+and findin_aaterm_list tag buffer parent aatl =
   List.fold_left
     (fun r aat -> match r with
-      | None -> findin_aaterm tag buffer aat
+      | None -> findin_aaterm tag buffer parent aat
       | Some _ -> r
     ) None aatl
 
-and findin_at_desc tag buffer = function
+and findin_at_desc tag buffer parent = function
   | ATconst _
   | ATvar _ -> None
-  | ATapp (s, atl) -> findin_aterm_list tag buffer atl
-  | ATinfix (t1, _, t2) | ATget (t1,t2)
-  | ATconcat (t1, t2) | ATlet (_, t1, t2) ->
-    let r = findin_aterm tag buffer t1 in
-    if r == None then findin_aterm tag buffer t2
+  | ATapp (s, atl) -> findin_aterm_list tag buffer parent atl
+  | ATinfix (t1, _, t2) | ATget (t1,t2) | ATconcat (t1, t2) ->
+    let r = findin_aterm tag buffer parent t1 in
+    if r == None then findin_aterm tag buffer parent t2
     else r
-  | ATdot (t, _) | ATprefix (_,t) -> findin_aterm tag buffer t
+  | ATlet (l , t2) ->
+    let r =
+      List.fold_left
+        (fun r (_, t) ->
+           if r == None then findin_aterm tag buffer parent t
+           else r
+        )None l
+    in
+    if r == None then findin_aterm tag buffer parent t2
+    else r
+  | ATdot (t, _) | ATprefix (_,t) -> findin_aterm tag buffer parent t
   | ATset (t1, t2, t3) | ATextract (t1, t2, t3)  ->
-    let r = findin_aterm tag buffer t1 in
+    let r = findin_aterm tag buffer parent t1 in
     if r == None then
-      let r = findin_aterm tag buffer t2 in
-      if r == None then findin_aterm tag buffer t3
+      let r = findin_aterm tag buffer parent t2 in
+      if r == None then findin_aterm tag buffer parent t3
       else r
     else r
-  | ATrecord r -> let atl = List.map snd r in findin_aterm_list tag buffer atl
-  | ATnamed (_, t) -> findin_aterm tag buffer t
-  | ATmapsTo (_, t) -> findin_aterm tag buffer t
-  | ATinInterval(e, _, i, j, _) -> findin_aterm_list tag buffer [e; i; j]
+  | ATrecord r ->
+    let atl = List.map snd r in findin_aterm_list tag buffer parent atl
+  | ATnamed (_, t) -> findin_aterm tag buffer parent t
+  | ATmapsTo (_, t) -> findin_aterm tag buffer parent t
+  | ATinInterval(e, _, i, j, _) -> findin_aterm_list tag buffer parent [e; i; j]
+  | ATite (f, t1, t2) ->
+    let r = findin_aterm tag buffer parent t1 in
+    if r != None then r
+    else
+      let r = findin_aterm tag buffer parent t2 in
+      if r != None then r
+      else findin_aaform tag buffer parent f
 
-let findin_aatom tag buffer aa =
+and findin_aatom tag buffer parent aa =
   match aa with
     | AAtrue
     | AAfalse -> None
@@ -440,13 +461,12 @@ let findin_aatom tag buffer aa =
     | AAdistinct atl
     | AAle atl
     | AAlt atl
-    | AAbuilt (_, atl) -> findin_aaterm_list tag buffer atl
+    | AAbuilt (_, atl) -> findin_aaterm_list tag buffer parent atl
+    | AApred (at, _) -> findin_aterm tag buffer parent at
 
-    | AApred at -> findin_aterm tag buffer at
-
-let rec findin_quant_form tag buffer parent
+and findin_quant_form tag buffer parent
     {aqf_triggers = trs; aqf_form = aaf ; aqf_hyp } =
-  let r = findin_triggers tag buffer trs in
+  let r = findin_triggers tag buffer parent trs in
   if r == None then
     let r = findin_aaform_list tag buffer parent aqf_hyp in
     if r == None then
@@ -458,16 +478,16 @@ let rec findin_quant_form tag buffer parent
     else r
   else r
 
-and findin_triggers tag buffer trs =
+and findin_triggers tag buffer parent trs =
   List.fold_left
     (fun r (aatl,_) -> match r with
-      | None -> findin_aaterm_list tag buffer aatl
+      | None -> findin_aaterm_list tag buffer parent aatl
       | Some _ -> r
     ) None trs
 
 and findin_aform tag buffer parent aform =
   match aform with
-    | AFatom a -> findin_aatom tag buffer a
+    | AFatom a -> findin_aatom tag buffer parent a
     | AFop (op, afl) -> findin_aaform_list tag buffer parent afl
     | AFforall qf
     | AFexists qf ->
@@ -476,8 +496,17 @@ and findin_aform tag buffer parent aform =
       if goodbuf && c = 0 then Some (QF qf)
       else if goodbuf && c > 0 then None
       else findin_quant_form tag buffer parent qf.c
-    | AFlet (vs, s, t, aaf) ->
-      let r = findin_aterm tag buffer t in
+    | AFlet (vs, l , aaf) ->
+      let r =
+        List.fold_left
+          (fun r (_,e) ->
+             if r == None then
+               match e with
+               | ATletTerm t -> findin_aterm tag buffer parent t.c
+               | ATletForm f -> findin_aform tag buffer parent f.c
+             else r
+          ) None l
+      in
       if r == None then findin_aaform tag buffer parent aaf
       else r
     | AFnamed (_, aaf) ->
@@ -640,6 +669,14 @@ let print_pred_type_list fmt = function
 
 (**************** to delete *******************)
 
+let print_oplogic fmt = function
+  | OPand -> fprintf fmt "and"
+  | OPor -> fprintf fmt "or"
+  | OPxor -> fprintf fmt "xor"
+  | OPimp -> fprintf fmt "->"
+  | OPiff -> fprintf fmt "<->"
+  | OPif | OPnot -> assert false (* handled differently *)
+
 let rec print_tterm fmt {Typed.c= {tt_desc = tt_desc}} =
   print_tt_desc fmt tt_desc
 
@@ -665,9 +702,8 @@ and print_tt_desc fmt = function
     fprintf fmt "%a %a %a" print_tterm t1 Symbols.print_clean s print_tterm t2
   | TTprefix (s, t) ->
     fprintf fmt "%a %a" Symbols.print_clean s print_tterm t
-  | TTlet (s, t1, t2) ->
-    fprintf fmt "let %a = %a in %a"
-      Symbols.print_clean s print_tterm t1 print_tterm t2
+  | TTlet (binders , t2) ->
+    fprintf fmt "let %a in %a" print_term_binders binders print_tterm t2
   | TTconcat (t1, t2) ->
     fprintf fmt "%a@%a" print_tterm t1 print_tterm t2
   | TTextract (t, t1, t2) ->
@@ -691,7 +727,19 @@ and print_tt_desc fmt = function
   | TTmapsTo(x,e) ->
     fprintf fmt "%s |-> %a" (Hstring.view x) print_term e
 
-let print_tatom fmt a = match a.Typed.c with
+  | TTite(f,t1, t2) ->
+    fprintf fmt "(if %a then %a else %a)"
+      print_tform f print_term t1 print_term t2
+
+and print_term_binders fmt l =
+  match l with
+  | [] -> assert false
+  | (sy, t) :: l ->
+    fprintf fmt "%a = %a" Symbols.print_clean sy print_term t;
+    List.iter (fun (sy, t) ->
+        fprintf fmt ",\n%a = %a" Symbols.print_clean sy print_term t) l
+
+and print_tatom fmt a = match a.Typed.c with
   | TAtrue -> fprintf fmt "true"
   | TAfalse -> fprintf fmt "false"
   | TAeq tl -> print_tterm_list " = " fmt tl
@@ -700,27 +748,22 @@ let print_tatom fmt a = match a.Typed.c with
     fprintf fmt "distinct(%a)" (print_tterm_list ", ") tl
   | TAle tl -> print_tterm_list " <= " fmt tl
   | TAlt tl -> print_tterm_list " < " fmt tl
-  | TApred t -> print_tterm fmt t
+  | TApred (t, negated) ->
+    if negated then fprintf fmt "(not (%a))" print_tterm t
+    else print_tterm fmt t
+
   | TAbuilt (h, tl) -> print_tterm_list (" "^(Hstring.view h)^" ") fmt tl
 
-let print_oplogic fmt = function
-  | OPand -> fprintf fmt "and"
-  | OPor -> fprintf fmt "or"
-  | OPimp -> fprintf fmt "->"
-  | OPnot -> fprintf fmt "not"
-  | OPif t -> fprintf fmt "%a ->" print_tterm t
-  | OPiff -> fprintf fmt "<->"
-
-let print_rwt fmt { rwt_vars = rv; rwt_left = rl; rwt_right = rr } =
+and print_rwt fmt { rwt_vars = rv; rwt_left = rl; rwt_right = rr } =
   fprintf fmt "forall %a. %a = %a"
     print_var_list rv print_tterm rl print_tterm rr
 
-let rec print_rwt_list fmt = function
+and print_rwt_list fmt = function
   | [] -> ()
   | [rwt] -> print_rwt fmt rwt
   | rwt::l -> fprintf fmt "%a; %a" print_rwt rwt print_rwt_list l
 
-let rec print_quant_form fmt
+and print_quant_form fmt
     {qf_bvars = bv; qf_upvars = uv; qf_triggers = trs; qf_form = tf } =
   fprintf fmt "%a [%a]. %a"
     print_var_list bv print_triggers trs print_tform tf
@@ -728,18 +771,35 @@ let rec print_quant_form fmt
 and print_triggers fmt = function
   | [] -> ()
   | [ts,_] -> print_tterm_list ", " fmt ts
-  | (ts,_)::l -> fprintf fmt "%a | %a" (print_tterm_list ", ") ts print_triggers l
+  | (ts,_)::l ->
+    fprintf fmt "%a | %a" (print_tterm_list ", ") ts print_triggers l
 
 and print_tform2 fmt f = match f.Typed.c with
   | TFatom a -> print_tatom fmt a
   | TFop (OPnot, [tf]) -> fprintf fmt "not %a" print_tform tf
+  | TFop (OPif, [c; f1; f2]) ->
+    fprintf fmt "(if %a then %a else %a)"
+      print_tform c  print_tform f1  print_tform f2
   | TFop (op, tfl) -> print_tform_list op fmt tfl
   | TFforall qf -> fprintf fmt "forall %a" print_quant_form qf
   | TFexists qf -> fprintf fmt "exists %a" print_quant_form qf
-  | TFlet (vs, s, t, tf) ->
-    fprintf fmt "let %a = %a in\n %a"
-      Symbols.print_clean s print_tterm t print_tform tf
+  | TFlet (vs, binders, tf) ->
+    fprintf fmt "let %a in\n %a" print_mixed_binders binders print_tform tf
   | TFnamed (_, tf) -> print_tform fmt tf
+
+and print_mixed_binders =
+  let aux fmt e =
+    match e with
+    | TletTerm t -> fprintf fmt "%a" print_term t
+    | TletForm f -> fprintf fmt "%a" print_tform2 f
+  in fun fmt binders ->
+    match binders with
+    | [] -> assert false
+    | (sy, e) :: l ->
+      fprintf fmt "%a = %a" Symbols.print_clean sy aux e;
+      List.iter (fun (sy, e) ->
+          fprintf fmt ",\n%a = %a" Symbols.print_clean sy aux e) l
+
 
 and print_tform fmt f = fprintf fmt " (id:%d)%a" f.Typed.annot print_tform2 f
 
@@ -866,9 +926,14 @@ and make_dep_at_desc d ex dep = function
     let dep = make_dep_aterm d ex dep t1 in
     let dep = make_dep_aterm d ex dep t2 in
     make_dep_aterm d ex dep t3
-  | ATlet (s, t1, t2) ->
-    let dep = make_dep_string d ex dep (Symbols.to_string_clean s) in
-    let dep = make_dep_aterm d ex dep t1 in
+  | ATlet (l, t2) ->
+    let dep =
+      List.fold_left
+        (fun dep (s, t1) ->
+           let dep = make_dep_string d ex dep (Symbols.to_string_clean s) in
+           make_dep_aterm d ex dep t1
+        )dep l
+    in
     make_dep_aterm d ex dep t2
   | ATdot (t, c) ->
     let dep = make_dep_string d ex dep (Hstring.view c) in
@@ -883,19 +948,23 @@ and make_dep_at_desc d ex dep = function
   | ATmapsTo (_, t) -> make_dep_aterm d ex dep t
   | ATinInterval(e, _, i, j, _) ->
     List.fold_left (make_dep_aterm d ex) dep [e; i; j]
+  | ATite (f, t1, t2) ->
+    let dep = make_dep_aterm d ex dep t1 in
+    let dep = make_dep_aterm d ex dep t2 in
+    make_dep_aaform d ex dep f
 
-let make_dep_aatom d ex dep = function
+and make_dep_aatom d ex dep = function
   | AAtrue | AAfalse -> dep
   | AAeq atl | AAneq atl | AAdistinct atl | AAle atl | AAlt atl ->
     List.fold_left (make_dep_aaterm d ex) dep atl
-  | AApred at -> make_dep_aterm d ex dep at
+  | AApred (at, _) -> make_dep_aterm d ex dep at
   | AAbuilt (h, atl) -> List.fold_left (make_dep_aaterm d ex) dep atl
 
-let make_dep_oplogic d ex dep = function
-  | AOPif at -> make_dep_aterm d ex dep at
+and make_dep_oplogic d ex dep = function
+  (*| AOPif at -> make_dep_aterm d ex dep at*)
   | _ -> dep
 
-let rec make_dep_quant_form d ex dep
+and make_dep_quant_form d ex dep
     {aqf_bvars = bv; aqf_upvars = uv; aqf_triggers = trs; aqf_form = aaf } =
   let vars = List.map (fun (s,_) -> (Symbols.to_string_clean s)) bv in
   make_dep_aform d (vars@ex) dep aaf.c
@@ -906,8 +975,15 @@ and make_dep_aform d ex dep = function
     List.fold_left (make_dep_aaform d ex) dep afl
   | AFforall qf -> make_dep_quant_form d ex dep qf.c
   | AFexists qf -> make_dep_quant_form d ex dep qf.c
-  | AFlet (vs, s, t, aaf) ->
-    let dep = make_dep_aterm d ex dep t in
+  | AFlet (vs, l , aaf) ->
+    let dep =
+      List.fold_left
+        (fun dep (_, e) ->
+           match e with
+           | ATletTerm t -> make_dep_aterm d ex dep t.c
+           | ATletForm f -> make_dep_aform d ex dep f.c
+        )dep l
+    in
     make_dep_aaform d ex dep aaf
   | AFnamed (_, aaf) ->
     make_dep_aform d ex dep aaf.c
@@ -948,6 +1024,15 @@ let make_dep annoted_ast =
 let annot_of_tconstant (buffer:sbuffer)  t =
   new_annot buffer t
 
+let of_oplogic (buffer:sbuffer)  = function
+  | OPand -> AOPand
+  | OPor -> AOPor
+  | OPxor -> AOPxor
+  | OPimp -> AOPimp
+  | OPnot -> AOPnot
+  | OPif -> AOPif
+  | OPiff -> AOPiff
+
 let rec of_tterm (buffer:sbuffer) t =
   {at_desc = of_tt_desc buffer t.Typed.c.tt_desc;
    at_ty = t.Typed.c.tt_ty }
@@ -971,7 +1056,7 @@ and of_tt_desc (buffer:sbuffer) = function
   | TTextract (t, t1, t2) ->
     ATextract (of_tterm buffer t, of_tterm buffer t1, of_tterm buffer t2)
   | TTconcat (t1, t2) -> ATconcat (of_tterm buffer t1, of_tterm buffer t2)
-  | TTlet (s, t1, t2) -> ATlet (s, of_tterm buffer t1, of_tterm buffer t2)
+  | TTlet (l, t2) -> ATlet (of_term_binders buffer l, of_tterm buffer t2)
   | TTdot (t, c) -> ATdot (of_tterm buffer t, c)
   | TTrecord r -> ATrecord (List.map (fun (c,t) -> (c, of_tterm buffer t)) r)
   | TTnamed (lbl, t) -> ATnamed (lbl, of_tterm buffer t)
@@ -984,9 +1069,13 @@ and of_tt_desc (buffer:sbuffer) = function
       of_tterm buffer j,
       ub
     )
+  | TTite(f, t1, t2) ->
+    ATite(annot_of_tform buffer f, of_tterm buffer t1, of_tterm buffer t2)
 
+and of_term_binders buffer l =
+  List.rev_map (fun (s, t) -> s, of_tterm buffer t) (List.rev l)
 
-let of_tatom (buffer:sbuffer) a = match a.Typed.c with
+and of_tatom (buffer:sbuffer) a = match a.Typed.c with
   | TAtrue -> AAtrue
   | TAfalse -> AAfalse
   | TAeq tl -> AAeq (List.map (annot_of_tterm buffer ) tl)
@@ -994,18 +1083,10 @@ let of_tatom (buffer:sbuffer) a = match a.Typed.c with
   | TAdistinct tl -> AAdistinct (List.map (annot_of_tterm buffer ) tl)
   | TAle tl -> AAle (List.map (annot_of_tterm buffer ) tl)
   | TAlt tl -> AAlt (List.map (annot_of_tterm buffer ) tl)
-  | TApred t -> AApred (of_tterm buffer  t)
+  | TApred (t, negated) -> AApred (of_tterm buffer  t, negated)
   | TAbuilt (h, tl) -> AAbuilt (h, (List.map (annot_of_tterm buffer ) tl))
 
-let of_oplogic (buffer:sbuffer)  = function
-  | OPand -> AOPand
-  | OPor -> AOPor
-  | OPimp -> AOPimp
-  | OPnot -> AOPnot
-  | OPif t -> AOPif (of_tterm buffer  t)
-  | OPiff -> AOPiff
-
-let rec change_polarity_aform f =
+and change_polarity_aform f =
   f.polarity <- not f.polarity;
   match f.c with
     | AFatom _ -> ()
@@ -1013,10 +1094,9 @@ let rec change_polarity_aform f =
     | AFforall aaqf | AFexists aaqf ->
       aaqf.polarity <- not aaqf.polarity;
       change_polarity_aform aaqf.c.aqf_form
-    | AFlet (_,_,_,af) | AFnamed (_, af) -> change_polarity_aform af
+    | AFlet (_,_,af) | AFnamed (_, af) -> change_polarity_aform af
 
-
-let rec of_quant_form (buffer:sbuffer)
+and of_quant_form (buffer:sbuffer)
     {qf_bvars = bv; qf_upvars = uv; qf_triggers = trs; qf_form = tf; qf_hyp } =
   let ptag = tag buffer in
   { aqf_bvars = bv;
@@ -1035,14 +1115,16 @@ and of_tform (buffer:sbuffer) f = match f.Typed.c with
   | TFatom a -> AFatom (of_tatom buffer a)
   | TFop (op, tfl) ->
     let afl = List.map (annot_of_tform buffer ) tfl in
-    assert (let l = List.length afl in l >= 1 && l <= 2);
+    assert (let l = List.length afl in l >= 1 && l <= 3);
     if op == OPnot || op == OPimp then
       change_polarity_aform (List.hd afl);
     AFop (of_oplogic buffer  op, afl)
   | TFforall qf -> AFforall (annot_of_quant_form buffer qf f.Typed.annot)
   | TFexists qf -> AFexists (annot_of_quant_form buffer qf f.Typed.annot)
-  | TFlet (vs, s, t, tf) ->
-    AFlet (vs, s, of_tterm buffer  t, annot_of_tform buffer tf)
+
+  | TFlet (vs, l, tf) ->
+    AFlet (vs, (annot_of_mixed_binders buffer l), annot_of_tform buffer tf)
+
   | TFnamed (n, tf) ->
     AFnamed (n, annot_of_tform buffer tf)
 
@@ -1050,6 +1132,13 @@ and annot_of_tform (buffer:sbuffer) t =
   let ptag = tag buffer in
   let c = of_tform buffer t in
   new_annot buffer c t.Typed.annot ptag
+
+and annot_of_mixed_binders buffer l =
+  List.rev_map
+    (fun (sy, e) -> match e with
+       | TletTerm t -> sy, ATletTerm (annot_of_tterm buffer t)
+       | TletForm f -> sy, ATletForm (annot_of_tform buffer f)
+    )(List.rev l)
 
 let rec annot_of_typed_decl (buffer:sbuffer) td =
   let ptag = tag buffer in
@@ -1086,6 +1175,16 @@ let annot (buffer:sbuffer) ast =
 
 (* Translation from annoted/pruned AST to AST *)
 
+let to_oplogic = function
+  | AOPand -> OPand
+  | AOPor -> OPor
+  | AOPxor -> OPxor
+  | AOPimp  -> OPimp
+  | AOPnot -> OPnot
+  | AOPif -> OPif
+  | AOPiff -> OPiff
+
+
 let rec to_tterm id {at_desc = at_desc; at_ty = at_ty } =
   {Typed.c = { tt_desc = to_tt_desc at_desc; tt_ty = at_ty };
    Typed.annot = id }
@@ -1107,7 +1206,7 @@ and to_tt_desc = function
   | ATextract (t1, t2, t3) ->
     TTextract (to_tterm 0 t1, to_tterm 0 t2, to_tterm 0 t3)
   | ATconcat (t1, t2) -> TTconcat (to_tterm 0 t1, to_tterm 0 t2)
-  | ATlet (s, t1, t2) -> TTlet (s, to_tterm 0 t1, to_tterm 0 t2)
+  | ATlet (l, t2) -> TTlet (to_tterm_binders l, to_tterm 0 t2)
   | ATdot (t, c) -> TTdot (to_tterm 0 t, c)
   | ATrecord r -> TTrecord (List.map (fun (c, t) -> (c, to_tterm 0 t)) r)
   | ATnamed (lbl, t) -> TTnamed (lbl, to_tterm 0 t)
@@ -1120,8 +1219,12 @@ and to_tt_desc = function
       to_tterm 0 j,
       ub
     )
+  | ATite (f, t1, t2) -> TTite (to_tform f, to_tterm 0 t1, to_tterm 0 t2)
 
-let to_tatom aa id =
+and to_tterm_binders l =
+  List.rev_map (fun (sy, t) -> sy, to_tterm 0 t) (List.rev l)
+
+and to_tatom aa id =
   let c = match aa with
     | AAtrue -> TAtrue
     | AAfalse -> TAfalse
@@ -1130,21 +1233,13 @@ let to_tatom aa id =
     | AAdistinct atl -> TAdistinct (from_aaterm_list atl)
     | AAle atl -> TAle (from_aaterm_list atl)
     | AAlt atl -> TAlt (from_aaterm_list atl)
-    | AApred at -> TApred (to_tterm 0 at)
+    | AApred (at, negated) -> TApred (to_tterm 0 at, negated)
     | AAbuilt (h, atl) -> TAbuilt (h, (from_aaterm_list atl))
   in
   { Typed.c = c;
     Typed.annot = id }
 
-let to_oplogic = function
-  | AOPand -> OPand
-  | AOPor -> OPor
-  | AOPimp  -> OPimp
-  | AOPnot -> OPnot
-  | AOPif at -> OPif (to_tterm 0 at)
-  | AOPiff -> OPiff
-
-let rec to_quant_form
+and to_quant_form
     {aqf_bvars = bv; aqf_upvars = uv; aqf_triggers = trs; aqf_form = aaf;
      aqf_hyp } =
   { qf_bvars = bv;
@@ -1176,11 +1271,21 @@ and void_to_tform af id =
       end
     | AFforall qf -> TFforall (to_quant_form qf.c)
     | AFexists qf -> TFexists (to_quant_form qf.c)
-    | AFlet (vs, s, t, aaf) -> TFlet (vs, s, to_tterm 0 t, to_tform aaf)
+
+    | AFlet (vs, l, aaf) ->
+      TFlet (vs, to_mixed_expr l, to_tform aaf)
+
     | AFnamed (n, aaf) -> TFnamed (n, to_tform aaf)
   in
   { Typed.c = c;
     Typed.annot = id }
+
+and to_mixed_expr l =
+  List.rev_map
+    (fun (sy, e) -> match e with
+       | ATletTerm t -> sy, TletTerm (to_tterm 0 t.c)
+       | ATletForm f -> sy, TletForm (to_tform f)
+    )(List.rev l)
 
 and to_tform aaf = void_to_tform aaf.c aaf.id
 
@@ -1234,61 +1339,74 @@ let rec to_ast = function
     else (to_typed_decl atd)::(to_ast l)
 
 
-let rec add_aterm_at (buffer:sbuffer) tags iter
+let add_oplogic (buffer:sbuffer) indent tags op =
+  match op with
+    | AOPand -> append_buf buffer ~tags "and "
+    | AOPor -> append_buf buffer ~tags "or "
+    | AOPxor -> append_buf buffer ~tags "xor "
+    | AOPimp  -> append_buf buffer ~tags "-> "
+    | AOPnot -> append_buf buffer ~tags "not "
+    | AOPiff -> append_buf buffer ~tags "<-> "
+    | AOPif -> assert false (* done in a different way in add_aform *)
+
+let rec add_aterm_at errors (indent:int) (buffer:sbuffer) tags iter
     {at_desc = at_desc; at_ty = at_ty } =
-  add_at_desc_at buffer tags iter at_desc
+  add_at_desc_at errors indent buffer tags iter at_desc
 
-and add_aterm (buffer:sbuffer) tags tt =
-  add_aterm_at buffer tags buffer#end_iter tt
+and add_aterm errors indent (buffer:sbuffer) tags tt =
+  add_aterm_at errors indent buffer tags buffer#end_iter tt
 
-and add_aterm_list_at (buffer:sbuffer) tags iter sep =
+and add_aterm_list_at errors indent (buffer:sbuffer) tags iter sep =
   function
     | [] -> ()
-    | [at] -> add_aterm_at buffer tags iter at;
+    | [at] -> add_aterm_at errors indent buffer tags iter at;
     | at::l ->
-      add_aterm_at buffer tags iter at;
+      add_aterm_at errors indent buffer tags iter at;
       append_buf buffer ~iter ~tags sep;
-      add_aterm_list_at buffer tags iter sep l
+      add_aterm_list_at errors indent buffer tags iter sep l
 
-and add_aaterm_at (buffer:sbuffer) tags iter at =
+and add_aaterm_at errors (indent:int) (buffer:sbuffer) tags iter at =
   at.line <- iter#line;
-  add_aterm_at buffer (at.tag::at.ptag::tags) iter at.c
+  add_aterm_at errors indent buffer (at.tag::at.ptag::tags) iter at.c
 
-and add_aaterm (buffer:sbuffer) tags at =
+and add_aaterm errors indent (buffer:sbuffer) tags at =
   at.line <- buffer#line_count;
-  add_aaterm_at buffer tags buffer#end_iter at
+  add_aaterm_at errors indent buffer tags buffer#end_iter at
 
-and add_aaterm_list_at (buffer:sbuffer) tags
+and add_aaterm_list_at errors (indent:int) (buffer:sbuffer) tags
     ?(multi_line=false) ?(offset=0) iter sep =
   function
     | [] -> ()
-    | [at] -> add_aaterm_at buffer tags iter at;
+    | [at] -> add_aaterm_at errors indent buffer tags iter at;
     | at::l ->
-      add_aaterm_at buffer tags iter at;
+      add_aaterm_at errors indent buffer tags iter at;
       append_buf buffer ~iter ~tags sep;
       if multi_line then begin
         append_buf buffer ~iter "\n";
         append_indentation buffer ~iter offset;
       end;
-      add_aaterm_list_at buffer tags ~multi_line ~offset iter sep l
+      add_aaterm_list_at
+        errors indent buffer tags ~multi_line ~offset iter sep l
 
-and add_aaterm_list (buffer:sbuffer) tags ?(multi_line = false) sep atl =
+and add_aaterm_list
+    errors (indent : int) (buffer:sbuffer) tags ?(multi_line = false) sep atl =
   let offset = buffer#end_iter#line_offset in
-  add_aaterm_list_at buffer tags ~multi_line ~offset buffer#end_iter sep atl
+  add_aaterm_list_at
+    errors indent buffer tags ~multi_line ~offset buffer#end_iter sep atl
 
-and add_arecord_at (buffer:sbuffer) tags iter =
+and add_arecord_at errors indent (buffer:sbuffer) tags iter =
   function
     | [] -> ()
     | [c, at] ->
       append_buf buffer ~iter ~tags (sprintf "%s = " (Hstring.view c));
-      add_aterm_at buffer tags iter at;
+      add_aterm_at errors indent buffer tags iter at;
     | (c, at)::l ->
       append_buf buffer ~iter ~tags (sprintf "%s = " (Hstring.view c));
-      add_aterm_at buffer tags iter at;
+      add_aterm_at errors indent buffer tags iter at;
       append_buf buffer ~iter ~tags "; ";
-      add_arecord_at buffer tags iter l
+      add_arecord_at errors indent buffer tags iter l
 
-and add_at_desc_at (buffer:sbuffer) tags iter at =
+and add_at_desc_at errors indent (buffer:sbuffer) tags iter at =
   (* let off1 = iter#offset in *)
   (* let off = off1 - (buffer#get_iter (`OFFSET off1))#line_offset in *)
   (* print_endline (sprintf "%d" off); *)
@@ -1302,122 +1420,137 @@ and add_at_desc_at (buffer:sbuffer) tags iter at =
     | ATapp (s, atl)  ->
       append_buf buffer ~iter ~tags
 	(sprintf "%s(" (Symbols.to_string_clean s));
-      add_aterm_list_at buffer tags iter ", " atl;
+      add_aterm_list_at errors indent buffer tags iter ", " atl;
       append_buf buffer ~iter ~tags ")"
     | ATinfix (t1, s, t2)  ->
-      add_aterm_at buffer tags iter t1;
+      add_aterm_at errors indent buffer tags iter t1;
       append_buf buffer ~iter ~tags
 	(sprintf " %s " (Symbols.to_string_clean s));
-      add_aterm_at buffer tags iter t2
+      add_aterm_at errors indent buffer tags iter t2
     | ATprefix (s, t) ->
       append_buf buffer ~iter ~tags
 	(sprintf "%s " (Symbols.to_string_clean s));
-      add_aterm_at buffer tags iter t
+      add_aterm_at errors indent buffer tags iter t
     | ATget (t1, t2) ->
-      add_aterm_at buffer tags iter t1;
+      add_aterm_at errors indent buffer tags iter t1;
       append_buf buffer ~iter ~tags "[";
-      add_aterm_at buffer tags iter t2;
+      add_aterm_at errors indent buffer tags iter t2;
       append_buf buffer ~iter ~tags "]"
     | ATset (t1, t2, t3) ->
-      add_aterm_at buffer tags iter t1;
+      add_aterm_at errors indent buffer tags iter t1;
       append_buf buffer ~iter ~tags "[";
-      add_aterm_at buffer tags iter t2;
+      add_aterm_at errors indent buffer tags iter t2;
       append_buf buffer ~iter ~tags "<-";
-      add_aterm_at buffer tags iter t3;
+      add_aterm_at errors indent buffer tags iter t3;
       append_buf buffer ~iter ~tags "]"
     | ATextract (t1, t2, t3) ->
-      add_aterm_at buffer tags iter t1;
+      add_aterm_at errors indent buffer tags iter t1;
       append_buf buffer ~iter ~tags "^{";
-      add_aterm_at buffer tags iter t2;
+      add_aterm_at errors indent buffer tags iter t2;
       append_buf buffer ~iter ~tags ", ";
-      add_aterm_at buffer tags iter t3;
+      add_aterm_at errors indent buffer tags iter t3;
       append_buf buffer ~iter ~tags "}"
     | ATconcat (t1, t2) ->
-      add_aterm_at buffer tags iter t1;
+      add_aterm_at errors indent buffer tags iter t1;
       append_buf buffer ~iter ~tags "@";
-      add_aterm_at buffer tags iter t2
-    | ATlet (s, t1, t2) ->
-      append_buf buffer ~iter ~tags
-	(sprintf "let %s = " (Symbols.to_string_clean s));
-      add_aterm_at buffer tags iter t1;
+      add_aterm_at errors indent buffer tags iter t2
+    | ATlet (l, t2) ->
+      append_buf buffer ~iter ~tags "let ";
+      add_term_binders_to_buf errors indent buffer tags iter l;
       append_buf buffer ~iter ~tags " in ";
-      add_aterm_at buffer tags iter t2
+      add_aterm_at errors indent buffer tags iter t2
     | ATdot (t, c) ->
-      add_aterm_at buffer tags iter t;
+      add_aterm_at errors indent buffer tags iter t;
       append_buf buffer ~iter ~tags (sprintf ".%s" (Hstring.view c))
     | ATrecord r ->
       append_buf buffer ~iter ~tags "{ ";
-      add_arecord_at buffer tags iter r;
+      add_arecord_at errors indent buffer tags iter r;
       append_buf buffer ~iter ~tags " }"
     | ATnamed (n, t) ->
       append_buf buffer ~iter ~tags (sprintf "%s: " (Hstring.view n));
-      add_aterm_at buffer tags iter t
+      add_aterm_at errors indent buffer tags iter t
 
     | ATmapsTo (n, t) ->
       append_buf buffer ~iter ~tags (sprintf "%s |-> " (Hstring.view n));
-      add_aterm_at buffer tags iter t
+      add_aterm_at errors indent buffer tags iter t
 
     | ATinInterval(t1, lb, t2, t3, ub) ->
-      add_aterm_at buffer tags iter t1;
+      add_aterm_at errors indent buffer tags iter t1;
       append_buf buffer ~iter ~tags " in ";
       append_buf buffer ~iter ~tags (if lb then "]" else "[");
-      add_aterm_at buffer tags iter t2;
+      add_aterm_at errors indent buffer tags iter t2;
       append_buf buffer ~iter ~tags " , ";
-      add_aterm_at buffer tags iter t3;
+      add_aterm_at errors indent buffer tags iter t3;
       append_buf buffer ~iter ~tags (if ub then "[" else "]")
 
-let add_aatom (buffer:sbuffer) indent tags aa =
+    | ATite(f, t1, t2) ->
+      append_buf buffer ~tags "if ";
+      add_aaform errors buffer indent tags f;
+      append_buf buffer ~tags " then ";
+      add_aterm errors indent buffer tags t1;
+      append_buf buffer ~tags " else ";
+      add_aterm errors indent buffer tags t2
+
+and add_term_binders_to_buf errors indent buffer tags iter l =
+  match l with
+  | [] -> assert false
+  | (sy, t) :: l ->
+    append_buf buffer ~tags (sprintf "%s = " (Symbols.to_string_clean sy));
+
+    add_aterm_at errors indent buffer tags iter t;
+    List.iter
+      (fun (sy, t) ->
+         append_buf buffer ~tags
+           (sprintf ", %s = " (Symbols.to_string_clean sy));
+         add_aterm_at errors indent buffer tags iter t;
+      )l
+
+and add_aatom errors (buffer:sbuffer) indent tags aa =
   append_indent buffer indent;
   match aa with
     | AAtrue -> append_buf buffer ~tags "true"
     | AAfalse -> append_buf buffer ~tags "false"
-    | AAeq atl -> add_aaterm_list buffer tags " = " atl
-    | AAneq atl -> add_aaterm_list buffer tags " <> " atl
+    | AAeq atl -> add_aaterm_list errors indent buffer tags " = " atl
+    | AAneq atl -> add_aaterm_list errors indent buffer tags " <> " atl
     | AAdistinct atl  ->
       append_buf buffer ~tags "distinct(";
-      add_aaterm_list buffer tags ", " atl;
+      add_aaterm_list errors indent buffer tags ", " atl;
       append_buf buffer  ~tags ")"
-    | AAle atl -> add_aaterm_list buffer tags " <= " atl
-    | AAlt atl -> add_aaterm_list buffer tags " < " atl
-    | AApred at -> add_aterm buffer tags at
+    | AAle atl -> add_aaterm_list errors indent buffer tags " <= " atl
+    | AAlt atl -> add_aaterm_list errors indent buffer tags " < " atl
+    | AApred (at, negated) ->
+      if negated then begin
+        append_buf buffer ~tags "(not (";
+        add_aterm errors indent buffer tags at;
+        append_buf buffer ~tags "))";
+      end
+      else
+        add_aterm errors indent buffer tags at
     | AAbuilt (h, atl) ->
-      add_aaterm_list buffer tags (" "^(Hstring.view h)^" ") atl
+      add_aaterm_list errors indent buffer tags (" "^(Hstring.view h)^" ") atl
 
-let add_oplogic (buffer:sbuffer) indent tags op =
-  match op with
-    | AOPand -> append_buf buffer ~tags "and "
-    | AOPor -> append_buf buffer ~tags "or "
-    | AOPimp  -> append_buf buffer ~tags "-> "
-    | AOPnot -> append_buf buffer ~tags "not "
-    | AOPif at ->
-      append_buf buffer (String.make indent ' ');
-      append_buf buffer ~tags "if ";
-      add_aterm buffer tags at;
-      append_buf buffer ~tags " then "
-    | AOPiff -> append_buf buffer ~tags "<-> "
-
-let add_rwt (buffer:sbuffer) indent tags r =
+and add_rwt errors (buffer:sbuffer) indent tags r =
   let { rwt_vars = rv; rwt_left = rl; rwt_right = rr } = r.c in
   let tags = r.tag::r.ptag::tags in
   append_indent buffer indent;
   append_buf buffer ~tags "forall ";
   fprintf str_formatter "%a. " print_var_list rv;
   append_buf buffer ~tags (flush_str_formatter ());
-  add_aterm buffer tags rl;
+  add_aterm errors indent buffer tags rl;
   append_buf buffer ~tags " = ";
-  add_aterm buffer tags rr
+  add_aterm errors indent buffer tags rr
 
-let rec add_rwt_list (buffer:sbuffer) indent tags = function
+and add_rwt_list errors (buffer:sbuffer) indent tags = function
   | [] -> ()
-  | [r] -> add_rwt buffer indent tags r
+  | [r] -> add_rwt errors buffer indent tags r
   | r::l ->
-    add_rwt buffer indent tags r;
+    add_rwt errors buffer indent tags r;
     append_buf buffer ~tags ";";
     append_buf buffer "\n";
-    add_rwt_list buffer indent tags l
+    add_rwt_list errors buffer indent tags l
 
 
-let add_empty_triggers_error ({rstore = rstore} as errors) (buffer:sbuffer) =
+and add_empty_triggers_error ({rstore = rstore} as errors) (buffer:sbuffer) =
   let row = rstore#append () in
   rstore#set ~row ~column:errors.rcol_icon `DIALOG_WARNING;
   rstore#set ~row ~column:errors.rcol_desc
@@ -1428,7 +1561,7 @@ let add_empty_triggers_error ({rstore = rstore} as errors) (buffer:sbuffer) =
   errors.some <- true
 
 
-let rec add_quant_form errors (buffer:sbuffer) indent offset tags qf =
+and add_quant_form errors (buffer:sbuffer) indent offset tags qf =
   let offset = offset + indent_size in
   let {aqf_bvars = bv; aqf_upvars = uv; aqf_triggers = trs; aqf_form = aaf;
       aqf_hyp} =
@@ -1461,9 +1594,9 @@ let rec add_quant_form errors (buffer:sbuffer) indent offset tags qf =
 and add_triggers errors (buffer:sbuffer) tags indent multi_line triggers =
   let rec add_triggers_aux  = function
     | [] -> ()
-    | [atl, b] -> add_aaterm_list buffer tags ~multi_line ", " atl
+    | [atl, b] -> add_aaterm_list errors indent buffer tags ~multi_line ", " atl
     | (atl, b)::l ->
-      add_aaterm_list buffer tags ~multi_line ", " atl;
+      add_aaterm_list errors indent buffer tags ~multi_line ", " atl;
       if multi_line then begin
         append_buf buffer "\n";
         append_indent buffer (indent-1);
@@ -1499,7 +1632,16 @@ and add_qf_hyp errors (buffer:sbuffer) indent ~tags aqf_hyp =
 and add_aform errors (buffer:sbuffer) indent tags
     ?parent_op ?(paren=false) aform =
   match aform with
-    | AFatom a -> add_aatom buffer 0 tags a
+    | AFatom a -> add_aatom errors buffer 0 tags a
+    | AFop (AOPif, [cond; th; el]) ->
+      append_buf buffer (String.make indent ' ');
+      append_buf buffer ~tags "if ";
+      add_aform errors buffer indent tags cond.c;
+      append_buf buffer ~tags " then ";
+      add_aform errors buffer indent tags th.c;
+      append_buf buffer ~tags " else ";
+      add_aform errors buffer indent tags el.c
+
     | AFop (op, afl) ->
       add_aaform_list errors buffer indent tags ?parent_op op afl
     | AFforall qf ->
@@ -1510,10 +1652,9 @@ and add_aform errors (buffer:sbuffer) indent tags
       let offset = buffer#end_iter#line_offset in
       append_buf buffer ~tags "exists ";
       add_quant_form errors buffer indent offset tags qf
-    | AFlet (vs, s, t, aaf) ->
-      append_buf buffer ~tags
-	(sprintf "let %s = " (Symbols.to_string_clean s));
-      add_aterm buffer tags t;
+    | AFlet (vs, l, aaf) ->
+      append_buf buffer ~tags (sprintf "let ");
+      add_mixed_binders_to_buf buffer errors indent tags l;
       append_buf buffer ~tags " in";
       append_buf buffer "\n";
       append_indent buffer indent;
@@ -1522,6 +1663,23 @@ and add_aform errors (buffer:sbuffer) indent tags
       append_buf buffer ~tags (sprintf "%s: " (Hstring.view n));
       add_aform errors buffer indent tags ?parent_op aaf.c
 
+and add_mixed_binders_to_buf buffer errors indent tags l =
+  let aux t =
+    match t with
+    | ATletTerm t -> add_aterm errors indent buffer tags t.c
+    | ATletForm f -> add_aform errors buffer indent tags f.c
+  in
+  match l with
+  | [] -> assert false
+  | (sy, t) :: l ->
+    append_buf buffer ~tags (sprintf "%s = " (Symbols.to_string_clean sy));
+    aux t;
+    List.iter
+      (fun (sy, t) ->
+         append_buf buffer ~tags
+           (sprintf ", %s = " (Symbols.to_string_clean sy));
+         aux t;
+      )l
 
 and add_aaform_list
     errors (buffer:sbuffer) indent tags ?parent_op op l =
@@ -1548,7 +1706,7 @@ and add_aaform_list_aux
           | Some AOPor, AOPor
           | Some AOPand, AOPand
           | Some (AOPimp | AOPiff), (AOPor | AOPand)
-          | Some (AOPif _), (AOPor | AOPand | AOPimp | AOPiff) -> false
+          | Some AOPif, (AOPor | AOPand | AOPimp | AOPiff) -> false
           | _ -> true
       in
       if paren then append_buf buffer ~tags "(";
@@ -1614,7 +1772,7 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
       append_buf buffer ~tags (sprintf "rewriting %s :" s);
       append_buf buffer "\n";
       d.line <- buffer#line_count;
-      add_rwt_list buffer 1 tags arwtl;
+      add_rwt_list errors buffer 1 tags arwtl;
       append_buf buffer "\n\n"
 
     | AGoal (loc, gs, s, aaf) ->
@@ -1710,15 +1868,20 @@ let rec isin_aterm sl { at_desc = at_desc } =
       List.mem (Symbols.to_string_clean sy) sl
     | ATapp (sy, atl) ->
       List.mem (Symbols.to_string_clean sy) sl || isin_aterm_list sl atl
-    | ATinfix (t1, _, t2) | ATget (t1,t2)
-    | ATconcat (t1, t2) | ATlet (_, t1, t2) ->
+    | ATinfix (t1, _, t2) | ATget (t1,t2) | ATconcat (t1, t2) ->
       isin_aterm sl t1 || isin_aterm sl t2
+    | ATlet (l, t2) ->
+      isin_aterm sl t2 || List.exists (fun (_,t1) -> isin_aterm sl t1) l
     | ATdot (t, _ ) | ATprefix (_,t) | ATnamed (_, t)
     | ATmapsTo (_, t) -> isin_aterm sl t
     | ATset (t1, t2, t3) | ATextract (t1, t2, t3)
     | ATinInterval(t1, _, t2, t3, _) ->
       isin_aterm sl t1 || isin_aterm sl t2 || isin_aterm sl t3
     | ATrecord rt -> let atl = List.map snd rt in isin_aterm_list sl atl
+    | ATite (f, t1, t2) ->
+      (match findtags_aaform sl f [] with [] -> false | _ -> true)
+      || isin_aterm sl t1
+      || isin_aterm sl t2
 
 and isin_aterm_list sl atl =
   List.fold_left
@@ -1733,9 +1896,12 @@ and findtags_aaterm sl aat acc =
     | ATapp (sy, atl) ->
       if List.mem (Symbols.to_string_clean sy) sl || isin_aterm_list sl atl
       then aat.tag::acc else acc
-    | ATinfix (t1, _, t2) | ATget (t1,t2)
-    | ATconcat (t1, t2) | ATlet (_, t1, t2) ->
+    | ATinfix (t1, _, t2) | ATget (t1,t2) | ATconcat (t1, t2) ->
       if isin_aterm sl t1 || isin_aterm sl t2 then aat.tag::acc else acc
+    | ATlet (l, t2) ->
+      if isin_aterm sl t2 || List.exists (fun (_,t1) -> isin_aterm sl t1) l
+      then aat.tag::acc
+      else acc
     | ATdot (t, _) | ATprefix (_,t) | ATnamed (_, t)
     | ATmapsTo (_, t) ->
       if isin_aterm sl t then aat.tag::acc else acc
@@ -1747,13 +1913,20 @@ and findtags_aaterm sl aat acc =
       let atl = List.map snd r in
       if isin_aterm_list sl atl then aat.tag::acc else acc
 
+    | ATite (f, t1, t2) ->
+      if (match findtags_aaform sl f [] with [] -> false | _ -> true)
+        || isin_aterm sl t1
+        || isin_aterm sl t2
+      then aat.tag::acc
+      else acc
+
 and findtags_aaterm_list sl aatl acc =
   List.fold_left
     (fun acc aat ->
       findtags_aaterm sl aat acc
     ) acc aatl
 
-let findtags_aatom sl aa acc =
+and findtags_aatom sl aa acc =
   match aa with
     | AAtrue
     | AAfalse -> acc
@@ -1765,10 +1938,10 @@ let findtags_aatom sl aa acc =
     | AAlt atl
     | AAbuilt (_, atl) -> findtags_aaterm_list sl atl acc
 
-    | AApred at -> acc
+    | AApred (at, _) -> acc
 
 
-let rec findtags_quant_form
+and findtags_quant_form
     sl {aqf_triggers = trs; aqf_form = aaf ; aqf_hyp } acc =
   let acc = findtags_triggers sl trs acc in
   let acc = findtags_aaform_list sl aqf_hyp acc in
@@ -1786,12 +1959,14 @@ and findtags_aform sl aform acc =
     | AFop (op, afl) -> findtags_aaform_list sl afl acc
     | AFforall qf
     | AFexists qf -> findtags_quant_form sl qf.c acc
-    | AFlet (vs, sy, t, aaf) ->
-        (* let acc = findtags_aterm sl t acc in *)
-      let s = Symbols.to_string_clean sy in
+    | AFlet (vs, l, aaf) ->
       let sl =
         List.fold_left
-          (fun l s' -> if Pervasives.(=) s' s then l else s'::l) [] sl
+          (fun sl (sy, _) ->
+             let s = Symbols.to_string_clean sy in
+             List.fold_left
+               (fun l s' -> if Pervasives.(=) s' s then l else s'::l) [] sl
+          )sl l
       in
       findtags_aform sl aaf.c acc
     | AFnamed (_, aaf) ->
@@ -1802,9 +1977,9 @@ and findtags_aaform_list sl aafl acc =
     (fun acc aaf -> findtags_aaform sl aaf acc
     ) acc aafl
 
-and findtags_aaform sl aaf acc =
+and findtags_aaform sl aaf (acc : GText.tag list) : GText.tag list =
   match aaf.c with
-    | AFatom (AApred at) when isin_aterm sl at -> aaf.tag::acc
+    | AFatom (AApred (at, _)) when isin_aterm sl at -> aaf.tag::acc
     | _ -> findtags_aform sl aaf.c acc
 
 let rec findtags_atyped_delc sl td acc =
@@ -1858,9 +2033,11 @@ let rec listsymbols at acc =
     | ATapp (sy, atl) ->
       List.fold_left (fun acc at -> listsymbols at acc)
 	((Symbols.to_string_clean sy)::acc) atl
-    | ATinfix (t1, _, t2) | ATget (t1,t2)
-    | ATconcat (t1, t2) | ATlet (_, t1, t2) ->
+    | ATinfix (t1, _, t2) | ATget (t1,t2) | ATconcat (t1, t2) ->
       listsymbols t1 (listsymbols t2 acc)
+    | ATlet (l, t2) ->
+      List.fold_left (fun acc (_,t1) -> listsymbols t1 acc)
+        (listsymbols t2 acc) l
     | ATdot (t, _) | ATprefix (_,t) | ATnamed (_, t) -> listsymbols t acc
     | ATset (t1, t2, t3) | ATextract (t1, t2, t3)  ->
       listsymbols t1 (listsymbols t2 (listsymbols t3 acc))
@@ -1871,6 +2048,8 @@ let rec listsymbols at acc =
 
     | ATinInterval(e, lb, i, j, ub) ->
       List.fold_left (fun acc at -> listsymbols at acc) acc [e; i; j]
+    | ATite (f, t1, t2) ->
+      listsymbols_aform f.c (listsymbols t1 (listsymbols t2 acc))
 
 and listsymbols_aform af acc =
   match af with
@@ -1885,7 +2064,15 @@ and listsymbols_aform af acc =
     List.fold_left (fun acc (aatl ,_) ->
         List.fold_left (fun acc aat -> listsymbols aat.c acc) acc aatl
       ) acc aqf.c.aqf_triggers
-  | AFlet (_, _, at, aaf) -> listsymbols_aform aaf.c (listsymbols at acc)
+
+  | AFlet (_, l, aaf) ->
+    List.fold_left
+      (fun acc (_,e) ->
+         match e with
+         | ATletTerm at -> listsymbols at.c acc
+         | ATletForm at -> listsymbols_aform at.c acc
+      ) (listsymbols_aform aaf.c acc) l
+
   | AFnamed (_, aaf) -> listsymbols_aform aaf.c acc
 
 and listsymbols_atom a acc =
@@ -1894,7 +2081,7 @@ and listsymbols_atom a acc =
   | AAeq aatl | AAneq aatl | AAdistinct aatl
   | AAle aatl | AAlt aatl | AAbuilt (_, aatl) ->
     List.fold_left (fun acc aat -> listsymbols aat.c acc) acc aatl
-  | AApred at -> listsymbols at acc
+  | AApred (at,_) -> listsymbols at acc
 
 
 let rec listsymbols_adecl ad =
@@ -1958,7 +2145,7 @@ let rec findproof_aform ids af acc depth found =
 	  findproof_aaform ids aaf acc depth found)
 	(acc,found) aaqf.c.aqf_hyp in
       findproof_aaform ids aaqf.c.aqf_form acc depth found
-    | AFlet (_,_,_, aaf) | AFnamed (_, aaf) ->
+    | AFlet (_,_, aaf) | AFnamed (_, aaf) ->
       findproof_aaform ids aaf acc depth found
 
 and findproof_aaform ids aaf acc depth found =
@@ -2012,7 +2199,7 @@ let rec find_line_id_aform id af =
     | AFforall aaqf | AFexists aaqf ->
       if aaqf.id = id then raise (FoundLine (aaqf.line, aaqf.tag))
       else find_line_id_aaform id aaqf.c.aqf_form
-    | AFlet (_,_,_, aaf) | AFnamed (_, aaf) ->
+    | AFlet (_,_, aaf) | AFnamed (_, aaf) ->
       find_line_id_aaform id aaf
 
 and find_line_id_aaform id aaf =
@@ -2080,7 +2267,7 @@ let findbyid_aatom id = function
   | AAlt atl
   | AAbuilt (_, atl) -> List.iter (findbyid_aaterm id) atl
 
-  | AApred at -> ()
+  | AApred _ -> ()
 
 let rec findbyid_aform id af =
   match af with
@@ -2093,7 +2280,7 @@ let rec findbyid_aform id af =
       List.iter (findbyid_aaform id) aaqf.c.aqf_hyp;
       if aaqf.id = id then raise (Foundannot (QF aaqf))
       else findbyid_aaform id aaqf.c.aqf_form
-    | AFlet (_,_,_, aaf) | AFnamed (_, aaf) ->
+    | AFlet (_,_, aaf) | AFnamed (_, aaf) ->
       findbyid_aaform id aaf
 
 and findbyid_aaform id aaf =

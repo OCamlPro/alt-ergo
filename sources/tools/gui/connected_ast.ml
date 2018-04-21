@@ -249,7 +249,7 @@ let rec list_uquant_vars_in_form = function
     if not aqf.polarity then
       aqf.c.aqf_bvars@l
     else l
-  | AFlet (upvars, s, at, aaf) ->
+  | AFlet (upvars, _, aaf) ->
     list_uquant_vars_in_form aaf.c
   | AFnamed (_, aaf) ->
     list_uquant_vars_in_form aaf.c
@@ -260,42 +260,90 @@ let rec list_vars_in_form = function
     List.fold_left (fun l aaf -> l@(list_vars_in_form aaf.c)) [] aafl
   | AFforall aqf | AFexists aqf ->
     aqf.c.aqf_bvars@(list_vars_in_form aqf.c.aqf_form.c)
-  | AFlet (upvars, s, at, aaf) ->
+  | AFlet (upvars, _, aaf) ->
     list_vars_in_form aaf.c
   | AFnamed (_, aaf) ->
     list_vars_in_form aaf.c
 
-let rec is_quantified_term vars at =
+let rec filter_used_vars_term vars at =
   match at.at_desc with
-    | ATconst _ -> false
+    | ATconst _ -> []
     | ATvar s ->
-      List.fold_left
-	(fun b (s',_) -> b || (Symbols.equal s s')) false vars
+      (try [List.find (fun (s',_) -> Symbols.equal s s') vars]
+       with Not_found ->  [])
     | ATapp (_, atl) ->
-      List.fold_left
-	(fun b at -> b || is_quantified_term vars at) false atl
+      List.fold_left (fun l at -> filter_used_vars_term vars at @ l) [] atl
     | ATget (at1, at2)
     | ATconcat (at1, at2)
     | ATinfix (at1, _, at2) ->
-      is_quantified_term vars at1
-      || is_quantified_term vars at2
+      filter_used_vars_term vars at1
+      @ filter_used_vars_term vars at2
     | ATdot (at, _) | ATprefix (_, at) | ATnamed (_, at)
     | ATmapsTo (_, at) ->
-      is_quantified_term vars at
+      filter_used_vars_term vars at
     | ATextract (at1, at2, at3)
     | ATset (at1, at2, at3)
     | ATinInterval (at1, _, at2, at3, _) ->
-      is_quantified_term vars at1
-      || is_quantified_term vars at2
-      || is_quantified_term vars at3
-    | ATlet (s', at1, at2) ->
+      filter_used_vars_term vars at1
+      @ filter_used_vars_term vars at2
+      @ filter_used_vars_term vars at3
+    | ATlet (l, at2) ->
       let nvars =
-	List.filter (fun (s'',_) -> not (Symbols.equal s' s'')) vars in
-      is_quantified_term vars at1
-      || is_quantified_term nvars at2
+        List.fold_left
+          (fun vars (s', _) ->
+	     List.filter (fun (s'',_) -> not (Symbols.equal s' s'')) vars
+          )vars l
+      in
+      List.fold_left (fun acc (_, at1) ->
+          filter_used_vars_term vars at1 @ acc
+        ) (filter_used_vars_term nvars at2) l
     | ATrecord r ->
       List.fold_left
-	(fun b (_, at) -> b || is_quantified_term vars at) false r
+	(fun acc (_, at) -> filter_used_vars_term vars at @ acc) [] r
+
+    | ATite (f, t1, t2) ->
+      filter_used_vars_aform vars f.c
+      @ filter_used_vars_term vars t1
+      @ filter_used_vars_term vars t2
+
+and filter_used_vars_aatom vars = function
+  | AAtrue | AAfalse -> []
+  | AAeq aatl | AAneq aatl | AAdistinct aatl
+  | AAle aatl | AAlt aatl   | AAbuilt (_, aatl) ->
+    List.fold_left (fun acc t -> filter_used_vars_term vars t.c @ acc) [] aatl
+  | AApred (t, _) -> filter_used_vars_term vars t
+
+and filter_used_vars_aform vars = function
+  | AFatom a -> filter_used_vars_aatom vars a
+  | AFop (op, afl) ->
+    List.fold_left (fun acc f -> filter_used_vars_aform vars f.c @ acc) [] afl
+  | AFforall qf | AFexists qf ->
+    let vars =
+      List.fold_left
+        (fun vars (s', _) ->
+	   List.filter (fun (s'',_) -> not (Symbols.equal s' s'')) vars
+        ) vars qf.c.aqf_bvars
+    in
+    filter_used_vars_aform vars qf.c.aqf_form.c
+  | AFlet (_, l, aaf) ->
+    let nvars =
+      List.fold_left
+        (fun vars (s', _) ->
+	   List.filter (fun (s'',_) -> not (Symbols.equal s' s'')) vars
+        ) vars l
+    in
+    List.fold_left (fun acc (_, at1) ->
+        match at1 with
+        | ATletTerm aat -> filter_used_vars_term vars aat.c @ acc
+        | ATletForm aaf -> filter_used_vars_aform vars aaf.c @ acc
+      ) (filter_used_vars_aform nvars aaf.c) l
+  | AFnamed (_, aaf) ->
+    filter_used_vars_aform vars aaf.c
+
+let is_quantified_term vars at =
+  match filter_used_vars_term vars at with
+  | [] -> false
+  | _ -> true
 
 let unquantify_aaterm (buffer:sbuffer) at =
   new_annot buffer at.c (Typechecker.new_id ()) (tag buffer)
@@ -308,30 +356,8 @@ let unquantify_aatom (buffer:sbuffer) = function
   | AAdistinct aatl -> AAdistinct (List.map (unquantify_aaterm buffer) aatl)
   | AAle aatl -> AAle (List.map (unquantify_aaterm buffer) aatl)
   | AAlt aatl -> AAlt (List.map (unquantify_aaterm buffer) aatl)
-  | AApred a -> AApred a
+  | AApred _ as e -> e
   | AAbuilt (h,aatl) -> AAbuilt (h, (List.map (unquantify_aaterm buffer) aatl))
-
-
-let rec aterm_used_vars goal_vars at =
-  match at.at_desc with
-    | ATconst _ -> []
-    | ATvar s ->
-      (try [List.find (fun (s',_) -> Symbols.equal s s') goal_vars]
-       with Not_found ->  [])
-    | ATapp (_, atl) ->
-      List.fold_left (fun l at -> aterm_used_vars goal_vars at @ l) [] atl
-    | ATdot (at, _) | ATprefix (_, at) | ATlet (_, _, at) | ATnamed (_, at)
-    | ATmapsTo (_, at) ->
-      aterm_used_vars goal_vars at
-    | ATinfix (at1, _, at2) | ATget (at1, at2) | ATconcat (at1, at2) ->
-      (aterm_used_vars goal_vars at1)@(aterm_used_vars goal_vars at2)
-    | ATset (at1, at2, at3) | ATextract (at1, at2, at3)
-    | ATinInterval (at1, _, at2, at3, _) ->
-      (aterm_used_vars goal_vars at1)@
-	(aterm_used_vars goal_vars at2)@
-	(aterm_used_vars goal_vars at3)
-    | ATrecord r ->
-      List.fold_left (fun l (_, at) -> aterm_used_vars goal_vars at @ l) [] r
 
 
 let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
@@ -377,7 +403,7 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
 		in
 		let tt = Typechecker.term tyenv (uplet@gv) lexpr in
 		let at = annot_of_tterm buffer tt in
-		at, aterm_used_vars gv at.c
+		at, filter_used_vars_term gv at.c
 	    in
 	    (nbv, v'::used, gu@goal_used, cdr_ve,
 	     v'::uplet, (uplet, s, at)::lets))
@@ -389,7 +415,7 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
       let add_lets afc lets =
 	List.fold_left
 	  (fun af (u, s, at) ->
-	    new_annot buffer (AFlet (u, s, at.c, af))
+	    new_annot buffer (AFlet (u, [s, ATletTerm at], af))
 	      (Typechecker.new_id ()) (tag buffer))
 	  afc lets in
       if nbv == [] then (add_lets aform lets).c, ve, goal_used
@@ -433,12 +459,12 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
 	  ve, goal_used
 	| _ -> assert false)
 
-    | AFlet (uv, s, at, aaf), _ ->
+    | AFlet (uv, l, aaf), _ ->
       let naaf, ve, goal_used =
 	unquantify_aform buffer tyenv vars_entries used_vars goal_vars
 	  aaf.c aaf.polarity
       in
-      AFlet (List.filter (fun v -> not (List.mem v used_vars)) uv, s, at, naaf),
+      AFlet (List.filter (fun v -> not (List.mem v used_vars)) uv, l, naaf),
       ve, goal_used
 
     | AFnamed (n, aaf), _ ->
@@ -494,7 +520,7 @@ let rec least_nested_form used_vars af =
 	) [] used_vars in
       if not_covered == [] then Exists aqf.c.aqf_form
       else least_nested_form not_covered aqf.c.aqf_form
-    | _, AFlet (upvars, s, at, af) ->
+    | _, AFlet (upvars, _, af) ->
       least_nested_form used_vars af
     | _, AFnamed (_, af) ->
       least_nested_form used_vars af
@@ -704,7 +730,7 @@ and add_trigger ?(register=true) t qid env str offset (sbuf:sbuffer) =
 		) lexprs [] in
 	      if qf.c.aqf_triggers != [] then
 		sbuf#insert ~iter ~tags " | ";
-	      add_aaterm_list_at sbuf tags iter "," atl;
+	      add_aaterm_list_at env.errors 0 sbuf tags iter "," atl;
 	      qf.c.aqf_triggers <- qf.c.aqf_triggers@[atl,true];
 	      if register then
 		save env.actions
@@ -851,9 +877,11 @@ and connect_at_desc env sbuf = function
   | ATconst _ | ATvar _ -> ()
   | ATapp (s, atl) -> connect_aterm_list env sbuf atl
   | ATinfix (t1, _, t2) | ATget (t1, t2)
-  | ATconcat (t1, t2) | ATlet (_, t1, t2) ->
+  | ATconcat (t1, t2) ->
     connect_aterm env sbuf t1;
     connect_aterm env sbuf t2
+  | ATlet (l, t2) ->
+    List.iter (fun (_, t1) -> connect_aterm env sbuf t1) l;
   | ATdot (t, _) | ATprefix (_, t) | ATnamed (_, t)
   | ATmapsTo (_, t) ->
     connect_aterm env sbuf t
@@ -865,6 +893,10 @@ and connect_at_desc env sbuf = function
   | ATrecord r ->
     let atl = List.map snd r in
     connect_aterm_list env sbuf atl
+  | ATite (f,t1,t2) ->
+    connect_aaform env sbuf f;
+    connect_aterm env sbuf t1;
+    connect_aterm env sbuf t2
 
 and connect_aatom env sbuf aa =
   match aa with
@@ -878,7 +910,7 @@ and connect_aatom env sbuf aa =
     | AAlt atl
     | AAbuilt (_, atl) -> connect_aaterm_list env sbuf connect_tag atl
 
-    | AApred at -> connect_aterm env sbuf at
+    | AApred (at, _) -> connect_aterm env sbuf at
 
 and connect_quant_form env sbuf
     {aqf_triggers = trs; aqf_hyp; aqf_form = aaf } =
@@ -896,8 +928,12 @@ and connect_aform env sbuf = function
   | AFexists aqf ->
     connect_trigger_tag env sbuf aqf.tag aqf.id;
     connect_quant_form env sbuf aqf.c
-  | AFlet (vs, s, t, aaf) ->
-    connect_aterm env sbuf t;
+  | AFlet (vs, l, aaf) ->
+    List.iter (fun (_,e) ->
+        match e with
+        | ATletTerm t -> connect_aterm env sbuf t.c
+        | ATletForm f -> connect_aform env sbuf f.c
+      ) l;
     connect_aform env sbuf aaf.c
   | AFnamed (_, aaf) ->
     connect_aform env sbuf aaf.c

@@ -169,6 +169,18 @@ else
   AC_MSG_ERROR(Cannot find ocplib-simplex library.)
 fi
 
+#looking for psmt2-frontend library
+
+if test "$USEOCAMLFIND" = yes; then
+  PSMT2FELIB=$(ocamlfind query -i-format psmt2-frontend)
+fi
+
+if test -n "$PSMT2FELIB";then
+  echo "ocamlfind found psmt2-frontend in $PSMT2FELIB"
+else
+  AC_MSG_ERROR(Cannot find psmt2-frontend library.)
+fi
+
 
 # then we look for ocamlopt; if not present, we issue a warning
 # if the version is not the same, we also discard it
@@ -306,6 +318,7 @@ AC_SUBST(CAMLZIPLIB)
 AC_SUBST(OCAMLWEB)
 AC_SUBST(LABLGTK2LIB)
 AC_SUBST(OCPLIBSIMPLEXLIB)
+AC_SUBST(PSMT2FELIB)
 AC_SUBST(ENABLEGUI)
 AC_SUBST(INCLUDEGTK2)
 AC_SUBST(OCAMLWIN32)

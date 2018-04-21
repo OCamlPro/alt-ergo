@@ -97,6 +97,9 @@ type 'a annoted =
       mutable line : int;
     }
 
+type aoplogic =
+    AOPand | AOPor | AOPxor | AOPimp | AOPnot | AOPif | AOPiff
+
 type aterm =
     { at_ty : Ty.t; at_desc : at_desc }
 
@@ -110,15 +113,16 @@ and at_desc =
   | ATset of aterm * aterm * aterm
   | ATextract of aterm * aterm * aterm
   | ATconcat of aterm * aterm
-  | ATlet of Symbols.t * aterm * aterm
+  | ATlet of (Symbols.t * aterm) list * aterm
   | ATdot of aterm * Hstring.t
   | ATrecord of (Hstring.t * aterm) list
   | ATnamed of Hstring.t * aterm
   | ATmapsTo of Hstring.t * aterm
   | ATinInterval of aterm * bool * aterm * aterm *  bool
-(* bool = true <-> interval is_open *)
+  (* bool = true <-> interval is_open *)
+  | ATite of aform annoted * aterm * aterm
 
-type aatom =
+and aatom =
   | AAtrue
   | AAfalse
   | AAeq of aterm annoted list
@@ -126,13 +130,10 @@ type aatom =
   | AAdistinct of aterm annoted list
   | AAle of aterm annoted list
   | AAlt of aterm annoted list
-  | AApred of aterm
+  | AApred of aterm * bool (* true <-> negated *)
   | AAbuilt of Hstring.t * aterm annoted list
 
-type aoplogic =
-    AOPand |AOPor | AOPimp | AOPnot | AOPif of aterm | AOPiff
-
-type aquant_form = {
+and aquant_form = {
   aqf_bvars : (Symbols.t * Ty.t) list ;
   aqf_upvars : (Symbols.t * Ty.t) list ;
   mutable aqf_triggers : (aterm annoted list * bool) list ;
@@ -145,8 +146,13 @@ and aform =
   | AFop of aoplogic * aform annoted list
   | AFforall of aquant_form annoted
   | AFexists of aquant_form annoted
-  | AFlet of (Symbols.t * Ty.t) list * Symbols.t * aterm * aform annoted
+  | AFlet of
+      (Symbols.t * Ty.t) list * (Symbols.t * atlet_kind) list * aform annoted
   | AFnamed of Hstring.t * aform annoted
+
+and atlet_kind =
+  | ATletTerm of aterm annoted
+  | ATletForm of aform annoted
 
 type atyped_decl =
   | ATheory of Loc.t * string * theories_extensions * atyped_decl annoted list
@@ -258,7 +264,10 @@ val annot :
 val annot_of_tterm :
   sbuffer -> (int tterm, int) Typed.annoted -> aterm annoted
 
-val add_aaterm_list_at : sbuffer ->
+val add_aaterm_list_at :
+  error_model ->
+  int ->
+  sbuffer ->
   GText.tag list -> ?multi_line:bool -> ?offset:int -> GText.iter ->
   string -> aterm annoted list -> unit
 

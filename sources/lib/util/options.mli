@@ -46,6 +46,7 @@ val set_debug_sat_simple : bool -> unit
 val set_debug_typing : bool -> unit
 val set_debug_constr : bool -> unit
 val set_debug_arrays : bool -> unit
+val set_debug_ite : bool -> unit
 val set_debug_types : bool -> unit
 val set_debug_combine : bool -> unit
 val set_debug_proof : bool -> unit
@@ -58,11 +59,12 @@ val set_profiling : float -> bool -> unit
 (** additional setters *)
 
 val set_type_only : bool -> unit
+val set_type_smt2 : bool -> unit
 val set_parse_only : bool -> unit
 val set_verbose : bool -> unit
 val set_steps_bound : int -> unit
 val set_age_bound : int -> unit
-val set_notriggers : bool -> unit
+val set_no_user_triggers : bool -> unit
 val set_triggers_var : bool -> unit
 val set_nb_triggers : int -> unit
 val set_greedy : bool -> unit
@@ -89,6 +91,7 @@ val set_thread_yield : (unit -> unit) -> unit
 val set_timeout : (unit -> unit) -> unit
 val set_save_used_context : bool -> unit
 val set_default_input_lang : string -> unit
+val set_unsat_mode : bool -> unit
 
 (* updates the filename to be parsed and sets a js_mode flag *)
 val set_file_for_js : string -> unit
@@ -114,6 +117,7 @@ val debug_sat_simple : unit -> bool
 val debug_typing : unit -> bool
 val debug_constr : unit -> bool
 val debug_arrays : unit -> bool
+val debug_ite : unit -> bool
 val debug_types : unit -> bool
 val debug_combine : unit -> bool
 val debug_proof : unit -> bool
@@ -123,7 +127,9 @@ val debug_explanations : unit -> bool
 
 (** additional getters *)
 val enable_assertions : unit -> bool
+val disable_ites : unit -> bool
 val type_only : unit -> bool
+val type_smt2 : unit -> bool
 val parse_only : unit -> bool
 val steps_bound : unit -> int
 val no_tcp : unit -> bool
@@ -132,9 +138,10 @@ val no_fm : unit -> bool
 val no_theory : unit -> bool
 val tighten_vars : unit -> bool
 val age_bound : unit -> int
-val notriggers : unit -> bool
+val no_user_triggers : unit -> bool
 val triggers_var : unit -> bool
 val nb_triggers : unit -> int
+val max_multi_triggers_size : unit -> int
 val verbose : unit -> bool
 val greedy : unit -> bool
 val no_Ematching : unit -> bool
@@ -172,6 +179,7 @@ val instantiate_after_backjump : unit -> bool
 val disable_weaks : unit -> bool
 val default_input_lang : unit -> string
 val answers_with_locs  : unit -> bool
+val unsat_mode : unit -> bool
 
 (** this option also yields true if profiling is set to true **)
 val timers : unit -> bool

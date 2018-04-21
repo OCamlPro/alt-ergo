@@ -1,0 +1,8 @@
+logic x, y : int
+axiom a : x = 10
+axiom b : y = 100
+
+goal g:
+let x = x + y in
+let y = 100000 in
+(x = 110 and y = 100)

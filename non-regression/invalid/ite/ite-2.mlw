@@ -1,0 +1,9 @@
+logic f : int -> int
+logic g : int, int -> int
+logic X, Z, T : int
+
+axiom a:
+  forall x : int.
+  f(x) = g((if (X <= f(x)) then T else Z), f(x))
+
+goal g: false

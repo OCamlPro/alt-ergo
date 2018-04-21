@@ -1,0 +1,14 @@
+(*** There are now builtin ****
+axiom tmp_before_builtin_1:
+ forall y, z : 'a[if true then y else z].
+ y = if true then y else z
+
+axiom tmp_before_builtin_2:
+ forall y, z : 'a[if false then y else z].
+ z = if false then y else z
+***)
+
+goal g:
+ let x = 1 in
+ let y = (1 <= 3 or 2 = 5) in
+ x <= (if y then 10 else x - 1)

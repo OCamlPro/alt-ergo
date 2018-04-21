@@ -71,7 +71,7 @@ and quantified = {
 and llet = {
   let_var: Symbols.t;
   let_subst : Term.subst;
-  let_term : Term.t;
+  let_form : t;
   let_f : t;
 }
 
@@ -82,6 +82,8 @@ and view =
   | Lemma of quantified
   | Skolem of quantified
   | Let of llet
+  [@ocaml.ppwarning "TODO: 'Let' is currently not used. \
+                     Remove it or reuse it for let x = form in form"]
 
 and iview = { pos : view ; neg : view ; size : int; tag : int ;
               negation : iview}
@@ -204,7 +206,7 @@ module View = struct
     | Let l1, Let l2 ->
       fst l1.let_f == fst l2.let_f
       && Sy.equal l1.let_var l2.let_var
-      && Term.equal l1.let_term l2.let_term
+      && equal l1.let_form l2.let_form
       && Term.compare_subst l1.let_subst l2.let_subst = 0
 
     | _, _ -> false
@@ -229,7 +231,7 @@ module View = struct
 
     | Skolem q -> 1 + 2*hash_quant acc q
 
-    | Let ({let_var=lvar; let_term=lterm;
+    | Let ({let_var=lvar; let_form=lform;
 	    let_subst=s; let_f=(lf,_)}) ->
       T.fold_subst_term
 	(fun s t acc ->acc * 19 + Sy.hash s) s
@@ -299,7 +301,7 @@ let rec print fmt f =
     | Let l ->
       fprintf fmt
 	"let %a =@ %a in@ %a" Sy.print l.let_var
-	Term.print l.let_term print l.let_f
+        print l.let_form print l.let_f
 
 (* let print fmt ((_,id) as f) = *)
 (*   fprintf fmt "(%d)%a" id print f *)
@@ -361,9 +363,9 @@ let free_vars =
         let mp = Sy.Map.filter (fun sy _ -> not (Sy.Map.mem sy binders)) mp in
         merge_maps mp acc
 
-      | Let {let_subst = (subst, _); let_term = t; let_f = lf} ->
+      | Let {let_subst = (subst, _); let_form = lform; let_f = lf} ->
         let mp = free_rec Sy.Map.empty lf in
-        let mp = Term.vars_of t mp in
+        let mp = free_rec mp lform in
         let mp = Sy.Map.fold
 	  (fun sy t mp ->
 	    if Sy.Map.mem sy mp then
@@ -479,7 +481,7 @@ let sub_terms_of_formula f =
     | Unit(f1, f2) -> aux f2 (aux f1 acc)
     | Clause(f1, f2, _) -> aux f2 (aux f1 acc)
     | Skolem q | Lemma q -> aux q.main acc
-    | Let llet -> Term.subterms (aux llet.let_f acc) llet.let_term
+    | Let llet -> aux llet.let_form (aux llet.let_f acc)
   in
   aux f Term.Set.empty
 
@@ -570,15 +572,19 @@ let mk_forall_aux =
         res
 
 
-(* forall up. let bv = t in f *)
-let mk_let _up bv t f id =
-  let {Term.ty=ty} = Term.view t in
-  let up = Term.vars_of t Sy.Map.empty in
+(* forall quant_vars. let bv = lf in f *)
+let mk_let quant_vars bv lf f id =
+  let up = free_vars lf in
+  (* only keep up vars that are bound with forall or exists, not those
+     bound with a let *)
+  let up = Sy.Map.filter (fun x _ -> Sy.Set.mem x quant_vars) up in
   let up = Sy.Map.fold (fun sy ty acc -> (Term.make sy [] ty)::acc) up [] in
-  let subst = Sy.Map.add bv (T.make (Sy.fresh "_let") up ty) Sy.Map.empty in
+  let subst =
+    Sy.Map.add bv (T.make (Sy.fresh "_let") up Ty.Tbool) Sy.Map.empty
+  in
   make
-    (Let{let_var=bv; let_subst=(subst, Ty.esubst); let_term=t; let_f=f})
-    (Let{let_var=bv; let_subst=(subst, Ty.esubst); let_term=t; let_f=mk_not f})
+    (Let{let_var=bv; let_subst=(subst, Ty.esubst); let_form=lf; let_f=f})
+    (Let{let_var=bv; let_subst=(subst, Ty.esubst); let_form=lf; let_f=mk_not f})
     (size f) id
 
 let mk_and f1 f2 is_impl id =
@@ -613,6 +619,9 @@ let mk_iff f1 f2 id = (* try to interpret iff as a double implication *)
   let b = mk_or (mk_not f2) f1 true id in
   mk_and a b false id
 
+let mk_xor f1 f2 is_impl id =
+  mk_not (mk_iff f1 f2 id)
+
 let translate_eq_to_iff s t =
   (T.view s).T.ty == Ty.Tbool &&
   not
@@ -635,9 +644,8 @@ let mk_lit a id = match Literal.LT.view a with
 
   | _ -> make (Literal a) (Literal (Literal.LT.neg a)) 1 id
 
-let mk_if t f2 f3 id =
-  let lit = mk_lit (Literal.LT.mk_pred t false) id in
-  mk_or (mk_and lit f2 true id) (mk_and (mk_not lit) f3 true id) false id
+let mk_if cond f2 f3 id =
+  mk_or (mk_and cond f2 true id) (mk_and (mk_not cond) f3 true id) false id
 
 let no_capture_issue s_t binders =
   true (* TODO *)
@@ -756,9 +764,9 @@ and iapply_subst ((s_t,s_ty) as subst) p n = match p, n with
     if sf1 == f1 && sf2 == f2 then p, n, true
     else Clause(sf1, sf2, is_impl), Unit(mk_not sf1, mk_not sf2), false
 
-  | Let ({let_subst = s; let_term = lterm; let_f = lf} as e), Let _ ->
-    let lterm = T.apply_subst subst lterm in
-    let se = { e with let_subst = T.union_subst s subst; let_term = lterm } in
+  | Let ({let_subst = s; let_form = lform; let_f = lf} as e), Let _ ->
+    let lform = apply_subst subst lform in
+    let se = { e with let_subst = T.union_subst s subst; let_form = lform } in
     let sne = { se with let_f = mk_not lf } in
     Let se, Let sne, false
 
@@ -881,15 +889,7 @@ let ground_terms_rec =
     | Lemma {main = f} | Skolem {main = f} -> terms acc f
     | Unit(f1,f2) -> terms (terms acc f1) f2
     | Clause(f1,f2,_) -> terms (terms acc f1) f2
-    | Let {let_term=t; let_f=lf} ->
-      let st =
-	T.Set.filter
-          (fun t->
-            Sy.Map.is_empty (T.vars_of t Sy.Map.empty)
-            && Ty.Svty.is_empty (T.vty_of t))
-	  (Term.subterms Term.Set.empty t)
-      in
-      terms (T.Set.union st acc) lf
+    | Let {let_form=lform; let_f=lf} -> terms (terms acc lform) lf
   in terms T.Set.empty
 
 let atoms_rec =
@@ -905,7 +905,8 @@ let atoms_rec =
 
     | Unit(f1,f2) -> atoms only_ground (atoms only_ground acc f1) f2
     | Clause(f1,f2,_) -> atoms only_ground (atoms only_ground acc f1) f2
-    | Let {let_term=t; let_f=lf} -> atoms only_ground acc lf
+    | Let {let_form=lform; let_f=lf} ->
+      atoms only_ground (atoms only_ground acc lf) lform
   in
   fun ~only_ground f acc ->
     atoms only_ground acc f
@@ -953,7 +954,7 @@ let max_term_depth f =
 
     | Clause(f1, f2,_) | Unit(f1, f2) -> aux f2 (aux f1 mx)
     | Lemma q | Skolem q -> aux q.main mx
-    | Let q -> max (aux q.let_f mx) (T.view q.let_term).T.depth
+    | Let q -> aux q.let_form (aux q.let_f mx)
   in
   aux f 0
 

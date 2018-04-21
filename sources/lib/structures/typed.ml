@@ -44,8 +44,13 @@ type tconstant =
   | Tfalse
   | Tvoid
 
+type oplogic =
+    OPand | OPor | OPxor | OPimp | OPnot | OPiff
+  | OPif
+
 type 'a tterm =
-    { tt_ty : Ty.t; tt_desc : 'a tt_desc }
+  { tt_ty : Ty.t; tt_desc : 'a tt_desc }
+
 and 'a tt_desc =
   | TTconst of tconstant
   | TTvar of Symbols.t
@@ -66,10 +71,12 @@ and 'a tt_desc =
   | TTconcat of ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
   | TTdot of ('a tterm, 'a) annoted * Hstring.t
   | TTrecord of (Hstring.t * ('a tterm, 'a) annoted) list
-  | TTlet of Symbols.t * ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
+  | TTlet of (Symbols.t * ('a tterm, 'a) annoted) list * ('a tterm, 'a) annoted
   | TTnamed of Hstring.t * ('a tterm, 'a) annoted
+  | TTite of ('a tform, 'a) annoted *
+             ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
 
-type 'a tatom =
+and 'a tatom =
   | TAtrue
   | TAfalse
   | TAeq of ('a tterm, 'a) annoted list
@@ -77,14 +84,10 @@ type 'a tatom =
   | TAneq of ('a tterm, 'a) annoted list
   | TAle of ('a tterm, 'a) annoted list
   | TAlt of ('a tterm, 'a) annoted list
-  | TApred of ('a tterm, 'a) annoted
+  | TApred of ('a tterm, 'a) annoted * bool (* true <-> negated *)
   | TAbuilt of Hstring.t * ('a tterm, 'a) annoted list
 
-type 'a oplogic =
-    OPand |OPor | OPimp | OPnot | OPiff
-  | OPif of ('a tterm, 'a) annoted
-
-type 'a quant_form = {
+and 'a quant_form = {
   (* quantified variables that appear in the formula *)
   qf_bvars : (Symbols.t * Ty.t) list ;
   qf_upvars : (Symbols.t * Ty.t) list ;
@@ -95,13 +98,16 @@ type 'a quant_form = {
 
 and 'a tform =
   | TFatom of ('a tatom, 'a) annoted
-  | TFop of 'a oplogic * (('a tform, 'a) annoted) list
+  | TFop of oplogic * (('a tform, 'a) annoted) list
   | TFforall of 'a quant_form
   | TFexists of 'a quant_form
-  | TFlet of (Symbols.t * Ty.t) list * Symbols.t *
-      ('a tterm, 'a) annoted * ('a tform, 'a) annoted
+  | TFlet of (Symbols.t * Ty.t) list *
+             (Symbols.t * 'a tlet_kind) list * ('a tform, 'a) annoted
   | TFnamed of Hstring.t * ('a tform, 'a) annoted
 
+and 'a tlet_kind =
+  | TletTerm of ('a tterm, 'a) annoted
+  | TletForm of ('a tform, 'a) annoted
 
 type 'a rwt_rule = {
   rwt_vars : (Symbols.t * Ty.t) list;
@@ -141,6 +147,20 @@ type 'a tdecl =
   | TTypeDecl of Loc.t * string list * string * body_type_decl
 
 (*****)
+
+let string_of_op = function
+  | OPand -> "and"
+  | OPor -> "or"
+  | OPimp -> "->"
+  | OPiff -> "<->"
+  | _ -> assert false
+
+let print_binder fmt (s, t) =
+  fprintf fmt "%a :%a" Symbols.print s Ty.print t
+
+let print_binders fmt l =
+  List.iter (fun c -> fprintf fmt "%a, " print_binder c) l
+
 let rec print_term fmt t = match t.c.tt_desc with
   | TTconst Ttrue ->
     fprintf fmt "true"
@@ -177,8 +197,8 @@ let rec print_term fmt t = match t.c.tt_desc with
     List.iter
       (fun (s, t) -> fprintf fmt "%s = %a" (Hstring.view s) print_term t) l;
     fprintf fmt " }"
-  | TTlet (s, t1, t2) ->
-    fprintf fmt "let %a=%a in %a" Symbols.print s print_term t1 print_term t2
+  | TTlet (binders, t2) ->
+    fprintf fmt "let %a in %a" print_term_binders binders print_term t2
   | TTnamed (lbl, t) ->
     fprintf fmt "%a" print_term t
 
@@ -193,10 +213,21 @@ let rec print_term fmt t = match t.c.tt_desc with
   | TTmapsTo(x,e) ->
     fprintf fmt "%s |-> %a" (Hstring.view x) print_term e
 
+  | TTite(cond, t1, t2) ->
+    fprintf fmt "(if %a then %a else %a)"
+      print_formula cond print_term t1 print_term t2
+
+and print_term_binders fmt l =
+  match l with
+  | [] -> assert false
+  | (sy, t) :: l ->
+    fprintf fmt "%a = %a" Symbols.print sy print_term t;
+    List.iter (fun (sy, t) ->
+        fprintf fmt ", %a = %a" Symbols.print sy print_term t) l
 
 and print_term_list fmt = List.iter (fprintf fmt "%a," print_term)
 
-let print_atom fmt a =
+and print_atom fmt a =
   match a.c with
     | TAtrue ->
       fprintf fmt "True"
@@ -210,37 +241,25 @@ let print_atom fmt a =
       fprintf fmt "%a <= %a" print_term t1 print_term t2
     | TAlt [t1; t2] ->
       fprintf fmt "%a < %a" print_term t1 print_term t2
-    | TApred t ->
-      print_term fmt t
+    | TApred (t, negated) ->
+      if negated then fprintf fmt "(not (%a))" print_term t
+      else print_term fmt t
     | TAbuilt(s, l) ->
       fprintf fmt "%s(%a)" (Hstring.view s) print_term_list l
     | _ -> assert false
 
-let string_of_op = function
-  | OPand -> "and"
-  | OPor -> "or"
-  | OPimp -> "->"
-  | OPiff -> "<->"
-  | _ -> assert false
-
-let print_binder fmt (s, t) =
-  fprintf fmt "%a :%a" Symbols.print s Ty.print t
-
-let print_binders fmt l =
-  List.iter (fun c -> fprintf fmt "%a, " print_binder c) l
-
-let print_triggers fmt l =
+and print_triggers fmt l =
   List.iter (fun (tr, _) -> fprintf fmt "%a | " print_term_list tr) l
 
-let rec print_formula fmt f =
+and print_formula fmt f =
   match f.c with
     | TFatom a ->
       print_atom fmt a
     | TFop(OPnot, [f]) ->
       fprintf fmt "not %a" print_formula f
-    | TFop(OPif(t), [f1;f2]) ->
+    | TFop(OPif, [cond; f1;f2]) ->
       fprintf fmt "if %a then %a else %a"
-	print_term t print_formula f1 print_formula f2
+	print_formula cond print_formula f1 print_formula f2
     | TFop(op, [f1; f2]) ->
       fprintf fmt "%a %s %a" print_formula f1 (string_of_op op) print_formula f2
     | TFforall {qf_bvars = l; qf_triggers = t; qf_form = f} ->

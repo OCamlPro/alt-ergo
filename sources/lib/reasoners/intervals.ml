@@ -1052,7 +1052,10 @@ let consistent_bnds low up =
   | _ -> true
 
 let new_up_bound idoms s ty q is_strict =
-  let old_low, old_up, ty = try MH.find s idoms with Not_found -> None,None,ty in
+  let old_low, old_up, ty =
+    try MH.find s idoms
+    with Not_found -> None,None,ty
+  in
   let new_up =
     match old_up with
     | None -> Some (q, is_strict)
@@ -1070,7 +1073,10 @@ let new_up_bound idoms s ty q is_strict =
     else raise Exit
 
 let new_low_bound idoms s ty q is_strict =
-  let old_low, old_up, ty = try MH.find s idoms with Not_found -> None,None,ty in
+  let old_low, old_up, ty =
+    try MH.find s idoms
+    with Not_found -> None,None,ty
+  in
   let new_low =
     match old_low with
     | None -> Some (q, is_strict)
@@ -1175,7 +1181,8 @@ let not_mergeable =
       begin
         match a, b with
         | Minfty, _ | _, Pinfty -> assert false (*should not happen*)
-        | Pinfty, _ | _, Minfty -> assert false (*should not happen or not norm*)
+        | Pinfty, _ | _, Minfty -> assert false
+                                       (*should not happen or not norm*)
         | Large(q1,_) , Large(q2,_) ->
           assert (Q.compare q1 q2 < 0); (* otherwise, we can merge *)
           if is_int then

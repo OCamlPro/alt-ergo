@@ -300,21 +300,27 @@ let rec freevars_term acc t = match t.c.tt_desc with
   | TTnamed (_, t) -> freevars_term acc t
   | TTextract (t1, t2, t3) ->
     freevars_term (freevars_term (freevars_term acc t1) t2) t3
-  | TTlet (sy, t1, t2) ->
-    let acc_t1 = freevars_term acc t1 in
+  | TTlet (l, t2) ->
+    let acc_t1 = List.fold_left (fun z (_,t) -> freevars_term z t) acc l in
     let acc_t2 = freevars_term acc_t1 t2 in
-    if Sy.mem sy acc_t1 then acc_t2
-    (* the symbol sy is already a free var in acc or t1 -> keep it *)
-    else Sy.remove sy acc_t2  (* the symbol sy is not a free var *)
+    List.fold_left
+      (fun acc (sy, _) ->
+         if Sy.mem sy acc_t1 then acc
+         (* the symbol sy is already a free var in acc or t1 -> keep it *)
+         else Sy.remove sy acc  (* the symbol sy is not a free var *)
+      )acc_t2 l
 
-let freevars_atom a = match a.c with
+  | TTite (cond,t1,t2) ->
+    List.fold_left freevars_term (Sy.union (freevars_form cond.c) acc) [t1;t2]
+
+and freevars_atom a = match a.c with
   | TAeq lt | TAneq lt | TAle lt
   | TAlt lt | TAbuilt(_,lt) | TAdistinct lt ->
     List.fold_left freevars_term Sy.empty lt
-  | TApred t -> freevars_term  Sy.empty t
+  | TApred (t,_) -> freevars_term  Sy.empty t
   | _ -> Sy.empty
 
-let rec freevars_form f = match f with
+and freevars_form f = match f with
   | TFatom a -> freevars_atom a
   | TFop (_,lf) ->
     List.fold_left Sy.union Sy.empty
@@ -322,7 +328,19 @@ let rec freevars_form f = match f with
   | TFforall qf | TFexists qf ->
     let s = freevars_form qf.qf_form.c in
     List.fold_left (fun acc (s,_) -> Sy.remove s acc) s qf.qf_bvars
-  | TFlet(up,v,t,f) -> freevars_term (Sy.remove v (freevars_form f.c)) t
+
+  | TFlet(up,binders,f) ->
+    let acc =
+      List.fold_left
+        (fun acc (sy, _) -> Sy.remove sy acc) (freevars_form f.c) binders
+    in
+    List.fold_left
+      (fun acc (_, e) ->
+         match e with
+         | TletTerm t -> freevars_term acc t
+         | TletForm g -> Sy.union (freevars_form g.c) acc
+      ) acc binders
+
   | TFnamed(_, f) -> freevars_form f.c
 
 let symbol_of = function
@@ -506,20 +524,20 @@ and type_term_desc env loc = function
 	| Ty.TypeClash(t, t') ->
 	  error (Unification(t, t')) loc
     end
-  | PPif(t1,t2,t3) ->
+  | PPif(cond,t2,t3) ->
     begin
-      let te1 = type_term env t1 in
-      let ty1 = Ty.shorten te1.c.tt_ty in
-      if not (Ty.equal ty1 Ty.Tbool) then
-	error (ShouldHaveType(ty1,Ty.Tbool)) t1.pp_loc;
+      let cond, _fv = type_form env cond in
+      (* TODO : should use _fv somewhere ? *)
       let te2 = type_term env t2 in
       let te3 = type_term env t3 in
       let ty2 = Ty.shorten te2.c.tt_ty in
       let ty3 = Ty.shorten te3.c.tt_ty in
-      if not (Ty.equal ty2 ty3) then
-	error (ShouldHaveType(ty3,ty2)) t3.pp_loc;
+      begin
+        try Ty.unify ty2 ty3
+        with Ty.TypeClash(t1,t2) -> error (ShouldHaveType(ty3,ty2)) t3.pp_loc;
+      end;
       Options.tool_req 1 (append_type "TR-Typing-Ite type" ty2);
-      TTapp(Symbols.name "ite",[te1;te2;te3]) , ty2
+      TTite (cond, te2, te3) , ty2
     end
   | PPdot(t, a) ->
     begin
@@ -591,15 +609,26 @@ and type_term_desc env loc = function
 	  TTrecord(nlbs), ty
 	| _ ->  error ShouldBeARecord loc
     end
-  | PPlet(x, t1, t2) ->
-    let te1 = type_term env t1 in
-    let ty1 = Ty.shorten te1.c.tt_ty in
-    let env = Env.add env [x] Symbols.var ty1 in
+  | PPlet(l, t2) ->
+    let _ =
+      List.fold_left (fun z (sy,_) ->
+          if Util.SS.mem sy z then error (DuplicatePattern sy) loc;
+          Util.SS.add sy z
+        )Util.SS.empty l
+    in
+    let rev_l = List.rev_map (fun (sy, t) -> sy, type_term env t) l in
+    let env =
+      List.fold_left
+        (fun env (sy, te1) ->
+           let ty1 = Ty.shorten te1.c.tt_ty in
+           Env.add env [sy] Symbols.var ty1
+        )env rev_l
+    in
     let te2 = type_term env t2 in
     let ty2 = Ty.shorten te2.c.tt_ty in
-    let s, _ = Env.find env x in
+    let l = List.rev_map (fun (sy, t) -> fst (Env.find env sy), t) rev_l in
     Options.tool_req 1 (append_type "TR-Typing-Let type" ty2);
-    TTlet(s, te1, te2), ty2
+    TTlet(l, te2), ty2
 
   (* | PPnamed(lbl, t) ->  *)
   (*     let te = type_term env t in *)
@@ -625,7 +654,7 @@ and type_term_desc env loc = function
   | _ -> error SyntaxError loc
 
 
-let rec join_forall f = match f.pp_desc with
+and join_forall f = match f.pp_desc with
   | PPforall(vs_ty, trs1, hyp1, f) ->
     let tyvars,trs2,hyp2, f = join_forall f in
     vs_ty @ tyvars , trs1@trs2 , hyp1@hyp2, f
@@ -636,7 +665,7 @@ let rec join_forall f = match f.pp_desc with
     join_forall f
   | _ -> [] , [] , [], f
 
-let rec join_exists f = match f.pp_desc with
+and join_exists f = match f.pp_desc with
   | PPexists (vs_ty, trs1, hyp1, f) ->
     let tyvars,trs2, hyp2,f = join_exists f in
     vs_ty @ tyvars , trs1@trs2, hyp1@hyp2,  f
@@ -647,7 +676,7 @@ let rec join_exists f = match f.pp_desc with
   | _ -> [] , [] , [], f
 
 
-let type_bound env bnd ty =
+and type_bound env bnd ty =
   try
     match bnd.pp_desc with
     | PPvar s ->
@@ -669,42 +698,33 @@ let type_bound env bnd ty =
   with Invalid_argument s when String.equal s "index out of bounds" ->
     assert false
 
-let type_trigger in_theory env l =
-  List.map
-    (fun t ->
-      match in_theory, t.pp_desc with
-      | false, PPinInterval _ -> error ThSemTriggerError t.pp_loc
-      | false, PPmapsTo _ -> error ThSemTriggerError t.pp_loc
-      | true, PPinInterval (e, a,b, c, d) ->
-        let te = type_term env e in
-        let tt_ty = te.c.tt_ty in
-        let tb = type_bound env b tt_ty in
-        if not (Ty.equal tt_ty tb.c.tt_ty) then
-          error (ShouldHaveType(tb.c.tt_ty,tt_ty)) b.pp_loc;
+and mk_ta_eq t1 t2 =
+  let c =
+    if t1.c.tt_ty != Ty.Tbool then TAeq [t1; t2]
+    else
+      match t1.c.tt_desc, t2.c.tt_desc with
+      | TTconst Ttrue, _  -> TApred (t2, false)
+      | _, TTconst Ttrue  -> TApred (t1, false)
+      | TTconst Tfalse, _ -> TApred (t2, true)
+      | _, TTconst Tfalse -> TApred (t1, true)
+      | _ -> TAeq [t1; t2]
+  in
+  {c ; annot=new_id ()}
 
-        let tc = type_bound env c tt_ty in
-        if not (Ty.equal tt_ty tc.c.tt_ty) then
-          error (ShouldHaveType(tc.c.tt_ty, tt_ty)) c.pp_loc;
+and mk_ta_neq t1 t2 =
+  let c =
+    if t1.c.tt_ty != Ty.Tbool then TAneq [t1; t2]
+    else
+      match t1.c.tt_desc, t2.c.tt_desc with
+      | TTconst Ttrue, _  -> TApred (t2, true)
+      | _, TTconst Ttrue  -> TApred (t1, true)
+      | TTconst Tfalse, _ -> TApred (t2, false)
+      | _, TTconst Tfalse -> TApred (t1, false)
+      | _ -> TAneq [t1; t2]
+  in
+  {c ; annot=new_id ()}
 
-        { c = { tt_desc = TTinInterval(te, a, tb , tc, d) ; tt_ty = Ty.Tbool};
-          annot = new_id ()}
-
-      | true, PPmapsTo (x, e) ->
-        let vx, ty_x = type_var_desc env x t.pp_loc in
-        let hs_x =
-          match vx with TTvar Symbols.Var hs -> hs | _ -> assert false
-        in
-        let te = type_term env e in
-        let tt_ty = te.c.tt_ty in
-        if not (Ty.equal tt_ty ty_x) then
-          error (ShouldHaveType(ty_x,tt_ty)) t.pp_loc;
-        { c = { tt_desc = TTmapsTo(hs_x, te) ; tt_ty = Ty.Tbool};
-          annot = new_id ()}
-
-      | _ -> type_term env t
-    )l
-
-let rec type_form ?(in_theory=false) env f =
+and type_form ?(in_theory=false) env f =
   let rec type_pp_desc pp_desc = match pp_desc with
     | PPconst ConstTrue ->
       Options.tool_req 1 "TR-Typing-True$_F$";
@@ -714,46 +734,59 @@ let rec type_form ?(in_theory=false) env f =
       TFatom {c=TAfalse; annot=new_id ()}, Sy.empty
     | PPvar p ->
       Options.tool_req 1 "TR-Typing-Var$_F$";
-      let r = begin
-	match Env.fresh_type env p f.pp_loc with
-	  | s, { Env.args = []; result = Ty.Tbool} ->
-	    let t2 = {c = {tt_desc=TTconst Ttrue;tt_ty=Ty.Tbool};
-		      annot = new_id ()} in
-	    let t1 = {c = {tt_desc=TTvar s; tt_ty=Ty.Tbool};
-		      annot = new_id ()} in
-	    TFatom {c = TAeq [t1;t2]; annot=new_id ()}
-	  | _ -> error (NotAPropVar p) f.pp_loc
-      end in r, freevars_form r
+      let res =
+        try
+          (* allow type cast bool to predicate in some simple situations *)
+          let s, ty = Env.find env p in
+          Options.tool_req 1 (append_type "TR-Typing-Var$_\\Gamma$ type" ty);
+          s, { Env.args = []; result = ty}
+        with Not_found ->
+          Env.fresh_type env p f.pp_loc
+      in
+      let r =
+	match res with
+	| s, { Env.args = []; result = Ty.Tbool} ->
+	  let t2 = {c = {tt_desc=TTconst Ttrue;tt_ty=Ty.Tbool};
+		    annot = new_id ()} in
+	  let t1 = {c = {tt_desc=TTvar s; tt_ty=Ty.Tbool};
+		    annot = new_id ()} in
+	  TFatom (mk_ta_eq t1 t2)
+        | s, { Env.args ; result} ->
+          error (NotAPropVar p) f.pp_loc
+      in
+      r, freevars_form r
 
     | PPapp(p,args ) ->
       Options.tool_req 1 "TR-Typing-App$_F$";
-      let r =
-	begin
-	  let te_args = List.map (type_term env) args in
-	  let lt_args =  List.map (fun {c={tt_ty=t}} -> t) te_args in
-	  match Env.fresh_type env p f.pp_loc with
-	    | s , { Env.args = lt; result = Ty.Tbool} ->
-	      begin
-		try
-		  List.iter2 Ty.unify lt lt_args;
-		  if Pervasives.(=) p "<=" || Pervasives.(=) p "<" then
-		    TFatom { c = TAbuilt(Hstring.make p,te_args);
-			     annot=new_id ()}
-		  else
-		    let t1 = {
-		      c = {tt_desc=TTapp(s,te_args); tt_ty=Ty.Tbool};
-		      annot=new_id (); }
-		    in
-		    TFatom { c = TApred t1; annot=new_id () }
-		with
-		  | Ty.TypeClash(t1,t2) ->
-		    error (Unification(t1,t2)) f.pp_loc
-		  | Invalid_argument _ ->
-		    error (WrongNumberofArgs p) f.pp_loc
-	      end
-	    | _ -> error (NotAPredicate p) f.pp_loc
-	end
-      in r, freevars_form r
+      let te_args = List.map (type_term env) args in
+      let lt_args =  List.map (fun {c={tt_ty=t}} -> t) te_args in
+      let s , { Env.args = lt; result } = Env.fresh_type env p f.pp_loc in
+      begin
+        try
+          if result != Ty.Tbool then
+            (* consider polymorphic functions *)
+            Ty.unify result Ty.Tbool;
+          try
+            List.iter2 Ty.unify lt lt_args;
+            let r =
+              if Pervasives.(=) p "<=" || Pervasives.(=) p "<" then
+                TFatom { c = TAbuilt(Hstring.make p,te_args);
+		         annot=new_id ()}
+              else
+                let t1 = {
+	          c = {tt_desc=TTapp(s,te_args); tt_ty=Ty.Tbool};
+	          annot=new_id (); }
+                in
+                TFatom { c = TApred (t1, false); annot=new_id () }
+            in
+            r, freevars_form r
+          with
+          | Ty.TypeClash(t1,t2) ->
+            error (Unification(t1,t2)) f.pp_loc
+          | Invalid_argument _ ->
+            error (WrongNumberofArgs p) f.pp_loc
+        with Ty.TypeClash(t1,t2) -> error (NotAPredicate p) f.pp_loc
+      end
 
     | PPdistinct (args) ->
       Options.tool_req 1 "TR-Typing-Distinct$_F$";
@@ -792,8 +825,8 @@ let rec type_form ?(in_theory=false) env f =
 	try
 	  Ty.unify tt1.c.tt_ty tt2.c.tt_ty;
 	  match op with
-	    | PPeq -> TFatom {c = TAeq [tt1; tt2]; annot = new_id()}
-	    | PPneq -> TFatom {c = TAneq [tt1; tt2]; annot = new_id()}
+	    | PPeq -> TFatom (mk_ta_eq tt1 tt2)
+	    | PPneq -> TFatom (mk_ta_neq tt1 tt2)
 	    | _ -> assert false
 	with Ty.TypeClash(t1,t2) -> error (Unification(t1,t2)) f.pp_loc
       in r, freevars_form r
@@ -830,6 +863,7 @@ let rec type_form ?(in_theory=false) env f =
 	  | PPand ->
 	    TFop(OPand,[f1;f2])
 	  | PPor -> TFop(OPor,[f1;f2])
+	  | PPxor -> TFop(OPxor,[f1;f2])
 	  | PPimplies -> TFop(OPimp,[f1;f2])
 	  | PPiff -> TFop(OPiff,[f1;f2])
 	  | _ -> assert false), Sy.union fv1 fv2)
@@ -839,10 +873,10 @@ let rec type_form ?(in_theory=false) env f =
       let f, fv = type_form env f in TFop(OPnot,[f]),fv
     | PPif(f1,f2,f3) ->
       Options.tool_req 1 "TR-Typing-Ite$_F$";
-      let f1 = type_term env f1 in
+      let f1,fv1 = type_form env f1 in
       let f2,fv2 = type_form env f2 in
       let f3,fv3 = type_form env f3 in
-      TFop(OPif f1,[f2;f3]), Sy.union fv2 fv3
+      TFop(OPif, [f1; f2;f3]), Sy.union fv1 (Sy.union fv2 fv3)
     | PPnamed(lbl,f) ->
       let f, fv = type_form env f in
       let lbl = Hstring.make lbl in
@@ -888,17 +922,44 @@ let rec type_form ?(in_theory=false) env f =
 	  TFexists qf_form
 	| _ -> assert false),
       (List.fold_left (fun acc (l,_) -> Sy.remove l acc) fv bvars)
-    | PPlet (var,t,f) ->
+    | PPlet (binders,f) ->
       Options.tool_req 1 "TR-Typing-Let$_F$";
-      let {c= { tt_ty = ttype }} as tt = type_term env t in
-      let svar = Symbols.var var in
+      let _ =
+        List.fold_left (fun z (sy,_) ->
+            if Util.SS.mem sy z then error (DuplicatePattern sy) f.pp_loc;
+            Util.SS.add sy z
+          )Util.SS.empty binders
+      in
+      let binders, free_vars =
+        List.fold_left
+          (fun (binders, free_vars) (sy, e) ->
+             let xx, tty, free_vars =
+               try
+                 (* try to type e as a term *)
+                 let {c= { tt_ty = ttype }} as tt = type_term env e in
+                 TletTerm tt, ttype, freevars_term free_vars tt
+               with _ ->
+                 (* try to type e as a form *)
+                 let fzz, free_v = type_form env e in
+                 TletForm fzz, Ty.Tbool, Sy.union free_v free_vars
+             in
+             (sy, Symbols.var sy, xx, tty):: binders, free_vars
+          )([], Sy.empty) binders
+      in
       let up = Env.list_of env in
       let env =
-	{env with
-	  Env.var_map = MString.add var (svar, ttype) env.Env.var_map} in
-      let f,fv = type_form env f in
-      TFlet (up ,svar , tt, f), freevars_term (Sy.remove svar fv) tt
-
+        List.fold_left
+          (fun env (v, sv, xx, ty) ->
+	     {env with Env.var_map = MString.add v (sv, ty) env.Env.var_map}
+          ) env binders
+      in
+      let f, fv = type_form env f in
+      let binders, fv =
+        List.fold_left
+          (fun (binders, fv) (_,sv,e,_) -> (sv, e) :: binders, Sy.remove sv fv)
+          ([], fv) binders
+      in
+      TFlet (up ,binders, f), Sy.union fv free_vars
 
     (* Remove labels : *)
     | PPforall_named (vs_tys, trs, hyp, f) ->
@@ -918,13 +979,55 @@ let rec type_form ?(in_theory=false) env f =
 	  let te2 = {c = {tt_desc=TTconst Ttrue;tt_ty=Ty.Tbool};
 		     annot = new_id ()}
 	  in
-	  let r = TFatom {c = TAeq [te1;te2]; annot=new_id ()} in
+	  let r = TFatom (mk_ta_eq te1 te2)in
 	  r, freevars_form r
 	| _ -> error ShouldHaveTypeProp f.pp_loc
   in
   let form, vars = type_pp_desc f.pp_desc in
   {c = form; annot = new_id ()}, vars
 
+and type_trigger in_theory env l =
+  List.map
+    (fun t ->
+      match in_theory, t.pp_desc with
+      | false, PPinInterval _ -> error ThSemTriggerError t.pp_loc
+      | false, PPmapsTo _ -> error ThSemTriggerError t.pp_loc
+      | true, PPinInterval (e, a,b, c, d) ->
+        let te = type_term env e in
+        let tt_ty = te.c.tt_ty in
+        let tb = type_bound env b tt_ty in
+        if not (Ty.equal tt_ty tb.c.tt_ty) then
+          error (ShouldHaveType(tb.c.tt_ty,tt_ty)) b.pp_loc;
+
+        let tc = type_bound env c tt_ty in
+        if not (Ty.equal tt_ty tc.c.tt_ty) then
+          error (ShouldHaveType(tc.c.tt_ty, tt_ty)) c.pp_loc;
+
+        { c = { tt_desc = TTinInterval(te, a, tb , tc, d) ; tt_ty = Ty.Tbool};
+          annot = new_id ()}
+
+      | true, PPmapsTo (x, e) ->
+        let vx, ty_x = type_var_desc env x t.pp_loc in
+        let hs_x =
+          match vx with TTvar Symbols.Var hs -> hs | _ -> assert false
+        in
+        let te = type_term env e in
+        let tt_ty = te.c.tt_ty in
+        if not (Ty.equal tt_ty ty_x) then
+          error (ShouldHaveType(ty_x,tt_ty)) t.pp_loc;
+        { c = { tt_desc = TTmapsTo(hs_x, te) ; tt_ty = Ty.Tbool};
+          annot = new_id ()}
+
+      | _ ->
+        try type_term env t
+        with Error _ ->
+          ignore (type_form env t);
+          if Options.verbose () then
+            fprintf fmt "; %a The given trigger is not a term and is ignored@."
+              Loc.report t.pp_loc;
+          (* hack to typecheck *)
+          type_term env {t with pp_desc = PPconst ConstVoid}
+    )l
 
 let make_rules loc f = match f.c with
   | TFforall {qf_bvars = vars; qf_form = {c = TFatom {c = TAeq [t1; t2]}}} ->
@@ -1008,16 +1111,23 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
       List.iter (fun (_,e) -> no_alpha_renaming_b s e) l;
       no_alpha_renaming_b s e
 
-    | PPlet(x, f1, f2) ->
-      no_alpha_renaming_b s f1;
-      let s, x =
-	if S.mem x up then
-	  let nx = fresh_var x in
-	  let m = MString.add x nx m in
-	  let up = S.add nx up in
-	  (up, m), nx
-	else
-	  (S.add x up, m), x
+    | PPlet(l, f2) ->
+      let _ =
+        List.fold_left (fun z (sy,_) ->
+            if Util.SS.mem sy z then error (DuplicatePattern sy) f.pp_loc;
+            Util.SS.add sy z
+          )Util.SS.empty l
+      in
+      List.iter (fun (x, f) -> no_alpha_renaming_b s f) l;
+      let s =
+        List.fold_left
+          (fun (up, m) (x, f) ->
+	     if S.mem x up then
+	       let nx = fresh_var x in
+               let m = MString.add x nx m in
+	       (S.add nx up, m)
+	     else (S.add x up, m)
+          )(up, m) l
       in
       no_alpha_renaming_b s f2
 
@@ -1193,20 +1303,35 @@ let rec alpha_renaming_b ((up, m) as s) f =
       if List.for_all2 (fun a b -> a == b) l l2 && e == ee then f
       else {f with pp_desc = PPwith(ee, l2)}
 
-    | PPlet(x, f1, f2) ->
-      let ff1 = alpha_renaming_b s f1 in
-      let s, x =
-	if S.mem x up then
-	  let nx = fresh_var x in
-	  let m = MString.add x nx m in
-	  let up = S.add nx up in
-	  (up, m), nx
-	else
-	  (S.add x up, m), x
+    | PPlet(l, f2) ->
+      let _ =
+        List.fold_left (fun z (sy,_) ->
+            if Util.SS.mem sy z then error (DuplicatePattern sy) f.pp_loc;
+            Util.SS.add sy z
+          )Util.SS.empty l
+      in
+      let same_fi = ref true in
+      let rev_l =
+        List.rev_map (fun (x, f1) ->
+            let ff1 = alpha_renaming_b s f1 in
+            same_fi := !same_fi && f1 == ff1;
+            x, ff1
+          ) l
+      in
+      let s, l =
+        List.fold_left
+          (fun ((up,m), l) (x, f1) ->
+	     if S.mem x up then
+	       let nx = fresh_var x in
+	       let m = MString.add x nx m in
+	       (S.add nx up, m), (nx, f1) :: l
+	     else
+	       (S.add x up, m), (x, f1) :: l
+          )((up,m), []) rev_l
       in
       let ff2 = alpha_renaming_b s f2 in
-      if f1 == ff1 && f2 == ff2 then f
-      else {f with pp_desc = PPlet(x, ff1, ff2)}
+      if !same_fi && f2 == ff2 then f
+      else {f with pp_desc = PPlet(l, ff2)}
 
     | PPcheck f' ->
       let ff = alpha_renaming_b s f' in
@@ -1372,13 +1497,14 @@ let rec intro_hypothesis env valid_mode f =
       let axioms, goal = intro_hypothesis env valid_mode
 	(alpha_renaming_env env f2) in
       f1_env::axioms, goal
-    | PPlet(var,{pp_desc=PPcast(t1,ty); pp_loc = ty_loc},f2) ->
+(*    | PPlet(var,{pp_desc=PPcast(t1,ty); pp_loc = ty_loc},f2) ->
       let env = Env.add_names env [var] ty ty_loc in
       let var = {pp_desc = PPvar var; pp_loc = f.pp_loc} in
       let feq = {pp_desc = PPinfix(var,PPeq,t1); pp_loc = f.pp_loc} in
       let axioms, goal = intro_hypothesis env valid_mode
 	(alpha_renaming_env env f2) in
       (feq,env)::axioms, goal
+*)
     | PPforall (lv, _, _, f) when valid_mode ->
       let env = List.fold_left (fun env (v, ty) ->
           Env.add_names env [v] ty f.pp_loc
@@ -1448,7 +1574,7 @@ let rec max_terms acc f =
     | PPforall_named(_, _, _, _)
     | PPexists_named(_, _, _, _)
     | PPvar _
-    | PPlet(_, _, _)
+    | PPlet(_, _)
     | PPinfix(_, _, _) -> raise Exit
 
     | PPif(f1, f2, f3) ->
@@ -1461,6 +1587,8 @@ let rec max_terms acc f =
     | _ -> f::acc
 
 let max_terms f = try max_terms [] f with Exit -> []
+
+let monomorphize_var (s,ty) = s, Ty.monomorphize ty
 
 let rec mono_term {c = {tt_ty=tt_ty; tt_desc=tt_desc}; annot = id} =
   let tt_desc = match tt_desc with
@@ -1488,15 +1616,18 @@ let rec mono_term {c = {tt_ty=tt_ty; tt_desc=tt_desc}; annot = id} =
       TTdot (mono_term t1, a)
     | TTrecord lbs ->
       TTrecord (List.map (fun (x, t) -> x, mono_term t) lbs)
-    | TTlet (sy,t1,t2)->
-      TTlet (sy, mono_term t1, mono_term t2)
+    | TTlet (l,t2)->
+      let l = List.rev_map (fun (x, t1) -> x, mono_term t1) (List.rev l) in
+      TTlet (l, mono_term t2)
     | TTnamed (lbl, t)->
       TTnamed (lbl, mono_term t)
+    | TTite (cond, t1, t2) ->
+      TTite (monomorphize_form cond, mono_term t1, mono_term t2)
   in
   { c = {tt_ty = Ty.monomorphize tt_ty; tt_desc=tt_desc}; annot = id}
 
 
-let monomorphize_atom tat =
+and monomorphize_atom tat =
   let c = match tat.c with
     | TAtrue | TAfalse -> tat.c
     | TAeq tl -> TAeq (List.map mono_term tl)
@@ -1504,14 +1635,12 @@ let monomorphize_atom tat =
     | TAle tl -> TAle (List.map mono_term tl)
     | TAlt tl -> TAlt (List.map mono_term tl)
     | TAdistinct tl -> TAdistinct (List.map mono_term tl)
-    | TApred t -> TApred (mono_term t)
+    | TApred (t, negated) -> TApred (mono_term t, negated)
     | TAbuilt (hs, tl) -> TAbuilt(hs, List.map mono_term tl)
   in
   { tat with c = c }
 
-let monomorphize_var (s,ty) = s, Ty.monomorphize ty
-
-let rec monomorphize_form tf =
+and monomorphize_form tf =
   let c = match tf.c with
     | TFatom tat -> TFatom (monomorphize_atom tat)
     | TFop (oplogic , tfl) ->
@@ -1532,9 +1661,19 @@ let rec monomorphize_form tf =
            qf_form = monomorphize_form qf.qf_form;
            qf_triggers =
             List.map (fun (l, b) -> List.map mono_term l, b) qf.qf_triggers}
-    | TFlet (l, sy, tt, tf) ->
+
+    | TFlet (l, binders, tf) ->
       let l = List.map monomorphize_var l in
-      TFlet(l,sy, mono_term tt, monomorphize_form tf)
+      let binders =
+        List.rev_map
+          (fun (sy, e) ->
+             match e with
+             | TletTerm tt -> sy, TletTerm (mono_term tt)
+             | TletForm ff -> sy, TletForm (monomorphize_form ff)
+          )(List.rev binders)
+      in
+      TFlet(l, binders, monomorphize_form tf)
+
     | TFnamed (hs,tf) ->
       TFnamed(hs, monomorphize_form tf)
   in

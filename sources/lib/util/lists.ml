@@ -30,3 +30,11 @@ let apply_right f l =
   (if same then l else List.rev res), same
 
 let rrmap f l = List.rev (List.map f l)
+
+let rec find_opt pred l =
+  match l with
+  | [] -> None
+  | e :: r ->
+    if pred e then Some e
+    else find_opt pred r
+

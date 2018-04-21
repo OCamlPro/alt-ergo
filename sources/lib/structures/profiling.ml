@@ -83,14 +83,14 @@ let state =
     instances_map_printed = ref false
   }
 
-let set_sigprof =
+let set_sigprof () =
   let tm =
     let v = Options.profiling_period () in
     if Pervasives.(>) v 0. then v else -. v
-  in fun () ->
-    ignore
-      (Unix.setitimer Unix.ITIMER_PROF
-         { Unix.it_value = tm; Unix.it_interval = 0. })
+  in
+  ignore
+    (Unix.setitimer Unix.ITIMER_PROF
+       { Unix.it_value = tm; Unix.it_interval = 0. })
 
 let init () =
   state.decisions := 0;
@@ -230,9 +230,9 @@ let register_produced_terms axiom loc consumed all produced _new =
   in
   state.instances_map := MS.add axiom ii !(state.instances_map)
 
-(*******************************************************************************
-                                                                                printing the internal state
-*******************************************************************************)
+(******************************************************************************
+printing the internal state
+******************************************************************************)
 
 type mode =
 | Stats

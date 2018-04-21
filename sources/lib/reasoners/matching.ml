@@ -460,6 +460,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let pats = pat_info.trigger in
     let pats_list = List.stable_sort trig_weight pats.F.content in
     Debug.matching pats;
+    if List.length pats_list > Options.max_multi_triggers_size () then
+      pat_info, []
+    else
     let egs =
       { sbs = SubstT.empty;
         sty = Ty.esubst;

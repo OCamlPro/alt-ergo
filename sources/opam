@@ -1,6 +1,6 @@
 opam-version: "1.2"
 name: "alt-ergo"
-version: "2.1.0"
+version: "2.2.0"
 
 maintainer: "alt-ergo@ocamlpro.com"
 authors: "Alt-Ergo developers"
@@ -32,6 +32,7 @@ depends: [
 	"zarith"
 	"camlzip"
 	"ocplib-simplex" {>= "0.4" }
+	"psmt2-frontend" {>= "0.1" }
         "menhir"
         "conf-autoconf" {build}
 ]

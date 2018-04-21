@@ -1,0 +1,4 @@
+goal g:
+  let x = 1 in
+   let x = x + 3 in
+   (2 * x <> 8)

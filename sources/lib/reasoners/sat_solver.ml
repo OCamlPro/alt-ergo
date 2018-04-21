@@ -14,11 +14,11 @@ let get_current () =
   | Util.Tableaux ->
     if Options.verbose() then
       Format.eprintf "[bool reasoning] use Tableaux-like solver@.";
-    (module Fun_sat : Sat_solver_sig.S)
+    (module Fun_sat : Sat_solver_sig.SatContainer)
   | Util.CDCL_satML ->
     if Options.verbose() then
       Format.eprintf "[bool reasoning] use CDCL solver@.";
-    (module Satml_frontend.Main : Sat_solver_sig.S)
+    (module Satml_frontend : Sat_solver_sig.SatContainer)
 
 (*
 (*+ no dynamic loading of SAT solvers anymore +*)
@@ -51,7 +51,8 @@ let load_current_sat () =
         eprintf
           "[Dynlink] Loading the SAT-solver in plugin \"%s\" failed!@."
           path;
-        Format.eprintf ">> Failure message: %s@.@." (MyDynlink.error_message m1);
+        Format.eprintf ">> Failure message: %s@.@."
+                             (MyDynlink.error_message m1);
       end;
       let prefixed_path = sprintf "%s/%s" Config.pluginsdir path in
       if debug_sat () then
@@ -72,7 +73,8 @@ let load_current_sat () =
         eprintf
           "[Dynlink] Trying to load the plugin from \"%s\" failed too!@."
           prefixed_path;
-        Format.eprintf ">> Failure message: %s@.@." (MyDynlink.error_message m2);
+        Format.eprintf ">> Failure message: %s@.@."
+                             (MyDynlink.error_message m2);
         exit 1
 
 let get_current () =

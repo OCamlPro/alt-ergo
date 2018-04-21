@@ -7,6 +7,7 @@ subgraph cluster_parsers__why {
 	color=lightgrey;
         "Why_parser";
         "Why_lexer";
+        "Psmt2_to_alt_ergo";
 }
 
 
@@ -50,6 +51,7 @@ subgraph cluster_lib__reasoners {
         "Records";
         "Sig";
         "Sum";
+        "Ite";
         "Uf";
         "Use";
         "Matching";
@@ -80,6 +82,7 @@ subgraph cluster_lib__structures {
         "Errors";
         "Fpa_rounding";
         "Profiling";
+        "Satml_types";
 }
 
 //#frontend
@@ -104,12 +107,12 @@ subgraph cluster_lib__util {
         "Gc_debug";
         "Emap";
         "Options";
-        "Cmdline_parser";
         "Timers";
         "Config";
         "Version";
         "Util";
         "Vec";
+        "Iheap";
         "Lists";
         "Loc";
         "Hconsing";

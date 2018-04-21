@@ -40,8 +40,14 @@ type tconstant =
   | Tfalse
   | Tvoid
 
+
+type oplogic =
+    OPand |OPor | OPxor | OPimp | OPnot | OPiff
+  | OPif
+
 type 'a tterm =
-    { tt_ty : Ty.t; tt_desc : 'a tt_desc }
+  { tt_ty : Ty.t; tt_desc : 'a tt_desc }
+
 and 'a tt_desc =
   | TTconst of tconstant
   | TTvar of Symbols.t
@@ -62,10 +68,12 @@ and 'a tt_desc =
   | TTconcat of ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
   | TTdot of ('a tterm, 'a) annoted * Hstring.t
   | TTrecord of (Hstring.t * ('a tterm, 'a) annoted) list
-  | TTlet of Symbols.t * ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
+  | TTlet of (Symbols.t * ('a tterm, 'a) annoted) list * ('a tterm, 'a) annoted
   | TTnamed of Hstring.t * ('a tterm, 'a) annoted
+  | TTite of ('a tform, 'a) annoted *
+             ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
 
-type 'a tatom =
+and 'a tatom =
   | TAtrue
   | TAfalse
   | TAeq of ('a tterm, 'a) annoted list
@@ -73,14 +81,10 @@ type 'a tatom =
   | TAneq of ('a tterm, 'a) annoted list
   | TAle of ('a tterm, 'a) annoted list
   | TAlt of ('a tterm, 'a) annoted list
-  | TApred of ('a tterm, 'a) annoted
+  | TApred of ('a tterm, 'a) annoted * bool (* true <-> negated *)
   | TAbuilt of Hstring.t * ('a tterm, 'a) annoted list
 
-type 'a oplogic =
-    OPand |OPor | OPimp | OPnot | OPiff
-  | OPif of ('a tterm, 'a) annoted
-
-type 'a quant_form = {
+and 'a quant_form = {
   (* quantified variables that appear in the formula *)
   qf_bvars : (Symbols.t * Ty.t) list ;
   qf_upvars : (Symbols.t * Ty.t) list ;
@@ -91,13 +95,16 @@ type 'a quant_form = {
 
 and 'a tform =
   | TFatom of ('a tatom, 'a) annoted
-  | TFop of 'a oplogic * (('a tform, 'a) annoted) list
+  | TFop of oplogic * (('a tform, 'a) annoted) list
   | TFforall of 'a quant_form
   | TFexists of 'a quant_form
-  | TFlet of (Symbols.t * Ty.t) list * Symbols.t *
-      ('a tterm, 'a) annoted * ('a tform, 'a) annoted
+  | TFlet of (Symbols.t * Ty.t) list *
+             (Symbols.t * 'a tlet_kind) list * ('a tform, 'a) annoted
   | TFnamed of Hstring.t * ('a tform, 'a) annoted
 
+and 'a tlet_kind =
+  | TletTerm of ('a tterm, 'a) annoted
+  | TletForm of ('a tform, 'a) annoted
 
 type 'a rwt_rule = {
   rwt_vars : (Symbols.t * Ty.t) list;

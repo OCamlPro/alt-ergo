@@ -9,6 +9,4 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(* empty interface file *)
-
-module Main : Sat_solver_sig.S
+include Sat_solver_sig.SatContainer

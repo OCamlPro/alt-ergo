@@ -35,7 +35,7 @@ type constant =
   | ConstVoid
 
 type pp_infix =
-  | PPand | PPor | PPimplies | PPiff
+  | PPand | PPor | PPxor | PPimplies | PPiff
   | PPlt | PPle | PPgt | PPge | PPeq | PPneq
   | PPadd | PPsub | PPmul | PPdiv | PPmod
 
@@ -86,7 +86,7 @@ and pp_desc =
       (string * string * ppure_type) list * (lexpr list * bool) list *
         lexpr list * lexpr
   | PPnamed of string * lexpr
-  | PPlet of string * lexpr * lexpr
+  | PPlet of (string * lexpr) list * lexpr
   | PPcheck of lexpr
   | PPcut of lexpr
   | PPcast of lexpr * ppure_type
