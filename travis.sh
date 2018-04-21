@@ -9,7 +9,9 @@ local_install_dir=`pwd`/___local
 
 git_repo=`pwd`
 
-
+install_unreleased_psmt2_frontend(){
+    opam pin add psmt2-frontend --kind auto https://github.com/Coquera/psmt2-frontend.git ; exit_if_error
+}
 non_regression(){
     echo "=+= [travis.sh] non-regression tests ... =+="
     echo "which alt-ergo == `which alt-ergo`"
@@ -79,6 +81,7 @@ do
 
     echo "=+= [travis.sh] $ocaml_version' compiler: test with 'opam pin'"
 
+    install_unreleased_psmt2_frontend ; exit_if_error
     opam pin add alt-ergo . --y ; exit_if_error
 
     non_regression
@@ -97,6 +100,7 @@ do
     opam sw $ocaml_version ; exit_if_error
     eval `opam config env`
 
+    install_unreleased_psmt2_frontend ; exit_if_error
     opam install ocamlfind camlzip zarith ocplib-simplex lablgtk menhir psmt2-frontend --y ; exit_if_error
 
     cd $git_repo/
