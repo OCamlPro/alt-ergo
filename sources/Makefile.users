@@ -5,9 +5,10 @@ VERSION=$(shell grep "=" lib/util/version.ml | cut -d"=" -f2 | head -n 1)
 LOCAL_INC = -I lib/util -I lib/structures -I lib/reasoners \
     -I lib/frontend -I tools/text -I tools/gui \
     -I parsers/why \
+    -I parsers/smt2 \
     -I plugins/fm-simplex
 
-INCLUDES = $(NUMLIB) $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(LOCAL_INC)
+INCLUDES = $(NUMLIB) $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(PSMT2FELIB) $(LOCAL_INC)
 #for coverage # -I /usr/local/lib/ocaml/3.12.1/bisect -pp "camlp4o str.cma /usr/local/lib/ocaml/3.12.1/bisect/bisect_pp.cmo"
 
 # TODO : enable these warnings one by one and fix the code
@@ -33,9 +34,9 @@ LIGHT_OFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g $(WAR
 BFLAGS = $(LIGHT_BFLAGS) -for-pack AltErgoLib
 OFLAGS = $(LIGHT_BFLAGS) -for-pack AltErgoLib
 
-LIBDEPS=num camlzip zarith ocplib-simplex
+LIBDEPS=num camlzip zarith ocplib-simplex psmt2-frontend
 
-BIBBYTE = zarith.cma nums.cma unix.cma dynlink.cma str.cma zip.cma ocplibSimplex.cma
+BIBBYTE = zarith.cma nums.cma unix.cma dynlink.cma str.cma zip.cma ocplibSimplex.cma psmt2Frontend.cma
 # for coverage bisect.cma 
 
 BIBOPT = $(BIBBYTE:.cma=.cmxa)
@@ -134,7 +135,8 @@ CMO = lib/util/config.cmo \
       lib/frontend/frontend.cmo \
       lib/frontend/parsers.cmo
 
-CMOFRONT = parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
+CMOFRONT = parsers/why/why_parser.cmo parsers/why/why_lexer.cmo parsers/smt2/psmt2_to_alt_ergo.cmo
+
 
 # parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
 
@@ -316,7 +318,7 @@ uninstall: uninstall-lib
 #######
 
 clean:
-	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/why plugins/fm-simplex ; do \
+	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/why parsers/smt2 plugins/fm-simplex ; do \
 	rm -f $$dd/*.cm[ioxtp] $$dd/*.cmti $$dd/*.o $$dd/*~ $$dd/*.annot $$dd/*.owz;\
 	rm -f $(GENERATED) $$dd/*.output META $(LIBNAME).*; \
 	rm -f $(NAME).byte $(NAME).opt $(GUINAME).opt $(GUINAME).byte *~; \
@@ -329,7 +331,7 @@ clean:
 
 .depend depend: $(GENERATED)
 	$(OCAMLDEP) -slash $(LOCAL_INC) lib/util/*.ml* lib/structures/*.ml* lib/reasoners/*.ml* lib/frontend/*.ml* tools/text/*.ml* \
-        tools/gui/*.ml* parsers/why/*.ml* plugins/fm-simplex/*ml* > .depend
+        tools/gui/*.ml* parsers/why/*.ml* parsers/smt2/*.ml* plugins/fm-simplex/*ml* > .depend
 
 include .depend
 

@@ -1,9 +1,9 @@
 ## Build and Installation
 
-  You need OCaml >= 4.04.0, zarith, camlzip, menhir and ocplib-simplex >= 0.4
-  to compile the sources. You need LablGtk2 and the widget
-  GSourceView2 to compile the GUI. You may need superuser permissions
-  to perform the installation.
+  You need OCaml >= 4.04.0, zarith, camlzip, menhir, ocplib-simplex >=
+  0.4 and psmt2-frontend library to compile the sources. You need
+  LablGtk2 and the widget GSourceView2 to compile the GUI. You may
+  need superuser permissions to perform the installation.
 
 #### Common Steps
 
@@ -60,22 +60,27 @@ This plugin has been "inlined" in Alt-Ergo sources.
 
 ## Usage
 
+Alt-Ergo supports file extensions:
+- `.why`, `.mlw`, `.ae` for its native input language
+- `.psmt2`, `.smt2` for (our polymorphic extension of) the SMT-LIB 2
+  standard
+
 - Alt-Ergo and AltGr-Ergo are executed with the following commands,
   respectively:
 
-        $ alt-ergo   [options] file.why
-        $ altgr-ergo [options] file.why
+        $ alt-ergo   [options] file.<ext>
+        $ altgr-ergo [options] file.<ext>
 
 The CDCL solver is now the default SAT engine. The commands below
 allow to enable the old Tableaux-like SAT-solver:
 
-        $ alt-ergo   [options] -sat-solver Tableaux file.why
-        $ altgr-ergo [options] -sat-solver Tableaux file.why
+        $ alt-ergo   [options] -sat-solver Tableaux file.<ext>
+        $ altgr-ergo [options] -sat-solver Tableaux file.<ext>
 
 - The Fm-Simplex plugin can be used as follows:
 
-        $ alt-ergo -inequalities-plugin fm-simplex-plugin.cmxs [other-options] file.why
-        $ alt-ergo -inequalities-plugin some-path/fm-simplex-plugin.cmxs [other-options] file.why
+        $ alt-ergo -inequalities-plugin fm-simplex-plugin.cmxs [other-options] file.<ext>
+        $ alt-ergo -inequalities-plugin some-path/fm-simplex-plugin.cmxs [other-options] file.<ext>
 
    Alt-Ergo will try to load a local plugin called
    "fm-simplex-plugin.cmxs". If this fails, Alt-Ergo tries to load it
