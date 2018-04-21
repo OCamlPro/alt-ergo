@@ -82,6 +82,7 @@ subgraph cluster_lib__structures {
         "Errors";
         "Fpa_rounding";
         "Profiling";
+        "Satml_types";
 }
 
 //#frontend
@@ -106,7 +107,6 @@ subgraph cluster_lib__util {
         "Gc_debug";
         "Emap";
         "Options";
-        "Cmdline_parser";
         "Timers";
         "Config";
         "Version";
