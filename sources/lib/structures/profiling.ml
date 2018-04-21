@@ -83,14 +83,14 @@ let state =
     instances_map_printed = ref false
   }
 
-let set_sigprof =
+let set_sigprof () =
   let tm =
     let v = Options.profiling_period () in
     if Pervasives.(>) v 0. then v else -. v
-  in fun () ->
-    ignore
-      (Unix.setitimer Unix.ITIMER_PROF
-         { Unix.it_value = tm; Unix.it_interval = 0. })
+  in
+  ignore
+    (Unix.setitimer Unix.ITIMER_PROF
+       { Unix.it_value = tm; Unix.it_interval = 0. })
 
 let init () =
   state.decisions := 0;
