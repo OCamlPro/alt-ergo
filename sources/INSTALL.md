@@ -20,7 +20,7 @@
 The steps below will build and install native or bytecode binaries
 depending on whether ocamlopt is installed or only ocamlc is detected.
 
-#### Everything (binaries, plugins, ...)
+#### Everything (binaries, plugins, library, ...)
 
   1. Compile with "make"
 
@@ -105,3 +105,7 @@ allow to enable the old Tableaux-like SAT-solver:
    should be loaded:
 
    $ alt-ergo -use-fpa -prelude fpa-theory-2017-01-04-16h00.why <file.why>
+
+- Since version 2.2.0, Alt-Ergo's library is also compiled and
+installed. A small example using the API is given here:
+examples/lib_usage.ml
