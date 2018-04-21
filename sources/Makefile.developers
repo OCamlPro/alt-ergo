@@ -151,7 +151,7 @@ public-release: # test-everything
 	mkdir -p $(FILES_DEST)
 	cp configure $(FILES_DEST)
 	git clean -dfx
-	cp ../License.OCamlPro ../OCamlPro-Non-Commercial-License.pdf ../LGPL-License.txt ../Apache-License-2.0.txt $(FILES_DEST)/
+	cp ../License.OCamlPro ../OCamlPro-Non-Commercial-License.txt ../OCamlPro-Non-Commercial-License.pdf ../LGPL-License.txt ../Apache-License-2.0.txt $(FILES_DEST)/
 	cp ../README.md ../LICENSE.md ../COPYING.md $(FILES_DEST)/
 	cp configure.in Makefile.configurable.in Makefile.users Makefile Makefile.developers $(FILES_DEST)/
 	cp INSTALL.md opam CHANGES $(FILES_DEST)/
