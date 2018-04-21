@@ -268,14 +268,13 @@ module Translate = struct
   let translate_fun_dec (_,sl,s) =
     List.map translate_sort sl, translate_sort s
 
-  let translate_fun_def (symb,pars,svl,sort) =
+  let translate_fun_def_aux (symb,pars,svl,sort) =
     let pars = List.map (fun par -> par.c) pars in
-    symb,
-    List.map (fun (p,s) -> p.p,p.c,translate_sort s) svl,
-    translate_sort sort,pars
+    let params = List.map (fun (p,s) -> p.p,p.c,translate_sort s) svl in
+    symb, params, translate_sort sort, pars
 
   let translate_fun_def fun_def term =
-    let symb,params,ret,pars = translate_fun_def fun_def in
+    let symb,params,ret,pars = translate_fun_def_aux fun_def in
     let t_expr = translate_term pars term in
     if Smtlib_ty.is_bool (Smtlib_ty.shorten term.ty) then
       mk_non_ground_predicate_def  symb.p (symb.c,symb.c) params t_expr
