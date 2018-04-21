@@ -1,3 +1,36 @@
+version 2.2.0, April 21, 2018
+================================
+
+* Frontend:
+
+  - new experimental support for the SMT2 standard, and for PSMT2: a
+    conservative extension of SMT2 with prenex polymorphism
+
+  - Alt-Ergo's library is now compiled (with make) and installed (with
+    make install). A small example on how to use it is provided in
+    examples/lib_usage.ml
+
+  - extension of Alt-Ergo's native language to support "xor" construct,
+    "Let x = form in form", and "If form then term/form else
+    term/form". Previously, only "Let x = term in term/form", and "If
+    term : Bool then term/form else term/form" were supported
+
+* Instantiation:
+
+  - add a new option "-max-multi-triggers-size <n>" to ignore
+    multi-triggers containing "a lot" of terms. Default value for n = 4
+
+  - small improvement in triggers inference
+
+* Reasoners:
+
+  - extending the backend to handle "If-Then-Else" on terms
+
+  - improvements and refactoring in the CDCL SAT solver
+
+  - soundness bugfix in UF module
+
+
 version 2.1.0, March 14, 2018
 ================================
 
