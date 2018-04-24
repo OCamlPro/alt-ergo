@@ -370,17 +370,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         | Ex.Bj _ | Ex.Fresh _ -> assert false
       ) ex []
 
-  let mround env acc =
+  let mround use_cs env acc =
     let tbox = SAT.current_tbox env.satml in
     let gd2, ngd2 =
-      Inst.m_predicates ~backward:Util.Normal
+      Inst.m_predicates ~use_cs ~backward:Util.Normal
         env.inst tbox (selector env) env.nb_mrounds
     in
     let l2 = List.rev_append (List.rev gd2) ngd2 in
     if Options.profiling() then Profiling.instances l2;
     (*let env = assume env l2 in*)
     let gd1, ngd1 =
-      Inst.m_lemmas ~backward:Util.Normal
+      Inst.m_lemmas ~use_cs ~backward:Util.Normal
         env.inst tbox (selector env) env.nb_mrounds
     in
     let l1 = List.rev_append (List.rev gd1) ngd1 in
@@ -693,10 +693,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                          that are facts with TRUE by mk_lit (and simplify)"]
 
 
-  let new_instances env sa acc =
+  let new_instances use_cs env sa acc =
     let inst, acc = inst_env_from_atoms env acc sa in
     let inst = terms_from_dec_proc {env with inst=inst} in
-    mround {env with inst = inst} acc
+    mround use_cs {env with inst = inst} acc
 
 
   type pending = {
@@ -867,7 +867,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let sa = atoms_from_sat_branches env ~greedy_round:false ~frugal:true in
     let l = instantiate_ground_preds env [] sa in
     let l = expand_skolems env l sa in
-    let l = new_instances env sa l in
+    let l = new_instances false env sa l in
     let env, updated = assume_aux ~dec_lvl env l in
     env, updated
 
@@ -876,7 +876,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let sa = atoms_from_sat_branches env ~greedy_round:false ~frugal:false in
     let l = instantiate_ground_preds env [] sa in
     let l = expand_skolems env l sa in
-    let l = new_instances env sa l in
+    let l = new_instances false env sa l in
     let env, updated = assume_aux ~dec_lvl env l in
     env, updated
 
@@ -892,7 +892,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        also expand skolems *)
     let l = instantiate_ground_preds env [] sa in
     let l = expand_skolems env l sa in
-    let l = new_instances env sa l in
+    let l = new_instances true env sa l in
     let env, updated = assume_aux ~dec_lvl env l in
     env, updated
 
