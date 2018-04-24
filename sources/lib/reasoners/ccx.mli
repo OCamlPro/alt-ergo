@@ -66,10 +66,10 @@ module type S = sig
   val query :  t -> Literal.LT.t -> Sig.answer
   val new_terms : t -> Term.Set.t
   val class_of : t -> Term.t -> Term.t list
-  val are_equal : t -> Term.t -> Term.t -> added_terms:bool -> Sig.answer
+  val are_equal : t -> Term.t -> Term.t -> init_terms:bool -> Sig.answer
   val are_distinct : t -> Term.t -> Term.t -> Sig.answer
   val cl_extract : t -> Term.Set.t list
-  val term_repr : t -> Term.t -> Term.t
+  val term_repr : t -> Term.t -> init_term:bool -> Term.t
   val print_model : Format.formatter -> t -> unit
   val get_union_find : t -> Combine.Uf.t
 

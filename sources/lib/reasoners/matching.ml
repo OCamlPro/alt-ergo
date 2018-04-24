@@ -59,15 +59,12 @@ module type S = sig
 
 end
 
-
 module type Arg = sig
   type t
-  val term_repr : t -> Term.t -> Term.t
-  val add_term : t -> Term.t -> t
-  val are_equal : t -> Term.t -> Term.t -> add_terms:bool -> Sig.answer
+  val term_repr : t -> Term.t -> init_term:bool -> Term.t
+  val are_equal : t -> Term.t -> Term.t -> init_terms:bool -> Sig.answer
   val class_of : t -> Term.t -> Term.t list
 end
-
 
 module Make (X : Arg) : S with type theory = X.t = struct
 
@@ -236,7 +233,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
 		with Not_found -> g , b
 	      in
               (* with triggers that are variables, always normalize substs *)
-              let t = X.term_repr (X.add_term tbox t) t in
+              let t = X.term_repr tbox t ~init_term:true in
 	      { sbs = SubstT.add f t s_t;
 		sty = s_ty;
 		gen = ng;
@@ -260,7 +257,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let wrap_are_equal_generic tbox t s add_terms cache_are_eq_gen =
     try MT2.find (t, s) !cache_are_eq_gen
     with Not_found ->
-      let res = X.are_equal tbox t s ~add_terms:add_terms in
+      let res = X.are_equal tbox t s ~init_terms:add_terms in
       cache_are_eq_gen :=
         MT2.add (t, s) res (MT2.add (s, t) res !cache_are_eq_gen);
       res
@@ -285,7 +282,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     else
       let t =
         if (T.view t).T.depth > max_t_depth || normalize_instances () then
-          X.term_repr (X.add_term tbox t) t
+          X.term_repr tbox t ~init_term:true
         else t
       in
       {sg with sbs=SubstT.add f t s_t}
@@ -323,7 +320,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
       let mtl =
         List.fold_left
           (fun acc xs ->
-            let xs = List.rev (List.rev_map (fun t -> X.term_repr tbox t) xs) in
+             let xs =
+               List.rev
+                 (List.rev_map
+                    (fun t -> X.term_repr tbox t ~init_term:false) xs)
+             in
             SLT.add xs acc
           ) SLT.empty cl
       in

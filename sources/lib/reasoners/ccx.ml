@@ -73,10 +73,10 @@ module type S = sig
   val query :  t -> Literal.LT.t -> Sig.answer
   val new_terms : t -> Term.Set.t
   val class_of : t -> Term.t -> Term.t list
-  val are_equal : t -> Term.t -> Term.t -> added_terms:bool -> Sig.answer
+  val are_equal : t -> Term.t -> Term.t -> init_terms:bool -> Sig.answer
   val are_distinct : t -> Term.t -> Term.t -> Sig.answer
   val cl_extract : t -> Term.Set.t list
-  val term_repr : t -> Term.t -> Term.t
+  val term_repr : t -> Term.t -> init_term:bool -> Term.t
   val print_model : Format.formatter -> t -> unit
   val get_union_find : t -> Combine.Uf.t
 
@@ -220,7 +220,7 @@ module Main : S = struct
 	[] -> [one]
       | res -> res
 
-  let are_equal env ex t1 t2 =
+  let explain_equality env ex t1 t2 =
     if T.equal t1 t2 then ex
     else match Uf.are_equal env.uf t1 t2 ~added_terms:true with
       | Yes (dep, _) -> Ex.union ex dep
@@ -232,7 +232,7 @@ module Main : S = struct
       let {T.f=f2; xs=xs2; ty=ty2} = T.view t2 in
       if Symbols.equal f1 f2 && Ty.equal ty1 ty2 then
 	try
-          let ex = List.fold_left2 (are_equal env) Ex.empty xs1 xs2 in
+          let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
           let a = A.LT.mk_eq t1 t2 in
           Debug.congruent a ex;
           Q.push (LTerm a, ex, Sig.Other) facts.equas
@@ -625,13 +625,9 @@ module Main : S = struct
 
   let class_of env t = Uf.class_of env.uf t
 
-  let are_equal env t1 t2 = Uf.are_equal env.uf t1 t2
-
   let are_distinct env t1 t2 = Uf.are_distinct env.uf t1 t2
 
   let cl_extract env = Uf.cl_extract env.uf
-
-  let term_repr env t = Uf.term_repr env.uf t
 
   let get_union_find env = env.uf
 
@@ -664,5 +660,30 @@ module Main : S = struct
 
   let retrieve_used_context env dep =
     Rel.retrieve_used_context env.relation dep
+
+  let are_equal env t1 t2 ~init_terms =
+    if T.equal t1 t2 then Sig.Yes (Ex.empty, [])
+    else
+    if init_terms then
+      let facts = empty_facts() in
+      let env, facts = add_term env facts t1 Ex.empty in
+      let env, facts = add_term env facts t2 Ex.empty in
+      try
+        let env, _ = assume_literals env [] facts in
+        Uf.are_equal env.uf t1 t2 ~added_terms:true
+      with Exception.Inconsistent (ex,cl) -> Yes(ex, cl)
+    else
+      Uf.are_equal env.uf t1 t2 ~added_terms:false
+
+  let term_repr env t ~init_term =
+    let env =
+      if not init_term then env
+      else
+        let facts = empty_facts() in
+        let env, facts = add_term env facts t Ex.empty in
+        fst (assume_literals env [] facts) (* may raise Inconsistent *)
+    in
+    Uf.term_repr env.uf t
+
 
 end

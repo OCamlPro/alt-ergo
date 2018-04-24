@@ -53,9 +53,8 @@ end
 
 module type Arg = sig
   type t
-  val term_repr : t -> Term.t -> Term.t
-  val add_term : t -> Term.t -> t
-  val are_equal : t -> Term.t -> Term.t -> add_terms:bool -> Sig.answer
+  val term_repr : t -> Term.t -> init_term:bool -> Term.t
+  val are_equal : t -> Term.t -> Term.t -> init_terms:bool -> Sig.answer
   val class_of : t -> Term.t -> Term.t list
 end
 
