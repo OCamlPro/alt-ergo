@@ -342,7 +342,7 @@ clean:
 
 .depend depend: $(GENERATED)
 	$(OCAMLDEP) -slash $(LOCAL_INC) lib/util/*.ml* lib/structures/*.ml* lib/reasoners/*.ml* lib/frontend/*.ml* tools/text/*.ml* \
-        tools/gui/*.ml* parsers/why/*.ml* parsers/smt2/*.ml* parsers/common/*.ml* plugins/fm-simplex/*ml* > .depend
+        tools/gui/*.ml* parsers/why/*.ml* parsers/smt2/*.ml* parsers/common/*.ml* plugins/fm-simplex/*ml*  plugins/w34ae/*ml* > .depend
 
 include .depend
 

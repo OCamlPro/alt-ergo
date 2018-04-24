@@ -508,17 +508,17 @@ term_:
       let loc =  (floc $startpos $endpos) in
       match $2 with
       | Pvar id ->
-         mk_let loc id.id_str $4 $6
+         mk_let loc [id.id_str, $4] $6
       | Pwild ->
-         mk_let  loc (id_anonymous loc).id_str $4 $6
+         mk_let  loc [(id_anonymous loc).id_str, $4] $6
       | Ptuple [] ->
-         mk_let  loc (id_anonymous loc).id_str
-           (mk_type_cast loc $4 (mk_tuple [] loc)) $6
+         mk_let  loc [(id_anonymous loc).id_str,
+           (mk_type_cast loc $4 (mk_tuple [] loc))] $6
       | Pcast (Pvar id, ty) ->
-         mk_let loc id.id_str (mk_type_cast loc $4 ty) $6
+         mk_let loc [id.id_str, (mk_type_cast loc $4 ty)] $6
       | Pcast (Pwild, ty) ->
          let id = id_anonymous loc in
-         mk_let loc id.id_str (mk_type_cast loc $4 ty) $6
+         mk_let loc [id.id_str, (mk_type_cast loc $4 ty)] $6
       | _ -> assert false
     }
 | quant comma_list1(quant_vars) triggers DOT term
