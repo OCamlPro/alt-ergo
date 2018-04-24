@@ -142,8 +142,8 @@ let rec literals_of_acc lit fs f acc = match F.view f with
     literals_of_acc true fs f2 acc
   | F.Lemma _ ->
     acc
-  | F.Skolem {F.main = f1} | F.Let {F.let_f = f1} ->
-    literals_of_acc true fs f1 acc
+  | F.Skolem {F.main=f} | F.Flet {F.flet_f=f} | F.Tlet {F.tlet_f=f} ->
+    literals_of_acc true fs f acc
 
 let literals_of ex =
   let fs  = formulas_of ex in

@@ -952,7 +952,7 @@ module Flat_Formula : FLAT_FORMULA = struct
           end
 
 
-        | F.Let {F.let_var=lvar; let_form=lform; let_subst=s; let_f=lf} ->
+        | F.Flet {F.flet_var=lvar; flet_form=lform; flet_subst=s; flet_f=lf} ->
           let f' = F.apply_subst s lf in
 	  let id = F.id f' in
           let v = Symbols.Map.find lvar (fst s) in
@@ -960,14 +960,17 @@ module Flat_Formula : FLAT_FORMULA = struct
           let equiv = F.mk_iff pv lform id in
           let elim_let = F.mk_and equiv f' false id in
           simp false elim_let
-            (*
+
+        | F.Tlet {F.tlet_var=lvar; tlet_term=lterm; tlet_subst=s; tlet_f=lf} ->
+          let f' = F.apply_subst s lf in
+          let v = Symbols.Map.find lvar (fst s) in
           let at, new_v = mk_lit hcons (A.mk_eq v lterm) !new_vars in
           new_vars := new_v;
           let res = simp topl f' in
           begin match res.view with
             | AND l -> mk_and hcons (at :: l)
             | _     -> mk_and hcons [at; res]
-          end*)
+          end
     in
     let res = simp true f in
     res, !lem, !new_vars

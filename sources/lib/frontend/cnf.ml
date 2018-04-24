@@ -188,7 +188,7 @@ let inline_abstractions in_term parent_abstr abstr up_qv tmp =
     in
     abstr := parent_abstr;
     List.fold_left
-      (fun acc (f, (sy, t, _)) -> F.mk_let up_qv sy f acc id) tmp l_abstr
+      (fun acc (f, (sy, t, _)) -> F.mk_let_f up_qv sy f acc id) tmp l_abstr
 
 let merge_ret_defns d1 d2 =
   (* best effort in case of captures ! ret_defns used to substitute in
@@ -513,7 +513,7 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
                assert false (* should be fully replaced *)
              | Form (gg, sy_gg, t_gg) ->
                (* not sy, but sy_gg, a fresh replacement of sy *)
-               F.mk_let up_qv sy_gg gg acc id
+               F.mk_let_f up_qv sy_gg gg acc id
           )res remaining, ret_d
 
     | TFnamed(lbl, f) ->

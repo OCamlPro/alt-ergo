@@ -162,9 +162,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 	  | F.Skolem _ ->
 	    fprintf fmt "[sat] I assume a skolem %a@." F.print f
 
-	  | F.Let {F.let_var=lvar; let_form=lform; let_f=lf} ->
-	    fprintf fmt "[sat] I assume a let %a = %a in %a@."
-	      Symbols.print lvar F.print lform F.print lf;
+          | F.Flet {F.flet_var=lvar; flet_form=lform; flet_f=lf} ->
+	    fprintf fmt "let %a = %a in %a@."
+	      Symbols.print lvar F.print lform F.print lf
+
+          | F.Tlet {F.tlet_var=lvar; tlet_term=lterm; tlet_f=lf} ->
+	    fprintf fmt "let %a = %a in %a@."
+	      Symbols.print lvar Term.print lterm F.print lf
       end
 
     let simplified_form f f' =
