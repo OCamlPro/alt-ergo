@@ -33,6 +33,8 @@ type sat_solver =
   | Tableaux
   | CDCL_satML
 
+type mode = On | Off | Auto
+
 (*
 let map_merge_is_union eq k a b =
   match a, b with

@@ -125,6 +125,15 @@ module M = struct
   let no_locs_in_answers = ref false
 
   let unsat_mode = ref false
+  let inline_lets = ref Util.Off
+
+  let set_inline_lets s =
+    match s with
+    | "on"  | "On"  -> inline_lets := Util.On
+    | "off" | "Off" -> inline_lets := Util.Off
+    | "auto" | "Auto" ->
+      Format.eprintf "'Auto' inline lets mode not implemented yet@."; exit 1
+    | _ -> Format.eprintf "unknown inline lets mode %S@." s; exit 1
 
   let show_where s=
     match s with
@@ -647,7 +656,12 @@ module M = struct
 
     "-unsat-mode",
     Arg.Set unsat_mode,
-    " answer unsat / sat / unknown instead of Valid / Invalid / I don't know"
+    " answer unsat / sat / unknown instead of Valid / Invalid / I don't know";
+
+    "-inline-lets",
+    Arg.String set_inline_lets,
+    " inline lets mode. Possible values are 'On', 'Off', 'Auto'. \
+     Default value = 'Off'"
 
   ]
 
@@ -747,6 +761,7 @@ let set_timeout f = M.timeout := f
 let set_save_used_context b = M.save_used_context := b
 let set_default_input_lang lang = M.set_default_input_lang lang
 let set_unsat_mode b = M.unsat_mode := b
+let set_inline_lets m = M.inline_lets := m
 
 (** getter functions **********************************************************)
 
@@ -860,6 +875,7 @@ let no_decisions_on__is_empty () = !M.no_decisions_on == Util.SS.empty
 let default_input_lang () = !M.default_input_lang
 let answers_with_locs ()  = not !M.no_locs_in_answers
 let unsat_mode ()  = !M.unsat_mode
+let inline_lets () = !M.inline_lets
 
 (** particular getters : functions that are immediately executed **************)
 let exec_thread_yield () = !M.thread_yield ()

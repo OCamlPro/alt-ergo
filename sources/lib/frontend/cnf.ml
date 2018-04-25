@@ -42,21 +42,31 @@ type let_info = { expr : expr; nb_failed : int ref }
 
 type let_defns = let_info Sy.Map.t
 
-let add_terms_defn binders defns =
+let add_terms_defn binders defns inline_lets =
+  let init = if inline_lets == Util.Off then 1 else 0 in
+  (* put nb_failed to 1 to keep let inline *)
   List.fold_left
     (fun defns (x, t) ->
-       Sy.Map.add x {expr = Term t ; nb_failed = ref 0} defns
+       Sy.Map.add x {expr = Term t ; nb_failed = ref init} defns
     )defns binders
 
-let add_defns binders defns =
+let add_defns binders defns inline_lets =
+  let init = if inline_lets == Util.Off then 1 else 0 in
+  (* put nb_failed to 1 to keep let inline *)
   List.fold_left
     (fun defns (x, e) ->
-       Sy.Map.add x {expr = e ; nb_failed = ref 0} defns
+       Sy.Map.add x {expr = e ; nb_failed = ref init} defns
     )defns binders
 
-let find_term_defn x defns =
+let find_term_defn x defns inline_lets =
+  let off = inline_lets == Util.Off in
   try match Sy.Map.find x defns with
-    | {expr = Term t} -> Some t
+    | {expr = Term t ; nb_failed } ->
+      (* although off is true, allow to substitute terms if nb_failed
+         = 0, because of LetIn inside terms that should be currently
+         always substituted *)
+      if off && !nb_failed > 0 then None
+      else Some t
     | {expr = Form (f, sy, t) ; nb_failed} ->
       (* we cannot substitute formulas inside terms.
              We will keep corresponding lets *)
@@ -195,9 +205,10 @@ let merge_ret_defns d1 d2 =
      triggers only !! *)
   Sy.Map.union (fun k a b  -> Some a) d1 d2
 
-let rec make_term up_qv (defns:let_defns) abstr {c = {tt_ty=ty; tt_desc=tt}} =
-  let ty = Ty.shorten ty in
-  match tt with
+let rec make_term up_qv inline_lets (defns:let_defns) abstr t =
+  let rec mk_term (defns:let_defns) {c = {tt_ty=ty; tt_desc=tt}} =
+    let ty = Ty.shorten ty in
+    match tt with
     | TTconst Ttrue ->
       T.vrai
     | TTconst Tfalse ->
@@ -211,147 +222,169 @@ let rec make_term up_qv (defns:let_defns) abstr {c = {tt_ty=ty; tt_desc=tt}} =
     | TTconst (Tbitv bt) ->
       T.bitv bt ty
     | TTvar s ->
-      begin match find_term_defn s defns with
+      begin match find_term_defn s defns inline_lets with
         | Some t -> t
         | None -> T.make s [] ty
       end
     | TTapp (s, l) ->
-      make_adequate_app s (List.map (make_term up_qv defns abstr) l) ty
+      make_adequate_app s (List.map (mk_term defns) l) ty
 
     | TTinInterval (e, a, b, c, d) ->
       assert (ty == Ty.Tbool);
-      let b, ty_b = bound_of_term (make_term up_qv defns abstr b) in
-      let c, ty_c = bound_of_term (make_term up_qv defns abstr c) in
+      let b, ty_b = bound_of_term (mk_term defns b) in
+      let c, ty_c = bound_of_term (mk_term defns c) in
       let lb = Symbols.mk_bound b ty_b ~is_open:a ~is_lower:true in
       let ub = Symbols.mk_bound c ty_c ~is_open:d ~is_lower:false in
-      T.make (Symbols.mk_in lb ub) [make_term up_qv defns abstr e] ty
+      T.make (Symbols.mk_in lb ub) [mk_term defns e] ty
 
     | TTmapsTo (x, e) ->
       assert (ty == Ty.Tbool);
-      T.make (Symbols.mk_maps_to x) [make_term up_qv defns abstr e] ty
+      T.make (Symbols.mk_maps_to x) [mk_term defns e] ty
 
     | TTinfix (t1, s, t2) ->
-      T.make s [make_term up_qv defns abstr t1;
-                make_term up_qv defns abstr t2] ty
+      T.make s [mk_term defns t1;
+                mk_term defns t2] ty
 
     | TTprefix ((Sy.Op Sy.Minus) as s, n) ->
       let t1 = if ty == Ty.Tint then T.int "0" else T.real "0"  in
-      T.make s [t1; make_term up_qv defns abstr n] ty
+      T.make s [t1; mk_term defns n] ty
     | TTprefix _ ->
       assert false
 
     | TTget (t1, t2) ->
       T.make (Sy.Op Sy.Get)
-        [make_term up_qv defns abstr t1; make_term up_qv defns abstr t2] ty
+        [mk_term defns t1; mk_term defns t2] ty
 
     | TTset (t1, t2, t3) ->
-      let t1 = make_term up_qv defns abstr t1 in
-      let t2 = make_term up_qv defns abstr t2 in
-      let t3 = make_term up_qv defns abstr t3 in
+      let t1 = mk_term defns t1 in
+      let t2 = mk_term defns t2 in
+      let t3 = mk_term defns t3 in
       T.make (Sy.Op Sy.Set) [t1; t2; t3] ty
 
     | TTextract (t1, t2, t3) ->
-      let t1 = make_term up_qv defns abstr t1 in
-      let t2 = make_term up_qv defns abstr t2 in
-      let t3 = make_term up_qv defns abstr t3 in
+      let t1 = mk_term defns t1 in
+      let t2 = mk_term defns t2 in
+      let t3 = mk_term defns t3 in
       T.make (Sy.Op Sy.Extract) [t1; t2; t3] ty
 
     | TTconcat (t1, t2) ->
       T.make (Sy.Op Sy.Concat)
-        [make_term up_qv defns abstr t1; make_term up_qv defns abstr t2] ty
+        [mk_term defns t1; mk_term defns t2] ty
 
     | TTdot (t, s) ->
-      T.make (Sy.Op (Sy.Access s)) [make_term up_qv defns abstr t] ty
+      T.make (Sy.Op (Sy.Access s)) [mk_term defns t] ty
 
     | TTrecord lbs ->
-      let lbs = List.map (fun (_, t) -> make_term up_qv defns abstr t) lbs in
+      let lbs = List.map (fun (_, t) -> mk_term defns t) lbs in
       T.make (Sy.Op Sy.Record) lbs ty
 
     | TTlet (binders, t2) ->
       let binders =
-        List.rev_map (fun (s, t1) -> s, make_term up_qv defns abstr t1)
+        List.rev_map (fun (s, t1) -> s, mk_term defns t1)
           (List.rev binders)
       in
-      let defns = add_terms_defn binders defns in
-      let res = make_term up_qv defns abstr t2 in
+      (* should inline Lets inside terms. Otherwise, we should
+         lifts/move them to formulas level *)
+      let defns = add_terms_defn binders defns (*inline_lets*) Util.On in
+      let res = mk_term defns t2 in
       assert (filter_out_fully_replaced binders defns == []);
       res
 
     | TTnamed(lbl, t) ->
-      let t = make_term up_qv defns abstr t in
+      let t = mk_term defns t in
       T.add_label lbl t;
       t
 
     | TTite(cond, t1, t2) ->
       let cond, _ =
-        make_form up_qv ~in_term:true defns abstr "" cond Loc.dummy in
+        make_form
+          up_qv inline_lets ~in_term:true defns abstr "" cond Loc.dummy
+      in
       let t_cond = abstract_form_in_term cond abstr in
-      let t1 = make_term up_qv defns abstr t1 in
-      let t2 = make_term up_qv defns abstr t2 in
+      let t1 = mk_term defns t1 in
+      let t2 = mk_term defns t2 in
       T.make (Sy.name "ite") [t_cond; t1; t2] ty
+  in
+  mk_term (defns:let_defns) t
+
 
 and make_trigger up_qv (defns:let_defns) abstr hyp (e, from_user) =
+  let inline_lets = Util.On in (* always inline lets in triggers *)
   let content, guard = match e with
     | [{c={ tt_desc = TTapp(s, t1::t2::l)}}]
         when Sy.equal s Sy.fake_eq ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map (make_term up_qv defns abstr) trs in
+      let trs = List.map (make_term up_qv inline_lets defns abstr) trs in
       let lit =
         A.LT.mk_eq
-          (make_term up_qv defns abstr t1)
-          (make_term up_qv defns abstr t2)
+          (make_term up_qv inline_lets defns abstr t1)
+          (make_term up_qv inline_lets defns abstr t2)
       in
       trs, Some lit
 
     | [{c={ tt_desc = TTapp(s, t1::t2::l) } }]
         when Sy.equal s Sy.fake_neq ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map (make_term up_qv defns abstr) trs in
+      let trs = List.map (make_term up_qv inline_lets defns abstr) trs in
       let lit =
         A.LT.mk_distinct false
-          [make_term up_qv defns abstr t1; make_term up_qv defns abstr t2]
+          [make_term up_qv inline_lets defns abstr t1;
+           make_term up_qv inline_lets defns abstr t2]
       in
       trs, Some lit
 
     | [{c={ tt_desc = TTapp(s, t1::t2::l) } }]
         when Sy.equal s Sy.fake_le ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map (make_term up_qv defns abstr) trs in
+      let trs = List.map (make_term up_qv inline_lets defns abstr) trs in
       let lit =
         A.LT.mk_builtin true ale
-          [make_term up_qv defns abstr t1; make_term up_qv defns abstr t2]
+          [make_term up_qv inline_lets defns abstr t1;
+           make_term up_qv inline_lets defns abstr t2]
       in
       trs, Some lit
 
     | [{c={ tt_desc = TTapp(s, t1::t2::l) } }]
         when Sy.equal s Sy.fake_lt ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map (make_term up_qv defns abstr) trs in
+      let trs = List.map (make_term up_qv inline_lets defns abstr) trs in
       let lit =
         A.LT.mk_builtin true alt
-          [make_term up_qv defns abstr t1; make_term up_qv defns abstr t2]
+          [make_term up_qv inline_lets defns abstr t1;
+           make_term up_qv inline_lets defns abstr t2]
       in
       trs, Some lit
 
-    | lt -> List.map (make_term up_qv defns abstr) lt, None
+    | lt -> List.map (make_term up_qv inline_lets defns abstr) lt, None
   in
   let depth = List.fold_left (fun z t -> max z (T.view t).T.depth) 0 content in
   { F.content ; guard ; depth; semantic = []; (* will be set by theories *)
     hyp; from_user;
   }
 
-and make_pred up_qv defns abstr ({c = { tt_ty = ty; tt_desc = tt }} as z) id =
-  match tt with
-  | TTvar x ->
+and make_pred up_qv inline_lets defns abstr z id =
+  match z with
+  | {c = { tt_ty = ty; tt_desc = TTvar x }} ->
+    let off = Options.inline_lets () == Util.Off in
     begin match find_any_defn x defns with
-      | Some (Form (f,_,_)) -> f
-      | Some (Term t) -> F.mk_lit (A.LT.mk_pred t false) id
-      | None -> F.mk_lit (A.LT.mk_pred (make_term up_qv defns abstr z) false) id
+      | Some (Form (f, _, fresh_sy)) ->
+        if off then F.mk_lit (A.LT.mk_pred fresh_sy false) id
+        else f
+
+      | Some (Term t) ->
+        if off then F.mk_lit (A.LT.mk_pred (T.make x [] Ty.Tbool) false) id
+        else F.mk_lit (A.LT.mk_pred t false) id
+
+      | None ->
+        F.mk_lit
+          (A.LT.mk_pred (make_term up_qv inline_lets defns abstr z) false)
+          id
     end
   | _ ->
-    F.mk_lit (A.LT.mk_pred (make_term up_qv defns abstr z) false) id
+    F.mk_lit
+      (A.LT.mk_pred (make_term up_qv inline_lets defns abstr z) false) id
 
-and make_form up_qv ~in_term defns abstr name_base f loc =
+and make_form up_qv inline_lets ~in_term defns abstr name_base f loc =
   let name_tag = ref 0 in
   let rec mk_form up_qv (defns:let_defns) toplevel c id =
     let parent_abstr = !abstr in
@@ -363,20 +396,20 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
 	  | TAfalse ->
 	    F.faux
           | TAeq [t1;t2] ->
-            F.mk_lit (A.LT.mk_eq (make_term up_qv defns abstr t1)
-                        (make_term up_qv defns abstr t2)) id
+            F.mk_lit (A.LT.mk_eq (make_term up_qv inline_lets defns abstr t1)
+                        (make_term up_qv inline_lets defns abstr t2)) id
 	  | TApred (t, negated) ->
-            let res = make_pred up_qv defns abstr t id in
+            let res = make_pred up_qv inline_lets defns abstr t id in
             if negated then F.mk_not res else res
 
           | TAneq lt | TAdistinct lt ->
-            let lt = List.map (make_term up_qv defns abstr) lt in
+            let lt = List.map (make_term up_qv inline_lets defns abstr) lt in
             F.mk_lit (A.LT.mk_distinct false lt) id
           | TAle [t1;t2] ->
 	    let lit =
               A.LT.mk_builtin true ale
-                [make_term up_qv defns abstr t1;
-                 make_term up_qv defns abstr t2]
+                [make_term up_qv inline_lets defns abstr t1;
+                 make_term up_qv inline_lets defns abstr t2]
             in
             F.mk_lit lit id
  	  | TAlt [t1;t2] ->
@@ -387,25 +420,25 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
 		        tt_desc = TTconst(Tint "1")}; annot = t1.annot} in
 	        let tt2 =
 		  T.make (Sy.Op Sy.Minus)
-                    [make_term up_qv defns abstr t2;
-                     make_term up_qv defns abstr one]
+                    [make_term up_qv inline_lets defns abstr t2;
+                     make_term up_qv inline_lets defns abstr one]
                     Ty.Tint
                 in
                 F.mk_lit
                   (A.LT.mk_builtin true ale
-                     [make_term up_qv defns abstr t1; tt2]) id
+                     [make_term up_qv inline_lets defns abstr t1; tt2]) id
 	      | _ ->
                 let lit =
                   A.LT.mk_builtin true alt
-                    [make_term up_qv defns abstr t1;
-                     make_term up_qv defns abstr t2]
+                    [make_term up_qv inline_lets defns abstr t1;
+                     make_term up_qv inline_lets defns abstr t2]
                 in
                 F.mk_lit lit id
 	    end
 	  | TAbuilt(n,lt) ->
             F.mk_lit
               (A.LT.mk_builtin true n
-                 (List.map (make_term up_qv defns abstr) lt)) id
+                 (List.map (make_term up_qv inline_lets defns abstr) lt)) id
 	  | _ -> assert false
         in
         res, defns
@@ -490,7 +523,8 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
         List.rev_map
           (fun (sy, e) ->
              match e with
-               | TletTerm t -> sy, Term (make_term up_qv defns abstr t)
+             | TletTerm t ->
+               sy, Term (make_term up_qv inline_lets defns abstr t)
              | TletForm g ->
                let fresh_sy = Sy.fresh ~mk_var:true (Hstring.fresh_string()) in
                let fresh_t = T.make fresh_sy [] Ty.Tbool in
@@ -498,7 +532,7 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
                sy, Form (gg, fresh_sy, fresh_t)
           )(List.rev binders)
       in
-      let defns = add_defns binders defns in
+      let defns = add_defns binders defns inline_lets in
       let res, ret_d = mk_form up_qv defns false lf.c lf.annot in
       let remaining = filter_out_fully_replaced binders defns in
       if remaining == [] then res, ret_d
@@ -510,7 +544,10 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
           (fun acc (sy, e) ->
              match e with
              | Term t ->
-               assert false (* should be fully replaced *)
+               (* not sy, but sy_gg, a fresh replacement of sy *)
+               F.mk_let_t up_qv sy t acc id
+                 [@ocaml.ppwarning "TODO: should introduce fresh vars"]
+
              | Form (gg, sy_gg, t_gg) ->
                (* not sy, but sy_gg, a fresh replacement of sy *)
                F.mk_let_f up_qv sy_gg gg acc id
@@ -529,24 +566,30 @@ and make_form up_qv ~in_term defns abstr name_base f loc =
 
 let mk_assume acc f name loc =
   let abstr = ref F.Map.empty in
+  let inline_lets = Options.inline_lets () in
   let ff, _ =
-    make_form Sy.Set.empty ~in_term:false Sy.Map.empty abstr name f loc
+    make_form
+      Sy.Set.empty inline_lets ~in_term:false Sy.Map.empty abstr name f loc
   in
   assert (F.Map.is_empty !abstr);
   {st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
 let mk_preddef acc f name loc =
   let abstr = ref F.Map.empty in
+  let inline_lets = Options.inline_lets () in
   let ff, _ =
-    make_form Sy.Set.empty ~in_term:false Sy.Map.empty abstr name f loc
+    make_form
+      Sy.Set.empty inline_lets ~in_term:false Sy.Map.empty abstr name f loc
   in
   assert (F.Map.is_empty !abstr);
   {st_decl=PredDef (ff, name) ; st_loc=loc} :: acc
 
 let mk_query acc n f loc sort =
   let abstr = ref F.Map.empty in
+  let inline_lets = Options.inline_lets () in
   let ff, _ =
-    make_form Sy.Set.empty ~in_term:false Sy.Map.empty abstr "" f loc
+    make_form
+      Sy.Set.empty inline_lets ~in_term:false Sy.Map.empty abstr "" f loc
   in
   assert (F.Map.is_empty !abstr);
   {st_decl=Query(n, ff, sort) ; st_loc=loc} :: acc
@@ -556,13 +599,15 @@ let make_rule ({rwt_left = t1; rwt_right = t2; rwt_vars} as r) =
     List.fold_left (fun z (sy, _) -> Sy.Set.add sy z) Sy.Set.empty rwt_vars
   in
   let abstr = ref F.Map.empty in
-  let s1 = make_term up_qv Sy.Map.empty abstr t1 in
+  let inline_lets = Options.inline_lets () in
+  let s1 = make_term up_qv inline_lets Sy.Map.empty abstr t1 in
   assert (F.Map.is_empty !abstr);
-  let s2 = make_term up_qv Sy.Map.empty abstr t2 in
+  let s2 = make_term up_qv inline_lets Sy.Map.empty abstr t2 in
   assert (F.Map.is_empty !abstr);
   { r with rwt_left = s1; rwt_right = s2 }
 
 let mk_theory acc l th_name extends loc =
+  let inline_lets = Options.inline_lets () in
   List.fold_left
     (fun acc e ->
       let loc, name, f, axiom_kind =
@@ -572,7 +617,8 @@ let mk_theory acc l th_name extends loc =
       in
       let abstr = ref F.Map.empty in
       let th_form, _ =
-        make_form Sy.Set.empty ~in_term:false Sy.Map.empty abstr name f loc
+        make_form
+          Sy.Set.empty inline_lets ~in_term:false Sy.Map.empty abstr name f loc
       in
       assert (F.Map.is_empty !abstr);
       let th_elt = {th_name; axiom_kind; extends; th_form} in

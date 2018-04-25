@@ -31,6 +31,8 @@ type sat_solver =
   | Tableaux
   | CDCL_satML
 
+type mode = On | Off | Auto
+
 (*
 (** This function is intended to be used with Map.merge in order to perform a
     union of two maps. The first argument is an equality function used to
