@@ -274,18 +274,18 @@ install-lib: lib META
 #	cp -f META $(LIBDIR)
 
 uninstall-lib:
-	ocamlfind remove alt-ergo-lib
+	ocamlfind remove alt-ergo
 
 install: install-ae install-gui install-fm-simplex install-lib
 
-uninstall: uninstall-lib
+uninstall:
 	@rm $(BINDIR)/$(NAME)$(EXE)
 	@rm $(MANDIR)/man1/alt-ergo.1
 	-@rm $(BINDIR)/$(GUINAME)$(EXE)
 	-@rm $(DATADIR)/gtksourceview-2.0/language-specs/alt-ergo.lang
 	@rm $(PLUGINSDIR)/fm-simplex-plugin.cm*
 	@rm $(PRELUDESDIR)/fpa-theory-2017-01-04-16h00.why
-#	-@rm $(LIBDIR)/$(LIBNAME).*
+	make uninstall-lib
 #	-@rm $(LIBDIR)/META
 #	-@rm $(LIBDIR)
 
