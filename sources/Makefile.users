@@ -6,6 +6,7 @@ LOCAL_INC = -I lib/util -I lib/structures -I lib/reasoners \
     -I lib/frontend -I tools/text -I tools/gui \
     -I parsers/why \
     -I parsers/smt2 \
+    -I parsers/common \
     -I plugins/fm-simplex
 
 INCLUDES = $(NUMLIB) $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(PSMT2FELIB) $(LOCAL_INC)
@@ -72,7 +73,7 @@ GENERATED = lib/util/config.ml \
 # bytecode and native-code compilation
 ######################################
 
-CMO = lib/util/config.cmo \
+CMO-LIB = lib/util/config.cmo \
       lib/util/version.cmo \
       lib/util/emap.cmo \
       lib/util/myUnix.cmo \
@@ -132,19 +133,23 @@ CMO = lib/util/config.cmo \
       lib/frontend/cnf.cmo \
       lib/frontend/typechecker.cmo \
       lib/frontend/parsed_interface.cmo \
-      lib/frontend/frontend.cmo \
-      lib/frontend/parsers.cmo
+      lib/frontend/frontend.cmo
 
-CMOFRONT = parsers/why/why_parser.cmo parsers/why/why_lexer.cmo parsers/smt2/psmt2_to_alt_ergo.cmo
+CMO-PARSERS = \
+      parsers/common/cmdline_parser.cmo \
+      parsers/common/parsers.cmo \
+      parsers/common/parsers_loader.cmo \
+      parsers/why/why_parser.cmo \
+      parsers/why/why_lexer.cmo \
+      parsers/smt2/psmt2_to_alt_ergo.cmo
 
 
 # parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
 
-MAINCMO = $(CMO) $(CMOFRONT) lib/frontend/parsers_loader.cmo tools/text/main_text.cmo
+MAINCMO = $(CMO-LIB) $(CMO-PARSERS) tools/text/main_text.cmo
 
 ifeq ($(ENABLEGUI),yes)
-	GUICMO = $(CMO) $(CMOFRONT) \
-                 lib/frontend/parsers_loader.cmo \
+	GUICMO = $(CMO-LIB) $(CMO-PARSERS) \
                  tools/gui/gui_session.cmo \
                  tools/gui/gui_config.cmo \
                  tools/gui/annoted_ast.cmo \
@@ -155,8 +160,8 @@ else
 	GUICMO = 
 endif
 
-CMX = $(CMO:.cmo=.cmx)
-CMXFRONT = $(CMOFRONT:.cmo=.cmx)
+CMX_LIB = $(CMO-LIB:.cmo=.cmx)
+CMX_PARSERS = $(CMO-PARSERS:.cmo=.cmx)
 MAINCMX = $(MAINCMO:.cmo=.cmx)
 GUICMX = $(GUICMO:.cmo=.cmx)
 
@@ -165,10 +170,10 @@ opt: $(NAME).opt
 
 
 #### LIBRARY
-$(LIBNAME).cmo: $(CMO) $(CMOFRONT) lib/reasoners/sig.cmi
+$(LIBNAME).cmo: $(CMO-LIB) lib/reasoners/sig.cmi
 	$(OCAMLC) $(LIGHT_BFLAGS) -pack -o $(LIBNAME).cmo $^
 
-$(LIBNAME).cmx: $(CMX) $(CMXFRONT) lib/reasoners/sig.cmi
+$(LIBNAME).cmx: $(CMX_LIB) lib/reasoners/sig.cmi
 	$(OCAMLOPT) $(LIGHT_OFLAGS)  -pack -o $(LIBNAME).cmx $^
 
 
@@ -318,7 +323,7 @@ uninstall: uninstall-lib
 #######
 
 clean:
-	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/why parsers/smt2 plugins/fm-simplex ; do \
+	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/common parsers/why parsers/smt2 plugins/fm-simplex ; do \
 	rm -f $$dd/*.cm[ioxtp] $$dd/*.cmti $$dd/*.o $$dd/*~ $$dd/*.annot $$dd/*.owz;\
 	rm -f $(GENERATED) $$dd/*.output META $(LIBNAME).*; \
 	rm -f $(NAME).byte $(NAME).opt $(GUINAME).opt $(GUINAME).byte *~; \
@@ -331,7 +336,7 @@ clean:
 
 .depend depend: $(GENERATED)
 	$(OCAMLDEP) -slash $(LOCAL_INC) lib/util/*.ml* lib/structures/*.ml* lib/reasoners/*.ml* lib/frontend/*.ml* tools/text/*.ml* \
-        tools/gui/*.ml* parsers/why/*.ml* parsers/smt2/*.ml* plugins/fm-simplex/*ml* > .depend
+        tools/gui/*.ml* parsers/why/*.ml* parsers/smt2/*.ml* parsers/common/*.ml* plugins/fm-simplex/*ml* > .depend
 
 include .depend
 
@@ -343,10 +348,10 @@ FM-SIMPLEX-CMO = plugins/fm-simplex/simplex_cache.cmo \
 
 FM-SIMPLEX-CMX = $(FM-SIMPLEX-CMO:.cmo=.cmx)
 
-fm-simplex-plugin.cmxs: $(CMX) $(FM-SIMPLEX-CMX)
+fm-simplex-plugin.cmxs: $(CMX_LIB) $(FM-SIMPLEX-CMX)
 	$(if $(QUIET),@echo 'Library $@' &&) $(OCAMLOPT) $(INCLUDES)  -shared -o $@ $(FM-SIMPLEX-CMX)
 
-fm-simplex-plugin.cma: $(CMO) $(FM-SIMPLEX-CMO)
+fm-simplex-plugin.cma: $(CMO-LIB) $(FM-SIMPLEX-CMO)
 	$(if $(QUIET),@echo 'Library $@' &&) $(OCAMLC) $(INCLUDES)  -a        -o $@ $(FM-SIMPLEX-CMO)
 
 ifeq ($(OCAMLBEST),opt)

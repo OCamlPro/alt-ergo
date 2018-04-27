@@ -2,12 +2,15 @@
 
 //#Why_parser
 subgraph cluster_parsers__why {
-        label="parsers / why";
+        label="parsers / <why/smt2/common>";
         style=filled;
 	color=lightgrey;
         "Why_parser";
         "Why_lexer";
         "Psmt2_to_alt_ergo";
+        "Cmdline_parser";
+        "Parsers";
+        "Parsers_loader";
 }
 
 
@@ -95,8 +98,6 @@ subgraph cluster_lib__frontend {
         "Triggers";
         "Typechecker";
         "Parsed_interface";
-        "Parsers";
-        "Parsers_loader";
 }
 
 //#util
