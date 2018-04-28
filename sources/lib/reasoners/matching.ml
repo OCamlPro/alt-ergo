@@ -464,18 +464,40 @@ module Make (X : Arg) : S with type theory = X.t = struct
     if List.length pats_list > Options.max_multi_triggers_size () then
       pat_info, []
     else
-    let egs =
-      { sbs = SubstT.empty;
-        sty = Ty.esubst;
-        gen = 0;
-	goal = false;
-	s_term_orig = [];
-	s_lem_orig = pat_info.trigger_orig;
-      }
-    in
-    let res = List.fold_left (match_pats_modulo env tbox) [egs] pats_list in
-    Debug.candidate_substitutions pat_info res;
-    pat_info, res
+      let egs =
+        { sbs = SubstT.empty;
+          sty = Ty.esubst;
+          gen = 0;
+	  goal = false;
+	  s_term_orig = [];
+	  s_lem_orig = pat_info.trigger_orig;
+        }
+      in
+      match pats_list with
+      | []  -> pat_info, []
+      | [_] ->
+        let res = List.fold_left (match_pats_modulo env tbox) [egs] pats_list in
+        Debug.candidate_substitutions pat_info res;
+        pat_info, res
+      | _ ->
+        let cpt = ref 1 in
+        try
+          List.iter
+            (fun pat ->
+               cpt := !cpt * List.length (match_pats_modulo env tbox [egs] pat);
+               (* TODO: put an adaptive limit *)
+               if !cpt = 0 || !cpt > 10_000 then raise Exit
+            ) (List.rev pats_list);
+          let res =
+            List.fold_left (match_pats_modulo env tbox) [egs] pats_list
+          in
+          Debug.candidate_substitutions pat_info res;
+          pat_info, res
+        with Exit ->
+          if verbose() then
+            fprintf fmt "@.skip matching for %a : cpt = %d@."
+              F.print pat_info.trigger_orig !cpt;
+          pat_info, []
 
   let reset_cache_refs () =
     cache_are_equal_light := MT2.empty;
