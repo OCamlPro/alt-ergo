@@ -205,6 +205,50 @@ let merge_ret_defns d1 d2 =
      triggers only !! *)
   Sy.Map.union (fun k a b  -> Some a) d1 d2
 
+module MT =
+  Map.Make
+    (struct
+      type t = T.t
+      let compare a b =
+        let c = (T.view a).T.depth - (T.view b).T.depth in
+        if c <> 0 then c
+        else T.compare a b
+    end)
+
+(* clean trigger:
+     remove useless terms in multi-triggers after inlining of lets*)
+let clean_trigger name trig =
+  match trig with
+  | [] | [_] -> trig
+  | _ ->
+    let s =
+      List.fold_left
+        (fun s t ->
+           if MT.mem t s then s
+           else
+             MT.add t (T.subterms T.Set.empty t) s
+        )MT.empty trig
+    in
+    let res =
+      MT.fold
+        (fun t _ acc ->
+           let rm = MT.remove t acc in
+           if MT.exists (fun _ sub -> T.Set.mem t sub) rm then rm
+           else acc
+        ) s s
+    in
+    let sz_l = List.length trig in
+    let sz_s = MT.cardinal res in
+    if sz_l = sz_s then trig
+    else
+      let trig' = MT.fold (fun t _ acc -> t :: acc) res [] in
+      if verbose () then begin
+        fprintf fmt "@.AXIOM: %s@." name;
+        fprintf fmt "from multi-trig of sz %d : %a@." sz_l T.print_list trig;
+        fprintf fmt "to   multi-trig of sz %d : %a@." sz_s T.print_list trig';
+      end;
+      trig'
+
 let rec make_term up_qv inline_lets (defns:let_defns) abstr t =
   let rec mk_term (defns:let_defns) {c = {tt_ty=ty; tt_desc=tt}} =
     let ty = Ty.shorten ty in
@@ -308,7 +352,7 @@ let rec make_term up_qv inline_lets (defns:let_defns) abstr t =
   mk_term (defns:let_defns) t
 
 
-and make_trigger up_qv (defns:let_defns) abstr hyp (e, from_user) =
+and make_trigger name up_qv (defns:let_defns) abstr hyp (e, from_user) =
   let inline_lets = Util.On in (* always inline lets in triggers *)
   let content, guard = match e with
     | [{c={ tt_desc = TTapp(s, t1::t2::l)}}]
@@ -358,6 +402,9 @@ and make_trigger up_qv (defns:let_defns) abstr hyp (e, from_user) =
     | lt -> List.map (make_term up_qv inline_lets defns abstr) lt, None
   in
   let depth = List.fold_left (fun z t -> max z (T.view t).T.depth) 0 content in
+  (* clean trigger:
+     remove useless terms in multi-triggers after inlining of lets*)
+  let content = clean_trigger name content in
   { F.content ; guard ; depth; semantic = []; (* will be set by theories *)
     hyp; from_user;
   }
@@ -496,7 +543,7 @@ and make_form up_qv inline_lets ~in_term defns abstr name_base f loc =
         List.map (fun f ->
             mk_form up_qv defns false f.c f.annot |> fst ) qf.qf_hyp in
       let trs =
-        List.map (make_trigger up_qv ret_d abstr hyp) qf.qf_triggers in
+        List.map (make_trigger name up_qv ret_d abstr hyp) qf.qf_triggers in
       (* for for_all, we should eventually inline some introduced abstractions
          before constructing the quantified formulas *)
       begin
