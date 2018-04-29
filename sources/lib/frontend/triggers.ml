@@ -52,10 +52,11 @@ module STRS = Set.Make(
       | TTconst (Treal r1) , TTconst (Treal r2) -> Num.compare_num r1 r2
       | x , y -> Pervasives.compare x y
     and compare_list l1 l2 = match l1,l2 with
-	[] , _ -> -1
+      | [], [] -> 0
+      | [] , _ -> -1
       | _ , [] -> 1
       | x::l1 , y::l2 ->
-	let c = Pervasives.compare x y in if c=0 then compare_list l1 l2 else c
+	let c = compare_term x y in if c=0 then compare_list l1 l2 else c
 
     let compare (t1,_,_) (t2,_,_) = compare_term t1 t2
   end)
@@ -442,6 +443,8 @@ let parties bv vty l =
 	in
 	parties_rec (SLLT.add ([t], bv1, vty1) llt, llt_ok) l
   in
+  let s = List.fold_left (fun z e -> STRS.add e z) STRS.empty l in
+  let l = STRS.elements s in (* remove redundancies in old l *)
   SLLT.elements (parties_rec (SLLT.empty, SLLT.empty) l)
 
 let strict_subset bv vty =
