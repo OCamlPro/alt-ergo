@@ -462,16 +462,24 @@ module Make (X : Sig.X) : S with type r = X.r = struct
 	  let s = try MapX.find x gamma with Not_found -> SetX.empty in
 	  MapX.add x (SetX.add r s) gamma) gamma (X.leaves c)
 
-    let explain_repr_of_distinct dep lit env =
-      let l =  match LX.view lit with
-        | Literal.Distinct (false, ([_;_] as args)) -> args
-        | Literal.Pred (r, _) -> [r]
-        | Literal.Distinct (false, _) ->
-           failwith "TODO: only take equal args repr"
-        | _ -> assert false
-      in
-      List.fold_left
-        (fun dep r -> Ex.union dep (snd (find_or_normal_form env r))) dep l
+    let explain_repr_of_distinct x repr_x dep lit env =
+      match LX.view lit with
+      | Literal.Distinct (false, ([_;_] as args)) ->
+        List.fold_left
+          (fun dep r -> Ex.union dep (snd (find_or_normal_form env r)))
+          dep args
+
+      | Literal.Pred (r, _) ->
+        Ex.union dep (snd (find_or_normal_form env r))
+
+      | Literal.Distinct (false, l) ->
+        List.fold_left
+          (fun d r ->
+             let z, ex = find_or_normal_form env r in
+             if X.equal z x || X.equal z repr_x then Ex.union d ex else d
+          )dep l
+
+      | _ -> assert false
 
     (* r1 = r2 => neqs(r1) \uplus neqs(r2) *)
     let update_neqs x repr_x dep env =
@@ -480,7 +488,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
 	  let ex2 = MapL.find l1 mapl in
 	  Options.tool_req 3 "TR-CCX-Congruence-Conflict";
 	  let ex = Ex.union (Ex.union ex1 ex2) dep in
-	  let ex = explain_repr_of_distinct ex l1 env in
+	  let ex = explain_repr_of_distinct x repr_x ex l1 env in
 	  raise (Inconsistent (ex, cl_extract env))
         with Not_found ->
 	  (* with the use of explain_repr_of_distinct above, I
