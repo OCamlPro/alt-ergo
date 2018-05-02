@@ -7,7 +7,7 @@ LOCAL_INC = -I lib/util -I lib/structures -I lib/reasoners \
     -I parsers/why \
     -I parsers/smt2 \
     -I parsers/common \
-    -I plugins/fm-simplex
+    -I plugins/fm-simplex \
     -I plugins/w34ae
 
 INCLUDES = $(NUMLIB) $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(PSMT2FELIB) $(LOCAL_INC)
@@ -144,10 +144,10 @@ CMO-LIB = lib/util/config.cmo \
 CMO-PARSERS = \
       parsers/common/cmdline_parser.cmo \
       parsers/common/parsers.cmo \
-      parsers/common/parsers_loader.cmo \
       parsers/why/why_parser.cmo \
       parsers/why/why_lexer.cmo \
-      parsers/smt2/psmt2_to_alt_ergo.cmo
+      parsers/smt2/psmt2_to_alt_ergo.cmo \
+      parsers/common/parsers_loader.cmo
 
 
 # parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
