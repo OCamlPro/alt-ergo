@@ -1205,8 +1205,9 @@ module Make
       Options.tool_req 4 "TR-Arith-Fm";
       let ineqs =
         MPL.fold (fun k v acc ->
-          assert (is_normalized_poly uf v.Oracle.ple0);
-          (better_bound_from_intervals env v) :: acc
+            if Options.enable_assertions() then
+              assert (is_normalized_poly uf v.Oracle.ple0);
+            (better_bound_from_intervals env v) :: acc
         ) env.inequations []
       in
       (*let pbs = split_problem env ineqs (fun p -> P.leaves p) in*)
