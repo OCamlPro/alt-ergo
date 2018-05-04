@@ -611,7 +611,8 @@ and make_form up_qv inline_lets ~in_term defns abstr name_base f loc =
   in
   mk_form up_qv defns true f.c f.annot
 
-let mk_assume acc f name loc =
+(* wrapper of function make_form *)
+let make_form name f loc =
   let abstr = ref F.Map.empty in
   let inline_lets = Options.inline_lets () in
   let ff, _ =
@@ -619,26 +620,19 @@ let mk_assume acc f name loc =
       Sy.Set.empty inline_lets ~in_term:false Sy.Map.empty abstr name f loc
   in
   assert (F.Map.is_empty !abstr);
+  assert (Symbols.Map.is_empty (F.free_vars ff));
+  ff
+
+let mk_assume acc f name loc =
+  let ff = make_form name f loc in
   {st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
 let mk_preddef acc f name loc =
-  let abstr = ref F.Map.empty in
-  let inline_lets = Options.inline_lets () in
-  let ff, _ =
-    make_form
-      Sy.Set.empty inline_lets ~in_term:false Sy.Map.empty abstr name f loc
-  in
-  assert (F.Map.is_empty !abstr);
+  let ff = make_form name f loc in
   {st_decl=PredDef (ff, name) ; st_loc=loc} :: acc
 
 let mk_query acc n f loc sort =
-  let abstr = ref F.Map.empty in
-  let inline_lets = Options.inline_lets () in
-  let ff, _ =
-    make_form
-      Sy.Set.empty inline_lets ~in_term:false Sy.Map.empty abstr "" f loc
-  in
-  assert (F.Map.is_empty !abstr);
+  let ff = make_form "" f loc in
   {st_decl=Query(n, ff, sort) ; st_loc=loc} :: acc
 
 let make_rule ({rwt_left = t1; rwt_right = t2; rwt_vars} as r) =
@@ -654,7 +648,6 @@ let make_rule ({rwt_left = t1; rwt_right = t2; rwt_vars} as r) =
   { r with rwt_left = s1; rwt_right = s2 }
 
 let mk_theory acc l th_name extends loc =
-  let inline_lets = Options.inline_lets () in
   List.fold_left
     (fun acc e ->
       let loc, name, f, axiom_kind =
@@ -662,12 +655,7 @@ let mk_theory acc l th_name extends loc =
         | TAxiom (loc, name, ax_kd, f) -> loc, name, f, ax_kd
         | _ -> assert false
       in
-      let abstr = ref F.Map.empty in
-      let th_form, _ =
-        make_form
-          Sy.Set.empty inline_lets ~in_term:false Sy.Map.empty abstr name f loc
-      in
-      assert (F.Map.is_empty !abstr);
+      let th_form = make_form name f loc in
       let th_elt = {th_name; axiom_kind; extends; th_form} in
       {st_decl=ThAssume th_elt ; st_loc=loc} :: acc
     )acc l
