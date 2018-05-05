@@ -183,22 +183,20 @@ let bound_of_term (t: T.t) =
   | Name _ | True | False | Void | Bitv _ | Op _ | In _ | MapsTo _ ->
     assert false
 
-let inline_abstractions in_term parent_abstr abstr up_qv tmp =
-  if in_term then tmp
-  else
-    let id = F.id tmp in
-    let l_abstr =
-      F.Map.fold
-        (fun f e acc ->
-           if F.Map.mem f parent_abstr then acc else (f, e) :: acc
-        )!abstr []
-    in
-    let l_abstr =
-      List.fast_sort (fun (_,(_,_,x)) (_,(_,_,y)) -> y - x) l_abstr
-    in
-    abstr := parent_abstr;
-    List.fold_left
-      (fun acc (f, (sy, t, _)) -> F.mk_let_f up_qv sy f acc id) tmp l_abstr
+let inline_abstractions parent_abstr abstr up_qv tmp =
+  let id = F.id tmp in
+  let l_abstr =
+    F.Map.fold
+      (fun f e acc ->
+         if F.Map.mem f parent_abstr then acc else (f, e) :: acc
+      )!abstr []
+  in
+  let l_abstr =
+    List.fast_sort (fun (_,(_,_,x)) (_,(_,_,y)) -> y - x) l_abstr
+  in
+  abstr := parent_abstr;
+  List.fold_left
+    (fun acc (f, (sy, t, _)) -> F.mk_let_f up_qv sy f acc id) tmp l_abstr
 
 let merge_ret_defns d1 d2 =
   (* best effort in case of captures ! ret_defns used to substitute in
@@ -342,7 +340,7 @@ let rec make_term up_qv inline_lets (defns:let_defns) abstr t =
     | TTite(cond, t1, t2) ->
       let cond, _ =
         make_form
-          up_qv inline_lets ~in_term:true defns abstr "" cond Loc.dummy
+          up_qv inline_lets defns abstr "" cond Loc.dummy
       in
       let t_cond = abstract_form_in_term cond abstr in
       let t1 = mk_term defns t1 in
@@ -431,7 +429,7 @@ and make_pred up_qv inline_lets defns abstr z id =
     F.mk_lit
       (A.LT.mk_pred (make_term up_qv inline_lets defns abstr z) false) id
 
-and make_form up_qv inline_lets ~in_term defns abstr name_base f loc =
+and make_form up_qv inline_lets defns abstr name_base f loc =
   let name_tag = ref 0 in
   let rec mk_form up_qv (defns:let_defns) toplevel c id =
     let parent_abstr = !abstr in
@@ -534,7 +532,7 @@ and make_form up_qv inline_lets ~in_term defns abstr name_base f loc =
       (*let upvars = varset_of_list qf.qf_upvars in*)
       let ff, ret_d =
         mk_form up_qv defns false qf.qf_form.c qf.qf_form.annot in
-      let ff = inline_abstractions in_term parent_abstr abstr up_qv ff in
+      let ff = inline_abstractions parent_abstr abstr up_qv ff in
 
       (* One of them should be empty. Otherwise, there may be a bug if
          we eventually substitute with the bad binding *)
@@ -607,7 +605,7 @@ and make_form up_qv inline_lets ~in_term defns abstr name_base f loc =
 
     | _ -> assert false
     in
-    inline_abstractions in_term parent_abstr abstr up_qv tmp, defns
+    inline_abstractions parent_abstr abstr up_qv tmp, defns
   in
   mk_form up_qv defns true f.c f.annot
 
@@ -616,8 +614,7 @@ let make_form name f loc =
   let abstr = ref F.Map.empty in
   let inline_lets = Options.inline_lets () in
   let ff, _ =
-    make_form
-      Sy.Set.empty inline_lets ~in_term:false Sy.Map.empty abstr name f loc
+    make_form Sy.Set.empty inline_lets Sy.Map.empty abstr name f loc
   in
   assert (F.Map.is_empty !abstr);
   assert (Symbols.Map.is_empty (F.free_vars ff));
