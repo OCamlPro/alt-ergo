@@ -614,38 +614,47 @@ let mk_forall_aux =
         res
 
 
-(* forall quant_vars. let bv = lf in f *)
+(* forall/exists quant_vars. let bv = lf in f *)
 let mk_let_f quant_vars bv lf f id =
-  let up = free_vars lf in
-  (* only keep up vars that are bound with forall or exists, not those
+   (* XXX this is buggy
+     (* only keep up vars that are bound with forall or exists, not those
      bound with a let *)
-  let up = Sy.Map.filter (fun x _ -> Sy.Set.mem x quant_vars) up in
-  let up = Sy.Map.fold (fun sy ty acc -> (Term.make sy [] ty)::acc) up [] in
-  let subst =
-    Sy.Map.add bv (T.make (Sy.fresh "_let") up Ty.Tbool) Sy.Map.empty
-  in
-  let sbt = subst, Ty.esubst in
-  make
-    (Flet{flet_var=bv; flet_subst=sbt; flet_form=lf; flet_f=f})
-    (Flet{flet_var=bv; flet_subst=sbt; flet_form=lf; flet_f=mk_not f})
-    (size f) id
+     let up = Sy.Map.filter (fun x _ -> Sy.Set.mem x quant_vars) up in
+  *)
+  if not (Sy.Map.mem bv (free_vars f)) then f
+  else
+    let up = quant_vars in
+    let up = Sy.Map.fold (fun sy ty acc -> (Term.make sy [] ty)::acc) up [] in
+    let subst =
+      Sy.Map.add bv (T.make (Sy.fresh "_let") up Ty.Tbool) Sy.Map.empty
+    in
+    let sbt = subst, Ty.esubst in
+    make
+      (Flet{flet_var=bv; flet_subst=sbt; flet_form=lf; flet_f=f})
+      (Flet{flet_var=bv; flet_subst=sbt; flet_form=lf; flet_f=mk_not f})
+      (size f) id
 
-(* forall quant_vars. let bv = lt in f *)
+(* forall/exists quant_vars. let bv = lt in f *)
 let mk_let_t quant_vars bv lt f id =
-  let up = Term.vars_of lt Sy.Map.empty in
-  (* only keep up vars that are bound with forall or exists, not those
+  (* XXX this is buggy
+     let up = Term.vars_of lt Sy.Map.empty in
+     (* only keep up vars that are bound with forall or exists, not those
      bound with a let *)
-  let up = Sy.Map.filter (fun x _ -> Sy.Set.mem x quant_vars) up in
-  let up = Sy.Map.fold (fun sy ty acc -> (Term.make sy [] ty)::acc) up [] in
-  let ty = Term.type_info lt in
-  let subst =
-    Sy.Map.add bv (T.make (Sy.fresh "_let") up ty) Sy.Map.empty
-  in
-  let sbt = subst, Ty.esubst in
-  make
-    (Tlet{tlet_var=bv; tlet_subst=sbt; tlet_term=lt; tlet_f=f})
-    (Tlet{tlet_var=bv; tlet_subst=sbt; tlet_term=lt; tlet_f=mk_not f})
-    (size f) id
+     let up = Sy.Map.filter (fun x _ -> Sy.Set.mem x quant_vars) up in
+  *)
+  if not (Sy.Map.mem bv (free_vars f)) then f
+  else
+    let up = quant_vars in
+    let up = Sy.Map.fold (fun sy ty acc -> (Term.make sy [] ty)::acc) up [] in
+    let ty = Term.type_info lt in
+    let subst =
+      Sy.Map.add bv (T.make (Sy.fresh "_let") up ty) Sy.Map.empty
+    in
+    let sbt = subst, Ty.esubst in
+    make
+      (Tlet{tlet_var=bv; tlet_subst=sbt; tlet_term=lt; tlet_f=f})
+      (Tlet{tlet_var=bv; tlet_subst=sbt; tlet_term=lt; tlet_f=mk_not f})
+      (size f) id
 
 let mk_and f1 f2 is_impl id =
   if equal f1 (mk_not f2) then faux

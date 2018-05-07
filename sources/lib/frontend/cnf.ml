@@ -525,7 +525,7 @@ and make_form up_qv inline_lets defns abstr name_base f loc =
           defns qf.qf_bvars
       in
       let up_qv =
-        List.fold_left (fun z (sy,_) -> Sy.Set.add sy z) up_qv qf.qf_bvars
+        List.fold_left (fun z (sy,ty) -> Sy.Map.add sy ty z) up_qv qf.qf_bvars
       in
       let qvars = varset_of_list qf.qf_bvars in
       let binders = F.mk_binders qvars in
@@ -614,7 +614,7 @@ let make_form name f loc =
   let abstr = ref F.Map.empty in
   let inline_lets = Options.inline_lets () in
   let ff, _ =
-    make_form Sy.Set.empty inline_lets Sy.Map.empty abstr name f loc
+    make_form Sy.Map.empty inline_lets Sy.Map.empty abstr name f loc
   in
   assert (F.Map.is_empty !abstr);
   assert (Symbols.Map.is_empty (F.free_vars ff));
@@ -634,7 +634,7 @@ let mk_query acc n f loc sort =
 
 let make_rule ({rwt_left = t1; rwt_right = t2; rwt_vars} as r) =
   let up_qv =
-    List.fold_left (fun z (sy, _) -> Sy.Set.add sy z) Sy.Set.empty rwt_vars
+    List.fold_left (fun z (sy, ty) -> Sy.Map.add sy ty z) Sy.Map.empty rwt_vars
   in
   let abstr = ref F.Map.empty in
   let inline_lets = Options.inline_lets () in

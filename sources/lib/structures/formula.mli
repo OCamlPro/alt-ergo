@@ -138,9 +138,9 @@ val mk_exists :
   (* free_vars and free_vty: they are computed if None is given *)
   t
 
-val mk_let_f : Symbols.Set.t -> Symbols.t -> t -> t -> int -> t
+val mk_let_f : Ty.t Symbols.Map.t -> Symbols.t -> t -> t -> int -> t
 
-val mk_let_t : Symbols.Set.t -> Symbols.t -> Term.t -> t -> int -> t
+val mk_let_t : Ty.t Symbols.Map.t -> Symbols.t -> Term.t -> t -> int -> t
 
 val add_label : Hstring.t -> t -> unit
 val label : t -> Hstring.t
