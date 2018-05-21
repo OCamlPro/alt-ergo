@@ -697,13 +697,19 @@ let potential_triggers =
 	    (STRS.add (t, bv_lf, vty_lf) acc) lt
 	else acc
 
-      | TTprefix (_, _)
+      | TTprefix (_,t) | TTnamed (_, t) ->
+        let vty_lf = vty_term vty_t t in
+        let bv_lf = vars_of_term bv Vterm.empty t in
+        if as_bv bv bv_lf || as_tyv vty vty_lf then
+          potential_rec vars (STRS.add (t, bv_lf, vty_lf) acc) t
+	else acc
+
       | TTconst _
       | TTmapsTo (_, _)
       | TTinInterval (_, _, _, _, _)
       | TTextract (_, _, _)
-      | TTconcat (_, _)
-      | TTnamed (_, _) -> acc
+      | TTconcat (_, _) -> acc
+
       | TTite _ -> assert false
 
   in fun vars l ->

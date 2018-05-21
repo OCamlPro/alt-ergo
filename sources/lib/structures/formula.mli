@@ -66,11 +66,19 @@ type quantified = {
                   formula. It forms with name a unique id *)
 }
 
-and llet = {
-  let_var: Symbols.t;
-  let_subst : Term.subst;
-  let_form : t;
-  let_f : t;
+and flet = {
+  flet_var: Symbols.t;
+  flet_subst : Term.subst;
+  flet_form : t;
+  flet_f : t;
+}
+
+
+and tlet = {
+  tlet_var: Symbols.t;
+  tlet_subst : Term.subst;
+  tlet_term : Term.t;
+  tlet_f : t;
 }
 
 and view =
@@ -79,7 +87,8 @@ and view =
   | Literal of Literal.LT.t   (* an atom *)
   | Lemma of quantified   (* a lemma *)
   | Skolem of quantified  (* lazy skolemization *)
-  | Let of llet (* a binding of a term *)
+  | Flet of flet (* a binding of a form *)
+  | Tlet of tlet (* a binding of a term *)
 
 
 type gformula = {
@@ -129,7 +138,9 @@ val mk_exists :
   (* free_vars and free_vty: they are computed if None is given *)
   t
 
-val mk_let : Symbols.Set.t -> Symbols.t -> t -> t -> int -> t
+val mk_let_f : Ty.t Symbols.Map.t -> Symbols.t -> t -> t -> int -> t
+
+val mk_let_t : Ty.t Symbols.Map.t -> Symbols.t -> Term.t -> t -> int -> t
 
 val add_label : Hstring.t -> t -> unit
 val label : t -> Hstring.t
