@@ -229,12 +229,19 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         eprintf "; %aInconsistent assumption@." report_loc loc
 *)
 
-    | Unknown (d, t) | Sat (d, t) ->
+    | Unknown (d, t) ->
       let loc = d.st_loc in
       if Options.answers_with_locs () then
         eprintf "; %aI don't know (%2.4f) (%Ld steps)%s@."
           Loc.report loc time steps (goal_name d);
       printf "unknown@."
+
+    | Sat (d, t) ->
+      let loc = d.st_loc in
+      if Options.answers_with_locs () then
+        eprintf "; %aInvalid (%2.4f) (%Ld steps)%s@."
+          Loc.report loc time steps (goal_name d);
+      printf "sat@."
 
     | Timeout (Some d) ->
       let loc = d.st_loc in
@@ -274,7 +281,12 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       if Options.verbose () then
         eprintf "%aInconsistent assumption@." report_loc loc
 
-    | Unknown (d, t) | Sat (d, t) ->
+    | Sat (d, t) ->
+      let loc = d.st_loc in
+      printf "%aInvalid (%2.4f) (%Ld steps)%s@."
+        report_loc loc time steps (goal_name d)
+
+    | Unknown (d, t) ->
       let loc = d.st_loc in
       printf "%aI don't know (%2.4f) (%Ld steps)%s@."
         report_loc loc time steps (goal_name d)
