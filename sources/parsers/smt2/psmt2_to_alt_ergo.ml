@@ -280,6 +280,9 @@ module Translate = struct
       mk_non_ground_predicate_def  symb.p (symb.c,symb.c) params t_expr
     else mk_function_def symb.p (symb.c,symb.c) params ret t_expr
 
+  let not_supported s =
+    Format.eprintf "; %S : Not yet supported@." s
+
   let translate_command acc command =
     match command.c with
     | Cmd_Assert(assert_term) ->
@@ -291,7 +294,7 @@ module Translate = struct
       Options.set_unsat_mode true;
       (mk_goal command.p "g" (mk_false_const command.p)) :: acc
     | Cmd_CheckSatAssum prop_lit_list  ->
-      Format.eprintf "Not yet supported@."; assert false
+      not_supported "check-sat-assuming"; assert false
     | Cmd_DeclareConst(symbol,const_dec) ->
       (translate_decl_fun symbol [] (translate_const_dec const_dec)) :: acc
     | Cmd_DeclareDataType(symbol,datatype_dec) -> assert false
@@ -310,23 +313,23 @@ module Translate = struct
       let l = List.map2 translate_fun_def fun_def_list term_list in
       l @ acc
     | Cmd_DefineSort(symbol,symbol_list,sort) -> acc
-    | Cmd_Echo(attribute_value) -> Format.eprintf "Not yet supported@."; acc
-    | Cmd_GetAssert -> Format.eprintf "Not yet supported@."; acc
-    | Cmd_GetProof -> Format.eprintf "Not yet supported@."; acc
-    | Cmd_GetUnsatCore -> Format.eprintf "Not yet supported@."; acc
-    | Cmd_GetValue(term_list) -> Format.eprintf "Not yet supported@."; acc
-    | Cmd_GetAssign -> Format.eprintf "Not yet supported@."; acc
-    | Cmd_GetOption(keyword) -> Format.eprintf "Not yet supported@."; acc
-    | Cmd_GetInfo(key_info) -> Format.eprintf "Not yet supported@."; acc
-    | Cmd_GetModel -> Format.eprintf "Not yet supported@."; acc
-    | Cmd_GetUnsatAssumptions -> Format.eprintf "Not yet supported@."; acc
-    | Cmd_Reset -> Format.eprintf "Not yet supported@."; assert false
-    | Cmd_ResetAssert -> Format.eprintf "Not yet supported@."; assert false
-    | Cmd_SetLogic(symbol) -> Format.eprintf "Not yet supported@."; acc
-    | Cmd_SetOption(option) -> Format.eprintf "Not yet supported@."; acc
-    | Cmd_SetInfo(attribute) -> Format.eprintf "Not yet supported@."; acc
-    | Cmd_Push(string) -> Format.eprintf "Not yet supported@."; assert false
-    | Cmd_Pop(string) -> Format.eprintf "Not yet supported@."; assert false
+    | Cmd_Echo(attribute_value) -> not_supported "echo"; acc
+    | Cmd_GetAssert -> not_supported "get-assertions"; acc
+    | Cmd_GetProof -> not_supported "get-proof"; acc
+    | Cmd_GetUnsatCore -> not_supported "get-unsat-core"; acc
+    | Cmd_GetValue(term_list) -> not_supported "get-value"; acc
+    | Cmd_GetAssign -> not_supported "get-assign"; acc
+    | Cmd_GetOption(keyword) -> not_supported "get-option"; acc
+    | Cmd_GetInfo(key_info) -> not_supported "get-info"; acc
+    | Cmd_GetModel -> not_supported "get-model"; acc
+    | Cmd_GetUnsatAssumptions -> not_supported "get-unsat-assumptions"; acc
+    | Cmd_Reset -> not_supported "reset"; assert false
+    | Cmd_ResetAssert -> not_supported "reset-asserts"; assert false
+    | Cmd_SetLogic(symbol) -> not_supported "set-logic"; acc
+    | Cmd_SetOption(option) -> not_supported "set-option"; acc
+    | Cmd_SetInfo(attribute) -> not_supported "set-info"; acc
+    | Cmd_Push(string) -> not_supported "push"; assert false
+    | Cmd_Pop(string) -> not_supported "pop"; assert false
     | Cmd_Exit -> acc
 
   let init () =

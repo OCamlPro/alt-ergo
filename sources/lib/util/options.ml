@@ -207,7 +207,6 @@ module M = struct
   let replay_all_used_context = ref false
   let save_used_context = ref false
 
-  let replay_satml_dfs = ref false
   let profiling_period = ref 0.
   let profiling = ref false
 
@@ -537,11 +536,6 @@ module M = struct
     " save used axioms and predicates in a .used file. This option implies \
      -proof";
 
-    "-replay-satml-dfs",
-    Arg.Set replay_satml_dfs,
-    " debug option for the satML plugin. Replays proven (valid) goals \
-     (with generated ground instances) using the functional SAT solver";
-
     "-timelimit",
     Arg.Float (set_limit timelimit),
     "n set the time limit to n seconds (not supported on Windows)";
@@ -854,7 +848,6 @@ let replay () = !M.replay
 let replay_used_context () = !M.replay_used_context
 let replay_all_used_context () = !M.replay_all_used_context
 let save_used_context () = !M.save_used_context
-let replay_satml_dfs () = !M.replay_satml_dfs
 let get_file () = !M.file
 let get_session_file () = !M.session_file
 let get_used_context_file () = !M.used_context_file

@@ -24,7 +24,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module MA = A.Map
   module Atom = Satml_types.Atom
   module FF = Satml_types.Flat_Formula
-  module Fun_sat = Fun_sat.Make (Th)
 
   let reset_refs () = SAT.reset_steps ()
   let get_steps () = SAT.get_steps ()
@@ -83,45 +82,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       theory_elim = true;
     }
 
-  module Replay = struct
-
-    let print_gamma env =
-      fprintf fmt "(* ground problem *)@.";
-      MF.iter (fun f _ -> fprintf fmt "%a -> @." F.print f) env.gamma;
-      fprintf fmt "false@."
-
-    let replay_with_dfs env =
-      try
-        let env_dfs =
-          try
-            let env_dfs =
-              MF.fold
-                (fun f _ env_dfs -> Fun_sat.assume env_dfs (mk_gf f))
-                env.gamma (Fun_sat.empty ())
-            in
-            MF.fold
-              (fun f (_,at) env_dfs ->
-                let f = F.mk_iff f (F.mk_lit (Atom.literal at) 0) 0 in
-                Fun_sat.assume env_dfs (mk_gf f)
-              ) env.abstr_of_axs env_dfs
-          with Fun_sat.Unsat dep -> raise (Unsat dep)
-        in
-        ignore (Fun_sat.unsat env_dfs (mk_gf F.vrai));
-        fprintf fmt "replay (by Fun_sat.unsat)@."
-
-      with
-        | Unsat _ ->
-          fprintf fmt "replay (by Fun_sat.assume)@.";
-        | Fun_sat.Unsat _ -> assert false
-        | Fun_sat.Sat _ ->
-          fprintf fmt "satML said UNSAT but Fun_sat said SAT@.";
-          print_gamma env;
-          exit 12
-        | e ->
-          fprintf fmt "satML said UNSAT but Fun_sat said:@.";
-          (*fprintf fmt "%s@." (Printexc.to_string e);*)
-          exit 13
-  end
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
@@ -964,7 +924,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       unsat_rec env ~first_call:true;
       assert false
     with IUnsat (env, dep) ->
-      if replay_satml_dfs () then Replay.replay_with_dfs env;
       dep
 
   let assume env gf =

@@ -189,7 +189,6 @@ val replay : unit -> bool
 val replay_used_context : unit -> bool
 val replay_all_used_context : unit -> bool
 val save_used_context : unit -> bool
-val replay_satml_dfs : unit -> bool
 val get_file : unit -> string
 val get_session_file : unit -> string
 val get_used_context_file : unit -> string

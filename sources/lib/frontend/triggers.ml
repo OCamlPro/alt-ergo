@@ -725,10 +725,48 @@ let filter_good_triggers (bv, vty) =
        let s2 = List.fold_left vty_term Vtype.empty l in
        Vterm.subset bv s1 && Vtype.subset vty s2 )
 
-let make_triggers gopt vterm vtype trs =
+let make_triggers gopt vterm vtype trs escaped_vars =
   let l = match List.filter (filter_mono vterm vtype) trs with
     | [] ->
-      multi_triggers gopt vterm vtype trs
+      if escaped_vars
+          [@ocaml.ppwarning "TODO: improve this"]
+      then
+        (* to avoid explosion in function 'parties' !
+           TODO: implement a better mechanism:
+           Encountered example:
+           vterm = { 's110', 's29', 'i20' }
+           trs = [
+           'i20' - 'x435' ;
+           'i20' - 'x441' ;
+           MS('x415','x416','s110') ;
+           MS('x417','x418','s110') ;
+           MS('x417','x419','s110') ;
+           MS('x420','x421','s110') ;
+           MS('x422','x423','s29') ;
+           MS('x424','x425','s29') ;
+           MS('x424','x426','s29') ;
+           MS('x427','x428','s29') ;
+           MS('i21','x434','s110') ;
+           MS('x433','x434','s29') ;
+           MS('x439','x440','s29') ;
+           MS('x442','x440','s29') ;
+           length('s110','x429') ;
+           length('s110','x431') ;
+           length('s110','x432') ;
+           length('s110','x435') ;
+           length('s110','x436') ;
+           length('s110','x438') ;
+           length('s110','x441') ;
+           length('s110','x443') ;
+           length('s29','x430') ;
+           length('s29','x437')
+           ]
+
+           ==> function 'parties' timeouts after 20 seconds.
+           Better solution: substitute free vars in trs with '_'.
+        *)
+        []
+      else multi_triggers gopt vterm vtype trs
     | trs' ->
       let f l = at_most (nb_triggers ()) (List.map (fun (t, _, _) -> [t]) l) in
       let trs_v, trs_nv = List.partition (fun (t, _, _) -> is_var t) trs' in
@@ -841,23 +879,23 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
 	if keep_triggers then check_triggers qf.qf_triggers (vterm', vtype')
 	else if Options.no_user_triggers () || qf.qf_triggers == [] then
 	  begin
-	    (make_triggers false vterm' vtype' (STRS.elements trs1))@
-	      (make_triggers false vterm' vtype' (STRS.elements trs2))
+	    (make_triggers false vterm' vtype' (STRS.elements trs1) false)@
+	      (make_triggers false vterm' vtype' (STRS.elements trs2) false)
 	  end
 	else
 	  begin
 	    let lf = filter_good_triggers (vterm', vtype') qf.qf_triggers in
 	    if lf != [] then lf
 	    else
-	      (make_triggers false vterm' vtype' (STRS.elements trs1))@
-		(make_triggers false vterm' vtype' (STRS.elements trs2))
+	      (make_triggers false vterm' vtype' (STRS.elements trs1) false)@
+		(make_triggers false vterm' vtype' (STRS.elements trs2) false)
 	  end
       in
       let trs12 =
         if trs12 != [] then trs12
         else (* allow vars to escape their scope *)
-	  (make_triggers false vterm' vtype' (STRS.elements f_trs1))@
-	  (make_triggers false vterm' vtype' (STRS.elements f_trs2))
+	  (make_triggers false vterm' vtype' (STRS.elements f_trs1) true)@
+	  (make_triggers false vterm' vtype' (STRS.elements f_trs2) true)
       in
       let trs = STRS.union trs1 trs2 in
       let f_trs = STRS.union trs (STRS.union f_trs1 f_trs2) in
@@ -888,15 +926,15 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
       let trs' =
 	if keep_triggers then check_triggers qf.qf_triggers (vterm', vtype')
 	else if Options.no_user_triggers () || qf.qf_triggers == [] then
-	  make_triggers gopt vterm' vtype' (STRS.elements trs)
+	  make_triggers gopt vterm' vtype' (STRS.elements trs) false
 	else
 	  let lf = filter_good_triggers (vterm',vtype') qf.qf_triggers in
 	  if lf != [] then lf
-	  else make_triggers gopt vterm' vtype' (STRS.elements trs)
+	  else make_triggers gopt vterm' vtype' (STRS.elements trs) false
       in
       let trs' = (* allow vars to escape their scope *)
         if trs' != [] then trs'
-        else make_triggers gopt vterm' vtype' (STRS.elements f_trs)
+        else make_triggers gopt vterm' vtype' (STRS.elements f_trs) true
       in
       let f_trs = STRS.union trs f_trs in
       let trs =
@@ -951,10 +989,10 @@ let make keep_triggers gopt f = match f.c with
       let trs = STRS.elements trs in
       if keep_triggers then
         failwith "No polymorphism in use-defined theories.";
-      let trs = make_triggers gopt Vterm.empty vty trs in
+      let trs = make_triggers gopt Vterm.empty vty trs false in
       let trs =
         if trs != [] then trs
-        else make_triggers gopt Vterm.empty vty (STRS.elements f_trs)
+        else make_triggers gopt Vterm.empty vty (STRS.elements f_trs) true
       in
       { f with c = TFforall
 	  {qf_bvars=[]; qf_upvars=[]; qf_triggers=trs; qf_form=f; qf_hyp=[] }}
