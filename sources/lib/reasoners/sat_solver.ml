@@ -9,16 +9,28 @@
 (*                                                                            *)
 (******************************************************************************)
 
+let debug s =
+  if Options.verbose() then Format.eprintf "[bool reasoning] %s@." s
+
 let get_current () =
-  match Options.sat_solver () with
-  | Util.Tableaux ->
-    if Options.verbose() then
-      Format.eprintf "[bool reasoning] use Tableaux-like solver@.";
+  match Options.sat_solver (), Options.sat_detection () with
+  | Util.Tableaux, false ->
+     debug "use Tableaux-like solver";
     (module Fun_sat : Sat_solver_sig.SatContainer)
-  | Util.CDCL_satML ->
-    if Options.verbose() then
-      Format.eprintf "[bool reasoning] use CDCL solver@.";
+
+  | Util.CDCL_satML, false ->
+     debug "use CDCL solver";
     (module Satml_frontend : Sat_solver_sig.SatContainer)
+
+  | Util.Tableaux, true ->
+     debug "use PP + Tableaux-like solver";
+     let module Sat = Sat_preprocessor.Main(Fun_sat) in
+     (module Sat : Sat_solver_sig.SatContainer)
+
+  | Util.CDCL_satML, true ->
+     debug "use PP + CDCL solver";
+     let module Sat = Sat_preprocessor.Main(Satml_frontend) in
+     (module Sat : Sat_solver_sig.SatContainer)
 
 (*
 (*+ no dynamic loading of SAT solvers anymore +*)

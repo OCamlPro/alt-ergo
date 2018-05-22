@@ -158,6 +158,7 @@ val term_like_pp : unit -> bool
 val all_models : unit -> bool
 val model : unit -> bool
 val interpretation : unit -> int
+val sat_detection : unit -> bool
 val debug_interpretation : unit -> bool
 val complete_model : unit -> bool
 val max_split : unit -> Numbers.Q.t

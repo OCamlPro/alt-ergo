@@ -78,6 +78,7 @@ module M = struct
   let model = ref false
   let complete_model = ref false
   let interpretation = ref 0
+  let sat_detection = ref false
   let debug_interpretation = ref false
   let unsat_core = ref false
   let debug_unsat_core = ref false
@@ -479,6 +480,10 @@ module M = struct
      A negative value (-1, -2, or -3) will disable interpretation display. \
      Note that -max-split limitation will be ignored in model generation phase";
 
+    "-sat-detection",
+      Arg.Set sat_detection,
+    " Experimental";
+
     "-unsat-core",
     Arg.Set unsat_core,
     " experimental support for unsat-cores";
@@ -819,7 +824,8 @@ let term_like_pp () = !M.term_like_pp
 let cumulative_time_profiling () = !M.cumulative_time_profiling
 let all_models () = !M.all_models
 let model () = !M.model || !M.complete_model
-let interpretation () = !M.interpretation
+let interpretation () = if !M.sat_detection then (-1) else !M.interpretation
+let sat_detection () = !M.sat_detection
 let debug_interpretation () = !M.debug_interpretation
 let complete_model () = !M.complete_model
 let max_split () = !M.max_split
