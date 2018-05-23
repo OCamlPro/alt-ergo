@@ -420,7 +420,79 @@ module SLLT =
       let compare (_, y1, _) (_, y2, _)  = Vterm.compare y1 y2
     end)
 
-let parties bv vty l =
+let mk_tt t u =
+  {t with c={t.c with tt_desc = u}}
+
+let _underscore = Symbols.var "_"
+
+let mk_underscore =
+  fun t -> mk_tt t (TTvar _underscore)
+
+let underscore =
+  let rec aux t s =
+    match t.c.tt_desc with
+    | TTconst _ -> t, true
+    | TTinInterval _ | TTmapsTo _-> t, true
+    | TTite _ -> assert false
+    | TTlet _ -> assert false
+    | TTvar v ->
+      if Vterm.mem v s then mk_underscore t, false
+      else t, true
+    | TTapp (f, tl) ->
+      let l, b = List.fold_left (fun (l,same) t ->
+          let t, b = aux t s in
+          t :: l, b && same
+        ) ([],true) (List.rev tl)
+      in
+      if b then t,true else mk_tt t (TTapp (f,l)), false
+    | TTinfix (i,f,p) ->
+      let i,bi = aux i s in
+      let p,bp = aux p s in
+      if bi && bp then t,true else mk_tt t (TTinfix (i,f,p)), false
+    | TTprefix (f,p) ->
+      let p,b = aux p s in
+      if b then t,true else mk_tt t (TTprefix (f,p)),false
+    | TTget (t1, t2) ->
+      let t1,b1 = aux t1 s in
+      let t2,b2 = aux t2 s in
+      if b1 && b2 then t,true else mk_tt t (TTget (t1,t2)),false
+    | TTconcat (t1, t2) ->
+      let t1,b1 = aux t1 s in
+      let t2,b2 = aux t2 s in
+      if b1 && b2 then t,true else mk_tt t (TTconcat (t1,t2)),false
+    | TTdot(d, h) ->
+      let d,b = aux d s in
+      if b then t,true else mk_tt t (TTdot (d,h)),false
+    | TTrecord lbs ->
+      let l, b = List.fold_left (fun (l,same) (h,t) ->
+          let t, b = aux t s in
+          (h,t) :: l, b && same
+        ) ([],true) (List.rev lbs)
+      in
+      if b then t,true else mk_tt t (TTrecord l), false
+    | TTset (t1, t2, t3) ->
+      let t1,b1 = aux t1 s in
+      let t2,b2 = aux t2 s in
+      let t3,b3 = aux t3 s in
+      if b1 && b2 && b3 then t,true else mk_tt t (TTset (t1,t2,t3)),false
+    | TTextract (t1, t2, t3) ->
+      let t1,b1 = aux t1 s in
+      let t2,b2 = aux t2 s in
+      let t3,b3 = aux t3 s in
+      if b1 && b2 && b3 then t,true else mk_tt t (TTextract (t1,t2,t3)),false
+    | TTnamed (h,n) ->
+      let n,b = aux n s in
+      if b then t,true else mk_tt t (TTnamed (h,n)),false
+  in
+  fun bv ((t,vt,vty) as e) ->
+    let s = Vterm.diff vt bv in
+    if Vterm.is_empty s then e
+    else
+      let t,_ = aux t s in
+      let vt = Vterm.add _underscore (Vterm.inter vt bv) in
+      t,vt,vty
+
+let parties bv vty l escaped_vars =
   let l =
     if triggers_var () then l
     else List.filter (fun (t,_,_) -> not (is_var t)) l
@@ -443,6 +515,7 @@ let parties bv vty l =
 	in
 	parties_rec (SLLT.add ([t], bv1, vty1) llt, llt_ok) l
   in
+  let l = if escaped_vars  then List.rev_map (underscore bv) l else l in
   let s = List.fold_left (fun z e -> STRS.add e z) STRS.empty l in
   let l = STRS.elements s in (* remove redundancies in old l *)
   SLLT.elements (parties_rec (SLLT.empty, SLLT.empty) l)
@@ -525,9 +598,9 @@ let underscoring_mt bv mt =
   let underscores = ref Vterm.empty in
   List.map (underscoring_term mvars underscores) mt
 
-let multi_triggers gopt bv vty trs =
+let multi_triggers gopt bv vty trs escaped_vars =
   let terms = simplification bv vty trs in
-  let l_parties = parties bv vty terms  in
+  let l_parties = parties bv vty terms escaped_vars in
   let lm = List.map (fun (lt, _, _) -> lt) l_parties in
   let mv , mt = List.partition (List.exists is_var) lm in
   let mv , mt = sort mv , sort mt in
@@ -727,46 +800,7 @@ let filter_good_triggers (bv, vty) =
 
 let make_triggers gopt vterm vtype trs escaped_vars =
   let l = match List.filter (filter_mono vterm vtype) trs with
-    | [] ->
-      if escaped_vars
-          [@ocaml.ppwarning "TODO: improve this"]
-      then
-        (* to avoid explosion in function 'parties' !
-           TODO: implement a better mechanism:
-           Encountered example:
-           vterm = { 's110', 's29', 'i20' }
-           trs = [
-           'i20' - 'x435' ;
-           'i20' - 'x441' ;
-           MS('x415','x416','s110') ;
-           MS('x417','x418','s110') ;
-           MS('x417','x419','s110') ;
-           MS('x420','x421','s110') ;
-           MS('x422','x423','s29') ;
-           MS('x424','x425','s29') ;
-           MS('x424','x426','s29') ;
-           MS('x427','x428','s29') ;
-           MS('i21','x434','s110') ;
-           MS('x433','x434','s29') ;
-           MS('x439','x440','s29') ;
-           MS('x442','x440','s29') ;
-           length('s110','x429') ;
-           length('s110','x431') ;
-           length('s110','x432') ;
-           length('s110','x435') ;
-           length('s110','x436') ;
-           length('s110','x438') ;
-           length('s110','x441') ;
-           length('s110','x443') ;
-           length('s29','x430') ;
-           length('s29','x437')
-           ]
-
-           ==> function 'parties' timeouts after 20 seconds.
-           Better solution: substitute free vars in trs with '_'.
-        *)
-        []
-      else multi_triggers gopt vterm vtype trs
+    | [] -> multi_triggers gopt vterm vtype trs escaped_vars
     | trs' ->
       let f l = at_most (nb_triggers ()) (List.map (fun (t, _, _) -> [t]) l) in
       let trs_v, trs_nv = List.partition (fun (t, _, _) -> is_var t) trs' in
@@ -777,7 +811,9 @@ let make_triggers gopt vterm vtype trs escaped_vars =
 	  else [] (*multi_triggers vars trs*)
 	else f trs_nv
       in
-      if greedy () || gopt then ll@(multi_triggers gopt vterm vtype trs) else ll
+      if greedy () || gopt then
+        ll@(multi_triggers gopt vterm vtype trs escaped_vars)
+      else ll
   in
   Lists.rrmap (fun e -> e, false) l
 
