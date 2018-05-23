@@ -33,7 +33,7 @@ LIGHT_BFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g $(WAR
 LIGHT_OFLAGS = -annot -absname -bin-annot -short-paths -strict-sequence -g $(WARNINGS) -inline 100 $(INCLUDES)
 
 BFLAGS = $(LIGHT_BFLAGS) -for-pack AltErgoLib
-OFLAGS = $(LIGHT_BFLAGS) -for-pack AltErgoLib
+OFLAGS = $(LIGHT_BFLAGS) -O3 -unbox-closures -for-pack AltErgoLib
 
 LIBDEPS=num camlzip zarith ocplib-simplex psmt2-frontend
 
