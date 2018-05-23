@@ -356,6 +356,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     Debug.match_term sg t pat;
     let {T.f=f_pat;xs=pats;ty=ty_pat} = T.view pat in
     match f_pat with
+      |	Symbols.Var hs when String.equal "_" (Hstring.view hs) -> [sg]
       |	Symbols.Var _ ->
 	let sb =
           (try

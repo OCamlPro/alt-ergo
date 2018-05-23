@@ -9,6 +9,7 @@
 (******************************************************************************)
 
 module Smtlib_error = Psmt2Frontend.Smtlib_error
+module Smtlib_options = Psmt2Frontend.Options
 module Smtlib_ty = Psmt2Frontend.Smtlib_ty
 module Smtlib_typed_env = Psmt2Frontend.Smtlib_typed_env
 module Smtlib_typing = Psmt2Frontend.Smtlib_typing
@@ -352,8 +353,10 @@ module Translate = struct
   let file commands =
     Smtlib_typing.typing commands;
 
-    if Options.type_smt2 () then
+    if Options.type_smt2 () then begin
+      Printf.eprintf "%s%!" (Smtlib_options.status ());
       []
+    end
     else begin
       let l = List.fold_left translate_command [] (List.rev commands) in
       (init ()) @ l
