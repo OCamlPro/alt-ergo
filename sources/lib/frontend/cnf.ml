@@ -351,7 +351,8 @@ let rec make_term up_qv inline_lets (defns:let_defns) abstr t =
   mk_term (defns:let_defns) t
 
 
-and make_trigger name up_qv (defns:let_defns) abstr hyp (e, from_user) =
+and make_trigger
+    name up_qv (defns:let_defns) abstr hyp (e, from_user, default) =
   let inline_lets = Util.On in (* always inline lets in triggers *)
   let content, guard = match e with
     | [{c={ tt_desc = TTapp(s, t1::t2::l)}}]
@@ -406,6 +407,7 @@ and make_trigger name up_qv (defns:let_defns) abstr hyp (e, from_user) =
   let content = clean_trigger name content in
   { F.content ; guard ; depth; semantic = []; (* will be set by theories *)
     hyp; from_user;
+    default;
   }
 
 and make_pred up_qv inline_lets defns abstr z id =

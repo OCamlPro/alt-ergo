@@ -48,7 +48,8 @@ type trigger = {
   hyp : t list;
   depth : int;
   from_user : bool;
-  guard : Literal.LT.t option
+  guard : Literal.LT.t option;
+  default : bool
 }
 
 and quantified = {
@@ -568,7 +569,8 @@ let resolution_triggers is_back f name binders free_vty =
            semantic = [];
            depth = (Term.view t).Term.depth;
            from_user = false;
-           guard = None
+          guard = None;
+          default = false;
          } :: acc
     )cand []
 

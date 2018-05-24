@@ -43,7 +43,9 @@ module type S = sig
   val add_term : term_info -> Term.t -> t -> t
   val max_term_depth : t -> int -> t
   val add_triggers :
-    backward:Util.inst_kind -> t -> (int * Explanation.t) Formula.Map.t -> t
+    backward:Util.inst_kind -> t -> (int * Explanation.t) Formula.Map.t ->
+    grd:bool ->
+    t
   val terms_info : t -> info Term.Map.t * Term.t list Term.Map.t Term.Subst.t
   val query : t -> theory -> (trigger_info * gsubst list) list
 

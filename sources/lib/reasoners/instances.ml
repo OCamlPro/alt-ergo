@@ -283,7 +283,8 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     Debug.new_mround ilvl kind;
     Options.tool_req 2 "TR-Sat-Mround";
     let env =
-      {env with matching = EM.add_triggers ~backward env.matching axs} in
+      {env with matching = EM.add_triggers ~backward env.matching axs
+                    ~grd:use_cs} in
     let ccx_tbox =
       if use_cs || Options.greedy () then X.get_case_split_env tbox
       else X.get_real_env tbox

@@ -87,7 +87,7 @@ and 'a quant_form = {
   (* quantified variables that appear in the formula *)
   qf_bvars : (Symbols.t * Ty.t) list ;
   qf_upvars : (Symbols.t * Ty.t) list ;
-  qf_triggers : (('a tterm, 'a) annoted list * bool) list;
+  qf_triggers : (('a tterm, 'a) annoted list * bool * bool) list;
   qf_hyp : ('a tform, 'a) annoted list;
   qf_form : ('a tform, 'a) annoted
 }
@@ -148,7 +148,7 @@ val print_formula : Format.formatter -> ('a tform, 'a) annoted
   -> unit
 val print_binders : Format.formatter -> (Symbols.t * Ty.t) list -> unit
 val print_triggers :
-  Format.formatter -> (('a tterm, 'a) annoted list * bool) list  -> unit
+  Format.formatter -> (('a tterm, 'a) annoted list * bool * bool) list  -> unit
 
 val th_ext_of_string : string -> Loc.t -> theories_extensions
 val string_of_th_ext : theories_extensions -> string

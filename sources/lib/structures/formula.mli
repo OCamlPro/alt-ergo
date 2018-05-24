@@ -46,7 +46,8 @@ type trigger = {
   hyp : t list;
   depth : int;
   from_user : bool;
-  guard : Literal.LT.t option
+  guard : Literal.LT.t option;
+  default : bool;
 }
 
 type quantified = {

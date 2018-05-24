@@ -90,7 +90,7 @@ and 'a quant_form = {
   (* quantified variables that appear in the formula *)
   qf_bvars : (Symbols.t * Ty.t) list ;
   qf_upvars : (Symbols.t * Ty.t) list ;
-  qf_triggers : (('a tterm, 'a) annoted list * bool) list ;
+  qf_triggers : (('a tterm, 'a) annoted list * bool * bool) list ;
   qf_hyp : ('a tform, 'a) annoted list;
   qf_form : ('a tform, 'a) annoted
 }
@@ -246,7 +246,7 @@ and print_atom fmt a =
   | _ -> assert false
 
 and print_triggers fmt l =
-  List.iter (fun (tr, _) -> fprintf fmt "%a | " print_term_list tr) l
+  List.iter (fun (tr, _, _) -> fprintf fmt "%a | " print_term_list tr) l
 
 and print_formula fmt f =
   match f.c with

@@ -598,15 +598,15 @@ let underscoring_mt bv mt =
   let underscores = ref Vterm.empty in
   List.map (underscoring_term mvars underscores) mt
 
-let multi_triggers gopt bv vty trs escaped_vars =
+let multi_triggers gopt bv vty trs escaped_vars nb_triggers =
   let terms = simplification bv vty trs in
   let l_parties = parties bv vty terms escaped_vars in
   let lm = List.map (fun (lt, _, _) -> lt) l_parties in
   let mv , mt = List.partition (List.exists is_var) lm in
   let mv , mt = sort mv , sort mt in
   let lm = if gopt || triggers_var () then mt@mv else mt in
-  let m = at_most (nb_triggers ()) lm in
-  at_most (nb_triggers ()) m
+  let m = at_most nb_triggers lm in
+  at_most nb_triggers m
 
 let rec vty_ty acc t =
   let t = Ty.shorten t in
@@ -792,17 +792,18 @@ let potential_triggers =
 
 let filter_good_triggers (bv, vty) =
   List.filter
-    (fun (l, _) ->
+    (fun (l, _, _) ->
        not (List.exists contains_ite l) &&
        let s1 = List.fold_left (vars_of_term bv) Vterm.empty l in
        let s2 = List.fold_left vty_term Vtype.empty l in
        Vterm.subset bv s1 && Vtype.subset vty s2 )
 
-let make_triggers gopt vterm vtype trs escaped_vars =
+let make_triggers ~default gopt vterm vtype trs escaped_vars =
+  let nb_triggers = if default then nb_triggers () else max_int in
   let l = match List.filter (filter_mono vterm vtype) trs with
-    | [] -> multi_triggers gopt vterm vtype trs escaped_vars
+    | [] -> multi_triggers gopt vterm vtype trs escaped_vars nb_triggers
     | trs' ->
-      let f l = at_most (nb_triggers ()) (List.map (fun (t, _, _) -> [t]) l) in
+      let f l = at_most nb_triggers (List.map (fun (t, _, _) -> [t]) l) in
       let trs_v, trs_nv = List.partition (fun (t, _, _) -> is_var t) trs' in
       let ll =
         if trs_nv == [] then
@@ -812,16 +813,16 @@ let make_triggers gopt vterm vtype trs escaped_vars =
         else f trs_nv
       in
       if greedy () || gopt then
-        ll@(multi_triggers gopt vterm vtype trs escaped_vars)
+        ll@(multi_triggers gopt vterm vtype trs escaped_vars nb_triggers)
       else ll
   in
-  Lists.rrmap (fun e -> e, false) l
+  Lists.rrmap (fun e -> e, false, default) l
 
 let check_triggers trs (bv, vty) =
   if trs == [] then
     failwith "There should be a trigger for every quantified formula \
               in a theory.";
-  List.iter (fun (l, _) ->
+  List.iter (fun (l, _, _) ->
       if List.exists contains_ite l then
         failwith "If-Then-Else are not allowed in (theory triggers)";
       let s1 = List.fold_left (vars_of_term bv) Vterm.empty l in
@@ -915,26 +916,36 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
         if keep_triggers then check_triggers qf.qf_triggers (vterm', vtype')
         else if Options.no_user_triggers () || qf.qf_triggers == [] then
           begin
-            (make_triggers false vterm' vtype' (STRS.elements trs1) false)@
-            (make_triggers false vterm' vtype' (STRS.elements trs2) false)
+     (make_triggers false vterm' vtype' (STRS.elements trs1) false
+        ~default:true)@
+     (make_triggers false vterm' vtype' (STRS.elements trs2) false
+        ~default:true)
           end
         else
           begin
             let lf = filter_good_triggers (vterm', vtype') qf.qf_triggers in
             if lf != [] then lf
             else
-              (make_triggers false vterm' vtype' (STRS.elements trs1) false)@
-              (make_triggers false vterm' vtype' (STRS.elements trs2) false)
+       (make_triggers false vterm' vtype' (STRS.elements trs1) false
+          ~default:true)@
+       (make_triggers false vterm' vtype' (STRS.elements trs2) false
+          ~default:true)
           end
       in
       let trs12 =
         if trs12 != [] then trs12
         else (* allow vars to escape their scope *)
-          (make_triggers false vterm' vtype' (STRS.elements f_trs1) true)@
-          (make_triggers false vterm' vtype' (STRS.elements f_trs2) true)
+	  (make_triggers
+      ~default:true false vterm' vtype' (STRS.elements f_trs1) true)@
+          (make_triggers
+             ~default:true false vterm' vtype' (STRS.elements f_trs2) true)
       in
       let trs = STRS.union trs1 trs2 in
       let f_trs = STRS.union trs (STRS.union f_trs1 f_trs2) in
+      let more_trs =
+        (make_triggers false vterm' vtype' (STRS.elements trs1) true
+           ~default:false)
+      in
       let trs =
         STRS.filter
           (fun (_, bvt, _) -> Vterm.is_empty (Vterm.inter bvt vterm'))
@@ -942,7 +953,7 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
       in
       let r  =
         { qf with
-          qf_triggers = trs12 ;
+	  qf_triggers = List.append trs12 more_trs;
           qf_form = {c=TFop(OPiff,[f1'; f2']); annot = ido} }
       in
       begin
@@ -963,20 +974,30 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
         if keep_triggers then check_triggers qf.qf_triggers (vterm', vtype')
         else if Options.no_user_triggers () || qf.qf_triggers == [] then
           make_triggers gopt vterm' vtype' (STRS.elements trs) false
+     ~default:true
         else
           let lf = filter_good_triggers (vterm',vtype') qf.qf_triggers in
           if lf != [] then lf
-          else make_triggers gopt vterm' vtype' (STRS.elements trs) false
+   else
+     make_triggers gopt vterm' vtype' (STRS.elements trs) false
+       ~default:true
       in
       let trs' = (* allow vars to escape their scope *)
         if trs' != [] then trs'
-        else make_triggers gopt vterm' vtype' (STRS.elements f_trs) true
+        else make_triggers
+            ~default:true
+            gopt vterm' vtype' (STRS.elements f_trs) true
+      in
+      let more_trs =
+        make_triggers
+          ~default:false
+          gopt vterm' vtype' (STRS.elements f_trs) true
       in
       let f_trs = STRS.union trs f_trs in
       let trs =
         STRS.filter
           (fun (_, bvt, _) -> Vterm.is_empty (Vterm.inter bvt vterm')) trs in
-      let r  = {qf with qf_triggers = trs' ; qf_form = f'} in
+      let r  = {qf with qf_triggers = trs' @ more_trs ; qf_form = f'} in
       begin
         match f.c with
         | TFforall _ -> TFforall r , trs, f_trs
@@ -1025,13 +1046,18 @@ let make keep_triggers gopt f = match f.c with
       let trs = STRS.elements trs in
       if keep_triggers then
         failwith "No polymorphism in use-defined theories.";
-      let trs = make_triggers gopt Vterm.empty vty trs false in
+      let trs = make_triggers gopt Vterm.empty vty trs false ~default:true in
       let trs =
         if trs != [] then trs
         else make_triggers gopt Vterm.empty vty (STRS.elements f_trs) true
+            ~default: true
       in
-      { f with
-        c = TFforall
-            {qf_bvars=[]; qf_upvars=[]; qf_triggers=trs; qf_form=f; qf_hyp=[]}
+      let more_trs =
+        make_triggers gopt Vterm.empty vty (STRS.elements f_trs) true
+          ~default: false
+      in
+      { f with c = TFforall
+	           {qf_bvars=[]; qf_upvars=[]; qf_triggers=trs@more_trs;
+             qf_form=f; qf_hyp=[] }
       }
 

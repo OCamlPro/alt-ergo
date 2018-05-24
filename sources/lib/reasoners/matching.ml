@@ -52,7 +52,9 @@ module type S = sig
   val add_term : term_info -> Term.t -> t -> t
   val max_term_depth : t -> int -> t
   val add_triggers :
-    backward:Util.inst_kind -> t -> (int * Explanation.t) Formula.Map.t -> t
+    backward:Util.inst_kind -> t -> (int * Explanation.t) Formula.Map.t ->
+    grd:bool ->
+    t
   val terms_info : t -> info Term.Map.t * T.t list MT.t SubstT.t
   val query : t -> theory -> (trigger_info * gsubst list) list
 
@@ -527,7 +529,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   let max_term_depth env mx = {env with max_t_depth = max env.max_t_depth mx}
 
-  let add_triggers ~backward env formulas =
+  let add_triggers ~backward env formulas ~grd =
     MF.fold
       (fun lem (age, dep) env ->
          match F.view lem with
@@ -541,6 +543,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
            in
            List.fold_left
              (fun env tr ->
+        if grd || tr.F.default then
                 let info =
                   { trigger = tr;
                     trigger_age = age ;
@@ -549,6 +552,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
                     trigger_dep = dep}
                 in
                 add_trigger info env
+        else
+          env
              ) env tgs
 
          | _ -> assert false
