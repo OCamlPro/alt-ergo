@@ -33,11 +33,13 @@ module type S = sig
 
   val empty : t
 
+  type pats
+
   val make:
     max_t_depth:int ->
     Matching_types.info Term.Map.t ->
     Term.t list Term.Map.t Term.Subst.t ->
-    Matching_types.trigger_info list ->
+    pats list ->
     t
 
   val add_term : term_info -> Term.t -> t -> t

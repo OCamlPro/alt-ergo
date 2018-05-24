@@ -42,11 +42,12 @@ module type S = sig
 
   val empty : t
 
+  type pats
   val make:
     max_t_depth:int ->
     Matching_types.info Term.Map.t ->
     Term.t list Term.Map.t Term.Subst.t ->
-    Matching_types.trigger_info list ->
+    pats list ->
     t
 
   val add_term : term_info -> Term.t -> t -> t
@@ -71,11 +72,19 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   type theory = X.t
 
+  type pats =
+    F.trigger list *
+    int * (* age *)
+    F.t * (* lem *)
+    F.t * (* lem's form *)
+    Explanation.t * (* dep *)
+    bool (* grd *)
+
   type t = {
     fils : T.t list MT.t SubstT.t ;
     info : info MT.t ;
     max_t_depth : int;
-    pats : trigger_info list
+    pats : pats list
   }
 
   exception Echec
@@ -214,7 +223,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
     in
     if info.term_age > age_limite () then env else add_rec env t
 
-  let add_trigger p env = { env with pats = p :: env.pats }
+  let add_trigger p env =
+    { env with pats = p :: env.pats }
 
   let all_terms
       f ty env tbox
@@ -505,10 +515,58 @@ module Make (X : Arg) : S with type theory = X.t = struct
     cache_are_equal_light := MT2.empty;
     cache_are_equal_full  := MT2.empty
 
+
+
+
+
+  let matching_one env tbox age lem f dep tr =
+    let pat_info =
+      { trigger = tr;
+        trigger_age = age ;
+	trigger_orig = lem ;
+	trigger_formula = f ;
+	trigger_dep = dep}
+    in
+    matching env tbox pat_info
+
+    let matching_all env tbox acc (tgs, age, lem, f, dep, grd) =
+      if grd then
+        List.fold_left
+          (fun acc tr ->
+             (matching_one env tbox age lem f dep tr) :: acc) acc tgs
+      else
+        let default, others = List.partition (fun t -> t.F.default) tgs in
+        let ok = ref false in
+        let acc =
+          List.fold_left
+            (fun acc tr ->
+               match matching_one env tbox age lem f dep tr with
+               | (_, []) -> acc
+               | res -> ok := true; res :: acc
+            ) acc default
+        in
+        let acc = ref acc in
+        let others = ref others in
+        try
+          while not !ok do
+            match !others with
+              [] -> raise Exit
+            | tr :: l ->
+              others := l;
+              match matching_one env tbox age lem f dep tr with
+              | (_, []) -> ()
+              | res -> ok := true; acc := res :: !acc
+          done;
+          !acc
+        with Exit -> !acc
+
+
+  
+  
   let query env tbox =
     reset_cache_refs ();
     try
-      let res = List.rev_map (matching env tbox) env.pats in
+      let res = List.fold_left (matching_all env tbox) [] env.pats in
       reset_cache_refs ();
       res
     with e ->
@@ -541,21 +599,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
              | Util.Backward -> Lazy.force tgs1
              | Util.Forward -> Lazy.force tgs2
            in
-           List.fold_left
-             (fun env tr ->
-        if grd || tr.F.default then
-                let info =
-                  { trigger = tr;
-                    trigger_age = age ;
-                    trigger_orig = lem ;
-                    trigger_formula = f ;
-                    trigger_dep = dep}
-                in
-                add_trigger info env
-        else
-          env
-             ) env tgs
-
+          add_trigger (tgs, age, lem, f, dep, grd) env
          | _ -> assert false
       ) formulas env
 
