@@ -48,6 +48,7 @@ type trigger = {
   from_user : bool;
   guard : Literal.LT.t option;
   default : bool;
+  nb_success : int ref;
 }
 
 type quantified = {

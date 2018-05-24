@@ -408,6 +408,7 @@ and make_trigger
   { F.content ; guard ; depth; semantic = []; (* will be set by theories *)
     hyp; from_user;
     default;
+    nb_success = ref 0;
   }
 
 and make_pred up_qv inline_lets defns abstr z id =

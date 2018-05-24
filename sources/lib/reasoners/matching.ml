@@ -546,16 +546,24 @@ module Make (X : Arg) : S with type theory = X.t = struct
             ) acc default
         in
         let acc = ref acc in
+        let others =
+          List.stable_sort
+            (fun t1 t2 -> !(t1.F.nb_success) - !(t2.F.nb_success))
+            others
+        in
         let others = ref others in
         try
-          while not !ok do
+          while greedy () || not !ok do
             match !others with
               [] -> raise Exit
             | tr :: l ->
               others := l;
               match matching_one env tbox age lem f dep tr with
               | (_, []) -> ()
-              | res -> ok := true; acc := res :: !acc
+              | res ->
+                ok := true;
+                incr tr.F.nb_success;
+                acc := res :: !acc
           done;
           !acc
         with Exit -> !acc

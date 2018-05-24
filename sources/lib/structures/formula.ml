@@ -49,7 +49,8 @@ type trigger = {
   depth : int;
   from_user : bool;
   guard : Literal.LT.t option;
-  default : bool
+  default : bool;
+  nb_success : int ref;
 }
 
 and quantified = {
@@ -565,12 +566,13 @@ let resolution_triggers is_back f name binders free_vty =
        if Term.Set.exists (cand_is_more_general t) others then acc
        else
          { content = [t];
+          nb_success = ref 0;
            hyp = [];
            semantic = [];
            depth = (Term.view t).Term.depth;
            from_user = false;
           guard = None;
-          default = false;
+          default = true;
          } :: acc
     )cand []
 
