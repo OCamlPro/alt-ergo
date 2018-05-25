@@ -126,6 +126,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        It forms with dlvl a total ordering on the formulas in gamma.
     *)
     gamma : (F.gformula * Ex.t * int * int) MF.t;
+    lems_track : ((F.quantified * Symbols.t Symbols.Map.t * Ex.t) list) MF.t;
     nb_related_to_goal : int;
     nb_related_to_hypo : int;
     nb_related_to_both : int;
@@ -732,11 +733,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        nb_related_to_hypo = t.nb_related_to_hypo + 1}
 
   let renamed_vars {F.main; binders} =
+    let renaming = ref Symbols.Map.empty in
     let sbt =
       Symbols.Map.fold
         (fun sy (ty, _) sbt ->
            let k = Symbols.var (Hstring.fresh_string()) in
            let t = Term.make k [] ty in
+           renaming := Symbols.Map.add k sy !renaming;
            Symbols.Map.add sy t sbt
 
         )binders Symbols.Map.empty
@@ -745,15 +748,29 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if debug_sat () then
       fprintf fmt "renamed vars of:@.%a@.@.is@.@.%a@.@."
         F.print main F.print res;
-    res
+    res, !renaming
 
   module Resolution = struct
 
     module EM = Instances.EM
+    module Hs = Hstring
+    module MH = Hs.Map
+    module T = Term
 
-    exception Res of exn
+    type status =
+      | Ok of { hs : Hs.t; t : Term.t; is_neg : bool; is_grd : bool; ex : Ex.t }
+      | Ignore
+      | Fail
 
-    let match_term env p t inst tbox =
+    type info =
+      {term : Term.t;
+       ex : Explanation.t;
+       form : F.t;
+       lems : (F.quantified * Symbols.t Symbols.Map.t * Ex.t) list;
+      }
+    exception Not_sat of t
+
+    let match_term env pp tt inst tbox sols check_unsat =
       let dummy_subst = {
         Matching_types.sbs = Term.Subst.empty;
         sty = Ty.esubst;
@@ -763,66 +780,111 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         s_lem_orig = F.vrai;
       }
       in
-      match EM.match_term inst tbox dummy_subst p t with
+      match EM.match_term inst tbox dummy_subst pp.term tt.term with
       | [] -> ()
-      | _ ->
+      | l ->
+        let res =
+          List.fold_left
+            (fun acc {Matching_types.sbs ; sty} ->
+               List.fold_left
+                 (fun acc (q, renaming, ex) ->
         if debug_sat () then
-          fprintf fmt "PB is UNK 1 (match)@.";
-        raise (Res (I_dont_know env))
+                      fprintf fmt "main = %a@." F.print q.F.main;
+                    let sbs =
+                      Term.Subst.fold
+                        (fun k t acc ->
+                           try
+                             let sy = Symbols.Map.find k renaming in
+                             Term.Subst.add sy t acc
+                           with Not_found ->
+                             assert (not (Symbols.Map.mem k q.F.binders));
+                             acc
+                        )sbs Term.Subst.empty
+                    in
+                    let m = F.apply_subst (sbs, sty) q.F.main in
+                    if debug_sat () then begin
+                      fprintf fmt "m  = %a@." F.print m;
+                      fprintf fmt "sbt = %a@."
+                        (Term.Subst.print Term.print) sbs;
+                    end;
+                    if F.equal m q.F.main then
+                      begin (*what to do ?*)
+                        if not check_unsat then raise (Not_sat env)
+                        else acc
+                      end
+                    else
+                      let g =
+                          F.mk_forall
+                          q.F.name q.F.loc q.F.binders q.F.triggers m 0 None
+                      in
+                      if MF.mem g env.gamma then acc
+                      else begin
+                        if debug_sat () then
+                          fprintf fmt "inst %a@." F.print g;
+                        (mk_gf g q.F.name true false, ex) :: acc
+                      end
+                 )acc pp.lems
+            )!sols l
+        in
+        (*if debug_sat () then
+          fprintf fmt "PB is UNK 1 (match %a against %a)@."
+            Term.print pp.term Term.print tt.term;
+          if debug_sat () then fprintf fmt "correct ? @.";*)
+        if not check_unsat && res != [] then raise (Not_sat env);
+        sols := res
 
-    module Hs = Hstring
-    module MH = Hs.Map
-    module T = Term
-
-    type status =
-      | Ok of { hs : Hs.t; t : Term.t; is_neg : bool; is_grd : bool }
-      | Ignore
-      | Fail
-
-    let extract_pred f =
+    let extract_pred f ex =
       match F.view f with
       | F.Literal a ->
         begin match Literal.LT.view a, Literal.LT.is_ground a with
           | Literal.Pred(t, is_neg), is_grd ->
             begin match T.view t with
               (* should we exclude bool vars ? and fail ?*)
-              | {T.f = Symbols.Name(hs, _)} -> Ok { hs; t; is_neg; is_grd }
+              | {T.f = Symbols.Name(hs, _)} -> Ok { hs; t; is_neg; is_grd; ex}
               | _ -> if is_grd then Ignore else Fail
             end
           | _, is_grd -> if is_grd then Ignore else Fail
         end
       | _ -> Ignore
 
-    let literals_of_gamma env =
+    let literals_of_gamma env check_unsat =
       MF.fold
-        (fun f _ acc ->
-           match extract_pred f with
+        (fun f (gf,ex,_,_) acc ->
+           match extract_pred f ex with
            | Ignore ->
              acc
 
            | Fail ->
+             if check_unsat then acc
+             else begin
              if debug_sat () then
                fprintf fmt "PB is UNK 2 (unsupported pred %a)@."
                  F.print f;
-             raise (Res (I_dont_know env))
+               raise (Not_sat env)
+             end
 
-           | Ok { hs; t; is_neg; is_grd } ->
+           | Ok { hs; t; is_neg; is_grd; ex } ->
              let pos_g, pos_n, neg_g, neg_n =
                try MH.find hs acc with Not_found -> [], [], [], []
              in
+             let lems = try MF.find f env.lems_track with Not_found -> [] in
+             if debug_sat () then
+               fprintf fmt "%d lems for %a@." (List.length lems) F.print f;
+             let e = { term = t; form =f; ex; lems } in
              let hs_acc = match is_neg, is_grd with
-               | false, true  -> t::pos_g, pos_n, neg_g, neg_n
-               | false, false -> pos_g, t::pos_n, neg_g, neg_n
-               | true , true  -> pos_g, pos_n, t::neg_g, neg_n
-               | true , false -> pos_g, pos_n, neg_g, t::neg_n
+               | false, true  -> e::pos_g, pos_n, neg_g, neg_n
+               | false, false -> pos_g, e::pos_n, neg_g, neg_n
+               | true , true  -> pos_g, pos_n, e::neg_g, neg_n
+               | true , false -> pos_g, pos_n, neg_g, e::neg_n
              in
              MH.add hs hs_acc acc
         ) env.gamma MH.empty
 
-    let check_if_sat env =
-      let mh = literals_of_gamma env in
+    let check_if_sat env ~check_unsat =
+      let mh = literals_of_gamma env check_unsat in
       let tbox = Th.get_case_split_env env.tbox in
       let inst = Inst.matching_env env.inst in
+      let sols = ref [] in
       if debug_sat () then
         fprintf fmt "[check_if_sat] %d hs to consider@." (MH.cardinal mh);
       MH.iter
@@ -835,7 +897,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            | _, [], _, _ ->
              List.iter
                (fun p ->
-                  List.iter (fun t -> match_term env p t inst tbox) pos_g)
+                  List.iter (fun t ->
+                      match_term env p t inst tbox sols check_unsat)
+                    pos_g)
                neg_n;
              if debug_sat () then
                fprintf fmt "for hs = %s : sat 2@." (Hs.view hs);
@@ -844,22 +908,56 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            | _, _, _, [] ->
              List.iter
                (fun p ->
-                  List.iter (fun t -> match_term env p t inst tbox) neg_g)
+                  List.iter (fun t ->
+                      match_term env p t inst tbox sols check_unsat)
+                    neg_g)
                pos_n;
              if debug_sat () then
                fprintf fmt "for hs = %s : sat 3@." (Hs.view hs);
 
            | _ ->
+             if check_unsat then ()
+             else begin
              if debug_sat () then
                fprintf fmt "PB is UNK 3 (hs = %s)@." (Hs.view hs);
-             raise (Res (I_dont_know env))
+               raise (Not_sat env)
+             end
         )mh;
+      begin
       if debug_sat () then
-        fprintf fmt "PB is SAT@.";
-      raise (Sat env)
+          if !sols == [] then
+            fprintf fmt "PB is SAT@."
+          else
+            fprintf fmt "PB generated %d instances@." (List.length !sols);
+      end;
+      !sols
 
+
+    let resolution env =
+      try check_if_sat env ~check_unsat:true
+      with
+      | Sat _ | I_dont_know _ -> []
+      | e ->
+        fprintf fmt "%s@." (Printexc.to_string e);
+        assert false
 
   end
+  let add_lems_track env xxx q renaming ex =
+    let l = try MF.find xxx env.lems_track with Not_found -> [] in
+    {env with lems_track = MF.add xxx ((q, renaming, ex) :: l) env.lems_track}
+
+  let update_lems_track ground f l env =
+    if ground then env
+    else
+      try
+        let parent = MF.find f env.lems_track in
+        let lems_track =
+          List.fold_left
+            (fun lems_track g -> MF.add g parent lems_track)
+            env.lems_track l
+        in
+        {env with lems_track}
+      with Not_found -> env
 
   let rec asm_aux ?(ground=true) acc list =
     List.fold_left
@@ -903,12 +1001,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            let env = update_nb_related env ff in
            match F.view f with
            | F.Unit (f1, f2) ->
+             let env = update_lems_track ground f [f1; f2] env in
              Options.tool_req 2 "TR-Sat-Assume-U";
              let lst = [{ff with F.f=f1},dep ; {ff with F.f=f2},dep] in
              asm_aux (env, true, tcp, ap_delta, lits) lst
 
            | F.Clause(f1,f2,is_impl) ->
              Options.tool_req 2 "TR-Sat-Assume-C";
+             let env = update_lems_track ground f [f1; f2] env in
              let p1 = {ff with F.f=f1} in
              let p2 = {ff with F.f=f2} in
              let p1, p2 =
@@ -916,7 +1016,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                  if is_impl || F.size f1 <= F.size f2 then p1, p2 else p2, p1
                else
                  let open Resolution in
-                 match extract_pred f1, extract_pred f2 with
+                 match extract_pred f1 dep, extract_pred f2 dep with
                  | Fail, _ -> p2, p1
                  | _, Fail -> p1, p2
                  | Ok _, _ -> p1, p2
@@ -929,18 +1029,25 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            | F.Lemma l ->
              Options.tool_req 2 "TR-Sat-Assume-Ax";
              let inst_env = Inst.add_lemma env.inst ff dep in
+             let xxx, renaming = renamed_vars l in
+             let env = add_lems_track env xxx l renaming dep in
              asm_aux
                ~ground:false
                ({env with inst = inst_env}, true, tcp, ap_delta, lits)
-               [{ff with F.f = renamed_vars l}, dep]
+               [{ff with F.f = xxx}, dep]
 
            | F.Literal a ->
+             (* What is the best strategy here ? propagate to Th and inst or
+                not ?*)
+             if not ground then env, bcp, tcp, ap_delta, lits
+             else
              let lits = (a, ff, dep, env.dlevel, env.plevel)::lits in
              let acc = env, true, true, ap_delta, lits in
              begin
                try (* ground preds bahave like proxies of lazy CNF *)
                  let af, adep = A.LT.Map.find a env.ground_preds in
-                 asm_aux acc [{ff with F.f = af}, Ex.union dep adep]
+                   asm_aux acc
+                     [{ff with F.f = af}, Ex.union dep adep]
                with Not_found -> acc
              end
 
@@ -1242,8 +1349,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if greedy () then
       begin
         let f =
-          try Resolution.check_if_sat env; (fun e -> raise (I_dont_know e))
-          with Resolution.Res exn -> fun e -> raise exn
+          try
+            if Resolution.check_if_sat env ~check_unsat:false == [] then
+              (fun e -> raise (Sat e))
+            else
+              (fun e -> raise (I_dont_know e))
+          with Resolution.Not_sat t -> fun e -> raise (I_dont_know e)
         in
         return_answer env 1 f
       end;
@@ -1265,8 +1376,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if ok1 || ok2 || ok3 || ok4 then env
     else
       let f =
-        try Resolution.check_if_sat env; (fun e -> raise (I_dont_know e))
-        with Resolution.Res exn -> fun e -> raise exn
+        try
+          if Resolution.check_if_sat env ~check_unsat:false == [] then
+            (fun e -> raise (Sat e))
+          else
+            (fun e -> raise (I_dont_know e))
+        with Resolution.Not_sat t -> fun e -> raise (I_dont_know e)
       in
       return_answer env 1 f
 
@@ -1275,6 +1390,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let env = do_case_split env Util.BeforeMatching in
     let env = compute_concrete_model env 2 in
     let env = new_inst_level env in
+    let inst = Resolution.resolution env in
+    let env = assume env inst in
     let env, ok1 =
       inst_and_assume true Util.Normal env inst_predicates env.inst
     in
@@ -1607,6 +1724,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let tbox = Th.add_term tbox Term.faux true in
     let env = {
       gamma = MF.empty;
+      lems_track = MF.empty;
       nb_related_to_goal = 0;
       nb_related_to_hypo = 0;
       nb_related_to_both = 0;
