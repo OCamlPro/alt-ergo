@@ -272,7 +272,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
 
     let gamma g =
-      if debug_sat () && verbose () then begin
+      if false && debug_sat () && verbose () then begin
         fprintf fmt "[sat] --- GAMMA ---------------------@.";
         MF.iter (fun f (_, ex, dlvl, plvl) ->
             fprintf fmt  "(%d, %d) %a \t->\t%a@."
@@ -736,12 +736,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Symbols.Map.fold
         (fun sy (ty, _) sbt ->
            let k = Symbols.var (Hstring.fresh_string()) in
-           let t = Term.make sy [] ty in
-           Symbols.Map.add k t sbt
+           let t = Term.make k [] ty in
+           Symbols.Map.add sy t sbt
 
         )binders Symbols.Map.empty
     in
-    F.apply_subst (sbt, Ty.esubst) main
+    let res = F.apply_subst (sbt, Ty.esubst) main in
+    if debug_sat () then
+      fprintf fmt "renamed vars of:@.%a@.@.is@.@.%a@.@."
+        F.print main F.print res;
+    res
 
   let rec asm_aux acc list =
     List.fold_left
@@ -1031,7 +1035,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
            | Fail ->
              if debug_sat () then
-               fprintf fmt "PB is UNK 2 (unsupported pred)@.";
+               fprintf fmt "PB is UNK 2 (unsupported pred %a)@."
+                 F.print f;
              raise (Res (I_dont_know env))
 
            | Ok { hs; t; is_neg; is_grd } ->
