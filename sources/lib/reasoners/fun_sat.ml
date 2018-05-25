@@ -783,6 +783,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       match EM.match_term inst tbox dummy_subst pp.term tt.term with
       | [] -> ()
       | l ->
+        if not check_unsat then raise (Not_sat env);
         let res =
           List.fold_left
             (fun acc {Matching_types.sbs ; sty} ->
@@ -808,10 +809,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                         (Term.Subst.print Term.print) sbs;
                     end;
                     if F.equal m q.F.main then
-                      begin (*what to do ?*)
-                        if not check_unsat then raise (Not_sat env)
-                        else acc
-                      end
+                      acc (*what to do ?*)
                     else
                       let g =
                           F.mk_forall
