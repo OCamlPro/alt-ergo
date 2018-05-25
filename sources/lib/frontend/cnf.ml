@@ -248,6 +248,8 @@ let clean_trigger name trig =
       end;
       trig'
 
+module MTR = Map.Make(T.Set)
+
 let rec make_term up_qv inline_lets (defns:let_defns) abstr t =
   let rec mk_term (defns:let_defns) {c = {tt_ty=ty; tt_desc=tt}} =
     let ty = Ty.shorten ty in
@@ -411,6 +413,26 @@ and make_trigger
     nb_success = ref 0;
   }
 
+and make_triggers name up_qv ret_d abstr hyp qf =
+  let cpt = ref 0 in
+  let trs = MTR.fold (fun k v l -> v :: l)
+      (List.fold_left (fun acc t ->
+           let tr = make_trigger name up_qv ret_d abstr hyp t in
+           let terms = List.fold_left (fun acc t ->
+               T.Set.add t acc
+             ) T.Set.empty tr.content in
+           try
+             let tr2,_ = MTR.find terms acc in
+             if tr2.F.default then begin
+               incr cpt; MTR.add terms (tr,!cpt) acc end
+             else
+               acc
+           with
+             Not_found -> incr cpt; MTR.add terms (tr,!cpt) acc
+         ) MTR.empty qf.qf_triggers) [] in
+    List.fast_sort (fun (_,i) (_,j) ->
+      Pervasives.compare i j) trs |> List.map fst
+
 and make_pred up_qv inline_lets defns abstr z id =
   match z with
   | {c = { tt_ty = ty; tt_desc = TTvar x }} ->
@@ -541,8 +563,9 @@ and make_form up_qv inline_lets defns abstr name_base f loc =
         let hyp =
           List.map (fun f ->
               mk_form up_qv defns false f.c f.annot |> fst ) qf.qf_hyp in
-        let trs =
-          List.map (make_trigger name up_qv ret_d abstr hyp) qf.qf_triggers in
+
+      let trs = make_triggers name up_qv ret_d abstr hyp qf in
+
         (* for for_all, we should eventually inline some introduced abstractions
            before constructing the quantified formulas *)
         begin
