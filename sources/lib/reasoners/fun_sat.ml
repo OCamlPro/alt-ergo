@@ -861,7 +861,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   end
 
-  let rec asm_aux acc list =
+  let rec asm_aux ?(ground=true) acc list =
     List.fold_left
       (fun ((env, bcp, tcp, ap_delta, lits) as acc) ({F.f=f} as ff ,dep) ->
          refresh_model_handler env;
@@ -912,6 +912,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              let p1 = {ff with F.f=f1} in
              let p2 = {ff with F.f=f2} in
              let p1, p2 =
+               if ground then
+                 if is_impl || F.size f1 <= F.size f2 then p1, p2 else p2, p1
+               else
+                 let open Resolution in
+                 match extract_pred f1, extract_pred f2 with
+                 | Fail, _ -> p2, p1
+                 | _, Fail -> p1, p2
+                 | Ok _, _ -> p1, p2
+                 | _, Ok _ -> p2, p1
+                 | Ignore, Ignore ->
                if is_impl || F.size f1 <= F.size f2 then p1, p2 else p2, p1
              in
              env, true, tcp, (p1,p2,dep,is_impl)::ap_delta, lits
@@ -920,6 +930,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              Options.tool_req 2 "TR-Sat-Assume-Ax";
              let inst_env = Inst.add_lemma env.inst ff dep in
              asm_aux
+               ~ground:false
                ({env with inst = inst_env}, true, tcp, ap_delta, lits)
                [{ff with F.f = renamed_vars l}, dep]
 
