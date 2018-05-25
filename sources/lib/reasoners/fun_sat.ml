@@ -747,6 +747,120 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         F.print main F.print res;
     res
 
+  module Resolution = struct
+
+    module EM = Instances.EM
+
+    exception Res of exn
+
+    let match_term env p t inst tbox =
+      let dummy_subst = {
+        Matching_types.sbs = Term.Subst.empty;
+        sty = Ty.esubst;
+        gen = 0;
+        goal = true;
+        s_term_orig = [];
+        s_lem_orig = F.vrai;
+      }
+      in
+      match EM.match_term inst tbox dummy_subst p t with
+      | [] -> ()
+      | _ ->
+        if debug_sat () then
+          fprintf fmt "PB is UNK 1 (match)@.";
+        raise (Res (I_dont_know env))
+
+    module Hs = Hstring
+    module MH = Hs.Map
+    module T = Term
+
+    type status =
+      | Ok of { hs : Hs.t; t : Term.t; is_neg : bool; is_grd : bool }
+      | Ignore
+      | Fail
+
+    let extract_pred f =
+      match F.view f with
+      | F.Literal a ->
+        begin match Literal.LT.view a, Literal.LT.is_ground a with
+          | Literal.Pred(t, is_neg), is_grd ->
+            begin match T.view t with
+              (* should we exclude bool vars ? and fail ?*)
+              | {T.f = Symbols.Name(hs, _)} -> Ok { hs; t; is_neg; is_grd }
+              | _ -> if is_grd then Ignore else Fail
+            end
+          | _, is_grd -> if is_grd then Ignore else Fail
+        end
+      | _ -> Ignore
+
+    let literals_of_gamma env =
+      MF.fold
+        (fun f _ acc ->
+           match extract_pred f with
+           | Ignore ->
+             acc
+
+           | Fail ->
+             if debug_sat () then
+               fprintf fmt "PB is UNK 2 (unsupported pred %a)@."
+                 F.print f;
+             raise (Res (I_dont_know env))
+
+           | Ok { hs; t; is_neg; is_grd } ->
+             let pos_g, pos_n, neg_g, neg_n =
+               try MH.find hs acc with Not_found -> [], [], [], []
+             in
+             let hs_acc = match is_neg, is_grd with
+               | false, true  -> t::pos_g, pos_n, neg_g, neg_n
+               | false, false -> pos_g, t::pos_n, neg_g, neg_n
+               | true , true  -> pos_g, pos_n, t::neg_g, neg_n
+               | true , false -> pos_g, pos_n, neg_g, t::neg_n
+             in
+             MH.add hs hs_acc acc
+        ) env.gamma MH.empty
+
+    let check_if_sat env =
+      let mh = literals_of_gamma env in
+      let tbox = Th.get_case_split_env env.tbox in
+      let inst = Inst.matching_env env.inst in
+      if debug_sat () then
+        fprintf fmt "[check_if_sat] %d hs to consider@." (MH.cardinal mh);
+      MH.iter
+        (fun hs (pos_g, pos_n, neg_g, neg_n) ->
+           match pos_g, pos_n, neg_g, neg_n with
+           | [], [], _, _ | _, _, [], [] | _, [], _, [] ->
+             if debug_sat () then
+               fprintf fmt "for hs = %s : sat 1@." (Hs.view hs)
+
+           | _, [], _, _ ->
+             List.iter
+               (fun p ->
+                  List.iter (fun t -> match_term env p t inst tbox) pos_g)
+               neg_n;
+             if debug_sat () then
+               fprintf fmt "for hs = %s : sat 2@." (Hs.view hs);
+
+
+           | _, _, _, [] ->
+             List.iter
+               (fun p ->
+                  List.iter (fun t -> match_term env p t inst tbox) neg_g)
+               pos_n;
+             if debug_sat () then
+               fprintf fmt "for hs = %s : sat 3@." (Hs.view hs);
+
+           | _ ->
+             if debug_sat () then
+               fprintf fmt "PB is UNK 3 (hs = %s)@." (Hs.view hs);
+             raise (Res (I_dont_know env))
+        )mh;
+      if debug_sat () then
+        fprintf fmt "PB is SAT@.";
+      raise (Sat env)
+
+
+  end
+
   let rec asm_aux acc list =
     List.fold_left
       (fun ((env, bcp, tcp, ap_delta, lits) as acc) ({F.f=f} as ff ,dep) ->
@@ -979,120 +1093,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          if not !terminated_normally && (i = 1 || i = 2 || i = 3) then
            return_cached_model (fun () -> ())
       )
-
-  module Resolution = struct
-
-    module EM = Instances.EM
-
-    exception Res of exn
-
-    let match_term env p t inst tbox =
-      let dummy_subst = {
-        Matching_types.sbs = Term.Subst.empty;
-        sty = Ty.esubst;
-        gen = 0;
-        goal = true;
-        s_term_orig = [];
-        s_lem_orig = F.vrai;
-      }
-      in
-      match EM.match_term inst tbox dummy_subst p t with
-      | [] -> ()
-      | _ ->
-        if debug_sat () then
-          fprintf fmt "PB is UNK 1 (match)@.";
-        raise (Res (I_dont_know env))
-
-    module Hs = Hstring
-    module MH = Hs.Map
-    module T = Term
-
-    type status =
-      | Ok of { hs : Hs.t; t : Term.t; is_neg : bool; is_grd : bool }
-      | Ignore
-      | Fail
-
-    let extract_pred f =
-      match F.view f with
-      | F.Literal a ->
-        begin match Literal.LT.view a, Literal.LT.is_ground a with
-          | Literal.Pred(t, is_neg), is_grd ->
-            begin match T.view t with
-              (* should we exclude bool vars ? and fail ?*)
-              | {T.f = Symbols.Name(hs, _)} -> Ok { hs; t; is_neg; is_grd }
-              | _ -> if is_grd then Ignore else Fail
-            end
-          | _, is_grd -> if is_grd then Ignore else Fail
-        end
-      | _ -> Ignore
-
-    let literals_of_gamma env =
-      MF.fold
-        (fun f _ acc ->
-           match extract_pred f with
-           | Ignore ->
-             acc
-
-           | Fail ->
-             if debug_sat () then
-               fprintf fmt "PB is UNK 2 (unsupported pred %a)@."
-                 F.print f;
-             raise (Res (I_dont_know env))
-
-           | Ok { hs; t; is_neg; is_grd } ->
-             let pos_g, pos_n, neg_g, neg_n =
-               try MH.find hs acc with Not_found -> [], [], [], []
-             in
-             let hs_acc = match is_neg, is_grd with
-               | false, true  -> t::pos_g, pos_n, neg_g, neg_n
-               | false, false -> pos_g, t::pos_n, neg_g, neg_n
-               | true , true  -> pos_g, pos_n, t::neg_g, neg_n
-               | true , false -> pos_g, pos_n, neg_g, t::neg_n
-             in
-             MH.add hs hs_acc acc
-        ) env.gamma MH.empty
-
-    let check_if_sat env =
-      let mh = literals_of_gamma env in
-      let tbox = Th.get_case_split_env env.tbox in
-      let inst = Inst.matching_env env.inst in
-      if debug_sat () then
-        fprintf fmt "[check_if_sat] %d hs to consider@." (MH.cardinal mh);
-      MH.iter
-        (fun hs (pos_g, pos_n, neg_g, neg_n) ->
-           match pos_g, pos_n, neg_g, neg_n with
-           | [], [], _, _ | _, _, [], [] | _, [], _, [] ->
-             if debug_sat () then
-               fprintf fmt "for hs = %s : sat 1@." (Hs.view hs)
-
-           | _, [], _, _ ->
-             List.iter
-               (fun p ->
-                  List.iter (fun t -> match_term env p t inst tbox) pos_g)
-               neg_n;
-             if debug_sat () then
-               fprintf fmt "for hs = %s : sat 2@." (Hs.view hs);
-
-
-           | _, _, _, [] ->
-             List.iter
-               (fun p ->
-                  List.iter (fun t -> match_term env p t inst tbox) neg_g)
-               pos_n;
-             if debug_sat () then
-               fprintf fmt "for hs = %s : sat 3@." (Hs.view hs);
-
-           | _ ->
-             if debug_sat () then
-               fprintf fmt "PB is UNK 3 (hs = %s)@." (Hs.view hs);
-             raise (Res (I_dont_know env))
-        )mh;
-      if debug_sat () then
-        fprintf fmt "PB is SAT@.";
-      raise (Sat env)
-
-
-  end
 
   let return_answer env orig return_function =
     update_all_models_option env;
