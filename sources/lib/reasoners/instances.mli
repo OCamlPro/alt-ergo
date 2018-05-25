@@ -26,6 +26,9 @@
 (*                                                                            *)
 (******************************************************************************)
 
+
+module EM : Matching.S with type theory = Ccx.Main.t
+
 module type S = sig
   type t
   type tbox
@@ -58,6 +61,8 @@ module type S = sig
 
   val matching_terms_info :
     t -> Matching_types.info Term.Map.t * Term.t list Term.Map.t Term.Subst.t
+
+  val matching_env : t -> EM.t
 
 end
 

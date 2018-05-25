@@ -37,6 +37,7 @@ module SF = F.Set
 module Ex = Explanation
 module MT = T.Map
 
+module EM = Matching.Make(Ccx.Main)
 
 module type S = sig
   type t
@@ -71,11 +72,12 @@ module type S = sig
   val matching_terms_info :
     t -> Matching_types.info Term.Map.t * Term.t list Term.Map.t Term.Subst.t
 
+  val matching_env : t -> EM.t
+
 end
 
 module Make(X : Theory.S) : S with type tbox = X.t = struct
 
-  module EM = Matching.Make(Ccx.Main)
 
   type tbox = X.t
   type instances = (F.gformula * Ex.t) list
@@ -373,5 +375,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     else m_predicates env tbox selector ilvl backward use_cs
 
   let matching_terms_info env = EM.terms_info env.matching
+
+  let matching_env env = env.matching
 
 end

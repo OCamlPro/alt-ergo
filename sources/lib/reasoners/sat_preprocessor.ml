@@ -268,9 +268,11 @@ module Main (SatCont : Sat_solver_sig.SatContainer)
         with
         | SAT.Unsat dep -> dep
         | SAT.I_dont_know sat -> check_if_idk_is_sat env sat
-        | SAT.Sat sat ->
+        | SAT.Sat sat ->(*
            fprintf fmt "Are other SATs able to detect Satisfibility ?!";
-           assert false
+           assert false*)
+          let env = {sat; assumed = []; pred_def = []; th_axioms = []} in
+          raise (Sat env)
 
     end
   end
