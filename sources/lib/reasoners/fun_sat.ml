@@ -805,8 +805,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                     if F.equal m q.F.main then
                       acc (*what to do ?*)
                     else
-                      let triggers = [] in (*q.F.triggers*)
-                      (*test disabling triggers for reso. instances *)
+                      let triggers = q.F.triggers (* [] *) in
+                      (*test disabling triggers for reso. instances ? *)
                       let g =
                           F.mk_forall
                             q.F.name q.F.loc q.F.binders triggers m 0 None
