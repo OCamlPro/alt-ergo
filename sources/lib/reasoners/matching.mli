@@ -50,8 +50,7 @@ module type S = sig
     t
   val terms_info : t -> info Term.Map.t * Term.t list Term.Map.t Term.Subst.t
   val query : t -> theory -> (trigger_info * gsubst list) list
-  val unused_context : Formula.t -> bool
-  val match_term : t -> theory -> gsubst -> Term.t -> Term.t -> gsubst list
+  val match_one_term : t -> theory -> Term.t -> Term.t -> gsubst list
 end
 
 

@@ -771,16 +771,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     exception Not_sat of t
 
     let match_term env pp tt inst tbox sols check_unsat =
-      let dummy_subst = {
-        Matching_types.sbs = Term.Subst.empty;
-        sty = Ty.esubst;
-        gen = 0;
-        goal = true;
-        s_term_orig = [];
-        s_lem_orig = F.vrai;
-      }
-      in
-      match EM.match_term inst tbox dummy_subst pp.term tt.term with
+      if debug_sat () then
+        fprintf fmt "match_term: %a vs %a@."
+          Term.print pp.term Term.print tt.term;
+      match EM.match_one_term inst tbox pp.term tt.term with
       | [] -> ()
       | l ->
         if not check_unsat then raise (Not_sat env);
@@ -811,9 +805,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                     if F.equal m q.F.main then
                       acc (*what to do ?*)
                     else
+                      let triggers = [] in (*q.F.triggers*)
+                      (*test disabling triggers for reso. instances *)
                       let g =
                           F.mk_forall
-                          q.F.name q.F.loc q.F.binders q.F.triggers m 0 None
+                            q.F.name q.F.loc q.F.binders triggers m 0 None
                       in
                       if MF.mem g env.gamma then acc
                       else begin
@@ -878,6 +874,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              MH.add hs hs_acc acc
         ) env.gamma MH.empty
 
+    let no_common_vars {term=p} {term=t} =
+      let vp = T.vars_of p Symbols.Map.empty in
+      let vt = T.vars_of t Symbols.Map.empty in
+      let res = Symbols.Map.for_all (fun sy _ -> not (Symbols.Map.mem sy vp)) vt
+      in
+      (*fprintf fmt "NCV = %b@." res;*)
+      res
+
+
     let check_if_sat env ~check_unsat =
       let mh = literals_of_gamma env check_unsat in
       let tbox = Th.get_case_split_env env.tbox in
@@ -887,6 +892,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         fprintf fmt "[check_if_sat] %d hs to consider@." (MH.cardinal mh);
       MH.iter
         (fun hs (pos_g, pos_n, neg_g, neg_n) ->
+           if debug_sat () then begin
+             fprintf fmt "hs = %s has:@." (Hs.view hs);
+             fprintf fmt "   %d pos_g@." (List.length pos_g);
+             fprintf fmt "   %d pos_n@." (List.length pos_n);
+             fprintf fmt "   %d neg_g@." (List.length neg_g);
+             fprintf fmt "   %d neg_n@." (List.length neg_n);
+           end;
            match pos_g, pos_n, neg_g, neg_n with
            | [], [], _, _ | _, _, [], [] | _, [], _, [] ->
              if debug_sat () then
@@ -930,9 +942,58 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end;
       !sols
 
+    let check_if_unsat env =
+      let check_unsat = true in
+      let mh = literals_of_gamma env check_unsat in
+      let tbox = Th.get_case_split_env env.tbox in
+      let inst = Inst.matching_env env.inst in
+      let sols = ref [] in
+      if debug_sat () then
+        fprintf fmt "[check_if_sat] %d hs to consider@." (MH.cardinal mh);
+      MH.iter
+        (fun hs (pos_g, pos_n, neg_g, neg_n) ->
+           if debug_sat () then begin
+             fprintf fmt "hs = %s has:@." (Hs.view hs);
+             fprintf fmt "   %d pos_g@." (List.length pos_g);
+             fprintf fmt "   %d pos_n@." (List.length pos_n);
+             fprintf fmt "   %d neg_g@." (List.length neg_g);
+             fprintf fmt "   %d neg_n@." (List.length neg_n);
+           end;
+
+           (* pos_n vs neg_n x 2 *)
+           (* to be tested : may be not efficient
+           List.iter
+             (fun p ->
+                List.iter (fun t ->
+                    if no_common_vars p t then begin
+                      match_term env p t inst tbox sols check_unsat;
+                      match_term env t p inst tbox sols check_unsat
+                    end
+                  )
+                  pos_n)
+             neg_n;
+           *)
+           (* pos_g vs neg_n *)
+           List.iter
+             (fun p ->
+                List.iter (fun t ->
+                    match_term env p t inst tbox sols check_unsat)
+                  pos_g)
+             neg_n;
+
+           (* neg_g vs pos_n *)
+             List.iter
+               (fun p ->
+                  List.iter (fun t ->
+                      match_term env p t inst tbox sols check_unsat)
+                    neg_g)
+               pos_n;
+        )mh;
+      !sols
+
 
     let resolution env =
-      try check_if_sat env ~check_unsat:true
+      try check_if_unsat env
       with
       | Sat _ | I_dont_know _ -> []
       | e ->

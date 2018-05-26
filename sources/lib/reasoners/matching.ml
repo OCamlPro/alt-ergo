@@ -58,7 +58,7 @@ module type S = sig
     t
   val terms_info : t -> info Term.Map.t * T.t list MT.t SubstT.t
   val query : t -> theory -> (trigger_info * gsubst list) list
-  val match_term : t -> theory -> gsubst -> Term.t -> Term.t -> gsubst list
+  val match_one_term : t -> theory -> Term.t -> Term.t -> gsubst list
 
 end
 
@@ -366,10 +366,12 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let rec match_term env tbox ({sty=s_ty;gen=g;goal=b} as sg) pat t =
     Options.exec_thread_yield ();
     Debug.match_term sg t pat;
+
     let {T.f=f_pat;xs=pats;ty=ty_pat} = T.view pat in
-    match f_pat with
-    |	Symbols.Var hs when String.equal "_" (Hstring.view hs) -> [sg]
-    |	Symbols.Var _ ->
+    let {T.f=f_t} = T.view t in
+    match f_pat, f_t with
+      |	Symbols.Var hs, _ when String.equal "_" (Hstring.view hs) -> [sg]
+      |	Symbols.Var _, _ ->
       let sb =
         (try
            let s_ty = Ty.matching s_ty ty_pat (T.view t).T.ty in
@@ -380,6 +382,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
          with Ty.TypeClash _ -> raise Echec)
       in
       [sb]
+      (*| _, Symbols.Var _ ->
+        match_term env tbox sg t pat*)
     | _ ->
       try
         let s_ty = Ty.matching s_ty ty_pat (T.view t).T.ty in
@@ -429,6 +433,31 @@ module Make (X : Arg) : S with type theory = X.t = struct
              ) [] sb_l
         ) [sg] pats xs
     with Invalid_argument _ -> raise Echec
+
+  (* exported *)
+  let match_one_term env tbox pat t =
+    let sg = {
+      Matching_types.sbs = Term.Subst.empty;
+      sty = Ty.esubst;
+      gen = 0;
+      goal = true;
+      s_term_orig = [];
+      s_lem_orig = F.vrai;
+    }
+    in
+    let {T.f=f; xs=pats; ty=ty} = T.view pat in
+    let {T.f=t_f; xs=t_xs; ty=t_ty} = T.view t in
+    try
+      Debug.match_one_pat_against sg pat t;
+      let s_ty = Ty.matching sg.sty ty (T.view t).T.ty in
+      let sg =
+        { sg with
+          sty = s_ty; gen = -1; goal = false;
+          s_term_orig = t::sg.s_term_orig }
+      in
+      match_list env tbox sg pats t_xs
+    with Echec | Ty.TypeClash _ -> []
+
 
   let match_one_pat env tbox pat0 lsbt_acc sg =
     Debug.match_one_pat sg pat0;
@@ -537,7 +566,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
              (matching_one env tbox age lem f dep tr) :: acc) acc tgs
       else
         let default, others = List.partition (fun t -> t.F.default) tgs in
-        let ok = ref false in
+        let ok = ref true in
         let acc =
           List.fold_left
             (fun acc tr ->
