@@ -161,6 +161,8 @@ val free_vars : t -> Ty.t Symbols.Map.t
 
 val apply_subst : Term.subst -> t -> t
 
+val apply_subst_trigger : Term.subst -> trigger -> trigger
+
 val compare : t -> t -> int
 val equal : t -> t -> bool
 val hash : t -> int

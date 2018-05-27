@@ -796,7 +796,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                              acc
                         )sbs Term.Subst.empty
                     in
-                    let m = F.apply_subst (sbs, sty) q.F.main in
+                    let sbt = sbs, sty in
+                    let m = F.apply_subst sbt q.F.main in
                     if debug_sat () then begin
                       fprintf fmt "m  = %a@." F.print m;
                       fprintf fmt "sbt = %a@."
@@ -805,7 +806,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                     if F.equal m q.F.main then
                       acc (*what to do ?*)
                     else
-                      let triggers = q.F.triggers (* [] *) in
+                      let triggers =
+                        List.rev_map (F.apply_subst_trigger sbt)
+                          (List.rev q.F.triggers)
+                      in (* [] *)
                       (*test disabling triggers for reso. instances ? *)
                       let g =
                           F.mk_forall
