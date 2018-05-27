@@ -566,7 +566,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
              (matching_one env tbox age lem f dep tr) :: acc) acc tgs
       else
         let default, others = List.partition (fun t -> t.F.default) tgs in
-        let ok = ref true in
+        let ok = ref false in
         let acc =
           List.fold_left
             (fun acc tr ->
