@@ -418,6 +418,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let internal_axiom_def ax a at inst =
     Debug.internal_axiom_def ax a at;
+    if at.Atom.neg.Atom.is_true then inst
+    else
     let gax = mk_gf ax in
     let ex = Ex.singleton (Ex.Literal at) in
     Inst.add_lemma inst gax ex
