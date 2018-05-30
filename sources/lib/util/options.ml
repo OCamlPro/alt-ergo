@@ -68,6 +68,7 @@ module M = struct
   let nb_triggers = ref 2
   let max_multi_triggers_size = ref 4
   let enable_assertions = ref false
+  let enable_inst_gen = ref 0
   let no_Ematching = ref false
   let arith_matching = ref true
   let no_backjumping = ref false
@@ -380,6 +381,12 @@ module M = struct
     "-enable-assertions",
     Arg.Set enable_assertions,
     " Enable verification of some heavy invariants";
+
+    "-enable-inst-gen",
+    Arg.Set_int enable_inst_gen,
+    " enable inst gen technique. Default = 0 (disabled) | 1 = between \
+     ground predicates and (non-ground) patterns | 2 = patterns \
+     against patterns as well ";
 
     "-no-tcp",
     Arg.Set no_tcp,
@@ -839,6 +846,7 @@ let timelimit () = !M.timelimit
 let timelimit_per_goal () = !M.timelimit_per_goal
 let interpretation_timelimit () = !M.interpretation_timelimit
 let enable_assertions () = !M.enable_assertions
+let enable_inst_gen () = !M.enable_inst_gen
 let profiling () =  !M.profiling
 let profiling_period () = !M.profiling_period
 let timers () = !M.timers || !M.profiling

@@ -128,6 +128,7 @@ val debug_explanations : unit -> bool
 
 (** additional getters *)
 val enable_assertions : unit -> bool
+val enable_inst_gen : unit -> int
 val disable_ites : unit -> bool
 val type_only : unit -> bool
 val type_smt2 : unit -> bool

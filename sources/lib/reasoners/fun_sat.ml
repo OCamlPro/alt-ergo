@@ -965,7 +965,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            end;
 
            (* pos_n vs neg_n x 2 *)
-           (* to be tested : may be not efficient
+           (* to be tested : may be not efficient *)
+           if Options.enable_inst_gen () = 2 then
            List.iter
              (fun p ->
                 List.iter (fun t ->
@@ -976,7 +977,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                   )
                   pos_n)
              neg_n;
-           *)
+
+           if Options.enable_inst_gen () = 1 then begin
            (* pos_g vs neg_n *)
            List.iter
              (fun p ->
@@ -992,11 +994,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                       match_term env p t inst tbox sols check_unsat)
                     neg_g)
                pos_n;
+           end
         )mh;
       !sols
 
 
     let resolution env =
+      let inst_gen = Options.enable_inst_gen () in
+      if inst_gen <> 1 && inst_gen <> 2 then []
+      else
       try check_if_unsat env
       with
       | Sat _ | I_dont_know _ -> []
