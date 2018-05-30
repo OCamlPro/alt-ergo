@@ -420,7 +420,7 @@ and make_triggers name up_qv ret_d abstr hyp qf =
            let tr = make_trigger name up_qv ret_d abstr hyp t in
            let terms = List.fold_left (fun acc t ->
                T.Set.add t acc
-             ) T.Set.empty tr.content in
+             ) T.Set.empty tr.F.content in
            try
              let tr2,_ = MTR.find terms acc in
              if tr2.F.default then begin
