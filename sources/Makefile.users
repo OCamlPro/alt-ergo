@@ -135,6 +135,7 @@ CMO-LIB = lib/util/config.cmo \
       lib/reasoners/theory.cmo \
       lib/reasoners/instances.cmo \
       lib/reasoners/sat_solver_sig.cmo \
+      lib/reasoners/inst_gen.cmo \
       lib/reasoners/fun_sat.cmo \
       lib/reasoners/satml.cmo \
       lib/reasoners/satml_frontend.cmo \
