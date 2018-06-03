@@ -296,6 +296,7 @@ let resolution env gamma tbox inst =
   else
     try check_if_unsat env gamma tbox inst
     with
+    | Util.Timeout as e -> raise e
     | e ->
       fprintf fmt "%s@." (Printexc.to_string e);
       assert false
@@ -316,4 +317,22 @@ let update_lems_track f l env =
     in
     Some {(*env with*) lems_track}
   with Not_found -> None
+
+let renamed_vars {F.main; binders} =
+  let renaming = ref Symbols.Map.empty in
+  let sbt =
+    Symbols.Map.fold
+      (fun sy (ty, _) sbt ->
+         let k = Symbols.var (Hstring.fresh_string()) in
+         let t = Term.make k [] ty in
+         renaming := Symbols.Map.add k sy !renaming;
+         Symbols.Map.add sy t sbt
+
+      )binders Symbols.Map.empty
+  in
+  let res = F.apply_subst (sbt, Ty.esubst) main in
+  if debug_sat () then
+    fprintf fmt "renamed vars of:@.%a@.@.is@.@.%a@.@."
+      F.print main F.print res;
+  res, !renaming
 

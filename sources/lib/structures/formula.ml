@@ -310,7 +310,7 @@ let rec print fmt f =
              ))
         trs print f
     else
-      fprintf fmt "lem %s" n
+	fprintf fmt "lem %s : %d" n (hash f)
 
   | Unit(f1, f2) -> fprintf fmt "@[(%a /\\@ %a)@]" print f1 print f2
 

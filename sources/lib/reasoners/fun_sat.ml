@@ -732,24 +732,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        nb_related_to_goal = t.nb_related_to_goal + 1;
        nb_related_to_hypo = t.nb_related_to_hypo + 1}
 
-  let renamed_vars {F.main; binders} =
-    let renaming = ref Symbols.Map.empty in
-    let sbt =
-      Symbols.Map.fold
-        (fun sy (ty, _) sbt ->
-           let k = Symbols.var (Hstring.fresh_string()) in
-           let t = Term.make k [] ty in
-           renaming := Symbols.Map.add k sy !renaming;
-           Symbols.Map.add sy t sbt
-
-        )binders Symbols.Map.empty
-    in
-    let res = F.apply_subst (sbt, Ty.esubst) main in
-    if debug_sat () then
-      fprintf fmt "renamed vars of:@.%a@.@.is@.@.%a@.@."
-        F.print main F.print res;
-    res, !renaming
-
   let add_lems_track env xxx q renaming ex =
     {env with inst_gen = Inst_gen.add_lems_track env.inst_gen xxx q renaming ex}
 
@@ -831,7 +813,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            | F.Lemma l ->
              Options.tool_req 2 "TR-Sat-Assume-Ax";
              let inst_env = Inst.add_lemma env.inst ff dep in
-             let xxx, renaming = renamed_vars l in
+             let xxx, renaming = Inst_gen.renamed_vars l in
              let env = add_lems_track env xxx l renaming dep in
              asm_aux
                ~ground:false

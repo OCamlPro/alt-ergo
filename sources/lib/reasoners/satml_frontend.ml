@@ -40,6 +40,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     inst : Inst.t;
     ground_preds : (F.gformula * Ex.t) A.Map.t; (* key <-> f *)
     skolems : F.gformula A.Map.t; (* key <-> f *)
+    inst_gen : Inst_gen.t;
     add_inst: Formula.t -> bool;
   }
 
@@ -55,6 +56,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       inst = Inst.empty;
       ground_preds = A.Map.empty;
       skolems = A.Map.empty;
+      inst_gen = Inst_gen.empty;
       add_inst = fun _ -> true;
     }
 
@@ -424,9 +426,45 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let ex = Ex.singleton (Ex.Literal at) in
     Inst.add_lemma inst gax ex
 
-  let register_abstraction (env, new_abstr_vars) (f, (af, at)) =
+  let atoms_rec =
+    let open Formula in
+    let rec atoms acc f = match view f with
+      | Literal a ->
+        if Literal.LT.is_ground a then acc
+        else SF.add (F.mk_not f) (SF.add f acc)
+
+      | Lemma {main = f} | Skolem {main = f} ->
+        acc(*
+        atoms acc f
+          [@ocaml.ppwarning "is this what we want ?"]
+*)
+
+      | Unit(f1,f2) -> atoms (atoms acc f1) f2
+      | Clause(f1,f2,_) -> atoms (atoms acc f1) f2
+      | Tlet {tlet_term=t; tlet_f=lf} -> atoms acc lf
+      | Flet {flet_form=lform; flet_f=lf} ->
+        atoms (atoms acc lf) lform
+    in
+    fun f ->
+      atoms SF.empty f |> SF.elements
+
+  let update_lems_track f l env =
+    match Inst_gen.update_lems_track f l env.inst_gen with
+    | None -> env
+    | Some inst_gen -> {env with inst_gen}
+
+  let add_lems_track env xxx q renaming ex =
+    let inst_gen = Inst_gen.add_lems_track env.inst_gen xxx q renaming ex in
+    update_lems_track xxx (atoms_rec xxx) {env with inst_gen}
+
+
+  let register_abstraction (env, new_abstr_vars, new_facts) (f, (af, at)) =
     if debug_sat () && verbose () then
       fprintf fmt "abstraction of %a is %a@.@." F.print f FF.print af;
+    let q = match F.view f with
+      | F.Lemma q -> q
+      | _ -> assert false
+    in
     let lat = Atom.literal at in
     let new_abstr_vars =
       if not (Atom.is_true at) then at :: new_abstr_vars else new_abstr_vars
@@ -444,7 +482,19 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     if Atom.level at = 0 then (* at is necessarily assigned if lvl = 0 *)
       if Atom.is_true at then
-        axiom_def env (mk_gf f) Ex.empty, new_abstr_vars
+        let env, new_facts =
+          if Options.enable_inst_gen () = 0 then env, new_facts
+          else
+            let xxx, renaming = Inst_gen.renamed_vars q in
+            if debug_sat () then begin
+              fprintf fmt "lem %a becomes@." F.print f;
+              fprintf fmt "xxx = %a@." F.print xxx;
+            end;
+            let env = add_lems_track env xxx q renaming Ex.empty in
+            env, (mk_gf xxx) :: new_facts
+        in
+        axiom_def env (mk_gf f) Ex.empty, new_abstr_vars,
+        new_facts
       else begin
         assert (Atom.is_true (Atom.neg at));
         assert false (* FF.simplify invariant: should not happen *)
@@ -461,7 +511,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let nlat = A.neg lat in
       (* semantics: nlat ==> f *)
       {env with skolems = A.Map.add nlat (mk_gf f) env.skolems},
-      new_abstr_vars
+      new_abstr_vars,
+      new_facts
     end
 
   let expand_skolems env acc sa =
@@ -678,7 +729,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     updated : bool;
   }
 
-  let pre_assume (env, acc) gf =
+  let rec pre_assume (env, acc) gf =
     let {F.f=f} = gf in
     if debug_sat() then
       fprintf fmt "Entry of pre_assume: Given %a@.@." F.print f;
@@ -702,7 +753,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       with Not_found ->
         Debug.assume gf;
         match F.view f with
-        | F.Lemma _ ->
+        | F.Lemma q ->
           let ff = FF.vrai in
           let _, old_sf =
             try FF.Map.find ff env.conj with Not_found -> 0, SF.empty
@@ -713,7 +764,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              conj  = FF.Map.add ff (env.nb_mrounds, SF.add f old_sf) env.conj }
           in
           (* This assert is not true assert (dec_lvl = 0); *)
-          axiom_def env gf Ex.empty, {acc with updated = true}
+          let (env, acc) as accu =
+            axiom_def env gf Ex.empty, {acc with updated = true} in
+          if Options.enable_inst_gen () = 0 then
+            accu
+          else
+            let xxx, renaming = Inst_gen.renamed_vars q in
+            if debug_sat () then begin
+              fprintf fmt "lem %a becomes@." F.print f;
+              fprintf fmt "xxx = %a@." F.print xxx;
+            end;
+            let env = add_lems_track env xxx q renaming Ex.empty in
+            pre_assume (env, acc) {gf with F.f=xxx}
 
         | _ ->
           let ff, axs, new_vars =
@@ -731,11 +793,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              conj  = FF.Map.add ff (env.nb_mrounds, SF.add f old_sf) env.conj }
           in
           Debug.simplified_form f ff;
-          let env, new_abstr_vars =
-            List.fold_left register_abstraction (env, acc.new_abstr_vars) axs
+          let env, new_abstr_vars, new_facts =
+            List.fold_left
+              register_abstraction (env, acc.new_abstr_vars, []) axs
           in
           let acc = { acc with new_abstr_vars } in
-
+          let env, acc =
           if FF.equal ff FF.vrai then env, acc
           else
           if cnf_is_in_cdcl then
@@ -765,6 +828,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
               }
             in
             env, acc
+          in
+          List.fold_left pre_assume (env, acc) new_facts
 
   let cdcl_assume env pending ~dec_lvl =
     let { seen_f; activate; new_vars; unit; nunit; updated } = pending in
@@ -830,6 +895,23 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         env, updated || updated'
 
 
+  let mk_gamma sa =
+    if debug_sat () then
+      fprintf fmt "@.--------------------------------------@.mk_gamma:@.";
+    List.fold_left
+      (fun mf a ->
+         if debug_sat () then
+           fprintf fmt "  %a@." A.print a;
+         let f = F.mk_lit a 0 in
+         let gf = mk_gf f in
+         MF.add f (gf, Ex.empty, 0, 0) mf
+      )MF.empty sa
+
+    let inst_gen env sa =
+    let tbox = SAT.current_tbox env.satml |> Th.get_case_split_env in
+    let inst = Inst.matching_env env.inst in
+    let gamma = mk_gamma sa in
+    Inst_gen.resolution env.inst_gen gamma tbox inst
 
   let frugal_instantiation env ~dec_lvl =
     Debug.new_instances "frugal-inst" env;
@@ -837,6 +919,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let l = instantiate_ground_preds env [] sa in
     let l = expand_skolems env l sa in
     let l = new_instances false env sa l in
+    let l' = inst_gen env sa in
+    let l =
+      List.fold_left (fun l (gf, ex) ->
+          assert (Ex.is_empty ex);
+          gf :: l)
+        l l'
+    in
+    if debug_sat () then
+      fprintf fmt "%d insts gen@." (List.length l');
     let env, updated = assume_aux ~dec_lvl env l in
     env, updated
 
