@@ -1129,20 +1129,22 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let nb_ok = ref 0 in
       aux_rec ~rm_clauses env inst loop nb_ok, !nb_ok > 0
 
+  (*
   let filter_new gamma l =
     List.filter (fun ({F.f}, _) -> not (MF.mem f gamma)) l
-
-  let check_if_sat env =
+*)
+  let check_if_sat ({gamma} as env) =
     let tbox = Th.get_case_split_env env.tbox in
     let inst = Inst.matching_env env.inst in
-    Inst_gen.check_if_sat env.inst_gen env.gamma tbox inst ~check_unsat:false |>
-    (filter_new env.gamma)
+    let known_inst f = MF.mem f gamma in
+    Inst_gen.check_if_sat env.inst_gen env.gamma tbox inst
+      ~check_unsat:false known_inst
 
-  let inst_gen env =
+  let inst_gen ({gamma} as env) =
     let tbox = Th.get_case_split_env env.tbox in
     let inst = Inst.matching_env env.inst in
-    Inst_gen.resolution env.inst_gen env.gamma tbox inst
-    |> (filter_new env.gamma)
+    let known_inst f = MF.mem f gamma in
+    Inst_gen.resolution env.inst_gen env.gamma tbox inst known_inst
 
   let greedy_instantiation env =
     if greedy () then

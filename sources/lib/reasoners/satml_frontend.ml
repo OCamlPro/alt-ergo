@@ -911,7 +911,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let tbox = SAT.current_tbox env.satml |> Th.get_case_split_env in
     let inst = Inst.matching_env env.inst in
     let gamma = mk_gamma sa in
-    Inst_gen.resolution env.inst_gen gamma tbox inst
+    let known_inst = fun _ -> false in (* insts not known for CDCL !!! tricky *)
+    Inst_gen.resolution env.inst_gen gamma tbox inst known_inst
 
   let frugal_instantiation env ~dec_lvl =
     Debug.new_instances "frugal-inst" env;

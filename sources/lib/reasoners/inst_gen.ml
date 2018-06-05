@@ -61,14 +61,16 @@ let mk_gf f name mf gf =
 
 exception Not_sat of t
 
-let match_term env pp tt inst tbox sols check_unsat =
+let match_term env pp tt inst tbox sols check_unsat known_inst =
+  (* XXX : TODO : Check that E-matching is activated and that, we only have
+     uninterpreted equality. Ie. no arith symbols ... to say SAT *)
   if debug_sat () then
     fprintf fmt "match_term: %a vs %a@."
       Term.print pp.term Term.print tt.term;
   match EM.match_one_term inst tbox pp.term tt.term with
   | [] -> ()
   | l ->
-    if not check_unsat then raise (Not_sat env);
+    (*if not check_unsat then raise (Not_sat env);*)
     let res =
       List.fold_left
         (fun acc {Matching_types.sbs ; sty} ->
@@ -106,12 +108,12 @@ let match_term env pp tt inst tbox sols check_unsat =
                     F.mk_forall
                       q.F.name q.F.loc q.F.binders triggers m 0 None
                   in
-                  (*if MF.mem g gamma then acc
-                    else begin*)
-                  if debug_sat () then
-                    fprintf fmt "inst %a@." F.print g;
-                  (mk_gf g q.F.name true false, ex) :: acc
-                  (*end*)
+                  if known_inst g then acc
+                  else begin
+                    if debug_sat () then
+                      fprintf fmt "inst %a@." F.print g;
+                    (mk_gf g q.F.name true false, ex) :: acc
+                  end
              )acc pp.lems
         )!sols l
     in
@@ -178,7 +180,7 @@ let no_common_vars {term=p} {term=t} =
   res
 
 
-let check_if_sat env gamma tbox inst ~check_unsat =
+let check_if_sat env gamma tbox inst ~check_unsat known_inst =
   let mh = literals_of_gamma env gamma check_unsat in
   (*let tbox = Th.get_case_split_env env.tbox in*)
   (*let inst = Inst.matching_env env.inst in*)
@@ -203,7 +205,7 @@ let check_if_sat env gamma tbox inst ~check_unsat =
          List.iter
            (fun p ->
               List.iter (fun t ->
-                  match_term env p t inst tbox sols check_unsat)
+                  match_term env p t inst tbox sols check_unsat known_inst)
                 pos_g)
            neg_n;
          if debug_sat () then
@@ -214,13 +216,14 @@ let check_if_sat env gamma tbox inst ~check_unsat =
          List.iter
            (fun p ->
               List.iter (fun t ->
-                  match_term env p t inst tbox sols check_unsat)
+                  match_term env p t inst tbox sols check_unsat known_inst)
                 neg_g)
            pos_n;
          if debug_sat () then
            fprintf fmt "for hs = %s : sat 3@." (Hs.view hs);
 
        | _ ->
+         (* should do better for nground vs nground *)
          if check_unsat then ()
          else begin
            if debug_sat () then
@@ -237,7 +240,7 @@ let check_if_sat env gamma tbox inst ~check_unsat =
   end;
   !sols
 
-let check_if_unsat env gamma tbox inst =
+let check_if_unsat env gamma tbox inst known_inst =
   let check_unsat = true in
   let mh = literals_of_gamma env gamma check_unsat in
   (*let tbox = Th.get_case_split_env env.tbox in
@@ -262,8 +265,8 @@ let check_if_unsat env gamma tbox inst =
            (fun p ->
               List.iter (fun t ->
                   if no_common_vars p t then begin
-                    match_term env p t inst tbox sols check_unsat;
-                    match_term env t p inst tbox sols check_unsat
+                    match_term env p t inst tbox sols check_unsat known_inst;
+                    match_term env t p inst tbox sols check_unsat known_inst
                   end
                 )
                 pos_n)
@@ -274,7 +277,7 @@ let check_if_unsat env gamma tbox inst =
          List.iter
            (fun p ->
               List.iter (fun t ->
-                  match_term env p t inst tbox sols check_unsat)
+                  match_term env p t inst tbox sols check_unsat known_inst)
                 pos_g)
            neg_n;
 
@@ -282,7 +285,7 @@ let check_if_unsat env gamma tbox inst =
          List.iter
            (fun p ->
               List.iter (fun t ->
-                  match_term env p t inst tbox sols check_unsat)
+                  match_term env p t inst tbox sols check_unsat known_inst)
                 neg_g)
            pos_n;
        end
@@ -290,11 +293,11 @@ let check_if_unsat env gamma tbox inst =
   !sols
 
 
-let resolution env gamma tbox inst =
+let resolution env gamma tbox inst known_inst =
   let inst_gen = Options.enable_inst_gen () in
   if inst_gen <> 1 && inst_gen <> 2 then []
   else
-    try check_if_unsat env gamma tbox inst
+    try check_if_unsat env gamma tbox inst known_inst
     with
     | Util.Timeout as e -> raise e
     | e ->
