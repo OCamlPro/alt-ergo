@@ -96,7 +96,7 @@ let init_profiling () =
     Profiling.init ();
   end
 
-let () =
+let main () =
   let d =
     try
       Options.Time.start ();

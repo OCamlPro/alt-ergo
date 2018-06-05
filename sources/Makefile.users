@@ -158,7 +158,7 @@ CMO-PARSERS = \
 
 # parsers/why/why_parser.cmo parsers/why/why_lexer.cmo
 
-MAINCMO = $(CMO-LIB) $(CMO-PARSERS) tools/text/main_text.cmo
+MAINCMO = $(CMO-LIB) $(CMO-PARSERS) tools/text/main_text.cmo tools/text/pmain_text.cmo
 
 ifeq ($(ENABLEGUI),yes)
 	GUICMO = $(CMO-LIB) $(CMO-PARSERS) \
