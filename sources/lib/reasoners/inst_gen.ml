@@ -247,7 +247,7 @@ let check_if_unsat env gamma tbox inst known_inst =
     let inst = Inst.matching_env env.inst in*)
   let sols = ref [] in
   if debug_sat () then
-    fprintf fmt "[check_if_sat] %d hs to consider@." (MH.cardinal mh);
+    fprintf fmt "[check_if_unsat] %d hs to consider@." (MH.cardinal mh);
   MH.iter
     (fun hs (pos_g, pos_n, neg_g, neg_n) ->
        if debug_sat () then begin
@@ -272,24 +272,28 @@ let check_if_unsat env gamma tbox inst known_inst =
                 pos_n)
            neg_n;
 
-       if Options.enable_inst_gen () = 1 then begin
-         (* pos_g vs neg_n *)
-         List.iter
-           (fun p ->
-              List.iter (fun t ->
-                  match_term env p t inst tbox sols check_unsat known_inst)
-                pos_g)
-           neg_n;
+       if Options.enable_inst_gen () = 1 || Options.enable_inst_gen () = 2 then
+         begin
+           (* pos_g vs neg_n *)
+           List.iter
+             (fun p ->
+                List.iter (fun t ->
+                    match_term env p t inst tbox sols check_unsat known_inst)
+                  pos_g)
+             neg_n;
 
-         (* neg_g vs pos_n *)
-         List.iter
-           (fun p ->
-              List.iter (fun t ->
-                  match_term env p t inst tbox sols check_unsat known_inst)
-                neg_g)
-           pos_n;
-       end
+           (* neg_g vs pos_n *)
+           List.iter
+             (fun p ->
+                List.iter (fun t ->
+                    match_term env p t inst tbox sols check_unsat known_inst)
+                  neg_g)
+             pos_n;
+         end
     )mh;
+  if debug_sat () then
+    fprintf fmt "[check_if_unsat] PB generated %d instances@."
+      (List.length !sols);
   !sols
 
 
