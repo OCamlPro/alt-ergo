@@ -65,8 +65,8 @@ let () =
     let cpt = ref 0 in
     let running = ref 0 in
     try
-      while not (Queue.is_empty configs) do
-        if !running < procs then begin
+      while true do
+        if !running < procs && not (Queue.is_empty configs) then begin
           let conf = Queue.pop configs in
           let out = Unix.openfile (sprintf "%s_%d" "out" !cpt)
               [Unix.O_RDWR;Unix.O_CREAT;Unix.O_TRUNC] 0o660 in
@@ -95,11 +95,12 @@ let () =
           end;
 
           decr running
-      done
+      done;
+      assert false
     with
     | Exit | Unix.Unix_error (Unix.ECHILD,_,_) ->
       Hashtbl.iter (fun pid (cpt,out) ->
-          Unix.close out;
+          begin try Unix.close out with _ -> () end;
           begin try Unix.kill pid Sys.sigkill with _ -> () end;
           Sys.remove (sprintf "%s_%d" "out" cpt)
         ) runs;
