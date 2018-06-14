@@ -596,7 +596,10 @@ module Make
             try MX.n_find x env.monomes
             with Not_found ->
               if monomes_inited then assert false;
-              I.undefined (X.type_info x), SX.empty
+              match X.ac_extract x with
+              | Some {h=h; l=l } when Sy.(equal h (Op Mult)) ->
+                 mult_bornes_vars l env (X.type_info x), SX.empty
+              | _ -> I.undefined (X.type_info x), SX.empty
           in
 	  I.add (I.scale a i_x) i
         ) (I.point v (P.type_info p) Explanation.empty) pl
@@ -784,20 +787,34 @@ module Make
       List.fold_left (fun env (a,x) ->
         let np = P.remove x p in
         let (np,c,d) = P.normal_form_pos np in
-        try
-	  let inp = MP.n_find np env.polynomes in
-	  let new_ix =
-	    I.scale
-	      (Q.div Q.one a)
-	      (I.add i
-	         (I.scale (Q.minus d)
-		    (I.add inp
-		       (I.point c ty Explanation.empty)))) in
-	  let old_ix, ux = MX.n_find x env.monomes in
-	  let ix = I.intersect old_ix new_ix in
-          MX.n_add x (ix, ux) old_ix env
-        with Not_found -> env
-      ) env lp
+        let inp =
+          let inp =
+            try MP.n_find np env.polynomes
+            with Not_found -> I.undefined ty in
+          I.intersect inp (intervals_from_monomes env np) in
+        let new_ix =
+          I.scale
+            (Q.div Q.one a)
+            (I.add i
+               (I.scale (Q.minus d)
+                  (I.add inp
+                     (I.point c ty Explanation.empty)))) in
+        let old_ix, ux =
+          try MX.n_find x env.monomes
+          with Not_found -> I.undefined ty, SX.empty in
+        let ix = I.intersect old_ix new_ix in
+        let env = MX.n_add x (ix, ux) old_ix env in
+        SX.fold
+          (fun x env ->
+             match X.ac_extract x with
+             | Some {h=h; l=l } when Symbols.(equal h (Op Mult)) ->
+               let ix = mult_bornes_vars l env (X.type_info x) in
+               let old_ix, ux = MX.n_find x env.monomes in
+               let ix = I.intersect old_ix ix in
+               { env with monomes = MX0.add x (ix, ux) env.monomes }
+             | _ -> env)
+          ux env
+        ) env lp
 
     let update_polynomes_intervals env =
       MP.fold
@@ -898,7 +915,7 @@ module Make
         else
 	  I.new_borne_inf expl b is_le uints in
       let env = MX.n_add x (u, use_x) u0 env in
-      let env =  tighten_non_lin are_eq x use_x env expl in
+      let env = tighten_non_lin are_eq x use_x env expl in
       env, (find_eq eqs x u env)
 
     let update_ple0 are_eq env p0 is_le expl =
