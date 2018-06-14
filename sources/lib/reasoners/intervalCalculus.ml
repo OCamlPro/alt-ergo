@@ -604,6 +604,78 @@ module Make
 	  I.add (I.scale a i_x) i
         ) (I.point v (P.type_info p) Explanation.empty) pl
 
+    (* Returns a mapping from [x] to [n] such that x^n appears in all
+       terms of [p] (and [p] contains at least two monomials
+       (otherwise the returned map is empty)). *)
+    let collect_common_multiples ?(even_monom=false) p =
+      let module AC = Ac.Make (X) in
+      let collect_monome m (_, x) =
+        let m' =
+          match X.ac_extract x with
+          | Some {h=h; l=l } when Sy.(equal h (Op Mult)) ->
+            let l = AC.compact l in  (* parano ? *)
+            List.fold_left (fun m (x, n) -> MX0.add x n m) MX0.empty l
+          | _ -> MX0.singleton x 1 in
+        match m with
+        | None -> Some m'
+        | Some m ->
+          let m'' =
+            MX0.merge
+              (fun x n n' ->
+                 match n, n' with
+                 | (_, None | None, _) -> None
+                 | Some n, Some n' -> Some (min n n'))
+              m m' in
+          Some m'' in
+      let lp, cp = P.to_list p in
+      match lp with
+      | [] -> MX0.empty
+      | [p] ->
+        if even_monom then
+          match collect_monome None p with None -> MX0.empty | Some m -> m
+        else MX0.empty
+      | _ ->
+        if not Numbers.Q.(is_zero cp) then MX0.empty else
+          let m = List.fold_left collect_monome None lp in
+          match m with None -> MX0.empty | Some m -> m
+
+    (* Divides polynomial [p] by monomial [mx] (mapping x_i |-> n_i
+       and representing the monomial \prod x_i^{n_i}). All monomials
+       in [p] must be divisible by [mx]. *)
+    let div_by_monome p mx =
+      let module AC = Ac.Make (X) in
+      let div_monome x =
+        let l =
+          match X.ac_extract x with
+          | Some {h=h; l=l } when Sy.(equal h (Op Mult)) ->
+            AC.compact l  (* parano ? *)
+          | _ -> [x, 1] in
+        List.fold_left
+          (fun p (x, n) ->
+             let n = n - (try MX0.find x mx with Not_found -> 0) in
+             assert (n >= 0);
+             if n <= 0 then p else P.mult (P.power (poly_of x) n) p)
+          (P.create [] (Q.from_int 1) (P.type_info p)) l in
+      let lp, cp = P.to_list p in
+      assert (Q.is_zero cp);
+      List.fold_left
+        (fun p (a, x) -> P.add p (P.mult_const a (div_monome x)))
+        (P.create [] cp (P.type_info p)) lp
+
+    let intervals_from_monomes ?(monomes_inited=true) env p =
+      let cm = collect_common_multiples p in
+      let i = intervals_from_monomes ~monomes_inited env p in
+      if MX0.is_empty cm then i else
+        (* When the polynomial p can be easily factorized by a
+           monomial cm (i.e. p = cm * p'), also use this factorization
+           to compute intervals. *)
+        let i' =
+          let icm = mult_bornes_vars (MX0.bindings cm) env (P.type_info p) in
+          let ip' =
+            let p' = div_by_monome p cm in
+            intervals_from_monomes ~monomes_inited:false env p' in
+          I.mult icm ip' in
+        I.intersect i i'
 
     (* because, it's not sufficient to look in the interval that corresponds to
        the normalized form of p ... *)
@@ -1447,64 +1519,6 @@ module Make
           | None, _ -> acc in
       let lp, _ = P.to_list p in
       List.fold_left (fun acc (_, x) -> collect_monome acc x 1) [] lp
-
-    (* Returns a mapping from [x] to [n] such that x^n appears in all
-       terms of [p] (and [p] contains at least two monomials
-       (otherwise the returned map is empty)). *)
-    let collect_common_multiples ?(even_monom=false) p =
-      let module AC = Ac.Make (X) in
-      let collect_monome m (_, x) =
-        let m' =
-          match X.ac_extract x with
-          | Some {h=h; l=l } when Sy.(equal h (Op Mult)) ->
-            let l = AC.compact l in  (* parano ? *)
-            List.fold_left (fun m (x, n) -> MX0.add x n m) MX0.empty l
-          | _ -> MX0.singleton x 1 in
-        match m with
-        | None -> Some m'
-        | Some m ->
-          let m'' =
-            MX0.merge
-              (fun x n n' ->
-                 match n, n' with
-                 | (_, None | None, _) -> None
-                 | Some n, Some n' -> Some (min n n'))
-              m m' in
-          Some m'' in
-      let lp, cp = P.to_list p in
-      match lp with
-      | [] -> MX0.empty
-      | [p] ->
-        if even_monom then
-          match collect_monome None p with None -> MX0.empty | Some m -> m
-        else MX0.empty
-      | _ ->
-        if not Numbers.Q.(is_zero cp) then MX0.empty else
-          let m = List.fold_left collect_monome None lp in
-          match m with None -> MX0.empty | Some m -> m
-
-    (* Divides polynomial [p] by monomial [mx] (mapping x_i |-> n_i
-       and representing the monomial \prod x_i^{n_i}). All monomials
-       in [p] must be divisible by [mx]. *)
-    let div_by_monome p mx =
-      let module AC = Ac.Make (X) in
-      let div_monome x =
-        let l =
-          match X.ac_extract x with
-          | Some {h=h; l=l } when Sy.(equal h (Op Mult)) ->
-            AC.compact l  (* parano ? *)
-          | _ -> [x, 1] in
-        List.fold_left
-          (fun p (x, n) ->
-             let n = n - (try MX0.find x mx with Not_found -> 0) in
-             assert (n >= 0);
-             if n <= 0 then p else P.mult (P.power (poly_of x) n) p)
-          (P.create [] (Q.from_int 1) (P.type_info p)) l in
-      let lp, cp = P.to_list p in
-      assert (Q.is_zero cp);
-      List.fold_left
-        (fun p (a, x) -> P.add p (P.mult_const a (div_monome x)))
-        (P.create [] cp (P.type_info p)) lp
 
     (* Returns [(s, expl), (s_large, expl)]. If [s] is -1, [x]^[n] is
        known negative, if [s] is 1, it is known positive. If [s_large]
