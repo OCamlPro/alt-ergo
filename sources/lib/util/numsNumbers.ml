@@ -124,6 +124,7 @@ module Z : NumbersInterface.ZSig with type t = Big_int.big_int = struct
 
   let numbits = Big_int.num_bits_big_int
 
+  let size = Big_int.num_digits_big_int
 end
 
 

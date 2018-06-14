@@ -95,6 +95,7 @@ module Z : NumbersInterface.ZSig with type t = Z.t = struct
 
   let numbits = Z.numbits
 
+  let size = Z.size
 end
 
 

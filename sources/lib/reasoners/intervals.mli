@@ -115,6 +115,7 @@ val add_explanation : t -> Explanation.t -> t
 
 val equal : t -> t -> bool
 
+val max_den_size : t -> int
 
 type interval_matching =
   ((Numbers.Q.t * bool) option * (Numbers.Q.t * bool) option * Ty.t)

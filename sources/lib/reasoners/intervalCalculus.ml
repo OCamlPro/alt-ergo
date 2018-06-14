@@ -334,6 +334,7 @@ module Make
         (*NB: adding a new entry into the map is considered as an improvement*)
         assert_normalized_poly p;
         if I.is_strict_smaller i old || not (MP0.mem p polynomes) then
+          if I.max_den_size i > 16 then env else
           let ty = P.type_info p in
           let polynomes = MP0.add p i polynomes in
           let improved_p = SP.add p env.improved_p in
@@ -378,6 +379,7 @@ module Make
         (*NB: adding a new entry into the map is considered as an improvement*)
         assert_is_alien x;
         if I.is_strict_smaller i old || not (MX0.mem x monomes) then
+          if I.max_den_size i > 16 then env else
           let ty = X.type_info x in
           let monomes = MX0.add x e monomes in
           let improved_x = SX.add x env.improved_x in

@@ -29,6 +29,7 @@
 open Format
 open Options
 
+module Z = Numbers.Z
 module Q = Numbers.Q
 
 module Ex = Explanation
@@ -1027,6 +1028,16 @@ let equal i1 i2 =
       )i1.ints i2.ints;
     true
   with Exit | Invalid_argument _ -> false
+
+let max_den_size i =
+  let l = bounds_of i in
+  List.fold_left
+    (fun s (b, b') ->
+       let sz (b, _) = match b with
+         | None -> 0
+         | Some (b, _) -> Z.size (Q.den b) in
+       max s (max (sz b) (sz b')))
+    0 l
 
 let min_bound {ints; is_int; expl} = match ints with
   | [] -> assert false

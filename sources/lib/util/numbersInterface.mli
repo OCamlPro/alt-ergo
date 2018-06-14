@@ -80,6 +80,9 @@ module type ZSig = sig
 
   (** return the number of bits set to one in the given integer *)
   val numbits : t -> int
+
+  (** Returns the number of machine words used to represent the number. *)
+  val size: t -> int
 end
 
 
