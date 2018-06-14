@@ -727,20 +727,20 @@ let max_merge b1 b2 =
     | Strict (v, _) -> Strict (v, ex)
 
 let power_bornes p (b1,b2) =
-  if neg_borne b1 && pos_borne b2 then
+  if pos_borne b1 && pos_borne b2 then
+    (power_borne_inf p b1, power_borne_sup p b2)
+  else if neg_borne b1 && neg_borne b2 then
+    match p with
+      | 0 -> assert false
+      | p when p mod 2 = 0 -> (power_borne_inf p b2, power_borne_sup p b1)
+      | _ -> (power_borne_inf p b1, power_borne_sup p b2)
+  else if neg_borne b1 && pos_borne b2 then
     match p with
       | 0 -> assert false
       | p when p mod 2 = 0 ->
 	(* max_merge to have explanations !!! *)
 	let m = max_merge (power_borne_sup p b1) (power_borne_sup p b2) in
 	(Large (Q.zero, Ex.empty), m)
-      | _ -> (power_borne_inf p b1, power_borne_sup p b2)
-  else if pos_borne b1 && pos_borne b2 then
-    (power_borne_inf p b1, power_borne_sup p b2)
-  else if neg_borne b1 && neg_borne b2 then
-    match p with
-      | 0 -> assert false
-      | p when p mod 2 = 0 -> (power_borne_inf p b2, power_borne_sup p b1)
       | _ -> (power_borne_inf p b1, power_borne_sup p b2)
   else assert false
 
