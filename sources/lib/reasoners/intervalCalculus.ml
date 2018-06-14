@@ -1947,6 +1947,44 @@ module Make
           else []
         | _ -> assert false
 
+    let two = Q.from_int 2
+
+    let case_split_div_mul f env =
+      let dens =
+        MP.fold
+          (fun p _ dens -> List.rev_append (f p) dens)
+          env.polynomes [] in
+      List.fold_left
+        (fun cs ((x, _) as xn) ->
+           match cs with
+           | _ :: _ -> cs
+           | [] ->
+             let (s, _), (s_large, _) = test_sign xn env in
+             if s <> 0 then [] else
+             if s_large >= 0 then
+               (* no info on sign of p or p >= 0, try case split p <= 0 *)
+               let r1 = x in
+               let r2 = alien_of (P.create [] Q.zero (X.type_info x)) in
+               [LR.mkv_builtin true ale [r1; r2], true, CS (Th_arith, two)]
+             else (* if s_large < 0 then *)
+               (* p <= 0, try case split p >= 0 *)
+               let r1 = alien_of (P.create [] Q.zero (X.type_info x)) in
+               let r2 = x in
+               [LR.mkv_builtin true ale [r1; r2], true, CS (Th_arith, two)])
+        [] dens
+
+    let case_split_div = case_split_div_mul collect_denominators
+
+    let case_split_mul env =
+      let cs =
+        let f p = MX0.bindings (collect_common_multiples p) in
+        case_split_div_mul f env in
+      match cs with
+      | _ :: _ -> cs
+      | [] ->
+        let f p = MX0.bindings (collect_common_multiples (* ~even_monom:true *) p) in
+        case_split_div_mul f env
+
     let default_case_split env uf ~for_model =
       Options.tool_req 4 "TR-Arith-CaseSplit";
       match check_size for_model  env (Sim_Wrap.case_split env uf) with
@@ -1956,6 +1994,12 @@ module Make
             let cs2, sz2 =  case_split_monomes env in
             match check_size for_model env cs1, check_size for_model env cs2
             with
+            | [], [] ->
+              begin
+                match check_size for_model env (case_split_div env) with
+                | [] -> check_size for_model env (case_split_mul env)
+                | cs -> cs
+              end
             | [], cs | cs, []  -> cs
             | cs1, cs2 -> if Q.compare sz1 sz2 < 0 then cs1 else cs2
           end
