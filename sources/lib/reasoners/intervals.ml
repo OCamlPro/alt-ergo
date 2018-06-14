@@ -844,10 +844,12 @@ let root_exces_borne is_int x n =
         else Large (s, e)
 
 let sqrt_interval is_int (l, ex) (b1,b2) =
-  let l1 = minus_borne (root_exces_borne is_int b2 2) in
-  let u1 = minus_borne (root_default_borne is_int b1 2) in
-  let l2 = root_default_borne is_int b1 2 in
-  let u2 = root_exces_borne is_int b2 2 in
+  let exces_b2 = root_exces_borne is_int b2 2 in
+  let default_b1 = root_default_borne is_int b1 2 in
+  let l1 = minus_borne exces_b2 in
+  let u1 = minus_borne default_b1 in
+  let l2 = default_b1 in
+  let u2 = exces_b2 in
   let c1 = compare_bornes l1 u1 in
   let c2 = compare_bornes l2 u2 in
   if c1 > 0 then
