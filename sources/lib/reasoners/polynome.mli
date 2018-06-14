@@ -47,6 +47,7 @@ module type T = sig
   val add : t -> t -> t
   val sub : t -> t -> t
   val mult : t -> t -> t
+  val power : t -> int -> t  (* p^n, n must be positive *)
   val mult_const : Numbers.Q.t -> t -> t
   val add_const : Numbers.Q.t -> t -> t
   val div : t -> t -> t * bool

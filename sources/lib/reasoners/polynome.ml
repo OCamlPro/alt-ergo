@@ -52,6 +52,7 @@ module type T = sig
   val add : t -> t -> t
   val sub : t -> t -> t
   val mult : t -> t -> t
+  val power : t -> int -> t
   val mult_const : Q.t -> t -> t
   val add_const : Q.t -> t -> t
   val div : t -> t -> t * bool
@@ -219,6 +220,12 @@ module Make (X : S) = struct
     Options.tool_req 4 "TR-Arith-Poly mult";
     let p = mult_const p1.c p2 in
     M.fold (fun x a p -> add (mult_monome a x p2) p) p1.m p
+
+  (* n must be >= 1 *)
+  let rec power p n =
+    if n <= 1 then p else
+      let p' = power p (n / 2) in
+      if n mod 2 = 0 then mult p' p' else mult (mult p' p') p
 
   let sub p1 p2 =
     Options.tool_req 4 "TR-Arith-Poly moins";

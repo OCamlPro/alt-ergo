@@ -1407,6 +1407,297 @@ module Make
     let add_ineq a v ineqs =
       match a with None -> ineqs | Some a -> MPL.add a v ineqs
 
+    let add_ineq are_eq p1 p2 is_le root expl env rm =
+      let ineq = Oracle.create_ineq p1 p2 is_le root expl in
+      match ineq_status ineq with
+      | Bottom -> raise (Exception.Inconsistent (expl, env.classes))
+      | Trivial_eq | Trivial_ineq _ ->
+        {env with inequations=remove_ineq root env.inequations},
+        false, (match root with None -> rm | Some a -> a:: rm)
+      | Monome _
+      | Other ->
+        let env =
+          init_monomes_of_poly
+            are_eq env ineq.Oracle.ple0 SX.empty expl
+        in
+        let env = update_ple0 are_eq env ineq.Oracle.ple0 is_le expl in
+        {env with inequations=add_ineq root ineq env.inequations},
+        true, rm
+
+    (* Returns a list of pairs [x, n] such that x^n appears as
+       denominator in [p]. The returned association list may contain
+       duplicates. *)
+    let collect_denominators p =
+      let rec collect_monome acc x n =
+        match X.ac_extract x with
+        | Some {h=h; l=l } when Sy.(equal h (Op Mult)) ->
+          List.fold_left
+            (fun acc (x, n') -> collect_monome acc x (n * n'))
+            acc l
+        | _ ->
+          match X.term_extract x with
+          | Some t, _ ->
+            begin
+              match Term.view t with
+              | {Term.f = Sy.(Op Div); xs = [a; b]} ->
+                let acc = (fst (X.make b), n) :: acc in
+                collect_monome acc (fst (X.make a)) n
+              | _ -> acc
+            end
+          | None, _ -> acc in
+      let lp, _ = P.to_list p in
+      List.fold_left (fun acc (_, x) -> collect_monome acc x 1) [] lp
+
+    (* Returns a mapping from [x] to [n] such that x^n appears in all
+       terms of [p] (and [p] contains at least two monomials
+       (otherwise the returned map is empty)). *)
+    let collect_common_multiples ?(even_monom=false) p =
+      let module AC = Ac.Make (X) in
+      let collect_monome m (_, x) =
+        let m' =
+          match X.ac_extract x with
+          | Some {h=h; l=l } when Sy.(equal h (Op Mult)) ->
+            let l = AC.compact l in  (* parano ? *)
+            List.fold_left (fun m (x, n) -> MX0.add x n m) MX0.empty l
+          | _ -> MX0.singleton x 1 in
+        match m with
+        | None -> Some m'
+        | Some m ->
+          let m'' =
+            MX0.merge
+              (fun x n n' ->
+                 match n, n' with
+                 | (_, None | None, _) -> None
+                 | Some n, Some n' -> Some (min n n'))
+              m m' in
+          Some m'' in
+      let lp, cp = P.to_list p in
+      match lp with
+      | [] -> MX0.empty
+      | [p] ->
+        if even_monom then
+          match collect_monome None p with None -> MX0.empty | Some m -> m
+        else MX0.empty
+      | _ ->
+        if not Numbers.Q.(is_zero cp) then MX0.empty else
+          let m = List.fold_left collect_monome None lp in
+          match m with None -> MX0.empty | Some m -> m
+
+    (* Divides polynomial [p] by monomial [mx] (mapping x_i |-> n_i
+       and representing the monomial \prod x_i^{n_i}). All monomials
+       in [p] must be divisible by [mx]. *)
+    let div_by_monome p mx =
+      let module AC = Ac.Make (X) in
+      let div_monome x =
+        let l =
+          match X.ac_extract x with
+          | Some {h=h; l=l } when Sy.(equal h (Op Mult)) ->
+            AC.compact l  (* parano ? *)
+          | _ -> [x, 1] in
+        List.fold_left
+          (fun p (x, n) ->
+             let n = n - (try MX0.find x mx with Not_found -> 0) in
+             assert (n >= 0);
+             if n <= 0 then p else P.mult (P.power (poly_of x) n) p)
+          (P.create [] (Q.from_int 1) (P.type_info p)) l in
+      let lp, cp = P.to_list p in
+      assert (Q.is_zero cp);
+      List.fold_left
+        (fun p (a, x) -> P.add p (P.mult_const a (div_monome x)))
+        (P.create [] cp (P.type_info p)) lp
+
+    (* Returns [(s, expl), (s_large, expl)]. If [s] is -1, [x]^[n] is
+       known negative, if [s] is 1, it is known positive. If [s_large]
+       is -1, [x]^[n] is known non positive, if [s_large] is 1,
+       [x]^[n] is non negative. *)
+    let test_sign (x, n) env =
+      let p = poly_of x in
+      let i =
+        try
+          let p, c, d = P.normal_form_pos p in
+          let i = MP.n_find p env.polynomes in
+          let i = I.add i (I.point c (P.type_info p) Explanation.empty) in
+          I.scale d i
+        with Not_found ->
+          intervals_from_monomes ~monomes_inited:false env p in
+      let i = I.power n i in
+      I.sign i, I.sign_large i
+
+    (* Returns [changed, p1', p2', expl'] such that [p1'] and [p2']
+       contain less divisions and [p1'] <> [p2'] is equivalent to [p1]
+       <> [p2] for any {,dis,in}equality <>. When [changed] is
+       [false], [p1', p2', expl'] are identical to [p1, p2,
+       expl]. [expl'] is a merge of [expl] and used explanations from
+       [env]. *)
+    let try_remove_div p1 p2 env expl =
+
+      let keep_signed lxn expl =
+        List.fold_left
+          (fun (m, expl) (x, n) ->
+             let (s, ex), _ = test_sign (x, n) env in
+             if s = 0 then (m, expl) else
+               let n', s' = try MX0.find x m with Not_found -> 0, 1 in
+               MX0.add x (n' + n, s' * s) m, Explanation.union expl ex)
+          (MX0.empty, expl) lxn in
+
+      let mult p mx =
+        let mult_monome x mx =
+          let rec filter s x mx =
+            match X.ac_extract x with
+            | Some ({h=h; l=l } as ac) when Sy.(equal h (Op Mult)) ->
+              let s, xl, mx =
+                List.fold_left
+                  (fun (s, xl, mx) (x', n') ->
+                     if n' <> 1 then s, ((x', n') :: xl), mx (* TODO *) else
+                       let s, x', mx = filter s x' mx in
+                       s, ((x', n') :: xl), mx)
+                  (s, [], mx) l in
+              s, X.ac_embed { ac with l=xl }, mx
+            | _ ->
+              match X.term_extract x with
+              | Some t, _ ->
+                begin
+                  match Term.view t with
+                  | {Term.f = Sy.(Op Div); xs = [a; b]} ->
+                    let xa = fst (X.make a) in
+                    let xb = fst (X.make b) in
+                    let s, xa, mx = filter s xa mx in
+                    begin
+                      try
+                        let nb, sb = MX0.find xb mx in
+                        if nb <= 1 then s * sb, xa, MX0.remove xb mx
+                        else s, xa, MX0.add xb (nb - 1, sb) mx
+                      with Not_found ->
+                      match X.term_extract xa with
+                      | Some a, _ ->
+                        let t = Term.make Sy.(Op Div) [a; b] Ty.Treal in
+                        s, fst (X.make t), mx
+                      | _ -> s, x, mx
+                    end
+                  | _ -> s, x, mx
+                end
+              | None, _ -> s, x, mx in
+          let s, x, mx = filter 1 x mx in
+          MX.fold
+            (fun x (n, s) p ->
+               P.mult (P.power (poly_of x) n) (P.mult_const (Q.from_int s) p))
+            mx (P.mult_const (Q.from_int s) (poly_of x)) in
+        let lp, cp = P.to_list p in
+        List.fold_left
+          (fun p (a, x) -> P.add p (P.mult_const a (mult_monome x mx)))
+          (mult_monome (P.embed (P.create [] cp Ty.Treal)) mx) lp in
+
+      match P.type_info p1 with
+      | Ty.Treal ->
+        let dens1 = collect_denominators p1 in
+        let dens2 = collect_denominators p2 in
+        let dens1, expl = keep_signed dens1 expl in
+        let dens2, expl = keep_signed dens2 expl in
+        let dens =
+          MX.merge
+            (fun _ d1 d2 ->
+               match d1, d2 with
+               | Some (s1, n1), Some (s2, n2) -> Some (s1 * s2, max n1 n2)
+               | Some (s, n), None | None, Some (s, n) -> Some (s, n)
+               | None, None -> None)
+            dens1 dens2 in
+        if MX.is_empty dens then false, p1, p2, expl
+        else true, mult p1 dens, mult p2 dens, expl
+      | _ ->
+        (* TODO: things are much more tricky for integer division *)
+        false, p1, p2, expl
+
+    (* Returns [changed, p', env', expl'] such that [p'] contains less
+       common multiples than p and [p'] <> 0 is equivalent to [p] <> 0
+       where '<>' is '=' if [is_eq] is true and '<=' or '<' otherwise,
+       respectively when [large] is [true] and [false]. When [changed]
+       is [false], [p', env', expl'] are identical to [p, env,
+       expl]. [expl'] is a merge of [expl] and used explanations from
+       [env]. *)
+    let try_remove_mul are_eq p ?(large=true) ?(is_eq=false) env expl =
+
+      let keep_signed mxn expl =
+        MX0.fold
+          (fun x n (m, s, ml, sl, expl) ->
+             let (s', ex), (sl', exl) = test_sign (x, n) env in
+             if s' <> 0 then
+               MX0.add x n m, s * s', ml, sl, Explanation.union expl ex
+             else (* s' = 0 *) if sl' = 0 then m, s, ml, sl, expl
+             else
+               m, s, MX0.add x (n, sl') ml, sl * sl', Explanation.union expl ex)
+          mxn (MX0.empty, 1, MX0.empty, 1, expl) in
+
+      let p', c = P.separate_constant p in
+      let check_const =
+        match P.type_info p with
+        | Ty.Tint -> Q.is_zero c || Q.is_one c
+        | _ -> Q.is_zero c in
+      if not check_const then false, p, env, expl else
+        let multiples = collect_common_multiples ~even_monom:true p' in
+        let multiples, s, multiples_l, s_l, expl = keep_signed multiples expl in
+        let multiples, s =
+          if (is_eq || large) && Q.is_zero c then multiples, s else
+            MX0.fold (fun x (n, _) -> MX0.add x n) multiples_l multiples,
+            s * s_l in
+        (* let () = *)
+        (*   Format.printf "s = %d@." s; *)
+        (*   Format.printf *)
+        (*     "multiples = @[%a@]@." *)
+        (*     (Osdp.Utils.pp_list *)
+        (*        ~sep:" *@ " *)
+        (*        (fun fmt (x, n) -> Format.fprintf fmt "%a^%d" X.print x n)) *)
+        (*     (MX0.bindings multiples) in *)
+        if MX.is_empty multiples then false, p, env, expl
+        else
+          let env =
+            if is_eq || (large && Q.is_zero c) then env else
+              MX0.fold
+                (fun x (n, s) env ->
+                   (* let () = Debug.env env in *)
+                   (* let () = Format.printf "  %d * %a^%d > 0@." s X.print x n in *)
+                   let res =
+                     update_ple0 are_eq env
+                       (P.mult_const (Q.from_int (-s)) (P.power (poly_of x) n))
+                       false expl in
+                   (* let () = Debug.env res in *)
+                   res)
+                multiples_l env in
+          let p = div_by_monome p' multiples in
+          let p = if s > 0 then p else (* s < 0 *) P.mult_const Q.m_one p in
+          true, P.add_const c p, env, expl
+
+    let try_remove_div_mul_env are_eq env =
+      MP.fold
+        (fun p i env ->
+           let extract_bound lower f env =
+             try
+               let b, expl, large = f i in
+               let pb = P.create [] b (P.type_info p) in
+               let changed, p1, p2, expl =
+                 if lower then try_remove_div pb p env expl
+                 else try_remove_div p pb env expl in
+               let changed', p, env, expl =
+                 try_remove_mul are_eq (P.sub p1 p2) ~large env expl in
+               let b =
+                 if not (changed || changed') || P.is_empty p then None
+                 else Some (p, large, expl) in
+               b, env
+             with I.No_finite_bound -> None, env in
+           let l, env = extract_bound true I.borne_inf env in
+           let u, env = extract_bound false I.borne_sup env in
+           let add_bound b env =
+             match b with
+             | None -> env
+             | Some (p', large, expl) ->
+               let p0 = P.create [] Q.zero (P.type_info p) in
+               (* Debug.env env; *)
+               (* Format.printf "  add_ineq %a %s 0@." P.print p' (if large then "<=" else "<"); *)
+               let env, _, _ = add_ineq are_eq p' p0 large None expl env [] in
+               (* Debug.env env; *)
+               env in
+           let env = add_bound l env in
+           add_bound u env)
+        env.polynomes env
 
     (*** functions to improve intervals modulo equality ***)
     let tighten_eq_bounds env r1 r2 p1 p2 origin_eq expl =
@@ -1430,6 +1721,7 @@ module Make
     let rec loop_update_intervals are_eq env cpt =
       let cpt = cpt + 1 in
       let env = {env with improved_p=SP.empty; improved_x=SX.empty} in
+      let env = try_remove_div_mul_env are_eq env in
       let env = update_non_lin_monomes_intervals are_eq env in
       let env = Sim_Wrap.solve env 1 in
       let env = update_polynomes_intervals env in
@@ -1460,31 +1752,15 @@ module Make
 	      | L.Builtin(_, n, [r1;r2]) when is_le n || is_lt n ->
                 incr nb_num;
 		let p1 = poly_of r1 in
-		let p2 = poly_of r2 in
-		let ineq =
-                  Oracle.create_ineq p1 p2 (is_le n) root expl in
-                begin
-                  match ineq_status ineq with
-                  | Bottom -> raise (Exception.Inconsistent (expl, env.classes))
-                  | Trivial_eq | Trivial_ineq _ ->
-                     {env with inequations=remove_ineq root env.inequations},
-                     eqs, new_ineqs,
-                    (match root with None -> rm | Some a -> a:: rm)
-
-                  | Monome _
-                  | Other ->
-		     let env =
-		       init_monomes_of_poly
-                         are_eq env ineq.Oracle.ple0 SX.empty
-                         Explanation.empty
-                     in
-		     let env =
-		       update_ple0
-                         are_eq env ineq.Oracle.ple0 (is_le n) expl
-                     in
-		     {env with inequations=add_ineq root ineq env.inequations},
-                     eqs, true, rm
-                end
+                let p2 = poly_of r2 in
+                let _, p1, p2, expl = try_remove_div p1 p2 env expl in
+                let _, p, env, expl =
+                  try_remove_mul
+                    are_eq (P.sub p1 p2) ~large:(is_le n) env expl in
+                let env, new_ineqs', rm =
+                  let p0 = P.create [] Q.zero (P.type_info p) in
+                  add_ineq are_eq p p0 (is_le n) root expl env rm in
+                env, eqs, (new_ineqs || new_ineqs'), rm
 
 	      | L.Distinct (false, [r1; r2]) when is_num r1 && is_num r2 ->
                  incr nb_num;
@@ -1509,7 +1785,9 @@ module Make
                 incr nb_num;
                 let p1 = poly_of r1 in
                 let p2 = poly_of r2 in
-		let p = P.sub p1 p2 in
+                let _, p1, p2, expl = try_remove_div p1 p2 env expl in
+                let _, p, env, expl =
+                  try_remove_mul are_eq (P.sub p1 p2) ~is_eq:true env expl in
 		let env = init_monomes_of_poly are_eq env p SX.empty
                   Explanation.empty
                 in
@@ -1530,6 +1808,7 @@ module Make
         let env = if query then env else Sim_Wrap.solve env 1 in
         if !nb_num = 0 || query then env, {assume=[]; remove = to_remove}
         else
+          let env = try_remove_div_mul_env are_eq env in
           (* we only call fm when new ineqs are assumed *)
           let env, eqs =
             if new_ineqs && not (Options.no_fm ()) then

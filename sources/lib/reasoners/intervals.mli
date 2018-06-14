@@ -85,6 +85,15 @@ val borne_sup : t -> Numbers.Q.t * Explanation.t * bool
 (** bool is true when bound is large. Raise: No_finite_bound if no
     finite upper bound*)
 
+val sign : t -> int * Explanation.t
+(** [sign i] returns a pair [s, ex]. When [s] is 1, all values in [i]
+    are positive, when [s] is -1, all values in [i] are negative. *)
+
+val sign_large : t -> int * Explanation.t
+(** [sign_large i] returns a pair [s, ex]. When [s] is 1, all values
+    in [i] are non negative, when [s] is -1, all values in [i] are non
+    positive. *)
+
 val div : t -> t -> t
 
 val mk_closed :

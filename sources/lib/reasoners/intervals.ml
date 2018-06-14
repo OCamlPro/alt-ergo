@@ -141,6 +141,34 @@ let borne_sup {ints=ints} =
   | (_, Strict (v, ex))::_ -> v, ex, false
   | _ -> raise No_finite_bound
 
+let sign i =
+  let pos, ex =
+    try
+      let l, ex, incl = borne_inf i in
+      Q.sign l > 0 || (Q.sign l = 0 && not incl), ex
+    with No_finite_bound -> false, Explanation.empty in
+  if pos then 1, ex else
+    let neg, ex =
+      try
+        let u, ex, incl = borne_sup i in
+        Q.sign u < 0 || (Q.sign u = 0 && not incl), ex
+      with No_finite_bound -> false, Explanation.empty in
+    if neg then (-1), ex else 0, Explanation.empty
+
+let sign_large i =
+  let non_neg, ex =
+    try
+      let l, ex, _ = borne_inf i in
+      Q.sign l >= 0, ex
+    with No_finite_bound -> false, Explanation.empty in
+  if non_neg then 1, ex else
+    let non_pos, ex =
+      try
+        let u, ex, _ = borne_sup i in
+        Q.sign u <= 0, ex
+      with No_finite_bound -> false, Explanation.empty in
+    if non_pos then (-1), ex else 0, Explanation.empty
+
 let explain_borne = function
   | Large (_, e) | Strict (_, e) -> e
   | _ -> Ex.empty
