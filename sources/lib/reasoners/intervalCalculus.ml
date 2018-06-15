@@ -117,6 +117,14 @@ module Make
       inequations : Oracle.t MPL.t;
       monomes: (I.t * SX.t) MX0.t;
       polynomes : I.t MP0.t;
+      simplified_p : SP.t;
+      (* polynomials that were simplified
+         (for instance of the form p*p' > 0 whereas p' > 0 is known) *)
+      abstract_p : P.t MP0.t;
+      nb_abstracted_p : int MP0.t;
+      (* polynomials that come from other by replacing a variable with
+         its interval bound (for instance 2x <= 3 could come from x*y
+         <= 3 when y \in [2, +oo) and x >= 0) *)
       known_eqs : SX.t;
       improved_p : SP.t;
       improved_x : SX.t;
@@ -453,8 +461,9 @@ module Make
         let j = I.add j (I.point (Q.minus c) ty Explanation.empty) in
         let j = I.scale (Q.inv d) j in
         try MP.n_add p j (MP.n_find p env.polynomes) env
-        with Not_found -> MP.n_add p j (I.undefined ty) env
-
+        with Not_found ->
+          let env = MP.n_add p j (I.undefined ty) env in
+          { env with abstract_p = MP0.add p p env.abstract_p }
 
     (*BISECT-IGNORE-BEGIN*)
     module Debug = struct
@@ -547,6 +556,9 @@ module Make
       monomes = MX.empty ;
       polynomes = MP.empty ;
       known_eqs = SX.empty ;
+      simplified_p = SP.empty ;
+      abstract_p = MP.empty ;
+      nb_abstracted_p = MP.empty;
       improved_p = SP.empty ;
       improved_x = SX.empty ;
       classes = classes;
@@ -990,7 +1002,7 @@ module Make
       let env = tighten_non_lin are_eq x use_x env expl in
       env, (find_eq eqs x u env)
 
-    let update_ple0 are_eq env p0 is_le expl =
+    let update_ple0 are_eq ?abstract env p0 is_le expl =
       if P.is_empty p0 then env
       else
         let ty = P.type_info p0 in
@@ -1016,6 +1028,16 @@ module Make
         in
         let env =
 	  if I.is_strict_smaller u pu then
+            let env =
+              match abstract with
+              | Some ap when I.is_undefined pu ->
+                let ap = try MP0.find ap env.abstract_p with Not_found -> ap in
+                let abs_p = MP0.add p ap env.abstract_p in
+                let nb =
+                  try MP0.find ap env.nb_abstracted_p with Not_found -> 0 in
+                let nbabs_p = MP0.add ap (nb + 1) env.nb_abstracted_p in
+                { env with abstract_p = abs_p; nb_abstracted_p = nbabs_p }
+              | _ -> env in
 	    update_monomes_from_poly p u (MP.n_add p u pu env)
 	  else env
         in
@@ -1479,7 +1501,7 @@ module Make
     let add_ineq a v ineqs =
       match a with None -> ineqs | Some a -> MPL.add a v ineqs
 
-    let add_ineq are_eq p1 p2 is_le root expl env rm =
+    let add_ineq are_eq ?abstract p1 p2 is_le root expl env rm =
       let ineq = Oracle.create_ineq p1 p2 is_le root expl in
       match ineq_status ineq with
       | Bottom -> raise (Exception.Inconsistent (expl, env.classes))
@@ -1490,9 +1512,14 @@ module Make
       | Other ->
         let env =
           init_monomes_of_poly
-            are_eq env ineq.Oracle.ple0 SX.empty expl
-        in
-        let env = update_ple0 are_eq env ineq.Oracle.ple0 is_le expl in
+            are_eq env ineq.Oracle.ple0 SX.empty expl in
+        let env = match abstract with
+          | Some _ -> env
+          | None ->
+            let p, _, _ = P.normal_form_pos ineq.Oracle.ple0 in
+            { env with abstract_p = MP0.remove p env.abstract_p } in
+        let env =
+          update_ple0 are_eq ?abstract env ineq.Oracle.ple0 is_le expl in
         {env with inequations=add_ineq root ineq env.inequations},
         true, rm
 
@@ -1706,11 +1733,233 @@ module Make
                let p0 = P.create [] Q.zero (P.type_info p) in
                (* Debug.env env; *)
                (* Format.printf "  add_ineq %a %s 0@." P.print p' (if large then "<=" else "<"); *)
-               let env, _, _ = add_ineq are_eq p' p0 large None expl env [] in
+               let env =
+                 { env with simplified_p = SP.add p env.simplified_p } in
+               let abstract =
+                 try Some (MP0.find p env.abstract_p) with Not_found -> None in
+               let env, _, _ =
+                 add_ineq are_eq ?abstract p' p0 large None expl env [] in
                (* Debug.env env; *)
                env in
            let env = add_bound l env in
            add_bound u env)
+        env.polynomes env
+
+    (* [try_remove_var p i env] returns a pair of lists [pl, pu] such
+       that each entry [p'i, bi, largei, expli] in [pl] means that
+       [p'i >= bi] (resp. > bi) when [largei] is [true]
+       (resp. [false]) and each entry in [pu] means that [p'i <= bi]
+       (resp. < bi). *)
+    let try_remove_var p i env =
+      (* [remove_var ~lower v p large env expl] returns either [None]
+         or [Some (p', large', expl')]. In the last case, this means
+         that for any [b], [p] >= [b] (if [lower] = [large] = true,
+         resp. [p] < [b] if [lower] = [large] = false,...) and
+         informations in [env] allow to infer [p'] >= [b] (if [lower]
+         = [large'] = true, resp. [p'] < [b] if [lower] = [large'] =
+         false,...). The polynomial [p'] is identical to [p] except
+         for the variable [v] that has been replaced by constants. *)
+      let remove_var ~lower v p large env expl =
+        let pl, c = P.to_list p in
+        let plc'largeexpl =
+          List.fold_left
+            (fun plc'expl (a, x) ->
+               match plc'expl with
+               | None -> None
+               | Some (pl, c', large, expl) ->
+                 match X.ac_extract x with
+                 | Some ({h=h; l=l } as ac) when Symbols.(equal h (Op Mult)) ->
+                   let lv, lo = List.partition (fun (x, _) -> X.equal x v) l in
+                   let n = List.fold_left (fun n (_, n') -> n + n') 0 lv in
+                   if n <= 0 then Some ((a, x) :: pl, c', large, expl) else
+                     let (ss, expl's), (s, expl') =
+                       match lo with
+                       | [] -> (1, Explanation.empty), (1, Explanation.empty)
+                       | _ ->
+                         let o = X.ac_embed { ac with l = lo } in
+                         test_sign (o, 1) env in
+                     let s = s * Q.sign a in
+                     if s = 0 then None else
+                       let vn = X.ac_embed { ac with l = [v, n] } in
+                       let ivn =
+                         try fst (MX0.find vn env.monomes)
+                         with Not_found ->
+                           mult_bornes_vars [v, n] env (P.type_info p) in
+                       let f =
+                         if Pervasives.(s > 0 = lower) then I.borne_sup
+                         else I.borne_inf in
+                       begin
+                         try
+                           let b, expl'', blarge = f ivn in
+                           let large, expl' =
+                             let strict = large && ss <> 0 && not blarge in
+                             if strict then false, expl's else large, expl' in
+                           let expl =
+                             Explanation.(union expl (union expl' expl'')) in
+                           match lo with
+                           | [] ->
+                             Some (pl, Q.(add c' (mult a b)), large, expl)
+                           | _ ->
+                             let o = X.ac_embed { ac with l = lo } in
+                             Some ((Q.mult a b, o) :: pl, c', large, expl)
+                         with I.No_finite_bound -> None
+                       end
+                 | _ ->
+                   if not (X.equal x v) then
+                     Some ((a, x) :: pl, c', large, expl)
+                   else
+                     let ix =
+                       try fst (MX0.find x env.monomes)
+                       with Not_found ->
+                         let i, _, _ = generic_find x env in i in
+                     let f =
+                       if Pervasives.(Q.sign a > 0 = lower) then I.borne_sup
+                       else I.borne_inf in
+                     try
+                       let b, expl'', blarge = f ix in
+                       let large = large && blarge in
+                       let expl = Explanation.union expl expl'' in
+                       Some (pl, Q.(add c' (mult a b)), large, expl)
+                     with I.No_finite_bound -> None)
+            (Some ([], Q.zero, large, expl))
+            pl in
+        match plc'largeexpl with
+        | None -> None
+        | Some (pl, c', large, expl) ->
+          Some (P.create pl (Q.add c c') (P.type_info p), large, expl) in
+      (* for each variable appearing in [p], list it in [pos]
+         (resp. [neg], resp. [undet]) when it appears in at least one
+         monomial where the rest of the monomial is known to be
+         positive (resp. negative, resp. unknown), list it in [even]
+         (resp. [odd]) when it appears at least once with an even
+         (resp. odd) power. *)
+      let pos, neg, undet, even, odd =
+        List.fold_left
+          (fun (pos, neg, undet, even, odd) (a, x) ->
+             let l =
+               match X.ac_extract x with
+               | Some {h=h; l=l } when Symbols.(equal h (Op Mult)) -> l
+               | _ -> [x, 1] in
+             let signs = List.map (fun xn -> fst (snd (test_sign xn env))) l in
+             let collect (l, s) s' = s :: l, s * s' in
+             let sign_l, _ = List.fold_left collect ([], Q.sign a) signs in
+             let sign_l = List.rev sign_l in
+             let sign_r, _ = List.fold_left collect ([], 1) (List.rev signs) in
+             List.fold_left2
+               (fun (pos, neg, undet, even, odd) (x, n) (sign_l, sign_r) ->
+                  let pos, neg, undet =
+                    let s = sign_l * sign_r in
+                    if s > 0 then SX.add x pos, neg, undet
+                    else if s < 0 then pos, SX.add x neg, undet
+                    else pos, neg, SX.add x undet in
+                  let even, odd =
+                    if n mod 2 = 0 then SX.add x even, odd
+                    else even, SX.add x odd in
+                  pos, neg, undet, even, odd)
+               (pos, neg, undet, even, odd)
+               l (List.combine sign_l sign_r))
+          (SX.empty, SX.empty, SX.empty, SX.empty, SX.empty)
+          (fst (P.to_list p)) in
+      let has_bounds_i i =
+        (try let _ = I.borne_inf i in true with I.No_finite_bound -> false),
+        (try let _ = I.borne_sup i in true with I.No_finite_bound -> false) in
+      let has_bounds v =
+        try has_bounds_i (fst (MX0.find v env.monomes))
+        with Not_found -> false, false in
+      let pl =
+        let b = try Some (I.borne_inf i) with I.No_finite_bound -> None in
+        match b with
+        | None -> []
+        | Some (b, expl, large) ->
+          (* look for a variable to replace: *)
+          (* 1. look for a variable lower and upper bounded and not in undet *)
+          let v =
+            SX.fold
+              (fun x v ->
+                 match has_bounds x with true, true -> SX.add x v | _ -> v)
+              (SX.diff (SX.union pos neg) undet) SX.empty in
+          (* 2. if none, look for a lower bounded variable only in neg *)
+          let v =
+            SX.fold
+              (fun x v ->
+                 let lb = fst (has_bounds x) || not (SX.mem x odd) in
+                 if lb then SX.add x v else v)
+              (SX.diff (SX.diff neg pos) undet) v in
+          (* 3. if none, look for an upper bounded variable only in pos *)
+          let v =
+            SX.fold
+              (fun x v ->
+                 let ub = snd (has_bounds x) && not (SX.mem x even) in
+                 if ub then SX.add x v else v)
+              (SX.diff (SX.diff pos neg) undet) v in
+          List.fold_left
+            (fun l v ->
+               match remove_var ~lower:true v p large env expl with
+               | None -> l
+               | Some (p, large, expl) -> (p, b, large, expl) :: l)
+            [] (SX.elements v) in
+      let pu =
+        let b = try Some (I.borne_sup i) with I.No_finite_bound -> None in
+        match b with
+        | None -> []
+        | Some (b, expl, large) ->
+          (* look for a variable to replace: *)
+          (* 1. look for a variable lower and upper bounded and not in undet *)
+          let v =
+            SX.fold
+              (fun x v ->
+                 match has_bounds x with true, true -> SX.add x v | _ -> v)
+              (SX.diff (SX.union pos neg) undet) SX.empty in
+          (* 2. if none, look for a lower bounded variable only in pos *)
+          let v =
+            SX.fold
+              (fun x v ->
+                 let lb = fst (has_bounds x) || not (SX.mem x odd) in
+                 if lb then SX.add x v else v)
+              (SX.diff (SX.diff pos neg) undet) v in
+          (* 3. if none, look for an upper bounded variable only in neg *)
+          let v =
+            SX.fold
+              (fun x v ->
+                 let ub = snd (has_bounds x) && not (SX.mem x even) in
+                 if ub then SX.add x v else v)
+              (SX.diff (SX.diff neg pos) undet) v in
+          List.fold_left
+            (fun l v ->
+               match remove_var ~lower:false v p large env expl with
+               | None -> l
+               | Some (p, large, expl) -> (p, b, large, expl) :: l)
+            [] (SX.elements v) in
+      pl, pu
+
+    let too_many_abstraction p env =
+      let ap = try MP0.find p env.abstract_p with Not_found -> p in
+      let nb = try MP0.find ap env.nb_abstracted_p with Not_found -> 0 in
+      nb > 256
+
+    let try_remove_var_env are_eq env =
+      MP.fold
+        (fun p i env ->
+           if SP.mem p env.simplified_p || too_many_abstraction p env then env
+           else
+             let pl, pu = try_remove_var p i env in
+             let env =
+               List.fold_left
+                 (fun env (p', b, large, expl) ->
+                    let pb = P.create [] b (P.type_info p) in
+                    let env, _, _ =
+                      add_ineq
+                        are_eq ~abstract:p pb p' large None expl env [] in
+                    env)
+                 env pl in
+             List.fold_left
+               (fun env (p', b, large, expl) ->
+                  let pb = P.create [] b (P.type_info p) in
+                  let env, _, _ =
+                    add_ineq
+                      are_eq ~abstract:p p' pb large None expl env [] in
+                  env)
+               env pu)
         env.polynomes env
 
     (*** functions to improve intervals modulo equality ***)
@@ -1736,6 +1985,7 @@ module Make
       let cpt = cpt + 1 in
       let env = {env with improved_p=SP.empty; improved_x=SX.empty} in
       let env = try_remove_div_mul_env are_eq env in
+      let env = try_remove_var_env are_eq env in
       let env = update_non_lin_monomes_intervals are_eq env in
       let env = Sim_Wrap.solve env 1 in
       let env = update_polynomes_intervals env in
@@ -1755,6 +2005,15 @@ module Make
           improved_p=SP.empty; improved_x=SX.empty; classes; new_uf = uf}
       in
       Debug.env env;
+      (* put simple bounds (e.g. 0 <= x) first *)
+      let la =
+        let is_bound (a, _, _, _) = match normal_form a with
+          | L.Builtin(_, n, [r1;r2]) when is_le n || is_lt n ->
+            Pervasives.(P.is_const (poly_of r1) <> None
+                        && P.is_monomial (poly_of r2) <> None)
+          | _ -> false in
+        let lab, lao = List.partition is_bound la in
+        lab @ lao in
       let nb_num = ref 0 in
       let env, eqs, new_ineqs, to_remove =
         List.fold_left
