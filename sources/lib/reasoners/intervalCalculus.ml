@@ -48,6 +48,10 @@ module I = Intervals
 module OracleContainer =
   (val (Inequalities.get_current ()) : Inequalities.Container_SIG)
 
+module PolynomialIneqsContainer =
+  (val (PolynomialInequalities.get_current ())
+    : PolynomialInequalities.Container_SIG)
+
 
 module Make
   (X : Sig.X)
@@ -62,6 +66,7 @@ module Make
 
 
     module Oracle = OracleContainer.Make(X)(Uf)(P)
+    module PolynomialIneqs = PolynomialIneqsContainer.Make(X)(Uf)(P)
 
     module MF = Formula.Map
     module ST = Term.Set
@@ -1538,7 +1543,7 @@ module Make
           | Some t, _ ->
             begin
               match Term.view t with
-              | {Term.f = Sy.(Op Div); xs = [a; b]} ->
+              | {Term.f = Sy.Op Sy.Div; xs = [a; b]} ->
                 let acc = (fst (X.make b), n) :: acc in
                 collect_monome acc (fst (X.make a)) n
               | _ -> acc
@@ -1599,7 +1604,7 @@ module Make
               | Some t, _ ->
                 begin
                   match Term.view t with
-                  | {Term.f = Sy.(Op Div); xs = [a; b]} ->
+                  | {Term.f = Sy.Op Sy.Div; xs = [a; b]} ->
                     let xa = fst (X.make a) in
                     let xb = fst (X.make b) in
                     let s, xa, mx = filter s xa mx in
@@ -2090,6 +2095,18 @@ module Make
           in
           let env = Sim_Wrap.solve env 1 in
           let env = loop_update_intervals are_eq env 0 in
+
+          let () =
+            if new_ineqs then
+              let polys =
+                List.filter
+                  (fun (p, i) ->
+                     Uf.is_normalized uf (alien_of p) && not (I.is_undefined i)
+                     && not (SP.mem p env.simplified_p)
+                     && not (MP.mem p env.abstract_p))
+                  (MP.bindings env.polynomes) in
+              PolynomialIneqs.test_polynomes polys in
+
           let env, eqs = equalities_from_intervals env eqs in
 
           Debug.env env;

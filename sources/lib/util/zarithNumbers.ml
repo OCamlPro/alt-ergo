@@ -170,4 +170,6 @@ module Q : NumbersInterface.QSig with module Z = Z = struct
 
   let div_2exp = Q.div_2exp
 
+  let to_zarith t = t
+  let of_zarith t = t
 end

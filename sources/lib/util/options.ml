@@ -54,6 +54,7 @@ module M = struct
   let debug_constr = ref false
   let verbose = ref false
   let debug_fm = ref false
+  let debug_sdp = ref false
   let debug_fpa = ref 0
   let debug_sum = ref false
   let debug_arith = ref false
@@ -95,6 +96,7 @@ module M = struct
   let sat_plugin = ref ""
   let parsers = ref []
   let inequalities_plugin = ref ""
+  let polynomial_inequalities_plugin = ref ""
   let profiling_plugin = ref ""
   let cumulative_time_profiling = ref false
   let normalize_instances = ref false
@@ -183,6 +185,8 @@ module M = struct
   let add_parser p = parsers := p :: !parsers
 
   let set_inequalities_plugin s = inequalities_plugin := s
+
+  let set_polynomial_inequalities_plugin s = polynomial_inequalities_plugin := s
 
   let set_profiling_plugin s = profiling_plugin := s
 
@@ -286,6 +290,10 @@ module M = struct
     "-dfm",
     Arg.Set debug_fm,
     "  sets the debugging flag of inequalities";
+
+    "-dsdp",
+    Arg.Set debug_sdp,
+    "  sets the debugging flag of polynomial inequalities";
 
     "-dfpa",
     Arg.Set_int debug_fpa,
@@ -577,6 +585,10 @@ module M = struct
     Arg.String set_inequalities_plugin,
     " use the given module to handle inequalities of linear arithmetic";
 
+    "-polynomial-inequalities-plugin" ,
+    Arg.String set_polynomial_inequalities_plugin,
+    " use the given module to handle polynomial inequalities";
+
     "-parser" ,
     Arg.String add_parser,
     " register a new parser for Alt-Ergo";
@@ -696,6 +708,7 @@ let set_debug_gc b = M.debug_gc := b
 let set_debug_use b = M.debug_use := b
 let set_debug_uf b = M.debug_uf := b
 let set_debug_fm b = M.debug_fm := b
+let set_debug_sdp b = M.debug_sdp := b
 let set_debug_sum b = M.debug_sum := b
 let set_debug_arith b = M.debug_arith := b
 let set_debug_bitv b = M.debug_bitv := b
@@ -767,6 +780,7 @@ let debug_gc () = !M.debug_gc
 let debug_use () = !M.debug_use
 let debug_uf () = !M.debug_uf
 let debug_fm () = !M.debug_fm
+let debug_sdp () = !M.debug_sdp
 let debug_fpa () = !M.debug_fpa
 let debug_sum () = !M.debug_sum
 let debug_arith () = !M.debug_arith
@@ -855,6 +869,7 @@ let sat_plugin () = !M.sat_plugin
 let parsers () = List.rev !M.parsers
 let sat_solver () = !M.sat_solver
 let inequalities_plugin () = !M.inequalities_plugin
+let polynomial_inequalities_plugin () = !M.polynomial_inequalities_plugin
 let profiling_plugin () = !M.profiling_plugin
 let normalize_instances () = !M.normalize_instances
 let use_fpa () = !M.use_fpa

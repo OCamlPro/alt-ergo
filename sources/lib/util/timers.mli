@@ -51,6 +51,8 @@ type ty_function =
   | F_add_terms
   | F_are_equal
   | F_assume
+  | F_sdp
+  | F_osdp
   | F_class_of
   | F_leaves
   | F_make

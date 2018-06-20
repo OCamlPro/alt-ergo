@@ -7,9 +7,10 @@ LOCAL_INC = -I lib/util -I lib/structures -I lib/reasoners \
     -I parsers/why \
     -I parsers/smt2 \
     -I parsers/common \
-    -I plugins/fm-simplex
+    -I plugins/fm-simplex \
+    -I plugins/osdp
 
-INCLUDES = $(NUMLIB) $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(PSMT2FELIB) $(LOCAL_INC)
+INCLUDES = $(NUMLIB) $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXLIB) $(PSMT2FELIB) $(OSDPLIB) $(LOCAL_INC)
 #for coverage # -I /usr/local/lib/ocaml/3.12.1/bisect -pp "camlp4o str.cma /usr/local/lib/ocaml/3.12.1/bisect/bisect_pp.cmo"
 
 # TODO : enable these warnings one by one and fix the code
@@ -113,6 +114,8 @@ CMO-LIB = lib/util/config.cmo \
       lib/reasoners/use.cmo \
       lib/reasoners/intervals.cmo \
       lib/reasoners/inequalities.cmo \
+      lib/reasoners/polynomialInequalities.cmo \
+      parsers/common/cmdline_parser.cmo \
       lib/reasoners/intervalCalculus.cmo \
       lib/reasoners/arith.cmo \
       lib/reasoners/records.cmo \
@@ -135,8 +138,9 @@ CMO-LIB = lib/util/config.cmo \
       lib/frontend/parsed_interface.cmo \
       lib/frontend/frontend.cmo
 
+# parsers/common/cmdline_parser.cmo était ici à l'origine mais c'est trop tard
+# (les options étaient lues après le chargement des modules)
 CMO-PARSERS = \
-      parsers/common/cmdline_parser.cmo \
       parsers/common/parsers.cmo \
       parsers/common/parsers_loader.cmo \
       parsers/why/why_parser.cmo \
@@ -270,14 +274,15 @@ install-lib: lib META
 uninstall-lib:
 	ocamlfind remove alt-ergo-lib
 
-install: install-ae install-gui install-fm-simplex install-lib
+install: install-ae install-gui install-fm-simplex  # install-lib
 
-uninstall: uninstall-lib
+uninstall:  # uninstall-lib
 	@rm $(BINDIR)/$(NAME)$(EXE)
 	@rm $(MANDIR)/man1/alt-ergo.1
 	-@rm $(BINDIR)/$(GUINAME)$(EXE)
 	-@rm $(DATADIR)/gtksourceview-2.0/language-specs/alt-ergo.lang
 	@rm $(PLUGINSDIR)/fm-simplex-plugin.cm*
+	@rm $(PLUGINSDIR)/osdp-plugin.cm*
 	@rm $(PRELUDESDIR)/fpa-theory-2017-01-04-16h00.why
 #	-@rm $(LIBDIR)/$(LIBNAME).*
 #	-@rm $(LIBDIR)/META
@@ -323,7 +328,7 @@ uninstall: uninstall-lib
 #######
 
 clean:
-	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/common parsers/why parsers/smt2 plugins/fm-simplex ; do \
+	@for dd in lib/util lib/structures lib/reasoners lib/frontend tools/text tools/gui parsers/common parsers/why parsers/smt2 plugins/fm-simplex plugins/osdp ; do \
 	rm -f $$dd/*.cm[ioxtp] $$dd/*.cmti $$dd/*.o $$dd/*~ $$dd/*.annot $$dd/*.owz;\
 	rm -f $(GENERATED) $$dd/*.output META $(LIBNAME).*; \
 	rm -f $(NAME).byte $(NAME).opt $(GUINAME).opt $(GUINAME).byte *~; \
@@ -336,7 +341,7 @@ clean:
 
 .depend depend: $(GENERATED)
 	$(OCAMLDEP) -slash $(LOCAL_INC) lib/util/*.ml* lib/structures/*.ml* lib/reasoners/*.ml* lib/frontend/*.ml* tools/text/*.ml* \
-        tools/gui/*.ml* parsers/why/*.ml* parsers/smt2/*.ml* parsers/common/*.ml* plugins/fm-simplex/*ml* > .depend
+        tools/gui/*.ml* parsers/why/*.ml* parsers/smt2/*.ml* parsers/common/*.ml* plugins/fm-simplex/*ml* plugins/osdp/*ml* > .depend
 
 include .depend
 
@@ -367,6 +372,31 @@ ifeq ($(OCAMLBEST),opt)
 else
 	mkdir -p $(PLUGINSDIR)
 	cp -f fm-simplex-plugin.cma $(PLUGINSDIR)
+endif
+
+OSDP-CMO = plugins/osdp/osdpIneqs.cmo
+
+OSDP-CMX = $(OSDP-CMO:.cmo=.cmx)
+
+osdp-plugin.cmxs: $(CMX_LIB) $(OSDP-CMX)
+	$(if $(QUIET),@echo 'Library $@' &&) $(OCAMLOPT) $(INCLUDES)  -shared -o $@ osdp.cmxa $(OSDP-CMX)
+
+osdp-plugin.cma: $(CMO-LIB) $(OSDP-CMO)
+	$(if $(QUIET),@echo 'Library $@' &&) $(OCAMLC) $(INCLUDES)  -a        -o $@ osdp.cma $(OSDP-CMO)
+
+ifeq ($(OCAMLBEST),opt)
+osdp: osdp-plugin.cmxs
+else
+osdp: osdp-plugin.cma
+endif
+
+install-osdp: osdp
+ifeq ($(OCAMLBEST),opt)
+	mkdir -p $(PLUGINSDIR)
+	cp -f osdp-plugin.cmxs $(PLUGINSDIR)
+else
+	mkdir -p $(PLUGINSDIR)
+	cp -f osdp-plugin.cma $(PLUGINSDIR)
 endif
 
 

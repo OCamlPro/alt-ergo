@@ -181,6 +181,24 @@ else
   AC_MSG_ERROR(Cannot find psmt2-frontend library.)
 fi
 
+#looking for osdp library
+
+if test "$USEOCAMLFIND" = yes; then
+  OSDPLIB=$(ocamlfind query -i-format osdp)
+fi
+
+if test -n "$OSDPLIB";then
+  echo "ocamlfind found osdp in $OSDPLIB"
+  OSDP=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/osdp/osdp.cmi,OSDP=yes,OSDP=no)
+  if test "$OSDP" = no ; then
+    AC_MSG_WARN(Cannot find osdp library. If you want to compile the plugin please install it via opam or retrieve it from http://cavale.enseeiht.fr/osdp/ and install it.)
+  else
+    OSDPLIB="-I +osdp"
+  fi
+fi
+
 
 # then we look for ocamlopt; if not present, we issue a warning
 # if the version is not the same, we also discard it
@@ -319,6 +337,7 @@ AC_SUBST(OCAMLWEB)
 AC_SUBST(LABLGTK2LIB)
 AC_SUBST(OCPLIBSIMPLEXLIB)
 AC_SUBST(PSMT2FELIB)
+AC_SUBST(OSDPLIB)
 AC_SUBST(ENABLEGUI)
 AC_SUBST(INCLUDEGTK2)
 AC_SUBST(OCAMLWIN32)

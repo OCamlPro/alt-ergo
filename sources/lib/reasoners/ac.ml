@@ -67,6 +67,8 @@ module type S = sig
   (* replaces the first argument by the second one in the given AC value *)
   val subst : r -> r -> t -> r
 
+  val term_extract : t -> Term.t option * bool (* original term ? *)
+
   (* add flatten the 2nd arg w.r.t HS.t, add it to the given list
      and compact the result *)
   val add : Symbols.t -> r * int -> (r * int) list -> (r * int) list
@@ -279,6 +281,21 @@ module Make (X : Sig.X) = struct
     let t = X.color {tm with l=compact (fold_flatten h (X.subst p v) l)} in
     Timers.exec_timer_pause Timers.M_AC Timers.F_subst;
     t
+
+
+  let term_extract {h=h;l=l;t=t} =
+    let l =
+      List.fold_left
+        (fun l e -> match l with
+           | None -> None
+           | Some l ->
+             match X.term_extract e with
+             | None, _ -> None
+             | Some e, _ -> Some (e :: l))
+        (Some []) (expand l) in
+    match l with
+    | None -> None, false
+    | Some l -> Some (Term.make h l t), false
 
 
   let add h arg arg_l =

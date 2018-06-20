@@ -37,6 +37,7 @@ val set_debug_gc : bool -> unit
 val set_debug_use : bool -> unit
 val set_debug_uf : bool -> unit
 val set_debug_fm : bool -> unit
+val set_debug_sdp : bool -> unit
 val set_debug_sum : bool -> unit
 val set_debug_arith : bool -> unit
 val set_debug_bitv : bool -> unit
@@ -108,6 +109,7 @@ val debug_gc : unit -> bool
 val debug_use : unit -> bool
 val debug_uf : unit -> bool
 val debug_fm : unit -> bool
+val debug_sdp : unit -> bool
 val debug_fpa : unit -> int
 val debug_sum : unit -> bool
 val debug_arith : unit -> bool
@@ -195,6 +197,7 @@ val get_used_context_file : unit -> string
 val sat_plugin : unit -> string
 val parsers : unit -> string list
 val inequalities_plugin : unit -> string
+val polynomial_inequalities_plugin : unit -> string
 val profiling_plugin : unit -> string
 val normalize_instances : unit -> bool
 
