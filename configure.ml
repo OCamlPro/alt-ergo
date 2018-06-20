@@ -161,7 +161,10 @@ let datadir =
   |> Filename.dirname
   |> follow Filename.parent_dir_name
   |> follow "share"
-  |> follow "alt-ergo"
+
+let osdp_pluginsdir = datadir |> follow "alt-ergo-osdp" |> follow "plugins"
+
+let datadir = datadir |> follow "alt-ergo"
 
 let pluginsdir = datadir |> follow "plugins"
 

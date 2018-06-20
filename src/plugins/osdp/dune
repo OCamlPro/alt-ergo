@@ -1,0 +1,22 @@
+(executable
+  (name OsdpIneqs)
+  (public_name alt-ergo-osdp)
+  (package alt-ergo-osdp)
+  (modes native plugin) ; produce a cmxs
+  ; no modules declaration since we have a single module
+  (libraries alt-ergo-lib osdp)
+  (embed_in_plugin_libraries osdp) ; link statically osdp
+)
+
+(documentation
+  (package alt-ergo-osdp)
+    (mld_files :standard)
+)
+
+(install
+  (package alt-ergo-osdp)
+  (section share)
+  (files
+    (OsdpIneqs.cmxs as plugins/osdp-plugin.cmxs)
+  )
+)
