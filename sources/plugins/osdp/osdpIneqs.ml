@@ -243,11 +243,13 @@ module Container : PolynomialInequalities.Container_SIG = struct
                            (fun (m, _) -> Osdp.Monomial.divide m lim)
                            l in
                      Sos.of_list l in
-                   (* Format.printf "p = %a ~~> s = %a@." Sos.Poly.pp p Sos.pp s; *)
+                   (* Format.printf "p = %a ~~> s = %a@."
+                      Sos.Poly.pp p Sos.pp s; *)
                    Sos.(sum - s * !!p), s :: sigmas)
                 (Sos.(!!Poly.zero), []) (List.combine pge0 degs) in
             (* Format.printf "sum: %a@." Sos.pp sum; *)
-                          (* Format.printf "degrees: @[%a@]@." (Osdp.Utils.pp_list ~sep:",@ " (fun fmt p -> Format.fprrintf \
+            (* Format.printf "degrees: @[%a@]@."
+               (Osdp.Utils.pp_list ~sep:",@ " (fun fmt p -> Format.fprrintf
                              fmt "%d" (Sos.degree p))) sigmas; *)
             let ret, _, _, witnesses =
               let options =

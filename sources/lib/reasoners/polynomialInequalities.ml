@@ -69,11 +69,13 @@ let load_current_polynomial_inequalities_reasoner () =
   match Options.polynomial_inequalities_plugin () with
   | "" ->
     if Options.debug_sdp () then
-      eprintf "[Dynlink] Using the default do-nothing module for polynomial inequalities@."
+      eprintf "[Dynlink] Using the default do-nothing module for \
+polynomial inequalities@."
 
   | path ->
     if Options.debug_sdp () then
-      eprintf "[Dynlink] Loading the 'polynomial inequalities' reasoner in %s ...@." path;
+      eprintf "[Dynlink] Loading the 'polynomial inequalities' \
+reasoner in %s ...@." path;
     try
       MyDynlink.loadfile path;
       if Options.debug_sdp () then  eprintf "Success !@.@."
@@ -81,7 +83,8 @@ let load_current_polynomial_inequalities_reasoner () =
     | MyDynlink.Error m1 ->
       if Options.debug_sdp() then begin
         eprintf
-          "[Dynlink] Loading the 'polynomial inequalities' reasoner in \"%s\" failed!@."
+          "[Dynlink] Loading the 'polynomial inequalities' reasoner \
+in \"%s\" failed!@."
           path;
         Format.eprintf ">> Failure message: %s@.@."
           (MyDynlink.error_message m1);
@@ -89,7 +92,8 @@ let load_current_polynomial_inequalities_reasoner () =
       let prefixed_path = sprintf "%s/%s" Config.pluginsdir path in
       if Options.debug_sdp () then
         eprintf
-          "[Dynlink] Loading the 'polynomial inequalities' reasoner in %s with prefix %s@."
+          "[Dynlink] Loading the 'polynomial inequalities' reasoner \
+in %s with prefix %s@."
           path Config.pluginsdir;
       try
         MyDynlink.loadfile prefixed_path;
@@ -98,7 +102,8 @@ let load_current_polynomial_inequalities_reasoner () =
       | MyDynlink.Error m2 ->
         if not (Options.debug_sdp()) then begin
           eprintf
-            "[Dynlink] Loading the 'polynomial inequalities' reasoner in \"%s\" failed!@."
+            "[Dynlink] Loading the 'polynomial inequalities' reasoner \
+in \"%s\" failed!@."
             path;
           Format.eprintf ">> Failure message: %s@.@."
             (MyDynlink.error_message m1);

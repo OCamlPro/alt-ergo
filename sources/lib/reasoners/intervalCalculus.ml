@@ -1700,7 +1700,8 @@ module Make
               MX0.fold
                 (fun x (n, s) env ->
                    (* let () = Debug.env env in *)
-                   (* let () = Format.printf "  %d * %a^%d > 0@." s X.print x n in *)
+                   (* let () = Format.printf "  %d * %a^%d > 0@."
+                      s X.print x n in *)
                    let res =
                      update_ple0 are_eq env
                        (P.mult_const (Q.from_int (-s)) (P.power (poly_of x) n))
@@ -1737,7 +1738,8 @@ module Make
              | Some (p', large, expl) ->
                let p0 = P.create [] Q.zero (P.type_info p) in
                (* Debug.env env; *)
-               (* Format.printf "  add_ineq %a %s 0@." P.print p' (if large then "<=" else "<"); *)
+               (* Format.printf "  add_ineq %a %s 0@." P.print p'
+                  (if large then "<=" else "<"); *)
                let env =
                  { env with simplified_p = SP.add p env.simplified_p } in
                let abstract =
@@ -2258,7 +2260,8 @@ module Make
       match cs with
       | _ :: _ -> cs
       | [] ->
-        let f p = MX0.bindings (collect_common_multiples (* ~even_monom:true *) p) in
+        let f p = MX0.bindings (collect_common_multiples
+                                  (* ~even_monom:true *) p) in
         case_split_div_mul f env
 
     let default_case_split env uf ~for_model =
