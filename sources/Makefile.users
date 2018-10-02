@@ -253,6 +253,7 @@ install-man:
 install-preludes:
 	mkdir -p $(PRELUDESDIR)
 	cp -f preludes/fpa-theory-2017-01-04-16h00.why $(PRELUDESDIR)/
+	cp -f preludes/b-set-theory-prelude-2018-09-28.ae $(PRELUDESDIR)/
 
 install-ae: install-man install-preludes
 	mkdir -p $(BINDIR)
@@ -285,6 +286,7 @@ uninstall:
 	-@rm $(DATADIR)/gtksourceview-2.0/language-specs/alt-ergo.lang
 	@rm $(PLUGINSDIR)/fm-simplex-plugin.cm*
 	@rm $(PRELUDESDIR)/fpa-theory-2017-01-04-16h00.why
+	@rm $(PRELUDESDIR)/b-set-theory-prelude-2018-09-28.ae
 	make uninstall-lib
 #	-@rm $(LIBDIR)/META
 #	-@rm $(LIBDIR)
