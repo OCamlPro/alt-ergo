@@ -59,7 +59,7 @@ module type SAT_ML = sig
   val reset_steps : unit -> unit
   val get_steps : unit -> int64
 
-  val assume_th_elt : t -> Commands.th_elt -> unit
+  val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> unit
   val decision_level : t -> int
   val cancel_until : t -> int -> unit
 
@@ -804,7 +804,7 @@ let compute_facts_for_theory_propagate env =
         else assert false
       in
       let ex =
-        if proof () || ta.var.level > 0 then Ex.singleton (Ex.Literal ta)
+        if unsat_core () || ta.var.level > 0 then Ex.singleton (Ex.Literal ta)
         else Ex.empty
       in
       assert (Literal.LT.is_ground ta.lit);
@@ -920,7 +920,7 @@ let compute_facts_for_theory_propagate env =
 
 
   let report_b_unsat env linit =
-    if not (Options.proof ()) then begin
+    if not (Options.unsat_core ()) then begin
       env.is_unsat <- true;
       env.unsat_core <- None;
       raise (Unsat None)
@@ -928,11 +928,12 @@ let compute_facts_for_theory_propagate env =
     else
       match linit with
       | [] | _::_::_ ->
-        (* currently, report_b_unsat called with a singleton if proof = true *)
+        (* currently, report_b_unsat called with a singleton
+           if unsat_core = true *)
         assert false
 
       | [{atoms=atoms}] ->
-        assert (Options.proof ());
+        assert (Options.unsat_core ());
         let l = ref linit in
         for i = 0 to Vec.size atoms - 1 do
           let v = (Vec.get atoms i).var in
@@ -978,7 +979,7 @@ let compute_facts_for_theory_propagate env =
 
 
   let report_t_unsat env dep =
-    if not (Options.proof ()) then begin
+    if not (Options.unsat_core ()) then begin
       env.is_unsat <- true;
       env.unsat_core <- None;
       raise (Unsat None)
@@ -1414,10 +1415,10 @@ let compute_facts_for_theory_propagate env =
     (*if not (clause_exists atoms) then XXX TODO *)
     let init_name = string_of_int cnumber in
     let init0 =
-      if Options.proof () then
+      if Options.unsat_core () then
         [make_clause init_name atoms f (List.length atoms) false []]
       else
-        [] (* no deps if proofs generation is not enabled *)
+        [] (* no deps if unsat cores generation is not enabled *)
     in
     try
       let atoms, init =
@@ -1601,9 +1602,9 @@ are detected ..."]
   let current_tbox env = env.tenv
   let set_current_tbox env tb = env.tenv <- tb
 
-  let assume_th_elt env th_elt =
+  let assume_th_elt env th_elt dep =
     assert (decision_level env == 0);
-    env.tenv <- Th.assume_th_elt (current_tbox env) th_elt
+    env.tenv <- Th.assume_th_elt (current_tbox env) th_elt dep
 
   (*
   let copy (v : 'a) : 'a = Marshal.from_string (Marshal.to_string v []) 0

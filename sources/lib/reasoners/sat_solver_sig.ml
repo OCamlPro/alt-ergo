@@ -42,12 +42,12 @@ module type S = sig
 
   (* [assume env f] assume a new formula [f] in [env]. Raises Unsat if
      [f] is unsatisfiable in [env] *)
-  val assume : t -> Formula.gformula -> t
+  val assume : t -> Formula.gformula -> Explanation.t -> t
 
-  val assume_th_elt : t -> Commands.th_elt -> t
+  val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
 
   (* [pred_def env f] assume a new predicate definition [f] in [env]. *)
-  val pred_def : t -> Formula.t -> string -> Loc.t -> t
+  val pred_def : t -> Formula.t -> string -> Explanation.t -> Loc.t -> t
 
   (* [unsat env f size] checks the unsatisfiability of [f] in
      [env]. Raises I_dont_know when the proof tree's height reaches
@@ -58,10 +58,6 @@ module type S = sig
 
   val reset_refs : unit -> unit
   val get_steps : unit -> int64
-
-  (* returns used axioms/predicates * unused axioms/predicates *)
-  val retrieve_used_context :
-    t -> Explanation.t -> Formula.t list * Formula.t list
 
 end
 

@@ -73,13 +73,11 @@ module type S = sig
   val print_model : Format.formatter -> t -> unit
   val get_union_find : t -> Combine.Uf.t
 
-  val assume_th_elt : t -> Commands.th_elt -> t
+  val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Term.Map.t * Term.t list Term.Map.t Term.Subst.t ->
     t -> (Formula.t -> Formula.t -> bool) -> t * Sig.instances
-  val retrieve_used_context :
-    t -> Explanation.t -> Formula.t list * Formula.t list
 end
 
 module Main : S

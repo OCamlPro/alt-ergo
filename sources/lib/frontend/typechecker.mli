@@ -39,12 +39,12 @@ val file : file ->
 (* used by main_gui *)
 val split_goals :
   ((int tdecl, int) annoted * env) list ->
-  ((int tdecl, int) annoted * env) list list
+  (((int tdecl, int) annoted * env) list * string) list
 
 (* used by main_text *)
 val split_goals_and_cnf :
   ((int tdecl, int) annoted * env) list ->
-  Commands.sat_tdecl list list
+  (Commands.sat_tdecl list * string) list
 
 val term : env -> (Symbols.t * Ty.t) list -> Parsed.lexpr ->
   (int tterm, int) annoted

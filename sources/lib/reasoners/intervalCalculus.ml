@@ -125,7 +125,7 @@ module Make
       int_sim : Sim.Core.t;
       rat_sim : Sim.Core.t;
       new_uf : uf;
-      th_axioms : Commands.th_elt MF.t;
+      th_axioms : (Commands.th_elt * Explanation.t) MF.t;
       linear_dep : ST.t MT.t;
       syntactic_matching :
         (Matching_types.trigger_info * Matching_types.gsubst list) list list;
@@ -2130,7 +2130,7 @@ module Make
 		      in
                       profile_produced_terms menv lorig nf s tr.F.content;
                       let dep =
-                        if not (Options.proof() || Options.profiling())
+                        if not (Options.unsat_core() || Options.profiling())
                         then
                           dep
                         else Ex.union dep (Ex.singleton (Ex.Dep lorig))
@@ -2146,9 +2146,9 @@ module Make
     let syntactic_matching menv env uf selector =
       let synt_match =
         MF.fold
-          (fun f th_ax accu ->
+          (fun f (_th_ax, dep) accu ->
             (* currently, No diff between propagators and case-split axs *)
-            let forms = MF.singleton f (0 (*0 = age *), Ex.empty) in
+            let forms = MF.singleton f (0 (*0 = age *), dep) in
             let menv = EM.add_triggers ~backward:Util.Normal menv forms in
             let res = EM.query menv uf in
             if debug_fpa () >= 2 then begin
@@ -2228,40 +2228,22 @@ module Make
           q.F.name q.F.loc q.F.binders (List.rev r_triggers) q.F.main
           (F.id th_form) (Some (q.F.free_v, q.F.free_vty))
 
-    let assume_th_elt t th_elt =
+    let assume_th_elt t th_elt dep =
       let {Commands.axiom_kind; th_form; th_name; extends} = th_elt in
       let kd_str =
         if axiom_kind == Parsed.Propagator then "Th propagator" else "Th CS"
       in
       match extends with
       | Typed.NIA | Typed.NRA | Typed.FPA ->
-        if EM.unused_context th_form then begin
-          if debug_fpa () >= 2 then
-            fprintf fmt "[IC][Theory %s][%s] %a not in used-context. Ignore@."
-              th_name kd_str F.print th_form;
-          t
-        end
-        else begin
-          let th_form = separate_semantic_triggers th_form in
-          let th_elt = {th_elt with Commands.th_form} in
-          if debug_fpa () >= 2 then
-            fprintf fmt "[IC][Theory %s][%s] %a@."
-              th_name kd_str F.print th_form;
-          assert (not (MF.mem th_form t.th_axioms));
-          {t with th_axioms = MF.add th_form th_elt t.th_axioms}
-        end
-      | _ -> t
+        let th_form = separate_semantic_triggers th_form in
+        let th_elt = {th_elt with Commands.th_form} in
+        if debug_fpa () >= 2 then
+          fprintf fmt "[IC][Theory %s][%s] %a@."
+            th_name kd_str F.print th_form;
+        assert (not (MF.mem th_form t.th_axioms));
+        {t with th_axioms = MF.add th_form (th_elt, dep) t.th_axioms}
 
-    let retrieve_used_context {th_axioms} dep =
-      let deps = Ex.formulas_of dep in
-      let used, unused =
-        Formula.Set.fold
-          (fun f ((used, assumed) as acc) ->
-            if MF.mem f th_axioms then f :: used, MF.remove f assumed else acc
-          ) deps ([], th_axioms)
-      in
-      let unused = MF.fold (fun f _ acc -> f::acc) unused [] in
-      used, unused
+      | _ -> t
 
     let instantiate ~do_syntactic_matching env uf selector =
       if Options.timers() then

@@ -80,14 +80,12 @@ module type S = sig
   val print_model : Format.formatter -> t -> unit
   val get_union_find : t -> Combine.Uf.t
 
-  val assume_th_elt : t -> Commands.th_elt -> t
+  val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Term.Map.t * Term.t list Term.Map.t Term.Subst.t ->
     t -> (Formula.t -> Formula.t -> bool) -> t * Sig.instances
 
-  val retrieve_used_context :
-    t -> Explanation.t -> Formula.t list * Formula.t list
 end
 
 module Main : S = struct
@@ -655,11 +653,8 @@ module Main : S = struct
     if not !zero then fprintf fmt "\n@.";
     Rel.print_model fmt env.relation rs
 
-  let assume_th_elt env th_elt =
-    {env with relation = Rel.assume_th_elt env.relation th_elt}
-
-  let retrieve_used_context env dep =
-    Rel.retrieve_used_context env.relation dep
+  let assume_th_elt env th_elt dep =
+    {env with relation = Rel.assume_th_elt env.relation th_elt dep}
 
   let are_equal env t1 t2 ~init_terms =
     if T.equal t1 t2 then Sig.Yes (Ex.empty, [])

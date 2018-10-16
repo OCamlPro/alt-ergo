@@ -50,15 +50,12 @@ module type S = sig
 
   val compute_concrete_model : t -> t
 
-  val assume_th_elt : t -> Commands.th_elt -> t
+  val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Term.Map.t * Term.t list Term.Map.t Term.Subst.t ->
     t -> (Formula.t -> Formula.t -> bool) ->
     int -> int -> t * Sig.instances
-
-  val retrieve_used_context :
-    t -> Explanation.t -> Formula.t list * Formula.t list
 
   val get_assumed : t -> Literal.LT.Set.t
 end

@@ -52,7 +52,7 @@ module type SAT_ML = sig
   val reset_steps : unit -> unit
   val get_steps : unit -> int64
 
-  val assume_th_elt : t -> Commands.th_elt -> unit
+  val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> unit
   val decision_level : t -> int
   val cancel_until : t -> int -> unit
 

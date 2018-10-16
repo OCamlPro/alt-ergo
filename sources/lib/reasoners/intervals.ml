@@ -55,7 +55,7 @@ module Debug = struct
     | Pinfty -> fprintf fmt "+inf"
     | Strict (v, e) | Large (v, e) ->
       fprintf fmt "%s" (Q.to_string v);
-      if verbose () || proof () then fprintf fmt " %a" Ex.print e
+      if verbose () || unsat_core () then fprintf fmt " %a" Ex.print e
 
   let print_interval fmt (b1,b2) =
     let c1, c2 = match b1, b2 with
@@ -74,7 +74,7 @@ module Debug = struct
 
   let print fmt {ints = ints; is_int = b; expl = e } =
     print_list fmt ints;
-    if verbose () || proof () then fprintf fmt " %a" Ex.print e
+    if verbose () || unsat_core () then fprintf fmt " %a" Ex.print e
 
 end
 (*BISECT-IGNORE-END*)

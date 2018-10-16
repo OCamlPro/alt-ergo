@@ -140,7 +140,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     inst : Inst.t;
     heuristics : Heuristics.t ref;
     model_gen_mode : bool ref;
-    ground_preds : F.t A.LT.Map.t; (* key <-> f *)
+    ground_preds : (F.t * Explanation.t) A.LT.Map.t; (* key <-> f *)
     add_inst: Formula.t -> bool;
     unit_facts_cache : (F.gformula * Ex.t) MF.t ref;
   }
@@ -538,29 +538,30 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
     | _ -> assert false
 
-  let pred_def env f name loc =
+  let pred_def env f name dep loc =
     Debug.pred_def f;
     let t = Term.make (Symbols.name name) [] Ty.Tbool in
     if not (Term.Set.mem t (F.ground_terms_rec f)) then
-      {env with inst = Inst.add_predicate env.inst (mk_gf f name true false)}
+      {env with
+       inst = Inst.add_predicate env.inst (mk_gf f name true false) dep }
     else
       begin
         let a_t = A.LT.mk_pred t false in
         assert (not (A.LT.Map.mem a_t env.ground_preds));
         let f_simpl = factorize_iff a_t f in
-        let gp = A.LT.Map.add a_t f_simpl env.ground_preds in
-        let gp = A.LT.Map.add (A.LT.neg a_t) (F.mk_not f_simpl) gp in
+        let gp = A.LT.Map.add a_t (f_simpl, dep) env.ground_preds in
+        let gp = A.LT.Map.add (A.LT.neg a_t) (F.mk_not f_simpl, dep) gp in
         {env with ground_preds = gp}
       end
 
 
   let add_dep f dep =
     match F.view f with
-    | F.Literal _ when proof () ->
+    | F.Literal _ when unsat_core () ->
       if not (Ex.mem (Ex.Bj f) dep) then
         Ex.union (Ex.singleton (Ex.Dep f)) dep
       else dep
-    | F.Clause _ when proof () ->
+    | F.Clause _ when unsat_core () ->
       Ex.union (Ex.singleton (Ex.Dep f)) dep
     | _ -> dep
 
@@ -568,7 +569,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let rec add_dep_of_formula f dep =
     let dep = add_dep f dep in
     match F.view f with
-    | F.Unit (f1, f2) when proof () ->
+    | F.Unit (f1, f2) when unsat_core () ->
       add_dep_of_formula f2 (add_dep_of_formula f1 dep)
     | _ -> dep
 
@@ -796,8 +797,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              let acc = env, true, true, ap_delta, lits in
              begin
                try (* ground preds bahave like proxies of lazy CNF *)
-                 asm_aux acc
-                   [{ff with F.f = A.LT.Map.find a env.ground_preds}, dep]
+                 let af, adep = A.LT.Map.find a env.ground_preds in
+                 asm_aux acc [{ff with F.f = af}, Ex.union dep adep]
                with Not_found -> acc
              end
 
@@ -1267,7 +1268,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let max_term_depth_in_sat env =
     let aux mx f = max mx (F.max_term_depth f) in
     let max_t = MF.fold (fun f _ mx -> aux mx f) env.gamma 0 in
-    A.LT.Map.fold (fun _ f mx -> aux mx f) env.ground_preds max_t
+    A.LT.Map.fold (fun _ (f,_) mx -> aux mx f) env.ground_preds max_t
 
 
   let rec backward_instantiation_rec env rnd max_rnd =
@@ -1401,8 +1402,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       dep
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
 
-  let assume env fg =
-    try assume env [fg,Ex.empty]
+  let assume env fg dep =
+    try assume env [fg, dep]
     with
     | IUnsat (d, classes) ->
       terminated_normally := true;
@@ -1472,19 +1473,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       add_inst = fun _ -> true;
     }
     in
-    assume env gf_true (*maybe usefull when -no-theory is on*)
+    assume env gf_true Ex.empty
+  (*maybe usefull when -no-theory is on*)
 
   let empty_with_inst add_inst =
     { (empty ()) with add_inst = add_inst }
 
   let get_steps () = !steps
 
-  let retrieve_used_context env dep =
-    (* TODO: remove redundancies because of theories axioms *)
-    let l1, l2 = Inst.retrieve_used_context env.inst dep in
-    let r1, r2 = Th.retrieve_used_context env.tbox dep in
-    List.rev_append l1 r1, List.rev_append l2 r2
-
-  let assume_th_elt env th_elt =
-    {env with tbox = Th.assume_th_elt env.tbox th_elt}
+  let assume_th_elt env th_elt dep =
+    {env with tbox = Th.assume_th_elt env.tbox th_elt dep}
 end

@@ -49,7 +49,7 @@ val set_debug_arrays : bool -> unit
 val set_debug_ite : bool -> unit
 val set_debug_types : bool -> unit
 val set_debug_combine : bool -> unit
-val set_debug_proof : bool -> unit
+val set_debug_unsat_core : bool -> unit
 val set_debug_split : bool -> unit
 val set_debug_matching : int -> unit
 val set_debug_explanations : bool -> unit
@@ -81,7 +81,7 @@ val set_interpretation : int -> unit
 val set_max_split : Numbers.Q.t -> unit
 val set_fm_cross_limit : Numbers.Q.t -> unit
 val set_rewriting : bool -> unit
-val set_proof : bool -> unit
+val set_unsat_core : bool -> unit
 val set_rules : int -> unit
 val set_restricted : bool -> unit
 val set_bottom_classes : bool -> unit
@@ -121,7 +121,7 @@ val debug_arrays : unit -> bool
 val debug_ite : unit -> bool
 val debug_types : unit -> bool
 val debug_combine : unit -> bool
-val debug_proof : unit -> bool
+val debug_unsat_core : unit -> bool
 val debug_split : unit -> bool
 val debug_matching : unit -> int
 val debug_explanations : unit -> bool
@@ -163,7 +163,7 @@ val complete_model : unit -> bool
 val max_split : unit -> Numbers.Q.t
 val fm_cross_limit : unit -> Numbers.Q.t
 val rewriting : unit -> bool
-val proof : unit -> bool
+val unsat_core : unit -> bool
 val rules : unit -> int
 val restricted : unit -> bool
 val bottom_classes : unit -> bool

@@ -36,6 +36,7 @@ type exp =
   | Fresh of int
   | Bj of F.t
   | Dep of F.t
+  | RootDep of string (* name of the toplevel formula *)
 
 module S =
   Set.Make
@@ -45,6 +46,7 @@ module S =
 	| Fresh i1, Fresh i2 -> i1 - i2
 	| Literal a  , Literal b   -> Satml_types.Atom.cmp_atom a b
         | Dep e1  , Dep e2   -> Formula.compare e1 e2
+        | RootDep s, RootDep t -> String.compare s t
         | Bj e1   , Bj e2    -> Formula.compare e1 e2
 
 	| Literal _, _ -> -1
@@ -55,6 +57,8 @@ module S =
 
         | Dep _, _ -> 1
         | _, Dep _ -> -1
+        | RootDep _, _ -> 1
+        | _, RootDep _ -> -1
 
      end)
 
@@ -101,25 +105,27 @@ let print fmt ex =
       | Literal a -> fprintf fmt "{Literal:%a}, " Satml_types.Atom.pr_atom a
       | Fresh i -> Format.fprintf fmt "{Fresh:%i}" i;
       | Dep f -> Format.fprintf fmt "{Dep:%a}" Formula.print f
+      | RootDep s -> Format.fprintf fmt "{RootDep:%s}" s
       | Bj f -> Format.fprintf fmt "{BJ:%a}" Formula.print f
     ) ex;
     fprintf fmt "}"
   end
 
-let print_proof fmt s =
-  S.iter
-    (fun e -> match e with
-      | Dep f -> Format.fprintf fmt "  %a@." F.print f
-      | Bj f -> assert false (* XXX or same as Dep ? *)
-      | Fresh i -> assert false
-      | Literal a -> assert false
-    ) s
+let print_unsat_core ?(tab=false) fmt dep =
+  iter_atoms
+    (function
+     | RootDep s ->
+        if tab then Format.fprintf fmt "  %s@." s (* tab is too big *)
+        else Format.fprintf fmt "%s@." s
+     | Dep _ -> ()
+     | Bj _ | Fresh _ | Literal _ -> assert false
+    ) dep
 
-let formulas_of s =
+  let formulas_of s =
   S.fold (fun e acc ->
-    match e with
+      match e with
       | Dep f | Bj f -> F.Set.add f acc
-      | Fresh _ -> acc
+      | RootDep _ | Fresh _ -> acc
       | Literal a -> assert false (*TODO*)
   ) s F.Set.empty
 
@@ -127,7 +133,7 @@ let bj_formulas_of s =
   S.fold (fun e acc ->
     match e with
       | Bj f -> F.Set.add f acc
-      | Dep _ | Fresh _ -> acc
+      | Dep _ | RootDep _ | Fresh _ -> acc
       | Literal a -> assert false (*TODO*)
   ) s F.Set.empty
 

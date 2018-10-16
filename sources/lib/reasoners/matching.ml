@@ -55,7 +55,6 @@ module type S = sig
     backward:Util.inst_kind -> t -> (int * Explanation.t) Formula.Map.t -> t
   val terms_info : t -> info Term.Map.t * T.t list MT.t SubstT.t
   val query : t -> theory -> (trigger_info * gsubst list) list
-  val unused_context : Formula.t -> bool
 
 end
 
@@ -556,54 +555,5 @@ module Make (X : Arg) : S with type theory = X.t = struct
       ) formulas env
 
   let terms_info env = env.info, env.fils
-
-  module SST = Set.Make(String)
-
-
-  let init_with_replay_used acc f =
-    if Sys.command (sprintf "[ -e %s ]" f) <> 0 then
-      begin
-        fprintf fmt
-          "File %s not found! Option -replay-used will be ignored@." f;
-        acc
-      end
-    else
-      let cin = open_in f in
-      let acc = ref (match acc with None -> SST.empty | Some ss -> ss) in
-      begin
-        try while true do acc := SST.add (input_line cin) !acc done;
-        with End_of_file -> close_in cin
-      end;
-      Some !acc
-
-  let used =
-    if Options.replay_used_context () then
-      init_with_replay_used None (Options.get_used_context_file ())
-    else if Options.replay_all_used_context () then
-      let dir = Filename.dirname (Options.get_used_context_file ()) in
-      Array.fold_left
-        (fun acc f ->
-          let f = sprintf "%s/%s" dir f in
-          if (Filename.check_suffix f ".used") then begin
-            init_with_replay_used acc f
-          end
-          else acc
-        ) None (Sys.readdir dir)
-    else None
-
-  let parent s =
-    if String.length s = 0 then s
-    else
-      match s.[0] with
-      | '#' ->
-        (match Str.split (Str.regexp "#") s
-         with | [a;b] -> a | _ -> assert false)
-      | _ -> s
-
-  let unused_context f = match used, F.view f with
-    | None  , _ -> false
-    | Some s_used, F.Lemma {F.name=s} ->
-      not (String.length s = 0 || SST.mem (parent s) s_used)
-    | _ -> assert false
 
 end

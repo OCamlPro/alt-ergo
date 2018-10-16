@@ -61,12 +61,13 @@ module FE = Frontend.Make(SAT)
 
 let () =
   List.iter
-    (fun pb ->
+    (fun (pb, goal_name) ->
+       let ctxt = FE.init_all_used_context () in
        let acc0 = SAT.empty (), true, Explanation.empty in
        let _, consistent, ex =
          List.fold_left
            (fun acc d ->
-              FE.process_decl (fun _ _ -> ()) acc d
+              FE.process_decl (fun _ _ -> ()) ctxt acc d
            )acc0 pb
        in
        Format.printf "%s@."
