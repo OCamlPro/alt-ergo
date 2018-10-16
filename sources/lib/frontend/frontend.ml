@@ -31,13 +31,15 @@ open Commands
 open Format
 open Options
 
-
+module F = Formula
+module Ex = Explanation
 module type S = sig
 
   type sat_env
+  type used_context
 
   type status =
-  | Unsat of Commands.sat_tdecl * Explanation.t
+  | Unsat of Commands.sat_tdecl * Ex.t
   | Inconsistent of Commands.sat_tdecl
   | Sat of Commands.sat_tdecl * sat_env
   | Unknown of Commands.sat_tdecl * sat_env
@@ -46,36 +48,51 @@ module type S = sig
 
   val process_decl:
     (status -> int64 -> unit) ->
-    sat_env * bool * Explanation.t -> Commands.sat_tdecl ->
-    sat_env * bool * Explanation.t
+    used_context ->
+    sat_env * bool * Ex.t -> Commands.sat_tdecl ->
+    sat_env * bool * Ex.t
 
   val print_status : status -> int64 -> unit
+
+  val init_all_used_context : unit -> used_context
+  val choose_used_context : used_context -> goal_name:string -> used_context
+
 end
 
 module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   type sat_env = SAT.t
 
+  type used_context = Util.SS.t option
+
   type status =
-  | Unsat of Commands.sat_tdecl * Explanation.t
+  | Unsat of Commands.sat_tdecl * Ex.t
   | Inconsistent of Commands.sat_tdecl
   | Sat of Commands.sat_tdecl * sat_env
   | Unknown of Commands.sat_tdecl * sat_env
   | Timeout of Commands.sat_tdecl option
   | Preprocess
 
-  let check_produced_proof dep =
-    if verbose () then
-      fprintf fmt "checking the proof:\n-------------------\n%a@."
-        Explanation.print_proof dep;
+  let output_used_context g_name dep =
+    if not (Options.js_mode ()) then begin
+        let f = Options.get_used_context_file () in
+        let cout = open_out (sprintf "%s.%s.used" f g_name) in
+        let cfmt = Format.formatter_of_out_channel cout in
+        Ex.print_unsat_core cfmt dep;
+        close_out cout
+      end
 
+  let check_produced_unsat_core dep =
+    if verbose () then
+      fprintf fmt "checking the unsat-core:\n-------------------\n%a@."
+        (Ex.print_unsat_core ~tab:false) dep;
     try
-      let pb = Formula.Set.elements (Explanation.formulas_of dep) in
+      let pb = F.Set.elements (Ex.formulas_of dep) in
       let env =
         List.fold_left
           (fun env f ->
             SAT.assume env
-	      {Formula.f=f;
+	      {F.f=f;
                origin_name = "";
                gdist = -1;
                hdist = -1;
@@ -87,12 +104,12 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 	       gf=false;
                from_terms = [];
                theory_elim = true;
-              }
+              } Ex.empty
           ) (SAT.empty ()) pb
       in
       ignore (SAT.unsat
                 env
-    	        {Formula.f=Formula.vrai;
+    	        {F.f=F.vrai;
                  origin_name = "";
                  gdist = -1;
                  hdist = -1;
@@ -105,7 +122,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                  from_terms = [];
                  theory_elim = true;
                 });
-      fprintf fmt "Checking produced proof failed!@.";
+      fprintf fmt "Checking produced unsat-core failed!@.";
       fprintf fmt "this may be due to a bug.@.";
       exit 1
     with
@@ -113,32 +130,30 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | (SAT.Sat _ | SAT.I_dont_know _) as e -> raise e
 
 
-  let do_save_used_context env dep =
-    if not (Options.js_mode ()) then
-      let used, unused = SAT.retrieve_used_context env dep in
-      let f = Options.get_used_context_file () in
-      let cout = open_out f in
-      List.iter (fun f ->
-        match Formula.view f with
-        | Formula.Lemma {Formula.name=name} ->
-          output_string cout (sprintf "%s\n" name)
-        | _ -> assert false
-      ) used;
-      close_out cout
+  let unused_context name context =
+    match context with
+    | None -> false
+    | Some s -> not (Util.SS.mem name s)
 
-  let process_decl print_status (env, consistent, dep) d =
+  let mk_root_dep f_name =
+    if Options.unsat_core () then Ex.singleton (Ex.RootDep f_name)
+    else Ex.empty
+
+  let process_decl print_status used_context ((env, consistent, dep) as acc) d =
     try
       match d.st_decl with
-        | Assume(n, f, mf) ->
-          let hdist =
-            try if Char.equal '@' n.[0] then 0 else -1 with _ -> -1
-          in
+      | Assume(n, f, mf) ->
+         let is_hyp = try (Char.equal '@' n.[0]) with _ -> false in
+         if not is_hyp && unused_context n used_context then
+           acc
+        else
+          let dep = if is_hyp then Ex.empty else mk_root_dep n in
           if consistent then
 	    SAT.assume env
-	      {Formula.f=f;
+	      {F.f=f;
                origin_name = n;
                gdist = -1;
-               hdist = hdist;
+               hdist = (if is_hyp then 0 else -1);
                trigger_depth = max_int;
                nb_reductions = 0;
                age=0;
@@ -147,11 +162,14 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                gf=false;
                from_terms = [];
                theory_elim = true;
-              },
+              } dep,
 	    consistent, dep
           else env, consistent, dep
         | PredDef (f, name) ->
-	  SAT.pred_def env f name d.st_loc, consistent, dep
+          if unused_context name used_context then acc
+          else
+            let dep = mk_root_dep name in
+	    SAT.pred_def env f name dep d.st_loc, consistent, dep
 
         | RwtDef r -> assert false
 
@@ -159,7 +177,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 	  let dep =
 	    if consistent then
 	      let dep' = SAT.unsat env
-	        {Formula.f=f;
+	        {F.f=f;
                  origin_name = n;
                  hdist = -1;
                  gdist = 0;
@@ -172,19 +190,23 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                  from_terms = [];
                  theory_elim = true;
                 } in
-	      Explanation.union dep' dep
+	      Ex.union dep' dep
 	    else dep
           in
-          if debug_proof () then check_produced_proof dep;
-          if save_used_context () then do_save_used_context env dep;
+          if debug_unsat_core () then check_produced_unsat_core dep;
+          if save_used_context () then output_used_context n dep;
 	  print_status (Unsat (d, dep)) (SAT.get_steps ());
 	  env, false, dep
 
-      | ThAssume th_elt ->
-        if consistent then
-	  let env = SAT.assume_th_elt env th_elt in
-	  env, consistent, dep
-        else env, consistent, dep
+      | ThAssume ({Commands.th_name} as th_elt) ->
+         if unused_context th_name used_context then
+           acc
+         else
+           if consistent then
+             let dep = mk_root_dep th_name in
+	     let env = SAT.assume_th_elt env th_elt dep in
+	     env, consistent, dep
+           else env, consistent, dep
 
     with
       | SAT.Sat t ->
@@ -192,8 +214,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         if model () then SAT.print_model ~header:true std_formatter t;
         env , consistent, dep
       | SAT.Unsat dep' ->
-        let dep = Explanation.union dep dep' in
-        if debug_proof () then check_produced_proof dep;
+        let dep = Ex.union dep dep' in
+        if debug_unsat_core () then check_produced_unsat_core dep;
         print_status (Inconsistent d) (SAT.get_steps ());
         env , false, dep
       | SAT.I_dont_know t ->
@@ -217,9 +239,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       if Options.answers_with_locs () then
         eprintf "; %aValid (%2.4f) (%Ld steps)%s@."
           Loc.report loc time steps (goal_name d);
-      (*if proof () && not (debug_proof ()) && not (save_used_context ()) then
-        eprintf "Proof:\n%a@." Explanation.print_proof dep;*)
-      printf "unsat@."
+      printf "unsat@.";
+      if unsat_core() && not (debug_unsat_core()) && not (save_used_context())
+      then
+        printf "(\n%a)@." (Ex.print_unsat_core ~tab:true) dep
+
 
     | Inconsistent d ->
       ()
@@ -273,8 +297,9 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       let loc = d.st_loc in
       printf "%aValid (%2.4f) (%Ld steps)%s@."
         report_loc loc time steps (goal_name d);
-      if proof () && not (debug_proof ()) && not (save_used_context ()) then
-        printf "Proof:\n%a@." Explanation.print_proof dep
+      if unsat_core() && not (debug_unsat_core()) && not (save_used_context())
+      then
+        printf "unsat-core:\n%a@." (Ex.print_unsat_core ~tab:true) dep
 
     | Inconsistent d ->
       let loc = d.st_loc in
@@ -307,5 +332,46 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   let print_status status steps =
     if Options.unsat_mode () then print_status_unsat_mode status steps
     else print_status_valid_mode status steps
+
+  let init_with_replay_used acc f =
+    assert (Sys.file_exists f);
+    let cin = open_in f in
+    let acc = ref (match acc with None -> Util.SS.empty | Some ss -> ss) in
+    try
+      while true do acc := Util.SS.add (input_line cin) !acc done;
+      assert false
+    with End_of_file ->
+      Some !acc
+
+  let init_used_context ~goal_name =
+    if Options.replay_used_context () then
+      let uc_f =
+        sprintf "%s.%s.used" (Options.get_used_context_file ()) goal_name
+      in
+      if Sys.file_exists uc_f then init_with_replay_used None uc_f
+      else
+        begin
+          fprintf fmt
+            "File %s not found! Option -replay-used will be ignored@." uc_f;
+          None
+        end
+    else
+      None
+
+  let init_all_used_context () =
+    if Options.replay_all_used_context () then
+      let dir = Filename.dirname (Options.get_used_context_file ()) in
+      Array.fold_left
+        (fun acc f ->
+          let f = sprintf "%s/%s" dir f in
+          if (Filename.check_suffix f ".used") then init_with_replay_used acc f
+          else acc
+        ) None (Sys.readdir dir)
+    else None
+
+  let choose_used_context all_ctxt ~goal_name =
+    if Options.replay_all_used_context () then all_ctxt
+    else init_used_context goal_name
+
 end
 

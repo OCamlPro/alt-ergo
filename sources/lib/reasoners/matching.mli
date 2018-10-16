@@ -46,7 +46,6 @@ module type S = sig
     backward:Util.inst_kind -> t -> (int * Explanation.t) Formula.Map.t -> t
   val terms_info : t -> info Term.Map.t * Term.t list Term.Map.t Term.Subst.t
   val query : t -> theory -> (trigger_info * gsubst list) list
-  val unused_context : Formula.t -> bool
 
 end
 

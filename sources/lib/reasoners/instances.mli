@@ -34,7 +34,7 @@ module type S = sig
   val empty : t
   val add_terms : t -> Term.Set.t -> Formula.gformula -> t
   val add_lemma : t -> Formula.gformula -> Explanation.t -> t
-  val add_predicate : t -> Formula.gformula -> t
+  val add_predicate : t -> Formula.gformula -> Explanation.t -> t
 
   val m_lemmas :
     use_cs : bool ->
@@ -53,10 +53,6 @@ module type S = sig
     (Formula.t -> Formula.t -> bool) ->
     int ->
     instances * instances (* goal_directed, others *)
-
-  (* returns used axioms/predicates * unused axioms/predicates *)
-  val retrieve_used_context :
-    t -> Explanation.t -> Formula.t list * Formula.t list
 
   val register_max_term_depth : t -> int -> t
 

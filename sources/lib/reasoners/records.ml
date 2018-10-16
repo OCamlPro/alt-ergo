@@ -458,9 +458,8 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   let print_model _ _ _ = ()
   let new_terms env = T.Set.empty
   let instantiate ~do_syntactic_matching _ env uf _ = env, []
-  let retrieve_used_context _ _ = [], []
 
-  let assume_th_elt t th_elt =
+  let assume_th_elt t th_elt dep =
     match th_elt.Commands.extends with
     | Typed.Records ->
       failwith "This Theory does not support theories extension"

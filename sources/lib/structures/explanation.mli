@@ -33,6 +33,7 @@ type exp =
   | Fresh of int
   | Bj of Formula.t
   | Dep of Formula.t
+  | RootDep of string (* name of the toplevel formula *)
 
 val empty : t
 
@@ -60,7 +61,7 @@ val add_fresh : exp -> t -> t
 
 val print : Format.formatter -> t -> unit
 
-val print_proof : Format.formatter -> t -> unit
+val print_unsat_core : ?tab:bool -> Format.formatter -> t -> unit
 
 val formulas_of : t -> Formula.Set.t
 

@@ -79,8 +79,8 @@ module M = struct
   let complete_model = ref false
   let interpretation = ref 0
   let debug_interpretation = ref false
-  let proof = ref false
-  let debug_proof = ref false
+  let unsat_core = ref false
+  let debug_unsat_core = ref false
   let rules = ref (-1)
   let max_split = ref (Numbers.Q.from_int 1000000)
   let fm_cross_limit = ref (Numbers.Q.from_int 10_000)
@@ -186,7 +186,7 @@ module M = struct
 
   let set_profiling_plugin s = profiling_plugin := s
 
-  let set_proof b = proof := b
+  let set_unsat_core b = unsat_core := b
 
   let set_rules = function
     | "parsing" -> rules := 0
@@ -479,13 +479,14 @@ module M = struct
      A negative value (-1, -2, or -3) will disable interpretation display. \
      Note that -max-split limitation will be ignored in model generation phase";
 
-    "-proof",
-    Arg.Set proof,
-    " experimental support for succinct proof";
+    "-unsat-core",
+    Arg.Set unsat_core,
+    " experimental support for unsat-cores";
 
-    "-debug-proof",
-    Arg.Set debug_proof,
-    " replay unsat-cores produced by -proof. The option implies -proof";
+    "-debug-unsat-core",
+    Arg.Set debug_unsat_core,
+    " replay unsat-cores produced by -unsat-core. The option implies \
+     -unsat-core";
 
     "-rules",
     Arg.String set_rules,
@@ -534,7 +535,7 @@ module M = struct
     "-save-used-context",
     Arg.Set save_used_context,
     " save used axioms and predicates in a .used file. This option implies \
-     -proof";
+     -unsat-core";
 
     "-timelimit",
     Arg.Float (set_limit timelimit),
@@ -678,8 +679,9 @@ let parse_cmdline_arguments () =
   match !ofile with
     | Some f ->
       M.file := f;
-      M.session_file := (Filename.chop_extension f)^".agr";
-      M.used_context_file := (Filename.chop_extension f)^".used"
+      let base_file = Filename.chop_extension f in
+      M.session_file := base_file^".agr";
+      M.used_context_file := base_file
     | None -> ()
 
 
@@ -708,7 +710,7 @@ let set_debug_arrays b = M.debug_arrays := b
 let set_debug_ite b = M.debug_ite := b
 let set_debug_types b = M.debug_types := b
 let set_debug_combine b = M.debug_combine := b
-let set_debug_proof b = M.debug_proof := b
+let set_debug_unsat_core b = M.debug_unsat_core := b
 let set_debug_split b = M.debug_split := b
 let set_debug_matching i = M.debug_matching := i
 let set_debug_explanations b = M.debug_explanations := b
@@ -737,7 +739,7 @@ let set_interpretation b = M.interpretation := b
 let set_max_split b = M.max_split := b
 let set_fm_cross_limit b = M.fm_cross_limit := b
 let set_rewriting b = M.rewriting := b
-let set_proof b = M.proof := b
+let set_unsat_core b = M.unsat_core := b
 let set_rules b = M.rules := b
 let set_restricted b = M.restricted := b
 let set_bottom_classes b = M.bottom_classes := b
@@ -780,7 +782,7 @@ let debug_arrays () = !M.debug_arrays
 let debug_ite () = !M.debug_ite
 let debug_types () = !M.debug_types
 let debug_combine () = !M.debug_combine
-let debug_proof () = !M.debug_proof
+let debug_unsat_core () = !M.debug_unsat_core
 let debug_split () = !M.debug_split
 let debug_matching () = !M.debug_matching
 let debug_explanations () = !M.debug_explanations
@@ -823,7 +825,7 @@ let complete_model () = !M.complete_model
 let max_split () = !M.max_split
 let fm_cross_limit () = !M.fm_cross_limit
 let rewriting () = !M.rewriting
-let proof () = !M.proof || !M.save_used_context || !M.debug_proof
+let unsat_core () = !M.unsat_core || !M.save_used_context || !M.debug_unsat_core
 let rules () = !M.rules
 let restricted () = !M.restricted
 let bottom_classes () = !M.bottom_classes

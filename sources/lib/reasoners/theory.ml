@@ -65,15 +65,12 @@ module type S = sig
   val compute_concrete_model : t -> t
 
 
-  val assume_th_elt : t -> Commands.th_elt -> t
+  val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Term.Map.t * Term.t list Term.Map.t Term.Subst.t ->
     t -> (Formula.t -> Formula.t -> bool) ->
     int -> int -> t * Sig.instances
-
-  val retrieve_used_context :
-    t -> Explanation.t -> Formula.t list * Formula.t list
 
   val get_assumed : t -> Literal.LT.Set.t
 
@@ -660,11 +657,8 @@ module Main_Default : S = struct
     fst (try_it env (CC_X.empty_facts ()) ~for_model:true)
 
 
-  let assume_th_elt t th_elt =
-    { t with gamma = CC_X.assume_th_elt t.gamma th_elt }
-
-  let retrieve_used_context env dep =
-    CC_X.retrieve_used_context env.gamma dep
+  let assume_th_elt t th_elt dep =
+    { t with gamma = CC_X.assume_th_elt t.gamma th_elt dep }
 
   let get_assumed env = env.assumed_set
 
@@ -701,8 +695,7 @@ module Main_Empty : S = struct
   let compute_concrete_model e = e
   let terms_in_repr e = Term.Set.empty
 
-  let assume_th_elt e _ = e
+  let assume_th_elt e _ _ = e
   let theories_instances ~do_syntactic_matching _ e _ _ _ = e, []
-  let retrieve_used_context _ _ = [], []
   let get_assumed env = env.assumed_set
 end

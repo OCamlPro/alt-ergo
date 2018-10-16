@@ -1,5 +1,9 @@
 ARCH = $(shell uname -m)
 
+ifndef VERBOSE
+.SILENT:
+endif
+
 VERSION=$(shell grep "=" lib/util/version.ml | cut -d"=" -f2 | head -n 1)
 
 LOCAL_INC = -I lib/util -I lib/structures -I lib/reasoners \

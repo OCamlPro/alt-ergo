@@ -492,8 +492,8 @@ let update_status image label buttonclean env s steps =
     if not satmode then Loc.report std_formatter d.st_loc;
     if satmode then printf "@{<C.F_Red>unsat@}@."
     else printf "@{<C.F_Green>Valid@} (%2.4f) (%Ld)@." time steps;
-    if proof () then begin
-      printf "Proof:\n%a@." Explanation.print_proof dep;
+    if unsat_core () then begin
+      printf "unsat-core:\n%a@." (Explanation.print_unsat_core ~tab:true) dep;
       show_used_lemmas env dep
     end;
     image#set_stock `YES;
@@ -618,7 +618,7 @@ let kill_thread thread () =
     interrupt := None
 
 
-let run_replay env =
+let run_replay env used_context =
   let ast = to_ast env.ast in
   if debug () then fprintf fmt "AST : \n-----\n%a@." print_typed_decl_list ast;
 
@@ -630,14 +630,14 @@ let run_replay env =
     (fun dcl ->
        let cnf = Cnf.make_list dcl in
        ignore (List.fold_left
-		 (FE.process_decl FE.print_status)
+		 (FE.process_decl FE.print_status used_context)
 		 (empty_sat_inst env.insts, true, Explanation.empty) cnf)
     ) ast_pruned;
   Options.Time.unset_timeout ~is_gui:true
 
 
 let run buttonrun buttonstop buttonclean inst_model timers_model
-    image label thread env () =
+    image label thread env used_context () =
 
   Profiling.init ();
 
@@ -686,7 +686,7 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
 	            let cnf = Cnf.make_list dcl in
 	            ignore (List.fold_left
 			      (FE.process_decl
-			         (wrapper_update_status image label buttonclean env))
+			         (wrapper_update_status image label buttonclean env) used_context)
 			      (empty_sat_inst inst_model, true, Explanation.empty)
 			      cnf)
 	         ) ast_pruned;
@@ -950,7 +950,7 @@ let search_all entry (sv:GSourceView2.source_view)
     done
 
 
-let start_gui () =
+let start_gui all_used_context =
   Options.set_timers true;
   Options.set_thread_yield Thread.yield;
 
@@ -1007,7 +1007,8 @@ let start_gui () =
 
   let envs =
     List.fold_left
-      (fun acc l ->
+      (fun acc (l, goal_name) ->
+         let used_context = FE.choose_used_context all_used_context goal_name in
          let buf1 = match source_language with
 	   | Some language ->
              GSourceView2.source_buffer ~language
@@ -1243,7 +1244,7 @@ let start_gui () =
          ignore(buttonrun#connect#clicked
 	          ~callback:(
                     run buttonrun buttonstop buttonclean inst_model timers_model
-	              result_image result_label thread env));
+	              result_image result_label thread env used_context));
 
          ignore(buttonstop#connect#clicked
 	          ~callback:(kill_thread thread));
@@ -1257,7 +1258,7 @@ let start_gui () =
          Hashtbl.add note_search !nb_page
 	   (search_entry,
 	    run buttonrun buttonstop buttonclean inst_model
-	      timers_model result_image result_label thread env);
+	      timers_model result_image result_label thread env used_context);
 
          env::acc
 
@@ -1326,13 +1327,13 @@ let start_gui () =
     `C ("Records", false, not_implemented);
     `S;
     `C ("Case split", debug_split (), set_debug_split);
-    `C ("Replay proofs", debug_proof (), set_debug_proof);
+    `C ("Replay unsat cores", debug_unsat_core (), set_debug_unsat_core);
     `C ("Typing", debug_typing (), set_debug_typing);
     `C ("Verbose", verbose (), set_verbose);
   ] in
 
   let options_entries = [
-    `C ("Unsat cores (proofs)", proof (), set_proof);
+    `C ("Unsat cores", unsat_core (), set_unsat_core);
     `S;
     `C ("Model", model (), set_model);
     `C ("Complete model", complete_model (), set_complete_model);
@@ -1425,15 +1426,15 @@ let start_gui () =
   (* Thread.join(GtkThread.start ()); *)
   GtkThread.main ()
 
-
-let start_replay session_cin =
+let start_replay session_cin all_used_context =
   let filename = get_file () in
   let preludes = Options.preludes () in
   let pfile = Parsers.parse_problem ~filename ~preludes in
   let typed_ast, _ = Typechecker.file pfile in
   let typed_ast = Typechecker.split_goals typed_ast in
   List.iter
-    (fun l ->
+    (fun (l, goal_name) ->
+       let used_context = FE.choose_used_context all_used_context goal_name in
 
        let buf1 = GSourceView2.source_buffer () in
 
@@ -1453,7 +1454,7 @@ let start_replay session_cin =
        add_to_buffer error_model env.buffer env.ast;
 
        Gui_replay.replay_session env;
-       run_replay env
+       run_replay env used_context
 
     ) typed_ast;
 
@@ -1471,13 +1472,15 @@ let () =
 	(Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
     with Invalid_argument _ -> ()
 
-let _ =
+let () =
+  let all_used_context = FE.init_all_used_context () in
   try
     Options.set_is_gui true;
-    if replay() then start_replay (Some (open_in_bin (get_session_file())))
-    else start_gui ()
+    if replay() then
+      start_replay (Some (open_in_bin (get_session_file()))) all_used_context
+    else start_gui all_used_context
   with
-  | Sys_error _ -> start_gui ()
+  | Sys_error _ -> start_gui all_used_context
   | Util.Timeout ->
     Format.eprintf "Timeout@.";
     exit 142

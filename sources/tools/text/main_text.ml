@@ -117,14 +117,16 @@ let () =
       FE.print_status (FE.Timeout None) 0L;
       exit 142
   in
+  let all_used_context = FE.init_all_used_context () in
   match d with
   | [] -> ()
-  | [cnf] ->
+  | [cnf, gname] ->
     begin
+      let used_context = FE.choose_used_context all_used_context gname in
       try
         SAT.reset_refs ();
         ignore
-          (List.fold_left (FE.process_decl FE.print_status)
+          (List.fold_left (FE.process_decl FE.print_status used_context)
 	     (SAT.empty (), true, Explanation.empty) cnf);
         Options.Time.unset_timeout ~is_gui:false;
         if Options.profiling() then
@@ -135,7 +137,8 @@ let () =
     if Options.timelimit_per_goal() then
       FE.print_status FE.Preprocess 0L;
     List.iter
-      (fun cnf ->
+      (fun (cnf, gname) ->
+         let used_context = FE.choose_used_context all_used_context gname in
         init_profiling ();
         try
           if Options.timelimit_per_goal() then
@@ -145,7 +148,7 @@ let () =
             end;
           SAT.reset_refs ();
           ignore
-            (List.fold_left (FE.process_decl FE.print_status)
+            (List.fold_left (FE.process_decl FE.print_status used_context)
 	       (SAT.empty (), true, Explanation.empty) cnf)
         with Util.Timeout ->
           if not (Options.timelimit_per_goal()) then exit 142

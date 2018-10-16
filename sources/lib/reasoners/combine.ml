@@ -789,14 +789,14 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
     { assume = a1 |@| a2 |@| a3 |@| a4 |@| a5 |@| a6;
       remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6;}
 
-  let assume_th_elt env th_elt =
+  let assume_th_elt env th_elt dep =
     Options.exec_thread_yield ();
-    let env1 = Rel1.assume_th_elt env.r1 th_elt in
-    let env2 = Rel2.assume_th_elt env.r2 th_elt in
-    let env3 = Rel3.assume_th_elt env.r3 th_elt in
-    let env4 = Rel4.assume_th_elt env.r4 th_elt in
-    let env5 = Rel5.assume_th_elt env.r5 th_elt in
-    let env6 = Rel6.assume_th_elt env.r6 th_elt in
+    let env1 = Rel1.assume_th_elt env.r1 th_elt dep in
+    let env2 = Rel2.assume_th_elt env.r2 th_elt dep in
+    let env3 = Rel3.assume_th_elt env.r3 th_elt dep in
+    let env4 = Rel4.assume_th_elt env.r4 th_elt dep in
+    let env5 = Rel5.assume_th_elt env.r5 th_elt dep in
+    let env6 = Rel6.assume_th_elt env.r6 th_elt dep in
     {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6}
 
   let query env uf a =
@@ -860,17 +860,6 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
     let r6, l6 =
       Rel6.instantiate ~do_syntactic_matching t_match env.r6 uf selector in
     {r1=r1; r2=r2; r3=r3; r4=r4; r5=r5; r6=r6},
-    l6 |@| l5 |@| l4 |@| l3 |@| l2 |@| l1
-
-  let retrieve_used_context env dep =
-    Options.exec_thread_yield ();
-    let r1, l1 = Rel1.retrieve_used_context env.r1 dep in
-    let r2, l2 = Rel2.retrieve_used_context env.r2 dep in
-    let r3, l3 = Rel3.retrieve_used_context env.r3 dep in
-    let r4, l4 = Rel4.retrieve_used_context env.r4 dep in
-    let r5, l5 = Rel5.retrieve_used_context env.r5 dep in
-    let r6, l6 = Rel6.retrieve_used_context env.r6 dep in
-    r6 |@| r5 |@| r4 |@| r3 |@| r2 |@| r1,
     l6 |@| l5 |@| l4 |@| l3 |@| l2 |@| l1
 
   let print_model fmt env rs =

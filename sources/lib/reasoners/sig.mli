@@ -91,10 +91,8 @@ module type RELATION = sig
 
   val new_terms : t -> Term.Set.t
 
-  val assume_th_elt : t -> Commands.th_elt -> t
+  val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
 
-  val retrieve_used_context :
-    t -> Explanation.t -> Formula.t list * Formula.t list
 end
 
 module type SHOSTAK = sig

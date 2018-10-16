@@ -38,7 +38,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     axs_of_abstr : (F.t * Atom.atom) MA.t;
     proxies : (Atom.atom * Atom.atom list * bool) Util.MI.t;
     inst : Inst.t;
-    ground_preds : F.gformula A.Map.t; (* key <-> f *)
+    ground_preds : (F.gformula * Ex.t) A.Map.t; (* key <-> f *)
     skolems : F.gformula A.Map.t; (* key <-> f *)
     add_inst: Formula.t -> bool;
   }
@@ -330,7 +330,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       (fun e acc ->
         match e with
         | Ex.Literal a -> a :: acc
-        | Ex.Dep _ -> acc (* for debug/profiling/proofs, ignore them *)
+        | Ex.Dep _ | Ex.RootDep _ -> acc
+        (* for debug/profiling/proofs, ignore them *)
         | Ex.Bj _ | Ex.Fresh _ -> assert false
       ) ex []
 
@@ -391,11 +392,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
     | _ -> assert false
 
-  let pred_def env f name loc =
+  let pred_def env f name dep loc =
+    (* dep currently not used. No unsat-cores in satML yet *)
     Debug.pred_def f;
     let t = Term.make (Symbols.name name) [] Ty.Tbool in
     if not (Term.Set.mem t (F.ground_terms_rec f)) then
-      {env with inst = Inst.add_predicate env.inst (mk_gf f)}
+      {env with inst = Inst.add_predicate env.inst (mk_gf f) dep}
     else
       begin
         let a_t = A.mk_pred t false in
@@ -405,8 +407,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         let not_a_t = A.neg a_t in
         let a_imp = F.mk_or (F.mk_lit not_a_t 0) f_simpl false 0 in
         let not_a_imp = F.mk_or (F.mk_lit a_t 0) (F.mk_not f_simpl) false 0 in
-        let gp = A.Map.add a_t (mk_gf a_imp) env.ground_preds in
-        let gp = A.Map.add not_a_t (mk_gf not_a_imp) gp in
+        let gp = A.Map.add a_t (mk_gf a_imp, dep) env.ground_preds in
+        let gp = A.Map.add not_a_t (mk_gf not_a_imp, dep) gp in
         {env with ground_preds = gp}
       end
 
@@ -650,7 +652,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let instantiate_ground_preds env acc sa =
     List.fold_left
       (fun acc a ->
-        try (A.Map.find a env.ground_preds) :: acc
+        try (fst (A.Map.find a env.ground_preds)) :: acc
         with Not_found -> acc
       )acc sa
       [@ocaml.ppwarning "!!! Possibles issues du to replacement of atoms \
@@ -888,7 +890,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let max_term_depth_in_sat env =
     let aux mx f = Pervasives.max mx (F.max_term_depth f) in
     let max_t = MF.fold (fun f _ mx -> aux mx f) env.gamma 0 in
-    A.Map.fold (fun _ {F.f} mx -> aux mx f) env.ground_preds max_t
+    A.Map.fold (fun _ ({F.f}, _dep) mx -> aux mx f) env.ground_preds max_t
 
 
   let checks_implemented_features () =
@@ -903,7 +905,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let open Options in
     if interpretation () <> 0 then fails "interpretation";
     if save_used_context () then fails "save_used_context";
-    if proof () then fails "proof";
+    if unsat_core () then fails "unsat_core";
     if all_models () then fails "all_models";
     if model () then fails "model"
 
@@ -926,23 +928,19 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     with IUnsat (env, dep) ->
       dep
 
-  let assume env gf =
+  let assume env gf dep =
+    (* dep currently not used. No unsat-cores in satML yet *)
     assert (SAT.decision_level env.satml == 0);
     try fst (assume_aux ~dec_lvl:0 env [gf])
     with IUnsat (env, dep) -> raise (Unsat dep)
 
-  let retrieve_used_context {inst=inst} = Inst.retrieve_used_context inst
-
-
-
-
 (* instrumentation of relevant exported functions for profiling *)
-  let assume t ff =
-    if not (Options.timers ()) then assume t ff
+  let assume t ff dep =
+    if not (Options.timers ()) then assume t ff dep
     else
       try
         Timers.exec_timer_start Timers.M_Sat Timers.F_assume;
-        let t = assume t ff in
+        let t = assume t ff dep in
         Timers.exec_timer_pause Timers.M_Sat Timers.F_assume;
         t
       with exn ->
@@ -961,7 +959,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         Timers.exec_timer_pause Timers.M_Sat Timers.F_unsat;
         raise exn
 
-  let assume_th_elt env th_elt = SAT.assume_th_elt env.satml th_elt; env
+  let assume_th_elt env th_elt dep =
+    SAT.assume_th_elt env.satml th_elt dep;
+    env
 
 end
 

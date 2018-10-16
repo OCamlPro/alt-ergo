@@ -1881,24 +1881,29 @@ let split_goals_aux f l =
     List.fold_left
       (fun (ctx, global_hyp, local_hyp, ret) (td, env) ->
 	 match td.c with
-         | TGoal (_, (Check | Cut), _, _) ->
-           ctx, global_hyp, [], (f td env (local_hyp@global_hyp@ctx)) :: ret
+         | TGoal (_, (Check | Cut), name, _) ->
+           ctx, global_hyp, [],
+           (f td env (local_hyp@global_hyp@ctx), name) :: ret
 
-         | TGoal (_, _, _, _) ->
-           ctx, [], [], (f td env (local_hyp@global_hyp@ctx)) :: ret
+         | TGoal (_, _, name, _) ->
+           ctx, [], [],
+           (f td env (local_hyp@global_hyp@ctx), name) :: ret
 
          | TAxiom (_, s, _, _) when is_global_hyp s ->
-           ctx, (f td env global_hyp), local_hyp, ret
+           ctx, (f td env global_hyp), local_hyp,
+           ret
 
          | TAxiom (_, s, _, _) when is_local_hyp s ->
-           ctx, global_hyp, (f td env local_hyp), ret
+           ctx, global_hyp, (f td env local_hyp),
+           ret
 
          | _ ->
-           (f td env ctx), global_hyp, local_hyp, ret
+           (f td env ctx), global_hyp, local_hyp,
+           ret
 
       ) ([],[],[],[]) l
   in
-  List.rev_map List.rev ret
+  List.rev_map (fun (l, goal_name) -> List.rev l, goal_name) ret
 
 let split_goals l =
   split_goals_aux (fun e env acc -> (e, env) :: acc) l

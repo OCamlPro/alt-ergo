@@ -46,7 +46,7 @@ module type S = sig
   val empty : t
   val add_terms : t -> T.Set.t -> F.gformula -> t
   val add_lemma : t -> F.gformula -> Ex.t -> t
-  val add_predicate : t -> F.gformula -> t
+  val add_predicate : t -> F.gformula -> Ex.t -> t
 
   val m_lemmas :
     use_cs : bool ->
@@ -65,9 +65,6 @@ module type S = sig
     (F.t -> F.t -> bool) ->
     int ->
     instances * instances (* goal_directed, others *)
-
-  (* returns used axioms/predicates * unused axioms/predicates *)
-  val retrieve_used_context : t -> Ex.t -> Formula.t list * Formula.t list
 
   val register_max_term_depth : t -> int -> t
 
@@ -125,15 +122,13 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     { env with
       matching = T.Set.fold (EM.add_term infos) s env.matching }
 
-  let add_predicate env gf =
+  let add_predicate env gf ex =
     let {F.f=f;age=age} = gf in
-    if EM.unused_context f then env
-    else
-      { env with
-        predicates = MF.add f (age,Ex.empty) env.predicates;
-        (* this is not done in SAT*)
-        matching = EM.max_term_depth env.matching (F.max_term_depth f)
-      }
+    { env with
+      predicates = MF.add f (age, ex) env.predicates;
+      (* this is not done in SAT*)
+      matching = EM.max_term_depth env.matching (F.max_term_depth f)
+    }
 
   let register_max_term_depth env mx =
     {env with matching = EM.max_term_depth env.matching mx}
@@ -224,7 +219,8 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 		      }
                     in
                     let dep =
-                      if not (Options.proof() || Options.profiling()) then dep
+                      if not (Options.unsat_core() || Options.profiling()) then
+                        dep
                       else
                         (* Dep lorig used to track conflicted instances
                            in profiling mode *)
@@ -303,37 +299,15 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   let m_predicates env tbox selector ilvl backward use_cs =
     mround env env.predicates tbox selector ilvl "predicates" backward use_cs
 
-  let retrieve_used_context env dep =
-    let deps = Ex.formulas_of dep in
-    let used, unlems, unpreds =
-      SF.fold
-        (fun f ((used, lems, preds) as acc) ->
-          if MF.mem f lems then f :: used, MF.remove f lems, preds
-          else if MF.mem f preds then f :: used, lems, MF.remove f preds
-          else
-            match F.view f with
-            | F.Lemma _ ->
-              (* An axiom that does not appear in lems because of inconsist. *)
-              f :: used, lems, preds
-            | _ -> acc
-        ) deps ([], env.lemmas, env.predicates)
-    in
-    let unused = MF.fold (fun f _ acc -> f::acc) unlems [] in
-    let unused = MF.fold (fun f _ acc -> f::acc) unpreds unused in
-    used, unused
-
-
   let add_lemma env gf dep =
     let {F.f=orig;age=age;gf=b} = gf in
-    if (*not (Ex.is_empty dep) ||*) EM.unused_context orig then env
-    else
-      let age, dep =
-        try
-          let age' , dep' = MF.find orig env.lemmas in
-          min age age' , Ex.union dep dep'
-        with Not_found -> age, dep
-      in
-      { env with lemmas = MF.add orig (age,dep) env.lemmas }
+    let age, dep =
+      try
+        let age' , dep' = MF.find orig env.lemmas in
+        min age age' , Ex.union dep dep'
+      with Not_found -> age, dep
+    in
+    { env with lemmas = MF.add orig (age,dep) env.lemmas }
 
   (*** add wrappers to profile exported functions ***)
 
