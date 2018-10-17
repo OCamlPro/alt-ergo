@@ -52,7 +52,7 @@ module Pur_Literal_PP = struct
     | PR t ->
       match Term.view t with
       | {Term.f=Symbols.Name(hs,_)} ->
-      SH.mem hs pos || SH.mem hs neg
+        SH.mem hs pos || SH.mem hs neg
       | _ -> false
 
   let get_lits gf (pos,neg) =
@@ -62,11 +62,11 @@ module Pur_Literal_PP = struct
         let view,is_neg = A.LT.atom_view l in
         match view with
         | EQ _ | EQ_LIST _ ->
-           pos,neg
-          (* if is_neg then
-           *   pos, SH.add eq neg
-           * else
-           *   SH.add eq pos, neg *)
+          pos,neg
+        (* if is_neg then
+         *   pos, SH.add eq neg
+         * else
+         *   SH.add eq pos, neg *)
         | BT (hs,l) ->
           pos,neg
         | PR t ->
@@ -77,7 +77,7 @@ module Pur_Literal_PP = struct
             else
               SH.add hs pos, neg
           | _ -> pos, neg
-         ) lits (pos,neg)
+      ) lits (pos,neg)
 
   let subst_simpl gfs pos neg =
     let open F in
@@ -122,7 +122,7 @@ module Pur_Literal_PP = struct
     let _, reduced =
       List.fold_left
         (fun ((seen, reduced) as acc) ({F.f} as gf) ->
-          if SF.mem f seen then acc else SF.add f seen, gf :: reduced
+           if SF.mem f seen then acc else SF.add f seen, gf :: reduced
         )(seen, []) (List.rev assumed)
     in
     reduced
@@ -160,119 +160,117 @@ end
 
 
 module Main (SatCont : Sat_solver_sig.SatContainer)
-       : Sat_solver_sig.SatContainer =
-  struct
+  : Sat_solver_sig.SatContainer =
+struct
 
-    module Make (Th : Theory.S) : Sat_solver_sig.S = struct
+  module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
-      module SAT = SatCont.Make(Th)
+    module SAT = SatCont.Make(Th)
 
-      type t = {
-          assumed : F.gformula list;
-          pred_def : (F.t * string * Loc.t) list;
-          th_axioms: Commands.th_elt list;
-          sat : SAT.t
-        }
+    type t = {
+      assumed : F.gformula list;
+      pred_def : (F.t * string * Loc.t) list;
+      th_axioms: Commands.th_elt list;
+      sat : SAT.t
+    }
 
-      exception Sat of t
-      exception Unsat of Ex.t
-      exception I_dont_know of t
+    exception Sat of t
+    exception Unsat of Ex.t
+    exception I_dont_know of t
 
-      let empty () =
-        {
-          assumed = [] ;
-          pred_def = [];
-          th_axioms = [];
-          sat = SAT.empty ();
-        }
+    let empty () =
+      {
+        assumed = [] ;
+        pred_def = [];
+        th_axioms = [];
+        sat = SAT.empty ();
+      }
 
-      let empty_with_inst add_inst =
-        { (empty ()) with sat = SAT.empty_with_inst add_inst }
+    let empty_with_inst add_inst =
+      { (empty ()) with sat = SAT.empty_with_inst add_inst }
 
-      let get_steps () = SAT.get_steps ()
+    let get_steps () = SAT.get_steps ()
 
-      let reset_refs () = SAT.reset_refs ()
+    let reset_refs () = SAT.reset_refs ()
 
-      let print_model ~header fmt env = SAT.print_model ~header fmt env.sat
+    let print_model ~header fmt env = SAT.print_model ~header fmt env.sat
 
-      let retrieve_used_context env dep = SAT.retrieve_used_context env.sat dep
+    let pred_def env f name dep loc =
+      {env with pred_def = (f, name, loc) :: env.pred_def}
 
-      let pred_def env f name loc =
-        {env with pred_def = (f, name, loc) :: env.pred_def}
+    let assume_th_elt env th_elt dep =
+      {env with th_axioms = th_elt :: env.th_axioms}
 
-      let assume_th_elt env th_elt =
-        {env with th_axioms = th_elt :: env.th_axioms}
+    let assume env fg dep =
+      { env with assumed = fg :: env.assumed }
 
-      let assume env fg =
-        { env with assumed = fg :: env.assumed }
+    let check_trivial_sat ({ assumed ; pred_def ; th_axioms } as env) =
+      if assumed == [] && pred_def == [] && th_axioms == [] then
+        raise (Sat env)
 
-      let check_trivial_sat ({ assumed ; pred_def ; th_axioms } as env) =
-        if assumed == [] && pred_def == [] && th_axioms == [] then
-          raise (Sat env)
+    let has_uquantifiers f =
+      let open F in
+      let rec aux f =
+        match view f with
+        | Literal _ -> false
+        | Lemma _ -> true
+        | Skolem {main=f} | Tlet {tlet_f=f} -> aux f
+        | Clause (f1, f2, _) | Unit (f1, f2) -> aux f1 || aux f2
+        | Flet {flet_f=f1; flet_form=f2} -> aux f1 || aux f2
+      in
+      aux f
 
-      let has_uquantifiers f =
-        let open F in
-        let rec aux f =
-          match view f with
-          | Literal _ -> false
-          | Lemma _ -> true
-          | Skolem {main=f} | Tlet {tlet_f=f} -> aux f
-          | Clause (f1, f2, _) | Unit (f1, f2) -> aux f1 || aux f2
-          | Flet {flet_f=f1; flet_form=f2} -> aux f1 || aux f2
+    let check_if_idk_is_sat env sat =
+      let is_idk =
+        env.pred_def != [] || env.th_axioms != [] ||
+        List.exists (fun {F.f} -> has_uquantifiers f) env.assumed
+      in
+      let env = {sat; assumed = []; pred_def = []; th_axioms = []} in
+      raise (if is_idk then I_dont_know env else Sat env)
+
+
+    let unsat env fg =
+      let env = { env with assumed = fg :: env.assumed } in
+      let env = { env with assumed = Pur_Literal_PP.simplify env.assumed } in
+      check_trivial_sat env;
+      try
+        let sat =
+          List.fold_left
+            (fun sat gf -> SAT.assume sat gf Ex.empty)
+            env.sat env.assumed
         in
-        aux f
-
-      let check_if_idk_is_sat env sat =
-        let is_idk =
-          env.pred_def != [] || env.th_axioms != [] ||
-            List.exists (fun {F.f} -> has_uquantifiers f) env.assumed
+        let sat =
+          List.fold_left
+            (fun sat (f,name,loc) -> SAT.pred_def sat f name Ex.empty loc)
+            sat env.pred_def
         in
-        let env = {sat; assumed = []; pred_def = []; th_axioms = []} in
-        raise (if is_idk then I_dont_know env else Sat env)
-
-
-      let unsat env fg =
-        let env = { env with assumed = fg :: env.assumed } in
-        let env = { env with assumed = Pur_Literal_PP.simplify env.assumed } in
-        check_trivial_sat env;
-        try
-          let sat =
-            List.fold_left
-              (fun sat gf -> SAT.assume sat gf)
-              env.sat env.assumed
-          in
-          let sat =
-            List.fold_left
-              (fun sat (f,name,loc) -> SAT.pred_def sat f name loc)
-              sat env.pred_def
-          in
-          let sat =
-            List.fold_left
-              (fun sat gf -> SAT.assume_th_elt sat gf)
-              sat env.th_axioms
-          in
-          SAT.unsat sat
-            {Formula.f=F.vrai;
-             origin_name = "<goal>";
-             hdist = -1;
-             gdist = 0;
-             trigger_depth = max_int;
-             nb_reductions = 0;
-             age=0;
-             lem=None;
-	     mf=false;
-             gf=true;
-             from_terms = [];
-             theory_elim = true;
-            }
-        with
-        | SAT.Unsat dep -> dep
-        | SAT.I_dont_know sat -> check_if_idk_is_sat env sat
-        | SAT.Sat sat ->(*
+        let sat =
+          List.fold_left
+            (fun sat gf -> SAT.assume_th_elt sat gf Ex.empty)
+            sat env.th_axioms
+        in
+        SAT.unsat sat
+          {Formula.f=F.vrai;
+           origin_name = "<goal>";
+           hdist = -1;
+           gdist = 0;
+           trigger_depth = max_int;
+           nb_reductions = 0;
+           age=0;
+           lem=None;
+           mf=false;
+           gf=true;
+           from_terms = [];
+           theory_elim = true;
+          }
+      with
+      | SAT.Unsat dep -> dep
+      | SAT.I_dont_know sat -> check_if_idk_is_sat env sat
+      | SAT.Sat sat ->(*
            fprintf fmt "Are other SATs able to detect Satisfibility ?!";
            assert false*)
-          let env = {sat; assumed = []; pred_def = []; th_axioms = []} in
-          raise (Sat env)
+        let env = {sat; assumed = []; pred_def = []; th_axioms = []} in
+        raise (Sat env)
 
-    end
   end
+end

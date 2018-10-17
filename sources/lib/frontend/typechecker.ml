@@ -1647,7 +1647,8 @@ and monomorphize_form tf =
            qf_hyp = List.map monomorphize_form qf.qf_hyp;
            qf_form = monomorphize_form qf.qf_form;
            qf_triggers =
-            List.map (fun (l, b,c) -> List.map mono_term l, b,c) qf.qf_triggers}
+             List.map (fun (l, b,c) ->
+                 List.map mono_term l, b,c) qf.qf_triggers}
     | TFexists qf ->
       TFexists
         {  qf_bvars = List.map monomorphize_var qf.qf_bvars;
@@ -1655,7 +1656,8 @@ and monomorphize_form tf =
            qf_hyp = List.map monomorphize_form qf.qf_hyp;
            qf_form = monomorphize_form qf.qf_form;
            qf_triggers =
-            List.map (fun (l, b,c) -> List.map mono_term l, b,c) qf.qf_triggers}
+             List.map (fun (l, b,c) ->
+                 List.map mono_term l, b,c) qf.qf_triggers}
 
     | TFlet (l, binders, tf) ->
       let l = List.map monomorphize_var l in

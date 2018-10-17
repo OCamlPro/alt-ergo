@@ -473,11 +473,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     try MA.find a !tmp_cache
     with Not_found ->
     (*assert (A.LT.is_ground a);*)
-      match Th.query a env.tbox with
-      | No -> tmp_cache := MA.add a No !tmp_cache; No
-      | Yes (ex,_) as y ->
-        learn_clause env ff ex;
-        tcp_cache := MA.add a y !tcp_cache; y
+    match Th.query a env.tbox with
+    | No -> tmp_cache := MA.add a No !tmp_cache; No
+    | Yes (ex,_) as y ->
+      learn_clause env ff ex;
+      tcp_cache := MA.add a y !tcp_cache; y
 
   let th_elim tcp_cache tmp_cache ff env =
     match F.view ff.F.f with
@@ -806,7 +806,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                  | Inst_gen.Ok _, _ -> p1, p2
                  | _, Inst_gen.Ok _ -> p2, p1
                  | Inst_gen.Ignore, Inst_gen.Ignore ->
-               if is_impl || F.size f1 <= F.size f2 then p1, p2 else p2, p1
+                   if is_impl || F.size f1 <= F.size f2 then p1, p2 else p2, p1
              in
              env, true, tcp, (p1,p2,dep,is_impl)::ap_delta, lits
 
@@ -825,15 +825,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                 not ?*)
              if not ground then env, bcp, tcp, ap_delta, lits
              else
-             let lits = (a, ff, dep, env.dlevel, env.plevel)::lits in
-             let acc = env, true, true, ap_delta, lits in
-             begin
-               try (* ground preds bahave like proxies of lazy CNF *)
-                 let af, adep = A.LT.Map.find a env.ground_preds in
+               let lits = (a, ff, dep, env.dlevel, env.plevel)::lits in
+               let acc = env, true, true, ap_delta, lits in
+               begin
+                 try (* ground preds bahave like proxies of lazy CNF *)
+                   let af, adep = A.LT.Map.find a env.ground_preds in
                    asm_aux acc
                      [{ff with F.f = af}, Ex.union dep adep]
-               with Not_found -> acc
-             end
+                 with Not_found -> acc
+               end
 
            | F.Skolem quantif ->
              Options.tool_req 2 "TR-Sat-Assume-Sko";

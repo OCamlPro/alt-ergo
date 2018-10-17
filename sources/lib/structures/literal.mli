@@ -36,11 +36,11 @@ type 'a view = private
   | Pred of 'a * bool
 
 type 'a atom_view =
-(* We do not need to export internal representation
-   of literals !*)
-   | EQ of 'a * 'a
-   | BT of Hstring.t * 'a list
-   | PR of 'a
+  (* We do not need to export internal representation
+     of literals !*)
+  | EQ of 'a * 'a
+  | BT of builtin * 'a list
+  | PR of 'a
   | EQ_LIST of 'a list
 
 module type OrderedType = sig

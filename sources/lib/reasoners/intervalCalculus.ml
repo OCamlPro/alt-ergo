@@ -2149,9 +2149,9 @@ module Make
         (fun f (_th_ax, dep) accu ->
            (* currently, No diff between propagators and case-split axs *)
            let forms = MF.singleton f (0 (*0 = age *), dep) in
-            let menv = EM.add_triggers ~backward:Util.Normal menv forms
-                ~grd:false
-            in
+           let menv = EM.add_triggers ~backward:Util.Normal menv forms
+               ~grd:false
+           in
            let res = EM.query menv uf in
            if debug_fpa () >= 2 then begin
              let cpt = ref 0 in

@@ -422,9 +422,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Debug.internal_axiom_def ax a at;
     if at.Atom.neg.Atom.is_true then inst
     else
-    let gax = mk_gf ax in
-    let ex = Ex.singleton (Ex.Literal at) in
-    Inst.add_lemma inst gax ex
+      let gax = mk_gf ax in
+      let ex = Ex.singleton (Ex.Literal at) in
+      Inst.add_lemma inst gax ex
 
   let atoms_rec =
     let open Formula in
@@ -799,35 +799,35 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           in
           let acc = { acc with new_abstr_vars } in
           let env, acc =
-          if FF.equal ff FF.vrai then env, acc
-          else
-          if cnf_is_in_cdcl then
-            (* this means that there exists another F.t that is
-               equivalent to f. These two formulas have the same ff *)
-            if SAT.exists_in_lazy_cnf env.satml ff then env, acc
+            if FF.equal ff FF.vrai then env, acc
             else
-              env,
-              {acc with
-               activate = FF.Map.add ff None acc.activate;
-               updated = true}
-          else
-            let ff_abstr,new_proxies,proxies_mp, new_vars =
-              FF.cnf_abstr env.ff_hcons_env ff env.proxies acc.new_vars
-            in
-            let env = {env with proxies = proxies_mp} in
-            let nunit =
-              List.fold_left FF.expand_proxy_defn acc.nunit new_proxies
-            in
-            let acc =
-              {acc with
-               new_vars;
-               nunit;
-               unit = [ff_abstr] :: acc.unit;
-               activate = FF.Map.add ff None acc.activate;
-               updated = true
-              }
-            in
-            env, acc
+            if cnf_is_in_cdcl then
+              (* this means that there exists another F.t that is
+                 equivalent to f. These two formulas have the same ff *)
+              if SAT.exists_in_lazy_cnf env.satml ff then env, acc
+              else
+                env,
+                {acc with
+                 activate = FF.Map.add ff None acc.activate;
+                 updated = true}
+            else
+              let ff_abstr,new_proxies,proxies_mp, new_vars =
+                FF.cnf_abstr env.ff_hcons_env ff env.proxies acc.new_vars
+              in
+              let env = {env with proxies = proxies_mp} in
+              let nunit =
+                List.fold_left FF.expand_proxy_defn acc.nunit new_proxies
+              in
+              let acc =
+                {acc with
+                 new_vars;
+                 nunit;
+                 unit = [ff_abstr] :: acc.unit;
+                 activate = FF.Map.add ff None acc.activate;
+                 updated = true
+                }
+              in
+              env, acc
           in
           List.fold_left pre_assume (env, acc) new_facts
 
@@ -907,7 +907,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          MF.add f (gf, Ex.empty, 0, 0) mf
       )MF.empty sa
 
-    let inst_gen env sa =
+  let inst_gen env sa =
     let tbox = SAT.current_tbox env.satml |> Th.get_case_split_env in
     let inst = Inst.matching_env env.inst in
     let gamma = mk_gamma sa in

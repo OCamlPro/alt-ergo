@@ -488,7 +488,7 @@ module M = struct
      Note that -max-split limitation will be ignored in model generation phase";
 
     "-sat-detection",
-      Arg.Set sat_detection,
+    Arg.Set sat_detection,
     " Experimental";
 
     "-unsat-core",

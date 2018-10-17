@@ -916,27 +916,27 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
         if keep_triggers then check_triggers qf.qf_triggers (vterm', vtype')
         else if Options.no_user_triggers () || qf.qf_triggers == [] then
           begin
-     (make_triggers false vterm' vtype' (STRS.elements trs1) false
-        ~default:true)@
-     (make_triggers false vterm' vtype' (STRS.elements trs2) false
-        ~default:true)
+            (make_triggers false vterm' vtype' (STRS.elements trs1) false
+               ~default:true)@
+            (make_triggers false vterm' vtype' (STRS.elements trs2) false
+               ~default:true)
           end
         else
           begin
             let lf = filter_good_triggers (vterm', vtype') qf.qf_triggers in
             if lf != [] then lf
             else
-       (make_triggers false vterm' vtype' (STRS.elements trs1) false
-          ~default:true)@
-       (make_triggers false vterm' vtype' (STRS.elements trs2) false
-          ~default:true)
+              (make_triggers false vterm' vtype' (STRS.elements trs1) false
+                 ~default:true)@
+              (make_triggers false vterm' vtype' (STRS.elements trs2) false
+                 ~default:true)
           end
       in
       let trs12 =
         if trs12 != [] then trs12
         else (* allow vars to escape their scope *)
-	  (make_triggers
-      ~default:true false vterm' vtype' (STRS.elements f_trs1) true)@
+          (make_triggers
+             ~default:true false vterm' vtype' (STRS.elements f_trs1) true)@
           (make_triggers
              ~default:true false vterm' vtype' (STRS.elements f_trs2) true)
       in
@@ -953,7 +953,7 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
       in
       let r  =
         { qf with
-	  qf_triggers = List.append trs12 more_trs;
+          qf_triggers = List.append trs12 more_trs;
           qf_form = {c=TFop(OPiff,[f1'; f2']); annot = ido} }
       in
       begin
@@ -974,13 +974,13 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
         if keep_triggers then check_triggers qf.qf_triggers (vterm', vtype')
         else if Options.no_user_triggers () || qf.qf_triggers == [] then
           make_triggers gopt vterm' vtype' (STRS.elements trs) false
-     ~default:true
+            ~default:true
         else
           let lf = filter_good_triggers (vterm',vtype') qf.qf_triggers in
           if lf != [] then lf
-   else
-     make_triggers gopt vterm' vtype' (STRS.elements trs) false
-       ~default:true
+          else
+            make_triggers gopt vterm' vtype' (STRS.elements trs) false
+              ~default:true
       in
       let trs' = (* allow vars to escape their scope *)
         if trs' != [] then trs'
@@ -1057,7 +1057,7 @@ let make keep_triggers gopt f = match f.c with
           ~default: false
       in
       { f with c = TFforall
-	           {qf_bvars=[]; qf_upvars=[]; qf_triggers=trs@more_trs;
-             qf_form=f; qf_hyp=[] }
+                   {qf_bvars=[]; qf_upvars=[]; qf_triggers=trs@more_trs;
+                    qf_form=f; qf_hyp=[] }
       }
 

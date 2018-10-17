@@ -370,8 +370,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let {T.f=f_pat;xs=pats;ty=ty_pat} = T.view pat in
     let {T.f=f_t} = T.view t in
     match f_pat, f_t with
-      |	Symbols.Var hs, _ when String.equal "_" (Hstring.view hs) -> [sg]
-      |	Symbols.Var _, _ ->
+    |	Symbols.Var hs, _ when String.equal "_" (Hstring.view hs) -> [sg]
+    |	Symbols.Var _, _ ->
       let sb =
         (try
            let s_ty = Ty.matching s_ty ty_pat (T.view t).T.ty in
@@ -382,8 +382,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
          with Ty.TypeClash _ -> raise Echec)
       in
       [sb]
-      (*| _, Symbols.Var _ ->
-        match_term env tbox sg t pat*)
+    (*| _, Symbols.Var _ ->
+      match_term env tbox sg t pat*)
     | _ ->
       try
         let s_ty = Ty.matching s_ty ty_pat (T.view t).T.ty in
@@ -553,54 +553,54 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let pat_info =
       { trigger = tr;
         trigger_age = age ;
-	trigger_orig = lem ;
-	trigger_formula = f ;
-	trigger_dep = dep}
+        trigger_orig = lem ;
+        trigger_formula = f ;
+        trigger_dep = dep}
     in
     matching env tbox pat_info
 
-    let matching_all env tbox acc (tgs, age, lem, f, dep, grd) =
-      if grd then
+  let matching_all env tbox acc (tgs, age, lem, f, dep, grd) =
+    if grd then
+      List.fold_left
+        (fun acc tr ->
+           (matching_one env tbox age lem f dep tr) :: acc) acc tgs
+    else
+      let default, others = List.partition (fun t -> t.F.default) tgs in
+      let ok = ref false in
+      let acc =
         List.fold_left
           (fun acc tr ->
-             (matching_one env tbox age lem f dep tr) :: acc) acc tgs
-      else
-        let default, others = List.partition (fun t -> t.F.default) tgs in
-        let ok = ref false in
-        let acc =
-          List.fold_left
-            (fun acc tr ->
-               match matching_one env tbox age lem f dep tr with
-               | (_, []) -> acc
-               | res -> ok := true; res :: acc
-            ) acc default
-        in
-        let acc = ref acc in
-        let others =
-          List.stable_sort
-            (fun t1 t2 -> !(t1.F.nb_success) - !(t2.F.nb_success))
-            others
-        in
-        let others = ref others in
-        try
-          while greedy () || not !ok do
-            match !others with
-              [] -> raise Exit
-            | tr :: l ->
-              others := l;
-              match matching_one env tbox age lem f dep tr with
-              | (_, []) -> ()
-              | res ->
-                ok := true;
-                incr tr.F.nb_success;
-                acc := res :: !acc
-          done;
-          !acc
-        with Exit -> !acc
+             match matching_one env tbox age lem f dep tr with
+             | (_, []) -> acc
+             | res -> ok := true; res :: acc
+          ) acc default
+      in
+      let acc = ref acc in
+      let others =
+        List.stable_sort
+          (fun t1 t2 -> !(t1.F.nb_success) - !(t2.F.nb_success))
+          others
+      in
+      let others = ref others in
+      try
+        while greedy () || not !ok do
+          match !others with
+            [] -> raise Exit
+          | tr :: l ->
+            others := l;
+            match matching_one env tbox age lem f dep tr with
+            | (_, []) -> ()
+            | res ->
+              ok := true;
+              incr tr.F.nb_success;
+              acc := res :: !acc
+        done;
+        !acc
+      with Exit -> !acc
 
 
-  
-  
+
+
   let query env tbox =
     reset_cache_refs ();
     try
@@ -637,7 +637,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
              | Util.Backward -> Lazy.force tgs1
              | Util.Forward -> Lazy.force tgs2
            in
-          add_trigger (tgs, age, lem, f, dep, grd) env
+           add_trigger (tgs, age, lem, f, dep, grd) env
          | _ -> assert false
       ) formulas env
 

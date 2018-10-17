@@ -310,7 +310,7 @@ let rec print fmt f =
              ))
         trs print f
     else
-	fprintf fmt "lem %s : %d" n (hash f)
+      fprintf fmt "lem %s : %d" n (hash f)
 
   | Unit(f1, f2) -> fprintf fmt "@[(%a /\\@ %a)@]" print f1 print f2
 
@@ -566,13 +566,13 @@ let resolution_triggers is_back f name binders free_vty =
        if Term.Set.exists (cand_is_more_general t) others then acc
        else
          { content = [t];
-          nb_success = ref 0;
+           nb_success = ref 0;
            hyp = [];
            semantic = [];
            depth = (Term.view t).Term.depth;
            from_user = false;
-          guard = None;
-          default = true;
+           guard = None;
+           default = true;
          } :: acc
     )cand []
 

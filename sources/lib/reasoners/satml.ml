@@ -809,8 +809,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           if unsat_core () || ta.var.level > 0 then Ex.singleton (Ex.Literal ta)
           else Ex.empty
         in
-      if Options.enable_inst_gen () = 0 then
-        assert (Literal.LT.is_ground ta.lit);
+        if Options.enable_inst_gen () = 0 then
+          assert (Literal.LT.is_ground ta.lit);
         if ta.timp then
           ()
             [@ocaml.ppwarning "XXX: only do this for instantiation ?"]

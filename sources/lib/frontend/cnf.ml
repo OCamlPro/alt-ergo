@@ -430,7 +430,7 @@ and make_triggers name up_qv ret_d abstr hyp qf =
            with
              Not_found -> incr cpt; MTR.add terms (tr,!cpt) acc
          ) MTR.empty qf.qf_triggers) [] in
-    List.fast_sort (fun (_,i) (_,j) ->
+  List.fast_sort (fun (_,i) (_,j) ->
       Pervasives.compare i j) trs |> List.map fst
 
 and make_pred up_qv inline_lets defns abstr z id =
@@ -564,7 +564,7 @@ and make_form up_qv inline_lets defns abstr name_base f loc =
           List.map (fun f ->
               mk_form up_qv defns false f.c f.annot |> fst ) qf.qf_hyp in
 
-      let trs = make_triggers name up_qv ret_d abstr hyp qf in
+        let trs = make_triggers name up_qv ret_d abstr hyp qf in
 
         (* for for_all, we should eventually inline some introduced abstractions
            before constructing the quantified formulas *)
