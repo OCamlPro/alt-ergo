@@ -128,7 +128,7 @@ CMO-LIB = lib/util/config.cmo \
       lib/reasoners/records.cmo \
       lib/reasoners/bitv.cmo \
       lib/reasoners/arrays.cmo \
-      lib/reasoners/sum.cmo \
+      lib/reasoners/enum.cmo \
       lib/reasoners/ite.cmo \
       lib/reasoners/combine.cmo \
       lib/reasoners/ccx.cmo \

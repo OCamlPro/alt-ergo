@@ -655,8 +655,8 @@ and X4 : Sig.SHOSTAK
 
 and X5 : Sig.SHOSTAK
  with type r = CX.r
- and type t = CX.r Sum.abstract =
-        Sum.Shostak
+ and type t = CX.r Enum.abstract =
+        Enum.Shostak
           (struct
             include CX
             let extract = extract5
@@ -727,7 +727,7 @@ module Rel4 : Sig.RELATION
 
 module Rel5 : Sig.RELATION
   with type r = CX.r and type uf = Uf.t =
-         Sum.Relation
+         Enum.Relation
            (struct
              include CX
              let extract = extract5
