@@ -52,7 +52,7 @@ module Shostak (X : ALIEN) = struct
   let name = "Sum"
 
   let is_mine_symb = function
-    | Sy.Name(_, Sy.Constructor) -> true
+    | Sy.Op (Sy.Constr _) -> true
     | _ -> false
 
   let fully_interpreted sb = true
@@ -130,7 +130,7 @@ module Shostak (X : ALIEN) = struct
         | Alien r    -> X.subst p v r
 
   let make t = match T.view t with
-    | {T.f=Sy.Name(hs, Sy.Constructor); xs=[];ty=ty} ->
+    | {T.f=Sy.Op (Sy.Constr hs); xs=[];ty=ty} ->
       is_mine (Cons(hs,ty)), []
     | _ -> assert false
 

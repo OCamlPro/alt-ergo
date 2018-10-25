@@ -36,8 +36,9 @@ type operator =
   | Sqrt_real_default | Sqrt_real_excess
   | Min_real | Min_int | Max_real | Max_int | Integer_log2 | Pow_real_int
   | Pow_real_real | Integer_round
+  | Constr of Hstring.t (* enums *)
 
-type name_kind = Ac | Constructor | Other
+type name_kind = Ac | Other
 
 type bound_kind = VarBnd of Hstring.t | ValBnd of Numbers.Q.t
 
@@ -63,7 +64,7 @@ let name ?(kind=Other) s = Name (Hstring.make s, kind)
 let var s = Var (Hstring.make s)
 let int i = Int (Hstring.make i)
 let real r = Real (Hstring.make r)
-
+let constr s = Op (Constr (Hstring.make s))
 
 let mk_bound name sort ~is_open ~is_lower =
   let kind =
@@ -92,9 +93,6 @@ let compare_kind k1 k2 = match k1, k2 with
   | Ac   , _     -> 1
   | _    , Ac    -> -1
   | Other, Other -> 0
-  | Other, _     -> 1
-  | _    , Other -> -1
-  | Constructor, Constructor -> 0
 
 let compare s1 s2 =  match s1, s2 with
   | Name (n1,k1), Name (n2,k2) ->
@@ -114,6 +112,11 @@ let compare s1 s2 =  match s1, s2 with
   | Op(Access s1), Op(Access s2) -> Hstring.compare s1 s2
   | Op(Access _), _ -> -1
   | _, Op(Access _) -> 1
+
+  | Op(Constr s1), Op(Constr s2) -> Hstring.compare s1 s2
+  | Op(Constr _), _ -> -1
+  | _, Op(Constr _) -> 1
+
   | _  -> Pervasives.compare s1 s2
 
 let equal s1 s2 = compare s1 s2 = 0
@@ -123,6 +126,7 @@ let hash = function
   | Name (n,_) -> Hstring.hash n * 19
   | Var n (*| Int n*) -> Hstring.hash n * 19 + 1
   | Op (Access s) -> Hstring.hash s + 19
+  | Op (Constr s) -> Hstring.hash s * 21
   | MapsTo hs -> Hstring.hash hs * 37
   | s -> Hashtbl.hash s
 
@@ -152,6 +156,7 @@ let to_string ?(show_vars=true) =  function
   | Op Div -> "/"
   | Op Modulo -> "%"
   | Op (Access s) -> "@Access_"^(Hstring.view s)
+  | Op (Constr s) -> "@Constr_"^(Hstring.view s)
   | Op Record -> "@Record"
   | Op Get -> "get"
   | Op Set -> "set"

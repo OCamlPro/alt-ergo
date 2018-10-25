@@ -47,51 +47,51 @@ let fpa_rounding_mode =
 (*  why3/standard rounding modes*)
 
 let _NearestTiesToEven__rounding_mode =
-  T.make (Sy.Name(Hs.make "NearestTiesToEven", Sy.Constructor)) []
+  T.make (Sy.constr "NearestTiesToEven") []
     fpa_rounding_mode
 (** ne in Gappa: to nearest, tie breaking to even mantissas*)
 
 let _ToZero__rounding_mode =
-  T.make (Sy.Name(Hs.make "ToZero", Sy.Constructor)) [] fpa_rounding_mode
+  T.make (Sy.constr "ToZero") [] fpa_rounding_mode
 (** zr in Gappa: toward zero *)
 
 let _Up__rounding_mode =
-  T.make (Sy.Name(Hs.make "Up", Sy.Constructor)) [] fpa_rounding_mode
+  T.make (Sy.constr "Up") [] fpa_rounding_mode
 (** up in Gappa: toward plus infinity *)
 
 let _Down__rounding_mode =
-  T.make (Sy.Name(Hs.make "Down", Sy.Constructor)) [] fpa_rounding_mode
+  T.make (Sy.constr "Down") [] fpa_rounding_mode
 (** dn in Gappa: toward minus infinity *)
 
 let _NearestTiesToAway__rounding_mode =
-  T.make (Sy.Name(Hs.make "NearestTiesToAway", Sy.Constructor)) []
+  T.make (Sy.constr "NearestTiesToAway") []
     fpa_rounding_mode
 (** na : to nearest, tie breaking away from zero *)
 
 (* additional Gappa rounding modes *)
 
 let _Aw__rounding_mode =
-  T.make (Sy.Name(Hs.make "Aw", Sy.Constructor)) [] fpa_rounding_mode
+  T.make (Sy.constr "Aw") [] fpa_rounding_mode
 (** aw in Gappa: away from zero **)
 
 let _Od__rounding_mode =
-  T.make (Sy.Name(Hs.make "Od", Sy.Constructor)) [] fpa_rounding_mode
+  T.make (Sy.constr "Od") [] fpa_rounding_mode
 (** od in Gappa: to odd mantissas *)
 
 let _No__rounding_mode =
-  T.make (Sy.Name(Hs.make "No", Sy.Constructor)) [] fpa_rounding_mode
+  T.make (Sy.constr "No") [] fpa_rounding_mode
 (** no in Gappa: to nearest, tie breaking to odd mantissas *)
 
 let _Nz__rounding_mode =
-  T.make (Sy.Name(Hs.make "Nz", Sy.Constructor)) [] fpa_rounding_mode
+  T.make (Sy.constr "Nz") [] fpa_rounding_mode
 (** nz in Gappa: to nearest, tie breaking toward zero *)
 
 let _Nd__rounding_mode =
-  T.make (Sy.Name(Hs.make "Nd", Sy.Constructor)) [] fpa_rounding_mode
+  T.make (Sy.constr "Nd") [] fpa_rounding_mode
 (** nd in Gappa: to nearest, tie breaking toward minus infinity *)
 
 let _Nu__rounding_mode =
-  T.make (Sy.Name(Hs.make "Nu", Sy.Constructor)) [] fpa_rounding_mode
+  T.make (Sy.constr "Nu") [] fpa_rounding_mode
 (** nu in Gappa: to nearest, tie breaking toward plus infinity *)
 
 
