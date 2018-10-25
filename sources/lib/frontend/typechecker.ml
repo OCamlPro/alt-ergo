@@ -232,7 +232,7 @@ module Env = struct
     let lv = List.rev rlv in
     add env lv Symbols.name ty
 
-  let add_logics env ac names pp_profile loc =
+  let add_logics env mk_symb names pp_profile loc =
     let profile =
       match pp_profile with
 	| PPredicate args ->
@@ -248,7 +248,7 @@ module Env = struct
     let logics =
       List.fold_left
 	(fun logics (n, lbl) ->
-	  let sy = Symbols.name n ~kind:ac in
+	  let sy = mk_symb n in
 	  if MString.mem n logics then error (SymbAlreadyDefined n) loc;
 
 	  let lbl = Hstring.make lbl in
@@ -1766,8 +1766,9 @@ let type_decl keep_triggers (acc, env) d =
 	(td, env)::acc, env
 
       | Logic (loc, ac, lp, pp_ty) ->
-	Options.tool_req 1 "TR-Typing-LogicFun$_F$";
-	let env' = Env.add_logics env ac lp pp_ty loc in
+	 Options.tool_req 1 "TR-Typing-LogicFun$_F$";
+        let mk_symb hs = Symbols.name hs ~kind:ac in
+	let env' = Env.add_logics env mk_symb lp pp_ty loc in
 	let lp = List.map fst lp in
 	let td = {c = TLogic(loc,lp,pp_ty); annot = new_id () } in
 	(td, env)::acc, env'
@@ -1805,9 +1806,8 @@ let type_decl keep_triggers (acc, env) d =
 	    | _ -> PPredicate l
 	in
 	let l = List.map (fun (_,x,t) -> (x,t)) l in
-
-	let env = Env.add_logics env Symbols.Other [n] ty loc in (* TODO *)
-
+        let mk_symb hs = Symbols.name hs ~kind:Symbols.Other in
+	let env = Env.add_logics env mk_symb [n] ty loc in (* TODO *)
 	let n = fst n in
 
 	let lvar = List.map (fun (x,_) -> {pp_desc=PPvar x;pp_loc=loc}) l in
@@ -1843,7 +1843,7 @@ let type_decl keep_triggers (acc, env) d =
 	match body with
 	  | Enum lc ->
 	    let lcl = List.map (fun c -> c, "") lc in (* TODO change this *)
-	    let env2 = Env.add_logics env1 Symbols.Constructor lcl ty loc in
+	    let env2 = Env.add_logics env1 Symbols.constr lcl ty loc in
 	    let td2 = TLogic(loc, lc, ty) in
 	    let td2_a = { c = td2; annot=new_id () } in
 	    (td1_a, env1)::(td2_a,env2)::acc, env2
