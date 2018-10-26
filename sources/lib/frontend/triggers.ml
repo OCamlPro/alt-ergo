@@ -1035,3 +1035,30 @@ let make keep_triggers gopt f = match f.c with
             {qf_bvars=[]; qf_upvars=[]; qf_triggers=trs; qf_form=f; qf_hyp=[]}
       }
 
+let make_decl keep_triggers ({ c; _ } as d) =
+  match c with
+  | TAxiom (loc, name, kind, f) ->
+    let f' = make keep_triggers false f in
+    { d with c = TAxiom (loc, name, kind, f') }
+  | TGoal (loc, sort, name, f) ->
+    let f' = make keep_triggers true f in
+    { d with c = TGoal (loc, sort, name, f') }
+  | TTheory (loc, name, exts, l) ->
+    let l' =
+      List.map (fun d' ->
+          match d'.c with
+          | TAxiom (loc', name', kind', f') ->
+            let f'' = make true false f' in
+            { d' with c = TAxiom (loc', name', kind', f'') }
+          | _ -> d'
+        ) l
+    in
+    { d with c = TTheory (loc, name, exts, l') }
+  | TPredicate_def (loc, name, l, f) ->
+    let f' = make keep_triggers false f in
+    { d with c = TPredicate_def (loc, name, l, f') }
+  | TFunction_def (loc, name, l, ty, f) ->
+    let f' = make keep_triggers false f in
+    { d with c = TFunction_def (loc, name, l, ty, f') }
+  | _ -> d
+

@@ -32,3 +32,7 @@ open Typed
    if k is true existing triggers are checked
    if b is true then variables are authorized in multi-triggers *)
 val make : bool -> bool -> (int tform, int) annoted -> (int tform, int) annoted
+
+(* [make_decl k d] computes the triggers for a declaration d
+   if k is true existing triggers are checked *)
+val make_decl : bool -> (int tdecl, int) annoted -> (int tdecl, int) annoted
