@@ -380,7 +380,7 @@ and make_trigger name up_qv (defns:let_defns) abstr hyp (e, from_user) =
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv inline_lets defns abstr) trs in
       let lit =
-        A.LT.mk_builtin true ale
+        A.LT.mk_builtin true A.LE
           [make_term up_qv inline_lets defns abstr t1;
            make_term up_qv inline_lets defns abstr t2]
       in
@@ -391,7 +391,7 @@ and make_trigger name up_qv (defns:let_defns) abstr hyp (e, from_user) =
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv inline_lets defns abstr) trs in
       let lit =
-        A.LT.mk_builtin true alt
+        A.LT.mk_builtin true A.LT
           [make_term up_qv inline_lets defns abstr t1;
            make_term up_qv inline_lets defns abstr t2]
       in
@@ -452,7 +452,7 @@ and make_form up_qv inline_lets defns abstr name_base f loc =
             F.mk_lit (A.LT.mk_distinct false lt) id
           | TAle [t1;t2] ->
 	    let lit =
-              A.LT.mk_builtin true ale
+              A.LT.mk_builtin true A.LE
                 [make_term up_qv inline_lets defns abstr t1;
                  make_term up_qv inline_lets defns abstr t2]
             in
@@ -470,20 +470,17 @@ and make_form up_qv inline_lets defns abstr name_base f loc =
                     Ty.Tint
                 in
                 F.mk_lit
-                  (A.LT.mk_builtin true ale
+                  (A.LT.mk_builtin true A.LE
                      [make_term up_qv inline_lets defns abstr t1; tt2]) id
 	      | _ ->
                 let lit =
-                  A.LT.mk_builtin true alt
+                  A.LT.mk_builtin true A.LT
                     [make_term up_qv inline_lets defns abstr t1;
                      make_term up_qv inline_lets defns abstr t2]
                 in
                 F.mk_lit lit id
 	    end
-	  | TAbuilt(n,lt) ->
-            F.mk_lit
-              (A.LT.mk_builtin true n
-                 (List.map (make_term up_qv inline_lets defns abstr) lt)) id
+
 	  | _ -> assert false
         in
         res, defns

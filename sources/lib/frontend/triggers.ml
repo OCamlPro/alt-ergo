@@ -634,7 +634,7 @@ let rec vty_term acc t =
 
 let rec vty_form acc f = match f.c with
   | TFatom {c=(TAeq l | TAneq l | TAdistinct l
-	          | TAle l | TAlt l | TAbuilt(_,l))}->
+	          | TAle l | TAlt l)}->
     List.fold_left vty_term acc l
   | TFatom {c=TApred (t,_)} -> vty_term acc t
   | TFop(_,l) -> List.fold_left vty_form acc l
@@ -862,7 +862,7 @@ let rec make_rec keep_triggers pol gopt vterm vtype f =
 		{ tt_desc = TTapp(Sy.fake_lt, l); tt_ty = Ty.Tbool}
 	      in
 	      [ { c = v; annot = a.annot } ]
-	    | TAle l | TAlt l | TAeq l | TAneq l | TAbuilt(_,l) -> l
+	    | TAle l | TAlt l | TAeq l | TAneq l -> l
 	    | TApred (t,_) -> [t]
 	    | TAdistinct l when pol == Neg -> l
 	    | _ -> []

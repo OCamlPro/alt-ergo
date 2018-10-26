@@ -142,7 +142,6 @@ and aatom =
   | AAle of aterm annoted list
   | AAlt of aterm annoted list
   | AApred of aterm * bool (* true <-> negated *)
-  | AAbuilt of Hstring.t * aterm annoted list
 
 and aquant_form = {
   aqf_bvars : (Symbols.t * Ty.t) list ;
@@ -460,8 +459,7 @@ and findin_aatom tag buffer parent aa =
     | AAneq atl
     | AAdistinct atl
     | AAle atl
-    | AAlt atl
-    | AAbuilt (_, atl) -> findin_aaterm_list tag buffer parent atl
+    | AAlt atl -> findin_aaterm_list tag buffer parent atl
     | AApred (at, _) -> findin_aterm tag buffer parent at
 
 and findin_quant_form tag buffer parent
@@ -752,8 +750,6 @@ and print_tatom fmt a = match a.Typed.c with
     if negated then fprintf fmt "(not (%a))" print_tterm t
     else print_tterm fmt t
 
-  | TAbuilt (h, tl) -> print_tterm_list (" "^(Hstring.view h)^" ") fmt tl
-
 and print_rwt fmt { rwt_vars = rv; rwt_left = rl; rwt_right = rr } =
   fprintf fmt "forall %a. %a = %a"
     print_var_list rv print_tterm rl print_tterm rr
@@ -958,7 +954,6 @@ and make_dep_aatom d ex dep = function
   | AAeq atl | AAneq atl | AAdistinct atl | AAle atl | AAlt atl ->
     List.fold_left (make_dep_aaterm d ex) dep atl
   | AApred (at, _) -> make_dep_aterm d ex dep at
-  | AAbuilt (h, atl) -> List.fold_left (make_dep_aaterm d ex) dep atl
 
 and make_dep_oplogic d ex dep = function
   (*| AOPif at -> make_dep_aterm d ex dep at*)
@@ -1084,7 +1079,6 @@ and of_tatom (buffer:sbuffer) a = match a.Typed.c with
   | TAle tl -> AAle (List.map (annot_of_tterm buffer ) tl)
   | TAlt tl -> AAlt (List.map (annot_of_tterm buffer ) tl)
   | TApred (t, negated) -> AApred (of_tterm buffer  t, negated)
-  | TAbuilt (h, tl) -> AAbuilt (h, (List.map (annot_of_tterm buffer ) tl))
 
 and change_polarity_aform f =
   f.polarity <- not f.polarity;
@@ -1234,7 +1228,6 @@ and to_tatom aa id =
     | AAle atl -> TAle (from_aaterm_list atl)
     | AAlt atl -> TAlt (from_aaterm_list atl)
     | AApred (at, negated) -> TApred (to_tterm 0 at, negated)
-    | AAbuilt (h, atl) -> TAbuilt (h, (from_aaterm_list atl))
   in
   { Typed.c = c;
     Typed.annot = id }
@@ -1526,8 +1519,6 @@ and add_aatom errors (buffer:sbuffer) indent tags aa =
       end
       else
         add_aterm errors indent buffer tags at
-    | AAbuilt (h, atl) ->
-      add_aaterm_list errors indent buffer tags (" "^(Hstring.view h)^" ") atl
 
 and add_rwt errors (buffer:sbuffer) indent tags r =
   let { rwt_vars = rv; rwt_left = rl; rwt_right = rr } = r.c in
@@ -1935,8 +1926,7 @@ and findtags_aatom sl aa acc =
     | AAneq atl
     | AAdistinct atl
     | AAle atl
-    | AAlt atl
-    | AAbuilt (_, atl) -> findtags_aaterm_list sl atl acc
+    | AAlt atl -> findtags_aaterm_list sl atl acc
 
     | AApred (at, _) -> acc
 
@@ -2079,7 +2069,7 @@ and listsymbols_atom a acc =
   match a with
   | AAtrue | AAfalse -> acc
   | AAeq aatl | AAneq aatl | AAdistinct aatl
-  | AAle aatl | AAlt aatl | AAbuilt (_, aatl) ->
+  | AAle aatl | AAlt aatl ->
     List.fold_left (fun acc aat -> listsymbols aat.c acc) acc aatl
   | AApred (at,_) -> listsymbols at acc
 
@@ -2264,8 +2254,7 @@ let findbyid_aatom id = function
   | AAneq atl
   | AAdistinct atl
   | AAle atl
-  | AAlt atl
-  | AAbuilt (_, atl) -> List.iter (findbyid_aaterm id) atl
+  | AAlt atl -> List.iter (findbyid_aaterm id) atl
 
   | AApred _ -> ()
 

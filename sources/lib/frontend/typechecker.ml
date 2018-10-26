@@ -315,7 +315,7 @@ let rec freevars_term acc t = match t.c.tt_desc with
 
 and freevars_atom a = match a.c with
   | TAeq lt | TAneq lt | TAle lt
-  | TAlt lt | TAbuilt(_,lt) | TAdistinct lt ->
+  | TAlt lt | TAdistinct lt ->
     List.fold_left freevars_term Sy.empty lt
   | TApred (t,_) -> freevars_term  Sy.empty t
   | _ -> Sy.empty
@@ -769,15 +769,11 @@ and type_form ?(in_theory=false) env f =
           try
             List.iter2 Ty.unify lt lt_args;
             let r =
-              if Pervasives.(=) p "<=" || Pervasives.(=) p "<" then
-                TFatom { c = TAbuilt(Hstring.make p,te_args);
-		         annot=new_id ()}
-              else
-                let t1 = {
+              let t1 = {
 	          c = {tt_desc=TTapp(s,te_args); tt_ty=Ty.Tbool};
 	          annot=new_id (); }
-                in
-                TFatom { c = TApred (t1, false); annot=new_id () }
+              in
+              TFatom { c = TApred (t1, false); annot=new_id () }
             in
             r, freevars_form r
           with
@@ -1636,7 +1632,6 @@ and monomorphize_atom tat =
     | TAlt tl -> TAlt (List.map mono_term tl)
     | TAdistinct tl -> TAdistinct (List.map mono_term tl)
     | TApred (t, negated) -> TApred (mono_term t, negated)
-    | TAbuilt (hs, tl) -> TAbuilt(hs, List.map mono_term tl)
   in
   { tat with c = c }
 

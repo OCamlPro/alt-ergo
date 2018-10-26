@@ -309,7 +309,7 @@ let rec filter_used_vars_term vars at =
 and filter_used_vars_aatom vars = function
   | AAtrue | AAfalse -> []
   | AAeq aatl | AAneq aatl | AAdistinct aatl
-  | AAle aatl | AAlt aatl   | AAbuilt (_, aatl) ->
+  | AAle aatl | AAlt aatl ->
     List.fold_left (fun acc t -> filter_used_vars_term vars t.c @ acc) [] aatl
   | AApred (t, _) -> filter_used_vars_term vars t
 
@@ -357,7 +357,6 @@ let unquantify_aatom (buffer:sbuffer) = function
   | AAle aatl -> AAle (List.map (unquantify_aaterm buffer) aatl)
   | AAlt aatl -> AAlt (List.map (unquantify_aaterm buffer) aatl)
   | AApred _ as e -> e
-  | AAbuilt (h,aatl) -> AAbuilt (h, (List.map (unquantify_aaterm buffer) aatl))
 
 
 let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
@@ -907,8 +906,7 @@ and connect_aatom env sbuf aa =
     | AAneq atl
     | AAdistinct atl
     | AAle atl
-    | AAlt atl
-    | AAbuilt (_, atl) -> connect_aaterm_list env sbuf connect_tag atl
+    | AAlt atl -> connect_aaterm_list env sbuf connect_tag atl
 
     | AApred (at, _) -> connect_aterm env sbuf at
 

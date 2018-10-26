@@ -26,10 +26,13 @@
 (*                                                                            *)
 (******************************************************************************)
 
+type builtin =
+  LE | LT (* arithmetic *)
+
 type 'a view = private
                | Eq of 'a * 'a
                | Distinct of bool * 'a list
-               | Builtin of bool * Hstring.t * 'a list
+               | Builtin of bool * builtin * 'a list
                | Pred of 'a * bool
 
 type 'a atom_view
@@ -61,12 +64,12 @@ module type S = sig
 
   val mk_eq : elt -> elt -> t
   val mk_distinct : bool -> elt list -> t
-  val mk_builtin : bool -> Hstring.t -> elt list -> t
+  val mk_builtin : bool -> builtin -> elt list -> t
   val mk_pred : elt -> bool -> t
 
   val mkv_eq : elt -> elt -> elt view
   val mkv_distinct : bool -> elt list -> elt view
-  val mkv_builtin : bool -> Hstring.t -> elt list -> elt view
+  val mkv_builtin : bool -> builtin -> elt list -> elt view
   val mkv_pred : elt -> bool -> elt view
 
   val neg : t -> t

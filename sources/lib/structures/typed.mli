@@ -82,7 +82,6 @@ and 'a tatom =
   | TAle of ('a tterm, 'a) annoted list
   | TAlt of ('a tterm, 'a) annoted list
   | TApred of ('a tterm, 'a) annoted * bool (* true <-> negated *)
-  | TAbuilt of Hstring.t * ('a tterm, 'a) annoted list
 
 and 'a quant_form = {
   (* quantified variables that appear in the formula *)
