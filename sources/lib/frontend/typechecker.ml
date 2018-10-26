@@ -239,7 +239,7 @@ module Env = struct
         { args = List.map (Types.ty_of_pp loc env.types None) args;
           result = Ty.Tbool }
       (*| PFunction ([], PPTvarid (_, loc)) ->
-        	  error CannotGeneralize loc*)
+          error CannotGeneralize loc*)
       | PFunction(args, res) ->
         let args = List.map (Types.ty_of_pp loc env.types None) args in
         let res = Types.ty_of_pp loc env.types None res in
@@ -1498,7 +1498,7 @@ let rec intro_hypothesis env valid_mode f =
         let var = {pp_desc = PPvar var; pp_loc = f.pp_loc} in
         let feq = {pp_desc = PPinfix(var,PPeq,t1); pp_loc = f.pp_loc} in
         let axioms, goal = intro_hypothesis env valid_mode
-        	(alpha_renaming_env env f2) in
+          (alpha_renaming_env env f2) in
         (feq,env)::axioms, goal
   *)
   | PPforall (lv, _, _, f) when valid_mode ->
@@ -1810,8 +1810,8 @@ let type_decl keep_triggers (acc, env) d =
       let infix = match d with Function_def _ -> PPeq | _ -> PPiff in
       let f = { pp_desc = PPinfix(p,infix,e) ; pp_loc = loc } in
       (* le trigger [[p]] ne permet pas de replier la definition,
-         	   donc on calcule les termes maximaux de la definition pour
-         	   laisser une possibilite de replier *)
+         donc on calcule les termes maximaux de la definition pour
+         laisser une possibilite de replier *)
       let trs = max_terms e in
       let f = make_pred loc [[p], false ; trs, false] f l in
       let f,_ = type_form env f in
