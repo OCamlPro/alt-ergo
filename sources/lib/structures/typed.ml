@@ -85,7 +85,6 @@ and 'a tatom =
   | TAle of ('a tterm, 'a) annoted list
   | TAlt of ('a tterm, 'a) annoted list
   | TApred of ('a tterm, 'a) annoted * bool (* true <-> negated *)
-  | TAbuilt of Hstring.t * ('a tterm, 'a) annoted list
 
 and 'a quant_form = {
   (* quantified variables that appear in the formula *)
@@ -244,8 +243,6 @@ and print_atom fmt a =
     | TApred (t, negated) ->
       if negated then fprintf fmt "(not (%a))" print_term t
       else print_term fmt t
-    | TAbuilt(s, l) ->
-      fprintf fmt "%s(%a)" (Hstring.view s) print_term_list l
     | _ -> assert false
 
 and print_triggers fmt l =

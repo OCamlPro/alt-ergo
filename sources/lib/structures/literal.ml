@@ -28,15 +28,19 @@
 
 open Hconsing
 open Options
+
+type builtin =
+  LE | LT (* arithmetic *)
+
 type 'a view =
   | Eq of 'a * 'a
   | Distinct of bool * 'a list
-  | Builtin of bool * Hstring.t * 'a list
+  | Builtin of bool * builtin * 'a list
   | Pred of 'a * bool
 
 type 'a atom_view =
   | EQ of 'a * 'a
-  | BT of Hstring.t * 'a list
+  | BT of builtin * 'a list
   | PR of 'a
   | EQ_LIST of 'a list
 
@@ -60,12 +64,12 @@ module type S = sig
 
   val mk_eq : elt -> elt -> t
   val mk_distinct : bool -> elt list -> t
-  val mk_builtin : bool -> Hstring.t -> elt list -> t
+  val mk_builtin : bool -> builtin -> elt list -> t
   val mk_pred : elt -> bool -> t
 
   val mkv_eq : elt -> elt -> elt view
   val mkv_distinct : bool -> elt list -> elt view
-  val mkv_builtin : bool -> Hstring.t -> elt list -> elt view
+  val mkv_builtin : bool -> builtin -> elt list -> elt view
   val mkv_pred : elt -> bool -> elt view
 
   val neg : t -> t
@@ -151,21 +155,20 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
 	Format.fprintf fmt "%s %s%a" lbl b X.print z;
 	List.iter (fun x -> Format.fprintf fmt " <> %a" X.print x) l
 
-      | Builtin (true, n, [v1;v2]) when Hstring.equal n ale ->
+      | Builtin (true, LE, [v1;v2]) ->
 	Format.fprintf fmt "%s %a <= %a" lbl X.print v1 X.print v2
 
-      | Builtin (true, n, [v1;v2]) when Hstring.equal n alt ->
+      | Builtin (true, LT, [v1;v2]) ->
 	Format.fprintf fmt "%s %a < %a" lbl X.print v1 X.print v2
 
-      | Builtin (false, n, [v1;v2]) when Hstring.equal n ale ->
+      | Builtin (false, LE, [v1;v2]) ->
 	Format.fprintf fmt "%s %a > %a" lbl X.print v1 X.print v2
 
-      | Builtin (false, n, [v1;v2]) when Hstring.equal n alt ->
+      | Builtin (false, LT, [v1;v2]) ->
 	Format.fprintf fmt "%s %a >= %a" lbl X.print v1 X.print v2
 
-      | Builtin (b, n, l) ->
-	let b = if b then "" else "~" in
-	Format.fprintf fmt "%s %s %s(%a)" lbl b (Hstring.view n) print_list l
+      | Builtin (_, (LE | LT), _) ->
+         assert false (* not reachable *)
 
       | Pred (p,b) ->
         Format.fprintf fmt "%s %a = %s" lbl X.print p
@@ -182,7 +185,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
         | BT(n1, l1), BT(n2, l2) ->
 	  begin
             try
-	      Hstring.equal n1 n2
+	      n1 == n2
               && List.for_all2 (fun x y -> X.compare x y = 0) l1 l2
 	    with Invalid_argument _ -> false
           end
@@ -199,7 +202,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
       | BT(n, l) ->
 	abs
 	  (List.fold_left
-	     (fun acc t-> acc*13 + X.hash t) (Hstring.hash n+7) l)
+	     (fun acc t-> acc*13 + X.hash t) (Hashtbl.hash n+7) l)
       | PR p -> abs (17 * X.hash p) (*XXX * 29 ?*)
       | EQ_LIST l ->
         abs (List.fold_left (fun acc t-> acc*31 + X.hash t) 1 l)

@@ -1306,21 +1306,21 @@ module Make
 	env, eqs
 
     let normal_form a = match a with
-      | L.Builtin (false, n, [r1; r2])
-          when is_le n && X.type_info r1 == Ty.Tint ->
+      | L.Builtin (false, L.LE, [r1; r2])
+          when X.type_info r1 == Ty.Tint ->
         let pred_r1 = P.sub (poly_of r1) (P.create [] Q.one Ty.Tint) in
-	LR.mkv_builtin true  n  [r2; alien_of pred_r1]
+	LR.mkv_builtin true L.LE [r2; alien_of pred_r1]
 
-      | L.Builtin (true, n, [r1; r2]) when
-	  not (is_le n) && X.type_info r1 == Ty.Tint ->
+      | L.Builtin (true, L.LT, [r1; r2]) when
+	  X.type_info r1 == Ty.Tint ->
         let pred_r2 = P.sub (poly_of r2) (P.create [] Q.one Ty.Tint) in
-	LR.mkv_builtin true ale [r1; alien_of pred_r2]
+	LR.mkv_builtin true L.LE [r1; alien_of pred_r2]
 
-      | L.Builtin (false, n, [r1; r2]) when is_le n ->
-	LR.mkv_builtin true alt [r2; r1]
+      | L.Builtin (false, L.LE, [r1; r2]) ->
+	LR.mkv_builtin true L.LT [r2; r1]
 
-      | L.Builtin (false, n, [r1; r2]) when is_lt n ->
-	LR.mkv_builtin true ale [r2; r1]
+      | L.Builtin (false, L.LT, [r1; r2]) ->
+	LR.mkv_builtin true L.LE [r2; r1]
 
       | _ -> a
 
@@ -1438,12 +1438,12 @@ module Make
 	    Debug.assume a expl;
 	    try
               match a with
-	      | L.Builtin(_, n, [r1;r2]) when is_le n || is_lt n ->
+	      | L.Builtin(_, ((L.LE | L.LT) as n), [r1;r2]) ->
                 incr nb_num;
 		let p1 = poly_of r1 in
 		let p2 = poly_of r2 in
 		let ineq =
-                  Oracle.create_ineq p1 p2 (is_le n) root expl in
+                  Oracle.create_ineq p1 p2 (n == L.LE) root expl in
                 begin
                   match ineq_status ineq with
                   | Bottom -> raise (Exception.Inconsistent (expl, env.classes))
@@ -1461,7 +1461,7 @@ module Make
                      in
 		     let env =
 		       update_ple0
-                         are_eq env ineq.Oracle.ple0 (is_le n) expl
+                         are_eq env ineq.Oracle.ple0 (n == L.LE) expl
                      in
 		     {env with inequations=add_ineq root ineq env.inequations},
                      eqs, true, rm
@@ -1722,7 +1722,7 @@ module Make
             let ty = X.type_info r1 in
             let r2 = alien_of (P.create [] n ty) in
             let pred =
-              if Q.is_zero eps then ale else (assert (Q.is_m_one eps); alt)
+              if Q.is_zero eps then L.LE else (assert (Q.is_m_one eps); L.LT)
             in
             [LR.mkv_builtin true pred [r1; r2], true, CS (Th_arith, Q.one)]
 

@@ -131,7 +131,6 @@ and aatom =
   | AAle of aterm annoted list
   | AAlt of aterm annoted list
   | AApred of aterm * bool (* true <-> negated *)
-  | AAbuilt of Hstring.t * aterm annoted list
 
 and aquant_form = {
   aqf_bvars : (Symbols.t * Ty.t) list ;
