@@ -690,7 +690,7 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
                             (wrapper_update_status image label buttonclean env)
                             used_context)
                          (empty_sat_inst inst_model, true, Explanation.empty)
-                              cnf)
+                         cnf)
                  ) ast_pruned;
 
                Options.Time.unset_timeout ~is_gui:true
