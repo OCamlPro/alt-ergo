@@ -176,6 +176,11 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
 
       | Distinct (_, _) -> assert false
 
+  let equal_builtins n1 n2 =
+    match n1, n2 with
+    | LT, LT | LE, LE -> true
+    | _ -> false
+
   module V = struct
     type elt = atom
 
@@ -185,7 +190,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
         | BT(n1, l1), BT(n2, l2) ->
 	  begin
             try
-	      n1 == n2
+              equal_builtins n1 n2
               && List.for_all2 (fun x y -> X.compare x y = 0) l1 l2
 	    with Invalid_argument _ -> false
           end
