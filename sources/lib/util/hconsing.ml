@@ -51,11 +51,11 @@ struct
   type t = Hashed.elt
 
   module HWeak = Weak.Make
-    (struct
-      type t = Hashed.elt
-      let equal = Hashed.eq
-      let hash = Hashed.hash
-     end)
+      (struct
+        type t = Hashed.elt
+        let equal = Hashed.eq
+        let hash = Hashed.hash
+      end)
 
   let storage = HWeak.create Hashed.initial_size
   let retain_list = ref []

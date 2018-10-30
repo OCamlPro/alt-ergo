@@ -47,7 +47,7 @@ let grow_to t new_capa =
   if new_capa > capa then
     t.data <-
       Array.init new_capa
-      (fun i -> if i < capa then data.(i) else t.dummy)
+        (fun i -> if i < capa then data.(i) else t.dummy)
 
 let grow_to_double_size t =
   let n = max 1 (Array.length t.data) in grow_to t (2 * n)

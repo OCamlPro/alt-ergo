@@ -1,32 +1,32 @@
 (****
-Using Alt-Ergo's lib: minimal example
+   Using Alt-Ergo's lib: minimal example
 
-compile & test with the following command if the lib is not installed:
+   compile & test with the following command if the lib is not installed:
 
-ocamlopt -o lib_usage \
--I `ocamlfind query num` \
--I `ocamlfind query zarith` \
--I `ocamlfind query ocplib-simplex` \
--I `ocamlfind query camlzip` \
--I .. \
-nums.cmxa zarith.cmxa ocplibSimplex.cmxa \
-unix.cmxa str.cmxa zip.cmxa dynlink.cmxa \
-altErgoLib.cmxa lib_usage.ml && ./lib_usage
+   ocamlopt -o lib_usage \
+   -I `ocamlfind query num` \
+   -I `ocamlfind query zarith` \
+   -I `ocamlfind query ocplib-simplex` \
+   -I `ocamlfind query camlzip` \
+   -I .. \
+   nums.cmxa zarith.cmxa ocplibSimplex.cmxa \
+   unix.cmxa str.cmxa zip.cmxa dynlink.cmxa \
+   altErgoLib.cmxa lib_usage.ml && ./lib_usage
 
-or with the following command if the lib is installed:
+   or with the following command if the lib is installed:
 
 
-ocamlopt -o lib_usage \
--I `ocamlfind query num` \
--I `ocamlfind query zarith` \
--I `ocamlfind query ocplib-simplex` \
--I `ocamlfind query camlzip` \
--I `ocamlfind query alt-ergo` \
-nums.cmxa zarith.cmxa ocplibSimplex.cmxa \
-unix.cmxa str.cmxa zip.cmxa dynlink.cmxa \
-altErgoLib.cmxa lib_usage.ml && ./lib_usage
+   ocamlopt -o lib_usage \
+   -I `ocamlfind query num` \
+   -I `ocamlfind query zarith` \
+   -I `ocamlfind query ocplib-simplex` \
+   -I `ocamlfind query camlzip` \
+   -I `ocamlfind query alt-ergo` \
+   nums.cmxa zarith.cmxa ocplibSimplex.cmxa \
+   unix.cmxa str.cmxa zip.cmxa dynlink.cmxa \
+   altErgoLib.cmxa lib_usage.ml && ./lib_usage
 
-****)
+ ****)
 
 Format.eprintf
   "\n(* This minimal example shows how to use Alt-Ergo's lib *)\n@."

@@ -91,12 +91,12 @@ module Make (X : S) = struct
 
   module M : Map.S with type key = r =
     Map.Make(
-      struct
-        type t = r
+    struct
+      type t = r
 
-        (*sorted in decreasing order to comply with AC(X) order requirements*)
-        let compare x y = X.str_cmp y x
-      end)
+      (*sorted in decreasing order to comply with AC(X) order requirements*)
+      let compare x y = X.str_cmp y x
+    end)
 
   type t = { m : Q.t M.t; c : Q.t; ty : Ty.t }
 
@@ -108,14 +108,14 @@ module Make (X : S) = struct
     try
       List.iter2
         (fun (a,x) (b,y) ->
-          let c = X.str_cmp x y   in if c <> 0 then raise (Out c);
-          let c = Q.compare a b in if c <> 0 then raise (Out c) )l1 l2;
+           let c = X.str_cmp x y   in if c <> 0 then raise (Out c);
+           let c = Q.compare a b in if c <> 0 then raise (Out c) )l1 l2;
       0
     with
-      | Out c -> c
-      | Invalid_argument s ->
-        assert (String.compare s "List.iter2" = 0);
-        List.length l1 - List.length l2
+    | Out c -> c
+    | Invalid_argument s ->
+      assert (String.compare s "List.iter2" = 0);
+      List.length l1 - List.length l2
 
   let compare p1 p2 =
     let c = Ty.compare p1.ty p2.ty in
@@ -135,7 +135,7 @@ module Make (X : S) = struct
     let h =
       M.fold
         (fun k v acc ->
-          23 * acc + (X.hash k) * Q.hash v
+           23 * acc + (X.hash k) * Q.hash v
         )p.m (19 * Q.hash p.c + 17 * Ty.hash p.ty)
     in
     abs h
@@ -146,16 +146,16 @@ module Make (X : S) = struct
       let zero = ref true in
       M.iter
         (fun x n ->
-          let s, n, op =
-            if Q.equal n Q.one then (if !zero then "" else "+"), "", ""
-            else if Q.equal n Q.m_one then "-", "", ""
-            else
-              if Q.sign n > 0 then
-	        (if !zero then "" else "+"), Q.to_string n, "*"
-              else "-", Q.to_string (Q.minus n), "*"
-          in
-	  zero := false;
-          fprintf fmt "%s%s%s%a" s n op X.print x
+           let s, n, op =
+             if Q.equal n Q.one then (if !zero then "" else "+"), "", ""
+             else if Q.equal n Q.m_one then "-", "", ""
+             else
+             if Q.sign n > 0 then
+               (if !zero then "" else "+"), Q.to_string n, "*"
+             else "-", Q.to_string (Q.minus n), "*"
+           in
+           zero := false;
+           fprintf fmt "%s%s%s%a" s n op X.print x
         ) p.m;
       let s, n =
         if Q.sign p.c > 0 then (if !zero then "" else "+"), Q.to_string p.c
@@ -183,9 +183,9 @@ module Make (X : S) = struct
   let create l c ty =
     let m =
       List.fold_left
-	(fun m (n, x) ->
-	  let n' = Q.add n (find x m) in
-	  if Q.sign n' = 0 then M.remove x m else M.add x n' m) M.empty l
+        (fun m (n, x) ->
+           let n' = Q.add n (find x m) in
+           if Q.sign n' = 0 then M.remove x m else M.add x n' m) M.empty l
     in
     { m = m; c = c; ty = ty }
 
@@ -193,10 +193,10 @@ module Make (X : S) = struct
     Options.tool_req 4 "TR-Arith-Poly plus";
     let m =
       M.fold
-	(fun x a m ->
-	  let a' = Q.add (find x m) a in
-	  if Q.sign a' = 0 then M.remove x m  else M.add x a' m)
-	p2.m p1.m
+        (fun x a m ->
+           let a' = Q.add (find x m) a in
+           if Q.sign a' = 0 then M.remove x m  else M.add x a' m)
+        p2.m p1.m
     in
     { m = m; c = Q.add p1.c p2.c; ty = p1.ty }
 
@@ -211,7 +211,7 @@ module Make (X : S) = struct
     let acx = mult_const p.c ax in
     let m =
       M.fold
-	(fun xi ai m -> M.add (X.mult x xi) (Q.mult a ai) m) p.m acx.m
+        (fun xi ai m -> M.add (X.mult x xi) (Q.mult a ai) m) p.m acx.m
     in
     { acx with m = m}
 
@@ -224,10 +224,10 @@ module Make (X : S) = struct
     Options.tool_req 4 "TR-Arith-Poly moins";
     let m =
       M.fold
-	(fun x a m ->
-	  let a' = Q.sub (find x m) a in
-	  if Q.sign a' = 0 then M.remove x m  else M.add x a' m)
-	p2.m p1.m
+        (fun x a m ->
+           let a' = Q.sub (find x m) a in
+           if Q.sign a' = 0 then M.remove x m  else M.add x a' m)
+        p2.m p1.m
     in
     { m = m; c = Q.sub p1.c p2.c; ty = p1.ty }
 
@@ -244,10 +244,10 @@ module Make (X : S) = struct
     if Q.sign p2.c = 0 then raise Division_by_zero;
     let p = mult_const (Q.div Q.one p2.c) p1 in
     match M.is_empty p.m, p.ty with
-      | _ , Ty.Treal  ->  p, false
-      | true, Ty.Tint  -> {p with c = euc_div_num p1.c p2.c}, false
-      | false, Ty.Tint ->  p, true (* XXX *)
-      | _ -> assert false
+    | _ , Ty.Treal  ->  p, false
+    | true, Ty.Tint  -> {p with c = euc_div_num p1.c p2.c}, false
+    | false, Ty.Tint ->  p, true (* XXX *)
+    | _ -> assert false
 
   let modulo p1 p2 =
     Options.tool_req 4 "TR-Arith-Poly mod";
@@ -294,11 +294,11 @@ module Make (X : S) = struct
   let is_monomial p  =
     try
       M.fold
-	(fun x a r ->
-	  match r with
-	    | None -> Some (a, x, p.c)
-	    | _ -> raise Exit)
-	p.m None
+        (fun x a r ->
+           match r with
+           | None -> Some (a, x, p.c)
+           | _ -> raise Exit)
+        p.m None
     with Exit -> None
 
   let ppmc_denominators {m=m} =
@@ -337,15 +337,15 @@ module Make (X : S) = struct
     let mp, acc =
       M.fold
         (fun r i (mp, acc) ->
-          let r, acc = X.abstract_selectors r acc in
-          let mp =
-            try
-              let j = M.find r mp in
-              let k = Q.add i j in
-              if Q.sign k = 0 then M.remove r mp else M.add r k mp
-            with Not_found -> M.add r i mp
-          in
-          mp, acc
+           let r, acc = X.abstract_selectors r acc in
+           let mp =
+             try
+               let j = M.find r mp in
+               let k = Q.add i j in
+               if Q.sign k = 0 then M.remove r mp else M.add r k mp
+             with Not_found -> M.add r i mp
+           in
+           mp, acc
         )p.m (M.empty, acc)
     in
     {p with m=mp}, acc

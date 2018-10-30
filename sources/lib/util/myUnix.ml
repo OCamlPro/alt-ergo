@@ -22,7 +22,7 @@ module Default_Unix = struct
         else Unix.ITIMER_VIRTUAL
       in
       ignore (Unix.setitimer itimer
-		{ Unix.it_value = timelimit; Unix.it_interval = 0. })
+                { Unix.it_value = timelimit; Unix.it_interval = 0. })
 
   let unset_timeout ~is_gui =
     let itimer =
@@ -30,25 +30,25 @@ module Default_Unix = struct
       else Unix.ITIMER_VIRTUAL
     in
     ignore (Unix.setitimer itimer
-	      { Unix.it_value = 0.; Unix.it_interval = 0. })
+              { Unix.it_value = 0.; Unix.it_interval = 0. })
 
 end
 
 include Default_Unix
 
 (* !! This commented code is used when compiling to javascript !!
-module JavaScript_Unix = struct
+   module JavaScript_Unix = struct
 
-  let cur_time () =
+   let cur_time () =
     let today = jsnew Js.date_now () in
     let t = Js.to_float (today##getTime()) in
     t /. 1000.
 
-  let set_timeout _ = ()
+   let set_timeout _ = ()
 
-  let unset_timeout () = ()
+   let unset_timeout () = ()
 
-end
+   end
 
-include JavaScript_Unix
+   include JavaScript_Unix
 *)

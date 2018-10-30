@@ -10,7 +10,7 @@
 (******************************************************************************)
 
 (** A wrapper of the Zip module of CamlZip: we use Zip except when we want to
-generate the.js file for try-Alt-Ergo **)
+    generate the.js file for try-Alt-Ergo **)
 
 module ZipWrapper = struct
   include Zip
@@ -21,19 +21,19 @@ end
 include ZipWrapper
 
 (* !! This commented code is used when compiling to javascript !!
-module DummyZip = struct
-  type entry = unit
-  type in_file = unit
+   module DummyZip = struct
+   type entry = unit
+   type in_file = unit
 
-  let s = "Zip module not available for your setting or has been disabled !"
+   let s = "Zip module not available for your setting or has been disabled !"
 
-  let open_in  _  =  failwith s
-  let close_in _ = failwith s
-  let entries  _  =  failwith s
-  let read_entry  _ _  =  failwith s
-  let filename  _  =  failwith s
-  let is_directory  _  =  failwith s
-end
+   let open_in  _  =  failwith s
+   let close_in _ = failwith s
+   let entries  _  =  failwith s
+   let read_entry  _ _  =  failwith s
+   let filename  _  =  failwith s
+   let is_directory  _  =  failwith s
+   end
 
-include DummyZip
+   include DummyZip
 *)

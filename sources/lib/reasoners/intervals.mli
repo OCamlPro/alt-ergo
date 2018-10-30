@@ -121,8 +121,8 @@ type interval_matching =
     Hstring.Map.t
 
 (** matchs the given lower and upper bounds against the given interval, and
-   update the given accumulator with the constraints. Returns None if
-   the matching problem is inconsistent
+    update the given accumulator with the constraints. Returns None if
+    the matching problem is inconsistent
 *)
 val match_interval:
   Symbols.bound -> Symbols.bound -> t -> interval_matching ->

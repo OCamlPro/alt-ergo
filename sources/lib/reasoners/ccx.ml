@@ -134,9 +134,9 @@ module Main : S = struct
       let aux fmt q =
         Q.iter
           (fun (lit,_,_) ->
-            match lit with
-            | LSem sa -> fprintf fmt "  > LSem  %a@." LR.print (LR.make sa)
-            | LTerm a -> fprintf fmt "  > LTerm %a@."Literal.LT.print a
+             match lit with
+             | LSem sa -> fprintf fmt "  > LSem  %a@." LR.print (LR.make sa)
+             | LTerm a -> fprintf fmt "  > LTerm %a@."Literal.LT.print a
           )q
       in
       let aux2 fmt mp =
@@ -155,43 +155,43 @@ module Main : S = struct
 
     let cc r1 r2 =
       if debug_cc () then
-	fprintf fmt "[cc] congruence closure : %a = %a@."
-	  X.print r1 X.print r2
+        fprintf fmt "[cc] congruence closure : %a = %a@."
+          X.print r1 X.print r2
 
     let make_cst t ctx =
       if debug_cc () then
-	if ctx != [] then
+        if ctx != [] then
           begin
             fprintf fmt "[cc] constraints of make(%a)@." Term.print t;
             let c = ref 0 in
             List.iter
               (fun a ->
-               incr c;
-               fprintf fmt " %d) %a@." !c A.LT.print a) ctx
-	  end
+                 incr c;
+                 fprintf fmt " %d) %a@." !c A.LT.print a) ctx
+          end
 
     let add_to_use t =
       if debug_cc () then
-	fprintf fmt "[cc] add_to_use: %a@." T.print t
+        fprintf fmt "[cc] add_to_use: %a@." T.print t
 
     let lrepr fmt = List.iter (fprintf fmt "%a " X.print)
 
     let leaves t lvs =
       fprintf fmt "[cc] leaves of %a@.@."
-	T.print t; lrepr fmt lvs
+        T.print t; lrepr fmt lvs
 
     let contra_congruence a ex =
       if debug_cc () then
-	fprintf fmt "[cc] find that %a %a by contra-congruence@."
-	  A.LT.print a Ex.print ex
+        fprintf fmt "[cc] find that %a %a by contra-congruence@."
+          A.LT.print a Ex.print ex
 
     let assume_literal sa =
       if debug_cc () then
-	fprintf fmt "[cc] assume literal : %a@." LR.print (LR.make sa)
+        fprintf fmt "[cc] assume literal : %a@." LR.print (LR.make sa)
 
     let congruent a ex =
       if debug_cc () then
-	fprintf fmt "[cc] new fact by conrgruence : %a ex[%a]@."
+        fprintf fmt "[cc] new fact by conrgruence : %a ex[%a]@."
           A.LT.print a Ex.print ex
 
     let cc_result p v touched =
@@ -199,7 +199,8 @@ module Main : S = struct
         fprintf fmt "[cc] the binding %a -> %a touched:@." X.print p X.print v;
         List.iter
           (fun (x, y, _) ->
-            fprintf fmt "  > %a ~~ becomes ~> %a@." X.print x X.print y) touched
+             fprintf fmt "  > %a ~~ becomes ~> %a@." X.print x X.print y)
+          touched
       end
 
   end
@@ -210,13 +211,13 @@ module Main : S = struct
   let concat_leaves uf l =
     let concat_rec acc t =
       match  X.leaves (fst (Uf.find uf t)) , acc with
-	  [] , _ -> one::acc
-	| res, [] -> res
-	| res , _ -> List.rev_append res acc
+        [] , _ -> one::acc
+      | res, [] -> res
+      | res , _ -> List.rev_append res acc
     in
     match List.fold_left concat_rec [] l with
-	[] -> [one]
-      | res -> res
+      [] -> [one]
+    | res -> res
 
   let explain_equality env ex t1 t2 =
     if T.equal t1 t2 then ex
@@ -229,7 +230,7 @@ module Main : S = struct
       let {T.f=f1; xs=xs1; ty=ty1} = T.view t1 in
       let {T.f=f2; xs=xs2; ty=ty2} = T.view t2 in
       if Symbols.equal f1 f2 && Ty.equal ty1 ty2 then
-	try
+        try
           let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
           let a = A.LT.mk_eq t1 t2 in
           Debug.congruent a ex;
@@ -246,26 +247,26 @@ module Main : S = struct
   let fold_find_with_explanation find ex l =
     List.fold_left
       (fun (lr, ex) t ->
-	let r, ex_r = find t in r::lr, Ex.union ex_r ex)
+         let r, ex_r = find t in r::lr, Ex.union ex_r ex)
       ([], ex) l
 
   let view find va ex_a =
     match va with
-      | A.Pred (t1, b) ->
-        let r1, ex1 = find t1 in
-	let ex = Ex.union ex1 ex_a in
-	LR.mkv_pred r1 b, ex
-      | A.Eq (t1, t2) ->
-        let r1, ex1 = find t1 in
-	let r2, ex2 = find t2 in
-	let ex = Ex.union (Ex.union ex1 ex2) ex_a in
-	LR.mkv_eq r1 r2, ex
-      | A.Distinct (b, lt) ->
-	let lr, ex = fold_find_with_explanation find ex_a lt in
-	LR.mkv_distinct b (List.rev lr), ex
-      | A.Builtin(b, s, l) ->
-	let lr, ex  = fold_find_with_explanation find ex_a l in
-	LR.mkv_builtin b s (List.rev lr), ex
+    | A.Pred (t1, b) ->
+      let r1, ex1 = find t1 in
+      let ex = Ex.union ex1 ex_a in
+      LR.mkv_pred r1 b, ex
+    | A.Eq (t1, t2) ->
+      let r1, ex1 = find t1 in
+      let r2, ex2 = find t2 in
+      let ex = Ex.union (Ex.union ex1 ex2) ex_a in
+      LR.mkv_eq r1 r2, ex
+    | A.Distinct (b, lt) ->
+      let lr, ex = fold_find_with_explanation find ex_a lt in
+      LR.mkv_distinct b (List.rev lr), ex
+    | A.Builtin(b, s, l) ->
+      let lr, ex  = fold_find_with_explanation find ex_a l in
+      LR.mkv_builtin b s (List.rev lr), ex
 
   let term_canonical_view env a ex_a =
     view (Uf.find env.uf) (A.LT.view a) ex_a
@@ -282,38 +283,38 @@ module Main : S = struct
       match T.view t1 with
       | {T.f=f1 ; xs=[x]} ->
         let ty_x = (Term.view x).Term.ty in
-	List.iter
-	  (fun t2 ->
-	    match T.view t2 with
-	    | {T.f=f2 ; xs=[y]} when Sy.equal f1 f2 ->
-              let ty_y = (Term.view y).Term.ty in
-              if Ty.equal ty_x ty_y then
-		begin match Uf.are_distinct env.uf t1 t2 with
-		| Yes (ex_r, _) ->
-		  let a = A.LT.mk_distinct false [x; y] in
-                  Debug.contra_congruence a ex_r;
-		  Q.push (LTerm a, ex_r, Sig.Other) facts.diseqs
-		| No -> assert false
-		end
-	    | _ -> ()
-	  ) (Uf.class_of env.uf bol)
+        List.iter
+          (fun t2 ->
+             match T.view t2 with
+             | {T.f=f2 ; xs=[y]} when Sy.equal f1 f2 ->
+               let ty_y = (Term.view y).Term.ty in
+               if Ty.equal ty_x ty_y then
+                 begin match Uf.are_distinct env.uf t1 t2 with
+                   | Yes (ex_r, _) ->
+                     let a = A.LT.mk_distinct false [x; y] in
+                     Debug.contra_congruence a ex_r;
+                     Q.push (LTerm a, ex_r, Sig.Other) facts.diseqs
+                   | No -> assert false
+                 end
+             | _ -> ()
+          ) (Uf.class_of env.uf bol)
       | _ -> ()
 
   let clean_use =
     List.fold_left
       (fun env a ->
-       match A.LT.view a with
-       | A.Distinct (_, lt)
-       | A.Builtin (_, _, lt) ->
-	  let lvs = concat_leaves env.uf lt in
-	  List.fold_left
-	    (fun env rx ->
-	     let st, sa = Use.find rx env.use in
-             (* SetA does not use ex, so Ex.empty is OK for removing *)
-	     let sa = SetA.remove (a, Ex.empty) sa in
-	     { env with use = Use.add rx (st,sa) env.use }
-	    ) env lvs
-       | _ -> assert false
+         match A.LT.view a with
+         | A.Distinct (_, lt)
+         | A.Builtin (_, _, lt) ->
+           let lvs = concat_leaves env.uf lt in
+           List.fold_left
+             (fun env rx ->
+                let st, sa = Use.find rx env.use in
+                (* SetA does not use ex, so Ex.empty is OK for removing *)
+                let sa = SetA.remove (a, Ex.empty) sa in
+                { env with use = Use.add rx (st,sa) env.use }
+             ) env lvs
+         | _ -> assert false
       )
 
   let contra_congruence env facts r =
@@ -329,44 +330,44 @@ module Main : S = struct
     let uf, res = Uf.union env.uf r1 r2 ex in
     List.fold_left
       (fun env (p, touched, v) ->
-	Options.exec_thread_yield ();
-        Debug.cc_result p v touched;
-        assert (X.is_a_leaf p);
-	(* we look for use(p) *)
-      	let p_t, p_a = Use.find p env.use in
+         Options.exec_thread_yield ();
+         Debug.cc_result p v touched;
+         assert (X.is_a_leaf p);
+         (* we look for use(p) *)
+         let p_t, p_a = Use.find p env.use in
 
-	(* we compute terms and atoms to consider for congruence *)
-	let repr_touched = List.map (fun (x, y, ex) ->
-          facts.touched <- Util.MI.add (X.hash x) x facts.touched;
-          y
-        ) touched
-        in
-	let st_others, sa_others = Use.congr_close_up env.use p repr_touched in
+         (* we compute terms and atoms to consider for congruence *)
+         let repr_touched = List.map (fun (x, y, ex) ->
+             facts.touched <- Util.MI.add (X.hash x) x facts.touched;
+             y
+           ) touched
+         in
+         let st_others, sa_others = Use.congr_close_up env.use p repr_touched in
 
-	(* we update use *)
-	let nuse = Use.up_close_up env.use p v in
-        let nuse =
-          List.fold_left
-            (fun nuse (r, rr, ex) ->
-              match X.leaves rr with
-              | _ :: _ -> nuse
-              | []     -> Use.up_close_up nuse p one
-            )nuse touched
-        in
-	Use.print nuse;
+         (* we update use *)
+         let nuse = Use.up_close_up env.use p v in
+         let nuse =
+           List.fold_left
+             (fun nuse (r, rr, ex) ->
+                match X.leaves rr with
+                | _ :: _ -> nuse
+                | []     -> Use.up_close_up nuse p one
+             )nuse touched
+         in
+         Use.print nuse;
 
-	(* we check the congruence of the terms. *)
-	let env =  {env with use=nuse} in
-	SetT.iter (fun t -> congruents env facts t st_others) p_t;
+         (* we check the congruence of the terms. *)
+         let env =  {env with use=nuse} in
+         SetT.iter (fun t -> congruents env facts t st_others) p_t;
 
-        (*CC of preds ?*)
-	SetA.iter (fun (a, ex) -> add_fact facts (LTerm a, ex, Sig.Other)) p_a;
+         (*CC of preds ?*)
+         SetA.iter (fun (a, ex) -> add_fact facts (LTerm a, ex, Sig.Other)) p_a;
 
-        (*touched preds ?*)
-        SetA.iter (fun (a, ex) -> add_fact facts (LTerm a, ex, Sig.Other))
-          sa_others;
+         (*touched preds ?*)
+         SetA.iter (fun (a, ex) -> add_fact facts (LTerm a, ex, Sig.Other))
+           sa_others;
 
-	env
+         env
       ) {env with uf=uf}  res
 
   module LRT =
@@ -376,17 +377,17 @@ module Main : S = struct
         let c = LR.compare x x' in
         if c <> 0 then c
         else match y, y' with
-        | None, None      ->  0
-        | Some _, None    ->  1
-        | None, Some _    -> -1
-        | Some a, Some a' -> Literal.LT.compare a a'
+          | None, None      ->  0
+          | Some _, None    ->  1
+          | None, Some _    -> -1
+          | Some a, Some a' -> Literal.LT.compare a a'
     end)
 
   let make_unique sa =
     let mp =
       List.fold_left
         (fun mp ((ra, aopt ,_ ,_) as e) ->
-          LRT.add (LR.make ra, aopt) e mp
+           LRT.add (LR.make ra, aopt) e mp
         ) LRT.empty sa
     in
     LRT.fold (fun _ e acc -> e::acc)mp []
@@ -439,23 +440,23 @@ module Main : S = struct
     match A.LT.view a with
     | A.Pred (t1, _) ->
       add_term env facts t1 ex
-      | A.Eq (t1, t2) ->
-	let env = add_term env facts t1 ex in
-	add_term env facts t2 ex
-      | A.Distinct (_, lt)
-      | A.Builtin (_, _, lt) ->
-	let env =
-          List.fold_left
-	    (fun env t-> add_term env facts t ex)
-            env  lt
-        in
-	let lvs = concat_leaves env.uf lt in (* A verifier *)
-	List.fold_left (* add Distinct and Builtin to Use *)
-	  (fun env rx ->
-	    let st, sa = Use.find rx env.use in
-	    { env with
-	      use = Use.add rx (st,SetA.add (a, ex) sa) env.use }
-	  ) env lvs
+    | A.Eq (t1, t2) ->
+      let env = add_term env facts t1 ex in
+      add_term env facts t2 ex
+    | A.Distinct (_, lt)
+    | A.Builtin (_, _, lt) ->
+      let env =
+        List.fold_left
+          (fun env t-> add_term env facts t ex)
+          env  lt
+      in
+      let lvs = concat_leaves env.uf lt in (* A verifier *)
+      List.fold_left (* add Distinct and Builtin to Use *)
+        (fun env rx ->
+           let st, sa = Use.find rx env.use in
+           { env with
+             use = Use.add rx (st,SetA.add (a, ex) sa) env.use }
+        ) env lvs
 
   let semantic_view env (a, ex, orig) facts =
     match a with
@@ -523,7 +524,7 @@ module Main : S = struct
       Debug.assume_literal sa;
       let env = match sa with
         | A.Distinct (false, lr) -> assume_dist env facts lr ex
-	| A.Distinct (true, _) -> assert false
+        | A.Distinct (true, _) -> assert false
         | A.Pred _ ->
           Q.push (LSem sa, ex, orig) facts.equas;
           env
@@ -553,8 +554,8 @@ module Main : S = struct
     let acc =
       Util.MI.fold
         (fun _ x acc ->
-          let y, ex = Uf.find_r uf x in (*use terms ? *)
-          (LR.mkv_eq x y, None, ex, Sig.Subst) :: acc)
+           let y, ex = Uf.find_r uf x in (*use terms ? *)
+           (LR.mkv_eq x y, None, ex, Sig.Subst) :: acc)
         facts.touched acc
     in
     facts.touched <- Util.MI.empty;
@@ -634,22 +635,22 @@ module Main : S = struct
     let eqs, neqs = Uf.model env.uf in
     let rs =
       List.fold_left (fun acc (r, l, to_rel) ->
-	if l != [] then begin
-	  if !zero then begin
-	    fprintf fmt "Theory:";
-	    zero := false;
-	  end;
-	  fprintf fmt "\n %a = %a" (T.print_list_sep " = ") l X.print r;
-	end;
-	to_rel@acc
-      ) [] eqs in
+          if l != [] then begin
+            if !zero then begin
+              fprintf fmt "Theory:";
+              zero := false;
+            end;
+            fprintf fmt "\n %a = %a" (T.print_list_sep " = ") l X.print r;
+          end;
+          to_rel@acc
+        ) [] eqs in
     List.iter (fun lt ->
-      if !zero then begin
-	fprintf fmt "Theory:";
-	zero := false;
-      end;
-      fprintf fmt "\n %a" (T.print_list_sep " <> ") lt;
-    ) neqs;
+        if !zero then begin
+          fprintf fmt "Theory:";
+          zero := false;
+        end;
+        fprintf fmt "\n %a" (T.print_list_sep " <> ") lt;
+      ) neqs;
     if not !zero then fprintf fmt "\n@.";
     Rel.print_model fmt env.relation rs
 

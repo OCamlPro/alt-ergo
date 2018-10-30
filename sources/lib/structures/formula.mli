@@ -31,11 +31,11 @@ type t
 type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
 
 type semantic_trigger =
-| Interval of Term.t * Symbols.bound * Symbols.bound
-| MapsTo of Hstring.t * Term.t
-| NotTheoryConst of Term.t
-| IsTheoryConst of Term.t
-| LinearDependency of Term.t * Term.t
+  | Interval of Term.t * Symbols.bound * Symbols.bound
+  | MapsTo of Hstring.t * Term.t
+  | NotTheoryConst of Term.t
+  | IsTheoryConst of Term.t
+  | LinearDependency of Term.t * Term.t
 
 type trigger = {
   content : Term.t list;

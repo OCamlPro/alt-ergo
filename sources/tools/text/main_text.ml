@@ -45,13 +45,13 @@ let () =
   (* what to do with Ctrl+C ? *)
   Sys.set_signal Sys.sigint(*-6*)
     (Sys.Signal_handle (fun _ ->
-      if Options.profiling() then Profiling.switch ()
-      else begin
-        Format.eprintf "; User wants me to stop.\n";
-        Format.printf "unknown@.";
-        exit 1
-      end
-     )
+         if Options.profiling() then Profiling.switch ()
+         else begin
+           Format.eprintf "; User wants me to stop.\n";
+           Format.printf "unknown@.";
+           exit 1
+         end
+       )
     )
 
 let () =
@@ -60,13 +60,13 @@ let () =
   if Options.profiling() then
     List.iter
       (fun sign ->
-        Sys.set_signal sign
-          (Sys.Signal_handle
-             (fun _ ->
-               Profiling.print true (SAT.get_steps ()) timers fmt;
-               exit 1
-             )
-          )
+         Sys.set_signal sign
+           (Sys.Signal_handle
+              (fun _ ->
+                 Profiling.print true (SAT.get_steps ()) timers fmt;
+                 exit 1
+              )
+           )
       )[ Sys.sigterm (*-11*); Sys.sigquit (*-9*)]
 
 let () =
@@ -76,7 +76,7 @@ let () =
     Sys.set_signal Sys.sigprof (*-21*)
       (Sys.Signal_handle
          (fun _ ->
-           Profiling.print false (SAT.get_steps ()) timers fmt;
+            Profiling.print false (SAT.get_steps ()) timers fmt;
          )
       )
 
@@ -84,7 +84,7 @@ let () =
   if not (model ()) then
     try
       Sys.set_signal Sys.sigvtalrm
-	(Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
+        (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
     with Invalid_argument _ -> ()
 
 let init_profiling () =
@@ -110,7 +110,7 @@ let () =
       let pfile = Parsers.parse_problem ~filename ~preludes in
       let d, _ = Typechecker.file pfile in
       let d = Typechecker.split_goals_and_cnf d
-        [@ocaml.ppwarning "TODO: implement a more efficient split"]
+          [@ocaml.ppwarning "TODO: implement a more efficient split"]
       in
       d
     with Util.Timeout ->
@@ -127,7 +127,7 @@ let () =
         SAT.reset_refs ();
         ignore
           (List.fold_left (FE.process_decl FE.print_status used_context)
-	     (SAT.empty (), true, Explanation.empty) cnf);
+             (SAT.empty (), true, Explanation.empty) cnf);
         Options.Time.unset_timeout ~is_gui:false;
         if Options.profiling() then
           Profiling.print true (SAT.get_steps ()) timers fmt;
@@ -139,19 +139,19 @@ let () =
     List.iter
       (fun (cnf, gname) ->
          let used_context = FE.choose_used_context all_used_context gname in
-        init_profiling ();
-        try
-          if Options.timelimit_per_goal() then
-            begin
-              Options.Time.start ();
-              Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
-            end;
-          SAT.reset_refs ();
-          ignore
-            (List.fold_left (FE.process_decl FE.print_status used_context)
-	       (SAT.empty (), true, Explanation.empty) cnf)
-        with Util.Timeout ->
-          if not (Options.timelimit_per_goal()) then exit 142
+         init_profiling ();
+         try
+           if Options.timelimit_per_goal() then
+             begin
+               Options.Time.start ();
+               Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
+             end;
+           SAT.reset_refs ();
+           ignore
+             (List.fold_left (FE.process_decl FE.print_status used_context)
+                (SAT.empty (), true, Explanation.empty) cnf)
+         with Util.Timeout ->
+           if not (Options.timelimit_per_goal()) then exit 142
       ) d;
     Options.Time.unset_timeout ~is_gui:false;
 

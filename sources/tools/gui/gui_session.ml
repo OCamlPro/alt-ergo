@@ -55,16 +55,16 @@ let save actions ac =
 
 let compute_ids_offsets old_res res =
   List.fold_left (fun acc (name1, id1) ->
-    try let id2 = List.assoc name1 res in
-	(* if id1 = id2 then acc else *) (id1, id2 - id1)::acc
-    with Not_found -> acc) [] old_res
+      try let id2 = List.assoc name1 res in
+        (* if id1 = id2 then acc else *) (id1, id2 - id1)::acc
+      with Not_found -> acc) [] old_res
 
 let offset_id id offsets =
   let nid = ref id in
   try
     List.iter
       (fun (i, off) ->
-	if id <= i then (nid := id + off; raise Exit))
+         if id <= i then (nid := id + off; raise Exit))
       offsets;
     id
   with Exit -> !nid
@@ -78,13 +78,13 @@ let offset_stack st offsets =
       | IncorrectPrune id -> IncorrectPrune (offset_id id offsets)
       | Unprune id -> Unprune (offset_id id offsets)
       | AddInstance (id, name, vars) ->
-	AddInstance ((offset_id id offsets), name, vars)
+        AddInstance ((offset_id id offsets), name, vars)
       | AddTrigger (id, inst_buf, trs) ->
-	AddTrigger ((offset_id id offsets), inst_buf, trs)
+        AddTrigger ((offset_id id offsets), inst_buf, trs)
       | LimitLemma (id, name, nb) ->
-	LimitLemma ((offset_id id offsets), name, nb)
+        LimitLemma ((offset_id id offsets), name, nb)
       | UnlimitLemma (id, name) ->
-	UnlimitLemma ((offset_id id offsets), name)
+        UnlimitLemma ((offset_id id offsets), name)
     in
     l := ac :: !l
   done;
@@ -94,11 +94,11 @@ let read_actions res = function
   | Some cin ->
     begin
       try
-	let old_res = (input_value cin: (string * int) list) in
-	let st = (input_value cin: action Stack.t) in
-	let offsets = compute_ids_offsets old_res res in
-	offset_stack st offsets;
-	st
+        let old_res = (input_value cin: (string * int) list) in
+        let st = (input_value cin: action Stack.t) in
+        let offsets = compute_ids_offsets old_res res in
+        offset_stack st offsets;
+        st
       with End_of_file -> Stack.create ()
     end
   | None -> Stack.create ()
@@ -112,10 +112,10 @@ let safe_session actions =
   let list_actions = !l in
   let _, incorrect_prunes =
     List.fold_left (fun (prunes, incorrect_prunes) -> function
-      | Prune id -> SI.add id prunes, incorrect_prunes
-      | IncorrectPrune id -> prunes, SI.add id incorrect_prunes
-      | Unprune id -> SI.remove id prunes, SI.remove id incorrect_prunes
-      | _ -> prunes, incorrect_prunes)
+        | Prune id -> SI.add id prunes, incorrect_prunes
+        | IncorrectPrune id -> prunes, SI.add id incorrect_prunes
+        | Unprune id -> SI.remove id prunes, SI.remove id incorrect_prunes
+        | _ -> prunes, incorrect_prunes)
       (SI.empty, SI.empty) list_actions
   in
   SI.is_empty incorrect_prunes

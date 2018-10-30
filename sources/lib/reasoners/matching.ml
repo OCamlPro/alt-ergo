@@ -110,9 +110,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
         fprintf fmt "@.match_pat_modulo: %a  with accumulated substs@."
           T.print pat;
         List.iter (fun {sbs=sbs; sty=sty} ->
-          fprintf fmt ">>> sbs= %a | sty= %a@."
-            (SubstT.print Term.print) sbs Ty.print_subst sty
-        )lsubsts
+            fprintf fmt ">>> sbs= %a | sty= %a@."
+              (SubstT.print Term.print) sbs Ty.print_subst sty
+          )lsubsts
       end
 
     let match_one_pat {sbs=sbs; sty=sty} pat0 =
@@ -161,8 +161,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
         if debug_matching() >= 2 then
           List.iter
             (fun gsbt ->
-              fprintf fmt " >>> sbs = %a  and  sbty = %a@."
-                (SubstT.print T.print) gsbt.sbs Ty.print_subst gsbt.sty
+               fprintf fmt " >>> sbs = %a  and  sbty = %a@."
+                 (SubstT.print T.print) gsbt.sbs Ty.print_subst gsbt.sty
             )res
 
       end
@@ -180,35 +180,35 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let rec add_rec env t =
       if MT.mem t env.info then env
       else
-	let {T.f=f; xs=xs} = T.view t in
-	let env =
-	  let map_f = try SubstT.find f env.fils with Not_found -> MT.empty in
+        let {T.f=f; xs=xs} = T.view t in
+        let env =
+          let map_f = try SubstT.find f env.fils with Not_found -> MT.empty in
 
-	  (* - l'age d'un terme est le min entre l'age passe en argument
-	     et l'age dans la map
-	     - un terme est en lien avec le but de la PO seulement s'il
-	     ne peut etre produit autrement (d'ou le &&)
-	     - le lemme de provenance est le dernier lemme
-	  *)
-	  let g, b = infos min (&&) t info.term_age info.term_from_goal env in
-	  let from_lems =
-	    List.fold_left
-	      (fun acc t ->
-		try (MT.find t env.info).lem_orig @ acc
-		with Not_found -> acc)
-	      (match info.term_from_formula with None -> [] | Some a -> [a])
-	      info.term_from_terms
-	  in
-	  { env with
-	    fils = SubstT.add f (MT.add t xs map_f) env.fils;
-	    info =
-	      MT.add t
-		{ age=g; lem_orig = from_lems; but=b;
-	          t_orig = info.term_from_terms }
-		env.info
-	  }
-	in
-	List.fold_left add_rec env xs
+          (* - l'age d'un terme est le min entre l'age passe en argument
+             	     et l'age dans la map
+             	     - un terme est en lien avec le but de la PO seulement s'il
+             	     ne peut etre produit autrement (d'ou le &&)
+             	     - le lemme de provenance est le dernier lemme
+             	  *)
+          let g, b = infos min (&&) t info.term_age info.term_from_goal env in
+          let from_lems =
+            List.fold_left
+              (fun acc t ->
+                 try (MT.find t env.info).lem_orig @ acc
+                 with Not_found -> acc)
+              (match info.term_from_formula with None -> [] | Some a -> [a])
+              info.term_from_terms
+          in
+          { env with
+            fils = SubstT.add f (MT.add t xs map_f) env.fils;
+            info =
+              MT.add t
+                { age=g; lem_orig = from_lems; but=b;
+                  t_orig = info.term_from_terms }
+                env.info
+          }
+        in
+        List.fold_left add_rec env xs
     in
     if info.term_age > age_limite () then env else add_rec env t
 
@@ -221,27 +221,27 @@ module Make (X : Arg) : S with type theory = X.t = struct
        s_lem_orig = s_lorig} lsbt_acc =
     SubstT.fold
       (fun k s l ->
-	MT.fold
-	  (fun t _ l ->
-	    try
-	      let s_ty = Ty.matching s_ty ty (T.view t).T.ty in
-	      let ng , but =
-		try
-		  let {age=ng;lem_orig=lem'; but=bt} = MT.find t env.info in
-		  max ng g , bt || b
-		with Not_found -> g , b
-	      in
-              (* with triggers that are variables, always normalize substs *)
-              let t = X.term_repr tbox t ~init_term:true in
-	      { sbs = SubstT.add f t s_t;
-		sty = s_ty;
-		gen = ng;
-		goal = but;
-		s_term_orig = t :: s_torig;
-		s_lem_orig = s_lorig;
-	      }::l
-	    with Ty.TypeClash _ -> l
-	  ) s l
+         MT.fold
+           (fun t _ l ->
+              try
+                let s_ty = Ty.matching s_ty ty (T.view t).T.ty in
+                let ng , but =
+                  try
+                    let {age=ng;lem_orig=lem'; but=bt} = MT.find t env.info in
+                    max ng g , bt || b
+                  with Not_found -> g , b
+                in
+                (* with triggers that are variables, always normalize substs *)
+                let t = X.term_repr tbox t ~init_term:true in
+                { sbs = SubstT.add f t s_t;
+                  sty = s_ty;
+                  gen = ng;
+                  goal = but;
+                  s_term_orig = t :: s_torig;
+                  s_lem_orig = s_lorig;
+                }::l
+              with Ty.TypeClash _ -> l
+           ) s l
       ) env.fils lsbt_acc
 
 
@@ -288,9 +288,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   let (-@) l1 l2 =
     match l1, l2 with
-      | [], _  -> l2
-      | _ , [] -> l1
-      | _ -> List.fold_left (fun acc e -> e :: acc) l2 (List.rev l1)
+    | [], _  -> l2
+    | _ , [] -> l1
+    | _ -> List.fold_left (fun acc e -> e :: acc) l2 (List.rev l1)
 
   let xs_modulo_records t { Ty.lbs = lbs } =
     List.rev
@@ -304,13 +304,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
         try
           List.iter2
             (fun t1 t2 ->
-              let c = T.compare t1 t2 in
-              if c <> 0 then raise (Exception.Compared c)
+               let c = T.compare t1 t2 in
+               if c <> 0 then raise (Exception.Compared c)
             ) l1 l2;
           0
         with Invalid_argument _ ->
           List.length l1 - List.length l2
-        | Exception.Compared n -> n
+           | Exception.Compared n -> n
     end)
 
   let filter_classes cl tbox =
@@ -324,7 +324,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
                  (List.rev_map
                     (fun t -> X.term_repr tbox t ~init_term:false) xs)
              in
-            SLT.add xs acc
+             SLT.add xs acc
           ) SLT.empty cl
       in
       SLT.elements mtl
@@ -338,16 +338,16 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let linear_arithmetic_matching f_pat pats ty_pat t =
     let {T.f=f ; xs; ty} = T.view t in
     if not (Options.arith_matching ()) ||
-         ty != Ty.Tint && ty != Ty.Treal then []
+       ty != Ty.Tint && ty != Ty.Treal then []
     else
       match f_pat, pats with
       | Symbols.Op Symbols.Plus, [p1; p2] ->
-         if T.is_ground p2 then [plus_of_minus t p2 ty]
-         else if T.is_ground p1 then [plus_of_minus t p1 ty] else []
+        if T.is_ground p2 then [plus_of_minus t p2 ty]
+        else if T.is_ground p1 then [plus_of_minus t p1 ty] else []
 
       | Symbols.Op Symbols.Minus, [p1; p2] ->
-         if T.is_ground p2 then [minus_of_plus t p2 ty]
-         else if T.is_ground p1 then [minus_of_plus t p1 ty] else []
+        if T.is_ground p2 then [minus_of_plus t p2 ty]
+        else if T.is_ground p1 then [minus_of_plus t p1 ty] else []
       | _ -> []
 
   let rec match_term env tbox ({sty=s_ty;gen=g;goal=b} as sg) pat t =
@@ -355,65 +355,65 @@ module Make (X : Arg) : S with type theory = X.t = struct
     Debug.match_term sg t pat;
     let {T.f=f_pat;xs=pats;ty=ty_pat} = T.view pat in
     match f_pat with
-      |	Symbols.Var hs when String.equal "_" (Hstring.view hs) -> [sg]
-      |	Symbols.Var _ ->
-	let sb =
-          (try
-	     let s_ty = Ty.matching s_ty ty_pat (T.view t).T.ty in
-	     let g',b' = infos max (||) t g b env in
-	     add_msymb tbox f_pat t
-	       { sg with sty=s_ty; gen=g'; goal=b' }
-               env.max_t_depth
-	   with Ty.TypeClash _ -> raise Echec)
-        in
-        [sb]
-      | _ ->
-        try
-          let s_ty = Ty.matching s_ty ty_pat (T.view t).T.ty in
-          let gsb = { sg with sty = s_ty } in
-          if T.is_ground pat &&
-            are_equal_light tbox pat t != Sig.No then
-            [gsb]
-          else
-            let cl = if no_Ematching () then [t] else X.class_of tbox t in
-            Debug.match_class_of t cl;
-            let cl =
-	      List.fold_left
-	        (fun l t ->
-                  let {T.f=f; xs=xs; ty=ty} = T.view t in
-	          if Symbols.compare f_pat f = 0 then xs::l
-                  else
-                    begin
-                      match f_pat, ty with
-                      | Symbols.Op (Symbols.Record), Ty.Trecord record ->
-                        (xs_modulo_records t record) :: l
-                      | _ -> l
-                    end
-	        )[] cl
-            in
-            let cl = filter_classes cl tbox in
-            let cl =
-              if cl != [] then cl
-              else linear_arithmetic_matching f_pat pats ty_pat t
-            in
+    |	Symbols.Var hs when String.equal "_" (Hstring.view hs) -> [sg]
+    |	Symbols.Var _ ->
+      let sb =
+        (try
+           let s_ty = Ty.matching s_ty ty_pat (T.view t).T.ty in
+           let g',b' = infos max (||) t g b env in
+           add_msymb tbox f_pat t
+             { sg with sty=s_ty; gen=g'; goal=b' }
+             env.max_t_depth
+         with Ty.TypeClash _ -> raise Echec)
+      in
+      [sb]
+    | _ ->
+      try
+        let s_ty = Ty.matching s_ty ty_pat (T.view t).T.ty in
+        let gsb = { sg with sty = s_ty } in
+        if T.is_ground pat &&
+           are_equal_light tbox pat t != Sig.No then
+          [gsb]
+        else
+          let cl = if no_Ematching () then [t] else X.class_of tbox t in
+          Debug.match_class_of t cl;
+          let cl =
             List.fold_left
-              (fun acc xs ->
-                try (match_list env tbox gsb pats xs) -@ acc
-                with Echec -> acc
-              ) [] cl
-        with Ty.TypeClash _ -> raise Echec
+              (fun l t ->
+                 let {T.f=f; xs=xs; ty=ty} = T.view t in
+                 if Symbols.compare f_pat f = 0 then xs::l
+                 else
+                   begin
+                     match f_pat, ty with
+                     | Symbols.Op (Symbols.Record), Ty.Trecord record ->
+                       (xs_modulo_records t record) :: l
+                     | _ -> l
+                   end
+              )[] cl
+          in
+          let cl = filter_classes cl tbox in
+          let cl =
+            if cl != [] then cl
+            else linear_arithmetic_matching f_pat pats ty_pat t
+          in
+          List.fold_left
+            (fun acc xs ->
+               try (match_list env tbox gsb pats xs) -@ acc
+               with Echec -> acc
+            ) [] cl
+      with Ty.TypeClash _ -> raise Echec
 
   and match_list env tbox sg pats xs =
     Debug.match_list sg pats xs;
     try
       List.fold_left2
         (fun sb_l pat arg ->
-          List.fold_left
-            (fun acc sg ->
-              let aux = match_term env tbox sg pat arg in
-              (*match aux with [] -> raise Echec | _  -> BUG !! *)
-              List.rev_append aux acc
-            ) [] sb_l
+           List.fold_left
+             (fun acc sg ->
+                let aux = match_term env tbox sg pat arg in
+                (*match aux with [] -> raise Echec | _  -> BUG !! *)
+                List.rev_append aux acc
+             ) [] sb_l
         ) [sg] pats xs
     with Invalid_argument _ -> raise Echec
 
@@ -422,29 +422,29 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let pat = T.apply_subst (sg.sbs, sg.sty) pat0 in
     let {T.f=f; xs=pats; ty=ty} = T.view pat in
     match f with
-      | Symbols.Var _ -> all_terms f ty env tbox sg lsbt_acc
-      | _ ->
-        let {sty=sty; gen=g; goal=b} = sg in
-        let f_aux t xs lsbt =
-          (* maybe put 3 as a rational parameter in the future *)
-          let too_big = (T.view t).T.depth > 3 * env.max_t_depth in
-          if too_big then lsbt
-          else
-	    try
-              Debug.match_one_pat_against sg pat0 t;
-	      let s_ty = Ty.matching sty ty (T.view t).T.ty in
-	      let gen, but = infos max (||) t g b env in
-              let sg =
-                { sg with
-                  sty = s_ty; gen = gen; goal = but;
-                  s_term_orig = t::sg.s_term_orig }
-              in
-	      let aux = match_list env tbox sg pats xs in
-              List.rev_append aux lsbt
-	    with Echec | Ty.TypeClash _ -> lsbt
-        in
-	try MT.fold f_aux (SubstT.find f env.fils) lsbt_acc
-	with Not_found -> lsbt_acc
+    | Symbols.Var _ -> all_terms f ty env tbox sg lsbt_acc
+    | _ ->
+      let {sty=sty; gen=g; goal=b} = sg in
+      let f_aux t xs lsbt =
+        (* maybe put 3 as a rational parameter in the future *)
+        let too_big = (T.view t).T.depth > 3 * env.max_t_depth in
+        if too_big then lsbt
+        else
+          try
+            Debug.match_one_pat_against sg pat0 t;
+            let s_ty = Ty.matching sty ty (T.view t).T.ty in
+            let gen, but = infos max (||) t g b env in
+            let sg =
+              { sg with
+                sty = s_ty; gen = gen; goal = but;
+                s_term_orig = t::sg.s_term_orig }
+            in
+            let aux = match_list env tbox sg pats xs in
+            List.rev_append aux lsbt
+          with Echec | Ty.TypeClash _ -> lsbt
+      in
+      try MT.fold f_aux (SubstT.find f env.fils) lsbt_acc
+      with Not_found -> lsbt_acc
 
   let match_pats_modulo env tbox lsubsts pat =
     Debug.match_pats_modulo pat lsubsts;
@@ -468,9 +468,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
         { sbs = SubstT.empty;
           sty = Ty.esubst;
           gen = 0;
-	  goal = false;
-	  s_term_orig = [];
-	  s_lem_orig = pat_info.trigger_orig;
+          goal = false;
+          s_term_orig = [];
+          s_lem_orig = pat_info.trigger_orig;
         }
       in
       match pats_list with
@@ -516,13 +516,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let query env tbox =
     if Options.timers() then
       try
-	Timers.exec_timer_start Timers.M_Match Timers.F_query;
-	let res = query env tbox in
-	Timers.exec_timer_pause Timers.M_Match Timers.F_query;
-	res
+        Timers.exec_timer_start Timers.M_Match Timers.F_query;
+        let res = query env tbox in
+        Timers.exec_timer_pause Timers.M_Match Timers.F_query;
+        res
       with e ->
-	Timers.exec_timer_pause Timers.M_Match Timers.F_query;
-	raise e
+        Timers.exec_timer_pause Timers.M_Match Timers.F_query;
+        raise e
     else query env tbox
 
   let max_term_depth env mx = {env with max_t_depth = max env.max_t_depth mx}
@@ -530,28 +530,28 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let add_triggers ~backward env formulas =
     MF.fold
       (fun lem (age, dep) env ->
-	match F.view lem with
-	| F.Lemma {F.triggers = tgs0; main = f;
-                   backward_triggers=tgs1; forward_triggers=tgs2} ->
-          let tgs =
-            match backward with
-            | Util.Normal -> tgs0
-            | Util.Backward -> Lazy.force tgs1
-            | Util.Forward -> Lazy.force tgs2
-          in
-	  List.fold_left
-	    (fun env tr ->
-	      let info =
-		{ trigger = tr;
-                  trigger_age = age ;
-		  trigger_orig = lem ;
-		  trigger_formula = f ;
-		  trigger_dep = dep}
-	      in
-              add_trigger info env
-            ) env tgs
+         match F.view lem with
+         | F.Lemma {F.triggers = tgs0; main = f;
+                    backward_triggers=tgs1; forward_triggers=tgs2} ->
+           let tgs =
+             match backward with
+             | Util.Normal -> tgs0
+             | Util.Backward -> Lazy.force tgs1
+             | Util.Forward -> Lazy.force tgs2
+           in
+           List.fold_left
+             (fun env tr ->
+                let info =
+                  { trigger = tr;
+                    trigger_age = age ;
+                    trigger_orig = lem ;
+                    trigger_formula = f ;
+                    trigger_dep = dep}
+                in
+                add_trigger info env
+             ) env tgs
 
-	| _ -> assert false
+         | _ -> assert false
       ) formulas env
 
   let terms_info env = env.info, env.fils

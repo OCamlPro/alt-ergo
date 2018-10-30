@@ -44,18 +44,18 @@ module Q = struct
     assert (sgn >= 0);
     if n = 1 then Some q
     else
-      if sgn = 0 then Some zero
-      else
-        let v = to_float q in
-        let w =
-          if Pervasives.(<) v min_float then min_float
-          else if Pervasives.(>) v max_float then max_float
-          else v
-        in
-        let flt = if n = 2 then sqrt w else w ** (1. /. float n) in
-        match classify_float flt with
-        | FP_normal | FP_subnormal | FP_zero -> Some (from_float flt)
-        | FP_infinite | FP_nan -> None
+    if sgn = 0 then Some zero
+    else
+      let v = to_float q in
+      let w =
+        if Pervasives.(<) v min_float then min_float
+        else if Pervasives.(>) v max_float then max_float
+        else v
+      in
+      let flt = if n = 2 then sqrt w else w ** (1. /. float n) in
+      match classify_float flt with
+      | FP_normal | FP_subnormal | FP_zero -> Some (from_float flt)
+      | FP_infinite | FP_nan -> None
 
   let unaccurate_root_default q n =
     match root_num q n with

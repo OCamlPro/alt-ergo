@@ -35,16 +35,16 @@ type 'a literal = LTerm of Literal.LT.t | LSem of 'a Literal.view
 type instances = (Formula.t list * Formula.gformula * Explanation.t) list
 
 type theory =
-| Th_arith
-| Th_sum
-| Th_arrays
-| Th_UF
+  | Th_arith
+  | Th_sum
+  | Th_arrays
+  | Th_UF
 
 type lit_origin =
-| Subst
-| CS of theory * Numbers.Q.t
-| NCS of theory * Numbers.Q.t
-| Other
+  | Subst
+  | CS of theory * Numbers.Q.t
+  | NCS of theory * Numbers.Q.t
+  | Other
 
 type 'a input =
   'a Literal.view * Literal.LT.t option * Explanation.t * lit_origin

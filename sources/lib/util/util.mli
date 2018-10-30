@@ -15,10 +15,10 @@ module MI : Map.S with type key = int
 module SS : Set.S with type elt = string
 
 (** Different values for -case-split-policy option:
- -after-theory-assume (default value): after assuming facts in theory by the SAT
- -before-matching: just before performing a matching round
- -after-matching: just after performing a matching round
- **)
+    -after-theory-assume (default value): after assuming facts in
+    theory by the SAT
+    -before-matching: just before performing a matching round
+    -after-matching: just after performing a matching round **)
 type case_split_policy =
   | AfterTheoryAssume (* default *)
   | BeforeMatching

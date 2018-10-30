@@ -14,7 +14,7 @@ open Parsed
 (** Declaration of types  **)
 
 val mk_abstract_type_decl : Loc.t -> string list -> string -> decl
-  [@ocaml.ppwarning "TODO: add documentation for every function in this file"]
+    [@ocaml.ppwarning "TODO: add documentation for every function in this file"]
 
 val mk_enum_type_decl : Loc.t -> string list -> string -> string list -> decl
 

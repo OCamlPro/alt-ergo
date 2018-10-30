@@ -87,21 +87,21 @@ type timers_model = {
 }
 
 type 'a annoted =
-    { mutable c : 'a;
-      mutable pruned : bool;
-      mutable polarity : bool;
-      tag : GText.tag;
-      ptag : GText.tag;
-      id : int;
-      buf : sbuffer;
-      mutable line : int;
-    }
+  { mutable c : 'a;
+    mutable pruned : bool;
+    mutable polarity : bool;
+    tag : GText.tag;
+    ptag : GText.tag;
+    id : int;
+    buf : sbuffer;
+    mutable line : int;
+  }
 
 type aoplogic =
     AOPand | AOPor | AOPxor | AOPimp | AOPnot | AOPif | AOPiff
 
 type aterm =
-    { at_ty : Ty.t; at_desc : at_desc }
+  { at_ty : Ty.t; at_desc : at_desc }
 
 and at_desc =
   | ATconst of tconstant
@@ -161,7 +161,7 @@ type atyped_decl =
   | ALogic of Loc.t * string list * plogic_type
   | APredicate_def of Loc.t * string * (string * ppure_type) list * aform
   | AFunction_def
-      of Loc.t * string * (string * ppure_type) list * ppure_type * aform
+    of Loc.t * string * (string * ppure_type) list * ppure_type * aform
   | ATypeDecl of Loc.t * string list * string * body_type_decl
 
 

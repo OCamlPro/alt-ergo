@@ -36,11 +36,11 @@ module Sy = Symbols
 type binders = (Ty.t * int) Sy.Map.t (*int tag in globally unique *)
 
 type semantic_trigger =
-| Interval of Term.t * Symbols.bound * Symbols.bound
-| MapsTo of Hstring.t * Term.t
-| NotTheoryConst of Term.t
-| IsTheoryConst of Term.t
-| LinearDependency of Term.t * Term.t
+  | Interval of Term.t * Symbols.bound * Symbols.bound
+  | MapsTo of Hstring.t * Term.t
+  | NotTheoryConst of Term.t
+  | IsTheoryConst of Term.t
+  | LinearDependency of Term.t * Term.t
 
 type trigger = {
   content : T.t list;
@@ -144,8 +144,8 @@ let equal_triggers =
   let map_of l =
     List.fold_left
       (fun mp {content=mtr; guard = opt} ->
-        let st = List.fold_left (fun z t -> T.Set.add t z) T.Set.empty mtr in
-        MST.add st opt mp
+         let st = List.fold_left (fun z t -> T.Set.add t z) T.Set.empty mtr in
+         MST.add st opt mp
       )MST.empty l
   in
   let equal_opt o1 o2 = match o1, o2 with
@@ -245,16 +245,16 @@ module View = struct
     | Skolem q -> 1 + 2*hash_quant acc q
 
     | Flet ({flet_var=lvar; flet_form=lform;
-	     flet_subst=s; flet_f=(lf,_)}) ->
+             flet_subst=s; flet_f=(lf,_)}) ->
       T.fold_subst_term
-	(fun s t acc ->acc * 19 + Sy.hash s) s
-	(lf.tag * 19 * 19 + Sy.hash lvar * 19 + acc)
+        (fun s t acc ->acc * 19 + Sy.hash s) s
+        (lf.tag * 19 * 19 + Sy.hash lvar * 19 + acc)
 
     | Tlet ({tlet_var=lvar; tlet_term=lterm;
-	    tlet_subst=s; tlet_f=(lf,_)}) ->
+             tlet_subst=s; tlet_f=(lf,_)}) ->
       T.fold_subst_term
-	(fun s t acc ->acc * 19 + Sy.hash s) s
-	(lf.tag * 19 * 23 + Sy.hash lvar * 19 + acc)
+        (fun s t acc ->acc * 19 + Sy.hash s) s
+        (lf.tag * 19 * 23 + Sy.hash lvar * 19 + acc)
 
   let eq f1 f2 = eqc f1.pos f2.pos && eqc f1.neg f2.neg
 
@@ -292,40 +292,40 @@ let print_binders =
 
 let rec print fmt f =
   match view f with
-    | Literal a ->
-      Literal.LT.print fmt a
-    | Lemma {triggers = trs; main = f; name = n; binders} ->
-      if verbose () then
-	let first = ref true in
-	fprintf fmt "(lemma: %s forall %a.)[%a]@  %a"
-	  n
-          print_binders binders
-	  (fun fmt ->
-	    List.iter (fun {content=l} ->
-	      fprintf fmt "%s%a"
-		(if !first then "" else " | ") T.print_list l;
-	      first := false;
-	    ))
-	  trs print f
-      else
-	fprintf fmt "lem %s" n
+  | Literal a ->
+    Literal.LT.print fmt a
+  | Lemma {triggers = trs; main = f; name = n; binders} ->
+    if verbose () then
+      let first = ref true in
+      fprintf fmt "(lemma: %s forall %a.)[%a]@  %a"
+        n
+        print_binders binders
+        (fun fmt ->
+           List.iter (fun {content=l} ->
+               fprintf fmt "%s%a"
+                 (if !first then "" else " | ") T.print_list l;
+               first := false;
+             ))
+        trs print f
+    else
+      fprintf fmt "lem %s" n
 
-    | Unit(f1, f2) -> fprintf fmt "@[(%a /\\@ %a)@]" print f1 print f2
+  | Unit(f1, f2) -> fprintf fmt "@[(%a /\\@ %a)@]" print f1 print f2
 
-    | Clause(f1, f2,_) -> fprintf fmt "@[(%a \\/@ %a)@]" print f1 print f2
+  | Clause(f1, f2,_) -> fprintf fmt "@[(%a \\/@ %a)@]" print f1 print f2
 
-    | Skolem{main=f; binders} ->
-      fprintf fmt "<sko exists %a.> (%a)" print_binders binders print f
+  | Skolem{main=f; binders} ->
+    fprintf fmt "<sko exists %a.> (%a)" print_binders binders print f
 
-    | Tlet l ->
-      fprintf fmt
-	"let %a =@ %a in@ %a" Sy.print l.tlet_var
-        T.print l.tlet_term print l.tlet_f
+  | Tlet l ->
+    fprintf fmt
+      "let %a =@ %a in@ %a" Sy.print l.tlet_var
+      T.print l.tlet_term print l.tlet_f
 
-    | Flet l ->
-      fprintf fmt
-	"let %a =@ %a in@ %a" Sy.print l.flet_var
-        print l.flet_form print l.flet_f
+  | Flet l ->
+    fprintf fmt
+      "let %a =@ %a in@ %a" Sy.print l.flet_var
+      print l.flet_form print l.flet_f
 
 (* let print fmt ((_,id) as f) = *)
 (*   fprintf fmt "(%d)%a" id print f *)
@@ -352,10 +352,10 @@ let mk_binders =
   fun st ->
     T.Set.fold
       (fun t sym ->
-        incr cpt;
-        match T.view t with
-          | {T.f=(Sy.Var _) as v; ty=ty} -> Sy.Map.add v (ty, !cpt) sym
-          | _ -> assert false
+         incr cpt;
+         match T.view t with
+         | {T.f=(Sy.Var _) as v; ty=ty} -> Sy.Map.add v (ty, !cpt) sym
+         | _ -> assert false
       )st Sy.Map.empty
 
 module F_Htbl =
@@ -369,53 +369,55 @@ module F_Htbl =
 let merge_maps acc b =
   Sy.Map.merge
     (fun sy a b ->
-      match a, b with
-      | None, None -> assert false
-      | Some _, None -> a
-      | _ -> b
+       match a, b with
+       | None, None -> assert false
+       | Some _, None -> a
+       | _ -> b
     ) acc b
 
 let free_vars =
   let rec free_rec acc f =
     match view f with
-      | Literal a   -> Literal.LT.vars_of a acc
-      | Unit(f1,f2) -> free_rec (free_rec acc f1) f2
-      | Clause(f1,f2,_) -> free_rec (free_rec acc f1) f2
-      | Lemma {binders = binders; main = f}
-      | Skolem {binders = binders; main = f} ->
-	let mp = free_rec Sy.Map.empty f in
-        let mp = Sy.Map.filter (fun sy _ -> not (Sy.Map.mem sy binders)) mp in
-        merge_maps mp acc
+    | Literal a   -> Literal.LT.vars_of a acc
+    | Unit(f1,f2) -> free_rec (free_rec acc f1) f2
+    | Clause(f1,f2,_) -> free_rec (free_rec acc f1) f2
+    | Lemma {binders = binders; main = f}
+    | Skolem {binders = binders; main = f} ->
+      let mp = free_rec Sy.Map.empty f in
+      let mp = Sy.Map.filter (fun sy _ -> not (Sy.Map.mem sy binders)) mp in
+      merge_maps mp acc
 
-      | Flet {flet_subst = (subst, _); flet_form = lform; flet_f = lf} ->
-        let mp = free_rec Sy.Map.empty lf in
-        let mp = free_rec mp lform in
-        let mp = Sy.Map.fold
-	  (fun sy t mp ->
-	    if Sy.Map.mem sy mp then
-              (* 'let' bindings are removed since they are mapped to fresh terms
-                 'vars' that are not nrmalized are replaced with the vars of
-                 their normal form w.r.t. subst *)
-              Term.vars_of t (Sy.Map.remove sy mp)
-	    else mp
-	  ) subst mp
-        in
-        merge_maps mp acc
+    | Flet {flet_subst = (subst, _); flet_form = lform; flet_f = lf} ->
+      let mp = free_rec Sy.Map.empty lf in
+      let mp = free_rec mp lform in
+      let mp = Sy.Map.fold
+          (fun sy t mp ->
+             if Sy.Map.mem sy mp then
+               (* 'let' bindings are removed since they are mapped to
+                  fresh terms 'vars' that are not nrmalized are
+                  replaced with the vars of their normal form
+                  w.r.t. subst *)
+               Term.vars_of t (Sy.Map.remove sy mp)
+             else mp
+          ) subst mp
+      in
+      merge_maps mp acc
 
-      | Tlet {tlet_subst = (subst, _); tlet_term = t; tlet_f = lf} ->
-        let mp = free_rec Sy.Map.empty lf in
-        let mp = Term.vars_of t mp in
-        let mp = Sy.Map.fold
-	  (fun sy t mp ->
-	    if Sy.Map.mem sy mp then
-              (* 'let' bindings are removed since they are mapped to fresh terms
-                 'vars' that are not nrmalized are replaced with the vars of
-                 their normal form w.r.t. subst *)
-              Term.vars_of t (Sy.Map.remove sy mp)
-	    else mp
-	  ) subst mp
-        in
-        merge_maps mp acc
+    | Tlet {tlet_subst = (subst, _); tlet_term = t; tlet_f = lf} ->
+      let mp = free_rec Sy.Map.empty lf in
+      let mp = Term.vars_of t mp in
+      let mp = Sy.Map.fold
+          (fun sy t mp ->
+             if Sy.Map.mem sy mp then
+               (* 'let' bindings are removed since they are mapped to
+                  fresh terms 'vars' that are not nrmalized are
+                  replaced with the vars of their normal form
+                  w.r.t. subst *)
+               Term.vars_of t (Sy.Map.remove sy mp)
+             else mp
+          ) subst mp
+      in
+      merge_maps mp acc
 
   in
   fun f -> free_rec Sy.Map.empty f
@@ -423,14 +425,14 @@ let free_vars =
 let type_variables f =
   let rec aux acc f =
     match view f with
-      | Unit(f1,f2) | Clause(f1,f2,_) -> aux (aux acc f1) f2
-      | Lemma lem | Skolem lem -> aux acc lem.main
-      | Flet flet -> aux acc flet.flet_f
-      | Tlet tlet -> aux acc tlet.tlet_f
-      | Literal a ->
-        Term.Set.fold
-          (fun t z -> Ty.Svty.union z (T.vty_of t))
-          (Literal.LT.terms_nonrec a) acc
+    | Unit(f1,f2) | Clause(f1,f2,_) -> aux (aux acc f1) f2
+    | Lemma lem | Skolem lem -> aux acc lem.main
+    | Flet flet -> aux acc flet.flet_f
+    | Tlet tlet -> aux acc tlet.tlet_f
+    | Literal a ->
+      Term.Set.fold
+        (fun t z -> Ty.Svty.union z (T.vty_of t))
+        (Literal.LT.terms_nonrec a) acc
   in
   Ty.Svty.fold
     (fun i z -> Ty.Set.add (Ty.Tvar {Ty.v=i; value = None}) z)
@@ -467,7 +469,7 @@ let find_particular_subst =
   in
   fun binders free_vty trs f ->
     if not (Ty.Set.is_empty free_vty) || has_hypotheses trs ||
-      has_semantic_triggers trs
+       has_semantic_triggers trs
     then None
     else
       try
@@ -475,12 +477,12 @@ let find_particular_subst =
         let acc, full =
           Sy.Map.fold
             (fun v (ty, _) (acc, full) ->
-              try
-                find_subst v (T.make v [] ty) f;
-                  (*TODO: (re-) test partial substs: acc, false*)
-                raise Exit
-              with Out (x, t) ->
-                Sy.Map.add x t acc, full
+               try
+                 find_subst v (T.make v [] ty) f;
+                 (*TODO: (re-) test partial substs: acc, false*)
+                 raise Exit
+               with Out (x, t) ->
+                 Sy.Map.add x t acc, full
             )binders (Sy.Map.empty, true)
         in
         if Sy.Map.is_empty acc then None else Some (acc, full)
@@ -492,8 +494,8 @@ let resolution_of_literal a binders free_vty acc =
   | Literal.Pred(t, _) ->
     let cond =
       Ty.Svty.subset free_vty (Term.vty_of t) &&
-        let vars = Term.vars_of t Symbols.Map.empty in
-        Symbols.Map.for_all (fun sy ty -> Sy.Map.mem sy vars) binders
+      let vars = Term.vars_of t Symbols.Map.empty in
+      Symbols.Map.for_all (fun sy ty -> Sy.Map.mem sy vars) binders
     in
     if cond then Term.Set.add t acc else acc
   | _ -> acc
@@ -546,9 +548,9 @@ let resolution_triggers is_back f name binders free_vty =
   let free_vty =
     Ty.Set.fold
       (fun ty svty ->
-        match ty with
-        | Ty.Tvar {Ty.v; value = None} -> Ty.Svty.add v svty
-        | _ -> assert false
+         match ty with
+         | Ty.Tvar {Ty.v; value = None} -> Ty.Svty.add v svty
+         | _ -> assert false
       )free_vty Ty.Svty.empty
   in
   let cand =
@@ -559,15 +561,15 @@ let resolution_triggers is_back f name binders free_vty =
   in
   Term.Set.fold
     (fun t acc ->
-      if Term.Set.exists (cand_is_more_general t) others then acc
-      else
-        { content = [t];
-          hyp = [];
-          semantic = [];
-          depth = (Term.view t).Term.depth;
-          from_user = false;
-          guard = None
-        } :: acc
+       if Term.Set.exists (cand_is_more_general t) others then acc
+       else
+         { content = [t];
+           hyp = [];
+           semantic = [];
+           depth = (Term.view t).Term.depth;
+           from_user = false;
+           guard = None
+         } :: acc
     )cand []
 
 
@@ -575,48 +577,48 @@ let mk_forall_aux =
   let env = F_Htbl.create 101 in
   (*fun up bv trs f name id ->*)
   fun name loc binders triggers f id ext_free free_v_f free_vty ->
-      let bkw_trs = lazy (resolution_triggers true  f name binders free_vty) in
-      let frw_trs = lazy (resolution_triggers false f name binders free_vty) in
-      let free_v, free_vty = match ext_free with
-        | Some (fv, fv_ty) -> fv, fv_ty
-        | None ->
-          let free_v = (* compute free vars (as terms) of f *)
-            Sy.Map.fold
-              (fun sy ty fv ->
-                if Sy.Map.mem sy binders then fv
-                else (Term.make sy [] ty) ::fv) free_v_f []
-          in
-          free_v, Ty.Set.elements free_vty
-      in
-      let new_q = {
-        name = name;
-        backward_triggers = bkw_trs;
-        forward_triggers = frw_trs;
-        main = f;
-        triggers = triggers;
-        binders = binders;
-        free_v = free_v;
-        free_vty = free_vty;
-        loc = loc }
-      in
-      try
-        let lem = F_Htbl.find env f in
-        let q = match view lem with Lemma q -> q | _ -> assert false in
-        assert (equal q.main f (* should be true *));
-        if not (equal_quant q new_q) then raise Exit;
-        if debug_warnings () then
-          eprintf "[warning] (sub) axiom %s replaced with %s@." name q.name;
-        lem
-      with Not_found | Exit ->
-        let sko = {new_q with main = mk_not f} in
-        let res = make (Lemma new_q) (Skolem sko) (size f) id in
-        F_Htbl.add env f res;
-        res
+    let bkw_trs = lazy (resolution_triggers true  f name binders free_vty) in
+    let frw_trs = lazy (resolution_triggers false f name binders free_vty) in
+    let free_v, free_vty = match ext_free with
+      | Some (fv, fv_ty) -> fv, fv_ty
+      | None ->
+        let free_v = (* compute free vars (as terms) of f *)
+          Sy.Map.fold
+            (fun sy ty fv ->
+               if Sy.Map.mem sy binders then fv
+               else (Term.make sy [] ty) ::fv) free_v_f []
+        in
+        free_v, Ty.Set.elements free_vty
+    in
+    let new_q = {
+      name = name;
+      backward_triggers = bkw_trs;
+      forward_triggers = frw_trs;
+      main = f;
+      triggers = triggers;
+      binders = binders;
+      free_v = free_v;
+      free_vty = free_vty;
+      loc = loc }
+    in
+    try
+      let lem = F_Htbl.find env f in
+      let q = match view lem with Lemma q -> q | _ -> assert false in
+      assert (equal q.main f (* should be true *));
+      if not (equal_quant q new_q) then raise Exit;
+      if debug_warnings () then
+        eprintf "[warning] (sub) axiom %s replaced with %s@." name q.name;
+      lem
+    with Not_found | Exit ->
+      let sko = {new_q with main = mk_not f} in
+      let res = make (Lemma new_q) (Skolem sko) (size f) id in
+      F_Htbl.add env f res;
+      res
 
 
 (* forall/exists quant_vars. let bv = lf in f *)
 let mk_let_f quant_vars bv lf f id =
-   (* XXX this is buggy
+  (* XXX this is buggy
      (* only keep up vars that are bound with forall or exists, not those
      bound with a let *)
      let up = Sy.Map.filter (fun x _ -> Sy.Set.mem x quant_vars) up in
@@ -659,26 +661,26 @@ let mk_let_t quant_vars bv lt f id =
 let mk_and f1 f2 is_impl id =
   if equal f1 (mk_not f2) then faux
   else
-    if equal f1 f2 then f1
-    else if equal f1 vrai then f2
-    else if equal f2 vrai then f1
-    else if (equal f1 faux) || (equal f2 faux) then faux
-    else
-      let f1, f2 = if is_impl || compare f1 f2 < 0 then f1, f2 else f2, f1 in
-      let size = size f1 + size f2 in
-      make (Unit(f1,f2)) (Clause(mk_not f1,mk_not f2,is_impl)) size id
+  if equal f1 f2 then f1
+  else if equal f1 vrai then f2
+  else if equal f2 vrai then f1
+  else if (equal f1 faux) || (equal f2 faux) then faux
+  else
+    let f1, f2 = if is_impl || compare f1 f2 < 0 then f1, f2 else f2, f1 in
+    let size = size f1 + size f2 in
+    make (Unit(f1,f2)) (Clause(mk_not f1,mk_not f2,is_impl)) size id
 
 let mk_or f1 f2 is_impl id =
   if equal f1 (mk_not f2) then vrai
   else
-    if equal f1 f2 then f1
-    else if equal f1 faux then f2
-    else if equal f2 faux then f1
-    else if equal f1 vrai || equal f2 vrai then vrai
-    else
-      let f1, f2 = if is_impl || compare f1 f2 < 0 then f1, f2 else f2, f1 in
-      let size = size f1 + size f2 in
-      make (Clause(f1,f2,is_impl)) (Unit(mk_not f1,mk_not f2)) size id
+  if equal f1 f2 then f1
+  else if equal f1 faux then f2
+  else if equal f2 faux then f1
+  else if equal f1 vrai || equal f2 vrai then vrai
+  else
+    let f1, f2 = if is_impl || compare f1 f2 < 0 then f1, f2 else f2, f1 in
+    let size = size f1 + size f2 in
+    make (Clause(f1,f2,is_impl)) (Unit(mk_not f1,mk_not f2)) size id
 
 let mk_imp f1 f2 id = mk_or (mk_not f1) f2 true id
 
@@ -694,7 +696,8 @@ let mk_xor f1 f2 is_impl id =
 let translate_eq_to_iff s t =
   (T.view s).T.ty == Ty.Tbool &&
   not
-  (T.equal s T.vrai || T.equal s T.faux || T.equal t T.vrai ||T.equal t T.faux)
+    (T.equal s T.vrai || T.equal s T.faux ||
+     T.equal t T.vrai ||T.equal t T.faux)
 
 let mk_lit a id = match Literal.LT.view a with
   | Literal.Eq(s,t) when translate_eq_to_iff s t ->
@@ -724,25 +727,25 @@ module Msbt =
     (struct
       type t = Term.t T.Subst.t
       let compare a b = T.Subst.compare T.compare a b
-     end)
+    end)
 
 module Msbty =
   Map.Make
     (struct
       type t = Ty.t Ty.M.t
       let compare a b = Ty.M.compare Ty.compare a b
-     end)
+    end)
 
 module Set = Set.Make(struct type t'=t type t=t' let compare=compare end)
 module Map = Map.Make(struct type t'=t type t=t' let compare=compare end)
 
 let apply_subst_trigger subst ({content; guard} as tr) =
   {tr with
-    content = List.map (T.apply_subst subst) content;
-    guard =
-      match guard with
-      | None -> guard
-      | Some g -> Some (Literal.LT.apply_subst subst g)
+   content = List.map (T.apply_subst subst) content;
+   guard =
+     match guard with
+     | None -> guard
+     | Some g -> Some (Literal.LT.apply_subst subst g)
   }
 
 (* this function should only be applied with ground substitutions *)
@@ -788,10 +791,10 @@ and iapply_subst ((s_t,s_ty) as subst) p n = match p, n with
     let s_t = (* discard the variables of s_t that are not in free_v *)
       List.fold_left
         (fun s_t' tv ->
-          match T.view tv with
-          | {T.f=(Sy.Var _) as x; xs = []} when Sy.Map.mem x s_t ->
-            Sy.Map.add x (Sy.Map.find x s_t) s_t'
-          | _ -> s_t'
+           match T.view tv with
+           | {T.f=(Sy.Var _) as x; xs = []} when Sy.Map.mem x s_t ->
+             Sy.Map.add x (Sy.Map.find x s_t) s_t'
+           | _ -> s_t'
         )Sy.Map.empty fr_v
     in
     (* should do the same filtering for fr_vty *)
@@ -804,22 +807,23 @@ and iapply_subst ((s_t,s_ty) as subst) p n = match p, n with
       let binders =
         Sy.Map.fold
           (fun sy (ty,i) bders ->
-            let ty' = Ty.apply_subst s_ty ty in
-            if Ty.compare ty ty' = 0 then bders
-            else Sy.Map.add sy (ty', i) bders
+             let ty' = Ty.apply_subst s_ty ty in
+             if Ty.compare ty ty' = 0 then bders
+             else Sy.Map.add sy (ty', i) bders
           )binders binders
       in
       let fr_v = List.rev (List.rev_map (T.apply_subst subst) fr_v) in
       let fr_vty = List.rev (List.rev_map (Ty.apply_subst s_ty) fr_vty) in
       let lem = {lem with main = f; triggers = trs; binders = binders;
-        free_v = fr_v; free_vty = fr_vty }
+                          free_v = fr_v; free_vty = fr_vty }
       in
       let slem = Lemma lem in
       let ssko = Skolem {lem with main = mk_not f} in
       (match p, n with
-      | Lemma _, Skolem _ -> slem, ssko, false (* a lot of cmp needed to hcons*)
-      | Skolem _, Lemma _ -> ssko, slem, false
-      | _ -> assert false)
+       | Lemma _, Skolem _ -> slem, ssko, false
+       (* a lot of cmp needed to hcons*)
+       | Skolem _, Lemma _ -> ssko, slem, false
+       | _ -> assert false)
 
   | Unit(f1, f2), Clause(_,_, is_impl) ->
     let sf1 = apply_subst subst f1 in
@@ -937,15 +941,15 @@ let apply_subst =
 
 let add_label lbl f =
   match view f with
-    | Literal a ->
-      Literal.LT.add_label lbl a;
-      Literal.LT.add_label lbl (Literal.LT.neg a)
-    | _ -> ()
+  | Literal a ->
+    Literal.LT.add_label lbl a;
+    Literal.LT.add_label lbl (Literal.LT.neg a)
+  | _ -> ()
 
 let label f =
   match view f with
-    | Literal l -> Literal.LT.label l
-    | _ -> Hstring.empty
+  | Literal l -> Literal.LT.label l
+  | _ -> Hstring.empty
 
 let label_model h =
   try Pervasives.(=) (String.sub (Hstring.view h) 0 6) "model:"
@@ -953,19 +957,19 @@ let label_model h =
 
 let is_in_model f =
   match view f with
-    | Literal l ->
-      label_model (Literal.LT.label l) || Literal.LT.is_in_model l
-    | _ -> false
+  | Literal l ->
+    label_model (Literal.LT.label l) || Literal.LT.is_in_model l
+  | _ -> false
 
 let ground_terms_rec =
   let rec terms acc f = match view f with
     | Literal a ->
       let s =
-	T.Set.filter
-	  (fun t->
-	    Sy.Map.is_empty (T.vars_of t Sy.Map.empty)
-            && Ty.Svty.is_empty (T.vty_of t)
-	  ) (Literal.LT.terms_rec a)
+        T.Set.filter
+          (fun t->
+             Sy.Map.is_empty (T.vars_of t Sy.Map.empty)
+             && Ty.Svty.is_empty (T.vty_of t)
+          ) (Literal.LT.terms_rec a)
       in
       T.Set.union s acc
     | Lemma {main = f} | Skolem {main = f} -> terms acc f
@@ -974,11 +978,11 @@ let ground_terms_rec =
     | Flet {flet_form=lform; flet_f=lf} -> terms (terms acc lform) lf
     | Tlet {tlet_term=t; tlet_f=lf} ->
       let st =
-	T.Set.filter
+        T.Set.filter
           (fun t->
              Sy.Map.is_empty (T.vars_of t Sy.Map.empty)
              && Ty.Svty.is_empty (T.vty_of t))
-	  (Term.subterms Term.Set.empty t)
+          (Term.subterms Term.Set.empty t)
       in
       terms (T.Set.union st acc) lf
   in terms T.Set.empty
@@ -1008,9 +1012,9 @@ let skolemize {main=f; binders=binders; free_v=free_v; free_vty=free_vty} =
   let tyvars =
     ignore (flush_str_formatter ());
     List.iter (fun ty ->
-      assert (Ty.Svty.is_empty (Ty.vty_of ty));
-      fprintf str_formatter "<%a>" Ty.print ty
-    ) free_vty;
+        assert (Ty.Svty.is_empty (Ty.vty_of ty));
+        fprintf str_formatter "<%a>" Ty.print ty
+      ) free_vty;
     flush_str_formatter ()
   in
   let mk_sym cpt s =
@@ -1020,7 +1024,7 @@ let skolemize {main=f; binders=binders; free_v=free_v; free_vty=free_vty} =
   let sbt =
     Symbols.Map.fold
       (fun x (ty,i) m ->
-        Sy.Map.add x (T.make (mk_sym i "_sko") free_v ty) m)
+         Sy.Map.add x (T.make (mk_sym i "_sko") free_v ty) m)
       binders Sy.Map.empty
   in
   apply_subst (sbt, Ty.esubst) f
@@ -1041,9 +1045,9 @@ let max_term_depth f =
   let rec aux f mx =
     match view f with
     | Literal a ->
-        T.Set.fold
-          (fun t mx -> max mx (T.view t).T.depth)
-          (Literal.LT.terms_nonrec a) mx
+      T.Set.fold
+        (fun t mx -> max mx (T.view t).T.depth)
+        (Literal.LT.terms_nonrec a) mx
 
     | Clause(f1, f2,_) | Unit(f1, f2) -> aux f2 (aux f1 mx)
     | Lemma q | Skolem q -> aux q.main mx

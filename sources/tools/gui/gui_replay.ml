@@ -33,37 +33,37 @@ open Options
 
 let replay_prune id env =
   match findbyid id env.ast with
-    | AD (ad, _) -> prune ~register:false env ad
-    | AF (af, _) -> prune ~register:false env af
-    | AT at -> prune ~register:false env at
-    | QF aq -> prune ~register:false env aq
+  | AD (ad, _) -> prune ~register:false env ad
+  | AF (af, _) -> prune ~register:false env af
+  | AT at -> prune ~register:false env at
+  | QF aq -> prune ~register:false env aq
 
 let replay_incorrect_prune id env =
   match findbyid id env.ast with
-    | AD (ad, _) -> incorrect_prune ~register:false env ad
-    | AF (af, _) -> incorrect_prune ~register:false env af
-    | AT at -> incorrect_prune ~register:false env at
-    | QF aq -> incorrect_prune ~register:false env aq
+  | AD (ad, _) -> incorrect_prune ~register:false env ad
+  | AF (af, _) -> incorrect_prune ~register:false env af
+  | AT at -> incorrect_prune ~register:false env at
+  | QF aq -> incorrect_prune ~register:false env aq
 
 let replay_unprune id env =
   match findbyid id env.ast with
-    | AD (ad, _) -> unprune ~register:false env ad
-    | AF (af, _) -> unprune ~register:false env af
-    | AT at -> unprune ~register:false env at
-    | QF aq -> unprune ~register:false env aq
+  | AD (ad, _) -> unprune ~register:false env ad
+  | AF (af, _) -> unprune ~register:false env af
+  | AT at -> unprune ~register:false env at
+  | QF aq -> unprune ~register:false env aq
 
 let replay_addinstance id aname entries env =
   match findbyid id env.ast with
-    | AD (ad, _) ->
-      begin
-	match ad.c with
-	  | AAxiom (_, aname, ax_kd, af) ->
-	    add_instance ~register:false env id af ax_kd aname entries
-	  | APredicate_def (_, aname,_ , af) ->
-	    add_instance ~register:false env id af Parsed.Default aname entries
-	  | _ -> assert false
-      end
-    | _ -> assert false
+  | AD (ad, _) ->
+    begin
+      match ad.c with
+      | AAxiom (_, aname, ax_kd, af) ->
+        add_instance ~register:false env id af ax_kd aname entries
+      | APredicate_def (_, aname,_ , af) ->
+        add_instance ~register:false env id af Parsed.Default aname entries
+      | _ -> assert false
+    end
+  | _ -> assert false
 
 let replay_limitlemma id name nb env =
   Hashtbl.add env.insts.h id (ref None, ref 0, name, ref nb)
@@ -87,17 +87,17 @@ let replay_session env =
 
 let undo_action env =
   match Stack.pop env.actions with
-    | Prune id | IncorrectPrune id -> replay env (Unprune id)
-    | Unprune id -> replay env (Prune id)
-    | ((AddInstance _ | AddTrigger _ ) as ac) ->
-      replay env (Prune (Hashtbl.find resulting_ids ac))
-    | LimitLemma (id, name, _) | UnlimitLemma (id, name) ->
-      try
-	Stack.iter (function
-	  | (LimitLemma (id', _, _) | UnlimitLemma (id', _) as ac)
-              when id = id' ->
-	    replay env ac; raise Exit
-	  | _ -> ()) env.actions;
-	replay env (LimitLemma (id, name, -1))
-      with Exit -> ()
+  | Prune id | IncorrectPrune id -> replay env (Unprune id)
+  | Unprune id -> replay env (Prune id)
+  | ((AddInstance _ | AddTrigger _ ) as ac) ->
+    replay env (Prune (Hashtbl.find resulting_ids ac))
+  | LimitLemma (id, name, _) | UnlimitLemma (id, name) ->
+    try
+      Stack.iter (function
+          | (LimitLemma (id', _, _) | UnlimitLemma (id', _) as ac)
+            when id = id' ->
+            replay env ac; raise Exit
+          | _ -> ()) env.actions;
+      replay env (LimitLemma (id, name, -1))
+    with Exit -> ()
 

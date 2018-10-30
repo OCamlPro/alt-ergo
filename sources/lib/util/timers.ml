@@ -202,10 +202,10 @@ let accumulate_cumulative_mode name env m f cur =
           name (string_of_ty_module m) (string_of_ty_function f);
       List.iter
         (fun (m, f, id) ->
-          if Options.debug() then
-            eprintf "  also update time of %s , %s@."
-              (string_of_ty_module m) (string_of_ty_function f);
-          accumulate env cur m f
+           if Options.debug() then
+             eprintf "  also update time of %s , %s@."
+               (string_of_ty_module m) (string_of_ty_function f);
+           accumulate env cur m f
         )env.stack
     end
 
@@ -260,31 +260,31 @@ let get_stack env = env.stack
 let get_timers_array env = env.z
 
 let all_functions =
-    let l =
-      [ F_add;
-        F_add_lemma;
-        F_add_predicate;
-        F_add_terms;
-        F_are_equal;
-        F_assume;
-        F_class_of;
-        F_leaves;
-        F_make;
-        F_m_lemmas;
-        F_m_predicates;
-        F_query;
-        F_solve;
-        F_subst;
-        F_union;
-        F_unsat;
-        F_none;
-        F_new_facts;
-        F_apply_subst;
-        F_instantiate;
-      ]
-    in
-    assert (List.length l = nb_ftag);
-    l
+  let l =
+    [ F_add;
+      F_add_lemma;
+      F_add_predicate;
+      F_add_terms;
+      F_are_equal;
+      F_assume;
+      F_class_of;
+      F_leaves;
+      F_make;
+      F_m_lemmas;
+      F_m_predicates;
+      F_query;
+      F_solve;
+      F_subst;
+      F_union;
+      F_unsat;
+      F_none;
+      F_new_facts;
+      F_apply_subst;
+      F_instantiate;
+    ]
+  in
+  assert (List.length l = nb_ftag);
+  l
 
 let all_modules =
   let l =

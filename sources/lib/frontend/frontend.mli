@@ -33,12 +33,12 @@ module type S = sig
   type used_context
 
   type status =
-  | Unsat of Commands.sat_tdecl * Explanation.t
-  | Inconsistent of Commands.sat_tdecl
-  | Sat of Commands.sat_tdecl * sat_env
-  | Unknown of Commands.sat_tdecl * sat_env
-  | Timeout of Commands.sat_tdecl option
-  | Preprocess
+    | Unsat of Commands.sat_tdecl * Explanation.t
+    | Inconsistent of Commands.sat_tdecl
+    | Sat of Commands.sat_tdecl * sat_env
+    | Unknown of Commands.sat_tdecl * sat_env
+    | Timeout of Commands.sat_tdecl option
+    | Preprocess
 
   val process_decl:
     (status -> int64 -> unit) ->

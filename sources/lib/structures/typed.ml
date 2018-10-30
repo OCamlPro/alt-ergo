@@ -33,8 +33,8 @@ open Parsed
 open Options
 
 type ('a, 'b) annoted =
-    { c : 'a;
-      annot : 'b }
+  { c : 'a;
+    annot : 'b }
 
 type tconstant =
   | Tint of string
@@ -60,7 +60,7 @@ and 'a tt_desc =
   | TTmapsTo of Hstring.t * ('a tterm, 'a) annoted
   | TTinInterval of
       ('a tterm, 'a) annoted * bool * ('a tterm, 'a) annoted *
-        ('a tterm, 'a) annoted *  bool
+      ('a tterm, 'a) annoted *  bool
   (* bool = true <-> interval is_open *)
 
   | TTget of ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
@@ -117,15 +117,15 @@ type 'a rwt_rule = {
 type goal_sort = Cut | Check | Thm
 
 type theories_extensions =
-| Sum
-| Arrays
-| Records
-| Bitv
-| LIA
-| LRA
-| NRA
-| NIA
-| FPA
+  | Sum
+  | Arrays
+  | Records
+  | Bitv
+  | LIA
+  | LRA
+  | NRA
+  | NIA
+  | FPA
 
 type 'a tdecl =
   (* to simplify impl and extension of GUI, a TTtheory is seen a list
@@ -139,10 +139,10 @@ type 'a tdecl =
   | TLogic of Loc.t * string list * plogic_type
   | TPredicate_def of
       Loc.t * string *
-	(string * ppure_type) list * ('a tform, 'a) annoted
+      (string * ppure_type) list * ('a tform, 'a) annoted
   | TFunction_def of
       Loc.t * string *
-	(string * ppure_type) list * ppure_type * ('a tform, 'a) annoted
+      (string * ppure_type) list * ppure_type * ('a tform, 'a) annoted
   | TTypeDecl of Loc.t * string list * string * body_type_decl
 
 (*****)
@@ -228,41 +228,41 @@ and print_term_list fmt = List.iter (fprintf fmt "%a," print_term)
 
 and print_atom fmt a =
   match a.c with
-    | TAtrue ->
-      fprintf fmt "True"
-    | TAfalse ->
-      fprintf fmt "True"
-    | TAeq [t1; t2] ->
-      fprintf fmt "%a = %a" print_term t1 print_term t2
-    | TAneq [t1; t2] ->
-      fprintf fmt "%a <> %a" print_term t1 print_term t2
-    | TAle [t1; t2] ->
-      fprintf fmt "%a <= %a" print_term t1 print_term t2
-    | TAlt [t1; t2] ->
-      fprintf fmt "%a < %a" print_term t1 print_term t2
-    | TApred (t, negated) ->
-      if negated then fprintf fmt "(not (%a))" print_term t
-      else print_term fmt t
-    | _ -> assert false
+  | TAtrue ->
+    fprintf fmt "True"
+  | TAfalse ->
+    fprintf fmt "True"
+  | TAeq [t1; t2] ->
+    fprintf fmt "%a = %a" print_term t1 print_term t2
+  | TAneq [t1; t2] ->
+    fprintf fmt "%a <> %a" print_term t1 print_term t2
+  | TAle [t1; t2] ->
+    fprintf fmt "%a <= %a" print_term t1 print_term t2
+  | TAlt [t1; t2] ->
+    fprintf fmt "%a < %a" print_term t1 print_term t2
+  | TApred (t, negated) ->
+    if negated then fprintf fmt "(not (%a))" print_term t
+    else print_term fmt t
+  | _ -> assert false
 
 and print_triggers fmt l =
   List.iter (fun (tr, _) -> fprintf fmt "%a | " print_term_list tr) l
 
 and print_formula fmt f =
   match f.c with
-    | TFatom a ->
-      print_atom fmt a
-    | TFop(OPnot, [f]) ->
-      fprintf fmt "not %a" print_formula f
-    | TFop(OPif, [cond; f1;f2]) ->
-      fprintf fmt "if %a then %a else %a"
-	print_formula cond print_formula f1 print_formula f2
-    | TFop(op, [f1; f2]) ->
-      fprintf fmt "%a %s %a" print_formula f1 (string_of_op op) print_formula f2
-    | TFforall {qf_bvars = l; qf_triggers = t; qf_form = f} ->
-      fprintf fmt "forall %a [%a]. %a"
-	print_binders l print_triggers t print_formula f
-    | _ -> assert false
+  | TFatom a ->
+    print_atom fmt a
+  | TFop(OPnot, [f]) ->
+    fprintf fmt "not %a" print_formula f
+  | TFop(OPif, [cond; f1;f2]) ->
+    fprintf fmt "if %a then %a else %a"
+      print_formula cond print_formula f1 print_formula f2
+  | TFop(op, [f1; f2]) ->
+    fprintf fmt "%a %s %a" print_formula f1 (string_of_op op) print_formula f2
+  | TFforall {qf_bvars = l; qf_triggers = t; qf_form = f} ->
+    fprintf fmt "forall %a [%a]. %a"
+      print_binders l print_triggers t print_formula f
+  | _ -> assert false
 
 and print_form_list fmt = List.iter (fprintf fmt "%a" print_formula)
 

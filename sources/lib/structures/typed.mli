@@ -29,8 +29,8 @@
 open Parsed
 
 type ('a, 'b) annoted =
-    { c : 'a;
-      annot : 'b }
+  { c : 'a;
+    annot : 'b }
 
 type tconstant =
   | Tint of string
@@ -57,7 +57,7 @@ and 'a tt_desc =
   | TTmapsTo of Hstring.t * ('a tterm, 'a) annoted
   | TTinInterval of
       ('a tterm, 'a) annoted * bool * ('a tterm, 'a) annoted *
-        ('a tterm, 'a) annoted *  bool
+      ('a tterm, 'a) annoted *  bool
   (* bool = true <-> interval is_open *)
 
   | TTget of ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
@@ -114,15 +114,15 @@ type 'a rwt_rule = {
 type goal_sort = Cut | Check | Thm
 
 type theories_extensions =
-| Sum
-| Arrays
-| Records
-| Bitv
-| LIA
-| LRA
-| NRA
-| NIA
-| FPA
+  | Sum
+  | Arrays
+  | Records
+  | Bitv
+  | LIA
+  | LRA
+  | NRA
+  | NIA
+  | FPA
 
 type 'a tdecl =
   (* to simplify impl and extension of GUI, a TTtheory is seen a list
@@ -136,10 +136,10 @@ type 'a tdecl =
   | TLogic of Loc.t * string list * plogic_type
   | TPredicate_def of
       Loc.t * string *
-	(string * ppure_type) list * ('a tform, 'a) annoted
+      (string * ppure_type) list * ('a tform, 'a) annoted
   | TFunction_def of
       Loc.t * string *
-	(string * ppure_type) list * ppure_type * ('a tform, 'a) annoted
+      (string * ppure_type) list * ppure_type * ('a tform, 'a) annoted
   | TTypeDecl of Loc.t * string list * string * body_type_decl
 
 

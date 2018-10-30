@@ -42,7 +42,7 @@ let register_parser ~lang new_parser =
     begin
       eprintf
         "Warning: A parser for extension %S is already registered. \
-It will be hidden !@." lang;
+         It will be hidden !@." lang;
     end;
   parsers := (lang, new_parser) :: !parsers
 
@@ -129,9 +129,9 @@ let parse_problem ~filename ~preludes =
   let acc = parse_input_file filename in
   List.fold_left
     (fun acc prelude ->
-      let prelude =
-        if Sys.file_exists prelude then prelude
-        else Config.preludesdir ^ "/" ^ prelude
-      in
-      List.rev_append (List.rev (parse_input_file prelude)) acc)
+       let prelude =
+         if Sys.file_exists prelude then prelude
+         else Config.preludesdir ^ "/" ^ prelude
+       in
+       List.rev_append (List.rev (parse_input_file prelude)) acc)
     acc (List.rev preludes)

@@ -98,37 +98,37 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let {F.f=f;age=age;lem=lem;mf=mf;from_terms=terms} = gf in
       if debug_sat () then begin
         match F.view f with
-	  | F.Unit _ -> ()
+        | F.Unit _ -> ()
 
-	  | F.Clause _ ->
-	    fprintf fmt "[sat] I assume a clause %a@." F.print f
+        | F.Clause _ ->
+          fprintf fmt "[sat] I assume a clause %a@." F.print f
 
-	  | F.Lemma _ ->
-	    fprintf fmt "[sat] I assume a [%d-atom] lemma: %a@."
-              (F.size f) F.print f
+        | F.Lemma _ ->
+          fprintf fmt "[sat] I assume a [%d-atom] lemma: %a@."
+            (F.size f) F.print f
 
-	  | F.Literal a ->
-	    Term.print_list str_formatter terms;
-	    let s = flush_str_formatter () in
-	    let n = match lem with
-	      | None -> ""
-	      | Some ff ->
-	        (match F.view ff with F.Lemma xx -> xx.F.name | _ -> "")
-	    in
-	    fprintf fmt "\n[sat]I assume a literal (%s : %s) %a@]@."
-              n s Literal.LT.print a;
-	    fprintf fmt "================================================@.@."
+        | F.Literal a ->
+          Term.print_list str_formatter terms;
+          let s = flush_str_formatter () in
+          let n = match lem with
+            | None -> ""
+            | Some ff ->
+              (match F.view ff with F.Lemma xx -> xx.F.name | _ -> "")
+          in
+          fprintf fmt "\n[sat]I assume a literal (%s : %s) %a@]@."
+            n s Literal.LT.print a;
+          fprintf fmt "================================================@.@."
 
-	  | F.Skolem _ ->
-	    fprintf fmt "[sat] I assume a skolem %a@." F.print f
+        | F.Skolem _ ->
+          fprintf fmt "[sat] I assume a skolem %a@." F.print f
 
-          | F.Flet {F.flet_var=lvar; flet_form=lform; flet_f=lf} ->
-	    fprintf fmt "let %a = %a in %a@."
-	      Symbols.print lvar F.print lform F.print lf
+        | F.Flet {F.flet_var=lvar; flet_form=lform; flet_f=lf} ->
+          fprintf fmt "let %a = %a in %a@."
+            Symbols.print lvar F.print lform F.print lf
 
-          | F.Tlet {F.tlet_var=lvar; tlet_term=lterm; tlet_f=lf} ->
-	    fprintf fmt "let %a = %a in %a@."
-	      Symbols.print lvar Term.print lterm F.print lf
+        | F.Tlet {F.tlet_var=lvar; tlet_term=lterm; tlet_f=lf} ->
+          fprintf fmt "let %a = %a in %a@."
+            Symbols.print lvar Term.print lterm F.print lf
       end
 
     let simplified_form f f' =
@@ -146,9 +146,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           unit;
         List.iter
           (fun c ->
-            fprintf fmt "CLAUSE: ";
-            List.iter (fun a -> fprintf fmt "%a or " Atom.pr_atom a) c;
-            fprintf fmt "@."
+             fprintf fmt "CLAUSE: ";
+             List.iter (fun a -> fprintf fmt "%a or " Atom.pr_atom a) c;
+             fprintf fmt "@."
           )non_unit
       end
 
@@ -158,9 +158,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         eprintf "@.(2) satML's model:@.";
         List.iter
           (fun a ->
-            eprintf " %f | %a @."
-              (Atom.weight a)
-              Atom.pr_atom a;
+             eprintf " %f | %a @."
+               (Atom.weight a)
+               Atom.pr_atom a;
           ) (List.rev model);
         eprintf "  --------------@."
 
@@ -173,7 +173,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           mode;
         eprintf "(1) ground problem: @.";
         FF.Map.iter (fun f (md, _) ->
-          eprintf "-> %d : %a@." md FF.print f) env.conj;
+            eprintf "-> %d : %a@." md FF.print f) env.conj;
         fprintf fmt "@.Gamma:@.";
         model env;
       end
@@ -182,8 +182,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if verbose () && debug_sat () then begin
         eprintf "[new_instances] %d generated@." (List.length l);
         List.iter (fun {F.f=f; origin_name; lem} ->
-          eprintf " instance(origin = %s): %a@." origin_name F.print f;
-        ) l
+            eprintf " instance(origin = %s): %a@." origin_name F.print f;
+          ) l
       end
 
     let trivial_fact p inst =
@@ -255,7 +255,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     fprintf fmt "Propositional:";
     List.iter
       (fun at ->
-        (fprintf fmt "\n %a" Literal.LT.print) (Atom.literal at)
+         (fprintf fmt "\n %a" Literal.LT.print) (Atom.literal at)
       ) model;
     fprintf fmt "\n@."
 
@@ -290,8 +290,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let clause =
       List.fold_left
         (fun tmp f ->
-          (* we cannot reduce like in DfsSAT *)
-          F.mk_or (F.mk_not f) tmp false 0
+           (* we cannot reduce like in DfsSAT *)
+           F.mk_or (F.mk_not f) tmp false 0
         )gf.F.f hyp
     in
     ({gf with F.f=clause}, dep) :: acc
@@ -328,11 +328,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let literals_of_ex ex =
     Ex.fold_atoms
       (fun e acc ->
-        match e with
-        | Ex.Literal a -> a :: acc
-        | Ex.Dep _ | Ex.RootDep _ -> acc
-        (* for debug/profiling/proofs, ignore them *)
-        | Ex.Bj _ | Ex.Fresh _ -> assert false
+         match e with
+         | Ex.Literal a -> a :: acc
+         | Ex.Dep _ | Ex.RootDep _ -> acc
+         (* for debug/profiling/proofs, ignore them *)
+         | Ex.Bj _ | Ex.Fresh _ -> assert false
       ) ex []
 
   let mround use_cs env acc =
@@ -356,12 +356,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let l = List.rev_append th_insts l in
     List.fold_left
       (fun acc (gf, dep) ->
-        match literals_of_ex dep with
-        | []  ->
-          gf :: acc
-        | [{Atom.lit}] ->
-          {gf with F.f = F.mk_or gf.F.f (F.mk_lit (A.neg lit) 0) false 0} :: acc
-        | _   -> assert false
+         match literals_of_ex dep with
+         | []  ->
+           gf :: acc
+         | [{Atom.lit}] ->
+           {gf with
+            F.f = F.mk_or gf.F.f (F.mk_lit (A.neg lit) 0) false 0} :: acc
+         | _   -> assert false
       )acc l
 
 
@@ -379,9 +380,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           if F.equal g21 not_at then g22
           else if F.equal ng21 not_at then F.mk_not g22
           else
-            if F.equal g22 not_at then g21
-            else if F.equal ng22 not_at then F.mk_not g21
-            else assert false
+          if F.equal g22 not_at then g21
+          else if F.equal ng22 not_at then F.mk_not g21
+          else assert false
         | _ -> assert false
       end
     | F.Literal a ->
@@ -464,27 +465,27 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let expand_skolems env acc sa =
     List.fold_left
       (fun acc a ->
-        if verbose () then
-          fprintf fmt "expand skolem of %a@.@." Literal.LT.print a;
-        try
-          let {F.f} as gf = A.Map.find a env.skolems in
-          if not (tableaux_cdcl ()) && MF.mem f env.gamma then acc
-          else gf :: acc
-        with Not_found -> acc
+         if verbose () then
+           fprintf fmt "expand skolem of %a@.@." Literal.LT.print a;
+         try
+           let {F.f} as gf = A.Map.find a env.skolems in
+           if not (tableaux_cdcl ()) && MF.mem f env.gamma then acc
+           else gf :: acc
+         with Not_found -> acc
       ) acc sa
 
   let inst_env_from_atoms env acc sa =
     List.fold_left
       (fun (inst, acc) a ->
-        let gf = mk_gf F.vrai in
-        if verbose () then
-          fprintf fmt "terms_of_atom %a @.@." Literal.LT.print a;
-        let inst = Inst.add_terms inst (A.ground_terms a) gf in
-        (* ax <-> a, if ax exists in axs_of_abstr *)
-        try
-          let ax, at = MA.find a env.axs_of_abstr in
-          internal_axiom_def ax a at inst, acc
-        with Not_found -> inst, acc
+         let gf = mk_gf F.vrai in
+         if verbose () then
+           fprintf fmt "terms_of_atom %a @.@." Literal.LT.print a;
+         let inst = Inst.add_terms inst (A.ground_terms a) gf in
+         (* ax <-> a, if ax exists in axs_of_abstr *)
+         try
+           let ax, at = MA.find a env.axs_of_abstr in
+           internal_axiom_def ax a at inst, acc
+         with Not_found -> inst, acc
       ) (env.inst, acc) sa
 
   let measure at =
@@ -510,11 +511,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let take_max aux l =
     let ((lvl, _, ind) ,_) as acc =
       List.fold_left (fun ((mz,lz) as acc) f ->
-        match aux f with
+          match aux f with
           | None -> acc
           | Some (m, l) ->
             if cmp_tuples m mz > 0 then (m, l) else acc
-      )((-1, -.1., -1), []) l
+        )((-1, -.1., -1), []) l
     in
     if lvl = -1 && ind = -1 then None
     else Some acc
@@ -522,60 +523,60 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let take_min aux l =
     let ((lvl, _, ind) ,_) as acc =
       List.fold_left (fun ((mz,lz) as acc) f ->
-        match aux f with
+          match aux f with
           | None -> acc
           | Some (m, l) ->
             if cmp_tuples m mz < 0 then (m, l) else acc
-      )((max_int, -.1., max_int), []) l
+        )((max_int, -.1., max_int), []) l
     in
     if lvl = max_int && ind = max_int then None
     else Some acc
 
   let rec take_normal aux l =
     match l with
-        [] -> None
-      | a::l ->
-        match aux a with
-          | None -> take_normal aux l
-          | (Some _) as v -> v
+      [] -> None
+    | a::l ->
+      match aux a with
+      | None -> take_normal aux l
+      | (Some _) as v -> v
 
   let atoms_from_sat_branches =
     let rec atoms_from_sat_branch f =
       match FF.view f with
-        | FF.UNIT at ->
-          if not (Atom.is_true at) then None
-          else Some (measure at, [Atom.literal at])
+      | FF.UNIT at ->
+        if not (Atom.is_true at) then None
+        else Some (measure at, [Atom.literal at])
 
-        | FF.AND l ->
-          begin
-            try
-              let acc =
-                List.fold_left (fun (mz,lz) f ->
+      | FF.AND l ->
+        begin
+          try
+            let acc =
+              List.fold_left (fun (mz,lz) f ->
                   match atoms_from_sat_branch f with
-                    | None -> raise Exit
-                    | Some (m, l) -> max m mz, List.rev_append l lz
+                  | None -> raise Exit
+                  | Some (m, l) -> max m mz, List.rev_append l lz
                 )((-1, -.1., -1), []) l
-              in
-              Some acc
-            with Exit -> None
-          end
+            in
+            Some acc
+          with Exit -> None
+        end
 
-        | FF.OR l ->
-          take_normal atoms_from_sat_branch l
+      | FF.OR l ->
+        take_normal atoms_from_sat_branch l
     in
     fun env ->
       FF.Map.fold
         (fun f _ sa ->
-          Debug.atoms_from_sat_branch f;
-          match atoms_from_sat_branch f with
-          | None   -> assert false
-          | Some (_,l) -> List.fold_left (fun sa a -> A.Set.add a sa) sa l
+           Debug.atoms_from_sat_branch f;
+           match atoms_from_sat_branch f with
+           | None   -> assert false
+           | Some (_,l) -> List.fold_left (fun sa a -> A.Set.add a sa) sa l
         ) env.conj A.Set.empty
 
   module SA = Set.Make (struct
-    type t = Atom.atom
-    let compare = Atom.cmp_atom
-  end)
+      type t = Atom.atom
+      let compare = Atom.cmp_atom
+    end)
 
   let atoms_from_lazy_sat =
     let rec add_reasons_graph _todo _done =
@@ -595,7 +596,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let sa =
         Literal.LT.Set.fold
           (fun a accu ->
-            SA.add (FF.get_atom env.ff_hcons_env a) accu
+             SA.add (FF.get_atom env.ff_hcons_env a) accu
           )(SAT.theory_assumed env.satml) SA.empty
       in
       let sa =
@@ -652,8 +653,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let instantiate_ground_preds env acc sa =
     List.fold_left
       (fun acc a ->
-        try (fst (A.Map.find a env.ground_preds)) :: acc
-        with Not_found -> acc
+         try (fst (A.Map.find a env.ground_preds)) :: acc
+         with Not_found -> acc
       )acc sa
       [@ocaml.ppwarning "!!! Possibles issues du to replacement of atoms \
                          that are facts with TRUE by mk_lit (and simplify)"]
@@ -687,15 +688,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         match ff with
         | None    ->
           env, acc
-          [@ocaml.ppwarning "TODO: should be assert failure?"]
+            [@ocaml.ppwarning "TODO: should be assert failure?"]
 
         | Some ff ->
           if SAT.exists_in_lazy_cnf env.satml ff then env, acc
           else
             env,
             {acc with
-              activate = FF.Map.add ff None acc.activate;
-              updated = true}
+             activate = FF.Map.add ff None acc.activate;
+             updated = true}
       with Not_found ->
         Debug.assume gf;
         match F.view f with
@@ -706,8 +707,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           in
           let env =
             {env with
-              gamma = MF.add f (env.nb_mrounds, None)  env.gamma;
-              conj  = FF.Map.add ff (env.nb_mrounds, SF.add f old_sf) env.conj }
+             gamma = MF.add f (env.nb_mrounds, None)  env.gamma;
+             conj  = FF.Map.add ff (env.nb_mrounds, SF.add f old_sf) env.conj }
           in
           (* This assert is not true assert (dec_lvl = 0); *)
           axiom_def env gf Ex.empty, {acc with updated = true}
@@ -724,8 +725,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           in
           let env =
             {env with
-              gamma = MF.add f (env.nb_mrounds, Some ff) env.gamma;
-              conj  = FF.Map.add ff (env.nb_mrounds, SF.add f old_sf) env.conj }
+             gamma = MF.add f (env.nb_mrounds, Some ff) env.gamma;
+             conj  = FF.Map.add ff (env.nb_mrounds, SF.add f old_sf) env.conj }
           in
           Debug.simplified_form f ff;
           let env, new_abstr_vars =
@@ -735,33 +736,33 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
           if FF.equal ff FF.vrai then env, acc
           else
-            if cnf_is_in_cdcl then
-              (* this means that there exists another F.t that is
-                 equivalent to f. These two formulas have the same ff *)
-              if SAT.exists_in_lazy_cnf env.satml ff then env, acc
-              else
-                env,
-                {acc with
-                  activate = FF.Map.add ff None acc.activate;
-                  updated = true}
+          if cnf_is_in_cdcl then
+            (* this means that there exists another F.t that is
+               equivalent to f. These two formulas have the same ff *)
+            if SAT.exists_in_lazy_cnf env.satml ff then env, acc
             else
-              let ff_abstr,new_proxies,proxies_mp, new_vars =
-                FF.cnf_abstr env.ff_hcons_env ff env.proxies acc.new_vars
-              in
-              let env = {env with proxies = proxies_mp} in
-              let nunit =
-                List.fold_left FF.expand_proxy_defn acc.nunit new_proxies
-              in
-              let acc =
-                {acc with
-                  new_vars;
-                  nunit;
-                  unit = [ff_abstr] :: acc.unit;
-                  activate = FF.Map.add ff None acc.activate;
-                  updated = true
-                }
-              in
-              env, acc
+              env,
+              {acc with
+               activate = FF.Map.add ff None acc.activate;
+               updated = true}
+          else
+            let ff_abstr,new_proxies,proxies_mp, new_vars =
+              FF.cnf_abstr env.ff_hcons_env ff env.proxies acc.new_vars
+            in
+            let env = {env with proxies = proxies_mp} in
+            let nunit =
+              List.fold_left FF.expand_proxy_defn acc.nunit new_proxies
+            in
+            let acc =
+              {acc with
+               new_vars;
+               nunit;
+               unit = [ff_abstr] :: acc.unit;
+               activate = FF.Map.add ff None acc.activate;
+               updated = true
+              }
+            in
+            env, acc
 
   let cdcl_assume env pending ~dec_lvl =
     let { seen_f; activate; new_vars; unit; nunit; updated } = pending in
@@ -783,7 +784,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     else
       try
         let f = F.vrai
-          [@ocaml.ppwarning "TODO: should fix for unsat cores generation"]
+            [@ocaml.ppwarning "TODO: should fix for unsat cores generation"]
         in
         SAT.set_new_proxies env.satml env.proxies;
         let nbv = FF.nb_made_vars env.ff_hcons_env in
@@ -813,9 +814,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let env, updated, new_abstr_vars = assume_aux_bis ~dec_lvl env l in
     let bot_abstr_vars = (* try to immediately expand newly added skolems *)
       List.fold_left (fun acc at ->
-        let neg_at = Atom.neg at in
-        if Atom.is_true neg_at then (Atom.literal neg_at) :: acc else acc
-      )[] new_abstr_vars
+          let neg_at = Atom.neg at in
+          if Atom.is_true neg_at then (Atom.literal neg_at) :: acc else acc
+        )[] new_abstr_vars
     in
     match bot_abstr_vars with
     | [] -> env, updated
@@ -866,25 +867,25 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let rec unsat_rec env ~first_call : unit =
     try SAT.solve env.satml; assert false
     with
-      | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
-      | Satml.Sat ->
-        (*if first_call then SAT.cancel_until 0;*)
-        let env = {env with nb_mrounds = env.nb_mrounds + 1}
+    | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
+    | Satml.Sat ->
+      (*if first_call then SAT.cancel_until 0;*)
+      let env = {env with nb_mrounds = env.nb_mrounds + 1}
           [@ocaml.ppwarning
-              "TODO: first intantiation a la DfsSAT before searching ..."]
-        in
-        if Options.profiling() then Profiling.instantiation env.nb_mrounds;
-        let dec_lvl = SAT.decision_level env.satml in
+            "TODO: first intantiation a la DfsSAT before searching ..."]
+      in
+      if Options.profiling() then Profiling.instantiation env.nb_mrounds;
+      let dec_lvl = SAT.decision_level env.satml in
 
-        let env, updated = frugal_instantiation env ~dec_lvl in
-        let env, updated =
-          if updated then env, true
-          else
-            let env, updated = normal_instantiation env ~dec_lvl in
-            if updated then env, true else greedy_instantiation env ~dec_lvl
-        in
-        if not updated then raise (I_dont_know env);
-        unsat_rec env ~first_call:false
+      let env, updated = frugal_instantiation env ~dec_lvl in
+      let env, updated =
+        if updated then env, true
+        else
+          let env, updated = normal_instantiation env ~dec_lvl in
+          if updated then env, true else greedy_instantiation env ~dec_lvl
+      in
+      if not updated then raise (I_dont_know env);
+      unsat_rec env ~first_call:false
 
   (* copied from sat_solvers.ml *)
   let max_term_depth_in_sat env =
@@ -917,7 +918,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     (* In dfs_sat goals' terms are added to env.inst *)
     let env =
       {env with inst =
-	  Inst.add_terms env.inst (F.ground_terms_rec gf.F.f) gf} in
+                  Inst.add_terms env.inst (F.ground_terms_rec gf.F.f) gf} in
     try
       assert (SAT.decision_level env.satml == 0);
       let env, updated = assume_aux ~dec_lvl:0 env [gf] in
@@ -934,7 +935,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     try fst (assume_aux ~dec_lvl:0 env [gf])
     with IUnsat (env, dep) -> raise (Unsat dep)
 
-(* instrumentation of relevant exported functions for profiling *)
+  (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
     if not (Options.timers ()) then assume t ff dep
     else

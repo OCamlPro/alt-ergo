@@ -116,8 +116,8 @@ module Make (X : Sig.X) = struct
     let assert_compare a b c1 c2 =
       assert (
         if not (c1 = 0 && c2 = 0 ||
-            c1 < 0 && c2 > 0 ||
-            c1 > 0 && c2 < 0) then begin
+                c1 < 0 && c2 > 0 ||
+                c1 > 0 && c2 < 0) then begin
           fprintf fmt "Ac.compare:@.%a vs @.%a@. = %d@.@." print a print b c1;
           fprintf fmt "But@.";
           fprintf fmt "Ac.compare:@.%a vs @.%a@. = %d@.@." print b print a c2;
@@ -129,7 +129,7 @@ module Make (X : Sig.X) = struct
     let subst p v tm =
       if debug_ac () then
         fprintf fmt "[ac] subst %a by %a in %a@."
-	  X.print p X.print v X.print (X.ac_embed tm)
+          X.print p X.print v X.print (X.ac_embed tm)
 
   end
   (*BISECT-IGNORE-END*)
@@ -138,9 +138,9 @@ module Make (X : Sig.X) = struct
 
   let flatten h (r,m) acc =
     match X.ac_extract r with
-      | Some ac when Sy.equal ac.h h ->
-	List.fold_left (fun z (e,n) -> (e,m * n) :: z) acc ac.l
-      | _ -> (r,m) :: acc
+    | Some ac when Sy.equal ac.h h ->
+      List.fold_left (fun z (e,n) -> (e,m * n) :: z) acc ac.l
+    | _ -> (r,m) :: acc
 
   let sort = List.fast_sort (fun (x,n) (y,m) -> X.str_cmp x y)
 
@@ -151,8 +151,8 @@ module Make (X : Sig.X) = struct
       | [] -> acc
       | [(x,n)] -> (x,n) :: acc
       | (x,n) :: (y,m) :: r ->
-	if X.equal x y then f acc ((x,n+m) :: r)
-	else f ((x,n)::acc) ((y,m) :: r)
+        if X.equal x y then f acc ((x,n+m) :: r)
+        else f ((x,n)::acc) ((y,m) :: r)
     in
     f [] (sort xs) (* increasing order - f's result in a decreasing order*)
 
@@ -165,23 +165,23 @@ module Make (X : Sig.X) = struct
 
   let abstract2 sy t r acc =
     match X.ac_extract r with
-      | Some ac when Sy.equal sy ac.h -> r, acc
-      | None -> r, acc
-      | Some _ -> match Term.view t with
-          | {Term.f=Sy.Name(hs,Sy.Ac) ;xs=xs;ty=ty} ->
-            let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
-            let aro_t = Term.make aro_sy xs ty  in
-            let eq = Literal.LT.mk_eq aro_t t in
-            X.term_embed aro_t, eq::acc
-          | {Term.f=Sy.Op Sy.Mult ;xs=xs;ty=ty} ->
-            let aro_sy = Sy.name "@*" in
-            let aro_t = Term.make aro_sy xs ty  in
-            let eq = Literal.LT.mk_eq aro_t t in
-            X.term_embed aro_t, eq::acc
-          | {Term.ty=ty} ->
-            let k = Term.fresh_name ty in
-            let eq = Literal.LT.mk_eq k t in
-            X.term_embed k, eq::acc
+    | Some ac when Sy.equal sy ac.h -> r, acc
+    | None -> r, acc
+    | Some _ -> match Term.view t with
+      | {Term.f=Sy.Name(hs,Sy.Ac) ;xs=xs;ty=ty} ->
+        let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
+        let aro_t = Term.make aro_sy xs ty  in
+        let eq = Literal.LT.mk_eq aro_t t in
+        X.term_embed aro_t, eq::acc
+      | {Term.f=Sy.Op Sy.Mult ;xs=xs;ty=ty} ->
+        let aro_sy = Sy.name "@*" in
+        let aro_t = Term.make aro_sy xs ty  in
+        let eq = Literal.LT.mk_eq aro_t t in
+        X.term_embed aro_t, eq::acc
+      | {Term.ty=ty} ->
+        let k = Term.fresh_name ty in
+        let eq = Literal.LT.mk_eq k t in
+        X.term_embed k, eq::acc
 
   let make t =
     Timers.exec_timer_start Timers.M_AC Timers.F_make;
@@ -192,7 +192,7 @@ module Make (X : Sig.X) = struct
         let ra, ctx = abstract2 sy a ra (ctx1 @ ctx2) in
         let rb, ctx = abstract2 sy b rb ctx in
         let rxs = [ ra,1 ; rb,1 ] in
-	X.ac_embed {h=sy; l=compact (fold_flatten sy (fun x -> x) rxs); t=ty;
+        X.ac_embed {h=sy; l=compact (fold_flatten sy (fun x -> x) rxs); t=ty;
                     distribute = true},
         ctx
       | _ -> assert false
@@ -214,9 +214,9 @@ module Make (X : Sig.X) = struct
       let c = X.str_cmp a b in
       if c <> 0 then c
       else
-	let c = m - n in
-	if c <> 0 then c
-	else mset_cmp(r,s)
+        let c = m - n in
+        if c <> 0 then c
+        else mset_cmp(r,s)
 
   let size = List.fold_left (fun z (rx,n) -> z + n) 0
 
@@ -227,8 +227,8 @@ module Make (X : Sig.X) = struct
     let l =
       List.fold_left
         (fun acc (x,n) ->
-          let sx = List.fold_right SX.add (X.leaves x) SX.empty in
-          SX.fold (fun lv acc -> (lv, n) :: acc)  sx acc
+           let sx = List.fold_right SX.add (X.leaves x) SX.empty in
+           SX.fold (fun lv acc -> (lv, n) :: acc)  sx acc
         ) []l
     in
     compact l
@@ -264,8 +264,8 @@ module Make (X : Sig.X) = struct
 
   let equal {h=f ; l=lx} {h=g ; l=ly} =
     Sy.equal f g &&
-      try List.for_all2 (fun (x, m) (y, n) -> m = n && X.equal x y) lx ly
-      with Invalid_argument _ -> false
+    try List.for_all2 (fun (x, m) (y, n) -> m = n && X.equal x y) lx ly
+    with Invalid_argument _ -> false
 
   let hash {h = f ; l = l; t = t} =
     let acc = Sy.hash f + 19 * Ty.hash t in
@@ -293,18 +293,18 @@ module Make (X : Sig.X) = struct
     let args, acc =
       List.fold_left
         (fun (args, acc) (r, i) ->
-          let r, acc = X.abstract_selectors r acc in
-          (r, i) :: args, acc
+           let r, acc = X.abstract_selectors r acc in
+           (r, i) :: args, acc
         )([],acc) args
     in
     let xac = X.ac_embed {ac with l = compact args} in
     xac, acc
 
-(* Ne suffit pas. Il faut aussi prevoir le collapse ? *)
-(*try List.assoc xac acc, acc
-  with Not_found ->
-  let v = X.term_embed (Term.fresh_name ac.t) in
-  v, (xac, v) :: acc*)
+  (* Ne suffit pas. Il faut aussi prevoir le collapse ? *)
+  (*try List.assoc xac acc, acc
+    with Not_found ->
+    let v = X.term_embed (Term.fresh_name ac.t) in
+    v, (xac, v) :: acc*)
 
 end
 

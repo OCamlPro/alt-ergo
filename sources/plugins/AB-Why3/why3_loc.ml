@@ -24,7 +24,7 @@ type position = Loc.t
 let user_position fname lnum cnum1 cnum2 =
   let upos =
     {pos_fname = fname; pos_lnum = lnum; pos_bol = cnum1;
-               pos_cnum = cnum2} in
+     pos_cnum = cnum2} in
   (upos, upos)
 
 let get ({pos_fname; pos_lnum; pos_bol; pos_cnum}, _) =

@@ -64,7 +64,7 @@ module type SAT_ML = sig
   val exists_in_lazy_cnf : t -> Flat_Formula.t -> bool
   val known_lazy_formulas : t -> int Flat_Formula.Map.t
 
-(*end*)
+  (*end*)
 end
 
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t
