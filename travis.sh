@@ -54,6 +54,12 @@ pre_merge_style_checker(){
     cd ..
 }
 
+check_indentation(){
+    echo "call ../extra/check_indentation.sh ...."
+    ../extra/check_indentation.sh ; exit_if_error
+    cd ..
+}
+
 ## dummy switch
 opam sw DUMMY --alias system
 eval `opam config env`
@@ -74,7 +80,11 @@ do
     git clean -dfx
     cd $git_repo/sources
     
-    ## A ## Test with 'opam pin'
+    ## A0 ## ocp-indent
+    opam install ocp-indent --y ; exit_if_error
+    check_indentation
+
+    ## A1 ## Test with 'opam pin'
 
     echo "=+= [travis.sh] $ocaml_version' compiler: test with 'opam pin'"
 
