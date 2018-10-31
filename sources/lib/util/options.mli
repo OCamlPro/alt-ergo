@@ -200,6 +200,7 @@ val normalize_instances : unit -> bool
 
 val sat_solver : unit -> Util.sat_solver
 val tableaux_cdcl : unit -> bool
+val hybrid_sat : unit -> bool
 val minimal_bj : unit -> bool
 val enable_restarts : unit -> bool
 val disable_flat_formulas_simplification : unit -> bool

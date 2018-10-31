@@ -31,7 +31,9 @@ type inst_kind = Normal | Forward | Backward
 
 type sat_solver =
   | Tableaux
-  | CDCL_satML
+  | Tableaux_CDCL
+  | CDCL
+  | CDCL_Tableaux
 
 type mode = On | Off | Auto
 

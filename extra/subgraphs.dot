@@ -63,6 +63,7 @@ subgraph cluster_lib__reasoners {
         "Fun_sat";
         "Satml";
         "Satml_frontend";
+        "Satml_frontend_hybrid";
         "Sat_solver";
         "Matching_types";
 }

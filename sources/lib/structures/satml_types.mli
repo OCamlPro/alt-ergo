@@ -66,6 +66,7 @@ module type ATOM = sig
   val index : atom -> int
   val cmp_atom : atom -> atom -> int
   val eq_atom : atom -> atom -> bool
+  val reason : atom -> reason
   val reason_atoms : atom -> atom list
 
   val dummy_var : var
@@ -93,6 +94,8 @@ module type ATOM = sig
 
   val add_atom : hcons_env -> Literal.LT.t -> var list -> atom * var list
 
+  module Set : Set.S with type elt = atom
+  module Map : Map.S with type key = atom
 end
 
 module Atom : ATOM
@@ -147,3 +150,17 @@ module type FLAT_FORMULA = sig
 end
 
 module Flat_Formula : FLAT_FORMULA
+
+module Proxy_formula : sig
+  val get_proxy_of : Formula.t ->
+    Atom.atom Formula.Map.t -> Atom.atom option
+
+  val mk_cnf :
+    Atom.hcons_env ->
+    Formula.t ->
+    Atom.atom Formula.Map.t * Formula.t Atom.Map.t *
+    Atom.var list * Atom.atom list list ->
+    Atom.atom *
+    (Atom.atom Formula.Map.t * Formula.t Atom.Map.t *
+     Atom.var list * Atom.atom list list)
+end
