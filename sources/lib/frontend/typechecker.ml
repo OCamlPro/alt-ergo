@@ -239,7 +239,7 @@ module Env = struct
         { args = List.map (Types.ty_of_pp loc env.types None) args;
           result = Ty.Tbool }
       (*| PFunction ([], PPTvarid (_, loc)) ->
-        	  error CannotGeneralize loc*)
+          error CannotGeneralize loc*)
       | PFunction(args, res) ->
         let args = List.map (Types.ty_of_pp loc env.types None) args in
         let res = Types.ty_of_pp loc env.types None res in
@@ -1498,7 +1498,7 @@ let rec intro_hypothesis env valid_mode f =
         let var = {pp_desc = PPvar var; pp_loc = f.pp_loc} in
         let feq = {pp_desc = PPinfix(var,PPeq,t1); pp_loc = f.pp_loc} in
         let axioms, goal = intro_hypothesis env valid_mode
-        	(alpha_renaming_env env f2) in
+          (alpha_renaming_env env f2) in
         (feq,env)::axioms, goal
   *)
   | PPforall (lv, _, _, f) when valid_mode ->
@@ -1678,7 +1678,6 @@ let axioms_of_rules keep_triggers loc name lf acc env =
   let acc =
     List.fold_left
       (fun acc (f, _) ->
-         let f = Triggers.make keep_triggers false f in
          let name = (Hstring.fresh_string ()) ^ "_" ^ name in
          let td = {c = TAxiom(loc,name,Default, f); annot = new_id () } in
          (td, env)::acc
@@ -1691,7 +1690,6 @@ let axioms_of_rules keep_triggers loc name lf acc env =
 let type_hypothesis keep_triggers acc env_f loc sort f =
   let f,_ = type_form env_f f in
   let f = monomorphize_form f in
-  let f = Triggers.make keep_triggers false f in
   let td =
     {c = TAxiom(loc, fresh_hypothesis_name sort,Default, f);
      annot = new_id () } in
@@ -1701,7 +1699,6 @@ let type_hypothesis keep_triggers acc env_f loc sort f =
 let type_goal keep_triggers acc env_g loc sort n goal =
   let goal, _ = type_form env_g goal in
   let goal = monomorphize_form goal in
-  let goal = Triggers.make keep_triggers true goal in
   let td = {c = TGoal(loc, sort, n, goal); annot = new_id () } in
   (td, env_g)::acc
 
@@ -1736,7 +1733,6 @@ let type_one_th_decl keep_triggers env e =
   match e with
   | Axiom(loc,name,ax_kd,f)  ->
     let f,_ = type_form ~in_theory:true env f in
-    let f = Triggers.make (*keep_triggers=*) true false f in
     {c = TAxiom (loc,name,ax_kd,f); annot = new_id ()}
 
   | Theory (loc, _, _, _)
@@ -1771,7 +1767,6 @@ let type_decl keep_triggers (acc, env) d =
     | Axiom(loc,name,ax_kd,f) ->
       Options.tool_req 1 "TR-Typing-AxiomDecl$_F$";
       let f, _ = type_form env f in
-      let f = Triggers.make keep_triggers false f in
       let td = {c = TAxiom(loc,name,ax_kd,f); annot = new_id () } in
       (td, env)::acc, env
 
@@ -1810,12 +1805,11 @@ let type_decl keep_triggers (acc, env) d =
       let infix = match d with Function_def _ -> PPeq | _ -> PPiff in
       let f = { pp_desc = PPinfix(p,infix,e) ; pp_loc = loc } in
       (* le trigger [[p]] ne permet pas de replier la definition,
-         	   donc on calcule les termes maximaux de la definition pour
-         	   laisser une possibilite de replier *)
+         donc on calcule les termes maximaux de la definition pour
+         laisser une possibilite de replier *)
       let trs = max_terms e in
       let f = make_pred loc [[p], false ; trs, false] f l in
       let f,_ = type_form env f in
-      let f = Triggers.make keep_triggers false f in
       let td =
         match d with
         | Function_def(_,_,_,t,_) ->
@@ -1858,7 +1852,9 @@ let file ld =
         ([], env) ld
     in
     if type_only () then exit 0;
-    List.rev ltd, env
+    let l = List.rev_map (fun (d, env) ->
+        Triggers.make_decl keep_triggers d, env) ltd in
+    l, env
   with
   | Errors.Error(e,l) ->
     Loc.report err_formatter l;
