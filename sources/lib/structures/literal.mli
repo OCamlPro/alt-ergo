@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -27,22 +27,22 @@
 (******************************************************************************)
 
 type builtin =
-  LE | LT (* arithmetic *)
+    LE | LT (* arithmetic *)
 
 type 'a view = private
-               | Eq of 'a * 'a
-               | Distinct of bool * 'a list
-               | Builtin of bool * builtin * 'a list
-               | Pred of 'a * bool
+  | Eq of 'a * 'a
+  | Distinct of bool * 'a list
+  | Builtin of bool * builtin * 'a list
+  | Pred of 'a * bool
 
 type 'a atom_view
 (* We do not need to export internal representation
    of literals !
    =
-  | EQ of 'a * 'a
-  | BT of Hstring.t * 'a list
-  | PR of 'a
-  | EQ_LIST of 'a list*)
+   | EQ of 'a * 'a
+   | BT of Hstring.t * 'a list
+   | PR of 'a
+   | EQ_LIST of 'a list*)
 
 module type OrderedType = sig
   type t
@@ -103,7 +103,7 @@ module type S_Term = sig
   val terms_rec : t -> Term.Set.t
 
   (** tries to return maximal ground terms in an atom. Returns all
-  ground subterms if maximal terms of the atom are not ground *)
+      ground subterms if maximal terms of the atom are not ground *)
   val ground_terms : t -> Term.Set.t
 
   val vars_of : t -> Ty.t Symbols.Map.t -> Ty.t Symbols.Map.t

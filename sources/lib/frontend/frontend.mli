@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -33,12 +33,12 @@ module type S = sig
   type used_context
 
   type status =
-  | Unsat of Commands.sat_tdecl * Explanation.t
-  | Inconsistent of Commands.sat_tdecl
-  | Sat of Commands.sat_tdecl * sat_env
-  | Unknown of Commands.sat_tdecl * sat_env
-  | Timeout of Commands.sat_tdecl option
-  | Preprocess
+    | Unsat of Commands.sat_tdecl * Explanation.t
+    | Inconsistent of Commands.sat_tdecl
+    | Sat of Commands.sat_tdecl * sat_env
+    | Unknown of Commands.sat_tdecl * sat_env
+    | Timeout of Commands.sat_tdecl option
+    | Preprocess
 
   val process_decl:
     (status -> int64 -> unit) ->

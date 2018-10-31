@@ -440,3 +440,6 @@ stripped-arch-binary: $(OPT)
 
 opam-deps:
 	opam install ocamlfind $(LIBDEPS) lablgtk menhir
+
+opam-deps-dev:
+	opam install ocp-indent merlin user-setup tuareg

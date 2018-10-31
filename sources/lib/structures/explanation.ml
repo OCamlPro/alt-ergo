@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -43,24 +43,24 @@ module S =
     (struct
       type t = exp
       let compare a b = match a,b with
-	| Fresh i1, Fresh i2 -> i1 - i2
-	| Literal a  , Literal b   -> Satml_types.Atom.cmp_atom a b
+        | Fresh i1, Fresh i2 -> i1 - i2
+        | Literal a  , Literal b   -> Satml_types.Atom.cmp_atom a b
         | Dep e1  , Dep e2   -> Formula.compare e1 e2
         | RootDep s, RootDep t -> String.compare s t
         | Bj e1   , Bj e2    -> Formula.compare e1 e2
 
-	| Literal _, _ -> -1
-	| _, Literal _ -> 1
+        | Literal _, _ -> -1
+        | _, Literal _ -> 1
 
-	| Fresh _, _ -> -1
-	| _, Fresh _ -> 1
+        | Fresh _, _ -> -1
+        | _, Fresh _ -> 1
 
         | Dep _, _ -> 1
         | _, Dep _ -> -1
         | RootDep _, _ -> 1
         | _, RootDep _ -> -1
 
-     end)
+    end)
 
 let is_empty t = S.is_empty t
 
@@ -102,40 +102,40 @@ let print fmt ex =
   if Options.debug_explanations () then begin
     fprintf fmt "{";
     S.iter (function
-      | Literal a -> fprintf fmt "{Literal:%a}, " Satml_types.Atom.pr_atom a
-      | Fresh i -> Format.fprintf fmt "{Fresh:%i}" i;
-      | Dep f -> Format.fprintf fmt "{Dep:%a}" Formula.print f
-      | RootDep s -> Format.fprintf fmt "{RootDep:%s}" s
-      | Bj f -> Format.fprintf fmt "{BJ:%a}" Formula.print f
-    ) ex;
+        | Literal a -> fprintf fmt "{Literal:%a}, " Satml_types.Atom.pr_atom a
+        | Fresh i -> Format.fprintf fmt "{Fresh:%i}" i;
+        | Dep f -> Format.fprintf fmt "{Dep:%a}" Formula.print f
+        | RootDep s -> Format.fprintf fmt "{RootDep:%s}" s
+        | Bj f -> Format.fprintf fmt "{BJ:%a}" Formula.print f
+      ) ex;
     fprintf fmt "}"
   end
 
 let print_unsat_core ?(tab=false) fmt dep =
   iter_atoms
     (function
-     | RootDep s ->
+      | RootDep s ->
         if tab then Format.fprintf fmt "  %s@." s (* tab is too big *)
         else Format.fprintf fmt "%s@." s
-     | Dep _ -> ()
-     | Bj _ | Fresh _ | Literal _ -> assert false
+      | Dep _ -> ()
+      | Bj _ | Fresh _ | Literal _ -> assert false
     ) dep
 
-  let formulas_of s =
+let formulas_of s =
   S.fold (fun e acc ->
       match e with
       | Dep f | Bj f -> F.Set.add f acc
       | RootDep _ | Fresh _ -> acc
       | Literal a -> assert false (*TODO*)
-  ) s F.Set.empty
+    ) s F.Set.empty
 
 let bj_formulas_of s =
   S.fold (fun e acc ->
-    match e with
+      match e with
       | Bj f -> F.Set.add f acc
       | Dep _ | RootDep _ | Fresh _ -> acc
       | Literal a -> assert false (*TODO*)
-  ) s F.Set.empty
+    ) s F.Set.empty
 
 let rec literals_of_acc lit fs f acc = match F.view f with
   | F.Literal _ ->
@@ -159,10 +159,10 @@ module MI = Map.Make (struct type t = int let compare = compare end)
 
 let literals_ids_of ex =
   List.fold_left (fun acc f ->
-    let i = F.id f in
-    let m = try MI.find i acc with Not_found -> 0 in
-    MI.add i (m + 1) acc
-  ) MI.empty (literals_of ex)
+      let i = F.id f in
+      let m = try MI.find i acc with Not_found -> 0 in
+      MI.add i (m + 1) acc
+    ) MI.empty (literals_of ex)
 
 
 let make_deps sf =

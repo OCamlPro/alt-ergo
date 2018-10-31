@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -168,9 +168,9 @@ let mk_bitv_const =
   let check_binary_mode s =
     String.iter
       (fun x ->
-        match x with
-        | '0' | '1' -> ()
-        | _ -> raise Parsing.Parse_error) s;
+         match x with
+         | '0' | '1' -> ()
+         | _ -> raise Parsing.Parse_error) s;
     s
   in fun loc const ->
     mk_localized loc (PPconst (ConstBitv (check_binary_mode const)))

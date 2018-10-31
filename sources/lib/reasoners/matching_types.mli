@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -30,9 +30,9 @@ type gsubst = {
   sbs : Term.t Term.Subst.t;
   sty : Ty.subst;
   gen : int ;     (* l'age d'une substitution est l'age du plus vieux
-		     terme qu'elle contient *)
+                     		     terme qu'elle contient *)
   goal : bool;    (* vrai si la substitution contient un terme ayant un lien
-		     avec le but de la PO *)
+                     		     avec le but de la PO *)
   s_term_orig : Term.t list;
   s_lem_orig : Formula.t;
 }

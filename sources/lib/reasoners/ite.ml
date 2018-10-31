@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -190,13 +190,13 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   let assume env uf la =
     if Options.timers() then
       try
-	Timers.exec_timer_start Timers.M_Arrays Timers.F_assume;
-	let res =assume env uf la in
-	Timers.exec_timer_pause Timers.M_Arrays Timers.F_assume;
-	res
+        Timers.exec_timer_start Timers.M_Arrays Timers.F_assume;
+        let res =assume env uf la in
+        Timers.exec_timer_pause Timers.M_Arrays Timers.F_assume;
+        res
       with e ->
-	Timers.exec_timer_pause Timers.M_Arrays Timers.F_assume;
-	raise e
+        Timers.exec_timer_pause Timers.M_Arrays Timers.F_assume;
+        raise e
     else assume env uf la
 
   let case_split env uf ~for_model = []

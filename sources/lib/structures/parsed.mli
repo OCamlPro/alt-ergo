@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -54,7 +54,7 @@ type ppure_type =
 type axiom_kind = Default | Propagator
 
 type lexpr =
-    { pp_loc : Loc.t; pp_desc : pp_desc }
+  { pp_loc : Loc.t; pp_desc : pp_desc }
 
 and pp_desc =
   | PPvar of string
@@ -81,10 +81,10 @@ and pp_desc =
       (string * ppure_type) list * (lexpr list * bool) list * lexpr list * lexpr
   | PPforall_named of
       (string * string * ppure_type) list * (lexpr list * bool) list *
-        lexpr list * lexpr
+      lexpr list * lexpr
   | PPexists_named of
       (string * string * ppure_type) list * (lexpr list * bool) list *
-        lexpr list * lexpr
+      lexpr list * lexpr
   | PPnamed of string * lexpr
   | PPlet of (string * lexpr) list * lexpr
   | PPcheck of lexpr
@@ -112,10 +112,10 @@ type decl =
   | Logic of Loc.t * name_kind * (string * string) list * plogic_type
   | Predicate_def of
       Loc.t * (string * string) *
-	(Loc.t * string * ppure_type) list * lexpr
+      (Loc.t * string * ppure_type) list * lexpr
   | Function_def of
       Loc.t * (string * string) *
-	(Loc.t * string * ppure_type) list * ppure_type * lexpr
+      (Loc.t * string * ppure_type) list * ppure_type * lexpr
   | TypeDecl of Loc.t * string list * string * body_type_decl
 
 type file = decl list

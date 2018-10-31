@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -70,7 +70,7 @@ module type SAT_ML = sig
   val exists_in_lazy_cnf : t -> FF.t -> bool
 
   val known_lazy_formulas : t -> int FF.Map.t
-(*end*)
+  (*end*)
 end
 
 module MFF = FF.Map
@@ -82,128 +82,128 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   type th = Th.t
   type t =
-      {
+    {
       (* si vrai, les contraintes sont deja fausses *)
-        mutable is_unsat : bool;
+      mutable is_unsat : bool;
 
-        mutable unsat_core : clause list option;
+      mutable unsat_core : clause list option;
 
       (* clauses du probleme *)
-        mutable clauses : clause Vec.t;
+      mutable clauses : clause Vec.t;
 
       (* clauses apprises *)
-        mutable learnts : clause Vec.t;
+      mutable learnts : clause Vec.t;
 
       (* valeur de l'increment pour l'activite des clauses *)
-        mutable clause_inc : float;
+      mutable clause_inc : float;
 
       (* valeur de l'increment pour l'activite des variables *)
-        mutable var_inc : float;
+      mutable var_inc : float;
 
       (* un vecteur des variables du probleme *)
-        mutable vars : var Vec.t;
+      mutable vars : var Vec.t;
 
       (* la pile de decisions avec les faits impliques *)
-        mutable trail : atom Vec.t;
+      mutable trail : atom Vec.t;
 
       (* une pile qui pointe vers les niveaux de decision dans trail *)
-        mutable trail_lim : int Vec.t;
+      mutable trail_lim : int Vec.t;
 
       (* Tete de la File des faits unitaires a propager.
-	 C'est un index vers le trail *)
-        mutable qhead : int;
+         	 C'est un index vers le trail *)
+      mutable qhead : int;
 
       (* Nombre des assignements top-level depuis la derniere
          execution de 'simplify()' *)
-        mutable simpDB_assigns : int;
+      mutable simpDB_assigns : int;
 
       (* Nombre restant de propagations a faire avant la prochaine
          execution de 'simplify()' *)
-        mutable simpDB_props : int;
+      mutable simpDB_props : int;
 
       (* Un tas ordone en fonction de l'activite des variables *)
-        mutable order : Iheap.t;
+      mutable order : Iheap.t;
 
       (* estimation de progressions, mis a jour par 'search()' *)
-        mutable progress_estimate : float;
+      mutable progress_estimate : float;
 
       (* *)
-        remove_satisfied : bool;
+      remove_satisfied : bool;
 
       (* inverse du facteur d'acitivte des variables, vaut 1/0.999 par defaut *)
-        var_decay : float;
+      var_decay : float;
 
       (* inverse du facteur d'activite des clauses, vaut 1/0.95 par defaut *)
-        clause_decay : float;
+      clause_decay : float;
 
       (* la limite de restart initiale, vaut 100 par defaut *)
-        mutable restart_first : int;
+      mutable restart_first : int;
 
       (* facteur de multiplication de restart limite, vaut 1.5 par defaut*)
-        restart_inc : float;
+      restart_inc : float;
 
       (* limite initiale du nombre de clause apprises, vaut 1/3
          des clauses originales par defaut *)
-        mutable learntsize_factor : float;
+      mutable learntsize_factor : float;
 
       (* multiplier learntsize_factor par cette valeur a chaque restart,
          vaut 1.1 par defaut *)
-        learntsize_inc : float;
+      learntsize_inc : float;
 
       (* controler la minimisation des clauses conflit, vaut true par defaut *)
-        expensive_ccmin : bool;
+      expensive_ccmin : bool;
 
       (* controle la polarite a choisir lors de la decision *)
-        polarity_mode : bool;
+      polarity_mode : bool;
 
-        mutable starts : int;
+      mutable starts : int;
 
-        mutable decisions : int;
+      mutable decisions : int;
 
-        mutable propagations : int;
+      mutable propagations : int;
 
-        mutable conflicts : int;
+      mutable conflicts : int;
 
-        mutable clauses_literals : int;
+      mutable clauses_literals : int;
 
-        mutable learnts_literals : int;
+      mutable learnts_literals : int;
 
-        mutable max_literals : int;
+      mutable max_literals : int;
 
-        mutable tot_literals : int;
+      mutable tot_literals : int;
 
-        mutable nb_init_vars : int;
+      mutable nb_init_vars : int;
 
-        mutable nb_init_clauses : int;
+      mutable nb_init_clauses : int;
 
-        mutable model : var Vec.t;
+      mutable model : var Vec.t;
 
-        mutable tenv : Th.t;
+      mutable tenv : Th.t;
 
-        mutable unit_tenv : Th.t;
+      mutable unit_tenv : Th.t;
 
-        mutable tenv_queue : Th.t Vec.t;
+      mutable tenv_queue : Th.t Vec.t;
 
-        mutable tatoms_queue : atom Queue.t;
-        mutable th_tableaux : atom Queue.t;
+      mutable tatoms_queue : atom Queue.t;
+      mutable th_tableaux : atom Queue.t;
 
-        mutable cpt_current_propagations : int;
+      mutable cpt_current_propagations : int;
 
-        mutable proxies : (Atom.atom * Atom.atom list * bool) Util.MI.t;
+      mutable proxies : (Atom.atom * Atom.atom list * bool) Util.MI.t;
 
-        mutable lazy_cnf :
-          (FF.t list MFF.t * FF.t) Matoms.t;
+      mutable lazy_cnf :
+        (FF.t list MFF.t * FF.t) Matoms.t;
 
-        lazy_cnf_queue :
-          (FF.t list MFF.t * FF.t) Matoms.t Vec.t;
+      lazy_cnf_queue :
+        (FF.t list MFF.t * FF.t) Matoms.t Vec.t;
 
-        mutable relevants : SFF.t;
-        relevants_queue : SFF.t Vec.t;
+      mutable relevants : SFF.t;
+      relevants_queue : SFF.t Vec.t;
 
-        mutable ff_lvl : int MFF.t;
+      mutable ff_lvl : int MFF.t;
 
-        mutable lvl_ff : SFF.t Util.MI.t;
-      }
+      mutable lvl_ff : SFF.t Util.MI.t;
+    }
 
   type conflict_origin =
     | C_none
@@ -316,7 +316,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       ff_lvl = MFF.empty;
 
       lvl_ff = Util.MI.empty;
-}
+    }
 
 
 (*
@@ -457,7 +457,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       with Not_found -> ()
     done
 
-(* annule tout jusqu'a lvl *exclu*  *)
+  (* annule tout jusqu'a lvl *exclu*  *)
   let cancel_until env lvl =
     cancel_ff_lvls_until env lvl;
     let repush = ref [] in
@@ -536,13 +536,13 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let enqueue env a lvl reason =
     assert (not a.is_true && not a.neg.is_true &&
-              a.var.level < 0 && a.var.reason == None && lvl >= 0);
-  (* Garder la reason car elle est utile pour les unsat-core *)
-  (*let reason = if lvl = 0 then None else reason in*)
+            a.var.level < 0 && a.var.reason == None && lvl >= 0);
+    (* Garder la reason car elle est utile pour les unsat-core *)
+    (*let reason = if lvl = 0 then None else reason in*)
     a.is_true <- true;
     a.var.level <- lvl;
     a.var.reason <- reason;
-  (*eprintf "enqueue: %a@." Debug.atom a; *)
+    (*eprintf "enqueue: %a@." Debug.atom a; *)
     Vec.push env.trail a;
     a.var.index <- Vec.size env.trail;
     if Options.enable_assertions() then  debug_enqueue_level a lvl reason
@@ -592,32 +592,32 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         for k = 2 to Vec.size atoms - 1 do
           let ak = Vec.get atoms k in
           if not (ak.neg.is_true) then begin
-          (* Watcher Trouve: mettre a jour et sortir *)
+            (* Watcher Trouve: mettre a jour et sortir *)
             Vec.set atoms 1 ak;
             Vec.set atoms k a.neg;
             Vec.push ak.neg.watched c;
             raise Exit
           end
         done;
-          (* Watcher NON Trouve *)
-          if first.neg.is_true then begin
-            (* la clause est fausse *)
-            env.qhead <- Vec.size env.trail;
-            for k = i to Vec.size watched - 1 do
-              Vec.set watched !new_sz (Vec.get watched k);
-              incr new_sz;
-            done;
-            if Options.profiling() then Profiling.bcp_conflict true true;
-            raise (Conflict c)
-          end
-          else begin
-            (* la clause est unitaire *)
-            Vec.set watched !new_sz c;
+        (* Watcher NON Trouve *)
+        if first.neg.is_true then begin
+          (* la clause est fausse *)
+          env.qhead <- Vec.size env.trail;
+          for k = i to Vec.size watched - 1 do
+            Vec.set watched !new_sz (Vec.get watched k);
             incr new_sz;
-            let mlvl = best_propagation_level env c in
-            enqueue env first mlvl (Some c);
-            if Options.profiling() then Profiling.red true;
-          end
+          done;
+          if Options.profiling() then Profiling.bcp_conflict true true;
+          raise (Conflict c)
+        end
+        else begin
+          (* la clause est unitaire *)
+          Vec.set watched !new_sz c;
+          incr new_sz;
+          let mlvl = best_propagation_level env c in
+          enqueue env first mlvl (Some c);
+          if Options.profiling() then Profiling.red true;
+        end
       with Exit -> ()
 
   let propagate_atom env a res =
@@ -668,94 +668,96 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       | None -> assert false
 
 
-let add_form_to_lazy_cnf =
-  let open FF in
-  let add_disj env ma f_a l =
-    List.fold_left
-      (fun ma fchild ->
-        let child = get_atom_or_proxy fchild env.proxies in
-        let ctt = try Matoms.find child ma |> fst with Not_found -> MFF.empty in
-        Matoms.add child (MFF.add f_a l ctt, fchild) ma
-      )ma l
-  in
-  let rec add_aux env ma (f_a : t) =
-    if SFF.mem f_a env.relevants then ma
-    else
-      begin
-        env.relevants <- SFF.add f_a env.relevants;
-        match view f_a with
-        | UNIT a ->
-          Queue.push a env.th_tableaux;
-          ma
-
-        | AND l ->
-          List.fold_left (add_aux env) ma l
-
-        | OR l  ->
-          match Lists.find_opt (fun e ->
-            let p = get_atom_or_proxy e env.proxies in
-            p.is_true) l
-          with
-          | None   -> add_disj env ma f_a l
-          | Some e -> add_aux env ma e
-      end
-  in
-  fun env ma f_a -> add_aux env ma f_a
-
-
-let relevancy_propagation env ma a =
-  try
-    let parents, f_a = Matoms.find a ma in
-    let ma = Matoms.remove a ma in
-    let ma =
-      MFF.fold
-        (fun fp lp ma ->
-          List.fold_left
-            (fun ma bf ->
-              let b = get_atom_or_proxy bf env.proxies in
-              if eq_atom a b then ma
-              else
-                let mf_b, fb =
-                  try Matoms.find b ma with Not_found -> assert false in
-                assert (FF.equal bf fb);
-                let mf_b = MFF.remove fp mf_b in
-                if MFF.is_empty mf_b then Matoms.remove b ma
-                else Matoms.add b (mf_b, fb) ma
-            )ma lp
-        )parents ma
+  let add_form_to_lazy_cnf =
+    let open FF in
+    let add_disj env ma f_a l =
+      List.fold_left
+        (fun ma fchild ->
+           let child = get_atom_or_proxy fchild env.proxies in
+           let ctt =
+             try Matoms.find child ma |> fst with Not_found -> MFF.empty
+           in
+           Matoms.add child (MFF.add f_a l ctt, fchild) ma
+        )ma l
     in
-    assert (let a = get_atom_or_proxy f_a env.proxies in a.is_true);
-    add_form_to_lazy_cnf env ma f_a
-  with Not_found -> ma
+    let rec add_aux env ma (f_a : t) =
+      if SFF.mem f_a env.relevants then ma
+      else
+        begin
+          env.relevants <- SFF.add f_a env.relevants;
+          match view f_a with
+          | UNIT a ->
+            Queue.push a env.th_tableaux;
+            ma
+
+          | AND l ->
+            List.fold_left (add_aux env) ma l
+
+          | OR l  ->
+            match Lists.find_opt (fun e ->
+                let p = get_atom_or_proxy e env.proxies in
+                p.is_true) l
+            with
+            | None   -> add_disj env ma f_a l
+            | Some e -> add_aux env ma e
+        end
+    in
+    fun env ma f_a -> add_aux env ma f_a
 
 
-let compute_facts_for_theory_propagate env =
-  (*let a = SFF.cardinal env.relevants in*)
-  env.lazy_cnf <-
-    Queue.fold (relevancy_propagation env) env.lazy_cnf env.tatoms_queue;
-  if Options.enable_assertions() then (*debug *)
-    Matoms.iter (fun a _ -> assert (not a.is_true)) env.lazy_cnf
+  let relevancy_propagation env ma a =
+    try
+      let parents, f_a = Matoms.find a ma in
+      let ma = Matoms.remove a ma in
+      let ma =
+        MFF.fold
+          (fun fp lp ma ->
+             List.fold_left
+               (fun ma bf ->
+                  let b = get_atom_or_proxy bf env.proxies in
+                  if eq_atom a b then ma
+                  else
+                    let mf_b, fb =
+                      try Matoms.find b ma with Not_found -> assert false in
+                    assert (FF.equal bf fb);
+                    let mf_b = MFF.remove fp mf_b in
+                    if MFF.is_empty mf_b then Matoms.remove b ma
+                    else Matoms.add b (mf_b, fb) ma
+               )ma lp
+          )parents ma
+      in
+      assert (let a = get_atom_or_proxy f_a env.proxies in a.is_true);
+      add_form_to_lazy_cnf env ma f_a
+    with Not_found -> ma
+
+
+  let compute_facts_for_theory_propagate env =
+    (*let a = SFF.cardinal env.relevants in*)
+    env.lazy_cnf <-
+      Queue.fold (relevancy_propagation env) env.lazy_cnf env.tatoms_queue;
+    if Options.enable_assertions() then (*debug *)
+      Matoms.iter (fun a _ -> assert (not a.is_true)) env.lazy_cnf
 
 
   let expensive_theory_propagate () = None
-(* try *)
-(*   if D1.d then eprintf "expensive_theory_propagate@."; *)
-(*   ignore(Th.expensive_processing env.tenv); *)
-(*   if D1.d then eprintf "expensive_theory_propagate => None@."; *)
-(*   None *)
-(* with Exception.Inconsistent dep ->  *)
-(*   if D1.d then eprintf "expensive_theory_propagate => Inconsistent@."; *)
-(*   Some dep *)
+  (* try *)
+  (*   if D1.d then eprintf "expensive_theory_propagate@."; *)
+  (*   ignore(Th.expensive_processing env.tenv); *)
+  (*   if D1.d then eprintf "expensive_theory_propagate => None@."; *)
+  (*   None *)
+  (* with Exception.Inconsistent dep ->  *)
+  (*   if D1.d then eprintf "expensive_theory_propagate => Inconsistent@."; *)
+  (*   Some dep *)
 
   let unit_theory_propagate env full_q lazy_q =
     let facts =
       Queue.fold
         (fun acc ta ->
-          assert (ta.is_true);
-          assert (ta.var.level >= 0);
-          if ta.var.level = 0 then
-            (ta.lit, Ex.empty, 0, env.cpt_current_propagations) :: acc
-          else acc
+           assert (ta.is_true);
+           assert (ta.var.level >= 0);
+           if ta.var.level = 0 then
+             (ta.lit, Ex.empty, 0, env.cpt_current_propagations) :: acc
+           else acc
         )[] lazy_q
     in
     if facts == [] then C_none
@@ -769,16 +771,16 @@ let compute_facts_for_theory_propagate env =
         in
         steps := Int64.add (Int64.of_int cpt) !steps;
         if steps_bound () <> -1
-	  && Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
-	  begin
-	    printf "Steps limit reached: %Ld@." !steps;
-	    exit 1
-	  end;
+        && Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
+          begin
+            printf "Steps limit reached: %Ld@." !steps;
+            exit 1
+          end;
         env.unit_tenv <- t;
         C_none
       with Exception.Inconsistent (dep, terms) ->
         (* XXX what to do with terms ? *)
-	(* eprintf "th inconsistent : %a @." Ex.print dep; *)
+        (* eprintf "th inconsistent : %a @." Ex.print dep; *)
         if Options.profiling() then Profiling.theory_conflict();
         C_theory dep
 
@@ -796,52 +798,52 @@ let compute_facts_for_theory_propagate env =
     | C_theory dep as res -> res
     | C_bool _ -> assert false
     | C_none ->
-    while not (Queue.is_empty tatoms_queue) do
-      let a = Queue.pop tatoms_queue in
-      let ta =
-        if a.is_true then a
-        else if a.neg.is_true then a.neg (* TODO: useful ?? *)
-        else assert false
-      in
-      let ex =
-        if unsat_core () || ta.var.level > 0 then Ex.singleton (Ex.Literal ta)
-        else Ex.empty
-      in
-      assert (Literal.LT.is_ground ta.lit);
-      if ta.timp then
-        ()
-          [@ocaml.ppwarning "XXX: only do this for instantiation ?"]
-      else
-        facts := (ta.lit, ex, dlvl,env.cpt_current_propagations) :: !facts;
-      env.cpt_current_propagations <- env.cpt_current_propagations + 1
-    done;
-    Queue.clear env.tatoms_queue;
-    Queue.clear env.th_tableaux;
-    if !facts == [] then C_none
-    else
-      try
-        (*let full_model = nb_assigns() = env.nb_init_vars in*)
-        (* XXX what to do with the other results of Th.assume ? *)
-        let t,_,cpt =
-          Th.assume ~ordered:(not (Options.tableaux_cdcl ()))
-            (List.rev !facts) env.tenv
+      while not (Queue.is_empty tatoms_queue) do
+        let a = Queue.pop tatoms_queue in
+        let ta =
+          if a.is_true then a
+          else if a.neg.is_true then a.neg (* TODO: useful ?? *)
+          else assert false
         in
-        steps := Int64.add (Int64.of_int cpt) !steps;
-        if steps_bound () <> -1
-	  && Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
-	  begin
-	    printf "Steps limit reached: %Ld@." !steps;
-	    exit 1
-	  end;
-        env.tenv <- t;
-        do_case_split env Util.AfterTheoryAssume
-      (*if full_model then expensive_theory_propagate ()
-        else None*)
-      with Exception.Inconsistent (dep, terms) ->
-        (* XXX what to do with terms ? *)
-	(* eprintf "th inconsistent : %a @." Ex.print dep; *)
-        if Options.profiling() then Profiling.theory_conflict();
-        C_theory dep
+        let ex =
+          if unsat_core () || ta.var.level > 0 then Ex.singleton (Ex.Literal ta)
+          else Ex.empty
+        in
+        assert (Literal.LT.is_ground ta.lit);
+        if ta.timp then
+          ()
+            [@ocaml.ppwarning "XXX: only do this for instantiation ?"]
+        else
+          facts := (ta.lit, ex, dlvl,env.cpt_current_propagations) :: !facts;
+        env.cpt_current_propagations <- env.cpt_current_propagations + 1
+      done;
+      Queue.clear env.tatoms_queue;
+      Queue.clear env.th_tableaux;
+      if !facts == [] then C_none
+      else
+        try
+          (*let full_model = nb_assigns() = env.nb_init_vars in*)
+          (* XXX what to do with the other results of Th.assume ? *)
+          let t,_,cpt =
+            Th.assume ~ordered:(not (Options.tableaux_cdcl ()))
+              (List.rev !facts) env.tenv
+          in
+          steps := Int64.add (Int64.of_int cpt) !steps;
+          if steps_bound () <> -1
+          && Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
+            begin
+              printf "Steps limit reached: %Ld@." !steps;
+              exit 1
+            end;
+          env.tenv <- t;
+          do_case_split env Util.AfterTheoryAssume
+        (*if full_model then expensive_theory_propagate ()
+          else None*)
+        with Exception.Inconsistent (dep, terms) ->
+          (* XXX what to do with terms ? *)
+          (* eprintf "th inconsistent : %a @." Ex.print dep; *)
+          if Options.profiling() then Profiling.theory_conflict();
+          C_theory dep
 
   let propagate env =
     let num_props = ref 0 in
@@ -864,8 +866,8 @@ let compute_facts_for_theory_propagate env =
     let c = Pervasives.compare c1.activity c2.activity in
     if sz1 = sz2 && c = 0 then 0
     else
-      if sz1 > 2 && (sz2 = 2 || c < 0) then -1
-      else 1
+    if sz1 > 2 && (sz2 = 2 || c < 0) then -1
+    else 1
 
   let locked c = false(*
                         try
@@ -916,7 +918,7 @@ let compute_facts_for_theory_propagate env =
 
 
   module HUC = Hashtbl.Make
-    (struct type t = clause let equal = (==) let hash = Hashtbl.hash end)
+      (struct type t = clause let equal = (==) let hash = Hashtbl.hash end)
 
 
   let report_b_unsat env linit =
@@ -944,7 +946,7 @@ let compute_facts_for_theory_propagate env =
           eprintf "@.>>UNSAT Deduction made from:@.";
           List.iter
             (fun hc ->
-              eprintf "    %a@." Atom.pr_clause hc
+               eprintf "    %a@." Atom.pr_clause hc
             )!l;
         end;
         let uc = HUC.create 17 in
@@ -952,14 +954,14 @@ let compute_facts_for_theory_propagate env =
           match todo with
           | [] -> ()
           | c::r ->
-	    for i = 0 to Vec.size c.atoms - 1 do
-	      let v = (Vec.get c.atoms i).var in
-	      if not v.seen then begin
-	        v.seen <- true;
-	        roots v.vpremise;
-	        match v.reason with None -> () | Some r -> roots [r];
-	      end
-	    done;
+            for i = 0 to Vec.size c.atoms - 1 do
+              let v = (Vec.get c.atoms i).var in
+              if not v.seen then begin
+                v.seen <- true;
+                roots v.vpremise;
+                match v.reason with None -> () | Some r -> roots [r];
+              end
+            done;
             match c.cpremise with
             | []    -> if not (HUC.mem uc c) then HUC.add uc c (); roots r
             | prems -> roots prems; roots r
@@ -969,7 +971,7 @@ let compute_facts_for_theory_propagate env =
           eprintf "@.>>UNSAT_CORE:@.";
           List.iter
             (fun hc ->
-              eprintf "    %a@." Atom.pr_clause hc
+               eprintf "    %a@." Atom.pr_clause hc
             )unsat_core;
         end;
         env.is_unsat <- true;
@@ -988,21 +990,21 @@ let compute_facts_for_theory_propagate env =
       let l =
         Ex.fold_atoms
           (fun ex l ->
-            match ex with
-            | Ex.Literal {var=v} ->
-              let l = List.rev_append v.vpremise l in
-              begin match v.reason with
-              | None -> l
-              | Some c -> c :: l
-              end
-            | _ -> assert false (* TODO *)
+             match ex with
+             | Ex.Literal {var=v} ->
+               let l = List.rev_append v.vpremise l in
+               begin match v.reason with
+                 | None -> l
+                 | Some c -> c :: l
+               end
+             | _ -> assert false (* TODO *)
           ) dep []
       in
       if false then begin
         eprintf "@.>>T-UNSAT Deduction made from:@.";
         List.iter
           (fun hc ->
-            eprintf "    %a@." Atom.pr_clause hc
+             eprintf "    %a@." Atom.pr_clause hc
           )l;
       end;
       let uc = HUC.create 17 in
@@ -1010,14 +1012,14 @@ let compute_facts_for_theory_propagate env =
         match todo with
         | [] -> ()
         | c::r ->
-	  for i = 0 to Vec.size c.atoms - 1 do
-	    let v = (Vec.get c.atoms i).var in
-	    if not v.seen then begin
-	      v.seen <- true;
-	      roots v.vpremise;
-	      match v.reason with None -> () | Some r -> roots [r];
-	    end
-	  done;
+          for i = 0 to Vec.size c.atoms - 1 do
+            let v = (Vec.get c.atoms i).var in
+            if not v.seen then begin
+              v.seen <- true;
+              roots v.vpremise;
+              match v.reason with None -> () | Some r -> roots [r];
+            end
+          done;
           match c.cpremise with
           | []    -> if not (HUC.mem uc c) then HUC.add uc c (); roots r
           | prems -> roots prems; roots r
@@ -1027,7 +1029,7 @@ let compute_facts_for_theory_propagate env =
         eprintf "@.>>T-UNSAT_CORE:@.";
         List.iter
           (fun hc ->
-            eprintf "    %a@." Atom.pr_clause hc
+             eprintf "    %a@." Atom.pr_clause hc
           ) unsat_core;
       end;
       env.is_unsat <- true;
@@ -1035,40 +1037,40 @@ let compute_facts_for_theory_propagate env =
       env.unsat_core <- unsat_core;
       raise (Unsat unsat_core)
 
-(*** experimental: taken from ctrl-ergo-2 ********************
+  (*** experimental: taken from ctrl-ergo-2 ********************
 
-     let rec theory_simplify () =
-     let theory_simplification = 2 in
-     let assume a =
-     assert (Literal.LT.is_ground ta.lit);
-     ignore (Th.assume a.lit Ex.empty env.tenv)
-     in
-     if theory_simplification >= 2 then begin
-     for i = 0 to Vec.size env.vars - 1 do
-     try
-     let a = (Vec.get env.vars i).pa in
-     if not (a.is_true || a.neg.is_true) then
-     try
-     assume a;
-     try assume a.neg
-     with Exception.Inconsistent _ ->
-     if debug () then
-     eprintf "%a propagated m/theory at level 0@.@." Atom.pr_atom a;
-     enqueue a 0 None (* Mettre Some dep pour les unsat-core*)
-     with Exception.Inconsistent _ ->
-     if debug () then
-     eprintf "%a propagated m/theory at level 0@.@." Atom.pr_atom a.neg;
-     enqueue a.neg 0 None (* Mettre Some dep pour les unsat-core*)
-     with Not_found -> ()
-     done;
+       let rec theory_simplify () =
+       let theory_simplification = 2 in
+       let assume a =
+       assert (Literal.LT.is_ground ta.lit);
+       ignore (Th.assume a.lit Ex.empty env.tenv)
+       in
+       if theory_simplification >= 2 then begin
+       for i = 0 to Vec.size env.vars - 1 do
+       try
+       let a = (Vec.get env.vars i).pa in
+       if not (a.is_true || a.neg.is_true) then
+       try
+       assume a;
+       try assume a.neg
+       with Exception.Inconsistent _ ->
+       if debug () then
+       eprintf "%a propagated m/theory at level 0@.@." Atom.pr_atom a;
+       enqueue a 0 None (* Mettre Some dep pour les unsat-core*)
+       with Exception.Inconsistent _ ->
+       if debug () then
+       eprintf "%a propagated m/theory at level 0@.@." Atom.pr_atom a.neg;
+       enqueue a.neg 0 None (* Mettre Some dep pour les unsat-core*)
+       with Not_found -> ()
+       done;
 
-     let head = env.qhead in
-     if propagate () <> None || theory_propagate () <> None then
-        raise (Unsat []);
-     let head' = env.qhead in
-     if head' > head then theory_simplify ()
-     end
-*)
+       let head = env.qhead in
+       if propagate () <> None || theory_propagate () <> None then
+          raise (Unsat []);
+       let head' = env.qhead in
+       if head' > head then theory_simplify ()
+       end
+  *)
 
   let all_propagations env =
     match propagate env with
@@ -1093,10 +1095,10 @@ let compute_facts_for_theory_propagate env =
     report_conflict env (all_propagations env);
     if nb_assigns env <> env.simpDB_assigns && env.simpDB_props <= 0 then begin
       if debug () then fprintf fmt "simplify@.";
-    (*theory_simplify ();*)
+      (*theory_simplify ();*)
       if Vec.size env.learnts > 0 then remove_satisfied env env.learnts;
       if env.remove_satisfied then remove_satisfied env env.clauses;
-    (*Iheap.filter env.order f_filter f_weight;*)
+      (*Iheap.filter env.order f_filter f_weight;*)
       env.simpDB_assigns <- nb_assigns env;
       env.simpDB_props <- env.clauses_literals + env.learnts_literals;
     end
@@ -1150,7 +1152,7 @@ let compute_facts_for_theory_propagate env =
               blevel := max !blevel a.var.level
             end
           end
-      );
+        );
 
       while assert (!tr_ind >= 0);
         let v = (Vec.get env.trail !tr_ind).var in
@@ -1189,15 +1191,15 @@ let compute_facts_for_theory_propagate env =
         let snd_max = ref (-1) in
         List.iter
           (fun v ->
-            let lvl = v.level in
-            if lvl == max_lvl then begin
-              if !max_v != None then raise Exit;
-              max_v := Some v
-            end
-            else begin
-              assert (lvl < max_lvl);
-              snd_max := max !snd_max lvl
-            end
+             let lvl = v.level in
+             if lvl == max_lvl then begin
+               if !max_v != None then raise Exit;
+               max_v := Some v
+             end
+             else begin
+               assert (lvl < max_lvl);
+               snd_max := max !snd_max lvl
+             end
           )lv;
         match !max_v with
         | None -> assert false
@@ -1221,12 +1223,12 @@ let compute_facts_for_theory_propagate env =
           (fun ex (acc, sz, max_lvl, c_hist) ->
              match ex with
              | Ex.Literal a ->
-	       let c_hist = List.rev_append a.var.vpremise c_hist in
-	       let c_hist = match a.var.reason with
-	         | None -> c_hist | Some r -> r:: c_hist
+               let c_hist = List.rev_append a.var.vpremise c_hist in
+               let c_hist = match a.var.reason with
+                 | None -> c_hist | Some r -> r:: c_hist
                in
-	       if a.var.level = 0 then acc, sz, max_lvl, c_hist
-	       else a.neg :: acc, sz + 1, max max_lvl a.var.level, c_hist
+               if a.var.level = 0 then acc, sz, max_lvl, c_hist
+               else a.neg :: acc, sz + 1, max max_lvl a.var.level, c_hist
              | _ -> assert false (* TODO *)
           ) dep ([], 0, 0, [])
       in
@@ -1246,9 +1248,9 @@ let compute_facts_for_theory_propagate env =
       let max_lvl = ref 0 in
       let lv = ref [] in
       Vec.iter c.atoms (fun a ->
-        max_lvl := max !max_lvl a.var.level;
-        lv := a.var :: !lv
-      );
+          max_lvl := max !max_lvl a.var.level;
+          lv := a.var :: !lv
+        );
       if !max_lvl == 0 then report_b_unsat env [c];
       match fixable_with_simple_backjump c !max_lvl !lv with
       | None  ->
@@ -1293,11 +1295,11 @@ let compute_facts_for_theory_propagate env =
     let l =
       Ex.fold_atoms
         (fun e acc ->
-          match e with
-          | Ex.Literal a ->
-            incr cpt;
-            a.neg :: acc
-          | _ -> assert false
+           match e with
+           | Ex.Literal a ->
+             incr cpt;
+             a.neg :: acc
+           | _ -> assert false
         )d []
     in
     fuip :: l, !cpt + 1
@@ -1324,18 +1326,18 @@ let compute_facts_for_theory_propagate env =
       propagate_and_stabilize env all_propagations conflictC;
 
       if nb_assigns env = env.nb_init_vars ||
-        (Options.tableaux_cdcl () && Matoms.is_empty env.lazy_cnf) then
+         (Options.tableaux_cdcl () && Matoms.is_empty env.lazy_cnf) then
         raise Sat;
       if Options.enable_restarts ()
-        && n_of_conflicts >= 0 && !conflictC >= n_of_conflicts then begin
-          env.progress_estimate <- progress_estimate env;
-          cancel_until env 0;
-          raise Restart
-        end;
+      && n_of_conflicts >= 0 && !conflictC >= n_of_conflicts then begin
+        env.progress_estimate <- progress_estimate env;
+        cancel_until env 0;
+        raise Restart
+      end;
       if decision_level env = 0 then simplify env;
 
       if n_of_learnts >= 0 &&
-        Vec.size env.learnts - nb_assigns env >= n_of_learnts then
+         Vec.size env.learnts - nb_assigns env >= n_of_learnts then
         reduce_db();
 
       let next = pick_branch_lit env in
@@ -1382,14 +1384,14 @@ let compute_facts_for_theory_propagate env =
         n_of_learnts   := !n_of_learnts *. env.learntsize_inc;
       done;
     with
-      | Sat ->
-        (*check_model ();*)
-        remove_satisfied env env.clauses;
-        remove_satisfied env env.learnts;
-        raise Sat
-      | (Unsat cl) as e ->
-        (* check_unsat_core cl; *)
-        raise e
+    | Sat ->
+      (*check_model ();*)
+      remove_satisfied env env.clauses;
+      remove_satisfied env env.learnts;
+      raise Sat
+    | (Unsat cl) as e ->
+      (* check_unsat_core cl; *)
+      raise e
 
   exception Trivial
 
@@ -1398,13 +1400,13 @@ let compute_facts_for_theory_propagate env =
       | [] -> trues @ unassigned @ falses, init
       | a::r ->
         if a.is_true then
-	  if a.var.level = 0 then raise Trivial
-	  else (a::trues) @ unassigned @ falses @ r, init
+          if a.var.level = 0 then raise Trivial
+          else (a::trues) @ unassigned @ falses @ r, init
         else if a.neg.is_true then
-	  if a.var.level = 0 then
-	    partition_aux trues unassigned falses
-	      (List.rev_append (a.var.vpremise) init) r
-	  else partition_aux trues unassigned (a::falses) init r
+          if a.var.level = 0 then
+            partition_aux trues unassigned falses
+              (List.rev_append (a.var.vpremise) init) r
+          else partition_aux trues unassigned (a::falses) init r
         else partition_aux trues (a::unassigned) falses init r
     in
     partition_aux [] [] [] init atoms
@@ -1423,57 +1425,58 @@ let compute_facts_for_theory_propagate env =
     try
       let atoms, init =
         if decision_level env = 0 then
-	  let atoms, init = List.fold_left
-	    (fun (atoms, init) a ->
-	      if a.is_true then raise Trivial;
-	      if a.neg.is_true then begin
-                if Options.profiling() then Profiling.red true;
-	        atoms, (List.rev_append (a.var.vpremise) init)
-              end
-	      else a::atoms, init
-	    ) ([], init0) atoms in
-	  List.fast_sort (fun a b -> a.var.vid - b.var.vid) atoms, init
+          let atoms, init = List.fold_left
+              (fun (atoms, init) a ->
+                 if a.is_true then raise Trivial;
+                 if a.neg.is_true then begin
+                   if Options.profiling() then Profiling.red true;
+                   atoms, (List.rev_append (a.var.vpremise) init)
+                 end
+                 else a::atoms, init
+              ) ([], init0) atoms in
+          List.fast_sort (fun a b -> a.var.vid - b.var.vid) atoms, init
         else partition atoms init0
       in
       let size = List.length atoms in
       match atoms with
-        | [] ->
-          report_b_unsat env init0;
+      | [] ->
+        report_b_unsat env init0;
 
-        | a::b::_ ->
-          let name = fresh_name () in
-          let clause = make_clause name atoms vraie_form size false init in
-          attach_clause env clause;
-          Vec.push env.clauses clause;
-          if debug_sat () && verbose () then
-            fprintf fmt "[satML] add_clause: %a@." Atom.pr_clause clause;
+      | a::b::_ ->
+        let name = fresh_name () in
+        let clause = make_clause name atoms vraie_form size false init in
+        attach_clause env clause;
+        Vec.push env.clauses clause;
+        if debug_sat () && verbose () then
+          fprintf fmt "[satML] add_clause: %a@." Atom.pr_clause clause;
 
-	  if a.neg.is_true then begin (* clause is false *)
-            let lvl = List.fold_left (fun m a -> max m a.var.level) 0 atoms in
-            cancel_until env lvl;
-            conflict_analyze_and_fix env (C_bool clause)
-          end
-          else
-            if not a.is_true && b.neg.is_true then begin (* clause is unit *)
-              let mlvl = best_propagation_level env clause in
-              enqueue env a mlvl (Some clause);
-            end
-              [@ocaml.ppwarning "TODO: add a heavy assert that checks \
-that clauses are not redundant, watchs are well set, unit and bottom \
-are detected ..."]
+        if a.neg.is_true then begin (* clause is false *)
+          let lvl = List.fold_left (fun m a -> max m a.var.level) 0 atoms in
+          cancel_until env lvl;
+          conflict_analyze_and_fix env (C_bool clause)
+        end
+        else
+        if not a.is_true && b.neg.is_true then begin (* clause is unit *)
+          let mlvl = best_propagation_level env clause in
+          enqueue env a mlvl (Some clause);
+        end
+            [@ocaml.ppwarning "TODO: add a heavy assert that checks \
+                               that clauses are not redundant, watchs \
+                               are well set, unit and bottom are \
+                               detected ..."]
 
-        | [a]   ->
-          if debug_sat () && verbose () then
-            fprintf fmt "[satML] add_atom: %a@." Atom.pr_atom a;
-          let lvl = a.var.level in
-          assert (lvl <> 0);
-          begin
-            if not (minimal_bj ()) then cancel_until env 0
-            else if a.is_true || a.neg.is_true then cancel_until env (lvl - 1)
-          end;
-          a.var.vpremise <- init;
-          enqueue env a 0 None;
-          propagate_and_stabilize env propagate (ref 0)
+      | [a]   ->
+        if debug_sat () && verbose () then
+          fprintf fmt "[satML] add_atom: %a@." Atom.pr_atom a;
+        let lvl = a.var.level in
+        assert (lvl <> 0);
+        begin
+          if not (minimal_bj ()) then cancel_until env 0
+          else if a.is_true || a.neg.is_true then cancel_until env (lvl - 1)
+        end;
+        a.var.vpremise <- init;
+        enqueue env a 0 None;
+        propagate_and_stabilize env propagate (ref 0)
 
     with Trivial ->
       if Options.profiling() then Profiling.elim true
@@ -1487,17 +1490,17 @@ are detected ..."]
       in
       let lz, s =
         MFF.fold (fun ff lz_kd (l, s) ->
-          match lz_kd with
-          | None ->
-            assert (not (MFF.mem ff env.ff_lvl));
-            assert (not (SFF.mem ff s));
-            env.ff_lvl <- MFF.add ff dec_lvl env.ff_lvl;
-            add_form_to_lazy_cnf env l ff, SFF.add ff s
-          | Some a ->
-            (* TODO for case 'Some a' *)
-            assert false
+            match lz_kd with
+            | None ->
+              assert (not (MFF.mem ff env.ff_lvl));
+              assert (not (SFF.mem ff s));
+              env.ff_lvl <- MFF.add ff dec_lvl env.ff_lvl;
+              add_form_to_lazy_cnf env l ff, SFF.add ff s
+            | Some a ->
+              (* TODO for case 'Some a' *)
+              assert false
 
-        ) mff (env.lazy_cnf, s)
+          ) mff (env.lazy_cnf, s)
       in
       env.lazy_cnf <- lz;
       env.lvl_ff <- Util.MI.add dec_lvl s env.lvl_ff;
@@ -1516,17 +1519,17 @@ are detected ..."]
       let accu =
         List.fold_left
           (fun ((unit_cnf, nunit_cnf) as accu) v ->
-            Vec.set env.vars v.vid v;
-            insert_var_order env v;
-            match th_entailed tenv0 v.pa with
-            | None -> accu
-            | Some (c, sz) ->
-              assert (sz >= 1);
-              if sz = 1 then c :: unit_cnf, nunit_cnf
-              else unit_cnf, c :: nunit_cnf
-                [@ocaml.ppwarning
-                  "Issue: BAD decision_level, in particular, \
-                   if minimal-bj is ON"]
+             Vec.set env.vars v.vid v;
+             insert_var_order env v;
+             match th_entailed tenv0 v.pa with
+             | None -> accu
+             | Some (c, sz) ->
+               assert (sz >= 1);
+               if sz = 1 then c :: unit_cnf, nunit_cnf
+               else unit_cnf, c :: nunit_cnf
+                                [@ocaml.ppwarning
+                                  "Issue: BAD decision_level, in particular, \
+                                   if minimal-bj is ON"]
           ) (unit_cnf, nunit_cnf) new_v
       in
       env.nb_init_vars <- nbv;
@@ -1619,5 +1622,5 @@ are detected ..."]
 *)
 
   let known_lazy_formulas env = env.ff_lvl
-(*end*)
+  (*end*)
 end

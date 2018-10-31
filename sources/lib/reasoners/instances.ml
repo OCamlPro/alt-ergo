@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -179,78 +179,78 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   let new_facts env tbox selector substs =
     List.fold_left
       (fun acc ({Matching_types.trigger_formula=f;
-	         trigger_age=age; trigger_dep=dep; trigger_orig=orig;
+                 trigger_age=age; trigger_dep=dep; trigger_orig=orig;
                  trigger = tr},
-	        subst_list) ->
+                subst_list) ->
         let cpt = ref 0 in
         let kept = ref 0 in
         List.fold_left
-	  (fun acc
-	    {Matching_types.sbs = sbs;
-	     sty = sty;
-	     gen = g;
-	     goal = b;
-	     s_term_orig = torig;
-	     s_lem_orig = lorig} ->
-              incr cpt;
-              let s = sbs, sty in
-	      match tr.F.guard with
-	      | Some a when X.query (Literal.LT.apply_subst s a) tbox==No -> acc
-	      | _ ->
-		let nf = F.apply_subst s f in
-                if inst_is_seen_during_this_round orig nf acc then acc
+          (fun acc
+            {Matching_types.sbs = sbs;
+             sty = sty;
+             gen = g;
+             goal = b;
+             s_term_orig = torig;
+             s_lem_orig = lorig} ->
+            incr cpt;
+            let s = sbs, sty in
+            match tr.F.guard with
+            | Some a when X.query (Literal.LT.apply_subst s a) tbox==No -> acc
+            | _ ->
+              let nf = F.apply_subst s f in
+              if inst_is_seen_during_this_round orig nf acc then acc
+              else
+                let accepted = selector nf orig in
+                if not accepted then add_rejected_to_acc orig nf acc
                 else
-                  let accepted = selector nf orig in
-                  if not accepted then add_rejected_to_acc orig nf acc
-                  else
-		    let p =
-		      { F.f = nf;
-                        origin_name = F.name_of_lemma lorig;
-                        gdist = -1;
-                        hdist = -1;
-                        trigger_depth = tr.F.depth;
-                        nb_reductions = 0;
-		        age = 1+(max g age);
-		        mf = true;
-		        gf = b;
-		        lem = Some lorig;
-		        from_terms = torig;
-		        theory_elim = true
-		      }
-                    in
-                    let dep =
-                      if not (Options.unsat_core() || Options.profiling()) then
-                        dep
-                      else
-                        (* Dep lorig used to track conflicted instances
-                           in profiling mode *)
-                        Ex.union dep (Ex.singleton (Ex.Dep lorig))
-                    in
-                    incr kept;
-                    add_accepted_to_acc orig nf (p, dep, s, tr.F.content) acc
-	  ) acc subst_list
+                  let p =
+                    { F.f = nf;
+                      origin_name = F.name_of_lemma lorig;
+                      gdist = -1;
+                      hdist = -1;
+                      trigger_depth = tr.F.depth;
+                      nb_reductions = 0;
+                      age = 1+(max g age);
+                      mf = true;
+                      gf = b;
+                      lem = Some lorig;
+                      from_terms = torig;
+                      theory_elim = true
+                    }
+                  in
+                  let dep =
+                    if not (Options.unsat_core() || Options.profiling()) then
+                      dep
+                    else
+                      (* Dep lorig used to track conflicted instances
+                         in profiling mode *)
+                      Ex.union dep (Ex.singleton (Ex.Dep lorig))
+                  in
+                  incr kept;
+                  add_accepted_to_acc orig nf (p, dep, s, tr.F.content) acc
+          ) acc subst_list
       ) MF.empty substs
 
 
   let split_and_filter_insts env insts =
     MF.fold
       (fun orig (mp_orig_ok, mp_orig_ko) acc ->
-        Debug.new_facts_of_axiom orig mp_orig_ok;
-        let acc =
-          MF.fold
-            (fun f (p, dep, _, _) (gd, ngd) ->
-              if p.F.gf then (p, dep) :: gd, ngd else gd, (p, dep) :: ngd
-            )mp_orig_ok acc
-        in
-        if Options.profiling() then
-          begin (* update profiler data *)
-            SF.iter (fun f -> record_this_instance f false orig) mp_orig_ko;
-            MF.iter (fun f (_, _, name, tr_ctt) ->
-              profile_produced_terms env orig f name tr_ctt;
-              record_this_instance f true orig
-            ) mp_orig_ok;
-          end;
-        acc
+         Debug.new_facts_of_axiom orig mp_orig_ok;
+         let acc =
+           MF.fold
+             (fun f (p, dep, _, _) (gd, ngd) ->
+                if p.F.gf then (p, dep) :: gd, ngd else gd, (p, dep) :: ngd
+             )mp_orig_ok acc
+         in
+         if Options.profiling() then
+           begin (* update profiler data *)
+             SF.iter (fun f -> record_this_instance f false orig) mp_orig_ko;
+             MF.iter (fun f (_, _, name, tr_ctt) ->
+                 profile_produced_terms env orig f name tr_ctt;
+                 record_this_instance f true orig
+               ) mp_orig_ok;
+           end;
+         acc
       )insts ([], [])
 
 
@@ -262,21 +262,21 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     fun lf ->
       List.fast_sort
         (fun (p1,_) (p2,_) ->
-          let c = size p1.F.f - size p2.F.f in
-          if c <> 0 then c
-          else F.compare p2.F.f p1.F.f
+           let c = size p1.F.f - size p2.F.f in
+           if c <> 0 then c
+           else F.compare p2.F.f p1.F.f
         ) lf
 
   let new_facts env tbox selector substs =
     if Options.timers() then
       try
-	Timers.exec_timer_start Timers.M_Match Timers.F_new_facts;
-	let res = new_facts env tbox selector substs in
-	Timers.exec_timer_pause Timers.M_Match Timers.F_new_facts;
-	res
+        Timers.exec_timer_start Timers.M_Match Timers.F_new_facts;
+        let res = new_facts env tbox selector substs in
+        Timers.exec_timer_pause Timers.M_Match Timers.F_new_facts;
+        res
       with e ->
-	Timers.exec_timer_pause Timers.M_Match Timers.F_new_facts;
-	raise e
+        Timers.exec_timer_pause Timers.M_Match Timers.F_new_facts;
+        raise e
     else new_facts env tbox selector substs
 
   let mround env axs tbox selector ilvl kind backward use_cs =
@@ -314,61 +314,61 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   let add_terms env s gf =
     if Options.timers() then
       try
-	Timers.exec_timer_start Timers.M_Match Timers.F_add_terms;
-	let res = add_terms env s gf in
-	Timers.exec_timer_pause Timers.M_Match Timers.F_add_terms;
-	res
+        Timers.exec_timer_start Timers.M_Match Timers.F_add_terms;
+        let res = add_terms env s gf in
+        Timers.exec_timer_pause Timers.M_Match Timers.F_add_terms;
+        res
       with e ->
-	Timers.exec_timer_pause Timers.M_Match Timers.F_add_terms;
-	raise e
+        Timers.exec_timer_pause Timers.M_Match Timers.F_add_terms;
+        raise e
     else add_terms env s gf
 
   let add_lemma env gf dep =
     if Options.timers() then
       try
-	Timers.exec_timer_start Timers.M_Match Timers.F_add_lemma;
-	let res = add_lemma env gf dep in
-	Timers.exec_timer_pause Timers.M_Match Timers.F_add_lemma;
-	res
+        Timers.exec_timer_start Timers.M_Match Timers.F_add_lemma;
+        let res = add_lemma env gf dep in
+        Timers.exec_timer_pause Timers.M_Match Timers.F_add_lemma;
+        res
       with e ->
-	Timers.exec_timer_pause Timers.M_Match Timers.F_add_lemma;
-	raise e
+        Timers.exec_timer_pause Timers.M_Match Timers.F_add_lemma;
+        raise e
     else add_lemma env gf dep
 
   let add_predicate env gf =
     if Options.timers() then
       try
-	Timers.exec_timer_start Timers.M_Match Timers.F_add_predicate;
-	let res = add_predicate env gf in
-	Timers.exec_timer_pause Timers.M_Match Timers.F_add_predicate;
-	res
+        Timers.exec_timer_start Timers.M_Match Timers.F_add_predicate;
+        let res = add_predicate env gf in
+        Timers.exec_timer_pause Timers.M_Match Timers.F_add_predicate;
+        res
       with e ->
-	Timers.exec_timer_pause Timers.M_Match Timers.F_add_predicate;
-	raise e
+        Timers.exec_timer_pause Timers.M_Match Timers.F_add_predicate;
+        raise e
     else add_predicate env gf
 
   let m_lemmas ~use_cs ~backward env tbox selector ilvl =
     if Options.timers() then
       try
-	Timers.exec_timer_start Timers.M_Match Timers.F_m_lemmas;
-	let res = m_lemmas env tbox selector ilvl backward use_cs in
-	Timers.exec_timer_pause Timers.M_Match Timers.F_m_lemmas;
-	res
+        Timers.exec_timer_start Timers.M_Match Timers.F_m_lemmas;
+        let res = m_lemmas env tbox selector ilvl backward use_cs in
+        Timers.exec_timer_pause Timers.M_Match Timers.F_m_lemmas;
+        res
       with e ->
-	Timers.exec_timer_pause Timers.M_Match Timers.F_m_lemmas;
-	raise e
+        Timers.exec_timer_pause Timers.M_Match Timers.F_m_lemmas;
+        raise e
     else m_lemmas env tbox selector ilvl backward use_cs
 
   let m_predicates ~use_cs ~backward env tbox selector ilvl =
     if Options.timers() then
       try
-	Timers.exec_timer_start Timers.M_Match Timers.F_m_predicates;
-	let res = m_predicates env tbox selector ilvl backward use_cs in
-	Timers.exec_timer_pause Timers.M_Match Timers.F_m_predicates;
-	res
+        Timers.exec_timer_start Timers.M_Match Timers.F_m_predicates;
+        let res = m_predicates env tbox selector ilvl backward use_cs in
+        Timers.exec_timer_pause Timers.M_Match Timers.F_m_predicates;
+        res
       with e ->
-	Timers.exec_timer_pause Timers.M_Match Timers.F_m_predicates;
-	raise e
+        Timers.exec_timer_pause Timers.M_Match Timers.F_m_predicates;
+        raise e
     else m_predicates env tbox selector ilvl backward use_cs
 
   let matching_terms_info env = EM.terms_info env.matching

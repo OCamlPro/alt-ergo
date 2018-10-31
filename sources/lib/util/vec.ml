@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -47,7 +47,7 @@ let grow_to t new_capa =
   if new_capa > capa then
     t.data <-
       Array.init new_capa
-      (fun i -> if i < capa then data.(i) else t.dummy)
+        (fun i -> if i < capa then data.(i) else t.dummy)
 
 let grow_to_double_size t =
   let n = max 1 (Array.length t.data) in grow_to t (2 * n)

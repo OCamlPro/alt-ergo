@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -223,23 +223,23 @@ let register_produced_terms axiom loc consumed all produced _new =
   assert (ii.loc == loc);
   let ii =
     {ii with
-      consumed = T.Set.union ii.consumed consumed;
-      all      = T.Set.union ii.all all;
-      produced = T.Set.union ii.produced produced;
-      _new     = T.Set.union ii._new _new }
+     consumed = T.Set.union ii.consumed consumed;
+     all      = T.Set.union ii.all all;
+     produced = T.Set.union ii.produced produced;
+     _new     = T.Set.union ii._new _new }
   in
   state.instances_map := MS.add axiom ii !(state.instances_map)
 
 (******************************************************************************
-printing the internal state
-******************************************************************************)
+   printing the internal state
+ ******************************************************************************)
 
 type mode =
-| Stats
-| Timers
-| CallTree
-| FunctionsTimers
-| Instances
+  | Stats
+  | Timers
+  | CallTree
+  | FunctionsTimers
+  | Instances
 
 let mode = ref Stats
 
@@ -268,29 +268,29 @@ let columns =
 
     "Steps", "Number of Steps", 14, None,
     (fun steps gtime timers sz ->
-      let avg = int_of_float (Int64.to_float steps /. gtime) in
-      sprintf "%s~%s"
-        (string_resize (sprintf "%Ld" steps) (sz-7))
-        (string_resize (sprintf "%d/s" avg) 6)
+       let avg = int_of_float (Int64.to_float steps /. gtime) in
+       sprintf "%s~%s"
+         (string_resize (sprintf "%Ld" steps) (sz-7))
+         (string_resize (sprintf "%d/s" avg) 6)
     );
 
     "Case splits", "Number of Case Splits", 14, None,
     (fun steps gtime timers sz ->
-      let avg = int_of_float (float_of_int (Options.cs_steps()) /. gtime) in
-      sprintf "%s~%s"
-        (string_resize (sprintf "%d" (Options.cs_steps())) (sz-7))
-        (string_resize (sprintf "%d/s" avg) 6)
+       let avg = int_of_float (float_of_int (Options.cs_steps()) /. gtime) in
+       sprintf "%s~%s"
+         (string_resize (sprintf "%d" (Options.cs_steps())) (sz-7))
+         (string_resize (sprintf "%d/s" avg) 6)
     );
 
     "Mod.", "Current active module", 7, None,
     (fun steps gtime timers sz ->
-      let kd, msg, _ = Timers.current_timer timers in
-      string_resize (Timers.string_of_ty_module kd) sz);
+       let kd, msg, _ = Timers.current_timer timers in
+       string_resize (Timers.string_of_ty_module kd) sz);
 
     "Module Id", "Each call to a module is tagged with a fresh Id", 10, None,
     (fun steps gtime timers sz ->
-      let kd, msg, id = Timers.current_timer timers in
-      int_resize id sz);
+       let kd, msg, id = Timers.current_timer timers in
+       int_resize id sz);
 
     (*-----------------------------------------------------------------*)
 
@@ -299,7 +299,7 @@ let columns =
 
     "#i rnds", "Number of intantiation rounds", 8, Some true,
     (fun steps gtime timers sz ->
-      int_resize !(state.instantiation_rounds) sz);
+       int_resize !(state.instantiation_rounds) sz);
 
 
     "#insts", "Number of generated instances", 8, Some true,
@@ -308,8 +308,8 @@ let columns =
     "i/r", "AVG number of generated instances per instantiation rounds",
     8, Some true,
     (fun steps gtime timers sz ->
-      int_resize
-        (!(state.instances) / (max 1 !(state.instantiation_rounds))) sz);
+       int_resize
+         (!(state.instances) / (max 1 !(state.instantiation_rounds))) sz);
 
     "dlvl", "Current Decision level", 6, Some true,
     (fun steps gtime timers sz -> int_resize !(state.decision_lvl) sz);
@@ -356,65 +356,65 @@ let columns =
     (*-----------------------------------------------------------------*)
     "SAT", "Time spent in SAT module(s)", 16, Some false,
     (fun steps gtime timers sz ->
-      let curr = Timers.get_sum timers Timers.M_Sat in
-      sprintf "%s~%s"
-        (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
+       let curr = Timers.get_sum timers Timers.M_Sat in
+       sprintf "%s~%s"
+         (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Matching", "Time spent in Matching module(s)", 16, Some false,
     (fun steps gtime timers sz ->
-      let curr = Timers.get_sum timers Timers.M_Match in
-      sprintf "%s~%s"
-        (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
+       let curr = Timers.get_sum timers Timers.M_Match in
+       sprintf "%s~%s"
+         (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "CC", "Time spent in CC module(s)", 16, Some false,
     (fun steps gtime timers sz ->
-      let curr = Timers.get_sum timers Timers.M_CC in
-      sprintf "%s~%s"
-        (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4)
+       let curr = Timers.get_sum timers Timers.M_CC in
+       sprintf "%s~%s"
+         (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4)
     );
 
     "Arith", "Time spent in Arith module(s)", 16, Some false,
     (fun steps gtime timers sz ->
-      let curr = Timers.get_sum timers Timers.M_Arith in
-      sprintf "%s~%s"
-        (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
+       let curr = Timers.get_sum timers Timers.M_Arith in
+       sprintf "%s~%s"
+         (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Arrays", "Time spent in Arrays module(s)", 16, Some false,
     (fun steps gtime timers sz ->
-      let curr = Timers.get_sum timers Timers.M_Arrays in
-      sprintf "%s~%s"
-        (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
+       let curr = Timers.get_sum timers Timers.M_Arrays in
+       sprintf "%s~%s"
+         (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Sum", "Time spent in Sum module(s)", 16, Some false,
     (fun steps gtime timers sz ->
-      let curr = Timers.get_sum timers Timers.M_Sum in
-      sprintf "%s~%s"
-        (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
+       let curr = Timers.get_sum timers Timers.M_Sum in
+       sprintf "%s~%s"
+         (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Records", "Time spent in Records module(s)", 16, Some false,
     (fun steps gtime timers sz ->
-      let curr = Timers.get_sum timers Timers.M_Records in
-      sprintf "%s~%s"
-        (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
+       let curr = Timers.get_sum timers Timers.M_Records in
+       sprintf "%s~%s"
+         (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "AC", "Time spent in AC module(s)", 16, Some false,
     (fun steps gtime timers sz ->
-      let curr = Timers.get_sum timers Timers.M_AC in
-      sprintf "%s~%s"
-        (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
+       let curr = Timers.get_sum timers Timers.M_AC in
+       sprintf "%s~%s"
+         (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Total", "Time spent in 'supervised' module(s)", 11, Some false,
     (fun steps gtime timers sz ->
-      let tsat = Timers.get_sum timers Timers.M_Sat in
-      let tmatch = Timers.get_sum timers Timers.M_Match in
-      let tcc = Timers.get_sum timers Timers.M_CC in
-      let tarith = Timers.get_sum timers Timers.M_Arith in
-      let tarrays = Timers.get_sum timers Timers.M_Arrays in
-      let tsum = Timers.get_sum timers Timers.M_Sum in
-      let trecs = Timers.get_sum timers Timers.M_Records in
-      let tac = Timers.get_sum timers Timers.M_AC in
-      let total = tsat+.tmatch+.tcc+.tarith+.tarrays+.tsum+.trecs+.tac in
-      float_resize total sz);
+       let tsat = Timers.get_sum timers Timers.M_Sat in
+       let tmatch = Timers.get_sum timers Timers.M_Match in
+       let tcc = Timers.get_sum timers Timers.M_CC in
+       let tarith = Timers.get_sum timers Timers.M_Arith in
+       let tarrays = Timers.get_sum timers Timers.M_Arrays in
+       let tsum = Timers.get_sum timers Timers.M_Sum in
+       let trecs = Timers.get_sum timers Timers.M_Records in
+       let tac = Timers.get_sum timers Timers.M_AC in
+       let total = tsat+.tmatch+.tcc+.tarith+.tarrays+.tsum+.trecs+.tac in
+       float_resize total sz);
   ]
 
 let print_initial_info () =
@@ -426,7 +426,7 @@ let print_initial_info () =
     in
     List.iter
       (fun (id, descr, sz, opt, func) ->
-        fprintf fmt "%s : %s@." (string_resize id max) descr
+         fprintf fmt "%s : %s@." (string_resize id max) descr
       )columns
   end
 
@@ -439,10 +439,10 @@ let stats_limit, timers_limit =
   let tmp_t = ref "" in
   List.iter
     (fun (_, _, sz, opt, _) ->
-      match opt with
-      | Some true  -> aux tmp_s sz
-      | Some false -> aux tmp_t sz
-      | _          -> aux tmp_s sz; aux tmp_t sz
+       match opt with
+       | Some true  -> aux tmp_s sz
+       | Some false -> aux tmp_t sz
+       | _          -> aux tmp_s sz; aux tmp_t sz
     )columns;
   !tmp_s ^ "|", !tmp_t ^ "|"
 
@@ -454,9 +454,9 @@ let print_header header fmt =
     fprintf fmt "%s@." (if pp_stats then stats_limit else timers_limit);
     List.iter
       (fun (id, descr, sz, opt, func) ->
-        match opt with
-        | Some b when b != pp_stats -> ()
-        | _ -> fprintf fmt "|%s" (string_resize id sz)
+         match opt with
+         | Some b when b != pp_stats -> ()
+         | _ -> fprintf fmt "|%s" (string_resize id sz)
       )columns;
     fprintf fmt "|@.";
     fprintf fmt "%s@." (if pp_stats then stats_limit else timers_limit)
@@ -468,9 +468,9 @@ let print_stats header steps fmt timers =
   let gtime = Options.Time.value() in
   List.iter
     (fun (id, descr, sz, opt, func) ->
-      match opt with
-      | Some false -> ()
-      | _ -> fprintf fmt "|%s" (func steps gtime timers sz)
+       match opt with
+       | Some false -> ()
+       | _ -> fprintf fmt "|%s" (func steps gtime timers sz)
     )columns;
   fprintf fmt "|@."
 
@@ -480,9 +480,9 @@ let print_timers header steps fmt timers =
   let gtime = Options.Time.value() in
   List.iter
     (fun (id, descr, sz, opt, func) ->
-      match opt with
-      | Some true -> ()
-      | _ -> fprintf fmt "|%s" (func steps gtime timers sz)
+       match opt with
+       | Some true -> ()
+       | _ -> fprintf fmt "|%s" (func steps gtime timers sz)
     )columns;
   fprintf fmt "|@."
 
@@ -513,41 +513,41 @@ let print_instances_generation forced steps timers =
     let insts =
       MS.fold
         (fun name ii acc ->
-          let f1 = float_of_int ii.kept in
-          let f2 = float_of_int ii.ignored in
-          let ratio = f1 /. (f1 +. f2) in
-          let all_card = SF.cardinal ii.all_insts in
-          (name, ii, all_card, ratio) :: acc)
+           let f1 = float_of_int ii.kept in
+           let f2 = float_of_int ii.ignored in
+           let ratio = f1 /. (f1 +. f2) in
+           let all_card = SF.cardinal ii.all_insts in
+           (name, ii, all_card, ratio) :: acc)
         !(state.instances_map) []
     in
     let insts =
       List.fast_sort (fun (_,i1,c1, r1) (_,i2,c2, r2) ->
-        (i1.decided - i2.decided) @@
+          (i1.decided - i2.decided) @@
           (c1 - c2) @@
           (i1.kept - i2.kept) @@
           (i1.confl - i2.confl) @@
           (i1.ignored - i2.ignored) @@
           (T.Set.cardinal i1._new - T.Set.cardinal i2._new)
-      ) insts
+        ) insts
     in
     List.iter
       (fun (name, i, card, r) ->
-        fprintf fmt "ratio kept/all: %s| " (float_resize r 8);
-        fprintf fmt "<> insts: %s| " (int_resize card 5);
-        fprintf fmt "kept: %s| " (int_resize i.kept 7);
-        fprintf fmt "ignored: %s| " (int_resize i.ignored 7) ;
-        fprintf fmt "decided: %s| " (int_resize i.decided 4);
-        fprintf fmt "conflicted: %s| " (int_resize i.confl 4);
-        fprintf fmt "consumed: %s| "
-          (int_resize (T.Set.cardinal i.consumed) 5);
-        fprintf fmt "produced: %s| "
-          (int_resize (T.Set.cardinal i.produced) 5);
-        fprintf fmt "new: %s|| "
-          (int_resize (T.Set.cardinal i._new) 5);
-        fprintf fmt "%s" (string_resize name 30);
-        (*fprintf fmt "%s | " (string_resize name 30);
-          fprintf fmt "%a@." report3 i.loc (* too long *) *)
-        fprintf fmt "@."
+         fprintf fmt "ratio kept/all: %s| " (float_resize r 8);
+         fprintf fmt "<> insts: %s| " (int_resize card 5);
+         fprintf fmt "kept: %s| " (int_resize i.kept 7);
+         fprintf fmt "ignored: %s| " (int_resize i.ignored 7) ;
+         fprintf fmt "decided: %s| " (int_resize i.decided 4);
+         fprintf fmt "conflicted: %s| " (int_resize i.confl 4);
+         fprintf fmt "consumed: %s| "
+           (int_resize (T.Set.cardinal i.consumed) 5);
+         fprintf fmt "produced: %s| "
+           (int_resize (T.Set.cardinal i.produced) 5);
+         fprintf fmt "new: %s|| "
+           (int_resize (T.Set.cardinal i._new) 5);
+         fprintf fmt "%s" (string_resize name 30);
+         (*fprintf fmt "%s | " (string_resize name 30);
+           fprintf fmt "%a@." report3 i.loc (* too long *) *)
+         fprintf fmt "@."
       )insts;
     (*if forced then
       let () = fprintf fmt "digraph v{@." in
@@ -599,10 +599,10 @@ let print_call_tree forced steps timers =
   let stack = Timers.get_stack timers in
   List.iter
     (fun (k, f, id) ->
-      fprintf fmt "(%s, %s, %s) --> "
-        (string_resize (Timers.string_of_ty_module k) 5)
-        (string_resize (Timers.string_of_ty_function f) 10)
-        (int_resize id 7)
+       fprintf fmt "(%s, %s, %s) --> "
+         (string_resize (Timers.string_of_ty_module k) 5)
+         (string_resize (Timers.string_of_ty_function f) 10)
+         (int_resize id 7)
     )(List.rev stack);
   let m, f, id = Timers.current_timer timers in
   fprintf fmt "(%s, %s, %s)@."
@@ -636,9 +636,9 @@ let line_of_module arr f =
   let cpt = ref 0. in
   List.iter
     (fun m ->
-      let v = arr.(Timers.mtag m).(Timers.ftag f) in
-      cpt := !cpt +. v;
-      fprintf fmt "| %a  " float_print v
+       let v = arr.(Timers.mtag m).(Timers.ftag f) in
+       cpt := !cpt +. v;
+       fprintf fmt "| %a  " float_print v
     ) Timers.all_modules;
   fprintf fmt "| %a        |@." float_print !cpt
 
@@ -649,7 +649,7 @@ let line_of_sum_module timers =
   fprintf fmt "%s " (string_resize "" 13);
   List.iter
     (fun m ->
-      fprintf fmt "| %a  " float_print (Timers.get_sum timers m))
+       fprintf fmt "| %a  " float_print (Timers.get_sum timers m))
     Timers.all_modules;
   fprintf fmt "| GTimer %a |@." float_print (Options.Time.value())
 
@@ -660,7 +660,7 @@ let timers_table forced timers =
   fprintf fmt "              ";
   List.iter
     (fun f ->
-      fprintf fmt"| %s" (string_resize (Timers.string_of_ty_module f) 9))
+       fprintf fmt"| %s" (string_resize (Timers.string_of_ty_module f) 9))
     Timers.all_modules;
   fprintf fmt "|@.";
   for _ = 0 to 206 do fprintf fmt "-" done;
@@ -688,9 +688,9 @@ let print all steps timers fmt =
     fprintf fmt "@.";
   end
   else match !mode with
-  | Stats           -> print_stats false steps fmt timers
-  | Timers          -> print_timers false steps fmt timers
-  | CallTree        -> print_call_tree false steps timers
-  | FunctionsTimers -> timers_table false timers;
-  | Instances       -> print_instances_generation false steps timers
+    | Stats           -> print_stats false steps fmt timers
+    | Timers          -> print_timers false steps fmt timers
+    | CallTree        -> print_call_tree false steps timers
+    | FunctionsTimers -> timers_table false timers;
+    | Instances       -> print_instances_generation false steps timers
 

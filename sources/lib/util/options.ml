@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -172,11 +172,11 @@ module M = struct
   let update_no_decisions_on s =
     no_decisions_on :=
       List.fold_left
-      (fun set s ->
-        match s with
-        | "" -> set
-        | s -> Util.SS.add s set
-      ) !no_decisions_on (Str.split (Str.regexp ",") s)
+        (fun set s ->
+           match s with
+           | "" -> set
+           | s -> Util.SS.add s set
+        ) !no_decisions_on (Str.split (Str.regexp ",") s)
 
   let set_sat_plugin s = sat_plugin := s
 
@@ -235,9 +235,9 @@ module M = struct
   let set_sat_solver s =
     match s with
     | "tableaux" | "Tableaux" | "tableaux-like" | "Tableaux-like" ->
-       sat_solver := Util.Tableaux
+      sat_solver := Util.Tableaux
     |  "CDCL" | "satML" ->
-       sat_solver := Util.CDCL_satML
+      sat_solver := Util.CDCL_satML
     | _ ->
       Format.eprintf "Args parsing error: unkown SAT solver %S@." s;
       exit 1
@@ -677,12 +677,12 @@ let parse_cmdline_arguments () =
   let set_file s = ofile := Some s in
   Arg.parse M.spec set_file M.usage;
   match !ofile with
-    | Some f ->
-      M.file := f;
-      let base_file = Filename.chop_extension f in
-      M.session_file := base_file^".agr";
-      M.used_context_file := base_file
-    | None -> ()
+  | Some f ->
+    M.file := f;
+    let base_file = Filename.chop_extension f in
+    M.session_file := base_file^".agr";
+    M.used_context_file := base_file
+  | None -> ()
 
 
 let set_file_for_js filename =

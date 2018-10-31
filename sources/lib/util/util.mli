@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -15,10 +15,10 @@ module MI : Map.S with type key = int
 module SS : Set.S with type elt = string
 
 (** Different values for -case-split-policy option:
- -after-theory-assume (default value): after assuming facts in theory by the SAT
- -before-matching: just before performing a matching round
- -after-matching: just after performing a matching round
- **)
+    -after-theory-assume (default value): after assuming facts in
+    theory by the SAT
+    -before-matching: just before performing a matching round
+    -after-matching: just after performing a matching round **)
 type case_split_policy =
   | AfterTheoryAssume (* default *)
   | BeforeMatching

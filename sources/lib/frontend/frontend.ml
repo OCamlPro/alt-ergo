@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -39,12 +39,12 @@ module type S = sig
   type used_context
 
   type status =
-  | Unsat of Commands.sat_tdecl * Ex.t
-  | Inconsistent of Commands.sat_tdecl
-  | Sat of Commands.sat_tdecl * sat_env
-  | Unknown of Commands.sat_tdecl * sat_env
-  | Timeout of Commands.sat_tdecl option
-  | Preprocess
+    | Unsat of Commands.sat_tdecl * Ex.t
+    | Inconsistent of Commands.sat_tdecl
+    | Sat of Commands.sat_tdecl * sat_env
+    | Unknown of Commands.sat_tdecl * sat_env
+    | Timeout of Commands.sat_tdecl option
+    | Preprocess
 
   val process_decl:
     (status -> int64 -> unit) ->
@@ -66,21 +66,21 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   type used_context = Util.SS.t option
 
   type status =
-  | Unsat of Commands.sat_tdecl * Ex.t
-  | Inconsistent of Commands.sat_tdecl
-  | Sat of Commands.sat_tdecl * sat_env
-  | Unknown of Commands.sat_tdecl * sat_env
-  | Timeout of Commands.sat_tdecl option
-  | Preprocess
+    | Unsat of Commands.sat_tdecl * Ex.t
+    | Inconsistent of Commands.sat_tdecl
+    | Sat of Commands.sat_tdecl * sat_env
+    | Unknown of Commands.sat_tdecl * sat_env
+    | Timeout of Commands.sat_tdecl option
+    | Preprocess
 
   let output_used_context g_name dep =
     if not (Options.js_mode ()) then begin
-        let f = Options.get_used_context_file () in
-        let cout = open_out (sprintf "%s.%s.used" f g_name) in
-        let cfmt = Format.formatter_of_out_channel cout in
-        Ex.print_unsat_core cfmt dep;
-        close_out cout
-      end
+      let f = Options.get_used_context_file () in
+      let cout = open_out (sprintf "%s.%s.used" f g_name) in
+      let cfmt = Format.formatter_of_out_channel cout in
+      Ex.print_unsat_core cfmt dep;
+      close_out cout
+    end
 
   let check_produced_unsat_core dep =
     if verbose () then
@@ -91,25 +91,25 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       let env =
         List.fold_left
           (fun env f ->
-            SAT.assume env
-	      {F.f=f;
-               origin_name = "";
-               gdist = -1;
-               hdist = -1;
-               trigger_depth = max_int;
-               nb_reductions = 0;
-               age=0;
-               lem=None;
-               mf=false;
-	       gf=false;
-               from_terms = [];
-               theory_elim = true;
-              } Ex.empty
+             SAT.assume env
+               {F.f=f;
+                origin_name = "";
+                gdist = -1;
+                hdist = -1;
+                trigger_depth = max_int;
+                nb_reductions = 0;
+                age=0;
+                lem=None;
+                mf=false;
+                gf=false;
+                from_terms = [];
+                theory_elim = true;
+               } Ex.empty
           ) (SAT.empty ()) pb
       in
       ignore (SAT.unsat
                 env
-    	        {F.f=F.vrai;
+                {F.f=F.vrai;
                  origin_name = "";
                  gdist = -1;
                  hdist = -1;
@@ -118,7 +118,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                  age=0;
                  lem=None;
                  mf=false;
-	         gf=false;
+                 gf=false;
                  from_terms = [];
                  theory_elim = true;
                 });
@@ -126,8 +126,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       fprintf fmt "this may be due to a bug.@.";
       exit 1
     with
-      | SAT.Unsat _  -> ()
-      | (SAT.Sat _ | SAT.I_dont_know _) as e -> raise e
+    | SAT.Unsat _  -> ()
+    | (SAT.Sat _ | SAT.I_dont_know _) as e -> raise e
 
 
   let unused_context name context =
@@ -143,14 +143,14 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     try
       match d.st_decl with
       | Assume(n, f, mf) ->
-         let is_hyp = try (Char.equal '@' n.[0]) with _ -> false in
-         if not is_hyp && unused_context n used_context then
-           acc
+        let is_hyp = try (Char.equal '@' n.[0]) with _ -> false in
+        if not is_hyp && unused_context n used_context then
+          acc
         else
           let dep = if is_hyp then Ex.empty else mk_root_dep n in
           if consistent then
-	    SAT.assume env
-	      {F.f=f;
+            SAT.assume env
+              {F.f=f;
                origin_name = n;
                gdist = -1;
                hdist = (if is_hyp then 0 else -1);
@@ -158,26 +158,26 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                nb_reductions = 0;
                age=0;
                lem=None;
-	       mf=mf;
+               mf=mf;
                gf=false;
                from_terms = [];
                theory_elim = true;
               } dep,
-	    consistent, dep
+            consistent, dep
           else env, consistent, dep
-        | PredDef (f, name) ->
-          if unused_context name used_context then acc
-          else
-            let dep = mk_root_dep name in
-	    SAT.pred_def env f name dep d.st_loc, consistent, dep
+      | PredDef (f, name) ->
+        if unused_context name used_context then acc
+        else
+          let dep = mk_root_dep name in
+          SAT.pred_def env f name dep d.st_loc, consistent, dep
 
-        | RwtDef r -> assert false
+      | RwtDef r -> assert false
 
-        | Query(n, f, sort) ->
-	  let dep =
-	    if consistent then
-	      let dep' = SAT.unsat env
-	        {F.f=f;
+      | Query(n, f, sort) ->
+        let dep =
+          if consistent then
+            let dep' = SAT.unsat env
+                {F.f=f;
                  origin_name = n;
                  hdist = -1;
                  gdist = 0;
@@ -185,46 +185,46 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                  nb_reductions = 0;
                  age=0;
                  lem=None;
-	         mf=(sort != Check);
+                 mf=(sort != Check);
                  gf=true;
                  from_terms = [];
                  theory_elim = true;
                 } in
-	      Ex.union dep' dep
-	    else dep
-          in
-          if debug_unsat_core () then check_produced_unsat_core dep;
-          if save_used_context () then output_used_context n dep;
-	  print_status (Unsat (d, dep)) (SAT.get_steps ());
-	  env, false, dep
+            Ex.union dep' dep
+          else dep
+        in
+        if debug_unsat_core () then check_produced_unsat_core dep;
+        if save_used_context () then output_used_context n dep;
+        print_status (Unsat (d, dep)) (SAT.get_steps ());
+        env, false, dep
 
       | ThAssume ({Commands.th_name} as th_elt) ->
-         if unused_context th_name used_context then
-           acc
-         else
-           if consistent then
-             let dep = mk_root_dep th_name in
-	     let env = SAT.assume_th_elt env th_elt dep in
-	     env, consistent, dep
-           else env, consistent, dep
+        if unused_context th_name used_context then
+          acc
+        else
+        if consistent then
+          let dep = mk_root_dep th_name in
+          let env = SAT.assume_th_elt env th_elt dep in
+          env, consistent, dep
+        else env, consistent, dep
 
     with
-      | SAT.Sat t ->
-        print_status (Sat (d,t)) (SAT.get_steps ());
-        if model () then SAT.print_model ~header:true std_formatter t;
-        env , consistent, dep
-      | SAT.Unsat dep' ->
-        let dep = Ex.union dep dep' in
-        if debug_unsat_core () then check_produced_unsat_core dep;
-        print_status (Inconsistent d) (SAT.get_steps ());
-        env , false, dep
-      | SAT.I_dont_know t ->
-        print_status (Unknown (d, t)) (SAT.get_steps ());
-        if model () then SAT.print_model ~header:true std_formatter t;
-        env , consistent, dep
-      | Util.Timeout as e ->
-        print_status (Timeout (Some d)) (SAT.get_steps ());
-        raise e
+    | SAT.Sat t ->
+      print_status (Sat (d,t)) (SAT.get_steps ());
+      if model () then SAT.print_model ~header:true std_formatter t;
+      env , consistent, dep
+    | SAT.Unsat dep' ->
+      let dep = Ex.union dep dep' in
+      if debug_unsat_core () then check_produced_unsat_core dep;
+      print_status (Inconsistent d) (SAT.get_steps ());
+      env , false, dep
+    | SAT.I_dont_know t ->
+      print_status (Unknown (d, t)) (SAT.get_steps ());
+      if model () then SAT.print_model ~header:true std_formatter t;
+      env , consistent, dep
+    | Util.Timeout as e ->
+      print_status (Timeout (Some d)) (SAT.get_steps ());
+      raise e
 
   let goal_name d =
     match d.st_decl with
@@ -363,9 +363,9 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       let dir = Filename.dirname (Options.get_used_context_file ()) in
       Array.fold_left
         (fun acc f ->
-          let f = sprintf "%s/%s" dir f in
-          if (Filename.check_suffix f ".used") then init_with_replay_used acc f
-          else acc
+           let f = sprintf "%s/%s" dir f in
+           if (Filename.check_suffix f ".used") then init_with_replay_used acc f
+           else acc
         ) None (Sys.readdir dir)
     else None
 

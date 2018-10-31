@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -14,7 +14,7 @@ open Parsed
 (** Declaration of types  **)
 
 val mk_abstract_type_decl : Loc.t -> string list -> string -> decl
-  [@ocaml.ppwarning "TODO: add documentation for every function in this file"]
+    [@ocaml.ppwarning "TODO: add documentation for every function in this file"]
 
 val mk_enum_type_decl : Loc.t -> string list -> string -> string list -> decl
 

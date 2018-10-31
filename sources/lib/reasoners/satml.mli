@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -64,7 +64,7 @@ module type SAT_ML = sig
   val exists_in_lazy_cnf : t -> Flat_Formula.t -> bool
   val known_lazy_formulas : t -> int Flat_Formula.Map.t
 
-(*end*)
+  (*end*)
 end
 
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t

@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -31,11 +31,11 @@ type t
 type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
 
 type semantic_trigger =
-| Interval of Term.t * Symbols.bound * Symbols.bound
-| MapsTo of Hstring.t * Term.t
-| NotTheoryConst of Term.t
-| IsTheoryConst of Term.t
-| LinearDependency of Term.t * Term.t
+  | Interval of Term.t * Symbols.bound * Symbols.bound
+  | MapsTo of Hstring.t * Term.t
+  | NotTheoryConst of Term.t
+  | IsTheoryConst of Term.t
+  | LinearDependency of Term.t * Term.t
 
 type trigger = {
   content : Term.t list;

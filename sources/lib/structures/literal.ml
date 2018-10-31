@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -30,7 +30,7 @@ open Hconsing
 open Options
 
 type builtin =
-  LE | LT (* arithmetic *)
+    LE | LT (* arithmetic *)
 
 type 'a view =
   | Eq of 'a * 'a
@@ -147,34 +147,34 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
     let lbl = Hstring.view (label a) in
     let lbl = if String.length lbl = 0 then lbl else lbl^":" in
     match view a with
-      | Eq (z1, z2) ->
-	Format.fprintf fmt "%s %a = %a" lbl X.print z1 X.print z2
+    | Eq (z1, z2) ->
+      Format.fprintf fmt "%s %a = %a" lbl X.print z1 X.print z2
 
-      | Distinct (b,(z::l)) ->
-	let b = if b then "~ " else "" in
-	Format.fprintf fmt "%s %s%a" lbl b X.print z;
-	List.iter (fun x -> Format.fprintf fmt " <> %a" X.print x) l
+    | Distinct (b,(z::l)) ->
+      let b = if b then "~ " else "" in
+      Format.fprintf fmt "%s %s%a" lbl b X.print z;
+      List.iter (fun x -> Format.fprintf fmt " <> %a" X.print x) l
 
-      | Builtin (true, LE, [v1;v2]) ->
-	Format.fprintf fmt "%s %a <= %a" lbl X.print v1 X.print v2
+    | Builtin (true, LE, [v1;v2]) ->
+      Format.fprintf fmt "%s %a <= %a" lbl X.print v1 X.print v2
 
-      | Builtin (true, LT, [v1;v2]) ->
-	Format.fprintf fmt "%s %a < %a" lbl X.print v1 X.print v2
+    | Builtin (true, LT, [v1;v2]) ->
+      Format.fprintf fmt "%s %a < %a" lbl X.print v1 X.print v2
 
-      | Builtin (false, LE, [v1;v2]) ->
-	Format.fprintf fmt "%s %a > %a" lbl X.print v1 X.print v2
+    | Builtin (false, LE, [v1;v2]) ->
+      Format.fprintf fmt "%s %a > %a" lbl X.print v1 X.print v2
 
-      | Builtin (false, LT, [v1;v2]) ->
-	Format.fprintf fmt "%s %a >= %a" lbl X.print v1 X.print v2
+    | Builtin (false, LT, [v1;v2]) ->
+      Format.fprintf fmt "%s %a >= %a" lbl X.print v1 X.print v2
 
-      | Builtin (_, (LE | LT), _) ->
-         assert false (* not reachable *)
+    | Builtin (_, (LE | LT), _) ->
+      assert false (* not reachable *)
 
-      | Pred (p,b) ->
-        Format.fprintf fmt "%s %a = %s" lbl X.print p
-          (if b then "false" else "true")
+    | Pred (p,b) ->
+      Format.fprintf fmt "%s %a = %s" lbl X.print p
+        (if b then "false" else "true")
 
-      | Distinct (_, _) -> assert false
+    | Distinct (_, _) -> assert false
 
   let equal_builtins n1 n2 =
     match n1, n2 with
@@ -186,28 +186,28 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
 
     let eq a1 a2 =
       match a1.value, a2.value with
-        | EQ(t1, t2), EQ(u1, u2) -> X.compare t1 u1 = 0 && X.compare t2 u2 = 0
-        | BT(n1, l1), BT(n2, l2) ->
-	  begin
-            try
-              equal_builtins n1 n2
-              && List.for_all2 (fun x y -> X.compare x y = 0) l1 l2
-	    with Invalid_argument _ -> false
-          end
-        | PR p1, PR p2 -> X.compare p1 p2 = 0
-        | EQ_LIST l1, EQ_LIST l2 ->
-	  begin
-            try List.for_all2 (fun x y -> X.compare x y = 0) l1 l2
-	    with Invalid_argument _ -> false
-          end
-	| _ -> false
+      | EQ(t1, t2), EQ(u1, u2) -> X.compare t1 u1 = 0 && X.compare t2 u2 = 0
+      | BT(n1, l1), BT(n2, l2) ->
+        begin
+          try
+            equal_builtins n1 n2
+            && List.for_all2 (fun x y -> X.compare x y = 0) l1 l2
+          with Invalid_argument _ -> false
+        end
+      | PR p1, PR p2 -> X.compare p1 p2 = 0
+      | EQ_LIST l1, EQ_LIST l2 ->
+        begin
+          try List.for_all2 (fun x y -> X.compare x y = 0) l1 l2
+          with Invalid_argument _ -> false
+        end
+      | _ -> false
 
     let hash a = match a.value with
       | EQ(t1, t2) -> abs (19 * (X.hash t1 + X.hash t2))
       | BT(n, l) ->
-	abs
-	  (List.fold_left
-	     (fun acc t-> acc*13 + X.hash t) (Hashtbl.hash n+7) l)
+        abs
+          (List.fold_left
+             (fun acc t-> acc*13 + X.hash t) (Hashtbl.hash n+7) l)
       | PR p -> abs (17 * X.hash p) (*XXX * 29 ?*)
       | EQ_LIST l ->
         abs (List.fold_left (fun acc t-> acc*31 + X.hash t) 1 l)
@@ -327,7 +327,7 @@ module type S_Term = sig
   val is_ground : t -> bool
   val is_in_model : t -> bool
 
-(*  module SetEq : Set.S with type elt = t * Term.t * Term.t*)
+  (*  module SetEq : Set.S with type elt = t * Term.t * Term.t*)
 end
 
 module LT : S_Term = struct
@@ -359,18 +359,18 @@ module LT : S_Term = struct
 
   let terms_nonrec a =
     match atom_view a with
-      | EQ(a,b), _ -> Term.Set.add a (Term.Set.singleton b)
-      | PR a, _    -> Term.Set.singleton a
-      | BT (_,l), _ | EQ_LIST l, _ ->
-        List.fold_left (fun z t -> Term.Set.add t z) Term.Set.empty l
+    | EQ(a,b), _ -> Term.Set.add a (Term.Set.singleton b)
+    | PR a, _    -> Term.Set.singleton a
+    | BT (_,l), _ | EQ_LIST l, _ ->
+      List.fold_left (fun z t -> Term.Set.add t z) Term.Set.empty l
 
   let ground_terms a =
     let res = terms_nonrec a in
     let tmp =
       Term.Set.fold
         (fun t acc ->
-          if Term.is_ground t then Term.Set.add t acc
-          else Term.subterms acc t
+           if Term.is_ground t then Term.Set.add t acc
+           else Term.subterms acc t
         )res Term.Set.empty
     in
     Term.Set.filter Term.is_ground tmp
@@ -385,12 +385,12 @@ module LT : S_Term = struct
 
   let is_in_model l =
     match view l with
-      | Eq (t1, t2) ->
-        Term.is_in_model t1 || Term.is_in_model t2
-      | Distinct (_, tl) | Builtin (_, _, tl) ->
-        List.exists Term.is_in_model tl
-      | Pred (t1, b) ->
-        Term.is_in_model t1
+    | Eq (t1, t2) ->
+      Term.is_in_model t1 || Term.is_in_model t2
+    | Distinct (_, tl) | Builtin (_, _, tl) ->
+      List.exists Term.is_in_model tl
+    | Pred (t1, b) ->
+      Term.is_in_model t1
 
   let apply_subst s a =
     if Options.timers() then

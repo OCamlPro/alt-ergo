@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -213,18 +213,18 @@ struct
 
   (*** implementations before hash-consing semantic values
 
-  let equal a b = CX.compare a b = 0
+       let equal a b = CX.compare a b = 0
 
-  let hash r = match r.v with
-    | Term  t -> Term.hash t
-    | Ac x -> AC.hash x
-    | X1 x -> X1.hash x
-    | X2 x -> X2.hash x
-    | X3 x -> X3.hash x
-    | X4 x -> X4.hash x
-    | X5 x -> X5.hash x
+       let hash r = match r.v with
+       | Term  t -> Term.hash t
+       | Ac x -> AC.hash x
+       | X1 x -> X1.hash x
+       | X2 x -> X2.hash x
+       | X3 x -> X3.hash x
+       | X4 x -> X4.hash x
+       | X5 x -> X5.hash x
 
-  ***)
+   ***)
 
   let equal a b = a.id = b.id
 
@@ -259,14 +259,14 @@ struct
   let subst p v r =
     if equal p v then r
     else match r.v with
-    | X1 t   -> X1.subst p v t
-    | X2 t   -> X2.subst p v t
-    | X3 t   -> X3.subst p v t
-    | X4 t   -> X4.subst p v t
-    | X5 t   -> X5.subst p v t
-    | X6 t   -> X6.subst p v t
-    | Ac t   -> if equal p r then v else AC.subst p v t
-    | Term _ -> if equal p r then v else r
+      | X1 t   -> X1.subst p v t
+      | X2 t   -> X2.subst p v t
+      | X3 t   -> X3.subst p v t
+      | X4 t   -> X4.subst p v t
+      | X5 t   -> X5.subst p v t
+      | X6 t   -> X6.subst p v t
+      | Ac t   -> if equal p r then v else AC.subst p v t
+      | Term _ -> if equal p r then v else r
 
   let make t =
     let {Term.f=sb} = Term.view t in
@@ -311,12 +311,12 @@ struct
 
   let is_solvable_theory_symbol sb =
     X1.is_mine_symb sb ||
-      not (restricted ()) &&
-      ((*X2.is_mine_symb sb || print records*)
-         X3.is_mine_symb sb ||
-         X4.is_mine_symb sb ||
-         X5.is_mine_symb sb)(* ||
-         AC.is_mine_symb sb*)
+    not (restricted ()) &&
+    ((*X2.is_mine_symb sb || print records*)
+      X3.is_mine_symb sb ||
+      X4.is_mine_symb sb ||
+      X5.is_mine_symb sb)(* ||
+                            AC.is_mine_symb sb*)
 
 
   let is_a_leaf r = match r.v with
@@ -336,14 +336,14 @@ struct
         X5.is_mine_symb ac.Sig.h,
         X6.is_mine_symb ac.Sig.h,
         AC.is_mine_symb ac.Sig.h with
-	| true  , false , false, false, false, false, false -> X1.color ac
-	| false , true  , false, false, false, false, false -> X2.color ac
-	| false , false , true , false, false, false, false -> X3.color ac
-	| false , false , false, true , false, false, false -> X4.color ac
-	| false , false , false, false, true,  false, false -> X5.color ac
-	| false , false , false, false, false, true,  false -> X6.color ac
-        (*AC.is_mine may say F if Options.no_ac is set to F dynamically *)
-	| _  -> ac_embed ac
+      | true  , false , false, false, false, false, false -> X1.color ac
+      | false , true  , false, false, false, false, false -> X2.color ac
+      | false , false , true , false, false, false, false -> X3.color ac
+      | false , false , false, true , false, false, false -> X4.color ac
+      | false , false , false, false, true,  false, false -> X5.color ac
+      | false , false , false, false, false, true,  false -> X6.color ac
+      (*AC.is_mine may say F if Options.no_ac is set to F dynamically *)
+      | _  -> ac_embed ac
 
 
   (*BISECT-IGNORE-BEGIN*)
@@ -377,8 +377,8 @@ struct
         fprintf fmt "%s subst:@." msg;
         List.iter
           (fun (p,v) ->
-            incr c;
-            fprintf fmt " %d) %a |-> %a@." !c print p print v) sbs;
+             incr c;
+             fprintf fmt " %d) %a |-> %a@." !c print p print v) sbs;
         fprintf fmt "@."
       end
 
@@ -391,8 +391,8 @@ struct
         let cpt = ref 0 in
         List.iter
           (fun (p,v) ->
-            incr cpt;
-            fprintf fmt "\t(%d) %a |-> %a@." !cpt CX.print p CX.print v
+             incr cpt;
+             fprintf fmt "\t(%d) %a |-> %a@." !cpt CX.print p CX.print v
           )acc;
         fprintf fmt "@."
       end
@@ -408,11 +408,11 @@ struct
     let assert_have_mem_types tya tyb =
       assert (
         not (Options.enable_assertions()) ||
-          if not (Ty.compare tya tyb = 0) then (
-            fprintf fmt "@.Tya = %a  and @.Tyb = %a@.@."
-              Ty.print tya Ty.print tyb;
-            false)
-          else true)
+        if not (Ty.compare tya tyb = 0) then (
+          fprintf fmt "@.Tya = %a  and @.Tyb = %a@.@."
+            Ty.print tya Ty.print tyb;
+          false)
+        else true)
 
     let solve a b =
       if debug_combine () then
@@ -442,8 +442,8 @@ struct
         let args, acc =
           List.fold_left
             (fun (args, acc) (r, i) ->
-              let r, acc = abstract_selectors r acc in
-              (r, i) :: args, acc
+               let r, acc = abstract_selectors r acc in
+               (r, i) :: args, acc
             )([],acc) args
         in
         ac_embed {ac with l = AC.compact args}, acc
@@ -466,10 +466,10 @@ struct
     let original = List.fold_right SX.add (CX.leaves b) original in
     let sbs =
       List.filter (fun (p,v) ->
-        match p.v with
-        | Ac _ -> true | Term _ -> SX.mem p original
-        | _ -> assert false
-      )sbs
+          match p.v with
+          | Ac _ -> true | Term _ -> SX.mem p original
+          | _ -> assert false
+        )sbs
     in
     Debug.print_sbt "Triangular and cleaned" sbs;
     (*
@@ -508,12 +508,13 @@ struct
           | Ty.Trecord _       -> X2.solve ra rb pb
           | Ty.Tbitv _         -> X3.solve ra rb pb
           | Ty.Tsum _          -> X5.solve ra rb pb
-            [@ocaml.ppwarning "TODO: a simple way of handling equalities \
-with void and unit is to add this case is the solver !"]
           (*| Ty.Tunit           -> pb *)
           | _                  -> solve_uninterpreted ra rb pb
         in
         solve_list pb
+          [@ocaml.ppwarning "TODO: a simple way of handling equalities \
+                             with void and unit is to add this case is \
+                             the solver!"]
 
   let solve_abstracted oa ob a b sbt =
     Debug.debug_abstraction_result oa ob a b sbt;
@@ -529,9 +530,9 @@ with void and unit is to add this case is the solver !"]
     let sbs = solve_abstracted a b a' b' acc in
     List.fast_sort
       (fun (p1, _) (p2, _) ->
-        let c = CX.str_cmp p2 p1 in
-        assert (c <> 0);
-        c
+         let c = CX.str_cmp p2 p1 in
+         assert (c <> 0);
+         c
       )sbs
 
   let assign_value r distincts eq =
@@ -544,7 +545,7 @@ with void and unit is to add this case is the solver !"]
       | _, Ty.Tsum _    -> X5.assign_value r distincts eq
       | Term t, ty      ->
         if (Term.view t).Term.depth = 1 ||
-          List.exists (fun (t,_) -> (Term.view t).Term.depth = 1) eq then None
+           List.exists (fun (t,_) -> (Term.view t).Term.depth = 1) eq then None
         else Some (Term.fresh_name ty, false) (* false <-> not a case-split *)
       | _               -> assert false
     in
@@ -570,12 +571,12 @@ with void and unit is to add this case is the solver !"]
         let acc =
           List.fold_left
             (fun acc (s, r) ->
-              if (Term.view s).Term.depth <= 1 then
-                match acc with
-                | Some(s', r') when Term.compare s' s > 0 -> acc
-                | _ -> Some (s, r)
-              else
-                acc
+               if (Term.view s).Term.depth <= 1 then
+                 match acc with
+                 | Some(s', r') when Term.compare s' s > 0 -> acc
+                 | _ -> Some (s, r)
+               else
+                 acc
             ) None l
         in
         let r =
@@ -591,8 +592,8 @@ with void and unit is to add this case is the solver !"]
                   Term.print t print rep;
                 List.iter
                   (fun (t, r) ->
-                    fprintf fmt "  > impossible case: %a -- %a@."
-                      Term.print t print r
+                     fprintf fmt "  > impossible case: %a -- %a@."
+                       Term.print t print r
                   )l;
               end;
               assert false
@@ -609,73 +610,73 @@ with void and unit is to add this case is the solver !"]
 end
 
 and TX1 : Polynome.T
- with type r = CX.r =
+  with type r = CX.r =
   Arith.Type(CX)
 
 and X1 : Sig.SHOSTAK
- with type t = TX1.t
- and type r = CX.r =
-        Arith.Shostak
-          (CX)
-          (struct
-            include TX1
-            let extract = CX.extract1
-            let embed =  CX.embed1
-           end)
+  with type t = TX1.t
+   and type r = CX.r =
+  Arith.Shostak
+    (CX)
+    (struct
+      include TX1
+      let extract = CX.extract1
+      let embed =  CX.embed1
+    end)
 
 and X2 : Sig.SHOSTAK
- with type r = CX.r
- and type t = CX.r Records.abstract =
-        Records.Shostak
-          (struct
-            include CX
-            let extract = extract2
-            let embed = embed2
-           end)
+  with type r = CX.r
+   and type t = CX.r Records.abstract =
+  Records.Shostak
+    (struct
+      include CX
+      let extract = extract2
+      let embed = embed2
+    end)
 
 and X3 : Sig.SHOSTAK
- with type r = CX.r
- and type t = CX.r Bitv.abstract =
-        Bitv.Shostak
-          (struct
-            include CX
-            let extract = extract3
-            let embed = embed3
-           end)
+  with type r = CX.r
+   and type t = CX.r Bitv.abstract =
+  Bitv.Shostak
+    (struct
+      include CX
+      let extract = extract3
+      let embed = embed3
+    end)
 
 and X4 : Sig.SHOSTAK
- with type r = CX.r
- and type t = CX.r Arrays.abstract =
-        Arrays.Shostak
-          (struct
-            include CX
-            let extract = extract4
-            let embed = embed4
-           end)
+  with type r = CX.r
+   and type t = CX.r Arrays.abstract =
+  Arrays.Shostak
+    (struct
+      include CX
+      let extract = extract4
+      let embed = embed4
+    end)
 
 and X5 : Sig.SHOSTAK
- with type r = CX.r
- and type t = CX.r Enum.abstract =
-        Enum.Shostak
-          (struct
-            include CX
-            let extract = extract5
-            let embed = embed5
-           end)
+  with type r = CX.r
+   and type t = CX.r Enum.abstract =
+  Enum.Shostak
+    (struct
+      include CX
+      let extract = extract5
+      let embed = embed5
+    end)
 
 and X6 : Sig.SHOSTAK
- with type r = CX.r
- and type t = CX.r Ite.abstract =
-        Ite.Shostak
-          (struct
-            include CX
-            let extract = extract6
-            let embed = embed6
-           end)
+  with type r = CX.r
+   and type t = CX.r Ite.abstract =
+  Ite.Shostak
+    (struct
+      include CX
+      let extract = extract6
+      let embed = embed6
+    end)
 
 (* Its signature is not Sig.SHOSTAK because it does not provide a solver *)
 and AC : Ac.S
- with type r = CX.r =
+  with type r = CX.r =
   Ac.Make(CX)
 
 
@@ -688,60 +689,60 @@ module Use = Use.Make(CX)
 
 module Rel1 : Sig.RELATION
   with type r = CX.r and type uf = Uf.t =
-         Arith.Relation (CX)(Uf)
+  Arith.Relation (CX)(Uf)
     (struct
       include TX1
       let extract = CX.extract1
       let embed =  CX.embed1
-     end)
+    end)
 
 module Rel2 : Sig.RELATION
   with type r = CX.r and type uf = Uf.t =
-         Records.Relation
-           (struct
-             include CX
-             let extract = extract2
-             let embed = embed2
-            end)(Uf)
+  Records.Relation
+    (struct
+      include CX
+      let extract = extract2
+      let embed = embed2
+    end)(Uf)
 
 
 module Rel3 : Sig.RELATION
   with type r = CX.r and type uf = Uf.t =
-         Bitv.Relation
-           (struct
-             include CX
-             let extract = extract3
-             let embed = embed3
-            end)(Uf)
+  Bitv.Relation
+    (struct
+      include CX
+      let extract = extract3
+      let embed = embed3
+    end)(Uf)
 
 
 module Rel4 : Sig.RELATION
   with type r = CX.r and type uf = Uf.t =
-         Arrays.Relation
-           (struct
-             include CX
-             let extract = extract4
-             let embed = embed4
-            end)(Uf)
+  Arrays.Relation
+    (struct
+      include CX
+      let extract = extract4
+      let embed = embed4
+    end)(Uf)
 
 
 module Rel5 : Sig.RELATION
   with type r = CX.r and type uf = Uf.t =
-         Enum.Relation
-           (struct
-             include CX
-             let extract = extract5
-             let embed = embed5
-            end)(Uf)
+  Enum.Relation
+    (struct
+      include CX
+      let extract = extract5
+      let embed = embed5
+    end)(Uf)
 
 module Rel6 : Sig.RELATION
   with type r = CX.r and type uf = Uf.t =
-         Ite.Relation
-           (struct
-             include CX
-             let extract = extract6
-             let embed = embed6
-            end)(Uf)
+  Ite.Relation
+    (struct
+      include CX
+      let extract = extract6
+      let embed = embed6
+    end)(Uf)
 
 
 module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
@@ -807,15 +808,15 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
       match Rel2.query env.r2 uf a with
       | Yes _ as ans -> ans
       | No ->
-	match Rel3.query env.r3 uf a with
+        match Rel3.query env.r3 uf a with
         | Yes _ as ans -> ans
-	| No ->
-	  match Rel4.query env.r4 uf a with
-	  | Yes _ as ans -> ans
-	  | No ->
+        | No ->
+          match Rel4.query env.r4 uf a with
+          | Yes _ as ans -> ans
+          | No ->
             match Rel5.query env.r5 uf a with
-	    | Yes _ as ans -> ans
-	    | No -> Rel6.query env.r6 uf a
+            | Yes _ as ans -> ans
+            | No -> Rel6.query env.r6 uf a
 
   let case_split env uf ~for_model =
     Options.exec_thread_yield ();
@@ -828,9 +829,9 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
     let l = seq1 |@| seq2 |@| seq3 |@| seq4 |@| seq5 |@| seq6 in
     List.sort
       (fun (_,_,sz1) (_,_,sz2) ->
-        match sz1, sz2 with
-        | CS(_,sz1), CS(_,sz2) -> Numbers.Q.compare sz1 sz2
-        | _ -> assert false
+         match sz1, sz2 with
+         | CS(_,sz1), CS(_,sz2) -> Numbers.Q.compare sz1 sz2
+         | _ -> assert false
       )l
 
 

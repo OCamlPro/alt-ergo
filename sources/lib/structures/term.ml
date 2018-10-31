@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -59,17 +59,17 @@ module H = struct
   type elt = view
   type t = elt
   let eq t1 t2 = try
-                      Sy.equal t1.f t2.f
-                      && List.for_all2 (==) t1.xs t2.xs
-                      && Ty.equal t1.ty t2.ty
+      Sy.equal t1.f t2.f
+      && List.for_all2 (==) t1.xs t2.xs
+      && Ty.equal t1.ty t2.ty
     with Invalid_argument _ -> false
 
   let equal = eq
 
   let hash t =
     abs (List.fold_left
-	   (fun acc x-> acc*19 +x.tag) (Sy.hash t.f + Ty.hash t.ty)
-	   t.xs)
+           (fun acc x-> acc*19 +x.tag) (Sy.hash t.f + Ty.hash t.ty)
+           t.xs)
 
   let set_id tag x = {x with tag = tag}
 
@@ -85,51 +85,52 @@ let view t = t
 let rec print_silent fmt t =
   let {f=x;xs=l;ty=ty} = view t in
   match x, l with
-    | Sy.Op Sy.Get, [e1; e2] ->
-      fprintf fmt "%a[%a]" print e1 print e2
+  | Sy.Op Sy.Get, [e1; e2] ->
+    fprintf fmt "%a[%a]" print e1 print e2
 
-    | Sy.Op Sy.Set, [e1; e2; e3] ->
-      fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3
+  | Sy.Op Sy.Set, [e1; e2; e3] ->
+    fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3
 
-    | Sy.Op Sy.Concat, [e1; e2] ->
-      fprintf fmt "%a@@%a" print e1 print e2
+  | Sy.Op Sy.Concat, [e1; e2] ->
+    fprintf fmt "%a@@%a" print e1 print e2
 
-    | Sy.Op Sy.Extract, [e1; e2; e3] ->
-      fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
+  | Sy.Op Sy.Extract, [e1; e2; e3] ->
+    fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
 
-    | Sy.Op (Sy.Access field), [e] ->
-      fprintf fmt "%a.%s" print e (Hstring.view field)
+  | Sy.Op (Sy.Access field), [e] ->
+    fprintf fmt "%a.%s" print e (Hstring.view field)
 
-    | Sy.Op (Sy.Record), _ ->
-      begin match ty with
-	| Ty.Trecord {Ty.lbs=lbs} ->
-	  assert (List.length l = List.length lbs);
-	  fprintf fmt "{";
-	  ignore (List.fold_left2 (fun first (field,_) e ->
-	    fprintf fmt "%s%s = %a"  (if first then "" else "; ")
-	      (Hstring.view field) print e;
-	    false
-	  ) true lbs l);
-	  fprintf fmt "}";
-	| _ -> assert false
-      end
+  | Sy.Op (Sy.Record), _ ->
+    begin match ty with
+      | Ty.Trecord {Ty.lbs=lbs} ->
+        assert (List.length l = List.length lbs);
+        fprintf fmt "{";
+        ignore (List.fold_left2 (fun first (field,_) e ->
+            fprintf fmt "%s%s = %a"  (if first then "" else "; ")
+              (Hstring.view field) print e;
+            false
+          ) true lbs l);
+        fprintf fmt "}";
+      | _ -> assert false
+    end
 
-    (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op op, [e1; e2] when op == Sy.Pow_real_int || op == Sy.Max_real ||
-        op == Sy.Max_int || op == Sy.Min_real || op == Sy.Min_int ||
-        op == Sy.Pow_real_real || op == Sy.Integer_round ->
-      fprintf fmt "%a(%a,%a)" Sy.print x print e1 print e2
+  (* TODO: introduce PrefixOp in the future to simplify this ? *)
+  | Sy.Op op, [e1; e2] when op == Sy.Pow_real_int || op == Sy.Max_real ||
+                            op == Sy.Max_int || op == Sy.Min_real ||
+                            op == Sy.Min_int ||
+                            op == Sy.Pow_real_real || op == Sy.Integer_round ->
+    fprintf fmt "%a(%a,%a)" Sy.print x print e1 print e2
 
-    | Sy.Op op, [e1; e2] ->
-      fprintf fmt "(%a %a %a)" print e1 Sy.print x print e2
+  | Sy.Op op, [e1; e2] ->
+    fprintf fmt "(%a %a %a)" print e1 Sy.print x print e2
 
-    | Sy.In(lb, rb), [t] ->
-      fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
-    | _, [] ->
-      fprintf fmt "%a" Sy.print x
+  | Sy.In(lb, rb), [t] ->
+    fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
+  | _, [] ->
+    fprintf fmt "%a" Sy.print x
 
-    | _, _ ->
-      fprintf fmt "%a(%a)" Sy.print x print_list l
+  | _, _ ->
+    fprintf fmt "%a(%a)" Sy.print x print_list l
 
 and print_verbose fmt t =
   fprintf fmt "(%a : %a)" print_silent t Ty.print (view t).ty
@@ -167,11 +168,11 @@ let sort = List.sort compare
 
 let merge_maps acc b =
   Sy.Map.merge (fun sy a b ->
-    match a, b with
-    | None, None -> assert false
-    | Some _, None -> a
-    | _ -> b
-  ) acc b
+      match a, b with
+      | None, None -> assert false
+      | Some _, None -> a
+      | _ -> b
+    ) acc b
 
 let vars_of_make s l ty =
   lazy (
@@ -203,8 +204,8 @@ let fresh_name ty = make (Sy.name (Hstring.fresh_string())) [] ty
 
 let is_fresh t =
   match view t with
-    | {f=Sy.Name(hs,_);xs=[]} -> Hstring.is_fresh_string (Hstring.view hs)
-    | _ -> false
+  | {f=Sy.Name(hs,_);xs=[]} -> Hstring.is_fresh_string (Hstring.view hs)
+  | _ -> false
 
 let is_fresh_skolem t =
   match view t with
@@ -225,11 +226,11 @@ let int i =
   let len = String.length i in
   assert (len >= 1);
   match i.[0] with
-    | '-' ->
-      assert (len >= 2);
-      let pi = String.sub i 1 (len - 1) in
-      make (Sy.Op Sy.Minus) [ positive_int "0"; positive_int pi ] Ty.Tint
-    | _ -> positive_int i
+  | '-' ->
+    assert (len >= 2);
+    let pi = String.sub i 1 (len - 1) in
+    make (Sy.Op Sy.Minus) [ positive_int "0"; positive_int pi ] Ty.Tint
+  | _ -> positive_int i
 
 let positive_real i = make (Sy.real i) [] Ty.Treal
 
@@ -237,11 +238,11 @@ let real r =
   let len = String.length r in
   assert (len >= 1);
   match r.[0] with
-    | '-' ->
-      assert (len >= 2);
-      let pi = String.sub r 1 (len - 1) in
-      make (Sy.Op Sy.Minus) [ positive_real "0"; positive_real pi ] Ty.Treal
-    | _ -> positive_real r
+  | '-' ->
+    assert (len >= 2);
+    let pi = String.sub r 1 (len - 1) in
+    make (Sy.Op Sy.Minus) [ positive_real "0"; positive_real pi ] Ty.Treal
+  | _ -> positive_real r
 
 let bitv bt ty = make (Sy.Bitv bt) [] ty
 
@@ -279,7 +280,7 @@ let find_skolem =
     if is_skolem_cst v then
       try Hsko.find hsko v
       with Not_found ->
-	let c = gen_sko ty in Hsko.add hsko v c; c
+        let c = gen_sko ty in Hsko.add hsko v c; c
     else v
 
 let is_ground t =
@@ -345,12 +346,12 @@ let rec is_in_model_rec depth { f = f; xs = xs } =
   let lb = Symbols.label f in
   (label_model lb
    &&
-     (try
-	let md = Scanf.sscanf (Hstring.view lb) "model:%d" (fun x -> x) in
-	depth <= md
-      with Scanf.Scan_failure _ | End_of_file-> true))
+   (try
+      let md = Scanf.sscanf (Hstring.view lb) "model:%d" (fun x -> x) in
+      depth <= md
+    with Scanf.Scan_failure _ | End_of_file-> true))
   ||
-    List.exists (is_in_model_rec (depth +1)) xs
+  List.exists (is_in_model_rec (depth +1)) xs
 
 let is_in_model t =
   label_model (label t) || is_in_model_rec 0 t
@@ -360,9 +361,9 @@ let is_labeled t = not (Hstring.equal (label t) Hstring.empty)
 
 let print_tagged_classes fmt =
   List.iter (fun cl ->
-    let cl = List.filter is_labeled (Set.elements cl) in
-    if cl != [] then
-      fprintf fmt "\n{ %a }" (print_list_sep " , ") cl)
+      let cl = List.filter is_labeled (Set.elements cl) in
+      if cl != [] then
+        fprintf fmt "\n{ %a }" (print_list_sep " , ") cl)
 
 let type_info t = t.ty
 let top () = vrai

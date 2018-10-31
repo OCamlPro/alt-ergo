@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -21,9 +21,9 @@ module Z = Numbers.Z
 
 let is_rounding_mode t =
   Options.use_fpa() &&
-    match (T.view t).T.ty with
-    | Ty.Tsum (hs, _) -> String.compare (Hs.view hs) "fpa_rounding_mode" = 0
-    | _ -> false
+  match (T.view t).T.ty with
+  | Ty.Tsum (hs, _) -> String.compare (Hs.view hs) "fpa_rounding_mode" = 0
+  | _ -> false
 
 let fpa_rounding_mode =
   let mode_ty = Hs.make "fpa_rounding_mode" in
@@ -113,31 +113,31 @@ let two_z = Z.from_int 2
 let half = Q.div Q.one two
 
 type rounding_mode =
-(* five standard/why3 fpa rounding modes *)
-| NearestTiesToEven
-(*ne in Gappa: to nearest, tie breaking to even mantissas*)
-| ToZero (* zr in Gappa: toward zero *)
-| Up (* up in Gappa: toward plus infinity *)
-| Down (* dn in Gappa: toward minus infinity *)
-| NearestTiesToAway (* na : to nearest, tie breaking away from zero *)
+  (* five standard/why3 fpa rounding modes *)
+  | NearestTiesToEven
+  (*ne in Gappa: to nearest, tie breaking to even mantissas*)
+  | ToZero (* zr in Gappa: toward zero *)
+  | Up (* up in Gappa: toward plus infinity *)
+  | Down (* dn in Gappa: toward minus infinity *)
+  | NearestTiesToAway (* na : to nearest, tie breaking away from zero *)
 
   (* additional Gappa rounding modes *)
-| Aw (* aw in Gappa: away from zero **)
-| Od (* od in Gappa: to odd mantissas *)
-| No (* no in Gappa: to nearest, tie breaking to odd mantissas *)
-| Nz (* nz in Gappa: to nearest, tie breaking toward zero *)
-| Nd (* nd in Gappa: to nearest, tie breaking toward minus infinity *)
-| Nu (* nu in Gappa: to nearest, tie breaking toward plus infinity *)
+  | Aw (* aw in Gappa: away from zero **)
+  | Od (* od in Gappa: to odd mantissas *)
+  | No (* no in Gappa: to nearest, tie breaking to odd mantissas *)
+  | Nz (* nz in Gappa: to nearest, tie breaking toward zero *)
+  | Nd (* nd in Gappa: to nearest, tie breaking toward minus infinity *)
+  | Nu (* nu in Gappa: to nearest, tie breaking toward plus infinity *)
 
 (* Integer part of binary logarithm for NON-ZERO POSITIVE number *)
 let integer_log_2 =
   let rec aux m e =
     if Q.compare m two >= 0 then aux (div_x_by_2_pow_n m 1) (e+1)
     else
-      if Q.compare m Q.one >= 0 then e
-      else
-        let () = assert (Q.compare_to_0 m > 0) in
-        aux (mult_x_by_2_pow_n m 1) (e - 1)
+    if Q.compare m Q.one >= 0 then e
+    else
+      let () = assert (Q.compare_to_0 m > 0) in
+      aux (mult_x_by_2_pow_n m 1) (e - 1)
   in
   fun m ->
     if Q.compare_to_0 m <= 0 then
@@ -216,7 +216,7 @@ let mode_of_term t =
 
 let int_of_term t =
   match Term.view t with
-  {Term.f = Symbols.Int n} ->
+    {Term.f = Symbols.Int n} ->
     let n = Hstring.view n in
     let n =
       try int_of_string n

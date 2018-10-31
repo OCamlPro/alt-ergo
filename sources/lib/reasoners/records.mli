@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -35,8 +35,8 @@ module type ALIEN = sig
 end
 
 module Shostak
-  (X : ALIEN) : Sig.SHOSTAK with type r = X.r and type t = X.r abstract
+    (X : ALIEN) : Sig.SHOSTAK with type r = X.r and type t = X.r abstract
 
 module Relation
-  (X : ALIEN) (Uf : Uf.S) : Sig.RELATION
+    (X : ALIEN) (Uf : Uf.S) : Sig.RELATION
   with type r = X.r and type uf = Uf.t

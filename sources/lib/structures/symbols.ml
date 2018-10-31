@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -85,7 +85,7 @@ let is_ac = function
   | _           -> false
 
 let underscoring = function
-Var s -> Var (Hstring.make ("$"^Hstring.view s))
+    Var s -> Var (Hstring.make ("$"^Hstring.view s))
   | _ -> assert false
 
 let compare_kind k1 k2 = match k1, k2 with
@@ -224,10 +224,10 @@ module Set =
 
 
 module Labels = Hashtbl.Make(struct
-  type t = s
-  let equal = equal
-  let hash = hash
-end)
+    type t = s
+    let equal = equal
+    let hash = hash
+  end)
 
 let labels = Labels.create 100007
 

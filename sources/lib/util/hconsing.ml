@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -51,11 +51,11 @@ struct
   type t = Hashed.elt
 
   module HWeak = Weak.Make
-    (struct
-      type t = Hashed.elt
-      let equal = Hashed.eq
-      let hash = Hashed.hash
-     end)
+      (struct
+        type t = Hashed.elt
+        let equal = Hashed.eq
+        let hash = Hashed.hash
+      end)
 
   let storage = HWeak.create Hashed.initial_size
   let retain_list = ref []

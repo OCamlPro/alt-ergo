@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -35,16 +35,16 @@ type 'a literal = LTerm of Literal.LT.t | LSem of 'a Literal.view
 type instances = (Formula.t list * Formula.gformula * Explanation.t) list
 
 type theory =
-| Th_arith
-| Th_sum
-| Th_arrays
-| Th_UF
+  | Th_arith
+  | Th_sum
+  | Th_arrays
+  | Th_UF
 
 type lit_origin =
-| Subst
-| CS of theory * Numbers.Q.t
-| NCS of theory * Numbers.Q.t
-| Other
+  | Subst
+  | CS of theory * Numbers.Q.t
+  | NCS of theory * Numbers.Q.t
+  | Other
 
 type 'a input =
   'a Literal.view * Literal.LT.t option * Explanation.t * lit_origin
