@@ -45,8 +45,8 @@ module type SAT_ML = sig
     unit
 
   val boolean_model : t -> Satml_types.Atom.atom list
-  val theory_assumed : t -> Literal.LT.Set.t
-  val assumed : t -> Satml_types.Atom.Set.t
+  val instantiation_context :
+    t -> Satml_types.Flat_Formula.hcons_env -> Satml_types.Atom.Set.t
   val current_tbox : t -> th
   val set_current_tbox : t -> th -> unit
   val empty : unit -> t

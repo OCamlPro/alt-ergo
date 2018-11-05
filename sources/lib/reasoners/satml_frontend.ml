@@ -277,8 +277,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     )Ex.empty lc*)
 
   let selector env f orig =
-    (Options.cdcl_tableaux_inst () || Options.cdcl_tableaux_th () ||
-     not (MF.mem f env.gamma))
+    (Options.cdcl_tableaux () || not (MF.mem f env.gamma))
     && begin match F.view orig with
       | F.Lemma _ -> env.add_inst orig
       | _ -> true
@@ -470,8 +469,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            fprintf fmt "expand skolem of %a@.@." Literal.LT.print a;
          try
            let {F.f} as gf = A.Map.find a env.skolems in
-           if not (Options.cdcl_tableaux_inst () ||
-                   Options.cdcl_tableaux_th ()) &&
+           if not (Options.cdcl_tableaux ()) &&
               MF.mem f env.gamma then acc
            else gf :: acc
          with Not_found -> acc
@@ -593,15 +591,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           add_reasons_graph _todo (SA.add a _done)
     in
     fun ~frugal env ->
-      let sa =
-        if Options.cdcl_tableaux_th () then
-          Literal.LT.Set.fold
-            (fun a accu ->
-               SA.add (FF.get_atom env.ff_hcons_env a) accu
-            )(SAT.theory_assumed env.satml) SA.empty
-        else
-          SAT.assumed env.satml
-      in
+      let sa = SAT.instantiation_context env.satml env.ff_hcons_env in
       let sa =
         if frugal then sa
         else add_reasons_graph (SA.elements sa) SA.empty

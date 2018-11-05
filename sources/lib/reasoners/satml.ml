@@ -53,8 +53,9 @@ module type SAT_ML = sig
     unit
 
   val boolean_model : t -> Atom.atom list
-  val theory_assumed : t -> Literal.LT.Set.t
-  val assumed : t -> Satml_types.Atom.Set.t
+  val instantiation_context :
+    t -> FF.hcons_env -> Satml_types.Atom.Set.t
+
   val current_tbox : t -> th
   val set_current_tbox : t -> th -> unit
   val empty : unit -> t
@@ -407,7 +408,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     if Options.profiling() then
       Profiling.decision (decision_level env) "<none>";
     Vec.push env.tenv_queue env.tenv; (* save the current tenv *)
-    if Options.cdcl_tableaux_inst () || Options.cdcl_tableaux_th () then begin
+    if Options.cdcl_tableaux () then begin
       Vec.push env.lazy_cnf_queue env.lazy_cnf;
       Vec.push env.relevants_queue env.relevants
     end
@@ -486,14 +487,14 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Queue.clear env.tatoms_queue;
       Queue.clear env.th_tableaux;
       env.tenv <- Vec.get env.tenv_queue lvl; (* recover the right tenv *)
-      if Options.cdcl_tableaux_inst () || Options.cdcl_tableaux_th () then begin
+      if Options.cdcl_tableaux () then begin
         env.lazy_cnf <- Vec.get env.lazy_cnf_queue lvl;
         env.relevants <- Vec.get env.relevants_queue lvl;
       end;
       Vec.shrink env.trail ((Vec.size env.trail) - env.qhead) true;
       Vec.shrink env.trail_lim ((Vec.size env.trail_lim) - lvl) true;
       Vec.shrink env.tenv_queue ((Vec.size env.tenv_queue) - lvl) true;
-      if Options.cdcl_tableaux_inst () || Options.cdcl_tableaux_th () then begin
+      if Options.cdcl_tableaux () then begin
         Vec.shrink
           env.lazy_cnf_queue ((Vec.size env.lazy_cnf_queue) - lvl) true;
         Vec.shrink env.relevants_queue
@@ -788,7 +789,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let theory_propagate env =
     let facts = ref [] in
     let dlvl = decision_level env in
-    if Options.cdcl_tableaux_th () || Options.cdcl_tableaux_inst () then
+    if Options.cdcl_tableaux () then
       compute_facts_for_theory_propagate env;
     let tatoms_queue =
       if Options.cdcl_tableaux_th () then begin
@@ -1554,8 +1555,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
 
   let update_lazy_cnf env ~do_bcp mff ~dec_lvl =
-    if (Options.cdcl_tableaux_inst () || Options.cdcl_tableaux_th ()) &&
-       dec_lvl <= decision_level env then begin
+    if Options.cdcl_tableaux () && dec_lvl <= decision_level env then begin
       let s =
         try Util.MI.find dec_lvl env.lvl_ff
         with Not_found -> SFF.empty
@@ -1634,7 +1634,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         end
     in
     fun env mff ->
-      if Options.cdcl_tableaux_inst () || Options.cdcl_tableaux_th () then
+      if Options.cdcl_tableaux () then
         better_bj env mff
 
 
@@ -1666,7 +1666,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       try_to_backjump_further env mff
 
   let exists_in_lazy_cnf env f' =
-    not (Options.cdcl_tableaux_inst () || Options.cdcl_tableaux_th ()) ||
+    not (Options.cdcl_tableaux ()) ||
     MFF.mem f' env.ff_lvl
 
   let boolean_model env =
@@ -1676,14 +1676,25 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     done;
     !l
 
-  let theory_assumed env = Th.get_assumed env.tenv
-
-  let assumed env =
-    SFF.fold (fun f acc ->
-        match FF.view f with
-        | FF.UNIT a -> SA.add a acc
-        | _ -> acc
-      )env.relevants SA.empty
+  let instantiation_context env hcons =
+    if Options.cdcl_tableaux_th () then
+      (* use atoms from theory environment if tableaux method
+         is used for theories *)
+      Literal.LT.Set.fold
+        (fun a accu ->
+           SA.add (FF.get_atom hcons a) accu
+        )(Th.get_assumed env.tenv) SA.empty
+    else if Options.cdcl_tableaux_inst () then
+      (* use relevants atoms from environment if tableaux method
+         is used for instantiation *)
+      SFF.fold (fun f acc ->
+          match FF.view f with
+          | FF.UNIT a -> SA.add a acc
+          | _ -> acc
+        )env.relevants SA.empty
+    else
+      (* can't be call if tableaux method is not used *)
+      assert false
 
   let current_tbox env = env.tenv
   let set_current_tbox env tb = env.tenv <- tb

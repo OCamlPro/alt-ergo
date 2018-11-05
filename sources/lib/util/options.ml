@@ -240,14 +240,14 @@ module M = struct
       sat_solver := Util.CDCL;
       cdcl_tableaux_inst := false;
       cdcl_tableaux_th := false
-    | "CDCL_Tableaux" | "satML_Tableaux" | "CDCL_tableaux" | "satML_tableaux" ->
+    | "CDCL-Tableaux" | "satML-Tableaux" | "CDCL-tableaux" | "satML-tableaux" ->
       sat_solver := Util.CDCL_Tableaux;
       cdcl_tableaux_inst := true;
       cdcl_tableaux_th := true
     | "tableaux" | "Tableaux" | "tableaux-like" | "Tableaux-like" ->
       sat_solver := Util.Tableaux;
       tableaux_cdcl := false
-    | "tableaux_cdcl" | "Tableaux_CDCL" | "tableaux_CDCL" | "Tableaux_cdcl" ->
+    | "tableaux-cdcl" | "Tableaux-CDCL" | "tableaux-CDCL" | "Tableaux-cdcl" ->
       sat_solver := Util.Tableaux_CDCL;
       tableaux_cdcl := true;
     | _ ->
@@ -859,6 +859,7 @@ let disable_weaks () = !M.disable_weaks
 let minimal_bj () = !M.minimal_bj
 let cdcl_tableaux_inst () = !M.cdcl_tableaux_inst
 let cdcl_tableaux_th () = !M.cdcl_tableaux_th
+let cdcl_tableaux () = !M.cdcl_tableaux_th || !M.cdcl_tableaux_inst
 let tableaux_cdcl () = !M.tableaux_cdcl
 let disable_flat_formulas_simplification () =
   !M.disable_flat_formulas_simplification

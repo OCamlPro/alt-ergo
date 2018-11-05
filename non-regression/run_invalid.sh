@@ -13,7 +13,7 @@ do
     for f in $files
     do
         cpt=`expr $cpt + 1`
-        res=`$alt_ergo_bin -timelimit $timelimit $options -sat-solver CDCL_Tableaux $f`
+        res=`$alt_ergo_bin -timelimit $timelimit $options -sat-solver CDCL-Tableaux $f`
         if [ "`echo $res | grep -c ":I don't know"`" -eq "0" ]
         then
             echo "[run_invalid > default cdcl solver with tableaux] issue with file $f"
@@ -44,7 +44,7 @@ cpt=0
 for f in $files
 do
     cpt=`expr $cpt + 1`
-    res=`$alt_ergo_bin -timelimit $timelimit -sat-solver Tableaux_CDCL $f`
+    res=`$alt_ergo_bin -timelimit $timelimit -sat-solver Tableaux-CDCL $f`
     if [ "`echo $res | grep -c ":I don't know"`" -eq "0" ]
     then
         echo "[run_invalid > tableaux solver with cdcl] issue with file $f"

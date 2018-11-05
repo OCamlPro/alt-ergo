@@ -201,6 +201,7 @@ val normalize_instances : unit -> bool
 val sat_solver : unit -> Util.sat_solver
 val cdcl_tableaux_inst : unit -> bool
 val cdcl_tableaux_th : unit -> bool
+val cdcl_tableaux : unit -> bool
 val tableaux_cdcl : unit -> bool
 val minimal_bj : unit -> bool
 val enable_restarts : unit -> bool
