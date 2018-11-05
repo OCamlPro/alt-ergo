@@ -113,11 +113,12 @@ and 'a tt_desc =
   | TTnamed of Hstring.t * 'a atterm
   (** TODO: what is this ? *)
   | TTite of 'a atform * 'a atterm * 'a atterm
-  (** Conditional branching, of the form [TTite (condition, then_branch, else_branch)].
+  (** Conditional branching, of the form
+      [TTite (condition, then_branch, else_branch)].
       TODO: check order of branches. *)
 (** Typed terms descriptors.
-    TODO: replace tuples by records (possible inline recors to avoid poluuting the
-          namespace ?) with explicit field names.  *)
+    TODO: replace tuples by records (possible inline recors to
+          avoid polluting the namespace ?) with explicit field names. *)
 
 and 'a atatom = ('a tatom, 'a) annoted
 (** Type alias for annoted typed atoms. *)
@@ -189,7 +190,8 @@ and 'a tform =
 and 'a tlet_kind =
   | TletTerm of 'a atterm   (** Term let-binding *)
   | TletForm of 'a atform   (** Formula let-binding *)
-(** The different kinds of let-bindings, wheterh they bindg terms or formulas. *)
+(** The different kinds of let-bindings,
+    whether they bind terms or formulas. *)
 
 
 (** {5 Printing} *)
@@ -214,8 +216,8 @@ val print_triggers : Format.formatter -> ('a atterm list * bool) list -> unit
 
 type 'a rwt_rule = {
   rwt_vars : (Symbols.t * Ty.t) list; (** Variables of the rewrite rule *)
-  rwt_left : 'a;                      (** Left side of the rewrite rule (aka pattern). *)
-  rwt_right : 'a;                     (** Right side of the rewrite rule. *)
+  rwt_left : 'a;          (** Left side of the rewrite rule (aka pattern). *)
+  rwt_right : 'a;         (** Right side of the rewrite rule. *)
 }
 (** Rewrite rules.
     Polymorphic to allow for different representation of terms. *)
