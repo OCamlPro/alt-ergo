@@ -277,7 +277,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     )Ex.empty lc*)
 
   let selector env f orig =
-    (tableaux_cdcl () || not (MF.mem f env.gamma))
+    (Options.cdcl_tableaux_inst () || Options.cdcl_tableaux_th () ||
+     not (MF.mem f env.gamma))
     && begin match F.view orig with
       | F.Lemma _ -> env.add_inst orig
       | _ -> true
@@ -469,7 +470,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            fprintf fmt "expand skolem of %a@.@." Literal.LT.print a;
          try
            let {F.f} as gf = A.Map.find a env.skolems in
-           if not (tableaux_cdcl ()) && MF.mem f env.gamma then acc
+           if not (Options.cdcl_tableaux_inst () ||
+                   Options.cdcl_tableaux_th ()) &&
+              MF.mem f env.gamma then acc
            else gf :: acc
          with Not_found -> acc
       ) acc sa
@@ -591,10 +594,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     fun ~frugal env ->
       let sa =
-        Literal.LT.Set.fold
-          (fun a accu ->
-             SA.add (FF.get_atom env.ff_hcons_env a) accu
-          )(SAT.theory_assumed env.satml) SA.empty
+        if Options.cdcl_tableaux_th () then
+          Literal.LT.Set.fold
+            (fun a accu ->
+               SA.add (FF.get_atom env.ff_hcons_env a) accu
+            )(SAT.theory_assumed env.satml) SA.empty
+        else
+          SAT.assumed env.satml
       in
       let sa =
         if frugal then sa
@@ -632,7 +638,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       env.gamma A.Set.empty
 
   let atoms_from_sat_branches env ~greedy_round ~frugal =
-    let sa = match greedy_round || greedy (), tableaux_cdcl () with
+    let sa = match greedy_round || greedy (), cdcl_tableaux_inst () with
       | false, false -> atoms_from_sat_branches env
       | false, true  -> atoms_from_lazy_sat ~frugal env
       | true , false -> atoms_from_bmodel env

@@ -100,8 +100,9 @@ module M = struct
   let normalize_instances = ref false
 
   let sat_solver = ref Util.CDCL_Tableaux
-  let tableaux_cdcl = ref true
-  let hybrid_sat = ref false
+  let cdcl_tableaux_inst = ref true
+  let cdcl_tableaux_th = ref true
+  let tableaux_cdcl = ref false
   let minimal_bj = ref true
   let enable_restarts = ref false
   let disable_flat_formulas_simplification = ref false
@@ -236,16 +237,19 @@ module M = struct
   let set_sat_solver s =
     match s with
     | "CDCL" | "satML" ->
-      sat_solver := Util.CDCL
+      sat_solver := Util.CDCL;
+      cdcl_tableaux_inst := false;
+      cdcl_tableaux_th := false
     | "CDCL_Tableaux" | "satML_Tableaux" | "CDCL_tableaux" | "satML_tableaux" ->
-      sat_solver := Util.CDCL_Tableaux
+      sat_solver := Util.CDCL_Tableaux;
+      cdcl_tableaux_inst := true;
+      cdcl_tableaux_th := true
     | "tableaux" | "Tableaux" | "tableaux-like" | "Tableaux-like" ->
-      sat_solver := Util.Tableaux
+      sat_solver := Util.Tableaux;
+      tableaux_cdcl := false
     | "tableaux_cdcl" | "Tableaux_CDCL" | "tableaux_CDCL" | "Tableaux_cdcl" ->
-      (* disable tableaux in cdcl solver *)
-      tableaux_cdcl := false;
-      hybrid_sat := true;
-      sat_solver := Util.Tableaux_CDCL
+      sat_solver := Util.Tableaux_CDCL;
+      tableaux_cdcl := true;
     | _ ->
       Format.eprintf "Args parsing error: unkown SAT solver %S@." s;
       exit 1
@@ -573,10 +577,15 @@ module M = struct
     Arg.Clear minimal_bj,
     " disable minimal backjumping in satML CDCL solver";
 
-    "-no-tableaux-cdcl",
-    Arg.Clear tableaux_cdcl,
+    "-no-tableaux-cdcl-in-instantiation",
+    Arg.Clear cdcl_tableaux_inst,
     " when satML is used, this disables the use of a tableaux-like method \
-     together with the CDCL solver";
+     for instantiations with the CDCL solver";
+
+    "-no-tableaux-cdcl-in-theories",
+    Arg.Clear cdcl_tableaux_th,
+    " when satML is used, this disables the use of a tableaux-like method \
+     for the theories with the CDCL solver";
 
     "-disable-flat-formulas-simplification",
     Arg.Set disable_flat_formulas_simplification,
@@ -848,8 +857,9 @@ let case_split_policy () = !M.case_split_policy
 let instantiate_after_backjump () = !M.instantiate_after_backjump
 let disable_weaks () = !M.disable_weaks
 let minimal_bj () = !M.minimal_bj
+let cdcl_tableaux_inst () = !M.cdcl_tableaux_inst
+let cdcl_tableaux_th () = !M.cdcl_tableaux_th
 let tableaux_cdcl () = !M.tableaux_cdcl
-let hybrid_sat () = !M.hybrid_sat
 let disable_flat_formulas_simplification () =
   !M.disable_flat_formulas_simplification
 
