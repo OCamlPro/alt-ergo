@@ -118,8 +118,8 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   module Conseq =
     Set.Make
       (struct
-        type t = A.LT.t * Ex.t
-        let compare (lt1,_) (lt2,_) = A.LT.compare lt1 lt2
+        type t = Tliteral.LT.t * Ex.t
+        let compare (lt1,_) (lt2,_) = Tliteral.LT.compare lt1 lt2
       end)
   (* map k |-> {sem Atom} d'egalites/disegalites sur des atomes semantiques*)
   module LRmap = struct
@@ -202,7 +202,7 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
           fprintf fmt "[Arrays] %d implied equalities@."
             (Conseq.cardinal st);
           Conseq.iter (fun (a,ex) -> fprintf fmt "  %a : %a@."
-                          A.LT.print a Ex.print ex) st
+                          Tliteral.LT.print a Ex.print ex) st
         end
 
     let case_split a =
@@ -289,9 +289,9 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
              let xj, _ = X.make si in
              let get_stab  = T.make (Sy.Op Sy.Get) [stab;gi] gty in
              let p       = LR.mk_eq xi xj in
-             let p_ded   = A.LT.mk_eq get sv in
+             let p_ded   = Tliteral.LT.mk_eq get sv in
              let n     = LR.mk_distinct false [xi;xj] in
-             let n_ded = A.LT.mk_eq get get_stab in
+             let n_ded = Tliteral.LT.mk_eq get get_stab in
              let dep = match are_eq gtab set with
                  Yes (dep, _) -> dep | No -> assert false
              in
@@ -324,7 +324,7 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
                      seen = Tmap.update get set env.seen;
                      new_terms = T.Set.add get env.new_terms }
           in
-          let p_ded = A.LT.mk_eq get sv in
+          let p_ded = Tliteral.LT.mk_eq get sv in
           env, Conseq.add (p_ded, Ex.empty) acc
       ) stabs (env,acc)
 
@@ -350,9 +350,9 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
              let get_stab  = T.make (Sy.Op Sy.Get) [stab;gi] gty in
              let gt_of_st  = T.make (Sy.Op Sy.Get) [set;gi] gty in
              let p       = LR.mk_eq xi xj in
-             let p_ded   = A.LT.mk_eq gt_of_st sv in
+             let p_ded   = Tliteral.LT.mk_eq gt_of_st sv in
              let n     = LR.mk_distinct false [xi;xj] in
-             let n_ded = A.LT.mk_eq gt_of_st get_stab in
+             let n_ded = Tliteral.LT.mk_eq gt_of_st get_stab in
              let dep = match are_eq gtab stab with
                  Yes (dep, _) -> dep | No -> assert false
              in
@@ -396,7 +396,7 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
                let i  = T.fresh_name ty_k in
                let g1 = T.make (Sy.Op Sy.Get) [t1;i] ty_v in
                let g2 = T.make (Sy.Op Sy.Get) [t2;i] ty_v in
-               let d  = A.LT.mk_distinct false [g1;g2] in
+               let d  = Tliteral.LT.mk_distinct false [g1;g2] in
                let acc = Conseq.add (d, dep) acc in
                let env =
                  {env with new_terms =

@@ -14,7 +14,7 @@ open Options
 
 module F = Formula
 module MF = Formula.Map
-module A = Literal.LT
+module A = Tliteral.LT
 module T = Term
 module Hs = Hstring
 
@@ -36,7 +36,7 @@ module type ATOM = sig
 
   and atom =
     { var : var;
-      lit : Literal.LT.t;
+      lit : Tliteral.LT.t;
       neg : atom;
       mutable watched : clause Vec.t;
       mutable is_true : bool;
@@ -64,9 +64,9 @@ module type ATOM = sig
 
   val pr_atom : Format.formatter -> atom -> unit
   val pr_clause : Format.formatter -> clause -> unit
-  val get_atom : hcons_env -> Literal.LT.t ->  atom
+  val get_atom : hcons_env -> Tliteral.LT.t ->  atom
 
-  val literal : atom -> Literal.LT.t
+  val literal : atom -> Tliteral.LT.t
   val weight : atom -> float
   val is_true : atom -> bool
   val neg : atom -> atom
@@ -102,7 +102,7 @@ module type ATOM = sig
   val hash_atom  : atom -> int
   val tag_atom   : atom -> int
 
-  val add_atom : hcons_env -> Literal.LT.t -> var list -> atom * var list
+  val add_atom : hcons_env -> Tliteral.LT.t -> var list -> atom * var list
 
   module Set : Set.S with type elt = atom
   module Map : Map.S with type key = atom
@@ -112,7 +112,7 @@ end
 
   (*module Make (Dummy : sig end) : sig*)
 
-  val literal : atom -> Literal.LT.t
+  val literal : atom -> Tliteral.LT.t
   val weight : atom -> float
   val is_true : atom -> bool
   val level : atom -> int
@@ -120,12 +120,12 @@ end
   val neg : atom -> atom
 
   val cpt_mk_var : int ref
-  val ma : var Literal.LT.Map.t ref
+  val ma : var Tliteral.LT.Map.t ref
 
 
-  val make_var : Literal.LT.t -> var * bool
+  val make_var : Tliteral.LT.t -> var * bool
 
-  val get_atom : Literal.LT.t -> atom (* get existing atom of a lit *)
+  val get_atom : Tliteral.LT.t -> atom (* get existing atom of a lit *)
   val vrai_atom  : atom
   val faux_atom  : atom
 
@@ -174,7 +174,7 @@ module Atom : ATOM = struct
 
   and atom =
     { var : var;
-      lit : Literal.LT.t;
+      lit : Tliteral.LT.t;
       neg : atom;
       mutable watched : clause Vec.t;
       mutable is_true : bool;
@@ -194,7 +194,7 @@ module Atom : ATOM = struct
 
   and premise = clause list
 
-  let dummy_lit = Literal.LT.vrai
+  let dummy_lit = Tliteral.LT.vrai
 
   let vraie_form = Formula.mk_lit dummy_lit 0
 
@@ -254,7 +254,7 @@ module Atom : ATOM = struct
 
     let atom fmt a =
       fprintf fmt "%s%d%s [index=%d | lit:%a] vpremise={{%a}}"
-        (sign a) (a.var.vid+1) (value a) a.var.index Literal.LT.print a.lit
+        (sign a) (a.var.vid+1) (value a) a.var.index Tliteral.LT.print a.lit
         premise a.var.vpremise
 
 
@@ -282,11 +282,11 @@ module Atom : ATOM = struct
   let is_gt n = Hstring.compare n agt = 0
 
   let normal_form lit = (* XXX do better *)
-    let av, is_neg = Literal.LT.atom_view lit in
-    (if is_neg then Literal.LT.neg lit else lit), is_neg
+    let av, is_neg = Tliteral.LT.atom_view lit in
+    (if is_neg then Tliteral.LT.neg lit else lit), is_neg
 
   let max_depth a =
-    let l = match Literal.LT.view a with
+    let l = match Tliteral.LT.view a with
       | Literal.Eq (s,t) ->  [s;t]
       | Literal.Distinct(_,l) -> l
       | Literal.Builtin (_,_,l) -> l
@@ -302,7 +302,7 @@ module Atom : ATOM = struct
   let index a = a.var.index
   let neg a = a.neg
 
-  module HT = Hashtbl.Make(Literal.LT)
+  module HT = Hashtbl.Make(Tliteral.LT)
 
   type hcons_env = { tbl : var HT.t ; cpt : int ref }
 
@@ -335,7 +335,7 @@ module Atom : ATOM = struct
             aid = cpt_fois_2 (* aid = vid*2 *) }
         and na =
           { var = var;
-            lit = Literal.LT.neg lit;
+            lit = Tliteral.LT.neg lit;
             watched = Vec.make 10 dummy_clause;
             neg = pa;
             is_true = false;
@@ -356,7 +356,7 @@ module Atom : ATOM = struct
 
   let empty_hcons_env, vrai_atom =
     let empty_hcons = { tbl= HT.create 5048 ; cpt = ref (-1) } in
-    let a, _ = add_atom empty_hcons Literal.LT.vrai [] in
+    let a, _ = add_atom empty_hcons Tliteral.LT.vrai [] in
     a.is_true <- true;
     a.var.level <- 0;
     a.var.reason <- None;
@@ -370,7 +370,7 @@ module Atom : ATOM = struct
   let get_atom hcons lit =
     try (HT.find hcons.tbl lit).pa
     with Not_found ->
-    try (HT.find hcons.tbl (Literal.LT.neg lit)).na
+    try (HT.find hcons.tbl (Tliteral.LT.neg lit)).na
     with Not_found -> assert false
 
   let make_clause name ali f sz_ali is_learnt premise =
@@ -454,14 +454,14 @@ module type FLAT_FORMULA = sig
   val vrai    : t
   val faux    : t
   val view    : t -> view
-  val mk_lit  : hcons_env -> Literal.LT.t -> Atom.var list -> t * Atom.var list
+  val mk_lit  : hcons_env -> Tliteral.LT.t -> Atom.var list -> t * Atom.var list
   val mk_and  : hcons_env -> t list -> t
   val mk_or   : hcons_env -> t list -> t
   val mk_not  : t -> t
 
   val empty_hcons_env : unit -> hcons_env
   val nb_made_vars : hcons_env -> int
-  val get_atom : hcons_env -> Literal.LT.t -> Atom.atom
+  val get_atom : hcons_env -> Tliteral.LT.t -> Atom.atom
 
   val simplify :
     hcons_env ->
@@ -634,7 +634,7 @@ module Flat_Formula : FLAT_FORMULA = struct
         cpt = ref 0 ;
         atoms = Atom.empty_hcons_env () }
     in
-    let vrai = mk_lit empty_hcons Literal.LT.vrai [] |> fst in
+    let vrai = mk_lit empty_hcons Tliteral.LT.vrai [] |> fst in
     let f_empty_hcons () =
       { tbl = HT.copy empty_hcons.tbl ;
         cpt = ref !(empty_hcons.cpt) ;

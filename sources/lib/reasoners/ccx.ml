@@ -59,7 +59,7 @@ module type S = sig
   val add :
     t ->
     r Sig.facts -> (* acc *)
-    Literal.LT.t ->
+    Tliteral.LT.t ->
     Explanation.t -> t * r Sig.facts
 
   val assume_literals :
@@ -70,7 +70,7 @@ module type S = sig
 
   val case_split :
     t -> for_model:bool -> (r Literal.view * bool * Sig.lit_origin) list * t
-  val query :  t -> Literal.LT.t -> Sig.answer
+  val query :  t -> Tliteral.LT.t -> Sig.answer
   val new_terms : t -> Term.Set.t
   val class_of : t -> Term.t -> Term.t list
   val are_equal : t -> Term.t -> Term.t -> init_terms:bool -> Sig.answer
@@ -122,7 +122,7 @@ module Main : S = struct
     | LSem Literal.Distinct _ -> Queue.push e facts.diseqs
     | LSem Literal.Builtin _  -> Queue.push e facts.ineqs
     | LTerm a ->
-      match Literal.LT.view a with
+      match Tliteral.LT.view a with
       | Literal.Pred _ | Literal.Eq _ -> Queue.push e facts.equas
       | Literal.Distinct _ -> Queue.push e facts.diseqs
       | Literal.Builtin _  -> Queue.push e facts.ineqs
@@ -136,7 +136,7 @@ module Main : S = struct
           (fun (lit,_,_) ->
              match lit with
              | LSem sa -> fprintf fmt "  > LSem  %a@." LR.print (LR.make sa)
-             | LTerm a -> fprintf fmt "  > LTerm %a@."Literal.LT.print a
+             | LTerm a -> fprintf fmt "  > LTerm %a@."Tliteral.LT.print a
           )q
       in
       let aux2 fmt mp =
@@ -167,7 +167,7 @@ module Main : S = struct
             List.iter
               (fun a ->
                  incr c;
-                 fprintf fmt " %d) %a@." !c A.LT.print a) ctx
+                 fprintf fmt " %d) %a@." !c Tliteral.LT.print a) ctx
           end
 
     let add_to_use t =
@@ -183,7 +183,7 @@ module Main : S = struct
     let contra_congruence a ex =
       if debug_cc () then
         fprintf fmt "[cc] find that %a %a by contra-congruence@."
-          A.LT.print a Ex.print ex
+          Tliteral.LT.print a Ex.print ex
 
     let assume_literal sa =
       if debug_cc () then
@@ -192,7 +192,7 @@ module Main : S = struct
     let congruent a ex =
       if debug_cc () then
         fprintf fmt "[cc] new fact by conrgruence : %a ex[%a]@."
-          A.LT.print a Ex.print ex
+          Tliteral.LT.print a Ex.print ex
 
     let cc_result p v touched =
       if debug_cc() then begin
@@ -232,7 +232,7 @@ module Main : S = struct
       if Symbols.equal f1 f2 && Ty.equal ty1 ty2 then
         try
           let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
-          let a = A.LT.mk_eq t1 t2 in
+          let a = Tliteral.LT.mk_eq t1 t2 in
           Debug.congruent a ex;
           Q.push (LTerm a, ex, Sig.Other) facts.equas
         with Exit -> ()
@@ -269,7 +269,7 @@ module Main : S = struct
       LR.mkv_builtin b s (List.rev lr), ex
 
   let term_canonical_view env a ex_a =
-    view (Uf.find env.uf) (A.LT.view a) ex_a
+    view (Uf.find env.uf) (Tliteral.LT.view a) ex_a
 
   let canonical_view env a ex_a = view (Uf.find_r env.uf) a ex_a
 
@@ -291,7 +291,7 @@ module Main : S = struct
                if Ty.equal ty_x ty_y then
                  begin match Uf.are_distinct env.uf t1 t2 with
                    | Yes (ex_r, _) ->
-                     let a = A.LT.mk_distinct false [x; y] in
+                     let a = Tliteral.LT.mk_distinct false [x; y] in
                      Debug.contra_congruence a ex_r;
                      Q.push (LTerm a, ex_r, Sig.Other) facts.diseqs
                    | No -> assert false
@@ -303,7 +303,7 @@ module Main : S = struct
   let clean_use =
     List.fold_left
       (fun env a ->
-         match A.LT.view a with
+         match Tliteral.LT.view a with
          | A.Distinct (_, lt)
          | A.Builtin (_, _, lt) ->
            let lvs = concat_leaves env.uf lt in
@@ -372,7 +372,7 @@ module Main : S = struct
 
   module LRT =
     Map.Make (struct
-      type t = LR.t * Literal.LT.t option
+      type t = LR.t * Tliteral.LT.t option
       let compare (x, y) (x', y') =
         let c = LR.compare x x' in
         if c <> 0 then c
@@ -380,7 +380,7 @@ module Main : S = struct
           | None, None      ->  0
           | Some _, None    ->  1
           | None, Some _    -> -1
-          | Some a, Some a' -> Literal.LT.compare a a'
+          | Some a, Some a' -> Tliteral.LT.compare a a'
     end)
 
   let make_unique sa =
@@ -437,7 +437,7 @@ module Main : S = struct
     end
 
   let add env facts a ex =
-    match A.LT.view a with
+    match Tliteral.LT.view a with
     | A.Pred (t1, _) ->
       add_term env facts t1 ex
     | A.Eq (t1, t2) ->

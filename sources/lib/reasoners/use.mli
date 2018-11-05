@@ -26,7 +26,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module SA : Set.S with type elt = Literal.LT.t * Explanation.t
+module SA : Set.S with type elt = Tliteral.LT.t * Explanation.t
 
 module type S = sig
   type t

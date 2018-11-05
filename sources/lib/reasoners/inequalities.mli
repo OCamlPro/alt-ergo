@@ -55,7 +55,7 @@ module type S = sig
   val incr_age : unit -> unit
 
   val create_ineq :
-    P.t -> P.t -> bool -> Literal.LT.t option -> Explanation.t -> t
+    P.t -> P.t -> bool -> Tliteral.LT.t option -> Explanation.t -> t
 
   val print_inequation : Format.formatter -> t -> unit
 

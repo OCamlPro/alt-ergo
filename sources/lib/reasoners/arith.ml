@@ -122,21 +122,21 @@ module Shostak
      c4. t2 <> 0 (already checked) *)
   let mk_modulo md t1 t2 p2 ctx =
     let zero = T.int "0" in
-    let c1 = A.LT.mk_builtin true A.LE [zero; md] in
+    let c1 = Tliteral.LT.mk_builtin true A.LE [zero; md] in
     let c2 =
       match P.is_const p2 with
       | Some n2 ->
         let an2 = Q.abs n2 in
         assert (Q.is_int an2);
         let t2 = T.int (Q.to_string an2) in
-        A.LT.mk_builtin true A.LT [md; t2]
+        Tliteral.LT.mk_builtin true A.LT [md; t2]
       | None ->
-        A.LT.mk_builtin true A.LT [md; t2]
+        Tliteral.LT.mk_builtin true A.LT [md; t2]
     in
     let k  = T.fresh_name Ty.Tint in
     let t3 = T.make (Sy.Op Sy.Mult) [t2;k] Ty.Tint in
     let t3 = T.make (Sy.Op Sy.Plus) [t3;md] Ty.Tint in
-    let c3 = A.LT.mk_eq t1 t3 in
+    let c3 = Tliteral.LT.mk_eq t1 t3 in
     c3 :: c2 :: c1 :: ctx
 
   let mk_euc_division p p2 t1 t2 ctx =

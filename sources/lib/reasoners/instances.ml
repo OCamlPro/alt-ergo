@@ -195,7 +195,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
             incr cpt;
             let s = sbs, sty in
             match tr.F.guard with
-            | Some a when X.query (Literal.LT.apply_subst s a) tbox==No -> acc
+            | Some a when X.query (Tliteral.LT.apply_subst s a) tbox==No -> acc
             | _ ->
               let nf = F.apply_subst s f in
               if inst_is_seen_during_this_round orig nf acc then acc

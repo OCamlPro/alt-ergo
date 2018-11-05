@@ -58,7 +58,7 @@ module Make
   module SP = Set.Make(P)
   module SX = Set.Make(struct type t = X.r let compare = X.hash_cmp end)
   module MX0 = Map.Make(struct type t = X.r let compare = X.hash_cmp end)
-  module MPL = Literal.LT.Map
+  module MPL = Tliteral.LT.Map
 
 
   module Oracle = OracleContainer.Make(X)(Uf)(P)
@@ -472,7 +472,7 @@ module Make
         MPL.iter
           (fun a {Oracle.ple0=p; is_le=is_le} ->
              fprintf fmt "%a%s0  |  %a@."
-               P.print p (if is_le then "<=" else "<") L.LT.print a
+               P.print p (if is_le then "<=" else "<") Tliteral.LT.print a
           )env.inequations;
         fprintf fmt "------------ FM: monomes ----------------------------@.";
         MX.iter

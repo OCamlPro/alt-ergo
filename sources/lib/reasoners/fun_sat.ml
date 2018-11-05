@@ -30,11 +30,11 @@ open Options
 open Format
 
 open Sig
-module A = Literal
+module A = Tliteral
 module F = Formula
 module SF = F.Set
 module MF = F.Map
-module MA = Literal.LT.Map
+module MA = A.LT.Map
 module Ex = Explanation
 
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
@@ -241,7 +241,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
               | Some ff ->
                 (match F.view ff with F.Lemma xx -> xx.F.name | _ -> "")
             in
-            fprintf fmt "LITERAL (%s : %s) %a@." n s Literal.LT.print a;
+            fprintf fmt "LITERAL (%s : %s) %a@." n s A.LT.print a;
             fprintf fmt "==========================================@.@."
 
           | F.Unit _   -> fprintf fmt "conjunction@."
@@ -703,7 +703,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
     | F.Literal a ->
       begin
-        match Literal.LT.view a with
+        match A.LT.view a with
         | Literal.Pred (t, b) -> if b then F.faux else F.vrai
         | _ -> assert false
       end

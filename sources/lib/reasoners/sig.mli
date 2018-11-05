@@ -30,7 +30,7 @@ type answer = Yes of Explanation.t * Term.Set.t list | No
 
 type 'a ac = {h: Symbols.t ; t: Ty.t ; l: ('a * int) list; distribute: bool}
 
-type 'a literal = LTerm of Literal.LT.t | LSem of 'a Literal.view
+type 'a literal = LTerm of Tliteral.LT.t | LSem of 'a Literal.view
 
 type instances = (Formula.t list * Formula.gformula * Explanation.t) list
 
@@ -47,7 +47,7 @@ type lit_origin =
   | Other
 
 type 'a input =
-  'a Literal.view * Literal.LT.t option * Explanation.t * lit_origin
+  'a Literal.view * Tliteral.LT.t option * Explanation.t * lit_origin
 
 type 'a fact = 'a literal * Explanation.t * lit_origin
 
@@ -60,7 +60,7 @@ type 'a facts = {
 
 type 'a result = {
   assume : 'a fact list;
-  remove: Literal.LT.t list;
+  remove: Tliteral.LT.t list;
 }
 
 type 'a solve_pb = { sbt : ('a * 'a) list; eqs : ('a * 'a) list }
@@ -110,7 +110,7 @@ module type SHOSTAK = sig
   val is_mine_symb : Symbols.t -> bool
 
   (** Give a representant of a term of the theory*)
-  val make : Term.t -> r * Literal.LT.t list
+  val make : Term.t -> r * Tliteral.LT.t list
 
   val term_extract : r -> Term.t option * bool (* original term ? *)
 
@@ -158,7 +158,7 @@ end
 module type X = sig
   type r
 
-  val make : Term.t -> r * Literal.LT.t list
+  val make : Term.t -> r * Tliteral.LT.t list
 
   val type_info : r -> Ty.t
 

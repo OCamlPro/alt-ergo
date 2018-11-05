@@ -20,7 +20,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module F = Formula
   module MF = F.Map
   module SF = F.Set
-  module A = Literal.LT
+  module A = Tliteral.LT
   module MA = A.Map
   module Atom = Satml_types.Atom
   module FF = Satml_types.Flat_Formula
@@ -116,7 +116,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
               (match F.view ff with F.Lemma xx -> xx.F.name | _ -> "")
           in
           fprintf fmt "\n[sat]I assume a literal (%s : %s) %a@]@."
-            n s Literal.LT.print a;
+            n s Tliteral.LT.print a;
           fprintf fmt "================================================@.@."
 
         | F.Skolem _ ->
@@ -255,7 +255,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     fprintf fmt "Propositional:";
     List.iter
       (fun at ->
-         (fprintf fmt "\n %a" Literal.LT.print) (Atom.literal at)
+         (fprintf fmt "\n %a" Tliteral.LT.print) (Atom.literal at)
       ) model;
     fprintf fmt "\n@."
 
@@ -387,7 +387,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
     | F.Literal a ->
       begin
-        match Literal.LT.view a with
+        match Tliteral.LT.view a with
         | Literal.Pred (t, b) -> if b then F.faux else F.vrai
         | _ -> assert false
       end
@@ -466,7 +466,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     List.fold_left
       (fun acc a ->
          if verbose () then
-           fprintf fmt "expand skolem of %a@.@." Literal.LT.print a;
+           fprintf fmt "expand skolem of %a@.@." Tliteral.LT.print a;
          try
            let {F.f} as gf = A.Map.find a env.skolems in
            if not (Options.cdcl_tableaux ()) &&
@@ -480,7 +480,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       (fun (inst, acc) a ->
          let gf = mk_gf F.vrai in
          if verbose () then
-           fprintf fmt "terms_of_atom %a @.@." Literal.LT.print a;
+           fprintf fmt "terms_of_atom %a @.@." Tliteral.LT.print a;
          let inst = Inst.add_terms inst (A.ground_terms a) gf in
          (* ax <-> a, if ax exists in axs_of_abstr *)
          try

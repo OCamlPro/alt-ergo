@@ -53,7 +53,7 @@ subgraph cluster_lib__reasoners {
         "Polynome";
         "Records";
         "Sig";
-        "Sum";
+        "Enum";
         "Ite";
         "Uf";
         "Use";
@@ -79,6 +79,7 @@ subgraph cluster_lib__structures {
         "Symbols";
         "Term";
         "Literal";
+        "Tliteral";
         "Ty";
         "Parsed";
         "Typed";

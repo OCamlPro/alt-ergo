@@ -26,7 +26,7 @@ module type ATOM = sig
 
   and atom =
     { var : var;
-      lit : Literal.LT.t;
+      lit : Tliteral.LT.t;
       neg : atom;
       mutable watched : clause Vec.t;
       mutable is_true : bool;
@@ -54,9 +54,9 @@ module type ATOM = sig
 
   val pr_atom : Format.formatter -> atom -> unit
   val pr_clause : Format.formatter -> clause -> unit
-  val get_atom : hcons_env -> Literal.LT.t ->  atom
+  val get_atom : hcons_env -> Tliteral.LT.t ->  atom
 
-  val literal : atom -> Literal.LT.t
+  val literal : atom -> Tliteral.LT.t
   val weight : atom -> float
   val is_true : atom -> bool
   val neg : atom -> atom
@@ -92,7 +92,7 @@ module type ATOM = sig
   val hash_atom  : atom -> int
   val tag_atom   : atom -> int
 
-  val add_atom : hcons_env -> Literal.LT.t -> var list -> atom * var list
+  val add_atom : hcons_env -> Tliteral.LT.t -> var list -> atom * var list
 
   module Set : Set.S with type elt = atom
   module Map : Map.S with type key = atom
@@ -112,13 +112,13 @@ module type FLAT_FORMULA = sig
   val vrai    : t
   val faux    : t
   val view    : t -> view
-  val mk_lit  : hcons_env -> Literal.LT.t -> Atom.var list -> t * Atom.var list
+  val mk_lit  : hcons_env -> Tliteral.LT.t -> Atom.var list -> t * Atom.var list
   val mk_and  : hcons_env -> t list -> t
   val mk_or   : hcons_env -> t list -> t
   val mk_not  : t -> t
   val empty_hcons_env : unit -> hcons_env
   val nb_made_vars : hcons_env -> int
-  val get_atom : hcons_env -> Literal.LT.t -> Atom.atom
+  val get_atom : hcons_env -> Tliteral.LT.t -> Atom.atom
 
   val simplify :
     hcons_env ->

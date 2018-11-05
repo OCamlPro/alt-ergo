@@ -36,10 +36,10 @@ module type S = sig
      decreasing order with respect to (dlvl, plvl) *)
   val assume :
     ?ordered:bool ->
-    (Literal.LT.t * Explanation.t * int * int) list -> t ->
+    (Tliteral.LT.t * Explanation.t * int * int) list -> t ->
     t * Term.Set.t * int
 
-  val query : Literal.LT.t -> t -> Sig.answer
+  val query : Tliteral.LT.t -> t -> Sig.answer
   val print_model : Format.formatter -> t -> unit
   val cl_extract : t -> Term.Set.t list
   val extract_ground_terms : t -> Term.Set.t
@@ -57,7 +57,7 @@ module type S = sig
     t -> (Formula.t -> Formula.t -> bool) ->
     int -> int -> t * Sig.instances
 
-  val get_assumed : t -> Literal.LT.Set.t
+  val get_assumed : t -> Tliteral.LT.Set.t
 end
 
 module Main_Default : S

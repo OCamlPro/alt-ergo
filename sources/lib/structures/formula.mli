@@ -46,7 +46,7 @@ type trigger = {
   hyp : t list;
   depth : int;
   from_user : bool;
-  guard : Literal.LT.t option
+  guard : Tliteral.LT.t option
 }
 
 type quantified = {
@@ -84,7 +84,7 @@ and tlet = {
 and view =
     Unit of t*t  (* unit clauses *)
   | Clause of t*t*bool      (* a clause (t1 or t2) bool <-> is implication *)
-  | Literal of Literal.LT.t   (* an atom *)
+  | Literal of Tliteral.LT.t   (* an atom *)
   | Lemma of quantified   (* a lemma *)
   | Skolem of quantified  (* lazy skolemization *)
   | Flet of flet (* a binding of a form *)
@@ -115,7 +115,7 @@ val mk_xor : t -> t -> bool -> int -> t (* bool <-> is implication *)
 val mk_imp : t -> t -> int -> t
 val mk_if : t -> t -> t -> int -> t
 val mk_iff : t -> t -> int -> t
-val mk_lit : Literal.LT.t -> int -> t
+val mk_lit : Tliteral.LT.t -> int -> t
 val mk_forall :
   string -> (* name *)
   Loc.t -> (* location in the original file *)
@@ -154,7 +154,7 @@ val print : Format.formatter -> t -> unit
 
 val ground_terms_rec : t -> Term.Set.t
 val atoms_rec :
-  only_ground:bool -> t -> Literal.LT.Set.t -> Literal.LT.Set.t
+  only_ground:bool -> t -> Tliteral.LT.Set.t -> Tliteral.LT.Set.t
 val free_vars : t -> Ty.t Symbols.Map.t
 
 val apply_subst : Term.subst -> t -> t

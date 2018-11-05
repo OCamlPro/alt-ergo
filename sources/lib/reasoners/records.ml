@@ -173,7 +173,7 @@ module Shostak (X : ALIEN) = struct
                let r, ctx = make_rec x ctx in
                let tyr = type_info r in
                let dlb = T.make (Symbols.Op (Symbols.Access lb)) [t] tyr in
-               let c = Literal.LT.mk_eq dlb x in
+               let c = Tliteral.LT.mk_eq dlb x in
                (lb, r)::l, c::ctx
             )
             xs lbs ([], ctx)

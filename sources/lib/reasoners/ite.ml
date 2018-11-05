@@ -132,12 +132,12 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
          match root with
          | None -> acc
          | Some a ->
-           match Literal.LT.view a with
+           match Tliteral.LT.view a with
            | Literal.Pred (t, is_neg)
              when not (MT.mem t env.assumed_pos_preds) &&
                   not (MT.mem t env.assumed_neg_preds) ->
              if debug_ite () then
-               fprintf fmt "[Ite.assume] %a@." Literal.LT.print a;
+               fprintf fmt "[Ite.assume] %a@." Tliteral.LT.print a;
              TB.add (t, is_neg) expl acc
            | _ -> acc
       )TB.empty la
@@ -147,10 +147,10 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
     let l =
       MT2.fold
         (fun (s, t) ex acc ->
-           let a = Literal.LT.mk_eq s t in
+           let a = Tliteral.LT.mk_eq s t in
            if debug_ite () then
              fprintf fmt "[Ite.assume] deduce that %a with expl %a@."
-               Literal.LT.print a Ex.print ex;
+               Tliteral.LT.print a Ex.print ex;
            (LTerm a, ex, Sig.Other) :: acc)
         env.pending_deds []
     in

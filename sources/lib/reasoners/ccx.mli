@@ -52,7 +52,7 @@ module type S = sig
   val add :
     t ->
     r Sig.facts -> (* acc *)
-    Literal.LT.t ->
+    Tliteral.LT.t ->
     Explanation.t -> t * r Sig.facts
 
   val assume_literals :
@@ -63,7 +63,7 @@ module type S = sig
 
   val case_split :
     t -> for_model:bool -> (r Literal.view * bool * Sig.lit_origin) list * t
-  val query :  t -> Literal.LT.t -> Sig.answer
+  val query :  t -> Tliteral.LT.t -> Sig.answer
   val new_terms : t -> Term.Set.t
   val class_of : t -> Term.t -> Term.t list
   val are_equal : t -> Term.t -> Term.t -> init_terms:bool -> Sig.answer

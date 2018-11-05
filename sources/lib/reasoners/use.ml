@@ -35,8 +35,8 @@ module ST = T.Set
 module SA =
   Set.Make
     (struct
-      type t = Literal.LT.t * Explanation.t
-      let compare (s1,_) (s2,_) = Literal.LT.compare s1 s2
+      type t = Tliteral.LT.t * Explanation.t
+      let compare (s1,_) (s2,_) = Tliteral.LT.compare s1 s2
     end)
 
 module type S = sig
@@ -113,7 +113,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
         let satoms fmt =
           SA.iter
             (fun (a,e) ->
-               fprintf fmt "%a %a" Literal.LT.print a Explanation.print e)
+               fprintf fmt "%a %a" Tliteral.LT.print a Explanation.print e)
         in
         fprintf fmt "@{<C.Bold>[use]@} gamma :\n";
         MX.iter
