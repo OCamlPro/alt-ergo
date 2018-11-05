@@ -435,11 +435,8 @@ module Atom : ATOM = struct
       end;
       !l
 
-
-  let compare a b = a.aid - b.aid
-
-  module Set = Set.Make(struct type t=atom let compare=compare end)
-  module Map = Map.Make(struct type t=atom let compare=compare end)
+  module Set = Set.Make(struct type t=atom let compare=cmp_atom end)
+  module Map = Map.Make(struct type t=atom let compare=cmp_atom end)
 
 end
 

@@ -573,10 +573,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            | Some (_,l) -> List.fold_left (fun sa a -> A.Set.add a sa) sa l
         ) env.conj A.Set.empty
 
-  module SA = Set.Make (struct
-      type t = Atom.atom
-      let compare = Atom.cmp_atom
-    end)
+  module SA = Satml_types.Atom.Set
 
   let atoms_from_lazy_sat =
     let rec add_reasons_graph _todo _done =
