@@ -13,6 +13,7 @@ open Satml_types
 
 exception Sat
 exception Unsat of Satml_types.Atom.clause list option
+exception Last_UIP_reason of Atom.Set.t
 
 module type SAT_ML = sig
 
@@ -64,7 +65,10 @@ module type SAT_ML = sig
   val exists_in_lazy_cnf : t -> Flat_Formula.t -> bool
   val known_lazy_formulas : t -> int Flat_Formula.Map.t
 
-  (*end*)
+  val reason_of_deduction: Atom.atom -> Atom.Set.t
+  val assume_simple : t -> Atom.atom list list -> unit
+
+  val decide : t -> Atom.atom -> unit
 end
 
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t

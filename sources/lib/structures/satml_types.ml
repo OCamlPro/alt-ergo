@@ -13,6 +13,7 @@ open Format
 open Options
 
 module F = Formula
+module MF = Formula.Map
 module A = Literal.LT
 module T = Term
 module Hs = Hstring
@@ -75,6 +76,7 @@ module type ATOM = sig
   val index : atom -> int
   val cmp_atom : atom -> atom -> int
   val eq_atom : atom -> atom -> bool
+  val reason : atom -> reason
   val reason_atoms : atom -> atom list
 
   val dummy_var : var
@@ -102,6 +104,8 @@ module type ATOM = sig
 
   val add_atom : hcons_env -> Literal.LT.t -> var list -> atom * var list
 
+  module Set : Set.S with type elt = atom
+  module Map : Map.S with type key = atom
 end
 
 (*
@@ -409,6 +413,8 @@ module Atom : ATOM = struct
   let iter_atoms_of_clauses cls f =
     Vec.iter cls (fun c -> Vec.iter c.atoms f)
 
+  let reason a =
+    a.var.reason
 
   let reason_atoms a =
     match a.var.reason with
@@ -428,6 +434,12 @@ module Atom : ATOM = struct
         assert false
       end;
       !l
+
+
+  let compare a b = a.aid - b.aid
+
+  module Set = Set.Make(struct type t=atom let compare=compare end)
+  module Map = Map.Make(struct type t=atom let compare=compare end)
 
 end
 
@@ -977,4 +989,60 @@ module Flat_Formula : FLAT_FORMULA = struct
   module Set = Set.Make(struct type t'=t type t=t' let compare=compare end)
   module Map = Map.Make(struct type t'=t type t=t' let compare=compare end)
 
+end
+
+module Proxy_formula = struct
+  let get_proxy_of f proxies =
+    try Some (MF.find f proxies)
+    with Not_found -> None
+
+  let atom_of_lit hcons lit is_neg new_vars =
+    let a, l = Atom.add_atom hcons lit new_vars in
+    if is_neg then a.Atom.neg,l else a,l
+
+  let mk_new_proxy n =
+    let sy = Symbols.name @@ "PROXY__" ^ (string_of_int n) in
+    A.mk_pred (Term.make sy [] Ty.Tbool) false
+
+  let rec mk_cnf hcons f ((proxies, inv_proxies, new_vars, cnf) as accu) =
+    match get_proxy_of f proxies with
+    | Some p -> p, accu
+    | None ->
+      let nf = F.mk_not f in
+      match get_proxy_of nf proxies with (* maybe redundant *)
+      | Some p -> Atom.neg p, accu
+      | None ->
+        let a, new_vars =
+          atom_of_lit hcons (mk_new_proxy (F.hash f)) false new_vars in
+        let na = Atom.neg a in
+        let proxies = MF.add f a proxies in
+        let proxies = MF.add nf na proxies in
+        let inv_proxies =  Atom.Map.add a f inv_proxies in
+        let inv_proxies =  Atom.Map.add na nf inv_proxies in
+        match F.view f with
+        | F.Unit (f1,f2) ->
+          let accu = (proxies, inv_proxies, new_vars, cnf) in
+          let a1, accu = mk_cnf hcons f1 accu in
+          let a2, (proxies, inv_proxies, new_vars, cnf) =
+            mk_cnf hcons f2 accu in
+          let cnf =
+            [na; a1] :: [na; a2] :: [a; Atom.neg a1; Atom.neg a2] :: cnf in
+          a, (proxies, inv_proxies, new_vars, cnf)
+
+        | F.Clause (f1, f2, _) ->
+          let accu = (proxies, inv_proxies, new_vars, cnf) in
+          let a1, accu = mk_cnf hcons f1 accu in
+          let a2, (proxies, inv_proxies, new_vars, cnf) =
+            mk_cnf hcons f2 accu in
+          let cnf =
+            [a; Atom.neg a1] :: [a; Atom.neg a2] :: [na; a1; a2] :: cnf in
+          a,  (proxies, inv_proxies, new_vars, cnf)
+
+        (* | F.Flet _ -> assert false
+         * | F.Tlet _ -> assert false *)
+
+        (* | F.Lemma _   -> assert false
+         * | F.Skolem _ -> assert false *)
+
+        | _ -> a, (proxies, inv_proxies, new_vars, cnf)
 end

@@ -39,9 +39,17 @@ module Ex = Explanation
 
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module Inst = Instances.Make(Th)
+  module CDCL = Satml_frontend_hybrid.Make(Th)
 
   exception No_suitable_decision
+  exception Propagate of F.gformula * Explanation.t
 
+  let is_fact_in_CDCL cdcl f =
+    match CDCL.is_true cdcl f with
+    | None -> false
+    | Some (ex,lvl) ->
+      assert (lvl <> 0 || Ex.has_no_bj (Lazy.force ex));
+      lvl = 0
 
   module Heuristics = struct
 
@@ -79,7 +87,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       in
       { env with mp = mp; var_inc = var_inc *. env.var_decay }
 
-    let choose delta env =
+    let choose delta env cdcl =
       let dec, no_dec =
         if Options.no_decisions_on__is_empty () then delta, []
         else
@@ -89,9 +97,26 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let dec =
         List.rev_map
           (fun ((a,b,d,is_impl) as e) ->
+             if Options.hybrid_sat () && is_fact_in_CDCL cdcl a.F.f then
+               raise (Propagate (a, Ex.empty));
+             if Options.hybrid_sat () && is_fact_in_CDCL cdcl b.F.f then
+               raise (Propagate (b, Ex.empty));
              e, (try (MF.find a.F.f env.mp) with Not_found -> 0.), a.F.gf
           ) dec
       in
+
+      if Options.hybrid_sat () then
+        (* force propagate modulo satML *)
+        List.iter
+          (fun (a, b, d, _) ->
+             match CDCL.is_true cdcl a.F.f with
+             | Some (ex, lvl) -> raise (Propagate (a, Lazy.force ex))
+             | None ->
+               match CDCL.is_true cdcl b.F.f with
+               | Some (ex, lvl) -> raise (Propagate (b, Lazy.force ex))
+               | None -> ()
+          )no_dec;
+
       let dec =
         List.fast_sort
           (fun (_, x1, b1) (_, x2, b2) ->
@@ -130,8 +155,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     nb_related_to_hypo : int;
     nb_related_to_both : int;
     nb_unrelated : int;
+    cdcl : CDCL.t ref;
     tcp_cache : Sig.answer MA.t;
     delta : (F.gformula * F.gformula * Ex.t * bool) list;
+    decisions : int MF.t;
     dlevel : int;
     plevel : int;
     ilevel : int;
@@ -400,6 +427,131 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       gf= gf;
       theory_elim = true; }
 
+
+  (* hybrid functions*)
+  let print_decisions_in_the_sats msg env =
+    if Options.hybrid_sat () && verbose() then begin
+      fprintf fmt "-----------------------------------------------------@.";
+      fprintf fmt ">> %s@." msg;
+      fprintf fmt "decisions in DfsSAT are:@.";
+      let l = MF.bindings env.decisions in
+      let l = List.fast_sort (fun (_,i) (_,j) -> j - i) l in
+      List.iter
+        (fun (f, i) ->
+           fprintf fmt "%d  -> %a@." i F.print f
+        )l;
+      fprintf fmt "decisions in satML are:@.";
+      List.iter
+        (fun (i, f) ->
+           fprintf fmt "%d  -> %a@." i F.print f
+        )(CDCL.get_decisions !(env.cdcl));
+      fprintf fmt "-----------------------------------------------------@."
+    end
+
+  let cdcl_same_decisions env =
+    if Options.hybrid_sat () && enable_assertions () then begin
+      let cdcl_decs = CDCL.get_decisions !(env.cdcl) in
+      let ok = ref true in
+      let decs =
+        List.fold_left
+          (fun decs (i, d) ->
+             try
+               let j = MF.find d decs in
+               assert (i = j);
+               MF.remove d decs
+             with Not_found ->
+               ok := false;
+               fprintf fmt "@.Aie! decision %a is only in satML !!@.@."
+                 F.print d;
+               fprintf fmt "nb decisions in DfsSAT: %d@."
+                 (MF.cardinal env.decisions);
+               fprintf fmt "nb decisions in satML:  %d@."
+                 (List.length cdcl_decs);
+               decs
+          )env.decisions cdcl_decs
+      in
+      if decs != MF.empty then begin
+        fprintf fmt "Aie ! some decisions only in DfsSAT@.";
+        ok := false;
+      end;
+      !ok
+    end
+    else true
+
+  let cdcl_known_decisions ex env =
+    Ex.fold_atoms
+      (fun e b ->
+         match e with
+         | Ex.Bj f -> b && MF.mem f env.decisions
+         | _ -> b
+      )ex true
+
+  let shift gamma ex acc0 =
+    let l =
+      Ex.fold_atoms
+        (fun e acc ->
+           match e with
+           | Ex.Bj f ->
+             let dec =
+               try let _,_,dec,_ = MF.find f gamma in dec
+               with Not_found -> max_int
+             in
+             (f, dec) :: acc
+           | _ ->
+             acc
+        )ex []
+    in
+    (* try to keep the decision ordering *)
+    let l = List.fast_sort (fun (_,i) (_,j) -> j - i) l in
+    List.fold_left (fun acc (f, _) -> F.mk_imp f acc (F.id f)) acc0 l
+
+
+  let cdcl_assume delay env l =
+    if debug_sat() && verbose() then fprintf fmt "[fun_cdcl_assume]@.";
+    let gamma = env.gamma in
+    try
+      let l =
+        List.rev_map
+          (fun ((gf, ex) as e) ->
+             if Ex.has_no_bj ex then e
+             else {gf with F.f = shift gamma ex gf.F.f}, Ex.empty
+          )(List.rev l)
+      in
+      env.cdcl := CDCL.assume delay !(env.cdcl) l
+    with
+    | Exception.Inconsistent (ex, l) ->
+      if debug_sat() &&  verbose() then
+        fprintf fmt "[fun_cdcl_assume] conflict@.";
+      assert (cdcl_known_decisions ex env);
+      raise (IUnsat(ex, l))
+
+  let cdcl_decide env f dlvl =
+    if debug_sat() &&  verbose() then fprintf fmt "[fun_cdcl_decide]@.";
+    try
+      env.cdcl := CDCL.decide !(env.cdcl) f dlvl
+    with
+    | Exception.Inconsistent (ex, l) ->
+      if debug_sat() && verbose() then
+        fprintf fmt "[fun_cdcl_decide] conflict@.";
+      assert (cdcl_known_decisions ex env);
+      raise (IUnsat(ex, l))
+    | e ->
+      fprintf fmt "%s@." (Printexc.to_string e);
+      assert false
+
+  let cdcl_forget_decision env f lvl =
+    try
+      env.cdcl := CDCL.forget_decision !(env.cdcl) f lvl
+    with
+    | e ->
+      fprintf fmt "@.cdcl_backjump error:@.%s@.@." (Printexc.get_backtrace ());
+      assert false
+
+  let cdcl_learn_clause delay env ex acc0 =
+    let f = shift env.gamma ex acc0 in
+    let ff = mk_gf f "<cdcl_learn_clause>" true true in
+    cdcl_assume delay env [ff, Ex.empty]
+
   let profile_conflicting_instances exp =
     if Options.profiling() then
       SF.iter
@@ -475,6 +627,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       match Th.query a env.tbox with
       | No -> tmp_cache := MA.add a No !tmp_cache; No
       | Yes (ex,_) as y ->
+        if Options.hybrid_sat () then
+          cdcl_learn_clause true env ex (ff.F.f);
         learn_clause env ff ex;
         tcp_cache := MA.add a y !tcp_cache; y
 
@@ -510,6 +664,23 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           if ans != No then Options.tool_req 2 "TR-Sat-Bcp-Red-2";
           ans, false
         | _ -> No, false
+
+  let red tcp_cache tmp_cache ff env tcp =
+    match red tcp_cache tmp_cache ff env tcp with
+    | (Yes _, _)  as ans -> ans
+    | No, b ->
+      if not (Options.hybrid_sat ()) then
+        No, b
+      else
+        match CDCL.is_true !(env.cdcl) (F.mk_not ff.F.f) with
+        | Some (ex, lvl) ->
+          let ex = Lazy.force ex in
+          if debug_sat() && verbose() then
+            fprintf fmt "red thanks to satML@.";
+          assert (cdcl_known_decisions ex env);
+          Yes(ex, []), true
+        | None ->
+          No, b
 
   let factorize_iff a_t f =
     let not_at = F.mk_not (F.mk_lit a_t 0) in
@@ -790,6 +961,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            | F.Lemma l ->
              Options.tool_req 2 "TR-Sat-Assume-Ax";
              let inst_env = Inst.add_lemma env.inst ff dep in
+             if Options.hybrid_sat () then
+               cdcl_assume false env [ff,dep];
              {env with inst = inst_env}, true, tcp, ap_delta, lits
 
            | F.Literal a ->
@@ -798,6 +971,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              begin
                try (* ground preds bahave like proxies of lazy CNF *)
                  let af, adep = A.LT.Map.find a env.ground_preds in
+                 if Options.hybrid_sat () then
+                   cdcl_assume false env
+                     [{ff with F.f = F.mk_imp f af (F.id f)}, adep];
                  asm_aux acc [{ff with F.f = af}, Ex.union dep adep]
                with Not_found -> acc
              end
@@ -805,6 +981,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            | F.Skolem quantif ->
              Options.tool_req 2 "TR-Sat-Assume-Sko";
              let f' = F.skolemize quantif  in
+             if Options.hybrid_sat () then begin
+               let f_imp_f' = F.mk_imp f f' (F.id f) in
+               (* correct to put <-> ?*)
+               (* should do something similar for Let ? *)
+               cdcl_assume false env [{ff with F.f=f_imp_f'}, Ex.empty]
+             end;
              asm_aux (env, true, tcp, ap_delta, lits) [{ff with F.f=f'},dep]
 
            | F.Flet
@@ -817,6 +999,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              let equiv = F.mk_iff pv lform id in
              let elim_let = F.mk_and equiv f' false id in
              let ff = {ff with F.f = elim_let} in
+             if Options.hybrid_sat () then begin
+               let f_imp_f' = F.mk_imp f elim_let (F.id f) in
+               (* correct to put <-> ?*)
+               (* should do something similar for Let ? *)
+               cdcl_assume false env [{ff with F.f=f_imp_f'}, Ex.empty]
+             end;
              asm_aux (env, true, tcp, ap_delta, lits) [ff, dep]
 
            | F.Tlet
@@ -827,12 +1015,25 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              let v = Symbols.Map.find lvar (fst s) in
              let lst = [{ff with F.f=F.mk_lit (A.LT.mk_eq v lterm) id}, dep;
                         {ff with F.f=f'}, dep] in
+             if Options.hybrid_sat () then begin
+               let elim_let =
+                 F.mk_and (F.mk_lit (A.LT.mk_eq v lterm) id) f' false id in
+               let f_imp_f' = F.mk_imp f elim_let (F.id f) in
+               (* correct to put <-> ?*)
+               (* should do something similar for Let ? *)
+               cdcl_assume false env [{ff with F.f=f_imp_f'}, Ex.empty]
+             end;
              asm_aux (env, true, tcp, ap_delta, lits) lst
 
       ) acc list
 
   let rec assume env list =
-    if list == [] then env
+    if list == [] then
+      begin
+        print_decisions_in_the_sats "exit assume rec" env;
+        assert (cdcl_same_decisions env);
+        env
+      end
     else
       try
         let result = asm_aux (env, false, false, [], []) list in
@@ -884,6 +1085,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         (fun (gf, dep) ->
            if Ex.has_no_bj dep then update_unit_facts env gf dep;
         )l;
+    if Options.hybrid_sat () then
+      cdcl_assume false env l;
 
     if Options.profiling() then Profiling.instances l;
     match l with
@@ -891,6 +1094,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | _  ->
       (* Put new generated instances in cache *)
       ignore (update_instances_cache (Some l));
+      if Options.hybrid_sat () then
+        cdcl_assume false env l;
       let env = assume env l in
       (* No conflict by direct assume, empty cache *)
       ignore (update_instances_cache (Some []));
@@ -1069,6 +1274,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         in
         let env = {env with tcp_cache = !tcp_cache} in
         ignore (update_instances_cache (Some l));
+        if Options.hybrid_sat () then
+          cdcl_assume false env l;
         let env = assume env l in
         ignore (update_instances_cache (Some []));
         Debug.out_mk_theories_instances true;
@@ -1184,6 +1391,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let rec unsat_rec env fg is_decision =
     try
+      if is_decision then
+        begin
+          let f = (fst fg).F.f in
+          if Options.hybrid_sat () then
+            try cdcl_decide env f (MF.find f env.decisions)
+            with Not_found -> assert false
+        end;
       let env = assume env [fg] in
       let env =
         if is_decision || not (Options.instantiate_after_backjump ()) then env
@@ -1215,55 +1429,81 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
 
   and make_one_decision env =
-    let ({F.f=f} as a,b,d,is_impl), l =
-      Heuristics.choose env.delta !(env.heuristics)
-    in
-    let new_level = env.dlevel + 1 in
-    if Options.profiling() then
-      Profiling.decision new_level a.F.origin_name;
-    let env_a =
-      {env with
-       delta=l;
-       dlevel = new_level;
-       plevel = 0}
-    in
-    Debug.decide f env_a;
-    let dep = unsat_rec env_a (a,Ex.singleton (Ex.Bj f)) true in
-    Debug.unsat_rec dep;
     try
-      let dep' =
-        try Ex.remove (Ex.Bj f) dep
-        with Not_found when Options.no_backjumping() -> dep
+      let ({F.f=f} as a,b,d,is_impl), l =
+        Heuristics.choose env.delta !(env.heuristics) !(env.cdcl)
       in
-      Debug.backtracking f env;
-      Options.tool_req 2 "TR-Sat-Decide";
-      if Options.profiling() then begin
-        Profiling.reset_dlevel env.dlevel;
-        Profiling.reset_ilevel env.ilevel;
+      let new_level = env.dlevel + 1 in
+      if Options.profiling() then
+        Profiling.decision new_level a.F.origin_name;
+      (*fprintf fmt "@.BEFORE DECIDING %a@." F.print f;*)
+      assert (cdcl_same_decisions env);
+      let env_a =
+        {env with
+         delta=l;
+         dlevel = new_level;
+         plevel = 0;
+         decisions = MF.add f new_level env.decisions}
+      in
+      if Options.hybrid_sat () then begin
+        assert (not (is_fact_in_CDCL !(env.cdcl) f));
+        assert (not (is_fact_in_CDCL !(env.cdcl) (F.mk_not f)));
       end;
-      let not_a = {a with F.f = F.mk_not f} in
-      if sat_learning () then learn_clause env not_a dep';
-
-      let env = {env with delta=l} in
-      (* in the section below, we try to backjump further with latest
-         generated instances if any *)
-      begin
-        match update_instances_cache None with
-        | None    -> assert false
-        | Some [] -> ()
-        | Some l  ->
-          (* backtrack further if Unsat is raised by the assume below *)
-          ignore (assume env l);
-          (*No backtrack, reset cache*)
-          ignore (update_instances_cache (Some []));
-      end;
-      unsat_rec
-        (assume env [b, Ex.union d dep'])
-        (not_a,dep') false
-    with Not_found ->
-      Debug.backjumping (F.mk_not f) env;
-      Options.tool_req 2 "TR-Sat-Backjumping";
-      dep
+      Debug.decide f env_a;
+      let dep = unsat_rec env_a (a,Ex.singleton (Ex.Bj f)) true in
+      if Options.hybrid_sat () then
+        cdcl_forget_decision env f new_level;
+      Debug.unsat_rec dep;
+      try
+        let dep' =
+          try Ex.remove (Ex.Bj f) dep
+          with Not_found when Options.no_backjumping() -> dep
+        in
+        Debug.backtracking f env;
+        Options.tool_req 2 "TR-Sat-Decide";
+        if Options.profiling() then begin
+          Profiling.reset_dlevel env.dlevel;
+          Profiling.reset_ilevel env.ilevel;
+        end;
+        let not_a = {a with F.f = F.mk_not f} in
+        if sat_learning () then learn_clause env not_a dep';
+        let env = {env with delta=l} in
+        (* in the section below, we try to backjump further with latest
+           generated instances if any *)
+        begin
+          match update_instances_cache None with
+          | None    -> assert false
+          | Some [] -> ()
+          | Some l  ->
+            (* backtrack further if Unsat is raised by the assume below *)
+            ignore (assume env l);
+            (*No backtrack, reset cache*)
+            ignore (update_instances_cache (Some []));
+        end;
+        assert (cdcl_same_decisions env);
+        if Options.hybrid_sat () then
+          cdcl_learn_clause false env dep' (F.mk_not f);
+        print_decisions_in_the_sats "make_one_decision:backtrack" env;
+        assert (cdcl_same_decisions env);
+        if not (Options.hybrid_sat ()) then
+          unsat_rec (assume env [b, Ex.union d dep']) (not_a,dep') false
+        else
+          match CDCL.is_true !(env.cdcl) a.F.f with
+          | Some (ex, lvl) -> (* it is a propagation in satML *)
+            if verbose() then
+              fprintf fmt "Youpii ! Better BJ thanks to satML@.";
+            let ex = Lazy.force ex in
+            assert (not (Ex.mem (Ex.Bj f) ex));
+            Ex.union dep' ex
+          | None ->
+            unsat_rec (assume env [b, Ex.union d dep']) (not_a,dep') false
+      with Not_found ->
+        Debug.backjumping (F.mk_not f) env;
+        Options.tool_req 2 "TR-Sat-Backjumping";
+        dep
+    with Propagate (ff, ex) ->
+      assert (cdcl_same_decisions env);
+      back_tracking (assume env [ff, ex])
 
   let max_term_depth_in_sat env =
     let aux mx f = max mx (F.max_term_depth f) in
@@ -1352,6 +1592,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let unsat env gf =
     Debug.is_it_unsat gf;
     try
+      if Options.hybrid_sat () then
+        cdcl_assume false env [gf,Ex.empty];
       let env = assume env [gf, Ex.empty] in
       let env =
         {env with inst = (* add all the terms of the goal to matching env *)
@@ -1383,6 +1625,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         inst_lemmas
           false Util.Normal env env.inst env.tbox (selector env) env.ilevel
       in
+      if Options.hybrid_sat () then
+        cdcl_assume false env gd;
       if Options.profiling() then Profiling.instances gd;
       let env = assume env gd in
 
@@ -1390,6 +1634,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env, _ = semantic_th_inst  env env.inst ~rm_clauses:true ~loop:4 in
 
       let d = back_tracking env in
+      assert (Ex.has_no_bj d);
       get_all_models_answer ();
       terminated_normally := true;
       d
@@ -1399,11 +1644,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Debug.unsat ();
       get_all_models_answer ();
       terminated_normally := true;
+      assert (Ex.has_no_bj dep);
       dep
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
 
   let assume env fg dep =
-    try assume env [fg, dep]
+    try
+      if Options.hybrid_sat () then
+        cdcl_assume false env [fg,dep];
+      assume env [fg,dep]
     with
     | IUnsat (d, classes) ->
       terminated_normally := true;
@@ -1458,8 +1707,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       nb_related_to_hypo = 0;
       nb_related_to_both = 0;
       nb_unrelated = 0;
+      cdcl = ref (CDCL.empty ());
       tcp_cache = MA.empty;
       delta = [] ;
+      decisions = MF.empty;
       dlevel = 0;
       plevel = 0;
       ilevel = 0;
