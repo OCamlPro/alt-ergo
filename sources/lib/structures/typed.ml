@@ -32,7 +32,7 @@ open Parsed
 [@@@ocaml.warning "-33"]
 open Options
 
-(** Anotations *)
+(** Anotations (used by the GUI). *)
 
 type ('a, 'b) annoted =
   { c : 'a;
@@ -162,9 +162,6 @@ and 'a tdecl =
   | TTypeDecl of Loc.t * string list * string * body_type_decl
 
 (*****)
-
-(** TODO: use some Format boxes, or at least use some break spaces,
-          to avoid printing everything on a single line. *)
 
 let string_of_op = function
   | OPand -> "and"
