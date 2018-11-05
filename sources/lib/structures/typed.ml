@@ -32,9 +32,13 @@ open Parsed
 [@@@ocaml.warning "-33"]
 open Options
 
+(** Anotations *)
+
 type ('a, 'b) annoted =
   { c : 'a;
     annot : 'b }
+
+(** Terms and Formulas *)
 
 type tconstant =
   | Tint of string
@@ -50,6 +54,8 @@ type oplogic =
 
 type 'a tterm =
   { tt_ty : Ty.t; tt_desc : 'a tt_desc }
+
+and 'a atterm = ('a tterm, 'a) annoted
 
 and 'a tt_desc =
   | TTconst of tconstant
@@ -76,6 +82,8 @@ and 'a tt_desc =
   | TTite of ('a tform, 'a) annoted *
              ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
 
+and 'a atatom = ('a tatom, 'a) annoted
+
 and 'a tatom =
   | TAtrue
   | TAfalse
@@ -95,6 +103,8 @@ and 'a quant_form = {
   qf_form : ('a tform, 'a) annoted
 }
 
+and 'a atform = ('a tform, 'a) annoted
+
 and 'a tform =
   | TFatom of ('a tatom, 'a) annoted
   | TFop of oplogic * (('a tform, 'a) annoted) list
@@ -107,6 +117,10 @@ and 'a tform =
 and 'a tlet_kind =
   | TletTerm of ('a tterm, 'a) annoted
   | TletForm of ('a tform, 'a) annoted
+
+
+
+(** Declarations *)
 
 type 'a rwt_rule = {
   rwt_vars : (Symbols.t * Ty.t) list;
@@ -127,7 +141,9 @@ type theories_extensions =
   | NIA
   | FPA
 
-type 'a tdecl =
+type 'a atdecl = ('a tdecl, 'a) annoted
+
+and 'a tdecl =
   (* to simplify impl and extension of GUI, a TTtheory is seen a list
      of tdecl, although we only allow axioms in theories
      declarations *)
@@ -146,6 +162,9 @@ type 'a tdecl =
   | TTypeDecl of Loc.t * string list * string * body_type_decl
 
 (*****)
+
+(** TODO: use some Format boxes, or at least use some break spaces,
+          to avoid printing everything on a single line. *)
 
 let string_of_op = function
   | OPand -> "and"
