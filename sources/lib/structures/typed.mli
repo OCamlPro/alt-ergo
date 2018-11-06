@@ -52,7 +52,7 @@ type tconstant =
   | Tbitv of string     (** Bitvector constant. *)
   | Ttrue               (** The true boolean (or proposition ?) *)
   | Tfalse              (** The false boolean *)
-  | Tvoid               (** The unit type *)
+  | Tvoid               (** The only value of type unit *)
 (** Typed constants. *)
 
 type oplogic =
@@ -271,9 +271,9 @@ and 'a tdecl =
       declares a type [t], with parameters [vars], and with
       contents [body]. This new type may either be abstract,
       a record type, or an enumeration. *)
-(** Typed declarations.
-    TODO: wrap this in a record to factorize away
-    the location and name of the declaration ? *)
+(** Typed declarations. *)
+(* TODO: wrap this in a record to factorize away
+   the location and name of the declaration ? *)
 
 
 (** {5 Printing} *)
