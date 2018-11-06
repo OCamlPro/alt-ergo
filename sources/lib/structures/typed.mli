@@ -46,8 +46,8 @@ type ('a, 'b) annoted = {
 
 
 type tconstant =
+  (* TODO: make Tint hold an arbitrary precision integer ? *)
   | Tint of string      (** An integer constant. *)
-                        (* TODO: make it an arbitrary rpecision integer ? *)
   | Treal of Num.num    (** Real constant. *)
   | Tbitv of string     (** Bitvector constant. *)
   | Ttrue               (** The true boolean (or proposition ?) *)
