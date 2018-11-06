@@ -141,7 +141,7 @@ module Make (Th : Theory.S) = struct
        * env *)
 
       | Satml.Unsat confl ->
-        if Options.hybrid_sat () || SAT.decision_level env.sat = 0 then begin
+        if Options.tableaux_cdcl () || SAT.decision_level env.sat = 0 then begin
           (* fprintf fmt "nb decisions : %d @."
              (List.length env.decisions); *)
           raise (Exception.Inconsistent (Ex.empty, []));

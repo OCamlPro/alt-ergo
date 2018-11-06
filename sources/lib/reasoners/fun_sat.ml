@@ -97,15 +97,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let dec =
         List.rev_map
           (fun ((a,b,d,is_impl) as e) ->
-             if Options.hybrid_sat () && is_fact_in_CDCL cdcl a.F.f then
+             if Options.tableaux_cdcl () && is_fact_in_CDCL cdcl a.F.f then
                raise (Propagate (a, Ex.empty));
-             if Options.hybrid_sat () && is_fact_in_CDCL cdcl b.F.f then
+             if Options.tableaux_cdcl () && is_fact_in_CDCL cdcl b.F.f then
                raise (Propagate (b, Ex.empty));
              e, (try (MF.find a.F.f env.mp) with Not_found -> 0.), a.F.gf
           ) dec
       in
 
-      if Options.hybrid_sat () then
+      if Options.tableaux_cdcl () then
         (* force propagate modulo satML *)
         List.iter
           (fun (a, b, d, _) ->
@@ -430,7 +430,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   (* hybrid functions*)
   let print_decisions_in_the_sats msg env =
-    if Options.hybrid_sat () && verbose() then begin
+    if Options.tableaux_cdcl () && verbose() then begin
       fprintf fmt "-----------------------------------------------------@.";
       fprintf fmt ">> %s@." msg;
       fprintf fmt "decisions in DfsSAT are:@.";
@@ -449,7 +449,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     end
 
   let cdcl_same_decisions env =
-    if Options.hybrid_sat () && enable_assertions () then begin
+    if Options.tableaux_cdcl () && enable_assertions () then begin
       let cdcl_decs = CDCL.get_decisions !(env.cdcl) in
       let ok = ref true in
       let decs =
@@ -627,7 +627,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       match Th.query a env.tbox with
       | No -> tmp_cache := MA.add a No !tmp_cache; No
       | Yes (ex,_) as y ->
-        if Options.hybrid_sat () then
+        if Options.tableaux_cdcl () then
           cdcl_learn_clause true env ex (ff.F.f);
         learn_clause env ff ex;
         tcp_cache := MA.add a y !tcp_cache; y
@@ -669,7 +669,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     match red tcp_cache tmp_cache ff env tcp with
     | (Yes _, _)  as ans -> ans
     | No, b ->
-      if not (Options.hybrid_sat ()) then
+      if not (Options.tableaux_cdcl ()) then
         No, b
       else
         match CDCL.is_true !(env.cdcl) (F.mk_not ff.F.f) with
@@ -961,7 +961,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            | F.Lemma l ->
              Options.tool_req 2 "TR-Sat-Assume-Ax";
              let inst_env = Inst.add_lemma env.inst ff dep in
-             if Options.hybrid_sat () then
+             if Options.tableaux_cdcl () then
                cdcl_assume false env [ff,dep];
              {env with inst = inst_env}, true, tcp, ap_delta, lits
 
@@ -971,7 +971,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              begin
                try (* ground preds bahave like proxies of lazy CNF *)
                  let af, adep = A.LT.Map.find a env.ground_preds in
-                 if Options.hybrid_sat () then
+                 if Options.tableaux_cdcl () then
                    cdcl_assume false env
                      [{ff with F.f = F.mk_imp f af (F.id f)}, adep];
                  asm_aux acc [{ff with F.f = af}, Ex.union dep adep]
@@ -981,7 +981,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            | F.Skolem quantif ->
              Options.tool_req 2 "TR-Sat-Assume-Sko";
              let f' = F.skolemize quantif  in
-             if Options.hybrid_sat () then begin
+             if Options.tableaux_cdcl () then begin
                let f_imp_f' = F.mk_imp f f' (F.id f) in
                (* correct to put <-> ?*)
                (* should do something similar for Let ? *)
@@ -999,7 +999,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              let equiv = F.mk_iff pv lform id in
              let elim_let = F.mk_and equiv f' false id in
              let ff = {ff with F.f = elim_let} in
-             if Options.hybrid_sat () then begin
+             if Options.tableaux_cdcl () then begin
                let f_imp_f' = F.mk_imp f elim_let (F.id f) in
                (* correct to put <-> ?*)
                (* should do something similar for Let ? *)
@@ -1015,7 +1015,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              let v = Symbols.Map.find lvar (fst s) in
              let lst = [{ff with F.f=F.mk_lit (A.LT.mk_eq v lterm) id}, dep;
                         {ff with F.f=f'}, dep] in
-             if Options.hybrid_sat () then begin
+             if Options.tableaux_cdcl () then begin
                let elim_let =
                  F.mk_and (F.mk_lit (A.LT.mk_eq v lterm) id) f' false id in
                let f_imp_f' = F.mk_imp f elim_let (F.id f) in
@@ -1085,7 +1085,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         (fun (gf, dep) ->
            if Ex.has_no_bj dep then update_unit_facts env gf dep;
         )l;
-    if Options.hybrid_sat () then
+    if Options.tableaux_cdcl () then
       cdcl_assume false env l;
 
     if Options.profiling() then Profiling.instances l;
@@ -1094,7 +1094,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | _  ->
       (* Put new generated instances in cache *)
       ignore (update_instances_cache (Some l));
-      if Options.hybrid_sat () then
+      if Options.tableaux_cdcl () then
         cdcl_assume false env l;
       let env = assume env l in
       (* No conflict by direct assume, empty cache *)
@@ -1274,7 +1274,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         in
         let env = {env with tcp_cache = !tcp_cache} in
         ignore (update_instances_cache (Some l));
-        if Options.hybrid_sat () then
+        if Options.tableaux_cdcl () then
           cdcl_assume false env l;
         let env = assume env l in
         ignore (update_instances_cache (Some []));
@@ -1394,7 +1394,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if is_decision then
         begin
           let f = (fst fg).F.f in
-          if Options.hybrid_sat () then
+          if Options.tableaux_cdcl () then
             try cdcl_decide env f (MF.find f env.decisions)
             with Not_found -> assert false
         end;
@@ -1445,13 +1445,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          plevel = 0;
          decisions = MF.add f new_level env.decisions}
       in
-      if Options.hybrid_sat () then begin
+      if Options.tableaux_cdcl () then begin
         assert (not (is_fact_in_CDCL !(env.cdcl) f));
         assert (not (is_fact_in_CDCL !(env.cdcl) (F.mk_not f)));
       end;
       Debug.decide f env_a;
       let dep = unsat_rec env_a (a,Ex.singleton (Ex.Bj f)) true in
-      if Options.hybrid_sat () then
+      if Options.tableaux_cdcl () then
         cdcl_forget_decision env f new_level;
       Debug.unsat_rec dep;
       try
@@ -1481,11 +1481,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             ignore (update_instances_cache (Some []));
         end;
         assert (cdcl_same_decisions env);
-        if Options.hybrid_sat () then
+        if Options.tableaux_cdcl () then
           cdcl_learn_clause false env dep' (F.mk_not f);
         print_decisions_in_the_sats "make_one_decision:backtrack" env;
         assert (cdcl_same_decisions env);
-        if not (Options.hybrid_sat ()) then
+        if not (Options.tableaux_cdcl ()) then
           unsat_rec (assume env [b, Ex.union d dep']) (not_a,dep') false
         else
           match CDCL.is_true !(env.cdcl) a.F.f with
@@ -1592,7 +1592,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let unsat env gf =
     Debug.is_it_unsat gf;
     try
-      if Options.hybrid_sat () then
+      if Options.tableaux_cdcl () then
         cdcl_assume false env [gf,Ex.empty];
       let env = assume env [gf, Ex.empty] in
       let env =
@@ -1625,7 +1625,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         inst_lemmas
           false Util.Normal env env.inst env.tbox (selector env) env.ilevel
       in
-      if Options.hybrid_sat () then
+      if Options.tableaux_cdcl () then
         cdcl_assume false env gd;
       if Options.profiling() then Profiling.instances gd;
       let env = assume env gd in
@@ -1650,7 +1650,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let assume env fg dep =
     try
-      if Options.hybrid_sat () then
+      if Options.tableaux_cdcl () then
         cdcl_assume false env [fg,dep];
       assume env [fg,dep]
     with

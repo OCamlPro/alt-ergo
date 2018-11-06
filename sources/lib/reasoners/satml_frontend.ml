@@ -277,7 +277,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     )Ex.empty lc*)
 
   let selector env f orig =
-    (tableaux_cdcl () || not (MF.mem f env.gamma))
+    (Options.cdcl_tableaux () || not (MF.mem f env.gamma))
     && begin match F.view orig with
       | F.Lemma _ -> env.add_inst orig
       | _ -> true
@@ -469,7 +469,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            fprintf fmt "expand skolem of %a@.@." Literal.LT.print a;
          try
            let {F.f} as gf = A.Map.find a env.skolems in
-           if not (tableaux_cdcl ()) && MF.mem f env.gamma then acc
+           if not (Options.cdcl_tableaux ()) &&
+              MF.mem f env.gamma then acc
            else gf :: acc
          with Not_found -> acc
       ) acc sa
@@ -573,10 +574,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            | Some (_,l) -> List.fold_left (fun sa a -> A.Set.add a sa) sa l
         ) env.conj A.Set.empty
 
-  module SA = Set.Make (struct
-      type t = Atom.atom
-      let compare = Atom.cmp_atom
-    end)
+  module SA = Satml_types.Atom.Set
 
   let atoms_from_lazy_sat =
     let rec add_reasons_graph _todo _done =
@@ -593,12 +591,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           add_reasons_graph _todo (SA.add a _done)
     in
     fun ~frugal env ->
-      let sa =
-        Literal.LT.Set.fold
-          (fun a accu ->
-             SA.add (FF.get_atom env.ff_hcons_env a) accu
-          )(SAT.theory_assumed env.satml) SA.empty
-      in
+      let sa = SAT.instantiation_context env.satml env.ff_hcons_env in
       let sa =
         if frugal then sa
         else add_reasons_graph (SA.elements sa) SA.empty
@@ -635,7 +628,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       env.gamma A.Set.empty
 
   let atoms_from_sat_branches env ~greedy_round ~frugal =
-    let sa = match greedy_round || greedy (), tableaux_cdcl () with
+    let sa = match greedy_round || greedy (), cdcl_tableaux_inst () with
       | false, false -> atoms_from_sat_branches env
       | false, true  -> atoms_from_lazy_sat ~frugal env
       | true , false -> atoms_from_bmodel env

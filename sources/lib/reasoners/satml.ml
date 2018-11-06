@@ -53,7 +53,9 @@ module type SAT_ML = sig
     unit
 
   val boolean_model : t -> Atom.atom list
-  val theory_assumed : t -> Literal.LT.Set.t
+  val instantiation_context :
+    t -> FF.hcons_env -> Satml_types.Atom.Set.t
+
   val current_tbox : t -> th
   val set_current_tbox : t -> th -> unit
   val empty : unit -> t
@@ -406,7 +408,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     if Options.profiling() then
       Profiling.decision (decision_level env) "<none>";
     Vec.push env.tenv_queue env.tenv; (* save the current tenv *)
-    if Options.tableaux_cdcl () then begin
+    if Options.cdcl_tableaux () then begin
       Vec.push env.lazy_cnf_queue env.lazy_cnf;
       Vec.push env.relevants_queue env.relevants
     end
@@ -485,14 +487,14 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Queue.clear env.tatoms_queue;
       Queue.clear env.th_tableaux;
       env.tenv <- Vec.get env.tenv_queue lvl; (* recover the right tenv *)
-      if Options.tableaux_cdcl () then begin
+      if Options.cdcl_tableaux () then begin
         env.lazy_cnf <- Vec.get env.lazy_cnf_queue lvl;
         env.relevants <- Vec.get env.relevants_queue lvl;
       end;
       Vec.shrink env.trail ((Vec.size env.trail) - env.qhead) true;
       Vec.shrink env.trail_lim ((Vec.size env.trail_lim) - lvl) true;
       Vec.shrink env.tenv_queue ((Vec.size env.tenv_queue) - lvl) true;
-      if Options.tableaux_cdcl () then begin
+      if Options.cdcl_tableaux () then begin
         Vec.shrink
           env.lazy_cnf_queue ((Vec.size env.lazy_cnf_queue) - lvl) true;
         Vec.shrink env.relevants_queue
@@ -787,9 +789,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let theory_propagate env =
     let facts = ref [] in
     let dlvl = decision_level env in
+    if Options.cdcl_tableaux () then
+      compute_facts_for_theory_propagate env;
     let tatoms_queue =
-      if Options.tableaux_cdcl () then begin
-        compute_facts_for_theory_propagate env;
+      if Options.cdcl_tableaux_th () then begin
         env.th_tableaux
       end
       else env.tatoms_queue
@@ -825,7 +828,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           (*let full_model = nb_assigns() = env.nb_init_vars in*)
           (* XXX what to do with the other results of Th.assume ? *)
           let t,_,cpt =
-            Th.assume ~ordered:(not (Options.tableaux_cdcl ()))
+            Th.assume ~ordered:(not (Options.cdcl_tableaux_th ()))
               (List.rev !facts) env.tenv
           in
           steps := Int64.add (Int64.of_int cpt) !steps;
@@ -1077,7 +1080,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     | C_bool c -> C_bool c
     | C_theory _ -> assert false
     | C_none ->
-      if Options.hybrid_sat () then
+      if Options.tableaux_cdcl () then
         C_none
       else
         match theory_propagate env with
@@ -1338,13 +1341,13 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         if decision_level env = 0 then report_conflict env confl;
         conflict_analyze_and_fix env confl;
         propagate_and_stabilize env propagator conflictC strat;
-        if Options.hybrid_sat () then
+        if Options.tableaux_cdcl () then
           match x with
           | None -> ()
           | Some r -> raise (Last_UIP_reason r)
       with
         Unsat _ as e ->
-        if Options.hybrid_sat () then begin
+        if Options.tableaux_cdcl () then begin
           if not (Options.minimal_bj ()) then assert (decision_level env = 0);
           raise (Last_UIP_reason Atom.Set.empty)
         end
@@ -1386,7 +1389,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       propagate_and_stabilize env all_propagations conflictC !strat;
 
       if nb_assigns env = env.nb_init_vars ||
-         (Options.tableaux_cdcl () && Matoms.is_empty env.lazy_cnf) then
+         (Options.cdcl_tableaux_inst () && Matoms.is_empty env.lazy_cnf) then
         raise Sat;
       if Options.enable_restarts ()
       && n_of_conflicts >= 0 && !conflictC >= n_of_conflicts then begin
@@ -1552,7 +1555,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
 
   let update_lazy_cnf env ~do_bcp mff ~dec_lvl =
-    if Options.tableaux_cdcl () && dec_lvl <= decision_level env then begin
+    if Options.cdcl_tableaux () && dec_lvl <= decision_level env then begin
       let s =
         try Util.MI.find dec_lvl env.lvl_ff
         with Not_found -> SFF.empty
@@ -1630,7 +1633,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           env.tenv     <- old_tenv
         end
     in
-    fun env mff -> if Options.tableaux_cdcl () then better_bj env mff
+    fun env mff ->
+      if Options.cdcl_tableaux () then
+        better_bj env mff
 
 
   let assume env unit_cnf nunit_cnf f ~cnumber mff ~dec_lvl =
@@ -1661,7 +1666,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       try_to_backjump_further env mff
 
   let exists_in_lazy_cnf env f' =
-    not (Options.tableaux_cdcl ()) || MFF.mem f' env.ff_lvl
+    not (Options.cdcl_tableaux ()) ||
+    MFF.mem f' env.ff_lvl
 
   let boolean_model env =
     let l = ref [] in
@@ -1670,7 +1676,25 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     done;
     !l
 
-  let theory_assumed env = Th.get_assumed env.tenv
+  let instantiation_context env hcons =
+    if Options.cdcl_tableaux_th () then
+      (* use atoms from theory environment if tableaux method
+         is used for theories *)
+      Literal.LT.Set.fold
+        (fun a accu ->
+           SA.add (FF.get_atom hcons a) accu
+        )(Th.get_assumed env.tenv) SA.empty
+    else if Options.cdcl_tableaux_inst () then
+      (* use relevants atoms from environment if tableaux method
+         is used for instantiation *)
+      SFF.fold (fun f acc ->
+          match FF.view f with
+          | FF.UNIT a -> SA.add a acc
+          | _ -> acc
+        )env.relevants SA.empty
+    else
+      (* can't be call if tableaux method is not used *)
+      assert false
 
   let current_tbox env = env.tenv
   let set_current_tbox env tb = env.tenv <- tb
