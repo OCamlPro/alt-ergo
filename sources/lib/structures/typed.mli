@@ -46,13 +46,13 @@ type ('a, 'b) annoted = {
 
 
 type tconstant =
-  | Tint of string      (** An integer constant.
-                            TODO: make it an arbitrary rpecision integer ? *)
+  | Tint of string      (** An integer constant. *)
+                        (* TODO: make it an arbitrary rpecision integer ? *)
   | Treal of Num.num    (** Real constant. *)
   | Tbitv of string     (** Bitvector constant. *)
   | Ttrue               (** The true boolean (or proposition ?) *)
   | Tfalse              (** The false boolean *)
-  | Tvoid               (** TODO: what is this ? *)
+  | Tvoid               (** The unit type *)
 (** Typed constants. *)
 
 type oplogic =
@@ -89,36 +89,35 @@ and 'a tt_desc =
   | TTmapsTo of Hstring.t * 'a atterm
   (** TODO: what is this ? *)
   | TTinInterval of 'a atterm * bool * 'a atterm * 'a atterm * bool
-  (** Represent intervals. (TODO: integer/real/arithmetic intervals ?)
+  (** Represent floating point intervals (used for triggers in Floating
+      point arithmetic theory).
       [TTinInterval (lower, l_strict, t, upper, u_strict)] is a constraint
       stating that term [t] is in the interval [lower, upper],
       and that the lower (resp. upper) bound is strict iff [l_strict]
-      (resp. [u_strict]) is true.
-      TODO: check that the order of arguments is the correct one ? *)
+      (resp. [u_strict]) is true. *)
   | TTget of 'a atterm * 'a atterm
-  (** Get operation. TODO: on arrays/bitvectors ? *)
+  (** Get operation on arrays *)
   | TTset of 'a atterm * 'a atterm * 'a atterm
-  (** Set operation. TODO: on arrays/bitvectors ? *)
+  (** Set operation on arrays *)
   | TTextract of 'a atterm * 'a atterm * 'a atterm
-  (** TODO: what is this ? *)
+  (** Extract a sub-bitvector *)
   | TTconcat of 'a atterm * 'a atterm
-  (* Concatenation. TODO: on lists/arrays/bitvectors ? *)
+  (* Concatenation of bitvectors *)
   | TTdot of 'a atterm * Hstring.t
-  (** TODO: what is this ? field acess on structs/records ? *)
+  (** Field acess on structs/records *)
   | TTrecord of (Hstring.t * 'a atterm) list
-  (** Record creation. TODO: check that this is correct. *)
+  (** Record creation. *)
   | TTlet of (Symbols.t * 'a atterm) list * 'a atterm
-  (** Let-bindings. Accept a list of mutually recursive le-bindings.
-      TODO: check that mutually recursive let-bindings are allowed ? *)
+  (** Let-bindings. Accept a list of mutually recursive le-bindings. *)
+  (* TODO: check that mutually recursive let-bindings are allowed ? *)
   | TTnamed of Hstring.t * 'a atterm
-  (** TODO: what is this ? *)
+  (** Attach a label to a term. *)
   | TTite of 'a atform * 'a atterm * 'a atterm
   (** Conditional branching, of the form
-      [TTite (condition, then_branch, else_branch)].
-      TODO: check order of branches. *)
-(** Typed terms descriptors.
-    TODO: replace tuples by records (possible inline recors to
-          avoid polluting the namespace ?) with explicit field names. *)
+      [TTite (condition, then_branch, else_branch)]. *)
+(** Typed terms descriptors. *)
+(* TODO: replace tuples by records (possible inline recors to
+         avoid polluting the namespace ?) with explicit field names. *)
 
 and 'a atatom = ('a tatom, 'a) annoted
 (** Type alias for annoted typed atoms. *)
@@ -131,18 +130,14 @@ and 'a tatom =
   | TAeq of 'a atterm list
   (** Equality of a set of typed terms. *)
   | TAdistinct of 'a atterm list
-  (** Disequality. All terms in the set are pairwise distinct.
-      TODO: check interpretation ? *)
+  (** Disequality. All terms in the set are pairwise distinct. *)
   | TAneq of 'a atterm list
   (** Equality negation: at least two elements in the list
-      are not equal.
-      TODO: check interpretation. *)
+      are not equal. *)
   | TAle of 'a atterm list
-  (** Arithmetic ordering: lesser or equal. Chained on lists of terms.
-      TODO: check interpretation ? *)
+  (** Arithmetic ordering: lesser or equal. Chained on lists of terms. *)
   | TAlt of 'a atterm list
-  (** Strict arithmetic ordering: less than. Chained on lists of terms.
-      TODO: check interpretation ? *)
+  (** Strict arithmetic ordering: less than. Chained on lists of terms. *)
   | TApred of 'a atterm * bool
   (** Term predicate, negated if the boolean is true.
       [TApred (t, negated)] is satisfied iff [t <=> not negated] *)
@@ -150,17 +145,16 @@ and 'a tatom =
 
 and 'a quant_form = {
   qf_bvars : (Symbols.t * Ty.t) list;
-  (** Quantified variables (with their types) that appear in the formula.
-      TODO: reword this to say whether those variables appear int he formula,
-            or whether they are the variables quantified by the formula (in the
-            inner formula [qf_form]) *)
+  (** Variables that are quantified by this formula. *)
   qf_upvars : (Symbols.t * Ty.t) list;
-  (** TODO: what are thoses ? *)
+  (** Free variables that occur in the formula. *)
   qf_triggers : ('a atterm list * bool) list;
   (** Triggers associated wiht the formula.
-      TODO: what is the boolean ? *)
+      For each trigger, the boolean specifies whether the trigger
+      was given in the input file (compared to inferred). *)
   qf_hyp : 'a atform list;
-  (** TODO: what is this field ? *)
+  (** Hypotheses of axioms with semantic triggers in FPA theory. Typically,
+      these hypotheses reduce to TRUE after instantiation *)
   qf_form : 'a atform;
   (** The quantified formula. *)
 }
@@ -184,7 +178,7 @@ and 'a tform =
   (** Let binding.
       TODO: what is in the first list ? *)
   | TFnamed of Hstring.t * 'a atform
-  (** TODO: what is this ? *)
+  (** Attach a name to a formula. *)
 (** Typed formulas. *)
 
 and 'a tlet_kind =
@@ -223,22 +217,28 @@ type 'a rwt_rule = {
     Polymorphic to allow for different representation of terms. *)
 
 type goal_sort =
-  | Cut       (** TODO: ? *)
-  | Check     (** TODO: ? *)
-  | Thm       (** The goal is a theorem to be proved ? *)
+  | Cut
+  (** Introduce a cut in a goal. Once the cut proved,
+      it's added as a hypothesis. *)
+  | Check
+  (** Check if some intermediate assertion is prouvable *)
+  | Thm
+  (** The goal to be proved *)
 (** Goal sort. Used in typed declarations. *)
 
 type theories_extensions =
-  | Sum     (** Sum types (aka algebraic datatypes). TODO: check. *)
-  | Arrays  (** Functionnal arrays (aka maps). TODO: check.  *)
+  | Sum     (** Enumerations (i.e. sum types) *)
+  | Arrays  (** Functionnal arrays (aka maps). *)
   | Records (** Records (aka structs) *)
   | Bitv    (** Theory of bitvectors *)
   | LIA     (** Linear Integer Arithmetic *)
   | LRA     (** Linear Real Arithmetic *)
   | NRA     (** Non-linear Real Arithmetic *)
   | NIA     (** Non-linear Integer arithmetic *)
-  | FPA     (** Floating Point Arithmetic *)
-(** Theories known in alt-ergo, as defined in smtlib. *)
+  | FPA     (** Floating Point Arithmetic.
+                See sources/preludes/fpa-theory-2017-01-04-16h00.why *)
+(** Theories known in alt-ergo. These theories correspond
+    to sets of axioms to extend expressive power of some theory. *)
 
 type 'a atdecl = ('a tdecl, 'a) annoted
 (** Type alias for annoted typed declarations. *)
@@ -267,8 +267,10 @@ and 'a tdecl =
       [TPredicate_def (loc, name, vars, ret, body)] declares a function
       [fun vars => body], where body has type [ret]. *)
   | TTypeDecl of Loc.t * string list * string * body_type_decl
-  (** Type declaration.
-      TODO: what are all those strings ?!! *)
+  (** New type declaration. [TTypeDecl (loc, vars, t, body)]
+      declares a type [t], with parameters [vars], and with
+      contents [body]. This new type may either be abstract,
+      a record type, or an enumeration. *)
 (** Typed declarations.
     TODO: wrap this in a record to factorize away
     the location and name of the declaration ? *)
