@@ -53,7 +53,7 @@ type t =
   (** Functional arrays. [TFarray (src,dst)] maps values of type [src]
       to values of type [dst]. *)
   | Tnext of t
-  (** TODO: ? *)
+  (** Experiment with a reachability theory. Can be safely ignored. *)
   | Tsum of Hstring.t * Hstring.t list
   (** Enumeration, with its name, and the list of its constructors. *)
   | Trecord of trecord
@@ -84,7 +84,7 @@ and trecord = {
 (** Record types. *)
 
 module Svty : Set.S with type elt = int
-(** Sets of type variables *)
+(** Sets of type variables, indexed by their identifier. *)
 
 module Set : Set.S with type elt = t
 (** Sets of types *)
