@@ -519,9 +519,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       in
       env.cdcl := CDCL.assume delay !(env.cdcl) l
     with
-    | Exception.Inconsistent (ex, l) ->
+    | CDCL.Bottom (ex, l, cdcl) ->
       if debug_sat() &&  verbose() then
         fprintf fmt "[fun_cdcl_assume] conflict@.";
+      env.cdcl := cdcl;
       assert (cdcl_known_decisions ex env);
       raise (IUnsat(ex, l))
 
@@ -530,10 +531,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     try
       env.cdcl := CDCL.decide !(env.cdcl) f dlvl
     with
-    | Exception.Inconsistent (ex, l) ->
+    | CDCL.Bottom (ex, l, _cdcl) ->
       if debug_sat() && verbose() then
         fprintf fmt "[fun_cdcl_decide] conflict@.";
       assert (cdcl_known_decisions ex env);
+      (* no need to save cdcl here *)
       raise (IUnsat(ex, l))
     | e ->
       fprintf fmt "%s@." (Printexc.to_string e);

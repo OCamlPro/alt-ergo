@@ -1,3 +1,15 @@
+(******************************************************************************)
+(*                                                                            *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                     *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the license indicated      *)
+(*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
+(*     present, please contact us to clarify licensing.                       *)
+(*                                                                            *)
+(******************************************************************************)
+
+
 module Make (Th : Theory.S) = struct
 
   open Options
@@ -21,6 +33,8 @@ module Make (Th : Theory.S) = struct
      decisions : (int * Formula.t) list;
      pending : (F.gformula * Ex.t) list list;
     }
+
+  exception Bottom of Explanation.t * Term.Set.t list * t
 
   let empty () =
     {sat = SAT.empty ();
@@ -89,7 +103,7 @@ module Make (Th : Theory.S) = struct
           fprintf fmt "!!! [dlvl=%d] %a becomes false before deciding@."
             dlvl F.print f;(* Satml_types.Atom.pr_atom (fst f); *)
         let ex = Ex.union (Ex.singleton (Ex.Bj f)) (Lazy.force ex) in
-        raise (Exception.Inconsistent (ex, []))
+        raise (Bottom (ex, [], env))
         (*SAT.print_env ();*)
     end
 
@@ -116,47 +130,38 @@ module Make (Th : Theory.S) = struct
               ) acc l
           )(env, [], [], []) ll
       in
-      try
-        if pfl == [] then env
-        else begin
-          (* SAT.cancel_until env.sat 0; *)
-          let _ =
-            SAT.new_vars env.sat (Atom.nb_made_vars env.hcons_env)
-              new_vars [] []
-          in
-          SAT.assume_simple env.sat cnf;
-          SAT.assume_simple env.sat pfl;
+      if pfl != [] then env
+      else
+        let () =
+          try
+            let _ =
+              SAT.new_vars env.sat (Atom.nb_made_vars env.hcons_env)
+                new_vars [] []
+            in
+            SAT.assume_simple env.sat cnf;
+            SAT.assume_simple env.sat pfl;
 
-          List.iter (fun ((dlvl, a) as e) ->
-              decide_aux env e;
-            ) (List.rev env.decisions);
-          (*SAT.solve ();*)
-          env
-        end
-      with
-      | Satml.Sat ->
-        assert false
-      (* Uncomment if Sat.solve is called *)
-      (* SAT.cancel_until env.sat 0;
-       * env *)
+            List.iter (fun ((dlvl, a) as e) -> decide_aux env e)
+              (List.rev env.decisions);
+          with
+          | Satml.Sat ->
+            assert false
+          (* Uncomment if Sat.solve is called *)
+          (* SAT.cancel_until env.sat 0;
+           * env *)
 
-      | Satml.Unsat confl ->
-        if Options.tableaux_cdcl () || SAT.decision_level env.sat = 0 then begin
-          (* fprintf fmt "nb decisions : %d @."
-             (List.length env.decisions); *)
-          raise (Exception.Inconsistent (Ex.empty, []));
-        end;
-        SAT.cancel_until env.sat 0;
-        (* OK, because DfsSAT decisions are not propagated here yet *)
-        (* How to compute the explanation the enable unsat cores ? *)
-        (*SAT.print_env ();*)
-        assert false;
-        (* raise (Exception.Inconsistent (Ex.empty, [])) *)
-      | Satml.Last_UIP_reason r ->
-        let r = Atom.Set.fold (fun a acc ->
-            SF.add (formula_of_atom env a) acc) r SF.empty in
-        let expl = Ex.make_deps r in
-        raise (Exception.Inconsistent (expl, []))
+          | Satml.Unsat confl ->
+            assert (Options.tableaux_cdcl () && SAT.decision_level env.sat = 0);
+            raise (Bottom (Ex.empty, [], env))
+
+          | Satml.Last_UIP_reason r ->
+            let r =
+              Atom.Set.fold (fun a acc ->
+                  SF.add (formula_of_atom env a) acc) r SF.empty
+            in
+            raise (Bottom (Ex.make_deps r, [], env))
+        in
+        env
 
   let decide env f dlvl =
     try
@@ -165,19 +170,13 @@ module Make (Th : Theory.S) = struct
       {env with decisions = (dlvl, f) :: env.decisions}
     with
     | Satml.Unsat confl ->
-      if SAT.decision_level env.sat = 0 then begin
-        fprintf fmt "nb decisions : %d @." (List.length env.decisions);
-        raise (Exception.Inconsistent (Ex.empty, []));
-      end;
-      SAT.cancel_until env.sat 0;
-      (* OK, because DfsSAT decisions are not propagated here yet *)
-      (* How to compute the explanation the enable unsat cores ? *)
-      (*SAT.print_env ();*)
-      assert false;
-      (* raise (Exception.Inconsistent (Ex.empty, [])) *)
+      assert (Options.tableaux_cdcl () && SAT.decision_level env.sat = 0);
+      raise (Bottom (Ex.empty, [], env))
+
     | Satml.Last_UIP_reason r ->
-      let r = Atom.Set.fold (fun a acc ->
-          SF.add (formula_of_atom env a) acc) r SF.empty in
-      let expl = Ex.make_deps r in
-      raise (Exception.Inconsistent (expl, []))
+      let r =
+        Atom.Set.fold (fun a acc ->
+            SF.add (formula_of_atom env a) acc) r SF.empty
+      in
+      raise (Bottom (Ex.make_deps r, [], env))
 end
