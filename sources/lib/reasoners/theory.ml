@@ -51,10 +51,10 @@ module type S = sig
      decreasing order with respect to (dlvl, plvl) *)
   val assume :
     ?ordered:bool ->
-    (Literal.LT.t * Explanation.t * int * int) list -> t ->
+    (Tliteral.LT.t * Explanation.t * int * int) list -> t ->
     t * Term.Set.t * int
 
-  val query : Literal.LT.t -> t -> answer
+  val query : Tliteral.LT.t -> t -> answer
   val print_model : Format.formatter -> t -> unit
   val cl_extract : t -> Term.Set.t list
   val extract_ground_terms : t -> Term.Set.t
@@ -72,7 +72,7 @@ module type S = sig
     t -> (Formula.t -> Formula.t -> bool) ->
     int -> int -> t * Sig.instances
 
-  val get_assumed : t -> Literal.LT.Set.t
+  val get_assumed : t -> Tliteral.LT.Set.t
 
 end
 
@@ -84,7 +84,7 @@ module Main_Default : S = struct
     let subterms_of_assumed l =
       List.fold_left
         (List.fold_left
-           (fun st (a, _, _) -> Term.Set.union st (A.LT.terms_rec a))
+           (fun st (a, _, _) -> Term.Set.union st (Tliteral.LT.terms_rec a))
         )SetT.empty l
 
     let types_of_subterms st =
@@ -214,11 +214,11 @@ module Main_Default : S = struct
                | [] -> assert false
                | (a,dlvl,plvl)::l ->
                  fprintf fmt "( (* %d , %d *) %a " dlvl plvl
-                   Literal.LT.print a;
+                   Tliteral.LT.print a;
                  List.iter
                    (fun (a, dlvl, plvl) ->
                       fprintf fmt " and@. (* %d , %d *) %a " dlvl plvl
-                        Literal.LT.print a
+                        Tliteral.LT.print a
                    ) l;
                  fprintf fmt " ) ->@."
             ) (List.rev l);
@@ -281,7 +281,7 @@ module Main_Default : S = struct
           print_lr_view c Ex.print dep
 
     let query a =
-      if debug_cc () then fprintf fmt "[cc] query : %a@." A.LT.print a
+      if debug_cc () then fprintf fmt "[cc] query : %a@." Tliteral.LT.print a
 
     let split_sat_contradicts_cs filt_choices =
       if debug_split () then
@@ -298,9 +298,9 @@ module Main_Default : S = struct
 
 
   type t = {
-    assumed_set : Literal.LT.Set.t;
-    assumed : (Literal.LT.t * int * int) list list;
-    cs_pending_facts : (Literal.LT.t * Ex.t * int * int) list list;
+    assumed_set : Tliteral.LT.Set.t;
+    assumed : (Tliteral.LT.t * int * int) list list;
+    cs_pending_facts : (Tliteral.LT.t * Ex.t * int * int) list list;
     terms : Term.Set.t;
     gamma : CC_X.t;
     gamma_finite : CC_X.t;
@@ -444,7 +444,7 @@ module Main_Default : S = struct
       (fun acc (a, _, _) ->
          match a with
          | LTerm r -> begin
-             match Literal.LT.view r with
+             match Tliteral.LT.view r with
              | Literal.Eq (t1, t2) ->
                SetT.add t1 (SetT.add t2 acc)
              | Literal.Distinct (_, l) | Literal.Builtin (_, _, l) ->
@@ -485,13 +485,13 @@ module Main_Default : S = struct
     let assumed, assumed_set, cpt =
       List.fold_left
         (fun ((assumed, assumed_set, cpt) as accu) ((a, ex, dlvl, plvl)) ->
-           if Literal.LT.Set.mem a assumed_set
+           if Tliteral.LT.Set.mem a assumed_set
            then accu
            else
              begin
                CC_X.add_fact facts (LTerm a, ex, Sig.Other);
                (a, dlvl, plvl) :: assumed,
-               Literal.LT.Set.add a assumed_set,
+               Tliteral.LT.Set.add a assumed_set,
                cpt+1
              end
         )([], t.assumed_set, 0) in_facts
@@ -566,13 +566,13 @@ module Main_Default : S = struct
       Options.exec_thread_yield ();
       Debug.query a;
       try
-        match A.LT.view a with
+        match Tliteral.LT.view a with
         | A.Eq (t1, t2)  ->
           let t = add_and_process_conseqs a t in
           CC_X.are_equal t.gamma t1 t2 ~init_terms:false
 
         | A.Distinct (false, [t1; t2]) ->
-          let na = A.LT.neg a in
+          let na = Tliteral.LT.neg a in
           let t = add_and_process_conseqs na t in (* na ? *)
           CC_X.are_distinct t.gamma t1 t2
 
@@ -588,7 +588,7 @@ module Main_Default : S = struct
           else CC_X.are_equal t.gamma t1 (Term.top()) ~init_terms:false
 
         | _ ->
-          let na = A.LT.neg a in
+          let na = Tliteral.LT.neg a in
           let t = add_and_process_conseqs na t in
           CC_X.query t.gamma na
       with Exception.Inconsistent (d, classes) ->
@@ -612,12 +612,12 @@ module Main_Default : S = struct
       { gamma = env;
         gamma_finite = env;
         choices = [];
-        assumed_set = Literal.LT.Set.empty;
+        assumed_set = Tliteral.LT.Set.empty;
         assumed = [];
         cs_pending_facts = [];
         terms = Term.Set.empty }
     in
-    let a = A.LT.mk_distinct false [T.vrai; T.faux] in
+    let a = Tliteral.LT.mk_distinct false [T.vrai; T.faux] in
     let t, _, _ = assume true [a, Ex.empty, 0, -1] t in
     t
 
@@ -668,16 +668,16 @@ end
 module Main_Empty : S = struct
 
   type t =
-    { assumed_set : Literal.LT.Set.t }
+    { assumed_set : Tliteral.LT.Set.t }
 
-  let empty () = { assumed_set = Literal.LT.Set.empty }
+  let empty () = { assumed_set = Tliteral.LT.Set.empty }
 
   let assume ?(ordered=true) in_facts t =
     let assumed_set =
       List.fold_left
         (fun assumed_set ((a, ex, dlvl, plvl)) ->
-           if Literal.LT.Set.mem a assumed_set then assumed_set
-           else Literal.LT.Set.add a assumed_set
+           if Tliteral.LT.Set.mem a assumed_set then assumed_set
+           else Tliteral.LT.Set.add a assumed_set
         ) t.assumed_set in_facts
     in
     {assumed_set}, T.Set.empty, 0

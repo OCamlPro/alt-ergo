@@ -34,6 +34,7 @@ open Commands
 module T = Term
 module F = Formula
 module A = Literal
+module ALT = Tliteral.LT
 module Sy = Symbols
 
 type expr = Term of T.t | Form of F.t * Sy.t * T.t
@@ -359,7 +360,7 @@ and make_trigger name up_qv (defns:let_defns) abstr hyp (e, from_user) =
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv inline_lets defns abstr) trs in
       let lit =
-        A.LT.mk_eq
+        ALT.mk_eq
           (make_term up_qv inline_lets defns abstr t1)
           (make_term up_qv inline_lets defns abstr t2)
       in
@@ -370,7 +371,7 @@ and make_trigger name up_qv (defns:let_defns) abstr hyp (e, from_user) =
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv inline_lets defns abstr) trs in
       let lit =
-        A.LT.mk_distinct false
+        ALT.mk_distinct false
           [make_term up_qv inline_lets defns abstr t1;
            make_term up_qv inline_lets defns abstr t2]
       in
@@ -381,7 +382,7 @@ and make_trigger name up_qv (defns:let_defns) abstr hyp (e, from_user) =
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv inline_lets defns abstr) trs in
       let lit =
-        A.LT.mk_builtin true A.LE
+        ALT.mk_builtin true A.LE
           [make_term up_qv inline_lets defns abstr t1;
            make_term up_qv inline_lets defns abstr t2]
       in
@@ -392,7 +393,7 @@ and make_trigger name up_qv (defns:let_defns) abstr hyp (e, from_user) =
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv inline_lets defns abstr) trs in
       let lit =
-        A.LT.mk_builtin true A.LT
+        ALT.mk_builtin true A.LT
           [make_term up_qv inline_lets defns abstr t1;
            make_term up_qv inline_lets defns abstr t2]
       in
@@ -414,21 +415,21 @@ and make_pred up_qv inline_lets defns abstr z id =
     let off = Options.inline_lets () == Util.Off in
     begin match find_any_defn x defns with
       | Some (Form (f, _, fresh_sy)) ->
-        if off then F.mk_lit (A.LT.mk_pred fresh_sy false) id
+        if off then F.mk_lit (ALT.mk_pred fresh_sy false) id
         else f
 
       | Some (Term t) ->
-        if off then F.mk_lit (A.LT.mk_pred (T.make x [] Ty.Tbool) false) id
-        else F.mk_lit (A.LT.mk_pred t false) id
+        if off then F.mk_lit (ALT.mk_pred (T.make x [] Ty.Tbool) false) id
+        else F.mk_lit (ALT.mk_pred t false) id
 
       | None ->
         F.mk_lit
-          (A.LT.mk_pred (make_term up_qv inline_lets defns abstr z) false)
+          (ALT.mk_pred (make_term up_qv inline_lets defns abstr z) false)
           id
     end
   | _ ->
     F.mk_lit
-      (A.LT.mk_pred (make_term up_qv inline_lets defns abstr z) false) id
+      (ALT.mk_pred (make_term up_qv inline_lets defns abstr z) false) id
 
 and make_form up_qv inline_lets defns abstr name_base f loc =
   let name_tag = ref 0 in
@@ -442,7 +443,7 @@ and make_form up_qv inline_lets defns abstr name_base f loc =
           | TAfalse ->
             F.faux
           | TAeq [t1;t2] ->
-            F.mk_lit (A.LT.mk_eq (make_term up_qv inline_lets defns abstr t1)
+            F.mk_lit (ALT.mk_eq (make_term up_qv inline_lets defns abstr t1)
                         (make_term up_qv inline_lets defns abstr t2)) id
           | TApred (t, negated) ->
             let res = make_pred up_qv inline_lets defns abstr t id in
@@ -450,10 +451,10 @@ and make_form up_qv inline_lets defns abstr name_base f loc =
 
           | TAneq lt | TAdistinct lt ->
             let lt = List.map (make_term up_qv inline_lets defns abstr) lt in
-            F.mk_lit (A.LT.mk_distinct false lt) id
+            F.mk_lit (ALT.mk_distinct false lt) id
           | TAle [t1;t2] ->
             let lit =
-              A.LT.mk_builtin true A.LE
+              ALT.mk_builtin true A.LE
                 [make_term up_qv inline_lets defns abstr t1;
                  make_term up_qv inline_lets defns abstr t2]
             in
@@ -471,11 +472,11 @@ and make_form up_qv inline_lets defns abstr name_base f loc =
                     Ty.Tint
                 in
                 F.mk_lit
-                  (A.LT.mk_builtin true A.LE
+                  (ALT.mk_builtin true A.LE
                      [make_term up_qv inline_lets defns abstr t1; tt2]) id
               | _ ->
                 let lit =
-                  A.LT.mk_builtin true A.LT
+                  ALT.mk_builtin true A.LT
                     [make_term up_qv inline_lets defns abstr t1;
                      make_term up_qv inline_lets defns abstr t2]
                 in

@@ -48,7 +48,7 @@ type trigger = {
   hyp : t list;
   depth : int;
   from_user : bool;
-  guard : Literal.LT.t option
+  guard : Tliteral.LT.t option
 }
 
 and quantified = {
@@ -85,7 +85,7 @@ and tlet = {
 and view =
     Unit of t*t
   | Clause of t*t*bool
-  | Literal of Literal.LT.t
+  | Literal of Tliteral.LT.t
   | Lemma of quantified
   | Skolem of quantified
   | Flet of flet
@@ -150,7 +150,7 @@ let equal_triggers =
   in
   let equal_opt o1 o2 = match o1, o2 with
     | None, None -> true
-    | Some a, Some b -> Literal.LT.equal a b
+    | Some a, Some b -> Tliteral.LT.equal a b
     | _ -> false
   in
   fun trs1 trs2 -> MST.equal equal_opt (map_of trs1) (map_of trs2)
@@ -194,7 +194,7 @@ let rec is_positive v =
   match v with
   | Unit _ | Lemma _ -> true
   | Clause _ | Skolem _ -> false
-  | Literal a ->  snd (Literal.LT.atom_view a)
+  | Literal a ->  snd (Tliteral.LT.atom_view a)
   | Tlet tlet -> is_positive (view tlet.tlet_f)
   | Flet flet -> is_positive (view flet.flet_f)
 
@@ -203,7 +203,7 @@ module View = struct
   type elt = iview
 
   let eqc c1 c2 = match c1,c2 with
-    | Literal x , Literal y -> Literal.LT.equal x y
+    | Literal x , Literal y -> Tliteral.LT.equal x y
     | Unit(f1,f2), Unit(g1,g2) | Clause(f1,f2,_), Clause(g1,g2,_) ->
       equal f1 g1 && equal f2 g2 || equal f1 g2 && equal f2 g1
 
@@ -228,7 +228,7 @@ module View = struct
   let hashllt = List.fold_left (fun acc (x, _) ->acc*19 + hashlt 0 x)
 
   let hashc acc = function
-    | Literal x -> Literal.LT.hash x
+    | Literal x -> Tliteral.LT.hash x
 
     | Unit((f1,_),(f2,_)) -> (* XXX : Same as Clause ? *)
       let min = min f1.tag f2.tag in
@@ -293,7 +293,7 @@ let print_binders =
 let rec print fmt f =
   match view f with
   | Literal a ->
-    Literal.LT.print fmt a
+    Tliteral.LT.print fmt a
   | Lemma {triggers = trs; main = f; name = n; binders} ->
     if verbose () then
       let first = ref true in
@@ -344,7 +344,7 @@ let make pos neg size id =
   and n = {pos = neg; neg = pos; size = size; tag = -1; negation = p} in
   if is_positive pos then H.make p, id else mk_not (H.make n, id)
 
-let vrai = make (Literal Literal.LT.vrai) (Literal Literal.LT.faux) 1 0
+let vrai = make (Literal Tliteral.LT.vrai) (Literal Tliteral.LT.faux) 1 0
 let faux = mk_not vrai
 
 let mk_binders =
@@ -378,7 +378,7 @@ let merge_maps acc b =
 let free_vars =
   let rec free_rec acc f =
     match view f with
-    | Literal a   -> Literal.LT.vars_of a acc
+    | Literal a   -> Tliteral.LT.vars_of a acc
     | Unit(f1,f2) -> free_rec (free_rec acc f1) f2
     | Clause(f1,f2,_) -> free_rec (free_rec acc f1) f2
     | Lemma {binders = binders; main = f}
@@ -432,7 +432,7 @@ let type_variables f =
     | Literal a ->
       Term.Set.fold
         (fun t z -> Ty.Svty.union z (T.vty_of t))
-        (Literal.LT.terms_nonrec a) acc
+        (Tliteral.LT.terms_nonrec a) acc
   in
   Ty.Svty.fold
     (fun i z -> Ty.Set.add (Ty.Tvar {Ty.v=i; value = None}) z)
@@ -455,7 +455,7 @@ let find_particular_subst =
     | Unit _ | Lemma _ | Skolem _ | Tlet _  | Flet _ -> ()
     | Clause(f1, f2,_) -> find_subst v tv f1; find_subst v tv f2
     | Literal a ->
-      match Literal.LT.view a with
+      match Tliteral.LT.view a with
       | Literal.Distinct (false, [a;b]) when T.equal tv a && T.is_ground b ->
         raise (Out (v, b))
 
@@ -490,7 +490,7 @@ let find_particular_subst =
 
 
 let resolution_of_literal a binders free_vty acc =
-  match Literal.LT.view a with
+  match Tliteral.LT.view a with
   | Literal.Pred(t, _) ->
     let cond =
       Ty.Svty.subset free_vty (Term.vty_of t) &&
@@ -520,7 +520,7 @@ let rec resolution_of_toplevel_conj is_back f binders free_vty acc =
 let sub_terms_of_formula f =
   let rec aux f acc =
     match view f with
-    | Literal a -> Term.Set.union acc (Literal.LT.terms_rec a)
+    | Literal a -> Term.Set.union acc (Tliteral.LT.terms_rec a)
     | Unit(f1, f2) -> aux f2 (aux f1 acc)
     | Clause(f1, f2, _) -> aux f2 (aux f1 acc)
     | Skolem q | Lemma q -> aux q.main acc
@@ -699,22 +699,22 @@ let translate_eq_to_iff s t =
     (T.equal s T.vrai || T.equal s T.faux ||
      T.equal t T.vrai ||T.equal t T.faux)
 
-let mk_lit a id = match Literal.LT.view a with
+let mk_lit a id = match Tliteral.LT.view a with
   | Literal.Eq(s,t) when translate_eq_to_iff s t ->
-    let a1 = Literal.LT.mk_pred s false in
-    let a2 = Literal.LT.mk_pred t false in
-    let f1 = make (Literal a1) (Literal (Literal.LT.neg a1)) 1 id in
-    let f2 = make (Literal a2) (Literal (Literal.LT.neg a2)) 1 id in
+    let a1 = Tliteral.LT.mk_pred s false in
+    let a2 = Tliteral.LT.mk_pred t false in
+    let f1 = make (Literal a1) (Literal (Tliteral.LT.neg a1)) 1 id in
+    let f2 = make (Literal a2) (Literal (Tliteral.LT.neg a2)) 1 id in
     mk_iff f1 f2 id
 
   | Literal.Distinct(false,[s;t]) when translate_eq_to_iff s t ->
-    let a1 = Literal.LT.mk_pred s false in
-    let a2 = Literal.LT.mk_pred t false in
-    let f1 = make (Literal a1) (Literal (Literal.LT.neg a1)) 1 id in
-    let f2 = make (Literal a2) (Literal (Literal.LT.neg a2)) 1 id in
+    let a1 = Tliteral.LT.mk_pred s false in
+    let a2 = Tliteral.LT.mk_pred t false in
+    let f1 = make (Literal a1) (Literal (Tliteral.LT.neg a1)) 1 id in
+    let f2 = make (Literal a2) (Literal (Tliteral.LT.neg a2)) 1 id in
     mk_not (mk_iff f1 f2 id)
 
-  | _ -> make (Literal a) (Literal (Literal.LT.neg a)) 1 id
+  | _ -> make (Literal a) (Literal (Tliteral.LT.neg a)) 1 id
 
 let mk_if cond f2 f3 id =
   mk_or (mk_and cond f2 true id) (mk_and (mk_not cond) f3 true id) false id
@@ -745,7 +745,7 @@ let apply_subst_trigger subst ({content; guard} as tr) =
    guard =
      match guard with
      | None -> guard
-     | Some g -> Some (Literal.LT.apply_subst subst g)
+     | Some g -> Some (Tliteral.LT.apply_subst subst g)
   }
 
 (* this function should only be applied with ground substitutions *)
@@ -778,8 +778,8 @@ let rec apply_subst =
 
 and iapply_subst ((s_t,s_ty) as subst) p n = match p, n with
   | Literal a, Literal _ ->
-    let sa = Literal.LT.apply_subst subst a in
-    let nsa = Literal.LT.neg sa in
+    let sa = Tliteral.LT.apply_subst subst a in
+    let nsa = Tliteral.LT.neg sa in
     if a == sa then p, n, true
     else Literal sa, Literal nsa , false
 
@@ -942,13 +942,13 @@ let apply_subst =
 let add_label lbl f =
   match view f with
   | Literal a ->
-    Literal.LT.add_label lbl a;
-    Literal.LT.add_label lbl (Literal.LT.neg a)
+    Tliteral.LT.add_label lbl a;
+    Tliteral.LT.add_label lbl (Tliteral.LT.neg a)
   | _ -> ()
 
 let label f =
   match view f with
-  | Literal l -> Literal.LT.label l
+  | Literal l -> Tliteral.LT.label l
   | _ -> Hstring.empty
 
 let label_model h =
@@ -958,7 +958,7 @@ let label_model h =
 let is_in_model f =
   match view f with
   | Literal l ->
-    label_model (Literal.LT.label l) || Literal.LT.is_in_model l
+    label_model (Tliteral.LT.label l) || Tliteral.LT.is_in_model l
   | _ -> false
 
 let ground_terms_rec =
@@ -969,7 +969,7 @@ let ground_terms_rec =
           (fun t->
              Sy.Map.is_empty (T.vars_of t Sy.Map.empty)
              && Ty.Svty.is_empty (T.vty_of t)
-          ) (Literal.LT.terms_rec a)
+          ) (Tliteral.LT.terms_rec a)
       in
       T.Set.union s acc
     | Lemma {main = f} | Skolem {main = f} -> terms acc f
@@ -990,8 +990,8 @@ let ground_terms_rec =
 let atoms_rec =
   let rec atoms only_ground acc f = match view f with
     | Literal a ->
-      if not only_ground || Literal.LT.is_ground a then
-        Literal.LT.Set.add a acc
+      if not only_ground || Tliteral.LT.is_ground a then
+        Tliteral.LT.Set.add a acc
       else acc
 
     | Lemma {main = f} | Skolem {main = f} ->
@@ -1047,7 +1047,7 @@ let max_term_depth f =
     | Literal a ->
       T.Set.fold
         (fun t mx -> max mx (T.view t).T.depth)
-        (Literal.LT.terms_nonrec a) mx
+        (Tliteral.LT.terms_nonrec a) mx
 
     | Clause(f1, f2,_) | Unit(f1, f2) -> aux f2 (aux f1 mx)
     | Lemma q | Skolem q -> aux q.main mx

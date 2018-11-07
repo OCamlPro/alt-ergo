@@ -41,7 +41,7 @@ module type S = sig
   type t = r Sig.ac
 
   (* builds an embeded semantic value from an AC term *)
-  val make : Term.t -> r * Literal.LT.t list
+  val make : Term.t -> r * Tliteral.LT.t list
 
   (* tells whether the given term is AC*)
   val is_mine_symb : Sy.t -> bool
@@ -171,16 +171,16 @@ module Make (X : Sig.X) = struct
       | {Term.f=Sy.Name(hs,Sy.Ac) ;xs=xs;ty=ty} ->
         let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
         let aro_t = Term.make aro_sy xs ty  in
-        let eq = Literal.LT.mk_eq aro_t t in
+        let eq = Tliteral.LT.mk_eq aro_t t in
         X.term_embed aro_t, eq::acc
       | {Term.f=Sy.Op Sy.Mult ;xs=xs;ty=ty} ->
         let aro_sy = Sy.name "@*" in
         let aro_t = Term.make aro_sy xs ty  in
-        let eq = Literal.LT.mk_eq aro_t t in
+        let eq = Tliteral.LT.mk_eq aro_t t in
         X.term_embed aro_t, eq::acc
       | {Term.ty=ty} ->
         let k = Term.fresh_name ty in
-        let eq = Literal.LT.mk_eq k t in
+        let eq = Tliteral.LT.mk_eq k t in
         X.term_embed k, eq::acc
 
   let make t =

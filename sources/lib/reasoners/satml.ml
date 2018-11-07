@@ -12,7 +12,7 @@
 open Format
 open Options
 
-module A = Literal.LT
+module A = Tliteral.LT
 module Atom = Satml_types.Atom
 module FF = Satml_types.Flat_Formula
 open Atom
@@ -55,7 +55,6 @@ module type SAT_ML = sig
   val boolean_model : t -> Atom.atom list
   val instantiation_context :
     t -> FF.hcons_env -> Satml_types.Atom.Set.t
-
   val current_tbox : t -> th
   val set_current_tbox : t -> th -> unit
   val empty : unit -> t
@@ -812,7 +811,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           if unsat_core () || ta.var.level > 0 then Ex.singleton (Ex.Literal ta)
           else Ex.empty
         in
-        assert (Literal.LT.is_ground ta.lit);
+        assert (Tliteral.LT.is_ground ta.lit);
         if ta.timp then
           ()
             [@ocaml.ppwarning "XXX: only do this for instantiation ?"]
@@ -1045,7 +1044,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
        let rec theory_simplify () =
        let theory_simplification = 2 in
        let assume a =
-       assert (Literal.LT.is_ground ta.lit);
+       assert (Tliteral.LT.is_ground ta.lit);
        ignore (Th.assume a.lit Ex.empty env.tenv)
        in
        if theory_simplification >= 2 then begin
@@ -1680,7 +1679,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     if Options.cdcl_tableaux_th () then
       (* use atoms from theory environment if tableaux method
          is used for theories *)
-      Literal.LT.Set.fold
+      Tliteral.LT.Set.fold
         (fun a accu ->
            SA.add (FF.get_atom hcons a) accu
         )(Th.get_assumed env.tenv) SA.empty

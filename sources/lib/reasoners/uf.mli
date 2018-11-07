@@ -31,7 +31,7 @@ module type S = sig
   type r
 
   val empty : unit -> t
-  val add : t -> Term.t -> t * Literal.LT.t list
+  val add : t -> Term.t -> t * Tliteral.LT.t list
 
   val mem : t -> Term.t -> bool
 

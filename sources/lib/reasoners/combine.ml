@@ -159,7 +159,7 @@ struct
   let bot () = term_embed Term.faux
 
   let is_an_eq a =
-    match Literal.LT.view a with Literal.Builtin _ -> false | _ -> true
+    match Tliteral.LT.view a with Literal.Builtin _ -> false | _ -> true
 
   let is_int v =
     let ty  = match v with
