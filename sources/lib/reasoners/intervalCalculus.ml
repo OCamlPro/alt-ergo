@@ -2229,14 +2229,14 @@ module Make
         (F.id th_form) (Some (q.F.free_v, q.F.free_vty))
 
   let assume_th_elt t th_elt dep =
-    let {Commands.axiom_kind; th_form; th_name; extends} = th_elt in
+    let {Commands.axiom_kind; ax_form; th_name; extends} = th_elt in
     let kd_str =
       if axiom_kind == Parsed.Propagator then "Th propagator" else "Th CS"
     in
     match extends with
     | Typed.NIA | Typed.NRA | Typed.FPA ->
-      let th_form = separate_semantic_triggers th_form in
-      let th_elt = {th_elt with Commands.th_form} in
+      let th_form = separate_semantic_triggers ax_form in
+      let th_elt = {th_elt with Commands.ax_form} in
       if debug_fpa () >= 2 then
         fprintf fmt "[IC][Theory %s][%s] %a@."
           th_name kd_str F.print th_form;

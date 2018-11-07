@@ -647,13 +647,13 @@ let make_rule ({rwt_left = t1; rwt_right = t2; rwt_vars} as r) =
 let mk_theory acc l th_name extends loc =
   List.fold_left
     (fun acc e ->
-       let loc, name, f, axiom_kind =
+       let loc, ax_name, f, axiom_kind =
          match e.c with
          | TAxiom (loc, name, ax_kd, f) -> loc, name, f, ax_kd
          | _ -> assert false
        in
-       let th_form = make_form name f loc in
-       let th_elt = {th_name; axiom_kind; extends; th_form} in
+       let ax_form = make_form ax_name f loc in
+       let th_elt = {th_name; axiom_kind; extends; ax_form; ax_name} in
        {st_decl=ThAssume th_elt ; st_loc=loc} :: acc
     )acc l
 

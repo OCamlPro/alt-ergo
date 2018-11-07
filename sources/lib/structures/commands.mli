@@ -33,7 +33,8 @@ open Typed
 type th_elt =
   {
     th_name : string;
-    th_form : Formula.t;
+    ax_name : string;
+    ax_form : Formula.t;
     extends : Typed.theories_extensions;
     axiom_kind : axiom_kind;
   }
