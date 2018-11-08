@@ -45,14 +45,14 @@ module type S = sig
   val add_term :
     t ->
     r Sig.facts -> (* acc *)
-    Term.t ->
+    Expr.t ->
     Explanation.t ->
     t * r Sig.facts
 
   val add :
     t ->
     r Sig.facts -> (* acc *)
-    Tliteral.LT.t ->
+    Expr.t ->
     Explanation.t -> t * r Sig.facts
 
   val assume_literals :
@@ -62,22 +62,22 @@ module type S = sig
     t * (r Sig.literal * Explanation.t * Sig.lit_origin) list
 
   val case_split :
-    t -> for_model:bool -> (r Literal.view * bool * Sig.lit_origin) list * t
-  val query :  t -> Tliteral.LT.t -> Sig.answer
-  val new_terms : t -> Term.Set.t
-  val class_of : t -> Term.t -> Term.t list
-  val are_equal : t -> Term.t -> Term.t -> init_terms:bool -> Sig.answer
-  val are_distinct : t -> Term.t -> Term.t -> Sig.answer
-  val cl_extract : t -> Term.Set.t list
-  val term_repr : t -> Term.t -> init_term:bool -> Term.t
+    t -> for_model:bool -> (r Xliteral.view * bool * Sig.lit_origin) list * t
+  val query :  t -> Expr.t -> Sig.answer
+  val new_terms : t -> Expr.Set.t
+  val class_of : t -> Expr.t -> Expr.t list
+  val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> Sig.answer
+  val are_distinct : t -> Expr.t -> Expr.t -> Sig.answer
+  val cl_extract : t -> Expr.Set.t list
+  val term_repr : t -> Expr.t -> init_term:bool -> Expr.t
   val print_model : Format.formatter -> t -> unit
   val get_union_find : t -> Combine.Uf.t
 
   val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
-    Matching_types.info Term.Map.t * Term.t list Term.Map.t Term.Subst.t ->
-    t -> (Formula.t -> Formula.t -> bool) -> t * Sig.instances
+    Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
+    t -> (Expr.t -> Expr.t -> bool) -> t * Sig.instances
 end
 
 module Main : S

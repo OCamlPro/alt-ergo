@@ -25,7 +25,7 @@ val mk_record_type_decl :
 (** Declaration of symbols, functions, predicates, and goals *)
 
 val mk_logic :
-  Loc.t -> name_kind -> (string * string) list -> plogic_type -> decl
+  Loc.t -> Symbols.name_kind -> (string * string) list -> plogic_type -> decl
 
 val mk_function_def :
   Loc.t ->

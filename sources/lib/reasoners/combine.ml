@@ -58,7 +58,7 @@ end =
 struct
 
   type rview =
-    | Term  of Term.t
+    | Term  of Expr.t
     | Ac    of AC.t
     | X1    of X1.t
     | X2    of X2.t
@@ -86,7 +86,7 @@ struct
         | X5 x   -> 5 + 9 * X5.hash x
         | X6 x   -> 6 + 9 * X6.hash x
         | Ac ac  -> 8 + 9 * AC.hash ac
-        | Term t -> 7 + 9 * Term.hash t
+        | Term t -> 7 + 9 * Expr.hash t
       in
       abs res
 
@@ -98,11 +98,11 @@ struct
       | X4 x, X4 y -> X4.equal x y
       | X5 x, X5 y -> X5.equal x y
       | X6 x, X6 y -> X6.equal x y
-      | Term x  , Term y  -> Term.equal x y
+      | Term x  , Term y  -> Expr.equal x y
       | Ac x    , Ac    y -> AC.equal x y
       | _ -> false
 
-    let initial_size = 4096
+    let initial_size = 9001
 
     let disable_weaks () = Options.disable_weaks ()
 
@@ -155,11 +155,11 @@ struct
     | Ac _ -> None, false (* SYLVAIN : TODO *)
     | Term t -> Some t, true
 
-  let top () = term_embed Term.vrai
-  let bot () = term_embed Term.faux
+  let top () = term_embed Expr.vrai
+  let bot () = term_embed Expr.faux
 
   let is_an_eq a =
-    match Tliteral.LT.view a with Literal.Builtin _ -> false | _ -> true
+    match Expr.lit_view a with Expr.Builtin _ -> false | _ -> true
 
   let is_int v =
     let ty  = match v with
@@ -169,7 +169,7 @@ struct
       | X4 x -> X4.type_info x
       | X5 x -> X5.type_info x
       | X6 x -> X6.type_info x
-      | Term t -> (Term.view t).Term.ty
+      | Term t -> Expr.type_info t
       | Ac x -> AC.type_info x
     in
     ty == Ty.Tint
@@ -182,7 +182,7 @@ struct
     | {v=X5 t}   -> X5.type_info t
     | {v=X6 t}   -> X6.type_info t
     | {v=Ac x}   -> AC.type_info x
-    | {v=Term t} -> let {Term.ty = ty} = Term.view t in ty
+    | {v=Term t} -> Expr.type_info t
 
   (* Xi < Term < Ac *)
   let theory_num x = match x with
@@ -207,7 +207,7 @@ struct
       | X4 x, X4 y -> X4.compare a b
       | X5 x, X5 y -> X5.compare a b
       | X6 x, X6 y -> X6.compare a b
-      | Term x  , Term y  -> Term.compare x y
+      | Term x  , Term y  -> Expr.compare x y
       | Ac x    , Ac    y -> AC.compare x y
       | va, vb            -> compare_tag va vb
 
@@ -216,7 +216,7 @@ struct
        let equal a b = CX.compare a b = 0
 
        let hash r = match r.v with
-       | Term  t -> Term.hash t
+       | Term  t -> Expr.hash t
        | Ac x -> AC.hash x
        | X1 x -> X1.hash x
        | X2 x -> X2.hash x
@@ -269,7 +269,11 @@ struct
       | Term _ -> if equal p r then v else r
 
   let make t =
-    let {Term.f=sb} = Term.view t in
+    let {Expr.f=sb} =
+      match Expr.term_view t with
+      | Expr.Not_a_term _ -> assert false
+      | Expr.Term tt -> tt
+    in
     match
       X1.is_mine_symb sb,
       not (restricted ()) && X2.is_mine_symb sb,
@@ -358,7 +362,7 @@ struct
         | X4 t    -> fprintf fmt "%a" X4.print t
         | X5 t    -> fprintf fmt "%a" X5.print t
         | X6 t    -> fprintf fmt "%a" X6.print t
-        | Term t  -> fprintf fmt "%a" Term.print t
+        | Term t  -> fprintf fmt "%a" Expr.print t
         | Ac t    -> fprintf fmt "%a" AC.print t
       else
         match r.v with
@@ -368,7 +372,7 @@ struct
         | X4 t    -> fprintf fmt "X4(%s):[%a]" X4.name X4.print t
         | X5 t    -> fprintf fmt "X5(%s):[%a]" X5.name X5.print t
         | X6 t    -> fprintf fmt "X6(%s):[%a]" X6.name X6.print t
-        | Term t  -> fprintf fmt "FT:[%a]" Term.print t
+        | Term t  -> fprintf fmt "FT:[%a]" Expr.print t
         | Ac t    -> fprintf fmt "Ac:[%a]" AC.print t
 
     let print_sbt msg sbs =
@@ -544,9 +548,9 @@ struct
       | _, Ty.Tfarray _ -> X4.assign_value r distincts eq
       | _, Ty.Tsum _    -> X5.assign_value r distincts eq
       | Term t, ty      ->
-        if (Term.view t).Term.depth = 1 ||
-           List.exists (fun (t,_) -> (Term.view t).Term.depth = 1) eq then None
-        else Some (Term.fresh_name ty, false) (* false <-> not a case-split *)
+        if (Expr.depth t) = 1 ||
+           List.exists (fun (t,_) -> (Expr.depth t) = 1) eq then None
+        else Some (Expr.fresh_name ty, false) (* false <-> not a case-split *)
       | _               -> assert false
     in
     if debug_interpretation() then
@@ -554,13 +558,13 @@ struct
         fprintf fmt "[combine] assign value to representative %a : " print r;
         match opt with
         | None -> fprintf fmt "None@."
-        | Some(res, is_cs) -> fprintf fmt " %a@." Term.print res
+        | Some(res, is_cs) -> fprintf fmt " %a@." Expr.print res
       end;
     opt
 
   let choose_adequate_model t rep l =
     let r, pprint =
-      match Term.type_info t with
+      match Expr.type_info t with
       | Ty.Tint
       | Ty.Treal     -> X1.choose_adequate_model t rep l
       | Ty.Tbitv _   -> X3.choose_adequate_model t rep l
@@ -571,9 +575,9 @@ struct
         let acc =
           List.fold_left
             (fun acc (s, r) ->
-               if (Term.view s).Term.depth <= 1 then
+               if (Expr.depth s) <= 1 then
                  match acc with
-                 | Some(s', r') when Term.compare s' s > 0 -> acc
+                 | Some(s', r') when Expr.compare s' s > 0 -> acc
                  | _ -> Some (s, r)
                else
                  acc
@@ -584,16 +588,16 @@ struct
           | Some (_,r) -> r
           | None ->
             match term_extract rep with
-            | Some t, true when (Term.view t).Term.depth = 1 -> rep
+            | Some t, true when (Expr.depth t) = 1 -> rep
             | _ ->
               if debug_interpretation() then begin
                 fprintf fmt "[Combine.choose_adequate_model] ";
                 fprintf fmt "What to choose for term %a with rep %a ??@."
-                  Term.print t print rep;
+                  Expr.print t print rep;
                 List.iter
                   (fun (t, r) ->
                      fprintf fmt "  > impossible case: %a -- %a@."
-                       Term.print t print r
+                       Expr.print t print r
                   )l;
               end;
               assert false
@@ -604,7 +608,7 @@ struct
     in
     if debug_interpretation() then
       fprintf fmt "[combine] %a selected as a model for %a@."
-        print r Term.print t;
+        print r Expr.print t;
     r, pprint
 
 end
@@ -878,11 +882,11 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
     let t4 = Rel4.new_terms env.r4 in
     let t5 = Rel5.new_terms env.r5 in
     let t6 = Rel6.new_terms env.r6 in
-    Term.Set.union t1
-      (Term.Set.union t2
-         (Term.Set.union t3
-            (Term.Set.union t4
-               (Term.Set.union t5 t6) )))
+    Expr.Set.union t1
+      (Expr.Set.union t2
+         (Expr.Set.union t3
+            (Expr.Set.union t4
+               (Expr.Set.union t5 t6) )))
 
 end
 

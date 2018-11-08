@@ -97,8 +97,6 @@ type plogic_type =
   | PPredicate of ppure_type list
   | PFunction of ppure_type list * ppure_type
 
-type name_kind = Symbols.name_kind
-
 type body_type_decl =
   | Record of (string * ppure_type) list  (* lbl : t *)
   | Enum of string list
@@ -109,7 +107,7 @@ type decl =
   | Axiom of Loc.t * string * axiom_kind * lexpr
   | Rewriting of Loc.t * string * lexpr list
   | Goal of Loc.t * string * lexpr
-  | Logic of Loc.t * name_kind * (string * string) list * plogic_type
+  | Logic of Loc.t * Symbols.name_kind * (string * string) list * plogic_type
   | Predicate_def of
       Loc.t * (string * string) *
       (Loc.t * string * ppure_type) list * lexpr

@@ -11,7 +11,7 @@
 
 module Sy = Symbols
 module Hs = Hstring
-module T = Term
+module E = Expr
 
 open Format
 open Options
@@ -21,8 +21,9 @@ module Z = Numbers.Z
 
 let is_rounding_mode t =
   Options.use_fpa() &&
-  match (T.view t).T.ty with
-  | Ty.Tsum (hs, _) -> String.compare (Hs.view hs) "fpa_rounding_mode" = 0
+  match E.term_view t with
+  | E.Term {E.ty = Ty.Tsum (hs, _)} ->
+    String.compare (Hs.view hs) "fpa_rounding_mode" = 0
   | _ -> false
 
 let fpa_rounding_mode =
@@ -47,51 +48,51 @@ let fpa_rounding_mode =
 (*  why3/standard rounding modes*)
 
 let _NearestTiesToEven__rounding_mode =
-  T.make (Sy.constr "NearestTiesToEven") []
+  E.mk_term (Sy.constr "NearestTiesToEven") []
     fpa_rounding_mode
 (** ne in Gappa: to nearest, tie breaking to even mantissas*)
 
 let _ToZero__rounding_mode =
-  T.make (Sy.constr "ToZero") [] fpa_rounding_mode
+  E.mk_term (Sy.constr "ToZero") [] fpa_rounding_mode
 (** zr in Gappa: toward zero *)
 
 let _Up__rounding_mode =
-  T.make (Sy.constr "Up") [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Up") [] fpa_rounding_mode
 (** up in Gappa: toward plus infinity *)
 
 let _Down__rounding_mode =
-  T.make (Sy.constr "Down") [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Down") [] fpa_rounding_mode
 (** dn in Gappa: toward minus infinity *)
 
 let _NearestTiesToAway__rounding_mode =
-  T.make (Sy.constr "NearestTiesToAway") []
+  E.mk_term (Sy.constr "NearestTiesToAway") []
     fpa_rounding_mode
 (** na : to nearest, tie breaking away from zero *)
 
 (* additional Gappa rounding modes *)
 
 let _Aw__rounding_mode =
-  T.make (Sy.constr "Aw") [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Aw") [] fpa_rounding_mode
 (** aw in Gappa: away from zero **)
 
 let _Od__rounding_mode =
-  T.make (Sy.constr "Od") [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Od") [] fpa_rounding_mode
 (** od in Gappa: to odd mantissas *)
 
 let _No__rounding_mode =
-  T.make (Sy.constr "No") [] fpa_rounding_mode
+  E.mk_term (Sy.constr "No") [] fpa_rounding_mode
 (** no in Gappa: to nearest, tie breaking to odd mantissas *)
 
 let _Nz__rounding_mode =
-  T.make (Sy.constr "Nz") [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Nz") [] fpa_rounding_mode
 (** nz in Gappa: to nearest, tie breaking toward zero *)
 
 let _Nd__rounding_mode =
-  T.make (Sy.constr "Nd") [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Nd") [] fpa_rounding_mode
 (** nd in Gappa: to nearest, tie breaking toward minus infinity *)
 
 let _Nu__rounding_mode =
-  T.make (Sy.constr "Nu") [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Nu") [] fpa_rounding_mode
 (** nu in Gappa: to nearest, tie breaking toward plus infinity *)
 
 
@@ -196,7 +197,7 @@ let to_mantissa_exp prec exp mode x =
     r_y, e'
 
 let mode_of_term t =
-  let eq_t s = Term.equal s t in
+  let eq_t s = E.equal s t in
   if eq_t _NearestTiesToEven__rounding_mode then NearestTiesToEven
   else if eq_t _ToZero__rounding_mode then ToZero
   else if eq_t _Up__rounding_mode then Up
@@ -210,13 +211,13 @@ let mode_of_term t =
   else if eq_t _Nu__rounding_mode then Nu
   else
     begin
-      eprintf "bad rounding mode %a@." Term.print t;
+      eprintf "bad rounding mode %a@." E.print t;
       assert false
     end
 
 let int_of_term t =
-  match Term.view t with
-    {Term.f = Symbols.Int n} ->
+  match E.term_view t with
+  | E.Term {E.f = Sy.Int n} ->
     let n = Hstring.view n in
     let n =
       try int_of_string n
@@ -226,22 +227,22 @@ let int_of_term t =
     in
     n (* ! may be negative or null *)
   | _ ->
-    eprintf "error: the given term %a is not an integer@." Term.print t;
+    eprintf "error: the given term %a is not an integer@." E.print t;
     assert false
 
 module MQ =
   Map.Make (struct
-    type t = Term.t * Term.t * Term.t * Q.t
+    type t = E.t * E.t * E.t * Q.t
     let compare (prec1, exp1, mode1, x1) (prec2, exp2, mode2, x2) =
       let c = Q.compare x1 x2 in
       if c <> 0 then c
       else
-        let c = Term.compare prec1 prec2 in
+        let c = E.compare prec1 prec2 in
         if c <> 0 then c
         else
-          let c = Term.compare exp1 exp2 in
+          let c = E.compare exp1 exp2 in
           if c <> 0 then c
-          else Term.compare mode1 mode2
+          else E.compare mode1 mode2
   end)
 
 let cache = ref MQ.empty

@@ -32,10 +32,11 @@ open Sig
 
 module X = Combine.Shostak
 module Ex = Explanation
-module T = Term
-module A = Literal
-module LR = A.Make(struct type t = X.r let compare = X.str_cmp include X end)
-module SetT = Term.Set
+module E = Expr
+module A = Xliteral
+module LR = Combine.Uf.LX
+module SE = Expr.Set
+
 module Sy = Symbols
 
 
@@ -51,28 +52,28 @@ module type S = sig
      decreasing order with respect to (dlvl, plvl) *)
   val assume :
     ?ordered:bool ->
-    (Tliteral.LT.t * Explanation.t * int * int) list -> t ->
-    t * Term.Set.t * int
+    (E.t * Explanation.t * int * int) list -> t ->
+    t * Expr.Set.t * int
 
-  val query : Tliteral.LT.t -> t -> answer
+  val query : E.t -> t -> answer
   val print_model : Format.formatter -> t -> unit
-  val cl_extract : t -> Term.Set.t list
-  val extract_ground_terms : t -> Term.Set.t
+  val cl_extract : t -> Expr.Set.t list
+  val extract_ground_terms : t -> Expr.Set.t
   val get_real_env : t -> Ccx.Main.t
   val get_case_split_env : t -> Ccx.Main.t
-  val do_case_split : t -> t * Term.Set.t
-  val add_term : t -> Term.t -> add_in_cs:bool -> t
+  val do_case_split : t -> t * Expr.Set.t
+  val add_term : t -> Expr.t -> add_in_cs:bool -> t
   val compute_concrete_model : t -> t
 
 
   val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
-    Matching_types.info Term.Map.t * Term.t list Term.Map.t Term.Subst.t ->
-    t -> (Formula.t -> Formula.t -> bool) ->
+    Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
+    t -> (Expr.t -> Expr.t -> bool) ->
     int -> int -> t * Sig.instances
 
-  val get_assumed : t -> Tliteral.LT.Set.t
+  val get_assumed : t -> E.Set.t
 
 end
 
@@ -84,11 +85,11 @@ module Main_Default : S = struct
     let subterms_of_assumed l =
       List.fold_left
         (List.fold_left
-           (fun st (a, _, _) -> Term.Set.union st (Tliteral.LT.terms_rec a))
-        )SetT.empty l
+           (fun st (a, _, _) -> Expr.Set.union st (E.sub_terms SE.empty a))
+        )SE.empty l
 
     let types_of_subterms st =
-      SetT.fold (fun t acc -> Ty.Set.add (T.type_info t) acc) st Ty.Set.empty
+      SE.fold (fun t acc -> Ty.Set.add (E.type_info t) acc) st Ty.Set.empty
 
     let generalize_types ty1 ty2 = match ty1, ty2 with
       | Ty.Tvar _, _ -> ty1
@@ -96,11 +97,12 @@ module Main_Default : S = struct
       | _ -> Ty.fresh_tvar ()
 
     let logics_of_assumed st =
-      SetT.fold
+      SE.fold
         (fun t mp ->
-           match T.view t with
-           | {T.f = Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac)); xs; ty} ->
-             let xs = List.map T.type_info xs in
+           match E.term_view t with
+           | E.Not_a_term _ -> assert false
+           | E.Term{E.f=Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac)); xs; ty} ->
+             let xs = List.map E.type_info xs in
              let xs, ty =
                try
                  let xs', ty', is_ac' = Hstring.Map.find hs mp in
@@ -214,11 +216,11 @@ module Main_Default : S = struct
                | [] -> assert false
                | (a,dlvl,plvl)::l ->
                  fprintf fmt "( (* %d , %d *) %a " dlvl plvl
-                   Tliteral.LT.print a;
+                   E.print a;
                  List.iter
                    (fun (a, dlvl, plvl) ->
                       fprintf fmt " and@. (* %d , %d *) %a " dlvl plvl
-                        Tliteral.LT.print a
+                        E.print a
                    ) l;
                  fprintf fmt " ) ->@."
             ) (List.rev l);
@@ -281,7 +283,7 @@ module Main_Default : S = struct
           print_lr_view c Ex.print dep
 
     let query a =
-      if debug_cc () then fprintf fmt "[cc] query : %a@." Tliteral.LT.print a
+      if debug_cc () then fprintf fmt "[cc] query : %a@." E.print a
 
     let split_sat_contradicts_cs filt_choices =
       if debug_split () then
@@ -298,13 +300,13 @@ module Main_Default : S = struct
 
 
   type t = {
-    assumed_set : Tliteral.LT.Set.t;
-    assumed : (Tliteral.LT.t * int * int) list list;
-    cs_pending_facts : (Tliteral.LT.t * Ex.t * int * int) list list;
-    terms : Term.Set.t;
+    assumed_set : E.Set.t;
+    assumed : (E.t * int * int) list list;
+    cs_pending_facts : (E.t * Ex.t * int * int) list list;
+    terms : Expr.Set.t;
     gamma : CC_X.t;
     gamma_finite : CC_X.t;
-    choices : (X.r Literal.view * lit_origin * choice_sign * Ex.t) list;
+    choices : (X.r Xliteral.view * lit_origin * choice_sign * Ex.t) list;
     (** the choice, the size, choice_sign,  the explication set,
         the explication for this choice. *)
   }
@@ -372,7 +374,7 @@ module Main_Default : S = struct
           Debug.split_backtrack neg_c dep;
           if bottom_classes () then
             printf "bottom (case-split):%a\n@."
-              Term.print_tagged_classes classes;
+              Expr.print_tagged_classes classes;
           aux ch No dl base_env [neg_c, lit_orig, CNeg, dep]
     in
     aux ch bad_last (List.rev t.choices) base_env l
@@ -427,7 +429,7 @@ module Main_Default : S = struct
     List.fold_left
       (fun acc r ->
          match X.term_extract r with
-         | Some t, _ -> SetT.add t acc | _ -> acc) acc l
+         | Some t, _ -> SE.add t acc | _ -> acc) acc l
 
   let extract_terms_from_choices =
     List.fold_left
@@ -444,13 +446,14 @@ module Main_Default : S = struct
       (fun acc (a, _, _) ->
          match a with
          | LTerm r -> begin
-             match Tliteral.LT.view r with
-             | Literal.Eq (t1, t2) ->
-               SetT.add t1 (SetT.add t2 acc)
-             | Literal.Distinct (_, l) | Literal.Builtin (_, _, l) ->
-               List.fold_right SetT.add l acc
-             | Literal.Pred (t1, _) ->
-               SetT.add t1 acc
+             match E.lit_view r with
+             | E.Not_a_lit _ -> assert false
+             | E.Eq (t1, t2) ->
+               SE.add t1 (SE.add t2 acc)
+             | E.Eql l | E.Distinct l | E.Builtin (_, _, l) ->
+               List.fold_right SE.add l acc
+             | E.Pred (t1, _) ->
+               SE.add t1 acc
 
            end
          | _ -> acc)
@@ -474,10 +477,10 @@ module Main_Default : S = struct
       ) in_facts_l;
 
     let t, ch = try_it t facts ~for_model:false in
-    let choices = extract_terms_from_choices SetT.empty t.choices in
+    let choices = extract_terms_from_choices SE.empty t.choices in
     let choices_terms = extract_terms_from_assumed choices ch in
 
-    {t with terms = Term.Set.union t.terms choices_terms}, choices_terms
+    {t with terms = Expr.Set.union t.terms choices_terms}, choices_terms
 
   (* facts are sorted in decreasing order with respect to (dlvl, plvl) *)
   let assume ordered in_facts t =
@@ -485,18 +488,18 @@ module Main_Default : S = struct
     let assumed, assumed_set, cpt =
       List.fold_left
         (fun ((assumed, assumed_set, cpt) as accu) ((a, ex, dlvl, plvl)) ->
-           if Tliteral.LT.Set.mem a assumed_set
+           if E.Set.mem a assumed_set
            then accu
            else
              begin
                CC_X.add_fact facts (LTerm a, ex, Sig.Other);
                (a, dlvl, plvl) :: assumed,
-               Tliteral.LT.Set.add a assumed_set,
+               E.Set.add a assumed_set,
                cpt+1
              end
         )([], t.assumed_set, 0) in_facts
     in
-    if assumed == [] then t, T.Set.empty, 0
+    if assumed == [] then t, E.Set.empty, 0
     else
       let t = {t with assumed_set; assumed = assumed :: t.assumed;
                       cs_pending_facts = in_facts :: t.cs_pending_facts} in
@@ -506,25 +509,25 @@ module Main_Default : S = struct
 
       let gamma, ch = CC_X.assume_literals t.gamma [] facts in
       let new_terms = CC_X.new_terms gamma in
-      {t with gamma = gamma; terms = Term.Set.union t.terms new_terms},
+      {t with gamma = gamma; terms = Expr.Set.union t.terms new_terms},
       new_terms, cpt
 
   let debug_theories_instances th_instances ilvl dlvl =
-    let module MF = Formula.Map in
+    let module MF = Expr.Map in
     fprintf fmt "===========================================================@.";
     fprintf fmt
       "[Theory] dec. level = %d, instant. level = %d, %d new Th instances@."
       dlvl ilvl (List.length th_instances);
     let mp =
       List.fold_left
-        (fun acc ((hyps:Formula.t list),gf, _) ->
-           match gf.Formula.lem with
+        (fun acc ((hyps:Expr.t list),gf, _) ->
+           match gf.Expr.lem with
            | None -> assert false
            | Some lem ->
              let inst =
                try MF.find lem acc with Not_found -> MF.empty
              in
-             MF.add lem (MF.add gf.Formula.f hyps inst) acc
+             MF.add lem (MF.add gf.Expr.ff hyps inst) acc
         )MF.empty th_instances
     in
     let l =
@@ -533,16 +536,16 @@ module Main_Default : S = struct
     in
     let l = List.fast_sort (fun (_,m,_) (_,n,_) -> n - m) l in
     List.iter (fun (f, m, inst) ->
-        fprintf fmt "@.%3d  -->  %a@." m Formula.print f;
+        fprintf fmt "@.%3d  -->  %a@." m Expr.print f;
         if true then begin
           MF.iter
             (fun f hyps ->
                fprintf fmt "  [inst]@.";
                List.iter
                  (fun h ->
-                    fprintf fmt "    hypothesis: %a@." Formula.print h;
+                    fprintf fmt "    hypothesis: %a@." Expr.print h;
                  )hyps;
-               fprintf fmt "    conclusion: %a@." Formula.print f;
+               fprintf fmt "    conclusion: %a@." Expr.print f;
             ) inst;
         end
       ) l
@@ -566,29 +569,29 @@ module Main_Default : S = struct
       Options.exec_thread_yield ();
       Debug.query a;
       try
-        match Tliteral.LT.view a with
-        | A.Eq (t1, t2)  ->
+        match E.lit_view a with
+        | E.Eq (t1, t2)  ->
           let t = add_and_process_conseqs a t in
           CC_X.are_equal t.gamma t1 t2 ~init_terms:false
 
-        | A.Distinct (false, [t1; t2]) ->
-          let na = Tliteral.LT.neg a in
+        | E.Distinct [t1; t2] ->
+          let na = E.neg a in
           let t = add_and_process_conseqs na t in (* na ? *)
           CC_X.are_distinct t.gamma t1 t2
 
-        | A.Distinct _ ->
+        | E.Distinct _ | E.Eql _ ->
           (* we only assume toplevel distinct with more that one arg.
-             not interesting to do a query in this case *)
+             not interesting to do a query in this case ?? or query ? *)
           No
 
-        | A.Pred (t1,b) ->
+        | E.Pred (t1,b) ->
           let t = add_and_process_conseqs a t in
           if b
-          then CC_X.are_distinct t.gamma t1 (Term.top())
-          else CC_X.are_equal t.gamma t1 (Term.top()) ~init_terms:false
+          then CC_X.are_distinct t.gamma t1 Expr.vrai
+          else CC_X.are_equal t.gamma t1 Expr.vrai ~init_terms:false
 
         | _ ->
-          let na = Tliteral.LT.neg a in
+          let na = E.neg a in
           let t = add_and_process_conseqs na t in
           CC_X.query t.gamma na
       with Exception.Inconsistent (d, classes) ->
@@ -606,18 +609,18 @@ module Main_Default : S = struct
 
   let empty () =
     let env = CC_X.empty () in
-    let env, _ = CC_X.add_term env (CC_X.empty_facts()) T.vrai Ex.empty in
-    let env, _ = CC_X.add_term env (CC_X.empty_facts()) T.faux Ex.empty in
+    let env, _ = CC_X.add_term env (CC_X.empty_facts()) E.vrai Ex.empty in
+    let env, _ = CC_X.add_term env (CC_X.empty_facts()) E.faux Ex.empty in
     let t =
       { gamma = env;
         gamma_finite = env;
         choices = [];
-        assumed_set = Tliteral.LT.Set.empty;
+        assumed_set = E.Set.empty;
         assumed = [];
         cs_pending_facts = [];
-        terms = Term.Set.empty }
+        terms = Expr.Set.empty }
     in
-    let a = Tliteral.LT.mk_distinct false [T.vrai; T.faux] in
+    let a = E.mk_distinct ~iff:false [E.vrai; E.faux] in
     let t, _, _ = assume true [a, Ex.empty, 0, -1] t in
     t
 
@@ -668,33 +671,33 @@ end
 module Main_Empty : S = struct
 
   type t =
-    { assumed_set : Tliteral.LT.Set.t }
+    { assumed_set : E.Set.t }
 
-  let empty () = { assumed_set = Tliteral.LT.Set.empty }
+  let empty () = { assumed_set = E.Set.empty }
 
   let assume ?(ordered=true) in_facts t =
     let assumed_set =
       List.fold_left
         (fun assumed_set ((a, ex, dlvl, plvl)) ->
-           if Tliteral.LT.Set.mem a assumed_set then assumed_set
-           else Tliteral.LT.Set.add a assumed_set
+           if E.Set.mem a assumed_set then assumed_set
+           else E.Set.add a assumed_set
         ) t.assumed_set in_facts
     in
-    {assumed_set}, T.Set.empty, 0
+    {assumed_set}, E.Set.empty, 0
 
   let query a t = No
 
   let print_model _ _ = ()
   let cl_extract _ = []
-  let extract_ground_terms _ = Term.Set.empty
+  let extract_ground_terms _ = Expr.Set.empty
 
   let empty_ccx = CC_X.empty ()
   let get_real_env _ = empty_ccx
   let get_case_split_env _ = empty_ccx
-  let do_case_split env = env, T.Set.empty
+  let do_case_split env = env, E.Set.empty
   let add_term env t ~add_in_cs = env
   let compute_concrete_model e = e
-  let terms_in_repr e = Term.Set.empty
+  let terms_in_repr e = Expr.Set.empty
 
   let assume_th_elt e _ _ = e
   let theories_instances ~do_syntactic_matching _ e _ _ _ = e, []

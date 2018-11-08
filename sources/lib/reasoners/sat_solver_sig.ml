@@ -38,21 +38,21 @@ module type S = sig
 
   (* the empty sat-solver context *)
   val empty : unit -> t
-  val empty_with_inst : (Formula.t -> bool) -> t
+  val empty_with_inst : (Expr.t -> bool) -> t
 
   (* [assume env f] assume a new formula [f] in [env]. Raises Unsat if
      [f] is unsatisfiable in [env] *)
-  val assume : t -> Formula.gformula -> Explanation.t -> t
+  val assume : t -> Expr.gformula -> Explanation.t -> t
 
   val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
 
   (* [pred_def env f] assume a new predicate definition [f] in [env]. *)
-  val pred_def : t -> Formula.t -> string -> Explanation.t -> Loc.t -> t
+  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> t
 
   (* [unsat env f size] checks the unsatisfiability of [f] in
      [env]. Raises I_dont_know when the proof tree's height reaches
      [size]. Raises Sat if [f] is satisfiable in [env] *)
-  val unsat : t -> Formula.gformula -> Explanation.t
+  val unsat : t -> Expr.gformula -> Explanation.t
 
   val print_model : header:bool -> Format.formatter -> t -> unit
 

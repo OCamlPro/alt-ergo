@@ -449,10 +449,10 @@ let refresh_instances ({istore=istore} as inst_model) () =
 
 
 let add_inst ({h=h} as inst_model) orig =
-  let id = Formula.id orig in
+  let id = Expr.id orig in
   let name =
-    match Formula.view orig with
-    | Formula.Lemma {Formula.name=n} when Pervasives.(<>) n "" -> n
+    match Expr.form_view orig with
+    | Expr.Lemma {Expr.name=n} when Pervasives.(<>) n "" -> n
     | _ -> string_of_int id
   in
   let r, n, limit, to_add =

@@ -11,6 +11,8 @@
 
 exception Timeout
 
+exception Cmp of int
+
 module MI : Map.S with type key = int
 module SS : Set.S with type elt = string
 
@@ -34,6 +36,14 @@ type sat_solver =
   | CDCL_Tableaux
 
 type mode = On | Off | Auto
+
+(**
+   generic function for comparing algebraic data types.
+   [compare_algebraic a b f]
+   - Pervasives.compare a b is used if
+
+*)
+val [@inline always] compare_algebraic : 'a -> 'a -> (('a * 'a) -> int) -> int
 
 (*
 (** This function is intended to be used with Map.merge in order to perform a

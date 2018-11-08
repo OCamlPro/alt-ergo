@@ -28,6 +28,7 @@
 
 open Options
 open Typed
+
 module Sy = Symbols
 
 type polarity = Pos | Neg
@@ -423,10 +424,8 @@ module SLLT =
 let mk_tt t u =
   {t with c={t.c with tt_desc = u}}
 
-let _underscore = Symbols.var "_"
-
 let mk_underscore =
-  fun t -> mk_tt t (TTvar _underscore)
+  fun t -> mk_tt t (TTvar Sy.underscore)
 
 let underscore =
   let rec aux t s =
@@ -489,7 +488,7 @@ let underscore =
     if Vterm.is_empty s then e
     else
       let t,_ = aux t s in
-      let vt = Vterm.add _underscore (Vterm.inter vt bv) in
+      let vt = Vterm.add Sy.underscore (Vterm.inter vt bv) in
       t,vt,vty
 
 let parties bv vty l escaped_vars =

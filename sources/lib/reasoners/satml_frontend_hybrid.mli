@@ -13,22 +13,22 @@ module Make (Th : Theory.S) : sig
 
   type t
 
-  exception Bottom of Explanation.t * Term.Set.t list * t
+  exception Bottom of Explanation.t * Expr.Set.t list * t
 
   val empty : unit -> t
 
-  val is_true : t -> Formula.t -> (Explanation.t Lazy.t * int) option
+  val is_true : t -> Expr.t -> (Explanation.t Lazy.t * int) option
 
-  val assume : bool -> t -> (Formula.gformula * Explanation.t) list -> t
+  val assume : bool -> t -> (Expr.gformula * Explanation.t) list -> t
 
-  val decide : t -> Formula.t -> int -> t
+  val decide : t -> Expr.t -> int -> t
 
   (* forget decisions one by one *)
-  val forget_decision : t -> Formula.t -> int -> t
+  val forget_decision : t -> Expr.t -> int -> t
 
   val reset_decisions : t -> t
   (*val solve : t -> t*)
 
-  val get_decisions : t -> (int * Formula.t) list
+  val get_decisions : t -> (int * Expr.t) list
 
 end

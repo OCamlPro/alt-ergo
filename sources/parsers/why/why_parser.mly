@@ -29,7 +29,6 @@
 %{
   [@@@ocaml.warning "-33"]
   open Options
-
   open Parsed_interface
 %}
 

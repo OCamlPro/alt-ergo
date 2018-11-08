@@ -40,7 +40,7 @@ module type S = sig
   type t = {
     ple0 : P.t;
     is_le : bool;
-    (* int instead of Tliteral.LT.t as a key to prevent us
+    (* int instead of Term.t as a key to prevent us
        from using it in deductions *)
     dep : (Q.t * P.t * bool) Util.MI.t;
     expl : Explanation.t;
@@ -63,7 +63,7 @@ module type S = sig
   val incr_age : unit -> unit
 
   val create_ineq :
-    P.t -> P.t -> bool -> Tliteral.LT.t option -> Explanation.t -> t
+    P.t -> P.t -> bool -> Expr.t option -> Explanation.t -> t
 
   val print_inequation : Format.formatter -> t -> unit
 
@@ -134,7 +134,7 @@ module Container : Container_SIG = struct
         let c = if P.type_info p == Ty.Treal then c else (Q.ceiling c) in
         let p = P.add_const c p in
         let dep = match a with
-          | Some a -> Util.MI.singleton (Tliteral.LT.uid a) (Q.one, p, is_le)
+          | Some a -> Util.MI.singleton (Expr.uid a) (Q.one, p, is_le)
           | None -> Util.MI.empty
         in
         { ple0 = p; is_le = is_le;

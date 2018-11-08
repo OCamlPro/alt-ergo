@@ -29,9 +29,10 @@
 open Format
 open Options
 open Sig
-module A = Literal
+module A = Xliteral
+
 module Sy = Symbols
-module T = Term
+module E = Expr
 
 module Z = Numbers.Z
 module Q = Numbers.Q
@@ -121,28 +122,28 @@ module Shostak
      c3. exists k. t1 = t2 * k + t ;
      c4. t2 <> 0 (already checked) *)
   let mk_modulo md t1 t2 p2 ctx =
-    let zero = T.int "0" in
-    let c1 = Tliteral.LT.mk_builtin true A.LE [zero; md] in
+    let zero = E.int "0" in
+    let c1 = E.mk_builtin true A.LE [zero; md] in
     let c2 =
       match P.is_const p2 with
       | Some n2 ->
         let an2 = Q.abs n2 in
         assert (Q.is_int an2);
-        let t2 = T.int (Q.to_string an2) in
-        Tliteral.LT.mk_builtin true A.LT [md; t2]
+        let t2 = E.int (Q.to_string an2) in
+        E.mk_builtin true A.LT [md; t2]
       | None ->
-        Tliteral.LT.mk_builtin true A.LT [md; t2]
+        E.mk_builtin true A.LT [md; t2]
     in
-    let k  = T.fresh_name Ty.Tint in
-    let t3 = T.make (Sy.Op Sy.Mult) [t2;k] Ty.Tint in
-    let t3 = T.make (Sy.Op Sy.Plus) [t3;md] Ty.Tint in
-    let c3 = Tliteral.LT.mk_eq t1 t3 in
+    let k  = E.fresh_name Ty.Tint in
+    let t3 = E.mk_term (Sy.Op Sy.Mult) [t2;k] Ty.Tint in
+    let t3 = E.mk_term (Sy.Op Sy.Plus) [t3;md] Ty.Tint in
+    let c3 = E.mk_eq ~iff:false t1 t3 in
     c3 :: c2 :: c1 :: ctx
 
   let mk_euc_division p p2 t1 t2 ctx =
     match P.to_list p2 with
     | [], coef_p2 ->
-      let md = T.make (Sy.Op Sy.Modulo) [t1;t2] Ty.Tint in
+      let md = E.mk_term (Sy.Op Sy.Modulo) [t1;t2] Ty.Tint in
       let r, ctx' = X.make md in
       let rp =
         P.mult_const (Q.div Q.one coef_p2) (embed r) in
@@ -206,7 +207,11 @@ module Shostak
       P.add (P.create [coef, (X.term_embed t)] Q.zero ty) p_acc
 
   let rec mke coef p t ctx =
-    let {T.f = sb ; xs = xs; ty = ty} = T.view t in
+    let {E.f = sb ; xs = xs; ty = ty} =
+      match E.term_view t with
+      | E.Not_a_term _ -> assert false
+      | E.Term tt -> tt
+    in
     match sb, xs with
     | (Sy.Int n | Sy.Real n) , _  ->
       let c = Q.mult coef (Q.from_string (Hstring.view n)) in
@@ -218,7 +223,7 @@ module Shostak
       if Options.no_NLA() && P.is_const p1 == None && P.is_const p2 == None
       then
         (* becomes uninterpreted *)
-        let tau = Term.make (Sy.name ~kind:Sy.Ac "@*") [t1; t2] ty in
+        let tau = E.mk_term (Sy.name ~kind:Sy.Ac "@*") [t1; t2] ty in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
@@ -231,7 +236,7 @@ module Shostak
          (P.is_const p2 == None ||
           (ty == Ty.Tint && P.is_const p1 == None)) then
         (* becomes uninterpreted *)
-        let tau = Term.make (Sy.name "@/") [t1; t2] ty in
+        let tau = E.mk_term (Sy.name "@/") [t1; t2] ty in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
@@ -260,14 +265,14 @@ module Shostak
          (P.is_const p1 == None || P.is_const p2 == None)
       then
         (* becomes uninterpreted *)
-        let tau = Term.make (Sy.name "@%") [t1; t2] ty in
+        let tau = E.mk_term (Sy.name "@%") [t1; t2] ty in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
         let p3, ctx =
           try P.modulo p1 p2, ctx
           with e ->
-            let t = T.make mod_symb [t1; t2] Ty.Tint in
+            let t = E.mk_term mod_symb [t1; t2] Ty.Tint in
             let ctx = match e with
               | Division_by_zero | Polynome.Maybe_zero -> ctx
               | Polynome.Not_a_num -> mk_modulo t t1 t2 p2 ctx
@@ -366,7 +371,7 @@ module Shostak
 
   let make t =
     Options.tool_req 4 "TR-Arith-Make";
-    let {T.ty = ty} = T.view t in
+    let ty = E.type_info t in
     let p, ctx = mke Q.one (empty_polynome ty) t [] in
     is_mine p, ctx
 
@@ -406,7 +411,7 @@ module Shostak
     List.exists
       (fun x ->
          match X.term_extract x with
-         | Some t, _ -> Term.is_fresh t
+         | Some t, _ -> E.is_fresh t
          | _ -> false
       ) (X.leaves xp)
 
@@ -491,7 +496,7 @@ module Shostak
     List.fold_left
       (fun (l, sb) (b, y) ->
          if X.ac_extract y != None && X.str_cmp y x > 0 then
-           let k = X.term_embed (T.fresh_name Ty.Tint) in
+           let k = X.term_embed (E.fresh_name Ty.Tint) in
            (b, k) :: l, (y, embed k)::sb
          else (b, y) :: l, sb)
       ([], []) l
@@ -545,7 +550,7 @@ module Shostak
     let m = Q.add a Q.one in
 
     (* 2. on introduit une variable fraiche *)
-    let sigma = X.term_embed (T.fresh_name Ty.Tint) in
+    let sigma = X.term_embed (E.fresh_name Ty.Tint) in
 
     (* 3. l'application de la formule (5.63) nous donne la valeur du pivot x*)
     let mm_sigma = (Q.minus m, sigma) in
@@ -741,13 +746,18 @@ module Shostak
       if P.is_const (embed r) != None then None
       else
       if List.exists
-          (fun (t,x) ->is_mine_symb (Term.view t).Term.f &&
-                       X.leaves x == []) eq
+          (fun (t,x) ->
+             let symb = match E.term_view t with
+               | E.Not_a_term _ -> assert false
+               | E.Term tt -> tt.E.f
+             in
+             is_mine_symb symb && X.leaves x == []
+          ) eq
       then None
       else
         let term_of_cst, cpt = match X.type_info r with
-          | Ty.Tint  -> Term.int, cpt_int
-          | Ty.Treal -> Term.real, cpt_real
+          | Ty.Tint  -> E.int, cpt_int
+          | Ty.Treal -> E.real, cpt_real
           | _ -> assert false
         in
         cpt := Q.add Q.one (max_constant distincts !cpt);
@@ -773,7 +783,7 @@ module Shostak
 
   let choose_adequate_model t r l =
     if debug_interpretation() then
-      fprintf fmt "[arith] choose_adequate_model for %a@." Term.print t;
+      fprintf fmt "[arith] choose_adequate_model for %a@." E.print t;
     let l = List.filter (fun (_, r) -> P.is_const (embed r) != None) l in
     let r =
       match l with

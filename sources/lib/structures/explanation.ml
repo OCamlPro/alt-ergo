@@ -29,13 +29,13 @@
 open Format
 open Options
 
-module F = Formula
+module E = Expr
 
 type exp =
   | Literal of Satml_types.Atom.atom
   | Fresh of int
-  | Bj of F.t
-  | Dep of F.t
+  | Bj of E.t
+  | Dep of E.t
   | RootDep of string (* name of the toplevel formula *)
 
 module S =
@@ -45,9 +45,9 @@ module S =
       let compare a b = match a,b with
         | Fresh i1, Fresh i2 -> i1 - i2
         | Literal a  , Literal b   -> Satml_types.Atom.cmp_atom a b
-        | Dep e1  , Dep e2   -> Formula.compare e1 e2
+        | Dep e1  , Dep e2   -> E.compare e1 e2
         | RootDep s, RootDep t -> String.compare s t
-        | Bj e1   , Bj e2    -> Formula.compare e1 e2
+        | Bj e1   , Bj e2    -> E.compare e1 e2
 
         | Literal _, _ -> -1
         | _, Literal _ -> 1
@@ -104,9 +104,9 @@ let print fmt ex =
     S.iter (function
         | Literal a -> fprintf fmt "{Literal:%a}, " Satml_types.Atom.pr_atom a
         | Fresh i -> Format.fprintf fmt "{Fresh:%i}" i;
-        | Dep f -> Format.fprintf fmt "{Dep:%a}" Formula.print f
+        | Dep f -> Format.fprintf fmt "{Dep:%a}" E.print f
         | RootDep s -> Format.fprintf fmt "{RootDep:%s}" s
-        | Bj f -> Format.fprintf fmt "{BJ:%a}" Formula.print f
+        | Bj f -> Format.fprintf fmt "{BJ:%a}" E.print f
       ) ex;
     fprintf fmt "}"
   end
@@ -124,49 +124,52 @@ let print_unsat_core ?(tab=false) fmt dep =
 let formulas_of s =
   S.fold (fun e acc ->
       match e with
-      | Dep f | Bj f -> F.Set.add f acc
+      | Dep f | Bj f -> E.Set.add f acc
       | RootDep _ | Fresh _ -> acc
       | Literal a -> assert false (*TODO*)
-    ) s F.Set.empty
+    ) s E.Set.empty
 
 let bj_formulas_of s =
   S.fold (fun e acc ->
       match e with
-      | Bj f -> F.Set.add f acc
+      | Bj f -> E.Set.add f acc
       | Dep _ | RootDep _ | Fresh _ -> acc
       | Literal a -> assert false (*TODO*)
-    ) s F.Set.empty
+    ) s E.Set.empty
 
-let rec literals_of_acc lit fs f acc = match F.view f with
-  | F.Literal _ ->
+let rec literals_of_acc lit fs f acc = match E.form_view f with
+  | E.Not_a_form -> assert false
+  | E.Literal _ ->
     if lit then f :: acc else acc
-  | F.Unit (f1,f2) ->
+  | E.Unit (f1,f2) ->
     let acc = literals_of_acc false fs f1 acc in
     literals_of_acc false fs f2 acc
-  | F.Clause (f1, f2, _) ->
+  | E.Clause (f1, f2, _) ->
     let acc = literals_of_acc true fs f1 acc in
     literals_of_acc true fs f2 acc
-  | F.Lemma _ ->
+  | E.Lemma _ ->
     acc
-  | F.Skolem {F.main=f} | F.Flet {F.flet_f=f} | F.Tlet {F.tlet_f=f} ->
+  | E.Skolem {E.main=f} ->
     literals_of_acc true fs f acc
+  | E.Let {E.in_e; let_e} ->
+    literals_of_acc true fs in_e @@ literals_of_acc true fs let_e acc
 
 let literals_of ex =
   let fs  = formulas_of ex in
-  F.Set.fold (literals_of_acc true fs) fs []
+  E.Set.fold (literals_of_acc true fs) fs []
 
 module MI = Map.Make (struct type t = int let compare = compare end)
 
 let literals_ids_of ex =
   List.fold_left (fun acc f ->
-      let i = F.id f in
+      let i = E.id f in
       let m = try MI.find i acc with Not_found -> 0 in
       MI.add i (m + 1) acc
     ) MI.empty (literals_of ex)
 
 
 let make_deps sf =
-  Formula.Set.fold (fun l acc -> S.add (Bj l) acc) sf S.empty
+  E.Set.fold (fun l acc -> S.add (Bj l) acc) sf S.empty
 
 let has_no_bj s =
   try S.iter (function Bj _ -> raise Exit | _ -> ())s; true

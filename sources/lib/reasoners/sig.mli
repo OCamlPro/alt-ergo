@@ -26,13 +26,14 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type answer = Yes of Explanation.t * Term.Set.t list | No
+type answer = Yes of Explanation.t * Expr.Set.t list | No
 
-type 'a ac = {h: Symbols.t ; t: Ty.t ; l: ('a * int) list; distribute: bool}
+type 'a ac =
+  {h: Symbols.t ; t: Ty.t ; l: ('a * int) list; distribute: bool}
 
-type 'a literal = LTerm of Tliteral.LT.t | LSem of 'a Literal.view
+type 'a literal = LTerm of Expr.t | LSem of 'a Xliteral.view
 
-type instances = (Formula.t list * Formula.gformula * Explanation.t) list
+type instances = (Expr.t list * Expr.gformula * Explanation.t) list
 
 type theory =
   | Th_arith
@@ -47,7 +48,7 @@ type lit_origin =
   | Other
 
 type 'a input =
-  'a Literal.view * Tliteral.LT.t option * Explanation.t * lit_origin
+  'a Xliteral.view * Expr.t option * Explanation.t * lit_origin
 
 type 'a fact = 'a literal * Explanation.t * lit_origin
 
@@ -60,7 +61,7 @@ type 'a facts = {
 
 type 'a result = {
   assume : 'a fact list;
-  remove: Tliteral.LT.t list;
+  remove: Expr.t list;
 }
 
 type 'a solve_pb = { sbt : ('a * 'a) list; eqs : ('a * 'a) list }
@@ -69,27 +70,27 @@ module type RELATION = sig
   type t
   type r
   type uf
-  val empty : Term.Set.t list -> t
+  val empty : Expr.Set.t list -> t
 
   val assume : t -> uf -> (r input) list -> t * r result
   val query  : t -> uf -> r input -> answer
 
   val case_split :
-    t -> uf -> for_model:bool -> (r Literal.view * bool * lit_origin) list
+    t -> uf -> for_model:bool -> (r Xliteral.view * bool * lit_origin) list
   (** case_split env returns a list of equalities *)
 
-  val add : t -> uf -> r -> Term.t -> t
+  val add : t -> uf -> r -> Expr.t -> t
   (** add a representant to take into account *)
 
   val instantiate :
     do_syntactic_matching:bool ->
-    Matching_types.info Term.Map.t * Term.t list Term.Map.t Term.Subst.t ->
-    t -> uf -> (Formula.t -> Formula.t -> bool) ->
+    Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
+    t -> uf -> (Expr.t -> Expr.t -> bool) ->
     t * instances
 
-  val print_model : Format.formatter -> t -> (Term.t * r) list -> unit
+  val print_model : Format.formatter -> t -> (Expr.t * r) list -> unit
 
-  val new_terms : t -> Term.Set.t
+  val new_terms : t -> Expr.Set.t
 
   val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
 
@@ -110,9 +111,9 @@ module type SHOSTAK = sig
   val is_mine_symb : Symbols.t -> bool
 
   (** Give a representant of a term of the theory*)
-  val make : Term.t -> r * Tliteral.LT.t list
+  val make : Expr.t -> r * Expr.t list
 
-  val term_extract : r -> Term.t option * bool (* original term ? *)
+  val term_extract : r -> Expr.t option * bool (* original term ? *)
 
   val color : (r ac) -> r
 
@@ -146,19 +147,19 @@ module type SHOSTAK = sig
      (eg. records). In this case, it's a unit fact, not a decision
   *)
   val assign_value :
-    r -> r list -> (Term.t * r) list -> (Term.t * bool) option
+    r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
 
   (* choose the value to print and how to print it for the given term.
      The second term is its representative. The list is its equivalence class
   *)
-  val choose_adequate_model : Term.t -> r -> (Term.t * r) list -> r * string
+  val choose_adequate_model : Expr.t -> r -> (Expr.t * r) list -> r * string
 
 end
 
 module type X = sig
   type r
 
-  val make : Term.t -> r * Tliteral.LT.t list
+  val make : Expr.t -> r * Expr.t list
 
   val type_info : r -> Ty.t
 
@@ -176,9 +177,9 @@ module type X = sig
 
   val solve : r -> r ->  (r * r) list
 
-  val term_embed : Term.t -> r
+  val term_embed : Expr.t -> r
 
-  val term_extract : r -> Term.t option * bool (* original term ? *)
+  val term_extract : r -> Expr.t option * bool (* original term ? *)
 
   val ac_embed : r ac -> r
 
@@ -204,10 +205,10 @@ module type X = sig
      (eg. records). In this case, it's a unit fact, not a decision
   *)
   val assign_value :
-    r -> r list -> (Term.t * r) list -> (Term.t * bool) option
+    r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
 
   (* choose the value to print and how to print it for the given term.
      The second term is its representative. The list is its equivalence class
   *)
-  val choose_adequate_model : Term.t -> r -> (Term.t * r) list -> r * string
+  val choose_adequate_model : Expr.t -> r -> (Expr.t * r) list -> r * string
 end

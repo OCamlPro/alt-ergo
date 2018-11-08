@@ -30,9 +30,10 @@ open Options
 open Format
 open Sig
 open Exception
+
 module Sy = Symbols
-module T  = Term
-module A  = Literal
+module E  = Expr
+module A  = Xliteral
 module L  = List
 module Hs = Hstring
 
@@ -129,8 +130,8 @@ module Shostak (X : ALIEN) = struct
       | Cons(hs,t) -> cr
       | Alien r    -> X.subst p v r
 
-  let make t = match T.view t with
-    | {T.f=Sy.Op (Sy.Constr hs); xs=[];ty=ty} ->
+  let make t = match E.term_view t with
+    | E.Term {E.f=Sy.Op (Sy.Constr hs); xs=[];ty=ty} ->
       is_mine (Cons(hs,ty)), []
     | _ -> assert false
 
@@ -197,7 +198,7 @@ module Shostak (X : ALIEN) = struct
 
 end
 
-module Relation (X : ALIEN) (Uf : Uf.S) = struct
+module Relation (X : ALIEN) (Uf : Uf.S with type r = X.r) = struct
   type r = X.r
   type uf = Uf.t
 
@@ -209,10 +210,9 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   module MX = Map.Make(struct type t = X.r let compare = X.hash_cmp end)
   module HSS = Set.Make (struct type t=Hs.t let compare = Hs.compare end)
 
-  module LR =
-    Literal.Make(struct type t = X.r let compare = X.hash_cmp include X end)
+  module LR = Uf.LX
 
-  type t = { mx : (HSS.t * Ex.t) MX.t; classes : Term.Set.t list;
+  type t = { mx : (HSS.t * Ex.t) MX.t; classes : Expr.Set.t list;
              size_splits : Numbers.Q.t }
 
   let empty classes = { mx = MX.empty; classes = classes;
@@ -445,7 +445,7 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
 
   let print_model _ _ _ = ()
 
-  let new_terms env = Term.Set.empty
+  let new_terms env = Expr.Set.empty
 
   let instantiate ~do_syntactic_matching _ env uf _  = env, []
   let assume_th_elt t th_elt dep =

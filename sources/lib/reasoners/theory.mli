@@ -36,28 +36,28 @@ module type S = sig
      decreasing order with respect to (dlvl, plvl) *)
   val assume :
     ?ordered:bool ->
-    (Tliteral.LT.t * Explanation.t * int * int) list -> t ->
-    t * Term.Set.t * int
+    (Expr.t * Explanation.t * int * int) list -> t ->
+    t * Expr.Set.t * int
 
-  val query : Tliteral.LT.t -> t -> Sig.answer
+  val query : Expr.t -> t -> Sig.answer
   val print_model : Format.formatter -> t -> unit
-  val cl_extract : t -> Term.Set.t list
-  val extract_ground_terms : t -> Term.Set.t
+  val cl_extract : t -> Expr.Set.t list
+  val extract_ground_terms : t -> Expr.Set.t
   val get_real_env : t -> Ccx.Main.t
   val get_case_split_env : t -> Ccx.Main.t
-  val do_case_split : t -> t * Term.Set.t
-  val add_term : t -> Term.t -> add_in_cs:bool -> t
+  val do_case_split : t -> t * Expr.Set.t
+  val add_term : t -> Expr.t -> add_in_cs:bool -> t
 
   val compute_concrete_model : t -> t
 
   val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
-    Matching_types.info Term.Map.t * Term.t list Term.Map.t Term.Subst.t ->
-    t -> (Formula.t -> Formula.t -> bool) ->
+    Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
+    t -> (Expr.t -> Expr.t -> bool) ->
     int -> int -> t * Sig.instances
 
-  val get_assumed : t -> Tliteral.LT.Set.t
+  val get_assumed : t -> Expr.Set.t
 end
 
 module Main_Default : S

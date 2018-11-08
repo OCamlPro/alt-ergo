@@ -11,6 +11,8 @@
 
 exception Timeout
 
+exception Cmp of int
+
 module MI = Map.Make(struct type t = int let compare a b = a - b end)
 
 module SS = Set.Make(String)
@@ -37,6 +39,17 @@ type sat_solver =
 
 type mode = On | Off | Auto
 
+let [@inline always] compare_algebraic s1 s2 f_same_constrs_with_args =
+  let r1 = Obj.repr s1 in
+  let r2 = Obj.repr s2 in
+  match Obj.is_int r1, Obj.is_int r2 with
+  | true, true -> Pervasives.compare s1 s2 (* both constructors without args *)
+  | true, false -> -1
+  | false, true -> 1
+  | false, false ->
+    let cmp_tags = Obj.tag r1 - Obj.tag r2 in
+    if cmp_tags <> 0 then cmp_tags else f_same_constrs_with_args (s1, s2)
+
 (*
 let map_merge_is_union eq k a b =
   match a, b with
@@ -45,3 +58,4 @@ let map_merge_is_union eq k a b =
   | Some _, None   -> a
   | Some (x, c1), Some (y, c2) -> assert (eq x y); Some (x, c1 + c2)
 *)
+

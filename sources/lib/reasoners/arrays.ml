@@ -30,8 +30,8 @@ open Options
 open Format
 
 module Sy = Symbols
-module T  = Term
-module A  = Literal
+module E  = Expr
+module A  = Xliteral
 module L  = List
 
 type 'a abstract = unit
@@ -65,21 +65,21 @@ module Shostak (X : ALIEN) = struct
   let abstract_selectors p acc = assert false
   let solve r1 r2 = assert false
   let assign_value r _ eq =
-    if List.exists (fun (t,_) -> (Term.view t).Term.depth = 1) eq then None
+    if List.exists (fun (t,_) -> (Expr.depth t) = 1) eq then None
     else
       match X.term_extract r with
       | Some t, true ->
-        Some (Term.fresh_name (X.type_info r), false)
+        Some (Expr.fresh_name (X.type_info r), false)
       | _ -> assert false
 
   let choose_adequate_model t _ l =
     let acc =
       List.fold_left
         (fun acc (s, r) ->
-           if (Term.view s).Term.depth <> 1 then acc
+           if (Expr.depth s) <> 1 then acc
            else
              match acc with
-             | Some(s', r') when Term.compare s' s > 0 -> acc
+             | Some(s', r') when Expr.compare s' s > 0 -> acc
              | _ -> Some (s, r)
         ) None l
     in
@@ -93,7 +93,7 @@ module Shostak (X : ALIEN) = struct
 
 end
 
-module Relation (X : ALIEN) (Uf : Uf.S) = struct
+module Relation (X : ALIEN) (Uf : Uf.S with type r = X.r) = struct
 
   open Sig
   module Ex = Explanation
@@ -101,16 +101,15 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   type r = X.r
   type uf = Uf.t
 
-  module LR =
-    Literal.Make(struct type t = X.r  let compare = X.hash_cmp include X end)
+  module LR = Uf.LX
 
   (* map get |-> { set } des associations (get,set) deja splites *)
   module Tmap = struct
-    include T.Map
+    include E.Map
     let update t a mp =
-      try add t (T.Set.add a (find t mp)) mp
-      with Not_found -> add t (T.Set.singleton a) mp
-    let splited t a mp = try T.Set.mem a (find t mp) with Not_found -> false
+      try add t (E.Set.add a (find t mp)) mp
+      with Not_found -> add t (E.Set.singleton a) mp
+    let splited t a mp = try E.Set.mem a (find t mp) with Not_found -> false
   end
 
   module LRset= LR.Set
@@ -118,8 +117,8 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   module Conseq =
     Set.Make
       (struct
-        type t = Tliteral.LT.t * Ex.t
-        let compare (lt1,_) (lt2,_) = Tliteral.LT.compare lt1 lt2
+        type t = E.t * Ex.t
+        let compare (lt1,_) (lt2,_) = E.compare lt1 lt2
       end)
   (* map k |-> {sem Atom} d'egalites/disegalites sur des atomes semantiques*)
   module LRmap = struct
@@ -128,19 +127,19 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
     let add k v ex mp = add k (Conseq.add (v,ex) (find k mp)) mp
   end
 
-  type gtype = {g:Term.t; gt:Term.t; gi:Term.t; gty:Ty.t}
+  type gtype = {g:Expr.t; gt:Expr.t; gi:Expr.t; gty:Ty.t}
   module G :Set.S with type elt = gtype = Set.Make
-      (struct type t = gtype let compare t1 t2 = T.compare t1.g t2.g end)
+      (struct type t = gtype let compare t1 t2 = E.compare t1.g t2.g end)
 
   (* ensemble de termes "set" avec leurs arguments et leurs types *)
-  type stype = {s:T.t; st:T.t; si:T.t; sv:T.t; sty:Ty.t}
+  type stype = {s:E.t; st:E.t; si:E.t; sv:E.t; sty:Ty.t}
   module S :Set.S with type elt = stype = Set.Make
-      (struct type t = stype let compare t1 t2 = T.compare t1.s t2.s end)
+      (struct type t = stype let compare t1 t2 = E.compare t1.s t2.s end)
 
   (* map t |-> {set(t,-,-)} qui associe a chaque tableau l'ensemble
      de ses affectations *)
   module TBS = struct
-    include Map.Make(T)
+    include Map.Make(E)
     let find k mp = try find k mp with Not_found -> S.empty
 
     (* add reutilise find ci-dessus *)
@@ -152,8 +151,8 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
      tbset : S.t TBS.t ;        (* map t |-> set(t,-,-) *)
      split : LRset.t;           (* l'ensemble des case-split possibles *)
      conseq   : Conseq.t LRmap.t; (* consequences des splits *)
-     seen  : T.Set.t Tmap.t;    (* combinaisons (get,set) deja splitees *)
-     new_terms : T.Set.t;
+     seen  : E.Set.t Tmap.t;    (* combinaisons (get,set) deja splitees *)
+     new_terms : E.Set.t;
      size_splits : Numbers.Q.t;
     }
 
@@ -164,7 +163,7 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
      split = LRset.empty;
      conseq   = LRmap.empty;
      seen  = Tmap.empty;
-     new_terms = T.Set.empty;
+     new_terms = E.Set.empty;
      size_splits = Numbers.Q.one;
     }
 
@@ -178,12 +177,12 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
                    LR.print (LR.make a)) la;
       end
 
-    let print_gets fmt = G.iter (fun t -> fprintf fmt "%a@." T.print t.g)
-    let print_sets fmt = S.iter (fun t -> fprintf fmt "%a@." T.print t.s)
+    let print_gets fmt = G.iter (fun t -> fprintf fmt "%a@." E.print t.g)
+    let print_sets fmt = S.iter (fun t -> fprintf fmt "%a@." E.print t.s)
     let print_splits fmt =
       LRset.iter (fun a -> fprintf fmt "%a@." LR.print a)
     let print_tbs fmt =
-      TBS.iter (fun k v -> fprintf fmt "%a --> %a@." T.print k print_sets v)
+      TBS.iter (fun k v -> fprintf fmt "%a --> %a@." E.print k print_sets v)
 
     let env fmt env =
       if debug_arrays () then begin
@@ -202,7 +201,7 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
           fprintf fmt "[Arrays] %d implied equalities@."
             (Conseq.cardinal st);
           Conseq.iter (fun (a,ex) -> fprintf fmt "  %a : %a@."
-                          Tliteral.LT.print a Ex.print ex) st
+                          E.print a Ex.print ex) st
         end
 
     let case_split a =
@@ -217,7 +216,11 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
 
   (* met a jour gets et tbset en utilisant l'ensemble des termes donne*)
   let rec update_gets_sets acc t =
-    let {T.f=f;xs=xs;ty=ty} = T.view t in
+    let {E.f=f;xs=xs;ty=ty} =
+      match E.term_view t with
+      | E.Not_a_term _ -> assert false
+      | E.Term tt -> tt
+    in
     let gets, tbset = List.fold_left update_gets_sets acc xs in
     match Sy.is_get f, Sy.is_set f, xs with
     | true , false, [a;i]   -> G.add {g=t; gt=a; gi=i; gty=ty} gets, tbset
@@ -282,22 +285,26 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
          if Tmap.splited get set env.seen then (env,acc)
          else
            let env = {env with seen = Tmap.update get set env.seen} in
-           let {T.f=f;xs=xs;ty=sty} = T.view set in
+           let {E.f=f;xs=xs;ty=sty} =
+             match E.term_view set with
+             | E.Not_a_term _ -> assert false
+             | E.Term tt -> tt
+           in
            match Sy.is_set f, xs with
            | true , [stab;si;sv] ->
              let xi, _ = X.make gi in
              let xj, _ = X.make si in
-             let get_stab  = T.make (Sy.Op Sy.Get) [stab;gi] gty in
+             let get_stab  = E.mk_term (Sy.Op Sy.Get) [stab;gi] gty in
              let p       = LR.mk_eq xi xj in
-             let p_ded   = Tliteral.LT.mk_eq get sv in
+             let p_ded   = E.mk_eq ~iff:false get sv in
              let n     = LR.mk_distinct false [xi;xj] in
-             let n_ded = Tliteral.LT.mk_eq get get_stab in
+             let n_ded = E.mk_eq ~iff:false get get_stab in
              let dep = match are_eq gtab set with
                  Yes (dep, _) -> dep | No -> assert false
              in
              let env =
                {env with new_terms =
-                           T.Set.add get_stab env.new_terms } in
+                           E.Set.add get_stab env.new_terms } in
              update_env
                are_eq are_dist dep env acc gi si p p_ded n n_ded
            | _ -> (env,acc)
@@ -308,8 +315,7 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
     ---------------------------------------------------------------------*)
   let get_from_set are_eq are_dist stype (env,acc) class_of =
     let {s=set; st=stab; si=si; sv=sv; sty=sty} = stype in
-    let ty_si = (T.view sv).T.ty in
-
+    let ty_si = E.type_info sv in
     let stabs =
       L.fold_left
         (fun acc t -> S.union acc (TBS.find t env.tbset))
@@ -317,14 +323,14 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
     in
 
     S.fold (fun stab' (env,acc) ->
-        let get = T.make (Sy.Op Sy.Get) [set; si] ty_si in
+        let get = E.mk_term (Sy.Op Sy.Get) [set; si] ty_si in
         if Tmap.splited get set env.seen then (env,acc)
         else
           let env = {env with
                      seen = Tmap.update get set env.seen;
-                     new_terms = T.Set.add get env.new_terms }
+                     new_terms = E.Set.add get env.new_terms }
           in
-          let p_ded = Tliteral.LT.mk_eq get sv in
+          let p_ded = E.mk_eq ~iff:false get sv in
           env, Conseq.add (p_ded, Ex.empty) acc
       ) stabs (env,acc)
 
@@ -347,19 +353,19 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
              let env = {env with seen = Tmap.update get set env.seen} in
              let xi, _ = X.make gi in
              let xj, _ = X.make si in
-             let get_stab  = T.make (Sy.Op Sy.Get) [stab;gi] gty in
-             let gt_of_st  = T.make (Sy.Op Sy.Get) [set;gi] gty in
+             let get_stab  = E.mk_term (Sy.Op Sy.Get) [stab;gi] gty in
+             let gt_of_st  = E.mk_term (Sy.Op Sy.Get) [set;gi] gty in
              let p       = LR.mk_eq xi xj in
-             let p_ded   = Tliteral.LT.mk_eq gt_of_st sv in
+             let p_ded   = E.mk_eq ~iff:false gt_of_st sv in
              let n     = LR.mk_distinct false [xi;xj] in
-             let n_ded = Tliteral.LT.mk_eq gt_of_st get_stab in
+             let n_ded = E.mk_eq ~iff:false gt_of_st get_stab in
              let dep = match are_eq gtab stab with
                  Yes (dep, _) -> dep | No -> assert false
              in
              let env =
                {env with
                 new_terms =
-                  T.Set.add get_stab (T.Set.add gt_of_st env.new_terms) }
+                  E.Set.add get_stab (E.Set.add gt_of_st env.new_terms) }
              in
              update_env are_eq are_dist dep env acc gi si p p_ded n n_ded
            end
@@ -393,14 +399,14 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
            begin
              match X.type_info r, X.term_extract r, X.term_extract s with
              | Ty.Tfarray (ty_k, ty_v), (Some t1, _), (Some t2, _)  ->
-               let i  = T.fresh_name ty_k in
-               let g1 = T.make (Sy.Op Sy.Get) [t1;i] ty_v in
-               let g2 = T.make (Sy.Op Sy.Get) [t2;i] ty_v in
-               let d  = Tliteral.LT.mk_distinct false [g1;g2] in
+               let i  = E.fresh_name ty_k in
+               let g1 = E.mk_term (Sy.Op Sy.Get) [t1;i] ty_v in
+               let g2 = E.mk_term (Sy.Op Sy.Get) [t2;i] ty_v in
+               let d  = E.mk_distinct ~iff:false [g1;g2] in
                let acc = Conseq.add (d, dep) acc in
                let env =
                  {env with new_terms =
-                             T.Set.add g2 (T.Set.add g1 env.new_terms) } in
+                             E.Set.add g2 (E.Set.add g1 env.new_terms) } in
                env, acc
              | _ -> accu
            end

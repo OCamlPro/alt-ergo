@@ -30,7 +30,8 @@ open Format
 open Options
 open Sig
 module Hs = Hstring
-module T = Term
+module E = Expr
+
 
 type 'a abstract =
   | Record of (Hs.t * 'a abstract) list * Ty.t
@@ -163,7 +164,11 @@ module Shostak (X : ALIEN) = struct
 
   let make t =
     let rec make_rec t ctx =
-      let { T.f = f; xs = xs; ty = ty} = T.view t in
+      let { E.f = f; xs = xs; ty = ty} =
+        match E.term_view t with
+        | E.Not_a_term _ -> assert false
+        | E.Term tt -> tt
+      in
       match f, ty with
       | Symbols.Op (Symbols.Record), Ty.Trecord {Ty.lbs=lbs} ->
         assert (List.length xs = List.length lbs);
@@ -172,8 +177,8 @@ module Shostak (X : ALIEN) = struct
             (fun x (lb, _) (l, ctx) ->
                let r, ctx = make_rec x ctx in
                let tyr = type_info r in
-               let dlb = T.make (Symbols.Op (Symbols.Access lb)) [t] tyr in
-               let c = Tliteral.LT.mk_eq dlb x in
+               let dlb = E.mk_term (Symbols.Op (Symbols.Access lb)) [t] tyr in
+               let c = E.mk_eq ~iff:false dlb x in
                (lb, r)::l, c::ctx
             )
             xs lbs ([], ctx)
@@ -251,7 +256,7 @@ module Shostak (X : ALIEN) = struct
         | (Ty.Trecord { Ty.args=args; name=name; lbs=lbs }) as tyr ->
           let flds =
             List.map
-              (fun (lb,ty) -> lb, embed (X.term_embed (T.fresh_name ty))) lbs
+              (fun (lb,ty) -> lb, embed (X.term_embed (E.fresh_name ty))) lbs
           in
           let record = is_mine (Record (flds, tyr)) in
           record, (left_abs_xe2, record) :: acc
@@ -290,7 +295,7 @@ module Shostak (X : ALIEN) = struct
         (fun (lb, ty) ->
            match info with
            | Some (a, v) when Hs.equal lb a -> lb, v
-           | _ -> let n = embed (X.term_embed (T.fresh_name ty)) in lb, n)
+           | _ -> let n = embed (X.term_embed (E.fresh_name ty)) in lb, n)
         lbs
     in
     Record (lbs, ty), lbs
@@ -342,7 +347,7 @@ module Shostak (X : ALIEN) = struct
                      | Some t, _ -> t)
                   lbs
               in
-              Some (T.make (Symbols.Op Symbols.Record) lbs ty), false
+              Some (E.mk_term (Symbols.Op Symbols.Record) lbs ty), false
             with Not_found -> None, false
           end
         | Access (a, r, ty) ->
@@ -350,7 +355,7 @@ module Shostak (X : ALIEN) = struct
             match X.term_extract (is_mine r) with
             | None, _ -> None, false
             | Some t, _ ->
-              Some (T.make (Symbols.Op (Symbols.Access a)) [t] ty), false
+              Some (E.mk_term (Symbols.Op (Symbols.Access a)) [t] ty), false
           end
         | Other (r, _) -> X.term_extract r
       end
@@ -411,15 +416,15 @@ module Shostak (X : ALIEN) = struct
     | Access _ -> None
 
     | Record (_, ty) ->
-      if List.exists (fun (t,_) -> (Term.view t).Term.depth = 1) eq
+      if List.exists (fun (t,_) -> (Expr.depth t) = 1) eq
       then None
-      else Some (Term.fresh_name ty, false)
+      else Some (Expr.fresh_name ty, false)
 
     | Other (_,ty) ->
       match ty with
       | Ty.Trecord {Ty.args; name; lbs} ->
-        let rev_lbs = List.rev_map (fun (hs, ty) -> Term.fresh_name ty) lbs in
-        let s = Term.make (Symbols.Op Symbols.Record) (List.rev rev_lbs) ty in
+        let rev_lbs = List.rev_map (fun (hs, ty) -> Expr.fresh_name ty) lbs in
+        let s = E.mk_term (Symbols.Op Symbols.Record) (List.rev rev_lbs) ty in
         Some (s, false) (* false <-> not a case-split *)
       | _ -> assert false
 
@@ -427,10 +432,10 @@ module Shostak (X : ALIEN) = struct
     let acc =
       List.fold_left
         (fun acc (s, r) ->
-           if (Term.view s).Term.depth <> 1 then acc
+           if (Expr.depth s) <> 1 then acc
            else
              match acc with
-             | Some(s', r') when Term.compare s' s > 0 -> acc
+             | Some(s', r') when Expr.compare s' s > 0 -> acc
              | _ -> Some (s, r)
         ) None l
     in
@@ -456,7 +461,7 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   let case_split env _ ~for_model = []
   let add env _ _ _ = env
   let print_model _ _ _ = ()
-  let new_terms env = T.Set.empty
+  let new_terms env = E.Set.empty
   let instantiate ~do_syntactic_matching _ env uf _ = env, []
 
   let assume_th_elt t th_elt dep =
