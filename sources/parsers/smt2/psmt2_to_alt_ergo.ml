@@ -132,6 +132,13 @@ module Translate = struct
         | [t1;t2] -> mk_mod name.p t1 t2
         | _ -> assert false
       end
+    | "abs" -> begin
+        match params with
+        | [x] ->
+          let cond = mk_pred_ge name.p x (mk_int_const name.p "0") in
+          mk_ite name.p cond x (mk_minus name.p x)
+        | _ -> assert false
+      end
     | "<" -> translate_chainable_assoc mk_pred_lt name params
     | "<=" -> translate_chainable_assoc mk_pred_le name params
     | ">" -> translate_chainable_assoc mk_pred_gt name params
