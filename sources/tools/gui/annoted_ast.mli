@@ -158,12 +158,13 @@ type atyped_decl =
   | AAxiom of Loc.t * string * Parsed.axiom_kind * aform
   | ARewriting of Loc.t * string * ((aterm rwt_rule) annoted) list
   | AGoal of Loc.t * goal_sort * string * aform annoted
-  | ALogic of Loc.t * string list * plogic_type
-  | APredicate_def of Loc.t * string * (string * ppure_type) list * aform
+  | ALogic of Loc.t * string list * plogic_type * tlogic_type
+  | APredicate_def
+    of Loc.t * string * (string * ppure_type * Ty.t) list * aform
   | AFunction_def
-    of Loc.t * string * (string * ppure_type) list * ppure_type * aform
-  | ATypeDecl of Loc.t * string list * string * body_type_decl
-
+    of Loc.t * string * (string * ppure_type * Ty.t) list
+       * ppure_type * Ty.t * aform
+  | ATypeDecl of Loc.t * string list * string * body_type_decl * Ty.t
 
 type annoted_node =
   | AD of (atyped_decl annoted * Typechecker.env)

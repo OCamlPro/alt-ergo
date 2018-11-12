@@ -125,16 +125,19 @@ module Types = struct
     let ty_vars = fresh_vars env vars loc in
     match body with
     | Abstract ->
-      { env with to_ty = MString.add id (Ty.text ty_vars id) env.to_ty }
+      let ty = Ty.text ty_vars id in
+      ty, { env with to_ty = MString.add id ty env.to_ty }
     | Enum lc ->
-      { env with to_ty = MString.add id (Ty.tsum id lc) env.to_ty }
+      let ty = Ty.tsum id lc in
+      ty, { env with to_ty = MString.add id ty env.to_ty }
     | Record lbs ->
       let lbs =
         List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs in
-      { to_ty = MString.add id (Ty.trecord ty_vars id lbs) env.to_ty;
-        from_labels =
-          List.fold_left
-            (fun fl (l,_) -> MString.add l id fl) env.from_labels lbs }
+      let ty = Ty.trecord ty_vars id lbs in
+      ty, { to_ty = MString.add id ty env.to_ty;
+            from_labels =
+              List.fold_left
+                (fun fl (l,_) -> MString.add l id fl) env.from_labels lbs }
 
   module SH = Set.Make(Hstring)
 
@@ -233,16 +236,18 @@ module Env = struct
     add env lv Symbols.name ty
 
   let add_logics env mk_symb names pp_profile loc =
-    let profile =
+    let decl, profile =
       match pp_profile with
       | PPredicate args ->
-        { args = List.map (Types.ty_of_pp loc env.types None) args;
-          result = Ty.Tbool }
+        let args = List.map (Types.ty_of_pp loc env.types None) args in
+        TPredicate args,
+        { args = args; result = Ty.Tbool }
       (*| PFunction ([], PPTvarid (_, loc)) ->
           error CannotGeneralize loc*)
       | PFunction(args, res) ->
         let args = List.map (Types.ty_of_pp loc env.types None) args in
         let res = Types.ty_of_pp loc env.types None res in
+        TFunction (args, res),
         { args = args; result = res }
     in
     let logics =
@@ -258,7 +263,7 @@ module Env = struct
            MString.add n (sy, profile) logics)
         env.logics names
     in
-    { env with logics = logics }
+    decl, { env with logics = logics }
 
   let find {var_map=m} n = MString.find n m
 
@@ -267,7 +272,8 @@ module Env = struct
   let list_of {var_map=m} = MString.fold (fun _ c acc -> c::acc) m []
 
   let add_type_decl env vars id body loc =
-    { env with types = Types.add env.types vars id body loc }
+    let ty, types = Types.add env.types vars id body loc in
+    ty, { env with types = types; }
 
   (* returns a type with fresh variables *)
   let fresh_type env n loc =
@@ -1759,9 +1765,9 @@ let type_decl keep_triggers (acc, env) d =
     | Logic (loc, ac, lp, pp_ty) ->
       Options.tool_req 1 "TR-Typing-LogicFun$_F$";
       let mk_symb hs = Symbols.name hs ~kind:ac in
-      let env' = Env.add_logics env mk_symb lp pp_ty loc in
+      let tlogic, env' = Env.add_logics env mk_symb lp pp_ty loc in
       let lp = List.map fst lp in
-      let td = {c = TLogic(loc,lp,pp_ty); annot = new_id () } in
+      let td = {c = TLogic(loc,lp,tlogic); annot = new_id () } in
       (td, env)::acc, env'
 
     | Axiom(loc,name,ax_kd,f) ->
@@ -1792,12 +1798,19 @@ let type_decl keep_triggers (acc, env) d =
       let ty =
         let l = List.map (fun (_,_,x) -> x) l in
         match d with
-          Function_def(_,_,_,t,_) -> PFunction(l,t)
-        | _ -> PPredicate l
+        | Function_def(_,_,_,t,_) -> PFunction(l,t)
+        | Predicate_def _ -> PPredicate l
+        | _ -> assert false
       in
       let l = List.map (fun (_,x,t) -> (x,t)) l in
       let mk_symb hs = Symbols.name hs ~kind:Symbols.Other in
-      let env = Env.add_logics env mk_symb [n] ty loc in (* TODO *)
+      let tlogic, env = Env.add_logics env mk_symb [n] ty loc in (* TODO *)
+      let l_args, t_typed =
+        match tlogic with
+        | TPredicate args -> args, Ty.Tbool
+        | TFunction (args, ret) -> args, ret
+      in
+      let l_typed = List.map2 (fun (x, _) t -> (x, t)) l l_args in
       let n = fst n in
 
       let lvar = List.map (fun (x,_) -> {pp_desc=PPvar x;pp_loc=loc}) l in
@@ -1814,26 +1827,26 @@ let type_decl keep_triggers (acc, env) d =
         match d with
         | Function_def(_,_,_,t,_) ->
           Options.tool_req 1 "TR-Typing-LogicFun$_F$";
-          TFunction_def(loc,n,l,t,f)
+          TFunction_def(loc,n,l_typed,t_typed,f)
         | _ ->
           Options.tool_req 1 "TR-Typing-LogicPred$_F$";
-          TPredicate_def(loc,n,l,f)
+          TPredicate_def(loc,n,l_typed,f)
       in
       let td_a = { c = td; annot=new_id () } in
       (td_a, env)::acc, env
 
     | TypeDecl(loc, ls, s, body) ->
       Options.tool_req 1 "TR-Typing-TypeDecl$_F$";
-      let env1 = Env.add_type_decl env ls s body loc in
-      let td1 =  TTypeDecl(loc, ls, s, body) in
+      let ty1, env1 = Env.add_type_decl env ls s body loc in
+      let td1 =  TTypeDecl(loc, ty1) in
       let td1_a = { c = td1; annot=new_id () } in
       let tls = List.map (fun s -> PPTvarid (s,loc)) ls in
       let ty = PFunction([], PPTexternal(tls, s, loc)) in
       match body with
       | Enum lc ->
         let lcl = List.map (fun c -> c, "") lc in (* TODO change this *)
-        let env2 = Env.add_logics env1 Symbols.constr lcl ty loc in
-        let td2 = TLogic(loc, lc, ty) in
+        let tlogic, env2 = Env.add_logics env1 Symbols.constr lcl ty loc in
+        let td2 = TLogic(loc, lc, tlogic) in
         let td2_a = { c = td2; annot=new_id () } in
         (td1_a, env1)::(td2_a,env2)::acc, env2
       | _ -> (td1_a, env1)::acc, env1

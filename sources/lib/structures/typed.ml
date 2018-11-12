@@ -27,7 +27,6 @@
 (******************************************************************************)
 
 open Format
-open Parsed
 
 [@@@ocaml.warning "-33"]
 open Options
@@ -141,6 +140,12 @@ type theories_extensions =
   | NIA
   | FPA
 
+type axiom_kind = Parsed.axiom_kind = Default | Propagator
+
+type tlogic_type =
+  | TPredicate of Ty.t list
+  | TFunction of Ty.t list * Ty.t
+
 type 'a atdecl = ('a tdecl, 'a) annoted
 
 and 'a tdecl =
@@ -152,14 +157,14 @@ and 'a tdecl =
   | TAxiom of Loc.t * string * axiom_kind * ('a tform, 'a) annoted
   | TRewriting of Loc.t * string * (('a tterm, 'a) annoted rwt_rule) list
   | TGoal of Loc.t * goal_sort * string * ('a tform, 'a) annoted
-  | TLogic of Loc.t * string list * plogic_type
+  | TLogic of Loc.t * string list * tlogic_type
   | TPredicate_def of
       Loc.t * string *
-      (string * ppure_type) list * ('a tform, 'a) annoted
+      (string * Ty.t) list * ('a tform, 'a) annoted
   | TFunction_def of
       Loc.t * string *
-      (string * ppure_type) list * ppure_type * ('a tform, 'a) annoted
-  | TTypeDecl of Loc.t * string list * string * body_type_decl
+      (string * Ty.t) list * Ty.t * ('a tform, 'a) annoted
+  | TTypeDecl of Loc.t * Ty.t
 
 (*****)
 

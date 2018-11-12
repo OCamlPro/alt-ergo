@@ -77,7 +77,18 @@ let print full =
     | Text(l, s) -> fprintf fmt "%a %s" print_list l (Hstring.view s)
     | Tfarray (t1, t2) -> fprintf fmt "(%a,%a) farray" print t1 print t2
     | Tnext t -> fprintf fmt "%a next" print t
-    | Tsum(s, _) -> fprintf fmt "%s" (Hstring.view s)
+    | Tsum(s, lc) ->
+      fprintf fmt "%s" (Hstring.view s);
+      if full then begin
+        fprintf fmt " = ";
+        let first = ref true in
+        List.iter
+          (fun s ->
+             fprintf fmt "%s%s" (if !first then "" else " | ")
+               (Hstring.view s);
+             first := false
+          ) lc
+      end
     | Trecord {args=lv; name=n; lbs=lbls} ->
       fprintf fmt "%a %s" print_list lv (Hstring.view n);
       if full then begin
