@@ -28,13 +28,6 @@ module type SAT_ML = sig
     (Satml_types.Atom.atom * Satml_types.Atom.atom list * bool) Util.MI.t ->
     unit
 
-  val new_vars :
-    t ->
-    nbv : int -> (* nb made vars *)
-    Satml_types.Atom.var list ->
-    Satml_types.Atom.atom list list -> Satml_types.Atom.atom list list ->
-    Satml_types.Atom.atom list list * Satml_types.Atom.atom list list
-
   val assume :
     t ->
     Satml_types.Atom.atom list list ->
@@ -42,6 +35,8 @@ module type SAT_ML = sig
     Formula.t ->
     cnumber : int ->
     Satml_types.Atom.atom option Flat_Formula.Map.t -> dec_lvl:int ->
+    nbv : int -> (* nb made vars *)
+    Satml_types.Atom.var list ->
     unit
 
   val boolean_model : t -> Satml_types.Atom.atom list
@@ -67,7 +62,13 @@ module type SAT_ML = sig
   val known_lazy_formulas : t -> int Flat_Formula.Map.t
 
   val reason_of_deduction: Atom.atom -> Atom.Set.t
-  val assume_simple : t -> Atom.atom list list -> unit
+  val assume_simple :
+    t ->
+    Atom.atom list list ->
+    Atom.atom list list ->
+    nbv : int -> (* nb made vars *)
+    Satml_types.Atom.var list ->
+    unit
 
   val decide : t -> Atom.atom -> unit
 end

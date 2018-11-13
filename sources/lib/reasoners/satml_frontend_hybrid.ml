@@ -134,13 +134,8 @@ module Make (Th : Theory.S) = struct
       else
         let () =
           try
-            let _ =
-              SAT.new_vars env.sat (Atom.nb_made_vars env.hcons_env)
-                new_vars [] []
-            in
-            SAT.assume_simple env.sat cnf;
-            SAT.assume_simple env.sat pfl;
-
+            let nbv = Atom.nb_made_vars env.hcons_env in
+            SAT.assume_simple env.sat pfl cnf ~nbv new_vars;
             List.iter (fun ((dlvl, a) as e) -> decide_aux env e)
               (List.rev env.decisions);
           with

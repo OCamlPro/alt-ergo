@@ -38,18 +38,13 @@ module type SAT_ML = sig
   val set_new_proxies :
     t -> (Atom.atom * Atom.atom list * bool) Util.MI.t -> unit
 
-  val new_vars :
-    t ->
-    nbv : int -> (* nb made vars *)
-    var list ->
-    atom list list -> atom list list ->
-    atom list list * atom list list
-
   val assume :
     t ->
     Atom.atom list list -> Atom.atom list list -> Formula.t ->
     cnumber : int ->
     Atom.atom option FF.Map.t -> dec_lvl:int ->
+    nbv : int -> (* nb made vars *)
+    Satml_types.Atom.var list ->
     unit
 
   val boolean_model : t -> Atom.atom list
@@ -76,7 +71,13 @@ module type SAT_ML = sig
 
   val reason_of_deduction: Atom.atom -> Atom.Set.t
 
-  val assume_simple : t -> Atom.atom list list -> unit
+  val assume_simple :
+    t ->
+    Atom.atom list list ->
+    Atom.atom list list ->
+    nbv : int -> (* nb made vars *)
+    Satml_types.Atom.var list ->
+    unit
 
   val decide : t -> Atom.atom -> unit
 
@@ -1580,32 +1581,36 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           env all_propagations (ref 0) Auto;
     end
 
-  let new_vars env ~nbv new_v unit_cnf nunit_cnf  =
+  let add_new_vars env ~nbv new_v =
     match new_v with
-    | [] -> unit_cnf, nunit_cnf
+    | [] -> ()
     | _ ->
-      let tenv0 = env.unit_tenv in
       Vec.grow_to_by_double env.vars nbv;
       Iheap.grow_to_by_double env.order nbv;
-      let accu =
-        List.fold_left
-          (fun ((unit_cnf, nunit_cnf) as accu) v ->
-             Vec.set env.vars v.vid v;
-             insert_var_order env v;
-             match th_entailed tenv0 v.pa with
-             | None -> accu
-             | Some (c, sz) ->
-               assert (sz >= 1);
-               if sz = 1 then c :: unit_cnf, nunit_cnf
-               else unit_cnf, c :: nunit_cnf
-                                [@ocaml.ppwarning
-                                  "Issue: BAD decision_level, in particular, \
-                                   if minimal-bj is ON"]
-          ) (unit_cnf, nunit_cnf) new_v
-      in
+      List.iter
+        (fun v ->
+           Vec.set env.vars v.vid v;
+           insert_var_order env v
+        ) new_v;
       env.nb_init_vars <- nbv;
-      Vec.grow_to_by_double env.model nbv;
-      accu
+      Vec.grow_to_by_double env.model nbv
+
+  let learn_from_new_vars env new_v =
+    let tenv0 = env.unit_tenv in
+    List.fold_left
+      (fun ((unit_cnf, nunit_cnf) as accu) v ->
+         if v.level >= 0 then accu
+         else
+           match th_entailed tenv0 v.pa with
+           | None -> accu
+           | Some (c, sz) ->
+             assert (sz >= 1);
+             if sz = 1 then c :: unit_cnf, nunit_cnf
+             else unit_cnf, c :: nunit_cnf
+                              [@ocaml.ppwarning
+                                "Issue: BAD decision_level, in particular, \
+                                 if minimal-bj is ON"]
+      ) ([], []) new_v
 
   let set_new_proxies env proxies =
     env.proxies <- proxies
@@ -1636,26 +1641,29 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       if Options.cdcl_tableaux () then
         better_bj env mff
 
+  let assume_clauses env unit_cnf nunit_cnf f ~cnumber =
+    match unit_cnf, nunit_cnf with
+    | [], [] -> ()
+    | _, _ ->
+      let nbc =
+        env.nb_init_clauses + List.length unit_cnf + List.length nunit_cnf in
+      Vec.grow_to_by_double env.clauses nbc;
+      Vec.grow_to_by_double env.learnts nbc;
+      env.nb_init_clauses <- nbc;
 
-  let assume env unit_cnf nunit_cnf f ~cnumber mff ~dec_lvl =
-    begin
-      match unit_cnf, nunit_cnf with
-      | [], [] -> ()
-      | _, _ ->
-        let nbc =
-          env.nb_init_clauses + List.length unit_cnf + List.length nunit_cnf in
-        Vec.grow_to_by_double env.clauses nbc;
-        Vec.grow_to_by_double env.learnts nbc;
-        env.nb_init_clauses <- nbc;
+      List.iter (add_clause env f ~cnumber) unit_cnf;
+      List.iter (add_clause env f ~cnumber) nunit_cnf;
 
-        List.iter (add_clause env f ~cnumber) unit_cnf;
-        List.iter (add_clause env f ~cnumber) nunit_cnf;
+      if verbose () then  begin
+        fprintf fmt "%d clauses@." (Vec.size env.clauses);
+        fprintf fmt "%d learnts@." (Vec.size env.learnts);
+      end
 
-        if verbose () then  begin
-          fprintf fmt "%d clauses@." (Vec.size env.clauses);
-          fprintf fmt "%d learnts@." (Vec.size env.learnts);
-        end
-    end;
+  let assume env unit_cnf nunit_cnf f ~cnumber mff ~dec_lvl ~nbv new_vars =
+    add_new_vars env ~nbv new_vars;
+    assume_clauses env unit_cnf nunit_cnf f ~cnumber;
+    let l_unit, l_nunit = learn_from_new_vars env new_vars in
+    assume_clauses env l_unit l_nunit f ~cnumber;
     (* do it after add clause and before T-propagate, disable bcp*)
     update_lazy_cnf env ~do_bcp:false mff ~dec_lvl;
     (* do bcp globally *)
@@ -1716,25 +1724,13 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let known_lazy_formulas env = env.ff_lvl
 
-  (* HYBRID SAT functions *)
-  let assume_simple env cnf =
-    match cnf with
-    | [] -> ()
-    | _ ->
-      let nbc = env.nb_init_clauses + List.length cnf in
-      Vec.grow_to_by_double env.clauses nbc;
-      Vec.grow_to_by_double env.learnts nbc;
-      env.nb_init_clauses <- nbc;
-
-      List.iter (add_clause env vraie_form ~cnumber:0) cnf;
-
-      if verbose () then  begin
-        fprintf fmt "%d clauses@." (Vec.size env.clauses);
-        fprintf fmt "%d learnts@." (Vec.size env.learnts);
-      end;
-      (* do it after add clause and before T-propagate, disable bcp*)
-      (* do bcp globally *)
-      propagate_and_stabilize env all_propagations (ref 0) Stop
+  (** HYBRID SAT functions **)
+  let assume_simple env unit_cnf defn_cnf ~nbv new_vars =
+    add_new_vars env ~nbv new_vars;
+    assume_clauses env unit_cnf defn_cnf vraie_form ~cnumber:0;
+    (* no need to call learn_from_new_vars. Theory disabled ! *)
+    (* do bcp globally *)
+    propagate_and_stabilize env all_propagations (ref 0) Stop
 
 
   let decide env f =
