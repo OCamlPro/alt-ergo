@@ -46,15 +46,38 @@ let register_parser ~lang new_parser =
     end;
   parsers := (lang, new_parser) :: !parsers
 
+let debug_no_parser_for_extension s =
+  if verbose() then
+    eprintf
+      "error: no parser registered for ext %S. Using default lang ...@." s
+
+let debug_no_parser_for_default_lang s =
+  if verbose() then
+    eprintf
+      "error: no parser registered for the provided default lang %S ?@." s
+
 let get_parser lang_opt =
-  let lang = match lang_opt with
-    | Some lang -> lang
-    | None -> Options.default_input_lang ()
-  in
-  try List.assoc lang !parsers
-  with Not_found ->
-    eprintf "error: no parser registered for extension %S@." lang;
-    exit 1
+  let d = Options.default_input_lang () in
+  match lang_opt with
+  | Some lang ->
+    begin
+      try List.assoc lang !parsers
+      with Not_found ->
+        debug_no_parser_for_extension lang;
+        try List.assoc d !parsers
+        with Not_found ->
+          debug_no_parser_for_default_lang d;
+          exit 1
+    end
+
+  | None ->
+    begin
+      try List.assoc d !parsers
+      with Not_found ->
+        debug_no_parser_for_default_lang d;
+        exit 1
+    end
+
 
 let parse_file ?lang lexbuf =
   let module Parser = (val get_parser lang : PARSER_INTERFACE) in
