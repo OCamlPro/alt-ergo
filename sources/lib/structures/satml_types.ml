@@ -63,6 +63,7 @@ module type ATOM = sig
   val nb_made_vars : hcons_env -> int
 
   val pr_atom : Format.formatter -> atom -> unit
+  val pr_atom_list : Format.formatter -> atom list -> unit
   val pr_clause : Format.formatter -> clause -> unit
   val get_atom : hcons_env -> Tliteral.LT.t ->  atom
 
@@ -271,6 +272,7 @@ module Atom : ATOM = struct
 
   end
 
+  let pr_atom_list = Debug.atoms_list
   let pr_atom = Debug.atom
   let pr_clause = Debug.clause
 

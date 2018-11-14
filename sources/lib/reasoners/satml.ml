@@ -12,7 +12,6 @@
 open Format
 open Options
 
-module A = Tliteral.LT
 module Atom = Satml_types.Atom
 module FF = Satml_types.Flat_Formula
 open Atom
@@ -1367,16 +1366,19 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     in
     fuip :: l, !cpt + 1
 
+  let frugal_th_query a tenv =
+    if a.is_true then Sig.No (* not useful to ask if it is already true ?*)
+    else Th.query (Atom.literal a) tenv
+
   let th_entailed tenv a =
     if Options.no_tcp () || not (Options.minimal_bj ()) then None
     else
-      let lit = Atom.literal a in
-      match Th.query lit tenv with
+      match frugal_th_query a tenv with
       | Sig.Yes (d,_) ->
         a.timp <- true;
         Some (clause_of_dep d a)
       | Sig.No  ->
-        match Th.query (A.neg lit) tenv with
+        match frugal_th_query a.Atom.neg tenv with
         | Sig.Yes (d,_) ->
           a.neg.timp <- true;
           Some (clause_of_dep d a.Atom.neg)
@@ -1599,17 +1601,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     let tenv0 = env.unit_tenv in
     List.fold_left
       (fun ((unit_cnf, nunit_cnf) as accu) v ->
-         if v.level >= 0 then accu
-         else
-           match th_entailed tenv0 v.pa with
-           | None -> accu
-           | Some (c, sz) ->
-             assert (sz >= 1);
-             if sz = 1 then c :: unit_cnf, nunit_cnf
-             else unit_cnf, c :: nunit_cnf
-                              [@ocaml.ppwarning
-                                "Issue: BAD decision_level, in particular, \
-                                 if minimal-bj is ON"]
+         match th_entailed tenv0 v.pa with
+         | None -> accu
+         | Some (c, sz) ->
+           assert (sz >= 1);
+           if sz = 1 then c :: unit_cnf, nunit_cnf
+           else unit_cnf, c :: nunit_cnf
+                            [@ocaml.ppwarning
+                              "Issue: BAD decision_level, in particular, \
+                               if minimal-bj is ON"]
       ) ([], []) new_v
 
   let set_new_proxies env proxies =
@@ -1661,9 +1661,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let assume env unit_cnf nunit_cnf f ~cnumber mff ~dec_lvl ~nbv new_vars =
     add_new_vars env ~nbv new_vars;
-    assume_clauses env unit_cnf nunit_cnf f ~cnumber;
     let l_unit, l_nunit = learn_from_new_vars env new_vars in
     assume_clauses env l_unit l_nunit f ~cnumber;
+    assume_clauses env unit_cnf nunit_cnf f ~cnumber;
     (* do it after add clause and before T-propagate, disable bcp*)
     update_lazy_cnf env ~do_bcp:false mff ~dec_lvl;
     (* do bcp globally *)
