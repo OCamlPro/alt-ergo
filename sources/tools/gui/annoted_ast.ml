@@ -169,11 +169,13 @@ type atyped_decl =
   | AAxiom of Loc.t * string * Parsed.axiom_kind * aform
   | ARewriting of Loc.t * string * ((aterm rwt_rule) annoted) list
   | AGoal of Loc.t * goal_sort * string * aform annoted
-  | ALogic of Loc.t * string list * plogic_type
-  | APredicate_def of Loc.t * string * (string * ppure_type) list * aform
+  | ALogic of Loc.t * string list * plogic_type * tlogic_type
+  | APredicate_def
+    of Loc.t * string * (string * ppure_type * Ty.t) list * aform
   | AFunction_def
-    of Loc.t * string * (string * ppure_type) list * ppure_type * aform
-  | ATypeDecl of Loc.t * string list * string * body_type_decl
+    of Loc.t * string * (string * ppure_type * Ty.t) list
+       * ppure_type * Ty.t * aform
+  | ATypeDecl of Loc.t * string list * string * body_type_decl * Ty.t
 
 
 type annoted_node =
@@ -540,7 +542,7 @@ let rec findin_atyped_delc tag buffer (td, env) stop_decl =
         )None decls
     | AAxiom (_, _, _, af)
     | APredicate_def (_, _, _, af)
-    | AFunction_def (_, _, _, _, af) ->
+    | AFunction_def (_, _, _, _, _, af) ->
       let aaf = new_annot buffer af (-1) tag in
       (* TODO: Change this so af is annoted *)
       findin_aform tag buffer (Some aaf) af
@@ -609,6 +611,14 @@ let print_plogic_type fmt = function
     fprintf fmt "%a -> %a" (print_ppure_type_list false) pptl
       print_ppure_type ppt
 
+let print_tlogic_type fmt = function
+  | TPredicate [] -> fprintf fmt "prop"
+  | TPredicate pptl ->
+    fprintf fmt "%a -> prop" Ty.print_list pptl
+  | TFunction ([], ppt) ->
+    fprintf fmt "%a" Ty.print ppt
+  | TFunction (pptl, ppt) ->
+    fprintf fmt "%a -> %a" Ty.print_list pptl Ty.print ppt
 
 let print_tconstant fmt = function
   | Tvoid -> fprintf fmt "void"
@@ -664,6 +674,16 @@ let rec print_string_ppure_type_list fmt = function
 let print_pred_type_list fmt = function
   | [] -> ()
   | l -> fprintf fmt "(%a)" print_string_ppure_type_list l
+
+let rec print_string_type_list fmt = function
+  | [] -> ()
+  | [s,ty] -> fprintf fmt "%s:%a" s Ty.print ty
+  | (s,ty)::l -> fprintf fmt "%s:%a, %a" s Ty.print ty
+                   print_string_type_list l
+
+let print_tpred_type_list fmt = function
+  | [] -> ()
+  | l -> fprintf fmt "(%a)" print_string_type_list l
 
 
 (**************** to delete *******************)
@@ -823,21 +843,15 @@ let rec print_typed_decl fmt td = match td.Typed.c with
   | TGoal (_, Check, s, tf) -> fprintf fmt "check %s : %a" s print_tform tf
   | TGoal (_, Cut, s, tf) -> fprintf fmt "cut %s : %a" s print_tform tf
   | TLogic (_, ls, ty) ->
-    fprintf fmt "logic %a : %a" print_string_list ls print_plogic_type ty
+    fprintf fmt "logic %a : %a" print_string_list ls print_tlogic_type ty
   | TPredicate_def (_, p, spptl, tf) ->
     fprintf fmt "predicate %s %a = %a" p
-      print_pred_type_list spptl print_tform tf
+      print_tpred_type_list spptl print_tform tf
   | TFunction_def (_, f, spptl, ty, tf) ->
     fprintf fmt "function %s (%a) : %a = %a" f
-      print_string_ppure_type_list spptl print_ppure_type ty print_tform tf
-  | TTypeDecl (_, ls, s, Abstract) ->
-    fprintf fmt "type %a %s" print_astring_list ls s
-  | TTypeDecl (_, ls, s, Enum lc) ->
-    fprintf fmt "type %a %s = %a" print_astring_list ls s
-      (print_string_sep " | ") lc
-  | TTypeDecl (_, ls, s, Record rt) ->
-    fprintf fmt "type %a %s = %a" print_astring_list ls s print_record_type rt
-
+      print_string_type_list spptl Ty.print ty print_tform tf
+  | TTypeDecl (_, ty) ->
+    fprintf fmt "type %a" Ty.print_full ty
   | TTheory (loc, name, th_ext, decls) ->
     fprintf fmt "theory %s exetends %s =\n%a\nend@."
       (Typed.string_of_th_ext th_ext) name
@@ -858,10 +872,10 @@ let find_dep_by_string dep s =
        | Some _ -> found
        | None -> begin
            match d.c with
-           | ALogic (_, ls, ty) when List.mem s ls -> Some d
-           | ATypeDecl (_, _, s', _) when Pervasives.(=) s s'-> Some d
+           | ALogic (_, ls, ty, _) when List.mem s ls -> Some d
+           | ATypeDecl (_, _, s', _, _) when Pervasives.(=) s s'-> Some d
            | APredicate_def (_, p, _, _) when Pervasives.(=) s p -> Some d
-           | AFunction_def (_, f, _, _, _) when Pervasives.(=) s f -> Some d
+           | AFunction_def (_, f, _, _, _, _) when Pervasives.(=) s f -> Some d
            | _ -> None
          end
     ) dep None
@@ -1000,14 +1014,14 @@ let rec make_dep_atyped_decl dep d =
          make_dep_aterm d vars dep r.c.rwt_right
       ) dep arwtl
   | AGoal (loc, _, s, aaf) -> make_dep_aform d [] dep aaf.c
-  | ALogic (loc, ls, ty) -> MDep.add d ([], []) dep
+  | ALogic (loc, ls, ty, _) -> MDep.add d ([], []) dep
   | APredicate_def (loc, p, spptl, af) ->
     let dep = MDep.add d ([], []) dep in
-    make_dep_aform d (p::(List.map fst spptl)) dep af
-  | AFunction_def (loc, f, spptl, ty, af) ->
+    make_dep_aform d (p::(List.map (fun (x, _, _) -> x) spptl)) dep af
+  | AFunction_def (loc, f, spptl, ty, _, af) ->
     let dep = MDep.add d ([], []) dep in
-    make_dep_aform d (f::(List.map fst spptl)) dep af
-  | ATypeDecl (loc, ls, s, lc) -> MDep.add d ([], []) dep
+    make_dep_aform d (f::(List.map (fun (x, _, _) -> x) spptl)) dep af
+  | ATypeDecl (loc, ls, s, lc, _) -> MDep.add d ([], []) dep
 
 let make_dep annoted_ast =
   let dep = MDep.empty in
@@ -1135,6 +1149,49 @@ and annot_of_mixed_binders buffer l =
        | TletForm f -> sy, ATletForm (annot_of_tform buffer f)
     )(List.rev l)
 
+let rec downgrade_ty = function
+  | Ty.Tint -> PPTint
+  | Ty.Treal -> PPTreal
+  | Ty.Tbool -> PPTbool
+  | Ty.Tunit -> PPTunit
+  | Ty.Tbitv i -> PPTbitv i
+  | Ty.Tvar { Ty.v = v; _ }  ->
+    PPTvarid (string_of_int v, Loc.dummy)
+  | Ty.Text (args, f) ->
+    PPTexternal (List.map downgrade_ty args,
+                 Hstring.view f, Loc.dummy)
+  | Ty.Tfarray _ -> assert false
+  | Ty.Tnext _ -> assert false
+  | Ty.Tsum (name, lc) -> assert false
+  | Ty.Trecord r -> assert false
+
+let downgrade_tlogic = function
+  | TPredicate args ->
+    PPredicate (List.map downgrade_ty args)
+  | TFunction (args, ret) ->
+    PFunction (List.map downgrade_ty args, downgrade_ty ret)
+
+let downgrade_type_decl = function
+  | Ty.Tint
+  | Ty.Treal
+  | Ty.Tbool
+  | Ty.Tunit
+  | Ty.Tbitv _
+  | Ty.Tvar _
+  | Ty.Tnext _
+  | Ty.Tfarray _ -> assert false
+  | Ty.Text (args, f) ->
+    let vars = List.map (function
+        | Ty.Tvar { Ty.v = v; _ } -> string_of_int v
+        | _ -> assert false
+      ) args in
+    vars, Hstring.view f, Parsed.Abstract
+  | Ty.Tsum (name, lc) ->
+    [], Hstring.view name, Parsed.Enum (List.map Hstring.view lc)
+  | Ty.Trecord r ->
+    [], "", Parsed.Abstract
+
+
 let rec annot_of_typed_decl (buffer:sbuffer) td =
   let ptag = tag buffer in
   let c = match td.Typed.c with
@@ -1155,12 +1212,18 @@ let rec annot_of_typed_decl (buffer:sbuffer) td =
     | TGoal (loc, gs, s, tf) ->
       let g = new_annot buffer (of_tform buffer tf) tf.Typed.annot ptag in
       AGoal (loc, gs, s, g)
-    | TLogic (loc, ls, ty) -> ALogic (loc, ls, ty)
+    | TLogic (loc, ls, ty) -> ALogic (loc, ls, downgrade_tlogic ty, ty)
     | TPredicate_def (loc, p, spptl, tf) ->
-      APredicate_def (loc, p,  spptl, of_tform buffer  tf)
+      APredicate_def (loc, p,
+                      List.map (fun (s, t) -> (s, downgrade_ty t, t)) spptl,
+                      of_tform buffer tf)
     | TFunction_def (loc, f, spptl, ty, tf) ->
-      AFunction_def (loc, f,  spptl, ty, of_tform buffer  tf)
-    | TTypeDecl (loc, ls, s, lc) -> ATypeDecl (loc, ls, s, lc)
+      AFunction_def (loc, f,
+                     List.map (fun (s, t) -> (s, downgrade_ty t, t)) spptl,
+                     downgrade_ty ty, ty, of_tform buffer tf)
+    | TTypeDecl (loc, ty) ->
+      let ls, s, lc = downgrade_type_decl ty in
+      ATypeDecl (loc, ls, s, lc, ty)
   in
   new_annot buffer c td.Typed.annot ptag
 
@@ -1310,12 +1373,14 @@ let rec to_typed_decl td =
         ) [] arwtl in
       TRewriting (loc, s, rwtl)
     | AGoal (loc, gs, s, aaf) -> TGoal (loc, gs, s, to_tform aaf)
-    | ALogic (loc, ls, ty) -> TLogic (loc, ls, ty)
+    | ALogic (loc, ls, _, ty) -> TLogic (loc, ls, ty)
     | APredicate_def (loc, p, spptl, af) ->
-      TPredicate_def (loc, p, spptl, void_to_tform af td.id)
-    | AFunction_def (loc, f, spptl, ty, af) ->
-      TFunction_def (loc, f, spptl, ty, void_to_tform af td.id)
-    | ATypeDecl (loc, ls, s, lc) -> TTypeDecl (loc, ls, s, lc)
+      TPredicate_def (loc, p, List.map (fun (x, _, y) -> (x, y)) spptl,
+                      void_to_tform af td.id)
+    | AFunction_def (loc, f, spptl, _, ty, af) ->
+      TFunction_def (loc, f, List.map (fun (x, _, y) -> (x, y)) spptl,
+                     ty, void_to_tform af td.id)
+    | ATypeDecl (loc, ls, s, lc, ty) -> TTypeDecl (loc, ty)
   in
   { Typed.c = c;
     Typed.annot = td.id }
@@ -1783,7 +1848,7 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
     add_aform errors buffer (indent+1) tags (negate_aaform aaf);
     append_buf buffer "\n\n"
 
-  | ALogic (loc, ls, ty) ->
+  | ALogic (loc, ls, ty, _) ->
     fprintf str_formatter
       "logic %a : %a" print_string_list ls print_plogic_type ty;
     d.line <- buffer#line_count;
@@ -1792,6 +1857,7 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
     append_buf buffer "\n\n"
 
   | APredicate_def (loc, p, spptl, af) ->
+    let spptl = List.map (fun (x, y, _) -> (x, y)) spptl in
     fprintf str_formatter "predicate %s %a =" p print_pred_type_list spptl;
     let tags = d.tag :: d.ptag :: tags in
     append_buf buffer ~tags (flush_str_formatter());
@@ -1801,7 +1867,8 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
     add_aform errors buffer (indent+1) tags af;
     append_buf buffer "\n\n"
 
-  | AFunction_def (loc, f, spptl, ty, af) ->
+  | AFunction_def (loc, f, spptl, ty, _, af) ->
+    let spptl = List.map (fun (x, y, _) -> (x, y)) spptl in
     fprintf str_formatter "function %s (%a) : %a =" f
       print_string_ppure_type_list spptl print_ppure_type ty;
     let tags = d.tag :: d.ptag :: tags in
@@ -1812,20 +1879,20 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
     add_aform errors buffer (indent+1) tags af;
     append_buf buffer "\n\n"
 
-  | ATypeDecl (loc, ls, s, Abstract) ->
+  | ATypeDecl (loc, ls, s, Abstract, _) ->
     fprintf str_formatter "type %a %s" print_astring_list ls s;
     d.line <- buffer#line_count;
     append_buf buffer ~tags:(d.tag :: d.ptag :: tags) (flush_str_formatter());
     append_buf buffer "\n\n"
 
-  | ATypeDecl (loc, ls, s, Enum lc) ->
+  | ATypeDecl (loc, ls, s, Enum lc, _) ->
     fprintf str_formatter "type %a %s = %a"
       print_astring_list ls s (print_string_sep " | ") lc;
     d.line <- buffer#line_count;
     append_buf buffer ~tags:(d.tag :: d.ptag :: tags) (flush_str_formatter());
     append_buf buffer "\n\n"
 
-  | ATypeDecl (loc, ls, s, Record rt) ->
+  | ATypeDecl (loc, ls, s, Record rt, _) ->
     fprintf str_formatter "type %a %s = { %a }"
       print_astring_list ls s	print_record_type rt;
     d.line <- buffer#line_count;
@@ -1837,8 +1904,8 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
 let rec filter_dummy_logics acc = function
   | [] -> List.rev acc
   | [td] -> List.rev (td :: acc)
-  | ({ c = ALogic (_, _, PFunction ([], PPTexternal ([], t, _))) }, _) ::
-    ((({ c = ATypeDecl (_, _, s, Enum _) }, _) :: _) as r)
+  | ({ c = ALogic (_, _, PFunction ([], PPTexternal ([], t, _)), _) }, _) ::
+    ((({ c = ATypeDecl (_, _, s, Enum _, _) }, _) :: _) as r)
     (* when String.equal t s  *) ->
     filter_dummy_logics acc r
   | td :: r -> filter_dummy_logics (td :: acc) r
@@ -1979,7 +2046,7 @@ let rec findtags_atyped_delc sl td acc =
     List.fold_left (fun acc td -> findtags_atyped_delc sl td acc)acc l
   | AAxiom (_, _, _, af)
   | APredicate_def (_, _, _, af)
-  | AFunction_def (_, _, _, _, af) ->
+  | AFunction_def (_, _, _, _, _, af) ->
     let aaf = (* incorrect annotations : to change *)
       { c = af;
         tag = td.tag;
@@ -2012,10 +2079,10 @@ let findtags_using r l =
   | AGoal _
   | ATypeDecl _ -> []
 
-  | ALogic (_, sl, _) -> findtags sl l
+  | ALogic (_, sl, _, _) -> findtags sl l
 
   | APredicate_def (_, s, _, _)
-  | AFunction_def (_, s, _, _, _) -> findtags [s] l
+  | AFunction_def (_, s, _, _, _, _) -> findtags [s] l
 
 let rec listsymbols at acc =
   match at.at_desc with
@@ -2082,18 +2149,18 @@ let rec listsymbols_adecl ad =
       (fun acc ad -> List.rev_append (listsymbols_adecl ad.c) acc) [] l
   | AAxiom (_,_, _, af)
   | APredicate_def (_, _, _, af)
-  | AFunction_def (_, _, _, _, af) -> listsymbols_aform af []
+  | AFunction_def (_, _, _, _, _, af) -> listsymbols_aform af []
   | AGoal (_, _, _, aaf) -> listsymbols_aform aaf.c []
   | ATypeDecl _ | ALogic _ | ARewriting _ -> []
 
 
 let findtags_atyped_delc_dep sl td acc =
   match td.c with
-  | ALogic (_, ls, _) ->
+  | ALogic (_, ls, _, _) ->
     let ne = List.fold_left (fun ne s -> ne || List.mem s sl) false ls in
     if ne then td.tag::acc else acc
   | APredicate_def (_, p, _, _) when List.mem p sl -> td.tag::acc
-  | AFunction_def (_, f, _, _, _) when List.mem f sl -> td.tag::acc
+  | AFunction_def (_, f, _, _, _, _) when List.mem f sl -> td.tag::acc
   | _ -> acc
 
 
@@ -2165,7 +2232,7 @@ let rec findproof_atyped_decl ids td (ax,acc) =
   | ALogic _ | ATypeDecl _ -> ax,acc
 
   | APredicate_def (_,_,_, af)
-  | AFunction_def (_,_,_,_, af)
+  | AFunction_def (_,_,_,_,_, af)
   | AAxiom (_, _, _, af) ->
     let acc, found = findproof_aform ids af acc 1 false in
     if found then td.ptag::ax, acc else ax,acc
@@ -2207,7 +2274,7 @@ let rec find_line_id_atyped_decl id td =
     | ALogic _ | ATypeDecl _  -> ()
 
     | APredicate_def (_,_,_, af)
-    | AFunction_def (_,_,_,_, af)
+    | AFunction_def (_,_,_,_,_, af)
     | AAxiom (_, _, _, af) ->
       find_line_id_aform id af
 
@@ -2289,7 +2356,7 @@ let findbyid_atyped_decl  stop_decl id (td, tyenv) =
     | ALogic _ | ATypeDecl _  -> ()
 
     | APredicate_def (_,_,_, af)
-    | AFunction_def (_,_,_,_, af)
+    | AFunction_def (_,_,_,_,_, af)
     | AAxiom (_, _, _, af) ->
       findbyid_aform id af
 
@@ -2310,10 +2377,10 @@ let compute_resulting_ids =
   let rec aux acc td =
     match td.c with
     | ARewriting (_,_, _) -> acc
-    | ALogic (_, names, _) -> (List.map (fun n -> n, td.id) names)@acc
-    | ATypeDecl (_, _, name, _)
+    | ALogic (_, names, _, _) -> (List.map (fun n -> n, td.id) names)@acc
+    | ATypeDecl (_, _, name, _, _)
     | APredicate_def (_, name, _, _)
-    | AFunction_def (_, name, _, _, _)
+    | AFunction_def (_, name, _, _, _, _)
     | AAxiom (_, name, _, _)
     | AGoal (_,_, name, _) -> (name, td.id)::acc
     | ATheory (_, _, _, l) ->

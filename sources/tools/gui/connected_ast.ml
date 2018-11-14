@@ -961,7 +961,7 @@ let rec connect_atyped_decl env td =
   | AGoal (_, _, _, aaf) ->
     connect_tag env env.buffer td.tag;
     connect_aform env env.buffer aaf.c
-  | AFunction_def (_, _, _, _, af) ->
+  | AFunction_def (_, _, _, _, _, af) ->
     connect_tag env env.buffer td.tag;
     connect_aform env env.buffer af
   | ALogic _

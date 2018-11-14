@@ -72,9 +72,7 @@ and tvar = {
 
 and trecord = {
   mutable args : t list;
-  (** parameters of the record
-      TODO: or are they the arguments applied
-            to the record constructor type ? *)
+  (** Arguments passed to the record constructor *)
   name : Hstring.t;
   (** Name of the record type *)
   mutable lbs :  (Hstring.t * t) list;

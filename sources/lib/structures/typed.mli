@@ -31,7 +31,6 @@
     This module defines a typed AST, used to represent typed terms
     before they are hashconsed. *)
 
-open Parsed
 
 (** {2 Annotations} *)
 
@@ -241,6 +240,19 @@ type theories_extensions =
 (** Theories known in alt-ergo. These theories correspond
     to sets of axioms to extend expressive power of some theory. *)
 
+type axiom_kind = Parsed.axiom_kind =
+  | Default     (** *)
+  | Propagator  (** *)
+(** Axiom kinds. *)
+
+type tlogic_type =
+  | TPredicate of Ty.t list       (** Predicate type declarations *)
+  | TFunction of Ty.t list * Ty.t (** Function type declarations *)
+(** Type declarations. Specifies the list of argument types,
+    as well as the return type for functions (predicate implicitly
+    returns a proposition, so there is no need for an explicit return
+    type). *)
+
 type 'a atdecl = ('a tdecl, 'a) annoted
 (** Type alias for annoted typed declarations. *)
 
@@ -254,20 +266,20 @@ and 'a tdecl =
   (** New rewrite rule that can be used. *)
   | TGoal of Loc.t * goal_sort * string * 'a atform
   (** New goal to prove. *)
-  | TLogic of Loc.t * string list * plogic_type
+  | TLogic of Loc.t * string list * tlogic_type
   (** Function (or predicate) type declaration. *)
   | TPredicate_def of
-      Loc.t * string * (string * ppure_type) list * 'a atform
+      Loc.t * string * (string * Ty.t) list * 'a atform
   (** Predicate definition.
-      [TPredicate_def (loc, name, vars, body)] declares a predicate
+      [TPredicate_def (loc, name, vars, body)] defines a predicate
       [fun vars => body]. *)
   | TFunction_def of
       Loc.t * string *
-      (string * ppure_type) list * ppure_type * 'a atform
+      (string * Ty.t) list * Ty.t * 'a atform
   (** Predicate definition.
-      [TPredicate_def (loc, name, vars, ret, body)] declares a function
+      [TPredicate_def (loc, name, vars, ret, body)] defines a function
       [fun vars => body], where body has type [ret]. *)
-  | TTypeDecl of Loc.t * string list * string * body_type_decl
+  | TTypeDecl of Loc.t * Ty.t
   (** New type declaration. [TTypeDecl (loc, vars, t, body)]
       declares a type [t], with parameters [vars], and with
       contents [body]. This new type may either be abstract,
