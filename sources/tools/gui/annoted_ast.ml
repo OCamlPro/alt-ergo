@@ -853,7 +853,7 @@ let rec print_typed_decl fmt td = match td.Typed.c with
   | TTypeDecl (_, ty) ->
     fprintf fmt "type %a" Ty.print_full ty
   | TTheory (loc, name, th_ext, decls) ->
-    fprintf fmt "theory %s exetends %s =\n%a\nend@."
+    fprintf fmt "theory %s extends %s =\n%a\nend@."
       (Typed.string_of_th_ext th_ext) name
       (fun fmt -> List.iter (print_typed_decl fmt)) decls
 
