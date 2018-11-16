@@ -662,8 +662,8 @@ let print_astring_list fmt l =
   in
   match l with
   | [] -> ()
-  | [s] -> aux fmt l
-  | s::r -> fprintf fmt "(%a)" aux l
+  | [s] -> fprintf fmt "%a " aux l
+  | s::r -> fprintf fmt "(%a) " aux l
 
 let rec print_string_ppure_type_list fmt = function
   | [] -> ()
@@ -853,7 +853,7 @@ let rec print_typed_decl fmt td = match td.Typed.c with
   | TTypeDecl (_, ty) ->
     fprintf fmt "type %a" Ty.print_full ty
   | TTheory (loc, name, th_ext, decls) ->
-    fprintf fmt "theory %s exetends %s =\n%a\nend@."
+    fprintf fmt "theory %s extends %s =\n%a\nend@."
       (Typed.string_of_th_ext th_ext) name
       (fun fmt -> List.iter (print_typed_decl fmt)) decls
 
@@ -1162,8 +1162,11 @@ let rec downgrade_ty = function
                  Hstring.view f, Loc.dummy)
   | Ty.Tfarray _ -> assert false
   | Ty.Tnext _ -> assert false
-  | Ty.Tsum (name, lc) -> assert false
-  | Ty.Trecord r -> assert false
+  | Ty.Tsum (name, _) ->
+    PPTexternal ([], Hstring.view name, Loc.dummy)
+  | Ty.Trecord r ->
+    PPTexternal (List.map downgrade_ty r.Ty.args,
+                 Hstring.view r.Ty.name, Loc.dummy)
 
 let downgrade_tlogic = function
   | TPredicate args ->
@@ -1189,7 +1192,14 @@ let downgrade_type_decl = function
   | Ty.Tsum (name, lc) ->
     [], Hstring.view name, Parsed.Enum (List.map Hstring.view lc)
   | Ty.Trecord r ->
-    [], "", Parsed.Abstract
+    let vars = List.map (function
+        | Ty.Tvar { Ty.v = v; _ } -> string_of_int v
+        | _ -> assert false
+      ) r.Ty.args in
+    let fields = List.map (fun (s, ty) ->
+        Hstring.view s, downgrade_ty ty
+      ) r.Ty.lbs in
+    vars, Hstring.view r.Ty.name, Parsed.Record fields
 
 
 let rec annot_of_typed_decl (buffer:sbuffer) td =
@@ -1880,20 +1890,20 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
     append_buf buffer "\n\n"
 
   | ATypeDecl (loc, ls, s, Abstract, _) ->
-    fprintf str_formatter "type %a %s" print_astring_list ls s;
+    fprintf str_formatter "type %a%s" print_astring_list ls s;
     d.line <- buffer#line_count;
     append_buf buffer ~tags:(d.tag :: d.ptag :: tags) (flush_str_formatter());
     append_buf buffer "\n\n"
 
   | ATypeDecl (loc, ls, s, Enum lc, _) ->
-    fprintf str_formatter "type %a %s = %a"
+    fprintf str_formatter "type %a%s = %a"
       print_astring_list ls s (print_string_sep " | ") lc;
     d.line <- buffer#line_count;
     append_buf buffer ~tags:(d.tag :: d.ptag :: tags) (flush_str_formatter());
     append_buf buffer "\n\n"
 
   | ATypeDecl (loc, ls, s, Record rt, _) ->
-    fprintf str_formatter "type %a %s = { %a }"
+    fprintf str_formatter "type %a%s = { %a }"
       print_astring_list ls s	print_record_type rt;
     d.line <- buffer#line_count;
     append_buf buffer ~tags:(d.tag :: d.ptag :: tags) (flush_str_formatter());

@@ -66,7 +66,7 @@ let print full =
     | Tvar{v=v ; value = None} -> fprintf fmt "'a_%d" v
     | Tvar{v=v ; value = Some (Trecord {args=l; name=n} as t) } ->
       if Hashtbl.mem h v then
-        fprintf fmt "%a %s" print_list l (Hstring.view n)
+        fprintf fmt "%a%s" print_list l (Hstring.view n)
       else
         (Hashtbl.add h v ();
          (*fprintf fmt "('a_%d->%a)" v print t *)
@@ -74,7 +74,7 @@ let print full =
     | Tvar{v=v ; value = Some t} ->
       (*fprintf fmt "('a_%d->%a)" v print t *)
       print fmt t
-    | Text(l, s) -> fprintf fmt "%a %s" print_list l (Hstring.view s)
+    | Text(l, s) -> fprintf fmt "%a%s" print_list l (Hstring.view s)
     | Tfarray (t1, t2) -> fprintf fmt "(%a,%a) farray" print t1 print t2
     | Tnext t -> fprintf fmt "%a next" print t
     | Tsum(s, lc) ->
@@ -90,7 +90,7 @@ let print full =
           ) lc
       end
     | Trecord {args=lv; name=n; lbs=lbls} ->
-      fprintf fmt "%a %s" print_list lv (Hstring.view n);
+      fprintf fmt "%a%s" print_list lv (Hstring.view n);
       if full then begin
         fprintf fmt " = {";
         let first = ref true in
@@ -109,7 +109,7 @@ let print full =
     | t::l ->
       fprintf fmt "(%a" print t;
       List.iter (fprintf fmt ", %a" print) l;
-      fprintf fmt ")"
+      fprintf fmt ") "
   in
   print, print_list
 
