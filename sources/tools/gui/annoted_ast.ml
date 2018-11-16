@@ -662,8 +662,8 @@ let print_astring_list fmt l =
   in
   match l with
   | [] -> ()
-  | [s] -> aux fmt l
-  | s::r -> fprintf fmt "(%a)" aux l
+  | [s] -> fprintf fmt "%a " aux l
+  | s::r -> fprintf fmt "(%a) " aux l
 
 let rec print_string_ppure_type_list fmt = function
   | [] -> ()
@@ -1890,20 +1890,20 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
     append_buf buffer "\n\n"
 
   | ATypeDecl (loc, ls, s, Abstract, _) ->
-    fprintf str_formatter "type %a %s" print_astring_list ls s;
+    fprintf str_formatter "type %a%s" print_astring_list ls s;
     d.line <- buffer#line_count;
     append_buf buffer ~tags:(d.tag :: d.ptag :: tags) (flush_str_formatter());
     append_buf buffer "\n\n"
 
   | ATypeDecl (loc, ls, s, Enum lc, _) ->
-    fprintf str_formatter "type %a %s = %a"
+    fprintf str_formatter "type %a%s = %a"
       print_astring_list ls s (print_string_sep " | ") lc;
     d.line <- buffer#line_count;
     append_buf buffer ~tags:(d.tag :: d.ptag :: tags) (flush_str_formatter());
     append_buf buffer "\n\n"
 
   | ATypeDecl (loc, ls, s, Record rt, _) ->
-    fprintf str_formatter "type %a %s = { %a }"
+    fprintf str_formatter "type %a%s = { %a }"
       print_astring_list ls s	print_record_type rt;
     d.line <- buffer#line_count;
     append_buf buffer ~tags:(d.tag :: d.ptag :: tags) (flush_str_formatter());
