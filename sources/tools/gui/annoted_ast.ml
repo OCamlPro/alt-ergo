@@ -1189,7 +1189,14 @@ let downgrade_type_decl = function
   | Ty.Tsum (name, lc) ->
     [], Hstring.view name, Parsed.Enum (List.map Hstring.view lc)
   | Ty.Trecord r ->
-    [], "", Parsed.Abstract
+    let vars = List.map (function
+        | Ty.Tvar { Ty.v = v; _ } -> string_of_int v
+        | _ -> assert false
+      ) r.Ty.args in
+    let fields = List.map (fun (s, ty) ->
+        Hstring.view s, downgrade_ty ty
+      ) r.Ty.lbs in
+    vars, Hstring.view r.Ty.name, Parsed.Record fields
 
 
 let rec annot_of_typed_decl (buffer:sbuffer) td =
