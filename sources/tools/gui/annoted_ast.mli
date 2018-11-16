@@ -26,7 +26,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
-
+open AltErgoLib
 open Parsed
 open Typed
 open Gui_session

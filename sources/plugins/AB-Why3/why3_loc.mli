@@ -16,6 +16,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open AltErgoLib
+
 (* locations in files *)
 
 type position = Loc.t

@@ -1,0 +1,11 @@
+
+(executable
+  (name         Main_text)
+  (public_name  alt-ergo)
+  (package      alt-ergo)
+  (libraries    alt-ergo-lib alt-ergo-parsers)
+  (modules      Main_text)
+  (link_flags   (-linkall))
+)
+
+

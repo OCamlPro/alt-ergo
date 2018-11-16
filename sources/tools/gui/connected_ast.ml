@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open AltErgoLib
+open AltErgoParsers
 open Gui_config
 open Annoted_ast
 

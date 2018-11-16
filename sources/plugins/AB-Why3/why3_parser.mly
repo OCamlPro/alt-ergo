@@ -18,11 +18,11 @@
 
 %{
 
-
-  open Lexing
-  open Why3_ptree
-  open Parsed_interface
-  open Parsed
+open AltErgoLib
+open Lexing
+open Why3_ptree
+open Parsed_interface
+open Parsed
 
   let infix  s = "infix "  ^ s
   let prefix s = "prefix " ^ s
@@ -40,7 +40,7 @@
   let error_param loc =
     Why3_loc.errorm ~loc "cannot determine the type of the parameter"
 
-  let error_loc loc = Why3_loc.error ~loc Error
+  let error_loc loc = Why3_loc.error ~loc Parsing.Parse_error
 
   (* Added  *)
 
@@ -220,13 +220,13 @@
 
 (* Entry points *)
 
-%type <Parsed.lexpr list * bool> trigger_parser
+%type <AltErgoLib.Parsed.lexpr list * bool> trigger_parser
 %start trigger_parser
 
-%type <Parsed.lexpr> lexpr_parser
+%type <AltErgoLib.Parsed.lexpr> lexpr_parser
 %start lexpr_parser
 
-%type <Parsed.file> file_parser
+%type <AltErgoLib.Parsed.file> file_parser
 %start file_parser
 %%
 
@@ -479,11 +479,11 @@ binder_vars_head:
     let push acc = function
       | Parsed.PPTexternal ([], s, _)
         -> (of_id (mk_id s $startpos $endpos)):: acc
-      | _ -> Why3_loc.error ~loc:(floc $startpos $endpos) Error in
+      | _ -> Why3_loc.error ~loc:(floc $startpos $endpos) Parsing.Parse_error in
     match $1 with
     | Parsed.PPTexternal (l, s, _) ->
        List.fold_left push [of_id (mk_id s $startpos $endpos)] l
-      | _ -> Why3_loc.error ~loc:(floc $startpos $endpos) Error }
+      | _ -> Why3_loc.error ~loc:(floc $startpos $endpos) Parsing.Parse_error }
 
 binder_var:
 | labels(lident_nq) { floc $startpos $endpos, Some $1 }

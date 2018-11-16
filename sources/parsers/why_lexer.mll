@@ -28,6 +28,7 @@
 
 {
   [@@@ocaml.warning "-33"]
+  open AltErgoLib
   open Options
 
   open Lexing
@@ -97,7 +98,7 @@
     let r = ref n_zero in
     for i=0 to String.length s - 1 do
       r := Num.add_num (Num.mult_num n_ten !r)
-	(Num.num_of_int (Char.code s.[i] - Char.code '0'))
+          (Num.num_of_int (Char.code s.[i] - Char.code '0'))
     done;
     !r
 
@@ -106,11 +107,11 @@
     for i=0 to String.length s - 1 do
       let c = s.[i] in
       let v =
-	match c with
-	  | '0'..'9' -> Char.code c - Char.code '0'
-	  | 'a'..'f' -> Char.code c - Char.code 'a' + 10
-	  | 'A'..'F' -> Char.code c - Char.code 'A' + 10
-	  | _ -> assert false
+        match c with
+        | '0'..'9' -> Char.code c - Char.code '0'
+        | 'a'..'f' -> Char.code c - Char.code 'a' + 10
+        | 'A'..'F' -> Char.code c - Char.code 'A' + 10
+        | _ -> assert false
       in
       r := Num.add_num (Num.mult_num n_16 !r) (Num.num_of_int v)
     done;
@@ -138,41 +139,41 @@ rule parse_token = parse
       (* decimal real literals *)
       {
         let v =
-	  match exp,sign with
-	    | Some exp,Some "-" ->
-		Num.div_num (decimal_number (i^f))
-		  (Num.power_num (Num.Int 10) (decimal_number exp))
-	    | Some exp,_ ->
-		Num.mult_num (decimal_number (i^f))
-		  (Num.power_num (Num.Int 10) (decimal_number exp))
-	    | None,_ -> decimal_number (i^f)
-	in
-	let v =
-	  Num.div_num v
-	    (Num.power_num (Num.Int 10) (Num.num_of_int (String.length f)))
-	in
-	NUM v
+          match exp,sign with
+          | Some exp,Some "-" ->
+            Num.div_num (decimal_number (i^f))
+              (Num.power_num (Num.Int 10) (decimal_number exp))
+          | Some exp,_ ->
+            Num.mult_num (decimal_number (i^f))
+              (Num.power_num (Num.Int 10) (decimal_number exp))
+          | None,_ -> decimal_number (i^f)
+        in
+        let v =
+          Num.div_num v
+            (Num.power_num (Num.Int 10) (Num.num_of_int (String.length f)))
+        in
+        NUM v
       }
 
   (* hexadecimal real literals a la C99 (0x..p..) *)
   | "0x" (hexadecimal+ as e) ('.' (hexadecimal* as f))?
       ['p''P'] (['+''-']? as sign) (digit+ as exp)
       {
-	let f = match f with None -> "" | Some f -> f in
-	let v =
-	  match sign with
-	    | "-" ->
-		Num.div_num (hexa_number (e^f))
-		  (Num.power_num (Num.Int 2) (decimal_number exp))
-	    | _ ->
-		Num.mult_num (hexa_number (e^f))
-		  (Num.power_num (Num.Int 2) (decimal_number exp))
-	in
-	let v =
-	  Num.div_num v
-	    (Num.power_num (Num.Int 16) (Num.num_of_int (String.length f)))
-	in
-	NUM v
+        let f = match f with None -> "" | Some f -> f in
+        let v =
+          match sign with
+          | "-" ->
+            Num.div_num (hexa_number (e^f))
+              (Num.power_num (Num.Int 2) (decimal_number exp))
+          | _ ->
+            Num.mult_num (hexa_number (e^f))
+              (Num.power_num (Num.Int 2) (decimal_number exp))
+        in
+        let v =
+          Num.div_num v
+            (Num.power_num (Num.Int 16) (Num.num_of_int (String.length f)))
+        in
+        NUM v
       }
   | "(*"  { parse_comment lexbuf; parse_token lexbuf }
   | "'"   { QUOTE }
@@ -247,9 +248,24 @@ and parse_string str_buf = parse
 {
 
   module Parser : Parsers.PARSER_INTERFACE = struct
-    let file    = Why_parser.file_parser    parse_token
-    let expr    = Why_parser.lexpr_parser   parse_token
-    let trigger = Why_parser.trigger_parser parse_token
+
+    let aux aux_fun token lexbuf =
+      try
+        let res = aux_fun token lexbuf in
+        Parsing.clear_parser ();
+        res
+      with
+      (* The --fixed-error flag makes menhir alias
+         the exception Error to Parsing.Parse_error *)
+      | Parsing.Parse_error ->
+        let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
+        let lex = Lexing.lexeme lexbuf in
+        Parsing.clear_parser ();
+        raise (Errors.Syntax_error (loc, lex))
+
+    let file    = aux Why_parser.file_parser    parse_token
+    let expr    = aux Why_parser.lexpr_parser   parse_token
+    let trigger = aux Why_parser.trigger_parser parse_token
   end
 
   let () =
