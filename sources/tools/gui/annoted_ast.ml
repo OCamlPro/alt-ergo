@@ -1162,8 +1162,11 @@ let rec downgrade_ty = function
                  Hstring.view f, Loc.dummy)
   | Ty.Tfarray _ -> assert false
   | Ty.Tnext _ -> assert false
-  | Ty.Tsum (name, lc) -> assert false
-  | Ty.Trecord r -> assert false
+  | Ty.Tsum (name, _) ->
+    PPTexternal ([], Hstring.view name, Loc.dummy)
+  | Ty.Trecord r ->
+    PPTexternal (List.map downgrade_ty r.Ty.args,
+                 Hstring.view r.Ty.name, Loc.dummy)
 
 let downgrade_tlogic = function
   | TPredicate args ->
