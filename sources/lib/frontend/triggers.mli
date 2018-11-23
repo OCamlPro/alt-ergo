@@ -28,11 +28,5 @@
 
 open Typed
 
-(* make k b f computes the triggers for a formula f
-   if k is true existing triggers are checked
-   if b is true then variables are authorized in multi-triggers *)
-val make : bool -> bool -> (int tform, int) annoted -> (int tform, int) annoted
-
-(* [make_decl k d] computes the triggers for a declaration d
-   if k is true existing triggers are checked *)
-val make_decl : bool -> (int tdecl, int) annoted -> (int tdecl, int) annoted
+(* [make_decl d] computes the triggers for a declaration d *)
+val make_decl : (int tdecl, int) annoted -> (int tdecl, int) annoted
