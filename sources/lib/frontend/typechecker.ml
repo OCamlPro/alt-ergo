@@ -1681,7 +1681,7 @@ and monomorphize_form tf =
   in
   { tf with c = c }
 
-let axioms_of_rules keep_triggers loc name lf acc env =
+let axioms_of_rules loc name lf acc env =
   let acc =
     List.fold_left
       (fun acc (f, _) ->
@@ -1694,7 +1694,7 @@ let axioms_of_rules keep_triggers loc name lf acc env =
 
 
 
-let type_hypothesis keep_triggers acc env_f loc sort f =
+let type_hypothesis acc env_f loc sort f =
   let f,_ = type_form env_f f in
   let f = monomorphize_form f in
   let td =
@@ -1703,14 +1703,14 @@ let type_hypothesis keep_triggers acc env_f loc sort f =
   (td, env_f)::acc
 
 
-let type_goal keep_triggers acc env_g loc sort n goal =
+let type_goal acc env_g loc sort n goal =
   let goal, _ = type_form env_g goal in
   let goal = monomorphize_form goal in
   let td = {c = TGoal(loc, sort, n, goal); annot = new_id () } in
   (td, env_g)::acc
 
 
-let rec type_and_intro_goal keep_triggers acc env loc sort n f =
+let rec type_and_intro_goal acc env loc sort n f =
   let b = (* smtfile() || smt2file() || satmode()*) false in
   let axioms, (goal, env_g) =
     intro_hypothesis env (not b) f in
@@ -1719,23 +1719,23 @@ let rec type_and_intro_goal keep_triggers acc env loc sort n f =
     List.fold_left
       (fun acc (f, env_f) -> match f.pp_desc with
          | PPcut f ->
-           let acc = type_and_intro_goal keep_triggers acc env_f
+           let acc = type_and_intro_goal acc env_f
                loc Cut (fresh_cut_name ()) f in
-           type_hypothesis keep_triggers acc env_f loc sort f
+           type_hypothesis acc env_f loc sort f
 
          | PPcheck f ->
-           type_and_intro_goal keep_triggers acc env_f
+           type_and_intro_goal acc env_f
              loc Check (fresh_check_name ()) f
 
          | _ ->
-           type_hypothesis keep_triggers acc env_f loc sort f
+           type_hypothesis acc env_f loc sort f
       ) acc axioms
   in
-  type_goal keep_triggers acc env_g loc sort n goal
+  type_goal acc env_g loc sort n goal
 
 
 
-let type_one_th_decl keep_triggers env e =
+let type_one_th_decl env e =
   (* NB: we always keep triggers for axioms of theories *)
   match e with
   | Axiom(loc,name,ax_kd,f)  ->
@@ -1752,13 +1752,13 @@ let type_one_th_decl keep_triggers env e =
     error WrongDeclInTheory loc
 
 
-let type_decl keep_triggers (acc, env) d =
+let type_decl (acc, env) d =
   Types.to_tyvars := MString.empty;
   try
     match d with
     | Theory (loc, name, ext, l) ->
       Options.tool_req 1 "TR-Typing-TheoryDecl$_F$";
-      let tl = List.map (type_one_th_decl keep_triggers env) l in
+      let tl = List.map (type_one_th_decl env) l in
       let ext = Typed.th_ext_of_string ext loc in
       let td = {c = TTheory(loc, name, ext, tl); annot = new_id () } in
       (td, env)::acc, env
@@ -1784,14 +1784,14 @@ let type_decl keep_triggers (acc, env) d =
         let td = {c = TRewriting(loc, name, rules); annot = new_id () } in
         (td, env)::acc, env
       else
-        axioms_of_rules keep_triggers loc name lf acc env
+        axioms_of_rules loc name lf acc env
 
 
     | Goal(loc, n, f) ->
       Options.tool_req 1 "TR-Typing-GoalDecl$_F$";
       (*let f = move_up f in*)
       let f = alpha_renaming_env env f in
-      type_and_intro_goal keep_triggers acc env loc Thm n f, env
+      type_and_intro_goal acc env loc Thm n f, env
 
     | Predicate_def(loc,n,l,e)
     | Function_def(loc,n,l,_,e) ->
@@ -1858,16 +1858,13 @@ let type_decl keep_triggers (acc, env) d =
 
 let file ld =
   let env = Env.empty in
-  let keep_triggers = false (* ??? *) in
   try
     let ltd, env =
-      List.fold_left
-        (fun acc d -> type_decl keep_triggers acc d)
-        ([], env) ld
+      List.fold_left (fun acc d -> type_decl acc d) ([], env) ld
     in
     if type_only () then exit 0;
     let l = List.rev_map (fun (d, env) ->
-        Triggers.make_decl keep_triggers d, env) ltd in
+        Triggers.make_decl d, env) ltd in
     l, env
   with
   | Errors.Error(e,l) ->
