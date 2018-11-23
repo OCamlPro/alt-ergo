@@ -1133,13 +1133,10 @@ and apply_subst_trigger subst ({content; guard} as tr) =
   }
 
 and mk_let_aux ({let_v; let_e; in_e} as x) =
-  match SMap.find_opt let_v (free_vars in_e SMap.empty) with
-  | None ->
-    in_e (* let_v does not appear in in_e *)
-
-  | Some (ty, n) ->
-    if n = 1 && (is_term let_e || Sy.equal let_v in_e.f) || not_an_app let_e
-    then (* inline in these situations *)
+  try
+    let ty, nb_occ = SMap.find let_v in_e.vars in
+    if nb_occ = 1 && (is_term let_e || Sy.equal let_v in_e.f) ||
+       not_an_app let_e then (* inline in these situations *)
       apply_subst_aux (SMap.singleton let_v let_e, Ty.esubst) in_e
     else
       let d = max let_e.depth in_e.depth in (* no + 1 ? *)
@@ -1161,6 +1158,7 @@ and mk_let_aux ({let_v; let_e; in_e} as x) =
       pos.neg <- Some neg;
       neg.neg <- Some pos;
       pos
+  with Not_found -> in_e (* let_v does not appear in in_e *)
 
 and mk_forall_bis (q : quantified) id =
   let binders =  (* ignore binders that are not used in f *)
