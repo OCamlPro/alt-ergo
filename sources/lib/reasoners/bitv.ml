@@ -29,8 +29,9 @@
 open Format
 open Sig
 
+
 module Sy = Symbols
-module T = Term
+module E = Expr
 
 type sort_var = A | B | C
 
@@ -223,23 +224,23 @@ module Shostak(X : ALIEN) = struct
       bitv_to_icomp (List.hd res) (List.tl res)
 
     let make t =
-      let rec make_rec t' ctx = match T.view t' with
-        | {T.f = Sy.Bitv s } -> string_to_bitv s, ctx
-        | {T.f = Sy.Op Sy.Concat ; xs = [t1;t2] ; ty = Ty.Tbitv n} ->
+      let rec make_rec t' ctx = match E.term_view t' with
+        | E.Term {E.f = Sy.Bitv s } -> string_to_bitv s, ctx
+        | E.Term {E.f = Sy.Op Sy.Concat ; xs = [t1;t2] ; ty = Ty.Tbitv n} ->
           let r1, ctx = make_rec t1 ctx in
           let r2, ctx = make_rec t2 ctx in
           { bv = I_Comp (r1, r2) ; sz = n }, ctx
-        | {T.f = Sy.Op Sy.Extract; xs = [t1;ti;tj] ; ty = Ty.Tbitv n} ->
+        | E.Term {E.f = Sy.Op Sy.Extract; xs = [t1;ti;tj] ; ty = Ty.Tbitv n} ->
           begin
-            match T.view ti , T.view tj with
-            | { T.f = Sy.Int i } , { T.f = Sy.Int j } ->
+            match E.term_view ti , E.term_view tj with
+            | E.Term { E.f = Sy.Int i } , E.Term { E.f = Sy.Int j } ->
               let i = int_of_string (Hstring.view i) in
               let j = int_of_string (Hstring.view j) in
               let r1, ctx = make_rec t1 ctx in
               { sz = j - i + 1 ; bv = I_Ext (r1,i,j)}, ctx
             | _ -> assert false
           end
-        | {T.ty = Ty.Tbitv n} ->
+        | E.Term {E.ty = Ty.Tbitv n} ->
           let r', ctx' = X.make t' in
           let ctx = ctx' @ ctx in
           {bv = I_Other (Alien r') ; sz = n}, ctx
@@ -798,7 +799,7 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   let case_split env _ ~for_model = []
   let add env _ _ _ = env
   let print_model _ _ _ = ()
-  let new_terms env = T.Set.empty
+  let new_terms env = E.Set.empty
   let instantiate ~do_syntactic_matching _ env uf _ = env, []
 
   let assume_th_elt t th_elt dep =

@@ -30,30 +30,27 @@ open Format
 open Options
 open Sig
 
-module T = Term
-module F = Formula
-module MF = F.Map
-module SF = F.Set
+module E = Expr
+module ME = Expr.Map
+module SE = Expr.Set
 module Ex = Explanation
-module MT = T.Map
-
 
 module type S = sig
   type t
   type tbox
-  type instances = (F.gformula * Ex.t) list
+  type instances = (Expr.gformula * Ex.t) list
 
   val empty : t
-  val add_terms : t -> T.Set.t -> F.gformula -> t
-  val add_lemma : t -> F.gformula -> Ex.t -> t
-  val add_predicate : t -> F.gformula -> Ex.t -> t
+  val add_terms : t -> SE.t -> Expr.gformula -> t
+  val add_lemma : t -> Expr.gformula -> Ex.t -> t
+  val add_predicate : t -> Expr.gformula -> Ex.t -> t
 
   val m_lemmas :
     use_cs : bool ->
     backward:Util.inst_kind ->
     t ->
     tbox ->
-    (F.t -> F.t -> bool) ->
+    (E.t -> E.t -> bool) ->
     int ->
     instances * instances (* goal_directed, others *)
 
@@ -62,14 +59,14 @@ module type S = sig
     backward:Util.inst_kind ->
     t ->
     tbox ->
-    (F.t -> F.t -> bool) ->
+    (E.t -> E.t -> bool) ->
     int ->
     instances * instances (* goal_directed, others *)
 
   val register_max_term_depth : t -> int -> t
 
   val matching_terms_info :
-    t -> Matching_types.info Term.Map.t * Term.t list Term.Map.t Term.Subst.t
+    t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
 
 end
 
@@ -78,30 +75,30 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   module EM = Matching.Make(Ccx.Main)
 
   type tbox = X.t
-  type instances = (F.gformula * Ex.t) list
+  type instances = (Expr.gformula * Ex.t) list
 
   type t = {
-    lemmas : (int * Ex.t) MF.t;
-    predicates : (int * Ex.t) MF.t;
+    lemmas : (int * Ex.t) ME.t;
+    predicates : (int * Ex.t) ME.t;
     matching : EM.t;
   }
 
   let empty = {
-    lemmas = MF.empty ;
+    lemmas = ME.empty ;
     matching = EM.empty;
-    predicates = MF.empty;
+    predicates = ME.empty;
   }
 
   module Debug = struct
 
     let new_facts_of_axiom ax insts_ok =
-      if debug_matching () >= 1 && insts_ok != MF.empty then
-        let name = match F.view ax with
-            F.Lemma {F.name=s} -> s | _ -> "!(no-name)"
+      if debug_matching () >= 1 && insts_ok != ME.empty then
+        let name = match Expr.form_view ax with
+            E.Lemma {E.name=s} -> s | _ -> "!(no-name)"
         in
         fprintf fmt "[Instances.split_and_filter_insts] ";
         fprintf fmt "%3d different new instances generated for %s@."
-          (MF.cardinal insts_ok) name
+          (ME.cardinal insts_ok) name
 
 
     let new_mround ilvl kind =
@@ -113,67 +110,67 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 
   let add_terms env s gf =
     let infos = {
-      Matching_types.term_age = gf.F.age ;
-      term_from_goal    = gf.F.gf ;
-      term_from_formula = gf.F.lem ;
-      term_from_terms   = gf.F.from_terms
+      Matching_types.term_age = gf.Expr.age ;
+      term_from_goal    = gf.Expr.gf ;
+      term_from_formula = gf.Expr.lem ;
+      term_from_terms   = gf.Expr.from_terms
     }
     in
     { env with
-      matching = T.Set.fold (EM.add_term infos) s env.matching }
+      matching = SE.fold (EM.add_term infos) s env.matching }
 
   let add_predicate env gf ex =
-    let {F.f=f;age=age} = gf in
+    let {Expr.ff=f;age=age} = gf in
     { env with
-      predicates = MF.add f (age, ex) env.predicates;
+      predicates = ME.add f (age, ex) env.predicates;
       (* this is not done in SAT*)
-      matching = EM.max_term_depth env.matching (F.max_term_depth f)
+      matching = EM.max_term_depth env.matching (E.depth f)
     }
 
   let register_max_term_depth env mx =
     {env with matching = EM.max_term_depth env.matching mx}
 
   let record_this_instance f accepted lorig =
-    match F.view lorig with
-    | F.Lemma {F.name;loc} -> Profiling.new_instance_of name f loc accepted
+    match Expr.form_view lorig with
+    | E.Lemma {E.name;loc} -> Profiling.new_instance_of name f loc accepted
     | _ -> assert false
 
   let profile_produced_terms env lorig nf s trs =
     let st0 =
-      List.fold_left (fun st t -> T.subterms st (T.apply_subst s t))
-        T.Set.empty trs
+      List.fold_left (fun st t -> E.sub_terms st (E.apply_subst s t))
+        SE.empty trs
     in
-    let name, loc, f = match F.view lorig with
-      | F.Lemma {F.name;main;loc} -> name, loc, main
+    let name, loc, f = match Expr.form_view lorig with
+      | E.Lemma {E.name;main;loc} -> name, loc, main
       | _ -> assert false
     in
-    let st1 = F.ground_terms_rec nf in
-    let diff = Term.Set.diff st1 st0 in
+    let st1 = E.max_ground_terms_rec_of_form nf in
+    let diff = Expr.Set.diff st1 st0 in
     let info, _ = EM.terms_info env.matching in
-    let _new = Term.Set.filter (fun t -> not (MT.mem t info)) diff in
+    let _new = Expr.Set.filter (fun t -> not (ME.mem t info)) diff in
     Profiling.register_produced_terms name loc st0 st1 diff _new
 
   let inst_is_seen_during_this_round orig f insts =
     try
-      let mp_orig_ok, mp_orig_ko = MF.find orig insts in
-      MF.mem f mp_orig_ok || SF.mem f mp_orig_ko
+      let mp_orig_ok, mp_orig_ko = ME.find orig insts in
+      ME.mem f mp_orig_ok || SE.mem f mp_orig_ko
     with Not_found -> false
 
   let add_accepted_to_acc orig f item insts =
     let mp_orig_ok, mp_orig_ko =
-      try MF.find orig insts with Not_found -> MF.empty, SF.empty
+      try ME.find orig insts with Not_found -> ME.empty, SE.empty
     in
-    assert (not (MF.mem f mp_orig_ok));
-    assert (not (SF.mem f mp_orig_ko));
-    MF.add orig (MF.add f item mp_orig_ok, mp_orig_ko) insts
+    assert (not (ME.mem f mp_orig_ok));
+    assert (not (SE.mem f mp_orig_ko));
+    ME.add orig (ME.add f item mp_orig_ok, mp_orig_ko) insts
 
   let add_rejected_to_acc orig f insts =
     let mp_orig_ok, mp_orig_ko =
-      try MF.find orig insts with Not_found -> MF.empty, SF.empty
+      try ME.find orig insts with Not_found -> ME.empty, SE.empty
     in
-    assert (not (MF.mem f mp_orig_ok));
-    assert (not (SF.mem f mp_orig_ko));
-    MF.add orig (mp_orig_ok, SF.add f mp_orig_ko) insts
+    assert (not (ME.mem f mp_orig_ok));
+    assert (not (SE.mem f mp_orig_ko));
+    ME.add orig (mp_orig_ok, SE.add f mp_orig_ko) insts
 
 
   let new_facts env tbox selector substs =
@@ -194,21 +191,21 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
              s_lem_orig = lorig} ->
             incr cpt;
             let s = sbs, sty in
-            match tr.F.guard with
-            | Some a when X.query (Tliteral.LT.apply_subst s a) tbox==No -> acc
+            match tr.E.guard with
+            | Some a when X.query (Expr.apply_subst s a) tbox==No -> acc
             | _ ->
-              let nf = F.apply_subst s f in
+              let nf = E.apply_subst s f in
               if inst_is_seen_during_this_round orig nf acc then acc
               else
                 let accepted = selector nf orig in
                 if not accepted then add_rejected_to_acc orig nf acc
                 else
                   let p =
-                    { F.f = nf;
-                      origin_name = F.name_of_lemma lorig;
+                    { Expr.ff = nf;
+                      origin_name = E.name_of_lemma lorig;
                       gdist = -1;
                       hdist = -1;
-                      trigger_depth = tr.F.depth;
+                      trigger_depth = tr.Expr.t_depth;
                       nb_reductions = 0;
                       age = 1+(max g age);
                       mf = true;
@@ -227,25 +224,25 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
                       Ex.union dep (Ex.singleton (Ex.Dep lorig))
                   in
                   incr kept;
-                  add_accepted_to_acc orig nf (p, dep, s, tr.F.content) acc
+                  add_accepted_to_acc orig nf (p, dep, s, tr.E.content) acc
           ) acc subst_list
-      ) MF.empty substs
+      ) ME.empty substs
 
 
   let split_and_filter_insts env insts =
-    MF.fold
+    ME.fold
       (fun orig (mp_orig_ok, mp_orig_ko) acc ->
          Debug.new_facts_of_axiom orig mp_orig_ok;
          let acc =
-           MF.fold
+           ME.fold
              (fun f (p, dep, _, _) (gd, ngd) ->
-                if p.F.gf then (p, dep) :: gd, ngd else gd, (p, dep) :: ngd
+                if p.Expr.gf then (p, dep) :: gd, ngd else gd, (p, dep) :: ngd
              )mp_orig_ok acc
          in
          if Options.profiling() then
            begin (* update profiler data *)
-             SF.iter (fun f -> record_this_instance f false orig) mp_orig_ko;
-             MF.iter (fun f (_, _, name, tr_ctt) ->
+             SE.iter (fun f -> record_this_instance f false orig) mp_orig_ko;
+             ME.iter (fun f (_, _, name, tr_ctt) ->
                  profile_produced_terms env orig f name tr_ctt;
                  record_this_instance f true orig
                ) mp_orig_ok;
@@ -255,16 +252,16 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 
 
   let sort_facts =
-    let rec size f = match F.view f with
-      | F.Unit(f1,f2) -> max (size f1) (size f2)
-      | _             -> F.size f
+    let rec size f = match Expr.form_view f with
+      | E.Unit(f1,f2) -> max (size f1) (size f2)
+      | _             -> E.size f
     in
     fun lf ->
       List.fast_sort
         (fun (p1,_) (p2,_) ->
-           let c = size p1.F.f - size p2.F.f in
+           let c = size p1.Expr.ff - size p2.Expr.ff in
            if c <> 0 then c
-           else F.compare p2.F.f p1.F.f
+           else E.compare p2.Expr.ff p1.Expr.ff
         ) lf
 
   let new_facts env tbox selector substs =
@@ -300,14 +297,14 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     mround env env.predicates tbox selector ilvl "predicates" backward use_cs
 
   let add_lemma env gf dep =
-    let {F.f=orig;age=age;gf=b} = gf in
+    let {Expr.ff=orig;age=age;gf=b} = gf in
     let age, dep =
       try
-        let age' , dep' = MF.find orig env.lemmas in
+        let age' , dep' = ME.find orig env.lemmas in
         min age age' , Ex.union dep dep'
       with Not_found -> age, dep
     in
-    { env with lemmas = MF.add orig (age,dep) env.lemmas }
+    { env with lemmas = ME.add orig (age,dep) env.lemmas }
 
   (*** add wrappers to profile exported functions ***)
 

@@ -35,16 +35,16 @@ module type S = sig
 
   val make:
     max_t_depth:int ->
-    Matching_types.info Term.Map.t ->
-    Term.t list Term.Map.t Term.Subst.t ->
+    Matching_types.info Expr.Map.t ->
+    Expr.t list Expr.Map.t Symbols.Map.t ->
     Matching_types.trigger_info list ->
     t
 
-  val add_term : term_info -> Term.t -> t -> t
+  val add_term : term_info -> Expr.t -> t -> t
   val max_term_depth : t -> int -> t
   val add_triggers :
-    backward:Util.inst_kind -> t -> (int * Explanation.t) Formula.Map.t -> t
-  val terms_info : t -> info Term.Map.t * Term.t list Term.Map.t Term.Subst.t
+    backward:Util.inst_kind -> t -> (int * Explanation.t) Expr.Map.t -> t
+  val terms_info : t -> info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
   val query : t -> theory -> (trigger_info * gsubst list) list
 
 end
@@ -52,9 +52,9 @@ end
 
 module type Arg = sig
   type t
-  val term_repr : t -> Term.t -> init_term:bool -> Term.t
-  val are_equal : t -> Term.t -> Term.t -> init_terms:bool -> Sig.answer
-  val class_of : t -> Term.t -> Term.t list
+  val term_repr : t -> Expr.t -> init_term:bool -> Expr.t
+  val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> Sig.answer
+  val class_of : t -> Expr.t -> Expr.t list
 end
 
 

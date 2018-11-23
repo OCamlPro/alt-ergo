@@ -29,19 +29,19 @@
 module type S = sig
   type t
   type tbox
-  type instances = (Formula.gformula * Explanation.t) list
+  type instances = (Expr.gformula * Explanation.t) list
 
   val empty : t
-  val add_terms : t -> Term.Set.t -> Formula.gformula -> t
-  val add_lemma : t -> Formula.gformula -> Explanation.t -> t
-  val add_predicate : t -> Formula.gformula -> Explanation.t -> t
+  val add_terms : t -> Expr.Set.t -> Expr.gformula -> t
+  val add_lemma : t -> Expr.gformula -> Explanation.t -> t
+  val add_predicate : t -> Expr.gformula -> Explanation.t -> t
 
   val m_lemmas :
     use_cs : bool ->
     backward:Util.inst_kind ->
     t ->
     tbox ->
-    (Formula.t -> Formula.t -> bool) ->
+    (Expr.t -> Expr.t -> bool) ->
     int ->
     instances * instances (* goal_directed, others *)
 
@@ -50,14 +50,14 @@ module type S = sig
     backward:Util.inst_kind ->
     t ->
     tbox ->
-    (Formula.t -> Formula.t -> bool) ->
+    (Expr.t -> Expr.t -> bool) ->
     int ->
     instances * instances (* goal_directed, others *)
 
   val register_max_term_depth : t -> int -> t
 
   val matching_terms_info :
-    t -> Matching_types.info Term.Map.t * Term.t list Term.Map.t Term.Subst.t
+    t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
 
 end
 

@@ -12,10 +12,8 @@
 open Format
 open Options
 
-module F = Formula
-module MF = Formula.Map
-module A = Tliteral.LT
-module T = Term
+module ME = Expr.Map
+module E = Expr
 module Hs = Hstring
 
 
@@ -36,7 +34,7 @@ module type ATOM = sig
 
   and atom =
     { var : var;
-      lit : Tliteral.LT.t;
+      lit : E.t;
       neg : atom;
       mutable watched : clause Vec.t;
       mutable is_true : bool;
@@ -50,7 +48,7 @@ module type ATOM = sig
       mutable removed : bool;
       learnt : bool;
       cpremise : premise;
-      form : Formula.t}
+      form : E.t}
 
   and reason = clause option
 
@@ -64,9 +62,9 @@ module type ATOM = sig
 
   val pr_atom : Format.formatter -> atom -> unit
   val pr_clause : Format.formatter -> clause -> unit
-  val get_atom : hcons_env -> Tliteral.LT.t ->  atom
+  val get_atom : hcons_env -> E.t ->  atom
 
-  val literal : atom -> Tliteral.LT.t
+  val literal : atom -> E.t
   val weight : atom -> float
   val is_true : atom -> bool
   val neg : atom -> atom
@@ -92,7 +90,7 @@ module type ATOM = sig
 
   val fresh_dname : unit -> string
 
-  val make_clause : string -> atom list -> Formula.t -> int -> bool ->
+  val make_clause : string -> atom list -> E.t -> int -> bool ->
     premise-> clause
 
   (*val made_vars_info : unit -> int * var list*)
@@ -102,7 +100,7 @@ module type ATOM = sig
   val hash_atom  : atom -> int
   val tag_atom   : atom -> int
 
-  val add_atom : hcons_env -> Tliteral.LT.t -> var list -> atom * var list
+  val add_atom : hcons_env -> E.t -> var list -> atom * var list
 
   module Set : Set.S with type elt = atom
   module Map : Map.S with type key = atom
@@ -112,7 +110,7 @@ end
 
   (*module Make (Dummy : sig end) : sig*)
 
-  val literal : atom -> Tliteral.LT.t
+  val literal : atom -> E.t
   val weight : atom -> float
   val is_true : atom -> bool
   val level : atom -> int
@@ -120,12 +118,12 @@ end
   val neg : atom -> atom
 
   val cpt_mk_var : int ref
-  val ma : var Tliteral.LT.Map.t ref
+  val ma : var E.Map.t ref
 
 
-  val make_var : Tliteral.LT.t -> var * bool
+  val make_var : E.t -> var * bool
 
-  val get_atom : Tliteral.LT.t -> atom (* get existing atom of a lit *)
+  val get_atom : E.t -> atom (* get existing atom of a lit *)
   val vrai_atom  : atom
   val faux_atom  : atom
 
@@ -174,7 +172,7 @@ module Atom : ATOM = struct
 
   and atom =
     { var : var;
-      lit : Tliteral.LT.t;
+      lit : E.t;
       neg : atom;
       mutable watched : clause Vec.t;
       mutable is_true : bool;
@@ -188,15 +186,15 @@ module Atom : ATOM = struct
       mutable removed : bool;
       learnt : bool;
       cpremise : premise;
-      form : Formula.t}
+      form : E.t}
 
   and reason = clause option
 
   and premise = clause list
 
-  let dummy_lit = Tliteral.LT.vrai
+  let dummy_lit = E.vrai
 
-  let vraie_form = Formula.mk_lit dummy_lit 0
+  let vraie_form = E.vrai
 
   let rec dummy_var =
     { vid = -101;
@@ -254,7 +252,7 @@ module Atom : ATOM = struct
 
     let atom fmt a =
       fprintf fmt "%s%d%s [index=%d | lit:%a] vpremise={{%a}}"
-        (sign a) (a.var.vid+1) (value a) a.var.index Tliteral.LT.print a.lit
+        (sign a) (a.var.vid+1) (value a) a.var.index E.print a.lit
         premise a.var.vpremise
 
 
@@ -282,17 +280,10 @@ module Atom : ATOM = struct
   let is_gt n = Hstring.compare n agt = 0
 
   let normal_form lit = (* XXX do better *)
-    let av, is_neg = Tliteral.LT.atom_view lit in
-    (if is_neg then Tliteral.LT.neg lit else lit), is_neg
+    let is_pos = E.is_positive lit in
+    (if is_pos then lit else E.neg lit), not is_pos
 
-  let max_depth a =
-    let l = match Tliteral.LT.view a with
-      | Literal.Eq (s,t) ->  [s;t]
-      | Literal.Distinct(_,l) -> l
-      | Literal.Builtin (_,_,l) -> l
-      | Literal.Pred (p,_) -> [p]
-    in
-    List.fold_left (fun z t -> max z (Term.view t).Term.depth) 0 l
+  let max_depth a = a.Expr.depth
 
   let literal a = a.lit
   let weight a = a.var.weight
@@ -302,7 +293,7 @@ module Atom : ATOM = struct
   let index a = a.var.index
   let neg a = a.neg
 
-  module HT = Hashtbl.Make(Tliteral.LT)
+  module HT = Hashtbl.Make(E)
 
   type hcons_env = { tbl : var HT.t ; cpt : int ref }
 
@@ -335,7 +326,7 @@ module Atom : ATOM = struct
             aid = cpt_fois_2 (* aid = vid*2 *) }
         and na =
           { var = var;
-            lit = Tliteral.LT.neg lit;
+            lit = E.neg lit;
             watched = Vec.make 10 dummy_clause;
             neg = pa;
             is_true = false;
@@ -356,7 +347,7 @@ module Atom : ATOM = struct
 
   let empty_hcons_env, vrai_atom =
     let empty_hcons = { tbl= HT.create 5048 ; cpt = ref (-1) } in
-    let a, _ = add_atom empty_hcons Tliteral.LT.vrai [] in
+    let a, _ = add_atom empty_hcons E.vrai [] in
     a.is_true <- true;
     a.var.level <- 0;
     a.var.reason <- None;
@@ -370,7 +361,7 @@ module Atom : ATOM = struct
   let get_atom hcons lit =
     try (HT.find hcons.tbl lit).pa
     with Not_found ->
-    try (HT.find hcons.tbl (Tliteral.LT.neg lit)).na
+    try (HT.find hcons.tbl (E.neg lit)).na
     with Not_found -> assert false
 
   let make_clause name ali f sz_ali is_learnt premise =
@@ -454,21 +445,21 @@ module type FLAT_FORMULA = sig
   val vrai    : t
   val faux    : t
   val view    : t -> view
-  val mk_lit  : hcons_env -> Tliteral.LT.t -> Atom.var list -> t * Atom.var list
+  val mk_lit  : hcons_env -> E.t -> Atom.var list -> t * Atom.var list
   val mk_and  : hcons_env -> t list -> t
   val mk_or   : hcons_env -> t list -> t
   val mk_not  : t -> t
 
   val empty_hcons_env : unit -> hcons_env
   val nb_made_vars : hcons_env -> int
-  val get_atom : hcons_env -> Tliteral.LT.t -> Atom.atom
+  val get_atom : hcons_env -> E.t -> Atom.atom
 
   val simplify :
     hcons_env ->
-    Formula.t ->
-    (Formula.t -> t * 'a) ->
+    E.t ->
+    (E.t -> t * 'a) ->
     Atom.var list ->
-    t * (Formula.t * (t * Atom.atom)) list
+    t * (E.t * (t * Atom.atom)) list
     * Atom.var list
 
   val get_proxy_of : t ->
@@ -634,7 +625,7 @@ module Flat_Formula : FLAT_FORMULA = struct
         cpt = ref 0 ;
         atoms = Atom.empty_hcons_env () }
     in
-    let vrai = mk_lit empty_hcons Tliteral.LT.vrai [] |> fst in
+    let vrai = mk_lit empty_hcons E.vrai [] |> fst in
     let f_empty_hcons () =
       { tbl = HT.copy empty_hcons.tbl ;
         cpt = ref !(empty_hcons.cpt) ;
@@ -848,19 +839,19 @@ module Flat_Formula : FLAT_FORMULA = struct
           mk_and hcons ((mk_or hcons ands) :: com)
     with Exit -> vrai
 
-  (* translation from Formula.t *)
+  (* translation from E.t *)
 
-  let abstract_lemma hcons abstr f tl lem new_vars =
+  let abstract_lemma hcons abstr (f: E.t) tl lem new_vars =
     try fst (abstr f)
     with Not_found ->
-    try fst (List.assoc f !lem)
+    try fst (snd (List.find (fun (x,y) -> E.equal f x) !lem))
     with Not_found ->
       if tl then begin
         lem := (f, (vrai, Atom.vrai_atom)) :: !lem;
         vrai
       end
       else
-        let lit = A.mk_pred (T.fresh_name Ty.Tbool) false in
+        let lit = E.fresh_name Ty.Tbool in
         let xlit, new_v = mk_lit hcons lit !new_vars in
         let at_lit, new_v = Atom.add_atom hcons.atoms lit new_v in
         new_vars := new_v;
@@ -873,18 +864,19 @@ module Flat_Formula : FLAT_FORMULA = struct
     let lem = ref [] in
     let new_vars = ref new_vars in
     let rec simp topl f =
-      match F.view f with
-      | F.Literal a ->
+      match E.form_view f with
+      | E.Not_a_form -> assert false
+      | E.Literal a ->
         let ff, l = mk_lit hcons a !new_vars in
         new_vars := l;
         ff
 
-      | F.Lemma _   -> abstract_lemma hcons abstr f topl lem new_vars
+      | E.Lemma _   -> abstract_lemma hcons abstr f topl lem new_vars
 
-      | F.Skolem _ ->
-        mk_not (simp false (F.mk_not f))
+      | E.Skolem _ ->
+        mk_not (simp false (E.neg f))
 
-      | F.Unit(f1, f2) ->
+      | E.Unit(f1, f2) ->
         let x1 = simp topl f1 in
         let x2 = simp topl f2 in
         begin match x1.view , x2.view with
@@ -894,7 +886,7 @@ module Flat_Formula : FLAT_FORMULA = struct
           | _              -> mk_and hcons [x1; x2]
         end
 
-      | F.Clause(f1, f2, _) ->
+      | E.Clause(f1, f2, _) ->
         let x1 = simp false f1 in
         let x2 = simp false f2 in
         begin match x1.view, x2.view with
@@ -904,26 +896,7 @@ module Flat_Formula : FLAT_FORMULA = struct
           | _            -> mk_or hcons [x1; x2]
         end
 
-
-      | F.Flet {F.flet_var=lvar; flet_form=lform; flet_subst=s; flet_f=lf} ->
-        let f' = F.apply_subst s lf in
-        let id = F.id f' in
-        let v = Symbols.Map.find lvar (fst s) in
-        let pv = F.mk_lit (A.mk_pred v false) id in
-        let equiv = F.mk_iff pv lform id in
-        let elim_let = F.mk_and equiv f' false id in
-        simp false elim_let
-
-      | F.Tlet {F.tlet_var=lvar; tlet_term=lterm; tlet_subst=s; tlet_f=lf} ->
-        let f' = F.apply_subst s lf in
-        let v = Symbols.Map.find lvar (fst s) in
-        let at, new_v = mk_lit hcons (A.mk_eq v lterm) !new_vars in
-        new_vars := new_v;
-        let res = simp topl f' in
-        begin match res.view with
-          | AND l -> mk_and hcons (at :: l)
-          | _     -> mk_and hcons [at; res]
-        end
+      | E.Let letin -> simp false (E.elim_let letin)
     in
     let res = simp true f in
     res, !lem, !new_vars
@@ -938,7 +911,7 @@ module Flat_Formula : FLAT_FORMULA = struct
   let mk_new_proxy n =
     let hs = Hs.make ("PROXY__" ^ (string_of_int n)) in
     let sy = Symbols.Name(hs, Symbols.Other) in
-    A.mk_pred (Term.make sy [] Ty.Tbool) false
+    E.mk_term sy [] Ty.Tbool
 
   let get_proxy_of f proxies_mp =
     try let p, _, _ = Util.MI.find f.tag proxies_mp in Some p
@@ -990,7 +963,7 @@ end
 
 module Proxy_formula = struct
   let get_proxy_of f proxies =
-    try Some (MF.find f proxies)
+    try Some (ME.find f proxies)
     with Not_found -> None
 
   let atom_of_lit hcons lit is_neg new_vars =
@@ -999,25 +972,25 @@ module Proxy_formula = struct
 
   let mk_new_proxy n =
     let sy = Symbols.name @@ "PROXY__" ^ (string_of_int n) in
-    A.mk_pred (Term.make sy [] Ty.Tbool) false
+    E.mk_term sy [] Ty.Tbool
 
   let rec mk_cnf hcons f ((proxies, inv_proxies, new_vars, cnf) as accu) =
     match get_proxy_of f proxies with
     | Some p -> p, accu
     | None ->
-      let nf = F.mk_not f in
+      let nf = E.neg f in
       match get_proxy_of nf proxies with (* maybe redundant *)
       | Some p -> Atom.neg p, accu
       | None ->
         let a, new_vars =
-          atom_of_lit hcons (mk_new_proxy (F.hash f)) false new_vars in
+          atom_of_lit hcons (mk_new_proxy (E.hash f)) false new_vars in
         let na = Atom.neg a in
-        let proxies = MF.add f a proxies in
-        let proxies = MF.add nf na proxies in
+        let proxies = ME.add f a proxies in
+        let proxies = ME.add nf na proxies in
         let inv_proxies =  Atom.Map.add a f inv_proxies in
         let inv_proxies =  Atom.Map.add na nf inv_proxies in
-        match F.view f with
-        | F.Unit (f1,f2) ->
+        match E.form_view f with
+        | E.Unit (f1,f2) ->
           let accu = (proxies, inv_proxies, new_vars, cnf) in
           let a1, accu = mk_cnf hcons f1 accu in
           let a2, (proxies, inv_proxies, new_vars, cnf) =
@@ -1026,7 +999,7 @@ module Proxy_formula = struct
             [na; a1] :: [na; a2] :: [a; Atom.neg a1; Atom.neg a2] :: cnf in
           a, (proxies, inv_proxies, new_vars, cnf)
 
-        | F.Clause (f1, f2, _) ->
+        | E.Clause (f1, f2, _) ->
           let accu = (proxies, inv_proxies, new_vars, cnf) in
           let a1, accu = mk_cnf hcons f1 accu in
           let a2, (proxies, inv_proxies, new_vars, cnf) =
@@ -1035,11 +1008,11 @@ module Proxy_formula = struct
             [a; Atom.neg a1] :: [a; Atom.neg a2] :: [na; a1; a2] :: cnf in
           a,  (proxies, inv_proxies, new_vars, cnf)
 
-        (* | F.Flet _ -> assert false
-         * | F.Tlet _ -> assert false *)
+        (* | E.Flet _ -> assert false
+         * | E.Tlet _ -> assert false *)
 
-        (* | F.Lemma _   -> assert false
-         * | F.Skolem _ -> assert false *)
+        (* | E.Lemma _   -> assert false
+         * | E.Skolem _ -> assert false *)
 
         | _ -> a, (proxies, inv_proxies, new_vars, cnf)
 end

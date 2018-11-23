@@ -41,7 +41,8 @@ let is_lt n = Hstring.compare n alt = 0
 
 let (-@) l1 l2 = List.rev_append l1 l2
 
-module L = Literal
+module L = Xliteral
+
 module Sy = Symbols
 module I = Intervals
 
@@ -58,17 +59,15 @@ module Make
   module SP = Set.Make(P)
   module SX = Set.Make(struct type t = X.r let compare = X.hash_cmp end)
   module MX0 = Map.Make(struct type t = X.r let compare = X.hash_cmp end)
-  module MPL = Tliteral.LT.Map
+  module MPL = Expr.Map
 
 
   module Oracle = OracleContainer.Make(X)(Uf)(P)
 
-  module MF = Formula.Map
-  module ST = Term.Set
-  module MT = Term.Map
-  module F = Formula
+  module SE = Expr.Set
+  module ME = Expr.Map
   module Ex = Explanation
-
+  module E = Expr
   module EM = Matching.Make
       (struct
         include Uf
@@ -81,8 +80,7 @@ module Make
 
   type r = P.r
   type uf = Uf.t
-  module LR =
-    Literal.Make(struct type t = X.r let compare = X.hash_cmp include X end)
+  module LR = Uf.LX
 
   module MR = Map.Make(
     struct
@@ -120,13 +118,13 @@ module Make
     known_eqs : SX.t;
     improved_p : SP.t;
     improved_x : SX.t;
-    classes : Term.Set.t list;
+    classes : SE.t list;
     size_splits : Q.t;
     int_sim : Sim.Core.t;
     rat_sim : Sim.Core.t;
     new_uf : uf;
-    th_axioms : (Commands.th_elt * Explanation.t) MF.t;
-    linear_dep : ST.t MT.t;
+    th_axioms : (Commands.th_elt * Explanation.t) ME.t;
+    linear_dep : SE.t ME.t;
     syntactic_matching :
       (Matching_types.trigger_info * Matching_types.gsubst list) list list;
   }
@@ -472,7 +470,7 @@ module Make
         MPL.iter
           (fun a {Oracle.ple0=p; is_le=is_le} ->
              fprintf fmt "%a%s0  |  %a@."
-               P.print p (if is_le then "<=" else "<") Tliteral.LT.print a
+               P.print p (if is_le then "<=" else "<") E.print a
           )env.inequations;
         fprintf fmt "------------ FM: monomes ----------------------------@.";
         MX.iter
@@ -558,8 +556,8 @@ module Make
       Sim.Solve.solve
         (Sim.Core.empty ~is_int:true ~check_invs:false ~debug:0);
 
-    th_axioms = MF.empty;
-    linear_dep = MT.empty;
+    th_axioms = ME.empty;
+    linear_dep = ME.empty;
     syntactic_matching = [];
   }
 
@@ -658,8 +656,9 @@ module Make
         | Some t, _ ->
           let use_x = SX.singleton x in
           begin
-            match Term.view t with
-            | {Term.f = (Sy.Op Sy.Div); xs = [a; b]} ->
+            match E.term_view t with
+            | E.Not_a_term _ -> assert false
+            | E.Term {E.f = (Sy.Op Sy.Div); xs = [a; b]} ->
               let ra, ea =
                 let (ra, _) as e = Uf.find env.new_uf a in
                 if List.filter (X.equal x) (X.leaves ra) == [] then e
@@ -1122,13 +1121,13 @@ module Make
       List.fold_left
         (fun st {Oracle.ple0} ->
            List.fold_left
-             (fun st (c, x) -> ST.union st (rclass_of x))
+             (fun st (c, x) -> SE.union st (rclass_of x))
              st (fst (P.to_list ple0))
-        )ST.empty ineqs
+        )SE.empty ineqs
     in
     let linear_dep =
-      ST.fold
-        (fun t linear_dep -> MT.add t terms linear_dep) terms env.linear_dep
+      SE.fold
+        (fun t linear_dep -> ME.add t terms linear_dep) terms env.linear_dep
     in
     {env with linear_dep}
 
@@ -1651,7 +1650,7 @@ module Make
 
   let add =
     let are_eq t1 t2 =
-      if Term.equal t1 t2 then Yes (Explanation.empty, []) else No
+      if E.equal t1 t2 then Yes (Explanation.empty, []) else No
     in
     fun env new_uf r t ->
       try
@@ -1695,11 +1694,11 @@ module Make
                 I.scale d
                   (I.add u'
                      (I.point c ty Explanation.empty)) in
-              fprintf fmt "\n %a ∈ %a" Term.print t I.pretty_print u
+              fprintf fmt "\n %a ∈ %a" E.print t I.pretty_print u
         ) rs;
       fprintf fmt "\n@."
 
-  let new_terms env = Term.Set.empty
+  let new_terms env = SE.empty
 
   let case_split_union_of_intervals =
     let aux acc uf i z =
@@ -1817,7 +1816,7 @@ module Make
         if int_sol || not is_int then main_vars, slake_vars
         else round_to_integers main_vars, round_to_integers slake_vars
       in
-      let fct = if is_int then Term.int else Term.real in
+      let fct = if is_int then E.int else E.real in
       List.fold_left
         (fun acc (v, q) ->
            assert (not is_int || Q.is_int q);
@@ -1895,8 +1894,8 @@ module Make
 
   let mk_const_term ty s =
     match ty with
-    | Ty.Tint -> Term.int (Q.to_string s)
-    | Ty.Treal -> Term.real (Q.to_string s)
+    | Ty.Tint -> E.int (Q.to_string s)
+    | Ty.Treal -> E.real (Q.to_string s)
     | _ -> assert false
 
   let integrate_mapsTo_bindings sbs maps_to =
@@ -1906,18 +1905,18 @@ module Make
           (fun ((sbt, sty) as sbs) (x, tx) ->
              let x = Sy.Var x in
              assert (not (Symbols.Map.mem x sbt));
-             let t = Term.apply_subst sbs tx in
+             let t = E.apply_subst sbs tx in
              let mk, _ = X.make t in
              match P.is_const (poly_of mk) with
              | None ->
                if debug_fpa() >= 2 then begin
                  fprintf fmt "bad semantic trigger %a |-> %a"
-                   Sy.print x Term.print tx;
+                   Sy.print x E.print tx;
                  fprintf fmt " left-hand side is not a constant!@.";
                end;
                raise Exit
              | Some c ->
-               let tc = mk_const_term (Term.type_info t) c in
+               let tc = mk_const_term (E.type_info t) c in
                Symbols.Map.add x tc sbt, sty
           )sbs maps_to
       in
@@ -1968,8 +1967,8 @@ module Make
     | [] | [_] -> true
     | e::l ->
       try
-        let st = MT.find e linear_dep in
-        List.for_all (fun t -> ST.mem t st) l
+        let st = ME.find e linear_dep in
+        List.for_all (fun t -> SE.mem t st) l
       with Not_found -> false
 
   exception Sem_match_fails of t
@@ -1980,13 +1979,13 @@ module Make
         List.fold_left
           (fun (idoms, maps_to, env, uf) s ->
              match s with
-             | F.MapsTo (x, t) ->
+             | E.MapsTo (x, t) ->
                (* this will be done in the latest phase *)
                idoms, (x, t) :: maps_to, env, uf
 
-             | F.Interval (t, lb, ub) ->
-               let tt = Term.apply_subst sbt t in
-               assert (Term.is_ground tt);
+             | E.Interval (t, lb, ub) ->
+               let tt = E.apply_subst sbt t in
+               assert (E.is_ground tt);
                let uf, _ = Uf.add uf tt in
                let rr, ex = Uf.find uf tt in
                let p = poly_of rr in
@@ -1999,30 +1998,30 @@ module Make
                  | Some idoms -> idoms, maps_to, env, uf
                end
 
-             | F.NotTheoryConst t ->
-               let tt = Term.apply_subst sbt t in
+             | E.NotTheoryConst t ->
+               let tt = E.apply_subst sbt t in
                let uf, _ = Uf.add uf tt in
                if X.leaves (fst (Uf.find uf tt)) == [] ||
                   X.leaves (fst (X.make tt)) == [] then
                  raise (Sem_match_fails env);
                idoms, maps_to, env, uf
 
-             | F.IsTheoryConst t ->
-               let tt = Term.apply_subst sbt t in
+             | E.IsTheoryConst t ->
+               let tt = E.apply_subst sbt t in
                let uf, _ = Uf.add uf tt in
                let r, _ = X.make tt in
                if X.leaves r != [] then raise (Sem_match_fails env);
                idoms, maps_to, env, uf
 
-             | F.LinearDependency (x, y) ->
-               let x = Term.apply_subst sbt x in
-               let y = Term.apply_subst sbt y in
+             | E.LinearDependency (x, y) ->
+               let x = E.apply_subst sbt x in
+               let y = E.apply_subst sbt y in
                if not (terms_linear_dep env [x;y]) then
                  raise (Sem_match_fails env);
                let uf, _ = Uf.add uf x in
                let uf, _ = Uf.add uf y in
                idoms, maps_to, env, uf
-          )(Hstring.Map.empty, [], env, uf) tr.F.semantic
+          )(Hstring.Map.empty, [], env, uf) tr.E.semantic
       in
       env, Some (idoms, maps_to)
     with Sem_match_fails env -> env, None
@@ -2039,24 +2038,24 @@ module Make
 
   let record_this_instance f accepted lorig =
     if Options.profiling() then
-      match F.view lorig with
-      | F.Lemma {F.name;loc} -> Profiling.new_instance_of name f loc accepted
+      match E.form_view lorig with
+      | E.Lemma {E.name;loc} -> Profiling.new_instance_of name f loc accepted
       | _ -> assert false
 
   let profile_produced_terms menv lorig nf s trs =
     if Options.profiling() then
       let st0 =
-        List.fold_left (fun st t -> Term.subterms st (Term.apply_subst s t))
-          Term.Set.empty trs
+        List.fold_left (fun st t -> E.sub_terms st (E.apply_subst s t))
+          SE.empty trs
       in
-      let name, loc, f = match F.view lorig with
-        | F.Lemma {F.name;main;loc} -> name, loc, main
+      let name, loc, f = match E.form_view lorig with
+        | E.Lemma {E.name;main;loc} -> name, loc, main
         | _ -> assert false
       in
-      let st1 = F.ground_terms_rec nf in
-      let diff = Term.Set.diff st1 st0 in
+      let st1 = E.max_ground_terms_rec_of_form nf in
+      let diff = SE.diff st1 st0 in
       let info, _ = EM.terms_info menv in
-      let _new = Term.Set.filter (fun t -> not (MT.mem t info)) diff in
+      let _new = SE.filter (fun t -> not (ME.mem t info)) diff in
       Profiling.register_produced_terms name loc st0 st1 diff _new
 
   let new_facts_for_axiom
@@ -2076,16 +2075,16 @@ module Make
                   Here, we'll try to extends subst 's' to conver variables
                   appearing in semantic triggers
                 *)
-            let lem_name = F.name_of_lemma orig in
+            let lem_name = E.name_of_lemma orig in
             let s = sbs, sty in
             if debug_fpa () >= 2 then begin
               fprintf fmt "[IC] try to extend synt sbt %a of ax %a@."
-                (Term.Subst.print Term.print) sbs F.print orig;
+                (Symbols.Map.print E.print) sbs E.print orig;
             end;
-            match tr.F.guard with
+            match tr.E.guard with
             | Some a -> assert false (*guards not supported for TH axioms*)
 
-            | None when tr.F.semantic == [] && not do_syntactic_matching ->
+            | None when tr.E.semantic == [] && not do_syntactic_matching ->
               (* pure syntactic insts already generated *)
               env, acc
 
@@ -2103,18 +2102,18 @@ module Make
               | env, Some sbs ->
                 if debug_fpa () >= 2 then
                   fprintf fmt "semantic matching succeeded:@.%a@."
-                    (Term.Subst.print Term.print) (fst sbs);
-                let nf = F.apply_subst sbs f in
+                    (Symbols.Map.print E.print) (fst sbs);
+                let nf = E.apply_subst sbs f in
                 let accepted = selector nf orig in
                 record_this_instance nf accepted lorig;
                 if accepted then begin
                   let hyp =
-                    List.map (fun f -> F.apply_subst sbs f) tr.F.hyp
+                    List.map (fun f -> E.apply_subst sbs f) tr.E.hyp
                   in
                   let p =
-                    { F.f = nf;
-                      origin_name = F.name_of_lemma lorig;
-                      trigger_depth = tr.F.depth;
+                    { E.ff = nf;
+                      origin_name = E.name_of_lemma lorig;
+                      trigger_depth = tr.E.t_depth;
                       gdist = -1;
                       hdist = -1;
                       nb_reductions = 0;
@@ -2128,7 +2127,7 @@ module Make
                       theory_elim = false;
                     }
                   in
-                  profile_produced_terms menv lorig nf s tr.F.content;
+                  profile_produced_terms menv lorig nf s tr.E.content;
                   let dep =
                     if not (Options.unsat_core() || Options.profiling())
                     then
@@ -2145,17 +2144,17 @@ module Make
 
   let syntactic_matching menv env uf selector =
     let synt_match =
-      MF.fold
+      ME.fold
         (fun f (_th_ax, dep) accu ->
            (* currently, No diff between propagators and case-split axs *)
-           let forms = MF.singleton f (0 (*0 = age *), dep) in
+           let forms = ME.singleton f (0 (*0 = age *), dep) in
            let menv = EM.add_triggers ~backward:Util.Normal menv forms in
            let res = EM.query menv uf in
            if debug_fpa () >= 2 then begin
              let cpt = ref 0 in
              List.iter (fun (_, l) -> List.iter (fun _ -> incr cpt) l) res;
              fprintf fmt "syntactic matching of Ax %s: got %d substs@."
-               (F.name_of_lemma f) !cpt
+               (E.name_of_lemma f) !cpt
            end;
            res:: accu
         )env.th_axioms []
@@ -2188,45 +2187,46 @@ module Make
     let is_theory_const = Hstring.make "is_theory_constant" in
     let linear_dep = Hstring.make "linear_dependency" in
     fun th_form ->
-      let {F.triggers} as q =
-        match F.view th_form with F.Lemma q -> q | _ -> assert false
+      let {E.triggers} as q =
+        match E.form_view th_form with E.Lemma q -> q | _ -> assert false
       in
       let r_triggers =
         List.rev_map
           (fun tr ->
              (* because sem-triggers will be set by theories *)
-             assert (tr.F.semantic == []);
+             assert (tr.E.semantic == []);
              let syn, sem =
                List.fold_left
                  (fun (syn, sem) t ->
-                    match Term.view t with
-                    | {Term.f=Symbols.In (lb, ub); xs=[x]} ->
-                      syn, (F.Interval (x, lb, ub)) :: sem
+                    match E.term_view t with
+                    | E.Not_a_term _ -> assert false
+                    | E.Term {E.f=Symbols.In (lb, ub); xs=[x]} ->
+                      syn, (E.Interval (x, lb, ub)) :: sem
 
-                    | {Term.f=Symbols.MapsTo x; xs=[t]} ->
-                      syn, (F.MapsTo (x, t)) :: sem
+                    | E.Term {E.f=Symbols.MapsTo x; xs=[t]} ->
+                      syn, (E.MapsTo (x, t)) :: sem
 
-                    | {Term.f=Sy.Name(hs,_); xs=[x]}
+                    | E.Term {E.f=Sy.Name(hs,_); xs=[x]}
                       when Hstring.equal hs not_theory_const ->
-                      syn, (F.NotTheoryConst x) :: sem
+                      syn, (E.NotTheoryConst x) :: sem
 
-                    | {Term.f=Sy.Name(hs,_); xs=[x]}
+                    | E.Term {E.f=Sy.Name(hs,_); xs=[x]}
                       when Hstring.equal hs is_theory_const ->
-                      syn, (F.IsTheoryConst x) :: sem
+                      syn, (E.IsTheoryConst x) :: sem
 
-                    | {Term.f=Sy.Name(hs,_); xs=[x;y]}
+                    | E.Term {E.f=Sy.Name(hs,_); xs=[x;y]}
                       when Hstring.equal hs linear_dep ->
-                      syn, (F.LinearDependency(x,y)) :: sem
+                      syn, (E.LinearDependency(x,y)) :: sem
 
                     | _ -> t::syn, sem
-                 )([], []) (List.rev tr.F.content)
+                 )([], []) (List.rev tr.E.content)
              in
-             {tr with F.content = syn; semantic = sem}
+             {tr with E.content = syn; semantic = sem}
           )triggers
       in
-      F.mk_forall
-        q.F.name q.F.loc q.F.binders (List.rev r_triggers) q.F.main
-        (F.id th_form) (Some (q.F.free_v, q.F.free_vty))
+      E.mk_forall
+        q.E.name q.E.loc q.E.binders (List.rev r_triggers) q.E.main
+        (E.id th_form) ~toplevel:true
 
   let assume_th_elt t th_elt dep =
     let {Commands.axiom_kind; ax_form; th_name; extends} = th_elt in
@@ -2239,9 +2239,9 @@ module Make
       let th_elt = {th_elt with Commands.ax_form} in
       if debug_fpa () >= 2 then
         fprintf fmt "[IC][Theory %s][%s] %a@."
-          th_name kd_str F.print th_form;
-      assert (not (MF.mem th_form t.th_axioms));
-      {t with th_axioms = MF.add th_form (th_elt, dep) t.th_axioms}
+          th_name kd_str E.print th_form;
+      assert (not (ME.mem th_form t.th_axioms));
+      {t with th_axioms = ME.add th_form (th_elt, dep) t.th_axioms}
 
     | _ -> t
 

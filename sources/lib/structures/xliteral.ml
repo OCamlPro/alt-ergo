@@ -29,8 +29,12 @@
 open Hconsing
 open Options
 
-type builtin =
+
+
+type builtin = Symbols.builtin =
     LE | LT (* arithmetic *)
+
+
 
 type 'a view =
   | Eq of 'a * 'a
@@ -215,7 +219,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
 
     let set_id n v = {v with uid = n}
 
-    let initial_size = 4096
+    let initial_size = 9001
 
     let disable_weaks () = Options.disable_weaks ()
 

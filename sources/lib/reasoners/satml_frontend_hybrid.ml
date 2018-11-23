@@ -15,9 +15,9 @@ module Make (Th : Theory.S) = struct
   open Options
   open Format
 
-  module F = Formula
-  module MF = F.Map
-  module SF = F.Set
+  module E = Expr
+  module ME = E.Map
+  module SE = E.Set
   module Ex = Explanation
   module Atom = Satml_types.Atom
   module MA = Atom.Map
@@ -26,20 +26,20 @@ module Make (Th : Theory.S) = struct
 
   type t =
     {sat : SAT.t;
-     assumed : SF.t;
-     proxies : Atom.atom MF.t;
-     inv_proxies : Formula.t MA.t;
+     assumed : SE.t;
+     proxies : Atom.atom ME.t;
+     inv_proxies : E.t MA.t;
      hcons_env : Atom.hcons_env;
-     decisions : (int * Formula.t) list;
-     pending : (F.gformula * Ex.t) list list;
+     decisions : (int * E.t) list;
+     pending : (E.gformula * Ex.t) list list;
     }
 
-  exception Bottom of Explanation.t * Term.Set.t list * t
+  exception Bottom of Explanation.t * E.Set.t list * t
 
   let empty () =
     {sat = SAT.empty ();
-     assumed = SF.empty;
-     proxies = MF.empty;
+     assumed = SE.empty;
+     proxies = ME.empty;
      inv_proxies = MA.empty;
      hcons_env = Atom.empty_hcons_env ();
      decisions=[];
@@ -56,8 +56,8 @@ module Make (Th : Theory.S) = struct
       if (Atom.is_true p) then
         let l_ex =
           let r = Atom.Set.fold (fun a acc ->
-              SF.add (formula_of_atom env a) acc)
-              (SAT.reason_of_deduction p) SF.empty in
+              SE.add (formula_of_atom env a) acc)
+              (SAT.reason_of_deduction p) SE.empty in
           lazy (Ex.make_deps r) in
         Some (l_ex,Atom.level p)
       else None
@@ -70,7 +70,7 @@ module Make (Th : Theory.S) = struct
     let a = match PF.get_proxy_of f env.proxies with
       | Some p -> p
       | None -> (* TODO *)
-        match PF.get_proxy_of (F.mk_not f) env.proxies with
+        match PF.get_proxy_of (E.neg f) env.proxies with
         | Some p -> p
         | None -> assert false
     in
@@ -87,7 +87,7 @@ module Make (Th : Theory.S) = struct
 
   let decide_aux env (dlvl,f) =
     begin
-      match is_true env f, is_true env (F.mk_not f) with
+      match is_true env f, is_true env (E.neg f) with
       | None, None -> begin
           match PF.get_proxy_of f env.proxies  with
           | Some p -> SAT.decide env.sat p
@@ -97,11 +97,11 @@ module Make (Th : Theory.S) = struct
       | Some _, None ->
         if verbose () && debug_sat () then
           fprintf fmt "!!! [dlvl=%d] %a becomes true before deciding@."
-            dlvl F.print f;
+            dlvl E.print f;
       | None, Some (ex,lvl) ->
         if verbose () && debug_sat () then
           fprintf fmt "!!! [dlvl=%d] %a becomes false before deciding@."
-            dlvl F.print f;(* Satml_types.Atom.pr_atom (fst f); *)
+            dlvl E.print f;(* Satml_types.Atom.pr_atom (fst f); *)
         let ex = Ex.union (Ex.singleton (Ex.Bj f)) (Lazy.force ex) in
         raise (Bottom (ex, [], env))
         (*SAT.print_env ();*)
@@ -115,18 +115,19 @@ module Make (Th : Theory.S) = struct
       let env = {env with pending = []} in
       let env, pfl, cnf, new_vars =
         List.fold_left (fun acc l ->
-            List.fold_left (fun ((env, pfl, cnf, vars) as acc) ({F.f}, ex) ->
-                if SF.mem f env.assumed then acc
-                else
-                if Ex.has_no_bj ex then begin
-                  let pf, (added_proxy, inv_proxies, new_vars, cnf) =
-                    PF.mk_cnf env.hcons_env f
-                      (env.proxies, env.inv_proxies, vars, cnf) in
-                  {env with assumed = SF.add f env.assumed;
-                            proxies = added_proxy; inv_proxies},
-                  [pf] :: pfl, cnf, new_vars
-                end
-                else acc
+            List.fold_left
+              (fun ((env, pfl, cnf, vars) as acc) ({E.ff=f}, ex) ->
+                 if SE.mem f env.assumed then acc
+                 else
+                 if Ex.has_no_bj ex then begin
+                   let pf, (added_proxy, inv_proxies, new_vars, cnf) =
+                     PF.mk_cnf env.hcons_env f
+                       (env.proxies, env.inv_proxies, vars, cnf) in
+                   {env with assumed = SE.add f env.assumed;
+                             proxies = added_proxy; inv_proxies},
+                   [pf] :: pfl, cnf, new_vars
+                 end
+                 else acc
               ) acc l
           )(env, [], [], []) ll
       in
@@ -157,7 +158,7 @@ module Make (Th : Theory.S) = struct
           | Satml.Last_UIP_reason r ->
             let r =
               Atom.Set.fold (fun a acc ->
-                  SF.add (formula_of_atom env a) acc) r SF.empty
+                  SE.add (formula_of_atom env a) acc) r SE.empty
             in
             raise (Bottom (Ex.make_deps r, [], env))
         in
@@ -176,7 +177,7 @@ module Make (Th : Theory.S) = struct
     | Satml.Last_UIP_reason r ->
       let r =
         Atom.Set.fold (fun a acc ->
-            SF.add (formula_of_atom env a) acc) r SF.empty
+            SE.add (formula_of_atom env a) acc) r SE.empty
       in
       raise (Bottom (Ex.make_deps r, [], env))
 end

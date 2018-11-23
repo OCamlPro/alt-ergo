@@ -189,6 +189,7 @@ let rec hash t =
   | _ -> Hashtbl.hash t
 
 let rec equal t1 t2 =
+  t1 == t2 ||
   match shorten t1 , shorten t2 with
   | Tvar{v=v1}, Tvar{v=v2} -> v1 = v2
   | Text(l1, s1), Text(l2, s2) ->

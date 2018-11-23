@@ -31,7 +31,7 @@ open Commands
 open Format
 open Options
 
-module F = Formula
+module E = Expr
 module Ex = Explanation
 module type S = sig
 
@@ -87,12 +87,12 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       fprintf fmt "checking the unsat-core:\n-------------------\n%a@."
         (Ex.print_unsat_core ~tab:false) dep;
     try
-      let pb = F.Set.elements (Ex.formulas_of dep) in
+      let pb = E.Set.elements (Ex.formulas_of dep) in
       let env =
         List.fold_left
           (fun env f ->
              SAT.assume env
-               {F.f=f;
+               {E.ff=f;
                 origin_name = "";
                 gdist = -1;
                 hdist = -1;
@@ -109,7 +109,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       in
       ignore (SAT.unsat
                 env
-                {F.f=F.vrai;
+                {E.ff=E.vrai;
                  origin_name = "";
                  gdist = -1;
                  hdist = -1;
@@ -150,7 +150,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           let dep = if is_hyp then Ex.empty else mk_root_dep n in
           if consistent then
             SAT.assume env
-              {F.f=f;
+              {E.ff=f;
                origin_name = n;
                gdist = -1;
                hdist = (if is_hyp then 0 else -1);
@@ -177,7 +177,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         let dep =
           if consistent then
             let dep' = SAT.unsat env
-                {F.f=f;
+                {E.ff=f;
                  origin_name = n;
                  hdist = -1;
                  gdist = 0;

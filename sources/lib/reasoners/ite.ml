@@ -11,7 +11,8 @@
 
 open Options
 open Format
-module T  = Term
+module E = Expr
+
 
 type 'a abstract = unit
 
@@ -55,54 +56,56 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   type r = X.r
   type uf = Uf.t
 
-  module TX2 = struct
-    type t = T.t * T.t
+  module EX2 = struct
+    type t = E.t * E.t
     let compare (s1, s2) (t1, t2) =
-      let c = T.compare s1 t1 in
-      if c <> 0 then c else T.compare s2 t2
+      let c = E.compare s1 t1 in
+      if c <> 0 then c else E.compare s2 t2
   end
 
-  module MT2 = Map.Make(TX2)
-  module ST2 = Set.Make(TX2)
-  module MT = Term.Map
+  module ME2 = Map.Make(EX2)
+  module SE2 = Set.Make(EX2)
+  module ME = Expr.Map
 
   module TB =
     Map.Make
       (struct
-        type t = T.t * bool
+        type t = E.t * bool
         let compare (a1, b1) (a2, b2) =
-          let c = T.compare a1 a2 in
+          let c = E.compare a1 a2 in
           if c <> 0 then c else Pervasives.compare b1 b2
       end)
 
   type t =
-    { pending_deds      : Ex.t MT2.t;
-      guarded_pos_deds  : ST2.t MT.t;
-      guarded_neg_deds  : ST2.t MT.t;
-      assumed_pos_preds : Ex.t MT.t;
-      assumed_neg_preds : Ex.t MT.t;
+    { pending_deds      : Ex.t ME2.t;
+      guarded_pos_deds  : SE2.t ME.t;
+      guarded_neg_deds  : SE2.t ME.t;
+      assumed_pos_preds : Ex.t ME.t;
+      assumed_neg_preds : Ex.t ME.t;
     }
 
   let empty _ =
-    { pending_deds  = MT2.empty;
-      guarded_pos_deds  = MT.empty;
-      guarded_neg_deds  = MT.empty;
-      assumed_pos_preds = MT.empty;
-      assumed_neg_preds = MT.empty;
+    { pending_deds  = ME2.empty;
+      guarded_pos_deds  = ME.empty;
+      guarded_neg_deds  = ME.empty;
+      assumed_pos_preds = ME.empty;
+      assumed_neg_preds = ME.empty;
     }
 
   let is_ite =
     let ite = Hstring.make "ite" in
     fun t ->
-      match T.view t with
-      | {T.f = Symbols.Name(hs, _); xs=[p;t1;t2]} when Hstring.equal ite hs ->
+      match E.term_view t with
+      | E.Not_a_term _ -> assert false
+      | E.Term {E.f = Symbols.Name(hs, _); xs=[p;t1;t2]}
+        when Hstring.equal ite hs ->
         Some (p, t1, t2)
       | _ ->
         None
 
   let add_to_guarded p s t mp =
-    let st = try MT.find p mp with Not_found -> ST2.empty in
-    MT.add p (ST2.add (s, t) st) mp
+    let st = try ME.find p mp with Not_found -> SE2.empty in
+    ME.add p (SE2.add (s, t) st) mp
 
   let add env _ r t =
     if Options.disable_ites () then env
@@ -112,14 +115,14 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
       | Some (p, t1, t2) ->
         if debug_ite () then
           fprintf fmt "[Ite.add]: (if %a then %a else %a)@."
-            T.print p T.print t1 T.print t2;
+            E.print p E.print t1 E.print t2;
         try
-          let ex = MT.find p env.assumed_pos_preds in
-          {env with pending_deds = MT2.add (t, t1) ex env.pending_deds}
+          let ex = ME.find p env.assumed_pos_preds in
+          {env with pending_deds = ME2.add (t, t1) ex env.pending_deds}
         with Not_found ->
         try
-          let ex = MT.find p env.assumed_neg_preds in
-          {env with pending_deds = MT2.add (t, t2) ex env.pending_deds}
+          let ex = ME.find p env.assumed_neg_preds in
+          {env with pending_deds = ME2.add (t, t2) ex env.pending_deds}
         with Not_found ->
           let guarded_pos_deds = add_to_guarded p t t1 env.guarded_pos_deds in
           let guarded_neg_deds = add_to_guarded p t t2 env.guarded_neg_deds in
@@ -132,12 +135,12 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
          match root with
          | None -> acc
          | Some a ->
-           match Tliteral.LT.view a with
-           | Literal.Pred (t, is_neg)
-             when not (MT.mem t env.assumed_pos_preds) &&
-                  not (MT.mem t env.assumed_neg_preds) ->
+           match E.lit_view a with
+           | E.Pred (t, is_neg)
+             when not (ME.mem t env.assumed_pos_preds) &&
+                  not (ME.mem t env.assumed_neg_preds) ->
              if debug_ite () then
-               fprintf fmt "[Ite.assume] %a@." Tliteral.LT.print a;
+               fprintf fmt "[Ite.assume] %a@." E.print a;
              TB.add (t, is_neg) expl acc
            | _ -> acc
       )TB.empty la
@@ -145,16 +148,18 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
 
   let extract_pending_deductions env =
     let l =
-      MT2.fold
+      ME2.fold
         (fun (s, t) ex acc ->
-           let a = Tliteral.LT.mk_eq s t in
+           let a = E.mk_eq ~iff:false s t
+               [@ocaml.ppwarning "TODO: build IFF instead ?"]
+           in
            if debug_ite () then
              fprintf fmt "[Ite.assume] deduce that %a with expl %a@."
-               Tliteral.LT.print a Ex.print ex;
+               E.print a Ex.print ex;
            (LTerm a, ex, Sig.Other) :: acc)
         env.pending_deds []
     in
-    {env with pending_deds = MT2.empty}, l
+    {env with pending_deds = ME2.empty}, l
 
   let assume env uf la =
     if Options.disable_ites () then env, { assume = []; remove = [] }
@@ -163,23 +168,23 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
         TB.fold
           (fun (t, is_neg) ex env ->
              if is_neg then
-               let assumed_neg_preds = MT.add t ex env.assumed_neg_preds in
+               let assumed_neg_preds = ME.add t ex env.assumed_neg_preds in
                let deds =
-                 try MT.find t env.guarded_neg_deds
-                 with Not_found -> ST2.empty
+                 try ME.find t env.guarded_neg_deds
+                 with Not_found -> SE2.empty
                in
                let pending_deds =
-                 ST2.fold (fun e acc -> MT2.add e ex acc) deds env.pending_deds
+                 SE2.fold (fun e acc -> ME2.add e ex acc) deds env.pending_deds
                in
                {env with assumed_neg_preds; pending_deds}
              else
-               let assumed_pos_preds = MT.add t ex env.assumed_pos_preds in
+               let assumed_pos_preds = ME.add t ex env.assumed_pos_preds in
                let deds =
-                 try MT.find t env.guarded_pos_deds
-                 with Not_found -> ST2.empty
+                 try ME.find t env.guarded_pos_deds
+                 with Not_found -> SE2.empty
                in
                let pending_deds =
-                 ST2.fold (fun e acc -> MT2.add e ex acc) deds env.pending_deds
+                 SE2.fold (fun e acc -> ME2.add e ex acc) deds env.pending_deds
                in
                {env with assumed_pos_preds; pending_deds}
           )(extract_preds env la) env
@@ -204,7 +209,7 @@ module Relation (X : ALIEN) (Uf : Uf.S) = struct
   let query _ _ _ = Sig.No
   let print_model _ _ _ = ()
 
-  let new_terms env = T.Set.empty
+  let new_terms env = E.Set.empty
   let instantiate ~do_syntactic_matching _ env uf _ = env, []
 
   let assume_th_elt t th_elt dep = t

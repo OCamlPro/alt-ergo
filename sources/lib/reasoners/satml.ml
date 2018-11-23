@@ -12,7 +12,7 @@
 open Format
 open Options
 
-module A = Tliteral.LT
+module E = Expr
 module Atom = Satml_types.Atom
 module FF = Satml_types.Flat_Formula
 open Atom
@@ -25,7 +25,7 @@ exception Last_UIP_reason of Atom.Set.t
 exception Restart
 exception Stopped
 
-let vraie_form = Formula.vrai
+let vraie_form = E.vrai
 
 
 module type SAT_ML = sig
@@ -47,7 +47,7 @@ module type SAT_ML = sig
 
   val assume :
     t ->
-    Atom.atom list list -> Atom.atom list list -> Formula.t ->
+    Atom.atom list list -> Atom.atom list list -> E.t ->
     cnumber : int ->
     Atom.atom option FF.Map.t -> dec_lvl:int ->
     unit
@@ -811,7 +811,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           if unsat_core () || ta.var.level > 0 then Ex.singleton (Ex.Literal ta)
           else Ex.empty
         in
-        assert (Tliteral.LT.is_ground ta.lit);
+        assert (E.is_ground ta.lit);
         if ta.timp then
           ()
             [@ocaml.ppwarning "XXX: only do this for instantiation ?"]
@@ -1044,7 +1044,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
        let rec theory_simplify () =
        let theory_simplification = 2 in
        let assume a =
-       assert (Tliteral.LT.is_ground ta.lit);
+       assert (E.is_ground ta.lit);
        ignore (Th.assume a.lit Ex.empty env.tenv)
        in
        if theory_simplification >= 2 then begin
@@ -1375,7 +1375,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         a.timp <- true;
         Some (clause_of_dep d a)
       | Sig.No  ->
-        match Th.query (A.neg lit) tenv with
+        match Th.query (E.neg lit) tenv with
         | Sig.Yes (d,_) ->
           a.neg.timp <- true;
           Some (clause_of_dep d a.Atom.neg)
@@ -1679,7 +1679,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     if Options.cdcl_tableaux_th () then
       (* use atoms from theory environment if tableaux method
          is used for theories *)
-      Tliteral.LT.Set.fold
+      E.Set.fold
         (fun a accu ->
            SA.add (FF.get_atom hcons a) accu
         )(Th.get_assumed env.tenv) SA.empty

@@ -35,12 +35,14 @@ module type S = sig
   type t
   type r
 
+  module LX : Xliteral.S with type elt = r
+
   val empty : unit -> t
-  val add : t -> Term.t -> t * Tliteral.LT.t list
+  val add : t -> Expr.t -> t * Expr.t list
 
-  val mem : t -> Term.t -> bool
+  val mem : t -> Expr.t -> bool
 
-  val find : t -> Term.t -> r * Explanation.t
+  val find : t -> Expr.t -> r * Explanation.t
 
   val find_r : t -> r -> r * Explanation.t
 
@@ -50,23 +52,23 @@ module type S = sig
 
   val distinct : t -> r list -> Explanation.t -> t
 
-  val are_equal : t -> Term.t -> Term.t -> added_terms:bool -> Sig.answer
-  val are_distinct : t -> Term.t -> Term.t -> Sig.answer
+  val are_equal : t -> Expr.t -> Expr.t -> added_terms:bool -> Sig.answer
+  val are_distinct : t -> Expr.t -> Expr.t -> Sig.answer
   val already_distinct : t -> r list -> bool
 
-  val class_of : t -> Term.t -> Term.t list
-  val rclass_of : t -> r -> Term.Set.t
+  val class_of : t -> Expr.t -> Expr.t list
+  val rclass_of : t -> r -> Expr.Set.t
 
-  val cl_extract : t -> Term.Set.t list
+  val cl_extract : t -> Expr.Set.t list
   val model : t ->
-    (r * Term.t list * (Term.t * r) list) list * (Term.t list) list
+    (r * Expr.t list * (Expr.t * r) list) list * (Expr.t list) list
 
   val print : Format.formatter -> t -> unit
-  val term_repr : t -> Term.t -> Term.t
-  val make : t -> Term.t -> r
+  val term_repr : t -> Expr.t -> Expr.t
+  val make : t -> Expr.t -> r
   val is_normalized : t -> r -> bool
 
-  val assign_next : t -> (r Literal.view * bool * Sig.lit_origin) list * t
+  val assign_next : t -> (r Xliteral.view * bool * Sig.lit_origin) list * t
   val output_concrete_model : t -> unit
 end
 
@@ -74,13 +76,14 @@ module Make (X : Sig.X) : S with type r = X.r = struct
 
   module Ac = Ac.Make(X)
   module Ex = Explanation
+
   module Sy = Symbols
-  module T = Term
-  module MapT = Term.Map
-  module SetT = Term.Set
+  module E = Expr
+  module ME = Expr.Map
+  module SE = Expr.Set
 
   module LX =
-    Literal.Make(struct type t = X.r let compare = X.hash_cmp include X end)
+    Xliteral.Make(struct type t = X.r let compare = X.hash_cmp include X end)
   module MapL = Emap.Make(LX)
 
   module MapX = Map.Make(struct type t = X.r let compare = X.hash_cmp end)
@@ -121,13 +124,13 @@ module Make (X : Sig.X) : S with type r = X.r = struct
   type t = {
 
     (* term -> [t] *)
-    make : r MapT.t;
+    make : r ME.t;
 
     (* representative table *)
     repr : (r * Ex.t) MapX.t;
 
     (* r -> class (of terms) *)
-    classes : SetT.t MapX.t;
+    classes : SE.t MapX.t;
 
     (*associates each value r with the set of semantical values whose
       representatives contains r *)
@@ -141,17 +144,17 @@ module Make (X : Sig.X) : S with type r = X.r = struct
   }
 
 
-  exception Found_term of T.t
+  exception Found_term of E.t
 
   (* hack: would need an inverse map from semantic values to terms *)
   let terms_of_distinct env l = match LX.view l with
-    | Literal.Distinct (false, rl) ->
+    | Xliteral.Distinct (false, rl) ->
       let lt =
         List.fold_left (fun acc r ->
             try
               let cl = MapX.find r env.classes in
-              SetT.iter (fun t ->
-                  if X.equal (MapT.find t env.make) r then
+              SE.iter (fun t ->
+                  if X.equal (ME.find t env.make) r then
                     raise (Found_term t)) cl;
               acc
             with
@@ -160,7 +163,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
       in
       let rec distrib = function
         | x :: r -> (distrib r) @
-                    (List.map (fun y -> SetT.add x (SetT.singleton y)) r)
+                    (List.map (fun y -> SE.add x (SE.singleton y)) r)
         | [] -> []
       in
       distrib lt
@@ -184,11 +187,11 @@ module Make (X : Sig.X) : S with type r = X.r = struct
     let lm_print fmt =
       MapL.iter (fun k dep -> fprintf fmt "%a %a" LX.print k Ex.print dep)
 
-    let t_print fmt = SetT.iter (fprintf fmt "%a " T.print)
+    let t_print fmt = SE.iter (fprintf fmt "%a " E.print)
 
     let pmake fmt m =
       fprintf fmt "[.] map:\n";
-      MapT.iter (fun t r -> fprintf fmt "%a -> %a\n" T.print t X.print r) m
+      ME.iter (fun t r -> fprintf fmt "%a -> %a\n" E.print t X.print r) m
 
     let prepr fmt m =
       fprintf fmt "------------- UF: Representatives map ----------------@.";
@@ -209,8 +212,8 @@ module Make (X : Sig.X) : S with type r = X.r = struct
     let pclasses fmt m =
       fprintf fmt "------------- UF: Class map --------------------------@.";
       MapX.iter
-        (fun k s -> fprintf fmt "%a -> %a\n" X.print k Term.print_list
-            (SetT.elements s)) m
+        (fun k s -> fprintf fmt "%a -> %a\n" X.print k E.print_list
+            (SE.elements s)) m
 
     let pgamma fmt m =
       fprintf fmt "------------- UF: Gamma map --------------------------@.";
@@ -234,7 +237,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
         end
 
     let lookup_not_found t env =
-      fprintf fmt "Uf: %a Not_found in env@." T.print t;
+      fprintf fmt "Uf: %a Not_found in env@." E.print t;
       all fmt env
 
 
@@ -285,7 +288,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
 
     let are_distinct t1 t2 =
       if debug_uf () then
-        printf " [uf] are_distinct %a %a @." T.print t1 T.print t2
+        printf " [uf] are_distinct %a %a @." E.print t1 E.print t2
 
 
     let check_inv_repr_normalized =
@@ -320,17 +323,17 @@ module Make (X : Sig.X) : S with type r = X.r = struct
 
   module Env = struct
 
-    let mem env t = MapT.mem t env.make
+    let mem env t = ME.mem t env.make
 
     let lookup_by_t t env =
       Options.exec_thread_yield ();
-      try MapX.find (MapT.find t env.make) env.repr
+      try MapX.find (ME.find t env.make) env.repr
       with Not_found ->
         Debug.lookup_not_found t env;
         assert false (*X.make t, Ex.empty*) (* XXXX *)
 
     let lookup_by_t___without_failure t env =
-      try MapX.find (MapT.find t env.make) env.repr
+      try MapX.find (ME.find t env.make) env.repr
       with Not_found -> fst (X.make t), Ex.empty
 
     let lookup_by_r r env =
@@ -447,13 +450,13 @@ module Make (X : Sig.X) : S with type r = X.r = struct
 
     let add_to_classes t r classes =
       MapX.add r
-        (SetT.add t (try MapX.find r classes with Not_found -> SetT.empty))
+        (SE.add t (try MapX.find r classes with Not_found -> SE.empty))
         classes
 
     let update_classes c nc classes =
-      let s1 = try MapX.find c classes with Not_found -> SetT.empty in
-      let s2 = try MapX.find nc classes with Not_found -> SetT.empty in
-      MapX.add nc (SetT.union s1 s2) (MapX.remove c classes)
+      let s1 = try MapX.find c classes with Not_found -> SE.empty in
+      let s2 = try MapX.find nc classes with Not_found -> SE.empty in
+      MapX.add nc (SE.union s1 s2) (MapX.remove c classes)
 
     let add_to_gamma r c gamma =
       Options.exec_thread_yield ();
@@ -464,15 +467,15 @@ module Make (X : Sig.X) : S with type r = X.r = struct
 
     let explain_repr_of_distinct x repr_x dep lit env =
       match LX.view lit with
-      | Literal.Distinct (false, ([_;_] as args)) ->
+      | Xliteral.Distinct (false, ([_;_] as args)) ->
         List.fold_left
           (fun dep r -> Ex.union dep (snd (find_or_normal_form env r)))
           dep args
 
-      | Literal.Pred (r, _) ->
+      | Xliteral.Pred (r, _) ->
         Ex.union dep (snd (find_or_normal_form env r))
 
-      | Literal.Distinct (false, l) ->
+      | Xliteral.Distinct (false, l) ->
         List.fold_left
           (fun d r ->
              let z, ex = find_or_normal_form env r in
@@ -516,7 +519,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
       let mk_env = env.make in
       let make =
         match X.term_extract p with
-        | Some t, true when not (MapT.mem t mk_env) -> MapT.add t p mk_env
+        | Some t, true when not (ME.mem t mk_env) -> ME.add t p mk_env
         | _ -> mk_env
       in
       let env =
@@ -557,7 +560,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
       let rp, ex = normal_form env mkr in
       let env =
         {env with
-         make    = MapT.add t mkr env.make;
+         make    = ME.add t mkr env.make;
          repr    = MapX.add mkr (rp,ex) env.repr;
          classes = add_to_classes t rp env.classes;
          gamma   = add_to_gamma mkr rp env.gamma;
@@ -715,7 +718,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
 
   let add env t =
     Options.tool_req 3 "TR-UFX-Add";
-    if MapT.mem t env.make then env, []
+    if ME.mem t env.make then env, []
     else
       let env, l = Env.init_term env t in
       Debug.check_invariants "add" env;
@@ -842,7 +845,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
     env
 
   let are_equal env t1 t2 ~added_terms =
-    if Term.equal t1 t2 then Sig.Yes (Ex.empty, cl_extract env)
+    if E.equal t1 t2 then Sig.Yes (Ex.empty, cl_extract env)
     else
       let lookup =
         if added_terms then Env.lookup_by_t
@@ -875,7 +878,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
   let mapt_choose m =
     let r = ref None in
     (try
-       MapT.iter (fun x rx ->
+       ME.iter (fun x rx ->
            r := Some (x, rx); raise Exit
          ) m
      with Exit -> ());
@@ -886,23 +889,23 @@ module Make (X : Sig.X) : S with type r = X.r = struct
       MapX.fold (fun r cl acc ->
           let l, to_rel =
             List.fold_left (fun (l, to_rel) t ->
-                let rt = MapT.find t env.make in
-                if complete_model () || T.is_in_model t then
+                let rt = ME.find t env.make in
+                if complete_model () || E.is_in_model t then
                   if X.equal rt r then l, (t,rt)::to_rel
                   else t::l, (t,rt)::to_rel
                 else l, to_rel
-              ) ([], []) (SetT.elements cl) in
+              ) ([], []) (SE.elements cl) in
           (r, l, to_rel)::acc
         ) env.classes []
     in
     let rec extract_neqs acc makes =
       try
         let x, rx = mapt_choose makes in
-        let makes = MapT.remove x makes in
+        let makes = ME.remove x makes in
         let acc =
-          if complete_model () || T.is_in_model x then
-            MapT.fold (fun y ry acc ->
-                if (complete_model () || T.is_in_model y)
+          if complete_model () || E.is_in_model x then
+            ME.fold (fun y ry acc ->
+                if (complete_model () || E.is_in_model y)
                 && (already_distinct env [rx; ry]
                     || already_distinct env [ry; rx])
                 then [y; x]::acc
@@ -930,31 +933,31 @@ module Make (X : Sig.X) : S with type r = X.r = struct
 
   let class_of env t =
     try
-      let rt, _ = MapX.find (MapT.find t env.make) env.repr in
+      let rt, _ = MapX.find (ME.find t env.make) env.repr in
       MapX.find rt env.classes
-    with Not_found -> SetT.singleton t
+    with Not_found -> SE.singleton t
 
   let rclass_of env r =
     try MapX.find r env.classes
-    with Not_found -> SetT.empty
+    with Not_found -> SE.empty
 
   let term_repr uf t =
     let st = class_of uf t in
-    SetT.fold
+    SE.fold
       (fun s t ->
          let c =
-           let c = (T.view t).T.depth - (T.view s).T.depth in
+           let c = (E.depth t) - (E.depth s) in
            if c <> 0 then c
-           else T.compare s t
+           else E.compare s t
          in
          if c > 0 then s else t
       ) st t
 
-  let class_of env t = SetT.elements (class_of env t)
+  let class_of env t = SE.elements (class_of env t)
 
   let empty () =
     let env = {
-      make  = MapT.empty;
+      make  = ME.empty;
       repr = MapX.empty;
       classes = MapX.empty;
       gamma = MapX.empty;
@@ -962,11 +965,11 @@ module Make (X : Sig.X) : S with type r = X.r = struct
       ac_rs = RS.empty
     }
     in
-    let env, _ = add env Term.vrai in
-    let env, _ = add env Term.faux in
+    let env, _ = add env E.vrai in
+    let env, _ = add env E.faux in
     distinct env [X.top (); X.bot ()] Ex.empty
 
-  let make uf t = MapT.find t uf.make
+  let make uf t = ME.find t uf.make
 
   (*** add wrappers to profile exported functions ***)
 
@@ -997,7 +1000,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
          let contains_rep = ref false in
          let lit_vals =
            match LX.view lit with
-           | Literal.Distinct (_, l) -> l
+           | Xliteral.Distinct (_, l) -> l
            | _ -> []
          in
          let acc2 =
@@ -1019,7 +1022,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
         MapX.iter
           (fun r eclass ->
              let eclass =
-               try SetT.fold (fun t z -> (t, MapT.find t env.make)::z) eclass []
+               try SE.fold (fun t z -> (t, ME.find t env.make)::z) eclass []
                with Not_found -> assert false
              in
              let opt =
@@ -1035,7 +1038,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
       | None -> assert false
       | Some (s, rep, is_cs) ->
         if Options.debug_interpretation() then
-          fprintf fmt "TRY assign-next %a = %a@." X.print rep Term.print s;
+          fprintf fmt "TRY assign-next %a = %a@." X.print rep E.print s;
         (*
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           modify this to be able to returns CS on terms. This way,
@@ -1077,7 +1080,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
 
     module V = Set.Make
         (struct
-          type t = (T.t * (X.r * string)) list * (X.r * string)
+          type t = (E.t * (X.r * string)) list * (X.r * string)
           let compare (l1, (v1,_)) (l2, (v2,_)) =
             let c = X.hash_cmp v1 v2 in
             if c <> 0 then c
@@ -1109,7 +1112,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
 
   let assert_has_depth_one (e, _) =
     match X.term_extract e with
-    | Some t, true -> assert ((T.view t).T.depth = 1);
+    | Some t, true -> assert (E.depth t = 1);
     | _ -> ()
 
   module SMT2LikeModelOutput = struct
@@ -1190,20 +1193,20 @@ module Make (X : Sig.X) : S with type r = X.r = struct
 
 
   let model_repr_of_term t env mrepr =
-    try MapT.find t mrepr, mrepr
+    try ME.find t mrepr, mrepr
     with Not_found ->
-      let mk = try MapT.find t env.make with Not_found -> assert false in
+      let mk = try ME.find t env.make with Not_found -> assert false in
       let rep,_ = try MapX.find mk env.repr with Not_found -> assert false in
       let cls =
-        try SetT.elements (MapX.find rep env.classes)
+        try SE.elements (MapX.find rep env.classes)
         with Not_found -> assert false
       in
       let cls =
-        try List.rev_map (fun s -> s, MapT.find s env.make) cls
+        try List.rev_map (fun s -> s, ME.find s env.make) cls
         with Not_found -> assert false
       in
       let e = X.choose_adequate_model t rep cls in
-      e, MapT.add t e mrepr
+      e, ME.add t e mrepr
 
 
   let output_concrete_model ({make; repr} as env) =
@@ -1211,12 +1214,16 @@ module Make (X : Sig.X) : S with type r = X.r = struct
     let abs_i = abs i in
     if abs_i = 1 || abs_i = 2 || abs_i = 3 then
       let functions, constants, arrays, _ =
-        MapT.fold
+        ME.fold
           (fun t mk ((fprofs, cprofs, carrays, mrepr) as acc) ->
-             let {T.f; xs; ty} = T.view t in
+             let {E.f; xs; ty} =
+               match E.term_view t with
+               | E.Not_a_term _ -> assert false
+               | E.Term tt -> tt
+             in
              if X.is_solvable_theory_symbol f
-             || T.is_fresh t || T.is_fresh_skolem t
-             || T.equal t T.vrai || T.equal t T.faux
+             || E.is_fresh t || E.is_fresh_skolem t
+             || E.equal t E.vrai || E.equal t E.faux
              then
                acc
              else
@@ -1226,7 +1233,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
                       let rep_x, mrepr = model_repr_of_term x env mrepr in
                       assert (is_a_good_model_value rep_x);
                       (x, rep_x)::xs,
-                      (T.type_info x)::tys,
+                      (E.type_info x)::tys,
                       mrepr
                    ) ([],[], mrepr) (List.rev xs)
                in
@@ -1239,7 +1246,11 @@ module Make (X : Sig.X) : S with type r = X.r = struct
                  begin
                    match X.term_extract a with
                    | Some ta, true ->
-                     let {T.f=f_ta;xs=xs_ta; ty=ty_ta} = T.view ta in
+                     let {E.f=f_ta;xs=xs_ta; ty=ty_ta} =
+                       match E.term_view ta with
+                       | E.Not_a_term _ -> assert false
+                       | E.Term tt -> tt
+                     in
                      assert (xs_ta == []);
                      fprofs,
                      cprofs,
@@ -1257,7 +1268,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
                    Profile.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
                    mrepr
 
-          ) make (Profile.empty, Profile.empty, Profile.empty, MapT.empty)
+          ) make (Profile.empty, Profile.empty, Profile.empty, ME.empty)
       in
       if i > 0 then begin
         printf "(\n";

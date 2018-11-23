@@ -18,10 +18,11 @@
 
 %{
 
-open Lexing
-open Why3_ptree
-open Parsed_interface
-open Parsed
+
+  open Lexing
+  open Why3_ptree
+  open Parsed_interface
+  open Parsed
 
   let infix  s = "infix "  ^ s
   let prefix s = "prefix " ^ s

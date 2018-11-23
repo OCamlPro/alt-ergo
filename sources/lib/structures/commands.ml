@@ -33,7 +33,7 @@ type th_elt =
   {
     th_name : string;
     ax_name : string;
-    ax_form : Formula.t;
+    ax_form : Expr.t;
     extends : Typed.theories_extensions;
     axiom_kind : axiom_kind;
   }
@@ -41,10 +41,10 @@ type th_elt =
 (* Sat entry *)
 
 type sat_decl_aux =
-  | Assume of string * Formula.t * bool
-  | PredDef of Formula.t * string (*name of the predicate*)
-  | RwtDef of (Term.t rwt_rule) list
-  | Query of string *  Formula.t * goal_sort
+  | Assume of string * Expr.t * bool
+  | PredDef of Expr.t * string (*name of the predicate*)
+  | RwtDef of (Expr.t rwt_rule) list
+  | Query of string *  Expr.t * goal_sort
   | ThAssume of th_elt
 
 type sat_tdecl = {

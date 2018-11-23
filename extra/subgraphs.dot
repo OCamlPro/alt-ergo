@@ -75,11 +75,8 @@ subgraph cluster_lib__structures {
 	color=lightgrey;
         "Exception";
         "Explanation";
-        "Formula";
-        "Symbols";
-        "Term";
-        "Literal";
-        "Tliteral";
+        "Expr";
+        "Xliteral";
         "Ty";
         "Parsed";
         "Typed";

@@ -41,7 +41,7 @@ module type S = sig
   type t = r Sig.ac
 
   (* builds an embeded semantic value from an AC term *)
-  val make : Term.t -> r * Tliteral.LT.t list
+  val make : Expr.t -> r * Expr.t list
 
   (* tells whether the given term is AC*)
   val is_mine_symb : Sy.t -> bool
@@ -69,9 +69,9 @@ module type S = sig
 
   (* add flatten the 2nd arg w.r.t HS.t, add it to the given list
      and compact the result *)
-  val add : Symbols.t -> r * int -> (r * int) list -> (r * int) list
+  val add : Sy.t -> r * int -> (r * int) list -> (r * int) list
 
-  val fully_interpreted : Symbols.t -> bool
+  val fully_interpreted : Sy.t -> bool
 
   val abstract_selectors : t -> (r * r) list -> r * (r * r) list
 
@@ -167,26 +167,27 @@ module Make (X : Sig.X) = struct
     match X.ac_extract r with
     | Some ac when Sy.equal sy ac.h -> r, acc
     | None -> r, acc
-    | Some _ -> match Term.view t with
-      | {Term.f=Sy.Name(hs,Sy.Ac) ;xs=xs;ty=ty} ->
+    | Some _ -> match Expr.term_view t with
+      | Expr.Term {Expr.f=Sy.Name(hs,Sy.Ac) ;xs=xs;ty=ty} ->
         let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
-        let aro_t = Term.make aro_sy xs ty  in
-        let eq = Tliteral.LT.mk_eq aro_t t in
+        let aro_t = Expr.mk_term aro_sy xs ty  in
+        let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
-      | {Term.f=Sy.Op Sy.Mult ;xs=xs;ty=ty} ->
+      | Expr.Term {Expr.f=Sy.Op Sy.Mult ;xs=xs;ty=ty} ->
         let aro_sy = Sy.name "@*" in
-        let aro_t = Term.make aro_sy xs ty  in
-        let eq = Tliteral.LT.mk_eq aro_t t in
+        let aro_t = Expr.mk_term aro_sy xs ty  in
+        let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
-      | {Term.ty=ty} ->
-        let k = Term.fresh_name ty in
-        let eq = Tliteral.LT.mk_eq k t in
+      | Expr.Term {Expr.ty=ty} ->
+        let k = Expr.fresh_name ty in
+        let eq = Expr.mk_eq ~iff:false k t in
         X.term_embed k, eq::acc
+      | Expr.Not_a_term _ -> assert false
 
   let make t =
     Timers.exec_timer_start Timers.M_AC Timers.F_make;
-    let x = match Term.view t with
-      | {Term.f= sy; xs=[a;b]; ty=ty} when Sy.is_ac sy ->
+    let x = match Expr.term_view t with
+      | Expr.Term {Expr.f= sy; xs=[a;b]; ty=ty} when Sy.is_ac sy ->
         let ra, ctx1 = X.make a in
         let rb, ctx2 = X.make b in
         let ra, ctx = abstract2 sy a ra (ctx1 @ ctx2) in
@@ -303,7 +304,7 @@ module Make (X : Sig.X) = struct
   (* Ne suffit pas. Il faut aussi prevoir le collapse ? *)
   (*try List.assoc xac acc, acc
     with Not_found ->
-    let v = X.term_embed (Term.fresh_name ac.t) in
+    let v = X.term_embed (Expr.fresh_name ac.t) in
     v, (xac, v) :: acc*)
 
 end

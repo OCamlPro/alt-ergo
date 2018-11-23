@@ -103,16 +103,14 @@ CMO-LIB = lib/util/config.cmo \
       lib/util/hconsing.cmo \
       lib/util/hstring.cmo \
       lib/structures/exception.cmo \
-      lib/structures/symbols.cmo \
       lib/structures/ty.cmo \
       lib/structures/parsed.cmo \
       lib/structures/errors.cmo \
+      lib/structures/symbols.cmo \
+      lib/structures/expr.cmo \
       lib/structures/typed.cmo \
-      lib/structures/literal.cmo \
-      lib/structures/term.cmo \
+      lib/structures/xliteral.cmo \
       lib/structures/fpa_rounding.cmo \
-      lib/structures/tliteral.cmo \
-      lib/structures/formula.cmo \
       lib/structures/satml_types.cmo \
       lib/structures/explanation.cmo \
       lib/structures/commands.cmo \

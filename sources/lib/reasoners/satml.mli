@@ -39,7 +39,7 @@ module type SAT_ML = sig
     t ->
     Satml_types.Atom.atom list list ->
     Satml_types.Atom.atom list list ->
-    Formula.t ->
+    Expr.t ->
     cnumber : int ->
     Satml_types.Atom.atom option Flat_Formula.Map.t -> dec_lvl:int ->
     unit

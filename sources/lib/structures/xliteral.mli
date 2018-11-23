@@ -26,7 +26,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type builtin =
+type builtin = Symbols.builtin =
     LE | LT (* arithmetic *)
 
 type 'a view = private

@@ -40,9 +40,7 @@ type ty_module =
   | M_Sum
   | M_Records
   | M_AC
-  | M_Formula
-  | M_Literal
-  | M_Term
+  | M_Expr
   | M_Triggers
   | M_Simplex
 
@@ -58,13 +56,11 @@ let mtag k = match k with
   | M_Sum    -> 8
   | M_Records-> 9
   | M_AC     -> 10
-  | M_Formula-> 11
-  | M_Literal-> 12
-  | M_Term   -> 13
-  | M_Triggers->14
-  | M_Simplex->15
+  | M_Expr-> 11
+  | M_Triggers->12
+  | M_Simplex->13
 
-let nb_mtag = 16
+let nb_mtag = 14
 
 type ty_function =
   | F_add
@@ -124,9 +120,7 @@ let string_of_ty_module k = match k with
   | M_Sum    -> "Sum"
   | M_Records-> "Records"
   | M_AC     -> "AC"
-  | M_Formula-> "Formula"
-  | M_Literal-> "Literal"
-  | M_Term   -> "Term"
+  | M_Expr-> "Expr"
   | M_Triggers->"Triggers"
   | M_Simplex->"Simplex"
 
@@ -299,9 +293,7 @@ let all_modules =
       M_Sum;
       M_Records;
       M_AC;
-      M_Formula;
-      M_Literal;
-      M_Term;
+      M_Expr;
       M_Triggers;
       M_Simplex;
     ]

@@ -38,9 +38,7 @@ type ty_module =
   | M_Sum
   | M_Records
   | M_AC
-  | M_Formula
-  | M_Literal
-  | M_Term
+  | M_Expr
   | M_Triggers
   | M_Simplex
 
