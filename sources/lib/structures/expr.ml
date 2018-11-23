@@ -766,7 +766,7 @@ let mk_or f1 f2 is_impl id =
   else if (equal f1 (vrai)) || (equal f2 (vrai)) then vrai
   else
     let f1, f2 = if is_impl || compare f1 f2 < 0 then f1, f2 else f2, f1 in
-    let d = (max f1.depth f2.depth) in (* the +1 causes regression *)
+    let d = 1 + max f1.depth f2.depth in
     let nb_nodes = f1.nb_nodes + f2.nb_nodes + 1 in
     let vars = SMap.union (fun _ a _ -> Some a) f1.vars f2.vars in
     let vty = Ty.Svty.union f1.vty f2.vty in
@@ -862,7 +862,7 @@ let mk_forall_ter =
           eprintf "[warning] (sub) axiom %s replaced with %s@." name q.name;
         lem
       with Not_found | Exit ->
-        let d = new_q.main.depth in (* + 1 ?? *)
+        let d = 1 + new_q.main.depth in (* + 1 ?? *)
         let nb_nodes = new_q.main.nb_nodes + 1 in
         (* prenex polymorphism. If sko_vty is not empty, then we are at
            toplevel and all free_vtys of lem.main are quantified in this
@@ -1167,7 +1167,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
 
       | Sy.Form (Sy.F_Unit b), _ ->
         begin match xs' with
-          | [u; v] -> mk_and u v false (*b*) 0
+          | [u; v] -> mk_and u v b 0
           | _ -> assert false
         end
 
@@ -1210,8 +1210,12 @@ and mk_let_aux ({let_v; let_e; in_e} as x) =
        not_an_app let_e then (* inline in these situations *)
       apply_subst_aux (SMap.singleton let_v let_e, Ty.esubst) in_e
     else
-      let d = max let_e.depth in_e.depth in (* no + 1 ? *)
-      let nb_nodes = let_e.nb_nodes + in_e.nb_nodes + 1 (* approx *) in
+      let d = 1 + let_e.depth + in_e.depth in
+      let occ_v =
+        try snd @@ SMap.find let_v in_e.vars
+        with Not_found -> assert false
+      in
+      let nb_nodes = occ_v * let_e.nb_nodes + in_e.nb_nodes + 1 in
       (* do not include free vars in let_sko that have been simplified *)
       let vars = merge_maps let_e.vars (SMap.remove let_v in_e.vars) in
       let vty = Ty.Svty.union let_e.vty in_e.vty in
