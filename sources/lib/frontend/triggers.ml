@@ -31,8 +31,6 @@ open Typed
 
 module Sy = Symbols
 
-type polarity = Pos | Neg
-
 module Vterm = Sy.Set
 module Vtype = Set.Make(struct type t=int let compare=Pervasives.compare end)
 
@@ -63,8 +61,6 @@ module STRS = Set.Make(
   end)
 
 let sort = List.sort (fun l1 l2 -> compare (List.length l1) (List.length l2))
-
-let neg_pol x = x (*function Pos -> Neg | Neg -> Pos*)
 
 let compare_tconstant c1 c2 =
   match c1, c2 with
@@ -268,137 +264,22 @@ let compare_tterm_list tl2 tl1 =
         ) tl1 tl2; 0
     with Out c -> c end
 
+let unique_stable_sort =
+  let rec unique l acc =
+    match l with
+    | [] -> List.rev acc
+    | [e] -> List.rev @@ e :: acc
+    | a::((b::_) as l) ->
+      if compare_tterm_list a b = 0 then unique l acc
+      else unique l (a :: acc)
+  in
+  fun l ->
+    unique (List.stable_sort compare_tterm_list l) []
 
-module Uniq_sort = struct
-  let rec merge cmp l1 l2 =
-    match l1, l2 with
-    | [], l2 -> l2
-    | l1, [] -> l1
-    | h1 :: t1, h2 :: t2 ->
-      let c = cmp h1 h2 in
-      if c = 0 then h1 :: merge cmp t1 t2
-      else if c < 0 then h1 :: merge cmp t1 l2
-      else h2 :: merge cmp l1 t2
-
-
-  let rec chop k l =
-    if k = 0 then l else begin
-      match l with
-      | x::t -> chop (k-1) t
-      | _ -> assert false
-    end
-  ;;
-
-  let stable_sort cmp l =
-    let rec rev_merge l1 l2 accu =
-      match l1, l2 with
-      | [], l2 -> List.rev_append l2 accu
-      | l1, [] -> List.rev_append l1 accu
-      | h1::t1, h2::t2 ->
-        let c = cmp h1 h2 in
-        if c = 0 then rev_merge t1 t2 (h1::accu)
-        else if c < 0 then rev_merge t1 l2 (h1::accu)
-        else rev_merge l1 t2 (h2::accu)
-    in
-    let rec rev_merge_rev l1 l2 accu =
-      match l1, l2 with
-      | [], l2 -> List.rev_append l2 accu
-      | l1, [] -> List.rev_append l1 accu
-      | h1::t1, h2::t2 ->
-        let c = cmp h1 h2 in
-        if c = 0 then rev_merge_rev t1 t2 (h1::accu)
-        else if c > 0 then rev_merge_rev t1 l2 (h1::accu)
-        else rev_merge_rev l1 t2 (h2::accu)
-    in
-    let rec sort n l =
-      match n, l with
-      | 2, x1 :: x2 :: _ ->
-        let c = cmp x1 x2 in
-        if c = 0 then [x1]
-        else if c < 0 then [x1; x2] else [x2; x1]
-      | 3, x1 :: x2 :: x3 :: _ ->
-        let c = cmp x1 x2 in
-        if c = 0 then begin
-          let c = cmp x2 x3 in
-          if c = 0 then [x1]
-          else if c <= 0 then [x1; x3]
-          else [x3; x1]
-        end
-        else if c < 0 then begin
-          let c = cmp x2 x3 in
-          if c = 0 then [x1; x2]
-          else if c < 0 then [x1; x2; x3]
-          else
-            let c = cmp x1 x3 in
-            if c = 0 then [x1; x2]
-            else if c < 0 then [x1; x3; x2]
-            else [x3; x1; x2]
-        end else begin
-          let c = cmp x1 x3 in
-          if c = 0 then [x2; x1]
-          else if c < 0 then [x2; x1; x3]
-          else
-            let c = cmp x2 x3 in
-            if c = 0 then [x2; x1]
-            else if c < 0 then [x2; x3; x1]
-            else [x3; x2; x1]
-        end
-      | n, l ->
-        let n1 = n asr 1 in
-        let n2 = n - n1 in
-        let l2 = chop n1 l in
-        let s1 = rev_sort n1 l in
-        let s2 = rev_sort n2 l2 in
-        rev_merge_rev s1 s2 []
-    and rev_sort n l =
-      match n, l with
-      | 2, x1 :: x2 :: _ ->
-        let c = cmp x1 x2 in
-        if c = 0 then [x1]
-        else if c > 0 then [x1; x2] else [x2; x1]
-      | 3, x1 :: x2 :: x3 :: _ ->
-        let c = cmp x1 x2 in
-        if c = 0 then begin
-          let c = cmp x2 x3 in
-          if c = 0 then [x1]
-          else if c > 0 then [x1; x3]
-          else [x3; x1]
-        end
-        else if c > 0 then begin
-          let c = cmp x2 x3 in
-          if c = 0 then [x1; x2]
-          else if c > 0 then [x1; x2; x3]
-          else
-            let c = cmp x1 x3 in
-            if c = 0 then [x1; x2]
-            else if c > 0 then [x1; x3; x2]
-            else [x3; x1; x2]
-        end else begin
-          let c = cmp x1 x3 in
-          if c = 0 then [x2; x1]
-          else if c > 0 then [x2; x1; x3]
-          else
-            let c = cmp x2 x3 in
-            if c = 0 then [x2; x1]
-            else if c > 0 then [x2; x3; x1]
-            else [x3; x2; x1]
-        end
-      | n, l ->
-        let n1 = n asr 1 in
-        let n2 = n - n1 in
-        let l2 = chop n1 l in
-        let s1 = sort n1 l in
-        let s2 = sort n2 l2 in
-        rev_merge s1 s2 []
-    in
-    let len = List.length l in
-    if len < 2 then l else sort len l
-end
-
-
+(*****************************************************************************)
 
 let at_most n l =
-  let l = Uniq_sort.stable_sort compare_tterm_list l in
+  let l = unique_stable_sort l in
   let rec atmost acc n l =
     match n, l with
     | n, _ when n <= 0 -> acc
@@ -597,13 +478,13 @@ let underscoring_mt bv mt =
   let underscores = ref Vterm.empty in
   List.map (underscoring_term mvars underscores) mt
 
-let multi_triggers gopt bv vty trs escaped_vars =
+let multi_triggers bv vty trs escaped_vars =
   let terms = simplification bv vty trs in
   let l_parties = parties bv vty terms escaped_vars in
   let lm = List.map (fun (lt, _, _) -> lt) l_parties in
   let mv , mt = List.partition (List.exists is_var) lm in
   let mv , mt = sort mv , sort mt in
-  let lm = if gopt || triggers_var () then mt@mv else mt in
+  let lm = if triggers_var () then mt@mv else mt in
   let m = at_most (nb_triggers ()) lm in
   at_most (nb_triggers ()) m
 
@@ -797,21 +678,19 @@ let filter_good_triggers (bv, vty) =
        let s2 = List.fold_left vty_term Vtype.empty l in
        Vterm.subset bv s1 && Vtype.subset vty s2 )
 
-let make_triggers gopt vterm vtype trs escaped_vars =
+let make_triggers vterm vtype trs escaped_vars =
   let l = match List.filter (filter_mono vterm vtype) trs with
-    | [] -> multi_triggers gopt vterm vtype trs escaped_vars
+    | [] -> multi_triggers vterm vtype trs escaped_vars
     | trs' ->
       let f l = at_most (nb_triggers ()) (List.map (fun (t, _, _) -> [t]) l) in
       let trs_v, trs_nv = List.partition (fun (t, _, _) -> is_var t) trs' in
       let ll =
         if trs_nv == [] then
-          if triggers_var () || gopt then
-            f trs_v
+          if triggers_var () then f trs_v
           else [] (*multi_triggers vars trs*)
         else f trs_nv
       in
-      if greedy () || gopt then
-        ll@(multi_triggers gopt vterm vtype trs escaped_vars)
+      if greedy () then ll@(multi_triggers vterm vtype trs escaped_vars)
       else ll
   in
   Lists.rrmap (fun e -> e, false) l
@@ -831,8 +710,11 @@ let check_triggers trs (bv, vty) =
     trs;
   trs
 
-let rec make_rec ~keep_triggers pol gopt vterm vtype f =
+(*****************************************************************************)
+
+let rec make_rec ~in_theory vterm vtype f =
   let c, trs, full_trs = match f.c with
+    (* Atoms true and false *)
     | TFatom {c = (TAfalse | TAtrue)} ->
       f.c, STRS.empty, STRS.empty
     | TFatom a ->
@@ -841,29 +723,8 @@ let rec make_rec ~keep_triggers pol gopt vterm vtype f =
       else
         begin
           let l = match a.c with
-            | TAeq l when pol == Neg ->
-              let v =
-                {tt_desc = TTapp(Sy.fake_eq, l); tt_ty = Ty.Tbool}
-              in
-              [ { c = v; annot = a.annot } ]
-            | TAneq l when pol == Neg ->
-              let v =
-                { tt_desc = TTapp(Sy.fake_neq, l); tt_ty = Ty.Tbool}
-              in
-              [ { c = v; annot = a.annot } ]
-            | TAle l when pol == Neg ->
-              let v =
-                { tt_desc = TTapp(Sy.fake_le, l); tt_ty = Ty.Tbool}
-              in
-              [ { c = v; annot = a.annot } ]
-            | TAlt l when pol == Neg ->
-              let v =
-                { tt_desc = TTapp(Sy.fake_lt, l); tt_ty = Ty.Tbool}
-              in
-              [ { c = v; annot = a.annot } ]
             | TAle l | TAlt l | TAeq l | TAneq l -> l
             | TApred (t,_) -> [t]
-            | TAdistinct l when pol == Neg -> l
             | _ -> []
           in
           let res = potential_triggers (vterm, vtype) l in
@@ -871,14 +732,12 @@ let rec make_rec ~keep_triggers pol gopt vterm vtype f =
         end
     | TFop (OPimp, [f1; f2]) ->
 
-      let f1, trs1, f_trs1 =
-        make_rec ~keep_triggers (neg_pol pol) gopt vterm vtype f1 in
-      let f2, trs2, f_trs2 = make_rec ~keep_triggers pol gopt vterm vtype f2 in
+      let f1, trs1, f_trs1 = make_rec ~in_theory vterm vtype f1 in
+      let f2, trs2, f_trs2 = make_rec ~in_theory vterm vtype f2 in
       TFop(OPimp, [f1; f2]), STRS.union trs1 trs2, STRS.union f_trs1 f_trs2
 
     | TFop (OPnot, [f1]) ->
-      let f1, trs1, f_trs1 =
-        make_rec ~keep_triggers (neg_pol pol) gopt vterm vtype f1 in
+      let f1, trs1, f_trs1 = make_rec ~in_theory vterm vtype f1 in
       TFop(OPnot, [f1]), trs1, f_trs1
 
     (* | OPiff
@@ -888,8 +747,7 @@ let rec make_rec ~keep_triggers pol gopt vterm vtype f =
       let lf, trs, f_trs =
         List.fold_left
           (fun (lf, trs1, f_trs1) f ->
-             let f, trs2, f_trs2 =
-               make_rec ~keep_triggers pol gopt vterm vtype f in
+             let f, trs2, f_trs2 = make_rec ~in_theory vterm vtype f in
              f::lf, STRS.union trs1 trs2, STRS.union f_trs1 f_trs2
           ) ([], STRS.empty, STRS.empty) lf
       in
@@ -904,33 +762,29 @@ let rec make_rec ~keep_triggers pol gopt vterm vtype f =
 
       let vterm'' = Vterm.union vterm vterm' in
       let vtype'' = Vtype.union vtype vtype' in
-      let f1', trs1, f_trs1 =
-        make_rec ~keep_triggers pol gopt vterm'' vtype'' f1
-      in
-      let f2', trs2, f_trs2 =
-        make_rec ~keep_triggers pol gopt vterm'' vtype'' f2
-      in
+      let f1', trs1, f_trs1 = make_rec ~in_theory vterm'' vtype'' f1 in
+      let f2', trs2, f_trs2 = make_rec ~in_theory vterm'' vtype'' f2 in
       let trs12 =
-        if keep_triggers then check_triggers qf.qf_triggers (vterm', vtype')
+        if in_theory then check_triggers qf.qf_triggers (vterm', vtype')
         else if Options.no_user_triggers () || qf.qf_triggers == [] then
           begin
-            (make_triggers false vterm' vtype' (STRS.elements trs1) false)@
-            (make_triggers false vterm' vtype' (STRS.elements trs2) false)
+            (make_triggers vterm' vtype' (STRS.elements trs1) false)@
+            (make_triggers vterm' vtype' (STRS.elements trs2) false)
           end
         else
           begin
             let lf = filter_good_triggers (vterm', vtype') qf.qf_triggers in
             if lf != [] then lf
             else
-              (make_triggers false vterm' vtype' (STRS.elements trs1) false)@
-              (make_triggers false vterm' vtype' (STRS.elements trs2) false)
+              (make_triggers vterm' vtype' (STRS.elements trs1) false)@
+              (make_triggers vterm' vtype' (STRS.elements trs2) false)
           end
       in
       let trs12 =
         if trs12 != [] then trs12
         else (* allow vars to escape their scope *)
-          (make_triggers false vterm' vtype' (STRS.elements f_trs1) true)@
-          (make_triggers false vterm' vtype' (STRS.elements f_trs2) true)
+          (make_triggers vterm' vtype' (STRS.elements f_trs1) true)@
+          (make_triggers vterm' vtype' (STRS.elements f_trs2) true)
       in
       let trs = STRS.union trs1 trs2 in
       let f_trs = STRS.union trs (STRS.union f_trs1 f_trs2) in
@@ -956,20 +810,20 @@ let rec make_rec ~keep_triggers pol gopt vterm vtype f =
         List.fold_left
           (fun b (s,_) -> Vterm.add s b) Vterm.empty qf.qf_bvars in
       let f', trs, f_trs =
-        make_rec ~keep_triggers pol gopt
+        make_rec ~in_theory
           (Vterm.union vterm vterm') (Vtype.union vtype vtype') qf.qf_form in
       let trs' =
-        if keep_triggers then check_triggers qf.qf_triggers (vterm', vtype')
+        if in_theory then check_triggers qf.qf_triggers (vterm', vtype')
         else if Options.no_user_triggers () || qf.qf_triggers == [] then
-          make_triggers gopt vterm' vtype' (STRS.elements trs) false
+          make_triggers vterm' vtype' (STRS.elements trs) false
         else
           let lf = filter_good_triggers (vterm',vtype') qf.qf_triggers in
           if lf != [] then lf
-          else make_triggers gopt vterm' vtype' (STRS.elements trs) false
+          else make_triggers vterm' vtype' (STRS.elements trs) false
       in
       let trs' = (* allow vars to escape their scope *)
         if trs' != [] then trs'
-        else make_triggers gopt vterm' vtype' (STRS.elements f_trs) true
+        else make_triggers vterm' vtype' (STRS.elements f_trs) true
       in
       let f_trs = STRS.union trs f_trs in
       let trs =
@@ -983,7 +837,7 @@ let rec make_rec ~keep_triggers pol gopt vterm vtype f =
       end
 
     | TFlet (up, binders, f) ->
-      let f, trs, f_trs = make_rec ~keep_triggers pol gopt vterm vtype f in
+      let f, trs, f_trs = make_rec ~in_theory vterm vtype f in
       let binders, trs, f_trs =
         List.fold_left
           (fun (binders, trs, f_trs) (sy, e) ->
@@ -994,9 +848,7 @@ let rec make_rec ~keep_triggers pol gopt vterm vtype f =
                STRS.union trs res,
                STRS.union f_trs res
              | TletForm flet ->
-               let flet', trs', f_trs' =
-                 make_rec ~keep_triggers pol gopt vterm vtype flet
-               in
+               let flet', trs', f_trs' = make_rec ~in_theory vterm vtype flet in
                (sy, TletForm flet') :: binders,
                STRS.union trs trs',
                STRS.union f_trs f_trs'
@@ -1005,29 +857,30 @@ let rec make_rec ~keep_triggers pol gopt vterm vtype f =
       TFlet (up, binders, f), trs, f_trs
 
     | TFnamed(lbl, f) ->
-      let f, trs, f_trs = make_rec ~keep_triggers pol gopt vterm vtype f in
+      let f, trs, f_trs = make_rec ~in_theory vterm vtype f in
       TFnamed(lbl, f), trs, f_trs
   in
   { f with c = c }, trs, full_trs
 
-let make ~keep_triggers gopt f = match f.c with
+let make ~in_theory f = match f.c with
   | TFforall _ | TFexists _ ->
     let f, _, _ =
-      make_rec ~keep_triggers Pos gopt Vterm.empty Vtype.empty f
+      make_rec ~in_theory Vterm.empty Vtype.empty f
     in
     f
   | _  ->
     let vty = vty_form Vtype.empty f in
-    let f, trs, f_trs = make_rec ~keep_triggers Pos gopt Vterm.empty vty f in
+    let f, trs, f_trs =
+      make_rec ~in_theory Vterm.empty vty f in
     if Vtype.is_empty vty then f
     else
       let trs = STRS.elements trs in
-      if keep_triggers then
+      if in_theory then
         failwith "No polymorphism in use-defined theories.";
-      let trs = make_triggers gopt Vterm.empty vty trs false in
+      let trs = make_triggers Vterm.empty vty trs false in
       let trs =
         if trs != [] then trs
-        else make_triggers gopt Vterm.empty vty (STRS.elements f_trs) true
+        else make_triggers Vterm.empty vty (STRS.elements f_trs) true
       in
       { f with
         c = TFforall
@@ -1037,26 +890,26 @@ let make ~keep_triggers gopt f = match f.c with
 let make_decl ({ c; _ } as d) =
   match c with
   | TAxiom (loc, name, kind, f) ->
-    let f' = make ~keep_triggers:false false f in
+    let f' = make ~in_theory:false f in
     { d with c = TAxiom (loc, name, kind, f') }
   | TGoal (loc, sort, name, f) ->
-    let f' = make ~keep_triggers:false true f in
+    let f' = make ~in_theory:false f in
     { d with c = TGoal (loc, sort, name, f') }
   | TTheory (loc, name, exts, l) ->
     let l' =
       List.map (fun d' ->
           match d'.c with
           | TAxiom (loc', name', kind', f') ->
-            let f'' = make ~keep_triggers:true false f' in
+            let f'' = make ~in_theory:true f' in
             { d' with c = TAxiom (loc', name', kind', f'') }
           | _ -> d'
         ) l
     in
     { d with c = TTheory (loc, name, exts, l') }
   | TPredicate_def (loc, name, l, f) ->
-    let f' = make ~keep_triggers:false false f in
+    let f' = make ~in_theory:false f in
     { d with c = TPredicate_def (loc, name, l, f') }
   | TFunction_def (loc, name, l, ty, f) ->
-    let f' = make ~keep_triggers:false false f in
+    let f' = make ~in_theory:false f in
     { d with c = TFunction_def (loc, name, l, ty, f') }
   | _ -> d
