@@ -49,6 +49,7 @@ and view = {
   vty : Ty.Svty.t;
   depth: int;
   nb_nodes : int;
+  pure : bool;
   mutable neg : t option
 }
 
@@ -392,17 +393,10 @@ let rec print_silent fmt t =
 
       | Sy.F_Lemma, [], B_lemma {triggers ; main ; name ; binders} ->
         if verbose () then
-          let first = ref true in
           fprintf fmt "(lemma: %s forall %a[%a].@  %a)"
             name
             print_binders binders
-            (fun fmt ->
-               List.iter (fun {content=l} ->
-                   fprintf fmt "%s%a"
-                     (if !first then "" else " | ") print_list l;
-                   first := false;
-                 ))
-            triggers print_silent main
+            print_triggers triggers print_silent main
         else
           fprintf fmt "(lem %s)" name
 
@@ -517,6 +511,15 @@ and print_list_sep sep fmt = function
 
 and print_list fmt = print_list_sep "," fmt
 
+and print_triggers fmt trs =
+  let first = ref true in
+  List.iter (fun {content=l} ->
+      fprintf fmt "%s%a"
+        (if !first then "" else " | ") print_list l;
+      first := false;
+    ) trs
+
+
 (** Some auxiliary functions *)
 
 let type_info t = t.ty
@@ -566,7 +569,7 @@ let rec is_positive e =
   let {f; xs; ty; bind} = e in
   match f, bind with
   | Sy.Lit (Sy.L_neg_pred | Sy.L_neg_eq | Sy.L_neg_built _), _ -> false
-  | Sy.Form (Sy.F_Clause _ | Sy.F_Skolem), _ -> false
+  | Sy.Form (Sy.F_Clause _ | Sy.F_Skolem | Sy.F_Xor), _ -> false
   | Sy.Form Sy.F_Let, B_let {in_e} -> is_positive in_e
   | _ -> true
 
@@ -666,9 +669,15 @@ let mk_term s l ty =
   let nb_nodes = List.fold_left (fun z t -> z + t.nb_nodes) 1 l in
   let vars = free_vars_non_form s l ty in
   let vty = free_type_vars_non_form l ty in
+  let pure =
+    List.for_all (fun e -> e.pure) l &&
+    match s with
+    | Sy.Name(hs, Sy.Other) -> not (String.equal (Hstring.view hs) "ite")
+    | _ -> true
+  in
   let pos =
     HC.make {f=s; xs=l; ty=ty; depth=d; tag= -42; vars; vty;
-             nb_nodes; neg = None; bind = B_none}
+             nb_nodes; neg = None; bind = B_none; pure}
   in
   if ty != Ty.Tbool then pos
   else if pos.neg != None then pos
@@ -676,7 +685,7 @@ let mk_term s l ty =
     let neg_s = Sy.Lit Sy.L_neg_pred in
     let neg =
       HC.make {f=neg_s; xs=[pos]; ty=ty; depth=d; tag= -42;
-               vars; vty; nb_nodes; neg = None; bind = B_none}
+               vars; vty; nb_nodes; neg = None; bind = B_none; pure = false}
     in
     assert (neg.neg == None);
     pos.neg <- Some neg;
@@ -691,12 +700,14 @@ let vrai =
     let faux =
       HC.make
         {f = Sy.False; xs = []; ty = Ty.Tbool; depth = -2; (*smallest depth*)
-         tag = -42; vars; vty; nb_nodes; neg = None; bind = B_none}
+         tag = -42; vars; vty; nb_nodes; neg = None; bind = B_none;
+         pure = true}
     in
     let vrai =
       HC.make
         {f = Sy.True;  xs = []; ty = Ty.Tbool; depth = -1; (*2nd smallest d*)
-         tag= -42; vars; vty; nb_nodes; neg = None; bind = B_none}
+         tag= -42; vars; vty; nb_nodes; neg = None; bind = B_none;
+         pure = true}
     in
     assert (vrai.neg == None);
     assert (faux.neg == None);
@@ -758,7 +769,7 @@ let mk_or f1 f2 is_impl id =
     let pos =
       HC.make {f=Sy.Form (Sy.F_Clause is_impl); xs=[f1; f2]; ty=Ty.Tbool;
                depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-               bind = B_none}
+               bind = B_none; pure = false}
     in
     if pos.neg != None then pos
     else
@@ -766,7 +777,7 @@ let mk_or f1 f2 is_impl id =
         HC.make
           {f=Sy.Form (Sy.F_Unit is_impl); xs=[neg f1; neg f2]; ty=Ty.Tbool;
            depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-           bind = B_none}
+           bind = B_none; pure = false}
       in
       assert (neg.neg == None);
       pos.neg <- Some neg;
@@ -788,7 +799,7 @@ let mk_iff f1 f2 id =
     let pos =
       HC.make {f=Sy.Form Sy.F_Iff; xs=[f1; f2]; ty=Ty.Tbool;
                depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-               bind = B_none}
+               bind = B_none; pure = false}
     in
     if pos.neg != None then pos
     else
@@ -796,7 +807,7 @@ let mk_iff f1 f2 id =
         HC.make
           {f=Sy.Form Sy.F_Xor; xs=[f1; f2]; ty=Ty.Tbool;
            depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-           bind = B_none}
+           bind = B_none; pure = false}
       in
       assert (neg.neg == None);
       pos.neg <- Some neg;
@@ -865,12 +876,12 @@ let mk_forall_ter =
         let pos =
           HC.make {f=Sy.Form Sy.F_Lemma; xs=[]; ty=Ty.Tbool;
                    depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-                   bind = B_lemma new_q}
+                   bind = B_lemma new_q; pure = false}
         in
         let neg =
           HC.make {f=Sy.Form Sy.F_Skolem; xs=[]; ty=Ty.Tbool;
                    depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-                   bind = B_skolem sko}
+                   bind = B_skolem sko; pure = false}
         in
         pos.neg <- Some neg;
         neg.neg <- Some pos;
@@ -934,13 +945,18 @@ let is_non_atomic_form e = match e.f with
   | Sy.Form _ -> true
   | _ -> false
 
+(* intended to be used for mk_eq or mk_builtin only *)
 let mk_positive_lit s neg_s l =
   let ty = Ty.Tbool in
-  assert (match s with
-      | Sy.Form _ -> false
-      | Sy.Lit (Sy.L_neg_eq | Sy.L_neg_built _ | Sy.L_neg_pred) -> false
-      | _ -> true
-    );
+  assert (
+    let open Sy in
+    match s with
+    | Lit (L_eq | L_built _) -> true
+    | Lit (L_neg_eq | L_neg_pred | L_neg_built _) -> false
+    | Form _ -> false
+    | True | False | Void | Name _ | Int _ | Real _ | Bitv _
+    | Op _ | Var _ | In _ | MapsTo _ -> false
+  );
   let d = 1 + List.fold_left (fun z t -> max z t.depth) 0 l in
   let nb_nodes = List.fold_left (fun z t -> z + t.nb_nodes) 1 l in
   let vars = free_vars_non_form s l ty in
@@ -948,14 +964,14 @@ let mk_positive_lit s neg_s l =
   let pos =
     HC.make {f=s; xs=l; ty=ty; depth=d; tag= -42; vars; vty;
              nb_nodes; neg = None;
-             bind = B_none}
+             bind = B_none; pure = false}
   in
   if pos.neg != None then pos
   else
     let neg =
       HC.make {f=neg_s; xs=l; ty=ty; depth=d; tag= -42;
                vars; vty; nb_nodes; neg = None;
-               bind = B_none}
+               bind = B_none; pure = false}
     in
     assert (neg.neg == None);
     pos.neg <- Some neg;
@@ -1197,12 +1213,12 @@ and mk_let_aux ({let_v; let_e; in_e} as x) =
       let pos =
         HC.make {f=Sy.Form Sy.F_Let; xs=[]; ty=Ty.Tbool;
                  depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-                 bind = B_let x}
+                 bind = B_let x; pure = false}
       in
       let neg =
         HC.make {f=Sy.Form Sy.F_Let; xs=[]; ty=Ty.Tbool;
                  depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-                 bind = B_let y}
+                 bind = B_let y; pure = false}
       in
       pos.neg <- Some neg;
       neg.neg <- Some pos;
