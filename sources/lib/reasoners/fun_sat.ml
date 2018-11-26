@@ -147,7 +147,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        - ex is the explanation associated to the formula
        - dlvl is the decision level where the formula was assumed to true
        - plvl is the propagation level (w.r.t. dlvl) of the formula.
-       It forms with dlvl a total ordering on the formulas in gamma.
+         It forms with dlvl a total ordering on the formulas in gamma.
     *)
     gamma : (E.gformula * Ex.t * int * int) ME.t;
     nb_related_to_goal : int;
@@ -216,6 +216,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | E.Unit _    -> "conjunction"
           | E.Skolem _  -> "skolem"
           | E.Literal _ -> "literal"
+          | E.Iff _ -> "iff"
+          | E.Xor _ -> "xor"
           | E.Let _ -> "let"
         in
         fprintf fmt "[sat] the following %s is unsat ? :@.%a@.@."
@@ -240,7 +242,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             let n = match lem with
               | None -> ""
               | Some ff ->
-                (match E.form_view ff with E.Lemma xx -> xx.E.name | _ -> "")
+                (match E.form_view ff with
+                 | E.Lemma xx -> xx.E.name
+                 | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+                 | E.Let _ | E.Iff _ | E.Xor _ -> ""
+                 | E.Not_a_form -> assert false)
             in
             fprintf fmt "LITERAL (%s : %s) %a@." n s E.print a;
             fprintf fmt "==========================================@.@."
@@ -251,7 +257,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                             (E.size f) E.print f
           | E.Skolem _ -> fprintf fmt "skolem %a@." E.print f
           | E.Let _ -> fprintf fmt "let-in %a@." E.print f
-
+          | E.Iff _ ->  fprintf fmt "equivalence %a@." E.print f
+          | E.Xor _ ->  fprintf fmt "neg-equivalence/xor %a@." E.print f
         end;
         if verbose () then
           fprintf fmt "with explanations : %a@." Explanation.print dep
@@ -345,7 +352,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     not (ME.mem f env.gamma)
     && begin match E.form_view orig with
       | E.Lemma _ -> env.add_inst orig
-      | _ -> true
+      | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+      | E.Let _ | E.Iff _ | E.Xor _ -> true
+      | E.Not_a_form -> assert false
     end
 
   let inst_predicates use_cs backward env inst tbox selector ilvl =
@@ -365,7 +374,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       raise (IUnsat (expl, classes))
 
   let is_literal f =
-    match E.form_view f with E.Literal _ -> true | _ -> false
+    match E.form_view f with
+    | E.Literal _ -> true
+    | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
+    | E.Let _ | E.Iff _ | E.Xor _ -> false
+    | E.Not_a_form -> assert false
 
   let extract_prop_model t =
     let s = ref SE.empty in
@@ -559,7 +572,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            match E.form_view f with
            | E.Lemma {E.name; loc} ->
              Profiling.conflicting_instance name loc
-           | _ -> ()
+           | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+           | E.Let _ | E.Iff _ | E.Xor _ -> ()
+           | E.Not_a_form -> assert false
         )(Ex.formulas_of exp)
 
   let do_case_split env origin =
@@ -642,7 +657,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           if Options.profiling() then Profiling.elim false;
         end;
       ans
-    | _ -> No
+    | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
+    | E.Let _ | E.Iff _ | E.Xor _ -> No
+    | E.Not_a_form -> assert false
 
   let red tcp_cache tmp_cache ff env tcp =
     let nf = E.neg ff.E.ff in
@@ -663,7 +680,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           let ans = query_of tcp_cache tmp_cache nff a env in
           if ans != No then Options.tool_req 2 "TR-Sat-Bcp-Red-2";
           ans, false
-        | _ -> No, false
+        | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
+        | E.Let _ | E.Iff _ | E.Xor _ -> No, false
+        | E.Not_a_form -> assert false
 
   let red tcp_cache tmp_cache ff env tcp =
     match red tcp_cache tmp_cache ff env tcp with
@@ -682,67 +701,26 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         | None ->
           No, b
 
-  let factorize_iff a_t f =
-    let not_at = E.neg a_t in
-    match E.form_view f with
-    | E.Unit(f1, f2) ->
-      begin
-        match E.form_view f1, E.form_view f2 with
-        | E.Clause(g11, g12, _), E.Clause(g21, g22, _) ->
-          let ng21 = E.neg g21 in
-          let ng22 = E.neg g22 in
-          assert (E.equal g11 ng21 || E.equal g11 ng22);
-          assert (E.equal g12 ng21 || E.equal g12 ng22);
-          if E.equal g21 not_at then g22
-          else if E.equal ng21 not_at then E.neg g22
-          else
-          if E.equal g22 not_at then g21
-          else if E.equal ng22 not_at then E.neg g21
-          else assert false
-        | _ -> assert false
-      end
-    | E.Literal a ->
-      begin
-        match E.lit_view a with
-        | E.Pred (t, b) -> if b then E.faux else E.vrai
-        | _ -> assert false
-      end
-    | _ -> assert false
-
-  let pred_def env f name dep loc =
-    Debug.pred_def f;
-    let a_t = E.mk_term (Symbols.name name) [] Ty.Tbool in
-    if not (SE.mem a_t (E.max_ground_terms_rec_of_form f)) then
-      {env with
-       inst = Inst.add_predicate env.inst (mk_gf f name true false) dep }
-    else
-      begin
-        assert (not (ME.mem a_t env.ground_preds));
-        let f_simpl = factorize_iff a_t f in
-        let gp = ME.add a_t (f_simpl, dep) env.ground_preds in
-        let gp = ME.add (E.neg a_t) (E.neg f_simpl, dep) gp in
-        {env with ground_preds = gp}
-      end
-
-
   let add_dep f dep =
     match E.form_view f with
-    | E.Literal _ when unsat_core () ->
-      if not (Ex.mem (Ex.Bj f) dep) then
-        Ex.union (Ex.singleton (Ex.Dep f)) dep
+    | E.Literal _ ->
+      if not (unsat_core ()) || Ex.mem (Ex.Bj f) dep then dep
+      else Ex.union (Ex.singleton (Ex.Dep f)) dep
+    | E.Clause _ ->
+      if unsat_core () then Ex.union (Ex.singleton (Ex.Dep f)) dep
       else dep
-    | E.Clause _ when unsat_core () ->
-      Ex.union (Ex.singleton (Ex.Dep f)) dep
-    | _ -> dep
-
+    | E.Unit _ | E.Lemma _ | E.Skolem _ | E.Let _ | E.Iff _ | E.Xor _ -> dep
+    | E.Not_a_form -> assert false
 
   let rec add_dep_of_formula f dep =
     let dep = add_dep f dep in
     match E.form_view f with
-    | E.Unit (f1, f2) when unsat_core () ->
-      add_dep_of_formula f2 (add_dep_of_formula f1 dep)
-    | _ -> dep
-
+    | E.Unit (f1, f2) ->
+      if not (unsat_core ()) then dep
+      else add_dep_of_formula f2 (add_dep_of_formula f1 dep)
+    | E.Lemma _ | E.Clause _ | E.Literal _ | E.Skolem _
+    | E.Let _ | E.Iff _ | E.Xor _ -> dep
+    | E.Not_a_form -> assert false
 
   (* currently:
      => this is not done modulo theories
@@ -949,6 +927,26 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            let env = update_nb_related env ff in
            match E.form_view f with
            | E.Not_a_form -> assert false
+           | E.Iff (f1, f2) ->
+             let id = E.id f in
+             let g = E.elim_iff f1 f2 id ~with_conj:true in
+             if Options.tableaux_cdcl () then begin
+               let f_imp_g = E.mk_imp f g id in
+               (* correct to put <-> ?*)
+               cdcl_assume false env [{ff with E.ff=f_imp_g}, Ex.empty]
+             end;
+             asm_aux (env, true, tcp, ap_delta, lits) [{ff with E.ff = g}, dep]
+
+           | E.Xor (f1, f2) ->
+             let id = E.id f in
+             let g = E.elim_iff f1 f2 id ~with_conj:false |> E.neg in
+             if Options.tableaux_cdcl () then begin
+               let f_imp_g = E.mk_imp f g id in
+               (* should do something similar for Let ? *)
+               cdcl_assume false env [{ff with E.ff=f_imp_g}, Ex.empty]
+             end;
+             asm_aux (env, true, tcp, ap_delta, lits) [{ff with E.ff = g}, dep]
+
            | E.Unit (f1, f2) ->
              Options.tool_req 2 "TR-Sat-Assume-U";
              let lst = [{ff with E.ff=f1},dep ; {ff with E.ff=f2},dep] in
@@ -1208,9 +1206,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                  fprintf fmt "Bad inst ! Hyp %a is not true !@." E.print f;
                  assert false
              end
-           | _ ->
+           | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
+           | E.Let _ | E.Iff _ | E.Xor _ ->
              Format.eprintf
                "Currently, arbitrary formulas in Hyps are not Th-reduced@.";
+             assert false
+           | E.Not_a_form ->
              assert false
         )(dep, acc) hyp
     in
@@ -1222,7 +1223,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | E.Not_a_form -> assert false
       | E.Literal _ -> true
       | E.Unit(f1, f2) -> aux f1 && aux f2
-      | E.Clause _ -> false
+      | E.Clause _ | E.Iff _ | E.Xor _ -> false
       | E.Lemma _ | E.Skolem _ | E.Let _ ->
         (*failwith "Not in current theory axioms"*)
         false
@@ -1644,6 +1645,42 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Debug.bottom classes;
       raise (Unsat d)
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
+
+
+  let factorize_iff a_t f =
+    if E.equal a_t f then E.vrai
+    else if E.equal (E.neg a_t) f then E.faux
+    else match E.form_view f with
+      | E.Iff(f1, f2) ->
+        if E.equal f1 a_t then f2
+        else if E.equal f2 a_t then f1
+        else assert false
+      | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
+      | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ -> assert false
+
+  let pred_def env f name dep loc =
+    Debug.pred_def f;
+    let gf = mk_gf f name true false in
+    let a_t = E.mk_term (Symbols.name name) [] Ty.Tbool in
+    if not (SE.mem a_t (E.max_ground_terms_rec_of_form f)) then
+      {env with
+       inst = Inst.add_predicate env.inst gf dep }
+    else
+      begin
+        assert (not (ME.mem a_t env.ground_preds));
+        if E.equal a_t f || E.equal (E.neg a_t) f then assume env gf dep
+        else match E.form_view f with
+          | E.Iff(f1, f2) ->
+            let f_simpl =
+              if E.equal f1 a_t then f2
+              else (if E.equal f2 a_t then f1 else assert false)
+            in
+            let gp = ME.add a_t (f_simpl, dep) env.ground_preds in
+            let gp = ME.add (E.neg a_t) (E.neg f_simpl, dep) gp in
+            {env with ground_preds = gp}
+          | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
+          | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ -> assert false
+      end
 
   let unsat env fg =
     if Options.timers() then

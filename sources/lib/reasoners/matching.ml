@@ -188,7 +188,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
             (* - l'age d'un terme est le min entre l'age passe en argument
                et l'age dans la map
                - un terme est en lien avec le but de la PO seulement s'il
-               ne peut etre produit autrement (d'ou le &&)
+                 ne peut etre produit autrement (d'ou le &&)
                - le lemme de provenance est le dernier lemme
             *)
             let g, b =
@@ -572,7 +572,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
                 add_trigger info env
              ) env tgs
 
-         | _ -> assert false
+         | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+         | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
       ) formulas env
 
   let terms_info env = env.info, env.fils

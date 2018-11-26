@@ -94,7 +94,10 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     let new_facts_of_axiom ax insts_ok =
       if debug_matching () >= 1 && insts_ok != ME.empty then
         let name = match Expr.form_view ax with
-            E.Lemma {E.name=s} -> s | _ -> "!(no-name)"
+          | E.Lemma {E.name=s} -> s
+          | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+          | E.Let _ | E.Iff _ | E.Xor _ -> "!(no-name)"
+          | E.Not_a_form -> assert false
         in
         fprintf fmt "[Instances.split_and_filter_insts] ";
         fprintf fmt "%3d different new instances generated for %s@."
@@ -133,7 +136,8 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   let record_this_instance f accepted lorig =
     match Expr.form_view lorig with
     | E.Lemma {E.name;loc} -> Profiling.new_instance_of name f loc accepted
-    | _ -> assert false
+    | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+    | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
 
   let profile_produced_terms env lorig nf s trs =
     let st0 =
@@ -142,7 +146,8 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     in
     let name, loc, f = match Expr.form_view lorig with
       | E.Lemma {E.name;main;loc} -> name, loc, main
-      | _ -> assert false
+      | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+      | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
     in
     let st1 = E.max_ground_terms_rec_of_form nf in
     let diff = Expr.Set.diff st1 st0 in
@@ -254,7 +259,9 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   let sort_facts =
     let rec size f = match Expr.form_view f with
       | E.Unit(f1,f2) -> max (size f1) (size f2)
-      | _             -> E.size f
+      | E.Lemma _ | E.Clause _ | E.Literal _ | E.Skolem _
+      | E.Let _ | E.Iff _ | E.Xor _ -> E.size f
+      | E.Not_a_form -> assert false
     in
     fun lf ->
       List.fast_sort

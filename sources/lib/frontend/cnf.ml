@@ -481,7 +481,7 @@ and make_form up_qv inline_lets defns abstr name_base f loc =
         let mkop = match op with
           | OPand -> E.mk_and ff1 ff2 false id
           | OPor -> E.mk_or ff1 ff2 false id
-          | OPxor -> E.mk_xor ff1 ff2 false id
+          | OPxor -> E.mk_xor ff1 ff2 id
           | _ -> assert false
         in
         mkop, merge_ret_defns d1 d2

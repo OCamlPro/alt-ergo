@@ -299,42 +299,42 @@ module Atom : ATOM = struct
 
   let make_var =
     fun hcons lit acc ->
-      let lit, negated = normal_form lit in
-      try HT.find hcons.tbl lit, negated, acc
-      with Not_found ->
-        let cpt = !(hcons.cpt) in
-        let cpt_fois_2 = cpt * 2 in
-        let rec var  =
-          { vid = cpt;
-            pa = pa;
-            na = na;
-            level = -1;
-            index = -1;
-            reason = None;
-            weight = 0.;
-            sweight = max_depth lit;
-            seen = false;
-            vpremise = [];
-          }
-        and pa =
-          { var = var;
-            lit = lit;
-            watched = Vec.make 10 dummy_clause;
-            neg = na;
-            is_true = false;
-            timp = false;
-            aid = cpt_fois_2 (* aid = vid*2 *) }
-        and na =
-          { var = var;
-            lit = E.neg lit;
-            watched = Vec.make 10 dummy_clause;
-            neg = pa;
-            is_true = false;
-            timp = false;
-            aid = cpt_fois_2 + 1 (* aid = vid*2+1 *) } in
-        HT.add hcons.tbl lit var;
-        incr hcons.cpt;
-        var, negated, var :: acc
+    let lit, negated = normal_form lit in
+    try HT.find hcons.tbl lit, negated, acc
+    with Not_found ->
+      let cpt = !(hcons.cpt) in
+      let cpt_fois_2 = cpt * 2 in
+      let rec var  =
+        { vid = cpt;
+          pa = pa;
+          na = na;
+          level = -1;
+          index = -1;
+          reason = None;
+          weight = 0.;
+          sweight = max_depth lit;
+          seen = false;
+          vpremise = [];
+        }
+      and pa =
+        { var = var;
+          lit = lit;
+          watched = Vec.make 10 dummy_clause;
+          neg = na;
+          is_true = false;
+          timp = false;
+          aid = cpt_fois_2 (* aid = vid*2 *) }
+      and na =
+        { var = var;
+          lit = E.neg lit;
+          watched = Vec.make 10 dummy_clause;
+          neg = pa;
+          is_true = false;
+          timp = false;
+          aid = cpt_fois_2 + 1 (* aid = vid*2+1 *) } in
+      HT.add hcons.tbl lit var;
+      incr hcons.cpt;
+      var, negated, var :: acc
 
   let add_atom hcons lit acc =
     let var, negated, acc = make_var hcons lit acc in
@@ -857,13 +857,13 @@ module Flat_Formula : FLAT_FORMULA = struct
         new_vars := new_v;
         lem := (f, (xlit, at_lit)) :: !lem
                  [@ocaml.ppwarning "xlit or at_lit is probably redundant"]
-        ;
-        xlit
+                 ;
+                 xlit
 
   let simplify hcons f abstr new_vars =
     let lem = ref [] in
     let new_vars = ref new_vars in
-    let rec simp topl f =
+    let rec simp topl ~parent_disj f =
       match E.form_view f with
       | E.Not_a_form -> assert false
       | E.Literal a ->
@@ -874,11 +874,11 @@ module Flat_Formula : FLAT_FORMULA = struct
       | E.Lemma _   -> abstract_lemma hcons abstr f topl lem new_vars
 
       | E.Skolem _ ->
-        mk_not (simp false (E.neg f))
+        mk_not (simp false ~parent_disj:false (E.neg f))
 
       | E.Unit(f1, f2) ->
-        let x1 = simp topl f1 in
-        let x2 = simp topl f2 in
+        let x1 = simp topl ~parent_disj:false f1 in
+        let x2 = simp topl ~parent_disj:false f2 in
         begin match x1.view , x2.view with
           | AND l1, AND l2 -> mk_and hcons (List.rev_append l1 l2)
           | AND l1, _      -> mk_and hcons (x2 :: l1)
@@ -887,8 +887,8 @@ module Flat_Formula : FLAT_FORMULA = struct
         end
 
       | E.Clause(f1, f2, _) ->
-        let x1 = simp false f1 in
-        let x2 = simp false f2 in
+        let x1 = simp false ~parent_disj:true f1 in
+        let x2 = simp false ~parent_disj:true f2 in
         begin match x1.view, x2.view with
           | OR l1, OR l2 -> mk_or hcons (List.rev_append l1 l2)
           | OR l1, _     -> mk_or hcons (x2 :: l1)
@@ -896,9 +896,17 @@ module Flat_Formula : FLAT_FORMULA = struct
           | _            -> mk_or hcons [x1; x2]
         end
 
-      | E.Let letin -> simp false (E.elim_let letin)
+      | E.Iff(f1, f2) ->
+        simp topl ~parent_disj @@
+        E.elim_iff f1 f2 (E.id f) ~with_conj:(not parent_disj)
+
+      | E.Xor(f1, f2) ->
+        let g = E.neg @@ E.elim_iff f1 f2 (E.id f) ~with_conj:parent_disj in
+        simp topl ~parent_disj g
+
+      | E.Let letin -> simp false ~parent_disj:false (E.elim_let letin)
     in
-    let res = simp true f in
+    let res = simp true ~parent_disj:false f in
     res, !lem, !new_vars
 
   (* CNF_ABSTR a la Tseitin *)
@@ -1008,11 +1016,9 @@ module Proxy_formula = struct
             [a; Atom.neg a1] :: [a; Atom.neg a2] :: [na; a1; a2] :: cnf in
           a,  (proxies, inv_proxies, new_vars, cnf)
 
-        (* | E.Flet _ -> assert false
-         * | E.Tlet _ -> assert false *)
+        | E.Let _ | E.Skolem _ | E.Lemma _ | E.Literal _ | E.Iff _
+        | E.Xor _ ->
+          a, (proxies, inv_proxies, new_vars, cnf)
 
-        (* | E.Lemma _   -> assert false
-         * | E.Skolem _ -> assert false *)
-
-        | _ -> a, (proxies, inv_proxies, new_vars, cnf)
+        | E.Not_a_form -> assert false
 end

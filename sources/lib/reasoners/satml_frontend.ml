@@ -113,7 +113,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           let n = match lem with
             | None -> ""
             | Some ff ->
-              (match E.form_view ff with E.Lemma xx -> xx.E.name | _ -> "")
+              (match E.form_view ff with
+               | E.Lemma xx -> xx.E.name
+               | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+               | E.Let _ | E.Iff _ | E.Xor _ -> ""
+               | E.Not_a_form -> assert false)
           in
           fprintf fmt "\n[sat]I assume a literal (%s : %s) %a@]@."
             n s E.print a;
@@ -124,6 +128,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
         | E.Let _ ->
           fprintf fmt "[sat] I assume a let-In %a@." E.print f
+
+        | E.Iff _ ->
+          fprintf fmt "[sat] I assume an equivalence %a@." E.print f
+
+        | E.Xor _ ->
+          fprintf fmt "[sat] I assume an neg-equivalence/Xor %a@." E.print f
+
       end
 
     let simplified_form f f' =
@@ -275,7 +286,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     (Options.cdcl_tableaux () || not (ME.mem f env.gamma))
     && begin match E.form_view orig with
       | E.Lemma _ -> env.add_inst orig
-      | _ -> true
+      | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+      | E.Let _ | E.Iff _ | E.Xor _ -> true
+      | E.Not_a_form -> assert false
     end
 
   (* <begin> copied from sat_solvers.ml *)
@@ -363,31 +376,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
 
   let factorize_iff a_t f =
-    let not_at = E.neg a_t in
-    match E.form_view f with
-    | E.Unit(f1, f2) ->
-      begin
-        match E.form_view f1, E.form_view f2 with
-        | E.Clause(g11, g12, _), E.Clause(g21, g22, _) ->
-          let ng21 = E.neg g21 in
-          let ng22 = E.neg g22 in
-          assert (E.equal g11 ng21 || E.equal g11 ng22);
-          assert (E.equal g12 ng21 || E.equal g12 ng22);
-          if E.equal g21 not_at then g22
-          else if E.equal ng21 not_at then E.neg g22
-          else
-          if E.equal g22 not_at then g21
-          else if E.equal ng22 not_at then E.neg g21
-          else assert false
-        | _ -> assert false
-      end
-    | E.Literal a ->
-      begin
-        match E.lit_view a with
-        | E.Pred (t, b) -> if b then E.faux else E.vrai
-        | _ -> assert false
-      end
-    | _ -> assert false
+    if E.equal a_t f then E.vrai
+    else if E.equal (E.neg a_t) f then E.faux
+    else match E.form_view f with
+      | E.Iff(f1, f2) ->
+        if E.equal f1 a_t then f2
+        else if E.equal f2 a_t then f1
+        else assert false
+      | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
+      | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ ->
+        assert false
 
   let pred_def env f name dep loc =
     (* dep currently not used. No unsat-cores in satML yet *)
@@ -447,7 +445,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       assert (Atom.level at < 0);
       let ded = match E.neg f |> E.form_view with
         | E.Skolem q -> E.skolemize q
-        | _ -> assert false
+        | E.Unit _ | E.Clause _ | E.Literal _ | E.Lemma _
+        | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
       in
       (*XXX TODO: internal skolems*)
       let f = E.mk_or lat ded false 0 in
@@ -618,9 +617,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         "improve terms / atoms extraction in lazy/non-lazy \
          and greedy/non-greedy mode. Separate atoms from terms !"]
 
-  let atoms_from_bmodel env =
-    ME.fold (fun f _ sa -> (E.atoms_rec_of_form ~only_ground:false) f sa)
-      env.gamma SE.empty
+      let atoms_from_bmodel env =
+        ME.fold (fun f _ sa -> (E.atoms_rec_of_form ~only_ground:false) f sa)
+          env.gamma SE.empty
 
   let atoms_from_sat_branches env ~greedy_round ~frugal =
     let sa = match greedy_round || greedy (), cdcl_tableaux_inst () with
@@ -632,11 +631,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     SE.elements sa
       [@ocaml.ppwarning "Issue for greedy: terms inside lemmas not extracted"]
 
-  let terms_from_dec_proc env =
-    let terms = Th.extract_ground_terms (SAT.current_tbox env.satml) in
-    Debug.add_terms_of "terms_from_dec_proc" terms;
-    let gf = mk_gf E.vrai in
-    Inst.add_terms env.inst terms gf
+      let terms_from_dec_proc env =
+        let terms = Th.extract_ground_terms (SAT.current_tbox env.satml) in
+        Debug.add_terms_of "terms_from_dec_proc" terms;
+        let gf = mk_gf E.vrai in
+        Inst.add_terms env.inst terms gf
 
   let instantiate_ground_preds env acc sa =
     List.fold_left
@@ -648,10 +647,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                          that are facts with TRUE by mk_lit (and simplify)"]
 
 
-  let new_instances use_cs env sa acc =
-    let inst, acc = inst_env_from_atoms env acc sa in
-    let inst = terms_from_dec_proc {env with inst=inst} in
-    mround use_cs {env with inst = inst} acc
+      let new_instances use_cs env sa acc =
+        let inst, acc = inst_env_from_atoms env acc sa in
+        let inst = terms_from_dec_proc {env with inst=inst} in
+        mround use_cs {env with inst = inst} acc
 
 
   type pending = {
@@ -701,7 +700,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           (* This assert is not true assert (dec_lvl = 0); *)
           axiom_def env gf Ex.empty, {acc with updated = true}
 
-        | _ ->
+        | E.Not_a_form -> assert false
+        | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+        | E.Let _ | E.Iff _ | E.Xor _ ->
           let ff, axs, new_vars =
             FF.simplify env.ff_hcons_env f
               (fun f -> ME.find f env.abstr_of_axs) acc.new_vars

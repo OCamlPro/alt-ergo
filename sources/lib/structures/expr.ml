@@ -117,6 +117,8 @@ type lit_view =
 type form_view =
   | Unit of t*t  (* unit clauses *)
   | Clause of t*t*bool      (* a clause (t1 or t2) bool <-> is implication *)
+  | Iff of t * t
+  | Xor of t * t
   | Literal of t   (* an atom *)
   | Lemma of quantified   (* a lemma *)
   | Skolem of quantified  (* lazy skolemization *)
@@ -336,6 +338,8 @@ let form_view t =
     match f, xs, bind with
     | Sy.Form (Sy.F_Unit _), [a;b], _ -> Unit (a, b)
     | Sy.Form (Sy.F_Clause i), [a;b], _ -> Clause (a, b, i)
+    | Sy.Form Sy.F_Iff, [a;b], _ -> Iff(a, b)
+    | Sy.Form Sy.F_Xor, [a;b], _ -> Xor(a, b)
     | Sy.Form Sy.F_Lemma, [], B_lemma lem -> Lemma lem
     | Sy.Form Sy.F_Skolem, [], B_skolem sko -> Skolem sko
     | Sy.Form Sy.F_Let, [], B_let x -> Let x
@@ -376,6 +380,12 @@ let rec print_silent fmt t =
       match form, xs, bind with
       | Sy.F_Unit _, [f1; f2], _ ->
         fprintf fmt "@[(%a /\\@ %a)@]" print_silent f1 print_silent f2
+
+      | Sy.F_Iff, [f1; f2], _ ->
+        fprintf fmt "@[(%a <->@ %a)@]" print_silent f1 print_silent f2
+
+      | Sy.F_Xor, [f1; f2], _ ->
+        fprintf fmt "@[(%a xor@ %a)@]" print_silent f1 print_silent f2
 
       | Sy.F_Clause _, [f1; f2], _ ->
         fprintf fmt "@[(%a \\/@ %a)@]" print_silent f1 print_silent f2
@@ -763,20 +773,47 @@ let mk_or f1 f2 is_impl id =
       neg.neg <- Some pos;
       pos
 
+let mk_iff f1 f2 id =
+  if equal f1 (neg f2) then faux
+  else if equal f1 f2 then vrai
+  else if equal f1 faux then neg f2
+  else if equal f2 faux then neg f1
+  else if equal f1 vrai then f2
+  else if equal f2 vrai then f1
+  else
+    let d = (max f1.depth f2.depth) in (* the +1 causes regression *)
+    let nb_nodes = f1.nb_nodes + f2.nb_nodes + 1 in
+    let vars = SMap.union (fun _ a _ -> Some a) f1.vars f2.vars in
+    let vty = Ty.Svty.union f1.vty f2.vty in
+    let pos =
+      HC.make {f=Sy.Form Sy.F_Iff; xs=[f1; f2]; ty=Ty.Tbool;
+               depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
+               bind = B_none}
+    in
+    if pos.neg != None then pos
+    else
+      let neg =
+        HC.make
+          {f=Sy.Form Sy.F_Xor; xs=[f1; f2]; ty=Ty.Tbool;
+           depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
+           bind = B_none}
+      in
+      assert (neg.neg == None);
+      pos.neg <- Some neg;
+      neg.neg <- Some pos;
+      pos
+
 let mk_and f1 f2 is_impl id =
   neg @@ mk_or (neg f1) (neg f2) is_impl id
 
 let mk_imp f1 f2 id = mk_or (neg f1) f2 true id
 
-let mk_iff f1 f2 id = (* try to interpret iff as a double implication *)
-  mk_and (mk_imp f1 f2 id) (mk_imp f2 f1 id) false id
+let mk_xor f1 f2 id =
+  neg (mk_iff f1 f2 id)
 
 let mk_if cond f2 f3 id =
   mk_or
     (mk_and cond f2 true id) (mk_and (neg cond) f3 true id) false id
-
-let mk_xor f1 f2 is_impl id =
-  neg (mk_iff f1 f2 id)
 
 let not_an_app e =
   (* we use this function because depth is currently not correct to
@@ -853,7 +890,7 @@ let find_particular_subst =
   let rec find_subst v tv f =
     match form_view f with
     | Not_a_form -> assert false
-    | Unit _ | Lemma _ | Skolem _ | Let _  -> ()
+    | Unit _ | Lemma _ | Skolem _ | Let _ | Iff _ | Xor _ -> ()
     | Clause(f1, f2,_) -> find_subst v tv f1; find_subst v tv f2
     | Literal a ->
       match lit_view a with
@@ -1118,6 +1155,18 @@ let rec apply_subst_aux (s_t, s_ty) t =
           | _ -> assert false
         end
 
+      | Sy.Form Sy.F_Iff, _ ->
+        begin match xs' with
+          | [u; v] -> mk_iff u v 0
+          | _ -> assert false
+        end
+
+      | Sy.Form Sy.F_Xor, _ ->
+        begin match xs' with
+          | [u; v] -> mk_xor u v 0
+          | _ -> assert false
+        end
+
       | _ ->
         mk_term f xs' ty'
 
@@ -1248,7 +1297,7 @@ let atoms_rec_of_form =
 
     | Lemma {main = f} | Skolem {main = f} ->
       atoms only_ground acc f
-    | Unit(f1,f2) | Clause(f1,f2,_) ->
+    | Unit(f1,f2) | Clause(f1,f2,_) | Iff (f1, f2) | Xor (f1, f2) ->
       atoms only_ground (atoms only_ground acc f1) f2
     | Let {let_e; in_e} ->
       let acc = atoms only_ground acc in_e in
@@ -1300,7 +1349,9 @@ let sub_terms_of_formula f =
   let rec aux f acc =
     match form_view f with
     | Literal a -> List.fold_left sub_terms acc (args_of_lit a)
-    | Unit(f1, f2) -> aux f2 (aux f1 acc)
+    | Unit(f1, f2)
+    | Iff(f1, f2)
+    | Xor(f1, f2)
     | Clause(f1, f2, _) -> aux f2 (aux f1 acc)
     | Skolem q | Lemma q -> aux q.main acc
     | Let xx ->
@@ -1494,7 +1545,19 @@ let elim_let =
     assert (is_ground res);
     res
 
+let elim_iff f1 f2 id ~with_conj =
+  if with_conj then
+    mk_and
+      (mk_imp f1 f2 id)
+      (mk_imp f2 f1 id) false id
+  else
+    mk_or
+      (mk_and f1 f2 false id)
+      (mk_and (neg f1) (neg f2) false id) false id
+
+
 (******)
+
 
 type gformula = {
   ff: expr;

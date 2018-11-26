@@ -1888,7 +1888,7 @@ module Make
         with I.NotConsistent expl ->
           if true (*debug_fpa() >= 2*) then begin
             [@ocaml.ppwarning "TODO: find an example triggering this case!"]
-              fprintf fmt "TODO: should check that this is correct !!!!@."
+            fprintf fmt "TODO: should check that this is correct !!!!@."
           end;
           raise (Exception.Inconsistent (expl, env.classes))
 
@@ -2040,7 +2040,8 @@ module Make
     if Options.profiling() then
       match E.form_view lorig with
       | E.Lemma {E.name;loc} -> Profiling.new_instance_of name f loc accepted
-      | _ -> assert false
+      | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+      | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
 
   let profile_produced_terms menv lorig nf s trs =
     if Options.profiling() then
@@ -2050,7 +2051,8 @@ module Make
       in
       let name, loc, f = match E.form_view lorig with
         | E.Lemma {E.name;main;loc} -> name, loc, main
-        | _ -> assert false
+        | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+        | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
       in
       let st1 = E.max_ground_terms_rec_of_form nf in
       let diff = SE.diff st1 st0 in
@@ -2188,7 +2190,10 @@ module Make
     let linear_dep = Hstring.make "linear_dependency" in
     fun th_form ->
       let {E.triggers} as q =
-        match E.form_view th_form with E.Lemma q -> q | _ -> assert false
+        match E.form_view th_form with
+        | E.Lemma q -> q
+        | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+        | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
       in
       let r_triggers =
         List.rev_map
