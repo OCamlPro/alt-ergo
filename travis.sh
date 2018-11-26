@@ -84,7 +84,7 @@ do
     cd $git_repo/sources
     
     ## A0 ## ocp-indent
-    opam install ocp-indent --y ; exit_if_error
+    opam install ocp-indent.1.6.1 --y ; exit_if_error
     check_indentation
 
     ## A1 ## Test with 'opam pin'

@@ -442,4 +442,4 @@ opam-deps:
 	opam install ocamlfind $(LIBDEPS) lablgtk menhir
 
 opam-deps-dev:
-	opam install ocp-indent merlin user-setup tuareg
+	opam install ocp-indent.1.6.1 merlin user-setup tuareg
