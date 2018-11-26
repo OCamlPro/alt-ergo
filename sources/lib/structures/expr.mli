@@ -112,6 +112,8 @@ type lit_view = private
 type form_view = private
   | Unit of t*t  (* unit clauses *)
   | Clause of t*t*bool      (* a clause (t1 or t2) bool <-> is implication *)
+  | Iff of t * t
+  | Xor of t * t
   | Literal of t   (* an atom *)
   | Lemma of quantified   (* a lemma *)
   | Skolem of quantified  (* lazy skolemization *)
@@ -196,7 +198,7 @@ val mk_and : t -> t -> bool -> int -> t
 val mk_imp : t -> t -> int -> t
 val mk_iff : t -> t -> int -> t
 val mk_if : t -> t -> t -> int -> t
-val mk_xor : t -> t -> bool -> int -> t (* bool <-> is implication *)
+val mk_xor : t -> t -> int -> t
 
 
 (** Substitutions *)
@@ -261,6 +263,8 @@ val mk_let : Symbols.t -> t -> t -> int -> t
 val skolemize : quantified -> t
 
 val elim_let : letin -> t
+
+val elim_iff : t -> t -> int -> with_conj:bool -> t
 
 type gformula = {
   ff: t;

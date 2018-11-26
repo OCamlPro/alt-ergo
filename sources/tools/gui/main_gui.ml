@@ -453,7 +453,10 @@ let add_inst ({h=h} as inst_model) orig =
   let name =
     match Expr.form_view orig with
     | Expr.Lemma {Expr.name=n} when Pervasives.(<>) n "" -> n
-    | _ -> string_of_int id
+    | Expr.Lemma _ | Expr.Unit _ | Expr.Clause _ | Expr.Literal _
+    | Expr.Skolem _ | Expr.Let _ | Expr.Iff _ | Expr.Xor _ ->
+      string_of_int id
+    | Expr.Not_a_form -> assert false
   in
   let r, n, limit, to_add =
     try

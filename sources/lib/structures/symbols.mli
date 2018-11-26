@@ -51,6 +51,8 @@ type form =
   (* formulas *)
   | F_Unit of bool
   | F_Clause of bool
+  | F_Iff
+  | F_Xor
   | F_Lemma
   | F_Skolem
   | F_Let

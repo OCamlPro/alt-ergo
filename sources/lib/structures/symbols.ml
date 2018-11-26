@@ -54,6 +54,8 @@ type form =
   (* formulas *)
   | F_Unit of bool
   | F_Clause of bool
+  | F_Iff
+  | F_Xor
   | F_Lemma
   | F_Skolem
   | F_Let
@@ -153,7 +155,8 @@ let compare_forms f1 f2 =
     (function
       | F_Unit b1, F_Unit b2
       | F_Clause b1, F_Clause b2 -> Pervasives.compare b1 b2
-      | _, (F_Unit _ | F_Clause _ | F_Lemma | F_Skolem | F_Let) ->
+      | _, (F_Unit _ | F_Clause _ | F_Lemma | F_Skolem | F_Let
+           | F_Iff | F_Xor) ->
         assert false
     )
 
@@ -245,6 +248,8 @@ let string_of_form f = match f with
   | F_Lemma -> "Lemma"
   | F_Skolem -> "Skolem"
   | F_Let -> "let"
+  | F_Iff -> "<->"
+  | F_Xor -> "xor"
 
 let to_string ?(show_vars=true) x = match x with
   | Name (n,_) -> Hstring.view n
