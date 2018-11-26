@@ -42,6 +42,7 @@ and view = private {
   vty : Ty.Svty.t;
   depth: int;
   nb_nodes : int;
+  pure : bool;
   mutable neg : t option
 }
 
