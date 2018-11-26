@@ -617,9 +617,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         "improve terms / atoms extraction in lazy/non-lazy \
          and greedy/non-greedy mode. Separate atoms from terms !"]
 
-      let atoms_from_bmodel env =
-        ME.fold (fun f _ sa -> (E.atoms_rec_of_form ~only_ground:false) f sa)
-          env.gamma SE.empty
+  let atoms_from_bmodel env =
+    ME.fold (fun f _ sa -> (E.atoms_rec_of_form ~only_ground:false) f sa)
+      env.gamma SE.empty
 
   let atoms_from_sat_branches env ~greedy_round ~frugal =
     let sa = match greedy_round || greedy (), cdcl_tableaux_inst () with
@@ -631,11 +631,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     SE.elements sa
       [@ocaml.ppwarning "Issue for greedy: terms inside lemmas not extracted"]
 
-      let terms_from_dec_proc env =
-        let terms = Th.extract_ground_terms (SAT.current_tbox env.satml) in
-        Debug.add_terms_of "terms_from_dec_proc" terms;
-        let gf = mk_gf E.vrai in
-        Inst.add_terms env.inst terms gf
+  let terms_from_dec_proc env =
+    let terms = Th.extract_ground_terms (SAT.current_tbox env.satml) in
+    Debug.add_terms_of "terms_from_dec_proc" terms;
+    let gf = mk_gf E.vrai in
+    Inst.add_terms env.inst terms gf
 
   let instantiate_ground_preds env acc sa =
     List.fold_left
@@ -647,10 +647,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                          that are facts with TRUE by mk_lit (and simplify)"]
 
 
-      let new_instances use_cs env sa acc =
-        let inst, acc = inst_env_from_atoms env acc sa in
-        let inst = terms_from_dec_proc {env with inst=inst} in
-        mround use_cs {env with inst = inst} acc
+  let new_instances use_cs env sa acc =
+    let inst, acc = inst_env_from_atoms env acc sa in
+    let inst = terms_from_dec_proc {env with inst=inst} in
+    mround use_cs {env with inst = inst} acc
 
 
   type pending = {

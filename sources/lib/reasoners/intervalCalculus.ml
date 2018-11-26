@@ -1888,7 +1888,7 @@ module Make
         with I.NotConsistent expl ->
           if true (*debug_fpa() >= 2*) then begin
             [@ocaml.ppwarning "TODO: find an example triggering this case!"]
-            fprintf fmt "TODO: should check that this is correct !!!!@."
+              fprintf fmt "TODO: should check that this is correct !!!!@."
           end;
           raise (Exception.Inconsistent (expl, env.classes))
 

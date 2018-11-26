@@ -520,14 +520,14 @@ struct
                              with void and unit is to add this case is \
                              the solver!"]
 
-          let solve_abstracted oa ob a b sbt =
-            Debug.debug_abstraction_result oa ob a b sbt;
-            let ra = apply_subst_right a sbt in
-            let rb = apply_subst_right b sbt in
-            let sbt' = solve_list { sbt=[] ; eqs=[ra,rb] } in
-            match sbt', sbt with
-            | [], _::_ -> [] (* the original equality was trivial *)
-            | _ -> make_idemp oa ob (List.rev_append sbt sbt')
+  let solve_abstracted oa ob a b sbt =
+    Debug.debug_abstraction_result oa ob a b sbt;
+    let ra = apply_subst_right a sbt in
+    let rb = apply_subst_right b sbt in
+    let sbt' = solve_list { sbt=[] ; eqs=[ra,rb] } in
+    match sbt', sbt with
+    | [], _::_ -> [] (* the original equality was trivial *)
+    | _ -> make_idemp oa ob (List.rev_append sbt sbt')
 
   let solve  a b =
     let a', b', acc = abstract_equality a b in

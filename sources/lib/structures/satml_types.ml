@@ -299,42 +299,42 @@ module Atom : ATOM = struct
 
   let make_var =
     fun hcons lit acc ->
-    let lit, negated = normal_form lit in
-    try HT.find hcons.tbl lit, negated, acc
-    with Not_found ->
-      let cpt = !(hcons.cpt) in
-      let cpt_fois_2 = cpt * 2 in
-      let rec var  =
-        { vid = cpt;
-          pa = pa;
-          na = na;
-          level = -1;
-          index = -1;
-          reason = None;
-          weight = 0.;
-          sweight = max_depth lit;
-          seen = false;
-          vpremise = [];
-        }
-      and pa =
-        { var = var;
-          lit = lit;
-          watched = Vec.make 10 dummy_clause;
-          neg = na;
-          is_true = false;
-          timp = false;
-          aid = cpt_fois_2 (* aid = vid*2 *) }
-      and na =
-        { var = var;
-          lit = E.neg lit;
-          watched = Vec.make 10 dummy_clause;
-          neg = pa;
-          is_true = false;
-          timp = false;
-          aid = cpt_fois_2 + 1 (* aid = vid*2+1 *) } in
-      HT.add hcons.tbl lit var;
-      incr hcons.cpt;
-      var, negated, var :: acc
+      let lit, negated = normal_form lit in
+      try HT.find hcons.tbl lit, negated, acc
+      with Not_found ->
+        let cpt = !(hcons.cpt) in
+        let cpt_fois_2 = cpt * 2 in
+        let rec var  =
+          { vid = cpt;
+            pa = pa;
+            na = na;
+            level = -1;
+            index = -1;
+            reason = None;
+            weight = 0.;
+            sweight = max_depth lit;
+            seen = false;
+            vpremise = [];
+          }
+        and pa =
+          { var = var;
+            lit = lit;
+            watched = Vec.make 10 dummy_clause;
+            neg = na;
+            is_true = false;
+            timp = false;
+            aid = cpt_fois_2 (* aid = vid*2 *) }
+        and na =
+          { var = var;
+            lit = E.neg lit;
+            watched = Vec.make 10 dummy_clause;
+            neg = pa;
+            is_true = false;
+            timp = false;
+            aid = cpt_fois_2 + 1 (* aid = vid*2+1 *) } in
+        HT.add hcons.tbl lit var;
+        incr hcons.cpt;
+        var, negated, var :: acc
 
   let add_atom hcons lit acc =
     let var, negated, acc = make_var hcons lit acc in
@@ -857,8 +857,8 @@ module Flat_Formula : FLAT_FORMULA = struct
         new_vars := new_v;
         lem := (f, (xlit, at_lit)) :: !lem
                  [@ocaml.ppwarning "xlit or at_lit is probably redundant"]
-                 ;
-                 xlit
+        ;
+        xlit
 
   let simplify hcons f abstr new_vars =
     let lem = ref [] in
