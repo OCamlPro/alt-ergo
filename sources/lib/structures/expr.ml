@@ -145,7 +145,10 @@ let compare t1 t2 =
   else
     let c = t1.depth - t2.depth in
     if c <> 0 then c
-    else t2.tag - t1.tag
+    else
+      let c = t1.nb_nodes - t2.nb_nodes in
+      if c <> 0 then c
+      else t2.tag - t1.tag
 
 let equal t1 t2 =  t1 == t2
 
