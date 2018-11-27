@@ -42,6 +42,7 @@ module M = struct
   let debug = ref false
   let debug_warnings = ref false
   let no_user_triggers = ref false
+  let debug_triggers = ref false
   let debug_cc = ref false
   let debug_gc = ref false
   let debug_use = ref false
@@ -362,6 +363,10 @@ module M = struct
     "-dexplanations",
     Arg.Set debug_explanations,
     "  sets the debugging flag of explanations";
+
+    "-dtriggers",
+    Arg.Set debug_triggers,
+    "  sets the debugging flag of triggers";
 
     "-verbose",
     Arg.Set verbose,
@@ -803,6 +808,7 @@ let debug_unsat_core () = !M.debug_unsat_core
 let debug_split () = !M.debug_split
 let debug_matching () = !M.debug_matching
 let debug_explanations () = !M.debug_explanations
+let debug_triggers () = !M.debug_triggers
 
 (** additional getters *)
 let disable_ites () = !M.disable_ites
