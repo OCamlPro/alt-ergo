@@ -38,6 +38,44 @@ main_script_out=$(mktemp)
 main_script_err=$(mktemp)
 trap "rm $main_script_out $main_script_err" EXIT
 
+## Challenges
+################################################################################################
+
+score=0
+total=0
+
+big_total=`ls challenges/*/*.mlw | wc -l`
+for kind in `ls challenges/`
+do
+    echo ""
+    echo -n "challenges/$kind"
+    for mlw in `ls challenges/$kind/*.mlw`
+    do
+        tput hpa 25
+        total=`expr $total + 1`
+        echo -n "$total / $big_total"
+        timeout 2 $pr $mlw $opt 1> $main_script_out 2> $main_script_err
+        if grep -q -w Valid $main_script_out ; then
+	    score=`expr $score + 1`
+            echo "\e[32m    > [OK] ../non-regression/$mlw\e[39m"
+        else 
+            echo ../non-regression/$mlw >> main_script.log
+            cat $main_script_out >> main_script.log
+            cat $main_script_err >> main_script.log
+            echo "" >> main_script.log
+            echo "    > [KO] ../non-regression/$mlw"
+        fi
+    done
+done
+
+percent=`expr 100 \* $score / $total`
+diff=`expr $total - $score`
+echo ""
+echo "$limit"
+echo " Score Challenges: $score/$total : $percent% (-$diff) "
+echo "$limit"
+
+
 ## Valid
 ################################################################################################
 
