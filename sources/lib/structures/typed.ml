@@ -284,6 +284,16 @@ and print_formula fmt f =
   | TFforall {qf_bvars = l; qf_triggers = t; qf_form = f} ->
     fprintf fmt "forall %a [%a]. %a"
       print_binders l print_triggers t print_formula f
+
+  | TFlet (_, binders, f) ->
+    List.iter
+      (fun (sy, let_e) ->
+         fprintf fmt " let %a = " Symbols.print sy;
+         match let_e with
+         | TletTerm t -> fprintf fmt "%a in@." print_term t
+         | TletForm f -> fprintf fmt "%a in@." print_formula f
+      )binders;
+    fprintf fmt "%a" print_formula f
   | _ -> fprintf fmt "(formula pprint not implemented)"
 
 and print_form_list fmt = List.iter (fprintf fmt "%a" print_formula)

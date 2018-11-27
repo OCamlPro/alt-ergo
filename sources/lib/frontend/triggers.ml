@@ -95,7 +95,7 @@ module AUX = struct
       List.fold_left
         (fun z (_, t1) -> max (depth_tterm t1 + 1)  z) (depth_tterm t2) l
     | TTnamed (_, t) | TTinInterval (t,_,_,_,_) | TTmapsTo(_,t) -> depth_tterm t
-    | TTite(_, t1, t2) -> max (depth_tterm t1) (depth_tterm t2)
+    | TTite(_, t1, t2) -> 0 (* we don't want ITEs in triggers *)
 
   exception Out of int
 
@@ -276,6 +276,26 @@ module AUX = struct
     fun l ->
       unique (List.stable_sort compare_tterm_list l) []
 
+  let rec terms_of_form acc f =
+    match f.c with
+    | TFatom{c = (TAtrue | TAfalse)} -> acc
+    | TFatom {c=(TAeq l | TAneq l | TAdistinct l
+                | TAle l | TAlt l)}->
+      List.rev_append l acc
+    | TFatom {c=TApred (t,_)} -> t :: acc
+    | TFop(_,l) -> List.fold_left terms_of_form acc l
+    | TFforall qf | TFexists qf -> terms_of_form acc qf.qf_form
+    | TFnamed (_, f) -> terms_of_form acc f
+
+    | TFlet (ls, binders, f') ->
+      List.fold_left
+        (fun acc (sy, e) ->
+           match e with
+           | TletTerm t -> t :: acc
+           | TletForm f -> terms_of_form acc f
+        )(terms_of_form acc f') binders
+
+
   let rec vty_of_term acc t =
     let acc = Vtype.union acc (Ty.vty_of t.c.tt_ty) in
     match t.c.tt_desc with
@@ -289,7 +309,17 @@ module AUX = struct
     | TTlet (l, t2) ->
       List.fold_left
         (fun acc (_, t) -> vty_of_term acc t) (vty_of_term acc t2) l
-    | _ -> acc
+
+    | TTconst _
+    | TTvar _
+    | TTmapsTo (_, _)
+    | TTinInterval (_, _, _, _, _) -> acc
+    | TTconcat (t1, t2) -> vty_of_term (vty_of_term acc t1) t2
+    | TTprefix (_, t)
+    | TTextract (t, _, _)
+    | TTnamed (_, t) -> vty_of_term acc t
+    | TTite (f, t1, t2) ->
+      List.fold_left vty_of_term acc (terms_of_form [t1; t2] f)
 
   let rec vty_of_form acc f = match f.c with
     | TFatom {c=(TAeq l | TAneq l | TAdistinct l
@@ -372,7 +402,8 @@ module AUX = struct
         else acc
       in
       vars_of_term bv acc e
-    | TTite (_, t1, t2) -> List.fold_left (vars_of_term bv) acc [t1;t2]
+    | TTite (f, t1, t2) ->
+      List.fold_left (vars_of_term bv) acc (terms_of_form [t1;t2] f)
 
 
   let filter_good_triggers (bv, vty) =
@@ -482,13 +513,16 @@ module AUX = struct
       | TTextract (_, _, _)
       | TTconcat (_, _) -> acc
 
-      | TTite _ -> assert false
+      | TTite (f, t1, t2) ->
+        (* do not take ITE as a potential trigger *)
+        List.fold_left (potential_rec vars) acc (terms_of_form [t1; t2] f)
 
     in fun vars l ->
       List.fold_left
         (fun acc t ->
-           if contains_ite t then acc else potential_rec vars acc t)
-        STRS.empty l
+           (*if contains_ite t then acc else*)
+           potential_rec vars acc t
+        ) STRS.empty l
 
   let is_var t = match t.c.tt_desc with
     | TTvar (Sy.Var _) -> true
@@ -669,168 +703,183 @@ let make_triggers vterm vtype (trs : STRS.t) ~escaped_vars =
   Lists.rrmap (fun e -> e, false) (mono @ multi)
 
 (*****************************************************************************)
+let debug_computed_triggers f name trs =
+  if Options.debug_triggers () then begin
+    Format.fprintf fmt "-----------------------------------------------@.";
+    Format.fprintf fmt
+      "computed triggers of (sub-)formula of axiom %s@." name;
+    Format.fprintf fmt "formula is: %a@.@.computed triggers are: %a@."
+      Typed.print_formula f Typed.print_triggers trs;
+    Format.fprintf fmt "-----------------------------------------------@.";
+  end
 
-let rec make_rec ~in_theory vterm vtype f =
-  let c, trs, full_trs = match f.c with
-    (* Atoms true and false *)
-    | TFatom {c = (TAfalse | TAtrue)} ->
-      f.c, STRS.empty, STRS.empty
-    | TFatom a ->
-      if Vterm.is_empty vterm && Vtype.is_empty vtype then
+let make_rec ~in_theory vterm vtype name f =
+  let rec make_rec ~in_theory vterm vtype f =
+    let c, trs, full_trs = match f.c with
+      (* Atoms true and false *)
+      | TFatom {c = (TAfalse | TAtrue)} ->
         f.c, STRS.empty, STRS.empty
-      else
-        begin
-          let l = match a.c with
-            | TAle l | TAlt l | TAeq l | TAneq l -> l
-            | TApred (t,_) -> [t]
-            | _ -> []
-          in
-          let res = AUX.potential_triggers (vterm, vtype) l in
-          f.c, res, res
-        end
-    | TFop (OPimp, [f1; f2]) ->
-
-      let f1, trs1, f_trs1 = make_rec ~in_theory vterm vtype f1 in
-      let f2, trs2, f_trs2 = make_rec ~in_theory vterm vtype f2 in
-      TFop(OPimp, [f1; f2]), STRS.union trs1 trs2, STRS.union f_trs1 f_trs2
-
-    | TFop (OPnot, [f1]) ->
-      let f1, trs1, f_trs1 = make_rec ~in_theory vterm vtype f1 in
-      TFop(OPnot, [f1]), trs1, f_trs1
-
-    (* | OPiff
-       | OPif of ('a tterm, 'a) annoted *)
-
-    | TFop (op, lf) ->
-      let lf, trs, f_trs =
-        List.fold_left
-          (fun (lf, trs1, f_trs1) f ->
-             let f, trs2, f_trs2 = make_rec ~in_theory vterm vtype f in
-             f::lf, STRS.union trs1 trs2, STRS.union f_trs1 f_trs2
-          ) ([], STRS.empty, STRS.empty) lf
-      in
-      TFop(op,List.rev lf), trs, f_trs
-
-    | TFforall ({ qf_form= {c = TFop(OPiff,[{c=TFatom _} as f1;f2]);
-                            annot = ido}} as qf) ->
-      let vtype' = AUX.vty_of_form Vtype.empty qf.qf_form in
-      let vterm' =
-        List.fold_left (fun b (s,_) -> Vterm.add s b) Vterm.empty qf.qf_bvars
-      in
-
-      let vterm'' = Vterm.union vterm vterm' in
-      let vtype'' = Vtype.union vtype vtype' in
-      let f1', trs1, f_trs1 = make_rec ~in_theory vterm'' vtype'' f1 in
-      let f2', trs2, f_trs2 = make_rec ~in_theory vterm'' vtype'' f2 in
-      let trs12 =
-        if in_theory then AUX.check_triggers qf.qf_triggers (vterm', vtype')
-        else if Options.no_user_triggers () || qf.qf_triggers == [] then
-          begin
-            (make_triggers vterm' vtype' trs1 ~escaped_vars:false)@
-            (make_triggers vterm' vtype' trs2 ~escaped_vars:false)
-          end
+      | TFatom a ->
+        if Vterm.is_empty vterm && Vtype.is_empty vtype then
+          f.c, STRS.empty, STRS.empty
         else
           begin
-            let lf = AUX.filter_good_triggers (vterm', vtype') qf.qf_triggers in
-            if lf != [] then lf
-            else
+            let l = match a.c with
+              | TAle l | TAlt l | TAeq l | TAneq l -> l
+              | TApred (t,_) -> [t]
+              | _ -> []
+            in
+            let res = AUX.potential_triggers (vterm, vtype) l in
+            f.c, res, res
+          end
+      | TFop (OPimp, [f1; f2]) ->
+
+        let f1, trs1, f_trs1 = make_rec ~in_theory vterm vtype f1 in
+        let f2, trs2, f_trs2 = make_rec ~in_theory vterm vtype f2 in
+        TFop(OPimp, [f1; f2]), STRS.union trs1 trs2, STRS.union f_trs1 f_trs2
+
+      | TFop (OPnot, [f1]) ->
+        let f1, trs1, f_trs1 = make_rec ~in_theory vterm vtype f1 in
+        TFop(OPnot, [f1]), trs1, f_trs1
+
+      (* | OPiff
+         | OPif of ('a tterm, 'a) annoted *)
+
+      | TFop (op, lf) ->
+        let lf, trs, f_trs =
+          List.fold_left
+            (fun (lf, trs1, f_trs1) f ->
+               let f, trs2, f_trs2 = make_rec ~in_theory vterm vtype f in
+               f::lf, STRS.union trs1 trs2, STRS.union f_trs1 f_trs2
+            ) ([], STRS.empty, STRS.empty) lf
+        in
+        TFop(op,List.rev lf), trs, f_trs
+
+      | TFforall ({ qf_form= {c = TFop(OPiff,[{c=TFatom _} as f1;f2]);
+                              annot = ido}} as qf) ->
+        let vtype' = AUX.vty_of_form Vtype.empty qf.qf_form in
+        let vterm' =
+          List.fold_left (fun b (s,_) -> Vterm.add s b) Vterm.empty qf.qf_bvars
+        in
+
+        let vterm'' = Vterm.union vterm vterm' in
+        let vtype'' = Vtype.union vtype vtype' in
+        let f1', trs1, f_trs1 = make_rec ~in_theory vterm'' vtype'' f1 in
+        let f2', trs2, f_trs2 = make_rec ~in_theory vterm'' vtype'' f2 in
+        let trs12 =
+          if in_theory then AUX.check_triggers qf.qf_triggers (vterm', vtype')
+          else if Options.no_user_triggers () || qf.qf_triggers == [] then
+            begin
               (make_triggers vterm' vtype' trs1 ~escaped_vars:false)@
               (make_triggers vterm' vtype' trs2 ~escaped_vars:false)
-          end
-      in
-      let trs12 =
-        if trs12 != [] then trs12
-        else (* allow vars to escape their scope *)
-          (make_triggers vterm' vtype' f_trs1 ~escaped_vars:true)@
-          (make_triggers vterm' vtype' f_trs2 ~escaped_vars:true)
-      in
-      let trs = STRS.union trs1 trs2 in
-      let f_trs = STRS.union trs (STRS.union f_trs1 f_trs2) in
-      let trs =
-        STRS.filter
-          (fun (_, bvt, _) -> Vterm.is_empty (Vterm.inter bvt vterm'))
-          trs
-      in
-      let r  =
-        { qf with
-          qf_triggers = trs12 ;
-          qf_form = {c=TFop(OPiff,[f1'; f2']); annot = ido} }
-      in
-      begin
-        match f.c with
-        | TFforall _ -> TFforall r, trs, f_trs
-        | _ -> TFexists r , trs, f_trs
-      end
+            end
+          else
+            begin
+              let lf =
+                AUX.filter_good_triggers (vterm', vtype') qf.qf_triggers in
+              if lf != [] then lf
+              else
+                (make_triggers vterm' vtype' trs1 ~escaped_vars:false)@
+                (make_triggers vterm' vtype' trs2 ~escaped_vars:false)
+            end
+        in
+        let trs12 =
+          if trs12 != [] then trs12
+          else (* allow vars to escape their scope *)
+            (make_triggers vterm' vtype' f_trs1 ~escaped_vars:true)@
+            (make_triggers vterm' vtype' f_trs2 ~escaped_vars:true)
+        in
+        let trs = STRS.union trs1 trs2 in
+        let f_trs = STRS.union trs (STRS.union f_trs1 f_trs2) in
+        let trs =
+          STRS.filter
+            (fun (_, bvt, _) -> Vterm.is_empty (Vterm.inter bvt vterm'))
+            trs
+        in
+        debug_computed_triggers qf.qf_form name trs12;
+        let r  =
+          { qf with
+            qf_triggers = trs12 ;
+            qf_form = {c=TFop(OPiff,[f1'; f2']); annot = ido} }
+        in
+        begin
+          match f.c with
+          | TFforall _ -> TFforall r, trs, f_trs
+          | _ -> TFexists r , trs, f_trs
+        end
 
-    | TFforall qf | TFexists qf ->
-      let vtype' = AUX.vty_of_form Vtype.empty qf.qf_form in
-      let vterm' =
-        List.fold_left
-          (fun b (s,_) -> Vterm.add s b) Vterm.empty qf.qf_bvars in
-      let f', trs, f_trs =
-        make_rec ~in_theory
-          (Vterm.union vterm vterm') (Vtype.union vtype vtype') qf.qf_form in
-      let trs' =
-        if in_theory then AUX.check_triggers qf.qf_triggers (vterm', vtype')
-        else if Options.no_user_triggers () || qf.qf_triggers == [] then
-          make_triggers vterm' vtype' trs ~escaped_vars:false
-        else
-          let lf = AUX.filter_good_triggers (vterm',vtype') qf.qf_triggers in
-          if lf != [] then lf
-          else make_triggers vterm' vtype' trs ~escaped_vars:false
-      in
-      let trs' = (* allow vars to escape their scope *)
-        if trs' != [] then trs'
-        else make_triggers vterm' vtype' f_trs ~escaped_vars:true
-      in
-      let f_trs = STRS.union trs f_trs in
-      let trs =
-        STRS.filter
-          (fun (_, bvt, _) -> Vterm.is_empty (Vterm.inter bvt vterm')) trs in
-      let r  = {qf with qf_triggers = trs' ; qf_form = f'} in
-      begin
-        match f.c with
-        | TFforall _ -> TFforall r , trs, f_trs
-        | _ -> TFexists r , trs, f_trs
-      end
+      | TFforall qf | TFexists qf ->
+        let vtype' = AUX.vty_of_form Vtype.empty qf.qf_form in
+        let vterm' =
+          List.fold_left
+            (fun b (s,_) -> Vterm.add s b) Vterm.empty qf.qf_bvars in
+        let f', trs, f_trs =
+          make_rec ~in_theory
+            (Vterm.union vterm vterm') (Vtype.union vtype vtype') qf.qf_form in
+        let trs' =
+          if in_theory then AUX.check_triggers qf.qf_triggers (vterm', vtype')
+          else if Options.no_user_triggers () || qf.qf_triggers == [] then
+            make_triggers vterm' vtype' trs ~escaped_vars:false
+          else
+            let lf = AUX.filter_good_triggers (vterm',vtype') qf.qf_triggers in
+            if lf != [] then lf
+            else make_triggers vterm' vtype' trs ~escaped_vars:false
+        in
+        let trs' = (* allow vars to escape their scope *)
+          if trs' != [] then trs'
+          else make_triggers vterm' vtype' f_trs ~escaped_vars:true
+        in
+        let f_trs = STRS.union trs f_trs in
+        let trs =
+          STRS.filter
+            (fun (_, bvt, _) -> Vterm.is_empty (Vterm.inter bvt vterm')) trs in
+        debug_computed_triggers qf.qf_form name trs';
+        let r  = {qf with qf_triggers = trs' ; qf_form = f'} in
+        begin
+          match f.c with
+          | TFforall _ -> TFforall r , trs, f_trs
+          | _ -> TFexists r , trs, f_trs
+        end
 
-    | TFlet (up, binders, f) ->
-      let f, trs, f_trs = make_rec ~in_theory vterm vtype f in
-      let binders, trs, f_trs =
-        List.fold_left
-          (fun (binders, trs, f_trs) (sy, e) ->
-             match e with
-             | TletTerm t ->
-               let res = AUX.potential_triggers (vterm, vtype) [t] in
-               (sy, e) :: binders,
-               STRS.union trs res,
-               STRS.union f_trs res
-             | TletForm flet ->
-               let flet', trs', f_trs' =
-                 make_rec ~in_theory vterm vtype flet in
-               (sy, TletForm flet') :: binders,
-               STRS.union trs trs',
-               STRS.union f_trs f_trs'
-          )([], trs, f_trs) (List.rev binders)
-      in
-      TFlet (up, binders, f), trs, f_trs
+      | TFlet (up, binders, f) ->
+        let f, trs, f_trs = make_rec ~in_theory vterm vtype f in
+        let binders, trs, f_trs =
+          List.fold_left
+            (fun (binders, trs, f_trs) (sy, e) ->
+               match e with
+               | TletTerm t ->
+                 let res = AUX.potential_triggers (vterm, vtype) [t] in
+                 (sy, e) :: binders,
+                 STRS.union trs res,
+                 STRS.union f_trs res
+               | TletForm flet ->
+                 let flet', trs', f_trs' =
+                   make_rec ~in_theory vterm vtype flet in
+                 (sy, TletForm flet') :: binders,
+                 STRS.union trs trs',
+                 STRS.union f_trs f_trs'
+            )([], trs, f_trs) (List.rev binders)
+        in
+        TFlet (up, binders, f), trs, f_trs
 
-    | TFnamed(lbl, f) ->
-      let f, trs, f_trs = make_rec ~in_theory vterm vtype f in
-      TFnamed(lbl, f), trs, f_trs
+      | TFnamed(lbl, f) ->
+        let f, trs, f_trs = make_rec ~in_theory vterm vtype f in
+        TFnamed(lbl, f), trs, f_trs
+    in
+    { f with c = c }, trs, full_trs
   in
-  { f with c = c }, trs, full_trs
+  make_rec ~in_theory vterm vtype f
 
-let make ~in_theory f = match f.c with
+let make ~in_theory name f = match f.c with
   | TFforall _ | TFexists _ ->
     let f, _, _ =
-      make_rec ~in_theory Vterm.empty Vtype.empty f
+      make_rec ~in_theory Vterm.empty Vtype.empty name f
     in
     f
   | _  ->
     let vty = AUX.vty_of_form Vtype.empty f in
     let f, trs, f_trs =
-      make_rec ~in_theory Vterm.empty vty f in
+      make_rec ~in_theory Vterm.empty vty name f in
     if Vtype.is_empty vty then f
     else begin
       if in_theory then
@@ -840,6 +889,7 @@ let make ~in_theory f = match f.c with
         if trs != [] then trs
         else make_triggers Vterm.empty vty f_trs ~escaped_vars:true
       in
+      debug_computed_triggers f name trs;
       { f with
         c = TFforall
             {qf_bvars=[]; qf_upvars=[]; qf_triggers=trs; qf_form=f; qf_hyp=[]}
@@ -849,26 +899,26 @@ let make ~in_theory f = match f.c with
 let make_decl ({ c; _ } as d) =
   match c with
   | TAxiom (loc, name, kind, f) ->
-    let f' = make ~in_theory:false f in
+    let f' = make ~in_theory:false name f in
     { d with c = TAxiom (loc, name, kind, f') }
   | TGoal (loc, sort, name, f) ->
-    let f' = make ~in_theory:false f in
+    let f' = make ~in_theory:false name f in
     { d with c = TGoal (loc, sort, name, f') }
   | TTheory (loc, name, exts, l) ->
     let l' =
       List.map (fun d' ->
           match d'.c with
           | TAxiom (loc', name', kind', f') ->
-            let f'' = make ~in_theory:true f' in
+            let f'' = make ~in_theory:true (name ^ name') f' in
             { d' with c = TAxiom (loc', name', kind', f'') }
           | _ -> d'
         ) l
     in
     { d with c = TTheory (loc, name, exts, l') }
   | TPredicate_def (loc, name, l, f) ->
-    let f' = make ~in_theory:false f in
+    let f' = make ~in_theory:false name f in
     { d with c = TPredicate_def (loc, name, l, f') }
   | TFunction_def (loc, name, l, ty, f) ->
-    let f' = make ~in_theory:false f in
+    let f' = make ~in_theory:false name f in
     { d with c = TFunction_def (loc, name, l, ty, f') }
   | _ -> d
