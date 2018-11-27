@@ -284,7 +284,7 @@ and print_formula fmt f =
   | TFforall {qf_bvars = l; qf_triggers = t; qf_form = f} ->
     fprintf fmt "forall %a [%a]. %a"
       print_binders l print_triggers t print_formula f
-  | _ -> assert false
+  | _ -> fprintf fmt "(formula pprint not implemented)"
 
 and print_form_list fmt = List.iter (fprintf fmt "%a" print_formula)
 
