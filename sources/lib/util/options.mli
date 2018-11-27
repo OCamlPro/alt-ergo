@@ -125,6 +125,7 @@ val debug_unsat_core : unit -> bool
 val debug_split : unit -> bool
 val debug_matching : unit -> int
 val debug_explanations : unit -> bool
+val debug_triggers : unit -> bool
 
 (** additional getters *)
 val enable_assertions : unit -> bool

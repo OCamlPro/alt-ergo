@@ -201,7 +201,7 @@ module Translate = struct
     match k.c with
     | Pattern(term_list) ->
       let tl = List.map (translate_term pars) term_list in
-      (tl, false) :: acc
+      (tl, true) :: acc
     | Named(symb) ->
       if Options.verbose () then
         Printf.eprintf "[Warning] (! :named not yet supported)\n%!";
