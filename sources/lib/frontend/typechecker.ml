@@ -240,21 +240,14 @@ module Env = struct
     let decl, profile =
       match pp_profile with
       | PPredicate args ->
-        let args =
-          List.map (fun pty ->
-              Ty.shorten @@ Types.ty_of_pp loc env.types None pty) args
-        in
+        let args = List.map (Types.ty_of_pp loc env.types None) args in
         TPredicate args,
         { args = args; result = Ty.Tbool }
       (*| PFunction ([], PPTvarid (_, loc)) ->
           error CannotGeneralize loc*)
       | PFunction(args, res) ->
-        let args =
-          List.map
-            (fun pty ->
-               Ty.shorten @@ Types.ty_of_pp loc env.types None pty) args
-        in
-        let res = Ty.shorten @@ Types.ty_of_pp loc env.types None res in
+        let args = List.map (Types.ty_of_pp loc env.types None) args in
+        let res = Types.ty_of_pp loc env.types None res in
         TFunction (args, res),
         { args = args; result = res }
     in
@@ -1813,12 +1806,6 @@ let type_decl (acc, env) d =
       let l = List.map (fun (_,x,t) -> (x,t)) l in
       let mk_symb hs = Symbols.name hs ~kind:Symbols.Other in
       let tlogic, env = Env.add_logics env mk_symb [n] ty loc in (* TODO *)
-      let l_args, t_typed =
-        match tlogic with
-        | TPredicate args -> args, Ty.Tbool
-        | TFunction (args, ret) -> args, ret
-      in
-      let l_typed = List.map2 (fun (x, _) t -> (x, t)) l l_args in
       let n = fst n in
 
       let lvar = List.map (fun (x,_) -> {pp_desc=PPvar x;pp_loc=loc}) l in
@@ -1831,6 +1818,13 @@ let type_decl (acc, env) d =
       let trs = max_terms e in
       let f = make_pred loc [[p], false ; trs, false] f l in
       let f,_ = type_form env f in
+      let t_typed, l_typed =
+        match tlogic with
+        | TPredicate args ->
+          Ty.Tbool, List.map2 (fun (x, _) ty -> x, Ty.shorten ty) l args
+        | TFunction (args, ret) ->
+          Ty.shorten ret, List.map2 (fun (x, _) ty -> x, Ty.shorten ty) l args
+      in
       let td =
         match d with
         | Function_def(_,_,_,t,_) ->
