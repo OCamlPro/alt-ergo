@@ -240,14 +240,21 @@ module Env = struct
     let decl, profile =
       match pp_profile with
       | PPredicate args ->
-        let args = List.map (Types.ty_of_pp loc env.types None) args in
+        let args =
+          List.map (fun pty ->
+              Ty.shorten @@ Types.ty_of_pp loc env.types None pty) args
+        in
         TPredicate args,
         { args = args; result = Ty.Tbool }
       (*| PFunction ([], PPTvarid (_, loc)) ->
           error CannotGeneralize loc*)
       | PFunction(args, res) ->
-        let args = List.map (Types.ty_of_pp loc env.types None) args in
-        let res = Types.ty_of_pp loc env.types None res in
+        let args =
+          List.map
+            (fun pty ->
+               Ty.shorten @@ Types.ty_of_pp loc env.types None pty) args
+        in
+        let res = Ty.shorten @@ Types.ty_of_pp loc env.types None res in
         TFunction (args, res),
         { args = args; result = res }
     in
