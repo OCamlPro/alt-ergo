@@ -1565,32 +1565,6 @@ let rec make_pred loc trs f = function
     { pp_desc = PPforall([x,t],[],[],(make_pred loc trs f l)) ;
       pp_loc = loc }
 
-let rec max_terms acc f =
-  match f.pp_desc with
-  | PPinfix(f1, ( PPand | PPor | PPimplies | PPiff ), f2)
-  | PPconcat(f1, f2) ->
-    let acc = max_terms acc f1 in
-    max_terms acc f2
-
-  | PPforall(_, _, _, _)
-  | PPexists(_, _, _, _)
-  | PPforall_named(_, _, _, _)
-  | PPexists_named(_, _, _, _)
-  | PPvar _
-  | PPlet(_, _)
-  | PPinfix(_, _, _) -> raise Exit
-
-  | PPif(f1, f2, f3) ->
-    let acc = max_terms acc f1 in
-    let acc = max_terms acc f2 in
-    max_terms acc f3
-  | PPextract(f1, _, _) | PPprefix(_, f1)
-  | PPnamed(_, f1) ->
-    max_terms acc f1
-  | _ -> f::acc
-
-let max_terms f = try max_terms [] f with Exit -> []
-
 let monomorphize_var (s,ty) = s, Ty.monomorphize ty
 
 let rec mono_term {c = {tt_ty=tt_ty; tt_desc=tt_desc}; annot = id} =
@@ -1812,11 +1786,7 @@ let type_decl (acc, env) d =
       let p = {pp_desc=PPapp(n,lvar) ; pp_loc=loc } in
       let infix = match d with Function_def _ -> PPeq | _ -> PPiff in
       let f = { pp_desc = PPinfix(p,infix,e) ; pp_loc = loc } in
-      (* le trigger [[p]] ne permet pas de replier la definition,
-         donc on calcule les termes maximaux de la definition pour
-         laisser une possibilite de replier *)
-      let trs = max_terms e in
-      let f = make_pred loc [[p], false ; trs, false] f l in
+      let f = make_pred loc [] f l in
       let f,_ = type_form env f in
       let t_typed, l_typed =
         match tlogic with
@@ -1864,9 +1834,7 @@ let file ld =
       List.fold_left (fun acc d -> type_decl acc d) ([], env) ld
     in
     if type_only () then exit 0;
-    let l = List.rev_map (fun (d, env) ->
-        Triggers.make_decl d, env) ltd in
-    l, env
+    List.rev ltd, env
   with
   | Errors.Error(e,l) ->
     Loc.report err_formatter l;

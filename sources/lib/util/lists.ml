@@ -29,8 +29,6 @@ let apply_right f l =
   in
   (if same then l else List.rev res), same
 
-let rrmap f l = List.rev (List.map f l)
-
 let rec find_opt pred l =
   match l with
   | [] -> None

@@ -121,6 +121,13 @@ type form_view = private
   | Let of letin (* a binding of an expr *)
   | Not_a_form
 
+type decl_kind =
+  | Dtheory
+  | Daxiom
+  | Dgoal
+  | Dpredicate of t
+  | Dfunction of t
+
 
 (** different views of an expression *)
 
@@ -245,6 +252,7 @@ val mk_forall :
   t -> (* quantified formula *)
   int -> (* id, for the GUI *)
   toplevel:bool -> (* for future triggers computation in presence of vty *)
+  decl_kind:decl_kind ->
   t
 
 val mk_exists :
@@ -257,6 +265,7 @@ val mk_exists :
   toplevel:bool -> (* for future triggers computation in presence of
                       vty, and to construct a toplevel forall that
                       cover vtys *)
+  decl_kind:decl_kind ->
   t
 
 val mk_let : Symbols.t -> t -> t -> int -> t

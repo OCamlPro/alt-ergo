@@ -94,7 +94,6 @@ subgraph cluster_lib__frontend {
 	color=lightgrey;
         "Frontend";
         "Cnf";
-        "Triggers";
         "Typechecker";
         "Parsed_interface";
 }

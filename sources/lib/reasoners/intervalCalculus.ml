@@ -2231,7 +2231,7 @@ module Make
       in
       E.mk_forall
         q.E.name q.E.loc q.E.binders (List.rev r_triggers) q.E.main
-        (E.id th_form) ~toplevel:true
+        (E.id th_form) ~toplevel:true ~decl_kind:E.Dtheory
 
   let assume_th_elt t th_elt dep =
     let {Commands.axiom_kind; ax_form; th_name; extends} = th_elt in
