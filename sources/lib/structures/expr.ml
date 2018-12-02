@@ -259,10 +259,10 @@ module Msbty : Map.S with type key = Ty.t Ty.M.t =
       let compare a b = Ty.M.compare Ty.compare a b
     end)
 
-module Set : Set.S with type elt = expr =
+module TSet : Set.S with type elt = expr =
   Set.Make (struct type t = expr let compare = compare end)
 
-module Map : Map.S with type key = expr =
+module TMap : Map.S with type key = expr =
   Map.Make (struct type t = expr let compare = compare end)
 
 module H = struct
@@ -531,7 +531,7 @@ let is_term e = match e.f with
 let mk_binders =
   let cpt = ref 0 in
   fun st ->
-    Set.fold
+    TSet.fold
       (fun t sym ->
          incr cpt;
          match t with
@@ -645,7 +645,7 @@ let print_tagged_classes =
   let is_labeled t = not (Hstring.equal (label t) Hstring.empty) in
   fun fmt l ->
     List.iter (fun cl ->
-        let cl = List.filter is_labeled (Set.elements cl) in
+        let cl = List.filter is_labeled (TSet.elements cl) in
         if cl != [] then
           fprintf fmt "\n{ %a }" (print_list_sep " , ") cl) l
 
@@ -1254,15 +1254,15 @@ and mk_forall_bis (q : quantified) id =
 
 
 let apply_subst =
-  let (cache : t Msbty.t Msbt.t Map.t ref) = ref Map.empty in
+  let (cache : t Msbty.t Msbt.t TMap.t ref) = ref TMap.empty in
   fun ((sbt, sbty) as s) f ->
     let ch = !cache in
-    try Map.find f ch |> Msbt.find sbt |> Msbty.find sbty
+    try TMap.find f ch |> Msbt.find sbt |> Msbty.find sbty
     with Not_found ->
       let nf = apply_subst_aux s f in
-      let c_sbt = try Map.find f ch with Not_found -> Msbt.empty in
+      let c_sbt = try TMap.find f ch with Not_found -> Msbt.empty in
       let c_sbty = try Msbt.find sbt c_sbt with Not_found -> Msbty.empty in
-      cache := Map.add f (Msbt.add sbt (Msbty.add sbty nf c_sbty) c_sbt) ch;
+      cache := TMap.add f (Msbt.add sbt (Msbty.add sbty nf c_sbty) c_sbt) ch;
       nf
 
 let apply_subst s t =
@@ -1283,7 +1283,7 @@ let apply_subst s t =
 let rec sub_terms acc e =
   match e.f with
   | Sy.Form _ | Sy.Lit _ -> acc
-  | _ -> List.fold_left sub_terms (Set.add e acc) e.xs
+  | _ -> List.fold_left sub_terms (TSet.add e acc) e.xs
 
 let args_of_lit e = match e.f with
   | Sy.Form _ -> assert false
@@ -1292,24 +1292,24 @@ let args_of_lit e = match e.f with
   | _ -> assert false
 
 let max_terms_of_lit e =
-  Set.of_list @@ args_of_lit e
+  TSet.of_list @@ args_of_lit e
 
 let max_ground_terms_of_lit =
   let rec max_sub_ground acc e =
     match e.f with
     | Sy.Form _ | Sy.Lit _ -> assert false
     | _ ->
-      if is_ground e then Set.add e acc
+      if is_ground e then TSet.add e acc
       else List.fold_left max_sub_ground acc e.xs
   in
-  fun e -> List.fold_left max_sub_ground Set.empty (args_of_lit e)
+  fun e -> List.fold_left max_sub_ground TSet.empty (args_of_lit e)
 
 let atoms_rec_of_form =
   let rec atoms only_ground acc f =
     match form_view f with
     | Not_a_form -> assert false
     | Literal a ->
-      if not only_ground || is_ground a then Set.add a acc else acc
+      if not only_ground || is_ground a then TSet.add a acc else acc
 
     | Lemma {main = f} | Skolem {main = f} ->
       atoms only_ground acc f
@@ -1324,9 +1324,9 @@ let atoms_rec_of_form =
     atoms only_ground acc f
 
 let max_ground_terms_rec_of_form f =
-  Set.fold
-    (fun a acc -> Set.union acc (max_ground_terms_of_lit a))
-    (atoms_rec_of_form ~only_ground:false f Set.empty) Set.empty
+  TSet.fold
+    (fun a acc -> TSet.union acc (max_ground_terms_of_lit a))
+    (atoms_rec_of_form ~only_ground:false f TSet.empty) TSet.empty
 
 (* used inside the old Formula's hashconsing module *)
 
@@ -1343,7 +1343,7 @@ let resolution_of_literal a binders free_vty acc =
       let vars = free_vars t SMap.empty in
       SMap.for_all (fun sy ty -> SMap.mem sy vars) binders
     in
-    if cond then Set.add t acc else acc
+    if cond then TSet.add t acc else acc
   | _ -> acc
 
 let rec resolution_of_disj is_back f binders free_vty acc =
@@ -1376,7 +1376,7 @@ let sub_terms_of_formula f =
       else sub_terms acc xx.let_e
     | Not_a_form -> assert false
   in
-  aux f Set.empty
+  aux f TSet.empty
 
 (* unification/matching like function, to detect when a backward
    triggers is too permessive (general) *)
@@ -1403,14 +1403,14 @@ let resolution_triggers is_back f name binders free_vty =
         )free_vty Ty.Svty.empty
     in
     let cand =
-      resolution_of_toplevel_conj is_back f binders free_vty Set.empty in
+      resolution_of_toplevel_conj is_back f binders free_vty TSet.empty in
     let others =
-      Set.filter (fun t -> not (Set.mem t cand))
+      TSet.filter (fun t -> not (TSet.mem t cand))
         (sub_terms_of_formula f)
     in
-    Set.fold
+    TSet.fold
       (fun t acc ->
-         if Set.exists (cand_is_more_general t) others then acc
+         if TSet.exists (cand_is_more_general t) others then acc
          else
            { content = [t];
              hyp = [];
@@ -1432,11 +1432,11 @@ let filter_subsumed_triggers triggers =
     (fun acc tr ->
        match tr.content with
        | [t] ->
-         let subterms = sub_terms Set.empty t in
+         let subterms = sub_terms TSet.empty t in
          if List.exists (fun tr ->
              match tr.content with
              | [s] ->
-               s != t && Set.mem s subterms &&
+               s != t && TSet.mem s subterms &&
                fully_uninterpreted_head s
              | _ -> false
            )triggers
@@ -1571,6 +1571,9 @@ let elim_iff f1 f2 id ~with_conj =
       (mk_and f1 f2 false id)
       (mk_and (neg f1) (neg f2) false id) false id
 
+
+module Set = TSet
+module Map = TMap
 
 (******)
 
