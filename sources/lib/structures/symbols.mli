@@ -55,7 +55,6 @@ type form =
   | F_Xor
   | F_Lemma
   | F_Skolem
-  | F_Let
 
 type name_kind = Ac | Other
 
@@ -78,6 +77,7 @@ type t =
   | Var of Var.t
   | In of bound * bound
   | MapsTo of Var.t
+  | Let
 
 val name : ?kind:name_kind -> string -> t
 val var : Var.t -> t

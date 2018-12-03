@@ -72,6 +72,7 @@ and letin = private {
   let_e : t;
   in_e : t;
   let_sko : t; (* fresh symb. with free vars *)
+  is_bool : bool;
 }
 
 and semantic_trigger =

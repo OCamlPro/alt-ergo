@@ -58,7 +58,6 @@ type form =
   | F_Xor
   | F_Lemma
   | F_Skolem
-  | F_Let
 
 type name_kind = Ac | Other
 
@@ -82,6 +81,7 @@ type t =
   | Var of Var.t
   | In of bound * bound
   | MapsTo of Var.t
+  | Let
 
 type s = t
 
@@ -148,7 +148,7 @@ let compare_forms f1 f2 =
     (function
       | F_Unit b1, F_Unit b2
       | F_Clause b1, F_Clause b2 -> Pervasives.compare b1 b2
-      | _, (F_Unit _ | F_Clause _ | F_Lemma | F_Skolem | F_Let
+      | _, (F_Unit _ | F_Clause _ | F_Lemma | F_Skolem
            | F_Iff | F_Xor) ->
         assert false
     )
@@ -190,7 +190,7 @@ let compare s1 s2 =
         if c <> 0 then c else compare_bounds b2 b2'
       | _ ,
         (True | False | Void | Name _ | Int _ | Real _ | Bitv _
-        | Op _ | Lit _ | Form _ | Var _ | In _ | MapsTo _) ->
+        | Op _ | Lit _ | Form _ | Var _ | In _ | MapsTo _ | Let) ->
         assert false
     )
 
@@ -202,6 +202,7 @@ let hash x =
   | Void -> 0
   | True -> 1
   | False -> 2
+  | Let -> 3
   | Bitv s -> 19 * Hashtbl.hash s + 3
   | In (b1, b2) -> 19 * (Hashtbl.hash b1 + Hashtbl.hash b2) + 4
   | Name (n,Ac) -> 19 * Hstring.hash n + 5
@@ -240,7 +241,6 @@ let string_of_form f = match f with
   | F_Clause _ -> "\\/"
   | F_Lemma -> "Lemma"
   | F_Skolem -> "Skolem"
-  | F_Let -> "let"
   | F_Iff -> "<->"
   | F_Xor -> "xor"
 
@@ -292,6 +292,7 @@ let to_string ?(show_vars=true) x = match x with
 
   | Lit lit -> string_of_lit lit
   | Form form -> string_of_form form
+  | Let -> "let"
 
 let to_string_clean s = to_string ~show_vars:false s
 let to_string s = to_string ~show_vars:true s
