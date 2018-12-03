@@ -1203,10 +1203,14 @@ and apply_subst_trigger subst ({content; guard} as tr) =
      | Some g -> Some (apply_subst_aux subst g)
   }
 
+(* *1* We should never subst formulas inside termes. We could allow to
+   substitute "let x = form" inside non-pure expressions as long as
+   they are not inside terms. But currently, we cannot detect this
+   efficiently *)
 and mk_let_aux ({let_v; let_e; in_e} as x) =
   try
     let ty, nb_occ = SMap.find let_v in_e.vars in
-    if nb_occ = 1 && (is_term let_e || Sy.equal let_v in_e.f) ||
+    if nb_occ = 1 && (let_e.pure (*1*) || Sy.equal let_v in_e.f) ||
        not_an_app let_e then (* inline in these situations *)
       apply_subst_aux (SMap.singleton let_v let_e, Ty.esubst) in_e
     else
