@@ -367,7 +367,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
       | E.Term tt -> tt
     in
     match f_pat with
-    |	Symbols.Var hs when Symbols.equal f_pat Symbols.underscore -> [sg]
+    |	Symbols.Var hs when Symbols.equal f_pat Symbols.underscore ->
+      begin
+        try [ { sg with sty = Ty.matching s_ty ty_pat (E.type_info t) } ]
+        with Ty.TypeClash _ -> raise Echec
+      end
     |	Symbols.Var _ ->
       let sb =
         (try

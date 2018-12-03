@@ -19,7 +19,4 @@ val apply : ('a -> 'a) -> 'a list -> 'a list * bool
     couples **)
 val apply_right : ('a -> 'a) -> ('b * 'a) list -> ('b * 'a) list * bool
 
-(** An abbreviation of List.rev List.rev_map **)
-val rrmap : ('a -> 'b) -> 'a list -> 'b list
-
 val find_opt : ('a -> bool) -> 'a list -> 'a option

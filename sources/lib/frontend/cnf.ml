@@ -341,6 +341,7 @@ let rec make_term up_qv inline_lets (defns:let_defns) abstr t =
       let cond, _ =
         make_form
           up_qv inline_lets defns abstr "" cond Loc.dummy
+          ~decl_kind:E.Daxiom (* not correct, but not a problem *)
       in
       let t_cond = abstract_form_in_term cond abstr in
       let t1 = mk_term defns t1 in
@@ -425,7 +426,7 @@ and make_pred up_qv inline_lets defns abstr z id =
     end
   | _ -> make_term up_qv inline_lets defns abstr z
 
-and make_form up_qv inline_lets defns abstr name_base f loc =
+and make_form up_qv inline_lets defns abstr name_base f loc ~decl_kind =
   let name_tag = ref 0 in
   let rec mk_form up_qv (defns:let_defns) toplevel c id =
     let parent_abstr = !abstr in
@@ -536,7 +537,7 @@ and make_form up_qv inline_lets defns abstr name_base f loc =
           | TFexists _ -> E.mk_exists
           | _ -> assert false
         in
-        func name loc binders trs ff id ~toplevel, ret_d
+        func name loc binders trs ff id ~toplevel ~decl_kind, ret_d
 
       | TFlet(up,binders,lf) ->
         let binders =
@@ -586,26 +587,39 @@ and make_form up_qv inline_lets defns abstr name_base f loc =
   mk_form up_qv defns true f.c f.annot
 
 (* wrapper of function make_form *)
-let make_form name f loc =
+let make_form name f loc ~decl_kind =
   let abstr = ref E.Map.empty in
   let inline_lets = Options.inline_lets () in
   let ff, _ =
-    make_form Sy.Map.empty inline_lets Sy.Map.empty abstr name f loc
+    make_form Sy.Map.empty inline_lets Sy.Map.empty abstr name f loc ~decl_kind
   in
   assert (E.Map.is_empty !abstr);
   assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
-  ff
+  if Ty.Svty.is_empty (E.free_type_vars ff) then ff
+  else
+    let id = E.id ff in
+    E.mk_forall name loc Symbols.Map.empty [] ff id ~toplevel:true ~decl_kind
 
 let mk_assume acc f name loc =
-  let ff = make_form name f loc in
+  let ff = make_form name f loc ~decl_kind:E.Daxiom in
   {st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
-let mk_preddef acc f name loc =
-  let ff = make_form name f loc in
+let mk_term p args rety =
+  let args = List.map (fun (s, ty) -> E.mk_term (Sy.var s) [] ty) args in
+  E.mk_term (Sy.name p) args rety
+
+let mk_function acc f name args loc rety =
+  let px = mk_term name args rety in
+  let ff = make_form name f loc ~decl_kind:(E.Dfunction px) in
+  {st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
+
+let mk_preddef acc f name args loc =
+  let px = mk_term name args Ty.Tbool in
+  let ff = make_form name f loc ~decl_kind: (E.Dpredicate px) in
   {st_decl=PredDef (ff, name) ; st_loc=loc} :: acc
 
 let mk_query acc n f loc sort =
-  let ff = make_form "" f loc in
+  let ff = make_form "" f loc ~decl_kind:E.Dgoal in
   {st_decl=Query(n, ff, sort) ; st_loc=loc} :: acc
 
 let make_rule ({rwt_left = t1; rwt_right = t2; rwt_vars} as r) =
@@ -628,7 +642,7 @@ let mk_theory acc l th_name extends loc =
          | TAxiom (loc, name, ax_kd, f) -> loc, name, f, ax_kd
          | _ -> assert false
        in
-       let ax_form = make_form ax_name f loc in
+       let ax_form = make_form ax_name f loc ~decl_kind:E.Dtheory in
        let th_elt = {th_name; axiom_kind; extends; ax_form; ax_name} in
        {st_decl=ThAssume th_elt ; st_loc=loc} :: acc
     )acc l
@@ -636,14 +650,14 @@ let mk_theory acc l th_name extends loc =
 let make acc d =
   match d.c with
   | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
-  | TAxiom(loc, name, Parsed.Default, f) ->  mk_assume acc f name loc
+  | TAxiom(loc, name, Parsed.Default, f) -> mk_assume acc f name loc
   | TAxiom(loc, name, Parsed.Propagator, f) -> assert false
   | TRewriting(loc, name, lr) ->
     {st_decl=RwtDef(List.map make_rule lr); st_loc=loc} :: acc
   | TGoal(loc, sort, n, f) -> mk_query acc n f loc sort
   (*| TPredicate_def(loc, n, [], f) -> mk_preddef acc f n loc b*)
-  | TPredicate_def(loc, n, _, f) -> mk_preddef acc f n loc
-  | TFunction_def(loc, n, _, _, f) -> mk_assume acc f n loc
+  | TPredicate_def(loc, n, args, f) -> mk_preddef acc f n args loc
+  | TFunction_def(loc, n, args, rety, f) -> mk_function acc f n args loc rety
   | TTypeDecl _ | TLogic _  -> acc
 
 
