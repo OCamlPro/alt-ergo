@@ -125,8 +125,8 @@ type decl_kind =
   | Dtheory
   | Daxiom
   | Dgoal
-  | Dpredicate of t
-  | Dfunction of t
+  | Dpredicate of string
+  | Dfunction of string
 
 
 (** different views of an expression *)
