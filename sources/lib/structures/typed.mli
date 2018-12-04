@@ -85,10 +85,10 @@ and 'a tt_desc =
   (** Prefix symbol application *)
   | TTapp of Symbols.t * 'a atterm list
   (** Arbitrary symbol application *)
-  | TTmapsTo of Hstring.t * 'a atterm
+  | TTmapsTo of Var.t * 'a atterm
   (** Used in semantic triggers for floating point arithmetic.
       See sources/preludes/fpa-theory-2017-01-04-16h00.why *)
-  | TTinInterval of 'a atterm * bool * 'a atterm * 'a atterm * bool
+  | TTinInterval of 'a atterm * Symbols.bound * Symbols.bound
   (** Represent floating point intervals (used for triggers in Floating
       point arithmetic theory).
       [TTinInterval (lower, l_strict, t, upper, u_strict)] is a constraint

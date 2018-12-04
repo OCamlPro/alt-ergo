@@ -76,7 +76,7 @@ and letin = private {
 
 and semantic_trigger =
   | Interval of t * Symbols.bound * Symbols.bound
-  | MapsTo of Hstring.t * t
+  | MapsTo of Var.t * t
   | NotTheoryConst of t
   | IsTheoryConst of t
   | LinearDependency of t * t

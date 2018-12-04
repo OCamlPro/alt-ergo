@@ -118,7 +118,7 @@ val equal : t -> t -> bool
 
 type interval_matching =
   ((Numbers.Q.t * bool) option * (Numbers.Q.t * bool) option * Ty.t)
-    Hstring.Map.t
+    Var.Map.t
 
 (** matchs the given lower and upper bounds against the given interval, and
     update the given accumulator with the constraints. Returns None if

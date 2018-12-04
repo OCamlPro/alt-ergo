@@ -59,7 +59,7 @@ type form =
 
 type name_kind = Ac | Other
 
-type bound_kind = VarBnd of Hstring.t | ValBnd of Numbers.Q.t
+type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
 
 type bound = private
   { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
@@ -75,19 +75,19 @@ type t =
   | Op of operator
   | Lit of lit
   | Form of form
-  | Var of Hstring.t
+  | Var of Var.t
   | In of bound * bound
-  | MapsTo of Hstring.t
+  | MapsTo of Var.t
 
 val name : ?kind:name_kind -> string -> t
-val var : string -> t
+val var : Var.t -> t
 val underscore : t
 val int : string -> t
 val real : string -> t
 val constr : string -> t
-val mk_bound : Hstring.t -> Ty.t -> is_open:bool -> is_lower:bool -> bound
+val mk_bound : bound_kind -> Ty.t -> is_open:bool -> is_lower:bool -> bound
 val mk_in : bound -> bound -> t
-val mk_maps_to : Hstring.t -> t
+val mk_maps_to : Var.t -> t
 
 val is_ac : t -> bool
 
@@ -119,6 +119,7 @@ val add_label : Hstring.t -> t -> unit
 val label : t -> Hstring.t
 
 val print_bound : Format.formatter -> bound -> unit
+val string_of_bound : bound -> string
 
 module Set : Set.S with type elt = t
 

@@ -106,6 +106,7 @@ CMO-LIB = lib/util/config.cmo \
       lib/structures/ty.cmo \
       lib/structures/parsed.cmo \
       lib/structures/errors.cmo \
+      lib/structures/var.cmo \
       lib/structures/symbols.cmo \
       lib/structures/expr.cmo \
       lib/structures/typed.cmo \
