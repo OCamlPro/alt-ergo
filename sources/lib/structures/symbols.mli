@@ -81,7 +81,6 @@ type t =
 
 val name : ?kind:name_kind -> string -> t
 val var : string -> t
-val underscoring : t -> t
 val underscore : t
 val int : string -> t
 val real : string -> t
@@ -105,7 +104,7 @@ val print_clean : Format.formatter -> t -> unit
 
 (*val dummy : t*)
 
-val fresh : ?mk_var:bool -> string -> t
+val fresh : ?is_var:bool -> string -> t
 
 val is_get : t -> bool
 val is_set : t -> bool

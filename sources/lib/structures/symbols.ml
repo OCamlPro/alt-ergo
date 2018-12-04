@@ -108,10 +108,6 @@ let is_ac x = match x with
   | Name(_, Ac) -> true
   | _           -> false
 
-let underscoring x = match x with
-    Var s -> Var (Hstring.make ("$"^Hstring.view s))
-  | _ -> assert false
-
 let underscore =
   Random.self_init ();
   var (sprintf "_%d" (Random.int 1_000_000))
@@ -310,11 +306,11 @@ let print fmt s = Format.fprintf fmt "%s" (to_string s)
 
 let fresh =
   let cpt = ref 0 in
-  fun ?(mk_var=false) s ->
+  fun ?(is_var=false) s ->
     incr cpt;
     (* garder le suffixe "__" car cela influence l'ordre *)
     let s = (Format.sprintf "!?__%s%i" s (!cpt)) in
-    if mk_var then var s else name s
+    if is_var then var s else name s
 
 let is_get f = equal f (Op Get)
 let is_set f = equal f (Op Set)

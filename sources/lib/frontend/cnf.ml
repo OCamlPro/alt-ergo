@@ -92,7 +92,7 @@ let abstract_form_in_term =
     try let _, abstr_t, _ = E.Map.find f !abstr in abstr_t
     with Not_found ->
       incr cpt;
-      let fresh_sy = Sy.fresh ~mk_var:true (Hstring.fresh_string()) in
+      let fresh_sy = Sy.fresh ~is_var:true (Hstring.fresh_string()) in
       let fresh_t = E.mk_term fresh_sy [] Ty.Tbool in
       abstr := E.Map.add f (fresh_sy, fresh_t, !cpt) !abstr;
       fresh_t
@@ -548,7 +548,7 @@ and make_form up_qv inline_lets defns abstr name_base f loc ~decl_kind =
                  sy, Term (make_term up_qv inline_lets defns abstr t)
                | TletForm g ->
                  let fresh_sy =
-                   Sy.fresh ~mk_var:true (Hstring.fresh_string()) in
+                   Sy.fresh ~is_var:true (Hstring.fresh_string()) in
                  let fresh_t = E.mk_term fresh_sy [] Ty.Tbool in
                  let gg, _ = mk_form up_qv defns false g.c g.annot in
                  sy, Form (gg, fresh_sy, fresh_t)
