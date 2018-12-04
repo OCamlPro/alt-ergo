@@ -132,8 +132,8 @@ type decl_kind =
   | Dtheory
   | Daxiom
   | Dgoal
-  | Dpredicate of t
-  | Dfunction of t
+  | Dpredicate of string
+  | Dfunction of string
 
 (** Comparison and hashing functions *)
 
@@ -1967,6 +1967,25 @@ module Triggers = struct
     in
     try max_terms [] f with Exit -> []
 
+  let head_is_name s a =
+    match a.f with
+    | Sy.Name(hs, _) -> String.equal (Hstring.view hs) s
+    | _ -> false
+
+  let term_definition s e =
+    match e.f, e.xs with
+    | (Sy.Lit Sy.L_eq | Sy.Form Sy.F_Iff), [a;b] ->
+      if head_is_name s a then a
+      else if head_is_name s b then b
+      else assert false
+
+    | Sy.Lit Sy.L_neg_pred, [a] -> (* in case of simplifications *)
+      assert (head_is_name s a);
+      a
+    | _ -> (* in case of simplifications *)
+      assert (head_is_name s e);
+      e
+
   let make f toplevel binders trs0 ~decl_kind =
     if SMap.is_empty binders && Ty.Svty.is_empty f.vty then trs0
     else
@@ -1989,7 +2008,8 @@ module Triggers = struct
                              free-vars issues of theories axioms \
                              with hypotheses fixed"]
 
-      | ((Dpredicate e | Dfunction e), _ , _) when toplevel ->
+      | ((Dpredicate s | Dfunction s), _ , _) when toplevel ->
+        let e = term_definition s f in
         let defn = match f with
           | {f = (Sy.Form Sy.F_Iff | Sy.Lit Sy.L_eq) ; xs = [e1; e2]} ->
             if equal e e1 then e2 else if equal e e2 then e1 else f

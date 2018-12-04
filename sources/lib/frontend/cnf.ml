@@ -604,18 +604,13 @@ let mk_assume acc f name loc =
   let ff = make_form name f loc ~decl_kind:E.Daxiom in
   {st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
-let mk_term p args rety =
-  let args = List.map (fun (s, ty) -> E.mk_term (Sy.var s) [] ty) args in
-  E.mk_term (Sy.name p) args rety
 
-let mk_function acc f name args loc rety =
-  let px = mk_term name args rety in
-  let ff = make_form name f loc ~decl_kind:(E.Dfunction px) in
+let mk_function acc f name loc =
+  let ff = make_form name f loc ~decl_kind:(E.Dfunction name) in
   {st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
-let mk_preddef acc f name args loc =
-  let px = mk_term name args Ty.Tbool in
-  let ff = make_form name f loc ~decl_kind: (E.Dpredicate px) in
+let mk_preddef acc f name loc =
+  let ff = make_form name f loc ~decl_kind: (E.Dpredicate name) in
   {st_decl=PredDef (ff, name) ; st_loc=loc} :: acc
 
 let mk_query acc n f loc sort =
@@ -656,8 +651,8 @@ let make acc d =
     {st_decl=RwtDef(List.map make_rule lr); st_loc=loc} :: acc
   | TGoal(loc, sort, n, f) -> mk_query acc n f loc sort
   (*| TPredicate_def(loc, n, [], f) -> mk_preddef acc f n loc b*)
-  | TPredicate_def(loc, n, args, f) -> mk_preddef acc f n args loc
-  | TFunction_def(loc, n, args, rety, f) -> mk_function acc f n args loc rety
+  | TPredicate_def(loc, n, args, f) -> mk_preddef acc f n loc
+  | TFunction_def(loc, n, args, rety, f) -> mk_function acc f n loc
   | TTypeDecl _ | TLogic _  -> acc
 
 
