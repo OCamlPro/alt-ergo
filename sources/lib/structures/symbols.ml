@@ -62,10 +62,11 @@ type form =
 
 type name_kind = Ac | Other
 
-type bound_kind = VarBnd of Hstring.t | ValBnd of Numbers.Q.t
+type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
 
 type bound = (* private *)
   { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
+
 
 type t =
   | True
@@ -78,23 +79,19 @@ type t =
   | Op of operator
   | Lit of lit
   | Form of form
-  | Var of Hstring.t
+  | Var of Var.t
   | In of bound * bound
-  | MapsTo of Hstring.t
+  | MapsTo of Var.t
 
 type s = t
 
 let name ?(kind=Other) s = Name (Hstring.make s, kind)
-let var s = Var (Hstring.make s)
+let var s = Var s
 let int i = Int (Hstring.make i)
 let real r = Real (Hstring.make r)
 let constr s = Op (Constr (Hstring.make s))
 
-let mk_bound name sort ~is_open ~is_lower =
-  let kind =
-    try ValBnd (Numbers.Q.from_string (Hstring.view name))
-    with _ -> VarBnd name
-  in
+let mk_bound kind sort ~is_open ~is_lower =
   {kind; sort; is_open; is_lower}
 
 let mk_in b1 b2 =
@@ -110,7 +107,7 @@ let is_ac x = match x with
 
 let underscore =
   Random.self_init ();
-  var (sprintf "_%d" (Random.int 1_000_000))
+  var @@ Var.of_string @@ sprintf "_%d" (Random.int 1_000_000)
 
 let compare_kinds k1 k2 =
   Util.compare_algebraic k1 k2
@@ -159,7 +156,7 @@ let compare_forms f1 f2 =
 let compare_bounds_kind a b =
   Util.compare_algebraic a b
     (function
-      | VarBnd h1, VarBnd h2 -> Hstring.compare h1 h2
+      | VarBnd h1, VarBnd h2 -> Var.compare h1 h2
       | ValBnd q1, ValBnd q2 -> Numbers.Q.compare q1 q2
       | _, (VarBnd _ | ValBnd _) -> assert false
     )
@@ -179,9 +176,8 @@ let compare s1 s2 =
   Util.compare_algebraic s1 s2
     (function
       | Int h1, Int h2
-      | Real h1, Real h2
-      | Var h1, Var h2
-      | MapsTo h1, MapsTo h2 -> Hstring.compare h1 h2
+      | Real h1, Real h2 -> Hstring.compare h1 h2
+      | Var v1, Var v2 | MapsTo v1, MapsTo v2 -> Var.compare v1 v2
       | Name (h1, k1), Name (h2, k2) ->
         let c = Hstring.compare h1 h2 in
         if c <> 0 then c else compare_kinds k1 k2
@@ -210,14 +206,15 @@ let hash x =
   | In (b1, b2) -> 19 * (Hashtbl.hash b1 + Hashtbl.hash b2) + 4
   | Name (n,Ac) -> 19 * Hstring.hash n + 5
   | Name (n,Other) -> 19 * Hstring.hash n + 6
-  | Var n | Int n | Real n -> 19 * Hstring.hash n + 7
-  | MapsTo hs -> 19 * Hstring.hash hs + 8
-  | Op op -> 19 * Hashtbl.hash op + 9
-  | Lit lit -> 19 * Hashtbl.hash lit + 10
-  | Form x -> 19 * Hashtbl.hash x + 11
+  | Int n | Real n -> 19 * Hstring.hash n + 7
+  | Var v -> 19 * Var.hash v + 8
+  | MapsTo v -> 19 * Var.hash v + 9
+  | Op op -> 19 * Hashtbl.hash op + 10
+  | Lit lit -> 19 * Hashtbl.hash lit + 11
+  | Form x -> 19 * Hashtbl.hash x + 12
 
 let string_of_bound_kind x = match x with
-  | VarBnd h -> Hstring.view h
+  | VarBnd v -> Var.to_string v
   | ValBnd v -> Numbers.Q.to_string v
 
 let string_of_bound b =
@@ -249,8 +246,8 @@ let string_of_form f = match f with
 
 let to_string ?(show_vars=true) x = match x with
   | Name (n,_) -> Hstring.view n
-  | Var x when show_vars -> Format.sprintf "'%s'" (Hstring.view x)
-  | Var x -> Hstring.view x
+  | Var v when show_vars -> Format.sprintf "'%s'" (Var.to_string v)
+  | Var v -> Var.to_string v
   | Int n -> Hstring.view n
   | Real n -> Hstring.view n
   | Bitv s -> "[|"^s^"|]"
@@ -291,8 +288,7 @@ let to_string ?(show_vars=true) x = match x with
   | In (lb, rb) ->
     Format.sprintf "%s , %s" (string_of_bound lb) (string_of_bound rb)
 
-  | MapsTo x ->
-    Format.sprintf "%s |->" (Hstring.view x)
+  | MapsTo x ->  Format.sprintf "%s |->" (Var.to_string x)
 
   | Lit lit -> string_of_lit lit
   | Form form -> string_of_form form
@@ -310,7 +306,7 @@ let fresh =
     incr cpt;
     (* garder le suffixe "__" car cela influence l'ordre *)
     let s = (Format.sprintf "!?__%s%i" s (!cpt)) in
-    if is_var then var s else name s
+    if is_var then var @@ Var.of_string s else name s
 
 let is_get f = equal f (Op Get)
 let is_set f = equal f (Op Set)

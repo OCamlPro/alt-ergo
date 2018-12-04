@@ -118,8 +118,8 @@ and at_desc =
   | ATdot of aterm * Hstring.t
   | ATrecord of (Hstring.t * aterm) list
   | ATnamed of Hstring.t * aterm
-  | ATmapsTo of Hstring.t * aterm
-  | ATinInterval of aterm * bool * aterm * aterm *  bool
+  | ATmapsTo of Var.t * aterm
+  | ATinInterval of aterm * Symbols.bound * Symbols.bound
   (* bool = true <-> interval is_open *)
   | ATite of aform annoted * aterm * aterm
 

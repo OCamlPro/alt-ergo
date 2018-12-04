@@ -63,10 +63,8 @@ and 'a tt_desc =
   | TTinfix of ('a tterm, 'a) annoted * Symbols.t * ('a tterm, 'a) annoted
   | TTprefix of Symbols.t * ('a tterm, 'a) annoted
   | TTapp of Symbols.t * ('a tterm, 'a) annoted list
-  | TTmapsTo of Hstring.t * ('a tterm, 'a) annoted
-  | TTinInterval of
-      ('a tterm, 'a) annoted * bool * ('a tterm, 'a) annoted *
-      ('a tterm, 'a) annoted *  bool
+  | TTmapsTo of Var.t * ('a tterm, 'a) annoted
+  | TTinInterval of 'a atterm * Symbols.bound * Symbols.bound
   (* bool = true <-> interval is_open *)
 
   | TTget of ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
@@ -223,16 +221,14 @@ let rec print_term fmt t = match t.c.tt_desc with
   | TTnamed (lbl, t) ->
     fprintf fmt "%a" print_term t
 
-  | TTinInterval(e, lb, i, j, ub) ->
-    fprintf fmt "%a in %s%a, %a%s"
+  | TTinInterval(e, i, j) ->
+    fprintf fmt "%a in %a, %a"
       print_term e
-      (if lb then "]" else "[")
-      print_term i
-      print_term j
-      (if ub then "[" else "]")
+      Symbols.print_bound i
+      Symbols.print_bound j
 
   | TTmapsTo(x,e) ->
-    fprintf fmt "%s |-> %a" (Hstring.view x) print_term e
+    fprintf fmt "%a |-> %a" Var.print x print_term e
 
   | TTite(cond, t1, t2) ->
     fprintf fmt "(if %a then %a else %a)"

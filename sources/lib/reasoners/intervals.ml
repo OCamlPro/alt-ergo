@@ -1035,14 +1035,14 @@ let max_bound {ints; is_int; expl} = match List.rev ints with
   | (_, b) :: _ -> b
 
 type interval_matching =
-  ((Q.t * bool) option * (Q.t * bool) option * Ty.t) Hstring.Map.t
+  ((Q.t * bool) option * (Q.t * bool) option * Ty.t) Var.Map.t
 
-module MH = Hstring.Map
+module MV = Var.Map
 module Sy = Symbols
 
 let is_question_mark =
   let qm = Hstring.make "?" in
-  fun s -> Hstring.equal qm s
+  fun s -> Hstring.equal qm (Var.view s).Var.hs
 
 let consistent_bnds low up =
   match low, up with
@@ -1053,7 +1053,7 @@ let consistent_bnds low up =
 
 let new_up_bound idoms s ty q is_strict =
   let old_low, old_up, ty =
-    try MH.find s idoms
+    try MV.find s idoms
     with Not_found -> None,None,ty
   in
   let new_up =
@@ -1069,12 +1069,12 @@ let new_up_bound idoms s ty q is_strict =
   in
   if new_up == old_up then idoms
   else
-  if consistent_bnds old_low new_up then MH.add s (old_low, new_up, ty) idoms
+  if consistent_bnds old_low new_up then MV.add s (old_low, new_up, ty) idoms
   else raise Exit
 
 let new_low_bound idoms s ty q is_strict =
   let old_low, old_up, ty =
-    try MH.find s idoms
+    try MV.find s idoms
     with Not_found -> None,None,ty
   in
   let new_low =
@@ -1090,12 +1090,12 @@ let new_low_bound idoms s ty q is_strict =
   in
   if new_low == old_low then idoms
   else
-  if consistent_bnds new_low old_up then MH.add s (new_low, old_up, ty) idoms
+  if consistent_bnds new_low old_up then MV.add s (new_low, old_up, ty) idoms
   else raise Exit
 
 let new_var idoms s ty =
-  if MH.mem s idoms then idoms
-  else MH.add s (None, None, ty) idoms
+  if MV.mem s idoms then idoms
+  else MV.add s (None, None, ty) idoms
 
 let match_interval_upper {Sy.sort; is_open; kind; is_lower} i imatch =
   assert (not is_lower);

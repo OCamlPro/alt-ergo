@@ -84,7 +84,7 @@ and letin = {
 
 and semantic_trigger =
   | Interval of t * Sy.bound * Sy.bound
-  | MapsTo of Hstring.t * t
+  | MapsTo of Var.t * t
   | NotTheoryConst of t
   | IsTheoryConst of t
   | LinearDependency of t * t
@@ -212,7 +212,7 @@ let compare_triggers f1 f2 trs1 trs2 =
 
                   | MapsTo (h1, t1), MapsTo (h2, t2) ->
                     let c = compare t1 t2 in
-                    if c <> 0 then c else Hstring.compare h1 h2
+                    if c <> 0 then c else Var.compare h1 h2
 
                   | NotTheoryConst a, NotTheoryConst b
                   | IsTheoryConst a , IsTheoryConst b  -> compare a b

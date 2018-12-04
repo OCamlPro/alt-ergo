@@ -216,7 +216,8 @@ module Env = struct
 
   let add_var env lv pp_ty loc  =
     let ty = Types.ty_of_pp loc env.types None pp_ty in
-    add env lv Symbols.var ty
+    let fvar s = Symbols.var @@ Var.of_string s in
+    add env lv fvar ty
 
   let add_names env lv pp_ty loc =
     Types.monomorphized pp_ty;
@@ -292,7 +293,7 @@ let new_id = let r = ref 0 in fun () -> r := !r+1; !r
 let rec freevars_term acc t = match t.c.tt_desc with
   | TTvar x -> Sy.add x acc
   | TTapp (_,lt) -> List.fold_left freevars_term acc lt
-  | TTinInterval (e,_,_,_,_) -> freevars_term acc e
+  | TTinInterval (e,_,_) -> freevars_term acc e
   | TTmapsTo (_, e) -> freevars_term acc e
   | TTinfix (t1,_,t2) | TTget(t1, t2) ->
     List.fold_left freevars_term acc [t1; t2]
@@ -628,7 +629,8 @@ and type_term_desc env loc = function
       List.fold_left
         (fun env (sy, te1) ->
            let ty1 = Ty.shorten te1.c.tt_ty in
-           Env.add env [sy] Symbols.var ty1
+           let fvar s = Symbols.var @@ Var.of_string s in
+           Env.add env [sy] fvar ty1
         )env rev_l
     in
     let te2 = type_term env t2 in
@@ -683,27 +685,34 @@ and join_exists f = match f.pp_desc with
   | _ -> [] , [] , [], f
 
 
-and type_bound env bnd ty =
-  try
-    match bnd.pp_desc with
+and type_bound env bnd ty ~is_open ~is_lower =
+  let bk, ty_x = match bnd.pp_desc with
     | PPvar s ->
-      begin
-        match s.[0] with
-        | '?' ->
-          let res = TTvar (Symbols.Var (Hstring.make s)) in
-          {c = { tt_desc = res ; tt_ty = ty }; annot = new_id ()}
-        | _ -> type_term env bnd
+      assert (String.length s > 0);
+      begin match s.[0] with
+        | '?' -> Symbols.VarBnd (Var.of_string s), ty
+        | _ ->
+          let vx, ty_x = type_var_desc env s bnd.pp_loc in
+          let var_x =
+            match vx with TTvar Symbols.Var vx -> vx | _ -> assert false
+          in
+          Symbols.VarBnd var_x, ty_x
       end
     | PPconst num ->
-      begin
-        match num with
-        | ConstInt _ | ConstReal _->
-          type_term env bnd
-        | _ -> assert false
-      end
+      let ty_x, q =
+        try match num with
+          | ConstInt s  ->
+            Ty.Tint,  Numbers.Q.from_string s
+          | ConstReal s ->
+            Ty.Treal, Numbers.Q.from_string (Num.string_of_num s)
+          | _ -> assert false
+        with _ -> assert false (*numbers well constructed with regular exprs*)
+      in
+      Symbols.ValBnd q, ty_x
     | _ -> assert false
-  with Invalid_argument s when String.equal s "index out of bounds" ->
-    assert false
+  in
+  if not (Ty.equal ty ty_x) then error (ShouldHaveType(ty, ty_x)) bnd.pp_loc;
+  Symbols.mk_bound bk ty ~is_open ~is_lower
 
 and mk_ta_eq t1 t2 =
   let c =
@@ -946,7 +955,8 @@ and type_form ?(in_theory=false) env f =
                  let fzz, free_v = type_form env e in
                  TletForm fzz, Ty.Tbool, Sy.union free_v free_vars
              in
-             (sy, Symbols.var sy, xx, tty):: binders, free_vars
+             (sy, Symbols.var @@ Var.of_string sy, xx, tty):: binders,
+             free_vars
           )([], Sy.empty) binders
       in
       let up = Env.list_of env in
@@ -998,15 +1008,9 @@ and type_trigger in_theory env l =
        | true, PPinInterval (e, a,b, c, d) ->
          let te = type_term env e in
          let tt_ty = te.c.tt_ty in
-         let tb = type_bound env b tt_ty in
-         if not (Ty.equal tt_ty tb.c.tt_ty) then
-           error (ShouldHaveType(tb.c.tt_ty,tt_ty)) b.pp_loc;
-
-         let tc = type_bound env c tt_ty in
-         if not (Ty.equal tt_ty tc.c.tt_ty) then
-           error (ShouldHaveType(tc.c.tt_ty, tt_ty)) c.pp_loc;
-
-         { c = { tt_desc = TTinInterval(te, a, tb , tc, d) ; tt_ty = Ty.Tbool};
+         let tb = type_bound env b tt_ty ~is_open:a ~is_lower:true in
+         let tc = type_bound env c tt_ty ~is_open:d ~is_lower:false in
+         { c = { tt_desc = TTinInterval(te, tb , tc) ; tt_ty = Ty.Tbool};
            annot = new_id ()}
 
        | true, PPmapsTo (x, e) ->
@@ -1577,8 +1581,8 @@ let rec mono_term {c = {tt_ty=tt_ty; tt_desc=tt_desc}; annot = id} =
       TTprefix(sy, mono_term t)
     | TTapp (sy,tl) ->
       TTapp (sy, List.map mono_term tl)
-    | TTinInterval (e, a,b,c,d) ->
-      TTinInterval(mono_term e, a,b,c,d)
+    | TTinInterval (e, lb, ub) ->
+      TTinInterval(mono_term e, lb, ub)
     | TTmapsTo (x, e) ->
       TTmapsTo(x, mono_term e)
     | TTget (t1,t2) ->

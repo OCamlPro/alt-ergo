@@ -282,11 +282,11 @@ let rec filter_used_vars_term vars at =
   | ATmapsTo (_, at) ->
     filter_used_vars_term vars at
   | ATextract (at1, at2, at3)
-  | ATset (at1, at2, at3)
-  | ATinInterval (at1, _, at2, at3, _) ->
+  | ATset (at1, at2, at3) ->
     filter_used_vars_term vars at1
     @ filter_used_vars_term vars at2
     @ filter_used_vars_term vars at3
+  | ATinInterval (at1, _, _) -> filter_used_vars_term vars at1
   | ATlet (l, at2) ->
     let nvars =
       List.fold_left
@@ -887,11 +887,12 @@ and connect_at_desc env sbuf = function
   | ATdot (t, _) | ATprefix (_, t) | ATnamed (_, t)
   | ATmapsTo (_, t) ->
     connect_aterm env sbuf t
-  | ATset (t1,t2,t3) | ATextract (t1,t2,t3)
-  | ATinInterval (t1,_,t2,t3,_) ->
+  | ATset (t1,t2,t3) | ATextract (t1,t2,t3) ->
     connect_aterm env sbuf t1;
     connect_aterm env sbuf t2;
     connect_aterm env sbuf t3
+
+  | ATinInterval (t1,_,_) -> connect_aterm env sbuf t1
   | ATrecord r ->
     let atl = List.map snd r in
     connect_aterm_list env sbuf atl

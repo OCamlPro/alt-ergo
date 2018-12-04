@@ -129,8 +129,8 @@ and at_desc =
   | ATdot of aterm * Hstring.t
   | ATrecord of (Hstring.t * aterm) list
   | ATnamed of Hstring.t * aterm
-  | ATmapsTo of Hstring.t * aterm
-  | ATinInterval of aterm * bool * aterm * aterm *  bool
+  | ATmapsTo of Var.t * aterm
+  | ATinInterval of aterm * Symbols.bound * Symbols.bound
   (* bool = true <-> interval is_open *)
   | ATite of aform annoted * aterm * aterm
 
@@ -445,7 +445,7 @@ and findin_at_desc tag buffer parent = function
     let atl = List.map snd r in findin_aterm_list tag buffer parent atl
   | ATnamed (_, t) -> findin_aterm tag buffer parent t
   | ATmapsTo (_, t) -> findin_aterm tag buffer parent t
-  | ATinInterval(e, _, i, j, _) -> findin_aterm_list tag buffer parent [e; i; j]
+  | ATinInterval(e, i, j) -> findin_aterm tag buffer parent e
   | ATite (f, t1, t2) ->
     let r = findin_aterm tag buffer parent t1 in
     if r != None then r
@@ -736,16 +736,13 @@ and print_tt_desc fmt = function
     fprintf fmt "%a.%s" print_tterm t (Hstring.view c)
   | TTrecord r -> fprintf fmt "{ %a }" (print_record ";") r
   | TTnamed (lbl, t) -> fprintf fmt "%s:%a" (Hstring.view lbl) print_tterm t
-  | TTinInterval(e, lb, i, j, ub) ->
-    fprintf fmt "%a in %s%a, %a%s"
+  | TTinInterval(e, lb, ub) ->
+    fprintf fmt "%a in %a, %a"
       print_term e
-      (if lb then "]" else "[")
-      print_term i
-      print_term j
-      (if ub then "[" else "]")
+      Symbols.print_bound lb
+      Symbols.print_bound ub
 
-  | TTmapsTo(x,e) ->
-    fprintf fmt "%s |-> %a" (Hstring.view x) print_term e
+  | TTmapsTo(x,e) -> fprintf fmt "%a |-> %a" Var.print x print_term e
 
   | TTite(f,t1, t2) ->
     fprintf fmt "(if %a then %a else %a)"
@@ -958,8 +955,7 @@ and make_dep_at_desc d ex dep = function
       dep r
   | ATnamed (_, t) -> make_dep_aterm d ex dep t
   | ATmapsTo (_, t) -> make_dep_aterm d ex dep t
-  | ATinInterval(e, _, i, j, _) ->
-    List.fold_left (make_dep_aterm d ex) dep [e; i; j]
+  | ATinInterval(e, i, j) -> make_dep_aterm d ex dep e
   | ATite (f, t1, t2) ->
     let dep = make_dep_aterm d ex dep t1 in
     let dep = make_dep_aterm d ex dep t2 in
@@ -1072,12 +1068,10 @@ and of_tt_desc (buffer:sbuffer) = function
   | TTrecord r -> ATrecord (List.map (fun (c,t) -> (c, of_tterm buffer t)) r)
   | TTnamed (lbl, t) -> ATnamed (lbl, of_tterm buffer t)
   | TTmapsTo (hs, t) -> ATmapsTo (hs, of_tterm buffer t)
-  | TTinInterval(e, lb, i, j, ub) ->
+  | TTinInterval(e, lb, ub) ->
     ATinInterval(
       of_tterm buffer e,
       lb,
-      of_tterm buffer i,
-      of_tterm buffer j,
       ub
     )
   | TTite(f, t1, t2) ->
@@ -1282,12 +1276,10 @@ and to_tt_desc = function
   | ATrecord r -> TTrecord (List.map (fun (c, t) -> (c, to_tterm 0 t)) r)
   | ATnamed (lbl, t) -> TTnamed (lbl, to_tterm 0 t)
   | ATmapsTo (hs, t) -> TTmapsTo (hs, to_tterm 0 t)
-  | ATinInterval(e, lb, i, j, ub) ->
+  | ATinInterval(e, lb, ub) ->
     TTinInterval(
       to_tterm 0 e,
       lb,
-      to_tterm 0 i,
-      to_tterm 0 j,
       ub
     )
   | ATite (f, t1, t2) -> TTite (to_tform f, to_tterm 0 t1, to_tterm 0 t2)
@@ -1543,17 +1535,17 @@ and add_at_desc_at errors indent (buffer:sbuffer) tags iter at =
     add_aterm_at errors indent buffer tags iter t
 
   | ATmapsTo (n, t) ->
-    append_buf buffer ~iter ~tags (sprintf "%s |-> " (Hstring.view n));
+    append_buf buffer ~iter ~tags (sprintf "%s |-> " (Var.to_string n));
     add_aterm_at errors indent buffer tags iter t
 
-  | ATinInterval(t1, lb, t2, t3, ub) ->
+  | ATinInterval(t1, lb, ub) ->
     add_aterm_at errors indent buffer tags iter t1;
     append_buf buffer ~iter ~tags " in ";
-    append_buf buffer ~iter ~tags (if lb then "]" else "[");
-    add_aterm_at errors indent buffer tags iter t2;
+    let lb = Symbols.string_of_bound lb in
+    let ub = Symbols.string_of_bound ub in
+    append_buf buffer ~iter ~tags lb;
     append_buf buffer ~iter ~tags " , ";
-    add_aterm_at errors indent buffer tags iter t3;
-    append_buf buffer ~iter ~tags (if ub then "[" else "]")
+    append_buf buffer ~iter ~tags ub
 
   | ATite(f, t1, t2) ->
     append_buf buffer ~tags "if ";
@@ -1946,9 +1938,10 @@ let rec isin_aterm sl { at_desc = at_desc } =
     isin_aterm sl t2 || List.exists (fun (_,t1) -> isin_aterm sl t1) l
   | ATdot (t, _ ) | ATprefix (_,t) | ATnamed (_, t)
   | ATmapsTo (_, t) -> isin_aterm sl t
-  | ATset (t1, t2, t3) | ATextract (t1, t2, t3)
-  | ATinInterval(t1, _, t2, t3, _) ->
+  | ATset (t1, t2, t3) | ATextract (t1, t2, t3) ->
     isin_aterm sl t1 || isin_aterm sl t2 || isin_aterm sl t3
+  | ATinInterval(t1, _, _) ->
+    isin_aterm sl t1
   | ATrecord rt -> let atl = List.map snd rt in isin_aterm_list sl atl
   | ATite (f, t1, t2) ->
     (match findtags_aaform sl f [] with [] -> false | _ -> true)
@@ -1977,10 +1970,11 @@ and findtags_aaterm sl aat acc =
   | ATdot (t, _) | ATprefix (_,t) | ATnamed (_, t)
   | ATmapsTo (_, t) ->
     if isin_aterm sl t then aat.tag::acc else acc
-  | ATset (t1, t2, t3) | ATextract (t1, t2, t3)
-  | ATinInterval(t1, _, t2, t3, _)->
+  | ATset (t1, t2, t3) | ATextract (t1, t2, t3) ->
     if isin_aterm sl t1 || isin_aterm sl t2 || isin_aterm sl t3
     then aat.tag::acc else acc
+  | ATinInterval(t1, _, _)->
+    if isin_aterm sl t1 then aat.tag::acc else acc
   | ATrecord r ->
     let atl = List.map snd r in
     if isin_aterm_list sl atl then aat.tag::acc else acc
@@ -2117,8 +2111,7 @@ let rec listsymbols at acc =
 
   | ATmapsTo (hs, t) -> listsymbols t acc
 
-  | ATinInterval(e, lb, i, j, ub) ->
-    List.fold_left (fun acc at -> listsymbols at acc) acc [e; i; j]
+  | ATinInterval(e, lb, ub) -> listsymbols e acc
   | ATite (f, t1, t2) ->
     listsymbols_aform f.c (listsymbols t1 (listsymbols t2 acc))
 

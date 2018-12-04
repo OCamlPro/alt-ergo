@@ -174,14 +174,6 @@ let varset_of_list =
     (fun acc (s,ty) ->
        SE.add (E.mk_term s [] (Ty.shorten ty)) acc) SE.empty
 
-let bound_of_term (t: E.t) =
-  let open Sy in
-  match E.term_view t with
-  | E.Term {E.ty; xs; f = (Var hs | Int hs | Real hs)} ->
-    assert (xs == []);
-    hs, ty
-  | _ -> assert false
-
 let inline_abstractions parent_abstr abstr tmp =
   let id = E.id tmp in
   let l_abstr =
@@ -270,12 +262,8 @@ let rec make_term up_qv inline_lets (defns:let_defns) abstr t =
     | TTapp (s, l) ->
       make_adequate_app s (List.map (mk_term defns) l) ty
 
-    | TTinInterval (e, a, b, c, d) ->
+    | TTinInterval (e, lb, ub) ->
       assert (ty == Ty.Tbool);
-      let b, ty_b = bound_of_term (mk_term defns b) in
-      let c, ty_c = bound_of_term (mk_term defns c) in
-      let lb = Sy.mk_bound b ty_b ~is_open:a ~is_lower:true in
-      let ub = Sy.mk_bound c ty_c ~is_open:d ~is_lower:false in
       E.mk_term (Sy.mk_in lb ub) [mk_term defns e] ty
 
     | TTmapsTo (x, e) ->

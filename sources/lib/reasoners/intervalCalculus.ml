@@ -1927,13 +1927,13 @@ module Make
     (* TODO : add the ability to modify the value of epsilon ? *)
     let eps = Q.div_2exp Q.one 1076 in
     let aux idoms sbt =
-      Hstring.Map.fold
-        (fun hs (lv, uv, ty) sbt ->
-           let s = Hstring.view hs in
+      Var.Map.fold
+        (fun v_hs (lv, uv, ty) sbt ->
+           let s = Hstring.view (Var.view v_hs).Var.hs in
            match s.[0] with
            | '?' -> sbt
            | _ ->
-             let lb_var = Sy.var s in
+             let lb_var = Sy.var v_hs in
              let lb_val = match lv, uv with
                | None, None -> raise Exit
                | Some (q1, false), Some (q2, false) when Q.equal q1 q2 ->
@@ -2021,7 +2021,7 @@ module Make
                let uf, _ = Uf.add uf x in
                let uf, _ = Uf.add uf y in
                idoms, maps_to, env, uf
-          )(Hstring.Map.empty, [], env, uf) tr.E.semantic
+          )(Var.Map.empty, [], env, uf) tr.E.semantic
       in
       env, Some (idoms, maps_to)
     with Sem_match_fails env -> env, None
