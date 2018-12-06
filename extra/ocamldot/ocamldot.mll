@@ -24,7 +24,7 @@ rule processSource = parse
         let i = String.rindex s '.' in
         let s = String.sub s 0 i in
         let s = Filename.basename s in
-        let s = String.capitalize s in
+        let s = String.capitalize_ascii s in
         currentSource := s;
         processTargets lexbuf }
   | eof
@@ -43,7 +43,7 @@ and processTargets = parse
         let i = String.rindex t '.' in
         let t = String.sub t 0 i in
         let t = Filename.basename t in
-        let t = String.capitalize t in
+        let t = String.capitalize_ascii t in
         addDepend t;
         processTargets lexbuf }
   | eof
@@ -255,7 +255,7 @@ let addEdgeTk kernel tcKernel source target =
 (**********************************)
 let tk dag =
   let edges = edgesOfGraph dag in
-  let (kernel,tcKernel) =
+  let (kernel,_tcKernel) =
     List.fold_left
       (fun (k,tck) (s,t) -> addEdgeTk k tck s t)
       (emptyGraph,emptyGraph)
@@ -278,13 +278,13 @@ let getDependFromFile file =
     let lexbuf = Lexing.from_channel ic in
     processSource lexbuf;
     close_in ic
-  with Sys_error msg -> ()
+  with Sys_error _msg -> ()
      | Exit -> ()
 let getDependFromStdin () =
   try
     let lexbuf = Lexing.from_channel stdin in
     processSource lexbuf
-  with Sys_error msg -> ()
+  with Sys_error _msg -> ()
      | Exit -> ()
 
 (**********************************)
@@ -324,7 +324,9 @@ let dir_to_mod_names graph dir =
   fold_dir (fun dir_to_mod_names path ->
       let file = Filename.basename path in
       let mod_name =
-        String.capitalize (try Filename.chop_extension file with _ -> file) in
+        String.capitalize_ascii
+          (try Filename.chop_extension file with _ -> file)
+      in
       if ((Filename.check_suffix file ".ml")
           && StringSet.mem mod_name nodes)
       then
@@ -342,7 +344,7 @@ let printColors dir_to_mod_names =
   let num_dirs = StringMap.cardinal dir_to_mod_names in
   let hsv i s v =
     Printf.sprintf "\"%f %f %f\"" ((float)i *. (1. /. (float)num_dirs)) s v in
-  StringMap.fold (fun dir mod_names i ->
+  StringMap.fold (fun _dir mod_names i ->
       List.iter (fun mod_name ->
           Printf.printf
             "\"%s\" [style = filled, fillcolor = %s] ;\n"

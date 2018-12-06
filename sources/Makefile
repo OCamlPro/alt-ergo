@@ -169,6 +169,9 @@ Makefile.config lib/util/config.ml: configure configure.ml
 # Dependency graph
 # ================
 
+../extra/ocamldot/ocamldot:
+	cd ../extra/ocamldot/ && $(MAKE)
+
 # plot the dependency graph
 # specifying all dependencies is really, really bothersome,
 # so we just put the ocamldot executable as dep
