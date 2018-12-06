@@ -143,7 +143,6 @@ module M = struct
     | "" -> ()
     | s ->
       let path = match s with
-        | "bin" -> Config.bindir
         | "lib" -> Config.libdir
         | "plugins" -> Config.pluginsdir
         | "preludes" -> Config.preludesdir

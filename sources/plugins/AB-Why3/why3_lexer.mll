@@ -17,6 +17,8 @@
 (******************************************************************************)
 
 {
+  open AltErgoLib
+  open AltErgoParsers
   open Why3_parser
   open Lexing
 

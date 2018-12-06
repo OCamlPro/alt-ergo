@@ -40,9 +40,9 @@ let () =
               fprintf fmt "[stack used] %d words@." e.stack_size;
               fprintf fmt "[size of major heap] %d words@." e.heap_words;
               fprintf fmt "[max size major heap] %d words@." e.top_heap_words;
-              fprintf fmt "[major words diff] %0.f Kwords@."
+              fprintf fmt "[major words diff] %0f Kwords@."
                 ((e.major_words -. d.major_words) /. 1000.);
-              fprintf fmt "[minor words diff] %0.f Kwords@."
+              fprintf fmt "[minor words diff] %0f Kwords@."
                 ((e.minor_words -. d.minor_words) /. 1000.);
               tmp := e
            )

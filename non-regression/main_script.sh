@@ -28,7 +28,7 @@ cpt=0
 COLS=$(tput cols)
 limit=""
 while [ $cpt -lt $COLS ]; do
-    cpt=`expr $cpt + 1`        
+    cpt=`expr $cpt + 1`
     limit=`echo -n $limit-`
 done
 

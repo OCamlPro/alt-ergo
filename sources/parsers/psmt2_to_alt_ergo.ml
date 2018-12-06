@@ -8,6 +8,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open AltErgoLib
+
 module Smtlib_error = Psmt2Frontend.Smtlib_error
 module Smtlib_options = Psmt2Frontend.Options
 module Smtlib_ty = Psmt2Frontend.Smtlib_ty

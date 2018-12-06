@@ -28,6 +28,7 @@
 
 %{
   [@@@ocaml.warning "-33"]
+  open AltErgoLib
   open Options
   open Parsed_interface
 %}
@@ -72,13 +73,13 @@
 
 /* Entry points */
 
-%type <Parsed.lexpr list * bool> trigger_parser
+%type <AltErgoLib.Parsed.lexpr list * bool> trigger_parser
 %start trigger_parser
 
-%type <Parsed.lexpr> lexpr_parser
+%type <AltErgoLib.Parsed.lexpr> lexpr_parser
 %start lexpr_parser
 
-%type <Parsed.file> file_parser
+%type <AltErgoLib.Parsed.file> file_parser
 %start file_parser
 %%
 
@@ -489,24 +490,3 @@ named_ident:
 | id = ID { id, "" }
 | id = ID str = STRING { id, str }
 
-%%
-
- let aux aux_fun token lexbuf =
-   try
-     let res = aux_fun token lexbuf in
-     Parsing.clear_parser ();
-     res
-   with
-   | Parsing.Parse_error
-   | (*Basics. | MenhirBasics.*)Error ->
-     (* not fully qualified ! backward incompat. in Menhir !!*)
-     let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
-     let lex = Lexing.lexeme lexbuf in
-     Parsing.clear_parser ();
-     raise (Errors.Syntax_error (loc, lex))
-
- let file_parser token lexbuf = aux file_parser token lexbuf
-
- let lexpr_parser token lexbuf = aux lexpr_parser token lexbuf
-
- let trigger_parser token lexbuf = aux trigger_parser token lexbuf

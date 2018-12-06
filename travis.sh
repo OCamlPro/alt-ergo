@@ -46,7 +46,7 @@ library(){
              -I $lib_path \
              nums.cmxa zarith.cmxa ocplibSimplex.cmxa psmt2Frontend.cmxa \
              unix.cmxa str.cmxa zip.cmxa dynlink.cmxa \
-             altErgoLib.cmxa lib_usage.ml ; exit_if_error
+             AltErgoLib.cmxa lib_usage.ml ; exit_if_error
     ./lib_usage ; exit_if_error
     cd $pwd
 }
@@ -63,10 +63,9 @@ check_indentation(){
     ../extra/check_indentation.sh ; exit_if_error
 }
 
-## dummy switch
-opam sw DUMMY --alias system
 eval `opam config env`
 opam update
+echo "opam --version == `opam --version`"
 # in travis, 'system' compiler is currently < 4.04.0
 
 pre_merge_style_checker
@@ -76,13 +75,13 @@ do
     echo "=+= [travis.sh] testing with OCaml version '$ocaml_version' =+="
 
     opam sw remove $ocaml_version # failure if does not exist accepted !
-    opam sw $ocaml_version ; exit_if_error
+    opam sw create test_pin $ocaml_version ; exit_if_error
     eval `opam config env`
 
     cd $git_repo/
     git clean -dfx
     cd $git_repo/sources
-    
+
     ## A0 ## ocp-indent
     opam install ocp-indent.1.6.1 --y ; exit_if_error
     check_indentation
@@ -92,10 +91,11 @@ do
     echo "=+= [travis.sh] $ocaml_version' compiler: test with 'opam pin'"
 
     install_unreleased_psmt2_frontend ; exit_if_error
-    opam pin add alt-ergo . --y ; exit_if_error
+    opam pin add . --no-action --y ; exit_if_error
+    opam install alt-ergo --y ; exit_if_error
 
     non_regression
-    library `ocamlfind query alt-ergo`
+    library `ocamlfind query alt-ergo-lib`
 
     opam remove alt-ergo
 
@@ -104,39 +104,25 @@ do
 
     echo "=+= [travis.sh] $ocaml_version' compiler: test with Makefile"
 
-    opam sw DUMMY
+    opam sw create test_makefile $ocaml_version ; exit_if_error
     eval `opam config env`
-    opam sw remove $ocaml_version ; exit_if_error # should be fail !
-    opam sw $ocaml_version ; exit_if_error
-    eval `opam config env`
-
-    install_unreleased_psmt2_frontend ; exit_if_error
-    opam install ocamlfind camlzip zarith ocplib-simplex lablgtk menhir psmt2-frontend --y ; exit_if_error
 
     cd $git_repo/
     git clean -dfx
     cd $git_repo/sources
 
-    autoconf
+    install_unreleased_psmt2_frontend ; exit_if_error
+    opam pin add . --no-action --y ; exit_if_error
+    opam install --deps-only alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo --y ; exit_if_error
 
     ./configure --prefix=$local_install_dir ; exit_if_error
 
     echo "=+= [travis.sh] building and installing ... =+="
 
-    make -j4 alt-ergo ; exit_if_error
-    make install-ae ; exit_if_error
-    make clean ; exit_if_error
-
-    make -j4 gui ; exit_if_error
-    make install-gui ; exit_if_error
-    make clean ; exit_if_error
-
-    make -j4 fm-simplex ; exit_if_error
-    make install-fm-simplex ; exit_if_error
-    make clean ; exit_if_error
-
-    make -j4 fm-simplex ; exit_if_error
-    make install-lib ; exit_if_error
+    make bin ; exit_if_error
+    make gui ; exit_if_error
+    make plugins ; exit_if_error
+    make install ; exit_if_error
     make clean ; exit_if_error
 
     echo "=+= [travis.sh] installed files in $local_install_dir ... =+="
@@ -144,6 +130,6 @@ do
     export PATH=$PATH:$local_install_dir/bin
 
     non_regression
-    library "$local_install_dir/lib/alt-ergo"
+    library "$local_install_dir/lib/alt-ergo-lib"
 
 done

@@ -16,6 +16,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open AltErgoLib
+
 type loc = Loc.t
 type integer_constant = string
 type constant = string

@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open AltErgoLib
+
 module type PARSER_INTERFACE = sig
   val file : Lexing.lexbuf -> Parsed.file
   val expr : Lexing.lexbuf -> Parsed.lexpr

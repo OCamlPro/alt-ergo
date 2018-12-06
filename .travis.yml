@@ -14,9 +14,10 @@ before_install:
 - git status
 
 install:
-- wget -qq https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin system
+- sudo wget -O /usr/local/bin/opam https://github.com/ocaml/opam/releases/download/2.0.1/opam-2.0.1-x86_64-linux
+- sudo chmod a+x /usr/local/bin/opam
 - export OPAMYES=1
-- opam init --comp system
+- opam init --disable-sandboxing --bare
 
 script:
 - sh ./travis.sh

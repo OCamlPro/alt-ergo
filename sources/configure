@@ -1,0 +1,3 @@
+#!/bin/bash -e
+
+ocaml unix.cma configure.ml "$@"

@@ -1,0 +1,32 @@
+(include_subdirs  unqualified)
+
+(library
+  (name             AltErgoLib)
+  (public_name      alt-ergo-lib)
+
+  ; external dependencies
+  (libraries        unix num str zarith dynlink ocplib-simplex)
+
+  ; .mli only modules *also* need to be in this field
+  (modules_without_implementation matching_types numbersInterface sig)
+
+  ; modules that make up the lib
+  (modules
+    ; frontend
+    Cnf Frontend Parsed_interface Typechecker
+    ; reasoners
+    Ac Arith Arrays Bitv Ccx Combine Enum Fun_sat Inequalities
+    Instances IntervalCalculus Intervals Ite Matching Matching_types
+    Polynome Records Satml_frontend_hybrid Satml_frontend Satml
+    Sat_solver Sat_solver_sig Sig Theory Uf Use
+    ; structures
+    Commands Errors Exception Explanation Fpa_rounding
+    Parsed Profiling Satml_types Symbols
+    Expr Var Ty Typed Xliteral
+    ; util
+    Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
+    MyDynlink MyUnix Numbers NumsNumbers NumbersInterface
+    Options Timers Util Vec Version ZarithNumbers
+  )
+
+)
