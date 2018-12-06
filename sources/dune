@@ -1,7 +1,7 @@
 (env
  (dev
   (flags (:standard -absname -bin-annot
-           -w +A-45-27-4-9-44-32-48-41-6-22))
+           -w +A-45-27-4-9-44-32-48-41-58-6-22))
   (ocamlopt_flags -O3 -unbox-closures))
  (release
   (flags (:standard -absname -bin-annot))
