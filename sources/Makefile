@@ -40,7 +40,7 @@ gen: $(GENERATED)
 conf: Makefile Makefile.config lib/util/config.ml
 
 # Alias for generated artifacts
-clean: dune-clean
+clean: generated-clean dune-clean ocamldot-clean
 
 # Alias to remove all generated files
 distclean: makefile-distclean release-distclean
@@ -165,6 +165,28 @@ Makefile.config lib/util/config.ml: configure configure.ml
 	./configure
 
 
+# ================
+# Dependency graph
+# ================
+
+../extra/ocamldot/ocamldot:
+	cd ../extra/ocamldot/ && $(MAKE) bin
+
+# plot the dependency graph
+# specifying all dependencies is really, really bothersome,
+# so we just put the ocamldot executable as dep
+archi: ../extra/ocamldot/ocamldot
+	ocamldep \
+		-I lib/frontend/ -I lib/reasoners/ -I lib/structures/ -I lib/util/ \
+		-I parsers/ -I tools/text/ -I tools/gui/ \
+		lib/frontend/*.ml lib/reasoners/*.ml lib/structures/*.ml lib/util/*.ml \
+		parsers/*.ml tools/text/*.ml tools/gui/*.ml | \
+		../extra/ocamldot/ocamldot | grep -v "}" > archi.dot
+	cat ../extra/subgraphs.dot >> archi.dot
+	echo "}" >> archi.dot
+	dot -Tpdf archi.dot > archi.pdf
+
+.PHONY: archi
 
 # ===============
 # PUBLIC RELEASES
@@ -207,6 +229,10 @@ generated-clean:
 # Clean build artifacts
 dune-clean:
 	$(DUNE) clean
+
+# Clean ocamldot's build artifacts
+ocamldot-clean:
+	cd ../extra/ocamldot && $(MAKE) clean
 
 # Cleanup all makefile-related files
 makefile-distclean:

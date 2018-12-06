@@ -12,6 +12,7 @@ sources/*.install
 
 # Generated build artifacts
 sources/_build
+extra/ocamldot/_build
 
 # Generated release files
 public-release
