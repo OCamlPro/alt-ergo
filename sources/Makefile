@@ -40,7 +40,7 @@ gen: $(GENERATED)
 conf: Makefile Makefile.config lib/util/config.ml
 
 # Alias for generated artifacts
-clean: dune-clean
+clean: generated-clean dune-clean ocamldot-clean
 
 # Alias to remove all generated files
 distclean: makefile-distclean release-distclean
@@ -170,7 +170,7 @@ Makefile.config lib/util/config.ml: configure configure.ml
 # ================
 
 ../extra/ocamldot/ocamldot:
-	cd ../extra/ocamldot/ && $(MAKE)
+	cd ../extra/ocamldot/ && $(MAKE) bin
 
 # plot the dependency graph
 # specifying all dependencies is really, really bothersome,
@@ -229,6 +229,10 @@ generated-clean:
 # Clean build artifacts
 dune-clean:
 	$(DUNE) clean
+
+# Clean ocamldot's build artifacts
+ocamldot-clean:
+	cd ../extra/ocamldot && $(MAKE) clean
 
 # Cleanup all makefile-related files
 makefile-distclean:
