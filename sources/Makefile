@@ -165,6 +165,25 @@ Makefile.config lib/util/config.ml: configure configure.ml
 	./configure
 
 
+# ================
+# Dependency graph
+# ================
+
+# plot the dependency graph
+# specifying all dependencies is really, really bothersome,
+# so we just put the ocamldot executable as dep
+archi: ../extra/ocamldot/ocamldot
+	ocamldep \
+		-I lib/frontend/ -I lib/reasoners/ -I lib/structures/ -I lib/util/ \
+		-I parsers/ -I tools/text/ -I tools/gui/ \
+		lib/frontend/*.ml lib/reasoners/*.ml lib/structures/*.ml lib/util/*.ml \
+		parsers/*.ml tools/text/*.ml tools/gui/*.ml | \
+		../extra/ocamldot/ocamldot | grep -v "}" > archi.dot
+	cat ../extra/subgraphs.dot >> archi.dot
+	echo "}" >> archi.dot
+	dot -Tpdf archi.dot > archi.pdf
+
+.PHONY: archi
 
 # ===============
 # PUBLIC RELEASES

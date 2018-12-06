@@ -1667,7 +1667,7 @@ module Make
     let extract_improved env =
       SP.fold
         (fun p acc ->
-	  MP.add p (MP.find p env.polynomes) acc)
+        MP.add p (MP.find p env.polynomes) acc)
         env.improved MP.empty
 *)
 
