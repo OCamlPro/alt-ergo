@@ -11,6 +11,7 @@ subgraph cluster_parsers__why {
         "Cmdline_parser";
         "Parsers";
         "Parsers_loader";
+        "MyZip";
 }
 
 
@@ -75,6 +76,8 @@ subgraph cluster_lib__structures {
 	color=lightgrey;
         "Exception";
         "Explanation";
+        "Var";
+        "Symbols";
         "Expr";
         "Xliteral";
         "Ty";
@@ -121,6 +124,5 @@ subgraph cluster_lib__util {
         "ZarithNumbers";
         "NumbersInterface";
         "MyUnix";
-        "MyZip";
         "MyDynlink"
 }
