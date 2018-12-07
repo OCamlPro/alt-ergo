@@ -52,8 +52,6 @@ type axiom_kind = Default | Propagator
 val th_ext_of_string : string -> theories_extensions option
 val string_of_th_ext : theories_extensions -> string
 
-type mode = On | Off | Auto
-
 (**
    generic function for comparing algebraic data types.
    [compare_algebraic a b f]

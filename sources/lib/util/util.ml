@@ -76,8 +76,6 @@ let string_of_th_ext ext =
   | NIA -> "NIA"
   | FPA -> "FPA"
 
-type mode = On | Off | Auto
-
 let [@inline always] compare_algebraic s1 s2 f_same_constrs_with_args =
   let r1 = Obj.repr s1 in
   let r2 = Obj.repr s2 in
