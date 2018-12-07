@@ -1521,6 +1521,34 @@ let skolemize {main=f; binders; sko_v; sko_vty} =
   assert (is_ground res);
   res
 
+
+let rec mk_ite_eq x c th el =
+  if equal th el then mk_eq_aux x th
+  else if equal c vrai then mk_eq_aux x th
+  else if equal c faux then mk_eq_aux x el
+  else
+    let e1 = mk_eq_aux x th in
+    let e2 = mk_eq_aux x el in
+    mk_and (mk_imp c e1 0) (mk_imp (neg c) e2 0) false 0
+
+and mk_eq_aux x e =
+  match e.f, e.xs with
+  | Sy.Name(hs, Sy.Other), [c;th;el]
+    when String.equal (Hstring.view hs) "ite" ->
+    mk_ite_eq x c th el
+
+  | _ -> mk_eq ~iff:true  x e
+
+let mk_let_equiv let_sko let_e id  =
+  match let_e.f, let_e.xs with
+  | Sy.Name(hs, Sy.Other), [c;th;el]
+    when String.equal (Hstring.view hs) "ite" ->
+    mk_eq_aux let_sko let_e
+
+  | _ ->
+    if type_info let_e == Ty.Tbool then mk_iff let_sko let_e id
+    else mk_eq ~iff:true let_sko let_e
+
 let elim_let =
   let ground_sko sko =
     if is_ground sko then sko
@@ -1545,10 +1573,7 @@ let elim_let =
     else
       let id = id in_e in
       let f' = apply_subst_aux (SMap.singleton let_v let_sko, Ty.esubst) in_e in
-      let equiv =
-        if type_info let_e == Ty.Tbool then mk_iff let_sko let_e id
-        else mk_eq ~iff:true let_sko let_e
-      in
+      let equiv = mk_let_equiv let_sko let_e id in
       let res = mk_and equiv f' false id in
       assert (is_ground res);
       res
@@ -2129,6 +2154,181 @@ let mk_exists name loc binders trs f id ~toplevel ~decl_kind =
     in
     mk_forall name loc SMap.empty trs tmp id ~toplevel ~decl_kind
 
+
+module Purification = struct
+
+  let is_pure e = e.pure
+
+  let rec purify_term t lets =
+    if t.pure then t, lets
+    else
+      match t.f, t.bind with
+      | Sy.Let, B_let {let_v; let_e; in_e} ->
+        let let_e, lets = purify_term let_e lets in
+        let in_e , lets = purify_term in_e  lets in
+        in_e, SMap.add let_v let_e lets
+
+      | (Sy.Lit _ | Sy.Form _), _ ->
+        let fresh_sy = Sy.fresh ~is_var:true "Pur-F" in
+        mk_term fresh_sy [] t.ty , SMap.add fresh_sy t lets
+
+      | _ -> (* detect ITEs *)
+        match term_view t with
+        | Not_a_term _ -> assert false (* should not happen ? *)
+        | Term t ->
+          match t.f, t.xs with
+          | Sy.Name(hs, Sy.Other), [c;th;el]
+            when String.equal (Hstring.view hs) "ite" ->
+            let fresh_sy = Sy.fresh ~is_var:true "Pur-Ite" in
+            mk_term fresh_sy [] t.ty , SMap.add fresh_sy t lets
+
+          | _ ->
+            let xs, lets =
+              List.fold_left (fun (acc, lets) t ->
+                  let t', lets' = purify_term t lets in
+                  t' :: acc, lets'
+                ) ([], lets) (List.rev t.xs)
+            in
+            mk_term t.f xs t.ty, lets
+
+  and purify_generic mk l =
+    let l, lets =
+      List.fold_left (fun (acc, lets) t ->
+          let t', lets' = purify_term t lets in
+          t' :: acc, lets'
+        )([], SMap.empty) (List.rev l)
+    in
+    mk_lifted (mk l) lets
+
+  and purify_eq l =
+    purify_generic (fun l ->
+        match l with
+        | [] | [_] -> assert false
+        | [a; b ] -> mk_eq ~iff:true a b
+        | l -> mk_nary_eq ~iff:true l
+      ) l
+
+  and purify_distinct l =
+    purify_generic (fun l -> mk_distinct ~iff:true l) l
+
+  and purify_builtin neg pred l =
+    purify_generic (fun l -> mk_builtin neg pred l) l
+
+  and purify_predicate p is_neg =
+    purify_generic (fun l ->
+        match l with
+        | [e] -> if is_neg then neg e else e
+        | _ -> assert false
+      ) [p]
+
+  and purify_literal e =
+    if List.for_all is_pure e.xs then e (* this is OK for lits and terms *)
+    else match lit_view e with
+      | Not_a_lit _ -> assert false
+      | Eq (a, b)  ->
+        assert (a.ty != Ty.Tbool);
+        (* TODO: translate to iff *)
+        purify_eq [a; b]
+      | Eql l      -> purify_eq l
+      | Distinct l -> purify_distinct l
+      | Builtin (neg,prd,l) -> purify_builtin neg prd l
+      | Pred (p, is_neg) -> purify_predicate p is_neg
+
+  and purify_form e =
+    assert (e.ty == Ty.Tbool);
+    if is_pure e then e (* non negated predicates *)
+    else
+      match e.f with
+      | Sy.True | Sy.False | Sy.Var _ | Sy.In _ ->
+        e
+      | Sy.Name _ -> (* non negated predicates with impure parts *)
+        let e, lets = purify_term e SMap.empty in
+        mk_lifted e lets
+
+      | Sy.Let -> (* let on forms *)
+        begin match e.xs, e.bind with
+          | [], B_let ({let_e; in_e} as letin) ->
+            if let_e.pure && in_e.pure then e
+            else
+              let let_e', lets =
+                purify_term let_e SMap.empty
+              in
+              let in_e' = purify_form in_e in
+              if let_e == let_e' && in_e == in_e' then e
+              else
+                mk_lifted
+                  (mk_let_aux {letin with let_e = let_e'; in_e = in_e'})
+                  lets
+          | _, (B_lemma _ | B_skolem _ | B_none | B_let _) -> assert false
+        end
+
+      | Sy.Void | Sy.Int _ | Sy.Real _ | Sy.Bitv _ | Sy.Op _ | Sy.MapsTo _ ->
+        assert false (* not formulas *)
+
+      | Sy.Lit _ -> purify_literal e
+      | Sy.Form x ->
+        begin match x, e.xs, e.bind with
+          | Sy.F_Unit imp, [a;b], _ ->
+            let a' = purify_form a in
+            let b' = purify_form b in
+            if a == a' && b == b' then e else mk_and a' b' imp 0
+
+          | Sy.F_Clause imp, [a;b], _ ->
+            let a' = purify_form a in
+            let b' = purify_form b in
+            if a == a' && b == b' then e else mk_or a' b' imp 0
+
+          | Sy.F_Iff, [a;b], _ ->
+            let a' = purify_form a in
+            let b' = purify_form b in
+            if a == a' && b == b' then e else mk_iff a' b' 0
+
+          | Sy.F_Xor, [a;b], _ ->
+            let a' = purify_form a in
+            let b' = purify_form b in
+            if a == a' && b == b' then e else mk_xor a' b' 0
+
+          | Sy.F_Lemma, [], B_lemma q ->
+            let m = purify_form q.main in
+            if m == q.main then e
+            else mk_forall_ter {q with main = m} 0
+
+          | Sy.F_Skolem, [], B_skolem q ->
+            let m = purify_form q.main in
+            if m == q.main then e
+            else neg (mk_forall_ter {q with main = (neg m)} 0)
+
+          | (Sy.F_Unit _ | Sy.F_Clause _ | Sy.F_Iff
+            | Sy.F_Xor | Sy.F_Skolem | Sy.F_Lemma),
+            _, _ ->
+            assert false
+        end
+
+  and mk_lifted e lets =
+    SMap.fold (*beware of ordering: to be checked *)
+      (fun let_v let_e acc ->
+         let let_e, lets =
+           purify_non_toplevel_ite let_e SMap.empty in
+         assert (let_e.ty != Ty.Tbool || SMap.is_empty lets);
+         mk_lifted (mk_let let_v let_e acc 0) lets
+      )lets e
+
+  and purify_non_toplevel_ite e lets =
+    match e.f, e.xs with
+    | Sy.Name(hs, Sy.Other), [c; th; el]
+      when String.equal (Hstring.view hs) "ite" ->
+      let c = purify_form c in
+      let th, lets = purify_non_toplevel_ite th lets in
+      let el, lets = purify_non_toplevel_ite el lets in
+      mk_term e.f [c; th; el] e.ty, lets
+
+    | (Sy.Form _ | Sy.Lit _), _ -> purify_form e, lets
+    | _ -> purify_term e lets
+
+end
+
+(*let purify_literal = Purification.purify_literal*)
+let purify_form = Purification.purify_form
 
 module Set = TSet
 module Map = TMap

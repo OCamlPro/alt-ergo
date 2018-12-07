@@ -277,6 +277,9 @@ val elim_let : letin -> t
 
 val elim_iff : t -> t -> int -> with_conj:bool -> t
 
+(*val purify_literal : t -> t*)
+val purify_form : t -> t
+
 type gformula = {
   ff: t;
   nb_reductions : int;

@@ -439,6 +439,7 @@ let make_form name f loc ~decl_kind =
     make_form Sy.Map.empty name f loc ~decl_kind
   in
   assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
+  let ff = E.purify_form ff in
   if Ty.Svty.is_empty (E.free_type_vars ff) then ff
   else
     let id = E.id ff in
