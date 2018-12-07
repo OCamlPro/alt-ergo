@@ -544,7 +544,7 @@ let mk_binders =
       )st SMap.empty
 
 
-let merge_maps acc b =
+let merge_vars acc b =
   SMap.merge (fun sy a b ->
       match a, b with
       | None, None -> assert false
@@ -555,7 +555,7 @@ let merge_maps acc b =
         Some (ty, x + y)
     ) acc b
 
-let free_vars t acc = merge_maps acc t.vars
+let free_vars t acc = merge_vars acc t.vars
 
 let free_type_vars t = t.vty
 
@@ -662,7 +662,7 @@ let free_vars_non_form s l ty =
   | Sy.Var _, _ -> assert false
   | Sy.Form _, _ -> assert false (* not correct for quantified and Lets *)
   | _, [] -> SMap.empty
-  | _, e::r -> List.fold_left (fun s t -> merge_maps s t.vars) e.vars r
+  | _, e::r -> List.fold_left (fun s t -> merge_vars s t.vars) e.vars r
 
 let free_type_vars_non_form l ty =
   List.fold_left (fun acc t -> Ty.Svty.union acc t.vty) (Ty.vty_of ty) l
@@ -768,7 +768,7 @@ let mk_or f1 f2 is_impl id =
     let f1, f2 = if is_impl || compare f1 f2 < 0 then f1, f2 else f2, f1 in
     let d = (max f1.depth f2.depth) in (* the +1 causes regression *)
     let nb_nodes = f1.nb_nodes + f2.nb_nodes + 1 in
-    let vars = SMap.union (fun _ a _ -> Some a) f1.vars f2.vars in
+    let vars = merge_vars f1.vars f2.vars in
     let vty = Ty.Svty.union f1.vty f2.vty in
     let pos =
       HC.make {f=Sy.Form (Sy.F_Clause is_impl); xs=[f1; f2]; ty=Ty.Tbool;
@@ -798,7 +798,7 @@ let mk_iff f1 f2 id =
   else
     let d = (max f1.depth f2.depth) in (* the +1 causes regression *)
     let nb_nodes = f1.nb_nodes + f2.nb_nodes + 1 in
-    let vars = SMap.union (fun _ a _ -> Some a) f1.vars f2.vars in
+    let vars = merge_vars f1.vars f2.vars in
     let vty = Ty.Svty.union f1.vty f2.vty in
     let pos =
       HC.make {f=Sy.Form Sy.F_Iff; xs=[f1; f2]; ty=Ty.Tbool;
@@ -1057,7 +1057,7 @@ let get_skolem =
 
 let no_capture_issue s_t binders =
   let new_v =
-    SMap.fold (fun _ t acc -> merge_maps acc t.vars) s_t SMap.empty
+    SMap.fold (fun _ t acc -> merge_vars acc t.vars) s_t SMap.empty
   in
   let capt_bind = SMap.filter (fun sy _ -> SMap.mem sy new_v) binders in
   if SMap.is_empty capt_bind then true
@@ -1213,7 +1213,7 @@ and mk_let_aux ({let_v; let_e; in_e} as x) =
       let d = max let_e.depth in_e.depth in (* no + 1 ? *)
       let nb_nodes = let_e.nb_nodes + in_e.nb_nodes + 1 (* approx *) in
       (* do not include free vars in let_sko that have been simplified *)
-      let vars = merge_maps let_e.vars (SMap.remove let_v in_e.vars) in
+      let vars = merge_vars let_e.vars (SMap.remove let_v in_e.vars) in
       let vty = Ty.Svty.union let_e.vty in_e.vty in
       let y = {x with in_e = neg in_e} in
       let pos =
@@ -1471,7 +1471,7 @@ let mk_let let_v let_e in_e id =
   (* eventual simplification are done in mk_let_aux *)
   let let_e_ty = type_info let_e in
   let free_vars =
-    merge_maps let_e.vars (SMap.remove let_v in_e.vars) (*NEW*)
+    merge_vars let_e.vars (SMap.remove let_v in_e.vars) (*NEW*)
   in
   let free_v_as_terms =
     SMap.fold (fun sy (ty ,_) acc -> (mk_term sy [] ty)::acc) free_vars []
