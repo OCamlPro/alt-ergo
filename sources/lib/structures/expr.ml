@@ -80,6 +80,7 @@ and letin = {
   let_e : t;
   in_e : t;
   let_sko : t; (* fresh symb. with free vars *)
+  is_bool : bool;
 }
 
 and semantic_trigger =
@@ -347,10 +348,10 @@ let form_view t =
     | Sy.Form Sy.F_Xor, [a;b], _ -> Xor(a, b)
     | Sy.Form Sy.F_Lemma, [], B_lemma lem -> Lemma lem
     | Sy.Form Sy.F_Skolem, [], B_skolem sko -> Skolem sko
-    | Sy.Form Sy.F_Let, [], B_let x -> Let x
     | Sy.Lit (Sy.L_eq | Sy.L_neg_eq | Sy.L_neg_pred |
               Sy.L_built _ | Sy.L_neg_built _), _, _ ->
       Literal t
+    | Sy.Let, [], B_let ({is_bool=true} as x) -> Let x
 
     | _ -> Literal t
 
@@ -408,15 +409,16 @@ let rec print_silent fmt t =
         fprintf fmt "(<sko exists %a.> %a)"
           print_binders binders print_silent main
 
-      | Sy.F_Let, [], B_let x ->
-        fprintf fmt
-          "(let%a %a =@ %a in@ %a)"
-          (fun fmt x -> if Options.verbose () then
-              fprintf fmt " [sko = %a]" print x.let_sko) x
-          Sy.print x.let_v print x.let_e print_silent x.in_e
-
       | _ -> assert false
     end
+
+  | Sy.Let, [] ->
+    let x = match bind with B_let x -> x | _ -> assert false in
+    fprintf fmt
+      "(let%a %a =@ %a in@ %a)"
+      (fun fmt x -> if Options.verbose () then
+          fprintf fmt " [sko = %a]" print x.let_sko) x
+      Sy.print x.let_v print x.let_e print_silent x.in_e
 
   (* Literals *)
   | Sy.Lit lit, xs ->
@@ -574,7 +576,7 @@ let rec is_positive e =
   match f, bind with
   | Sy.Lit (Sy.L_neg_pred | Sy.L_neg_eq | Sy.L_neg_built _), _ -> false
   | Sy.Form (Sy.F_Clause _ | Sy.F_Skolem | Sy.F_Xor), _ -> false
-  | Sy.Form Sy.F_Let, B_let {in_e} -> is_positive in_e
+  | Sy.Let, B_let {in_e; is_bool = true} -> is_positive in_e
   | _ -> true
 
 let neg t =
@@ -835,7 +837,7 @@ let not_an_app e =
      detect constants (not incremented in some situations due to
      some regression) *)
   match e with
-  | {f = (Sy.Form _ | Sy.Lit _)}  -> false
+  | {f = (Sy.Form _ | Sy.Lit _ | Sy.Let)}  -> false
   | {xs = []} -> assert (depth e <= 1); true
   | _ -> false
 
@@ -958,10 +960,9 @@ let mk_positive_lit s neg_s l =
     let open Sy in
     match s with
     | Lit (L_eq | L_built _) -> true
-    | Lit (L_neg_eq | L_neg_pred | L_neg_built _) -> false
-    | Form _ -> false
+    | Lit (L_neg_eq | L_neg_pred | L_neg_built _) | Form _
     | True | False | Void | Name _ | Int _ | Real _ | Bitv _
-    | Op _ | Var _ | In _ | MapsTo _ -> false
+    | Op _ | Var _ | In _ | MapsTo _ | Let -> false
   );
   let d = 1 + List.fold_left (fun z t -> max z t.depth) 0 l in
   let nb_nodes = List.fold_left (fun z t -> z + t.nb_nodes) 1 l in
@@ -1133,7 +1134,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
           | _ -> assert false
         end
 
-      | Sy.Form Sy.F_Let, B_let {let_v; let_e; in_e ; let_sko} ->
+      | Sy.Let, B_let {let_v; let_e; in_e ; let_sko; is_bool} ->
         assert (xs == []);
         (* TODO: implement case where variables capture happens *)
         assert (no_capture_issue s_t (SMap.singleton let_v (let_e.ty, 0)));
@@ -1144,7 +1145,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
         assert (not (SMap.mem let_v s_t));
         let in_e2 = apply_subst_aux (SMap.remove let_v s_t, s_ty) in_e in
         assert (let_e != let_e2 || in_e != in_e2);
-        mk_let_aux {let_v; let_e=let_e2; in_e=in_e2; let_sko=let_sko2}
+        mk_let_aux {let_v; let_e=let_e2; in_e=in_e2; let_sko=let_sko2; is_bool}
 
       | Sy.Lit Sy.L_eq, _ ->
         begin match xs' with
@@ -1214,25 +1215,28 @@ and mk_let_aux ({let_v; let_e; in_e} as x) =
        not_an_app let_e then (* inline in these situations *)
       apply_subst_aux (SMap.singleton let_v let_e, Ty.esubst) in_e
     else
+      let ty = type_info in_e in
       let d = max let_e.depth in_e.depth in (* no + 1 ? *)
       let nb_nodes = let_e.nb_nodes + in_e.nb_nodes + 1 (* approx *) in
       (* do not include free vars in let_sko that have been simplified *)
       let vars = merge_vars let_e.vars (SMap.remove let_v in_e.vars) in
       let vty = Ty.Svty.union let_e.vty in_e.vty in
-      let y = {x with in_e = neg in_e} in
       let pos =
-        HC.make {f=Sy.Form Sy.F_Let; xs=[]; ty=Ty.Tbool;
+        HC.make {f=Sy.Let; xs=[]; ty;
                  depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
                  bind = B_let x; pure = false}
       in
-      let neg =
-        HC.make {f=Sy.Form Sy.F_Let; xs=[]; ty=Ty.Tbool;
-                 depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-                 bind = B_let y; pure = false}
-      in
-      pos.neg <- Some neg;
-      neg.neg <- Some pos;
-      pos
+      if pos.neg != None || not x.is_bool then pos
+      else
+        let y = {x with in_e = neg in_e} in
+        let neg =
+          HC.make {f=Sy.Let; xs=[]; ty;
+                   depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
+                   bind = B_let y; pure = false}
+        in
+        pos.neg <- Some neg;
+        neg.neg <- Some pos;
+        pos
   with Not_found -> in_e (* let_v does not appear in in_e *)
 
 and mk_forall_bis (q : quantified) id =
@@ -1481,7 +1485,8 @@ let mk_let let_v let_e in_e id =
     SMap.fold (fun sy (ty ,_) acc -> (mk_term sy [] ty)::acc) free_vars []
   in
   let let_sko = mk_term (Sy.fresh "_let") free_v_as_terms let_e_ty in
-  mk_let_aux {let_v; let_e; in_e; let_sko}
+  let is_bool = type_info in_e == Ty.Tbool in
+  mk_let_aux {let_v; let_e; in_e; let_sko; is_bool}
 
 let skolemize {main=f; binders; sko_v; sko_vty} =
   let tyvars =
@@ -1605,8 +1610,7 @@ module Triggers = struct
              (fun acc t -> max (score_term t) acc) 0 tl)
 
     | {f=(Sy.MapsTo _ | Sy.In _); xs = [e]} -> score_term e
-    | {f= (Lit _ | Form _)}
-    | {f=(Sy.MapsTo _ | Sy.In _)} -> assert false
+    | {f= (Lit _ | Form _ | Sy.MapsTo _ | Sy.In _ | Sy.Let)} -> assert false
 
 
   let rec cmp_trig_term (t1 : expr) (t2 : expr) =
@@ -1703,8 +1707,8 @@ module Triggers = struct
 
     | {f=Op _}, _ -> -1
     | _, {f=Op _} -> 1
-    | {f = (Lit _ | Form _ | In _ | MapsTo _)},
-      {f = (Lit _ | Form _ | In _ | MapsTo _)} -> assert false
+    | {f = (Lit _ | Form _ | In _ | MapsTo _ | Let)},
+      {f = (Lit _ | Form _ | In _ | MapsTo _ | Let)} -> assert false
 
   let cmp_trig_term_list tl2 tl1 =
     let l1 = List.map score_term tl1 in
@@ -1966,7 +1970,7 @@ module Triggers = struct
       | {f = Sy.Form (Sy.F_Unit _ | Sy.F_Clause _ | Sy.F_Xor | Sy.F_Iff) } ->
         List.fold_left max_terms acc e.xs
 
-      | {f = Sy.Form (Sy.F_Lemma | Sy.F_Skolem | Sy.F_Let)} -> raise Exit
+      | {f = Sy.Form (Sy.F_Lemma | Sy.F_Skolem) | Sy.Let} -> raise Exit
       | {f} when is_infix f -> raise Exit
       (*| {f = Op _} -> raise Exit*)
       | {f=Op _; _ } ->
