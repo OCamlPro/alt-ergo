@@ -1896,6 +1896,9 @@ module Triggers = struct
 
   (***)
 
+  let free_vars_as_set e =
+    SMap.fold (fun sy _ s -> SSet.add sy s) e.vars SSet.empty
+
   let potential_triggers =
     let has_bvar bv_lf bv =
       SMap.exists (fun e _ -> SSet.mem e bv) bv_lf
@@ -1903,26 +1906,28 @@ module Triggers = struct
     let has_tyvar vty vty_lf =
       Svty.exists (fun e -> Svty.mem e vty) vty_lf
     in
-    let args_of e =
+    let args_of e lets =
       match e.bind with
-      | B_lemma q | B_skolem q -> [q.main]
-      | B_let {let_e; in_e} -> [let_e; in_e]
-      | _ -> e.xs
+      | B_lemma q | B_skolem q -> lets, [q.main]
+      | B_let ({let_v; let_e; in_e} as x) ->
+        SMap.add let_v x lets, [let_e; in_e]
+      | _ -> lets, e.xs
     in
-    let rec aux ((vterm, vtype) as vars) acc e =
-      let acc =
+    let rec aux ((vterm, vtype) as vars) ((strs, lets) as acc) e =
+      let strs, lets =
         if e.pure && (has_bvar e.vars vterm || has_tyvar e.vty vtype) &&
            not (is_prefix e.f)
         then
-          let vrs = SMap.fold (fun sy _ s -> SSet.add sy s) e.vars SSet.empty in
-          STRS.add (e, vrs, e.vty) acc
+          let vrs = free_vars_as_set e in
+          STRS.add (e, vrs, e.vty) strs, lets
         else
           acc
       in
-      List.fold_left (aux vars) acc (args_of e)
+      let lets, args = args_of e lets in
+      List.fold_left (aux vars) (strs, lets) args
     in
     fun ((vterm, vtype) as vars) e ->
-      aux vars STRS.empty e
+      aux vars (STRS.empty, SMap.empty) e
 
   let triggers_of_list l =
     List.map
@@ -1996,6 +2001,26 @@ module Triggers = struct
       assert (head_is_name s e);
       e
 
+  let expand_lets terms lets =
+    let sbt =
+      SMap.fold
+        (fun sy {let_e} sbt ->
+           let let_e = apply_subst (sbt, Ty.esubst) let_e in
+           if let_e.pure then SMap.add sy let_e sbt else sbt
+               [@ocaml.ppwarning "TODO: once 'let x = term in term' \
+                                  added, check that the resulting sbt \
+                                  is well normalized (may be not true \
+                                  depending on the ordering of vars in \
+                                  lets"]
+        )lets SMap.empty
+    in
+    let sbs = sbt, Ty.esubst in
+    STRS.fold
+      (fun (e, _, _) strs ->
+         let e = apply_subst sbs e in
+         STRS.add (e, free_vars_as_set e, e.vty) strs
+      )terms terms
+
   let make f toplevel binders trs0 ~decl_kind =
     if SMap.is_empty binders && Ty.Svty.is_empty f.vty then trs0
     else
@@ -2032,9 +2057,11 @@ module Triggers = struct
       | _ , _::_ , _   -> check_triggers (vterm, vtype) trs0
 
       | _, _, {f = (Sy.Form Sy.F_Iff) ; xs = [e1; e2]} when is_literal e1 ->
-        let f_trs1 = potential_triggers (vterm, vtype) e1 in
+        let f_trs1, lets = potential_triggers (vterm, vtype) e1 in
+        let f_trs1 = expand_lets f_trs1 lets in
         let trs1 = trs_in_scope f_trs1 e1 in
-        let f_trs2 = potential_triggers (vterm, vtype) e2 in
+        let f_trs2, lets = potential_triggers (vterm, vtype) e2 in
+        let f_trs2 = expand_lets f_trs2 lets in
         let trs2 = trs_in_scope f_trs2 e2 in
         let res_1 =
           make_triggers vterm vtype trs1 ~escaped_vars:false @
@@ -2050,7 +2077,8 @@ module Triggers = struct
         triggers_of_list res
 
       | _ ->
-        let f_trs = potential_triggers (vterm, vtype) f in
+        let f_trs, lets = potential_triggers (vterm, vtype) f in
+        let f_trs = expand_lets f_trs lets in
         let trs = trs_in_scope f_trs f in
         triggers_of_list @@
         match make_triggers vterm vtype trs ~escaped_vars:false with
