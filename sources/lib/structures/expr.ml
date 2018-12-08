@@ -1534,15 +1534,21 @@ let elim_let =
     (* usefull when let_sko still contains variables that are not in
        ie_e due to simplification *)
     let let_sko = ground_sko let_sko in
-    let id = id in_e in
-    let f' = apply_subst_aux (SMap.singleton let_v let_sko, Ty.esubst) in_e in
-    let equiv =
-      if type_info let_e == Ty.Tbool then mk_iff let_sko let_e id
-      else mk_eq ~iff:true let_sko let_e
-    in
-    let res = mk_and equiv f' false id in
-    assert (is_ground res);
-    res
+    if let_sko.nb_nodes >= let_e.nb_nodes && let_e.pure then
+      apply_subst_aux (SMap.singleton let_v let_e, Ty.esubst) in_e
+        [@ocaml.ppwarning "TODO: should also inline form in form. But \
+                           not possible to detect if we are not \
+                           inlining a form inside a term"]
+    else
+      let id = id in_e in
+      let f' = apply_subst_aux (SMap.singleton let_v let_sko, Ty.esubst) in_e in
+      let equiv =
+        if type_info let_e == Ty.Tbool then mk_iff let_sko let_e id
+        else mk_eq ~iff:true let_sko let_e
+      in
+      let res = mk_and equiv f' false id in
+      assert (is_ground res);
+      res
 
 let elim_iff f1 f2 id ~with_conj =
   if with_conj then
