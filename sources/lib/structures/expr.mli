@@ -269,7 +269,9 @@ val mk_exists :
   decl_kind:decl_kind ->
   t
 
-val mk_let : Symbols.t -> t -> t -> int -> t
+type ensure_let_deps_set
+val set_let_deps : Symbols.t -> t -> ensure_let_deps_set
+val mk_let : Symbols.t -> ensure_let_deps_set -> t -> int -> t
 
 val skolemize : quantified -> t
 

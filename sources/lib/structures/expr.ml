@@ -1471,18 +1471,59 @@ let free_type_vars_as_types e =
     (free_type_vars e) Ty.Set.empty
 
 
+
+type ensure_let_deps_set = t option
+let set_let_deps let_v let_e =
+  let dep_vars =
+    SMap.fold
+      (fun sy (ty, _) sv ->
+         match sy with
+         | Sy.Var v ->
+           begin match Var.let_deps v with
+             | None -> Var.Map.add v ty sv
+             | Some l ->
+               List.fold_left
+                 (fun sv (v, ty) ->
+                    assert (Var.let_deps v == None);
+                    Var.Map.add v ty sv
+                 )sv l
+           end
+         | _ -> assert false
+
+      )let_e.vars Var.Map.empty
+  in
+  begin match let_v with
+    | Sy.Var v ->
+      begin match Var.let_deps v with
+        | Some _ -> () (* already set ! may happen when lifting *)
+        | None -> Var.set_let_deps v dep_vars
+      end
+    | _ -> assert false
+  end;
+  Some let_e
+
 (* let let_v = let_e in in_e *)
 let mk_let let_v let_e in_e id =
   (* !!! DANGER !!! only keep up vars that are bound with forall or
      exists, not those bound with a let is buggy:
      let up = SMap.filter (fun x _ -> Sy.Set.mem x quant_vars) up in *)
   (* eventual simplification are done in mk_let_aux *)
+  let let_e = match let_e with None -> assert false | Some x -> x in
   let let_e_ty = type_info let_e in
-  let free_vars = let_e.vars in (* dep vars are only those appearing in let_e*)
-  let free_v_as_terms =
-    SMap.fold (fun sy (ty ,_) acc -> (mk_term sy [] ty)::acc) free_vars []
+  let dep_vars =
+    match let_v with
+    | Sy.Var v ->
+      begin match Var.let_deps v with
+        | None -> assert false
+        | Some l -> l
+      end
+    | _ -> assert false
   in
-  let let_sko = mk_term (Sy.fresh "_let") free_v_as_terms let_e_ty in
+  let dep_v_as_terms =
+    List.fold_left (fun acc (v, ty) -> (mk_term (Sy.var v) [] ty)::acc)
+      [] (List.rev dep_vars)
+  in
+  let let_sko = mk_term (Sy.fresh "_let") dep_v_as_terms let_e_ty in
   let is_bool = type_info in_e == Ty.Tbool in
   mk_let_aux {let_v; let_e; in_e; let_sko; is_bool}
 
@@ -2310,6 +2351,7 @@ module Purification = struct
          let let_e, lets =
            purify_non_toplevel_ite let_e SMap.empty in
          assert (let_e.ty != Ty.Tbool || SMap.is_empty lets);
+         let let_e = set_let_deps let_v let_e in
          mk_lifted (mk_let let_v let_e acc 0) lets
       )lets e
 

@@ -11,12 +11,13 @@
 
 type t
 
-type view = {hs : Hstring.t ; id : int}
+
+module Map : Map.S with type key = t
+module Set : Set.S with type elt = t
+
 
 val of_hstring : Hstring.t -> t
 val of_string  : string -> t
-
-val view : t -> view
 
 val compare : t -> t -> int
 
@@ -28,7 +29,8 @@ val print : Format.formatter -> t -> unit
 
 val to_string : t -> string
 
-module Map : Map.S with type key = t
+val hstring_part : t -> Hstring.t
 
-module Set : Set.S with type elt = t
+val set_let_deps : t -> Ty.t Map.t -> unit
 
+val let_deps : t -> (t * Ty.t) list option

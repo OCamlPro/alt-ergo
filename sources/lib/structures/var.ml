@@ -12,24 +12,16 @@
 open Options
 open Format
 
-type view = {
+type t = {
   hs : Hstring.t ;
   id : int ;
+
+  (* None -> not a let var. Some l -> list of direct and indirect
+     quantified vars dependencies of this let var. *)
+  let_deps : (t * Ty.t) list option ref;
 }
 
-type t = view
-
-let cpt = ref 0
-
-let of_hstring hs =
-  incr cpt;
-  {hs ; id = !cpt}
-
-let of_string s =
-  incr cpt;
-  {hs = Hstring.make s; id = !cpt}
-
-let view v = v
+type var = t
 
 let compare a b =
   let c = a.id - b.id in
@@ -43,11 +35,27 @@ let equal a b = compare a b = 0
 
 let hash {hs ; id} = id
 
+module Set = Set.Make(struct type t = var let compare = compare end)
+module Map = Map.Make(struct type t = var let compare = compare end)
+
+let cpt = ref 0
+
+let of_hstring hs =
+  incr cpt;
+  {hs ; id = !cpt; let_deps = ref None}
+
+let of_string s =
+  incr cpt;
+  {hs = Hstring.make s; id = !cpt; let_deps = ref None}
+
+let set_let_deps v m = v.let_deps := Some (Map.bindings m)
+
+let let_deps v = !(v.let_deps)
+
+let hstring_part v = v.hs
+
 let to_string {hs ; id} =
   sprintf "%s~%d" (Hstring.view hs) id
 
 let print fmt v =
   fprintf fmt "%s" (to_string v)
-
-module Set = Set.Make(struct type t = view let compare = compare end)
-module Map = Map.Make(struct type t = view let compare = compare end)

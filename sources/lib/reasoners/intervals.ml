@@ -1042,7 +1042,7 @@ module Sy = Symbols
 
 let is_question_mark =
   let qm = Hstring.make "?" in
-  fun s -> Hstring.equal qm (Var.view s).Var.hs
+  fun s -> Hstring.equal qm (Var.hstring_part s)
 
 let consistent_bnds low up =
   match low, up with

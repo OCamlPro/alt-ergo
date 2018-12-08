@@ -1933,7 +1933,7 @@ module Relation
     let aux idoms sbt =
       Var.Map.fold
         (fun v_hs (lv, uv, ty) sbt ->
-           let s = Hstring.view (Var.view v_hs).Var.hs in
+           let s = Hstring.view (Var.hstring_part v_hs) in
            match s.[0] with
            | '?' -> sbt
            | _ ->

@@ -224,7 +224,7 @@ let rec make_term up_qv t =
 
     | TTlet (binders, t2) ->
       let binders =
-        List.rev_map (fun (s, t1) -> s, mk_term t1)
+        List.rev_map (fun (s, t1) -> s, E.set_let_deps s (mk_term t1))
           (List.rev binders)
       in
       List.fold_left
@@ -411,10 +411,11 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
       let binders =
         List.rev_map
           (fun (sy, e) ->
-             sy,
-             match e with
-             | TletTerm t -> make_term up_qv t
-             | TletForm g -> mk_form up_qv false g.c g.annot
+             let e = match e with
+               | TletTerm t -> make_term up_qv t
+               | TletForm g -> mk_form up_qv false g.c g.annot
+             in
+             sy, E.set_let_deps sy e
           )(List.rev binders)
       in
       let res = mk_form up_qv false lf.c lf.annot in
