@@ -1478,9 +1478,7 @@ let mk_let let_v let_e in_e id =
      let up = SMap.filter (fun x _ -> Sy.Set.mem x quant_vars) up in *)
   (* eventual simplification are done in mk_let_aux *)
   let let_e_ty = type_info let_e in
-  let free_vars =
-    merge_vars let_e.vars (SMap.remove let_v in_e.vars) (*NEW*)
-  in
+  let free_vars = let_e.vars in (* dep vars are only those appearing in let_e*)
   let free_v_as_terms =
     SMap.fold (fun sy (ty ,_) acc -> (mk_term sy [] ty)::acc) free_vars []
   in
