@@ -66,12 +66,12 @@ lib: gen
 # Build the cli/text alt-ergo bin
 bin: gen
 	$(DUNE) build $(DUNE_FLAGS) _build/install/default/bin/alt-ergo
-	ln -s _build/install/default/bin/alt-ergo alt-ergo
+	ln -sf _build/install/default/bin/alt-ergo alt-ergo
 
 # Build the GUI
 gui: gen
 	$(DUNE) build $(DUNE_FLAGS) _build/install/default/bin/altgr-ergo
-	ln -s _build/install/default/bin/altgr-ergo altgr-ergo
+	ln -sf _build/install/default/bin/altgr-ergo altgr-ergo
 
 # fm-simplex plugin
 fm-simplex:
@@ -99,8 +99,8 @@ plugins:
 # parralelize more
 all: gen
 	$(DUNE) build $(DUNE_FLAGS) @install
-	ln -s _build/install/default/bin/alt-ergo alt-ergo
-	ln -s _build/install/default/bin/altgr-ergo altgr-ergo
+	ln -sf _build/install/default/bin/alt-ergo alt-ergo
+	ln -sf _build/install/default/bin/altgr-ergo altgr-ergo
 
 # declare these targets as phony to avoid name clashes with existing directories,
 # particularly the "plugins" target

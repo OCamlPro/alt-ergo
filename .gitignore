@@ -12,6 +12,8 @@ sources/*.install
 
 # Generated build artifacts
 sources/_build
+sources/alt-ergo
+sources/altgr-ergo
 extra/ocamldot/_build
 
 # Generated release files
