@@ -38,7 +38,7 @@ module type ATOM = sig
       neg : atom;
       mutable watched : clause Vec.t;
       mutable is_true : bool;
-      mutable timp : bool;
+      mutable timp : int;
       aid : int }
 
   and clause =
@@ -176,7 +176,7 @@ module Atom : ATOM = struct
       neg : atom;
       mutable watched : clause Vec.t;
       mutable is_true : bool;
-      mutable timp : bool;
+      mutable timp : int;
       aid : int }
 
   and clause =
@@ -209,7 +209,7 @@ module Atom : ATOM = struct
       vpremise = [] }
   and dummy_atom =
     { var = dummy_var;
-      timp = false;
+      timp = 0;
       lit = dummy_lit;
       watched = {Vec.dummy=dummy_clause; data=[||]; sz=0};
       neg = dummy_atom;
@@ -322,7 +322,7 @@ module Atom : ATOM = struct
             watched = Vec.make 10 dummy_clause;
             neg = na;
             is_true = false;
-            timp = false;
+            timp = 0;
             aid = cpt_fois_2 (* aid = vid*2 *) }
         and na =
           { var = var;
@@ -330,7 +330,7 @@ module Atom : ATOM = struct
             watched = Vec.make 10 dummy_clause;
             neg = pa;
             is_true = false;
-            timp = false;
+            timp = 0;
             aid = cpt_fois_2 + 1 (* aid = vid*2+1 *) } in
         HT.add hcons.tbl lit var;
         incr hcons.cpt;
