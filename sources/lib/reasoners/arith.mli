@@ -33,9 +33,11 @@ module Shostak
     (P : Polynome.EXTENDED_Polynome with type r = X.r) : Sig.SHOSTAK
   with type r = X.r and type t = P.t
 
+(*
 module Relation
     (X : Sig.X)
     (Uf : Uf.S with type r = X.r)
     (P : Polynome.EXTENDED_Polynome with type r = X.r)
   : Sig.RELATION
     with type r = X.r and type uf = Uf.t
+*)

@@ -38,36 +38,37 @@ module type S = sig
 
   val empty : unit -> t
 
-  val empty_facts : unit -> r Sig.facts
+  val empty_facts : unit -> r Sig_rel.facts
 
-  val add_fact : r Sig.facts -> r fact -> unit
+  val add_fact : r Sig_rel.facts -> r Sig_rel.fact -> unit
 
   val add_term :
     t ->
-    r Sig.facts -> (* acc *)
+    r Sig_rel.facts -> (* acc *)
     Expr.t ->
     Explanation.t ->
-    t * r Sig.facts
+    t * r Sig_rel.facts
 
   val add :
     t ->
-    r Sig.facts -> (* acc *)
+    r Sig_rel.facts -> (* acc *)
     Expr.t ->
-    Explanation.t -> t * r Sig.facts
+    Explanation.t -> t * r Sig_rel.facts
 
   val assume_literals :
     t ->
-    (r Sig.literal * Explanation.t * Sig.lit_origin) list ->
-    r Sig.facts ->
-    t * (r Sig.literal * Explanation.t * Sig.lit_origin) list
+    (r Sig_rel.literal * Explanation.t * Sig_rel.lit_origin) list ->
+    r Sig_rel.facts ->
+    t * (r Sig_rel.literal * Explanation.t * Sig_rel.lit_origin) list
 
   val case_split :
-    t -> for_model:bool -> (r Xliteral.view * bool * Sig.lit_origin) list * t
-  val query :  t -> Expr.t -> Sig.answer
+    t -> for_model:bool ->
+    (r Xliteral.view * bool * Sig_rel.lit_origin) list * t
+  val query :  t -> Expr.t -> Sig_rel.answer
   val new_terms : t -> Expr.Set.t
   val class_of : t -> Expr.t -> Expr.t list
-  val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> Sig.answer
-  val are_distinct : t -> Expr.t -> Expr.t -> Sig.answer
+  val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> Sig_rel.answer
+  val are_distinct : t -> Expr.t -> Expr.t -> Sig_rel.answer
   val cl_extract : t -> Expr.Set.t list
   val term_repr : t -> Expr.t -> init_term:bool -> Expr.t
   val print_model : Format.formatter -> t -> unit
@@ -77,7 +78,7 @@ module type S = sig
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
-    t -> (Expr.t -> Expr.t -> bool) -> t * Sig.instances
+    t -> (Expr.t -> Expr.t -> bool) -> t * Sig_rel.instances
 end
 
 module Main : S

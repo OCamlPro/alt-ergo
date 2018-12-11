@@ -41,21 +41,18 @@ subgraph cluster_lib__reasoners {
         label="lib / reasoners";
         style=filled;
 	color=lightgrey;
-        "Ac";
-        "Arith";
-        "Arrays";
-        "Bitv";
+        "Arrays_rel";
         "Theory";
         "Ccx";
         "Combine";
         "Intervals";
         "Inequalities";
         "IntervalCalculus";
-        "Polynome";
-        "Records";
-        "Sig";
-        "Enum";
-        "Ite";
+        "Records_rel";
+        "Ite_rel";
+        "Sig_rel";
+        "Enum_rel";
+        "Bitv_rel";
         "Uf";
         "Use";
         "Matching";
@@ -67,14 +64,33 @@ subgraph cluster_lib__reasoners {
         "Satml_frontend_hybrid";
         "Sat_solver";
         "Matching_types";
+
+##reasoners__shostak
+##subgraph cluster_lib__reasoners__shostak {
+##        label="lib / reasoners / Shostak";
+##        style=filled;
+##	color=lightgrey;
+        "Shostak";
+        "Ac";
+        "Arith";
+        "Arrays";
+        "Bitv";
+        "Enum";
+        "Ite";
+        "Polynome";
+        "Records";
+        "Sig";
+##}
+
+
 }
+
 
 //#structures
 subgraph cluster_lib__structures {
         label="lib / structures";
         style=filled;
 	color=lightgrey;
-        "Exception";
         "Explanation";
         "Var";
         "Symbols";
@@ -88,6 +104,7 @@ subgraph cluster_lib__structures {
         "Fpa_rounding";
         "Profiling";
         "Satml_types";
+
 }
 
 //#frontend

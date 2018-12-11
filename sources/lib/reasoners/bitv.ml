@@ -421,7 +421,7 @@ module Shostak(X : ALIEN) = struct
 
     let sys_solve sys =
       let c_solve (st1,st2) = match st1.bv,st2.bv with
-        |Cte _, Cte _ -> raise Exception.Unsolvable (* forcement un 1 et un 0 *)
+        |Cte _, Cte _ -> raise Util.Unsolvable (* forcement un 1 et un 0 *)
 
         |Cte b, Other (Var _) -> [cte_vs_other b st2]
         |Other (Var _), Cte b -> [cte_vs_other b st1]
@@ -550,7 +550,7 @@ module Shostak(X : ALIEN) = struct
         (fun set ->
            let st1 = ST_Set.min_elt set and st2 = ST_Set.max_elt set
            in  match st1.bv , st2.bv with
-           |S_Cte false, S_Cte true -> raise Exception.Unsolvable
+           |S_Cte false, S_Cte true -> raise Util.Unsolvable
            |S_Cte false , _ -> st1,set
            |_ , _ -> st2,set
         ) (union_sets init_sets)
@@ -591,7 +591,7 @@ module Shostak(X : ALIEN) = struct
       else begin
         let varsU = get_vars u in
         let varsV = get_vars v in
-        if varsU = [] && varsV = [] then raise Exception.Unsolvable
+        if varsU = [] && varsV = [] then raise Util.Unsolvable
         else
           begin
             let st_sys = slice u v in
@@ -784,28 +784,5 @@ module Shostak(X : ALIEN) = struct
 
   let choose_adequate_model t l =
     assert false
-
-end
-
-module Relation (X : ALIEN) (Uf : Uf.S) = struct
-  type r = X.r
-  type t = unit
-  type uf = Uf.t
-
-  let empty _ = ()
-  let assume _ _ _ =
-    (), { assume = []; remove = []}
-  let query _ _ _ = Sig.No
-  let case_split env _ ~for_model = []
-  let add env _ _ _ = env
-  let print_model _ _ _ = ()
-  let new_terms env = E.Set.empty
-  let instantiate ~do_syntactic_matching _ env uf _ = env, []
-
-  let assume_th_elt t th_elt dep =
-    match th_elt.Expr.extends with
-    | Util.Bitv ->
-      failwith "This Theory does not support theories extension"
-    | _ -> t
 
 end

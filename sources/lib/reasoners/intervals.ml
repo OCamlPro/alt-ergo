@@ -552,7 +552,7 @@ let doesnt_contain_0 =
       let pos_strict_b2 = up_borne_pos_strict b2 in
       if pos_strict_b1 && pos_strict_b2 then
         (* there is no negative values at all *)
-        Sig.Yes (Ex.union (explain_borne b1) (explain_borne b2), [])
+        Sig_rel.Yes (Ex.union (explain_borne b1) (explain_borne b2), [])
       else
         begin
           (* we know l does not contain 0. So, these asserts should hold *)
@@ -563,22 +563,22 @@ let doesnt_contain_0 =
           match l with
           | [] ->
             (* there is no positive values at all *)
-            Sig.Yes (Ex.union (explain_borne b1) (explain_borne b2), [])
+            Sig_rel.Yes (Ex.union (explain_borne b1) (explain_borne b2), [])
           | (c1,_)::_ ->
             if low_borne_pos_strict c1 then
-              Sig.Yes (Ex.union (explain_borne b2) (explain_borne c1), [])
+              Sig_rel.Yes (Ex.union (explain_borne b2) (explain_borne c1), [])
             else explain_no_zero l
         end
   in
   fun int ->
-    if contains int Q.zero then Sig.No
+    if contains int Q.zero then Sig_rel.No
     else explain_no_zero int.ints
 
 
 let is_positive {ints=ints; expl=expl} =
   match ints with
   | [] -> assert false
-  | (lb,_)::_ -> if pos_borne lb then Sig.Yes (expl, []) else Sig.No
+  | (lb,_)::_ -> if pos_borne lb then Sig_rel.Yes (expl, []) else Sig_rel.No
 
 let root_default_num v n =
   if n = 2 then Q.sqrt_default v else Q.root_default v n
@@ -907,8 +907,8 @@ let inv_bornes (l, u) is_int =
 
 let inv ({ints=l; is_int=is_int} as u) =
   match doesnt_contain_0 u with
-  | Sig.No -> { u with ints = [Minfty, Pinfty] }
-  | Sig.Yes (ex, _) ->
+  | Sig_rel.No -> { u with ints = [Minfty, Pinfty] }
+  | Sig_rel.Yes (ex, _) ->
     let l' =
       List.fold_left
         (fun acc (l,u) ->
@@ -957,8 +957,8 @@ let div i1 i2 =
   if is_undefined inv_i2 then inv_i2
   else
     let i1 = match doesnt_contain_0 i2 with
-      | Sig.Yes (ex, _) -> add_expl_zero i1 ex
-      | Sig.No -> i1
+      | Sig_rel.Yes (ex, _) -> add_expl_zero i1 ex
+      | Sig_rel.No -> i1
     in
     let ({ints=l; is_int=is_int} as i) = mult i1 inv_i2 in
     assert (l != []);

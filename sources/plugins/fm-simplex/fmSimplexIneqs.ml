@@ -41,8 +41,7 @@ module Container : Inequalities.Container_SIG = struct
 
     module MX = Map.Make(struct type t = X.r let compare = X.hash_cmp end)
 
-    module Ex = Exception
-
+    module Ex = Explanation
 
     let print_couple fmt (re, eps) =
       fprintf fmt "(%s , %s)" (Q.to_string re) (Q.to_string eps)

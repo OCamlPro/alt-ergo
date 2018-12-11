@@ -47,8 +47,8 @@ module type S = sig
 
   val distinct : t -> r list -> Explanation.t -> t
 
-  val are_equal : t -> Expr.t -> Expr.t -> added_terms:bool -> Sig.answer
-  val are_distinct : t -> Expr.t -> Expr.t -> Sig.answer
+  val are_equal : t -> Expr.t -> Expr.t -> added_terms:bool -> Sig_rel.answer
+  val are_distinct : t -> Expr.t -> Expr.t -> Sig_rel.answer
   val already_distinct : t -> r list -> bool
 
   val class_of : t -> Expr.t -> Expr.t list
@@ -65,7 +65,7 @@ module type S = sig
 
   val is_normalized : t -> r -> bool
 
-  val assign_next : t -> (r Xliteral.view * bool * Sig.lit_origin) list * t
+  val assign_next : t -> (r Xliteral.view * bool * Sig_rel.lit_origin) list * t
   val output_concrete_model : t -> unit
 end
 

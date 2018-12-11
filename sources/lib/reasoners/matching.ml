@@ -60,7 +60,7 @@ end
 module type Arg = sig
   type t
   val term_repr : t -> E.t -> init_term:bool -> E.t
-  val are_equal : t -> E.t -> E.t -> init_terms:bool -> Sig.answer
+  val are_equal : t -> E.t -> E.t -> init_terms:bool -> Sig_rel.answer
   val class_of : t -> E.t -> E.t list
 end
 
@@ -281,7 +281,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let add_msymb tbox f t ({sbs=s_t} as sg) max_t_depth =
     if SubstE.mem f s_t then
       let s = SubstE.find f s_t in
-      if are_equal_full tbox t s == Sig.No then raise Echec;
+      if are_equal_full tbox t s == Sig_rel.No then raise Echec;
       sg
     else
       let t =
@@ -311,12 +311,12 @@ module Make (X : Arg) : S with type theory = X.t = struct
           List.iter2
             (fun t1 t2 ->
                let c = E.compare t1 t2 in
-               if c <> 0 then raise (Exception.Compared c)
+               if c <> 0 then raise (Util.Cmp c)
             ) l1 l2;
           0
         with Invalid_argument _ ->
           List.length l1 - List.length l2
-           | Exception.Compared n -> n
+           | Util.Cmp n -> n
     end)
 
   let filter_classes cl tbox =
@@ -388,7 +388,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         let s_ty = Ty.matching s_ty ty_pat (E.type_info t) in
         let gsb = { sg with sty = s_ty } in
         if E.is_ground pat &&
-           are_equal_light tbox pat t != Sig.No then
+           are_equal_light tbox pat t != Sig_rel.No then
           [gsb]
         else
           let cl = if no_Ematching () then [t] else X.class_of tbox t in

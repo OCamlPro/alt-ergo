@@ -653,7 +653,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         let tenv, _ = Th.do_case_split env.tenv in
         env.tenv <- tenv;
         C_none
-      with Exception.Inconsistent (expl, classes) ->
+      with Ex.Inconsistent (expl, classes) ->
         C_theory expl
     else C_none
 
@@ -746,7 +746,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   (*   ignore(Th.expensive_processing env.tenv); *)
   (*   if D1.d then eprintf "expensive_theory_propagate => None@."; *)
   (*   None *)
-  (* with Exception.Inconsistent dep ->  *)
+  (* with Ex.Inconsistent dep ->  *)
   (*   if D1.d then eprintf "expensive_theory_propagate => Inconsistent@."; *)
   (*   Some dep *)
 
@@ -779,7 +779,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           end;
         env.unit_tenv <- t;
         C_none
-      with Exception.Inconsistent (dep, terms) ->
+      with Ex.Inconsistent (dep, terms) ->
         (* XXX what to do with terms ? *)
         (* eprintf "th inconsistent : %a @." Ex.print dep; *)
         if Options.profiling() then Profiling.theory_conflict();
@@ -841,7 +841,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           do_case_split env Util.AfterTheoryAssume
         (*if full_model then expensive_theory_propagate ()
           else None*)
-        with Exception.Inconsistent (dep, terms) ->
+        with Ex.Inconsistent (dep, terms) ->
           (* XXX what to do with terms ? *)
           (* eprintf "th inconsistent : %a @." Ex.print dep; *)
           if Options.profiling() then Profiling.theory_conflict();
@@ -1055,11 +1055,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
        try
        assume a;
        try assume a.neg
-       with Exception.Inconsistent _ ->
+       with Ex.Inconsistent _ ->
        if debug () then
        eprintf "%a propagated m/theory at level 0@.@." Atom.pr_atom a;
        enqueue a 0 None (* Mettre Some dep pour les unsat-core*)
-       with Exception.Inconsistent _ ->
+       with Ex.Inconsistent _ ->
        if debug () then
        eprintf "%a propagated m/theory at level 0@.@." Atom.pr_atom a.neg;
        enqueue a.neg 0 None (* Mettre Some dep pour les unsat-core*)
@@ -1282,7 +1282,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   dep;
 (* ignore (Th.expensive_processing !env); *)
   assert false
-  with Exception.Inconsistent _ -> ()
+  with Ex.Inconsistent _ -> ()
 *)
 
 
@@ -1371,15 +1371,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     else
       let lit = Atom.literal a in
       match Th.query lit tenv with
-      | Sig.Yes (d,_) ->
+      | Sig_rel.Yes (d,_) ->
         a.timp <- true;
         Some (clause_of_dep d a)
-      | Sig.No  ->
+      | Sig_rel.No  ->
         match Th.query (E.neg lit) tenv with
-        | Sig.Yes (d,_) ->
+        | Sig_rel.Yes (d,_) ->
           a.neg.timp <- true;
           Some (clause_of_dep d a.Atom.neg)
-        | Sig.No -> None
+        | Sig_rel.No -> None
 
   let search env strat n_of_conflicts n_of_learnts =
     let conflictC = ref 0 in

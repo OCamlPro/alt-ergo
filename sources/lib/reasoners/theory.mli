@@ -39,7 +39,7 @@ module type S = sig
     (Expr.t * Explanation.t * int * int) list -> t ->
     t * Expr.Set.t * int
 
-  val query : Expr.t -> t -> Sig.answer
+  val query : Expr.t -> t -> Sig_rel.answer
   val print_model : Format.formatter -> t -> unit
   val cl_extract : t -> Expr.Set.t list
   val extract_ground_terms : t -> Expr.Set.t
@@ -55,7 +55,7 @@ module type S = sig
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) ->
-    int -> int -> t * Sig.instances
+    int -> int -> t * Sig_rel.instances
 
   val get_assumed : t -> Expr.Set.t
 end

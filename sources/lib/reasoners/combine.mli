@@ -32,4 +32,4 @@ module Use : Use.S with type r = Shostak.r
 
 module Uf : Uf.S with type r = Shostak.r
 
-module Relation : Sig.RELATION with type r = Shostak.r and type uf = Uf.t
+module Relation : Sig_rel.RELATION with type r = Shostak.r and type uf = Uf.t

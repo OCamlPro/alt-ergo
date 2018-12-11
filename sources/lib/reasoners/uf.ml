@@ -28,7 +28,6 @@
 
 open Format
 open Options
-open Exception
 open Sig
 
 module type S = sig
@@ -52,8 +51,8 @@ module type S = sig
 
   val distinct : t -> r list -> Explanation.t -> t
 
-  val are_equal : t -> Expr.t -> Expr.t -> added_terms:bool -> Sig.answer
-  val are_distinct : t -> Expr.t -> Expr.t -> Sig.answer
+  val are_equal : t -> Expr.t -> Expr.t -> added_terms:bool -> Sig_rel.answer
+  val are_distinct : t -> Expr.t -> Expr.t -> Sig_rel.answer
   val already_distinct : t -> r list -> bool
 
   val class_of : t -> Expr.t -> Expr.t list
@@ -68,7 +67,7 @@ module type S = sig
   val make : t -> Expr.t -> r
   val is_normalized : t -> r -> bool
 
-  val assign_next : t -> (r Xliteral.view * bool * Sig.lit_origin) list * t
+  val assign_next : t -> (r Xliteral.view * bool * Sig_rel.lit_origin) list * t
   val output_concrete_model : t -> unit
 end
 
@@ -492,7 +491,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
           Options.tool_req 3 "TR-CCX-Congruence-Conflict";
           let ex = Ex.union (Ex.union ex1 ex2) dep in
           let ex = explain_repr_of_distinct x repr_x ex l1 env in
-          raise (Inconsistent (ex, cl_extract env))
+          raise (Ex.Inconsistent (ex, cl_extract env))
         with Not_found ->
           (* with the use of explain_repr_of_distinct above, I
              	     don't need to propagate dep to ex1 here *)
@@ -756,9 +755,9 @@ module Make (X : Sig.X) : S with type r = X.r = struct
       begin
         ignore (Env.update_neqs rr1 rr2 dep env);
         try X.solve rr1 rr2, dep
-        with Unsolvable ->
+        with Util.Unsolvable ->
           Options.tool_req 3 "TR-CCX-Congruence-Conflict";
-          raise (Inconsistent (dep, cl_extract env))
+          raise (Ex.Inconsistent (dep, cl_extract env))
       end
 
   let rec ac_x eqs env tch =
@@ -804,7 +803,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
            try
              let exr = MapX.find rr mapr in
              Options.tool_req 3 "TR-CCX-Distinct-Conflict";
-             raise (Inconsistent ((Ex.union ex exr), cl_extract env))
+             raise (Ex.Inconsistent ((Ex.union ex exr), cl_extract env))
            with Not_found ->
              let uex = Ex.union ex dep in
              let mdis =
@@ -834,9 +833,9 @@ module Make (X : Sig.X) : S with type r = X.r = struct
                    distinct env [a; b] ex
                | []  ->
                  Options.tool_req 3 "TR-CCX-Distinct-Conflict";
-                 raise (Inconsistent (ex, cl_extract env))
+                 raise (Ex.Inconsistent (ex, cl_extract env))
                | _   -> env
-             with Unsolvable -> env) mapr env)
+             with Util.Unsolvable -> env) mapr env)
       env newds
 
   let distinct env rl dep =
@@ -845,7 +844,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
     env
 
   let are_equal env t1 t2 ~added_terms =
-    if E.equal t1 t2 then Sig.Yes (Ex.empty, cl_extract env)
+    if E.equal t1 t2 then Sig_rel.Yes (Ex.empty, cl_extract env)
     else
       let lookup =
         if added_terms then Env.lookup_by_t
@@ -853,8 +852,8 @@ module Make (X : Sig.X) : S with type r = X.r = struct
       in
       let r1, ex_r1 = lookup t1 env in
       let r2, ex_r2 = lookup t2 env in
-      if X.equal r1 r2 then Yes (Ex.union ex_r1 ex_r2, cl_extract env)
-      else No
+      if X.equal r1 r2 then Sig_rel.Yes (Ex.union ex_r1 ex_r2, cl_extract env)
+      else Sig_rel.No
 
   let are_distinct env t1 t2 =
     Debug.are_distinct t1 t2;
@@ -862,8 +861,8 @@ module Make (X : Sig.X) : S with type r = X.r = struct
     let r2, ex_r2 = Env.lookup_by_t t2 env in
     try
       ignore (union env r1 r2 (Ex.union ex_r1 ex_r2));
-      No
-    with Inconsistent (ex, classes) -> Yes (ex, classes)
+      Sig_rel.No
+    with Ex.Inconsistent (ex, classes) -> Sig_rel.Yes (ex, classes)
 
   let already_distinct env lr =
     let d = LX.mk_distinct false lr in
@@ -1047,7 +1046,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
         *)
         let env, _ =  add env s in (* important for termination *)
         let eq = LX.view (LX.mk_eq rep (make env s)) in
-        [eq, is_cs, Sig.CS (Sig.Th_UF, Numbers.Q.one)], env
+        [eq, is_cs, Sig_rel.CS (Sig_rel.Th_UF, Numbers.Q.one)], env
     in
     Debug.check_invariants "assign_next" env;
     res, env

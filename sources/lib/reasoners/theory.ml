@@ -28,7 +28,7 @@
 
 open Format
 open Options
-open Sig
+open Sig_rel
 
 module X = Combine.Shostak
 module Ex = Explanation
@@ -55,7 +55,7 @@ module type S = sig
     (E.t * Explanation.t * int * int) list -> t ->
     t * Expr.Set.t * int
 
-  val query : E.t -> t -> answer
+  val query : E.t -> t -> Sig_rel.answer
   val print_model : Format.formatter -> t -> unit
   val cl_extract : t -> Expr.Set.t list
   val extract_ground_terms : t -> Expr.Set.t
@@ -71,7 +71,7 @@ module type S = sig
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) ->
-    int -> int -> t * Sig.instances
+    int -> int -> t * Sig_rel.instances
 
   val get_assumed : t -> E.Set.t
 
@@ -356,13 +356,13 @@ module Main_Default : S = struct
           let base_env, ch =  CC_X.assume_literals base_env ch facts in
           Options.tool_req 3 "TR-CCX-CS-Normal-Run";
           aux ch bad_last (a::dl) base_env l
-        with Exception.Inconsistent (dep, classes) ->
+        with Ex.Inconsistent (dep, classes) ->
         match Ex.remove_fresh exp dep with
         | None ->
           (* The choice doesn't participate to the inconsistency *)
           Debug.split_backjump c dep;
           Options.tool_req 3 "TR-CCX-CS-Case-Split-Conflict";
-          raise (Exception.Inconsistent (dep, classes))
+          raise (Ex.Inconsistent (dep, classes))
         | Some dep ->
           Options.tool_req 3 "TR-CCX-CS-Case-Split-Progress";
           (* The choice participates to the inconsistency *)
@@ -408,7 +408,7 @@ module Main_Default : S = struct
           try
             let env, ch = CC_X.assume_literals t.gamma_finite [] facts in
             look_for_sat ch t env [] for_model
-          with Exception.Inconsistent (dep, classes) ->
+          with Ex.Inconsistent (dep, classes) ->
             Options.tool_req 3 "TR-CCX-CS-Case-Split-Erase-Choices";
             (* we replay the conflict in look_for_sat, so we can
                	       safely ignore the explanation which is not useful *)
@@ -417,10 +417,10 @@ module Main_Default : S = struct
             Debug.split_sat_contradicts_cs filt_choices;
             look_for_sat ~bad_last:(Yes (dep, classes))
               [] { t with choices = []} t.gamma filt_choices ~for_model
-      with Exception.Inconsistent (d, cl) ->
+      with Ex.Inconsistent (d, cl) ->
         Debug.end_case_split t.choices;
         Options.tool_req 3 "TR-CCX-CS-Conflict";
-        raise (Exception.Inconsistent (d, cl))
+        raise (Ex.Inconsistent (d, cl))
     in
     Debug.end_case_split (fst r).choices; r
 
@@ -473,7 +473,8 @@ module Main_Default : S = struct
     let facts = CC_X.empty_facts () in
     List.iter
       (List.iter
-         (fun (a,ex,dlvl,plvl) -> CC_X.add_fact facts (LTerm a, ex, Sig.Other))
+         (fun (a,ex,dlvl,plvl) ->
+            CC_X.add_fact facts (LTerm a, ex, Sig_rel.Other))
       ) in_facts_l;
 
     let t, ch = try_it t facts ~for_model:false in
@@ -492,7 +493,7 @@ module Main_Default : S = struct
            then accu
            else
              begin
-               CC_X.add_fact facts (LTerm a, ex, Sig.Other);
+               CC_X.add_fact facts (LTerm a, ex, Sig_rel.Other);
                (a, dlvl, plvl) :: assumed,
                E.Set.add a assumed_set,
                cpt+1
@@ -594,7 +595,7 @@ module Main_Default : S = struct
           let na = E.neg a in
           let t = add_and_process_conseqs na t in
           CC_X.query t.gamma na
-      with Exception.Inconsistent (d, classes) ->
+      with Ex.Inconsistent (d, classes) ->
         Yes (d, classes)
 
   let add_term_in_gm gm t =
