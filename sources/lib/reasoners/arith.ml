@@ -583,12 +583,12 @@ module Shostak
     let ppmc = P.ppmc_denominators p in
     let p = P.mult_const (Q.div ppmc pgcd) p in
     let l, b = P.to_list p in
-    if not (Q.is_int b) then raise Exception.Unsolvable;
+    if not (Q.is_int b) then raise Util.Unsolvable;
     omega l b
 
   let is_null p =
     if Q.sign (snd (P.separate_constant p)) <> 0 then
-      raise Exception.Unsolvable;
+      raise Util.Unsolvable;
     []
 
   let solve_int p =
@@ -800,5 +800,3 @@ module Shostak
     r, pprint_const_for_model r
 
 end
-
-module Relation = IntervalCalculus.Make

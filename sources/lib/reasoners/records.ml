@@ -363,7 +363,7 @@ module Shostak (X : ALIEN) = struct
 
 
   let orient_solved p v pb =
-    if List.mem p (X.leaves v) then raise Exception.Unsolvable;
+    if List.mem p (X.leaves v) then raise Util.Unsolvable;
     { pb with sbt = (p,v) :: pb.sbt }
 
   let solve r1 r2 pb =
@@ -448,26 +448,3 @@ module Shostak (X : ALIEN) = struct
 
 end
 
-
-module Relation (X : ALIEN) (Uf : Uf.S) = struct
-  type r = X.r
-  type uf = Uf.t
-  type t = unit
-
-  let empty _ = ()
-  let assume _ _ _ =
-    (), { assume = []; remove = []}
-  let query _ _ _ = Sig.No
-  let case_split env _ ~for_model = []
-  let add env _ _ _ = env
-  let print_model _ _ _ = ()
-  let new_terms env = E.Set.empty
-  let instantiate ~do_syntactic_matching _ env uf _ = env, []
-
-  let assume_th_elt t th_elt dep =
-    match th_elt.Expr.extends with
-    | Util.Records ->
-      failwith "This Theory does not support theories extension"
-    | _ -> t
-
-end

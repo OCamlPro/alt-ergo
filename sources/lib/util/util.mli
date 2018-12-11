@@ -10,6 +10,7 @@
 (******************************************************************************)
 
 exception Timeout
+exception Unsolvable
 
 exception Cmp of int
 

@@ -50,7 +50,7 @@ module OracleContainer =
   (val (Inequalities.get_current ()) : Inequalities.Container_SIG)
 
 
-module Make
+module Relation
     (X : Sig.X)
     (Uf : Uf.S with type r = X.r)
     (P : Polynome.EXTENDED_Polynome with type r = X.r) = struct
@@ -141,7 +141,7 @@ module Make
         let ex = Lazy.force ex in
         if debug_fm() then
           fprintf fmt "[fm] simplex derived unsat: %a@." Explanation.print ex;
-        raise (Exception.Inconsistent (ex, env.classes))
+        raise (Ex.Inconsistent (ex, env.classes))
 
     let solve env i =
       let int_sim = Sim.Solve.solve env.int_sim in
@@ -222,7 +222,7 @@ module Make
         let ty = X.type_info x in
         let r1 = x in
         let r2 = alien_of (P.create [] n  ty) in
-        [LR.mkv_eq r1 r2, true, CS (Th_arith, s)]
+        [LR.mkv_eq r1 r2, true, Sig_rel.CS (Sig_rel.Th_arith, s)]
       in
       let aux_1 uf x (info,_) acc =
         assert (X.type_info x == Ty.Tint);
@@ -604,9 +604,9 @@ module Make
     try
       let z = alien_of (P.create [] Q.zero (P.type_info p)) in
       match X.solve (alien_of p) z with
-      | [] -> Sig.No (* p is equal to zero *)
+      | [] -> Sig_rel.No (* p is equal to zero *)
       | _ -> I.doesnt_contain_0 ip
-    with Exception.Unsolvable -> Sig.Yes (Explanation.empty, env.classes)
+    with Util.Unsolvable -> Sig_rel.Yes (Explanation.empty, env.classes)
 
 
   let rec init_monomes_of_poly are_eq env p use_p expl =
@@ -681,21 +681,21 @@ module Make
                 init_alien are_eq expl pb npb ty use_x env in
               let ib = I.add_explanation ib eb in (* take repr into account*)
               let ia, ib = match cannot_be_equal_to_zero env pb ib with
-                | Yes (ex, _) when Q.equal ca cb
-                                && P.compare pa' pb' = 0 ->
+                | Sig_rel.Yes (ex, _) when Q.equal ca cb
+                                        && P.compare pa' pb' = 0 ->
                   let expl = Explanation.union ex expl in
                   I.point da ty expl, I.point db ty expl
-                | Yes (ex, _) ->
+                | Sig_rel.Yes (ex, _) ->
                   begin
                     match are_eq a b with
-                    | Yes (ex_eq, _) ->
+                    | Sig_rel.Yes (ex_eq, _) ->
                       let expl = Explanation.union ex expl in
                       let expl = Explanation.union ex_eq expl in
                       I.point Q.one ty expl,
                       I.point Q.one ty expl
-                    | No -> ia, ib
+                    | Sig_rel.No -> ia, ib
                   end
-                | No -> ia, ib
+                | Sig_rel.No -> ia, ib
               in
               I.div ia ib, env
             | _ -> I.undefined ty, env
@@ -817,7 +817,7 @@ module Make
     | Some (v, ex) when X.type_info x != Ty.Tint || Q.is_int v ->
       let eq =
         LR.mkv_eq x (alien_of (P.create [] v (X.type_info x))) in
-      Some (eq, None, ex, Sig.Other)
+      Some (eq, None, ex, Sig_rel.Other)
     | _ -> None
 
   let find_eq eqs x u env =
@@ -875,7 +875,7 @@ module Make
   let fm_equalities eqs { Oracle.ple0 = p; dep = dep; expl = ex } =
     Util.MI.fold
       (fun _ (_, p, _) eqs ->
-         (mk_equality p, None, ex, Sig.Other) :: eqs
+         (mk_equality p, None, ex, Sig_rel.Other) :: eqs
       ) dep eqs
 
 
@@ -974,7 +974,7 @@ module Make
          match ineq_status ineq with
          | Bottom           ->
            Debug.added_inequation "Bottom" ineq;
-           raise (Exception.Inconsistent (expl, env.classes))
+           raise (Ex.Inconsistent (expl, env.classes))
 
          | Trivial_eq       ->
            Debug.added_inequation "Trivial_eq" ineq;
@@ -1033,7 +1033,7 @@ module Make
            match ineq_status ineq with
            | Trivial_eq | Trivial_ineq _ -> (acc, all_lvs)
            | Bottom ->
-             raise (Exception.Inconsistent (ineq.Oracle.expl, env.classes))
+             raise (Ex.Inconsistent (ineq.Oracle.expl, env.classes))
            | _ ->
              let lvs =
                List.fold_left (fun acc e -> SX.add e acc) SX.empty (aliens p)
@@ -1235,7 +1235,7 @@ module Make
     match P.to_list p with
     | ([], v) ->
       if Q.sign v = 0 then
-        raise (Exception.Inconsistent (expl, env.classes));
+        raise (Ex.Inconsistent (expl, env.classes));
       env, eqs
     | ([a, x], v) ->
       let b = Q.div (Q.minus v) a in
@@ -1270,7 +1270,7 @@ module Make
     match P.to_list p with
     | ([], v) ->
       if Q.sign v <> 0 then
-        raise (Exception.Inconsistent (expl, env.classes));
+        raise (Ex.Inconsistent (expl, env.classes));
       env, eqs
 
     | ([a, x], v) ->
@@ -1345,7 +1345,7 @@ module Make
              match I.is_point i with
              | Some (num, ex) ->
                let r2 = alien_of (P.create [] num (P.type_info p)) in
-               SX.add xp knw, (LR.mkv_eq xp r2, None, ex, Sig.Other) :: eqs
+               SX.add xp knw, (LR.mkv_eq xp r2, None, ex, Sig_rel.Other) :: eqs
              | None -> knw, eqs
         ) env.polynomes  (env.known_eqs, eqs)
     in {env with known_eqs= known}, eqs
@@ -1361,7 +1361,7 @@ module Make
              match I.is_point i with
              | Some (num, ex) ->
                let r2 = alien_of (P.create [] num (X.type_info x)) in
-               SX.add x knw, (LR.mkv_eq x r2, None, ex, Sig.Other) :: eqs
+               SX.add x knw, (LR.mkv_eq x r2, None, ex, Sig_rel.Other) :: eqs
              | None -> knw, eqs
         ) env.monomes  (env.known_eqs, eqs)
     in {env with known_eqs= known}, eqs
@@ -1375,7 +1375,7 @@ module Make
       List.fold_left
         (fun nb (_,_,_,i) ->
            match i with
-           | CS (Th_arith, n) -> Numbers.Q.mult nb n
+           | Sig_rel.CS (Sig_rel.Th_arith, n) -> Numbers.Q.mult nb n
            | _ -> nb
         )env.size_splits la
     in
@@ -1393,8 +1393,8 @@ module Make
     if P.is_const p1 != None || P.is_const p2 != None then env
     else
       match origin_eq with
-      | CS _ | NCS _ -> env
-      | Subst | Sig.Other ->
+      | Sig_rel.CS _ | Sig_rel.NCS _ -> env
+      | Sig_rel.Subst | Sig_rel.Other ->
         (* Subst is needed, but is Other needed ?? or is it subsumed ? *)
         let i1, us1, is_mon_1 = generic_find r1 env in
         let i2, us2, is_mon_2 = generic_find r2 env in
@@ -1445,7 +1445,7 @@ module Make
                  Oracle.create_ineq p1 p2 (n == L.LE) root expl in
                begin
                  match ineq_status ineq with
-                 | Bottom -> raise (Exception.Inconsistent (expl, env.classes))
+                 | Bottom -> raise (Ex.Inconsistent (expl, env.classes))
                  | Trivial_eq | Trivial_ineq _ ->
                    {env with inequations=remove_ineq root env.inequations},
                    eqs, new_ineqs,
@@ -1473,7 +1473,7 @@ module Make
                  match P.is_const p with
                  | Some c ->
                    if Q.is_zero c then (* bottom *)
-                     raise (Exception.Inconsistent (expl, env.classes))
+                     raise (Ex.Inconsistent (expl, env.classes))
                    else (* trivial *)
                      let rm = match root with Some a -> a::rm | None -> rm in
                      env, eqs, new_ineqs, rm
@@ -1501,14 +1501,14 @@ module Make
 
            with I.NotConsistent expl ->
              Debug.inconsistent_interval expl ;
-             raise (Exception.Inconsistent (expl, env.classes))
+             raise (Ex.Inconsistent (expl, env.classes))
         )
         (env, [], false, []) la
 
     in
     try
       let env = if query then env else Sim_Wrap.solve env 1 in
-      if !nb_num = 0 || query then env, {assume=[]; remove = to_remove}
+      if !nb_num = 0 || query then env, {Sig_rel.assume=[]; remove = to_remove}
       else
         (* we only call fm when new ineqs are assumed *)
         let env, eqs =
@@ -1524,11 +1524,13 @@ module Make
         let eqs = remove_trivial_eqs eqs la in
         Debug.implied_equalities eqs;
         let to_assume =
-          List.rev_map (fun (sa, _, ex, orig) -> (LSem sa, ex, orig)) eqs in
-        env, {assume = to_assume; remove = to_remove}
+          List.rev_map (fun (sa, _, ex, orig) ->
+              (Sig_rel.LSem sa, ex, orig)) eqs
+        in
+        env, {Sig_rel.assume = to_assume; remove = to_remove}
     with I.NotConsistent expl ->
       Debug.inconsistent_interval expl ;
-      raise (Exception.Inconsistent (expl, env.classes))
+      raise (Ex.Inconsistent (expl, env.classes))
 
 
   let assume ~query env uf la =
@@ -1544,8 +1546,8 @@ module Make
   let query env uf a_ex =
     try
       ignore(assume ~query:true env uf [a_ex]);
-      No
-    with Exception.Inconsistent (expl, classes) -> Yes (expl, classes)
+      Sig_rel.No
+    with Ex.Inconsistent (expl, classes) -> Sig_rel.Yes (expl, classes)
 
 
   let assume env uf la =
@@ -1592,7 +1594,7 @@ module Make
       let r1 = alien_of p in
       let r2 = alien_of (P.create [] n  (P.type_info p)) in
       Debug.case_split r1 r2;
-      [LR.mkv_eq r1 r2, true, CS (Th_arith, s)], s
+      [LR.mkv_eq r1 r2, true, Sig_rel.CS (Sig_rel.Th_arith, s)], s
     | None ->
       Debug.no_case_split "polynomes";
       [], Q.zero
@@ -1618,7 +1620,7 @@ module Make
       let r1 = x in
       let r2 = alien_of (P.create [] n  ty) in
       Debug.case_split r1 r2;
-      [LR.mkv_eq r1 r2, true, CS (Th_arith, s)], s
+      [LR.mkv_eq r1 r2, true, Sig_rel.CS (Sig_rel.Th_arith, s)], s
     | None ->
       Debug.no_case_split "monomes";
       [], Q.zero
@@ -1628,7 +1630,7 @@ module Make
     else
       match res with
       | [] -> res
-      | [_, _, CS (Th_arith, s)] ->
+      | [_, _, Sig_rel.CS (Sig_rel.Th_arith, s)] ->
         if Numbers.Q.compare (Q.mult s env.size_splits) (max_split ()) <= 0 ||
            Numbers.Q.sign  (max_split ()) < 0 then res
         else []
@@ -1650,7 +1652,7 @@ module Make
 
   let add =
     let are_eq t1 t2 =
-      if E.equal t1 t2 then Yes (Explanation.empty, []) else No
+      if E.equal t1 t2 then Sig_rel.Yes (Explanation.empty, []) else Sig_rel.No
     in
     fun env new_uf r t ->
       try
@@ -1661,7 +1663,7 @@ module Make
         else env
       with I.NotConsistent expl ->
         Debug.inconsistent_interval expl ;
-        raise (Exception.Inconsistent (expl, env.classes))
+        raise (Ex.Inconsistent (expl, env.classes))
 
 (*
     let extract_improved env =
@@ -1723,7 +1725,8 @@ module Make
         let pred =
           if Q.is_zero eps then L.LE else (assert (Q.is_m_one eps); L.LT)
         in
-        [LR.mkv_builtin true pred [r1; r2], true, CS (Th_arith, Q.one)]
+        [LR.mkv_builtin true pred [r1; r2], true,
+         Sig_rel.CS (Sig_rel.Th_arith, Q.one)]
 
 
   (*****)
@@ -1808,7 +1811,7 @@ module Make
       (* when splitting on union of intervals, FM does not include
          related ineqs when crossing. So, we may miss some bounds/deductions,
          and FM-Simplex may fail to find a model *)
-      raise (Exception.Inconsistent(Lazy.force ex, env.classes))
+      raise (Ex.Inconsistent(Lazy.force ex, env.classes))
 
     | Sim.Core.Sat sol ->
       let {Sim.Core.main_vars; slake_vars; int_sol} = Lazy.force sol in
@@ -1835,7 +1838,8 @@ module Make
 
   let model_from_unbounded_domains =
     let mk_cs acc (x, v, ex) =
-      ((LR.view (LR.mk_eq x v)), true, CS (Th_arith, Q.from_int 2)) :: acc
+      ((LR.view (LR.mk_eq x v)), true,
+       Sig_rel.CS (Sig_rel.Th_arith, Q.from_int 2)) :: acc
     in
     fun env uf ->
       assert (env.int_sim.Sim.Core.status == Sim.Core.SAT);
@@ -1890,7 +1894,7 @@ module Make
             [@ocaml.ppwarning "TODO: find an example triggering this case!"]
               fprintf fmt "TODO: should check that this is correct !!!!@."
           end;
-          raise (Exception.Inconsistent (expl, env.classes))
+          raise (Ex.Inconsistent (expl, env.classes))
 
   let mk_const_term ty s =
     match ty with

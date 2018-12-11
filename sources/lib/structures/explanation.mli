@@ -35,6 +35,8 @@ type exp =
   | Dep of Expr.t
   | RootDep of string (* name of the toplevel formula *)
 
+exception Inconsistent of t * Expr.Set.t list
+
 val empty : t
 
 val is_empty : t -> bool

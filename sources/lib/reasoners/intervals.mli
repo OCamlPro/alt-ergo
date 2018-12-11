@@ -37,9 +37,9 @@ val is_undefined : t -> bool
 
 val point : Numbers.Q.t -> Ty.t -> Explanation.t -> t
 
-val doesnt_contain_0 : t -> Sig.answer
+val doesnt_contain_0 : t -> Sig_rel.answer
 
-val is_positive : t -> Sig.answer
+val is_positive : t -> Sig_rel.answer
 
 val is_strict_smaller : t -> t -> bool
 

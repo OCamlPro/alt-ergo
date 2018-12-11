@@ -26,7 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type 'a abstract
+(*type 'a abstract*)
+type 'a abstract = Cons of Hstring.t * Ty.t |  Alien of 'a
 
 module type ALIEN = sig
   include Sig.X
@@ -36,7 +37,3 @@ end
 
 module Shostak
     (X : ALIEN) : Sig.SHOSTAK with type r = X.r and type t = X.r abstract
-
-module Relation
-    (X : ALIEN) (Uf : Uf.S with type r = X.r) : Sig.RELATION
-  with type r = X.r and type uf = Uf.t

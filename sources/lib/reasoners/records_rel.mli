@@ -26,10 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-exception Unsolvable
-exception Inconsistent of Explanation.t * Expr.Set.t list
-exception Progress
-exception NotCongruent
-exception Trivial
-exception Interpreted_Symbol
-exception Compared of int
+module Relation
+    (X : Records.ALIEN) (Uf : Uf.S) : Sig_rel.RELATION
+  with type r = X.r and type uf = Uf.t

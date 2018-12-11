@@ -28,14 +28,13 @@
 
 open Format
 open Options
-open Sig
 
 module X = Combine.Shostak
 module Ex = Explanation
 module E = Expr
 module A = Xliteral
 module SE = Expr.Set
-
+open Sig_rel
 module Sy = Symbols
 
 module type S = sig
@@ -45,36 +44,37 @@ module type S = sig
 
   val empty : unit -> t
 
-  val empty_facts : unit -> r Sig.facts
+  val empty_facts : unit -> r facts
 
-  val add_fact : r Sig.facts -> r fact -> unit
+  val add_fact : r facts -> r fact -> unit
 
   val add_term :
     t ->
-    r Sig.facts -> (* acc *)
+    r facts -> (* acc *)
     Expr.t ->
     Explanation.t ->
-    t * r Sig.facts
+    t * r facts
 
   val add :
     t ->
-    r Sig.facts -> (* acc *)
+    r facts -> (* acc *)
     E.t ->
-    Explanation.t -> t * r Sig.facts
+    Explanation.t -> t * r facts
 
   val assume_literals :
     t ->
-    (r Sig.literal * Explanation.t * Sig.lit_origin) list ->
-    r Sig.facts ->
-    t * (r Sig.literal * Explanation.t * Sig.lit_origin) list
+    (r literal * Explanation.t * lit_origin) list ->
+    r facts ->
+    t * (r literal * Explanation.t * lit_origin) list
 
   val case_split :
-    t -> for_model:bool -> (r Xliteral.view * bool * Sig.lit_origin) list * t
-  val query :  t -> E.t -> Sig.answer
+    t -> for_model:bool ->
+    (r Xliteral.view * bool * lit_origin) list * t
+  val query :  t -> E.t -> answer
   val new_terms : t -> Expr.Set.t
   val class_of : t -> Expr.t -> Expr.t list
-  val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> Sig.answer
-  val are_distinct : t -> Expr.t -> Expr.t -> Sig.answer
+  val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> answer
+  val are_distinct : t -> Expr.t -> Expr.t -> answer
   val cl_extract : t -> Expr.Set.t list
   val term_repr : t -> Expr.t -> init_term:bool -> Expr.t
   val print_model : Format.formatter -> t -> unit
@@ -84,7 +84,7 @@ module type S = sig
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
-    t -> (Expr.t -> Expr.t -> bool) -> t * Sig.instances
+    t -> (Expr.t -> Expr.t -> bool) -> t * instances
 
 end
 
@@ -119,7 +119,8 @@ module Main : S = struct
 
   let add_fact facts ((lit, ex, orig) as e) =
     match lit with
-    | LSem Xliteral.Pred _ | LSem Xliteral.Eq _ -> Queue.push e facts.equas
+    | LSem Xliteral.Pred _ | LSem Xliteral.Eq _ ->
+      Queue.push e facts.equas
     | LSem Xliteral.Distinct _ -> Queue.push e facts.diseqs
     | LSem Xliteral.Builtin _  -> Queue.push e facts.ineqs
     | LTerm a ->
@@ -132,7 +133,7 @@ module Main : S = struct
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
 
-    let facts (f : r Sig.facts) msg =
+    let facts (f : r facts) msg =
       let aux fmt q =
         Q.iter
           (fun (lit,_,_) ->
@@ -244,7 +245,7 @@ module Main : S = struct
           let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
           let a = E.mk_eq ~iff:false t1 t2 in
           Debug.congruent a ex;
-          Q.push (LTerm a, ex, Sig.Other) facts.equas
+          Q.push (LTerm a, ex, Other) facts.equas
         with Exit -> ()
 
   let congruents env facts t1 s =
@@ -327,7 +328,9 @@ module Main : S = struct
                    | Yes (ex_r, _) ->
                      let a = E.mk_distinct ~iff:false [x; y] in
                      Debug.contra_congruence a ex_r;
-                     Q.push (LTerm a, ex_r, Sig.Other) facts.diseqs
+                     Q.push
+                       (LTerm a, ex_r, Other)
+                       facts.diseqs
                    | No -> assert false
                  end
              | _ -> ()
@@ -358,7 +361,7 @@ module Main : S = struct
     else if X.equal (fst (Uf.find_r env.uf r)) (X.bot()) then
       new_facts_by_contra_congruence env facts r E.vrai
 
-  let congruence_closure env (facts:r Sig.facts) r1 r2 ex =
+  let congruence_closure env (facts:r facts) r1 r2 ex =
     Options.exec_thread_yield ();
     Debug.cc r1 r2;
     let uf, res = Uf.union env.uf r1 r2 ex in
@@ -372,7 +375,8 @@ module Main : S = struct
 
          (* we compute terms and atoms to consider for congruence *)
          let repr_touched = List.map (fun (x, y, ex) ->
-             facts.touched <- Util.MI.add (X.hash x) x facts.touched;
+             facts.touched <-
+               Util.MI.add (X.hash x) x facts.touched;
              y
            ) touched
          in
@@ -395,10 +399,10 @@ module Main : S = struct
          SE.iter (fun t -> congruents env facts t st_others) p_t;
 
          (*CC of preds ?*)
-         SetA.iter (fun (a, ex) -> add_fact facts (LTerm a, ex, Sig.Other)) p_a;
+         SetA.iter (fun (a, ex) -> add_fact facts (LTerm a, ex, Other)) p_a;
 
          (*touched preds ?*)
-         SetA.iter (fun (a, ex) -> add_fact facts (LTerm a, ex, Sig.Other))
+         SetA.iter (fun (a, ex) -> add_fact facts (LTerm a, ex, Other))
            sa_others;
 
          env
@@ -452,7 +456,7 @@ module Main : S = struct
       (* we update uf and use *)
       let nuf, ctx  = Uf.add env.uf t in
       Debug.make_cst t ctx;
-      List.iter (fun a -> add_fact facts (LTerm a, ex, Sig.Other)) ctx;
+      List.iter (fun a -> add_fact facts (LTerm a, ex, Other)) ctx;
       (*or Ex.empty ?*)
 
       let rt, _ = Uf.find nuf t in
@@ -589,7 +593,7 @@ module Main : S = struct
       else env, choices (* Return to give priority to equalities *)
     end
 
-  let rec norm_queue env ineqs (facts:r Sig.facts) =
+  let rec norm_queue env ineqs (facts:r facts) =
     if Q.is_empty facts.ineqs then env, List.rev ineqs
     else
       let e = Q.pop facts.ineqs in
@@ -599,18 +603,18 @@ module Main : S = struct
         match e with
         (* for case-split, to be sure that CS is given
            back to relations *)
-        | LSem ra, ex, ((Sig.CS _ | Sig.NCS _) as orig) ->
+        | LSem ra, ex, ((CS _ | NCS _) as orig) ->
           (ra, None, ex, orig) :: ineqs
         | _ -> ineqs
       in
       norm_queue env ineqs facts
 
-  let add_touched uf acc (facts:r Sig.facts) =
+  let add_touched uf acc (facts:r facts) =
     let acc =
       Util.MI.fold
         (fun _ x acc ->
            let y, ex = Uf.find_r uf x in (*use terms ? *)
-           (LR.mkv_eq x y, None, ex, Sig.Subst) :: acc)
+           (LR.mkv_eq x y, None, ex, Subst) :: acc)
         facts.touched acc
     in
     facts.touched <- Util.MI.empty;
@@ -673,7 +677,7 @@ module Main : S = struct
 
   let query env a =
     let ra, ex_ra = term_canonical_view env a Ex.empty in
-    Rel.query env.relation env.uf (ra, Some a, ex_ra, Sig.Other)
+    Rel.query env.relation env.uf (ra, Some a, ex_ra, Other)
 
   let new_terms env = Rel.new_terms env.relation
 
@@ -713,7 +717,7 @@ module Main : S = struct
     {env with relation = Rel.assume_th_elt env.relation th_elt dep}
 
   let are_equal env t1 t2 ~init_terms =
-    if E.equal t1 t2 then Sig.Yes (Ex.empty, [])
+    if E.equal t1 t2 then Yes (Ex.empty, [])
     else
     if init_terms then
       let facts = empty_facts() in
@@ -722,7 +726,7 @@ module Main : S = struct
       try
         let env, _ = assume_literals env [] facts in
         Uf.are_equal env.uf t1 t2 ~added_terms:true
-      with Exception.Inconsistent (ex,cl) -> Yes(ex, cl)
+      with Ex.Inconsistent (ex,cl) -> Yes(ex, cl)
     else
       Uf.are_equal env.uf t1 t2 ~added_terms:false
 

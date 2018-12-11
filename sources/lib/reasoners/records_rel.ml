@@ -26,36 +26,25 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module type S = sig
-  type t
-  type theory
-  open Matching_types
+module Relation (X : Records.ALIEN) (Uf : Uf.S) = struct
+  type r = X.r
+  type uf = Uf.t
+  type t = unit
 
-  val empty : t
+  let empty _ = ()
+  let assume _ _ _ =
+    (), { Sig_rel.assume = []; remove = []}
+  let query _ _ _ = Sig_rel.No
+  let case_split env _ ~for_model = []
+  let add env _ _ _ = env
+  let print_model _ _ _ = ()
+  let new_terms env = Expr.Set.empty
+  let instantiate ~do_syntactic_matching _ env uf _ = env, []
 
-  val make:
-    max_t_depth:int ->
-    Matching_types.info Expr.Map.t ->
-    Expr.t list Expr.Map.t Symbols.Map.t ->
-    Matching_types.trigger_info list ->
-    t
-
-  val add_term : term_info -> Expr.t -> t -> t
-  val max_term_depth : t -> int -> t
-  val add_triggers :
-    backward:Util.inst_kind -> t -> (int * Explanation.t) Expr.Map.t -> t
-  val terms_info : t -> info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
-  val query : t -> theory -> (trigger_info * gsubst list) list
+  let assume_th_elt t th_elt dep =
+    match th_elt.Expr.extends with
+    | Util.Records ->
+      failwith "This Theory does not support theories extension"
+    | _ -> t
 
 end
-
-
-module type Arg = sig
-  type t
-  val term_repr : t -> Expr.t -> init_term:bool -> Expr.t
-  val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> Sig_rel.answer
-  val class_of : t -> Expr.t -> Expr.t list
-end
-
-
-module Make (X : Arg) : S with type theory = X.t

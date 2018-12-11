@@ -8,19 +8,20 @@
   (libraries        unix num str zarith dynlink ocplib-simplex)
 
   ; .mli only modules *also* need to be in this field
-  (modules_without_implementation matching_types numbersInterface sig)
+  (modules_without_implementation matching_types numbersInterface sig sig_rel)
 
   ; modules that make up the lib
   (modules
     ; frontend
     Cnf Frontend Parsed_interface Typechecker
     ; reasoners
-    Ac Arith Arrays Bitv Ccx Combine Enum Fun_sat Inequalities
-    Instances IntervalCalculus Intervals Ite Matching Matching_types
-    Polynome Records Satml_frontend_hybrid Satml_frontend Satml
-    Sat_solver Sat_solver_sig Sig Theory Uf Use
+    Ac Arith Arrays Arrays_rel Bitv Ccx Shostak Combine Enum Enum_rel
+    Fun_sat Inequalities Bitv_rel
+    Instances IntervalCalculus Intervals Ite_rel Ite Matching Matching_types
+    Polynome Records Records_rel Satml_frontend_hybrid Satml_frontend Satml
+    Sat_solver Sat_solver_sig Sig Sig_rel Theory Uf Use
     ; structures
-    Commands Errors Exception Explanation Fpa_rounding
+    Commands Errors Explanation Fpa_rounding
     Parsed Profiling Satml_types Symbols
     Expr Var Ty Typed Xliteral
     ; util
