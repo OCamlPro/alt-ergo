@@ -650,7 +650,7 @@ and popup_axiom t env offset () =
               ) ([],0) vars in
           let ax_kd = match atd.c with
             | AAxiom (_, _, ax_kd, _) -> ax_kd
-            | APredicate_def (_, aname,_ , af) -> Parsed.Default
+            | APredicate_def (_, aname,_ , af) -> Util.Default
             | _ -> assert false
           in
           vars, entries, atd.id, af, ax_kd, aname

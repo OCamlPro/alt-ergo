@@ -226,25 +226,6 @@ type goal_sort =
   (** The goal to be proved *)
 (** Goal sort. Used in typed declarations. *)
 
-type theories_extensions =
-  | Sum     (** Enumerations (i.e. sum types) *)
-  | Arrays  (** Functionnal arrays (aka maps). *)
-  | Records (** Records (aka structs) *)
-  | Bitv    (** Theory of bitvectors *)
-  | LIA     (** Linear Integer Arithmetic *)
-  | LRA     (** Linear Real Arithmetic *)
-  | NRA     (** Non-linear Real Arithmetic *)
-  | NIA     (** Non-linear Integer arithmetic *)
-  | FPA     (** Floating Point Arithmetic.
-                See sources/preludes/fpa-theory-2017-01-04-16h00.why *)
-(** Theories known in alt-ergo. These theories correspond
-    to sets of axioms to extend expressive power of some theory. *)
-
-type axiom_kind = Parsed.axiom_kind =
-  | Default     (** *)
-  | Propagator  (** *)
-(** Axiom kinds. *)
-
 type tlogic_type =
   | TPredicate of Ty.t list       (** Predicate type declarations *)
   | TFunction of Ty.t list * Ty.t (** Function type declarations *)
@@ -257,10 +238,10 @@ type 'a atdecl = ('a tdecl, 'a) annoted
 (** Type alias for annoted typed declarations. *)
 
 and 'a tdecl =
-  | TTheory of Loc.t * string * theories_extensions * 'a atdecl list
+  | TTheory of Loc.t * string * Util.theories_extensions * 'a atdecl list
   (** Theory declarations. The list of declarations in a Theory may
       only contain Axioms. *)
-  | TAxiom of Loc.t * string * axiom_kind * 'a atform
+  | TAxiom of Loc.t * string * Util.axiom_kind * 'a atform
   (** New axiom that can be used in proofs. *)
   | TRewriting of Loc.t * string * ('a atterm rwt_rule) list
   (** New rewrite rule that can be used. *)
@@ -287,16 +268,3 @@ and 'a tdecl =
 (** Typed declarations. *)
 (* TODO: wrap this in a record to factorize away
    the location and name of the declaration ? *)
-
-
-(** {5 Printing} *)
-
-val string_of_th_ext : theories_extensions -> string
-(** Returns the string name of the given theory. *)
-
-
-(** {5 Building functions} *)
-
-val th_ext_of_string : string -> Loc.t -> theories_extensions
-(** Parses a string into the typed representation of theories. *)
-

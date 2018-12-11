@@ -47,7 +47,7 @@ val show_used_lemmas : env -> Explanation.t -> unit
 val prune_unused : env -> unit
 
 val add_instance :
-  ?register:bool -> env -> int -> aform -> Parsed.axiom_kind -> string ->
+  ?register:bool -> env -> int -> aform -> Util.axiom_kind -> string ->
   string list -> unit
 
 val readd_trigger : ?register:bool -> env -> int -> string -> bool -> unit

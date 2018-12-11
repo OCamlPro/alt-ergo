@@ -626,15 +626,15 @@ let mk_theory acc l th_name extends loc =
          | _ -> assert false
        in
        let ax_form = make_form ax_name f loc ~decl_kind:E.Dtheory in
-       let th_elt = {th_name; axiom_kind; extends; ax_form; ax_name} in
+       let th_elt = {Expr.th_name; axiom_kind; extends; ax_form; ax_name} in
        {st_decl=ThAssume th_elt ; st_loc=loc} :: acc
     )acc l
 
 let make acc d =
   match d.c with
   | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
-  | TAxiom(loc, name, Parsed.Default, f) -> mk_assume acc f name loc
-  | TAxiom(loc, name, Parsed.Propagator, f) -> assert false
+  | TAxiom(loc, name, Util.Default, f) -> mk_assume acc f name loc
+  | TAxiom(loc, name, Util.Propagator, f) -> assert false
   | TRewriting(loc, name, lr) ->
     {st_decl=RwtDef(List.map make_rule lr); st_loc=loc} :: acc
   | TGoal(loc, sort, n, f) -> mk_query acc n f loc sort

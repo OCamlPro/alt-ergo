@@ -80,7 +80,7 @@ module type S = sig
   val print_model : Format.formatter -> t -> unit
   val get_union_find : t -> Combine.Uf.t
 
-  val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->

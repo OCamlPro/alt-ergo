@@ -92,7 +92,7 @@ module type RELATION = sig
 
   val new_terms : t -> Expr.Set.t
 
-  val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
 
 end
 

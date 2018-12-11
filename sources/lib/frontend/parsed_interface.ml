@@ -61,7 +61,7 @@ let mk_theory loc name ext expr =
   Theory (loc, name, ext, expr)
 
 let mk_generic_axiom loc name expr =
-  Axiom (loc, name, Default, expr)
+  Axiom (loc, name, Util.Default, expr)
 
 let mk_rewriting loc name expr =
   Rewriting (loc, name, expr)
@@ -70,10 +70,10 @@ let mk_rewriting loc name expr =
 (** Declaration of theory axioms and case-splits **)
 
 let mk_theory_axiom loc name expr =
-  Axiom (loc, name, Propagator, expr)
+  Axiom (loc, name, Util.Propagator, expr)
 
 let mk_theory_case_split loc name expr =
-  Axiom (loc, name, Default, expr)
+  Axiom (loc, name, Util.Default, expr)
 
 
 (** Making pure and logic types *)

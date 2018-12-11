@@ -66,7 +66,7 @@ module type S = sig
   val compute_concrete_model : t -> t
 
 
-  val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->

@@ -123,7 +123,7 @@ module Make
     int_sim : Sim.Core.t;
     rat_sim : Sim.Core.t;
     new_uf : uf;
-    th_axioms : (Commands.th_elt * Explanation.t) ME.t;
+    th_axioms : (Expr.th_elt * Explanation.t) ME.t;
     linear_dep : SE.t ME.t;
     syntactic_matching :
       (Matching_types.trigger_info * Matching_types.gsubst list) list list;
@@ -2234,14 +2234,14 @@ module Make
         (E.id th_form) ~toplevel:true ~decl_kind:E.Dtheory
 
   let assume_th_elt t th_elt dep =
-    let {Commands.axiom_kind; ax_form; th_name; extends} = th_elt in
+    let {Expr.axiom_kind; ax_form; th_name; extends} = th_elt in
     let kd_str =
-      if axiom_kind == Parsed.Propagator then "Th propagator" else "Th CS"
+      if axiom_kind == Util.Propagator then "Th propagator" else "Th CS"
     in
     match extends with
-    | Typed.NIA | Typed.NRA | Typed.FPA ->
+    | Util.NIA | Util.NRA | Util.FPA ->
       let th_form = separate_semantic_triggers ax_form in
-      let th_elt = {th_elt with Commands.ax_form} in
+      let th_elt = {th_elt with Expr.ax_form} in
       if debug_fpa () >= 2 then
         fprintf fmt "[IC][Theory %s][%s] %a@."
           th_name kd_str E.print th_form;

@@ -37,6 +37,44 @@ type sat_solver =
   | CDCL
   | CDCL_Tableaux
 
+type theories_extensions =
+  | Sum
+  | Arrays
+  | Records
+  | Bitv
+  | LIA
+  | LRA
+  | NRA
+  | NIA
+  | FPA
+
+type axiom_kind = Default | Propagator
+
+let th_ext_of_string ext =
+  match ext with
+  | "Sum" -> Some Sum
+  | "Arrays" -> Some Arrays
+  | "Records" -> Some Records
+  | "Bitv" -> Some Bitv
+  | "LIA" -> Some LIA
+  | "LRA" -> Some LRA
+  | "NRA" -> Some NRA
+  | "NIA" -> Some NIA
+  | "FPA" -> Some FPA
+  |  _ -> None
+
+let string_of_th_ext ext =
+  match ext with
+  | Sum -> "Sum"
+  | Arrays -> "Arrays"
+  | Records -> "Records"
+  | Bitv -> "Bitv"
+  | LIA -> "LIA"
+  | LRA -> "LRA"
+  | NRA -> "NRA"
+  | NIA -> "NIA"
+  | FPA -> "FPA"
+
 type mode = On | Off | Auto
 
 let [@inline always] compare_algebraic s1 s2 f_same_constrs_with_args =

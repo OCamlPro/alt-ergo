@@ -41,7 +41,7 @@ module type S = sig
      [f] is unsatisfiable in [env] *)
   val assume : t -> Expr.gformula -> Explanation.t -> t
 
-  val assume_th_elt : t -> Commands.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
 
   (* [pred_def env f] assume a new predicate definition [f] in [env]. *)
   val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> t

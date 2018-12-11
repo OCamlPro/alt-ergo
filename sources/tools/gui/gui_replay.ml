@@ -61,7 +61,7 @@ let replay_addinstance id aname entries env =
       | AAxiom (_, aname, ax_kd, af) ->
         add_instance ~register:false env id af ax_kd aname entries
       | APredicate_def (_, aname,_ , af) ->
-        add_instance ~register:false env id af Parsed.Default aname entries
+        add_instance ~register:false env id af Util.Default aname entries
       | _ -> assert false
     end
   | _ -> assert false

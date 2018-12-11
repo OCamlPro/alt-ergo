@@ -1664,7 +1664,7 @@ let axioms_of_rules loc name lf acc env =
     List.fold_left
       (fun acc (f, _) ->
          let name = (Hstring.fresh_string ()) ^ "_" ^ name in
-         let td = {c = TAxiom(loc,name,Default, f); annot = new_id () } in
+         let td = {c = TAxiom(loc,name,Util.Default, f); annot = new_id () } in
          (td, env)::acc
       ) acc lf
   in
@@ -1676,7 +1676,7 @@ let type_hypothesis acc env_f loc sort f =
   let f,_ = type_form env_f f in
   let f = monomorphize_form f in
   let td =
-    {c = TAxiom(loc, fresh_hypothesis_name sort,Default, f);
+    {c = TAxiom(loc, fresh_hypothesis_name sort,Util.Default, f);
      annot = new_id () } in
   (td, env_f)::acc
 
@@ -1737,7 +1737,11 @@ let type_decl (acc, env) d =
     | Theory (loc, name, ext, l) ->
       Options.tool_req 1 "TR-Typing-TheoryDecl$_F$";
       let tl = List.map (type_one_th_decl env) l in
-      let ext = Typed.th_ext_of_string ext loc in
+      let ext = match Util.th_ext_of_string ext with
+        | Some res -> res
+        | None ->
+          Errors.error (Errors.ThExtError ext) loc
+      in
       let td = {c = TTheory(loc, name, ext, tl); annot = new_id () } in
       (td, env)::acc, env
 

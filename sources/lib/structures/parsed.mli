@@ -51,8 +51,6 @@ type ppure_type =
   | PPTvarid of string * Loc.t
   | PPTexternal of ppure_type list * string * Loc.t
 
-type axiom_kind = Default | Propagator
-
 type lexpr =
   { pp_loc : Loc.t; pp_desc : pp_desc }
 
@@ -104,7 +102,7 @@ type body_type_decl =
 
 type decl =
   | Theory of Loc.t * string * string * decl list
-  | Axiom of Loc.t * string * axiom_kind * lexpr
+  | Axiom of Loc.t * string * Util.axiom_kind * lexpr
   | Rewriting of Loc.t * string * lexpr list
   | Goal of Loc.t * string * lexpr
   | Logic of Loc.t * Symbols.name_kind * (string * string) list * plogic_type

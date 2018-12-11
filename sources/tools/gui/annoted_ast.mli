@@ -155,8 +155,9 @@ and atlet_kind =
   | ATletForm of aform annoted
 
 type atyped_decl =
-  | ATheory of Loc.t * string * theories_extensions * atyped_decl annoted list
-  | AAxiom of Loc.t * string * Parsed.axiom_kind * aform
+  | ATheory of
+      Loc.t * string * Util.theories_extensions * atyped_decl annoted list
+  | AAxiom of Loc.t * string * Util.axiom_kind * aform
   | ARewriting of Loc.t * string * ((aterm rwt_rule) annoted) list
   | AGoal of Loc.t * goal_sort * string * aform annoted
   | ALogic of Loc.t * string list * plogic_type * tlogic_type

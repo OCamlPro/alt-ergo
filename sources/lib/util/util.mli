@@ -35,6 +35,22 @@ type sat_solver =
   | CDCL
   | CDCL_Tableaux
 
+type theories_extensions =
+  | Sum
+  | Arrays
+  | Records
+  | Bitv
+  | LIA
+  | LRA
+  | NRA
+  | NIA
+  | FPA
+
+type axiom_kind = Default | Propagator
+
+val th_ext_of_string : string -> theories_extensions option
+val string_of_th_ext : theories_extensions -> string
+
 type mode = On | Off | Auto
 
 (**

@@ -166,8 +166,9 @@ and atlet_kind =
   | ATletForm of aform annoted
 
 type atyped_decl =
-  | ATheory of Loc.t * string * theories_extensions * atyped_decl annoted list
-  | AAxiom of Loc.t * string * Parsed.axiom_kind * aform
+  | ATheory of
+      Loc.t * string * Util.theories_extensions * atyped_decl annoted list
+  | AAxiom of Loc.t * string * Util.axiom_kind * aform
   | ARewriting of Loc.t * string * ((aterm rwt_rule) annoted) list
   | AGoal of Loc.t * goal_sort * string * aform annoted
   | ALogic of Loc.t * string list * plogic_type * tlogic_type
@@ -831,9 +832,9 @@ let rec print_record_type fmt = function
     fprintf fmt "%s : %a; %a" c print_ppure_type ty print_record_type l
 
 let rec print_typed_decl fmt td = match td.Typed.c with
-  | TAxiom (_, s, Parsed.Default, tf) ->
+  | TAxiom (_, s, Util.Default, tf) ->
     fprintf fmt "axiom %s : %a" s print_tform tf
-  | TAxiom (_, s, Parsed.Propagator, tf) ->
+  | TAxiom (_, s, Util.Propagator, tf) ->
     fprintf fmt "axiom %s : %a" s print_tform tf
   | TRewriting (_, s, rwtl) ->
     fprintf fmt "rewriting %s : %a" s print_rwt_list rwtl
@@ -852,7 +853,7 @@ let rec print_typed_decl fmt td = match td.Typed.c with
     fprintf fmt "type %a" Ty.print_full ty
   | TTheory (loc, name, th_ext, decls) ->
     fprintf fmt "theory %s extends %s =\n%a\nend@."
-      (Typed.string_of_th_ext th_ext) name
+      (Util.string_of_th_ext th_ext) name
       (fun fmt -> List.iter (print_typed_decl fmt)) decls
 
 let print_typed_decl_list fmt = List.iter (fprintf fmt "%a@." print_typed_decl)
@@ -1801,7 +1802,7 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
   match d.c with
   | ATheory (loc, name, ext, l) ->
     fprintf str_formatter "theory %s extends %s =" name
-      (Typed.string_of_th_ext ext);
+      (Util.string_of_th_ext ext);
     let ntags = d.tag :: d.ptag :: tags in
     append_buf buffer ~tags:ntags (flush_str_formatter());
     append_buf buffer "\n\n";
@@ -1816,8 +1817,8 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
          (s.[0] == '_'  || s.[0] == '@')
       then "hypothesis"
       else match ax_kd with
-        | Default -> "axiom"
-        | Propagator ->
+        | Util.Default -> "axiom"
+        | Util.Propagator ->
           Format.eprintf "[warning] may become 'propagator' in the future@.";
           "axiom"
     in

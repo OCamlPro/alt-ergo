@@ -291,3 +291,13 @@ type gformula = {
   hdist : int; (* dist to hypotheses *)
   theory_elim : bool;
 }
+
+type th_elt =
+  {
+    th_name : string;
+    ax_name : string;
+    ax_form : t;
+    extends : Util.theories_extensions;
+    axiom_kind : Util.axiom_kind;
+  }
+

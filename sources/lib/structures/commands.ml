@@ -28,16 +28,6 @@
 
 open Typed
 
-
-type th_elt =
-  {
-    th_name : string;
-    ax_name : string;
-    ax_form : Expr.t;
-    extends : Typed.theories_extensions;
-    axiom_kind : axiom_kind;
-  }
-
 (* Sat entry *)
 
 type sat_decl_aux =
@@ -45,7 +35,7 @@ type sat_decl_aux =
   | PredDef of Expr.t * string (*name of the predicate*)
   | RwtDef of (Expr.t rwt_rule) list
   | Query of string *  Expr.t * goal_sort
-  | ThAssume of th_elt
+  | ThAssume of Expr.th_elt
 
 type sat_tdecl = {
   st_loc : Loc.t;

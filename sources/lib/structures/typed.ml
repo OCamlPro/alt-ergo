@@ -128,19 +128,6 @@ type 'a rwt_rule = {
 
 type goal_sort = Cut | Check | Thm
 
-type theories_extensions =
-  | Sum
-  | Arrays
-  | Records
-  | Bitv
-  | LIA
-  | LRA
-  | NRA
-  | NIA
-  | FPA
-
-type axiom_kind = Parsed.axiom_kind = Default | Propagator
-
 type tlogic_type =
   | TPredicate of Ty.t list
   | TFunction of Ty.t list * Ty.t
@@ -152,8 +139,8 @@ and 'a tdecl =
      of tdecl, although we only allow axioms in theories
      declarations *)
   | TTheory of
-      Loc.t * string * theories_extensions * ('a tdecl, 'a) annoted list
-  | TAxiom of Loc.t * string * axiom_kind * ('a tform, 'a) annoted
+      Loc.t * string * Util.theories_extensions * ('a tdecl, 'a) annoted list
+  | TAxiom of Loc.t * string * Util.axiom_kind * ('a tform, 'a) annoted
   | TRewriting of Loc.t * string * (('a tterm, 'a) annoted rwt_rule) list
   | TGoal of Loc.t * goal_sort * string * ('a tform, 'a) annoted
   | TLogic of Loc.t * string list * tlogic_type
@@ -294,28 +281,3 @@ and print_formula fmt f =
 
 and print_form_list fmt = List.iter (fprintf fmt "%a" print_formula)
 
-let th_ext_of_string ext loc =
-  match ext with
-  | "Sum" -> Sum
-  | "Arrays" -> Arrays
-  | "Records" -> Records
-  | "Bitv" -> Bitv
-  | "LIA" -> LIA
-  | "LRA" -> LRA
-
-  | "NRA" -> NRA
-  | "NIA" -> NIA
-  | "FPA" -> FPA
-  |  _ ->  Errors.error (Errors.ThExtError ext) loc
-
-let string_of_th_ext ext =
-  match ext with
-  | Sum -> "Sum"
-  | Arrays -> "Arrays"
-  | Records -> "Records"
-  | Bitv -> "Bitv"
-  | LIA -> "LIA"
-  | LRA -> "LRA"
-  | NRA -> "NRA"
-  | NIA -> "NIA"
-  | FPA -> "FPA"

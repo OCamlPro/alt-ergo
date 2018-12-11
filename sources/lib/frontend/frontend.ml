@@ -198,7 +198,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         print_status (Unsat (d, dep)) (SAT.get_steps ());
         env, false, dep
 
-      | ThAssume ({Commands.ax_name} as th_elt) ->
+      | ThAssume ({Expr.ax_name} as th_elt) ->
         if unused_context ax_name used_context then
           acc
         else
