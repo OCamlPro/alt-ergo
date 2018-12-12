@@ -154,7 +154,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     nb_related_to_both : int;
     nb_unrelated : int;
     cdcl : CDCL.t ref;
-    tcp_cache : Sig_rel.answer ME.t;
+    tcp_cache : Th_util.answer ME.t;
     delta : (E.gformula * E.gformula * Ex.t * bool) list;
     decisions : int ME.t;
     dlevel : int;
@@ -639,8 +639,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     with Not_found ->
       assert (E.is_ground a);
       match Th.query a env.tbox with
-      | Sig_rel.No -> tmp_cache := ME.add a Sig_rel.No !tmp_cache; Sig_rel.No
-      | Sig_rel.Yes (ex,_) as y ->
+      | None -> tmp_cache := ME.add a None !tmp_cache; None
+      | Some (ex,_) as y ->
         if Options.tableaux_cdcl () then
           cdcl_learn_clause true env ex (ff.E.ff);
         learn_clause env ff ex;
@@ -650,14 +650,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     match E.form_view ff.E.ff with
     | E.Literal a ->
       let ans = query_of tcp_cache tmp_cache ff a env in
-      if ans != Sig_rel.No then
+      if ans != None then
         begin
           Options.tool_req 2 "TR-Sat-Bcp-Elim-2";
           if Options.profiling() then Profiling.elim false;
         end;
       ans
     | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
-    | E.Let _ | E.Iff _ | E.Xor _ -> Sig_rel.No
+    | E.Let _ | E.Iff _ | E.Xor _ -> None
     | E.Not_a_form -> assert false
 
   let red tcp_cache tmp_cache ff env tcp =
@@ -665,30 +665,30 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let nff = {ff with E.ff = nf} in
     try
       let _, ex = ME.find nf !(env.unit_facts_cache) in
-      Sig_rel.Yes(ex, []), true
+      Some(ex, []), true
     with Not_found ->
     try
       let _, ex, _, _ = ME.find nf env.gamma in
-      let r = Sig_rel.Yes (ex, Th.cl_extract env.tbox) in
+      let r = Some (ex, Th.cl_extract env.tbox) in
       Options.tool_req 2 "TR-Sat-Bcp-Red-1";
       r, true
     with Not_found ->
-      if not tcp then Sig_rel.No, false
+      if not tcp then None, false
       else match E.form_view nf with
         | E.Literal a ->
           let ans = query_of tcp_cache tmp_cache nff a env in
-          if ans != Sig_rel.No then Options.tool_req 2 "TR-Sat-Bcp-Red-2";
+          if ans != None then Options.tool_req 2 "TR-Sat-Bcp-Red-2";
           ans, false
         | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
-        | E.Let _ | E.Iff _ | E.Xor _ -> Sig_rel.No, false
+        | E.Let _ | E.Iff _ | E.Xor _ -> None, false
         | E.Not_a_form -> assert false
 
   let red tcp_cache tmp_cache ff env tcp =
     match red tcp_cache tmp_cache ff env tcp with
-    | (Sig_rel.Yes _, _)  as ans -> ans
-    | Sig_rel.No, b ->
+    | (Some _, _)  as ans -> ans
+    | None, b ->
       if not (Options.tableaux_cdcl ()) then
-        Sig_rel.No, b
+        None, b
       else
         match CDCL.is_true !(env.cdcl) (E.neg ff.E.ff) with
         | Some (ex, lvl) ->
@@ -696,9 +696,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           if debug_sat() && verbose() then
             fprintf fmt "red thanks to satML@.";
           assert (cdcl_known_decisions ex env);
-          Sig_rel.Yes(ex, []), true
+          Some(ex, []), true
         | None ->
-          Sig_rel.No, b
+          None, b
 
   let add_dep f dep =
     match E.form_view f with
@@ -755,16 +755,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             let u =
               match th_elim tcp_cache tmp_cache gf1 env,
                     th_elim tcp_cache tmp_cache gf2 env with
-              | Sig_rel.No, Sig_rel.No -> raise Exit
-              | Sig_rel.Yes _, _ | _, Sig_rel.Yes _ when gf1.E.theory_elim -> u
+              | None, None -> raise Exit
+              | Some _, _ | _, Some _ when gf1.E.theory_elim -> u
 
-              | Sig_rel.Yes (d1, c1), Sig_rel.Yes (d2, c2) ->
+              | Some (d1, c1), Some (d2, c2) ->
                 u (* eliminate if both are true ? why ? *)
               (*(gf1, Ex.union d d1) :: (gf2, Ex.union d d2) :: u*)
 
-              | Sig_rel.Yes (d1, c1), _ -> (gf1, Ex.union d d1) :: u
+              | Some (d1, c1), _ -> (gf1, Ex.union d d1) :: u
 
-              | _, Sig_rel.Yes (d2, c2) -> (gf2, Ex.union d d2) :: u
+              | _, Some (d2, c2) -> (gf2, Ex.union d d2) :: u
             in
             cl, u
           with Exit ->
@@ -774,27 +774,27 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                 red tcp_cache tmp_cache gf1 env tcp,
                 red tcp_cache tmp_cache gf2 env tcp
               with
-              | (Sig_rel.Yes (d1, c1), b1) , (Sig_rel.Yes (d2, c2), b2) ->
+              | (Some (d1, c1), b1) , (Some (d2, c2), b2) ->
                 if Options.profiling() then Profiling.bcp_conflict b1 b2;
                 let expl = Ex.union (Ex.union d d1) d2 in
                 let c = List.rev_append c1 c2 in
                 raise (Ex.Inconsistent (expl, c))
 
-              | (Sig_rel.Yes(d1, _), b) , (Sig_rel.No, _) ->
+              | (Some(d1, _), b) , (None, _) ->
                 if Options.profiling() then Profiling.red b;
                 let gf2 =
                   {gf2 with E.nb_reductions = gf2.E.nb_reductions + 1} in
                 let gf2 = update_distances env gf2 f1 in
                 cl, (gf2,Ex.union d d1) :: u
 
-              | (Sig_rel.No, _) , (Sig_rel.Yes(d2, _),b) ->
+              | (None, _) , (Some(d2, _),b) ->
                 if Options.profiling() then Profiling.red b;
                 let gf1 =
                   {gf1 with E.nb_reductions = gf1.E.nb_reductions + 1} in
                 let gf1 = update_distances env gf1 f2 in
                 cl, (gf1,Ex.union d d2) :: u
 
-              | (Sig_rel.No, _) , (Sig_rel.No, _) -> fd::cl , u
+              | (None, _) , (None, _) -> fd::cl , u
             end
       ) acc delta
 
@@ -1133,7 +1133,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | Some env ->
         let cs_tbox = Th.get_case_split_env env.tbox in
         let uf = Ccx.Main.get_union_find cs_tbox in
-        Combine.Uf.output_concrete_model uf
+        Uf.output_concrete_model uf
     end;
     return_function ()
 
@@ -1152,7 +1152,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let env = compute_concrete_model env orig in
     let uf = Ccx.Main.get_union_find (Th.get_case_split_env env.tbox) in
     Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
-    Combine.Uf.output_concrete_model uf;
+    Uf.output_concrete_model uf;
     terminated_normally := true;
     return_function env
 
@@ -1199,9 +1199,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            | E.Literal a ->
              begin
                match query_of tcp_cache tmp_cache {gf with E.ff=f} a env with
-               | Sig_rel.Yes (ex, _) ->
+               | Some (ex, _) ->
                  Ex.union dep ex, ({gf with E.ff=f}, ex) :: acc
-               | Sig_rel.No ->
+               | None ->
                  fprintf fmt "Bad inst ! Hyp %a is not true !@." E.print f;
                  assert false
              end

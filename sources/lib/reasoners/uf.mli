@@ -26,47 +26,44 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module type S = sig
-  type t
-  type r
+type t
 
-  module LX : Xliteral.S with type elt = r
+type r = Shostak.Combine.r
 
-  val empty : unit -> t
-  val add : t -> Expr.t -> t * Expr.t list
+module LX : Xliteral.S with type elt = r
 
-  val mem : t -> Expr.t -> bool
+val empty : unit -> t
+val add : t -> Expr.t -> t * Expr.t list
 
-  val find : t -> Expr.t -> r * Explanation.t
+val mem : t -> Expr.t -> bool
 
-  val find_r : t -> r -> r * Explanation.t
+val find : t -> Expr.t -> r * Explanation.t
 
-  val union :
-    t -> r -> r -> Explanation.t ->
-    t * (r * (r * r * Explanation.t) list * r) list
+val find_r : t -> r -> r * Explanation.t
 
-  val distinct : t -> r list -> Explanation.t -> t
+val union :
+  t -> r -> r -> Explanation.t ->
+  t * (r * (r * r * Explanation.t) list * r) list
 
-  val are_equal : t -> Expr.t -> Expr.t -> added_terms:bool -> Sig_rel.answer
-  val are_distinct : t -> Expr.t -> Expr.t -> Sig_rel.answer
-  val already_distinct : t -> r list -> bool
+val distinct : t -> r list -> Explanation.t -> t
 
-  val class_of : t -> Expr.t -> Expr.t list
-  val rclass_of : t -> r -> Expr.Set.t
+val are_equal : t -> Expr.t -> Expr.t -> added_terms:bool -> Th_util.answer
+val are_distinct : t -> Expr.t -> Expr.t -> Th_util.answer
+val already_distinct : t -> r list -> bool
 
-  val cl_extract : t -> Expr.Set.t list
-  val model : t ->
-    (r * Expr.t list * (Expr.t * r) list) list * (Expr.t list) list
+val class_of : t -> Expr.t -> Expr.t list
+val rclass_of : t -> r -> Expr.Set.t
 
-  val print : Format.formatter -> t -> unit
-  val term_repr : t -> Expr.t -> Expr.t
+val cl_extract : t -> Expr.Set.t list
+val model : t ->
+  (r * Expr.t list * (Expr.t * r) list) list * (Expr.t list) list
 
-  val make : t -> Expr.t -> r (* may raise Not_found *)
+val print : Format.formatter -> t -> unit
+val term_repr : t -> Expr.t -> Expr.t
 
-  val is_normalized : t -> r -> bool
+val make : t -> Expr.t -> r (* may raise Not_found *)
 
-  val assign_next : t -> (r Xliteral.view * bool * Sig_rel.lit_origin) list * t
-  val output_concrete_model : t -> unit
-end
+val is_normalized : t -> r -> bool
 
-module Make (X : Sig.X) : S with type r = X.r
+val assign_next : t -> (r Xliteral.view * bool * Th_util.lit_origin) list * t
+val output_concrete_model : t -> unit

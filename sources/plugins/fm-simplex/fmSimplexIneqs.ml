@@ -17,12 +17,11 @@ module Q = Numbers.Q
 
 module Container : Inequalities.Container_SIG = struct
   module Make
-      (X : Sig.X)
-      (Uf : Uf.S with type r = X.r)
-      (P : Polynome.EXTENDED_Polynome with type r = X.r)
+      (P : Polynome.T with type r = Shostak.Combine.r)
     : Inequalities.S with module P = P = struct
 
-    module FM = Inequalities.FM(X)(Uf)(P)
+    module X = Shostak.Combine
+    module FM = Inequalities.FM(P)
 
     include FM
     (* Only redefine functions "available" and "fmSimplex" functions *)

@@ -30,11 +30,11 @@ open Format
 open Options
 open Sig_rel
 
-module X = Combine.Shostak
+module X = Shostak.Combine
 module Ex = Explanation
 module E = Expr
 module A = Xliteral
-module LR = Combine.Uf.LX
+module LR = Uf.LX
 module SE = Expr.Set
 
 module Sy = Symbols
@@ -55,7 +55,7 @@ module type S = sig
     (E.t * Explanation.t * int * int) list -> t ->
     t * Expr.Set.t * int
 
-  val query : E.t -> t -> Sig_rel.answer
+  val query : E.t -> t -> Th_util.answer
   val print_model : Format.formatter -> t -> unit
   val cl_extract : t -> Expr.Set.t list
   val extract_ground_terms : t -> Expr.Set.t
@@ -228,10 +228,10 @@ module Main_Default : S = struct
         end
 
     let theory_of k = match k with
-      | Th_arith  -> "Th_arith "
-      | Th_sum    -> "Th_sum   "
-      | Th_arrays -> "Th_arrays"
-      | Th_UF -> "Th_UF"
+      | Th_util.Th_arith  -> "Th_arith "
+      | Th_util.Th_sum    -> "Th_sum   "
+      | Th_util.Th_arrays -> "Th_arrays"
+      | Th_util.Th_UF -> "Th_UF"
 
     let made_choices fmt choices =
       match choices with
@@ -241,10 +241,10 @@ module Main_Default : S = struct
         List.iter
           (fun (rx, lit_orig, _, ex) ->
              match lit_orig with
-             | CS(k, sz) ->
+             | Th_util.CS(k, sz) ->
                fprintf fmt "  > %s  cs: %a (because %a)@."
                  (theory_of k) LR.print (LR.make rx) Ex.print ex
-             | NCS(k, sz) ->
+             | Th_util.NCS(k, sz) ->
                fprintf fmt "  > %s ncs: %a (because %a)@."
                  (theory_of k) LR.print (LR.make rx) Ex.print ex
              | _ -> assert false
@@ -306,12 +306,13 @@ module Main_Default : S = struct
     terms : Expr.Set.t;
     gamma : CC_X.t;
     gamma_finite : CC_X.t;
-    choices : (X.r Xliteral.view * lit_origin * choice_sign * Ex.t) list;
+    choices :
+      (X.r Xliteral.view * Th_util.lit_origin * choice_sign * Ex.t) list;
     (** the choice, the size, choice_sign,  the explication set,
         the explication for this choice. *)
   }
 
-  let look_for_sat ?(bad_last=No) ch t base_env l ~for_model =
+  let look_for_sat ?(bad_last=None) ch t base_env l ~for_model =
     let rec aux ch bad_last dl base_env li =
       Options.exec_thread_yield ();
       match li, bad_last with
@@ -333,7 +334,7 @@ module Main_Default : S = struct
                    in
                    (* A new explanation in order to track the choice *)
                    (c, size, CPos exp, ex_c_exp)) l in
-            aux ch No dl base_env l
+            aux ch None dl base_env l
         end
       | ((c, lit_orig, CNeg, ex_c) as a)::l, _ ->
         let facts = CC_X.empty_facts () in
@@ -368,14 +369,14 @@ module Main_Default : S = struct
           (* The choice participates to the inconsistency *)
           let neg_c = LR.view (LR.neg (LR.make c)) in
           let lit_orig = match lit_orig with
-            | CS(k, sz) -> NCS(k, sz)
+            | Th_util.CS(k, sz) -> Th_util.NCS(k, sz)
             | _ -> assert false
           in
           Debug.split_backtrack neg_c dep;
           if bottom_classes () then
             printf "bottom (case-split):%a\n@."
               Expr.print_tagged_classes classes;
-          aux ch No dl base_env [neg_c, lit_orig, CNeg, dep]
+          aux ch None dl base_env [neg_c, lit_orig, CNeg, dep]
     in
     aux ch bad_last (List.rev t.choices) base_env l
 
@@ -392,7 +393,7 @@ module Main_Default : S = struct
          List.for_all
            (fun x ->
               match X.term_extract x with
-              | Some t, _ -> Combine.Uf.mem uf t
+              | Some t, _ -> Uf.mem uf t
               | _ -> true
            )(X.leaves r)
       )l
@@ -415,7 +416,7 @@ module Main_Default : S = struct
             let uf =  CC_X.get_union_find t.gamma in
             let filt_choices = List.filter (filter_choice uf) t.choices in
             Debug.split_sat_contradicts_cs filt_choices;
-            look_for_sat ~bad_last:(Yes (dep, classes))
+            look_for_sat ~bad_last:(Some (dep, classes))
               [] { t with choices = []} t.gamma filt_choices ~for_model
       with Ex.Inconsistent (d, cl) ->
         Debug.end_case_split t.choices;
@@ -474,7 +475,7 @@ module Main_Default : S = struct
     List.iter
       (List.iter
          (fun (a,ex,dlvl,plvl) ->
-            CC_X.add_fact facts (LTerm a, ex, Sig_rel.Other))
+            CC_X.add_fact facts (LTerm a, ex, Th_util.Other))
       ) in_facts_l;
 
     let t, ch = try_it t facts ~for_model:false in
@@ -493,7 +494,7 @@ module Main_Default : S = struct
            then accu
            else
              begin
-               CC_X.add_fact facts (LTerm a, ex, Sig_rel.Other);
+               CC_X.add_fact facts (LTerm a, ex, Th_util.Other);
                (a, dlvl, plvl) :: assumed,
                E.Set.add a assumed_set,
                cpt+1
@@ -583,7 +584,7 @@ module Main_Default : S = struct
         | E.Distinct _ | E.Eql _ ->
           (* we only assume toplevel distinct with more that one arg.
              not interesting to do a query in this case ?? or query ? *)
-          No
+          None
 
         | E.Pred (t1,b) ->
           let t = add_and_process_conseqs a t in
@@ -596,7 +597,7 @@ module Main_Default : S = struct
           let t = add_and_process_conseqs na t in
           CC_X.query t.gamma na
       with Ex.Inconsistent (d, classes) ->
-        Yes (d, classes)
+        Some (d, classes)
 
   let add_term_in_gm gm t =
     let facts = CC_X.empty_facts() in
@@ -686,7 +687,7 @@ module Main_Empty : S = struct
     in
     {assumed_set}, E.Set.empty, 0
 
-  let query a t = No
+  let query a t = None
 
   let print_model _ _ = ()
   let cl_extract _ = []

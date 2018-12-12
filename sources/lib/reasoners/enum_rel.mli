@@ -26,6 +26,4 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module Relation
-    (X : Enum.ALIEN) (Uf : Uf.S with type r = X.r) : Sig_rel.RELATION
-  with type r = X.r and type uf = Uf.t
+include Sig_rel.RELATION

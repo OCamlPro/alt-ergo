@@ -28,7 +28,7 @@
 
 module type S = sig
 
-  module P : Polynome.EXTENDED_Polynome
+  module P : Polynome.T with type r = Shostak.Combine.r
   module MP : Map.S with type key = P.t
 
   type t = {
@@ -75,16 +75,12 @@ end
 
 
 module FM
-    (X : Sig.X)
-    (Uf : Uf.S with type r = X.r)
-    (P : Polynome.EXTENDED_Polynome with type r = X.r)
+    (P : Polynome.T with type r = Shostak.Combine.r)
   : S with module P = P
 
 module type Container_SIG = sig
   module Make
-      (X : Sig.X)
-      (Uf : Uf.S with type r = X.r)
-      (P : Polynome.EXTENDED_Polynome with type r = X.r)
+      (P : Polynome.T with type r = Shostak.Combine.r)
     : S with module P = P
 end
 
