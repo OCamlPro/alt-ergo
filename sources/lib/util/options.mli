@@ -92,7 +92,7 @@ val set_timeout : (unit -> unit) -> unit
 val set_save_used_context : bool -> unit
 val set_default_input_lang : string -> unit
 val set_unsat_mode : bool -> unit
-val set_inline_lets : Util.mode -> unit
+val set_inline_lets : bool -> unit
 
 (* updates the filename to be parsed and sets a js_mode flag *)
 val set_file_for_js : string -> unit
@@ -182,7 +182,7 @@ val disable_weaks : unit -> bool
 val default_input_lang : unit -> string
 val answers_with_locs  : unit -> bool
 val unsat_mode : unit -> bool
-val inline_lets : unit -> Util.mode
+val inline_lets : unit -> bool
 
 (** this option also yields true if profiling is set to true **)
 val timers : unit -> bool

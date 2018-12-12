@@ -128,15 +128,7 @@ module M = struct
   let no_locs_in_answers = ref false
 
   let unsat_mode = ref false
-  let inline_lets = ref Util.Off
-
-  let set_inline_lets s =
-    match s with
-    | "on"  | "On"  -> inline_lets := Util.On
-    | "off" | "Off" -> inline_lets := Util.Off
-    | "auto" | "Auto" ->
-      Format.eprintf "'Auto' inline lets mode not implemented yet@."; exit 1
-    | _ -> Format.eprintf "unknown inline lets mode %S@." s; exit 1
+  let inline_lets = ref false
 
   let show_where s=
     match s with
@@ -675,9 +667,10 @@ module M = struct
     " answer unsat / sat / unknown instead of Valid / Invalid / I don't know";
 
     "-inline-lets",
-    Arg.String set_inline_lets,
-    " inline lets mode. Possible values are 'On', 'Off', 'Auto'. \
-     Default value = 'Off'"
+    Arg.Set inline_lets,
+    " enable substutition of variables bounds by Let. The default \
+     behavior is to only substitute variables that are bound to a \
+     constant, or that appear at most once."
 
   ]
 
