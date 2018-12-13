@@ -283,7 +283,7 @@ module Atom : ATOM = struct
     let is_pos = E.is_positive lit in
     (if is_pos then lit else E.neg lit), not is_pos
 
-  let max_depth a = a.Expr.depth
+  let max_depth a = E.depth a
 
   let literal a = a.lit
   let weight a = a.var.weight

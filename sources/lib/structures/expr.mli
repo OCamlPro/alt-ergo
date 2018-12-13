@@ -30,9 +30,9 @@
 
 type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
 
-type t = view
+type t
 
-and view = private {
+type view = private {
   f: Symbols.t;
   xs: t list;
   ty: Ty.t;
@@ -100,7 +100,7 @@ module Map : Map.S with type key = t
 type subst = t Symbols.Map.t * Ty.subst
 
 type term_view = private
-  | Term of t
+  | Term of view
   | Not_a_term of {is_lit : bool}
 
 type lit_view = private
@@ -304,3 +304,4 @@ type th_elt =
     axiom_kind : Util.axiom_kind;
   }
 
+val is_pure : t -> bool

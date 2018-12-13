@@ -106,7 +106,7 @@ type expr = t
 type subst = expr SMap.t * Ty.subst
 
 type term_view =
-  | Term of t
+  | Term of view
   | Not_a_term of {is_lit : bool}
 
 type lit_view =
@@ -2155,9 +2155,9 @@ let mk_exists name loc binders trs f id ~toplevel ~decl_kind =
     mk_forall name loc SMap.empty trs tmp id ~toplevel ~decl_kind
 
 
-module Purification = struct
+let is_pure e = e.pure
 
-  let is_pure e = e.pure
+module Purification = struct
 
   let rec purify_term t lets =
     if t.pure then t, lets

@@ -119,7 +119,7 @@ module ME =
     (struct
       type t = E.t
       let compare a b =
-        let c = a.E.depth - b.E.depth in
+        let c = E.depth a - E.depth b in
         if c <> 0 then c
         else E.compare a b
     end)
@@ -468,8 +468,8 @@ let make_rule ({rwt_left = t1; rwt_right = t2; rwt_vars} as r) =
   in
   let s1 = make_term up_qv t1 in
   let s2 = make_term up_qv t2 in
-  assert (s1.E.pure);
-  assert (s2.E.pure);
+  assert (E.is_pure s1);
+  assert (E.is_pure s2);
   { r with rwt_left = s1; rwt_right = s2 }
 
 let mk_theory acc l th_name extends loc =
