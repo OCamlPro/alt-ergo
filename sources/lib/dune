@@ -15,8 +15,8 @@
     ; frontend
     Cnf Frontend Parsed_interface Typechecker
     ; reasoners
-    Ac Arith Arrays Arrays_rel Bitv Ccx Shostak Combine Enum Enum_rel
-    Fun_sat Inequalities Bitv_rel
+    Ac Arith Arrays Arrays_rel Bitv Ccx Shostak Relation Enum Enum_rel
+    Fun_sat Inequalities Bitv_rel Th_util
     Instances IntervalCalculus Intervals Ite_rel Ite Matching Matching_types
     Polynome Records Records_rel Satml_frontend_hybrid Satml_frontend Satml
     Sat_solver Sat_solver_sig Sig Sig_rel Theory Uf Use

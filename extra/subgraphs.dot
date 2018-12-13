@@ -44,7 +44,7 @@ subgraph cluster_lib__reasoners {
         "Arrays_rel";
         "Theory";
         "Ccx";
-        "Combine";
+        "Relation";
         "Intervals";
         "Inequalities";
         "IntervalCalculus";
@@ -80,6 +80,7 @@ subgraph cluster_lib__reasoners {
         "Polynome";
         "Records";
         "Sig";
+        "Th_util"
 ##}
 
 

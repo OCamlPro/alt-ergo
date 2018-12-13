@@ -26,6 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module Relation
-    (X : Bitv.ALIEN) (Uf : Uf.S) : Sig_rel.RELATION
-  with type r = X.r and type uf = Uf.t
+include Sig_rel.RELATION
+
+

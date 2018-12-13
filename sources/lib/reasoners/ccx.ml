@@ -29,18 +29,19 @@
 open Format
 open Options
 
-module X = Combine.Shostak
+module X = Shostak.Combine
 module Ex = Explanation
 module E = Expr
 module A = Xliteral
 module SE = Expr.Set
 open Sig_rel
+
 module Sy = Symbols
 
 module type S = sig
 
   type t
-  type r = Combine.Shostak.r
+  type r = Shostak.Combine.r
 
   val empty : unit -> t
 
@@ -63,22 +64,22 @@ module type S = sig
 
   val assume_literals :
     t ->
-    (r literal * Explanation.t * lit_origin) list ->
+    (r literal * Explanation.t * Th_util.lit_origin) list ->
     r facts ->
-    t * (r literal * Explanation.t * lit_origin) list
+    t * (r literal * Explanation.t * Th_util.lit_origin) list
 
   val case_split :
     t -> for_model:bool ->
-    (r Xliteral.view * bool * lit_origin) list * t
-  val query :  t -> E.t -> answer
+    (r Xliteral.view * bool * Th_util.lit_origin) list * t
+  val query :  t -> E.t -> Th_util.answer
   val new_terms : t -> Expr.Set.t
   val class_of : t -> Expr.t -> Expr.t list
-  val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> answer
-  val are_distinct : t -> Expr.t -> Expr.t -> answer
+  val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> Th_util.answer
+  val are_distinct : t -> Expr.t -> Expr.t -> Th_util.answer
   val cl_extract : t -> Expr.Set.t list
   val term_repr : t -> Expr.t -> init_term:bool -> Expr.t
   val print_model : Format.formatter -> t -> unit
-  val get_union_find : t -> Combine.Uf.t
+  val get_union_find : t -> Uf.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :
@@ -91,9 +92,7 @@ end
 module Main : S = struct
 
   module SetA = Use.SA
-  module Use = Combine.Use
-  module Uf = Combine.Uf
-  module Rel = Combine.Relation
+  module Rel = Relation
   module Q = Queue
   module LR = Uf.LX
 
@@ -103,7 +102,7 @@ module Main : S = struct
     relation : Rel.t
   }
 
-  type r = Combine.Shostak.r
+  type r = Shostak.Combine.r
 
   let empty () = {
     use = Use.empty ;
@@ -225,8 +224,8 @@ module Main : S = struct
   let explain_equality env ex t1 t2 =
     if E.equal t1 t2 then ex
     else match Uf.are_equal env.uf t1 t2 ~added_terms:true with
-      | Yes (dep, _) -> Ex.union ex dep
-      | No -> raise Exit
+      | Some (dep, _) -> Ex.union ex dep
+      | None -> raise Exit
 
   let equal_only_by_congruence env facts t1 t2 =
     if not (E.equal t1 t2) then
@@ -245,7 +244,7 @@ module Main : S = struct
           let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
           let a = E.mk_eq ~iff:false t1 t2 in
           Debug.congruent a ex;
-          Q.push (LTerm a, ex, Other) facts.equas
+          Q.push (LTerm a, ex, Th_util.Other) facts.equas
         with Exit -> ()
 
   let congruents env facts t1 s =
@@ -325,13 +324,13 @@ module Main : S = struct
                let ty_y = Expr.type_info y in
                if Ty.equal ty_x ty_y then
                  begin match Uf.are_distinct env.uf t1 t2 with
-                   | Yes (ex_r, _) ->
+                   | Some (ex_r, _) ->
                      let a = E.mk_distinct ~iff:false [x; y] in
                      Debug.contra_congruence a ex_r;
                      Q.push
-                       (LTerm a, ex_r, Other)
+                       (LTerm a, ex_r, Th_util.Other)
                        facts.diseqs
-                   | No -> assert false
+                   | None -> assert false
                  end
              | _ -> ()
           ) (Uf.class_of env.uf bol)
@@ -399,10 +398,12 @@ module Main : S = struct
          SE.iter (fun t -> congruents env facts t st_others) p_t;
 
          (*CC of preds ?*)
-         SetA.iter (fun (a, ex) -> add_fact facts (LTerm a, ex, Other)) p_a;
+         SetA.iter (fun (a, ex) ->
+             add_fact facts (LTerm a, ex, Th_util.Other)) p_a;
 
          (*touched preds ?*)
-         SetA.iter (fun (a, ex) -> add_fact facts (LTerm a, ex, Other))
+         SetA.iter (fun (a, ex) ->
+             add_fact facts (LTerm a, ex, Th_util.Other))
            sa_others;
 
          env
@@ -456,7 +457,7 @@ module Main : S = struct
       (* we update uf and use *)
       let nuf, ctx  = Uf.add env.uf t in
       Debug.make_cst t ctx;
-      List.iter (fun a -> add_fact facts (LTerm a, ex, Other)) ctx;
+      List.iter (fun a -> add_fact facts (LTerm a, ex, Th_util.Other)) ctx;
       (*or Ex.empty ?*)
 
       let rt, _ = Uf.find nuf t in
@@ -603,7 +604,7 @@ module Main : S = struct
         match e with
         (* for case-split, to be sure that CS is given
            back to relations *)
-        | LSem ra, ex, ((CS _ | NCS _) as orig) ->
+        | LSem ra, ex, ((Th_util.CS _ | Th_util.NCS _) as orig) ->
           (ra, None, ex, orig) :: ineqs
         | _ -> ineqs
       in
@@ -614,7 +615,7 @@ module Main : S = struct
       Util.MI.fold
         (fun _ x acc ->
            let y, ex = Uf.find_r uf x in (*use terms ? *)
-           (LR.mkv_eq x y, None, ex, Subst) :: acc)
+           (LR.mkv_eq x y, None, ex, Th_util.Subst) :: acc)
         facts.touched acc
     in
     facts.touched <- Util.MI.empty;
@@ -677,7 +678,7 @@ module Main : S = struct
 
   let query env a =
     let ra, ex_ra = term_canonical_view env a Ex.empty in
-    Rel.query env.relation env.uf (ra, Some a, ex_ra, Other)
+    Rel.query env.relation env.uf (ra, Some a, ex_ra, Th_util.Other)
 
   let new_terms env = Rel.new_terms env.relation
 
@@ -717,7 +718,7 @@ module Main : S = struct
     {env with relation = Rel.assume_th_elt env.relation th_elt dep}
 
   let are_equal env t1 t2 ~init_terms =
-    if E.equal t1 t2 then Yes (Ex.empty, [])
+    if E.equal t1 t2 then Some (Ex.empty, [])
     else
     if init_terms then
       let facts = empty_facts() in
@@ -726,7 +727,7 @@ module Main : S = struct
       try
         let env, _ = assume_literals env [] facts in
         Uf.are_equal env.uf t1 t2 ~added_terms:true
-      with Ex.Inconsistent (ex,cl) -> Yes(ex, cl)
+      with Ex.Inconsistent (ex,cl) -> Some (ex, cl)
     else
       Uf.are_equal env.uf t1 t2 ~added_terms:false
 

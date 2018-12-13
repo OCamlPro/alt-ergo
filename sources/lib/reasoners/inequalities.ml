@@ -34,7 +34,7 @@ module Q = Numbers.Q
 
 module type S = sig
 
-  module P : Polynome.EXTENDED_Polynome
+  module P : Polynome.T with type r = Shostak.Combine.r
   module MP : Map.S with type key = P.t
 
   type t = {
@@ -83,20 +83,17 @@ end
 
 module type Container_SIG = sig
   module Make
-      (X : Sig.X)
-      (Uf : Uf.S with type r = X.r)
-      (P : Polynome.EXTENDED_Polynome with type r = X.r)
+      (P : Polynome.T with type r = Shostak.Combine.r)
     : S with module P = P
 
 end
 
 module Container : Container_SIG = struct
   module Make
-      (X : Sig.X)
-      (Uf : Uf.S with type r = X.r)
-      (P : Polynome.EXTENDED_Polynome with type r = X.r)
+      (P : Polynome.T with type r = Shostak.Combine.r)
     : S with module P = P = struct
 
+    module X = Shostak.Combine
     module P = P
     module MP = Map.Make(P)
     module MX = Map.Make(struct type t = X.r let compare = X.hash_cmp end)

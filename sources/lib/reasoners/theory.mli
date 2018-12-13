@@ -39,7 +39,7 @@ module type S = sig
     (Expr.t * Explanation.t * int * int) list -> t ->
     t * Expr.Set.t * int
 
-  val query : Expr.t -> t -> Sig_rel.answer
+  val query : Expr.t -> t -> Th_util.answer
   val print_model : Format.formatter -> t -> unit
   val cl_extract : t -> Expr.Set.t list
   val extract_ground_terms : t -> Expr.Set.t

@@ -26,10 +26,28 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module Shostak : Sig.X
+module Combine : Sig.X
 
-module Use : Use.S with type r = Shostak.r
+module Polynome : Polynome.T
+  with type r = Combine.r
 
-module Uf : Uf.S with type r = Shostak.r
+module Arith : Sig.SHOSTAK
+  with type r = Combine.r and type t = Polynome.t
 
-module Relation : Sig_rel.RELATION with type r = Shostak.r and type uf = Uf.t
+module Records : Sig.SHOSTAK
+  with type r = Combine.r and type t = Combine.r Records.abstract
+
+module Bitv : Sig.SHOSTAK
+  with type r = Combine.r and type t = Combine.r Bitv.abstract
+
+module Arrays : Sig.SHOSTAK
+  with type r = Combine.r and type t = Combine.r Arrays.abstract
+
+module Enum : Sig.SHOSTAK
+  with type r = Combine.r and type t = Combine.r Enum.abstract
+
+module Ite : Sig.SHOSTAK
+  with type r = Combine.r and type t = Combine.r Ite.abstract
+
+module Ac : Ac.S with type r = Combine.r and type t = Combine.r Sig.ac
+

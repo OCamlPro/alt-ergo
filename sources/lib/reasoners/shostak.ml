@@ -1,3 +1,31 @@
+(******************************************************************************)
+(*                                                                            *)
+(*     The Alt-Ergo theorem prover                                            *)
+(*     Copyright (C) 2006-2013                                                *)
+(*                                                                            *)
+(*     Sylvain Conchon                                                        *)
+(*     Evelyne Contejean                                                      *)
+(*                                                                            *)
+(*     Francois Bobot                                                         *)
+(*     Mohamed Iguernelala                                                    *)
+(*     Stephane Lescuyer                                                      *)
+(*     Alain Mebsout                                                          *)
+(*                                                                            *)
+(*     CNRS - INRIA - Universite Paris Sud                                    *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the Apache Software        *)
+(*     License version 2.0                                                    *)
+(*                                                                            *)
+(*  ------------------------------------------------------------------------  *)
+(*                                                                            *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                     *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the Apache Software        *)
+(*     License version 2.0                                                    *)
+(*                                                                            *)
+(******************************************************************************)
+
 open Format
 open Options
 open Sig
@@ -654,3 +682,13 @@ and X6 : Sig.SHOSTAK
 and AC : Ac.S
   with type r = CX.r =
   Ac.Make(CX)
+
+module Combine = CX
+module Arith = X1
+module Records = X2
+module Bitv = X3
+module Arrays = X4
+module Enum = X5
+module Ite = X6
+module Polynome = TX1
+module Ac = AC

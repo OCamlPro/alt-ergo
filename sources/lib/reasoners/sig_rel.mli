@@ -26,28 +26,14 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type answer = Yes of Explanation.t * Expr.Set.t list | No
-
 type 'a literal = LTerm of Expr.t | LSem of 'a Xliteral.view
 
 type instances = (Expr.t list * Expr.gformula * Explanation.t) list
 
-type theory =
-  | Th_arith
-  | Th_sum
-  | Th_arrays
-  | Th_UF
-
-type lit_origin =
-  | Subst
-  | CS of theory * Numbers.Q.t
-  | NCS of theory * Numbers.Q.t
-  | Other
-
 type 'a input =
-  'a Xliteral.view * Expr.t option * Explanation.t * lit_origin
+  'a Xliteral.view * Expr.t option * Explanation.t * Th_util.lit_origin
 
-type 'a fact = 'a literal * Explanation.t * lit_origin
+type 'a fact = 'a literal * Explanation.t * Th_util.lit_origin
 
 type 'a facts = {
   equas     : 'a fact Queue.t;
@@ -63,27 +49,30 @@ type 'a result = {
 
 module type RELATION = sig
   type t
-  type r
-  type uf
+
   val empty : Expr.Set.t list -> t
 
-  val assume : t -> uf -> (r input) list -> t * r result
-  val query  : t -> uf -> r input -> answer
+  val assume : t ->
+    Uf.t -> (Shostak.Combine.r input) list -> t * Shostak.Combine.r result
+  val query  : t -> Uf.t -> Shostak.Combine.r input -> Th_util.answer
 
   val case_split :
-    t -> uf -> for_model:bool -> (r Xliteral.view * bool * lit_origin) list
+    t -> Uf.t ->
+    for_model:bool ->
+    (Shostak.Combine.r Xliteral.view * bool * Th_util.lit_origin) list
   (** case_split env returns a list of equalities *)
 
-  val add : t -> uf -> r -> Expr.t -> t
+  val add : t -> Uf.t -> Shostak.Combine.r -> Expr.t -> t
   (** add a representant to take into account *)
 
   val instantiate :
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
-    t -> uf -> (Expr.t -> Expr.t -> bool) ->
+    t -> Uf.t -> (Expr.t -> Expr.t -> bool) ->
     t * instances
 
-  val print_model : Format.formatter -> t -> (Expr.t * r) list -> unit
+  val print_model :
+    Format.formatter -> t -> (Expr.t * Shostak.Combine.r) list -> unit
 
   val new_terms : t -> Expr.Set.t
 

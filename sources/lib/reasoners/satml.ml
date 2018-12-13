@@ -1371,15 +1371,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     else
       let lit = Atom.literal a in
       match Th.query lit tenv with
-      | Sig_rel.Yes (d,_) ->
+      | Some (d,_) ->
         a.timp <- true;
         Some (clause_of_dep d a)
-      | Sig_rel.No  ->
+      | None  ->
         match Th.query (E.neg lit) tenv with
-        | Sig_rel.Yes (d,_) ->
+        | Some (d,_) ->
           a.neg.timp <- true;
           Some (clause_of_dep d a.Atom.neg)
-        | Sig_rel.No -> None
+        | None -> None
 
   let search env strat n_of_conflicts n_of_learnts =
     let conflictC = ref 0 in
