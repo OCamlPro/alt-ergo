@@ -32,6 +32,8 @@ val make : string -> t
 
 val view : t -> string
 
+val print : Format.formatter -> t -> unit
+
 val equal : t -> t -> bool
 
 val compare : t -> t -> int

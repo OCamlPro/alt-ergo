@@ -44,6 +44,8 @@ let make s = S.make {content = s; id = - 1}
 
 let view s = s.content
 
+let print fmt v = Format.fprintf fmt "%s" (view v)
+
 let equal s1 s2 = s1.id == s2.id
 
 let compare s1 s2 = compare s1.id s2.id
