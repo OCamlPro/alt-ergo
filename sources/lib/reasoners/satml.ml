@@ -445,8 +445,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let unassign_atom a =
     a.is_true <- false;
     a.neg.is_true <- false;
-    a.timp <- false;
-    a.neg.timp <- false;
+    a.timp <- 0;
+    a.neg.timp <- 0;
     a.var.level <- -1;
     a.var.index <- -1;
     a.var.reason <- None;
@@ -454,6 +454,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let enqueue_assigned env a =
     assert (a.is_true || a.neg.is_true);
+    if a.timp = 1 then begin
+      a.timp <- -1;
+      a.neg.timp <- -1
+    end;
     assert (a.var.level >= 0);
     Vec.push env.trail a
 
@@ -812,10 +816,20 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           else Ex.empty
         in
         assert (E.is_ground ta.lit);
-        if ta.timp then
-          ()
-            [@ocaml.ppwarning "XXX: only do this for instantiation ?"]
-        else
+        let th_imp =
+          if ta.timp = -1 then
+            let lit = Atom.literal a in
+            match Th.query lit env.tenv with
+            | Some (d, _) ->
+              a.timp <- 1;
+              a.neg.timp <- 1;
+              true
+            | None ->
+              false
+          else
+            ta.timp = 1
+        in
+        if not th_imp then
           facts := (ta.lit, ex, dlvl,env.cpt_current_propagations) :: !facts;
         env.cpt_current_propagations <- env.cpt_current_propagations + 1
       done;
@@ -1372,12 +1386,12 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       let lit = Atom.literal a in
       match Th.query lit tenv with
       | Some (d,_) ->
-        a.timp <- true;
+        a.timp <- 1;
         Some (clause_of_dep d a)
       | None  ->
         match Th.query (E.neg lit) tenv with
         | Some (d,_) ->
-          a.neg.timp <- true;
+          a.neg.timp <- 1;
           Some (clause_of_dep d a.Atom.neg)
         | None -> None
 
