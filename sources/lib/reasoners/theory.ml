@@ -125,7 +125,7 @@ module Main_Default : S = struct
         (fun ty mp ->
            match ty with
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> mp
-           | Tvar _ | Tnext _ -> assert false
+           | Tvar _ -> assert false
 
            | Text (_, hs) | Tsum (hs, _) | Trecord {name=hs} when
                Hstring.Map.mem hs mp -> mp
@@ -148,7 +148,7 @@ module Main_Default : S = struct
         (fun _ ty ->
            match ty with
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> ()
-           | Tvar _ | Tnext _ -> assert false
+           | Tvar _ -> assert false
            | Text _ -> fprintf fmt "@.type %a@." Ty.print ty
            | Tsum (_, l) ->
              fprintf fmt "@.type %a = " Ty.print ty;

@@ -1159,7 +1159,6 @@ let rec downgrade_ty = function
   | Ty.Tfarray (src, dst) ->
     PPTexternal ([downgrade_ty src; downgrade_ty dst],
                  "farray", Loc.dummy)
-  | Ty.Tnext _ -> assert false
   | Ty.Tsum (name, _) ->
     PPTexternal ([], Hstring.view name, Loc.dummy)
   | Ty.Trecord r ->
@@ -1179,7 +1178,6 @@ let downgrade_type_decl = function
   | Ty.Tunit
   | Ty.Tbitv _
   | Ty.Tvar _
-  | Ty.Tnext _
   | Ty.Tfarray _ -> assert false
   | Ty.Text (args, f) ->
     let vars = List.map (function

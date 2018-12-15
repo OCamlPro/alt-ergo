@@ -38,7 +38,6 @@ type t =
   | Tbitv of int
   | Text of t list * Hstring.t
   | Tfarray of t * t
-  | Tnext of t
   | Tsum of Hstring.t * Hstring.t list
   | Trecord of trecord
 
@@ -76,7 +75,6 @@ let print full =
       print fmt t
     | Text(l, s) -> fprintf fmt "%a%s" print_list l (Hstring.view s)
     | Tfarray (t1, t2) -> fprintf fmt "(%a,%a) farray" print t1 print t2
-    | Tnext t -> fprintf fmt "%a next" print t
     | Tsum(s, lc) ->
       fprintf fmt "%s" (Hstring.view s);
       if full then begin
@@ -152,10 +150,6 @@ let rec shorten ty =
     r.lbs <- List.map (fun (lb, ty) -> lb, shorten ty) r.lbs;
     ty
 
-  | Tnext t1 ->
-    let t1' = shorten t1 in
-    if t1 == t1' then ty else Tnext t1'
-
   | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum (_, _) -> ty
 
 
@@ -209,7 +203,6 @@ let rec equal t1 t2 =
     end
   | Tint, Tint | Treal, Treal | Tbool, Tbool | Tunit, Tunit -> true
   | Tbitv n1, Tbitv n2 -> n1 =n2
-  | Tnext t1, Tnext t2 -> equal t1 t2
   | _ -> false
 
 let rec compare t1 t2 =
@@ -330,10 +323,6 @@ let apply_subst =
            name = r.name;
            lbs = lbs}
 
-    | Tnext t ->
-      let t' = apply_subst s t in
-      if t == t' then ty else Tnext t'
-
     | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum (_, _) -> ty
   in
   fun s ty -> if M.is_empty s then ty else apply_subst s ty
@@ -382,10 +371,6 @@ let rec fresh ty subst =
     in
     Trecord { args = args; name = n; lbs = lbs}, subst
 
-  | Tnext ty ->
-    let ty, subst = fresh ty subst in
-    Tnext ty, subst
-
   | t -> t, subst
 
 and fresh_list lty subst =
@@ -429,7 +414,6 @@ let rec monomorphize ty =
     in
     Trecord {args = m_tylv; name = n; lbs = m_tylb}
   | Tfarray (ty1,ty2)    -> Tfarray (monomorphize ty1,monomorphize ty2)
-  | Tnext ty    -> Tnext (monomorphize ty)
   | Tvar {v=v; value=None} -> text [] ("'_c"^(string_of_int v))
   | Tvar ({value=Some ty1} as r) ->
     Tvar { r with value = Some (monomorphize ty1)}

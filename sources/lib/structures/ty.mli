@@ -52,8 +52,6 @@ type t =
   | Tfarray of t * t
   (** Functional arrays. [TFarray (src,dst)] maps values of type [src]
       to values of type [dst]. *)
-  | Tnext of t
-  (** Experiment with a reachability theory. Can be safely ignored. *)
   | Tsum of Hstring.t * Hstring.t list
   (** Enumeration, with its name, and the list of its constructors. *)
   | Trecord of trecord
