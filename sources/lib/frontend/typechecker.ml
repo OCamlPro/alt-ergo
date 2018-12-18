@@ -800,13 +800,13 @@ and type_form ?(in_theory=false) env f =
         let f1 = type_form env f1 in
         let f2 = type_form env f2 in
         (match op with
-            | PPand ->
-              TFop(OPand,[f1;f2])
-            | PPor -> TFop(OPor,[f1;f2])
-            | PPxor -> TFop(OPxor,[f1;f2])
-            | PPimplies -> TFop(OPimp,[f1;f2])
-            | PPiff -> TFop(OPiff,[f1;f2])
-            | _ -> assert false)
+         | PPand ->
+           TFop(OPand,[f1;f2])
+         | PPor -> TFop(OPor,[f1;f2])
+         | PPxor -> TFop(OPxor,[f1;f2])
+         | PPimplies -> TFop(OPimp,[f1;f2])
+         | PPiff -> TFop(OPiff,[f1;f2])
+         | _ -> assert false)
       end
     | PPprefix(PPnot,f) ->
       Options.tool_req 1 "TR-Typing-OpNot$_F$";
