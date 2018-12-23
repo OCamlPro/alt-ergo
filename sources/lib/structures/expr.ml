@@ -902,50 +902,11 @@ let has_semantic_triggers trs =
 let has_hypotheses trs =
   List.exists (fun tr -> tr.hyp != []) trs
 
-let find_particular_subst =
-  let exception Out of Sy.t * t in
-  (* ex: in "forall x, y : int. x <> 1 or f(y) = x+1 or P(x,y)",
-     x can be replaced with 1 *)
-  let rec find_subst v tv f =
-    match form_view f with
-    | Not_a_form -> assert false
-    | Unit _ | Lemma _ | Skolem _ | Let _ | Iff _ | Xor _ -> ()
-    | Clause(f1, f2,_) -> find_subst v tv f1; find_subst v tv f2
-    | Literal a ->
-      match lit_view a with
-      | Distinct [a;b] when equal tv a && is_ground b ->
-        raise (Out (v, b))
+let no_occur_check v e =
+  not (SMap.mem v e.vars)
 
-      | Distinct [a;b] when equal tv b && is_ground a ->
-        raise (Out (v, a))
-
-      | Pred (t, is_neg) when equal tv t ->
-        raise (Out (v, if is_neg then vrai else faux))
-
-      | _ -> ()
-  in
-  fun binders trs f ->
-    if not (Ty.Svty.is_empty f.vty) || has_hypotheses trs ||
-       has_semantic_triggers trs
-    then
-      None
-    else
-      try
-        assert (not (SMap.is_empty binders));
-        let acc, full =
-          SMap.fold
-            (fun v (ty, _) (acc, full) ->
-               try
-                 find_subst v (mk_term v [] ty) f;
-                 (*TODO: (re-) test partial substs: acc, false*)
-                 raise Exit
-               with Out (x, t) ->
-                 SMap.add x t acc, full
-            )binders (SMap.empty, true)
-        in
-        if SMap.is_empty acc then None else Some (acc, full)
-      with Exit -> None
-
+let no_vtys l =
+  List.for_all (fun e -> Ty.Svty.is_empty e.vty) l
 
 (** smart constructors for literals *)
 
@@ -1249,15 +1210,15 @@ and mk_forall_bis (q : quantified) id =
     match find_particular_subst binders q.triggers q.main with
     | None -> mk_forall_ter q 0
 
-    | Some (sbs, covers_all_binders) ->
+    | Some sbs ->
       let subst = sbs, Ty.esubst in
-      let trs = List.map (apply_subst_trigger subst) q.triggers in
-      let bkw_trs = List.map (apply_subst_trigger subst) q.backward_trs in
-      let frw_trs = List.map (apply_subst_trigger subst) q.forward_trs in
-      let sko_v   = List.map (apply_subst_aux subst) q.sko_v in
       let f = apply_subst_aux subst q.main in
-      if covers_all_binders then f
+      if is_ground f then f
       else
+        let trs = List.map (apply_subst_trigger subst) q.triggers in
+        let bkw_trs = List.map (apply_subst_trigger subst) q.backward_trs in
+        let frw_trs = List.map (apply_subst_trigger subst) q.forward_trs in
+        let sko_v   = List.map (apply_subst_aux subst) q.sko_v in
         let binders = SMap.filter (fun x _ -> not (SMap.mem x sbs)) binders in
         let q =
           {q with
@@ -1265,6 +1226,58 @@ and mk_forall_bis (q : quantified) id =
            forward_trs = frw_trs; sko_v; main = f }
         in
         mk_forall_bis q id
+
+and find_particular_subst =
+  let exception Found of Sy.t * t in
+  (* ex: in "forall x, y : int. x <> 1 or f(y) = x+1 or P(x,y)",
+     x can be replaced with 1 *)
+  let rec find_subst v tv f =
+    match form_view f with
+    | Not_a_form -> assert false
+    | Unit _ | Lemma _ | Skolem _ | Let _ | Iff _ | Xor _ -> ()
+    | Clause(f1, f2,_) -> find_subst v tv f1; find_subst v tv f2
+    | Literal a ->
+      match lit_view a with
+      | Distinct [a;b] when
+          equal tv a && no_occur_check v b && no_vtys [tv;a] ->
+        (* TODO: should unify when type variables are present *)
+        raise (Found (v, b))
+
+      | Distinct [a;b] when
+          equal tv b && no_occur_check v a && no_vtys [tv; b] ->
+        (* TODO: should unify when type variables are present *)
+        raise (Found (v, a))
+
+      | Pred (t, is_neg) when equal tv t ->
+        raise (Found (v, if is_neg then vrai else faux))
+
+      | _ -> ()
+  in
+  fun binders trs f ->
+    if not (Ty.Svty.is_empty f.vty) || has_hypotheses trs ||
+       has_semantic_triggers trs
+    then
+      None
+    else
+      begin
+        assert (not (SMap.is_empty binders));
+        let sbt =
+          SMap.fold
+            (fun v (ty, _) sbt ->
+               try
+                 let f = apply_subst_aux (sbt, Ty.esubst) f in
+                 find_subst v (mk_term v [] ty) f;
+                 sbt
+               with Found (x, t) ->
+                 fprintf fmt "%a |-> %a@." Sy.print x print t;
+                 assert (not (SMap.mem x sbt));
+                 let one_sbt = SMap.singleton x t, Ty.esubst in
+                 let sbt = SMap.map (apply_subst_aux one_sbt) sbt in
+                 SMap.add x t sbt
+            )binders SMap.empty
+        in
+        if SMap.is_empty sbt then None else Some sbt
+      end
 
 
 let apply_subst =
