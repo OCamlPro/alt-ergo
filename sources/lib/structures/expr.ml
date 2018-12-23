@@ -38,6 +38,13 @@ module SSet = Sy.Set
 
 type binders = (Ty.t * int) SMap.t (*int tag in globally unique *)
 
+type decl_kind =
+  | Dtheory
+  | Daxiom
+  | Dgoal
+  | Dpredicate of string
+  | Dfunction of string
+
 type t = view
 
 and view = {
@@ -64,15 +71,14 @@ and quantified = {
   name : string;
   main : t;
   toplevel : bool;
-  triggers : trigger list;
-  backward_trs : trigger list;
-  forward_trs : trigger list;
+  user_trs : trigger list;
   binders : binders;
   (* These fields should be (ordered) lists ! important for skolemization *)
   sko_v : t list;
   sko_vty : Ty.t list;
   loc : Loc.t; (* location of the "GLOBAL" axiom containing this quantified
                   formula. It forms with name a unique id *)
+  kind : decl_kind;
 }
 
 and letin = {
@@ -128,13 +134,6 @@ type form_view =
   | Let of letin (* a binding of an expr *)
   | Not_a_form
 
-
-type decl_kind =
-  | Dtheory
-  | Daxiom
-  | Dgoal
-  | Dpredicate of string
-  | Dfunction of string
 
 (** Comparison and hashing functions *)
 
@@ -234,8 +233,8 @@ let compare_triggers f1 f2 trs1 trs2 =
   | Invalid_argument _ -> List.length trs1 - List.length trs2
 
 let compare_quant
-    {main=f1; binders=b1; sko_v=sko_v1; sko_vty=free_vty1; triggers=trs1}
-    {main=f2; binders=b2; sko_v=sko_v2; sko_vty=free_vty2; triggers=trs2}
+    {main=f1; binders=b1; sko_v=sko_v1; sko_vty=free_vty1; user_trs=trs1}
+    {main=f2; binders=b2; sko_v=sko_v2; sko_vty=free_vty2; user_trs=trs2}
   =
   let c = compare f1 f2 in
   if c <> 0 then c
@@ -396,12 +395,12 @@ let rec print_silent fmt t =
       | Sy.F_Clause _, [f1; f2], _ ->
         fprintf fmt "@[(%a \\/@ %a)@]" print_silent f1 print_silent f2
 
-      | Sy.F_Lemma, [], B_lemma {triggers ; main ; name ; binders} ->
+      | Sy.F_Lemma, [], B_lemma {user_trs ; main ; name ; binders} ->
         if verbose () then
           fprintf fmt "(lemma: %s forall %a[%a].@  %a)"
             name
             print_binders binders
-            print_triggers triggers print_silent main
+            print_triggers user_trs print_silent main
         else
           fprintf fmt "(lem %s)" name
 
@@ -845,8 +844,7 @@ let not_an_app e =
 let mk_forall_ter =
   let env = F_Htbl.create 101 in
   fun new_q id ->
-    let { name; loc; binders; triggers;
-          backward_trs = bkw_trs; forward_trs = frw_trs;
+    let { name; loc; binders; user_trs;
           main = f; sko_v ; sko_vty ; toplevel } = new_q
     in
     (* when calling mk_forall_ter, binders should not contains
@@ -1057,8 +1055,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
 
       | Sy.Form (Sy.F_Lemma | Sy.F_Skolem), (B_lemma q | B_skolem q) ->
         assert (xs == []);
-        let { main; triggers = trs; binders; sko_v; sko_vty;
-              backward_trs = bkw_trs; forward_trs = frw_trs } = q
+        let { main; user_trs = trs; binders; sko_v; sko_vty } = q
         in
         (* TODO: implement case where variables capture happens *)
         assert (no_capture_issue s_t binders);
@@ -1070,8 +1067,6 @@ let rec apply_subst_aux (s_t, s_ty) t =
         );
         let main = apply_subst_aux s main in
         let trs = List.map (apply_subst_trigger s) trs in
-        let bkw_trs = List.map (apply_subst_trigger s) bkw_trs in
-        let frw_trs = List.map (apply_subst_trigger s) frw_trs in
         let binders =
           SMap.fold
             (fun sy (ty,i) bders ->
@@ -1083,8 +1078,8 @@ let rec apply_subst_aux (s_t, s_ty) t =
         let sko_v = List.map (apply_subst_aux s) sko_v in
         let sko_vty = List.map (Ty.apply_subst s_ty) sko_vty in
         let q = {q with
-                 main; triggers = trs; binders = binders; sko_v;
-                 sko_vty; forward_trs = frw_trs; backward_trs = bkw_trs}
+                 main; user_trs = trs; binders = binders; sko_v;
+                 sko_vty}
         in
         begin match f with
           | Sy.Form Sy.F_Lemma  ->
@@ -1207,7 +1202,7 @@ and mk_forall_bis (q : quantified) id =
   if SMap.is_empty binders && Ty.Svty.is_empty q.main.vty then q.main
   else
     let q = {q with binders} in
-    match find_particular_subst binders q.triggers q.main with
+    match find_particular_subst binders q.user_trs q.main with
     | None -> mk_forall_ter q 0
 
     | Some sbs ->
@@ -1215,16 +1210,10 @@ and mk_forall_bis (q : quantified) id =
       let f = apply_subst_aux subst q.main in
       if is_ground f then f
       else
-        let trs = List.map (apply_subst_trigger subst) q.triggers in
-        let bkw_trs = List.map (apply_subst_trigger subst) q.backward_trs in
-        let frw_trs = List.map (apply_subst_trigger subst) q.forward_trs in
+        let trs = List.map (apply_subst_trigger subst) q.user_trs in
         let sko_v   = List.map (apply_subst_aux subst) q.sko_v in
         let binders = SMap.filter (fun x _ -> not (SMap.mem x sbs)) binders in
-        let q =
-          {q with
-           binders; triggers = trs; backward_trs = bkw_trs;
-           forward_trs = frw_trs; sko_v; main = f }
-        in
+        let q = {q with binders; user_trs = trs; sko_v; main = f } in
         mk_forall_bis q id
 
 and find_particular_subst =
@@ -1417,17 +1406,10 @@ let cand_is_more_general cand other =
   try matches cand other; true
   with Exit -> false
 
-let resolution_triggers is_back f name binders free_vty =
+let resolution_triggers ~is_back {main = f; name;  binders} =
   if Options.no_backward () then []
   else
-    let free_vty =
-      Ty.Set.fold
-        (fun ty svty ->
-           match ty with
-           | Ty.Tvar {Ty.v; value = None} -> Ty.Svty.add v svty
-           | _ -> assert false
-        )free_vty Ty.Svty.empty
-    in
+    let free_vty = f.vty in
     let cand =
       resolution_of_toplevel_conj is_back f binders free_vty TSet.empty in
     let others =
@@ -1446,32 +1428,6 @@ let resolution_triggers is_back f name binders free_vty =
              guard = None
            } :: acc
       )cand []
-
-let fully_uninterpreted_head s =
-  match s.f with
-  | Sy.Op _ -> false
-  | _ -> true
-
-(* this function removes "big triggers" that are subsumed by smaller ones *)
-let filter_subsumed_triggers triggers =
-  List.fold_left
-    (fun acc tr ->
-       match tr.content with
-       | [t] ->
-         let subterms = sub_terms TSet.empty t in
-         if List.exists (fun tr ->
-             match tr.content with
-             | [s] ->
-               s != t && TSet.mem s subterms &&
-               fully_uninterpreted_head s
-             | _ -> false
-           )triggers
-         then
-           acc
-         else
-           tr :: acc
-       | _ -> tr :: acc
-    )[] triggers |> List.rev
 
 let free_vars_as_terms e =
   SMap.fold (fun sy (ty, _) acc -> (mk_term sy [] ty) :: acc)
@@ -2060,7 +2016,7 @@ module Triggers = struct
          STRS.add (e, free_vars_as_set e, e.vty) strs
       )terms terms
 
-  let make f toplevel binders trs0 ~decl_kind =
+  let make f toplevel binders trs0 ~decl_kind ~only_check =
     if SMap.is_empty binders && Ty.Svty.is_empty f.vty then trs0
     else
       let vtype = if toplevel then f.vty else Ty.Svty.empty in
@@ -2095,7 +2051,9 @@ module Triggers = struct
 
       | _ , _::_ , _   -> check_triggers (vterm, vtype) trs0
 
-      | _, _, {f = (Sy.Form Sy.F_Iff) ; xs = [e1; e2]} when is_literal e1 ->
+      | _ when only_check -> []
+
+      | _, [], {f = (Sy.Form Sy.F_Iff) ; xs = [e1; e2]} when is_literal e1 ->
         let f_trs1, lets = potential_triggers (vterm, vtype) e1 in
         let f_trs1 = expand_lets f_trs1 lets in
         let trs1 = trs_in_scope f_trs1 e1 in
@@ -2115,7 +2073,7 @@ module Triggers = struct
         in
         triggers_of_list res
 
-      | _ ->
+      | _, [], _ ->
         let f_trs, lets = potential_triggers (vterm, vtype) f in
         let f_trs = expand_lets f_trs lets in
         let trs = trs_in_scope f_trs f in
@@ -2128,7 +2086,18 @@ end
 
 (*****)
 
+let make_triggers f binders decl_kind =
+  let toplevel = true in
+  let trs0 = [] in
+  Triggers.make f toplevel binders trs0 ~decl_kind ~only_check:false
+
 let mk_forall name loc binders trs f id ~toplevel ~decl_kind =
+  let decl_kind =
+    if toplevel then decl_kind
+    else match decl_kind with
+      | Dpredicate  _ | Dfunction _ -> Daxiom (* pred and func only toplevel*)
+      | _ -> decl_kind
+  in
   let binders =
     (* ignore binders that are not used in f ! already done in mk_forall_bis
        but maybe usefull for triggers inference *)
@@ -2141,16 +2110,10 @@ let mk_forall name loc binders trs f id ~toplevel ~decl_kind =
   in
   let free_vty = free_type_vars_as_types f in
   let sko_vty = if toplevel then [] else Ty.Set.elements free_vty in
-  let trs = Triggers.make f toplevel binders trs ~decl_kind in
-  if Options.debug_triggers () then
-    fprintf fmt "[expr] triggers of %s are: %a@." name print_triggers trs;
-  let trs = filter_subsumed_triggers trs in
-  let bkw_trs = resolution_triggers true  f name binders free_vty in
-  let frw_trs = resolution_triggers false f name binders free_vty in
+  let trs = Triggers.make f toplevel binders trs ~decl_kind ~only_check:true in
   mk_forall_bis
     {name; loc; binders; toplevel;
-     triggers = trs; main = f; backward_trs = bkw_trs;
-     forward_trs = frw_trs; sko_v; sko_vty} id
+     user_trs = trs; main = f; sko_v; sko_vty; kind = decl_kind} id
 
 let mk_exists name loc binders trs f id ~toplevel ~decl_kind =
   if not toplevel || Ty.Svty.is_empty f.vty then

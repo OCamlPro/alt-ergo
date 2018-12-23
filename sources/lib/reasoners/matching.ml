@@ -552,18 +552,81 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   let max_term_depth env mx = {env with max_t_depth = max env.max_t_depth mx}
 
+
+
+  let fully_uninterpreted_head s =
+    match E.term_view s with
+    | E.Not_a_term _ -> assert false
+    | E.Term {E.f = Symbols.Op _} -> false
+    | _ -> true
+
+  (* this function removes "big triggers" that are subsumed by smaller ones *)
+  let filter_subsumed_triggers triggers =
+    List.fold_left
+      (fun acc tr ->
+         match tr.E.content with
+         | [t] ->
+           let subterms = E.sub_terms E.Set.empty t in
+           if List.exists (fun tr ->
+               match tr.E.content with
+               | [s] ->
+                 not (E.equal s t) && E.Set.mem s subterms &&
+                 fully_uninterpreted_head s
+               | _ -> false
+             )triggers
+           then
+             acc
+           else
+             tr :: acc
+         | _ -> tr :: acc
+      )[] triggers |> List.rev
+
+  module HE = Hashtbl.Make (E)
+
+  let triggers_of =
+    let trs_tbl = HE.create 101 in
+    fun q ->
+      match q.E.user_trs with
+      | _::_ as l -> l
+      | [] ->
+        try HE.find trs_tbl q.E.main
+        with Not_found ->
+          let trs = E.make_triggers q.E.main q.E.binders q.E.kind in
+          HE.add trs_tbl q.E.main trs;
+          trs
+
+  let backward_triggers =
+    let trs_tbl = HE.create 101 in
+    fun q ->
+      try HE.find trs_tbl q.E.main
+      with Not_found ->
+        let trs = E.resolution_triggers ~is_back:true q in
+        HE.add trs_tbl q.E.main trs;
+        trs
+
+  let forward_triggers =
+    let trs_tbl = HE.create 101 in
+    fun q ->
+      try HE.find trs_tbl q.E.main
+      with Not_found ->
+        let trs = E.resolution_triggers ~is_back:false q in
+        HE.add trs_tbl q.E.main trs;
+        trs
+
   let add_triggers ~backward env formulas =
     ME.fold
       (fun lem (age, dep) env ->
          match E.form_view lem with
-         | E.Lemma {E.triggers = tgs0; main = f;
-                    backward_trs=tgs1; forward_trs=tgs2} ->
+         | E.Lemma ({E.user_trs = tgs0; main = f; name; binders} as q) ->
            let tgs =
              match backward with
-             | Util.Normal -> tgs0
-             | Util.Backward -> tgs1
-             | Util.Forward -> tgs2
+             | Util.Normal   -> triggers_of q
+             | Util.Backward -> backward_triggers q
+             | Util.Forward  -> forward_triggers q
            in
+           if Options.debug_triggers () then
+             fprintf fmt "[expr] triggers of %s are: %a@."
+               name E.print_triggers tgs;
            List.fold_left
              (fun env tr ->
                 let info =

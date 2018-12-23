@@ -10,7 +10,7 @@ local_install_dir=`pwd`/___local
 git_repo=`pwd`
 
 install_unreleased_psmt2_frontend(){
-    opam pin add psmt2-frontend --kind auto https://github.com/Coquera/psmt2-frontend.git ; exit_if_error
+    opam pin add psmt2-frontend --kind auto https://github.com/Coquera/psmt2-frontend.git#master ; exit_if_error
 }
 
 non_regression(){
