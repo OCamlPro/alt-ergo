@@ -1269,7 +1269,6 @@ and find_particular_subst =
                  find_subst v (mk_term v [] ty) f;
                  sbt
                with Found (x, t) ->
-                 fprintf fmt "%a |-> %a@." Sy.print x print t;
                  assert (not (SMap.mem x sbt));
                  let one_sbt = SMap.singleton x t, Ty.esubst in
                  let sbt = SMap.map (apply_subst_aux one_sbt) sbt in
