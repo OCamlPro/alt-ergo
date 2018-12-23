@@ -2185,7 +2185,7 @@ let separate_semantic_triggers =
   let is_theory_const = Hstring.make "is_theory_constant" in
   let linear_dep = Hstring.make "linear_dependency" in
   fun th_form ->
-    let {E.triggers} as q =
+    let {E.user_trs} as q =
       match E.form_view th_form with
       | E.Lemma q -> q
       | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
@@ -2223,7 +2223,7 @@ let separate_semantic_triggers =
                )([], []) (List.rev tr.E.content)
            in
            {tr with E.content = syn; semantic = sem}
-        )triggers
+        )user_trs
     in
     E.mk_forall
       q.E.name q.E.loc q.E.binders (List.rev r_triggers) q.E.main

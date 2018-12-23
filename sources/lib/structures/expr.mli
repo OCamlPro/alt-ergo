@@ -30,6 +30,13 @@
 
 type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
 
+type decl_kind =
+  | Dtheory
+  | Daxiom
+  | Dgoal
+  | Dpredicate of string
+  | Dfunction of string
+
 type t
 
 type view = private {
@@ -56,15 +63,14 @@ and quantified = private {
   name : string;
   main : t;
   toplevel : bool;
-  triggers : trigger list;
-  backward_trs : trigger list;
-  forward_trs : trigger list;
+  user_trs : trigger list;
   binders : binders;
   (* These fields should be (ordered) lists ! important for skolemization *)
   sko_v : t list;
   sko_vty : Ty.t list;
   loc : Loc.t; (* location of the "GLOBAL" axiom containing this quantified
                   formula. It forms with name a unique id *)
+  kind : decl_kind;
 }
 
 and letin = private {
@@ -122,14 +128,6 @@ type form_view = private
   | Let of letin (* a binding of an expr *)
   | Not_a_form
 
-type decl_kind =
-  | Dtheory
-  | Daxiom
-  | Dgoal
-  | Dpredicate of string
-  | Dfunction of string
-
-
 (** different views of an expression *)
 
 val term_view : t -> term_view
@@ -142,6 +140,7 @@ val form_view : t -> form_view
 val print : Format.formatter -> t -> unit
 val print_list : Format.formatter -> t list -> unit
 val print_list_sep : string -> Format.formatter -> t list -> unit
+val print_triggers : Format.formatter -> trigger list -> unit
 
 (** Comparison and hashing functions *)
 
@@ -244,6 +243,10 @@ val max_ground_terms_rec_of_form : t -> Set.t
 
 
 (** skolemization and other smart constructors for formulas **)
+
+val make_triggers: t -> binders -> decl_kind -> trigger list
+
+val resolution_triggers: is_back:bool -> quantified -> trigger list
 
 val mk_forall :
   string -> (* name *)
