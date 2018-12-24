@@ -45,8 +45,7 @@ module type S = sig
   val add_predicate : t -> Expr.gformula -> Ex.t -> t
 
   val m_lemmas :
-    use_cs : bool ->
-    backward:Util.inst_kind ->
+    Util.matching_env ->
     t ->
     tbox ->
     (E.t -> E.t -> bool) ->
@@ -54,8 +53,7 @@ module type S = sig
     instances * instances (* goal_directed, others *)
 
   val m_predicates :
-    use_cs : bool ->
-    backward:Util.inst_kind ->
+    Util.matching_env ->
     t ->
     tbox ->
     (E.t -> E.t -> bool) ->
@@ -282,25 +280,25 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         raise e
     else new_facts env tbox selector substs
 
-  let mround env axs tbox selector ilvl kind backward use_cs =
+  let mround env axs tbox selector ilvl kind mconf =
     Debug.new_mround ilvl kind;
     Options.tool_req 2 "TR-Sat-Mround";
     let env =
-      {env with matching = EM.add_triggers ~backward env.matching axs} in
+      {env with matching = EM.add_triggers mconf env.matching axs} in
     let ccx_tbox =
-      if use_cs || Options.greedy () then X.get_case_split_env tbox
+      if mconf.Util.use_cs || mconf.Util.greedy then X.get_case_split_env tbox
       else X.get_real_env tbox
     in
-    let substs = EM.query env.matching ccx_tbox in
+    let substs = EM.query mconf env.matching ccx_tbox in
     let insts = new_facts env tbox selector substs in
     let gd, ngd = split_and_filter_insts env insts in
     sort_facts gd, sort_facts ngd
 
-  let m_lemmas env tbox selector ilvl backward use_cs =
-    mround env env.lemmas tbox selector ilvl "axioms" backward use_cs
+  let m_lemmas env tbox selector ilvl mconf =
+    mround env env.lemmas tbox selector ilvl "axioms" mconf
 
-  let m_predicates env tbox selector ilvl backward use_cs =
-    mround env env.predicates tbox selector ilvl "predicates" backward use_cs
+  let m_predicates env tbox selector ilvl mconf =
+    mround env env.predicates tbox selector ilvl "predicates" mconf
 
   let add_lemma env gf dep =
     let {Expr.ff=orig;age=age;gf=b} = gf in
@@ -350,29 +348,29 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         raise e
     else add_predicate env gf
 
-  let m_lemmas ~use_cs ~backward env tbox selector ilvl =
+  let m_lemmas mconf env tbox selector ilvl =
     if Options.timers() then
       try
         Timers.exec_timer_start Timers.M_Match Timers.F_m_lemmas;
-        let res = m_lemmas env tbox selector ilvl backward use_cs in
+        let res = m_lemmas env tbox selector ilvl mconf in
         Timers.exec_timer_pause Timers.M_Match Timers.F_m_lemmas;
         res
       with e ->
         Timers.exec_timer_pause Timers.M_Match Timers.F_m_lemmas;
         raise e
-    else m_lemmas env tbox selector ilvl backward use_cs
+    else m_lemmas env tbox selector ilvl mconf
 
-  let m_predicates ~use_cs ~backward env tbox selector ilvl =
+  let m_predicates mconf env tbox selector ilvl =
     if Options.timers() then
       try
         Timers.exec_timer_start Timers.M_Match Timers.F_m_predicates;
-        let res = m_predicates env tbox selector ilvl backward use_cs in
+        let res = m_predicates env tbox selector ilvl mconf in
         Timers.exec_timer_pause Timers.M_Match Timers.F_m_predicates;
         res
       with e ->
         Timers.exec_timer_pause Timers.M_Match Timers.F_m_predicates;
         raise e
-    else m_predicates env tbox selector ilvl backward use_cs
+    else m_predicates env tbox selector ilvl mconf
 
   let matching_terms_info env = EM.terms_info env.matching
 

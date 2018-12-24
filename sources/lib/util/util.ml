@@ -98,3 +98,13 @@ let [@inline always] cmp_lists l1 l2 cmp_elts =
   with
   | Cmp n -> n
   | Invalid_argument _ -> List.length l1 - List.length l2
+
+type matching_env =
+  {
+    nb_triggers : int;
+    triggers_var : bool;
+    no_ematching: bool;
+    greedy : bool;
+    use_cs : bool;
+    backward : inst_kind
+  }

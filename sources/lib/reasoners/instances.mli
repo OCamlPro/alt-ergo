@@ -37,8 +37,7 @@ module type S = sig
   val add_predicate : t -> Expr.gformula -> Explanation.t -> t
 
   val m_lemmas :
-    use_cs : bool ->
-    backward:Util.inst_kind ->
+    Util.matching_env ->
     t ->
     tbox ->
     (Expr.t -> Expr.t -> bool) ->
@@ -46,8 +45,7 @@ module type S = sig
     instances * instances (* goal_directed, others *)
 
   val m_predicates :
-    use_cs : bool ->
-    backward:Util.inst_kind ->
+    Util.matching_env ->
     t ->
     tbox ->
     (Expr.t -> Expr.t -> bool) ->
