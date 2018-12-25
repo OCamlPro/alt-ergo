@@ -668,18 +668,17 @@ let free_vars_non_form s l ty =
 let free_type_vars_non_form l ty =
   List.fold_left (fun acc t -> Ty.Svty.union acc t.vty) (Ty.vty_of ty) l
 
+let is_ite s = match s with
+  | Sy.Op Sy.Tite -> true
+  | _ -> false
+
 let mk_term s l ty =
   assert (match s with Sy.Lit _ | Sy.Form _ -> false | _ -> true);
   let d = 1 + List.fold_left (fun z t -> max z t.depth) 0 l in
   let nb_nodes = List.fold_left (fun z t -> z + t.nb_nodes) 1 l in
   let vars = free_vars_non_form s l ty in
   let vty = free_type_vars_non_form l ty in
-  let pure =
-    List.for_all (fun e -> e.pure) l &&
-    match s with
-    | Sy.Name(hs, Sy.Other) -> not (String.equal (Hstring.view hs) "ite")
-    | _ -> true
-  in
+  let pure = List.for_all (fun e -> e.pure) l && not (is_ite s) in
   let pos =
     HC.make {f=s; xs=l; ty=ty; depth=d; tag= -42; vars; vty;
              nb_nodes; neg = None; bind = B_none; pure}
@@ -1500,19 +1499,13 @@ let rec mk_ite_eq x c th el =
     mk_and (mk_imp c e1 0) (mk_imp (neg c) e2 0) false 0
 
 and mk_eq_aux x e =
-  match e.f, e.xs with
-  | Sy.Name(hs, Sy.Other), [c;th;el]
-    when String.equal (Hstring.view hs) "ite" ->
-    mk_ite_eq x c th el
-
+  match e.xs with
+  | [c;th;el] when is_ite e.f -> mk_ite_eq x c th el
   | _ -> mk_eq ~iff:true  x e
 
 let mk_let_equiv let_sko let_e id  =
-  match let_e.f, let_e.xs with
-  | Sy.Name(hs, Sy.Other), [c;th;el]
-    when String.equal (Hstring.view hs) "ite" ->
-    mk_eq_aux let_sko let_e
-
+  match let_e.xs with
+  | [c;th;el] when is_ite let_e.f -> mk_eq_aux let_sko let_e
   | _ ->
     if type_info let_e == Ty.Tbool then mk_iff let_sko let_e id
     else mk_eq ~iff:true let_sko let_e
@@ -1994,6 +1987,7 @@ module Triggers = struct
       assert (head_is_name s a);
       a
     | _ -> (* in case of simplifications *)
+      fprintf fmt "term definition of %S:@.%a@." s print e;
       assert (head_is_name s e);
       e
 
@@ -2147,9 +2141,8 @@ module Purification = struct
         match term_view t with
         | Not_a_term _ -> assert false (* should not happen ? *)
         | Term t ->
-          match t.f, t.xs with
-          | Sy.Name(hs, Sy.Other), [c;th;el]
-            when String.equal (Hstring.view hs) "ite" ->
+          match t.xs with
+          | [c;th;el] when is_ite t.f ->
             let fresh_sy = Sy.fresh ~is_var:true "Pur-Ite" in
             mk_term fresh_sy [] t.ty , SMap.add fresh_sy t lets
 
@@ -2286,8 +2279,7 @@ module Purification = struct
 
   and purify_non_toplevel_ite e lets =
     match e.f, e.xs with
-    | Sy.Name(hs, Sy.Other), [c; th; el]
-      when String.equal (Hstring.view hs) "ite" ->
+    | _, [c; th; el] when is_ite e.f ->
       let c = purify_form c in
       let th, lets = purify_non_toplevel_ite th lets in
       let el, lets = purify_non_toplevel_ite el lets in

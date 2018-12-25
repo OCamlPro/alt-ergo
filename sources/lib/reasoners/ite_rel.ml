@@ -52,12 +52,11 @@ let empty _ =
   }
 
 let is_ite =
-  let ite = Hstring.make "ite" in
+  let ite = Symbols.Op Symbols.Tite in
   fun t ->
     match E.term_view t with
     | E.Not_a_term _ -> assert false
-    | E.Term {E.f = Symbols.Name(hs, _); xs=[p;t1;t2]}
-      when Hstring.equal ite hs ->
+    | E.Term {E.f ; xs=[p;t1;t2]} when Symbols.equal f ite ->
       Some (p, t1, t2)
     | _ ->
       None

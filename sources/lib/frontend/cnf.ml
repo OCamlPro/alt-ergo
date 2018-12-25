@@ -246,7 +246,8 @@ let rec make_term up_qv t =
       in
       let t1 = mk_term t1 in
       let t2 = mk_term t2 in
-      E.mk_term (Sy.name "ite") [cond; t1; t2] ty
+      if E.type_info t1 == Ty.Tbool then E.mk_if cond t1 t2 0
+      else E.mk_term (Sy.Op Sy.Tite) [cond; t1; t2] ty
   in
   mk_term t
 
