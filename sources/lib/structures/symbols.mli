@@ -38,6 +38,7 @@ type operator =
   | Min_real | Min_int | Max_real | Max_int | Integer_log2 | Pow_real_int
   | Pow_real_real | Integer_round
   | Constr of Hstring.t (* enums *)
+  | Tite
 
 type lit =
   (* literals *)

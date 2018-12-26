@@ -356,16 +356,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | E.Not_a_form -> assert false
     end
 
-  let inst_predicates use_cs backward env inst tbox selector ilvl =
-    try Inst.m_predicates ~use_cs ~backward inst tbox selector ilvl
+  let inst_predicates mconf env inst tbox selector ilvl =
+    try Inst.m_predicates mconf inst tbox selector ilvl
     with Ex.Inconsistent (expl, classes) ->
       Debug.inconsistent expl env;
       Options.tool_req 2 "TR-Sat-Conflict-2";
       env.heuristics := Heuristics.bump_activity !(env.heuristics) expl;
       raise (IUnsat (expl, classes))
 
-  let inst_lemmas use_cs backward env inst tbox selector ilvl =
-    try Inst.m_lemmas ~use_cs ~backward inst tbox selector ilvl
+  let inst_lemmas mconf env inst tbox selector ilvl =
+    try Inst.m_lemmas mconf inst tbox selector ilvl
     with Ex.Inconsistent (expl, classes) ->
       Debug.inconsistent expl env;
       Options.tool_req 2 "TR-Sat-Conflict-2";
@@ -1048,10 +1048,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         None
 
   (* returns the (new) env and true if some new instances are made *)
-  let inst_and_assume force_grd backward env inst_function inst_env =
+  let inst_and_assume mconf env inst_function inst_env =
     let gd, ngd =
-      inst_function
-        force_grd backward env inst_env env.tbox (selector env) env.ilevel
+      inst_function mconf env inst_env env.tbox (selector env) env.ilevel
     in
     let l = List.rev_append (List.rev gd) ngd in
 
@@ -1295,11 +1294,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         env.gamma env.inst
     in
     let env = new_inst_level env in
-    let env, ok1 =
-      inst_and_assume true Util.Normal env inst_predicates gre_inst
+    let mconf =
+      {Util.nb_triggers = max 10 (nb_triggers () * 10);
+       no_ematching = false;
+       triggers_var = true;
+       use_cs = true;
+       backward = Util.Normal;
+       greedy = true;
+      }
     in
-    let env, ok2 = inst_and_assume true Util.Normal env inst_lemmas gre_inst
-    in
+    let env, ok1 = inst_and_assume mconf env inst_predicates gre_inst in
+    let env, ok2 = inst_and_assume mconf env inst_lemmas gre_inst in
     let env, ok3 = syntactic_th_inst env gre_inst ~rm_clauses:false in
     let env, ok4 = semantic_th_inst  env gre_inst ~rm_clauses:false ~loop:4 in
     let env = do_case_split env Util.AfterMatching in
@@ -1311,12 +1316,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let env = do_case_split env Util.BeforeMatching in
     let env = compute_concrete_model env 2 in
     let env = new_inst_level env in
-    let env, ok1 =
-      inst_and_assume true Util.Normal env inst_predicates env.inst
+    let mconf =
+      {Util.nb_triggers = nb_triggers ();
+       no_ematching = no_Ematching();
+       triggers_var = triggers_var ();
+       use_cs = false;
+       backward = Util.Normal;
+       greedy = greedy ();
+      }
     in
-    let env, ok2 =
-      inst_and_assume true Util.Normal env inst_lemmas env.inst
-    in
+    let env, ok1 = inst_and_assume mconf env inst_predicates env.inst in
+    let env, ok2 = inst_and_assume mconf env inst_lemmas env.inst in
     let env, ok3 = syntactic_th_inst env env.inst ~rm_clauses:false in
     let env, ok4 = semantic_th_inst  env env.inst ~rm_clauses:false ~loop:4 in
     let env = do_case_split env Util.AfterMatching in
@@ -1502,12 +1512,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let nb1 = env.nb_related_to_goal in
       if verbose () || debug_sat () then
         fprintf fmt "[sat.backward] round %d / %d@." rnd max_rnd;
-      let env, new_i1 =
-        inst_and_assume false Util.Backward env inst_predicates env.inst
+      let mconf =
+        {Util.nb_triggers = nb_triggers ();
+         no_ematching = no_Ematching();
+         triggers_var = triggers_var ();
+         use_cs = false;
+         greedy = greedy ();
+         backward = Util.Backward;
+        }
       in
-      let env, new_i2 =
-        inst_and_assume false Util.Backward env inst_lemmas env.inst
-      in
+      let env, new_i1 = inst_and_assume mconf env inst_predicates env.inst in
+      let env, new_i2 = inst_and_assume mconf env inst_lemmas env.inst in
       let nb2 = env.nb_related_to_goal in
       if verbose () || debug_sat () then
         fprintf fmt "[sat.backward] backward: %d goal-related hyps (+%d)@."
@@ -1598,17 +1613,23 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env, _ = syntactic_th_inst env env.inst ~rm_clauses:true in
       let env, _ = semantic_th_inst  env env.inst ~rm_clauses:true ~loop:4 in
 
-      let env, _ =
-        inst_and_assume false Util.Normal env inst_predicates env.inst
+      let mconf =
+        {Util.nb_triggers = nb_triggers ();
+         no_ematching = no_Ematching();
+         triggers_var = triggers_var ();
+         use_cs = false;
+         backward = Util.Normal;
+         greedy = greedy ();
+        }
       in
+      let env, _ = inst_and_assume mconf env inst_predicates env.inst in
 
       let env, _ = syntactic_th_inst env env.inst ~rm_clauses:true in
       let env, _ = semantic_th_inst  env env.inst ~rm_clauses:true ~loop:4 in
 
       (* goal directed for lemmas *)
       let gd, _ =
-        inst_lemmas
-          false Util.Normal env env.inst env.tbox (selector env) env.ilevel
+        inst_lemmas mconf  env env.inst env.tbox (selector env) env.ilevel
       in
       if Options.tableaux_cdcl () then
         cdcl_assume false env gd;

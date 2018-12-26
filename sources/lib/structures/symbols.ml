@@ -41,6 +41,7 @@ type operator =
   | Min_real | Min_int | Max_real | Max_int | Integer_log2 | Pow_real_int
   | Pow_real_real | Integer_round
   | Constr of Hstring.t (* enums *)
+  | Tite
 
 type lit =
   (* literals *)
@@ -125,7 +126,7 @@ let compare_operators op1 op2 =
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
             | Integer_log2 | Pow_real_int | Pow_real_real | Integer_round
-            | Constr _) -> assert false
+            | Constr _ | Tite) -> assert false
     )
 
 let compare_builtin b1 b2 =
@@ -281,6 +282,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op Integer_round -> "integer_round"
   | Op Concat -> "@"
   | Op Extract -> "^"
+  | Op Tite -> "ite"
   | Op Reach -> assert false
   | True -> "true"
   | False -> "false"

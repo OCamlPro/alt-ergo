@@ -2141,13 +2141,22 @@ let new_facts_for_axiom
 
 
 let syntactic_matching menv env uf selector =
+  let mconf =
+    {Util.nb_triggers = nb_triggers ();
+     no_ematching = no_Ematching();
+     triggers_var = triggers_var ();
+     use_cs = false;
+     backward = Util.Normal;
+     greedy = greedy ();
+    }
+  in
   let synt_match =
     ME.fold
       (fun f (_th_ax, dep) accu ->
          (* currently, No diff between propagators and case-split axs *)
          let forms = ME.singleton f (0 (*0 = age *), dep) in
-         let menv = EM.add_triggers ~backward:Util.Normal menv forms in
-         let res = EM.query menv uf in
+         let menv = EM.add_triggers mconf menv forms in
+         let res = EM.query mconf menv uf in
          if debug_fpa () >= 2 then begin
            let cpt = ref 0 in
            List.iter (fun (_, l) -> List.iter (fun _ -> incr cpt) l) res;

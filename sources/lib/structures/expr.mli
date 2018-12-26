@@ -244,7 +244,8 @@ val max_ground_terms_rec_of_form : t -> Set.t
 
 (** skolemization and other smart constructors for formulas **)
 
-val make_triggers: t -> binders -> decl_kind -> trigger list
+val make_triggers:
+  t -> binders -> decl_kind -> Util.matching_env -> trigger list
 
 val resolution_triggers: is_back:bool -> quantified -> trigger list
 

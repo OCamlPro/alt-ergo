@@ -668,18 +668,17 @@ let free_vars_non_form s l ty =
 let free_type_vars_non_form l ty =
   List.fold_left (fun acc t -> Ty.Svty.union acc t.vty) (Ty.vty_of ty) l
 
+let is_ite s = match s with
+  | Sy.Op Sy.Tite -> true
+  | _ -> false
+
 let mk_term s l ty =
   assert (match s with Sy.Lit _ | Sy.Form _ -> false | _ -> true);
   let d = 1 + List.fold_left (fun z t -> max z t.depth) 0 l in
   let nb_nodes = List.fold_left (fun z t -> z + t.nb_nodes) 1 l in
   let vars = free_vars_non_form s l ty in
   let vty = free_type_vars_non_form l ty in
-  let pure =
-    List.for_all (fun e -> e.pure) l &&
-    match s with
-    | Sy.Name(hs, Sy.Other) -> not (String.equal (Hstring.view hs) "ite")
-    | _ -> true
-  in
+  let pure = List.for_all (fun e -> e.pure) l && not (is_ite s) in
   let pos =
     HC.make {f=s; xs=l; ty=ty; depth=d; tag= -42; vars; vty;
              nb_nodes; neg = None; bind = B_none; pure}
@@ -1023,7 +1022,7 @@ let no_capture_issue s_t binders =
   if SMap.is_empty capt_bind then true
   else
     begin
-      fprintf fmt "captures between@.%aand%a!@.(captured = %a)@.@."
+      eprintf "captures between@.%aand%a!@.(captured = %a)@.@."
         (SMap.print print) s_t print_binders binders print_binders capt_bind;
       false
     end
@@ -1500,19 +1499,13 @@ let rec mk_ite_eq x c th el =
     mk_and (mk_imp c e1 0) (mk_imp (neg c) e2 0) false 0
 
 and mk_eq_aux x e =
-  match e.f, e.xs with
-  | Sy.Name(hs, Sy.Other), [c;th;el]
-    when String.equal (Hstring.view hs) "ite" ->
-    mk_ite_eq x c th el
-
+  match e.xs with
+  | [c;th;el] when is_ite e.f -> mk_ite_eq x c th el
   | _ -> mk_eq ~iff:true  x e
 
 let mk_let_equiv let_sko let_e id  =
-  match let_e.f, let_e.xs with
-  | Sy.Name(hs, Sy.Other), [c;th;el]
-    when String.equal (Hstring.view hs) "ite" ->
-    mk_eq_aux let_sko let_e
-
+  match let_e.xs with
+  | [c;th;el] when is_ite let_e.f -> mk_eq_aux let_sko let_e
   | _ ->
     if type_info let_e == Ty.Tbool then mk_iff let_sko let_e id
     else mk_eq ~iff:true let_sko let_e
@@ -1805,9 +1798,9 @@ module Triggers = struct
         let vt = SSet.add Sy.underscore (SSet.inter vt bv) in
         t,vt,vty
 
-  let parties bv vty l escaped_vars =
+  let parties mconf bv vty l escaped_vars =
     let l =
-      if triggers_var () then l
+      if mconf.Util.triggers_var then l
       else List.filter (fun (t,_,_) -> not (is_var t)) l
     in
     let rec parties_rec (llt, llt_ok)  l =
@@ -1858,34 +1851,35 @@ module Triggers = struct
     in fun bv_a vty_a l ->
       simpl_rec bv_a vty_a [] l
 
-  let multi_triggers bv vty trs escaped_vars =
+  let multi_triggers menv bv vty trs escaped_vars =
     let terms = simplification bv vty trs in
-    let l_parties = parties bv vty terms escaped_vars in
+    let l_parties = parties menv bv vty terms escaped_vars in
     let lm = List.map (fun (lt, _, _) -> lt) l_parties in
     let mv , mt = List.partition (List.exists is_var) lm in
     let mv = List.sort (fun l1 l2 -> List.length l1 - List.length l2) mv in
     let mt = List.sort (fun l1 l2 -> List.length l1 - List.length l2) mt in
-    let lm = if triggers_var () then mt@mv else mt in
-    let m = at_most (nb_triggers ()) lm in
-    at_most (nb_triggers ()) m
+    let lm = if menv.Util.triggers_var then mt@mv else mt in
+    let m = at_most menv.Util.nb_triggers lm in
+    at_most menv.Util.nb_triggers m
 
-  let mono_triggers vterm vtype trs =
+  let mono_triggers menv vterm vtype trs =
     let mono = List.filter
         (fun (t, bv_t, vty_t) ->
            SSet.subset vterm bv_t && Svty.subset vtype vty_t) trs
     in
     let trs_v, trs_nv = List.partition (fun (t, _, _) -> is_var t) mono in
     let base =
-      if trs_nv == [] then (if triggers_var () then trs_v else []) else trs_nv
+      if trs_nv == [] then (if menv.Util.triggers_var then trs_v else [])
+      else trs_nv
     in
-    at_most (nb_triggers ()) (List.map (fun (t, _, _) -> [t]) base)
+    at_most menv.Util.nb_triggers (List.map (fun (t, _, _) -> [t]) base)
 
-  let make_triggers vterm vtype (trs : STRS.t) ~escaped_vars =
+  let make_triggers menv vterm vtype (trs : STRS.t) ~escaped_vars =
     let trs = STRS.elements trs in
-    let mono = mono_triggers vterm vtype trs in
+    let mono = mono_triggers menv vterm vtype trs in
     let multi =
-      if mono != [] && not (greedy ()) then []
-      else multi_triggers vterm vtype trs escaped_vars
+      if mono != [] && not menv.Util.greedy then []
+      else multi_triggers menv vterm vtype trs escaped_vars
     in
     mono @ multi
 
@@ -1993,6 +1987,7 @@ module Triggers = struct
       assert (head_is_name s a);
       a
     | _ -> (* in case of simplifications *)
+      fprintf fmt "term definition of %S:@.%a@." s print e;
       assert (head_is_name s e);
       e
 
@@ -2016,29 +2011,31 @@ module Triggers = struct
          STRS.add (e, free_vars_as_set e, e.vty) strs
       )terms terms
 
-  let make f toplevel binders trs0 ~decl_kind ~only_check =
+  let check_user_triggers f toplevel binders trs0 ~decl_kind =
     if SMap.is_empty binders && Ty.Svty.is_empty f.vty then trs0
     else
       let vtype = if toplevel then f.vty else Ty.Svty.empty in
       let vterm = SMap.fold (fun sy _ s -> SSet.add sy s) binders SSet.empty in
-      let trs0 =
-        if decl_kind == Dtheory then
-          trs0
-            [@ocaml.ppwarning "TODO: filter_good_triggers for this \
-                               case once free-vars issues of theories \
-                               axioms with hypotheses fixed"]
-        else
-          filter_good_triggers (vterm, vtype) trs0
-      in
-      match decl_kind, trs0, f with
-      | Dtheory, _, _ ->
+      if decl_kind == Dtheory then
         trs0
+          [@ocaml.ppwarning "TODO: filter_good_triggers for this \
+                             case once free-vars issues of theories \
+                             axioms with hypotheses fixed"]
           (*check_triggers (vterm, vtype) trs0*)
           [@ocaml.ppwarning "TODO: do it for this case once \
                              free-vars issues of theories axioms \
                              with hypotheses fixed"]
+      else
+        filter_good_triggers (vterm, vtype) trs0
 
-      | ((Dpredicate s | Dfunction s), _ , _) when toplevel ->
+  let make f binders decl_kind mconf =
+    if SMap.is_empty binders && Ty.Svty.is_empty f.vty then []
+    else
+      let vtype = f.vty in
+      let vterm = SMap.fold (fun sy _ s -> SSet.add sy s) binders SSet.empty in
+      match decl_kind, f with
+      | Dtheory, _ -> assert false
+      | (Dpredicate s | Dfunction s), _ ->
         let e = term_definition s f in
         let defn = match f with
           | {f = (Sy.Form Sy.F_Iff | Sy.Lit Sy.L_eq) ; xs = [e1; e2]} ->
@@ -2049,11 +2046,7 @@ module Triggers = struct
         let tt = List.fast_sort (fun a b -> depth b - depth a) tt in
         filter_good_triggers (vterm, vtype) @@ triggers_of_list [[e]; tt]
 
-      | _ , _::_ , _   -> check_triggers (vterm, vtype) trs0
-
-      | _ when only_check -> []
-
-      | _, [], {f = (Sy.Form Sy.F_Iff) ; xs = [e1; e2]} when is_literal e1 ->
+      | _, {f = (Sy.Form Sy.F_Iff) ; xs = [e1; e2]} when is_literal e1 ->
         let f_trs1, lets = potential_triggers (vterm, vtype) e1 in
         let f_trs1 = expand_lets f_trs1 lets in
         let trs1 = trs_in_scope f_trs1 e1 in
@@ -2061,35 +2054,32 @@ module Triggers = struct
         let f_trs2 = expand_lets f_trs2 lets in
         let trs2 = trs_in_scope f_trs2 e2 in
         let res_1 =
-          make_triggers vterm vtype trs1 ~escaped_vars:false @
-          make_triggers vterm vtype trs2 ~escaped_vars:false
+          make_triggers mconf vterm vtype trs1 ~escaped_vars:false @
+          make_triggers mconf vterm vtype trs2 ~escaped_vars:false
         in
         let res =
           match res_1 with
           | [] ->
-            make_triggers vterm vtype f_trs1 ~escaped_vars:true @
-            make_triggers vterm vtype f_trs2 ~escaped_vars:true
+            make_triggers mconf vterm vtype f_trs1 ~escaped_vars:true @
+            make_triggers mconf vterm vtype f_trs2 ~escaped_vars:true
           | res -> res
         in
         triggers_of_list res
 
-      | _, [], _ ->
+      | _ ->
         let f_trs, lets = potential_triggers (vterm, vtype) f in
         let f_trs = expand_lets f_trs lets in
         let trs = trs_in_scope f_trs f in
         triggers_of_list @@
-        match make_triggers vterm vtype trs ~escaped_vars:false with
-        | [] -> make_triggers vterm vtype f_trs ~escaped_vars:true
+        match make_triggers mconf vterm vtype trs ~escaped_vars:false with
+        | [] -> make_triggers mconf vterm vtype f_trs ~escaped_vars:true
         | res -> res
 
 end
 
 (*****)
 
-let make_triggers f binders decl_kind =
-  let toplevel = true in
-  let trs0 = [] in
-  Triggers.make f toplevel binders trs0 ~decl_kind ~only_check:false
+let make_triggers = Triggers.make
 
 let mk_forall name loc binders trs f id ~toplevel ~decl_kind =
   let decl_kind =
@@ -2110,7 +2100,7 @@ let mk_forall name loc binders trs f id ~toplevel ~decl_kind =
   in
   let free_vty = free_type_vars_as_types f in
   let sko_vty = if toplevel then [] else Ty.Set.elements free_vty in
-  let trs = Triggers.make f toplevel binders trs ~decl_kind ~only_check:true in
+  let trs = Triggers.check_user_triggers f toplevel binders trs ~decl_kind in
   mk_forall_bis
     {name; loc; binders; toplevel;
      user_trs = trs; main = f; sko_v; sko_vty; kind = decl_kind} id
@@ -2151,9 +2141,8 @@ module Purification = struct
         match term_view t with
         | Not_a_term _ -> assert false (* should not happen ? *)
         | Term t ->
-          match t.f, t.xs with
-          | Sy.Name(hs, Sy.Other), [c;th;el]
-            when String.equal (Hstring.view hs) "ite" ->
+          match t.xs with
+          | [c;th;el] when is_ite t.f ->
             let fresh_sy = Sy.fresh ~is_var:true "Pur-Ite" in
             mk_term fresh_sy [] t.ty , SMap.add fresh_sy t lets
 
@@ -2290,8 +2279,7 @@ module Purification = struct
 
   and purify_non_toplevel_ite e lets =
     match e.f, e.xs with
-    | Sy.Name(hs, Sy.Other), [c; th; el]
-      when String.equal (Hstring.view hs) "ite" ->
+    | _, [c; th; el] when is_ite e.f ->
       let c = purify_form c in
       let th, lets = purify_non_toplevel_ite th lets in
       let el, lets = purify_non_toplevel_ite el lets in

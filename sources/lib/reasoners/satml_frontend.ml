@@ -343,18 +343,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          | Ex.Bj _ | Ex.Fresh _ -> assert false
       ) ex []
 
-  let mround use_cs env acc =
+  let mround menv env acc =
     let tbox = SAT.current_tbox env.satml in
     let gd2, ngd2 =
-      Inst.m_predicates ~use_cs ~backward:Util.Normal
-        env.inst tbox (selector env) env.nb_mrounds
+      Inst.m_predicates menv env.inst tbox (selector env) env.nb_mrounds
     in
     let l2 = List.rev_append (List.rev gd2) ngd2 in
     if Options.profiling() then Profiling.instances l2;
     (*let env = assume env l2 in*)
     let gd1, ngd1 =
-      Inst.m_lemmas ~use_cs ~backward:Util.Normal
-        env.inst tbox (selector env) env.nb_mrounds
+      Inst.m_lemmas menv env.inst tbox (selector env) env.nb_mrounds
     in
     let l1 = List.rev_append (List.rev gd1) ngd1 in
     if Options.profiling() then Profiling.instances l1;
@@ -823,7 +821,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let sa = atoms_from_sat_branches env ~greedy_round:false ~frugal:true in
     let l = instantiate_ground_preds env [] sa in
     let l = expand_skolems env l sa in
-    let l = new_instances false env sa l in
+    let mconf =
+      {Util.nb_triggers = nb_triggers ();
+       no_ematching = no_Ematching();
+       triggers_var = triggers_var ();
+       use_cs = false;
+       backward = Util.Normal;
+       greedy = greedy ();
+      }
+    in
+    let l = new_instances mconf env sa l in
     let env, updated = assume_aux ~dec_lvl env l in
     env, updated
 
@@ -832,7 +839,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let sa = atoms_from_sat_branches env ~greedy_round:false ~frugal:false in
     let l = instantiate_ground_preds env [] sa in
     let l = expand_skolems env l sa in
-    let l = new_instances false env sa l in
+    let mconf =
+      {Util.nb_triggers = Pervasives.max 2 (nb_triggers () * 2);
+       no_ematching = no_Ematching();
+       triggers_var = triggers_var ();
+       use_cs = false;
+       backward = Util.Normal;
+       greedy = greedy ();
+      }
+    in
+    let l = new_instances mconf env sa l in
     let env, updated = assume_aux ~dec_lvl env l in
     env, updated
 
@@ -848,7 +864,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        also expand skolems *)
     let l = instantiate_ground_preds env [] sa in
     let l = expand_skolems env l sa in
-    let l = new_instances true env sa l in
+    let mconf =
+      {Util.nb_triggers = Pervasives.max 10 (nb_triggers () * 10);
+       no_ematching = false;
+       triggers_var = true;
+       use_cs = true;
+       backward = Util.Normal;
+       greedy = true;
+      }
+    in
+    let l = new_instances mconf env sa l in
     let env, updated = assume_aux ~dec_lvl env l in
     env, updated
 
