@@ -261,11 +261,20 @@ module Translate = struct
   let translate_goal pos (pars,term) =
     mk_goal pos "g" (translate_assert_term (pars,term))
 
+  let name_of_assert term =
+    match term.c with
+    | TermExclimationPt(term,[{c = Named s}]) -> Some s.c
+    | _ -> None
+
   let translate_assert =
     let cpt = ref 0 in
     fun pos (pars,term) ->
       incr cpt;
-      let name = Printf.sprintf "ax__%d" !cpt in
+      let name =
+        match name_of_assert term with
+        | Some s -> s
+        | None -> Printf.sprintf "unamed__assert__%d" !cpt
+      in
       mk_generic_axiom pos name (translate_assert_term (pars,term))
 
   let translate_const_dec (_,sort) =
