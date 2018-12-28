@@ -1877,11 +1877,13 @@ module Triggers = struct
   let make_triggers menv vterm vtype (trs : STRS.t) ~escaped_vars =
     let trs = STRS.elements trs in
     let mono = mono_triggers menv vterm vtype trs in
-    let multi =
-      if mono != [] && not menv.Util.greedy then []
+    if menv.Util.greedy then
+      (* merge directly multi in mono if greedy is set *)
+      mono @ multi_triggers menv vterm vtype trs escaped_vars, []
+    else
+      mono,
+      if mono != [] then []
       else multi_triggers menv vterm vtype trs escaped_vars
-    in
-    mono @ multi
 
   (***)
 
@@ -2053,16 +2055,29 @@ module Triggers = struct
         let f_trs2, lets = potential_triggers (vterm, vtype) e2 in
         let f_trs2 = expand_lets f_trs2 lets in
         let trs2 = trs_in_scope f_trs2 e2 in
-        let res_1 =
-          make_triggers mconf vterm vtype trs1 ~escaped_vars:false @
+        let mono_1, multi_1 =
+          make_triggers mconf vterm vtype trs1 ~escaped_vars:false
+        in
+        let mono_2, multi_2 =
           make_triggers mconf vterm vtype trs2 ~escaped_vars:false
         in
+        let mono = List.rev_append mono_1 mono_2 in
+        let multi = List.rev_append multi_1 multi_2 in
         let res =
-          match res_1 with
+          match mono with
+          | _::_ -> mono (* try to take nb_triggers ? *)
           | [] ->
-            make_triggers mconf vterm vtype f_trs1 ~escaped_vars:true @
-            make_triggers mconf vterm vtype f_trs2 ~escaped_vars:true
-          | res -> res
+            let mono_11, multi_12 =
+              make_triggers mconf vterm vtype f_trs1 ~escaped_vars:true
+            in
+            let mono_21, multi_22 =
+              make_triggers mconf vterm vtype f_trs2 ~escaped_vars:true
+            in
+            let mono' = List.rev_append mono_11 mono_21 in
+            let multi' = List.rev_append multi_12 multi_22 in
+            if mono' != [] then mono'
+            else if multi != [] then multi
+            else multi'
         in
         triggers_of_list res
 
@@ -2070,10 +2085,19 @@ module Triggers = struct
         let f_trs, lets = potential_triggers (vterm, vtype) f in
         let f_trs = expand_lets f_trs lets in
         let trs = trs_in_scope f_trs f in
+        let mono, multi =
+          make_triggers mconf vterm vtype trs ~escaped_vars:false
+        in
         triggers_of_list @@
-        match make_triggers mconf vterm vtype trs ~escaped_vars:false with
-        | [] -> make_triggers mconf vterm vtype f_trs ~escaped_vars:true
-        | res -> res
+        match mono with
+        | _::_ -> mono (* try to take nb_triggers ? *)
+        | [] ->
+          let mono', multi' =
+            make_triggers mconf vterm vtype f_trs ~escaped_vars:true
+          in
+          if mono' != [] then mono'
+          else if multi != [] then multi
+          else multi'
 
 end
 
