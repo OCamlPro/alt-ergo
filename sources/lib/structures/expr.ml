@@ -1989,7 +1989,7 @@ module Triggers = struct
       assert (head_is_name s a);
       a
     | _ -> (* in case of simplifications *)
-      fprintf fmt "term definition of %S:@.%a@." s print e;
+      (*fprintf fmt "term definition of %S:@.%a@." s print e;*)
       assert (head_is_name s e);
       e
 
