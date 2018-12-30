@@ -30,6 +30,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     satml : SAT.t;
     ff_hcons_env : FF.hcons_env;
     nb_mrounds : int;
+    last_forced_normal : int;
+    last_forced_greedy : int;
     gamma : (int * FF.t option) ME.t;
     conj : (int * SE.t) FF.Map.t;
     abstr_of_axs : (FF.t * Atom.atom) ME.t;
@@ -46,6 +48,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       satml = SAT.empty ();
       ff_hcons_env = FF.empty_hcons_env ();
       nb_mrounds = 0;
+      last_forced_normal = 0;
+      last_forced_greedy = 0;
       conj = FF.Map.empty;
       abstr_of_axs = ME.empty;
       axs_of_abstr = ME.empty;
@@ -619,7 +623,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     ME.fold (fun f _ sa -> (E.atoms_rec_of_form ~only_ground:false) f sa)
       env.gamma SE.empty
 
-  let atoms_from_sat_branches env ~greedy_round ~frugal =
+  let instantiation_context env ~greedy_round ~frugal =
     let sa = match greedy_round || greedy (), cdcl_tableaux_inst () with
       | false, false -> atoms_from_sat_branches env
       | false, true  -> atoms_from_lazy_sat ~frugal env
@@ -815,67 +819,73 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         env, updated || updated'
 
 
+  let frugal_mconf () =
+    {Util.nb_triggers = nb_triggers ();
+     no_ematching = no_Ematching();
+     triggers_var = triggers_var ();
+     use_cs = false;
+     backward = Util.Normal;
+     greedy = greedy ();
+    }
 
-  let frugal_instantiation env ~dec_lvl =
-    Debug.new_instances "frugal-inst" env;
-    let sa = atoms_from_sat_branches env ~greedy_round:false ~frugal:true in
+  let normal_mconf () =
+    {Util.nb_triggers = Pervasives.max 2 (nb_triggers () * 2);
+     no_ematching = no_Ematching();
+     triggers_var = triggers_var ();
+     use_cs = false;
+     backward = Util.Normal;
+     greedy = greedy ();
+    }
+
+  let greedy_mconf () =
+    {Util.nb_triggers = Pervasives.max 10 (nb_triggers () * 10);
+     no_ematching = false;
+     triggers_var = true;
+     use_cs = true;
+     backward = Util.Normal;
+     greedy = true;
+    }
+
+  let do_instantiation env sa mconf msg ~dec_lvl =
+    Debug.new_instances msg env;
     let l = instantiate_ground_preds env [] sa in
     let l = expand_skolems env l sa in
-    let mconf =
-      {Util.nb_triggers = nb_triggers ();
-       no_ematching = no_Ematching();
-       triggers_var = triggers_var ();
-       use_cs = false;
-       backward = Util.Normal;
-       greedy = greedy ();
-      }
-    in
     let l = new_instances mconf env sa l in
     let env, updated = assume_aux ~dec_lvl env l in
     env, updated
 
-  let normal_instantiation env ~dec_lvl =
-    Debug.new_instances "normal-inst" env;
-    let sa = atoms_from_sat_branches env ~greedy_round:false ~frugal:false in
-    let l = instantiate_ground_preds env [] sa in
-    let l = expand_skolems env l sa in
-    let mconf =
-      {Util.nb_triggers = Pervasives.max 2 (nb_triggers () * 2);
-       no_ematching = no_Ematching();
-       triggers_var = triggers_var ();
-       use_cs = false;
-       backward = Util.Normal;
-       greedy = greedy ();
-      }
-    in
-    let l = new_instances mconf env sa l in
-    let env, updated = assume_aux ~dec_lvl env l in
-    env, updated
+  type instantiation_strat =
+    | Auto
+    | Force_normal
+    | Force_greedy
 
 
-  let greedy_instantiation env ~dec_lvl =
-    assert (dec_lvl == SAT.decision_level env.satml);
-    if greedy () then raise (I_dont_know env);
+  let instantiation env inst_strat dec_lvl =
+    let nb_mrounds = env.nb_mrounds in
+    match inst_strat with
+    | Force_normal ->
+      let mconf = frugal_mconf () in (* take frugal_mconf if normal is forced *)
+      let env = {env with last_forced_normal = nb_mrounds} in
+      let sa = instantiation_context env ~greedy_round:false ~frugal:false in
+      do_instantiation env sa mconf "normal-inst (forced)" ~dec_lvl
 
-    Debug.new_instances "greedy-inst" env;
-    let sa = atoms_from_sat_branches env ~greedy_round:true ~frugal:false in
-    (* FLASH -> bugfix: SHOULD instantiate ground preds to add more
-       terms into instantiation engine !  --> for the same reasons,
-       also expand skolems *)
-    let l = instantiate_ground_preds env [] sa in
-    let l = expand_skolems env l sa in
-    let mconf =
-      {Util.nb_triggers = Pervasives.max 10 (nb_triggers () * 10);
-       no_ematching = false;
-       triggers_var = true;
-       use_cs = true;
-       backward = Util.Normal;
-       greedy = true;
-      }
-    in
-    let l = new_instances mconf env sa l in
-    let env, updated = assume_aux ~dec_lvl env l in
-    env, updated
+    | Force_greedy ->
+      let mconf = normal_mconf () in (*take normal_mconf if greedy is forced*)
+      let env = {env with last_forced_greedy = nb_mrounds} in
+      let sa = instantiation_context env ~greedy_round:true ~frugal:false in
+      do_instantiation env sa mconf "greedy-inst (forced)" ~dec_lvl
+
+    | Auto ->
+      List.fold_left
+        (fun ((env, updated) as acc) (mconf, debug, greedy_round, frugal) ->
+           if updated then acc
+           else
+             let sa = instantiation_context env ~greedy_round ~frugal in
+             do_instantiation env sa mconf debug ~dec_lvl
+        )(env, false)
+        [ frugal_mconf (), "frugal-inst", false, true ;
+          normal_mconf (), "normal-inst", false, false;
+          greedy_mconf (), "greedy-inst", true , false ]
 
 
   let rec unsat_rec env ~first_call : unit =
@@ -890,14 +900,27 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
               "TODO: first intantiation a la DfsSAT before searching ..."]
         in
         if Options.profiling() then Profiling.instantiation env.nb_mrounds;
-        let dec_lvl = SAT.decision_level env.satml in
-
-        let env, updated = frugal_instantiation env ~dec_lvl in
-        let env, updated =
-          if updated then env, true
+        let strat =
+          if env.nb_mrounds - env.last_forced_greedy > 1000 then Force_greedy
           else
-            let env, updated = normal_instantiation env ~dec_lvl in
-            if updated then env, true else greedy_instantiation env ~dec_lvl
+          if env.nb_mrounds - env.last_forced_normal > 50 then Force_normal
+          else Auto
+        in
+        (*let strat = Auto in*)
+        let dec_lvl = SAT.decision_level env.satml in
+        let env, updated = instantiation env strat dec_lvl in
+        let env, updated =
+          if not updated && strat != Auto then instantiation env Auto dec_lvl
+          else env, updated
+        in
+        let dec_lvl' = SAT.decision_level env.satml in
+        let env =
+          if strat == Auto && dec_lvl' = dec_lvl then
+            (* increase chances of forcing Normal each time Auto
+               instantiation doesn't allow to backjump *)
+            {env with last_forced_normal = env.last_forced_normal - 1}
+          else
+            env
         in
         if not updated then raise (I_dont_know env);
         unsat_rec env ~first_call:false
@@ -909,6 +932,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       with
       | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
       | _ -> assert false
+
 
   (* copied from sat_solvers.ml *)
   let max_term_depth_in_sat env =
