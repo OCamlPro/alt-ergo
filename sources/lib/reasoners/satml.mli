@@ -15,6 +15,11 @@ exception Sat
 exception Unsat of Satml_types.Atom.clause list option
 exception Last_UIP_reason of Atom.Set.t
 
+type conflict_origin =
+  | C_none
+  | C_bool of Atom.clause
+  | C_theory of Explanation.t
+
 module type SAT_ML = sig
 
   (*module Make (Dummy : sig end) : sig*)
@@ -70,6 +75,8 @@ module type SAT_ML = sig
   val assume_simple : t -> Atom.atom list list -> unit
 
   val decide : t -> Atom.atom -> unit
+  val conflict_analyze_and_fix : t -> conflict_origin -> unit
+
 end
 
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t

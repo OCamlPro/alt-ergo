@@ -883,23 +883,32 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     with
     | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
     | Satml.Sat ->
-      (*if first_call then SAT.cancel_until 0;*)
-      let env = {env with nb_mrounds = env.nb_mrounds + 1}
-          [@ocaml.ppwarning
-            "TODO: first intantiation a la DfsSAT before searching ..."]
-      in
-      if Options.profiling() then Profiling.instantiation env.nb_mrounds;
-      let dec_lvl = SAT.decision_level env.satml in
+      try
+        (*if first_call then SAT.cancel_until 0;*)
+        let env = {env with nb_mrounds = env.nb_mrounds + 1}
+            [@ocaml.ppwarning
+              "TODO: first intantiation a la DfsSAT before searching ..."]
+        in
+        if Options.profiling() then Profiling.instantiation env.nb_mrounds;
+        let dec_lvl = SAT.decision_level env.satml in
 
-      let env, updated = frugal_instantiation env ~dec_lvl in
-      let env, updated =
-        if updated then env, true
-        else
-          let env, updated = normal_instantiation env ~dec_lvl in
-          if updated then env, true else greedy_instantiation env ~dec_lvl
-      in
-      if not updated then raise (I_dont_know env);
-      unsat_rec env ~first_call:false
+        let env, updated = frugal_instantiation env ~dec_lvl in
+        let env, updated =
+          if updated then env, true
+          else
+            let env, updated = normal_instantiation env ~dec_lvl in
+            if updated then env, true else greedy_instantiation env ~dec_lvl
+        in
+        if not updated then raise (I_dont_know env);
+        unsat_rec env ~first_call:false
+
+      with Ex.Inconsistent (expl, _cls) -> (*may be raised during matching*)
+      try
+        SAT.conflict_analyze_and_fix env.satml (Satml.C_theory expl);
+        unsat_rec env ~first_call:false
+      with
+      | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
+      | _ -> assert false
 
   (* copied from sat_solvers.ml *)
   let max_term_depth_in_sat env =
@@ -943,6 +952,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       unsat_rec env ~first_call:true;
       assert false
     with IUnsat (env, dep) ->
+      assert begin
+        Ex.fold_atoms
+          (fun e b -> match e with
+             | Ex.Bj _ -> false (* only used in fun_sat *)
+             | Ex.Literal _ | Ex.Fresh _ -> false (* bug if this happens *)
+             | Ex.RootDep _ | Ex.Dep _ -> b
+          )dep true
+      end;
       dep
 
   let assume env gf dep =

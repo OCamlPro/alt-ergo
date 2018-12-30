@@ -25,6 +25,11 @@ exception Last_UIP_reason of Atom.Set.t
 exception Restart
 exception Stopped
 
+type conflict_origin =
+  | C_none
+  | C_bool of clause
+  | C_theory of Ex.t
+
 let vraie_form = E.vrai
 
 
@@ -79,6 +84,7 @@ module type SAT_ML = sig
   val assume_simple : t -> Atom.atom list list -> unit
 
   val decide : t -> Atom.atom -> unit
+  val conflict_analyze_and_fix : t -> conflict_origin -> unit
 
 end
 
@@ -213,11 +219,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       mutable lvl_ff : SFF.t Util.MI.t;
     }
-
-  type conflict_origin =
-    | C_none
-    | C_bool of clause
-    | C_theory of Ex.t
 
   exception Conflict of clause
   (*module Make (Dummy : sig end) = struct*)
@@ -1234,6 +1235,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       with Exit -> None
 
   let conflict_analyze_and_fix env confl =
+    env.conflicts <- env.conflicts + 1;
+    if decision_level env = 0 then report_conflict env confl;
     match confl with
     | C_none -> assert false
     | C_theory dep ->
@@ -1350,8 +1353,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       in
       try
         incr conflictC;
-        env.conflicts <- env.conflicts + 1;
-        if decision_level env = 0 then report_conflict env confl;
         conflict_analyze_and_fix env confl;
         propagate_and_stabilize env propagator conflictC strat;
         if Options.tableaux_cdcl () then
