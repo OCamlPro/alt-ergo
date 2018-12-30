@@ -588,9 +588,22 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   module HEI = Hashtbl.Make (
     struct
-      type t = E.t * int
-      let hash (e, n) = E.hash e * n
-      let equal (e1, n1) (e2, n2) = n1 = n2 && E.equal e1 e2
+      open Util
+      type t = E.t * Util.matching_env
+      let hash (e, mc) =
+        abs @@
+        E.hash e *
+        (mc.nb_triggers +
+         (if mc.triggers_var then 10 else -10) +
+         (if mc.greedy then 50 else - 50)
+        )
+
+      let equal (e1, mc1) (e2, mc2) =
+        E.equal e1 e2 &&
+        mc1.nb_triggers == mc2.nb_triggers &&
+        mc1.triggers_var == mc2.triggers_var &&
+        mc1.greedy == mc2.greedy
+
     end)
 
   module HE = Hashtbl.Make (E)
@@ -601,10 +614,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
       match q.E.user_trs with
       | _::_ as l -> l
       | [] ->
-        try HEI.find trs_tbl (q.E.main, mconf.Util.nb_triggers)
+        try HEI.find trs_tbl (q.E.main, mconf)
         with Not_found ->
           let trs = E.make_triggers q.E.main q.E.binders q.E.kind mconf in
-          HEI.add trs_tbl (q.E.main, mconf.Util.nb_triggers) trs;
+          HEI.add trs_tbl (q.E.main, mconf) trs;
           trs
 
   let backward_triggers =
