@@ -1868,10 +1868,7 @@ module Triggers = struct
            SSet.subset vterm bv_t && Svty.subset vtype vty_t) trs
     in
     let trs_v, trs_nv = List.partition (fun (t, _, _) -> is_var t) mono in
-    let base =
-      if trs_nv == [] then (if menv.Util.triggers_var then trs_v else [])
-      else trs_nv
-    in
+    let base = if menv.Util.triggers_var then trs_nv @ trs_v else trs_nv in
     at_most menv.Util.nb_triggers (List.map (fun (t, _, _) -> [t]) base)
 
   let make_triggers menv vterm vtype (trs : STRS.t) ~escaped_vars =
