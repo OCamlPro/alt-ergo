@@ -1871,9 +1871,26 @@ module Triggers = struct
     let base = if menv.Util.triggers_var then trs_nv @ trs_v else trs_nv in
     at_most menv.Util.nb_triggers (List.map (fun (t, _, _) -> [t]) base)
 
+  let filter_interpreted_arith mono =
+    let m =
+      List.filter
+        (fun t ->
+           match t with
+           | [{f = Sy.Op Sy.Plus}] -> false
+           | [{f = Sy.Op Sy.Minus}] -> false
+           | _ -> true
+        )mono
+    in
+    (* no triggers whose head is '+' or '-' if alternative triggers
+       are computed *)
+    match m with
+    | [] -> mono
+    | _ -> m
+
   let make_triggers menv vterm vtype (trs : STRS.t) ~escaped_vars =
     let trs = STRS.elements trs in
     let mono = mono_triggers menv vterm vtype trs in
+    let mono = filter_interpreted_arith mono in
     if menv.Util.greedy then
       (* merge directly multi in mono if greedy is set *)
       mono @ multi_triggers menv vterm vtype trs escaped_vars, []
