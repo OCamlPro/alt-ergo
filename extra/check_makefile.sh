@@ -13,7 +13,7 @@ local_install_dir=$1
 cd $git_repo/sources
 
 # Configure using the local installation directory
-./configure --prefix=$local_install_dir ; exit_if_error
+./configure --prefix=$local_install_dir
 
 # Check that the makefile targets work
 echo "=+= [check_makefile.sh] building and installing ... =+="
