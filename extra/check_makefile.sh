@@ -24,7 +24,7 @@ make install
 make clean
 
 # Log the result of installation
-echo "=+= [check_makefile.sh] installed files in $local_install_dir ... =+="
+echo "=+= [check_makefile.sh] installed files in '$local_install_dir' =+="
 ls -R $local_install_dir
 
 # Add the local isntall to the path
