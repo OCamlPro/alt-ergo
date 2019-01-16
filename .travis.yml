@@ -42,7 +42,9 @@ env:
 # Prepare the opam switch and pin some needed repos
 before_install:
   - git status
+  # Create local install dir and add it to path
   - mkdir -p ${LOCAL_INSTALL_DIR}
+  - export PATH=$PATH:${LOCAL_INSTALL_DIR}/bin
   # Some opam boilerplate
   - export OPAMYES=1
   - export OPAMJOBS=2
