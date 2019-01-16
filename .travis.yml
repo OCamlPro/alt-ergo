@@ -72,6 +72,6 @@ script:
   - if [ "$TO_TEST" = "install" ]; then ./extra/test_lib.sh `ocamlfind query alt-ergo-lib`; fi
   # Makefile tests
   - if [ "$TO_TEST" = "makefile" ]; then ./extra/check_makefile.sh; fi
-  - if [ "$TO_TEST" = "makefile" ]; then ./extra/non_regression; fi
-  - if [ "$TO_TEST" = "makefile" ]; then ./extra/test_lib ${LOCAL_INSTALL_DIR}/lib/alt-ergo-lib; fi
+  - if [ "$TO_TEST" = "makefile" ]; then ./extra/non_regression.sh; fi
+  - if [ "$TO_TEST" = "makefile" ]; then ./extra/test_lib.sh ${LOCAL_INSTALL_DIR}/lib/alt-ergo-lib; fi
 
