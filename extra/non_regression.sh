@@ -7,7 +7,7 @@
 
 # Cd to the non-regression directory
 git_repo=`git rev-parse --show-toplevel`
-cd $git_repo/non_regression
+cd $git_repo/non-regression
 
 # Log some practical info
 echo "=+= [travis.sh] non-regression tests ... =+="
