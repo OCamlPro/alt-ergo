@@ -995,7 +995,11 @@ let start_gui all_used_context =
   let filename = get_file () in
   let preludes = Options.preludes () in
   let pfile = Parsers.parse_problem ~filename ~preludes in
-  let typed_ast, _ = Typechecker.file pfile in
+  (* TODO: is the GUI ever invoked in parse_only mode ? *)
+  if parse_only () then exit 0;
+  let typed_ast, _ = Typechecker.type_file pfile in
+  (* TODO: is the GUI ever invoked in type_only mode ? *)
+  if type_only () then exit 0;
   let typed_ast = Typechecker.split_goals typed_ast in
 
   let main_vbox = GPack.vbox
@@ -1443,7 +1447,11 @@ let start_replay session_cin all_used_context =
   let filename = get_file () in
   let preludes = Options.preludes () in
   let pfile = Parsers.parse_problem ~filename ~preludes in
-  let typed_ast, _ = Typechecker.file pfile in
+  (* TODO: is the GUI ever invoked in parse_only mode ? *)
+  if parse_only () then exit 0;
+  let typed_ast, _ = Typechecker.type_file pfile in
+  (* TODO: is the GUI ever invoked in type_only mode ? *)
+  if type_only () then exit 0;
   let typed_ast = Typechecker.split_goals typed_ast in
   List.iter
     (fun (l, goal_name) ->

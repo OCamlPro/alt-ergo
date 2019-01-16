@@ -4,8 +4,8 @@
   (public_name  alt-ergo)
   (package      alt-ergo)
   (libraries    alt-ergo-lib alt-ergo-parsers)
-  (modules      Main_text)
   (link_flags   (-linkall))
+  (modules      Main_input Main_text)
 )
 
 

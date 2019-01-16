@@ -38,6 +38,11 @@ type ('a, 'b) annoted =
   { c : 'a;
     annot : 'b }
 
+let new_id = let r = ref 0 in fun () -> r := !r+1; !r
+
+let mk ?(annot=new_id ()) c = { c; annot; }
+
+
 (** Terms and Formulas *)
 
 type tconstant =
