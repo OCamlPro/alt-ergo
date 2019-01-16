@@ -30,6 +30,7 @@ done
 
 # Exit
 if [ $cpt -eq 0 ] ; then
+    echo "All files have correct style"
     exit 0
 else
     echo "Some fixes are needed before you can commit"
