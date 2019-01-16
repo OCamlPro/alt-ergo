@@ -1,23 +1,77 @@
-# safelist
+language: ocaml
+# restrict branches to test
 branches:
   only:
   - master
   - next
   - next+
+# System dependencies
+addons:
+  apt:
+    sources:
+      - avsm
+    packages:
+      - opam
+      - libgmp-dev
+      - libgtksourceview2.0-dev
+      - zlib1g-dev
+      - libgtk2.0-dev
+      - libexpat1-dev
+# Lists of things to test, using env variables
+env:
+  global:
+    - LOCAL_INSTALL_DIR=${HOME}/local
+  matrix:
+    # Check style and indentation
+    - TO_TEST=style OPAMBUILDTEST=false OCAML_VERSION=4.04.2
+    - TO_TEST=indent OPAMBUILDTEST=false OCAML_VERSION=4.04.2
+    # Check that the package installs correctly with and without its test dependencies using opam
+    - TO_TEST=install OPAMBUILDTEST=false OCAML_VERSION=4.04.2
+    - TO_TEST=install OPAMBUILDTEST=true OCAML_VERSION=4.04.2
+    # Check build and unit tests
+    # NOTE: testing needs OPAMBUILDTEST=true so that test deps are installed
+    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.04.2
+    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.04.2+flambda
+    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.05.0
+    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.05.0+flambda
+    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.06.1
+    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.06.1+flambda
+    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.07.0
+    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.07.0+flambda
 
-language: ocaml
-sudo: required
-
+# Prepare the opam switch and pin some needed repos
 before_install:
-- sudo apt-get update -qq
-- sudo apt-get install -y git -qq ocaml ocaml-native-compilers libgmp-dev libgtksourceview2.0-dev zlib1g-dev libgtk2.0-dev libexpat1-dev
-- git status
+  - git status
+  - mkdir -p ${LOCAL_INSTALL_DIR}
+  # Some opam boilerplate
+  - export OPAMYES=1
+  - export OPAMJOBS=2
+  # Init opam, and the default switch with the right ocaml version
+  - opam init --disable-sandboxing --compiler=${OCAML_VERSION}
+  - eval `opam config env`
+  # Set the verbose option *after* compiling the compiler,
+  # else the log oveflows
+  - export OPAMVERBOSE=1
+  # Pin psm2
+  - if [ "$TO_TEST" = "indent" ]; then opam install ocp-indent.1.6.1; fi
+  - opam pin add psmt2-frontend --kind auto https://github.com/Coquera/psmt2-frontend.git#master
 
+# Install dependencies
 install:
-- sudo wget -O /usr/local/bin/opam https://github.com/ocaml/opam/releases/download/2.0.1/opam-2.0.1-x86_64-linux
-- sudo chmod a+x /usr/local/bin/opam
-- export OPAMYES=1
-- opam init --disable-sandboxing --bare
+  - opam pin add --no-action ./sources
+  - opam install --deps-only alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
+# Use the TO_TEST env variable to decide what script to run
 script:
-- sh ./travis.sh
+  # Style and indent tests
+  - if [ "$TO_TEST" = "style" ]; then ./extra/pre-merge-style-checker.sh; fi
+  - if [ "$TO_TEST" = "indent" ]; then ./extra/check_indentation.sh; fi
+  # Installation tests (using opam)
+  - if [ "$TO_TEST" = "install" ]; then opam install alt-ergo-lib alt-ergo altgr-ergo; fi
+  - if [ "$TO_TEST" = "install" ]; then ./extra/non_regression.sh; fi
+  - if [ "$TO_TEST" = "install" ]; then ./extra/test_lib.sh `ocamlfind query alt-ergo-lib`; fi
+  # Makefile tests
+  - if [ "$TO_TEST" = "makefile" ]; then ./extra/check_makefile.sh; fi
+  - if [ "$TO_TEST" = "makefile" ]; then ./extra/non_regression; fi
+  - if [ "$TO_TEST" = "makefile" ]; then ./extra/test_lib ${LOCAL_INSTALL_DIR}/lib/alt-ergo-lib; fi
+
