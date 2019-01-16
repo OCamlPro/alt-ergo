@@ -19,6 +19,9 @@ extra/ocamldot/_build
 # Generated documentation files
 extra/index.html
 
+# Generated test artifacts
+non-regression/main_script.log
+
 # Generated release files
 public-release
 

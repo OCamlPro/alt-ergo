@@ -266,3 +266,85 @@ val monomorphize: t -> t
 (** Return a monomorphized variant of the given type, where
     type variable without values have been replaced by abstract types. *)
 
+
+(** {2 Safe interface} *)
+
+module Safe : sig
+
+  type nonrec t = t
+  (** The type of types. *)
+
+  val hash : t -> int
+  (** Hash function. *)
+
+  val equal : t -> t -> bool
+  (** Equality function. *)
+
+  val compare : t -> t -> int
+  (** Comparison function. *)
+
+  (** Type variables. *)
+  module Var : sig
+
+    type t = tvar
+    (** The type of variables the can occur in types *)
+
+    val hash : t -> int
+    (** Hash function. *)
+
+    val equal : t -> t -> bool
+    (** Equality function. *)
+
+    val compare : t -> t -> int
+    (** Comparison function. *)
+
+    val mk : string -> t
+    (** Create a new type variable with the given name.
+        Currently the name is ignored and a fresh variable
+        is created each time. *)
+
+  end
+
+  (** Type constructors (aka abstract, or external types). *)
+  module Const : sig
+
+    type t
+    (** Type constructors. *)
+
+    val hash : t -> int
+    (** Hash function. *)
+
+    val equal : t -> t -> bool
+    (** Equality function. *)
+
+    val compare : t -> t -> int
+    (** Comparison function. *)
+
+    val arity : t -> int
+    (** Return the arity of a type const*)
+
+    val mk : string -> int -> t
+    (** Create a type constant with the given arity. *)
+
+    val tag : t -> _ -> _ -> unit
+    (** Tag a variable.
+        Currently a no-op, there for compatibility with dolmen. *)
+
+  end
+
+  val prop : t
+  (** The type of propositions/booleans. *)
+
+  val of_var : Var.t -> t
+  (** Create a type from a variable. *)
+
+  val apply : Const.t -> t list -> t
+  (** Application for types.
+      Ensures that the arity of the given type constructor is respected. *)
+
+  val tag : t -> _ -> _ -> unit
+  (** Annotate the given type with the given tag and value.
+        Currently a no-op, there for compatibility with dolmen. *)
+
+end
+

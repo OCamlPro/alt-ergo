@@ -118,6 +118,10 @@ non-regression: all
 	cd ../non-regression &&  ./non-regression.sh
 	rm ../non-regression/alt-ergo.opt
 
+# Alias to non-regression tests
+# TODO: have unit tests ?
+test: non-regression
+
 .PHONY: non-regression
 
 

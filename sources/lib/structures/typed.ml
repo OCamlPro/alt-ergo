@@ -80,7 +80,6 @@ and 'a tt_desc =
   | TTapp of Symbols.t * ('a tterm, 'a) annoted list
   | TTmapsTo of Var.t * ('a tterm, 'a) annoted
   | TTinInterval of 'a atterm * Symbols.bound * Symbols.bound
-  (* bool = true <-> interval is_open *)
 
   | TTget of ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
   | TTset of
@@ -373,4 +372,346 @@ let is_local_hyp s =
 
 let is_global_hyp s =
   try Pervasives.(=) (String.sub s 0 2) "@H" with Invalid_argument _ -> false
+
+module Safe = struct
+
+  (* Unified expressions.
+     These are mainly there because alt-ergo distinguishes
+     terms, atoms, and formulas, whereas some languages
+     (and thus the typechecker) do not make this difference
+     (for instance smtlib) *)
+  type t =
+    | Term of int atterm
+    | Atom of int atatom
+    | Form of int atform * Ty.tvar list
+    (* Formulas also carry their set of explicitly
+       quantified type variables, so that non top-level type
+       variable quantification can be rejected as invalid. *)
+
+  (* TODO: implement hash, compare and equal on typed terms *)
+
+  let ty = function
+    | Term { c = { tt_ty ; _ }; _ } -> tt_ty
+    | Atom _
+    | Form _ -> Ty.Safe.prop
+
+  module Var = struct
+
+    type t = {
+      var : Symbols.t;
+      ty  : Ty.t;
+    }
+
+    let hash { var; _ } = Symbols.hash var
+
+    let compare v v' =
+      Symbols.compare v.var v'.var
+
+    let equal v v' = compare v v' = 0
+
+    let ty { ty; _ } = ty
+
+    let make var ty = { var; ty; }
+
+    let mk name ty = make (Symbols.var (Var.of_string name)) ty
+
+  end
+
+  module Const = struct
+
+    type t = {
+      symbol : Symbols.t;
+      vars : Ty.Safe.Var.t list;
+      args : Ty.t list;
+      ret  : Ty.t;
+    }
+
+    let hash { symbol; _ } = Symbols.hash symbol
+
+    let compare c c' =
+      Symbols.compare c.symbol c'.symbol
+
+    let equal c c' = compare c c' = 0
+
+    let arity c =
+      List.length c.vars,
+      List.length c.args
+
+    let mk symbol vars args ret =
+      { symbol; vars; args; ret; }
+
+    (* let tag _ _ _ = () *)
+
+  end
+
+  exception Term_expected
+  exception Formula_expected
+  exception Formula_in_term_let
+  exception Deep_type_quantification
+  exception Wrong_type of t * Ty.t
+  exception Wrong_arity of Const.t * int * int
+
+  (* Auxiliary functions. *)
+
+  let promote_term = function
+    | ((Term t) as e) when Ty.equal Ty.Safe.prop (ty e) ->
+      Atom (mk (TApred (t, false)))
+    | e -> e
+
+  let promote_atom = function
+    | Atom a -> Form (mk (TFatom a), [])
+    | e -> e
+
+  let expect_term = function
+    | Term t -> t
+    | Atom { c = TApred (t, false); _ } -> t
+    | _ -> raise Term_expected
+
+  let expect_formula t =
+    match promote_atom @@ promote_term t with
+    | Form (f, []) -> f
+    | Form (_, _) -> raise Deep_type_quantification
+    | _ -> raise Formula_expected
+
+
+  (* Smart constructors:
+     Wrappers to build term while checking the well-typedness *)
+
+  let apply c tys args =
+    (* check arity *)
+    let n_ty = List.length tys in
+    let n_args = List.length args in
+    let a_ty, a_args = Const.arity c in
+    if n_ty <> a_ty || n_args <> a_args then
+      raise (Wrong_arity (c, n_ty, n_args))
+    else begin
+      (* compute the type variable substitution *)
+      let s = List.fold_left2 (fun acc v ty ->
+          Ty.M.add v.Ty.v ty acc) Ty.M.empty c.Const.vars tys in
+      (* comptue the actual expected arguments types *)
+      let expected_args_ty = List.map (Ty.apply_subst s) c.Const.args in
+      (* check that the arsg have the expected type, and unwrap them *)
+      let actual_args =
+        List.map2 (fun t expected_ty ->
+            if not (Ty.equal (ty t) expected_ty) then
+              raise (Wrong_type (t, expected_ty))
+            else expect_term t
+          ) args expected_args_ty in
+      (* compute the return type and create the resulting term. *)
+      let ret_ty = Ty.apply_subst s c.Const.ret in
+      promote_term (Term (
+          mk ({ tt_ty = ret_ty;
+                tt_desc = TTapp (c.Const.symbol, actual_args)})
+        ))
+    end
+
+  let _true = Atom (mk TAtrue)
+  let _false = Atom (mk TAfalse)
+
+  let eq a b =
+    let a_t = expect_term a in
+    let b_t = expect_term b in
+    let a_ty = a_t.c.tt_ty in
+    let b_ty = b_t.c.tt_ty in
+    if not (Ty.equal a_ty b_ty) then
+      raise (Wrong_type (b, a_ty))
+    else
+      Atom (mk (TAeq [a_t; b_t]))
+
+  let distinct = function
+    | [] -> _true
+    | x :: r ->
+      let x_t = expect_term x in
+      let expected_ty = x_t.c.tt_ty in
+      let r' = List.map (fun t ->
+          if not (Ty.equal expected_ty (ty t)) then
+            raise (Wrong_type (t, expected_ty))
+          else expect_term t
+        ) r
+      in
+      Atom (mk (TAdistinct (x_t :: r')))
+
+  let mk_form_op op l =
+    let l_f = List.map expect_formula l in
+    Form (mk (TFop(op, l_f)), [])
+
+  let neg t = mk_form_op OPnot [t]
+  let imply p q = mk_form_op OPimp [p; q]
+  let equiv p q = mk_form_op OPiff [p; q]
+  let xor p q = mk_form_op OPxor [p; q]
+
+  let _and = mk_form_op OPand
+  let _or = mk_form_op OPor
+
+
+  (** free variable computation *)
+  let add_fv (fv, bv) v ty =
+    if Symbols.Set.mem v bv then fv
+    else Symbols.Map.add v ty fv
+
+  let rec fv_match f (fv, bv) = function
+    | [] -> fv
+    | (pattern, body) :: r ->
+      let bv' = vars_of_pattern bv pattern in
+      let fv' = f (fv, bv') body in
+      fv_match f (fv', bv) r
+
+  and vars_of_pattern s = function
+    | Var v -> Symbols.Set.add (Symbols.var v) s
+    | Constr { args; _ } ->
+      List.fold_left (fun acc (v, _, _) ->
+          Symbols.Set.add (Symbols.var v) acc) s args
+
+  let rec fv_term_desc ty ((fv, bv) as acc) = function
+    | TTconst _ -> fv
+    | TTvar v -> add_fv acc v ty
+    (* neither infix nor prefix operators cann be variables *)
+    | TTinfix (l, _, r)             -> fv_term_list acc [l; r]
+    | TTprefix (_, t)               -> fv_term acc t
+    | TTapp (_, l)                  -> fv_term_list acc l
+    | TTmapsTo (_, t)               -> fv_term acc t
+    | TTinInterval (t, l, u)        -> fv_term_bounds acc t l u
+    | TTget (a, i)                  -> fv_term_list acc [a; i]
+    | TTset (a, i, v)               -> fv_term_list acc [a; i; v]
+    | TTextract (a, i, l)           -> fv_term_list acc [a; i; l]
+    | TTconcat (u, v)               -> fv_term_list acc [u; v]
+    | TTdot (t, _)                  -> fv_term acc t
+    | TTrecord l                    -> fv_term_list acc (List.map snd l)
+    | TTnamed (_, t)                -> fv_term acc t
+    | TTite (f, a, b)               -> fv_term_list ((fv_form acc f), bv) [a; b]
+    | TTlet (l, body)               -> fv_term_let acc body l
+    | TTproject (_, t, _)           -> fv_term acc t
+    | TTmatch (e, l)                -> fv_term_match ((fv_term acc e), bv) l
+    | TTform f                      -> fv_form acc f
+
+  and fv_term_match acc l = fv_match fv_term acc l
+
+  and fv_term_bound ((fv, _) as acc) = function
+    | { Symbols.kind = Symbols.VarBnd v; sort; _ } ->
+      add_fv acc (Symbols.var v) sort
+    | _ -> fv
+
+  and fv_term_bounds ((_, bv) as acc) t l u =
+    let fv' = fv_term_bound acc l in
+    let fv'' = fv_term_bound (fv', bv) u in
+    fv_term (fv'', bv) t
+
+  and fv_term_let ((_, bv) as acc) body = function
+    | [] -> fv_term acc body
+    | (x, t) :: r ->
+      let fv' = fv_term acc t in
+      let bv' = Symbols.Set.add x bv in
+      fv_term_let (fv', bv') body r
+
+  and fv_term_list (fv, bv) l =
+    let aux lv t = fv_term (lv, bv) t in
+    List.fold_left aux fv l
+
+  and fv_term acc t =
+    fv_term_desc t.c.tt_ty acc t.c.tt_desc
+
+  and fv_atom_desc ((fv, _) as acc) = function
+    | TAtrue | TAfalse -> fv
+    | TAeq l | TAneq l
+    | TAle l | TAlt l
+    | TAdistinct l -> fv_term_list acc l
+    | TApred (t, _) -> fv_term acc t
+    | TTisConstr (t, _) -> fv_term acc t
+
+  and fv_atom acc a =
+    fv_atom_desc acc a.c
+
+  and fv_form_desc ((fv, bv) as acc) = function
+    | TFatom a -> fv_atom acc a
+    | TFop (_, l) -> fv_form_list acc l
+    | TFforall q | TFexists q ->
+      let aux m (v, ty) = Symbols.Map.add v ty m in
+      List.fold_left aux fv q.qf_upvars
+    | TFnamed (_, f) -> fv_form acc f
+    | TFlet (l, _, _) ->
+      let aux m (v, ty) = Symbols.Map.add v ty m in
+      List.fold_left aux fv l
+    | TFmatch (e, l) ->
+      fv_form_match (fv_term acc e, bv) l
+
+  and fv_form_match acc l = fv_match fv_form acc l
+
+  and fv_form_let ((_, bv) as acc) body = function
+    | [] -> fv_form acc body
+    | (v, TletTerm t) :: r ->
+      let fv' = fv_term acc t in
+      let bv' = Symbols.Set.add v bv in
+      fv_form_let (fv', bv') body r
+    | (v, TletForm f) :: r ->
+      let fv' = fv_form acc f in
+      let bv' = Symbols.Set.add v bv in
+      fv_form_let (fv', bv') body r
+
+  and fv_form_list (fv, bv) l =
+    let aux lv t = fv_form (lv, bv) t in
+    List.fold_left aux fv l
+
+  and fv_form acc f =
+    fv_form_desc acc f.c
+
+  let _empty_acc = (Symbols.Map.empty, Symbols.Set.empty)
+
+  (* NOTE: free type variables are not computed here. *)
+  let to_fv m =
+    [], Symbols.Map.fold (fun v ty acc ->
+        Var.make v ty :: acc) m []
+
+  let fv = function
+    | Term t -> to_fv @@ fv_term _empty_acc t
+    | Atom a -> to_fv @@ fv_atom _empty_acc a
+    | Form (f, _) -> to_fv @@ fv_form _empty_acc f
+
+  let var_to_tuple { Var.var; ty; } = var, ty
+
+  let all (_, t_fv) (ty_qv, t_qv) e =
+    let f = expect_formula e in
+    let qf_bvars = List.map var_to_tuple t_qv in
+    let qf_upvars = List.map var_to_tuple t_fv in
+    Form (mk @@ TFforall {
+        qf_bvars; qf_upvars;
+        qf_triggers = [];
+        qf_hyp = [];
+        qf_form = f;
+      }, ty_qv)
+
+  let ex (_, t_fv) (ty_qv, t_qv) e =
+    let f = expect_formula e in
+    let qf_bvars = List.map var_to_tuple t_qv in
+    let qf_upvars = List.map var_to_tuple t_fv in
+    Form (mk @@ TFexists {
+        qf_bvars; qf_upvars;
+        qf_triggers = [];
+        qf_hyp = [];
+        qf_form = f;
+      }, ty_qv)
+
+  let letin l e =
+    match promote_atom e with
+    | Atom _ -> assert false
+    | Term t ->
+      let l' = List.map (fun (v, e') ->
+          match e' with
+          | Term t' -> v.Var.var, t'
+          | _ -> raise Formula_in_term_let
+        ) l in
+      Term (mk @@ { tt_desc = TTlet (l', t); tt_ty = t.c.tt_ty})
+    | Form (f, []) ->
+      let l' = List.map (fun (v, e') ->
+          match promote_atom e' with
+          | Term t' -> v.Var.var, TletTerm t'
+          | Form (f', []) -> v.Var.var, TletForm f'
+          | Form (_, _) -> raise Deep_type_quantification
+          | Atom _ -> assert false
+        ) l in
+      let fv_m = fv_form_let _empty_acc f l' in
+      let fv_l = Symbols.Map.fold (fun v ty acc -> (v, ty) :: acc) fv_m [] in
+      Form (mk @@ TFlet (fv_l, l', f), [])
+    | Form (_, _) -> raise Deep_type_quantification
+
+end
 

@@ -18,7 +18,6 @@ module MI = Map.Make(struct type t = int let compare a b = a - b end)
 
 module SS = Set.Make(String)
 
-
 (** Different values for -case-split-policy option:
     -after-theory-assume (default value): after assuming facts in
     theory by the SAT

@@ -47,6 +47,7 @@ let view s = s.content
 let print fmt v = Format.fprintf fmt "%s" (view v)
 
 let equal s1 s2 = s1.id == s2.id
+(* TODO: is the physical equality really necessary here ? *)
 
 let compare s1 s2 = compare s1.id s2.id
 
