@@ -5,6 +5,10 @@ branches:
   - master
   - next
   - next+
+# Cache the opam directory to avoid re-compiling the compiler
+cache:
+  directories:
+    - $HOME/.opam
 # System dependencies
 addons:
   apt:
