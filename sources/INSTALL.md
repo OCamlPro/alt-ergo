@@ -7,15 +7,12 @@
 
 #### Common Steps
 
-  1. If a configure file is not distributed with the sources, then
-  run "autoconf"
+  1. Configure with "./configure" to generate Makefile.config
 
-  2. Configure with "./configure" to generate Makefile.configurable
-
-  3. Alternatively, you can configure with "./configure -prefix
+  2. Alternatively, you can configure with "./configure -prefix
   some-absolute-path-prefix" to add a prefix for installation
-  directories. You may also want to use "make show-dest-dirs" to see
-  directories where things will be installed.
+  directories. You may also want to use "make gen && cat lib/util/config.ml"
+  to see directories where things will be installed.
 
 The steps below will build and install native or bytecode binaries
 depending on whether ocamlopt is installed or only ocamlc is detected.
@@ -25,20 +22,20 @@ depending on whether ocamlopt is installed or only ocamlc is detected.
   1. Compile with "make"
 
   2. Install with "make install"
- 
+
   3. Uninstall with "make uninstall"
 
 #### Alt-Ergo binary
 
-  1. Compile with "make alt-ergo"
+  1. Compile with "make bin"
 
-  2. Install with "make install-ae"
- 
+  2. Install with "make install"
+
 #### AltGr-Ergo binary
 
   1. Compile with "make gui"
-  
-  2. Install with "make install-gui"
+
+  2. Install with "make install"
 
 
 The steps below will build and install additional plugins (extension
@@ -52,7 +49,7 @@ The steps below will build and install additional plugins (extension
 
   1. Compile with "make fm-simplex"
 
-  2. Install with "make install-fm-simplex"
+  2. Install with "make install"
 
 #### The profiler plugin
 
@@ -107,5 +104,5 @@ allow to enable the old Tableaux-like SAT-solver:
    $ alt-ergo -use-fpa -prelude fpa-theory-2017-01-04-16h00.why <file.why>
 
 - Since version 2.2.0, Alt-Ergo's library is also compiled and
-installed. A small example using the API is given here:
-examples/lib_usage.ml
+  installed. A small example using the API is given here:
+  "examples/lib_usage.ml"
