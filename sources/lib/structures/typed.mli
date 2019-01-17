@@ -40,6 +40,14 @@ type ('a, 'b) annoted = {
 }
 (** An annoted structure. Usually used to annotate terms. *)
 
+val new_id : unit -> int
+(** Generate a new, fresh integer (useful for annotations). *)
+
+val mk : ?annot:int -> 'a -> ('a, int) annoted
+(** Create an annoted value with the given annotation.
+    If no annotation is given, a fresh annotation is generated
+    using {!new_id}. *)
+
 
 (** {2 Terms and formulas} *)
 

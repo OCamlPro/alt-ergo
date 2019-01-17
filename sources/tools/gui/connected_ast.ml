@@ -348,7 +348,7 @@ let is_quantified_term vars at =
   | _ -> true
 
 let unquantify_aaterm (buffer:sbuffer) at =
-  new_annot buffer at.c (Typechecker.new_id ()) (tag buffer)
+  new_annot buffer at.c (Typed.new_id ()) (tag buffer)
 
 let unquantify_aatom (buffer:sbuffer) = function
   | AAtrue -> AAtrue
@@ -395,14 +395,14 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
               let lexpr = Parsers.parse_expr lb in
               let at, gu =
                 try
-                  let tt = Typechecker.term tyenv uplet lexpr in
+                  let tt = Typechecker.type_expr tyenv uplet lexpr in
                   annot_of_tterm buffer tt, []
                 with Errors.Error _ ->
                   let gv = List.fold_left (fun acc v ->
                       if List.mem v uplet then acc
                       else v::acc) [] goal_vars
                   in
-                  let tt = Typechecker.term tyenv (uplet@gv) lexpr in
+                  let tt = Typechecker.type_expr tyenv (uplet@gv) lexpr in
                   let at = annot_of_tterm buffer tt in
                   at, filter_used_vars_term gv at.c
               in
@@ -417,7 +417,7 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
         List.fold_left
           (fun af (u, s, at) ->
              new_annot buffer (AFlet (u, [s, ATletTerm at], af))
-               (Typechecker.new_id ()) (tag buffer))
+               (Typed.new_id ()) (tag buffer))
           afc lets in
       if nbv == [] then (add_lets aform lets).c, ve, goal_used
       else
@@ -441,10 +441,10 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
             } in
           (match f with
            | AFforall _ ->
-             AFforall (new_annot buffer c (Typechecker.new_id ()) (tag buffer)),
+             AFforall (new_annot buffer c (Typed.new_id ()) (tag buffer)),
              ve, goal_used
            | AFexists _ ->
-             AFexists (new_annot buffer c (Typechecker.new_id ()) (tag buffer)),
+             AFexists (new_annot buffer c (Typed.new_id ()) (tag buffer)),
              ve, goal_used
            | _ -> assert false)
 
@@ -455,10 +455,10 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
       let c = { aaqf.c with aqf_form = naqf_form } in
       (match f with
        | AFforall _ ->
-         AFforall (new_annot buffer c (Typechecker.new_id ()) (tag buffer)),
+         AFforall (new_annot buffer c (Typed.new_id ()) (tag buffer)),
          ve, goal_used
        | AFexists _ ->
-         AFexists (new_annot buffer c (Typechecker.new_id ()) (tag buffer)),
+         AFexists (new_annot buffer c (Typed.new_id ()) (tag buffer)),
          ve, goal_used
        | _ -> assert false)
 
@@ -477,7 +477,7 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
       in
       AFnamed (n, naaf), ve, goal_used
   in
-  new_annot buffer c (Typechecker.new_id ()) ptag, ve, goal_used
+  new_annot buffer c (Typed.new_id ()) ptag, ve, goal_used
 
 
 let make_instance (buffer:sbuffer) vars entries afc goal_form tyenv =
@@ -724,7 +724,7 @@ and add_trigger ?(register=true) t qid env str offset (sbuf:sbuffer) =
         let lexprs, _ = Parsers.parse_trigger lb in
         let atl = List.fold_right
             (fun lexpr l->
-               let tt = Typechecker.term tyenv
+               let tt = Typechecker.type_expr tyenv
                    (qf.c.aqf_upvars@qf.c.aqf_bvars) lexpr in
                let at = annot_of_tterm sbuf tt in
                at.tag#set_priority (t#priority - 1);

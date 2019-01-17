@@ -27,8 +27,11 @@
 (******************************************************************************)
 
 open AltErgoLib
-open AltErgoParsers
 open Options
+
+(* workaround to force inclusion of main_input,
+   because dune is stupid, :p *)
+include Main_input
 
 (* done here to initialize options,
    before the instantiations of functors *)
@@ -110,11 +113,13 @@ let () =
       Options.set_is_gui false;
       init_profiling ();
 
-      (*Options.parse_args ();*)
       let filename = get_file () in
       let preludes = Options.preludes () in
-      let pfile = Parsers.parse_problem ~filename ~preludes in
-      let d, _ = Typechecker.file pfile in
+      let (module I : Input.S) = Input.find (Options.frontend ()) in
+      let pfile = I.parse_file ~filename ~preludes in
+      if parse_only () then exit 0;
+      let d, _ = I.type_file pfile in
+      if type_only () then exit 0;
       let d = Typechecker.split_goals_and_cnf d
           [@ocaml.ppwarning "TODO: implement a more efficient split"]
       in

@@ -13,7 +13,7 @@
   ; modules that make up the lib
   (modules
     ; frontend
-    Cnf Frontend Parsed_interface Typechecker
+    Cnf Input Frontend Parsed_interface Typechecker
     ; reasoners
     Ac Arith Arrays Arrays_rel Bitv Ccx Shostak Relation Enum Enum_rel
     Fun_sat Inequalities Bitv_rel Th_util

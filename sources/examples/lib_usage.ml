@@ -52,7 +52,7 @@ let goal_3 = PA.mk_goal Loc.dummy "toy_3" (PA.mk_not Loc.dummy eq1)
 
 let parsed = [goal_1; goal_2; goal_3]
 
-let typed, env = Typechecker.file parsed
+let typed, env = Typechecker.type_file parsed
 
 let pbs = Typechecker.split_goals_and_cnf typed
 

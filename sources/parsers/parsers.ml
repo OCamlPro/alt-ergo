@@ -134,7 +134,6 @@ let parse_input_file file =
     let ext = if String.equal ext "" then None else Some ext in
     let a = parse_file ?lang:ext lb in
     if opened_cin then close_in cin;
-    if parse_only () then exit 0;
     a
   with
   | Errors.Lexical_error (loc, s) ->

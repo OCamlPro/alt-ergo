@@ -37,6 +37,7 @@ module M = struct
   let type_only = ref false
   let type_smt2 = ref false
   let parse_only = ref false
+  let frontend = ref "legacy"
   let steps_bound = ref (-1)
   let age_bound = ref 50
   let debug = ref false
@@ -250,6 +251,10 @@ module M = struct
     "-parse-only",
     Arg.Set parse_only,
     " stop after parsing";
+
+    "-frontend",
+    Arg.Set_string frontend,
+    " select the parsing and typing frontend";
 
     "-type-only",
     Arg.Set type_only,
@@ -733,6 +738,7 @@ let set_debug_explanations b = M.debug_explanations := b
 let set_type_only b = M.type_only := b
 let set_type_smt2 b = M.type_smt2 := b
 let set_parse_only b = M.parse_only := b
+let set_frontend s = M.frontend := s
 let set_steps_bound b = M.steps_bound := b
 let set_age_bound b = M.age_bound := b
 let set_no_user_triggers b = M.no_user_triggers := b
@@ -808,6 +814,7 @@ let js_mode () = !M.js_mode
 let type_only () = !M.type_only
 let type_smt2 () = !M.type_smt2
 let parse_only () = !M.parse_only
+let frontend () = !M.frontend
 let steps_bound () = !M.steps_bound
 let no_tcp () = !M.no_tcp
 let no_decisions () = !M.no_decisions

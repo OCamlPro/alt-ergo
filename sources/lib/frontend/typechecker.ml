@@ -276,9 +276,6 @@ module Env = struct
 
 end
 
-let new_id = let r = ref 0 in fun () -> r := !r+1; !r
-
-
 let symbol_of = function
     PPadd -> Symbols.Op Symbols.Plus
   | PPsub -> Symbols.Op Symbols.Minus
@@ -1757,13 +1754,12 @@ let type_decl (acc, env) d =
     Loc.report std_formatter loc;
     acc, env
 
-let file ld =
+let type_file ld =
   let env = Env.empty in
   try
     let ltd, env =
       List.fold_left (fun acc d -> type_decl acc d) ([], env) ld
     in
-    if type_only () then exit 0;
     List.rev ltd, env
   with
   | Errors.Error(e,l) ->
@@ -1812,7 +1808,7 @@ let split_goals l =
 let split_goals_and_cnf l =
   split_goals_aux (fun td env acc -> Cnf.make acc td) l
 
-let term env vars t =
+let type_expr env vars t =
   let vmap =
     List.fold_left
       (fun m (s,ty)->
@@ -1823,3 +1819,4 @@ let term env vars t =
   type_term env t
 
 type env = Env.t
+

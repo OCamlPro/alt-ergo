@@ -61,6 +61,7 @@ val set_profiling : float -> bool -> unit
 val set_type_only : bool -> unit
 val set_type_smt2 : bool -> unit
 val set_parse_only : bool -> unit
+val set_frontend : string -> unit
 val set_verbose : bool -> unit
 val set_steps_bound : int -> unit
 val set_age_bound : int -> unit
@@ -133,6 +134,7 @@ val disable_ites : unit -> bool
 val type_only : unit -> bool
 val type_smt2 : unit -> bool
 val parse_only : unit -> bool
+val frontend : unit -> string
 val steps_bound : unit -> int
 val no_tcp : unit -> bool
 val no_decisions : unit -> bool
