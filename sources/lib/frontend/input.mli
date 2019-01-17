@@ -28,14 +28,9 @@ exception Method_not_registered of string
 module type S = sig
 
   (** {5 Parsing} *)
-  type expr
-  (** The type of a parsed expression (i.e. a term, or formula, etc..) *)
 
   type file
   (** The type of a parsed file (including preludes). *)
-
-  val parse_expr : Lexing.lexbuf -> expr
-  (** Parse an expression from a lexbuf. *)
 
   val parse_file : filename:string -> preludes:string list -> file
   (** Parse a file (and some preludes). *)
@@ -45,10 +40,6 @@ module type S = sig
 
   type env
   (** The type of local environments used for typechecking. *)
-
-  val type_expr :
-    env -> (Symbols.t * Ty.t) list -> expr -> int Typed.atterm
-  (** Parse and typecheck a term. *)
 
   val type_file : file -> (int Typed.atdecl * env) list * env
   (** Parse and typecheck some input file, together with some prelude files. *)

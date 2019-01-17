@@ -14,20 +14,13 @@ module type S = sig
 
   (* Parsing *)
 
-  type expr
-
   type file
-
-  val parse_expr : Lexing.lexbuf -> expr
 
   val parse_file : filename:string -> preludes:string list -> file
 
   (* Typechecking *)
 
   type env
-
-  val type_expr :
-    env -> (Symbols.t * Ty.t) list -> expr -> int Typed.atterm
 
   val type_file : file -> (int Typed.atdecl * env) list * env
 end
