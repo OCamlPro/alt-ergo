@@ -1,3 +1,53 @@
+version dev
+===========
+
+* General improvements:
+
+  - Switched build system to use dune
+
+  - use flambda optimization options if available
+
+* Frontend:
+
+  - native alt-ergo format now support algebraic datatypes
+
+  - SMTLIB-2 ADT logic is now supported as well
+
+  - extended support for if-then-else and let-bindings
+    mixing terms and formulas
+
+  - accept unknwon file formats as long as a parser
+    is specified on the command line
+
+  - dedicated support for multiple goals in a single file
+
+  - '-save'/'-replay-used-context' now work with multiple files to
+    accomodate multiple goals in a single file
+
+  - '-proof' option become '-unsat-core'
+
+  - '-unsat-mode' chenges output to SAT/UNSAT/Unknown rather than
+    Valid/Invalid/I don't know
+
+* Reasoners:
+
+  - added support for Algebraic Datatypes
+
+  - improve handling of let-bindings
+
+  - there are now 4 core solvers (default is cdcl-tableaux):
+    * cdcl : CDCL solver
+    * cdcl-tableaux : CDCL extended with Tableau boolean model simplification
+    * tableaux : Fonctional SAT solver with Tableau boolean model simplification
+    * tableaux-cdcl : Same as Tableaux, but using a CDCL solver for boolean constraints
+
+* Instantiation:
+
+  - Triggers computation is done lazily in the backend
+
+  - Triggers are periodically recomputed with different heuristics
+
+
 version 2.2.0, April 21, 2018
 ================================
 
