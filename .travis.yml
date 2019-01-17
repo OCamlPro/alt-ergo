@@ -61,7 +61,6 @@ before_install:
   - export OPAMVERBOSE=1
   # Pin psm2
   - if [ "$TO_TEST" = "indent" ]; then opam install ocp-indent.1.6.1; fi
-  - opam pin add psmt2-frontend --kind auto https://github.com/Coquera/psmt2-frontend.git#master
 
 # Install dependencies
 install:
