@@ -1164,6 +1164,8 @@ let rec downgrade_ty = function
   | Ty.Trecord r ->
     PPTexternal (List.map downgrade_ty r.Ty.args,
                  Hstring.view r.Ty.name, Loc.dummy)
+  | Ty.Tadt _ ->
+    Gui_config.not_supported "Algebraic datatypes"
 
 let downgrade_tlogic = function
   | TPredicate args ->
@@ -1196,6 +1198,9 @@ let downgrade_type_decl = function
         Hstring.view s, downgrade_ty ty
       ) r.Ty.lbs in
     vars, Hstring.view r.Ty.name, Parsed.Record fields
+
+  | Ty.Tadt _ ->
+    Gui_config.not_supported "Algebraic datatypes"
 
 
 let rec annot_of_typed_decl (buffer:sbuffer) td =

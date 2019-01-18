@@ -135,11 +135,15 @@ module Main_Default : S = struct
              Hstring.Map.add hs (Text(l, hs)) mp
 
            | Tsum (hs, l) ->
-             Hstring.Map.add hs (Tsum(hs, l)) mp
+             Hstring.Map.add hs ty mp
 
            | Trecord {args; name; lbs} ->
              (* cannot do better for records ? *)
              Hstring.Map.add name ty mp
+
+           | Tadt (hs, _) ->
+             (* cannot do better for ADT ? *)
+             Hstring.Map.add hs ty mp
         )sty Hstring.Map.empty
 
     let print_types_decls types =
@@ -172,6 +176,8 @@ module Main_Default : S = struct
                         (Hstring.view lbl) Ty.print ty) l;
                  fprintf fmt " }@."
              end
+           | Tadt _ ->
+             fprintf fmt "%a@." Ty.print_full ty
         )types;
       fprintf fmt "@."
 

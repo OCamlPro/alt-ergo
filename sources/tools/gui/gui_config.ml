@@ -118,3 +118,7 @@ let monospace_font = !monospace_font
 let general_font = !general_font
 let style = !style
 let wrap = !wrap
+
+let not_supported msg =
+  Format.eprintf "%S currently not supported by the GUI@." msg;
+  assert false

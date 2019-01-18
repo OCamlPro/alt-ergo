@@ -449,7 +449,18 @@ let rec print_silent fmt t =
       | Sy.L_neg_pred, [a] ->
         fprintf fmt "(not %a)" print a
 
-      | _ -> assert false
+      | Sy.L_built (Sy.IsConstr hs), [e] ->
+        fprintf fmt "(%a ? %a)" print e Hstring.print hs
+
+      | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
+        fprintf fmt "not (%a ? %a)" print e Hstring.print hs
+
+      | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
+        | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
+        | Sy.L_built (Sy.IsConstr _)
+        | Sy.L_neg_built (Sy.IsConstr _)) , _ ->
+        assert false
+
     end
 
   | Sy.Op Sy.Get, [e1; e2] ->
@@ -489,8 +500,17 @@ let rec print_silent fmt t =
                             op == Sy.Integer_round ->
     fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
 
+  (* TODO: introduce PrefixOp in the future to simplify this ? *)
+  | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
+    fprintf fmt "%a(%a)" Hstring.print hs print_list l
+
   | Sy.Op op, [e1; e2] ->
     fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
+
+  | Sy.Op Sy.Destruct (hs, grded), [e] ->
+    fprintf fmt "%a#%s%a"
+      print e (if grded then "" else "!") Hstring.print hs
+
 
   | Sy.In(lb, rb), [t] ->
     fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
@@ -829,6 +849,11 @@ let mk_xor f1 f2 id =
 let mk_if cond f2 f3 id =
   mk_or
     (mk_and cond f2 true id) (mk_and (neg cond) f3 true id) false id
+
+let mk_ite cond th el id =
+  let ty = type_info th in
+  if ty == Ty.Tbool then mk_if cond th el id
+  else mk_term (Sy.Op Sy.Tite) [cond; th; el] ty
 
 let not_an_app e =
   (* we use this function because depth is currently not correct to
@@ -1294,6 +1319,20 @@ let apply_subst s t =
 
 (** Subterms, and related stuff *)
 
+(* new: first written for term_definition *)
+let max_pure_subterms =
+  let args_of e =
+    match e.bind with
+    | B_lemma q | B_skolem q -> [q.main]
+    | B_let {let_e; in_e} -> [let_e; in_e]
+    | _ -> e.xs
+  in
+  let rec aux acc e =
+    if e.pure then TSet.add e acc
+    else List.fold_left aux acc (args_of e)
+  in
+  fun e -> aux TSet.empty e
+
 let rec sub_terms acc e =
   match e.f with
   | Sy.Form _ | Sy.Lit _ -> acc
@@ -1582,7 +1621,7 @@ module Triggers = struct
     | {f = Op (Get | Set) ; xs = [t1 ; t2]} ->
       max (score_term t1) (score_term t2)
 
-    | {f = Op (Access _) ; xs = [t]} -> 1 + score_term t
+    | {f = Op (Access _ | Destruct _) ; xs = [t]} -> 1 + score_term t
     | {f = Op Record; xs} ->
       1 + (List.fold_left
              (fun acc t -> max (score_term t) acc) 0 xs)
@@ -1671,6 +1710,13 @@ module Triggers = struct
 
     | {f=Op (Access _)}, _ -> -1
     | _, {f=Op (Access _)} -> 1
+
+    | {f=Op (Destruct (_,a1)) ; xs=[t1]}, {f=Op (Destruct(_,a2)) ; xs=[t2]} ->
+      let c = Pervasives.compare a1 a2 in (* should be Hstring.compare *)
+      if c<>0 then c else cmp_trig_term t1 t2
+
+    | {f=Op (Destruct _)}, _ -> -1
+    | _, {f=Op (Destruct _)} -> 1
 
     | {f=Op Record ; xs= lbs1}, {f=Op Record ; xs= lbs2} ->
       Util.cmp_lists lbs1 lbs2 cmp_trig_term
@@ -1999,13 +2045,15 @@ module Triggers = struct
       else if head_is_name s b then b
       else assert false
 
-    | Sy.Lit Sy.L_neg_pred, [a] -> (* in case of simplifications *)
-      assert (head_is_name s a);
+    | Sy.Lit Sy.L_neg_pred, [a] when head_is_name s a ->
       a
     | _ -> (* in case of simplifications *)
-      (*fprintf fmt "term definition of %S:@.%a@." s print e;*)
-      assert (head_is_name s e);
-      e
+      if head_is_name s e then e
+      else
+        let s = TSet.filter (head_is_name s) (max_pure_subterms e) in
+        match TSet.elements s with
+        | [u] -> u
+        | _ -> assert false
 
   let expand_lets terms lets =
     let sbt =
@@ -2156,6 +2204,89 @@ let mk_exists name loc binders trs f id ~toplevel ~decl_kind =
       neg (mk_forall nm loc binders trs (neg f) id ~toplevel:false ~decl_kind)
     in
     mk_forall name loc SMap.empty trs tmp id ~toplevel ~decl_kind
+
+
+let rec compile_match mk_destr mk_tester e cases accu =
+  match cases with
+  | [] -> accu
+
+  | (Typed.Var x, p) :: _ ->
+    apply_subst ((SMap.singleton (Symbols.var x) e), Ty.esubst) p
+
+  | (Typed.Constr {name; args}, p) :: l ->
+    let _then =
+      List.fold_left
+        (fun acc (var, destr, ty) ->
+           let destr = mk_destr destr in
+           let d = mk_term destr [e] ty in
+           mk_let (Sy.var var) d acc 0
+        )p args
+    in
+    match l with
+      [] -> _then
+    | _ ->
+      let _else = compile_match mk_destr mk_tester e l accu in
+      let cond = mk_tester e name in
+      mk_ite cond _then _else 0
+
+(* TO BE REMOVED *)
+let debug_compile_match e cases res =
+  if debug_adt () then begin
+    fprintf fmt "compilation of: match %a with@." print e;
+    let p_list_vars fmt l =
+      match l with
+        [] -> ()
+      | [e,_,_] -> Var.print fmt e
+      | (e,_,_) :: l ->
+        fprintf fmt "(%a" Var.print e;
+        List.iter (fun (e,_,_) -> fprintf fmt ", %a" Var.print e) l;
+        fprintf fmt ")"
+    in
+    List.iter
+      (fun (p, v) ->
+         match p with
+         | Typed.Constr {name; args} ->
+           fprintf fmt "| %a %a -> %a@."
+             Hstring.print name
+             p_list_vars args
+             print v;
+         | Typed.Var x ->
+           fprintf fmt "| %a -> %a@." Var.print x print v;
+      )cases;
+    fprintf fmt "end@.";
+    fprintf fmt "@.result is: %a@.@." print res;
+  end
+
+let mk_match e cases =
+  let ty = type_info e in
+  let mk_destr =
+    match ty with
+    | Ty.Tadt _ -> (fun hs -> Sy.destruct ~guarded:true (Hstring.view hs))
+    | Ty.Trecord _ -> (fun hs -> Sy.Op (Sy.Access hs))
+    | Ty.Tsum _ -> (fun _hs -> assert false) (* no destructors for Tsum *)
+    | _ -> assert false
+  in
+  let mk_tester =
+    match ty with
+    | Ty.Tadt _ ->
+      (fun e name -> mk_builtin true (Sy.IsConstr name) [e])
+
+    | Ty.Trecord _ ->
+      (fun _e _name -> assert false) (* no need to test for records *)
+
+    | Ty.Tsum _ ->
+      (fun e n -> (* testers are equalities for Tsum *)
+         let constr = mk_term (Sy.constr (Hstring.view n)) [] (type_info e) in
+         mk_eq ~iff:false e constr)
+
+    | _ -> assert false
+  in
+  let res = compile_match mk_destr mk_tester e cases e in
+  debug_compile_match e cases res;
+  res
+    [@ocaml.ppwarning "TODO: introduce a let if e is a big expr"]
+    [@ocaml.ppwarning "TODO: add other elim schemes"]
+    [@ocaml.ppwarning "TODO: add a match construct in expr"]
 
 
 let is_pure e = e.pure

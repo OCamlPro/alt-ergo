@@ -207,7 +207,7 @@ val mk_imp : t -> t -> int -> t
 val mk_iff : t -> t -> int -> t
 val mk_if : t -> t -> t -> int -> t
 val mk_xor : t -> t -> int -> t
-
+val mk_ite : t -> t -> t -> int -> t
 
 (** Substitutions *)
 
@@ -222,6 +222,9 @@ val apply_subst_trigger : subst -> trigger -> trigger
     application) and formulas *)
 val sub_terms : Set.t -> t -> Set.t
 
+(** [max_pure_subterms e] returns the maximal pure terms of the given
+    expression *)
+val max_pure_subterms : t -> Set.t
 
 (** returns the maximal terms of the given literal. Assertion
     failure if not a literal (should replace the assertion failure
@@ -274,6 +277,8 @@ val mk_exists :
   t
 
 val mk_let : Symbols.t -> t -> t -> int -> t
+
+val mk_match : t -> (Typed.pattern * t) list -> t
 
 val skolemize : quantified -> t
 

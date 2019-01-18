@@ -72,6 +72,11 @@ type oplogic =
   | OPif        (** conditional branching *)
 (** Logic operators. *)
 
+type pattern =
+  | Constr of { name : Hstring.t ; args : (Var.t * Hstring.t * Ty.t) list}
+  | Var of Var.t
+
+
 type 'a tterm = {
   tt_ty : Ty.t;         (** type of the term *)
   tt_desc : 'a tt_desc; (** term descriptor *)
@@ -126,6 +131,7 @@ and 'a tt_desc =
 (** Typed terms descriptors. *)
 (* TODO: replace tuples by records (possible inline recors to
          avoid polluting the namespace ?) with explicit field names. *)
+
 
 and 'a atatom = ('a tatom, 'a) annoted
 (** Type alias for annoted typed atoms. *)

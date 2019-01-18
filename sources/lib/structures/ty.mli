@@ -54,6 +54,12 @@ type t =
       to values of type [dst]. *)
   | Tsum of Hstring.t * Hstring.t list
   (** Enumeration, with its name, and the list of its constructors. *)
+
+  | Tadt of Hstring.t * t list
+  (** Algebraic types applied to arguments. [Tadt (s, args)] is
+      the application of the datatype constructor [s] to
+      arguments [args]. *)
+
   | Trecord of trecord
   (** Record type. *)
 
@@ -76,8 +82,27 @@ and trecord = {
   mutable lbs :  (Hstring.t * t) list;
   (** List of fields of the record. Each field has a name,
       and an associated type. *)
+  record_constr : Hstring.t;
+  (** record constructor. Useful is case it's a specialization of an
+      algeberaic datatype. Default value is "{__[name]" *)
 }
 (** Record types. *)
+
+type adt_constr =
+  { constr : Hstring.t ;
+    (** constructor of an ADT type *)
+
+    destrs : (Hstring.t * t) list
+    (** the list of destructors associated with the constructor and
+        their respective types *)
+  }
+
+(** bodies of types definitions. Currently, bodies are inlined in the
+    type [t] for records and enumerations. But, this is not possible
+    for recursive ADTs *)
+type type_body =
+  | Adt of adt_constr list
+  (** body of an algebraic datatype *)
 
 module Svty : Set.S with type elt = int
 (** Sets of type variables, indexed by their identifier. *)
@@ -85,6 +110,12 @@ module Svty : Set.S with type elt = int
 module Set : Set.S with type elt = t
 (** Sets of types *)
 
+
+val assoc_destrs : Hstring.t -> adt_constr list -> (Hstring.t * t) list
+(** returns the list of destructors associated with the given consturctor.
+    raises Not_found if the constructor is not in the given list *)
+
+val type_body : Hstring.t -> t list -> type_body
 
 (** {2 Type inspection} *)
 
@@ -135,7 +166,19 @@ val tsum : string -> string list -> t
 (** Create an enumeration type. [tsum name enums] creates an enumeration
     named [name], with constructors [enums]. *)
 
-val trecord : t list -> string -> (string * t) list -> t
+val t_adt :
+  ?body: ((string * (string * t) list) list) option ->
+  string -> t list ->
+  t
+(** Crearte and algebraic datatype. The body is a list of
+    constructors, where each constructor is associated with the list of
+    its destructors with their respective types. If [body] is none,
+    then no definition will be registered for this type. The second
+    argument is the name of the type. The third one provides its list
+    of arguments. *)
+
+val trecord :
+  ?record_constr:string -> t list -> string -> (string * t) list -> t
 (** Create a record type. [trecord args name lbs] creates a record
     type with name [name], arguments [args] and fields [lbs]. *)
 

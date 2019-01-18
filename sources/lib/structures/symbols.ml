@@ -31,6 +31,7 @@ open Options
 
 type builtin =
     LE | LT (* arithmetic *)
+  | IsConstr of Hstring.t (* ADT tester *)
 
 type operator =
     Plus | Minus | Mult | Div | Modulo
@@ -40,7 +41,8 @@ type operator =
   | Sqrt_real_default | Sqrt_real_excess
   | Min_real | Min_int | Max_real | Max_int | Integer_log2 | Pow_real_int
   | Pow_real_real | Integer_round
-  | Constr of Hstring.t (* enums *)
+  | Constr of Hstring.t (* enums, adts *)
+  | Destruct of Hstring.t * bool
   | Tite
 
 type lit =
@@ -91,6 +93,7 @@ let var s = Var s
 let int i = Int (Hstring.make i)
 let real r = Real (Hstring.make r)
 let constr s = Op (Constr (Hstring.make s))
+let destruct ~guarded s = Op (Destruct (Hstring.make s, guarded))
 
 let mk_bound kind sort ~is_open ~is_lower =
   {kind; sort; is_open; is_lower}
@@ -120,19 +123,23 @@ let compare_operators op1 op2 =
   Util.compare_algebraic op1 op2
     (function
       | Access h1, Access h2 | Constr h1, Constr h2 -> Hstring.compare h1 h2
+      | Destruct (h1, b1), Destruct(h2, b2) ->
+        let c = Pervasives.compare b1 b2 in
+        if c <> 0 then c else Hstring.compare h1 h2
       | _ , (Plus | Minus | Mult | Div | Modulo
             | Concat | Extract | Get | Set | Fixed | Float | Reach
             | Access _ | Record | Sqrt_real | Abs_int | Abs_real
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
             | Integer_log2 | Pow_real_int | Pow_real_real | Integer_round
-            | Constr _ | Tite) -> assert false
+            | Constr _ | Destruct _ | Tite) -> assert false
     )
 
 let compare_builtin b1 b2 =
   Util.compare_algebraic b1 b2
     (function
-      | _, (LT | LE) -> assert false
+      | IsConstr h1, IsConstr h2 -> Hstring.compare h1 h2
+      | _, (LT | LE | IsConstr _) -> assert false
     )
 
 let compare_lits lit1 lit2 =
@@ -236,6 +243,10 @@ let string_of_lit lit = match lit with
   | L_built LT -> "<"
   | L_neg_built LE -> ">"
   | L_neg_built LT -> ">="
+  | L_built (IsConstr h) ->
+    sprintf "? %s" (Hstring.view h)
+  | L_neg_built (IsConstr h) ->
+    sprintf "?not? %s" (Hstring.view h)
 
 let string_of_form f = match f with
   | F_Unit _ -> "/\\"
@@ -259,6 +270,9 @@ let to_string ?(show_vars=true) x = match x with
   | Op Modulo -> "%"
   | Op (Access s) -> "@Access_"^(Hstring.view s)
   | Op (Constr s) -> (Hstring.view s)
+  | Op (Destruct (s,g)) ->
+    Format.sprintf "%s%s" (if g then "" else "!") (Hstring.view s)
+
   | Op Record -> "@Record"
   | Op Get -> "get"
   | Op Set -> "set"
