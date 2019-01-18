@@ -236,6 +236,7 @@ module Main_Default : S = struct
     let theory_of k = match k with
       | Th_util.Th_arith  -> "Th_arith "
       | Th_util.Th_sum    -> "Th_sum   "
+      | Th_util.Th_adt    -> "Th_adt   "
       | Th_util.Th_arrays -> "Th_arrays"
       | Th_util.Th_UF -> "Th_UF"
 
