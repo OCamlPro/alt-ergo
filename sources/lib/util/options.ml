@@ -58,6 +58,7 @@ module M = struct
   let debug_fm = ref false
   let debug_fpa = ref 0
   let debug_sum = ref false
+  let debug_adt = ref false
   let debug_arith = ref false
   let debug_combine = ref false
   let debug_bitv = ref false
@@ -66,6 +67,8 @@ module M = struct
   let options = ref false
   let greedy = ref false
   let disable_ites = ref false
+  let disable_adts = ref false
+  let enable_adts_cs = ref false
   let triggers_var = ref false
   let nb_triggers = ref 2
   let max_multi_triggers_size = ref 4
@@ -304,6 +307,10 @@ module M = struct
     Arg.Set debug_sum,
     "  sets the debugging flag of Sum";
 
+    "-dadt",
+    Arg.Set debug_adt,
+    "  sets the debugging flag of ADTs";
+
     "-darith",
     Arg.Set debug_arith,
     " sets the debugging flag of Arith (without fm)";
@@ -384,6 +391,14 @@ module M = struct
     "-disable-ites",
     Arg.Set disable_ites,
     "  disable handling of ite(s) on terms in the backend";
+
+    "-disable-adts",
+    Arg.Set disable_adts,
+    "  disable Algebraic Datatypes theory";
+
+    "-enable-adts-cs",
+    Arg.Set enable_adts_cs,
+    "  enable case-split for Algebraic Datatypes theory";
 
     "-steps-bound",
     Arg.Set_int steps_bound,
@@ -718,6 +733,7 @@ let set_debug_use b = M.debug_use := b
 let set_debug_uf b = M.debug_uf := b
 let set_debug_fm b = M.debug_fm := b
 let set_debug_sum b = M.debug_sum := b
+let set_debug_adt b = M.debug_adt := b
 let set_debug_arith b = M.debug_arith := b
 let set_debug_bitv b = M.debug_bitv := b
 let set_debug_ac   b = M.debug_ac := b
@@ -791,6 +807,7 @@ let debug_uf () = !M.debug_uf
 let debug_fm () = !M.debug_fm
 let debug_fpa () = !M.debug_fpa
 let debug_sum () = !M.debug_sum
+let debug_adt () = !M.debug_adt
 let debug_arith () = !M.debug_arith
 let debug_bitv () = !M.debug_bitv
 let debug_ac   () = !M.debug_ac
@@ -810,6 +827,8 @@ let debug_triggers () = !M.debug_triggers
 
 (** additional getters *)
 let disable_ites () = !M.disable_ites
+let disable_adts () = !M.disable_adts
+let enable_adts_cs () = !M.enable_adts_cs
 let js_mode () = !M.js_mode
 let type_only () = !M.type_only
 let type_smt2 () = !M.type_smt2
