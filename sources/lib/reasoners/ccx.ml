@@ -250,7 +250,7 @@ module Main : S = struct
   let congruents env facts t1 s =
     match E.term_view t1 with
     | E.Term {E.xs=[]} -> ()
-    | E.Term {E.f} when X.fully_interpreted f -> ()
+    | E.Term {E.f; ty} when X.fully_interpreted f ty -> ()
     | E.Term _ -> SE.iter (equal_only_by_congruence env facts t1) s
     | E.Not_a_term _ -> assert false
 

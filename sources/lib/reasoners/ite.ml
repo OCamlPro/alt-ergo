@@ -23,7 +23,7 @@ module Shostak (X : ALIEN) = struct
   type r = X.r
 
   let name           = "Ite"
-  let is_mine_symb _ = false
+  let is_mine_symb _ _ = false
   let fully_interpreted sb = assert false
   let type_info _    = assert false
   let color _        = assert false

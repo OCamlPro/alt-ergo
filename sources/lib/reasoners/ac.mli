@@ -38,7 +38,7 @@ module type S = sig
   val make : Expr.t -> r * Expr.t list
 
   (* tells whether the given term is AC*)
-  val is_mine_symb : Symbols.t -> bool
+  val is_mine_symb : Symbols.t -> Ty.t -> bool
 
   (* compares two AC semantic values *)
   val compare : t -> t -> int

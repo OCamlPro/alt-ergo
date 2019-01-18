@@ -44,7 +44,7 @@ module type S = sig
   val make : Expr.t -> r * Expr.t list
 
   (* tells whether the given term is AC*)
-  val is_mine_symb : Sy.t -> bool
+  val is_mine_symb : Sy.t -> Ty.t -> bool
 
   (* compares two AC semantic values *)
   val compare : t -> t -> int
@@ -201,7 +201,7 @@ module Make (X : Sig.X) = struct
     Timers.exec_timer_pause Timers.M_AC Timers.F_make;
     x
 
-  let is_mine_symb sy = Options.no_ac() == false && Sy.is_ac sy
+  let is_mine_symb sy _ = Options.no_ac() == false && Sy.is_ac sy
 
   let type_info {t=ty} = ty
 
