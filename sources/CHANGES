@@ -9,25 +9,28 @@ version dev
 
 * Frontend:
 
-  - native alt-ergo format now support algebraic datatypes
+  - native alt-ergo format now supports algebraic datatypes
 
   - SMTLIB-2 ADT logic is now supported as well
 
-  - extended support for if-then-else and let-bindings
+  - extended/better support for if-then-else and let-bindings
     mixing terms and formulas
 
-  - accept unknwon file formats as long as a parser
-    is specified on the command line
+  - accept unknown file formats as long as a parser
+    is specified on the command line, or the parser associated with
+    the default language (that can be modified with option
+    -default-lang) is able to parse it
 
-  - dedicated support for multiple goals in a single file
+  - '-save'/'-replay-used-context' options now work with multiple
+    files to accomodate multiple goals in a single file
 
-  - '-save'/'-replay-used-context' now work with multiple files to
-    accomodate multiple goals in a single file
+  - '-proof' option becomes '-unsat-core'. Now, it shows the names of
+    the assertions / axioms / definitions used in the proof instead if
+    the formulas themselves
 
-  - '-proof' option become '-unsat-core'
-
-  - '-unsat-mode' chenges output to SAT/UNSAT/Unknown rather than
-    Valid/Invalid/I don't know
+  - '-unsat-mode' changes output to SAT/UNSAT/Unknown rather than
+    Valid/Invalid/I don't know. This option is set automatically is
+    the PSMT2-frontend library is used
 
 * Reasoners:
 
@@ -47,6 +50,16 @@ version dev
 
   - Triggers are periodically recomputed with different heuristics
 
+* Data structures:
+
+  - Term, Literal and Formula modules are now merged in a new Expr
+    module. This enable arbitrary mixing of terms and formulas as done
+    in SMT-LIB2 language
+
+  - A lot of improvements in Expr module: more simplifications for
+    quantified formulas, better elimination of let-in construct,
+    additional constructs in the backend (iff, If-Then-Else, ...),
+    code reviewing and performances improvements ...
 
 version 2.2.0, April 21, 2018
 ================================
