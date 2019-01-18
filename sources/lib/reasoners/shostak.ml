@@ -269,19 +269,19 @@ struct
       | Term _ -> if equal p r then v else r
 
   let make t =
-    let {Expr.f=sb} =
+    let {Expr.f=sb; ty} =
       match Expr.term_view t with
       | Expr.Not_a_term _ -> assert false
       | Expr.Term tt -> tt
     in
     match
-      X1.is_mine_symb sb,
-      not (restricted ()) && X2.is_mine_symb sb,
-      not (restricted ()) && X3.is_mine_symb sb,
-      not (restricted ()) && X4.is_mine_symb sb,
-      not (restricted ()) && X5.is_mine_symb sb,
-      not (restricted ()) && X6.is_mine_symb sb,
-      AC.is_mine_symb sb
+      X1.is_mine_symb sb ty,
+      not (restricted ()) && X2.is_mine_symb sb ty,
+      not (restricted ()) && X3.is_mine_symb sb ty,
+      not (restricted ()) && X4.is_mine_symb sb ty,
+      not (restricted ()) && X5.is_mine_symb sb ty,
+      not (restricted ()) && X6.is_mine_symb sb ty,
+      AC.is_mine_symb sb ty
     with
     | true  , false , false, false, false, false, false -> X1.make t
     | false , true  , false, false, false, false, false -> X2.make t
@@ -293,15 +293,15 @@ struct
     | false , false , false, false, false, false, false -> term_embed t, []
     | _ -> assert false
 
-  let fully_interpreted sb =
+  let fully_interpreted sb ty =
     match
-      X1.is_mine_symb sb,
-      not (restricted ()) && X2.is_mine_symb sb,
-      not (restricted ()) && X3.is_mine_symb sb,
-      not (restricted ()) && X4.is_mine_symb sb,
-      not (restricted ()) && X5.is_mine_symb sb,
-      not (restricted ()) && X6.is_mine_symb sb,
-      AC.is_mine_symb sb
+      X1.is_mine_symb sb ty,
+      not (restricted ()) && X2.is_mine_symb sb ty,
+      not (restricted ()) && X3.is_mine_symb sb ty,
+      not (restricted ()) && X4.is_mine_symb sb ty,
+      not (restricted ()) && X5.is_mine_symb sb ty,
+      not (restricted ()) && X6.is_mine_symb sb ty,
+      AC.is_mine_symb sb ty
     with
     | true , false ,false,false,false,false,false -> X1.fully_interpreted sb
     | false, true  ,false,false,false,false,false -> X2.fully_interpreted sb
@@ -313,14 +313,14 @@ struct
     | false, false ,false,false,false,false,false -> false
     | _ -> assert false
 
-  let is_solvable_theory_symbol sb =
-    X1.is_mine_symb sb ||
+  let is_solvable_theory_symbol sb ty =
+    X1.is_mine_symb sb ty ||
     not (restricted ()) &&
     ((*X2.is_mine_symb sb || print records*)
-      X3.is_mine_symb sb ||
-      X4.is_mine_symb sb ||
-      X5.is_mine_symb sb)(* ||
-                            AC.is_mine_symb sb*)
+      X3.is_mine_symb sb ty ||
+      X4.is_mine_symb sb ty ||
+      X5.is_mine_symb sb ty)(* ||
+                               AC.is_mine_symb sb*)
 
 
   let is_a_leaf r = match r.v with
@@ -332,21 +332,22 @@ struct
     | [] -> assert false
     | [r,1] -> r
     | _ ->
+      let ty = ac.Sig.t in
       match
-        X1.is_mine_symb ac.Sig.h,
-        X2.is_mine_symb ac.Sig.h,
-        X3.is_mine_symb ac.Sig.h,
-        X4.is_mine_symb ac.Sig.h,
-        X5.is_mine_symb ac.Sig.h,
-        X6.is_mine_symb ac.Sig.h,
-        AC.is_mine_symb ac.Sig.h with
+        X1.is_mine_symb ac.Sig.h ty,
+        X2.is_mine_symb ac.Sig.h ty,
+        X3.is_mine_symb ac.Sig.h ty,
+        X4.is_mine_symb ac.Sig.h ty,
+        X5.is_mine_symb ac.Sig.h ty,
+        X6.is_mine_symb ac.Sig.h ty,
+        AC.is_mine_symb ac.Sig.h ty with
+      (*AC.is_mine may say F if Options.no_ac is set to F dynamically *)
       | true  , false , false, false, false, false, false -> X1.color ac
       | false , true  , false, false, false, false, false -> X2.color ac
       | false , false , true , false, false, false, false -> X3.color ac
       | false , false , false, true , false, false, false -> X4.color ac
       | false , false , false, false, true,  false, false -> X5.color ac
       | false , false , false, false, false, true,  false -> X6.color ac
-      (*AC.is_mine may say F if Options.no_ac is set to F dynamically *)
       | _  -> ac_embed ac
 
 

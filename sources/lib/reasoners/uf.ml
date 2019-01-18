@@ -1179,7 +1179,7 @@ let output_concrete_model ({make; repr} as env) =
              | E.Not_a_term _ -> assert false
              | E.Term tt -> tt
            in
-           if X.is_solvable_theory_symbol f
+           if X.is_solvable_theory_symbol f ty
            || E.is_fresh t || E.is_fresh_skolem t
            || E.equal t E.vrai || E.equal t E.faux
            then

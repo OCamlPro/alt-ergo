@@ -93,7 +93,7 @@ module Shostak
   end
   (*BISECT-IGNORE-END*)
 
-  let is_mine_symb sy =
+  let is_mine_symb sy _ty =
     let open Sy in
     match sy with
     | Int _ | Real _ -> true
@@ -747,11 +747,11 @@ module Shostak
       else
       if List.exists
           (fun (t,x) ->
-             let symb = match E.term_view t with
+             let symb, ty = match E.term_view t with
                | E.Not_a_term _ -> assert false
-               | E.Term tt -> tt.E.f
+               | E.Term tt -> tt.E.f, tt.E.ty
              in
-             is_mine_symb symb && X.leaves x == []
+             is_mine_symb symb ty && X.leaves x == []
           ) eq
       then None
       else

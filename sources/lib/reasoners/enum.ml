@@ -49,8 +49,9 @@ module Shostak (X : ALIEN) = struct
 
   let name = "Sum"
 
-  let is_mine_symb = function
-    | Sy.Op (Sy.Constr _) -> true
+  let is_mine_symb sy ty =
+    match sy, ty with
+    | Sy.Op (Sy.Constr _), Ty.Tsum _ -> true
     | _ -> false
 
   let fully_interpreted sb = true

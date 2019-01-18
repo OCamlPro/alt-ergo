@@ -242,7 +242,7 @@ module Shostak (X : ALIEN) = struct
 
   let subst p v r = is_mine (subst_rec p v r)
 
-  let is_mine_symb =  function
+  let is_mine_symb sy _ty = match sy with
     | Symbols.Op (Symbols.Record | Symbols.Access _) -> true
     | _ -> false
 
@@ -278,6 +278,7 @@ module Shostak (X : ALIEN) = struct
              let e, acc = X.abstract_selectors (is_mine e) acc in
              (lbl, embed e)::flds, acc
           )([], acc) fields
+          [@ocaml.ppwarning "TODO: should not rebuild if not changed !"]
       in
       is_mine (Record (List.rev flds, ty)), acc
 

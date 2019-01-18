@@ -76,7 +76,7 @@ module Shostak(X : ALIEN) = struct
 
   let name = "bitv"
 
-  let is_mine_symb = function
+  let is_mine_symb sy ty = match sy with
     | Sy.Bitv _ | Sy.Op (Sy.Concat | Sy.Extract)  -> true
     | _ -> false
 
