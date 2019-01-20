@@ -71,3 +71,10 @@ type matching_env =
     use_cs : bool;
     backward : inst_kind
   }
+
+val print_list:
+  sep:string ->
+  pp:(Format.formatter -> 'a -> unit) ->
+  Format.formatter ->
+  'a list ->
+  unit

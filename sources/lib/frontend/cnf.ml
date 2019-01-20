@@ -246,8 +246,22 @@ let rec make_term up_qv t =
       in
       let t1 = mk_term t1 in
       let t2 = mk_term t2 in
-      if E.type_info t1 == Ty.Tbool then E.mk_if cond t1 t2 0
-      else E.mk_term (Sy.Op Sy.Tite) [cond; t1; t2] ty
+      E.mk_ite cond t1 t2 0
+
+    | TTproject (b, t, s) ->
+      E.mk_term (Sy.destruct ~guarded:b (Hstring.view s)) [mk_term t] ty
+
+    | TTmatch (e, pats) ->
+      let e = make_term up_qv e in
+      let pats =
+        List.rev_map (fun (p, t) -> p, make_term up_qv t) (List.rev pats)
+      in
+      E.mk_match e pats
+
+    | TTform e ->
+      make_form
+        up_qv "" e Loc.dummy
+        ~decl_kind:E.Daxiom (* not correct, but not a problem *)
   in
   mk_term t
 
@@ -353,6 +367,9 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
                 [make_term up_qv t1;
                  make_term up_qv t2]
           end
+        | TTisConstr (t, lbl) ->
+          E.mk_builtin ~is_pos:true (Sy.IsConstr lbl)
+            [make_term up_qv t]
 
         | _ -> assert false
       end
@@ -429,6 +446,14 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
       let ff = mk_form up_qv false f.c f.annot in
       E.add_label lbl ff;
       ff
+
+    | TFmatch (e, pats) ->
+      let e = make_term up_qv e in
+      let pats =
+        List.rev_map (fun (p, f) -> p, mk_form up_qv false f.c f.annot)
+          (List.rev pats)
+      in
+      E.mk_match e pats
 
     | _ -> assert false
   in

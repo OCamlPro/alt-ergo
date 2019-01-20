@@ -24,17 +24,33 @@ let mk_prefix op e = PPprefix (op, e)
 
 (** Declaration of types  **)
 
-let mk_type_decl loc ty_vars ty ty_kind =
-  TypeDecl (loc, ty_vars, ty, ty_kind)
+let mk_non_rec_type_decl loc ty_vars ty ty_kind =
+  TypeDecl [ loc, ty_vars, ty, ty_kind ]
+
+let mk_rec_type_decl l =
+  TypeDecl l
 
 let mk_abstract_type_decl loc ty_vars ty =
-  mk_type_decl loc ty_vars ty Abstract
+  mk_non_rec_type_decl loc ty_vars ty Abstract
 
 let mk_enum_type_decl loc ty_vars ty enums =
-  mk_type_decl loc ty_vars ty (Enum enums)
+  mk_non_rec_type_decl loc ty_vars ty (Enum enums)
 
-let mk_record_type_decl loc ty_vars ty fields =
-  mk_type_decl loc ty_vars ty (Record fields)
+let mk_algebraic_type_decl loc ty_vars ty enums =
+  try
+    let l =
+      List.rev_map
+        (fun (c, l) ->
+           if l != [] then raise Exit;
+           c
+        )enums
+    in
+    mk_non_rec_type_decl loc ty_vars ty (Enum (List.rev l))
+  with Exit ->
+    mk_non_rec_type_decl loc ty_vars ty (Algebraic enums)
+
+let mk_record_type_decl loc ty_vars ty ?(constr="{") fields =
+  mk_non_rec_type_decl loc ty_vars ty (Record (constr, fields))
 
 
 (** Declaration of symbols, functions, predicates, and goals *)
@@ -245,10 +261,11 @@ let mk_type_cast loc e ty =
 let mk_var loc var =
   mk_localized loc (PPvar var)
 
-
 let mk_application loc app args =
   mk_localized loc (PPapp (app, args))
 
+let mk_pattern pat_loc pat_app args =
+  { pat_loc ; pat_desc = (pat_app, args) }
 
 let mk_ite loc cond th el =
   mk_localized loc (PPif (cond, th, el))
@@ -277,7 +294,12 @@ let mk_check loc expr =
 let mk_cut loc expr =
   mk_localized loc (PPcut expr)
 
+let mk_match loc expr cases =
+  mk_localized loc (PPmatch (expr, cases))
 
+let mk_algebraic_test loc expr cstr =
+  mk_localized loc (PPisConstr (expr, cstr))
 
-
+let mk_algebraic_project loc ~guarded expr cstr =
+  mk_localized loc (PPproject (guarded, expr, cstr))
 

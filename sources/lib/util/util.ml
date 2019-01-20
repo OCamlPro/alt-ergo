@@ -108,3 +108,10 @@ type matching_env =
     use_cs : bool;
     backward : inst_kind
   }
+
+let print_list ~sep ~pp fmt l =
+  match l with
+    [] -> ()
+  | e :: l ->
+    Format.fprintf fmt "%a" pp e;
+    List.iter (fun e -> Format.fprintf fmt "%s %a" sep pp e) l

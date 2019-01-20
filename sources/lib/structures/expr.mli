@@ -197,7 +197,7 @@ val pred : t -> t
 
 val mk_eq : iff:bool -> t -> t -> t
 val mk_distinct : iff:bool -> t list -> t
-val mk_builtin : bool -> Symbols.builtin -> t list -> t
+val mk_builtin : is_pos:bool -> Symbols.builtin -> t list -> t
 
 (** simple smart constructors for formulas *)
 
