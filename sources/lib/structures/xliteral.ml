@@ -32,9 +32,8 @@ open Options
 
 
 type builtin = Symbols.builtin =
-    LE | LT (* arithmetic *)
-
-
+    LE | LT | (* arithmetic *)
+    IsConstr of Hstring.t (* ADT tester *)
 
 type 'a view =
   | Eq of 'a * 'a
@@ -175,6 +174,13 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
     | Builtin (_, (LE | LT), _) ->
       assert false (* not reachable *)
 
+    | Builtin (pos, IsConstr hs, [e]) ->
+      Format.fprintf fmt "%s(%a ? %a)"
+        (if pos then "" else "not ") X.print e Hstring.print hs
+
+    | Builtin (_, IsConstr hs, _) ->
+      assert false (* not reachable *)
+
     | Pred (p,b) ->
       Format.fprintf fmt "%s %a = %s" lbl X.print p
         (if b then "false" else "true")
@@ -184,6 +190,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
   let equal_builtins n1 n2 =
     match n1, n2 with
     | LT, LT | LE, LE -> true
+    | IsConstr h1, IsConstr h2 -> Hstring.equal h1 h2
     | _ -> false
 
   module V = struct

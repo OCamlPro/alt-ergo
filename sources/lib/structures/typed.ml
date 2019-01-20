@@ -57,6 +57,16 @@ type oplogic =
     OPand | OPor | OPxor | OPimp | OPnot | OPiff
   | OPif
 
+(** type of pattern in match construct of ADTs *)
+type pattern =
+  | Constr of { name : Hstring.t ; args : (Var.t * Hstring.t * Ty.t) list}
+  (** A pattern case which is a constructor. [name] is the name of
+      constructor. [args] contains the variables bound by this pattern
+      with their correponsing destructors and types *)
+
+  | Var of Var.t
+  (** a pattern that is a variable (or underscore) *)
+
 type 'a tterm =
   { tt_ty : Ty.t; tt_desc : 'a tt_desc }
 
@@ -120,7 +130,6 @@ and 'a tform =
 and 'a tlet_kind =
   | TletTerm of ('a tterm, 'a) annoted
   | TletForm of ('a tform, 'a) annoted
-
 
 
 (** Declarations *)

@@ -27,9 +27,10 @@
 (******************************************************************************)
 
 type builtin = Symbols.builtin =
-    LE | LT (* arithmetic *)
+    LE | LT | (* arithmetic *)
+    IsConstr of Hstring.t (* ADT tester *)
 
-type 'a view = private
+type 'a view = (*private*)
   | Eq of 'a * 'a
   | Distinct of bool * 'a list
   | Builtin of bool * builtin * 'a list
