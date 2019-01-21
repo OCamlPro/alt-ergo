@@ -371,7 +371,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let choose_used_context all_ctxt ~goal_name =
     if Options.replay_all_used_context () then all_ctxt
-    else init_used_context goal_name
+    else init_used_context ~goal_name
 
 end
 

@@ -976,8 +976,12 @@ let div i1 i2 =
     else { i with ints = l }
 
 let abs =
-  let zero_inf_r = new_borne_inf Ex.empty Q.zero true (undefined Ty.Treal) in
-  let zero_inf_i = new_borne_inf Ex.empty Q.zero true (undefined Ty.Tint) in
+  let zero_inf_r =
+    new_borne_inf Ex.empty Q.zero ~is_le:true (undefined Ty.Treal)
+  in
+  let zero_inf_i =
+    new_borne_inf Ex.empty Q.zero ~is_le:true (undefined Ty.Tint)
+  in
   fun i ->
     let xx = if i.is_int then zero_inf_i else zero_inf_r in
     intersect (merge i (scale Q.m_one i)) xx

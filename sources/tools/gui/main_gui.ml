@@ -831,7 +831,7 @@ let set_color_inst inst_model renderer (istore:GTree.model) row =
   else if inst_model.max <> 0 then
     let perc = (nb_inst * 65535) / inst_model.max in
     let red_n =
-      Gdk.Color.alloc colormap (`RGB (perc, 0, 0)) in
+      Gdk.Color.alloc ~colormap (`RGB (perc, 0, 0)) in
     renderer#set_properties [`FOREGROUND_GDK red_n]
   else
     renderer#set_properties [`FOREGROUND_SET false];
@@ -858,7 +858,7 @@ let create_inst_view inst_model env buffer sv ~packing () =
   col#set_sort_column_id inst_model.icol_number.GTree.index;
 
   let renderer = GTree.cell_renderer_text [`EDITABLE true] in
-  ignore (renderer#connect#edited (fun path s ->
+  ignore (renderer#connect#edited ~callback:(fun path s ->
       let limit = try int_of_string s with Failure _ -> -1 in
       List.iter (fun path ->
           let row = inst_model.istore#get_iter path in
@@ -1024,7 +1024,9 @@ let start_gui all_used_context =
   let envs =
     List.fold_left
       (fun acc (l, goal_name) ->
-         let used_context = FE.choose_used_context all_used_context goal_name in
+         let used_context =
+           FE.choose_used_context all_used_context ~goal_name
+         in
          let buf1 = match source_language with
            | Some language ->
              GSourceView2.source_buffer ~language
@@ -1320,7 +1322,7 @@ let start_gui all_used_context =
         ~modal:true
         ~position:`CENTER_ON_PARENT () in
     ignore (
-      font_win#ok_button#connect#clicked (fun () ->
+      font_win#ok_button#connect#clicked ~callback:(fun () ->
           set_font envs font_win#selection#font_name)
     );
     ignore (font_win#run ());
@@ -1455,7 +1457,7 @@ let start_replay session_cin all_used_context =
   let typed_ast = Typechecker.split_goals typed_ast in
   List.iter
     (fun (l, goal_name) ->
-       let used_context = FE.choose_used_context all_used_context goal_name in
+       let used_context = FE.choose_used_context all_used_context ~goal_name in
 
        let buf1 = GSourceView2.source_buffer () in
 

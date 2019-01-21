@@ -144,7 +144,7 @@ let deduce_is_constr uf r h eqs env ex =
         let eqs =
           if seen_tester r h env then eqs
           else
-            let is_c = E.mk_builtin true (Sy.IsConstr h) [t] in
+            let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr h) [t] in
             if debug_adt () then
               fprintf fmt "[deduce is_constr] %a@." E.print is_c;
             (Sig_rel.LTerm is_c, ex, Th_util.Other) :: eqs
@@ -260,7 +260,7 @@ let add_guarded_destr env uf t hs e t_ty =
      This may/will introduce bugs when instantiating
      let env = {env with new_terms = SE.add access env.new_terms} in
   *)
-  let is_c = E.mk_builtin true (Sy.IsConstr c) [e] in
+  let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr c) [e] in
   let eq = E.mk_eq access t ~iff:false in
   if debug_adt () then begin
     fprintf fmt "associated with constr %a@." Hstring.print c;

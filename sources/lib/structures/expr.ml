@@ -1141,10 +1141,10 @@ let rec apply_subst_aux (s_t, s_ty) t =
         neg (match xs' with [e] -> e | _ -> assert false)
 
       | Sy.Lit (Sy.L_built n), _ ->
-        mk_builtin true n xs'
+        mk_builtin ~is_pos:true n xs'
 
       | Sy.Lit (Sy.L_neg_built n), _ ->
-        mk_builtin false n xs'
+        mk_builtin ~is_pos:false n xs'
 
       | Sy.Form (Sy.F_Unit b), _ ->
         begin match xs' with
@@ -2269,7 +2269,7 @@ let mk_match e cases =
   let mk_tester =
     match ty with
     | Ty.Tadt _ ->
-      (fun e name -> mk_builtin true (Sy.IsConstr name) [e])
+      (fun e name -> mk_builtin ~is_pos:true (Sy.IsConstr name) [e])
 
     | Ty.Trecord _ ->
       (fun _e _name -> assert false) (* no need to test for records *)
@@ -2345,7 +2345,7 @@ module Purification = struct
     purify_generic (fun l -> mk_distinct ~iff:true l) l
 
   and purify_builtin neg pred l =
-    purify_generic (fun l -> mk_builtin neg pred l) l
+    purify_generic (fun l -> mk_builtin ~is_pos:neg pred l) l
 
   and purify_predicate p is_neg =
     purify_generic (fun l ->

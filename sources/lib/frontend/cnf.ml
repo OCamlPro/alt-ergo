@@ -295,7 +295,7 @@ and make_trigger name up_qv hyp (e, from_user) =
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv) trs in
       let lit =
-        E.mk_builtin true Sy.LE
+        E.mk_builtin ~is_pos:true Sy.LE
           [make_term up_qv t1;
            make_term up_qv t2]
       in
@@ -306,7 +306,7 @@ and make_trigger name up_qv hyp (e, from_user) =
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv) trs in
       let lit =
-        E.mk_builtin true Sy.LT
+        E.mk_builtin ~is_pos:true Sy.LT
           [make_term up_qv t1;
            make_term up_qv t2]
       in
@@ -345,7 +345,7 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
           let lt = List.map (make_term up_qv) lt in
           E.mk_distinct ~iff:true lt
         | TAle [t1;t2] ->
-          E.mk_builtin true Sy.LE
+          E.mk_builtin ~is_pos:true Sy.LE
             [make_term up_qv t1;
              make_term up_qv t2]
         | TAlt [t1;t2] ->
@@ -360,10 +360,10 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
                    make_term up_qv one]
                   Ty.Tint
               in
-              E.mk_builtin true Sy.LE
+              E.mk_builtin ~is_pos:true Sy.LE
                 [make_term up_qv t1; tt2]
             | _ ->
-              E.mk_builtin true Sy.LT
+              E.mk_builtin ~is_pos:true Sy.LT
                 [make_term up_qv t1;
                  make_term up_qv t2]
           end

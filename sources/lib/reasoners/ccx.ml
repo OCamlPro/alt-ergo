@@ -669,7 +669,7 @@ module Main : S = struct
   (* End: new implementation of add, add_term, assume_literals and all that *)
 
   let case_split env ~for_model =
-    match Rel.case_split env.relation env.uf for_model with
+    match Rel.case_split env.relation env.uf ~for_model with
     | [] when for_model ->
       let l, uf = Uf.assign_next env.uf in
       (* try to not to modify uf in the future. It's currently done only

@@ -308,12 +308,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     ({gf with E.ff=clause}, dep) :: acc
 
-  let mk_theories_instances do_synt_ma remove_clauses env acc =
+  let mk_theories_instances do_syntactic_matching remove_clauses env acc =
     let t_match = Inst.matching_terms_info env.inst in
     let tbox = SAT.current_tbox env.satml in
     let tbox, l =
       Th.theories_instances
-        do_synt_ma t_match tbox (selector env) env.nb_mrounds 0
+        ~do_syntactic_matching t_match tbox (selector env) env.nb_mrounds 0
         [@ocaml.ppwarning "TODO: modifications made in tbox are lost! improve?"]
     in
     List.fold_left reduce_filters acc l, (match l with [] -> false | _ -> true)

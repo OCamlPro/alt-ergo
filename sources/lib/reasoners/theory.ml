@@ -326,7 +326,7 @@ module Main_Default : S = struct
       | [], _ ->
         begin
           Options.tool_req 3 "TR-CCX-CS-Case-Split";
-          let l, base_env = CC_X.case_split base_env for_model in
+          let l, base_env = CC_X.case_split base_env ~for_model in
           match l with
           | [] ->
             { t with gamma_finite = base_env; choices = List.rev dl }, ch
@@ -411,15 +411,15 @@ module Main_Default : S = struct
     Debug.begin_case_split t.choices;
     let r =
       try
-        if t.choices == [] then look_for_sat [] t t.gamma [] for_model
+        if t.choices == [] then look_for_sat [] t t.gamma [] ~for_model
         else
           try
             let env, ch = CC_X.assume_literals t.gamma_finite [] facts in
-            look_for_sat ch t env [] for_model
+            look_for_sat ch t env [] ~for_model
           with Ex.Inconsistent (dep, classes) ->
             Options.tool_req 3 "TR-CCX-CS-Case-Split-Erase-Choices";
             (* we replay the conflict in look_for_sat, so we can
-               	       safely ignore the explanation which is not useful *)
+               safely ignore the explanation which is not useful *)
             let uf =  CC_X.get_union_find t.gamma in
             let filt_choices = List.filter (filter_choice uf) t.choices in
             Debug.split_sat_contradicts_cs filt_choices;

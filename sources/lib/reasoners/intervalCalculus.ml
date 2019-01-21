@@ -883,9 +883,9 @@ let update_intervals are_eq env eqs expl (a, x, v) is_le =
   let b = Q.div (Q.mult Q.m_one v) a in
   let u =
     if Q.sign a > 0 then
-      I.new_borne_sup expl b is_le uints
+      I.new_borne_sup expl b ~is_le uints
     else
-      I.new_borne_inf expl b is_le uints in
+      I.new_borne_inf expl b ~is_le uints in
   let env = MX.n_add x (u, use_x) u0 env in
   let env =  tighten_non_lin are_eq x use_x env expl in
   env, (find_eq eqs x u env)
@@ -903,9 +903,9 @@ let update_ple0 are_eq env p0 is_le expl =
     let c = Q.minus c in
     let u =
       if change then
-        I.new_borne_inf expl c is_le (I.undefined ty)
+        I.new_borne_inf expl c ~is_le (I.undefined ty)
       else
-        I.new_borne_sup expl c is_le (I.undefined ty) in
+        I.new_borne_sup expl c ~is_le (I.undefined ty) in
     let u, pu =
       try
         (* p is in normal_form_pos because of the ite above *)
@@ -1136,7 +1136,7 @@ let refine_x_bounds ix env rels is_low =
          let b, ex_b, is_le = I.borne_inf ip in (* invariant, see above *)
          let b = Q.div b m_cx in
          let func = if is_low then I.new_borne_inf else I.new_borne_sup in
-         func (Explanation.union ineq_ex ex_b) b is_le ix
+         func (Explanation.union ineq_ex ex_b) b ~is_le ix
        with I.No_finite_bound -> ix
     )rels ix
 
@@ -1169,7 +1169,7 @@ let refine_p_bounds ip p env rels is_low =
          let b = Q.mult cx bx in
          let b = Q.add (Q.div b md0) mc0 in (* final bnd of p0 *)
          let func = if is_low then I.new_borne_inf else I.new_borne_sup in
-         func (Explanation.union ineq_ex ex_b) b is_le ip
+         func (Explanation.union ineq_ex ex_b) b ~is_le ip
        with Exit | I.No_finite_bound -> ip
     )rels ip
 
@@ -1847,7 +1847,7 @@ let model_from_unbounded_domains =
 
 
 let case_split env uf ~for_model =
-  let res = default_case_split env uf for_model in
+  let res = default_case_split env uf ~for_model in
   match res with
   | [] ->
     if not for_model then []
