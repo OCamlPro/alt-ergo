@@ -296,8 +296,7 @@ let type_var_desc env p loc =
   with Not_found ->
   match Env.fresh_type env p loc with
   | s, { Env.args = []; result = ty} ->
-    Options.tool_req 1 (append_type "TR-Typing-Var$_\\Delta$ type" ty);
-    TTvar s , ty
+    TTapp (s, []) , ty
   | _ -> error (ShouldBeApply p) loc
 
 let rec type_term env f =
