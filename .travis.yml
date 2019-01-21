@@ -65,7 +65,8 @@ before_install:
 # Install dependencies
 install:
   - opam pin add --no-action ./sources
-  - opam install --deps-only alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+  - opam install --deps-only alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo ||
+    ( opam update && opam install --deps-only alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo )
 
 # Use the TO_TEST env variable to decide what script to run
 script:
