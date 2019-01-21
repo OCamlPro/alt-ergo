@@ -15,7 +15,7 @@ addons:
     sources:
       - avsm
     packages:
-      - opam
+      - opam>=2
       - libgmp-dev
       - libgtksourceview2.0-dev
       - zlib1g-dev
