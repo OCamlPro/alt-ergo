@@ -56,7 +56,7 @@ let is_ite =
   fun t ->
     match E.term_view t with
     | E.Not_a_term _ -> assert false
-    | E.Term {E.f ; xs=[p;t1;t2]} when Symbols.equal f ite ->
+    | E.Term { E.f ; xs = [p;t1;t2]; _ } when Symbols.equal f ite ->
       Some (p, t1, t2)
     | _ ->
       None

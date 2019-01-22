@@ -69,7 +69,8 @@ module Types = struct
 
   let check_number_args loc lty ty =
     match ty with
-    | Ty.Text (lty', s) | Ty.Trecord {Ty.args=lty'; name=s}
+    | Ty.Text (lty', s)
+    | Ty.Trecord { Ty.args = lty'; name = s; _ }
     | Ty.Tadt (s,lty') ->
       if List.length lty <> List.length lty' then
         error (WrongNumberofArgs (Hstring.view s)) loc;
@@ -90,7 +91,7 @@ module Types = struct
         ) lpp lvars
     with Invalid_argument _ -> false
 
-  let rec ty_of_pp loc env rectype = function
+  let rec ty_of_pp _loc env rectype = function
     | PPTint -> Ty.Tint
     | PPTbool -> Ty.Tbool
     | PPTunit -> Ty.Tunit
@@ -170,7 +171,7 @@ module Types = struct
     in
     check_duplicates SH.empty lbs;
     match ty with
-    | Ty.Trecord {Ty.lbs=l} ->
+    | Ty.Trecord { Ty.lbs = l; _ } ->
       if List.length lbs <> List.length l then
         error WrongNumberOfLabels loc;
       List.iter
@@ -198,7 +199,7 @@ module Types = struct
     | PPTexternal (args, _, _) ->
       List.iter monomorphized args
 
-    | pp_ty -> ()
+    | _ -> ()
 
 end
 
@@ -302,10 +303,9 @@ module Env = struct
     let kind = if record then RecordDestr else AdtDestr in
     add_logics ~kind env mk_sy [destr, ""] pp_profile loc
 
+  let find { var_map = m; _ } n = MString.find n m
 
-  let find {var_map=m} n = MString.find n m
-
-  let list_of {var_map=m} = MString.fold (fun _ c acc -> c::acc) m []
+  let list_of { var_map = m; _ } = MString.fold (fun _ c acc -> c::acc) m []
 
   let add_type_decl ?(recursive=false) env vars id body loc =
     let ty, types = Types.add_decl ~recursive env.types vars id body loc in
@@ -365,7 +365,7 @@ let filter_patterns pats ty_body loc =
     List.fold_left
       (fun (miss, filtered_pats, dead) ((p, _) as u) ->
          match p with
-         | Constr {name} ->
+         | Constr { name; _ } ->
            assert (HSS.mem name cases); (* pattern is well typed *)
            if HSS.mem name miss then (* not encountered yet *)
              HSS.remove name miss, u :: filtered_pats, dead
@@ -387,7 +387,7 @@ let check_pattern_matching missing dead loc =
     let dead =
       List.rev_map
         (function
-          | Constr { name } -> name
+          | Constr { name; _ } -> name
           | Var v -> (Var.view v).Var.hs
         ) dead
     in
@@ -400,7 +400,7 @@ let mk_adequate_app p s te_args ty logic_kind =
     (* symbol 's' alreadt contains the information *)
     TTapp(s, te_args)
 
-  | Env.RecordConstr, _, Ty.Trecord {Ty.lbs} ->
+  | Env.RecordConstr, _, Ty.Trecord { Ty.lbs; _ } ->
     let lbs =
       try List.map2 (fun (hs, _) e -> hs, e) lbs te_args
       with Invalid_argument _ -> assert false
@@ -443,7 +443,7 @@ let rec type_term ?(call_from_type_form=false) env f =
     | PPapp(p,args) ->
       begin
         let te_args = List.map (type_term env) args in
-        let lt_args =  List.map (fun {c={tt_ty=t}} -> t) te_args in
+        let lt_args =  List.map (fun { c = { tt_ty = t; _ }; _ } -> t) te_args in
         let s, {Env.args = lt; result = t}, kind = Env.fresh_type env p loc in
         try
           List.iter2 Ty.unify lt lt_args;
@@ -487,10 +487,10 @@ let rec type_term ?(call_from_type_form=false) env f =
           TTinfix(te1,s,te2) , ty1
         | _ -> error (ShouldHaveTypeInt ty1) t1.pp_loc
       end
-    | PPprefix(PPneg, {pp_desc=PPconst (ConstInt n)}) ->
+    | PPprefix(PPneg, { pp_desc=PPconst (ConstInt n); _ }) ->
       Options.tool_req 1 (append_type "TR-Typing-OpUnarith type" Ty.Tint);
       TTconst(Tint ("-"^n)), Ty.Tint
-    | PPprefix(PPneg, {pp_desc=PPconst (ConstReal n)}) ->
+    | PPprefix(PPneg, { pp_desc=PPconst (ConstReal n); _ }) ->
       Options.tool_req 1 (append_type "TR-Typing-OpUnarith type" Ty.Treal);
       TTconst(Treal (Num.minus_num n)), Ty.Treal
     | PPprefix(PPneg, e) ->
@@ -515,8 +515,8 @@ let rec type_term ?(call_from_type_form=false) env f =
         | _ , Ty.Tbitv _ -> error (ShouldHaveTypeBitv ty1) t1.pp_loc
         | _ -> error (ShouldHaveTypeBitv ty1) t1.pp_loc
       end
-    | PPextract(e, ({pp_desc=PPconst(ConstInt i)} as ei),
-                ({pp_desc=PPconst(ConstInt j)} as ej)) ->
+    | PPextract(e, ({ pp_desc=PPconst(ConstInt i); _ } as ei),
+                ({ pp_desc = PPconst(ConstInt j); _ } as ej)) ->
       begin
         let te = type_term env e in
         let tye = Ty.shorten te.c.tt_ty in
@@ -591,7 +591,7 @@ let rec type_term ?(call_from_type_form=false) env f =
         let te = type_term env t in
         let ty = Ty.shorten te.c.tt_ty in
         match ty with
-        | Ty.Trecord {Ty.name=g; lbs=lbs} ->
+        | Ty.Trecord { Ty.name = g; lbs; _ } ->
           begin
             try
               let a = Hstring.make a in
@@ -611,7 +611,7 @@ let rec type_term ?(call_from_type_form=false) env f =
         let ty = Types.from_labels env.Env.types lbs loc in
         let ty, _ = Ty.fresh (Ty.shorten ty) Ty.esubst in
         match ty with
-        | Ty.Trecord {Ty.lbs=ty_lbs} ->
+        | Ty.Trecord { Ty.lbs=ty_lbs; _ } ->
           begin
             try
               let lbs =
@@ -633,7 +633,7 @@ let rec type_term ?(call_from_type_form=false) env f =
             (fun (lb, t) -> Hstring.make lb, (type_term env t, t.pp_loc)) lbs in
         let ty = Ty.shorten te.c.tt_ty in
         match ty with
-        | Ty.Trecord {Ty.lbs=ty_lbs} ->
+        | Ty.Trecord { Ty.lbs = ty_lbs; _ } ->
           let nlbs =
             List.map
               (fun (lb, ty_lb) ->
@@ -725,7 +725,7 @@ let rec type_term ?(call_from_type_form=false) env f =
           begin match Ty.type_body name params with
             | Ty.Adt cases -> cases
           end
-        | Ty.Trecord {Ty.record_constr; lbs} ->
+        | Ty.Trecord { Ty.record_constr; lbs; _ } ->
           [{Ty.constr = record_constr; destrs = lbs}]
         | Ty.Tsum (_,l) ->
           List.map (fun e -> {Ty.constr = e; destrs = []}) l
@@ -761,7 +761,6 @@ let rec type_term ?(call_from_type_form=false) env f =
       TTform (type_form env f), Ty.Tbool
   in
   {c = { tt_desc = e ; tt_ty = Ty.shorten ty }; annot = new_id ()}
-
 
 
 and join_forall f = match f.pp_desc with
@@ -878,7 +877,7 @@ and type_form ?(in_theory=false) env f =
     | PPapp(p,args ) ->
       Options.tool_req 1 "TR-Typing-App$_F$";
       let te_args = List.map (type_term env) args in
-      let lt_args =  List.map (fun {c={tt_ty=t}} -> t) te_args in
+      let lt_args =  List.map (fun { c = { tt_ty = t; _}; _ } -> t) te_args in
       let s , { Env.args = lt; result }, kd = Env.fresh_type env p f.pp_loc in
       begin
         try
@@ -908,7 +907,9 @@ and type_form ?(in_theory=false) env f =
       let r =
         begin
           let te_args = List.map (type_term env) args in
-          let lt_args =  List.map (fun {c={tt_ty=t}} -> t) te_args in
+          let lt_args =  List.map (
+              fun { c = { tt_ty = t; _ }; _ } -> t
+            ) te_args in
           try
             let t = match lt_args with
               | t::_ -> t
@@ -923,7 +924,7 @@ and type_form ?(in_theory=false) env f =
       in r
 
     | PPinfix
-        ({pp_desc = PPinfix (_, (PPlt|PPle|PPgt|PPge|PPeq|PPneq), a)} as p,
+        ({ pp_desc = PPinfix (_, (PPlt|PPle|PPgt|PPge|PPeq|PPneq), a); _ } as p,
          (PPlt | PPle | PPgt | PPge | PPeq | PPneq as r), b) ->
       Options.tool_req 1 "TR-Typing-OpComp$_F$";
       let r =
@@ -1070,7 +1071,7 @@ and type_form ?(in_theory=false) env f =
              let xx, tty =
                try
                  (* try to type e as a term *)
-                 let {c= { tt_ty = ttype }} as tt = type_term env e in
+                 let { c = { tt_ty = ttype; _ }; _} as tt = type_term env e in
                  TletTerm tt, ttype
                with _ ->
                  (* try to type e as a form *)
@@ -1113,7 +1114,7 @@ and type_form ?(in_theory=false) env f =
           begin match Ty.type_body name params with
             | Ty.Adt cases -> cases
           end
-        | Ty.Trecord {Ty.record_constr; lbs} ->
+        | Ty.Trecord { Ty.record_constr; lbs; _ } ->
           [{Ty.constr = record_constr ; destrs = lbs}]
 
         | Ty.Tsum (_,l) ->
@@ -1221,9 +1222,10 @@ and type_trigger in_theory env l =
     )l
 
 let make_rules loc f = match f.c with
-  | TFforall {qf_bvars = vars; qf_form = {c = TFatom {c = TAeq [t1; t2]}}} ->
+  | TFforall { qf_bvars = vars;
+               qf_form = { c = TFatom { c = TAeq [t1; t2]; _ }; _ }; _ } ->
     {rwt_vars = vars; rwt_left = t1; rwt_right = t2}
-  | TFatom {c = TAeq [t1; t2]} ->
+  | TFatom { c = TAeq [t1; t2]; _} ->
     {rwt_vars = []; rwt_left = t1; rwt_right = t2}
   | _ -> error SyntaxError loc
 

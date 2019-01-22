@@ -128,7 +128,7 @@ module Make (X : S) = struct
         let c =  compare_maps (map_to_list p1.m) (map_to_list p2.m) in
         if c = 0 then Q.compare p1.c p2.c else c
 
-  let equal {m=m1; c=c1} {m=m2; c=c2} =
+  let equal { m = m1; c = c1; _ } { m = m2; c = c2; _ } =
     Q.equal c1 c2 && M.equal Q.equal m1 m2
 
   let hash p =
@@ -301,14 +301,14 @@ module Make (X : S) = struct
         p.m None
     with Exit -> None
 
-  let ppmc_denominators {m=m} =
+  let ppmc_denominators { m; _ } =
     let res =
       M.fold
         (fun k c acc -> Z.my_lcm (Q.den c) acc)
         m Z.one in
     Q.abs (Q.from_z res)
 
-  let pgcd_numerators {m=m} =
+  let pgcd_numerators { m; _ } =
     let res =
       M.fold
         (fun k c acc -> Z.my_gcd (Q.num c) acc)
@@ -316,7 +316,7 @@ module Make (X : S) = struct
     in
     Q.abs (Q.from_z res)
 
-  let normal_form ({ m = m; c = c } as p) =
+  let normal_form ({ m; c; _ } as p) =
     if M.is_empty m then
       { p with c = Q.zero }, p.c, Q.one
     else

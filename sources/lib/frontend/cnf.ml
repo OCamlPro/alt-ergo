@@ -159,7 +159,7 @@ let clean_trigger name trig =
       trig'
 
 let rec make_term up_qv t =
-  let rec mk_term {c = {tt_ty=ty; tt_desc=tt}} =
+  let rec mk_term { c = { tt_ty = ty; tt_desc = tt; _ }; _ } =
     let ty = Ty.shorten ty in
     match tt with
     | TTconst Ttrue ->
@@ -268,7 +268,7 @@ let rec make_term up_qv t =
 
 and make_trigger name up_qv hyp (e, from_user) =
   let content, guard = match e with
-    | [{c={ tt_desc = TTapp(s, t1::t2::l)}}]
+    | [{ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }]
       when Sy.equal s Sy.fake_eq ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv) trs in
@@ -279,7 +279,7 @@ and make_trigger name up_qv hyp (e, from_user) =
       in
       trs, Some lit
 
-    | [{c={ tt_desc = TTapp(s, t1::t2::l) } }]
+    | [{ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }]
       when Sy.equal s Sy.fake_neq ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv) trs in
@@ -290,7 +290,7 @@ and make_trigger name up_qv hyp (e, from_user) =
       in
       trs, Some lit
 
-    | [{c={ tt_desc = TTapp(s, t1::t2::l) } }]
+    | [{ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }]
       when Sy.equal s Sy.fake_le ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv) trs in
@@ -301,7 +301,7 @@ and make_trigger name up_qv hyp (e, from_user) =
       in
       trs, Some lit
 
-    | [{c={ tt_desc = TTapp(s, t1::t2::l) } }]
+    | [{ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }]
       when Sy.equal s Sy.fake_lt ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv) trs in

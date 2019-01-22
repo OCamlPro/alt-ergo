@@ -152,7 +152,7 @@ let deduce_is_constr uf r h eqs env ex =
         begin
           match E.term_view t with
           | E.Not_a_term _ -> assert false
-          | E.Term {E.ty = Ty.Tadt (name,params) as ty} ->
+          | E.Term { E.ty = Ty.Tadt (name,params) as ty; _ } ->
             (* Only do this deduction for finite types ??
                  may not terminate in some cases otherwise.
                  eg. type t = A of t
@@ -163,7 +163,7 @@ let deduce_is_constr uf r h eqs env ex =
               | Ty.Adt cases -> cases
             in
             let {Ty.destrs; _} =
-              try List.find (fun {Ty.constr = c} -> Hstring.equal h c) cases
+              try List.find (fun { Ty.constr = c; _ } -> Hstring.equal h c) cases
               with Not_found -> assert false
             in
             let xs = List.map (fun (_, ty) -> E.fresh_name ty) destrs in
@@ -226,7 +226,7 @@ let update_tester r hs env =
 
 let trivial_tester r hs =
   match embed r with (* can filter further/better *)
-  | Adt.Constr {c_name} -> Hstring.equal c_name hs
+  | Adt.Constr { c_name; _ } -> Hstring.equal c_name hs
   | _ -> false
 
 let constr_of_destr ty dest =
@@ -286,7 +286,7 @@ let add_guarded_destr env uf t hs e t_ty =
 let add env (uf:uf) (r:r) t =
   if Options.disable_adts () then env
   else
-    let {E.f=sy; xs; ty} = match E.term_view t with
+    let { E.f = sy; xs; ty; _ } = match E.term_view t with
       | E.Term t -> t
       | E.Not_a_term _ -> assert false
     in
@@ -327,8 +327,8 @@ let count_splits env la =
 
 let add_diseq uf hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
-  | Adt.Alien r , Adt.Constr {c_name = h; c_args = []}
-  | Adt.Constr {c_name = h; c_args = []}, Adt.Alien r  ->
+  | Adt.Alien r , Adt.Constr { c_name = h; c_args = []; _ }
+  | Adt.Constr { c_name = h; c_args = []; _ }, Adt.Alien r  ->
     (* not correct with args *)
     let enum, ex =
       try MX.find r env.domains with Not_found -> hss, Ex.empty
@@ -385,7 +385,7 @@ let assoc_and_remove_selector hs r env =
 
 let assume_is_constr uf hs r dep env eqs =
   match embed r with
-  | Adt.Constr{c_name} when not (Hs.equal c_name hs) ->
+  | Adt.Constr{ c_name; _ } when not (Hs.equal c_name hs) ->
     raise (Ex.Inconsistent (dep, env.classes));
   | _ ->
     if debug_adt () then
@@ -418,7 +418,7 @@ let assume_is_constr uf hs r dep env eqs =
 
 let assume_not_is_constr uf hs r dep env eqs =
   match embed r with
-  | Adt.Constr{c_name} when Hs.equal c_name hs ->
+  | Adt.Constr{ c_name; _ } when Hs.equal c_name hs ->
     raise (Ex.Inconsistent (dep, env.classes));
   | _ ->
 
@@ -449,7 +449,8 @@ let assume_not_is_constr uf hs r dep env eqs =
 (* dot it modulo equivalence class ? or is it sufficient ? *)
 let add_eq uf hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
-  | Adt.Alien r, Adt.Constr {c_name=h} | Adt.Constr {c_name=h}, Adt.Alien r  ->
+  | Adt.Alien r, Adt.Constr { c_name = h; _ }
+  | Adt.Constr { c_name = h; _ }, Adt.Alien r  ->
     let enum, ex =
       try MX.find r env.domains with Not_found -> hss, Ex.empty
     in

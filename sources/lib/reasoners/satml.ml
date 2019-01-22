@@ -125,7 +125,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       mutable trail_lim : int Vec.t;
 
       (* Tete de la File des faits unitaires a propager.
-         	 C'est un index vers le trail *)
+         C'est un index vers le trail *)
       mutable qhead : int;
 
       (* Nombre des assignements top-level depuis la derniere
@@ -951,7 +951,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
            if unsat_core = true *)
         assert false
 
-      | [{atoms=atoms}] ->
+      | [{ atoms; _ }] ->
         assert (Options.unsat_core ());
         let l = ref linit in
         for i = 0 to Vec.size atoms - 1 do
@@ -1008,7 +1008,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         Ex.fold_atoms
           (fun ex l ->
              match ex with
-             | Ex.Literal {var=v} ->
+             | Ex.Literal { var = v; _ } ->
                let l = List.rev_append v.vpremise l in
                begin match v.reason with
                  | None -> l

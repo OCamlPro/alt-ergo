@@ -75,7 +75,7 @@ module Shostak (X : ALIEN) = struct
     | Alien x ->
       fprintf fmt "%a" X.print x
 
-    | Constr {c_name; c_args} ->
+    | Constr { c_name; c_args; _ } ->
       fprintf fmt "%a" Hs.print c_name;
       begin
         match c_args with
@@ -101,7 +101,7 @@ module Shostak (X : ALIEN) = struct
       X.embed u
         [@ocaml.ppwarning "TODO: canonize Constr(list of selects)"]
 
-    | Select {d_arg; d_name} ->
+    | Select { d_arg; d_name; _ } ->
       match embed d_arg with
       | Constr c ->
         begin
@@ -145,7 +145,7 @@ module Shostak (X : ALIEN) = struct
   let make t =
     assert (not (Options.disable_adts ()));
     if debug_adt () then eprintf "[ADTs] make %a@." E.print t;
-    let {E.f; xs; ty} = match E.term_view t with
+    let { E.f; xs; ty; _ } = match E.term_view t with
       | E.Term t -> t
       | E.Not_a_term _ -> assert false
     in
@@ -284,7 +284,7 @@ module Shostak (X : ALIEN) = struct
   let abstract_selectors p acc =
     match p with
     | Alien r -> assert false (* handled in Combine *)
-    | Constr { c_args } ->
+    | Constr { c_args; _ } ->
       let same = ref true in
       let acc, args =
         List.fold_left (fun (acc, l) (lbl, x) ->
@@ -301,14 +301,14 @@ module Shostak (X : ALIEN) = struct
        should probably reconstruct a new 'p' using args
     *)
 
-    | Tester {t_arg} ->
+    | Tester { t_arg; _ } ->
       let s_arg, acc = X.abstract_selectors t_arg acc in
       if not (X.equal s_arg t_arg)
           [@ocaml.ppwarning "TODO: abstract Selectors: case to test"] then
         assert false;
       is_mine p, acc
 
-    | Select ({d_arg} as s)  [@ocaml.ppwarning "TODO: abstract Selectors"] ->
+    | Select ({ d_arg; _ } as s)  [@ocaml.ppwarning "TODO: abstract Selectors"] ->
       (* no need to abstract THIS selector. It's necessiraly
          toplevel in ADTs *)
       (*

@@ -109,19 +109,19 @@ module Make (X : Arg) : S with type theory = X.t = struct
       if debug_matching() >= 3 then begin
         fprintf fmt "@.match_pat_modulo: %a  with accumulated substs@."
           E.print pat;
-        List.iter (fun {sbs=sbs; sty=sty} ->
+        List.iter (fun { sbs; sty; _ } ->
             fprintf fmt ">>> sbs= %a | sty= %a@."
               (SubstE.print E.print) sbs Ty.print_subst sty
           )lsubsts
       end
 
-    let match_one_pat {sbs=sbs; sty=sty} pat0 =
+    let match_one_pat { sbs; sty; _ } pat0 =
       if debug_matching() >= 3 then
         fprintf fmt "@.match_pat: %a  with subst:  sbs= %a | sty= %a @."
           E.print pat0 (SubstE.print E.print) sbs Ty.print_subst sty
 
 
-    let match_one_pat_against {sbs=sbs; sty=sty} pat0 t =
+    let match_one_pat_against { sbs; sty; _ } pat0 t =
       if debug_matching() >= 3 then
         fprintf fmt
           "@.match_pat: %a  against term %a@.with subst:  sbs= %a | sty= %a @."
@@ -130,13 +130,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
           (SubstE.print E.print) sbs
           Ty.print_subst sty
 
-    let match_term {sbs=sbs; sty=sty} t pat =
+    let match_term { sbs; sty; _ } t pat =
       if debug_matching() >= 3 then
         fprintf fmt
           "[match_term] I match %a against %a with subst: sbs=%a | sty= %a@."
           E.print pat E.print t (SubstE.print E.print) sbs Ty.print_subst sty
 
-    let match_list {sbs=sbs; sty=sty} pats xs =
+    let match_list { sbs; sty; _ } pats xs =
       if debug_matching() >= 3 then
         fprintf fmt
           "@.[match_list] I match %a against %a with subst: sbs=%a | sty= %a@."
@@ -181,7 +181,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       if ME.mem t env.info then env
       else
         match E.term_view t with
-        | E.Term {E.f=f; xs=xs} ->
+        | E.Term { E.f = f; xs = xs; _ } ->
           let env =
             let map_f =
               try SubstE.find f env.fils with Not_found -> ME.empty in
@@ -233,7 +233,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
                 let s_ty = Ty.matching s_ty ty (E.type_info t) in
                 let ng , but =
                   try
-                    let {age=ng;lem_orig=lem'; but=bt} = ME.find t env.info in
+                    let { age = ng; lem_orig = lem'; but = bt; _ } =
+                      ME.find t env.info
+                    in
                     max ng g , bt || b
                   with Not_found -> g , b
                 in
@@ -279,7 +281,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let are_equal_full tbox t s =
     wrap_are_equal_generic tbox t s true cache_are_equal_full
 
-  let add_msymb tbox f t ({sbs=s_t} as sg) max_t_depth =
+  let add_msymb tbox f t ({ sbs = s_t; _ } as sg) max_t_depth =
     if SubstE.mem f s_t then
       let s = SubstE.find f s_t in
       if are_equal_full tbox t s == None then raise Echec;
@@ -298,7 +300,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     | _ , [] -> l1
     | _ -> List.fold_left (fun acc e -> e :: acc) l2 (List.rev l1)
 
-  let xs_modulo_records t { Ty.lbs = lbs } =
+  let xs_modulo_records t { Ty.lbs; _  } =
     List.rev
       (List.rev_map
          (fun (hs, ty) ->
@@ -345,7 +347,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let linear_arithmetic_matching f_pat pats ty_pat t =
     match E.term_view t with
     | E.Not_a_term _ -> assert false
-    | E.Term {E.f=f ; xs; ty} ->
+    | E.Term { E.f = f; xs; ty; _ } ->
       if not (Options.arith_matching ()) ||
          ty != Ty.Tint && ty != Ty.Treal then []
       else
@@ -359,10 +361,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
           else if E.is_ground p1 then [minus_of_plus t p1 ty] else []
         | _ -> []
 
-  let rec match_term mconf env tbox ({sty=s_ty;gen=g;goal=b} as sg) pat t =
+  let rec match_term mconf env tbox
+      ({ sty = s_ty; gen = g; goal = b; _ } as sg) pat t =
     Options.exec_thread_yield ();
     Debug.match_term sg t pat;
-    let {E.f=f_pat;xs=pats;ty=ty_pat} =
+    let { E.f = f_pat; xs = pats; ty = ty_pat; _ } =
       match E.term_view pat with
       | E.Not_a_term _ -> assert false
       | E.Term tt -> tt
@@ -399,7 +402,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           let cl =
             List.fold_left
               (fun l t ->
-                 let {E.f=f; xs=xs; ty=ty} =
+                 let { E.f = f; xs = xs; ty = ty; _ } =
                    match E.term_view t with
                    | E.Not_a_term _ -> assert false
                    | E.Term tt -> tt
@@ -443,7 +446,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let match_one_pat mconf env tbox pat0 lsbt_acc sg =
     Debug.match_one_pat sg pat0;
     let pat = E.apply_subst (sg.sbs, sg.sty) pat0 in
-    let {E.f=f; xs=pats; ty=ty} =
+    let { E.f = f; xs = pats; ty = ty; _ } =
       match E.term_view pat with
       | E.Not_a_term _ -> assert false
       | E.Term tt -> tt
@@ -451,7 +454,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     match f with
     | Symbols.Var _ -> all_terms f ty env tbox sg lsbt_acc
     | _ ->
-      let {sty=sty; gen=g; goal=b} = sg in
+      let { sty; gen = g; goal = b; _ } = sg in
       let f_aux t xs lsbt =
         (* maybe put 3 as a rational parameter in the future *)
         let too_big = (E.depth t) > 3 * env.max_t_depth in
@@ -480,8 +483,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let trig_weight s t =
     match E.term_view s, E.term_view t with
     | E.Not_a_term _, _ | _, E.Not_a_term _ -> assert false
-    | E.Term {E.f=Symbols.Name _}, E.Term {E.f=Symbols.Op _}   -> -1
-    | E.Term {E.f=Symbols.Op _}  , E.Term {E.f=Symbols.Name _} -> 1
+    | E.Term { E.f = Symbols.Name _; _ },
+      E.Term { E.f = Symbols.Op _; _ }   -> -1
+    | E.Term { E.f = Symbols.Op _; _ },
+      E.Term { E.f = Symbols.Name _; _ } -> 1
     | _ -> (E.depth t) - (E.depth s)
 
 
@@ -562,7 +567,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let fully_uninterpreted_head s =
     match E.term_view s with
     | E.Not_a_term _ -> assert false
-    | E.Term {E.f = Symbols.Op _} -> false
+    | E.Term { E.f = Symbols.Op _; _ } -> false
     | _ -> true
 
   (* this function removes "big triggers" that are subsumed by smaller ones *)
@@ -642,7 +647,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     ME.fold
       (fun lem (age, dep) env ->
          match E.form_view lem with
-         | E.Lemma ({E.user_trs = tgs0; main = f; name; binders} as q) ->
+         | E.Lemma ({ E.user_trs = tgs0; main = f; name; binders; _ } as q) ->
            let tgs =
              match mconf.Util.backward with
              | Util.Normal   -> triggers_of q mconf

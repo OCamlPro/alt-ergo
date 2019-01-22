@@ -97,7 +97,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         printf "[sat] unsat of %a ?@." E.print gf.E.ff
 
     let assume gf =
-      let {E.ff=f;age=age;lem=lem;mf=mf;from_terms=terms} = gf in
+      let { E.ff = f; age = age; lem = lem;
+            mf = mf; from_terms = terms; _ } = gf in
       if debug_sat () then begin
         match E.form_view f with
         | E.Not_a_form -> assert false
@@ -191,7 +192,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let generated_instances l =
       if verbose () && debug_sat () then begin
         eprintf "[new_instances] %d generated@." (List.length l);
-        List.iter (fun {E.ff=f; origin_name; lem} ->
+        List.iter (fun { E.ff = f; origin_name; lem; _ } ->
             eprintf " instance(origin = %s): %a@." origin_name E.print f;
           ) l
       end
@@ -205,7 +206,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let generated_skolems l =
       if verbose () && debug_sat () then begin
         eprintf "[new_skolems] %d generated@." (List.length l);
-        List.iter (fun {E.ff=f} -> eprintf " skolem: %a@." E.print f) l
+        List.iter (fun { E.ff = f; _ } -> eprintf " skolem: %a@." E.print f) l
       end
 
     let atoms_from_sat_branch f =
@@ -369,7 +370,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          match literals_of_ex dep with
          | []  ->
            gf :: acc
-         | [{Atom.lit}] ->
+         | [{ Atom.lit; _ }] ->
            {gf with
             E.ff =
               E.mk_or gf.E.ff (E.neg lit) false 0} :: acc
@@ -464,7 +465,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          if verbose () then
            fprintf fmt "expand skolem of %a@.@." E.print a;
          try
-           let {E.ff=f} as gf = ME.find a env.skolems in
+           let { E.ff = f; _ } as gf = ME.find a env.skolems in
            if not (Options.cdcl_tableaux ()) &&
               ME.mem f env.gamma then acc
            else gf :: acc
@@ -666,7 +667,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   }
 
   let pre_assume (env, acc) gf =
-    let {E.ff=f} = gf in
+    let { E.ff = f; _ } = gf in
     if debug_sat() then
       fprintf fmt "Entry of pre_assume: Given %a@.@." E.print f;
     if SE.mem f acc.seen_f then env, acc
@@ -756,7 +757,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             env, acc
 
   let cdcl_assume env pending ~dec_lvl =
-    let { seen_f; activate; new_vars; unit; nunit; updated } = pending in
+    let { seen_f; activate; new_vars; unit; nunit; updated; _ } = pending in
     (*
     fprintf fmt "pending : %d distinct forms@." (SE.cardinal seen_f);
     fprintf fmt "pending : %d to activate@." (SFF.cardinal activate);
@@ -938,7 +939,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let max_term_depth_in_sat env =
     let aux mx f = Pervasives.max mx (E.depth f) in
     let max_t = ME.fold (fun f _ mx -> aux mx f) env.gamma 0 in
-    ME.fold (fun _ ({E.ff=f}, _dep) mx -> aux mx f) env.ground_preds max_t
+    ME.fold (fun _ ({ E.ff = f; _ }, _) mx -> aux mx f) env.ground_preds max_t
 
 
   let checks_implemented_features () =

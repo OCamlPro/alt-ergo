@@ -229,12 +229,12 @@ module Main : S = struct
 
   let equal_only_by_congruence env facts t1 t2 =
     if not (E.equal t1 t2) then
-      let {E.f=f1; xs=xs1; ty=ty1} =
+      let { E.f = f1; xs = xs1; ty = ty1; _ } =
         match E.term_view t1 with
         | E.Not_a_term _ -> assert false
         | E.Term tt -> tt
       in
-      let {E.f=f2; xs=xs2; ty=ty2} =
+      let { E.f = f2; xs = xs2; ty = ty2; _ } =
         match E.term_view t2 with
         | E.Not_a_term _ -> assert false
         | E.Term tt -> tt
@@ -249,8 +249,8 @@ module Main : S = struct
 
   let congruents env facts t1 s =
     match E.term_view t1 with
-    | E.Term {E.xs=[]} -> ()
-    | E.Term {E.f; ty} when X.fully_interpreted f ty -> ()
+    | E.Term { E.xs = []; _ } -> ()
+    | E.Term { E.f; ty; _ } when X.fully_interpreted f ty -> ()
     | E.Term _ -> SE.iter (equal_only_by_congruence env facts t1) s
     | E.Not_a_term _ -> assert false
 
@@ -314,13 +314,13 @@ module Main : S = struct
     | Some t1, true ->  (* original term *)
       match E.term_view t1 with
       | E.Not_a_term _ -> assert false
-      | E.Term {E.f=f1 ; xs=[x]} ->
+      | E.Term { E.f = f1; xs = [x]; _ } ->
         let ty_x = Expr.type_info x in
         List.iter
           (fun t2 ->
              match E.term_view t2 with
              | E.Not_a_term _ -> assert false
-             | E.Term {E.f=f2 ; xs=[y]} when Sy.equal f1 f2 ->
+             | E.Term { E.f = f2 ; xs = [y]; _ } when Sy.equal f1 f2 ->
                let ty_y = Expr.type_info y in
                if Ty.equal ty_x ty_y then
                  begin match Uf.are_distinct env.uf t1 t2 with
@@ -448,7 +448,7 @@ module Main : S = struct
       Debug.add_to_use t;
 
       (* we add t's arguments in env *)
-      let {E.f = f; xs = xs} =
+      let { E.f; xs; _ } =
         match E.term_view t with
         | E.Not_a_term _ -> assert false (* see what to do here *)
         | E.Term tt -> tt

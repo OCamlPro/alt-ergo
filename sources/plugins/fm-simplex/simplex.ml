@@ -101,7 +101,7 @@ module Simplex (C : Coef_Type) = struct
         let z = ref 0 in
         let nz = ref 0 in
         List.iter
-          (fun (_,{a2=a2}) ->
+          (fun (_, { a2 ; _ }) ->
              Array.iter (fun v -> incr (if Q.is_zero v then z else nz)) a2
           )matrix;
         fprintf fmt "zero-cells:     %d@." !z;
@@ -148,7 +148,7 @@ module Simplex (C : Coef_Type) = struct
       end
 
 
-    let max_poly {a2=a2} =
+    let max_poly { a2 ; _ } =
       Array.fold_left (fun n v -> max n (String.length (C.to_string v))) 0 a2
 
     let max_sys ctx = List.fold_left (fun n (_,p) -> max n (max_poly p)) 0 ctx
@@ -895,7 +895,7 @@ module Simplex (C : Coef_Type) = struct
       | E_unsat(ctx,co)    -> I_unsat(ctx,co)
 
 
-    let infos_of distr q {c2=c2} ctx =
+    let infos_of distr q { c2 ; _ } ctx =
       let acc0 =
         List.fold_left
           (fun acc (i,p) ->

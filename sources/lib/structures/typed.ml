@@ -312,7 +312,7 @@ and print_formula fmt f =
       print_formula cond print_formula f1 print_formula f2
   | TFop(op, [f1; f2]) ->
     fprintf fmt "%a %s %a" print_formula f1 (string_of_op op) print_formula f2
-  | TFforall {qf_bvars = l; qf_triggers = t; qf_form = f} ->
+  | TFforall { qf_bvars = l; qf_triggers = t; qf_form = f; _ } ->
     fprintf fmt "forall %a [%a]. %a"
       print_binders l print_triggers t print_formula f
 

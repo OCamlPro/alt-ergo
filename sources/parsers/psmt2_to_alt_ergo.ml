@@ -296,7 +296,7 @@ module Translate = struct
 
   let name_of_assert term =
     match term.c with
-    | TermExclimationPt(term,[{c = Named s}]) -> Some s.c
+    | TermExclimationPt(term,[{ c = Named s; _ }]) -> Some s.c
     | _ -> None
 
   let translate_assert =

@@ -429,7 +429,7 @@ let reset_timers timers_model =
 
 
 
-let refresh_instances ({istore=istore} as inst_model) () =
+let refresh_instances ({ istore; _ } as inst_model) () =
   Hashtbl.iter (fun id (r, n, name, limit) ->
       let row, upd_info =
         match !r with
@@ -454,11 +454,11 @@ let refresh_instances ({istore=istore} as inst_model) () =
   true
 
 
-let add_inst ({h=h} as inst_model) orig =
+let add_inst ({ h; _ } as inst_model) orig =
   let id = Expr.id orig in
   let name =
     match Expr.form_view orig with
-    | Expr.Lemma {Expr.name=n} when Pervasives.(<>) n "" -> n
+    | Expr.Lemma { Expr.name = n ; _ } when Pervasives.(<>) n "" -> n
     | Expr.Lemma _ | Expr.Unit _ | Expr.Clause _ | Expr.Literal _
     | Expr.Skolem _ | Expr.Let _ | Expr.Iff _ | Expr.Xor _ ->
       string_of_int id

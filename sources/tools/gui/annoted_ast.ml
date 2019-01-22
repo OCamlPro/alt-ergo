@@ -392,7 +392,7 @@ let new_annot (buffer:sbuffer) c id ptag =
     line = buffer#line_count }
 
 
-let rec findin_aterm tag buffer parent { at_desc = at_desc } =
+let rec findin_aterm tag buffer parent { at_desc ; _ } =
   findin_at_desc tag buffer parent at_desc
 
 and findin_aterm_list tag buffer parent atl =
@@ -468,7 +468,7 @@ and findin_aatom tag buffer parent aa =
   | AApred (at, _) -> findin_aterm tag buffer parent at
 
 and findin_quant_form tag buffer parent
-    {aqf_triggers = trs; aqf_form = aaf ; aqf_hyp } =
+    { aqf_triggers = trs; aqf_form = aaf ; aqf_hyp; _ } =
   let r = findin_triggers tag buffer parent trs in
   if r == None then
     let r = findin_aaform_list tag buffer parent aqf_hyp in
@@ -698,7 +698,7 @@ let print_oplogic fmt = function
   | OPiff -> fprintf fmt "<->"
   | OPif | OPnot -> assert false (* handled differently *)
 
-let rec print_tterm fmt {Typed.c= {tt_desc = tt_desc}} =
+let rec print_tterm fmt { Typed.c = { tt_desc; _ }; _ } =
   print_tt_desc fmt tt_desc
 
 and print_tterm_list se fmt = function
@@ -787,7 +787,7 @@ and print_rwt_list fmt = function
   | rwt::l -> fprintf fmt "%a; %a" print_rwt rwt print_rwt_list l
 
 and print_quant_form fmt
-    {qf_bvars = bv; qf_upvars = uv; qf_triggers = trs; qf_form = tf } =
+    { qf_bvars = bv; qf_upvars = uv; qf_triggers = trs; qf_form = tf; _ } =
   fprintf fmt "%a [%a]. %a"
     print_var_list bv print_triggers trs print_tform tf
 
@@ -981,7 +981,7 @@ and make_dep_oplogic d ex dep = function
   | _ -> dep
 
 and make_dep_quant_form d ex dep
-    {aqf_bvars = bv; aqf_upvars = uv; aqf_triggers = trs; aqf_form = aaf } =
+    { aqf_bvars = bv; aqf_upvars = uv; aqf_triggers = trs; aqf_form = aaf; _ } =
   let vars = List.map (fun (s,_) -> (Symbols.to_string_clean s)) bv in
   make_dep_aform d (vars@ex) dep aaf.c
 
@@ -1636,7 +1636,7 @@ and add_rwt_list errors (buffer:sbuffer) indent tags = function
     add_rwt_list errors buffer indent tags l
 
 
-and add_empty_triggers_error ({rstore = rstore} as errors) (buffer:sbuffer) =
+and add_empty_triggers_error ({ rstore; _ } as errors) (buffer:sbuffer) =
   let row = rstore#append () in
   rstore#set ~row ~column:errors.rcol_icon `DIALOG_WARNING;
   rstore#set ~row ~column:errors.rcol_desc
@@ -1816,7 +1816,7 @@ and add_aaform_list_aux
 
 
 and add_aaform errors (buffer:sbuffer) indent tags ?parent_op
-    ({c = af; tag = tag; ptag = ptag} as aaf) =
+    ({ c = af; tag = tag; ptag = ptag; _ } as aaf) =
   aaf.line <- buffer#line_count;
   add_aform errors buffer indent (tag::ptag::tags) ?parent_op af
 
@@ -1938,8 +1938,8 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
 let rec filter_dummy_logics acc = function
   | [] -> List.rev acc
   | [td] -> List.rev (td :: acc)
-  | ({ c = ALogic (_, _, PFunction ([], PPTexternal ([], t, _)), _) }, _) ::
-    ((({ c = ATypeDecl (_, _, s, Enum _, _) }, _) :: _) as r)
+  | ({ c = ALogic (_, _, PFunction ([], PPTexternal ([], t, _)), _); _ }, _) ::
+    ((({ c = ATypeDecl (_, _, s, Enum _, _); _ }, _) :: _) as r)
     (* when String.equal t s  *) ->
     filter_dummy_logics acc r
   | td :: r -> filter_dummy_logics (td :: acc) r
@@ -1954,7 +1954,7 @@ let add_to_buffer errors (buffer:sbuffer) annoted_ast =
 
 
 
-let rec isin_aterm sl { at_desc = at_desc } =
+let rec isin_aterm sl { at_desc; _ } =
   match at_desc with
   | ATconst _ -> false
   | ATvar sy ->
@@ -2036,7 +2036,7 @@ and findtags_aatom sl aa acc =
 
 
 and findtags_quant_form
-    sl {aqf_triggers = trs; aqf_form = aaf ; aqf_hyp } acc =
+    sl { aqf_triggers = trs; aqf_form = aaf ; aqf_hyp; _ } acc =
   let acc = findtags_triggers sl trs acc in
   let acc = findtags_aaform_list sl aqf_hyp acc in
   findtags_aaform sl aaf acc

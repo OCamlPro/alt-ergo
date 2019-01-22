@@ -101,7 +101,8 @@ module Main_Default : S = struct
         (fun t mp ->
            match E.term_view t with
            | E.Not_a_term _ -> assert false
-           | E.Term{E.f=Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac)); xs; ty} ->
+           | E.Term { E.f = Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac));
+                      xs; ty; _ } ->
              let xs = List.map E.type_info xs in
              let xs, ty =
                try
@@ -127,7 +128,7 @@ module Main_Default : S = struct
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> mp
            | Tvar _ -> assert false
 
-           | Text (_, hs) | Tsum (hs, _) | Trecord {name=hs} when
+           | Text (_, hs) | Tsum (hs, _) | Trecord { name = hs; _ } when
                Hstring.Map.mem hs mp -> mp
 
            | Text (l, hs) ->
@@ -137,7 +138,7 @@ module Main_Default : S = struct
            | Tsum (hs, l) ->
              Hstring.Map.add hs ty mp
 
-           | Trecord {args; name; lbs} ->
+           | Trecord { args; name; lbs; _ } ->
              (* cannot do better for records ? *)
              Hstring.Map.add name ty mp
 
@@ -164,7 +165,7 @@ module Main_Default : S = struct
                  fprintf fmt "@."
              end
 
-           | Trecord {Ty.lbs} ->
+           | Trecord { Ty.lbs; _ } ->
              fprintf fmt "@.type %a = " Ty.print ty;
              begin match lbs with
                | [] -> assert false

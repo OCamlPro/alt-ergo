@@ -86,7 +86,7 @@ let search_using t sbuf env =
       List.iter (fun t -> t#set_property (`BACKGROUND "gold")) tags1;
       List.iter (fun t -> t#set_property (`BACKGROUND "orange")) tags2;
       env.search_tags <- List.rev_append tags1 tags2;
-    | AT {c = at} ->
+    | AT { c = at ; _ } ->
       let tags = findtags_dep at env.ast in
       env.search_tags <- tags;
       List.iter (fun t -> t#set_property (`BACKGROUND "orange")) tags
@@ -186,15 +186,15 @@ let tag_callback t env sbuf ~origin:y z i =
                 flush_str_formatter ()
               | Some (AF _) -> ": formula"
               | Some (QF _) -> ": quantified formula"
-              | Some (AD ({c = ATheory _}, _)) -> ": Theory"
-              | Some (AD ({c = AAxiom _}, _)) -> ": Axiom"
-              | Some (AD ({c = AGoal _}, _)) -> ": Goal"
-              | Some (AD ({c = ALogic _}, _)) -> ": Logic declaration"
-              | Some (AD ({c = APredicate_def _}, _)) ->
+              | Some (AD ({ c = ATheory _ ; _ }, _)) -> ": Theory"
+              | Some (AD ({ c = AAxiom _ ; _ }, _)) -> ": Axiom"
+              | Some (AD ({ c = AGoal _ ; _ }, _)) -> ": Goal"
+              | Some (AD ({ c = ALogic _ ; _ }, _)) -> ": Logic declaration"
+              | Some (AD ({ c = APredicate_def _ ;  _}, _)) ->
                 ": Predicate definition"
-              | Some (AD ({c = AFunction_def _}, _)) ->
+              | Some (AD ({ c = AFunction_def _ ;  _}, _)) ->
                 ": Function definition"
-              | Some (AD ({c = ATypeDecl _}, _)) -> ": Type declaration"
+              | Some (AD ({ c = ATypeDecl _ ; _ }, _)) -> ": Type declaration"
               | _ -> "" in
             env.st_ctx#pop ();
             ignore(env.st_ctx#push tyt);
@@ -862,8 +862,7 @@ and connect_trigger_tag env sbuf t qid =
 and connect_axiom_tag env t =
   ignore (t#connect#event ~callback:(axiom_callback t env))
 
-and connect_aterm env sbuf
-    { at_desc = at_desc } =
+and connect_aterm env sbuf { at_desc; _ } =
   connect_at_desc env sbuf at_desc
 
 and connect_aterm_list env sbuf atl =
@@ -917,7 +916,7 @@ and connect_aatom env sbuf aa =
   | AApred (at, _) -> connect_aterm env sbuf at
 
 and connect_quant_form env sbuf
-    {aqf_triggers = trs; aqf_hyp; aqf_form = aaf } =
+    { aqf_triggers = trs; aqf_hyp; aqf_form = aaf; _ } =
   connect_triggers env sbuf trs;
   connect_aaform_list env sbuf aqf_hyp;
   connect_aaform env sbuf aaf

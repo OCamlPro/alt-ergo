@@ -128,7 +128,7 @@ struct
   let embed6 x = hcons {v = X6 x; id = -1000 (* dummy *)}
   let embed7 x = hcons {v = X7 x; id = -1000 (* dummy *)}
 
-  let ac_embed ({Sig.l = l} as t) =
+  let ac_embed ({ Sig.l; _ } as t) =
     match l with
     | []    ->
       assert false
@@ -140,16 +140,16 @@ struct
 
   let term_embed t = hcons {v = Term t; id = -1000 (* dummy *)}
 
-  let extract1 = function {v=X1 r} -> Some r | _ -> None
-  let extract2 = function {v=X2 r} -> Some r | _ -> None
-  let extract3 = function {v=X3 r} -> Some r | _ -> None
-  let extract4 = function {v=X4 r} -> Some r | _ -> None
-  let extract5 = function {v=X5 r} -> Some r | _ -> None
-  let extract6 = function {v=X6 r} -> Some r | _ -> None
-  let extract7 = function {v=X7 r} -> Some r | _ -> None
+  let extract1 = function { v=X1 r; _ } -> Some r | _ -> None
+  let extract2 = function { v=X2 r; _ } -> Some r | _ -> None
+  let extract3 = function { v=X3 r; _ } -> Some r | _ -> None
+  let extract4 = function { v=X4 r; _ } -> Some r | _ -> None
+  let extract5 = function { v=X5 r; _ } -> Some r | _ -> None
+  let extract6 = function { v=X6 r; _ } -> Some r | _ -> None
+  let extract7 = function { v=X7 r; _ } -> Some r | _ -> None
 
   let ac_extract = function
-    | {v = Ac t}   -> Some t
+    | { v = Ac t; _ }   -> Some t
     | _ -> None
 
   let term_extract r =
@@ -185,15 +185,15 @@ struct
     ty == Ty.Tint
 
   let type_info = function
-    | {v=X1 t}   -> X1.type_info t
-    | {v=X2 t}   -> X2.type_info t
-    | {v=X3 t}   -> X3.type_info t
-    | {v=X4 t}   -> X4.type_info t
-    | {v=X5 t}   -> X5.type_info t
-    | {v=X6 t}   -> X6.type_info t
-    | {v=X7 t}   -> X7.type_info t
-    | {v=Ac x}   -> AC.type_info x
-    | {v=Term t} -> Expr.type_info t
+    | { v = X1 t; _ }   -> X1.type_info t
+    | { v = X2 t; _ }   -> X2.type_info t
+    | { v = X3 t; _ }   -> X3.type_info t
+    | { v = X4 t; _ }   -> X4.type_info t
+    | { v = X5 t; _ }   -> X5.type_info t
+    | { v = X6 t; _ }   -> X6.type_info t
+    | { v = X7 t; _ }   -> X7.type_info t
+    | { v = Ac x; _ }   -> AC.type_info x
+    | { v = Term t; _ } -> Expr.type_info t
 
   (* Xi < Term < Ac *)
   let theory_num x = match x with
@@ -284,7 +284,7 @@ struct
       | Term _ -> if equal p r then v else r
 
   let make t =
-    let {Expr.f=sb; ty} =
+    let { Expr.f = sb; ty; _ } =
       match Expr.term_view t with
       | Expr.Not_a_term _ -> assert false
       | Expr.Term tt -> tt
@@ -477,7 +477,7 @@ struct
   let abstract_equality a b =
     let aux r acc =
       match r.v with
-      | Ac ({l=args} as ac) ->
+      | Ac ({ l = args; _ } as ac) ->
         let args, acc =
           List.fold_left
             (fun (args, acc) (r, i) ->

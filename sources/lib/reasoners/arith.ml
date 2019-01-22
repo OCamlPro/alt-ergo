@@ -55,7 +55,7 @@ module Type (X:Sig.X) : Polynome.T with type r = X.r = struct
             h = Sy.Op Sy.Mult;
             t = X.type_info v1;
             l = let l2 = match X.ac_extract v1 with
-                | Some {h=h; l=l} when Sy.equal h (Sy.Op Sy.Mult) -> l
+                | Some { h; l; _ } when Sy.equal h (Sy.Op Sy.Mult) -> l
                 | _ -> [v1, 1]
               in Ac.add (Sy.Op Sy.Mult) (v2,1) l2
           }
@@ -207,7 +207,7 @@ module Shostak
       P.add (P.create [coef, (X.term_embed t)] Q.zero ty) p_acc
 
   let rec mke coef p t ctx =
-    let {E.f = sb ; xs = xs; ty = ty} =
+    let { E.f = sb ; xs; ty; _ } =
       match E.term_view t with
       | E.Not_a_term _ -> assert false
       | E.Term tt -> tt
@@ -379,7 +379,7 @@ module Shostak
     assert (n >=0);
     if n = 0 then acc else expand p (n-1) (p::acc)
 
-  let unsafe_ac_to_arith {h=sy; l=rl; t=ty} =
+  let unsafe_ac_to_arith { h = sy; l = rl; t = ty; _ } =
     let mlt = List.fold_left (fun l (r,n) -> expand (embed r)n l) [] rl in
     List.fold_left P.mult (P.create [] Q.one ty) mlt
 
@@ -602,7 +602,7 @@ module Shostak
     with Not_found -> is_null p
 
 
-  let unsafe_ac_to_arith {h=sy; l=rl; t=ty} =
+  let unsafe_ac_to_arith { h = sy; l = rl; t = ty; _ } =
     let mlt = List.fold_left (fun l (r, n) -> expand (embed r) n l) [] rl in
     List.fold_left P.mult (P.create [] Q.one ty) mlt
 
@@ -652,7 +652,7 @@ module Shostak
       sbs []
 
   let is_non_lin pv = match X.ac_extract pv with
-    | Some {Sig.h} -> is_mult h
+    | Some { Sig.h; _ } -> is_mult h
     | _ -> false
 
   let make_idemp a b sbs lvs unsafe_mode =

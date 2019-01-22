@@ -157,9 +157,9 @@ let rec literals_of_acc lit fs f acc = match E.form_view f with
     literals_of_acc true fs f2 acc
   | E.Lemma _ ->
     acc
-  | E.Skolem {E.main=f} ->
+  | E.Skolem { E.main = f; _ } ->
     literals_of_acc true fs f acc
-  | E.Let {E.in_e; let_e} ->
+  | E.Let { E.in_e; let_e; _ } ->
     literals_of_acc true fs in_e @@ literals_of_acc true fs let_e acc
 
 let literals_of ex =

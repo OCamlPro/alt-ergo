@@ -107,7 +107,7 @@ module Make (X : Sig.X) = struct
         fprintf fmt "%a" print_x p;
         List.iter (fprintf fmt "%a" (pr_elt sep))((p,n-1)::l)
 
-    let print fmt {h=h ; l=l} =
+    let print fmt { h; l; _ } =
       if Sy.equal h (Sy.Op Sy.Mult) then
         fprintf fmt "%a" (pr_xs "'*'") l
       else
@@ -168,17 +168,17 @@ module Make (X : Sig.X) = struct
     | Some ac when Sy.equal sy ac.h -> r, acc
     | None -> r, acc
     | Some _ -> match Expr.term_view t with
-      | Expr.Term {Expr.f=Sy.Name(hs,Sy.Ac) ;xs=xs;ty=ty} ->
+      | Expr.Term { Expr.f = Sy.Name (hs, Sy.Ac); xs; ty; _ } ->
         let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
-      | Expr.Term {Expr.f=Sy.Op Sy.Mult ;xs=xs;ty=ty} ->
+      | Expr.Term { Expr.f = Sy.Op Sy.Mult; xs; ty; _ } ->
         let aro_sy = Sy.name "@*" in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
-      | Expr.Term {Expr.ty=ty} ->
+      | Expr.Term { Expr.ty; _ } ->
         let k = Expr.fresh_name ty in
         let eq = Expr.mk_eq ~iff:false k t in
         X.term_embed k, eq::acc
@@ -187,7 +187,7 @@ module Make (X : Sig.X) = struct
   let make t =
     Timers.exec_timer_start Timers.M_AC Timers.F_make;
     let x = match Expr.term_view t with
-      | Expr.Term {Expr.f= sy; xs=[a;b]; ty=ty} when Sy.is_ac sy ->
+      | Expr.Term { Expr.f = sy; xs = [a;b]; ty; _ } when Sy.is_ac sy ->
         let ra, ctx1 = X.make a in
         let rb, ctx2 = X.make b in
         let ra, ctx = abstract2 sy a ra (ctx1 @ ctx2) in
@@ -203,9 +203,9 @@ module Make (X : Sig.X) = struct
 
   let is_mine_symb sy _ = Options.no_ac() == false && Sy.is_ac sy
 
-  let type_info {t=ty} = ty
+  let type_info { t = ty; _ } = ty
 
-  let leaves { l=l } = List.fold_left (fun z (a,_) -> (X.leaves a) @ z)[] l
+  let leaves { l; _ } = List.fold_left (fun z (a,_) -> (X.leaves a) @ z)[] l
 
   let rec mset_cmp = function
     |  []   ,  []   ->  0
@@ -236,7 +236,7 @@ module Make (X : Sig.X) = struct
 
 
   (* x et y are sorted in a decreasing order *)
-  let compare {h=f ; l=x} {h=g ; l=y} =
+  let compare { h = f; l = x; _ } { h = g; l = y; _ } =
     let c = Sy.compare f g in
     if c <> 0 then c
     else
@@ -263,17 +263,17 @@ module Make (X : Sig.X) = struct
     else assert false
   *)
 
-  let equal {h=f ; l=lx} {h=g ; l=ly} =
+  let equal { h = f; l = lx; _ } { h = g; l = ly; _ } =
     Sy.equal f g &&
     try List.for_all2 (fun (x, m) (y, n) -> m = n && X.equal x y) lx ly
     with Invalid_argument _ -> false
 
-  let hash {h = f ; l = l; t = t} =
+  let hash { h = f; l; t; _ } =
     let acc = Sy.hash f + 19 * Ty.hash t in
     abs (List.fold_left (fun acc (x, y) -> acc + 19 * (X.hash x + y)) acc l)
 
 
-  let subst p v ({h=h;l=l;t=t} as tm)  =
+  let subst p v ({ h; l; t; _ } as tm)  =
     Options.exec_thread_yield ();
     Timers.exec_timer_start Timers.M_AC Timers.F_subst;
     Debug.subst p v tm;
@@ -290,7 +290,7 @@ module Make (X : Sig.X) = struct
 
   let fully_interpreted sb = true
 
-  let abstract_selectors ({l=args} as ac) acc =
+  let abstract_selectors ({ l = args; _ } as ac) acc =
     let args, acc =
       List.fold_left
         (fun (args, acc) (r, i) ->

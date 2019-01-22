@@ -225,22 +225,24 @@ module Shostak(X : ALIEN) = struct
 
     let make t =
       let rec make_rec t' ctx = match E.term_view t' with
-        | E.Term {E.f = Sy.Bitv s } -> string_to_bitv s, ctx
-        | E.Term {E.f = Sy.Op Sy.Concat ; xs = [t1;t2] ; ty = Ty.Tbitv n} ->
+        | E.Term { E.f = Sy.Bitv s; _ } -> string_to_bitv s, ctx
+        | E.Term { E.f = Sy.Op Sy.Concat ;
+                   xs = [t1;t2] ; ty = Ty.Tbitv n; _ } ->
           let r1, ctx = make_rec t1 ctx in
           let r2, ctx = make_rec t2 ctx in
           { bv = I_Comp (r1, r2) ; sz = n }, ctx
-        | E.Term {E.f = Sy.Op Sy.Extract; xs = [t1;ti;tj] ; ty = Ty.Tbitv n} ->
+        | E.Term { E.f = Sy.Op Sy.Extract;
+                   xs = [t1;ti;tj] ; ty = Ty.Tbitv n; _ } ->
           begin
             match E.term_view ti , E.term_view tj with
-            | E.Term { E.f = Sy.Int i } , E.Term { E.f = Sy.Int j } ->
+            | E.Term { E.f = Sy.Int i; _ } , E.Term { E.f = Sy.Int j; _ } ->
               let i = int_of_string (Hstring.view i) in
               let j = int_of_string (Hstring.view j) in
               let r1, ctx = make_rec t1 ctx in
               { sz = j - i + 1 ; bv = I_Ext (r1,i,j)}, ctx
             | _ -> assert false
           end
-        | E.Term {E.ty = Ty.Tbitv n} ->
+        | E.Term { E.ty = Ty.Tbitv n; _ } ->
           let r', ctx' = X.make t' in
           let ctx = ctx' @ ctx in
           {bv = I_Other (Alien r') ; sz = n}, ctx
@@ -656,7 +658,7 @@ module Shostak(X : ALIEN) = struct
          | Other (Alien t) | Ext(Alien t,_,_,_) -> (X.leaves t)@acc
       ) [] bitv
 
-  let is_mine = function [{bv = Other (Alien r)}] -> r | bv -> X.embed bv
+  let is_mine = function [{ bv = Other (Alien r); _ }] -> r | bv -> X.embed bv
 
   let print = Debug.print_C_ast
 
@@ -699,7 +701,7 @@ module Shostak(X : ALIEN) = struct
 
   let extract_xterm r =
     match X.extract r with
-      Some ([{bv=Other(Var _ as x)}]) -> x
+      Some ([{ bv = Other (Var _ as x); _ }]) -> x
     | None -> Alien r
     | _ -> assert false
 

@@ -22,7 +22,7 @@ module Z = Numbers.Z
 let is_rounding_mode t =
   Options.use_fpa() &&
   match E.term_view t with
-  | E.Term {E.ty = Ty.Tsum (hs, _)} ->
+  | E.Term { E.ty = Ty.Tsum (hs, _); _ } ->
     String.compare (Hs.view hs) "fpa_rounding_mode" = 0
   | _ -> false
 
@@ -217,7 +217,7 @@ let mode_of_term t =
 
 let int_of_term t =
   match E.term_view t with
-  | E.Term {E.f = Sy.Int n} ->
+  | E.Term { E.f = Sy.Int n; _ } ->
     let n = Hstring.view n in
     let n =
       try int_of_string n

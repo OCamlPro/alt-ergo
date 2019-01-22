@@ -116,7 +116,7 @@ module Make (Th : Theory.S) = struct
       let env, pfl, cnf, new_vars =
         List.fold_left (fun acc l ->
             List.fold_left
-              (fun ((env, pfl, cnf, vars) as acc) ({E.ff=f}, ex) ->
+              (fun ((env, pfl, cnf, vars) as acc) ({ E.ff = f; _ }, ex) ->
                  if SE.mem f env.assumed then acc
                  else
                  if Ex.has_no_bj ex then begin

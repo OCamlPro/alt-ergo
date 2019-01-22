@@ -324,7 +324,7 @@ module MP = struct
        end;
        b)
 
-  let n_add p i old ({polynomes} as env) =
+  let n_add p i old ({ polynomes; _ } as env) =
     (*NB: adding a new entry into the map is considered as an improvement*)
     assert_normalized_poly p;
     if I.is_strict_smaller i old || not (MP0.mem p polynomes) then
@@ -368,7 +368,7 @@ module MX = struct
       b
     )
 
-  let n_add x ((i,_) as e) old ({monomes} as env) =
+  let n_add x ((i,_) as e) old ({ monomes; _ } as env) =
     (*NB: adding a new entry into the map is considered as an improvement*)
     assert_is_alien x;
     if I.is_strict_smaller i old || not (MX0.mem x monomes) then
@@ -464,7 +464,7 @@ module Debug = struct
     if debug_fm () then begin
       fprintf fmt "------------ FM: inequations-------------------------@.";
       MPL.iter
-        (fun a {Oracle.ple0=p; is_le=is_le} ->
+        (fun a { Oracle.ple0 = p; is_le = is_le; _ } ->
            fprintf fmt "%a%s0  |  %a@."
              P.print p (if is_le then "<=" else "<") E.print a
         )env.inequations;
@@ -633,7 +633,7 @@ and init_alien are_eq expl p (normal_p, c, d) ty use_x env =
 and update_monome are_eq expl use_x env x =
   let ty = X.type_info x in
   let ui, env = match  X.ac_extract x with
-    | Some {h=h; l=l }
+    | Some { h; l; _ }
       when Symbols.equal h (Symbols.Op Symbols.Mult) ->
       let use_x = SX.singleton x in
       let env =
@@ -654,7 +654,7 @@ and update_monome are_eq expl use_x env x =
         begin
           match E.term_view t with
           | E.Not_a_term _ -> assert false
-          | E.Term {E.f = (Sy.Op Sy.Div); xs = [a; b]} ->
+          | E.Term { E.f = (Sy.Op Sy.Div); xs = [a; b]; _ } ->
             let ra, ea =
               let (ra, _) as e = Uf.find env.new_uf a in
               if List.filter (X.equal x) (X.leaves ra) == [] then e
@@ -711,7 +711,7 @@ let rec tighten_ac are_eq x env expl =
     with Not_found -> I.undefined ty, SX.empty in
   try
     match X.ac_extract x with
-    | Some {h=h;t=t;l=[x,n]}
+    | Some { h; t; l = [x,n]; _ }
       when Symbols.equal h (Symbols.Op Symbols.Mult) && n mod 2 = 0  ->
       let env =
         if is_alien x then
@@ -729,7 +729,7 @@ let rec tighten_ac are_eq x env expl =
           env
       in
       env
-    | Some {h=h;t=t;l=[x,n]} when
+    | Some { h; t; l = [x,n]; _ } when
         Symbols.equal h (Symbols.Op Symbols.Mult) && n > 2 ->
       let env =
         if is_alien x then
@@ -818,7 +818,7 @@ let find_eq eqs x u env =
   | Some eq1 ->
     begin
       match X.ac_extract x with
-      | Some {h = h; l = [y,n]}
+      | Some { h; l = [y,n]; _ }
         when Symbols.equal h (Symbols.Op Symbols.Mult) ->
         let neweqs = try
             let u, _, _ = generic_find y env in
@@ -837,7 +837,7 @@ type ineq_status =
   | Monome of Q.t * P.r * Q.t
   | Other
 
-let ineq_status {Oracle.ple0 = p ; is_le = is_le} =
+let ineq_status { Oracle.ple0 = p ; is_le; _ } =
   match P.is_monomial p with
     Some (a, x, v) -> Monome (a, x, v)
   | None ->
@@ -864,7 +864,7 @@ let mk_equality p =
   let r2 = alien_of (P.create [] Q.zero (P.type_info p)) in
   LR.mkv_eq r1 r2
 
-let fm_equalities eqs { Oracle.ple0 = p; dep = dep; expl = ex } =
+let fm_equalities eqs { Oracle.ple0 = p; dep; expl = ex; _ } =
   Util.MI.fold
     (fun _ (_, p, _) eqs ->
        (mk_equality p, None, ex, Th_util.Other) :: eqs
@@ -875,7 +875,7 @@ let update_intervals are_eq env eqs expl (a, x, v) is_le =
   let (u0, use_x0) as ixx = MX.n_find x env.monomes in
   let uints, use_x =
     match X.ac_extract x with
-    | Some {h=h; l=l} when Symbols.equal h (Symbols.Op Symbols.Mult) ->
+    | Some { h; l; _ } when Symbols.equal h (Symbols.Op Symbols.Mult) ->
       let m = mult_bornes_vars l env (X.type_info x) in
       I.intersect m u0, use_x0
     | _ -> ixx
@@ -1019,7 +1019,7 @@ let split_problem env ineqs aliens =
   let current_age = Oracle.current_age () in
   let l, all_lvs =
     List.fold_left
-      (fun (acc, all_lvs) ({Oracle.ple0=p} as ineq) ->
+      (fun (acc, all_lvs) ({ Oracle.ple0 = p; _ } as ineq) ->
 
 
          match ineq_status ineq with
@@ -1080,7 +1080,7 @@ let better_upper_bound_from_intervals env p =
   with I.No_finite_bound | Not_found ->
     assert false (*env.polynomes is up to date w.r.t. ineqs *)
 
-let better_bound_from_intervals env ({Oracle.ple0; is_le; dep} as v) =
+let better_bound_from_intervals env ({ Oracle.ple0; is_le; dep; _ } as v) =
   let p, c = P.separate_constant ple0 in
   assert (not (P.is_empty p));
   let cur_up_bnd = Q.minus c in
@@ -1111,7 +1111,7 @@ let args_of p = List.rev_map snd (fst (P.to_list p))
 let update_linear_dep env rclass_of ineqs =
   let terms =
     List.fold_left
-      (fun st {Oracle.ple0} ->
+      (fun st { Oracle.ple0; _ } ->
          List.fold_left
            (fun st (c, x) -> SE.union st (rclass_of x))
            st (fst (P.to_list ple0))
@@ -1958,7 +1958,7 @@ let extend_with_domain_substitution =
         fprintf fmt "[IC] extend_with_domain_substitution failed !@.";
       None
 
-let terms_linear_dep {linear_dep} lt =
+let terms_linear_dep { linear_dep ; _ } lt =
   match lt with
   | [] | [_] -> true
   | e::l ->
@@ -2035,7 +2035,8 @@ let semantic_matching lem_name tr sbt env uf optimized =
 let record_this_instance f accepted lorig =
   if Options.profiling() then
     match E.form_view lorig with
-    | E.Lemma {E.name;loc} -> Profiling.new_instance_of name f loc accepted
+    | E.Lemma { E.name; loc; _ } ->
+      Profiling.new_instance_of name f loc accepted
     | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
     | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
 
@@ -2046,7 +2047,7 @@ let profile_produced_terms menv lorig nf s trs =
         SE.empty trs
     in
     let name, loc, f = match E.form_view lorig with
-      | E.Lemma {E.name;main;loc} -> name, loc, main
+      | E.Lemma { E.name; main; loc; _ } -> name, loc, main
       | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
       | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
     in
@@ -2194,7 +2195,7 @@ let separate_semantic_triggers =
   let is_theory_const = Hstring.make "is_theory_constant" in
   let linear_dep = Hstring.make "linear_dependency" in
   fun th_form ->
-    let {E.user_trs} as q =
+    let { E.user_trs; _ } as q =
       match E.form_view th_form with
       | E.Lemma q -> q
       | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
@@ -2210,21 +2211,21 @@ let separate_semantic_triggers =
                (fun (syn, sem) t ->
                   match E.term_view t with
                   | E.Not_a_term _ -> assert false
-                  | E.Term {E.f=Symbols.In (lb, ub); xs=[x]} ->
+                  | E.Term { E.f = Symbols.In (lb, ub); xs = [x]; _ } ->
                     syn, (E.Interval (x, lb, ub)) :: sem
 
-                  | E.Term {E.f=Symbols.MapsTo x; xs=[t]} ->
+                  | E.Term { E.f = Symbols.MapsTo x; xs = [t]; _ } ->
                     syn, (E.MapsTo (x, t)) :: sem
 
-                  | E.Term {E.f=Sy.Name(hs,_); xs=[x]}
+                  | E.Term { E.f = Sy.Name (hs,_); xs = [x]; _ }
                     when Hstring.equal hs not_theory_const ->
                     syn, (E.NotTheoryConst x) :: sem
 
-                  | E.Term {E.f=Sy.Name(hs,_); xs=[x]}
+                  | E.Term { E.f = Sy.Name (hs,_); xs = [x]; _ }
                     when Hstring.equal hs is_theory_const ->
                     syn, (E.IsTheoryConst x) :: sem
 
-                  | E.Term {E.f=Sy.Name(hs,_); xs=[x;y]}
+                  | E.Term { E.f = Sy.Name (hs,_); xs = [x;y]; _ }
                     when Hstring.equal hs linear_dep ->
                     syn, (E.LinearDependency(x,y)) :: sem
 
@@ -2239,7 +2240,7 @@ let separate_semantic_triggers =
       (E.id th_form) ~toplevel:true ~decl_kind:E.Dtheory
 
 let assume_th_elt t th_elt dep =
-  let {Expr.axiom_kind; ax_form; th_name; extends} = th_elt in
+  let { Expr.axiom_kind; ax_form; th_name; extends; _ } = th_elt in
   let kd_str =
     if axiom_kind == Util.Propagator then "Th propagator" else "Th CS"
   in

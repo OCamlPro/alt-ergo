@@ -88,7 +88,7 @@ let print_generic body_of =
     | Tunit -> fprintf fmt "unit"
     | Tbitv n -> fprintf fmt "bitv[%d]" n
     | Tvar{v=v ; value = None} -> fprintf fmt "'a_%d" v
-    | Tvar{v=v ; value = Some (Trecord {args=l; name=n} as t) } ->
+    | Tvar{v=v ; value = Some (Trecord { args = l; name = n; _ } as t) } ->
       if Hashtbl.mem h v then
         fprintf fmt "%a %s" print_list l (Hstring.view n)
       else
@@ -102,7 +102,7 @@ let print_generic body_of =
     | Tfarray (t1, t2) ->
       fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
     | Tsum(s, _) -> fprintf fmt "<sum>%s" (Hstring.view s)
-    | Trecord {args=lv; name=n; lbs=lbls} ->
+    | Trecord { args = lv; name = n; lbs = lbls; _ } ->
       fprintf fmt "%a <record>%s" print_list lv (Hstring.view n);
       if body_of != None then begin
         fprintf fmt " = {";
@@ -166,9 +166,10 @@ let fresh_tvar () = Tvar (fresh_var ())
 
 let rec shorten ty =
   match ty with
-  | Tvar {value=None}  -> ty
-  | Tvar {value=Some(Tvar{value=None} as t')} -> t'
-  | Tvar ({value=Some(Tvar t2)} as t1) -> t1.value <- t2.value; shorten ty
+  | Tvar { value = None; _ }  -> ty
+  | Tvar { value = Some (Tvar{ value = None; _ } as t'); _ } -> t'
+  | Tvar ({ value = Some (Tvar t2); _ } as t1) ->
+    t1.value <- t2.value; shorten ty
   | Tvar {v = n; value = Some t'} -> shorten t'
 
   | Text (l,s) ->
@@ -200,7 +201,7 @@ and shorten_body n args =
 
 let rec compare t1 t2 =
   match shorten t1 , shorten t2 with
-  | Tvar{v=v1} , Tvar{v=v2} -> Pervasives.compare v1 v2
+  | Tvar{ v = v1; _ } , Tvar{ v = v2; _ } -> Pervasives.compare v1 v2
   | Tvar _, _ -> -1 | _ , Tvar _ -> 1
   | Text(l1, s1) , Text(l2, s2) ->
     let c = Hstring.compare s1 s2 in
@@ -215,7 +216,8 @@ let rec compare t1 t2 =
   | Tsum(s1, _), Tsum(s2, _) ->
     Hstring.compare s1 s2
   | Tsum _, _ -> -1 | _ , Tsum _ -> 1
-  | Trecord {args=a1;name=s1;lbs=l1},Trecord {args=a2;name=s2;lbs=l2} ->
+  | Trecord { args = a1; name = s1; lbs = l1; _ },
+    Trecord { args = a2; name = s2; lbs = l2; _ } ->
     let c = Hstring.compare s1 s2 in
     if c <> 0 then c else
       let c = compare_list a1 a2 in
@@ -246,14 +248,15 @@ and compare_list l1 l2 = match l1, l2 with
 let rec equal t1 t2 =
   t1 == t2 ||
   match shorten t1 , shorten t2 with
-  | Tvar{v=v1}, Tvar{v=v2} -> v1 = v2
+  | Tvar{ v = v1; _ }, Tvar{ v = v2; _ } -> v1 = v2
   | Text(l1, s1), Text(l2, s2) ->
     (try Hstring.equal s1 s2 && List.for_all2 equal l1 l2
      with Invalid_argument _ -> false)
   | Tfarray (ta1, ta2), Tfarray (tb1, tb2) ->
     equal ta1 tb1 && equal ta2 tb2
   | Tsum (s1, _), Tsum (s2, _) -> Hstring.equal s1 s2
-  | Trecord {args=a1;name=s1;lbs=l1}, Trecord {args=a2;name=s2;lbs=l2} ->
+  | Trecord { args = a1; name = s1; lbs = l1; _ },
+    Trecord { args = a2; name = s2; lbs = l2; _ } ->
     begin
       try
         Hstring.equal s1 s2 && List.for_all2 equal a1 a2 &&
@@ -285,7 +288,7 @@ let rec matching s pat t =
   | Tvar {v=n;value=None} , _ ->
     (try if not (equal (M.find n s) t) then raise (TypeClash(pat,t)); s
      with Not_found -> M.add n t s)
-  | Tvar {value=_}, _ -> raise (Shorten pat)
+  | Tvar { value = _; _ }, _ -> raise (Shorten pat)
   | Text (l1,s1) , Text (l2,s2) when Hstring.equal s1 s2 ->
     List.fold_left2 matching s l1 l2
   | Tfarray (ta1,ta2), Tfarray (tb1,tb2) ->
@@ -305,7 +308,7 @@ let rec matching s pat t =
 let apply_subst =
   let rec apply_subst s ty =
     match ty with
-    | Tvar {v=n} ->
+    | Tvar { v= n; _ } ->
       (try M.find n s with Not_found -> ty)
 
     | Text (l,e) ->
@@ -338,7 +341,7 @@ let apply_subst =
 
 let rec fresh ty subst =
   match ty with
-  | Tvar {v=x} ->
+  | Tvar { v= x; _ } ->
     begin
       try M.find x subst, subst
       with Not_found ->
@@ -352,7 +355,7 @@ let rec fresh ty subst =
     let ty1, subst = fresh ty1 subst in
     let ty2, subst = fresh ty2 subst in
     Tfarray (ty1, ty2), subst
-  | Trecord ({args = args; name = n; lbs = lbs} as r) ->
+  | Trecord ({ args; name = n; lbs; _ } as r) ->
     let args, subst = fresh_list args subst in
     let lbs, subst =
       List.fold_right
@@ -524,11 +527,11 @@ let trecord ?(record_constr="{") lv n lbs =
 
 let rec hash t =
   match t with
-  | Tvar{v=v} -> v
+  | Tvar{ v; _ } -> v
   | Text(l,s) ->
     abs (List.fold_left (fun acc x-> acc*19 + hash x) (Hstring.hash s) l)
   | Tfarray (t1,t2) -> 19 * (hash t1) + 23 * (hash t2)
-  | Trecord { args = args; name = s; lbs = lbs} ->
+  | Trecord { args; name = s; lbs; _ } ->
     let h =
       List.fold_left (fun h ty -> 27 * h + hash ty) (Hstring.hash s) args
     in
@@ -548,12 +551,12 @@ let rec hash t =
 
   | _ -> Hashtbl.hash t
 
-let occurs {v=n} t =
+let occurs { v = n; _ } t =
   let rec occursrec = function
-    | Tvar {v=m} -> n=m
+    | Tvar { v = m; _ } -> n=m
     | Text(l,_) -> List.exists occursrec l
     | Tfarray (t1,t2) -> occursrec t1 || occursrec t2
-    | Trecord { args } | Tadt (_, args) -> List.exists occursrec args
+    | Trecord { args ; _ } | Tadt (_, args) -> List.exists occursrec args
     | Tsum _ | Tint | Treal | Tbool | Tunit | Tbitv _ -> false
   in occursrec t
 
@@ -564,10 +567,10 @@ let rec unify t1 t2 =
   match t1 , t2 with
     Tvar ({v=n;value=None} as tv1), Tvar {v=m;value=None} ->
     if n<>m then tv1.value <- Some t2
-  | _ ,  Tvar ({value=None} as tv) ->
+  | _ ,  Tvar ({ value = None; _ } as tv) ->
     if (occurs tv t1) then raise (TypeClash(t1,t2));
     tv.value <- Some t1
-  | Tvar ({value=None} as tv) , _ ->
+  | Tvar ({ value = None; _ } as tv) , _ ->
     if (occurs tv t2) then raise (TypeClash(t1,t2));
     tv.value <- Some t2
   | Text(l1,s1) , Text(l2,s2) when Hstring.equal s1 s2 ->
@@ -590,7 +593,7 @@ let instantiate lvar lty ty =
     List.fold_left2
       (fun s x t ->
          match x with
-         | Tvar {v=n} ->
+         | Tvar { v = n; _ } ->
            M.add n t s
          | _ -> assert false) M.empty lvar lty
   in
@@ -620,13 +623,14 @@ let vty_of t =
     | Tvar { v = i ; value = None } -> Svty.add i acc
     | Text(l,_) -> List.fold_left vty_of_rec acc l
     | Tfarray (t1,t2) -> vty_of_rec (vty_of_rec acc t1) t2
-    | Trecord {args = args; name = s; lbs = lbs} ->
+    | Trecord { args; name = s; lbs; _ } ->
       let acc = List.fold_left vty_of_rec acc args in
       List.fold_left (fun acc (_, ty) -> vty_of_rec acc ty) acc lbs
     | Tadt(_, args) ->
       List.fold_left vty_of_rec acc args
 
-    | Tvar {value=Some _ }|Tint|Treal|Tbool|Tunit|Tbitv _|Tsum (_, _) ->
+    | Tvar { value = Some _ ; _ }
+    | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum (_, _) ->
       acc
   in
   vty_of_rec Svty.empty t
@@ -637,7 +641,7 @@ let rec monomorphize ty =
   match ty with
   | Tint | Treal | Tbool | Tunit   | Tbitv _  | Tsum _ -> ty
   | Text (tyl,hs) -> Text (List.map monomorphize tyl, hs)
-  | Trecord ({args = tylv; name = n; lbs = tylb} as r) ->
+  | Trecord ({ args = tylv; name = n; lbs = tylb; _ } as r) ->
     let m_tylv = List.map monomorphize tylv in
     let m_tylb =
       List.map (fun (lb, ty_lb) -> lb, monomorphize ty_lb) tylb
@@ -645,7 +649,7 @@ let rec monomorphize ty =
     Trecord {r with args = m_tylv; name = n; lbs = m_tylb}
   | Tfarray (ty1,ty2)    -> Tfarray (monomorphize ty1,monomorphize ty2)
   | Tvar {v=v; value=None} -> text [] ("'_c"^(string_of_int v))
-  | Tvar ({value=Some ty1} as r) ->
+  | Tvar ({ value = Some ty1; _ } as r) ->
     Tvar { r with value = Some (monomorphize ty1)}
   | Tadt(name, params) ->
     Tadt(name, List.map monomorphize params)

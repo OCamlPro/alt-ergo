@@ -164,13 +164,13 @@ module Shostak (X : ALIEN) = struct
 
   let make t =
     let rec make_rec t ctx =
-      let { E.f = f; xs = xs; ty = ty} =
+      let { E.f; xs; ty; _ } =
         match E.term_view t with
         | E.Not_a_term _ -> assert false
         | E.Term tt -> tt
       in
       match f, ty with
-      | Symbols.Op (Symbols.Record), Ty.Trecord {Ty.lbs=lbs} ->
+      | Symbols.Op (Symbols.Record), Ty.Trecord { Ty.lbs; _ } ->
         assert (List.length xs = List.length lbs);
         let l, ctx =
           List.fold_right2
@@ -253,7 +253,7 @@ module Shostak (X : ALIEN) = struct
       with Not_found ->
         let left_abs_xe2, acc = X.abstract_selectors xe acc in
         match X.type_info left_abs_xe2 with
-        | (Ty.Trecord { Ty.args=args; name=name; lbs=lbs }) as tyr ->
+        | (Ty.Trecord { Ty.args; name; lbs; _ }) as tyr ->
           let flds =
             List.map
               (fun (lb,ty) -> lb, embed (X.term_embed (E.fresh_name ty))) lbs
@@ -423,7 +423,7 @@ module Shostak (X : ALIEN) = struct
 
     | Other (_,ty) ->
       match ty with
-      | Ty.Trecord {Ty.args; name; lbs} ->
+      | Ty.Trecord { Ty.args; name; lbs; _ } ->
         let rev_lbs = List.rev_map (fun (hs, ty) -> Expr.fresh_name ty) lbs in
         let s = E.mk_term (Symbols.Op Symbols.Record) (List.rev rev_lbs) ty in
         Some (s, false) (* false <-> not a case-split *)

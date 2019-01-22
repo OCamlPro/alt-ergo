@@ -248,7 +248,7 @@ module Atom : ATOM = struct
       else ":X"
 
     let premise fmt v =
-      List.iter (fun {name=name} -> fprintf fmt "%s," name) v
+      List.iter (fun { name = name; _ } -> fprintf fmt "%s," name) v
 
     let atom fmt a =
       fprintf fmt "%s%d%s [index=%d | lit:%a] vpremise={{%a}}"
@@ -264,7 +264,7 @@ module Atom : ATOM = struct
         fprintf fmt "%a ; " atom (Vec.get vec i)
       done
 
-    let clause fmt {name=name; atoms=arr; cpremise=cp} =
+    let clause fmt { name; atoms=arr; cpremise=cp; _ } =
       fprintf fmt "%s:{ %a} cpremise={{%a}}" name atoms_vec arr premise cp
 
   end
@@ -823,7 +823,7 @@ module Flat_Formula : FLAT_FORMULA = struct
         match extract_common l with
         | None ->
           begin match l with
-            | [{view=UNIT _} as fa;{view=AND ands}] ->
+            | [{ view = UNIT _; _ } as fa; { view = AND ands; _ }] ->
               begin
                 try
                   mk_or hcons

@@ -69,10 +69,10 @@ module RS = struct
   let find k m =
     try find k m with Not_found -> SetRL.empty
 
-  let add_rule (({h=h},_,_) as rul) mp =
+  let add_rule (({ h ; _ }, _, _) as rul) mp =
     add h (SetRL.add rul (find h mp)) mp
 
-  let remove_rule (({h=h},_,_) as rul) mp =
+  let remove_rule (({ h ; _ }, _, _) as rul) mp =
     add h (SetRL.remove rul (find h mp)) mp
 
 end
@@ -528,7 +528,7 @@ module Env = struct
     in
     (init_new_ac_leaves env mkr), ctx
 
-  let head_cp eqs env pac ({h=h} as ac) v dep =
+  let head_cp eqs env pac ({ h ; _ } as ac) v dep =
     try (*if RS.mem h env.ac_rs then*)
       SetRL.iter
         (fun (g, d, dep_rl) ->
@@ -1088,7 +1088,7 @@ module SMT2LikeModelOutput = struct
 
   let print_symb ty fmt f =
     match f, ty with
-    | Sy.Op Sy.Record, Ty.Trecord {Ty.name} ->
+    | Sy.Op Sy.Record, Ty.Trecord { Ty.name ; _ } ->
       fprintf fmt "%a__%s" Sy.print f (Hstring.view name)
 
     | _ -> Sy.print fmt f
@@ -1167,14 +1167,14 @@ let model_repr_of_term t env mrepr =
     e, ME.add t e mrepr
 
 
-let output_concrete_model ({make; repr} as env) =
+let output_concrete_model ({ make; repr; _ } as env) =
   let i = interpretation () in
   let abs_i = abs i in
   if abs_i = 1 || abs_i = 2 || abs_i = 3 then
     let functions, constants, arrays, _ =
       ME.fold
         (fun t mk ((fprofs, cprofs, carrays, mrepr) as acc) ->
-           let {E.f; xs; ty} =
+           let { E.f; xs; ty; _ } =
              match E.term_view t with
              | E.Not_a_term _ -> assert false
              | E.Term tt -> tt
@@ -1204,7 +1204,7 @@ let output_concrete_model ({make; repr} as env) =
                begin
                  match X.term_extract a with
                  | Some ta, true ->
-                   let {E.f=f_ta;xs=xs_ta; ty=ty_ta} =
+                   let { E.f = f_ta; xs=xs_ta; ty=ty_ta; _ } =
                      match E.term_view ta with
                      | E.Not_a_term _ -> assert false
                      | E.Term tt -> tt

@@ -140,7 +140,7 @@ module Container : Container_SIG = struct
 
     let find_coefficient x ineq = P.find x ineq.ple0
 
-    let split_pos_neg _ ({ple0 = p ; age = age},_) (mx, nb_max) =
+    let split_pos_neg _ ({ ple0 = p ; age; _ }, _) (mx, nb_max) =
       let mx = List.fold_left (fun m (c,x) ->
           let cmp = Q.sign c in (* equiv. to compare c Q.zero *)
           if cmp = 0 then m

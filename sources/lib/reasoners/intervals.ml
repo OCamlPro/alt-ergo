@@ -104,13 +104,13 @@ let point b ty e = {
   expl = e
 }
 
-let is_point { ints = l; expl = e } =
+let is_point { ints = l; expl = e; _ } =
   match l with
   | [Large (v1, e1) , Large (v2, e2)] when Q.equal v1 v2 ->
     Some (v1, Ex.union e (Ex.union e1 e2))
   | _ -> None
 
-let finite_size {ints = l; is_int = is_int} =
+let finite_size { ints = l; is_int = is_int; _ } =
   if not is_int then None
   else
     try
@@ -130,11 +130,11 @@ let finite_size {ints = l; is_int = is_int} =
     with Exit -> None
 
 let borne_inf = function
-  | {ints = (Large (v, ex), _)::_} -> v, ex, true
-  | {ints = (Strict (v, ex), _)::_} -> v, ex, false
+  | { ints = (Large (v, ex), _) :: _; _ } -> v, ex, true
+  | { ints = (Strict (v, ex), _) :: _; _ } -> v, ex, false
   | _ -> raise No_finite_bound
 
-let borne_sup {ints=ints} =
+let borne_sup { ints; _ } =
   match List.rev ints with
   | (_, Large (v, ex))::_ -> v, ex, true
   | (_, Strict (v, ex))::_ -> v, ex, false
@@ -326,7 +326,9 @@ let intersect =
         step is_int l1 r2 (Int((lo1,up2))::acc) (* ex of lo2 and up1 ? *)
       else assert false
   in
-  fun ({ints=l1; expl=e1; is_int=is_int} as uints1) {ints=l2; expl=e2} ->
+  fun
+    ({ints=l1; expl=e1; is_int=is_int} as uints1)
+    { ints = l2; expl = e2; _ } ->
     (*l1 and l2 are supposed to be normalized *)
     let expl = Ex.union e1 e2 in
     let l = step is_int l1 l2 []  in
@@ -508,7 +510,7 @@ let add_interval is_int l (b1,b2) =
        union_bornes is_int (l1)
     ) l []
 
-let add {ints = l1; is_int = is_int; expl = e1} {ints = l2; expl = e2}=
+let add {ints = l1; is_int = is_int; expl = e1} { ints = l2; expl = e2; _ } =
   let l =
     List.fold_left
       (fun l bs -> let i = add_interval is_int l1 bs in i@l) [] l2
@@ -575,7 +577,7 @@ let doesnt_contain_0 =
     else explain_no_zero int.ints
 
 
-let is_positive {ints=ints; expl=expl} =
+let is_positive { ints; expl; _ } =
   match ints with
   | [] -> assert false
   | (lb,_)::_ -> if pos_borne lb then Some (expl, []) else None
@@ -905,7 +907,7 @@ let inv_bornes (l, u) is_int =
   inv_borne_sup u is_int ~other:l, inv_borne_inf l is_int ~other:u
 
 
-let inv ({ints=l; is_int=is_int} as u) =
+let inv ({ ints = l; is_int; _ } as u) =
   match doesnt_contain_0 u with
   | None -> { u with ints = [Minfty, Pinfty] }
   | Some (ex, _) ->
@@ -924,7 +926,7 @@ let inv ({ints=l; is_int=is_int} as u) =
 
 type sign_of_interval = Zero | Pos | Neg | Mixed
 
-let sign_of_interval {ints} =
+let sign_of_interval { ints; _ } =
   match ints, List.rev ints with
   | [], _ | _, [] -> assert false
   | (inf, _)::_, (_,sup)::_ ->
@@ -960,7 +962,7 @@ let div i1 i2 =
       | Some (ex, _) -> add_expl_zero i1 ex
       | None -> i1
     in
-    let ({ints=l; is_int=is_int} as i) = mult i1 inv_i2 in
+    let ({ ints = l; is_int = is_int; _ } as i) = mult i1 inv_i2 in
     assert (l != []);
     if is_int then
       (* not just int_bornes because it's Euclidean division *)

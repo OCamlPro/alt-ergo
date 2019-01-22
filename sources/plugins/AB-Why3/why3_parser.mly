@@ -79,31 +79,31 @@ open Parsed
 
   let mk_tyapp q pl =
     match q with
-    | {Parsed.pp_desc = PPvar "int"} -> int_type
-    | {Parsed.pp_desc = PPvar "bool"} -> bool_type
-    | {Parsed.pp_desc = PPvar "real"} -> real_type
-    | {Parsed.pp_desc = PPvar s; pp_loc } ->  mk_external_type pp_loc pl s
+    | { Parsed.pp_desc = PPvar "int" ; _ } -> int_type
+    | { Parsed.pp_desc = PPvar "bool" ; _ } -> bool_type
+    | { Parsed.pp_desc = PPvar "real" ; _ } -> real_type
+    | { Parsed.pp_desc = PPvar s; pp_loc } ->  mk_external_type pp_loc pl s
     | _ -> Format.eprintf "TODO@."; assert false
 
   let mk_apply loc (f : Parsed.lexpr) a =
     match f with
-    | { pp_desc = Parsed.PPapp ("mod", le) } ->
+    | { pp_desc = Parsed.PPapp ("mod", le) ; _ } ->
        mk_application loc "comp_mod" (le @ [a])
-    | { pp_desc = Parsed.PPapp ("div", le) } ->
+    | { pp_desc = Parsed.PPapp ("div", le) ; _ } ->
        mk_application loc "comp_div" (le @ [a])
-    | { pp_desc = Parsed.PPapp ("domain_restriction", le) } ->
+    | { pp_desc = Parsed.PPapp ("domain_restriction", le) ; _ } ->
        mk_application loc "infix_lsbr" (le @ [a])
-    | { pp_desc = Parsed.PPapp ("domain_substraction", le) } ->
+    | { pp_desc = Parsed.PPapp ("domain_substraction", le) ; _ } ->
        mk_application loc "infix_lslsbr" (le @ [a])
-    | { pp_desc = Parsed.PPapp ("range_substraction", le) } ->
+    | { pp_desc = Parsed.PPapp ("range_substraction", le) ; _ } ->
        mk_application loc "infix_brgtgt" (le @ [a])
-    | { pp_desc = Parsed.PPapp ("range_restriction", le) } ->
+    | { pp_desc = Parsed.PPapp ("range_restriction", le) ; _ } ->
        mk_application loc "infix_brgt" (le @ [a])
-    | { pp_desc = PPvar "singleton" } ->
+    | { pp_desc = PPvar "singleton" ; _ } ->
        let empty = mk_application loc "empty" [] in
        mk_application loc "add" [a; empty]
-    | { pp_desc = PPvar s } -> mk_application loc s [a]
-    | { pp_desc = PPapp (s, l) } -> mk_application loc s (l @ [a])
+    | { pp_desc = PPvar s ; _ } -> mk_application loc s [a]
+    | { pp_desc = PPapp (s, l) ; _ } -> mk_application loc s (l @ [a])
     | _ ->  Format.eprintf "TODO@."; assert false
 
   let mk_infix_ident id loc t1 t2 =
@@ -150,11 +150,11 @@ open Parsed
   mk_record loc str_exp_list
 
   let mk_qualid = function
-  | { id_str = "True"; id_loc} -> mk_true_const id_loc
-  | { id_str = "False"; id_loc} -> mk_false_const id_loc
-  | { id_str; id_loc} -> mk_var id_loc id_str
+    | { id_str = "True"; id_loc; _} -> mk_true_const id_loc
+    | { id_str = "False"; id_loc; _ } -> mk_false_const id_loc
+    | { id_str; id_loc; _ } -> mk_var id_loc id_str
 
-  let hack_mod var { id_str; id_loc}  =
+  let hack_mod var { id_str; id_loc; _ }  =
     match var.pp_desc, id_str with
     | PPvar "Power", "power" ->
        (*Format.eprintf "%s\n" "hack";*) mk_var id_loc "power1"
@@ -505,8 +505,8 @@ term_:
     { mk_not (floc $startpos $endpos) $2 }
 | prefix_op term %prec prec_prefix_op
                     { match $1 with
-                      | {id_str = "prefix -"}
-                      | {id_str = "infix -"} ->
+                      | { id_str = "prefix -" ; _ }
+                      | { id_str = "infix -" ; _ } ->
                          mk_minus (floc $startpos $endpos) $2
                       | _ -> Format.eprintf "TODO@."; assert false
                     }
@@ -570,8 +570,8 @@ term_arg_:
     { mk_qualid $1 }
 | o = oppref ; a = term_arg
                      { match o with
-                      | {id_str = "prefix -"}
-                      | {id_str = "infix -"} ->
+                      | { id_str = "prefix -" ; _ }
+                      | { id_str = "infix -" ; _ } ->
                          mk_minus (floc $startpos $endpos) a
                       | _ -> Format.eprintf "TODO@."; assert false
                     }
@@ -582,8 +582,8 @@ term_dot_:
       { $1 }
   | o = oppref ; a = term_dot
                        { match o with
-                      | {id_str = "prefix -"}
-                      | {id_str = "infix -"} ->
+                      | { id_str = "prefix -" ; _ }
+                      | { id_str = "infix -" ; _ } ->
                          mk_minus (floc $startpos $endpos) a
                       | _ -> Format.eprintf "TODO@."; assert false
                     }
@@ -592,8 +592,8 @@ term_dot_:
 term_sub_:
   | term_dot DOT lqualid_rich
         { match $3 with
-                      | {Parsed.pp_desc = PPvar "prefix -"}
-                      | {Parsed.pp_desc = PPvar "infix -"} ->
+                      | {Parsed.pp_desc = PPvar "prefix -" ; _ }
+                      | {Parsed.pp_desc = PPvar "infix -" ; _ } ->
                          mk_minus (floc $startpos $endpos) $1
                       | _ -> Format.eprintf "TODO@."; assert false
                     }
