@@ -1018,7 +1018,7 @@ let mk_distinct ~iff tl =
   | [a; b] -> neg (mk_eq ~iff a b)
   | _ -> neg (mk_nary_eq ~iff tl)
 
-let mk_builtin is_pos n l =
+let mk_builtin ~is_pos n l =
   let pos =
     mk_positive_lit (Sy.Lit (Sy.L_built n)) (Sy.Lit (Sy.L_neg_built n)) l
   in

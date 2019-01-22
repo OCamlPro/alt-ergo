@@ -25,13 +25,19 @@ open Parsed_interface
 
 
 module Translate = struct
+
+  let pos x =
+    match x.p with
+    | None -> Loc.dummy
+    | Some p -> p
+
   (**************************************************************************)
   let translate_left_assoc f id params =
     match params with
     | [] | [_] -> assert false
     | t :: l ->
       List.fold_left (fun acc t ->
-          f id.p acc t
+          f (pos id) acc t
         ) t l
 
   let translate_right_assoc f id params =
@@ -39,7 +45,7 @@ module Translate = struct
     | [] | [_] -> assert false
     | t :: l ->
       List.fold_left (fun acc t ->
-          f id.p t acc
+          f (pos id) t acc
         ) t l
 
   let translate_chainable_assoc f id params =
@@ -47,8 +53,8 @@ module Translate = struct
     | [] | [_] -> assert false
     | a::b::l ->
       let (res,_) = List.fold_left (fun (acc,curr) next ->
-          mk_and id.p acc (f id.p curr next), next
-        ) ((f id.p a b),b) l
+          mk_and (pos id) acc (f (pos id) curr next), next
+        ) ((f (pos id) a b),b) l
       in res
 
   (**************************************************************************)
@@ -70,13 +76,16 @@ module Translate = struct
       | TReal -> real_type
       | TBool -> bool_type
       | TString -> assert false
-      | TArray (t1,t2) -> mk_external_type sort.p [aux t1;aux t2] "farray"
+      | TArray (t1,t2) -> mk_external_type (pos sort) [aux t1;aux t2] "farray"
       | TBitVec (n) -> assert false
-      | TSort (s,t_list) -> mk_external_type sort.p (List.map aux t_list) s
-      | TDatatype (d,t_list) -> assert false
-      | TVar (s) -> mk_var_type sort.p s
+      | TSort (s,t_list) -> mk_external_type (pos sort) (List.map aux t_list) s
+      | TDatatype (d,t_list) ->
+        mk_external_type (pos sort) (List.map aux t_list) d
+      | TVar (s) -> mk_var_type (pos sort) s
       | TFun (t_list,t) -> assert false
       | TLink(t) -> assert false
+      | TRoundingMode -> assert false
+      | TFloatingPoint _ -> assert false
     in
     aux sort.ty
 
@@ -94,7 +103,7 @@ module Translate = struct
     end
 
   let translate_constant cst t =
-    let loc = t.p in
+    let loc = pos t in
     match cst with
     | Const_Dec(s) -> mk_real_const loc (better_num_of_string s)
     | Const_Num(s) ->
@@ -111,11 +120,10 @@ module Translate = struct
     | Const_Hex(s) -> mk_int_const loc s
     | Const_Bin(s) -> mk_int_const loc s
 
-  let translate_identifier id params raw_params =
-    let name = Smtlib_typed_env.get_identifier id in
+  let translate_string_identifier name params raw_params =
     match name.c with
-    | "true" -> mk_true_const name.p
-    | "false" -> mk_false_const name.p
+    | "true" -> mk_true_const (pos name)
+    | "false" -> mk_false_const (pos name)
     | "+" -> begin
         match params with
         | [p] -> p
@@ -123,7 +131,7 @@ module Translate = struct
       end
     | "-" -> begin
         match params with
-        | [t] -> mk_minus name.p t
+        | [t] -> mk_minus (pos name) t
         | _ -> translate_left_assoc mk_sub name params
       end
     | "*" -> translate_left_assoc mk_mul name params
@@ -131,14 +139,14 @@ module Translate = struct
     | "div" -> translate_left_assoc mk_div name params
     | "mod" -> begin
         match params with
-        | [t1;t2] -> mk_mod name.p t1 t2
+        | [t1;t2] -> mk_mod (pos name) t1 t2
         | _ -> assert false
       end
     | "abs" -> begin
         match params with
         | [x] ->
-          let cond = mk_pred_ge name.p x (mk_int_const name.p "0") in
-          mk_ite name.p cond x (mk_minus name.p x)
+          let cond = mk_pred_ge (pos name) x (mk_int_const (pos name) "0") in
+          mk_ite (pos name) cond x (mk_minus (pos name) x)
         | _ -> assert false
       end
     | "<" -> translate_chainable_assoc mk_pred_lt name params
@@ -168,30 +176,42 @@ module Translate = struct
     | "ite" ->
       begin
         match params with
-        | [b;e1;e2] -> mk_ite name.p b e1 e2
+        | [b;e1;e2] -> mk_ite (pos name) b e1 e2
         | _ -> assert false
       end
     | "not" -> begin
         match params with
-        | [t] -> mk_not name.p t
+        | [t] -> mk_not (pos name) t
         | _ -> assert false
       end
-    | "distinct" -> mk_distinct name.p params
+    | "distinct" -> mk_distinct (pos name) params
     | "select" -> begin
         match params with
-        | [t;i] -> mk_array_get name.p t i
+        | [t;i] -> mk_array_get (pos name) t i
         | _ -> assert false
       end
     | "store" -> begin
         match params with
-        | [t;i;j] -> mk_array_set name.p t i j
+        | [t;i;j] -> mk_array_set (pos name) t i j
         | _ -> assert false
       end
     | _ ->
       if name.is_quantif then
-        mk_var name.p name.c
+        mk_var (pos name) name.c
       else
-        mk_application name.p name.c params
+        mk_application (pos name) name.c params
+
+
+
+  let translate_identifier id params raw_params =
+    let name, l = Smtlib_typed_env.get_identifier id in
+    match name.c, l, params with
+    | _, [], _ -> translate_string_identifier name params raw_params
+    | "is", [constr], [e] ->
+      mk_algebraic_test (pos name) e constr
+    | _ ->
+      Format.eprintf "TODO: handle other underscored IDs@.";
+      assert false
 
   let translate_qual_identifier qid params raw_params=
     match qid.c with
@@ -215,8 +235,8 @@ module Translate = struct
       let triggers = List.fold_left (fun acc key_term ->
           translate_key_term pars acc key_term
         ) [] key_term_list in
-      f t.p svl triggers [] (translate_term pars term)
-    | _ -> f t.p svl [] [] (translate_term pars t)
+      f (pos t) svl triggers [] (translate_term pars term)
+    | _ -> f (pos t) svl [] [] (translate_term pars t)
 
   and translate_term pars term =
     match term.c with
@@ -226,7 +246,7 @@ module Translate = struct
       begin
         match s with
         | None -> q
-        | Some s -> mk_type_cast term.p q (translate_sort s)
+        | Some s -> mk_type_cast (pos term) q (translate_sort s)
       end
     | TermQualIdTerm(qid,term_list) ->
       let params = List.map (translate_term pars) term_list in
@@ -234,13 +254,13 @@ module Translate = struct
       begin
         match s with
         | None -> q
-        | Some s -> mk_type_cast term.p q (translate_sort s)
+        | Some s -> mk_type_cast (pos term) q (translate_sort s)
       end
     | TermLetTerm(varbinding_list,term) ->
       let varbind = List.map (fun (s,term) ->
           s.c, (translate_term pars term)
         ) varbinding_list in
-      mk_let term.p varbind (translate_term pars term)
+      mk_let (pos term) varbind (translate_term pars term)
     | TermForAllTerm(sorted_var_list,t) ->
       let svl = List.map (fun (v,s) ->
           v.c, v.c, translate_sort s
@@ -253,7 +273,20 @@ module Translate = struct
       translate_quantif mk_exists svl pars t
     | TermExclimationPt(term,key_term_list) ->
       translate_term pars term
-    | TermMatch(term,pattern_term_list) -> assert false
+    | TermMatch(term,pattern_term_list) ->
+      let t = translate_term pars term in
+      let cases = List.map (fun (pat,term) ->
+          translate_pattern pat,
+          translate_term pars term
+        ) pattern_term_list
+      in
+      mk_match (pos term) t cases
+
+  and translate_pattern pat =
+    let p = pos pat in
+    match pat.c with
+    | MatchPattern(s,sl) -> mk_pattern p s.c (List.map (fun s -> s.c) sl)
+    | MatchUnderscore -> mk_pattern p "_" []
 
   let translate_assert_term (pars,term) =
     translate_term pars term
@@ -282,22 +315,38 @@ module Translate = struct
 
   let translate_decl_fun f params ret =
     let logic_type = mk_logic_type params (Some ret) in
-    mk_logic f.p Symbols.Other [(f.c,f.c)] logic_type
+    mk_logic (pos f) Symbols.Other [(f.c,f.c)] logic_type
 
   let translate_fun_dec (_,sl,s) =
     List.map translate_sort sl, translate_sort s
 
   let translate_fun_def_aux (symb,pars,svl,sort) =
     let pars = List.map (fun par -> par.c) pars in
-    let params = List.map (fun (p,s) -> p.p,p.c,translate_sort s) svl in
+    let params = List.map (fun (p,s) -> pos p, p.c,translate_sort s) svl in
     symb, params, translate_sort sort, pars
 
   let translate_fun_def fun_def term =
     let symb,params,ret,pars = translate_fun_def_aux fun_def in
     let t_expr = translate_term pars term in
     if Smtlib_ty.is_bool (Smtlib_ty.shorten term.ty) then
-      mk_non_ground_predicate_def  symb.p (symb.c,symb.c) params t_expr
-    else mk_function_def symb.p (symb.c,symb.c) params ret t_expr
+      mk_non_ground_predicate_def (pos symb) (symb.c,symb.c) params t_expr
+    else mk_function_def (pos symb) (symb.c,symb.c) params ret t_expr
+
+  let translate_datatype_decl (name, _) (params, cases) =
+    let params = List.map (fun n -> n.c) params in
+    let cases =
+      List.map (fun (constr, d_l) ->
+          constr.c,
+          List.map (fun (des, sort) -> des.c, translate_sort sort) d_l
+        )cases
+    in
+    pos name, params, name.c, (Parsed.Algebraic cases)
+
+  let translate_datatypes sort_dec datatype_dec =
+    try
+      mk_rec_type_decl @@
+      List.map2 translate_datatype_decl sort_dec datatype_dec
+    with Invalid_argument _ -> assert false
 
   let not_supported s =
     Format.eprintf "; %S : Not yet supported@." s
@@ -305,26 +354,30 @@ module Translate = struct
   let translate_command acc command =
     match command.c with
     | Cmd_Assert(assert_term) ->
-      (translate_assert command.p assert_term) :: acc
+      (translate_assert (pos command) assert_term) :: acc
     | Cmd_CheckEntailment(assert_term) ->
       Options.set_unsat_mode false;
-      (translate_goal command.p assert_term) :: acc
+      (translate_goal (pos command) assert_term) :: acc
     | Cmd_CheckSat ->
       Options.set_unsat_mode true;
-      (mk_goal command.p "g" (mk_false_const command.p)) :: acc
+      (mk_goal (pos command) "g" (mk_false_const (pos command))) :: acc
     | Cmd_CheckSatAssum prop_lit_list  ->
       not_supported "check-sat-assuming"; assert false
     | Cmd_DeclareConst(symbol,const_dec) ->
       (translate_decl_fun symbol [] (translate_const_dec const_dec)) :: acc
-    | Cmd_DeclareDataType(symbol,datatype_dec) -> assert false
-    | Cmd_DeclareDataTypes(sort_dec_list,datatype_dec_list) -> assert false
+    | Cmd_DeclareDataType(symbol,datatype_dec) ->
+      (mk_rec_type_decl
+         [(translate_datatype_decl (symbol,0) datatype_dec)]) :: acc
+    | Cmd_DeclareDataTypes(sort_dec_list,datatype_dec_list) ->
+      (translate_datatypes sort_dec_list datatype_dec_list) :: acc
+
     | Cmd_DeclareFun(symbol,fun_dec) ->
       let params,ret = translate_fun_dec fun_dec in
       (translate_decl_fun symbol params ret):: acc
     | Cmd_DeclareSort(symbol,n) ->
       let n = int_of_string n in
       let pars = init n (fun i -> Printf.sprintf "'a_%d" i) in
-      (mk_abstract_type_decl command.p pars symbol.c) :: acc
+      (mk_abstract_type_decl (pos command) pars symbol.c) :: acc
     | Cmd_DefineFun(fun_def,term)
     | Cmd_DefineFunRec(fun_def,term) ->
       (translate_fun_def fun_def term) :: acc
@@ -352,7 +405,7 @@ module Translate = struct
     | Cmd_Exit -> acc
 
   let init () =
-    if Smtlib_error.get_is_int_real () then
+    if Psmt2Frontend.Options.get_is_int_real () then
       let dummy_pos = Lexing.dummy_pos,Lexing.dummy_pos in
 
       (* assert false; *)

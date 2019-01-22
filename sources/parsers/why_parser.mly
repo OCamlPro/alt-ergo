@@ -40,10 +40,10 @@
 %token <string> INTEGER
 %token <Num.num> NUM
 %token <string> STRING
-%token WITH THEORY EXTENDS END
+%token MATCH WITH THEORY EXTENDS END QM
 %token AND LEFTARROW RIGHTARROW AC AT AXIOM CASESPLIT REWRITING
 %token BAR HAT
-%token BOOL COLON COMMA PV DISTINCT DOT ELSE EOF EQUAL
+%token BOOL COLON COMMA PV DISTINCT DOT SHARP ELSE OF EOF EQUAL
 %token EXISTS FALSE VOID FORALL FUNC GE GOAL GT CHECK CUT
 %token IF IN INT BITV MAPS_TO
 %token LE LET LEFTPAR LEFTSQ LEFTBR LOGIC LRARROW XOR LT MINUS
@@ -105,7 +105,23 @@ decl:
     { mk_abstract_type_decl ($startpos, $endpos) ty_vars ty }
 
 | TYPE ty_vars = type_vars ty = ident EQUAL enum = list1_constructors_sep_bar
-   { mk_enum_type_decl ($startpos, $endpos) ty_vars ty enum }
+   others = and_recursive_opt
+    {
+      match others with
+        | [] ->
+           mk_algebraic_type_decl ($startpos, $endpos) ty_vars ty enum
+        | l ->
+           let l = (($startpos, $endpos), ty_vars, ty, enum) :: l in
+           let l =
+             List.map
+               (fun (a, b, c, d) ->
+                 match mk_algebraic_type_decl a b c d with
+                 | Parsed.TypeDecl [e] -> e
+                 | _ -> assert false
+               ) l
+           in
+           mk_rec_type_decl l
+    }
 
 | TYPE ty_vars = type_vars ty = ident EQUAL record = record_type
    { mk_record_type_decl ($startpos, $endpos) ty_vars ty record }
@@ -202,8 +218,19 @@ logic_binder:
     { (($startpos(id), $endpos(id)), id, ty) }
 
 list1_constructors_sep_bar:
-| cons = ident { [cons] }
-| cons = ident BAR cons_l = list1_constructors_sep_bar { cons :: cons_l }
+| cons = ident algebraic_args { [cons, $2] }
+| cons = ident algebraic_args BAR cons_l = list1_constructors_sep_bar
+                                             { (cons, $2) :: cons_l }
+
+algebraic_args:
+| { [] }
+| OF record_type { $2 }
+
+and_recursive_opt:
+  | { [] }
+  | AND ty_vars = type_vars ty = ident EQUAL enum = list1_constructors_sep_bar
+others = and_recursive_opt
+    { (($startpos, $endpos), ty_vars, ty, enum) :: others}
 
 lexpr:
 
@@ -318,6 +345,23 @@ lexpr:
 | CUT e = lexpr
    { mk_cut ($startpos, $endpos) e }
 
+/* match */
+| MATCH e = lexpr WITH cases = list1_match_cases END
+    { mk_match ($startpos, $endpos) e (List.rev cases) }
+
+
+list1_match_cases:
+|     p = simple_pattern RIGHTARROW e = lexpr { [p, e]}
+| BAR p = simple_pattern RIGHTARROW e = lexpr { [p, e]}
+| l = list1_match_cases BAR p = simple_pattern RIGHTARROW e = lexpr
+    { (p,e) :: l }
+
+simple_pattern:
+| id = ident { mk_pattern ($startpos, $endpos) id [] }
+| app = ident LEFTPAR args = list1_string_sep_comma RIGHTPAR
+   { mk_pattern ($startpos, $endpos) app args }
+
+
 let_binders:
 | binder = ident EQUAL e = lexpr { [binder, e] }
 | binder = ident EQUAL e = lexpr COMMA l = let_binders { (binder, e) :: l }
@@ -368,6 +412,14 @@ simple_expr :
 | se = simple_expr COLON ty = primitive_type
     {  mk_type_cast ($startpos, $endpos) se ty }
 
+| se = simple_expr QM id = ident
+    { mk_algebraic_test ($startpos, $endpos) se id }
+
+| se = simple_expr id = QM_ID
+    { mk_algebraic_test ($startpos, $endpos) se id }
+
+| se = simple_expr SHARP label = ident
+   { mk_algebraic_project ($startpos, $endpos) ~guarded:true se label }
 array_assignements:
 | assign = array_assignement
    { [assign] }
@@ -429,6 +481,7 @@ sq:
 | RIGHTSQ {false}
 
 bound:
+| QM                 { mk_var ($startpos, $endpos) "" }
 | id = QM_ID         { mk_var ($startpos, $endpos) id }
 | id = ID            { mk_var ($startpos, $endpos) id }
 | i = INTEGER        { mk_int_const ($startpos, $endpos) i }
@@ -485,6 +538,11 @@ list1_multi_logic_binder:
 list1_named_ident_sep_comma:
 | id = named_ident                                   { [id] }
        | id = named_ident COMMA l = list1_named_ident_sep_comma { id :: l }
+
+list1_string_sep_comma:
+| id = ident
+    { [ id ] }
+| id = ident COMMA l = list1_string_sep_comma { id :: l  }
 
 named_ident:
 | id = ID { id, "" }

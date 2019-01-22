@@ -117,7 +117,7 @@ and 'a tt_desc =
   | TTconcat of 'a atterm * 'a atterm
   (* Concatenation of bitvectors *)
   | TTdot of 'a atterm * Hstring.t
-  (** Field acess on structs/records *)
+  (** Field access on structs/records *)
   | TTrecord of (Hstring.t * 'a atterm) list
   (** Record creation. *)
   | TTlet of (Symbols.t * 'a atterm) list * 'a atterm
@@ -128,8 +128,20 @@ and 'a tt_desc =
   | TTite of 'a atform * 'a atterm * 'a atterm
   (** Conditional branching, of the form
       [TTite (condition, then_branch, else_branch)]. *)
+
+  | TTproject of bool * 'a atterm  * Hstring.t
+  (** Field (conditional) access on ADTs. The boolean is true when the
+      projection is 'guarded' and cannot be simplified (because
+      functions are total) *)
+
+  | TTmatch of 'a atterm * (pattern * 'a atterm) list
+  (** pattern matching on ADTs *)
+
+  | TTform of 'a atform
+  (** formulas inside terms: simple way to add them without making a
+      lot of changes *)
 (** Typed terms descriptors. *)
-(* TODO: replace tuples by records (possible inline recors to
+(* TODO: replace tuples by records (possible inline records to
          avoid polluting the namespace ?) with explicit field names. *)
 
 
@@ -155,6 +167,12 @@ and 'a tatom =
   | TApred of 'a atterm * bool
   (** Term predicate, negated if the boolean is true.
       [TApred (t, negated)] is satisfied iff [t <=> not negated] *)
+
+  | TTisConstr of ('a tterm, 'a) annoted  * Hstring.t
+  (** Test if the given term's head symbol is identitical to the
+      provided ADT consturctor *)
+
+
 (** Typed atoms. *)
 
 and 'a quant_form = {
@@ -193,6 +211,10 @@ and 'a tform =
       TODO: what is in the first list ? *)
   | TFnamed of Hstring.t * 'a atform
   (** Attach a name to a formula. *)
+
+  | TFmatch of 'a atterm * (pattern * 'a atform) list
+  (** pattern matching on ADTs *)
+
 (** Typed formulas. *)
 
 and 'a tlet_kind =

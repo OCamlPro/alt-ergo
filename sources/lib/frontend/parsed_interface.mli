@@ -18,9 +18,15 @@ val mk_abstract_type_decl : Loc.t -> string list -> string -> decl
 
 val mk_enum_type_decl : Loc.t -> string list -> string -> string list -> decl
 
-val mk_record_type_decl :
-  Loc.t -> string list -> string -> (string * ppure_type) list -> decl
+val mk_algebraic_type_decl :
+  Loc.t -> string list -> string ->
+  (string * (string * ppure_type) list) list -> decl
 
+val mk_record_type_decl :
+  Loc.t -> string list -> string -> ?constr : string ->
+  (string * ppure_type) list -> decl
+
+val mk_rec_type_decl : Parsed.type_decl list -> decl
 
 (** Declaration of symbols, functions, predicates, and goals *)
 
@@ -186,6 +192,8 @@ val mk_var : Loc.t -> string -> lexpr
 
 val mk_application : Loc.t -> string -> lexpr list -> lexpr
 
+val mk_pattern : Loc.t -> string -> string list -> pattern
+
 val mk_ite : Loc.t -> lexpr -> lexpr -> lexpr -> lexpr
 
 val mk_let : Loc.t -> (string * lexpr) list -> lexpr -> lexpr
@@ -205,3 +213,9 @@ val mk_maps_to : Loc.t -> string -> lexpr -> lexpr
 val mk_check : Loc.t -> lexpr -> lexpr
 
 val mk_cut : Loc.t -> lexpr -> lexpr
+
+val mk_match : Loc.t -> lexpr -> (pattern * lexpr) list -> lexpr
+
+val mk_algebraic_test : Loc.t -> lexpr -> string -> lexpr
+
+val mk_algebraic_project : Loc.t -> guarded:bool -> lexpr -> string -> lexpr

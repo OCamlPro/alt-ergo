@@ -94,6 +94,9 @@ and 'a tt_desc =
   | TTnamed of Hstring.t * ('a tterm, 'a) annoted
   | TTite of ('a tform, 'a) annoted *
              ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
+  | TTproject of bool * ('a tterm, 'a) annoted  * Hstring.t
+  | TTmatch of 'a atterm * (pattern * 'a atterm) list
+  | TTform of 'a atform
 
 and 'a atatom = ('a tatom, 'a) annoted
 
@@ -106,6 +109,7 @@ and 'a tatom =
   | TAle of ('a tterm, 'a) annoted list
   | TAlt of ('a tterm, 'a) annoted list
   | TApred of ('a tterm, 'a) annoted * bool (* true <-> negated *)
+  | TTisConstr of ('a tterm, 'a) annoted  * Hstring.t
 
 and 'a quant_form = {
   (* quantified variables that appear in the formula *)
@@ -126,6 +130,7 @@ and 'a tform =
   | TFlet of (Symbols.t * Ty.t) list *
              (Symbols.t * 'a tlet_kind) list * ('a tform, 'a) annoted
   | TFnamed of Hstring.t * ('a tform, 'a) annoted
+  | TFmatch of 'a atterm * (pattern * 'a atform) list
 
 and 'a tlet_kind =
   | TletTerm of ('a tterm, 'a) annoted
@@ -234,6 +239,33 @@ let rec print_term fmt t = match t.c.tt_desc with
   | TTite(cond, t1, t2) ->
     fprintf fmt "(if %a then %a else %a)"
       print_formula cond print_term t1 print_term t2
+  | TTproject (grded, t1, s) ->
+    fprintf fmt "%a#%s%s"
+      print_term t1 (if grded then "" else "!") (Hstring.view s)
+
+  | TTform f ->
+    fprintf fmt "%a" print_formula f
+
+  | TTmatch (e, cases) ->
+    let pp_vars fmt l =
+      match l with
+        [] -> ()
+      | [e,_,_] -> Var.print fmt e
+      | (e,_,_) :: l ->
+        fprintf fmt "(%a" Var.print e;
+        List.iter (fun (e,_,_) -> fprintf fmt ", %a" Var.print e) l;
+        fprintf fmt ")"
+    in
+    fprintf fmt "match %a with\n" print_term e;
+    List.iter
+      (fun (p, v) ->
+         match p with
+         | Constr {name = n; args = l} ->
+           fprintf fmt "| %a %a -> %a\n" Hstring.print n pp_vars l print_term v
+         | Var x ->
+           fprintf fmt "| %a -> %a\n" Var.print x print_term v;
+      )cases;
+    fprintf fmt "end@."
 
 and print_term_binders fmt l =
   match l with
@@ -262,6 +294,8 @@ and print_atom fmt a =
   | TApred (t, negated) ->
     if negated then fprintf fmt "(not (%a))" print_term t
     else print_term fmt t
+  | TTisConstr (t1, s) ->
+    fprintf fmt "%a ? %s" print_term t1 (Hstring.view s)
   | _ -> assert false
 
 and print_triggers fmt l =

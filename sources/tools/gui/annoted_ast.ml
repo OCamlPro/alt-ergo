@@ -749,6 +749,12 @@ and print_tt_desc fmt = function
     fprintf fmt "(if %a then %a else %a)"
       print_tform f print_term t1 print_term t2
 
+  | TTproject (_, _, _) | TTmatch (_, _) ->
+    Gui_config.not_supported "Algebraic datatypes"
+
+  | TTform _ ->
+    Gui_config.not_supported "Formulas inside terms"
+
 and print_term_binders fmt l =
   match l with
   | [] -> assert false
@@ -769,6 +775,7 @@ and print_tatom fmt a = match a.Typed.c with
   | TApred (t, negated) ->
     if negated then fprintf fmt "(not (%a))" print_tterm t
     else print_tterm fmt t
+  | TTisConstr _ -> Gui_config.not_supported "Algebraic datatypes"
 
 and print_rwt fmt { rwt_vars = rv; rwt_left = rl; rwt_right = rr } =
   fprintf fmt "forall %a. %a = %a"
@@ -802,6 +809,7 @@ and print_tform2 fmt f = match f.Typed.c with
   | TFlet (vs, binders, tf) ->
     fprintf fmt "let %a in\n %a" print_mixed_binders binders print_tform tf
   | TFnamed (_, tf) -> print_tform fmt tf
+  | TFmatch _ -> Gui_config.not_supported "Algebraic datatypes"
 
 and print_mixed_binders =
   let aux fmt e =
@@ -1078,6 +1086,13 @@ and of_tt_desc (buffer:sbuffer) = function
   | TTite(f, t1, t2) ->
     ATite(annot_of_tform buffer f, of_tterm buffer t1, of_tterm buffer t2)
 
+  | TTproject (_, _, _) | TTmatch (_, _) ->
+    Gui_config.not_supported "Algebraic datatypes"
+
+  | TTform _ ->
+    Gui_config.not_supported "Formulas inside terms"
+
+
 and of_term_binders buffer l =
   List.rev_map (fun (s, t) -> s, of_tterm buffer t) (List.rev l)
 
@@ -1090,6 +1105,7 @@ and of_tatom (buffer:sbuffer) a = match a.Typed.c with
   | TAle tl -> AAle (List.map (annot_of_tterm buffer ) tl)
   | TAlt tl -> AAlt (List.map (annot_of_tterm buffer ) tl)
   | TApred (t, negated) -> AApred (of_tterm buffer  t, negated)
+  | TTisConstr _ -> Gui_config.not_supported "Algebraic datatypes"
 
 and change_polarity_aform f =
   f.polarity <- not f.polarity;
@@ -1132,6 +1148,8 @@ and of_tform (buffer:sbuffer) f = match f.Typed.c with
 
   | TFnamed (n, tf) ->
     AFnamed (n, annot_of_tform buffer tf)
+  | TFmatch (_, _) ->
+    Gui_config.not_supported "Algebraic datatypes"
 
 and annot_of_tform (buffer:sbuffer) t =
   let ptag = tag buffer in
@@ -1196,8 +1214,10 @@ let downgrade_type_decl = function
       ) r.Ty.args in
     let fields = List.map (fun (s, ty) ->
         Hstring.view s, downgrade_ty ty
-      ) r.Ty.lbs in
-    vars, Hstring.view r.Ty.name, Parsed.Record fields
+      ) r.Ty.lbs
+    in
+    let constr = Hstring.view r.Ty.record_constr in
+    vars, Hstring.view r.Ty.name, Parsed.Record (constr, fields)
 
   | Ty.Tadt _ ->
     Gui_config.not_supported "Algebraic datatypes"
@@ -1901,12 +1921,17 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
     append_buf buffer ~tags:(d.tag :: d.ptag :: tags) (flush_str_formatter());
     append_buf buffer "\n\n"
 
-  | ATypeDecl (loc, ls, s, Record rt, _) ->
+  | ATypeDecl (loc, ls, s, Record (_, rt), _) ->
     fprintf str_formatter "type %a%s = { %a }"
       print_astring_list ls s	print_record_type rt;
     d.line <- buffer#line_count;
     append_buf buffer ~tags:(d.tag :: d.ptag :: tags) (flush_str_formatter());
     append_buf buffer "\n\n"
+
+  | ATypeDecl (loc, ls, s, Algebraic _, _) ->
+    Gui_config.not_supported "Algebraic datatypes"
+
+
 
 (* Remove introduced logic declarations for type constructors
    (for printing) *)

@@ -73,7 +73,9 @@
         "type"       , TYPE;
         "unit"       , UNIT;
         "void"       , VOID;
+        "match"      , MATCH;
         "with"       , WITH;
+        "of"         , OF;
       ]
     in
     List.iter (fun (s, kw) -> Hashtbl.add tbl s kw) kw_list;
@@ -127,7 +129,8 @@ let identifier = (alphabet | '_') (alphabet | '_' | digit | '?' | '\'')*
 rule parse_token = parse
   | '\n'                     { mk_new_line lexbuf; parse_token lexbuf }
   | [' ' '\t' '\r']+         { parse_token lexbuf }
-  | '?' (identifier ?) as id { QM_ID id }
+  | '?'                      { QM }
+  | '?' identifier as id     { QM_ID id }
   | identifier as i          { try assoc_keyword i with Not_found -> ID i }
   | digit+ as s              { INTEGER s }
 
@@ -198,6 +201,7 @@ rule parse_token = parse
   | "%"   { PERCENT }
   | "@"   { AT }
   | "."   { DOT }
+  | "#"   { SHARP }
   | "["   { LEFTSQ }
   | "]"   { RIGHTSQ }
   | "{"   { LEFTBR }

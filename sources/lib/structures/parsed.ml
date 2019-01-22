@@ -54,6 +54,9 @@ type ppure_type =
   | PPTvarid of string * Loc.t
   | PPTexternal of ppure_type list * string * Loc.t
 
+type pattern =
+  { pat_loc : Loc.t; pat_desc : string * string list }
+
 type lexpr =
   { pp_loc : Loc.t; pp_desc : pp_desc }
 
@@ -91,6 +94,9 @@ and pp_desc =
   | PPcheck of lexpr
   | PPcut of lexpr
   | PPcast of lexpr * ppure_type
+  | PPmatch of lexpr * (pattern * lexpr) list
+  | PPisConstr of lexpr * string
+  | PPproject of bool * lexpr * string
 
 (* Declarations. *)
 
@@ -99,9 +105,12 @@ type plogic_type =
   | PFunction of ppure_type list * ppure_type
 
 type body_type_decl =
-  | Record of (string * ppure_type) list  (* lbl : t *)
+  | Record of string * (string * ppure_type) list  (* lbl : t *)
   | Enum of string list
+  | Algebraic of (string * (string * ppure_type) list) list
   | Abstract
+
+type type_decl = Loc.t * string list * string * body_type_decl
 
 type decl =
   | Theory of Loc.t * string * string * decl list
@@ -115,6 +124,6 @@ type decl =
   | Function_def of
       Loc.t * (string * string) *
       (Loc.t * string * ppure_type) list * ppure_type * lexpr
-  | TypeDecl of Loc.t * string list * string * body_type_decl
+  | TypeDecl of type_decl list
 
 type file = decl list
