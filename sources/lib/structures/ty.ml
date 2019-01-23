@@ -95,7 +95,7 @@ let print_generic body_of =
         (Hashtbl.add h v ();
          (*fprintf fmt "('a_%d->%a)" v print t *)
          print body_of fmt t)
-    | Tvar{v=v ; value = Some t} ->
+    | Tvar{ value = Some t; _ } ->
       (*fprintf fmt "('a_%d->%a)" v print t *)
       print body_of fmt t
     | Text(l, s) -> fprintf fmt "%a <ext>%s" print_list l (Hstring.view s)
@@ -170,7 +170,7 @@ let rec shorten ty =
   | Tvar { value = Some (Tvar{ value = None; _ } as t'); _ } -> t'
   | Tvar ({ value = Some (Tvar t2); _ } as t1) ->
     t1.value <- t2.value; shorten ty
-  | Tvar {v = n; value = Some t'} -> shorten t'
+  | Tvar { value = Some t'; _ } -> shorten t'
 
   | Text (l,s) ->
     let l, same = Lists.apply shorten l in
@@ -195,7 +195,7 @@ let rec shorten ty =
 
   | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum (_, _) -> ty
 
-and shorten_body n args =
+and shorten_body _ _ =
   ()
     [@ocaml.ppwarning "TODO: should be implemented ?"]
 
@@ -440,7 +440,7 @@ module Decls = struct
               (fun sbt vty ty ->
                  let vty = shorten vty in
                  match vty with
-                 | Tvar {v ; value = Some _} -> assert false
+                 | Tvar { value = Some _ ; _ } -> assert false
                  | Tvar {v ; value = None}   ->
                    if equal vty ty then sbt else M.add v ty sbt
                  | _ ->
@@ -541,7 +541,7 @@ let rec hash t =
         (abs h) lbs
     in
     abs h
-  | Tsum (s, l) -> abs (Hstring.hash s) (*we do not hash constructors*)
+  | Tsum (s, _) -> abs (Hstring.hash s) (*we do not hash constructors*)
 
   | Tadt (s, args) ->
     let h =
@@ -623,7 +623,7 @@ let vty_of t =
     | Tvar { v = i ; value = None } -> Svty.add i acc
     | Text(l,_) -> List.fold_left vty_of_rec acc l
     | Tfarray (t1,t2) -> vty_of_rec (vty_of_rec acc t1) t2
-    | Trecord { args; name = s; lbs; _ } ->
+    | Trecord { args; lbs; _ } ->
       let acc = List.fold_left vty_of_rec acc args in
       List.fold_left (fun acc (_, ty) -> vty_of_rec acc ty) acc lbs
     | Tadt(_, args) ->

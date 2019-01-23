@@ -53,7 +53,7 @@ let replay_unprune id env =
   | AT at -> unprune ~register:false env at
   | QF aq -> unprune ~register:false env aq
 
-let replay_addinstance id aname entries env =
+let replay_addinstance id _aname entries env =
   match findbyid id env.ast with
   | AD (ad, _) ->
     begin

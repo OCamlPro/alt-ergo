@@ -76,7 +76,8 @@ module Shostak(X : ALIEN) = struct
 
   let name = "bitv"
 
-  let is_mine_symb sy ty = match sy with
+  let is_mine_symb sy _ =
+    match sy with
     | Sy.Bitv _ | Sy.Op (Sy.Concat | Sy.Extract)  -> true
     | _ -> false
 
@@ -102,8 +103,8 @@ module Shostak(X : ALIEN) = struct
        les plus jeunes (petites)*)
 
     | Alien t1, Alien t2 -> X.str_cmp t1 t2
-    | Var v, Alien t -> 1
-    | Alien t, Var v -> -1
+    | Var _, Alien _ -> 1
+    | Alien _, Var _ -> -1
 
   let compare_simple_term st1 st2 =
     if st1.sz <> st2.sz then st1.sz - st2.sz
@@ -164,7 +165,7 @@ module Shostak(X : ALIEN) = struct
           |I_Ext(t'',k,_) ->
             alpha {t with bv = I_Ext(t'',i+k,j+k)}
 
-          |I_Comp(u,v) when j < v.sz ->
+          |I_Comp(_,v) when j < v.sz ->
             alpha{t with bv =I_Ext(v,i,j)}
 
           |I_Comp(u,v) when i >= v.sz ->
@@ -232,7 +233,7 @@ module Shostak(X : ALIEN) = struct
           let r2, ctx = make_rec t2 ctx in
           { bv = I_Comp (r1, r2) ; sz = n }, ctx
         | E.Term { E.f = Sy.Op Sy.Extract;
-                   xs = [t1;ti;tj] ; ty = Ty.Tbitv n; _ } ->
+                   xs = [t1;ti;tj] ; ty = Ty.Tbitv _; _ } ->
           begin
             match E.term_view ti , E.term_view tj with
             | E.Term { E.f = Sy.Int i; _ } , E.Term { E.f = Sy.Int j; _ } ->
@@ -272,10 +273,10 @@ module Shostak(X : ALIEN) = struct
       | Cte b -> fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
       | Other (Alien t) -> fprintf fmt "%a@?" X.print t
       | Other (Var tv) -> fprintf fmt "%a@?" print_tvar (tv,ast.sz)
-      | Ext (Alien t,sz,i,j) ->
+      | Ext (Alien t,_,i,j) ->
         fprintf fmt "%a@?" X.print t;
         fprintf fmt "<%d,%d>@?" i j
-      | Ext (Var tv,sz,i,j) ->
+      | Ext (Var tv,_,i,j) ->
         fprintf fmt "%a@?" print_tvar (tv,ast.sz);
         fprintf fmt "<%d,%d>@?" i j
 
@@ -330,7 +331,7 @@ module Shostak(X : ALIEN) = struct
 
     let st_slice st siz =
       let siz_bis = st.sz - siz in match st.bv with
-      |Cte b -> {st with sz = siz},{st with sz = siz_bis}
+      |Cte _ -> {st with sz = siz},{st with sz = siz_bis}
       |Other x ->
         let s1 = Ext(x,st.sz, siz_bis, st.sz - 1) in
         let s2 = Ext(x,st.sz, 0, siz_bis - 1) in
@@ -428,8 +429,8 @@ module Shostak(X : ALIEN) = struct
         |Cte b, Other (Var _) -> [cte_vs_other b st2]
         |Other (Var _), Cte b -> [cte_vs_other b st1]
 
-        |Cte b, Other (Alien t) -> [cte_vs_other b st2]
-        |Other (Alien t), Cte b -> [cte_vs_other b st1]
+        |Cte b, Other (Alien _) -> [cte_vs_other b st2]
+        |Other (Alien _), Cte b -> [cte_vs_other b st1]
 
         |Cte b, Ext(xt,s_xt,i,j) -> [cte_vs_ext b xt s_xt i j]
         |Ext(xt,s_xt,i,j), Cte b -> [cte_vs_ext b xt s_xt i j]
@@ -546,7 +547,7 @@ module Shostak(X : ALIEN) = struct
       in List.fold_left f_aux acc tl
 
     let equalities_propagation eqs_slic =
-      let init_sets = List.map (fun (t,vls) -> init_sets vls) eqs_slic in
+      let init_sets = List.map (fun (_,vls) -> init_sets vls) eqs_slic in
       let init_sets = List.flatten init_sets
       in List.map
         (fun set ->
@@ -559,7 +560,7 @@ module Shostak(X : ALIEN) = struct
 
     let build_solution unif_slic sets =
       let get_rep var =
-        fst(List.find ( fun(rep,set)->ST_Set.mem var set ) sets) in
+        fst(List.find ( fun(_,set)->ST_Set.mem var set ) sets) in
       let to_external_ast v =
         {sz = v.sz;
          bv = match v.bv with
@@ -695,7 +696,7 @@ module Shostak(X : ALIEN) = struct
 
   let extract r ty =
     match X.extract r with
-      Some (u::_ as bv) -> to_i_ast bv
+      Some (_::_ as bv) -> to_i_ast bv
     | None -> {bv =  Canonizer.I_Other (Alien r); sz = ty}
     | Some [] -> assert false
 
@@ -772,7 +773,7 @@ module Shostak(X : ALIEN) = struct
       let compare = compare_mine
     end)
 *)
-  let fully_interpreted sb = true
+  let fully_interpreted _ = true
 
   let term_extract _ = None, false
 
@@ -784,7 +785,7 @@ module Shostak(X : ALIEN) = struct
   let assign_value _ __ =
     failwith "[Bitv.assign_value] not implemented for theory Bitv"
 
-  let choose_adequate_model t l =
+  let choose_adequate_model _ _ =
     assert false
 
 end

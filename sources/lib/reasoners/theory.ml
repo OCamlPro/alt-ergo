@@ -135,10 +135,10 @@ module Main_Default : S = struct
              let l = List.map (fun _ -> Ty.fresh_tvar()) l in
              Hstring.Map.add hs (Text(l, hs)) mp
 
-           | Tsum (hs, l) ->
+           | Tsum (hs, _) ->
              Hstring.Map.add hs ty mp
 
-           | Trecord { args; name; lbs; _ } ->
+           | Trecord { name; _ } ->
              (* cannot do better for records ? *)
              Hstring.Map.add name ty mp
 
@@ -249,10 +249,10 @@ module Main_Default : S = struct
         List.iter
           (fun (rx, lit_orig, _, ex) ->
              match lit_orig with
-             | Th_util.CS(k, sz) ->
+             | Th_util.CS(k, _) ->
                fprintf fmt "  > %s  cs: %a (because %a)@."
                  (theory_of k) LR.print (LR.make rx) Ex.print ex
-             | Th_util.NCS(k, sz) ->
+             | Th_util.NCS(k, _) ->
                fprintf fmt "  > %s ncs: %a (because %a)@."
                  (theory_of k) LR.print (LR.make rx) Ex.print ex
              | _ -> assert false
@@ -482,7 +482,7 @@ module Main_Default : S = struct
     let facts = CC_X.empty_facts () in
     List.iter
       (List.iter
-         (fun (a,ex,dlvl,plvl) ->
+         (fun (a,ex,_dlvl,_plvl) ->
             CC_X.add_fact facts (LTerm a, ex, Th_util.Other))
       ) in_facts_l;
 
@@ -517,7 +517,7 @@ module Main_Default : S = struct
       Debug.assumed t.assumed;
       assert (not ordered || is_ordered_list t.assumed);
 
-      let gamma, ch = CC_X.assume_literals t.gamma [] facts in
+      let gamma, _ = CC_X.assume_literals t.gamma [] facts in
       let new_terms = CC_X.new_terms gamma in
       {t with gamma = gamma; terms = Expr.Set.union t.terms new_terms},
       new_terms, cpt
@@ -685,17 +685,17 @@ module Main_Empty : S = struct
 
   let empty () = { assumed_set = E.Set.empty }
 
-  let assume ?(ordered=true) in_facts t =
+  let assume ?ordered:(_=true) in_facts t =
     let assumed_set =
       List.fold_left
-        (fun assumed_set ((a, ex, dlvl, plvl)) ->
+        (fun assumed_set ((a, _, _, _)) ->
            if E.Set.mem a assumed_set then assumed_set
            else E.Set.add a assumed_set
         ) t.assumed_set in_facts
     in
     {assumed_set}, E.Set.empty, 0
 
-  let query a t = None
+  let query _ _ = None
 
   let print_model _ _ = ()
   let cl_extract _ = []
@@ -705,11 +705,11 @@ module Main_Empty : S = struct
   let get_real_env _ = empty_ccx
   let get_case_split_env _ = empty_ccx
   let do_case_split env = env, E.Set.empty
-  let add_term env t ~add_in_cs = env
+  let add_term env _ ~add_in_cs:_ = env
   let compute_concrete_model e = e
-  let terms_in_repr e = Expr.Set.empty
+  let terms_in_repr _ = Expr.Set.empty
 
   let assume_th_elt e _ _ = e
-  let theories_instances ~do_syntactic_matching _ e _ _ _ = e, []
+  let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []
   let get_assumed env = env.assumed_set
 end

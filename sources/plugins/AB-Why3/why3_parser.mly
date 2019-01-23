@@ -35,7 +35,7 @@ open Parsed
 
   let mk_id id s e = { id_str = id; id_lab = []; id_loc = floc s e }
 
-  let mk_term d s e = d
+  let mk_term d _ _ = d
 
   let error_param loc =
     Why3_loc.errorm ~loc "cannot determine the type of the parameter"
@@ -316,7 +316,7 @@ decl:
 
 type_decl:
 | labels(lident_nq) ty_var* typedefn
-  { let model, def, inv = $3 in
+  { let _, def, _ = $3 in
     let loc = floc $startpos $endpos in
     let ty_vars = List.map (fun i -> i.id_str) $2 in
     match def with

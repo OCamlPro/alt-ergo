@@ -97,8 +97,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         printf "[sat] unsat of %a ?@." E.print gf.E.ff
 
     let assume gf =
-      let { E.ff = f; age = age; lem = lem;
-            mf = mf; from_terms = terms; _ } = gf in
+      let { E.ff = f; lem; from_terms = terms; _ } = gf in
       if debug_sat () then begin
         match E.form_view f with
         | E.Not_a_form -> assert false
@@ -192,7 +191,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let generated_instances l =
       if verbose () && debug_sat () then begin
         eprintf "[new_instances] %d generated@." (List.length l);
-        List.iter (fun { E.ff = f; origin_name; lem; _ } ->
+        List.iter (fun { E.ff = f; origin_name; _ } ->
             eprintf " instance(origin = %s): %a@." origin_name E.print f;
           ) l
       end
@@ -276,7 +275,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     print_propositional_model env;
     Th.print_model fmt (SAT.current_tbox env.satml)
 
-  let make_explanation lc = Ex.empty
+  let make_explanation _ = Ex.empty
   (*
     if debug_sat () then
     fprintf fmt "make_explanation of %d clauses@." (List.length lc);
@@ -309,10 +308,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     ({gf with E.ff=clause}, dep) :: acc
 
-  let mk_theories_instances do_syntactic_matching remove_clauses env acc =
+  let mk_theories_instances do_syntactic_matching _remove_clauses env acc =
     let t_match = Inst.matching_terms_info env.inst in
     let tbox = SAT.current_tbox env.satml in
-    let tbox, l =
+    let _tbox, l =
       Th.theories_instances
         ~do_syntactic_matching t_match tbox (selector env) env.nb_mrounds 0
         [@ocaml.ppwarning "TODO: modifications made in tbox are lost! improve?"]
@@ -390,7 +389,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ ->
         assert false
 
-  let pred_def env f name dep loc =
+  let pred_def env f name dep _loc =
     (* dep currently not used. No unsat-cores in satML yet *)
     Debug.pred_def f;
     let a_t = E.mk_term (Symbols.name name) [] Ty.Tbool in
@@ -508,7 +507,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let take_max aux l =
     let ((lvl, _, ind) ,_) as acc =
-      List.fold_left (fun ((mz,lz) as acc) f ->
+      List.fold_left (fun ((mz,_) as acc) f ->
           match aux f with
           | None -> acc
           | Some (m, l) ->
@@ -520,7 +519,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let take_min aux l =
     let ((lvl, _, ind) ,_) as acc =
-      List.fold_left (fun ((mz,lz) as acc) f ->
+      List.fold_left (fun ((mz,_) as acc) f ->
           match aux f with
           | None -> acc
           | Some (m, l) ->
@@ -889,7 +888,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           greedy_mconf (), "greedy-inst", true , false ]
 
 
-  let rec unsat_rec env ~first_call : unit =
+  let rec unsat_rec env ~first_call:_ : unit =
     try SAT.solve env.satml; assert false
     with
     | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
@@ -971,12 +970,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     try
       assert (SAT.decision_level env.satml == 0);
-      let env, updated = assume_aux ~dec_lvl:0 env [gf] in
+      let env, _updated = assume_aux ~dec_lvl:0 env [gf] in
       let max_t = max_term_depth_in_sat env in
       let env = {env with inst = Inst.register_max_term_depth env.inst max_t} in
       unsat_rec env ~first_call:true;
       assert false
-    with IUnsat (env, dep) ->
+    with IUnsat (_env, dep) ->
       assert begin
         Ex.fold_atoms
           (fun e b -> match e with
@@ -987,11 +986,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end;
       dep
 
-  let assume env gf dep =
+  let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)
     assert (SAT.decision_level env.satml == 0);
     try fst (assume_aux ~dec_lvl:0 env [gf])
-    with IUnsat (env, dep) -> raise (Unsat dep)
+    with IUnsat (_env, dep) -> raise (Unsat dep)
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =

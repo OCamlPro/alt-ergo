@@ -22,7 +22,7 @@ let from_array data sz d = {data = data; sz = sz; dummy = d}
 
 let from_list l sz d =
   let l = ref l in
-  let f_init i = match !l with [] -> assert false | e::r -> l := r; e in
+  let f_init _ = match !l with [] -> assert false | e::r -> l := r; e in
   {data = Array.init sz f_init; sz = sz; dummy = d}
 
 let clear s = s.sz <- 0

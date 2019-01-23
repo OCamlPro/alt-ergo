@@ -232,7 +232,7 @@ module Shostak (X : ALIEN) = struct
 
   let rec subst_rec p v r =
     match r with
-    | Other (t, ty) ->
+    | Other (t, _) ->
       embed (if X.equal p t then v else X.subst p v t)
     | Access (a, t, ty) ->
       Access (a, subst_rec p v t, ty)
@@ -253,7 +253,7 @@ module Shostak (X : ALIEN) = struct
       with Not_found ->
         let left_abs_xe2, acc = X.abstract_selectors xe acc in
         match X.type_info left_abs_xe2 with
-        | (Ty.Trecord { Ty.args; name; lbs; _ }) as tyr ->
+        | (Ty.Trecord { Ty.lbs; _ }) as tyr ->
           let flds =
             List.map
               (fun (lb,ty) -> lb, embed (X.term_embed (E.fresh_name ty))) lbs
@@ -268,7 +268,7 @@ module Shostak (X : ALIEN) = struct
   let abstract_selectors v acc =
     match v with
     (* Handled by combine. Should not happen! *)
-    | Other (r, ty) -> assert false
+    | Other _ -> assert false
 
     (* This is not a selector *)
     | Record (fields,ty) ->
@@ -379,12 +379,12 @@ module Shostak (X : ALIEN) = struct
       in
       {pb with eqs=eqs}
 
-    | Other (a1,_), Other (a2,_)    ->
+    | Other _, Other _    ->
       if X.str_cmp r1 r2 > 0 then { pb with sbt = (r1,r2)::pb.sbt }
       else { pb with sbt = (r2,r1)::pb.sbt }
 
-    | Other (a1,_), Record (l2, _)  -> orient_solved r1 r2 pb
-    | Record (l1, _), Other (a2,_)  -> orient_solved r2 r1 pb
+    | Other _, Record _  -> orient_solved r1 r2 pb
+    | Record _, Other _  -> orient_solved r2 r1 pb
     | Access _ , _ -> assert false
     | _ , Access _ -> assert false
 
@@ -423,20 +423,20 @@ module Shostak (X : ALIEN) = struct
 
     | Other (_,ty) ->
       match ty with
-      | Ty.Trecord { Ty.args; name; lbs; _ } ->
-        let rev_lbs = List.rev_map (fun (hs, ty) -> Expr.fresh_name ty) lbs in
+      | Ty.Trecord { Ty.lbs; _ } ->
+        let rev_lbs = List.rev_map (fun (_, ty) -> Expr.fresh_name ty) lbs in
         let s = E.mk_term (Symbols.Op Symbols.Record) (List.rev rev_lbs) ty in
         Some (s, false) (* false <-> not a case-split *)
       | _ -> assert false
 
-  let choose_adequate_model t _ l =
+  let choose_adequate_model _ _ l =
     let acc =
       List.fold_left
         (fun acc (s, r) ->
            if (Expr.depth s) <> 1 then acc
            else
              match acc with
-             | Some(s', r') when Expr.compare s' s > 0 -> acc
+             | Some(s', _) when Expr.compare s' s > 0 -> acc
              | _ -> Some (s, r)
         ) None l
     in

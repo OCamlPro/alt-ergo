@@ -760,7 +760,7 @@ let empty_error_model () =
 
 
 let goto_error (view:GTree.view) error_model buffer
-    (sv:GSourceView2.source_view)  path column =
+    (sv:GSourceView2.source_view)  path _column =
   let model = view#model in
   let row = model#get_iter path in
   let line = model#get ~row ~column:error_model.rcol_line in
@@ -800,7 +800,7 @@ let create_error_view error_model buffer sv ~packing () =
 
 
 let goto_lemma (view:GTree.view) inst_model buffer
-    (sv:GSourceView2.source_view) env path column =
+    (sv:GSourceView2.source_view) env path _column =
   let model = view#model in
   let row = model#get_iter path in
   let id = model#get ~row ~column:inst_model.icol_tag in
@@ -858,12 +858,12 @@ let create_inst_view inst_model env buffer sv ~packing () =
   col#set_sort_column_id inst_model.icol_number.GTree.index;
 
   let renderer = GTree.cell_renderer_text [`EDITABLE true] in
-  ignore (renderer#connect#edited ~callback:(fun path s ->
+  ignore (renderer#connect#edited ~callback:(fun _path s ->
       let limit = try int_of_string s with Failure _ -> -1 in
       List.iter (fun path ->
           let row = inst_model.istore#get_iter path in
           let id = inst_model.istore#get ~row ~column:inst_model.icol_tag in
-          let _, nb, name,l = Hashtbl.find inst_model.h id in
+          let _, _, name,l = Hashtbl.find inst_model.h id in
           if limit >= 0 then
             begin
               l := limit;
@@ -948,7 +948,7 @@ let search_one buf str result iter found_all_tag =
     buf#apply_tag found_all_tag ~start:i1 ~stop:i2;
     iter := i2
 
-let search_all entry (sv:GSourceView2.source_view)
+let search_all entry (_sv:GSourceView2.source_view)
     (buf:sbuffer) found_tag found_all_tag () =
   buf#remove_tag found_tag ~start:buf#start_iter ~stop:buf#end_iter;
   buf#remove_tag found_all_tag ~start:buf#start_iter ~stop:buf#end_iter;

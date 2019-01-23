@@ -134,7 +134,7 @@ struct
       assert false
     | [x, 1] -> x
     | l     ->
-      let sort = List.fast_sort (fun (x,n) (y,m) -> CX.str_cmp x y) in
+      let sort = List.fast_sort (fun (x,_) (y,_) -> CX.str_cmp x y) in
       let ac = { t with Sig.l = List.rev (sort l) } in
       hcons {v = Ac ac; id = -1000 (* dummy *)}
 
@@ -213,15 +213,15 @@ struct
     if CX.equal a b then 0
     else
       match a.v, b.v with
-      | X1 x, X1 y -> X1.compare a b
-      | X2 x, X2 y -> X2.compare a b
-      | X3 x, X3 y -> X3.compare a b
-      | X4 x, X4 y -> X4.compare a b
-      | X5 x, X5 y -> X5.compare a b
-      | X6 x, X6 y -> X6.compare a b
-      | X7 x, X7 y -> X7.compare a b
+      | X1 _, X1 _ -> X1.compare a b
+      | X2 _, X2 _ -> X2.compare a b
+      | X3 _, X3 _ -> X3.compare a b
+      | X4 _, X4 _ -> X4.compare a b
+      | X5 _, X5 _ -> X5.compare a b
+      | X6 _, X6 _ -> X6.compare a b
+      | X7 _, X7 _ -> X7.compare a b
       | Term x  , Term y  -> Expr.compare x y
-      | Ac x    , Ac    y -> AC.compare x y
+      | Ac x    , Ac y    -> AC.compare x y
       | va, vb            -> compare_tag va vb
 
   (*** implementations before hash-consing semantic values
@@ -504,7 +504,7 @@ struct
     let original = List.fold_right SX.add (CX.leaves a) SX.empty in
     let original = List.fold_right SX.add (CX.leaves b) original in
     let sbs =
-      List.filter (fun (p,v) ->
+      List.filter (fun (p,_) ->
           match p.v with
           | Ac _ -> true | Term _ -> SX.mem p original
           | _ ->
@@ -602,7 +602,7 @@ struct
         fprintf fmt "[combine] assign value to representative %a : " print r;
         match opt with
         | None -> fprintf fmt "None@."
-        | Some(res, is_cs) -> fprintf fmt " %a@." Expr.print res
+        | Some(res, _is_cs) -> fprintf fmt " %a@." Expr.print res
       end;
     opt
 
@@ -623,7 +623,7 @@ struct
             (fun acc (s, r) ->
                if (Expr.depth s) <= 1 then
                  match acc with
-                 | Some(s', r') when Expr.compare s' s > 0 -> acc
+                 | Some(s', _) when Expr.compare s' s > 0 -> acc
                  | _ -> Some (s, r)
                else
                  acc

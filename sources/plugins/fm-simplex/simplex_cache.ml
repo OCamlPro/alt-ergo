@@ -50,7 +50,7 @@ module MAKE (C : sig
             if c <> 0 then c
             else MI.compare Q.compare n1 n2
 
-        let compare (sum1, ctt1, lambdas1) (sum2, ctt2, lambdas2) =
+        let compare (sum1, _, lambdas1) (sum2, _, lambdas2) =
           let c = MD.compare cmp sum1 sum2 in
           if c <> 0 then c
           else

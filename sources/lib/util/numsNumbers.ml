@@ -232,7 +232,7 @@ module Q : NumbersInterface.QSig with module Z = Z = struct
     match res with
     | Int i -> Big_int.big_int_of_int i
     | Big_int b -> b
-    | Ratio rat -> assert false
+    | Ratio _ -> assert false
 
   let mult_2exp t n = mult t (power (Int 2) n)
 

@@ -112,7 +112,7 @@ let varset_of_list =
 let merge_ret_defns d1 d2 =
   (* best effort in case of captures ! ret_defns used to substitute in
      triggers only !! *)
-  Sy.Map.union (fun k a b  -> Some a) d1 d2
+  Sy.Map.union (fun _ a _  -> Some a) d1 d2
 
 module ME =
   Map.Make
@@ -425,7 +425,7 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
       in
       func name loc binders trs ff id ~toplevel ~decl_kind
 
-    | TFlet(up,binders,lf) ->
+    | TFlet(_,binders,lf) ->
       let binders =
         List.rev_map
           (fun (sy, e) ->
@@ -498,7 +498,7 @@ let make_rule ({rwt_left = t1; rwt_right = t2; rwt_vars} as r) =
   assert (E.is_pure s2);
   { r with rwt_left = s1; rwt_right = s2 }
 
-let mk_theory acc l th_name extends loc =
+let mk_theory acc l th_name extends _loc =
   List.fold_left
     (fun acc e ->
        let loc, ax_name, f, axiom_kind =
@@ -515,13 +515,13 @@ let make acc d =
   match d.c with
   | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
   | TAxiom(loc, name, Util.Default, f) -> mk_assume acc f name loc
-  | TAxiom(loc, name, Util.Propagator, f) -> assert false
-  | TRewriting(loc, name, lr) ->
+  | TAxiom(_, _, Util.Propagator, _) -> assert false
+  | TRewriting(loc, _, lr) ->
     {st_decl=RwtDef(List.map make_rule lr); st_loc=loc} :: acc
   | TGoal(loc, sort, n, f) -> mk_query acc n f loc sort
   (*| TPredicate_def(loc, n, [], f) -> mk_preddef acc f n loc b*)
-  | TPredicate_def(loc, n, args, f) -> mk_preddef acc f n loc
-  | TFunction_def(loc, n, args, rety, f) -> mk_function acc f n loc
+  | TPredicate_def(loc, n, _args, f) -> mk_preddef acc f n loc
+  | TFunction_def(loc, n, _args, _rety, f) -> mk_function acc f n loc
   | TTypeDecl _ | TLogic _  -> acc
 
 

@@ -54,7 +54,7 @@ module Shostak (X : ALIEN) = struct
     | Sy.Op (Sy.Constr _), Ty.Tsum _ -> true
     | _ -> false
 
-  let fully_interpreted sb = true
+  let fully_interpreted _ = true
 
   let type_info = function
     | Cons (_, ty) -> ty
@@ -67,7 +67,7 @@ module Shostak (X : ALIEN) = struct
   module Debug = struct
 
     let print fmt = function
-      | Cons (hs,ty) -> fprintf fmt "%s" (Hs.view hs)
+      | Cons (hs,_) -> fprintf fmt "%s" (Hs.view hs)
       | Alien x -> fprintf fmt "%a" X.print x
 
     let solve_bis a b =
@@ -96,7 +96,7 @@ module Shostak (X : ALIEN) = struct
 
   let is_mine = function
     | Alien r -> r
-    | Cons(hs,ty) as c -> X.embed c
+    | Cons _ as c -> X.embed c
 
   let compare_mine c1 c2 =
     match c1 , c2 with
@@ -125,7 +125,7 @@ module Shostak (X : ALIEN) = struct
     if X.equal p cr then v
     else
       match c with
-      | Cons(hs,t) -> cr
+      | Cons _ -> cr
       | Alien r    -> X.subst p v r
 
   let make t = match E.term_view t with
@@ -136,7 +136,7 @@ module Shostak (X : ALIEN) = struct
   let solve a b =
     match embed a, embed b with
     | Cons(c1,_) , Cons(c2,_) when Hs.equal c1 c2 -> []
-    | Cons(c1,_) , Cons(c2,_) -> raise Util.Unsolvable
+    | Cons(_,_) , Cons(_,_) -> raise Util.Unsolvable
     | Cons _     , Alien r2   -> [r2,a]
     | Alien r1   , Cons _     -> [r1,b]
     | Alien _    , Alien _    ->
@@ -171,11 +171,11 @@ module Shostak (X : ALIEN) = struct
         raise e
     else solve r1 r2 pb
 
-  let assign_value r _ _ =
+  let assign_value _ _ _ =
     (* values of theory sum should be assigned by case_split *)
     None
 
-  let choose_adequate_model t r l =
+  let choose_adequate_model _ r l =
     let l =
       List.filter
         (fun (_, r) -> match embed r with Cons _ -> true | _ -> false) l

@@ -231,7 +231,7 @@ module Container : Container_SIG = struct
 
     let merge_deps d1 d2 =
       Util.MI.merge
-        (fun k op1 op2 ->
+        (fun _ op1 op2 ->
            match op1, op2 with
            | None, None -> None
            | Some _, None -> op1
@@ -295,7 +295,7 @@ module Container : Container_SIG = struct
       let xopt = MX.fold (fun x (pos, neg) acc ->
           match acc with
           | None -> Some (x, pos * neg)
-          | Some (y, c') ->
+          | Some (_, c') ->
             let c = pos * neg in
             if c < c' then Some (x, c) else acc
         ) pos_neg None in
@@ -343,7 +343,7 @@ module Container : Container_SIG = struct
       in
       fourier acc mp
 
-    let fmSimplex add_ineqs are_eq acc mp =
+    let fmSimplex _add_ineqs _are_eq _acc _mp =
       let msg =
         "Not implemented in the default version!"^
         "Use the FmSimplex plugin instead" in

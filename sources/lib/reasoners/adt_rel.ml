@@ -122,11 +122,11 @@ end
 (* ################################################################ *)
 
 
-let print_model fmt env l = ()
+let print_model _ _ _ = ()
 let new_terms env = env.new_terms
-let instantiate ~do_syntactic_matching _ env uf _ = env, []
+let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
-let assume_th_elt t th_elt dep =
+let assume_th_elt _ _ _ =
   assert false
 
 let seen_tester r hs env =
@@ -344,7 +344,7 @@ let add_diseq uf hss sm1 sm2 dep env eqs =
         env, eqs
       else env, eqs
 
-  | Adt.Alien r , Adt.Constr _ | Adt.Constr _, Adt.Alien r  ->
+  | Adt.Alien _ , Adt.Constr _ | Adt.Constr _, Adt.Alien _  ->
     env, eqs
 
   | Adt.Alien r1, Adt.Alien r2 ->
@@ -606,7 +606,7 @@ let assume env uf la =
 
 let two = Numbers.Q.from_int 2
 
-let case_split env uf ~for_model =
+let case_split env _ ~for_model =
   if disable_adts () || not (enable_adts_cs()) then []
   else
     begin
@@ -625,7 +625,7 @@ let case_split env uf ~for_model =
         []
     end
 
-let query env uf (ra, a, ex, _) =
+let query env uf (ra, _, ex, _) =
   if Options.disable_adts () then None
   else
     try

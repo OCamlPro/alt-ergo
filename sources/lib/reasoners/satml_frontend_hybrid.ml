@@ -64,7 +64,7 @@ module Make (Th : Theory.S) = struct
     | None -> assert false
 
   let forget_decision env f lvl =
-    let l_ok, l_ko =
+    let l_ok, _ =
       List.partition (fun (dlvl, _) -> dlvl < lvl) env.decisions in
     let env = { env with decisions = l_ok } in
     let a = match PF.get_proxy_of f env.proxies with
@@ -98,7 +98,7 @@ module Make (Th : Theory.S) = struct
         if verbose () && debug_sat () then
           fprintf fmt "!!! [dlvl=%d] %a becomes true before deciding@."
             dlvl E.print f;
-      | None, Some (ex,lvl) ->
+      | None, Some (ex, _) ->
         if verbose () && debug_sat () then
           fprintf fmt "!!! [dlvl=%d] %a becomes false before deciding@."
             dlvl E.print f;(* Satml_types.Atom.pr_atom (fst f); *)
@@ -142,7 +142,7 @@ module Make (Th : Theory.S) = struct
             SAT.assume_simple env.sat cnf;
             SAT.assume_simple env.sat pfl;
 
-            List.iter (fun ((dlvl, a) as e) -> decide_aux env e)
+            List.iter (decide_aux env)
               (List.rev env.decisions);
           with
           | Satml.Sat ->
@@ -151,7 +151,7 @@ module Make (Th : Theory.S) = struct
           (* SAT.cancel_until env.sat 0;
            * env *)
 
-          | Satml.Unsat confl ->
+          | Satml.Unsat _ ->
             assert (Options.tableaux_cdcl () && SAT.decision_level env.sat = 0);
             raise (Bottom (Ex.empty, [], env))
 
@@ -170,7 +170,7 @@ module Make (Th : Theory.S) = struct
       assert (dlvl = List.length env.decisions + 1);
       {env with decisions = (dlvl, f) :: env.decisions}
     with
-    | Satml.Unsat confl ->
+    | Satml.Unsat _ ->
       assert (Options.tableaux_cdcl () && SAT.decision_level env.sat = 0);
       raise (Bottom (Ex.empty, [], env))
 

@@ -142,7 +142,7 @@ module Make (X : Sig.X) = struct
       List.fold_left (fun z (e,n) -> (e,m * n) :: z) acc ac.l
     | _ -> (r,m) :: acc
 
-  let sort = List.fast_sort (fun (x,n) (y,m) -> X.str_cmp x y)
+  let sort = List.fast_sort (fun (x,_) (y,_) -> X.str_cmp x y)
 
   let rev_sort l = List.rev (sort l)
 
@@ -219,7 +219,7 @@ module Make (X : Sig.X) = struct
         if c <> 0 then c
         else mset_cmp(r,s)
 
-  let size = List.fold_left (fun z (rx,n) -> z + n) 0
+  let size = List.fold_left (fun z (_,n) -> z + n) 0
 
 
   module SX = Set.Make(struct type t=r let compare = X.str_cmp end)
@@ -273,7 +273,7 @@ module Make (X : Sig.X) = struct
     abs (List.fold_left (fun acc (x, y) -> acc + 19 * (X.hash x + y)) acc l)
 
 
-  let subst p v ({ h; l; t; _ } as tm)  =
+  let subst p v ({ h; l; _ } as tm)  =
     Options.exec_thread_yield ();
     Timers.exec_timer_start Timers.M_AC Timers.F_subst;
     Debug.subst p v tm;
@@ -288,7 +288,7 @@ module Make (X : Sig.X) = struct
     Timers.exec_timer_pause Timers.M_AC Timers.F_add;
     r
 
-  let fully_interpreted sb = true
+  let fully_interpreted _ = true
 
   let abstract_selectors ({ l = args; _ } as ac) acc =
     let args, acc =

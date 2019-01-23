@@ -94,7 +94,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       in
       let dec =
         List.rev_map
-          (fun ((a,b,d,is_impl) as e) ->
+          (fun ((a,b,_,_) as e) ->
              if Options.tableaux_cdcl () && is_fact_in_CDCL cdcl a.E.ff then
                raise (Propagate (a, Ex.empty));
              if Options.tableaux_cdcl () && is_fact_in_CDCL cdcl b.E.ff then
@@ -106,12 +106,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if Options.tableaux_cdcl () then
         (* force propagate modulo satML *)
         List.iter
-          (fun (a, b, d, _) ->
+          (fun (a, b, _, _) ->
              match CDCL.is_true cdcl a.E.ff with
-             | Some (ex, lvl) -> raise (Propagate (a, Lazy.force ex))
+             | Some (ex, _lvl) -> raise (Propagate (a, Lazy.force ex))
              | None ->
                match CDCL.is_true cdcl b.E.ff with
-               | Some (ex, lvl) -> raise (Propagate (b, Lazy.force ex))
+               | Some (ex, _lvl) -> raise (Propagate (b, Lazy.force ex))
                | None -> ()
           )no_dec;
 
@@ -231,8 +231,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
     let assume gf dep env =
       if debug_sat () then
-        let { E.ff = f; age = age; lem = lem;
-              mf = mf; from_terms = terms; _ } = gf in
+        let { E.ff = f; lem; from_terms = terms; _ } = gf in
         fprintf fmt "[sat] at level (%d, %d) I assume a " env.dlevel env.plevel;
         begin match E.form_view f with
           | E.Not_a_form -> assert false
@@ -556,7 +555,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     try
       env.cdcl := CDCL.forget_decision !(env.cdcl) f lvl
     with
-    | e ->
+    | _ ->
       fprintf fmt "@.cdcl_backjump error:@.%s@.@." (Printexc.get_backtrace ());
       assert false
 
@@ -692,7 +691,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         None, b
       else
         match CDCL.is_true !(env.cdcl) (E.neg ff.E.ff) with
-        | Some (ex, lvl) ->
+        | Some (ex, _lvl) ->
           let ex = Lazy.force ex in
           if debug_sat() && verbose() then
             fprintf fmt "red thanks to satML@.";
@@ -759,13 +758,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
               | None, None -> raise Exit
               | Some _, _ | _, Some _ when gf1.E.theory_elim -> u
 
-              | Some (d1, c1), Some (d2, c2) ->
+              | Some _, Some _ ->
                 u (* eliminate if both are true ? why ? *)
               (*(gf1, Ex.union d d1) :: (gf2, Ex.union d d2) :: u*)
 
-              | Some (d1, c1), _ -> (gf1, Ex.union d d1) :: u
+              | Some (d1, _), _ -> (gf1, Ex.union d d1) :: u
 
-              | _, Some (d2, c2) -> (gf2, Ex.union d d2) :: u
+              | _, Some (d2, _) -> (gf2, Ex.union d d2) :: u
             in
             cl, u
           with Exit ->
@@ -887,7 +886,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let rec asm_aux acc list =
     List.fold_left
       (fun
-        ((env, bcp, tcp, ap_delta, lits) as acc)
+        ((env, _, tcp, ap_delta, lits) as acc)
         ({ E.ff = f; _ } as ff, dep) ->
         refresh_model_handler env;
         Options.exec_thread_yield ();
@@ -963,7 +962,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             in
             env, true, tcp, (p1,p2,dep,is_impl)::ap_delta, lits
 
-          | E.Lemma l ->
+          | E.Lemma _ ->
             Options.tool_req 2 "TR-Sat-Assume-Ax";
             let inst_env = Inst.add_lemma env.inst ff dep in
             if Options.tableaux_cdcl () then
@@ -1233,7 +1232,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
 
   let mk_theories_instances ~do_syntactic_matching ~rm_clauses env inst =
-    let { gamma; tbox; _ } = env in
+    let { tbox; _ } = env in
     Debug.in_mk_theories_instances ();
     let t_match = Inst.matching_terms_info inst in
     try
@@ -1427,7 +1426,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   and make_one_decision env =
     try
-      let ({ E.ff = f; _ } as a,b,d,is_impl), l =
+      let ({ E.ff = f; _ } as a,b,d,_is_impl), l =
         Heuristics.choose env.delta !(env.heuristics) !(env.cdcl)
       in
       let new_level = env.dlevel + 1 in
@@ -1486,7 +1485,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           unsat_rec (assume env [b, Ex.union d dep']) (not_a,dep') false
         else
           match CDCL.is_true !(env.cdcl) a.E.ff with
-          | Some (ex, lvl) -> (* it is a propagation in satML *)
+          | Some (ex, _lvl) -> (* it is a propagation in satML *)
             if verbose() then
               fprintf fmt "Youpii ! Better BJ thanks to satML@.";
             let ex = Lazy.force ex in
@@ -1564,7 +1563,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
       let l =
         ME.fold
-          (fun f (ff, ex, dlvl, plvl) acc ->
+          (fun _ (ff, ex, _dlvl, plvl) acc ->
              if ff.E.gdist >= 0 then (ff, ex, plvl) :: acc else acc
           )modified_env.gamma []
       in
@@ -1577,7 +1576,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let l = List.rev_map (fun (ff, ex, _) -> ff, ex) l in
       if verbose () || debug_sat () then
         List.iter
-          (fun (ff, ex) ->
+          (fun (ff, _ex) ->
              fprintf fmt "%2d : %a@.@." ff.E.gdist E.print ff.E.ff
           )l;
       let env = assume env l in
@@ -1681,7 +1680,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
       | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ -> assert false
 
-  let pred_def env f name dep loc =
+  let pred_def env f name dep _loc =
     Debug.pred_def f;
     let gf = mk_gf f name true false in
     let a_t = E.mk_term (Symbols.name name) [] Ty.Tbool in

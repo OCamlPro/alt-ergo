@@ -101,7 +101,7 @@ let search_using t sbuf env =
 
 (* let arrow_cursor () = Gdk.Cursor.create `ARROW *)
 
-let set_select env sbuf = ()
+let set_select _env _sbuf = ()
 (* match env.start_select, env.stop_select with *)
 (*   | Some b, Some e -> *)
 (* 	  sbuf#select_range *)
@@ -119,7 +119,7 @@ let set_select env sbuf = ()
 
 (*   | _ -> () *)
 
-let tag_callback t env sbuf ~origin:y z i =
+let tag_callback t env sbuf ~origin:_y z i =
   let ofs = (new GText.iter i)#offset in
   match GdkEvent.get_type z with
   | `MOTION_NOTIFY ->
@@ -239,7 +239,7 @@ let term_callback t env sbuf ~origin:y z i =
 
 let rec list_uquant_vars_in_form = function
   | AFatom _ -> []
-  | AFop (op, aafl) ->
+  | AFop (_, aafl) ->
     List.fold_left (fun l aaf -> l@(list_uquant_vars_in_form aaf.c)) [] aafl
   | AFforall aqf ->
     let l = list_uquant_vars_in_form aqf.c.aqf_form.c in
@@ -251,18 +251,18 @@ let rec list_uquant_vars_in_form = function
     if not aqf.polarity then
       aqf.c.aqf_bvars@l
     else l
-  | AFlet (upvars, _, aaf) ->
+  | AFlet (_, _, aaf) ->
     list_uquant_vars_in_form aaf.c
   | AFnamed (_, aaf) ->
     list_uquant_vars_in_form aaf.c
 
 let rec list_vars_in_form = function
   | AFatom _ -> []
-  | AFop (op, aafl) ->
+  | AFop (_, aafl) ->
     List.fold_left (fun l aaf -> l@(list_vars_in_form aaf.c)) [] aafl
   | AFforall aqf | AFexists aqf ->
     aqf.c.aqf_bvars@(list_vars_in_form aqf.c.aqf_form.c)
-  | AFlet (upvars, _, aaf) ->
+  | AFlet (_, _, aaf) ->
     list_vars_in_form aaf.c
   | AFnamed (_, aaf) ->
     list_vars_in_form aaf.c
@@ -317,7 +317,7 @@ and filter_used_vars_aatom vars = function
 
 and filter_used_vars_aform vars = function
   | AFatom a -> filter_used_vars_aatom vars a
-  | AFop (op, afl) ->
+  | AFop (_, afl) ->
     List.fold_left (fun acc f -> filter_used_vars_aform vars f.c @ acc) [] afl
   | AFforall qf | AFexists qf ->
     let vars =
@@ -501,8 +501,8 @@ type nestedq = Forall of aform annoted | Exists of aform annoted
 let rec least_nested_form used_vars af =
   match used_vars, af.c with
   | [], _ -> Exists af
-  | v::r, AFatom _ -> raise(UncoveredVar v)
-  | v::r, AFop (op, aafl) ->
+  | v::_, AFatom _ -> raise(UncoveredVar v)
+  | v::_, AFop (_, aafl) ->
     let rec least_list = function
       | [] -> raise(UncoveredVar v)
       | af::l ->
@@ -523,7 +523,7 @@ let rec least_nested_form used_vars af =
         ) [] used_vars in
     if not_covered == [] then Exists aqf.c.aqf_form
     else least_nested_form not_covered aqf.c.aqf_form
-  | _, AFlet (upvars, _, af) ->
+  | _, AFlet (_, _, af) ->
     least_nested_form used_vars af
   | _, AFnamed (_, af) ->
     least_nested_form used_vars af
@@ -534,7 +534,7 @@ let rec add_instance_aux ?(register=true) env id af ax_kd aname vars entries =
     let rec find_goal = function
       | [] -> raise Not_found
       | [gt] -> gt
-      | x::r -> find_goal r in
+      | _::r -> find_goal r in
     let g, tyenv = find_goal env.ast in
     match g.c with
     | AGoal (loc, _, _, f) -> f, tyenv, loc
@@ -592,7 +592,7 @@ and add_instance ?(register=true) env id af ax_kd aname entries =
     (list_uquant_vars_in_form af) entries
 
 
-and popup_axiom t env offset () =
+and popup_axiom t env _offset () =
   let pop_w = GWindow.dialog
       ~title:"Instantiate axiom"
       ~allow_grow:true
@@ -616,12 +616,12 @@ and popup_axiom t env offset () =
 
   let vars, entries, id, af, ax_kd, aname =
     match find t env.buffer env.ast with
-    | Some (AD (atd, tyenv)) ->
+    | Some (AD (atd, _)) ->
       begin
         match atd.c with
-        | AAxiom (_, aname, _, af) ->
+        | AAxiom (_, aname, _, _) ->
           pop_w#set_title ("Instantiate axiom "^aname)
-        | APredicate_def (_, aname,_ , af) ->
+        | APredicate_def (_, aname,_ , _) ->
           pop_w#set_title ("Instantiate predicate "^aname)
         | _ -> assert false
       end;
@@ -650,7 +650,7 @@ and popup_axiom t env offset () =
               ) ([],0) vars in
           let ax_kd = match atd.c with
             | AAxiom (_, _, ax_kd, _) -> ax_kd
-            | APredicate_def (_, aname,_ , af) -> Util.Default
+            | APredicate_def _ -> Util.Default
             | _ -> assert false
           in
           vars, entries, atd.id, af, ax_kd, aname
@@ -670,10 +670,10 @@ and popup_axiom t env offset () =
                 pop_w#destroy ()
 
               with
-              | Errors.Lexical_error (loc, s) ->
+              | Errors.Lexical_error _ ->
                 errors_l#set_text ("Lexical error");
                 errors_l#misc#show ()
-              | Errors.Syntax_error (loc, s) ->
+              | Errors.Syntax_error _ ->
                 errors_l#set_text ("Syntax error");
                 errors_l#misc#show ()
               | Errors.Error (e,_) ->
@@ -805,10 +805,10 @@ and popup_trigger t qid env (sbuf:sbuffer) offset () =
                   add_trigger t qid env str offset sbuf;
                   pop_w#destroy ()
                 with
-                | Errors.Lexical_error (loc, s) ->
+                | Errors.Lexical_error _ ->
                   errors_l#set_text ("Lexical error");
                   errors_l#misc#show ()
-                | Errors.Syntax_error (loc, s) ->
+                | Errors.Syntax_error _ ->
                   errors_l#set_text ("Syntax error");
                   errors_l#misc#show ()
                 | Errors.Error (e,_) ->
@@ -878,12 +878,12 @@ and connect_aaterm_list env sbuf
 
 and connect_at_desc env sbuf = function
   | ATconst _ | ATvar _ -> ()
-  | ATapp (s, atl) -> connect_aterm_list env sbuf atl
+  | ATapp (_, atl) -> connect_aterm_list env sbuf atl
   | ATinfix (t1, _, t2) | ATget (t1, t2)
   | ATconcat (t1, t2) ->
     connect_aterm env sbuf t1;
     connect_aterm env sbuf t2
-  | ATlet (l, t2) ->
+  | ATlet (l, _) ->
     List.iter (fun (_, t1) -> connect_aterm env sbuf t1) l;
   | ATdot (t, _) | ATprefix (_, t) | ATnamed (_, t)
   | ATmapsTo (_, t) ->
@@ -926,12 +926,12 @@ and connect_triggers env sbuf trs =
 
 and connect_aform env sbuf = function
   | AFatom a -> connect_aatom env sbuf a
-  | AFop (op, afl) -> connect_aaform_list env sbuf afl
+  | AFop (_, afl) -> connect_aaform_list env sbuf afl
   | AFforall aqf
   | AFexists aqf ->
     connect_trigger_tag env sbuf aqf.tag aqf.id;
     connect_quant_form env sbuf aqf.c
-  | AFlet (vs, l, aaf) ->
+  | AFlet (_, l, aaf) ->
     List.iter (fun (_,e) ->
         match e with
         | ATletTerm t -> connect_aterm env sbuf t.c
@@ -957,7 +957,7 @@ let rec connect_atyped_decl env td =
   | AAxiom (_, _, _, af) ->
     connect_axiom_tag env td.tag;
     connect_aform env env.buffer af
-  | ARewriting (_, _, arwtl) ->
+  | ARewriting (_, _, _arwtl) ->
     connect_tag env env.buffer td.tag
   (* TODO *)
   | AGoal (_, _, _, aaf) ->

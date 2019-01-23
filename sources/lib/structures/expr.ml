@@ -193,7 +193,7 @@ let compare_lists l1 l2 cmp_elts =
   let res = Util.cmp_lists l1 l2 cmp_elts in
   if res <> 0 then raise (Util.Cmp res)
 
-let compare_triggers f1 f2 trs1 trs2 =
+let compare_triggers _f1 _f2 trs1 trs2 =
   try
     List.iter2
       (fun tr1 tr2 ->
@@ -337,7 +337,7 @@ let lit_view t =
     | _ -> Pred(t, false)
 
 let form_view t =
-  let { f; xs; ty; bind; _ } = t in
+  let { f; xs; bind; _ } = t in
   if t.ty != Ty.Tbool then Not_a_form
   else
     match f, xs, bind with
@@ -504,7 +504,7 @@ let rec print_silent fmt t =
   | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
     fprintf fmt "%a(%a)" Hstring.print hs print_list l
 
-  | Sy.Op op, [e1; e2] ->
+  | Sy.Op _, [e1; e2] ->
     fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
 
   | Sy.Op Sy.Destruct (hs, grded), [e] ->
@@ -591,7 +591,7 @@ let size t = t.nb_nodes
 let depth t = t.depth
 
 let rec is_positive e =
-  let { f; xs; ty; bind; _ } = e in
+  let { f; bind; _ } = e in
   match f, bind with
   | Sy.Lit (Sy.L_neg_pred | Sy.L_neg_eq | Sy.L_neg_built _), _ -> false
   | Sy.Form (Sy.F_Clause _ | Sy.F_Skolem | Sy.F_Xor), _ -> false
@@ -664,7 +664,7 @@ let rec is_in_model e =
   is_model_label (label e) ||
   match e with
   | { f = Sy.Form _; _ } -> false
-  | { f = Sy.Lit x ; xs; _ } -> List.exists is_in_model xs
+  | { f = Sy.Lit _ ; xs; _ } -> List.exists is_in_model xs
   | _ -> is_in_model_rec 0 e
 
 let print_tagged_classes =
@@ -778,7 +778,7 @@ let pred t = mk_term (Sy.Op Sy.Minus) [t;int "1"] Ty.Tint
 
 (** simple smart constructors for formulas *)
 
-let mk_or f1 f2 is_impl id =
+let mk_or f1 f2 is_impl _id =
   if equal f1 (neg f2) then vrai
   else
   if equal f1 f2 then f1
@@ -809,7 +809,7 @@ let mk_or f1 f2 is_impl id =
       neg.neg <- Some pos;
       pos
 
-let mk_iff f1 f2 id =
+let mk_iff f1 f2 _id =
   if equal f1 (neg f2) then faux
   else if equal f1 f2 then vrai
   else if equal f1 faux then neg f2
@@ -868,10 +868,8 @@ let not_an_app e =
 
 let mk_forall_ter =
   let env = F_Htbl.create 101 in
-  fun new_q id ->
-    let { name; loc; binders; user_trs;
-          main = f; sko_v ; sko_vty ; toplevel ; _ } = new_q
-    in
+  fun new_q _id ->
+    let { name; main = f; _ } = new_q in
     (* when calling mk_forall_ter, binders should not contains
        ununsed binders. Eventual simplification is done in
        mk_forall_bis, which calls mk_forall_ter *)
@@ -1147,7 +1145,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
       | Sy.Lit (Sy.L_neg_built n), _ ->
         mk_builtin ~is_pos:false n xs'
 
-      | Sy.Form (Sy.F_Unit b), _ ->
+      | Sy.Form (Sy.F_Unit _), _ ->
         begin match xs' with
           | [u; v] -> mk_and u v false (*b*) 0
           | _ -> assert false
@@ -1191,7 +1189,7 @@ and apply_subst_trigger subst ({ content; guard; _ } as tr) =
    efficiently *)
 and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
   try
-    let ty, nb_occ = SMap.find let_v in_e.vars in
+    let _, nb_occ = SMap.find let_v in_e.vars in
     if nb_occ = 1 && (let_e.pure (*1*) || Sy.equal let_v in_e.f) ||
        not_an_app let_e then (* inline in these situations *)
       apply_subst_aux (SMap.singleton let_v let_e, Ty.esubst) in_e
@@ -1395,7 +1393,7 @@ let resolution_of_literal a binders free_vty acc =
     let cond =
       Ty.Svty.subset free_vty (free_type_vars t) &&
       let vars = free_vars t SMap.empty in
-      SMap.for_all (fun sy ty -> SMap.mem sy vars) binders
+      SMap.for_all (fun sy _ -> SMap.mem sy vars) binders
     in
     if cond then TSet.add t acc else acc
   | _ -> acc
@@ -1445,7 +1443,7 @@ let cand_is_more_general cand other =
   try matches cand other; true
   with Exit -> false
 
-let resolution_triggers ~is_back { main = f; name;  binders; _ } =
+let resolution_triggers ~is_back { main = f; binders; _ } =
   if Options.no_backward () then []
   else
     let free_vty = f.vty in
@@ -1479,7 +1477,7 @@ let free_type_vars_as_types e =
 
 
 (* let let_v = let_e in in_e *)
-let mk_let let_v let_e in_e id =
+let mk_let let_v let_e in_e _id =
   (* !!! DANGER !!! only keep up vars that are bound with forall or
      exists, not those bound with a let is buggy:
      let up = SMap.filter (fun x _ -> Sy.Set.mem x quant_vars) up in *)
@@ -1545,7 +1543,7 @@ and mk_eq_aux x e =
 
 let mk_let_equiv let_sko let_e id  =
   match let_e.xs with
-  | [c;th;el] when is_ite let_e.f -> mk_eq_aux let_sko let_e
+  | [_;_;_] when is_ite let_e.f -> mk_eq_aux let_sko let_e
   | _ ->
     if type_info let_e == Ty.Tbool then mk_iff let_sko let_e id
     else mk_eq ~iff:true let_sko let_e
@@ -1650,8 +1648,8 @@ module Triggers = struct
     | _, { f = (True | False | Void | Int _ | Real _ | Bitv _); _ } ->  1
 
     | { f = (Var _) as v1; _ }, { f = (Var _) as v2; _ } -> Sy.compare v1 v2
-    | { f = Var v1; _ }, _ -> -1
-    | _, { f = Var v2; _ } ->  1
+    | { f = Var _; _ }, _ -> -1
+    | _, { f = Var _; _ } ->  1
     | { f = s; xs = l1; _ }, { f = s'; xs = l2; _ }
       when is_infix s && is_infix s' ->
       let c = (score_term t1) - (score_term t2) in
@@ -1831,7 +1829,7 @@ module Triggers = struct
     let aux t s =
       let sbt =
         SMap.fold
-          (fun v (ty, occ) sbt ->
+          (fun v (ty, _occ) sbt ->
              if not (SSet.mem v s) then sbt
              else SMap.add v (mk_term Sy.underscore [] ty) sbt
           )t.vars SMap.empty
@@ -1891,7 +1889,7 @@ module Triggers = struct
     in
     let rec simpl_rec bv_a vty_a acc = function
       | [] -> acc
-      | ((t, bv, vty) as e)::l ->
+      | ((_, bv, vty) as e)::l ->
         if strict_subset bv vty l || strict_subset bv vty acc ||
            (SSet.subset bv_a bv && Svty.subset vty_a vty) ||
            (SSet.equal (SSet.inter bv_a bv) SSet.empty &&
@@ -1914,7 +1912,7 @@ module Triggers = struct
 
   let mono_triggers menv vterm vtype trs =
     let mono = List.filter
-        (fun (t, bv_t, vty_t) ->
+        (fun (_, bv_t, vty_t) ->
            SSet.subset vterm bv_t && Svty.subset vtype vty_t) trs
     in
     let trs_v, trs_nv = List.partition (fun (t, _, _) -> is_var t) mono in
@@ -1981,7 +1979,7 @@ module Triggers = struct
       let lets, args = args_of e lets in
       List.fold_left (aux vars) (strs, lets) args
     in
-    fun ((vterm, vtype) as vars) e ->
+    fun vars e ->
       aux vars (STRS.empty, SMap.empty) e
 
   let triggers_of_list l =
@@ -2317,7 +2315,7 @@ module Purification = struct
         | Not_a_term _ -> assert false (* should not happen ? *)
         | Term t ->
           match t.xs with
-          | [c;th;el] when is_ite t.f ->
+          | [_;_;_] when is_ite t.f ->
             let fresh_sy = Sy.fresh ~is_var:true "Pur-Ite" in
             mk_term fresh_sy [] t.ty , SMap.add fresh_sy t lets
 

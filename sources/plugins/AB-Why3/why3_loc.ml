@@ -34,7 +34,7 @@ let get ({pos_fname; pos_lnum; pos_bol; pos_cnum}, _) =
 
 let join (p1 : position) (p2 : position) =
   match (get p1, get p2) with
-    ((f1, l1, b1, e1), (f2, _, b2, e2 )) ->
+    ((f1, l1, b1, e1), (_, _, b2, e2 )) ->
     let pos =
       {pos_fname = f1; pos_lnum = l1; pos_bol = b1 ; pos_cnum = e1 + e2 - b2} in
     (pos, pos)

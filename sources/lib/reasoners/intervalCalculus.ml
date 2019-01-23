@@ -69,11 +69,11 @@ module E = Expr
 module EM = Matching.Make
     (struct
       include Uf
-      let add_term2 env t ~add_to_cs = fst (Uf.add env t)
-      let are_equal env s t ~init_terms =
+      let add_term2 env t ~add_to_cs:_ = fst (Uf.add env t)
+      let are_equal env s t ~init_terms:_ =
         Uf.are_equal env s t ~added_terms:false
       let class_of2 = Uf.class_of
-      let term_repr env t ~init_term = Uf.term_repr env t
+      let term_repr env t ~init_term:_ = Uf.term_repr env t
     end)
 
 type r = P.r
@@ -92,7 +92,7 @@ let poly_of r = Shostak.Arith.embed r
 (* should be provided by the shostak part or CX directly *)
 let is_alien x =
   match P.is_monomial @@ poly_of x with
-  | Some(a, x, c) -> Q.equal a Q.one && Q.equal c Q.zero
+  | Some(a, _, c) -> Q.equal a Q.one && Q.equal c Q.zero
   | _ -> false
 
 
@@ -139,7 +139,7 @@ module Sim_Wrap = struct
         fprintf fmt "[fm] simplex derived unsat: %a@." Explanation.print ex;
       raise (Ex.Inconsistent (ex, env.classes))
 
-  let solve env i =
+  let solve env _i =
     let int_sim = Sim.Solve.solve env.int_sim in
     check_unsat_result int_sim env;
     let rat_sim = Sim.Solve.solve env.rat_sim in
@@ -176,15 +176,15 @@ module Sim_Wrap = struct
 
   let add_if_better p _old _new simplex =
     (* p is in normal form pos *)
-    let old_mn, old_mn_ex = extract_bound _old true in
-    let old_mx, old_mx_ex = extract_bound _old false in
+    let old_mn, _old_mn_ex = extract_bound _old true in
+    let old_mx, _old_mx_ex = extract_bound _old false in
     let new_mn, new_mn_ex = extract_bound _new true in
     let new_mx, new_mx_ex = extract_bound _new false in
     if same_bnds old_mn new_mn && same_bnds old_mx new_mx then simplex
     else
       let l, z = P.to_list p in
       assert (Q.sign z = 0);
-      let simplex, changed =
+      let simplex, _changed =
         match l with
           [] -> assert false
         | [c, x] ->
@@ -291,7 +291,7 @@ module Sim_Wrap = struct
       | Sim.Core.Sat _   -> assert false (* because we maximized *)
       | Sim.Core.Unsat _ -> assert false (* we know sim is SAT *)
       | Sim.Core.Unbounded _ -> i
-      | Sim.Core.Max(mx,sol) ->
+      | Sim.Core.Max(mx,_sol) ->
         let {Sim.Core.max_v; is_le; reason} = Lazy.force mx in
         set_new_bound reason (Q.mult q max_v) ~is_le:is_le i
     in
@@ -315,7 +315,7 @@ module MP = struct
 
   let assert_normalized_poly p =
     assert
-      (let p0, c0, d0 = P.normal_form_pos p in
+      (let _p0, c0, d0 = P.normal_form_pos p in
        let b = Q.is_zero c0 && Q.is_one d0 in
        begin
          if not b then
@@ -512,7 +512,7 @@ module Debug = struct
         (if ineq.Oracle.is_le then "<=" else "<");
       fprintf fmt "from the following combination:@.";
       Util.MI.iter
-        (fun a (coef, ple0, is_le) ->
+        (fun _a (coef, ple0, is_le) ->
            fprintf fmt "\t%a * (%a %s 0) + @."
              Q.print coef P.print ple0 (if is_le then "<=" else "<")
         )ineq.Oracle.dep;
@@ -706,12 +706,12 @@ and update_monome are_eq expl use_x env x =
 
 let rec tighten_ac are_eq x env expl =
   let ty = X.type_info x in
-  let u, use_x =
+  let u, _use_x =
     try MX.n_find x env.monomes
     with Not_found -> I.undefined ty, SX.empty in
   try
     match X.ac_extract x with
-    | Some { h; t; l = [x,n]; _ }
+    | Some { h; l = [x,n]; _ }
       when Symbols.equal h (Symbols.Op Symbols.Mult) && n mod 2 = 0  ->
       let env =
         if is_alien x then
@@ -729,7 +729,7 @@ let rec tighten_ac are_eq x env expl =
           env
       in
       env
-    | Some { h; t; l = [x,n]; _ } when
+    | Some { h; l = [x,n]; _ } when
         Symbols.equal h (Symbols.Op Symbols.Mult) && n > 2 ->
       let env =
         if is_alien x then
@@ -750,7 +750,7 @@ let rec tighten_ac are_eq x env expl =
   with Q.Not_a_float -> env
 
 
-and tighten_div x env expl =
+and tighten_div _ env _ =
   env
 
 and tighten_non_lin are_eq x use_x env expl =
@@ -818,7 +818,7 @@ let find_eq eqs x u env =
   | Some eq1 ->
     begin
       match X.ac_extract x with
-      | Some { h; l = [y,n]; _ }
+      | Some { h; l = [y,_]; _ }
         when Symbols.equal h (Symbols.Op Symbols.Mult) ->
         let neweqs = try
             let u, _, _ = generic_find y env in
@@ -864,7 +864,7 @@ let mk_equality p =
   let r2 = alien_of (P.create [] Q.zero (P.type_info p)) in
   LR.mkv_eq r1 r2
 
-let fm_equalities eqs { Oracle.ple0 = p; dep; expl = ex; _ } =
+let fm_equalities eqs { Oracle.dep; expl = ex; _ } =
   Util.MI.fold
     (fun _ (_, p, _) eqs ->
        (mk_equality p, None, ex, Th_util.Other) :: eqs
@@ -1113,7 +1113,7 @@ let update_linear_dep env rclass_of ineqs =
     List.fold_left
       (fun st { Oracle.ple0; _ } ->
          List.fold_left
-           (fun st (c, x) -> SE.union st (rclass_of x))
+           (fun st (_, x) -> SE.union st (rclass_of x))
            st (fst (P.to_list ple0))
       )SE.empty ineqs
   in
@@ -1151,7 +1151,7 @@ let monomes_relational_deductions env x_rels =
        else env
     )x_rels env
 
-let refine_p_bounds ip p env rels is_low =
+let refine_p_bounds ip _p env rels is_low =
   MX.fold
     (fun x (cx, mc0, md0, ineq_ex) ip ->
        try
@@ -1195,7 +1195,7 @@ let fm uf are_eq rclass_of env eqs =
   if debug_fm () then fprintf fmt "[fm] in fm/fm-simplex@.";
   Options.tool_req 4 "TR-Arith-Fm";
   let ineqs =
-    MPL.fold (fun k v acc ->
+    MPL.fold (fun _ v acc ->
         if Options.enable_assertions() then
           assert (is_normalized_poly uf v.Oracle.ple0);
         (better_bound_from_intervals env v) :: acc
@@ -1321,7 +1321,7 @@ let remove_trivial_eqs eqs la =
   in
   let eqs, _ =
     List.fold_left
-      (fun ((eqs, m) as acc) ((sa, root, ex, orig) as e) ->
+      (fun ((eqs, m) as acc) ((sa, _, _, _) as e) ->
          if MR.mem sa m then acc else e :: eqs, MR.add sa e m
       )([], la) eqs
   in
@@ -1573,9 +1573,9 @@ let case_split_polynomes env =
          | Some s when Q.compare s Q.one > 0 ->
            begin
              match o with
-             | Some (s', p', _) when Q.compare s' s < 0 -> o
+             | Some (s', _, _) when Q.compare s' s < 0 -> o
              | _ ->
-               let n, ex, is_large = I.borne_inf i in
+               let n, _, is_large = I.borne_inf i in
                assert (is_large);
                Some (s, p, n)
            end
@@ -1600,7 +1600,7 @@ let case_split_monomes env =
              match o with
              | Some (s', _, _) when Q.compare s' s < 0 -> o
              | _ ->
-               let n, ex, is_large = I.borne_inf i in
+               let n, _, is_large = I.borne_inf i in
                assert (is_large);
                Some (s, x, n)
            end
@@ -1646,7 +1646,7 @@ let add =
   let are_eq t1 t2 =
     if E.equal t1 t2 then Some (Explanation.empty, []) else None
   in
-  fun env new_uf r t ->
+  fun env new_uf r _ ->
     try
       let env = {env with new_uf} in
       if is_num r then
@@ -1692,7 +1692,7 @@ let print_model fmt env rs = match rs with
       ) rs;
     fprintf fmt "\n@."
 
-let new_terms env = SE.empty
+let new_terms _ = SE.empty
 
 let case_split_union_of_intervals =
   let aux acc uf i z =
@@ -1711,7 +1711,7 @@ let case_split_union_of_intervals =
     match !cs with
     | None -> assert false
     | Some(_,None, _) -> assert false
-    | Some(r1,Some (n, eps), ex) ->
+    | Some(r1,Some (n, eps), _) ->
       let ty = X.type_info r1 in
       let r2 = alien_of (P.create [] n ty) in
       let pred =
@@ -1734,7 +1734,7 @@ let int_constraints_from_map_intervals =
     let acc =
       MP.fold (fun p i acc -> aux p (alien_of p) i uf acc) env.polynomes []
     in
-    MX.fold (fun x (i,s) acc -> aux (poly_of x) x i uf acc) env.monomes acc
+    MX.fold (fun x (i,_) acc -> aux (poly_of x) x i uf acc) env.monomes acc
 
 
 let fm_simplex_unbounded_integers_encoding env uf =
@@ -1755,7 +1755,7 @@ let fm_simplex_unbounded_integers_encoding env uf =
          let l = List.rev_map (fun (c, x) -> x, c) (List.rev l) in
          assert (Q.sign c = 0);
          let cst0 =
-           List.fold_left (fun z (x, c) -> Q.add z (Q.abs c))Q.zero l
+           List.fold_left (fun z (_, c) -> Q.add z (Q.abs c))Q.zero l
          in
          let cst = Q.div cst0 (Q.from_int 2) in
          assert (mn == None || mx == None);
@@ -1807,7 +1807,7 @@ let model_from_simplex sim is_int env uf =
 
   | Sim.Core.Sat sol ->
     let {Sim.Core.main_vars; slake_vars; int_sol} = Lazy.force sol in
-    let main_vars, slake_vars =
+    let main_vars, _slake_vars =
       if int_sol || not is_int then main_vars, slake_vars
       else round_to_integers main_vars, round_to_integers slake_vars
     in
@@ -1829,7 +1829,7 @@ let model_from_simplex sim is_int env uf =
 
 
 let model_from_unbounded_domains =
-  let mk_cs acc (x, v, ex) =
+  let mk_cs acc (x, v, _ex) =
     ((LR.view (LR.mk_eq x v)), true,
      Th_util.CS (Th_util.Th_arith, Q.from_int 2)) :: acc
   in
@@ -1935,7 +1935,7 @@ let extend_with_domain_substitution =
              | Some (q1, false), Some (q2, false) when Q.equal q1 q2 ->
                mk_const_term ty q1
 
-             | Some (q1,s1), Some (q2,s2) ->
+             | Some (q1,_), Some (q2,_) ->
                fprintf fmt "%a <= %a <= %a@."
                  Q.print q1 Sy.print lb_var Q.print q2;
                Format.eprintf "Which value should we choose ?@.";
@@ -1969,9 +1969,9 @@ let terms_linear_dep { linear_dep ; _ } lt =
 
 exception Sem_match_fails of t
 
-let domain_matching lem_name tr sbt env uf optimized =
+let domain_matching _lem_name tr sbt env uf optimized =
   try
-    let idoms, maps_to, env, uf =
+    let idoms, maps_to, env, _uf =
       List.fold_left
         (fun (idoms, maps_to, env, uf) s ->
            match s with
@@ -1983,7 +1983,7 @@ let domain_matching lem_name tr sbt env uf optimized =
              let tt = E.apply_subst sbt t in
              assert (E.is_ground tt);
              let uf, _ = Uf.add uf tt in
-             let rr, ex = Uf.find uf tt in
+             let rr, _ex = Uf.find uf tt in
              let p = poly_of rr in
              let p', c', d = P.normal_form_pos p in
              let env, i' = best_interval_of optimized env p' in
@@ -2046,7 +2046,7 @@ let profile_produced_terms menv lorig nf s trs =
       List.fold_left (fun st t -> E.sub_terms st (E.apply_subst s t))
         SE.empty trs
     in
-    let name, loc, f = match E.form_view lorig with
+    let name, loc, _ = match E.form_view lorig with
       | E.Lemma { E.name; main; loc; _ } -> name, loc, main
       | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
       | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
@@ -2081,7 +2081,7 @@ let new_facts_for_axiom
               (Symbols.Map.print E.print) sbs E.print orig;
           end;
           match tr.E.guard with
-          | Some a -> assert false (*guards not supported for TH axioms*)
+          | Some _ -> assert false (*guards not supported for TH axioms*)
 
           | None when tr.E.semantic == [] && not do_syntactic_matching ->
             (* pure syntactic insts already generated *)
@@ -2141,7 +2141,7 @@ let new_facts_for_axiom
     ) accu substs
 
 
-let syntactic_matching menv env uf selector =
+let syntactic_matching menv env uf _selector =
   let mconf =
     {Util.nb_triggers = nb_triggers ();
      no_ematching = no_Ematching();

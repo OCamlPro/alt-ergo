@@ -509,7 +509,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
          let last_dec =
            if Vec.size env.trail_lim = 0 then 0 else Vec.last env.trail_lim in
          env.cpt_current_propagations <- (Vec.size env.trail) - last_dec
-       with e -> assert false
+       with _ -> assert false
       );
     end;
     if Options.profiling() then Profiling.reset_dlevel (decision_level env);
@@ -658,7 +658,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         let tenv, _ = Th.do_case_split env.tenv in
         env.tenv <- tenv;
         C_none
-      with Ex.Inconsistent (expl, classes) ->
+      with Ex.Inconsistent (expl, _) ->
         C_theory expl
     else C_none
 
@@ -755,7 +755,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   (*   if D1.d then eprintf "expensive_theory_propagate => Inconsistent@."; *)
   (*   Some dep *)
 
-  let unit_theory_propagate env full_q lazy_q =
+  let unit_theory_propagate env _full_q lazy_q =
     let facts =
       Queue.fold
         (fun acc ta ->
@@ -784,7 +784,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           end;
         env.unit_tenv <- t;
         C_none
-      with Ex.Inconsistent (dep, terms) ->
+      with Ex.Inconsistent (dep, _terms) ->
         (* XXX what to do with terms ? *)
         (* eprintf "th inconsistent : %a @." Ex.print dep; *)
         if Options.profiling() then Profiling.theory_conflict();
@@ -802,7 +802,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       else env.tatoms_queue
     in
     match unit_theory_propagate env env.tatoms_queue tatoms_queue with
-    | C_theory dep as res -> res
+    | C_theory _ as res -> res
     | C_bool _ -> assert false
     | C_none ->
       while not (Queue.is_empty tatoms_queue) do
@@ -821,7 +821,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           if ta.timp = -1 then
             let lit = Atom.literal a in
             match Th.query lit env.tenv with
-            | Some (d, _) ->
+            | Some _ ->
               a.timp <- 1;
               a.neg.timp <- 1;
               true
@@ -856,7 +856,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           do_case_split env Util.AfterTheoryAssume
         (*if full_model then expensive_theory_propagate ()
           else None*)
-        with Ex.Inconsistent (dep, terms) ->
+        with Ex.Inconsistent (dep, _terms) ->
           (* XXX what to do with terms ? *)
           (* eprintf "th inconsistent : %a @." Ex.print dep; *)
           if Options.profiling() then Profiling.theory_conflict();
@@ -886,7 +886,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     if sz1 > 2 && (sz2 = 2 || c < 0) then -1
     else 1
 
-  let locked c = false(*
+  let locked _ = false(*
                         try
                         for i = 0 to Vec.size env.vars - 1 do
                         match (Vec.get env.vars i).reason with
@@ -1187,8 +1187,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       | 0, _ ->
         cond := false;
         learnt := SA.add p.neg !learnt
-      | n, None -> assert false
-      | n, Some cl -> c := cl
+      | _, None -> assert false
+      | _, Some cl -> c := cl
     done;
     List.iter (fun q -> q.var.seen <- false) !seen;
     let learnt = SA.elements !learnt in
@@ -1288,7 +1288,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         enqueue env a propag_lvl (Some c)
 
 
-  let check_inconsistence_of dep = ()
+  let check_inconsistence_of _ = ()
 (*
   try
   let env = ref (Th.empty()) in ();
@@ -1474,7 +1474,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       remove_satisfied env env.clauses;
       remove_satisfied env env.learnts;
       raise Sat
-    | (Unsat cl) as e ->
+    | (Unsat _) as e ->
       (* check_unsat_core cl; *)
       raise e
 
@@ -1582,7 +1582,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
               assert (not (SFF.mem ff s));
               env.ff_lvl <- MFF.add ff dec_lvl env.ff_lvl;
               add_form_to_lazy_cnf env l ff, SFF.add ff s
-            | Some a ->
+            | Some _ ->
               (* TODO for case 'Some a' *)
               assert false
 

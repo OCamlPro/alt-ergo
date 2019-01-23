@@ -52,7 +52,7 @@ module Types = struct
     { to_ty = MString.empty;
       from_labels = MString.empty }
 
-  let fresh_vars ~recursive env vars loc =
+  let fresh_vars ~recursive _ vars loc =
     List.map
       (fun x ->
          if recursive then
@@ -357,7 +357,7 @@ let check_no_duplicates =
   in
   fun loc args -> aux loc args S.empty
 
-let filter_patterns pats ty_body loc =
+let filter_patterns pats ty_body _loc =
   let cases =
     List.fold_left (fun s {Ty.constr=c; _} -> HSS.add c s) HSS.empty ty_body
   in
@@ -371,7 +371,7 @@ let filter_patterns pats ty_body loc =
              HSS.remove name miss, u :: filtered_pats, dead
            else (* case already seen --> dead pattern *)
              miss, pats, p :: dead
-         | Var v ->
+         | Var _ ->
            if HSS.is_empty miss then (* match already exhaussive -> dead case *)
              miss, filtered_pats, p :: dead
            else (* covers all remaining cases, miss becomes empty *)
@@ -581,7 +581,7 @@ let rec type_term ?(call_from_type_form=false) env f =
         let ty3 = Ty.shorten te3.c.tt_ty in
         begin
           try Ty.unify ty2 ty3
-          with Ty.TypeClash(t1,t2) -> error (ShouldHaveType(ty3,ty2)) t3.pp_loc;
+          with Ty.TypeClash _ -> error (ShouldHaveType(ty3,ty2)) t3.pp_loc;
         end;
         Options.tool_req 1 (append_type "TR-Typing-Ite type" ty2);
         TTite (cond, te2, te3) , ty2
@@ -616,7 +616,7 @@ let rec type_term ?(call_from_type_form=false) env f =
             try
               let lbs =
                 List.map2
-                  (fun (s, te) (lb,ty_lb)->
+                  (fun (_, te) (lb,ty_lb)->
                      Ty.unify te.c.tt_ty ty_lb;
                      lb, te) lbs ty_lbs
               in
@@ -745,7 +745,7 @@ let rec type_term ?(call_from_type_form=false) env f =
       let ty =
         match filtered_pats with
         | [] -> assert false
-        | (p, e) :: l ->
+        | (_, e) :: l ->
           let ty = e.c.tt_ty in
           List.iter
             (fun (_, e) ->
@@ -770,7 +770,7 @@ and join_forall f = match f.pp_desc with
   | PPforall_named (named_vs_ty, trs1, hyp1, f) ->
     let vs_ty = List.map (fun (v, _, ty) -> v, ty) named_vs_ty in
     join_forall {f with pp_desc = PPforall (vs_ty, trs1, hyp1, f)}
-  | PPnamed(lbl, f) ->
+  | PPnamed(_, f) ->
     join_forall f
   | _ -> [] , [] , [], f
 
@@ -869,7 +869,7 @@ and type_form ?(in_theory=false) env f =
           let t1 = {c = {tt_desc=TTvar s; tt_ty=Ty.Tbool};
                     annot = new_id ()} in
           TFatom (mk_ta_eq t1 t2)
-        | s, { Env.args ; result} ->
+        | _ ->
           error (NotAPropVar p) f.pp_loc
       in
       r
@@ -899,7 +899,7 @@ and type_form ?(in_theory=false) env f =
             error (Unification(t1,t2)) f.pp_loc
           | Invalid_argument _ ->
             error (WrongNumberofArgs p) f.pp_loc
-        with Ty.TypeClash(t1,t2) -> error (NotAPredicate p) f.pp_loc
+        with Ty.TypeClash _ -> error (NotAPredicate p) f.pp_loc
       end
 
     | PPdistinct (args) ->
@@ -1084,7 +1084,7 @@ and type_form ?(in_theory=false) env f =
       let up = Env.list_of env in
       let env =
         List.fold_left
-          (fun env (v, sv, xx, ty) ->
+          (fun env (v, sv, _, ty) ->
              {env with Env.var_map = MString.add v (sv, ty) env.Env.var_map}
           ) env binders
       in
@@ -1165,7 +1165,7 @@ and type_pattern p env ty ty_body =
     in
     let args =
       List.map2
-        (fun v (destr, ty) ->
+        (fun v (destr, _) ->
            let tv, ty = type_var_desc env v pat_loc in
            let var_v =
              match tv with TTvar Symbols.Var vx -> vx | _ -> assert false
@@ -1177,7 +1177,7 @@ and type_pattern p env ty ty_body =
   with Not_found ->
     if args != [] then error (NotAdtConstr (f, ty)) pat_loc;
     let env = Env.add_ty_var env [f] ty in
-    let tv, ty = type_var_desc env f pat_loc in
+    let tv, _ = type_var_desc env f pat_loc in
     let var_f =
       match tv with TTvar Symbols.Var vx -> vx | _ -> assert false
     in
@@ -1251,7 +1251,7 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
      with Not_found -> ());
     no_alpha_renaming_b s e
 
-  | PPapp(k, l) ->
+  | PPapp(_, l) ->
     List.iter (no_alpha_renaming_b s) l
 
   | PPinInterval(e, _,_,_,_) ->
@@ -1262,10 +1262,10 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
 
   | PPconst _ -> ()
 
-  | PPinfix(f1, op, f2) ->
+  | PPinfix(f1, _, f2) ->
     no_alpha_renaming_b s f1; no_alpha_renaming_b s f2
 
-  | PPprefix(op, f1) ->
+  | PPprefix(_, f1) ->
     no_alpha_renaming_b s f1
 
   | PPget(f1,f2) ->
@@ -1291,10 +1291,10 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
     no_alpha_renaming_b s f2;
     no_alpha_renaming_b s f3
 
-  | PPnamed(n, f1) ->
+  | PPnamed(_, f1) ->
     no_alpha_renaming_b s f1
 
-  | PPdot(f1, a) ->
+  | PPdot(f1, _) ->
     no_alpha_renaming_b s f1
 
   | PPrecord l ->
@@ -1311,10 +1311,10 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
           Util.SS.add sy z
         )Util.SS.empty l
     in
-    List.iter (fun (x, f) -> no_alpha_renaming_b s f) l;
+    List.iter (fun (_, f) -> no_alpha_renaming_b s f) l;
     let s =
       List.fold_left
-        (fun (up, m) (x, f) ->
+        (fun (up, m) (x, _) ->
            if S.mem x up then
              let nx = fresh_var x in
              let m = MString.add x nx m in
@@ -1330,7 +1330,7 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
   | PPcut f' ->
     no_alpha_renaming_b s f'
 
-  | PPcast (f',ty) ->
+  | PPcast (f',_) ->
     no_alpha_renaming_b s f'
 
   | PPforall(xs, trs, hyp, f1) ->
@@ -1358,9 +1358,9 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
     List.iter (fun (l, _) -> List.iter (no_alpha_renaming_b s) l) trs
 
   | PPexists(lx, trs, hyp, f1) ->
-    let s, lx =
+    let s, _ =
       List.fold_left
-        (fun (s, lx) (x, _) ->
+        (fun (_, lx) (x, _) ->
            if S.mem x up then
              let nx = fresh_var x in
              let m = MString.add x nx m in
@@ -1375,9 +1375,9 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
     List.iter (fun (l, _) -> List.iter (no_alpha_renaming_b s) l) trs
 
   | PPexists_named (lx, trs, hyp, f1) ->
-    let s, lx =
+    let s, _ =
       List.fold_left
-        (fun (s, lx) (x, _, _) ->
+        (fun (_, lx) (x, _, _) ->
            if S.mem x up then
              let nx = fresh_var x in
              let m = MString.add x nx m in
@@ -1393,12 +1393,12 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
 
   | PPmatch(e, cases) ->
     no_alpha_renaming_b s e;
-    List.iter (fun (p, e) -> no_alpha_renaming_b s e) cases
+    List.iter (fun (_, e) -> no_alpha_renaming_b s e) cases
 
-  | PPisConstr (e, lbl) ->
+  | PPisConstr (e, _) ->
     no_alpha_renaming_b s e
 
-  | PPproject (_, e, lbl) ->
+  | PPproject (_, e, _) ->
     no_alpha_renaming_b s e
 
 
@@ -1591,7 +1591,7 @@ let rec alpha_renaming_b ((up, m) as s) f =
   | PPexists(lx, trs, hyp, f1) ->
     let s, lx =
       List.fold_left
-        (fun (s, lx) (x, ty) ->
+        (fun (_, lx) (x, ty) ->
            if S.mem x up then
              let nx = fresh_var x in
              let m = MString.add x nx m in
@@ -1614,7 +1614,7 @@ let rec alpha_renaming_b ((up, m) as s) f =
   | PPexists_named (lx, trs, hyp, f1) ->
     let s, lx =
       List.fold_left
-        (fun (s, lx) (x, lbl, ty) ->
+        (fun (_, lx) (x, lbl, ty) ->
            if S.mem x up then
              let nx = fresh_var x in
              let m = MString.add x nx m in
@@ -1717,7 +1717,7 @@ let rec elim_toplevel_forall env bnot f =
 let rec intro_hypothesis env valid_mode f =
   match f.pp_desc with
   | PPinfix(f1,PPimplies,f2) when valid_mode ->
-    let ((f1, env) as f1_env) =
+    let ((_, env) as f1_env) =
       elim_toplevel_forall env (not valid_mode) f1 in
     let axioms, goal = intro_hypothesis env valid_mode
         (alpha_renaming_env env f2) in
@@ -1925,7 +1925,7 @@ let type_goal acc env_g loc sort n goal =
   (td, env_g)::acc
 
 
-let rec type_and_intro_goal acc env loc sort n f =
+let rec type_and_intro_goal acc env _loc sort n f =
   let b = (* smtfile() || smt2file() || satmode()*) false in
   let axioms, (goal, env_g) =
     intro_hypothesis env (not b) f in
@@ -2029,7 +2029,7 @@ let partition_non_rec =
   fun l ->
     aux [] @@
     List.rev_map
-      (fun ((loc, ls, s, body) as e) -> (e, s, user_types_of_body body))
+      (fun ((_loc, _, s, body) as e) -> (e, s, user_types_of_body body))
       (List.rev l)
 
 let refine_body_of_non_recursive_adt body =
@@ -2186,7 +2186,7 @@ let rec type_decl (acc, env) d =
     in
     let td =
       match d with
-      | Function_def(_,_,_,t,_) ->
+      | Function_def _ ->
         Options.tool_req 1 "TR-Typing-LogicFun$_F$";
         TFunction_def(loc,n,l_typed,t_typed,f)
       | _ ->
@@ -2220,7 +2220,7 @@ let rec type_decl (acc, env) d =
     (* step 1: with body == (Algebraic []) *)
     let env, tyvars_of_ty =
       List.fold_left
-        (fun (env, tyvars_of_ty) (loc, ls, s, body) ->
+        (fun (env, tyvars_of_ty) (loc, ls, s, _) ->
            Types.to_tyvars := MString.empty;
            let _, env = Env.add_type_decl env ls s (Parsed.Algebraic []) loc in
            env, MString.add s !(Types.to_tyvars) tyvars_of_ty
@@ -2243,6 +2243,7 @@ let rec type_decl (acc, env) d =
       (fun (acc, env) ty_d ->
          type_user_defined_type_body ~is_recursive:true env acc ty_d)
       (acc, env) are_rec
+
 
 let type_file ld =
   let env = Env.empty in
@@ -2296,7 +2297,7 @@ let split_goals l =
   split_goals_aux (fun e env acc -> (e, env) :: acc) l
 
 let split_goals_and_cnf l =
-  split_goals_aux (fun td env acc -> Cnf.make acc td) l
+  split_goals_aux (fun td _env acc -> Cnf.make acc td) l
 
 let type_expr env vars t =
   let vmap =

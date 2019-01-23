@@ -142,7 +142,8 @@ let add_diseq hss sm1 sm2 dep env eqs =
 
 let add_eq hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
-  | Alien r, Cons(h,ty) | Cons (h,ty), Alien r  ->
+  | Alien r, Cons(h,_)
+  | Cons (h,_), Alien r  ->
     let enum, ex = try MX.find r env.mx with Not_found -> hss, Ex.empty in
     let ex = Ex.union ex dep in
     if not (HSS.mem h enum) then raise (Ex.Inconsistent (ex, env.classes));
@@ -227,13 +228,13 @@ let assume env uf la =
 
 let add env _ r _ = add_aux env r
 
-let case_split env uf ~for_model =
+let case_split env _ ~for_model =
   let acc = MX.fold
-      (fun r (hss, ex) acc ->
+      (fun r (hss, _) acc ->
          let sz = HSS.cardinal hss in
          if sz = 1 then acc
          else match acc with
-           | Some (n,r,hs) when n <= sz -> acc
+           | Some (n,_,_) when n <= sz -> acc
            | _ -> Some (sz, r, HSS.choose hss)
       ) env.mx None
   in
@@ -283,10 +284,10 @@ let query env uf la =
 
 let print_model _ _ _ = ()
 
-let new_terms env = Expr.Set.empty
+let new_terms _ = Expr.Set.empty
 
-let instantiate ~do_syntactic_matching _ env uf _  = env, []
-let assume_th_elt t th_elt dep =
+let instantiate ~do_syntactic_matching:_ _ env _ _  = env, []
+let assume_th_elt t th_elt _ =
   match th_elt.Expr.extends with
   | Util.Sum ->
     failwith "This Theory does not support theories extension"

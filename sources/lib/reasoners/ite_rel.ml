@@ -65,7 +65,7 @@ let add_to_guarded p s t mp =
   let st = try ME.find p mp with Not_found -> SE2.empty in
   ME.add p (SE2.add (s, t) st) mp
 
-let add env _ r t =
+let add env _ _ t =
   if Options.disable_ites () then env
   else
     match is_ite t with
@@ -119,7 +119,7 @@ let extract_pending_deductions env =
   in
   {env with pending_deds = ME2.empty}, l
 
-let assume env uf la =
+let assume env _ la =
   if Options.disable_ites () then env, { Sig_rel.assume = []; remove = [] }
   else
     let env =
@@ -162,12 +162,13 @@ let assume env uf la =
       raise e
   else assume env uf la
 
-let case_split env uf ~for_model = []
+let case_split _ _ ~for_model:_ = []
 
 let query _ _ _ = None
 let print_model _ _ _ = ()
 
-let new_terms env = E.Set.empty
-let instantiate ~do_syntactic_matching _ env uf _ = env, []
+let new_terms _ = E.Set.empty
+let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
-let assume_th_elt t th_elt dep = t
+let assume_th_elt t _ _ = t
+

@@ -226,14 +226,14 @@ module Make (X : Arg) : S with type theory = X.t = struct
        s_term_orig=s_torig;
        s_lem_orig = s_lorig} lsbt_acc =
     SubstE.fold
-      (fun k s l ->
+      (fun _ s l ->
          ME.fold
            (fun t _ l ->
               try
                 let s_ty = Ty.matching s_ty ty (E.type_info t) in
                 let ng , but =
                   try
-                    let { age = ng; lem_orig = lem'; but = bt; _ } =
+                    let { age = ng; but = bt; _ } =
                       ME.find t env.info
                     in
                     max ng g , bt || b
@@ -344,10 +344,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let minus_of_plus t d ty =
     [E.mk_term (Symbols.Op Symbols.Plus)  [t; d] ty ; d]
 
-  let linear_arithmetic_matching f_pat pats ty_pat t =
+  let linear_arithmetic_matching f_pat pats _ty_pat t =
     match E.term_view t with
     | E.Not_a_term _ -> assert false
-    | E.Term { E.f = f; xs; ty; _ } ->
+    | E.Term { E.ty; _ } ->
       if not (Options.arith_matching ()) ||
          ty != Ty.Tint && ty != Ty.Treal then []
       else
@@ -371,7 +371,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       | E.Term tt -> tt
     in
     match f_pat with
-    |	Symbols.Var hs when Symbols.equal f_pat Symbols.underscore ->
+    |	 Symbols.Var _ when Symbols.equal f_pat Symbols.underscore ->
       begin
         try [ { sg with sty = Ty.matching s_ty ty_pat (E.type_info t) } ]
         with Ty.TypeClash _ -> raise Echec
@@ -647,7 +647,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     ME.fold
       (fun lem (age, dep) env ->
          match E.form_view lem with
-         | E.Lemma ({ E.user_trs = tgs0; main = f; name; binders; _ } as q) ->
+         | E.Lemma ({ E.main = f; name; _ } as q) ->
            let tgs =
              match mconf.Util.backward with
              | Util.Normal   -> triggers_of q mconf

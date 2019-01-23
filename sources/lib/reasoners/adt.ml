@@ -40,7 +40,7 @@ let constr_of_destr ty dest =
       | Ty.Adt cases ->
         try
           List.find
-            (fun {Ty.constr = c ; destrs} ->
+            (fun { Ty.destrs; _ } ->
                List.exists (fun (d, _) -> Hstring.equal dest d) destrs
             )cases
         with Not_found -> assert false (* invariant *)
@@ -63,7 +63,7 @@ module Shostak (X : ALIEN) = struct
     not (Options.disable_adts ()) &&
     match sy, ty with
     | Sy.Op (Sy.Constr _), Ty.Tadt _ -> true
-    | Sy.Op Sy.Destruct (_, guarded), _ -> true
+    | Sy.Op Sy.Destruct _, _ -> true
     | _ -> false
 
   let embed r =
@@ -105,7 +105,7 @@ module Shostak (X : ALIEN) = struct
       match embed d_arg with
       | Constr c ->
         begin
-          try snd @@ List.find (fun (lbl, v) -> Hs.equal d_name lbl) c.c_args
+          try snd @@ List.find (fun (lbl, _) -> Hs.equal d_name lbl) c.c_args
           with Not_found ->
             fprintf fmt "is_mine %a failed@." print u;
             assert false
@@ -219,7 +219,7 @@ module Shostak (X : ALIEN) = struct
       )SX.empty l
 
   [@@ocaml.ppwarning "TODO: not sure"]
-  let fully_interpreted sb =
+  let fully_interpreted _ =
     false (* not sure *)
 (*
     not (Options.disable_adts ()) &&
@@ -238,8 +238,8 @@ module Shostak (X : ALIEN) = struct
   let compare s1 s2 =
     match embed s1, embed s2 with
     | Alien r1, Alien r2 -> X.str_cmp r1 r2
-    | Alien r1, _ -> 1
-    | _, Alien r2 -> -1
+    | Alien _, _ -> 1
+    | _, Alien _ -> -1
 
     | Constr c1, Constr c2 ->
       let c = Hstring.compare c1.c_name c2.c_name in
@@ -283,10 +283,10 @@ module Shostak (X : ALIEN) = struct
 
   let abstract_selectors p acc =
     match p with
-    | Alien r -> assert false (* handled in Combine *)
+    | Alien _ -> assert false (* handled in Combine *)
     | Constr { c_args; _ } ->
       let same = ref true in
-      let acc, args =
+      let acc, _ =
         List.fold_left (fun (acc, l) (lbl, x) ->
             let y, acc = X.abstract_selectors x acc in
             same := !same && x == y;
@@ -322,7 +322,7 @@ module Shostak (X : ALIEN) = struct
         assert false;
       let x = is_mine @@ Select {s with d_arg=s_arg} in
       begin match embed x  with
-        | Select ({d_name; d_ty; d_arg} as s) ->
+        | Select ({ d_name; d_arg; _ } as s) ->
           let {Ty.constr ; destrs} =
             constr_of_destr (X.type_info d_arg) d_name
           in
@@ -403,11 +403,11 @@ module Shostak (X : ALIEN) = struct
   let term_extract _ = None, false
 
 
-  let assign_value r _ eq =
+  let assign_value _ _ _ =
     fprintf fmt "[ADTs.models] assign_value currently not implemented";
     assert false
 
-  let choose_adequate_model t _ l =
+  let choose_adequate_model _ _ _ =
     fprintf fmt "[ADTs.models] choose_adequate_model currently not implemented";
     assert false
 

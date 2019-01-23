@@ -41,7 +41,7 @@ let compare a b =
 
 let equal a b = compare a b = 0
 
-let hash {hs ; id} = id
+let hash { id; _ } = id
 
 let to_string {hs ; id} =
   sprintf "%s~%d" (Hstring.view hs) id

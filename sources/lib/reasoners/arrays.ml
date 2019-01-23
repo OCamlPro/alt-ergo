@@ -44,7 +44,7 @@ module Shostak (X : ALIEN) = struct
 
   let name           = "Farrays"
   let is_mine_symb _ _ = false
-  let fully_interpreted sb = assert false
+  let fully_interpreted _ = assert false
   let type_info _    = assert false
   let color _        = assert false
   let print _ _      = assert false
@@ -57,24 +57,24 @@ module Shostak (X : ALIEN) = struct
   let subst _ _ _    = assert false
   let make _         = assert false
   let term_extract _ = None, false
-  let abstract_selectors p acc = assert false
-  let solve r1 r2 = assert false
+  let abstract_selectors _ _ = assert false
+  let solve _ _ = assert false
   let assign_value r _ eq =
     if List.exists (fun (t,_) -> (Expr.depth t) = 1) eq then None
     else
       match X.term_extract r with
-      | Some t, true ->
+      | Some _, true ->
         Some (Expr.fresh_name (X.type_info r), false)
       | _ -> assert false
 
-  let choose_adequate_model t _ l =
+  let choose_adequate_model _ _ l =
     let acc =
       List.fold_left
         (fun acc (s, r) ->
            if (Expr.depth s) <> 1 then acc
            else
              match acc with
-             | Some(s', r') when Expr.compare s' s > 0 -> acc
+             | Some(s', _) when Expr.compare s' s > 0 -> acc
              | _ -> Some (s, r)
         ) None l
     in

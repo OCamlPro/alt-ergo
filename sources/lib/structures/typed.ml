@@ -224,7 +224,7 @@ let rec print_term fmt t = match t.c.tt_desc with
     fprintf fmt " }"
   | TTlet (binders, t2) ->
     fprintf fmt "let %a in %a" print_term_binders binders print_term t2
-  | TTnamed (lbl, t) ->
+  | TTnamed (_, t) ->
     fprintf fmt "%a" print_term t
 
   | TTinInterval(e, i, j) ->

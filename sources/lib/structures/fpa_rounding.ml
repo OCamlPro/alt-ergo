@@ -221,7 +221,7 @@ let int_of_term t =
     let n = Hstring.view n in
     let n =
       try int_of_string n
-      with e ->
+      with _ ->
         eprintf "error when trying to convert %s to an int@." n;
         assert false
     in

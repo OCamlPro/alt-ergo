@@ -22,7 +22,7 @@ module DummyDL = struct
 
   let error_message s = s
 
-  let loadfile s = ()
+  let loadfile _ = ()
 
 end
 

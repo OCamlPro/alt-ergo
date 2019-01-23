@@ -145,7 +145,7 @@ module Container : Inequalities.Container_SIG = struct
       print_parsed_answer sim_res;
       match sim_res with
       | Unsat _  | Eq_unsat -> acc
-      | Unbound { vof; vals; _ } ->
+      | Unbound { vals; _ } ->
         raise (Ex.Inconsistent (explain vals constrs, []))
       (* XXX: parties reelles nulles *)
       | Max { vof = (re, eps); vals = vals; _ } ->
@@ -211,7 +211,7 @@ module Container : Inequalities.Container_SIG = struct
       print_parsed_answer sim_res;
       match sim_res with
       | Unsat _ | Eq_unsat -> acc
-      | Unbound { vof; vals; _ } ->
+      | Unbound { vals; _ } ->
         raise (Ex.Inconsistent (explain vals constrs, []))
       | Max { vof = (vof, eps); vals; _} -> (* XXX: parties avec eps nulles *)
         assert (Q.is_zero eps);
@@ -284,7 +284,7 @@ module Container : Inequalities.Container_SIG = struct
       let cpt = ref (nb_ineqs + 1) in
       let ctrs =
         MINEQS.fold
-          (fun p (ineq, _) ctrs ->
+          (fun _ (ineq, _) ctrs ->
              decr cpt;
              (!cpt, ineq) :: ctrs
           )mp []
@@ -301,7 +301,7 @@ module Container : Inequalities.Container_SIG = struct
     let check_is_rat mp =
       let is_rat = ref true in
       begin
-        try MINEQS.iter (fun p i ->  is_rat := is_rat_poly p; raise Exit) mp
+        try MINEQS.iter (fun p _ ->  is_rat := is_rat_poly p; raise Exit) mp
         with Exit -> ()
       end;
       let is_rat = !is_rat in

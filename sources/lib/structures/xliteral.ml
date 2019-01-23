@@ -178,7 +178,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
       Format.fprintf fmt "%s(%a ? %a)"
         (if pos then "" else "not ") X.print e Hstring.print hs
 
-    | Builtin (_, IsConstr hs, _) ->
+    | Builtin (_, IsConstr _, _) ->
       assert false (* not reachable *)
 
     | Pred (p,b) ->

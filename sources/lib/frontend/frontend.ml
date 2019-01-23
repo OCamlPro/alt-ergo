@@ -171,7 +171,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           let dep = mk_root_dep name in
           SAT.pred_def env f name dep d.st_loc, consistent, dep
 
-      | RwtDef r -> assert false
+      | RwtDef _ -> assert false
 
       | Query(n, f, sort) ->
         let dep =
@@ -245,7 +245,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         printf "(\n%a)@." (Ex.print_unsat_core ~tab:true) dep
 
 
-    | Inconsistent d ->
+    | Inconsistent _ ->
       ()
       (*
       let loc = d.st_loc in
@@ -253,14 +253,14 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         eprintf "; %aInconsistent assumption@." report_loc loc
 *)
 
-    | Unknown (d, t) ->
+    | Unknown (d, _) ->
       let loc = d.st_loc in
       if Options.answers_with_locs () then
         eprintf "; %aI don't know (%2.4f) (%Ld steps)%s@."
           Loc.report loc time steps (goal_name d);
       printf "unknown@."
 
-    | Sat (d, t) ->
+    | Sat (d, _) ->
       let loc = d.st_loc in
       if Options.answers_with_locs () then
         eprintf "; %aInvalid (%2.4f) (%Ld steps)%s@."
@@ -306,12 +306,12 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       if Options.verbose () then
         eprintf "%aInconsistent assumption@." report_loc loc
 
-    | Sat (d, t) ->
+    | Sat (d, _) ->
       let loc = d.st_loc in
       printf "%aInvalid (%2.4f) (%Ld steps)%s@."
         report_loc loc time steps (goal_name d)
 
-    | Unknown (d, t) ->
+    | Unknown (d, _) ->
       let loc = d.st_loc in
       printf "%aI don't know (%2.4f) (%Ld steps)%s@."
         report_loc loc time steps (goal_name d)

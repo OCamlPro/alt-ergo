@@ -116,7 +116,7 @@ module Main : S = struct
       diseqs  = Queue.create ();
       touched = Util.MI.empty }
 
-  let add_fact facts ((lit, ex, orig) as e) =
+  let add_fact facts ((lit, _, _) as e) =
     match lit with
     | LSem Xliteral.Pred _ | LSem Xliteral.Eq _ ->
       Queue.push e facts.equas
@@ -373,7 +373,7 @@ module Main : S = struct
          let p_t, p_a = Use.find p env.use in
 
          (* we compute terms and atoms to consider for congruence *)
-         let repr_touched = List.map (fun (x, y, ex) ->
+         let repr_touched = List.map (fun (x, y, _) ->
              facts.touched <-
                Util.MI.add (X.hash x) x facts.touched;
              y
@@ -385,7 +385,7 @@ module Main : S = struct
          let nuse = Use.up_close_up env.use p v in
          let nuse =
            List.fold_left
-             (fun nuse (r, rr, ex) ->
+             (fun nuse (_, rr, _) ->
                 match X.leaves rr with
                 | _ :: _ -> nuse
                 | []     -> Use.up_close_up nuse p one
@@ -448,7 +448,7 @@ module Main : S = struct
       Debug.add_to_use t;
 
       (* we add t's arguments in env *)
-      let { E.f; xs; _ } =
+      let { E.xs; _ } =
         match E.term_view t with
         | E.Not_a_term _ -> assert false (* see what to do here *)
         | E.Term tt -> tt
@@ -533,7 +533,7 @@ module Main : S = struct
       env
     end
 
-  let assume_dist env facts lr ex =
+  let assume_dist env _facts lr ex =
     Options.tool_req 3 "TR-CCX-Distinct";
     if Uf.already_distinct env.uf lr then env
     else  {env with uf = Uf.distinct env.uf lr ex}
@@ -544,7 +544,7 @@ module Main : S = struct
       Debug.facts facts "equalities";
       let e = Q.pop facts.equas in
       Q.push e facts.ineqs; (*XXX also added in touched by congruence_closure*)
-      let env, (sa, root, ex, orig) =  semantic_view env e facts in
+      let env, (sa, _, ex, _) =  semantic_view env e facts in
       Debug.assume_literal sa;
       let env = match sa with
         | A.Pred (r1,neg) ->
@@ -580,7 +580,7 @@ module Main : S = struct
       Debug.facts facts "disequalities";
       let e = Q.pop facts.diseqs in
       Q.push e facts.ineqs;
-      let env, (sa, root, ex, orig) = semantic_view env e facts in
+      let env, (sa, _, ex, orig) = semantic_view env e facts in
       Debug.assume_literal sa;
       let env = match sa with
         | A.Distinct (false, lr) -> assume_dist env facts lr ex

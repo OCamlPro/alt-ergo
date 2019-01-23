@@ -522,7 +522,7 @@ module Flat_Formula : FLAT_FORMULA = struct
 
   let print fmt f = cpt := 0; print fmt f
 
-  let print_stats fmt = ()
+  let print_stats _ = ()
 
   let compare f1 f2 = f1.tag - f2.tag
 
@@ -659,7 +659,7 @@ module Flat_Formula : FLAT_FORMULA = struct
     match l1, l2 with
     | [], l2 -> l2
     | l1, [] -> l1
-    | h1 :: t1, h2 :: t2 ->
+    | h1 :: t1, h2 :: _ ->
       let c = compare h1 h2 in
       if c = 0 then merge_rec t1 l2 h1
       else
@@ -751,7 +751,7 @@ module Flat_Formula : FLAT_FORMULA = struct
         (fun (atoms, ands) f ->
            match view f with
            | OR _   -> assert false
-           | UNIT a -> f::atoms, ands
+           | UNIT _ -> f::atoms, ands
            | AND l  -> atoms, l::ands
         )([],[]) l
     in
@@ -844,7 +844,7 @@ module Flat_Formula : FLAT_FORMULA = struct
   let abstract_lemma hcons abstr (f: E.t) tl lem new_vars =
     try fst (abstr f)
     with Not_found ->
-    try fst (snd (List.find (fun (x,y) -> E.equal f x) !lem))
+    try fst (snd (List.find (fun (x,_) -> E.equal f x) !lem))
     with Not_found ->
       if tl then begin
         lem := (f, (vrai, Atom.vrai_atom)) :: !lem;

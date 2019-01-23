@@ -77,13 +77,13 @@ module Translate = struct
       | TBool -> bool_type
       | TString -> assert false
       | TArray (t1,t2) -> mk_external_type (pos sort) [aux t1;aux t2] "farray"
-      | TBitVec (n) -> assert false
+      | TBitVec _ -> assert false
       | TSort (s,t_list) -> mk_external_type (pos sort) (List.map aux t_list) s
       | TDatatype (d,t_list) ->
         mk_external_type (pos sort) (List.map aux t_list) d
       | TVar (s) -> mk_var_type (pos sort) s
-      | TFun (t_list,t) -> assert false
-      | TLink(t) -> assert false
+      | TFun _ -> assert false
+      | TLink _ -> assert false
       | TRoundingMode -> assert false
       | TFloatingPoint _ -> assert false
     in
@@ -116,7 +116,7 @@ module Translate = struct
           Format.eprintf "%s@." (to_string ty);
           assert false
       end
-    | Const_Str(s) -> assert false (* to do *)
+    | Const_Str _  -> assert false (* to do *)
     | Const_Hex(s) -> mk_int_const loc s
     | Const_Bin(s) -> mk_int_const loc s
 
@@ -224,7 +224,7 @@ module Translate = struct
     | Pattern(term_list) ->
       let tl = List.map (translate_term pars) term_list in
       (tl, true) :: acc
-    | Named(symb) ->
+    | Named _ ->
       if Options.verbose () then
         Printf.eprintf "[Warning] (! :named not yet supported)\n%!";
       acc
@@ -271,7 +271,7 @@ module Translate = struct
           v.c, "", translate_sort s
         ) sorted_var_list in
       translate_quantif mk_exists svl pars t
-    | TermExclimationPt(term,key_term_list) ->
+    | TermExclimationPt(term,_key_term_list) ->
       translate_term pars term
     | TermMatch(term,pattern_term_list) ->
       let t = translate_term pars term in
@@ -296,7 +296,7 @@ module Translate = struct
 
   let name_of_assert term =
     match term.c with
-    | TermExclimationPt(term,[{ c = Named s; _ }]) -> Some s.c
+    | TermExclimationPt(_, [{ c = Named s; _ }]) -> Some s.c
     | _ -> None
 
   let translate_assert =
@@ -361,7 +361,7 @@ module Translate = struct
     | Cmd_CheckSat ->
       Options.set_unsat_mode true;
       (mk_goal (pos command) "g" (mk_false_const (pos command))) :: acc
-    | Cmd_CheckSatAssum prop_lit_list  ->
+    | Cmd_CheckSatAssum _ ->
       not_supported "check-sat-assuming"; assert false
     | Cmd_DeclareConst(symbol,const_dec) ->
       (translate_decl_fun symbol [] (translate_const_dec const_dec)) :: acc
@@ -384,24 +384,24 @@ module Translate = struct
     | Cmd_DefineFunsRec(fun_def_list,term_list) ->
       let l = List.map2 translate_fun_def fun_def_list term_list in
       l @ acc
-    | Cmd_DefineSort(symbol,symbol_list,sort) -> acc
-    | Cmd_Echo(attribute_value) -> not_supported "echo"; acc
+    | Cmd_DefineSort _ -> acc
+    | Cmd_Echo _ -> not_supported "echo"; acc
     | Cmd_GetAssert -> not_supported "get-assertions"; acc
     | Cmd_GetProof -> not_supported "get-proof"; acc
     | Cmd_GetUnsatCore -> not_supported "get-unsat-core"; acc
-    | Cmd_GetValue(term_list) -> not_supported "get-value"; acc
+    | Cmd_GetValue _ -> not_supported "get-value"; acc
     | Cmd_GetAssign -> not_supported "get-assign"; acc
-    | Cmd_GetOption(keyword) -> not_supported "get-option"; acc
-    | Cmd_GetInfo(key_info) -> not_supported "get-info"; acc
+    | Cmd_GetOption _ -> not_supported "get-option"; acc
+    | Cmd_GetInfo _ -> not_supported "get-info"; acc
     | Cmd_GetModel -> not_supported "get-model"; acc
     | Cmd_GetUnsatAssumptions -> not_supported "get-unsat-assumptions"; acc
     | Cmd_Reset -> not_supported "reset"; assert false
     | Cmd_ResetAssert -> not_supported "reset-asserts"; assert false
-    | Cmd_SetLogic(symbol) -> not_supported "set-logic"; acc
-    | Cmd_SetOption(option) -> not_supported "set-option"; acc
-    | Cmd_SetInfo(attribute) -> not_supported "set-info"; acc
-    | Cmd_Push(string) -> not_supported "push"; assert false
-    | Cmd_Pop(string) -> not_supported "pop"; assert false
+    | Cmd_SetLogic _ -> not_supported "set-logic"; acc
+    | Cmd_SetOption _ -> not_supported "set-option"; acc
+    | Cmd_SetInfo _ -> not_supported "set-info"; acc
+    | Cmd_Push _ -> not_supported "push"; assert false
+    | Cmd_Pop _ -> not_supported "pop"; assert false
     | Cmd_Exit -> acc
 
   let init () =
