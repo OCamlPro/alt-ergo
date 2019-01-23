@@ -789,6 +789,7 @@ and join_exists f = match f.pp_desc with
 and type_bound env bnd ty ~is_open ~is_lower =
   let bk, ty_x = match bnd.pp_desc with
     | PPvar s ->
+      let s = if String.equal s "" then "?" else s in
       assert (String.length s > 0);
       begin match s.[0] with
         | '?' -> Symbols.VarBnd (Var.of_string s), ty
