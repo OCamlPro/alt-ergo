@@ -32,6 +32,7 @@ type answer = (Explanation.t * Expr.Set.t list) option
 type theory =
   | Th_arith
   | Th_sum
+  | Th_adt
   | Th_arrays
   | Th_UF
 

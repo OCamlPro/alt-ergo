@@ -54,6 +54,9 @@ module rec CX : sig
   val extract6 : r -> X6.t option
   val embed6 : X6.t -> r
 
+  val extract7 : r -> X7.t option
+  val embed7 : X7.t -> r
+
 end =
 struct
 
@@ -66,6 +69,7 @@ struct
     | X4    of X4.t
     | X5    of X5.t
     | X6    of X6.t
+    | X7    of X7.t
 
   type r = {v : rview ; id : int}
 
@@ -79,14 +83,15 @@ struct
 
     let hash r =
       let res = match r.v with
-        | X1 x   -> 1 + 9 * X1.hash x
-        | X2 x   -> 2 + 9 * X2.hash x
-        | X3 x   -> 3 + 9 * X3.hash x
-        | X4 x   -> 4 + 9 * X4.hash x
-        | X5 x   -> 5 + 9 * X5.hash x
-        | X6 x   -> 6 + 9 * X6.hash x
-        | Ac ac  -> 8 + 9 * AC.hash ac
-        | Term t -> 7 + 9 * Expr.hash t
+        | X1 x   -> 1 + 10 * X1.hash x
+        | X2 x   -> 2 + 10 * X2.hash x
+        | X3 x   -> 3 + 10 * X3.hash x
+        | X4 x   -> 4 + 10 * X4.hash x
+        | X5 x   -> 5 + 10 * X5.hash x
+        | X6 x   -> 6 + 10 * X6.hash x
+        | X7 x   -> 7 + 10 * X7.hash x
+        | Ac ac  -> 9 + 10 * AC.hash ac
+        | Term t -> 8 + 10 * Expr.hash t
       in
       abs res
 
@@ -98,6 +103,7 @@ struct
       | X4 x, X4 y -> X4.equal x y
       | X5 x, X5 y -> X5.equal x y
       | X6 x, X6 y -> X6.equal x y
+      | X7 x, X7 y -> X7.equal x y
       | Term x  , Term y  -> Expr.equal x y
       | Ac x    , Ac    y -> AC.equal x y
       | _ -> false
@@ -120,6 +126,7 @@ struct
   let embed4 x = hcons {v = X4 x; id = -1000 (* dummy *)}
   let embed5 x = hcons {v = X5 x; id = -1000 (* dummy *)}
   let embed6 x = hcons {v = X6 x; id = -1000 (* dummy *)}
+  let embed7 x = hcons {v = X7 x; id = -1000 (* dummy *)}
 
   let ac_embed ({Sig.l = l} as t) =
     match l with
@@ -139,6 +146,7 @@ struct
   let extract4 = function {v=X4 r} -> Some r | _ -> None
   let extract5 = function {v=X5 r} -> Some r | _ -> None
   let extract6 = function {v=X6 r} -> Some r | _ -> None
+  let extract7 = function {v=X7 r} -> Some r | _ -> None
 
   let ac_extract = function
     | {v = Ac t}   -> Some t
@@ -152,6 +160,7 @@ struct
     | X4 _ -> X4.term_extract r
     | X5 _ -> X5.term_extract r
     | X6 _ -> X6.term_extract r
+    | X7 _ -> X7.term_extract r
     | Ac _ -> None, false (* SYLVAIN : TODO *)
     | Term t -> Some t, true
 
@@ -169,6 +178,7 @@ struct
       | X4 x -> X4.type_info x
       | X5 x -> X5.type_info x
       | X6 x -> X6.type_info x
+      | X7 x -> X7.type_info x
       | Term t -> Expr.type_info t
       | Ac x -> AC.type_info x
     in
@@ -181,6 +191,7 @@ struct
     | {v=X4 t}   -> X4.type_info t
     | {v=X5 t}   -> X5.type_info t
     | {v=X6 t}   -> X6.type_info t
+    | {v=X7 t}   -> X7.type_info t
     | {v=Ac x}   -> AC.type_info x
     | {v=Term t} -> Expr.type_info t
 
@@ -194,6 +205,7 @@ struct
     | X4 _    -> -6
     | X5 _    -> -7
     | X6 _    -> -8
+    | X7 _    -> -9
 
   let compare_tag a b = theory_num a - theory_num b
 
@@ -207,6 +219,7 @@ struct
       | X4 x, X4 y -> X4.compare a b
       | X5 x, X5 y -> X5.compare a b
       | X6 x, X6 y -> X6.compare a b
+      | X7 x, X7 y -> X7.compare a b
       | Term x  , Term y  -> Expr.compare x y
       | Ac x    , Ac    y -> AC.compare x y
       | va, vb            -> compare_tag va vb
@@ -253,6 +266,7 @@ struct
     | X4 t -> X4.leaves t
     | X5 t -> X5.leaves t
     | X6 t -> X6.leaves t
+    | X7 t -> X7.leaves t
     | Ac t -> r :: (AC.leaves t)
     | Term _ -> [r]
 
@@ -265,6 +279,7 @@ struct
       | X4 t   -> X4.subst p v t
       | X5 t   -> X5.subst p v t
       | X6 t   -> X6.subst p v t
+      | X7 t   -> X7.subst p v t
       | Ac t   -> if equal p r then v else AC.subst p v t
       | Term _ -> if equal p r then v else r
 
@@ -281,16 +296,19 @@ struct
       not (restricted ()) && X4.is_mine_symb sb ty,
       not (restricted ()) && X5.is_mine_symb sb ty,
       not (restricted ()) && X6.is_mine_symb sb ty,
+      not (restricted ()) && X7.is_mine_symb sb ty,
       AC.is_mine_symb sb ty
     with
-    | true  , false , false, false, false, false, false -> X1.make t
-    | false , true  , false, false, false, false, false -> X2.make t
-    | false , false , true , false, false, false, false -> X3.make t
-    | false , false , false, true , false, false, false -> X4.make t
-    | false , false , false, false, true , false, false -> X5.make t
-    | false , false , false, false, false, true , false -> X6.make t
-    | false , false , false, false, false, false, true  -> AC.make t
-    | false , false , false, false, false, false, false -> term_embed t, []
+    | true  , false , false , false, false, false, false, false -> X1.make t
+    | false , true  , false , false, false, false, false, false -> X2.make t
+    | false , false , true  , false, false, false, false, false -> X3.make t
+    | false , false , false , true , false, false, false, false -> X4.make t
+    | false , false , false , false, true , false, false, false -> X5.make t
+    | false , false , false , false, false, true , false, false -> X6.make t
+    | false , false , false , false, false, false, true , false -> X7.make t
+    | false , false , false , false, false, false, false, true  -> AC.make t
+    | false , false , false , false, false, false, false, false ->
+      term_embed t, []
     | _ -> assert false
 
   let fully_interpreted sb ty =
@@ -301,16 +319,27 @@ struct
       not (restricted ()) && X4.is_mine_symb sb ty,
       not (restricted ()) && X5.is_mine_symb sb ty,
       not (restricted ()) && X6.is_mine_symb sb ty,
+      not (restricted ()) && X7.is_mine_symb sb ty,
       AC.is_mine_symb sb ty
     with
-    | true , false ,false,false,false,false,false -> X1.fully_interpreted sb
-    | false, true  ,false,false,false,false,false -> X2.fully_interpreted sb
-    | false, false ,true ,false,false,false,false -> X3.fully_interpreted sb
-    | false, false ,false,true ,false,false,false -> X4.fully_interpreted sb
-    | false, false ,false,false,true ,false,false -> X5.fully_interpreted sb
-    | false, false ,false,false,false,true ,false -> X6.fully_interpreted sb
-    | false, false ,false,false,false,false,true  -> AC.fully_interpreted sb
-    | false, false ,false,false,false,false,false -> false
+    | true  , false , false , false, false, false, false, false ->
+      X1.fully_interpreted sb
+    | false , true  , false , false, false, false, false, false ->
+      X2.fully_interpreted sb
+    | false , false , true  , false, false, false, false, false ->
+      X3.fully_interpreted sb
+    | false , false , false , true , false, false, false, false ->
+      X4.fully_interpreted sb
+    | false , false , false , false, true , false, false, false ->
+      X5.fully_interpreted sb
+    | false , false , false , false, false, true , false, false ->
+      X6.fully_interpreted sb
+    | false , false , false , false, false, false, true , false ->
+      X7.fully_interpreted sb
+    | false , false , false , false, false, false, false, true  ->
+      AC.fully_interpreted sb
+    | false , false , false , false, false, false, false, false ->
+      false
     | _ -> assert false
 
   let is_solvable_theory_symbol sb ty =
@@ -340,14 +369,16 @@ struct
         X4.is_mine_symb ac.Sig.h ty,
         X5.is_mine_symb ac.Sig.h ty,
         X6.is_mine_symb ac.Sig.h ty,
+        X7.is_mine_symb ac.Sig.h ty,
         AC.is_mine_symb ac.Sig.h ty with
       (*AC.is_mine may say F if Options.no_ac is set to F dynamically *)
-      | true  , false , false, false, false, false, false -> X1.color ac
-      | false , true  , false, false, false, false, false -> X2.color ac
-      | false , false , true , false, false, false, false -> X3.color ac
-      | false , false , false, true , false, false, false -> X4.color ac
-      | false , false , false, false, true,  false, false -> X5.color ac
-      | false , false , false, false, false, true,  false -> X6.color ac
+      | true  , false , false , false, false, false, false, false -> X1.color ac
+      | false , true  , false , false, false, false, false, false -> X2.color ac
+      | false , false , true  , false, false, false, false, false -> X3.color ac
+      | false , false , false , true , false, false, false, false -> X4.color ac
+      | false , false , false , false, true , false, false, false -> X5.color ac
+      | false , false , false , false, false, true , false, false -> X6.color ac
+      | false , false , false , false, false, false, true , false -> X7.color ac
       | _  -> ac_embed ac
 
 
@@ -363,6 +394,7 @@ struct
         | X4 t    -> fprintf fmt "%a" X4.print t
         | X5 t    -> fprintf fmt "%a" X5.print t
         | X6 t    -> fprintf fmt "%a" X6.print t
+        | X7 t    -> fprintf fmt "%a" X7.print t
         | Term t  -> fprintf fmt "%a" Expr.print t
         | Ac t    -> fprintf fmt "%a" AC.print t
       else
@@ -373,6 +405,7 @@ struct
         | X4 t    -> fprintf fmt "X4(%s):[%a]" X4.name X4.print t
         | X5 t    -> fprintf fmt "X5(%s):[%a]" X5.name X5.print t
         | X6 t    -> fprintf fmt "X6(%s):[%a]" X6.name X6.print t
+        | X7 t    -> fprintf fmt "X7(%s):[%a]" X7.name X7.print t
         | Term t  -> fprintf fmt "FT:[%a]" Expr.print t
         | Ac t    -> fprintf fmt "Ac:[%a]" AC.print t
 
@@ -437,6 +470,7 @@ struct
     | X4 a   -> X4.abstract_selectors a acc
     | X5 a   -> X5.abstract_selectors a acc
     | X6 a   -> X6.abstract_selectors a acc
+    | X7 a   -> X7.abstract_selectors a acc
     | Term _ -> a, acc
     | Ac a   -> AC.abstract_selectors a acc
 
@@ -473,7 +507,9 @@ struct
       List.filter (fun (p,v) ->
           match p.v with
           | Ac _ -> true | Term _ -> SX.mem p original
-          | _ -> assert false
+          | _ ->
+            Format.eprintf "Ici: %a@." CX.print p;
+            assert false
         )sbs
     in
     Debug.print_sbt "Triangular and cleaned" sbs;
@@ -490,6 +526,8 @@ struct
   let merge_sbt sbt1 sbt2 = sbt1 @ sbt2
 
   let solve_uninterpreted r1 r2 pb = (* r1 != r2*)
+    if debug_combine () then
+      fprintf fmt "solve uninterpreted %a = %a@." print r1 print r2;
     if CX.str_cmp r1 r2 > 0 then { pb with sbt = (r1,r2)::pb.sbt }
     else { pb with sbt = (r2,r1)::pb.sbt }
 
@@ -514,6 +552,7 @@ struct
           | Ty.Tbitv _         -> X3.solve ra rb pb
           | Ty.Tsum _          -> X5.solve ra rb pb
           (*| Ty.Tunit           -> pb *)
+          | Ty.Tadt _ when not (Options.disable_adts()) -> X6.solve ra rb pb
           | _                  -> solve_uninterpreted ra rb pb
         in
         solve_list pb
@@ -531,14 +570,16 @@ struct
     | _ -> make_idemp oa ob (List.rev_append sbt sbt')
 
   let solve  a b =
-    let a', b', acc = abstract_equality a b in
-    let sbs = solve_abstracted a b a' b' acc in
-    List.fast_sort
-      (fun (p1, _) (p2, _) ->
-         let c = CX.str_cmp p2 p1 in
-         assert (c <> 0);
-         c
-      )sbs
+    if CX.equal a b then []
+    else
+      let a', b', acc = abstract_equality a b in
+      let sbs = solve_abstracted a b a' b' acc in
+      List.fast_sort
+        (fun (p1, _) (p2, _) ->
+           let c = CX.str_cmp p2 p1 in
+           assert (c <> 0);
+           c
+        )sbs
 
   let assign_value r distincts eq =
     let opt = match r.v, type_info r with
@@ -548,7 +589,9 @@ struct
       | _, Ty.Tbitv _   -> X3.assign_value r distincts eq
       | _, Ty.Tfarray _ -> X4.assign_value r distincts eq
       | _, Ty.Tsum _    -> X5.assign_value r distincts eq
-      | Term t, ty      ->
+      | _, Ty.Tadt _    when not (Options.disable_adts()) ->
+        X6.assign_value r distincts eq
+      | Term t, ty      -> (* case disable_adts() handled here *)
         if (Expr.depth t) = 1 ||
            List.exists (fun (t,_) -> (Expr.depth t) = 1) eq then None
         else Some (Expr.fresh_name ty, false) (* false <-> not a case-split *)
@@ -570,6 +613,8 @@ struct
       | Ty.Treal     -> X1.choose_adequate_model t rep l
       | Ty.Tbitv _   -> X3.choose_adequate_model t rep l
       | Ty.Tsum _    -> X5.choose_adequate_model t rep l
+      | Ty.Tadt _    when not (Options.disable_adts()) ->
+        X6.choose_adequate_model t rep l
       | Ty.Trecord _ -> X2.choose_adequate_model t rep l
       | Ty.Tfarray _ -> X4.choose_adequate_model t rep l
       | _            ->
@@ -671,12 +716,22 @@ and X5 : Sig.SHOSTAK
 
 and X6 : Sig.SHOSTAK
   with type r = CX.r
-   and type t = CX.r Ite.abstract =
-  Ite.Shostak
+   and type t = CX.r Adt.abstract =
+  Adt.Shostak
     (struct
       include CX
       let extract = extract6
       let embed = embed6
+    end)
+
+and X7 : Sig.SHOSTAK
+  with type r = CX.r
+   and type t = CX.r Ite.abstract =
+  Ite.Shostak
+    (struct
+      include CX
+      let extract = extract7
+      let embed = embed7
     end)
 
 (* Its signature is not Sig.SHOSTAK because it does not provide a solver *)
@@ -690,6 +745,7 @@ module Records = X2
 module Bitv = X3
 module Arrays = X4
 module Enum = X5
-module Ite = X6
+module Adt = X6
+module Ite = X7
 module Polynome = TX1
 module Ac = AC

@@ -46,6 +46,9 @@ module Arrays : Sig.SHOSTAK
 module Enum : Sig.SHOSTAK
   with type r = Combine.r and type t = Combine.r Enum.abstract
 
+module Adt : Sig.SHOSTAK
+  with type r = Combine.r and type t = Combine.r Adt.abstract
+
 module Ite : Sig.SHOSTAK
   with type r = Combine.r and type t = Combine.r Ite.abstract
 
