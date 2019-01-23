@@ -481,7 +481,7 @@ sq:
 | RIGHTSQ {false}
 
 bound:
-| QM                 { mk_var ($startpos, $endpos) "" }
+| QM                 { mk_var ($startpos, $endpos) "?" }
 | id = QM_ID         { mk_var ($startpos, $endpos) id }
 | id = ID            { mk_var ($startpos, $endpos) id }
 | i = INTEGER        { mk_int_const ($startpos, $endpos) i }
