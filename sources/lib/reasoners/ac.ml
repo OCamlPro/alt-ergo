@@ -144,8 +144,6 @@ module Make (X : Sig.X) = struct
 
   let sort = List.fast_sort (fun (x,_) (y,_) -> X.str_cmp x y)
 
-  let rev_sort l = List.rev (sort l)
-
   let compact xs =
     let rec f acc = function
       | [] -> acc
@@ -158,10 +156,6 @@ module Make (X : Sig.X) = struct
 
   let fold_flatten sy f =
     List.fold_left (fun z (rt,n) -> flatten sy ((f rt),n) z) []
-
-  let expand =
-    List.fold_left
-      (fun l (x,n) -> let l= ref l in for _=1 to n do l:=x::!l done; !l) []
 
   let abstract2 sy t r acc =
     match X.ac_extract r with

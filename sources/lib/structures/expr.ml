@@ -549,9 +549,11 @@ and print_triggers fmt trs =
 
 let type_info t = t.ty
 
-let is_term e = match e.f with
-  | Sy.Form _ | Sy.Lit _  -> false
-  | _ -> true (* bool vars are terms *)
+(* unused
+   let is_term e = match e.f with
+   | Sy.Form _ | Sy.Lit _  -> false
+   | _ -> true (* bool vars are terms *)
+*)
 
 let mk_binders =
   let cpt = ref 0 in
@@ -931,9 +933,11 @@ let no_vtys l =
 
 (** smart constructors for literals *)
 
-let is_non_atomic_form e = match e.f with
-  | Sy.Form _ -> true
-  | _ -> false
+(* unused
+   let is_non_atomic_form e = match e.f with
+   | Sy.Form _ -> true
+   | _ -> false
+*)
 
 (* intended to be used for mk_eq or mk_builtin only *)
 let mk_positive_lit s neg_s l =
@@ -1380,10 +1384,6 @@ let max_ground_terms_rec_of_form f =
     (fun a acc -> TSet.union acc (max_ground_terms_of_lit a))
     (atoms_rec_of_form ~only_ground:false f TSet.empty) TSet.empty
 
-(* used inside the old Formula's hashconsing module *)
-
-let fold_subst_term f (s,_) acc = SMap.fold f s acc
-
 
 (** Other smart constructors and skolemization functions **)
 
@@ -1465,10 +1465,6 @@ let resolution_triggers ~is_back { main = f; binders; _ } =
              guard = None
            } :: acc
       )cand []
-
-let free_vars_as_terms e =
-  SMap.fold (fun sy (ty, _) acc -> (mk_term sy [] ty) :: acc)
-    (free_vars e SMap.empty) []
 
 let free_type_vars_as_types e =
   Ty.Svty.fold
@@ -1764,8 +1760,6 @@ module Triggers = struct
 
   let vty_of_term acc t = Svty.union acc t.vty
 
-  let vty_of_form acc f = Svty.union acc f.vty
-
   let not_pure t = not t.pure
 
   let vars_of_term bv acc t =
@@ -1783,11 +1777,12 @@ module Triggers = struct
          SSet.subset bv s1 && Svty.subset vty s2 )
       trs
 
-  let check_triggers (bv, vty) (trs : trigger list) =
-    if trs == [] then
+  (* unused
+     let check_triggers (bv, vty) (trs : trigger list) =
+     if trs == [] then
       failwith "There should be a trigger for every quantified formula \
                 in a theory.";
-    List.iter (fun { content = l; _ } ->
+     List.iter (fun { content = l; _ } ->
         if List.exists not_pure l then
           failwith "If-Then-Else are not allowed in (theory triggers)";
         let s1 = List.fold_left (vars_of_term bv) SSet.empty l in
@@ -1796,7 +1791,8 @@ module Triggers = struct
           failwith "Triggers of a theory should contain every quantified \
                     types and variables.")
       trs;
-    trs
+     trs
+  *)
 
   let is_var t = match t.f with
     | Sy.Var _ -> true

@@ -37,8 +37,6 @@ module E = Expr
 module Z = Numbers.Z
 module Q = Numbers.Q
 
-let ale = Hstring.make "<="
-let alt = Hstring.make "<"
 let is_mult h = Sy.equal (Sy.Op Sy.Mult) h
 let mod_symb = Sy.name "@mod"
 
@@ -461,8 +459,6 @@ module Shostak
     in
     is_mine p
 
-
-  let compare_mine = P.compare
 
   let compare x y = P.compare (embed x) (embed y)
 

@@ -34,13 +34,6 @@ open Matching_types
 module Z = Numbers.Z
 module Q = Numbers.Q
 
-let ale = Hstring.make "<="
-let alt = Hstring.make "<"
-let is_le n = Hstring.compare n ale = 0
-let is_lt n = Hstring.compare n alt = 0
-
-let (-@) l1 l2 = List.rev_append l1 l2
-
 module L = Xliteral
 
 module Sy = Symbols
@@ -69,10 +62,10 @@ module E = Expr
 module EM = Matching.Make
     (struct
       include Uf
-      let add_term2 env t ~add_to_cs:_ = fst (Uf.add env t)
+      (* unused -- let add_term2 env t ~add_to_cs:_ = fst (Uf.add env t) *)
       let are_equal env s t ~init_terms:_ =
         Uf.are_equal env s t ~added_terms:false
-      let class_of2 = Uf.class_of
+      (* unused -- let class_of2 = Uf.class_of *)
       let term_repr env t ~init_term:_ = Uf.term_repr env t
     end)
 
@@ -350,8 +343,10 @@ module MP = struct
 
   (* shadow the functions find and add of MP with the ones below
      to force the use of n_find and n_add for normalized polys *)
+  [@@@ocaml.warning "-32"]
   let find (_ : unit) (_ : unit) = assert false
   let add (_ : unit) (_ : unit) (_ : unit) = assert false
+  [@@@ocaml.warning "+32"]
 
 end
 
@@ -397,9 +392,10 @@ module MX = struct
 
   (* shadow the functions find and add of MX with the ones below
      to force the use of n_find and n_add for true aliens *)
+  [@@@ocaml.warning "-32"]
   let find (_ : unit) (_ : unit) = assert false
   let add (_ : unit) (_ : unit) (_ : unit) = assert false
-
+  [@@@ocaml.warning "+32"]
 end
 
 (* generic find for values that may be non-alien or non

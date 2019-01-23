@@ -976,10 +976,6 @@ and make_dep_aatom d ex dep = function
     List.fold_left (make_dep_aaterm d ex) dep atl
   | AApred (at, _) -> make_dep_aterm d ex dep at
 
-and make_dep_oplogic _ _ dep = function
-  (*| AOPif at -> make_dep_aterm d ex dep at*)
-  | _ -> dep
-
 and make_dep_quant_form d ex dep { aqf_bvars = bv; aqf_form = aaf; _ } =
   let vars = List.map (fun (s,_) -> (Symbols.to_string_clean s)) bv in
   make_dep_aform d (vars@ex) dep aaf.c
@@ -1035,9 +1031,6 @@ let make_dep annoted_ast =
 
 (* Translation from AST to annoted/pruned AST *)
 
-
-let annot_of_tconstant (buffer:sbuffer)  t =
-  new_annot buffer t
 
 let of_oplogic _ = function
   | OPand -> AOPand
@@ -1455,10 +1448,6 @@ and add_aterm_list_at errors indent (buffer:sbuffer) tags iter sep =
 and add_aaterm_at errors (indent:int) (buffer:sbuffer) tags iter at =
   at.line <- iter#line;
   add_aterm_at errors indent buffer (at.tag::at.ptag::tags) iter at.c
-
-and add_aaterm errors indent (buffer:sbuffer) tags at =
-  at.line <- buffer#line_count;
-  add_aaterm_at errors indent buffer tags buffer#end_iter at
 
 and add_aaterm_list_at errors (indent:int) (buffer:sbuffer) tags
     ?(multi_line=false) ?(offset=0) iter sep =

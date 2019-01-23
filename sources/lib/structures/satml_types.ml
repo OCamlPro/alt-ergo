@@ -72,8 +72,6 @@ module type ATOM = sig
   val faux_atom  : atom
   val level : atom -> int
   val index : atom -> int
-  val cmp_atom : atom -> atom -> int
-  val eq_atom : atom -> atom -> bool
   val reason : atom -> reason
   val reason_atoms : atom -> atom list
 
@@ -242,11 +240,6 @@ module Atom : ATOM = struct
       else if a.neg.is_true then sprintf "[F%s]" (level a)
       else ""
 
-    let value_ms_like a =
-      if a.is_true then sprintf ":1%s" (level a)
-      else if a.neg.is_true then sprintf ":0%s" (level a)
-      else ":X"
-
     let premise fmt v =
       List.iter (fun { name = name; _ } -> fprintf fmt "%s," name) v
 
@@ -255,9 +248,6 @@ module Atom : ATOM = struct
         (sign a) (a.var.vid+1) (value a) a.var.index E.print a.lit
         premise a.var.vpremise
 
-
-    let atoms_list fmt l = List.iter (fprintf fmt "%a ; " atom) l
-    let atoms_array fmt arr = Array.iter (fprintf fmt "%a ; " atom) arr
 
     let atoms_vec fmt vec =
       for i = 0 to Vec.size vec - 1 do
@@ -271,13 +261,6 @@ module Atom : ATOM = struct
 
   let pr_atom = Debug.atom
   let pr_clause = Debug.clause
-
-  let ale = Hstring.make "<="
-  let alt = Hstring.make "<"
-  let agt = Hstring.make ">"
-  let is_le n = Hstring.compare n ale = 0
-  let is_lt n = Hstring.compare n alt = 0
-  let is_gt n = Hstring.compare n agt = 0
 
   let normal_form lit = (* XXX do better *)
     let is_pos = E.is_positive lit in
@@ -391,18 +374,17 @@ module Atom : ATOM = struct
 
   let to_int f = int_of_float f
 
-  let cmp_var v1 v2 = v1.vid - v2.vid
-  let eq_var v1 v2 = v1.vid - v2.vid = 0
-  let tag_var v = v.vid
-  let h_var v = v.vid
+  (* unused --
+     let cmp_var v1 v2 = v1.vid - v2.vid
+     let eq_var v1 v2 = v1.vid - v2.vid = 0
+     let tag_var v = v.vid
+     let h_var v = v.vid
+  *)
 
   let cmp_atom a1 a2 = a1.aid - a2.aid
   let eq_atom   a1 a2 = a1.aid - a2.aid = 0
   let hash_atom a1 = a1.aid
   let tag_atom  a1 = a1.aid
-
-  let iter_atoms_of_clauses cls f =
-    Vec.iter cls (fun c -> Vec.iter c.atoms f)
 
   let reason a =
     a.var.reason
@@ -527,8 +509,8 @@ module Flat_Formula : FLAT_FORMULA = struct
   let compare f1 f2 = f1.tag - f2.tag
 
   let equal f1 f2 = f1.tag == f2.tag
-  let hash f = f.tag
-  let tag  f = f.tag
+  (* unused -- let hash f = f.tag *)
+  (* unused -- let tag  f = f.tag *)
   let view f = f.view
 
   let is_positive pos = match pos with

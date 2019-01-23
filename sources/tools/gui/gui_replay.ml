@@ -30,7 +30,6 @@ open AltErgoLib
 open Gui_session
 open Annoted_ast
 open Connected_ast
-open Options
 
 let replay_prune id env =
   match findbyid id env.ast with
@@ -86,13 +85,14 @@ let replay_session env =
   Stack.iter (fun a -> l := a::!l) env.actions;
   List.iter (replay env) !l
 
-let undo_action env =
-  match Stack.pop env.actions with
-  | Prune id | IncorrectPrune id -> replay env (Unprune id)
-  | Unprune id -> replay env (Prune id)
-  | ((AddInstance _ | AddTrigger _ ) as ac) ->
+(* unused --
+   let undo_action env =
+   match Stack.pop env.actions with
+   | Prune id | IncorrectPrune id -> replay env (Unprune id)
+   | Unprune id -> replay env (Prune id)
+   | ((AddInstance _ | AddTrigger _ ) as ac) ->
     replay env (Prune (Hashtbl.find resulting_ids ac))
-  | LimitLemma (id, name, _) | UnlimitLemma (id, name) ->
+   | LimitLemma (id, name, _) | UnlimitLemma (id, name) ->
     try
       Stack.iter (function
           | (LimitLemma (id', _, _) | UnlimitLemma (id', _) as ac)
@@ -101,4 +101,5 @@ let undo_action env =
           | _ -> ()) env.actions;
       replay env (LimitLemma (id, name, -1))
     with Exit -> ()
+*)
 

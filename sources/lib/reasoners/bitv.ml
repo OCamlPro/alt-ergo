@@ -255,19 +255,21 @@ module Shostak(X : ALIEN) = struct
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
-    open Canonizer
 
     let print_tvar fmt ({var=v;sorte=s},sz) =
       fprintf fmt "%s_%d[%d]@?"
         (match s with | A -> "a" | B -> "b" | C -> "c")
         v sz
 
-    let rec print_I_ast fmt ast = match ast.bv with
-      | I_Cte b -> fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
-      | I_Other (Alien t) -> fprintf fmt "%a[%d]@?" X.print t ast.sz
-      | I_Other (Var tv) -> fprintf fmt "%a@?" print_tvar (tv,ast.sz)
-      | I_Ext (u,i,j) -> fprintf fmt "%a<%d,%d>@?" print_I_ast u i j
-      | I_Comp(u,v) -> fprintf fmt "@[(%a * %a)@]" print_I_ast u print_I_ast v
+    (* unused
+       open Canonizer
+       let rec print_I_ast fmt ast = match ast.bv with
+       | I_Cte b -> fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
+       | I_Other (Alien t) -> fprintf fmt "%a[%d]@?" X.print t ast.sz
+       | I_Other (Var tv) -> fprintf fmt "%a@?" print_tvar (tv,ast.sz)
+       | I_Ext (u,i,j) -> fprintf fmt "%a<%d,%d>@?" print_I_ast u i j
+       | I_Comp(u,v) -> fprintf fmt "@[(%a * %a)@]" print_I_ast u print_I_ast v
+    *)
 
     let print fmt ast = match ast.bv with
       | Cte b -> fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
@@ -688,11 +690,6 @@ module Shostak(X : ALIEN) = struct
          let tmp = f_aux st
          in { bv = Canonizer.I_Comp(acc,tmp) ; sz = acc.sz + tmp.sz }
       ) (f_aux (List.hd biv)) (List.tl biv)
-
-  let size_of r =
-    match X.type_info r with Ty.Tbitv i -> i | _ ->
-      Format.eprintf "ici=%a@." X.print r;
-      assert false
 
   let extract r ty =
     match X.extract r with

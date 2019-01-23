@@ -485,20 +485,24 @@ let print_timers header steps fmt timers =
     )columns;
   fprintf fmt "|@."
 
-let report2 axiom fmt (b,e) =
-  let open Lexing in
-  let l = b.pos_lnum in
-  let fc = b.pos_cnum - b.pos_bol + 1 in
-  let lc = e.pos_cnum - b.pos_bol + 1 in
-  fprintf fmt "(Sub) Axiom \"%s\", line %d, characters %d-%d:"
+(* unused
+   let report2 axiom fmt (b,e) =
+   let open Lexing in
+   let l = b.pos_lnum in
+   let fc = b.pos_cnum - b.pos_bol + 1 in
+   let lc = e.pos_cnum - b.pos_bol + 1 in
+   fprintf fmt "(Sub) Axiom \"%s\", line %d, characters %d-%d:"
     axiom l fc lc
+*)
 
-let report3 fmt (b,e) =
-  let open Lexing in
-  let l = b.pos_lnum in
-  let fc = b.pos_cnum - b.pos_bol + 1 in
-  let lc = e.pos_cnum - b.pos_bol + 1 in
-  fprintf fmt "line %d, chars %d-%d." l fc lc
+(* unused
+   let report3 fmt (b,e) =
+   let open Lexing in
+   let l = b.pos_lnum in
+   let fc = b.pos_cnum - b.pos_bol + 1 in
+   let lc = e.pos_cnum - b.pos_bol + 1 in
+   fprintf fmt "line %d, chars %d-%d." l fc lc
+*)
 
 let (@@) a b = if a <> 0 then a else b
 

@@ -47,8 +47,6 @@ open Parsed
  let str_of_labs labs =
   String.concat " " labs
 
- let dummy_loc = Loc.dummy
-
   let translate_param (loc, id_op, pty) =
     match id_op with
     | Some id -> (loc, id.id_str, pty)

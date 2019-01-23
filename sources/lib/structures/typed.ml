@@ -327,5 +327,3 @@ and print_formula fmt f =
     fprintf fmt "%a" print_formula f
   | _ -> fprintf fmt "(formula pprint not implemented)"
 
-and print_form_list fmt = List.iter (fprintf fmt "%a" print_formula)
-

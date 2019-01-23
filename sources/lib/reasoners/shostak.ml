@@ -167,23 +167,6 @@ struct
   let top () = term_embed Expr.vrai
   let bot () = term_embed Expr.faux
 
-  let is_an_eq a =
-    match Expr.lit_view a with Expr.Builtin _ -> false | _ -> true
-
-  let is_int v =
-    let ty  = match v with
-      | X1 x -> X1.type_info x
-      | X2 x -> X2.type_info x
-      | X3 x -> X3.type_info x
-      | X4 x -> X4.type_info x
-      | X5 x -> X5.type_info x
-      | X6 x -> X6.type_info x
-      | X7 x -> X7.type_info x
-      | Term t -> Expr.type_info t
-      | Ac x -> AC.type_info x
-    in
-    ty == Ty.Tint
-
   let type_info = function
     | { v = X1 t; _ }   -> X1.type_info t
     | { v = X2 t; _ }   -> X2.type_info t
@@ -452,10 +435,6 @@ struct
           false)
         else true)
 
-    let solve a b =
-      if debug_combine () then
-        fprintf fmt "@.[combine] I solve %a = %a:@." print a print b
-
   end
   (*BISECT-IGNORE-END*)
 
@@ -522,8 +501,6 @@ struct
 
   let apply_subst_right r sbt =
     List.fold_right (fun (p,v)r  -> CX.subst p v r) sbt r
-
-  let merge_sbt sbt1 sbt2 = sbt1 @ sbt2
 
   let solve_uninterpreted r1 r2 pb = (* r1 != r2*)
     if debug_combine () then

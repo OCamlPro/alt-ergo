@@ -109,8 +109,6 @@ let div_x_by_2_pow_n x n = mult_x_by_2_pow_n x (-n)
 
 let two = Q.from_int 2
 
-let two_z = Z.from_int 2
-
 let half = Q.div Q.one two
 
 type rounding_mode =

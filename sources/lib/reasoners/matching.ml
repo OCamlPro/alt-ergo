@@ -562,17 +562,17 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   let max_term_depth env mx = {env with max_t_depth = max env.max_t_depth mx}
 
+  (* unused --
+     let fully_uninterpreted_head s =
+     match E.term_view s with
+     | E.Not_a_term _ -> assert false
+     | E.Term { E.f = Symbols.Op _; _ } -> false
+     | _ -> true
 
-
-  let fully_uninterpreted_head s =
-    match E.term_view s with
-    | E.Not_a_term _ -> assert false
-    | E.Term { E.f = Symbols.Op _; _ } -> false
-    | _ -> true
-
-  (* this function removes "big triggers" that are subsumed by smaller ones *)
-  let filter_subsumed_triggers triggers =
-    List.fold_left
+     (* this function removes "big triggers"
+        that are subsumed by smaller ones *)
+     let filter_subsumed_triggers triggers =
+     List.fold_left
       (fun acc tr ->
          match tr.E.content with
          | [t] ->
@@ -590,6 +590,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
              tr :: acc
          | _ -> tr :: acc
       )[] triggers |> List.rev
+  *)
 
   module HEI = Hashtbl.Make (
     struct

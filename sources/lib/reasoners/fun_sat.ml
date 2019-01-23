@@ -292,14 +292,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let red _ _ =
       if debug_sat () && verbose () then fprintf fmt "[sat] red@."
 
-    let delta d =
-      if debug_sat () && verbose () && false then begin
+    (* unused --
+       let delta d =
+       if debug_sat () && verbose () && false then begin
         fprintf fmt "[sat] - Delta ---------------------@.";
         List.iter (fun (f1, f2, ex) ->
             fprintf fmt "(%a or %a), %a@."
               E.print f1.E.ff E.print f2.E.ff Ex.print ex) d;
         fprintf fmt "[sat] --------------------- Delta -@."
-      end
+       end
+    *)
 
     let gamma g =
       if false && debug_sat () && verbose () then begin
@@ -1669,16 +1671,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
 
 
-  let factorize_iff a_t f =
-    if E.equal a_t f then E.vrai
-    else if E.equal (E.neg a_t) f then E.faux
-    else match E.form_view f with
+  (* unused --
+     let factorize_iff a_t f =
+     if E.equal a_t f then E.vrai
+     else if E.equal (E.neg a_t) f then E.faux
+     else match E.form_view f with
       | E.Iff(f1, f2) ->
         if E.equal f1 a_t then f2
         else if E.equal f2 a_t then f1
         else assert false
       | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
       | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ -> assert false
+  *)
 
   let pred_def env f name dep _loc =
     Debug.pred_def f;

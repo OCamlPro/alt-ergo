@@ -109,11 +109,6 @@ let varset_of_list =
     (fun acc (s,ty) ->
        SE.add (E.mk_term s [] (Ty.shorten ty)) acc) SE.empty
 
-let merge_ret_defns d1 d2 =
-  (* best effort in case of captures ! ret_defns used to substitute in
-     triggers only !! *)
-  Sy.Map.union (fun _ a _  -> Some a) d1 d2
-
 module ME =
   Map.Make
     (struct

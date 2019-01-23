@@ -107,9 +107,11 @@ module Debug = struct
       fprintf fmt "-------------------------------------------@.";
     end
 
+  (* unused --
   let case_split r r' =
     if debug_adt () then
       fprintf fmt "[ADT.case-split] %a = %a@." X.print r X.print r'
+  *)
 
   let no_case_split () =
     if debug_adt () then fprintf fmt "[ADT.case-split] nothing@."

@@ -176,11 +176,13 @@ module Main : S = struct
       if debug_cc () then
         fprintf fmt "[cc] add_to_use: %a@." E.print t
 
-    let lrepr fmt = List.iter (fprintf fmt "%a " X.print)
+    (* unused --
+       let lrepr fmt = List.iter (fprintf fmt "%a " X.print)
 
-    let leaves t lvs =
-      fprintf fmt "[cc] leaves of %a@.@."
+       let leaves t lvs =
+       fprintf fmt "[cc] leaves of %a@.@."
         E.print t; lrepr fmt lvs
+    *)
 
     let contra_congruence a ex =
       if debug_cc () then

@@ -269,9 +269,11 @@ module Main_Default : S = struct
         fprintf fmt "============= End CASE-SPLIT =================@.%a@."
           made_choices choices
 
-    let split_size sz =
-      if debug_split () then
+    (* unused --
+       let split_size sz =
+       if debug_split () then
         fprintf fmt ">size case-split: %s@." (Numbers.Q.to_string sz)
+    *)
 
     let print_lr_view fmt ch = LR.print fmt (LR.make ch)
 
@@ -707,7 +709,6 @@ module Main_Empty : S = struct
   let do_case_split env = env, E.Set.empty
   let add_term env _ ~add_in_cs:_ = env
   let compute_concrete_model e = e
-  let terms_in_repr _ = Expr.Set.empty
 
   let assume_th_elt e _ _ = e
   let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []

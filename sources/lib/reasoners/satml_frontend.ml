@@ -147,8 +147,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         fprintf fmt "  is: %a@." FF.print f';
       end
 
-    let cnf_form f unit non_unit =
-      if debug_sat () && verbose () then begin
+    (* unused --
+       let cnf_form f unit non_unit =
+       if debug_sat () && verbose () then begin
         fprintf fmt "[sat] CFF form of: %a@." FF.print f;
         fprintf fmt "  is:@.";
         List.iter
@@ -160,7 +161,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              List.iter (fun a -> fprintf fmt "%a or " Atom.pr_atom a) c;
              fprintf fmt "@."
           )non_unit
-      end
+       end
+    *)
 
     let model env =
       if debug_sat () then
@@ -174,9 +176,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           ) (List.rev model);
         eprintf "  --------------@."
 
-    let mround () =
-      if debug_sat () then fprintf fmt "matching round@."
-
     let new_instances mode env =
       if debug_sat () then begin
         eprintf "@.# [sat] I GENERATE NEW INSTANCES (%s)#################@.@."
@@ -188,25 +187,31 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         model env;
       end
 
-    let generated_instances l =
-      if verbose () && debug_sat () then begin
+    (* unused --
+       let generated_instances l =
+       if verbose () && debug_sat () then begin
         eprintf "[new_instances] %d generated@." (List.length l);
         List.iter (fun { E.ff = f; origin_name; _ } ->
             eprintf " instance(origin = %s): %a@." origin_name E.print f;
           ) l
-      end
+       end
+    *)
 
-    let trivial_fact p inst =
-      if verbose () && debug_sat () then begin
+    (* unused --
+       let trivial_fact p inst =
+       if verbose () && debug_sat () then begin
         if inst then eprintf "already known instance: %a@." E.print p
         else eprintf "already known skolem: %a@." E.print p
-      end
+       end
+    *)
 
-    let generated_skolems l =
-      if verbose () && debug_sat () then begin
+    (* unused --
+       let generated_skolems l =
+       if verbose () && debug_sat () then begin
         eprintf "[new_skolems] %d generated@." (List.length l);
         List.iter (fun { E.ff = f; _ } -> eprintf " skolem: %a@." E.print f) l
-      end
+       end
+    *)
 
     let atoms_from_sat_branch f =
       if verbose () && debug_sat () then begin
@@ -220,9 +225,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         fprintf fmt "@.";
       end
 
-    let axiom_def f =
-      if debug_sat () then
+    (* unused --
+       let axiom_def f =
+       if debug_sat () then
         eprintf "[sat] I assume an axiom: %a@.@." E.print f
+    *)
 
     let internal_axiom_def f a at =
       if debug_sat () then begin
@@ -231,16 +238,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         fprintf fmt "at of a is %a@.@." Atom.pr_atom at
       end
 
-    let in_mk_theories_instances () =
-      if Options.debug_fpa() > 0 || debug_sat() then
+    (* unused --
+       let in_mk_theories_instances () =
+       if Options.debug_fpa() > 0 || debug_sat() then
         fprintf fmt "@.[sat] entering mk_theories_instances:@."
+    *)
 
-    let out_mk_theories_instances normal_exit =
-      if Options.debug_fpa() > 0 || debug_sat() then
+    (* unused --
+       let out_mk_theories_instances normal_exit =
+       if Options.debug_fpa() > 0 || debug_sat() then
         if normal_exit then
           fprintf fmt "@.[sat] normal exit of mk_theories_instances.@.@."
         else
           fprintf fmt "@.exit mk_theories_instances with Inconsistency.@.@."
+    *)
 
     let print_f_conj fmt hyp =
       match hyp with
@@ -505,29 +516,33 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let max a b = if cmp_tuples a b > 0 then a else b
 
-  let take_max aux l =
-    let ((lvl, _, ind) ,_) as acc =
+  (* unused --
+     let take_max aux l =
+     let ((lvl, _, ind) ,_) as acc =
       List.fold_left (fun ((mz,_) as acc) f ->
           match aux f with
           | None -> acc
           | Some (m, l) ->
             if cmp_tuples m mz > 0 then (m, l) else acc
         )((-1, -.1., -1), []) l
-    in
-    if lvl = -1 && ind = -1 then None
-    else Some acc
+     in
+     if lvl = -1 && ind = -1 then None
+     else Some acc
+  *)
 
-  let take_min aux l =
-    let ((lvl, _, ind) ,_) as acc =
+  (* unused --
+     let take_min aux l =
+     let ((lvl, _, ind) ,_) as acc =
       List.fold_left (fun ((mz,_) as acc) f ->
           match aux f with
           | None -> acc
           | Some (m, l) ->
             if cmp_tuples m mz < 0 then (m, l) else acc
         )((max_int, -.1., max_int), []) l
-    in
-    if lvl = max_int && ind = max_int then None
-    else Some acc
+     in
+     if lvl = max_int && ind = max_int then None
+     else Some acc
+  *)
 
   let rec take_normal aux l =
     match l with

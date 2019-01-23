@@ -237,17 +237,6 @@ let low_borne_neg_strict b =
 let up_borne_neg_strict b =
   compare_bounds b ~is_low1:false zero_large ~is_low2:false < 0
 
-let low_borne_pos_large b =
-  compare_bounds b ~is_low1:true zero_large ~is_low2:true >= 0
-
-let up_borne_pos_large b =
-  compare_bounds b ~is_low1:false zero_large ~is_low2:false >= 0
-
-let low_borne_neg_large b =
-  compare_bounds b ~is_low1:true zero_large ~is_low2:true <= 0
-
-let up_borne_neg_large b =
-  compare_bounds b ~is_low1:false zero_large ~is_low2:false <= 0
 
 (* should be removed: probably buggy when mixing lower and upper bounds *)
 let pos_borne b = match b with

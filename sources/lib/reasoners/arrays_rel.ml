@@ -113,15 +113,16 @@ module Debug = struct
                  LR.print (LR.make a)) la;
     end
 
-  let print_gets fmt = G.iter (fun t -> fprintf fmt "%a@." E.print t.g)
-  let print_sets fmt = S.iter (fun t -> fprintf fmt "%a@." E.print t.s)
-  let print_splits fmt =
-    LRset.iter (fun a -> fprintf fmt "%a@." LR.print a)
-  let print_tbs fmt =
-    TBS.iter (fun k v -> fprintf fmt "%a --> %a@." E.print k print_sets v)
+  (* unused --
+     let print_gets fmt = G.iter (fun t -> fprintf fmt "%a@." E.print t.g)
+     let print_sets fmt = S.iter (fun t -> fprintf fmt "%a@." E.print t.s)
+     let print_splits fmt =
+     LRset.iter (fun a -> fprintf fmt "%a@." LR.print a)
+     let print_tbs fmt =
+     TBS.iter (fun k v -> fprintf fmt "%a --> %a@." E.print k print_sets v)
 
-  let env fmt env =
-    if debug_arrays () then begin
+     let env fmt env =
+     if debug_arrays () then begin
       fprintf fmt "-- gets ----------------------------------------@.";
       print_gets fmt env.gets;
       fprintf fmt "-- tabs of sets --------------------------------@.";
@@ -129,7 +130,8 @@ module Debug = struct
       fprintf fmt "-- splits --------------------------------------@.";
       print_splits fmt env.split;
       fprintf fmt "------------------------------------------------@."
-    end
+     end
+  *)
 
   let new_equalities fmt st =
     if debug_arrays () then

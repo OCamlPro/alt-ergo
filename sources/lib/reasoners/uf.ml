@@ -141,11 +141,12 @@ let cl_extract env =
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
 
-  let rs_print fmt = SetX.iter (fprintf fmt "\t%a@." X.print)
+  (* unused --
+     let rs_print fmt = SetX.iter (fprintf fmt "\t%a@." X.print)
+  *)
+
   let lm_print fmt =
     MapL.iter (fun k dep -> fprintf fmt "%a %a" LX.print k Ex.print dep)
-
-  let t_print fmt = SE.iter (fprintf fmt "%a " E.print)
 
   let pmake fmt m =
     fprintf fmt "[.] map:\n";
@@ -173,9 +174,11 @@ module Debug = struct
       (fun k s -> fprintf fmt "%a -> %a\n" X.print k E.print_list
           (SE.elements s)) m
 
-  let pgamma fmt m =
-    fprintf fmt "------------- UF: Gamma map --------------------------@.";
-    MapX.iter (fun k s -> fprintf fmt "%a -> \n%a" X.print k rs_print s) m
+  (* unused --
+     let pgamma fmt m =
+     fprintf fmt "------------- UF: Gamma map --------------------------@.";
+     MapX.iter (fun k s -> fprintf fmt "%a -> \n%a" X.print k rs_print s) m
+  *)
 
   let pneqs fmt m =
     fprintf fmt "------------- UF: Disequations map--------------------@.";

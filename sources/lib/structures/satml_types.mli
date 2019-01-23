@@ -64,8 +64,6 @@ module type ATOM = sig
   val faux_atom  : atom
   val level : atom -> int
   val index : atom -> int
-  val cmp_atom : atom -> atom -> int
-  val eq_atom : atom -> atom -> bool
   val reason : atom -> reason
   val reason_atoms : atom -> atom list
 

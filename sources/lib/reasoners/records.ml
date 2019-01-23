@@ -288,49 +288,39 @@ module Shostak (X : ALIEN) = struct
 
   (* Shostak'pair solver adapted to records *)
 
-  let mk_fresh_record x info =
-    let ty = type_info x in
-    let lbs = match ty with Ty.Trecord r -> r.Ty.lbs | _ -> assert false in
-    let lbs =
+  (* unused --
+     let mk_fresh_record x info =
+     let ty = type_info x in
+     let lbs = match ty with Ty.Trecord r -> r.Ty.lbs | _ -> assert false in
+     let lbs =
       List.map
         (fun (lb, ty) ->
            match info with
            | Some (a, v) when Hs.equal lb a -> lb, v
            | _ -> let n = embed (X.term_embed (E.fresh_name ty)) in lb, n)
         lbs
-    in
-    Record (lbs, ty), lbs
+     in
+     Record (lbs, ty), lbs
+  *)
 
-  let rec occurs x = function
-    | Record (lbs, _) ->
+  (* unused --
+     let rec occurs x = function
+     | Record (lbs, _) ->
       List.exists (fun (_, v) -> occurs x v) lbs
-    | Access (_, v, _) -> occurs x v
-    | Other _ as v -> compare_mine x v = 0 (* XXX *)
+     | Access (_, v, _) -> occurs x v
+     | Other _ as v -> compare_mine x v = 0 (* XXX *)
+  *)
 
-  let direct_args_of_labels x = List.exists (fun (_, y)-> compare_mine x y = 0)
-
-  let rec subst_access x s e =
-    match e with
-    | Record (lbs, ty) ->
+  (* unused --
+     let rec subst_access x s e =
+     match e with
+     | Record (lbs, ty) ->
       Record (List.map (fun (n,e') -> n, subst_access x s e') lbs, ty)
-    | Access (lb, e', _) when compare_mine x e' = 0 ->
+     | Access (lb, e', _) when compare_mine x e' = 0 ->
       Hs.list_assoc lb s
-    | Access (lb', e', ty) -> Access (lb', subst_access x s e', ty)
-    | Other _ -> e
-
-  let rec find_list x = function
-    | [] -> raise Not_found
-    | (y, t) :: _ when compare_mine x y = 0 -> t
-    | _ :: l -> find_list x l
-
-  let split l =
-    let rec split_rec acc = function
-      | [] -> acc, []
-      | ((x, t) as v) :: l ->
-        try acc, (t, find_list x acc) :: l
-        with Not_found -> split_rec (v::acc) l
-    in
-    split_rec [] l
+     | Access (lb', e', ty) -> Access (lb', subst_access x s e', ty)
+     | Other _ -> e
+  *)
 
   let fully_interpreted _ = false
 

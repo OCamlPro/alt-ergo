@@ -20,8 +20,10 @@ module DummyDL = struct
   [@@@ocaml.warning "-38"]
   exception Error of error
 
+  [@@@ocaml.warning "-32"]
   let error_message s = s
 
+  [@@@ocaml.warning "-32"]
   let loadfile _ = ()
 
 end

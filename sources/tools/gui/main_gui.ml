@@ -369,9 +369,6 @@ let empty_timers_model (table:GPack.table) =
   t
 
 
-let pump () =
-  while Glib.Main.iteration false do () done
-
 let refresh_timers t () =
   let tsat = Timers.get_sum t.timers Timers.M_Sat in
   let tmatch = Timers.get_sum t.timers Timers.M_Match in

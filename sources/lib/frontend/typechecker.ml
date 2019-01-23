@@ -443,7 +443,9 @@ let rec type_term ?(call_from_type_form=false) env f =
     | PPapp(p,args) ->
       begin
         let te_args = List.map (type_term env) args in
-        let lt_args =  List.map (fun { c = { tt_ty = t; _ }; _ } -> t) te_args in
+        let lt_args = List.map (
+            fun { c = { tt_ty = t; _ }; _ } -> t
+          ) te_args in
         let s, {Env.args = lt; result = t}, kind = Env.fresh_type env p loc in
         try
           List.iter2 Ty.unify lt lt_args;

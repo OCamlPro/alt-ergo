@@ -363,7 +363,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let f_weight env i j =
     Pervasives.(<) (Vec.get env.vars j).weight (Vec.get env.vars i).weight
 
-  let f_filter env i = (Vec.get env.vars i).level < 0
+  (* unused -- let f_filter env i = (Vec.get env.vars i).level < 0 *)
 
   let insert_var_order env v =
     Iheap.insert (f_weight env) env.order v.vid
@@ -399,7 +399,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let nb_assigns env = Vec.size env.trail
   let nb_clauses env = Vec.size env.clauses
-  let nb_learnts env = Vec.size env.learnts
+  (* unused -- let nb_learnts env = Vec.size env.learnts *)
   let nb_vars    env = Vec.size env.vars
 
   let new_decision_level env =
@@ -745,7 +745,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Matoms.iter (fun a _ -> assert (not a.is_true)) env.lazy_cnf
 
 
-  let expensive_theory_propagate () = None
+  let _expensive_theory_propagate () = None
   (* try *)
   (*   if D1.d then eprintf "expensive_theory_propagate@."; *)
   (*   ignore(Th.expensive_processing env.tenv); *)
@@ -877,24 +877,28 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     env.simpDB_props <- env.simpDB_props - !num_props;
     !res
 
-  let f_sort_db c1 c2 =
-    let sz1 = Vec.size c1.atoms in
-    let sz2 = Vec.size c2.atoms in
-    let c = Pervasives.compare c1.activity c2.activity in
-    if sz1 = sz2 && c = 0 then 0
-    else
-    if sz1 > 2 && (sz2 = 2 || c < 0) then -1
-    else 1
+  (* unused --
+     let f_sort_db c1 c2 =
+     let sz1 = Vec.size c1.atoms in
+     let sz2 = Vec.size c2.atoms in
+     let c = Pervasives.compare c1.activity c2.activity in
+     if sz1 = sz2 && c = 0 then 0
+     else
+     if sz1 > 2 && (sz2 = 2 || c < 0) then -1
+     else 1
 
-  let locked _ = false(*
-                        try
-                        for i = 0 to Vec.size env.vars - 1 do
-                        match (Vec.get env.vars i).reason with
-| Some c' when c ==c' -> raise Exit
-| _ -> ()
-                        done;
-                        false
-                        with Exit -> true*)
+     let locked _ = false
+     (*
+     try
+      for i = 0 to Vec.size env.vars - 1 do
+      match (Vec.get env.vars i).reason with
+        | Some c' when c ==c' -> raise Exit
+        | _ -> ()
+      done;
+      false
+     with Exit -> true
+   *)
+  *)
 
   let reduce_db () = ()
 (*
@@ -1288,7 +1292,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         enqueue env a propag_lvl (Some c)
 
 
-  let check_inconsistence_of _ = ()
+  let _check_inconsistence_of _ = ()
 (*
   try
   let env = ref (Th.empty()) in ();
@@ -1438,22 +1442,23 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         (* right decision level will be set inside record_learnt_clause *)
     done
 
-  let check_clause c =
-    let b = ref false in
-    let atoms = c.atoms in
-    for i = 0 to Vec.size atoms - 1 do
+  (* unused --
+     let check_clause c =
+     let b = ref false in
+     let atoms = c.atoms in
+     for i = 0 to Vec.size atoms - 1 do
       let a = Vec.get atoms i in
       b := !b || a.is_true
-    done;
-    assert (!b)
+     done;
+     assert (!b)
 
-  let check_vec vec =
-    for i = 0 to Vec.size vec - 1 do check_clause (Vec.get vec i) done
+     let check_vec vec =
+     for i = 0 to Vec.size vec - 1 do check_clause (Vec.get vec i) done
 
-  let check_model env =
-    check_vec env.clauses;
-    check_vec env.learnts
-
+     let check_model env =
+     check_vec env.clauses;
+     check_vec env.learnts
+  *)
 
   let solve env =
     if env.is_unsat then raise (Unsat env.unsat_core);

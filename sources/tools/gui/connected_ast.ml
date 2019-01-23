@@ -215,10 +215,10 @@ let tag_callback t env sbuf ~origin:_y z i =
 
   | _ -> false
 
-
-let term_callback t env sbuf ~origin:y z i =
-  if tag_callback t env sbuf ~origin:y z i then true
-  else
+(* unused --
+   let term_callback t env sbuf ~origin:y z i =
+   if tag_callback t env sbuf ~origin:y z i then true
+   else
     match GdkEvent.get_type z with
     | `BUTTON_PRESS ->
       let z = GdkEvent.Button.cast z in
@@ -235,6 +235,7 @@ let term_callback t env sbuf ~origin:y z i =
         end
       else false
     | _ -> false
+*)
 
 
 let rec list_uquant_vars_in_form = function
@@ -852,9 +853,6 @@ and triggers_callback t qid env sbuf ~origin:y z i =
 
 and connect_tag env sbuf t =
   ignore (t#connect#event ~callback:(tag_callback t env sbuf))
-
-and connect_term env sbuf t =
-  ignore (t#connect#event ~callback:(term_callback t env sbuf))
 
 and connect_trigger_tag env sbuf t qid =
   ignore (t#connect#event ~callback:(triggers_callback t qid env sbuf))

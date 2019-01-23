@@ -64,7 +64,7 @@ module M = struct
   let debug_bitv = ref false
   let debug_ac = ref false
   let debug_split = ref false
-  let options = ref false
+  (* unused -- let options = ref false *)
   let greedy = ref false
   let disable_ites = ref false
   let disable_adts = ref false
@@ -184,7 +184,7 @@ module M = struct
 
   let set_profiling_plugin s = profiling_plugin := s
 
-  let set_unsat_core b = unsat_core := b
+  (* unused -- let set_unsat_core b = unsat_core := b *)
 
   let set_rules = function
     | "parsing" -> rules := 0
@@ -780,9 +780,9 @@ let set_rules b = M.rules := b
 let set_restricted b = M.restricted := b
 let set_bottom_classes b = M.bottom_classes := b
 let set_timelimit b = M.timelimit := b
-let set_model_timelimit b = M.timelimit := b
+(* unused -- let set_model_timelimit b = M.timelimit := b *)
 let set_timers b = M.timers := b
-let set_minimal_bj b = M.minimal_bj := b
+(* unused -- let set_minimal_bj b = M.minimal_bj := b *)
 
 let set_profiling f b =
   M.profiling := b;
