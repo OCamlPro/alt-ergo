@@ -308,7 +308,8 @@ module Shostak (X : ALIEN) = struct
         assert false;
       is_mine p, acc
 
-    | Select ({ d_arg; _ } as s)  [@ocaml.ppwarning "TODO: abstract Selectors"] ->
+    | Select ({ d_arg; _ } as s)
+        [@ocaml.ppwarning "TODO: abstract Selectors"] ->
       (* no need to abstract THIS selector. It's necessiraly
          toplevel in ADTs *)
       (*

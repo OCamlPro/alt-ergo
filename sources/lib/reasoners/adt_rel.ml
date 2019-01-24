@@ -108,8 +108,8 @@ module Debug = struct
     end
 
   (* unused --
-  let case_split r r' =
-    if debug_adt () then
+     let case_split r r' =
+     if debug_adt () then
       fprintf fmt "[ADT.case-split] %a = %a@." X.print r X.print r'
   *)
 
@@ -165,7 +165,9 @@ let deduce_is_constr uf r h eqs env ex =
               | Ty.Adt cases -> cases
             in
             let {Ty.destrs; _} =
-              try List.find (fun { Ty.constr = c; _ } -> Hstring.equal h c) cases
+              try List.find (
+                  fun { Ty.constr = c; _ } -> Hstring.equal h c
+                ) cases
               with Not_found -> assert false
             in
             let xs = List.map (fun (_, ty) -> E.fresh_name ty) destrs in
