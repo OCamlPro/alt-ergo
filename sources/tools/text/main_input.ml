@@ -19,9 +19,11 @@ let () =
 
     (* Parsing *)
 
-    type file = Parsed.file
+    type parsed = Parsed.decl
 
-    let parse_file = Parsers.parse_problem
+    let parse_files ~filename ~preludes =
+      let l = Parsers.parse_problem ~filename ~preludes in
+      Lists.to_seq l
 
     (** Typechecking *)
 

@@ -137,7 +137,7 @@ and 'a tlet_kind =
   | TletForm of ('a tform, 'a) annoted
 
 
-(** Declarations *)
+(** Rewrite rules *)
 
 type 'a rwt_rule = {
   rwt_vars : (Symbols.t * Ty.t) list;
@@ -145,11 +145,27 @@ type 'a rwt_rule = {
   rwt_right : 'a
 }
 
+let print_rwt pp fmt r =
+  Format.fprintf fmt "@<hv>%a@ --> %a@]" pp r.rwt_left pp r.rwt_right
+
+
+(** Goal sort *)
+
 type goal_sort = Cut | Check | Thm
+
+let print_goal_sort fmt = function
+  | Cut -> Format.fprintf fmt "cut"
+  | Check -> Format.fprintf fmt "check"
+  | Thm -> Format.fprintf fmt "thm"
+
+
+(** Logic type *)
 
 type tlogic_type =
   | TPredicate of Ty.t list
   | TFunction of Ty.t list * Ty.t
+
+(** Declarations *)
 
 type 'a atdecl = ('a tdecl, 'a) annoted
 
@@ -326,4 +342,35 @@ and print_formula fmt f =
       )binders;
     fprintf fmt "%a" print_formula f
   | _ -> fprintf fmt "(formula pprint not implemented)"
+
+(*
+let rec print_tdecl fmt = function
+  | TTheory (_, name, _, l) ->
+    Format.fprintf fmt "th %s: @[<v>%a@]" name
+      (Util.print_list_pp ~sep:Format.pp_print_space ~pp:print_atdecl) l
+  | TAxiom (_, name, kind, f) ->
+    Format.fprintf fmt "ax %s: @[<hov>%a@]" name print_formula f
+  | TRewriting (_, name, l) ->
+    Format.fprintf fmt "rwt %s: @[<hov>%a@]" name
+      (Util.print_list_pp ~sep:Format.pp_print_space
+         ~pp:(print_rwt print_term)) l
+  | TGoal (_, sort, name, f) ->
+    Format.fprintf fmt "goal %s: @[<hov>%a@]" name print_formula f
+
+and print_atdecl fmt a = print_tdecl fmt a.c
+*)
+
+let fresh_hypothesis_name =
+  let cpt = ref 0 in
+  fun sort ->
+    incr cpt;
+    match sort with
+    | Thm -> "@H"^(string_of_int !cpt)
+    | _ -> "@L"^(string_of_int !cpt)
+
+let is_local_hyp s =
+  try Pervasives.(=) (String.sub s 0 2) "@L" with Invalid_argument _ -> false
+
+let is_global_hyp s =
+  try Pervasives.(=) (String.sub s 0 2) "@H" with Invalid_argument _ -> false
 

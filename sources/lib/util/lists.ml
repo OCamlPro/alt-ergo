@@ -36,3 +36,10 @@ let rec find_opt pred l =
     if pred e then Some e
     else find_opt pred r
 
+let to_seq l =
+  let rec aux l () = match l with
+    | [] -> Seq.Nil
+    | x :: tail -> Seq.Cons (x, aux tail)
+  in
+  aux l
+

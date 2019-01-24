@@ -514,7 +514,6 @@ let make acc d =
   | TRewriting(loc, _, lr) ->
     {st_decl=RwtDef(List.map make_rule lr); st_loc=loc} :: acc
   | TGoal(loc, sort, n, f) -> mk_query acc n f loc sort
-  (*| TPredicate_def(loc, n, [], f) -> mk_preddef acc f n loc b*)
   | TPredicate_def(loc, n, _args, f) -> mk_preddef acc f n loc
   | TFunction_def(loc, n, _args, _rety, f) -> mk_function acc f n loc
   | TTypeDecl _ | TLogic _  -> acc

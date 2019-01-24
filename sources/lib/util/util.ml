@@ -115,3 +115,12 @@ let print_list ~sep ~pp fmt l =
   | e :: l ->
     Format.fprintf fmt "%a" pp e;
     List.iter (fun e -> Format.fprintf fmt "%s %a" sep pp e) l
+
+
+let rec print_list_pp ~sep ~pp fmt = function
+  | [] -> ()
+  | [x] -> pp fmt x
+  | x :: l ->
+    Format.fprintf fmt "%a %a" pp x sep ();
+    print_list_pp ~sep ~pp fmt l
+

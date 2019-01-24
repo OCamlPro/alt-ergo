@@ -105,8 +105,60 @@ let init_profiling () =
     Profiling.init ();
   end
 
+(* Internal state while iterating over input statements *)
+type 'a state = {
+  env : 'a;
+  ctx   : Commands.sat_tdecl list;
+  local : Commands.sat_tdecl list;
+  global : Commands.sat_tdecl list;
+}
+
+let solve all_context (cnf, goal_name) =
+  let used_context = FE.choose_used_context all_context ~goal_name in
+  init_profiling ();
+  try
+    if Options.timelimit_per_goal() then
+      begin
+        Options.Time.start ();
+        Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
+      end;
+    SAT.reset_refs ();
+    let _ =
+      List.fold_left
+        (FE.process_decl FE.print_status used_context)
+        (SAT.empty (), true, Explanation.empty) cnf
+    in
+    if Options.profiling() then
+      Profiling.print true (SAT.get_steps ()) timers fmt
+  with Util.Timeout ->
+    if not (Options.timelimit_per_goal()) then exit 142
+
+let typed_loop all_context state td =
+  if type_only () then state else begin
+    match td.Typed.c with
+    | Typed.TGoal (_, kind, name, _) ->
+      let l = state.local @ state.global @ state.ctx in
+      let cnf = List.rev @@ Cnf.make l td in
+      let () = solve all_context (cnf, name) in
+      begin match kind with
+        | Typed.Check
+        | Typed.Cut -> { state with local = []; }
+        | _ -> { state with global = []; local = []; }
+      end
+    | Typed.TAxiom (_, s, _, _) when Typed.is_global_hyp s ->
+      let cnf = Cnf.make state.global td in
+      { state with global = cnf; }
+    | Typed.TAxiom (_, s, _, _) when Typed.is_local_hyp s ->
+      let cnf = Cnf.make state.local td in
+      { state with local = cnf; }
+    | _ ->
+      let cnf = Cnf.make state.ctx td in
+      { state with ctx = cnf; }
+  end
+
 let () =
-  let d =
+  let (module I : Input.S) = Input.find (Options.frontend ()) in
+  let parsed =
     try
       Options.Time.start ();
       Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
@@ -115,20 +167,30 @@ let () =
 
       let filename = get_file () in
       let preludes = Options.preludes () in
-      let (module I : Input.S) = Input.find (Options.frontend ()) in
-      let pfile = I.parse_file ~filename ~preludes in
-      if parse_only () then exit 0;
-      let d, _ = I.type_file pfile in
-      if type_only () then exit 0;
-      let d = Typechecker.split_goals_and_cnf d
-          [@ocaml.ppwarning "TODO: implement a more efficient split"]
-      in
-      d
+      I.parse_files ~filename ~preludes
     with Util.Timeout ->
       FE.print_status (FE.Timeout None) 0L;
       exit 142
   in
   let all_used_context = FE.init_all_used_context () in
+  if Options.timelimit_per_goal() then
+    FE.print_status FE.Preprocess 0L;
+  let typing_loop state p =
+    if parse_only () then state else begin
+      let l, env = I.type_parsed state.env p in
+      List.fold_left (typed_loop all_used_context) { state with env; } l
+    end
+  in
+  let state = {
+    env = I.empty_env;
+    ctx = [];
+    local = [];
+    global = [];
+  } in
+  let _ : _ state = Seq.fold_left typing_loop state parsed in
+  Options.Time.unset_timeout ~is_gui:false;
+
+(*
   match d with
   | [] -> ()
   | [cnf, goal_name] ->
@@ -145,26 +207,4 @@ let () =
       with Util.Timeout -> ()
     end
   | _ ->
-    if Options.timelimit_per_goal() then
-      FE.print_status FE.Preprocess 0L;
-    List.iter
-      (fun (cnf, goal_name) ->
-         let used_context =
-           FE.choose_used_context all_used_context ~goal_name
-         in
-         init_profiling ();
-         try
-           if Options.timelimit_per_goal() then
-             begin
-               Options.Time.start ();
-               Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
-             end;
-           SAT.reset_refs ();
-           ignore
-             (List.fold_left (FE.process_decl FE.print_status used_context)
-                (SAT.empty (), true, Explanation.empty) cnf)
-         with Util.Timeout ->
-           if not (Options.timelimit_per_goal()) then exit 142
-      ) d;
-    Options.Time.unset_timeout ~is_gui:false;
-
+*)
