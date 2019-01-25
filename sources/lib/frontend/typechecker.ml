@@ -1927,7 +1927,7 @@ let type_goal acc env_g loc sort n goal =
   (td, env_g)::acc
 
 
-let rec type_and_intro_goal acc env _loc sort n f =
+let rec type_and_intro_goal acc env sort n f =
   let b = (* smtfile() || smt2file() || satmode()*) false in
   let axioms, (goal, env_g) =
     intro_hypothesis env (not b) f in
@@ -1936,13 +1936,13 @@ let rec type_and_intro_goal acc env _loc sort n f =
     List.fold_left
       (fun acc (f, env_f) -> match f.pp_desc with
          | PPcut f ->
-           let acc = type_and_intro_goal acc env_f
-               loc Cut (fresh_cut_name ()) f in
+           let acc = type_and_intro_goal
+               acc env_f Cut (fresh_cut_name ()) f in
            type_hypothesis acc env_f loc sort f
 
          | PPcheck f ->
-           type_and_intro_goal acc env_f
-             loc Check (fresh_check_name ()) f
+           type_and_intro_goal
+             acc env_f Check (fresh_check_name ()) f
 
          | _ ->
            type_hypothesis acc env_f loc sort f
@@ -2156,7 +2156,7 @@ let rec type_decl (acc, env) d =
     Options.tool_req 1 "TR-Typing-GoalDecl$_F$";
     (*let f = move_up f in*)
     let f = alpha_renaming_env env f in
-    type_and_intro_goal acc env loc Thm n f, env
+    type_and_intro_goal acc env Thm n f, env
 
   | Predicate_def(loc,n,l,e)
   | Function_def(loc,n,l,_,e) ->
