@@ -52,7 +52,7 @@ module Types = struct
     { to_ty = MString.empty;
       from_labels = MString.empty }
 
-  let fresh_vars ~recursive _ vars loc =
+  let fresh_vars ~recursive vars loc =
     List.map
       (fun x ->
          if recursive then
@@ -130,7 +130,7 @@ module Types = struct
 
   let add_decl ~recursive env vars id body loc =
     if MString.mem id env.to_ty && not recursive then error (ClashType id) loc;
-    let ty_vars = fresh_vars ~recursive env vars loc in
+    let ty_vars = fresh_vars ~recursive vars loc in
     match body with
     | Abstract ->
       let ty = Ty.text ty_vars id in
