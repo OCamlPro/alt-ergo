@@ -888,7 +888,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let rec asm_aux acc list =
     List.fold_left
       (fun
-        ((env, _, tcp, ap_delta, lits) as acc)
+        ((env, _bcp, tcp, ap_delta, lits) as acc)
         ({ E.ff = f; _ } as ff, dep) ->
         refresh_model_handler env;
         Options.exec_thread_yield ();
