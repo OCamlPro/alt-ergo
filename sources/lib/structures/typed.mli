@@ -224,7 +224,7 @@ and 'a tlet_kind =
     whether they bind terms or formulas. *)
 
 
-(** {5 Printing} *)
+(** {4 Printing} *)
 
 val print_term : Format.formatter -> _ atterm -> unit
 (** Print annoted typed terms. Ignore the annotations. *)

@@ -9,13 +9,20 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(** A wrapper of the Dynlink module: we use Dynlink except when we want to
+(** Dynlink wrapper
+
+    A wrapper of the Dynlink module: we use Dynlink except when we want to
     generate a static (native) binary **)
 
 type error
+(** Type error, as in {!Dynlink.error} *)
 
 exception Error of error
+(** Error exception, as in {!Dynlink.Error} *)
 
 val error_message : error -> string
+(** Error messages as strings, as in {!Dynlink.error_message} *)
 
 val loadfile : string -> unit
+(** Load a compiled file, as in {!Dynlink.loadfile}. *)
+

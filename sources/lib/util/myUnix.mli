@@ -9,9 +9,22 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(** cur_time, provided by Unix or by Javascript depending on the
-    compilation mode: for byte/opt or for javascript **)
+(** Unix wrapper
+
+    This module defines some wrappers around Unix function,
+    in order to more easily maintain compatibility when
+    compiling to javascript.
+*)
+
 val cur_time : unit -> float
+(** Returns the current time. **)
 
 val set_timeout : is_gui:bool -> float -> unit
+(** Set a timeout, using Unix timers.
+    If [is_gui] then the timer raises {!Unix.ITIMER_REAL},
+    else raises {!Unix.ITIMER_VIRTUAL}.
+    No-op on javascript. *)
+
 val unset_timeout : is_gui:bool -> unit
+(** Unset the previously set timer. *)
+

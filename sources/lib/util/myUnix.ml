@@ -9,6 +9,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+(** TODO: use the newly available Sys.backend_type to simplify things ? *)
+
 module Default_Unix = struct
 
   open Unix

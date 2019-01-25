@@ -24,7 +24,9 @@
 (*+                                                                      +*)
 (*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*)
 
-(** Association tables over ordered types.
+(** {2 Maps}
+
+    Association tables over ordered types.
 
     This module implements applicative association tables, also known as
     finite maps or dictionaries, given a total ordering function

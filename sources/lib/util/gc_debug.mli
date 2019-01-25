@@ -10,3 +10,9 @@
 (******************************************************************************)
 
 (* empty interface *)
+
+(** Gc logging
+
+    This module registers some alarm functions (if configured in the
+    Options modules) that print some gc statistics on stderr.
+*)

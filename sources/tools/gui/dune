@@ -1,4 +1,8 @@
 
+(documentation
+  (package altgr-ergo)
+)
+
 (executable
   (name         Main_gui)
   (public_name  altgr-ergo)

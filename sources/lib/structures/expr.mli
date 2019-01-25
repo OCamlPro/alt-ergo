@@ -216,7 +216,7 @@ val apply_subst_trigger : subst -> trigger -> trigger
 
 (** Subterms, and related stuff *)
 
-(** {sub_term acc e] returns the acc augmented with the term and all
+(** [sub_term acc e] returns the acc augmented with the term and all
     its sub-terms. Returns the acc if e is not a term. Does not go
     through literals (except positive uninterpreted predicates
     application) and formulas *)

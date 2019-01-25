@@ -84,7 +84,7 @@ and trecord = {
       and an associated type. *)
   record_constr : Hstring.t;
   (** record constructor. Useful is case it's a specialization of an
-      algeberaic datatype. Default value is "{__[name]" *)
+      algeberaic datatype. Default value is "\{__[name]" *)
 }
 (** Record types. *)
 

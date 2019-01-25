@@ -1,5 +1,9 @@
 (include_subdirs  unqualified)
 
+(documentation
+  (package alt-ergo-lib)
+)
+
 (library
   (name             AltErgoLib)
   (public_name      alt-ergo-lib)
