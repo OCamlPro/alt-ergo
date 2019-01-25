@@ -101,7 +101,7 @@ module Simplex (C : Coef_Type) = struct
         let z = ref 0 in
         let nz = ref 0 in
         List.iter
-          (fun (_,{a2=a2}) ->
+          (fun (_, { a2 ; _ }) ->
              Array.iter (fun v -> incr (if Q.is_zero v then z else nz)) a2
           )matrix;
         fprintf fmt "zero-cells:     %d@." !z;
@@ -116,11 +116,11 @@ module Simplex (C : Coef_Type) = struct
       List.iter (fun (si,c) -> fprintf fmt "%sL%d + " (C.to_string c) si) l;
       fprintf fmt "0"
 
-    let poly fmt {a=a;c=c} =
+    let poly fmt { a; c} =
       Array.iter (fun (si,c) -> fprintf fmt "%sL%d + " (C.to_string c) si) a;
       fprintf fmt "%s" (C2.to_string c)
 
-    let poly01 fmt {a=a; c=c} =
+    let poly01 fmt { a; _ } =
       for i = 1 to Array.length a - 2 do
         fprintf fmt "%s" (expand (C.to_string (snd a.(i))) 2)
       done
@@ -139,7 +139,7 @@ module Simplex (C : Coef_Type) = struct
         fprintf fmt "I am given a problem of size %d:@." nb_vars;
         fprintf fmt "max: %a;@." poly0 co;
         List.iter
-          (fun (x,(pp, pn, ctt)) ->
+          (fun (_,(pp, pn, ctt)) ->
              fprintf fmt "  (%a)  + (%a) + %s =  0;@."
                poly0 pp poly0 pn (Q.to_string ctt)
           ) eqs;
@@ -148,7 +148,7 @@ module Simplex (C : Coef_Type) = struct
       end
 
 
-    let max_poly {a2=a2} =
+    let max_poly { a2 ; _ } =
       Array.fold_left (fun n v -> max n (String.length (C.to_string v))) 0 a2
 
     let max_sys ctx = List.fold_left (fun n (_,p) -> max n (max_poly p)) 0 ctx
@@ -318,7 +318,7 @@ module Simplex (C : Coef_Type) = struct
       | _     -> None
 
 
-    let create len (lpos, lneg, ctt) tbl_i_s =
+    let create len (lpos, lneg, ctt) _tbl_i_s =
       let a = Array.init len (fun i -> i, Q.zero) in (* BUG CORRIGE*)
       let f1 (i,c)= a.(i) <- i,c in
       List.iter f1 lpos;
@@ -331,8 +331,8 @@ module Simplex (C : Coef_Type) = struct
       { (create len (s_neq,[],Q.zero) tbl_i_s) with c = C2.abstract C.zero }
 
     let mult_const a c v =
-      let f2 i (s,cs) = a.(i) <- s, C.zero in
-      let g2 i (s,cs) = () in
+      let f2 i (s,_) = a.(i) <- s, C.zero in
+      let g2 _ _ = () in
       let h2 i (s,cs) = a.(i) <- s, C.mult v cs in
       let k = if C.is_zero v then f2 else if C.is_one v then g2 else h2 in
       Array.iteri k a;
@@ -350,15 +350,15 @@ module Simplex (C : Coef_Type) = struct
         (s, ind), mult_const a c (C.div C.m_one v)
 
     let subst_in_p ({a=a ; c=c} as pp) ((s,lhs), {a=rhs_a; c=rhs_c}) =
-      let s', v = a.(lhs) in
+      let _, v = a.(lhs) in
       (*assert (String.compare s s' = 0);*)
       if not (C.is_zero v) then begin
         a.(lhs) <- s, C.zero;
-        let f6a j (sw,w) =
+        let f6a j (_,w) =
           let sj, vj = rhs_a.(j) in
           if not (C.is_zero vj) then a.(j) <- sj, C.add vj w
         in
-        let f6b j (sw,w) =
+        let f6b j (_,w) =
           let sj, vj = rhs_a.(j) in
           if not (C.is_zero vj) then a.(j) <- sj, C.add (C.mult v vj) w
         in
@@ -404,7 +404,7 @@ module Simplex (C : Coef_Type) = struct
     let solve_zero_list zsbt zsbt_inv l =
       if !dsimplex then  fprintf fmt "[eq_solve] 0 = 0 (modulo Li >= 0)@.";
       List.iter
-        (fun (s,coef) ->
+        (fun (s, _coef) ->
            if not zsbt_inv.(s) then
              begin Vec.push zsbt s; zsbt_inv.(s) <- true end
         )l
@@ -419,7 +419,7 @@ module Simplex (C : Coef_Type) = struct
       let zsbt_inv = Array.make len false in
       let eqs =
         List.fold_left
-          (fun acc (x,((lp,ln, ctt) as lp_ln)) -> (* lp + ln + ctt = 0 *)
+          (fun acc (_,((lp,ln, ctt) as lp_ln)) -> (* lp + ln + ctt = 0 *)
              let sg = Q.sign ctt in
              let p = (create len lp_ln h_i_s) in
              if !dsimplex then fprintf fmt "  >> poly %a@." D.poly p;
@@ -533,9 +533,9 @@ module Simplex (C : Coef_Type) = struct
 
     let compact_poly {a=a ; c=c} base new_len h_zsbt =
       let old_i = ref 0 in
-      let f4 i =
+      let f4 _ =
         while H.mem base !old_i || H.mem h_zsbt !old_i do incr old_i done;
-        let s, coef = a.(!old_i) in
+        let _, coef = a.(!old_i) in
         incr old_i;
         coef
       in
@@ -549,12 +549,12 @@ module Simplex (C : Coef_Type) = struct
     let compact_problem co matrix len new_len zsbt =
       let base = H.create 101 in
       let basic = H.create 101 in
-      List.iter (fun ((s,i),p) -> H.add base i 0) matrix;
+      List.iter (fun ((_,i),_) -> H.add base i 0) matrix;
       let h_zsbt = H.create (List.length zsbt) in
       List.iter (fun i -> H.add h_zsbt i ()) zsbt;
       let matrix, _ =
         List.fold_left
-          (fun (matrix,cptL) ((s,i),p) ->
+          (fun (matrix,cptL) ((s,_),p) ->
              let p = compact_poly p base new_len h_zsbt in
              H.add basic cptL s;
              (cptL, p)::matrix, cptL + 1
@@ -562,7 +562,7 @@ module Simplex (C : Coef_Type) = struct
       in
       let matrix =
         List.fold_left
-          (fun acc ((i, p) as line) ->
+          (fun acc ((_, p) as line) ->
              if !dsimplex then
                fprintf fmt "compact_problem: LINE %a@." D.pline line;
              if array_is_null p.a2 then
@@ -667,7 +667,7 @@ module Simplex (C : Coef_Type) = struct
 
     exception Choose_index of int
 
-    let choose_var ctx co (q,lines) =
+    let choose_var ctx co (q,_) =
       try
         for _ = 0 to !len - 1 do
           let i = Queue.pop q in
@@ -686,7 +686,7 @@ module Simplex (C : Coef_Type) = struct
              let rap = C2.minus (C2.div p.c2 v_ch_vr) in
              match !acc with
              | None -> acc := Some (v_ch_vr, rap, line)
-             | Some (v_r,r,(jj,_)) ->
+             | Some (_,r,(jj,_)) ->
                let delta = C2.compare rap r in
                let change = delta < 0 || (delta = 0 &&  j < jj) in
                if change then acc := Some (v_ch_vr, rap, line)
@@ -696,15 +696,15 @@ module Simplex (C : Coef_Type) = struct
       | Some (_, _, eq) -> eq
 
     let mult_const a2 c2 v =
-      let f5 i cs = a2.(i) <- C.zero in
-      let g5 i cs = () in
+      let f5 i _ = a2.(i) <- C.zero in
+      let g5 _ _ = () in
       let h5 i cs = a2.(i) <- C.mult v cs in
       let k = if C.is_zero v then f5 else if C.is_one v then g5 else h5 in
       Array.iteri k a2;
       {a2=a2 ; c2 = C2.mult v c2}
 
 
-    let change_pivot ch_vr (old_vr, {a2=old_a; c2=c2}) distr order =
+    let change_pivot ch_vr (old_vr, {a2=old_a; c2=c2}) distr _order =
       D.change_pivot ch_vr old_vr;
 
       (* update_distr *)
@@ -895,7 +895,7 @@ module Simplex (C : Coef_Type) = struct
       | E_unsat(ctx,co)    -> I_unsat(ctx,co)
 
 
-    let infos_of distr q {c2=c2} ctx =
+    let infos_of distr q { c2 ; _ } ctx =
       let acc0 =
         List.fold_left
           (fun acc (i,p) ->

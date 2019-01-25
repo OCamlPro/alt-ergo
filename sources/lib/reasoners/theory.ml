@@ -101,7 +101,8 @@ module Main_Default : S = struct
         (fun t mp ->
            match E.term_view t with
            | E.Not_a_term _ -> assert false
-           | E.Term{E.f=Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac)); xs; ty} ->
+           | E.Term { E.f = Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac));
+                      xs; ty; _ } ->
              let xs = List.map E.type_info xs in
              let xs, ty =
                try
@@ -127,17 +128,17 @@ module Main_Default : S = struct
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> mp
            | Tvar _ -> assert false
 
-           | Text (_, hs) | Tsum (hs, _) | Trecord {name=hs} when
+           | Text (_, hs) | Tsum (hs, _) | Trecord { name = hs; _ } when
                Hstring.Map.mem hs mp -> mp
 
            | Text (l, hs) ->
              let l = List.map (fun _ -> Ty.fresh_tvar()) l in
              Hstring.Map.add hs (Text(l, hs)) mp
 
-           | Tsum (hs, l) ->
+           | Tsum (hs, _) ->
              Hstring.Map.add hs ty mp
 
-           | Trecord {args; name; lbs} ->
+           | Trecord { name; _ } ->
              (* cannot do better for records ? *)
              Hstring.Map.add name ty mp
 
@@ -164,7 +165,7 @@ module Main_Default : S = struct
                  fprintf fmt "@."
              end
 
-           | Trecord {Ty.lbs} ->
+           | Trecord { Ty.lbs; _ } ->
              fprintf fmt "@.type %a = " Ty.print ty;
              begin match lbs with
                | [] -> assert false
@@ -248,10 +249,10 @@ module Main_Default : S = struct
         List.iter
           (fun (rx, lit_orig, _, ex) ->
              match lit_orig with
-             | Th_util.CS(k, sz) ->
+             | Th_util.CS(k, _) ->
                fprintf fmt "  > %s  cs: %a (because %a)@."
                  (theory_of k) LR.print (LR.make rx) Ex.print ex
-             | Th_util.NCS(k, sz) ->
+             | Th_util.NCS(k, _) ->
                fprintf fmt "  > %s ncs: %a (because %a)@."
                  (theory_of k) LR.print (LR.make rx) Ex.print ex
              | _ -> assert false
@@ -268,9 +269,11 @@ module Main_Default : S = struct
         fprintf fmt "============= End CASE-SPLIT =================@.%a@."
           made_choices choices
 
-    let split_size sz =
-      if debug_split () then
+    (* unused --
+       let split_size sz =
+       if debug_split () then
         fprintf fmt ">size case-split: %s@." (Numbers.Q.to_string sz)
+    *)
 
     let print_lr_view fmt ch = LR.print fmt (LR.make ch)
 
@@ -326,7 +329,7 @@ module Main_Default : S = struct
       | [], _ ->
         begin
           Options.tool_req 3 "TR-CCX-CS-Case-Split";
-          let l, base_env = CC_X.case_split base_env for_model in
+          let l, base_env = CC_X.case_split base_env ~for_model in
           match l with
           | [] ->
             { t with gamma_finite = base_env; choices = List.rev dl }, ch
@@ -411,15 +414,15 @@ module Main_Default : S = struct
     Debug.begin_case_split t.choices;
     let r =
       try
-        if t.choices == [] then look_for_sat [] t t.gamma [] for_model
+        if t.choices == [] then look_for_sat [] t t.gamma [] ~for_model
         else
           try
             let env, ch = CC_X.assume_literals t.gamma_finite [] facts in
-            look_for_sat ch t env [] for_model
+            look_for_sat ch t env [] ~for_model
           with Ex.Inconsistent (dep, classes) ->
             Options.tool_req 3 "TR-CCX-CS-Case-Split-Erase-Choices";
             (* we replay the conflict in look_for_sat, so we can
-               	       safely ignore the explanation which is not useful *)
+               safely ignore the explanation which is not useful *)
             let uf =  CC_X.get_union_find t.gamma in
             let filt_choices = List.filter (filter_choice uf) t.choices in
             Debug.split_sat_contradicts_cs filt_choices;
@@ -481,7 +484,7 @@ module Main_Default : S = struct
     let facts = CC_X.empty_facts () in
     List.iter
       (List.iter
-         (fun (a,ex,dlvl,plvl) ->
+         (fun (a,ex,_dlvl,_plvl) ->
             CC_X.add_fact facts (LTerm a, ex, Th_util.Other))
       ) in_facts_l;
 
@@ -516,7 +519,7 @@ module Main_Default : S = struct
       Debug.assumed t.assumed;
       assert (not ordered || is_ordered_list t.assumed);
 
-      let gamma, ch = CC_X.assume_literals t.gamma [] facts in
+      let gamma, _ = CC_X.assume_literals t.gamma [] facts in
       let new_terms = CC_X.new_terms gamma in
       {t with gamma = gamma; terms = Expr.Set.union t.terms new_terms},
       new_terms, cpt
@@ -684,17 +687,17 @@ module Main_Empty : S = struct
 
   let empty () = { assumed_set = E.Set.empty }
 
-  let assume ?(ordered=true) in_facts t =
+  let assume ?ordered:(_=true) in_facts t =
     let assumed_set =
       List.fold_left
-        (fun assumed_set ((a, ex, dlvl, plvl)) ->
+        (fun assumed_set ((a, _, _, _)) ->
            if E.Set.mem a assumed_set then assumed_set
            else E.Set.add a assumed_set
         ) t.assumed_set in_facts
     in
     {assumed_set}, E.Set.empty, 0
 
-  let query a t = None
+  let query _ _ = None
 
   let print_model _ _ = ()
   let cl_extract _ = []
@@ -704,11 +707,10 @@ module Main_Empty : S = struct
   let get_real_env _ = empty_ccx
   let get_case_split_env _ = empty_ccx
   let do_case_split env = env, E.Set.empty
-  let add_term env t ~add_in_cs = env
+  let add_term env _ ~add_in_cs:_ = env
   let compute_concrete_model e = e
-  let terms_in_repr e = Expr.Set.empty
 
   let assume_th_elt e _ _ = e
-  let theories_instances ~do_syntactic_matching _ e _ _ _ = e, []
+  let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []
   let get_assumed env = env.assumed_set
 end

@@ -138,15 +138,6 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
 
   let label t = try Labels.find labels t with Not_found -> Hstring.empty
 
-  let print_list fmt = function
-    | [] -> ()
-    | z :: l ->
-      Format.fprintf fmt "%a" X.print z;
-      List.iter (Format.fprintf fmt ", %a" X.print) l
-
-  let ale = Hstring.make "<="
-  let alt = Hstring.make "<"
-
   let print fmt a =
     let lbl = Hstring.view (label a) in
     let lbl = if String.length lbl = 0 then lbl else lbl^":" in
@@ -178,7 +169,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
       Format.fprintf fmt "%s(%a ? %a)"
         (if pos then "" else "not ") X.print e Hstring.print hs
 
-    | Builtin (_, IsConstr hs, _) ->
+    | Builtin (_, IsConstr _, _) ->
       assert false (* not reachable *)
 
     | Pred (p,b) ->

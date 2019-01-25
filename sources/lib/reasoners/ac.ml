@@ -107,7 +107,7 @@ module Make (X : Sig.X) = struct
         fprintf fmt "%a" print_x p;
         List.iter (fprintf fmt "%a" (pr_elt sep))((p,n-1)::l)
 
-    let print fmt {h=h ; l=l} =
+    let print fmt { h; l; _ } =
       if Sy.equal h (Sy.Op Sy.Mult) then
         fprintf fmt "%a" (pr_xs "'*'") l
       else
@@ -142,9 +142,7 @@ module Make (X : Sig.X) = struct
       List.fold_left (fun z (e,n) -> (e,m * n) :: z) acc ac.l
     | _ -> (r,m) :: acc
 
-  let sort = List.fast_sort (fun (x,n) (y,m) -> X.str_cmp x y)
-
-  let rev_sort l = List.rev (sort l)
+  let sort = List.fast_sort (fun (x,_) (y,_) -> X.str_cmp x y)
 
   let compact xs =
     let rec f acc = function
@@ -159,26 +157,22 @@ module Make (X : Sig.X) = struct
   let fold_flatten sy f =
     List.fold_left (fun z (rt,n) -> flatten sy ((f rt),n) z) []
 
-  let expand =
-    List.fold_left
-      (fun l (x,n) -> let l= ref l in for _=1 to n do l:=x::!l done; !l) []
-
   let abstract2 sy t r acc =
     match X.ac_extract r with
     | Some ac when Sy.equal sy ac.h -> r, acc
     | None -> r, acc
     | Some _ -> match Expr.term_view t with
-      | Expr.Term {Expr.f=Sy.Name(hs,Sy.Ac) ;xs=xs;ty=ty} ->
+      | Expr.Term { Expr.f = Sy.Name (hs, Sy.Ac); xs; ty; _ } ->
         let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
-      | Expr.Term {Expr.f=Sy.Op Sy.Mult ;xs=xs;ty=ty} ->
+      | Expr.Term { Expr.f = Sy.Op Sy.Mult; xs; ty; _ } ->
         let aro_sy = Sy.name "@*" in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
-      | Expr.Term {Expr.ty=ty} ->
+      | Expr.Term { Expr.ty; _ } ->
         let k = Expr.fresh_name ty in
         let eq = Expr.mk_eq ~iff:false k t in
         X.term_embed k, eq::acc
@@ -187,7 +181,7 @@ module Make (X : Sig.X) = struct
   let make t =
     Timers.exec_timer_start Timers.M_AC Timers.F_make;
     let x = match Expr.term_view t with
-      | Expr.Term {Expr.f= sy; xs=[a;b]; ty=ty} when Sy.is_ac sy ->
+      | Expr.Term { Expr.f = sy; xs = [a;b]; ty; _ } when Sy.is_ac sy ->
         let ra, ctx1 = X.make a in
         let rb, ctx2 = X.make b in
         let ra, ctx = abstract2 sy a ra (ctx1 @ ctx2) in
@@ -203,9 +197,9 @@ module Make (X : Sig.X) = struct
 
   let is_mine_symb sy _ = Options.no_ac() == false && Sy.is_ac sy
 
-  let type_info {t=ty} = ty
+  let type_info { t = ty; _ } = ty
 
-  let leaves { l=l } = List.fold_left (fun z (a,_) -> (X.leaves a) @ z)[] l
+  let leaves { l; _ } = List.fold_left (fun z (a,_) -> (X.leaves a) @ z)[] l
 
   let rec mset_cmp = function
     |  []   ,  []   ->  0
@@ -219,7 +213,7 @@ module Make (X : Sig.X) = struct
         if c <> 0 then c
         else mset_cmp(r,s)
 
-  let size = List.fold_left (fun z (rx,n) -> z + n) 0
+  let size = List.fold_left (fun z (_,n) -> z + n) 0
 
 
   module SX = Set.Make(struct type t=r let compare = X.str_cmp end)
@@ -236,7 +230,7 @@ module Make (X : Sig.X) = struct
 
 
   (* x et y are sorted in a decreasing order *)
-  let compare {h=f ; l=x} {h=g ; l=y} =
+  let compare { h = f; l = x; _ } { h = g; l = y; _ } =
     let c = Sy.compare f g in
     if c <> 0 then c
     else
@@ -263,17 +257,17 @@ module Make (X : Sig.X) = struct
     else assert false
   *)
 
-  let equal {h=f ; l=lx} {h=g ; l=ly} =
+  let equal { h = f; l = lx; _ } { h = g; l = ly; _ } =
     Sy.equal f g &&
     try List.for_all2 (fun (x, m) (y, n) -> m = n && X.equal x y) lx ly
     with Invalid_argument _ -> false
 
-  let hash {h = f ; l = l; t = t} =
+  let hash { h = f; l; t; _ } =
     let acc = Sy.hash f + 19 * Ty.hash t in
     abs (List.fold_left (fun acc (x, y) -> acc + 19 * (X.hash x + y)) acc l)
 
 
-  let subst p v ({h=h;l=l;t=t} as tm)  =
+  let subst p v ({ h; l; _ } as tm)  =
     Options.exec_thread_yield ();
     Timers.exec_timer_start Timers.M_AC Timers.F_subst;
     Debug.subst p v tm;
@@ -288,9 +282,9 @@ module Make (X : Sig.X) = struct
     Timers.exec_timer_pause Timers.M_AC Timers.F_add;
     r
 
-  let fully_interpreted sb = true
+  let fully_interpreted _ = true
 
-  let abstract_selectors ({l=args} as ac) acc =
+  let abstract_selectors ({ l = args; _ } as ac) acc =
     let args, acc =
       List.fold_left
         (fun (args, acc) (r, i) ->

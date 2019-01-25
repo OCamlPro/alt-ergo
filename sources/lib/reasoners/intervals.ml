@@ -72,7 +72,7 @@ module Debug = struct
       print_interval fmt e;
       List.iter (fprintf fmt " U %a" print_interval) l
 
-  let print fmt {ints = ints; is_int = b; expl = e } =
+  let print fmt { ints; expl = e; _ } =
     print_list fmt ints;
     if verbose () || unsat_core () then fprintf fmt " %a" Ex.print e
 
@@ -104,13 +104,13 @@ let point b ty e = {
   expl = e
 }
 
-let is_point { ints = l; expl = e } =
+let is_point { ints = l; expl = e; _ } =
   match l with
   | [Large (v1, e1) , Large (v2, e2)] when Q.equal v1 v2 ->
     Some (v1, Ex.union e (Ex.union e1 e2))
   | _ -> None
 
-let finite_size {ints = l; is_int = is_int} =
+let finite_size { ints = l; is_int = is_int; _ } =
   if not is_int then None
   else
     try
@@ -130,11 +130,11 @@ let finite_size {ints = l; is_int = is_int} =
     with Exit -> None
 
 let borne_inf = function
-  | {ints = (Large (v, ex), _)::_} -> v, ex, true
-  | {ints = (Strict (v, ex), _)::_} -> v, ex, false
+  | { ints = (Large (v, ex), _) :: _; _ } -> v, ex, true
+  | { ints = (Strict (v, ex), _) :: _; _ } -> v, ex, false
   | _ -> raise No_finite_bound
 
-let borne_sup {ints=ints} =
+let borne_sup { ints; _ } =
   match List.rev ints with
   | (_, Large (v, ex))::_ -> v, ex, true
   | (_, Strict (v, ex))::_ -> v, ex, false
@@ -195,20 +195,20 @@ let compare_bounds b1 ~is_low1 b2 ~is_low2 =
   | Minfty, _ | _, Pinfty -> -1
   | _, Minfty | Pinfty, _ -> 1
 
-  | Large (v1, ex1), Large (v2, ex2) -> Q.compare v1 v2
+  | Large (v1, _), Large (v2, _) -> Q.compare v1 v2
 
-  | Strict (v1, ex1), Strict (v2, ex2) ->
+  | Strict (v1, _), Strict (v2, _) ->
     let c = Q.compare v1 v2 in
     if c <> 0 then c
     else if is_low1 == is_low2 then 0  (* bl_bl or bu_bu *)
     else if is_low1 then 1  (* implies not is_low2 *)
     else -1  (* implies not is_low1 and is_low2 *)
 
-  | Strict (v1, ex1), Large (v2, ex2) ->
+  | Strict (v1, _), Large (v2, _) ->
     let c = Q.compare v1 v2 in
     if c <> 0 then c else if is_low1 then 1 else -1
 
-  | Large (v1, ex1), Strict (v2, ex2) ->
+  | Large (v1, _), Strict (v2, _) ->
     let c = Q.compare v1 v2 in
     if c <> 0 then c else if is_low2 then -1 else 1
 
@@ -237,17 +237,6 @@ let low_borne_neg_strict b =
 let up_borne_neg_strict b =
   compare_bounds b ~is_low1:false zero_large ~is_low2:false < 0
 
-let low_borne_pos_large b =
-  compare_bounds b ~is_low1:true zero_large ~is_low2:true >= 0
-
-let up_borne_pos_large b =
-  compare_bounds b ~is_low1:false zero_large ~is_low2:false >= 0
-
-let low_borne_neg_large b =
-  compare_bounds b ~is_low1:true zero_large ~is_low2:true <= 0
-
-let up_borne_neg_large b =
-  compare_bounds b ~is_low1:false zero_large ~is_low2:false <= 0
 
 (* should be removed: probably buggy when mixing lower and upper bounds *)
 let pos_borne b = match b with
@@ -290,7 +279,7 @@ let join l glob_ex = (* l should not be empty *)
   | [], None    -> assert false
   | l , None    -> l
   | [], Some ex -> raise (NotConsistent (Ex.union ex glob_ex));
-  | l , Some _  -> assert false
+  | _ , Some _  -> assert false
 
 
 let intersect =
@@ -298,13 +287,13 @@ let intersect =
     match l1, l2 with
     | [], _ | _, [] ->  List.rev acc
 
-    | (lo1, up1)::r1, (lo2, up2)::r2 when
+    | (_, up1) :: r1, (lo2, _) :: _ when
         compare_bounds up1 ~is_low1:false lo2 ~is_low2:true < 0 ->
       (* No overlap. (lo1, up1) is smaller *)
       let nexpl  = Ex.union (explain_borne up1) (explain_borne lo2) in
       step is_int r1 l2 ((Empty nexpl) :: acc)
 
-    | (lo1, up1)::r1, (lo2, up2)::r2 when
+    | (lo1, _) :: _, (_, up2) :: r2 when
         compare_bounds lo1 ~is_low1:true up2 ~is_low2:false > 0 ->
       (* No overlap. (lo2, up2) is smaller *)
       let nexpl  = Ex.union (explain_borne up2) (explain_borne lo1) in
@@ -326,7 +315,9 @@ let intersect =
         step is_int l1 r2 (Int((lo1,up2))::acc) (* ex of lo2 and up1 ? *)
       else assert false
   in
-  fun ({ints=l1; expl=e1; is_int=is_int} as uints1) {ints=l2; expl=e2} ->
+  fun
+    ({ints=l1; expl=e1; is_int=is_int} as uints1)
+    { ints = l2; expl = e2; _ } ->
     (*l1 and l2 are supposed to be normalized *)
     let expl = Ex.union e1 e2 in
     let l = step is_int l1 l2 []  in
@@ -508,7 +499,7 @@ let add_interval is_int l (b1,b2) =
        union_bornes is_int (l1)
     ) l []
 
-let add {ints = l1; is_int = is_int; expl = e1} {ints = l2; expl = e2}=
+let add {ints = l1; is_int = is_int; expl = e1} { ints = l2; expl = e2; _ } =
   let l =
     List.fold_left
       (fun l bs -> let i = add_interval is_int l1 bs in i@l) [] l2
@@ -575,7 +566,7 @@ let doesnt_contain_0 =
     else explain_no_zero int.ints
 
 
-let is_positive {ints=ints; expl=expl} =
+let is_positive { ints; expl; _ } =
   match ints with
   | [] -> assert false
   | (lb,_)::_ -> if pos_borne lb then Some (expl, []) else None
@@ -887,7 +878,7 @@ let inv_borne_inf b is_int ~other =
   | Minfty ->
     if is_int then Large (Q.zero,  explain_borne other)
     else Strict (Q.zero, explain_borne other)
-  | Strict (c, e) | Large (c, e) when Q.sign c = 0 -> Pinfty
+  | Strict (c, _) | Large (c, _) when Q.sign c = 0 -> Pinfty
   | Strict (v, e) -> Strict (Q.div Q.one v, e)
   | Large (v, e) -> Large (Q.div Q.one v, e)
 
@@ -897,7 +888,7 @@ let inv_borne_sup b is_int ~other =
   | Pinfty ->
     if is_int then Large (Q.zero, explain_borne other)
     else Strict (Q.zero, explain_borne other)
-  | Strict (c, e) | Large (c, e) when Q.sign c = 0 -> Minfty
+  | Strict (c, _) | Large (c, _) when Q.sign c = 0 -> Minfty
   | Strict (v, e) -> Strict (Q.div Q.one v, e)
   | Large (v, e) -> Large (Q.div Q.one v, e)
 
@@ -905,7 +896,7 @@ let inv_bornes (l, u) is_int =
   inv_borne_sup u is_int ~other:l, inv_borne_inf l is_int ~other:u
 
 
-let inv ({ints=l; is_int=is_int} as u) =
+let inv ({ ints = l; is_int; _ } as u) =
   match doesnt_contain_0 u with
   | None -> { u with ints = [Minfty, Pinfty] }
   | Some (ex, _) ->
@@ -924,7 +915,7 @@ let inv ({ints=l; is_int=is_int} as u) =
 
 type sign_of_interval = Zero | Pos | Neg | Mixed
 
-let sign_of_interval {ints} =
+let sign_of_interval { ints; _ } =
   match ints, List.rev ints with
   | [], _ | _, [] -> assert false
   | (inf, _)::_, (_,sup)::_ ->
@@ -960,7 +951,7 @@ let div i1 i2 =
       | Some (ex, _) -> add_expl_zero i1 ex
       | None -> i1
     in
-    let ({ints=l; is_int=is_int} as i) = mult i1 inv_i2 in
+    let ({ ints = l; is_int = is_int; _ } as i) = mult i1 inv_i2 in
     assert (l != []);
     if is_int then
       (* not just int_bornes because it's Euclidean division *)
@@ -976,8 +967,12 @@ let div i1 i2 =
     else { i with ints = l }
 
 let abs =
-  let zero_inf_r = new_borne_inf Ex.empty Q.zero true (undefined Ty.Treal) in
-  let zero_inf_i = new_borne_inf Ex.empty Q.zero true (undefined Ty.Tint) in
+  let zero_inf_r =
+    new_borne_inf Ex.empty Q.zero ~is_le:true (undefined Ty.Treal)
+  in
+  let zero_inf_i =
+    new_borne_inf Ex.empty Q.zero ~is_le:true (undefined Ty.Tint)
+  in
   fun i ->
     let xx = if i.is_int then zero_inf_i else zero_inf_r in
     intersect (merge i (scale Q.m_one i)) xx
@@ -1026,11 +1021,13 @@ let equal i1 i2 =
     true
   with Exit | Invalid_argument _ -> false
 
-let min_bound {ints; is_int; expl} = match ints with
+let min_bound { ints; _ } =
+  match ints with
   | [] -> assert false
   | (b, _) :: _ -> b
 
-let max_bound {ints; is_int; expl} = match List.rev ints with
+let max_bound { ints; _} =
+  match List.rev ints with
   | [] -> assert false
   | (_, b) :: _ -> b
 
@@ -1101,13 +1098,13 @@ let match_interval_upper {Sy.sort; is_open; kind; is_lower} i imatch =
   assert (not is_lower);
   match kind, max_bound i with
   | Sy.VarBnd s, _ when is_question_mark s -> imatch (* ? var *)
-  | Sy.VarBnd s, Minfty -> assert false
+  | Sy.VarBnd _, Minfty -> assert false
   | Sy.VarBnd s, Pinfty -> new_var imatch s sort
   | Sy.VarBnd s, Strict (v, _) -> new_low_bound imatch s sort v false
   | Sy.VarBnd s, Large  (v, _) -> new_low_bound imatch s sort v is_open
 
-  | Sy.ValBnd vl, Minfty -> assert false
-  | Sy.ValBnd vl, Pinfty -> raise Exit
+  | Sy.ValBnd _, Minfty -> assert false
+  | Sy.ValBnd _, Pinfty -> raise Exit
   | Sy.ValBnd vl, Strict (v, _) ->
     let c = Q.compare v vl in
     if c > 0 then raise Exit;
@@ -1123,13 +1120,13 @@ let match_interval_lower {Sy.sort; is_open; kind; is_lower} i imatch =
   assert (is_lower);
   match kind, min_bound i with
   | Sy.VarBnd s, _ when is_question_mark s -> imatch (* ? var *)
-  | Sy.VarBnd s, Pinfty -> assert false
+  | Sy.VarBnd _, Pinfty -> assert false
   | Sy.VarBnd s,  Minfty -> new_var imatch s sort
   | Sy.VarBnd s, Strict (v, _) -> new_up_bound imatch s sort v false
   | Sy.VarBnd s, Large  (v, _) -> new_up_bound imatch s sort v is_open
 
-  | Sy.ValBnd vl, Minfty -> raise Exit
-  | Sy.ValBnd vl, Pinfty -> assert false
+  | Sy.ValBnd _, Minfty -> raise Exit
+  | Sy.ValBnd _, Pinfty -> assert false
   | Sy.ValBnd vl, Strict (v, _) ->
     let c = Q.compare v vl in
     if c < 0 then raise Exit;

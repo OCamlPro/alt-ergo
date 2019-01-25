@@ -113,15 +113,16 @@ module Debug = struct
                  LR.print (LR.make a)) la;
     end
 
-  let print_gets fmt = G.iter (fun t -> fprintf fmt "%a@." E.print t.g)
-  let print_sets fmt = S.iter (fun t -> fprintf fmt "%a@." E.print t.s)
-  let print_splits fmt =
-    LRset.iter (fun a -> fprintf fmt "%a@." LR.print a)
-  let print_tbs fmt =
-    TBS.iter (fun k v -> fprintf fmt "%a --> %a@." E.print k print_sets v)
+  (* unused --
+     let print_gets fmt = G.iter (fun t -> fprintf fmt "%a@." E.print t.g)
+     let print_sets fmt = S.iter (fun t -> fprintf fmt "%a@." E.print t.s)
+     let print_splits fmt =
+     LRset.iter (fun a -> fprintf fmt "%a@." LR.print a)
+     let print_tbs fmt =
+     TBS.iter (fun k v -> fprintf fmt "%a --> %a@." E.print k print_sets v)
 
-  let env fmt env =
-    if debug_arrays () then begin
+     let env fmt env =
+     if debug_arrays () then begin
       fprintf fmt "-- gets ----------------------------------------@.";
       print_gets fmt env.gets;
       fprintf fmt "-- tabs of sets --------------------------------@.";
@@ -129,7 +130,8 @@ module Debug = struct
       fprintf fmt "-- splits --------------------------------------@.";
       print_splits fmt env.split;
       fprintf fmt "------------------------------------------------@."
-    end
+     end
+  *)
 
   let new_equalities fmt st =
     if debug_arrays () then
@@ -152,7 +154,7 @@ end
 
 (* met a jour gets et tbset en utilisant l'ensemble des termes donne*)
 let rec update_gets_sets acc t =
-  let {E.f=f;xs=xs;ty=ty} =
+  let { E.f; xs; ty; _ } =
     match E.term_view t with
     | E.Not_a_term _ -> assert false
     | E.Term tt -> tt
@@ -221,7 +223,7 @@ let get_of_set are_eq are_dist gtype (env,acc) class_of =
        if Tmap.splited get set env.seen then (env,acc)
        else
          let env = {env with seen = Tmap.update get set env.seen} in
-         let {E.f=f;xs=xs;ty=sty} =
+         let { E.f; xs; _ } =
            match E.term_view set with
            | E.Not_a_term _ -> assert false
            | E.Term tt -> tt
@@ -249,8 +251,8 @@ let get_of_set are_eq are_dist gtype (env,acc) class_of =
 (*----------------------------------------------------------------------
   set(-,-,-) modulo egalite
   ---------------------------------------------------------------------*)
-let get_from_set are_eq are_dist stype (env,acc) class_of =
-  let {s=set; st=stab; si=si; sv=sv; sty=sty} = stype in
+let get_from_set _are_eq _are_dist stype (env,acc) class_of =
+  let {s=set; st=stab; si=si; sv=sv; _} = stype in
   let ty_si = E.type_info sv in
   let stabs =
     L.fold_left
@@ -258,7 +260,8 @@ let get_from_set are_eq are_dist stype (env,acc) class_of =
       S.empty (class_of stab)
   in
 
-  S.fold (fun stab' (env,acc) ->
+  (* TODO/WARNING: very suspicious unused variable ! *)
+  S.fold (fun _stab' (env,acc) ->
       let get = E.mk_term (Sy.Op Sy.Get) [set; si] ty_si in
       if Tmap.splited get set env.seen then (env,acc)
       else
@@ -282,7 +285,7 @@ let get_and_set are_eq are_dist gtype (env,acc) class_of =
       S.empty (class_of gtab)
   in
   S.fold
-    (fun  {s=set; st=stab; si=si; sv=sv; sty=sty} (env,acc) ->
+    (fun  {s=set; st=stab; si=si; sv=sv; _ } (env,acc) ->
        if Tmap.splited get set env.seen then (env,acc)
        else
          begin
@@ -327,7 +330,7 @@ let new_splits are_eq are_dist env acc class_of =
 
 (* nouvelles disegalites par instantiation du premier
    axiome d'exentionnalite *)
-let extensionality accu la class_of =
+let extensionality accu la _class_of =
   List.fold_left
     (fun ((env, acc) as accu) (a, _, dep,_) ->
        match a with
@@ -376,7 +379,7 @@ let new_equalities env eqs la class_of =
 (* choisir une egalite sur laquelle on fait un case-split *)
 let two = Numbers.Q.from_int 2
 
-let case_split env uf ~for_model =
+let case_split env _ ~for_model:_ =
   (*if Numbers.Q.compare
     (Numbers.Q.mult two env.size_splits) (max_split ()) <= 0  ||
     Numbers.Q.sign  (max_split ()) < 0 then*)
@@ -432,13 +435,13 @@ let assume env uf la =
   else assume env uf la
 
 let query _ _ _ = None
-let add env _ r _ = env
+let add env _ _ _ = env
 let print_model _ _ _ = ()
 
 let new_terms env = env.new_terms
-let instantiate ~do_syntactic_matching _ env uf _ = env, []
+let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
-let assume_th_elt t th_elt dep =
+let assume_th_elt t th_elt _ =
   match th_elt.Expr.extends with
   | Util.Arrays ->
     failwith "This Theory does not support theories extension"

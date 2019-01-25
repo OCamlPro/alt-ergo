@@ -22,7 +22,7 @@ module Z = Numbers.Z
 let is_rounding_mode t =
   Options.use_fpa() &&
   match E.term_view t with
-  | E.Term {E.ty = Ty.Tsum (hs, _)} ->
+  | E.Term { E.ty = Ty.Tsum (hs, _); _ } ->
     String.compare (Hs.view hs) "fpa_rounding_mode" = 0
   | _ -> false
 
@@ -108,8 +108,6 @@ let mult_x_by_2_pow_n x n =
 let div_x_by_2_pow_n x n = mult_x_by_2_pow_n x (-n)
 
 let two = Q.from_int 2
-
-let two_z = Z.from_int 2
 
 let half = Q.div Q.one two
 
@@ -217,11 +215,11 @@ let mode_of_term t =
 
 let int_of_term t =
   match E.term_view t with
-  | E.Term {E.f = Sy.Int n} ->
+  | E.Term { E.f = Sy.Int n; _ } ->
     let n = Hstring.view n in
     let n =
       try int_of_string n
-      with e ->
+      with _ ->
         eprintf "error when trying to convert %s to an int@." n;
         assert false
     in

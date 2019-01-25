@@ -56,15 +56,15 @@ module Container : Inequalities.Container_SIG = struct
     let print_parsed_answer answer =
       if debug_fm() then
         match answer with
-        | Unsat {vof=vof;vals=vals} ->
+        | Unsat { vof; vals; _ } ->
           fprintf fmt "I read: the simplex problem is not feasible (<=)@.";
           print_answer (vof,vals)
         | Eq_unsat ->
           fprintf fmt "I read: the simplex problem is not feasible (=)@."
-        | Unbound {vof=vof;vals=vals} ->
+        | Unbound { vof; vals; _ } ->
           fprintf fmt "I read: the simplex problem is not bounnded@.";
           print_answer (vof,vals)
-        | Max {vof=vof;vals=vals}  ->
+        | Max { vof; vals; _ }  ->
           fprintf fmt "I read: the simplex problem has a solution@.";
           print_answer (vof,vals)
 
@@ -111,7 +111,7 @@ module Container : Inequalities.Container_SIG = struct
            if Q.compare re Q.zero = 0 &&
               Q.compare eps Q.zero = 0 then expl (* XXX eps ? re ? *)
            else
-             let {expl=ex} = List.assoc ld constrs in
+             let { expl = ex ;  _ } = List.assoc ld constrs in
              Explanation.union expl ex
         )Explanation.empty vals
 
@@ -145,9 +145,10 @@ module Container : Inequalities.Container_SIG = struct
       print_parsed_answer sim_res;
       match sim_res with
       | Unsat _  | Eq_unsat -> acc
-      | Unbound {vof=vof;vals=vals} ->
+      | Unbound { vals; _ } ->
         raise (Ex.Inconsistent (explain vals constrs, []))
-      | Max {vof=(re, eps);vals=vals} -> (* XXX: parties reelles nulles *)
+      (* XXX: parties reelles nulles *)
+      | Max { vof = (re, eps); vals = vals; _ } ->
         assert (Q.is_zero re);
         let expl = explain vals constrs in
         let cmp = Q.compare eps Q.zero in
@@ -210,9 +211,9 @@ module Container : Inequalities.Container_SIG = struct
       print_parsed_answer sim_res;
       match sim_res with
       | Unsat _ | Eq_unsat -> acc
-      | Unbound {vof=vof;vals=vals} ->
+      | Unbound { vals; _ } ->
         raise (Ex.Inconsistent (explain vals constrs, []))
-      | Max {vof=vof,eps; vals=vals} -> (* XXX: parties avec eps nulles *)
+      | Max { vof = (vof, eps); vals; _} -> (* XXX: parties avec eps nulles *)
         assert (Q.is_zero eps);
         let expl = explain vals constrs in
         let dep =
@@ -260,7 +261,7 @@ module Container : Inequalities.Container_SIG = struct
         begin
           fprintf fmt "begin fm-simplex: nb_constrs = %d@." nb_constrs;
           List.iter
-            (fun (id, {ple0}) ->
+            (fun (id, { ple0 ; _ }) ->
                fprintf fmt "%d) %a <= 0@." id P.print ple0) constrs;
         end;
       let sum, ctt, lambdas = generalized_fm_projection constrs in
@@ -283,7 +284,7 @@ module Container : Inequalities.Container_SIG = struct
       let cpt = ref (nb_ineqs + 1) in
       let ctrs =
         MINEQS.fold
-          (fun p (ineq, _) ctrs ->
+          (fun _ (ineq, _) ctrs ->
              decr cpt;
              (!cpt, ineq) :: ctrs
           )mp []
@@ -300,7 +301,7 @@ module Container : Inequalities.Container_SIG = struct
     let check_is_rat mp =
       let is_rat = ref true in
       begin
-        try MINEQS.iter (fun p i ->  is_rat := is_rat_poly p; raise Exit) mp
+        try MINEQS.iter (fun p _ ->  is_rat := is_rat_poly p; raise Exit) mp
         with Exit -> ()
       end;
       let is_rat = !is_rat in

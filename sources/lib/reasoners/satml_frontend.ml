@@ -97,7 +97,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         printf "[sat] unsat of %a ?@." E.print gf.E.ff
 
     let assume gf =
-      let {E.ff=f;age=age;lem=lem;mf=mf;from_terms=terms} = gf in
+      let { E.ff = f; lem; from_terms = terms; _ } = gf in
       if debug_sat () then begin
         match E.form_view f with
         | E.Not_a_form -> assert false
@@ -147,8 +147,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         fprintf fmt "  is: %a@." FF.print f';
       end
 
-    let cnf_form f unit non_unit =
-      if debug_sat () && verbose () then begin
+    (* unused --
+       let cnf_form f unit non_unit =
+       if debug_sat () && verbose () then begin
         fprintf fmt "[sat] CFF form of: %a@." FF.print f;
         fprintf fmt "  is:@.";
         List.iter
@@ -160,7 +161,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              List.iter (fun a -> fprintf fmt "%a or " Atom.pr_atom a) c;
              fprintf fmt "@."
           )non_unit
-      end
+       end
+    *)
 
     let model env =
       if debug_sat () then
@@ -174,9 +176,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           ) (List.rev model);
         eprintf "  --------------@."
 
-    let mround () =
-      if debug_sat () then fprintf fmt "matching round@."
-
     let new_instances mode env =
       if debug_sat () then begin
         eprintf "@.# [sat] I GENERATE NEW INSTANCES (%s)#################@.@."
@@ -188,25 +187,31 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         model env;
       end
 
-    let generated_instances l =
-      if verbose () && debug_sat () then begin
+    (* unused --
+       let generated_instances l =
+       if verbose () && debug_sat () then begin
         eprintf "[new_instances] %d generated@." (List.length l);
-        List.iter (fun {E.ff=f; origin_name; lem} ->
+        List.iter (fun { E.ff = f; origin_name; _ } ->
             eprintf " instance(origin = %s): %a@." origin_name E.print f;
           ) l
-      end
+       end
+    *)
 
-    let trivial_fact p inst =
-      if verbose () && debug_sat () then begin
+    (* unused --
+       let trivial_fact p inst =
+       if verbose () && debug_sat () then begin
         if inst then eprintf "already known instance: %a@." E.print p
         else eprintf "already known skolem: %a@." E.print p
-      end
+       end
+    *)
 
-    let generated_skolems l =
-      if verbose () && debug_sat () then begin
+    (* unused --
+       let generated_skolems l =
+       if verbose () && debug_sat () then begin
         eprintf "[new_skolems] %d generated@." (List.length l);
-        List.iter (fun {E.ff=f} -> eprintf " skolem: %a@." E.print f) l
-      end
+        List.iter (fun { E.ff = f; _ } -> eprintf " skolem: %a@." E.print f) l
+       end
+    *)
 
     let atoms_from_sat_branch f =
       if verbose () && debug_sat () then begin
@@ -220,9 +225,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         fprintf fmt "@.";
       end
 
-    let axiom_def f =
-      if debug_sat () then
+    (* unused --
+       let axiom_def f =
+       if debug_sat () then
         eprintf "[sat] I assume an axiom: %a@.@." E.print f
+    *)
 
     let internal_axiom_def f a at =
       if debug_sat () then begin
@@ -231,16 +238,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         fprintf fmt "at of a is %a@.@." Atom.pr_atom at
       end
 
-    let in_mk_theories_instances () =
-      if Options.debug_fpa() > 0 || debug_sat() then
+    (* unused --
+       let in_mk_theories_instances () =
+       if Options.debug_fpa() > 0 || debug_sat() then
         fprintf fmt "@.[sat] entering mk_theories_instances:@."
+    *)
 
-    let out_mk_theories_instances normal_exit =
-      if Options.debug_fpa() > 0 || debug_sat() then
+    (* unused --
+       let out_mk_theories_instances normal_exit =
+       if Options.debug_fpa() > 0 || debug_sat() then
         if normal_exit then
           fprintf fmt "@.[sat] normal exit of mk_theories_instances.@.@."
         else
           fprintf fmt "@.exit mk_theories_instances with Inconsistency.@.@."
+    *)
 
     let print_f_conj fmt hyp =
       match hyp with
@@ -275,7 +286,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     print_propositional_model env;
     Th.print_model fmt (SAT.current_tbox env.satml)
 
-  let make_explanation lc = Ex.empty
+  let make_explanation _ = Ex.empty
   (*
     if debug_sat () then
     fprintf fmt "make_explanation of %d clauses@." (List.length lc);
@@ -308,12 +319,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     ({gf with E.ff=clause}, dep) :: acc
 
-  let mk_theories_instances do_synt_ma remove_clauses env acc =
+  let mk_theories_instances do_syntactic_matching _remove_clauses env acc =
     let t_match = Inst.matching_terms_info env.inst in
     let tbox = SAT.current_tbox env.satml in
-    let tbox, l =
+    let _tbox, l =
       Th.theories_instances
-        do_synt_ma t_match tbox (selector env) env.nb_mrounds 0
+        ~do_syntactic_matching t_match tbox (selector env) env.nb_mrounds 0
         [@ocaml.ppwarning "TODO: modifications made in tbox are lost! improve?"]
     in
     List.fold_left reduce_filters acc l, (match l with [] -> false | _ -> true)
@@ -369,7 +380,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          match literals_of_ex dep with
          | []  ->
            gf :: acc
-         | [{Atom.lit}] ->
+         | [{ Atom.lit; _ }] ->
            {gf with
             E.ff =
               E.mk_or gf.E.ff (E.neg lit) false 0} :: acc
@@ -389,7 +400,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ ->
         assert false
 
-  let pred_def env f name dep loc =
+  let pred_def env f name dep _loc =
     (* dep currently not used. No unsat-cores in satML yet *)
     Debug.pred_def f;
     let a_t = E.mk_term (Symbols.name name) [] Ty.Tbool in
@@ -464,7 +475,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          if verbose () then
            fprintf fmt "expand skolem of %a@.@." E.print a;
          try
-           let {E.ff=f} as gf = ME.find a env.skolems in
+           let { E.ff = f; _ } as gf = ME.find a env.skolems in
            if not (Options.cdcl_tableaux ()) &&
               ME.mem f env.gamma then acc
            else gf :: acc
@@ -505,29 +516,33 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let max a b = if cmp_tuples a b > 0 then a else b
 
-  let take_max aux l =
-    let ((lvl, _, ind) ,_) as acc =
-      List.fold_left (fun ((mz,lz) as acc) f ->
+  (* unused --
+     let take_max aux l =
+     let ((lvl, _, ind) ,_) as acc =
+      List.fold_left (fun ((mz,_) as acc) f ->
           match aux f with
           | None -> acc
           | Some (m, l) ->
             if cmp_tuples m mz > 0 then (m, l) else acc
         )((-1, -.1., -1), []) l
-    in
-    if lvl = -1 && ind = -1 then None
-    else Some acc
+     in
+     if lvl = -1 && ind = -1 then None
+     else Some acc
+  *)
 
-  let take_min aux l =
-    let ((lvl, _, ind) ,_) as acc =
-      List.fold_left (fun ((mz,lz) as acc) f ->
+  (* unused --
+     let take_min aux l =
+     let ((lvl, _, ind) ,_) as acc =
+      List.fold_left (fun ((mz,_) as acc) f ->
           match aux f with
           | None -> acc
           | Some (m, l) ->
             if cmp_tuples m mz < 0 then (m, l) else acc
         )((max_int, -.1., max_int), []) l
-    in
-    if lvl = max_int && ind = max_int then None
-    else Some acc
+     in
+     if lvl = max_int && ind = max_int then None
+     else Some acc
+  *)
 
   let rec take_normal aux l =
     match l with
@@ -666,7 +681,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   }
 
   let pre_assume (env, acc) gf =
-    let {E.ff=f} = gf in
+    let { E.ff = f; _ } = gf in
     if debug_sat() then
       fprintf fmt "Entry of pre_assume: Given %a@.@." E.print f;
     if SE.mem f acc.seen_f then env, acc
@@ -756,7 +771,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             env, acc
 
   let cdcl_assume env pending ~dec_lvl =
-    let { seen_f; activate; new_vars; unit; nunit; updated } = pending in
+    let { seen_f; activate; new_vars; unit; nunit; updated; _ } = pending in
     (*
     fprintf fmt "pending : %d distinct forms@." (SE.cardinal seen_f);
     fprintf fmt "pending : %d to activate@." (SFF.cardinal activate);
@@ -888,7 +903,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           greedy_mconf (), "greedy-inst", true , false ]
 
 
-  let rec unsat_rec env ~first_call : unit =
+  let rec unsat_rec env ~first_call:_ : unit =
     try SAT.solve env.satml; assert false
     with
     | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
@@ -938,7 +953,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let max_term_depth_in_sat env =
     let aux mx f = Pervasives.max mx (E.depth f) in
     let max_t = ME.fold (fun f _ mx -> aux mx f) env.gamma 0 in
-    ME.fold (fun _ ({E.ff=f}, _dep) mx -> aux mx f) env.ground_preds max_t
+    ME.fold (fun _ ({ E.ff = f; _ }, _) mx -> aux mx f) env.ground_preds max_t
 
 
   let checks_implemented_features () =
@@ -970,12 +985,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     try
       assert (SAT.decision_level env.satml == 0);
-      let env, updated = assume_aux ~dec_lvl:0 env [gf] in
+      let env, _updated = assume_aux ~dec_lvl:0 env [gf] in
       let max_t = max_term_depth_in_sat env in
       let env = {env with inst = Inst.register_max_term_depth env.inst max_t} in
       unsat_rec env ~first_call:true;
       assert false
-    with IUnsat (env, dep) ->
+    with IUnsat (_env, dep) ->
       assert begin
         Ex.fold_atoms
           (fun e b -> match e with
@@ -986,11 +1001,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end;
       dep
 
-  let assume env gf dep =
+  let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)
     assert (SAT.decision_level env.satml == 0);
     try fst (assume_aux ~dec_lvl:0 env [gf])
-    with IUnsat (env, dep) -> raise (Unsat dep)
+    with IUnsat (_env, dep) -> raise (Unsat dep)
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =

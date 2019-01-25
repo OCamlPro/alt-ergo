@@ -14,6 +14,7 @@ type t
 val init : int -> t
 val in_heap : t -> int -> bool
 val decrease : (int -> int -> bool) -> t -> int -> unit
+val increase : (int -> int -> bool) -> t -> int -> unit
 (*val increase : (int -> int -> bool) -> t -> int -> unit*)
 val size : t -> int
 val is_empty : t -> bool

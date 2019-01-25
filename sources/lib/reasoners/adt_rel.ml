@@ -107,9 +107,11 @@ module Debug = struct
       fprintf fmt "-------------------------------------------@.";
     end
 
-  let case_split r r' =
-    if debug_adt () then
+  (* unused --
+     let case_split r r' =
+     if debug_adt () then
       fprintf fmt "[ADT.case-split] %a = %a@." X.print r X.print r'
+  *)
 
   let no_case_split () =
     if debug_adt () then fprintf fmt "[ADT.case-split] nothing@."
@@ -122,11 +124,11 @@ end
 (* ################################################################ *)
 
 
-let print_model fmt env l = ()
+let print_model _ _ _ = ()
 let new_terms env = env.new_terms
-let instantiate ~do_syntactic_matching _ env uf _ = env, []
+let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
-let assume_th_elt t th_elt dep =
+let assume_th_elt _ _ _ =
   assert false
 
 let seen_tester r hs env =
@@ -144,7 +146,7 @@ let deduce_is_constr uf r h eqs env ex =
         let eqs =
           if seen_tester r h env then eqs
           else
-            let is_c = E.mk_builtin true (Sy.IsConstr h) [t] in
+            let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr h) [t] in
             if debug_adt () then
               fprintf fmt "[deduce is_constr] %a@." E.print is_c;
             (Sig_rel.LTerm is_c, ex, Th_util.Other) :: eqs
@@ -152,7 +154,7 @@ let deduce_is_constr uf r h eqs env ex =
         begin
           match E.term_view t with
           | E.Not_a_term _ -> assert false
-          | E.Term {E.ty = Ty.Tadt (name,params) as ty} ->
+          | E.Term { E.ty = Ty.Tadt (name,params) as ty; _ } ->
             (* Only do this deduction for finite types ??
                  may not terminate in some cases otherwise.
                  eg. type t = A of t
@@ -163,7 +165,9 @@ let deduce_is_constr uf r h eqs env ex =
               | Ty.Adt cases -> cases
             in
             let {Ty.destrs; _} =
-              try List.find (fun {Ty.constr = c} -> Hstring.equal h c) cases
+              try List.find (
+                  fun { Ty.constr = c; _ } -> Hstring.equal h c
+                ) cases
               with Not_found -> assert false
             in
             let xs = List.map (fun (_, ty) -> E.fresh_name ty) destrs in
@@ -226,7 +230,7 @@ let update_tester r hs env =
 
 let trivial_tester r hs =
   match embed r with (* can filter further/better *)
-  | Adt.Constr {c_name} -> Hstring.equal c_name hs
+  | Adt.Constr { c_name; _ } -> Hstring.equal c_name hs
   | _ -> false
 
 let constr_of_destr ty dest =
@@ -260,7 +264,7 @@ let add_guarded_destr env uf t hs e t_ty =
      This may/will introduce bugs when instantiating
      let env = {env with new_terms = SE.add access env.new_terms} in
   *)
-  let is_c = E.mk_builtin true (Sy.IsConstr c) [e] in
+  let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr c) [e] in
   let eq = E.mk_eq access t ~iff:false in
   if debug_adt () then begin
     fprintf fmt "associated with constr %a@." Hstring.print c;
@@ -286,7 +290,7 @@ let add_guarded_destr env uf t hs e t_ty =
 let add env (uf:uf) (r:r) t =
   if Options.disable_adts () then env
   else
-    let {E.f=sy; xs; ty} = match E.term_view t with
+    let { E.f = sy; xs; ty; _ } = match E.term_view t with
       | E.Term t -> t
       | E.Not_a_term _ -> assert false
     in
@@ -327,8 +331,8 @@ let count_splits env la =
 
 let add_diseq uf hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
-  | Adt.Alien r , Adt.Constr {c_name = h; c_args = []}
-  | Adt.Constr {c_name = h; c_args = []}, Adt.Alien r  ->
+  | Adt.Alien r , Adt.Constr { c_name = h; c_args = []; _ }
+  | Adt.Constr { c_name = h; c_args = []; _ }, Adt.Alien r  ->
     (* not correct with args *)
     let enum, ex =
       try MX.find r env.domains with Not_found -> hss, Ex.empty
@@ -344,7 +348,7 @@ let add_diseq uf hss sm1 sm2 dep env eqs =
         env, eqs
       else env, eqs
 
-  | Adt.Alien r , Adt.Constr _ | Adt.Constr _, Adt.Alien r  ->
+  | Adt.Alien _ , Adt.Constr _ | Adt.Constr _, Adt.Alien _  ->
     env, eqs
 
   | Adt.Alien r1, Adt.Alien r2 ->
@@ -385,7 +389,7 @@ let assoc_and_remove_selector hs r env =
 
 let assume_is_constr uf hs r dep env eqs =
   match embed r with
-  | Adt.Constr{c_name} when not (Hs.equal c_name hs) ->
+  | Adt.Constr{ c_name; _ } when not (Hs.equal c_name hs) ->
     raise (Ex.Inconsistent (dep, env.classes));
   | _ ->
     if debug_adt () then
@@ -418,7 +422,7 @@ let assume_is_constr uf hs r dep env eqs =
 
 let assume_not_is_constr uf hs r dep env eqs =
   match embed r with
-  | Adt.Constr{c_name} when Hs.equal c_name hs ->
+  | Adt.Constr{ c_name; _ } when Hs.equal c_name hs ->
     raise (Ex.Inconsistent (dep, env.classes));
   | _ ->
 
@@ -449,7 +453,8 @@ let assume_not_is_constr uf hs r dep env eqs =
 (* dot it modulo equivalence class ? or is it sufficient ? *)
 let add_eq uf hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
-  | Adt.Alien r, Adt.Constr {c_name=h} | Adt.Constr {c_name=h}, Adt.Alien r  ->
+  | Adt.Alien r, Adt.Constr { c_name = h; _ }
+  | Adt.Constr { c_name = h; _ }, Adt.Alien r  ->
     let enum, ex =
       try MX.find r env.domains with Not_found -> hss, Ex.empty
     in
@@ -605,7 +610,7 @@ let assume env uf la =
 
 let two = Numbers.Q.from_int 2
 
-let case_split env uf ~for_model =
+let case_split env _ ~for_model =
   if disable_adts () || not (enable_adts_cs()) then []
   else
     begin
@@ -624,7 +629,7 @@ let case_split env uf ~for_model =
         []
     end
 
-let query env uf (ra, a, ex, _) =
+let query env uf (ra, _, ex, _) =
   if Options.disable_adts () then None
   else
     try

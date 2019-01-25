@@ -128,28 +128,28 @@ struct
   let embed6 x = hcons {v = X6 x; id = -1000 (* dummy *)}
   let embed7 x = hcons {v = X7 x; id = -1000 (* dummy *)}
 
-  let ac_embed ({Sig.l = l} as t) =
+  let ac_embed ({ Sig.l; _ } as t) =
     match l with
     | []    ->
       assert false
     | [x, 1] -> x
     | l     ->
-      let sort = List.fast_sort (fun (x,n) (y,m) -> CX.str_cmp x y) in
+      let sort = List.fast_sort (fun (x,_) (y,_) -> CX.str_cmp x y) in
       let ac = { t with Sig.l = List.rev (sort l) } in
       hcons {v = Ac ac; id = -1000 (* dummy *)}
 
   let term_embed t = hcons {v = Term t; id = -1000 (* dummy *)}
 
-  let extract1 = function {v=X1 r} -> Some r | _ -> None
-  let extract2 = function {v=X2 r} -> Some r | _ -> None
-  let extract3 = function {v=X3 r} -> Some r | _ -> None
-  let extract4 = function {v=X4 r} -> Some r | _ -> None
-  let extract5 = function {v=X5 r} -> Some r | _ -> None
-  let extract6 = function {v=X6 r} -> Some r | _ -> None
-  let extract7 = function {v=X7 r} -> Some r | _ -> None
+  let extract1 = function { v=X1 r; _ } -> Some r | _ -> None
+  let extract2 = function { v=X2 r; _ } -> Some r | _ -> None
+  let extract3 = function { v=X3 r; _ } -> Some r | _ -> None
+  let extract4 = function { v=X4 r; _ } -> Some r | _ -> None
+  let extract5 = function { v=X5 r; _ } -> Some r | _ -> None
+  let extract6 = function { v=X6 r; _ } -> Some r | _ -> None
+  let extract7 = function { v=X7 r; _ } -> Some r | _ -> None
 
   let ac_extract = function
-    | {v = Ac t}   -> Some t
+    | { v = Ac t; _ }   -> Some t
     | _ -> None
 
   let term_extract r =
@@ -167,33 +167,16 @@ struct
   let top () = term_embed Expr.vrai
   let bot () = term_embed Expr.faux
 
-  let is_an_eq a =
-    match Expr.lit_view a with Expr.Builtin _ -> false | _ -> true
-
-  let is_int v =
-    let ty  = match v with
-      | X1 x -> X1.type_info x
-      | X2 x -> X2.type_info x
-      | X3 x -> X3.type_info x
-      | X4 x -> X4.type_info x
-      | X5 x -> X5.type_info x
-      | X6 x -> X6.type_info x
-      | X7 x -> X7.type_info x
-      | Term t -> Expr.type_info t
-      | Ac x -> AC.type_info x
-    in
-    ty == Ty.Tint
-
   let type_info = function
-    | {v=X1 t}   -> X1.type_info t
-    | {v=X2 t}   -> X2.type_info t
-    | {v=X3 t}   -> X3.type_info t
-    | {v=X4 t}   -> X4.type_info t
-    | {v=X5 t}   -> X5.type_info t
-    | {v=X6 t}   -> X6.type_info t
-    | {v=X7 t}   -> X7.type_info t
-    | {v=Ac x}   -> AC.type_info x
-    | {v=Term t} -> Expr.type_info t
+    | { v = X1 t; _ }   -> X1.type_info t
+    | { v = X2 t; _ }   -> X2.type_info t
+    | { v = X3 t; _ }   -> X3.type_info t
+    | { v = X4 t; _ }   -> X4.type_info t
+    | { v = X5 t; _ }   -> X5.type_info t
+    | { v = X6 t; _ }   -> X6.type_info t
+    | { v = X7 t; _ }   -> X7.type_info t
+    | { v = Ac x; _ }   -> AC.type_info x
+    | { v = Term t; _ } -> Expr.type_info t
 
   (* Xi < Term < Ac *)
   let theory_num x = match x with
@@ -213,15 +196,15 @@ struct
     if CX.equal a b then 0
     else
       match a.v, b.v with
-      | X1 x, X1 y -> X1.compare a b
-      | X2 x, X2 y -> X2.compare a b
-      | X3 x, X3 y -> X3.compare a b
-      | X4 x, X4 y -> X4.compare a b
-      | X5 x, X5 y -> X5.compare a b
-      | X6 x, X6 y -> X6.compare a b
-      | X7 x, X7 y -> X7.compare a b
+      | X1 _, X1 _ -> X1.compare a b
+      | X2 _, X2 _ -> X2.compare a b
+      | X3 _, X3 _ -> X3.compare a b
+      | X4 _, X4 _ -> X4.compare a b
+      | X5 _, X5 _ -> X5.compare a b
+      | X6 _, X6 _ -> X6.compare a b
+      | X7 _, X7 _ -> X7.compare a b
       | Term x  , Term y  -> Expr.compare x y
-      | Ac x    , Ac    y -> AC.compare x y
+      | Ac x    , Ac y    -> AC.compare x y
       | va, vb            -> compare_tag va vb
 
   (*** implementations before hash-consing semantic values
@@ -284,7 +267,7 @@ struct
       | Term _ -> if equal p r then v else r
 
   let make t =
-    let {Expr.f=sb; ty} =
+    let { Expr.f = sb; ty; _ } =
       match Expr.term_view t with
       | Expr.Not_a_term _ -> assert false
       | Expr.Term tt -> tt
@@ -452,10 +435,6 @@ struct
           false)
         else true)
 
-    let solve a b =
-      if debug_combine () then
-        fprintf fmt "@.[combine] I solve %a = %a:@." print a print b
-
   end
   (*BISECT-IGNORE-END*)
 
@@ -477,7 +456,7 @@ struct
   let abstract_equality a b =
     let aux r acc =
       match r.v with
-      | Ac ({l=args} as ac) ->
+      | Ac ({ l = args; _ } as ac) ->
         let args, acc =
           List.fold_left
             (fun (args, acc) (r, i) ->
@@ -504,7 +483,7 @@ struct
     let original = List.fold_right SX.add (CX.leaves a) SX.empty in
     let original = List.fold_right SX.add (CX.leaves b) original in
     let sbs =
-      List.filter (fun (p,v) ->
+      List.filter (fun (p,_) ->
           match p.v with
           | Ac _ -> true | Term _ -> SX.mem p original
           | _ ->
@@ -522,8 +501,6 @@ struct
 
   let apply_subst_right r sbt =
     List.fold_right (fun (p,v)r  -> CX.subst p v r) sbt r
-
-  let merge_sbt sbt1 sbt2 = sbt1 @ sbt2
 
   let solve_uninterpreted r1 r2 pb = (* r1 != r2*)
     if debug_combine () then
@@ -602,7 +579,7 @@ struct
         fprintf fmt "[combine] assign value to representative %a : " print r;
         match opt with
         | None -> fprintf fmt "None@."
-        | Some(res, is_cs) -> fprintf fmt " %a@." Expr.print res
+        | Some(res, _is_cs) -> fprintf fmt " %a@." Expr.print res
       end;
     opt
 
@@ -623,7 +600,7 @@ struct
             (fun acc (s, r) ->
                if (Expr.depth s) <= 1 then
                  match acc with
-                 | Some(s', r') when Expr.compare s' s > 0 -> acc
+                 | Some(s', _) when Expr.compare s' s > 0 -> acc
                  | _ -> Some (s, r)
                else
                  acc

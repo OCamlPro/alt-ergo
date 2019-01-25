@@ -131,9 +131,9 @@ let () =
   let all_used_context = FE.init_all_used_context () in
   match d with
   | [] -> ()
-  | [cnf, gname] ->
+  | [cnf, goal_name] ->
     begin
-      let used_context = FE.choose_used_context all_used_context gname in
+      let used_context = FE.choose_used_context all_used_context ~goal_name in
       try
         SAT.reset_refs ();
         ignore
@@ -148,8 +148,10 @@ let () =
     if Options.timelimit_per_goal() then
       FE.print_status FE.Preprocess 0L;
     List.iter
-      (fun (cnf, gname) ->
-         let used_context = FE.choose_used_context all_used_context gname in
+      (fun (cnf, goal_name) ->
+         let used_context =
+           FE.choose_used_context all_used_context ~goal_name
+         in
          init_profiling ();
          try
            if Options.timelimit_per_goal() then

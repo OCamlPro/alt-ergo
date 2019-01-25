@@ -91,7 +91,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     let new_facts_of_axiom ax insts_ok =
       if debug_matching () >= 1 && insts_ok != ME.empty then
         let name = match Expr.form_view ax with
-          | E.Lemma {E.name=s} -> s
+          | E.Lemma { E.name = s; _ } -> s
           | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
           | E.Let _ | E.Iff _ | E.Xor _ -> "!(no-name)"
           | E.Not_a_form -> assert false
@@ -120,7 +120,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
       matching = SE.fold (EM.add_term infos) s env.matching }
 
   let add_predicate env gf ex =
-    let {Expr.ff=f;age=age} = gf in
+    let { Expr.ff = f; age = age; _ } = gf in
     { env with
       predicates = ME.add f (age, ex) env.predicates;
       (* this is not done in SAT*)
@@ -132,7 +132,8 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 
   let record_this_instance f accepted lorig =
     match Expr.form_view lorig with
-    | E.Lemma {E.name;loc} -> Profiling.new_instance_of name f loc accepted
+    | E.Lemma { E.name; loc; _ } ->
+      Profiling.new_instance_of name f loc accepted
     | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
     | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
 
@@ -141,8 +142,8 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
       List.fold_left (fun st t -> E.sub_terms st (E.apply_subst s t))
         SE.empty trs
     in
-    let name, loc, f = match Expr.form_view lorig with
-      | E.Lemma {E.name;main;loc} -> name, loc, main
+    let name, loc, _ = match Expr.form_view lorig with
+      | E.Lemma { E.name; main; loc; _ } -> name, loc, main
       | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
       | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
     in
@@ -175,7 +176,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     ME.add orig (mp_orig_ok, SE.add f mp_orig_ko) insts
 
 
-  let new_facts env tbox selector substs =
+  let new_facts _env tbox selector substs =
     List.fold_left
       (fun acc ({Matching_types.trigger_formula=f;
                  trigger_age=age; trigger_dep=dep; trigger_orig=orig;
@@ -237,7 +238,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
          Debug.new_facts_of_axiom orig mp_orig_ok;
          let acc =
            ME.fold
-             (fun f (p, dep, _, _) (gd, ngd) ->
+             (fun _ (p, dep, _, _) (gd, ngd) ->
                 if p.Expr.gf then (p, dep) :: gd, ngd else gd, (p, dep) :: ngd
              )mp_orig_ok acc
          in
@@ -301,7 +302,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     mround env env.predicates tbox selector ilvl "predicates" mconf
 
   let add_lemma env gf dep =
-    let {Expr.ff=orig;age=age;gf=b} = gf in
+    let { Expr.ff = orig; age = age; _ } = gf in
     let age, dep =
       try
         let age' , dep' = ME.find orig env.lemmas in

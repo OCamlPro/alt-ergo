@@ -127,13 +127,13 @@ let query env uf a =
 
 let case_split env uf ~for_model =
   Options.exec_thread_yield ();
-  let seq1 = Rel1.case_split env.r1 uf for_model in
-  let seq2 = Rel2.case_split env.r2 uf for_model in
-  let seq3 = Rel3.case_split env.r3 uf for_model in
-  let seq4 = Rel4.case_split env.r4 uf for_model in
-  let seq5 = Rel5.case_split env.r5 uf for_model in
-  let seq6 = Rel6.case_split env.r6 uf for_model in
-  let seq7 = Rel7.case_split env.r7 uf for_model in
+  let seq1 = Rel1.case_split env.r1 uf ~for_model in
+  let seq2 = Rel2.case_split env.r2 uf ~for_model in
+  let seq3 = Rel3.case_split env.r3 uf ~for_model in
+  let seq4 = Rel4.case_split env.r4 uf ~for_model in
+  let seq5 = Rel5.case_split env.r5 uf ~for_model in
+  let seq6 = Rel6.case_split env.r6 uf ~for_model in
+  let seq7 = Rel7.case_split env.r7 uf ~for_model in
   let l = seq1 |@| seq2 |@| seq3 |@| seq4 |@| seq5 |@| seq6 |@| seq7 in
   List.sort
     (fun (_,_,sz1) (_,_,sz2) ->

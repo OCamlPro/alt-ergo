@@ -86,7 +86,7 @@ let iter_atoms f s = S.iter f s
 let fold_atoms f s acc = S.fold f s acc
 
 (* TODO : XXX : We have to choose the smallest ??? *)
-let merge s1 s2 = s1
+let merge s1 _s2 = s1
 
 let fresh_exp =
   let r = ref (-1) in
@@ -128,7 +128,7 @@ let formulas_of s =
       match e with
       | Dep f | Bj f -> E.Set.add f acc
       | RootDep _ | Fresh _ -> acc
-      | Literal a -> assert false (*TODO*)
+      | Literal _ -> assert false (*TODO*)
     ) s E.Set.empty
 
 let bj_formulas_of s =
@@ -136,7 +136,7 @@ let bj_formulas_of s =
       match e with
       | Bj f -> E.Set.add f acc
       | Dep _ | RootDep _ | Fresh _ -> acc
-      | Literal a -> assert false (*TODO*)
+      | Literal _ -> assert false (*TODO*)
     ) s E.Set.empty
 
 let rec literals_of_acc lit fs f acc = match E.form_view f with
@@ -157,9 +157,9 @@ let rec literals_of_acc lit fs f acc = match E.form_view f with
     literals_of_acc true fs f2 acc
   | E.Lemma _ ->
     acc
-  | E.Skolem {E.main=f} ->
+  | E.Skolem { E.main = f; _ } ->
     literals_of_acc true fs f acc
-  | E.Let {E.in_e; let_e} ->
+  | E.Let { E.in_e; let_e; _ } ->
     literals_of_acc true fs in_e @@ literals_of_acc true fs let_e acc
 
 let literals_of ex =

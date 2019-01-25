@@ -72,8 +72,6 @@ module type ATOM = sig
   val faux_atom  : atom
   val level : atom -> int
   val index : atom -> int
-  val cmp_atom : atom -> atom -> int
-  val eq_atom : atom -> atom -> bool
   val reason : atom -> reason
   val reason_atoms : atom -> atom list
 
@@ -242,13 +240,8 @@ module Atom : ATOM = struct
       else if a.neg.is_true then sprintf "[F%s]" (level a)
       else ""
 
-    let value_ms_like a =
-      if a.is_true then sprintf ":1%s" (level a)
-      else if a.neg.is_true then sprintf ":0%s" (level a)
-      else ":X"
-
     let premise fmt v =
-      List.iter (fun {name=name} -> fprintf fmt "%s," name) v
+      List.iter (fun { name = name; _ } -> fprintf fmt "%s," name) v
 
     let atom fmt a =
       fprintf fmt "%s%d%s [index=%d | lit:%a] vpremise={{%a}}"
@@ -256,28 +249,18 @@ module Atom : ATOM = struct
         premise a.var.vpremise
 
 
-    let atoms_list fmt l = List.iter (fprintf fmt "%a ; " atom) l
-    let atoms_array fmt arr = Array.iter (fprintf fmt "%a ; " atom) arr
-
     let atoms_vec fmt vec =
       for i = 0 to Vec.size vec - 1 do
         fprintf fmt "%a ; " atom (Vec.get vec i)
       done
 
-    let clause fmt {name=name; atoms=arr; cpremise=cp} =
+    let clause fmt { name; atoms=arr; cpremise=cp; _ } =
       fprintf fmt "%s:{ %a} cpremise={{%a}}" name atoms_vec arr premise cp
 
   end
 
   let pr_atom = Debug.atom
   let pr_clause = Debug.clause
-
-  let ale = Hstring.make "<="
-  let alt = Hstring.make "<"
-  let agt = Hstring.make ">"
-  let is_le n = Hstring.compare n ale = 0
-  let is_lt n = Hstring.compare n alt = 0
-  let is_gt n = Hstring.compare n agt = 0
 
   let normal_form lit = (* XXX do better *)
     let is_pos = E.is_positive lit in
@@ -391,18 +374,17 @@ module Atom : ATOM = struct
 
   let to_int f = int_of_float f
 
-  let cmp_var v1 v2 = v1.vid - v2.vid
-  let eq_var v1 v2 = v1.vid - v2.vid = 0
-  let tag_var v = v.vid
-  let h_var v = v.vid
+  (* unused --
+     let cmp_var v1 v2 = v1.vid - v2.vid
+     let eq_var v1 v2 = v1.vid - v2.vid = 0
+     let tag_var v = v.vid
+     let h_var v = v.vid
+  *)
 
   let cmp_atom a1 a2 = a1.aid - a2.aid
   let eq_atom   a1 a2 = a1.aid - a2.aid = 0
   let hash_atom a1 = a1.aid
   let tag_atom  a1 = a1.aid
-
-  let iter_atoms_of_clauses cls f =
-    Vec.iter cls (fun c -> Vec.iter c.atoms f)
 
   let reason a =
     a.var.reason
@@ -522,13 +504,13 @@ module Flat_Formula : FLAT_FORMULA = struct
 
   let print fmt f = cpt := 0; print fmt f
 
-  let print_stats fmt = ()
+  let print_stats _ = ()
 
   let compare f1 f2 = f1.tag - f2.tag
 
   let equal f1 f2 = f1.tag == f2.tag
-  let hash f = f.tag
-  let tag  f = f.tag
+  (* unused -- let hash f = f.tag *)
+  (* unused -- let tag  f = f.tag *)
   let view f = f.view
 
   let is_positive pos = match pos with
@@ -659,7 +641,7 @@ module Flat_Formula : FLAT_FORMULA = struct
     match l1, l2 with
     | [], l2 -> l2
     | l1, [] -> l1
-    | h1 :: t1, h2 :: t2 ->
+    | h1 :: t1, h2 :: _ ->
       let c = compare h1 h2 in
       if c = 0 then merge_rec t1 l2 h1
       else
@@ -751,7 +733,7 @@ module Flat_Formula : FLAT_FORMULA = struct
         (fun (atoms, ands) f ->
            match view f with
            | OR _   -> assert false
-           | UNIT a -> f::atoms, ands
+           | UNIT _ -> f::atoms, ands
            | AND l  -> atoms, l::ands
         )([],[]) l
     in
@@ -823,7 +805,7 @@ module Flat_Formula : FLAT_FORMULA = struct
         match extract_common l with
         | None ->
           begin match l with
-            | [{view=UNIT _} as fa;{view=AND ands}] ->
+            | [{ view = UNIT _; _ } as fa; { view = AND ands; _ }] ->
               begin
                 try
                   mk_or hcons
@@ -844,7 +826,7 @@ module Flat_Formula : FLAT_FORMULA = struct
   let abstract_lemma hcons abstr (f: E.t) tl lem new_vars =
     try fst (abstr f)
     with Not_found ->
-    try fst (snd (List.find (fun (x,y) -> E.equal f x) !lem))
+    try fst (snd (List.find (fun (x,_) -> E.equal f x) !lem))
     with Not_found ->
       if tl then begin
         lem := (f, (vrai, Atom.vrai_atom)) :: !lem;

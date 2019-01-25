@@ -37,8 +37,6 @@ module E = Expr
 module Z = Numbers.Z
 module Q = Numbers.Q
 
-let ale = Hstring.make "<="
-let alt = Hstring.make "<"
 let is_mult h = Sy.equal (Sy.Op Sy.Mult) h
 let mod_symb = Sy.name "@mod"
 
@@ -55,7 +53,7 @@ module Type (X:Sig.X) : Polynome.T with type r = X.r = struct
             h = Sy.Op Sy.Mult;
             t = X.type_info v1;
             l = let l2 = match X.ac_extract v1 with
-                | Some {h=h; l=l} when Sy.equal h (Sy.Op Sy.Mult) -> l
+                | Some { h; l; _ } when Sy.equal h (Sy.Op Sy.Mult) -> l
                 | _ -> [v1, 1]
               in Ac.add (Sy.Op Sy.Mult) (v2,1) l2
           }
@@ -123,16 +121,16 @@ module Shostak
      c4. t2 <> 0 (already checked) *)
   let mk_modulo md t1 t2 p2 ctx =
     let zero = E.int "0" in
-    let c1 = E.mk_builtin true A.LE [zero; md] in
+    let c1 = E.mk_builtin ~is_pos:true A.LE [zero; md] in
     let c2 =
       match P.is_const p2 with
       | Some n2 ->
         let an2 = Q.abs n2 in
         assert (Q.is_int an2);
         let t2 = E.int (Q.to_string an2) in
-        E.mk_builtin true A.LT [md; t2]
+        E.mk_builtin ~is_pos:true A.LT [md; t2]
       | None ->
-        E.mk_builtin true A.LT [md; t2]
+        E.mk_builtin ~is_pos:true A.LT [md; t2]
     in
     let k  = E.fresh_name Ty.Tint in
     let t3 = E.mk_term (Sy.Op Sy.Mult) [t2;k] Ty.Tint in
@@ -183,7 +181,7 @@ module Shostak
     | Some res -> assert (Q.compare (Q.mult res res) q >= 0); res
 
   let mk_partial_interpretation_1 aux_func coef p_acc ty t x =
-    let r_x, ctx_x = X.make x in
+    let r_x, _ = X.make x in
     try
       match P.to_list (embed r_x) with
       | [], d ->
@@ -207,7 +205,7 @@ module Shostak
       P.add (P.create [coef, (X.term_embed t)] Q.zero ty) p_acc
 
   let rec mke coef p t ctx =
-    let {E.f = sb ; xs = xs; ty = ty} =
+    let { E.f = sb ; xs; ty; _ } =
       match E.term_view t with
       | E.Not_a_term _ -> assert false
       | E.Term tt -> tt
@@ -379,7 +377,7 @@ module Shostak
     assert (n >=0);
     if n = 0 then acc else expand p (n-1) (p::acc)
 
-  let unsafe_ac_to_arith {h=sy; l=rl; t=ty} =
+  let unsafe_ac_to_arith { l = rl; t = ty; _ } =
     let mlt = List.fold_left (fun l (r,n) -> expand (embed r)n l) [] rl in
     List.fold_left P.mult (P.create [] Q.one ty) mlt
 
@@ -391,7 +389,7 @@ module Shostak
     match P.extract r with
     | Some p ->
       let l, _ = P.to_list p in
-      List.fold_left (fun acc (a, x) -> max acc (nb_vars_in_alien x)) 0 l
+      List.fold_left (fun acc (_, x) -> max acc (nb_vars_in_alien x)) 0 l
     | None ->
       begin
         match X.ac_extract r with
@@ -423,7 +421,7 @@ module Shostak
 
   let color ac =
     match ac.l with
-    | [(r, 1)] -> assert false
+    | [(_, 1)] -> assert false
     | _ ->
       let p = unsafe_ac_to_arith ac in
       if not ac.distribute then
@@ -461,8 +459,6 @@ module Shostak
     in
     is_mine p
 
-
-  let compare_mine = P.compare
 
   let compare x y = P.compare (embed x) (embed y)
 
@@ -602,7 +598,7 @@ module Shostak
     with Not_found -> is_null p
 
 
-  let unsafe_ac_to_arith {h=sy; l=rl; t=ty} =
+  let unsafe_ac_to_arith { l = rl; t = ty; _ } =
     let mlt = List.fold_left (fun l (r, n) -> expand (embed r) n l) [] rl in
     List.fold_left P.mult (P.create [] Q.one ty) mlt
 
@@ -629,7 +625,7 @@ module Shostak
     let pp = polynome_distribution p unsafe_mode in
     let ty = P.type_info p in
     let sbs = if ty == Ty.Treal then solve_real pp else solve_int pp in
-    let sbs = List.fast_sort (fun (a,_) (x,y) -> X.str_cmp x a)sbs in
+    let sbs = List.fast_sort (fun (a,_) (x,_) -> X.str_cmp x a)sbs in
     sbs
 
   let apply_subst r l = List.fold_left (fun r (p,v) -> X.subst p v r) r l
@@ -641,7 +637,7 @@ module Shostak
     if X.equal p q then p
     else
       match X.ac_extract p with
-      | Some ac when unsafe_mode -> raise Unsafe
+      | Some _ when unsafe_mode -> raise Unsafe
       | Some ac -> X.ac_embed {ac with distribute = false}
       | None -> assert false (* p is a leaf and not interpreted *)
 
@@ -652,20 +648,20 @@ module Shostak
       sbs []
 
   let is_non_lin pv = match X.ac_extract pv with
-    | Some {Sig.h} -> is_mult h
+    | Some { Sig.h; _ } -> is_mult h
     | _ -> false
 
-  let make_idemp a b sbs lvs unsafe_mode =
+  let make_idemp _ _ sbs lvs unsafe_mode =
     let sbs = triangular_down sbs unsafe_mode in
     let sbs = triangular_down (List.rev sbs) unsafe_mode in (*triangular up*)
-    let sbs = List.filter (fun (p,v) -> SX.mem p lvs || is_non_lin p) sbs in
+    let sbs = List.filter (fun (p,_) -> SX.mem p lvs || is_non_lin p) sbs in
       (*
         This assert is not TRUE because of AC and distributivity of '*'
         assert (not (Options.enable_assertions ()) ||
         X.equal (apply_subst a sbs) (apply_subst b sbs));
       *)
     List.iter
-      (fun (p, v) ->
+      (fun (p, _) ->
          if not (SX.mem p lvs) then (assert (is_non_lin p); raise Unsafe)
       )sbs;
     sbs

@@ -263,10 +263,10 @@ let percent total a =
 let columns =
   [
     "GTimer", "Global timer", 11, None,
-    (fun steps gtime timers sz -> float_resize gtime sz);
+    (fun _ gtime _ sz -> float_resize gtime sz);
 
     "Steps", "Number of Steps", 14, None,
-    (fun steps gtime timers sz ->
+    (fun steps gtime _ sz ->
        let avg = int_of_float (Int64.to_float steps /. gtime) in
        sprintf "%s~%s"
          (string_resize (sprintf "%Ld" steps) (sz-7))
@@ -274,7 +274,7 @@ let columns =
     );
 
     "Case splits", "Number of Case Splits", 14, None,
-    (fun steps gtime timers sz ->
+    (fun _ gtime _ sz ->
        let avg = int_of_float (float_of_int (Options.cs_steps()) /. gtime) in
        sprintf "%s~%s"
          (string_resize (sprintf "%d" (Options.cs_steps())) (sz-7))
@@ -282,128 +282,128 @@ let columns =
     );
 
     "Mod.", "Current active module", 7, None,
-    (fun steps gtime timers sz ->
-       let kd, msg, _ = Timers.current_timer timers in
+    (fun _ _ timers sz ->
+       let kd, _msg, _ = Timers.current_timer timers in
        string_resize (Timers.string_of_ty_module kd) sz);
 
     "Module Id", "Each call to a module is tagged with a fresh Id", 10, None,
-    (fun steps gtime timers sz ->
-       let kd, msg, id = Timers.current_timer timers in
+    (fun _ _ timers sz ->
+       let _kd, _msg, id = Timers.current_timer timers in
        int_resize id sz);
 
     (*-----------------------------------------------------------------*)
 
     "ilvl", "Current Instantiaton level", 6, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.instantiation_lvl) sz);
+    (fun _ _ _ sz -> int_resize !(state.instantiation_lvl) sz);
 
     "#i rnds", "Number of intantiation rounds", 8, Some true,
-    (fun steps gtime timers sz ->
+    (fun _ _ _ sz ->
        int_resize !(state.instantiation_rounds) sz);
 
 
     "#insts", "Number of generated instances", 8, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.instances) sz);
+    (fun _ _ _ sz -> int_resize !(state.instances) sz);
 
     "i/r", "AVG number of generated instances per instantiation rounds",
     8, Some true,
-    (fun steps gtime timers sz ->
+    (fun _ _ _ sz ->
        int_resize
          (!(state.instances) / (max 1 !(state.instantiation_rounds))) sz);
 
     "dlvl", "Current Decision level", 6, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.decision_lvl) sz);
+    (fun _ _ _ sz -> int_resize !(state.decision_lvl) sz);
 
     "#decs", "Number of decisions", 6, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.decisions) sz);
+    (fun _ _ _ sz -> int_resize !(state.decisions) sz);
 
     "T-asm", "Number of calls to Theory.assume", 6, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.assumes) sz);
+    (fun _ _ _ sz -> int_resize !(state.assumes) sz);
 
     "T/d", "Number of Theory.assume after last decision", 6, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.assumes_current_lvl) sz);
+    (fun _ _ _ sz -> int_resize !(state.assumes_current_lvl) sz);
 
     "T-qr", "Number of calls to Theory.query", 15, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.queries) sz);
+    (fun _ _ _ sz -> int_resize !(state.queries) sz);
 
     "B-R", "Number of reduced clauses by Boolean propagation", 6, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.b_red) sz);
+    (fun _ _ _ sz -> int_resize !(state.b_red) sz);
 
     "B-E", "Number of eliminated clauses by Boolean propagation", 6,
-    Some true, (fun steps gtime timers sz -> int_resize !(state.b_elim) sz);
+    Some true, (fun _ _ _ sz -> int_resize !(state.b_elim) sz);
 
     "T-R", "Number of reduced clauses by Theory propagation", 6, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.t_red) sz);
+    (fun _ _ _ sz -> int_resize !(state.t_red) sz);
 
     "T-E", "Number of eliminated clauses by Theory propagation", 6,
-    Some true, (fun steps gtime timers sz -> int_resize !(state.t_elim) sz);
+    Some true, (fun _ _ _ sz -> int_resize !(state.t_elim) sz);
 
     "B-!",  "Number of direct Boolean conflicts", 5, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.b_conflicts) sz);
+    (fun _ _ _ sz -> int_resize !(state.b_conflicts) sz);
 
     "T-!", "Number of direct Theory conflicts" , 5, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.th_conflicts) sz);
+    (fun _ _ _ sz -> int_resize !(state.th_conflicts) sz);
 
     "B>!", "Number of Boolean conflicts deduced by BCP", 5, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.bcp_b_conflicts) sz);
+    (fun _ _ _ sz -> int_resize !(state.bcp_b_conflicts) sz);
 
     "T>!", "Number of Theory conflicts deduced by BCP", 5, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.bcp_th_conflicts) sz);
+    (fun _ _ _ sz -> int_resize !(state.bcp_th_conflicts) sz);
 
     "M>!", "Number of Mix conflicts deduced by BCP", 5, Some true,
-    (fun steps gtime timers sz -> int_resize !(state.bcp_mix_conflicts) sz);
+    (fun _ _ _ sz -> int_resize !(state.bcp_mix_conflicts) sz);
 
     (*-----------------------------------------------------------------*)
     "SAT", "Time spent in SAT module(s)", 16, Some false,
-    (fun steps gtime timers sz ->
+    (fun _ gtime timers sz ->
        let curr = Timers.get_sum timers Timers.M_Sat in
        sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Matching", "Time spent in Matching module(s)", 16, Some false,
-    (fun steps gtime timers sz ->
+    (fun _ gtime timers sz ->
        let curr = Timers.get_sum timers Timers.M_Match in
        sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "CC", "Time spent in CC module(s)", 16, Some false,
-    (fun steps gtime timers sz ->
+    (fun _ gtime timers sz ->
        let curr = Timers.get_sum timers Timers.M_CC in
        sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4)
     );
 
     "Arith", "Time spent in Arith module(s)", 16, Some false,
-    (fun steps gtime timers sz ->
+    (fun _ gtime timers sz ->
        let curr = Timers.get_sum timers Timers.M_Arith in
        sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Arrays", "Time spent in Arrays module(s)", 16, Some false,
-    (fun steps gtime timers sz ->
+    (fun _ gtime timers sz ->
        let curr = Timers.get_sum timers Timers.M_Arrays in
        sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Sum", "Time spent in Sum module(s)", 16, Some false,
-    (fun steps gtime timers sz ->
+    (fun _ gtime timers sz ->
        let curr = Timers.get_sum timers Timers.M_Sum in
        sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Records", "Time spent in Records module(s)", 16, Some false,
-    (fun steps gtime timers sz ->
+    (fun _ gtime timers sz ->
        let curr = Timers.get_sum timers Timers.M_Records in
        sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "AC", "Time spent in AC module(s)", 16, Some false,
-    (fun steps gtime timers sz ->
+    (fun _ gtime timers sz ->
        let curr = Timers.get_sum timers Timers.M_AC in
        sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Total", "Time spent in 'supervised' module(s)", 11, Some false,
-    (fun steps gtime timers sz ->
+    (fun _ _ timers sz ->
        let tsat = Timers.get_sum timers Timers.M_Sat in
        let tmatch = Timers.get_sum timers Timers.M_Match in
        let tcc = Timers.get_sum timers Timers.M_CC in
@@ -424,7 +424,7 @@ let print_initial_info () =
         0 columns
     in
     List.iter
-      (fun (id, descr, sz, opt, func) ->
+      (fun (id, descr, _, _, _) ->
          fprintf fmt "%s : %s@." (string_resize id max) descr
       )columns
   end
@@ -452,7 +452,7 @@ let print_header header fmt =
     nb_prints := 0;
     fprintf fmt "%s@." (if pp_stats then stats_limit else timers_limit);
     List.iter
-      (fun (id, descr, sz, opt, func) ->
+      (fun (id, _, sz, opt, _) ->
          match opt with
          | Some b when b != pp_stats -> ()
          | _ -> fprintf fmt "|%s" (string_resize id sz)
@@ -466,7 +466,7 @@ let print_stats header steps fmt timers =
   print_header header fmt;
   let gtime = Options.Time.value() in
   List.iter
-    (fun (id, descr, sz, opt, func) ->
+    (fun (_, _, sz, opt, func) ->
        match opt with
        | Some false -> ()
        | _ -> fprintf fmt "|%s" (func steps gtime timers sz)
@@ -478,31 +478,35 @@ let print_timers header steps fmt timers =
   print_header header fmt;
   let gtime = Options.Time.value() in
   List.iter
-    (fun (id, descr, sz, opt, func) ->
+    (fun (_, _, sz, opt, func) ->
        match opt with
        | Some true -> ()
        | _ -> fprintf fmt "|%s" (func steps gtime timers sz)
     )columns;
   fprintf fmt "|@."
 
-let report2 axiom fmt (b,e) =
-  let open Lexing in
-  let l = b.pos_lnum in
-  let fc = b.pos_cnum - b.pos_bol + 1 in
-  let lc = e.pos_cnum - b.pos_bol + 1 in
-  fprintf fmt "(Sub) Axiom \"%s\", line %d, characters %d-%d:"
+(* unused
+   let report2 axiom fmt (b,e) =
+   let open Lexing in
+   let l = b.pos_lnum in
+   let fc = b.pos_cnum - b.pos_bol + 1 in
+   let lc = e.pos_cnum - b.pos_bol + 1 in
+   fprintf fmt "(Sub) Axiom \"%s\", line %d, characters %d-%d:"
     axiom l fc lc
+*)
 
-let report3 fmt (b,e) =
-  let open Lexing in
-  let l = b.pos_lnum in
-  let fc = b.pos_cnum - b.pos_bol + 1 in
-  let lc = e.pos_cnum - b.pos_bol + 1 in
-  fprintf fmt "line %d, chars %d-%d." l fc lc
+(* unused
+   let report3 fmt (b,e) =
+   let open Lexing in
+   let l = b.pos_lnum in
+   let fc = b.pos_cnum - b.pos_bol + 1 in
+   let lc = e.pos_cnum - b.pos_bol + 1 in
+   fprintf fmt "line %d, chars %d-%d." l fc lc
+*)
 
 let (@@) a b = if a <> 0 then a else b
 
-let print_instances_generation forced steps timers =
+let print_instances_generation forced _steps _timers =
   if not forced && !(state.instances_map_printed) then
     fprintf fmt "[Instances profiling] No change since last print@."
   else
@@ -520,7 +524,7 @@ let print_instances_generation forced steps timers =
         !(state.instances_map) []
     in
     let insts =
-      List.fast_sort (fun (_,i1,c1, r1) (_,i2,c2, r2) ->
+      List.fast_sort (fun (_, i1, c1, _) (_, i2, c2, _) ->
           (i1.decided - i2.decided) @@
           (c1 - c2) @@
           (i1.kept - i2.kept) @@
@@ -594,7 +598,7 @@ let print_instances_generation forced steps timers =
       fprintf fmt "}@."*)
     ()
 
-let print_call_tree forced steps timers =
+let print_call_tree _forced _steps timers =
   let stack = Timers.get_stack timers in
   List.iter
     (fun (k, f, id) ->

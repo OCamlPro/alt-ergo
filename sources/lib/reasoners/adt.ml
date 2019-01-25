@@ -40,7 +40,7 @@ let constr_of_destr ty dest =
       | Ty.Adt cases ->
         try
           List.find
-            (fun {Ty.constr = c ; destrs} ->
+            (fun { Ty.destrs; _ } ->
                List.exists (fun (d, _) -> Hstring.equal dest d) destrs
             )cases
         with Not_found -> assert false (* invariant *)
@@ -63,7 +63,7 @@ module Shostak (X : ALIEN) = struct
     not (Options.disable_adts ()) &&
     match sy, ty with
     | Sy.Op (Sy.Constr _), Ty.Tadt _ -> true
-    | Sy.Op Sy.Destruct (_, guarded), _ -> true
+    | Sy.Op Sy.Destruct _, _ -> true
     | _ -> false
 
   let embed r =
@@ -75,7 +75,7 @@ module Shostak (X : ALIEN) = struct
     | Alien x ->
       fprintf fmt "%a" X.print x
 
-    | Constr {c_name; c_args} ->
+    | Constr { c_name; c_args; _ } ->
       fprintf fmt "%a" Hs.print c_name;
       begin
         match c_args with
@@ -101,11 +101,11 @@ module Shostak (X : ALIEN) = struct
       X.embed u
         [@ocaml.ppwarning "TODO: canonize Constr(list of selects)"]
 
-    | Select {d_arg; d_name} ->
+    | Select { d_arg; d_name; _ } ->
       match embed d_arg with
       | Constr c ->
         begin
-          try snd @@ List.find (fun (lbl, v) -> Hs.equal d_name lbl) c.c_args
+          try snd @@ List.find (fun (lbl, _) -> Hs.equal d_name lbl) c.c_args
           with Not_found ->
             fprintf fmt "is_mine %a failed@." print u;
             assert false
@@ -145,7 +145,7 @@ module Shostak (X : ALIEN) = struct
   let make t =
     assert (not (Options.disable_adts ()));
     if debug_adt () then eprintf "[ADTs] make %a@." E.print t;
-    let {E.f; xs; ty} = match E.term_view t with
+    let { E.f; xs; ty; _ } = match E.term_view t with
       | E.Term t -> t
       | E.Not_a_term _ -> assert false
     in
@@ -219,7 +219,7 @@ module Shostak (X : ALIEN) = struct
       )SX.empty l
 
   [@@ocaml.ppwarning "TODO: not sure"]
-  let fully_interpreted sb =
+  let fully_interpreted _ =
     false (* not sure *)
 (*
     not (Options.disable_adts ()) &&
@@ -238,8 +238,8 @@ module Shostak (X : ALIEN) = struct
   let compare s1 s2 =
     match embed s1, embed s2 with
     | Alien r1, Alien r2 -> X.str_cmp r1 r2
-    | Alien r1, _ -> 1
-    | _, Alien r2 -> -1
+    | Alien _, _ -> 1
+    | _, Alien _ -> -1
 
     | Constr c1, Constr c2 ->
       let c = Hstring.compare c1.c_name c2.c_name in
@@ -283,10 +283,10 @@ module Shostak (X : ALIEN) = struct
 
   let abstract_selectors p acc =
     match p with
-    | Alien r -> assert false (* handled in Combine *)
-    | Constr { c_args } ->
+    | Alien _ -> assert false (* handled in Combine *)
+    | Constr { c_args; _ } ->
       let same = ref true in
-      let acc, args =
+      let acc, _ =
         List.fold_left (fun (acc, l) (lbl, x) ->
             let y, acc = X.abstract_selectors x acc in
             same := !same && x == y;
@@ -301,14 +301,15 @@ module Shostak (X : ALIEN) = struct
        should probably reconstruct a new 'p' using args
     *)
 
-    | Tester {t_arg} ->
+    | Tester { t_arg; _ } ->
       let s_arg, acc = X.abstract_selectors t_arg acc in
       if not (X.equal s_arg t_arg)
           [@ocaml.ppwarning "TODO: abstract Selectors: case to test"] then
         assert false;
       is_mine p, acc
 
-    | Select ({d_arg} as s)  [@ocaml.ppwarning "TODO: abstract Selectors"] ->
+    | Select ({ d_arg; _ } as s)
+        [@ocaml.ppwarning "TODO: abstract Selectors"] ->
       (* no need to abstract THIS selector. It's necessiraly
          toplevel in ADTs *)
       (*
@@ -322,7 +323,7 @@ module Shostak (X : ALIEN) = struct
         assert false;
       let x = is_mine @@ Select {s with d_arg=s_arg} in
       begin match embed x  with
-        | Select ({d_name; d_ty; d_arg} as s) ->
+        | Select ({ d_name; d_arg; _ } as s) ->
           let {Ty.constr ; destrs} =
             constr_of_destr (X.type_info d_arg) d_name
           in
@@ -403,11 +404,11 @@ module Shostak (X : ALIEN) = struct
   let term_extract _ = None, false
 
 
-  let assign_value r _ eq =
+  let assign_value _ _ _ =
     fprintf fmt "[ADTs.models] assign_value currently not implemented";
     assert false
 
-  let choose_adequate_model t _ l =
+  let choose_adequate_model _ _ _ =
     fprintf fmt "[ADTs.models] choose_adequate_model currently not implemented";
     assert false
 

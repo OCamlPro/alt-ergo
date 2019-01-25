@@ -80,8 +80,6 @@ val mk_bitv_type : string -> ppure_type
 
 val mk_external_type : Loc.t -> ppure_type list -> string -> ppure_type
 
-val mk_logic_type : ppure_type list -> ppure_type option -> plogic_type
-
 val mk_var_type : Loc.t -> string -> ppure_type
 
 val mk_logic_type : ppure_type list -> ppure_type option -> plogic_type

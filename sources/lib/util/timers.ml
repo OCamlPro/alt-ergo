@@ -195,7 +195,7 @@ let accumulate_cumulative_mode name env m f cur =
         eprintf "@.%s time of %s , %s@."
           name (string_of_ty_module m) (string_of_ty_function f);
       List.iter
-        (fun (m, f, id) ->
+        (fun (m, f, _) ->
            if Options.debug() then
              eprintf "  also update time of %s , %s@."
                (string_of_ty_module m) (string_of_ty_function f);
@@ -233,7 +233,7 @@ let pause env m f =
 (** update the value of the current timer **)
 let update env =
   let cur = MyUnix.cur_time() in
-  let m, f, id = env.cur_t in
+  let m, f, _ = env.cur_t in
   accumulate_cumulative_mode "update" env m f cur;
   accumulate env cur m f;
   env.cur_u <- cur

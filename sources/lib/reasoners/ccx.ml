@@ -116,7 +116,7 @@ module Main : S = struct
       diseqs  = Queue.create ();
       touched = Util.MI.empty }
 
-  let add_fact facts ((lit, ex, orig) as e) =
+  let add_fact facts ((lit, _, _) as e) =
     match lit with
     | LSem Xliteral.Pred _ | LSem Xliteral.Eq _ ->
       Queue.push e facts.equas
@@ -176,11 +176,13 @@ module Main : S = struct
       if debug_cc () then
         fprintf fmt "[cc] add_to_use: %a@." E.print t
 
-    let lrepr fmt = List.iter (fprintf fmt "%a " X.print)
+    (* unused --
+       let lrepr fmt = List.iter (fprintf fmt "%a " X.print)
 
-    let leaves t lvs =
-      fprintf fmt "[cc] leaves of %a@.@."
+       let leaves t lvs =
+       fprintf fmt "[cc] leaves of %a@.@."
         E.print t; lrepr fmt lvs
+    *)
 
     let contra_congruence a ex =
       if debug_cc () then
@@ -229,12 +231,12 @@ module Main : S = struct
 
   let equal_only_by_congruence env facts t1 t2 =
     if not (E.equal t1 t2) then
-      let {E.f=f1; xs=xs1; ty=ty1} =
+      let { E.f = f1; xs = xs1; ty = ty1; _ } =
         match E.term_view t1 with
         | E.Not_a_term _ -> assert false
         | E.Term tt -> tt
       in
-      let {E.f=f2; xs=xs2; ty=ty2} =
+      let { E.f = f2; xs = xs2; ty = ty2; _ } =
         match E.term_view t2 with
         | E.Not_a_term _ -> assert false
         | E.Term tt -> tt
@@ -249,8 +251,8 @@ module Main : S = struct
 
   let congruents env facts t1 s =
     match E.term_view t1 with
-    | E.Term {E.xs=[]} -> ()
-    | E.Term {E.f; ty} when X.fully_interpreted f ty -> ()
+    | E.Term { E.xs = []; _ } -> ()
+    | E.Term { E.f; ty; _ } when X.fully_interpreted f ty -> ()
     | E.Term _ -> SE.iter (equal_only_by_congruence env facts t1) s
     | E.Not_a_term _ -> assert false
 
@@ -314,13 +316,13 @@ module Main : S = struct
     | Some t1, true ->  (* original term *)
       match E.term_view t1 with
       | E.Not_a_term _ -> assert false
-      | E.Term {E.f=f1 ; xs=[x]} ->
+      | E.Term { E.f = f1; xs = [x]; _ } ->
         let ty_x = Expr.type_info x in
         List.iter
           (fun t2 ->
              match E.term_view t2 with
              | E.Not_a_term _ -> assert false
-             | E.Term {E.f=f2 ; xs=[y]} when Sy.equal f1 f2 ->
+             | E.Term { E.f = f2 ; xs = [y]; _ } when Sy.equal f1 f2 ->
                let ty_y = Expr.type_info y in
                if Ty.equal ty_x ty_y then
                  begin match Uf.are_distinct env.uf t1 t2 with
@@ -373,7 +375,7 @@ module Main : S = struct
          let p_t, p_a = Use.find p env.use in
 
          (* we compute terms and atoms to consider for congruence *)
-         let repr_touched = List.map (fun (x, y, ex) ->
+         let repr_touched = List.map (fun (x, y, _) ->
              facts.touched <-
                Util.MI.add (X.hash x) x facts.touched;
              y
@@ -385,7 +387,7 @@ module Main : S = struct
          let nuse = Use.up_close_up env.use p v in
          let nuse =
            List.fold_left
-             (fun nuse (r, rr, ex) ->
+             (fun nuse (_, rr, _) ->
                 match X.leaves rr with
                 | _ :: _ -> nuse
                 | []     -> Use.up_close_up nuse p one
@@ -448,7 +450,7 @@ module Main : S = struct
       Debug.add_to_use t;
 
       (* we add t's arguments in env *)
-      let {E.f = f; xs = xs} =
+      let { E.xs; _ } =
         match E.term_view t with
         | E.Not_a_term _ -> assert false (* see what to do here *)
         | E.Term tt -> tt
@@ -533,7 +535,7 @@ module Main : S = struct
       env
     end
 
-  let assume_dist env facts lr ex =
+  let assume_dist env _facts lr ex =
     Options.tool_req 3 "TR-CCX-Distinct";
     if Uf.already_distinct env.uf lr then env
     else  {env with uf = Uf.distinct env.uf lr ex}
@@ -544,7 +546,7 @@ module Main : S = struct
       Debug.facts facts "equalities";
       let e = Q.pop facts.equas in
       Q.push e facts.ineqs; (*XXX also added in touched by congruence_closure*)
-      let env, (sa, root, ex, orig) =  semantic_view env e facts in
+      let env, (sa, _, ex, _) =  semantic_view env e facts in
       Debug.assume_literal sa;
       let env = match sa with
         | A.Pred (r1,neg) ->
@@ -580,7 +582,7 @@ module Main : S = struct
       Debug.facts facts "disequalities";
       let e = Q.pop facts.diseqs in
       Q.push e facts.ineqs;
-      let env, (sa, root, ex, orig) = semantic_view env e facts in
+      let env, (sa, _, ex, orig) = semantic_view env e facts in
       Debug.assume_literal sa;
       let env = match sa with
         | A.Distinct (false, lr) -> assume_dist env facts lr ex
@@ -669,7 +671,7 @@ module Main : S = struct
   (* End: new implementation of add, add_term, assume_literals and all that *)
 
   let case_split env ~for_model =
-    match Rel.case_split env.relation env.uf for_model with
+    match Rel.case_split env.relation env.uf ~for_model with
     | [] when for_model ->
       let l, uf = Uf.assign_next env.uf in
       (* try to not to modify uf in the future. It's currently done only

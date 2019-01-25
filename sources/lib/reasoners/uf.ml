@@ -69,10 +69,10 @@ module RS = struct
   let find k m =
     try find k m with Not_found -> SetRL.empty
 
-  let add_rule (({h=h},_,_) as rul) mp =
+  let add_rule (({ h ; _ }, _, _) as rul) mp =
     add h (SetRL.add rul (find h mp)) mp
 
-  let remove_rule (({h=h},_,_) as rul) mp =
+  let remove_rule (({ h ; _ }, _, _) as rul) mp =
     add h (SetRL.remove rul (find h mp)) mp
 
 end
@@ -141,11 +141,12 @@ let cl_extract env =
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
 
-  let rs_print fmt = SetX.iter (fprintf fmt "\t%a@." X.print)
+  (* unused --
+     let rs_print fmt = SetX.iter (fprintf fmt "\t%a@." X.print)
+  *)
+
   let lm_print fmt =
     MapL.iter (fun k dep -> fprintf fmt "%a %a" LX.print k Ex.print dep)
-
-  let t_print fmt = SE.iter (fprintf fmt "%a " E.print)
 
   let pmake fmt m =
     fprintf fmt "[.] map:\n";
@@ -160,7 +161,7 @@ module Debug = struct
   let prules fmt s =
     fprintf fmt "------------- UF: AC rewrite rules ----------------------@.";
     RS.iter
-      (fun k srl ->
+      (fun _ srl ->
          SetRL.iter
            (fun (ac,d,dep)-> fprintf fmt "%a ~~> %a %a\n"
                X.print (X.ac_embed ac) X.print d Ex.print dep
@@ -173,9 +174,11 @@ module Debug = struct
       (fun k s -> fprintf fmt "%a -> %a\n" X.print k E.print_list
           (SE.elements s)) m
 
-  let pgamma fmt m =
-    fprintf fmt "------------- UF: Gamma map --------------------------@.";
-    MapX.iter (fun k s -> fprintf fmt "%a -> \n%a" X.print k rs_print s) m
+  (* unused --
+     let pgamma fmt m =
+     fprintf fmt "------------- UF: Gamma map --------------------------@.";
+     MapX.iter (fun k s -> fprintf fmt "%a -> \n%a" X.print k rs_print s) m
+  *)
 
   let pneqs fmt m =
     fprintf fmt "------------- UF: Disequations map--------------------@.";
@@ -257,7 +260,7 @@ module Debug = struct
     in
     fun orig repr ->
       MapX.iter
-        (fun _ (rr, ex) ->
+        (fun _ (rr, _) ->
            List.iter
              (fun x ->
                 try
@@ -323,7 +326,7 @@ module Env = struct
       match l_1, l_2 with
         [],[] -> l1
       | l, [] -> l @ l1
-      | [], l -> raise List_minus_exn
+      | [], _ -> raise List_minus_exn
       | (a,m)::r, (b,n)::s ->
         let cmp = X.str_cmp a b in
         if cmp = 0 then
@@ -528,7 +531,7 @@ module Env = struct
     in
     (init_new_ac_leaves env mkr), ctx
 
-  let head_cp eqs env pac ({h=h} as ac) v dep =
+  let head_cp eqs env pac ({ h ; _ } as ac) v dep =
     try (*if RS.mem h env.ac_rs then*)
       SetRL.iter
         (fun (g, d, dep_rl) ->
@@ -536,7 +539,7 @@ module Env = struct
            else
              match disjoint_union ac.l g.l with
              | _  , [] , _  -> ()
-             | l1 , cm , l2 ->
+             | l1 , _cm , l2 ->
                let rx = X.color {ac with l = Ac.add h (d,1) l1} in
                let ry = X.color {g  with l = Ac.add h (v,1) l2} in
                Debug.critical_pair rx ry;
@@ -547,7 +550,7 @@ module Env = struct
 
   let comp_collapse eqs env (p, v, dep) =
     RS.fold
-      (fun h rls env ->
+      (fun _ rls env ->
          SetRL.fold
            (fun ((g, d, dep_rl) as rul) env ->
               Options.exec_thread_yield ();
@@ -1075,20 +1078,20 @@ let assert_has_depth_one (e, _) =
 
 module SMT2LikeModelOutput = struct
 
-  let x_print fmt (rep , ppr) = fprintf fmt "%s" ppr
+  let x_print fmt (_ , ppr) = fprintf fmt "%s" ppr
 
   let print_args fmt l =
     match l with
     | [] -> assert false
-    | [t,e] ->
+    | [_,e] ->
       fprintf fmt "%a" x_print e;
-    | (t,e) :: l ->
+    | (_,e) :: l ->
       fprintf fmt "%a" x_print e;
-      List.iter (fun (t, e) -> fprintf fmt " %a" x_print e) l
+      List.iter (fun (_, e) -> fprintf fmt " %a" x_print e) l
 
   let print_symb ty fmt f =
     match f, ty with
-    | Sy.Op Sy.Record, Ty.Trecord {Ty.name} ->
+    | Sy.Op Sy.Record, Ty.Trecord { Ty.name ; _ } ->
       fprintf fmt "%a__%s" Sy.print f (Hstring.view name)
 
     | _ -> Sy.print fmt f
@@ -1096,7 +1099,7 @@ module SMT2LikeModelOutput = struct
   let output_constants_model cprofs =
     (*printf "; constants:@.";*)
     Profile.iter
-      (fun (f, xs_ty, ty) st ->
+      (fun (f, _xs_ty, ty) st ->
          match Profile.V.elements st with
          | [[], rep] ->
            (*printf "  (%a %a)  ; %a@."
@@ -1109,7 +1112,7 @@ module SMT2LikeModelOutput = struct
     if not (Profile.is_empty fprofs) then printf "@.";
     (*printf "@.; functions:@.";*)
     Profile.iter
-      (fun (f, xs_ty, ty) st ->
+      (fun (f, _xs_ty, ty) st ->
          (*printf "  ; fun %a : %a -> %a@."
            (print_symb ty) f Ty.print_list xs_ty Ty.print ty;*)
          Profile.V.iter
@@ -1126,7 +1129,7 @@ module SMT2LikeModelOutput = struct
     Profile.iter
       (fun (f, xs_ty, ty) st ->
          match xs_ty with
-           [tyi] ->
+           [_] ->
            (*printf "  ; array %a : %a -> %a@."
              (print_symb ty) f Ty.print tyi Ty.print ty;*)
            Profile.V.iter
@@ -1167,14 +1170,14 @@ let model_repr_of_term t env mrepr =
     e, ME.add t e mrepr
 
 
-let output_concrete_model ({make; repr} as env) =
+let output_concrete_model ({ make; _ } as env) =
   let i = interpretation () in
   let abs_i = abs i in
   if abs_i = 1 || abs_i = 2 || abs_i = 3 then
     let functions, constants, arrays, _ =
       ME.fold
-        (fun t mk ((fprofs, cprofs, carrays, mrepr) as acc) ->
-           let {E.f; xs; ty} =
+        (fun t _mk ((fprofs, cprofs, carrays, mrepr) as acc) ->
+           let { E.f; xs; ty; _ } =
              match E.term_view t with
              | E.Not_a_term _ -> assert false
              | E.Term tt -> tt
@@ -1204,7 +1207,7 @@ let output_concrete_model ({make; repr} as env) =
                begin
                  match X.term_extract a with
                  | Some ta, true ->
-                   let {E.f=f_ta;xs=xs_ta; ty=ty_ta} =
+                   let { E.f = f_ta; xs=xs_ta; _ } =
                      match E.term_view ta with
                      | E.Not_a_term _ -> assert false
                      | E.Term tt -> tt
