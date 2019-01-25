@@ -2152,7 +2152,7 @@ let rec type_decl (acc, env) d =
       axioms_of_rules loc name lf acc env
 
 
-  | Goal(loc, n, f) ->
+  | Goal(_loc, n, f) ->
     Options.tool_req 1 "TR-Typing-GoalDecl$_F$";
     (*let f = move_up f in*)
     let f = alpha_renaming_env env f in
