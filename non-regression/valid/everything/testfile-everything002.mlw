@@ -1,3 +1,0 @@
-
-logic A,B,C : prop
-goal g2 : (A or B) -> (B or A)

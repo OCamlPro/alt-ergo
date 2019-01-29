@@ -1,7 +1,0 @@
-
-logic x,y,z:int
-
-goal g35: 
-
-x <> 0 -> (-2*x) / x = -2
-

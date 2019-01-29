@@ -1,3 +1,0 @@
-
-goal g6 : let x = 1 in let x = 2 in x = 1
-

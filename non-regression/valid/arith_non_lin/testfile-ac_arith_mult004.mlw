@@ -1,8 +1,0 @@
-
-
-goal g4: forall x,y,z:int.
-  x*x*x * y*y * z = 23040 ->
-  x = 4 ->
-  y = 6 ->
-  z = 10
-

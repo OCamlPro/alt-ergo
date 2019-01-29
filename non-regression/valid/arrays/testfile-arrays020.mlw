@@ -1,9 +1,0 @@
-
-
-goal g20 :
-  forall i,j:int.
-  forall v : 'a.
-  forall b : 'a farray.
-  b = b[j<-v]->
-  b[j]= v
-

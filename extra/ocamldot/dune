@@ -1,7 +1,0 @@
-
-(ocamllex ocamldot)
-
-(executable
-  (name ocamldot)
-  (modules Ocamldot)
-)

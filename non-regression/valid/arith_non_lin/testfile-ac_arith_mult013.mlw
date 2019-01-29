@@ -1,8 +1,0 @@
-
-
-logic x,y,z:int
-
-goal g13 : 
-  z * y * x = 20 ->
-  x * y = 4 ->
-  z = 5

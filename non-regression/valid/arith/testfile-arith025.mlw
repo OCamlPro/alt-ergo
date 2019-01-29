@@ -1,5 +1,0 @@
-
-logic a:int
-
-goal g25: a=0 -> 0<=a-1 -> false
-

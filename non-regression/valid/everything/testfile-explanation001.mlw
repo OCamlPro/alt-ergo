@@ -1,5 +1,0 @@
-
-logic a,b : prop
-
-goal g1 : a -> b -> (a and b)
-

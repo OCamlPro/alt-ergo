@@ -1,3 +1,0 @@
-
-logic A,B,C,P,Q,R,S: prop
-goal g18: not (((A -> B) and A) -> B)

@@ -1,4 +1,0 @@
-
-logic x,y:int
-goal g2: 4 <= x <= 9 -> 2 <= x / 2 <= 4
-

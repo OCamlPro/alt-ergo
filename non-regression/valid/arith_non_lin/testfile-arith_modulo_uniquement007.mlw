@@ -1,2 +1,0 @@
-
-goal g7: forall a,m:int. a%10 = m -> 0 <= m < 10

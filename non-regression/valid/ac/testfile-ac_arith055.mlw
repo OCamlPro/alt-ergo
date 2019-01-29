@@ -1,9 +1,0 @@
-
-logic ac f : int,int -> int
-logic a,b,c,x : int
-  
-goal g55 :
-  f(a,b) = f(a,x + f(c,f(b,a))) ->
-  x = 0 -> 
-  f(a,b) = f(a,f(c,f(a,b)))
-

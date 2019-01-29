@@ -1,3 +1,0 @@
-
-logic A,B,C,P,Q,R,S: prop
-goal g25: not ((not A -> A) -> A)

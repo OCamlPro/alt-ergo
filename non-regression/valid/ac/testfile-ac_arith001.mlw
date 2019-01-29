@@ -1,3 +1,0 @@
-
-logic ac f : int,int -> int
-goal g1 : forall a,b,c,x:int. c = a + x  -> a = f(c,b) -> x=1 ->  f(c,b)=c-1

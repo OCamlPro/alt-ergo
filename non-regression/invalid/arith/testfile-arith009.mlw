@@ -1,2 +1,0 @@
-
-goal g9: forall x:int. 0<=x<=1 -> x=0

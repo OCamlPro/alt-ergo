@@ -1,6 +1,0 @@
-
-type t = A | B | C
-
-goal g1: 
-  A = B or B = C or A = C 
-    

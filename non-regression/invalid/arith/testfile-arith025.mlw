@@ -1,3 +1,0 @@
-
-goal g8 : forall x:real. x < 3.0 -> x <= 2.0
-

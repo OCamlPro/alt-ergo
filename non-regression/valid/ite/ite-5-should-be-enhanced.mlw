@@ -1,3 +1,0 @@
-(* should not abstract true in this case *)
-goal g:
- 1 = if true then 1 else 2

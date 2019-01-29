@@ -1,6 +1,0 @@
-logic X, Y : real
-
-goal g :
-  Y > 0. ->
-  X*Y >= 0. ->
-  X > 0. (* a conter-example is obaitained when x/y = 0 *)

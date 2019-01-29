@@ -1,4 +1,0 @@
-
-goal g2 : 
-     (exists x:int. x=2 and x=3)
-

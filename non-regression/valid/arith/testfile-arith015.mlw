@@ -1,2 +1,0 @@
-
-goal g15: forall x:int. x<0 -> -x >=0

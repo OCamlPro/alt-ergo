@@ -1,3 +1,0 @@
-
-logic A,B,C,P,Q,R,S: prop
-goal g8: ((A -> B) and (B -> C)) -> (A -> C)

@@ -1,3 +1,0 @@
-
-logic A,B : prop
-goal g5: (A -> B) -> (B -> A)

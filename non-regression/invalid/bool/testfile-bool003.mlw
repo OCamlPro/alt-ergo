@@ -1,3 +1,0 @@
-
-logic A,B : prop
-goal g3: (A or B) and not A and not B

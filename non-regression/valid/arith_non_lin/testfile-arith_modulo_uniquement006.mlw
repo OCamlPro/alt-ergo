@@ -1,2 +1,0 @@
-
-goal g6: forall a:int. a % 10 = 12 -> false

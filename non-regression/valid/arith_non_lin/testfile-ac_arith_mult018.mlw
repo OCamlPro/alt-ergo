@@ -1,4 +1,0 @@
-
-logic x:int
-goal g18: -1<= x <= 1 -> x*x <> 1 -> x = 0
-

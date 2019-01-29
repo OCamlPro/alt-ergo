@@ -1,6 +1,0 @@
-goal g5: forall x,y,z:int.
-  y = 6 ->
-  x = 4 ->
-  x*x*x * y*y * z = 23040 ->
-  z = 10
-

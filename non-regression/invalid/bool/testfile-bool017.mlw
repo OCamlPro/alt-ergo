@@ -1,3 +1,0 @@
-
-logic p,q,r : prop
-goal g17: (not ((p -> q) and (p and q -> r) -> (p -> r)))

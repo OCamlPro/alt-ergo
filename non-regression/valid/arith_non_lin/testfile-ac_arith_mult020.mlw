@@ -1,4 +1,0 @@
-
-logic x:int
-goal g20 :  x*x*x*x <= 16 -> -2 <= x <= 2
-

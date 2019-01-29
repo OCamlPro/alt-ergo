@@ -1,7 +1,0 @@
-
-logic f : 'a -> bitv[2]
-
-goal g11: forall x:bitv[3]. forall y:bitv[2]. forall z:'a.
-          x=y@[|1|] -> f(z)=y -> f(z)^{0,0} = x^{0,0}
-
-

@@ -1,2 +1,0 @@
-
-goal g9: forall x,y:bitv[2]. x@y=y@x -> x^{0,0} = y^{0,0}

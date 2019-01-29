@@ -1,3 +1,0 @@
-
-logic A,B,C,P,Q,R,S: prop
-goal g5: (A -> B)-> (not B -> not A)

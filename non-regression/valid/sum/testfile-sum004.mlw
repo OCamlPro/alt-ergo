@@ -1,7 +1,0 @@
-
-type t = A | B | C
-
-goal g4:
-  forall x:t.
-  x <> A -> x <> B -> x = C
-

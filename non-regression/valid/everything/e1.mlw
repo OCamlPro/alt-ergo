@@ -1,5 +1,0 @@
-logic R : int -> prop
-
-axiom a: forall x: int[R(x)]. not R(x)
-
-goal g: R(1) -> false

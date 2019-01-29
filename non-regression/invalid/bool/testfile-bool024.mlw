@@ -1,3 +1,0 @@
-
-logic A,B,C,P,Q,R,S: prop
-goal g24: not (((A or B) and (A or C)) -> (A or (B and C)))

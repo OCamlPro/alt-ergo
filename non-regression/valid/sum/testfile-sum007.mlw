@@ -1,7 +1,0 @@
-
-
-type t = A | B | C
-
-goal g7:
-  forall x:t. (x <> A or x <> B)
-

@@ -1,3 +1,0 @@
-
-
-goal g2: forall x:int. forall y:real. x<>y

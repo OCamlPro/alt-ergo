@@ -1,4 +1,0 @@
-
-goal g24: forall x,y:int. x= -1 -> x % (-32) = y -> false
-
-

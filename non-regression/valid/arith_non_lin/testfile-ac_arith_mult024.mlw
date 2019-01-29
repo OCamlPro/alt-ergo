@@ -1,4 +1,0 @@
-
-logic x:int
-goal g24 : x*x*x = -1000 -> x = -10
-

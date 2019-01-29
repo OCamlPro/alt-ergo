@@ -1,4 +1,0 @@
-goal g:
- let x = 1 in
- let y = x+3 in
- x + y < (let z = 6 in ((z+z) / 2))

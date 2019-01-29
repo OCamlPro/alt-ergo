@@ -1,2 +1,0 @@
-
-goal g0: forall a: int. a > 0 -> a / 2 < a
