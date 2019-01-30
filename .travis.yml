@@ -133,5 +133,5 @@ jobs:
         github-token: $GITHUB_TOKEN
         keep-history: true
         on:
-          branches: next
+          branch: next
 
