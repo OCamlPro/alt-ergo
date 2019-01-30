@@ -62,8 +62,8 @@ before_cache:
 # build the doc and push it to gh-pages
 stages:
   - pre-check
-  - documentation
   - test
+  - documentation
 
 jobs:
   include:
