@@ -1,4 +1,8 @@
-language: ocaml
+# ocaml is not a recognized language by travis, and using it
+# make travis default to ruby, whose setup is a bit time-consuming.
+# Hence, we currently use c given it's the most lightweight
+# in terms of language setup for the VMs.
+language: c
 # Cache the opam directory to avoid re-compiling the compiler
 cache:
   directories:
