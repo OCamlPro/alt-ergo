@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ve
 
 # === deploy_doc ===
 #
@@ -21,8 +21,8 @@ cd $git_repo
 (cd extra && asciidoc index.txt)
 
 # Checkout gh-pages
+git fetch origin +gh-pages:gh-pages
 git checkout gh-pages
-git pull origin gh-pages
 
 # Create necessary directories if they do not exists
 mkdir -p ./$VERSION
