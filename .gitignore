@@ -16,6 +16,9 @@ sources/alt-ergo
 sources/altgr-ergo
 extra/ocamldot/_build
 
+# Generated documentation files
+extra/index.html
+
 # Generated release files
 public-release
 

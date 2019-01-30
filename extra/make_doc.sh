@@ -22,7 +22,7 @@ cd $git_repo
 
 # Checkout gh-pages
 git checkout gh-pages
-git pull
+git pull origin gh-pages
 
 # Create necessary directories if they do not exists
 mkdir -p ./$VERSION
