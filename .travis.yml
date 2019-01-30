@@ -125,7 +125,7 @@ jobs:
     - stage: "documentation"
       name: "doc build && dev upload"
       script: extra/travis_doc_test.sh
-      before_deploy: ./extra/deploy_doc dev
+      before_deploy: ./extra/deploy_doc.sh dev
       env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
       deploy:
         provider: pages
