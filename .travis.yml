@@ -1,10 +1,4 @@
 language: ocaml
-# restrict branches to test
-branches:
-  only:
-  - master
-  - next
-  - next+
 # Cache the opam directory to avoid re-compiling the compiler
 cache:
   directories:
@@ -64,8 +58,8 @@ before_cache:
 # build the doc and push it to gh-pages
 stages:
   - pre-check
-  - test
   - documentation
+  - test
 
 jobs:
   include:
@@ -139,7 +133,5 @@ jobs:
         github-token: $GITHUB_TOKEN
         keep-history: true
         on:
-          branches:
-            only:
-              -next
+          branches: next
 
