@@ -1,4 +1,8 @@
 
+(documentation
+  (package alt-ergo-parsers)
+)
+
 (ocamllex (modules why_lexer))
 
 (menhir

@@ -150,7 +150,7 @@ uninstall:
 # ========================
 
 # Build the documentation
-doc:
+doc: gen
 	$(DUNE) build $(DUNE_FLAGS) @doc
 
 # Open the generated html doc in browser
@@ -241,7 +241,7 @@ ocamldot-clean:
 	cd ../extra/ocamldot && $(MAKE) clean
 
 # Cleanup all makefile-related files
-makefile-distclean:
+makefile-distclean: generated-clean
 	rm -rf Makefile.config
 
 # Clenaup release generated files and dirs

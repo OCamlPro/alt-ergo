@@ -16,33 +16,17 @@ addons:
       - avsm
     packages:
       - opam>=2
+      - asciidoc
       - libgmp-dev
       - libgtksourceview2.0-dev
       - zlib1g-dev
       - libgtk2.0-dev
       - libexpat1-dev
 
-# Lists of things to test, using env variables
+# Global environment variables
 env:
   global:
     - LOCAL_INSTALL_DIR=${HOME}/local
-  matrix:
-    # Check style and indentation
-    - TO_TEST=style OPAMBUILDTEST=false OCAML_VERSION=4.04.2
-    - TO_TEST=indent OPAMBUILDTEST=false OCAML_VERSION=4.04.2
-    # Check that the package installs correctly with and without its test dependencies using opam
-    - TO_TEST=install OPAMBUILDTEST=false OCAML_VERSION=4.04.2
-    - TO_TEST=install OPAMBUILDTEST=true OCAML_VERSION=4.04.2
-    # Check build and unit tests
-    # NOTE: testing needs OPAMBUILDTEST=true so that test deps are installed
-    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.04.2
-    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.04.2+flambda
-    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.05.0
-    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.05.0+flambda
-    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.06.1
-    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.06.1+flambda
-    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.07.0
-    - TO_TEST=makefile OPAMBUILDTEST=true OCAML_VERSION=4.07.0+flambda
 
 # Prepare the opam switch and pin some needed repos
 before_install:
@@ -56,11 +40,11 @@ before_install:
   # Init opam, and the default switch with the right ocaml version
   - opam init --disable-sandboxing --compiler=${OCAML_VERSION}
   - eval `opam config env`
-  # Set the verbose option *after* compiling the compiler,
-  # else the log oveflows
+  # Install odoc & ocp-indent
+  - opam install odoc ocp-indent.1.6.1
+  # Set the verbose option *after* compiling the compiler
+  # and installing odoc, else the log oveflows
   - export OPAMVERBOSE=1
-  # Pin psm2
-  - if [ "$TO_TEST" = "indent" ]; then opam install ocp-indent.1.6.1; fi
 
 # Install dependencies
 install:
@@ -68,17 +52,91 @@ install:
   - opam install --deps-only alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo ||
     ( opam update && opam install --deps-only alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo )
 
-# Use the TO_TEST env variable to decide what script to run
-script:
-  # Style and indent tests
-  - if [ "$TO_TEST" = "style" ]; then ./extra/pre-merge-style-checker.sh; fi
-  - if [ "$TO_TEST" = "indent" ]; then ./extra/check_indentation.sh; fi
-  # Installation tests (using opam)
-  - if [ "$TO_TEST" = "install" ]; then opam install alt-ergo-lib alt-ergo altgr-ergo; fi
-  - if [ "$TO_TEST" = "install" ]; then ./extra/non_regression.sh; fi
-  - if [ "$TO_TEST" = "install" ]; then ./extra/test_lib.sh `ocamlfind query alt-ergo-lib`; fi
-  # Makefile tests
-  - if [ "$TO_TEST" = "makefile" ]; then ./extra/check_makefile.sh ${LOCAL_INSTALL_DIR}; fi
-  - if [ "$TO_TEST" = "makefile" ]; then ./extra/non_regression.sh; fi
-  - if [ "$TO_TEST" = "makefile" ]; then ./extra/test_lib.sh ${LOCAL_INSTALL_DIR}/lib/alt-ergo-lib; fi
+# Remove source pins before the cache is updated, to avoid
+# having the alt-ergo sources in the cache
+before_cache:
+  - opam uninstall alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+  - opam pin remove alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+
+
+# Order stages to test style and indent first,
+# then run non-regression tests, and finally,
+# build the doc and push it to gh-pages
+stages:
+  - pre-check
+  - test
+  - documentation
+
+jobs:
+  include:
+    # === Pre-check stage ===
+    - stage: "pre-check"
+    # style check
+      name: "Style check"
+      script: extra/pre-merge-style-checker.sh
+      env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
+    # indentation check
+    - stage: "pre-check"
+      name: "Indent check"
+      script: extra/check_indentation.sh
+      env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
+
+    # === Build Tests ===
+    # Installation (no tests)
+    - stage: "test"
+      name: "install (no tests)"
+      script: extra/travis_install_test.sh
+      env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
+    # Installation (with tests)
+    - stage: "test"
+      name: "install (with tests)"
+      script: extra/travis_install_test.sh
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.04.2
+    # Non-regression tests
+    - stage: "test"
+      name: "non-regression (4.04.2)"
+      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.04.2
+    - stage: "test"
+      name: "non-regression (4.04.2+flambda)"
+      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.04.2+flambda
+    - stage: "test"
+      name: "non-regression (4.05.0)"
+      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.05.0
+    - stage: "test"
+      name: "non-regression (4.05.0+flambda)"
+      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.05.0+flambda
+    - stage: "test"
+      name: "non-regression (4.06.1)"
+      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.06.1
+    - stage: "test"
+      name: "non-regression (4.06.1+flambda)"
+      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.06.1+flambda
+    - stage: "test"
+      name: "non-regression (4.07.0)"
+      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.07.0
+    - stage: "test"
+      name: "non-regression (4.07.0+flambda)"
+      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.07.0+flambda
+
+    # === Doc stage ===
+    # Next branch (upload doc in gh-pages)
+    - stage: "documentation"
+      name: "doc build && dev upload"
+      script: extra/travis_doc_test.sh
+      after_sucess: ./extra/deploy_doc dev
+      env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
+      if: branch = next
+      deploy:
+        provider: pages
+        skip-cleanup: true
+        github-token: $GITHUB_TOKEN
+        keep-history: true
 

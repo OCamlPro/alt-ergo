@@ -17,6 +17,8 @@
     To do so, an input method actually generates the typed
     representation of the input. *)
 
+(** {3 Input method} *)
+
 exception Method_not_registered of string
 (** Exceptions raised when trying to lookup an input method
     that has not been registered. *)
@@ -27,16 +29,11 @@ exception Method_not_registered of string
     is currently only used in the GUI. *)
 module type S = sig
 
-  (** {5 Parsing} *)
-
   type file
   (** The type of a parsed file (including preludes). *)
 
   val parse_file : filename:string -> preludes:string list -> file
   (** Parse a file (and some preludes). *)
-
-
-  (** {5 Typechecking} *)
 
   type env
   (** The type of local environments used for typechecking. *)
