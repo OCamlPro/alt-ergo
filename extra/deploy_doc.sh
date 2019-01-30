@@ -28,6 +28,6 @@ git checkout gh-pages
 mkdir -p ./$VERSION
 
 # Copy doc to the right locations
-cp extra/index.html ./
+cp extra/index.adoc ./
 cp -r sources/_build/default/_doc/_html/* ./$VERSION/
 
