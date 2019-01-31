@@ -29,16 +29,21 @@ exception Method_not_registered of string
     is currently only used in the GUI. *)
 module type S = sig
 
-  type file
-  (** The type of a parsed file (including preludes). *)
+  (** {5 Parsing} *)
 
-  val parse_file : filename:string -> preludes:string list -> file
+  type parsed
+  (** The type of a parsed statement. *)
+
+  val parse_files : filename:string -> preludes:string list -> parsed Seq.t
   (** Parse a file (and some preludes). *)
 
   type env
-  (** The type of local environments used for typechecking. *)
+  (** Global typing environment *)
 
-  val type_file : file -> (int Typed.atdecl * env) list * env
+  val empty_env : env
+  (** The empty/initial environment *)
+
+  val type_parsed : env -> parsed -> int Typed.atdecl list * env
   (** Parse and typecheck some input file, together with some prelude files. *)
 
 end

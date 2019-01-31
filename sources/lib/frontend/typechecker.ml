@@ -1756,14 +1756,6 @@ let rec intro_hypothesis env valid_mode f =
     let f_env = elim_toplevel_forall env valid_mode f in
     [] , f_env
 
-let fresh_hypothesis_name =
-  let cpt = ref 0 in
-  fun sort ->
-    incr cpt;
-    match sort with
-    | Thm -> "@H"^(string_of_int !cpt)
-    | _ -> "@L"^(string_of_int !cpt)
-
 let fresh_check_name =
   let cpt = ref 0 in fun () -> incr cpt; "check_"^(string_of_int !cpt)
 
@@ -2246,12 +2238,15 @@ let rec type_decl (acc, env) d =
          type_user_defined_type_body ~is_recursive:true env acc ty_d)
       (acc, env) are_rec
 
+let type_parsed env d =
+  let l, env' = type_decl ([], env) d in
+  List.rev_map fst l, env'
 
 let type_file ld =
   let env = Env.empty in
   try
     let ltd, env =
-      List.fold_left (fun acc d -> type_decl acc d) ([], env) ld
+      List.fold_left type_decl ([], env) ld
     in
     List.rev ltd, env
   with
@@ -2260,11 +2255,6 @@ let type_file ld =
     eprintf "typing error: %a\n@." Errors.report e;
     exit 1
 
-let is_local_hyp s =
-  try Pervasives.(=) (String.sub s 0 2) "@L" with Invalid_argument _ -> false
-
-let is_global_hyp s =
-  try Pervasives.(=) (String.sub s 0 2) "@H" with Invalid_argument _ -> false
 
 let split_goals_aux f l =
   let _, _, _, ret =
@@ -2312,4 +2302,6 @@ let type_expr env vars t =
   type_term env t
 
 type env = Env.t
+
+let empty_env = Env.empty
 

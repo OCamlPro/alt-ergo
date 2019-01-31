@@ -75,6 +75,9 @@ type matching_env =
 val print_list:
   sep:string ->
   pp:(Format.formatter -> 'a -> unit) ->
-  Format.formatter ->
-  'a list ->
-  unit
+  Format.formatter -> 'a list -> unit
+
+val print_list_pp:
+  sep:(Format.formatter -> unit -> unit) ->
+  pp:(Format.formatter -> 'a -> unit) ->
+  Format.formatter -> 'a list -> unit

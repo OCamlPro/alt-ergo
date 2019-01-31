@@ -15,15 +15,19 @@ module type S = sig
 
   (* Parsing *)
 
-  type file
+  type parsed
 
-  val parse_file : filename:string -> preludes:string list -> file
+  val parse_files :
+    filename:string -> preludes:string list -> parsed Seq.t
 
   (* Typechecking *)
 
   type env
 
-  val type_file : file -> (int Typed.atdecl * env) list * env
+  val empty_env : env
+
+  val type_parsed : env -> parsed -> int Typed.atdecl list * env
+
 end
 
 let input_methods = ref []
