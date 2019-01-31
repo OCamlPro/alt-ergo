@@ -19,7 +19,7 @@ cd $git_repo
 (cd sources && make doc)
 
 # Generate version index page
-(cd extra && asciidoc index.txt)
+(cd extra && asciidoc index.adoc)
 
 # Checkout gh-pages
 git fetch origin +gh-pages:gh-pages
@@ -29,6 +29,6 @@ git checkout gh-pages
 mkdir -p ./$VERSION
 
 # Copy doc to the right locations
-cp extra/index.adoc ./
+cp extra/index.html ./
 cp -r sources/_build/default/_doc/_html/* ./$VERSION/
 
