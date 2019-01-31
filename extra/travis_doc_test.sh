@@ -25,4 +25,9 @@ make doc | tee $LOGFILE
 echo "Checking for warnings or errors during documentation building..."
 ! grep File $LOGFILE
 
+# remove artifact log file
+rm -f $LOGFILE
+
+# exit nicely
 echo "All good, ^^"
+

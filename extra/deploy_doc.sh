@@ -14,7 +14,8 @@ VERSION=$1
 git_repo=`git rev-parse --show-toplevel`
 cd $git_repo
 
-# Generate documentation
+# Generate documentation, or rather check that it
+# has correctly been built.
 (cd sources && make doc)
 
 # Generate version index page
