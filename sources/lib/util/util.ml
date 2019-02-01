@@ -40,6 +40,7 @@ type sat_solver =
 
 type theories_extensions =
   | Sum
+  | Adt
   | Arrays
   | Records
   | Bitv
@@ -54,6 +55,7 @@ type axiom_kind = Default | Propagator
 let th_ext_of_string ext =
   match ext with
   | "Sum" -> Some Sum
+  | "Adt" -> Some Adt
   | "Arrays" -> Some Arrays
   | "Records" -> Some Records
   | "Bitv" -> Some Bitv
@@ -67,6 +69,7 @@ let th_ext_of_string ext =
 let string_of_th_ext ext =
   match ext with
   | Sum -> "Sum"
+  | Adt -> "Adt"
   | Arrays -> "Arrays"
   | Records -> "Records"
   | Bitv -> "Bitv"
