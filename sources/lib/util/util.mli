@@ -38,6 +38,7 @@ type sat_solver =
 
 type theories_extensions =
   | Sum
+  | Adt
   | Arrays
   | Records
   | Bitv

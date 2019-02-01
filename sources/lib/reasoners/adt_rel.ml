@@ -128,8 +128,11 @@ let print_model _ _ _ = ()
 let new_terms env = env.new_terms
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
-let assume_th_elt _ _ _ =
-  assert false
+let assume_th_elt t th_elt _ =
+  match th_elt.Expr.extends with
+  | Util.Adt ->
+    failwith "This Theory does not support theories extension"
+  | _ -> t
 
 let seen_tester r hs env =
   try HSS.mem hs (MX.find r env.seen_testers)
