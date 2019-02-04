@@ -379,7 +379,10 @@ module Safe = struct
      These are mainly there because alt-ergo distinguishes
      terms, atoms, and formulas, whereas some languages
      (and thus the typechecker) do not make this difference
-     (for instance smtlib) *)
+     (for instance smtlib). Additionally, even though formulas
+     can occur in terms (through the TTForm constructor),
+     it is more convenient to have this wrapper in order
+     to safely go from terms to formulas. *)
   type t =
     | Term of int atterm
     | Atom of int atatom
@@ -454,6 +457,8 @@ module Safe = struct
   (* Auxiliary functions. *)
 
   let promote_term = function
+    | Term { c = { tt_desc = TTform f; _ } ; _ } ->
+      Form (f, [])
     | ((Term t) as e) when Ty.equal Ty.Safe.prop (ty e) ->
       Atom (mk (TApred (t, false)))
     | e -> e
@@ -465,7 +470,14 @@ module Safe = struct
   let expect_term = function
     | Term t -> t
     | Atom { c = TApred (t, false); _ } -> t
-    | _ -> raise Term_expected
+    | a ->
+      begin match promote_atom a with
+        | Form (f, []) ->
+          mk { tt_desc = TTform f; tt_ty = Ty.Safe.prop; }
+        | Form (_, _) ->
+          raise Deep_type_quantification
+        | _ -> assert false
+      end
 
   let expect_formula t =
     match promote_atom @@ promote_term t with
@@ -695,9 +707,7 @@ module Safe = struct
     | Atom _ -> assert false
     | Term t ->
       let l' = List.map (fun (v, e') ->
-          match e' with
-          | Term t' -> v.Var.var, t'
-          | _ -> raise Formula_in_term_let
+          v.Var.var, expect_term e'
         ) l in
       Term (mk @@ { tt_desc = TTlet (l', t); tt_ty = t.c.tt_ty})
     | Form (f, []) ->

@@ -7,7 +7,7 @@
   (name         Main_text)
   (public_name  alt-ergo)
   (package      alt-ergo)
-  (libraries    alt-ergo-lib alt-ergo-parsers)
+  (libraries    alt-ergo-lib alt-ergo-parsers dolmen dolmen_type)
   (link_flags   (-linkall))
   (modules      Main_input Main_text)
 )
