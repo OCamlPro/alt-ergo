@@ -683,6 +683,9 @@ module Safe = struct
 
     let mk _ = fresh_var ()
 
+    let print fmt { v ; _ } =
+      fprintf fmt "'a_%d" v
+
   end
 
   module Const = struct
@@ -710,6 +713,11 @@ module Safe = struct
 
     let tag _ _ _ = () (* Used for dolmen compatibility *)
 
+    let base = mk "$i" 0
+
+    let print fmt { symbol; _ } =
+      Format.fprintf fmt "%s" (Hstring.view symbol)
+
   end
 
   exception Wrong_arity of Const.t * int
@@ -725,6 +733,14 @@ module Safe = struct
       Text (args, Const.symbol c)
     else
       raise (Wrong_arity (c, m))
+
+  (* ugly thing to satisfy the expected type in
+     typed statements TTypeDecl constructor *)
+  let apply_empty c =
+    let l = Array.to_list (
+        Array.init (Const.arity c) (fun _ -> fresh_tvar ())
+      ) in
+    Text (l, Const.symbol c)
 
   let tag _ _ _ = () (* dolmen compatibility *)
 

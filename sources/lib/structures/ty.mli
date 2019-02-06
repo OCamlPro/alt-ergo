@@ -298,6 +298,9 @@ module Safe : sig
     val compare : t -> t -> int
     (** Comparison function. *)
 
+    val print : Format.formatter -> t -> unit
+    (** Printer function *)
+
     val mk : string -> t
     (** Create a new type variable with the given name.
         Currently the name is ignored and a fresh variable
@@ -320,6 +323,9 @@ module Safe : sig
     val compare : t -> t -> int
     (** Comparison function. *)
 
+    val print : Format.formatter -> t -> unit
+    (** Printer function *)
+
     val arity : t -> int
     (** Return the arity of a type const*)
 
@@ -329,6 +335,9 @@ module Safe : sig
     val tag : t -> _ -> _ -> unit
     (** Tag a variable.
         Currently a no-op, there for compatibility with dolmen. *)
+
+    val base : t
+    (** Some pre-existing type (corresponds to tptp's $i) *)
 
   end
 
@@ -341,6 +350,10 @@ module Safe : sig
   val apply : Const.t -> t list -> t
   (** Application for types.
       Ensures that the arity of the given type constructor is respected. *)
+
+  val apply_empty : Const.t -> t
+  (** Generate an open type, which is the result of aplying the constructor
+      to fresh type variables. *)
 
   val tag : t -> _ -> _ -> unit
   (** Annotate the given type with the given tag and value.

@@ -391,7 +391,15 @@ module Safe = struct
        quantified type variables, so that non top-level type
        variable quantification can be rejected as invalid. *)
 
-  (* TODO: implement hash, compare and equal on typed terms *)
+  let print fmt = function
+    | Term t -> print_term fmt t
+    | Atom a -> print_atom fmt a
+    | Form (f, []) -> print_formula fmt f
+    | Form (f, l) ->
+      Format.fprintf fmt "(%a) %a"
+        (Util.print_list_pp
+           ~sep:Format.pp_print_space ~pp:Ty.Safe.Var.print) l
+        print_formula f
 
   let ty = function
     | Term { c = { tt_ty ; _ }; _ } -> tt_ty
@@ -411,6 +419,9 @@ module Safe = struct
       Symbols.compare v.var v'.var
 
     let equal v v' = compare v v' = 0
+
+    let print fmt { var; _ } =
+      Format.fprintf fmt "%s" (Symbols.to_string var)
 
     let ty { ty; _ } = ty
 
@@ -434,16 +445,35 @@ module Safe = struct
     let compare c c' =
       Symbols.compare c.symbol c'.symbol
 
+    let print fmt { symbol; _ } =
+      Format.fprintf fmt "%s" (Symbols.to_string symbol)
+
     let equal c c' = compare c c' = 0
 
     let arity c =
       List.length c.vars,
       List.length c.args
 
-    let mk symbol vars args ret =
+    let make symbol vars args ret =
       { symbol; vars; args; ret; }
 
-    (* let tag _ _ _ = () *)
+    let mk name vars args ret =
+      make (Symbols.name name) vars args ret
+
+    let tag _ _ _ = ()
+
+    let name c = Symbols.to_string c.symbol
+
+    let tlogic_type c =
+      if Ty.Safe.equal Ty.Safe.prop c.ret
+      then TPredicate c.args
+      else TFunction (c.args, c.ret)
+
+    let _true =
+      make Symbols.True [] [] Ty.Safe.prop
+
+    let _false =
+      make Symbols.False [] [] Ty.Safe.prop
 
   end
 
@@ -485,9 +515,15 @@ module Safe = struct
     | Form (_, _) -> raise Deep_type_quantification
     | _ -> raise Formula_expected
 
+  let expect_prop t =
+    match promote_atom @@ promote_term t with
+    | Form (f, l) -> l, f
+    | _ -> raise Formula_expected
 
   (* Smart constructors:
      Wrappers to build term while checking the well-typedness *)
+  let of_var v =
+    Term (mk { tt_desc = TTvar v.Var.var; tt_ty = v.Var.ty })
 
   let apply c tys args =
     (* check arity *)
@@ -722,6 +758,9 @@ module Safe = struct
       let fv_l = Symbols.Map.fold (fun v ty acc -> (v, ty) :: acc) fv_m [] in
       Form (mk @@ TFlet (fv_l, l', f), [])
     | Form (_, _) -> raise Deep_type_quantification
+
+  (* for compatibility purposes with dolmen *)
+  let tag _ _ _ = ()
 
 end
 

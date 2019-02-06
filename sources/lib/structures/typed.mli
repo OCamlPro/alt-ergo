@@ -336,6 +336,9 @@ module Safe : sig
         type variables, in order to disallow deep type quantification. *)
   (** An expression is either a term, an atom, or a formula. *)
 
+  val print : Format.formatter -> t -> unit
+  (** Printer function. *)
+
   val ty : t -> Ty.t
   (** Return the type of the given expression. *)
 
@@ -352,6 +355,9 @@ module Safe : sig
 
     val compare : t -> t -> int
     (** comparison function *)
+
+    val print : Format.formatter -> t -> unit
+    (** Printer function *)
 
     val mk : string -> Ty.t -> t
     (** Create a typed variable from a name and type. *)
@@ -378,17 +384,35 @@ module Safe : sig
     val compare : t -> t -> int
     (** comparison function *)
 
+    val print : Format.formatter -> t -> unit
+    (** Printer function *)
+
     val arity : t -> int * int
     (** Return the expected number of arguments of the constants.
         The pair contains first the number of expected type
         arguments (for polymorphic functions), and then the number
         of reguler (or term) arguments. *)
 
-    val mk : Symbols.t -> Ty.tvar list -> Ty.t list -> Ty.t -> t
+    val mk : string -> Ty.tvar list -> Ty.t list -> Ty.t -> t
     (** Create a typed funciton symbol. Takes as arguments the
         symbol of the function, the type variables that occur in its
         type, the list of argument's expected types, and the function
         return type. *)
+
+    val tag : t -> _ -> _ -> unit
+    (** Noop, there for compatibility with Dolmen's interface. *)
+
+    val name : t -> string
+    (** Name of the constant. *)
+
+    val tlogic_type : t -> tlogic_type
+    (** Generate the logic type of the constant symbol. *)
+
+    val _true : t
+    (** The [true] constant *)
+
+    val _false : t
+    (** The [false] constant *)
 
   end
 
@@ -424,7 +448,17 @@ module Safe : sig
       arguments, but these number do not match the arity of [c],
       as defined by {! Const.arity}. *)
 
+
+  (** {3 Expression inspection} *)
+
+  val expect_prop : t -> Ty.Safe.Var.t list * int atform
+  (** Unwrap a formula from an expression. *)
+
+
   (** {3 Expression building} *)
+
+  val of_var : Var.t -> t
+  (** Create an expression out of a variable. *)
 
   val apply : Const.t -> Ty.t list -> t list -> t
   (** Apply the given typed funciton symbol to the list of
@@ -521,5 +555,8 @@ module Safe : sig
   (** Let-binding.
       @raise Deep_type_quantification
   *)
+
+  val tag : t -> _ -> _ -> unit
+  (** Noop, there for compatibility with Dolmen's interface. *)
 
 end
