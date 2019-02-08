@@ -5,14 +5,19 @@
   LablGtk2 and the widget GSourceView2 to compile the GUI. You may
   need superuser permissions to perform the installation.
 
-#### Common Steps
+#### Configuration
 
-  1. Configure with "./configure" to generate Makefile.config
+  1. Configure with "./configure" to generate Makefile.config,
+  in order to build everything (lib, parsers, binaries, and GUI).
 
   2. Alternatively, you can configure with "./configure -prefix
   some-absolute-path-prefix" to add a prefix for installation
   directories. You may also want to use "make gen && cat lib/util/config.ml"
   to see directories where things will be installed.
+
+  3. You can use "./configure <package>" to select which packeg you
+  can to build. "<package>" may be one of: alt-ergo-lib, alt-ergo-parsers,
+  alt-ergo, altgr-ergo.
 
 The steps below will build and install native or bytecode binaries
 depending on whether ocamlopt is installed or only ocamlc is detected.
@@ -25,17 +30,29 @@ depending on whether ocamlopt is installed or only ocamlc is detected.
 
   3. Uninstall with "make uninstall"
 
+#### Alt-Ergo library
+
+  1. Compile with "make alt-ergo-lib"
+
+  2. Install with "make install-lib"
+
+#### Alt-Ergo parsers
+
+  1. Compile with "make alt-ergo-parsers"
+
+  2. Install with "make install-parsers"
+
 #### Alt-Ergo binary
 
-  1. Compile with "make bin"
+  1. Compile with "make alt-ergo"
 
-  2. Install with "make install"
+  2. Install with "make install-bin"
 
 #### AltGr-Ergo binary
 
-  1. Compile with "make gui"
+  1. Compile with "make altgr-ergo"
 
-  2. Install with "make install"
+  2. Install with "make install-gui"
 
 
 The steps below will build and install additional plugins (extension
@@ -49,11 +66,13 @@ The steps below will build and install additional plugins (extension
 
   1. Compile with "make fm-simplex"
 
-  2. Install with "make install"
+  2. The Fm-Simplex plugin is currently built and installed
+  at the same time as the alt-ergo binary.
 
 #### The profiler plugin
 
 This plugin has been "inlined" in Alt-Ergo sources.
+
 
 ## Usage
 

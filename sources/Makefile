@@ -48,27 +48,25 @@ clean: generated-clean dune-clean ocamldot-clean
 distclean: makefile-distclean release-distclean
 
 # declare these aliases as phony
-.PHONY: world gen conf clean distclean
+.PHONY: world gen conf clean distclean alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
+# =================
+# Build rules (dev)
+# =================
 
-
-# ===========
-# Build rules
-# ===========
-
-# Build the alt-ergo lib
+# Build the alt-ergo lib (dev)
 lib: gen
 	$(DUNE) build $(DUNE_FLAGS) \
 		lib/AltErgoLib.cma \
 		lib/AltErgoLib.cmxa \
 		lib/AltErgoLib.cmxs
 
-# Build the cli/text alt-ergo bin
+# Build the cli/text alt-ergo bin (dev)
 bin: gen
 	$(DUNE) build $(DUNE_FLAGS) _build/install/default/bin/alt-ergo
 	ln -sf _build/install/default/bin/alt-ergo alt-ergo
 
-# Build the GUI
+# Build the GUI (dev)
 gui: gen
 	$(DUNE) build $(DUNE_FLAGS) _build/install/default/bin/altgr-ergo
 	ln -sf _build/install/default/bin/altgr-ergo altgr-ergo
@@ -108,6 +106,29 @@ all: gen
 
 
 # =====================
+# Build rules (release)
+# =====================
+
+# Build the alt-ergo-lib (release)
+alt-ergo-lib:
+	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo-lib @install
+
+# Build the alt-ergo-parsers (release)
+alt-ergo-parsers:
+	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo-parsers @install
+
+# Build the cli/text alt-ergo (release)
+alt-ergo:
+	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo @install
+
+# Build the GUI (release)
+altgr-ergo:
+	$(DUNE) build $(DUNE_FLAGS) -p altgrèergo @install
+
+.PHONY: alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+
+
+# =====================
 # Non-regressions tests
 # =====================
 
@@ -142,7 +163,68 @@ uninstall:
 		--prefix $(prefix)						\
 		--libdir $(libdir)
 
+# Install only the lib
+install-lib:
+	$(DUNE) install $(DUNE_FLAGS)		\
+		--prefix $(prefix)						\
+		--libdir $(libdir)						\
+		-p alt-ergo-lib alt-ergo-lib
+
+# Uninstall the lib
+uninstall-lib:
+	$(DUNE) uninstall $(DUNE_FLAGS)	\
+		--prefix $(prefix)						\
+		--libdir $(libdir)						\
+		-p alt-ergo-lib alt-ergo-lib
+
+
+# Install only the parsers
+install-parsers:
+	$(DUNE) install $(DUNE_FLAGS)		\
+		--prefix $(prefix)						\
+		--libdir $(libdir)						\
+		-p alt-ergo-parsers alt-ergo-parsers
+
+# Uninstall the parsers
+uninstall-parsers:
+	$(DUNE) uninstall $(DUNE_FLAGS)	\
+		--prefix $(prefix)						\
+		--libdir $(libdir)						\
+		-p alt-ergo-parsers alt-ergo-parsers
+
+# Install only the binary
+install-bin:
+	$(DUNE) install $(DUNE_FLAGS)		\
+		--prefix $(prefix)						\
+		--libdir $(libdir)						\
+		-p alt-ergo alt-ergo
+
+# Uninstall the binary
+uninstall-bin:
+	$(DUNE) uninstall $(DUNE_FLAGS)	\
+		--prefix $(prefix)						\
+		--libdir $(libdir)						\
+		-p alt-ergo alt-ergo
+
+# Install only the binary
+install-gui:
+	$(DUNE) install $(DUNE_FLAGS)		\
+		--prefix $(prefix)						\
+		--libdir $(libdir)						\
+		-p altgr-ergo altgr-ergo
+
+# Uninstall the lib
+uninstall-gui:
+	$(DUNE) uninstall $(DUNE_FLAGS)	\
+		--prefix $(prefix)						\
+		--libdir $(libdir)						\
+		-p altgr-ergo altgr-ergo
+
 .PHONY: install uninstall
+.PHONY: install-lib uninstall-lib
+.PHONY: install-bin uninstall-bin
+.PHONY: install-gui uninstall-gui
+.PHONY: install-parsers uninstall-parsers
 
 
 # ========================
