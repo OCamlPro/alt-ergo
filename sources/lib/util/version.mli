@@ -26,6 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-val version : string
-val release_commit : string
-val release_date : string
+val _version : string
+val _release_commit : string
+val _release_date : string

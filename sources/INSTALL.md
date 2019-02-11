@@ -15,8 +15,8 @@
   directories. You may also want to use "make gen && cat lib/util/config.ml"
   to see directories where things will be installed.
 
-  3. You can use "./configure <package>" to select which packeg you
-  can to build. "<package>" may be one of: alt-ergo-lib, alt-ergo-parsers,
+  3. You can use "./configure <package>" to select which package you
+  want to build. "<package>" may be one of: alt-ergo-lib, alt-ergo-parsers,
   alt-ergo, altgr-ergo.
 
 The steps below will build and install native or bytecode binaries

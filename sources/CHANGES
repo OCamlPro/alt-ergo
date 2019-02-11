@@ -1,5 +1,5 @@
-version dev
-===========
+version 2.3.0, February 11, 2019
+================================
 
 * General improvements:
 
@@ -25,7 +25,7 @@ version dev
     files to accomodate multiple goals in a single file
 
   - '-proof' option becomes '-unsat-core'. Now, it shows the names of
-    the assertions / axioms / definitions used in the proof instead if
+    the assertions / axioms / definitions used in the proof instead of
     the formulas themselves
 
   - '-unsat-mode' changes output to SAT/UNSAT/Unknown rather than
@@ -36,7 +36,7 @@ version dev
 
   - added support for Algebraic Datatypes
 
-  - improve handling of let-bindings
+  - improve handling of let and if-then-else bindings
 
   - there are now 4 core solvers (default is cdcl-tableaux):
     * cdcl : CDCL solver
@@ -53,7 +53,7 @@ version dev
 * Data structures:
 
   - Term, Literal and Formula modules are now merged in a new Expr
-    module. This enable arbitrary mixing of terms and formulas as done
+    module. This enables arbitrary mixing of terms and formulas as done
     in SMT-LIB2 language
 
   - A lot of improvements in Expr module: more simplifications for

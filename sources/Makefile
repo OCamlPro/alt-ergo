@@ -293,16 +293,17 @@ FILES_DEST=../public-release/$(PUBLIC_RELEASE)/$(PUBLIC_RELEASE)
 public-release:
 	rm -rf ../public-release
 	mkdir -p $(FILES_DEST)
-	cp configure $(FILES_DEST)
+	cp configure configure.ml *.opam dune-project dune $(FILES_DEST)
 	git clean -dfx
 	cp ../License.OCamlPro ../OCamlPro-Non-Commercial-License.txt ../OCamlPro-Non-Commercial-License.pdf ../LGPL-License.txt ../Apache-License-2.0.txt $(FILES_DEST)/
 	cp ../README.md ../LICENSE.md ../COPYING.md $(FILES_DEST)/
 	cp Makefile $(FILES_DEST)/
 	cp INSTALL.md alt-ergo.opam CHANGES $(FILES_DEST)/
-	cp -rf lib tools parsers plugins preludes examples doc $(FILES_DEST)/
-	#echo "let version=\"$(PUBLIC_VERSION)\"" >> $(FILES_DEST)/lib/util/version.ml
-	echo "let release_commit = \"$(COMMIT_ID)\"" >> $(FILES_DEST)/lib/util/version.ml
-	echo "let release_date = \""`LANG=en_US; date`"\"" >> $(FILES_DEST)/lib/util/version.ml
+	cp -rf lib tools parsers preludes examples doc $(FILES_DEST)/
+	cp -rf plugins $(FILES_DEST)/ 2> /dev/null || echo "cp: skip plugins dir (not found)"
+	#echo "let _version=\"$(PUBLIC_VERSION)\"" >> $(FILES_DEST)/lib/util/version.ml
+	echo "let _release_commit = \"$(COMMIT_ID)\"" >> $(FILES_DEST)/lib/util/version.ml
+	echo "let _release_date = \""`LANG=en_US; date`"\"" >> $(FILES_DEST)/lib/util/version.ml
 	cd $(FILES_DEST)/.. && tar cfz $(PUBLIC_TARGZ) $(PUBLIC_RELEASE)
 	rm -rf $(FILES_DEST)
 
