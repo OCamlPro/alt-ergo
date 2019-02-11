@@ -187,7 +187,7 @@ let show_about () =
       ~copyright:"CNRS - INRIA - Université Paris Sud (2006-2013)\n\
                   OCamlPro (2013-2018)"
       ~license:"CeCILL-C"
-      ~version:Version.version
+      ~version:Version._version
       ~website:"http://alt-ergo.lri.fr\nhttp://alt-ergo.ocamlpro.com"
       ~title:v ()
   in

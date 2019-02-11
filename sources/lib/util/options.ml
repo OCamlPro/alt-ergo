@@ -148,12 +148,12 @@ module M = struct
       in
       Format.printf "%s@." path; exit 0
 
-  let show_version () = Format.printf "%s@." Version.version; exit 0
+  let show_version () = Format.printf "%s@." Version._version; exit 0
 
   let show_version_info () =
-    Format.printf "Version          = %s@." Version.version;
-    Format.printf "Release date     = %s@." Version.release_date;
-    Format.printf "Release commit   = %s@." Version.release_commit;
+    Format.printf "Version          = %s@." Version._version;
+    Format.printf "Release date     = %s@." Version._release_date;
+    Format.printf "Release commit   = %s@." Version._release_commit;
     exit 0
 
   let set_max_split s =
