@@ -299,7 +299,8 @@ public-release:
 	cp ../README.md ../LICENSE.md ../COPYING.md $(FILES_DEST)/
 	cp Makefile $(FILES_DEST)/
 	cp INSTALL.md alt-ergo.opam CHANGES $(FILES_DEST)/
-	cp -rf lib tools parsers plugins preludes examples doc $(FILES_DEST)/
+	cp -rf lib tools parsers preludes examples doc $(FILES_DEST)/
+	cp -rf plugins $(FILES_DEST)/ 2> /dev/null || echo "cp: skip plugins dir (not found)"
 	#echo "let _version=\"$(PUBLIC_VERSION)\"" >> $(FILES_DEST)/lib/util/version.ml
 	echo "let _release_commit = \"$(COMMIT_ID)\"" >> $(FILES_DEST)/lib/util/version.ml
 	echo "let _release_date = \""`LANG=en_US; date`"\"" >> $(FILES_DEST)/lib/util/version.ml
