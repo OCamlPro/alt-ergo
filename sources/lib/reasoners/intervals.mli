@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -37,9 +37,9 @@ val is_undefined : t -> bool
 
 val point : Numbers.Q.t -> Ty.t -> Explanation.t -> t
 
-val doesnt_contain_0 : t -> Sig.answer
+val doesnt_contain_0 : t -> Th_util.answer
 
-val is_positive : t -> Sig.answer
+val is_positive : t -> Th_util.answer
 
 val is_strict_smaller : t -> t -> bool
 
@@ -118,11 +118,11 @@ val equal : t -> t -> bool
 
 type interval_matching =
   ((Numbers.Q.t * bool) option * (Numbers.Q.t * bool) option * Ty.t)
-    Hstring.Map.t
+    Var.Map.t
 
 (** matchs the given lower and upper bounds against the given interval, and
-   update the given accumulator with the constraints. Returns None if
-   the matching problem is inconsistent
+    update the given accumulator with the constraints. Returns None if
+    the matching problem is inconsistent
 *)
 val match_interval:
   Symbols.bound -> Symbols.bound -> t -> interval_matching ->

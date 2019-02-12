@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -35,28 +35,27 @@ module type S = sig
 
   val make:
     max_t_depth:int ->
-    Matching_types.info Term.Map.t ->
-    Term.t list Term.Map.t Term.Subst.t ->
+    Matching_types.info Expr.Map.t ->
+    Expr.t list Expr.Map.t Symbols.Map.t ->
     Matching_types.trigger_info list ->
     t
 
-  val add_term : term_info -> Term.t -> t -> t
+  val add_term : term_info -> Expr.t -> t -> t
   val max_term_depth : t -> int -> t
   val add_triggers :
-    backward:Util.inst_kind -> t -> (int * Explanation.t) Formula.Map.t -> t
-  val terms_info : t -> info Term.Map.t * Term.t list Term.Map.t Term.Subst.t
-  val query : t -> theory -> (trigger_info * gsubst list) list
-  val unused_context : Formula.t -> bool
+    Util.matching_env -> t -> (int * Explanation.t) Expr.Map.t -> t
+  val terms_info : t -> info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
+  val query :
+    Util.matching_env -> t -> theory -> (trigger_info * gsubst list) list
 
 end
 
 
 module type Arg = sig
   type t
-  val term_repr : t -> Term.t -> Term.t
-  val add_term : t -> Term.t -> t
-  val are_equal : t -> Term.t -> Term.t -> add_terms:bool -> Sig.answer
-  val class_of : t -> Term.t -> Term.t list
+  val term_repr : t -> Expr.t -> init_term:bool -> Expr.t
+  val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> Th_util.answer
+  val class_of : t -> Expr.t -> Expr.t list
 end
 
 

@@ -19,13 +19,13 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
 (*                                                                            *)
 (******************************************************************************)
 
-val version : string
-val release_commit : string
-val release_date : string
+val _version : string
+val _release_commit : string
+val _release_date : string

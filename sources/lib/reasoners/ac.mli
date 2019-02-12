@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -35,10 +35,10 @@ module type S = sig
   type t = r Sig.ac
 
   (* builds an embeded semantic value from an AC term *)
-  val make : Term.t -> r * Literal.LT.t list
+  val make : Expr.t -> r * Expr.t list
 
   (* tells whether the given term is AC*)
-  val is_mine_symb : Symbols.t -> bool
+  val is_mine_symb : Symbols.t -> Ty.t -> bool
 
   (* compares two AC semantic values *)
   val compare : t -> t -> int

@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -36,13 +36,15 @@ module S =
     let hash s = Hashtbl.hash s.content
     let eq s1 s2 = String.equal s1.content s2.content
     let set_id n v = {v with id = n}
-    let initial_size = 5003
+    let initial_size = 9001
     let disable_weaks () = Options.disable_weaks ()
   end)
 
 let make s = S.make {content = s; id = - 1}
 
 let view s = s.content
+
+let print fmt v = Format.fprintf fmt "%s" (view v)
 
 let equal s1 s2 = s1.id == s2.id
 

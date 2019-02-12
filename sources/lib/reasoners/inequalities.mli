@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -28,16 +28,16 @@
 
 module type S = sig
 
-  module P : Polynome.EXTENDED_Polynome
+  module P : Polynome.T with type r = Shostak.Combine.r
   module MP : Map.S with type key = P.t
 
   type t = {
-      ple0 : P.t;
-      is_le : bool;
-      dep : (Numbers.Q.t * P.t * bool) Util.MI.t;
-      expl : Explanation.t;
-      age : Numbers.Z.t;
-    }
+    ple0 : P.t;
+    is_le : bool;
+    dep : (Numbers.Q.t * P.t * bool) Util.MI.t;
+    expl : Explanation.t;
+    age : Numbers.Z.t;
+  }
 
   module MINEQS : sig
     type mp = (t * Numbers.Q.t) MP.t
@@ -55,7 +55,7 @@ module type S = sig
   val incr_age : unit -> unit
 
   val create_ineq :
-    P.t -> P.t -> bool -> Literal.LT.t option -> Explanation.t -> t
+    P.t -> P.t -> bool -> Expr.t option -> Explanation.t -> t
 
   val print_inequation : Format.formatter -> t -> unit
 
@@ -75,16 +75,12 @@ end
 
 
 module FM
-  (X : Sig.X)
-  (Uf : Uf.S with type r = X.r)
-  (P : Polynome.EXTENDED_Polynome with type r = X.r)
+    (P : Polynome.T with type r = Shostak.Combine.r)
   : S with module P = P
 
 module type Container_SIG = sig
   module Make
-    (X : Sig.X)
-    (Uf : Uf.S with type r = X.r)
-    (P : Polynome.EXTENDED_Polynome with type r = X.r)
+      (P : Polynome.T with type r = Shostak.Combine.r)
     : S with module P = P
 end
 

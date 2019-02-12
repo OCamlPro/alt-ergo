@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -65,10 +65,13 @@ type error =
   | ThExtError of string
   | ThSemTriggerError
   | WrongDeclInTheory
+  | ShouldBeADT of Ty.t
+  | MatchNotExhaustive of Hstring.t list
+  | MatchUnusedCases of Hstring.t list
+  | NotAdtConstr of string * Ty.t
 
 (* this is a typing error *)
 exception Error of error * Loc.t
-exception Warning of error * Loc.t
 
 (* these two exception are used by the lexer and the parser *)
 exception Lexical_error of Loc.t * string
@@ -76,4 +79,4 @@ exception Syntax_error of Loc.t * string
 
 val report : Format.formatter -> error -> unit
 val error : error -> Loc.t -> 'a
-val warning : error -> Loc.t -> 'a
+val warning : error -> Loc.t -> unit

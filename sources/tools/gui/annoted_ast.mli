@@ -19,13 +19,14 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
 (*                                                                            *)
 (******************************************************************************)
 
+open AltErgoLib
 open Parsed
 open Typed
 open Gui_session
@@ -87,21 +88,21 @@ type timers_model = {
 }
 
 type 'a annoted =
-    { mutable c : 'a;
-      mutable pruned : bool;
-      mutable polarity : bool;
-      tag : GText.tag;
-      ptag : GText.tag;
-      id : int;
-      buf : sbuffer;
-      mutable line : int;
-    }
+  { mutable c : 'a;
+    mutable pruned : bool;
+    mutable polarity : bool;
+    tag : GText.tag;
+    ptag : GText.tag;
+    id : int;
+    buf : sbuffer;
+    mutable line : int;
+  }
 
 type aoplogic =
     AOPand | AOPor | AOPxor | AOPimp | AOPnot | AOPif | AOPiff
 
 type aterm =
-    { at_ty : Ty.t; at_desc : at_desc }
+  { at_ty : Ty.t; at_desc : at_desc }
 
 and at_desc =
   | ATconst of tconstant
@@ -117,8 +118,8 @@ and at_desc =
   | ATdot of aterm * Hstring.t
   | ATrecord of (Hstring.t * aterm) list
   | ATnamed of Hstring.t * aterm
-  | ATmapsTo of Hstring.t * aterm
-  | ATinInterval of aterm * bool * aterm * aterm *  bool
+  | ATmapsTo of Var.t * aterm
+  | ATinInterval of aterm * Symbols.bound * Symbols.bound
   (* bool = true <-> interval is_open *)
   | ATite of aform annoted * aterm * aterm
 
@@ -131,7 +132,6 @@ and aatom =
   | AAle of aterm annoted list
   | AAlt of aterm annoted list
   | AApred of aterm * bool (* true <-> negated *)
-  | AAbuilt of Hstring.t * aterm annoted list
 
 and aquant_form = {
   aqf_bvars : (Symbols.t * Ty.t) list ;
@@ -155,16 +155,18 @@ and atlet_kind =
   | ATletForm of aform annoted
 
 type atyped_decl =
-  | ATheory of Loc.t * string * theories_extensions * atyped_decl annoted list
-  | AAxiom of Loc.t * string * Parsed.axiom_kind * aform
+  | ATheory of
+      Loc.t * string * Util.theories_extensions * atyped_decl annoted list
+  | AAxiom of Loc.t * string * Util.axiom_kind * aform
   | ARewriting of Loc.t * string * ((aterm rwt_rule) annoted) list
   | AGoal of Loc.t * goal_sort * string * aform annoted
-  | ALogic of Loc.t * string list * plogic_type
-  | APredicate_def of Loc.t * string * (string * ppure_type) list * aform
+  | ALogic of Loc.t * string list * plogic_type * tlogic_type
+  | APredicate_def
+    of Loc.t * string * (string * ppure_type * Ty.t) list * aform
   | AFunction_def
-      of Loc.t * string * (string * ppure_type) list * ppure_type * aform
-  | ATypeDecl of Loc.t * string list * string * body_type_decl
-
+    of Loc.t * string * (string * ppure_type * Ty.t) list
+       * ppure_type * Ty.t * aform
+  | ATypeDecl of Loc.t * string list * string * body_type_decl * Ty.t
 
 type annoted_node =
   | AD of (atyped_decl annoted * Typechecker.env)

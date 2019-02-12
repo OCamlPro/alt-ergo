@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -11,11 +11,11 @@
 
 let get_current () =
   match Options.sat_solver () with
-  | Util.Tableaux ->
+  | Util.Tableaux | Util.Tableaux_CDCL ->
     if Options.verbose() then
       Format.eprintf "[bool reasoning] use Tableaux-like solver@.";
     (module Fun_sat : Sat_solver_sig.SatContainer)
-  | Util.CDCL_satML ->
+  | Util.CDCL | Util.CDCL_Tableaux ->
     if Options.verbose() then
       Format.eprintf "[bool reasoning] use CDCL solver@.";
     (module Satml_frontend : Sat_solver_sig.SatContainer)

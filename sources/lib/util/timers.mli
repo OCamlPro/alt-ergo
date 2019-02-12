@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -38,9 +38,7 @@ type ty_module =
   | M_Sum
   | M_Records
   | M_AC
-  | M_Formula
-  | M_Literal
-  | M_Term
+  | M_Expr
   | M_Triggers
   | M_Simplex
 

@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -38,6 +38,7 @@ val set_debug_use : bool -> unit
 val set_debug_uf : bool -> unit
 val set_debug_fm : bool -> unit
 val set_debug_sum : bool -> unit
+val set_debug_adt : bool -> unit
 val set_debug_arith : bool -> unit
 val set_debug_bitv : bool -> unit
 val set_debug_ac : bool -> unit
@@ -49,7 +50,7 @@ val set_debug_arrays : bool -> unit
 val set_debug_ite : bool -> unit
 val set_debug_types : bool -> unit
 val set_debug_combine : bool -> unit
-val set_debug_proof : bool -> unit
+val set_debug_unsat_core : bool -> unit
 val set_debug_split : bool -> unit
 val set_debug_matching : int -> unit
 val set_debug_explanations : bool -> unit
@@ -61,6 +62,7 @@ val set_profiling : float -> bool -> unit
 val set_type_only : bool -> unit
 val set_type_smt2 : bool -> unit
 val set_parse_only : bool -> unit
+val set_frontend : string -> unit
 val set_verbose : bool -> unit
 val set_steps_bound : int -> unit
 val set_age_bound : int -> unit
@@ -81,7 +83,7 @@ val set_interpretation : int -> unit
 val set_max_split : Numbers.Q.t -> unit
 val set_fm_cross_limit : Numbers.Q.t -> unit
 val set_rewriting : bool -> unit
-val set_proof : bool -> unit
+val set_unsat_core : bool -> unit
 val set_rules : int -> unit
 val set_restricted : bool -> unit
 val set_bottom_classes : bool -> unit
@@ -92,6 +94,7 @@ val set_timeout : (unit -> unit) -> unit
 val set_save_used_context : bool -> unit
 val set_default_input_lang : string -> unit
 val set_unsat_mode : bool -> unit
+val set_inline_lets : bool -> unit
 
 (* updates the filename to be parsed and sets a js_mode flag *)
 val set_file_for_js : string -> unit
@@ -109,6 +112,7 @@ val debug_uf : unit -> bool
 val debug_fm : unit -> bool
 val debug_fpa : unit -> int
 val debug_sum : unit -> bool
+val debug_adt : unit -> bool
 val debug_arith : unit -> bool
 val debug_bitv : unit -> bool
 val debug_ac : unit -> bool
@@ -120,17 +124,21 @@ val debug_arrays : unit -> bool
 val debug_ite : unit -> bool
 val debug_types : unit -> bool
 val debug_combine : unit -> bool
-val debug_proof : unit -> bool
+val debug_unsat_core : unit -> bool
 val debug_split : unit -> bool
 val debug_matching : unit -> int
 val debug_explanations : unit -> bool
+val debug_triggers : unit -> bool
 
 (** additional getters *)
 val enable_assertions : unit -> bool
 val disable_ites : unit -> bool
+val disable_adts : unit -> bool
+val enable_adts_cs : unit -> bool
 val type_only : unit -> bool
 val type_smt2 : unit -> bool
 val parse_only : unit -> bool
+val frontend : unit -> string
 val steps_bound : unit -> int
 val no_tcp : unit -> bool
 val no_decisions : unit -> bool
@@ -162,7 +170,7 @@ val complete_model : unit -> bool
 val max_split : unit -> Numbers.Q.t
 val fm_cross_limit : unit -> Numbers.Q.t
 val rewriting : unit -> bool
-val proof : unit -> bool
+val unsat_core : unit -> bool
 val rules : unit -> int
 val restricted : unit -> bool
 val bottom_classes : unit -> bool
@@ -180,6 +188,7 @@ val disable_weaks : unit -> bool
 val default_input_lang : unit -> string
 val answers_with_locs  : unit -> bool
 val unsat_mode : unit -> bool
+val inline_lets : unit -> bool
 
 (** this option also yields true if profiling is set to true **)
 val timers : unit -> bool
@@ -187,7 +196,6 @@ val replay : unit -> bool
 val replay_used_context : unit -> bool
 val replay_all_used_context : unit -> bool
 val save_used_context : unit -> bool
-val replay_satml_dfs : unit -> bool
 val get_file : unit -> string
 val get_session_file : unit -> string
 val get_used_context_file : unit -> string
@@ -198,6 +206,9 @@ val profiling_plugin : unit -> string
 val normalize_instances : unit -> bool
 
 val sat_solver : unit -> Util.sat_solver
+val cdcl_tableaux_inst : unit -> bool
+val cdcl_tableaux_th : unit -> bool
+val cdcl_tableaux : unit -> bool
 val tableaux_cdcl : unit -> bool
 val minimal_bj : unit -> bool
 val enable_restarts : unit -> bool

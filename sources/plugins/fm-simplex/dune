@@ -1,0 +1,15 @@
+
+(library
+  (name       FmSimplexPlugin)
+  (libraries  alt-ergo-lib)
+  (modules    Simplex Simplex_cache FmSimplexIneqs)
+)
+
+(install
+  (package alt-ergo)
+  (section share)
+  (files
+    (FmSimplexPlugin.cma as plugins/fm-simplex-plugin.cma)
+    (FmSimplexPlugin.cmxs as plugins/fm-simplex-plugin.cmxs)
+  )
+)

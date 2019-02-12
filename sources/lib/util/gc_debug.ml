@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -32,19 +32,19 @@ let () =
       ignore
         (create_alarm
            (fun () ->
-            let e = quick_stat () in
-            let d = !tmp in
-            fprintf fmt "[GC infos]========================================@.";
-            fprintf fmt "[major collections] %d th@." e.major_collections;
-            fprintf fmt "[minor collections] %d th@." e.minor_collections;
-            fprintf fmt "[stack used] %d words@." e.stack_size;
-            fprintf fmt "[size of major heap] %d words@." e.heap_words;
-            fprintf fmt "[max size major heap] %d words@." e.top_heap_words;
-            fprintf fmt "[major words diff] %0.f Kwords@."
-                    ((e.major_words -. d.major_words) /. 1000.);
-            fprintf fmt "[minor words diff] %0.f Kwords@."
-                    ((e.minor_words -. d.minor_words) /. 1000.);
-            tmp := e
+              let e = quick_stat () in
+              let d = !tmp in
+              fprintf fmt "[GC infos]======================================@.";
+              fprintf fmt "[major collections] %d th@." e.major_collections;
+              fprintf fmt "[minor collections] %d th@." e.minor_collections;
+              fprintf fmt "[stack used] %d words@." e.stack_size;
+              fprintf fmt "[size of major heap] %d words@." e.heap_words;
+              fprintf fmt "[max size major heap] %d words@." e.top_heap_words;
+              fprintf fmt "[major words diff] %0f Kwords@."
+                ((e.major_words -. d.major_words) /. 1000.);
+              fprintf fmt "[minor words diff] %0f Kwords@."
+                ((e.minor_words -. d.minor_words) /. 1000.);
+              tmp := e
            )
         )
     end

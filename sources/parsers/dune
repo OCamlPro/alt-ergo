@@ -1,0 +1,27 @@
+
+(documentation
+  (package alt-ergo-parsers)
+)
+
+(ocamllex (modules why_lexer))
+
+(menhir
+  (infer    true)
+  (flags    --fixed-exception)
+  (modules  why_parser)
+)
+
+(library
+    (name             AltErgoParsers)
+    (public_name      alt-ergo-parsers)
+    (libraries        camlzip dynlink psmt2-frontend alt-ergo-lib)
+    (modules
+      ; common
+      Parsers Parsers_loader MyZip
+      ; psmt2
+      Psmt2_to_alt_ergo
+      ; AE format
+      Why_lexer Why_parser
+    )
+)
+

@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -37,11 +37,13 @@ module M = struct
   let type_only = ref false
   let type_smt2 = ref false
   let parse_only = ref false
+  let frontend = ref "legacy"
   let steps_bound = ref (-1)
   let age_bound = ref 50
   let debug = ref false
   let debug_warnings = ref false
   let no_user_triggers = ref false
+  let debug_triggers = ref false
   let debug_cc = ref false
   let debug_gc = ref false
   let debug_use = ref false
@@ -56,14 +58,17 @@ module M = struct
   let debug_fm = ref false
   let debug_fpa = ref 0
   let debug_sum = ref false
+  let debug_adt = ref false
   let debug_arith = ref false
   let debug_combine = ref false
   let debug_bitv = ref false
   let debug_ac = ref false
   let debug_split = ref false
-  let options = ref false
+  (* unused -- let options = ref false *)
   let greedy = ref false
   let disable_ites = ref false
+  let disable_adts = ref false
+  let enable_adts_cs = ref false
   let triggers_var = ref false
   let nb_triggers = ref 2
   let max_multi_triggers_size = ref 4
@@ -79,8 +84,8 @@ module M = struct
   let complete_model = ref false
   let interpretation = ref 0
   let debug_interpretation = ref false
-  let proof = ref false
-  let debug_proof = ref false
+  let unsat_core = ref false
+  let debug_unsat_core = ref false
   let rules = ref (-1)
   let max_split = ref (Numbers.Q.from_int 1000000)
   let fm_cross_limit = ref (Numbers.Q.from_int 10_000)
@@ -99,8 +104,10 @@ module M = struct
   let cumulative_time_profiling = ref false
   let normalize_instances = ref false
 
-  let sat_solver = ref Util.CDCL_satML
-  let tableaux_cdcl = ref true
+  let sat_solver = ref Util.CDCL_Tableaux
+  let cdcl_tableaux_inst = ref true
+  let cdcl_tableaux_th = ref true
+  let tableaux_cdcl = ref false
   let minimal_bj = ref true
   let enable_restarts = ref false
   let disable_flat_formulas_simplification = ref false
@@ -125,13 +132,13 @@ module M = struct
   let no_locs_in_answers = ref false
 
   let unsat_mode = ref false
+  let inline_lets = ref false
 
   let show_where s=
     match s with
     | "" -> ()
     | s ->
       let path = match s with
-        | "bin" -> Config.bindir
         | "lib" -> Config.libdir
         | "plugins" -> Config.pluginsdir
         | "preludes" -> Config.preludesdir
@@ -141,12 +148,12 @@ module M = struct
       in
       Format.printf "%s@." path; exit 0
 
-  let show_version () = Format.printf "%s@." Version.version; exit 0
+  let show_version () = Format.printf "%s@." Version._version; exit 0
 
   let show_version_info () =
-    Format.printf "Version          = %s@." Version.version;
-    Format.printf "Release date     = %s@." Version.release_date;
-    Format.printf "Release commit   = %s@." Version.release_commit;
+    Format.printf "Version          = %s@." Version._version;
+    Format.printf "Release date     = %s@." Version._release_date;
+    Format.printf "Release commit   = %s@." Version._release_commit;
     exit 0
 
   let set_max_split s =
@@ -163,11 +170,11 @@ module M = struct
   let update_no_decisions_on s =
     no_decisions_on :=
       List.fold_left
-      (fun set s ->
-        match s with
-        | "" -> set
-        | s -> Util.SS.add s set
-      ) !no_decisions_on (Str.split (Str.regexp ",") s)
+        (fun set s ->
+           match s with
+           | "" -> set
+           | s -> Util.SS.add s set
+        ) !no_decisions_on (Str.split (Str.regexp ",") s)
 
   let set_sat_plugin s = sat_plugin := s
 
@@ -177,7 +184,7 @@ module M = struct
 
   let set_profiling_plugin s = profiling_plugin := s
 
-  let set_proof b = proof := b
+  (* unused -- let set_unsat_core b = unsat_core := b *)
 
   let set_rules = function
     | "parsing" -> rules := 0
@@ -198,7 +205,6 @@ module M = struct
   let replay_all_used_context = ref false
   let save_used_context = ref false
 
-  let replay_satml_dfs = ref false
   let profiling_period = ref 0.
   let profiling = ref false
 
@@ -226,10 +232,20 @@ module M = struct
 
   let set_sat_solver s =
     match s with
+    | "CDCL" | "satML" ->
+      sat_solver := Util.CDCL;
+      cdcl_tableaux_inst := false;
+      cdcl_tableaux_th := false
+    | "CDCL-Tableaux" | "satML-Tableaux" | "CDCL-tableaux" | "satML-tableaux" ->
+      sat_solver := Util.CDCL_Tableaux;
+      cdcl_tableaux_inst := true;
+      cdcl_tableaux_th := true
     | "tableaux" | "Tableaux" | "tableaux-like" | "Tableaux-like" ->
-       sat_solver := Util.Tableaux
-    |  "CDCL" | "satML" ->
-       sat_solver := Util.CDCL_satML
+      sat_solver := Util.Tableaux;
+      tableaux_cdcl := false
+    | "tableaux-cdcl" | "Tableaux-CDCL" | "tableaux-CDCL" | "Tableaux-cdcl" ->
+      sat_solver := Util.Tableaux_CDCL;
+      tableaux_cdcl := true;
     | _ ->
       Format.eprintf "Args parsing error: unkown SAT solver %S@." s;
       exit 1
@@ -238,6 +254,10 @@ module M = struct
     "-parse-only",
     Arg.Set parse_only,
     " stop after parsing";
+
+    "-frontend",
+    Arg.Set_string frontend,
+    " select the parsing and typing frontend";
 
     "-type-only",
     Arg.Set type_only,
@@ -286,6 +306,10 @@ module M = struct
     "-dsum",
     Arg.Set debug_sum,
     "  sets the debugging flag of Sum";
+
+    "-dadt",
+    Arg.Set debug_adt,
+    "  sets the debugging flag of ADTs";
 
     "-darith",
     Arg.Set debug_arith,
@@ -343,6 +367,10 @@ module M = struct
     Arg.Set debug_explanations,
     "  sets the debugging flag of explanations";
 
+    "-dtriggers",
+    Arg.Set debug_triggers,
+    "  sets the debugging flag of triggers";
+
     "-verbose",
     Arg.Set verbose,
     "  sets the verbose mode";
@@ -363,6 +391,14 @@ module M = struct
     "-disable-ites",
     Arg.Set disable_ites,
     "  disable handling of ite(s) on terms in the backend";
+
+    "-disable-adts",
+    Arg.Set disable_adts,
+    "  disable Algebraic Datatypes theory";
+
+    "-enable-adts-cs",
+    Arg.Set enable_adts_cs,
+    "  enable case-split for Algebraic Datatypes theory";
 
     "-steps-bound",
     Arg.Set_int steps_bound,
@@ -471,13 +507,14 @@ module M = struct
      A negative value (-1, -2, or -3) will disable interpretation display. \
      Note that -max-split limitation will be ignored in model generation phase";
 
-    "-proof",
-    Arg.Set proof,
-    " experimental support for succinct proof";
+    "-unsat-core",
+    Arg.Set unsat_core,
+    " experimental support for unsat-cores";
 
-    "-debug-proof",
-    Arg.Set debug_proof,
-    " replay unsat-cores produced by -proof. The option implies -proof";
+    "-debug-unsat-core",
+    Arg.Set debug_unsat_core,
+    " replay unsat-cores produced by -unsat-core. The option implies \
+     -unsat-core";
 
     "-rules",
     Arg.String set_rules,
@@ -526,12 +563,7 @@ module M = struct
     "-save-used-context",
     Arg.Set save_used_context,
     " save used axioms and predicates in a .used file. This option implies \
-     -proof";
-
-    "-replay-satml-dfs",
-    Arg.Set replay_satml_dfs,
-    " debug option for the satML plugin. Replays proven (valid) goals \
-     (with generated ground instances) using the functional SAT solver";
+     -unsat-core";
 
     "-timelimit",
     Arg.Float (set_limit timelimit),
@@ -561,10 +593,15 @@ module M = struct
     Arg.Clear minimal_bj,
     " disable minimal backjumping in satML CDCL solver";
 
-    "-no-tableaux-cdcl",
-    Arg.Clear tableaux_cdcl,
+    "-no-tableaux-cdcl-in-instantiation",
+    Arg.Clear cdcl_tableaux_inst,
     " when satML is used, this disables the use of a tableaux-like method \
-     together with the CDCL solver";
+     for instantiations with the CDCL solver";
+
+    "-no-tableaux-cdcl-in-theories",
+    Arg.Clear cdcl_tableaux_th,
+    " when satML is used, this disables the use of a tableaux-like method \
+     for the theories with the CDCL solver";
 
     "-disable-flat-formulas-simplification",
     Arg.Set disable_flat_formulas_simplification,
@@ -647,7 +684,13 @@ module M = struct
 
     "-unsat-mode",
     Arg.Set unsat_mode,
-    " answer unsat / sat / unknown instead of Valid / Invalid / I don't know"
+    " answer unsat / sat / unknown instead of Valid / Invalid / I don't know";
+
+    "-inline-lets",
+    Arg.Set inline_lets,
+    " enable substutition of variables bounds by Let. The default \
+     behavior is to only substitute variables that are bound to a \
+     constant, or that appear at most once."
 
   ]
 
@@ -668,11 +711,12 @@ let parse_cmdline_arguments () =
   let set_file s = ofile := Some s in
   Arg.parse M.spec set_file M.usage;
   match !ofile with
-    | Some f ->
-      M.file := f;
-      M.session_file := (Filename.chop_extension f)^".agr";
-      M.used_context_file := (Filename.chop_extension f)^".used"
-    | None -> ()
+  | Some f ->
+    M.file := f;
+    let base_file = Filename.chop_extension f in
+    M.session_file := base_file^".agr";
+    M.used_context_file := base_file
+  | None -> ()
 
 
 let set_file_for_js filename =
@@ -689,6 +733,7 @@ let set_debug_use b = M.debug_use := b
 let set_debug_uf b = M.debug_uf := b
 let set_debug_fm b = M.debug_fm := b
 let set_debug_sum b = M.debug_sum := b
+let set_debug_adt b = M.debug_adt := b
 let set_debug_arith b = M.debug_arith := b
 let set_debug_bitv b = M.debug_bitv := b
 let set_debug_ac   b = M.debug_ac := b
@@ -700,7 +745,7 @@ let set_debug_arrays b = M.debug_arrays := b
 let set_debug_ite b = M.debug_ite := b
 let set_debug_types b = M.debug_types := b
 let set_debug_combine b = M.debug_combine := b
-let set_debug_proof b = M.debug_proof := b
+let set_debug_unsat_core b = M.debug_unsat_core := b
 let set_debug_split b = M.debug_split := b
 let set_debug_matching i = M.debug_matching := i
 let set_debug_explanations b = M.debug_explanations := b
@@ -709,6 +754,7 @@ let set_debug_explanations b = M.debug_explanations := b
 let set_type_only b = M.type_only := b
 let set_type_smt2 b = M.type_smt2 := b
 let set_parse_only b = M.parse_only := b
+let set_frontend s = M.frontend := s
 let set_steps_bound b = M.steps_bound := b
 let set_age_bound b = M.age_bound := b
 let set_no_user_triggers b = M.no_user_triggers := b
@@ -729,14 +775,14 @@ let set_interpretation b = M.interpretation := b
 let set_max_split b = M.max_split := b
 let set_fm_cross_limit b = M.fm_cross_limit := b
 let set_rewriting b = M.rewriting := b
-let set_proof b = M.proof := b
+let set_unsat_core b = M.unsat_core := b
 let set_rules b = M.rules := b
 let set_restricted b = M.restricted := b
 let set_bottom_classes b = M.bottom_classes := b
 let set_timelimit b = M.timelimit := b
-let set_model_timelimit b = M.timelimit := b
+(* unused -- let set_model_timelimit b = M.timelimit := b *)
 let set_timers b = M.timers := b
-let set_minimal_bj b = M.minimal_bj := b
+(* unused -- let set_minimal_bj b = M.minimal_bj := b *)
 
 let set_profiling f b =
   M.profiling := b;
@@ -747,6 +793,7 @@ let set_timeout f = M.timeout := f
 let set_save_used_context b = M.save_used_context := b
 let set_default_input_lang lang = M.set_default_input_lang lang
 let set_unsat_mode b = M.unsat_mode := b
+let set_inline_lets m = M.inline_lets := m
 
 (** getter functions **********************************************************)
 
@@ -760,6 +807,7 @@ let debug_uf () = !M.debug_uf
 let debug_fm () = !M.debug_fm
 let debug_fpa () = !M.debug_fpa
 let debug_sum () = !M.debug_sum
+let debug_adt () = !M.debug_adt
 let debug_arith () = !M.debug_arith
 let debug_bitv () = !M.debug_bitv
 let debug_ac   () = !M.debug_ac
@@ -771,17 +819,21 @@ let debug_arrays () = !M.debug_arrays
 let debug_ite () = !M.debug_ite
 let debug_types () = !M.debug_types
 let debug_combine () = !M.debug_combine
-let debug_proof () = !M.debug_proof
+let debug_unsat_core () = !M.debug_unsat_core
 let debug_split () = !M.debug_split
 let debug_matching () = !M.debug_matching
 let debug_explanations () = !M.debug_explanations
+let debug_triggers () = !M.debug_triggers
 
 (** additional getters *)
 let disable_ites () = !M.disable_ites
+let disable_adts () = !M.disable_adts
+let enable_adts_cs () = !M.enable_adts_cs
 let js_mode () = !M.js_mode
 let type_only () = !M.type_only
 let type_smt2 () = !M.type_smt2
 let parse_only () = !M.parse_only
+let frontend () = !M.frontend
 let steps_bound () = !M.steps_bound
 let no_tcp () = !M.no_tcp
 let no_decisions () = !M.no_decisions
@@ -814,7 +866,7 @@ let complete_model () = !M.complete_model
 let max_split () = !M.max_split
 let fm_cross_limit () = !M.fm_cross_limit
 let rewriting () = !M.rewriting
-let proof () = !M.proof || !M.save_used_context || !M.debug_proof
+let unsat_core () = !M.unsat_core || !M.save_used_context || !M.debug_unsat_core
 let rules () = !M.rules
 let restricted () = !M.restricted
 let bottom_classes () = !M.bottom_classes
@@ -829,6 +881,9 @@ let case_split_policy () = !M.case_split_policy
 let instantiate_after_backjump () = !M.instantiate_after_backjump
 let disable_weaks () = !M.disable_weaks
 let minimal_bj () = !M.minimal_bj
+let cdcl_tableaux_inst () = !M.cdcl_tableaux_inst
+let cdcl_tableaux_th () = !M.cdcl_tableaux_th
+let cdcl_tableaux () = !M.cdcl_tableaux_th || !M.cdcl_tableaux_inst
 let tableaux_cdcl () = !M.tableaux_cdcl
 let disable_flat_formulas_simplification () =
   !M.disable_flat_formulas_simplification
@@ -839,7 +894,6 @@ let replay () = !M.replay
 let replay_used_context () = !M.replay_used_context
 let replay_all_used_context () = !M.replay_all_used_context
 let save_used_context () = !M.save_used_context
-let replay_satml_dfs () = !M.replay_satml_dfs
 let get_file () = !M.file
 let get_session_file () = !M.session_file
 let get_used_context_file () = !M.used_context_file
@@ -860,6 +914,7 @@ let no_decisions_on__is_empty () = !M.no_decisions_on == Util.SS.empty
 let default_input_lang () = !M.default_input_lang
 let answers_with_locs ()  = not !M.no_locs_in_answers
 let unsat_mode ()  = !M.unsat_mode
+let inline_lets () = !M.inline_lets
 
 (** particular getters : functions that are immediately executed **************)
 let exec_thread_yield () = !M.thread_yield ()

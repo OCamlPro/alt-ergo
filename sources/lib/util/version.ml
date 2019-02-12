@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -29,10 +29,10 @@
 (* WARNING: a "cut" is performed on the following file in the Makefile.
    DO NOT CHANGE its format *)
 
-let version="2.2.0"
+let _version="2.3.0"
 
-let release_commit = "(not released)"
+let _release_commit = "(not released)"
 
-let release_date   = "(not released)"
+let _release_date   = "(not released)"
 
 

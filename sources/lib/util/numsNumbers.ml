@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -212,19 +212,19 @@ module Q : NumbersInterface.QSig with module Z = Z = struct
 
   let from_zz z1 z2 = Big_int z1 // Big_int z2
 
-(********
-         comparer avec l'implem de Alain de of_float
-         let ratio_of_float f =
-         Ratio.ratio_of_string (string_of_float f)
+  (********
+           comparer avec l'implem de Alain de of_float
+           let ratio_of_float f =
+           Ratio.ratio_of_string (string_of_float f)
 
-         let num_of_float f = num_of_ratio (ratio_of_float f)
+           let num_of_float f = num_of_ratio (ratio_of_float f)
 
-         let of_float x =
-         let res = of_float x in
-         let z = num_of_float x in
-         assert (res =/ z);
-         res
-********)
+           let of_float x =
+           let res = of_float x in
+           let z = num_of_float x in
+           assert (res =/ z);
+           res
+   ********)
 
   let truncate t =
     let res = integer_num t in
@@ -232,7 +232,7 @@ module Q : NumbersInterface.QSig with module Z = Z = struct
     match res with
     | Int i -> Big_int.big_int_of_int i
     | Big_int b -> b
-    | Ratio rat -> assert false
+    | Ratio _ -> assert false
 
   let mult_2exp t n = mult t (power (Int 2) n)
 

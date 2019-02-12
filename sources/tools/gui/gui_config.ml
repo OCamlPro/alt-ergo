@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -118,3 +118,7 @@ let monospace_font = !monospace_font
 let general_font = !general_font
 let style = !style
 let wrap = !wrap
+
+let not_supported msg =
+  Format.eprintf "%S currently not supported by the GUI@." msg;
+  assert false

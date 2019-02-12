@@ -1,32 +1,32 @@
 (****
-Using Alt-Ergo's lib: minimal example
+   Using Alt-Ergo's lib: minimal example
 
-compile & test with the following command if the lib is not installed:
+   compile & test with the following command if the lib is not installed:
 
-ocamlopt -o lib_usage \
--I `ocamlfind query num` \
--I `ocamlfind query zarith` \
--I `ocamlfind query ocplib-simplex` \
--I `ocamlfind query camlzip` \
--I .. \
-nums.cmxa zarith.cmxa ocplibSimplex.cmxa \
-unix.cmxa str.cmxa zip.cmxa dynlink.cmxa \
-altErgoLib.cmxa lib_usage.ml && ./lib_usage
+   ocamlopt -o lib_usage \
+   -I `ocamlfind query num` \
+   -I `ocamlfind query zarith` \
+   -I `ocamlfind query ocplib-simplex` \
+   -I `ocamlfind query camlzip` \
+   -I .. \
+   nums.cmxa zarith.cmxa ocplibSimplex.cmxa \
+   unix.cmxa str.cmxa zip.cmxa dynlink.cmxa \
+   altErgoLib.cmxa lib_usage.ml && ./lib_usage
 
-or with the following command if the lib is installed:
+   or with the following command if the lib is installed:
 
 
-ocamlopt -o lib_usage \
--I `ocamlfind query num` \
--I `ocamlfind query zarith` \
--I `ocamlfind query ocplib-simplex` \
--I `ocamlfind query camlzip` \
--I `ocamlfind query alt-ergo` \
-nums.cmxa zarith.cmxa ocplibSimplex.cmxa \
-unix.cmxa str.cmxa zip.cmxa dynlink.cmxa \
-altErgoLib.cmxa lib_usage.ml && ./lib_usage
+   ocamlopt -o lib_usage \
+   -I `ocamlfind query num` \
+   -I `ocamlfind query zarith` \
+   -I `ocamlfind query ocplib-simplex` \
+   -I `ocamlfind query camlzip` \
+   -I `ocamlfind query alt-ergo` \
+   nums.cmxa zarith.cmxa ocplibSimplex.cmxa \
+   unix.cmxa str.cmxa zip.cmxa dynlink.cmxa \
+   altErgoLib.cmxa lib_usage.ml && ./lib_usage
 
-****)
+ ****)
 
 Format.eprintf
   "\n(* This minimal example shows how to use Alt-Ergo's lib *)\n@."
@@ -52,7 +52,7 @@ let goal_3 = PA.mk_goal Loc.dummy "toy_3" (PA.mk_not Loc.dummy eq1)
 
 let parsed = [goal_1; goal_2; goal_3]
 
-let typed, env = Typechecker.file parsed
+let typed, env = Typechecker.type_file parsed
 
 let pbs = Typechecker.split_goals_and_cnf typed
 
@@ -61,12 +61,13 @@ module FE = Frontend.Make(SAT)
 
 let () =
   List.iter
-    (fun pb ->
+    (fun (pb, goal_name) ->
+       let ctxt = FE.init_all_used_context () in
        let acc0 = SAT.empty (), true, Explanation.empty in
        let _, consistent, ex =
          List.fold_left
            (fun acc d ->
-              FE.process_decl (fun _ _ -> ()) acc d
+              FE.process_decl (fun _ _ -> ()) ctxt acc d
            )acc0 pb
        in
        Format.printf "%s@."

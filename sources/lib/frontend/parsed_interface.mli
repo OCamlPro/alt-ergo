@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -14,18 +14,24 @@ open Parsed
 (** Declaration of types  **)
 
 val mk_abstract_type_decl : Loc.t -> string list -> string -> decl
-  [@ocaml.ppwarning "TODO: add documentation for every function in this file"]
+    [@ocaml.ppwarning "TODO: add documentation for every function in this file"]
 
 val mk_enum_type_decl : Loc.t -> string list -> string -> string list -> decl
 
-val mk_record_type_decl :
-  Loc.t -> string list -> string -> (string * ppure_type) list -> decl
+val mk_algebraic_type_decl :
+  Loc.t -> string list -> string ->
+  (string * (string * ppure_type) list) list -> decl
 
+val mk_record_type_decl :
+  Loc.t -> string list -> string -> ?constr : string ->
+  (string * ppure_type) list -> decl
+
+val mk_rec_type_decl : Parsed.type_decl list -> decl
 
 (** Declaration of symbols, functions, predicates, and goals *)
 
 val mk_logic :
-  Loc.t -> name_kind -> (string * string) list -> plogic_type -> decl
+  Loc.t -> Symbols.name_kind -> (string * string) list -> plogic_type -> decl
 
 val mk_function_def :
   Loc.t ->
@@ -73,8 +79,6 @@ val unit_type : ppure_type
 val mk_bitv_type : string -> ppure_type
 
 val mk_external_type : Loc.t -> ppure_type list -> string -> ppure_type
-
-val mk_logic_type : ppure_type list -> ppure_type option -> plogic_type
 
 val mk_var_type : Loc.t -> string -> ppure_type
 
@@ -186,6 +190,8 @@ val mk_var : Loc.t -> string -> lexpr
 
 val mk_application : Loc.t -> string -> lexpr list -> lexpr
 
+val mk_pattern : Loc.t -> string -> string list -> pattern
+
 val mk_ite : Loc.t -> lexpr -> lexpr -> lexpr -> lexpr
 
 val mk_let : Loc.t -> (string * lexpr) list -> lexpr -> lexpr
@@ -205,3 +211,9 @@ val mk_maps_to : Loc.t -> string -> lexpr -> lexpr
 val mk_check : Loc.t -> lexpr -> lexpr
 
 val mk_cut : Loc.t -> lexpr -> lexpr
+
+val mk_match : Loc.t -> lexpr -> (pattern * lexpr) list -> lexpr
+
+val mk_algebraic_test : Loc.t -> lexpr -> string -> lexpr
+
+val mk_algebraic_project : Loc.t -> guarded:bool -> lexpr -> string -> lexpr

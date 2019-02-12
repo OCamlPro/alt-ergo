@@ -19,52 +19,51 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
 (*                                                                            *)
 (******************************************************************************)
 
-module type S = sig
-  type t
-  type r
+type t
 
-  val empty : unit -> t
-  val add : t -> Term.t -> t * Literal.LT.t list
+type r = Shostak.Combine.r
 
-  val mem : t -> Term.t -> bool
+module LX : Xliteral.S with type elt = r
 
-  val find : t -> Term.t -> r * Explanation.t
+val empty : unit -> t
+val add : t -> Expr.t -> t * Expr.t list
 
-  val find_r : t -> r -> r * Explanation.t
+val mem : t -> Expr.t -> bool
 
-  val union :
-    t -> r -> r -> Explanation.t ->
-    t * (r * (r * r * Explanation.t) list * r) list
+val find : t -> Expr.t -> r * Explanation.t
 
-  val distinct : t -> r list -> Explanation.t -> t
+val find_r : t -> r -> r * Explanation.t
 
-  val are_equal : t -> Term.t -> Term.t -> added_terms:bool -> Sig.answer
-  val are_distinct : t -> Term.t -> Term.t -> Sig.answer
-  val already_distinct : t -> r list -> bool
+val union :
+  t -> r -> r -> Explanation.t ->
+  t * (r * (r * r * Explanation.t) list * r) list
 
-  val class_of : t -> Term.t -> Term.t list
-  val rclass_of : t -> r -> Term.Set.t
+val distinct : t -> r list -> Explanation.t -> t
 
-  val cl_extract : t -> Term.Set.t list
-  val model : t ->
-    (r * Term.t list * (Term.t * r) list) list * (Term.t list) list
+val are_equal : t -> Expr.t -> Expr.t -> added_terms:bool -> Th_util.answer
+val are_distinct : t -> Expr.t -> Expr.t -> Th_util.answer
+val already_distinct : t -> r list -> bool
 
-  val print : Format.formatter -> t -> unit
-  val term_repr : t -> Term.t -> Term.t
+val class_of : t -> Expr.t -> Expr.t list
+val rclass_of : t -> r -> Expr.Set.t
 
-  val make : t -> Term.t -> r (* may raise Not_found *)
+val cl_extract : t -> Expr.Set.t list
+val model : t ->
+  (r * Expr.t list * (Expr.t * r) list) list * (Expr.t list) list
 
-  val is_normalized : t -> r -> bool
+val print : Format.formatter -> t -> unit
+val term_repr : t -> Expr.t -> Expr.t
 
-  val assign_next : t -> (r Literal.view * bool * Sig.lit_origin) list * t
-  val output_concrete_model : t -> unit
-end
+val make : t -> Expr.t -> r (* may raise Not_found *)
 
-module Make (X : Sig.X) : S with type r = X.r
+val is_normalized : t -> r -> bool
+
+val assign_next : t -> (r Xliteral.view * bool * Th_util.lit_origin) list * t
+val output_concrete_model : t -> unit

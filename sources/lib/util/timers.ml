@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -40,9 +40,7 @@ type ty_module =
   | M_Sum
   | M_Records
   | M_AC
-  | M_Formula
-  | M_Literal
-  | M_Term
+  | M_Expr
   | M_Triggers
   | M_Simplex
 
@@ -58,13 +56,11 @@ let mtag k = match k with
   | M_Sum    -> 8
   | M_Records-> 9
   | M_AC     -> 10
-  | M_Formula-> 11
-  | M_Literal-> 12
-  | M_Term   -> 13
-  | M_Triggers->14
-  | M_Simplex->15
+  | M_Expr-> 11
+  | M_Triggers->12
+  | M_Simplex->13
 
-let nb_mtag = 16
+let nb_mtag = 14
 
 type ty_function =
   | F_add
@@ -124,9 +120,7 @@ let string_of_ty_module k = match k with
   | M_Sum    -> "Sum"
   | M_Records-> "Records"
   | M_AC     -> "AC"
-  | M_Formula-> "Formula"
-  | M_Literal-> "Literal"
-  | M_Term   -> "Term"
+  | M_Expr-> "Expr"
   | M_Triggers->"Triggers"
   | M_Simplex->"Simplex"
 
@@ -201,11 +195,11 @@ let accumulate_cumulative_mode name env m f cur =
         eprintf "@.%s time of %s , %s@."
           name (string_of_ty_module m) (string_of_ty_function f);
       List.iter
-        (fun (m, f, id) ->
-          if Options.debug() then
-            eprintf "  also update time of %s , %s@."
-              (string_of_ty_module m) (string_of_ty_function f);
-          accumulate env cur m f
+        (fun (m, f, _) ->
+           if Options.debug() then
+             eprintf "  also update time of %s , %s@."
+               (string_of_ty_module m) (string_of_ty_function f);
+           accumulate env cur m f
         )env.stack
     end
 
@@ -239,7 +233,7 @@ let pause env m f =
 (** update the value of the current timer **)
 let update env =
   let cur = MyUnix.cur_time() in
-  let m, f, id = env.cur_t in
+  let m, f, _ = env.cur_t in
   accumulate_cumulative_mode "update" env m f cur;
   accumulate env cur m f;
   env.cur_u <- cur
@@ -260,31 +254,31 @@ let get_stack env = env.stack
 let get_timers_array env = env.z
 
 let all_functions =
-    let l =
-      [ F_add;
-        F_add_lemma;
-        F_add_predicate;
-        F_add_terms;
-        F_are_equal;
-        F_assume;
-        F_class_of;
-        F_leaves;
-        F_make;
-        F_m_lemmas;
-        F_m_predicates;
-        F_query;
-        F_solve;
-        F_subst;
-        F_union;
-        F_unsat;
-        F_none;
-        F_new_facts;
-        F_apply_subst;
-        F_instantiate;
-      ]
-    in
-    assert (List.length l = nb_ftag);
-    l
+  let l =
+    [ F_add;
+      F_add_lemma;
+      F_add_predicate;
+      F_add_terms;
+      F_are_equal;
+      F_assume;
+      F_class_of;
+      F_leaves;
+      F_make;
+      F_m_lemmas;
+      F_m_predicates;
+      F_query;
+      F_solve;
+      F_subst;
+      F_union;
+      F_unsat;
+      F_none;
+      F_new_facts;
+      F_apply_subst;
+      F_instantiate;
+    ]
+  in
+  assert (List.length l = nb_ftag);
+  l
 
 let all_modules =
   let l =
@@ -299,9 +293,7 @@ let all_modules =
       M_Sum;
       M_Records;
       M_AC;
-      M_Formula;
-      M_Literal;
-      M_Term;
+      M_Expr;
       M_Triggers;
       M_Simplex;
     ]

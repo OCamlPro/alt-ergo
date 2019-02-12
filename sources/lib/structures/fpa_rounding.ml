@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -11,7 +11,7 @@
 
 module Sy = Symbols
 module Hs = Hstring
-module T = Term
+module E = Expr
 
 open Format
 open Options
@@ -21,9 +21,10 @@ module Z = Numbers.Z
 
 let is_rounding_mode t =
   Options.use_fpa() &&
-    match (T.view t).T.ty with
-    | Ty.Tsum (hs, _) -> String.compare (Hs.view hs) "fpa_rounding_mode" = 0
-    | _ -> false
+  match E.term_view t with
+  | E.Term { E.ty = Ty.Tsum (hs, _); _ } ->
+    String.compare (Hs.view hs) "fpa_rounding_mode" = 0
+  | _ -> false
 
 let fpa_rounding_mode =
   let mode_ty = Hs.make "fpa_rounding_mode" in
@@ -47,51 +48,51 @@ let fpa_rounding_mode =
 (*  why3/standard rounding modes*)
 
 let _NearestTiesToEven__rounding_mode =
-  T.make (Sy.Name(Hs.make "NearestTiesToEven", Sy.Constructor)) []
+  E.mk_term (Sy.constr "NearestTiesToEven") []
     fpa_rounding_mode
 (** ne in Gappa: to nearest, tie breaking to even mantissas*)
 
 let _ToZero__rounding_mode =
-  T.make (Sy.Name(Hs.make "ToZero", Sy.Constructor)) [] fpa_rounding_mode
+  E.mk_term (Sy.constr "ToZero") [] fpa_rounding_mode
 (** zr in Gappa: toward zero *)
 
 let _Up__rounding_mode =
-  T.make (Sy.Name(Hs.make "Up", Sy.Constructor)) [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Up") [] fpa_rounding_mode
 (** up in Gappa: toward plus infinity *)
 
 let _Down__rounding_mode =
-  T.make (Sy.Name(Hs.make "Down", Sy.Constructor)) [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Down") [] fpa_rounding_mode
 (** dn in Gappa: toward minus infinity *)
 
 let _NearestTiesToAway__rounding_mode =
-  T.make (Sy.Name(Hs.make "NearestTiesToAway", Sy.Constructor)) []
+  E.mk_term (Sy.constr "NearestTiesToAway") []
     fpa_rounding_mode
 (** na : to nearest, tie breaking away from zero *)
 
 (* additional Gappa rounding modes *)
 
 let _Aw__rounding_mode =
-  T.make (Sy.Name(Hs.make "Aw", Sy.Constructor)) [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Aw") [] fpa_rounding_mode
 (** aw in Gappa: away from zero **)
 
 let _Od__rounding_mode =
-  T.make (Sy.Name(Hs.make "Od", Sy.Constructor)) [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Od") [] fpa_rounding_mode
 (** od in Gappa: to odd mantissas *)
 
 let _No__rounding_mode =
-  T.make (Sy.Name(Hs.make "No", Sy.Constructor)) [] fpa_rounding_mode
+  E.mk_term (Sy.constr "No") [] fpa_rounding_mode
 (** no in Gappa: to nearest, tie breaking to odd mantissas *)
 
 let _Nz__rounding_mode =
-  T.make (Sy.Name(Hs.make "Nz", Sy.Constructor)) [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Nz") [] fpa_rounding_mode
 (** nz in Gappa: to nearest, tie breaking toward zero *)
 
 let _Nd__rounding_mode =
-  T.make (Sy.Name(Hs.make "Nd", Sy.Constructor)) [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Nd") [] fpa_rounding_mode
 (** nd in Gappa: to nearest, tie breaking toward minus infinity *)
 
 let _Nu__rounding_mode =
-  T.make (Sy.Name(Hs.make "Nu", Sy.Constructor)) [] fpa_rounding_mode
+  E.mk_term (Sy.constr "Nu") [] fpa_rounding_mode
 (** nu in Gappa: to nearest, tie breaking toward plus infinity *)
 
 
@@ -108,36 +109,34 @@ let div_x_by_2_pow_n x n = mult_x_by_2_pow_n x (-n)
 
 let two = Q.from_int 2
 
-let two_z = Z.from_int 2
-
 let half = Q.div Q.one two
 
 type rounding_mode =
-(* five standard/why3 fpa rounding modes *)
-| NearestTiesToEven
-(*ne in Gappa: to nearest, tie breaking to even mantissas*)
-| ToZero (* zr in Gappa: toward zero *)
-| Up (* up in Gappa: toward plus infinity *)
-| Down (* dn in Gappa: toward minus infinity *)
-| NearestTiesToAway (* na : to nearest, tie breaking away from zero *)
+  (* five standard/why3 fpa rounding modes *)
+  | NearestTiesToEven
+  (*ne in Gappa: to nearest, tie breaking to even mantissas*)
+  | ToZero (* zr in Gappa: toward zero *)
+  | Up (* up in Gappa: toward plus infinity *)
+  | Down (* dn in Gappa: toward minus infinity *)
+  | NearestTiesToAway (* na : to nearest, tie breaking away from zero *)
 
   (* additional Gappa rounding modes *)
-| Aw (* aw in Gappa: away from zero **)
-| Od (* od in Gappa: to odd mantissas *)
-| No (* no in Gappa: to nearest, tie breaking to odd mantissas *)
-| Nz (* nz in Gappa: to nearest, tie breaking toward zero *)
-| Nd (* nd in Gappa: to nearest, tie breaking toward minus infinity *)
-| Nu (* nu in Gappa: to nearest, tie breaking toward plus infinity *)
+  | Aw (* aw in Gappa: away from zero **)
+  | Od (* od in Gappa: to odd mantissas *)
+  | No (* no in Gappa: to nearest, tie breaking to odd mantissas *)
+  | Nz (* nz in Gappa: to nearest, tie breaking toward zero *)
+  | Nd (* nd in Gappa: to nearest, tie breaking toward minus infinity *)
+  | Nu (* nu in Gappa: to nearest, tie breaking toward plus infinity *)
 
 (* Integer part of binary logarithm for NON-ZERO POSITIVE number *)
 let integer_log_2 =
   let rec aux m e =
     if Q.compare m two >= 0 then aux (div_x_by_2_pow_n m 1) (e+1)
     else
-      if Q.compare m Q.one >= 0 then e
-      else
-        let () = assert (Q.compare_to_0 m > 0) in
-        aux (mult_x_by_2_pow_n m 1) (e - 1)
+    if Q.compare m Q.one >= 0 then e
+    else
+      let () = assert (Q.compare_to_0 m > 0) in
+      aux (mult_x_by_2_pow_n m 1) (e - 1)
   in
   fun m ->
     if Q.compare_to_0 m <= 0 then
@@ -196,7 +195,7 @@ let to_mantissa_exp prec exp mode x =
     r_y, e'
 
 let mode_of_term t =
-  let eq_t s = Term.equal s t in
+  let eq_t s = E.equal s t in
   if eq_t _NearestTiesToEven__rounding_mode then NearestTiesToEven
   else if eq_t _ToZero__rounding_mode then ToZero
   else if eq_t _Up__rounding_mode then Up
@@ -210,38 +209,38 @@ let mode_of_term t =
   else if eq_t _Nu__rounding_mode then Nu
   else
     begin
-      eprintf "bad rounding mode %a@." Term.print t;
+      eprintf "bad rounding mode %a@." E.print t;
       assert false
     end
 
 let int_of_term t =
-  match Term.view t with
-  {Term.f = Symbols.Int n} ->
+  match E.term_view t with
+  | E.Term { E.f = Sy.Int n; _ } ->
     let n = Hstring.view n in
     let n =
       try int_of_string n
-      with e ->
+      with _ ->
         eprintf "error when trying to convert %s to an int@." n;
         assert false
     in
     n (* ! may be negative or null *)
   | _ ->
-    eprintf "error: the given term %a is not an integer@." Term.print t;
+    eprintf "error: the given term %a is not an integer@." E.print t;
     assert false
 
 module MQ =
   Map.Make (struct
-    type t = Term.t * Term.t * Term.t * Q.t
+    type t = E.t * E.t * E.t * Q.t
     let compare (prec1, exp1, mode1, x1) (prec2, exp2, mode2, x2) =
       let c = Q.compare x1 x2 in
       if c <> 0 then c
       else
-        let c = Term.compare prec1 prec2 in
+        let c = E.compare prec1 prec2 in
         if c <> 0 then c
         else
-          let c = Term.compare exp1 exp2 in
+          let c = E.compare exp1 exp2 in
           if c <> 0 then c
-          else Term.compare mode1 mode2
+          else E.compare mode1 mode2
   end)
 
 let cache = ref MQ.empty

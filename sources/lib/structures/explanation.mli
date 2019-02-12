@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -31,8 +31,11 @@ type t
 type exp =
   | Literal of Satml_types.Atom.atom
   | Fresh of int
-  | Bj of Formula.t
-  | Dep of Formula.t
+  | Bj of Expr.t
+  | Dep of Expr.t
+  | RootDep of string (* name of the toplevel formula *)
+
+exception Inconsistent of t * Expr.Set.t list
 
 val empty : t
 
@@ -60,17 +63,17 @@ val add_fresh : exp -> t -> t
 
 val print : Format.formatter -> t -> unit
 
-val print_proof : Format.formatter -> t -> unit
+val print_unsat_core : ?tab:bool -> Format.formatter -> t -> unit
 
-val formulas_of : t -> Formula.Set.t
+val formulas_of : t -> Expr.Set.t
 
-val bj_formulas_of : t -> Formula.Set.t
+val bj_formulas_of : t -> Expr.Set.t
 
 module MI : Map.S with type key = int
 
 val literals_ids_of : t -> int MI.t
 
-val make_deps : Formula.Set.t -> t
+val make_deps : Expr.Set.t -> t
 
 val has_no_bj : t -> bool
 

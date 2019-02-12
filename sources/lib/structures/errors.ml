@@ -19,7 +19,7 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
@@ -67,10 +67,13 @@ type error =
   | ThExtError of string
   | ThSemTriggerError
   | WrongDeclInTheory
+  | ShouldBeADT of Ty.t
+  | MatchNotExhaustive of Hstring.t list
+  | MatchUnusedCases of Hstring.t list
+  | NotAdtConstr of string * Ty.t
 
 (* this is a typing error *)
 exception Error of error * Loc.t
-exception Warning of error * Loc.t
 
 (* these two exception are used by the lexer and the parser *)
 exception Lexical_error of Loc.t * string
@@ -162,6 +165,27 @@ let report fmt = function
   | WrongDeclInTheory ->
     fprintf fmt
       "Currently, this kind of declarations are not allowed inside theories"
+  | ShouldBeADT ty ->
+    fprintf fmt "%a is not an algebraic, a record or an enumeration datatype"
+      Ty.print ty
+
+  | MatchNotExhaustive missing ->
+    fprintf fmt
+      "Pattern-matching is not exhaustive. These cases are missing: %a"
+      (Util.print_list ~sep:" |" ~pp:Hstring.print) missing
+
+  | MatchUnusedCases dead ->
+    fprintf fmt
+      "Pattern-matching contains unreachable cases. These cases are removed: %a"
+      (Util.print_list ~sep:" |" ~pp:Hstring.print) dead
+
+  | NotAdtConstr (lbl, ty) ->
+    fprintf fmt
+      "The symbol %s is not a constructor of the type %a" lbl Ty.print ty
 
 let error e l = raise (Error(e,l))
-let warning e l = raise (Warning(e,l))
+let warning e l =
+  if Options.unsat_mode () then Format.fprintf err_formatter "; ";
+  Loc.report err_formatter l;
+  report err_formatter e;
+  Format.eprintf "@."

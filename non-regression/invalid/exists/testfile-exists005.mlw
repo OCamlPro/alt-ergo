@@ -1,3 +1,0 @@
-axiom a : exists x:'a. forall y:'a. x = y
-
-goal G : false

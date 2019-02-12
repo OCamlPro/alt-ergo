@@ -1,0 +1,28 @@
+#!/bin/sh
+
+files=`find ./ -regex .*[.]ml[ily]?`
+
+cpt=0
+
+for f in $files ; do
+    # only check files that are not untracked and not ignored
+    status=`git status $f -s --ignored`
+    res=`echo $status | cut -d' ' -f1`
+    if ! [ "$res" = "??" ] && ! [ "$res" = "!!" ] ; then
+        .git/hooks/ocp-checker $f
+        if ! [ "$?" -eq "0" ] ; then
+            cpt=$((cpt+1))
+        fi
+    fi
+done
+
+if ! [ $cpt -eq 0 ] ; then
+    #echo "White spaces detected and removed in *.ml* files"
+    echo "Some fixes are needed before you can commit"
+    exit 1
+fi
+
+cd extra
+./check_indentation.sh
+
+exit $?
