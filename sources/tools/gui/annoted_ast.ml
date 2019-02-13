@@ -846,9 +846,9 @@ let rec print_typed_decl fmt td = match td.Typed.c with
     fprintf fmt "axiom %s : %a" s print_tform tf
   | TRewriting (_, s, rwtl) ->
     fprintf fmt "rewriting %s : %a" s print_rwt_list rwtl
-  | TGoal (_, Thm, s, tf) -> fprintf fmt "goal %s : %a" s print_tform tf
-  | TGoal (_, Check, s, tf) -> fprintf fmt "check %s : %a" s print_tform tf
-  | TGoal (_, Cut, s, tf) -> fprintf fmt "cut %s : %a" s print_tform tf
+  | TNegated_goal (_, Thm, s, tf) -> fprintf fmt "goal %s : %a" s print_tform tf
+  | TNegated_goal (_, Check, s, tf) -> fprintf fmt "check %s : %a" s print_tform tf
+  | TNegated_goal (_, Cut, s, tf) -> fprintf fmt "cut %s : %a" s print_tform tf
   | TLogic (_, ls, ty) ->
     fprintf fmt "logic %a : %a" print_string_list ls print_tlogic_type ty
   | TPredicate_def (_, p, spptl, tf) ->
@@ -1232,7 +1232,7 @@ let rec annot_of_typed_decl (buffer:sbuffer) td =
                td.Typed.annot ptag
           ) rwtl in
       ARewriting (loc, s, arwtl)
-    | TGoal (loc, gs, s, tf) ->
+    | TNegated_goal (loc, gs, s, tf) ->
       let g = new_annot buffer (of_tform buffer tf) tf.Typed.annot ptag in
       AGoal (loc, gs, s, g)
     | TLogic (loc, ls, ty) -> ALogic (loc, ls, downgrade_tlogic ty, ty)
@@ -1393,7 +1393,7 @@ let rec to_typed_decl td =
                  rwt_right = to_tterm ar.id ar.c.rwt_right}::rwtl
         ) [] arwtl in
       TRewriting (loc, s, rwtl)
-    | AGoal (loc, gs, s, aaf) -> TGoal (loc, gs, s, to_tform aaf)
+    | AGoal (loc, gs, s, aaf) -> TNegated_goal (loc, gs, s, to_tform aaf)
     | ALogic (loc, ls, _, ty) -> TLogic (loc, ls, ty)
     | APredicate_def (loc, p, spptl, af) ->
       TPredicate_def (loc, p, List.map (fun (x, _, y) -> (x, y)) spptl,

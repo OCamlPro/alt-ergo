@@ -276,8 +276,11 @@ and 'a tdecl =
   (** New axiom that can be used in proofs. *)
   | TRewriting of Loc.t * string * ('a atterm rwt_rule) list
   (** New rewrite rule that can be used. *)
-  | TGoal of Loc.t * goal_sort * string * 'a atform
-  (** New goal to prove. *)
+  | TNegated_goal of Loc.t * goal_sort * string * 'a atform
+  (** New goal to prove, already negated !
+      WARNING: the formula given is added as an axiom,
+               so be sure to negate it before creating
+               a goal of this form. *)
   | TLogic of Loc.t * string list * tlogic_type
   (** Function (or predicate) type declaration. *)
   | TPredicate_def of
@@ -299,6 +302,14 @@ and 'a tdecl =
 (** Typed declarations. *)
 (* TODO: wrap this in a record to factorize away
    the location and name of the declaration ? *)
+
+
+(** {5 Monomorphization} *)
+
+val monomorphize_term : 'a atterm -> 'a atterm
+val monomorphize_atom : 'a atatom -> 'a atatom
+val monomorphize_form : 'a atform -> 'a atform
+(** Monomorphization functions on expressions. *)
 
 
 (** {5 Printing} *)
@@ -387,6 +398,14 @@ module Safe : sig
     val print : Format.formatter -> t -> unit
     (** Printer function *)
 
+    val print_ty :
+      Format.formatter ->
+      (Ty.Safe.Var.t list * Ty.t list * Ty.t) -> unit
+    (** Print a term constant's type. *)
+
+    val print_full : Format.formatter -> t -> unit
+    (** Print a constant together with its type. *)
+
     val arity : t -> int * int
     (** Return the expected number of arguments of the constants.
         The pair contains first the number of expected type
@@ -417,18 +436,6 @@ module Safe : sig
   end
 
   (** {5 Typing exceptions} *)
-
-  exception Term_expected
-  (** Raised by function that expect an expression to be
-      a term, but the expression was an atom or formula. *)
-
-  exception Formula_expected
-  (** Raised by function that expect an expression to be
-      a formula, but the expression was a term. *)
-
-  exception Formula_in_term_let
-  (** Current typed term structure restricts let-bindings in terms
-      to only bind variables to terms and not formulas. *)
 
   exception Deep_type_quantification
   (** Alt-ergo restricts type variables to be quantified at the
@@ -467,7 +474,6 @@ module Safe : sig
       expression.
       @raise Wrong_arity
       @raise Wrong_type
-      @raise Term_expected
   *)
 
   val _true : t
@@ -479,48 +485,51 @@ module Safe : sig
   val eq : t -> t -> t
   (** Create an equality between two expressions.
       @raise Wrong_type
-      @raise Term_expected
+  *)
+
+  val eqs : t list -> t
+  (** Create a chain of equalities.
+      @raise Wrong_type
   *)
 
   val distinct : t list -> t
   (** Create a distinct expression.
       @raise Wrong_type
-      @raise Term_expected
   *)
 
   val neg : t -> t
   (** Propositional negation
-      @raise Formula_expected
+      @raise Wrong_type
       @raise Deep_type_quantification
   *)
 
   val imply : t -> t -> t
   (** Propositional implication
-      @raise Formula_expted
+      @raise Wrong_type
       @raise Deep_type_quantification
   *)
 
   val equiv : t -> t -> t
   (** Propositional equivalence
-      @raise Formula_expected
+      @raise Wrong_type
       @raise Deep_type_quantification
   *)
 
   val xor : t -> t -> t
   (** Propositional exclusive disjunction
-      @raise Formula_expected
+      @raise Wrong_type
       @raise Deep_type_quantification
   *)
 
   val _and : t list -> t
   (** Propositional conjunction
-      @raise Formula_expected
+      @raise Wrong_type
       @raise Deep_type_quantification
   *)
 
   val _or : t list -> t
   (** Propositional disjunction
-      @raise Formula_expected
+      @raise Wrong_type
       @raise Deep_type_quantification
   *)
 
@@ -535,7 +544,7 @@ module Safe : sig
       of free variables that occur in the resulting formula, then
       the lists of variables quantified in the formula, and then the body
       of the quantified formula.
-      @raise Formula_expected
+      @raise Wrong_type
       @raise Deep_type_quantification
   *)
 
@@ -547,14 +556,24 @@ module Safe : sig
       of free variables that occur in the resulting formula, then
       the lists of variables quantified in the formula, and then the body
       of the quantified formula.
-      @raise Formula_expected
+      @raise Wrong_type
       @raise Deep_type_quantification
   *)
 
   val letin : (Var.t * t) list -> t -> t
   (** Let-binding.
+      @raise Wrong_type
       @raise Deep_type_quantification
   *)
+
+  val ite : t -> t -> t -> t
+  (** Create a conditional. *)
+
+  val mk_select : t -> t -> t
+  (** Create a get operation on functionnal arrays *)
+
+  val mk_store : t -> t -> t -> t
+  (** Create a set operation on functionnal arrays. *)
 
   val tag : t -> _ -> _ -> unit
   (** Noop, there for compatibility with Dolmen's interface. *)

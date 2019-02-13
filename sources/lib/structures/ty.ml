@@ -718,6 +718,18 @@ module Safe = struct
     let print fmt { symbol; _ } =
       Format.fprintf fmt "%s" (Hstring.view symbol)
 
+    let rec print_arity_aux fmt = function
+      | 0 -> Format.fprintf fmt "Type"
+      | n ->
+        assert (n > 0);
+        Format.fprintf fmt "Type ->@ %a" print_arity_aux (n - 1)
+
+    let print_ty fmt n =
+      Format.fprintf fmt "@[<hov>%a@]" print_arity_aux n
+
+    let print_full fmt c =
+      Format.fprintf fmt "%a:@ %a" print c print_ty c.arity
+
   end
 
   exception Wrong_arity of Const.t * int
@@ -733,6 +745,10 @@ module Safe = struct
       Text (args, Const.symbol c)
     else
       raise (Wrong_arity (c, m))
+
+  let base = apply Const.base []
+
+  let mk_array src dst = Tfarray (src, dst)
 
   (* ugly thing to satisfy the expected type in
      typed statements TTypeDecl constructor *)

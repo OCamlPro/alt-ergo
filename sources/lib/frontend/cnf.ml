@@ -450,7 +450,9 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
       in
       E.mk_match e pats
 
-    | _ -> assert false
+    | _ ->
+      Format.eprintf "error on: %a@." Typed.print_formula (Typed.mk c);
+      assert false
   in
   mk_form up_qv true f.c f.annot
 
@@ -513,7 +515,7 @@ let make acc d =
   | TAxiom(_, _, Util.Propagator, _) -> assert false
   | TRewriting(loc, _, lr) ->
     {st_decl=RwtDef(List.map make_rule lr); st_loc=loc} :: acc
-  | TGoal(loc, sort, n, f) -> mk_query acc n f loc sort
+  | TNegated_goal(loc, sort, n, f) -> mk_query acc n f loc sort
   | TPredicate_def(loc, n, _args, f) -> mk_preddef acc f n loc
   | TFunction_def(loc, n, _args, _rety, f) -> mk_function acc f n loc
   | TTypeDecl _ | TLogic _  -> acc

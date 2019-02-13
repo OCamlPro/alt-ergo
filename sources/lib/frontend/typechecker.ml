@@ -1783,114 +1783,6 @@ let rec make_pred loc trs f = function
     { pp_desc = PPforall([x,t],[],[],(make_pred loc trs f l)) ;
       pp_loc = loc }
 
-let monomorphize_var (s,ty) = s, Ty.monomorphize ty
-
-let rec mono_term {c = {tt_ty=tt_ty; tt_desc=tt_desc}; annot = id} =
-  let tt_desc = match tt_desc with
-    | TTconst _ | TTvar _ ->
-      tt_desc
-    | TTinfix (t1, sy, t2) ->
-      TTinfix(mono_term t1, sy, mono_term t2)
-    | TTprefix (sy,t) ->
-      TTprefix(sy, mono_term t)
-    | TTapp (sy,tl) ->
-      TTapp (sy, List.map mono_term tl)
-    | TTinInterval (e, lb, ub) ->
-      TTinInterval(mono_term e, lb, ub)
-    | TTmapsTo (x, e) ->
-      TTmapsTo(x, mono_term e)
-    | TTget (t1,t2) ->
-      TTget (mono_term t1, mono_term t2)
-    | TTset (t1,t2,t3) ->
-      TTset(mono_term t1, mono_term t2, mono_term t3)
-    | TTextract (t1,t2,t3) ->
-      TTextract(mono_term t1, mono_term t2, mono_term t3)
-    | TTconcat (t1,t2)->
-      TTconcat (mono_term t1, mono_term t2)
-    | TTdot (t1, a) ->
-      TTdot (mono_term t1, a)
-    | TTrecord lbs ->
-      TTrecord (List.map (fun (x, t) -> x, mono_term t) lbs)
-    | TTlet (l,t2)->
-      let l = List.rev_map (fun (x, t1) -> x, mono_term t1) (List.rev l) in
-      TTlet (l, mono_term t2)
-    | TTnamed (lbl, t)->
-      TTnamed (lbl, mono_term t)
-    | TTite (cond, t1, t2) ->
-      TTite (monomorphize_form cond, mono_term t1, mono_term t2)
-
-    | TTproject (grded, t, lbl) ->
-      TTproject (grded, mono_term t, lbl)
-    | TTmatch (e, pats) ->
-      let e = mono_term e in
-      let pats = List.rev_map (fun (p, f) -> p, mono_term f) (List.rev pats) in
-      TTmatch (e, pats)
-
-    | TTform f -> TTform (monomorphize_form f)
-
-  in
-  { c = {tt_ty = Ty.monomorphize tt_ty; tt_desc=tt_desc}; annot = id}
-
-
-and monomorphize_atom tat =
-  let c = match tat.c with
-    | TAtrue | TAfalse -> tat.c
-    | TAeq tl -> TAeq (List.map mono_term tl)
-    | TAneq tl -> TAneq (List.map mono_term tl)
-    | TAle tl -> TAle (List.map mono_term tl)
-    | TAlt tl -> TAlt (List.map mono_term tl)
-    | TAdistinct tl -> TAdistinct (List.map mono_term tl)
-    | TApred (t, negated) -> TApred (mono_term t, negated)
-    | TTisConstr (t, lbl) -> TTisConstr (mono_term t, lbl)
-  in
-  { tat with c = c }
-
-and monomorphize_form tf =
-  let c = match tf.c with
-    | TFatom tat -> TFatom (monomorphize_atom tat)
-    | TFop (oplogic , tfl) ->
-      TFop(oplogic, List.map monomorphize_form tfl)
-    | TFforall qf ->
-      TFforall
-        {  qf_bvars = List.map monomorphize_var qf.qf_bvars;
-           qf_upvars = List.map monomorphize_var qf.qf_upvars;
-           qf_hyp = List.map monomorphize_form qf.qf_hyp;
-           qf_form = monomorphize_form qf.qf_form;
-           qf_triggers =
-             List.map (fun (l, b) -> List.map mono_term l, b) qf.qf_triggers}
-    | TFexists qf ->
-      TFexists
-        {  qf_bvars = List.map monomorphize_var qf.qf_bvars;
-           qf_upvars = List.map monomorphize_var qf.qf_upvars;
-           qf_hyp = List.map monomorphize_form qf.qf_hyp;
-           qf_form = monomorphize_form qf.qf_form;
-           qf_triggers =
-             List.map (fun (l, b) -> List.map mono_term l, b) qf.qf_triggers}
-
-    | TFlet (l, binders, tf) ->
-      let l = List.map monomorphize_var l in
-      let binders =
-        List.rev_map
-          (fun (sy, e) ->
-             match e with
-             | TletTerm tt -> sy, TletTerm (mono_term tt)
-             | TletForm ff -> sy, TletForm (monomorphize_form ff)
-          )(List.rev binders)
-      in
-      TFlet(l, binders, monomorphize_form tf)
-
-    | TFnamed (hs,tf) ->
-      TFnamed(hs, monomorphize_form tf)
-
-    | TFmatch(e, pats) ->
-      let e = mono_term e in
-      let pats =
-        List.rev_map
-          (fun (p, f) -> p, monomorphize_form f) (List.rev pats)
-      in
-      TFmatch (e, pats)
-  in
-  { tf with c = c }
 
 let axioms_of_rules loc name lf acc env =
   let acc =
@@ -1907,7 +1799,7 @@ let axioms_of_rules loc name lf acc env =
 
 let type_hypothesis acc env_f loc sort f =
   let f = type_form env_f f in
-  let f = monomorphize_form f in
+  let f = Typed.monomorphize_form f in
   let td =
     {c = TAxiom(loc, fresh_hypothesis_name sort,Util.Default, f);
      annot = new_id () } in
@@ -1916,8 +1808,8 @@ let type_hypothesis acc env_f loc sort f =
 
 let type_goal acc env_g loc sort n goal =
   let goal = type_form env_g goal in
-  let goal = monomorphize_form goal in
-  let td = {c = TGoal(loc, sort, n, goal); annot = new_id () } in
+  let goal = Typed.monomorphize_form goal in
+  let td = {c = TNegated_goal(loc, sort, n, goal); annot = new_id () } in
   (td, env_g)::acc
 
 
@@ -2263,11 +2155,11 @@ let split_goals_aux f l =
     List.fold_left
       (fun (ctx, global_hyp, local_hyp, ret) (td, env) ->
          match td.c with
-         | TGoal (_, (Check | Cut), name, _) ->
+         | TNegated_goal (_, (Check | Cut), name, _) ->
            ctx, global_hyp, [],
            (f td env (local_hyp@global_hyp@ctx), name) :: ret
 
-         | TGoal (_, _, name, _) ->
+         | TNegated_goal (_, _, name, _) ->
            ctx, [], [],
            (f td env (local_hyp@global_hyp@ctx), name) :: ret
 

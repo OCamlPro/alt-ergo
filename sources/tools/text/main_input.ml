@@ -68,12 +68,22 @@ let () =
     let parse_aux dir (lang, gen, close) =
       let rec aux () =
         match gen () with
-        | None -> close (); Seq.Nil
-        | Some x -> Cons ((dir, lang, x), aux)
+        | None ->
+          close ();
+          (* Dimancs need a special prove statement
+             to be added at the end *)
+          begin match lang with
+            | L.Dimacs | L.Tptp ->
+              let prove = Dolmen.Statement.prove () in
+              Seq.Cons ((dir, lang, prove), Seq.empty)
+            | _ ->
+              Seq.Nil
+          end
+        | Some x -> Seq.Cons ((dir, lang, x), aux)
       in
       aux
 
-    let parse_file (dir, filename) : _ Seq.t =
+    let parse_file (lang, dir, filename) : _ Seq.t =
       match L.find ~dir filename with
       | None -> raise Not_found
       | Some f ->
@@ -83,20 +93,24 @@ let () =
             let lang, _, _ = L.of_extension @@ Dolmen.Misc.get_extension f' in
             parse_aux dir @@ L.parse_input (`Raw (f', lang, contents))
           | _ ->
-            parse_aux dir @@ L.parse_input (`File f)
+            let language =
+              try let l, _, _ = L.of_filename f in Some l
+              with L.Extension_not_found _ -> lang
+            in
+            parse_aux dir @@ L.parse_input ?language (`File f)
         end
 
-    let parse_include (dir, _, stmt) =
+    let parse_include (dir, lang, stmt) =
       match stmt with
       | { Dolmen.Statement.descr =
             Dolmen.Statement.Include file; _ } ->
-        `Seq (parse_file (dir, file))
+        `Seq (parse_file (Some lang, dir, file))
       | _ -> `Ok
 
     let parse_files ~filename ~preludes =
       let l = preludes @ [filename] in
       Lists.to_seq l
-      |> Seq.map (fun f -> Filename.dirname f, Filename.basename f)
+      |> Seq.map (fun f -> None, Filename.dirname f, Filename.basename f)
       |> Seq.flat_map parse_file
       |> Seqs.flat_map_rec parse_include
       |> Seq.map (fun (_, l, stmt) -> (l, stmt))
@@ -107,6 +121,15 @@ let () =
     module Void = struct
       type 'a t = unit
       let rwrt = ()
+
+      type name = unit
+      let name = ()
+      let exact _ = ()
+
+      type pos = unit
+      let pos = ()
+      let infix = ()
+      let prefix = ()
     end
 
     module W = struct
@@ -116,6 +139,7 @@ let () =
         | `Term of Typed.Safe.Const.t
       ]
 
+      (* TODO: print warnings *)
       let shadow _ _ _ = ()
       let unused_ty_var _ _ = ()
       let unused_term_var _ _ = ()
@@ -126,19 +150,25 @@ let () =
     module T = Dolmen_type.Tff.Make(Void)(Ty.Safe)(Typed.Safe)(W)
 
     (* Dolmen's typing environment is not explicit, but stored
-       in the global mutable state, hence no need for explicit
+       in a global mutable state, hence no need for explicit
        environment. *)
     type env = unit
     let empty_env = ()
 
 
     (* Typing Builtins *)
+    module B_zf = Dolmen_type.Base.Zf.Tff(T)(Void)
     module B_tptp = Dolmen_type.Base.Tptp.Tff(T)(Ty.Safe)(Typed.Safe)
     module B_smtlib = Dolmen_type.Base.Smtlib.Tff(T)(Void)(Ty.Safe)(Typed.Safe)
+    module B_smtlib_array = Dolmen_type.Array.Smtlib.Tff(T)(Ty.Safe)(Typed.Safe)
 
     let builtins = function
       | L.Tptp -> B_tptp.parse
-      | L.Smtlib -> B_smtlib.parse
+      | L.Smtlib ->
+        Dolmen_type.Base.merge [
+          B_smtlib.parse;
+          B_smtlib_array.parse;
+        ]
       | _ -> (fun _ _ _ _ -> None)
 
     (* Starting environment (mainly to specify the builtins function) *)
@@ -148,7 +178,13 @@ let () =
         | L.Tptp | L.Dimacs -> T.Typed Ty.Safe.prop
         | _ -> T.Nothing
       in
-      T.empty_env ~expect (builtins lang)
+      let infer_base =
+        match lang with
+        | L.Tptp -> Some Ty.Safe.base
+        | L.Dimacs -> Some Ty.Safe.prop
+        | _ -> None
+      in
+      T.empty_env ?infer_base ~expect (builtins lang)
 
     (* Get a location from a statement *)
     let _loc s =
@@ -173,7 +209,60 @@ let () =
          | id -> Dolmen.Id.full_name id)
 
     let hyp_id = stmt_id "hyp"
+    let goal_id = stmt_id "g"
 
+    let type_form ?(negate=false) lang f =
+      let env = start_env lang in
+      let e =
+        try T.parse env f
+        with Typed.Safe.Wrong_type (t, ty) ->
+          raise (T.Typing_error (T.Type_mismatch (t, ty), env, f))
+      in
+      let e' = if negate then Typed.Safe.neg e else e in
+      let _, ax = Typed.Safe.expect_prop e' in
+      ax
+
+    let type_hyp s lang t =
+      let ax = type_form lang t in
+      [Typed.mk (Typed.TAxiom (_loc s, hyp_id s, Util.Default, ax))]
+
+    let type_goal ?(negate=false) s lang g_sort t =
+      let g = type_form ~negate lang t in
+      let g' = Typed.monomorphize_form g in
+      let name = Typed.fresh_hypothesis_name g_sort in
+      [Typed.mk (Typed.TNegated_goal (_loc s, g_sort, name, g'))]
+
+    let type_assumption s lang t =
+      let f = type_form ~negate:false lang t in
+      let not_f = Typed.(mk (TFop (OPnot, [f]))) in
+      let g = Typed.monomorphize_form not_f in
+      let g_sort = Typed.Cut in
+      let hyp_name = Typed.fresh_hypothesis_name g_sort in
+      [Typed.mk (Typed.TNegated_goal (_loc s, g_sort, goal_id s, g));
+       Typed.mk (Typed.TAxiom (_loc s, hyp_name, Util.Default, f)) ]
+
+    let get_role s =
+      let module S = Dolmen.Statement in
+      let module T = Dolmen.Term in
+      match s.S.attr with
+      | Some { T.term = T.Colon (_, {
+          T.term = T.App (
+              { T.term = T.Symbol f ; _ } , [
+              { T.term = T.Symbol id; _ }
+            ]) ; _ }) ; _ }
+      | Some { T.term = T.App (
+            { T.term = T.Symbol f ; _ } , [
+            { T.term = T.Symbol id; _ }
+          ]) ; _ }
+        ->
+        if Dolmen.Id.(equal tptp_role f) then
+          Some (Dolmen.Id.full_name id)
+        else
+          None
+      | _ -> None
+
+    let is_tptp_assumption s = get_role s = Some "assumption"
+    let is_tptp_negated_conjecture s = get_role s = Some "negated_conjecture"
 
     (* Typecheck statements *)
     let rec type_parsed () (lang, s) =
@@ -204,11 +293,52 @@ let () =
                                        [Typed.Safe.Const.name c],
                                        Typed.Safe.Const.tlogic_type c))]
           end
+        (* Explicit Prove statements (aka check-sat in smtlib) *)
+        | S.Prove [] ->
+          begin match lang with
+            | L.Smtlib | L.Dimacs | L.ICNF ->
+              Options.set_unsat_mode true;
+              let _, _true = Typed.Safe.(expect_prop _true) in
+              [Typed.mk (Typed.TNegated_goal
+                           (_loc s, Typed.Thm, goal_id s, _true))]
+            | _ -> []
+          end
+        (* Hypotheses *)
         | S.Antecedent t ->
+          if is_tptp_assumption s then
+            type_assumption s lang t
+          else if is_tptp_negated_conjecture s then
+            type_goal ~negate:false s lang Typed.Thm t
+          else
+            type_hyp s lang t
+        | S.Consequent t ->
+          type_goal s lang Typed.Thm t
+
+        (* Special case for clauses *)
+        | S.Clause l ->
           let env = start_env lang in
-          let e = T.parse env t in
-          let _, ax = Typed.Safe.expect_prop e in
-          [Typed.mk (Typed.TAxiom (_loc s, hyp_id s, Util.Default, ax))]
+          let fv_lists = List.map Dolmen.Term.fv l in
+          begin match List.sort_uniq Dolmen.Id.compare (List.flatten fv_lists) with
+            | [] ->
+              (* TODO: add a special case for clauses in type declaration,
+                       to avoid encoding them using disjunctions. *)
+              let l' = List.map (T.parse env) l in
+              let _, ax = Typed.Safe.expect_prop @@ Typed.Safe._or l' in
+              [Typed.mk (Typed.TAxiom (_loc s, hyp_id s, Util.Default, ax))]
+            | free_vars -> (* if there are free variables, these must be quantified
+                              or else the typchecker will raise an error. *)
+              let loc = s.S.loc in
+              let vars = List.map (Dolmen.Term.const ?loc) free_vars in
+              let f = Dolmen.Term.forall ?loc vars (
+                  match l with
+                  | [] -> assert false | [p] -> p
+                  | _ -> Dolmen.Term.apply ?loc (Dolmen.Term.or_t ?loc ()) l
+                ) in
+              let ax = type_form lang f in
+              [Typed.mk (Typed.TAxiom (_loc s, hyp_id s, Util.Default, ax))]
+          end
+        | S.Exit ->
+          exit 0
         | _ ->
           Format.eprintf "Error, don't know what to do with:@\n %a@." S.print s;
           exit 2

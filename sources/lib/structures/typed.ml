@@ -176,7 +176,7 @@ and 'a tdecl =
       Loc.t * string * Util.theories_extensions * ('a tdecl, 'a) annoted list
   | TAxiom of Loc.t * string * Util.axiom_kind * ('a tform, 'a) annoted
   | TRewriting of Loc.t * string * (('a tterm, 'a) annoted rwt_rule) list
-  | TGoal of Loc.t * goal_sort * string * ('a tform, 'a) annoted
+  | TNegated_goal of Loc.t * goal_sort * string * ('a tform, 'a) annoted
   | TLogic of Loc.t * string list * tlogic_type
   | TPredicate_def of
       Loc.t * string *
@@ -326,10 +326,40 @@ and print_formula fmt f =
     fprintf fmt "if %a then %a else %a"
       print_formula cond print_formula f1 print_formula f2
   | TFop(op, [f1; f2]) ->
-    fprintf fmt "%a %s %a" print_formula f1 (string_of_op op) print_formula f2
+    fprintf fmt "(%a %s %a)" print_formula f1 (string_of_op op) print_formula f2
+  | TFop(op, l) ->
+    fprintf fmt "(%a)" (
+      Util.print_list_pp
+        ~sep:(fun fmt () -> Format.fprintf fmt " %s " (string_of_op op))
+        ~pp:print_formula) l
   | TFforall { qf_bvars = l; qf_triggers = t; qf_form = f; _ } ->
     fprintf fmt "forall %a [%a]. %a"
       print_binders l print_triggers t print_formula f
+  | TFexists { qf_bvars = l; qf_triggers = t; qf_form = f; _ } ->
+    fprintf fmt "exists %a [%a]. %a"
+      print_binders l print_triggers t print_formula f
+  | TFnamed (_, f') -> print_formula fmt f'
+
+  | TFmatch (e, cases) ->
+    let pp_vars fmt l =
+      match l with
+        [] -> ()
+      | [e,_,_] -> Var.print fmt e
+      | (e,_,_) :: l ->
+        fprintf fmt "(%a" Var.print e;
+        List.iter (fun (e,_,_) -> fprintf fmt ", %a" Var.print e) l;
+        fprintf fmt ")"
+    in
+    fprintf fmt "match %a with\n" print_term e;
+    List.iter
+      (fun (p, v) ->
+         match p with
+         | Constr {name = n; args = l} ->
+           fprintf fmt "| %a %a -> %a\n" Hstring.print n pp_vars l print_formula v
+         | Var x ->
+           fprintf fmt "| %a -> %a\n" Var.print x print_formula v;
+      )cases;
+    fprintf fmt "end@."
 
   | TFlet (_, binders, f) ->
     List.iter
@@ -340,7 +370,6 @@ and print_formula fmt f =
          | TletForm f -> fprintf fmt "%a in@." print_formula f
       )binders;
     fprintf fmt "%a" print_formula f
-  | _ -> fprintf fmt "(formula pprint not implemented)"
 
 (*
 let rec print_tdecl fmt = function
@@ -372,6 +401,121 @@ let is_local_hyp s =
 
 let is_global_hyp s =
   try Pervasives.(=) (String.sub s 0 2) "@H" with Invalid_argument _ -> false
+
+
+(* Monomorphization *)
+
+let monomorphize_var (s,ty) = s, Ty.monomorphize ty
+
+let rec mono_term {c = {tt_ty=tt_ty; tt_desc=tt_desc}; annot = id} =
+  let tt_desc = match tt_desc with
+    | TTconst _ | TTvar _ ->
+      tt_desc
+    | TTinfix (t1, sy, t2) ->
+      TTinfix(mono_term t1, sy, mono_term t2)
+    | TTprefix (sy,t) ->
+      TTprefix(sy, mono_term t)
+    | TTapp (sy,tl) ->
+      TTapp (sy, List.map mono_term tl)
+    | TTinInterval (e, lb, ub) ->
+      TTinInterval(mono_term e, lb, ub)
+    | TTmapsTo (x, e) ->
+      TTmapsTo(x, mono_term e)
+    | TTget (t1,t2) ->
+      TTget (mono_term t1, mono_term t2)
+    | TTset (t1,t2,t3) ->
+      TTset(mono_term t1, mono_term t2, mono_term t3)
+    | TTextract (t1,t2,t3) ->
+      TTextract(mono_term t1, mono_term t2, mono_term t3)
+    | TTconcat (t1,t2)->
+      TTconcat (mono_term t1, mono_term t2)
+    | TTdot (t1, a) ->
+      TTdot (mono_term t1, a)
+    | TTrecord lbs ->
+      TTrecord (List.map (fun (x, t) -> x, mono_term t) lbs)
+    | TTlet (l,t2)->
+      let l = List.rev_map (fun (x, t1) -> x, mono_term t1) (List.rev l) in
+      TTlet (l, mono_term t2)
+    | TTnamed (lbl, t)->
+      TTnamed (lbl, mono_term t)
+    | TTite (cond, t1, t2) ->
+      TTite (monomorphize_form cond, mono_term t1, mono_term t2)
+
+    | TTproject (grded, t, lbl) ->
+      TTproject (grded, mono_term t, lbl)
+    | TTmatch (e, pats) ->
+      let e = mono_term e in
+      let pats = List.rev_map (fun (p, f) -> p, mono_term f) (List.rev pats) in
+      TTmatch (e, pats)
+
+    | TTform f -> TTform (monomorphize_form f)
+
+  in
+  { c = {tt_ty = Ty.monomorphize tt_ty; tt_desc=tt_desc}; annot = id}
+
+and monomorphize_term t = mono_term t
+
+and monomorphize_atom tat =
+  let c = match tat.c with
+    | TAtrue | TAfalse -> tat.c
+    | TAeq tl -> TAeq (List.map mono_term tl)
+    | TAneq tl -> TAneq (List.map mono_term tl)
+    | TAle tl -> TAle (List.map mono_term tl)
+    | TAlt tl -> TAlt (List.map mono_term tl)
+    | TAdistinct tl -> TAdistinct (List.map mono_term tl)
+    | TApred (t, negated) -> TApred (mono_term t, negated)
+    | TTisConstr (t, lbl) -> TTisConstr (mono_term t, lbl)
+  in
+  { tat with c = c }
+
+and monomorphize_form tf =
+  let c = match tf.c with
+    | TFatom tat -> TFatom (monomorphize_atom tat)
+    | TFop (oplogic , tfl) ->
+      TFop(oplogic, List.map monomorphize_form tfl)
+    | TFforall qf ->
+      TFforall
+        {  qf_bvars = List.map monomorphize_var qf.qf_bvars;
+           qf_upvars = List.map monomorphize_var qf.qf_upvars;
+           qf_hyp = List.map monomorphize_form qf.qf_hyp;
+           qf_form = monomorphize_form qf.qf_form;
+           qf_triggers =
+             List.map (fun (l, b) -> List.map mono_term l, b) qf.qf_triggers}
+    | TFexists qf ->
+      TFexists
+        {  qf_bvars = List.map monomorphize_var qf.qf_bvars;
+           qf_upvars = List.map monomorphize_var qf.qf_upvars;
+           qf_hyp = List.map monomorphize_form qf.qf_hyp;
+           qf_form = monomorphize_form qf.qf_form;
+           qf_triggers =
+             List.map (fun (l, b) -> List.map mono_term l, b) qf.qf_triggers}
+
+    | TFlet (l, binders, tf) ->
+      let l = List.map monomorphize_var l in
+      let binders =
+        List.rev_map
+          (fun (sy, e) ->
+             match e with
+             | TletTerm tt -> sy, TletTerm (mono_term tt)
+             | TletForm ff -> sy, TletForm (monomorphize_form ff)
+          )(List.rev binders)
+      in
+      TFlet(l, binders, monomorphize_form tf)
+
+    | TFnamed (hs,tf) ->
+      TFnamed(hs, monomorphize_form tf)
+
+    | TFmatch(e, pats) ->
+      let e = mono_term e in
+      let pats =
+        List.rev_map
+          (fun (p, f) -> p, monomorphize_form f) (List.rev pats)
+      in
+      TFmatch (e, pats)
+  in
+  { tf with c = c }
+
+
 
 module Safe = struct
 
@@ -445,10 +589,31 @@ module Safe = struct
     let compare c c' =
       Symbols.compare c.symbol c'.symbol
 
+    let equal c c' = compare c c' = 0
+
     let print fmt { symbol; _ } =
       Format.fprintf fmt "%s" (Symbols.to_string symbol)
 
-    let equal c c' = compare c c' = 0
+    let print_ty fmt (vars, args, ret) =
+      let rec aux_vars args ret fmt = function
+        | [] -> aux_args ret fmt args
+        | vars ->
+          Format.fprintf fmt "%a ->@ %a"
+            (Util.print_list_pp ~pp:Ty.Safe.Var.print
+               ~sep:(fun fmt () -> Format.fprintf fmt " ->@ ")) vars
+            (aux_args ret) args
+      and aux_args ret fmt = function
+        | [] -> Ty.print fmt ret
+        | args ->
+          Format.fprintf fmt "%a ->@ %a"
+            (Util.print_list_pp ~pp:Ty.print
+               ~sep:(fun fmt () -> Format.fprintf fmt " ->@ ")) args
+            Ty.print ret
+      in
+      Format.fprintf fmt "@[<hov>%a@]" (aux_vars args ret) vars
+
+    let print_full fmt c =
+      Format.fprintf fmt "%a:@ %a" print c print_ty (c.vars, c.args, c.ret)
 
     let arity c =
       List.length c.vars,
@@ -477,9 +642,6 @@ module Safe = struct
 
   end
 
-  exception Term_expected
-  exception Formula_expected
-  exception Formula_in_term_let
   exception Deep_type_quantification
   exception Wrong_type of t * Ty.t
   exception Wrong_arity of Const.t * int * int
@@ -509,16 +671,18 @@ module Safe = struct
         | _ -> assert false
       end
 
-  let expect_formula t =
-    match promote_atom @@ promote_term t with
-    | Form (f, []) -> f
-    | Form (_, _) -> raise Deep_type_quantification
-    | _ -> raise Formula_expected
-
   let expect_prop t =
     match promote_atom @@ promote_term t with
     | Form (f, l) -> l, f
-    | _ -> raise Formula_expected
+    | (Term _) as e ->
+      raise (Wrong_type (e, Ty.Safe.prop))
+    (* promote_atom guarantees this cannot happen *)
+    | Atom _ -> assert false
+
+    let expect_formula t =
+      match expect_prop t with
+      | [], f -> f
+      | _ -> raise Deep_type_quantification
 
   (* Smart constructors:
      Wrappers to build term while checking the well-typedness *)
@@ -556,6 +720,54 @@ module Safe = struct
   let _true = Atom (mk TAtrue)
   let _false = Atom (mk TAfalse)
 
+  let mk_form_op op l =
+    let l_f = List.map expect_formula l in
+    Form (mk (TFop(op, l_f)), [])
+
+  let neg t = mk_form_op OPnot [t]
+  let imply p q = mk_form_op OPimp [p; q]
+  let equiv p q = mk_form_op OPiff [p; q]
+  let xor p q = mk_form_op OPxor [p; q]
+
+  (* Use a divide and conquer strategy to chain
+     application of binary operators to a list of expressions. *)
+  let mk_bin_op op l =
+    let rec divide = function
+      | [] -> []
+      | [t] -> [t]
+      | x :: y :: r ->
+        let r' = divide r in
+        let t = mk_form_op op [x; y] in
+        t :: r'
+    in
+    let rec conquer = function
+      | [] -> raise (Invalid_argument "Typed.mk_bin_op")
+      | [t] -> t
+      | l -> conquer (divide l)
+    in
+    conquer l
+
+  let _and = mk_bin_op OPand
+  let _or = mk_bin_op OPor
+
+  (* TODO: allow real n-ary equalities.
+     Currently, n-ary equalities are translated using a "star"
+     of equalities (i.e. all elements of the chain are equal
+     to the first), in order to avoid long chains that could
+     be a problem for the union-find/congruence closure. *)
+  let eqs = function
+    | [] | [_] -> raise (Invalid_argument "Typed.eqs")
+    | e :: r ->
+      let e_ty = ty e in
+      let e_t = expect_term e in
+      let l = List.fold_left (fun acc e' ->
+          if Ty.equal e_ty (ty e')
+          then expect_term e' :: acc
+          else raise (Wrong_type (e', e_ty))
+        ) [] r in
+      let l' = List.map (fun f_t -> Atom (mk (TAeq [e_t; f_t]))) l in
+      _and l'
+
   let eq a b =
     let a_t = expect_term a in
     let b_t = expect_term b in
@@ -578,19 +790,6 @@ module Safe = struct
         ) r
       in
       Atom (mk (TAdistinct (x_t :: r')))
-
-  let mk_form_op op l =
-    let l_f = List.map expect_formula l in
-    Form (mk (TFop(op, l_f)), [])
-
-  let neg t = mk_form_op OPnot [t]
-  let imply p q = mk_form_op OPimp [p; q]
-  let equiv p q = mk_form_op OPiff [p; q]
-  let xor p q = mk_form_op OPxor [p; q]
-
-  let _and = mk_form_op OPand
-  let _or = mk_form_op OPor
-
 
   (** free variable computation *)
   let add_fv (fv, bv) v ty =
@@ -743,7 +942,10 @@ module Safe = struct
     | Atom _ -> assert false
     | Term t ->
       let l' = List.map (fun (v, e') ->
-          v.Var.var, expect_term e'
+          if not (Ty.equal v.Var.ty (ty e')) then
+            raise (Wrong_type (e, v.Var.ty))
+          else
+            v.Var.var, expect_term e'
         ) l in
       Term (mk @@ { tt_desc = TTlet (l', t); tt_ty = t.c.tt_ty})
     | Form (f, []) ->
@@ -758,6 +960,53 @@ module Safe = struct
       let fv_l = Symbols.Map.fold (fun v ty acc -> (v, ty) :: acc) fv_m [] in
       Form (mk @@ TFlet (fv_l, l', f), [])
     | Form (_, _) -> raise Deep_type_quantification
+
+  (* Array operations *)
+  let get_array_type arr =
+    match ty arr with
+    | Ty.Tfarray (src, dst) -> (src, dst)
+    | _ ->
+      let a_ty = Ty.Safe.of_var (Ty.Safe.Var.mk "a") in
+      let b_ty = Ty.Safe.of_var (Ty.Safe.Var.mk "b") in
+      let gen_arr_ty = Ty.Safe.mk_array a_ty b_ty in
+      raise (Wrong_type (arr, gen_arr_ty))
+
+  let mk_select arr idx =
+    let idx_ty = ty idx in
+    let (src, dst) = get_array_type arr in
+    if Ty.equal idx_ty src then
+      Term (mk { tt_ty = dst;
+                 tt_desc =  TTget (expect_term arr,
+                                   expect_term idx) })
+    else
+      raise (Wrong_type (idx, src))
+
+  let mk_store arr idx value =
+    let idx_ty = ty idx in
+    let val_ty = ty value in
+    let (src, dst) = get_array_type arr in
+    if Ty.equal idx_ty src then
+      if Ty.equal val_ty dst then
+        Term (mk { tt_ty = ty arr;
+                   tt_desc =  TTset (expect_term arr,
+                                     expect_term idx,
+                                     expect_term value) })
+      else
+        raise (Wrong_type (value, dst))
+    else
+      raise (Wrong_type (idx, src))
+
+  (* conditionals *)
+  let ite c a b =
+    let cond = expect_formula c in
+    if not (Ty.equal (ty a) (ty b)) then
+      raise (Wrong_type (b, ty a))
+    else begin
+      let a_t = expect_term a in
+      let b_t = expect_term b in
+      Term (mk { tt_ty = ty a;
+                 tt_desc = TTite (cond, a_t, b_t); })
+    end
 
   (* for compatibility purposes with dolmen *)
   let tag _ _ _ = ()

@@ -326,6 +326,13 @@ module Safe : sig
     val print : Format.formatter -> t -> unit
     (** Printer function *)
 
+    val print_ty : Format.formatter -> int -> unit
+    (** Print a type constructor's "type", i.e something such as
+        "Type -> Type -> ... -> Type" using the given arity. *)
+
+    val print_full : Format.formatter -> t -> unit
+    (** Print a constant type constructor tpgether with its type. *)
+
     val arity : t -> int
     (** Return the arity of a type const*)
 
@@ -344,12 +351,18 @@ module Safe : sig
   val prop : t
   (** The type of propositions/booleans. *)
 
+  val base : t
+  (** The type corresponding to {!Const.base}. *)
+
   val of_var : Var.t -> t
   (** Create a type from a variable. *)
 
   val apply : Const.t -> t list -> t
   (** Application for types.
       Ensures that the arity of the given type constructor is respected. *)
+
+  val mk_array : t -> t -> t
+  (** Create a functional array type. *)
 
   val apply_empty : Const.t -> t
   (** Generate an open type, which is the result of aplying the constructor
