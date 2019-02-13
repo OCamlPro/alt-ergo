@@ -169,6 +169,7 @@ let () =
           B_smtlib.parse;
           B_smtlib_array.parse;
         ]
+      | L.Zf -> B_zf.parse
       | _ -> (fun _ _ _ _ -> None)
 
     (* Starting environment (mainly to specify the builtins function) *)
