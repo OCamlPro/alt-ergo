@@ -354,6 +354,9 @@ module Safe : sig
   val base : t
   (** The type corresponding to {!Const.base}. *)
 
+  val int : t
+  (** The type of integers. *)
+
   val of_var : Var.t -> t
   (** Create a type from a variable. *)
 
@@ -361,8 +364,11 @@ module Safe : sig
   (** Application for types.
       Ensures that the arity of the given type constructor is respected. *)
 
-  val mk_array : t -> t -> t
+  val array : t -> t -> t
   (** Create a functional array type. *)
+
+  val bitv : int -> t
+  (** Create a fixed-size bitvector type. *)
 
   val apply_empty : Const.t -> t
   (** Generate an open type, which is the result of aplying the constructor

@@ -160,7 +160,8 @@ let () =
     module B_zf = Dolmen_type.Base.Zf.Tff(T)(Void)
     module B_tptp = Dolmen_type.Base.Tptp.Tff(T)(Ty.Safe)(Typed.Safe)
     module B_smtlib = Dolmen_type.Base.Smtlib.Tff(T)(Void)(Ty.Safe)(Typed.Safe)
-    module B_smtlib_array = Dolmen_type.Array.Smtlib.Tff(T)(Ty.Safe)(Typed.Safe)
+    module B_smtlib_array = Dolmen_type.Arrays.Smtlib.Tff(T)(Ty.Safe)(Typed.Safe)
+    module B_smtlib_bitv = Dolmen_type.Bitv.Smtlib.Tff(T)(Ty.Safe)(Typed.Safe)
 
     let builtins = function
       | L.Tptp -> B_tptp.parse
@@ -168,6 +169,7 @@ let () =
         Dolmen_type.Base.merge [
           B_smtlib.parse;
           B_smtlib_array.parse;
+          B_smtlib_bitv.parse;
         ]
       | L.Zf -> B_zf.parse
       | _ -> (fun _ _ _ _ -> None)

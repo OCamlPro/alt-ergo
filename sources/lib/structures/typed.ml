@@ -961,6 +961,11 @@ module Safe = struct
       Form (mk @@ TFlet (fv_l, l', f), [])
     | Form (_, _) -> raise Deep_type_quantification
 
+  (* Integers *)
+  let int s =
+    Term (mk { tt_ty = Ty.Safe.int;
+               tt_desc = TTconst (Tint s); })
+
   (* Array operations *)
   let get_array_type arr =
     match ty arr with
@@ -968,10 +973,10 @@ module Safe = struct
     | _ ->
       let a_ty = Ty.Safe.of_var (Ty.Safe.Var.mk "a") in
       let b_ty = Ty.Safe.of_var (Ty.Safe.Var.mk "b") in
-      let gen_arr_ty = Ty.Safe.mk_array a_ty b_ty in
+      let gen_arr_ty = Ty.Safe.array a_ty b_ty in
       raise (Wrong_type (arr, gen_arr_ty))
 
-  let mk_select arr idx =
+  let select arr idx =
     let idx_ty = ty idx in
     let (src, dst) = get_array_type arr in
     if Ty.equal idx_ty src then
@@ -981,7 +986,7 @@ module Safe = struct
     else
       raise (Wrong_type (idx, src))
 
-  let mk_store arr idx value =
+  let store arr idx value =
     let idx_ty = ty idx in
     let val_ty = ty value in
     let (src, dst) = get_array_type arr in
@@ -1007,6 +1012,116 @@ module Safe = struct
       Term (mk { tt_ty = ty a;
                  tt_desc = TTite (cond, a_t, b_t); })
     end
+
+  (* bitvectors *)
+  let get_bitv_size t =
+    match ty t with
+    | (Ty.Tbitv n) as t_ty -> t_ty, n
+    | _ -> raise (Wrong_type (t, Ty.Safe.bitv (-1)))
+
+  let mk_bitv s =
+    let n = String.length s in
+    Term (mk { tt_ty = Ty.Safe.bitv n;
+               tt_desc = TTconst (Tbitv s); })
+
+  let bitv_concat s t =
+    let _, n = get_bitv_size s in
+    let _, m = get_bitv_size t in
+    Term (mk { tt_ty = Ty.Safe.bitv (n + m);
+               tt_desc = TTconcat (expect_term s, expect_term t); } )
+
+  let bitv_extract i j t =
+    let _, m = get_bitv_size t in
+    if j < 0 || i > m then
+      raise (Invalid_argument "Typed.bitv_extract")
+    else begin
+      let n = i - j + 1 in
+      let t_t = expect_term t in
+      let i_t = expect_term @@ int (string_of_int i) in
+      let j_t = expect_term @@ int (string_of_int j) in
+      Term (mk { tt_ty = Ty.Safe.bitv n;
+                 tt_desc = TTextract(t_t, j_t, i_t); })
+    end
+
+  let rec bitv_repeat i t =
+    if i <= 1 then t
+    else begin
+      let t' = bitv_repeat (i / 2) t in
+      if i mod 2 = 0 then bitv_concat t' t'
+      else bitv_concat t (bitv_concat t' t')
+    end
+
+  (* TODO: implement builtins for these bitvector operations ? *)
+  let bitv_extend s = fun i t ->
+    let _, n = get_bitv_size t in
+    let t_t = expect_term t in
+    let i_t = expect_term @@ int (string_of_int i) in
+    Term (mk { tt_ty = Ty.Safe.bitv (n + i); tt_desc = TTapp (s, [i_t; t_t]); })
+
+  let bitv_rotate s = fun i t ->
+    let tt_ty, _ = get_bitv_size t in
+    let i_t = expect_term @@ int (string_of_int i) in
+    Term (mk { tt_ty; tt_desc = TTapp (s, [i_t; expect_term t]); })
+
+  let bitv_unary s = fun t ->
+    let tt_ty, _ = get_bitv_size t in
+    Term (mk { tt_ty; tt_desc = TTapp (s, [expect_term t]); })
+
+  let bitv_binary symb = fun s t ->
+    let tt_ty, n = get_bitv_size s in
+    let _, m = get_bitv_size t in
+    if n <> m then
+      raise (Wrong_type (t, tt_ty))
+    else begin
+      Term (mk { tt_ty; tt_desc = TTapp (symb, [expect_term s; expect_term t]); })
+    end
+
+  let bitv_binary_pred symb = fun s t ->
+    let bv_ty, n = get_bitv_size s in
+    let _, m = get_bitv_size t in
+    if n <> m then
+      raise (Wrong_type (t, bv_ty))
+    else begin
+      Term (mk { tt_ty = Ty.Safe.prop;
+                 tt_desc = TTapp (symb, [expect_term s; expect_term t]); })
+    end
+
+  let zero_extend = bitv_extend (Symbols.name "zero_extend")
+  let sign_extend = bitv_extend (Symbols.name "sign_extend")
+  let rotate_left = bitv_rotate (Symbols.name "rotate_left")
+  let rotate_right = bitv_rotate (Symbols.name "rotate_right")
+
+  let bvnot = bitv_unary (Symbols.name "bvnot")
+  let bvand = bitv_binary (Symbols.name "bvand")
+  let bvor = bitv_binary (Symbols.name "bvor")
+  let bvnand = bitv_binary (Symbols.name "bvnand")
+  let bvnor = bitv_binary (Symbols.name "bvnor")
+  let bvxor = bitv_binary (Symbols.name "bvxor")
+  let bvxnor = bitv_binary (Symbols.name "bvxnor")
+  let bvcomp = bitv_binary_pred (Symbols.name "bvcomp")
+
+  let bvneg = bitv_unary (Symbols.name "bvneg")
+  let bvadd = bitv_binary (Symbols.name "bvadd")
+  let bvsub = bitv_binary (Symbols.name "bvsub")
+  let bvmul = bitv_binary (Symbols.name "bvmul")
+  let bvudiv = bitv_binary (Symbols.name "bvudiv")
+  let bvurem = bitv_binary (Symbols.name "bvurem")
+  let bvsdiv = bitv_binary (Symbols.name "bvsdiv")
+  let bvsrem = bitv_binary (Symbols.name "bvsrem")
+  let bvsmod = bitv_binary (Symbols.name "bvsmod")
+
+  let bvshl = bitv_binary (Symbols.name "bvshl")
+  let bvlshr = bitv_binary (Symbols.name "bvlshr")
+  let bvashr = bitv_binary (Symbols.name "bvashr")
+
+  let bvult = bitv_binary_pred (Symbols.name "bvult")
+  let bvule = bitv_binary_pred (Symbols.name "bvule")
+  let bvugt = bitv_binary_pred (Symbols.name "bvugt")
+  let bvuge = bitv_binary_pred (Symbols.name "bvuge")
+  let bvslt = bitv_binary_pred (Symbols.name "bvslt")
+  let bvsle = bitv_binary_pred (Symbols.name "bvsle")
+  let bvsgt = bitv_binary_pred (Symbols.name "bvsgt")
+  let bvsge = bitv_binary_pred (Symbols.name "bvsge")
 
   (* for compatibility purposes with dolmen *)
   let tag _ _ _ = ()

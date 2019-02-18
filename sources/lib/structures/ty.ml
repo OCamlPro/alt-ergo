@@ -748,7 +748,11 @@ module Safe = struct
 
   let base = apply Const.base []
 
-  let mk_array src dst = Tfarray (src, dst)
+  let array src dst = Tfarray (src, dst)
+
+  let bitv n = Tbitv n
+
+  let int = Tint
 
   (* ugly thing to satisfy the expected type in
      typed statements TTypeDecl constructor *)
