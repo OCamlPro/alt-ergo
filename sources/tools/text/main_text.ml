@@ -177,8 +177,14 @@ let () =
     FE.print_status FE.Preprocess 0L;
   let typing_loop state p =
     if parse_only () then state else begin
-      let l, env = I.type_parsed state.env p in
-      List.fold_left (typed_loop all_used_context) { state with env; } l
+      try
+        let l, env = I.type_parsed state.env p in
+        List.fold_left (typed_loop all_used_context) { state with env; } l
+      with
+        Errors.Error (e,l) ->
+        Loc.report Format.err_formatter l;
+        Format.eprintf "typing error: %a\n@." Errors.report e;
+        exit 1
     end
   in
   let state = {
