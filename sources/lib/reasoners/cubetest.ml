@@ -185,9 +185,12 @@ let get_closest  (z : ('a * Q.t) list) : ('a * Z.t) list =
       else r, Q.to_z ((if Q.sign v < 0 then Q.sub else Q.add) v' Q.one)
   in
   List.fold_left
-    (fun acc ((x,_) as mon) ->
+    (fun acc ((x, _v) as mon) ->
        if X.equal x r
-       then acc
+       then begin
+         (*Format.eprintf "%a |-> %a\n@." X.print r Q.print _v;*)
+         acc
+       end
        else if is_alien x then  (apprx mon) :: acc else acc
     )
     []
@@ -205,7 +208,7 @@ let integer_sol_if_exists (result : Sim.Core.result) : (P.r * Z.t) list option =
       (Lazy.force sol).main_vars @ (Lazy.force sol).slake_vars in
     Some (get_closest q_sol)
 
-let integer_sol_if_max
+let integer_sol_if_max s _t
     (result : Sim.Core.result)
   : ((P.r * Z.t) list * bool) option =
   match result with
@@ -213,10 +216,20 @@ let integer_sol_if_max
   | Sat _ -> assert false
   | Unsat _ -> None
 
-  | Unbounded sol ->
-    let q_sol =
-      (Lazy.force sol).main_vars @ (Lazy.force sol).slake_vars in
-    Some (get_closest q_sol, true)
+  | Unbounded _sol ->
+    let s, _ =
+      Sim.Assert.var s r
+        (Some (Q.one, Q.zero)) Explanation.empty None Explanation.empty
+    in
+    let s, t = Sim.Solve.maximize s @@ Sim.Core.P.from_list [r,Q.one] in
+    begin match Sim.Result.get t s with
+      | Unbounded sol ->
+        let q_sol =
+          (Lazy.force sol).main_vars @ (Lazy.force sol).slake_vars in
+        Some (get_closest q_sol, true)
+      | _ -> assert false
+    end
+
 
   | Max (max, sol) ->
     let q_sol =
@@ -237,8 +250,8 @@ let apply_subst r l =
 let cubefast_k (p_list : P.t list) : ((P.r * Z.t) list * bool) option =
   cube_center_simplex p_list
   |> (fun s -> Sim.Solve.maximize s @@ Sim.Core.P.from_list [r,Q.one])
-  |> (fun (s,t) -> Sim.Result.get t s)
-  |> integer_sol_if_max
+  |> (fun (s,t) -> Sim.Result.get t s
+  |> integer_sol_if_max s t
   |> (fun res -> (* Checking if the integer solution is inside the square *)
       match res with
         None -> None
@@ -260,3 +273,4 @@ let cubefast_k (p_list : P.t list) : ((P.r * Z.t) list * bool) option =
         in
         Some (sol, good)
     )
+     )

@@ -1840,7 +1840,25 @@ let model_from_unbounded_domains =
     let l2 = model_from_simplex int_sim true  env uf in
     List.fold_left mk_cs (List.fold_left mk_cs [] l1) l2
 
+let filter_wrt_to_intervals env sol =
+  List.fold_left
+    (fun acc ((x, v) as e) ->
+       let v = Q.from_z v in
+       let dot = I.point v Ty.Tint Ex.empty in
+       try
+         (try ignore @@ I.intersect dot (fst @@ MX0.find x env.monomes)
+          with Not_found -> ());
+         (try ignore @@ I.intersect dot (MP0.find (poly_of x) env.polynomes)
+          with Not_found -> ());
+         e :: acc
+       with
+       | I.NotConsistent _ -> acc
+       | e ->
+         Format.eprintf "%s@." (Printexc.to_string e);
+         assert false
+    )[] sol
 
+  
 let case_split env uf ~for_model =
   let cube_sol =
     Cubetest.cubefast_k @@
@@ -1857,11 +1875,15 @@ let case_split env uf ~for_model =
         Format.printf
           "No solution found by cube@.";
       default_case_split env uf ~for_model
-    | Some (sol, sure) ->
+    | Some (sol0, sure) ->
+      let sol = filter_wrt_to_intervals env sol0 in
       if debug_fm ()
       then begin
         Format.printf
           "Solution found by cube, sure ? %b @." sure;
+        Format.printf
+          "size before filter = %d | size after filter = %d@."
+          (List.length sol0) (List.length sol);
         List.iter
           (fun (r,z) ->
              Format.printf "%a = %a@."
