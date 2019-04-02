@@ -89,6 +89,7 @@ module Make (X : S) = struct
 
   type r = X.r
 
+  (* Type of monomials *)
   module M : Map.S with type key = r =
     Map.Make(
     struct
@@ -98,7 +99,11 @@ module Make (X : S) = struct
       let compare x y = X.str_cmp y x
     end)
 
-  type t = { m : Q.t M.t; c : Q.t; ty : Ty.t }
+  type t = {
+    m : Q.t M.t; (* Mapping monomials to rationals *)
+    c : Q.t; (* The affine constant *)
+    ty : Ty.t (* Its type *)
+  }
 
   let map_to_list m = List.rev (M.fold (fun x a aliens -> (a, x)::aliens) m [])
 

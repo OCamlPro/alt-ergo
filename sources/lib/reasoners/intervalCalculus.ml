@@ -25,7 +25,6 @@
 (*     License version 2.0                                                    *)
 (*                                                                            *)
 (******************************************************************************)
-
 open Format
 open Options
 open Sig
@@ -890,7 +889,7 @@ let update_ple0 are_eq env p0 is_le expl =
   if P.is_empty p0 then env
   else
     let ty = P.type_info p0 in
-    let a, _ = P.choose p0 in
+    let a, _ = P.choose p0 in (* Takes the first element of the polynomial ? *)
     let p, change =
       if Q.sign a < 0 then
         P.mult_const Q.m_one p0, true
@@ -1843,7 +1842,42 @@ let model_from_unbounded_domains =
 
 
 let case_split env uf ~for_model =
-  let res = default_case_split env uf ~for_model in
+  let cube_sol =
+    Cubetest.cubefast_k @@
+    MPL.fold
+      (fun _k v acc -> v.Oracle.ple0 :: acc)
+      env.inequations
+      []
+  in
+  let res =
+    match cube_sol with
+      None ->
+      if debug_fm ()
+      then
+        Format.printf
+          "No solution found by cube@.";
+      default_case_split env uf ~for_model
+    | Some (sol, sure) ->
+      if debug_fm ()
+      then begin
+        Format.printf
+          "Solution found by cube, sure ? %b @." sure;
+        List.iter
+          (fun (r,z) ->
+             Format.printf "%a = %a@."
+               X.print r
+               Z.print z
+          )
+          sol
+      end;
+      List.map
+        (fun (r, z) ->
+           LR.mkv_eq r (alien_of (P.create [] (Q.from_z z) Ty.Tint)),
+           true,
+           Th_util.CS (Th_util.Th_arith, Q.from_int 2)
+        )
+        sol
+  in
   match res with
   | [] ->
     if not for_model then []
