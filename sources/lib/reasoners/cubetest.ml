@@ -61,6 +61,8 @@ end
 
 let r : X.r = X.term_embed (Expr.fresh_name Ty.Tint)
 
+type solution = ((P.r * Z.t) list)
+
 let cubetest (p : P.t) : P.t * Q.t =
   let coef_list, cst = P.to_list p in
   (* p(X) <= 0
@@ -110,9 +112,12 @@ let cubetest (p : P.t) : P.t * Q.t =
 *)
 type bound = Q.t * Q.t (* The second val sets *)
 
-let cubetest_sort (p_list : P.t list) : (bound option * bound option) M.t =
+let cubetest_sort (p_list : P.t list)
+  : (bound option * bound option) M.t =
 
-  let add_to_map (acc : (bound option * bound option) M.t) (p : P.t) =
+  let add_to_map
+      (acc : (bound option * bound option) M.t)
+      (p : P.t) =
     let q,k = cubetest p in (* q(X) <= 0 *)
     match M.find_opt q acc with
       Some (lower, None) ->
@@ -139,49 +144,49 @@ let cubetest_sort (p_list : P.t list) : (bound option * bound option) M.t =
     p_list
 
 let cube_center_simplex (p_list : P.t list) : Sim.Core.t =
-    let simp =
-      Sim.Solve.solve
-        (Sim.Core.empty ~is_int:false ~check_invs:false ~debug:0) in
-    let poly_bounds = cubetest_sort p_list in
-    let add_and_test p (new_mn, new_mx) (s : Sim.Core.t) =
-      (* assert P.normal_form_pos p = p; *)
-      let l, z = P.to_list p in
-      assert (Q.sign z = 0);
-      let new_simplex, _ =
-        match l with
-          [] -> assert false
-        | [c, x] ->
-          assert (Q.is_one @@ Q.abs c);
-          if Q.sign c > 0
-          then
-            Sim.Assert.var s x new_mn Explanation.empty new_mx Explanation.empty
-          else
-            let op_bound (bound : bound option) =
-              match bound with
-                None -> None
-              | Some (b,c) -> Some (Q.minus b, c) in
-            Sim.Assert.var
-              s
-              x
-              (op_bound new_mx)
-              Explanation.empty
-              (op_bound new_mn)
-              Explanation.empty
-        | _ ->
-          let l = List.rev_map (fun (c, x) -> x, c) l in
-          Sim.Assert.poly s (Sim.Core.P.from_list l) (alien_of p)
-            new_mn Explanation.empty new_mx Explanation.empty
-      in new_simplex
-    in
-    M.fold
-      add_and_test
-      poly_bounds
-      simp
+  let simp =
+    Sim.Solve.solve
+      (Sim.Core.empty ~is_int:false ~check_invs:false ~debug:0) in
+  let poly_bounds = cubetest_sort p_list in
+  let add_and_test p (new_mn, new_mx) (s : Sim.Core.t) =
+    (* assert P.normal_form_pos p = p; *)
+    let l, z = P.to_list p in
+    assert (Q.sign z = 0);
+    let new_simplex, _ =
+      match l with
+        [] -> assert false
+      | [c, x] ->
+        assert (Q.is_one @@ Q.abs c);
+        if Q.sign c > 0
+        then
+          Sim.Assert.var s x new_mn Explanation.empty new_mx Explanation.empty
+        else
+          let op_bound (bound : bound option) =
+            match bound with
+              None -> None
+            | Some (b,c) -> Some (Q.minus b, c) in
+          Sim.Assert.var
+            s
+            x
+            (op_bound new_mx)
+            Explanation.empty
+            (op_bound new_mn)
+            Explanation.empty
+      | _ ->
+        let l = List.rev_map (fun (c, x) -> x, c) l in
+        Sim.Assert.poly s (Sim.Core.P.from_list l) (alien_of p)
+          new_mn Explanation.empty new_mx Explanation.empty
+    in new_simplex
+  in
+  M.fold
+    add_and_test
+    poly_bounds
+    simp
 
 (** Returns the closest integer vector (considering norm_1) from the input
     rational vector.
     Doesn't round the radius variable r if used. *)
-let get_closest  (z : ('a * Q.t) list) : ('a * Z.t) list =
+let get_closest  (z : (X.r * Q.t) list) : solution =
   let apprx =
     fun ((r,v) : ('a * Q.t)) : ('a * Z.t) ->
       let v' = (if Q.sign v < 0 then Q.ceiling else Q.floor) v in
@@ -198,7 +203,8 @@ let get_closest  (z : ('a * Q.t) list) : ('a * Z.t) list =
     []
     z
 
-let integer_sol_if_exists (result : Sim.Core.result) : (P.r * Z.t) list option =
+let integer_sol_if_exists (result : Sim.Core.result)
+  : solution option =
   match result with
     Unknown
   | Unbounded _
@@ -211,18 +217,32 @@ let integer_sol_if_exists (result : Sim.Core.result) : (P.r * Z.t) list option =
     Some (get_closest q_sol)
 
 let integer_sol_if_max
+    s
     (result : Sim.Core.result)
-  : ((P.r * Z.t) list * bool) option =
+  : (solution * bool) option =
   match result with
     Unknown
   | Sat _ -> assert false
   | Unsat _ -> None
 
-  | Unbounded sol ->
-    let q_sol =
-      (Lazy.force sol).main_vars @ (Lazy.force sol).slake_vars in
-    Some (get_closest q_sol, true)
-
+  | Unbounded _sols -> (* Check if the radius is unbounded *)
+    let s, _ =
+      Sim.Assert.var s r
+        (Some (Q.one, Q.zero))
+        Explanation.empty
+        None
+        Explanation.empty
+    in
+    let s, t =
+      Sim.Solve.maximize s @@ Sim.Core.P.from_list [r,Q.one] in
+    begin match Sim.Result.get t s with
+      | Unbounded sol ->
+        let q_sol =
+          (Lazy.force sol).main_vars @
+          (Lazy.force sol).slake_vars in
+        Some (get_closest q_sol, true)
+      | _ -> assert false
+    end
   | Max (max, sol) ->
     let q_sol =
       (Lazy.force sol).main_vars @ (Lazy.force sol).slake_vars in
@@ -230,7 +250,7 @@ let integer_sol_if_max
     let max = (Lazy.force max).max_v in
     Some (closest, (Q.compare max Q.one >= 0))
 
-let cubefast (p_list : P.t list) : (P.r * Z.t) list option =
+let cubefast (p_list : P.t list) : solution option =
   cube_center_simplex p_list
   |> Sim.Solve.solve
   |> Sim.Result.get None
@@ -239,29 +259,30 @@ let cubefast (p_list : P.t list) : (P.r * Z.t) list option =
 let apply_subst r l =
   List.fold_left (fun r (p,v) -> P.subst p v r) r l
 
-let cubefast_k (p_list : P.t list) : ((P.r * Z.t) list * bool) option =
+(* Checks if the integer solution is inside the polyhedron *)
+let check_sol (p_list : P.t list) (sol : solution) : bool =
+  let res_poly =
+    List.map (fun (x,v) -> (x,P.create [] (Q.from_z v) Ty.Tint)) sol in
+  List.for_all
+    (fun p ->
+       let poly_const =
+         apply_subst p res_poly in
+       match P.to_list poly_const with
+         [], c -> Q.sign c <= 0
+       | _ -> (* Every variable should have been replaced *)
+         assert false
+    )
+    p_list
+
+let cubefast_k (p_list : P.t list) : (solution * bool) option =
   cube_center_simplex p_list
   |> (fun s -> Sim.Solve.maximize s @@ Sim.Core.P.from_list [r,Q.one])
-  |> (fun (s,t) -> Sim.Result.get t s)
-  |> integer_sol_if_max
-  |> (fun res -> (* Checking if the integer solution is inside the square *)
-      match res with
+  |> (fun (s,t) -> Sim.Result.get t s, s)
+  |> (fun (sol,s) -> integer_sol_if_max s sol)
+  |> (fun sol ->
+      match sol with
         None -> None
-      | Some (_, true) -> res
-      | Some (sol, false) ->
-        let res_poly =
-          List.map (fun (x,v) -> (x,P.create [] (Q.from_z v) Ty.Tint)) sol in
-        let good =
-          List.for_all
-            (fun p ->
-               let poly_const =
-                 apply_subst p res_poly in
-               match P.to_list poly_const with
-                 [], c -> Q.sign c <= 0
-               | _ -> (* Every variable should have been replaced *)
-                 assert false
-            )
-            p_list
-        in
-        Some (sol, good)
+      | Some (_, true) -> sol
+      | Some (s, false) ->
+        Some (s, check_sol p_list s)
     )

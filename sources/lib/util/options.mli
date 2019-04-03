@@ -189,6 +189,7 @@ val default_input_lang : unit -> string
 val answers_with_locs  : unit -> bool
 val unsat_mode : unit -> bool
 val inline_lets : unit -> bool
+val get_cubefast : unit -> string
 
 (** this option also yields true if profiling is set to true **)
 val timers : unit -> bool

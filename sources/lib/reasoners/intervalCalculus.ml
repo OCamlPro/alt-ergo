@@ -1840,14 +1840,63 @@ let model_from_unbounded_domains =
     let l2 = model_from_simplex int_sim true  env uf in
     List.fold_left mk_cs (List.fold_left mk_cs [] l1) l2
 
+let filter_wrt_to_intervals env sol =
+  List.fold_left
+    (fun acc ((x, v) as e) ->
+       let v = Q.from_z v in
+       let dot = I.point v Ty.Tint Ex.empty in
+       try
+         (try
+            ignore @@
+            I.intersect dot (fst @@ MX0.find x env.monomes)
+          with Not_found -> ());
+         (try
+            ignore @@
+            I.intersect dot (MP0.find (poly_of x) env.polynomes)
+          with Not_found -> ());
+         e :: acc
+       with
+       | I.NotConsistent _ -> acc
+       | e ->
+         Format.eprintf "%s@." (Printexc.to_string e);
+         assert false
+    )
+    []
+    sol
+
+let cubefast env : (Cubetest.solution * bool) option =
+  let cube_strat : string =  Options.get_cubefast () in
+  if String.equal cube_strat "no" then None
+  else
+    let p_list =
+      MPL.fold
+        (fun _k v acc -> v.Oracle.ple0 :: acc)
+        env.inequations
+        []
+    in
+    let raw_res =
+      match cube_strat with
+      | "yes" -> (
+          match Cubetest.cubefast p_list with
+            None -> None
+          | Some s ->
+            Some (s, true)
+        )
+      | "max" -> Cubetest.cubefast_k p_list
+
+      | "both" -> (
+          match Cubetest.cubefast p_list with
+            None -> Cubetest.cubefast_k p_list
+          | Some s -> Some (s, true)
+        )
+      | _ -> assert false in
+    match raw_res with
+      None -> None
+    | Some (s,sure) -> Some (filter_wrt_to_intervals env s, sure)
 
 let case_split env uf ~for_model =
   let cube_sol =
-    Cubetest.cubefast_k @@
-    MPL.fold
-      (fun _k v acc -> v.Oracle.ple0 :: acc)
-      env.inequations
-      []
+    cubefast env
   in
   let res =
     match cube_sol with

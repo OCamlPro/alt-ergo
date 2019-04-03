@@ -134,6 +134,9 @@ module M = struct
   let unsat_mode = ref false
   let inline_lets = ref false
 
+  let cubefast = ref ""
+
+
   let show_where s=
     match s with
     | "" -> ()
@@ -249,6 +252,28 @@ module M = struct
     | _ ->
       Format.eprintf "Args parsing error: unkown SAT solver %S@." s;
       exit 1
+
+  let no_cf = "no"
+  let cf = "yes"
+  let cf_max = "max"
+  let cf_both = "both"
+  let set_cube_strategy str =
+    match String.lowercase_ascii str with
+    | "no" | "n" | "false" | "f" ->
+      cubefast := no_cf
+    | "yes" | "y" | "true" | "t" ->
+      cubefast := cf
+    | "max" | "m" | "maximum" ->
+      cubefast := cf_max
+    | "both" | "b"  ->
+      cubefast := cf_both
+    | _ -> (
+        raise
+          (Arg.Bad
+             ("Bad value '" ^
+              str ^
+              "' for option -cubefast"))
+      )
 
   let spec = [
     "-parse-only",
@@ -690,8 +715,15 @@ module M = struct
     Arg.Set inline_lets,
     " enable substutition of variables bounds by Let. The default \
      behavior is to only substitute variables that are bound to a \
-     constant, or that appear at most once."
+     constant, or that appear at most once.";
 
+    "-cubefast",
+    Arg.String set_cube_strategy,
+    "[no|yes|max|both] \
+     disables or enables the cubefast test for the \
+     unit cube or the maximal cube. If 'both' is set,
+    it first tries the unit cube and, if it doesn't work,
+    maximizes it.";
   ]
 
   let spec =
@@ -915,6 +947,8 @@ let default_input_lang () = !M.default_input_lang
 let answers_with_locs ()  = not !M.no_locs_in_answers
 let unsat_mode ()  = !M.unsat_mode
 let inline_lets () = !M.inline_lets
+
+let get_cubefast () = !M.cubefast
 
 (** particular getters : functions that are immediately executed **************)
 let exec_thread_yield () = !M.thread_yield ()
