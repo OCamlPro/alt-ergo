@@ -1865,48 +1865,52 @@ let filter_wrt_to_intervals env sol =
     sol
 
 let cubefast env : (Cubetest.solution * bool) option =
-  let cube_strat : string =  Options.get_cubefast () in
-  if String.equal cube_strat "no" then None
-  else
-    let p_list =
-      MPL.fold
-        (fun _k v acc -> v.Oracle.ple0 :: acc)
-        env.inequations
-        []
-    in
-    let raw_res =
-      match cube_strat with
-      | "yes" -> (
-          match Cubetest.cubefast p_list with
-            None -> None
-          | Some s ->
-            Some (s, true)
-        )
-      | "max" -> Cubetest.cubefast_k p_list
+  let cube_strat : Util.cubefast =  Options.get_cubefast () in
 
-      | "both" -> (
-          match Cubetest.cubefast p_list with
-            None -> Cubetest.cubefast_k p_list
-          | Some s -> Some (s, true)
-        )
-      | _ -> assert false in
-    match raw_res with
-      None -> None
-    | Some (s,sure) -> Some (filter_wrt_to_intervals env s, sure)
+  let p_list () =
+    MPL.fold
+      (fun _k v acc -> v.Oracle.ple0 :: acc)
+      env.inequations
+      []
+  in
+  let raw_res =
+    match cube_strat with
+    | Util.Yes ->
+      let l = p_list () in
+      (
+        match Cubetest.cubefast l with
+          None -> None
+        | Some s ->
+          Some (s, true)
+      )
+    | Util.Max ->
+      let l = p_list () in Cubetest.cubefast_k l
+
+    | Util.Both -> (
+        let l = p_list () in
+        match Cubetest.cubefast l with
+          None -> Cubetest.cubefast_k l
+        | Some s -> Some (s, true)
+      )
+    | Util.No -> None in
+  match raw_res with
+    None -> None
+  | Some (s,sure) -> Some (filter_wrt_to_intervals env s, sure)
 
 let case_split env uf ~for_model =
   let cube_sol =
     cubefast env
   in
   let res =
-    match cube_sol with
-      None ->
+    match Options.get_cubefast (), cube_sol with
+      _,None
+    | Util.No, _ ->
       if debug_fm ()
       then
         Format.printf
           "No solution found by cube@.";
       default_case_split env uf ~for_model
-    | Some (sol, sure) ->
+    | _, Some (sol, sure) ->
       if debug_fm ()
       then begin
         Format.printf

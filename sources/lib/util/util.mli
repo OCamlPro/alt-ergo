@@ -48,6 +48,12 @@ type theories_extensions =
   | NIA
   | FPA
 
+type cubefast =
+  | No
+  | Yes
+  | Max
+  | Both
+
 type axiom_kind = Default | Propagator
 
 val th_ext_of_string : string -> theories_extensions option

@@ -52,6 +52,12 @@ type theories_extensions =
 
 type axiom_kind = Default | Propagator
 
+type cubefast =
+  | No
+  | Yes
+  | Max
+  | Both
+
 let th_ext_of_string ext =
   match ext with
   | "Sum" -> Some Sum

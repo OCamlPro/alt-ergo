@@ -134,8 +134,7 @@ module M = struct
   let unsat_mode = ref false
   let inline_lets = ref false
 
-  let cubefast = ref ""
-
+  let cubefast = ref Util.No
 
   let show_where s=
     match s with
@@ -253,20 +252,16 @@ module M = struct
       Format.eprintf "Args parsing error: unkown SAT solver %S@." s;
       exit 1
 
-  let no_cf = "no"
-  let cf = "yes"
-  let cf_max = "max"
-  let cf_both = "both"
   let set_cube_strategy str =
     match String.lowercase_ascii str with
     | "no" | "n" | "false" | "f" ->
-      cubefast := no_cf
+      cubefast := Util.No
     | "yes" | "y" | "true" | "t" ->
-      cubefast := cf
+      cubefast := Util.Yes
     | "max" | "m" | "maximum" ->
-      cubefast := cf_max
+      cubefast := Util.Max
     | "both" | "b"  ->
-      cubefast := cf_both
+      cubefast := Util.Both
     | _ -> (
         raise
           (Arg.Bad
@@ -721,9 +716,9 @@ module M = struct
     Arg.String set_cube_strategy,
     "[no|yes|max|both] \
      disables or enables the cubefast test for the \
-     unit cube or the maximal cube. If 'both' is set,
-    it first tries the unit cube and, if it doesn't work,
-    maximizes it.";
+     unit cube or the maximal cube. If 'both' is set, \
+     it first tries the unit cube and, if it doesn't work, \
+     maximizes it.";
   ]
 
   let spec =
