@@ -1864,12 +1864,22 @@ let filter_wrt_to_intervals env sol =
     []
     sol
 
+(*let cubefast_cpt = ref 0
+*)
 let cubefast env : (Cubetest.solution * bool) option =
+  (*if !cubefast_cpt > 2000 then None else
+  let _ = cubefast_cpt := !cubefast_cpt + 1;
+    Format.printf "Cubefast iteration %i@." !cubefast_cpt
+  in*)
   let cube_strat : Util.cubefast =  Options.get_cubefast () in
-
   let p_list () =
     MPL.fold
-      (fun _k v acc -> v.Oracle.ple0 :: acc)
+      (fun _k v acc ->
+         let v = better_bound_from_intervals env v in
+         let p = v.Oracle.ple0 in
+         if P.type_info p == Ty.Tint
+         then p:: acc
+         else acc)
       env.inequations
       []
   in
@@ -1903,8 +1913,8 @@ let case_split env uf ~for_model =
   in
   let res =
     match Options.get_cubefast (), cube_sol with
-      _,None
-    | Util.No, _ ->
+      Util.No, _ -> default_case_split env uf ~for_model
+    | _,None ->
       if debug_fm ()
       then
         Format.printf
