@@ -135,6 +135,7 @@ module M = struct
   let inline_lets = ref false
 
   let cubefast = ref Util.No
+  let cube_pong = ref (-1)
 
   let show_where s=
     match s with
@@ -719,6 +720,12 @@ module M = struct
      unit cube or the maximal cube. If 'both' is set, \
      it first tries the unit cube and, if it doesn't work, \
      maximizes it.";
+
+    "-cubepong",
+    Arg.Int (fun i -> cube_pong := i),
+    "(works only if cubetest is activated) sets the number n of \
+     cubefast tests before giving up. Then if the case split still \
+     fails after n iterations, cubefast retries n times, etc.";
   ]
 
   let spec =
@@ -944,6 +951,7 @@ let unsat_mode ()  = !M.unsat_mode
 let inline_lets () = !M.inline_lets
 
 let get_cubefast () = !M.cubefast
+let get_cubepong () = !M.cube_pong
 
 (** particular getters : functions that are immediately executed **************)
 let exec_thread_yield () = !M.thread_yield ()

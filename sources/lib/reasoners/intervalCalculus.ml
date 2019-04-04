@@ -1843,35 +1843,50 @@ let model_from_unbounded_domains =
 let filter_wrt_to_intervals env sol =
   List.fold_left
     (fun acc ((x, v) as e) ->
-       let v = Q.from_z v in
-       let dot = I.point v Ty.Tint Ex.empty in
-       try
-         (try
-            ignore @@
-            I.intersect dot (fst @@ MX0.find x env.monomes)
-          with Not_found -> ());
-         (try
-            ignore @@
-            I.intersect dot (MP0.find (poly_of x) env.polynomes)
-          with Not_found -> ());
-         e :: acc
-       with
-       | I.NotConsistent _ -> acc
-       | e ->
-         Format.eprintf "%s@." (Printexc.to_string e);
-         assert false
+       let v = Q.from_z v in(
+         let dot = I.point v Ty.Tint Ex.empty in
+         try
+           (try
+              ignore @@
+              I.intersect dot (fst @@ MX0.find x env.monomes)
+            with Not_found -> ());
+           (try
+              ignore @@
+              I.intersect dot (MP0.find (poly_of x) env.polynomes)
+            with Not_found -> ());
+           e :: acc
+         with
+         | I.NotConsistent _ -> acc
+         | e ->
+           Format.eprintf "%s@." (Printexc.to_string e);
+           assert false
+       )
     )
     []
     sol
 
-(*let cubefast_cpt = ref 0
-*)
+let cubefast_cpt = ref (0,true)
+
 let cubefast env : (Cubetest.solution * bool) option =
   (*if !cubefast_cpt > 2000 then None else
   let _ = cubefast_cpt := !cubefast_cpt + 1;
     Format.printf "Cubefast iteration %i@." !cubefast_cpt
   in*)
   let cube_strat : Util.cubefast =  Options.get_cubefast () in
+  let cubefast_pong () =
+    let pong = Options.get_cubepong () in
+    if pong < 0 then true
+    else
+      let incr i = cubefast_cpt := (i + 1, true); true in
+      let decr i = cubefast_cpt := (i-1, false); false in
+      match !cubefast_cpt with
+      | (i, false) ->
+        if i <= 0 then incr 0
+        else decr i
+      | (i, true) ->
+        if i >= pong then decr pong
+        else incr i
+  in
   let p_list () =
     MPL.fold
       (fun _k v acc ->
@@ -1884,6 +1899,7 @@ let cubefast env : (Cubetest.solution * bool) option =
       []
   in
   let raw_res =
+    if not(cubefast_pong ()) then None else
     match cube_strat with
     | Util.Yes ->
       let l = p_list () in
