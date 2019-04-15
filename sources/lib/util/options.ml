@@ -134,6 +134,9 @@ module M = struct
   let unsat_mode = ref false
   let inline_lets = ref false
 
+  let simplify = ref false
+  let simplify_verbose = ref false
+
   let show_where s=
     match s with
     | "" -> ()
@@ -690,8 +693,16 @@ module M = struct
     Arg.Set inline_lets,
     " enable substutition of variables bounds by Let. The default \
      behavior is to only substitute variables that are bound to a \
-     constant, or that appear at most once."
+     constant, or that appear at most once.";
 
+    "-simplify",
+    Arg.Set simplify,
+    " simplifies the formula during the preprocessing, after it has \
+     been typed.";
+
+    "-simplify-verbose",
+    Arg.Set simplify_verbose,
+    " debug messages for the preprocessing simplifyier.";
   ]
 
   let spec =
@@ -794,6 +805,8 @@ let set_save_used_context b = M.save_used_context := b
 let set_default_input_lang lang = M.set_default_input_lang lang
 let set_unsat_mode b = M.unsat_mode := b
 let set_inline_lets m = M.inline_lets := m
+let set_simplify m = M.simplify := m
+let set_simplify_verbose m = M.simplify_verbose := m
 
 (** getter functions **********************************************************)
 
@@ -915,6 +928,9 @@ let default_input_lang () = !M.default_input_lang
 let answers_with_locs ()  = not !M.no_locs_in_answers
 let unsat_mode ()  = !M.unsat_mode
 let inline_lets () = !M.inline_lets
+let simplify () = !M.simplify
+let simplify_verbose () = !M.simplify_verbose
+
 
 (** particular getters : functions that are immediately executed **************)
 let exec_thread_yield () = !M.thread_yield ()

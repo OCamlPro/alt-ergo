@@ -194,6 +194,8 @@ let string_of_op = function
   | OPor -> "or"
   | OPimp -> "->"
   | OPiff -> "<->"
+  | OPxor -> "xor"
+  | OPif -> "ite"
   | _ -> assert false
 
 let print_binder fmt (s, t) =
@@ -298,7 +300,7 @@ and print_atom fmt a =
   | TAtrue ->
     fprintf fmt "True"
   | TAfalse ->
-    fprintf fmt "True"
+    fprintf fmt "False"
   | TAeq [t1; t2] ->
     fprintf fmt "%a = %a" print_term t1 print_term t2
   | TAneq [t1; t2] ->
@@ -312,7 +314,7 @@ and print_atom fmt a =
     else print_term fmt t
   | TTisConstr (t1, s) ->
     fprintf fmt "%a ? %s" print_term t1 (Hstring.view s)
-  | _ -> assert false
+  | _ -> fprintf fmt "(atom pprint not implemented)"
 
 and print_triggers fmt l =
   List.iter (fun (tr, _) -> fprintf fmt "%a | " print_term_list tr) l
@@ -322,14 +324,14 @@ and print_formula fmt f =
   | TFatom a ->
     print_atom fmt a
   | TFop(OPnot, [f]) ->
-    fprintf fmt "not %a" print_formula f
+    fprintf fmt "not (%a)" print_formula f
   | TFop(OPif, [cond; f1;f2]) ->
-    fprintf fmt "if %a then %a else %a"
+    fprintf fmt "if (%a) then (%a) else (%a)"
       print_formula cond print_formula f1 print_formula f2
   | TFop(op, [f1; f2]) ->
-    fprintf fmt "%a %s %a" print_formula f1 (string_of_op op) print_formula f2
+    fprintf fmt "(%a) %s (%a)" print_formula f1 (string_of_op op) print_formula f2
   | TFforall { qf_bvars = l; qf_triggers = t; qf_form = f; _ } ->
-    fprintf fmt "forall %a [%a]. %a"
+    fprintf fmt "forall (%a) [%a]. (%a)"
       print_binders l print_triggers t print_formula f
 
   | TFlet (_, binders, f) ->
@@ -337,12 +339,14 @@ and print_formula fmt f =
       (fun (sy, let_e) ->
          fprintf fmt " let %a = " Symbols.print sy;
          match let_e with
-         | TletTerm t -> fprintf fmt "%a in@." print_term t
-         | TletForm f -> fprintf fmt "%a in@." print_formula f
+         | TletTerm t -> fprintf fmt "(%a) in@." print_term t
+         | TletForm f -> fprintf fmt "(%a) in@." print_formula f
       )binders;
     fprintf fmt "%a" print_formula f
-  | _ -> fprintf fmt "(formula pprint not implemented)"
-
+  | TFexists _ -> fprintf fmt "(existential formula pprint not implemented)"
+  | TFmatch _ ->  fprintf fmt "(match formula pprint not implemented)"
+  | TFop _ -> fprintf fmt "(operator formula pprint not implemented)"
+  | TFnamed _ ->  fprintf fmt "(named formula pprint not implemented)"
 (*
 let rec print_tdecl fmt = function
   | TTheory (_, name, _, l) ->

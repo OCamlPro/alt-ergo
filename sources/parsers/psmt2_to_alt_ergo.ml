@@ -458,6 +458,7 @@ let file_parser token lexbuf =
 
 let lexpr_parser token lexbuf =
   Translate.lexpr (Smtlib_parser.term token lexbuf)
+(*|> Simple_reasoner.simplify_boolean_expr *)
 
 let trigger_parser token lexbuf =
   Translate.trigger (Smtlib_parser.term_list token lexbuf)

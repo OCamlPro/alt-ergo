@@ -50,7 +50,7 @@ type t = view
 and view = {
   f: Sy.t;
   xs: t list;
-  ty: Ty.t;
+  ty: Ty.t; (* expression type *)
   bind : bind_kind;
   tag: int;
   vars : (Ty.t * int) SMap.t; (* vars to types and nb of occurences *)
@@ -124,8 +124,8 @@ type lit_view =
   | Not_a_lit of { is_form : bool }
 
 type form_view =
-  | Unit of t*t  (* unit clauses *)
-  | Clause of t*t*bool      (* a clause (t1 or t2) bool <-> is implication *)
+  | Unit of t * t  (* unit clauses *)
+  | Clause of t * t * bool      (* a clause (t1 or t2) bool <-> is implication *)
   | Iff of t * t
   | Xor of t * t
   | Literal of t   (* an atom *)

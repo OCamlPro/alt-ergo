@@ -304,6 +304,10 @@ and 'a tdecl =
 
 (** {5 Printing} *)
 
+val string_of_op : oplogic -> string
+
+val print_atom : Format.formatter -> _ atatom -> unit
+
 val print_term : Format.formatter -> _ atterm -> unit
 (** Print annoted typed terms. Ignore the annotations. *)
 

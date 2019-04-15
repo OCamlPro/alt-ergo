@@ -506,7 +506,12 @@ let mk_theory acc l th_name extends _loc =
        {st_decl=ThAssume th_elt ; st_loc=loc} :: acc
     )acc l
 
-let make acc d =
+let make acc (d : (int Typed.tdecl, int) Typed.annoted) =
+  let d =
+    if Options.simplify ()
+    then Simple_reasoner_expr.S.simplify_tdecl d
+    else d
+  in
   match d.c with
   | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
   | TAxiom(loc, name, Util.Default, f) -> mk_assume acc f name loc

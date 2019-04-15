@@ -29,10 +29,10 @@
 (* used in the typechecker for the text-mode *)
 val make :
   Commands.sat_tdecl list ->
-  (int Typed.tdecl, 'a) Typed.annoted ->
+  (int Typed.tdecl, int) Typed.annoted ->
   Commands.sat_tdecl list
 
 (* used in the GUI *)
 val make_list :
-  (int Typed.tdecl, 'a) Typed.annoted list ->
+  (int Typed.tdecl, int) Typed.annoted list ->
   Commands.sat_tdecl list
