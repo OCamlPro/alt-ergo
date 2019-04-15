@@ -29,6 +29,7 @@
   ; modules that make up the lib
   (modules
     ; frontend
+    Simple_reasoner_expr
     Cnf Input Frontend Parsed_interface Typechecker
     ; reasoners
     Ac Arith Arrays Arrays_rel Bitv Ccx Shostak Relation Enum Enum_rel

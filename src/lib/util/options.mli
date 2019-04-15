@@ -274,6 +274,15 @@ val set_file : string -> unit
 (** Updates the filename to be parsed and sets a js_mode flag *)
 val set_file_for_js : string -> unit
 
+(** Set [simplify] accessible with {!val:get_simplify} *)
+val set_simplify : Util.simplify -> unit
+
+(** Set [simplify_th] accessible with {!val:get_simplify_th} *)
+val set_simplify_th : bool -> unit
+
+(** Set [simplify_verbose] accessible with {!val:get_simplify_verbose} *)
+val set_simplify_verbose : bool -> unit
+
 (** Setters used by parse_command *)
 
 (** Set [case_split_policy] accessible with {!val:get_case_split_policy}  *)
@@ -960,6 +969,18 @@ val get_status : unit -> known_status
 
 (** [true] if the JavaScript mode is activated *)
 val get_js_mode : unit -> bool
+(** Default to [false] *)
+
+(** [true] if simplification is activated *)
+val get_simplify : unit -> Util.simplify
+(** Default to [true] *)
+
+(** Gets the simplify mode: [false] => no theory used *)
+val get_simplify_th : unit -> bool
+(** Default to [true] *)
+
+(** Gets the simplify verbose mode: [false] => no verbose *)
+val get_simplify_verbose : unit -> bool
 (** Default to [false] *)
 
 (** Value specifying the file given to Alt-Ergo *)
