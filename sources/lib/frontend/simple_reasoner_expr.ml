@@ -49,24 +49,22 @@ let op_opt (op : 'a -> 'a -> 'b) (v1 : 'a option) (v2 : 'a option) : 'b option =
   | None -> None
 
 module Make
-    (Annot : sig type annot val mk : 'a -> ('a, annot) annoted end) =
+    (Annot : sig type annot
+       val true_form : annot atform
+       val false_form : annot atform
+       val true_atom : annot atatom
+       val false_atom : annot atatom
+       val true_term : annot atterm
+       val false_term : annot atterm
+       val mk : 'a -> ('a, annot) annoted end) =
 struct
 
-  let true_desc = TTconst Ttrue
-  let false_desc = TTconst Tfalse
-  let true_symp = Symbols.True
-  let false_symp = Symbols.False
-  let true_atom = TAtrue
-  let false_atom = TAfalse
 
   let identity l = l
   type a = Annot.annot
 
-  (** All the following function try to check whether the expression in argument is
-      true, false or unknown.
-      They respectively return Some true, Some false and None.
-      Similarily, functions manipulating values with return an option.
-  *)
+  let t : a atform = Annot.true_form
+  let f : a atform = Annot.false_form
 
   let solve_const (c : tconstant) : bool option =
     match c with
@@ -120,7 +118,11 @@ struct
 
   let value_to_tterm (real : bool) (v : value) : a atterm =
     let tt_desc,tt_ty = value_to_tdesc real v in
-    Annot.mk {tt_ty; tt_desc}
+    match tt_desc with
+      TTconst Ttrue -> Annot.true_term
+    | TTconst Tfalse -> Annot.false_term
+    | _ ->
+      Annot.mk {tt_ty; tt_desc}
 
   let fold_left_stop f acc l =
     let rec __fold acc l =
@@ -139,7 +141,6 @@ struct
 
   let oplogic_oper
       ?(simp : a atform -> a atform = identity)
-      ((t,f) : a atform * a atform)
       (op : oplogic)
       (l : a atform list) : a atform list =
     if Options.simplify_verbose ()
@@ -268,8 +269,9 @@ struct
       Some v1, Some v2 -> (Some (value_to_tterm real (op v1 v2)))
     | _,_ -> None
 
-  let mem_optim (old_a : 'a) (new_a : 'a) : 'a =
-    if old_a == new_a then old_a else new_a
+  let mem_optim (old_a : ('a,a) annoted) (new_a : 'a) : ('a,a) annoted * bool =
+    let diff = old_a.c == new_a in
+    (if diff then old_a else Annot.mk new_a), diff
 
   let rec simplify_term_infix
       (op : Symbols.operator) (t1 : a atterm) (t2 : a atterm) : a tt_desc =
@@ -288,14 +290,14 @@ struct
 
   and simplify_atom (atom : a atatom) : a atatom =
     let map l = List.map simplify_tterm l in
-    let c : a tatom =
+    let res,diff =
       match atom.c with
         TAtrue
-      | TAfalse -> atom.c
+      | TAfalse -> atom, false (* false = no change *)
       | TAeq l ->
         let simpl = map l in
         (* the first boolean represents the difference,
-           the second that everything is equal *)
+             the second that everything is equal *)
         let has_diff l : bool * bool =
           let rec _has_diff (all_equal : bool) (last_val : value option) l : bool * bool =
             match l with
@@ -351,37 +353,35 @@ struct
         then
           (if Options.simplify_verbose ()
            then Format.printf "There is a difference, this is FALSE@." ;
-           TAfalse)
+           Annot.false_atom, true)
         else if all_eq
         then
           (if Options.simplify_verbose ()
            then Format.printf "Everything is equal@." ;
-           TAtrue)
-        else TAeq simpl
+           Annot.true_atom, true)
+        else mem_optim atom (TAeq simpl)
 
-      | TAdistinct l -> TAdistinct (map l)
-      | TAneq l -> TAneq (map l)
-      | TAle l -> TAle (map l)
-      | TAlt l -> TAlt (map l)
-      | TApred (term,b) -> TApred (simplify_tterm term, b)
+      | TAdistinct l -> mem_optim atom @@ TAdistinct (map l)
+      | TAneq l -> mem_optim atom @@ TAneq (map l)
+      | TAle l -> mem_optim atom @@ TAle (map l)
+      | TAlt l -> mem_optim atom @@ TAlt (map l)
+      | TApred (term,b) -> mem_optim atom @@ TApred (simplify_tterm term, b)
       | TTisConstr (term, name) ->(
-        (if Options.simplify_verbose ()
-         then Format.printf "TTisConstr (%a,%s)@."
-             Typed.print_term term
-             (Hstring.view name)
-         );
+          (if Options.simplify_verbose ()
+           then Format.printf "TTisConstr (%a,%s)@."
+               Typed.print_term term
+               (Hstring.view name)
+          );
           let term' = simplify_tterm term in
           match term'.c.tt_desc with
           | TTapp (Op (Constr name'),_) ->
             if Hstring.equal name name' then
-              TAtrue
-            else TAfalse
-          | _ -> TTisConstr (term', name)
+              Annot.true_atom, true
+            else Annot.false_atom, true
+          | _ -> mem_optim atom @@ TTisConstr (term', name)
         )
     in
-    let res = mem_optim atom (Annot.mk c)
-    in
-    if Options.simplify_verbose ()
+    if Options.simplify_verbose () && diff
     then
       Format.printf
         "Old atom: %a\nNew atom: %a\n@."
@@ -390,17 +390,14 @@ struct
     res
 
   and simplify_tform (form : a atform) : a atform =
-    let t : a atform = Annot.mk (TFatom (Annot.mk true_atom))
-    and f : a atform = Annot.mk (TFatom (Annot.mk false_atom)) in
-    let res =
+    let res : a tform =
       match form.c with
-        TFatom atom -> {form with c = TFatom (simplify_atom atom)}
-      | TFop (OPnot, l) -> ({form with c = TFop(OPnot,List.map simplify_tform l)})
+        TFatom atom -> TFatom (simplify_atom atom)
+      | TFop (OPnot, l) -> (TFop(OPnot,List.map simplify_tform l))
       | TFop (op, l) -> (
           let l' =
             oplogic_oper
               ~simp:simplify_tform
-              (t,f)
               op
               l
           in
@@ -412,7 +409,7 @@ struct
               Format.printf
                 "Form %a is decided\n@."
                 Typed.print_formula hd;
-            hd
+            hd.c
           | _ ->
             if Options.simplify_verbose ()
             then
@@ -420,7 +417,7 @@ struct
                 (Format.printf
                    "Form %a is remaining@." Typed.print_formula)
                 l';
-            {form with c = TFop(op,l')}
+            TFop(op,l')
         )
       | TFforall qf ->
         let new_qf : a quant_form =
@@ -446,7 +443,7 @@ struct
             let new_hyp = List.rev rev_new_hyp in
             {qf with qf_hyp = new_hyp; qf_form = sform}
         in
-        {form with c = TFforall new_qf}
+        TFforall new_qf
 
       | TFexists qf ->
         let new_qf : a quant_form =
@@ -472,12 +469,12 @@ struct
             let new_hyp = List.rev rev_new_hyp in
             {qf with qf_hyp = new_hyp; qf_form = sform}
         in
-        {form with c = TFforall new_qf}
+        TFforall new_qf
 
-      | _ -> form (* todo *)
+      | _ -> form.c (* todo *)
     in
-    let res = mem_optim form res in
-    if Options.simplify_verbose ()
+    let res,diff = mem_optim form res in
+    if Options.simplify_verbose () && diff
     then
       Format.printf "Old form: %a\nNew form: %a\n@."
         Typed.print_formula form
@@ -506,7 +503,7 @@ struct
     res
 
   and simplify_tt_desc (desc : a tt_desc) : a tt_desc =
-    let res = 
+    let res =
       match desc with
       | TTinfix (term1, Op op, term2) ->
         simplify_term_infix op term1 term2
@@ -519,16 +516,16 @@ struct
       | TTform f -> TTform (simplify_tform f)
       | _ -> desc
     in
-    mem_optim desc res
+    res
 
   and simplify_tterm (term : a atterm) : a atterm =
-    let res =
+    let res,diff =
       mem_optim
         term
-        {annot = term.annot; c = {term.c with tt_desc = simplify_tt_desc term.c.tt_desc}}
+        {term.c with tt_desc = simplify_tt_desc term.c.tt_desc}
     in
 
-    if Options.simplify_verbose ()
+    if Options.simplify_verbose () && diff
     then
       Format.printf "Old term: %a\nNew term: %a\n@."
         Typed.print_term term
@@ -559,7 +556,21 @@ struct
 
       | TTypeDecl _ as res -> res
     in
-    mem_optim adecl {adecl with c = decl}
+    fst @@ mem_optim adecl decl
 end
 
-module S = Make (struct type annot = int let mk t = Typed.mk t end)
+module S = Make (
+  struct
+    type annot = int
+
+    let true_form = Typed.true_atform
+    let false_form = Typed.false_atform
+
+    let true_atom = Typed.true_atatom
+    let false_atom = Typed.false_atatom
+
+    let true_term = Typed.true_atterm
+    let false_term = Typed.false_atterm
+
+    let mk t = Typed.mk t
+  end)

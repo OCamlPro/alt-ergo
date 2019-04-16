@@ -301,8 +301,23 @@ and 'a tdecl =
 (* TODO: wrap this in a record to factorize away
    the location and name of the declaration ? *)
 
+(** {5. Toplevel constants} *)
+val true_atatom : int atatom
+val false_atatom : int atatom
 
-(** {5 Printing} *)
+val true_tform : int tform
+val false_tform : int tform
+
+val true_atform : int atform
+val false_atform : int atform
+
+val true_term : int tterm
+val false_term : int tterm
+
+val true_atterm : int atterm
+val false_atterm : int atterm
+
+(** {6 Printing} *)
 
 val string_of_op : oplogic -> string
 
@@ -322,6 +337,10 @@ val print_triggers : Format.formatter -> ('a atterm list * bool) list -> unit
 
 val print_goal_sort : Format.formatter -> goal_sort -> unit
 (** Print a goal sort *)
+
+val print_tdecl : Format.formatter -> _ tdecl -> unit
+
+val print_atdecl : Format.formatter -> _ atdecl -> unit
 
 val print_rwt :
   (Format.formatter -> 'a -> unit) ->

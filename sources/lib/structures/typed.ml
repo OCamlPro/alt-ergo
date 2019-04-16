@@ -136,6 +136,22 @@ and 'a tlet_kind =
   | TletTerm of ('a tterm, 'a) annoted
   | TletForm of ('a tform, 'a) annoted
 
+(** Toplevel common components *)
+
+let true_atatom     = {c=TAtrue; annot = new_id ()}
+let false_atatom    = {c=TAfalse; annot = new_id ()}
+
+let true_tform      = TFatom true_atatom
+let false_tform     = TFatom false_atatom
+
+let true_atform  = {c = true_tform; annot = new_id()}
+let false_atform = {c = false_tform; annot = new_id()}
+
+let true_term    = {tt_desc = TTconst Ttrue; tt_ty=Ty.Tbool}
+let false_term   = {tt_desc = TTconst Tfalse; tt_ty=Ty.Tbool}
+
+let true_atterm  = {c = true_term; annot = new_id ()}
+let false_atterm = {c = false_term; annot = new_id ()}
 
 (** Rewrite rules *)
 
@@ -347,22 +363,27 @@ and print_formula fmt f =
   | TFmatch _ ->  fprintf fmt "(match formula pprint not implemented)"
   | TFop _ -> fprintf fmt "(operator formula pprint not implemented)"
   | TFnamed _ ->  fprintf fmt "(named formula pprint not implemented)"
-(*
+
 let rec print_tdecl fmt = function
   | TTheory (_, name, _, l) ->
     Format.fprintf fmt "th %s: @[<v>%a@]" name
       (Util.print_list_pp ~sep:Format.pp_print_space ~pp:print_atdecl) l
-  | TAxiom (_, name, kind, f) ->
+  | TAxiom (_, name, _kind, f) ->
     Format.fprintf fmt "ax %s: @[<hov>%a@]" name print_formula f
   | TRewriting (_, name, l) ->
     Format.fprintf fmt "rwt %s: @[<hov>%a@]" name
       (Util.print_list_pp ~sep:Format.pp_print_space
          ~pp:(print_rwt print_term)) l
-  | TGoal (_, sort, name, f) ->
+  | TGoal (_, _sort, name, f) ->
     Format.fprintf fmt "goal %s: @[<hov>%a@]" name print_formula f
+  | TPredicate_def (_,str,_,form) ->
+    Format.fprintf fmt "Predicate %s :\n %a" str print_formula form
+  | TFunction_def (_,str,_,_,form) ->
+    Format.fprintf fmt "Function %s :\n %a" str print_formula form
+  | _ -> ()
 
 and print_atdecl fmt a = print_tdecl fmt a.c
-*)
+
 
 let fresh_hypothesis_name =
   let cpt = ref 0 in
@@ -377,4 +398,3 @@ let is_local_hyp s =
 
 let is_global_hyp s =
   try Pervasives.(=) (String.sub s 0 2) "@H" with Invalid_argument _ -> false
-
