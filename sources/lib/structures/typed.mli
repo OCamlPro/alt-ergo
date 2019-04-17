@@ -321,29 +321,51 @@ val false_atterm : int atterm
 
 val string_of_op : oplogic -> string
 
-val print_atom : Format.formatter -> _ atatom -> unit
+type 'annot annot_printer = Format.formatter -> 'annot -> unit
+type ('a,'annot) annoted_printer = Format.formatter -> ('a,'annot) annoted -> unit
 
-val print_term : Format.formatter -> _ atterm -> unit
-(** Print annoted typed terms. Ignore the annotations. *)
+val no_print : _ annot_printer
+val int_print : int annot_printer
 
-val print_formula : Format.formatter -> _ atform -> unit
-(**Print annoted typed formulas; Ignores the annotations. *)
+val print_atom :
+  ?annot: 'annot annot_printer -> Format.formatter -> 'annot atatom -> unit
 
-val print_binders : Format.formatter -> (Symbols.t * Ty.t) list -> unit
+(** Print annoted typed terms. If no annot function is given, ignores
+    the annotations. *)
+val print_term :
+  ?annot: 'annot annot_printer -> Format.formatter -> 'annot atterm -> unit
+
+(** Print annoted typed formulas. If no annot function is given, ignores
+    the annotations. *)
+val print_formula :
+  ?annot: 'annot annot_printer -> Format.formatter -> 'annot atform -> unit
+
 (** Print a list of bound typed variables. *)
+val print_binders : Format.formatter -> (Symbols.t * Ty.t) list -> unit
 
-val print_triggers : Format.formatter -> ('a atterm list * bool) list -> unit
+val print_triggers :
+  ?annot: 'annot annot_printer ->
+  Format.formatter -> ('annot atterm list * bool) list -> unit
 (** Print a list of triggers. *)
 
 val print_goal_sort : Format.formatter -> goal_sort -> unit
 (** Print a goal sort *)
 
-val print_tdecl : Format.formatter -> _ tdecl -> unit
+val print_tdecl :
+  ?annot: 'annot annot_printer ->
+  Format.formatter -> 'annot tdecl -> unit
 
-val print_atdecl : Format.formatter -> _ atdecl -> unit
+val print_atdecl :
+  ?annot: 'annot annot_printer -> Format.formatter -> 'annot atdecl -> unit
+
+val print_annot :
+  'annot annot_printer ->
+  ('a,'annot) annoted_printer ->
+  Format.formatter -> ('a,'annot) annoted -> unit
 
 val print_rwt :
   (Format.formatter -> 'a -> unit) ->
   Format.formatter -> 'a rwt_rule -> unit
+
 (** Print a rewrite rule *)
 

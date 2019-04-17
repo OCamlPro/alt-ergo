@@ -11,6 +11,31 @@
 
 open Typed
 
+module type SR =
+sig
+  (** The type of annotations *)
+  type a
+
+  (** Each of the following function returns a simplified version of the
+      atom/formula/desc/tterm/decl in argument.
+      Tests multiple properties:
+      - replaces trivial equalities by true or false
+      - replaces (_ is cons) (cons ...) by true when `cons` is a
+        constructor
+      - replaces if (cond) then t1 else t2 by t1/t2 when cond is
+        simplified by true/false. *)
+
+  val simplify_atom : a atatom -> a atatom
+
+  val simplify_tform : a atform -> a atform
+
+  val simplify_tt_desc : a tt_desc -> a tt_desc
+
+  val simplify_tterm : a atterm -> a atterm
+
+  val simplify_tdecl : a atdecl -> a atdecl
+end
+
 type value =
     Bool of bool
   | Num of Num.num
@@ -34,43 +59,27 @@ let pretty_value fmt v =
 module ValueSet = Set.Make (struct type t = value let compare = val_compare end)
 module ValueMap = Set.Make (struct type t = value let compare = val_compare end)
 
-let unary_op_opt (op : 'a -> 'b) (v : 'a option) : 'b option =
-  match v with
-    None -> None
-  | Some v -> Some (op v)
-
-(* Lazy evaluation of arguments is important. *)
-let op_opt (op : 'a -> 'a -> 'b) (v1 : 'a option) (v2 : 'a option) : 'b option =
-  match v1 with
-    Some v1 ->
-    unary_op_opt
-      (fun v2 -> op v1 v2)
-      v2
-  | None -> None
-
 module Make
-    (Annot : sig type annot
+    (Annot :
+     sig
+       type annot
        val true_form : annot atform
        val false_form : annot atform
        val true_atom : annot atatom
        val false_atom : annot atatom
-       val true_term : annot atterm
-       val false_term : annot atterm
-       val mk : 'a -> ('a, annot) annoted end) =
+
+       val mk : 'a -> ('a, annot) annoted
+       val print_annot : annot Typed.annot_printer
+     end
+    ) =
 struct
-
-
+  let verb = Options.simplify_verbose ()
   let identity l = l
   type a = Annot.annot
 
   let t : a atform = Annot.true_form
   let f : a atform = Annot.false_form
-
-  let solve_const (c : tconstant) : bool option =
-    match c with
-      Ttrue ->  Some true
-    | Tfalse -> Some false
-    | _c -> None (* This should not happen if the formula is well typed *)
+  let annot = Annot.print_annot
 
   let const_to_value (c : tconstant) : value option =
     match c with
@@ -82,11 +91,6 @@ struct
     | Ttrue -> Some (Bool true)
     | Tfalse -> Some (Bool false)
     | _ -> None
-
-  let tt_desc_to_value (desc : a tt_desc) : value option =
-    match desc with
-      TTconst c -> (const_to_value c)
-    | _ -> None (* todo : simplify ? *)
 
   let value_to_tdesc (real : bool) (v : value) : a tt_desc * Ty.t =
     let desc, ty =
@@ -101,10 +105,10 @@ struct
 
   let tform_to_value
       ?(simp : a tform -> a tform = identity) (f : a atform) : value option =
-    if Options.simplify_verbose ()
+    if verb
     then
       Format.printf "Valuation of formula %a@."
-        Typed.print_formula f;
+        (Typed.print_formula ~annot) f;
     match simp f.c with
       TFatom {c = TAtrue;_} ->  Some (Bool true)
     | TFatom {c = TAfalse;_} -> Some (Bool false)
@@ -115,14 +119,6 @@ struct
     match (simp f).c.tt_desc with
       TTconst c ->  const_to_value c
     | _ -> None
-
-  let value_to_tterm (real : bool) (v : value) : a atterm =
-    let tt_desc,tt_ty = value_to_tdesc real v in
-    match tt_desc with
-      TTconst Ttrue -> Annot.true_term
-    | TTconst Tfalse -> Annot.false_term
-    | _ ->
-      Annot.mk {tt_ty; tt_desc}
 
   let fold_left_stop f acc l =
     let rec __fold acc l =
@@ -143,13 +139,13 @@ struct
       ?(simp : a atform -> a atform = identity)
       (op : oplogic)
       (l : a atform list) : a atform list =
-    if Options.simplify_verbose ()
+    if verb
     then
       Format.printf "Logic operator %s detected.@."
         (Typed.string_of_op op);
     match op with
       OPand -> (
-        if Options.simplify_verbose ()
+        if verb
         then
           Format.printf "AND formula@.";
         let l' =
@@ -159,22 +155,22 @@ struct
                 let selt : a atform = simp elt in
                 match tform_to_value selt with
                   Some (Bool true) ->
-                  if Options.simplify_verbose ()
+                  if verb
                   then
                     Format.printf "%a is true, removing it from formula@."
-                      Typed.print_formula selt;
+                      (Typed.print_formula ~annot) selt;
                   acc, false
                 | Some (Bool false) ->
-                  if Options.simplify_verbose ()
+                  if verb
                   then
                     Format.printf "%a is false, ending@."
-                      Typed.print_formula selt;
+                      (Typed.print_formula ~annot) selt;
                   [f], true
                 | _ ->
-                  if Options.simplify_verbose ()
+                  if verb
                   then
                     Format.printf "%a is unknown@."
-                      Typed.print_formula selt;
+                      (Typed.print_formula ~annot) selt;
                   (selt :: acc), false
              )
              []
@@ -245,33 +241,28 @@ struct
           let scond = simp cond in
           match tform_to_value scond with
             Some (Bool true) ->
-            if Options.simplify_verbose ()
+            if verb
             then
               Format.printf "OP Condition is TRUE@.";
             [simp th]
           | Some (Bool false) ->
-            if Options.simplify_verbose ()
+            if verb
             then
               Format.printf "OP Condition is FALSE@.";
             [simp el]
           | _ ->
-            if Options.simplify_verbose ()
+            if verb
             then
               Format.printf "OP Condition is UNKNOWN@.";
             [scond; simp th; simp el]
         )
       | _ -> l (* unspecified *)
 
-  let op_term
-      (real : bool) (op : value -> value -> value) (t1 : a atterm) (t2 : a atterm)
-    : a atterm option =
-    match tterm_to_value t1, tterm_to_value t2 with
-      Some v1, Some v2 -> (Some (value_to_tterm real (op v1 v2)))
-    | _,_ -> None
-
   let mem_optim (old_a : ('a,a) annoted) (new_a : 'a) : ('a,a) annoted * bool =
-    let diff = old_a.c == new_a in
-    (if diff then old_a else Annot.mk new_a), diff
+    let diff= old_a.c <> new_a in
+    let res =
+      (if diff then Annot.mk new_a else old_a) in
+    res, diff
 
   let rec simplify_term_infix
       (op : Symbols.operator) (t1 : a atterm) (t2 : a atterm) : a tt_desc =
@@ -306,30 +297,30 @@ struct
               let hd_val = tterm_to_value hd in
               match hd_val, last_val with
               | None, None ->
-                if Options.simplify_verbose ()
+                if verb
                 then
                   Format.printf "Term %a not valuable@."
-                    Typed.print_term hd
+                    (Typed.print_term ~annot) hd
                 ;
                 _has_diff false None tl
               | Some v, None ->
-                if Options.simplify_verbose ()
+                if verb
                 then
                   Format.printf "Term %a valuable. Keeping it@."
-                    Typed.print_term hd;
+                    (Typed.print_term ~annot) hd;
                 _has_diff all_equal (Some v) tl
               | None, Some v ->
-                if Options.simplify_verbose ()
+                if verb
                 then
                   Format.printf "Term %a not valuable. Keeping %a@."
                     pretty_value v
-                    Typed.print_term hd
+                    (Typed.print_term ~annot) hd
                 ;
                 _has_diff all_equal (Some v) tl
               | Some v, Some v' ->
                 if val_compare v v' <> 0
                 then (
-                  if Options.simplify_verbose ()
+                  if verb
                   then
                     Format.printf "%a <> %a@."
                       pretty_value v
@@ -338,7 +329,7 @@ struct
                   true,false (* There is a trivial difference *)
                 )
                 else (
-                  if Options.simplify_verbose ()
+                  if verb
                   then
                     Format.printf "%a = %a@."
                       pretty_value v
@@ -351,12 +342,12 @@ struct
         let there_is_diff,all_eq = has_diff simpl in
         if there_is_diff
         then
-          (if Options.simplify_verbose ()
+          (if verb
            then Format.printf "There is a difference, this is FALSE@." ;
            Annot.false_atom, true)
         else if all_eq
         then
-          (if Options.simplify_verbose ()
+          (if verb
            then Format.printf "Everything is equal@." ;
            Annot.true_atom, true)
         else mem_optim atom (TAeq simpl)
@@ -367,9 +358,9 @@ struct
       | TAlt l -> mem_optim atom @@ TAlt (map l)
       | TApred (term,b) -> mem_optim atom @@ TApred (simplify_tterm term, b)
       | TTisConstr (term, name) ->(
-          (if Options.simplify_verbose ()
+          (if verb
            then Format.printf "TTisConstr (%a,%s)@."
-               Typed.print_term term
+               (Typed.print_term ~annot) term
                (Hstring.view name)
           );
           let term' = simplify_tterm term in
@@ -381,12 +372,12 @@ struct
           | _ -> mem_optim atom @@ TTisConstr (term', name)
         )
     in
-    if Options.simplify_verbose () && diff
+    if verb && diff
     then
       Format.printf
         "Old atom: %a\nNew atom: %a\n@."
-        Typed.print_atom atom
-        Typed.print_atom res;
+        (Typed.print_atom ~annot) atom
+        (Typed.print_atom ~annot) res;
     res
 
   and simplify_tform (form : a atform) : a atform =
@@ -404,18 +395,18 @@ struct
           match l' with
             []  -> assert false
           | hd :: []  ->
-            if Options.simplify_verbose ()
+            if verb
             then
               Format.printf
                 "Form %a is decided\n@."
-                Typed.print_formula hd;
+                (Typed.print_formula ~annot) hd;
             hd.c
           | _ ->
-            if Options.simplify_verbose ()
+            if verb
             then
               List.iter
                 (Format.printf
-                   "Form %a is remaining@." Typed.print_formula)
+                   "Form %a is remaining@." (Typed.print_formula ~annot))
                 l';
             TFop(op,l')
         )
@@ -469,16 +460,16 @@ struct
             let new_hyp = List.rev rev_new_hyp in
             {qf with qf_hyp = new_hyp; qf_form = sform}
         in
-        TFforall new_qf
+        TFexists new_qf
 
       | _ -> form.c (* todo *)
     in
     let res,diff = mem_optim form res in
-    if Options.simplify_verbose () && diff
+    if verb && diff
     then
       Format.printf "Old form: %a\nNew form: %a\n@."
-        Typed.print_formula form
-        Typed.print_formula res;
+        (Typed.print_formula ~annot) form
+        (Typed.print_formula ~annot) res;
     res
 
   and simplify_ite_desc (cond : a atform) (th : a atterm) (el : a atterm) : a tt_desc =
@@ -486,17 +477,17 @@ struct
     let res =
     match tform_to_value scond with
         Some (Bool true) ->
-        if Options.simplify_verbose ()
+        if verb
         then
           Format.printf "Condition is TRUE";
         (simplify_tterm th).c.tt_desc
     | Some (Bool false) ->
-        if Options.simplify_verbose ()
+        if verb
         then
           Format.printf "Condition is FALSE";
         (simplify_tterm el).c.tt_desc
     | _ ->
-        if Options.simplify_verbose ()
+        if verb
         then
           Format.printf "Condition is UNKNOWN";
         TTite (scond, simplify_tterm th, simplify_tterm el) in
@@ -525,11 +516,11 @@ struct
         {term.c with tt_desc = simplify_tt_desc term.c.tt_desc}
     in
 
-    if Options.simplify_verbose () && diff
+    if verb && diff
     then
       Format.printf "Old term: %a\nNew term: %a\n@."
-        Typed.print_term term
-        Typed.print_term res;
+        (Typed.print_term ~annot) term
+        (Typed.print_term ~annot) res;
     res
 
   and simplify_tdecl (adecl : a atdecl) : a atdecl =
@@ -556,7 +547,13 @@ struct
 
       | TTypeDecl _ as res -> res
     in
-    fst @@ mem_optim adecl decl
+    let res, diff = mem_optim adecl decl in
+    if  verb && diff
+    then
+      Format.printf "Old decl: %a\nNew decl: %a\n@."
+        (Typed.print_atdecl ~annot) adecl
+        (Typed.print_atdecl ~annot) res;
+    res
 end
 
 module S = Make (
@@ -569,8 +566,6 @@ module S = Make (
     let true_atom = Typed.true_atatom
     let false_atom = Typed.false_atatom
 
-    let true_term = Typed.true_atterm
-    let false_term = Typed.false_atterm
-
-    let mk t = Typed.mk t
+    let mk i = {c = i; annot = -1}
+    let print_annot = Typed.int_print
   end)

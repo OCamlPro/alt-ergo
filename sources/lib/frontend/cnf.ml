@@ -507,9 +507,36 @@ let mk_theory acc l th_name extends _loc =
     )acc l
 
 let make acc (d : (int Typed.tdecl, int) Typed.annoted) =
+  let verb = Options.simplify_verbose () in
   let d =
     if Options.simplify ()
-    then Simple_reasoner_expr.S.simplify_tdecl d
+    then (
+      if verb
+      then
+        Printf.printf "Simplying the formula...@.";
+
+      let res = Simple_reasoner_expr.S.simplify_tdecl d in
+      if res == d
+      then (
+        if verb
+        then (
+          Printf.printf "Simplifyer did not change the formula@."
+        );
+        d
+      )
+      else (
+        if verb
+        then
+          (Format.printf "Simplifyer changed the formula from\n\
+                          %a\n\
+                          to\n\
+                          %a@."
+             (Typed.print_atdecl ~annot:Typed.int_print) d
+             (Typed.print_atdecl ~annot:Typed.int_print) res
+          );
+        res
+      )
+    )
     else d
   in
   match d.c with
