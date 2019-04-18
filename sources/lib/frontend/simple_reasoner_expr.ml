@@ -524,31 +524,49 @@ struct
     res
 
   and simplify_tdecl (adecl : a atdecl) : a atdecl =
-    let decl =
+    let res =
       match adecl.c with
         TTheory (l,s,te,dlist) ->
-        TTheory (l,s,te, List.map simplify_tdecl dlist)
+        let dl,diff =
+          List.fold_left
+            (fun (acc,diff) decl ->
+               let sdecl = simplify_tdecl decl in
+               let diff' = not (sdecl == decl) in
+               (sdecl :: acc), diff || diff')
+            ([],false)
+            dlist
+        in
+        if diff then
+          Annot.mk (TTheory (l,s,te, List.rev dl))
+        else adecl
 
       | TAxiom (l,s,ak,form) ->
-        TAxiom (l,s,ak, simplify_tform form)
+        let sform = simplify_tform form in
+        if sform == form
+        then adecl
+        else Annot.mk (TAxiom (l,s,ak, sform))
 
-      | TRewriting _ as res -> res
 
       | TGoal (l,g,s, form) ->
-        TGoal (l,g,s, simplify_tform form)
-
-      | TLogic _ as res -> res
+        let sform = simplify_tform form in
+        if sform == form
+        then adecl
+        else Annot.mk (TGoal (l,g,s, sform))
 
       | TPredicate_def (ln,s,al,form) ->
-        TPredicate_def (ln,s,al, simplify_tform form)
+        let sform = simplify_tform form in
+        if sform == form
+        then adecl
+        else Annot.mk (TPredicate_def (ln,s,al, sform))
 
       | TFunction_def (l,s,sl,t,form) ->
-        TFunction_def (l,s,sl,t, simplify_tform form)
+        let sform = simplify_tform form in
+        if sform == form
+        then adecl
+        else Annot.mk (TFunction_def (l,s,sl,t, sform))
 
-      | TTypeDecl _ as res -> res
-    in
-    let res, diff = mem_optim adecl decl in
-    if  verb && diff
+      | TRewriting _ | TTypeDecl _ | TLogic _ -> adecl in
+    if verb
     then
       Format.printf "Old decl: %a\nNew decl: %a\n@."
         (Typed.print_atdecl ~annot) adecl
@@ -566,6 +584,6 @@ module S = Make (
     let true_atom = Typed.true_atatom
     let false_atom = Typed.false_atatom
 
-    let mk i = {c = i; annot = -1}
+    let mk i = Typed.mk i
     let print_annot = Typed.int_print
   end)

@@ -513,14 +513,14 @@ let make acc (d : (int Typed.tdecl, int) Typed.annoted) =
     then (
       if verb
       then
-        Printf.printf "Simplying the formula...@.";
+        Format.printf "Simplying the formula...@.";
 
       let res = Simple_reasoner_expr.S.simplify_tdecl d in
       if res == d
       then (
         if verb
         then (
-          Printf.printf "Simplifyer did not change the formula@."
+          Format.printf "Simplifyer did not change the formula@."
         );
         d
       )
