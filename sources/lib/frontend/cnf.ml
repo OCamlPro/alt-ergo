@@ -34,6 +34,7 @@ open Commands
 module E = Expr
 module Sy = Symbols
 module SE = E.Set
+module SRE = Simple_reasoner_expr
 
 [@@ocaml.ppwarning "TODO: Change Symbols.Float to store FP numeral \
                     constants (eg, <24, -149> for single) instead of \
@@ -513,18 +514,13 @@ let make acc (d : (int Typed.tdecl, int) Typed.annoted) =
     then (
       if verb
       then
-        Format.printf "Simplying the formula...@.";
-
-      let res = Simple_reasoner_expr.S.simplify_tdecl d in
-      if res == d
+        Format.printf "Simplying the formula %a@."
+          (Typed.print_atdecl ~annot:Typed.no_print) d;
+      let res = SRE.SInt.simplify_tdecl d in
+      if SRE.modified res
       then (
-        if verb
-        then (
-          Format.printf "Simplifyer did not change the formula@."
-        );
-        d
-      )
-      else (
+        let f =
+          SRE.get res in
         if verb
         then
           (Format.printf "Simplifyer changed the formula from\n\
@@ -532,9 +528,16 @@ let make acc (d : (int Typed.tdecl, int) Typed.annoted) =
                           to\n\
                           %a@."
              (Typed.print_atdecl ~annot:Typed.int_print) d
-             (Typed.print_atdecl ~annot:Typed.int_print) res
+             (Typed.print_atdecl ~annot:Typed.int_print) f
           );
-        res
+        f
+      )
+      else (
+        if verb
+        then (
+          Format.printf "Simplifyer did not change the formula@."
+        );
+        d
       )
     )
     else d

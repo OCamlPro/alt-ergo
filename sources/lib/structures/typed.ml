@@ -328,7 +328,7 @@ and print_term_binders ?(annot=no_print) fmt l =
 and print_term_list
     ?(annot=no_print) fmt = List.iter (fprintf fmt "%a," (print_term ~annot))
 
-and print_atom ?(annot: 'annot annot_printer =no_print) fmt (a : 'annot atatom) =
+and print_atom ?(annot: 'annot annot_printer=no_print) fmt (a : 'annot atatom) =
   let printer fmt a =
     match a.c with
     | TAtrue ->
@@ -408,7 +408,6 @@ let rec print_tdecl ?(annot=no_print) fmt = function
 
 and print_atdecl ?(annot=no_print) fmt a =
   print_annot annot (fun fmt a -> print_tdecl ~annot fmt a.c) fmt a
-
 
 let fresh_hypothesis_name =
   let cpt = ref 0 in
