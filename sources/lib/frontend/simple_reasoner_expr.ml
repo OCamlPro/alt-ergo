@@ -11,6 +11,22 @@
 
 open Typed
 
+type value =
+    Bool of bool
+  | Num of Num.num
+
+let of_bool (b : bool) : value = Bool b
+let of_int (i : int) : value = Num (Num.num_of_int i)
+let of_num (n : Num.num) : value = Num n
+
+(** Maps for variable valuation *)
+module VarVal =
+struct
+  include Hashtbl.Make (Var)
+  let find_opt key map =
+    try Some (find key map) with _ -> None
+end
+
 (** A simplified formula/expr/... type.
    the diff field is set to false if the operation did not change the
    input.
@@ -28,6 +44,11 @@ module type S =
 sig
   (** The type of annotations *)
   type a
+
+  module Val :
+  sig
+    val update : Var.t -> value -> unit
+  end
 
   (** Each of the following function returns a simplified version of the
       atom/formula/desc/tterm/decl in argument.
@@ -49,10 +70,6 @@ sig
   val simplify_tdecl : a atdecl -> a atdecl simp
 end
 
-type value =
-    Bool of bool
-  | Num of Num.num
-
 let val_compare t1 t2 =
   match t1,t2 with
     Bool true, Bool false -> 1
@@ -69,28 +86,33 @@ let pretty_value fmt v =
   | Num n ->
     Format.fprintf fmt "%s" (Num.string_of_num n)
 
-module ValueSet = Set.Make (struct type t = value let compare = val_compare end)
-module ValueMap = Set.Make (struct type t = value let compare = val_compare end)
+module type Annot =
+sig
+  type annot
+  val true_form : annot atform
+  val false_form : annot atform
+  val true_atom : annot atatom
+  val false_atom : annot atatom
+
+  val mk : 'a -> ('a, annot) annoted
+  val print_annot : annot Typed.annot_printer
+end
 
 module Make
-    (Annot :
-     sig
-       type annot
-       val true_form : annot atform
-       val false_form : annot atform
-       val true_atom : annot atatom
-       val false_atom : annot atatom
-
-       val mk : 'a -> ('a, annot) annoted
-       val print_annot : annot Typed.annot_printer
-     end
-    ) =
+    (Annot : Annot) : S with type a = Annot.annot =
 struct
   let verb = Options.simplify_verbose ()
   let identity l = {v = l; diff = false}
   type a = Annot.annot
 
   let annot = Annot.print_annot
+
+  let var_vals = VarVal.create 17
+
+  module Val =
+  struct
+    let update = VarVal.add var_vals
+  end
 
   let const_to_value (c : tconstant) : value option =
     match c with
@@ -130,6 +152,9 @@ struct
     let simp_term : a atterm = (simp f).v in
     match simp_term.c.tt_desc with
       TTconst c ->  const_to_value c
+    | TTvar (Var x) ->
+      VarVal.find_opt var_vals x
+
     | _ -> None
 
   let fold_left_stop f acc l =
@@ -728,16 +753,20 @@ struct
     res
 end
 
-module SInt = Make (
-  struct
-    type annot = int
+module AnnotInt =
+struct
+  type annot = int
 
-    let true_form = Typed.true_atform
-    let false_form = Typed.false_atform
+  let true_form = Typed.true_atform
+  let false_form = Typed.false_atform
 
-    let true_atom = Typed.true_atatom
-    let false_atom = Typed.false_atatom
+  let true_atom = Typed.true_atatom
+  let false_atom = Typed.false_atatom
 
-    let mk i = Typed.mk i
-    let print_annot = Typed.int_print
-  end)
+  let mk i = Typed.mk i
+  let print_annot = Typed.int_print
+end
+
+module SInt =
+  Make
+    (AnnotInt : Annot)

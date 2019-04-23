@@ -231,7 +231,7 @@ let print_binder fmt (s, t) =
 
 let print_binders fmt l =
   List.iter (fun c -> fprintf fmt "%a, " print_binder c) l
- 
+
 let rec print_term ?(annot=no_print) fmt t =
   let printer fmt t =
     match t.c.tt_desc with
@@ -422,3 +422,4 @@ let is_local_hyp s =
 
 let is_global_hyp s =
   try Pervasives.(=) (String.sub s 0 2) "@H" with Invalid_argument _ -> false
+
