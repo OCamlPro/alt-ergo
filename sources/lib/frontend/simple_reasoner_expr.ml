@@ -469,11 +469,27 @@ struct
     let res : a atatom simp =
       match atom.c with
         TAtrue
-      | TAfalse -> identity atom (* false = no change *)
+      | TAfalse -> identity atom (* no change *)
       | TAeq l ->
-          apply_op (=) l
+        let tmp_res = apply_op (=) l in (
+          match tmp_res.v.c with
+            TAeq (t1 :: t2 :: []) ->
+            if Typed.eq_tterm t1.c t2.c
+            then {v = Annot.true_atom; diff = true}
+            else tmp_res
+          | _ -> tmp_res
+        )
       | TAdistinct l | TAneq l ->
-        apply_op (=) l
+        let tmp_res = apply_op (<>) l in(
+          match tmp_res.v.c with
+            TAdistinct (t1 :: t2 :: [])
+          | TAneq (t1 :: t2 :: []) ->
+            if Typed.eq_tterm t1.c t2.c
+            then {v = Annot.false_atom; diff = true}
+            else tmp_res
+          | _ -> tmp_res
+        )
+
       | TAle l ->
         apply_op (fun v1 v2 -> val_compare v1 v2 <= 0) l
       | TAlt l ->

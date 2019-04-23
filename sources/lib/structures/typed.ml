@@ -203,6 +203,201 @@ and 'a tdecl =
       (string * Ty.t) list * Ty.t * ('a tform, 'a) annoted
   | TTypeDecl of Loc.t * Ty.t
 
+let eq_list eq l1 l2 =
+  let rec loop l1 l2 =
+    match l1, l2 with
+      [],[] -> true
+    | hd1 :: tl1, hd2 :: tl2 ->
+      if eq hd1 hd2
+      then loop tl1 tl2
+      else false
+    | _,_ -> false
+  in loop l1 l2
+
+let eq_tconstant (c1 : tconstant) (c2 : tconstant) : bool =
+  match c1, c2 with
+    Tint s1, Tint s2
+  | Tbitv s1, Tbitv s2 -> String.equal s1 s2
+  | Treal n1, Treal n2 -> Num.eq_num n1 n2
+  | Ttrue, Ttrue | Tfalse, Tfalse | Tvoid, Tvoid -> true
+  | _ -> false
+
+let eq_oplogic o1 o2 = o1 == o2
+
+let eq_pattern (p1 : pattern) (p2 : pattern) : bool =
+  match p1, p2 with
+    Constr {name = name1; args = args1},
+    Constr {name = name2; args = args2} ->
+      Hstring.equal name1 name2
+      &&
+      eq_list
+        (fun (x1,s1,t1) (x2,s2,t2) ->
+           Var.equal x1 x2 &&
+           Hstring.equal s1 s2 &&
+           Ty.equal t1 t2)
+        args1
+        args2
+
+  | Var x1, Var x2 -> Var.equal x1 x2
+  | _,_ -> false
+
+let rec eq_tterm (t1 : 'a tterm) (t2 : 'a tterm) : bool =
+  Ty.equal t1.tt_ty t2.tt_ty && eq_tt_desc t1.tt_desc t2.tt_desc
+
+and eq_tt_desc (e1 : 'a tt_desc) (e2 : 'a tt_desc) : bool =
+  match e1, e2 with
+    TTconst c1, TTconst c2 -> eq_tconstant c1 c2
+  | TTvar v1, TTvar v2 -> Symbols.equal v1 v2
+  | TTinfix (t11, symb1, t12), TTinfix (t21, symb2, t22) ->
+    Symbols.equal symb1 symb2 &&
+    eq_tterm t11.c t21.c &&
+    eq_tterm t12.c t22.c
+
+  | TTprefix (s1,t1), TTprefix (s2, t2) ->
+    Symbols.equal s1 s2 &&
+    eq_tterm t1.c t2.c
+
+  | TTapp (s1, l1), TTapp (s2, l2) ->
+    Symbols.equal s1 s2 &&
+    eq_list
+      (fun t1 t2 -> eq_tterm t1.c t2.c)
+      l1 l2
+
+  | TTmapsTo (x1, t1), TTmapsTo (x2, t2) ->
+    Var.equal x1 x2 &&
+    eq_tterm t1.c t2.c
+
+  | TTget (t11, t12), TTget (t21, t22)
+  | TTconcat (t11, t12), TTconcat (t21, t22) ->
+    eq_tterm t11.c t21.c &&
+    eq_tterm t12.c t22.c
+
+  | TTset (t11, t12, t13), TTset (t21, t22, t23)
+  | TTextract (t11, t12, t13), TTextract (t21, t22, t23)  ->
+    eq_tterm t11.c t21.c &&
+    eq_tterm t12.c t22.c &&
+    eq_tterm t13.c t23.c
+
+  | TTdot (t1, s1), TTdot (t2, s2)
+  | TTnamed (s1, t1), TTnamed (s2, t2) ->
+    Hstring.equal s1 s2 &&
+    eq_tterm t1.c t2.c
+
+  | TTrecord l1, TTrecord l2 ->
+    eq_list
+      (fun  (s1,t1) (s2,t2) -> Hstring.equal s1 s2 && eq_tterm t1.c t2.c)
+      l1 l2
+
+  | TTlet (l1, t1), TTlet (l2, t2) ->
+    eq_tterm t1.c t2.c &&
+    eq_list
+      (fun (s1, t1) (s2, t2) ->
+         Symbols.equal s1 s2 && eq_tterm t1.c t2.c)
+      l1
+      l2
+
+  | TTite (c1,th1,el1), TTite (c2,th2,el2) ->
+    eq_tform c1.c c2.c && eq_tterm th1.c th2.c && eq_tterm el1.c el2.c
+
+  | TTproject (b1,t1,s1), TTproject (b2,t2,s2) ->
+    (b1 && (not b2) || (not b1) && b2)  && eq_tterm t1.c t2.c && Hstring.equal s1 s2
+
+  | TTmatch (t1, l1), TTmatch (t2, l2) ->
+    eq_tterm t1.c t2.c &&
+    eq_list
+      (fun (p1,t1) (p2,t2) ->
+         eq_pattern p1 p2 && eq_tterm t1.c t2.c
+      )
+      l1
+      l2
+
+  | TTform f1, TTform f2 -> eq_tform f1.c f2.c
+  | _,_ -> false
+
+and eq_tatom (a1 : 'a tatom) (a2 : 'a tatom) : bool =
+  match a1, a2 with
+    TAtrue, TAtrue
+  | TAfalse, TAfalse -> true
+  | TAeq l1, TAeq l2
+  | TAdistinct l1, TAdistinct l2
+  | TAneq l1, TAneq l2
+  | TAle l1, TAle l2
+  | TAlt l1, TAlt l2 ->
+    eq_list
+      (fun t1 t2 -> eq_tterm t1.c t2.c)
+      l1
+      l2
+  | TApred (t1, b1), TApred (t2, b2) ->
+    (b1 && (not b2) || (not b1) && b2) &&
+    eq_tterm t1.c t2.c
+  | TTisConstr (t1, s1), TTisConstr (t2, s2) ->
+    Hstring.equal s1 s2 && eq_tterm t1.c t2.c
+  | _,_ -> false
+
+and eq_quant_form (q1 : 'a quant_form) (q2 : 'a quant_form) : bool =
+  let stylist =
+    eq_list
+      (fun (s1,t1) (s2, t2) -> Symbols.equal s1 s2 && Ty.equal t1 t2)
+  in
+  stylist q1.qf_bvars q2.qf_bvars &&
+  stylist q1.qf_upvars q2.qf_upvars &&
+  eq_list (fun f1 f2 -> eq_tform f1.c f2.c) q1.qf_hyp q2.qf_hyp &&
+  eq_tform q1.qf_form.c q2.qf_form.c &&
+  eq_list
+    (fun (tlist1,b1) (tlist2,b2) ->
+       (b1 && (not b2) || (not b1) && b2) &&
+       eq_list
+         (fun t1 t2 -> eq_tterm t1.c t2.c)
+         tlist1
+         tlist2)
+    q1.qf_triggers
+    q2.qf_triggers
+
+and eq_tform (f1 : 'a tform) (f2 : 'a tform) : bool =
+  match f1, f2 with
+  | TFatom a1, TFatom a2 -> eq_tatom a1.c a2.c
+
+  | TFop (op1, l1), TFop (op2, l2) ->
+    eq_oplogic op1 op2 &&
+    eq_list
+      (fun f1 f2 -> eq_tform f1.c f2.c)
+      l1
+      l2
+
+  | TFforall q1, TFforall q2
+  | TFexists q1, TFexists q2 ->
+    eq_quant_form q1 q2
+
+  | TFlet (stlist1, slklist1,f1), TFlet (stlist2, slklist2,f2) ->
+    let stylist =
+      eq_list
+        (fun (s1,t1) (s2, t2) -> Symbols.equal s1 s2 && Ty.equal t1 t2)
+    in
+    stylist stlist1 stlist2 &&
+    eq_list
+      (fun (s1,lf1) (s2, lf2) -> Symbols.equal s1 s2 && eq_tlet_kind lf1 lf2)
+      slklist1 slklist2
+    &&
+    eq_tform f1.c f2.c
+
+  | TFnamed (s1, f1), TFnamed (s2, f2) ->
+    Hstring.equal s1 s2 && eq_tform f1.c f2.c
+
+  | TFmatch (t1, pfl1), TFmatch (t2, pfl2) ->
+    eq_tterm t1.c t2.c &&
+    eq_list
+      (fun (p1, f1) (p2, f2) -> eq_pattern p1 p2 && eq_tform f1.c f2.c)
+      pfl1
+      pfl2
+
+  | _,_ -> false
+
+and eq_tlet_kind (k1 : 'a tlet_kind) (k2 : 'a tlet_kind) : bool =
+  match k1, k2 with
+    TletTerm t1, TletTerm t2 -> eq_tterm t1.c t2.c
+  | TletForm f1, TletForm f2 -> eq_tform f1.c f2.c
+  | _,_ -> false
+
 (*****)
 
 let string_of_op = function
@@ -422,4 +617,3 @@ let is_local_hyp s =
 
 let is_global_hyp s =
   try Pervasives.(=) (String.sub s 0 2) "@H" with Invalid_argument _ -> false
-

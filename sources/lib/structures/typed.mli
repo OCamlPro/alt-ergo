@@ -317,7 +317,21 @@ val false_term : int tterm
 val true_atterm : int atterm
 val false_atterm : int atterm
 
-(** {6 Printing} *)
+(** {6. Structural equality} *)
+
+val eq_tterm : 'a tterm -> 'a tterm -> bool
+
+val eq_tt_desc : 'a tt_desc -> 'a tt_desc -> bool
+
+val eq_tatom : 'a tatom -> 'a tatom -> bool
+
+val eq_quant_form : 'a quant_form -> 'a quant_form -> bool
+
+val eq_tform : 'a tform -> 'a tform -> bool
+
+val eq_tlet_kind : 'a tlet_kind -> 'a tlet_kind -> bool
+
+(** {7 Printing} *)
 
 val string_of_op : oplogic -> string
 
