@@ -15,18 +15,6 @@ type value =
     Bool of bool
   | Num of Num.num
 
-let of_bool (b : bool) : value = Bool b
-let of_int (i : int) : value = Num (Num.num_of_int i)
-let of_num (n : Num.num) : value = Num n
-
-(** Maps for variable valuation *)
-module VarVal =
-struct
-  include Hashtbl.Make (Var)
-  let find_opt key map =
-    try Some (find key map) with _ -> None
-end
-
 (** A simplified formula/expr/... type.
    the diff field is set to false if the operation did not change the
    input.
@@ -44,11 +32,6 @@ module type S =
 sig
   (** The type of annotations *)
   type a
-
-  module Val :
-  sig
-    val update : Var.t -> value -> unit
-  end
 
   (** Each of the following function returns a simplified version of the
       atom/formula/desc/tterm/decl in argument.
@@ -107,13 +90,6 @@ struct
 
   let annot = Annot.print_annot
 
-  let var_vals = VarVal.create 17
-
-  module Val =
-  struct
-    let update = VarVal.add var_vals
-  end
-
   let const_to_value (c : tconstant) : value option =
     match c with
     | Tint i -> (
@@ -152,8 +128,6 @@ struct
     let simp_term : a atterm = (simp f).v in
     match simp_term.c.tt_desc with
       TTconst c ->  const_to_value c
-    | TTvar (Var x) ->
-      VarVal.find_opt var_vals x
 
     | _ -> None
 

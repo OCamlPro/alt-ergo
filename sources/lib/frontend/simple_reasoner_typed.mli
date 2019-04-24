@@ -5,12 +5,6 @@ open Typed
 (** The type of values manipulated by the simplifyer. *)
 type value
 
-val of_bool : bool -> value
-val of_int : int -> value
-val of_num : Num.num -> value
-
-module VarVal : Hashtbl.S with type key = Var.t
-
 (** 2. Simplifyer *)
 
 (** A simplified formula/expr/... type. *)
@@ -26,11 +20,6 @@ module type S =
 sig
   (** The type of annotations *)
   type a
-
-  module Val :
-  sig
-    val update : Var.t -> value -> unit
-  end
 
   (** Each of the following function returns a simplified version of the
       atom/formula/desc/tterm/decl in argument.
@@ -69,7 +58,6 @@ module Make
        (** Prints an annotation *)
        val print_annot : annot Typed.annot_printer
 
-       val variable_val : value VarVal.t
      end
     ) : S with type a = Annot.annot
 
