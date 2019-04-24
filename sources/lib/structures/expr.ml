@@ -52,7 +52,7 @@ and view = {
   xs: t list;
   ty: Ty.t; (* expression type *)
   bind : bind_kind;
-  tag: int;
+  tag: int; (* always = -42 *)
   vars : (Ty.t * int) SMap.t; (* vars to types and nb of occurences *)
   vty : Ty.Svty.t;
   depth: int;
