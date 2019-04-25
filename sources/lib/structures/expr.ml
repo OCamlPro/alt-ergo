@@ -2498,7 +2498,10 @@ let print_th_elt fmt t =
 module SimpExpr =
   Simple_reasoner_expr.SimpleReasoner (
   struct
-    type expr = t
+    type t' = t
+    type t = t'
+    let hash = hash
+    let equal = equal
 
     let mk_expr sy l typ =
       match sy,l with
@@ -2535,7 +2538,6 @@ module SimpExpr =
 
     let real = real
     let int = int
-    let equal = equal
 
     let pretty = print
   end

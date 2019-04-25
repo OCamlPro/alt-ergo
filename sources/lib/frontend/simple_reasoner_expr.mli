@@ -12,6 +12,16 @@
 module type S =
 sig
   type expr
+
+  (** Adds/replaces the value of an expression. This expression will be replaced by a
+      constant if possible *)
+  val bind_expr_val : expr -> Num.num -> unit
+
+  (** Adds/replaces the value of an expression. This expression will be replaced by a
+      constant if possible *)
+  val bind_expr_bool : expr -> bool -> unit
+
+  (** Simplifies an expression *)
   val simp_expr : expr -> expr
 end
 
@@ -22,21 +32,21 @@ module SimpleReasoner
            - a type
            - a set of sub expressions
            - a composition operator *)
-       type expr
+       type t
+       val hash : t -> int
+       val equal : t -> t -> bool
+       val mk_expr : Symbols.t -> t list -> Ty.t -> t
 
-       val mk_expr : Symbols.t -> expr list -> Ty.t -> expr
+       val get_comp : t -> Symbols.t
+       val get_sub_expr : t -> t list
+       val get_type : t -> Ty.t
 
-       val get_comp : expr -> Symbols.t
-       val get_sub_expr : expr -> expr list
-       val get_type : expr -> Ty.t
+       val vrai : t
+       val faux : t
 
-       val vrai : expr
-       val faux : expr
+       val real : string -> t
+       val int : string -> t
 
-       val real : string -> expr
-       val int : string -> expr
-       val equal : expr -> expr -> bool
+       val pretty : Format.formatter -> t -> unit
 
-       val pretty : Format.formatter -> expr -> unit
-
-     end) : S with type expr = E.expr
+     end) : S with type expr = E.t
