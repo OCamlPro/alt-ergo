@@ -124,14 +124,14 @@ type lit_view =
   | Not_a_lit of { is_form : bool }
 
 type form_view =
-  | Unit of t * t  (* unit clauses *)
-  | Clause of t * t * bool      (* a clause (t1 or t2) bool <-> is implication *)
+  | Unit of t * t          (* unit clauses *)
+  | Clause of t * t * bool (* a clause (t1 or t2) bool <-> is implication *)
   | Iff of t * t
   | Xor of t * t
-  | Literal of t   (* an atom *)
-  | Lemma of quantified   (* a lemma *)
-  | Skolem of quantified  (* lazy skolemization *)
-  | Let of letin (* a binding of an expr *)
+  | Literal of t           (* an atom *)
+  | Lemma of quantified    (* a lemma *)
+  | Skolem of quantified   (* lazy skolemization *)
+  | Let of letin           (* a binding of an expr *)
   | Not_a_form
 
 
@@ -2495,3 +2495,48 @@ type th_elt =
 let print_th_elt fmt t =
   Format.fprintf fmt "%s/%s: @[<hov>%a@]" t.th_name t.ax_name print t.ax_form
 
+module SimpExpr =
+  Simple_reasoner_expr.SimpleReasoner (
+  struct
+    type expr = t
+
+    let mk_expr sy l typ =
+      match sy,l with
+        Sy.Form (Sy.F_Unit is_impl), f1 :: f2 :: [] ->
+        mk_and f1 f2 is_impl 0
+      | Sy.Form (Sy.F_Unit _), _ -> assert false
+
+      | Sy.Form (Sy.F_Clause is_impl), f1 :: f2 :: [] ->
+        mk_or f1 f2 is_impl 0
+      | Sy.Form (Sy.F_Clause _), _ -> assert false
+
+      | Sy.Form (Sy.F_Iff), _ -> mk_nary_eq ~iff:true l
+
+      | Sy.Form (Sy.F_Xor), f1 :: f2 :: [] -> mk_xor f1 f2 0
+      | Sy.Form (Sy.F_Xor), _ -> assert false
+
+      | Sy.Form (Sy.F_Lemma),_
+      | Sy.Form (Sy.F_Skolem),_ -> failwith "Formula undefined."
+
+      | Sy.Lit (Sy.L_eq),_ -> mk_positive_lit sy (Sy.Lit (Sy.L_neg_eq)) l
+      | Sy.Lit (Sy.L_built b),_ -> mk_positive_lit sy (Sy.Lit (Sy.L_neg_built b)) l
+      | Sy.Lit (Sy.L_neg_eq),  _
+      | Sy.Lit (Sy.L_neg_built _), _
+      | Sy.Lit (Sy.L_neg_pred), _ -> assert false
+
+      | _ -> mk_term sy l typ
+
+    let get_comp e = e.f
+    let get_sub_expr e = e.xs
+    let get_type e = e.ty
+
+    let vrai = vrai
+    let faux = faux
+
+    let real = real
+    let int = int
+    let equal = equal
+
+    let pretty = print
+  end
+  )

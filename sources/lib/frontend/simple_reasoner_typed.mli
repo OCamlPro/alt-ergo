@@ -1,12 +1,5 @@
 open Typed
 
-(** 1. Values *)
-
-(** The type of values manipulated by the simplifyer. *)
-type value
-
-(** 2. Simplifyer *)
-
 (** A simplified formula/expr/... type. *)
 type 'a simp
 

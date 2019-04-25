@@ -259,7 +259,7 @@ let rec make_term up_qv t =
         up_qv "" e Loc.dummy
         ~decl_kind:E.Daxiom (* not correct, but not a problem *)
   in
-  mk_term t
+  mk_term t |> E.SimpExpr.simp_expr
 
 
 and make_trigger name up_qv hyp (e, from_user) =
@@ -458,7 +458,7 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
 (* wrapper of function make_form *)
 let make_form name f loc ~decl_kind =
   let ff =
-    make_form Sy.Map.empty name f loc ~decl_kind
+    make_form Sy.Map.empty name f loc ~decl_kind |> E.SimpExpr.simp_expr
   in
   assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
   let ff = E.purify_form ff in
@@ -502,12 +502,17 @@ let mk_theory acc l th_name extends _loc =
          | TAxiom (loc, name, ax_kd, f) -> loc, name, f, ax_kd
          | _ -> assert false
        in
-       let ax_form = make_form ax_name f loc ~decl_kind:E.Dtheory in
+       let ax_form =
+         make_form ax_name f loc ~decl_kind:E.Dtheory
+       in
        let th_elt = {Expr.th_name; axiom_kind; extends; ax_form; ax_name} in
        {st_decl=ThAssume th_elt ; st_loc=loc} :: acc
-    )acc l
+    )
+    acc
+    l
 
 let make acc (d : (int Typed.tdecl, int) Typed.annoted) =
+   (*
   let verb = Options.simplify_verbose () in
   let d =
     if Options.simplify ()
@@ -540,8 +545,8 @@ let make acc (d : (int Typed.tdecl, int) Typed.annoted) =
         d
       )
     )
-    else d
-  in
+     else d
+  in *)
   match d.c with
   | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
   | TAxiom(loc, name, Util.Default, f) -> mk_assume acc f name loc
