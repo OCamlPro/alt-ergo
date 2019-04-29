@@ -34,7 +34,7 @@ open Commands
 module E = Expr
 module Sy = Symbols
 module SE = E.Set
-module SRT = Simple_reasoner_typed
+module SRE = Simple_reasoner_expr
 
 [@@ocaml.ppwarning "TODO: Change Symbols.Float to store FP numeral \
                     constants (eg, <24, -149> for single) instead of \
@@ -259,7 +259,11 @@ let rec make_term up_qv t =
         up_qv "" e Loc.dummy
         ~decl_kind:E.Daxiom (* not correct, but not a problem *)
   in
-  mk_term t |> E.SimpExpr.simp_expr
+  let term =
+    mk_term t in
+  let smp_term = E.SimpExpr.simp_expr term in
+  if SRE.has_changed smp_term then SRE.get_expr smp_term
+  else term
 
 
 and make_trigger name up_qv hyp (e, from_user) =
@@ -458,7 +462,11 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
 (* wrapper of function make_form *)
 let make_form name f loc ~decl_kind =
   let ff =
-    make_form Sy.Map.empty name f loc ~decl_kind |> E.SimpExpr.simp_expr
+    let form =
+      make_form Sy.Map.empty name f loc ~decl_kind in
+    let smp_form = E.SimpExpr.simp_expr form in
+    if SRE.has_changed smp_form then SRE.get_expr smp_form
+    else form
   in
   assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
   let ff = E.purify_form ff in

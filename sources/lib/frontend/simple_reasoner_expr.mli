@@ -9,20 +9,29 @@
 (*                                                                            *)
 (******************************************************************************)
 
+(** A simplified formula/expr/... type.
+   the diff field is set to false if the operation did not change the
+   input.
+ *)
+type 'a simp
+
+val get_expr : 'a simp -> 'a
+val has_changed : 'a simp -> bool
+
 module type S =
 sig
   type expr
 
   (** Adds/replaces the value of an expression. This expression will be replaced by a
       constant if possible *)
-  val bind_expr_val : expr -> Num.num -> unit
+  val bind_expr_val : expr -> float -> unit
 
   (** Adds/replaces the value of an expression. This expression will be replaced by a
       constant if possible *)
   val bind_expr_bool : expr -> bool -> unit
 
   (** Simplifies an expression *)
-  val simp_expr : expr -> expr
+  val simp_expr : expr -> expr simp
 end
 
 module SimpleReasoner
