@@ -317,4 +317,7 @@ val print_th_elt : Format.formatter -> th_elt -> unit
 
 val is_pure : t -> bool
 
-module SimpExpr : Simple_reasoner_expr.S with type expr = t
+module SimpExpr :
+  functor
+    (Th : Simple_reasoner_expr.Th with type expr = t)
+    -> Simple_reasoner_expr.S with type expr = t

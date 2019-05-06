@@ -36,6 +36,17 @@ module Sy = Symbols
 module SE = E.Set
 module SRE = Simple_reasoner_expr
 
+
+module SimpExprPreproc =
+  Expr.SimpExpr (
+  struct
+    type expr = Expr.t
+    type env = Theory.Main_Empty.t
+    let empty = Theory.Main_Empty.empty
+    let query _ _ = false
+  end
+  )
+
 [@@ocaml.ppwarning "TODO: Change Symbols.Float to store FP numeral \
                     constants (eg, <24, -149> for single) instead of \
                     having terms"]
@@ -261,7 +272,7 @@ let rec make_term up_qv t =
   in
   let term =
     mk_term t in
-  let smp_term = E.SimpExpr.simp_expr term in
+  let smp_term = SimpExprPreproc.simp_expr term in
   if SRE.has_changed smp_term then SRE.get_expr smp_term
   else term
 
@@ -464,7 +475,7 @@ let make_form name f loc ~decl_kind =
   let ff =
     let form =
       make_form Sy.Map.empty name f loc ~decl_kind in
-    let smp_form = E.SimpExpr.simp_expr form in
+    let smp_form = SimpExprPreproc.simp_expr form in
     if SRE.has_changed smp_form then SRE.get_expr smp_form
     else form
   in

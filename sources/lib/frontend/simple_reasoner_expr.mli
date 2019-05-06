@@ -18,17 +18,19 @@ type 'a simp
 val get_expr : 'a simp -> 'a
 val has_changed : 'a simp -> bool
 
+module type Th =
+sig
+  type expr
+  type env
+  val empty : unit -> env
+  val query : expr -> env -> bool end
+
 module type S =
 sig
   type expr
 
-  (** Adds/replaces the value of an expression. This expression will be replaced by a
-      constant if possible *)
-  val bind_expr_val : expr -> float -> unit
-
-  (** Adds/replaces the value of an expression. This expression will be replaced by a
-      constant if possible *)
-  val bind_expr_bool : expr -> bool -> unit
+  module Th : Th
+  val set_env : Th.env -> unit
 
   (** Simplifies an expression *)
   val simp_expr : expr -> expr simp
@@ -42,7 +44,6 @@ module SimpleReasoner
            - a set of sub expressions
            - a composition operator *)
        type t
-       val hash : t -> int
        val equal : t -> t -> bool
        val mk_expr : Symbols.t -> t list -> Ty.t -> t
 
@@ -55,7 +56,9 @@ module SimpleReasoner
 
        val real : string -> t
        val int : string -> t
+       val neg : t -> t option
 
        val pretty : Format.formatter -> t -> unit
 
-     end) : S with type expr = E.t
+     end)
+    (T : Th with type expr = E.t) : S with type expr = E.t

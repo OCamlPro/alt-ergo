@@ -2500,7 +2500,6 @@ module SimpExpr =
   struct
     type t' = t
     type t = t'
-    let hash = hash
     let equal = equal
 
     let mk_expr sy l typ =
@@ -2538,6 +2537,7 @@ module SimpExpr =
 
     let real = real
     let int = int
+    let neg e = e.neg
 
     let pretty = print
   end

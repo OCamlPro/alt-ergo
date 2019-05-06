@@ -73,18 +73,19 @@ let get_expr (e : 'a simp) : 'a = e.v
 let has_changed (e : 'a simp) : bool = e.diff
 
 (** 2. Simplifyer *)
+module type Th =
+sig
+  type expr
+  type env
+  val empty : unit -> env
+  val query : expr -> env -> bool end
 
 module type S =
 sig
   type expr
 
-  (** Adds/replaces the value of an expression. This expression will be replaced by a
-      constant if possible *)
-  val bind_expr_val : expr -> float -> unit
-
-  (** Adds/replaces the value of an expression. This expression will be replaced by a
-      constant if possible *)
-  val bind_expr_bool : expr -> bool -> unit
+  module Th : Th
+  val set_env : Th.env -> unit
 
   (** Simplifies an expression *)
   val simp_expr : expr -> expr simp
@@ -98,7 +99,7 @@ module SimpleReasoner
            - a set of sub expressions
            - a composition operator *)
        type t
-       val hash : t -> int
+
        val equal : t -> t -> bool
        val mk_expr : Symbols.t -> t list -> Ty.t -> t
 
@@ -111,38 +112,21 @@ module SimpleReasoner
 
        val real : string -> t
        val int : string -> t
+       val neg : t -> t option
 
        val pretty : Format.formatter -> t -> unit
-
-     end) : S with type expr = E.t
+     end)
+    (T : Th with type expr = E.t)
+  : S with type expr = E.t
 =
 struct
   let verb = Options.simplify_verbose
   type expr = E.t
 
-  module ExprTbl =
-  struct
-    include Hashtbl.Make (E)
-    let find_opt (tbl : 'a t) (k : key) =
-      try Some (find tbl k) with _ -> None
-  end
+  module Th = T
+  let env = ref (T.empty ())
 
-  let binder : value ExprTbl.t = ExprTbl.create 17
-  let bind_expr_val (e : expr) v =
-    if verb () then
-      Format.printf
-        "%a = %f@."
-        E.pretty e
-        v;
-    ExprTbl.add binder e (Num v)
-
-  let bind_expr_bool (e : expr) b =
-    if verb () then
-      Format.printf
-        "%a = %b@."
-        E.pretty e
-        b;
-    ExprTbl.add binder e (Bool b)
+  let set_env e = env := e
 
   let identity v = {v; diff = false}
   let diff_list (l : 'a simp list) : 'a list simp =
@@ -162,7 +146,19 @@ struct
     | False -> Some (Bool false)
     | Int s
     | Real s -> Some (Num (Float.of_string (Hstring.view s)))
-    | _ -> ExprTbl.find_opt binder e
+    | _ ->
+      if E.get_type e = Tbool
+      then
+        if Th.query e !env then Some (Bool true)
+        else (
+          match E.neg e with
+            None -> None
+          | Some nege ->
+            if Th.query nege !env
+            then Some (Bool false)
+            else None
+        )
+      else None
 
   let value_to_expr (ty : Ty.t) (v : value) : expr =
     match v with
