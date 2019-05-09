@@ -134,7 +134,7 @@ module M = struct
   let unsat_mode = ref false
   let inline_lets = ref false
 
-  let simplify = ref false
+  let simplify = ref Util.SNo
   let simplify_verbose = ref false
 
   let show_where s=
@@ -252,6 +252,17 @@ module M = struct
     | _ ->
       Format.eprintf "Args parsing error: unkown SAT solver %S@." s;
       exit 1
+
+  let update_simplify s =
+    simplify :=
+      (match String.lowercase_ascii s with
+       | "n" | "no" -> Util.SNo
+       | "p" | "pre" | "preprocess" -> Util.SPreprocess
+       | "y" | "yes" | "a" | "all" -> Util.SAll
+       | _ ->
+         Format.eprintf "Args parsing error: unkown simplify option %S@." s;
+         exit 1
+      )
 
   let spec = [
     "-parse-only",
@@ -696,7 +707,7 @@ module M = struct
      constant, or that appear at most once.";
 
     "-simplify",
-    Arg.Set simplify,
+    Arg.String update_simplify,
     " simplifies the formula during the preprocessing, after it has \
      been typed.";
 

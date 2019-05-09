@@ -272,10 +272,13 @@ let rec make_term up_qv t =
   in
   let term =
     mk_term t in
-  let smp_term = SimpExprPreproc.simp_expr term in
-  if SRE.has_changed smp_term then SRE.get_expr smp_term
-  else term
-
+  match Options.simplify () with
+    Util.SNo -> term
+  | Util.SPreprocess | Util.SAll ->
+    let smp_term =
+      SimpExprPreproc.simp_expr term in
+    if SRE.has_changed smp_term then SRE.get_expr smp_term
+    else term
 
 and make_trigger name up_qv hyp (e, from_user) =
   let content, guard = match e with

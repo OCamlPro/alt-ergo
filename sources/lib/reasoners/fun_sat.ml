@@ -1021,7 +1021,34 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
       ) acc list
 
+  let e_simplify env f =
+    match Options.simplify () with
+      Util.SAll ->
+      Simpl.set_env env.tbox;
+      let simpf = Simpl.simp_expr f
+      in
+      if SRE.has_changed simpf
+      then SRE.get_expr simpf
+      else f
+    | _ -> f
+
+  let fg_simplify env fg =
+    match Options.simplify () with
+      Util.SAll ->
+      Simpl.set_env env.tbox;
+      let simpf = Simpl.simp_expr fg.E.ff in
+      if SRE.has_changed simpf
+      then (
+        let new_f =
+          SRE.get_expr simpf in
+        {fg with E.ff = new_f}
+      )
+      else fg
+    | _ -> fg
+
   let rec assume env list =
+    let list =
+      List.map (fun (e,expl) -> (fg_simplify env e, expl)) list in
     if list == [] then
       begin
         print_decisions_in_the_sats "exit assume rec" env;
@@ -1671,17 +1698,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
 
   let assume env fg dep =
-    let fg =
-      Simpl.set_env env.tbox;
-      let simpf = Simpl.simp_expr fg.E.ff in
-      if SRE.has_changed simpf
-      then (
-        let new_f =
-          SRE.get_expr simpf in
-        {fg with E.ff = new_f}
-      )
-      else fg
-    in
+    let fg = fg_simplify env fg in
     try
       if Options.tableaux_cdcl () then
         cdcl_assume false env [fg,dep];
@@ -1804,5 +1821,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let get_steps () = !steps
 
   let assume_th_elt env th_elt dep =
+    let th_elt =
+      {th_elt with E.ax_form = e_simplify env th_elt.E.ax_form} in
     {env with tbox = Th.assume_th_elt env.tbox th_elt dep}
 end

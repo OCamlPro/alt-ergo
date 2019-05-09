@@ -50,6 +50,11 @@ type theories_extensions =
   | NIA
   | FPA
 
+type simplify =
+  | SNo
+  | SPreprocess
+  | SAll
+
 type axiom_kind = Default | Propagator
 
 let th_ext_of_string ext =

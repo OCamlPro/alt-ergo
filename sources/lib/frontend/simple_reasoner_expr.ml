@@ -450,31 +450,27 @@ struct
       in
       {v; diff}
 
-  (** Wrapper of simp_expr for option *)
+  (** Wrapper of simp_expr for verbose *)
   let simp_expr e =
-    if Options.simplify ()
-    then (
-      let res = simp_expr e in
-      if res.diff
-      then
-        let () =
-          if verb ()
-          then
-            Format.printf
-              "Old expression = %a\n\
-               New expression = %a@."
-              E.pretty e
-              E.pretty res.v in
-        res
-      else
-        let () =
-          if verb ()
-          then
-            Format.printf
-              "No change on %a@."
-              E.pretty e
-        in
-        identity e
-    )
-    else identity e
+    let res = simp_expr e in
+    if res.diff
+    then
+      let () =
+        if verb ()
+        then
+          Format.printf
+            "Old expression = %a\n\
+             New expression = %a@."
+            E.pretty e
+            E.pretty res.v in
+      res
+    else
+      let () =
+        if verb ()
+        then
+          Format.printf
+            "No change on %a@."
+            E.pretty e
+      in
+      identity e
 end
