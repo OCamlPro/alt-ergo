@@ -28,9 +28,9 @@ sig
 module type S =
 sig
   type expr
+  type env
 
-  module Th : Th
-  val set_env : Th.env -> unit
+  val set_env : env -> unit
 
   (** Simplifies an expression *)
   val simp_expr : expr -> expr simp
@@ -61,4 +61,4 @@ module SimpleReasoner
        val pretty : Format.formatter -> t -> unit
 
      end)
-    (T : Th with type expr = E.t) : S with type expr = E.t
+    (T : Th with type expr = E.t) : S with type expr = E.t and type env = T.env

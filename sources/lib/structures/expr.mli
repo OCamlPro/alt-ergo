@@ -319,5 +319,5 @@ val is_pure : t -> bool
 
 module SimpExpr :
   functor
-    (Th : Simple_reasoner_expr.Th with type expr = t)
-    -> Simple_reasoner_expr.S with type expr = t
+    (T : Simple_reasoner_expr.Th with type expr = t)
+    -> Simple_reasoner_expr.S with type expr = t and type env = T.env

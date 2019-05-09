@@ -2512,6 +2512,7 @@ module SimpExpr =
         mk_or f1 f2 is_impl 0
       | Sy.Form (Sy.F_Clause _), _ -> assert false
 
+      | Sy.Form (Sy.F_Iff), [f1;f2] -> mk_iff f1 f2 0
       | Sy.Form (Sy.F_Iff), _ -> mk_nary_eq ~iff:true l
 
       | Sy.Form (Sy.F_Xor), f1 :: f2 :: [] -> mk_xor f1 f2 0

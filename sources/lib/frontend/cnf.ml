@@ -531,41 +531,6 @@ let mk_theory acc l th_name extends _loc =
     l
 
 let make acc (d : (int Typed.tdecl, int) Typed.annoted) =
-   (*
-  let verb = Options.simplify_verbose () in
-  let d =
-    if Options.simplify ()
-    then (
-      if verb
-      then
-        Format.printf "Simplying the formula %a@."
-          (Typed.print_atdecl ~annot:Typed.no_print) d;
-      let res = SRT.SInt.simplify_tdecl d in
-      if SRT.modified res
-      then (
-        let f =
-          SRT.get res in
-        if verb
-        then
-          (Format.printf "Simplifyer changed the formula from\n\
-                          %a\n\
-                          to\n\
-                          %a@."
-             (Typed.print_atdecl ~annot:Typed.int_print) d
-             (Typed.print_atdecl ~annot:Typed.int_print) f
-          );
-        f
-      )
-      else (
-        if verb
-        then (
-          Format.printf "Simplifyer did not change the formula@."
-        );
-        d
-      )
-    )
-     else d
-  in *)
   match d.c with
   | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
   | TAxiom(loc, name, Util.Default, f) -> mk_assume acc f name loc

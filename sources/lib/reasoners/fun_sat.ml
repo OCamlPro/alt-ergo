@@ -33,11 +33,23 @@ module E = Expr
 module SE = E.Set
 module ME = E.Map
 module Ex = Explanation
-
+module SRE = Simple_reasoner_expr
 
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module Inst = Instances.Make(Th)
   module CDCL = Satml_frontend_hybrid.Make(Th)
+  module Simpl : SRE.S with type env = Th.t and type expr = E.t
+    =
+    E.SimpExpr
+      (struct
+        type expr = E.t
+        type env = Th.t
+        let empty = Th.empty
+        let query e env =
+          match Th.query e env with
+            None -> false
+          | Some _ -> true
+      end)
 
   exception No_suitable_decision
   exception Propagate of E.gformula * Explanation.t
@@ -1659,6 +1671,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
 
   let assume env fg dep =
+    let fg =
+      Simpl.set_env env.tbox;
+      let simpf = Simpl.simp_expr fg.E.ff in
+      if SRE.has_changed simpf
+      then (
+        let new_f =
+          SRE.get_expr simpf in
+        {fg with E.ff = new_f}
+      )
+      else fg
+    in
     try
       if Options.tableaux_cdcl () then
         cdcl_assume false env [fg,dep];
