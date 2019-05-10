@@ -896,7 +896,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        nb_related_to_goal = t.nb_related_to_goal + 1;
        nb_related_to_hypo = t.nb_related_to_hypo + 1}
 
-
   let rec asm_aux acc list =
     List.fold_left
       (fun
@@ -1021,34 +1020,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
       ) acc list
 
-  let e_simplify env f =
-    match Options.simplify () with
-      Util.SAll ->
-      Simpl.set_env env.tbox;
-      let simpf = Simpl.simp_expr f
-      in
-      if SRE.has_changed simpf
-      then SRE.get_expr simpf
-      else f
-    | _ -> f
-
-  let fg_simplify env fg =
-    match Options.simplify () with
-      Util.SAll ->
-      Simpl.set_env env.tbox;
-      let simpf = Simpl.simp_expr fg.E.ff in
-      if SRE.has_changed simpf
-      then (
-        let new_f =
-          SRE.get_expr simpf in
-        {fg with E.ff = new_f}
-      )
-      else fg
-    | _ -> fg
-
   let rec assume env list =
-    let list =
-      List.map (fun (e,expl) -> (fg_simplify env e, expl)) list in
     if list == [] then
       begin
         print_decisions_in_the_sats "exit assume rec" env;
@@ -1065,7 +1037,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         Options.tool_req 2 "TR-Sat-Conflict-2";
         env.heuristics := Heuristics.bump_activity !(env.heuristics) expl;
         raise (IUnsat (expl, classes))
-
 
   let new_inst_level env =
     let new_ilevel = env.ilevel + 1 in
@@ -1698,7 +1669,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
 
   let assume env fg dep =
-    let fg = fg_simplify env fg in
     try
       if Options.tableaux_cdcl () then
         cdcl_assume false env [fg,dep];
@@ -1821,7 +1791,5 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let get_steps () = !steps
 
   let assume_th_elt env th_elt dep =
-    let th_elt =
-      {th_elt with E.ax_form = e_simplify env th_elt.E.ax_form} in
     {env with tbox = Th.assume_th_elt env.tbox th_elt dep}
 end

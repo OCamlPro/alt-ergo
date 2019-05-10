@@ -9,6 +9,20 @@
 (*                                                                            *)
 (******************************************************************************)
 
+let verb = Options.simplify_verbose
+
+let silent (msg : ('a, Format.formatter, unit) format) =
+  Format.ifprintf Format.std_formatter msg
+
+let talk (msg : ('a, Format.formatter, unit) format) =
+  Format.printf "[Preprocess] ";
+  Format.printf msg
+
+let debug (msg : ('a, Format.formatter, unit) format) =
+  if verb ()
+  then talk msg
+  else silent msg
+
 (** 1. Utils *)
 type value =
     Bool of bool
@@ -120,7 +134,6 @@ module SimpleReasoner
   : S with type expr = E.t and type env = T.env
 =
 struct
-  let verb = Options.simplify_verbose
   type expr = E.t
   type env = T.env
 
@@ -146,14 +159,10 @@ struct
     | _ ->
       if E.get_type e = Tbool
       then
-        let () =
-          if verb ()
-          then Format.printf "Query for the expression %a@." E.pretty e
+        let () = debug "Query for the expression %a@." E.pretty e
         in
         if T.query e !env then
-          let () =
-            if verb ()
-            then Format.printf "%a = TRUE@." E.pretty e
+          let () = debug "%a = TRUE@." E.pretty e
           in
           Some true
         else (
@@ -162,15 +171,11 @@ struct
           | Some nege ->
             if T.query nege !env
             then
-              let () =
-                if verb ()
-                then Format.printf "%a = FALSE@." E.pretty e
+              let () = debug "%a = FALSE@." E.pretty e
               in
               Some false
             else
-              let () =
-                if verb ()
-                then Format.printf "%a = UNKNOWN@." E.pretty e
+              let () = debug "%a = UNKNOWN@." E.pretty e
               in
               None
         )
@@ -314,6 +319,7 @@ struct
       let by_form (f : Symbols.form) (elist : expr list) : expr list simp =
         match f with
         | Symbols.F_Unit _ -> (* <=> AND *) (
+            let () = debug "F_Unit@." in
             let res =
               fold_left_stop
                 (fun acc e ->
@@ -329,6 +335,7 @@ struct
             | _ -> {res with v = List.rev res.v}
           )
         | F_Clause _ -> (* <=> OR *) (
+            let () = debug "F_Clause@." in
             let res =
               fold_left_stop
                 (fun acc e ->
@@ -343,7 +350,8 @@ struct
               [] -> {v = [E.faux]; diff = true}
             | _ ->  {res with v = List.rev res.v}
           )
-        | _ -> identity elist
+        | _ ->
+            let () = debug "No additional simplification@." in identity elist
 
       and by_lit (l : Symbols.lit) (elist : expr list) : expr list simp =
         let is_constr (constr : Hstring.t) (e : expr) : bool option =
@@ -375,21 +383,17 @@ struct
               e :: [] -> (
                 match is_constr s e with
                   None ->
-                  if verb ()
-                  then
-                    Format.printf
-                      "%a is not explicitely the constructor %a, leaving as is@."
-                      E.pretty e
-                      Hstring.print s
+                  debug
+                    "%a is not explicitely the constructor %a, leaving as is@."
+                    E.pretty e
+                    Hstring.print s
                   ;
                   identity elist
                 | Some true  ->
-                  if verb ()
-                  then
-                    Format.printf
-                      "%a is explicitely the constructor %a, this is TRUE@."
-                      E.pretty e
-                      Hstring.print s;
+                  debug
+                    "%a is explicitely the constructor %a, this is TRUE@."
+                    E.pretty e
+                    Hstring.print s;
                   {v = [E.vrai]; diff = true}
                 | Some false ->
                   if verb ()
@@ -408,28 +412,24 @@ struct
         let symb = E.get_comp e in
         match symb with
           Op o ->
-          if verb () then
-            Format.printf
-              "Operator: %a@."
-              Symbols.print symb;
+          debug
+            "Operator: %a@."
+            Symbols.print symb;
           by_operator o elist.v
         | Form f ->
-          if verb () then
-            Format.printf
-              "Formula: %a@."
-              Symbols.print symb;
+          debug
+            "Formula: %a@."
+            Symbols.print symb;
           by_form f elist.v, false
         | Lit l ->
-          if verb () then
-            Format.printf
-              "Literal: %a@."
-              Symbols.print symb;
+          debug
+            "Literal: %a@."
+            Symbols.print symb;
           by_lit l elist.v, false
         | _ ->
-          if verb () then
-            Format.printf
-              "Other: %a@."
-              Symbols.print symb;
+          debug
+            "Other: %a@."
+            Symbols.print symb;
           elist, false
       in
       let diff = elist.diff || xs.diff in
@@ -452,25 +452,23 @@ struct
 
   (** Wrapper of simp_expr for verbose *)
   let simp_expr e =
+    debug "Simplifying %a@." E.pretty e;
     let res = simp_expr e in
     if res.diff
     then
       let () =
-        if verb ()
-        then
-          Format.printf
-            "Old expression = %a\n\
-             New expression = %a@."
-            E.pretty e
-            E.pretty res.v in
+        debug
+          "Old expression = %a@."
+          E.pretty e;
+        debug
+          "New expression = %a@."
+          E.pretty res.v in
       res
     else
       let () =
-        if verb ()
-        then
-          Format.printf
-            "No change on %a@."
-            E.pretty e
+        debug
+          "No change on %a@."
+          E.pretty e
       in
       identity e
 end
