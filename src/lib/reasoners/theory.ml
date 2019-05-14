@@ -156,9 +156,9 @@ module Main_Default : S = struct
            match ty with
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> ()
            | Tvar _ -> assert false
-           | Text _ -> print_dbg ~flushed:false "type %a@ " Ty.print ty
+           | Text _ -> print_dbg ~flushed:false "type %a@ " Ty.print_full ty
            | Tsum (_, l) ->
-             print_dbg ~flushed:false ~header:false "type %a = " Ty.print ty;
+             print_dbg ~flushed:false ~header:false "type %a = " Ty.print_full ty;
              begin match l with
                | [] -> assert false
                | e::l ->
@@ -169,16 +169,16 @@ module Main_Default : S = struct
              end
 
            | Trecord { Ty.lbs; _ } ->
-             print_dbg ~flushed:false ~header:false "type %a = " Ty.print ty;
+             print_dbg ~flushed:false ~header:false "type %a = " Ty.print_full ty;
              begin match lbs with
                | [] -> assert false
                | (lbl, ty)::l ->
                  let print fmt (lbl,ty) =
                    fprintf fmt " ; %s :%a"
-                     (Hstring.view lbl) Ty.print ty in
+                     (Hstring.view lbl) Ty.print_full ty in
                  print_dbg ~flushed:false ~header:false
                    "{ %s : %a%a"
-                   (Hstring.view lbl) Ty.print ty
+                   (Hstring.view lbl) Ty.print_full ty
                    (pp_list_no_space print) l;
                  print_dbg ~flushed:false ~header:false " }@ "
              end
