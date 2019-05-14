@@ -317,7 +317,19 @@ val print_th_elt : Format.formatter -> th_elt -> unit
 
 val is_pure : t -> bool
 
+(** SimpExpr defines a simplifyer functor for expressions of type t
+    (defined in this file). *)
 module SimpExpr :
   functor
-    (T : Simple_reasoner_expr.Th with type expr = t)
-    -> Simple_reasoner_expr.S with type expr = t and type env = T.env
+    (Expl : Simple_reasoner_expr.Expl)
+    (T : Simple_reasoner_expr.Th with type expr = t and type expl = Expl.t)
+    -> Simple_reasoner_expr.S with type expr = t
+                               and type env = T.env
+                               and type expl = Expl.t
+
+(** Implementation of the simplifyer with no theory and no explanations.
+    This module can be used for agnostic simplification / preprocessing. *)
+module SimpExprDummy :
+  Simple_reasoner_expr.S with type expr = t
+                          and type env = unit
+                          and type expl = unit

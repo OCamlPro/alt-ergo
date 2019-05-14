@@ -2538,8 +2538,23 @@ module SimpExpr =
 
     let real = real
     let int = int
-    let neg e = e.neg
 
     let pretty = print
   end
   )
+
+module SimpExprDummy =
+  SimpExpr
+    (struct
+      type t = unit
+      let empty = ()
+      let union _ _ = ()
+    end)
+    (struct
+      type expr = t
+      type env = unit
+      type expl = unit
+      let empty _ = ()
+      let query _ _ = None
+    end
+    )

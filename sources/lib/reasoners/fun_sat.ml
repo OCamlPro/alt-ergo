@@ -41,14 +41,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module Simpl : SRE.S with type env = Th.t and type expr = E.t
     =
     E.SimpExpr
+      (Ex)
       (struct
         type expr = E.t
         type env = Th.t
+        type expl = Ex.t
         let empty = Th.empty
         let query e env =
           match Th.query e env with
-            None -> false
-          | Some _ -> true
+            Some (e,_) -> Some (true, e)
+          | None -> (
+              match Th.query (E.neg e) env with
+                None -> None
+              | Some (e,_) -> Some (false, e)
+            )
       end)
 
   exception No_suitable_decision

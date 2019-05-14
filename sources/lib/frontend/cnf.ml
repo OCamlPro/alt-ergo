@@ -38,14 +38,7 @@ module SRE = Simple_reasoner_expr
 
 
 module SimpExprPreproc =
-  Expr.SimpExpr (
-  struct
-    type expr = Expr.t
-    type env = Theory.Main_Empty.t
-    let empty = Theory.Main_Empty.empty
-    let query _ _ = false
-  end
-  )
+  Expr.SimpExprDummy
 
 [@@ocaml.ppwarning "TODO: Change Symbols.Float to store FP numeral \
                     constants (eg, <24, -149> for single) instead of \

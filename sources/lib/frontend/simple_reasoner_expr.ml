@@ -24,6 +24,10 @@ let debug (msg : ('a, Format.formatter, unit) format) =
   else silent msg
 
 (** 1. Utils *)
+
+(** Values are representations of expressions
+    that have been "solved", in the sense that they can
+    be reduced to a boolean or a float/int. *)
 type value =
     Bool of bool
   | Num of float
@@ -63,133 +67,168 @@ let (|<=) v1 v2 =
   | Num n1, Num n2 -> n1 <= n2
   | _,_ -> assert false
 
-let fold_left_stop f acc l =
+(** Same as List.fold_left, but f returns
+    a tuple (acc, stop) where stop is a boolean
+    stating that the loop has to stop. *)
+let fold_left_stop
+    (f : 'a -> 'b -> ('a * bool))
+    (acc : 'a)
+    (l : 'b list) : 'a
+  =
   let rec __fold acc l =
     match l with
       [] -> acc
     | hd :: tl ->
       let acc, stop = f acc hd in
-      if stop then acc else
-        __fold acc tl
+      if stop then acc
+      else __fold acc tl
   in __fold acc l
 
 (** A simplified formula/expr/... type.
-   the diff field is set to false if the operation did not change the
-   input.
+    The diff field is set to false if the operation did not change the
+    input.
+    As queries may provide explanations, the third field correspond to the explanation
+    behind the simplification.
+
  *)
-type 'a simp =
+type ('a, 'expl) simp =
   {
     v : 'a;
-    diff : bool
+    diff : bool;
+    expl : 'expl
   }
 
-let get_expr (e : 'a simp) : 'a = e.v
-let has_changed (e : 'a simp) : bool = e.diff
+let get_expr (e : ('a,_) simp) : 'a = e.v
+let has_changed (e : _ simp) : bool = e.diff
+let get_expl (e : (_,'expl) simp) : 'a = e.expl
 
 (** 2. Simplifyer *)
+
+(** As the simplifyer interacts with different components of alt-ergo,
+    it is written to be as generic as possible.
+    The simplifyer is then a functor of different modules which type is
+    defined below.
+*)
+
+(** Expr is the signature of the module dedicated to
+    the representation of expressions that are to be
+    simplified. *)
+module type Expr =
+sig
+  type t
+
+  val equal : t -> t -> bool
+  val mk_expr : Symbols.t -> t list -> Ty.t -> t
+
+  (** Expressions are generally defined by 3 elements:
+      - a type
+      - a set of sub expressions
+      - a composition operator *)
+  val get_comp : t -> Symbols.t
+  val get_sub_expr : t -> t list
+  val get_type : t -> Ty.t
+
+  val vrai : t
+  val faux : t
+
+  val real : string -> t
+  val int : string -> t
+
+  val pretty : Format.formatter -> t -> unit
+end
+
+(** Expl is the signature of the module dedicated to
+    the explanations of the calculations. *)
+module type Expl =
+sig
+  type t
+
+  (** Represents no explanation. *)
+  val empty : t
+
+  (** Merges two explanations. *)
+  val union : t -> t -> t
+end
+
+(** Th is the signature of the module dedicated to
+    the interactions with the theory. *)
 module type Th =
 sig
   type expr
   type env
-  val empty : unit -> env
-  val query : expr -> env -> bool end
+  type expl
 
+  (** An empty environment. Know nothing. *)
+  val empty : unit -> env
+
+  (** Tries to decide the expression in argument given the environment.
+      If it fails, returns None. Otherwise, provides the answer and
+      an explanation (possibly empty)
+  *)
+  val query : expr -> env -> (bool * expl) option
+end
+
+(** This is the signature of the simplifyer. *)
 module type S =
 sig
+  (** The type of expressions. *)
   type expr
+
+  (** The type of environments the theory works in. *)
   type env
 
+  (** The type of explanations *)
+  type expl
+
+  (** Sets the environment to be used in the simplifyer.
+      Set to empty by default. *)
   val set_env : env -> unit
 
-  (** Simplifies an expression *)
-  val simp_expr : expr -> expr simp
+  (** Simplifies an expression. *)
+  val simp_expr : expr -> (expr,expl) simp
 end
 
 module SimpleReasoner
-    (E :
-     sig
-       (** Expressions are generally defined by 3 elements:
-           - a type
-           - a set of sub expressions
-           - a composition operator *)
-       type t
-
-       val equal : t -> t -> bool
-       val mk_expr : Symbols.t -> t list -> Ty.t -> t
-
-       val get_comp : t -> Symbols.t
-       val get_sub_expr : t -> t list
-       val get_type : t -> Ty.t
-
-       val vrai : t
-       val faux : t
-
-       val real : string -> t
-       val int : string -> t
-       val neg : t -> t option
-
-       val pretty : Format.formatter -> t -> unit
-     end)
-    (T : Th with type expr = E.t)
-  : S with type expr = E.t and type env = T.env
+    (E : Expr)
+    (Expl : Expl)
+    (T : Th with type expr = E.t and type expl = Expl.t)
+  : S with type expr = E.t and type env = T.env and type expl = Expl.t
 =
 struct
   type expr = E.t
   type env = T.env
+  type expl = Expl.t
 
   let env = ref (T.empty ())
 
   let set_env e = env := e
+  let no_reason = Expl.empty
 
-  let identity v = {v; diff = false}
-  let diff_list (l : 'a simp list) : 'a list simp =
+  let identity v = {v; diff = false; expl = Expl.empty}
+  let diff_list (l : ('a, 'expl) simp list) : (('a list), 'expl) simp =
     let rev =
       List.fold_left
         (fun acc s ->
-           {v = s.v :: acc.v; diff = acc.diff || s.diff}
+           {v = s.v :: acc.v;
+            diff = acc.diff || s.diff;
+            expl = Expl.union acc.expl s.expl
+           }
         )
-        {v = []; diff = false}
+        (identity [])
         l
     in
     {rev with v = List.rev rev.v}
 
-  let lit_query (e : expr) : bool option =
+  let expr_to_value (e : expr) : (value * expl) option  =
     match E.get_comp e with
-      Symbols.Form _ -> None (* Not compatible with query *)
-    | _ ->
-      if E.get_type e = Tbool
-      then
-        let () = debug "Query for the expression %a@." E.pretty e
-        in
-        if T.query e !env then
-          let () = debug "%a = TRUE@." E.pretty e
-          in
-          Some true
-        else (
-          match E.neg e with
-            None -> None
-          | Some nege ->
-            if T.query nege !env
-            then
-              let () = debug "%a = FALSE@." E.pretty e
-              in
-              Some false
-            else
-              let () = debug "%a = UNKNOWN@." E.pretty e
-              in
-              None
-        )
-      else None
-
-  let expr_to_value (e : expr) : value option =
-    match E.get_comp e with
-      True -> Some (Bool true)
-    | False -> Some (Bool false)
+      True -> Some ((Bool true), no_reason)
+    | False -> Some ((Bool false), no_reason)
     | Int s
-    | Real s -> Some (Num (Float.of_string (Hstring.view s)))
+    | Real s -> Some ((Num (Float.of_string (Hstring.view s))), no_reason)
     | _ ->
-      match lit_query e with
-        Some b -> Some (Bool b)
+      match T.query e !env with
+        Some (res_query, expl) ->
+        Some ((Bool res_query), expl)
       | None -> None
 
   let value_to_expr (ty : Ty.t) (v : value) : expr =
@@ -203,67 +242,75 @@ struct
   let arith
       (ty : Ty.t)
       (op : value -> value -> value)
-      (e_list : expr list): expr list simp =
-    let vals,exprs =
+      (e_list : expr list): (expr list, expl) simp =
+    let vals,expl,exprs =
       List.fold_left
-        (fun (acc_solved,acc_remain) v ->
+        (fun (acc_solved,acc_expl,acc_remain) v ->
            match expr_to_value v with
-             None -> (acc_solved, v :: acc_remain)
-           | Some v ->
+             None -> (acc_solved, acc_expl, v :: acc_remain)
+           | Some (v, expl) ->
+             let new_expl = Expl.union expl acc_expl in
              match acc_solved with
-               None -> (Some v, acc_remain)
-             | Some old_v -> (Some (op old_v v), acc_remain)
+               None ->
+               (Some v, new_expl, acc_remain)
+             | Some old_v -> (Some (op old_v v), new_expl, acc_remain)
         )
-        (None, [])
+        (None, Expl.empty, [])
         e_list
     in
     match vals with
-      None -> {v = e_list; diff = false}
-    | Some v -> {v = (value_to_expr ty v) :: List.rev exprs; diff = true}
+      None -> identity e_list
+    | Some v -> {v = (value_to_expr ty v) :: List.rev exprs; diff = true; expl}
 
-  let oper (op : value -> value -> bool) (l : expr list) : bool * bool =
-    (* all_true is a boolean stating that every operation succeded.
+  let oper (op : value -> value -> bool) (l : expr list) : bool * bool * expl =
+    (* all_true is a boolean stating that every call of 'op' returned 'true'.
        set to true at the beginning, it is set to false if one of the
        list term.
-       last_val is the last value that has been accepted by the test.
-       Set to None at the beginning. *)
+       last_val is the last value that has been accepted by the test
+       acc_expl is the accumulated explanations of each value tested
+    *)
     let rec _oper
         (all_true : bool)
         (last_val : value option)
-        (l : expr list) : bool * bool =
+        (acc_expl : expl)
+        (l : expr list) : bool * bool * expl =
       match l with
         [] -> (* No more elements, and none failed the test. *)
-        false, all_true
+        false, all_true, acc_expl
       | hd :: tl ->
         let hd_val = expr_to_value hd in
         match hd_val, last_val with
         | None, None ->
-          _oper false None tl
+          _oper false None acc_expl tl
 
-        | Some v, None ->
-          _oper all_true (Some v) tl
+        | Some (v, expl), None ->
+          _oper
+            all_true
+            (Some v)
+            (Expl.union expl acc_expl)
+            tl
 
         | None, Some v ->
-          _oper all_true (Some v) tl
+          _oper all_true (Some v) acc_expl tl
 
-        | Some v, Some v' ->
+        | Some (v, expl), Some v' ->
           if op v v'
           then (
-            _oper all_true (Some v') tl
+            _oper all_true (Some v') (Expl.union expl acc_expl) tl
           )
           else (
-            true,false (* The operation is not respected *)
+            true, false, (Expl.union expl acc_expl) (* The operation is not respected *)
           )
     in
-    _oper true None l
+    _oper true None no_reason l
 
-  let apply_op (op : value -> value -> bool) (l : expr list) : expr list simp =
-    let falsify,all_true = oper op l in
+  let apply_op (op : value -> value -> bool) (l : expr list) : (expr list, expl) simp =
+    let falsify,all_true, expl = oper op l in
     if falsify
-    then {v = [E.faux]; diff = true}
+    then {v = [E.faux]; diff = true; expl}
     else if all_true
-    then {v = [E.vrai]; diff = true}
-    else {v = l; diff = false}
+    then {v = [E.vrai]; diff = true; expl}
+    else {v = l; diff = false; expl}
 
   let is_unary (o : Symbols.operator) : bool =
     let open Symbols in
@@ -279,176 +326,183 @@ struct
     | Constr _
     | Destruct (_,_) -> true
 
-  let rec simp_expr (e : expr) : expr simp =
-    if E.equal e E.vrai || E.equal e E.faux then {v = e; diff = false}
+  let rec simp_expr (e : expr) : (expr, expl) simp =
+    if E.equal e E.vrai || E.equal e E.faux
+    then {v = e; diff = false; expl = no_reason}
     else
-    let query_res = lit_query e in
-    match query_res with
-      Some true -> {v = E.vrai; diff = true}
-    | Some false -> {v = E.faux; diff = true}
-    | None ->
-      let ty = E.get_type e in
-      (* simp_expr treats 3 cases : either the expression is an operation,
-         a formula or a literal.
-         A function is dedicated to each of these cases, returning a simplified list
-         of subexpressions. If this list contains only 1 element, it is either because
-         it has been simplified to 1 element or because it is an operation over
-         a single expression.
-      *)
+      let query_res = T.query e !env in
+      match query_res with
+        Some (true, expl) -> {v = E.vrai; diff = true; expl}
+      | Some (false, expl) -> {v = E.faux; diff = true; expl}
+      | None ->
+        let ty = E.get_type e in
+        (* simp_expr treats 3 cases : either the expression is an operation,
+           a formula or a literal.
+           A function is dedicated to each of these cases, returning a simplified list
+           of subexpressions. If this list contains only 1 element, it is either because
+           it has been simplified to 1 element or because it is an operation over
+           a single expression.
+        *)
 
-      (* The boolean states that the operation is a unary operation and must be preserved.
-         Otherwise, it can be discarded.
-         For example, (3 + 2) is simplified to 5, the operator '+' can be discarded.
-         However, in f(3 + 2), f must not be discarded. *)
-      let by_operator (op : Symbols.operator) (elist : expr list) : expr list simp * bool =
-        match op with
-        | Symbols.Plus  -> arith ty (++) elist, false
-        | Symbols.Minus -> arith ty (--) elist, false
-        | Symbols.Mult  -> arith ty ( ** ) elist, false
-        | Symbols.Tite -> (
-            match elist with
-              cond :: th :: el :: [] ->
-              if E.(equal cond vrai) then {v = [th]; diff = true}
-              else if E.(equal cond faux) then {v = [el]; diff = true}
-              else if E.equal th el then {v = [th]; diff = true}
-              else identity elist
-            | _ -> assert false
-          ), false
-        | o -> identity elist, is_unary o in
+        (* The boolean states that the operation is a unary operation and must be preserved.
+           Otherwise, it can be discarded.
+           For example, (3 + 2) is simplified to 5, the operator '+' can be discarded.
+           However, in f(3 + 2), f must not be discarded. *)
+        let by_operator
+            (op : Symbols.operator)
+            (elist : expr list) :
+          (expr list, expl) simp * bool =
+          match op with
+          | Symbols.Plus  -> arith ty (++) elist, false
+          | Symbols.Minus -> arith ty (--) elist, false
+          | Symbols.Mult  -> arith ty ( ** ) elist, false
+          | Symbols.Tite -> (
+              match elist with
+                cond :: th :: el :: [] ->
+                if E.(equal cond vrai) then {v = [th]; diff = true; expl = no_reason}
+                else if E.(equal cond faux) then {v = [el]; diff = true; expl = no_reason}
+                else if E.equal th el then {v = [th]; diff = true; expl = no_reason}
+                else identity elist
+              | _ -> assert false
+            ), false
+          | o -> identity elist, is_unary o in
 
-      let by_form (f : Symbols.form) (elist : expr list) : expr list simp =
-        match f with
-        | Symbols.F_Unit _ -> (* <=> AND *) (
-            let () = debug "F_Unit@." in
-            let res =
-              fold_left_stop
-                (fun acc e ->
-                   if E.(equal e vrai) then {v = acc.v; diff = true}, false
-                   else if E.(equal e faux) then {v = [E.faux]; diff = true}, true
-                   else {v = (e :: acc.v); diff = acc.diff}, false
-                )
-                {v = []; diff= false}
-                elist
-            in
-            match res.v with
-              [] -> {v = [E.vrai]; diff = true}
-            | _ -> {res with v = List.rev res.v}
-          )
-        | F_Clause _ -> (* <=> OR *) (
-            let () = debug "F_Clause@." in
-            let res =
-              fold_left_stop
-                (fun acc e ->
-                   if E.(equal e faux) then {v = acc.v; diff = true}, false
-                   else if E.(equal e vrai) then {v = [E.vrai]; diff = true}, true
-                   else {v = (e :: acc.v); diff = acc.diff}, false
-                )
-                {v = []; diff= false}
-                elist
-            in
-            match res.v with
-              [] -> {v = [E.faux]; diff = true}
-            | _ ->  {res with v = List.rev res.v}
-          )
-        | _ ->
+        let by_form (f : Symbols.form) (elist : expr list) : (expr list, expl) simp =
+          match f with
+          | Symbols.F_Unit _ -> (* <=> AND *) (
+              let () = debug "F_Unit@." in
+              let res =
+                fold_left_stop
+                  (fun acc e ->
+                     if E.(equal e vrai)
+                     then {acc with diff = true}, false
+                     else if E.(equal e faux)
+                     then {v = [E.faux]; diff = true; expl = no_reason}, true
+                     else {acc with v = (e :: acc.v)}, false
+                  )
+                  {v = []; diff= false; expl = no_reason}
+                  elist
+              in
+              match res.v with
+                [] -> {v = [E.vrai]; diff = true; expl = no_reason}
+              | _ -> {res with v = List.rev res.v}
+            )
+          | F_Clause _ -> (* <=> OR *) (
+              let () = debug "F_Clause@." in
+              let res =
+                fold_left_stop
+                  (fun acc e ->
+                     if E.(equal e faux)
+                     then {acc with diff = true}, false
+                     else if E.(equal e vrai)
+                     then {v = [E.vrai]; diff = true; expl = no_reason}, true
+                     else {acc with v = (e :: acc.v)}, false
+                  )
+                  {v = []; diff= false; expl = no_reason}
+                  elist
+              in
+              match res.v with
+                [] -> {v = [E.faux]; diff = true; expl = no_reason}
+              | _ ->  {res with v = List.rev res.v}
+            )
+          | _ ->
             let () = debug "No additional simplification@." in identity elist
 
-      and by_lit (l : Symbols.lit) (elist : expr list) : expr list simp =
-        let is_constr (constr : Hstring.t) (e : expr) : bool option =
-          match E.get_comp e with
-            Op (Constr s') -> Some (Hstring.equal constr s')
-          | _ -> None
-        in
-        match l with
-          L_eq -> (
-            let res = apply_op (|=) elist in
-            match res.v with
-              [] | _ :: [] -> res
-            | _ -> (* structural equality check *)
-              if
-                List.for_all
-                  (fun elt -> E.equal elt @@ List.hd res.v) (List.tl res.v)
-              then
-                {v = [E.vrai]; diff = true}
-              else res
-          )
-        | L_built LE -> apply_op (|<=) elist
-        | L_built LT -> apply_op (|<) elist
-        | L_neg_built _
-        | L_neg_pred
-        | L_neg_eq -> identity elist
+        and by_lit (l : Symbols.lit) (elist : expr list) : (expr list, expl) simp =
+          let is_constr (constr : Hstring.t) (e : expr) : bool option =
+            match E.get_comp e with
+              Op (Constr s') -> Some (Hstring.equal constr s')
+            | _ -> None
+          in
+          match l with
+            L_eq -> (
+              let res = apply_op (|=) elist in
+              match res.v with
+                [] | _ :: [] -> res
+              | _ -> (* structural equality check *)
+                if
+                  List.for_all
+                    (fun elt -> E.equal elt @@ List.hd res.v) (List.tl res.v)
+                then
+                  {v = [E.vrai]; diff = true; expl = no_reason}
+                else res
+            )
+          | L_built LE -> apply_op (|<=) elist
+          | L_built LT -> apply_op (|<) elist
+          | L_neg_built _
+          | L_neg_pred
+          | L_neg_eq -> identity elist
 
-        | L_built (IsConstr s) -> (
-            match elist with
-              e :: [] -> (
-                match is_constr s e with
-                  None ->
-                  debug
-                    "%a is not explicitely the constructor %a, leaving as is@."
-                    E.pretty e
-                    Hstring.print s
-                  ;
-                  identity elist
-                | Some true  ->
-                  debug
-                    "%a is explicitely the constructor %a, this is TRUE@."
-                    E.pretty e
-                    Hstring.print s;
-                  {v = [E.vrai]; diff = true}
-                | Some false ->
-                  if verb ()
-                  then
-                    Format.printf
-                      "%a is explicitely NOT the constructor %a, this is FALSE@."
+          | L_built (IsConstr s) -> (
+              match elist with
+                e :: [] -> (
+                  match is_constr s e with
+                    None ->
+                    debug
+                      "%a is not explicitely the constructor %a, leaving as is@."
+                      E.pretty e
+                      Hstring.print s
+                    ;
+                    identity elist
+                  | Some true  ->
+                    debug
+                      "%a is explicitely the constructor %a, this is TRUE@."
                       E.pretty e
                       Hstring.print s;
-                  {v = [E.faux]; diff = true}
-              )
-            | _ -> assert false
-          )
-      in
-      let elist = (List.map (fun e -> simp_expr e))  (E.get_sub_expr e) |> diff_list in
-      let xs, is_unary_op =
-        let symb = E.get_comp e in
-        match symb with
-          Op o ->
-          debug
-            "Operator: %a@."
-            Symbols.print symb;
-          by_operator o elist.v
-        | Form f ->
-          debug
-            "Formula: %a@."
-            Symbols.print symb;
-          by_form f elist.v, false
-        | Lit l ->
-          debug
-            "Literal: %a@."
-            Symbols.print symb;
-          by_lit l elist.v, false
-        | _ ->
-          debug
-            "Other: %a@."
-            Symbols.print symb;
-          elist, false
-      in
-      let diff = elist.diff || xs.diff in
-      let v =
-        if not diff then e
-        else
-          match xs.v with
-            [] -> (* The simplification did something strange and discarded everything.
-                     This should not happen. *)
-            Format.printf
-              "Expression %a was discarded by simplifyer. Keeping it."
-              E.pretty e;
-            e
-          | elt :: [] when not (is_unary_op) ->
-            (* It usually means that the expression is trivial. *)
-            elt
-          | l -> E.mk_expr (E.get_comp e) l (E.get_type e)
-      in
-      {v; diff}
+                    {v = [E.vrai]; diff = true; expl = no_reason}
+                  | Some false ->
+                    debug
+                        "%a is explicitely NOT the constructor %a, this is FALSE@."
+                        E.pretty e
+                        Hstring.print s;
+                    {v = [E.faux]; diff = true; expl = no_reason}
+                )
+              | _ -> assert false
+            )
+        in
+        let elist = (List.map (fun e -> simp_expr e))  (E.get_sub_expr e) |> diff_list in
+        let xs, is_unary_op =
+          let symb = E.get_comp e in
+          match symb with
+            Op o ->
+            debug
+              "Operator: %a@."
+              Symbols.print symb;
+            by_operator o elist.v
+          | Form f ->
+            debug
+              "Formula: %a@."
+              Symbols.print symb;
+            by_form f elist.v, false
+          | Lit l ->
+            debug
+              "Literal: %a@."
+              Symbols.print symb;
+            by_lit l elist.v, false
+          | _ ->
+            debug
+              "Other: %a@."
+              Symbols.print symb;
+            elist, false
+        in
+        let diff = elist.diff || xs.diff in
+        let expl = Expl.union elist.expl xs.expl in
+        let v =
+          if not diff then e
+          else
+            match xs.v with
+              [] -> (* The simplification did something strange and discarded everything.
+                       This should not happen. *)
+              debug
+                "Expression %a was discarded by simplifyer. Keeping it."
+                E.pretty e;
+              e
+            | elt :: [] when not (is_unary_op) ->
+              (* It usually means that the expression is trivial. *)
+              elt
+            | l -> E.mk_expr (E.get_comp e) l (E.get_type e)
+        in
+        {v; diff; expl}
 
   (** Wrapper of simp_expr for verbose *)
   let simp_expr e =
