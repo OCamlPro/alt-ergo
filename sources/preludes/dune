@@ -1,0 +1,9 @@
+
+(install
+  (package alt-ergo)
+  (section share)
+  (files
+    (b-set-theory-prelude-2018-09-28.ae as preludes/b-set-theory-prelude-2018-09-28.ae)
+    (fpa-theory-2017-01-04-16h00.why as preludes/fpa-theory-2017-01-04-16h00.why)
+  )
+)
