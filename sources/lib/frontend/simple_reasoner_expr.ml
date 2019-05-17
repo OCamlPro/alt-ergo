@@ -223,7 +223,7 @@ struct
     match E.get_comp e with
       True -> Some ((Bool true), no_reason)
     | False -> Some ((Bool false), no_reason)
-    | Int s
+    | Int s -> Some ((Num (Float.of_string (Hstring.view s))), no_reason)
     | Real s -> Some ((Num (Float.of_string (Hstring.view s))), no_reason)
     | _ ->
       match T.query e !env with
@@ -232,17 +232,29 @@ struct
       | None -> None
 
   let value_to_expr (ty : Ty.t) (v : value) : expr =
+    debug "Type = %a@." Ty.print ty;
     match v with
       Bool true -> E.vrai
     | Bool false -> E.faux
     | Num i ->
-      if ty == Ty.Treal then E.real (string_of_float i)
-      else E.int (string_of_float i)
+      if ty == Ty.Treal
+      then E.real (string_of_float i)
+      else E.int (string_of_int @@ int_of_float i)
 
   let arith
       (ty : Ty.t)
       (op : value -> value -> value)
       (e_list : expr list): (expr list, expl) simp =
+    (* Wrapper for op. Checks that it has been called.
+       If it has never been called, then there have been no
+       simplification. *)
+    let op_has_been_called = ref false in
+    let op v1 v2 =
+      op_has_been_called := true ;
+      debug "Calling operator.@.";
+      op v1 v2
+    in
+
     let vals,expl,exprs =
       List.fold_left
         (fun (acc_solved,acc_expl,acc_remain) v ->
@@ -258,9 +270,19 @@ struct
         (None, Expl.empty, [])
         e_list
     in
-    match vals with
-      None -> identity e_list
-    | Some v -> {v = (value_to_expr ty v) :: List.rev exprs; diff = true; expl}
+    if not (!op_has_been_called)
+    then
+      begin
+        debug "Operator has not been called.@.";
+        identity e_list
+      end
+    else
+      match vals with
+        None -> identity e_list
+      | Some v ->
+        let cst_expr = value_to_expr ty v in
+        debug "Result of simplifyable operations : %a@." E.pretty cst_expr;
+        {v = List.rev exprs @ [value_to_expr ty v]; diff = true; expl}
 
   let oper (op : value -> value -> bool) (l : expr list) : bool * bool * expl =
     (* all_true is a boolean stating that every call of 'op' returned 'true'.
@@ -291,7 +313,7 @@ struct
             tl
 
         | None, Some v ->
-          _oper all_true (Some v) acc_expl tl
+          _oper false (Some v) acc_expl tl
 
         | Some (v, expl), Some v' ->
           if op v v'
@@ -375,10 +397,20 @@ struct
                 fold_left_stop
                   (fun acc e ->
                      if E.(equal e vrai)
-                     then {acc with diff = true}, false
+                     then (
+                       debug "%a = true@." E.pretty e;
+                       {acc with diff = true}, false
+                     )
                      else if E.(equal e faux)
-                     then {v = [E.faux]; diff = true; expl = no_reason}, true
-                     else {acc with v = (e :: acc.v)}, false
+                     then (
+                       debug "%a = false@." E.pretty e;
+                       {v = [E.faux]; diff = true; expl = no_reason}, true
+                     )
+                     else
+                       (
+                         debug "Keeping %a@." E.pretty e;
+                         {acc with v = (e :: acc.v)}, false
+                       )
                   )
                   {v = []; diff= false; expl = no_reason}
                   elist
@@ -393,10 +425,19 @@ struct
                 fold_left_stop
                   (fun acc e ->
                      if E.(equal e faux)
-                     then {acc with diff = true}, false
+                     then  (
+                       debug "%a = false@." E.pretty e;
+                       {acc with diff = true}, false
+                     )
                      else if E.(equal e vrai)
-                     then {v = [E.vrai]; diff = true; expl = no_reason}, true
-                     else {acc with v = (e :: acc.v)}, false
+                     then (
+                       debug "%a = true@." E.pretty e;
+                       {v = [E.vrai]; diff = true; expl = no_reason}, true
+                     )
+                     else (
+                       debug "Keeping %a@." E.pretty e;
+                       {acc with v = (e :: acc.v)}, false
+                     )
                   )
                   {v = []; diff= false; expl = no_reason}
                   elist
@@ -461,7 +502,7 @@ struct
             )
         in
         let elist = (List.map (fun e -> simp_expr e))  (E.get_sub_expr e) |> diff_list in
-        let xs, is_unary_op =
+        let xs, may_be_unary_op =
           let symb = E.get_comp e in
           match symb with
             Op o ->
@@ -479,11 +520,16 @@ struct
               "Literal: %a@."
               Symbols.print symb;
             by_lit l elist.v, false
+          | Name _ ->
+            debug
+              "Name: %a@."
+              Symbols.print symb;
+            elist, true
           | _ ->
             debug
               "Other: %a@."
               Symbols.print symb;
-            elist, false
+            elist, true
         in
         let diff = elist.diff || xs.diff in
         let expl = Expl.union elist.expl xs.expl in
@@ -497,7 +543,10 @@ struct
                 "Expression %a was discarded by simplifyer. Keeping it."
                 E.pretty e;
               e
-            | elt :: [] when not (is_unary_op) ->
+            | elt :: [] when not (may_be_unary_op) ->
+              debug
+                "Expression %a is now %a.@."
+                E.pretty e E.pretty elt;
               (* It usually means that the expression is trivial. *)
               elt
             | l -> E.mk_expr (E.get_comp e) l (E.get_type e)
@@ -506,23 +555,31 @@ struct
 
   (** Wrapper of simp_expr for verbose *)
   let simp_expr e =
-    debug "Simplifying %a@." E.pretty e;
-    let res = simp_expr e in
-    if res.diff
-    then
-      let () =
-        debug
-          "Old expression = %a@."
-          E.pretty e;
-        debug
-          "New expression = %a@."
-          E.pretty res.v in
-      res
-    else
-      let () =
-        debug
-          "No change on %a@."
-          E.pretty e
-      in
-      identity e
+    try
+      debug "Simplifying %a@." E.pretty e;
+      let res = simp_expr e in
+      if res.diff
+      then
+        let () =
+          debug
+            "Old expression = %a@."
+            E.pretty e;
+          debug
+            "New expression = %a@."
+            E.pretty res.v in
+        res
+      else
+        let () =
+          debug
+            "No change on %a@."
+            E.pretty e
+        in
+        identity e
+    with
+      Failure s ->
+      talk
+        "Error while simplifying %a\n%s\nI will continue with the initial expression@."
+        E.pretty e
+        s;
+      {v=e;diff=false;expl=no_reason}
 end

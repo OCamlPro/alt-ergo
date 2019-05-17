@@ -471,9 +471,12 @@ let make_form name f loc ~decl_kind =
   let ff =
     let form =
       make_form Sy.Map.empty name f loc ~decl_kind in
-    let smp_form = SimpExprPreproc.simp_expr form in
-    if SRE.has_changed smp_form then SRE.get_expr smp_form
-    else form
+     match Options.simplify () with
+       Util.SNo -> form
+     | Util.SPreprocess | Util.SAll ->
+       let smp_form = SimpExprPreproc.simp_expr form in
+       if SRE.has_changed smp_form then SRE.get_expr smp_form
+       else form
   in
   assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
   let ff = E.purify_form ff in

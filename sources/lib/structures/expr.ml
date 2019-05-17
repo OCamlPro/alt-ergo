@@ -2506,27 +2506,34 @@ module SimpExpr =
       match sy,l with
         Sy.Form (Sy.F_Unit is_impl), f1 :: f2 :: [] ->
         mk_and f1 f2 is_impl 0
-      | Sy.Form (Sy.F_Unit _), _ -> assert false
+      | Sy.Form (Sy.F_Unit _), _ ->
+        failwith "F_Unit not supported by simplifyer";
 
       | Sy.Form (Sy.F_Clause is_impl), f1 :: f2 :: [] ->
         mk_or f1 f2 is_impl 0
-      | Sy.Form (Sy.F_Clause _), _ -> assert false
+      | Sy.Form (Sy.F_Clause _), _ ->
+        failwith "F_Clause not supported by simplifyer";
 
       | Sy.Form (Sy.F_Iff), [f1;f2] -> mk_iff f1 f2 0
       | Sy.Form (Sy.F_Iff), _ -> mk_nary_eq ~iff:true l
 
       | Sy.Form (Sy.F_Xor), f1 :: f2 :: [] -> mk_xor f1 f2 0
-      | Sy.Form (Sy.F_Xor), _ -> assert false
+      | Sy.Form (Sy.F_Xor), _ ->
+        Format.eprintf "F_Xor not supported by simplifyer";
+        assert false
 
       | Sy.Form (Sy.F_Lemma),_
       | Sy.Form (Sy.F_Skolem),_ -> failwith "Formula undefined."
 
       | Sy.Lit (Sy.L_eq),_ -> mk_positive_lit sy (Sy.Lit (Sy.L_neg_eq)) l
       | Sy.Lit (Sy.L_built b),_ -> mk_positive_lit sy (Sy.Lit (Sy.L_neg_built b)) l
-      | Sy.Lit (Sy.L_neg_eq),  _
-      | Sy.Lit (Sy.L_neg_built _), _
-      | Sy.Lit (Sy.L_neg_pred), _ -> assert false
-
+      | Sy.Lit (Sy.L_neg_eq),  _ ->
+        let positive = mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) l in
+        neg positive
+      | Sy.Lit (Sy.L_neg_built n), _ ->
+        mk_builtin ~is_pos:false n l
+      | Sy.Lit (Sy.L_neg_pred), _ ->
+        failwith "Lit (L_neg_pred) not supported by simplifyer"
       | _ -> mk_term sy l typ
 
     let get_comp e = e.f
