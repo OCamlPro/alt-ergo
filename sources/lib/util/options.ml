@@ -137,6 +137,9 @@ module M = struct
   let simplify = ref Util.SNo
   let simplify_th = ref false
   let simplify_verbose = ref false
+  let distrib_threads = ref 0
+  let distrib_options_file = ref ""
+  let distrib_time_limit = ref 0
 
   let show_where s=
     match s with
@@ -719,6 +722,18 @@ module M = struct
     "-simplify-verbose",
     Arg.Set simplify_verbose,
     " debug messages for the preprocessing simplifyier.";
+
+    "-jthread",
+    Arg.Set_int distrib_threads,
+    " set the number of threads to use";
+
+    "-joption",
+    Arg.Set_string distrib_options_file,
+    " use default.conf if missing";
+
+    "-jtlimit",
+    Arg.Set_int distrib_time_limit,
+    " set the global time limit"
   ]
 
   let spec =
@@ -824,6 +839,10 @@ let set_inline_lets m = M.inline_lets := m
 let set_simplify m = M.simplify := m
 let set_simplify_th b = M.simplify_th := b
 let set_simplify_verbose m = M.simplify_verbose := m
+
+let set_distrib_threads n = M.distrib_threads := n
+let set_distrib_options_file s = M.distrib_options_file := s
+let set_distrib_time_limit n = M.distrib_time_limit := n
 
 (** getter functions **********************************************************)
 
@@ -953,6 +972,11 @@ let simplify_verbose () = !M.simplify_verbose
 (** particular getters : functions that are immediately executed **************)
 let exec_thread_yield () = !M.thread_yield ()
 let exec_timeout () = !M.timeout ()
+
+let distrib_threads () = !M.distrib_threads
+let distrib_options_file () = !M.distrib_options_file
+let distrib_time_limit () = !M.distrib_time_limit
+
 
 let tool_req n msg =
   if rules () = n then Format.fprintf fmt "[rule] %s@." msg

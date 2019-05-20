@@ -103,6 +103,11 @@ val set_simplify_verbose : bool -> unit
 val set_file_for_js : string -> unit
 
 
+val set_distrib_threads : int -> unit
+val set_distrib_options_file : string -> unit
+val set_distrib_time_limit : int -> unit
+
+
 (** getter functions **********************************************************)
 
 (** getters for debug flags *)
@@ -225,6 +230,12 @@ val use_fpa : unit -> bool
 (** particular getters : functions that are immediately executed **************)
 val exec_thread_yield : unit -> unit
 val exec_timeout : unit -> unit
+
+
+val distrib_threads : unit -> int
+val distrib_options_file : unit -> string
+val distrib_time_limit : unit -> int
+
 
 val tool_req : int -> string -> unit
 

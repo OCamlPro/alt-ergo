@@ -35,7 +35,8 @@ include Main_input
 
 (* done here to initialize options,
    before the instantiations of functors *)
-let () = Options.parse_cmdline_arguments ()
+
+let () = parse_cmdline_arguments ()
 
 module SatCont = (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer)
 
@@ -156,7 +157,7 @@ let typed_loop all_context state td =
       { state with ctx = cnf; }
   end
 
-let () =
+let main () =
   let (module I : Input.S) = Input.find (Options.frontend ()) in
   let parsed =
     try

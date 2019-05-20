@@ -5,5 +5,4 @@
  (release
   (flags (:standard -bin-annot -w -22))
   (ocamlopt_flags -O3 -unbox-closures))
-)
-
+ )
