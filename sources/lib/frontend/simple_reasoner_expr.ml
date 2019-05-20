@@ -52,7 +52,7 @@ let ( ** ) v1 v2 =
 let (|=) v1 v2 =
   match v1, v2 with
     Bool b1, Bool b2 -> b1 == b2
-  | Num n1, Num n2 -> Float.equal n1 n2
+  | Num n1, Num n2 -> n1 == n2
   | _,_ -> false
 
 let (|<>) v1 v2 = not (v1 |= v2)
@@ -239,8 +239,8 @@ struct
     match E.get_comp e with
       True -> Some ((Bool true), no_reason)
     | False -> Some ((Bool false), no_reason)
-    | Int s -> Some ((Num (Float.of_string (Hstring.view s))), no_reason)
-    | Real s -> Some ((Num (Float.of_string (Hstring.view s))), no_reason)
+    | Int s -> Some ((Num (float_of_string (Hstring.view s))), no_reason)
+    | Real s -> Some ((Num (float_of_string (Hstring.view s))), no_reason)
     | _ ->
       if E.get_type e = Ty.Tbool then
         match T.query e !env with
