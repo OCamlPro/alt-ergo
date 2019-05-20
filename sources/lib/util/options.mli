@@ -96,6 +96,7 @@ val set_default_input_lang : string -> unit
 val set_unsat_mode : bool -> unit
 val set_inline_lets : bool -> unit
 val set_simplify : Util.simplify -> unit
+val set_simplify_th : bool -> unit
 val set_simplify_verbose : bool -> unit
 
 (* updates the filename to be parsed and sets a js_mode flag *)
@@ -192,6 +193,7 @@ val answers_with_locs  : unit -> bool
 val unsat_mode : unit -> bool
 val inline_lets : unit -> bool
 val simplify : unit -> Util.simplify
+val simplify_th : unit -> bool
 val simplify_verbose : unit -> bool
 
 (** this option also yields true if profiling is set to true **)

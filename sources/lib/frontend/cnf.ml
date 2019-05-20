@@ -37,8 +37,46 @@ module SE = E.Set
 module SRE = Simple_reasoner_expr
 
 
-module SimpExprPreproc =
-  Expr.SimpExprDummy
+
+let choose_preproc () :
+  (module Simple_reasoner_expr.S with type expr = Expr.t
+                                  and type env = Theory.Main_Default.t
+                                  and type expl = Explanation.t)  =
+  if Options.simplify_th ()
+  then
+    (module
+      Expr.SimpExpr
+        (Explanation)
+        (struct
+          type expr = Expr.t
+          type expl = Explanation.t
+          type env = Theory.Main_Default.t
+          let empty = Theory.Main_Default.empty
+          let query _ _ = None
+        end
+        )
+    )
+  else
+    (module
+      Expr.SimpExpr
+        (Explanation)
+        (struct
+          type expr = Expr.t
+          type expl = Explanation.t
+          type env = Theory.Main_Default.t
+          let empty = Theory.Main_Default.empty
+          let query ex env =
+            try
+              match Theory.Main_Default.query ex env with
+                Some (expl,_) -> Some (true, expl)
+              | None -> None
+            with _ ->
+              Format.eprintf "Query failed on %a@." Expr.print ex; None
+        end
+        )
+    )
+
+module SimpExprPreproc = (val (choose_preproc ()))
 
 [@@ocaml.ppwarning "TODO: Change Symbols.Float to store FP numeral \
                     constants (eg, <24, -149> for single) instead of \

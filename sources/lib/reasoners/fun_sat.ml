@@ -33,30 +33,11 @@ module E = Expr
 module SE = E.Set
 module ME = E.Map
 module Ex = Explanation
-module SRE = Simple_reasoner_expr
 
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module Inst = Instances.Make(Th)
   module CDCL = Satml_frontend_hybrid.Make(Th)
-  module Simpl : SRE.S with type env = Th.t and type expr = E.t
-    =
-    E.SimpExpr
-      (Ex)
-      (struct
-        type expr = E.t
-        type env = Th.t
-        type expl = Ex.t
-        let empty = Th.empty
-        let query e env =
-          match Th.query e env with
-            Some (e,_) -> Some (true, e)
-          | None -> (
-              match Th.query (E.neg e) env with
-                None -> None
-              | Some (e,_) -> Some (false, e)
-            )
-      end)
-
+  
   exception No_suitable_decision
   exception Propagate of E.gformula * Explanation.t
 

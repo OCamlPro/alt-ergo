@@ -135,6 +135,7 @@ module M = struct
   let inline_lets = ref false
 
   let simplify = ref Util.SNo
+  let simplify_th = ref false
   let simplify_verbose = ref false
 
   let show_where s=
@@ -711,6 +712,10 @@ module M = struct
     " simplifies the formula during the preprocessing, after it has \
      been typed.";
 
+    "-simplify-th",
+    Arg.Set simplify_th,
+    " the simplifyer uses a non trivial theory.";
+
     "-simplify-verbose",
     Arg.Set simplify_verbose,
     " debug messages for the preprocessing simplifyier.";
@@ -817,6 +822,7 @@ let set_default_input_lang lang = M.set_default_input_lang lang
 let set_unsat_mode b = M.unsat_mode := b
 let set_inline_lets m = M.inline_lets := m
 let set_simplify m = M.simplify := m
+let set_simplify_th b = M.simplify_th := b
 let set_simplify_verbose m = M.simplify_verbose := m
 
 (** getter functions **********************************************************)
@@ -940,6 +946,7 @@ let answers_with_locs ()  = not !M.no_locs_in_answers
 let unsat_mode ()  = !M.unsat_mode
 let inline_lets () = !M.inline_lets
 let simplify () = !M.simplify
+let simplify_th () = !M.simplify_th
 let simplify_verbose () = !M.simplify_verbose
 
 

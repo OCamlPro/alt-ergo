@@ -370,13 +370,23 @@ struct
 
   let rec simp_expr (e : expr) : (expr, expl) simp =
     if E.equal e E.vrai || E.equal e E.faux
-    then {v = e; diff = false; expl = no_reason}
+    then (
+      debug "Expression is trivial@.";
+      {v = e; diff = false; expl = no_reason}
+    )
     else
       let query_res = T.query e !env in
       match query_res with
-        Some (true, expl) -> {v = E.vrai; diff = true; expl}
-      | Some (false, expl) -> {v = E.faux; diff = true; expl}
+        Some (true, expl) -> (
+          debug "Theory found it is true@.";
+          {v = E.vrai; diff = true; expl}
+        )
+      | Some (false, expl) -> (
+          debug "Theory found it is false@.";
+          {v = E.faux; diff = true; expl}
+        )
       | None ->
+        debug "Theory did not found an answer@.";
         let ty = E.get_type e in
         (* simp_expr treats 3 cases : either the expression is an operation,
            a formula or a literal.
