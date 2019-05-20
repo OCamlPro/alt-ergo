@@ -55,7 +55,7 @@ let (|=) v1 v2 =
   | Num n1, Num n2 -> Float.equal n1 n2
   | _,_ -> false
 
-(*let (|<>) v1 v2 = not (v1 |= v2) *)
+let (|<>) v1 v2 = not (v1 |= v2)
 
 let (|<) v1 v2 =
   match v1, v2 with
@@ -66,6 +66,18 @@ let (|<=) v1 v2 =
   match v1, v2 with
   | Num n1, Num n2 -> n1 <= n2
   | _,_ -> assert false
+
+let (|>) v1 v2 =
+  match v1, v2 with
+  | Num n1, Num n2 -> n1 > n2
+  | _,_ -> assert false
+
+let (|>=) v1 v2 =
+  match v1, v2 with
+  | Num n1, Num n2 -> n1 >= n2
+  | _,_ -> assert false
+
+
 
 (** Same as List.fold_left, but f returns
     a tuple (acc, stop) where stop is a boolean
@@ -83,6 +95,11 @@ let fold_left_stop
       if stop then acc
       else __fold acc tl
   in __fold acc l
+
+let pp_val fmt v =
+  match v with
+    Bool b -> Format.fprintf fmt "Bool %b" b
+  | Num n -> Format.fprintf fmt "Num %f" n
 
 (** A simplified formula/expr/... type.
     The diff field is set to false if the operation did not change the
@@ -316,7 +333,10 @@ struct
           _oper false (Some v) acc_expl tl
 
         | Some (v, expl), Some v' ->
-          if op v v'
+          let res = op v v' in
+          debug "Result : %a (op) %a = %b@."
+            pp_val v' pp_val v res;
+          if op v' v
           then (
             _oper all_true (Some v') (Expl.union expl acc_expl) tl
           )
@@ -327,7 +347,7 @@ struct
     _oper true None no_reason l
 
   let apply_op (op : value -> value -> bool) (l : expr list) : (expr list, expl) simp =
-    let falsify,all_true, expl = oper op l in
+    let falsify,all_true,expl = oper op l in
     if falsify
     then {v = [E.faux]; diff = true; expl}
     else if all_true
@@ -470,9 +490,36 @@ struct
             )
           | L_built LE -> apply_op (|<=) elist
           | L_built LT -> apply_op (|<) elist
-          | L_neg_built _
-          | L_neg_pred
-          | L_neg_eq -> identity elist
+          | L_neg_built LE -> apply_op (|>) elist
+          | L_neg_built LT -> apply_op (|>=) elist
+          | L_neg_built (IsConstr s) -> (
+              match elist with
+                e :: [] -> (
+                  match is_constr s e with
+                    None ->
+                    debug
+                      "%a is not explicitely the constructor %a, leaving as is@."
+                      E.pretty e
+                      Hstring.print s
+                    ;
+                    identity elist
+                  | Some true  ->
+                    debug
+                      "%a is explicitely the constructor %a, this is FALSE@."
+                      E.pretty e
+                      Hstring.print s;
+                    {v = [E.faux]; diff = true; expl = no_reason}
+                  | Some false ->
+                    debug
+                      "%a is explicitely NOT the constructor %a, this is TRUE@."
+                      E.pretty e
+                      Hstring.print s;
+                    {v = [E.vrai]; diff = true; expl = no_reason}
+                )
+              | _ -> assert false
+            )
+          | L_neg_pred -> identity elist
+          | L_neg_eq -> apply_op (|<>) elist
 
           | L_built (IsConstr s) -> (
               match elist with
@@ -501,7 +548,9 @@ struct
               | _ -> assert false
             )
         in
-        let elist = (List.map (fun e -> simp_expr e))  (E.get_sub_expr e) |> diff_list in
+        let elist =
+          (List.map (fun e -> simp_expr e)) (E.get_sub_expr e) in
+        let elist = diff_list elist in
         let xs, may_be_unary_op =
           let symb = E.get_comp e in
           match symb with
