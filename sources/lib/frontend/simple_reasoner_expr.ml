@@ -52,7 +52,7 @@ let ( ** ) v1 v2 =
 let (|=) v1 v2 =
   match v1, v2 with
     Bool b1, Bool b2 -> b1 == b2
-  | Num n1, Num n2 -> n1 == n2
+  | Num n1, Num n2 -> (Pervasives.(=)) n1 n2
   | _,_ -> false
 
 let (|<>) v1 v2 = not (v1 |= v2)
