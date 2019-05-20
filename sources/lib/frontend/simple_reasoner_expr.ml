@@ -243,10 +243,12 @@ struct
     | Int s -> Some ((Num (Float.of_string (Hstring.view s))), no_reason)
     | Real s -> Some ((Num (Float.of_string (Hstring.view s))), no_reason)
     | _ ->
-      match T.query e !env with
-        Some (res_query, expl) ->
-        Some ((Bool res_query), expl)
-      | None -> None
+      if E.get_type e = Ty.Tbool then
+        match T.query e !env with
+          Some (res_query, expl) ->
+          Some ((Bool res_query), expl)
+        | None -> None
+      else None
 
   let value_to_expr (ty : Ty.t) (v : value) : expr =
     debug "Type = %a@." Ty.print ty;
@@ -375,7 +377,10 @@ struct
       {v = e; diff = false; expl = no_reason}
     )
     else
-      let query_res = T.query e !env in
+      let query_res =
+        if E.get_type e = Ty.Tbool
+        then T.query e !env
+        else None in
       match query_res with
         Some (true, expl) -> (
           debug "Theory found it is true@.";
