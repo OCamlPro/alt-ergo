@@ -37,7 +37,7 @@ module Ex = Explanation
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module Inst = Instances.Make(Th)
   module CDCL = Satml_frontend_hybrid.Make(Th)
-  
+
   exception No_suitable_decision
   exception Propagate of E.gformula * Explanation.t
 

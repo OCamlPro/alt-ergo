@@ -10,9 +10,9 @@
 (******************************************************************************)
 
 (** A simplified formula/expr/... type.
-   the diff field is set to false if the operation did not change the
-   input.
- *)
+    the diff field is set to false if the operation did not change the
+    input.
+*)
 type ('a,'expl) simp
 
 val get_expr : ('a, _) simp -> 'a

@@ -228,15 +228,15 @@ let eq_pattern (p1 : pattern) (p2 : pattern) : bool =
   match p1, p2 with
     Constr {name = name1; args = args1},
     Constr {name = name2; args = args2} ->
-      Hstring.equal name1 name2
-      &&
-      eq_list
-        (fun (x1,s1,t1) (x2,s2,t2) ->
-           Var.equal x1 x2 &&
-           Hstring.equal s1 s2 &&
-           Ty.equal t1 t2)
-        args1
-        args2
+    Hstring.equal name1 name2
+    &&
+    eq_list
+      (fun (x1,s1,t1) (x2,s2,t2) ->
+         Var.equal x1 x2 &&
+         Hstring.equal s1 s2 &&
+         Ty.equal t1 t2)
+      args1
+      args2
 
   | Var x1, Var x2 -> Var.equal x1 x2
   | _,_ -> false
@@ -300,7 +300,8 @@ and eq_tt_desc (e1 : 'a tt_desc) (e2 : 'a tt_desc) : bool =
     eq_tform c1.c c2.c && eq_tterm th1.c th2.c && eq_tterm el1.c el2.c
 
   | TTproject (b1,t1,s1), TTproject (b2,t2,s2) ->
-    (b1 && (not b2) || (not b1) && b2)  && eq_tterm t1.c t2.c && Hstring.equal s1 s2
+    (b1 && (not b2) || (not b1) && b2)
+    && eq_tterm t1.c t2.c && Hstring.equal s1 s2
 
   | TTmatch (t1, l1), TTmatch (t2, l2) ->
     eq_tterm t1.c t2.c &&
@@ -410,7 +411,8 @@ let string_of_op = function
   | _ -> assert false
 
 type 'annot annot_printer = Format.formatter -> 'annot -> unit
-type ('a,'annot) annoted_printer = Format.formatter -> ('a,'annot) annoted -> unit
+type ('a,'annot) annoted_printer =
+  Format.formatter -> ('a,'annot) annoted -> unit
 
 let (no_print : _ annot_printer) = fun fmt _ -> fprintf fmt ""
 let (int_print : int annot_printer) = fun fmt -> fprintf fmt ".%i"
@@ -447,15 +449,30 @@ let rec print_term ?(annot=no_print) fmt t =
     | TTapp(s,l) ->
       fprintf fmt "%a(%a)" Symbols.print s (print_term_list ~annot) l
     | TTinfix(t1,s,t2) ->
-      fprintf fmt "%a %a %a" (print_term ~annot) t1 Symbols.print s (print_term ~annot) t2
+      fprintf
+        fmt
+        "%a %a %a"
+        (print_term ~annot) t1
+        Symbols.print s
+        (print_term ~annot) t2
     | TTprefix (s, t') ->
       fprintf fmt "%a %a" Symbols.print s (print_term ~annot) t'
     | TTget (t1, t2) ->
       fprintf fmt "%a[%a]" (print_term ~annot) t1 (print_term ~annot) t2
     | TTset (t1, t2, t3) ->
-      fprintf fmt "%a[%a<-%a]" (print_term ~annot) t1 (print_term ~annot) t2 (print_term ~annot) t3
+      fprintf
+        fmt
+        "%a[%a<-%a]"
+        (print_term ~annot) t1
+        (print_term ~annot) t2
+        (print_term ~annot) t3
     | TTextract (t1, t2, t3) ->
-      fprintf fmt "%a^{%a,%a}" (print_term ~annot) t1 (print_term ~annot) t2 (print_term ~annot) t3
+      fprintf
+        fmt
+        "%a^{%a,%a}"
+        (print_term ~annot) t1
+        (print_term ~annot) t2
+        (print_term ~annot) t3
     | TTconcat (t1, t2) ->
       fprintf fmt "%a @ %a" (print_term ~annot) t1 (print_term ~annot) t2
     | TTdot (t1, s) ->
@@ -463,10 +480,15 @@ let rec print_term ?(annot=no_print) fmt t =
     | TTrecord l ->
       fprintf fmt "{ ";
       List.iter
-        (fun (s, t) -> fprintf fmt "%s = %a" (Hstring.view s) (print_term ~annot) t) l;
+        (fun (s, t) ->
+           fprintf fmt "%s = %a" (Hstring.view s) (print_term ~annot) t) l;
       fprintf fmt " }"
     | TTlet (binders, t2) ->
-      fprintf fmt "let %a in %a" (print_term_binders ~annot) binders (print_term ~annot) t2
+      fprintf
+        fmt
+        "let %a in %a"
+        (print_term_binders ~annot) binders
+        (print_term ~annot) t2
     | TTnamed (_, t) ->
       fprintf fmt "%a" (print_term ~annot) t
 
@@ -481,7 +503,9 @@ let rec print_term ?(annot=no_print) fmt t =
 
     | TTite(cond, t1, t2) ->
       fprintf fmt "(if %a then %a else %a)"
-        (print_formula ~annot) cond (print_term ~annot) t1 (print_term ~annot) t2
+        (print_formula ~annot) cond
+        (print_term ~annot) t1
+        (print_term ~annot) t2
     | TTproject (grded, t1, s) ->
       fprintf fmt "%a#%s%s"
         (print_term ~annot) t1 (if grded then "" else "!") (Hstring.view s)
@@ -504,7 +528,12 @@ let rec print_term ?(annot=no_print) fmt t =
         (fun (p, v) ->
            match p with
            | Constr {name = n; args = l} ->
-             fprintf fmt "| %a %a -> %a\n" Hstring.print n pp_vars l (print_term ~annot) v
+             fprintf
+               fmt
+               "| %a %a -> %a\n"
+               Hstring.print n
+               pp_vars l
+               (print_term ~annot) v
            | Var x ->
              fprintf fmt "| %a -> %a\n" Var.print x (print_term ~annot) v;
         )cases;
@@ -562,7 +591,12 @@ and print_formula ?(annot=no_print) fmt f =
       fprintf fmt "if (%a) then (%a) else (%a)"
         print_formula cond print_formula f1 print_formula f2
     | TFop(op, [f1; f2]) ->
-      fprintf fmt "(%a) %s (%a)" print_formula f1 (string_of_op op) print_formula f2
+      fprintf
+        fmt
+        "(%a) %s (%a)"
+        print_formula f1
+        (string_of_op op)
+        print_formula f2
     | TFforall { qf_bvars = l; qf_triggers = t; qf_form = f; _ } ->
       fprintf fmt "forall (%a) [%a]. (%a)"
         print_binders l (print_triggers ~annot) t print_formula f

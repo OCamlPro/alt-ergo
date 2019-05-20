@@ -336,7 +336,8 @@ val eq_tlet_kind : 'a tlet_kind -> 'a tlet_kind -> bool
 val string_of_op : oplogic -> string
 
 type 'annot annot_printer = Format.formatter -> 'annot -> unit
-type ('a,'annot) annoted_printer = Format.formatter -> ('a,'annot) annoted -> unit
+type ('a,'annot) annoted_printer =
+  Format.formatter -> ('a,'annot) annoted -> unit
 
 val no_print : _ annot_printer
 val int_print : int annot_printer

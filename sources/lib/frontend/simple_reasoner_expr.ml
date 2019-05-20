@@ -104,10 +104,10 @@ let pp_val fmt v =
 (** A simplified formula/expr/... type.
     The diff field is set to false if the operation did not change the
     input.
-    As queries may provide explanations, the third field correspond to the explanation
-    behind the simplification.
+    As queries may provide explanations, the third field correspond to the
+    explanation behind the simplification.
 
- *)
+*)
 type ('a, 'expl) simp =
   {
     v : 'a;
@@ -124,8 +124,7 @@ let get_expl (e : (_,'expl) simp) : 'a = e.expl
 (** As the simplifyer interacts with different components of alt-ergo,
     it is written to be as generic as possible.
     The simplifyer is then a functor of different modules which type is
-    defined below.
-*)
+    defined below. *)
 
 (** Expr is the signature of the module dedicated to
     the representation of expressions that are to be
@@ -342,13 +341,15 @@ struct
           then (
             _oper all_true (Some v') (Expl.union expl acc_expl) tl
           )
-          else (
-            true, false, (Expl.union expl acc_expl) (* The operation is not respected *)
+          else (* The operation is not respected *) (
+            true, false, (Expl.union expl acc_expl)
           )
     in
     _oper true None no_reason l
 
-  let apply_op (op : value -> value -> bool) (l : expr list) : (expr list, expl) simp =
+  let apply_op
+      (op : value -> value -> bool)
+      (l : expr list) : (expr list, expl) simp =
     let falsify,all_true,expl = oper op l in
     if falsify
     then {v = [E.faux]; diff = true; expl}
@@ -395,15 +396,17 @@ struct
         let ty = E.get_type e in
         (* simp_expr treats 3 cases : either the expression is an operation,
            a formula or a literal.
-           A function is dedicated to each of these cases, returning a simplified list
-           of subexpressions. If this list contains only 1 element, it is either because
-           it has been simplified to 1 element or because it is an operation over
-           a single expression.
-        *)
+           A function is dedicated to each of these cases, returning a
+           simplified list of subexpressions.
+           If this list contains only 1 element, it is either because
+           it has been simplified to 1 element or because it is an operation
+           over a single expression. *)
 
-        (* The boolean states that the operation is a unary operation and must be preserved.
+        (* The boolean states that the operation is a unary operation and
+           must be preserved.
            Otherwise, it can be discarded.
-           For example, (3 + 2) is simplified to 5, the operator '+' can be discarded.
+           For example, (3 + 2) is simplified to 5, the operator '+' can
+           be discarded.
            However, in f(3 + 2), f must not be discarded. *)
         let by_operator
             (op : Symbols.operator)
@@ -416,15 +419,21 @@ struct
           | Symbols.Tite -> (
               match elist with
                 cond :: th :: el :: [] ->
-                if E.(equal cond vrai) then {v = [th]; diff = true; expl = no_reason}
-                else if E.(equal cond faux) then {v = [el]; diff = true; expl = no_reason}
-                else if E.equal th el then {v = [th]; diff = true; expl = no_reason}
+                if E.(equal cond vrai)
+                then {v = [th]; diff = true; expl = no_reason}
+                else if E.(equal cond faux)
+                then {v = [el]; diff = true; expl = no_reason}
+                else if E.equal th el
+                then {v = [th]; diff = true; expl = no_reason}
                 else identity elist
               | _ -> assert false
             ), false
           | o -> identity elist, is_unary o in
 
-        let by_form (f : Symbols.form) (elist : expr list) : (expr list, expl) simp =
+        let by_form
+            (f : Symbols.form)
+            (elist : expr list)
+          : (expr list, expl) simp =
           match f with
           | Symbols.F_Unit _ -> (* <=> AND *) (
               let () = debug "F_Unit@." in
@@ -484,7 +493,9 @@ struct
           | _ ->
             let () = debug "No additional simplification@." in identity elist
 
-        and by_lit (l : Symbols.lit) (elist : expr list) : (expr list, expl) simp =
+        and by_lit
+            (l : Symbols.lit)
+            (elist : expr list) : (expr list, expl) simp =
           let is_constr (constr : Hstring.t) (e : expr) : bool option =
             match E.get_comp e with
               Op (Constr s') -> Some (Hstring.equal constr s')
@@ -513,20 +524,23 @@ struct
                   match is_constr s e with
                     None ->
                     debug
-                      "%a is not explicitely the constructor %a, leaving as is@."
+                      "%a is not explicitely the constructor %a,\
+                       leaving as is@."
                       E.pretty e
                       Hstring.print s
                     ;
                     identity elist
                   | Some true  ->
                     debug
-                      "%a is explicitely the constructor %a, this is FALSE@."
+                      "%a is explicitely the constructor %a,\
+                       this is FALSE@."
                       E.pretty e
                       Hstring.print s;
                     {v = [E.faux]; diff = true; expl = no_reason}
                   | Some false ->
                     debug
-                      "%a is explicitely NOT the constructor %a, this is TRUE@."
+                      "%a is explicitely NOT the constructor %a,\
+                       this is TRUE@."
                       E.pretty e
                       Hstring.print s;
                     {v = [E.vrai]; diff = true; expl = no_reason}
@@ -542,22 +556,25 @@ struct
                   match is_constr s e with
                     None ->
                     debug
-                      "%a is not explicitely the constructor %a, leaving as is@."
+                      "%a is not explicitely the constructor %a,\
+                       leaving as is@."
                       E.pretty e
                       Hstring.print s
                     ;
                     identity elist
                   | Some true  ->
                     debug
-                      "%a is explicitely the constructor %a, this is TRUE@."
+                      "%a is explicitely the constructor %a,\
+                       this is TRUE@."
                       E.pretty e
                       Hstring.print s;
                     {v = [E.vrai]; diff = true; expl = no_reason}
                   | Some false ->
                     debug
-                        "%a is explicitely NOT the constructor %a, this is FALSE@."
-                        E.pretty e
-                        Hstring.print s;
+                      "%a is explicitely NOT the constructor %a,\
+                       this is FALSE@."
+                      E.pretty e
+                      Hstring.print s;
                     {v = [E.faux]; diff = true; expl = no_reason}
                 )
               | _ -> assert false
@@ -601,8 +618,8 @@ struct
           if not diff then e
           else
             match xs.v with
-              [] -> (* The simplification did something strange and discarded everything.
-                       This should not happen. *)
+              [] -> (* The simplification did something strange and discarded
+                       everything. This should not happen. *)
               debug
                 "Expression %a was discarded by simplifyer. Keeping it."
                 E.pretty e;
@@ -642,7 +659,8 @@ struct
     with
       Failure s ->
       talk
-        "Error while simplifying %a\n%s\nI will continue with the initial expression@."
+        "Error while simplifying %a\n%s\n\
+         I will continue with the initial expression@."
         E.pretty e
         s;
       {v=e;diff=false;expl=no_reason}

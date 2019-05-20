@@ -2525,11 +2525,12 @@ module SimpExpr =
       | Sy.Form (Sy.F_Lemma),_
       | Sy.Form (Sy.F_Skolem),_ -> failwith "Formula undefined."
 
-      | Sy.Lit (Sy.L_eq),_ -> mk_positive_lit sy (Sy.Lit (Sy.L_neg_eq)) l
-      | Sy.Lit (Sy.L_built b),_ -> mk_positive_lit sy (Sy.Lit (Sy.L_neg_built b)) l
+      | Sy.Lit (Sy.L_eq),_ ->
+        mk_positive_lit sy (Sy.Lit (Sy.L_neg_eq)) l
+      | Sy.Lit (Sy.L_built b),_ ->
+        mk_positive_lit sy (Sy.Lit (Sy.L_neg_built b)) l
       | Sy.Lit (Sy.L_neg_eq),  _ ->
-        let positive = mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) l in
-        neg positive
+        mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) l |> neg
       | Sy.Lit (Sy.L_neg_built n), _ ->
         mk_builtin ~is_pos:false n l
       | Sy.Lit (Sy.L_neg_pred), _ ->

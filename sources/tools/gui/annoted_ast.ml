@@ -743,11 +743,14 @@ and print_tt_desc fmt = function
       Symbols.print_bound lb
       Symbols.print_bound ub
 
-  | TTmapsTo(x,e) -> fprintf fmt "%a |-> %a" Var.print x (print_term ~annot:no_print) e
+  | TTmapsTo(x,e) ->
+    fprintf fmt "%a |-> %a" Var.print x (print_term ~annot:no_print) e
 
   | TTite(f,t1, t2) ->
     fprintf fmt "(if %a then %a else %a)"
-      print_tform f (print_term ~annot:no_print) t1 (print_term ~annot:no_print) t2
+      print_tform f
+      (print_term ~annot:no_print) t1
+      (print_term ~annot:no_print) t2
 
   | TTproject (_, _, _) | TTmatch (_, _) ->
     Gui_config.not_supported "Algebraic datatypes"
@@ -761,7 +764,11 @@ and print_term_binders fmt l =
   | (sy, t) :: l ->
     fprintf fmt "%a = %a" Symbols.print_clean sy (print_term ~annot:no_print) t;
     List.iter (fun (sy, t) ->
-        fprintf fmt ",\n%a = %a" Symbols.print_clean sy (print_term ~annot:no_print) t) l
+        fprintf
+          fmt
+          ",\n%a = %a"
+          Symbols.print_clean sy
+          (print_term ~annot:no_print) t) l
 
 and print_tatom fmt a = match a.Typed.c with
   | TAtrue -> fprintf fmt "true"
