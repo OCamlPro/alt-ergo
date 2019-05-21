@@ -125,3 +125,19 @@ allow to enable the old Tableaux-like SAT-solver:
 - Since version 2.2.0, Alt-Ergo's library is also compiled and
   installed. A small example using the API is given here:
   "examples/lib_usage.ml"
+
+### Plugins and Preludes directories
+
+As stated above, the `-where` option of `alt-ergo` can be used to get the absolute
+path that is searched by default when looking for plugins and preludes that were
+given with a relative path. It is useful to know that these two directories are
+actually relative to the location of the `alt-ergo` executable, so that the
+executable, as well as preludes and plugins, can be relocated.
+
+For instance, on a Linux system, assuming the `alt-ergo` executable is at some path
+`some/path/bin/alt-ergo`, theses directories are respectively located at
+`some/path/share/alt-ergo/plugins/` and `some/path/share/alt-ergo/preludes/`.
+On windows, a binary at path `Z:\some\path\bin\alt-ergo` will look for preludes and
+plugins in `Z:\some\path\share\alt-ergo\preludes` and
+`Z:\some\path\share\alt-ergo\plugins` respectively.
+
