@@ -386,7 +386,7 @@ module M = struct
     "-where",
     Arg.String show_where,
     "  prints the directory of its argument. Possible arguments are: \
-     'bin', 'lib', 'plugins', 'data' and 'man'";
+     'lib', 'plugins', 'preludes', 'data' and 'man'";
 
     "-disable-ites",
     Arg.Set disable_ites,
