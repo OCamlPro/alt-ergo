@@ -30,23 +30,23 @@ let debug (msg : ('a, Format.formatter, unit) format) =
     be reduced to a boolean or a float/int. *)
 type value =
     Bool of bool
-  | Num of float
+  | Num of Q.t
 
 let (++) v1 v2 =
   match v1, v2 with
     Bool b1, Bool b2 -> Bool (b1 || b2)
-  | Num n1, Num n2 -> Num (n1 +. n2)
+  | Num n1, Num n2 -> Num (Q.add n1 n2)
   | _,_ -> assert false
 
 let (--) v1 v2 =
   match v1, v2 with
-  | Num n1, Num n2 -> Num (n1 -. n2)
+  | Num n1, Num n2 -> Num (Q.sub n1 n2)
   | _,_ -> assert false
 
 let ( ** ) v1 v2 =
   match v1, v2 with
     Bool b1, Bool b2 -> Bool (b1 && b2)
-  | Num n1, Num n2 -> Num (n1 *. n2)
+  | Num n1, Num n2 -> Num (Q.mul n1 n2)
   | _,_ -> assert false
 
 let (|=) v1 v2 =
@@ -99,7 +99,7 @@ let fold_left_stop
 let pp_val fmt v =
   match v with
     Bool b -> Format.fprintf fmt "Bool %b" b
-  | Num n -> Format.fprintf fmt "Num %f" n
+  | Num n -> Format.fprintf fmt "Num %a" Q.pp_print n
 
 (** A simplified formula/expr/... type.
     The diff field is set to false if the operation did not change the
@@ -239,8 +239,8 @@ struct
     match E.get_comp e with
       True -> Some ((Bool true), no_reason)
     | False -> Some ((Bool false), no_reason)
-    | Int s -> Some ((Num (float_of_string (Hstring.view s))), no_reason)
-    | Real s -> Some ((Num (float_of_string (Hstring.view s))), no_reason)
+    | Int s -> Some ((Num (Q.of_string (Hstring.view s))), no_reason)
+    | Real s -> Some ((Num (Q.of_string (Hstring.view s))), no_reason)
     | _ ->
       if E.get_type e = Ty.Tbool then
         match T.query e !env with
@@ -255,9 +255,10 @@ struct
       Bool true -> E.vrai
     | Bool false -> E.faux
     | Num i ->
+      let i' = Q.to_string i in
       if ty == Ty.Treal
-      then E.real (string_of_float i)
-      else E.int (string_of_int @@ int_of_float i)
+      then E.real i'
+      else E.int i'
 
   let arith
       (ty : Ty.t)
