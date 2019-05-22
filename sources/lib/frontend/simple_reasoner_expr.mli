@@ -68,8 +68,21 @@ sig
   type expr
   type env
   type expl
+
+  (** Empty environment. *)
   val empty : unit -> env
-  val query : expr -> env -> (bool * expl) option
+
+  (** Tries to decide the expression in argument given the environment.
+      If it fails, returns None. Otherwise, provides the answer and
+      an explanation (possibly empty)
+  *)
+  val bool_query : expr -> env -> (bool * expl) option
+
+  (** Tries to decide the arithmetic value of an expression given the 
+      environment.
+      If it fails, returns None. Otherwise, provides the answer and
+      an explanation (possibly empty) *)
+  val q_query :  expr -> env -> (Q.t * expl) option
 end
 
 (** This is the signature of the simplifyer. *)

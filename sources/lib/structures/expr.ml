@@ -2563,6 +2563,7 @@ module SimpExprDummy =
       type env = unit
       type expl = unit
       let empty _ = ()
-      let query _ _ = None
+      let bool_query _ _ = None
+      let q_query _ _ = None
     end
     )

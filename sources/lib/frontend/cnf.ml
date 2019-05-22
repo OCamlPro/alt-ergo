@@ -48,7 +48,8 @@ module DummySimp:
       type expl = Explanation.t
       type env = Theory.Main_Default.t
       let empty = Theory.Main_Default.empty
-      let query _ _ = None
+      let bool_query _ _ = None
+      let q_query _ _ = None
     end
     )
 
@@ -63,13 +64,14 @@ module ThSimp : Simple_reasoner_expr.S with type expr = Expr.t
       type expl = Explanation.t
       type env = Theory.Main_Default.t
       let empty = Theory.Main_Default.empty
-      let query ex env =
+      let bool_query ex env =
         try
           match Theory.Main_Default.query ex env with
             Some (expl,_) -> Some (true, expl)
           | None -> None
         with _ ->
           Format.eprintf "Query failed on %a@." Expr.print ex; None
+      let q_query _ _ = None (* Todo : add arithmetic solving *)
     end
     )
 

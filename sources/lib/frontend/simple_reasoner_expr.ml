@@ -77,8 +77,6 @@ let (|>=) v1 v2 =
   | Num n1, Num n2 -> n1 >= n2
   | _,_ -> assert false
 
-
-
 (** Same as List.fold_left, but f returns
     a tuple (acc, stop) where stop is a boolean
     stating that the loop has to stop. *)
@@ -174,14 +172,21 @@ sig
   type env
   type expl
 
-  (** An empty environment. Know nothing. *)
+  (** Empty environment. *)
   val empty : unit -> env
 
   (** Tries to decide the expression in argument given the environment.
       If it fails, returns None. Otherwise, provides the answer and
       an explanation (possibly empty)
   *)
-  val query : expr -> env -> (bool * expl) option
+  val bool_query : expr -> env -> (bool * expl) option
+
+  (** Tries to decide the arithmetic value of an expression given the
+      environment.
+      If it fails, returns None. Otherwise, provides the answer and
+      an explanation (possibly empty) *)
+  val q_query : expr -> env -> (Q.t * expl) option
+
 end
 
 (** This is the signature of the simplifyer. *)
@@ -235,19 +240,39 @@ struct
     in
     {rev with v = List.rev rev.v}
 
+  (* Check is an expression has an arithmetic type (Some true),
+     a boolean type (Some false) or else (None). *)
+  let is_arith (e : expr) : bool option =
+    match E.get_type e with
+      Ty.Tbool -> Some false
+    | Ty.Tint | Ty.Treal
+    | Ty.Tvar {value = Some Ty.Tint;_}
+    | Ty.Tvar {value = Some Ty.Treal;_} -> Some true
+    | _ -> None
+
+  let value_from_query (e : expr) : (value * expl) option =
+    match is_arith e with
+      Some true -> (
+        match T.q_query e !env with
+          Some (res_query, expl) ->
+          Some ((Num res_query), expl)
+        | None -> None
+      )
+    | Some false -> (
+        match T.bool_query e !env with
+          Some (res_query, expl) ->
+          Some ((Bool res_query), expl)
+        | None -> None
+      )
+    | None -> None
+
   let expr_to_value (e : expr) : (value * expl) option  =
     match E.get_comp e with
       True -> Some ((Bool true), no_reason)
     | False -> Some ((Bool false), no_reason)
     | Int s -> Some ((Num (Q.of_string (Hstring.view s))), no_reason)
     | Real s -> Some ((Num (Q.of_string (Hstring.view s))), no_reason)
-    | _ ->
-      if E.get_type e = Ty.Tbool then
-        match T.query e !env with
-          Some (res_query, expl) ->
-          Some ((Bool res_query), expl)
-        | None -> None
-      else None
+    | _ -> value_from_query e
 
   let value_to_expr (ty : Ty.t) (v : value) : expr =
     debug "Type = %a@." Ty.print ty;
@@ -379,18 +404,13 @@ struct
       {v = e; diff = false; expl = no_reason}
     )
     else
-      let query_res =
-        if E.get_type e = Ty.Tbool
-        then T.query e !env
-        else None in
+      let query_res = value_from_query e in
       match query_res with
-        Some (true, expl) -> (
-          debug "Theory found it is true@.";
-          {v = E.vrai; diff = true; expl}
-        )
-      | Some (false, expl) -> (
-          debug "Theory found it is false@.";
-          {v = E.faux; diff = true; expl}
+      | Some (q, expl) -> (
+          let cst_exp = value_to_expr (E.get_type e) q in
+          debug "Theory found %a = %a@."
+            E.pretty e E.pretty cst_exp;
+          {v = cst_exp; diff = true; expl}
         )
       | None ->
         debug "Theory did not found an answer@.";
