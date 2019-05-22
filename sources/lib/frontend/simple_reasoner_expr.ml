@@ -142,8 +142,8 @@ sig
   val get_sub_expr : t -> t list
   val get_type : t -> Ty.t
 
-  val vrai : t
-  val faux : t
+  val _true : t
+  val _false : t
 
   val real : string -> t
   val int : string -> t
@@ -277,8 +277,8 @@ struct
   let value_to_expr (ty : Ty.t) (v : value) : expr =
     debug "Type = %a@." Ty.print ty;
     match v with
-      Bool true -> E.vrai
-    | Bool false -> E.faux
+      Bool true -> E._true
+    | Bool false -> E._false
     | Num i ->
       let i' = Q.to_string i in
       if ty == Ty.Treal
@@ -378,9 +378,9 @@ struct
       (l : expr list) : (expr list, expl) simp =
     let falsify,all_true,expl = oper op l in
     if falsify
-    then {v = [E.faux]; diff = true; expl}
+    then {v = [E._false]; diff = true; expl}
     else if all_true
-    then {v = [E.vrai]; diff = true; expl}
+    then {v = [E._true]; diff = true; expl}
     else {v = l; diff = false; expl}
 
   let is_unary (o : Symbols.operator) : bool =
@@ -398,7 +398,7 @@ struct
     | Destruct (_,_) -> true
 
   let rec simp_expr (e : expr) : (expr, expl) simp =
-    if E.equal e E.vrai || E.equal e E.faux
+    if E.equal e E._true || E.equal e E._false
     then (
       debug "Expression is trivial@.";
       {v = e; diff = false; expl = no_reason}
@@ -440,9 +440,9 @@ struct
           | Symbols.Tite -> (
               match elist with
                 cond :: th :: el :: [] ->
-                if E.(equal cond vrai)
+                if E.(equal cond _true)
                 then {v = [th]; diff = true; expl = no_reason}
-                else if E.(equal cond faux)
+                else if E.(equal cond _false)
                 then {v = [el]; diff = true; expl = no_reason}
                 else if E.equal th el
                 then {v = [th]; diff = true; expl = no_reason}
@@ -461,15 +461,15 @@ struct
               let res =
                 fold_left_stop
                   (fun acc e ->
-                     if E.(equal e vrai)
+                     if E.(equal e _true)
                      then (
                        debug "%a = true@." E.pretty e;
                        {acc with diff = true}, false
                      )
-                     else if E.(equal e faux)
+                     else if E.(equal e _false)
                      then (
                        debug "%a = false@." E.pretty e;
-                       {v = [E.faux]; diff = true; expl = no_reason}, true
+                       {v = [E._false]; diff = true; expl = no_reason}, true
                      )
                      else
                        (
@@ -481,7 +481,7 @@ struct
                   elist
               in
               match res.v with
-                [] -> {v = [E.vrai]; diff = true; expl = no_reason}
+                [] -> {v = [E._true]; diff = true; expl = no_reason}
               | _ -> {res with v = List.rev res.v}
             )
           | F_Clause _ -> (* <=> OR *) (
@@ -489,15 +489,15 @@ struct
               let res =
                 fold_left_stop
                   (fun acc e ->
-                     if E.(equal e faux)
+                     if E.(equal e _false)
                      then  (
                        debug "%a = false@." E.pretty e;
                        {acc with diff = true}, false
                      )
-                     else if E.(equal e vrai)
+                     else if E.(equal e _true)
                      then (
                        debug "%a = true@." E.pretty e;
-                       {v = [E.vrai]; diff = true; expl = no_reason}, true
+                       {v = [E._true]; diff = true; expl = no_reason}, true
                      )
                      else (
                        debug "Keeping %a@." E.pretty e;
@@ -508,7 +508,7 @@ struct
                   elist
               in
               match res.v with
-                [] -> {v = [E.faux]; diff = true; expl = no_reason}
+                [] -> {v = [E._false]; diff = true; expl = no_reason}
               | _ ->  {res with v = List.rev res.v}
             )
           | _ ->
@@ -532,7 +532,7 @@ struct
                   List.for_all
                     (fun elt -> E.equal elt @@ List.hd res.v) (List.tl res.v)
                 then
-                  {v = [E.vrai]; diff = true; expl = no_reason}
+                  {v = [E._true]; diff = true; expl = no_reason}
                 else res
             )
           | L_built LE -> apply_op (|<=) elist
@@ -557,14 +557,14 @@ struct
                        this is FALSE@."
                       E.pretty e
                       Hstring.print s;
-                    {v = [E.faux]; diff = true; expl = no_reason}
+                    {v = [E._false]; diff = true; expl = no_reason}
                   | Some false ->
                     debug
                       "%a is explicitely NOT the constructor %a,\
                        this is TRUE@."
                       E.pretty e
                       Hstring.print s;
-                    {v = [E.vrai]; diff = true; expl = no_reason}
+                    {v = [E._true]; diff = true; expl = no_reason}
                 )
               | _ -> assert false
             )
@@ -589,14 +589,14 @@ struct
                        this is TRUE@."
                       E.pretty e
                       Hstring.print s;
-                    {v = [E.vrai]; diff = true; expl = no_reason}
+                    {v = [E._true]; diff = true; expl = no_reason}
                   | Some false ->
                     debug
                       "%a is explicitely NOT the constructor %a,\
                        this is FALSE@."
                       E.pretty e
                       Hstring.print s;
-                    {v = [E.faux]; diff = true; expl = no_reason}
+                    {v = [E._false]; diff = true; expl = no_reason}
                 )
               | _ -> assert false
             )

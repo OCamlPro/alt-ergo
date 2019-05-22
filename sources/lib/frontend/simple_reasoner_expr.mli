@@ -78,7 +78,7 @@ sig
   *)
   val bool_query : expr -> env -> (bool * expl) option
 
-  (** Tries to decide the arithmetic value of an expression given the 
+  (** Tries to decide the arithmetic value of an expression given the
       environment.
       If it fails, returns None. Otherwise, provides the answer and
       an explanation (possibly empty) *)
