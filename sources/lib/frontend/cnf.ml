@@ -36,47 +36,53 @@ module Sy = Symbols
 module SE = E.Set
 module SRE = Simple_reasoner_expr
 
+(** Simplifyer not using the theory *)
+module DummySimp:
+  (Simple_reasoner_expr.S with type expr = Expr.t
+                           and type env = Theory.Main_Default.t
+                           and type expl = Explanation.t) =
+  Expr.SimpExpr
+    (Explanation)
+    (struct
+      type expr = Expr.t
+      type expl = Explanation.t
+      type env = Theory.Main_Default.t
+      let empty = Theory.Main_Default.empty
+      let query _ _ = None
+    end
+    )
+
+(** Simplifyer using the theory *)
+module ThSimp : Simple_reasoner_expr.S with type expr = Expr.t
+                                        and type env = Theory.Main_Default.t
+                                        and type expl = Explanation.t =
+  Expr.SimpExpr
+    (Explanation)
+    (struct
+      type expr = Expr.t
+      type expl = Explanation.t
+      type env = Theory.Main_Default.t
+      let empty = Theory.Main_Default.empty
+      let query ex env =
+        try
+          match Theory.Main_Default.query ex env with
+            Some (expl,_) -> Some (true, expl)
+          | None -> None
+        with _ ->
+          Format.eprintf "Query failed on %a@." Expr.print ex; None
+    end
+    )
 
 
 let choose_preproc () :
   (module Simple_reasoner_expr.S with type expr = Expr.t
                                   and type env = Theory.Main_Default.t
                                   and type expl = Explanation.t)  =
-  if Options.simplify_th ()
-  then
-    (module
-      Expr.SimpExpr
-        (Explanation)
-        (struct
-          type expr = Expr.t
-          type expl = Explanation.t
-          type env = Theory.Main_Default.t
-          let empty = Theory.Main_Default.empty
-          let query _ _ = None
-        end
-        )
-    )
-  else
-    (module
-      Expr.SimpExpr
-        (Explanation)
-        (struct
-          type expr = Expr.t
-          type expl = Explanation.t
-          type env = Theory.Main_Default.t
-          let empty = Theory.Main_Default.empty
-          let query ex env =
-            try
-              match Theory.Main_Default.query ex env with
-                Some (expl,_) -> Some (true, expl)
-              | None -> None
-            with _ ->
-              Format.eprintf "Query failed on %a@." Expr.print ex; None
-        end
-        )
-    )
+  if not (Options.simplify_th ())
+  then (module DummySimp)
+  else (module ThSimp)
 
-module SimpExprPreproc = (val (choose_preproc ()))
+module SimpExprPreproc () = (val (choose_preproc ()))
 
 [@@ocaml.ppwarning "TODO: Change Symbols.Float to store FP numeral \
                     constants (eg, <24, -149> for single) instead of \
@@ -301,14 +307,14 @@ let rec make_term up_qv t =
         up_qv "" e Loc.dummy
         ~decl_kind:E.Daxiom (* not correct, but not a problem *)
   in
-  let term =
-    mk_term t in
+  let term = mk_term t in
   match Options.simplify () with
     Util.SNo -> term
   | Util.SPreprocess | Util.SAll ->
-    let smp_term =
-      SimpExprPreproc.simp_expr term in
-    if SRE.has_changed smp_term then SRE.get_expr smp_term
+    let module S = SimpExprPreproc () in
+    let smp_term = S.simp_expr term in
+    if SRE.has_changed smp_term
+    then SRE.get_expr smp_term
     else term
 
 and make_trigger name up_qv hyp (e, from_user) =
@@ -512,7 +518,8 @@ let make_form name f loc ~decl_kind =
     match Options.simplify () with
       Util.SNo -> form
     | Util.SPreprocess | Util.SAll ->
-      let smp_form = SimpExprPreproc.simp_expr form in
+      let module S = SimpExprPreproc () in
+      let smp_form = S.simp_expr form in
       if SRE.has_changed smp_form then SRE.get_expr smp_form
       else form
   in
@@ -567,7 +574,7 @@ let mk_theory acc l th_name extends _loc =
     acc
     l
 
-let make acc (d : (int Typed.tdecl, int) Typed.annoted) =
+let make acc (d : (int Typed.tdecl, 'a) Typed.annoted) =
   match d.c with
   | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
   | TAxiom(loc, name, Util.Default, f) -> mk_assume acc f name loc

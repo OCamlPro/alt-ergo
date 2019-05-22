@@ -222,8 +222,6 @@ let eq_tconstant (c1 : tconstant) (c2 : tconstant) : bool =
   | Ttrue, Ttrue | Tfalse, Tfalse | Tvoid, Tvoid -> true
   | _ -> false
 
-let eq_oplogic o1 o2 = o1 == o2
-
 let eq_pattern (p1 : pattern) (p2 : pattern) : bool =
   match p1, p2 with
     Constr {name = name1; args = args1},
@@ -359,7 +357,7 @@ and eq_tform (f1 : 'a tform) (f2 : 'a tform) : bool =
   | TFatom a1, TFatom a2 -> eq_tatom a1.c a2.c
 
   | TFop (op1, l1), TFop (op2, l2) ->
-    eq_oplogic op1 op2 &&
+    (Pervasives.(=)) op1 op2 &&
     eq_list
       (fun f1 f2 -> eq_tform f1.c f2.c)
       l1
@@ -418,10 +416,10 @@ let (no_print : _ annot_printer) = fun fmt _ -> fprintf fmt ""
 let (int_print : int annot_printer) = fun fmt -> fprintf fmt ".%i"
 
 let print_annot
-    (annot : 'annot annot_printer)
+    (pp_annot : 'annot annot_printer)
     (print : ('a,'annot) annoted_printer)
     (fmt : Format.formatter) (t : ('a, 'annot) annoted) =
-  fprintf fmt "%a%a" print t annot t.annot
+  fprintf fmt "%a%a" print t pp_annot t.annot
 
 let print_binder fmt (s, t) =
   fprintf fmt "%a :%a" Symbols.print s Ty.print t

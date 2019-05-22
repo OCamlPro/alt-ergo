@@ -56,9 +56,10 @@ type lit =
 
 (** Formulas : composition of expressions *)
 type form =
-  | F_Unit of bool   (** F_Unit <=> (AND) *)
-  | F_Clause of bool (** F_Clause <=> (OR) In both cases, the boolean state
-                         the formula was initially an implication *)
+  | F_Unit of bool   (** F_Unit b <=> (AND),
+                         b = true => the formula was an implication  *)
+  | F_Clause of bool (** F_Clause b <=> (OR),
+                         b = true => the formula was an implication *)
   | F_Iff
   | F_Xor
   | F_Lemma
