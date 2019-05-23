@@ -43,8 +43,8 @@ sig
   val get_sub_expr : t -> t list
   val get_type : t -> Ty.t
 
-  val vrai : t
-  val faux : t
+  val _true : t
+  val _false : t
 
   val real : string -> t
   val int : string -> t

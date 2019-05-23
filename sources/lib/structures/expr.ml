@@ -2541,8 +2541,8 @@ module SimpExpr =
     let get_sub_expr e = e.xs
     let get_type e = e.ty
 
-    let vrai = vrai
-    let faux = faux
+    let _true = vrai
+    let _false = faux
 
     let real = real
     let int = int
