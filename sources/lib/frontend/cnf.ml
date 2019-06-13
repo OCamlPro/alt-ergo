@@ -121,37 +121,39 @@ module ME =
 
 (* clean trigger:
      remove useless terms in multi-triggers after inlining of lets*)
-let clean_trigger name trig =
-  match trig with
-  | [] | [_] -> trig
-  | _ ->
-    let s =
-      List.fold_left
-        (fun s t ->
-           if ME.mem t s then s
-           else
-             ME.add t (E.sub_terms SE.empty t) s
-        )ME.empty trig
-    in
-    let res =
-      ME.fold
-        (fun t _ acc ->
-           let rm = ME.remove t acc in
-           if ME.exists (fun _ sub -> SE.mem t sub) rm then rm
-           else acc
-        ) s s
-    in
-    let sz_l = List.length trig in
-    let sz_s = ME.cardinal res in
-    if sz_l = sz_s then trig
-    else
-      let trig' = ME.fold (fun t _ acc -> t :: acc) res [] in
-      if verbose () then begin
-        fprintf fmt "@.AXIOM: %s@." name;
-        fprintf fmt "from multi-trig of sz %d : %a@." sz_l E.print_list trig;
-        fprintf fmt "to   multi-trig of sz %d : %a@." sz_s E.print_list trig';
-      end;
-      trig'
+let clean_trigger ~in_theory name trig =
+  if in_theory then trig
+  else
+    match trig with
+    | [] | [_] -> trig
+    | _ ->
+      let s =
+        List.fold_left
+          (fun s t ->
+             if ME.mem t s then s
+             else
+               ME.add t (E.sub_terms SE.empty t) s
+          )ME.empty trig
+      in
+      let res =
+        ME.fold
+          (fun t _ acc ->
+             let rm = ME.remove t acc in
+             if ME.exists (fun _ sub -> SE.mem t sub) rm then rm
+             else acc
+          ) s s
+      in
+      let sz_l = List.length trig in
+      let sz_s = ME.cardinal res in
+      if sz_l = sz_s then trig
+      else
+        let trig' = ME.fold (fun t _ acc -> t :: acc) res [] in
+        if verbose () then begin
+          fprintf fmt "@.AXIOM: %s@." name;
+          fprintf fmt "from multi-trig of sz %d : %a@." sz_l E.print_list trig;
+          fprintf fmt "to   multi-trig of sz %d : %a@." sz_s E.print_list trig';
+        end;
+        trig'
 
 let rec make_term up_qv t =
   let rec mk_term { c = { tt_ty = ty; tt_desc = tt; _ }; _ } =
@@ -261,7 +263,7 @@ let rec make_term up_qv t =
   mk_term t
 
 
-and make_trigger name up_qv hyp (e, from_user) =
+and make_trigger ~in_theory name up_qv hyp (e, from_user) =
   let content, guard = match e with
     | [{ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }]
       when Sy.equal s Sy.fake_eq ->
@@ -313,7 +315,7 @@ and make_trigger name up_qv hyp (e, from_user) =
     List.fold_left (fun z t -> max z (E.depth t)) 0 content in
   (* clean trigger:
      remove useless terms in multi-triggers after inlining of lets*)
-  let content = clean_trigger name content in
+  let content = clean_trigger ~in_theory name content in
   { E.content ; guard ; t_depth; semantic = []; (* will be set by theories *)
     hyp; from_user;
   }
@@ -411,8 +413,9 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
       let hyp =
         List.map (fun f -> mk_form up_qv false f.c f.annot) qf.qf_hyp
       in
+      let in_theory = decl_kind == E.Dtheory in
       let trs =
-        List.map (make_trigger name up_qv hyp) qf.qf_triggers in
+        List.map (make_trigger ~in_theory name up_qv hyp) qf.qf_triggers in
       let func = match f with
         | TFforall _ -> E.mk_forall
         | TFexists _ -> E.mk_exists
