@@ -357,6 +357,9 @@ module Safe : sig
   val int : t
   (** The type of integers. *)
 
+  val real : t
+  (** The type of reals *)
+
   val of_var : Var.t -> t
   (** Create a type from a variable. *)
 

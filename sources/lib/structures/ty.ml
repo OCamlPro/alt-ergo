@@ -754,6 +754,8 @@ module Safe = struct
 
   let int = Tint
 
+  let real = Treal
+
   (* ugly thing to satisfy the expected type in
      typed statements TTypeDecl constructor *)
   let apply_empty c =

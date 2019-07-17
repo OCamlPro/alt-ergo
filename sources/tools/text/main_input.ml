@@ -162,6 +162,9 @@ let () =
     module B_smtlib = Dolmen_type.Base.Smtlib.Tff(T)(Void)(Ty.Safe)(Typed.Safe)
     module B_smtlib_array = Dolmen_type.Arrays.Smtlib.Tff(T)(Ty.Safe)(Typed.Safe)
     module B_smtlib_bitv = Dolmen_type.Bitv.Smtlib.Tff(T)(Ty.Safe)(Typed.Safe)
+    module B_smtlib_arith_int = Dolmen_type.Arith.Smtlib.Int.Tff(T)(Ty.Safe)(Typed.Safe.Int)
+    module B_smtlib_arith_real = Dolmen_type.Arith.Smtlib.Real.Tff(T)(Ty.Safe)(Typed.Safe.Real)
+    module B_smtlib_arith_real_int = Dolmen_type.Arith.Smtlib.Real_Int.Tff(T)(Ty.Safe)(Typed.Safe.Real_Int)
 
     let builtins = function
       | L.Tptp -> B_tptp.parse
@@ -170,6 +173,9 @@ let () =
           B_smtlib.parse;
           B_smtlib_array.parse;
           B_smtlib_bitv.parse;
+          (* B_smtlib_arith_int.parse;
+           * B_smtlib_arith_real.parse; *)
+          B_smtlib_arith_real_int.parse;
         ]
       | L.Zf -> B_zf.parse
       | _ -> (fun _ _ _ _ -> None)

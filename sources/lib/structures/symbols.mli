@@ -31,10 +31,11 @@ type builtin =
   | IsConstr of Hstring.t (* ADT tester *)
 
 type operator =
-  | Plus | Minus | Mult | Div | Modulo
+    Plus | Minus | Mult | Div | Modulo
   | Concat | Extract | Get | Set | Fixed | Float
   | Reach | Access of Hstring.t | Record
-  | Sqrt_real | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
+  | Sqrt_real | Abs_int | Abs_real | Real_of_int | Int_of_real
+  | Int_floor | Int_ceil | Is_int
   | Sqrt_real_default | Sqrt_real_excess
   | Min_real | Min_int | Max_real | Max_int | Integer_log2 | Pow_real_int
   | Pow_real_real | Integer_round

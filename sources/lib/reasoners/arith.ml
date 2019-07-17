@@ -98,7 +98,7 @@ module Shostak
     | Op (Plus | Minus | Mult | Div | Modulo
          | Float | Fixed | Abs_int | Abs_real | Sqrt_real
          | Sqrt_real_default | Sqrt_real_excess
-         | Real_of_int | Int_floor | Int_ceil
+         | Real_of_int | Int_of_real | Is_int | Int_floor | Int_ceil
          | Max_int | Max_real | Min_int | Min_real
          | Pow_real_int | Pow_real_real | Integer_log2
          | Integer_round) -> true
@@ -305,6 +305,9 @@ module Shostak
       mk_partial_interpretation_1 excess_sqrt_or_Exit coef p ty t x, ctx
 
     | Sy.Op Sy.Real_of_int, [x] ->
+      mk_partial_interpretation_1 (fun d -> d) coef p ty t x, ctx
+
+    | Sy.Op Sy.Int_of_real, [x] ->
       mk_partial_interpretation_1 (fun d -> d) coef p ty t x, ctx
 
     | Sy.Op Sy.Int_floor, [x] ->

@@ -68,6 +68,8 @@ let make_adequate_app s l ty =
       | "abs_int", [_] ->  Sy.Op Sy.Abs_int, l
       | "abs_real", [_] ->  Sy.Op Sy.Abs_real, l
       | "real_of_int", [_] -> Sy.Op Sy.Real_of_int, l
+      | "int_of_real", [_] -> Sy.Op Sy.Int_of_real, l
+      | "is_int", [_] -> Sy.Op Sy.Is_int, l
       | "int_floor", [_] -> Sy.Op Sy.Int_floor, l
       | "int_ceil", [_] -> Sy.Op Sy.Int_ceil, l
       | "max_real", [_;_] -> Sy.Op Sy.Max_real, l
