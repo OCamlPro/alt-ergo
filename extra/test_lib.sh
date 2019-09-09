@@ -27,7 +27,7 @@ ocamlopt -o lib_usage \
   -I `ocamlfind query zarith` \
   -I `ocamlfind query ocplib-simplex` \
   -I `ocamlfind query psmt2-frontend` \
-  -I `ocamlfind query camlzip` \
+  -I `ocamlfind query zip` \
   -I $lib_path \
   nums.cmxa zarith.cmxa ocplibSimplex.cmxa psmt2Frontend.cmxa \
   unix.cmxa str.cmxa zip.cmxa dynlink.cmxa \
