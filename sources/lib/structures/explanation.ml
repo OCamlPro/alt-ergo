@@ -94,6 +94,12 @@ let fresh_exp =
     incr r;
     Fresh !r
 
+let filter_fresh t =
+  S.filter (function
+      | Fresh _ -> false
+      | _ -> true
+    ) t
+
 let remove_fresh fe s =
   if S.mem fe s then Some (S.remove fe s)
   else None
