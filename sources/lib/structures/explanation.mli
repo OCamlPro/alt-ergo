@@ -57,7 +57,8 @@ val fresh_exp : unit -> exp
 
 val filter_fresh : t -> t
 (** Filter out fresh exp from the set of explanations.
-    Guarantees physical equality if no elements has been filtered (ocaml >= 4.03) *)
+    Guarantees physical equality if no elements has been filtered
+    (ocaml >= 4.03). *)
 
 val remove_fresh : exp -> t -> t option
 
