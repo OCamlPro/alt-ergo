@@ -445,6 +445,23 @@ let exclude =
     let uints1_c = union_intervals {uints1 with ints = l_c} in
     intersect uints1_c uints2
 
+let add_borne b1 b2 =
+  match b1,b2 with
+  | Minfty, Pinfty | Pinfty, Minfty -> assert false
+  | Minfty, _ | _, Minfty -> Minfty
+  | Pinfty, _ | _, Pinfty -> Pinfty
+  | Large (v1, e1), Large (v2, e2) ->
+    Large (Q.add v1 v2, Ex.union e1 e2)
+  | (Large (v1, e1) | Strict (v1, e1)), (Large (v2, e2) | Strict (v2, e2)) ->
+    Strict (Q.add v1 v2, Ex.union e1 e2)
+
+let translate c ((b1, b2) as b) =
+  if Q.(equal zero) c then b
+  else begin
+    let tmp = Large (c, Ex.empty) in
+    (add_borne b1 tmp, add_borne b2 tmp)
+  end
+
 let scale_interval_zero n (b1, b2) =
   assert (Q.sign n = 0);
   Large (Q.zero, explain_borne b1), Large (Q.zero, explain_borne b2)
@@ -463,34 +480,31 @@ let scale_interval_neg n (b1, b2) =
   minus_borne (scale_borne_non_zero (Q.minus n) b2),
   minus_borne (scale_borne_non_zero (Q.minus n) b1)
 
-let scale n uints =
+
+let affine_scale ~const ~coef uints =
   Options.tool_req 4 "TR-Arith-Axiomes scale";
-  if Q.equal n Q.one then uints
+  if Q.equal coef Q.one then
+    { uints with ints = List.map (translate const) uints.ints; }
   else
-    let sgn = Q.sign n in
+    let sgn = Q.sign coef in
     let aux =
       if sgn = 0 then scale_interval_zero
       else if sgn > 0 then scale_interval_pos
       else scale_interval_neg
     in
-    let rl = List.rev_map (aux n) uints.ints in
+    let rl = List.rev_map (fun bornes ->
+        translate const (aux coef bornes)
+      ) uints.ints in
     let l =
-      if uints.is_int then rev_normalize_int_bounds rl uints.expl n
+      if uints.is_int then rev_normalize_int_bounds rl uints.expl coef
       else List.rev rl
     in
     let res = union_intervals { uints with ints = l } in
     assert (res.ints != []);
     res
 
-let add_borne b1 b2 =
-  match b1,b2 with
-  | Minfty, Pinfty | Pinfty, Minfty -> assert false
-  | Minfty, _ | _, Minfty -> Minfty
-  | Pinfty, _ | _, Pinfty -> Pinfty
-  | Large (v1, e1), Large (v2, e2) ->
-    Large (Q.add v1 v2, Ex.union e1 e2)
-  | (Large (v1, e1) | Strict (v1, e1)), (Large (v2, e2) | Strict (v2, e2)) ->
-    Strict (Q.add v1 v2, Ex.union e1 e2)
+let scale coef uints =
+  affine_scale ~const:Q.zero ~coef uints
 
 let add_interval is_int l (b1,b2) =
   List.fold_right

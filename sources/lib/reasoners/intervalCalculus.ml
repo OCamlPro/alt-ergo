@@ -402,26 +402,33 @@ end
    normalized polys *)
 let generic_find xp env =
   let is_mon = is_alien xp in
+  if debug_fm () then
+    fprintf fmt "generic_find: %a ... " X.print xp;
   try
     if not is_mon then raise Not_found;
-    let i, use = MX.n_find xp env.monomes in i, use, is_mon
+    let i, use = MX.n_find xp env.monomes in
+    if debug_fm () then fprintf fmt "found@.";
+    i, use, is_mon
   with Not_found ->
     (* according to this implem, it means that we can find aliens in polys
        but not in monomes. FIX THIS => an interval of x in monomes and in
        polys may be differents !!! *)
+    if debug_fm () then
+      fprintf fmt "not_found@.";
     let p0 = poly_of xp in
     let p, c = P.separate_constant p0 in
     let p, c0, d = P.normal_form_pos p in
+    if debug_fm() then
+      fprintf fmt "normalized into %a + %a * %a@."
+        Q.print c Q.print d P.print p;
     assert (Q.sign d <> 0 && Q.sign c0 = 0);
     let ty = P.type_info p0 in
     let ip =
       try MP.n_find p env.polynomes with Not_found -> I.undefined ty
     in
-    let ip = if Q.is_one d then ip else I.scale d ip in
-    let ip =
-      if Q.is_zero c then ip
-      else I.add ip (I.point c ty Explanation.empty)
-    in
+    if debug_fm() then
+      fprintf fmt "scaling %a by %a@." I.print ip Q.print d;
+    let ip = I.affine_scale ~const:c ~coef:d ip in
     ip, SX.empty, is_mon
 
 
@@ -515,13 +522,21 @@ module Debug = struct
       fprintf fmt "\t0@.@."
     end
 
-  let tighten_interval_modulo_eq p1 p2 i1 i2 b1 b2 j =
+  let tighten_interval_modulo_eq_begin p1 p2 =
     if debug_fm () then begin
       fprintf fmt "@.[fm] tighten intervals modulo eq: %a = %a@."
         P.print p1 P.print p2;
+    end
+
+  let tighten_interval_modulo_eq_middle p1 p2 i1 i2 j =
+    if debug_fm () then begin
       fprintf fmt "  %a has interval %a@." P.print p1 I.print i1;
       fprintf fmt "  %a has interval %a@." P.print p2 I.print i2;
       fprintf fmt "  intersection is %a@." I.print j;
+    end
+
+  let tighten_interval_modulo_eq_end p1 p2 b1 b2 =
+    if debug_fm () then begin
       if b1 then fprintf fmt "  > improve interval of %a@.@." P.print p1;
       if b2 then fprintf fmt "  > improve interval of %a@.@." P.print p2;
       if not b1 && not b2 then fprintf fmt "  > no improvement@.@."
@@ -1384,12 +1399,14 @@ let tighten_eq_bounds env r1 r2 p1 p2 origin_eq expl =
     | Th_util.CS _ | Th_util.NCS _ -> env
     | Th_util.Subst | Th_util.Other ->
       (* Subst is needed, but is Other needed ?? or is it subsumed ? *)
+      Debug.tighten_interval_modulo_eq_begin p1 p2;
       let i1, us1, is_mon_1 = generic_find r1 env in
       let i2, us2, is_mon_2 = generic_find r2 env in
       let j = I.add_explanation (I.intersect i1 i2) expl in
+      Debug.tighten_interval_modulo_eq_middle p1 p2 i1 i2 j;
       let impr_i1 = I.is_strict_smaller j i1 in
       let impr_i2 = I.is_strict_smaller j i2 in
-      Debug.tighten_interval_modulo_eq p1 p2 i1 i2 impr_i1 impr_i2 j;
+      Debug.tighten_interval_modulo_eq_end p1 p2 impr_i1 impr_i2;
       let env =
         if impr_i1 then generic_add r1 j us1 is_mon_1 env else env
       in
