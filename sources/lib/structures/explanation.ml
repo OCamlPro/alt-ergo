@@ -94,10 +94,10 @@ let fresh_exp =
     incr r;
     Fresh !r
 
-let filter_fresh t =
-  S.filter (function
-      | Fresh _ -> false
-      | _ -> true
+let exists_fresh t =
+  S.exists (function
+      | Fresh _ -> true
+      | _ -> false
     ) t
 
 let remove_fresh fe s =

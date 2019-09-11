@@ -55,10 +55,8 @@ val fold_atoms : (exp -> 'a -> 'a )  -> t -> 'a -> 'a
 
 val fresh_exp : unit -> exp
 
-val filter_fresh : t -> t
-(** Filter out fresh exp from the set of explanations.
-    Guarantees physical equality if no elements has been filtered
-    (ocaml >= 4.03). *)
+val exists_fresh : t -> bool
+(** Does there exists a [Fresh _] exp in an explanation set. *)
 
 val remove_fresh : exp -> t -> t option
 
