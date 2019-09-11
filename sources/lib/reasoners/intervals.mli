@@ -65,6 +65,13 @@ val add : t -> t -> t
 
 val scale : Numbers.Q.t -> t -> t
 
+val affine_scale : const:Numbers.Q.t -> coef:Numbers.Q.t -> t -> t
+(** Perform an affine transformation on the given bounds.
+    Suposing input bounds (b1, b2), this will return
+    (const + coef * b1, const + coef * b2).
+    This function is useful to avoid the incorrect roundings that
+    can take place when scaling down an integer range. *)
+
 val sub : t -> t -> t
 
 val merge : t -> t -> t
