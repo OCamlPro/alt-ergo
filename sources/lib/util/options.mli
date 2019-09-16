@@ -238,6 +238,17 @@ end
 val cs_steps : unit -> int
 val incr_cs_steps : unit -> unit
 
+val get_steps : unit -> int
+(** Return the number of steps *)
+
+val reset_steps : unit -> unit
+(** Reset the global steps counter *)
+
+val incr_and_check_steps : int -> unit
+(** Increment the number of steps by cpt and then check if this number is
+    inbound by the -steps-bound option.
+    Exit if the number of steps is reached *)
+
 (** open Options in every module to hide polymorphic versions of Pervasives **)
 val (<>) : int -> int -> bool
 val (=) : int -> int -> bool

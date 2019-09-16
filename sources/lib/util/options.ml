@@ -226,6 +226,11 @@ module M = struct
 
   let set_default_input_lang lang = default_input_lang := "." ^ lang
 
+  let set_steps_bounds n =
+    if n >= 0 then steps_bound := n
+    else
+      raise (Arg.Bad ("-steps-bound argument should be positive"))
+
   let timers = ref false
 
   let usage = "usage: alt-ergo [options] file.<why|mlw>"
@@ -401,7 +406,7 @@ module M = struct
     "  enable case-split for Algebraic Datatypes theory";
 
     "-steps-bound",
-    Arg.Set_int steps_bound,
+    Arg.Int set_steps_bounds,
     " <n> set the maximum number of steps";
 
     "-enable-assertions",
@@ -755,7 +760,6 @@ let set_type_only b = M.type_only := b
 let set_type_smt2 b = M.type_smt2 := b
 let set_parse_only b = M.parse_only := b
 let set_frontend s = M.frontend := s
-let set_steps_bound b = M.steps_bound := b
 let set_age_bound b = M.age_bound := b
 let set_no_user_triggers b = M.no_user_triggers := b
 let set_verbose b = M.verbose := b
@@ -766,6 +770,7 @@ let set_no_Ematching b = M.no_Ematching := b
 let set_no_NLA b = M.no_NLA := b
 let set_no_ac b = M.no_ac := b
 let set_normalize_instances b = M.normalize_instances := b
+let set_steps_bound b = M.steps_bound := b
 let set_nocontracongru b = M.nocontracongru := b
 let set_term_like_pp b = M.term_like_pp := b
 let set_all_models b = M.all_models := b
@@ -947,6 +952,24 @@ end
 let cs_steps_cpt = ref 0
 let cs_steps () = !cs_steps_cpt
 let incr_cs_steps () = incr cs_steps_cpt
+
+let steps = ref 0
+let get_steps () = !steps
+let reset_steps () = steps := 0
+let incr_and_check_steps cpt =
+  if cpt < 0 then
+    begin
+      Format.eprintf "Steps can only be positive@.";
+      exit 1
+    end;
+  steps := !steps + cpt;
+  if steps_bound () <> (-1) && (0 > !steps || !steps >= steps_bound ()) then
+    begin
+      Format.eprintf "Steps limit reached: %d@."
+        (if !steps > 0 then !steps else
+           steps_bound ());
+      exit 1
+    end
 
 
 (** open Options in every module to hide polymorphic versions of Pervasives **)

@@ -72,7 +72,7 @@ let () =
          Sys.set_signal sign
            (Sys.Signal_handle
               (fun _ ->
-                 Profiling.print true (SAT.get_steps ()) timers fmt;
+                 Profiling.print true (Options.get_steps ()) timers fmt;
                  exit 1
               )
            )
@@ -85,7 +85,7 @@ let () =
     Sys.set_signal Sys.sigprof (*-21*)
       (Sys.Signal_handle
          (fun _ ->
-            Profiling.print false (SAT.get_steps ()) timers fmt;
+            Profiling.print false (Options.get_steps ()) timers fmt;
          )
       )
 
@@ -129,7 +129,7 @@ let solve all_context (cnf, goal_name) =
         (SAT.empty (), true, Explanation.empty) cnf
     in
     if Options.profiling() then
-      Profiling.print true (SAT.get_steps ()) timers fmt
+      Profiling.print true (Options.get_steps ()) timers fmt
   with Util.Timeout ->
     if not (Options.timelimit_per_goal()) then exit 142
 
@@ -169,12 +169,12 @@ let () =
       let preludes = Options.preludes () in
       I.parse_files ~filename ~preludes
     with Util.Timeout ->
-      FE.print_status (FE.Timeout None) 0L;
+      FE.print_status (FE.Timeout None) 0;
       exit 142
   in
   let all_used_context = FE.init_all_used_context () in
   if Options.timelimit_per_goal() then
-    FE.print_status FE.Preprocess 0L;
+    FE.print_status FE.Preprocess 0;
   let typing_loop state p =
     if parse_only () then state else begin
       try

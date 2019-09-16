@@ -170,7 +170,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
   }
 
-  let steps = ref 0L
   let all_models_sat_env = ref None
   let latest_saved_env = ref None
   let terminated_normally = ref false
@@ -846,13 +845,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       in
       let utbox = if env.dlevel = 0 then tbox else utbox in
       let inst = Inst.add_terms inst new_terms (mk_gf E.vrai "" mf gf) in
-      steps := Int64.add (Int64.of_int cpt) !steps;
-      if steps_bound () <> -1
-      && Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
-        begin
-          printf "Steps limit reached: %Ld@." !steps;
-          exit 1
-        end;
+      Options.incr_and_check_steps cpt;
       { env with tbox = tbox; unit_tbox = utbox; inst = inst }
 
   let propagations ((env, bcp, tcp, ap_delta, lits) as result) =
@@ -1733,7 +1726,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     else assume env fg
 
   let reset_refs () =
-    steps := 0L;
+    Options.reset_steps ();
     all_models_sat_env := None;
     latest_saved_env := None;
     terminated_normally := false
@@ -1777,8 +1770,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let empty_with_inst add_inst =
     { (empty ()) with add_inst = add_inst }
-
-  let get_steps () = !steps
 
   let assume_th_elt env th_elt dep =
     {env with tbox = Th.assume_th_elt env.tbox th_elt dep}
