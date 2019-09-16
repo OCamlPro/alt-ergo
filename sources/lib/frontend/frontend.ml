@@ -195,7 +195,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         in
         if debug_unsat_core () then check_produced_unsat_core dep;
         if save_used_context () then output_used_context n dep;
-        print_status (Unsat (d, dep)) (SAT.get_steps ());
+        print_status (Unsat (d, dep)) (Options.get_steps ());
         env, false, dep
 
       | ThAssume ({ Expr.ax_name; _ } as th_elt) ->
@@ -210,20 +210,20 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
     with
     | SAT.Sat t ->
-      print_status (Sat (d,t)) (SAT.get_steps ());
+      print_status (Sat (d,t)) (Options.get_steps ());
       if model () then SAT.print_model ~header:true std_formatter t;
       env , consistent, dep
     | SAT.Unsat dep' ->
       let dep = Ex.union dep dep' in
       if debug_unsat_core () then check_produced_unsat_core dep;
-      print_status (Inconsistent d) (SAT.get_steps ());
+      print_status (Inconsistent d) (Options.get_steps ());
       env , false, dep
     | SAT.I_dont_know t ->
-      print_status (Unknown (d, t)) (SAT.get_steps ());
+      print_status (Unknown (d, t)) (Options.get_steps ());
       if model () then SAT.print_model ~header:true std_formatter t;
       env , consistent, dep
     | Util.Timeout as e ->
-      print_status (Timeout (Some d)) (SAT.get_steps ());
+      print_status (Timeout (Some d)) (Options.get_steps ());
       raise e
 
   let goal_name d =

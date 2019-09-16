@@ -238,6 +238,10 @@ end
 val cs_steps : unit -> int
 val incr_cs_steps : unit -> unit
 
+val get_steps : unit -> int
+val reset_steps : unit -> unit
+val incr_and_check_steps : int -> unit
+
 (** open Options in every module to hide polymorphic versions of Pervasives **)
 val (<>) : int -> int -> bool
 val (=) : int -> int -> bool

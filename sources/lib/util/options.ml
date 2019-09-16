@@ -948,6 +948,19 @@ let cs_steps_cpt = ref 0
 let cs_steps () = !cs_steps_cpt
 let incr_cs_steps () = incr cs_steps_cpt
 
+let steps = ref 0
+let get_steps () = !steps
+let reset_steps () = steps := 0
+let incr_and_check_steps cpt =
+  steps := !steps + cpt;
+  if steps_bound () <> (-1) && (0 > !steps || !steps >= steps_bound ()) then
+    begin
+      Format.printf "Steps limit reached: %d@."
+        (if !steps > 0 then !steps else
+           steps_bound ());
+      exit 1
+    end
+
 
 (** open Options in every module to hide polymorphic versions of Pervasives **)
 let (<>) (a: int) (b: int) = a <> b
