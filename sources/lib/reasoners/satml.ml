@@ -65,7 +65,7 @@ module type SAT_ML = sig
   val empty : unit -> t
 
   val reset_steps : unit -> unit
-  val get_steps : unit -> int64
+  val get_steps : unit -> int
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
   val decision_level : t -> int
@@ -223,9 +223,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   exception Conflict of clause
   (*module Make (Dummy : sig end) = struct*)
 
-  let steps = ref 0L
+  let steps = ref 0
 
-  let reset_steps () = steps := 0L
+  let reset_steps () = steps := 0
   let get_steps () = !steps
 
   let empty () =
@@ -775,11 +775,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           Th.assume ~ordered:false
             (List.rev facts) env.unit_tenv
         in
-        steps := Int64.add (Int64.of_int cpt) !steps;
+        steps := cpt + !steps;
         if steps_bound () <> -1
-        && Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
+        && compare !steps (steps_bound ()) > 0 then
           begin
-            printf "Steps limit reached: %Ld@." !steps;
+            printf "Steps limit reached: %d@." !steps;
             exit 1
           end;
         env.unit_tenv <- t;
@@ -845,11 +845,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             Th.assume ~ordered:(not (Options.cdcl_tableaux_th ()))
               (List.rev !facts) env.tenv
           in
-          steps := Int64.add (Int64.of_int cpt) !steps;
+          steps := cpt + !steps;
           if steps_bound () <> -1
-          && Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
+          && compare !steps (steps_bound ()) > 0 then
             begin
-              printf "Steps limit reached: %Ld@." !steps;
+              printf "Steps limit reached: %d@." !steps;
               exit 1
             end;
           env.tenv <- t;

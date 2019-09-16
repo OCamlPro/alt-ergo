@@ -57,7 +57,7 @@ module type S = sig
   val print_model : header:bool -> Format.formatter -> t -> unit
 
   val reset_refs : unit -> unit
-  val get_steps : unit -> int64
+  val get_steps : unit -> int
 
 end
 

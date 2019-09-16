@@ -169,12 +169,12 @@ let () =
       let preludes = Options.preludes () in
       I.parse_files ~filename ~preludes
     with Util.Timeout ->
-      FE.print_status (FE.Timeout None) 0L;
+      FE.print_status (FE.Timeout None) 0;
       exit 142
   in
   let all_used_context = FE.init_all_used_context () in
   if Options.timelimit_per_goal() then
-    FE.print_status FE.Preprocess 0L;
+    FE.print_status FE.Preprocess 0;
   let typing_loop state p =
     if parse_only () then state else begin
       try

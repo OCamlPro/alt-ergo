@@ -170,7 +170,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
   }
 
-  let steps = ref 0L
+  let steps = ref 0
   let all_models_sat_env = ref None
   let latest_saved_env = ref None
   let terminated_normally = ref false
@@ -846,11 +846,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       in
       let utbox = if env.dlevel = 0 then tbox else utbox in
       let inst = Inst.add_terms inst new_terms (mk_gf E.vrai "" mf gf) in
-      steps := Int64.add (Int64.of_int cpt) !steps;
-      if steps_bound () <> -1
-      && Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
+      steps := cpt + !steps;
+      if (steps_bound ()) <> (-1)
+      && compare !steps (steps_bound ()) > 0 then
         begin
-          printf "Steps limit reached: %Ld@." !steps;
+          printf "Steps limit reached: %d@." !steps;
           exit 1
         end;
       { env with tbox = tbox; unit_tbox = utbox; inst = inst }
@@ -1733,7 +1733,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     else assume env fg
 
   let reset_refs () =
-    steps := 0L;
+    steps := 0;
     all_models_sat_env := None;
     latest_saved_env := None;
     terminated_normally := false

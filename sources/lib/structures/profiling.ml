@@ -267,9 +267,9 @@ let columns =
 
     "Steps", "Number of Steps", 14, None,
     (fun steps gtime _ sz ->
-       let avg = int_of_float (Int64.to_float steps /. gtime) in
+       let avg = int_of_float ((float_of_int steps) /. gtime) in
        sprintf "%s~%s"
-         (string_resize (sprintf "%Ld" steps) (sz-7))
+         (string_resize (sprintf "%d" steps) (sz-7))
          (string_resize (sprintf "%d/s" avg) 6)
     );
 

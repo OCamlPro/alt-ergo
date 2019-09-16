@@ -57,7 +57,7 @@ module type SAT_ML = sig
   val empty : unit -> t
 
   val reset_steps : unit -> unit
-  val get_steps : unit -> int64
+  val get_steps : unit -> int
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
   val decision_level : t -> int

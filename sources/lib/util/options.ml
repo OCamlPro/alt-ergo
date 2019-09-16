@@ -755,7 +755,6 @@ let set_type_only b = M.type_only := b
 let set_type_smt2 b = M.type_smt2 := b
 let set_parse_only b = M.parse_only := b
 let set_frontend s = M.frontend := s
-let set_steps_bound b = M.steps_bound := b
 let set_age_bound b = M.age_bound := b
 let set_no_user_triggers b = M.no_user_triggers := b
 let set_verbose b = M.verbose := b
@@ -766,6 +765,7 @@ let set_no_Ematching b = M.no_Ematching := b
 let set_no_NLA b = M.no_NLA := b
 let set_no_ac b = M.no_ac := b
 let set_normalize_instances b = M.normalize_instances := b
+let set_steps_bound b = M.steps_bound := b
 let set_nocontracongru b = M.nocontracongru := b
 let set_term_like_pp b = M.term_like_pp := b
 let set_all_models b = M.all_models := b

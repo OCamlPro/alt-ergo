@@ -47,12 +47,12 @@ module type S = sig
     | Preprocess
 
   val process_decl:
-    (status -> int64 -> unit) ->
+    (status -> int -> unit) ->
     used_context ->
     sat_env * bool * Ex.t -> Commands.sat_tdecl ->
     sat_env * bool * Ex.t
 
-  val print_status : status -> int64 -> unit
+  val print_status : status -> int -> unit
 
   val init_all_used_context : unit -> used_context
   val choose_used_context : used_context -> goal_name:string -> used_context
@@ -237,7 +237,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Unsat (d, dep) ->
       let loc = d.st_loc in
       if Options.answers_with_locs () then
-        eprintf "; %aValid (%2.4f) (%Ld steps)%s@."
+        eprintf "; %aValid (%2.4f) (%d steps)%s@."
           Loc.report loc time steps (goal_name d);
       printf "unsat@.";
       if unsat_core() && not (debug_unsat_core()) && not (save_used_context())
@@ -256,33 +256,33 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Unknown (d, _) ->
       let loc = d.st_loc in
       if Options.answers_with_locs () then
-        eprintf "; %aI don't know (%2.4f) (%Ld steps)%s@."
+        eprintf "; %aI don't know (%2.4f) (%d steps)%s@."
           Loc.report loc time steps (goal_name d);
       printf "unknown@."
 
     | Sat (d, _) ->
       let loc = d.st_loc in
       if Options.answers_with_locs () then
-        eprintf "; %aInvalid (%2.4f) (%Ld steps)%s@."
+        eprintf "; %aInvalid (%2.4f) (%d steps)%s@."
           Loc.report loc time steps (goal_name d);
       printf "sat@."
 
     | Timeout (Some d) ->
       let loc = d.st_loc in
       if Options.answers_with_locs () then
-        eprintf "; %aTimeout (%2.4f) (%Ld steps)%s@."
+        eprintf "; %aTimeout (%2.4f) (%d steps)%s@."
           Loc.report loc time steps (goal_name d);
       printf "timeout@."
 
     | Timeout None ->
       if Options.answers_with_locs () then
-        eprintf "; %aTimeout (%2.4f) (%Ld steps)@."
+        eprintf "; %aTimeout (%2.4f) (%d steps)@."
           Loc.report Loc.dummy time steps;
       printf "timeout@."
 
     | Preprocess ->
       if Options.answers_with_locs () then
-        eprintf "; %aPreprocessing (%2.4f) (%Ld steps)@."
+        eprintf "; %aPreprocessing (%2.4f) (%d steps)@."
           Loc.report Loc.dummy time steps
 
 
@@ -295,7 +295,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     match status with
     | Unsat (d, dep) ->
       let loc = d.st_loc in
-      printf "%aValid (%2.4f) (%Ld steps)%s@."
+      printf "%aValid (%2.4f) (%d steps)%s@."
         report_loc loc time steps (goal_name d);
       if unsat_core() && not (debug_unsat_core()) && not (save_used_context())
       then
@@ -308,25 +308,25 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
     | Sat (d, _) ->
       let loc = d.st_loc in
-      printf "%aInvalid (%2.4f) (%Ld steps)%s@."
+      printf "%aInvalid (%2.4f) (%d steps)%s@."
         report_loc loc time steps (goal_name d)
 
     | Unknown (d, _) ->
       let loc = d.st_loc in
-      printf "%aI don't know (%2.4f) (%Ld steps)%s@."
+      printf "%aI don't know (%2.4f) (%d steps)%s@."
         report_loc loc time steps (goal_name d)
 
     | Timeout (Some d) ->
       let loc = d.st_loc in
-      printf "%aTimeout (%2.4f) (%Ld steps)%s@."
+      printf "%aTimeout (%2.4f) (%d steps)%s@."
         report_loc loc time steps (goal_name d);
 
     | Timeout None ->
-      printf "%aTimeout (%2.4f) (%Ld steps)@."
+      printf "%aTimeout (%2.4f) (%d steps)@."
         report_loc Loc.dummy time steps;
 
     | Preprocess ->
-      printf "%aPreprocessing (%2.4f) (%Ld steps)@."
+      printf "%aPreprocessing (%2.4f) (%d steps)@."
         report_loc Loc.dummy time steps
 
   let print_status status steps =
