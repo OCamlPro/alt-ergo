@@ -44,5 +44,5 @@ val register_produced_terms :
   Expr.Set.t -> (* produced that are new *)
   unit
 
-val print : bool -> int64 -> Timers.t -> Format.formatter -> unit
+val print : bool -> int -> Timers.t -> Format.formatter -> unit
 val switch : unit -> unit
