@@ -959,13 +959,13 @@ let reset_steps () = steps := 0
 let incr_and_check_steps cpt =
   if cpt < 0 then
     begin
-      Format.printf "Steps can only be positive@.";
+      Format.eprintf "Steps can only be positive@.";
       exit 1
     end;
   steps := !steps + cpt;
   if steps_bound () <> (-1) && (0 > !steps || !steps >= steps_bound ()) then
     begin
-      Format.printf "Steps limit reached: %d@."
+      Format.eprintf "Steps limit reached: %d@."
         (if !steps > 0 then !steps else
            steps_bound ());
       exit 1
