@@ -226,6 +226,11 @@ module M = struct
 
   let set_default_input_lang lang = default_input_lang := "." ^ lang
 
+  let set_steps_bounds n =
+    if n >= 0 then steps_bound := n
+    else
+      raise (Arg.Bad ("-steps-bound argument should be positive"))
+
   let timers = ref false
 
   let usage = "usage: alt-ergo [options] file.<why|mlw>"
@@ -401,7 +406,7 @@ module M = struct
     "  enable case-split for Algebraic Datatypes theory";
 
     "-steps-bound",
-    Arg.Set_int steps_bound,
+    Arg.Int set_steps_bounds,
     " <n> set the maximum number of steps";
 
     "-enable-assertions",
@@ -952,6 +957,11 @@ let steps = ref 0
 let get_steps () = !steps
 let reset_steps () = steps := 0
 let incr_and_check_steps cpt =
+  if cpt < 0 then
+    begin
+      Format.printf "Steps can only be positive@.";
+      exit 1
+    end;
   steps := !steps + cpt;
   if steps_bound () <> (-1) && (0 > !steps || !steps >= steps_bound ()) then
     begin
