@@ -324,7 +324,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let _tbox, l =
       Th.theories_instances
         ~do_syntactic_matching t_match tbox (selector env) env.nb_mrounds 0
-        [@ocaml.ppwarning "TODO: modifications made in tbox are lost! improve?"]
+      [@ocaml.ppwarning "TODO: modifications made in tbox are lost! improve?"]
     in
     List.fold_left reduce_filters acc l, (match l with [] -> false | _ -> true)
 
@@ -629,9 +629,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     SE.union (atoms_from_lazy_sat ~frugal:true env)
       (*otherwise, we loose atoms that abstract internal axioms *)
       (aux accu FF.vrai)
-      [@ocaml.ppwarning
-        "improve terms / atoms extraction in lazy/non-lazy \
-         and greedy/non-greedy mode. Separate atoms from terms !"]
+    [@ocaml.ppwarning
+      "improve terms / atoms extraction in lazy/non-lazy \
+       and greedy/non-greedy mode. Separate atoms from terms !"]
 
   let atoms_from_bmodel env =
     ME.fold (fun f _ sa -> (E.atoms_rec_of_form ~only_ground:false) f sa)
@@ -645,7 +645,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | true,  true  -> atoms_from_lazy_greedy env
     in
     SE.elements sa
-      [@ocaml.ppwarning "Issue for greedy: terms inside lemmas not extracted"]
+    [@ocaml.ppwarning "Issue for greedy: terms inside lemmas not extracted"]
 
   let terms_from_dec_proc env =
     let terms = Th.extract_ground_terms (SAT.current_tbox env.satml) in
@@ -659,8 +659,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          try (fst (ME.find a env.ground_preds)) :: acc
          with Not_found -> acc
       )acc sa
-      [@ocaml.ppwarning "!!! Possibles issues du to replacement of atoms \
-                         that are facts with TRUE by mk_lit (and simplify)"]
+    [@ocaml.ppwarning "!!! Possibles issues du to replacement of atoms \
+                       that are facts with TRUE by mk_lit (and simplify)"]
 
 
   let new_instances use_cs env sa acc =
@@ -691,7 +691,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         match ff with
         | None    ->
           env, acc
-            [@ocaml.ppwarning "TODO: should be assert failure?"]
+          [@ocaml.ppwarning "TODO: should be assert failure?"]
 
         | Some ff ->
           if SAT.exists_in_lazy_cnf env.satml ff then env, acc
@@ -789,7 +789,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     else
       try
         let f = E.vrai
-            [@ocaml.ppwarning "TODO: should fix for unsat cores generation"]
+                [@ocaml.ppwarning "TODO: should fix for unsat cores generation"]
         in
         SAT.set_new_proxies env.satml env.proxies;
         let nbv = FF.nb_made_vars env.ff_hcons_env in
@@ -910,8 +910,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       try
         (*if first_call then SAT.cancel_until 0;*)
         let env = {env with nb_mrounds = env.nb_mrounds + 1}
-            [@ocaml.ppwarning
-              "TODO: first intantiation a la DfsSAT before searching ..."]
+                  [@ocaml.ppwarning
+                    "TODO: first intantiation a la DfsSAT before searching ..."]
         in
         if Options.profiling() then Profiling.instantiation env.nb_mrounds;
         let strat =

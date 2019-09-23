@@ -39,7 +39,7 @@ before_install:
   - opam init --disable-sandboxing --compiler=${OCAML_VERSION}
   - eval `opam config env`
   # Install odoc & ocp-indent
-  - opam install odoc ocp-indent.1.6.1
+  - opam install odoc ocp-indent
   # Set the verbose option *after* compiling the compiler
   # and installing odoc, else the log oveflows
   - export OPAMVERBOSE=1

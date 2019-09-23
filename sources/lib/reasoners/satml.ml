@@ -495,7 +495,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           env.lazy_cnf_queue ((Vec.size env.lazy_cnf_queue) - lvl) true;
         Vec.shrink env.relevants_queue
           ((Vec.size env.relevants_queue) - lvl) true
-          [@ocaml.ppwarning "TODO: try to disable 'fill_with_dummy'"]
+        [@ocaml.ppwarning "TODO: try to disable 'fill_with_dummy'"]
       end;
       (try
          let last_dec =
@@ -1529,12 +1529,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         if not a.is_true && b.neg.is_true then begin (* clause is unit *)
           let mlvl = best_propagation_level env clause in
           enqueue env a mlvl (Some clause);
+          [@ocaml.ppwarning "TODO: add a heavy assert that checks \
+                             that clauses are not redundant, watchs \
+                             are well set, unit and bottom are \
+                             detected ..."]
         end
-            [@ocaml.ppwarning "TODO: add a heavy assert that checks \
-                               that clauses are not redundant, watchs \
-                               are well set, unit and bottom are \
-                               detected ..."]
-
       | [a]   ->
         if debug_sat () && verbose () then
           fprintf fmt "[satML] add_atom: %a@." Atom.pr_atom a;
@@ -1598,9 +1597,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
                assert (sz >= 1);
                if sz = 1 then c :: unit_cnf, nunit_cnf
                else unit_cnf, c :: nunit_cnf
-                                [@ocaml.ppwarning
-                                  "Issue: BAD decision_level, in particular, \
-                                   if minimal-bj is ON"]
+                    [@ocaml.ppwarning
+                      "Issue: BAD decision_level, in particular, \
+                       if minimal-bj is ON"]
           ) (unit_cnf, nunit_cnf) new_v
       in
       env.nb_init_vars <- nbv;

@@ -99,7 +99,7 @@ module Shostak (X : ALIEN) = struct
     | Alien r -> r
     | Constr _ | Tester _ ->
       X.embed u
-        [@ocaml.ppwarning "TODO: canonize Constr(list of selects)"]
+      [@ocaml.ppwarning "TODO: canonize Constr(list of selects)"]
 
     | Select { d_arg; d_name; _ } ->
       match embed d_arg with
@@ -296,7 +296,7 @@ module Shostak (X : ALIEN) = struct
       if !same then is_mine p, acc
       else
         is_mine p, acc
-          [@ocaml.ppwarning "TODO: abstract Selectors: case to test"]
+        [@ocaml.ppwarning "TODO: abstract Selectors: case to test"]
     (* assert false
        should probably reconstruct a new 'p' using args
     *)
@@ -304,12 +304,12 @@ module Shostak (X : ALIEN) = struct
     | Tester { t_arg; _ } ->
       let s_arg, acc = X.abstract_selectors t_arg acc in
       if not (X.equal s_arg t_arg)
-          [@ocaml.ppwarning "TODO: abstract Selectors: case to test"] then
+         [@ocaml.ppwarning "TODO: abstract Selectors: case to test"] then
         assert false;
       is_mine p, acc
 
     | Select ({ d_arg; _ } as s)
-        [@ocaml.ppwarning "TODO: abstract Selectors"] ->
+      [@ocaml.ppwarning "TODO: abstract Selectors"] ->
       (* no need to abstract THIS selector. It's necessiraly
          toplevel in ADTs *)
       (*
@@ -319,7 +319,7 @@ module Shostak (X : ALIEN) = struct
       *)
       let s_arg, acc = X.abstract_selectors d_arg acc in
       if not (X.equal s_arg d_arg)
-          [@ocaml.ppwarning "TODO: abstract Selectors"] then
+         [@ocaml.ppwarning "TODO: abstract Selectors"] then
         assert false;
       let x = is_mine @@ Select {s with d_arg=s_arg} in
       begin match embed x  with
