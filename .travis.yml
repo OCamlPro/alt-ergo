@@ -38,7 +38,7 @@ before_install:
   # Init opam, and the default switch with the right ocaml version
   - opam init --disable-sandboxing --compiler=${OCAML_VERSION}
   - eval `opam config env`
-  # Install odoc & ocp-indent
+  # Install odoc & ocp-indent>1.6.1
   - opam install odoc ocp-indent
   # Set the verbose option *after* compiling the compiler
   # and installing odoc, else the log oveflows
