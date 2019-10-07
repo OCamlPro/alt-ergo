@@ -15,6 +15,7 @@ exception Unsolvable
 exception Cmp of int
 
 module MI : Map.S with type key = int
+module SI : Set.S with type elt = int
 module SS : Set.S with type elt = string
 
 (** Different values for -case-split-policy option:
