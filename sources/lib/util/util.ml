@@ -17,6 +17,9 @@ exception Cmp of int
 module MI = Map.Make(struct type t = int
     let compare (x: int) y = Stdlib.compare x y end)
 
+module SI = Set.Make(struct type t = int
+    let compare (x: int) y = Stdlib.compare x y end)
+
 module SS = Set.Make(String)
 
 
