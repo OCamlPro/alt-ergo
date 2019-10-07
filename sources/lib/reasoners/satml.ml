@@ -353,7 +353,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 *)
 
   let f_weight env i j =
-    Pervasives.(<) (Vec.get env.vars j).weight (Vec.get env.vars i).weight
+    (Stdlib.compare
+       (Vec.get env.vars j).weight (Vec.get env.vars i).weight) < 0
 
   (* unused -- let f_filter env i = (Vec.get env.vars i).level < 0 *)
 
@@ -367,7 +368,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let var_bump_activity env v =
     v.weight <- v.weight +. env.var_inc;
-    if Pervasives.(>) v.weight 1e100 then begin
+    if (Stdlib.compare v.weight 1e100) > 0 then begin
       for i = 0 to env.vars.Vec.sz - 1 do
         (Vec.get env.vars i).weight <- (Vec.get env.vars i).weight *. 1e-100
       done;
@@ -379,7 +380,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let clause_bump_activity env c =
     c.activity <- c.activity +. env.clause_inc;
-    if Pervasives.(>) c.activity 1e20 then begin
+    if (Stdlib.compare c.activity 1e20) > 0 then begin
       for i = 0 to env.learnts.Vec.sz - 1 do
         (Vec.get env.learnts i).activity <-
           (Vec.get env.learnts i).activity *. 1e-20;
@@ -861,7 +862,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
      let f_sort_db c1 c2 =
      let sz1 = Vec.size c1.atoms in
      let sz2 = Vec.size c2.atoms in
-     let c = Pervasives.compare c1.activity c2.activity in
+     let c = Stdlib.compare c1.activity c2.activity in
      if sz1 = sz2 && c = 0 then 0
      else
      if sz1 > 2 && (sz2 = 2 || c < 0) then -1

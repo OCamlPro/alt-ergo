@@ -23,14 +23,15 @@ echo "content of lib == $x"
 # Compile the lib_usage caml file
 cd $git_repo/sources/examples
 ocamlopt -o lib_usage \
+  -I `ocamlfind query stdlib-shims` \
   -I `ocamlfind query num` \
   -I `ocamlfind query zarith` \
   -I `ocamlfind query ocplib-simplex` \
   -I `ocamlfind query psmt2-frontend` \
   -I `ocamlfind query zip` \
   -I $lib_path \
-  nums.cmxa zarith.cmxa ocplibSimplex.cmxa psmt2Frontend.cmxa \
-  unix.cmxa str.cmxa zip.cmxa dynlink.cmxa \
+  stdlib_shims.cmxa nums.cmxa zarith.cmxa ocplibSimplex.cmxa \
+  psmt2Frontend.cmxa unix.cmxa str.cmxa zip.cmxa dynlink.cmxa \
   AltErgoLib.cmxa lib_usage.ml
 
 # Execute the lib usage test

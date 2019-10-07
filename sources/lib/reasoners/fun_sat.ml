@@ -75,7 +75,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         SE.fold
           (fun f mp ->
              let w = var_inc +. try ME.find f mp with Not_found -> 0. in
-             stable := !stable && Pervasives.(<=) w 1e100;
+             stable := !stable && (Stdlib.compare w 1e100) <= 0;
              ME.add f w mp
           )(Ex.bj_formulas_of expl) mp
       in
@@ -118,9 +118,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let dec =
         List.fast_sort
           (fun (_, x1, b1) (_, x2, b2) ->
-             let c = Pervasives.compare b2 b1 in
+             let c = Stdlib.compare b2 b1 in
              if c <> 0 then c
-             else Pervasives.compare x2 x1
+             else Stdlib.compare x2 x1
           )dec
       in
       (*
@@ -1164,7 +1164,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let i = abs (interpretation ()) in
     assert (i = 1 || i = 2 || i = 3);
     if not !(env.model_gen_mode) &&
-       Pervasives.(<>) (Options.interpretation_timelimit ()) 0. then
+       Stdlib.(<>) (Options.interpretation_timelimit ()) 0. then
       begin
         Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
         Options.Time.set_timeout

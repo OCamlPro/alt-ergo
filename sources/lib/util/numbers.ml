@@ -48,8 +48,8 @@ module Q = struct
     else
       let v = to_float q in
       let w =
-        if Pervasives.(<) v min_float then min_float
-        else if Pervasives.(>) v max_float then max_float
+        if (Stdlib.compare v min_float) < 0 then min_float
+        else if (Stdlib.compare v max_float) > 0 then max_float
         else v
       in
       let flt = if n = 2 then sqrt w else w ** (1. /. float n) in
