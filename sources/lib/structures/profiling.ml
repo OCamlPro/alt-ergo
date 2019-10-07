@@ -85,7 +85,7 @@ let state =
 let set_sigprof () =
   let tm =
     let v = Options.profiling_period () in
-    if (Stdlib.compare v 0.) = 1 then v else -. v
+    if (Stdlib.compare v 0.) > 0 then v else -. v
   in
   ignore
     (Unix.setitimer Unix.ITIMER_PROF

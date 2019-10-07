@@ -278,7 +278,8 @@ let rec equal t1 t2 =
   | _ -> false
 
 (*** matching with a substitution mechanism ***)
-module M = Map.Make(struct type t=int let compare = Stdlib.compare end)
+module M =
+  Map.Make(struct type t=int let compare (x: int) y = Stdlib.compare x y end)
 type subst = t M.t
 
 let esubst = M.empty
@@ -607,7 +608,7 @@ let compare_subst = M.compare Stdlib.compare
 let equal_subst = M.equal Stdlib.(=)
 
 module Svty =
-  Set.Make(struct type t = int let compare = Stdlib.compare end)
+  Set.Make(struct type t = int let compare (x: int) y = Stdlib.compare x y end)
 
 module Set =
   Set.Make(struct
