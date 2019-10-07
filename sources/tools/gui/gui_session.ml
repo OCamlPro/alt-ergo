@@ -105,7 +105,8 @@ let read_actions res = function
   | None -> Stack.create ()
 
 
-module SI = Set.Make (struct type t = int let compare = compare end)
+module SI =
+  Set.Make (struct type t = int let compare (x: int) y = Stdlib.compare x y end)
 
 let safe_session actions =
   let l = ref [] in
