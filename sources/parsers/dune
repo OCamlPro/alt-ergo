@@ -14,7 +14,7 @@
 (library
     (name             AltErgoParsers)
     (public_name      alt-ergo-parsers)
-    (libraries        camlzip dynlink psmt2-frontend alt-ergo-lib)
+    (libraries        camlzip dynlink psmt2-frontend alt-ergo-lib stdlib-shims)
     (modules
       ; common
       Parsers Parsers_loader MyZip

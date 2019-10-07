@@ -18,7 +18,7 @@ module Default_Unix = struct
   let cur_time () = (times()).tms_utime
 
   let set_timeout ~is_gui timelimit =
-    if Pervasives.(<>) timelimit 0. then
+    if Stdlib.(<>) timelimit 0. then
       let itimer =
         if is_gui then Unix.ITIMER_REAL (* troubles with VIRTUAL *)
         else Unix.ITIMER_VIRTUAL

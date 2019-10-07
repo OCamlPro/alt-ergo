@@ -16,6 +16,7 @@ depends: [
   "ocplib-simplex" {>= "0.4" }
   "zarith"
   "seq"
+  "stdlib-shims"
 ]
 homepage: "http://alt-ergo.ocamlpro.com/"
 dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"

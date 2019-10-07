@@ -124,7 +124,7 @@ let parse_input_file file =
       stdin, Lexing.from_string file_content, false, ext
     else
       let ext = Filename.extension file in
-      if Pervasives.(<>) file "" then
+      if not (String.equal file "") then
         let cin = open_in file in
         cin, Lexing.from_channel cin, true, ext
       else
