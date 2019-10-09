@@ -1447,7 +1447,8 @@ let update_used_by env r1 _r2 _p1 p2 orig _expl eqs =
     let s = MX0.find r1 env.used_by in
     SE.fold (fun t (env,eqs) ->
         match E.term_view t with
-        | E.Term { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
+        | E.Term
+            { E.f = (Sy.Op (Sy.PowReal | Sy.PowInt)); xs = [a; b]; ty; _ } ->
           begin
             match calc_pow a b ty env.new_uf with
               None -> env, eqs
@@ -1699,10 +1700,10 @@ let default_case_split env uf ~for_model =
 let add_used_by x env =
   match X.term_extract x with
   | Some t, _ ->
+      { E.f = (Sy.Op (Sy.PowInt | Sy.PowReal)); xs = [a; b]; ty; _ } ->
     begin
       match E.term_view t with
       | E.Not_a_term _ -> assert false
-      | E.Term { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
         begin
           match calc_pow a b ty env.new_uf with
           | Some (cst,ex) ->

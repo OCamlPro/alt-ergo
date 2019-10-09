@@ -75,7 +75,8 @@ let make_adequate_app s l ty =
       | "min_real", [_;_] -> Sy.Op Sy.Min_real, l
       | "min_int", [_;_] -> Sy.Op Sy.Min_int, l
       | "integer_log2", [_] -> Sy.Op Sy.Integer_log2, l
-      | "pow", [_;_] -> Sy.Op Sy.Pow, l
+      | "**", [_;_] -> Sy.Op Sy.PowInt, l
+      | "**.", [_;_] -> Sy.Op Sy.PowReal, l
 
       (* should not happend thanks to well typedness *)
       | ("float"
