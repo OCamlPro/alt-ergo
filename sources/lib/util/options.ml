@@ -231,6 +231,9 @@ module M = struct
     else
       raise (Arg.Bad ("-steps-bound argument should be positive"))
 
+  let set_gc_policy n =
+    Gc.set { (Gc.get()) with Gc.allocation_policy = n }
+
   let timers = ref false
 
   let usage = "usage: alt-ergo [options] file.<why|mlw>"
@@ -672,6 +675,12 @@ module M = struct
     Arg.Set disable_weaks,
     " Prevent the GC from collecting hashconsed data structrures that are \
      not reachable (useful for more determinism)";
+
+    "-gc-policy",
+    Arg.Int set_gc_policy,
+    " Set the gc policy allocation. 0 is the next-fit policy, 1 is the \
+     first-fit policy, 2 is the best-fit policy. See GC module for more \
+     informations ";
 
     "-enable-restarts",
     Arg.Set enable_restarts,
