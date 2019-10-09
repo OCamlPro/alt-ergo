@@ -100,11 +100,15 @@ end
 
 module Sim = OcplibSimplex.Basic.Make(SimVar)(Numbers.Q)(Explanation)
 
+type used_by = {
+  pow : SE.t MX0.t;
+}
+
 type t = {
   inequations : Oracle.t MPL.t;
   monomes: (I.t * SX.t) MX0.t;
   polynomes : I.t MP0.t;
-  used_by : SE.t MX0.t;
+  used_by : used_by;
   known_eqs : SX.t;
   improved_p : SP.t;
   improved_x : SX.t;
@@ -545,12 +549,15 @@ module Debug = struct
 
 end
 (*BISECT-IGNORE-END*)
+let empty_used_by () = {
+  pow = MX0.empty
+}
 
 let empty classes = {
   inequations = MPL.empty;
   monomes = MX.empty ;
   polynomes = MP.empty ;
-  used_by = MX0.empty;
+  used_by = empty_used_by ();
   known_eqs = SX.empty ;
   improved_p = SP.empty ;
   improved_x = SX.empty ;
@@ -1444,7 +1451,7 @@ let update_used_by env r1 _r2 _p1 p2 orig _expl eqs =
   try
     if orig != Th_util.Subst then raise Exit;
     if P.is_const p2 == None then raise Exit;
-    let s = MX0.find r1 env.used_by in
+    let s = MX0.find r1 env.used_by.pow in
     SE.fold (fun t (env,eqs) ->
         match E.term_view t with
         | E.Term
@@ -1696,54 +1703,51 @@ let default_case_split env uf ~for_model =
   | res -> res
 
 (** Add relation between term x and the terms in it. This can allow use to track
-    if x is computable when his subterms values are known. *)
-let add_used_by x env =
-  match X.term_extract x with
-  | Some t, _ ->
+    if x is computable when his subterms values are known.
+    This is currently only done for power *)
+let add_used_by t env =
+  match E.term_view t with
+  | E.Not_a_term _ -> assert false
+  | E.Term
       { E.f = (Sy.Op (Sy.PowInt | Sy.PowReal)); xs = [a; b]; ty; _ } ->
     begin
-      match E.term_view t with
-      | E.Not_a_term _ -> assert false
-        begin
-          match calc_pow a b ty env.new_uf with
-          | Some (cst,ex) ->
-            let s =
-              if ty == Ty.Tint then
-                E.int (Q.to_string cst)
-              else
-                E.real (Q.to_string cst)
-            in
-            let eq = E.mk_eq ~iff:false s t in
-            env, [eq,ex]
-          | None ->
-            let ra = Uf.make env.new_uf a in
-            let rb = Uf.make env.new_uf b in
-            let sra =
-              try MX0.find ra env.used_by
-              with Not_found -> SE.empty in
-            let used_by_ra = MX0.add ra (SE.add t sra) env.used_by in
-            let srb =
-              try MX0.find rb used_by_ra
-              with Not_found -> SE.empty in
-            let used_by_rb = MX0.add rb (SE.add t srb) env.used_by in
-            {env with used_by = used_by_rb}, []
-        end
-      | _ -> env, []
-               [@ocaml.ppwarning "TODO: add other terms such as div!"]
+      match calc_pow a b ty env.new_uf with
+      | Some (cst,ex) ->
+        let s =
+          if ty == Ty.Tint then
+            E.int (Q.to_string cst)
+          else
+            E.real (Q.to_string cst)
+        in
+        let eq = E.mk_eq ~iff:false s t in
+        env, [eq,ex]
+      | None ->
+        let ra = Uf.make env.new_uf a in
+        let rb = Uf.make env.new_uf b in
+        let sra =
+          try MX0.find ra env.used_by.pow
+          with Not_found -> SE.empty in
+        let used_by_ra = MX0.add ra (SE.add t sra) env.used_by.pow in
+        let srb =
+          try MX0.find rb used_by_ra
+          with Not_found -> SE.empty in
+        let used_by_rb = MX0.add rb (SE.add t srb) env.used_by.pow in
+        {env with used_by = {pow = used_by_rb}}, []
     end
-  | None, _ -> env, []
+  | _ -> env, []
+           [@ocaml.ppwarning "TODO: add other terms such as div!"]
 
 let add =
   let are_eq t1 t2 =
     if E.equal t1 t2 then Some (Explanation.empty, []) else None
   in
-  fun env new_uf r _ ->
+  fun env new_uf r t ->
     try
       let env = {env with new_uf} in
       if is_num r then
-        let env, eqs = add_used_by r env in
-        init_monomes_of_poly are_eq env
-          (poly_of r) SX.empty Explanation.empty, eqs
+        let env = init_monomes_of_poly are_eq env
+            (poly_of r) SX.empty Explanation.empty in
+        add_used_by t env
       else env, []
     with I.NotConsistent expl ->
       Debug.inconsistent_interval expl ;
