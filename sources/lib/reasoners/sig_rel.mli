@@ -62,7 +62,8 @@ module type RELATION = sig
     (Shostak.Combine.r Xliteral.view * bool * Th_util.lit_origin) list
   (** case_split env returns a list of equalities *)
 
-  val add : t -> Uf.t -> Shostak.Combine.r -> Expr.t -> t
+  val add : t -> Uf.t -> Shostak.Combine.r -> Expr.t ->
+    t * (Expr.t * Explanation.t) list
   (** add a representant to take into account *)
 
   val instantiate :

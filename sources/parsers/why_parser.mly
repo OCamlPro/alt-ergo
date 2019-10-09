@@ -50,7 +50,7 @@
 %token NOT NOTEQ OR PERCENT PLUS PRED PROP
 %token QUOTE REAL UNIT
 %token RIGHTPAR RIGHTSQ RIGHTBR
-%token SLASH
+%token SLASH POW
 %token THEN TIMES TRUE TYPE
 
 /* Precedences */
@@ -63,7 +63,7 @@
 %nonassoc prec_ite
 %left prec_relation EQUAL NOTEQ LT LE GT GE
 %left PLUS MINUS
-%left TIMES SLASH PERCENT AT
+%left TIMES SLASH PERCENT POW AT
 %nonassoc HAT
 %nonassoc uminus
 %nonassoc NOT
@@ -252,6 +252,9 @@ lexpr:
 
 | se1 = lexpr PERCENT se2 = lexpr
    { mk_mod ($startpos, $endpos) se1 se2 }
+
+| se1 = lexpr POW se2 = lexpr
+   { mk_pow ($startpos, $endpos) se1 se2 }
 
 | se1 = lexpr AND se2 = lexpr
    { mk_and ($startpos, $endpos) se1 se2 }

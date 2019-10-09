@@ -40,7 +40,7 @@ type constant =
 type pp_infix =
   | PPand | PPor | PPxor | PPimplies | PPiff
   | PPlt | PPle | PPgt | PPge | PPeq | PPneq
-  | PPadd | PPsub | PPmul | PPdiv | PPmod
+  | PPadd | PPsub | PPmul | PPdiv | PPmod | PPpow
 
 type pp_prefix =
   | PPneg | PPnot
