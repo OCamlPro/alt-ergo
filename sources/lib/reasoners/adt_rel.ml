@@ -320,6 +320,9 @@ let add env (uf:uf) (r:r) t =
     *)
     | _ -> env
 
+let add env (uf:uf) (r:r) t =
+  add env (uf:uf) (r:r) t, []
+
 
 let count_splits env la =
   let nb =

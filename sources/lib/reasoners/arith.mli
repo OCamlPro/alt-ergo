@@ -26,6 +26,14 @@
 (*                                                                            *)
 (******************************************************************************)
 
+(** Compute x^y. Raise Exit if y is not an Int (castable in Int).
+    Raise Exit if the return type is Int but the result of x^y is not.*)
+val calc_power : Numbers.Q.t -> Numbers.Q.t -> Ty.t -> Numbers.Q.t
+
+(** Same as calc_power but return an option.
+    Return None if the exception Exit is raised *)
+val calc_power_opt : Numbers.Q.t -> Numbers.Q.t -> Ty.t -> Numbers.Q.t option
+
 module Type (X : Sig.X ): Polynome.T with type r = X.r
 
 module Shostak

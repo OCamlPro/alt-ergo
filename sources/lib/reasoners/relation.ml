@@ -145,14 +145,14 @@ let case_split env uf ~for_model =
 
 let add env uf r t =
   Options.exec_thread_yield ();
-  {r1=Rel1.add env.r1 uf r t;
-   r2=Rel2.add env.r2 uf r t;
-   r3=Rel3.add env.r3 uf r t;
-   r4=Rel4.add env.r4 uf r t;
-   r5=Rel5.add env.r5 uf r t;
-   r6=Rel6.add env.r6 uf r t;
-   r7=Rel7.add env.r7 uf r t;
-  }
+  let r1, eqs1 =Rel1.add env.r1 uf r t in
+  let r2, eqs2 =Rel2.add env.r2 uf r t in
+  let r3, eqs3 =Rel3.add env.r3 uf r t in
+  let r4, eqs4 =Rel4.add env.r4 uf r t in
+  let r5, eqs5 =Rel5.add env.r5 uf r t in
+  let r6, eqs6 =Rel6.add env.r6 uf r t in
+  let r7, eqs7 =Rel7.add env.r7 uf r t in
+  {r1;r2;r3;r4;r5;r6;r7;},eqs1|@|eqs2|@|eqs3|@|eqs4|@|eqs5|@|eqs6|@|eqs7
 
 
 let instantiate ~do_syntactic_matching t_match env uf selector =
