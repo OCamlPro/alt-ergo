@@ -47,7 +47,7 @@ let update name r f =
 
 (* small wrapper around opam var *)
 let opam_var v =
-  let cmd = Format.asprintf "opam var %s" v in
+  let cmd = Format.asprintf "opam config var %s" v in
   let ch = Unix.open_process_in cmd in
   let s = input_line ch in
   let _ = Unix.close_process_in ch in
