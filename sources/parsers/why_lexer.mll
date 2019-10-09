@@ -197,6 +197,7 @@ rule parse_token = parse
   | "+"   { PLUS }
   | "-"   { MINUS }
   | "*"   { TIMES }
+  | "**." { POWDOT }
   | "**"  { POW }
   | "/"   { SLASH }
   | "%"   { PERCENT }

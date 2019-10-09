@@ -166,16 +166,19 @@ theory Simple_FPA extends FPA =
         k |->
            (
             2. **
-            (integer_log2(
-              max_real(
-                abs_real(i),
+            real_of_int(
+              (integer_log2(
                 max_real(
-                  abs_real(j),
-                  (2. ** - exp_min + prec-1)
-                )
+                  abs_real(i),
+                  max_real(
+                    abs_real(j),
+                    (2. ** real_of_int(- exp_min + prec-1))
+                    )
+                   )
+                 ) - prec (* we can improve by -1 for some rounding modes *)
                )
-             ) - prec (* we can improve by -1 for some rounding modes *)
-           ))
+             )
+           )
      ]
      {
         i <= x,
@@ -198,16 +201,19 @@ theory Simple_FPA extends FPA =
         k |->
            (
             2. **
-            (integer_log2(
-              max_real(
-                abs_real(i),
+            real_of_int(
+              (integer_log2(
                 max_real(
-                  abs_real(j),
-                  (2. ** - exp_min + prec-1)
+                  abs_real(i),
+                  max_real(
+                    abs_real(j),
+                    (2. ** real_of_int(- exp_min + prec-1))
+                   )
+                  )
+                 ) - prec + 1(* we can improve by -1 for some rounding modes *)
                 )
                )
-             ) - prec + 1(* we can improve by -1 for some rounding modes *)
-           ))
+              )
      ]
      {
         i <= x,
@@ -515,9 +521,9 @@ theory Simple_FPA extends FPA =
         is_theory_constant(prec),
         is_theory_constant(exp_min),
         is_theory_constant(mode),
-        real_of_int(x) + (2. ** prec)  in [0., ?],
-        real_of_int(x) - (2. ** prec) in [?, 0.],
-        k |-> (2. ** prec)
+        real_of_int(x) + (2. ** real_of_int(prec))  in [0., ?],
+        real_of_int(x) - (2. ** real_of_int(prec)) in [?, 0.],
+        k |-> (2. ** real_of_int(prec))
      ]
      {
         -k <= real_of_int(x),
@@ -538,7 +544,7 @@ theory Simple_FPA extends FPA =
         is_theory_constant(x),
         x in [i , i],
         k1 |-> abs_real(i),
-        k2 |-> (2. ** integer_log2(abs_real(i)))
+        k2 |-> (2. ** real_of_int(integer_log2(abs_real(i))))
      ].
      k1 >= 1. ->
      k1 = k2 -> (* is pow of 2 ?*)
@@ -556,9 +562,9 @@ theory Simple_FPA extends FPA =
         is_theory_constant(p),
         is_theory_constant(mode),
         float(m, p, mode, x) in ]i, j[,
-        i2 |-> float(m, p, Up, i + (2. ** (2 * (- p)))),
-        j2 |-> float(m, p, Down, j - (2. **(2 * (- p))))
-        (* (2. ** (2 * (- p))) is smaller than any gap between two successive floats *)
+        i2 |-> float(m, p, Up, i + (2. ** real_of_int((2 * (- p))))),
+        j2 |-> float(m, p, Down, j - (2. ** real_of_int((2 * (- p)))))
+        (* (2. ** real_of_int((2 * (- p)))) is smaller than any gap between two successive floats *)
      ]
      {
         float(m, p, mode, x) > i,
