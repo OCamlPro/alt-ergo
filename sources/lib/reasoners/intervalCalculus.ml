@@ -1437,14 +1437,27 @@ let calc_pow a b ty uf =
   let rb, expl_b = Uf.find uf b in
   let pa = poly_of ra in
   let pb = poly_of rb in
-  match P.is_const pa, P.is_const pb with
-  | Some c_x, Some c_y ->
-    begin
-      match Arith.calc_power_opt c_x c_y ty with
-      | None -> None
-      | Some res -> Some (res, Ex.union expl_a expl_b)
-    end
-  | _ -> None
+  try
+    match P.is_const pb with
+    | Some c_y ->
+      let res,expl =
+        (* x¹ -> x *)
+        if Q.equal c_y Q.one then
+          ra, Ex.union expl_a expl_b
+          (* x⁰ -> 1 *)
+        else if Q.equal c_y Q.zero then
+          alien_of (P.create [] Q.one ty), Ex.union expl_a expl_b
+        else
+          match P.is_const pa with
+          | Some c_x ->
+            (* x^y *)
+            let res = Arith.calc_power c_x c_y ty  in
+            alien_of (P.create [] res ty), Ex.union expl_a expl_b
+          | None -> raise Exit
+      in
+      Some (res,expl)
+    | None -> None
+  with Exit -> None
 
 (** Update and compute value of terms in relation with r1 if it is possible *)
 let update_used_by env r1 _r2 _p1 p2 orig _expl eqs =
@@ -1459,9 +1472,8 @@ let update_used_by env r1 _r2 _p1 p2 orig _expl eqs =
           begin
             match calc_pow a b ty env.new_uf with
               None -> env, eqs
-            | Some (cst,ex) ->
+            | Some (y,ex) ->
               let x = X.term_embed t in
-              let y = alien_of (P.create [] cst ty) in
               let eq = L.Eq (x,y) in
               env, (eq, None, ex, Th_util.Other) :: eqs
           end
@@ -1712,15 +1724,14 @@ let add_used_by t env =
       { E.f = (Sy.Op (Sy.PowInt | Sy.PowReal)); xs = [a; b]; ty; _ } ->
     begin
       match calc_pow a b ty env.new_uf with
-      | Some (cst,ex) ->
-        let s =
-          if ty == Ty.Tint then
-            E.int (Q.to_string cst)
-          else
-            E.real (Q.to_string cst)
-        in
-        let eq = E.mk_eq ~iff:false s t in
-        env, [eq,ex]
+      | Some (res,ex) ->
+        begin
+          match X.term_extract res with
+          | Some x, _ ->
+            let eq = E.mk_eq ~iff:false x t in
+            env, [eq,ex]
+          | None, _ -> assert false
+        end
       | None ->
         let ra = Uf.make env.new_uf a in
         let rb = Uf.make env.new_uf b in
