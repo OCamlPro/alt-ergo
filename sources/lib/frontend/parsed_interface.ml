@@ -141,6 +141,9 @@ let mk_div loc e1 e2 =
 let mk_mod loc e1 e2 =
   mk_localized loc (mk_infix e1 PPmod e2)
 
+let mk_pow loc e1 e2 =
+  mk_localized loc (mk_infix e1 PPpow e2)
+
 let mk_minus loc e =
   mk_localized loc (mk_prefix PPneg e)
 

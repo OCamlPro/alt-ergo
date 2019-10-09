@@ -226,7 +226,7 @@ let assume env uf la =
   in
   env, { Sig_rel.assume = eqs; remove = [] }
 
-let add env _ r _ = add_aux env r
+let add env _ r _ = add_aux env r, []
 
 let case_split env _ ~for_model =
   let acc = MX.fold

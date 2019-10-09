@@ -433,7 +433,7 @@ let assume env uf la =
   else assume env uf la
 
 let query _ _ _ = None
-let add env _ _ _ = env
+let add env _ _ _ = env, []
 let print_model _ _ _ = ()
 
 let new_terms env = env.new_terms

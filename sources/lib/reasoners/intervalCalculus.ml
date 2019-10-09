@@ -104,6 +104,7 @@ type t = {
   inequations : Oracle.t MPL.t;
   monomes: (I.t * SX.t) MX0.t;
   polynomes : I.t MP0.t;
+  used_by : SE.t MX0.t;
   known_eqs : SX.t;
   improved_p : SP.t;
   improved_x : SX.t;
@@ -549,6 +550,7 @@ let empty classes = {
   inequations = MPL.empty;
   monomes = MX.empty ;
   polynomes = MP.empty ;
+  used_by = MX0.empty;
   known_eqs = SX.empty ;
   improved_p = SP.empty ;
   improved_x = SX.empty ;
@@ -1423,6 +1425,42 @@ let rec loop_update_intervals are_eq env cpt =
   then env
   else loop_update_intervals are_eq env cpt
 
+let calc_pow a b ty uf =
+  let ra, expl_a = Uf.find uf a in
+  let rb, expl_b = Uf.find uf b in
+  let pa = poly_of ra in
+  let pb = poly_of rb in
+  match P.is_const pa, P.is_const pb with
+  | Some c_x, Some c_y ->
+    begin
+      match Arith.calc_power_opt c_x c_y ty with
+      | None -> None
+      | Some res -> Some (res, Ex.union expl_a expl_b)
+    end
+  | _ -> None
+
+(** Update and compute value of terms in relation with r1 if it is possible *)
+let update_used_by env r1 _r2 _p1 p2 orig _expl eqs =
+  try
+    if orig != Th_util.Subst then raise Exit;
+    if P.is_const p2 == None then raise Exit;
+    let s = MX0.find r1 env.used_by in
+    SE.fold (fun t (env,eqs) ->
+        match E.term_view t with
+        | E.Term { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
+          begin
+            match calc_pow a b ty env.new_uf with
+              None -> env, eqs
+            | Some (cst,ex) ->
+              let x = X.term_embed t in
+              let y = alien_of (P.create [] cst ty) in
+              let eq = L.Eq (x,y) in
+              env, (eq, None, ex, Th_util.Other) :: eqs
+          end
+        | _ -> assert false
+      ) s (env,eqs)
+  with Exit | Not_found -> env, eqs
+
 let assume ~query env uf la =
   Oracle.incr_age ();
   let env = count_splits env la in
@@ -1500,6 +1538,7 @@ let assume ~query env uf la =
              in
              let env, eqs = add_equality are_eq env eqs p expl in
              let env = tighten_eq_bounds env r1 r2 p1 p2 orig expl in
+             let env, eqs = update_used_by env r1 r2 p1 p2 orig expl eqs in
              env, eqs, new_ineqs, rm
 
            | _ -> acc
@@ -1655,6 +1694,44 @@ let default_case_split env uf ~for_model =
     end
   | res -> res
 
+(** Add relation between term x and the terms in it. This can allow use to track
+    if x is computable when his subterms values are known. *)
+let add_used_by x env =
+  match X.term_extract x with
+  | Some t, _ ->
+    begin
+      match E.term_view t with
+      | E.Not_a_term _ -> assert false
+      | E.Term { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
+        begin
+          match calc_pow a b ty env.new_uf with
+          | Some (cst,ex) ->
+            let s =
+              if ty == Ty.Tint then
+                E.int (Q.to_string cst)
+              else
+                E.real (Q.to_string cst)
+            in
+            let eq = E.mk_eq ~iff:false s t in
+            env, [eq,ex]
+          | None ->
+            let ra = Uf.make env.new_uf a in
+            let rb = Uf.make env.new_uf b in
+            let sra =
+              try MX0.find ra env.used_by
+              with Not_found -> SE.empty in
+            let used_by_ra = MX0.add ra (SE.add t sra) env.used_by in
+            let srb =
+              try MX0.find rb used_by_ra
+              with Not_found -> SE.empty in
+            let used_by_rb = MX0.add rb (SE.add t srb) env.used_by in
+            {env with used_by = used_by_rb}, []
+        end
+      | _ -> env, []
+               [@ocaml.ppwarning "TODO: add other terms such as div!"]
+    end
+  | None, _ -> env, []
+
 let add =
   let are_eq t1 t2 =
     if E.equal t1 t2 then Some (Explanation.empty, []) else None
@@ -1663,9 +1740,10 @@ let add =
     try
       let env = {env with new_uf} in
       if is_num r then
+        let env, eqs = add_used_by r env in
         init_monomes_of_poly are_eq env
-          (poly_of r) SX.empty Explanation.empty
-      else env
+          (poly_of r) SX.empty Explanation.empty, eqs
+      else env, []
     with I.NotConsistent expl ->
       Debug.inconsistent_interval expl ;
       raise (Ex.Inconsistent (expl, env.classes))

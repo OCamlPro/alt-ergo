@@ -328,6 +328,7 @@ let symbol_of = function
   | PPmul -> Symbols.Op Symbols.Mult
   | PPdiv -> Symbols.Op Symbols.Div
   | PPmod ->  Symbols.Op Symbols.Modulo
+  | PPpow ->  Symbols.Op Symbols.Pow
   | _ -> assert false
 
 let append_type msg ty =
@@ -485,6 +486,20 @@ let rec type_term ?(call_from_type_form=false) env f =
         let ty2 = Ty.shorten te2.c.tt_ty in
         match ty1, ty2 with
         | Ty.Tint, Ty.Tint ->
+          Options.tool_req 1 (append_type "TR-Typing-OpMod type" ty1);
+          TTinfix(te1,s,te2) , ty1
+        | _ -> error (ShouldHaveTypeInt ty1) t1.pp_loc
+      end
+    | PPinfix(t1, PPpow, t2) ->
+      begin
+        let s = symbol_of PPpow in
+        let te1 = type_term env t1 in
+        let te2 = type_term env t2 in
+        let ty1 = Ty.shorten te1.c.tt_ty in
+        let ty2 = Ty.shorten te2.c.tt_ty in
+        match ty1, ty2 with
+        | Ty.Tint, Ty.Tint | Ty.Tint, Ty.Treal
+        | Ty.Treal, Ty.Tint | Ty.Treal, Ty.Treal  ->
           Options.tool_req 1 (append_type "TR-Typing-OpMod type" ty1);
           TTinfix(te1,s,te2) , ty1
         | _ -> error (ShouldHaveTypeInt ty1) t1.pp_loc
