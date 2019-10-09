@@ -115,7 +115,7 @@ module Shostak
          | Sqrt_real_default | Sqrt_real_excess
          | Real_of_int | Int_floor | Int_ceil
          | Max_int | Max_real | Min_int | Min_real
-         | Pow | Integer_log2
+         | PowInt | PowReal | Integer_log2
          | Integer_round) -> true
     | _ -> false
 
@@ -343,7 +343,7 @@ module Shostak
       in
       mk_partial_interpretation_1 aux_func coef p ty t x, ctx
 
-    | Sy.Op Sy.Pow, [x; y] ->
+    | Sy.Op Sy.PowInt, [x; y] | Sy.Op Sy.PowReal, [x; y] ->
       mk_partial_interpretation_2
         (fun x y -> calc_power x y ty) coef p ty t x y, ctx
 

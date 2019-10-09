@@ -101,7 +101,9 @@ val mk_div : Loc.t -> lexpr -> lexpr -> lexpr
 
 val mk_mod : Loc.t -> lexpr -> lexpr -> lexpr
 
-val mk_pow : Loc.t -> lexpr -> lexpr -> lexpr
+val mk_pow_int : Loc.t -> lexpr -> lexpr -> lexpr
+
+val mk_pow_real : Loc.t -> lexpr -> lexpr -> lexpr
 
 val mk_minus : Loc.t -> lexpr -> lexpr
 
