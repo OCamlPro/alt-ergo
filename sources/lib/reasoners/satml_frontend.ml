@@ -507,7 +507,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if res <> 0 then res
     else
       (* higher weight is better hence compare w2 w1 *)
-      let res = Pervasives.compare w2 w1 in
+      let res = Stdlib.compare w2 w1 in
       if res <> 0 then res
       else
         (* lower index is better *)
@@ -843,7 +843,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     }
 
   let normal_mconf () =
-    {Util.nb_triggers = Pervasives.max 2 (nb_triggers () * 2);
+    {Util.nb_triggers = Stdlib.max 2 (nb_triggers () * 2);
      no_ematching = no_Ematching();
      triggers_var = triggers_var ();
      use_cs = false;
@@ -852,7 +852,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     }
 
   let greedy_mconf () =
-    {Util.nb_triggers = Pervasives.max 10 (nb_triggers () * 10);
+    {Util.nb_triggers = Stdlib.max 10 (nb_triggers () * 10);
      no_ematching = false;
      triggers_var = true;
      use_cs = true;
@@ -950,7 +950,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   (* copied from sat_solvers.ml *)
   let max_term_depth_in_sat env =
-    let aux mx f = Pervasives.max mx (E.depth f) in
+    let aux mx f = Stdlib.max mx (E.depth f) in
     let max_t = ME.fold (fun f _ mx -> aux mx f) env.gamma 0 in
     ME.fold (fun _ ({ E.ff = f; _ }, _) mx -> aux mx f) env.ground_preds max_t
 
