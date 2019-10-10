@@ -128,6 +128,7 @@ module M = struct
   let no_sat_learning = ref false
   let instantiate_after_backjump = ref false
   let disable_weaks = ref false
+  let gc_policy = ref 0
   let default_input_lang = ref ".why"
   let no_locs_in_answers = ref false
 
@@ -232,7 +233,13 @@ module M = struct
       raise (Arg.Bad ("-steps-bound argument should be positive"))
 
   let set_gc_policy n =
-    Gc.set { (Gc.get()) with Gc.allocation_policy = n }
+    match n with
+    | 0 | 1 | 2 -> gc_policy := n
+    | _ ->
+      Format.eprintf "[warning] Gc_policy value must be 0[default], 1 or 2@."
+
+  let init_gc_policy () =
+    Gc.set { (Gc.get()) with Gc.allocation_policy = !gc_policy }
 
   let timers = ref false
 
@@ -678,8 +685,8 @@ module M = struct
 
     "-gc-policy",
     Arg.Int set_gc_policy,
-    " Set the gc policy allocation. 0 is the next-fit policy, 1 is the \
-     first-fit policy, 2 is the best-fit policy. See GC module for more \
+    " Set the gc policy allocation. 0 = next-fit policy [default], 1 = \
+     first-fit policy, 2 = best-fit policy. See GC module for more \
      informations ";
 
     "-enable-restarts",
@@ -724,6 +731,7 @@ let parse_cmdline_arguments () =
   let ofile = ref None in
   let set_file s = ofile := Some s in
   Arg.parse M.spec set_file M.usage;
+  M.init_gc_policy ();
   match !ofile with
   | Some f ->
     M.file := f;
