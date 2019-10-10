@@ -101,14 +101,14 @@ end
 module Sim = OcplibSimplex.Basic.Make(SimVar)(Numbers.Q)(Explanation)
 
 type used_by = {
-  pow : SE.t MX0.t;
+  pow : SE.t;
 }
 
 type t = {
   inequations : Oracle.t MPL.t;
   monomes: (I.t * SX.t) MX0.t;
   polynomes : I.t MP0.t;
-  used_by : used_by;
+  used_by : used_by MX0.t;
   known_eqs : SX.t;
   improved_p : SP.t;
   improved_x : SX.t;
@@ -549,15 +549,12 @@ module Debug = struct
 
 end
 (*BISECT-IGNORE-END*)
-let empty_used_by () = {
-  pow = MX0.empty
-}
 
 let empty classes = {
   inequations = MPL.empty;
   monomes = MX.empty ;
   polynomes = MP.empty ;
-  used_by = empty_used_by ();
+  used_by = MX0.empty;
   known_eqs = SX.empty ;
   improved_p = SP.empty ;
   improved_x = SX.empty ;
@@ -1460,15 +1457,15 @@ let calc_pow a b ty uf =
   with Exit -> None
 
 (** Update and compute value of terms in relation with r1 if it is possible *)
-let update_used_by env r1 _r2 _p1 p2 orig _expl eqs =
+let update_used_by_pow env r1 p2 orig  eqs =
   try
     if orig != Th_util.Subst then raise Exit;
     if P.is_const p2 == None then raise Exit;
-    let s = MX0.find r1 env.used_by.pow in
+    let s = (MX0.find r1 env.used_by).pow in
     SE.fold (fun t (env,eqs) ->
         match E.term_view t with
         | E.Term
-            { E.f = (Sy.Op (Sy.PowReal | Sy.PowInt)); xs = [a; b]; ty; _ } ->
+            { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
           begin
             match calc_pow a b ty env.new_uf with
               None -> env, eqs
@@ -1558,7 +1555,7 @@ let assume ~query env uf la =
              in
              let env, eqs = add_equality are_eq env eqs p expl in
              let env = tighten_eq_bounds env r1 r2 p1 p2 orig expl in
-             let env, eqs = update_used_by env r1 r2 p1 p2 orig expl eqs in
+             let env, eqs = update_used_by_pow env r1 p2 orig eqs in
              env, eqs, new_ineqs, rm
 
            | _ -> acc
@@ -1721,7 +1718,7 @@ let add_used_by t env =
   match E.term_view t with
   | E.Not_a_term _ -> assert false
   | E.Term
-      { E.f = (Sy.Op (Sy.PowInt | Sy.PowReal)); xs = [a; b]; ty; _ } ->
+      { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
     begin
       match calc_pow a b ty env.new_uf with
       | Some (res,ex) ->
@@ -1736,14 +1733,14 @@ let add_used_by t env =
         let ra = Uf.make env.new_uf a in
         let rb = Uf.make env.new_uf b in
         let sra =
-          try MX0.find ra env.used_by.pow
+          try (MX0.find ra env.used_by).pow
           with Not_found -> SE.empty in
-        let used_by_ra = MX0.add ra (SE.add t sra) env.used_by.pow in
+        let used_by_ra = MX0.add ra {pow = (SE.add t sra)} env.used_by in
         let srb =
-          try MX0.find rb used_by_ra
+          try (MX0.find rb used_by_ra).pow
           with Not_found -> SE.empty in
-        let used_by_rb = MX0.add rb (SE.add t srb) env.used_by.pow in
-        {env with used_by = {pow = used_by_rb}}, []
+        let used_by_rb = MX0.add rb {pow = (SE.add t srb)} env.used_by in
+        {env with used_by = used_by_rb}, []
     end
   | _ -> env, []
            [@ocaml.ppwarning "TODO: add other terms such as div!"]

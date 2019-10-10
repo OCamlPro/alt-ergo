@@ -328,8 +328,8 @@ let symbol_of = function
   | PPmul -> Symbols.Op Symbols.Mult
   | PPdiv -> Symbols.Op Symbols.Div
   | PPmod ->  Symbols.Op Symbols.Modulo
-  | PPpow_int ->  Symbols.Op Symbols.PowInt
-  | PPpow_real ->  Symbols.Op Symbols.PowReal
+  | PPpow_int ->  Symbols.Op Symbols.Pow
+  | PPpow_real ->  Symbols.Op Symbols.Pow
   | _ -> assert false
 
 let append_type msg ty =
