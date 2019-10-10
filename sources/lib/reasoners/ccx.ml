@@ -160,16 +160,28 @@ module Main : S = struct
         fprintf fmt "[cc] congruence closure : %a = %a@."
           X.print r1 X.print r2
 
-    let make_cst orig  t ctx =
+    let make_cst t ctx =
       if debug_cc () then
         if ctx != [] then
           begin
-            fprintf fmt "[cc] constraints of %s(%a)@." orig Expr.print t;
+            fprintf fmt "[cc] constraints of make(%a)@." Expr.print t;
             let c = ref 0 in
             List.iter
               (fun a ->
                  incr c;
                  fprintf fmt " %d) %a@." !c E.print a) ctx
+          end
+
+    let rel_add_cst t ctx =
+      if debug_cc () then
+        if ctx != [] then
+          begin
+            fprintf fmt "[cc] constraints of Rel.add(%a)@." Expr.print t;
+            let c = ref 0 in
+            List.iter
+              (fun (a, _ex) ->
+                 incr c;
+                 fprintf fmt " %d) %a@." !c (A.print_view X.print) a) ctx
           end
 
     let add_to_use t =
@@ -458,7 +470,7 @@ module Main : S = struct
       let env = List.fold_left (fun env t -> add_term env facts t ex) env xs in
       (* we update uf and use *)
       let nuf, ctx  = Uf.add env.uf t in
-      Debug.make_cst "make" t ctx;
+      Debug.make_cst t ctx;
       List.iter (fun a -> add_fact facts (LTerm a, ex, Th_util.Other)) ctx;
       (*or Ex.empty ?*)
 
@@ -467,8 +479,8 @@ module Main : S = struct
       let nuse = Use.up_add env.use t rt lvs in
 
       (* If finitetest is used we add the term to the relation *)
-      let rel,eqs = Rel.add env.relation nuf rt t in
-      Debug.make_cst "relation" t ctx;
+      let rel, eqs = Rel.add env.relation nuf rt t in
+      Debug.rel_add_cst t eqs;
       (* We add terms made from relations as fact *)
       List.iter (fun (a,ex) -> add_fact facts (LSem a, ex, Th_util.Other)) eqs;
       Use.print nuse;
