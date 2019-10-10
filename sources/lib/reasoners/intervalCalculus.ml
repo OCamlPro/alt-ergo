@@ -1437,22 +1437,22 @@ let calc_pow a b ty uf =
   try
     match P.is_const pb with
     | Some c_y ->
-      let res,expl =
-        (* x¹ -> x *)
+      let res =
+        (* x ** 1 -> x *)
         if Q.equal c_y Q.one then
-          ra, Ex.union expl_a expl_b
-          (* x⁰ -> 1 *)
+          ra
+          (* x ** 0 -> 1 *)
         else if Q.equal c_y Q.zero then
-          alien_of (P.create [] Q.one ty), Ex.union expl_a expl_b
+          alien_of (P.create [] Q.one ty)
         else
           match P.is_const pa with
           | Some c_x ->
-            (* x^y *)
+            (* x ** y *)
             let res = Arith.calc_power c_x c_y ty  in
-            alien_of (P.create [] res ty), Ex.union expl_a expl_b
+            alien_of (P.create [] res ty)
           | None -> raise Exit
       in
-      Some (res,expl)
+      Some (res,Ex.union expl_a expl_b)
     | None -> None
   with Exit -> None
 
@@ -1470,8 +1470,7 @@ let update_used_by_pow env r1 p2 orig  eqs =
             match calc_pow a b ty env.new_uf with
               None -> eqs
             | Some (y,ex) ->
-              let x = X.term_embed t in
-              let eq = L.Eq (x,y) in
+              let eq = L.Eq (X.term_embed t,y) in
               (eq, None, ex, Th_util.Other) :: eqs
           end
         | _ -> assert false
@@ -1712,9 +1711,9 @@ let default_case_split env uf ~for_model =
   | res -> res
 
 (** Add relation between term x and the terms in it. This can allow use to track
-    if x is computable when his subterms values are known.
+    if x is computable when its subterms values are known.
     This is currently only done for power *)
-let add_used_by t env =
+let add_used_by t r env =
   match E.term_view t with
   | E.Not_a_term _ -> assert false
   | E.Term
@@ -1722,13 +1721,8 @@ let add_used_by t env =
     begin
       match calc_pow a b ty env.new_uf with
       | Some (res,ex) ->
-        begin
-          match X.term_extract res with
-          | Some x, _ ->
-            let eq = E.mk_eq ~iff:false x t in
-            env, [eq,ex]
-          | None, _ -> assert false
-        end
+        let eq = L.Eq(res, r) in
+        env, [eq,ex]
       | None ->
         let ra = Uf.make env.new_uf a in
         let rb = Uf.make env.new_uf b in
@@ -1739,7 +1733,7 @@ let add_used_by t env =
         let srb =
           try (MX0.find rb used_by_ra).pow
           with Not_found -> SE.empty in
-        let used_by_rb = MX0.add rb {pow = (SE.add t srb)} env.used_by in
+        let used_by_rb = MX0.add rb {pow = (SE.add t srb)} used_by_ra in
         {env with used_by = used_by_rb}, []
     end
   | _ -> env, []
@@ -1755,7 +1749,7 @@ let add =
       if is_num r then
         let env = init_monomes_of_poly are_eq env
             (poly_of r) SX.empty Explanation.empty in
-        add_used_by t env
+        add_used_by t r env
       else env, []
     with I.NotConsistent expl ->
       Debug.inconsistent_interval expl ;

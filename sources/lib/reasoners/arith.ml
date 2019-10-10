@@ -44,7 +44,7 @@ let calc_power (c : Q.t) (d : Q.t) (ty : Ty.t) =
   (* d must be integral and if we work on integer exponentation,
      d must be positive*)
   if not (Q.is_int d) then raise Exit;
-  if Ty.Tint == ty && (Q.compare d Q.zero) < 0 then raise Exit;
+  if Ty.Tint == ty && Q.sign d < 0 then raise Exit;
   let n = match Z.to_machine_int (Q.to_z d) with
     | Some n -> n
     | None -> raise Exit
@@ -53,7 +53,7 @@ let calc_power (c : Q.t) (d : Q.t) (ty : Ty.t) =
   let sz = Z.numbits (Q.num c) + Z.numbits (Q.den c) in
   if sz <> 0 && Pervasives.abs n > 100_000 / sz then raise Exit;
   let res = Q.power c n in
-  if ty == Ty.Tint then assert (Q.is_int c);
+  assert (ty != Ty.Tint || Q.is_int c);
   res
 
 let calc_power_opt (c : Q.t) (d : Q.t) (ty : Ty.t) =
