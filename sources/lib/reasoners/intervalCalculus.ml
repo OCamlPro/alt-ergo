@@ -1721,8 +1721,11 @@ let add_used_by t r env =
     begin
       match calc_pow a b ty env.new_uf with
       | Some (res,ex) ->
-        let eq = L.Eq(res, r) in
-        env, [eq,ex]
+        if X.equal res r then
+          (* in this case, Arith.make already reduced "t" to a constant "r" *)
+          env, []
+        else
+          env, [L.Eq(res, r), ex]
       | None ->
         let ra = Uf.make env.new_uf a in
         let rb = Uf.make env.new_uf b in
