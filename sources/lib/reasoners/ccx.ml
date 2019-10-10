@@ -470,7 +470,7 @@ module Main : S = struct
       let rel,eqs = Rel.add env.relation nuf rt t in
       Debug.make_cst "relation" t ctx;
       (* We add terms made from relations as fact *)
-      List.iter (fun (a,ex) -> add_fact facts (LTerm a, ex, Th_util.Other)) eqs;
+      List.iter (fun (a,ex) -> add_fact facts (LSem a, ex, Th_util.Other)) eqs;
       Use.print nuse;
 
       (* we compute terms to consider for congruence *)
