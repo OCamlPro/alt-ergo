@@ -501,18 +501,19 @@ let rec type_term ?(call_from_type_form=false) env f =
         match ty1, ty2, op with
         | Ty.Tint, Ty.Tint, PPpow_int ->
           Options.tool_req 1 (append_type "TR-Typing-Oppow_int type" ty1);
-          TTinfix(te1,s,te2) , ty1
-        | Ty.Treal, Ty.Treal, PPpow_real | Ty.Treal, Ty.Tint, PPpow_real
-        | Ty.Tint, Ty.Treal, PPpow_real ->
+          TTinfix(te1,s,te2) , Ty.Tint
+
+        | (Ty.Tint | Ty.Treal), (Ty.Tint | Ty.Treal), PPpow_real ->
           Options.tool_req 1 (append_type "TR-Typing-Oppow_real type" ty1);
-          TTinfix(te1,s,te2) , ty1
+          TTinfix(te1,s,te2) , Ty.Treal
+
         | Ty.Treal , _, PPpow_int -> error (ShouldHaveTypeInt Ty.Tint) t1.pp_loc
         | _, Ty.Treal, PPpow_int -> error (ShouldHaveTypeInt Ty.Tint) t2.pp_loc
-        | Ty.Tint, Ty.Tint, PPpow_real ->
-          error (ShouldHaveTypeInt Ty.Treal) t1.pp_loc
+
         | _, _, PPpow_real -> error (ShouldHaveTypeInt Ty.Treal) t1.pp_loc
         | _, _, PPpow_int -> error (ShouldHaveTypeInt Ty.Tint) t1.pp_loc
-        | _ -> assert false (* can't appen *)
+
+        | _ -> assert false (* can't happen *)
       end
     | PPprefix(PPneg, { pp_desc=PPconst (ConstInt n); _ }) ->
       Options.tool_req 1 (append_type "TR-Typing-OpUnarith type" Ty.Tint);
@@ -2329,4 +2330,3 @@ let type_expr env vars t =
 type env = Env.t
 
 let empty_env = Env.empty
-
