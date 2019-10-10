@@ -1462,21 +1462,21 @@ let update_used_by_pow env r1 p2 orig  eqs =
     if orig != Th_util.Subst then raise Exit;
     if P.is_const p2 == None then raise Exit;
     let s = (MX0.find r1 env.used_by).pow in
-    SE.fold (fun t (env,eqs) ->
+    SE.fold (fun t eqs ->
         match E.term_view t with
         | E.Term
             { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
           begin
             match calc_pow a b ty env.new_uf with
-              None -> env, eqs
+              None -> eqs
             | Some (y,ex) ->
               let x = X.term_embed t in
               let eq = L.Eq (x,y) in
-              env, (eq, None, ex, Th_util.Other) :: eqs
+              (eq, None, ex, Th_util.Other) :: eqs
           end
         | _ -> assert false
-      ) s (env,eqs)
-  with Exit | Not_found -> env, eqs
+      ) s eqs
+  with Exit | Not_found -> eqs
 
 let assume ~query env uf la =
   Oracle.incr_age ();
@@ -1555,7 +1555,7 @@ let assume ~query env uf la =
              in
              let env, eqs = add_equality are_eq env eqs p expl in
              let env = tighten_eq_bounds env r1 r2 p1 p2 orig expl in
-             let env, eqs = update_used_by_pow env r1 p2 orig eqs in
+             let eqs = update_used_by_pow env r1 p2 orig eqs in
              env, eqs, new_ineqs, rm
 
            | _ -> acc
