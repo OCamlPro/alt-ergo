@@ -172,6 +172,18 @@ module Main : S = struct
                  fprintf fmt " %d) %a@." !c E.print a) ctx
           end
 
+    let rel_add_cst t ctx =
+      if debug_cc () then
+        if ctx != [] then
+          begin
+            fprintf fmt "[cc] constraints of Rel.add(%a)@." Expr.print t;
+            let c = ref 0 in
+            List.iter
+              (fun (a, _ex) ->
+                 incr c;
+                 fprintf fmt " %d) %a@." !c (A.print_view X.print) a) ctx
+          end
+
     let add_to_use t =
       if debug_cc () then
         fprintf fmt "[cc] add_to_use: %a@." E.print t
@@ -467,7 +479,10 @@ module Main : S = struct
       let nuse = Use.up_add env.use t rt lvs in
 
       (* If finitetest is used we add the term to the relation *)
-      let rel = Rel.add env.relation nuf rt t in
+      let rel, eqs = Rel.add env.relation nuf rt t in
+      Debug.rel_add_cst t eqs;
+      (* We add terms made from relations as fact *)
+      List.iter (fun (a,ex) -> add_fact facts (LSem a, ex, Th_util.Other)) eqs;
       Use.print nuse;
 
       (* we compute terms to consider for congruence *)

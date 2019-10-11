@@ -290,7 +290,7 @@ let add_guarded_destr env uf t hs e t_ty =
 
 
 [@@ocaml.ppwarning "working with X.term_extract r would be sufficient ?"]
-let add env (uf:uf) (r:r) t =
+let add_aux env (uf:uf) (r:r) t =
   if Options.disable_adts () then env
   else
     let { E.f = sy; xs; ty; _ } = match E.term_view t with
@@ -319,6 +319,9 @@ let add env (uf:uf) (r:r) t =
        { env with seen_testers = SE.add t env.seen_testers }
     *)
     | _ -> env
+
+let add env (uf:uf) (r:r) t =
+  add_aux env (uf:uf) (r:r) t, []
 
 
 let count_splits env la =

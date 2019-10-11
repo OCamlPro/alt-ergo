@@ -36,8 +36,8 @@ type operator =
   | Reach | Access of Hstring.t | Record
   | Sqrt_real | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
   | Sqrt_real_default | Sqrt_real_excess
-  | Min_real | Min_int | Max_real | Max_int | Integer_log2 | Pow_real_int
-  | Pow_real_real | Integer_round
+  | Min_real | Min_int | Max_real | Max_int | Integer_log2
+  | Pow | Integer_round
   | Constr of Hstring.t (* enums, adts *)
   | Destruct of Hstring.t * bool
   | Tite

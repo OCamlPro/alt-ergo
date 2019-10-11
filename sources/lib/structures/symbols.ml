@@ -39,8 +39,8 @@ type operator =
   | Reach | Access of Hstring.t | Record
   | Sqrt_real | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
   | Sqrt_real_default | Sqrt_real_excess
-  | Min_real | Min_int | Max_real | Max_int | Integer_log2 | Pow_real_int
-  | Pow_real_real | Integer_round
+  | Min_real | Min_int | Max_real | Max_int | Integer_log2
+  | Pow | Integer_round
   | Constr of Hstring.t (* enums, adts *)
   | Destruct of Hstring.t * bool
   | Tite
@@ -131,7 +131,7 @@ let compare_operators op1 op2 =
             | Access _ | Record | Sqrt_real | Abs_int | Abs_real
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
-            | Integer_log2 | Pow_real_int | Pow_real_real | Integer_round
+            | Integer_log2 | Pow | Integer_round
             | Constr _ | Destruct _ | Tite) -> assert false
     )
 
@@ -291,8 +291,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op Min_real -> "min_real"
   | Op Min_int -> "min_int"
   | Op Integer_log2 -> "integer_log2"
-  | Op Pow_real_int -> "pow_real_int"
-  | Op Pow_real_real -> "pow_real_real"
+  | Op Pow -> "**"
   | Op Integer_round -> "integer_round"
   | Op Concat -> "@"
   | Op Extract -> "^"

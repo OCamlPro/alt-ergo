@@ -100,10 +100,15 @@ end
 
 module Sim = OcplibSimplex.Basic.Make(SimVar)(Numbers.Q)(Explanation)
 
+type used_by = {
+  pow : SE.t;
+}
+
 type t = {
   inequations : Oracle.t MPL.t;
   monomes: (I.t * SX.t) MX0.t;
   polynomes : I.t MP0.t;
+  used_by : used_by MX0.t;
   known_eqs : SX.t;
   improved_p : SP.t;
   improved_x : SX.t;
@@ -549,6 +554,7 @@ let empty classes = {
   inequations = MPL.empty;
   monomes = MX.empty ;
   polynomes = MP.empty ;
+  used_by = MX0.empty;
   known_eqs = SX.empty ;
   improved_p = SP.empty ;
   improved_x = SX.empty ;
@@ -1423,6 +1429,54 @@ let rec loop_update_intervals are_eq env cpt =
   then env
   else loop_update_intervals are_eq env cpt
 
+let calc_pow a b ty uf =
+  let ra, expl_a = Uf.find uf a in
+  let rb, expl_b = Uf.find uf b in
+  let pa = poly_of ra in
+  let pb = poly_of rb in
+  try
+    match P.is_const pb with
+    | Some c_y ->
+      let res =
+        (* x ** 1 -> x *)
+        if Q.equal c_y Q.one then
+          ra
+          (* x ** 0 -> 1 *)
+        else if Q.equal c_y Q.zero then
+          alien_of (P.create [] Q.one ty)
+        else
+          match P.is_const pa with
+          | Some c_x ->
+            (* x ** y *)
+            let res = Arith.calc_power c_x c_y ty  in
+            alien_of (P.create [] res ty)
+          | None -> raise Exit
+      in
+      Some (res,Ex.union expl_a expl_b)
+    | None -> None
+  with Exit -> None
+
+(** Update and compute value of terms in relation with r1 if it is possible *)
+let update_used_by_pow env r1 p2 orig  eqs =
+  try
+    if orig != Th_util.Subst then raise Exit;
+    if P.is_const p2 == None then raise Exit;
+    let s = (MX0.find r1 env.used_by).pow in
+    SE.fold (fun t eqs ->
+        match E.term_view t with
+        | E.Term
+            { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
+          begin
+            match calc_pow a b ty env.new_uf with
+              None -> eqs
+            | Some (y,ex) ->
+              let eq = L.Eq (X.term_embed t,y) in
+              (eq, None, ex, Th_util.Other) :: eqs
+          end
+        | _ -> assert false
+      ) s eqs
+  with Exit | Not_found -> eqs
+
 let assume ~query env uf la =
   Oracle.incr_age ();
   let env = count_splits env la in
@@ -1500,6 +1554,7 @@ let assume ~query env uf la =
              in
              let env, eqs = add_equality are_eq env eqs p expl in
              let env = tighten_eq_bounds env r1 r2 p1 p2 orig expl in
+             let eqs = update_used_by_pow env r1 p2 orig eqs in
              env, eqs, new_ineqs, rm
 
            | _ -> acc
@@ -1655,17 +1710,50 @@ let default_case_split env uf ~for_model =
     end
   | res -> res
 
+(** Add relation between term x and the terms in it. This can allow use to track
+    if x is computable when its subterms values are known.
+    This is currently only done for power *)
+let add_used_by t r env =
+  match E.term_view t with
+  | E.Not_a_term _ -> assert false
+  | E.Term
+      { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
+    begin
+      match calc_pow a b ty env.new_uf with
+      | Some (res,ex) ->
+        if X.equal res r then
+          (* in this case, Arith.make already reduced "t" to a constant "r" *)
+          env, []
+        else
+          env, [L.Eq(res, r), ex]
+      | None ->
+        let ra = Uf.make env.new_uf a in
+        let rb = Uf.make env.new_uf b in
+        let sra =
+          try (MX0.find ra env.used_by).pow
+          with Not_found -> SE.empty in
+        let used_by_ra = MX0.add ra {pow = (SE.add t sra)} env.used_by in
+        let srb =
+          try (MX0.find rb used_by_ra).pow
+          with Not_found -> SE.empty in
+        let used_by_rb = MX0.add rb {pow = (SE.add t srb)} used_by_ra in
+        {env with used_by = used_by_rb}, []
+    end
+  | _ -> env, []
+           [@ocaml.ppwarning "TODO: add other terms such as div!"]
+
 let add =
   let are_eq t1 t2 =
     if E.equal t1 t2 then Some (Explanation.empty, []) else None
   in
-  fun env new_uf r _ ->
+  fun env new_uf r t ->
     try
       let env = {env with new_uf} in
       if is_num r then
-        init_monomes_of_poly are_eq env
-          (poly_of r) SX.empty Explanation.empty
-      else env
+        let env = init_monomes_of_poly are_eq env
+            (poly_of r) SX.empty Explanation.empty in
+        add_used_by t r env
+      else env, []
     with I.NotConsistent expl ->
       Debug.inconsistent_interval expl ;
       raise (Ex.Inconsistent (expl, env.classes))

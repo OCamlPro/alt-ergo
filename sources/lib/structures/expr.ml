@@ -493,11 +493,9 @@ let rec print_silent fmt t =
     end
 
   (* TODO: introduce PrefixOp in the future to simplify this ? *)
-  | Sy.Op op, [e1; e2] when op == Sy.Pow_real_int || op == Sy.Max_real ||
-                            op == Sy.Max_int || op == Sy.Min_real ||
-                            op == Sy.Min_int ||
-                            op == Sy.Pow_real_real ||
-                            op == Sy.Integer_round ->
+  | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||
+                            op == Sy.Max_real || op == Sy.Max_int ||
+                            op == Sy.Min_real || op == Sy.Min_int ->
     fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
 
   (* TODO: introduce PrefixOp in the future to simplify this ? *)

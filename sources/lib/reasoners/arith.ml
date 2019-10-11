@@ -40,6 +40,25 @@ module Q = Numbers.Q
 let is_mult h = Sy.equal (Sy.Op Sy.Mult) h
 let mod_symb = Sy.name "@mod"
 
+let calc_power (c : Q.t) (d : Q.t) (ty : Ty.t) =
+  (* d must be integral and if we work on integer exponentation,
+     d must be positive*)
+  if not (Q.is_int d) then raise Exit;
+  if Ty.Tint == ty && Q.sign d < 0 then raise Exit;
+  let n = match Z.to_machine_int (Q.to_z d) with
+    | Some n -> n
+    | None -> raise Exit
+  in
+  (* This lines prevent overflow from computation *)
+  let sz = Z.numbits (Q.num c) + Z.numbits (Q.den c) in
+  if sz <> 0 && Pervasives.abs n > 100_000 / sz then raise Exit;
+  let res = Q.power c n in
+  assert (ty != Ty.Tint || Q.is_int c);
+  res
+
+let calc_power_opt (c : Q.t) (d : Q.t) (ty : Ty.t) =
+  try Some (calc_power c d ty)
+  with Exit -> None
 
 module Type (X:Sig.X) : Polynome.T with type r = X.r = struct
   include
@@ -100,7 +119,7 @@ module Shostak
          | Sqrt_real_default | Sqrt_real_excess
          | Real_of_int | Int_floor | Int_ceil
          | Max_int | Max_real | Min_int | Min_real
-         | Pow_real_int | Pow_real_real | Integer_log2
+         | Pow | Integer_log2
          | Integer_round) -> true
     | _ -> false
 
@@ -328,31 +347,9 @@ module Shostak
       in
       mk_partial_interpretation_1 aux_func coef p ty t x, ctx
 
-    | Sy.Op Sy.Pow_real_int, [x; y] ->
-      let aux_func (c : Q.t) (d : Q.t) =
-        assert (Q.is_int d);
-        let n = match Z.to_machine_int (Q.to_z d) with
-          | Some n -> n
-          | None -> raise Exit
-        in
-        let sz = Z.numbits (Q.num c) + Z.numbits (Q.den c) in
-        if sz <> 0 && abs n > 100_000 / sz then raise Exit;
-        Q.power c n
-      in
-      mk_partial_interpretation_2 aux_func coef p ty t x y, ctx
-
-    | Sy.Op Sy.Pow_real_real, [x; y] ->
-      let aux_func (c : Q.t) (d : Q.t) =
-        if not (Q.is_int d) then raise Exit;
-        let n = match Z.to_machine_int (Q.to_z d) with
-          | Some n -> n
-          | None -> raise Exit
-        in
-        let sz = Z.numbits (Q.num c) + Z.numbits (Q.den c) in
-        if sz <> 0 && abs n > 100_000 / sz then raise Exit;
-        Q.power c n
-      in
-      mk_partial_interpretation_2 aux_func coef p ty t x y, ctx
+    | Sy.Op Sy.Pow, [x; y] ->
+      mk_partial_interpretation_2
+        (fun x y -> calc_power x y ty) coef p ty t x y, ctx
 
     | Sy.Op Sy.Fixed, _ ->
       (* Fixed-Point arithmetic currently not implemented *)
