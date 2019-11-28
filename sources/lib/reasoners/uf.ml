@@ -44,7 +44,10 @@ module LX =
   Xliteral.Make(struct type t = X.r let compare = X.hash_cmp include X end)
 module MapL = Emap.Make(LX)
 
-module MapX = Map.Make(struct type t = X.r let compare = X.hash_cmp end)
+module MapX = struct
+  include Map.Make(struct type t = X.r let compare = X.hash_cmp end)
+  let find m x = Steps.incr (Steps.Uf); find m x
+end
 module SetX = Set.Make(struct type t = X.r let compare = X.hash_cmp end)
 
 module SetXX = Set.Make(struct
@@ -554,6 +557,7 @@ module Env = struct
          SetRL.fold
            (fun ((g, d, dep_rl) as rul) env ->
               Options.exec_thread_yield ();
+	      Steps.incr Steps.Ac;
               let env = {env with ac_rs = RS.remove_rule rul env.ac_rs} in
               let gx = X.color g in
               let g2, ex_g2 = normal_form env (Ac.subst p v g) in
