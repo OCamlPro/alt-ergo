@@ -557,7 +557,7 @@ module Env = struct
          SetRL.fold
            (fun ((g, d, dep_rl) as rul) env ->
               Options.exec_thread_yield ();
-	      Steps.incr Steps.Ac;
+              Steps.incr Steps.Ac;
               let env = {env with ac_rs = RS.remove_rule rul env.ac_rs} in
               let gx = X.color g in
               let g2, ex_g2 = normal_form env (Ac.subst p v g) in
