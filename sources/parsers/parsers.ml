@@ -149,6 +149,7 @@ let parse_input_file file =
     exit 1
 
 let parse_problem ~filename ~preludes =
+  Parsers_loader.load ();
   let acc = parse_input_file filename in
   List.fold_left
     (fun acc prelude ->
