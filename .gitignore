@@ -14,6 +14,10 @@ sources/*.install
 sources/_build
 sources/alt-ergo
 sources/altgr-ergo
+sources/AB-Why3-plugin.cma
+sources/AB-Why3-plugin.cmxs
+sources/fm-simplex-plugin.cma
+sources/fm-simplex-plugin.cmxs
 extra/ocamldot/_build
 
 # Generated documentation files
