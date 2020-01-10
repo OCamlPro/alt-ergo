@@ -76,16 +76,16 @@ fm-simplex:
 	$(DUNE) build $(DUNE_FLAGS) \
 		_build/install/default/share/alt-ergo/plugins/fm-simplex-plugin.cma \
 		_build/install/default/share/alt-ergo/plugins/fm-simplex-plugin.cmxs
-		ln -sf _build/install/default/share/alt-ergo/plugins/fm-simplex-plugin.cma fm-simplex-plugin.cma
-		ln -sf _build/install/default/share/alt-ergo/plugins/fm-simplex-plugin.cmxs fm-simplex-plugin.cmxs
+	ln -sf _build/install/default/share/alt-ergo/plugins/fm-simplex-plugin.cma fm-simplex-plugin.cma
+	ln -sf _build/install/default/share/alt-ergo/plugins/fm-simplex-plugin.cmxs fm-simplex-plugin.cmxs
 
 # Ab-Why3 plugin
 AB-Why3:
 	$(DUNE) build $(DUNE_FLAGS) \
 		_build/install/default/share/alt-ergo/plugins/AB-Why3-plugin.cma \
 		_build/install/default/share/alt-ergo/plugins/AB-Why3-plugin.cmxs
-		ln -sf _build/install/default/share/alt-ergo/plugins/AB-Why3-plugin.cma AB-Why3-plugin.cma
-		ln -sf _build/install/default/share/alt-ergo/plugins/AB-Why3-plugin.cmxs AB-Why3-plugin.cmxs
+	ln -sf _build/install/default/share/alt-ergo/plugins/AB-Why3-plugin.cma AB-Why3-plugin.cma
+	ln -sf _build/install/default/share/alt-ergo/plugins/AB-Why3-plugin.cmxs AB-Why3-plugin.cmxs
 
 # Build all plugins
 plugins:
