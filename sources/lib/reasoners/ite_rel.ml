@@ -112,7 +112,7 @@ let extract_pending_deductions env =
     ME2.fold
       (fun (s, t) ex acc ->
          let a = E.mk_eq ~iff:false s t
-             [@ocaml.ppwarning "TODO: build IFF instead ?"]
+                 [@ocaml.ppwarning "TODO: build IFF instead ?"]
          in
          if debug_ite () then
            fprintf fmt "[Ite.assume] deduce that %a with expl %a@."

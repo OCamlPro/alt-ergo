@@ -41,7 +41,7 @@ type t =
     [@ocaml.ppwarning "selectors should be improved. only representatives \
                        in it. No true or false _is"]
 
-      selectors : (E.t * Ex.t) list MHs.t MX.t;
+    selectors : (E.t * Ex.t) list MHs.t MX.t;
     size_splits : Numbers.Q.t;
     new_terms : SE.t;
     pending_deds :
@@ -589,7 +589,7 @@ let assume env uf la =
              assume_is_constr uf hs e ex env eqs
 
            | Xliteral.Builtin(false, Sy.IsConstr hs, [e]), _, ex, _
-               [@ocaml.ppwarning "XXX: assume not (. ? .): reasoning missing ?"]
+             [@ocaml.ppwarning "XXX: assume not (. ? .): reasoning missing ?"]
              ->
              assume_not_is_constr uf hs e ex env eqs
 
@@ -645,7 +645,7 @@ let query env uf (ra, _, ex, _) =
         None
 
       | Xliteral.Builtin(false, Sy.IsConstr hs, [e])
-          [@ocaml.ppwarning "XXX: assume not (. ? .): reasoning missing ?"]
+        [@ocaml.ppwarning "XXX: assume not (. ? .): reasoning missing ?"]
         ->
         ignore (assume_not_is_constr uf hs e ex env []);
         None
