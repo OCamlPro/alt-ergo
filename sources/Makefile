@@ -127,7 +127,7 @@ alt-ergo:
 
 # Build the GUI (release)
 altgr-ergo:
-	$(DUNE) build $(DUNE_FLAGS) -p altgrèergo @install
+	$(DUNE) build $(DUNE_FLAGS) -p altgr-ergo @install
 
 .PHONY: alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
