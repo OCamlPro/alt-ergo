@@ -24,7 +24,7 @@ let () =
   let args = Arg.align [
       "--prefix", Arg.Set_string prefix, "<path> prefix directory";
       "--libdir", Arg.Set_string libdir, "<path> lib directory";
-      "--static", Arg.Set static, "Enable statically compilation";
+      "--static", Arg.Set static, " Enable statically compilation";
     ] in
   let anon_fun s =
     match !pkg with
