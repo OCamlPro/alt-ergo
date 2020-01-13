@@ -115,22 +115,21 @@ all: gen
 
 # Build the alt-ergo-lib (release)
 alt-ergo-lib:
-	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo-lib @install
+	$(DUNE) build $(DUNE_FLAGS) --profile=$(profile) alt-ergo-lib @install
 
 # Build the alt-ergo-parsers (release)
 alt-ergo-parsers:
-	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo-parsers @install
+	$(DUNE) build $(DUNE_FLAGS) --profile=$(profile) alt-ergo-parsers @install
 
 # Build the cli/text alt-ergo (release)
 alt-ergo:
-	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo @install
+	$(DUNE) build $(DUNE_FLAGS) --profile=$(profile) alt-ergo @install
 
 # Build the GUI (release)
 altgr-ergo:
-	$(DUNE) build $(DUNE_FLAGS) -p altgr-ergo @install
+	$(DUNE) build $(DUNE_FLAGS) --profile=$(profile) altgr-ergo @install
 
 .PHONY: alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-
 
 # =====================
 # Non-regressions tests
