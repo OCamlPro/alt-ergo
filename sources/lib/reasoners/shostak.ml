@@ -533,9 +533,9 @@ struct
           | _                  -> solve_uninterpreted ra rb pb
         in
         solve_list pb
-          [@ocaml.ppwarning "TODO: a simple way of handling equalities \
-                             with void and unit is to add this case is \
-                             the solver!"]
+        [@ocaml.ppwarning "TODO: a simple way of handling equalities \
+                           with void and unit is to add this case is \
+                           the solver!"]
 
   let solve_abstracted oa ob a b sbt =
     Debug.debug_abstraction_result oa ob a b sbt;

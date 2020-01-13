@@ -225,7 +225,7 @@ let rec make_term up_qv t =
       List.fold_left
         (fun acc (sy, e) ->
            E.mk_let sy e acc 0
-             [@ocaml.ppwarning "TODO: should introduce fresh vars"]
+           [@ocaml.ppwarning "TODO: should introduce fresh vars"]
         )(mk_term t2) binders
 
     | TTnamed(lbl, t) ->
@@ -435,7 +435,7 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
       List.fold_left
         (fun acc (sy, e) ->
            E.mk_let sy e acc id
-             [@ocaml.ppwarning "TODO: should introduce fresh vars"]
+           [@ocaml.ppwarning "TODO: should introduce fresh vars"]
         )res binders
 
     | TFnamed(lbl, f) ->
