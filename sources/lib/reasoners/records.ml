@@ -278,7 +278,7 @@ module Shostak (X : ALIEN) = struct
              let e, acc = X.abstract_selectors (is_mine e) acc in
              (lbl, embed e)::flds, acc
           )([], acc) fields
-          [@ocaml.ppwarning "TODO: should not rebuild if not changed !"]
+        [@ocaml.ppwarning "TODO: should not rebuild if not changed !"]
       in
       is_mine (Record (List.rev flds, ty)), acc
 
