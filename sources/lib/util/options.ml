@@ -1017,4 +1017,3 @@ let get_is_gui () =
   | None ->
     Format.eprintf "Error in Options.get_is_gui: is_gui is not set!@.";
     assert false
-
