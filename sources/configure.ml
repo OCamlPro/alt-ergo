@@ -15,6 +15,7 @@
 let prefix = ref ""
 let libdir = ref ""
 let mandir = ref ""
+let static = ref false
 
 let pkg = ref ""
 
@@ -23,6 +24,7 @@ let () =
   let args = Arg.align [
       "--prefix", Arg.Set_string prefix, "<path> prefix directory";
       "--libdir", Arg.Set_string libdir, "<path> lib directory";
+      "--static", Arg.Set static, " Enable statically compilation";
     ] in
   let anon_fun s =
     match !pkg with
@@ -104,6 +106,19 @@ let pluginsdir = datadir |> follow "plugins"
 let preludesdir = datadir |> follow "preludes"
 
 |} in
+  let () = close_out ch in
+  let () = Format.printf "done.@." in
+  ()
+
+
+(* Output executable flags into tools/text/flags.dune *)
+let () =
+  let f = Filename.concat (Filename.concat "tools" "text") "flags.dune" in
+  let () = Format.printf "Generating file %s..." f in
+  let ch = open_out f in
+  let fmt = Format.formatter_of_out_channel ch in
+  let () = Format.fprintf fmt {|(-linkall %s)@.|}
+      (if !static then "-cclib -static" else "") in
   let () = close_out ch in
   let () = Format.printf "done.@." in
   ()
