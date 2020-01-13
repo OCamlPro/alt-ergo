@@ -8,7 +8,7 @@
   (public_name  alt-ergo)
   (package      alt-ergo)
   (libraries    alt-ergo-lib alt-ergo-parsers)
-  (link_flags   (-linkall))
+  (link_flags   (:include flags.dune))
   (modules      Main_input Main_text)
 )
 
