@@ -23,7 +23,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module Atom = Satml_types.Atom
   module FF = Satml_types.Flat_Formula
 
-  let reset_refs () = Options.reset_steps ()
+  let reset_refs () = Steps.reset_steps ()
 
   type t = {
     satml : SAT.t;
