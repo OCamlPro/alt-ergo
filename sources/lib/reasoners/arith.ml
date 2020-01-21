@@ -51,7 +51,7 @@ let calc_power (c : Q.t) (d : Q.t) (ty : Ty.t) =
   in
   (* This lines prevent overflow from computation *)
   let sz = Z.numbits (Q.num c) + Z.numbits (Q.den c) in
-  if sz <> 0 && Pervasives.abs n > 100_000 / sz then raise Exit;
+  if sz <> 0 && Stdlib.abs n > 100_000 / sz then raise Exit;
   let res = Q.power c n in
   assert (ty != Ty.Tint || Q.is_int c);
   res

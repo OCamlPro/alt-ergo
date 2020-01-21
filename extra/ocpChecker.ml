@@ -45,10 +45,10 @@ let update_file file lines =
       exit 2
   in
   Queue.iter (fun line ->
-      Pervasives.output_string cout line;
-      Pervasives.output_string cout "\n"
+      Stdlib.output_string cout line;
+      Stdlib.output_string cout "\n"
     )lines;
-  Pervasives.flush cout;
+  Stdlib.flush cout;
   close_out cout
 
 
@@ -78,4 +78,3 @@ let () =
 
   | _ ->
     Format.eprintf "%s: Too many arguments!@." Sys.argv.(0); exit 4
-

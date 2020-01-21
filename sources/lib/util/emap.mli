@@ -41,8 +41,8 @@
       struct
         type t = int * int
         let compare (x0,y0) (x1,y1) =
-          match Pervasives.compare x0 x1 with
-            0 -> Pervasives.compare y0 y1
+          match Stdlib.compare x0 x1 with
+            0 -> Stdlib.compare y0 y1
           | c -> c
       end
 
@@ -68,7 +68,7 @@ sig
       [f e1 e2] is strictly negative if [e1] is smaller than [e2],
       and [f e1 e2] is strictly positive if [e1] is greater than [e2].
       Example: a suitable ordering function is the generic structural
-      comparison function {!Pervasives.compare}. *)
+      comparison function {!Stdlib.compare}. *)
 end
 (** Input signature of the functor {!Map.Make}. *)
 
