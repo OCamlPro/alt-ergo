@@ -116,21 +116,21 @@ jobs:
       script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.06.1+flambda
     - stage: "test"
-      name: "non-regression (4.07.0)"
+      name: "non-regression (4.07.1)"
       script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
-      env: OPAMBUILDTEST=true OCAML_VERSION=4.07.0
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.07.1
     - stage: "test"
-      name: "non-regression (4.07.0+flambda)"
+      name: "non-regression (4.07.1+flambda)"
       script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
-      env: OPAMBUILDTEST=true OCAML_VERSION=4.07.0+flambda
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.07.1+flambda
     - stage: "test"
-      name: "non-regression (4.08.0)"
+      name: "non-regression (4.08.1)"
       script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
-      env: OPAMBUILDTEST=true OCAML_VERSION=4.08.0
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.08.1
     - stage: "test"
-      name: "non-regression (4.08.0+flambda)"
+      name: "non-regression (4.08.1+flambda)"
       script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
-      env: OPAMBUILDTEST=true OCAML_VERSION=4.08.0+flambda
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.08.1+flambda
     - stage: "test"
       name: "non-regression (4.09.0)"
       script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
