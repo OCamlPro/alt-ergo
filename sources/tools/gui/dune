@@ -13,5 +13,3 @@
                 Gui_replay Main_gui)
   (link_flags   (-linkall))
 )
-
-

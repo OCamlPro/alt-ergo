@@ -249,7 +249,7 @@ val incr_and_check_steps : int -> unit
     inbound by the -steps-bound option.
     Exit if the number of steps is reached *)
 
-(** open Options in every module to hide polymorphic versions of Pervasives **)
+(** open Options in every module to hide polymorphic versions of Stdlib **)
 val (<>) : int -> int -> bool
 val (=) : int -> int -> bool
 val (<) : int -> int -> bool

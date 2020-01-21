@@ -388,7 +388,7 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
         List.fold_left (fun (nbv, used, goal_used, ve, uplet, lets) v ->
             let ((s, _) as v'), e = List.hd ve in
             let cdr_ve = List.tl ve in
-            assert (Pervasives.(=) v v');
+            assert (Stdlib.(=) v v');
             if String.length e == 0 then
               (v'::nbv, used, goal_used, cdr_ve, v'::uplet, lets)
             else
@@ -545,7 +545,7 @@ let rec add_instance_aux ?(register=true) env id af ax_kd aname vars entries =
     make_instance env.inst_buffer vars entries af goal_form tyenv in
   let ln_form = least_nested_form used_vars goal_form in
   env.inst_buffer#place_cursor  ~where:env.inst_buffer#end_iter;
-  if Pervasives.(=) ln_form (Exists goal_form) then begin
+  if Stdlib.(=) ln_form (Exists goal_form) then begin
     let hy =
       AAxiom (loc, (sprintf "%s%s" "_instance_" aname), ax_kd, instance.c) in
     let ahy = new_annot env.inst_buffer hy instance.id ptag in
@@ -739,7 +739,7 @@ and add_trigger ?(register=true) t qid env str offset (sbuf:sbuffer) =
         if register then
           save env.actions
             (AddTrigger (qf.id,
-                         Pervasives.(=) sbuf env.inst_buffer, str));
+                         Stdlib.(=) sbuf env.inst_buffer, str));
         commit_tags_buffer sbuf
       | _ -> assert false
     end
@@ -999,7 +999,7 @@ let show_used_lemmas env expl =
    let prune_unused env expl =
    let ids = match Explanation.ids_of expl with
    | None -> []
-   | Some ids -> List.sort Pervasives.compare ids
+   | Some ids -> List.sort Stdlib.compare ids
    in
    let prune_top d = match d.c with
    | ATypeDecl _ | AGoal _ | ALogic _ -> ()
