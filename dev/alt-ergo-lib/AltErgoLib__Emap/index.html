@@ -3,8 +3,8 @@
 struct
   type t = int * int
   let compare (x0,y0) (x1,y1) =
-    match Pervasives.compare x0 x1 with
-      0 -&gt; Pervasives.compare y0 y1
+    match Stdlib.compare x0 x1 with
+      0 -&gt; Stdlib.compare y0 y1
     | c -&gt; c
 end
 
