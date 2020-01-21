@@ -191,7 +191,7 @@ type annoted_node =
 module MDep = Map.Make (
   struct
     type t = atyped_decl annoted
-    let compare = Pervasives.compare
+    let compare = Stdlib.compare
   end)
 
 
@@ -880,9 +880,9 @@ let find_dep_by_string dep s =
        | None -> begin
            match d.c with
            | ALogic (_, ls, _, _) when List.mem s ls -> Some d
-           | ATypeDecl (_, _, s', _, _) when Pervasives.(=) s s'-> Some d
-           | APredicate_def (_, p, _, _) when Pervasives.(=) s p -> Some d
-           | AFunction_def (_, f, _, _, _, _) when Pervasives.(=) s f -> Some d
+           | ATypeDecl (_, _, s', _, _) when Stdlib.(=) s s'-> Some d
+           | APredicate_def (_, p, _, _) when Stdlib.(=) s p -> Some d
+           | AFunction_def (_, f, _, _, _, _) when Stdlib.(=) s f -> Some d
            | _ -> None
          end
     ) dep None
@@ -892,7 +892,7 @@ let find_tag_deps dep tag =
     (fun d (deps,_) found ->
        match found with
        | Some _ -> found
-       | None -> if Pervasives.(=) d.tag tag then Some deps else None
+       | None -> if Stdlib.(=) d.tag tag then Some deps else None
     ) dep None
 
 let find_tag_inversedeps dep tag =
@@ -900,7 +900,7 @@ let find_tag_inversedeps dep tag =
     (fun d (_,deps) found ->
        match found with
        | Some _ -> found
-       | None -> if Pervasives.(=) d.tag tag then Some deps else None
+       | None -> if Stdlib.(=) d.tag tag then Some deps else None
     ) dep None
 
 let make_dep_string d ex dep s =
@@ -2046,7 +2046,7 @@ and findtags_aform sl aform acc =
         (fun sl (sy, _) ->
            let s = Symbols.to_string_clean sy in
            List.fold_left
-             (fun l s' -> if Pervasives.(=) s' s then l else s'::l) [] sl
+             (fun l s' -> if Stdlib.(=) s' s then l else s'::l) [] sl
         )sl l
     in
     findtags_aform sl aaf.c acc

@@ -989,7 +989,7 @@ let incr_and_check_steps cpt =
     end
 
 
-(** open Options in every module to hide polymorphic versions of Pervasives **)
+(** open Options in every module to hide polymorphic versions of Stdlib **)
 let (<>) (a: int) (b: int) = a <> b
 let (=)  (a: int) (b: int) = a = b
 let (<)  (a: int) (b: int) = a < b
