@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 
 # === pre-merge-style-checker ===
 #
@@ -12,7 +12,7 @@ git_repo=`git rev-parse --show-toplevel`
 cd $git_repo/extra
 
 # Compile style checker
-ocamlopt -o ocp-checker ocpChecker.ml
+ocamlfind ocamlopt -o ocp-checker -linkpkg -package stdlib-shims ocpChecker.ml
 
 # List source files to check
 files=`find ../sources -regex .*[.]ml[ily]?`
