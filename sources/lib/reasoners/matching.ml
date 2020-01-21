@@ -444,6 +444,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     with Invalid_argument _ -> raise Echec
 
   let match_one_pat mconf env tbox pat0 lsbt_acc sg =
+    Steps.incr (Steps.Matching);
     Debug.match_one_pat sg pat0;
     let pat = E.apply_subst (sg.sbs, sg.sty) pat0 in
     let { E.f = f; xs = pats; ty = ty; _ } =
