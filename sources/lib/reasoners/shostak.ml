@@ -233,8 +233,8 @@ struct
     not needed
 
     let compare a b =
-    let c = Pervasives.compare a.id b.id in
-    let c' = Pervasives.compare b.id a.id in
+    let c = Stdlib.compare a.id b.id in
+    let c' = Stdlib.compare b.id a.id in
     assert ((c = 0 && c' = 0) || (c*c' < 0));
     c
   *)

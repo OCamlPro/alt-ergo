@@ -57,7 +57,7 @@ val string_of_th_ext : theories_extensions -> string
 (**
    generic function for comparing algebraic data types.
    [compare_algebraic a b f]
-   - Pervasives.compare a b is used if
+   - Stdlib.compare a b is used if
 
 *)
 val [@inline always] compare_algebraic : 'a -> 'a -> (('a * 'a) -> int) -> int
