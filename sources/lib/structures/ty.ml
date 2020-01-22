@@ -661,3 +661,106 @@ let print_subst fmt sbt =
 
 let print_full =
   fst (print_generic (Some type_body)) (Some type_body)
+
+module Safe = struct
+
+  type nonrec t = t
+
+  let hash = hash
+  let equal = equal
+  let compare = compare
+
+  module Var = struct
+
+    type t = tvar
+
+    let hash v = v.v
+
+    let compare v v' = Pervasives.compare v.v v'.v
+
+    let equal v v' = compare v v' = 0
+
+    let mk _ = fresh_var ()
+
+    let print fmt { v ; _ } =
+      fprintf fmt "'a_%d" v
+
+  end
+
+  module Const = struct
+
+    type t = {
+      arity : int;
+      symbol : Hstring.t;
+    }
+
+    let hash { symbol; _ } = Hstring.hash symbol
+
+    let compare c c' =
+      Hstring.compare c.symbol c'.symbol
+
+    let equal c c' = compare c c' = 0
+
+    (* TODO: keep track of all created type constructors,
+             to avoid having the same name with different arities ? *)
+    let mk name arity =
+      { symbol = Hstring.make name; arity; }
+
+    let arity { arity; _ } = arity
+
+    let symbol { symbol; _ } = symbol
+
+    let tag _ _ _ = () (* Used for dolmen compatibility *)
+
+    let base = mk "$i" 0
+
+    let print fmt { symbol; _ } =
+      Format.fprintf fmt "%s" (Hstring.view symbol)
+
+    let rec print_arity_aux fmt = function
+      | 0 -> Format.fprintf fmt "Type"
+      | n ->
+        assert (n > 0);
+        Format.fprintf fmt "Type ->@ %a" print_arity_aux (n - 1)
+
+    let print_ty fmt n =
+      Format.fprintf fmt "@[<hov>%a@]" print_arity_aux n
+
+    let print_full fmt c =
+      Format.fprintf fmt "%a:@ %a" print c print_ty c.arity
+
+  end
+
+  exception Wrong_arity of Const.t * int
+
+  let prop = Tbool
+
+  let of_var v = Tvar v
+
+  let apply c args =
+    let n = Const.arity c in
+    let m = List.length args in
+    if m = n then
+      Text (args, Const.symbol c)
+    else
+      raise (Wrong_arity (c, m))
+
+  let base = apply Const.base []
+
+  let array src dst = Tfarray (src, dst)
+
+  let bitv n = Tbitv n
+
+  let int = Tint
+
+  (* ugly thing to satisfy the expected type in
+     typed statements TTypeDecl constructor *)
+  let apply_empty c =
+    let l = Array.to_list (
+        Array.init (Const.arity c) (fun _ -> fresh_tvar ())
+      ) in
+    Text (l, Const.symbol c)
+
+  let tag _ _ _ = () (* dolmen compatibility *)
+
+end

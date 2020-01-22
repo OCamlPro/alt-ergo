@@ -104,10 +104,8 @@ and 'a tt_desc =
   | TTinInterval of 'a atterm * Symbols.bound * Symbols.bound
   (** Represent floating point intervals (used for triggers in Floating
       point arithmetic theory).
-      [TTinInterval (lower, l_strict, t, upper, u_strict)] is a constraint
-      stating that term [t] is in the interval [lower, upper],
-      and that the lower (resp. upper) bound is strict iff [l_strict]
-      (resp. [u_strict]) is true. *)
+      [TTinInterval (t, lower, upper)] is a constraint
+      stating that term [t] is between its lower and upper bound. *)
   | TTget of 'a atterm * 'a atterm
   (** Get operation on arrays *)
   | TTset of 'a atterm * 'a atterm * 'a atterm
@@ -121,8 +119,7 @@ and 'a tt_desc =
   | TTrecord of (Hstring.t * 'a atterm) list
   (** Record creation. *)
   | TTlet of (Symbols.t * 'a atterm) list * 'a atterm
-  (** Let-bindings. Accept a list of mutually recursive le-bindings. *)
-  (* TODO: check that mutually recursive let-bindings are allowed ? *)
+  (** Let-bindings. Accept a list of sequential let-bindings. *)
   | TTnamed of Hstring.t * 'a atterm
   (** Attach a label to a term. *)
   | TTite of 'a atform * 'a atterm * 'a atterm
@@ -207,8 +204,10 @@ and 'a tform =
   | TFlet of (Symbols.t * Ty.t) list *
              (Symbols.t * 'a tlet_kind) list *
              'a atform
-  (** Let binding.
-      TODO: what is in the first list ? *)
+  (** Let binding. [TFlet (fv, bv, body)] represents the binding
+      of the variables in [bv] (to the corresponding term or formula),
+      in the formula [body]. The list [fv] contains the list of free term
+      variables (together with their type) that occurs in the formula. *)
   | TFnamed of Hstring.t * 'a atform
   (** Attach a name to a formula. *)
 
@@ -277,8 +276,11 @@ and 'a tdecl =
   (** New axiom that can be used in proofs. *)
   | TRewriting of Loc.t * string * ('a atterm rwt_rule) list
   (** New rewrite rule that can be used. *)
-  | TGoal of Loc.t * goal_sort * string * 'a atform
-  (** New goal to prove. *)
+  | TNegated_goal of Loc.t * goal_sort * string * 'a atform
+  (** New goal to prove, already negated !
+      WARNING: the formula given is added as an axiom,
+               so be sure to negate it before creating
+               a goal of this form. *)
   | TLogic of Loc.t * string list * tlogic_type
   (** Function (or predicate) type declaration. *)
   | TPredicate_def of
@@ -300,6 +302,14 @@ and 'a tdecl =
 (** Typed declarations. *)
 (* TODO: wrap this in a record to factorize away
    the location and name of the declaration ? *)
+
+
+(** {5 Monomorphization} *)
+
+val monomorphize_term : 'a atterm -> 'a atterm
+val monomorphize_atom : 'a atatom -> 'a atatom
+val monomorphize_form : 'a atform -> 'a atform
+(** Monomorphization functions on expressions. *)
 
 
 (** {5 Printing} *)
@@ -324,3 +334,384 @@ val print_rwt :
   Format.formatter -> 'a rwt_rule -> unit
 (** Print a rewrite rule *)
 
+
+(** {2 Expressions} *)
+
+module Safe : sig
+
+  type t =
+    | Term of int atterm  (** Terms *)
+    | Atom of int atatom  (** Atoms *)
+    | Form of int atform * Ty.tvar list
+    (** Formulas additionally carry their set of explicitly quantified
+        type variables, in order to disallow deep type quantification. *)
+  (** An expression is either a term, an atom, or a formula. *)
+
+  val print : Format.formatter -> t -> unit
+  (** Printer function. *)
+
+  val ty : t -> Ty.t
+  (** Return the type of the given expression. *)
+
+  module Var : sig
+
+    type t
+    (** Typed variables *)
+
+    val hash : t -> int
+    (** hash function *)
+
+    val equal : t -> t -> bool
+    (** equality funciton *)
+
+    val compare : t -> t -> int
+    (** comparison function *)
+
+    val print : Format.formatter -> t -> unit
+    (** Printer function *)
+
+    val mk : string -> Ty.t -> t
+    (** Create a typed variable from a name and type. *)
+
+    val make : Symbols.t -> Ty.t -> t
+    (** Create a typed variable from a symbol and type. *)
+
+    val ty : t -> Ty.t
+    (** Return the type of a typed variable. *)
+
+  end
+
+  module Const : sig
+
+    type t
+    (** Typed function symbols (aka constants) *)
+
+    val hash : t -> int
+    (** hash function *)
+
+    val equal : t -> t -> bool
+    (** equality funciton *)
+
+    val compare : t -> t -> int
+    (** comparison function *)
+
+    val print : Format.formatter -> t -> unit
+    (** Printer function *)
+
+    val print_ty :
+      Format.formatter ->
+      (Ty.Safe.Var.t list * Ty.t list * Ty.t) -> unit
+    (** Print a term constant's type. *)
+
+    val print_full : Format.formatter -> t -> unit
+    (** Print a constant together with its type. *)
+
+    val arity : t -> int * int
+    (** Return the expected number of arguments of the constants.
+        The pair contains first the number of expected type
+        arguments (for polymorphic functions), and then the number
+        of reguler (or term) arguments. *)
+
+    val mk : string -> Ty.tvar list -> Ty.t list -> Ty.t -> t
+    (** Create a typed funciton symbol. Takes as arguments the
+        symbol of the function, the type variables that occur in its
+        type, the list of argument's expected types, and the function
+        return type. *)
+
+    val tag : t -> _ -> _ -> unit
+    (** Noop, there for compatibility with Dolmen's interface. *)
+
+    val name : t -> string
+    (** Name of the constant. *)
+
+    val tlogic_type : t -> tlogic_type
+    (** Generate the logic type of the constant symbol. *)
+
+    val _true : t
+    (** The [true] constant *)
+
+    val _false : t
+    (** The [false] constant *)
+
+  end
+
+  (** {5 Typing exceptions} *)
+
+  exception Deep_type_quantification
+  (** Alt-ergo restricts type variables to be quantified at the
+      top of formulas. This exception is raised when trying to
+      build a formula that contain a formula with explicitly
+      quantified type variables. *)
+
+  exception Wrong_type of t * Ty.t
+  (** [Wrong_type (t, ety)] is raised by function that checks
+      and compute the type of expressions, when an expression
+      was expected to have type [ety], but doe snot have that
+      type (as returned by the {! ty} function). *)
+
+  exception Wrong_arity of Const.t * int * int
+  (** [Wrong_arity (c, n, m)] is raised when a constant [c]
+      is applied to [n] number of type arguments and [m] term
+      arguments, but these number do not match the arity of [c],
+      as defined by {! Const.arity}. *)
+
+
+  (** {3 Expression inspection} *)
+
+  val expect_prop : t -> Ty.Safe.Var.t list * int atform
+  (** Unwrap a formula from an expression. *)
+
+
+  (** {3 Expression building} *)
+
+  val of_var : Var.t -> t
+  (** Create an expression out of a variable. *)
+
+  val apply : Const.t -> Ty.t list -> t list -> t
+  (** Apply the given typed funciton symbol to the list of
+      types and terms given. Automatically checks that the arguments
+      have the correct type, and computes the type of the resulting
+      expression.
+      @raise Wrong_arity
+      @raise Wrong_type
+  *)
+
+  val _true : t
+  (** The [true] expression *)
+
+  val _false : t
+  (** The [false] expression *)
+
+  val eq : t -> t -> t
+  (** Create an equality between two expressions.
+      @raise Wrong_type
+  *)
+
+  val eqs : t list -> t
+  (** Create a chain of equalities.
+      @raise Wrong_type
+  *)
+
+  val distinct : t list -> t
+  (** Create a distinct expression.
+      @raise Wrong_type
+  *)
+
+  val neg : t -> t
+  (** Propositional negation
+      @raise Wrong_type
+      @raise Deep_type_quantification
+  *)
+
+  val imply : t -> t -> t
+  (** Propositional implication
+      @raise Wrong_type
+      @raise Deep_type_quantification
+  *)
+
+  val equiv : t -> t -> t
+  (** Propositional equivalence
+      @raise Wrong_type
+      @raise Deep_type_quantification
+  *)
+
+  val xor : t -> t -> t
+  (** Propositional exclusive disjunction
+      @raise Wrong_type
+      @raise Deep_type_quantification
+  *)
+
+  val _and : t list -> t
+  (** Propositional conjunction
+      @raise Wrong_type
+      @raise Deep_type_quantification
+  *)
+
+  val _or : t list -> t
+  (** Propositional disjunction
+      @raise Wrong_type
+      @raise Deep_type_quantification
+  *)
+
+  val fv : t -> Ty.tvar list * Var.t list
+  (** Return the list of free variables that occur in a given term *)
+
+  val all :
+    (Ty.tvar list * Var.t list) ->
+    (Ty.tvar list * Var.t list) ->
+    t -> t
+  (** Universal quantification. Accepts as first pair the lists
+      of free variables that occur in the resulting formula, then
+      the lists of variables quantified in the formula, and then the body
+      of the quantified formula.
+      @raise Wrong_type
+      @raise Deep_type_quantification
+  *)
+
+  val ex :
+    (Ty.tvar list * Var.t list) ->
+    (Ty.tvar list * Var.t list) ->
+    t -> t
+  (** Existencial quantification. Accepts as first pair the lists
+      of free variables that occur in the resulting formula, then
+      the lists of variables quantified in the formula, and then the body
+      of the quantified formula.
+      @raise Wrong_type
+      @raise Deep_type_quantification
+  *)
+
+  val letin : (Var.t * t) list -> t -> t
+  (** Let-binding.
+      @raise Wrong_type
+      @raise Deep_type_quantification
+  *)
+
+  val ite : t -> t -> t -> t
+  (** Create a conditional. *)
+
+  val select : t -> t -> t
+  (** Create a get operation on functionnal arrays *)
+
+  val store : t -> t -> t -> t
+  (** Create a set operation on functionnal arrays. *)
+
+  val mk_bitv : string -> t
+  (** Create a bitvector litteral from a string representation.
+      The string should only contain characters '0' or '1'. *)
+
+  val bitv_concat : t -> t -> t
+  (** Bitvector concatenation. *)
+
+  val bitv_extract : int -> int -> t -> t
+  (** Bitvector extraction, using the start and end position
+      of the bitvector to extract. *)
+
+  val bitv_repeat : int -> t -> t
+  (** Repetition of a bitvector. *)
+
+  val zero_extend : int -> t -> t
+  (** Extend the given bitvector with the given numer of 0. *)
+
+  val sign_extend : int -> t -> t
+  (** Extend the given bitvector with its most significant bit
+      repeated the given number of times. *)
+
+  val rotate_right : int -> t -> t
+  (** [rotate_right i x] means rotate bits of x to the right i times. *)
+
+  val rotate_left : int -> t -> t
+  (** [rotate_left i x] means rotate bits of x to the left i times. *)
+
+  val bvnot : t -> t
+  (** Bitwise negation. *)
+
+  val bvand : t -> t -> t
+  (** Bitwise conjunction. *)
+
+  val bvor : t -> t -> t
+  (** Bitwise disjunction. *)
+
+  val bvnand : t -> t -> t
+  (** [bvnand s t] abbreviates [bvnot (bvand s t)]. *)
+
+  val bvnor : t -> t -> t
+  (** [bvnor s t] abbreviates [bvnot (bvor s t)]. *)
+
+  val bvxor : t -> t -> t
+  (** [bvxor s t] abbreviates [bvor (bvand s (bvnot t)) (bvand (bvnot s) t)]. *)
+
+  val bvxnor : t -> t -> t
+  (** [bvxnor s t] abbreviates [bvor (bvand s t)
+      (bvand (bvnot s) (bvnot t))]. *)
+
+  val bvcomp : t -> t -> t
+  (** Bitwise comparison. [bvcomp s t] equald [#b1] iff [s] and [t]
+      are bitwise equal. *)
+
+
+  val bvneg : t -> t
+  (** Arithmetic complement on bitvectors.
+      Supposing an input bitvector of size [m] representing
+      an integer [k], the resulting term should represent
+      the integer [2^m - k]. *)
+
+  val bvadd : t -> t -> t
+  (** Arithmetic addition on bitvectors, modulo the size of
+      the bitvectors (overflows wrap around [2^m] where [m]
+      is the size of the two input bitvectors). *)
+
+  val bvsub : t -> t -> t
+  (** Arithmetic substraction on bitvectors, modulo the size
+      of the bitvectors (2's complement subtraction modulo).
+      [bvsub s t] should be equal to [bvadd s (bvneg t)]. *)
+
+  val bvmul : t -> t -> t
+  (** Arithmetic multiplication on bitvectors, modulo the size
+      of the bitvectors (see {!bvadd}). *)
+
+  val bvudiv : t -> t -> t
+  (** Arithmetic euclidian integer division on bitvectors. *)
+
+  val bvurem : t -> t -> t
+  (** Arithmetic euclidian integer remainder on bitvectors. *)
+
+  val bvsdiv : t -> t -> t
+  (** Arithmetic 2's complement signed division.
+      (see smtlib's specification for more information). *)
+
+  val bvsrem : t -> t -> t
+  (** Arithmetic 2's coplement signed remainder (sign follows dividend).
+      (see smtlib's specification for more information). *)
+
+  val bvsmod : t -> t -> t
+  (** Arithmetic 2's coplement signed remainder (sign follows divisor).
+      (see smtlib's specification for more information). *)
+
+  val bvshl : t -> t -> t
+  (** Logical shift left. [bvshl t k] return the result of
+      shifting [t] to the left [k] times. In other words,
+      this should return the bitvector representing
+      [t * 2^k] (since bitvectors represent integers using
+      the least significatn bit in cell 0). *)
+
+  val bvlshr : t -> t -> t
+  (** Logical shift right. [bvlshr t k] return the result of
+      shifting [t] to the right [k] times. In other words,
+      this should return the bitvector representing
+      [t / (2^k)]. *)
+
+  val bvashr : t -> t -> t
+  (** Arithmetic shift right, like logical shift right except that the most
+      significant bits of the result always copy the most significant
+      bit of the first argument*)
+
+  val bvult : t -> t -> t
+  (** Boolean arithmetic comparison (less than).
+      [bvult s t] should return the [true] term iff [s < t]. *)
+
+  val bvule : t -> t -> t
+  (** Boolean arithmetic comparison (less or equal than). *)
+
+  val bvugt : t -> t -> t
+  (** Boolean arithmetic comparison (greater than). *)
+
+  val bvuge : t -> t -> t
+  (** Boolean arithmetic comparison (greater or equal than). *)
+
+  val bvslt : t -> t -> t
+  (** Boolean signed arithmetic comparison (less than).
+      (See smtlib's specification for more information) *)
+
+  val bvsle : t -> t -> t
+  (** Boolean signed arithmetic comparison (less or equal than). *)
+
+  val bvsgt : t -> t -> t
+  (** Boolean signed arithmetic comparison (greater than). *)
+
+  val bvsge : t -> t -> t
+  (** Boolean signed arithmetic comparison (greater or equal than). *)
+
+  val tag : t -> _ -> _ -> unit
+  (** Noop, there for compatibility with Dolmen's interface. *)
+
+end

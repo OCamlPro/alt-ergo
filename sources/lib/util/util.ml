@@ -22,7 +22,6 @@ module SI = Set.Make(struct type t = int
 
 module SS = Set.Make(String)
 
-
 (** Different values for -case-split-policy option:
     -after-theory-assume (default value): after assuming facts in
     theory by the SAT
