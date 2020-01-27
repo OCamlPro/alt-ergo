@@ -1497,6 +1497,7 @@ let assume ~query env uf la =
          try
            match a with
            | L.Builtin(_, ((L.LE | L.LT) as n), [r1;r2]) ->
+             Steps.incr (Builtin);
              incr nb_num;
              let p1 = poly_of r1 in
              let p2 = poly_of r2 in
