@@ -113,7 +113,7 @@ let preludesdir = datadir |> follow "preludes"
 
 (* Output executable flags into tools/text/flags.dune *)
 let () =
-  let f = Filename.concat (Filename.concat "tools" "text") "flags.dune" in
+  let f = Filename.concat (Filename.concat "main" "text") "flags.dune" in
   let () = Format.printf "Generating file %s..." f in
   let ch = open_out f in
   let fmt = Format.formatter_of_out_channel ch in

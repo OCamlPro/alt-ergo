@@ -6,7 +6,7 @@ META
 *.merlin
 sources/Makefile.config
 sources/lib/util/config.ml
-sources/tools/text/flags.dune
+sources/main/text/flags.dune
 
 # Generated installation files
 sources/*.install
