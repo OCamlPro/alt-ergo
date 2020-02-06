@@ -48,8 +48,8 @@ let incr k =
       naive_steps := !naive_steps + n;
   end;
   if steps_bound () <> -1
-  && ((Pervasives.compare !steps ((steps_bound ())) > 0)
-      || (Pervasives.compare !naive_steps ((steps_bound ())) > 0)) then
+  && ((Stdlib.compare !steps ((steps_bound ())) > 0)
+      || (Stdlib.compare !naive_steps ((steps_bound ())) > 0)) then
     begin
       printf "Steps limit reached: %d@."
         (if !naive_steps > 0 then !naive_steps
