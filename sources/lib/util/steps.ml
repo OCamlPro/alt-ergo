@@ -1,7 +1,16 @@
 open Options
 open Format
 
-type incr_kind = Matching | Omega | Fourier | Uf | Builtin | Ac | Naive of int
+(** Define the type of increment *)
+type incr_kind =
+    Matching (* Matching step increment *)
+  | Omega (* Step of Arith on Real and Int *)
+  | Fourier (* FourierMotzkin step increment *)
+  | Uf (* UF step increment *)
+  | Builtin (* Inequalities increment *)
+  | Ac (* AC step reasoning *)
+  | Naive of int (* Naive cpt increment the counter for cpt term assumed in the
+                  * theories environment *)
 
 let naive_steps = ref 0
 let steps = ref 0
@@ -12,6 +21,7 @@ let mult_uf = ref 0
 let mult_b = ref 0
 let mult_a = ref 0
 
+(** Multipliers are here to homogeneize the global step counter *)
 let incr k =
   begin
     match k with
@@ -40,6 +50,8 @@ let incr k =
         (steps := !steps + 1;
          mult_f := 0);
     | Naive n ->
+      (* Since n refers to the number of terms sent to the theories no
+       * multiplier is needed here *)
       if n < 0 then
         begin
           Format.eprintf "steps can only be positive@.";
@@ -69,5 +81,9 @@ let reset_steps () =
   mult_b := 0;
   mult_a := 0
 
+(** Return the max steps between naive and refine steps counting. Both counter
+ ** are compute at execution. The first one count the number of terms sent to
+ ** the thories environment, the second one count steps depending of the
+ ** theories used *)
 let get_steps () =
   max !naive_steps !steps
