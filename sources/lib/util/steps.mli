@@ -1,4 +1,13 @@
-type incr_kind = Matching | Omega | Fourier | Uf | Builtin | Ac | Naive of int
+type incr_kind =
+    Matching (* Matching step increment *)
+  | Omega (* Step of Arith on Real and Int *)
+  | Fourier (* FourierMotzkin step increment *)
+  | Uf (* UF step increment *)
+  | Builtin (* Inequalities increment *)
+  | Ac (* AC step reasoning *)
+  | Naive of int (* Naive way of counting steps is to increment the counter for
+                  * each term assumed in the theories environment *)
+(** Define the type of increment *)
 
 val incr  : incr_kind -> unit
 (** Increment the number of steps depending of the incr_kind
