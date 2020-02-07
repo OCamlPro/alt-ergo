@@ -768,7 +768,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           Th.assume ~ordered:false
             (List.rev facts) env.unit_tenv
         in
-        Steps.incr (Steps.Naive cpt);
+        Steps.incr (Steps.Th_assumed cpt);
         env.unit_tenv <- t;
         C_none
       with Ex.Inconsistent (dep, _terms) ->
@@ -832,7 +832,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             Th.assume ~ordered:(not (Options.cdcl_tableaux_th ()))
               (List.rev !facts) env.tenv
           in
-          Steps.incr (Naive cpt);
+          Steps.incr (Steps.Th_assumed cpt);
           env.tenv <- t;
           do_case_split env Util.AfterTheoryAssume
         (*if full_model then expensive_theory_propagate ()
