@@ -1,16 +1,44 @@
+(******************************************************************************)
+(*                                                                            *)
+(*     The Alt-Ergo theorem prover                                            *)
+(*     Copyright (C) 2006-2013                                                *)
+(*                                                                            *)
+(*     Sylvain Conchon                                                        *)
+(*     Evelyne Contejean                                                      *)
+(*                                                                            *)
+(*     Francois Bobot                                                         *)
+(*     Mohamed Iguernelala                                                    *)
+(*     Stephane Lescuyer                                                      *)
+(*     Alain Mebsout                                                          *)
+(*                                                                            *)
+(*     CNRS - INRIA - Universite Paris Sud                                    *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the Apache Software        *)
+(*     License version 2.0                                                    *)
+(*                                                                            *)
+(*  ------------------------------------------------------------------------  *)
+(*                                                                            *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                     *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the Apache Software        *)
+(*     License version 2.0                                                    *)
+(*                                                                            *)
+(******************************************************************************)
+
 open Options
 open Format
 
-(** Define the type of increment *)
+(* Define the type of increment *)
 type incr_kind =
-    Matching (* Matching step increment *)
-  | Omega (* Step of Arith on Real and Int *)
-  | Fourier (* FourierMotzkin step increment *)
-  | Uf (* UF step increment *)
-  | Builtin (* Inequalities increment *)
-  | Ac (* AC step reasoning *)
-  | Naive of int (* Naive cpt increment the counter for cpt term assumed in the
-                  * theories environment *)
+    Matching           (* Matching step increment *)
+  | Interval_Calculus  (* Arith : Interval Calculus increment *)
+  | Fourier            (* Arith : FourierMotzkin step increment *)
+  | Omega              (* Arith : number of omega procedure on  Real and Int *)
+  | Uf                 (* UF step increment *)
+  | Ac                 (* AC step reasoning *)
+  | Th_assumed of int  (* Increment the counter for each term assumed in the
+                          theories environment *)
 
 let naive_steps = ref 0
 let steps = ref 0
@@ -21,7 +49,7 @@ let mult_uf = ref 0
 let mult_b = ref 0
 let mult_a = ref 0
 
-(** Multipliers are here to homogeneize the global step counter *)
+(* Multipliers are here to homogeneize the global step counter *)
 let incr k =
   begin
     match k with
@@ -41,7 +69,7 @@ let incr k =
       if !mult_a = 1 then
         (steps := !steps + 1;
          mult_a := 0)
-    | Builtin -> mult_b := !mult_b + 1;
+    | Interval_Calculus -> mult_b := !mult_b + 1;
       if !mult_b = 5 then
         (steps := !steps + 1;
          mult_b := 0)
@@ -49,7 +77,7 @@ let incr k =
       if !mult_f = 40 then
         (steps := !steps + 1;
          mult_f := 0);
-    | Naive n ->
+    | Th_assumed n ->
       (* Since n refers to the number of terms sent to the theories no
        * multiplier is needed here *)
       if n < 0 then
@@ -81,9 +109,9 @@ let reset_steps () =
   mult_b := 0;
   mult_a := 0
 
-(** Return the max steps between naive and refine steps counting. Both counter
- ** are compute at execution. The first one count the number of terms sent to
- ** the thories environment, the second one count steps depending of the
- ** theories used *)
+(* Return the max steps between naive and refine steps counting. Both counter
+ * are compute at execution. The first one count the number of terms sent to the
+ * theories environment, the second one count steps depending of the theories
+ * used *)
 let get_steps () =
   max !naive_steps !steps

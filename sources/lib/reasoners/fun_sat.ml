@@ -845,7 +845,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       in
       let utbox = if env.dlevel = 0 then tbox else utbox in
       let inst = Inst.add_terms inst new_terms (mk_gf E.vrai "" mf gf) in
-      Steps.incr (Naive cpt);
+      Steps.incr (Th_assumed cpt);
       { env with tbox = tbox; unit_tbox = utbox; inst = inst }
 
   let propagations ((env, bcp, tcp, ap_delta, lits) as result) =

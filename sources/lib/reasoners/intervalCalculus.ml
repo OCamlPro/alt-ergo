@@ -1494,10 +1494,10 @@ let assume ~query env uf la =
       (fun ((env, eqs, new_ineqs, rm) as acc) (a, root, expl, orig) ->
          let a = normal_form a in
          Debug.assume a expl;
+         Steps.incr (Interval_Calculus);
          try
            match a with
            | L.Builtin(_, ((L.LE | L.LT) as n), [r1;r2]) ->
-             Steps.incr (Builtin);
              incr nb_num;
              let p1 = poly_of r1 in
              let p2 = poly_of r2 in
