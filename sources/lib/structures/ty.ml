@@ -676,7 +676,7 @@ module Safe = struct
 
     let hash v = v.v
 
-    let compare v v' = Pervasives.compare v.v v'.v
+    let compare v v' = Stdlib.compare v.v v'.v
 
     let equal v v' = compare v v' = 0
 
