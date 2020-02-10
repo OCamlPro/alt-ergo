@@ -39,7 +39,7 @@ before_install:
   - opam init --disable-sandboxing --compiler=${OCAML_VERSION}
   - eval `opam config env`
   # Install odoc & ocp-indent
-  - opam install odoc ocp-indent.1.6.1
+  - opam install odoc ocp-indent.1.8.1
   # Set the verbose option *after* compiling the compiler
   # and installing odoc, else the log oveflows
   - export OPAMVERBOSE=1
@@ -116,13 +116,29 @@ jobs:
       script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.06.1+flambda
     - stage: "test"
-      name: "non-regression (4.07.0)"
+      name: "non-regression (4.07.1)"
       script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
-      env: OPAMBUILDTEST=true OCAML_VERSION=4.07.0
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.07.1
     - stage: "test"
-      name: "non-regression (4.07.0+flambda)"
+      name: "non-regression (4.07.1+flambda)"
       script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
-      env: OPAMBUILDTEST=true OCAML_VERSION=4.07.0+flambda
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.07.1+flambda
+    - stage: "test"
+      name: "non-regression (4.08.1)"
+      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.08.1
+    - stage: "test"
+      name: "non-regression (4.08.1+flambda)"
+      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.08.1+flambda
+    - stage: "test"
+      name: "non-regression (4.09.0)"
+      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.09.0
+    - stage: "test"
+      name: "non-regression (4.09.0+flambda)"
+      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.09.0+flambda
 
     # === Doc stage ===
     # Next branch (upload doc in gh-pages)
@@ -138,4 +154,3 @@ jobs:
         keep-history: true
         on:
           branch: next
-

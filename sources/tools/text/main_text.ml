@@ -161,7 +161,9 @@ let () =
   let parsed =
     try
       Options.Time.start ();
-      Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
+      if not (Options.timelimit_per_goal()) then
+        Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
+
       Options.set_is_gui false;
       init_profiling ();
 

@@ -12,7 +12,7 @@ open AltErgoLib
 open Options
 open Format
 
-let () =
+let load () =
   List.iter
     (fun p ->
        if verbose () then eprintf "[Dynlink] Loading the parser in %S ...@." p;

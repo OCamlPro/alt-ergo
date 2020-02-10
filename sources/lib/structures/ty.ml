@@ -197,7 +197,7 @@ let rec shorten ty =
 
 and shorten_body _ _ =
   ()
-    [@ocaml.ppwarning "TODO: should be implemented ?"]
+  [@ocaml.ppwarning "TODO: should be implemented ?"]
 
 let rec compare t1 t2 =
   match shorten t1 , shorten t2 with
@@ -331,7 +331,7 @@ let apply_subst =
                   lbs = lbs}
 
     | Tadt(name, params)
-        [@ocaml.ppwarning "TODO: detect when there are no changes "]
+      [@ocaml.ppwarning "TODO: detect when there are no changes "]
       ->
       Tadt (name, List.map (apply_subst s) params)
 
@@ -635,7 +635,7 @@ let vty_of t =
   vty_of_rec Svty.empty t
 
 
-    [@ocaml.ppwarning "TODO: detect when there are no changes "]
+  [@ocaml.ppwarning "TODO: detect when there are no changes "]
 let rec monomorphize ty =
   match ty with
   | Tint | Treal | Tbool | Tunit   | Tbitv _  | Tsum _ -> ty

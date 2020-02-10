@@ -1371,8 +1371,8 @@ let atoms_rec_of_form =
       atoms only_ground (atoms only_ground acc f1) f2
     | Let { let_e; in_e; _ } ->
       let acc = atoms only_ground acc in_e in
-      if let_e.ty == Ty.Tbool then atoms only_ground acc let_e else acc
-          [@ocaml.ppwarning "TODO: add some stuff from let_e"]
+      if let_e.ty == Ty.Tbool then atoms only_ground acc let_e
+      else acc [@ocaml.ppwarning "TODO: add some stuff from let_e"]
   in
   fun ~only_ground f acc ->
     atoms only_ground acc f
@@ -1560,9 +1560,9 @@ let elim_let =
     let let_sko = ground_sko let_sko in
     if let_sko.nb_nodes >= let_e.nb_nodes && let_e.pure then
       apply_subst_aux (SMap.singleton let_v let_e, Ty.esubst) in_e
-        [@ocaml.ppwarning "TODO: should also inline form in form. But \
-                           not possible to detect if we are not \
-                           inlining a form inside a term"]
+      [@ocaml.ppwarning "TODO: should also inline form in form. But \
+                         not possible to detect if we are not \
+                         inlining a form inside a term"]
     else
       let id = id in_e in
       let f' = apply_subst_aux (SMap.singleton let_v let_sko, Ty.esubst) in_e in
@@ -2058,12 +2058,12 @@ module Triggers = struct
       SMap.fold
         (fun sy { let_e; _ } sbt ->
            let let_e = apply_subst (sbt, Ty.esubst) let_e in
-           if let_e.pure then SMap.add sy let_e sbt else sbt
-               [@ocaml.ppwarning "TODO: once 'let x = term in term' \
-                                  added, check that the resulting sbt \
-                                  is well normalized (may be not true \
-                                  depending on the ordering of vars in \
-                                  lets"]
+           if let_e.pure then SMap.add sy let_e sbt
+           else sbt
+                [@ocaml.ppwarning "TODO: once 'let x = term in term' \
+                                   added, check that the resulting sbt \
+                                   is well normalized (may be not true \
+                                   depending on the ordering of vars in lets"]
         )lets SMap.empty
     in
     let sbs = sbt, Ty.esubst in
@@ -2080,13 +2080,13 @@ module Triggers = struct
       let vterm = SMap.fold (fun sy _ s -> SSet.add sy s) binders SSet.empty in
       if decl_kind == Dtheory then
         trs0
-          [@ocaml.ppwarning "TODO: filter_good_triggers for this \
-                             case once free-vars issues of theories \
-                             axioms with hypotheses fixed"]
-          (*check_triggers (vterm, vtype) trs0*)
-          [@ocaml.ppwarning "TODO: do it for this case once \
-                             free-vars issues of theories axioms \
-                             with hypotheses fixed"]
+        [@ocaml.ppwarning "TODO: filter_good_triggers for this \
+                           case once free-vars issues of theories \
+                           axioms with hypotheses fixed"]
+        (*check_triggers (vterm, vtype) trs0*)
+        [@ocaml.ppwarning "TODO: do it for this case once \
+                           free-vars issues of theories axioms \
+                           with hypotheses fixed"]
       else
         filter_good_triggers (vterm, vtype) trs0
 
@@ -2282,9 +2282,9 @@ let mk_match e cases =
   let res = compile_match mk_destr mk_tester e cases e in
   debug_compile_match e cases res;
   res
-    [@ocaml.ppwarning "TODO: introduce a let if e is a big expr"]
-    [@ocaml.ppwarning "TODO: add other elim schemes"]
-    [@ocaml.ppwarning "TODO: add a match construct in expr"]
+  [@ocaml.ppwarning "TODO: introduce a let if e is a big expr"]
+  [@ocaml.ppwarning "TODO: add other elim schemes"]
+  [@ocaml.ppwarning "TODO: add a match construct in expr"]
 
 
 let is_pure e = e.pure
@@ -2492,4 +2492,3 @@ type th_elt =
 
 let print_th_elt fmt t =
   Format.fprintf fmt "%s/%s: @[<hov>%a@]" t.th_name t.ax_name print t.ax_form
-

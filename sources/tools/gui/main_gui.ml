@@ -151,7 +151,7 @@ let save_session envs =
 
 let save_dialog cancel envs () =
   if List.exists
-      (fun env -> Pervasives.(<>) env.actions env.saved_actions) envs then
+      (fun env -> Stdlib.(<>) env.actions env.saved_actions) envs then
     if List.exists
         (fun env -> not (Gui_session.safe_session env.actions)) envs then
       GToolbox.message_box
@@ -250,7 +250,7 @@ let pop_model sat_env () =
 let compare_rows icol_number (model:#GTree.model) row1 row2 =
   let t1 = model#get ~row:row1 ~column:icol_number in
   let t2 = model#get ~row:row2 ~column:icol_number in
-  Pervasives.compare t1 t2
+  Stdlib.compare t1 t2
 
 
 let empty_inst_model () =
@@ -382,7 +382,7 @@ let refresh_timers t () =
   let total =
     tsat +. tmatch +. tcc +. tarith +. tarrays +. tsum +. trecords +. tac in
 
-  let total = if Pervasives.(=) total 0. then 1. else total in
+  let total = if Stdlib.(=) total 0. then 1. else total in
 
   t.tl_sat#set_text (sprintf "%3.2f s" tsat);
   t.tl_match#set_text (sprintf "%3.2f s" tmatch);
@@ -455,7 +455,7 @@ let add_inst ({ h; _ } as inst_model) orig =
   let id = Expr.id orig in
   let name =
     match Expr.form_view orig with
-    | Expr.Lemma { Expr.name = n ; _ } when Pervasives.(<>) n "" -> n
+    | Expr.Lemma { Expr.name = n ; _ } when Stdlib.(<>) n "" -> n
     | Expr.Lemma _ | Expr.Unit _ | Expr.Clause _ | Expr.Literal _
     | Expr.Skolem _ | Expr.Let _ | Expr.Iff _ | Expr.Xor _ ->
       string_of_int id
@@ -607,7 +607,7 @@ let vt_signal =
 
 let force_interrupt old_action_ref n =
   (* This function is called just before the thread's timeslice ends *)
-  if Pervasives.(=) (Some (Thread.id(Thread.self()))) !interrupt then
+  if Stdlib.(=) (Some (Thread.id(Thread.self()))) !interrupt then
     raise Abort_thread;
   match !old_action_ref with
   | Sys.Signal_handle f -> f n
@@ -723,8 +723,8 @@ let remove_context env () =
          toggle_prune env td
        | AAxiom (_, s, _, _)
          when String.length s = 0 ||
-              (Pervasives.(<>) s.[0] '_'  &&
-               Pervasives.(<>) s.[0] '@') ->
+              (Stdlib.(<>) s.[0] '_'  &&
+               Stdlib.(<>) s.[0] '@') ->
          toggle_prune env td
        | _ -> ()
     ) env.ast
@@ -951,7 +951,7 @@ let search_all entry (_sv:GSourceView2.source_view)
   buf#remove_tag found_all_tag ~start:buf#start_iter ~stop:buf#end_iter;
   let str = entry#text in
   let iter = ref buf#start_iter in
-  if Pervasives.(<>) str "" then
+  if Stdlib.(<>) str "" then
     let result = ref None in
     search_one buf str result iter found_all_tag;
     while !result != None do
@@ -1300,7 +1300,7 @@ let start_gui all_used_context =
 
   let set_wrap_lines _ =
     List.iter (fun env ->
-        if Pervasives.(=) env.goal_view#wrap_mode `NONE then (
+        if Stdlib.(=) env.goal_view#wrap_mode `NONE then (
           env.goal_view#set_wrap_mode `CHAR;
           env.inst_view#set_wrap_mode `CHAR;
           Gui_config.update_wrap true
