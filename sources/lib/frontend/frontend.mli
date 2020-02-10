@@ -41,12 +41,12 @@ module type S = sig
     | Preprocess
 
   val process_decl:
-    (status -> int64 -> unit) ->
+    (status -> int -> unit) ->
     used_context ->
     sat_env * bool * Explanation.t -> Commands.sat_tdecl ->
     sat_env * bool * Explanation.t
 
-  val print_status : status -> int64 -> unit
+  val print_status : status -> int -> unit
 
   val init_all_used_context : unit -> used_context
   val choose_used_context : used_context -> goal_name:string -> used_context

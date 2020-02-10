@@ -187,7 +187,7 @@ let show_about () =
       ~copyright:"CNRS - INRIA - Université Paris Sud (2006-2013)\n\
                   OCamlPro (2013-2018)"
       ~license:"CeCILL-C"
-      ~version:Version.version
+      ~version:Version._version
       ~website:"http://alt-ergo.lri.fr\nhttp://alt-ergo.ocamlpro.com"
       ~title:v ()
   in
@@ -497,7 +497,7 @@ let update_status image label buttonclean env s steps =
     let time = Options.Time.value () in
     if not satmode then Loc.report std_formatter d.st_loc;
     if satmode then printf "@{<C.F_Red>unsat@}@."
-    else printf "@{<C.F_Green>Valid@} (%2.4f) (%Ld)@." time steps;
+    else printf "@{<C.F_Green>Valid@} (%2.4f) (%d)@." time steps;
     if unsat_core () then begin
       printf "unsat-core:\n%a@." (Explanation.print_unsat_core ~tab:true) dep;
       show_used_lemmas env dep

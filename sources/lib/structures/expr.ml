@@ -493,11 +493,9 @@ let rec print_silent fmt t =
     end
 
   (* TODO: introduce PrefixOp in the future to simplify this ? *)
-  | Sy.Op op, [e1; e2] when op == Sy.Pow_real_int || op == Sy.Max_real ||
-                            op == Sy.Max_int || op == Sy.Min_real ||
-                            op == Sy.Min_int ||
-                            op == Sy.Pow_real_real ||
-                            op == Sy.Integer_round ->
+  | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||
+                            op == Sy.Max_real || op == Sy.Max_int ||
+                            op == Sy.Min_real || op == Sy.Min_int ->
     fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
 
   (* TODO: introduce PrefixOp in the future to simplify this ? *)
@@ -1031,7 +1029,7 @@ let mk_builtin ~is_pos n l =
 (** Substitutions *)
 
 let is_skolem_cst v =
-  try Pervasives.(=) (String.sub (Sy.to_string v.f) 0 4) "_sko"
+  try String.equal (String.sub (Sy.to_string v.f) 0 4) "_sko"
   with Invalid_argument _ -> false
 
 let get_skolem =
@@ -1669,9 +1667,9 @@ module Triggers = struct
     | { f = (Name _) as s1; xs=tl1; _ }, { f = (Name _) as s2; xs=tl2; _ } ->
       let l1 = List.map score_term tl1 in
       let l2 = List.map score_term tl2 in
-      let l1 = List.fast_sort Pervasives.compare l1 in
-      let l2 = List.fast_sort Pervasives.compare l2 in
-      let c  = Util.cmp_lists l1 l2 Pervasives.compare in
+      let l1 = List.fast_sort Stdlib.compare l1 in
+      let l2 = List.fast_sort Stdlib.compare l2 in
+      let c  = Util.cmp_lists l1 l2 Stdlib.compare in
       if c <> 0 then c
       else
         let c = Sy.compare s1 s2 in
@@ -1702,7 +1700,7 @@ module Triggers = struct
 
     | { f = Op (Access a1) ; xs=[t1]; _ },
       { f = Op (Access a2) ; xs=[t2]; _ } ->
-      let c = Pervasives.compare a1 a2 in (* should be Hstring.compare *)
+      let c = Stdlib.compare a1 a2 in (* should be Hstring.compare *)
       if c<>0 then c else cmp_trig_term t1 t2
 
     | { f = Op (Access _); _ }, _ -> -1
@@ -1710,7 +1708,7 @@ module Triggers = struct
 
     | { f = Op (Destruct (_,a1)) ; xs = [t1]; _ },
       { f = Op (Destruct (_,a2)) ; xs = [t2]; _ } ->
-      let c = Pervasives.compare a1 a2 in (* should be Hstring.compare *)
+      let c = Stdlib.compare a1 a2 in (* should be Hstring.compare *)
       if c<>0 then c else cmp_trig_term t1 t2
 
     | { f = Op (Destruct _); _ }, _ -> -1
@@ -1725,9 +1723,9 @@ module Triggers = struct
       (* ops that are not infix or prefix *)
       let l1 = List.map score_term tl1 in
       let l2 = List.map score_term tl2 in
-      let l1 = List.fast_sort Pervasives.compare l1 in
-      let l2 = List.fast_sort Pervasives.compare l2 in
-      let c = Util.cmp_lists l1 l2 Pervasives.compare in
+      let l1 = List.fast_sort Stdlib.compare l1 in
+      let l2 = List.fast_sort Stdlib.compare l2 in
+      let c = Util.cmp_lists l1 l2 Stdlib.compare in
       if c <> 0 then c
       else
         let c = Sy.compare s1 s2 in
@@ -1741,9 +1739,9 @@ module Triggers = struct
   let cmp_trig_term_list tl2 tl1 =
     let l1 = List.map score_term tl1 in
     let l2 = List.map score_term tl2 in
-    let l1 = List.rev (List.fast_sort Pervasives.compare l1) in
-    let l2 = List.rev (List.fast_sort Pervasives.compare l2) in
-    let c = Util.cmp_lists l1 l2 Pervasives.compare in
+    let l1 = List.rev (List.fast_sort Stdlib.compare l1) in
+    let l2 = List.rev (List.fast_sort Stdlib.compare l2) in
+    let c = Util.cmp_lists l1 l2 Stdlib.compare in
     if c <> 0 then c else Util.cmp_lists tl1 tl2 cmp_trig_term
 
   let unique_stable_sort =

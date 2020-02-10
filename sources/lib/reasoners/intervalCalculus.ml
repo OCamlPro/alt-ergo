@@ -100,10 +100,15 @@ end
 
 module Sim = OcplibSimplex.Basic.Make(SimVar)(Numbers.Q)(Explanation)
 
+type used_by = {
+  pow : SE.t;
+}
+
 type t = {
   inequations : Oracle.t MPL.t;
   monomes: (I.t * SX.t) MX0.t;
   polynomes : I.t MP0.t;
+  used_by : used_by MX0.t;
   known_eqs : SX.t;
   improved_p : SP.t;
   improved_x : SX.t;
@@ -402,26 +407,33 @@ end
    normalized polys *)
 let generic_find xp env =
   let is_mon = is_alien xp in
+  if debug_fm () then
+    fprintf fmt "generic_find: %a ... " X.print xp;
   try
     if not is_mon then raise Not_found;
-    let i, use = MX.n_find xp env.monomes in i, use, is_mon
+    let i, use = MX.n_find xp env.monomes in
+    if debug_fm () then fprintf fmt "found@.";
+    i, use, is_mon
   with Not_found ->
     (* according to this implem, it means that we can find aliens in polys
        but not in monomes. FIX THIS => an interval of x in monomes and in
        polys may be differents !!! *)
+    if debug_fm () then
+      fprintf fmt "not_found@.";
     let p0 = poly_of xp in
     let p, c = P.separate_constant p0 in
     let p, c0, d = P.normal_form_pos p in
+    if debug_fm() then
+      fprintf fmt "normalized into %a + %a * %a@."
+        Q.print c Q.print d P.print p;
     assert (Q.sign d <> 0 && Q.sign c0 = 0);
     let ty = P.type_info p0 in
     let ip =
       try MP.n_find p env.polynomes with Not_found -> I.undefined ty
     in
-    let ip = if Q.is_one d then ip else I.scale d ip in
-    let ip =
-      if Q.is_zero c then ip
-      else I.add ip (I.point c ty Explanation.empty)
-    in
+    if debug_fm() then
+      fprintf fmt "scaling %a by %a@." I.print ip Q.print d;
+    let ip = I.affine_scale ~const:c ~coef:d ip in
     ip, SX.empty, is_mon
 
 
@@ -515,13 +527,21 @@ module Debug = struct
       fprintf fmt "\t0@.@."
     end
 
-  let tighten_interval_modulo_eq p1 p2 i1 i2 b1 b2 j =
+  let tighten_interval_modulo_eq_begin p1 p2 =
     if debug_fm () then begin
       fprintf fmt "@.[fm] tighten intervals modulo eq: %a = %a@."
         P.print p1 P.print p2;
+    end
+
+  let tighten_interval_modulo_eq_middle p1 p2 i1 i2 j =
+    if debug_fm () then begin
       fprintf fmt "  %a has interval %a@." P.print p1 I.print i1;
       fprintf fmt "  %a has interval %a@." P.print p2 I.print i2;
       fprintf fmt "  intersection is %a@." I.print j;
+    end
+
+  let tighten_interval_modulo_eq_end p1 p2 b1 b2 =
+    if debug_fm () then begin
       if b1 then fprintf fmt "  > improve interval of %a@.@." P.print p1;
       if b2 then fprintf fmt "  > improve interval of %a@.@." P.print p2;
       if not b1 && not b2 then fprintf fmt "  > no improvement@.@."
@@ -534,6 +554,7 @@ let empty classes = {
   inequations = MPL.empty;
   monomes = MX.empty ;
   polynomes = MP.empty ;
+  used_by = MX0.empty;
   known_eqs = SX.empty ;
   improved_p = SP.empty ;
   improved_x = SX.empty ;
@@ -1384,12 +1405,14 @@ let tighten_eq_bounds env r1 r2 p1 p2 origin_eq expl =
     | Th_util.CS _ | Th_util.NCS _ -> env
     | Th_util.Subst | Th_util.Other ->
       (* Subst is needed, but is Other needed ?? or is it subsumed ? *)
+      Debug.tighten_interval_modulo_eq_begin p1 p2;
       let i1, us1, is_mon_1 = generic_find r1 env in
       let i2, us2, is_mon_2 = generic_find r2 env in
       let j = I.add_explanation (I.intersect i1 i2) expl in
+      Debug.tighten_interval_modulo_eq_middle p1 p2 i1 i2 j;
       let impr_i1 = I.is_strict_smaller j i1 in
       let impr_i2 = I.is_strict_smaller j i2 in
-      Debug.tighten_interval_modulo_eq p1 p2 i1 i2 impr_i1 impr_i2 j;
+      Debug.tighten_interval_modulo_eq_end p1 p2 impr_i1 impr_i2;
       let env =
         if impr_i1 then generic_add r1 j us1 is_mon_1 env else env
       in
@@ -1405,6 +1428,54 @@ let rec loop_update_intervals are_eq env cpt =
   if env.improved_p == SP.empty && env.improved_x == SX.empty || cpt > 10
   then env
   else loop_update_intervals are_eq env cpt
+
+let calc_pow a b ty uf =
+  let ra, expl_a = Uf.find uf a in
+  let rb, expl_b = Uf.find uf b in
+  let pa = poly_of ra in
+  let pb = poly_of rb in
+  try
+    match P.is_const pb with
+    | Some c_y ->
+      let res =
+        (* x ** 1 -> x *)
+        if Q.equal c_y Q.one then
+          ra
+          (* x ** 0 -> 1 *)
+        else if Q.equal c_y Q.zero then
+          alien_of (P.create [] Q.one ty)
+        else
+          match P.is_const pa with
+          | Some c_x ->
+            (* x ** y *)
+            let res = Arith.calc_power c_x c_y ty  in
+            alien_of (P.create [] res ty)
+          | None -> raise Exit
+      in
+      Some (res,Ex.union expl_a expl_b)
+    | None -> None
+  with Exit -> None
+
+(** Update and compute value of terms in relation with r1 if it is possible *)
+let update_used_by_pow env r1 p2 orig  eqs =
+  try
+    if orig != Th_util.Subst then raise Exit;
+    if P.is_const p2 == None then raise Exit;
+    let s = (MX0.find r1 env.used_by).pow in
+    SE.fold (fun t eqs ->
+        match E.term_view t with
+        | E.Term
+            { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
+          begin
+            match calc_pow a b ty env.new_uf with
+              None -> eqs
+            | Some (y,ex) ->
+              let eq = L.Eq (X.term_embed t,y) in
+              (eq, None, ex, Th_util.Other) :: eqs
+          end
+        | _ -> assert false
+      ) s eqs
+  with Exit | Not_found -> eqs
 
 let assume ~query env uf la =
   Oracle.incr_age ();
@@ -1483,6 +1554,7 @@ let assume ~query env uf la =
              in
              let env, eqs = add_equality are_eq env eqs p expl in
              let env = tighten_eq_bounds env r1 r2 p1 p2 orig expl in
+             let eqs = update_used_by_pow env r1 p2 orig eqs in
              env, eqs, new_ineqs, rm
 
            | _ -> acc
@@ -1638,17 +1710,50 @@ let default_case_split env uf ~for_model =
     end
   | res -> res
 
+(** Add relation between term x and the terms in it. This can allow use to track
+    if x is computable when its subterms values are known.
+    This is currently only done for power *)
+let add_used_by t r env =
+  match E.term_view t with
+  | E.Not_a_term _ -> assert false
+  | E.Term
+      { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
+    begin
+      match calc_pow a b ty env.new_uf with
+      | Some (res,ex) ->
+        if X.equal res r then
+          (* in this case, Arith.make already reduced "t" to a constant "r" *)
+          env, []
+        else
+          env, [L.Eq(res, r), ex]
+      | None ->
+        let ra = Uf.make env.new_uf a in
+        let rb = Uf.make env.new_uf b in
+        let sra =
+          try (MX0.find ra env.used_by).pow
+          with Not_found -> SE.empty in
+        let used_by_ra = MX0.add ra {pow = (SE.add t sra)} env.used_by in
+        let srb =
+          try (MX0.find rb used_by_ra).pow
+          with Not_found -> SE.empty in
+        let used_by_rb = MX0.add rb {pow = (SE.add t srb)} used_by_ra in
+        {env with used_by = used_by_rb}, []
+    end
+  | _ -> env, []
+           [@ocaml.ppwarning "TODO: add other terms such as div!"]
+
 let add =
   let are_eq t1 t2 =
     if E.equal t1 t2 then Some (Explanation.empty, []) else None
   in
-  fun env new_uf r _ ->
+  fun env new_uf r t ->
     try
       let env = {env with new_uf} in
       if is_num r then
-        init_monomes_of_poly are_eq env
-          (poly_of r) SX.empty Explanation.empty
-      else env
+        let env = init_monomes_of_poly are_eq env
+            (poly_of r) SX.empty Explanation.empty in
+        add_used_by t r env
+      else env, []
     with I.NotConsistent expl ->
       Debug.inconsistent_interval expl ;
       raise (Ex.Inconsistent (expl, env.classes))

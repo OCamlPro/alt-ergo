@@ -32,7 +32,7 @@ module TB =
       type t = E.t * bool
       let compare (a1, b1) (a2, b2) =
         let c = E.compare a1 a2 in
-        if c <> 0 then c else Pervasives.compare b1 b2
+        if c <> 0 then c else Stdlib.compare b1 b2
     end)
 
 type t =
@@ -65,7 +65,7 @@ let add_to_guarded p s t mp =
   let st = try ME.find p mp with Not_found -> SE2.empty in
   ME.add p (SE2.add (s, t) st) mp
 
-let add env _ _ t =
+let add_aux env t =
   if Options.disable_ites () then env
   else
     match is_ite t with
@@ -85,6 +85,9 @@ let add env _ _ t =
         let guarded_pos_deds = add_to_guarded p t t1 env.guarded_pos_deds in
         let guarded_neg_deds = add_to_guarded p t t2 env.guarded_neg_deds in
         {env with guarded_pos_deds; guarded_neg_deds}
+
+let add env _ _ t =
+  add_aux env t, []
 
 
 let extract_preds env la =

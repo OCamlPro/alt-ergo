@@ -64,9 +64,6 @@ module type SAT_ML = sig
   val set_current_tbox : t -> th -> unit
   val empty : unit -> t
 
-  val reset_steps : unit -> unit
-  val get_steps : unit -> int64
-
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
   val decision_level : t -> int
   val cancel_until : t -> int -> unit
@@ -223,11 +220,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   exception Conflict of clause
   (*module Make (Dummy : sig end) = struct*)
 
-  let steps = ref 0L
-
-  let reset_steps () = steps := 0L
-  let get_steps () = !steps
-
   let empty () =
     {
       is_unsat = false;
@@ -361,7 +353,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 *)
 
   let f_weight env i j =
-    Pervasives.(<) (Vec.get env.vars j).weight (Vec.get env.vars i).weight
+    (Stdlib.compare
+       (Vec.get env.vars j).weight (Vec.get env.vars i).weight) < 0
 
   (* unused -- let f_filter env i = (Vec.get env.vars i).level < 0 *)
 
@@ -375,7 +368,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let var_bump_activity env v =
     v.weight <- v.weight +. env.var_inc;
-    if Pervasives.(>) v.weight 1e100 then begin
+    if (Stdlib.compare v.weight 1e100) > 0 then begin
       for i = 0 to env.vars.Vec.sz - 1 do
         (Vec.get env.vars i).weight <- (Vec.get env.vars i).weight *. 1e-100
       done;
@@ -387,7 +380,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let clause_bump_activity env c =
     c.activity <- c.activity +. env.clause_inc;
-    if Pervasives.(>) c.activity 1e20 then begin
+    if (Stdlib.compare c.activity 1e20) > 0 then begin
       for i = 0 to env.learnts.Vec.sz - 1 do
         (Vec.get env.learnts i).activity <-
           (Vec.get env.learnts i).activity *. 1e-20;
@@ -775,13 +768,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           Th.assume ~ordered:false
             (List.rev facts) env.unit_tenv
         in
-        steps := Int64.add (Int64.of_int cpt) !steps;
-        if steps_bound () <> -1
-        && Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
-          begin
-            printf "Steps limit reached: %Ld@." !steps;
-            exit 1
-          end;
+        Options.incr_and_check_steps cpt;
         env.unit_tenv <- t;
         C_none
       with Ex.Inconsistent (dep, _terms) ->
@@ -845,13 +832,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             Th.assume ~ordered:(not (Options.cdcl_tableaux_th ()))
               (List.rev !facts) env.tenv
           in
-          steps := Int64.add (Int64.of_int cpt) !steps;
-          if steps_bound () <> -1
-          && Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
-            begin
-              printf "Steps limit reached: %Ld@." !steps;
-              exit 1
-            end;
+          Options.incr_and_check_steps cpt;
           env.tenv <- t;
           do_case_split env Util.AfterTheoryAssume
         (*if full_model then expensive_theory_propagate ()
@@ -881,7 +862,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
      let f_sort_db c1 c2 =
      let sz1 = Vec.size c1.atoms in
      let sz2 = Vec.size c2.atoms in
-     let c = Pervasives.compare c1.activity c2.activity in
+     let c = Stdlib.compare c1.activity c2.activity in
      if sz1 = sz2 && c = 0 then 0
      else
      if sz1 > 2 && (sz2 = 2 || c < 0) then -1

@@ -21,7 +21,7 @@ module MAKE (C : sig
     val print : formatter -> t -> unit
   end) = struct
 
-  module MI = Map.Make (struct type t = int let compare a b = a - b end)
+  module MI = Util.MI
   module MD = Map.Make(C)
 
   let ppprint fmt p =

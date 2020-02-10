@@ -75,7 +75,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         SE.fold
           (fun f mp ->
              let w = var_inc +. try ME.find f mp with Not_found -> 0. in
-             stable := !stable && Pervasives.(<=) w 1e100;
+             stable := !stable && (Stdlib.compare w 1e100) <= 0;
              ME.add f w mp
           )(Ex.bj_formulas_of expl) mp
       in
@@ -118,9 +118,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let dec =
         List.fast_sort
           (fun (_, x1, b1) (_, x2, b2) ->
-             let c = Pervasives.compare b2 b1 in
+             let c = Stdlib.compare b2 b1 in
              if c <> 0 then c
-             else Pervasives.compare x2 x1
+             else Stdlib.compare x2 x1
           )dec
       in
       (*
@@ -170,7 +170,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
   }
 
-  let steps = ref 0L
   let all_models_sat_env = ref None
   let latest_saved_env = ref None
   let terminated_normally = ref false
@@ -846,13 +845,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       in
       let utbox = if env.dlevel = 0 then tbox else utbox in
       let inst = Inst.add_terms inst new_terms (mk_gf E.vrai "" mf gf) in
-      steps := Int64.add (Int64.of_int cpt) !steps;
-      if steps_bound () <> -1
-      && Int64.compare !steps (Int64.of_int (steps_bound ())) > 0 then
-        begin
-          printf "Steps limit reached: %Ld@." !steps;
-          exit 1
-        end;
+      Options.incr_and_check_steps cpt;
       { env with tbox = tbox; unit_tbox = utbox; inst = inst }
 
   let propagations ((env, bcp, tcp, ap_delta, lits) as result) =
@@ -1171,7 +1164,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let i = abs (interpretation ()) in
     assert (i = 1 || i = 2 || i = 3);
     if not !(env.model_gen_mode) &&
-       Pervasives.(<>) (Options.interpretation_timelimit ()) 0. then
+       Stdlib.(<>) (Options.interpretation_timelimit ()) 0. then
       begin
         Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
         Options.Time.set_timeout
@@ -1733,7 +1726,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     else assume env fg
 
   let reset_refs () =
-    steps := 0L;
+    Options.reset_steps ();
     all_models_sat_env := None;
     latest_saved_env := None;
     terminated_normally := false
@@ -1777,8 +1770,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let empty_with_inst add_inst =
     { (empty ()) with add_inst = add_inst }
-
-  let get_steps () = !steps
 
   let assume_th_elt env th_elt dep =
     {env with tbox = Th.assume_th_elt env.tbox th_elt dep}

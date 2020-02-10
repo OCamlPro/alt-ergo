@@ -27,7 +27,6 @@
 (******************************************************************************)
 
 open Format
-open Options
 
 module E = Expr
 
@@ -93,6 +92,12 @@ let fresh_exp =
   fun () ->
     incr r;
     Fresh !r
+
+let exists_fresh t =
+  S.exists (function
+      | Fresh _ -> true
+      | _ -> false
+    ) t
 
 let remove_fresh fe s =
   if S.mem fe s then Some (S.remove fe s)
@@ -166,7 +171,7 @@ let literals_of ex =
   let fs  = formulas_of ex in
   E.Set.fold (literals_of_acc true fs) fs []
 
-module MI = Map.Make (struct type t = int let compare = compare end)
+module MI = Util.MI
 
 let literals_ids_of ex =
   List.fold_left (fun acc f ->

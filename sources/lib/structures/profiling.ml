@@ -85,7 +85,7 @@ let state =
 let set_sigprof () =
   let tm =
     let v = Options.profiling_period () in
-    if Pervasives.(>) v 0. then v else -. v
+    if (Stdlib.compare v 0.) > 0 then v else -. v
   in
   ignore
     (Unix.setitimer Unix.ITIMER_PROF
@@ -267,9 +267,9 @@ let columns =
 
     "Steps", "Number of Steps", 14, None,
     (fun steps gtime _ sz ->
-       let avg = int_of_float (Int64.to_float steps /. gtime) in
+       let avg = int_of_float ((float_of_int steps) /. gtime) in
        sprintf "%s~%s"
-         (string_resize (sprintf "%Ld" steps) (sz-7))
+         (string_resize (sprintf "%d" steps) (sz-7))
          (string_resize (sprintf "%d/s" avg) 6)
     );
 
@@ -629,9 +629,9 @@ let switch () =
 
 
 let float_print fmt v =
-  if Pervasives.(=) v 0. then fprintf fmt "--     "
-  else if Pervasives.(<) v 10. then fprintf fmt "%0.5f" v
-  else if Pervasives.(<) v 100. then fprintf fmt "%0.4f" v
+  if Stdlib.(=) v 0. then fprintf fmt "--     "
+  else if (Stdlib.compare v 10.) < 0 then fprintf fmt "%0.5f" v
+  else if (Stdlib.compare v 100.) < 0 then fprintf fmt "%0.4f" v
   else fprintf fmt "%0.3f" v
 
 let line_of_module arr f =

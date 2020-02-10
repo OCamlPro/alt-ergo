@@ -37,7 +37,7 @@ module S = Set.Make(String)
 module HSS = Hstring.Set
 
 module MString =
-  Map.Make(struct type t = string let compare = Pervasives.compare end)
+  Map.Make(struct type t = string let compare = String.compare end)
 
 
 
@@ -88,7 +88,7 @@ module Types = struct
       List.for_all2
         (fun pp x ->
            match pp with
-           | PPTvarid (y, _) -> Pervasives.(=) x y
+           | PPTvarid (y, _) -> Stdlib.(=) x y
            | _ -> false
         ) lpp lvars
     with Invalid_argument _ -> false
@@ -107,7 +107,7 @@ module Types = struct
           to_tyvars := MString.add s nty !to_tyvars;
           nty
       end
-    | PPTexternal (l, s, loc) when Pervasives.(=) s "farray" ->
+    | PPTexternal (l, s, loc) when String.equal s "farray" ->
       let t1,t2 = match l with
         | [t2] -> PPTint,t2
         | [t1;t2] -> t1,t2
@@ -118,7 +118,7 @@ module Types = struct
     | PPTexternal (l, s, loc) ->
       begin
         match rectype with
-        | Some (id, vars, ty) when Pervasives.(=) s id &&
+        | Some (id, vars, ty) when Stdlib.(=) s id &&
                                    equal_pp_vars l vars -> ty
         | _ ->
           try
@@ -330,6 +330,8 @@ let symbol_of = function
   | PPmul -> Symbols.Op Symbols.Mult
   | PPdiv -> Symbols.Op Symbols.Div
   | PPmod ->  Symbols.Op Symbols.Modulo
+  | PPpow_int ->  Symbols.Op Symbols.Pow
+  | PPpow_real ->  Symbols.Op Symbols.Pow
   | _ -> assert false
 
 let append_type msg ty =
@@ -490,6 +492,30 @@ let rec type_term ?(call_from_type_form=false) env f =
           Options.tool_req 1 (append_type "TR-Typing-OpMod type" ty1);
           TTinfix(te1,s,te2) , ty1
         | _ -> error (ShouldHaveTypeInt ty1) t1.pp_loc
+      end
+    | PPinfix(t1, (PPpow_int | PPpow_real as op), t2) ->
+      begin
+        let s = symbol_of op in
+        let te1 = type_term env t1 in
+        let te2 = type_term env t2 in
+        let ty1 = Ty.shorten te1.c.tt_ty in
+        let ty2 = Ty.shorten te2.c.tt_ty in
+        match ty1, ty2, op with
+        | Ty.Tint, Ty.Tint, PPpow_int ->
+          Options.tool_req 1 (append_type "TR-Typing-Oppow_int type" ty1);
+          TTinfix(te1,s,te2) , Ty.Tint
+
+        | (Ty.Tint | Ty.Treal), (Ty.Tint | Ty.Treal), PPpow_real ->
+          Options.tool_req 1 (append_type "TR-Typing-Oppow_real type" ty1);
+          TTinfix(te1,s,te2) , Ty.Treal
+
+        | Ty.Treal , _, PPpow_int -> error (ShouldHaveTypeInt Ty.Tint) t1.pp_loc
+        | _, Ty.Treal, PPpow_int -> error (ShouldHaveTypeInt Ty.Tint) t2.pp_loc
+
+        | _, _, PPpow_real -> error (ShouldHaveTypeInt Ty.Treal) t1.pp_loc
+        | _, _, PPpow_int -> error (ShouldHaveTypeInt Ty.Tint) t1.pp_loc
+
+        | _ -> assert false (* can't happen *)
       end
     | PPprefix(PPneg, { pp_desc=PPconst (ConstInt n); _ }) ->
       Options.tool_req 1 (append_type "TR-Typing-OpUnarith type" Ty.Tint);
@@ -2198,4 +2224,3 @@ let type_expr env vars t =
 type env = Env.t
 
 let empty_env = Env.empty
-

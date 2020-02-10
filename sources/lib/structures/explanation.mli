@@ -55,6 +55,9 @@ val fold_atoms : (exp -> 'a -> 'a )  -> t -> 'a -> 'a
 
 val fresh_exp : unit -> exp
 
+val exists_fresh : t -> bool
+(** Does there exists a [Fresh _] exp in an explanation set. *)
+
 val remove_fresh : exp -> t -> t option
 
 val remove : exp -> t -> t

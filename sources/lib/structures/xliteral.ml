@@ -93,6 +93,45 @@ module type S = sig
 
 end
 
+let print_view ?(lbl="") pr_elt fmt vw =
+  match vw with
+  | Eq (z1, z2) ->
+    Format.fprintf fmt "%s %a = %a" lbl pr_elt z1 pr_elt z2
+
+  | Distinct (b,(z::l)) ->
+    let b = if b then "~ " else "" in
+    Format.fprintf fmt "%s %s%a" lbl b pr_elt z;
+    List.iter (fun x -> Format.fprintf fmt " <> %a" pr_elt x) l
+
+  | Builtin (true, LE, [v1;v2]) ->
+    Format.fprintf fmt "%s %a <= %a" lbl pr_elt v1 pr_elt v2
+
+  | Builtin (true, LT, [v1;v2]) ->
+    Format.fprintf fmt "%s %a < %a" lbl pr_elt v1 pr_elt v2
+
+  | Builtin (false, LE, [v1;v2]) ->
+    Format.fprintf fmt "%s %a > %a" lbl pr_elt v1 pr_elt v2
+
+  | Builtin (false, LT, [v1;v2]) ->
+    Format.fprintf fmt "%s %a >= %a" lbl pr_elt v1 pr_elt v2
+
+  | Builtin (_, (LE | LT), _) ->
+    assert false (* not reachable *)
+
+  | Builtin (pos, IsConstr hs, [e]) ->
+    Format.fprintf fmt "%s(%a ? %a)"
+      (if pos then "" else "not ") pr_elt e Hstring.print hs
+
+  | Builtin (_, IsConstr _, _) ->
+    assert false (* not reachable *)
+
+  | Pred (p,b) ->
+    Format.fprintf fmt "%s %a = %s" lbl pr_elt p
+      (if b then "false" else "true")
+
+  | Distinct (_, _) -> assert false
+
+
 module Make (X : OrderedType) : S with type elt = X.t = struct
 
   type elt = X.t
@@ -103,7 +142,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
 
   type t = { at : atom; neg : bool; tpos : int; tneg : int }
 
-  let compare a1 a2 = Pervasives.compare a1.tpos a2.tpos
+  let compare a1 a2 = Stdlib.compare a1.tpos a2.tpos
   let equal a1 a2 = a1.tpos = a2.tpos (* XXX == *)
   let hash a1 = a1.tpos
   let uid a1 = a1.tpos
@@ -141,42 +180,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
   let print fmt a =
     let lbl = Hstring.view (label a) in
     let lbl = if String.length lbl = 0 then lbl else lbl^":" in
-    match view a with
-    | Eq (z1, z2) ->
-      Format.fprintf fmt "%s %a = %a" lbl X.print z1 X.print z2
-
-    | Distinct (b,(z::l)) ->
-      let b = if b then "~ " else "" in
-      Format.fprintf fmt "%s %s%a" lbl b X.print z;
-      List.iter (fun x -> Format.fprintf fmt " <> %a" X.print x) l
-
-    | Builtin (true, LE, [v1;v2]) ->
-      Format.fprintf fmt "%s %a <= %a" lbl X.print v1 X.print v2
-
-    | Builtin (true, LT, [v1;v2]) ->
-      Format.fprintf fmt "%s %a < %a" lbl X.print v1 X.print v2
-
-    | Builtin (false, LE, [v1;v2]) ->
-      Format.fprintf fmt "%s %a > %a" lbl X.print v1 X.print v2
-
-    | Builtin (false, LT, [v1;v2]) ->
-      Format.fprintf fmt "%s %a >= %a" lbl X.print v1 X.print v2
-
-    | Builtin (_, (LE | LT), _) ->
-      assert false (* not reachable *)
-
-    | Builtin (pos, IsConstr hs, [e]) ->
-      Format.fprintf fmt "%s(%a ? %a)"
-        (if pos then "" else "not ") X.print e Hstring.print hs
-
-    | Builtin (_, IsConstr _, _) ->
-      assert false (* not reachable *)
-
-    | Pred (p,b) ->
-      Format.fprintf fmt "%s %a = %s" lbl X.print p
-        (if b then "false" else "true")
-
-    | Distinct (_, _) -> assert false
+    print_view ~lbl X.print fmt (view a)
 
   let equal_builtins n1 n2 =
     match n1, n2 with

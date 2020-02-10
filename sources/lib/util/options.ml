@@ -128,6 +128,7 @@ module M = struct
   let no_sat_learning = ref false
   let instantiate_after_backjump = ref false
   let disable_weaks = ref false
+  let gc_policy = ref 0
   let default_input_lang = ref ".why"
   let no_locs_in_answers = ref false
 
@@ -148,12 +149,12 @@ module M = struct
       in
       Format.printf "%s@." path; exit 0
 
-  let show_version () = Format.printf "%s@." Version.version; exit 0
+  let show_version () = Format.printf "%s@." Version._version; exit 0
 
   let show_version_info () =
-    Format.printf "Version          = %s@." Version.version;
-    Format.printf "Release date     = %s@." Version.release_date;
-    Format.printf "Release commit   = %s@." Version.release_commit;
+    Format.printf "Version          = %s@." Version._version;
+    Format.printf "Release date     = %s@." Version._release_date;
+    Format.printf "Release commit   = %s@." Version._release_commit;
     exit 0
 
   let set_max_split s =
@@ -225,6 +226,20 @@ module M = struct
     reversed_preludes := p :: !reversed_preludes
 
   let set_default_input_lang lang = default_input_lang := "." ^ lang
+
+  let set_steps_bounds n =
+    if n >= 0 then steps_bound := n
+    else
+      raise (Arg.Bad ("-steps-bound argument should be positive"))
+
+  let set_gc_policy n =
+    match n with
+    | 0 | 1 | 2 -> gc_policy := n
+    | _ ->
+      Format.eprintf "[warning] Gc_policy value must be 0[default], 1 or 2@."
+
+  let init_gc_policy () =
+    Gc.set { (Gc.get()) with Gc.allocation_policy = !gc_policy }
 
   let timers = ref false
 
@@ -386,7 +401,7 @@ module M = struct
     "-where",
     Arg.String show_where,
     "  prints the directory of its argument. Possible arguments are: \
-     'bin', 'lib', 'plugins', 'data' and 'man'";
+     'lib', 'plugins', 'preludes', 'data' and 'man'";
 
     "-disable-ites",
     Arg.Set disable_ites,
@@ -401,7 +416,7 @@ module M = struct
     "  enable case-split for Algebraic Datatypes theory";
 
     "-steps-bound",
-    Arg.Set_int steps_bound,
+    Arg.Int set_steps_bounds,
     " <n> set the maximum number of steps";
 
     "-enable-assertions",
@@ -668,6 +683,12 @@ module M = struct
     " Prevent the GC from collecting hashconsed data structrures that are \
      not reachable (useful for more determinism)";
 
+    "-gc-policy",
+    Arg.Int set_gc_policy,
+    " Set the gc policy allocation. 0 = next-fit policy [default], 1 = \
+     first-fit policy, 2 = best-fit policy. See GC module for more \
+     informations ";
+
     "-enable-restarts",
     Arg.Set enable_restarts,
     " For satML: enable restarts or not. Default behavior is 'false'";
@@ -710,6 +731,7 @@ let parse_cmdline_arguments () =
   let ofile = ref None in
   let set_file s = ofile := Some s in
   Arg.parse M.spec set_file M.usage;
+  M.init_gc_policy ();
   match !ofile with
   | Some f ->
     M.file := f;
@@ -755,7 +777,6 @@ let set_type_only b = M.type_only := b
 let set_type_smt2 b = M.type_smt2 := b
 let set_parse_only b = M.parse_only := b
 let set_frontend s = M.frontend := s
-let set_steps_bound b = M.steps_bound := b
 let set_age_bound b = M.age_bound := b
 let set_no_user_triggers b = M.no_user_triggers := b
 let set_verbose b = M.verbose := b
@@ -766,6 +787,7 @@ let set_no_Ematching b = M.no_Ematching := b
 let set_no_NLA b = M.no_NLA := b
 let set_no_ac b = M.no_ac := b
 let set_normalize_instances b = M.normalize_instances := b
+let set_steps_bound b = M.steps_bound := b
 let set_nocontracongru b = M.nocontracongru := b
 let set_term_like_pp b = M.term_like_pp := b
 let set_all_models b = M.all_models := b
@@ -948,6 +970,24 @@ let cs_steps_cpt = ref 0
 let cs_steps () = !cs_steps_cpt
 let incr_cs_steps () = incr cs_steps_cpt
 
+let steps = ref 0
+let get_steps () = !steps
+let reset_steps () = steps := 0
+let incr_and_check_steps cpt =
+  if cpt < 0 then
+    begin
+      Format.eprintf "Steps can only be positive@.";
+      exit 1
+    end;
+  steps := !steps + cpt;
+  if steps_bound () <> (-1) && (0 > !steps || !steps >= steps_bound ()) then
+    begin
+      Format.eprintf "Steps limit reached: %d@."
+        (if !steps > 0 then !steps else
+           steps_bound ());
+      exit 1
+    end
+
 
 (** open Options in every module to hide polymorphic versions of Pervasives **)
 let (<>) (a: int) (b: int) = a <> b
@@ -957,7 +997,7 @@ let (>)  (a: int) (b: int) = a > b
 let (<=) (a: int) (b: int) = a <= b
 let (>=) (a: int) (b: int) = a >= b
 
-let compare  (a: int) (b: int) = Pervasives.compare a b
+let compare  (a: int) (b: int) = Stdlib.compare a b
 
 
 (* extra **)

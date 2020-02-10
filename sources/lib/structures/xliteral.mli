@@ -90,4 +90,11 @@ module type S = sig
   module Set : Set.S with type elt = t
 end
 
+val print_view :
+  ?lbl:string ->
+  (Format.formatter -> 'a -> unit) ->
+  Format.formatter ->
+  'a view ->
+  unit
+
 module Make ( X : OrderedType ) : S with type elt = X.t

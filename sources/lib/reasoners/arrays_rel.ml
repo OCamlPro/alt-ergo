@@ -252,16 +252,14 @@ let get_of_set are_eq are_dist gtype (env,acc) class_of =
   set(-,-,-) modulo egalite
   ---------------------------------------------------------------------*)
 let get_from_set _are_eq _are_dist stype (env,acc) class_of =
-  let {s=set; st=stab; si=si; sv=sv; _} = stype in
-  let ty_si = E.type_info sv in
-  let stabs =
+  let sets =
     L.fold_left
       (fun acc t -> S.union acc (TBS.find t env.tbset))
-      S.empty (class_of stab)
+      (S.singleton stype) (class_of stype.st)
   in
 
-  (* TODO/WARNING: very suspicious unused variable ! *)
-  S.fold (fun _stab' (env,acc) ->
+  S.fold (fun { s = set; si = si; sv = sv; _ } (env,acc) ->
+      let ty_si = E.type_info sv in
       let get = E.mk_term (Sy.Op Sy.Get) [set; si] ty_si in
       if Tmap.splited get set env.seen then (env,acc)
       else
@@ -271,7 +269,7 @@ let get_from_set _are_eq _are_dist stype (env,acc) class_of =
         in
         let p_ded = E.mk_eq ~iff:false get sv in
         env, Conseq.add (p_ded, Ex.empty) acc
-    ) stabs (env,acc)
+    ) sets (env,acc)
 
 (*----------------------------------------------------------------------
   get(t,-) and set(t,-,-) modulo egalite
@@ -435,7 +433,7 @@ let assume env uf la =
   else assume env uf la
 
 let query _ _ _ = None
-let add env _ _ _ = env
+let add env _ _ _ = env, []
 let print_model _ _ _ = ()
 
 let new_terms env = env.new_terms

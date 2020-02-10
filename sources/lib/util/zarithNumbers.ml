@@ -153,7 +153,7 @@ module Q : NumbersInterface.QSig with module Z = Z = struct
   let floor t      = from_z (Z.fdiv (num t) (den t))
   let ceiling t    = from_z (Z.cdiv (num t) (den t))
   let power t n    =
-    let abs_n = Pervasives.abs n in
+    let abs_n = Stdlib.abs n in
     let num_pow = Z.power (num t) abs_n in
     let den_pow = Z.power (den t) abs_n in
     if n >= 0 then from_zz num_pow den_pow else from_zz den_pow num_pow

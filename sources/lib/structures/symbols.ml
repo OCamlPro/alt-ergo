@@ -40,8 +40,8 @@ type operator =
   | Sqrt_real | Abs_int | Abs_real | Real_of_int | Int_of_real
   | Int_floor | Int_ceil | Is_int
   | Sqrt_real_default | Sqrt_real_excess
-  | Min_real | Min_int | Max_real | Max_int | Integer_log2 | Pow_real_int
-  | Pow_real_real | Integer_round
+  | Min_real | Min_int | Max_real | Max_int | Integer_log2
+  | Pow | Integer_round
   | Constr of Hstring.t (* enums, adts *)
   | Destruct of Hstring.t * bool
   | Tite
@@ -125,16 +125,15 @@ let compare_operators op1 op2 =
     (function
       | Access h1, Access h2 | Constr h1, Constr h2 -> Hstring.compare h1 h2
       | Destruct (h1, b1), Destruct(h2, b2) ->
-        let c = Pervasives.compare b1 b2 in
+        let c = Stdlib.compare b1 b2 in
         if c <> 0 then c else Hstring.compare h1 h2
       | _ , (Plus | Minus | Mult | Div | Modulo
             | Concat | Extract | Get | Set | Fixed | Float | Reach
             | Access _ | Record | Sqrt_real | Abs_int | Abs_real
-            | Real_of_int | Int_of_real |Int_floor | Int_ceil
-            | Sqrt_real_default | Sqrt_real_excess | Min_real | Min_int
-            | Max_real | Max_int | Integer_log2 | Pow_real_int | Pow_real_real
-            | Integer_round | Is_int | Constr _ | Destruct _ | Tite) ->
-        assert false
+            | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
+            | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
+            | Integer_log2 | Pow | Integer_round
+            | Constr _ | Destruct _ | Tite) -> assert false
     )
 
 let compare_builtin b1 b2 =
@@ -157,7 +156,7 @@ let compare_forms f1 f2 =
   Util.compare_algebraic f1 f2
     (function
       | F_Unit b1, F_Unit b2
-      | F_Clause b1, F_Clause b2 -> Pervasives.compare b1 b2
+      | F_Clause b1, F_Clause b2 -> Stdlib.compare b1 b2
       | _, (F_Unit _ | F_Clause _ | F_Lemma | F_Skolem
            | F_Iff | F_Xor) ->
         assert false
@@ -175,10 +174,10 @@ let compare_bounds a b =
   let c = Ty.compare a.sort b.sort in
   if c <> 0 then c
   else
-    let c = Pervasives.compare a.is_open b.is_open in
+    let c = Stdlib.compare a.is_open b.is_open in
     if c <> 0 then c
     else
-      let c = Pervasives.compare a.is_lower b.is_lower in
+      let c = Stdlib.compare a.is_lower b.is_lower in
       if c <> 0 then c
       else compare_bounds_kind a.kind b.kind
 
@@ -294,8 +293,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op Min_real -> "min_real"
   | Op Min_int -> "min_int"
   | Op Integer_log2 -> "integer_log2"
-  | Op Pow_real_int -> "pow_real_int"
-  | Op Pow_real_real -> "pow_real_real"
+  | Op Pow -> "**"
   | Op Integer_round -> "integer_round"
   | Op Is_int -> "is_int"
   | Op Concat -> "@"
