@@ -31,7 +31,7 @@
     ; util
     Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
     MyDynlink MyUnix Numbers NumsNumbers NumbersInterface
-    Options Timers Util Vec Version ZarithNumbers
+    Options Timers Util Vec Version ZarithNumbers Steps
   )
 
 )

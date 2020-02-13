@@ -306,6 +306,7 @@ module Container : Container_SIG = struct
     let monome_ineq ineq = P.is_monomial ineq.ple0 != None
 
     let fourierMotzkin add_ineqs are_eq acc mp =
+      Steps.incr (Steps.Fourier);
       let rec fourier acc mp =
         Options.exec_thread_yield ();
         if MINEQS.is_empty mp then acc
