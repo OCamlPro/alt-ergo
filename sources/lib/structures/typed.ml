@@ -654,7 +654,7 @@ module Safe = struct
       let div =
         make Symbols.(Op Div) [] [Ty.Safe.int; Ty.Safe.int] Ty.Safe.int
 
-      let modulo =
+      let rem =
         make Symbols.(Op Modulo) [] [Ty.Safe.int; Ty.Safe.int] Ty.Safe.int
 
       let abs =
@@ -703,9 +703,43 @@ module Safe = struct
     end
   end
 
+  module Cstr = struct
+
+    type t = {
+      const : Const.t
+    }
+
+    let hash t = Const.hash t.const
+
+    let equal t t' = Const.equal t.const t'.const
+
+    let arity t = Const.arity t.const
+
+  end
+
+  module Field = struct
+
+    type t = {
+      const : Const.t;
+    }
+
+    let hash t = Const.hash t.const
+
+    let equal t t' = Const.equal t.const t'.const
+
+  end
+
+  let define_adt _ _ _ = assert false
+  let define_record _ _ _ = assert false
+
+  (* Exceptions *)
+
   exception Deep_type_quantification
   exception Wrong_type of t * Ty.t
   exception Wrong_arity of Const.t * int * int
+  exception Wrong_record_type of Field.t * Ty.Safe.Const.t
+  exception Field_missing of Field.t
+  exception Field_repeated of Field.t
 
   (* Auxiliary functions. *)
 
@@ -817,6 +851,12 @@ module Safe = struct
         ))
     end
 
+  let apply_cstr (c : Cstr.t) tys args = apply c.const tys args
+
+  let apply_field (f : Field.t) t = apply f.const [] [t]
+  (* TODO: add type inference of type args to correctly deal
+           with polymorphic records ? *)
+
   (* Use a divide and conquer strategy to chain
      application of binary operators to a list of expressions. *)
   let mk_bin_op op l =
@@ -837,6 +877,9 @@ module Safe = struct
 
   let _and = mk_bin_op OPand
   let _or = mk_bin_op OPor
+
+  let nor a b = neg (_or [a; b])
+  let nand a b = neg (_and [a; b])
 
   (* TODO: allow real n-ary equalities.
      Currently, n-ary equalities are translated using a "star"
@@ -878,6 +921,10 @@ module Safe = struct
         ) r
       in
       Atom (mk (TAdistinct (x_t :: r')))
+
+  (** record creation *)
+  let record _ = assert false
+  let record_with _ _ = assert false
 
   (** free variable computation *)
   let add_fv (fv, bv) v ty =
@@ -1230,19 +1277,19 @@ module Safe = struct
   module Int = struct
     type nonrec t = t
     let int s = int s
-    let neg i = apply Const.Int.sub [] [int "0";i]
+    let minus i = apply Const.Int.sub [] [int "0";i]
     let add i j = apply Const.Int.add [] [i;j]
     let sub i j = apply Const.Int.sub [] [i;j]
     let mul i j = apply Const.Int.mul [] [i;j]
     let div i j = apply Const.Int.div [] [i;j]
-    let modulo i j = apply Const.Int.modulo [] [i;j]
+    let rem i j = apply Const.Int.rem [] [i;j]
     let abs i = apply Const.Int.abs [] [i;]
     let lt i j = apply Const.Int.lt [] [i;j]
     let le i j = apply Const.Int.le [] [i;j]
     let gt i j = apply Const.Int.lt [] [j;i]
     let ge i j = apply Const.Int.le [] [j;i]
     let divisible i j =
-      let n = apply Const.Int.modulo [] [int i;j] in
+      let n = apply Const.Int.rem [] [int i;j] in
       let zero = int "0" in
       let f = Const.make Symbols.(Lit L_eq) [] [Ty.Safe.int; Ty.Safe.int]
         Ty.Safe.prop
@@ -1254,7 +1301,7 @@ module Safe = struct
   module Real = struct
     type nonrec t = t
     let real s = real s
-    let neg i = apply Const.Real.sub [] [real "0";i]
+    let minus i = apply Const.Real.sub [] [real "0";i]
     let add i j = apply Const.Real.add [] [i;j]
     let sub i j = apply Const.Real.sub [] [i;j]
     let mul i j = apply Const.Real.mul [] [i;j]
@@ -1271,9 +1318,6 @@ module Safe = struct
     type ty = Ty.t
 
     let ty t = ty t
-
-    let int s = int s
-    let real s = real s
 
     module Int = struct
       include Int

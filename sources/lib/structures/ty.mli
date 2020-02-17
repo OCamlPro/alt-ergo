@@ -363,6 +363,9 @@ module Safe : sig
   val of_var : Var.t -> t
   (** Create a type from a variable. *)
 
+  val wildcard : unit -> t
+  (** Wildcard creation (currently unsupported). *)
+
   val apply : Const.t -> t list -> t
   (** Application for types.
       Ensures that the arity of the given type constructor is respected. *)

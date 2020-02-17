@@ -435,6 +435,52 @@ module Safe : sig
 
   end
 
+  (** A module for Algebraic datatype constructors. *)
+  module Cstr : sig
+
+    type t
+    (** An algebraic type constructor. Note that such constructors are used to
+        build terms, and not types, e.g. consider the following:
+        [type 'a list = Nil | Cons of 'a * 'a t], then [Nil] and [Cons] are the
+        constructors, while [list] would be a type constant of arity 1 used to
+        name the type. *)
+
+    val hash : t -> int
+    (** A hash function for adt constructors, should be suitable to create hashtables. *)
+
+    val equal : t -> t -> bool
+    (** An equality function on adt constructors. Should be compatible with the hash function. *)
+
+    val arity : t -> int * int
+    (** Returns the arity of a constructor. *)
+
+  end
+
+  (* A module to represnet Record fields *)
+  module Field : sig
+
+    type t
+    (** A field of a record. *)
+
+    val hash : t -> int
+    (** A hash function for adt constructors, should be suitable to create hashtables. *)
+
+    val equal : t -> t -> bool
+    (** An equality function on adt constructors. Should be compatible with the hash function. *)
+
+  end
+
+  val define_adt :
+    Ty.Safe.Const.t -> Ty.Safe.Var.t list ->
+    (string * (Ty.Safe.t * string option) list) list ->
+    (Cstr.t * (Ty.Safe.t * Const.t option) list) list
+  (** Define a new adt. *)
+
+  val define_record :
+    Ty.Safe.Const.t -> Ty.Safe.Var.t list -> (string * Ty.Safe.t) list -> Field.t list
+  (** Define a (previously abstract) type to be a record type, with the given fields. *)
+
+
   (** {5 Typing exceptions} *)
 
   exception Deep_type_quantification
@@ -455,6 +501,17 @@ module Safe : sig
       arguments, but these number do not match the arity of [c],
       as defined by {! Const.arity}. *)
 
+  exception Wrong_record_type of Field.t * Ty.Safe.Const.t
+  (** Exception raised in case of typing error during term construction.
+      This should be raised when the returned field was expected to be a field
+      for the returned record type constant, but it was of another record type. *)
+
+  exception Field_repeated of Field.t
+  (** Field repeated in a record expression. *)
+
+  exception Field_missing of Field.t
+  (** Field missing in a record expression. *)
+
 
   (** {3 Expression inspection} *)
 
@@ -467,13 +524,35 @@ module Safe : sig
   (** Create an expression out of a variable. *)
 
   val apply : Const.t -> Ty.t list -> t list -> t
-  (** Apply the given typed funciton symbol to the list of
+  (** Apply the given typed function symbol to the list of
       types and terms given. Automatically checks that the arguments
       have the correct type, and computes the type of the resulting
       expression.
       @raise Wrong_arity
       @raise Wrong_type
   *)
+
+  val apply_cstr : Cstr.t -> Ty.t list -> t list -> t
+  (** Apply the given typed adt constructor to the list of
+      types and terms given. Automatically checks that the arguments
+      have the correct type, and computes the type of the resulting
+      expression.
+      @raise Wrong_arity
+      @raise Wrong_type
+  *)
+
+  val apply_field : Field.t -> t -> t
+  (** Apply the given typed record field to the argument,
+      and computes the type of the resulting expression.
+      @raise Wrong_arity
+      @raise Wrong_type
+  *)
+
+  val record : (Field.t * t) list -> t
+  (** Create a record. *)
+
+  val record_with : t -> (Field.t * t) list -> t
+  (** Create an updated record *)
 
   val _true : t
   (** The [true] expression *)
@@ -528,6 +607,18 @@ module Safe : sig
 
   val _or : t list -> t
   (** Propositional disjunction
+      @raise Wrong_type
+      @raise Deep_type_quantification
+  *)
+
+  val nand : t -> t -> t
+  (** Propositional negated conjunction
+      @raise Wrong_type
+      @raise Deep_type_quantification
+  *)
+
+  val nor : t -> t -> t
+  (** Propositional negated disjunction
       @raise Wrong_type
       @raise Deep_type_quantification
   *)
@@ -721,7 +812,7 @@ module Safe : sig
           as a string, and not an [int], to avoid overflow caused
           by the limited precision of native intgers. *)
 
-    val neg : t -> t
+    val minus : t -> t
     (** Arithmetic negation. *)
 
     val add : t -> t -> t
@@ -736,7 +827,7 @@ module Safe : sig
     val div : t -> t -> t
     (** Integer division. See Smtlib theory for a full description. *)
 
-    val modulo : t -> t -> t
+    val rem : t -> t -> t
     (** Integer remainder See Smtlib theory for a full description. *)
 
     val abs : t -> t
@@ -767,7 +858,7 @@ module Safe : sig
     (** Build a real constant. The string should respect
         smtlib's syntax for INTEGER or DECIMAL. *)
 
-    val neg : t -> t
+    val minus : t -> t
     (** Arithmetic negation. *)
 
     val add : t -> t -> t
@@ -805,18 +896,16 @@ module Safe : sig
     val ty : t -> ty
     (** Get the type of a term. *)
 
-    val int : string -> t
-    (** Build an integer constant. The integer is passed
-          as a string, and not an [int], to avoid overflow caused
-          by the limited precision of native intgers. *)
 
-    val real : string -> t
-    (** Build a real constant. The string should respect
-        smtlib's syntax for INTEGER or DECIMAL. *)
 
     (** Integer operations on terms *)
     module Int : sig
-      val neg : t -> t
+      val int : string -> t
+      (** Build an integer constant. The integer is passed
+          as a string, and not an [int], to avoid overflow caused
+          by the limited precision of native intgers. *)
+
+      val minus : t -> t
       (** Arithmetic negation. *)
 
       val add : t -> t -> t
@@ -831,7 +920,7 @@ module Safe : sig
       val div : t -> t -> t
       (** Integer division. See Smtlib theory for a full description. *)
 
-      val modulo : t -> t -> t
+      val rem : t -> t -> t
       (** Integer remainder See Smtlib theory for a full description. *)
 
       val abs : t -> t
@@ -859,7 +948,11 @@ module Safe : sig
 
     (** Real operations on terms *)
     module Real : sig
-      val neg : t -> t
+      val real : string -> t
+      (** Build a real constant. The string should respect
+          smtlib's syntax for INTEGER or DECIMAL. *)
+
+      val minus : t -> t
       (** Arithmetic negation. *)
 
       val add : t -> t -> t

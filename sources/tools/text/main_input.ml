@@ -133,18 +133,13 @@ let () =
     end
 
     module W = struct
-      type binding = [
-        | `Not_found
-        | `Ty of Ty.Safe.Const.t
-        | `Term of Typed.Safe.Const.t
-      ]
-
       (* TODO: print warnings *)
       let shadow _ _ _ = ()
       let unused_ty_var _ _ = ()
       let unused_term_var _ _ = ()
       let error_in_attribute _ _ = ()
       let not_found _ _ = ()
+      let superfluous_destructor _ _ _ _ = ()
     end
 
     module T = Dolmen_type.Tff.Make(Void)(Ty.Safe)(Typed.Safe)(W)
@@ -292,16 +287,16 @@ let () =
           Format.eprintf "; ignoring set-logic@.";
           []
         (* Type declarations *)
-        | S.Decl (id, ty) ->
+        | S.Decls l ->
           let env = start_env lang in
-          begin match T.new_decl env ty id with
+          List.map (function
             | `Type_decl c ->
-              [Typed.mk (Typed.TTypeDecl (_loc s, Ty.Safe.apply_empty c))]
+              Typed.mk (Typed.TTypeDecl (_loc s, Ty.Safe.apply_empty c))
             | `Term_decl c ->
-              [Typed.mk (Typed.TLogic (_loc s,
+              Typed.mk (Typed.TLogic (_loc s,
                                        [Typed.Safe.Const.name c],
-                                       Typed.Safe.Const.tlogic_type c))]
-          end
+                                       Typed.Safe.Const.tlogic_type c))
+            ) (T.decls env l)
         (* Explicit Prove statements (aka check-sat in smtlib) *)
         | S.Prove [] ->
           begin match lang with

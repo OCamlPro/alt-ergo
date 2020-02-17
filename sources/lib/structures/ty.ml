@@ -737,6 +737,11 @@ module Safe = struct
 
   let of_var v = Tvar v
 
+  (* TODO: either raise a proper exception,
+           or actually handle wildcards in types
+           (see dolmen standard expressions for an example) *)
+  let wildcard () = assert false
+
   let apply c args =
     let n = Const.arity c in
     let m = List.length args in
