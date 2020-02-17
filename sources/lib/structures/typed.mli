@@ -711,7 +711,8 @@ module Safe : sig
   (** [bvxor s t] abbreviates [bvor (bvand s (bvnot t)) (bvand (bvnot s) t)]. *)
 
   val bvxnor : t -> t -> t
-  (** [bvxnor s t] abbreviates [bvor (bvand s t) (bvand (bvnot s) (bvnot t))]. *)
+  (** [bvxnor s t] abbreviates [bvor (bvand s t)
+      (bvand (bvnot s) (bvnot t))]. *)
 
   val bvcomp : t -> t -> t
   (** Bitwise comparison. [bvcomp s t] equald [#b1] iff [s] and [t]

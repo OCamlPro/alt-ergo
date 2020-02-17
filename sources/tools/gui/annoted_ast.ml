@@ -847,7 +847,8 @@ let rec print_typed_decl fmt td = match td.Typed.c with
   | TRewriting (_, s, rwtl) ->
     fprintf fmt "rewriting %s : %a" s print_rwt_list rwtl
   | TNegated_goal (_, Thm, s, tf) -> fprintf fmt "goal %s : %a" s print_tform tf
-  | TNegated_goal (_, Check, s, tf) -> fprintf fmt "check %s : %a" s print_tform tf
+  | TNegated_goal (_, Check, s, tf) ->
+    fprintf fmt "check %s : %a" s print_tform tf
   | TNegated_goal (_, Cut, s, tf) -> fprintf fmt "cut %s : %a" s print_tform tf
   | TLogic (_, ls, ty) ->
     fprintf fmt "logic %a : %a" print_string_list ls print_tlogic_type ty

@@ -32,6 +32,7 @@ let () =
   end in
   Input.register "legacy" (module M)
 
+(*
 (* === DOLMEN input method === *)
 
 let () =
@@ -155,7 +156,8 @@ let () =
     module B_zf = Dolmen_type.Base.Zf.Tff(T)(Void)
     module B_tptp = Dolmen_type.Base.Tptp.Tff(T)(Ty.Safe)(Typed.Safe)
     module B_smtlib = Dolmen_type.Base.Smtlib.Tff(T)(Void)(Ty.Safe)(Typed.Safe)
-    module B_smtlib_array = Dolmen_type.Arrays.Smtlib.Tff(T)(Ty.Safe)(Typed.Safe)
+    module B_smtlib_array =
+      Dolmen_type.Arrays.Smtlib.Tff(T)(Ty.Safe)(Typed.Safe)
     module B_smtlib_bitv = Dolmen_type.Bitv.Smtlib.Tff(T)(Ty.Safe)(Typed.Safe)
     module B_smtlib_arith_int = Dolmen_type.Arith.Smtlib.Int.Tff(T)(Ty.Safe)(Typed.Safe.Int)
     module B_smtlib_arith_real = Dolmen_type.Arith.Smtlib.Real.Tff(T)(Ty.Safe)(Typed.Safe.Real)
@@ -322,15 +324,17 @@ let () =
         | S.Clause l ->
           let env = start_env lang in
           let fv_lists = List.map Dolmen.Term.fv l in
-          begin match List.sort_uniq Dolmen.Id.compare (List.flatten fv_lists) with
+          begin
+            match List.sort_uniq Dolmen.Id.compare (List.flatten fv_lists) with
             | [] ->
               (* TODO: add a special case for clauses in type declaration,
                        to avoid encoding them using disjunctions. *)
               let l' = List.map (T.parse env) l in
               let _, ax = Typed.Safe.expect_prop @@ Typed.Safe._or l' in
               [Typed.mk (Typed.TAxiom (_loc s, hyp_id s, Util.Default, ax))]
-            | free_vars -> (* if there are free variables, these must be quantified
-                              or else the typchecker will raise an error. *)
+            | free_vars ->
+                 (* if there are free variables, these must be quantified
+                    or else the typchecker will raise an error. *)
               let loc = s.S.loc in
               let vars = List.map (Dolmen.Term.const ?loc) free_vars in
               let f = Dolmen.Term.forall ?loc vars (
@@ -375,13 +379,15 @@ let () =
         | T.Expected (s, r) ->
           Format.fprintf fmt "Expected %s, but got %a" s (pp_opt pp_res) r
         | T.Bad_op_arity (name, i, j) ->
-          Format.fprintf fmt "Operator '%s' extects %d arguments but received %d" name i j
+          Format.fprintf fmt
+            "Operator '%s' extects %d arguments but received %d" name i j
         | T.Bad_ty_arity (c, n) ->
           Format.fprintf fmt "Bad arity for id '%a': expected %d but got %d"
             Ty.Safe.Const.print c (Ty.Safe.Const.arity c) n
         | T.Bad_term_arity (c, n, m) ->
           let i, j = Typed.Safe.Const.arity c in
-          Format.fprintf fmt "Bad arity for id '%a': expected %d/%d arguments but got %d/%d"
+          Format.fprintf fmt
+            "Bad arity for id '%a': expected %d/%d arguments but got %d/%d"
             Typed.Safe.Const.print c i j n m
         | T.Var_application v ->
           Format.fprintf fmt "Trying to apply variable '%a' to some arguments"
@@ -390,7 +396,8 @@ let () =
           Format.fprintf fmt "Trying to apply variable '%a' to some arguments"
             Ty.Safe.Var.print v
         | T.Type_mismatch (t, ty) ->
-          Format.fprintf fmt "@[<hv>Term@ %a@ has type@ %a@ but was expected of type@ %a"
+          Format.fprintf fmt
+            "@[<hv>Term@ %a@ has type@ %a@ but was expected of type@ %a"
             Typed.Safe.print t Ty.print (Typed.Safe.ty t) Ty.print ty
         | T.Quantified_var_inference ->
           Format.fprintf fmt "Cannot infer the type of a quantified variable"
@@ -402,10 +409,12 @@ let () =
         | T.Cannot_tag_ttype ->
           Format.fprintf fmt "The Ttype constant cannot be tagged"
         | T.Cannot_find d ->
-          Format.fprintf fmt "The following couldn't be found in the environment: %a"
+          Format.fprintf fmt
+            "The following couldn't be found in the environment: %a"
             Dolmen.Id.print d
         | T.Type_var_in_type_constructor ->
-          Format.fprintf fmt "A type constructor's type cannot contain type variables"
+          Format.fprintf fmt
+            "A type constructor's type cannot contain type variables"
         | T.Unhandled_ast ->
           Format.fprintf fmt "This AST constructor it not currently handled"
         | _ -> Format.fprintf fmt "Unknown error message, sorry :/"
@@ -445,3 +454,4 @@ let () =
   end in
   Input.register "dolmen" (module M)
 
+*)

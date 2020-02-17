@@ -355,7 +355,8 @@ and print_formula fmt f =
       (fun (p, v) ->
          match p with
          | Constr {name = n; args = l} ->
-           fprintf fmt "| %a %a -> %a\n" Hstring.print n pp_vars l print_formula v
+           fprintf fmt "| %a %a -> %a\n" Hstring.print n pp_vars l
+             print_formula v
          | Var x ->
            fprintf fmt "| %a -> %a\n" Var.print x print_formula v;
       )cases;
@@ -774,10 +775,10 @@ module Safe = struct
     (* promote_atom guarantees this cannot happen *)
     | Atom _ -> assert false
 
-    let expect_formula t =
-      match expect_prop t with
-      | [], f -> f
-      | _ -> raise Deep_type_quantification
+  let expect_formula t =
+    match expect_prop t with
+    | [], f -> f
+    | _ -> raise Deep_type_quantification
 
   (* Smart constructors:
      Wrappers to build term while checking the well-typedness *)
@@ -1223,7 +1224,8 @@ module Safe = struct
     if n <> m then
       raise (Wrong_type (t, tt_ty))
     else begin
-      Term (mk { tt_ty; tt_desc = TTapp (symb, [expect_term s; expect_term t]); })
+      Term
+        (mk { tt_ty; tt_desc = TTapp (symb, [expect_term s; expect_term t]); })
     end
 
   let bitv_binary_pred symb = fun s t ->
