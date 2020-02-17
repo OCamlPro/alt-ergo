@@ -32,7 +32,6 @@ let () =
   end in
   Input.register "legacy" (module M)
 
-(*
 (* === DOLMEN input method === *)
 
 let () =
@@ -254,12 +253,12 @@ let () =
       | Some { T.term = T.Colon (_, {
           T.term = T.App (
               { T.term = T.Symbol f ; _ } , [
-              { T.term = T.Symbol id; _ }
-            ]) ; _ }) ; _ }
+                { T.term = T.Symbol id; _ }
+              ]) ; _ }) ; _ }
       | Some { T.term = T.App (
             { T.term = T.Symbol f ; _ } , [
-            { T.term = T.Symbol id; _ }
-          ]) ; _ }
+              { T.term = T.Symbol id; _ }
+            ]) ; _ }
         ->
         if Dolmen.Id.(equal tptp_role f) then
           Some (Dolmen.Id.full_name id)
@@ -292,12 +291,12 @@ let () =
         | S.Decls l ->
           let env = start_env lang in
           List.map (function
-            | `Type_decl c ->
-              Typed.mk (Typed.TTypeDecl (_loc s, Ty.Safe.apply_empty c))
-            | `Term_decl c ->
-              Typed.mk (Typed.TLogic (_loc s,
-                                       [Typed.Safe.Const.name c],
-                                       Typed.Safe.Const.tlogic_type c))
+              | `Type_decl c ->
+                Typed.mk (Typed.TTypeDecl (_loc s, Ty.Safe.apply_empty c))
+              | `Term_decl c ->
+                Typed.mk (Typed.TLogic (_loc s,
+                                        [Typed.Safe.Const.name c],
+                                        Typed.Safe.Const.tlogic_type c))
             ) (T.decls env l)
         (* Explicit Prove statements (aka check-sat in smtlib) *)
         | S.Prove [] ->
@@ -333,8 +332,8 @@ let () =
               let _, ax = Typed.Safe.expect_prop @@ Typed.Safe._or l' in
               [Typed.mk (Typed.TAxiom (_loc s, hyp_id s, Util.Default, ax))]
             | free_vars ->
-                 (* if there are free variables, these must be quantified
-                    or else the typchecker will raise an error. *)
+              (* if there are free variables, these must be quantified
+                 or else the typchecker will raise an error. *)
               let loc = s.S.loc in
               let vars = List.map (Dolmen.Term.const ?loc) free_vars in
               let f = Dolmen.Term.forall ?loc vars (
@@ -445,8 +444,8 @@ let () =
             let loc = get_loc t.Dolmen.Term.loc in
             Some (
               Format.asprintf
-                  "@[<hv>While typing:@ @[<hov>%a@]@]@.%a:@\n%a@."
-                  Dolmen.Term.print t Dolmen.ParseLocation.fmt loc pp_err err
+                "@[<hv>While typing:@ @[<hov>%a@]@]@.%a:@\n%a@."
+                Dolmen.Term.print t Dolmen.ParseLocation.fmt loc pp_err err
             )
 
           | _ -> None
@@ -454,4 +453,3 @@ let () =
   end in
   Input.register "dolmen" (module M)
 
-*)

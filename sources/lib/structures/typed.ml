@@ -742,6 +742,14 @@ module Safe = struct
   exception Field_missing of Field.t
   exception Field_repeated of Field.t
 
+  (* typing annotations *)
+
+  let ensure t expect_ty =
+    let actual_ty = ty t in
+    if not (Ty.equal actual_ty expect_ty) then
+      raise (Wrong_type (t, expect_ty));
+    t
+
   (* Auxiliary functions. *)
 
   let promote_term = function

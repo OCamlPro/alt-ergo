@@ -515,6 +515,9 @@ module Safe : sig
 
   (** {3 Expression inspection} *)
 
+  val ensure : t -> Ty.t -> t
+  (** Ensure that a term has the given type. *)
+
   val expect_prop : t -> Ty.Safe.Var.t list * int atform
   (** Unwrap a formula from an expression. *)
 
