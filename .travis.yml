@@ -72,12 +72,12 @@ jobs:
     # style check
       name: "Style check"
       script: extra/pre-merge-style-checker.sh
-      env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
+      env: OPAMBUILDTEST=false OCAML_VERSION=4.05.0
     # indentation check
     - stage: "pre-check"
       name: "Indent check"
       script: extra/check_indentation.sh
-      env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
+      env: OPAMBUILDTEST=false OCAML_VERSION=4.05.0
 
     # === Build Tests ===
     # Installation (no tests)
