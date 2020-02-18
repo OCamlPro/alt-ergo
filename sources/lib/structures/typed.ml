@@ -321,22 +321,22 @@ and print_formula fmt f =
   | TFatom a ->
     print_atom fmt a
   | TFop(OPnot, [f]) ->
-    fprintf fmt "not %a" print_formula f
+    fprintf fmt "@[<hov 2>not (%a)@]" print_formula f
   | TFop(OPif, [cond; f1;f2]) ->
-    fprintf fmt "if %a then %a else %a"
+    fprintf fmt "@[<hv 2>(if %a then@ %a@ else@ %a)@]"
       print_formula cond print_formula f1 print_formula f2
   | TFop(op, [f1; f2]) ->
-    fprintf fmt "(%a %s %a)" print_formula f1 (string_of_op op) print_formula f2
+    fprintf fmt "@[<hov 2>(%a@ %s@ %a)@]" print_formula f1 (string_of_op op) print_formula f2
   | TFop(op, l) ->
-    fprintf fmt "(%a)" (
+    fprintf fmt "@[<hov 2>(%a)@]" (
       Util.print_list_pp
-        ~sep:(fun fmt () -> Format.fprintf fmt " %s " (string_of_op op))
+        ~sep:(fun fmt () -> Format.fprintf fmt "@ %s@ " (string_of_op op))
         ~pp:print_formula) l
   | TFforall { qf_bvars = l; qf_triggers = t; qf_form = f; _ } ->
-    fprintf fmt "forall %a [%a]. %a"
+    fprintf fmt "@[<hov 2>forall %a [%a].@ %a@]"
       print_binders l print_triggers t print_formula f
   | TFexists { qf_bvars = l; qf_triggers = t; qf_form = f; _ } ->
-    fprintf fmt "exists %a [%a]. %a"
+    fprintf fmt "@[<hov 2>exists %a [%a].@ %a@]"
       print_binders l print_triggers t print_formula f
   | TFnamed (_, f') -> print_formula fmt f'
 
@@ -956,7 +956,7 @@ module Safe = struct
   let rec fv_term_desc ty ((fv, bv) as acc) = function
     | TTconst _ -> fv
     | TTvar v -> add_fv acc v ty
-    (* neither infix nor prefix operators cann be variables *)
+    (* neither infix nor prefix operators can be variables *)
     | TTinfix (l, _, r)             -> fv_term_list acc [l; r]
     | TTprefix (_, t)               -> fv_term acc t
     | TTapp (_, l)                  -> fv_term_list acc l
@@ -1016,7 +1016,7 @@ module Safe = struct
     | TFatom a -> fv_atom acc a
     | TFop (_, l) -> fv_form_list acc l
     | TFforall q | TFexists q ->
-      let aux m (v, ty) = Symbols.Map.add v ty m in
+      let aux lv (v, ty) = add_fv (lv, bv) v ty in
       List.fold_left aux fv q.qf_upvars
     | TFnamed (_, f) -> fv_form acc f
     | TFlet (l, _, _) ->
@@ -1061,7 +1061,7 @@ module Safe = struct
 
   let all (_, t_fv) (ty_qv, t_qv) e =
     let f = expect_formula e in
-    let qf_bvars = List.map var_to_tuple t_qv in
+    let qf_bvars = List.rev_map var_to_tuple t_qv in
     let qf_upvars = List.map var_to_tuple t_fv in
     Form (mk @@ TFforall {
         qf_bvars; qf_upvars;

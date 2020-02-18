@@ -231,7 +231,7 @@ let () =
       let ax = type_form lang t in
       [Typed.mk (Typed.TAxiom (_loc s, hyp_id s, Util.Default, ax))]
 
-    let type_goal ?(negate=false) s lang g_sort t =
+    let type_goal ~negate s lang g_sort t =
       let g = type_form ~negate lang t in
       let g' = Typed.monomorphize_form g in
       let name = Typed.fresh_hypothesis_name g_sort in
@@ -303,9 +303,9 @@ let () =
           begin match lang with
             | L.Smtlib | L.Dimacs | L.ICNF ->
               Options.set_unsat_mode true;
-              let _, _true = Typed.Safe.(expect_prop _true) in
+              let _, _false = Typed.Safe.(expect_prop @@ neg _true) in
               [Typed.mk (Typed.TNegated_goal
-                           (_loc s, Typed.Thm, goal_id s, _true))]
+                           (_loc s, Typed.Thm, goal_id s, _false))]
             | _ -> []
           end
         (* Hypotheses *)
@@ -313,11 +313,11 @@ let () =
           if is_tptp_assumption s then
             type_assumption s lang t
           else if is_tptp_negated_conjecture s then
-            type_goal ~negate:false s lang Typed.Thm t
+            type_goal ~negate:true s lang Typed.Thm t
           else
             type_hyp s lang t
         | S.Consequent t ->
-          type_goal s lang Typed.Thm t
+          type_goal ~negate:false s lang Typed.Thm t
 
         (* Special case for clauses *)
         | S.Clause l ->
@@ -416,6 +416,12 @@ let () =
             "A type constructor's type cannot contain type variables"
         | T.Unhandled_ast ->
           Format.fprintf fmt "This AST constructor it not currently handled"
+        | T.Unbound_variables (tys, ts, f) ->
+          let pp_sep fmt () = Format.fprintf fmt ",@ " in
+          Format.fprintf fmt "Unbound variables: %a@ %a@\nin: %a"
+            (Format.pp_print_list ~pp_sep Ty.Safe.Var.print) tys
+            (Format.pp_print_list ~pp_sep Typed.Safe.Var.print) ts
+            Typed.Safe.print f
         | _ -> Format.fprintf fmt "Unknown error message, sorry :/"
       in
 
