@@ -1,6 +1,13 @@
 dev version
 ===========
 
+version 2.3.1, February 18, 2020
+================================
+
+* Minor release:
+
+  - Fix issue #248. Avoid double rounding int intervals
+
 
 version 2.3.0, February 11, 2019
 ================================
