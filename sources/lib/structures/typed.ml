@@ -855,9 +855,9 @@ module Safe = struct
         mk_atom l actual_args
       | _ ->
         promote_term (Term (
-          mk ({ tt_ty = ret_ty;
-                tt_desc = TTapp (c.Const.symbol, actual_args)})
-        ))
+            mk ({ tt_ty = ret_ty;
+                  tt_desc = TTapp (c.Const.symbol, actual_args)})
+          ))
     end
 
   let apply_cstr (c : Cstr.t) tys args = apply c.const tys args
@@ -1302,7 +1302,7 @@ module Safe = struct
       let n = apply Const.Int.rem [] [int i;j] in
       let zero = int "0" in
       let f = Const.make Symbols.(Lit L_eq) [] [Ty.Safe.int; Ty.Safe.int]
-        Ty.Safe.prop
+          Ty.Safe.prop
       in
       apply f [] [n;zero]
   end

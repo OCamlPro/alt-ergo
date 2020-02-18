@@ -446,10 +446,10 @@ module Safe : sig
         name the type. *)
 
     val hash : t -> int
-    (** A hash function for adt constructors, should be suitable to create hashtables. *)
+    (** A hash function for adt constructors. *)
 
     val equal : t -> t -> bool
-    (** An equality function on adt constructors. Should be compatible with the hash function. *)
+    (** An equality function on adt constructors. *)
 
     val arity : t -> int * int
     (** Returns the arity of a constructor. *)
@@ -463,10 +463,10 @@ module Safe : sig
     (** A field of a record. *)
 
     val hash : t -> int
-    (** A hash function for adt constructors, should be suitable to create hashtables. *)
+    (** A hash function for adt constructors. *)
 
     val equal : t -> t -> bool
-    (** An equality function on adt constructors. Should be compatible with the hash function. *)
+    (** An equality function on adt constructors. *)
 
   end
 
@@ -477,8 +477,10 @@ module Safe : sig
   (** Define a new adt. *)
 
   val define_record :
-    Ty.Safe.Const.t -> Ty.Safe.Var.t list -> (string * Ty.Safe.t) list -> Field.t list
-  (** Define a (previously abstract) type to be a record type, with the given fields. *)
+    Ty.Safe.Const.t -> Ty.Safe.Var.t list ->
+    (string * Ty.Safe.t) list -> Field.t list
+  (** Define a (previously abstract) type to be a record type,
+      with the given fields. *)
 
 
   (** {5 Typing exceptions} *)
@@ -503,8 +505,9 @@ module Safe : sig
 
   exception Wrong_record_type of Field.t * Ty.Safe.Const.t
   (** Exception raised in case of typing error during term construction.
-      This should be raised when the returned field was expected to be a field
-      for the returned record type constant, but it was of another record type. *)
+      This should be raised when the returned field was expected to be a
+      field for the returned record type constant, but it was of another
+      record type. *)
 
   exception Field_repeated of Field.t
   (** Field repeated in a record expression. *)
