@@ -326,7 +326,8 @@ and print_formula fmt f =
     fprintf fmt "@[<hv 2>(if %a then@ %a@ else@ %a)@]"
       print_formula cond print_formula f1 print_formula f2
   | TFop(op, [f1; f2]) ->
-    fprintf fmt "@[<hov 2>(%a@ %s@ %a)@]" print_formula f1 (string_of_op op) print_formula f2
+    fprintf fmt "@[<hov 2>(%a@ %s@ %a)@]"
+      print_formula f1 (string_of_op op) print_formula f2
   | TFop(op, l) ->
     fprintf fmt "@[<hov 2>(%a)@]" (
       Util.print_list_pp
