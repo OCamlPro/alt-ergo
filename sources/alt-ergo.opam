@@ -11,8 +11,9 @@ build: [
 ]
 depends: [
   "ocaml" {>="4.04.0"}
-  "alt-ergo-lib" { = "2.3.0+" }
-  "alt-ergo-parsers" { = "2.3.0+" }
+  "dune" {>= "1.5" build }
+  "alt-ergo-lib" { = version }
+  "alt-ergo-parsers" { = version }
 ]
 homepage: "http://alt-ergo.ocamlpro.com/"
 dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"
