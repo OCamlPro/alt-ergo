@@ -73,7 +73,7 @@ let () =
           (* Dimancs need a special prove statement
              to be added at the end *)
           begin match lang with
-            | L.Dimacs | L.Tptp ->
+            | L.Dimacs | L.Tptp _ ->
               let prove = Dolmen.Statement.prove () in
               Seq.Cons ((dir, lang, prove), Seq.empty)
             | _ ->
@@ -157,28 +157,31 @@ let () =
     module B_tptp =
       Dolmen_type.Base.Tptp.Tff(T)(Ty.Safe)(Typed.Safe)
     module B_smtlib =
-      Dolmen_type.Base.Smtlib.Tff(T)(Void)(Ty.Safe)(Typed.Safe)
+      Dolmen_type.Base.Smtlib2.Tff(T)(Void)(Ty.Safe)(Typed.Safe)
     module B_smtlib_array =
-      Dolmen_type.Arrays.Smtlib.Tff(T)(Ty.Safe)(Typed.Safe)
+      Dolmen_type.Arrays.Smtlib2.Tff(T)(Ty.Safe)(Typed.Safe)
     module B_smtlib_bitv =
-      Dolmen_type.Bitv.Smtlib.Tff(T)(Ty.Safe)(Typed.Safe)
+      Dolmen_type.Bitv.Smtlib2.Tff(T)(Ty.Safe)(Typed.Safe)
     module B_smtlib_arith_int =
-      Dolmen_type.Arith.Smtlib.Int.Tff(T)(Ty.Safe)(Typed.Safe.Int)
+      Dolmen_type.Arith.Smtlib2.Int.Tff(T)(Ty.Safe)(Typed.Safe.Int)
     module B_smtlib_arith_real =
-      Dolmen_type.Arith.Smtlib.Real.Tff(T)(Ty.Safe)(Typed.Safe.Real)
+      Dolmen_type.Arith.Smtlib2.Real.Tff(T)(Ty.Safe)(Typed.Safe.Real)
     module B_smtlib_arith_real_int =
-      Dolmen_type.Arith.Smtlib.Real_Int.Tff(T)(Ty.Safe)(Typed.Safe.Real_Int)
+      Dolmen_type.Arith.Smtlib2.Real_Int.Tff(T)(Ty.Safe)(Typed.Safe.Real_Int)
 
     let builtins = function
-      | L.Tptp -> B_tptp.parse
-      | L.Smtlib ->
+      | L.Tptp v ->
         Dolmen_type.Base.merge [
-          B_smtlib.parse;
-          B_smtlib_array.parse;
-          B_smtlib_bitv.parse;
+          B_tptp.parse v;
+        ]
+      | L.Smtlib2 v ->
+        Dolmen_type.Base.merge [
+          B_smtlib.parse v;
+          B_smtlib_array.parse v;
+          B_smtlib_bitv.parse v;
           (* B_smtlib_arith_int.parse;
            * B_smtlib_arith_real.parse; *)
-          B_smtlib_arith_real_int.parse;
+          B_smtlib_arith_real_int.parse v;
         ]
       | L.Zf -> B_zf.parse
       | _ -> (fun _ _ _ _ -> None)
@@ -187,12 +190,12 @@ let () =
     let start_env lang =
       let expect =
         match lang with
-        | L.Tptp | L.Dimacs -> T.Typed Ty.Safe.prop
+        | L.Tptp _ | L.Dimacs -> T.Typed Ty.Safe.prop
         | _ -> T.Nothing
       in
       let infer_base =
         match lang with
-        | L.Tptp -> Some Ty.Safe.base
+        | L.Tptp _ -> Some Ty.Safe.base
         | L.Dimacs -> Some Ty.Safe.prop
         | _ -> None
       in
@@ -308,7 +311,7 @@ let () =
         (* Explicit Prove statements (aka check-sat in smtlib) *)
         | S.Prove [] ->
           begin match lang with
-            | L.Smtlib | L.Dimacs | L.ICNF ->
+            | L.Smtlib2 _ | L.Dimacs | L.ICNF ->
               Options.set_unsat_mode true;
               let _, _false = Typed.Safe.(expect_prop @@ neg _true) in
               [Typed.mk (Typed.TNegated_goal
