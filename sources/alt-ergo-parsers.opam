@@ -14,7 +14,7 @@ depends: [
   "dune" {>= "1.5" build }
   "alt-ergo-lib" { = version }
   "psmt2-frontend" { >= "0.2" }
-  "camlzip"
+  "camlzip" { >= "1.07" }
   "menhir"
   "stdlib-shims"
 ]
