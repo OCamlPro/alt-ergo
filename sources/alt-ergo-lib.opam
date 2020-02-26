@@ -11,7 +11,7 @@ build: [
 ]
 depends: [
   "ocaml" {>="4.04.0"}
-  "dune" {>= "1.5" build }
+  "dune" {>= "1.5"}
   "num"
   "ocplib-simplex" {>= "0.4" }
   "zarith"
