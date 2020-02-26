@@ -11,7 +11,7 @@ build: [
 ]
 depends: [
   "ocaml" {>="4.04.0"}
-  "dune" {>= "1.5" build }
+  "dune" {>= "1.5"}
   "alt-ergo-lib" { = version }
   "alt-ergo-parsers" { = version }
 ]
