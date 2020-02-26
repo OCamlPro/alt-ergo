@@ -37,7 +37,7 @@ module S = Set.Make(String)
 module HSS = Hstring.Set
 
 module MString =
-  Map.Make(struct type t = string let compare = Pervasives.compare end)
+  Map.Make(struct type t = string let compare = String.compare end)
 
 module Types = struct
 
@@ -86,7 +86,7 @@ module Types = struct
       List.for_all2
         (fun pp x ->
            match pp with
-           | PPTvarid (y, _) -> Pervasives.(=) x y
+           | PPTvarid (y, _) -> Stdlib.(=) x y
            | _ -> false
         ) lpp lvars
     with Invalid_argument _ -> false
@@ -105,7 +105,7 @@ module Types = struct
           to_tyvars := MString.add s nty !to_tyvars;
           nty
       end
-    | PPTexternal (l, s, loc) when Pervasives.(=) s "farray" ->
+    | PPTexternal (l, s, loc) when String.equal s "farray" ->
       let t1,t2 = match l with
         | [t2] -> PPTint,t2
         | [t1;t2] -> t1,t2
@@ -116,7 +116,7 @@ module Types = struct
     | PPTexternal (l, s, loc) ->
       begin
         match rectype with
-        | Some (id, vars, ty) when Pervasives.(=) s id &&
+        | Some (id, vars, ty) when Stdlib.(=) s id &&
                                    equal_pp_vars l vars -> ty
         | _ ->
           try

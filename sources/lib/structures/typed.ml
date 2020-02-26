@@ -369,8 +369,8 @@ let fresh_hypothesis_name =
     | _ -> "@L"^(string_of_int !cpt)
 
 let is_local_hyp s =
-  try Pervasives.(=) (String.sub s 0 2) "@L" with Invalid_argument _ -> false
+  try String.equal (String.sub s 0 2) "@L" with Invalid_argument _ -> false
 
 let is_global_hyp s =
-  try Pervasives.(=) (String.sub s 0 2) "@H" with Invalid_argument _ -> false
+  try String.equal (String.sub s 0 2) "@H" with Invalid_argument _ -> false
 

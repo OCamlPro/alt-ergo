@@ -32,7 +32,7 @@ module TB =
       type t = E.t * bool
       let compare (a1, b1) (a2, b2) =
         let c = E.compare a1 a2 in
-        if c <> 0 then c else Pervasives.compare b1 b2
+        if c <> 0 then c else Stdlib.compare b1 b2
     end)
 
 type t =
