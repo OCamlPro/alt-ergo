@@ -1021,7 +1021,7 @@ module Safe = struct
       List.fold_left aux fv q.qf_upvars
     | TFnamed (_, f) -> fv_form acc f
     | TFlet (l, _, _) ->
-      let aux m (v, ty) = Symbols.Map.add v ty m in
+      let aux lv (v, ty) = add_fv (lv, bv) v ty in
       List.fold_left aux fv l
     | TFmatch (e, l) ->
       fv_form_match (fv_term acc e, bv) l
