@@ -268,14 +268,27 @@ and string = parse
       { Buffer.add_char string_buf c; string lexbuf }
 
 {
-          let comment lexbuf = comment_start_loc := loc lexbuf; comment lexbuf
+  let aux aux_fun token lexbuf =
+  try
+    let res = aux_fun token lexbuf in
+    Parsing.clear_parser ();
+    res
+  with
+  | Parsing.Parse_error ->
+    (* not fully qualified ! backward incompat. in Menhir !!*)
+    let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
+    let lex = Lexing.lexeme lexbuf in
+    Parsing.clear_parser ();
+    raise (Errors.Syntax_error (loc, lex))
+
+  let comment lexbuf = comment_start_loc := loc lexbuf; comment lexbuf
 
   let string lexbuf = string_start_loc := loc lexbuf; string lexbuf
 
   module Parser : Parsers.PARSER_INTERFACE = struct
-    let file    = Why3_parser.file_parser     token
-    let expr    = Why3_parser.lexpr_parser    token
-    let trigger = Why3_parser.trigger_parser  token
+    let file    = aux Why3_parser.file_parser     token
+    let expr    = aux Why3_parser.lexpr_parser    token
+    let trigger = aux Why3_parser.trigger_parser  token
   end
 
   let () = (* register this parser in Input_lang *)

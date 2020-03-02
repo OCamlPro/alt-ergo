@@ -138,15 +138,22 @@ let parse_input_file file =
   with
   | Errors.Lexical_error (loc, s) ->
     Loc.report err_formatter loc;
-    eprintf "lexical error: %s\n@." s;
+    eprintf "Lexical error: %s\n@." s;
     if opened_cin then close_in cin;
     exit 1
 
   | Errors.Syntax_error (loc, s) ->
     Loc.report err_formatter loc;
-    eprintf "syntax error when reading token %S\n@." s;
+    eprintf "Syntax error when reading token %S\n@." s;
     if opened_cin then close_in cin;
     exit 1
+
+  | Parsing.Parse_error ->
+    Loc.report err_formatter (Lexing.dummy_pos,Lexing.dummy_pos);
+    eprintf "Syntax error\n@.";
+    if opened_cin then close_in cin;
+    exit 1
+
 
 let parse_problem ~filename ~preludes =
   Parsers_loader.load ();
