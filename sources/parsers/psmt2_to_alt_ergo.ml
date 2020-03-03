@@ -441,17 +441,29 @@ end
 
 let aux aux_fun token lexbuf =
   try
+    Smtlib_options.set_keep_loc true;
     let res = aux_fun token lexbuf in
     Parsing.clear_parser ();
     res
   with
   | Parsing.Parse_error
-  | (*Basics. | MenhirBasics. |*) Smtlib_error.Error _ ->
+  | Smtlib_parser.Error ->
     (* not fully qualified ! backward incompat. in Menhir !!*)
     let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
     let lex = Lexing.lexeme lexbuf in
     Parsing.clear_parser ();
-    raise (Errors.Syntax_error (loc, lex))
+    Smtlib_error.print Format.err_formatter (Options.get_file ())
+      (Syntax_error (lex)) loc;
+    exit 1
+  | Smtlib_error.Error (e , p) ->
+    Parsing.clear_parser ();
+    (match p with
+       Some loc ->
+       Smtlib_error.print Format.err_formatter (Options.get_file ()) e loc
+     | None ->
+       let loc = Lexing.dummy_pos,Lexing.dummy_pos in
+       Smtlib_error.print Format.err_formatter (Options.get_file ()) e loc);
+    exit 1
 
 let file_parser token lexbuf =
   Translate.file (Smtlib_parser.commands token lexbuf)
