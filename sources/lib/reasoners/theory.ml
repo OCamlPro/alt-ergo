@@ -337,7 +337,7 @@ module Main_Default : S = struct
             let l =
               List.map
                 (fun (c, is_cs, size) ->
-                   Options.incr_cs_steps();
+                   Steps.incr_cs_steps();
                    let exp = Ex.fresh_exp () in
                    let ex_c_exp =
                      if is_cs then Ex.add_fresh exp Ex.empty else Ex.empty

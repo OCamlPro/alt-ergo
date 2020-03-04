@@ -30,4 +30,3 @@ rm -f $LOGFILE
 
 # exit nicely
 echo "All good, ^^"
-

@@ -20,4 +20,3 @@ $git_repo/extra/non_regression.sh
 
 # Test the lib usage
 $git_repo/extra/test_lib.sh `ocamlfind query alt-ergo-lib`
-

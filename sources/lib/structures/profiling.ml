@@ -275,9 +275,9 @@ let columns =
 
     "Case splits", "Number of Case Splits", 14, None,
     (fun _ gtime _ sz ->
-       let avg = int_of_float (float_of_int (Options.cs_steps()) /. gtime) in
+       let avg = int_of_float (float_of_int (Steps.cs_steps()) /. gtime) in
        sprintf "%s~%s"
-         (string_resize (sprintf "%d" (Options.cs_steps())) (sz-7))
+         (string_resize (sprintf "%d" (Steps.cs_steps())) (sz-7))
          (string_resize (sprintf "%d/s" avg) 6)
     );
 
@@ -696,4 +696,3 @@ let print all steps timers fmt =
     | CallTree        -> print_call_tree false steps timers
     | FunctionsTimers -> timers_table false timers;
     | Instances       -> print_instances_generation false steps timers
-

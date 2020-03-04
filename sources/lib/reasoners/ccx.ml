@@ -543,7 +543,7 @@ module Main : S = struct
   let assume_eq env facts r1 r2 ex =
     Options.tool_req 3 "TR-CCX-Congruence";
     let env = congruence_closure env facts r1 r2 ex in
-    if Options.nocontracongru () || X.type_info r1 != Ty.Tbool then env
+    if Options.no_contracongru () || X.type_info r1 != Ty.Tbool then env
     else begin
       contra_congruence env facts r1;
       contra_congruence env facts r2;

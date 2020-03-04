@@ -2246,7 +2246,7 @@ let new_facts_for_axiom
 let syntactic_matching menv env uf _selector =
   let mconf =
     {Util.nb_triggers = nb_triggers ();
-     no_ematching = no_Ematching();
+     no_ematching = no_ematching();
      triggers_var = triggers_var ();
      use_cs = false;
      backward = Util.Normal;

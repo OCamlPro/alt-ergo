@@ -1348,27 +1348,33 @@ let start_gui all_used_context =
     `C ("Verbose", verbose (), set_verbose);
   ] in
 
-  let options_entries = [
-    `C ("Unsat cores", unsat_core (), set_unsat_core);
-    `S;
-    `C ("Model", model (), set_model);
-    `C ("Complete model", complete_model (), set_complete_model);
-    `C ("All models", all_models (), set_all_models);
-    `S;
-    `C ("Variables in triggers", triggers_var (), set_triggers_var);
-    `C ("Greedy", greedy (), set_greedy);
-    `C ("Contra congruence", not (nocontracongru ()),
-        fun b -> set_nocontracongru (not b));
-    `S;
-    `C ("Restricted", restricted (), set_restricted);
-    `S;
-    `C ("Wrap lines", wrap, set_wrap_lines);
-    `S;
-    `I ("Change font", choose_font);
-    `I ("Increase font size", fun () -> increase_size envs);
-    `I ("Decrease font size", fun () -> decrease_size envs);
-    `I ("Reset font size", fun () -> reset_size envs);
-  ] in
+  let options_entries =
+    let set_complete_model b =
+      if b then set_model MComplete else set_model MNone in
+    let set_all_models b =
+      if b then set_model MAll else set_model MNone in
+    let set_model b = if b then set_model MDefault else set_model MNone in
+    [
+      `C ("Unsat cores", unsat_core (), set_unsat_core);
+      `S;
+      `C ("Model", model (), set_model);
+      `C ("Complete model", complete_model (), set_complete_model);
+      `C ("All models", all_models (), set_all_models);
+      `S;
+      `C ("Variables in triggers", triggers_var (), set_triggers_var);
+      `C ("Greedy", greedy (), set_greedy);
+      `C ("Contra congruence", not (no_contracongru ()),
+          fun b -> set_no_contracongru (not b));
+      `S;
+      `C ("Restricted", restricted (), set_restricted);
+      `S;
+      `C ("Wrap lines", wrap, set_wrap_lines);
+      `S;
+      `I ("Change font", choose_font);
+      `I ("Increase font size", fun () -> increase_size envs);
+      `I ("Decrease font size", fun () -> decrease_size envs);
+      `I ("Reset font size", fun () -> reset_size envs);
+    ] in
 
   let help_entries = [
     `I ("About", show_about);

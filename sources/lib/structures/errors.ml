@@ -185,7 +185,7 @@ let report fmt = function
 
 let error e l = raise (Error(e,l))
 let warning e l =
-  if Options.unsat_mode () then Format.fprintf err_formatter "; ";
+  if Options.output_smtlib () then Format.fprintf err_formatter "; ";
   Loc.report err_formatter l;
   report err_formatter e;
   Format.eprintf "@."

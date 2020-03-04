@@ -115,3 +115,9 @@ let reset_steps () =
  * used *)
 let get_steps () =
   max !naive_steps !steps
+
+
+(** Functions useful for case-split steps *)
+let cs_steps_cpt = ref 0
+let cs_steps () = !cs_steps_cpt
+let incr_cs_steps () = Stdlib.incr cs_steps_cpt
