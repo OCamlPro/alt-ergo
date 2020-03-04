@@ -12,7 +12,7 @@ cd $git_repo/non-regression
 # Log some practical info
 echo "=+= [travis.sh] non-regression tests ... =+="
 echo "which alt-ergo == `which alt-ergo`"
-echo "alt-ergo -version == `alt-ergo -version`"
+echo "alt-ergo --version == `alt-ergo --version`"
 
 # Run the tests
 sh ./run_valid.sh "alt-ergo" "0.5"

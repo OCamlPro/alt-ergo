@@ -55,3 +55,9 @@ val reset_steps : unit -> unit
 
 val get_steps : unit -> int
 (** Return the number of steps *)
+
+(** Return the number of case-split steps *)
+val cs_steps : unit -> int
+
+(** Increase the number of case-split steps *)
+val incr_cs_steps : unit -> unit

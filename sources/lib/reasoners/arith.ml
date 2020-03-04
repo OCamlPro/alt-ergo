@@ -237,7 +237,7 @@ module Shostak
     | Sy.Op Sy.Mult, [t1;t2] ->
       let p1, ctx = mke coef (empty_polynome ty) t1 ctx in
       let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
-      if Options.no_NLA() && P.is_const p1 == None && P.is_const p2 == None
+      if Options.no_nla() && P.is_const p1 == None && P.is_const p2 == None
       then
         (* becomes uninterpreted *)
         let tau = E.mk_term (Sy.name ~kind:Sy.Ac "@*") [t1; t2] ty in
@@ -249,7 +249,7 @@ module Shostak
     | Sy.Op Sy.Div, [t1;t2] ->
       let p1, ctx = mke Q.one (empty_polynome ty) t1 ctx in
       let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
-      if Options.no_NLA() &&
+      if Options.no_nla() &&
          (P.is_const p2 == None ||
           (ty == Ty.Tint && P.is_const p1 == None)) then
         (* becomes uninterpreted *)
@@ -278,7 +278,7 @@ module Shostak
     | Sy.Op Sy.Modulo , [t1;t2] ->
       let p1, ctx = mke Q.one (empty_polynome ty) t1 ctx in
       let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
-      if Options.no_NLA() &&
+      if Options.no_nla() &&
          (P.is_const p1 == None || P.is_const p2 == None)
       then
         (* becomes uninterpreted *)
