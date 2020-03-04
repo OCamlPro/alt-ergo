@@ -1164,12 +1164,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let i = abs (interpretation ()) in
     assert (i = 1 || i = 2 || i = 3);
     if not !(env.model_gen_mode) &&
-       Stdlib.(<>) (Options.interpretation_timelimit ()) 0. then
+       Stdlib.(<>) (Options.timelimit_interpretation ()) 0. then
       begin
         Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
         Options.Time.set_timeout
           ~is_gui:(Options.get_is_gui())
-          (Options.interpretation_timelimit ());
+          (Options.timelimit_interpretation ());
         env.model_gen_mode := true;
         return_answer env i (fun _ -> raise Util.Timeout)
       end
@@ -1315,7 +1315,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let env = new_inst_level env in
     let mconf =
       {Util.nb_triggers = nb_triggers ();
-       no_ematching = no_Ematching();
+       no_ematching = no_ematching();
        triggers_var = triggers_var ();
        use_cs = false;
        backward = Util.Normal;
@@ -1511,7 +1511,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         fprintf fmt "[sat.backward] round %d / %d@." rnd max_rnd;
       let mconf =
         {Util.nb_triggers = nb_triggers ();
-         no_ematching = no_Ematching();
+         no_ematching = no_ematching();
          triggers_var = triggers_var ();
          use_cs = false;
          greedy = greedy ();
@@ -1532,15 +1532,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let backward_instantiation env deepest_term =
     try
-      let no_Ematching = Options.no_Ematching () in
-      let no_NLA = Options.no_NLA () in
+      let no_ematching = Options.no_ematching () in
+      let no_nla = Options.no_nla () in
       let no_ac = Options.no_ac () in
       let greedy = Options.greedy () in
       (*let normalize_instances = Options.normalize_instances () in*)
       let max_split = Options.max_split () in
 
-      Options.set_no_Ematching true;
-      Options.set_no_NLA true;
+      Options.set_no_ematching true;
+      Options.set_no_nla true;
       Options.set_no_ac  true;
       Options.set_greedy true;
       (*Options.set_normalize_instances true;*)
@@ -1549,8 +1549,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let max_rnd = 2 * deepest_term in
       let modified_env = backward_instantiation_rec env 1 max_rnd in
 
-      Options.set_no_Ematching no_Ematching;
-      Options.set_no_NLA no_NLA;
+      Options.set_no_ematching no_ematching;
+      Options.set_no_nla no_nla;
       Options.set_no_ac  no_ac;
       Options.set_greedy greedy;
       (*Options.set_normalize_instances normalize_instances;*)
@@ -1612,7 +1612,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
       let mconf =
         {Util.nb_triggers = nb_triggers ();
-         no_ematching = no_Ematching();
+         no_ematching = no_ematching();
          triggers_var = triggers_var ();
          use_cs = false;
          backward = Util.Normal;

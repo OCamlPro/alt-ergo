@@ -58,7 +58,7 @@ do
         if grep -q -w Valid $main_script_out ; then
 	    score=`expr $score + 1`
             echo "\e[32m    > [OK] ../non-regression/$mlw\e[39m"
-        else 
+        else
             echo ../non-regression/$mlw >> main_script.log
             cat $main_script_out >> main_script.log
             cat $main_script_err >> main_script.log
@@ -95,7 +95,7 @@ do
         timeout 2 $pr $mlw $opt 1> $main_script_out 2> $main_script_err
         if grep -q -w Valid $main_script_out ; then
 	    score=`expr $score + 1`
-        else 
+        else
             echo ../non-regression/$mlw >> main_script.log
             cat $main_script_out >> main_script.log
             cat $main_script_err >> main_script.log
@@ -132,7 +132,7 @@ do
         timeout 2 $pr $mlw $opt 1> $main_script_out 2> $main_script_err
         if grep -q -w "I don't know" $main_script_out ; then
 	    score=`expr $score + 1`
-        else 
+        else
             echo ../non-regression/$mlw >> main_script.log
             cat $main_script_out >> main_script.log
             cat $main_script_err >> main_script.log
@@ -149,7 +149,7 @@ echo "$limit"
 echo " Score Invalid: $score/$total : $percent% (-$diff)"
 echo "$limit"
 
- 
+
 ## Incorrect
 ################################################################################################
 

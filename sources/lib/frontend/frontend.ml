@@ -231,7 +231,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Query(n,_,_) -> sprintf " (goal %s)" n
     | _ -> ""
 
-  let print_status_unsat_mode status steps =
+  let print_status_output_smtlib status steps =
     let time = Time.value() in
     match status with
     | Unsat (d, dep) ->
@@ -330,8 +330,9 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         report_loc Loc.dummy time steps
 
   let print_status status steps =
-    if Options.unsat_mode () then print_status_unsat_mode status steps
-    else print_status_valid_mode status steps
+    if Options.output_smtlib () then print_status_output_smtlib status steps
+    else if Options.output_native () then print_status_valid_mode status steps
+    else assert false           (* will be useful for szs *)
 
   let init_with_replay_used acc f =
     assert (Sys.file_exists f);
@@ -374,4 +375,3 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     else init_used_context ~goal_name
 
 end
-

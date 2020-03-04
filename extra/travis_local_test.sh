@@ -21,4 +21,3 @@ $git_repo/extra/non_regression.sh
 
 # Test the lib usage
 $git_repo/extra/test_lib.sh $LOCAL_DIR/lib/alt-ergo-lib
-

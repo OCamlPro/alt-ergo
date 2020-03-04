@@ -15,7 +15,7 @@ lib_path=$1
 # Log some concrete values used in the test
 echo "=+= [travis.sh] build and test library example ... =+="
 echo "which alt-ergo == `which alt-ergo`"
-echo "alt-ergo -version == `alt-ergo -version`"
+echo "alt-ergo --version == `alt-ergo --version`"
 echo "path to lib == $lib_path"
 x=`ls $lib_path`
 echo "content of lib == $x"
@@ -23,7 +23,7 @@ echo "content of lib == $x"
 # Compile the lib_usage caml file
 cd $git_repo/sources/examples
 ocamlfind ocamlopt -linkpkg -package \
-	  stdlib-shims,num,zarith,ocplib-simplex,psmt2-frontend,unix,str,zip,dynlink \
+	  stdlib-shims,num,zarith,ocplib-simplex,psmt2-frontend,unix,str,zip,dynlink,cmdliner \
 	  -o lib_usage \
 	  -I $lib_path AltErgoLib.cmxa \
 	  lib_usage.ml

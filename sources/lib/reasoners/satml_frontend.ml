@@ -835,7 +835,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let frugal_mconf () =
     {Util.nb_triggers = nb_triggers ();
-     no_ematching = no_Ematching();
+     no_ematching = no_ematching();
      triggers_var = triggers_var ();
      use_cs = false;
      backward = Util.Normal;
@@ -844,7 +844,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let normal_mconf () =
     {Util.nb_triggers = Stdlib.max 2 (nb_triggers () * 2);
-     no_ematching = no_Ematching();
+     no_ematching = no_ematching();
      triggers_var = triggers_var ();
      use_cs = false;
      backward = Util.Normal;

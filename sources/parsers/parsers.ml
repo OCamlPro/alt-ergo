@@ -52,30 +52,30 @@ let debug_no_parser_for_extension s =
     eprintf
       "error: no parser registered for ext %S. Using default lang ...@." s
 
-let debug_no_parser_for_default_lang s =
+let debug_no_parser_for_input_format s =
   if verbose() then
     eprintf
-      "error: no parser registered for the provided default lang %S ?@." s
+      "error: no parser registered for the provided input format %S ?@." s
 
 let get_parser lang_opt =
-  let d = Options.default_input_lang () in
+  let i = Options.input_format () in
   match lang_opt with
   | Some lang ->
     begin
       try List.assoc lang !parsers
       with Not_found ->
         debug_no_parser_for_extension lang;
-        try List.assoc d !parsers
+        try List.assoc i !parsers
         with Not_found ->
-          debug_no_parser_for_default_lang d;
+          debug_no_parser_for_input_format i;
           exit 1
     end
 
   | None ->
     begin
-      try List.assoc d !parsers
+      try List.assoc i !parsers
       with Not_found ->
-        debug_no_parser_for_default_lang d;
+        debug_no_parser_for_input_format i;
         exit 1
     end
 
@@ -116,7 +116,7 @@ let extract_zip_file f =
     raise e
 
 let parse_input_file file =
-  if verbose() then fprintf fmt "[input_lang] parsing file %s@." file;
+  if verbose() then fprintf fmt "[input_lang] parsing file \"%s\"@." file;
   let cin, lb, opened_cin, ext =
     if Filename.check_suffix file ".zip" then
       let ext = Filename.extension (Filename.chop_extension file) in
@@ -131,6 +131,12 @@ let parse_input_file file =
         stdin, Lexing.from_channel stdin, false, ext
   in
   try
+    (if Options.infer_output_format () then
+       match ext with
+       | ".smt2" | ".psmt2" -> Options.set_output_format OSmtlib
+       | ".why" | ".mlw" | ".ae" -> Options.set_output_format ONative
+       | _ -> Format.eprintf "Warning: This extension is not supported@."
+    );
     let ext = if String.equal ext "" then None else Some ext in
     let a = parse_file ?lang:ext lb in
     if opened_cin then close_in cin;
