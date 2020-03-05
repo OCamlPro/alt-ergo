@@ -3,7 +3,10 @@ name: "alt-ergo"
 version: "dev"
 authors: "Alt-Ergo developers"
 maintainer: "OCamlPro <alt-ergo@ocamlpro.com>"
-license: "OCamlPro Non-Commercial Purpose License, version 1"
+license: [
+	"OCamlPro Non-Commercial Purpose License, version 1"
+	"LGPL-2.1-only"
+]
 build: [
   ["./configure" name]
   ["dune" "subst"] {pinned}
@@ -14,6 +17,7 @@ depends: [
   "dune" {>= "1.5"}
   "alt-ergo-lib" { = version }
   "alt-ergo-parsers" { = version }
+  "menhir"
 ]
 homepage: "http://alt-ergo.ocamlpro.com/"
 dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"

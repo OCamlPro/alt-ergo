@@ -1,3 +1,7 @@
+(documentation
+  (package alt-ergo)
+    (mld_files :standard)
+)
 
 (ocamllex (modules why3_lexer))
 
