@@ -15,16 +15,16 @@ The resources are licensed as follows:
 
 Some of these files are Copyright (C) 2006-2013 --- CNRS - INRIA -
 Universite Paris Sud, and Copyright (C) 2013-2017 --- OCamlPro SAS.
-They are distributed under the terms of the Apache Software License
-version 2.0.
+They are distributed under the terms of the [Apache Software License
+version 2.0](licenses/Apache-License-2.0.txt).
 
 The other files that refer to a file 'License.OCamlPro' are Copyright
 (C) --- OCamlPro SAS. They are distributed under the terms of the
-license indicated in 'License.OCamlPro'.
+license indicated in [License.OCamlPro](licenses/License.OCamlPro).
 
 Note that some plugins may have different licenses. For instance the
-sources of the AB-Why3 plugin are governed by the GNU Lesser General
-Public License version 2.1, and are Copyright (C) 2010-2017 INRIA -
+sources of the AB-Why3 plugin are governed by the [GNU Lesser General
+Public License version 2.1](licenses/LGPL-License.txt), and are Copyright (C) 2010-2017 INRIA -
 CNRS - Paris-Sud University and Copyright (C) 2018 OCamlPro SAS (see
 plugins/AB-Why3/README.md.
 
@@ -37,7 +37,7 @@ license it is distributed.
 The binaries (tools, plugins, ...) that are generated from the OCaml
 source files are Copyright (C) --- OCamlPro SAS. They are distributed
 under the terms of the license indicated in the file
-'License.OCamlPro', except for the AB-Why3 plugin, which is
-distributed under the terms of the GNU Lesser General Public License
-version 2.1.
+[License.OCamlPro](licenses/License.OCamlPro), except for the AB-Why3 plugin, which is
+distributed under the terms of the [GNU Lesser General
+Public License version 2.1](licenses/LGPL-License.txt).
 
