@@ -121,6 +121,7 @@ let () =
     module Void = struct
       type 'a t = unit
       let rwrt = ()
+      let named = ()
 
       type name = unit
       let name = ()
@@ -241,11 +242,16 @@ let () =
       let ax = type_form lang t in
       [Typed.mk (Typed.TAxiom (_loc s, hyp_id s, Util.Default, ax))]
 
-    let type_goal ~negate s lang g_sort t =
-      let g = type_form ~negate lang t in
+    let type_goal s lang g_sort t =
+      let g = type_form ~negate:true lang t in
       let g' = Typed.monomorphize_form g in
       let name = Typed.fresh_hypothesis_name g_sort in
       [Typed.mk (Typed.TNegated_goal (_loc s, g_sort, name, g'))]
+
+    let type_negated_goal s lang g_sort t =
+      let g = type_form ~negate:false lang t in
+      let name = Typed.fresh_hypothesis_name g_sort in
+      [Typed.mk (Typed.TNegated_goal (_loc s, g_sort, name, g))]
 
     let type_assumption s lang t =
       let f = type_form ~negate:false lang t in
@@ -313,9 +319,9 @@ let () =
           begin match lang with
             | L.Smtlib2 _ | L.Dimacs | L.ICNF ->
               Options.set_unsat_mode true;
-              let _, _false = Typed.Safe.(expect_prop @@ neg _true) in
+              let _, _true = Typed.Safe.(expect_prop @@ _true) in
               [Typed.mk (Typed.TNegated_goal
-                           (_loc s, Typed.Thm, goal_id s, _false))]
+                           (_loc s, Typed.Thm, goal_id s, _true))]
             | _ -> []
           end
         (* Hypotheses *)
@@ -323,11 +329,11 @@ let () =
           if is_tptp_assumption s then
             type_assumption s lang t
           else if is_tptp_negated_conjecture s then
-            type_goal ~negate:true s lang Typed.Thm t
+            type_negated_goal s lang Typed.Thm t
           else
             type_hyp s lang t
         | S.Consequent t ->
-          type_goal ~negate:false s lang Typed.Thm t
+          type_goal s lang Typed.Thm t
 
         (* Special case for clauses *)
         | S.Clause l ->
