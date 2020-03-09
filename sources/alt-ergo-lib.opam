@@ -17,6 +17,7 @@ depends: [
   "zarith"
   "seq"
   "stdlib-shims"
+  "cmdliner"
 ]
 homepage: "http://alt-ergo.ocamlpro.com/"
 dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"
