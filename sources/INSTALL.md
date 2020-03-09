@@ -1,143 +1,108 @@
-## Build and Installation
+# Build and Installation
 
-  You need OCaml >= 4.04.0, zarith, camlzip, menhir, ocplib-simplex >=
-  0.4 and psmt2-frontend library to compile the sources. You need
-  LablGtk2 and the widget GSourceView2 to compile the GUI. You may
-  need superuser permissions to perform the installation.
+## Dependencies
 
-#### Configuration
+To compile the sources, you will need the following libraries :
+```
+  ocaml >= 4.04.0
+  dune >= 1.5
+  zarith
+  camlzip
+  menhir
+  ocplib-simplex >= 0.4
+  seq
+  cmdliner
+  stdlib-shims
+  psmt2-frontend
+```
 
-  1. Configure with "./configure" to generate Makefile.config,
+To compile the GUI you will also need 
+```
+  lablgtk2
+  gtksourceview2
+```
+You may need superuser permissions to perform the installation.
+
+## Configuration
+
+  1. Configure with `./configure` to generate Makefile.config,
   in order to build everything (lib, parsers, binaries, and GUI).
 
-  2. Alternatively, you can configure with "./configure -prefix
-  some-absolute-path-prefix" to add a prefix for installation
-  directories. You may also want to use "make gen && cat lib/util/config.ml"
+  2. Alternatively, you can configure with `./configure -prefix
+  some-absolute-path-prefix` to add a prefix for installation
+  directories. You may also want to use `make gen && cat lib/util/config.ml`
   to see directories where things will be installed.
 
-  3. You can use "./configure <package>" to select which package you
-  want to build. "<package>" may be one of: alt-ergo-lib, alt-ergo-parsers,
+  3. You can use `./configure <package>` to select which package you
+  want to build. `<package>` may be one of: alt-ergo-lib, alt-ergo-parsers,
   alt-ergo, altgr-ergo.
+
+## Build and Install
 
 The steps below will build and install native or bytecode binaries
 depending on whether ocamlopt is installed or only ocamlc is detected.
 
-#### Everything (binaries, plugins, library, ...)
+### Everything (binaries, plugins, library, ...)
 
-  1. Compile with "make"
+  1. Compile with `make`
 
-  2. Install with "make install"
+  2. Install with `make install`
 
-  3. Uninstall with "make uninstall"
+  3. Uninstall with `make uninstall` 
 
-#### Alt-Ergo library
+### Alt-Ergo library
 
-  1. Compile with "make alt-ergo-lib"
+  1. Compile with `make alt-ergo-lib`
 
-  2. Install with "make install-lib"
+  2. Install with `make install-lib` 
 
-#### Alt-Ergo parsers
+### Alt-Ergo parsers
 
-  1. Compile with "make alt-ergo-parsers"
+  1. Compile with `make alt-ergo-parsers`
 
-  2. Install with "make install-parsers"
+  2. Install with `make install-parsers` 
 
-#### Alt-Ergo binary
+### Alt-Ergo binary
 
-  1. Compile with "make alt-ergo"
+  1. Compile with `make alt-ergo`
 
-  2. Install with "make install-bin"
+  2. Install with `make install-bin` 
 
-#### AltGr-Ergo binary
+### AltGr-Ergo binary
 
-  1. Compile with "make altgr-ergo"
+  1. Compile with `make altgr-ergo`
 
-  2. Install with "make install-gui"
+  2. Install with `make install-gui` 
 
+
+
+## Plugins
 
 The steps below will build and install additional plugins (extension
 .cmxs if ocamlopt is installed or .cma if only ocamlc is detected).
 
-#### The SatML Plugin
+### The SatML Plugin
 
   (satML is now inlined and compiled directly with Alt-Ergo's source code)
 
-#### The Fm-Simplex Plugin
+### The Fm-Simplex Plugin
 
-  1. Compile with "make fm-simplex"
+  1. Compile with `make fm-simplex`
 
   2. The Fm-Simplex plugin is currently built and installed
   at the same time as the alt-ergo binary.
 
-#### The profiler plugin
+### The AB-Why3 parser plugin
+
+  1. Compile with `make AB-Why3`
+
+  2. The AB-Why3 plugin is currently built and installed
+  at the same time as the alt-ergo binary.
+
+You can find more information [here](plugins/AB-Why3/README.md)
+
+### The profiler plugin
 
 This plugin has been "inlined" in Alt-Ergo sources.
 
-
-## Usage
-
-Alt-Ergo supports file extensions:
-- `.why`, `.mlw`, `.ae` for its native input language
-- `.psmt2`, `.smt2` for (our polymorphic extension of) the SMT-LIB 2
-  standard
-
-- Alt-Ergo and AltGr-Ergo are executed with the following commands,
-  respectively:
-
-        $ alt-ergo   [options] file.<ext>
-        $ altgr-ergo [options] file.<ext>
-
-The CDCL solver is now the default SAT engine. The commands below
-allow to enable the old Tableaux-like SAT-solver:
-
-        $ alt-ergo   [options] -sat-solver Tableaux file.<ext>
-        $ altgr-ergo [options] -sat-solver Tableaux file.<ext>
-
-- The Fm-Simplex plugin can be used as follows:
-
-        $ alt-ergo -inequalities-plugin fm-simplex-plugin.cmxs [other-options] file.<ext>
-        $ alt-ergo -inequalities-plugin some-path/fm-simplex-plugin.cmxs [other-options] file.<ext>
-
-   Alt-Ergo will try to load a local plugin called
-   "fm-simplex-plugin.cmxs". If this fails, Alt-Ergo tries to load it
-   from the default plugins directory (run "alt-ergo -where plugins"
-   to see its absolute path). You can also provide a relative or an
-   absolute path as shown by the second command above. Also, you
-   should replace ".cmxs" by ".cma" if you are working with bytcode
-   binaries.
-
-- Preludes can be passed to Alt-Ergo as follows:
-
-        $ alt-ergo -prelude p.why -prelude some-path/q.why [other-options] file.why
-
-   Alt-Ergo will try to load a local plugin called "p.why". If this
-   fails, Alt-Ergo tries to load it from the default preludes
-   directory (run "alt-ergo -where preludes" to see its absolute
-   path). You can also provide a relative or an absolute path as shown
-   by "some-path/q.why".
-
-   For instance, the following command-line enables floating-point
-   arithmetic reasoning in Alt-Ergo and indicates that the FPA prelude
-   should be loaded:
-
-   $ alt-ergo -use-fpa -prelude fpa-theory-2017-01-04-16h00.why <file.why>
-
-- Since version 2.2.0, Alt-Ergo's library is also compiled and
-  installed. A small example using the API is given here:
-  "examples/lib_usage.ml"
-
-### Plugins and Preludes directories
-
-As stated above, the `-where` option of `alt-ergo` can be used to get the absolute
-path that is searched by default when looking for plugins and preludes that were
-given with a relative path. It is useful to know that these two directories are
-actually relative to the location of the `alt-ergo` executable, so that the
-executable, as well as preludes and plugins, can be relocated.
-
-For instance, on a Linux system, assuming the `alt-ergo` executable is at some path
-`some/path/bin/alt-ergo`, theses directories are respectively located at
-`some/path/share/alt-ergo/plugins/` and `some/path/share/alt-ergo/preludes/`.
-On windows, a binary at path `Z:\some\path\bin\alt-ergo` will look for preludes and
-plugins in `Z:\some\path\share\alt-ergo\preludes` and
-`Z:\some\path\share\alt-ergo\plugins` respectively.
 
