@@ -560,6 +560,8 @@ module Safe = struct
       ty  : Ty.t;
     }
 
+    let name t = Symbols.to_string t.var
+
     let hash { var; _ } = Symbols.hash var
 
     let compare v v' =

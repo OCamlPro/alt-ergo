@@ -151,6 +151,16 @@ let () =
     type env = unit
     let empty_env = ()
 
+    (* Definitions *)
+    module Def = Dolmen_type.Def.Declare(T)
+    module Ty_subst = Dolmen_type.Def.Subst(T)(struct
+        let term_subst _ _ _ = assert false
+        let ty_subst l ty =
+          let s = List.fold_left (fun acc (v, ty) ->
+              Ty.M.add v.Ty.v ty acc
+            ) Ty.M.empty l in
+          Ty.apply_subst s ty
+        end)
 
     (* Typing Builtins *)
     module B_zf =
@@ -173,10 +183,14 @@ let () =
     let builtins = function
       | L.Tptp v ->
         Dolmen_type.Base.merge [
+          Def.parse;
+          Ty_subst.parse;
           B_tptp.parse v;
         ]
       | L.Smtlib2 v ->
         Dolmen_type.Base.merge [
+          Def.parse;
+          Ty_subst.parse;
           B_smtlib.parse v;
           B_smtlib_array.parse v;
           B_smtlib_bitv.parse v;
@@ -184,8 +198,14 @@ let () =
            * B_smtlib_arith_real.parse; *)
           B_smtlib_arith_real_int.parse v;
         ]
-      | L.Zf -> B_zf.parse
-      | _ -> (fun _ _ _ _ -> None)
+      | L.Zf ->
+        Dolmen_type.Base.merge [
+          Def.parse;
+          Ty_subst.parse;
+          B_zf.parse;
+        ]
+      | _ ->
+        Dolmen_type.Base.noop
 
     (* Starting environment (mainly to specify the builtins function) *)
     let start_env lang =
@@ -213,6 +233,11 @@ let () =
             pos_bol = 0; pos_cnum = l.P.stop_column; }
         )
       | None -> Lexing.dummy_pos, Lexing.dummy_pos
+
+    let default_loc = Dolmen.ParseLocation.mk "<?>" 0 0 0 0
+    let get_loc = function
+      | Some loc -> loc
+      | None -> default_loc
 
     (** Generate statement names *)
     let stmt_id ref_name =
@@ -314,6 +339,23 @@ let () =
                                         [Typed.Safe.Const.name c],
                                         Typed.Safe.Const.tlogic_type c))
             ) (T.decls env l)
+        (* Type/Term definitions *)
+        | S.Def (id, ast) ->
+          let env = start_env lang in
+          begin match T.new_def env ast id with
+            | `Type_def (id, _, vars, body) ->
+              let () = Ty_subst.define_ty id vars body in
+              []
+            | `Term_def (id, _, vars, args, body) ->
+              let c = Def.define_term id vars args body in
+              let name = Typed.Safe.Const.name c in
+              let l = List.map (fun v ->
+                  Typed.Safe.Var.name v, Typed.Safe.Var.ty v
+                ) args in
+              let ret_ty = Typed.Safe.ty body in
+              let _, ret = Typed.Safe.expect_prop body in
+              [Typed.mk (Typed.TFunction_def (_loc s, name, l, ret_ty, ret))]
+          end
         (* Explicit Prove statements (aka check-sat in smtlib) *)
         | S.Prove [] ->
           begin match lang with
@@ -363,18 +405,15 @@ let () =
         | S.Exit ->
           exit 0
         | _ ->
-          Format.eprintf "Error, don't know what to do with:@\n %a@." S.print s;
+          let loc = get_loc s.loc in
+          Format.eprintf "%a:@\nError, don't know what to do with:@\n %a@."
+            Dolmen.ParseLocation.fmt loc S.print s;
           exit 2
       in
       l, ()
 
     (* Error messages printing *)
     let () =
-      let default_loc = Dolmen.ParseLocation.mk "<?>" 0 0 0 0 in
-      let get_loc = function
-        | Some loc -> loc
-        | None -> default_loc
-      in
 
       let pp_opt pp fmt = function
         | None -> ()

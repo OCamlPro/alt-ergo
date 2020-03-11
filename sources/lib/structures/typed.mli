@@ -291,8 +291,8 @@ and 'a tdecl =
   | TFunction_def of
       Loc.t * string *
       (string * Ty.t) list * Ty.t * 'a atform
-  (** Predicate definition.
-      [TPredicate_def (loc, name, vars, ret, body)] defines a function
+  (** Function definition.
+      [TFunction_def (loc, name, vars, ret, body)] defines a function
       [fun vars => body], where body has type [ret]. *)
   | TTypeDecl of Loc.t * Ty.t
   (** New type declaration. [TTypeDecl (loc, vars, t, body)]
@@ -378,6 +378,9 @@ module Safe : sig
 
     val ty : t -> Ty.t
     (** Return the type of a typed variable. *)
+
+    val name : t -> string
+    (** Name of the constant. *)
 
   end
 
