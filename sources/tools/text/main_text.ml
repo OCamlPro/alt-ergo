@@ -128,6 +128,8 @@ let solve all_context (cnf, goal_name) =
         (FE.process_decl FE.print_status used_context)
         (SAT.empty (), true, Explanation.empty) cnf
     in
+    if Options.timelimit_per_goal() then
+      Options.Time.unset_timeout ~is_gui:false;
     if Options.profiling() then
       Profiling.print true (Steps.get_steps ()) timers fmt
   with Util.Timeout ->
