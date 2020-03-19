@@ -321,6 +321,12 @@ type_decl:
     | None -> mk_abstract_type_decl loc ty_vars $1.id_str
     | Some l ->  mk_enum_type_decl loc ty_vars $1.id_str l
    }
+| lab_li=labels(lident_nq) ty_v=ty_var* rec_def=typerecord
+  {
+    let loc = floc $startpos $endpos in
+    let ty_vars = List.map (fun i -> i.id_str) ty_v in
+    mk_record_type_decl loc ty_vars lab_li.id_str rec_def
+  }
 
 late_invariant:
 | labels(lident_nq) ty_var* invariant+
@@ -337,9 +343,15 @@ typedefn:
 | model bar_list1(type_case) invariant*
     { $1, Some $2, $3 }
 
+typerecord:
+| model LEFTBRC li_ctr=semicolon_list1(case_type_record) RIGHTBRC { li_ctr }
+
 model:
 | EQUAL         { false }
 | MODEL         { true }
+
+case_type_record:
+| lab_lid=labels(lident_nq) c=cast { lab_lid.id_str, c }
 
 type_case:
 | labels(uident_nq) { $1.id_str }
@@ -588,11 +600,13 @@ term_dot_:
 | term_sub_ { $1 }
 
 term_sub_:
-  | term_dot DOT lqualid_rich
-        { match $3 with
+  | td=term_dot DOT ldr=lqualid_rich
+        { match ldr with
                       | {Parsed.pp_desc = PPvar "prefix -" ; _ }
                       | {Parsed.pp_desc = PPvar "infix -" ; _ } ->
-                         mk_minus (floc $startpos $endpos) $1
+                         mk_minus (floc $startpos $endpos) td
+                      | {Parsed.pp_desc = PPvar s ; _ } ->
+                         mk_dot_record (floc $startpos $endpos) td s
                       | _ -> Format.eprintf "TODO@."; assert false
                     }
 | LEFTPAR term RIGHTPAR                             { $2 }
@@ -601,6 +615,8 @@ term_sub_:
 | LEFTPAR comma_list2(term) RIGHTPAR
     { mk_tuple_record $2(floc $startpos $endpos) }
 
+| LEFTBRC li_cr=semicolon_list1(case_record) RIGHTBRC
+    { mk_record (floc $startpos $endpos) li_cr }
 
 field_list1(X):
 | fl = semicolon_list1(separated_pair(lqualid, EQUAL, X)) { fl }
@@ -639,6 +655,9 @@ numeral:
 
 invariant:
 | INVARIANT LEFTBRC term RIGHTBRC { $3 }
+
+case_record:
+| lab_li=labels(lident_nq) EQUAL t=term { lab_li.id_str, t }
 
 
 (* Patterns *)
