@@ -8,4 +8,5 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(* empty interface *)
+(** Dynamicaly load parser p if option -parser p is enable *)
+val load : unit -> unit
