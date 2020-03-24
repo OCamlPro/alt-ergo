@@ -100,7 +100,7 @@ and 'a tt_desc =
   (** Arbitrary symbol application *)
   | TTmapsTo of Var.t * 'a atterm
   (** Used in semantic triggers for floating point arithmetic.
-      See sources/preludes/fpa-theory-2017-01-04-16h00.why *)
+      See sources/preludes/fpa-theory-2017-01-04-16h00.ae *)
   | TTinInterval of 'a atterm * Symbols.bound * Symbols.bound
   (** Represent floating point intervals (used for triggers in Floating
       point arithmetic theory).

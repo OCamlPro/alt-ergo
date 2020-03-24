@@ -132,7 +132,7 @@ let vno_backward = ref false
 let vno_sat_learning = ref false
 let vinstantiate_after_backjump = ref false
 let vdisable_weaks = ref false
-let vinput_format = ref "why"
+let vinput_format = ref "ae"
 let vanswers_with_loc = ref true
 
 type output = ONative | OSmtlib | OSZS
@@ -1369,7 +1369,8 @@ let main =
 
   let file =
     let doc =
-      "Source file. Must be suffixed by $(i,.mlw), $(i,.why), \
+      "Source file. Must be suffixed by $(i,.ae), \
+       ($(i,.mlw) and $(i,.why) are depreciated, \
        $(i,.smt2) or $(i,.psmt2)." in
     let i = Arg.(info [] ~docv:"FILE" ~doc) in
     Arg.(value & pos ~rev:true 0 (some string) None & i) in
