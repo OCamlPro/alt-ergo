@@ -397,7 +397,7 @@ val frontend : unit -> string
     does not allow to automatically select a parser (eg. JS mode, GUI
     mode, ...). *)
 val input_format : unit -> string
-(** Default to [.why] *)
+(** Default to [.ae] *)
 
 (** [true] if the program shall stop after parsing. *)
 val parse_only : unit -> bool

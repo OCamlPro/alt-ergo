@@ -2,8 +2,7 @@ alt_ergo_bin=$1
 timelimit=$2
 
 files=""
-files="$files `find invalid/ -name '*'.mlw`"
-files="$files `find invalid/ -name '*'.why`"
+files="$files `find invalid/ -name '*'.ae`"
 files="$files `find invalid/ -name '*'.zip`"
 
 ## run Alt-Ergo with imperative SAT solver assisted with tableaux on invalid tests

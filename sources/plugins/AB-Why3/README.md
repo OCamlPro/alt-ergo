@@ -21,7 +21,7 @@ written in Why3's logic.
 
 Assuming you are currently in `alt-ergo-git/sources` directory, and
 `autoconf && ./configure && make` succeeded, you can ask Alt-Ergo to
-prove the goals given in a file `b-why3-POs.why` with the following
+prove the goals given in a file `b-why3-POs.ae` with the following
 command:
 
 
