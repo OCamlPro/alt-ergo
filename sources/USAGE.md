@@ -20,7 +20,7 @@ allow to enable the old Tableaux-like SAT-solver:
 
 ### Files extensions
 Alt-Ergo supports file extensions:
-- `.why`, `.mlw`, `.ae` for its native input language
+- `.ae`, for its native input language (`.why` and `.mlw` are now depreciated although still accepted)
 - `.psmt2`, `.smt2` for (our polymorphic extension of) the SMT-LIB 2
   standard
 
@@ -44,19 +44,19 @@ The Fm-Simplex plugin can be used as follows:
 
 Preludes can be passed to Alt-Ergo as follows:
 
-        $ alt-ergo --prelude p.why --prelude some-path/q.why [other-options] file.why
+        $ alt-ergo --prelude p.ae --prelude some-path/q.ae [other-options] file.ae
 
-   Alt-Ergo will try to load a local plugin called "p.why". If this
+   Alt-Ergo will try to load a local prelude called "p.ae". If this
    fails, Alt-Ergo tries to load it from the default preludes
-   directory (run "alt-ergo --where preludes" to see its absolute
+   directory (run `alt-ergo --where preludes` to see its absolute
    path). You can also provide a relative or an absolute path as shown
-   by "some-path/q.why".
+   by "some-path/q.ae".
 
    For instance, the following command-line enables floating-point
    arithmetic reasoning in Alt-Ergo and indicates that the FPA prelude
    should be loaded:
 
-        $ alt-ergo --use-fpa --prelude fpa-theory-2017-01-04-16h00.why <file.why>
+        $ alt-ergo --use-fpa --prelude fpa-theory-2017-01-04-16h00.ae <file.ae>
 
 ### Plugins and Preludes directories
 
