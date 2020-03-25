@@ -28,6 +28,8 @@
 
 open AltErgoLib
 
+exception ParserError of string
+
 module type PARSER_INTERFACE = sig
   val file : Lexing.lexbuf -> Parsed.file
   val expr : Lexing.lexbuf -> Parsed.lexpr
@@ -41,8 +43,11 @@ val register_parser : lang:string -> (module PARSER_INTERFACE) -> unit
 
 val parse_file : ?lang:string -> Lexing.lexbuf -> Parsed.file
 (** Parses the given file (lexbuf) using the appropriate 'parser'
-    depending on the given language. If no language is given, the
-    default one is used. *)
+    depending on the given language (set from extension) or
+    the format set with the --input option.
+    If no output format is set with the --output option, we set it depending
+    on the extension / input format. by default if an input format is set
+    results will be printed according this input format. *)
 
 val parse_expr : ?lang:string -> Lexing.lexbuf -> Parsed.lexpr
 (** Parses the given expression (lexbuf) using the appropriate 'parser'

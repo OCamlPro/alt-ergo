@@ -30,6 +30,8 @@ open AltErgoLib
 open Options
 open Format
 
+exception ParserError of string
+
 module type PARSER_INTERFACE = sig
   val file : Lexing.lexbuf -> Parsed.file
   val expr : Lexing.lexbuf -> Parsed.lexpr
@@ -47,38 +49,47 @@ let register_parser ~lang new_parser =
     end;
   parsers := (lang, new_parser) :: !parsers
 
-let debug_no_parser_for_extension s =
-  if verbose() then
-    eprintf
-      "error: no parser registered for ext %S. Using default lang ...@." s
-
-let debug_no_parser_for_input_format s =
-  if verbose() then
-    eprintf
-      "error: no parser registered for the provided input format %S ?@." s
-
-let get_parser lang_opt =
-  let i = Options.input_format () in
-  match lang_opt with
-  | Some lang ->
-    begin
-      try List.assoc lang !parsers
+let find_parser ext_opt format =
+  try List.assoc ext_opt !parsers
+  with Not_found ->
+    if String.equal ext_opt ".why" then begin
+      eprintf
+        "Warning: please use the AB-Why3 plugin for file in Why3 format. \
+         .why and .mlw extensions are depreciated and used for Why3 files. \
+         Continue with native Alt-Ergo parsers !@.";
+      try List.assoc ".ae" !parsers
       with Not_found ->
-        debug_no_parser_for_extension lang;
-        try List.assoc i !parsers
-        with Not_found ->
-          debug_no_parser_for_input_format i;
-          exit 1
-    end
+        raise (ParserError ("Error: no parser registered for the provided \
+                             input format %S ?@."^format))
+    end else
+      raise (ParserError ("Error: no parser registered for the provided \
+                           input format %S ?@."^format))
 
-  | None ->
-    begin
-      try List.assoc i !parsers
-      with Not_found ->
-        debug_no_parser_for_input_format i;
-        exit 1
-    end
+let set_output_format fmt =
+  if Options.infer_output_format () then
+    match fmt with
+    | Options.Unknown s ->
+      Format.eprintf "Warning: The output format %s is not supported@." s
+    | fmt -> Options.set_output_format fmt
 
+let get_input_parser fmt =
+  set_output_format fmt;
+  match fmt with
+  | Options.Native -> find_parser ".ae" "native"
+  | Options.Smtlib2 -> find_parser ".smt2" "smtlib2"
+  | Options.Why3 -> find_parser ".why" "why3"
+  | Options.Unknown s -> find_parser s s
+
+let get_parser ext_opt =
+  if Options.infer_input_format () then
+    match ext_opt with
+    | Some ext ->
+      get_input_parser (Options.match_extension ext)
+    | None ->
+      raise
+        (ParserError "Error: no extension found, can't infer input format@.")
+  else
+    get_input_parser (Options.input_format ())
 
 let parse_file ?lang lexbuf =
   let module Parser = (val get_parser lang : PARSER_INTERFACE) in
@@ -131,12 +142,6 @@ let parse_input_file file =
         stdin, Lexing.from_channel stdin, false, ext
   in
   try
-    (if Options.infer_output_format () then
-       match ext with
-       | ".smt2" | ".psmt2" -> Options.set_output_format OSmtlib
-       | ".why" | ".mlw" | ".ae" -> Options.set_output_format ONative
-       | _ -> Format.eprintf "Warning: This extension is not supported@."
-    );
     let ext = if String.equal ext "" then None else Some ext in
     let a = parse_file ?lang:ext lb in
     if opened_cin then close_in cin;

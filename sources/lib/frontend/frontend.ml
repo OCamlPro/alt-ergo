@@ -330,9 +330,9 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         report_loc Loc.dummy time steps
 
   let print_status status steps =
-    if Options.output_smtlib () then print_status_output_smtlib status steps
-    else if Options.output_native () then print_status_valid_mode status steps
-    else assert false           (* will be useful for szs *)
+    match Options.output_format () with
+    | Smtlib2 -> print_status_output_smtlib status steps
+    | Native | Why3 | Unknown _ -> print_status_valid_mode status steps
 
   let init_with_replay_used acc f =
     assert (Sys.file_exists f);

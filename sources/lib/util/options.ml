@@ -35,6 +35,47 @@ exception Error of bool * string
 
 type model = MNone | MDefault | MAll | MComplete
 
+let model_parser = function
+  | "none" -> Ok MNone
+  | "default" -> Ok MDefault
+  | "complete" -> Ok MComplete
+  | "all" -> Ok MAll
+  | s ->
+    Error (`Msg ("Option --model does not accept the argument \"" ^ s))
+
+let model_to_string = function
+  | MNone -> "none"
+  | MDefault -> "default"
+  | MComplete -> "complete"
+  | MAll -> "all"
+
+let model_printer fmt model = Format.fprintf fmt "%s" (model_to_string model)
+
+let model_conv = Arg.conv ~docv:"MDL" (model_parser, model_printer)
+
+type input_format = Native | Smtlib2 | Why3 (* | SZS *) | Unknown of string
+type output_format = input_format
+
+let format_parser = function
+  | "native" | "altergo" | "alt-ergo" -> Ok Native
+  | "smtlib2" | "smt-lib2" -> Ok Smtlib2
+  | "why3" -> Ok Why3
+  (* | "szs" | "SZS" -> "szs" *)
+  | s ->
+    Error (`Msg (Format.sprintf
+                   "The format %s is not accepted as input/output" s))
+
+let format_to_string = function
+  | Native -> "native"
+  | Smtlib2 -> "smtlib2"
+  | Why3 -> "why3"
+  | Unknown s -> Format.sprintf "Unknown %s" s
+
+let format_printer fmt format =
+  Format.fprintf fmt "%s" (format_to_string format)
+
+let format_conv = Arg.conv ~docv:"FMT" (format_parser, format_printer)
+
 let vtimers = ref false
 
 let vfile = ref ""
@@ -132,12 +173,26 @@ let vno_backward = ref false
 let vno_sat_learning = ref false
 let vinstantiate_after_backjump = ref false
 let vdisable_weaks = ref false
-let vinput_format = ref "ae"
 let vanswers_with_loc = ref true
 
-type output = ONative | OSmtlib | OSZS
+(* vinfer_input_format controls whether input format
+   should be inferred by alt-ergo.
+   It's set to true by default and set to false when an input format is set.
+   The inference is done at parsing (in parsers.ml) using the extension of the
+   input file and regarding of this extension,
+   the corresponding parser is choosed *)
+let vinfer_input_format = ref true
+let vinput_format = ref Native
+
+(* vinfer_output_format controls whether output format
+   should be inferred by alt-ergo.
+   It's set to true by default and set to false when an outpu format is set.
+   The inference is done at parsing (in parsers.ml) using the extension of the
+   input file and regarding of this extension,
+   the corresponding output_format is choosed *)
 let vinfer_output_format = ref true
-let voutput_format = ref ONative
+let voutput_format = ref Native
+
 let vinline_lets = ref false
 
 let vreplay = ref false
@@ -148,6 +203,13 @@ let vsave_used_context = ref false
 let vprofiling_period = ref 0.
 let vprofiling = ref false
 
+let match_extension e =
+  match e with
+  | ".ae" -> Native
+  | ".smt2" | ".psmt2" -> Smtlib2
+  | ".why" | ".mlw" -> Why3
+  (* | ".szs" -> SZS *)
+  | s -> Unknown s
 
 (* We don't want to handle functions with more than 10 arguments so
    we need to split the debug options to gather them in the end.
@@ -157,15 +219,38 @@ let vprofiling = ref false
    to allow the adding of new ones in the right group
 *)
 
-(* type rules = RParsing | RTyping | RSat | RCC | RArith | RNone *)
+type rules = RParsing | RTyping | RSat | RCC | RArith | RNone
 
-(* let rules_of_string = function *)
-(*   | "parsing" -> RParsing *)
-(*   | "typing" -> RTyping *)
-(*   | "sat" -> RSat *)
-(*   | "cc" -> RCC *)
-(*   | "arith" -> RArith *)
-(*   | _ -> RNone *)
+let value_of_rules = function
+  | RParsing -> 0
+  | RTyping -> 1
+  | RSat -> 2
+  | RCC -> 3
+  | RArith -> 4
+  | RNone -> -1
+
+
+let rules_parser = function
+  | "parsing" -> Ok RParsing
+  | "typing" -> Ok RTyping
+  | "sat" -> Ok RSat
+  | "cc" -> Ok RCC
+  | "arith" -> Ok RArith
+  | "none" -> Ok RNone
+  | s ->
+    Error (`Msg ("Option --rules does not accept the argument \"" ^ s))
+
+let rules_to_string = function
+  | RParsing -> "parsing"
+  | RTyping -> "typing"
+  | RSat -> "sat"
+  | RCC -> "cc"
+  | RArith -> "arith"
+  | RNone -> "none"
+
+let rules_printer fmt rules = Format.fprintf fmt "%s" (rules_to_string rules)
+
+let rules_conv = Arg.conv ~docv:"MDL" (rules_parser, rules_printer)
 
 type dbg_opt_spl1 = {
   debug : bool;
@@ -229,7 +314,7 @@ type execution_opt =
   {
     answers_with_loc : bool;
     frontend : string;
-    input_format : string;
+    input_format : input_format;
     parse_only : bool;
     parsers : string list;
     preludes : string list;
@@ -258,7 +343,7 @@ type output_opt =
   {
     interpretation : int;
     model : model;
-    output_format : output;
+    output_format : output_format;
     unsat_core : bool;
   }
 
@@ -341,14 +426,7 @@ let mk_dbg_opt_spl2 debug_explanations debug_fm debug_fpa debug_gc
 let mk_dbg_opt_spl3 debug_split debug_sum debug_triggers debug_types
     debug_typing debug_uf debug_unsat_core debug_use debug_warnings rules
   =
-  let rules = match rules with
-    | "parsing" -> 0
-    | "typing" -> 1
-    | "sat" -> 2
-    | "cc" -> 3
-    | "arith" -> 4
-    | _ -> -1
-  in
+  let rules = value_of_rules rules in
   `Ok {debug_split; debug_sum; debug_triggers; debug_types; debug_typing;
        debug_uf; debug_unsat_core; debug_use; debug_warnings; rules;
       }
@@ -381,7 +459,12 @@ let mk_execution_opt frontend input_format parse_only parsers
     preludes no_locs_in_answers type_only type_smt2
   =
   let answers_with_loc = not no_locs_in_answers in
-  let input_format = "." ^ input_format in
+
+  vinfer_input_format := input_format = None;
+  let input_format = match input_format with
+    | None -> Native
+    | Some fmt -> fmt
+  in
   `Ok {answers_with_loc; input_format; parse_only; parsers; frontend;
        type_only; type_smt2; preludes;}
 
@@ -420,24 +503,10 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
 
 let mk_output_opt interpretation model unsat_core output_format
   =
-  let model = match model with
-    | "none" -> MNone
-    | "default" -> MDefault
-    | "complete" -> MComplete
-    | "all" -> MAll
-    | _ ->
-      let m = "Option --model does not accept the argument \"" ^ model in
-      raise (Error (false, m))
-  in
-  vinfer_output_format :=
-    (match output_format with Some _ -> false | None -> true);
+  vinfer_output_format := output_format = None;
   let output_format = match output_format with
-    | None | Some "native" -> ONative
-    | Some "smtlib" -> OSmtlib
-    | Some "szs" | Some "OSZS" -> OSZS
-    | Some fmt ->
-      let m = "Option --output does not accept the argument \"" ^ fmt in
-      raise (Error (false, m))
+    | None -> Native
+    | Some fmt -> fmt
   in
   `Ok { interpretation; model; unsat_core; output_format; }
 
@@ -555,7 +624,10 @@ let mk_opts file case_split_opt context_opt dbg_opt execution_opt _
   (match file with
    | Some f ->
      vfile := f;
-     let base_file = Filename.chop_extension f in
+     let base_file = try
+         Filename.chop_extension f
+       with Invalid_argument _ -> f
+     in
      vsession_file := base_file^".agr";
      vused_context_file := base_file;
    | _ -> ()
@@ -835,7 +907,7 @@ let parse_dbg_opt_spl3 =
     let doc =
       "$(docv) = parsing|typing|sat|cc|arith, output rules used on stderr." in
     let docv = "TR" in
-    Arg.(value & opt string "" & info ["rules"] ~docv ~docs ~doc) in
+    Arg.(value & opt rules_conv RNone & info ["rules"] ~docv ~docs ~doc) in
 
   Term.(ret (const mk_dbg_opt_spl3 $
 
@@ -895,8 +967,9 @@ let parse_context_opt =
     Arg.(value & flag & info ["replay"] ~docs ~doc) in
 
   let replay_all_used_context =
-    let doc = "Replay with all axioms and predicates saved in $(i,.used) files \
-               of the current directory." in
+    let doc =
+      "Replay with all axioms and predicates saved in $(i,.used) files \
+       of the current directory." in
     Arg.(value & flag & info ["replay-all-used-context"] ~docs ~doc) in
 
   let replay_used_context =
@@ -923,13 +996,14 @@ let parse_execution_opt =
     Arg.(value & opt string !vfrontend & info ["frontend"] ~docv ~docs ~doc) in
 
   let input_format =
-    let doc =
-      "Set the default input format to $(docv). Useful when the extension \
-       does not allow to automatically select a parser (eg. JS mode, GUI \
-       mode, ...)." in
+    let doc = Format.sprintf
+        "Set the default input format to $(docv) and must be %s. \
+         Useful when the extension does not allow to automatically select \
+         a parser (eg. JS mode, GUI mode, ...)."
+        (Arg.doc_alts ["native"; "smtlib"; "why3"]) in
     let docv = "FMT" in
-    Arg.(value & opt string !vinput_format &
-         info ["i"; "input"] ~docv ~doc) in
+    Arg.(value & opt (some format_conv) None & info ["i"; "input"] ~docv ~doc)
+  in
 
   let parse_only =
     let doc = "Stop after parsing." in
@@ -1080,24 +1154,27 @@ let parse_output_opt =
         "Experimental support for models on labeled terms. \
          $(docv) must be %s. %s shows a complete model and %s shows \
          all models."
-        (Arg.doc_alts ["default"; "complete"; "all"])
+        (Arg.doc_alts ["none"; "default"; "complete"; "all"])
         (Arg.doc_quote "complete") (Arg.doc_quote "all") in
     let docv = "VAL" in
-    Arg.(value & opt string "none" & info ["m"; "model"] ~docv ~doc) in
+    Arg.(value & opt model_conv MNone & info ["m"; "model"] ~docv ~doc) in
 
   let unsat_core =
     let doc = "Experimental support for unsat-cores." in
     Arg.(value & flag & info ["u"; "unsat-core"] ~doc) in
 
   let output_format =
-    let doc = Format.sprintf
+    let doc =
+      Format.sprintf
         "Answer unsat/sat/unknown instead of Valid/Invalid/I don't know. \
-         $(docv) must be %s. It must be noticed that not specifying an \
-         output format will let Alt-Ergo set it according to the file's \
+         $(docv) must be %s. It must be noticed that not specifying an output \
+         format will let Alt-Ergo set it according to the input file's \
          extension."
-        (Arg.doc_alts ["native"; "smtlib"]) in
+        (Arg.doc_alts [ "native"; "smtlib" ])
+    in
     let docv = "FMT" in
-    Arg.(value & opt (some string) None & info ["o"; "output"] ~docv ~doc) in
+    Arg.(value & opt (some format_conv) None & info ["o"; "output"] ~docv ~doc)
+  in
 
   Term.(ret (const mk_output_opt $
              interpretation $ model $ unsat_core $ output_format
@@ -1636,15 +1713,15 @@ let can_decide_on s =
 
 let no_decisions_on__is_empty () = !vno_decisions_on == Util.SS.empty
 
+let infer_input_format ()  = !vinfer_input_format
 let input_format () = !vinput_format
+
 let answers_with_locs ()  = !vanswers_with_loc
-let output_native ()  = !voutput_format = ONative
-let output_smtlib ()  = !voutput_format = OSmtlib
-let output_szs ()  = !voutput_format = OSZS
+let output_format ()  = !voutput_format
 let infer_output_format ()  = !vinfer_output_format
 let inline_lets () = !vinline_lets
 
-let set_input_format i = vinput_format := "." ^ i
+let set_input_format i = vinput_format := i
 let set_output_format o = voutput_format := o
 
 (** particular getters : functions that are immediately executed **************)
