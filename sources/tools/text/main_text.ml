@@ -172,9 +172,14 @@ let () =
       let filename = get_file () in
       let preludes = Options.preludes () in
       I.parse_files ~filename ~preludes
-    with Util.Timeout ->
+    with
+    | Util.Timeout ->
       FE.print_status (FE.Timeout None) 0;
       exit 142
+    | AltErgoParsers.Parsers.ParserError s ->
+      Format.eprintf "%s@." s;
+      exit 1
+
   in
   let all_used_context = FE.init_all_used_context () in
   if Options.timelimit_per_goal() then

@@ -1510,3 +1510,6 @@ let () =
   | Util.Timeout ->
     Format.eprintf "Timeout@.";
     exit 142
+  | Parsers.ParserError s ->
+    Format.eprintf "%s@." s;
+    exit 1

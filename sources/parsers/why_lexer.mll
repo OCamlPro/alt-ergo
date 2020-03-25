@@ -277,8 +277,5 @@ and parse_string str_buf = parse
   let () =
     (*register this parser in Input_lang: 3 different extensions recognized *)
     let p = (module Parser : Parsers.PARSER_INTERFACE) in
-    Parsers.register_parser ~lang:".why" p;
-    Parsers.register_parser ~lang:".mlw" p;
     Parsers.register_parser ~lang:".ae" p
-
 }
