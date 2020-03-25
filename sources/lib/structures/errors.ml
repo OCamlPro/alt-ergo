@@ -185,7 +185,10 @@ let report fmt = function
 
 let error e l = raise (Error(e,l))
 let warning e l =
-  if Options.output_smtlib () then Format.fprintf err_formatter "; ";
+  begin match Options.output_format () with
+    | Smtlib2 -> Format.fprintf err_formatter "; ";
+    | Native | Why3 | Unknown _ -> ()
+  end;
   Loc.report err_formatter l;
   report err_formatter e;
   Format.eprintf "@."

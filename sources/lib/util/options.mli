@@ -42,15 +42,21 @@ val fmt : Format.formatter
 (** Type used to describe the type of models wanted *)
 type model = MNone | MDefault | MAll | MComplete
 
-(** Type used to describe the type of output wanted by {!val:set_output_format}
-*)
-type output =
-  | ONative                     (** Native Alt-Ergo format  *)
-  | OSmtlib
+(** Type used to describe the type of input wanted by
+    {!val:set_input_format} *)
+type input_format =
+  | Native                     (** Native Alt-Ergo format  *)
+  | Smtlib2
   (** {{:
       http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2017-07-18.pdf}
       Smtlib} default format *)
-  | OSZS                        (** Not yet implemented SZS format  *)
+  | Why3                       (** Why3 file format *)
+  (*   | SZS                        * Not yet implemented SZS format   *)
+  | Unknown of string          (** Unknown file format *)
+
+(** Type used to describe the type of output wanted by
+    {!val:set_output_format} *)
+type output_format = input_format
 
 (** {2 Setter functions} *)
 
@@ -159,7 +165,7 @@ val set_greedy : bool -> unit
 val set_inline_lets : bool -> unit
 
 (** Set {!val:input_format} *)
-val set_input_format : string -> unit
+val set_input_format : input_format -> unit
 
 (** Set {!val:interpretation}
 
@@ -202,7 +208,7 @@ val set_no_user_triggers : bool -> unit
 val set_normalize_instances : bool -> unit
 
 (** Set {!val:output_format} *)
-val set_output_format : output -> unit
+val set_output_format : output_format -> unit
 
 (** Set {!val:parse_only} *)
 val set_parse_only : bool -> unit
@@ -395,9 +401,15 @@ val frontend : unit -> string
 
 (** Value specifying the default input format. Useful when the extension
     does not allow to automatically select a parser (eg. JS mode, GUI
-    mode, ...). *)
-val input_format : unit -> string
-(** Default to [.ae] *)
+    mode, ...). possible values are
+    {ul {- native} {- smtlib2} {- why3}} *)
+val input_format : unit -> input_format
+(** Default to [Native] *)
+
+(** [true] if Alt-Ergo infers automatically the input format according to the
+    file extension. [false] if an input format is set with -i option *)
+val infer_input_format : unit -> bool
+(** Default to [true] *)
 
 (** [true] if the program shall stop after parsing. *)
 val parse_only : unit -> bool
@@ -499,20 +511,13 @@ val all_models : unit -> bool
 val interpretation : unit -> int
 (** Default to [0] *)
 
-(** [true] if the output format is set to [Native] *)
-val output_native : unit -> bool
-(** Default to [true] *)
-
-(** [true] if the output format is set to [Smtlib] *)
-val output_smtlib : unit -> bool
-(** Default to [false] *)
-
-(** [true] if the output format is set to [SZS] *)
-val output_szs : unit -> bool
-(** Default to [false] *)
+(** Value specifying the default output format. possible values are
+    {ul {- native} {- smtlib2} {- why3}}. *)
+val output_format : unit -> output_format
+(** Default to [Native] *)
 
 (** [true] if Alt-Ergo infers automatically the output format according to the
-    input format. *)
+    the file extension or the input format if set. *)
 val infer_output_format : unit -> bool
 (** Default to [true] *)
 
@@ -814,6 +819,8 @@ val can_decide_on : string -> bool
 val no_decisions_on__is_empty : unit -> bool
 
 (** Extra *)
+val match_extension : string -> input_format
+
 val set_is_gui : bool -> unit
 val get_is_gui : unit -> bool
 
