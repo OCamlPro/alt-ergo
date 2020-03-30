@@ -29,3 +29,36 @@ module DummyDL = struct
 end
 
 include Dynlink
+
+let load fmt verbose p msg =
+  if verbose then
+    Format.fprintf fmt "[Dynlink] Loading the %s in %S ...@." msg p;
+  try
+    loadfile p;
+    if verbose then Format.fprintf fmt "Success !@.@."
+  with
+  | Error m1 ->
+    if verbose then begin
+      Format.fprintf fmt "[Dynlink] Loading the %s in plugin %S failed!@."
+        msg p;
+      Format.fprintf fmt ">> Failure message: %s@.@." (error_message m1);
+    end;
+    let pp = Format.sprintf "%s/%s" Config.pluginsdir p in
+    if verbose then
+      Format.fprintf fmt "[Dynlink] Loading the %s in %S ... with prefix %S@."
+        msg p Config.pluginsdir;
+    try
+      loadfile pp;
+      if verbose then Format.fprintf fmt "Success !@.@."
+    with
+    | Error m2 ->
+      if not verbose then begin
+        Format.fprintf fmt
+          "[Dynlink] Loading the %s in plugin %S failed!@." msg p;
+        Format.fprintf fmt ">> Failure message: %s@.@." (error_message m1);
+      end;
+      Errors.run_error
+        (Dynlink_error
+           (Format.sprintf
+              "Trying to load the plugin from %S failed too!@. \
+               >> Failure message: %s@.@." pp (error_message m2)))

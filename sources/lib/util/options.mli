@@ -39,6 +39,9 @@
 *)
 val fmt : Format.formatter
 
+(** Exception used to exit with corresponding retcode *)
+exception Exit_options of int
+
 (** Type used to describe the type of models wanted *)
 type model = MNone | MDefault | MAll | MComplete
 
@@ -824,4 +827,8 @@ val match_extension : string -> input_format
 val set_is_gui : bool -> unit
 val get_is_gui : unit -> bool
 
+(** Print message as comment in the corresponding output format *)
+val print_output_format: Format.formatter -> string -> unit
+
 val parse_cmdline_arguments : unit -> unit
+

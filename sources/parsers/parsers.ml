@@ -28,9 +28,8 @@
 
 open AltErgoLib
 open Options
+open Errors
 open Format
-
-exception ParserError of string
 
 module type PARSER_INTERFACE = sig
   val file : Lexing.lexbuf -> Parsed.file
@@ -59,11 +58,11 @@ let find_parser ext_opt format =
          Continue with native Alt-Ergo parsers !@.";
       try List.assoc ".ae" !parsers
       with Not_found ->
-        raise (ParserError ("Error: no parser registered for the provided \
-                             input format %S ?@."^format))
+        error (Parser_error ("Error: no parser registered for the provided \
+                              input format %S ?@."^format))
     end else
-      raise (ParserError ("Error: no parser registered for the provided \
-                           input format %S ?@."^format))
+      error (Parser_error ("Error: no parser registered for the provided \
+                            input format %S ?@."^format))
 
 let set_output_format fmt =
   if Options.infer_output_format () then
@@ -86,8 +85,8 @@ let get_parser ext_opt =
     | Some ext ->
       get_input_parser (Options.match_extension ext)
     | None ->
-      raise
-        (ParserError "Error: no extension found, can't infer input format@.")
+      error
+        (Parser_error "Error: no extension found, can't infer input format@.")
   else
     get_input_parser (Options.input_format ())
 
@@ -147,24 +146,13 @@ let parse_input_file file =
     if opened_cin then close_in cin;
     a
   with
-  | Errors.Lexical_error (loc, s) ->
-    Loc.report err_formatter loc;
-    eprintf "Lexical error: %s\n@." s;
+  | Errors.Error e ->
     if opened_cin then close_in cin;
-    exit 1
+    raise (Error e)
 
-  | Errors.Syntax_error (loc, s) ->
-    Loc.report err_formatter loc;
-    eprintf "Syntax error when reading token %S\n@." s;
+  | Parsing.Parse_error as e ->
     if opened_cin then close_in cin;
-    exit 1
-
-  | Parsing.Parse_error ->
-    Loc.report err_formatter (Lexing.dummy_pos,Lexing.dummy_pos);
-    eprintf "Syntax error\n@.";
-    if opened_cin then close_in cin;
-    exit 1
-
+    raise e
 
 let parse_problem ~filename ~preludes =
   Parsers_loader.load ();

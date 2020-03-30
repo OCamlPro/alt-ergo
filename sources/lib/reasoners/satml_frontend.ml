@@ -957,12 +957,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let checks_implemented_features () =
     let fails msg =
-      Format.eprintf
-        "Currently, %S feature is not implemented in CDCL solver !@."
-        msg;
-      Format.eprintf
-        "Please use the old Tableaux-like SAT solver unstead.@.";
-      exit 1
+      let msg =
+        Format.sprintf
+          "%S is not implemented in CDCL solver ! \
+           Please use the old Tableaux-like SAT solver instead."
+          msg
+      in
+      Errors.run_error (Errors.Unsupported_feature msg)
     in
     let open Options in
     if interpretation () <> 0 then fails "interpretation";

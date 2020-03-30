@@ -452,16 +452,16 @@ let aux aux_fun token lexbuf =
     Parsing.clear_parser ();
     Smtlib_error.print Format.err_formatter (Options.get_file ())
       (Syntax_error (lex)) loc;
-    exit 1
+    Errors.error (Errors.Syntax_error (loc,""))
   | Smtlib_error.Error (e , p) ->
     Parsing.clear_parser ();
-    (match p with
-       Some loc ->
-       Smtlib_error.print Format.err_formatter (Options.get_file ()) e loc
-     | None ->
-       let loc = Lexing.dummy_pos,Lexing.dummy_pos in
-       Smtlib_error.print Format.err_formatter (Options.get_file ()) e loc);
-    exit 1
+    let loc =
+      match p with
+        Some loc -> loc
+      | None -> Lexing.dummy_pos,Lexing.dummy_pos
+    in
+    Smtlib_error.print Format.err_formatter (Options.get_file ()) e loc;
+    Errors.error (Errors.Syntax_error (loc,""))
 
 let file_parser token lexbuf =
   Translate.file (Smtlib_parser.commands token lexbuf)

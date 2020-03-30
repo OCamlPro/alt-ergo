@@ -104,17 +104,17 @@ let search_using t sbuf env =
 let set_select _env _sbuf = ()
 (* match env.start_select, env.stop_select with *)
 (*   | Some b, Some e -> *)
-(* 	  sbuf#select_range *)
-(* 	    (sbuf#get_iter (`OFFSET b)) (sbuf#get_iter (`OFFSET e)) *)
+(*    sbuf#select_range *)
+(*      (sbuf#get_iter (`OFFSET b)) (sbuf#get_iter (`OFFSET e)) *)
 (*   (\* | None, Some _ -> *\) *)
-(*   (\* 	if sbuf#has_selection then *\) *)
-(*   (\* 	  let ib, _ = sbuf#selection_bounds in *\) *)
-(*   (\* 	  env.start_select <- Some ib#offset; *\) *)
+(*   (\*  if sbuf#has_selection then *\) *)
+(*   (\*    let ib, _ = sbuf#selection_bounds in *\) *)
+(*   (\*    env.start_select <- Some ib#offset; *\) *)
 (*   (\*       set_select env sbuf *\) *)
 (*   (\* | Some _, None -> *\) *)
-(*   (\* 	if sbuf#has_selection then *\) *)
-(*   (\* 	  let _, ie = sbuf#selection_bounds in *\) *)
-(*   (\* 	  env.stop_select <- Some ie#offset; *\) *)
+(*   (\*  if sbuf#has_selection then *\) *)
+(*   (\*    let _, ie = sbuf#selection_bounds in *\) *)
+(*   (\*    env.stop_select <- Some ie#offset; *\) *)
 (*   (\*       set_select env sbuf *\) *)
 
 (*   | _ -> () *)
@@ -671,14 +671,8 @@ and popup_axiom t env _offset () =
                 pop_w#destroy ()
 
               with
-              | Errors.Lexical_error _ ->
-                errors_l#set_text ("Lexical error");
-                errors_l#misc#show ()
-              | Errors.Syntax_error _ ->
-                errors_l#set_text ("Syntax error");
-                errors_l#misc#show ()
-              | Errors.Error (e,_) ->
-                fprintf str_formatter "Typing error : %a" Errors.report e;
+              | Errors.Error e ->
+                Errors.report str_formatter e;
                 errors_l#set_text (flush_str_formatter ());
                 errors_l#misc#show ()
            ));
@@ -806,14 +800,8 @@ and popup_trigger t qid env (sbuf:sbuffer) offset () =
                   add_trigger t qid env str offset sbuf;
                   pop_w#destroy ()
                 with
-                | Errors.Lexical_error _ ->
-                  errors_l#set_text ("Lexical error");
-                  errors_l#misc#show ()
-                | Errors.Syntax_error _ ->
-                  errors_l#set_text ("Syntax error");
-                  errors_l#misc#show ()
-                | Errors.Error (e,_) ->
-                  fprintf str_formatter "Typing error : %a" Errors.report e;
+                | Errors.Error e ->
+                  Errors.report str_formatter e;
                   errors_l#set_text (flush_str_formatter ());
                   errors_l#misc#show ()
              ));

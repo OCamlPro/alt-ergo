@@ -134,6 +134,8 @@ Utilities module specific to Alt-Ergo:
 
 {!modules:
 AltErgoLib.Config
+AltErgoLib.Errors
+AltErgoLib.Steps
 AltErgoLib.Options
 AltErgoLib.Version
 }

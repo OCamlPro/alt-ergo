@@ -60,7 +60,8 @@ module Types = struct
            with Not_found -> assert false
          else
            begin
-             if MString.mem x !to_tyvars then error (TypeDuplicateVar x) loc;
+             if MString.mem x !to_tyvars then
+               typing_error (TypeDuplicateVar x) loc;
              let nv = Ty.Tvar (Ty.fresh_var ()) in
              to_tyvars := MString.add x nv !to_tyvars;
              nv
@@ -73,11 +74,11 @@ module Types = struct
     | Ty.Trecord { Ty.args = lty'; name = s; _ }
     | Ty.Tadt (s,lty') ->
       if List.length lty <> List.length lty' then
-        error (WrongNumberofArgs (Hstring.view s)) loc;
+        typing_error (WrongNumberofArgs (Hstring.view s)) loc;
       lty'
     | Ty.Tsum (s, _) ->
       if List.length lty <> 0 then
-        error (WrongNumberofArgs (Hstring.view s)) loc;
+        typing_error (WrongNumberofArgs (Hstring.view s)) loc;
       []
     | _ -> assert false
 
@@ -109,7 +110,7 @@ module Types = struct
       let t1,t2 = match l with
         | [t2] -> PPTint,t2
         | [t1;t2] -> t1,t2
-        | _ -> error (WrongArity(s,2)) loc in
+        | _ -> typing_error (WrongArity(s,2)) loc in
       let ty1 = ty_of_pp loc env rectype t1 in
       let ty2 = ty_of_pp loc env rectype t2 in
       Ty.Tfarray (ty1, ty2)
@@ -125,11 +126,12 @@ module Types = struct
             let vars = check_number_args loc lty ty in
             Ty.instantiate vars lty ty
           with Not_found ->
-            error (UnknownType s) loc
+            typing_error (UnknownType s) loc
       end
 
   let add_decl ~recursive env vars id body loc =
-    if MString.mem id env.to_ty && not recursive then error (ClashType id) loc;
+    if MString.mem id env.to_ty && not recursive then
+      typing_error (ClashType id) loc;
     let ty_vars = fresh_vars ~recursive vars loc in
     match body with
     | Abstract ->
@@ -166,18 +168,18 @@ module Types = struct
     let rec check_duplicates s = function
       | [] -> ()
       | (lb, _) :: l ->
-        if SH.mem lb s then error (DuplicateLabel lb) loc;
+        if SH.mem lb s then typing_error (DuplicateLabel lb) loc;
         check_duplicates (SH.add lb s) l
     in
     check_duplicates SH.empty lbs;
     match ty with
     | Ty.Trecord { Ty.lbs = l; _ } ->
       if List.length lbs <> List.length l then
-        error WrongNumberOfLabels loc;
+        typing_error WrongNumberOfLabels loc;
       List.iter
         (fun (lb, _) ->
            try ignore (Hstring.list_assoc lb l)
-           with Not_found -> error (WrongLabel(lb, ty)) loc) lbs;
+           with Not_found -> typing_error (WrongLabel(lb, ty)) loc) lbs;
       ty
     | _ -> assert false
 
@@ -190,7 +192,7 @@ module Types = struct
         let l = Hstring.view l in
         let ty = MString.find (MString.find l env.from_labels) env.to_ty in
         check_labels lbs ty loc
-      with Not_found -> error (NoRecordType l) loc
+      with Not_found -> typing_error (NoRecordType l) loc
 
   let rec monomorphized = function
     | PPTvarid (x, _) when not (MString.mem x !to_tyvars) ->
@@ -268,7 +270,7 @@ module Env = struct
         TPredicate args,
         { args = args; result = Ty.Tbool }
       (*| PFunction ([], PPTvarid (_, loc)) ->
-          error CannotGeneralize loc*)
+          typing_error CannotGeneralize loc*)
       | PFunction(args, res) ->
         let args = List.map (Types.ty_of_pp loc env.types None) args in
         let res = Types.ty_of_pp loc env.types None res in
@@ -279,7 +281,7 @@ module Env = struct
       List.fold_left
         (fun logics (n, lbl) ->
            let sy = mk_symb n in
-           if MString.mem n logics then error (SymbAlreadyDefined n) loc;
+           if MString.mem n logics then typing_error (SymbAlreadyDefined n) loc;
            let lbl = Hstring.make lbl in
            if not (Hstring.equal lbl Hstring.empty) then
              Symbols.add_label lbl sy;
@@ -318,7 +320,7 @@ module Env = struct
       let args, subst = Ty.fresh_list args Ty.esubst in
       let res, _ = Ty.fresh r subst in
       s, { args = args; result = res }, kind
-    with Not_found -> error (SymbUndefined n) loc
+    with Not_found -> typing_error (SymbUndefined n) loc
 
 end
 
@@ -347,14 +349,14 @@ let type_var_desc env p loc =
     { Env.args = []; result = ty},
     (Env.Other | Env.AdtConstr (*more exactly, Enum constr*) ) ->
     TTapp (s, []) , ty
-  | _ -> error (ShouldBeApply p) loc
+  | _ -> typing_error (ShouldBeApply p) loc
 
 let check_no_duplicates =
   let rec aux loc l ss =
     match l with
     | [] -> ()
     | e :: l ->
-      if S.mem e ss then error (ClashParam e) loc;
+      if S.mem e ss then typing_error (ClashParam e) loc;
       aux loc l (S.add e ss)
   in
   fun loc args -> aux loc args S.empty
@@ -384,7 +386,7 @@ let filter_patterns pats ty_body _loc =
 
 let check_pattern_matching missing dead loc =
   if not (HSS.is_empty missing) then
-    error (MatchNotExhaustive (HSS.elements missing)) loc;
+    typing_error (MatchNotExhaustive (HSS.elements missing)) loc;
   if dead != [] then
     let dead =
       List.rev_map
@@ -393,7 +395,8 @@ let check_pattern_matching missing dead loc =
           | Var v -> (Var.view v).Var.hs
         ) dead
     in
-    warning (MatchUnusedCases dead) loc
+    print_warning Format.err_formatter
+      (Typing_error(loc,MatchUnusedCases dead))
 
 let mk_adequate_app p s te_args ty logic_kind =
   let hp = Hstring.make p in
@@ -455,9 +458,9 @@ let rec type_term ?(call_from_type_form=false) env f =
           mk_adequate_app p s te_args t kind, t
         with
         | Ty.TypeClash(t1,t2) ->
-          error (Unification(t1,t2)) loc
+          typing_error (Unification(t1,t2)) loc
         | Invalid_argument _ ->
-          error (WrongNumberofArgs p) loc
+          typing_error (WrongNumberofArgs p) loc
       end
 
     | PPinfix(t1,(PPadd | PPsub | PPmul | PPdiv as op),t2) ->
@@ -474,9 +477,9 @@ let rec type_term ?(call_from_type_form=false) env f =
         | Ty.Treal, Ty.Treal ->
           Options.tool_req 1 (append_type "TR-Typing-OpBin type" ty2);
           TTinfix(te1,s,te2), ty2
-        | Ty.Tint, _ -> error (ShouldHaveType(ty2,Ty.Tint)) t2.pp_loc
-        | Ty.Treal, _ -> error (ShouldHaveType(ty2,Ty.Treal)) t2.pp_loc
-        | _ -> error (ShouldHaveTypeIntorReal ty1) t1.pp_loc
+        | Ty.Tint, _ -> typing_error (ShouldHaveType(ty2,Ty.Tint)) t2.pp_loc
+        | Ty.Treal, _ -> typing_error (ShouldHaveType(ty2,Ty.Treal)) t2.pp_loc
+        | _ -> typing_error (ShouldHaveTypeIntorReal ty1) t1.pp_loc
       end
     | PPinfix(t1, PPmod, t2) ->
       begin
@@ -489,7 +492,7 @@ let rec type_term ?(call_from_type_form=false) env f =
         | Ty.Tint, Ty.Tint ->
           Options.tool_req 1 (append_type "TR-Typing-OpMod type" ty1);
           TTinfix(te1,s,te2) , ty1
-        | _ -> error (ShouldHaveTypeInt ty1) t1.pp_loc
+        | _ -> typing_error (ShouldHaveTypeInt ty1) t1.pp_loc
       end
     | PPinfix(t1, (PPpow_int | PPpow_real as op), t2) ->
       begin
@@ -507,11 +510,15 @@ let rec type_term ?(call_from_type_form=false) env f =
           Options.tool_req 1 (append_type "TR-Typing-Oppow_real type" ty1);
           TTinfix(te1,s,te2) , Ty.Treal
 
-        | Ty.Treal , _, PPpow_int -> error (ShouldHaveTypeInt Ty.Tint) t1.pp_loc
-        | _, Ty.Treal, PPpow_int -> error (ShouldHaveTypeInt Ty.Tint) t2.pp_loc
+        | Ty.Treal , _, PPpow_int ->
+          typing_error (ShouldHaveTypeInt Ty.Tint) t1.pp_loc
+        | _, Ty.Treal, PPpow_int ->
+          typing_error (ShouldHaveTypeInt Ty.Tint) t2.pp_loc
 
-        | _, _, PPpow_real -> error (ShouldHaveTypeInt Ty.Treal) t1.pp_loc
-        | _, _, PPpow_int -> error (ShouldHaveTypeInt Ty.Tint) t1.pp_loc
+        | _, _, PPpow_real ->
+          typing_error (ShouldHaveTypeInt Ty.Treal) t1.pp_loc
+        | _, _, PPpow_int ->
+          typing_error (ShouldHaveTypeInt Ty.Tint) t1.pp_loc
 
         | _ -> assert false (* can't happen *)
       end
@@ -525,7 +532,7 @@ let rec type_term ?(call_from_type_form=false) env f =
       let te = type_term env e in
       let ty = Ty.shorten te.c.tt_ty in
       if ty!=Ty.Tint && ty!=Ty.Treal then
-        error (ShouldHaveTypeIntorReal ty) e.pp_loc;
+        typing_error (ShouldHaveTypeIntorReal ty) e.pp_loc;
       Options.tool_req 1 (append_type "TR-Typing-OpUnarith type" ty);
       TTprefix(Symbols.Op Symbols.Minus, te), ty
     | PPconcat(t1, t2) ->
@@ -539,9 +546,9 @@ let rec type_term ?(call_from_type_form=false) env f =
           Options.tool_req 1
             (append_type "TR-Typing-OpConcat type" (Ty.Tbitv (n+m)));
           TTconcat(te1, te2), Ty.Tbitv (n+m)
-        | Ty.Tbitv _ , _ -> error (ShouldHaveTypeBitv ty2) t2.pp_loc
-        | _ , Ty.Tbitv _ -> error (ShouldHaveTypeBitv ty1) t1.pp_loc
-        | _ -> error (ShouldHaveTypeBitv ty1) t1.pp_loc
+        | Ty.Tbitv _ , _ -> typing_error (ShouldHaveTypeBitv ty2) t2.pp_loc
+        | _ , Ty.Tbitv _ -> typing_error (ShouldHaveTypeBitv ty1) t1.pp_loc
+        | _ -> typing_error (ShouldHaveTypeBitv ty1) t1.pp_loc
       end
     | PPextract(e, ({ pp_desc=PPconst(ConstInt i); _ } as ei),
                 ({ pp_desc = PPconst(ConstInt j); _ } as ej)) ->
@@ -552,14 +559,14 @@ let rec type_term ?(call_from_type_form=false) env f =
         let j = int_of_string j in
         match tye with
         | Ty.Tbitv n ->
-          if i>j then error (BitvExtract(i,j)) loc;
-          if j>=n then error (BitvExtractRange(n,j) ) loc;
+          if i>j then typing_error (BitvExtract(i,j)) loc;
+          if j>=n then typing_error (BitvExtractRange(n,j) ) loc;
           let tei = type_term env ei in
           let tej = type_term env ej in
           Options.tool_req 1
             (append_type "TR-Typing-OpExtract type" (Ty.Tbitv (j-i+1)));
           TTextract(te, tei, tej), Ty.Tbitv (j-i+1)
-        | _ -> error (ShouldHaveType(tye,Ty.Tbitv (j+1))) loc
+        | _ -> typing_error (ShouldHaveType(tye,Ty.Tbitv (j+1))) loc
       end
     | PPget (t1, t2) ->
       begin
@@ -576,9 +583,9 @@ let rec type_term ?(call_from_type_form=false) env f =
               TTget(te1, te2), tyval
             with
             | Ty.TypeClash(t1,t2) ->
-              error (Unification(t1,t2)) loc
+              typing_error (Unification(t1,t2)) loc
           end
-        | _ -> error ShouldHaveTypeArray t1.pp_loc
+        | _ -> typing_error ShouldHaveTypeArray t1.pp_loc
       end
     | PPset (t1, t2, t3) ->
       begin
@@ -594,10 +601,10 @@ let rec type_term ?(call_from_type_form=false) env f =
             Ty.unify tykey tykey2;Ty.unify tyval tyval2;
             Options.tool_req 1 (append_type "TR-Typing-OpSet type" ty1);
             TTset(te1, te2, te3), ty1
-          | _ -> error ShouldHaveTypeArray t1.pp_loc
+          | _ -> typing_error ShouldHaveTypeArray t1.pp_loc
         with
         | Ty.TypeClash(t, t') ->
-          error (Unification(t, t')) loc
+          typing_error (Unification(t, t')) loc
       end
     | PPif(cond,t2,t3) ->
       begin
@@ -609,7 +616,8 @@ let rec type_term ?(call_from_type_form=false) env f =
         let ty3 = Ty.shorten te3.c.tt_ty in
         begin
           try Ty.unify ty2 ty3
-          with Ty.TypeClash _ -> error (ShouldHaveType(ty3,ty2)) t3.pp_loc;
+          with Ty.TypeClash _ ->
+            typing_error (ShouldHaveType(ty3,ty2)) t3.pp_loc;
         end;
         Options.tool_req 1 (append_type "TR-Typing-Ite type" ty2);
         TTite (cond, te2, te3) , ty2
@@ -626,9 +634,9 @@ let rec type_term ?(call_from_type_form=false) env f =
               TTdot(te, a), Hstring.list_assoc a lbs
             with Not_found ->
               let g = Hstring.view g in
-              error (ShouldHaveLabel(g,a)) t.pp_loc
+              typing_error (ShouldHaveLabel(g,a)) t.pp_loc
           end
-        | _ -> error (ShouldHaveTypeRecord ty) t.pp_loc
+        | _ -> typing_error (ShouldHaveTypeRecord ty) t.pp_loc
       end
     | PPrecord lbs ->
       begin
@@ -649,9 +657,9 @@ let rec type_term ?(call_from_type_form=false) env f =
                      lb, te) lbs ty_lbs
               in
               TTrecord(lbs), ty
-            with Ty.TypeClash(t1,t2) -> error (Unification(t1,t2)) loc
+            with Ty.TypeClash(t1,t2) -> typing_error (Unification(t1,t2)) loc
           end
-        | _ -> error ShouldBeARecord loc
+        | _ -> typing_error ShouldBeARecord loc
       end
     | PPwith(e, lbs) ->
       begin
@@ -674,20 +682,20 @@ let rec type_term ?(call_from_type_form=false) env f =
                    lb, {c = { tt_desc = TTdot(te, lb); tt_ty = ty_lb};
                         annot = te.annot }
                  | Ty.TypeClash(t1,t2) ->
-                   error (Unification(t1,t2)) loc
+                   typing_error (Unification(t1,t2)) loc
               ) ty_lbs
           in
           List.iter
             (fun (lb, _) ->
                try ignore (Hstring.list_assoc lb ty_lbs)
-               with Not_found -> error (NoLabelInType(lb, ty)) loc) lbs;
+               with Not_found -> typing_error (NoLabelInType(lb, ty)) loc) lbs;
           TTrecord(nlbs), ty
-        | _ ->  error ShouldBeARecord loc
+        | _ ->  typing_error ShouldBeARecord loc
       end
     | PPlet(l, t2) ->
       let _ =
         List.fold_left (fun z (sy,_) ->
-            if Util.SS.mem sy z then error (DuplicatePattern sy) loc;
+            if Util.SS.mem sy z then typing_error (DuplicatePattern sy) loc;
             Util.SS.add sy z
           )Util.SS.empty l
       in
@@ -724,7 +732,7 @@ let rec type_term ?(call_from_type_form=false) env f =
           te.c.tt_desc, Ty.shorten te.c.tt_ty
         with
         | Ty.TypeClash(t1,t2) ->
-          error (Unification(t1,t2)) loc
+          typing_error (Unification(t1,t2)) loc
       end
 
     | PPproject (grded, t, lbl) ->
@@ -741,7 +749,7 @@ let rec type_term ?(call_from_type_form=false) env f =
             TTdot (te, Hstring.make lbl), Ty.shorten result
 
           | _ -> assert false
-        with Ty.TypeClash(t1,t2) -> error (Unification(t1,t2)) loc
+        with Ty.TypeClash(t1,t2) -> typing_error (Unification(t1,t2)) loc
       end
 
     | PPmatch (e, pats) ->
@@ -758,7 +766,7 @@ let rec type_term ?(call_from_type_form=false) env f =
         | Ty.Tsum (_,l) ->
           List.map (fun e -> {Ty.constr = e; destrs = []}) l
         | _ ->
-          error (ShouldBeADT ty) loc
+          typing_error (ShouldBeADT ty) loc
       in
       let pats =
         List.rev @@
@@ -778,14 +786,14 @@ let rec type_term ?(call_from_type_form=false) env f =
           List.iter
             (fun (_, e) ->
                if not (Ty.equal ty e.c.tt_ty) then
-                 error (ShouldHaveType(e.c.tt_ty, ty)) loc
+                 typing_error (ShouldHaveType(e.c.tt_ty, ty)) loc
             )l;
           ty
       in
       TTmatch (e, filtered_pats), ty
 
     | _ ->
-      if call_from_type_form then error SyntaxError loc;
+      if call_from_type_form then typing_error SyntaxError loc;
       TTform (type_form env f), Ty.Tbool
   in
   {c = { tt_desc = e ; tt_ty = Ty.shorten ty }; annot = new_id ()}
@@ -839,7 +847,8 @@ and type_bound env bnd ty ~is_open ~is_lower =
       Symbols.ValBnd q, ty_x
     | _ -> assert false
   in
-  if not (Ty.equal ty ty_x) then error (ShouldHaveType(ty, ty_x)) bnd.pp_loc;
+  if not (Ty.equal ty ty_x) then
+    typing_error (ShouldHaveType(ty, ty_x)) bnd.pp_loc;
   Symbols.mk_bound bk ty ~is_open ~is_lower
 
 and mk_ta_eq t1 t2 =
@@ -898,7 +907,7 @@ and type_form ?(in_theory=false) env f =
                     annot = new_id ()} in
           TFatom (mk_ta_eq t1 t2)
         | _ ->
-          error (NotAPropVar p) f.pp_loc
+          typing_error (NotAPropVar p) f.pp_loc
       in
       r
 
@@ -924,10 +933,10 @@ and type_form ?(in_theory=false) env f =
             r
           with
           | Ty.TypeClash(t1,t2) ->
-            error (Unification(t1,t2)) f.pp_loc
+            typing_error (Unification(t1,t2)) f.pp_loc
           | Invalid_argument _ ->
-            error (WrongNumberofArgs p) f.pp_loc
-        with Ty.TypeClash _ -> error (NotAPredicate p) f.pp_loc
+            typing_error (WrongNumberofArgs p) f.pp_loc
+        with Ty.TypeClash _ -> typing_error (NotAPredicate p) f.pp_loc
       end
 
     | PPdistinct (args) ->
@@ -942,12 +951,12 @@ and type_form ?(in_theory=false) env f =
             let t = match lt_args with
               | t::_ -> t
               | [] ->
-                error (WrongNumberofArgs "distinct") f.pp_loc
+                typing_error (WrongNumberofArgs "distinct") f.pp_loc
             in
             List.iter (Ty.unify t) lt_args;
             TFatom { c = TAdistinct te_args; annot=new_id () }
           with
-          | Ty.TypeClash(t1,t2) -> error (Unification(t1,t2)) f.pp_loc
+          | Ty.TypeClash(t1,t2) -> typing_error (Unification(t1,t2)) f.pp_loc
         end
       in r
 
@@ -972,7 +981,7 @@ and type_form ?(in_theory=false) env f =
           | PPeq -> TFatom (mk_ta_eq tt1 tt2)
           | PPneq -> TFatom (mk_ta_neq tt1 tt2)
           | _ -> assert false
-        with Ty.TypeClash(t1,t2) -> error (Unification(t1,t2)) f.pp_loc
+        with Ty.TypeClash(t1,t2) -> typing_error (Unification(t1,t2)) f.pp_loc
       in r
     | PPinfix(t1, (PPlt | PPgt | PPge | PPle as op), t2) ->
       Options.tool_req 1 "TR-Typing-OpComp$_F$";
@@ -995,8 +1004,8 @@ and type_form ?(in_theory=false) env f =
               | _ -> assert false
             in
             TFatom {c = top; annot=new_id ()}
-          | _ -> error (ShouldHaveTypeIntorReal ty) t1.pp_loc
-        with Ty.TypeClash(t1,t2) -> error (Unification(t1,t2)) f.pp_loc
+          | _ -> typing_error (ShouldHaveTypeIntorReal ty) t1.pp_loc
+        with Ty.TypeClash(t1,t2) -> typing_error (Unification(t1,t2)) f.pp_loc
       in r
 
     | PPisConstr (t,lbl) ->
@@ -1012,8 +1021,8 @@ and type_form ?(in_theory=false) env f =
             let top = TTisConstr (tt, Hstring.make lbl) in
             let r = TFatom {c = top; annot=new_id ()} in
             r
-          | _ -> error (NotAdtConstr (lbl, result)) f.pp_loc
-        with Ty.TypeClash(t1,t2) -> error (Unification(t1,t2)) f.pp_loc
+          | _ -> typing_error (NotAdtConstr (lbl, result)) f.pp_loc
+        with Ty.TypeClash(t1,t2) -> typing_error (Unification(t1,t2)) f.pp_loc
       end
 
     | PPinfix(f1,op ,f2) ->
@@ -1089,7 +1098,8 @@ and type_form ?(in_theory=false) env f =
       Options.tool_req 1 "TR-Typing-Let$_F$";
       let _ =
         List.fold_left (fun z (sy,_) ->
-            if Util.SS.mem sy z then error (DuplicatePattern sy) f.pp_loc;
+            if Util.SS.mem sy z then
+              typing_error (DuplicatePattern sy) f.pp_loc;
             Util.SS.add sy z
           )Util.SS.empty binders
       in
@@ -1148,7 +1158,7 @@ and type_form ?(in_theory=false) env f =
         | Ty.Tsum (_,l) ->
           List.map (fun e -> {Ty.constr = e ; destrs = []}) l
         | _ ->
-          error (ShouldBeADT ty) f.pp_loc
+          typing_error (ShouldBeADT ty) f.pp_loc
       in
       let pats =
         List.rev @@
@@ -1173,7 +1183,7 @@ and type_form ?(in_theory=false) env f =
                    annot = new_id ()}
         in
         TFatom (mk_ta_eq te1 te2)
-      | _ -> error ShouldHaveTypeProp f.pp_loc
+      | _ -> typing_error ShouldHaveTypeProp f.pp_loc
   in
   let form = type_pp_desc f.pp_desc in
   {c = form; annot = new_id ()}
@@ -1189,7 +1199,7 @@ and type_pattern p env ty ty_body =
         List.fold_left2
           (fun env v (_, ty) -> Env.add_ty_var env [v] ty) env args prof
       with
-        Invalid_argument _ -> error (WrongNumberofArgs f) pat_loc
+        Invalid_argument _ -> typing_error (WrongNumberofArgs f) pat_loc
     in
     let args =
       List.map2
@@ -1203,7 +1213,7 @@ and type_pattern p env ty ty_body =
     in
     Constr { name = hf ; args = args }, env
   with Not_found ->
-    if args != [] then error (NotAdtConstr (f, ty)) pat_loc;
+    if args != [] then typing_error (NotAdtConstr (f, ty)) pat_loc;
     let env = Env.add_ty_var env [f] ty in
     let tv, _ = type_var_desc env f pat_loc in
     let var_f =
@@ -1215,8 +1225,8 @@ and type_trigger in_theory env l =
   List.map
     (fun t ->
        match in_theory, t.pp_desc with
-       | false, PPinInterval _ -> error ThSemTriggerError t.pp_loc
-       | false, PPmapsTo _ -> error ThSemTriggerError t.pp_loc
+       | false, PPinInterval _ -> typing_error ThSemTriggerError t.pp_loc
+       | false, PPmapsTo _ -> typing_error ThSemTriggerError t.pp_loc
        | true, PPinInterval (e, a,b, c, d) ->
          let te = type_term env e in
          let tt_ty = te.c.tt_ty in
@@ -1233,7 +1243,7 @@ and type_trigger in_theory env l =
          let te = type_term env e in
          let tt_ty = te.c.tt_ty in
          if not (Ty.equal tt_ty ty_x) then
-           error (ShouldHaveType(ty_x,tt_ty)) t.pp_loc;
+           typing_error (ShouldHaveType(ty_x,tt_ty)) t.pp_loc;
          { c = { tt_desc = TTmapsTo(hs_x, te) ; tt_ty = Ty.Tbool};
            annot = new_id ()}
 
@@ -1255,7 +1265,7 @@ let make_rules loc f = match f.c with
     {rwt_vars = vars; rwt_left = t1; rwt_right = t2}
   | TFatom { c = TAeq [t1; t2]; _} ->
     {rwt_vars = []; rwt_left = t1; rwt_right = t2}
-  | _ -> error SyntaxError loc
+  | _ -> typing_error SyntaxError loc
 
 
 let fresh_var =
@@ -1335,7 +1345,7 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
   | PPlet(l, f2) ->
     let _ =
       List.fold_left (fun z (sy,_) ->
-          if Util.SS.mem sy z then error (DuplicatePattern sy) f.pp_loc;
+          if Util.SS.mem sy z then typing_error (DuplicatePattern sy) f.pp_loc;
           Util.SS.add sy z
         )Util.SS.empty l
     in
@@ -1538,7 +1548,7 @@ let rec alpha_renaming_b ((up, m) as s) f =
   | PPlet(l, f2) ->
     let _ =
       List.fold_left (fun z (sy,_) ->
-          if Util.SS.mem sy z then error (DuplicatePattern sy) f.pp_loc;
+          if Util.SS.mem sy z then typing_error (DuplicatePattern sy) f.pp_loc;
           Util.SS.add sy z
         )Util.SS.empty l
     in
@@ -1794,7 +1804,7 @@ let check_duplicate_params l =
     | [] -> ()
     | (loc,x,_)::rem ->
       if List.mem x acc then
-        error (ClashParam x) loc
+        typing_error (ClashParam x) loc
       else loop rem (x::acc)
   in
   loop l []
@@ -1984,7 +1994,7 @@ let type_one_th_decl env e =
   | Predicate_def(loc,_,_,_)
   | Function_def(loc,_,_,_,_)
   | TypeDecl ((loc, _, _, _)::_) ->
-    error WrongDeclInTheory loc
+    typing_error WrongDeclInTheory loc
   | TypeDecl [] -> assert false
 
 let is_recursive_type =
@@ -2141,7 +2151,7 @@ let rec type_decl (acc, env) d =
     let ext = match Util.th_ext_of_string ext with
       | Some res -> res
       | None ->
-        Errors.error (Errors.ThExtError ext) loc
+        typing_error (ThExtError ext) loc
     in
     let td = {c = TTheory(loc, name, ext, tl); annot = new_id () } in
     (td, env)::acc, env
@@ -2270,17 +2280,10 @@ let type_parsed env d =
 
 let type_file ld =
   let env = Env.empty in
-  try
-    let ltd, env =
-      List.fold_left type_decl ([], env) ld
-    in
-    List.rev ltd, env
-  with
-  | Errors.Error(e,l) ->
-    Loc.report err_formatter l;
-    eprintf "typing error: %a\n@." Errors.report e;
-    exit 1
-
+  let ltd, env =
+    List.fold_left type_decl ([], env) ld
+  in
+  List.rev ltd, env
 
 let split_goals_aux f l =
   let _, _, _, ret =

@@ -28,7 +28,7 @@
 
 open Format
 
-type error =
+type typing_error =
   | BitvExtract of int*int
   | BitvExtractRange of int*int
   | ClashType of string
@@ -72,15 +72,31 @@ type error =
   | MatchUnusedCases of Hstring.t list
   | NotAdtConstr of string * Ty.t
 
-(* this is a typing error *)
-exception Error of error * Loc.t
+type run_error =
+  | Invalid_steps_count of int
+  | Steps_limit of int
+  | Failed_check_unsat_core
+  | Unsupported_feature of string
+  | Dynlink_error of string
 
-(* these two exception are used by the lexer and the parser *)
-exception Lexical_error of Loc.t * string
-exception Syntax_error of Loc.t * string
+type error =
+  | Parser_error of string
+  | Lexical_error of Loc.t * string
+  | Syntax_error of Loc.t * string
+  | Typing_error of Loc.t * typing_error
+  | Run_error of run_error
 
+exception Error of error
 
-let report fmt = function
+let error e = raise (Error e)
+
+let typing_error e loc =
+  error (Typing_error (loc,e))
+
+let run_error e =
+  error (Run_error e)
+
+let report_typing_error fmt = function
   | BitvExtract(i,j) ->
     fprintf fmt "bitvector extraction malformed (%d>%d)" i j
   | BitvExtractRange(n,j) ->
@@ -183,12 +199,44 @@ let report fmt = function
     fprintf fmt
       "The symbol %s is not a constructor of the type %a" lbl Ty.print ty
 
-let error e l = raise (Error(e,l))
-let warning e l =
-  begin match Options.output_format () with
-    | Smtlib2 -> Format.fprintf err_formatter "; ";
-    | Native | Why3 | Unknown _ -> ()
-  end;
-  Loc.report err_formatter l;
-  report err_formatter e;
-  Format.eprintf "@."
+let report_run_error fmt = function
+  | Invalid_steps_count i ->
+    fprintf fmt "%d is not a valid number of steps" i
+  | Steps_limit i ->
+    fprintf fmt "Steps limit reached: %d" i
+  | Failed_check_unsat_core ->
+    fprintf fmt "Checking produced unsat-core failed"
+  | Unsupported_feature f ->
+    fprintf fmt "Unsupported Feature: %s" f
+  | Dynlink_error s ->
+    fprintf fmt "[Dynlink] %s" s
+
+let report fmt = function
+  | Parser_error s ->
+    Options.print_output_format fmt
+      (Format.sprintf "Parser Error: %s" s);
+  | Lexical_error (l,s) ->
+    Loc.report err_formatter l;
+    Options.print_output_format fmt
+      (Format.sprintf "Lexical Error: %s" s);
+  | Syntax_error (l,s) ->
+    Loc.report err_formatter l;
+    Options.print_output_format fmt
+      (Format.sprintf "Syntax Error: %s" s);
+  | Typing_error (l,e) ->
+    Loc.report err_formatter l;
+    Options.print_output_format fmt "Typing Error: ";
+    report_typing_error fmt e
+  | Run_error e ->
+    Options.print_output_format fmt "Fatal Error: ";
+    report_run_error fmt e
+
+let print_error fmt e =
+  Options.print_output_format fmt "[Error] ";
+  report fmt e;
+  Format.fprintf fmt "@."
+
+let print_warning fmt e =
+  Options.print_output_format fmt "[Warning] ";
+  report fmt e;
+  Format.fprintf fmt "@."

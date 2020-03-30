@@ -26,7 +26,15 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type error =
+(** {1 Errors module} *)
+
+(** This module aims to regroup all exception that can be raised
+    by the Alt-Ergo-lib *)
+
+(** {2 Error types } *)
+
+(** Error that can be raised by the typechecker *)
+type typing_error =
   | BitvExtract of int*int
   | BitvExtractRange of int*int
   | ClashType of string
@@ -70,13 +78,44 @@ type error =
   | MatchUnusedCases of Hstring.t list
   | NotAdtConstr of string * Ty.t
 
-(* this is a typing error *)
-exception Error of error * Loc.t
+(** Errors that can be raised at solving*)
+type run_error =
+  | Invalid_steps_count of int
+  | Steps_limit of int
+  | Failed_check_unsat_core
+  | Unsupported_feature of string
+  | Dynlink_error of string
 
-(* these two exception are used by the lexer and the parser *)
-exception Lexical_error of Loc.t * string
-exception Syntax_error of Loc.t * string
+(** All types of error that can be raised *)
+type error =
+  | Parser_error of string (** Error used at parser loading *)
+  | Lexical_error of Loc.t * string (** Error used by the lexer *)
+  | Syntax_error of Loc.t * string (** Error used by the parser*)
+  | Typing_error of Loc.t * typing_error (** Error used at typing *)
+  | Run_error of run_error (** Error used during solving *)
 
+(** {2 Exceptions } *)
+
+exception Error of error
+
+(** {3 Raising exceptions functions } *)
+
+(** Raise the input error as {!Error} *)
+val error : error -> 'a
+
+(** Raise the input {!typing_error} as {!Typing_error} *)
+val typing_error : typing_error -> Loc.t -> 'a
+
+(** Raise the input {!run_error} as {!Run_error} *)
+val run_error : run_error -> 'a
+
+(** {2 Printing } *)
+
+(** Print a message on the formatter corresponding to the error *)
 val report : Format.formatter -> error -> unit
-val error : error -> Loc.t -> 'a
-val warning : error -> Loc.t -> unit
+
+(** Print the input error as error *)
+val print_error : Format.formatter -> error -> unit
+
+(** Print the input error as warning *)
+val print_warning : Format.formatter -> error -> unit
