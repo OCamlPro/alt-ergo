@@ -1,0 +1,9 @@
+#!/bin/sh
+
+git_repo=`git rev-parse --show-toplevel`
+cd $git_repo/rsc/extra
+
+./check_style.sh
+./check_indentation.sh
+
+exit $?

@@ -1,9 +1,0 @@
-(env
- (dev
-  (flags (:standard -bin-annot -w -22))
-  (ocamlopt_flags -g -O3 -unbox-closures))
- (release
-  (flags (:standard -bin-annot -w -22))
-  (ocamlopt_flags -O3 -unbox-closures))
-)
-

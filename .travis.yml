@@ -46,7 +46,7 @@ before_install:
 
 # Install dependencies
 install:
-  - opam pin add --no-action ./sources
+  - opam pin add --no-action .
   - opam install --deps-only alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo ||
     ( opam update && opam install --deps-only alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo )
 
@@ -71,81 +71,81 @@ jobs:
     - stage: "pre-check"
     # style check
       name: "Style check"
-      script: extra/pre-merge-style-checker.sh
+      script: rsc/extra/check_style.sh
       env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
     # indentation check
     - stage: "pre-check"
       name: "Indent check"
-      script: extra/check_indentation.sh
+      script: rsc/extra/check_indentation.sh
       env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
 
     # === Build Tests ===
     # Installation (no tests)
     - stage: "test"
       name: "install (no tests)"
-      script: extra/travis_install_test.sh
+      script: rsc/extra/travis_install_test.sh
       env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
     # Installation (with tests)
     - stage: "test"
       name: "install (with tests)"
-      script: extra/travis_install_test.sh
+      script: rsc/extra/travis_install_test.sh
       env: OPAMBUILDTEST=true OCAML_VERSION=4.04.2
     # Non-regression tests
     - stage: "test"
       name: "non-regression (4.04.2)"
-      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.04.2
     - stage: "test"
       name: "non-regression (4.04.2+flambda)"
-      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.04.2+flambda
     - stage: "test"
       name: "non-regression (4.05.0)"
-      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.05.0
     - stage: "test"
       name: "non-regression (4.05.0+flambda)"
-      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.05.0+flambda
     - stage: "test"
       name: "non-regression (4.06.1)"
-      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.06.1
     - stage: "test"
       name: "non-regression (4.06.1+flambda)"
-      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.06.1+flambda
     - stage: "test"
       name: "non-regression (4.07.1)"
-      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.07.1
     - stage: "test"
       name: "non-regression (4.07.1+flambda)"
-      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.07.1+flambda
     - stage: "test"
       name: "non-regression (4.08.1)"
-      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.08.1
     - stage: "test"
       name: "non-regression (4.08.1+flambda)"
-      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.08.1+flambda
     - stage: "test"
       name: "non-regression (4.09.0)"
-      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.09.0
     - stage: "test"
       name: "non-regression (4.09.0+flambda)"
-      script: extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
+      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.09.0+flambda
 
     # === Doc stage ===
     # Next branch (upload doc in gh-pages)
     - stage: "documentation"
       name: "doc build && dev upload"
-      script: extra/travis_doc_test.sh
-      before_deploy: ./extra/deploy_doc.sh dev
+      script: rsc/extra/travis_doc_test.sh
+      before_deploy: ./rsc/extra/deploy_doc.sh dev
       env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
       deploy:
         provider: pages

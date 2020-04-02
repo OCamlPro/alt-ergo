@@ -1,3 +1,0 @@
-(lang dune 1.5)
-(name alt-ergo)
-(using menhir 2.0)

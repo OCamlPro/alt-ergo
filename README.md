@@ -16,7 +16,7 @@ Alt-Ergo's website: http://alt-ergo.ocamlpro.com/
 
 ## Documentation
 
-See enclosed [USAGE.md](sources/USAGE.md) for information on how to use Alt-Ergo
+See enclosed [USAGE.md](USAGE.md) for information on how to use Alt-Ergo
 
 Documentation for developpers is available [here](https://ocamlpro.github.io/alt-ergo/dev/)
 
@@ -38,9 +38,10 @@ Alt-Ergo is freely available for non-commercial uses (such as academic and explo
 
 For commercial use, see the [Alt-Ergo Users' Club](https://alt-ergo.ocamlpro.com/#club). Club members with adequate membership can have access to Alt-Ergo under the [Apache Software License version 2.0](licenses/Apache-License-2.0.txt).
 See enclosed [LICENSE.md](LICENSE.md) file for more detail.
+
 ## Build
 
-See enclosed [INSTALL.md](sources/INSTALL.md) file for installation informations
+See enclosed [INSTALL.md](INSTALL.md) file for installation informations
 
 ## Support
 
