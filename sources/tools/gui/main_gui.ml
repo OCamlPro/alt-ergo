@@ -39,7 +39,9 @@ open Options
 
 (* done here to initialize options,
    before the instantiations of functors *)
-let () = Options.parse_cmdline_arguments ()
+let () =
+  try Options.parse_cmdline_arguments ()
+  with Options.Exit_options i -> exit i
 
 module SatCont = (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer)
 
@@ -1510,6 +1512,6 @@ let () =
   | Util.Timeout ->
     Format.eprintf "Timeout@.";
     exit 142
-  | Parsers.ParserError s ->
-    Format.eprintf "%s@." s;
+  | Errors.Error e ->
+    Errors.print_error Format.err_formatter e;
     exit 1

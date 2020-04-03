@@ -216,7 +216,7 @@ rule parse_token = parse
   | _ as c {
     let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
     let s = "illegal character: " ^ String.make 1 c in
-    raise (Errors.Lexical_error (loc, s))
+    Errors.error (Errors.Lexical_error (loc, s))
   }
 
 and parse_comment = parse
@@ -225,7 +225,7 @@ and parse_comment = parse
   | '\n' { mk_new_line lexbuf; parse_comment lexbuf }
   | eof  {
     let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
-    raise (Errors.Lexical_error (loc, "unterminated comment"))
+    Errors.error (Errors.Lexical_error (loc, "unterminated comment"))
   }
   | _    { parse_comment lexbuf }
 
@@ -244,7 +244,7 @@ and parse_string str_buf = parse
 
   | eof  {
     let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
-    raise (Errors.Lexical_error (loc, "unterminated string"))
+    Errors.error (Errors.Lexical_error (loc, "unterminated string"))
   }
 
   | _ as c {
@@ -267,7 +267,7 @@ and parse_string str_buf = parse
         let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
         let lex = Lexing.lexeme lexbuf in
         Parsing.clear_parser ();
-        raise (Errors.Syntax_error (loc, lex))
+        Errors.error (Errors.Syntax_error (loc, lex))
 
     let file    = aux Why_parser.file_parser    parse_token
     let expr    = aux Why_parser.lexpr_parser   parse_token

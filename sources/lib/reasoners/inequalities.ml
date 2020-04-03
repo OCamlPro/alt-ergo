@@ -370,43 +370,8 @@ let load_current_inequalities_reasoner () =
       eprintf "[Dynlink] Using the 'FM module' for arithmetic inequalities@."
 
   | path ->
-    if Options.debug_fm () then
-      eprintf "[Dynlink] Loading the 'inequalities' reasoner in %s ...@." path;
-    try
-      MyDynlink.loadfile path;
-      if Options.debug_fm () then  eprintf "Success !@.@."
-    with
-    | MyDynlink.Error m1 ->
-      if Options.debug_fm() then begin
-        eprintf
-          "[Dynlink] Loading the 'inequalities' reasoner in \"%s\" failed!@."
-          path;
-        Format.eprintf ">> Failure message: %s@.@."
-          (MyDynlink.error_message m1);
-      end;
-      let prefixed_path = sprintf "%s/%s" Config.pluginsdir path in
-      if Options.debug_fm () then
-        eprintf
-          "[Dynlink] Loading the 'inequalities' reasoner in %s with prefix %s@."
-          path Config.pluginsdir;
-      try
-        MyDynlink.loadfile prefixed_path;
-        if Options.debug_fm () then  eprintf "Success !@.@."
-      with
-      | MyDynlink.Error m2 ->
-        if not (Options.debug_fm()) then begin
-          eprintf
-            "[Dynlink] Loading the 'inequalities' reasoner in \"%s\" failed!@."
-            path;
-          Format.eprintf ">> Failure message: %s@.@."
-            (MyDynlink.error_message m1);
-        end;
-        eprintf
-          "[Dynlink] Trying to load the plugin from \"%s\" failed too!@."
-          prefixed_path;
-        Format.eprintf ">> Failure message: %s@.@."
-          (MyDynlink.error_message m2);
-        exit 1
+    MyDynlink.load err_formatter (Options.debug_fm ()) path
+      "'inequalities' reasoner (FM module)"
 
 let get_current () =
   if not !initialized then

@@ -29,6 +29,8 @@
 open Cmdliner
 
 let fmt = Format.err_formatter
+
+exception Exit_options of int
 exception Error of bool * string
 
 (* Declaration of all the options as refs with default values *)
@@ -434,20 +436,21 @@ let mk_dbg_opt_spl3 debug_split debug_sum debug_triggers debug_types
 let mk_dbg_opt dbg_opt_spl1 dbg_opt_spl2 dbg_opt_spl3 =
   `Ok {dbg_opt_spl1; dbg_opt_spl2; dbg_opt_spl3}
 
-
 let mk_case_split_opt case_split_policy enable_adts_cs max_split
   =
-  let set_case_split_policy_option s =
-    match s with
-    | "after-theory-assume" -> Util.AfterTheoryAssume
-    | "before-matching" -> Util.BeforeMatching
-    | "after-matching" -> Util.AfterMatching
-    | _ -> raise (
-        Error (false, "Bad value '"^s^"' for option --case-split-policy"))
+  let res =
+    match case_split_policy with
+    | "after-theory-assume" -> `Ok(Util.AfterTheoryAssume)
+    | "before-matching" -> `Ok(Util.BeforeMatching)
+    | "after-matching" -> `Ok(Util.AfterMatching)
+    | _ -> `Error ("Bad value '" ^ case_split_policy ^
+                   "' for option --case-split-policy")
   in
   let max_split = Numbers.Q.from_string max_split in
-  let case_split_policy = set_case_split_policy_option case_split_policy in
-  `Ok {max_split; case_split_policy; enable_adts_cs;}
+  match res with
+  | `Ok(case_split_policy) ->
+    `Ok {max_split; case_split_policy; enable_adts_cs;}
+  | `Error m -> `Error(false, m)
 
 let mk_context_opt replay replay_all_used_context replay_used_context
     save_used_context
@@ -550,24 +553,25 @@ let mk_sat_opt bottom_classes disable_flat_formulas_simplification
   let cdcl_tableaux_inst = not no_tableaux_cdcl_in_instantiation in
   let cdcl_tableaux_th = not no_tableaux_cdcl_in_theories in
   let tableaux_cdcl = false in
-  let sat_solver, cdcl_tableaux_inst, cdcl_tableaux_th, tableaux_cdcl =
-    match sat_solver with
-    | "CDCL" | "satML" -> Util.CDCL, false, false, tableaux_cdcl
+  let res = match sat_solver with
+    | "CDCL" | "satML" ->
+      `Ok(Util.CDCL, false, false, tableaux_cdcl)
     | "CDCL-Tableaux" | "satML-Tableaux" | "CDCL-tableaux" | "satML-tableaux" ->
-      Util.CDCL_Tableaux, true, true, tableaux_cdcl
+      `Ok(Util.CDCL_Tableaux, true, true, tableaux_cdcl)
     | "tableaux" | "Tableaux" | "tableaux-like" | "Tableaux-like" ->
-      Util.Tableaux, false, cdcl_tableaux_th, tableaux_cdcl
+      `Ok(Util.Tableaux, false, cdcl_tableaux_th, tableaux_cdcl)
     | "tableaux-cdcl" | "Tableaux-CDCL" | "tableaux-CDCL" | "Tableaux-cdcl" ->
-      Util.Tableaux_CDCL, cdcl_tableaux_inst, cdcl_tableaux_th, true
-    | _ ->
-      Format.eprintf "Args parsing error: unkown SAT solver %S@." sat_solver;
-      exit 1
+      `Ok(Util.Tableaux_CDCL, cdcl_tableaux_inst, cdcl_tableaux_th, true)
+    | _ -> `Error ("Args parsing error: unkown SAT solver " ^ sat_solver)
   in
-
-  `Ok { arith_matching; bottom_classes; cdcl_tableaux_inst; cdcl_tableaux_th;
-        disable_flat_formulas_simplification; enable_restarts;
-        minimal_bj; no_backjumping; no_backward; no_decisions; no_decisions_on;
-        no_sat_learning; sat_plugin; sat_solver; tableaux_cdcl}
+  match res with
+  | `Ok(sat_solver, cdcl_tableaux_inst, cdcl_tableaux_th, tableaux_cdcl) ->
+    `Ok { arith_matching; bottom_classes; cdcl_tableaux_inst; cdcl_tableaux_th;
+          disable_flat_formulas_simplification; enable_restarts;
+          minimal_bj; no_backjumping; no_backward; no_decisions;
+          no_decisions_on; no_sat_learning; sat_plugin; sat_solver;
+          tableaux_cdcl}
+  | `Error m -> `Error (false, m)
 
 let mk_term_opt disable_ites inline_lets rewriting term_like_pp
   =
@@ -593,7 +597,7 @@ let halt_opt version_info where =
                 "\"\nAccepted options are lib, plugins, preludes, data or man")
     in
     match res with
-    | `Ok path -> Format.printf "%s@." path; exit 0
+    | `Ok path -> Format.printf "%s@." path
     | `Error m -> raise (Error (false, m))
   in
   let handle_version_info vi =
@@ -601,140 +605,142 @@ let halt_opt version_info where =
       Format.printf "Version          = %s@." Version._version;
       Format.printf "Release date     = %s@." Version._release_date;
       Format.printf "Release commit   = %s@." Version._release_commit;
-      exit 0)
+    )
   in
   try
-    (match where with Some w -> handle_where w | None -> ());
-    if version_info then handle_version_info version_info;
-    `Ok ()
-  with
-  | Failure f -> `Error (false, f)
-  | Error (b, m) -> `Error (b, m)
+    match where with
+    | Some w -> handle_where w; `Ok true
+    | None -> if version_info then (handle_version_info version_info; `Ok true)
+      else `Ok false
+  with Failure f -> `Error (false, f)
+     | Error (b, m) -> `Error (b, m)
 
-let mk_opts file case_split_opt context_opt dbg_opt execution_opt _
+let mk_opts file case_split_opt context_opt dbg_opt execution_opt halt_opt
     internal_opt limit_opt output_opt profiling_opt quantifiers_opt
     sat_opt term_opt theory_opt
   =
 
-  (* If save_used_context was invoked as an option it should
-     automatically set unsat_core to true *)
-  let output_opt = if context_opt.save_used_context then
-      { output_opt with unsat_core = true} else output_opt in
+  if halt_opt then `Ok false
+  else
+    (* If save_used_context was invoked as an option it should
+       automatically set unsat_core to true *)
+    let output_opt = if context_opt.save_used_context then
+        { output_opt with unsat_core = true} else output_opt in
 
-  (match file with
-   | Some f ->
-     vfile := f;
-     let base_file = try
-         Filename.chop_extension f
-       with Invalid_argument _ -> f
-     in
-     vsession_file := base_file^".agr";
-     vused_context_file := base_file;
-   | _ -> ()
-  );
+    (match file with
+     | Some f ->
+       vfile := f;
+       let base_file = try
+           Filename.chop_extension f
+         with Invalid_argument _ -> f
+       in
+       vsession_file := base_file^".agr";
+       vused_context_file := base_file;
+     | _ -> ()
+    );
 
-  Gc.set { (Gc.get()) with Gc.allocation_policy = internal_opt.gc_policy };
+    Gc.set { (Gc.get()) with Gc.allocation_policy = internal_opt.gc_policy };
 
-  vdebug := dbg_opt.dbg_opt_spl1.debug;
-  vdebug_ac := dbg_opt.dbg_opt_spl1.debug_ac;
-  vdebug_adt := dbg_opt.dbg_opt_spl1.debug_adt;
-  vdebug_arith := dbg_opt.dbg_opt_spl1.debug_arith;
-  vdebug_arrays := dbg_opt.dbg_opt_spl1.debug_arrays;
-  vdebug_bitv := dbg_opt.dbg_opt_spl1.debug_bitv;
-  vdebug_cc := dbg_opt.dbg_opt_spl1.debug_cc;
-  vdebug_combine := dbg_opt.dbg_opt_spl1.debug_combine;
-  vdebug_constr := dbg_opt.dbg_opt_spl1.debug_constr;
-  vdebug_explanations := dbg_opt.dbg_opt_spl2.debug_explanations;
-  vdebug_fm := dbg_opt.dbg_opt_spl2.debug_fm;
-  vdebug_fpa := dbg_opt.dbg_opt_spl2.debug_fpa;
-  vdebug_gc := dbg_opt.dbg_opt_spl2.debug_gc;
-  vdebug_interpretation := dbg_opt.dbg_opt_spl2.debug_interpretation;
-  vdebug_ite := dbg_opt.dbg_opt_spl2.debug_ite;
-  vdebug_matching := dbg_opt.dbg_opt_spl2.debug_matching;
-  vdebug_sat := dbg_opt.dbg_opt_spl2.debug_sat;
-  vdebug_sat_simple := dbg_opt.dbg_opt_spl2.debug_sat_simple;
-  vdebug_split := dbg_opt.dbg_opt_spl3.debug_split;
-  vdebug_sum := dbg_opt.dbg_opt_spl3.debug_sum;
-  vdebug_triggers := dbg_opt.dbg_opt_spl3.debug_triggers;
-  vdebug_types := dbg_opt.dbg_opt_spl3.debug_types;
-  vdebug_typing := dbg_opt.dbg_opt_spl3.debug_typing;
-  vdebug_uf := dbg_opt.dbg_opt_spl3.debug_uf;
-  vdebug_unsat_core := dbg_opt.dbg_opt_spl3.debug_unsat_core;
-  vdebug_use := dbg_opt.dbg_opt_spl3.debug_use;
-  vdebug_warnings := dbg_opt.dbg_opt_spl3.debug_warnings;
-  vrules := dbg_opt.dbg_opt_spl3.rules;
-  vcase_split_policy := case_split_opt.case_split_policy;
-  venable_adts_cs := case_split_opt.enable_adts_cs;
-  vmax_split := case_split_opt.max_split;
-  vreplay := context_opt.replay;
-  vreplay_all_used_context := context_opt.replay_all_used_context;
-  vreplay_used_context := context_opt.replay_used_context;
-  vsave_used_context := context_opt.save_used_context;
-  vinput_format := execution_opt.input_format;
-  vfrontend := execution_opt.frontend;
-  vanswers_with_loc := execution_opt.answers_with_loc;
-  vparse_only := execution_opt.parse_only;
-  vparsers := execution_opt.parsers;
-  vpreludes := execution_opt.preludes;
-  vtype_only := execution_opt.type_only;
-  vtype_smt2 := execution_opt .type_smt2;
-  vdisable_weaks := internal_opt.disable_weaks;
-  venable_assertions := internal_opt.enable_assertions;
-  vage_bound := limit_opt.age_bound;
-  vfm_cross_limit := limit_opt.fm_cross_limit;
-  vtimelimit_interpretation := limit_opt.timelimit_interpretation;
-  vsteps_bound := limit_opt.steps_bound;
-  vtimelimit := limit_opt.timelimit;
-  vtimelimit_per_goal := limit_opt.timelimit_per_goal;
-  vinterpretation := output_opt.interpretation;
-  vmodel := output_opt.model;
-  vunsat_core := output_opt.unsat_core;
-  voutput_format := output_opt.output_format;
-  vcumulative_time_profiling := profiling_opt.cumulative_time_profiling;
-  vprofiling := profiling_opt.profiling;
-  vprofiling_period := profiling_opt.profiling_period;
-  vprofiling_plugin := profiling_opt.profiling_plugin;
-  vverbose := profiling_opt.verbose;
-  vgreedy := quantifiers_opt.greedy;
-  vinstantiate_after_backjump := quantifiers_opt.instantiate_after_backjump;
-  vmax_multi_triggers_size := quantifiers_opt.max_multi_triggers_size;
-  vnb_triggers := quantifiers_opt.nb_triggers;
-  vno_ematching := quantifiers_opt.no_ematching;
-  vno_user_triggers := quantifiers_opt.no_user_triggers;
-  vnormalize_instances := quantifiers_opt.normalize_instances;
-  vtriggers_var := quantifiers_opt.triggers_var;
-  varith_matching := sat_opt.arith_matching;
-  vbottom_classes := sat_opt.bottom_classes;
-  vdisable_flat_formulas_simplification :=
-    sat_opt.disable_flat_formulas_simplification;
-  venable_restarts := sat_opt.enable_restarts;
-  vno_backjumping := sat_opt.no_backjumping;
-  vno_backward := sat_opt.no_backward;
-  vno_decisions := sat_opt.no_decisions;
-  vno_decisions_on := sat_opt.no_decisions_on;
-  vminimal_bj := sat_opt.minimal_bj;
-  vno_sat_learning := sat_opt.no_sat_learning;
-  vcdcl_tableaux_inst := sat_opt.cdcl_tableaux_inst;
-  vcdcl_tableaux_th := sat_opt.cdcl_tableaux_th;
-  vsat_plugin := sat_opt.sat_plugin;
-  vsat_solver := sat_opt.sat_solver;
-  vtableaux_cdcl := sat_opt.tableaux_cdcl;
-  vdisable_ites := term_opt.disable_ites;
-  vinline_lets := term_opt.inline_lets;
-  vrewriting := term_opt.rewriting;
-  vterm_like_pp := term_opt.term_like_pp;
-  vdisable_adts := theory_opt.disable_adts;
-  vinequalities_plugin := theory_opt.inequalities_plugin;
-  vno_ac := theory_opt.no_ac;
-  vno_contracongru := theory_opt.no_contracongru;
-  vno_fm := theory_opt.no_fm;
-  vno_nla := theory_opt.no_nla;
-  vno_tcp := theory_opt.no_tcp;
-  vno_theory := theory_opt.no_theory;
-  vrestricted := theory_opt.restricted;
-  vtighten_vars := theory_opt.tighten_vars;
-  vuse_fpa := theory_opt.use_fpa;
-  `Ok ()
+    vdebug := dbg_opt.dbg_opt_spl1.debug;
+    vdebug_ac := dbg_opt.dbg_opt_spl1.debug_ac;
+    vdebug_adt := dbg_opt.dbg_opt_spl1.debug_adt;
+    vdebug_arith := dbg_opt.dbg_opt_spl1.debug_arith;
+    vdebug_arrays := dbg_opt.dbg_opt_spl1.debug_arrays;
+    vdebug_bitv := dbg_opt.dbg_opt_spl1.debug_bitv;
+    vdebug_cc := dbg_opt.dbg_opt_spl1.debug_cc;
+    vdebug_combine := dbg_opt.dbg_opt_spl1.debug_combine;
+    vdebug_constr := dbg_opt.dbg_opt_spl1.debug_constr;
+    vdebug_explanations := dbg_opt.dbg_opt_spl2.debug_explanations;
+    vdebug_fm := dbg_opt.dbg_opt_spl2.debug_fm;
+    vdebug_fpa := dbg_opt.dbg_opt_spl2.debug_fpa;
+    vdebug_gc := dbg_opt.dbg_opt_spl2.debug_gc;
+    vdebug_interpretation := dbg_opt.dbg_opt_spl2.debug_interpretation;
+    vdebug_ite := dbg_opt.dbg_opt_spl2.debug_ite;
+    vdebug_matching := dbg_opt.dbg_opt_spl2.debug_matching;
+    vdebug_sat := dbg_opt.dbg_opt_spl2.debug_sat;
+    vdebug_sat_simple := dbg_opt.dbg_opt_spl2.debug_sat_simple;
+    vdebug_split := dbg_opt.dbg_opt_spl3.debug_split;
+    vdebug_sum := dbg_opt.dbg_opt_spl3.debug_sum;
+    vdebug_triggers := dbg_opt.dbg_opt_spl3.debug_triggers;
+    vdebug_types := dbg_opt.dbg_opt_spl3.debug_types;
+    vdebug_typing := dbg_opt.dbg_opt_spl3.debug_typing;
+    vdebug_uf := dbg_opt.dbg_opt_spl3.debug_uf;
+    vdebug_unsat_core := dbg_opt.dbg_opt_spl3.debug_unsat_core;
+    vdebug_use := dbg_opt.dbg_opt_spl3.debug_use;
+    vdebug_warnings := dbg_opt.dbg_opt_spl3.debug_warnings;
+    vrules := dbg_opt.dbg_opt_spl3.rules;
+    vcase_split_policy := case_split_opt.case_split_policy;
+    venable_adts_cs := case_split_opt.enable_adts_cs;
+    vmax_split := case_split_opt.max_split;
+    vreplay := context_opt.replay;
+    vreplay_all_used_context := context_opt.replay_all_used_context;
+    vreplay_used_context := context_opt.replay_used_context;
+    vsave_used_context := context_opt.save_used_context;
+    vinput_format := execution_opt.input_format;
+    vfrontend := execution_opt.frontend;
+    vanswers_with_loc := execution_opt.answers_with_loc;
+    vparse_only := execution_opt.parse_only;
+    vparsers := execution_opt.parsers;
+    vpreludes := execution_opt.preludes;
+    vtype_only := execution_opt.type_only;
+    vtype_smt2 := execution_opt .type_smt2;
+    vdisable_weaks := internal_opt.disable_weaks;
+    venable_assertions := internal_opt.enable_assertions;
+    vage_bound := limit_opt.age_bound;
+    vfm_cross_limit := limit_opt.fm_cross_limit;
+    vtimelimit_interpretation := limit_opt.timelimit_interpretation;
+    vsteps_bound := limit_opt.steps_bound;
+    vtimelimit := limit_opt.timelimit;
+    vtimelimit_per_goal := limit_opt.timelimit_per_goal;
+    vinterpretation := output_opt.interpretation;
+    vmodel := output_opt.model;
+    vunsat_core := output_opt.unsat_core;
+    voutput_format := output_opt.output_format;
+    vcumulative_time_profiling := profiling_opt.cumulative_time_profiling;
+    vprofiling := profiling_opt.profiling;
+    vprofiling_period := profiling_opt.profiling_period;
+    vprofiling_plugin := profiling_opt.profiling_plugin;
+    vverbose := profiling_opt.verbose;
+    vgreedy := quantifiers_opt.greedy;
+    vinstantiate_after_backjump := quantifiers_opt.instantiate_after_backjump;
+    vmax_multi_triggers_size := quantifiers_opt.max_multi_triggers_size;
+    vnb_triggers := quantifiers_opt.nb_triggers;
+    vno_ematching := quantifiers_opt.no_ematching;
+    vno_user_triggers := quantifiers_opt.no_user_triggers;
+    vnormalize_instances := quantifiers_opt.normalize_instances;
+    vtriggers_var := quantifiers_opt.triggers_var;
+    varith_matching := sat_opt.arith_matching;
+    vbottom_classes := sat_opt.bottom_classes;
+    vdisable_flat_formulas_simplification :=
+      sat_opt.disable_flat_formulas_simplification;
+    venable_restarts := sat_opt.enable_restarts;
+    vno_backjumping := sat_opt.no_backjumping;
+    vno_backward := sat_opt.no_backward;
+    vno_decisions := sat_opt.no_decisions;
+    vno_decisions_on := sat_opt.no_decisions_on;
+    vminimal_bj := sat_opt.minimal_bj;
+    vno_sat_learning := sat_opt.no_sat_learning;
+    vcdcl_tableaux_inst := sat_opt.cdcl_tableaux_inst;
+    vcdcl_tableaux_th := sat_opt.cdcl_tableaux_th;
+    vsat_plugin := sat_opt.sat_plugin;
+    vsat_solver := sat_opt.sat_solver;
+    vtableaux_cdcl := sat_opt.tableaux_cdcl;
+    vdisable_ites := term_opt.disable_ites;
+    vinline_lets := term_opt.inline_lets;
+    vrewriting := term_opt.rewriting;
+    vterm_like_pp := term_opt.term_like_pp;
+    vdisable_adts := theory_opt.disable_adts;
+    vinequalities_plugin := theory_opt.inequalities_plugin;
+    vno_ac := theory_opt.no_ac;
+    vno_contracongru := theory_opt.no_contracongru;
+    vno_fm := theory_opt.no_fm;
+    vno_nla := theory_opt.no_nla;
+    vno_tcp := theory_opt.no_tcp;
+    vno_theory := theory_opt.no_theory;
+    vrestricted := theory_opt.restricted;
+    vtighten_vars := theory_opt.tighten_vars;
+    vuse_fpa := theory_opt.use_fpa;
+    `Ok true
 
 (* Custom sections *)
 
@@ -1509,7 +1515,8 @@ let main =
 let parse_cmdline_arguments () =
   let r = Cmdliner.Term.(eval main) in
   match r with
-  | `Ok () -> ()
+  | `Ok false -> raise (Exit_options 0)
+  | `Ok true -> ()
   | e -> exit @@ Term.(exit_status_of_result e)
 
 let set_file_for_js filename =
@@ -1790,3 +1797,8 @@ let get_is_gui () =
   | None ->
     Format.eprintf "Error in Options.get_is_gui: is_gui is not set!@.";
     assert false
+
+let print_output_format fmt msg =
+  match output_format () with
+  | Smtlib2 -> Format.fprintf fmt "; %s" msg;
+  | Native | Why3 | Unknown _ -> Format.fprintf fmt "%s" msg;

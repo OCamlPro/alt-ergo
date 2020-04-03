@@ -27,7 +27,7 @@
 (******************************************************************************)
 
 open Options
-open Format
+open Errors
 
 (* Define the type of increment *)
 type incr_kind =
@@ -81,21 +81,19 @@ let incr k =
       (* Since n refers to the number of terms sent to the theories no
        * multiplier is needed here *)
       if n < 0 then
-        begin
-          Format.eprintf "steps can only be positive@.";
-          exit 1
-        end;
+        run_error (Invalid_steps_count n);
       naive_steps := !naive_steps + n;
   end;
   if steps_bound () <> -1
   && ((Stdlib.compare !steps ((steps_bound ())) > 0)
       || (Stdlib.compare !naive_steps ((steps_bound ())) > 0)) then
     begin
-      printf "Steps limit reached: %d@."
-        (if !naive_steps > 0 then !naive_steps
-         else if !steps > 0 then !steps
-         else steps_bound ());
-      exit 1
+      let n =
+        if !naive_steps > 0 then !naive_steps
+        else if !steps > 0 then !steps
+        else steps_bound ()
+      in
+      run_error (Steps_limit n)
     end
 
 

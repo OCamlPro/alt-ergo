@@ -35,7 +35,9 @@ include Main_input
 
 (* done here to initialize options,
    before the instantiations of functors *)
-let () = Options.parse_cmdline_arguments ()
+let () =
+  try Options.parse_cmdline_arguments ()
+  with Options.Exit_options i -> exit i
 
 module SatCont = (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer)
 
@@ -176,8 +178,12 @@ let () =
     | Util.Timeout ->
       FE.print_status (FE.Timeout None) 0;
       exit 142
-    | AltErgoParsers.Parsers.ParserError s ->
-      Format.eprintf "%s@." s;
+    | Parsing.Parse_error ->
+      Errors.print_error Format.err_formatter
+        (Syntax_error ((Lexing.dummy_pos,Lexing.dummy_pos),""));
+      exit 1
+    | Errors.Error e ->
+      Errors.print_error Format.err_formatter e;
       exit 1
 
   in
@@ -190,9 +196,8 @@ let () =
         let l, env = I.type_parsed state.env p in
         List.fold_left (typed_loop all_used_context) { state with env; } l
       with
-        Errors.Error (e,l) ->
-        Loc.report Format.err_formatter l;
-        Format.eprintf "typing error: %a\n@." Errors.report e;
+        Errors.Error e ->
+        Errors.print_error Format.err_formatter e;
         exit 1
     end
   in

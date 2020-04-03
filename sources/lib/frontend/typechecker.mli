@@ -36,16 +36,19 @@ val type_expr :
   env -> (Symbols.t * Ty.t) list -> Parsed.lexpr -> int Typed.atterm
 (** Typecheck an input expression (i.e. term (or formula ?)), given
     a local environment and a list of local types used to extend the
-    initial environment. *)
+    initial environment.
+    @raise Typing_error {!Errors.Typing_error} *)
 (* TODO: give the env a proper module with binding functions,
          so that the list argument can be ommitted ? *)
 
 val type_parsed : env -> Parsed.decl -> int Typed.atdecl list * env
-(** Type a single declaration. *)
+(** Type a single declaration.
+    @raise Typing_error {!Errors.Typing_error} *)
 
 val type_file : Parsed.file -> (int Typed.atdecl * env) list * env
 (** Type an input file. Returns the successive global environments
-    obtained after typing each declaration. *)
+    obtained after typing each declaration.
+    @raise Typing_error {!Errors.Typing_error} *)
 
 
 (* TODO: move these functions out of the typechecker *)

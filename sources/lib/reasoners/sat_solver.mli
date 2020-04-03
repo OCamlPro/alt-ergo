@@ -14,11 +14,3 @@ val get_current : unit -> (module Sat_solver_sig.SatContainer)
 (** returns the current activated SAT-solver depending on the value of
     `Options.sat_solver ()`. See command-line option `-sat-solver` for
     more details **)
-
-
-(*
-(*+ no dynamic loading of SAT solvers anymore +*)
-val set_current : (module Sat_solver_sig.S) -> unit
-(** sets a new SAT-solver. This function is intended to be used by dynamically
-    loaded plugins **)
-*)

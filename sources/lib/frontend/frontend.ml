@@ -122,9 +122,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                  from_terms = [];
                  theory_elim = true;
                 });
-      fprintf fmt "Checking produced unsat-core failed!@.";
-      fprintf fmt "this may be due to a bug.@.";
-      exit 1
+      Errors.run_error Errors.Failed_check_unsat_core
     with
     | SAT.Unsat _  -> ()
     | (SAT.Sat _ | SAT.I_dont_know _) as e -> raise e

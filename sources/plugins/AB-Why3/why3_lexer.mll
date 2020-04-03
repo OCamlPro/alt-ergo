@@ -279,7 +279,7 @@ and string = parse
     let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
     let lex = Lexing.lexeme lexbuf in
     Parsing.clear_parser ();
-    raise (Errors.Syntax_error (loc, lex))
+    Errors.error (Errors.Syntax_error (loc, lex))
 
   let comment lexbuf = comment_start_loc := loc lexbuf; comment lexbuf
 
