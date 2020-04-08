@@ -25,8 +25,7 @@ license indicated in [License.OCamlPro](licenses/License.OCamlPro).
 Note that some plugins may have different licenses. For instance the
 sources of the AB-Why3 plugin are governed by the [GNU Lesser General
 Public License version 2.1](licenses/LGPL-License.txt), and are Copyright (C) 2010-2017 INRIA -
-CNRS - Paris-Sud University and Copyright (C) 2018 OCamlPro SAS (see
-plugins/AB-Why3/README.md.
+CNRS - Paris-Sud University and Copyright (C) 2018 OCamlPro SAS (see the AB-Why3 [README](src/plugins/AB-Why3/README.md)).
 
 You may want to refer to the header of each file to know under which
 license it is distributed.
