@@ -1,4 +1,4 @@
-## Copyright
+# Copyright
 
 These software are distributed in the hope that they will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -11,7 +11,7 @@ doubt, please contact us to clarify licensing.
 
 The resources are licensed as follows:
 
-### OCaml source files and Alt-Ergo preludes
+## OCaml source files and Alt-Ergo preludes
 
 Some of these files are Copyright (C) 2006-2013 --- CNRS - INRIA -
 Universite Paris Sud, and Copyright (C) 2013-2017 --- OCamlPro SAS.
@@ -32,7 +32,7 @@ You may want to refer to the header of each file to know under which
 license it is distributed.
 
 
-### Binaries generated from the source files
+## Binaries generated from the source files
 
 The binaries (tools, plugins, ...) that are generated from the OCaml
 source files are Copyright (C) --- OCamlPro SAS. They are distributed

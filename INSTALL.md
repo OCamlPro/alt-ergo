@@ -2,7 +2,7 @@
 
 ## Dependencies
 
-External dependencies graph generated with `dune-deps` :
+External dependencies graph generated with `dune-deps` (use `make archi` for source files dependencies):
 
 ![](docs/deps.png)
 

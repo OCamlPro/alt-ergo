@@ -43,6 +43,10 @@ See enclosed [LICENSE.md](LICENSE.md) file for more detail.
 
 See enclosed [INSTALL.md](INSTALL.md) file for installation informations
 
+## Contributing
+
+Please refer to our [contributing guidelines](CONTRIBUTING.md).
+
 ## Support
 
 See http://alt-ergo.ocamlpro.com/support.php or contact us at
