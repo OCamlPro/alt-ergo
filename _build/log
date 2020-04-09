@@ -1,0 +1,122 @@
+# dune build @doc
+# OCAMLPARAM: unset
+# Workspace root: /home/travis/build/OCamlPro/alt-ergo
+$ /usr/bin/nproc > /tmp/dune59cf02.output 2> /dev/null
+# Auto-detected concurrency: 2
+# disable binary cache
+$ /home/travis/.opam/4.04.2/bin/ocamlc.opt -config > /tmp/dunebe2c7c.output
+# Dune context:
+#  { name = "default"
+#  ; kind = "default"
+#  ; profile = Dyn
+#  ; merlin = true
+#  ; for_host = None
+#  ; fdo_target_exe = None
+#  ; build_dir = "default"
+#  ; toplevel_path = Some External "/home/travis/.opam/4.04.2/lib/toplevel"
+#  ; ocaml_bin = External "/home/travis/.opam/4.04.2/bin"
+#  ; ocaml = Ok External "/home/travis/.opam/4.04.2/bin/ocaml"
+#  ; ocamlc = External "/home/travis/.opam/4.04.2/bin/ocamlc.opt"
+#  ; ocamlopt = Ok External "/home/travis/.opam/4.04.2/bin/ocamlopt.opt"
+#  ; ocamldep = Ok External "/home/travis/.opam/4.04.2/bin/ocamldep.opt"
+#  ; ocamlmklib = Ok External "/home/travis/.opam/4.04.2/bin/ocamlmklib.opt"
+#  ; env =
+#      map
+#        { "INSIDE_DUNE" :
+#            "/home/travis/build/OCamlPro/alt-ergo/_build/default"
+#        ; "OCAMLFIND_IGNORE_DUPS_IN" :
+#            "/home/travis/build/OCamlPro/alt-ergo/_build/install/default/lib"
+#        ; "OCAMLPATH" :
+#            "/home/travis/build/OCamlPro/alt-ergo/_build/install/default/lib"
+#        }
+#  ; findlib_path = [ External "/home/travis/.opam/4.04.2/lib" ]
+#  ; arch_sixtyfour = true
+#  ; natdynlink_supported = true
+#  ; supports_shared_libraries = true
+#  ; ocaml_config =
+#      { version = "4.04.2"
+#      ; standard_library_default = "/home/travis/.opam/4.04.2/lib/ocaml"
+#      ; standard_library = "/home/travis/.opam/4.04.2/lib/ocaml"
+#      ; standard_runtime = "/home/travis/.opam/4.04.2/bin/ocamlrun"
+#      ; ccomp_type = "cc"
+#      ; c_compiler = "gcc"
+#      ; ocamlc_cflags =
+#          [ "-std=gnu99"
+#          ; "-O2"
+#          ; "-fno-strict-aliasing"
+#          ; "-fwrapv"
+#          ; "-Wall"
+#          ; "-D_FILE_OFFSET_BITS=64"
+#          ; "-D_REENTRANT"
+#          ; "-fPIC"
+#          ]
+#      ; ocamlopt_cflags =
+#          [ "-std=gnu99"
+#          ; "-O2"
+#          ; "-fno-strict-aliasing"
+#          ; "-fwrapv"
+#          ; "-Wall"
+#          ; "-D_FILE_OFFSET_BITS=64"
+#          ; "-D_REENTRANT"
+#          ]
+#      ; bytecomp_c_compiler =
+#          [ "gcc"
+#          ; "-std=gnu99"
+#          ; "-O2"
+#          ; "-fno-strict-aliasing"
+#          ; "-fwrapv"
+#          ; "-Wall"
+#          ; "-D_FILE_OFFSET_BITS=64"
+#          ; "-D_REENTRANT"
+#          ; "-fPIC"
+#          ]
+#      ; bytecomp_c_libraries = [ "-lm"; "-ldl"; "-lcurses"; "-lpthread" ]
+#      ; native_c_compiler =
+#          [ "gcc"
+#          ; "-std=gnu99"
+#          ; "-O2"
+#          ; "-fno-strict-aliasing"
+#          ; "-fwrapv"
+#          ; "-Wall"
+#          ; "-D_FILE_OFFSET_BITS=64"
+#          ; "-D_REENTRANT"
+#          ]
+#      ; native_c_libraries = [ "-lm"; "-ldl" ]
+#      ; cc_profile = [ "-pg" ]
+#      ; architecture = "amd64"
+#      ; model = "default"
+#      ; int_size = 63
+#      ; word_size = 64
+#      ; system = "linux"
+#      ; asm = [ "as" ]
+#      ; asm_cfi_supported = true
+#      ; with_frame_pointers = false
+#      ; ext_exe = ""
+#      ; ext_obj = ".o"
+#      ; ext_asm = ".s"
+#      ; ext_lib = ".a"
+#      ; ext_dll = ".so"
+#      ; os_type = "Unix"
+#      ; default_executable_name = "a.out"
+#      ; systhread_supported = true
+#      ; host = "x86_64-unknown-linux-gnu"
+#      ; target = "x86_64-unknown-linux-gnu"
+#      ; profiling = false
+#      ; flambda = false
+#      ; spacetime = false
+#      ; safe_string = false
+#      ; exec_magic_number = "Caml1999X011"
+#      ; cmi_magic_number = "Caml1999I021"
+#      ; cmo_magic_number = "Caml1999O011"
+#      ; cma_magic_number = "Caml1999A012"
+#      ; cmx_magic_number = "Caml1999Y015"
+#      ; cmxa_magic_number = "Caml1999Z014"
+#      ; ast_impl_magic_number = "Caml1999M020"
+#      ; ast_intf_magic_number = "Caml1999N018"
+#      ; cmxs_magic_number = "Caml2007D002"
+#      ; cmt_magic_number = "Caml2012T008"
+#      ; natdynlink_supported = true
+#      ; supports_shared_libraries = true
+#      ; windows_unicode = false
+#      }
+#  }

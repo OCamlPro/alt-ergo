@@ -1,0 +1,141 @@
+type token =
+    XOR
+  | WITH
+  | VOID
+  | UNIT
+  | TYPE
+  | TRUE
+  | TIMES
+  | THEORY
+  | THEN
+  | STRING of string
+  | SLASH
+  | SHARP
+  | RIGHTSQ
+  | RIGHTPAR
+  | RIGHTBR
+  | RIGHTARROW
+  | REWRITING
+  | REAL
+  | QUOTE
+  | QM_ID of string
+  | QM
+  | PV
+  | PROP
+  | PRED
+  | POWDOT
+  | POW
+  | PLUS
+  | PERCENT
+  | OR
+  | OF
+  | NUM of Num.num
+  | NOTEQ
+  | NOT
+  | MINUS
+  | MATCH
+  | MAPS_TO
+  | LT
+  | LRARROW
+  | LOGIC
+  | LET
+  | LEFTSQ
+  | LEFTPAR
+  | LEFTBR
+  | LEFTARROW
+  | LE
+  | INTEGER of string
+  | INT
+  | IN
+  | IF
+  | ID of string
+  | HAT
+  | GT
+  | GOAL
+  | GE
+  | FUNC
+  | FORALL
+  | FALSE
+  | EXTENDS
+  | EXISTS
+  | EQUAL
+  | EOF
+  | END
+  | ELSE
+  | DOT
+  | DISTINCT
+  | CUT
+  | COMMA
+  | COLON
+  | CHECK
+  | CASESPLIT
+  | BOOL
+  | BITV
+  | BAR
+  | AXIOM
+  | AT
+  | AND
+  | AC
+val menhir_begin_marker : int
+val xv_type_vars : string list
+val xv_type_var : string
+val xv_triggers : (AltErgoLib.Parsed.lexpr list * bool) list
+val xv_trigger_parser : AltErgoLib.Parsed.lexpr list * bool
+val xv_trigger : AltErgoLib.Parsed.lexpr list * bool
+val xv_theory_elts : AltErgoLib.Parsed.decl list
+val xv_theory_elt : AltErgoLib.Parsed.decl
+val xv_sq : bool
+val xv_simple_pattern : AltErgoLib.Parsed.pattern
+val xv_simple_expr : AltErgoLib.Parsed.lexpr
+val xv_record_type : (string * AltErgoLib.Parsed.ppure_type) list
+val xv_primitive_type : AltErgoLib.Parsed.ppure_type
+val xv_named_ident : string * string
+val xv_multi_logic_binder :
+  (string * string) list * AltErgoLib.Parsed.ppure_type
+val xv_logic_type : AltErgoLib.Parsed.plogic_type
+val xv_logic_binder :
+  AltErgoLib.Loc.t * string * AltErgoLib.Parsed.ppure_type
+val xv_list2_lexpr_sep_comma : AltErgoLib.Parsed.lexpr list
+val xv_list1_type_var_sep_comma : string list
+val xv_list1_trigger_sep_bar : (AltErgoLib.Parsed.lexpr list * bool) list
+val xv_list1_string_sep_comma : string list
+val xv_list1_primitive_type_sep_comma : AltErgoLib.Parsed.ppure_type list
+val xv_list1_named_ident_sep_comma : (string * string) list
+val xv_list1_multi_logic_binder :
+  ((string * string) list * AltErgoLib.Parsed.ppure_type) list
+val xv_list1_match_cases :
+  (AltErgoLib.Parsed.pattern * AltErgoLib.Parsed.lexpr) list
+val xv_list1_logic_binder_sep_comma :
+  (AltErgoLib.Loc.t * string * AltErgoLib.Parsed.ppure_type) list
+val xv_list1_lexpr_sep_pv : AltErgoLib.Parsed.lexpr list
+val xv_list1_lexpr_sep_comma : AltErgoLib.Parsed.lexpr list
+val xv_list1_lexpr_or_dom_sep_comma : AltErgoLib.Parsed.lexpr list
+val xv_list1_label_sep_PV : (string * AltErgoLib.Parsed.ppure_type) list
+val xv_list1_label_expr_sep_PV : (string * AltErgoLib.Parsed.lexpr) list
+val xv_list1_decl : AltErgoLib.Parsed.file
+val xv_list1_constructors_sep_bar :
+  (string * (string * AltErgoLib.Parsed.ppure_type) list) list
+val xv_list0_primitive_type_sep_comma : AltErgoLib.Parsed.ppure_type list
+val xv_list0_logic_binder_sep_comma :
+  (AltErgoLib.Loc.t * string * AltErgoLib.Parsed.ppure_type) list
+val xv_list0_lexpr_sep_comma : AltErgoLib.Parsed.lexpr list
+val xv_lexpr_parser : AltErgoLib.Parsed.lexpr
+val xv_lexpr_or_dom : AltErgoLib.Parsed.lexpr
+val xv_lexpr : AltErgoLib.Parsed.lexpr
+val xv_let_binders : (string * AltErgoLib.Parsed.lexpr) list
+val xv_label_with_type : string * AltErgoLib.Parsed.ppure_type
+val xv_ident : string
+val xv_filters : AltErgoLib.Parsed.lexpr list
+val xv_file_parser : AltErgoLib.Parsed.file
+val xv_decl : AltErgoLib.Parsed.decl
+val xv_bound : AltErgoLib.Parsed.lexpr
+val xv_array_assignements :
+  (AltErgoLib.Parsed.lexpr * AltErgoLib.Parsed.lexpr) list
+val xv_array_assignement : AltErgoLib.Parsed.lexpr * AltErgoLib.Parsed.lexpr
+val xv_and_recursive_opt :
+  (AltErgoLib.Loc.t * string list * string *
+   (string * (string * AltErgoLib.Parsed.ppure_type) list) list)
+  list
+val xv_algebraic_args : (string * AltErgoLib.Parsed.ppure_type) list
+val xv_ac_modifier : AltErgoLib.Symbols.name_kind
+val menhir_end_marker : int
