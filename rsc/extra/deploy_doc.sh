@@ -16,7 +16,7 @@ cd $git_repo
 
 # Generate documentation, or rather check that it
 # has correctly been built.
-(cd src && make doc)
+make doc
 
 # Generate version index page
 (cd rsc/extra && asciidoc index.adoc)
@@ -30,5 +30,5 @@ mkdir -p ./$VERSION
 
 # Copy doc to the right locations
 cp rsc/extra/index.html ./
-cp -r src/_build/default/_doc/_html/* ./$VERSION/
+cp -r _build/default/_doc/_html/* ./$VERSION/
 
