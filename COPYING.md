@@ -1,1 +1,3 @@
-See LICENSE.md
+# Copying
+
+See [LICENSE.md](LICENSE.md)

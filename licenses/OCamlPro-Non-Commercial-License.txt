@@ -1,6 +1,6 @@
 OCamlPro Non-Commercial Purpose License, version 1
 
-Copyright 2013-2014 by OCamlPro.
+Copyright 2013-2020 by OCamlPro.
 
 All rights reserved.
 

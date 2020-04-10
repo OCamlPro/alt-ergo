@@ -1,4 +1,4 @@
-## Copyright
+# Copyright
 
 These software are distributed in the hope that they will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -11,7 +11,7 @@ doubt, please contact us to clarify licensing.
 
 The resources are licensed as follows:
 
-### OCaml source files and Alt-Ergo preludes
+## OCaml source files and Alt-Ergo preludes
 
 Some of these files are Copyright (C) 2006-2013 --- CNRS - INRIA -
 Universite Paris Sud, and Copyright (C) 2013-2017 --- OCamlPro SAS.
@@ -25,14 +25,13 @@ license indicated in [License.OCamlPro](licenses/License.OCamlPro).
 Note that some plugins may have different licenses. For instance the
 sources of the AB-Why3 plugin are governed by the [GNU Lesser General
 Public License version 2.1](licenses/LGPL-License.txt), and are Copyright (C) 2010-2017 INRIA -
-CNRS - Paris-Sud University and Copyright (C) 2018 OCamlPro SAS (see
-plugins/AB-Why3/README.md.
+CNRS - Paris-Sud University and Copyright (C) 2018 OCamlPro SAS (see the AB-Why3 [README](src/plugins/AB-Why3/README.md)).
 
 You may want to refer to the header of each file to know under which
 license it is distributed.
 
 
-### Binaries generated from the source files
+## Binaries generated from the source files
 
 The binaries (tools, plugins, ...) that are generated from the OCaml
 source files are Copyright (C) --- OCamlPro SAS. They are distributed
