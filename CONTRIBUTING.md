@@ -16,7 +16,7 @@ The following terms apply to all such contributions:
 
 * Pull request should be rebased and up to date from the `base` branch to be merged.
 
-* All commits will be squashed into one when merged into the `base` branch. A PR with only one commit is appreciated since it facilitates the review.
+* All commits will be squashed into one when merged into the `base` branch. A PR with only one commit is appreciated if the modification are minimal. Else, we ask for a clean commit history with relevant messages since it facilitates the review.
 
 ## Legal Guidelines
 
