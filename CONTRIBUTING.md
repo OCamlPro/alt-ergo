@@ -2,7 +2,7 @@
 
 ## Pull Request Guidelines
 
-External contributions to Alt-Ergo may be proposed using git's standard pull request mechanism.
+External contributions to Alt-Ergo may be proposed using git's standard pull request mechanism from your `base` branch to our `target` one ( `next` by default).
 The following terms apply to all such contributions:
 
 * We require all pull requests to pass :
