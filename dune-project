@@ -9,7 +9,7 @@
 (maintainers "Alt-Ergo developers")
 (source (github OCamlPro/alt-ergo))
 ; Not specifying bug_reports since it defaults to the github issue page
-(homepage "http://alt-ergo.ocamlpro.com/")
+(homepage "https://alt-ergo.ocamlpro.com/")
 (documentation "https://ocamlpro.github.io/alt-ergo/dev/")
 
 (using menhir 2.0)
@@ -22,7 +22,7 @@
  (description "\
 Alt-Ergo is an automatic theorem prover of mathematical formulas. It was developed at LRI, and is now maintained at OCamlPro.
 
-See more details on http://alt-ergo.ocamlpro.com/")
+See more details on https://alt-ergo.ocamlpro.com/")
  (depends
   (ocaml (>= 4.04.0))
   (dune (>= 2.0))
@@ -42,7 +42,7 @@ Altgr-Ergo is the graphical interface for the Alt-Ergo SMT prover.
 
 Alt-Ergo is an automatic theorem prover of mathematical formulas. It was developed at LRI, and is now maintained at OCamlPro.
 
-See more details on http://alt-ergo.ocamlpro.com/"
+See more details on https://alt-ergo.ocamlpro.com/"
  )
  (license "OCamlPro Non-Commercial Purpose License, version 1")
 
