@@ -1,3 +1,5 @@
 # Copying
 
-See [LICENSE.md](LICENSE.md)
+See [LICENSE.md]
+
+[LICENSE.md]: LICENSE.md

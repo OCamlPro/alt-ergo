@@ -103,10 +103,11 @@ The steps below will build and install additional plugins (extension
   2. The AB-Why3 plugin is currently built and installed
   at the same time as the alt-ergo binary.
 
-You can find more information [here](plugins/AB-Why3/README.md)
+You can find more information in the [AB-Why3 README]
 
 ### The profiler plugin
 
 This plugin has been "inlined" in Alt-Ergo sources.
 
 
+[AB-Why3 README]: plugins/AB-Why3/README.md
