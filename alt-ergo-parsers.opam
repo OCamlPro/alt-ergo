@@ -10,7 +10,7 @@ Alt-Ergo is an automatic theorem prover of mathematical formulas. It was develop
 See more details on http://alt-ergo.ocamlpro.com/"""
 maintainer: ["Alt-Ergo developers"]
 authors: ["Alt-Ergo developers"]
-homepage: "http://alt-ergo.ocamlpro.com/"
+homepage: "https://alt-ergo.ocamlpro.com/"
 doc: "https://ocamlpro.github.io/alt-ergo/dev/"
 bug-reports: "https://github.com/OCamlPro/alt-ergo/issues"
 depends: [
