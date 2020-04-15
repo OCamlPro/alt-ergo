@@ -45,9 +45,10 @@ Please refer to our [contributing guidelines].
 
 ## Support
 
-See [Alt-Ergo @ OCamlPro] or contact us at `alt-ergo@ocamlpro.com` for more details.
+See [Alt-Ergo @ OCamlPro] or contact us at [alt-ergo@ocamlpro.com] for more details.
 
 [Alt-Ergo]: https://alt-ergo.ocamlpro.com
+[alt-ergo@ocamlpro.com]: mailto:alt-ergo@ocamlpro.com
 [Alt-Ergo @ OCamlPro]: https://alt-ergo.ocamlpro.com/#services
 [Alt-Ergo Users' Club]: https://alt-ergo.ocamlpro.com/#club
 [Apache Software License version 2.0]: ./licenses/Apache-License-2.0.txt
