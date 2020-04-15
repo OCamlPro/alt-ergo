@@ -2,7 +2,7 @@
 
 ## Library
 
-Since version 2.2.0, Alt-Ergo's library is also compiled and installed. A small example using the API is given [here](examples/lib_usage.ml). You can also find some documentation [here](https://ocamlpro.github.io/alt-ergo/dev/alt-ergo-lib/index.html)
+Since version 2.2.0, Alt-Ergo's library is also compiled and installed. You can find this [small example] using the API. You can also find some [documentation]
 
 ## Run
 
@@ -72,3 +72,6 @@ For instance, on a Linux system, assuming the `alt-ergo` executable is at some p
 On windows, a binary at path `Z:\some\path\bin\alt-ergo` will look for preludes and
 plugins in `Z:\some\path\share\alt-ergo\preludes` and
 `Z:\some\path\share\alt-ergo\plugins` respectively.
+
+[small example]: examples/lib_usage.ml
+[documentation]: https://ocamlpro.github.io/alt-ergo/dev/alt-ergo-lib/index.html

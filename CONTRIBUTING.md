@@ -20,4 +20,7 @@ The following terms apply to all such contributions:
 
 ## Legal Guidelines
 
-In addition to agreeing to the terms of the Alt-Ergo's [License](LICENSE.md), we ask our contributors to sign the Contributor License Agreement (CLA), available [here](https://www.ocamlpro.com/files/CLA-OCamlPro-corporate.txt).
+In addition to agreeing to the terms of the Alt-Ergo's [License], we ask our contributors to sign the [Contributor License Agreement (CLA)].
+
+[License]: LICENSE.md
+[Contributor License Agreement (CLA)]: https://www.ocamlpro.com/files/CLA-OCamlPro-corporate.txt
