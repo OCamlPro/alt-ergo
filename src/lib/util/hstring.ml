@@ -37,7 +37,7 @@ module S =
     let eq s1 s2 = String.equal s1.content s2.content
     let set_id n v = {v with id = n}
     let initial_size = 9001
-    let disable_weaks () = Options.disable_weaks ()
+    let disable_weaks () = Options.get_disable_weaks ()
   end)
 
 let make s = S.make {content = s; id = - 1}

@@ -41,7 +41,7 @@ module SE = E.Set
 let make_adequate_app s l ty =
   let open Fpa_rounding in
   match s with
-  | Sy.Name (hs, Sy.Other) when Options.use_fpa() ->
+  | Sy.Name (hs, Sy.Other) when Options.get_use_fpa() ->
     let s, l  =
       match Hstring.view hs, l with
       | "float", [_;_;_;_] -> Sy.Op Sy.Float, l
@@ -146,7 +146,7 @@ let clean_trigger ~in_theory name trig =
       if sz_l = sz_s then trig
       else
         let trig' = ME.fold (fun t _ acc -> t :: acc) res [] in
-        if verbose () then begin
+        if get_verbose () then begin
           fprintf fmt "@.AXIOM: %s@." name;
           fprintf fmt "from multi-trig of sz %d : %a@." sz_l E.print_list trig;
           fprintf fmt "to   multi-trig of sz %d : %a@." sz_s E.print_list trig';

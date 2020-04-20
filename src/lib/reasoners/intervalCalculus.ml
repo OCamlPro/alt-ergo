@@ -133,7 +133,7 @@ module Sim_Wrap = struct
     | Sim.Core.Sat _ -> ()
     | Sim.Core.Unsat ex ->
       let ex = Lazy.force ex in
-      if debug_fm() then
+      if get_debug_fm() then
         fprintf fmt "[fm] simplex derived unsat: %a@." Explanation.print ex;
       raise (Ex.Inconsistent (ex, env.classes))
 
@@ -146,7 +146,7 @@ module Sim_Wrap = struct
 
 
   let solve env i =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Simplex Timers.F_solve;
         let res = solve env i in
@@ -210,7 +210,7 @@ module Sim_Wrap = struct
   (* not used for the moment *)
   let case_split =
     let gen_cs x n s orig =
-      if debug_fm () then
+      if get_debug_fm () then
         fprintf fmt "[Sim_CS-%d] %a = %a of size %a@."
           orig X.print x Q.print n  Q.print s;
       let ty = X.type_info x in
@@ -293,7 +293,7 @@ module Sim_Wrap = struct
         let {Sim.Core.max_v; is_le; reason} = Lazy.force mx in
         set_new_bound reason (Q.mult q max_v) ~is_le:is_le i
     in
-    if debug_fpa()>=2 then fprintf fmt "#infer bounds for %a@." P.print p;
+    if get_debug_fpa()>=2 then fprintf fmt "#infer bounds for %a@." P.print p;
     let ty = P.type_info p in
     let sim = if ty == Ty.Tint then env.int_sim else env.rat_sim in
     let i = I.undefined ty in
@@ -302,7 +302,7 @@ module Sim_Wrap = struct
     assert (sim.Sim.Core.status == Sim.Core.SAT);
     let i = best_bnd lp ~upper:true sim i I.new_borne_sup in
     let i = best_bnd lp ~upper:false sim i I.new_borne_inf in
-    if debug_fpa () >= 2 then
+    if get_debug_fpa () >= 2 then
       fprintf fmt "## inferred bounds for %a: %a@." P.print p I.print i;
     i
 
@@ -407,23 +407,23 @@ end
    normalized polys *)
 let generic_find xp env =
   let is_mon = is_alien xp in
-  if debug_fm () then
+  if get_debug_fm () then
     fprintf fmt "generic_find: %a ... " X.print xp;
   try
     if not is_mon then raise Not_found;
     let i, use = MX.n_find xp env.monomes in
-    if debug_fm () then fprintf fmt "found@.";
+    if get_debug_fm () then fprintf fmt "found@.";
     i, use, is_mon
   with Not_found ->
     (* according to this implem, it means that we can find aliens in polys
        but not in monomes. FIX THIS => an interval of x in monomes and in
        polys may be differents !!! *)
-    if debug_fm () then
+    if get_debug_fm () then
       fprintf fmt "not_found@.";
     let p0 = poly_of xp in
     let p, c = P.separate_constant p0 in
     let p, c0, d = P.normal_form_pos p in
-    if debug_fm() then
+    if get_debug_fm() then
       fprintf fmt "normalized into %a + %a * %a@."
         Q.print c Q.print d P.print p;
     assert (Q.sign d <> 0 && Q.sign c0 = 0);
@@ -431,7 +431,7 @@ let generic_find xp env =
     let ip =
       try MP.n_find p env.polynomes with Not_found -> I.undefined ty
     in
-    if debug_fm() then
+    if get_debug_fm() then
       fprintf fmt "scaling %a by %a@." I.print ip Q.print d;
     let ip = I.affine_scale ~const:c ~coef:d ip in
     ip, SX.empty, is_mon
@@ -460,7 +460,7 @@ let generic_add x j use is_mon env =
 module Debug = struct
 
   let assume a expl =
-    if debug_fm () then begin
+    if get_debug_fm () then begin
       fprintf fmt "[fm] We assume: %a@." LR.print (LR.make a);
       fprintf fmt "explanations: %a@." Explanation.print expl
     end
@@ -469,7 +469,7 @@ module Debug = struct
     SX.iter (fprintf fmt "%a, " X.print) use
 
   let env env =
-    if debug_fm () then begin
+    if get_debug_fm () then begin
       fprintf fmt "------------ FM: inequations-------------------------@.";
       MPL.iter
         (fun a { Oracle.ple0 = p; is_le = is_le; _ } ->
@@ -492,7 +492,7 @@ module Debug = struct
     end
 
   let implied_equalities l =
-    if debug_fm () then
+    if get_debug_fm () then
       begin
         fprintf fmt "[fm] %d implied equalities@." (List.length l);
         List.iter
@@ -502,19 +502,19 @@ module Debug = struct
       end
 
   let case_split r1 r2 =
-    if debug_fm () then
+    if get_debug_fm () then
       fprintf fmt "[case-split] %a = %a@." X.print r1 X.print r2
 
   let no_case_split s =
-    if debug_fm () then fprintf fmt "[case-split] %s : nothing@." s
+    if get_debug_fm () then fprintf fmt "[case-split] %s : nothing@." s
 
 
   let inconsistent_interval expl =
-    if debug_fm () then
+    if get_debug_fm () then
       fprintf fmt "interval inconsistent %a@." Explanation.print expl
 
   let added_inequation kind ineq =
-    if debug_fm () then begin
+    if get_debug_fm () then begin
       fprintf fmt "[fm] I derived the (%s) inequality: %a %s 0@."
         kind P.print ineq.Oracle.ple0
         (if ineq.Oracle.is_le then "<=" else "<");
@@ -528,20 +528,20 @@ module Debug = struct
     end
 
   let tighten_interval_modulo_eq_begin p1 p2 =
-    if debug_fm () then begin
+    if get_debug_fm () then begin
       fprintf fmt "@.[fm] tighten intervals modulo eq: %a = %a@."
         P.print p1 P.print p2;
     end
 
   let tighten_interval_modulo_eq_middle p1 p2 i1 i2 j =
-    if debug_fm () then begin
+    if get_debug_fm () then begin
       fprintf fmt "  %a has interval %a@." P.print p1 I.print i1;
       fprintf fmt "  %a has interval %a@." P.print p2 I.print i2;
       fprintf fmt "  intersection is %a@." I.print j;
     end
 
   let tighten_interval_modulo_eq_end p1 p2 b1 b2 =
-    if debug_fm () then begin
+    if get_debug_fm () then begin
       if b1 then fprintf fmt "  > improve interval of %a@.@." P.print p1;
       if b2 then fprintf fmt "  > improve interval of %a@.@." P.print p2;
       if not b1 && not b2 then fprintf fmt "  > no improvement@.@."
@@ -1209,11 +1209,11 @@ let polynomes_relational_deductions env p_rels =
 
 
 let fm uf are_eq rclass_of env eqs =
-  if debug_fm () then fprintf fmt "[fm] in fm/fm-simplex@.";
+  if get_debug_fm () then fprintf fmt "[fm] in fm/fm-simplex@.";
   Options.tool_req 4 "TR-Arith-Fm";
   let ineqs =
     MPL.fold (fun _ v acc ->
-        if Options.enable_assertions() then
+        if Options.get_enable_assertions() then
           assert (is_normalized_poly uf v.Oracle.ple0);
         (better_bound_from_intervals env v) :: acc
       ) env.inequations []
@@ -1233,7 +1233,7 @@ let fm uf are_eq rclass_of env eqs =
          env, eqs
       )(env, eqs) pbs
   in
-  if debug_fm () then fprintf fmt "[fm] out fm/fm-simplex@.";
+  if get_debug_fm () then fprintf fmt "[fm] out fm/fm-simplex@.";
   res
 
 let is_num r =
@@ -1573,7 +1573,7 @@ let assume ~query env uf la =
     else
       (* we only call fm when new ineqs are assumed *)
       let env, eqs =
-        if new_ineqs && not (Options.no_fm ()) then
+        if new_ineqs && not (Options.get_no_fm ()) then
           fm uf are_eq rclass_of env eqs
         else env, eqs
       in
@@ -1612,7 +1612,7 @@ let query env uf a_ex =
 
 
 let assume env uf la =
-  if Options.timers() then
+  if Options.get_timers() then
     try
       Timers.exec_timer_start Timers.M_Arith Timers.F_assume;
       let res =assume ~query:false env uf la in
@@ -1624,7 +1624,7 @@ let assume env uf la =
   else assume ~query:false env uf la
 
 let query env uf la =
-  if Options.timers() then
+  if Options.get_timers() then
     try
       Timers.exec_timer_start Timers.M_Arith Timers.F_query;
       let res = query env uf la in
@@ -1692,8 +1692,8 @@ let check_size for_model env res =
     match res with
     | [] -> res
     | [_, _, Th_util.CS (Th_util.Th_arith, s)] ->
-      if Numbers.Q.compare (Q.mult s env.size_splits) (max_split ()) <= 0 ||
-         Numbers.Q.sign  (max_split ()) < 0 then res
+      if Numbers.Q.compare (Q.mult s env.size_splits) (get_max_split ()) <= 0 ||
+         Numbers.Q.sign  (get_max_split ()) < 0 then res
       else []
     | _ -> assert false
 
@@ -1923,7 +1923,7 @@ let model_from_simplex sim is_int env uf =
          else
            let t = fct (Q.to_string q) in
            let r, _ = X.make t in
-           if debug_interpretation() then
+           if get_debug_interpretation() then
              fprintf fmt "[%s simplex] %a = %a@."
                (if is_int then "integer" else "rational") X.print v X.print r;
            (v, r, Explanation.empty) :: acc
@@ -1984,7 +1984,7 @@ let best_interval_of optimized env p =
           let env = MP.n_add p k i env in
           Sim_Wrap.solve env 1, k
       with I.NotConsistent expl ->
-        if true (*debug_fpa() >= 2*) then begin
+        if true (*get_debug_fpa() >= 2*) then begin
           [@ocaml.ppwarning "TODO: find an example triggering this case!"]
           fprintf fmt "TODO: should check that this is correct !!!!@."
         end;
@@ -2007,7 +2007,7 @@ let integrate_mapsTo_bindings sbs maps_to =
            let mk, _ = X.make t in
            match P.is_const (poly_of mk) with
            | None ->
-             if debug_fpa() >= 2 then begin
+             if get_debug_fpa() >= 2 then begin
                fprintf fmt "bad semantic trigger %a |-> %a"
                  Sy.print x E.print tx;
                fprintf fmt " left-hand side is not a constant!@.";
@@ -2056,7 +2056,7 @@ let extend_with_domain_substitution =
   fun (sbt, sbty) idoms ->
     try Some (aux idoms sbt, sbty)
     with Exit ->
-      if debug_fpa() >=2 then
+      if get_debug_fpa() >=2 then
         fprintf fmt "[IC] extend_with_domain_substitution failed !@.";
       None
 
@@ -2135,7 +2135,7 @@ let semantic_matching lem_name tr sbt env uf optimized =
     end
 
 let record_this_instance f accepted lorig =
-  if Options.profiling() then
+  if Options.get_profiling() then
     match E.form_view lorig with
     | E.Lemma { E.name; loc; _ } ->
       Profiling.new_instance_of name f loc accepted
@@ -2143,7 +2143,7 @@ let record_this_instance f accepted lorig =
     | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
 
 let profile_produced_terms menv lorig nf s trs =
-  if Options.profiling() then
+  if Options.get_profiling() then
     let st0 =
       List.fold_left (fun st t -> E.sub_terms st (E.apply_subst s t))
         SE.empty trs
@@ -2178,7 +2178,7 @@ let new_facts_for_axiom
                 *)
           let lem_name = E.name_of_lemma orig in
           let s = sbs, sty in
-          if debug_fpa () >= 2 then begin
+          if get_debug_fpa () >= 2 then begin
             fprintf fmt "[IC] try to extend synt sbt %a of ax %a@."
               (Symbols.Map.print E.print) sbs E.print orig;
           end;
@@ -2190,18 +2190,18 @@ let new_facts_for_axiom
             env, acc
 
           | None when not (terms_linear_dep env torig) ->
-            if debug_fpa () >= 2 then
+            if get_debug_fpa () >= 2 then
               fprintf fmt "semantic matching failed(1)@.";
             env, acc
 
           | None ->
             match semantic_matching lem_name tr s env uf optimized with
             | env, None ->
-              if debug_fpa () >= 2 then
+              if get_debug_fpa () >= 2 then
                 fprintf fmt "semantic matching failed(2)@.";
               env, acc
             | env, Some sbs ->
-              if debug_fpa () >= 2 then
+              if get_debug_fpa () >= 2 then
                 fprintf fmt "semantic matching succeeded:@.%a@."
                   (Symbols.Map.print E.print) (fst sbs);
               let nf = E.apply_subst sbs f in
@@ -2230,7 +2230,7 @@ let new_facts_for_axiom
                 in
                 profile_produced_terms menv lorig nf s tr.E.content;
                 let dep =
-                  if not (Options.unsat_core() || Options.profiling())
+                  if not (Options.get_unsat_core() || Options.get_profiling())
                   then
                     dep
                   else Ex.union dep (Ex.singleton (Ex.Dep lorig))
@@ -2245,12 +2245,12 @@ let new_facts_for_axiom
 
 let syntactic_matching menv env uf _selector =
   let mconf =
-    {Util.nb_triggers = nb_triggers ();
-     no_ematching = no_ematching();
-     triggers_var = triggers_var ();
+    {Util.nb_triggers = get_nb_triggers ();
+     no_ematching = get_no_ematching();
+     triggers_var = get_triggers_var ();
      use_cs = false;
      backward = Util.Normal;
-     greedy = greedy ();
+     greedy = get_greedy ();
     }
   in
   let synt_match =
@@ -2260,7 +2260,7 @@ let syntactic_matching menv env uf _selector =
          let forms = ME.singleton f (0 (*0 = age *), dep) in
          let menv = EM.add_triggers mconf menv forms in
          let res = EM.query mconf menv uf in
-         if debug_fpa () >= 2 then begin
+         if get_debug_fpa () >= 2 then begin
            let cpt = ref 0 in
            List.iter (fun (_, l) -> List.iter (fun _ -> incr cpt) l) res;
            fprintf fmt "syntactic matching of Ax %s: got %d substs@."
@@ -2272,7 +2272,7 @@ let syntactic_matching menv env uf _selector =
   {env with syntactic_matching = synt_match}
 
 let instantiate ~do_syntactic_matching match_terms env uf selector =
-  if debug_fpa () >= 2 then fprintf fmt "entering IC.instantiate@.";
+  if get_debug_fpa () >= 2 then fprintf fmt "entering IC.instantiate@.";
   let optimized = ref (SP.empty) in
   let t_infos, t_subterms = match_terms in
   let menv = EM.make ~max_t_depth:100 t_infos t_subterms [] in
@@ -2287,7 +2287,7 @@ let instantiate ~do_syntactic_matching match_terms env uf selector =
            ~do_syntactic_matching menv uf selector optimized substs accu
       )(env, []) env.syntactic_matching
   in
-  if debug_fpa () >= 2 then
+  if get_debug_fpa () >= 2 then
     fprintf fmt "IC.instantiate: %d insts generated@." (List.length insts);
   env, insts
 
@@ -2350,7 +2350,7 @@ let assume_th_elt t th_elt dep =
   | Util.NIA | Util.NRA | Util.FPA ->
     let th_form = separate_semantic_triggers ax_form in
     let th_elt = {th_elt with Expr.ax_form} in
-    if debug_fpa () >= 2 then
+    if get_debug_fpa () >= 2 then
       fprintf fmt "[IC][Theory %s][%s] %a@."
         th_name kd_str E.print th_form;
     assert (not (ME.mem th_form t.th_axioms));
@@ -2359,7 +2359,7 @@ let assume_th_elt t th_elt dep =
   | _ -> t
 
 let instantiate ~do_syntactic_matching env uf selector =
-  if Options.timers() then
+  if Options.get_timers() then
     try
       Timers.exec_timer_start Timers.M_Arith Timers.F_instantiate;
       let res = instantiate ~do_syntactic_matching env uf selector in

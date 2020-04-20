@@ -94,7 +94,7 @@ let congr_close_up g p touched =
     (find p g) touched
 
 let print g =
-  if debug_use () then
+  if get_debug_use () then
     begin
       let sterms fmt = SE.iter (fprintf fmt "%a " E.print) in
       let satoms fmt =

@@ -107,7 +107,7 @@ let empty _ =
 module Debug = struct
 
   let assume fmt la =
-    if debug_arrays () && la != [] then begin
+    if get_debug_arrays () && la != [] then begin
       fprintf fmt "[Arrays.Rel] We assume@.";
       L.iter (fun (a,_,_,_) -> fprintf fmt "  > %a@."
                  LR.print (LR.make a)) la;
@@ -122,7 +122,7 @@ module Debug = struct
      TBS.iter (fun k v -> fprintf fmt "%a --> %a@." E.print k print_sets v)
 
      let env fmt env =
-     if debug_arrays () then begin
+     if get_debug_arrays () then begin
       fprintf fmt "-- gets ----------------------------------------@.";
       print_gets fmt env.gets;
       fprintf fmt "-- tabs of sets --------------------------------@.";
@@ -134,7 +134,7 @@ module Debug = struct
   *)
 
   let new_equalities fmt st =
-    if debug_arrays () then
+    if get_debug_arrays () then
       begin
         fprintf fmt "[Arrays] %d implied equalities@."
           (Conseq.cardinal st);
@@ -143,11 +143,11 @@ module Debug = struct
       end
 
   let case_split a =
-    if debug_arrays () then
+    if get_debug_arrays () then
       fprintf fmt "[Arrays.case-split] %a@." LR.print a
 
   let case_split_none () =
-    if debug_arrays () then fprintf fmt "[Arrays.case-split] Nothing@."
+    if get_debug_arrays () then fprintf fmt "[Arrays.case-split] Nothing@."
 
 end
 (*BISECT-IGNORE-END*)
@@ -421,7 +421,7 @@ let assume env uf la =
 
 
 let assume env uf la =
-  if Options.timers() then
+  if get_timers() then
     try
       Timers.exec_timer_start Timers.M_Arrays Timers.F_assume;
       let res =assume env uf la in

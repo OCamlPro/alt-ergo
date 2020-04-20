@@ -300,7 +300,7 @@ module H = struct
 
   let initial_size = 9001
 
-  let disable_weaks () = Options.disable_weaks ()
+  let disable_weaks () = Options.get_disable_weaks ()
 end
 
 module Labels = Hashtbl.Make(H)
@@ -396,7 +396,7 @@ let rec print_silent fmt t =
         fprintf fmt "@[(%a \\/@ %a)@]" print_silent f1 print_silent f2
 
       | Sy.F_Lemma, [], B_lemma { user_trs ; main ; name ; binders; _ } ->
-        if verbose () then
+        if get_verbose () then
           fprintf fmt "(lemma: %s forall %a[%a].@  %a)"
             name
             print_binders binders
@@ -415,7 +415,7 @@ let rec print_silent fmt t =
     let x = match bind with B_let x -> x | _ -> assert false in
     fprintf fmt
       "(let%a %a =@ %a in@ %a)"
-      (fun fmt x -> if Options.verbose () then
+      (fun fmt x -> if Options.get_verbose () then
           fprintf fmt " [sko = %a]" print x.let_sko) x
       Sy.print x.let_v print x.let_e print_silent x.in_e
 
@@ -524,7 +524,7 @@ and print_verbose fmt t =
   fprintf fmt "(%a : %a)" print_silent t Ty.print t.ty
 
 and print fmt t =
-  if Options.debug () then print_verbose fmt t
+  if Options.get_debug () then print_verbose fmt t
   else print_silent fmt t
 
 and print_list_sep sep fmt = function
@@ -881,7 +881,7 @@ let mk_forall_ter =
         let q = match form_view lem with Lemma q -> q | _ -> assert false in
         assert (equal q.main f (* should be true *));
         if compare_quant q new_q <> 0 then raise Exit;
-        if debug_warnings () then
+        if get_debug_warnings () then
           eprintf "[warning] (sub) axiom %s replaced with %s@." name q.name;
         lem
       with Not_found | Exit ->
@@ -1087,7 +1087,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
         assert (
           (* invariant: s_t does not contain other free vars than
              those of t, and binders cannot be free vars of t *)
-          not (Options.enable_assertions ()) ||
+          not (Options.get_enable_assertions ()) ||
           SMap.for_all (fun sy _ -> not (SMap.mem sy s_t)) binders
         );
         let main = apply_subst_aux s main in
@@ -1306,7 +1306,7 @@ let apply_subst =
       nf
 
 let apply_subst s t =
-  if Options.timers() then
+  if Options.get_timers() then
     try
       Timers.exec_timer_start Timers.M_Expr Timers.F_apply_subst;
       let res = apply_subst s t in
@@ -1442,7 +1442,7 @@ let cand_is_more_general cand other =
   with Exit -> false
 
 let resolution_triggers ~is_back { main = f; binders; _ } =
-  if Options.no_backward () then []
+  if Options.get_no_backward () then []
   else
     let free_vty = f.vty in
     let cand =
@@ -2229,7 +2229,7 @@ let rec compile_match mk_destr mk_tester e cases accu =
 
 (* TO BE REMOVED *)
 let debug_compile_match e cases res =
-  if debug_adt () then begin
+  if get_debug_adt () then begin
     fprintf fmt "compilation of: match %a with@." print e;
     let p_list_vars fmt l =
       match l with

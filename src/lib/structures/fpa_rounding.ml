@@ -20,7 +20,7 @@ module Q = Numbers.Q
 module Z = Numbers.Z
 
 let is_rounding_mode t =
-  Options.use_fpa() &&
+  Options.get_use_fpa() &&
   match E.term_view t with
   | E.Term { E.ty = Ty.Tsum (hs, _); _ } ->
     String.compare (Hs.view hs) "fpa_rounding_mode" = 0

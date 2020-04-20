@@ -258,97 +258,133 @@ val set_verbose : bool -> unit
 (** Updates the filename to be parsed and sets a js_mode flag *)
 val set_file_for_js : string -> unit
 
+(** Setters used by parse_command *)
+
+val set_case_split_policy : Util.case_split_policy -> unit
+val set_enable_adts_cs : bool -> unit
+val set_replay : bool -> unit
+val set_replay_all_used_context : bool -> unit
+val set_replay_used_context : bool -> unit
+val set_answers_with_loc : bool -> unit
+val set_infer_input_format : 'a option -> unit
+val set_infer_output_format : 'a option -> unit
+val set_parsers : string list -> unit
+val set_preludes : string list -> unit
+val set_disable_weaks : bool -> unit
+val set_enable_assertions : bool -> unit
+val set_timelimit_interpretation : float -> unit
+val set_timelimit_per_goal : bool -> unit
+val set_cumulative_time_profiling : bool -> unit
+val set_profiling_period : float -> unit
+val set_profiling_plugin : string -> unit
+val set_instantiate_after_backjump : bool -> unit
+val set_max_multi_triggers_size : int -> unit
+val set_arith_matching : bool -> unit
+val set_cdcl_tableaux_inst : bool -> unit
+val set_cdcl_tableaux_th : bool -> unit
+val set_disable_flat_formulas_simplification : bool -> unit
+val set_enable_restarts : bool -> unit
+val set_minimal_bj : bool -> unit
+val set_no_backjumping : bool -> unit
+val set_no_backward : bool -> unit
+val set_no_decisions : bool -> unit
+val set_no_decisions_on : Util.SS.t -> unit
+val set_no_sat_learning : bool -> unit
+val set_sat_plugin : string -> unit
+val set_sat_solver : Util.sat_solver -> unit
+val set_tableaux_cdcl : string -> unit
+
 (** {2 Getter functions} *)
 
 (** {3 Getters for debug flags} *)
 (** Default value for all the debug flags is [false] *)
 
 (** Get the debugging flag. *)
-val debug : unit -> bool
+val get_debug : unit -> bool
 
 (** Get the debugging flag of warnings. *)
-val debug_warnings : unit -> bool
+val get_debug_warnings : unit -> bool
 
 (** Get the debugging flag of cc. *)
-val debug_cc : unit -> bool
+val get_debug_cc : unit -> bool
 
 (** Prints some debug info about the GC's activity. *)
-val debug_gc : unit -> bool
+val get_debug_gc : unit -> bool
 
 (** Get the debugging flag of use. *)
-val debug_use : unit -> bool
+val get_debug_use : unit -> bool
 
 (** Get the debugging flag of uf. *)
-val debug_uf : unit -> bool
+val get_debug_uf : unit -> bool
 
 (** Get the debugging flag of inequalities. *)
-val debug_fm : unit -> bool
+val get_debug_fm : unit -> bool
 
 (** Get the debugging value of floating-point. *)
-val debug_fpa : unit -> int
+val get_debug_fpa : unit -> int
 (** Default to [0]. *)
 
 (** Get the debugging flag of Sum. *)
-val debug_sum : unit -> bool
+val get_debug_sum : unit -> bool
 
 (** Get the debugging flag of ADTs. *)
-val debug_adt : unit -> bool
+val get_debug_adt : unit -> bool
 
 (** Get the debugging flag of Arith (without fm). *)
-val debug_arith : unit -> bool
+val get_debug_arith : unit -> bool
 
 (** Get the debugging flag of bitv. *)
-val debug_bitv : unit -> bool
+val get_debug_bitv : unit -> bool
 
 (** Get the debugging flag of ac. *)
-val debug_ac : unit -> bool
+val get_debug_ac : unit -> bool
 
 (** Get the debugging flag of SAT. *)
-val debug_sat : unit -> bool
+val get_debug_sat : unit -> bool
 
 (** Get the debugging flag of SAT (simple output). *)
-val debug_sat_simple : unit -> bool
+val get_debug_sat_simple : unit -> bool
 
 (** Get the debugging flag of typing. *)
-val debug_typing : unit -> bool
+val get_debug_typing : unit -> bool
 
 (** Get the debugging flag of constructors. *)
-val debug_constr : unit -> bool
+val get_debug_constr : unit -> bool
 
 (** Get the debugging flag of arrays. *)
-val debug_arrays : unit -> bool
+val get_debug_arrays : unit -> bool
 
 (** Get the debugging flag of ite. *)
-val debug_ite : unit -> bool
+val get_debug_ite : unit -> bool
 
 (** Get the debugging flag of types. *)
-val debug_types : unit -> bool
+val get_debug_types : unit -> bool
 
 (** Get the debugging flag of combine. *)
-val debug_combine : unit -> bool
+val get_debug_combine : unit -> bool
 
-(** Replay unsat-cores produced by {!val:unsat_core}.
+(** Replay unsat-cores produced by {!val:get_unsat_core}.
     The option implies {!val:unsat_core} is set to [true]. *)
-val debug_unsat_core : unit -> bool
+val get_debug_unsat_core : unit -> bool
 
 (** Get the debugging flag of case-split analysis. *)
-val debug_split : unit -> bool
+val get_debug_split : unit -> bool
 
 (** Get the debugging flag of E-matching
 
     Possible values are
     {ol {- Disabled} {- Light} {- Full}}
 *)
-val debug_matching : unit -> int
+val get_debug_matching : unit -> int
 
 (** Get the debugging flag of explanations. *)
-val debug_explanations : unit -> bool
+val get_debug_explanations : unit -> bool
 
 (** Get the debugging flag of triggers. *)
-val debug_triggers : unit -> bool
+val get_debug_triggers : unit -> bool
 
 (** Get the debugging flag for interpretation generatation. *)
-val debug_interpretation : unit -> bool
+val get_debug_interpretation : unit -> bool
 
 (** {3 Additional getters} *)
 
@@ -360,115 +396,115 @@ val debug_interpretation : unit -> bool
     {ul {- after-theory-assume} {- before-matching} {- after-matching}}
 
 *)
-val case_split_policy : unit -> Util.case_split_policy
+val get_case_split_policy : unit -> Util.case_split_policy
 (** Default to [after-theory-assume] *)
 
 (** [true] if case-split for Algebraic Datatypes theory is enabled. *)
-val enable_adts_cs : unit -> bool
+val get_enable_adts_cs : unit -> bool
 (** Default to [false] *)
 
-(** Value specifying the maximum size of case-split. *)
-val max_split : unit -> Numbers.Q.t
+(** Valuget_e specifying the maximum size of case-split. *)
+val get_max_split : unit -> Numbers.Q.t
 (** Default to [1_000_000] *)
 
 (** {4 Context options} *)
 
 (** [true] if replay session will be saved in [file_name.agr]. *)
-val replay : unit -> bool
+val get_replay : unit -> bool
 (** Default to [false] *)
 
 (** [true] if replay with all axioms and predicates saved in [.used] files
     of the current directory is enabled. *)
-val replay_all_used_context : unit -> bool
+val get_replay_all_used_context : unit -> bool
 (** Default to [false] *)
 
 (** [true] if replay with axioms and predicates saved in [.used] file
     is enabled. *)
-val replay_used_context : unit -> bool
+val get_replay_used_context : unit -> bool
 (** Default to [false] *)
 
 (** [true] if used axioms and predicates will be saved in a [.used] file.
     This option implies {!val:unsat_core} is set to [true]. *)
-val save_used_context : unit -> bool
+val get_save_used_context : unit -> bool
 (** Default to [false] *)
 
 (** {4 Execution options} *)
 
 (** [true] if the locations of goals is shown when printing solver's answers. *)
-val answers_with_locs  : unit -> bool
+val get_answers_with_locs  : unit -> bool
 (** Default to [true] *)
 
-(** Value of the currently selected parsing and typing frontend. *)
-val frontend : unit -> string
+(** Valuget_e of the currently selected parsing and typing frontend. *)
+val get_frontend : unit -> string
 (** Default to [legacy] *)
 
 (** Value specifying the default input format. Useful when the extension
     does not allow to automatically select a parser (eg. JS mode, GUI
     mode, ...). possible values are
     {ul {- native} {- smtlib2} {- why3}} *)
-val input_format : unit -> input_format
+val get_input_format : unit -> input_format
 (** Default to [Native] *)
 
 (** [true] if Alt-Ergo infers automatically the input format according to the
     file extension. [false] if an input format is set with -i option *)
-val infer_input_format : unit -> bool
+val get_infer_input_format : unit -> bool
 (** Default to [true] *)
 
 (** [true] if the program shall stop after parsing. *)
-val parse_only : unit -> bool
+val get_parse_only : unit -> bool
 (** Default to [false] *)
 
 (** List of registered parsers for Alt-Ergo. *)
-val parsers : unit -> string list
+val get_parsers : unit -> string list
 (** Default to [false] *)
 
 (** List of files that have be loaded as preludes. *)
-val preludes : unit -> string list
+val get_preludes : unit -> string list
 (** Default to [\[\]] *)
 
 (** [true] if the program shall stop after typing. *)
-val type_only : unit -> bool
+val get_type_only : unit -> bool
 (** Default to [false] *)
 
 (** [true] if the program shall stop after SMT2 typing. *)
-val type_smt2 : unit -> bool
+val get_type_smt2 : unit -> bool
 (** Default to [false] *)
 
 (** {4 Internal options} *)
 
 (** [true] if the GC is prevented from collecting hashconsed data structrures
     that are not reachable (useful for more determinism). *)
-val disable_weaks : unit -> bool
+val get_disable_weaks : unit -> bool
 (** Default to [false] *)
 
 (** [true] if verification of some heavy invariants is enabled. *)
-val enable_assertions : unit -> bool
+val get_enable_assertions : unit -> bool
 (** Default to [false] *)
 
 (** {4 Limit options} *)
 
 (** Value specifying the age limit bound. *)
-val age_bound : unit -> int
+val get_age_bound : unit -> int
 (** Default to [50] *)
 
 (** Value specifying the limit above which Fourier-Motzkin variables elimination
     steps that may produce a number of inequalities that is greater than this
     limit are skipped.
     However, unit eliminations are always done. *)
-val fm_cross_limit : unit -> Numbers.Q.t
+val get_fm_cross_limit : unit -> Numbers.Q.t
 (** Default to [10_000] *)
 
 (** Value specifying the maximum number of steps. *)
-val steps_bound : unit -> int
+val get_steps_bound : unit -> int
 (** Default to [-1] *)
 
 (** Value specifying the time limit (not supported on Windows). *)
-val timelimit : unit -> float
+val get_timelimit : unit -> float
 (** Default to [0.] *)
 
 (** Value specifying the time limit for model generation
     (not supported on Windows). *)
-val timelimit_interpretation : unit -> float
+val get_timelimit_interpretation : unit -> float
 (** Default to [1.] (not supported on Windows) *)
 
 (** Value specifying the given timelimit for each goal in case of multiple
@@ -476,7 +512,7 @@ val timelimit_interpretation : unit -> float
     resolution time.
 
     ${i Not relevant for GUI-mode.} *)
-val timelimit_per_goal : unit -> bool
+val get_timelimit_per_goal : unit -> bool
 (** Default to [false] *)
 
 (** {4 Output options} *)
@@ -490,15 +526,15 @@ val timelimit_per_goal : unit -> bool
     Which are used in the two setters below. This option answers
     [true] if the model is set to Default or Complete
 *)
-val model : unit -> bool
+val get_model : unit -> bool
 (** Default to [false] *)
 
 (** [true] if the model is set to complete model *)
-val complete_model : unit -> bool
+val get_complete_model : unit -> bool
 (** Default to [false] *)
 
 (** [true] if the model is set to all models? *)
-val all_models : unit -> bool
+val get_all_models : unit -> bool
 (** Default to [false] *)
 
 (** Experimental support for counter-example generation.
@@ -511,21 +547,21 @@ val all_models : unit -> bool
 
     Note that {!val:max_split} limitation will be ignored in model
     generation phase. *)
-val interpretation : unit -> int
+val get_interpretation : unit -> int
 (** Default to [0] *)
 
 (** Value specifying the default output format. possible values are
     {ul {- native} {- smtlib2} {- why3}}. *)
-val output_format : unit -> output_format
+val get_output_format : unit -> output_format
 (** Default to [Native] *)
 
 (** [true] if Alt-Ergo infers automatically the output format according to the
     the file extension or the input format if set. *)
-val infer_output_format : unit -> bool
+val get_infer_output_format : unit -> bool
 (** Default to [true] *)
 
 (** [true] if experimental support for unsat-cores is on. *)
-val unsat_core : unit -> bool
+val get_unsat_core : unit -> bool
 (** Default to [false] *)
 
 (** {4 Profiling options} *)
@@ -534,59 +570,59 @@ val unsat_core : unit -> bool
 
     Use Ctrl-C to switch between different views and Ctrl + AltGr + \ to exit.
 *)
-val profiling : unit -> bool
+val get_profiling : unit -> bool
 (** Default to [false] *)
 
 (** Value specifying the profiling module frequency.*)
-val profiling_period : unit -> float
+val get_profiling_period : unit -> float
 (** Default to [0.] *)
 
 (** [true] if the time spent in called functions is recorded in callers *)
-val cumulative_time_profiling : unit -> bool
+val get_cumulative_time_profiling : unit -> bool
 (** Default to [false] *)
 
 (** Value specifying which module is used as a profiling plugin. *)
-val profiling_plugin : unit -> string
+val get_profiling_plugin : unit -> string
 (** Default to [false] *)
 
 (** [true] if profiling is set to true (automatically enabled) *)
-val timers : unit -> bool
+val get_timers : unit -> bool
 (** Default to [false] *)
 
 (** [true] if the verbose mode is activated. *)
-val verbose : unit -> bool
+val get_verbose : unit -> bool
 (** Default to [false] *)
 
 (** {4 Quantifier options} *)
 
 (** [true] if all available ground terms are used in instantiation. *)
-val greedy : unit -> bool
+val get_greedy : unit -> bool
 (** Default to [false] *)
 
 (** [true] if a (normal) instantiation round is made after every
     backjump/backtrack.*)
-val instantiate_after_backjump : unit -> bool
+val get_instantiate_after_backjump : unit -> bool
 (** Default to [false] *)
 
 (** Value specifying the max number of terms allowed in multi-triggers. *)
-val max_multi_triggers_size : unit -> int
+val get_max_multi_triggers_size : unit -> int
 (** Default to [4] *)
 
 (** [true] if variables are allowed as triggers. *)
-val triggers_var : unit -> bool
+val get_triggers_var : unit -> bool
 (** Default to [false] *)
 
 (** Value specifying the number of (multi)triggers. *)
-val nb_triggers : unit -> int
+val get_nb_triggers : unit -> int
 (** Default to [2] *)
 
 (** [true] if matching modulo ground equalities is disabled. *)
-val no_ematching : unit -> bool
+val get_no_ematching : unit -> bool
 (** Default to [false] *)
 
 (** [true] if user triggers are ignored except for triggers
     of theories axioms *)
-val no_user_triggers : unit -> bool
+val get_no_user_triggers : unit -> bool
 (** Default to [false] *)
 
 (** [true] if generated substitutions are normalised by matching w.r.t.
@@ -594,22 +630,22 @@ val no_user_triggers : unit -> bool
 
     This means that only terms that are greater (w.r.t. depth)
     than the initial terms of the problem are normalized. *)
-val normalize_instances : unit -> bool
+val get_normalize_instances : unit -> bool
 (** Default to [false] *)
 
 (** {4 SAT options} *)
 
 (** [true] if (the weak form of) matching modulo linear arithmetic
     is disabled. *)
-val arith_matching : unit -> bool
+val get_arith_matching : unit -> bool
 (** Default to [true] *)
 
 (** [true] if backjumping mechanism in the functional SAT solver is disabled. *)
-val no_backjumping : unit -> bool
+val get_no_backjumping : unit -> bool
 (** Default to [false] *)
 
 (** [true] if equivalence classes at each bottom of the SAT are shown. *)
-val bottom_classes : unit -> bool
+val get_bottom_classes : unit -> bool
 (** Default to [false] *)
 
 (** Value specifying which SAT solver is being used.
@@ -626,143 +662,143 @@ val bottom_classes : unit -> bool
     {ul {- tableaux-cdcl} {- tableaux-CDCL} {- Tableaux-cdcl}}}
     }
 *)
-val sat_solver : unit -> Util.sat_solver
+val get_sat_solver : unit -> Util.sat_solver
 (** Default to [CDCL-tableaux] *)
 
 (** [true] if the use of a tableaux-like method for instantiations
     is enabled with the CDCL solver if satML is used. *)
-val cdcl_tableaux_inst : unit -> bool
+val get_cdcl_tableaux_inst : unit -> bool
 (** Default to [true] *)
 
 (** [true] if the use of a tableaux-like method for theories
     is enabled with the CDCL solver if satML is used. *)
-val cdcl_tableaux_th : unit -> bool
+val get_cdcl_tableaux_th : unit -> bool
 (** Default to [true] *)
 
 (** [true] if the use of a tableaux-like method for theories or instantiations
     is enabled with the CDCL solver if satML is used. *)
-val cdcl_tableaux : unit -> bool
+val get_cdcl_tableaux : unit -> bool
 (** Default to [true] *)
 
 (** [true] if the tableaux SAT-solver is used with CDCL assist. *)
-val tableaux_cdcl : unit -> bool
+val get_tableaux_cdcl : unit -> bool
 (** Default to [false] *)
 
 (** [true] if minimal backjumping in satML CDCL solver is enabled *)
-val minimal_bj : unit -> bool
+val get_minimal_bj : unit -> bool
 (** Default to [true] *)
 
 (** [true] if restarts are enabled for satML. *)
-val enable_restarts : unit -> bool
+val get_enable_restarts : unit -> bool
 (** Default to [false] *)
 
 (** [true] if facts simplification is disabled in satML's flat formulas. *)
-val disable_flat_formulas_simplification : unit -> bool
+val get_disable_flat_formulas_simplification : unit -> bool
 (** Default to [false] *)
 
 
-val no_sat_learning : unit -> bool
-val sat_learning : unit -> bool
+val get_no_sat_learning : unit -> bool
+val get_sat_learning : unit -> bool
 (** [true] if learning/caching of unit facts in the Default SAT is disabled.
     These facts are used to improve bcp.
 
     Default to [true] (sat_learning is active) *)
 
 (** Value specifying which SAT-solver is used. *)
-val sat_plugin : unit -> string
+val get_sat_plugin : unit -> string
 (** Default to [false] *)
 
 (** {4 Term options} *)
 
 (** [true] if handling of ite(s) on terms in the backend is disabled. *)
-val disable_ites : unit -> bool
+val get_disable_ites : unit -> bool
 (** Default to [false] *)
 
 (** [true] if substitution of variables bounds by Let is enabled. The default
     behavior is to only substitute variables that are bound to a
     constant, or that appear at most once. *)
-val inline_lets : unit -> bool
+val get_inline_lets : unit -> bool
 (** Default to [false] *)
 
 (** [true] if rewriting is used instead of axiomatic approach. *)
-val rewriting : unit -> bool
+val get_rewriting : unit -> bool
 (** Default to [false] *)
 
 (** [true] if semantic values shall be output as terms. *)
-val term_like_pp : unit -> bool
+val get_term_like_pp : unit -> bool
 (** Default to [true] *)
 
 (** {4 Theory options} *)
 
 (** [true] if Algebraic Datatypes theory is disabled *)
-val disable_adts : unit -> bool
+val get_disable_adts : unit -> bool
 (** Default to [false] *)
 
 (** Value specifying which module is used to handle inequalities
     of linear arithmetic. *)
-val inequalities_plugin : unit -> string
+val get_inequalities_plugin : unit -> string
 (** Default to [false] *)
 
 (** [true] if the AC (Associative and Commutative) theory is disabled
     for function symbols. *)
-val no_ac : unit -> bool
+val get_no_ac : unit -> bool
 (** Default to [false] *)
 
 (** [true] if contracongru is disabled. *)
-val no_contracongru : unit -> bool
+val get_no_contracongru : unit -> bool
 (** Default to [false] *)
 
 (** [true] if Fourier-Motzkin algorithm is disabled. *)
-val no_fm : unit -> bool
+val get_no_fm : unit -> bool
 (** Default to [false] *)
 
 (** [true] if non-linear arithmetic reasoning (i.e. non-linear
     multplication, division and modulo on integers and rationals) is disabled.
     Non-linear multiplication remains AC. *)
-val no_nla : unit -> bool
+val get_no_nla : unit -> bool
 (** Default to [false] *)
 
 (** [true] if BCP modulo theories is deactivated. *)
-val no_tcp : unit -> bool
+val get_no_tcp : unit -> bool
 (** Default to [false] *)
 
 (** [true] if backward reasoning step (starting from the goal) done in
     the default SAT solver before deciding is disabled. *)
-val no_backward : unit -> bool
+val get_no_backward : unit -> bool
 (** Default to [false] *)
 
 (** [true] if decisions at the SAT level are disabled. *)
-val no_decisions : unit -> bool
+val get_no_decisions : unit -> bool
 (** Default to [false] *)
 
 (** [true] if theory reasoning is completely deactivated. *)
-val no_theory : unit -> bool
+val get_no_theory : unit -> bool
 (** Default to [false] *)
 
 (** [true] if the set of decision procedures (equality, arithmetic and AC)
     is restricted. *)
-val restricted : unit -> bool
+val get_restricted : unit -> bool
 (** Default to [false] *)
 
 (** [true] if the best bounds for arithmetic variables is computed. *)
-val tighten_vars : unit -> bool
+val get_tighten_vars : unit -> bool
 (** Default to [false] *)
 
 (** [true] if support for floating-point arithmetic is enabled. *)
-val use_fpa : unit -> bool
+val get_use_fpa : unit -> bool
 (** Default to [false] *)
 
 (** Possible values are
     {ul {- 0 : parsing} {- 1 : typing} {- 2 : sat} {- 3 : cc} {- 4 : arith}}
 
     output rules used on stderr. *)
-val rules : unit -> int
+val get_rules : unit -> int
 (** Default to [-1] *)
 
 (** {4 Files} *)
 
 (** [true] if the JavaScript mode is activated *)
-val js_mode : unit -> bool
+val get_js_mode : unit -> bool
 (** Default to [false] *)
 
 (** Value specifying the file given to Alt-Ergo *)
@@ -818,8 +854,8 @@ val (>=) : int -> int -> bool
 
 val compare : int -> int -> int
 
-val can_decide_on : string -> bool
-val no_decisions_on__is_empty : unit -> bool
+val get_can_decide_on : string -> bool
+val get_no_decisions_on_is_empty : unit -> bool
 
 (** Extra *)
 val match_extension : string -> input_format
@@ -829,6 +865,3 @@ val get_is_gui : unit -> bool
 
 (** Print message as comment in the corresponding output format *)
 val print_output_format: Format.formatter -> string -> unit
-
-val parse_cmdline_arguments : unit -> unit
-

@@ -40,7 +40,7 @@ open Options
 (* done here to initialize options,
    before the instantiations of functors *)
 let () =
-  try Options.parse_cmdline_arguments ()
+  try Parse_command.parse_cmdline_arguments ()
   with Options.Exit_options i -> exit i
 
 module SatCont = (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer)

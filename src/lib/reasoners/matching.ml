@@ -87,7 +87,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   let make ~max_t_depth info fils pats = { fils; info; pats; max_t_depth }
 
-  let age_limite = Options.age_bound
+  let age_limite = Options.get_age_bound
   (* l'age limite des termes, au dela ils ne sont pas consideres par le
      matching *)
 
@@ -95,18 +95,18 @@ module Make (X : Arg) : S with type theory = X.t = struct
   module Debug = struct
 
     let add_term t =
-      if debug_matching() >= 3 then
+      if get_debug_matching() >= 3 then
         fprintf fmt "[matching] add_term:  %a@." E.print t
 
     let matching tr =
-      if debug_matching() >= 3 then begin
+      if get_debug_matching() >= 3 then begin
         fprintf fmt "@.[matching] (multi-)trigger: %a@."
           E.print_list tr.E.content;
         fprintf fmt "========================================================@."
       end
 
     let match_pats_modulo pat lsubsts =
-      if debug_matching() >= 3 then begin
+      if get_debug_matching() >= 3 then begin
         fprintf fmt "@.match_pat_modulo: %a  with accumulated substs@."
           E.print pat;
         List.iter (fun { sbs; sty; _ } ->
@@ -116,13 +116,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
       end
 
     let match_one_pat { sbs; sty; _ } pat0 =
-      if debug_matching() >= 3 then
+      if get_debug_matching() >= 3 then
         fprintf fmt "@.match_pat: %a  with subst:  sbs= %a | sty= %a @."
           E.print pat0 (SubstE.print E.print) sbs Ty.print_subst sty
 
 
     let match_one_pat_against { sbs; sty; _ } pat0 t =
-      if debug_matching() >= 3 then
+      if get_debug_matching() >= 3 then
         fprintf fmt
           "@.match_pat: %a  against term %a@.with subst:  sbs= %a | sty= %a @."
           E.print pat0
@@ -131,13 +131,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
           Ty.print_subst sty
 
     let match_term { sbs; sty; _ } t pat =
-      if debug_matching() >= 3 then
+      if get_debug_matching() >= 3 then
         fprintf fmt
           "[match_term] I match %a against %a with subst: sbs=%a | sty= %a@."
           E.print pat E.print t (SubstE.print E.print) sbs Ty.print_subst sty
 
     let match_list { sbs; sty; _ } pats xs =
-      if debug_matching() >= 3 then
+      if get_debug_matching() >= 3 then
         fprintf fmt
           "@.[match_list] I match %a against %a with subst: sbs=%a | sty= %a@."
           E.print_list pats
@@ -146,19 +146,19 @@ module Make (X : Arg) : S with type theory = X.t = struct
           Ty.print_subst sty
 
     let match_class_of t cl =
-      if debug_matching() >= 3 then
+      if get_debug_matching() >= 3 then
         fprintf fmt "class_of (%a)  = { %a }@."
           E.print t
           (fun fmt -> List.iter (fprintf fmt "%a , " E.print)) cl
 
     let candidate_substitutions pat_info res =
-      if debug_matching() >= 1 then begin
+      if get_debug_matching() >= 1 then begin
         fprintf fmt "[Matching.matching]@.";
         fprintf fmt "%3d candidate substitutions for Axiom %a with trigger %a@."
           (List.length res)
           E.print pat_info.trigger_orig
           E.print_list pat_info.trigger.E.content;
-        if debug_matching() >= 2 then
+        if get_debug_matching() >= 2 then
           List.iter
             (fun gsbt ->
                fprintf fmt " >>> sbs = %a  and  sbty = %a@."
@@ -288,7 +288,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       sg
     else
       let t =
-        if (E.depth t) > max_t_depth || normalize_instances () then
+        if (E.depth t) > max_t_depth || get_normalize_instances () then
           X.term_repr tbox t ~init_term:true
         else t
       in
@@ -348,7 +348,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     match E.term_view t with
     | E.Not_a_term _ -> assert false
     | E.Term { E.ty; _ } ->
-      if not (Options.arith_matching ()) ||
+      if not (Options.get_arith_matching ()) ||
          ty != Ty.Tint && ty != Ty.Treal then []
       else
         match f_pat, pats with
@@ -495,7 +495,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let pats = pat_info.trigger in
     let pats_list = List.stable_sort trig_weight pats.E.content in
     Debug.matching pats;
-    if List.length pats_list > Options.max_multi_triggers_size () then
+    if List.length pats_list > Options.get_max_multi_triggers_size () then
       pat_info, []
     else
       let egs =
@@ -530,7 +530,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           Debug.candidate_substitutions pat_info res;
           pat_info, res
         with Exit ->
-          if verbose() then
+          if get_verbose() then
             fprintf fmt "@.skip matching for %a : cpt = %d@."
               E.print pat_info.trigger_orig !cpt;
           pat_info, []
@@ -550,7 +550,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       raise e
 
   let query env tbox =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Match Timers.F_query;
         let res = query env tbox in
@@ -656,7 +656,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
              | Util.Backward -> backward_triggers q
              | Util.Forward  -> forward_triggers q
            in
-           if Options.debug_triggers () then
+           if Options.get_debug_triggers () then
              fprintf fmt "[expr] triggers of %s are: %a@."
                name E.print_triggers tgs;
            List.fold_left

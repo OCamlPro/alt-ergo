@@ -66,11 +66,11 @@ let empty classes = {
 module Debug = struct
 
   let assume a =
-    if debug_adt () then
+    if get_debug_adt () then
       fprintf fmt "[Sum.Rel] we assume %a@." LR.print (LR.make a)
 
   let print_env loc env =
-    if debug_adt () then begin
+    if get_debug_adt () then begin
       fprintf fmt "--ADT env %s ---------------------------------@." loc;
       MX.iter
         (fun r (hss, ex) ->
@@ -114,10 +114,10 @@ module Debug = struct
   *)
 
   let no_case_split () =
-    if debug_adt () then fprintf fmt "[ADT.case-split] nothing@."
+    if get_debug_adt () then fprintf fmt "[ADT.case-split] nothing@."
 
   let add r =
-    if debug_adt () then fprintf fmt "ADT.Rel.add: %a@." X.print r
+    if get_debug_adt () then fprintf fmt "ADT.Rel.add: %a@." X.print r
 
 end
 (*BISECT-IGNORE-END*)
@@ -150,7 +150,7 @@ let deduce_is_constr uf r h eqs env ex =
           if seen_tester r h env then eqs
           else
             let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr h) [t] in
-            if debug_adt () then
+            if get_debug_adt () then
               fprintf fmt "[deduce is_constr] %a@." E.print is_c;
             (Sig_rel.LTerm is_c, ex, Th_util.Other) :: eqs
         in
@@ -177,7 +177,7 @@ let deduce_is_constr uf r h eqs env ex =
             let cons = E.mk_term (Sy.constr (Hs.view h)) xs ty in
             let env = {env with new_terms = SE.add cons env.new_terms} in
             let eq = E.mk_eq t cons ~iff:false in
-            if debug_adt () then
+            if get_debug_adt () then
               fprintf fmt "[deduce equal to constr] %a@." E.print eq;
             let eqs = (Sig_rel.LTerm eq, ex, Th_util.Other) :: eqs in
             env, eqs
@@ -204,12 +204,12 @@ let add_adt env uf t r sy ty =
   else
     match sy, ty with
     | Sy.Op Sy.Constr hs, Ty.Tadt _ ->
-      if debug_adt () then Format.eprintf "new ADT expr(C): %a@." E.print t;
+      if get_debug_adt () then Format.eprintf "new ADT expr(C): %a@." E.print t;
       { env with domains =
                    MX.add r (HSS.singleton hs, Ex.empty) env.domains }
 
     | _, Ty.Tadt _ ->
-      if debug_adt () then Format.eprintf "new ADT expr: %a@." E.print t;
+      if get_debug_adt () then Format.eprintf "new ADT expr: %a@." E.print t;
       let constrs =
         match values_of ty with None -> assert false | Some s -> s
       in
@@ -237,7 +237,7 @@ let trivial_tester r hs =
   | _ -> false
 
 let constr_of_destr ty dest =
-  if debug_adt () then fprintf fmt "ty = %a@." Ty.print ty;
+  if get_debug_adt () then fprintf fmt "ty = %a@." Ty.print ty;
   match ty with
   | Ty.Tadt (name, params) ->
     let cases =
@@ -258,7 +258,7 @@ let constr_of_destr ty dest =
 [@@ocaml.ppwarning "XXX improve. For each selector, store its \
                     corresponding constructor when typechecking ?"]
 let add_guarded_destr env uf t hs e t_ty =
-  if debug_adt () then
+  if get_debug_adt () then
     Format.eprintf "new (guarded) Destr: %a@." E.print t;
   let env = { env with seen_destr = SE.add t env.seen_destr } in
   let {Ty.constr = c; _} = constr_of_destr (E.type_info e) hs in
@@ -269,7 +269,7 @@ let add_guarded_destr env uf t hs e t_ty =
   *)
   let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr c) [e] in
   let eq = E.mk_eq access t ~iff:false in
-  if debug_adt () then begin
+  if get_debug_adt () then begin
     fprintf fmt "associated with constr %a@." Hstring.print c;
     fprintf fmt "%a => %a@." E.print is_c E.print eq;
   end;
@@ -291,7 +291,7 @@ let add_guarded_destr env uf t hs e t_ty =
 
 [@@ocaml.ppwarning "working with X.term_extract r would be sufficient ?"]
 let add_aux env (uf:uf) (r:r) t =
-  if Options.disable_adts () then env
+  if get_disable_adts () then env
   else
     let { E.f = sy; xs; ty; _ } = match E.term_view t with
       | E.Term t -> t
@@ -300,13 +300,13 @@ let add_aux env (uf:uf) (r:r) t =
     let env = add_adt env uf t r sy ty in
     match sy, xs with
     | Sy.Op Sy.Destruct (hs, true), [e] -> (* guarded *)
-      if debug_adt () then
+      if get_debug_adt () then
         fprintf fmt "[ADTs] add guarded destruct: %a@." E.print t;
       if (SE.mem t env.seen_destr) then env
       else add_guarded_destr env uf t hs e ty
 
     | Sy.Op Sy.Destruct (_, false), [_] -> (* not guarded *)
-      if debug_adt () then
+      if get_debug_adt () then
         fprintf fmt "[ADTs] add unguarded destruct: %a@." E.print t;
       { env with seen_access = SE.add t env.seen_access }
 
@@ -314,7 +314,7 @@ let add_aux env (uf:uf) (r:r) t =
       assert false (* not possible *)
 
     (*| Sy.Op Sy.IsConstr _, _ ->
-       if debug_adt () then
+       if get_debug_adt () then
          Format.eprintf "new Tester: %a@." E.print t;
        { env with seen_testers = SE.add t env.seen_testers }
     *)
@@ -398,7 +398,7 @@ let assume_is_constr uf hs r dep env eqs =
   | Adt.Constr{ c_name; _ } when not (Hs.equal c_name hs) ->
     raise (Ex.Inconsistent (dep, env.classes));
   | _ ->
-    if debug_adt () then
+    if get_debug_adt () then
       fprintf fmt "assume is constr %a %a@." X.print r Hs.print hs;
     if seen_tester r hs env then
       env, eqs
@@ -510,7 +510,7 @@ let update_cs_modulo_eq r1 r2 ex env eqs =
      r1 |-> r2, because LR.mkv_eq may swap r1 and r2 *)
   try
     let old = MX.find r1 env.selectors in
-    if debug_adt () then
+    if get_debug_adt () then
       fprintf fmt "update selectors modulo eq: %a |-> %a@."
         X.print r1 X.print r2;
     let mhs = try MX.find r2 env.selectors with Not_found -> MHs.empty in
@@ -519,7 +519,7 @@ let update_cs_modulo_eq r1 r2 ex env eqs =
       MHs.fold
         (fun hs l mhs ->
            if trivial_tester r2 hs then begin
-             if debug_adt () then
+             if get_debug_adt () then
                fprintf fmt "make deduction because %a ? %a is trivial @."
                  X.print r2 Hs.print hs;
              List.iter
@@ -546,7 +546,7 @@ let remove_redundancies la =
     )la
 
 let assume env uf la =
-  if Options.disable_adts () then
+  if get_disable_adts () then
     env, { Sig_rel.assume = []; remove = [] }
   else
     let la = remove_redundancies la in (* should be done globally in CCX *)
@@ -600,7 +600,7 @@ let assume env uf la =
     let eqs = List.rev_append env.pending_deds eqs in
     let env = {env with pending_deds = []} in
     Debug.print_env "after assume" env;
-    if debug_adt () then begin
+    if get_debug_adt () then begin
       fprintf fmt "[ADT] assume deduced %d equalities@." (List.length eqs);
       List.iter
         (fun (a, _, _) ->
@@ -617,16 +617,16 @@ let assume env uf la =
 let two = Numbers.Q.from_int 2
 
 let case_split env _ ~for_model =
-  if disable_adts () || not (enable_adts_cs()) then []
+  if get_disable_adts () || not (get_enable_adts_cs()) then []
   else
     begin
       assert (not for_model);
-      if debug_adt () then Debug.print_env "before cs" env;
+      if get_debug_adt () then Debug.print_env "before cs" env;
       try
         let r, mhs = MX.choose env.selectors in
-        if debug_adt () then fprintf fmt "found r = %a@." X.print r;
+        if get_debug_adt () then fprintf fmt "found r = %a@." X.print r;
         let hs, _ = MHs.choose mhs in
-        if debug_adt () then fprintf fmt "found hs = %a@." Hs.print hs;
+        if get_debug_adt () then fprintf fmt "found hs = %a@." Hs.print hs;
         (* cs on negative version would be better in general *)
         let cs =  LR.mkv_builtin false (Sy.IsConstr hs) [r] in
         [ cs, true, Th_util.CS(Th_util.Th_adt, two) ]
@@ -636,7 +636,7 @@ let case_split env _ ~for_model =
     end
 
 let query env uf (ra, _, ex, _) =
-  if Options.disable_adts () then None
+  if get_disable_adts () then None
   else
     try
       match ra with
