@@ -30,6 +30,7 @@ See more details on https://alt-ergo.ocamlpro.com/")
   (alt-ergo-common (= :version))
   (alt-ergo-parsers (= :version))
    menhir
+   cmdliner
  )
 )
 
@@ -55,6 +56,7 @@ See more details on https://alt-ergo.ocamlpro.com/"
   (alt-ergo-parsers (= :version))
   lablgtk
   conf-gtksourceview
+  cmdliner
  )
 )
 
@@ -105,6 +107,5 @@ See more details on http://alt-ergo.ocamlpro.com/"
   zarith
   seq
   stdlib-shims
-  cmdliner
  )
 )
