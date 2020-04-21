@@ -27,7 +27,6 @@ See more details on https://alt-ergo.ocamlpro.com/")
   (ocaml (>= 4.04.0))
   (dune (>= 2.0))
   (alt-ergo-lib (= :version))
-  (alt-ergo-common (= :version))
   (alt-ergo-parsers (= :version))
    menhir
    cmdliner
@@ -52,7 +51,6 @@ See more details on https://alt-ergo.ocamlpro.com/"
   (ocaml (>= 4.04.0))
   (dune (>= 2.0))
   (alt-ergo-lib (= :version))
-  (alt-ergo-common (= :version))
   (alt-ergo-parsers (= :version))
   lablgtk
   conf-gtksourceview

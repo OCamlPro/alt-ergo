@@ -66,7 +66,7 @@ clean: generated-clean dune-clean ocamldot-clean
 distclean: makefile-distclean release-distclean
 
 # declare these aliases as phony
-.PHONY: world gen conf clean distclean alt-ergo-lib alt-ergo-common \
+.PHONY: world gen conf clean distclean alt-ergo-lib \
 	alt-ergo-parsers alt-ergo altgr-ergo
 
 # =================
