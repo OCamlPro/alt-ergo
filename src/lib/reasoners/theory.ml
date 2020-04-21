@@ -565,7 +565,8 @@ module Main_Default : S = struct
   let theories_instances ~do_syntactic_matching t_match t selector dlvl ilvl =
     let gamma, instances =
       CC_X.theories_instances ~do_syntactic_matching t_match t.gamma selector in
-    if get_debug_fpa() > 0 then get_debug_theories_instances instances dlvl ilvl;
+    if get_debug_fpa() > 0 then
+      get_debug_theories_instances instances dlvl ilvl;
     {t with gamma = gamma}, instances
 
   let query =

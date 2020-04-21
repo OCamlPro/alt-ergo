@@ -800,7 +800,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           else assert false
         in
         let ex =
-          if get_unsat_core () || ta.var.level > 0 then Ex.singleton (Ex.Literal ta)
+          if get_unsat_core () || ta.var.level > 0 then
+            Ex.singleton (Ex.Literal ta)
           else Ex.empty
         in
         assert (E.is_ground ta.lit);
@@ -1347,7 +1348,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       with
         Unsat _ as e ->
         if Options.get_tableaux_cdcl () then begin
-          if not (Options.get_minimal_bj ()) then assert (decision_level env = 0);
+          if not (Options.get_minimal_bj ()) then
+            assert (decision_level env = 0);
           raise (Last_UIP_reason Atom.Set.empty)
         end
         else raise e
@@ -1388,7 +1390,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       propagate_and_stabilize env all_propagations conflictC !strat;
 
       if nb_assigns env = env.nb_init_vars ||
-         (Options.get_cdcl_tableaux_inst () && Matoms.is_empty env.lazy_cnf) then
+         (Options.get_cdcl_tableaux_inst () &&
+          Matoms.is_empty env.lazy_cnf) then
         raise Sat;
       if Options.get_enable_restarts ()
       && n_of_conflicts >= 0 && !conflictC >= n_of_conflicts then begin

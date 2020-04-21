@@ -123,20 +123,20 @@ let mk_case_split_opt case_split_policy enable_adts_cs max_split
   =
   let res =
     match case_split_policy with
-    | "after-theory-assume" -> `Ok(Util.AfterTheoryAssume)
-    | "before-matching" -> `Ok(Util.BeforeMatching)
-    | "after-matching" -> `Ok(Util.AfterMatching)
-    | _ -> `Error ("Bad value '" ^ case_split_policy ^
+    | "after-theory-assume" -> Ok(Util.AfterTheoryAssume)
+    | "before-matching" -> Ok(Util.BeforeMatching)
+    | "after-matching" -> Ok(Util.AfterMatching)
+    | _ -> Error ("Bad value '" ^ case_split_policy ^
                    "' for option --case-split-policy")
   in
   let max_split = Numbers.Q.from_string max_split in
   match res with
-  | `Ok(case_split_policy) ->
+  | Ok(case_split_policy) ->
     set_max_split max_split;
     set_case_split_policy case_split_policy;
     set_enable_adts_cs enable_adts_cs;
     `Ok()
-  | `Error m -> `Error(false, m)
+  | Error m -> `Error(false, m)
 
 let mk_context_opt replay replay_all_used_context replay_used_context
     save_used_context
@@ -283,7 +283,8 @@ let mk_sat_opt get_bottom_classes disable_flat_formulas_simplification
     set_bottom_classes get_bottom_classes;
     set_cdcl_tableaux_inst cdcl_tableaux_inst;
     set_cdcl_tableaux_th cdcl_tableaux_th;
-    set_disable_flat_formulas_simplification disable_flat_formulas_simplification;
+    set_disable_flat_formulas_simplification
+      disable_flat_formulas_simplification;
     set_enable_restarts enable_restarts;
     set_minimal_bj minimal_bj;
     set_no_backjumping no_backjumping;
@@ -626,7 +627,8 @@ let parse_execution_opt =
   let frontend =
     let doc = "Select the parsing and typing frontend." in
     let docv = "FTD" in
-    Arg.(value & opt string (get_frontend ()) & info ["frontend"] ~docv ~docs ~doc) in
+    Arg.(value & opt string (get_frontend ()) &
+         info ["frontend"] ~docv ~docs ~doc) in
 
   let input_format =
     let doc = Format.sprintf
@@ -644,13 +646,15 @@ let parse_execution_opt =
 
   let parsers =
     let doc = "Register a new parser for Alt-Ergo." in
-    Arg.(value & opt_all string (get_parsers ()) & info ["add-parser"] ~docs ~doc) in
+    Arg.(value & opt_all string (get_parsers ()) &
+         info ["add-parser"] ~docs ~doc) in
 
   let preludes =
     let doc =
       "Add a file that will be loaded as a prelude. The command is \
        cumulative, and the order of successive preludes is preserved." in
-    Arg.(value & opt_all string (get_preludes ()) & info ["prelude"] ~docs ~doc) in
+    Arg.(value & opt_all string (get_preludes ()) &
+         info ["prelude"] ~docs ~doc) in
 
   let no_locs_in_answers =
     let doc =
@@ -723,7 +727,8 @@ let parse_limit_opt =
   let age_bound =
     let doc = "Set the age limit bound." in
     let docv = "AGE" in
-    Arg.(value & opt int (get_age_bound ()) & info ["age-bound"] ~docv ~docs ~doc) in
+    Arg.(value & opt int (get_age_bound ()) &
+         info ["age-bound"] ~docv ~docs ~doc) in
 
   let fm_cross_limit =
     (* TODO : Link this to Alt-Ergo numbers *)
@@ -965,7 +970,8 @@ let parse_sat_opt =
   let sat_plugin =
     let doc =
       "Use the given SAT-solver instead of the default DFS-based SAT solver." in
-    Arg.(value & opt string (get_sat_plugin ()) & info ["sat-plugin"] ~docs ~doc) in
+    Arg.(value & opt string (get_sat_plugin ()) &
+         info ["sat-plugin"] ~docs ~doc) in
 
   let sat_solver =
     let doc = Format.sprintf

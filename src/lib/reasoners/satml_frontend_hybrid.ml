@@ -152,7 +152,8 @@ module Make (Th : Theory.S) = struct
            * env *)
 
           | Satml.Unsat _ ->
-            assert (Options.get_tableaux_cdcl () && SAT.decision_level env.sat = 0);
+            assert (Options.get_tableaux_cdcl () &&
+                    SAT.decision_level env.sat = 0);
             raise (Bottom (Ex.empty, [], env))
 
           | Satml.Last_UIP_reason r ->

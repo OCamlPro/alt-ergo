@@ -1391,7 +1391,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         end;
       let env = assume env [fg] in
       let env =
-        if is_decision || not (Options.get_instantiate_after_backjump ()) then env
+        if is_decision || not (Options.get_instantiate_after_backjump ())
+        then env
         else normal_instantiation env false
       in
       back_tracking env

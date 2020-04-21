@@ -238,7 +238,9 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         eprintf "; %aValid (%2.4f) (%d steps)%s@."
           Loc.report loc time steps (goal_name d);
       printf "unsat@.";
-      if get_unsat_core() && not (get_debug_unsat_core()) && not (get_save_used_context())
+      if get_unsat_core() &&
+         not (get_debug_unsat_core()) &&
+         not (get_save_used_context())
       then
         printf "(\n%a)@." (Ex.print_unsat_core ~tab:true) dep
 
@@ -295,7 +297,9 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       let loc = d.st_loc in
       printf "%aValid (%2.4f) (%d steps)%s@."
         report_loc loc time steps (goal_name d);
-      if get_unsat_core() && not (get_debug_unsat_core()) && not (get_save_used_context())
+      if get_unsat_core() &&
+         not (get_debug_unsat_core()) &&
+         not (get_save_used_context())
       then
         printf "unsat-core:\n%a@." (Ex.print_unsat_core ~tab:true) dep
 

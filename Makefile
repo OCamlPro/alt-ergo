@@ -125,7 +125,7 @@ all: gen
 
 # declare these targets as phony to avoid name clashes with existing directories,
 # particularly the "plugins" target
-.PHONY: src lib common parsers bin gui fm-simplex AB-Why3 plugins all
+.PHONY: lib bin gui fm-simplex AB-Why3 plugins all
 
 
 # =====================

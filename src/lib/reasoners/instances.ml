@@ -231,7 +231,8 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
                     }
                   in
                   let dep =
-                    if not (Options.get_unsat_core() || Options.get_profiling()) then
+                    if not (Options.get_unsat_core() ||
+                            Options.get_profiling()) then
                       dep
                     else
                       (* Dep lorig used to track conflicted instances

@@ -629,7 +629,8 @@ let kill_thread thread () =
 
 let run_replay env used_context =
   let ast = to_ast env.ast in
-  if get_debug () then fprintf fmt "AST : \n-----\n%a@." print_typed_decl_list ast;
+  if get_debug () then
+    fprintf fmt "AST : \n-----\n%a@." print_typed_decl_list ast;
 
   let ast_pruned = [ast] in
 
@@ -664,7 +665,8 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
   clear_used_lemmas_tags env;
 
   let ast = to_ast env.ast in
-  if get_debug () then fprintf fmt "AST : \n-----\n%a@." print_typed_decl_list ast;
+  if get_debug () then
+    fprintf fmt "AST : \n-----\n%a@." print_typed_decl_list ast;
 
   let ast_pruned = [ast] in
 
@@ -707,7 +709,8 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
                wrapper_update_aborted
                  image label buttonstop buttonrun timers_model e
             );
-            if get_debug () then fprintf fmt "Send done signal to waiting thread@.";
+            if get_debug () then
+              fprintf fmt "Send done signal to waiting thread@.";
             wrapper_reset buttonstop buttonrun;
             Thread.delay 0.001;
             GMain.Timeout.remove to_id;
