@@ -28,8 +28,6 @@
 
 let fmt = Format.err_formatter
 
-exception Exit_options of int
-
 (* Declaration of all the options as refs with default values *)
 
 type model = MNone | MDefault | MAll | MComplete

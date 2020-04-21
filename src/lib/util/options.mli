@@ -39,9 +39,6 @@
 *)
 val fmt : Format.formatter
 
-(** Exception used to exit with corresponding retcode *)
-exception Exit_options of int
-
 (** Type used to describe the type of models wanted *)
 type model = MNone | MDefault | MAll | MComplete
 

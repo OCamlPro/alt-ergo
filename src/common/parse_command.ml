@@ -4,6 +4,9 @@ open Cmdliner
 
 exception Error of bool * string
 
+(* Exception used to exit with corresponding retcode *)
+exception Exit_parse_command of int
+
 let model_parser = function
   | "none" -> Ok MNone
   | "default" -> Ok MDefault
@@ -1149,6 +1152,6 @@ let main =
 let parse_cmdline_arguments () =
   let r = Cmdliner.Term.(eval main) in
   match r with
-  | `Ok false -> raise (Exit_options 0)
+  | `Ok false -> raise (Exit_parse_command 0)
   | `Ok true -> ()
   | e -> exit @@ Term.(exit_status_of_result e)
