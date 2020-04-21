@@ -130,7 +130,7 @@ let mk_case_split_opt case_split_policy enable_adts_cs max_split
     | "before-matching" -> Ok(Util.BeforeMatching)
     | "after-matching" -> Ok(Util.AfterMatching)
     | _ -> Error ("Bad value '" ^ case_split_policy ^
-                   "' for option --case-split-policy")
+                  "' for option --case-split-policy")
   in
   let max_split = Numbers.Q.from_string max_split in
   match res with
