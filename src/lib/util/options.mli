@@ -98,8 +98,14 @@ val set_debug_explanations : bool -> unit
 (** Set {!val:debug_fm} *)
 val set_debug_fm : bool -> unit
 
+(** Set {!val:debug_fpa} *)
+val set_debug_fpa : int -> unit
+
 (** Set {!val:debug_gc} *)
 val set_debug_gc : bool -> unit
+
+(** Set {!val:debug_interpretation} *)
+val set_debug_interpretation : bool -> unit
 
 (** Set {!val:debug_ite} *)
 val set_debug_ite : bool -> unit
@@ -123,6 +129,9 @@ val set_debug_split : bool -> unit
 (** Set {!val:debug_sum} *)
 val set_debug_sum : bool -> unit
 
+(** Set {!val:debug_triggers} *)
+val set_debug_triggers : bool -> unit
+
 (** Set {!val:debug_types} *)
 val set_debug_types : bool -> unit
 
@@ -138,8 +147,11 @@ val set_debug_unsat_core : bool -> unit
 (** Set {!val:debug_use} *)
 val set_debug_use : bool -> unit
 
+(** Set {!val:debug_warnings} *)
+val set_debug_warnings : bool -> unit
+
 (** Set {!val:profiling} *)
-val set_profiling : float -> bool -> unit
+val set_profiling : bool -> float -> unit
 
 (** Set {!val:timers} *)
 val set_timers : bool -> unit
@@ -255,6 +267,8 @@ val set_unsat_core : bool -> unit
 (** Set {!val:verbose} *)
 val set_verbose : bool -> unit
 
+val set_file : string -> unit
+
 (** Updates the filename to be parsed and sets a js_mode flag *)
 val set_file_for_js : string -> unit
 
@@ -292,7 +306,17 @@ val set_no_decisions_on : Util.SS.t -> unit
 val set_no_sat_learning : bool -> unit
 val set_sat_plugin : string -> unit
 val set_sat_solver : Util.sat_solver -> unit
-val set_tableaux_cdcl : string -> unit
+val set_tableaux_cdcl : bool -> unit
+val set_disable_ites : bool -> unit
+val set_disable_adts : bool -> unit
+val set_inequalities_plugin : string -> unit
+val set_no_fm : bool -> unit
+val set_no_tcp : bool -> unit
+val set_no_theory : bool -> unit
+val set_tighten_vars : bool -> unit
+val set_use_fpa : bool -> unit
+val set_session_file : string -> unit
+val set_used_context_file : string -> unit
 
 (** {2 Getter functions} *)
 

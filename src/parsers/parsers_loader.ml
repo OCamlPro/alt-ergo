@@ -15,5 +15,5 @@ open Format
 let load () =
   List.iter
     (fun p ->
-       MyDynlink.load err_formatter (verbose ()) p "parser"
-    )(Options.parsers())
+       MyDynlink.load err_formatter (get_verbose ()) p "parser"
+    )(Options.get_parsers())

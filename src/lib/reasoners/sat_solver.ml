@@ -10,12 +10,12 @@
 (******************************************************************************)
 
 let get_current () =
-  match Options.sat_solver () with
+  match Options.get_sat_solver () with
   | Util.Tableaux | Util.Tableaux_CDCL ->
-    if Options.verbose() then
+    if Options.get_verbose() then
       Format.eprintf "[bool reasoning] use Tableaux-like solver@.";
     (module Fun_sat : Sat_solver_sig.SatContainer)
   | Util.CDCL | Util.CDCL_Tableaux ->
-    if Options.verbose() then
+    if Options.get_verbose() then
       Format.eprintf "[bool reasoning] use CDCL solver@.";
     (module Satml_frontend : Sat_solver_sig.SatContainer)

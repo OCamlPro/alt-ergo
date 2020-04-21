@@ -189,14 +189,14 @@ let accumulate env cur m f =
   env.z.(mt).(ft) <- env.z.(mt).(ft) +. (cur -. env.cur_u)
 
 let accumulate_cumulative_mode name env m f cur =
-  if Options.cumulative_time_profiling() then
+  if Options.get_cumulative_time_profiling() then
     begin
-      if Options.debug() then
+      if Options.get_debug() then
         eprintf "@.%s time of %s , %s@."
           name (string_of_ty_module m) (string_of_ty_function f);
       List.iter
         (fun (m, f, _) ->
-           if Options.debug() then
+           if Options.get_debug() then
              eprintf "  also update time of %s , %s@."
                (string_of_ty_module m) (string_of_ty_function f);
            accumulate env cur m f
@@ -308,8 +308,8 @@ let (timer_start : (ty_module -> ty_function -> unit) ref) =
 let (timer_pause : (ty_module -> ty_function -> unit) ref) =
   ref (fun _ _ -> ())
 
-let set_timer_start f = assert (Options.timers ()); timer_start := f
-let set_timer_pause f = assert (Options.timers ()); timer_pause := f
+let set_timer_start f = assert (Options.get_timers ()); timer_start := f
+let set_timer_pause f = assert (Options.get_timers ()); timer_pause := f
 
 let exec_timer_start kd msg = !timer_start kd msg
 let exec_timer_pause kd = !timer_pause kd

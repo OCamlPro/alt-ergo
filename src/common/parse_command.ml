@@ -1,4 +1,6 @@
+open AltErgoLib
 open Options
+open Cmdliner
 
 exception Error of bool * string
 
@@ -193,9 +195,8 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     `Error (false, "--steps-bound argument should be positive")
   else
     let fm_cross_limit = Numbers.Q.from_string fm_cross_limit in
-    let timelimit = set_limit timelimit !vtimelimit in
-    let timelimit_interpretation = set_limit timelimit_interpretation
-        !vtimelimit_interpretation in
+    let timelimit = set_limit timelimit 0. in
+    let timelimit_interpretation = set_limit timelimit_interpretation 1. in
     set_age_bound age_bound;
     set_fm_cross_limit fm_cross_limit;
     set_timelimit_interpretation timelimit_interpretation;
@@ -206,7 +207,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
 
 let mk_output_opt interpretation model unsat_core output_format
   =
-  vinfer_output_format := output_format = None;
+  set_infer_output_format output_format;
   let output_format = match output_format with
     | None -> Native
     | Some fmt -> fmt
@@ -218,16 +219,15 @@ let mk_output_opt interpretation model unsat_core output_format
   `Ok()
 
 let mk_profiling_opt cumulative_time_profiling profiling
-    profiling_plugin verbose
+    profiling_plugin get_verbose
   =
   let profiling, profiling_period = match profiling with
     | Some f -> true, f
     | None -> false, 0.
   in
-  set_profiling profiling;
-  set_profiling_period profiling_period;
+  set_profiling profiling profiling_period;
   set_profiling_plugin profiling_plugin;
-  set_verbose verbose;
+  set_verbose get_verbose;
   set_cumulative_time_profiling cumulative_time_profiling;
   `Ok()
 
@@ -245,7 +245,7 @@ let mk_quantifiers_opt greedy instantiate_after_backjump
   set_triggers_var triggers_var;
   `Ok()
 
-let mk_sat_opt bottom_classes disable_flat_formulas_simplification
+let mk_sat_opt get_bottom_classes disable_flat_formulas_simplification
     enable_restarts no_arith_matching no_backjumping
     no_backward no_decisions no_decisions_on
     no_minimal_bj no_sat_learning no_tableaux_cdcl_in_instantiation
@@ -280,7 +280,7 @@ let mk_sat_opt bottom_classes disable_flat_formulas_simplification
   match res with
   | `Ok(sat_solver, cdcl_tableaux_inst, cdcl_tableaux_th, tableaux_cdcl) ->
     set_arith_matching arith_matching;
-    set_bottom_classes bottom_classes;
+    set_bottom_classes get_bottom_classes;
     set_cdcl_tableaux_inst cdcl_tableaux_inst;
     set_cdcl_tableaux_th cdcl_tableaux_th;
     set_disable_flat_formulas_simplification disable_flat_formulas_simplification;
@@ -352,31 +352,29 @@ let halt_opt version_info where =
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
 
-let mk_opts file case_split_opt context_opt dbg_opt execution_opt halt_opt
-    internal_opt limit_opt output_opt profiling_opt quantifiers_opt
-    sat_opt term_opt theory_opt
+let mk_opts file () () () () () () halt_opt (gc) () () () () () () ()
   =
 
   if halt_opt then `Ok false
-  else
-    (* If save_used_context was invoked as an option it should
+  (* If save_used_context was invoked as an option it should
        automatically set unsat_core to true *)
-  if save_used_context () then set_unsat_core true;
-  (match file with
-   | Some f ->
-     let base_file = try
-         Filename.chop_extension f
-       with Invalid_argument _ -> f
-     in
-     set_file f;
-     set_session_file (base_file^".agr");
-     set_used_context_file base_file;
-   | _ -> ()
-  );
+  else begin
+    if get_save_used_context () then set_unsat_core true;
+    (match file with
+     | Some f ->
+       let base_file = try
+           Filename.chop_extension f
+         with Invalid_argument _ -> f
+       in
+       set_file f;
+       set_session_file (base_file^".agr");
+       set_used_context_file base_file;
+     | _ -> ()
+    );
 
-  Gc.set { (Gc.get()) with Gc.allocation_policy = internal_opt.fst };
-  `Ok true
-
+    Gc.set { (Gc.get()) with Gc.allocation_policy = gc };
+    `Ok true
+  end
 
 (* Custom sections *)
 
@@ -462,7 +460,7 @@ let parse_dbg_opt_spl2 =
 
   let debug_fpa =
     let doc = "Set the debugging flag of floating-point." in
-    Arg.(value & opt int !vdebug_fpa & info ["dfpa"] ~docs ~doc) in
+    Arg.(value & opt int (get_debug_fpa ()) & info ["dfpa"] ~docs ~doc) in
 
   let debug_gc =
     let doc = "Prints some debug info about the GC's activity." in
@@ -480,7 +478,7 @@ let parse_dbg_opt_spl2 =
     let doc = "Set the debugging flag \
                of E-matching (0=disabled, 1=light, 2=full)." in
     let docv = "FLAG" in
-    Arg.(value & opt int !vdebug_matching &
+    Arg.(value & opt int (get_debug_matching ()) &
          info ["dmatching"] ~docv ~docs ~doc) in
 
   let debug_sat =
@@ -565,13 +563,6 @@ let parse_dbg_opt_spl3 =
              rules
             ))
 
-let parse_dbg_opt =
-  Term.(ret (const mk_dbg_opt $
-             parse_dbg_opt_spl1 $
-             parse_dbg_opt_spl2 $
-             parse_dbg_opt_spl3
-            ))
-
 let parse_case_split_opt =
 
   let docs = s_case_split in
@@ -591,7 +582,7 @@ let parse_case_split_opt =
     Arg.(value & flag & info ["enable-adts-cs"] ~docs ~doc) in
 
   let max_split =
-    let dv = Numbers.Q.to_string !vmax_split in
+    let dv = Numbers.Q.to_string (get_max_split ()) in
     let doc =
       Format.sprintf "Maximum size of case-split." in
     let docv = "VAL" in
@@ -635,7 +626,7 @@ let parse_execution_opt =
   let frontend =
     let doc = "Select the parsing and typing frontend." in
     let docv = "FTD" in
-    Arg.(value & opt string !vfrontend & info ["frontend"] ~docv ~docs ~doc) in
+    Arg.(value & opt string (get_frontend ()) & info ["frontend"] ~docv ~docs ~doc) in
 
   let input_format =
     let doc = Format.sprintf
@@ -653,13 +644,13 @@ let parse_execution_opt =
 
   let parsers =
     let doc = "Register a new parser for Alt-Ergo." in
-    Arg.(value & opt_all string !vparsers & info ["add-parser"] ~docs ~doc) in
+    Arg.(value & opt_all string (get_parsers ()) & info ["add-parser"] ~docs ~doc) in
 
   let preludes =
     let doc =
       "Add a file that will be loaded as a prelude. The command is \
        cumulative, and the order of successive preludes is preserved." in
-    Arg.(value & opt_all string !vpreludes & info ["prelude"] ~docs ~doc) in
+    Arg.(value & opt_all string (get_preludes ()) & info ["prelude"] ~docs ~doc) in
 
   let no_locs_in_answers =
     let doc =
@@ -732,11 +723,11 @@ let parse_limit_opt =
   let age_bound =
     let doc = "Set the age limit bound." in
     let docv = "AGE" in
-    Arg.(value & opt int !vage_bound & info ["age-bound"] ~docv ~docs ~doc) in
+    Arg.(value & opt int (get_age_bound ()) & info ["age-bound"] ~docv ~docs ~doc) in
 
   let fm_cross_limit =
     (* TODO : Link this to Alt-Ergo numbers *)
-    let dv = Numbers.Q.to_string !vfm_cross_limit in
+    let dv = Numbers.Q.to_string (get_fm_cross_limit ()) in
     let doc = Format.sprintf
         "Skip Fourier-Motzkin variables elimination steps that may produce \
          a number of inequalities that is greater than the given limit. \
@@ -754,7 +745,7 @@ let parse_limit_opt =
   let steps_bound =
     let doc = "Set the maximum number of steps." in
     let docv = "STEPS" in
-    Arg.(value & opt int !vsteps_bound &
+    Arg.(value & opt int (get_steps_bound ()) &
          info ["S"; "steps-bound"] ~docv ~doc) in
 
   let timelimit =
@@ -788,7 +779,7 @@ let parse_output_opt =
        interpretation display. Note that $(b, --max-split) limitation will \
        be ignored in model generation phase." in
     let docv = "VAL" in
-    Arg.(value & opt int !vinterpretation &
+    Arg.(value & opt int (get_interpretation ()) &
          info ["interpretation"] ~docv ~docs ~doc) in
 
   let model =
@@ -842,16 +833,16 @@ let parse_profiling_opt =
   let profiling_plugin =
     let doc = "Use the given profiling plugin." in
     let docv = "PGN" in
-    Arg.(value & opt string !vprofiling_plugin &
+    Arg.(value & opt string (get_profiling_plugin ()) &
          info ["profiling-plugin"] ~docv ~docs ~doc) in
 
-  let verbose =
-    let doc = "Set the verbose mode." in
+  let get_verbose =
+    let doc = "Set the get_verbose mode." in
     Arg.(value & flag & info ["v"; "verbose"] ~doc) in
 
   Term.(ret (const mk_profiling_opt $
              cumulative_time_profiling $ profiling $
-             profiling_plugin $ verbose
+             profiling_plugin $ get_verbose
             ))
 
 let parse_quantifiers_opt =
@@ -870,13 +861,13 @@ let parse_quantifiers_opt =
   let max_multi_triggers_size =
     let doc = "Max number of terms allowed in multi-triggers." in
     let docv = "VAL" in
-    Arg.(value & opt int !vmax_multi_triggers_size &
+    Arg.(value & opt int (get_max_multi_triggers_size ()) &
          info ["max-multi-triggers-size"] ~docv ~docs ~doc) in
 
   let nb_triggers =
     let doc = "Number of (multi)triggers." in
     let docv = "VAL" in
-    Arg.(value & opt int !vnb_triggers &
+    Arg.(value & opt int (get_nb_triggers ()) &
          info ["nb-triggers"] ~docv ~docs ~doc) in
 
   let no_ematching =
@@ -909,7 +900,7 @@ let parse_sat_opt =
 
   let docs = s_sat in
 
-  let bottom_classes =
+  let get_bottom_classes =
     let doc = "Show equivalence classes at each bottom of the sat." in
     Arg.(value & flag & info ["bottom-classes"] ~docs ~doc) in
 
@@ -974,7 +965,7 @@ let parse_sat_opt =
   let sat_plugin =
     let doc =
       "Use the given SAT-solver instead of the default DFS-based SAT solver." in
-    Arg.(value & opt string !vsat_plugin & info ["sat-plugin"] ~docs ~doc) in
+    Arg.(value & opt string (get_sat_plugin ()) & info ["sat-plugin"] ~docs ~doc) in
 
   let sat_solver =
     let doc = Format.sprintf
@@ -988,7 +979,7 @@ let parse_sat_opt =
          info ["sat-solver"] ~docv ~docs ~doc) in
 
   Term.(ret (const mk_sat_opt $
-             bottom_classes $ disable_flat_formulas_simplification $
+             get_bottom_classes $ disable_flat_formulas_simplification $
              enable_restarts $ no_arith_matching $
              no_backjumping $ no_backward $ no_decisions $ no_decisions_on $
              no_minimal_bj $ no_sat_learning $
@@ -1034,7 +1025,7 @@ let parse_theory_opt =
   let inequalities_plugin =
     let doc =
       "Use the given module to handle inequalities of linear arithmetic." in
-    Arg.(value & opt string !vinequalities_plugin &
+    Arg.(value & opt string (get_inequalities_plugin ()) &
          info ["inequalities-plugin"] ~docs ~doc) in
 
   let no_ac =
@@ -1140,7 +1131,8 @@ let main =
 
   Term.(ret (const mk_opts $
              file $
-             parse_case_split_opt $ parse_context_opt $ parse_dbg_opt $
+             parse_case_split_opt $ parse_context_opt $
+             parse_dbg_opt_spl1 $ parse_dbg_opt_spl2 $ parse_dbg_opt_spl3 $
              parse_execution_opt $ parse_halt_opt $ parse_internal_opt $
              parse_limit_opt $ parse_output_opt $ parse_profiling_opt $
              parse_quantifiers_opt $ parse_sat_opt $ parse_term_opt $

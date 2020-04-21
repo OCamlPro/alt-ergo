@@ -293,7 +293,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
     (* unused --
        let delta d =
-       if get_debug_sat () && verbose () && false then begin
+       if get_debug_sat () && get_verbose () && false then begin
         fprintf fmt "[sat] - Delta ---------------------@.";
         List.iter (fun (f1, f2, ex) ->
             fprintf fmt "(%a or %a), %a@."

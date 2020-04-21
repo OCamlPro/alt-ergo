@@ -95,11 +95,11 @@ module Make (Th : Theory.S) = struct
         end
       | Some _, Some _ -> assert false
       | Some _, None ->
-        if verbose () && debug_sat () then
+        if get_verbose () && get_debug_sat () then
           fprintf fmt "!!! [dlvl=%d] %a becomes true before deciding@."
             dlvl E.print f;
       | None, Some (ex, _) ->
-        if verbose () && debug_sat () then
+        if get_verbose () && get_debug_sat () then
           fprintf fmt "!!! [dlvl=%d] %a becomes false before deciding@."
             dlvl E.print f;(* Satml_types.Atom.pr_atom (fst f); *)
         let ex = Ex.union (Ex.singleton (Ex.Bj f)) (Lazy.force ex) in
@@ -152,7 +152,7 @@ module Make (Th : Theory.S) = struct
            * env *)
 
           | Satml.Unsat _ ->
-            assert (Options.tableaux_cdcl () && SAT.decision_level env.sat = 0);
+            assert (Options.get_tableaux_cdcl () && SAT.decision_level env.sat = 0);
             raise (Bottom (Ex.empty, [], env))
 
           | Satml.Last_UIP_reason r ->
@@ -171,7 +171,7 @@ module Make (Th : Theory.S) = struct
       {env with decisions = (dlvl, f) :: env.decisions}
     with
     | Satml.Unsat _ ->
-      assert (Options.tableaux_cdcl () && SAT.decision_level env.sat = 0);
+      assert (Options.get_tableaux_cdcl () && SAT.decision_level env.sat = 0);
       raise (Bottom (Ex.empty, [], env))
 
     | Satml.Last_UIP_reason r ->

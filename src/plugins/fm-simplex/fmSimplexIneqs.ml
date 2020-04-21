@@ -54,7 +54,7 @@ module Container : Inequalities.Container_SIG = struct
         )vals
 
     let print_parsed_answer answer =
-      if debug_fm() then
+      if get_debug_fm() then
         match answer with
         | Unsat { vof; vals; _ } ->
           fprintf fmt "I read: the simplex problem is not feasible (<=)@.";
@@ -182,7 +182,7 @@ module Container : Inequalities.Container_SIG = struct
     let tighten_monomial
         add_ineqs are_eq acc x sum_x is_pos sum ctt lambdas nb_constrs constrs
       =
-      if false || debug_fm() then fprintf fmt "tighten_monomial %s%a@."
+      if false || get_debug_fm() then fprintf fmt "tighten_monomial %s%a@."
           (if is_pos then "+" else "-") X.print x;
       let max_ctt, equas, s_neq =
         monomial_bounding_pb sum ctt lambdas x sum_x is_pos in
@@ -257,7 +257,7 @@ module Container : Inequalities.Container_SIG = struct
         )sum acc
 
     let fm_simplex add_ineqs are_eq acc constrs nb_constrs =
-      if debug_fm() then
+      if get_debug_fm() then
         begin
           fprintf fmt "begin fm-simplex: nb_constrs = %d@." nb_constrs;
           List.iter
@@ -271,12 +271,12 @@ module Container : Inequalities.Container_SIG = struct
           let acc =
             tighten_polynomials
               add_ineqs are_eq acc sum ctt lambdas nb_constrs constrs in
-          if  Options.tighten_vars() then
+          if  Options.get_tighten_vars() then
             tighten_monomials
               add_ineqs are_eq acc sum ctt lambdas nb_constrs constrs
           else acc
       in
-      if debug_fm() then fprintf fmt "end fm-simplex@.@.";
+      if get_debug_fm() then fprintf fmt "end fm-simplex@.@.";
       acc
 
     let list_of_mineqs mp =

@@ -28,6 +28,7 @@
 
 open AltErgoLib
 open Options
+open AltErgoCommon
 
 (* workaround to force inclusion of main_input,
    because dune is stupid, :p *)
@@ -43,7 +44,7 @@ module SatCont = (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer)
 
 module TH =
   (val
-    (if Options.no_theory() then (module Theory.Main_Empty : Theory.S)
+    (if Options.get_no_theory() then (module Theory.Main_Empty : Theory.S)
      else (module Theory.Main_Default : Theory.S)) : Theory.S )
 
 module SAT = SatCont.Make(TH)
@@ -56,7 +57,7 @@ let () =
   (* what to do with Ctrl+C ? *)
   Sys.set_signal Sys.sigint(*-6*)
     (Sys.Signal_handle (fun _ ->
-         if Options.profiling() then Profiling.switch ()
+         if Options.get_profiling() then Profiling.switch ()
          else begin
            Format.eprintf "; User wants me to stop.\n";
            Format.printf "unknown@.";
@@ -68,7 +69,7 @@ let () =
 let () =
   (* put the test here because Windows does not handle Sys.Signal_handle
      correctly *)
-  if Options.profiling() then
+  if Options.get_profiling() then
     List.iter
       (fun sign ->
          Sys.set_signal sign
@@ -83,7 +84,7 @@ let () =
 let () =
   (* put the test here because Windows does not handle Sys.Signal_handle
      correctly *)
-  if Options.profiling() then
+  if Options.get_profiling() then
     Sys.set_signal Sys.sigprof (*-21*)
       (Sys.Signal_handle
          (fun _ ->
@@ -92,16 +93,16 @@ let () =
       )
 
 let () =
-  if not (model ()) then
+  if not (get_model ()) then
     try
       Sys.set_signal Sys.sigvtalrm
         (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
     with Invalid_argument _ -> ()
 
 let init_profiling () =
-  if Options.profiling () then begin
+  if Options.get_profiling () then begin
     Timers.reset timers;
-    assert (Options.timers());
+    assert (Options.get_timers());
     Timers.set_timer_start (Timers.start timers);
     Timers.set_timer_pause (Timers.pause timers);
     Profiling.init ();
@@ -119,10 +120,10 @@ let solve all_context (cnf, goal_name) =
   let used_context = FE.choose_used_context all_context ~goal_name in
   init_profiling ();
   try
-    if Options.timelimit_per_goal() then
+    if Options.get_timelimit_per_goal() then
       begin
         Options.Time.start ();
-        Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
+        Options.Time.set_timeout ~is_gui:false (Options.get_timelimit ());
       end;
     SAT.reset_refs ();
     let _ =
@@ -130,15 +131,15 @@ let solve all_context (cnf, goal_name) =
         (FE.process_decl FE.print_status used_context)
         (SAT.empty (), true, Explanation.empty) cnf
     in
-    if Options.timelimit_per_goal() then
+    if Options.get_timelimit_per_goal() then
       Options.Time.unset_timeout ~is_gui:false;
-    if Options.profiling() then
+    if Options.get_profiling() then
       Profiling.print true (Steps.get_steps ()) timers fmt
   with Util.Timeout ->
-    if not (Options.timelimit_per_goal()) then exit 142
+    if not (Options.get_timelimit_per_goal()) then exit 142
 
 let typed_loop all_context state td =
-  if type_only () then state else begin
+  if get_type_only () then state else begin
     match td.Typed.c with
     | Typed.TGoal (_, kind, name, _) ->
       let l = state.local @ state.global @ state.ctx in
@@ -161,18 +162,18 @@ let typed_loop all_context state td =
   end
 
 let () =
-  let (module I : Input.S) = Input.find (Options.frontend ()) in
+  let (module I : Input.S) = Input.find (Options.get_frontend ()) in
   let parsed =
     try
       Options.Time.start ();
-      if not (Options.timelimit_per_goal()) then
-        Options.Time.set_timeout ~is_gui:false (Options.timelimit ());
+      if not (Options.get_timelimit_per_goal()) then
+        Options.Time.set_timeout ~is_gui:false (Options.get_timelimit ());
 
       Options.set_is_gui false;
       init_profiling ();
 
       let filename = get_file () in
-      let preludes = Options.preludes () in
+      let preludes = Options.get_preludes () in
       I.parse_files ~filename ~preludes
     with
     | Util.Timeout ->
@@ -188,10 +189,10 @@ let () =
 
   in
   let all_used_context = FE.init_all_used_context () in
-  if Options.timelimit_per_goal() then
+  if Options.get_timelimit_per_goal() then
     FE.print_status FE.Preprocess 0;
   let typing_loop state p =
-    if parse_only () then state else begin
+    if get_parse_only () then state else begin
       try
         let l, env = I.type_parsed state.env p in
         List.fold_left (typed_loop all_used_context) { state with env; } l
@@ -222,7 +223,7 @@ let () =
           (List.fold_left (FE.process_decl FE.print_status used_context)
              (SAT.empty (), true, Explanation.empty) cnf);
         Options.Time.unset_timeout ~is_gui:false;
-        if Options.profiling() then
+        if Options.get_profiling() then
           Profiling.print true (SAT.get_steps ()) timers fmt;
       with Util.Timeout -> ()
     end

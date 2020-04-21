@@ -211,7 +211,7 @@ module Main_Default : S = struct
     let assumed =
       let cpt = ref 0 in
       fun l ->
-        if debug_cc () then begin
+        if get_debug_cc () then begin
           fprintf fmt "[cc] Assumed facts (in this order):@.@.";
           print_declarations l;
           incr cpt;
@@ -260,43 +260,43 @@ module Main_Default : S = struct
         fprintf fmt "==============================================@."
 
     let begin_case_split choices =
-      if debug_split () then
+      if get_debug_split () then
         fprintf fmt "============= Begin CASE-SPLIT ===============@.%a@."
           made_choices choices
 
     let end_case_split choices =
-      if debug_split () then
+      if get_debug_split () then
         fprintf fmt "============= End CASE-SPLIT =================@.%a@."
           made_choices choices
 
     (* unused --
        let split_size sz =
-       if debug_split () then
+       if get_debug_split () then
         fprintf fmt ">size case-split: %s@." (Numbers.Q.to_string sz)
     *)
 
     let print_lr_view fmt ch = LR.print fmt (LR.make ch)
 
     let split_backtrack neg_c ex_c =
-      if debug_split () then
+      if get_debug_split () then
         fprintf fmt "[case-split] I backtrack on %a : %a@."
           print_lr_view neg_c Ex.print ex_c
 
     let split_assume c ex_c =
-      if debug_split () then
+      if get_debug_split () then
         fprintf fmt "[case-split] I assume %a : %a@."
           print_lr_view c Ex.print ex_c
 
     let split_backjump c dep =
-      if debug_split () then
+      if get_debug_split () then
         fprintf fmt "[case-split] I backjump on %a : %a@."
           print_lr_view c Ex.print dep
 
     let query a =
-      if debug_cc () then fprintf fmt "[cc] query : %a@." E.print a
+      if get_debug_cc () then fprintf fmt "[cc] query : %a@." E.print a
 
     let split_sat_contradicts_cs filt_choices =
-      if debug_split () then
+      if get_debug_split () then
         fprintf fmt
           "[case-split] The SAT contradicts CS! I'll replay choices@.%a@."
           made_choices filt_choices
@@ -383,7 +383,7 @@ module Main_Default : S = struct
             | _ -> assert false
           in
           Debug.split_backtrack neg_c dep;
-          if bottom_classes () then
+          if get_bottom_classes () then
             printf "bottom (case-split):%a\n@."
               Expr.print_tagged_classes classes;
           aux ch None dl base_env [neg_c, lit_orig, CNeg, dep]
@@ -515,7 +515,7 @@ module Main_Default : S = struct
     else
       let t = {t with assumed_set; assumed = assumed :: t.assumed;
                       cs_pending_facts = in_facts :: t.cs_pending_facts} in
-      if Options.profiling() then Profiling.assume cpt;
+      if Options.get_profiling() then Profiling.assume cpt;
       Debug.assumed t.assumed;
       assert (not ordered || is_ordered_list t.assumed);
 
@@ -524,7 +524,7 @@ module Main_Default : S = struct
       {t with gamma = gamma; terms = Expr.Set.union t.terms new_terms},
       new_terms, cpt
 
-  let debug_theories_instances th_instances ilvl dlvl =
+  let get_debug_theories_instances th_instances ilvl dlvl =
     let module MF = Expr.Map in
     fprintf fmt "===========================================================@.";
     fprintf fmt
@@ -565,7 +565,7 @@ module Main_Default : S = struct
   let theories_instances ~do_syntactic_matching t_match t selector dlvl ilvl =
     let gamma, instances =
       CC_X.theories_instances ~do_syntactic_matching t_match t.gamma selector in
-    if debug_fpa() > 0 then debug_theories_instances instances dlvl ilvl;
+    if get_debug_fpa() > 0 then get_debug_theories_instances instances dlvl ilvl;
     {t with gamma = gamma}, instances
 
   let query =
@@ -577,7 +577,7 @@ module Main_Default : S = struct
       { t with gamma = gamma }
     in
     fun a t ->
-      if Options.profiling() then Profiling.query();
+      if Options.get_profiling() then Profiling.query();
       Options.exec_thread_yield ();
       Debug.query a;
       try
@@ -641,7 +641,7 @@ module Main_Default : S = struct
   let cl_extract env = CC_X.cl_extract env.gamma
 
   let assume ?(ordered=true) facts t =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_CC Timers.F_assume;
         let res = assume ordered facts t in
@@ -653,7 +653,7 @@ module Main_Default : S = struct
     else assume ordered facts t
 
   let query a t =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_CC Timers.F_query;
         let res = query a t in

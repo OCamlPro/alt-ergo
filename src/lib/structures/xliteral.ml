@@ -223,7 +223,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
 
     let initial_size = 9001
 
-    let disable_weaks () = Options.disable_weaks ()
+    let disable_weaks () = Options.get_disable_weaks ()
 
   end
 

@@ -433,7 +433,7 @@ module Decls = struct
       (* should I instantiate if not found ?? *)
       with Not_found ->
         let params, body = fresh_type params body in
-        (*if true || debug_adt () then*)
+        (*if true || get_debug_adt () then*)
         let sbt =
           try
             List.fold_left2
@@ -464,7 +464,7 @@ module Decls = struct
         add name params body;
         body
     with Not_found ->
-      if debug_adt () then
+      if get_debug_adt () then
         fprintf fmt "%a not found@." Hstring.print name;
       assert false
 end
@@ -490,7 +490,7 @@ let t_adt ?(body=None) s ty_vars =
     | None -> ()
     | Some [] -> assert false
     | Some ([_] as cases) ->
-      if debug_adt () then
+      if get_debug_adt () then
         Format.eprintf "should be registered as a record@.";
       let cases =
         List.map (fun (s, l) ->

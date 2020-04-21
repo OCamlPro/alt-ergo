@@ -225,7 +225,7 @@ module Translate = struct
       let tl = List.map (translate_term pars) term_list in
       (tl, true) :: acc
     | Named _ ->
-      if Options.verbose () then
+      if Options.get_verbose () then
         Printf.eprintf "[Warning] (! :named not yet supported)\n%!";
       acc
 
@@ -422,7 +422,7 @@ module Translate = struct
   let file commands =
     Smtlib_typing.typing commands;
 
-    if Options.type_smt2 () then begin
+    if Options.get_type_smt2 () then begin
       Printf.eprintf "%s%!" (Smtlib_options.status ());
       []
     end

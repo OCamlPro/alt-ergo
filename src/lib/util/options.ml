@@ -93,18 +93,22 @@ let set_debug_combine b = debug_combine := b
 let set_debug_constr b = debug_constr := b
 let set_debug_explanations b = debug_explanations := b
 let set_debug_fm b = debug_fm := b
+let set_debug_fpa i = debug_fpa := i
 let set_debug_gc b = debug_gc := b
+let set_debug_interpretation b = debug_interpretation := b
 let set_debug_ite b = debug_ite := b
 let set_debug_matching i = debug_matching := i
 let set_debug_sat b = debug_sat := b
 let set_debug_sat_simple b = debug_sat_simple := b
 let set_debug_split b = debug_split := b
 let set_debug_sum b = debug_sum := b
+let set_debug_triggers b = debug_triggers := b
 let set_debug_types b = debug_types := b
 let set_debug_typing b = debug_typing := b
 let set_debug_uf b = debug_uf := b
 let set_debug_unsat_core b = debug_unsat_core := b
 let set_debug_use b = debug_use := b
+let set_debug_warnings b = debug_warnings := b
 let set_rules b = rules := b
 
 let get_debug () = !debug
@@ -268,7 +272,7 @@ let profiling_plugin = ref ""
 let verbose = ref false
 
 let set_cumulative_time_profiling b = cumulative_time_profiling := b
-let set_profiling f b =
+let set_profiling b f =
   profiling := b;
   profiling_period := if b then f else 0.
 let set_profiling_period p = profiling_period := p
@@ -360,7 +364,7 @@ let get_no_decisions () = !no_decisions
 let get_can_decide_on s =
   let ss = !no_decisions_on in
   ss == Util.SS.empty || not (Util.SS.mem s ss)
-let get_no_decisions_on () = !no_decisions_on
+(* let get_no_decisions_on () = !no_decisions_on *)
 let get_no_decisions_on_is_empty () = !no_decisions_on == Util.SS.empty
 let get_no_sat_learning () = !no_sat_learning
 let get_sat_learning () = not (!no_sat_learning)
@@ -399,7 +403,7 @@ let restricted = ref false
 let tighten_vars = ref false
 let use_fpa = ref false
 
-let set_disable_adts b = ref disable_adts := b
+let set_disable_adts b = disable_adts := b
 let set_inequalities_plugin b = inequalities_plugin := b
 let set_no_ac b = no_ac := b
 let set_no_contracongru b = no_contracongru := b
