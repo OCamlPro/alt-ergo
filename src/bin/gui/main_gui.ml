@@ -27,7 +27,7 @@
 (******************************************************************************)
 
 open AltErgoLib
-open AltErgoCommon
+open Alt_ergo_common
 open AltErgoParsers
 open Typed
 open Commands

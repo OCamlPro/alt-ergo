@@ -8,10 +8,10 @@ SRC_DIR := src
 
 BIN_DIR := $(SRC_DIR)/bin
 LIB_DIR := $(SRC_DIR)/lib
-COMMON_DIR := $(SRC_DIR)/common
 PLUGINS_DIR := $(SRC_DIR)/plugins
 PARSERS_DIR := $(SRC_DIR)/parsers
 
+COMMON_DIR := $(BIN_DIR)/common
 BTEXT_DIR := $(BIN_DIR)/text
 BGUI_DIR := $(BIN_DIR)/gui
 

@@ -1,5 +1,5 @@
 (library
- (name             AltErgoCommon)
+ (name             alt_ergo_common)
  (libraries        alt-ergo-lib cmdliner)
  (modules Parse_command)
 )

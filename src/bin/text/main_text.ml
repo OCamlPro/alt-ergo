@@ -28,7 +28,7 @@
 
 open AltErgoLib
 open Options
-open AltErgoCommon
+open Alt_ergo_common
 
 (* workaround to force inclusion of main_input,
    because dune is stupid, :p *)
