@@ -1,3 +1,13 @@
+(documentation
+  (package alt-ergo)
+  (mld_files :standard)
+)
+
+(documentation
+  (package altgr-ergo)
+  (mld_files :standard)
+)
+
 (library
  (name             alt_ergo_common)
  (libraries        alt-ergo-lib cmdliner)

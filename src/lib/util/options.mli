@@ -572,7 +572,8 @@ val get_interpretation : unit -> int
 (** Default to [0] *)
 
 (** Value specifying the default output format. possible values are
-    {ul {- native} {- smtlib2} {- why3}}. *)
+    {ul {- native} {- smtlib2} {- why3}}
+    . *)
 val get_output_format : unit -> output_format
 (** Default to [Native] *)
 
