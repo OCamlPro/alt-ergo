@@ -7,4 +7,4 @@ graphical interface to the {e alt-ergo} automated theorem prover.
 
 {3 Command Line Parsing}
 
-The command line parsing is computed by the {{:index_common.html}[Alt_ergo_common.Parse_command]} module from the common library (which is an internal library) using {{:https://erratique.ch/software/cmdliner}[cmdliner]}
+The command line parsing is computed in our common internal library (see {{:index_common.html}[Alt_ergo_common]}) using {{:https://erratique.ch/software/cmdliner}[cmdliner]}
