@@ -7,7 +7,7 @@ is available through the {e --help} option.
 
 {3 Parsing}
 
-The command line parsing is computed by the Parse_command module from the common library (which is an internal library) using cmdliner
+The command line parsing is computed by the {!module:Alt_ergo_common.Parse_command} module from the common library (which is an internal library) using cmdliner
 
 
 {3 Plugins}
