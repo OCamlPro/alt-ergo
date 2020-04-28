@@ -807,7 +807,11 @@ let parse_output_opt =
   let output_format =
     let doc =
       Format.sprintf
-        "Answer unsat/sat/unknown instead of Valid/Invalid/I don't know. \
+      "Control the output format of the solver, $(docv) must be %s.
+        The alt-ergo native format outputs Valid/Invalid/I don't know.
+        The smtlib format outputs unsat/sat/unknown.
+        If left unspecified, Alt-Ergo will use its heuristics to determine the
+        adequate output format according to the input format."
          $(docv) must be %s. It must be noticed that not specifying an output \
          format will let Alt-Ergo set it according to the input file's \
          extension."
