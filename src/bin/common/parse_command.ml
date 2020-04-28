@@ -871,7 +871,7 @@ let parse_quantifiers_opt =
     Arg.(value & flag & info ["inst-after-bj"] ~docs ~doc) in
 
   let max_multi_triggers_size =
-    let doc = "Max number of terms allowed in multi-triggers." in
+    let doc = "Maximum size of multi-triggers, i.e. the maximum number of independent patterns in a multi-trigger." in
     let docv = "VAL" in
     Arg.(value & opt int (get_max_multi_triggers_size ()) &
          info ["max-multi-triggers-size"] ~docv ~docs ~doc) in
