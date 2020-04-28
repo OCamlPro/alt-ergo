@@ -764,7 +764,7 @@ let parse_limit_opt =
 
   let timelimit_per_goal =
     let doc =
-      "Set the given timelimit for each goal, in case of multiple goals per \
+      "Set the timelimit given by the $(i,--timelimit) option to apply for each goal, in case of multiple goals per \
        file. In this case, time spent in preprocessing is separated from \
        resolution time. Not relevant for GUI-mode." in
     Arg.(value & flag & info ["timelimit-per-goal"] ~docs ~doc) in
