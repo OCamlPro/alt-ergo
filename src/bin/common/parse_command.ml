@@ -801,7 +801,7 @@ let parse_output_opt =
     Arg.(value & opt model_conv MNone & info ["m"; "model"] ~docv ~doc) in
 
   let unsat_core =
-    let doc = "Experimental support for unsat-cores." in
+    let doc = "Experimental support for computing and printing unsat-cores." in
     Arg.(value & flag & info ["u"; "unsat-core"] ~doc) in
 
   let output_format =
