@@ -783,7 +783,7 @@ let parse_output_opt =
       "Experimental support for counter-example generation. Possible \
        values are 1, 2, or 3 to compute an interpretation before returning \
        Unknown, before instantiation (1), or before every decision (2) or \
-       instantiation. A negative value (-1, -2, or -3) will disable \
+       instantiation (3). A negative value (-1, -2, or -3) will disable \
        interpretation display. Note that $(b, --max-split) limitation will \
        be ignored in model generation phase." in
     let docv = "VAL" in
