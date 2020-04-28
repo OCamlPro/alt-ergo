@@ -849,7 +849,7 @@ let parse_profiling_opt =
          info ["profiling-plugin"] ~docv ~docs ~doc) in
 
   let get_verbose =
-    let doc = "Set the get_verbose mode." in
+    let doc = "Set the verbose mode." in
     Arg.(value & flag & info ["v"; "verbose"] ~doc) in
 
   Term.(ret (const mk_profiling_opt $
