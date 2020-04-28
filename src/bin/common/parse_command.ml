@@ -877,7 +877,7 @@ let parse_quantifiers_opt =
          info ["max-multi-triggers-size"] ~docv ~docs ~doc) in
 
   let nb_triggers =
-    let doc = "Number of (multi)triggers." in
+    let doc = Maximum number of triggers used (including regular and multi triggers)." in
     let docv = "VAL" in
     Arg.(value & opt int (get_nb_triggers ()) &
          info ["nb-triggers"] ~docv ~docs ~doc) in
