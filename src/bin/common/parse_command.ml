@@ -1057,7 +1057,7 @@ let parse_theory_opt =
     Arg.(value & flag & info ["no-nla"] ~docs ~doc) in
 
   let no_tcp =
-    let doc = "Deactivate BCP modulo theories." in
+    let doc = "Deactivate Boolean Constant Propagation (BCP) modulo theories." in
     Arg.(value & flag & info ["no-tcp"] ~docs ~doc) in
 
   let no_theory =
