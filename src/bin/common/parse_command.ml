@@ -26,14 +26,21 @@ let model_printer fmt model = Format.fprintf fmt "%s" (model_to_string model)
 let model_conv = Arg.conv ~docv:"MDL" (model_parser, model_printer)
 
 
-let format_parser = function
-  | "native" | "altergo" | "alt-ergo" -> Ok Native
-  | "smtlib2" | "smt-lib2" -> Ok Smtlib2
-  | "why3" -> Ok Why3
-  (* | "szs" | "SZS" -> "szs" *)
-  | s ->
-    Error (`Msg (Format.sprintf
-                   "The format %s is not accepted as input/output" s))
+(* When adding another parser, remember to change this list too as it
+   is used in the documentation *)
+let formats_list =
+  ["native", Native;
+   "altergo", Native;
+   "alt-ergo", Native;
+   "smtlib2", Smtlib2;
+   "smt-lib2", Smtlib2;
+   "why3", Why3]
+
+let format_parser s =
+  match List.assoc_opt s formats_list with
+  | Some f -> Ok f
+  | None -> Error (`Msg (Format.sprintf
+                           "The format %s is not accepted as input/output" s))
 
 let format_to_string = function
   | Native -> "native"
@@ -46,9 +53,9 @@ let format_printer fmt format =
 
 let format_conv = Arg.conv ~docv:"FMT" (format_parser, format_printer)
 
-type rules = RParsing | RTyping | RSat | RCC | RArith | RNone
+type rule = RParsing | RTyping | RSat | RCC | RArith | RNone
 
-let value_of_rules = function
+let value_of_rule = function
   | RParsing -> 0
   | RTyping -> 1
   | RSat -> 2
@@ -56,7 +63,7 @@ let value_of_rules = function
   | RArith -> 4
   | RNone -> -1
 
-let rules_parser = function
+let rule_parser = function
   | "parsing" -> Ok RParsing
   | "typing" -> Ok RTyping
   | "sat" -> Ok RSat
@@ -64,9 +71,9 @@ let rules_parser = function
   | "arith" -> Ok RArith
   | "none" -> Ok RNone
   | s ->
-    Error (`Msg ("Option --rules does not accept the argument \"" ^ s))
+    Error (`Msg ("Option --rule does not accept the argument \"" ^ s))
 
-let rules_to_string = function
+let rule_to_string = function
   | RParsing -> "parsing"
   | RTyping -> "typing"
   | RSat -> "sat"
@@ -74,9 +81,9 @@ let rules_to_string = function
   | RArith -> "arith"
   | RNone -> "none"
 
-let rules_printer fmt rules = Format.fprintf fmt "%s" (rules_to_string rules)
+let rule_printer fmt rule = Format.fprintf fmt "%s" (rule_to_string rule)
 
-let rules_conv = Arg.conv ~docv:"MDL" (rules_parser, rules_printer)
+let rule_conv = Arg.conv ~docv:"MDL" (rule_parser, rule_printer)
 
 let mk_dbg_opt_spl1 debug debug_ac debug_adt debug_arith debug_arrays
     debug_bitv debug_cc debug_combine debug_constr
@@ -107,9 +114,9 @@ let mk_dbg_opt_spl2 debug_explanations debug_fm debug_fpa debug_gc
   `Ok()
 
 let mk_dbg_opt_spl3 debug_split debug_sum debug_triggers debug_types
-    debug_typing debug_uf debug_unsat_core debug_use debug_warnings rules
+    debug_typing debug_uf debug_unsat_core debug_use debug_warnings rule
   =
-  let rules = value_of_rules rules in
+  let rule = value_of_rule rule in
   set_debug_split debug_split;
   set_debug_sum debug_sum;
   set_debug_triggers debug_triggers;
@@ -119,7 +126,7 @@ let mk_dbg_opt_spl3 debug_split debug_sum debug_triggers debug_types
   set_debug_unsat_core debug_unsat_core;
   set_debug_use debug_use;
   set_debug_warnings debug_warnings;
-  set_rules rules;
+  set_rule rule;
   `Ok()
 
 let mk_case_split_opt case_split_policy enable_adts_cs max_split
@@ -547,11 +554,11 @@ let parse_dbg_opt_spl3 =
     let doc = "Set the debugging flag of warnings." in
     Arg.(value & flag & info ["dwarnings"] ~docs ~doc) in
 
-  let rules =
+  let rule =
     let doc =
-      "$(docv) = parsing|typing|sat|cc|arith, output rules used on stderr." in
+      "$(docv) = parsing|typing|sat|cc|arith, output rule used on stderr." in
     let docv = "TR" in
-    Arg.(value & opt rules_conv RNone & info ["rules"] ~docv ~docs ~doc) in
+    Arg.(value & opt rule_conv RNone & info ["rule"] ~docv ~docs ~doc) in
 
   Term.(ret (const mk_dbg_opt_spl3 $
 
@@ -564,7 +571,7 @@ let parse_dbg_opt_spl3 =
              debug_unsat_core $
              debug_use $
              debug_warnings $
-             rules
+             rule
             ))
 
 let parse_case_split_opt =
@@ -638,7 +645,7 @@ let parse_execution_opt =
         "Set the default input format to $(docv) and must be %s. \
          Useful when the extension does not allow to automatically select \
          a parser (eg. JS mode, GUI mode, ...)."
-        (Arg.doc_alts ["native"; "smtlib"; "why3"]) in
+        (Arg.doc_alts (fst @@ List.split formats_list)) in
     let docv = "FMT" in
     Arg.(value & opt (some format_conv) None & info ["i"; "input"] ~docv ~doc)
   in
@@ -683,7 +690,8 @@ let parse_halt_opt =
   let docs = s_halt in
 
   let version_info =
-    let doc = "Print some info about this version." in
+    let doc = "Print some info about this version \
+               (version, date released, date commited) ." in
     Arg.(value & flag & info ["version-info"] ~docs ~doc) in
 
   let where =
@@ -714,8 +722,8 @@ let parse_internal_opt =
   let gc_policy =
     let doc =
       "Set the gc policy allocation. 0 = next-fit policy, 1 = \
-       first-fit policy, 2 = best-fit policy. See GC module for more \
-       informations." in
+       first-fit policy, 2 = best-fit policy. See the Gc module \
+       of the OCaml distribution for more informations." in
     let docv = "PLCY" in
     Arg.(value & opt int 0 & info ["gc-policy"] ~docv ~docs ~doc) in
 
@@ -764,7 +772,8 @@ let parse_limit_opt =
 
   let timelimit_per_goal =
     let doc =
-      "Set the timelimit given by the $(i,--timelimit) option to apply for each goal, in case of multiple goals per \
+      "Set the timelimit given by the $(i,--timelimit) option to apply for each \
+       goal, in case of multiple goals per \
        file. In this case, time spent in preprocessing is separated from \
        resolution time. Not relevant for GUI-mode." in
     Arg.(value & flag & info ["timelimit-per-goal"] ~docs ~doc) in
@@ -807,12 +816,12 @@ let parse_output_opt =
   let output_format =
     let doc =
       Format.sprintf
-      "Control the output format of the solver, $(docv) must be %s.
-        The alt-ergo native format outputs Valid/Invalid/I don't know.
-        The smtlib format outputs unsat/sat/unknown.
-        If left unspecified, Alt-Ergo will use its heuristics to determine the
-        adequate output format according to the input format."
-         $(docv) must be %s. It must be noticed that not specifying an output \
+        "Control the output format of the solver, $(docv) must be %s.\
+         The alt-ergo native format outputs Valid/Invalid/I don't know.\
+         The smtlib format outputs unsat/sat/unknown.\
+         If left unspecified, Alt-Ergo will use its heuristics to determine the \
+         adequate output format according to the input format.\
+         It must be noticed that not specifying an output \
          format will let Alt-Ergo set it according to the input file's \
          extension."
         (Arg.doc_alts [ "native"; "smtlib" ])
@@ -877,7 +886,7 @@ let parse_quantifiers_opt =
          info ["max-multi-triggers-size"] ~docv ~docs ~doc) in
 
   let nb_triggers =
-    let doc = Maximum number of triggers used (including regular and multi triggers)." in
+    let doc = "Maximum number of triggers used (including regular and multi triggers)." in
     let docv = "VAL" in
     Arg.(value & opt int (get_nb_triggers ()) &
          info ["nb-triggers"] ~docv ~docs ~doc) in
@@ -893,9 +902,9 @@ let parse_quantifiers_opt =
   let normalize_instances =
     let doc =
       "Normalize generated substitutions by matching w.r.t. the state of \
-       the theory. This means that only terms that \
-       are greater (w.r.t. depth) than the initial terms of the problem are \
-       normalized." in
+                                    the theory. This means that only terms that \
+                                      are greater (w.r.t. depth) than the initial terms of the problem are \
+                                      normalized." in
     Arg.(value & flag & info ["normalize-instances"] ~docs ~doc) in
 
   let triggers_var =
@@ -937,7 +946,7 @@ let parse_sat_opt =
   let no_backward =
     let doc =
       "Disable backward reasoning step (starting from the goal) done in \
-       the default SAT solver before deciding." in
+the default SAT solver before deciding." in
     Arg.(value & flag & info ["no-backward"] ~docs ~doc) in
 
 
@@ -948,7 +957,7 @@ let parse_sat_opt =
   let no_decisions_on =
     let doc =
       "Disable decisions at the SAT level for the instances generated \
-       from the given axioms. Arguments should be separated with a comma." in
+    from the given axioms. Arguments should be separated with a comma." in
     let docv = "[INST1; INST2; ...]" in
     Arg.(value & opt string "" &
          info ["no-decisions-on"] ~docv ~docs ~doc) in
@@ -960,18 +969,18 @@ let parse_sat_opt =
   let no_sat_learning =
     let doc =
       "Disable learning/caching of unit facts in the Default SAT. These \
-       facts are used to improve bcp." in
+  facts are used to improve bcp." in
     Arg.(value & flag & info ["no-sat-learning"] ~docs ~doc) in
 
   let no_tableaux_cdcl_in_instantiation =
     let doc = "When satML is used, this disables the use of a tableaux-like\
-               method for instantiations with the CDCL solver." in
+method for instantiations with the CDCL solver." in
     Arg.(value & flag &
          info ["no-tableaux-cdcl-in-instantiation"] ~docs ~doc) in
 
   let no_tableaux_cdcl_in_theories =
     let doc = "When satML is used, this disables the use of a tableaux-like\
-               method for theories with the CDCL solver." in
+method for theories with the CDCL solver." in
     Arg.(value & flag & info ["no-tableaux-cdcl-in-theories"] ~docs ~doc) in
 
   let sat_plugin =
@@ -983,7 +992,7 @@ let parse_sat_opt =
   let sat_solver =
     let doc = Format.sprintf
         "Choose the SAT solver to use. Default value is CDCL (i.e. satML \
-         solver). Possible options are %s."
+                                                                solver). Possible options are %s."
         (Arg.doc_alts ["CDCL"; "satML"; "CDCL-Tableaux";
                        "satML-Tableaux"; "Tableaux-CDCL"])
     in
@@ -1011,8 +1020,8 @@ let parse_term_opt =
   let inline_lets =
     let doc =
       "Enable substitution of variables bounds by Let. The default \
-       behavior is to only substitute variables that are bound to a \
-       constant, or that appear at most once." in
+    behavior is to only substitute variables that are bound to a \
+      constant, or that appear at most once." in
     Arg.(value & flag & info ["inline-lets"] ~docs ~doc) in
 
   let rewriting =
@@ -1043,7 +1052,7 @@ let parse_theory_opt =
 
   let no_ac =
     let doc = "Disable the AC theory of Associative and \
-               Commutative function symbols." in
+  Commutative function symbols." in
     Arg.(value & flag & info ["no-ac"] ~docs ~doc) in
 
   let no_contracongru =
@@ -1056,8 +1065,8 @@ let parse_theory_opt =
 
   let no_nla =
     let doc = "Disable non-linear arithmetic reasoning (i.e. non-linear \
-               multplication, division and modulo on integers and rationals). \
-               Non-linear multiplication remains AC." in
+                                                          multplication, division and modulo on integers and rationals). \
+                                                         Non-linear multiplication remains AC." in
     Arg.(value & flag & info ["no-nla"] ~docs ~doc) in
 
   let no_tcp =
@@ -1093,8 +1102,8 @@ let main =
   let file =
     let doc =
       "Source file. Must be suffixed by $(i,.ae), \
-       ($(i,.mlw) and $(i,.why) are depreciated, \
-       $(i,.smt2) or $(i,.psmt2)." in
+                                  ($(i,.mlw) and $(i,.why) are depreciated, \
+                                             $(i,.smt2) or $(i,.psmt2)." in
     let i = Arg.(info [] ~docv:"FILE" ~doc) in
     Arg.(value & pos ~rev:true 0 (some string) None & i) in
 
@@ -1123,22 +1132,25 @@ let main =
       `S s_case_split;
       `S s_halt;
       `S s_debug;
+      `P "These options are used to output debug info for the concerned \
+          part of the solver.\
+          They are $(b,not) used to check internal consistency.";
       `S Manpage.s_bugs;
       `P "You can open an issue on: \
-          https://github.com/OCamlPro/alt-ergo/issues";
+            https://github.com/OCamlPro/alt-ergo/issues";
       `Pre "Or you can write to: \n   alt-ergo@ocamlpro.com";
       `S Manpage.s_authors;
       `Pre "CURRENT AUTHORS\n\
-           \   Albin Coquereau\n\
-           \   Guillaume Bury\n\
-           \   Mattias Roux";
+                                       \   Albin Coquereau\n\
+                                       \   Guillaume Bury\n\
+                                       \   Mattias Roux";
 
       `Pre "ORIGINAL AUTHORS\n\
-           \   Sylvain Conchon\n\
-           \   Evelyne Contejean\n\
-           \   Mohamed Iguernlala\n\
-           \   Stephane Lescuyer\n\
-           \   Alain Mebsout\n";
+                                       \   Sylvain Conchon\n\
+                                       \   Evelyne Contejean\n\
+                                       \   Mohamed Iguernlala\n\
+                                       \   Stephane Lescuyer\n\
+                                       \   Alain Mebsout\n";
     ]
   in
 

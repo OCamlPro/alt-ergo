@@ -231,8 +231,8 @@ val set_restricted : bool -> unit
 (** Set {!val:rewriting} *)
 val set_rewriting : bool -> unit
 
-(** Set {!val:rules} *)
-val set_rules : int -> unit
+(** Set {!val:rule} *)
+val set_rule : int -> unit
 
 (** Set {!val:save_used_context} *)
 val set_save_used_context : bool -> unit
@@ -813,8 +813,8 @@ val get_use_fpa : unit -> bool
 (** Possible values are
     {ul {- 0 : parsing} {- 1 : typing} {- 2 : sat} {- 3 : cc} {- 4 : arith}}
 
-    output rules used on stderr. *)
-val get_rules : unit -> int
+    output rule used on stderr. *)
+val get_rule : unit -> int
 (** Default to [-1] *)
 
 (** {4 Files} *)
@@ -858,7 +858,7 @@ end
 (** {2 Globals} *)
 (** Global functions used throughout the whole program *)
 
-(** Displays the used rules *)
+(** Displays the used rule *)
 val tool_req : int -> string -> unit
 
 (** {3 Monomorphisations}  *)
