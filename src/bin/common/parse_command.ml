@@ -887,7 +887,7 @@ let parse_quantifiers_opt =
     Arg.(value & flag & info ["no-ematching"] ~docs ~doc) in
 
   let no_user_triggers =
-    let doc = "Ignore user triggers, except for triggers of theories axioms"; in
+    let doc = "Ignore user triggers, except for triggers of theories' axioms"; in
     Arg.(value & flag & info ["no-user-triggers"] ~docs ~doc) in
 
   let normalize_instances =
