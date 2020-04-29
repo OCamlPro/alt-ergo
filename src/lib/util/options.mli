@@ -62,124 +62,125 @@ type output_format = input_format
 
 (** {3 Setters for debug flags} *)
 
-(** Set {!val:debug} *)
+(** Set [debug] accessible with {!val:get_debug} *)
 val set_debug : bool -> unit
 
-(**Set {!val:debug_ac} *)
+(**Set [debug_ac] accessible with {!val:get_debug_ac} *)
 val set_debug_ac : bool -> unit
 
-(** Set {!val:debug_adt} *)
+(** Set [debug_adt] accessible with {!val:get_debug_adt} *)
 val set_debug_adt : bool -> unit
 
-(** Set {!val:debug_arith} *)
+(** Set [debug_arith] accessible with {!val:get_debug_arith} *)
 val set_debug_arith : bool -> unit
 
-(** Set {!val:debug_arrays} *)
+(** Set [debug_arrays] accessible with {!val:get_debug_arrays} *)
 val set_debug_arrays : bool -> unit
 
-(** Set {!val:debug_bitv} *)
+(** Set [debug_bitv] accessible with {!val:get_debug_bitv} *)
 val set_debug_bitv : bool -> unit
 
-(** Set {!val:debug_cc} *)
+(** Set [debug_cc] accessible with {!val:get_debug_cc} *)
 val set_debug_cc : bool -> unit
 
-(** Set {!val:debug_combine} *)
+(** Set [debug_combine] accessible with {!val:get_debug_combine} *)
 val set_debug_combine : bool -> unit
 
-(** Set {!val:debug_constr} *)
+(** Set [debug_constr] accessible with {!val:get_debug_constr} *)
 val set_debug_constr : bool -> unit
 
-(** Set {!val:debug_explanations} *)
+(** Set [debug_explanations] accessible with {!val:get_debug_explanations} *)
 val set_debug_explanations : bool -> unit
 
-(** Set {!val:debug_fm} *)
+(** Set [debug_fm] accessible with {!val:get_debug_fm} *)
 val set_debug_fm : bool -> unit
 
-(** Set {!val:debug_fpa} *)
+(** Set [debug_fpa] accessible with {!val:get_debug_fpa} *)
 val set_debug_fpa : int -> unit
 
-(** Set {!val:debug_gc} *)
+(** Set [debug_gc] accessible with {!val:get_debug_gc} *)
 val set_debug_gc : bool -> unit
 
-(** Set {!val:debug_interpretation} *)
+(** Set [debug_interpretation] accessible with
+    {!val:get_debug_interpretation} *)
 val set_debug_interpretation : bool -> unit
 
-(** Set {!val:debug_ite} *)
+(** Set [debug_ite] accessible with {!val:get_debug_ite} *)
 val set_debug_ite : bool -> unit
 
-(** Set {!val:debug_matching}
+(** Set [debug_matching] accessible with {!val:get_debug_matching}
 
     Possible values are
     {ol {- Disabled} {- Light} {- Full}}
 *)
 val set_debug_matching : int -> unit
 
-(** Set {!val:debug_sat} *)
+(** Set [debug_sat] accessible with {!val:get_debug_sat} *)
 val set_debug_sat : bool -> unit
 
-(** Set {!val:debug_sat_simple} *)
+(** Set [debug_sat_simple] accessible with {!val:get_debug_sat_simple} *)
 val set_debug_sat_simple : bool -> unit
 
-(** Set {!val:debug_split} *)
+(** Set [debug_split] accessible with {!val:get_debug_split} *)
 val set_debug_split : bool -> unit
 
-(** Set {!val:debug_sum} *)
+(** Set [debug_sum] accessible with {!val:get_debug_sum} *)
 val set_debug_sum : bool -> unit
 
-(** Set {!val:debug_triggers} *)
+(** Set [debug_triggers] accessible with {!val:get_debug_triggers} *)
 val set_debug_triggers : bool -> unit
 
-(** Set {!val:debug_types} *)
+(** Set [debug_types] accessible with {!val:get_debug_types} *)
 val set_debug_types : bool -> unit
 
-(** Set {!val:debug_typing} *)
+(** Set [debug_typing] accessible with {!val:get_debug_typing} *)
 val set_debug_typing : bool -> unit
 
-(** Set {!val:debug_uf} *)
+(** Set [debug_uf] accessible with {!val:get_debug_uf} *)
 val set_debug_uf : bool -> unit
 
-(** Set {!val:debug_unsat_core} *)
+(** Set [debug_unsat_core] accessible with {!val:get_debug_unsat_core} *)
 val set_debug_unsat_core : bool -> unit
 
-(** Set {!val:debug_use} *)
+(** Set [debug_use] accessible with {!val:get_debug_use} *)
 val set_debug_use : bool -> unit
 
-(** Set {!val:debug_warnings} *)
+(** Set [debug_warnings] accessible with {!val:get_debug_warnings} *)
 val set_debug_warnings : bool -> unit
 
-(** Set {!val:profiling} *)
+(** Set [profiling] accessible with {!val:get_profiling} *)
 val set_profiling : bool -> float -> unit
 
-(** Set {!val:timers} *)
+(** Set [timers] accessible with {!val:get_timers} *)
 val set_timers : bool -> unit
 
 (** {3 Additional setters} *)
 
-(** Set {!val:type_only} *)
+(** Set [type_only] accessible with {!val:get_type_only} *)
 val set_type_only : bool -> unit
 
-(** Set {!val:age_bound} *)
+(** Set [age_bound] accessible with {!val:get_age_bound} *)
 val set_age_bound : int -> unit
 
-(** Set {!val:bottom_classes} *)
+(** Set [bottom_classes] accessible with {!val:get_bottom_classes} *)
 val set_bottom_classes : bool -> unit
 
-(** Set {!val:fm_cross_limit} *)
+(** Set [fm_cross_limit] accessible with {!val:get_fm_cross_limit} *)
 val set_fm_cross_limit : Numbers.Q.t -> unit
 
-(** Set {!val:frontend} *)
+(** Set [frontend] accessible with {!val:get_frontend} *)
 val set_frontend : string -> unit
 
-(** Set {!val:greedy} *)
+(** Set [greedy] accessible with {!val:get_greedy} *)
 val set_greedy : bool -> unit
 
-(** Set {!val:inline_lets} *)
+(** Set [inline_lets] accessible with {!val:get_inline_lets} *)
 val set_inline_lets : bool -> unit
 
-(** Set {!val:input_format} *)
+(** Set [input_format] accessible with {!val:get_input_format} *)
 val set_input_format : input_format -> unit
 
-(** Set {!val:interpretation}
+(** Set [interpretation] accessible with {!val:get_interpretation}
 
     Possible values are :
     {ol {- Unknown} {- Before instantiation}
@@ -188,83 +189,83 @@ val set_input_format : input_format -> unit
     A negative value (-1, -2, or -3) will disable interpretation display. *)
 val set_interpretation : int -> unit
 
-(** Set {!val:max_split} *)
+(** Set [max_split] accessible with {!val:get_max_split} *)
 val set_max_split : Numbers.Q.t -> unit
 
-(** Set {!val:model}
+(** Set [model] accessible with {!val:get_model}
 
     Possible values are :
     {ul {- Default} {- Complete} {- All}}
 *)
 val set_model : model -> unit
 
-(** Set {!val:nb_triggers} *)
+(** Set [nb_triggers] accessible with {!val:get_nb_triggers} *)
 val set_nb_triggers : int -> unit
 
-(** Set {!val:no_ac} *)
+(** Set [no_ac] accessible with {!val:get_no_ac} *)
 val set_no_ac : bool -> unit
 
-(** Set {!val:no_contragru} *)
+(** Set [no_contragru] accessible with {!val:get_no_contragru} *)
 val set_no_contracongru : bool -> unit
 
-(** Set {!val:no_ematching} *)
+(** Set [no_ematching] accessible with {!val:get_no_ematching} *)
 val set_no_ematching : bool -> unit
 
-(** Set {!val:no_nla} *)
+(** Set [no_nla] accessible with {!val:get_no_nla} *)
 val set_no_nla : bool -> unit
 
-(** Set {!val:no_user_triggers} *)
+(** Set [no_user_triggers] accessible with {!val:get_no_user_triggers} *)
 val set_no_user_triggers : bool -> unit
 
-(** Set {!val:normalize_instances} *)
+(** Set [normalize_instances] accessible with {!val:get_normalize_instances} *)
 val set_normalize_instances : bool -> unit
 
-(** Set {!val:output_format} *)
+(** Set [output_format] accessible with {!val:get_output_format} *)
 val set_output_format : output_format -> unit
 
-(** Set {!val:parse_only} *)
+(** Set [parse_only] accessible with {!val:get_parse_only} *)
 val set_parse_only : bool -> unit
 
-(** Set {!val:restricted} *)
+(** Set [restricted] accessible with {!val:get_restricted} *)
 val set_restricted : bool -> unit
 
-(** Set {!val:rewriting} *)
+(** Set [rewriting] accessible with {!val:get_rewriting} *)
 val set_rewriting : bool -> unit
 
-(** Set {!val:rule} *)
+(** Set [rule] accessible with {!val:get_rule} *)
 val set_rule : int -> unit
 
-(** Set {!val:save_used_context} *)
+(** Set [save_used_context] accessible with {!val:get_save_used_context} *)
 val set_save_used_context : bool -> unit
 
-(** Set {!val:steps_bound} *)
+(** Set [steps_bound] accessible with {!val:get_steps_bound} *)
 val set_steps_bound : int -> unit
 
-(** Set {!val:term_like_pp} *)
+(** Set [term_like_pp] accessible with {!val:get_term_like_pp} *)
 val set_term_like_pp : bool -> unit
 
-(** Set {!val:thread_yield} *)
+(** Set [thread_yield] accessible with {!val:get_thread_yield} *)
 val set_thread_yield : (unit -> unit) -> unit
 
-(** Set {!val:timelimit} *)
+(** Set [timelimit] accessible with {!val:get_timelimit} *)
 val set_timelimit : float -> unit
 
-(** Set {!val:timeout} *)
+(** Set [timeout] accessible with {!val:get_timeout} *)
 val set_timeout : (unit -> unit) -> unit
 
-(** Set {!val:triggers_var} *)
+(** Set [triggers_var] accessible with {!val:get_triggers_var} *)
 val set_triggers_var : bool -> unit
 
-(** Set {!val:type_smt2} *)
+(** Set [type_smt2] accessible with {!val:get_type_smt2} *)
 val set_type_smt2 : bool -> unit
 
-(** Set {!val:unsat_core} *)
+(** Set [unsat_core] accessible with {!val:get_unsat_core} *)
 val set_unsat_core : bool -> unit
 
-(** Set {!val:verbose} *)
+(** Set [verbose] accessible with {!val:get_verbose} *)
 val set_verbose : bool -> unit
 
-(** Set {!val:file} *)
+(** Set [file] accessible with {!val:get_file} *)
 val set_file : string -> unit
 
 (** Updates the filename to be parsed and sets a js_mode flag *)
@@ -272,133 +273,139 @@ val set_file_for_js : string -> unit
 
 (** Setters used by parse_command *)
 
-(** Set {!val:case_split_policy}  *)
+(** Set [case_split_policy] accessible with {!val:get_case_split_policy}  *)
 val set_case_split_policy : Util.case_split_policy -> unit
 
-(** Set {!val:enable_adts_cs} *)
+(** Set [enable_adts_cs] accessible with {!val:get_enable_adts_cs} *)
 val set_enable_adts_cs : bool -> unit
 
-(** Set {!val:replay} *)
+(** Set [replay] accessible with {!val:get_replay} *)
 val set_replay : bool -> unit
 
-(** Set {!val:replay_all_used_context} *)
+(** Set [replay_all_used_context] accessible with
+    {!val:get_replay_all_used_context} *)
 val set_replay_all_used_context : bool -> unit
 
-(** Set {!val:replay_used_context} *)
+(** Set [replay_used_context] accessible with {!val:get_replay_used_context} *)
 val set_replay_used_context : bool -> unit
 
-(** Set {!val:answers_with_loc} *)
+(** Set [answers_with_loc] accessible with {!val:get_answers_with_loc} *)
 val set_answers_with_loc : bool -> unit
 
-(** Set {!val:infer_input_format} *)
+(** Set [infer_input_format] accessible with {!val:get_infer_input_format} *)
 val set_infer_input_format : 'a option -> unit
 
-(** Set {!val:infer_output_format} *)
+(** Set [infer_output_format] accessible with {!val:get_infer_output_format} *)
 val set_infer_output_format : 'a option -> unit
 
-(** Set {!val:parsers} *)
+(** Set [parsers] accessible with {!val:get_parsers} *)
 val set_parsers : string list -> unit
 
-(** Set {!val:preludes} *)
+(** Set [preludes] accessible with {!val:get_preludes} *)
 val set_preludes : string list -> unit
 
-(** Set {!val:disable_weaks} *)
+(** Set [disable_weaks] accessible with {!val:get_disable_weaks} *)
 val set_disable_weaks : bool -> unit
 
-(** Set {!val:enable_assertions} *)
+(** Set [enable_assertions] accessible with {!val:get_enable_assertions} *)
 val set_enable_assertions : bool -> unit
 
-(** Set {!val:timelimit_interpretation} *)
+(** Set [timelimit_interpretation] accessible with
+    {!val:get_timelimit_interpretation} *)
 val set_timelimit_interpretation : float -> unit
 
-(** Set {!val:timelimit_per_goal} *)
+(** Set [timelimit_per_goal] accessible with {!val:get_timelimit_per_goal} *)
 val set_timelimit_per_goal : bool -> unit
 
-(** Set {!val:cumulative_time_profiling} *)
+(** Set [cumulative_time_profiling] accessible with
+    {!val:get_cumulative_time_profiling} *)
 val set_cumulative_time_profiling : bool -> unit
 
-(** Set {!val:profiling_period} *)
+(** Set [profiling_period] accessible with {!val:get_profiling_period} *)
 val set_profiling_period : float -> unit
 
-(** Set {!val:profiling_plugin} *)
+(** Set [profiling_plugin] accessible with {!val:get_profiling_plugin} *)
 val set_profiling_plugin : string -> unit
 
-(** Set {!val:instantiate_after_backjump} *)
+(** Set [instantiate_after_backjump] accessible with
+    {!val:get_instantiate_after_backjump} *)
 val set_instantiate_after_backjump : bool -> unit
 
-(** Set {!val:max_multi_triggers_size} *)
+(** Set [max_multi_triggers_size] accessible with
+    {!val:get_max_multi_triggers_size} *)
 val set_max_multi_triggers_size : int -> unit
 
-(** Set {!val:arith_matching} *)
+(** Set [arith_matching] accessible with {!val:get_arith_matching} *)
 val set_arith_matching : bool -> unit
 
-(** Set {!val:cdcl_tableaux_inst} *)
+(** Set [cdcl_tableaux_inst] accessible with {!val:get_cdcl_tableaux_inst} *)
 val set_cdcl_tableaux_inst : bool -> unit
 
-(** Set {!val:cdcl_tableaux_th} *)
+(** Set [cdcl_tableaux_th] accessible with {!val:get_cdcl_tableaux_th} *)
 val set_cdcl_tableaux_th : bool -> unit
 
-(** Set {!val:disable_flat_formulas_simplification} *)
+(** Set [disable_flat_formulas_simplification] accessible
+    with {!val:get_disable_flat_formulas_simplification} *)
 val set_disable_flat_formulas_simplification : bool -> unit
 
-(** Set {!val:enable_restarts} *)
+(** Set [enable_restarts] accessible with {!val:get_enable_restarts} *)
 val set_enable_restarts : bool -> unit
 
-(** Set {!val:minimal_bj} *)
+(** Set [minimal_bj] accessible with {!val:get_minimal_bj} *)
 val set_minimal_bj : bool -> unit
 
-(** Set {!val:no_backjumping} *)
+(** Set [no_backjumping] accessible with {!val:get_no_backjumping} *)
 val set_no_backjumping : bool -> unit
 
-(** Set {!val:no_backward} *)
+(** Set [no_backward] accessible with {!val:get_no_backward} *)
 val set_no_backward : bool -> unit
 
-(** Set {!val:no_decisions} *)
+(** Set [no_decisions] accessible with {!val:get_no_decisions} *)
 val set_no_decisions : bool -> unit
 
-(** Set {!val:no_decisions_on} *)
+(** Set [no_decisions_on] accessible with {!val:get_no_decisions_on} *)
 val set_no_decisions_on : Util.SS.t -> unit
 
-(** Set {!val:no_sat_learning} *)
+(** Set [no_sat_learning] accessible with {!val:get_no_sat_learning} *)
 val set_no_sat_learning : bool -> unit
 
-(** Set {!val:sat_plugin} *)
+(** Set [sat_plugin] accessible with {!val:get_sat_plugin} *)
 val set_sat_plugin : string -> unit
 
-(** Set {!val:sat_solver} *)
+(** Set [sat_solver] accessible with {!val:get_sat_solver} *)
 val set_sat_solver : Util.sat_solver -> unit
 
-(** Set {!val:tableaux_cdcl} *)
+(** Set [tableaux_cdcl] accessible with {!val:get_tableaux_cdcl} *)
 val set_tableaux_cdcl : bool -> unit
 
-(** Set {!val:disable_ites} *)
+(** Set [disable_ites] accessible with {!val:get_disable_ites} *)
 val set_disable_ites : bool -> unit
 
-(** Set {!val:disable_adts} *)
+(** Set [disable_adts] accessible with {!val:get_disable_adts} *)
 val set_disable_adts : bool -> unit
 
-(** Set {!val:inequalities_plugin} *)
+(** Set [inequalities_plugin] accessible with {!val:get_inequalities_plugin} *)
 val set_inequalities_plugin : string -> unit
 
-(** Set {!val:no_fm} *)
+(** Set [no_fm] accessible with {!val:get_no_fm} *)
 val set_no_fm : bool -> unit
 
-(** Set {!val:no_tcp} *)
+(** Set [no_tcp] accessible with {!val:get_no_tcp} *)
 val set_no_tcp : bool -> unit
 
-(** Set {!val:no_theory} *)
+(** Set [no_theory] accessible with {!val:get_no_theory} *)
 val set_no_theory : bool -> unit
 
-(** Set {!val:tighten_vars} *)
+(** Set [tighten_vars] accessible with {!val:get_tighten_vars} *)
 val set_tighten_vars : bool -> unit
 
-(** Set {!val:use_fpa} *)
+(** Set [use_fpa] accessible with {!val:get_use_fpa} *)
 val set_use_fpa : bool -> unit
 
-(** Set {!val:session_file} *)
+(** Set [session_file] accessible with {!val:get_session_file} *)
 val set_session_file : string -> unit
 
-(** Set {!val:used_context_file} *)
+(** Set [used_context_file] accessible with {!val:get_used_context_file} *)
 val set_used_context_file : string -> unit
 
 (** {2 Getter functions} *)
@@ -471,7 +478,7 @@ val get_debug_types : unit -> bool
 val get_debug_combine : unit -> bool
 
 (** Replay unsat-cores produced by {!val:get_unsat_core}.
-    The option implies {!val:unsat_core} is set to [true]. *)
+    The option implies {!val:get_unsat_core} returns [true]. *)
 val get_debug_unsat_core : unit -> bool
 
 (** Get the debugging flag of case-split analysis. *)
@@ -531,7 +538,7 @@ val get_replay_used_context : unit -> bool
 (** Default to [false] *)
 
 (** [true] if used axioms and predicates will be saved in a [.used] file.
-    This option implies {!val:unsat_core} is set to [true]. *)
+    This option implies {!val:get_unsat_core} returns [true]. *)
 val get_save_used_context : unit -> bool
 (** Default to [false] *)
 
@@ -652,7 +659,7 @@ val get_all_models : unit -> bool
 
     A negative value (-1, -2, or -3) will disable interpretation display.
 
-    Note that {!val:max_split} limitation will be ignored in model
+    Note that {!val:get_max_split} limitation will be ignored in model
     generation phase. *)
 val get_interpretation : unit -> int
 (** Default to [0] *)
