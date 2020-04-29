@@ -26,7 +26,7 @@ open Gc
 *)
 
 let () =
-  if debug_gc() then
+  if get_debug_gc() then
     begin
       let tmp = ref (quick_stat ()) in
       ignore

@@ -101,7 +101,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   module Debug = struct
 
     let new_facts_of_axiom ax insts_ok =
-      if debug_matching () >= 1 && insts_ok != ME.empty then
+      if get_debug_matching () >= 1 && insts_ok != ME.empty then
         let name = match Expr.form_view ax with
           | E.Lemma { E.name = s; _ } -> s
           | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
@@ -114,7 +114,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 
 
     let new_mround ilvl kind =
-      if debug_matching () >= 1 then
+      if get_debug_matching () >= 1 then
         fprintf fmt "@.# [matching] new %s matching round: ilevel = %d...@."
           kind ilvl
 
@@ -231,7 +231,8 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
                     }
                   in
                   let dep =
-                    if not (Options.unsat_core() || Options.profiling()) then
+                    if not (Options.get_unsat_core() ||
+                            Options.get_profiling()) then
                       dep
                     else
                       (* Dep lorig used to track conflicted instances
@@ -254,7 +255,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
                 if p.Expr.gf then (p, dep) :: gd, ngd else gd, (p, dep) :: ngd
              )mp_orig_ok acc
          in
-         if Options.profiling() then
+         if Options.get_profiling() then
            begin (* update profiler data *)
              SE.iter (fun f -> record_this_instance f false orig) mp_orig_ko;
              ME.iter (fun f (_, _, name, tr_ctt) ->
@@ -282,7 +283,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         ) lf
 
   let new_facts env tbox selector substs =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Match Timers.F_new_facts;
         let res = new_facts env tbox selector substs in
@@ -326,7 +327,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   (*** add wrappers to profile exported functions ***)
 
   let add_terms env s gf =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Match Timers.F_add_terms;
         let res = add_terms env s gf in
@@ -338,7 +339,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     else add_terms env s gf
 
   let add_lemma env gf dep =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Match Timers.F_add_lemma;
         let res = add_lemma env gf dep in
@@ -350,7 +351,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     else add_lemma env gf dep
 
   let add_predicate env gf =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Match Timers.F_add_predicate;
         let res = add_predicate env gf in
@@ -362,7 +363,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     else add_predicate env gf
 
   let m_lemmas mconf env tbox selector ilvl =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Match Timers.F_m_lemmas;
         let res = m_lemmas env tbox selector ilvl mconf in
@@ -374,7 +375,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     else m_lemmas env tbox selector ilvl mconf
 
   let m_predicates mconf env tbox selector ilvl =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Match Timers.F_m_predicates;
         let res = m_predicates env tbox selector ilvl mconf in

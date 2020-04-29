@@ -71,18 +71,18 @@ module Shostak (X : ALIEN) = struct
       | Alien x -> fprintf fmt "%a" X.print x
 
     let solve_bis a b =
-      if debug_sum () then fprintf fmt "[Sum] we solve %a = %a@."
+      if get_debug_sum () then fprintf fmt "[Sum] we solve %a = %a@."
           X.print a X.print b
 
     let solve_bis_result res =
-      if debug_sum () then
+      if get_debug_sum () then
         match res with
         | [p,v] -> fprintf fmt "\twe get: %a |-> %a@." X.print p X.print v
         | []    -> fprintf fmt "\tthe equation is trivial@."
         | _ -> assert false
 
     let solve_bis_unsolvable () =
-      if debug_sum () then fprintf fmt "\tthe equation is unsolvable@."
+      if get_debug_sum () then fprintf fmt "\tthe equation is unsolvable@."
 
   end
   (*BISECT-IGNORE-END*)
@@ -160,7 +160,7 @@ module Shostak (X : ALIEN) = struct
     {pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}
 
   let solve r1 r2 pb =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Sum Timers.F_solve;
         let res = solve r1 r2 pb in
@@ -195,4 +195,3 @@ module Shostak (X : ALIEN) = struct
     r, flush_str_formatter ()
 
 end
-

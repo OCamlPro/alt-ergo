@@ -127,7 +127,7 @@ module Make (X : Sig.X) = struct
       )
 
     let subst p v tm =
-      if debug_ac () then
+      if get_debug_ac () then
         fprintf fmt "[ac] subst %a by %a in %a@."
           X.print p X.print v X.print (X.ac_embed tm)
 
@@ -195,7 +195,7 @@ module Make (X : Sig.X) = struct
     Timers.exec_timer_pause Timers.M_AC Timers.F_make;
     x
 
-  let is_mine_symb sy _ = Options.no_ac() == false && Sy.is_ac sy
+  let is_mine_symb sy _ = get_no_ac() == false && Sy.is_ac sy
 
   let type_info { t = ty; _ } = ty
 
@@ -302,4 +302,3 @@ module Make (X : Sig.X) = struct
     v, (xac, v) :: acc*)
 
 end
-

@@ -379,7 +379,7 @@ module Shostak (X : ALIEN) = struct
     | _ , Access _ -> assert false
 
   let make t =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Records Timers.F_make;
         let res = make t in
@@ -391,7 +391,7 @@ module Shostak (X : ALIEN) = struct
     else make t
 
   let solve r1 r2 pb =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Records Timers.F_solve;
         let res = solve r1 r2 pb in
@@ -438,4 +438,3 @@ module Shostak (X : ALIEN) = struct
     | _ -> assert false
 
 end
-

@@ -145,7 +145,7 @@ module Main : S = struct
         Util.MI.iter
           (fun _ x -> fprintf fmt "%a |-> ... (See Uf)@." X.print x) mp
       in
-      if debug_cc () then begin
+      if get_debug_cc () then begin
         fprintf fmt "I am in %s with the following facts@." msg;
         fprintf fmt "---- Begin Facts -----------------------------------@.";
         fprintf fmt "Equalities:@.%a" aux f.equas;
@@ -156,12 +156,12 @@ module Main : S = struct
       end
 
     let cc r1 r2 =
-      if debug_cc () then
+      if get_debug_cc () then
         fprintf fmt "[cc] congruence closure : %a = %a@."
           X.print r1 X.print r2
 
     let make_cst t ctx =
-      if debug_cc () then
+      if get_debug_cc () then
         if ctx != [] then
           begin
             fprintf fmt "[cc] constraints of make(%a)@." Expr.print t;
@@ -173,7 +173,7 @@ module Main : S = struct
           end
 
     let rel_add_cst t ctx =
-      if debug_cc () then
+      if get_debug_cc () then
         if ctx != [] then
           begin
             fprintf fmt "[cc] constraints of Rel.add(%a)@." Expr.print t;
@@ -185,7 +185,7 @@ module Main : S = struct
           end
 
     let add_to_use t =
-      if debug_cc () then
+      if get_debug_cc () then
         fprintf fmt "[cc] add_to_use: %a@." E.print t
 
     (* unused --
@@ -197,21 +197,21 @@ module Main : S = struct
     *)
 
     let contra_congruence a ex =
-      if debug_cc () then
+      if get_debug_cc () then
         fprintf fmt "[cc] find that %a %a by contra-congruence@."
           E.print a Ex.print ex
 
     let assume_literal sa =
-      if debug_cc () then
+      if get_debug_cc () then
         fprintf fmt "[cc] assume literal : %a@." LR.print (LR.make sa)
 
     let congruent a ex =
-      if debug_cc () then
+      if get_debug_cc () then
         fprintf fmt "[cc] new fact by conrgruence : %a ex[%a]@."
           E.print a Ex.print ex
 
     let cc_result p v touched =
-      if debug_cc() then begin
+      if get_debug_cc() then begin
         fprintf fmt "[cc] the binding %a -> %a touched:@." X.print p X.print v;
         List.iter
           (fun (x, y, _) ->
@@ -543,7 +543,7 @@ module Main : S = struct
   let assume_eq env facts r1 r2 ex =
     Options.tool_req 3 "TR-CCX-Congruence";
     let env = congruence_closure env facts r1 r2 ex in
-    if Options.no_contracongru () || X.type_info r1 != Ty.Tbool then env
+    if Options.get_no_contracongru () || X.type_info r1 != Ty.Tbool then env
     else begin
       contra_congruence env facts r1;
       contra_congruence env facts r2;

@@ -87,23 +87,23 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
     let choose delta env cdcl =
       let dec, no_dec =
-        if Options.no_decisions_on__is_empty () then delta, []
+        if Options.get_no_decisions_on_is_empty () then delta, []
         else
           List.partition
-            (fun (a, _,_,_) -> Options.can_decide_on a.E.origin_name) delta
+            (fun (a, _,_,_) -> Options.get_can_decide_on a.E.origin_name) delta
       in
       let dec =
         List.rev_map
           (fun ((a,b,_,_) as e) ->
-             if Options.tableaux_cdcl () && is_fact_in_CDCL cdcl a.E.ff then
+             if Options.get_tableaux_cdcl () && is_fact_in_CDCL cdcl a.E.ff then
                raise (Propagate (a, Ex.empty));
-             if Options.tableaux_cdcl () && is_fact_in_CDCL cdcl b.E.ff then
+             if Options.get_tableaux_cdcl () && is_fact_in_CDCL cdcl b.E.ff then
                raise (Propagate (b, Ex.empty));
              e, (try (ME.find a.E.ff env.mp) with Not_found -> 0.), a.E.gf
           ) dec
       in
 
-      if Options.tableaux_cdcl () then
+      if Options.get_tableaux_cdcl () then
         (* force propagate modulo satML *)
         List.iter
           (fun (a, b, _, _) ->
@@ -186,7 +186,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
 
     let print_nb_related env =
-      if verbose () then begin
+      if get_verbose () then begin
         fprintf fmt "----------------------------------------------------@.";
         fprintf fmt " nb_related_to_both = %d@." env.nb_related_to_both;
         fprintf fmt " nb_related_to_goal = %d@." env.nb_related_to_goal;
@@ -196,7 +196,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
 
     let propagations (env, bcp, tcp, ap_delta, lits) =
-      if debug_sat() then begin
+      if get_debug_sat() then begin
         fprintf fmt
           "[sat] propagations: |lits| = %d , B = %b , T = %b , "
           (List.length lits) bcp tcp ;
@@ -205,7 +205,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
 
     let is_it_unsat gf =
-      if verbose () && debug_sat () then
+      if get_verbose () && get_debug_sat () then
         let s =
           match E.form_view gf.E.ff with
           | E.Not_a_form -> assert false
@@ -222,14 +222,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           s E.print gf.E.ff
 
     let pred_def f =
-      if debug_sat () then
+      if get_debug_sat () then
         eprintf "[sat] I assume a predicate: %a@.@." E.print f
 
     let unsat_rec dep =
-      if debug_sat () then fprintf fmt "unsat_rec : %a@." Ex.print dep
+      if get_debug_sat () then fprintf fmt "unsat_rec : %a@." Ex.print dep
 
     let assume gf dep env =
-      if debug_sat () then
+      if get_debug_sat () then
         let { E.ff = f; lem; from_terms = terms; _ } = gf in
         fprintf fmt "[sat] at level (%d, %d) I assume a " env.dlevel env.plevel;
         begin match E.form_view f with
@@ -258,42 +258,42 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | E.Iff _ ->  fprintf fmt "equivalence %a@." E.print f
           | E.Xor _ ->  fprintf fmt "neg-equivalence/xor %a@." E.print f
         end;
-        if verbose () then
+        if get_verbose () then
           fprintf fmt "with explanations : %a@." Explanation.print dep
 
     let unsat () =
-      if debug_sat () then fprintf fmt "[sat] unsat@."
+      if get_debug_sat () then fprintf fmt "[sat] unsat@."
 
     let decide f env =
-      if debug_sat () then
+      if get_debug_sat () then
         fprintf fmt "[sat] I decide: at level (%d, %d), on %a@."
           env.dlevel env.plevel E.print f
 
     let instantiate env =
-      if debug_sat () then
+      if get_debug_sat () then
         fprintf fmt "[sat] I instantiate at level (%d, %d). Inst level = %d@."
           env.dlevel env.plevel env.ilevel
 
     let backtracking f env =
-      if debug_sat () then
+      if get_debug_sat () then
         fprintf fmt "[sat] backtrack: at level (%d, %d), and assume not %a@."
           env.dlevel env.plevel E.print f
 
     let backjumping f env =
-      if debug_sat () then
+      if get_debug_sat () then
         fprintf fmt
           "[sat] backjump: at level (%d, %d), I ignore the case %a@."
           env.dlevel env.plevel E.print f
 
     let elim _ _ =
-      if debug_sat () && verbose () then fprintf fmt "[sat] elim@."
+      if get_debug_sat () && get_verbose () then fprintf fmt "[sat] elim@."
 
     let red _ _ =
-      if debug_sat () && verbose () then fprintf fmt "[sat] red@."
+      if get_debug_sat () && get_verbose () then fprintf fmt "[sat] red@."
 
     (* unused --
        let delta d =
-       if debug_sat () && verbose () && false then begin
+       if get_debug_sat () && get_verbose () && false then begin
         fprintf fmt "[sat] - Delta ---------------------@.";
         List.iter (fun (f1, f2, ex) ->
             fprintf fmt "(%a or %a), %a@."
@@ -303,7 +303,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     *)
 
     let gamma g =
-      if false && debug_sat () && verbose () then begin
+      if false && get_debug_sat () && get_verbose () then begin
         fprintf fmt "[sat] --- GAMMA ---------------------@.";
         ME.iter (fun f (_, ex, dlvl, plvl) ->
             fprintf fmt  "(%d, %d) %a \t->\t%a@."
@@ -312,20 +312,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
 
     let bottom classes =
-      if bottom_classes () then
+      if get_bottom_classes () then
         printf "bottom:%a\n@." E.print_tagged_classes classes
 
     let inconsistent expl env =
-      if debug_sat () then
+      if get_debug_sat () then
         fprintf fmt "inconsistent at level (%d, %d), reason : %a@."
           env.dlevel env.plevel Ex.print expl
 
     let in_mk_theories_instances () =
-      if Options.debug_fpa() > 0 || debug_sat() then
+      if Options.get_debug_fpa() > 0 || get_debug_sat() then
         fprintf fmt "@.[sat] entering mk_theories_instances:@."
 
     let out_mk_theories_instances normal_exit =
-      if Options.debug_fpa() > 0 || debug_sat() then
+      if Options.get_debug_fpa() > 0 || get_debug_sat() then
         if normal_exit then
           fprintf fmt "@.[sat] normal exit of mk_theories_instances.@.@."
         else
@@ -339,7 +339,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         List.iter (fun f -> fprintf fmt " /\\  %a" E.print f) l
 
     let print_theory_instance hyp gf =
-      if Options.debug_fpa() > 1 || Options.debug_sat() then begin
+      if Options.get_debug_fpa() > 1 || Options.get_debug_sat() then begin
         fprintf fmt "@.%s >@." (E.name_of_lemma_opt gf.E.lem);
         fprintf fmt "  hypotheses: %a@." print_f_conj hyp;
         fprintf fmt "  conclusion: %a@." E.print gf.E.ff;
@@ -384,7 +384,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let s = ref SE.empty in
     ME.iter
       (fun f _ ->
-         if (complete_model () && is_literal f) || E.is_in_model f then
+         if (get_complete_model () && is_literal f) || E.is_in_model f then
            s := SE.add f !s
       )
       t.gamma;
@@ -406,7 +406,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
 
   let refresh_model_handler =
-    if model () then
+    if get_model () then
       fun t ->
         try
           let alrm =
@@ -441,7 +441,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   (* hybrid functions*)
   let print_decisions_in_the_sats msg env =
-    if Options.tableaux_cdcl () && verbose() then begin
+    if Options.get_tableaux_cdcl () && get_verbose() then begin
       fprintf fmt "-----------------------------------------------------@.";
       fprintf fmt ">> %s@." msg;
       fprintf fmt "decisions in DfsSAT are:@.";
@@ -460,7 +460,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     end
 
   let cdcl_same_decisions env =
-    if Options.tableaux_cdcl () && enable_assertions () then begin
+    if Options.get_tableaux_cdcl () && get_enable_assertions () then begin
       let cdcl_decs = CDCL.get_decisions !(env.cdcl) in
       let ok = ref true in
       let decs =
@@ -518,7 +518,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
 
   let cdcl_assume delay env l =
-    if debug_sat() && verbose() then fprintf fmt "[fun_cdcl_assume]@.";
+    if get_debug_sat() && get_verbose() then fprintf fmt "[fun_cdcl_assume]@.";
     let gamma = env.gamma in
     try
       let l =
@@ -531,19 +531,19 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       env.cdcl := CDCL.assume delay !(env.cdcl) l
     with
     | CDCL.Bottom (ex, l, cdcl) ->
-      if debug_sat() &&  verbose() then
+      if get_debug_sat() && get_verbose() then
         fprintf fmt "[fun_cdcl_assume] conflict@.";
       env.cdcl := cdcl;
       assert (cdcl_known_decisions ex env);
       raise (IUnsat(ex, l))
 
   let cdcl_decide env f dlvl =
-    if debug_sat() &&  verbose() then fprintf fmt "[fun_cdcl_decide]@.";
+    if get_debug_sat() && get_verbose() then fprintf fmt "[fun_cdcl_decide]@.";
     try
       env.cdcl := CDCL.decide !(env.cdcl) f dlvl
     with
     | CDCL.Bottom (ex, l, _cdcl) ->
-      if debug_sat() && verbose() then
+      if get_debug_sat() && get_verbose() then
         fprintf fmt "[fun_cdcl_decide] conflict@.";
       assert (cdcl_known_decisions ex env);
       (* no need to save cdcl here *)
@@ -566,7 +566,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     cdcl_assume delay env [ff, Ex.empty]
 
   let profile_conflicting_instances exp =
-    if Options.profiling() then
+    if Options.get_profiling() then
       SE.iter
         (fun f ->
            match E.form_view f with
@@ -578,9 +578,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         )(Ex.formulas_of exp)
 
   let do_case_split env origin =
-    if Options.case_split_policy () == origin then
+    if Options.get_case_split_policy () == origin then
       try
-        if debug_sat() then fprintf fmt "[sat] performing case-split@.";
+        if get_debug_sat() then fprintf fmt "[sat] performing case-split@.";
         let tbox, new_terms = Th.do_case_split env.tbox in
         let inst =
           Inst.add_terms env.inst new_terms (mk_gf E.vrai "" false false) in
@@ -596,21 +596,21 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     try
       let _ = ME.find f env.gamma in
       Options.tool_req 2 "TR-Sat-Bcp-Elim-1";
-      if Options.profiling() then Profiling.elim true;
+      if Options.get_profiling() then Profiling.elim true;
       true
     with Not_found -> false
 
 
   let update_unit_facts env ff dep =
     let f = ff.E.ff in
-    if sat_learning () && not (ME.mem f !(env.unit_facts_cache)) then
+    if get_sat_learning () && not (ME.mem f !(env.unit_facts_cache)) then
       begin
         assert (Ex.has_no_bj dep);
         env.unit_facts_cache := ME.add f (ff, dep) !(env.unit_facts_cache)
       end
 
   let learn_clause ({ gamma; _ } as env) ff0 dep =
-    if sat_learning () then
+    if get_sat_learning () then
       let fl, dep =
         Ex.fold_atoms
           (fun e (l, ex) ->
@@ -642,7 +642,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       match Th.query a env.tbox with
       | None -> tmp_cache := ME.add a None !tmp_cache; None
       | Some (ex,_) as y ->
-        if Options.tableaux_cdcl () then
+        if Options.get_tableaux_cdcl () then
           cdcl_learn_clause true env ex (ff.E.ff);
         learn_clause env ff ex;
         tcp_cache := ME.add a y !tcp_cache; y
@@ -654,7 +654,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if ans != None then
         begin
           Options.tool_req 2 "TR-Sat-Bcp-Elim-2";
-          if Options.profiling() then Profiling.elim false;
+          if Options.get_profiling() then Profiling.elim false;
         end;
       ans
     | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
@@ -688,13 +688,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     match red tcp_cache tmp_cache ff env tcp with
     | (Some _, _)  as ans -> ans
     | None, b ->
-      if not (Options.tableaux_cdcl ()) then
+      if not (Options.get_tableaux_cdcl ()) then
         None, b
       else
         match CDCL.is_true !(env.cdcl) (E.neg ff.E.ff) with
         | Some (ex, _lvl) ->
           let ex = Lazy.force ex in
-          if debug_sat() && verbose() then
+          if get_debug_sat() && get_verbose() then
             fprintf fmt "red thanks to satML@.";
           assert (cdcl_known_decisions ex env);
           Some(ex, []), true
@@ -704,10 +704,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let add_dep f dep =
     match E.form_view f with
     | E.Literal _ ->
-      if not (unsat_core ()) || Ex.mem (Ex.Bj f) dep then dep
+      if not (get_unsat_core ()) || Ex.mem (Ex.Bj f) dep then dep
       else Ex.union (Ex.singleton (Ex.Dep f)) dep
     | E.Clause _ ->
-      if unsat_core () then Ex.union (Ex.singleton (Ex.Dep f)) dep
+      if get_unsat_core () then Ex.union (Ex.singleton (Ex.Dep f)) dep
       else dep
     | E.Unit _ | E.Lemma _ | E.Skolem _ | E.Let _ | E.Iff _ | E.Xor _ -> dep
     | E.Not_a_form -> assert false
@@ -716,7 +716,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let dep = add_dep f dep in
     match E.form_view f with
     | E.Unit (f1, f2) ->
-      if not (unsat_core ()) then dep
+      if not (get_unsat_core ()) then dep
       else add_dep_of_formula f2 (add_dep_of_formula f1 dep)
     | E.Lemma _ | E.Clause _ | E.Literal _ | E.Skolem _
     | E.Let _ | E.Iff _ | E.Xor _ -> dep
@@ -743,7 +743,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
 
   let do_bcp env tcp tcp_cache tmp_cache delta acc =
-    let tcp = tcp && not (Options.no_tcp ()) in
+    let tcp = tcp && not (Options.get_no_tcp ()) in
     List.fold_left
       (fun (cl,u)
         ((({ E.ff = f1; _ } as gf1), ({ E.ff = f2; _ } as gf2), d, _) as fd) ->
@@ -776,20 +776,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                 red tcp_cache tmp_cache gf2 env tcp
               with
               | (Some (d1, c1), b1) , (Some (d2, c2), b2) ->
-                if Options.profiling() then Profiling.bcp_conflict b1 b2;
+                if Options.get_profiling() then Profiling.bcp_conflict b1 b2;
                 let expl = Ex.union (Ex.union d d1) d2 in
                 let c = List.rev_append c1 c2 in
                 raise (Ex.Inconsistent (expl, c))
 
               | (Some(d1, _), b) , (None, _) ->
-                if Options.profiling() then Profiling.red b;
+                if Options.get_profiling() then Profiling.red b;
                 let gf2 =
                   {gf2 with E.nb_reductions = gf2.E.nb_reductions + 1} in
                 let gf2 = update_distances env gf2 f1 in
                 cl, (gf2,Ex.union d d1) :: u
 
               | (None, _) , (Some(d2, _),b) ->
-                if Options.profiling() then Profiling.red b;
+                if Options.get_profiling() then Profiling.red b;
                 let gf1 =
                   {gf1 with E.nb_reductions = gf1.E.nb_reductions + 1} in
                 let gf1 = update_distances env gf1 f2 in
@@ -832,15 +832,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           try Th.assume ~ordered:false ufacts env.unit_tbox
           with Ex.Inconsistent (reason, _) as e ->
             assert (Ex.has_no_bj reason);
-            if Options.profiling() then Profiling.theory_conflict();
-            if debug_sat() then fprintf fmt "[sat] solved by unit_tbox@.";
+            if Options.get_profiling() then Profiling.theory_conflict();
+            if get_debug_sat() then fprintf fmt "[sat] solved by unit_tbox@.";
             raise e
         else env.unit_tbox, SE.empty, 0
       in
       let tbox, new_terms, cpt =
         try Th.assume facts env.tbox
         with Ex.Inconsistent _ as e ->
-          if Options.profiling() then Profiling.theory_conflict();
+          if Options.get_profiling() then Profiling.theory_conflict();
           raise e
       in
       let utbox = if env.dlevel = 0 then tbox else utbox in
@@ -888,13 +888,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         let dep = add_dep f dep in
         let dep_gamma = add_dep_of_formula f dep in
         (* propagate all unit facts to cache *)
-        if sat_learning () && Ex.has_no_bj dep_gamma then
+        if get_sat_learning () && Ex.has_no_bj dep_gamma then
           update_unit_facts env ff dep_gamma;
         Debug.gamma env.gamma;
         (try
            let _, ex_nf, _, _ = ME.find (E.neg f) env.gamma in
            Options.tool_req 2 "TR-Sat-Conflict-1";
-           if Options.profiling() then Profiling.bool_conflict ();
+           if Options.get_profiling() then Profiling.bool_conflict ();
            let exx = Ex.union dep_gamma ex_nf in
             (*
            missing VSID, but we have regressions when it is activated
@@ -907,7 +907,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         end
         else
           let env =
-            if ff.E.mf && greedy () then
+            if ff.E.mf && get_greedy () then
               { env with inst=
                            Inst.add_terms
                              env.inst (E.max_ground_terms_rec_of_form f) ff }
@@ -926,7 +926,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | E.Iff (f1, f2) ->
             let id = E.id f in
             let g = E.elim_iff f1 f2 id ~with_conj:true in
-            if Options.tableaux_cdcl () then begin
+            if Options.get_tableaux_cdcl () then begin
               let f_imp_g = E.mk_imp f g id in
               (* correct to put <-> ?*)
               cdcl_assume false env [{ff with E.ff=f_imp_g}, Ex.empty]
@@ -936,7 +936,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | E.Xor (f1, f2) ->
             let id = E.id f in
             let g = E.elim_iff f1 f2 id ~with_conj:false |> E.neg in
-            if Options.tableaux_cdcl () then begin
+            if Options.get_tableaux_cdcl () then begin
               let f_imp_g = E.mk_imp f g id in
               (* should do something similar for Let ? *)
               cdcl_assume false env [{ff with E.ff=f_imp_g}, Ex.empty]
@@ -960,7 +960,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | E.Lemma _ ->
             Options.tool_req 2 "TR-Sat-Assume-Ax";
             let inst_env = Inst.add_lemma env.inst ff dep in
-            if Options.tableaux_cdcl () then
+            if Options.get_tableaux_cdcl () then
               cdcl_assume false env [ff,dep];
             {env with inst = inst_env}, true, tcp, ap_delta, lits
 
@@ -970,7 +970,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             begin
               try (* ground preds bahave like proxies of lazy CNF *)
                 let af, adep = ME.find a env.ground_preds in
-                if Options.tableaux_cdcl () then
+                if Options.get_tableaux_cdcl () then
                   cdcl_assume false env
                     [{ff with E.ff = E.mk_imp f af (E.id f)}, adep];
                 asm_aux acc [{ff with E.ff = af}, Ex.union dep adep]
@@ -980,7 +980,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | E.Skolem quantif ->
             Options.tool_req 2 "TR-Sat-Assume-Sko";
             let f' = E.skolemize quantif  in
-            if Options.tableaux_cdcl () then begin
+            if Options.get_tableaux_cdcl () then begin
               let f_imp_f' = E.mk_imp f f' (E.id f) in
               (* correct to put <-> ?*)
               (* should do something similar for Let ? *)
@@ -992,7 +992,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             Options.tool_req 2 "TR-Sat-Assume-Let";
             let elim_let = E.elim_let letin in
             let ff = {ff with E.ff = elim_let} in
-            if Options.tableaux_cdcl () then begin
+            if Options.get_tableaux_cdcl () then begin
               let f_imp_f' = E.mk_imp f elim_let (E.id f) in
               (* correct to put <-> ?*)
               (* should do something similar for Let ? *)
@@ -1024,7 +1024,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let new_inst_level env =
     let new_ilevel = env.ilevel + 1 in
     let env = {env with ilevel = new_ilevel} in
-    if Options.profiling() then Profiling.instantiation new_ilevel;
+    if Options.get_profiling() then Profiling.instantiation new_ilevel;
     Debug.instantiate env;
     env
 
@@ -1054,21 +1054,21 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     (* do this to avoid loosing instances when a conflict is detected
        directly with some of these instances only, ie before assumign
        the others *)
-    if sat_learning () then
+    if get_sat_learning () then
       List.iter
         (fun (gf, dep) ->
            if Ex.has_no_bj dep then update_unit_facts env gf dep;
         )l;
-    if Options.tableaux_cdcl () then
+    if Options.get_tableaux_cdcl () then
       cdcl_assume false env l;
 
-    if Options.profiling() then Profiling.instances l;
+    if Options.get_profiling() then Profiling.instances l;
     match l with
     | [] -> env, false
     | _  ->
       (* Put new generated instances in cache *)
       ignore (update_instances_cache (Some l));
-      if Options.tableaux_cdcl () then
+      if Options.get_tableaux_cdcl () then
         cdcl_assume false env l;
       let env = assume env l in
       (* No conflict by direct assume, empty cache *)
@@ -1076,7 +1076,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       env, true
 
   let update_all_models_option env =
-    if all_models () then
+    if get_all_models () then
       begin
         (* should be used when all_models () is activated only *)
         if !all_models_sat_env == None then all_models_sat_env := Some env;
@@ -1092,18 +1092,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
 
   let get_all_models_answer () =
-    if all_models () then
+    if get_all_models () then
       match !all_models_sat_env with
       | Some env -> raise (I_dont_know env)
       | None -> fprintf fmt "[all-models] No SAT models found@."
 
 
   let compute_concrete_model env origin =
-    if abs (interpretation ()) <> origin then env
+    if abs (get_interpretation ()) <> origin then env
     else
       try
         (* to push pending stuff *)
-        let env = do_case_split env (Options.case_split_policy ()) in
+        let env = do_case_split env (Options.get_case_split_policy ()) in
         let env = {env with tbox = Th.compute_concrete_model env.tbox} in
         latest_saved_env := Some env;
         env
@@ -1115,7 +1115,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
 
   let return_cached_model return_function =
-    let i = abs(interpretation ()) in
+    let i = abs(get_interpretation ()) in
     assert (i = 1 || i = 2 || i = 3);
     assert (not !terminated_normally);
     terminated_normally := true; (* to avoid loops *)
@@ -1137,7 +1137,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let () =
     at_exit
       (fun () ->
-         let i = abs(interpretation ()) in
+         let i = abs(get_interpretation ()) in
          if not !terminated_normally && (i = 1 || i = 2 || i = 3) then
            return_cached_model (fun () -> ())
       )
@@ -1156,20 +1156,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let switch_to_model_gen env =
     not !terminated_normally &&
     not !(env.model_gen_mode) &&
-    let i = abs (interpretation ()) in
+    let i = abs (get_interpretation ()) in
     (i = 1 || i = 2 || i = 3)
 
 
   let do_switch_to_model_gen env =
-    let i = abs (interpretation ()) in
+    let i = abs (get_interpretation ()) in
     assert (i = 1 || i = 2 || i = 3);
     if not !(env.model_gen_mode) &&
-       Stdlib.(<>) (Options.timelimit_interpretation ()) 0. then
+       Stdlib.(<>) (Options.get_timelimit_interpretation ()) 0. then
       begin
         Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
         Options.Time.set_timeout
           ~is_gui:(Options.get_is_gui())
-          (Options.timelimit_interpretation ());
+          (Options.get_timelimit_interpretation ());
         env.model_gen_mode := true;
         return_answer env i (fun _ -> raise Util.Timeout)
       end
@@ -1252,7 +1252,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         in
         let env = {env with tcp_cache = !tcp_cache} in
         ignore (update_instances_cache (Some l));
-        if Options.tableaux_cdcl () then
+        if Options.get_tableaux_cdcl () then
           cdcl_assume false env l;
         let env = assume env l in
         ignore (update_instances_cache (Some []));
@@ -1283,7 +1283,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       aux_rec ~rm_clauses env inst loop nb_ok, !nb_ok > 0
 
   let greedy_instantiation env =
-    if greedy () then return_answer env 1 (fun e -> raise (I_dont_know e));
+    if get_greedy () then return_answer env 1 (fun e -> raise (I_dont_know e));
     let gre_inst =
       ME.fold
         (fun f (gf,_,_,_) inst ->
@@ -1292,7 +1292,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     let env = new_inst_level env in
     let mconf =
-      {Util.nb_triggers = max 10 (nb_triggers () * 10);
+      {Util.nb_triggers = max 10 (get_nb_triggers () * 10);
        no_ematching = false;
        triggers_var = true;
        use_cs = true;
@@ -1314,12 +1314,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let env = compute_concrete_model env 2 in
     let env = new_inst_level env in
     let mconf =
-      {Util.nb_triggers = nb_triggers ();
-       no_ematching = no_ematching();
-       triggers_var = triggers_var ();
+      {Util.nb_triggers = get_nb_triggers ();
+       no_ematching = get_no_ematching();
+       triggers_var = get_triggers_var ();
        use_cs = false;
        backward = Util.Normal;
-       greedy = greedy ();
+       greedy = get_greedy ();
       }
     in
     let env, ok1 = inst_and_assume mconf env inst_predicates env.inst in
@@ -1334,7 +1334,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   (* should be merged with do_bcp/red/elim ?
      calls to debug hooks are missing *)
   let propagate_unit_facts_in_cache env =
-    if no_sat_learning() then None
+    if get_no_sat_learning() then None
     else
       let cache = !(env.unit_facts_cache) in
       let in_cache f =
@@ -1350,13 +1350,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              let nf2 = E.neg f2 in
              match in_cache nf1, in_cache nf2 with
              | Some d1, Some d2 ->
-               if Options.profiling() then Profiling.bcp_conflict true true;
+               if Options.get_profiling() then Profiling.bcp_conflict true true;
                let expl = Ex.union (Ex.union d d1) d2 in
                raise (IUnsat (expl, []))
 
              | Some d1, _ ->
                (* a is false, so b should be true *)
-               if Options.profiling() then Profiling.red true;
+               if Options.get_profiling() then Profiling.red true;
                let not_gf1 = {gf1 with E.ff = nf1} in
                let gf2 =
                  {gf2 with E.nb_reductions = gf2.E.nb_reductions + 1} in
@@ -1385,13 +1385,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if is_decision then
         begin
           let f = (fst fg).E.ff in
-          if Options.tableaux_cdcl () then
+          if Options.get_tableaux_cdcl () then
             try cdcl_decide env f (ME.find f env.decisions)
             with Not_found -> assert false
         end;
       let env = assume env [fg] in
       let env =
-        if is_decision || not (Options.instantiate_after_backjump ()) then env
+        if is_decision || not (Options.get_instantiate_after_backjump ())
+        then env
         else normal_instantiation env false
       in
       back_tracking env
@@ -1405,7 +1406,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   and back_tracking env =
     try
       let env = compute_concrete_model env 3 in
-      if env.delta == [] || Options.no_decisions() then
+      if env.delta == [] || Options.get_no_decisions() then
         back_tracking (normal_instantiation env true)
       else
         match propagate_unit_facts_in_cache env with
@@ -1425,7 +1426,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         Heuristics.choose env.delta !(env.heuristics) !(env.cdcl)
       in
       let new_level = env.dlevel + 1 in
-      if Options.profiling() then
+      if Options.get_profiling() then
         Profiling.decision new_level a.E.origin_name;
       (*fprintf fmt "@.BEFORE DECIDING %a@." E.print f;*)
       assert (cdcl_same_decisions env);
@@ -1436,28 +1437,28 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          plevel = 0;
          decisions = ME.add f new_level env.decisions}
       in
-      if Options.tableaux_cdcl () then begin
+      if Options.get_tableaux_cdcl () then begin
         assert (not (is_fact_in_CDCL !(env.cdcl) f));
         assert (not (is_fact_in_CDCL !(env.cdcl) (E.neg f)));
       end;
       Debug.decide f env_a;
       let dep = unsat_rec env_a (a,Ex.singleton (Ex.Bj f)) true in
-      if Options.tableaux_cdcl () then
+      if Options.get_tableaux_cdcl () then
         cdcl_forget_decision env f new_level;
       Debug.unsat_rec dep;
       try
         let dep' =
           try Ex.remove (Ex.Bj f) dep
-          with Not_found when Options.no_backjumping() -> dep
+          with Not_found when Options.get_no_backjumping() -> dep
         in
         Debug.backtracking f env;
         Options.tool_req 2 "TR-Sat-Decide";
-        if Options.profiling() then begin
+        if Options.get_profiling() then begin
           Profiling.reset_dlevel env.dlevel;
           Profiling.reset_ilevel env.ilevel;
         end;
         let not_a = {a with E.ff = E.neg f} in
-        if sat_learning () then learn_clause env not_a dep';
+        if get_sat_learning () then learn_clause env not_a dep';
         let env = {env with delta=l} in
         (* in the section below, we try to backjump further with latest
            generated instances if any *)
@@ -1472,16 +1473,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             ignore (update_instances_cache (Some []));
         end;
         assert (cdcl_same_decisions env);
-        if Options.tableaux_cdcl () then
+        if Options.get_tableaux_cdcl () then
           cdcl_learn_clause false env dep' (E.neg f);
         print_decisions_in_the_sats "make_one_decision:backtrack" env;
         assert (cdcl_same_decisions env);
-        if not (Options.tableaux_cdcl ()) then
+        if not (Options.get_tableaux_cdcl ()) then
           unsat_rec (assume env [b, Ex.union d dep']) (not_a,dep') false
         else
           match CDCL.is_true !(env.cdcl) a.E.ff with
           | Some (ex, _lvl) -> (* it is a propagation in satML *)
-            if verbose() then
+            if get_verbose() then
               fprintf fmt "Youpii ! Better BJ thanks to satML@.";
             let ex = Lazy.force ex in
             assert (not (Ex.mem (Ex.Bj f) ex));
@@ -1507,21 +1508,21 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if rnd > max_rnd then env
     else
       let nb1 = env.nb_related_to_goal in
-      if verbose () || debug_sat () then
+      if get_verbose () || get_debug_sat () then
         fprintf fmt "[sat.backward] round %d / %d@." rnd max_rnd;
       let mconf =
-        {Util.nb_triggers = nb_triggers ();
-         no_ematching = no_ematching();
-         triggers_var = triggers_var ();
+        {Util.nb_triggers = get_nb_triggers ();
+         no_ematching = get_no_ematching();
+         triggers_var = get_triggers_var ();
          use_cs = false;
-         greedy = greedy ();
+         greedy = get_greedy ();
          backward = Util.Backward;
         }
       in
       let env, new_i1 = inst_and_assume mconf env inst_predicates env.inst in
       let env, new_i2 = inst_and_assume mconf env inst_lemmas env.inst in
       let nb2 = env.nb_related_to_goal in
-      if verbose () || debug_sat () then
+      if get_verbose () || get_debug_sat () then
         fprintf fmt "[sat.backward] backward: %d goal-related hyps (+%d)@."
           nb2 (nb2-nb1);
 
@@ -1532,12 +1533,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let backward_instantiation env deepest_term =
     try
-      let no_ematching = Options.no_ematching () in
-      let no_nla = Options.no_nla () in
-      let no_ac = Options.no_ac () in
-      let greedy = Options.greedy () in
+      let no_ematching = Options.get_no_ematching () in
+      let no_nla = Options.get_no_nla () in
+      let no_ac = Options.get_no_ac () in
+      let greedy = Options.get_greedy () in
       (*let normalize_instances = Options.normalize_instances () in*)
-      let max_split = Options.max_split () in
+      let max_split = Options.get_max_split () in
 
       Options.set_no_ematching true;
       Options.set_no_nla true;
@@ -1569,26 +1570,26 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           )l
       in
       let l = List.rev_map (fun (ff, ex, _) -> ff, ex) l in
-      if verbose () || debug_sat () then
+      if get_verbose () || get_debug_sat () then
         List.iter
           (fun (ff, _ex) ->
              fprintf fmt "%2d : %a@.@." ff.E.gdist E.print ff.E.ff
           )l;
       let env = assume env l in
       Debug.print_nb_related env;
-      if verbose () || debug_sat () then
+      if get_verbose () || get_debug_sat () then
         fprintf fmt "[sat.backward] done (after %2.4f seconds)\n@."
           (Options.Time.value ());
       env
     with IUnsat _ as e ->
-      if verbose () || debug_sat () then
+      if get_verbose () || get_debug_sat () then
         fprintf fmt "[sat.backward] solved with backward !@.";
       raise e
 
   let unsat env gf =
     Debug.is_it_unsat gf;
     try
-      if Options.tableaux_cdcl () then
+      if Options.get_tableaux_cdcl () then
         cdcl_assume false env [gf,Ex.empty];
       let env = assume env [gf, Ex.empty] in
       let env =
@@ -1601,7 +1602,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env = {env with inst = Inst.register_max_term_depth env.inst max_t} in
 
       let env =
-        if Options.no_backward () then env
+        if Options.get_no_backward () then env
         else backward_instantiation env max_t
       in
 
@@ -1611,12 +1612,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env, _ = semantic_th_inst  env env.inst ~rm_clauses:true ~loop:4 in
 
       let mconf =
-        {Util.nb_triggers = nb_triggers ();
-         no_ematching = no_ematching();
-         triggers_var = triggers_var ();
+        {Util.nb_triggers = get_nb_triggers ();
+         no_ematching = get_no_ematching();
+         triggers_var = get_triggers_var ();
          use_cs = false;
          backward = Util.Normal;
-         greedy = greedy ();
+         greedy = get_greedy ();
         }
       in
       let env, _ = inst_and_assume mconf env inst_predicates env.inst in
@@ -1628,9 +1629,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let gd, _ =
         inst_lemmas mconf  env env.inst env.tbox (selector env) env.ilevel
       in
-      if Options.tableaux_cdcl () then
+      if Options.get_tableaux_cdcl () then
         cdcl_assume false env gd;
-      if Options.profiling() then Profiling.instances gd;
+      if Options.get_profiling() then Profiling.instances gd;
       let env = assume env gd in
 
       let env, _ = syntactic_th_inst env env.inst ~rm_clauses:true in
@@ -1653,7 +1654,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let assume env fg dep =
     try
-      if Options.tableaux_cdcl () then
+      if Options.get_tableaux_cdcl () then
         cdcl_assume false env [fg,dep];
       assume env [fg,dep]
     with
@@ -1702,7 +1703,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
 
   let unsat env fg =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Sat Timers.F_unsat;
         let env = unsat env fg in
@@ -1714,7 +1715,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     else unsat env fg
 
   let assume env fg =
-    if Options.timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Sat Timers.F_assume;
         let env = assume env fg in

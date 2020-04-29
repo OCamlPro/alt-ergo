@@ -65,7 +65,7 @@ let find_parser ext_opt format =
                             input format %S ?@."^format))
 
 let set_output_format fmt =
-  if Options.infer_output_format () then
+  if Options.get_infer_output_format () then
     match fmt with
     | Options.Unknown s ->
       Format.eprintf "Warning: The output format %s is not supported@." s
@@ -80,7 +80,7 @@ let get_input_parser fmt =
   | Options.Unknown s -> find_parser s s
 
 let get_parser ext_opt =
-  if Options.infer_input_format () then
+  if Options.get_infer_input_format () then
     match ext_opt with
     | Some ext ->
       get_input_parser (Options.match_extension ext)
@@ -88,7 +88,7 @@ let get_parser ext_opt =
       error
         (Parser_error "Error: no extension found, can't infer input format@.")
   else
-    get_input_parser (Options.input_format ())
+    get_input_parser (Options.get_input_format ())
 
 let parse_file ?lang lexbuf =
   let module Parser = (val get_parser lang : PARSER_INTERFACE) in
@@ -108,7 +108,7 @@ let extract_zip_file f =
   try
     match MyZip.entries cin with
     | [e] when not (MyZip.is_directory e) ->
-      if verbose () then
+      if get_verbose () then
         eprintf
           "I'll read the content of '%s' in the given zip@."
           (MyZip.filename e);
@@ -126,7 +126,7 @@ let extract_zip_file f =
     raise e
 
 let parse_input_file file =
-  if verbose() then fprintf fmt "[input_lang] parsing file \"%s\"@." file;
+  if get_verbose() then fprintf fmt "[input_lang] parsing file \"%s\"@." file;
   let cin, lb, opened_cin, ext =
     if Filename.check_suffix file ".zip" then
       let ext = Filename.extension (Filename.chop_extension file) in

@@ -11,6 +11,7 @@ LIB_DIR := $(SRC_DIR)/lib
 PLUGINS_DIR := $(SRC_DIR)/plugins
 PARSERS_DIR := $(SRC_DIR)/parsers
 
+COMMON_DIR := $(BIN_DIR)/common
 BTEXT_DIR := $(BIN_DIR)/text
 BGUI_DIR := $(BIN_DIR)/gui
 
@@ -65,7 +66,8 @@ clean: generated-clean dune-clean ocamldot-clean
 distclean: makefile-distclean release-distclean
 
 # declare these aliases as phony
-.PHONY: world gen conf clean distclean alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+.PHONY: world gen conf clean distclean alt-ergo-lib \
+	alt-ergo-parsers alt-ergo altgr-ergo
 
 # =================
 # Build rules (dev)
@@ -123,7 +125,7 @@ all: gen
 
 # declare these targets as phony to avoid name clashes with existing directories,
 # particularly the "plugins" target
-.PHONY: src lib bin gui fm-simplex AB-Why3 plugins all
+.PHONY: lib bin gui fm-simplex AB-Why3 plugins all
 
 
 # =====================
@@ -197,7 +199,6 @@ uninstall-lib:
 		--prefix $(prefix)						\
 		--libdir $(libdir)						\
 		-p alt-ergo-lib alt-ergo-lib
-
 
 # Install only the parsers
 install-parsers:
@@ -286,11 +287,13 @@ $(EXTRA_DIR)/ocamldot/ocamldot:
 # so we just put the ocamldot executable as dep
 archi: $(EXTRA_DIR)/ocamldot/ocamldot
 	ocamldep \
-		-I $(BIN_DIR)/ -I $(LIB_DIR)/ -I $(PARSERS_DIR)/ -I $(PLUGINS_DIR)/ \
-		-I $(BTEXT_DIR)/ -I $(BGUI_DIR)/ \
+		-I $(BIN_DIR)/ -I $(LIB_DIR)/ -I $(COMMON_DIR)/ -I $(PARSERS_DIR)/ \
+		-I $(PLUGINS_DIR)/ -I $(BTEXT_DIR)/ -I $(BGUI_DIR)/ \
 		-I $(FTND_DIR)/ -I $(RSNRS_DIR)/ -I $(STRCT_DIR)/ -I $(UTIL_DIR)/ \
+		-I _build/default/$(COMMON_DIR)/ \
 		-I _build/default/$(PARSERS_DIR)/ -I _build/default/$(PLUGINS_DIR)/ \
 		$(FTND_DIR)/*.ml $(RSNRS_DIR)/*.ml $(STRCT_DIR)/*.ml $(UTIL_DIR)/*.ml \
+		$(COMMON_DIR)/*.ml _build/default/$(COMMON_DIR)/*.ml \
 		$(PARSERS_DIR)/*.ml _build/default/$(PARSERS_DIR)/*.ml \
 		$(PLUGINS_DIR)/*/*.ml _build/default/$(PLUGINS_DIR)/*/*.ml \
 		$(BTEXT_DIR)/*.ml $(BGUI_DIR)/*.ml | \
@@ -327,7 +330,7 @@ public-release:
 	cp README.md LICENSE.md COPYING.md $(FILES_DEST)/
 	cp Makefile $(FILES_DEST)/
 	cp INSTALL.md alt-ergo.opam CHANGES $(FILES_DEST)/
-	cp -rf lib bin parsers preludes examples doc $(FILES_DEST)/
+	cp -rf lib bin common parsers preludes examples doc $(FILES_DEST)/
 	cp -rf plugins $(FILES_DEST)/ 2> /dev/null || echo "cp: skip plugins dir (not found)"
 	#echo "let _version=\"$(PUBLIC_VERSION)\"" >> $(FILES_DEST)/$(UTIL_DIR)/version.ml
 	echo "let _release_commit = \"$(COMMIT_ID)\"" >> $(FILES_DEST)/$(UTIL_DIR)/version.ml

@@ -588,7 +588,7 @@ module Flat_Formula : FLAT_FORMULA = struct
   let mk_lit hcons a acc =
     let at, acc = Atom.add_atom hcons.atoms a acc in
     let at =
-      if disable_flat_formulas_simplification () then at
+      if get_disable_flat_formulas_simplification () then at
       else
       if at.Atom.var.Atom.level = 0 then
         if at.Atom.is_true then Atom.vrai_atom
@@ -657,7 +657,7 @@ module Flat_Formula : FLAT_FORMULA = struct
              match e.view with
              | AND l -> merge_and_check so l, nso
              | UNIT a when
-                 not (disable_flat_formulas_simplification ()) &&
+                 not (get_disable_flat_formulas_simplification ()) &&
                  a.Atom.var.Atom.level = 0 ->
                begin
                  if a.Atom.neg.Atom.is_true then (aaz a; raise Exit); (* XXX*)
@@ -741,12 +741,12 @@ module Flat_Formula : FLAT_FORMULA = struct
     | [], [] -> assert false
 
     | _::_::_, _ ->
-      if debug () then
+      if get_debug () then
         fprintf fmt "Failure: many distinct atoms@.";
       None
 
     | [_] as common, _ ->
-      if debug () then
+      if get_debug () then
         fprintf fmt "TODO: Should have one toplevel common atom@.";
       begin
         try
@@ -757,7 +757,7 @@ module Flat_Formula : FLAT_FORMULA = struct
       end
 
     | [], ad::ands' ->
-      if debug () then
+      if get_debug () then
         fprintf fmt "Should look for internal common parts@.";
       let common = List.fold_left intersect_list ad ands' in
       match common with
@@ -774,7 +774,7 @@ module Flat_Formula : FLAT_FORMULA = struct
              match e.view with
              | OR l  -> merge_and_check so l, nso
              | UNIT a  when
-                 not (disable_flat_formulas_simplification ()) &&
+                 not (get_disable_flat_formulas_simplification ()) &&
                  a.Atom.var.Atom.level = 0 ->
                begin
                  if a.Atom.is_true then (aaz a; raise Exit); (* XXX *)

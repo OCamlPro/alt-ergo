@@ -1251,7 +1251,7 @@ and type_trigger in_theory env l =
          try type_term env t
          with Error _ ->
            ignore (type_form env t);
-           if Options.verbose () then
+           if Options.get_verbose () then
              fprintf fmt
                "; %a The given trigger is not a term and is ignored@."
                Loc.report t.pp_loc;
@@ -2172,7 +2172,7 @@ let rec type_decl (acc, env) d =
 
   | Rewriting(loc, name, lr) ->
     let lf = List.map (type_form env) lr in
-    if Options.rewriting () then
+    if Options.get_rewriting () then
       let rules = List.map (fun f -> make_rules loc f) lf in
       let td = {c = TRewriting(loc, name, rules); annot = new_id () } in
       (td, env)::acc, env

@@ -110,7 +110,7 @@ struct
 
     let initial_size = 9001
 
-    let disable_weaks () = Options.disable_weaks ()
+    let disable_weaks () = Options.get_disable_weaks ()
 
   end
 
@@ -272,14 +272,15 @@ struct
       | Expr.Not_a_term _ -> assert false
       | Expr.Term tt -> tt
     in
+    let not_restricted = not (get_restricted ()) in
     match
       X1.is_mine_symb sb ty,
-      not (restricted ()) && X2.is_mine_symb sb ty,
-      not (restricted ()) && X3.is_mine_symb sb ty,
-      not (restricted ()) && X4.is_mine_symb sb ty,
-      not (restricted ()) && X5.is_mine_symb sb ty,
-      not (restricted ()) && X6.is_mine_symb sb ty,
-      not (restricted ()) && X7.is_mine_symb sb ty,
+      not_restricted && X2.is_mine_symb sb ty,
+      not_restricted && X3.is_mine_symb sb ty,
+      not_restricted && X4.is_mine_symb sb ty,
+      not_restricted && X5.is_mine_symb sb ty,
+      not_restricted && X6.is_mine_symb sb ty,
+      not_restricted && X7.is_mine_symb sb ty,
       AC.is_mine_symb sb ty
     with
     | true  , false , false , false, false, false, false, false -> X1.make t
@@ -295,14 +296,15 @@ struct
     | _ -> assert false
 
   let fully_interpreted sb ty =
+    let not_restricted = not (get_restricted ()) in
     match
       X1.is_mine_symb sb ty,
-      not (restricted ()) && X2.is_mine_symb sb ty,
-      not (restricted ()) && X3.is_mine_symb sb ty,
-      not (restricted ()) && X4.is_mine_symb sb ty,
-      not (restricted ()) && X5.is_mine_symb sb ty,
-      not (restricted ()) && X6.is_mine_symb sb ty,
-      not (restricted ()) && X7.is_mine_symb sb ty,
+      not_restricted && X2.is_mine_symb sb ty,
+      not_restricted && X3.is_mine_symb sb ty,
+      not_restricted && X4.is_mine_symb sb ty,
+      not_restricted && X5.is_mine_symb sb ty,
+      not_restricted && X6.is_mine_symb sb ty,
+      not_restricted && X7.is_mine_symb sb ty,
       AC.is_mine_symb sb ty
     with
     | true  , false , false , false, false, false, false, false ->
@@ -327,7 +329,7 @@ struct
 
   let is_solvable_theory_symbol sb ty =
     X1.is_mine_symb sb ty ||
-    not (restricted ()) &&
+    not (get_restricted ()) &&
     ((*X2.is_mine_symb sb || print records*)
       X3.is_mine_symb sb ty ||
       X4.is_mine_symb sb ty ||
@@ -354,7 +356,7 @@ struct
         X6.is_mine_symb ac.Sig.h ty,
         X7.is_mine_symb ac.Sig.h ty,
         AC.is_mine_symb ac.Sig.h ty with
-      (*AC.is_mine may say F if Options.no_ac is set to F dynamically *)
+      (*AC.is_mine may say F if Options.get_no_ac is set to F dynamically *)
       | true  , false , false , false, false, false, false, false -> X1.color ac
       | false , true  , false , false, false, false, false, false -> X2.color ac
       | false , false , true  , false, false, false, false, false -> X3.color ac
@@ -369,7 +371,7 @@ struct
   module Debug = struct
 
     let print fmt r =
-      if term_like_pp () then
+      if get_term_like_pp () then
         match r.v with
         | X1 t    -> fprintf fmt "%a" X1.print t
         | X2 t    -> fprintf fmt "%a" X2.print t
@@ -393,7 +395,7 @@ struct
         | Ac t    -> fprintf fmt "Ac:[%a]" AC.print t
 
     let print_sbt msg sbs =
-      if debug_combine () then begin
+      if get_debug_combine () then begin
         let c = ref 0 in
         fprintf fmt "%s subst:@." msg;
         List.iter
@@ -404,8 +406,8 @@ struct
       end
 
     let debug_abstraction_result oa ob a b acc =
-      if debug_combine () then begin
-        fprintf fmt "@.== debug_abstraction_result ==@.";
+      if get_debug_combine () then begin
+        fprintf fmt "@.== get_debug_abstraction_result ==@.";
         fprintf fmt "@.Initial equaliy:   %a = %a@." CX.print oa CX.print ob;
         fprintf fmt "abstracted equality: %a = %a@." CX.print a CX.print b;
         fprintf fmt "selectors elimination result:@.";
@@ -419,16 +421,16 @@ struct
       end
 
     let solve_one a b =
-      if debug_combine () then
+      if get_debug_combine () then
         fprintf fmt "solve one %a = %a@." CX.print a CX.print b
 
     let debug_abstract_selectors a =
-      if debug_combine () then
+      if get_debug_combine () then
         fprintf fmt "abstract selectors of %a@." CX.print a
 
     let assert_have_mem_types tya tyb =
       assert (
-        not (Options.enable_assertions()) ||
+        not (Options.get_enable_assertions()) ||
         if not (Ty.compare tya tyb = 0) then (
           fprintf fmt "@.Tya = %a  and @.Tyb = %a@.@."
             Ty.print tya Ty.print tyb;
@@ -494,7 +496,7 @@ struct
     Debug.print_sbt "Triangular and cleaned" sbs;
     (*
       This assert is not TRUE because of AC and distributivity of '*'
-      assert (not (Options.enable_assertions()) ||
+      assert (not (Options.get_enable_assertions()) ||
       equal (apply_subst a sbs) (apply_subst b sbs));
     *)
     sbs
@@ -503,7 +505,7 @@ struct
     List.fold_right (fun (p,v)r  -> CX.subst p v r) sbt r
 
   let solve_uninterpreted r1 r2 pb = (* r1 != r2*)
-    if debug_combine () then
+    if get_debug_combine () then
       fprintf fmt "solve uninterpreted %a = %a@." print r1 print r2;
     if CX.str_cmp r1 r2 > 0 then { pb with sbt = (r1,r2)::pb.sbt }
     else { pb with sbt = (r2,r1)::pb.sbt }
@@ -529,7 +531,7 @@ struct
           | Ty.Tbitv _         -> X3.solve ra rb pb
           | Ty.Tsum _          -> X5.solve ra rb pb
           (*| Ty.Tunit           -> pb *)
-          | Ty.Tadt _ when not (Options.disable_adts()) -> X6.solve ra rb pb
+          | Ty.Tadt _ when not (Options.get_disable_adts()) -> X6.solve ra rb pb
           | _                  -> solve_uninterpreted ra rb pb
         in
         solve_list pb
@@ -566,7 +568,7 @@ struct
       | _, Ty.Tbitv _   -> X3.assign_value r distincts eq
       | _, Ty.Tfarray _ -> X4.assign_value r distincts eq
       | _, Ty.Tsum _    -> X5.assign_value r distincts eq
-      | _, Ty.Tadt _    when not (Options.disable_adts()) ->
+      | _, Ty.Tadt _    when not (Options.get_disable_adts()) ->
         X6.assign_value r distincts eq
       | Term t, ty      -> (* case disable_adts() handled here *)
         if (Expr.depth t) = 1 ||
@@ -574,7 +576,7 @@ struct
         else Some (Expr.fresh_name ty, false) (* false <-> not a case-split *)
       | _               -> assert false
     in
-    if debug_interpretation() then
+    if get_debug_interpretation() then
       begin
         fprintf fmt "[combine] assign value to representative %a : " print r;
         match opt with
@@ -590,7 +592,7 @@ struct
       | Ty.Treal     -> X1.choose_adequate_model t rep l
       | Ty.Tbitv _   -> X3.choose_adequate_model t rep l
       | Ty.Tsum _    -> X5.choose_adequate_model t rep l
-      | Ty.Tadt _    when not (Options.disable_adts()) ->
+      | Ty.Tadt _    when not (Options.get_disable_adts()) ->
         X6.choose_adequate_model t rep l
       | Ty.Trecord _ -> X2.choose_adequate_model t rep l
       | Ty.Tfarray _ -> X4.choose_adequate_model t rep l
@@ -613,7 +615,7 @@ struct
             match term_extract rep with
             | Some t, true when (Expr.depth t) = 1 -> rep
             | _ ->
-              if debug_interpretation() then begin
+              if get_debug_interpretation() then begin
                 fprintf fmt "[Combine.choose_adequate_model] ";
                 fprintf fmt "What to choose for term %a with rep %a ??@."
                   Expr.print t print rep;
@@ -629,7 +631,7 @@ struct
         fprintf str_formatter "%a" print r; (* it's a EUF constant *)
         r, flush_str_formatter ()
     in
-    if debug_interpretation() then
+    if get_debug_interpretation() then
       fprintf fmt "[combine] %a selected as a model for %a@."
         print r Expr.print t;
     r, pprint

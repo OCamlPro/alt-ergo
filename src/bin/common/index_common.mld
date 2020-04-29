@@ -1,0 +1,9 @@
+{1 Alt_ergo_common}
+
+{2 Command line parsing}
+
+The alt-ergo-common package is used for parsing the command line with {{:https://erratique.ch/software/cmdliner}[cmdliner]}
+See
+{!modules:
+Alt_ergo_common.Parse_command
+}

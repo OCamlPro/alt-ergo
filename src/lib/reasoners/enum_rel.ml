@@ -56,12 +56,12 @@ let empty classes = { mx = MX.empty; classes = classes;
 module Debug = struct
 
   let assume bol r1 r2 =
-    if debug_sum () then
+    if get_debug_sum () then
       fprintf fmt "[Sum.Rel] we assume %a %s %a@."
         X.print r1 (if bol then "=" else "<>") X.print r2
 
   let print_env env =
-    if debug_sum () then begin
+    if get_debug_sum () then begin
       fprintf fmt "--SUM env ---------------------------------@.";
       MX.iter
         (fun r (hss, ex) ->
@@ -80,14 +80,14 @@ module Debug = struct
     end
 
   let case_split r r' =
-    if debug_sum () then
+    if get_debug_sum () then
       fprintf fmt "[case-split] %a = %a@." X.print r X.print r'
 
   let no_case_split () =
-    if debug_sum () then fprintf fmt "[case-split] sum: nothing@."
+    if get_debug_sum () then fprintf fmt "[case-split] sum: nothing@."
 
   let add r =
-    if debug_sum () then fprintf fmt "Sum.Rel.add: %a@." X.print r
+    if get_debug_sum () then fprintf fmt "Sum.Rel.add: %a@." X.print r
 
 end
 (*BISECT-IGNORE-END*)
@@ -243,8 +243,8 @@ let case_split env _ ~for_model =
     let n = Numbers.Q.from_int n in
     if for_model ||
        Numbers.Q.compare
-         (Numbers.Q.mult n env.size_splits) (max_split ()) <= 0  ||
-       Numbers.Q.sign  (max_split ()) < 0 then
+         (Numbers.Q.mult n env.size_splits) (get_max_split ()) <= 0  ||
+       Numbers.Q.sign  (get_max_split ()) < 0 then
       let r' = is_mine (Cons(hs,X.type_info r)) in
       Debug.case_split r r';
       [LR.mkv_eq r r', true, Th_util.CS(Th_util.Th_sum, n)]
@@ -258,7 +258,7 @@ let query env uf a_ex =
   with Ex.Inconsistent (expl, classes) -> Some (expl, classes)
 
 let assume env uf la =
-  if Options.timers() then
+  if Options.get_timers() then
     try
       Timers.exec_timer_start Timers.M_Sum Timers.F_assume;
       let res =assume env uf la in
@@ -270,7 +270,7 @@ let assume env uf la =
   else assume env uf la
 
 let query env uf la =
-  if Options.timers() then
+  if Options.get_timers() then
     try
       Timers.exec_timer_start Timers.M_Sum Timers.F_query;
       let res = query env uf la  in

@@ -27,6 +27,7 @@
 (******************************************************************************)
 
 open AltErgoLib
+open Alt_ergo_common
 open AltErgoParsers
 open Typed
 open Commands
@@ -40,14 +41,14 @@ open Options
 (* done here to initialize options,
    before the instantiations of functors *)
 let () =
-  try Options.parse_cmdline_arguments ()
-  with Options.Exit_options i -> exit i
+  try Parse_command.parse_cmdline_arguments ()
+  with Parse_command.Exit_parse_command i -> exit i
 
 module SatCont = (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer)
 
 module TH =
   (val
-    (if Options.no_theory() then (module Theory.Main_Empty : Theory.S)
+    (if Options.get_no_theory() then (module Theory.Main_Empty : Theory.S)
      else (module Theory.Main_Default : Theory.S)) : Theory.S )
 
 module SAT = SatCont.Make(TH)
@@ -500,7 +501,7 @@ let update_status image label buttonclean env s steps =
     if not satmode then Loc.report std_formatter d.st_loc;
     if satmode then printf "@{<C.F_Red>unsat@}@."
     else printf "@{<C.F_Green>Valid@} (%2.4f) (%d)@." time steps;
-    if unsat_core () then begin
+    if get_unsat_core () then begin
       printf "unsat-core:\n%a@." (Explanation.print_unsat_core ~tab:true) dep;
       show_used_lemmas env dep
     end;
@@ -525,7 +526,7 @@ let update_status image label buttonclean env s steps =
     image#set_stock `NO;
     label#set_text (sprintf "  I don't know (%2.2f s)"
                       (Options.Time.value()));
-    if model () then pop_model t ()
+    if get_model () then pop_model t ()
 
   | FE.Sat (d, t) ->
     if not satmode then Loc.report std_formatter d.st_loc;
@@ -534,7 +535,7 @@ let update_status image label buttonclean env s steps =
     image#set_stock `NO;
     label#set_text
       (sprintf "  I don't know (sat) (%2.2f s)" (Options.Time.value()));
-    if model () then pop_model t ()
+    if get_model () then pop_model t ()
 
   | FE.Timeout _ ->
     assert false (* should not happen in GUI ? *)
@@ -546,7 +547,7 @@ let update_aborted image label buttonstop buttonrun timers_model = function
   | Abort_thread ->
     Options.Time.unset_timeout ~is_gui:true;
     Timers.update timers_model.timers;
-    if debug () then fprintf fmt "alt-ergo thread terminated@.";
+    if get_debug () then fprintf fmt "alt-ergo thread terminated@.";
     image#set_stock `DIALOG_QUESTION;
     label#set_text "  Process aborted";
     buttonstop#misc#hide ();
@@ -554,7 +555,7 @@ let update_aborted image label buttonstop buttonrun timers_model = function
   | Util.Timeout ->
     Options.Time.unset_timeout ~is_gui:true;
     Timers.update timers_model.timers;
-    if debug () then
+    if get_debug () then
       fprintf fmt "alt-ergo thread terminated (timeout)@.";
     image#set_stock `CUT;
     label#set_text "  Timeout";
@@ -564,7 +565,7 @@ let update_aborted image label buttonstop buttonrun timers_model = function
     Options.Time.unset_timeout ~is_gui:true;
     Timers.update timers_model.timers;
     let message = sprintf "Error: %s" (Printexc.to_string e) in
-    if debug () then fprintf fmt "alt-ergo thread terminated@.";
+    if get_debug () then fprintf fmt "alt-ergo thread terminated@.";
     image#set_stock `DIALOG_ERROR;
     label#set_text (" "^message);
     buttonstop#misc#hide ();
@@ -628,12 +629,13 @@ let kill_thread thread () =
 
 let run_replay env used_context =
   let ast = to_ast env.ast in
-  if debug () then fprintf fmt "AST : \n-----\n%a@." print_typed_decl_list ast;
+  if get_debug () then
+    fprintf fmt "AST : \n-----\n%a@." print_typed_decl_list ast;
 
   let ast_pruned = [ast] in
 
   Options.Time.start ();
-  Options.Time.set_timeout ~is_gui:true (Options.timelimit ());
+  Options.Time.set_timeout ~is_gui:true (Options.get_timelimit ());
   List.iter
     (fun dcl ->
        let cnf = Cnf.make_list dcl in
@@ -663,7 +665,8 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
   clear_used_lemmas_tags env;
 
   let ast = to_ast env.ast in
-  if debug () then fprintf fmt "AST : \n-----\n%a@." print_typed_decl_list ast;
+  if get_debug () then
+    fprintf fmt "AST : \n-----\n%a@." print_typed_decl_list ast;
 
   let ast_pruned = [ast] in
 
@@ -683,9 +686,9 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
          (fun () ->
             (try
                (* Thread.yield (); *)
-               if debug () then fprintf fmt "Starting alt-ergo thread@.";
+               if get_debug () then fprintf fmt "Starting alt-ergo thread@.";
                Options.Time.start ();
-               Options.Time.set_timeout ~is_gui:true (Options.timelimit ());
+               Options.Time.set_timeout ~is_gui:true (Options.get_timelimit ());
                Timers.set_timer_start (Timers.start timers_model.timers);
                Timers.set_timer_pause (Timers.pause timers_model.timers);
 
@@ -706,7 +709,8 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
                wrapper_update_aborted
                  image label buttonstop buttonrun timers_model e
             );
-            if debug () then fprintf fmt "Send done signal to waiting thread@.";
+            if get_debug () then
+              fprintf fmt "Send done signal to waiting thread@.";
             wrapper_reset buttonstop buttonrun;
             Thread.delay 0.001;
             GMain.Timeout.remove to_id;
@@ -992,13 +996,13 @@ let start_gui all_used_context =
   let smanager = GSourceView2.source_style_scheme_manager ~default:true in
   let scheme = smanager#style_scheme Gui_config.style in
   let filename = get_file () in
-  let preludes = Options.preludes () in
+  let preludes = Options.get_preludes () in
   let pfile = Parsers.parse_problem ~filename ~preludes in
   (* TODO: is the GUI ever invoked in parse_only mode ? *)
-  if parse_only () then exit 0;
+  if get_parse_only () then exit 0;
   let typed_ast, _ = Typechecker.type_file pfile in
   (* TODO: is the GUI ever invoked in type_only mode ? *)
-  if type_only () then exit 0;
+  if get_type_only () then exit 0;
   let typed_ast = Typechecker.split_goals typed_ast in
 
   let main_vbox = GPack.vbox
@@ -1042,9 +1046,9 @@ let start_gui all_used_context =
          buf2#set_style_scheme scheme;
 
          let annoted_ast = annot buf1 l in
-         if debug () then fprintf fmt "Computing dependencies ... ";
+         if get_debug () then fprintf fmt "Computing dependencies ... ";
          let dep = make_dep annoted_ast in
-         if debug () then fprintf fmt "Done@.";
+         if get_debug () then fprintf fmt "Done@.";
 
 
          let text = List.fold_left
@@ -1330,24 +1334,24 @@ let start_gui all_used_context =
 
 
   let debug_entries = [
-    `C ("SAT", debug_sat (), set_debug_sat);
+    `C ("SAT", get_debug_sat (), set_debug_sat);
     `S;
-    `C ("CC", debug_cc (), set_debug_cc);
-    `C ("Use", debug_use (), set_debug_use);
-    `C ("UF", debug_uf (), set_debug_uf);
-    `C ("AC", debug_ac (), set_debug_ac);
+    `C ("CC", get_debug_cc (), set_debug_cc);
+    `C ("Use", get_debug_use (), set_debug_use);
+    `C ("UF", get_debug_uf (), set_debug_uf);
+    `C ("AC", get_debug_ac (), set_debug_ac);
     `S;
-    `C ("Arith", debug_arith (), set_debug_arith);
-    `C ("Fourier-Motzkin", debug_fm (), set_debug_fm);
-    `C ("Arrays", debug_arrays (), set_debug_arrays);
-    `C ("Bit-vectors", debug_bitv (), set_debug_bitv);
-    `C ("Sum", debug_sum (), set_debug_sum);
+    `C ("Arith", get_debug_arith (), set_debug_arith);
+    `C ("Fourier-Motzkin", get_debug_fm (), set_debug_fm);
+    `C ("Arrays", get_debug_arrays (), set_debug_arrays);
+    `C ("Bit-vectors", get_debug_bitv (), set_debug_bitv);
+    `C ("Sum", get_debug_sum (), set_debug_sum);
     `C ("Records", false, not_implemented);
     `S;
-    `C ("Case split", debug_split (), set_debug_split);
-    `C ("Replay unsat cores", debug_unsat_core (), set_debug_unsat_core);
-    `C ("Typing", debug_typing (), set_debug_typing);
-    `C ("Verbose", verbose (), set_verbose);
+    `C ("Case split", get_debug_split (), set_debug_split);
+    `C ("Replay unsat cores", get_debug_unsat_core (), set_debug_unsat_core);
+    `C ("Typing", get_debug_typing (), set_debug_typing);
+    `C ("Verbose", get_verbose (), set_verbose);
   ] in
 
   let options_entries =
@@ -1357,18 +1361,18 @@ let start_gui all_used_context =
       if b then set_model MAll else set_model MNone in
     let set_model b = if b then set_model MDefault else set_model MNone in
     [
-      `C ("Unsat cores", unsat_core (), set_unsat_core);
+      `C ("Unsat cores", get_unsat_core (), set_unsat_core);
       `S;
-      `C ("Model", model (), set_model);
-      `C ("Complete model", complete_model (), set_complete_model);
-      `C ("All models", all_models (), set_all_models);
+      `C ("Model", get_model (), set_model);
+      `C ("Complete model", get_complete_model (), set_complete_model);
+      `C ("All models", get_all_models (), set_all_models);
       `S;
-      `C ("Variables in triggers", triggers_var (), set_triggers_var);
-      `C ("Greedy", greedy (), set_greedy);
-      `C ("Contra congruence", not (no_contracongru ()),
+      `C ("Variables in triggers", get_triggers_var (), set_triggers_var);
+      `C ("Greedy", get_greedy (), set_greedy);
+      `C ("Contra congruence", not (get_no_contracongru ()),
           fun b -> set_no_contracongru (not b));
       `S;
-      `C ("Restricted", restricted (), set_restricted);
+      `C ("Restricted", get_restricted (), set_restricted);
       `S;
       `C ("Wrap lines", wrap, set_wrap_lines);
       `S;
@@ -1452,13 +1456,13 @@ let start_gui all_used_context =
 
 let start_replay session_cin all_used_context =
   let filename = get_file () in
-  let preludes = Options.preludes () in
+  let preludes = Options.get_preludes () in
   let pfile = Parsers.parse_problem ~filename ~preludes in
   (* TODO: is the GUI ever invoked in parse_only mode ? *)
-  if parse_only () then exit 0;
+  if get_parse_only () then exit 0;
   let typed_ast, _ = Typechecker.type_file pfile in
   (* TODO: is the GUI ever invoked in type_only mode ? *)
-  if type_only () then exit 0;
+  if get_type_only () then exit 0;
   let typed_ast = Typechecker.split_goals typed_ast in
   List.iter
     (fun (l, goal_name) ->
@@ -1494,7 +1498,7 @@ let start_replay session_cin all_used_context =
 
 
 let () =
-  if not (model ()) then
+  if not (get_model ()) then
     try
       Sys.set_signal Sys.sigalrm
         (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
@@ -1504,7 +1508,7 @@ let () =
   let all_used_context = FE.init_all_used_context () in
   try
     Options.set_is_gui true;
-    if replay() then
+    if get_replay() then
       start_replay (Some (open_in_bin (get_session_file()))) all_used_context
     else start_gui all_used_context
   with

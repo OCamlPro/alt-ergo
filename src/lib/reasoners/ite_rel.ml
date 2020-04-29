@@ -66,12 +66,12 @@ let add_to_guarded p s t mp =
   ME.add p (SE2.add (s, t) st) mp
 
 let add_aux env t =
-  if Options.disable_ites () then env
+  if Options.get_disable_ites () then env
   else
     match is_ite t with
     | None -> env
     | Some (p, t1, t2) ->
-      if debug_ite () then
+      if get_debug_ite () then
         fprintf fmt "[Ite.add]: (if %a then %a else %a)@."
           E.print p E.print t1 E.print t2;
       try
@@ -100,7 +100,7 @@ let extract_preds env la =
          | E.Pred (t, is_neg)
            when not (ME.mem t env.assumed_pos_preds) &&
                 not (ME.mem t env.assumed_neg_preds) ->
-           if debug_ite () then
+           if get_debug_ite () then
              fprintf fmt "[Ite.assume] %a@." E.print a;
            TB.add (t, is_neg) expl acc
          | _ -> acc
@@ -114,7 +114,7 @@ let extract_pending_deductions env =
          let a = E.mk_eq ~iff:false s t
                  [@ocaml.ppwarning "TODO: build IFF instead ?"]
          in
-         if debug_ite () then
+         if get_debug_ite () then
            fprintf fmt "[Ite.assume] deduce that %a with expl %a@."
              E.print a Ex.print ex;
          (Sig_rel.LTerm a, ex, Th_util.Other) :: acc)
@@ -123,7 +123,7 @@ let extract_pending_deductions env =
   {env with pending_deds = ME2.empty}, l
 
 let assume env _ la =
-  if Options.disable_ites () then env, { Sig_rel.assume = []; remove = [] }
+  if Options.get_disable_ites () then env, { Sig_rel.assume = []; remove = [] }
   else
     let env =
       TB.fold
@@ -154,7 +154,7 @@ let assume env _ la =
     env, { Sig_rel.assume = deds; remove = [] }
 
 let assume env uf la =
-  if Options.timers() then
+  if Options.get_timers() then
     try
       Timers.exec_timer_start Timers.M_Arrays Timers.F_assume;
       let res =assume env uf la in
@@ -174,4 +174,3 @@ let new_terms _ = E.Set.empty
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
 let assume_th_elt t _ _ = t
-

@@ -398,10 +398,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let new_decision_level env =
     env.decisions <- env.decisions + 1;
     Vec.push env.trail_lim (Vec.size env.trail);
-    if Options.profiling() then
+    if Options.get_profiling() then
       Profiling.decision (decision_level env) "<none>";
     Vec.push env.tenv_queue env.tenv; (* save the current tenv *)
-    if Options.cdcl_tableaux () then begin
+    if Options.get_cdcl_tableaux () then begin
       Vec.push env.lazy_cnf_queue env.lazy_cnf;
       Vec.push env.relevants_queue env.relevants
     end
@@ -472,7 +472,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       env.qhead <- Vec.get env.trail_lim lvl;
       for c = Vec.size env.trail - 1 downto env.qhead do
         let a = Vec.get env.trail c in
-        if Options.minimal_bj () && a.var.level <= lvl then begin
+        if Options.get_minimal_bj () && a.var.level <= lvl then begin
           assert (a.var.level = 0 || a.var.reason != None);
           repush := a :: !repush
         end
@@ -484,14 +484,14 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Queue.clear env.tatoms_queue;
       Queue.clear env.th_tableaux;
       env.tenv <- Vec.get env.tenv_queue lvl; (* recover the right tenv *)
-      if Options.cdcl_tableaux () then begin
+      if Options.get_cdcl_tableaux () then begin
         env.lazy_cnf <- Vec.get env.lazy_cnf_queue lvl;
         env.relevants <- Vec.get env.relevants_queue lvl;
       end;
       Vec.shrink env.trail ((Vec.size env.trail) - env.qhead) true;
       Vec.shrink env.trail_lim ((Vec.size env.trail_lim) - lvl) true;
       Vec.shrink env.tenv_queue ((Vec.size env.tenv_queue) - lvl) true;
-      if Options.cdcl_tableaux () then begin
+      if Options.get_cdcl_tableaux () then begin
         Vec.shrink
           env.lazy_cnf_queue ((Vec.size env.lazy_cnf_queue) - lvl) true;
         Vec.shrink env.relevants_queue
@@ -505,9 +505,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
        with _ -> assert false
       );
     end;
-    if Options.profiling() then Profiling.reset_dlevel (decision_level env);
+    if Options.get_profiling() then Profiling.reset_dlevel (decision_level env);
     assert (Vec.size env.trail_lim = Vec.size env.tenv_queue);
-    assert (Options.minimal_bj () || (!repush == []));
+    assert (Options.get_minimal_bj () || (!repush == []));
     List.iter (enqueue_assigned env) !repush
 
   let rec pick_branch_var env =
@@ -552,7 +552,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     (*eprintf "enqueue: %a@." Debug.atom a; *)
     Vec.push env.trail a;
     a.var.index <- Vec.size env.trail;
-    if Options.enable_assertions() then  debug_enqueue_level a lvl reason
+    if Options.get_enable_assertions() then  debug_enqueue_level a lvl reason
 
   let progress_estimate env =
     let prg = ref 0. in
@@ -570,11 +570,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let check_levels propag_lvl current_lvl =
     assert (propag_lvl <= current_lvl);
-    assert (propag_lvl == current_lvl || (Options.minimal_bj ()))
+    assert (propag_lvl == current_lvl || (Options.get_minimal_bj ()))
 
   let best_propagation_level env c =
     let mlvl =
-      if Options.minimal_bj () then max_level_in_clause c
+      if Options.get_minimal_bj () then max_level_in_clause c
       else decision_level env
     in
     check_levels mlvl (decision_level env);
@@ -592,7 +592,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       (* clause vraie, la garder dans les watched *)
       Vec.set watched !new_sz c;
       incr new_sz;
-      if Options.profiling() then Profiling.elim true;
+      if Options.get_profiling() then Profiling.elim true;
     end
     else
       try (* chercher un nouveau watcher *)
@@ -614,7 +614,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             Vec.set watched !new_sz (Vec.get watched k);
             incr new_sz;
           done;
-          if Options.profiling() then Profiling.bcp_conflict true true;
+          if Options.get_profiling() then Profiling.bcp_conflict true true;
           raise (Conflict c)
         end
         else begin
@@ -623,7 +623,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           incr new_sz;
           let mlvl = best_propagation_level env c in
           enqueue env first mlvl (Some c);
-          if Options.profiling() then Profiling.red true;
+          if Options.get_profiling() then Profiling.red true;
         end
       with Exit -> ()
 
@@ -643,10 +643,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
 
   let do_case_split env origin =
-    if Options.case_split_policy () != Util.AfterTheoryAssume then
+    if Options.get_case_split_policy () != Util.AfterTheoryAssume then
       failwith
         "Only AfterTheoryAssume case-split policy is supported by satML";
-    if Options.case_split_policy () == origin then
+    if Options.get_case_split_policy () == origin then
       try
         let tenv, _ = Th.do_case_split env.tenv in
         env.tenv <- tenv;
@@ -734,7 +734,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     (*let a = SFF.cardinal env.relevants in*)
     env.lazy_cnf <-
       Queue.fold (relevancy_propagation env) env.lazy_cnf env.tatoms_queue;
-    if Options.enable_assertions() then (*debug *)
+    if Options.get_enable_assertions() then (*debug *)
       Matoms.iter (fun a _ -> assert (not a.is_true)) env.lazy_cnf
 
 
@@ -774,16 +774,16 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       with Ex.Inconsistent (dep, _terms) ->
         (* XXX what to do with terms ? *)
         (* eprintf "th inconsistent : %a @." Ex.print dep; *)
-        if Options.profiling() then Profiling.theory_conflict();
+        if Options.get_profiling() then Profiling.theory_conflict();
         C_theory dep
 
   let theory_propagate env =
     let facts = ref [] in
     let dlvl = decision_level env in
-    if Options.cdcl_tableaux () then
+    if Options.get_cdcl_tableaux () then
       compute_facts_for_theory_propagate env;
     let tatoms_queue =
-      if Options.cdcl_tableaux_th () then begin
+      if Options.get_cdcl_tableaux_th () then begin
         env.th_tableaux
       end
       else env.tatoms_queue
@@ -800,7 +800,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           else assert false
         in
         let ex =
-          if unsat_core () || ta.var.level > 0 then Ex.singleton (Ex.Literal ta)
+          if get_unsat_core () || ta.var.level > 0 then
+            Ex.singleton (Ex.Literal ta)
           else Ex.empty
         in
         assert (E.is_ground ta.lit);
@@ -829,7 +830,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           (*let full_model = nb_assigns() = env.nb_init_vars in*)
           (* XXX what to do with the other results of Th.assume ? *)
           let t,_,cpt =
-            Th.assume ~ordered:(not (Options.cdcl_tableaux_th ()))
+            Th.assume ~ordered:(not (Options.get_cdcl_tableaux_th ()))
               (List.rev !facts) env.tenv
           in
           Steps.incr (Steps.Th_assumed cpt);
@@ -840,7 +841,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         with Ex.Inconsistent (dep, _terms) ->
           (* XXX what to do with terms ? *)
           (* eprintf "th inconsistent : %a @." Ex.print dep; *)
-          if Options.profiling() then Profiling.theory_conflict();
+          if Options.get_profiling() then Profiling.theory_conflict();
           C_theory dep
 
   let propagate env =
@@ -924,7 +925,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
 
   let report_b_unsat env linit =
-    if not (Options.unsat_core ()) then begin
+    if not (Options.get_unsat_core ()) then begin
       env.is_unsat <- true;
       env.unsat_core <- None;
       raise (Unsat None)
@@ -933,11 +934,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       match linit with
       | [] | _::_::_ ->
         (* currently, report_b_unsat called with a singleton
-           if unsat_core = true *)
+           if get_unsat_core = true *)
         assert false
 
       | [{ atoms; _ }] ->
-        assert (Options.unsat_core ());
+        assert (Options.get_unsat_core ());
         let l = ref linit in
         for i = 0 to Vec.size atoms - 1 do
           let v = (Vec.get atoms i).var in
@@ -983,7 +984,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
 
   let report_t_unsat env dep =
-    if not (Options.unsat_core ()) then begin
+    if not (Options.get_unsat_core ()) then begin
       env.is_unsat <- true;
       env.unsat_core <- None;
       raise (Unsat None)
@@ -1079,7 +1080,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     | C_bool c -> C_bool c
     | C_theory _ -> assert false
     | C_none ->
-      if Options.tableaux_cdcl () then
+      if Options.get_tableaux_cdcl () then
         C_none
       else
         match theory_propagate env with
@@ -1099,7 +1100,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     (* report possible propagation conflict *)
     report_conflict env (all_propagations env);
     if nb_assigns env <> env.simpDB_assigns && env.simpDB_props <= 0 then begin
-      if debug () then fprintf fmt "simplify@.";
+      if get_debug () then fprintf fmt "simplify@.";
       (*theory_simplify ();*)
       if Vec.size env.learnts > 0 then remove_satisfied env env.learnts;
       if env.remove_satisfied then remove_satisfied env env.clauses;
@@ -1111,7 +1112,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let record_learnt_clause env ~is_T_learn blevel learnt history size =
     let curr_level = decision_level env in
-    if not is_T_learn || Options.minimal_bj () ||
+    if not is_T_learn || Options.get_minimal_bj () ||
        blevel = curr_level then begin
       check_levels blevel curr_level;
       match learnt with
@@ -1161,7 +1162,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       while assert (!tr_ind >= 0);
         let v = (Vec.get env.trail !tr_ind).var in
-        not v.seen || ((Options.minimal_bj ()) && v.level < max_lvl) do
+        not v.seen || ((Options.get_minimal_bj ()) && v.level < max_lvl) do
         decr tr_ind
       done;
 
@@ -1180,7 +1181,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     let learnt = List.fast_sort (fun a b -> b.var.level - a.var.level) learnt in
     let size = List.length learnt in
     let bj_level =
-      if Options.minimal_bj () then
+      if Options.get_minimal_bj () then
         match learnt with
           [] -> 0
         | a :: _ -> max 0 (a.var.level - 1)
@@ -1189,7 +1190,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     bj_level, learnt, !history, size
 
   let fixable_with_simple_backjump confl max_lvl lv =
-    if not (Options.minimal_bj ()) then None
+    if not (Options.get_minimal_bj ()) then None
     else
       try
         let max_v = ref None in
@@ -1340,14 +1341,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         incr conflictC;
         conflict_analyze_and_fix env confl;
         propagate_and_stabilize env propagator conflictC strat;
-        if Options.tableaux_cdcl () then
+        if Options.get_tableaux_cdcl () then
           match x with
           | None -> ()
           | Some r -> raise (Last_UIP_reason r)
       with
         Unsat _ as e ->
-        if Options.tableaux_cdcl () then begin
-          if not (Options.minimal_bj ()) then assert (decision_level env = 0);
+        if Options.get_tableaux_cdcl () then begin
+          if not (Options.get_minimal_bj ()) then
+            assert (decision_level env = 0);
           raise (Last_UIP_reason Atom.Set.empty)
         end
         else raise e
@@ -1367,7 +1369,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     fuip :: l, !cpt + 1
 
   let th_entailed tenv a =
-    if Options.no_tcp () || not (Options.minimal_bj ()) then None
+    if Options.get_no_tcp () || not (Options.get_minimal_bj ()) then None
     else
       let lit = Atom.literal a in
       match Th.query lit tenv with
@@ -1388,9 +1390,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       propagate_and_stabilize env all_propagations conflictC !strat;
 
       if nb_assigns env = env.nb_init_vars ||
-         (Options.cdcl_tableaux_inst () && Matoms.is_empty env.lazy_cnf) then
+         (Options.get_cdcl_tableaux_inst () &&
+          Matoms.is_empty env.lazy_cnf) then
         raise Sat;
-      if Options.enable_restarts ()
+      if Options.get_enable_restarts ()
       && n_of_conflicts >= 0 && !conflictC >= n_of_conflicts then begin
         env.progress_estimate <- progress_estimate env;
         cancel_until env 0;
@@ -1488,7 +1491,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     (*if not (clause_exists atoms) then XXX TODO *)
     let init_name = string_of_int cnumber in
     let init0 =
-      if Options.unsat_core () then
+      if Options.get_unsat_core () then
         [make_clause init_name atoms f (List.length atoms) false []]
       else
         [] (* no deps if unsat cores generation is not enabled *)
@@ -1500,7 +1503,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
               (fun (atoms, init) a ->
                  if a.is_true then raise Trivial;
                  if a.neg.is_true then begin
-                   if Options.profiling() then Profiling.red true;
+                   if Options.get_profiling() then Profiling.red true;
                    atoms, (List.rev_append (a.var.vpremise) init)
                  end
                  else a::atoms, init
@@ -1518,7 +1521,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         let clause = make_clause name atoms vraie_form size false init in
         attach_clause env clause;
         Vec.push env.clauses clause;
-        if debug_sat () && verbose () then
+        if get_debug_sat () && get_verbose () then
           fprintf fmt "[satML] add_clause: %a@." Atom.pr_clause clause;
 
         if a.neg.is_true then begin (* clause is false *)
@@ -1537,12 +1540,12 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
                              are well set, unit and bottom are \
                              detected ..."]
       | [a]   ->
-        if debug_sat () && verbose () then
+        if get_debug_sat () && get_verbose () then
           fprintf fmt "[satML] add_atom: %a@." Atom.pr_atom a;
         let lvl = a.var.level in
         assert (lvl <> 0);
         begin
-          if not (minimal_bj ()) then cancel_until env 0
+          if not (get_minimal_bj ()) then cancel_until env 0
           else if a.is_true || a.neg.is_true then cancel_until env (lvl - 1)
         end;
         a.var.vpremise <- init;
@@ -1551,11 +1554,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     (* TODO *)
 
     with Trivial ->
-      if Options.profiling() then Profiling.elim true
+      if Options.get_profiling() then Profiling.elim true
 
 
   let update_lazy_cnf env ~do_bcp mff ~dec_lvl =
-    if Options.cdcl_tableaux () && dec_lvl <= decision_level env then begin
+    if Options.get_cdcl_tableaux () && dec_lvl <= decision_level env then begin
       let s =
         try Util.MI.find dec_lvl env.lvl_ff
         with Not_found -> SFF.empty
@@ -1634,7 +1637,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         end
     in
     fun env mff ->
-      if Options.cdcl_tableaux () then
+      if Options.get_cdcl_tableaux () then
         better_bj env mff
 
 
@@ -1652,7 +1655,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         List.iter (add_clause env f ~cnumber) unit_cnf;
         List.iter (add_clause env f ~cnumber) nunit_cnf;
 
-        if verbose () then  begin
+        if get_verbose () then  begin
           fprintf fmt "%d clauses@." (Vec.size env.clauses);
           fprintf fmt "%d learnts@." (Vec.size env.learnts);
         end
@@ -1666,7 +1669,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       try_to_backjump_further env mff
 
   let exists_in_lazy_cnf env f' =
-    not (Options.cdcl_tableaux ()) ||
+    not (Options.get_cdcl_tableaux ()) ||
     MFF.mem f' env.ff_lvl
 
   let boolean_model env =
@@ -1677,14 +1680,14 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     !l
 
   let instantiation_context env hcons =
-    if Options.cdcl_tableaux_th () then
+    if Options.get_cdcl_tableaux_th () then
       (* use atoms from theory environment if tableaux method
          is used for theories *)
       E.Set.fold
         (fun a accu ->
            SA.add (FF.get_atom hcons a) accu
         )(Th.get_assumed env.tenv) SA.empty
-    else if Options.cdcl_tableaux_inst () then
+    else if Options.get_cdcl_tableaux_inst () then
       (* use relevants atoms from environment if tableaux method
          is used for instantiation *)
       SFF.fold (fun f acc ->
@@ -1729,7 +1732,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       List.iter (add_clause env vraie_form ~cnumber:0) cnf;
 
-      if verbose () then  begin
+      if get_verbose () then  begin
         fprintf fmt "%d clauses@." (Vec.size env.clauses);
         fprintf fmt "%d learnts@." (Vec.size env.learnts);
       end;

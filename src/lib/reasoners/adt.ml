@@ -32,7 +32,7 @@ end
 
 (* TODO: can this function be replace with Ty.assoc_destrs ?? *)
 let constr_of_destr ty dest =
-  if debug_adt () then fprintf fmt "ty = %a@." Ty.print ty;
+  if get_debug_adt () then fprintf fmt "ty = %a@." Ty.print ty;
   match ty with
   | Ty.Tadt (s, params) ->
     let bdy = Ty.type_body s params in
@@ -60,7 +60,7 @@ module Shostak (X : ALIEN) = struct
   [@@ocaml.ppwarning "XXX: IsConstr not interpreted currently. Maybe \
                       it's OK"]
   let is_mine_symb sy ty =
-    not (Options.disable_adts ()) &&
+    not (get_disable_adts ()) &&
     match sy, ty with
     | Sy.Op (Sy.Constr _), Ty.Tadt _ -> true
     | Sy.Op Sy.Destruct _, _ -> true
@@ -143,8 +143,8 @@ module Shostak (X : ALIEN) = struct
     | _ -> false
 
   let make t =
-    assert (not (Options.disable_adts ()));
-    if debug_adt () then eprintf "[ADTs] make %a@." E.print t;
+    assert (not (get_disable_adts ()));
+    if get_debug_adt () then eprintf "[ADTs] make %a@." E.print t;
     let { E.f; xs; ty; _ } = match E.term_view t with
       | E.Term t -> t
       | E.Not_a_term _ -> assert false
@@ -222,7 +222,7 @@ module Shostak (X : ALIEN) = struct
   let fully_interpreted _ =
     false (* not sure *)
 (*
-    not (Options.disable_adts ()) &&
+    not (get_disable_adts ()) &&
     match sb with
     | Sy.Op (Sy.Constr _) -> true
     | Sy.Op Sy.Destruct (_, guarded) -> not guarded
@@ -331,13 +331,13 @@ module Shostak (X : ALIEN) = struct
           let cons =
             E.mk_term (Sy.constr (Hs.view constr)) xs (X.type_info d_arg)
           in
-          if debug_adt () then
+          if get_debug_adt () then
             fprintf fmt "abstr with equality %a == %a@."
               X.print d_arg E.print cons;
           let cons, _ = make cons in
           let acc = (d_arg, cons) :: acc in
           let xx = is_mine @@ Select {s with d_arg = cons} in
-          if debug_adt () then
+          if get_debug_adt () then
             fprintf fmt "%a becomes %a@." X.print x  X.print xx;
           xx, acc
 
@@ -350,9 +350,9 @@ module Shostak (X : ALIEN) = struct
     List.exists (fun y -> X.equal x y) (X.leaves e)
 
   let solve r1 r2 pb =
-    if debug_adt () then
+    if get_debug_adt () then
       Format.eprintf "[ADTs] solve %a = %a@." X.print r1 X.print r2;
-    assert (not (Options.disable_adts ()));
+    assert (not (get_disable_adts ()));
     match embed r1, embed r2 with
     | Select _, _ | _, Select _ -> assert false (* should be eliminated *)
     | Tester _, _ | _, Tester _ -> assert false (* not interpreted *)
@@ -383,7 +383,7 @@ module Shostak (X : ALIEN) = struct
 
   let subst p v s =
     (*TODO: detect when there are no changes to improve *)
-    assert (not (Options.disable_adts ()));
+    assert (not (get_disable_adts ()));
     match s with
     | Alien r -> if X.equal p r then v else X.subst p v r
     | Constr c ->

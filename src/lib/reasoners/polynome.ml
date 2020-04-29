@@ -164,7 +164,7 @@ module Make (X : S) = struct
       fprintf fmt "%s%s" s n
 
     let print fmt p =
-      if Options.term_like_pp () then pprint fmt p
+      if Options.get_term_like_pp () then pprint fmt p
       else begin
         M.iter
           (fun t n -> fprintf fmt "%s*%a " (Q.to_string n) X.print t) p.m;

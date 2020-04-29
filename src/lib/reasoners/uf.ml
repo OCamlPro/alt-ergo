@@ -133,7 +133,7 @@ let terms_of_distinct env l = match LX.view l with
 
 
 let cl_extract env =
-  if bottom_classes () then
+  if get_bottom_classes () then
     let classes = MapX.fold (fun _ cl acc -> cl :: acc) env.classes [] in
     MapX.fold (fun _ ml acc ->
         MapL.fold (fun l _ acc -> (terms_of_distinct env l) @ acc) ml acc
@@ -188,7 +188,7 @@ module Debug = struct
     MapX.iter (fun k s -> fprintf fmt "%a -> %a\n" X.print k lm_print s) m
 
   let all fmt env =
-    if debug_uf () then
+    if get_debug_uf () then
       begin
         fprintf fmt "-------------------------------------------------@.";
         fprintf fmt "%a %a %a %a %a"
@@ -206,52 +206,52 @@ module Debug = struct
 
 
   let canon_of r rr =
-    if rewriting () && verbose () then
+    if get_rewriting () && get_verbose () then
       fprintf fmt "canon %a = %a@." X.print r X.print rr
 
   let init_leaf p =
-    if debug_uf () then fprintf fmt "init_leaf: %a@." X.print p
+    if get_debug_uf () then fprintf fmt "init_leaf: %a@." X.print p
 
   let critical_pair rx ry =
-    if debug_uf () then
+    if get_debug_uf () then
       fprintf fmt "[uf] critical pair: %a = %a@." X.print rx X.print ry
 
   let collapse_mult g2 d2 =
-    if debug_ac () then
+    if get_debug_ac () then
       fprintf fmt "[uf] collapse *: %a = %a@."
         X.print g2 X.print d2
 
 
   let collapse g2 d2 =
-    if debug_ac () then
+    if get_debug_ac () then
       fprintf fmt "[uf] collapse: %a = %a@."
         X.print g2 X.print d2
 
   let compose p v g d =
-    if debug_ac () then
+    if get_debug_ac () then
       Format.eprintf "Compose : %a -> %a on %a and %a@."
         X.print p X.print v
         Ac.print g X.print d
 
   let x_solve rr1 rr2 dep =
-    if debug_uf () then
+    if get_debug_uf () then
       printf "[uf] x-solve: %a = %a %a@."
         X.print rr1 X.print rr2 Ex.print dep
 
   let ac_solve p v dep =
-    if debug_uf () then
+    if get_debug_uf () then
       printf "[uf] ac-solve: %a |-> %a %a@." X.print p X.print v Ex.print dep
 
   let ac_x r1 r2 =
-    if debug_uf () then
+    if get_debug_uf () then
       printf "[uf] ac(x): delta (%a) = delta (%a)@."
         X.print r1 X.print r2
 
   let distinct d =
-    if debug_uf () then fprintf fmt "[uf] distinct %a@." LX.print d
+    if get_debug_uf () then fprintf fmt "[uf] distinct %a@." LX.print d
 
   let are_distinct t1 t2 =
-    if debug_uf () then
+    if get_debug_uf () then
       printf " [uf] are_distinct %a %a @." E.print t1 E.print t2
 
 
@@ -279,7 +279,7 @@ module Debug = struct
         )repr
 
   let check_invariants orig env =
-    if Options.enable_assertions() then begin
+    if Options.get_enable_assertions() then begin
       check_inv_repr_normalized orig env.repr;
     end
 end
@@ -733,7 +733,7 @@ let rec ac_x eqs env tch =
     Debug.ac_x r1 r2;
     let sbs, dep = x_solve env r1 r2 dep in
     let env, tch = List.fold_left (ac_solve eqs dep) (env, tch) sbs in
-    if debug_uf () then Debug.all fmt env;
+    if get_debug_uf () then Debug.all fmt env;
     ac_x eqs env tch
 
 let union env r1 r2 dep =
@@ -745,7 +745,7 @@ let union env r1 r2 dep =
   env, res
 
 let union env r1 r2 dep =
-  if Options.timers() then
+  if Options.get_timers() then
     try
       Timers.exec_timer_start Timers.M_UF Timers.F_union;
       let res = union env r1 r2 dep in
@@ -855,7 +855,7 @@ let model env =
         let l, to_rel =
           List.fold_left (fun (l, to_rel) t ->
               let rt = ME.find t env.make in
-              if complete_model () || E.is_in_model t then
+              if get_complete_model () || E.is_in_model t then
                 if X.equal rt r then l, (t,rt)::to_rel
                 else t::l, (t,rt)::to_rel
               else l, to_rel
@@ -868,9 +868,9 @@ let model env =
       let x, rx = mapt_choose makes in
       let makes = ME.remove x makes in
       let acc =
-        if complete_model () || E.is_in_model x then
+        if get_complete_model () || E.is_in_model x then
           ME.fold (fun y ry acc ->
-              if (complete_model () || E.is_in_model y)
+              if (get_complete_model () || E.is_in_model y)
               && (already_distinct env [rx; ry]
                   || already_distinct env [ry; rx])
               then [y; x]::acc
@@ -939,7 +939,7 @@ let make uf t = ME.find t uf.make
 (*** add wrappers to profile exported functions ***)
 
 let add env t =
-  if Options.timers() then
+  if Options.get_timers() then
     try
       Timers.exec_timer_start Timers.M_UF Timers.F_add_terms;
       let res = add env t  in
@@ -1002,7 +1002,7 @@ let assign_next env =
     match !acc with
     | None -> assert false
     | Some (s, rep, is_cs) ->
-      if Options.debug_interpretation() then
+      if Options.get_debug_interpretation() then
         fprintf fmt "TRY assign-next %a = %a@." X.print rep E.print s;
         (*
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1175,7 +1175,7 @@ let model_repr_of_term t env mrepr =
 
 
 let output_concrete_model ({ make; _ } as env) =
-  let i = interpretation () in
+  let i = get_interpretation () in
   let abs_i = abs i in
   if abs_i = 1 || abs_i = 2 || abs_i = 3 then
     let functions, constants, arrays, _ =

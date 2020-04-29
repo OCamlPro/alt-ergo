@@ -74,7 +74,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Preprocess
 
   let output_used_context g_name dep =
-    if not (Options.js_mode ()) then begin
+    if not (Options.get_js_mode ()) then begin
       let f = Options.get_used_context_file () in
       let cout = open_out (sprintf "%s.%s.used" f g_name) in
       let cfmt = Format.formatter_of_out_channel cout in
@@ -83,7 +83,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     end
 
   let check_produced_unsat_core dep =
-    if verbose () then
+    if get_verbose () then
       fprintf fmt "checking the unsat-core:\n-------------------\n%a@."
         (Ex.print_unsat_core ~tab:false) dep;
     try
@@ -134,7 +134,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Some s -> not (Util.SS.mem name s)
 
   let mk_root_dep f_name =
-    if Options.unsat_core () then Ex.singleton (Ex.RootDep f_name)
+    if Options.get_unsat_core () then Ex.singleton (Ex.RootDep f_name)
     else Ex.empty
 
   let process_decl print_status used_context ((env, consistent, dep) as acc) d =
@@ -191,8 +191,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
             Ex.union dep' dep
           else dep
         in
-        if debug_unsat_core () then check_produced_unsat_core dep;
-        if save_used_context () then output_used_context n dep;
+        if get_debug_unsat_core () then check_produced_unsat_core dep;
+        if get_save_used_context () then output_used_context n dep;
         print_status (Unsat (d, dep)) (Steps.get_steps ());
         env, false, dep
 
@@ -209,16 +209,16 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     with
     | SAT.Sat t ->
       print_status (Sat (d,t)) (Steps.get_steps ());
-      if model () then SAT.print_model ~header:true std_formatter t;
+      if get_model () then SAT.print_model ~header:true std_formatter t;
       env , consistent, dep
     | SAT.Unsat dep' ->
       let dep = Ex.union dep dep' in
-      if debug_unsat_core () then check_produced_unsat_core dep;
+      if get_debug_unsat_core () then check_produced_unsat_core dep;
       print_status (Inconsistent d) (Steps.get_steps ());
       env , false, dep
     | SAT.I_dont_know t ->
       print_status (Unknown (d, t)) (Steps.get_steps ());
-      if model () then SAT.print_model ~header:true std_formatter t;
+      if get_model () then SAT.print_model ~header:true std_formatter t;
       env , consistent, dep
     | Util.Timeout as e ->
       print_status (Timeout (Some d)) (Steps.get_steps ());
@@ -234,11 +234,13 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     match status with
     | Unsat (d, dep) ->
       let loc = d.st_loc in
-      if Options.answers_with_locs () then
+      if Options.get_answers_with_locs () then
         eprintf "; %aValid (%2.4f) (%d steps)%s@."
           Loc.report loc time steps (goal_name d);
       printf "unsat@.";
-      if unsat_core() && not (debug_unsat_core()) && not (save_used_context())
+      if get_unsat_core() &&
+         not (get_debug_unsat_core()) &&
+         not (get_save_used_context())
       then
         printf "(\n%a)@." (Ex.print_unsat_core ~tab:true) dep
 
@@ -247,39 +249,39 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       ()
       (*
       let loc = d.st_loc in
-      if Options.verbose () && Options.answers_with_locs () then
+      if Options.get_verbose () && Options.get_answers_with_locs () then
         eprintf "; %aInconsistent assumption@." report_loc loc
 *)
 
     | Unknown (d, _) ->
       let loc = d.st_loc in
-      if Options.answers_with_locs () then
+      if Options.get_answers_with_locs () then
         eprintf "; %aI don't know (%2.4f) (%d steps)%s@."
           Loc.report loc time steps (goal_name d);
       printf "unknown@."
 
     | Sat (d, _) ->
       let loc = d.st_loc in
-      if Options.answers_with_locs () then
+      if Options.get_answers_with_locs () then
         eprintf "; %aInvalid (%2.4f) (%d steps)%s@."
           Loc.report loc time steps (goal_name d);
       printf "sat@."
 
     | Timeout (Some d) ->
       let loc = d.st_loc in
-      if Options.answers_with_locs () then
+      if Options.get_answers_with_locs () then
         eprintf "; %aTimeout (%2.4f) (%d steps)%s@."
           Loc.report loc time steps (goal_name d);
       printf "timeout@."
 
     | Timeout None ->
-      if Options.answers_with_locs () then
+      if Options.get_answers_with_locs () then
         eprintf "; %aTimeout (%2.4f) (%d steps)@."
           Loc.report Loc.dummy time steps;
       printf "timeout@."
 
     | Preprocess ->
-      if Options.answers_with_locs () then
+      if Options.get_answers_with_locs () then
         eprintf "; %aPreprocessing (%2.4f) (%d steps)@."
           Loc.report Loc.dummy time steps
 
@@ -287,21 +289,23 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   let print_status_valid_mode status steps =
     let time = Time.value() in
     let report_loc fmt loc =
-      if js_mode () then fprintf fmt "# [answer] "
-      else if Options.answers_with_locs () then Loc.report fmt loc
+      if get_js_mode () then fprintf fmt "# [answer] "
+      else if Options.get_answers_with_locs () then Loc.report fmt loc
     in
     match status with
     | Unsat (d, dep) ->
       let loc = d.st_loc in
       printf "%aValid (%2.4f) (%d steps)%s@."
         report_loc loc time steps (goal_name d);
-      if unsat_core() && not (debug_unsat_core()) && not (save_used_context())
+      if get_unsat_core() &&
+         not (get_debug_unsat_core()) &&
+         not (get_save_used_context())
       then
         printf "unsat-core:\n%a@." (Ex.print_unsat_core ~tab:true) dep
 
     | Inconsistent d ->
       let loc = d.st_loc in
-      if Options.verbose () then
+      if Options.get_verbose () then
         eprintf "%aInconsistent assumption@." report_loc loc
 
     | Sat (d, _) ->
@@ -328,7 +332,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         report_loc Loc.dummy time steps
 
   let print_status status steps =
-    match Options.output_format () with
+    match Options.get_output_format () with
     | Smtlib2 -> print_status_output_smtlib status steps
     | Native | Why3 | Unknown _ -> print_status_valid_mode status steps
 
@@ -343,7 +347,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       Some !acc
 
   let init_used_context ~goal_name =
-    if Options.replay_used_context () then
+    if Options.get_replay_used_context () then
       let uc_f =
         sprintf "%s.%s.used" (Options.get_used_context_file ()) goal_name
       in
@@ -358,7 +362,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       None
 
   let init_all_used_context () =
-    if Options.replay_all_used_context () then
+    if Options.get_replay_all_used_context () then
       let dir = Filename.dirname (Options.get_used_context_file ()) in
       Array.fold_left
         (fun acc f ->
@@ -369,7 +373,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     else None
 
   let choose_used_context all_ctxt ~goal_name =
-    if Options.replay_all_used_context () then all_ctxt
+    if Options.get_replay_all_used_context () then all_ctxt
     else init_used_context ~goal_name
 
 end

@@ -206,7 +206,7 @@ module Container : Container_SIG = struct
         MINEQS.iter (fun _ (i , _) -> fprintf fmt "%a  " print_inequation i)
 
       let cross x vars cpos cneg others =
-        if Options.debug_fm () then begin
+        if Options.get_debug_fm () then begin
           fprintf Options.fmt "[fm] We cross on %a (%d vars remaining)@."
             X.print x (MX.cardinal vars);
           fprintf Options.fmt "with:@. cpos = %a@. cneg = %a@. others = %a@."
@@ -214,7 +214,7 @@ module Container : Container_SIG = struct
         end
 
       let cross_result x ninqs =
-        if Options.debug_fm () then
+        if Options.get_debug_fm () then
           fprintf Options.fmt
             "result of eliminating %a: at most %d new ineqs (not printed)@."
             X.print x ninqs
@@ -320,8 +320,8 @@ module Container : Container_SIG = struct
             let acc = add_ineqs are_eq acc s_x cneg in
             let size_res = Q.from_int (nb_pos * nb_neg) in
             let mp', nb_inqs =
-              if Q.compare size_res (fm_cross_limit ()) >= 0 &&
-                 Q.sign (fm_cross_limit()) >= 0 then
+              if Q.compare size_res (get_fm_cross_limit ()) >= 0 &&
+                 Q.sign (get_fm_cross_limit()) >= 0 then
                 let u_cpos = List.filter monome_ineq cpos in
                 let u_cneg = List.filter monome_ineq cneg in
                 let mp', nb_inq1 = match u_cpos with
@@ -364,13 +364,13 @@ let initialized = ref false
 let set_current mdl = current := mdl
 
 let load_current_inequalities_reasoner () =
-  match Options.inequalities_plugin () with
+  match Options.get_inequalities_plugin () with
   | "" ->
-    if Options.debug_fm () then
+    if Options.get_debug_fm () then
       eprintf "[Dynlink] Using the 'FM module' for arithmetic inequalities@."
 
   | path ->
-    MyDynlink.load err_formatter (Options.debug_fm ()) path
+    MyDynlink.load err_formatter (Options.get_debug_fm ()) path
       "'inequalities' reasoner (FM module)"
 
 let get_current () =

@@ -30,29 +30,29 @@ end
 
 include Dynlink
 
-let load fmt verbose p msg =
-  if verbose then
+let load fmt get_verbose p msg =
+  if get_verbose then
     Format.fprintf fmt "[Dynlink] Loading the %s in %S ...@." msg p;
   try
     loadfile p;
-    if verbose then Format.fprintf fmt "Success !@.@."
+    if get_verbose then Format.fprintf fmt "Success !@.@."
   with
   | Error m1 ->
-    if verbose then begin
+    if get_verbose then begin
       Format.fprintf fmt "[Dynlink] Loading the %s in plugin %S failed!@."
         msg p;
       Format.fprintf fmt ">> Failure message: %s@.@." (error_message m1);
     end;
     let pp = Format.sprintf "%s/%s" Config.pluginsdir p in
-    if verbose then
+    if get_verbose then
       Format.fprintf fmt "[Dynlink] Loading the %s in %S ... with prefix %S@."
         msg p Config.pluginsdir;
     try
       loadfile pp;
-      if verbose then Format.fprintf fmt "Success !@.@."
+      if get_verbose then Format.fprintf fmt "Success !@.@."
     with
     | Error m2 ->
-      if not verbose then begin
+      if not get_verbose then begin
         Format.fprintf fmt
           "[Dynlink] Loading the %s in plugin %S failed!@." msg p;
         Format.fprintf fmt ">> Failure message: %s@.@." (error_message m1);

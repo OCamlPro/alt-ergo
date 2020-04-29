@@ -84,7 +84,7 @@ let state =
 
 let set_sigprof () =
   let tm =
-    let v = Options.profiling_period () in
+    let v = Options.get_profiling_period () in
     if (Stdlib.compare v 0.) > 0 then v else -. v
   in
   ignore

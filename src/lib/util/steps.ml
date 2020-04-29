@@ -84,14 +84,15 @@ let incr k =
         run_error (Invalid_steps_count n);
       naive_steps := !naive_steps + n;
   end;
-  if steps_bound () <> -1
-  && ((Stdlib.compare !steps ((steps_bound ())) > 0)
-      || (Stdlib.compare !naive_steps ((steps_bound ())) > 0)) then
+  let steps_bound = get_steps_bound () in
+  if steps_bound <> -1
+  && ((Stdlib.compare !steps ((steps_bound)) > 0)
+      || (Stdlib.compare !naive_steps ((steps_bound)) > 0)) then
     begin
       let n =
         if !naive_steps > 0 then !naive_steps
         else if !steps > 0 then !steps
-        else steps_bound ()
+        else steps_bound
       in
       run_error (Steps_limit n)
     end
