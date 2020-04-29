@@ -271,48 +271,133 @@ val set_file_for_js : string -> unit
 
 (** Setters used by parse_command *)
 
+(** Set {!val:case_split_policy}  *)
 val set_case_split_policy : Util.case_split_policy -> unit
+
+(** Set {!val:enable_adts_cs} *)
 val set_enable_adts_cs : bool -> unit
+
+(** Set {!val:replay} *)
 val set_replay : bool -> unit
+
+(** Set {!val:replay_all_used_context} *)
 val set_replay_all_used_context : bool -> unit
+
+(** Set {!val:replay_used_context} *)
 val set_replay_used_context : bool -> unit
+
+(** Set {!val:answers_with_loc} *)
 val set_answers_with_loc : bool -> unit
+
+(** Set {!val:infer_input_format} *)
 val set_infer_input_format : 'a option -> unit
+
+(** Set {!val:infer_output_format} *)
 val set_infer_output_format : 'a option -> unit
+
+(** Set {!val:parsers} *)
 val set_parsers : string list -> unit
+
+(** Set {!val:preludes} *)
 val set_preludes : string list -> unit
+
+(** Set {!val:disable_weaks} *)
 val set_disable_weaks : bool -> unit
+
+(** Set {!val:enable_assertions} *)
 val set_enable_assertions : bool -> unit
+
+(** Set {!val:timelimit_interpretation} *)
 val set_timelimit_interpretation : float -> unit
+
+(** Set {!val:timelimit_per_goal} *)
 val set_timelimit_per_goal : bool -> unit
+
+(** Set {!val:cumulative_time_profiling} *)
 val set_cumulative_time_profiling : bool -> unit
+
+(** Set {!val:profiling_period} *)
 val set_profiling_period : float -> unit
+
+(** Set {!val:profiling_plugin} *)
 val set_profiling_plugin : string -> unit
+
+(** Set {!val:instantiate_after_backjump} *)
 val set_instantiate_after_backjump : bool -> unit
+
+(** Set {!val:max_multi_triggers_size} *)
 val set_max_multi_triggers_size : int -> unit
+
+(** Set {!val:arith_matching} *)
 val set_arith_matching : bool -> unit
+
+(** Set {!val:cdcl_tableaux_inst} *)
 val set_cdcl_tableaux_inst : bool -> unit
+
+(** Set {!val:cdcl_tableaux_th} *)
 val set_cdcl_tableaux_th : bool -> unit
+
+(** Set {!val:disable_flat_formulas_simplification} *)
 val set_disable_flat_formulas_simplification : bool -> unit
+
+(** Set {!val:enable_restarts} *)
 val set_enable_restarts : bool -> unit
+
+(** Set {!val:minimal_bj} *)
 val set_minimal_bj : bool -> unit
+
+(** Set {!val:no_backjumping} *)
 val set_no_backjumping : bool -> unit
+
+(** Set {!val:no_backward} *)
 val set_no_backward : bool -> unit
+
+(** Set {!val:no_decisions} *)
 val set_no_decisions : bool -> unit
+
+(** Set {!val:no_decisions_on} *)
 val set_no_decisions_on : Util.SS.t -> unit
+
+(** Set {!val:no_sat_learning} *)
 val set_no_sat_learning : bool -> unit
+
+(** Set {!val:sat_plugin} *)
 val set_sat_plugin : string -> unit
+
+(** Set {!val:sat_solver} *)
 val set_sat_solver : Util.sat_solver -> unit
+
+(** Set {!val:tableaux_cdcl} *)
 val set_tableaux_cdcl : bool -> unit
+
+(** Set {!val:disable_ites} *)
 val set_disable_ites : bool -> unit
+
+(** Set {!val:disable_adts} *)
 val set_disable_adts : bool -> unit
+
+(** Set {!val:inequalities_plugin} *)
 val set_inequalities_plugin : string -> unit
+
+(** Set {!val:no_fm} *)
 val set_no_fm : bool -> unit
+
+(** Set {!val:no_tcp} *)
 val set_no_tcp : bool -> unit
+
+(** Set {!val:no_theory} *)
 val set_no_theory : bool -> unit
+
+(** Set {!val:tighten_vars} *)
 val set_tighten_vars : bool -> unit
+
+(** Set {!val:use_fpa} *)
 val set_use_fpa : bool -> unit
+
+(** Set {!val:session_file} *)
 val set_session_file : string -> unit
+
+(** Set {!val:used_context_file} *)
 val set_used_context_file : string -> unit
 
 (** {2 Getter functions} *)
