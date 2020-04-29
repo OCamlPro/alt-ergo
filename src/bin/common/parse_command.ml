@@ -772,8 +772,8 @@ let parse_limit_opt =
 
   let timelimit_per_goal =
     let doc =
-      "Set the timelimit given by the $(i,--timelimit) option to apply for each \
-       goal, in case of multiple goals per \
+      "Set the timelimit given by the $(i,--timelimit) option to apply \
+       for each goal, in case of multiple goals per \
        file. In this case, time spent in preprocessing is separated from \
        resolution time. Not relevant for GUI-mode." in
     Arg.(value & flag & info ["timelimit-per-goal"] ~docs ~doc) in
@@ -819,8 +819,8 @@ let parse_output_opt =
         "Control the output format of the solver, $(docv) must be %s.\
          The alt-ergo native format outputs Valid/Invalid/I don't know.\
          The smtlib format outputs unsat/sat/unknown.\
-         If left unspecified, Alt-Ergo will use its heuristics to determine the \
-         adequate output format according to the input format.\
+         If left unspecified, Alt-Ergo will use its heuristics to \
+         determine the adequate output format according to the input format.\
          It must be noticed that not specifying an output \
          format will let Alt-Ergo set it according to the input file's \
          extension."
@@ -880,13 +880,15 @@ let parse_quantifiers_opt =
     Arg.(value & flag & info ["inst-after-bj"] ~docs ~doc) in
 
   let max_multi_triggers_size =
-    let doc = "Maximum size of multi-triggers, i.e. the maximum number of independent patterns in a multi-trigger." in
+    let doc = "Maximum size of multi-triggers, i.e. the maximum number \
+               of independent patterns in a multi-trigger." in
     let docv = "VAL" in
     Arg.(value & opt int (get_max_multi_triggers_size ()) &
          info ["max-multi-triggers-size"] ~docv ~docs ~doc) in
 
   let nb_triggers =
-    let doc = "Maximum number of triggers used (including regular and multi triggers)." in
+    let doc = "Maximum number of triggers used \
+               (including regular and multi triggers)." in
     let docv = "VAL" in
     Arg.(value & opt int (get_nb_triggers ()) &
          info ["nb-triggers"] ~docv ~docs ~doc) in
@@ -896,15 +898,16 @@ let parse_quantifiers_opt =
     Arg.(value & flag & info ["no-ematching"] ~docs ~doc) in
 
   let no_user_triggers =
-    let doc = "Ignore user triggers, except for triggers of theories' axioms"; in
+    let doc =
+      "Ignore user triggers, except for triggers of theories' axioms"; in
     Arg.(value & flag & info ["no-user-triggers"] ~docs ~doc) in
 
   let normalize_instances =
     let doc =
       "Normalize generated substitutions by matching w.r.t. the state of \
-                                    the theory. This means that only terms that \
-                                      are greater (w.r.t. depth) than the initial terms of the problem are \
-                                      normalized." in
+       the theory. This means that only terms that \
+       are greater (w.r.t. depth) than the initial terms of the problem are \
+       normalized." in
     Arg.(value & flag & info ["normalize-instances"] ~docs ~doc) in
 
   let triggers_var =
@@ -946,7 +949,7 @@ let parse_sat_opt =
   let no_backward =
     let doc =
       "Disable backward reasoning step (starting from the goal) done in \
-the default SAT solver before deciding." in
+       the default SAT solver before deciding." in
     Arg.(value & flag & info ["no-backward"] ~docs ~doc) in
 
 
@@ -957,7 +960,7 @@ the default SAT solver before deciding." in
   let no_decisions_on =
     let doc =
       "Disable decisions at the SAT level for the instances generated \
-    from the given axioms. Arguments should be separated with a comma." in
+       from the given axioms. Arguments should be separated with a comma." in
     let docv = "[INST1; INST2; ...]" in
     Arg.(value & opt string "" &
          info ["no-decisions-on"] ~docv ~docs ~doc) in
@@ -969,18 +972,18 @@ the default SAT solver before deciding." in
   let no_sat_learning =
     let doc =
       "Disable learning/caching of unit facts in the Default SAT. These \
-  facts are used to improve bcp." in
+       facts are used to improve bcp." in
     Arg.(value & flag & info ["no-sat-learning"] ~docs ~doc) in
 
   let no_tableaux_cdcl_in_instantiation =
     let doc = "When satML is used, this disables the use of a tableaux-like\
-method for instantiations with the CDCL solver." in
+               method for instantiations with the CDCL solver." in
     Arg.(value & flag &
          info ["no-tableaux-cdcl-in-instantiation"] ~docs ~doc) in
 
   let no_tableaux_cdcl_in_theories =
     let doc = "When satML is used, this disables the use of a tableaux-like\
-method for theories with the CDCL solver." in
+               method for theories with the CDCL solver." in
     Arg.(value & flag & info ["no-tableaux-cdcl-in-theories"] ~docs ~doc) in
 
   let sat_plugin =
@@ -992,7 +995,7 @@ method for theories with the CDCL solver." in
   let sat_solver =
     let doc = Format.sprintf
         "Choose the SAT solver to use. Default value is CDCL (i.e. satML \
-                                                                solver). Possible options are %s."
+         solver). Possible options are %s."
         (Arg.doc_alts ["CDCL"; "satML"; "CDCL-Tableaux";
                        "satML-Tableaux"; "Tableaux-CDCL"])
     in
@@ -1020,8 +1023,8 @@ let parse_term_opt =
   let inline_lets =
     let doc =
       "Enable substitution of variables bounds by Let. The default \
-    behavior is to only substitute variables that are bound to a \
-      constant, or that appear at most once." in
+       behavior is to only substitute variables that are bound to a \
+       constant, or that appear at most once." in
     Arg.(value & flag & info ["inline-lets"] ~docs ~doc) in
 
   let rewriting =
@@ -1052,7 +1055,7 @@ let parse_theory_opt =
 
   let no_ac =
     let doc = "Disable the AC theory of Associative and \
-  Commutative function symbols." in
+               Commutative function symbols." in
     Arg.(value & flag & info ["no-ac"] ~docs ~doc) in
 
   let no_contracongru =
@@ -1065,12 +1068,13 @@ let parse_theory_opt =
 
   let no_nla =
     let doc = "Disable non-linear arithmetic reasoning (i.e. non-linear \
-                                                          multplication, division and modulo on integers and rationals). \
-                                                         Non-linear multiplication remains AC." in
+               multplication, division and modulo on integers and rationals). \
+               Non-linear multiplication remains AC." in
     Arg.(value & flag & info ["no-nla"] ~docs ~doc) in
 
   let no_tcp =
-    let doc = "Deactivate Boolean Constant Propagation (BCP) modulo theories." in
+    let doc =
+      "Deactivate Boolean Constant Propagation (BCP) modulo theories." in
     Arg.(value & flag & info ["no-tcp"] ~docs ~doc) in
 
   let no_theory =
@@ -1102,8 +1106,8 @@ let main =
   let file =
     let doc =
       "Source file. Must be suffixed by $(i,.ae), \
-                                  ($(i,.mlw) and $(i,.why) are depreciated, \
-                                             $(i,.smt2) or $(i,.psmt2)." in
+       ($(i,.mlw) and $(i,.why) are depreciated, \
+       $(i,.smt2) or $(i,.psmt2)." in
     let i = Arg.(info [] ~docv:"FILE" ~doc) in
     Arg.(value & pos ~rev:true 0 (some string) None & i) in
 
@@ -1137,20 +1141,20 @@ let main =
           They are $(b,not) used to check internal consistency.";
       `S Manpage.s_bugs;
       `P "You can open an issue on: \
-            https://github.com/OCamlPro/alt-ergo/issues";
+          https://github.com/OCamlPro/alt-ergo/issues";
       `Pre "Or you can write to: \n   alt-ergo@ocamlpro.com";
       `S Manpage.s_authors;
       `Pre "CURRENT AUTHORS\n\
-                                       \   Albin Coquereau\n\
-                                       \   Guillaume Bury\n\
-                                       \   Mattias Roux";
+           \   Albin Coquereau\n\
+           \   Guillaume Bury\n\
+           \   Mattias Roux";
 
       `Pre "ORIGINAL AUTHORS\n\
-                                       \   Sylvain Conchon\n\
-                                       \   Evelyne Contejean\n\
-                                       \   Mohamed Iguernlala\n\
-                                       \   Stephane Lescuyer\n\
-                                       \   Alain Mebsout\n";
+           \   Sylvain Conchon\n\
+           \   Evelyne Contejean\n\
+           \   Mohamed Iguernlala\n\
+           \   Stephane Lescuyer\n\
+           \   Alain Mebsout\n";
     ]
   in
 
