@@ -37,10 +37,12 @@ let formats_list =
    "why3", Why3]
 
 let format_parser s =
-  match List.assoc_opt s formats_list with
-  | Some f -> Ok f
-  | None -> Error (`Msg (Format.sprintf
-                           "The format %s is not accepted as input/output" s))
+  try
+    Ok (List.assoc s formats_list)
+  with
+    Not_found ->
+    Error (`Msg (Format.sprintf
+                   "The format %s is not accepted as input/output" s))
 
 let format_to_string = function
   | Native -> "native"
