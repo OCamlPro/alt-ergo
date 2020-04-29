@@ -264,6 +264,7 @@ val set_unsat_core : bool -> unit
 (** Set {!val:verbose} *)
 val set_verbose : bool -> unit
 
+(** Set {!val:file} *)
 val set_file : string -> unit
 
 (** Updates the filename to be parsed and sets a js_mode flag *)
