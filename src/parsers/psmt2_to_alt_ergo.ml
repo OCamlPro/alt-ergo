@@ -349,7 +349,8 @@ module Translate = struct
     with Invalid_argument _ -> assert false
 
   let not_supported s =
-    Format.eprintf "; %S : Not yet supported@." s
+    if Options.get_verbose () then
+      Format.eprintf "; %S : Not yet supported@." s
 
   let translate_command acc command =
     match command.c with
