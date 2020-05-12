@@ -88,7 +88,7 @@ module Make (X : Sig.X) = struct
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
-
+    open Printer
 
     let print_x fmt v =
       match X.leaves v with
@@ -118,18 +118,20 @@ module Make (X : Sig.X) = struct
         if not (c1 = 0 && c2 = 0 ||
                 c1 < 0 && c2 > 0 ||
                 c1 > 0 && c2 < 0) then begin
-          fprintf fmt "Ac.compare:@.%a vs @.%a@. = %d@.@." print a print b c1;
-          fprintf fmt "But@.";
-          fprintf fmt "Ac.compare:@.%a vs @.%a@. = %d@.@." print b print a c2;
+          print_err
+            "Ac.compare:@,%a vs %a@, = %d@,\
+             But@,\
+             Ac.compare:@,%a vs %a@, = %d@."
+            print a print b c1 print b print a c2;
           false
         end
         else true
       )
 
     let subst p v tm =
-      if get_debug_ac () then
-        fprintf fmt "[ac] subst %a by %a in %a@."
-          X.print p X.print v X.print (X.ac_embed tm)
+      print_dbg ~debug:(get_debug_ac ())
+        "[ac] subst %a by %a in %a@."
+        X.print p X.print v X.print (X.ac_embed tm)
 
   end
   (*BISECT-IGNORE-END*)

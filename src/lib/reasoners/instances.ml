@@ -26,7 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
 open Options
 
 module E = Expr
@@ -99,6 +98,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   }
 
   module Debug = struct
+    open Printer
 
     let new_facts_of_axiom ax insts_ok =
       if get_debug_matching () >= 1 && insts_ok != ME.empty then
@@ -108,15 +108,17 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
           | E.Let _ | E.Iff _ | E.Xor _ -> "!(no-name)"
           | E.Not_a_form -> assert false
         in
-        fprintf fmt "[Instances.split_and_filter_insts] ";
-        fprintf fmt "%3d different new instances generated for %s@."
+        print_dbg
+          ~module_name:"Instances" ~function_name:"new_facts_of_axiom"
+          "[Instances.split_and_filter_insts]@,\
+           %3d different new instances generated for %s@."
           (ME.cardinal insts_ok) name
 
-
     let new_mround ilvl kind =
-      if get_debug_matching () >= 1 then
-        fprintf fmt "@.# [matching] new %s matching round: ilevel = %d...@."
-          kind ilvl
+      print_dbg ~debug:(get_debug_matching () >= 1)
+        ~module_name:"Instance" ~function_name:"new_mround"
+        "[matching] new %s matching round: ilevel = %d...@."
+        kind ilvl
 
   end
 

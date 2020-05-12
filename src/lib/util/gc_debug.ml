@@ -10,7 +10,6 @@
 (******************************************************************************)
 
 open Options
-open Format
 open Gc
 
 (*
@@ -25,7 +24,7 @@ open Gc
  major_words; (* num of alloc words in major heap, since beginning *)
 *)
 
-let () =
+let init () =
   if get_debug_gc() then
     begin
       let tmp = ref (quick_stat ()) in
@@ -34,15 +33,22 @@ let () =
            (fun () ->
               let e = quick_stat () in
               let d = !tmp in
-              fprintf fmt "[GC infos]======================================@.";
-              fprintf fmt "[major collections] %d th@." e.major_collections;
-              fprintf fmt "[minor collections] %d th@." e.minor_collections;
-              fprintf fmt "[stack used] %d words@." e.stack_size;
-              fprintf fmt "[size of major heap] %d words@." e.heap_words;
-              fprintf fmt "[max size major heap] %d words@." e.top_heap_words;
-              fprintf fmt "[major words diff] %0f Kwords@."
-                ((e.major_words -. d.major_words) /. 1000.);
-              fprintf fmt "[minor words diff] %0f Kwords@."
+
+              Printer.print_dbg
+                ~module_name:"Gc_debug"
+                "[major collections] %d th@,\
+                 [minor collections] %d th@,\
+                 [stack used] %d words@,\
+                 [size of major heap] %d words@,\
+                 [max size major heap] %d words@,\
+                 [major words diff] %0f Kwords@,\
+                 [minor words diff] %0f Kwords@."
+                e.major_collections
+                e.minor_collections
+                e.stack_size
+                e.heap_words
+                e.top_heap_words
+                ((e.major_words -. d.major_words) /. 1000.)
                 ((e.minor_words -. d.minor_words) /. 1000.);
               tmp := e
            )

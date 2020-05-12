@@ -57,10 +57,10 @@ let () =
   (* what to do with Ctrl+C ? *)
   Sys.set_signal Sys.sigint(*-6*)
     (Sys.Signal_handle (fun _ ->
-         if Options.get_profiling() then Profiling.switch ()
+         if Options.get_profiling() then Profiling.switch (get_fmt_err ())
          else begin
-           Format.eprintf "; User wants me to stop.\n";
-           Format.printf "unknown@.";
+           Printer.print_wrn "User wants me to stop.@.";
+           Printer.print_std "unknown@.";
            exit 1
          end
        )
@@ -75,7 +75,8 @@ let () =
          Sys.set_signal sign
            (Sys.Signal_handle
               (fun _ ->
-                 Profiling.print true (Steps.get_steps ()) timers fmt;
+                 Profiling.print true (Steps.get_steps ()) timers
+                   (get_fmt_err ());
                  exit 1
               )
            )
@@ -88,7 +89,7 @@ let () =
     Sys.set_signal Sys.sigprof (*-21*)
       (Sys.Signal_handle
          (fun _ ->
-            Profiling.print false (Steps.get_steps ()) timers fmt;
+            Profiling.print false (Steps.get_steps ()) timers (get_fmt_err ());
          )
       )
 
@@ -134,7 +135,7 @@ let solve all_context (cnf, goal_name) =
     if Options.get_timelimit_per_goal() then
       Options.Time.unset_timeout ~is_gui:false;
     if Options.get_profiling() then
-      Profiling.print true (Steps.get_steps ()) timers fmt
+      Profiling.print true (Steps.get_steps ()) timers (get_fmt_err ())
   with Util.Timeout ->
     if not (Options.get_timelimit_per_goal()) then exit 142
 
@@ -162,7 +163,10 @@ let typed_loop all_context state td =
   end
 
 let () =
+  Gc_debug.init ();
   let (module I : Input.S) = Input.find (Options.get_frontend ()) in
+  Printer.init_colors ();
+  Printer.init_output_format ();
   let parsed =
     try
       Options.Time.start ();
@@ -180,11 +184,11 @@ let () =
       FE.print_status (FE.Timeout None) 0;
       exit 142
     | Parsing.Parse_error ->
-      Errors.print_error Format.err_formatter
+      Printer.print_err "%a@." Errors.report
         (Syntax_error ((Lexing.dummy_pos,Lexing.dummy_pos),""));
       exit 1
     | Errors.Error e ->
-      Errors.print_error Format.err_formatter e;
+      Printer.print_err "%a@." Errors.report e;
       exit 1
 
   in
@@ -198,7 +202,7 @@ let () =
         List.fold_left (typed_loop all_used_context) { state with env; } l
       with
         Errors.Error e ->
-        Errors.print_error Format.err_formatter e;
+        Printer.print_err "%a@." Errors.report e;
         exit 1
     end
   in
@@ -211,7 +215,7 @@ let () =
   let _ : _ state = Seq.fold_left typing_loop state parsed in
   Options.Time.unset_timeout ~is_gui:false;
 
-(*
+ (*
   match d with
   | [] -> ()
   | [cnf, goal_name] ->

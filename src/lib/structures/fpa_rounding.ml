@@ -13,7 +13,6 @@ module Sy = Symbols
 module Hs = Hstring
 module E = Expr
 
-open Format
 open Options
 
 module Q = Numbers.Q
@@ -141,11 +140,13 @@ let integer_log_2 =
   fun m ->
     if Q.compare_to_0 m <= 0 then
       begin
-        eprintf "integer_log_2 not defined for input (%a)@." Q.print m;
+        Printer.print_err
+          "integer_log_2 not defined for input (%a)@." Q.print m;
         assert false
       end;
     let res = aux m 0 in
-    (*eprintf "found that integer_log_2 of %a is %d@." Q.print m res;*)
+    (* Printer.print_dbg
+       "found that integer_log_2 of %a is %d@." Q.print m res;*)
     assert (Q.compare (mult_x_by_2_pow_n Q.one res) m <= 0);
     assert (Q.compare (mult_x_by_2_pow_n Q.one (res+1)) m > 0);
     res
@@ -209,7 +210,7 @@ let mode_of_term t =
   else if eq_t _Nu__rounding_mode then Nu
   else
     begin
-      eprintf "bad rounding mode %a@." E.print t;
+      Printer.print_err "bad rounding mode %a@." E.print t;
       assert false
     end
 
@@ -220,12 +221,14 @@ let int_of_term t =
     let n =
       try int_of_string n
       with _ ->
-        eprintf "error when trying to convert %s to an int@." n;
+        Printer.print_err
+          "error when trying to convert %s to an int@." n;
         assert false
     in
     n (* ! may be negative or null *)
   | _ ->
-    eprintf "error: the given term %a is not an integer@." E.print t;
+    Printer.print_err
+      "the given term %a is not an integer@." E.print t;
     assert false
 
 module MQ =

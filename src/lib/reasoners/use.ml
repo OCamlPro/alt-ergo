@@ -102,12 +102,24 @@ let print g =
           (fun (a,e) ->
              fprintf fmt "%a %a" E.print a Explanation.print e)
       in
-      fprintf fmt "@{<C.Bold>[use]@} gamma :\n";
+      let print_sterms_and_atoms fmt (st,sa) =
+        match SE.is_empty st,SA.is_empty sa with
+        | true, true -> fprintf fmt ""
+        | false, true -> fprintf fmt " is used by {%a}" sterms st
+        | true,false -> fprintf fmt " is used by {%a}" satoms sa
+        | false, false ->
+          fprintf fmt " is used by {%a} and {%a}" sterms st satoms sa
+      in
+      Printer.print_dbg
+        ~module_name:"Use" ~function_name:"print"
+        "@[<v 2>gamma :@,";
       MX.iter
         (fun t (st,sa) ->
-           fprintf fmt "%a is used by {%a} and {%a}\n"
-             X.print t sterms st satoms sa
-        ) g
+           Printer.print_dbg ~header:false "%a" X.print t;
+           Printer.print_dbg ~header:false "%a@,"
+             print_sterms_and_atoms (st,sa);
+        ) g;
+      Printer.flush_dbg ()
     end
 
 let mem = MX.mem

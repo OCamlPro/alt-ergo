@@ -29,10 +29,11 @@ module MAKE (C : sig
     fprintf fmt "0"
 
   let print_sum id sum =
-    fprintf fmt "@.sum %d@." id;
+    Printer.print_dbg "sum %d@," id;
     MD.iter
       (fun x (lp,ln,q) ->
-         fprintf fmt "%a -> (%a) + (%a) + %s = 0@."
+         Printer.print_dbg ~header:false
+           "%a -> (%a) + (%a) + %s = 0"
            C.print x ppprint lp ppprint ln (Q.to_string q)) sum
 
   module SM = Map.Make
@@ -58,8 +59,8 @@ module MAKE (C : sig
             if c <> 0 then(
               print_sum 1 sum1;
               print_sum 2 sum2;
-              fprintf fmt "l1 = %a@." ppprint lambdas1;
-              fprintf fmt "l2 = %a@." ppprint lambdas2);
+              Printer.print_dbg "l1 = %a@." ppprint lambdas1;
+              Printer.print_dbg "l2 = %a@." ppprint lambdas2);
             assert (c = 0);
             c
       end)

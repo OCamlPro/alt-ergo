@@ -58,7 +58,7 @@ val cl_extract : t -> Expr.Set.t list
 val model : t ->
   (r * Expr.t list * (Expr.t * r) list) list * (Expr.t list) list
 
-val print : Format.formatter -> t -> unit
+val print : t -> unit
 val term_repr : t -> Expr.t -> Expr.t
 
 val make : t -> Expr.t -> r (* may raise Not_found *)

@@ -93,20 +93,21 @@ module Shostak
   module Debug = struct
 
     let solve_aux r1 r2 =
-      if get_debug_arith () then
-        fprintf fmt "[arith:solve-aux] we solve %a=%a@." X.print r1 X.print r2
+      Printer.print_dbg ~debug:(get_debug_arith ())
+        ~module_name:"Arith" ~function_name:"solve_aux"
+        "we solve %a=%a@." X.print r1 X.print r2
 
     let solve_one r1 r2 sbs =
-      if get_debug_arith () then
-        begin
-          fprintf fmt "[arith:solve-one] solving %a = %a yields:@."
-            X.print r1 X.print r2;
-          let c = ref 0 in
-          List.iter
-            (fun (p,v) ->
-               incr c;
-               fprintf fmt " %d) %a |-> %a@." !c X.print p X.print v) sbs
-        end
+      let c = ref 0 in
+      let print fmt (p,v) =
+        incr c;
+        fprintf fmt  "%d) %a |-> %a@." !c X.print p X.print v
+      in
+      Printer.print_dbg ~debug:(get_debug_arith ())
+        ~module_name:"Arith" ~function_name:"solve_one"
+        "solving %a = %a yields:@,%a@."
+        X.print r1 X.print r2
+        (Printer.pp_list_no_space print) sbs
   end
   (*BISECT-IGNORE-END*)
 
@@ -675,13 +676,15 @@ module Shostak
     let lvs = List.fold_right SX.add (X.leaves r1) SX.empty in
     let lvs = List.fold_right SX.add (X.leaves r2) lvs in
     try
-      if get_debug_arith () then
-        fprintf fmt "[arith] Try solving with unsafe mode.@.";
+      Printer.print_dbg ~debug:(get_debug_arith ())
+        ~module_name:"Arith" ~function_name:"solve"
+        "Try solving with unsafe mode.@.";
       solve_one pb r1 r2 lvs true (* true == unsafe mode *)
     with Unsafe ->
     try
-      if get_debug_arith () then
-        fprintf fmt "[arith] Cancel unsafe solving mode. Try safe mode@.";
+      Printer.print_dbg ~debug:(get_debug_arith ())
+        ~module_name:"Arith" ~function_name:"solve"
+        "Cancel unsafe solving mode. Try safe mode@.";
       solve_one pb r1 r2 lvs false (* false == safe mode *)
     with Unsafe ->
       assert false
@@ -777,8 +780,9 @@ module Shostak
         else Format.sprintf "(- %s)" (pprint_positive_const (Q.abs c))
 
   let choose_adequate_model t r l =
-    if get_debug_interpretation() then
-      fprintf fmt "[arith] choose_adequate_model for %a@." E.print t;
+    Printer.print_dbg ~debug:(get_debug_interpretation ())
+      ~module_name:"Arith" ~function_name:"choose_adequate_model"
+      "choose_adequate_model for %a@." E.print t;
     let l = List.filter (fun (_, r) -> P.is_const (embed r) != None) l in
     let r =
       match l with

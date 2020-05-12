@@ -1,3 +1,14 @@
+(executable
+ (name formatshims)
+ (modules formatshims)
+ (libraries dune.configurator))
+
+(rule
+ (targets format_shims.ml)
+ (deps ./formatshims.exe)
+ (action
+  (run ./formatshims.exe)))
+
 (include_subdirs  unqualified)
 
 (documentation
@@ -32,7 +43,7 @@
     ; util
     Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
     MyDynlink MyUnix Numbers NumsNumbers NumbersInterface
-    Options Timers Util Vec Version ZarithNumbers Steps
+    Options Timers Util Vec Version ZarithNumbers Steps Printer Format_shims
   )
 
 )

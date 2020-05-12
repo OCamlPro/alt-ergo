@@ -182,8 +182,7 @@ let tag_callback t env sbuf ~origin:_y z i =
           begin
             let tyt = match find t sbuf env.ast with
               | Some (AT at) ->
-                fprintf str_formatter ": %a" Ty.print_full at.c.at_ty;
-                flush_str_formatter ()
+                asprintf ": %a@." Ty.print_full at.c.at_ty
               | Some (AF _) -> ": formula"
               | Some (QF _) -> ": quantified formula"
               | Some (AD ({ c = ATheory _ ; _ }, _)) -> ": Theory"
@@ -226,8 +225,7 @@ let tag_callback t env sbuf ~origin:_y z i =
         begin
           let tyt = match find t sbuf env.ast with
             | Some (AT at) ->
-              fprintf str_formatter ": %a" Ty.print at.c.at_ty;
-              flush_str_formatter ()
+              asprintf ": %a" Ty.print at.c.at_ty
             | _ -> "" in
           env.st_ctx#pop ();
           ignore(env.st_ctx#push tyt);
@@ -483,9 +481,13 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
 
 let make_instance (buffer:sbuffer) vars entries afc goal_form tyenv =
   let goal_vars = list_vars_in_form goal_form.c in
-  if get_debug () then List.iter (fun (v,e) ->
-      eprintf "%a -> %s@." Symbols.print_clean (fst v) e)
+  if get_debug () then begin
+    Printer.print_dbg "@,";
+    List.iter (fun (v,e) ->
+        Printer.print_dbg ~header:false
+          "%a -> %s@." Symbols.print_clean (fst v) e)
       (List.combine vars (List.rev entries));
+  end;
   let aform, _, goal_used =
     unquantify_aform buffer tyenv (List.combine vars (List.rev entries)) []
       goal_vars afc true
@@ -636,9 +638,8 @@ and popup_axiom t env _offset () =
               ~border_width:5 ~packing:pop_w#vbox#add () in
           let entries,_ = List.fold_left
               (fun (entries,i) (s,ty) ->
-                 fprintf str_formatter "%a : %a = "
-                   Symbols.print_clean s Ty.print ty;
-                 let text = flush_str_formatter () in
+                 let text = asprintf "%a : %a = @."
+                     Symbols.print_clean s Ty.print ty in
                  ignore(
                    GMisc.label ~text ~xalign:1.0
                      ~packing:(table#attach ~left:0 ~top:i) ());
@@ -672,8 +673,7 @@ and popup_axiom t env _offset () =
 
               with
               | Errors.Error e ->
-                Errors.report str_formatter e;
-                errors_l#set_text (flush_str_formatter ());
+                errors_l#set_text (asprintf "%a@." Errors.report e);
                 errors_l#misc#show ()
            ));
 
@@ -801,8 +801,7 @@ and popup_trigger t qid env (sbuf:sbuffer) offset () =
                   pop_w#destroy ()
                 with
                 | Errors.Error e ->
-                  Errors.report str_formatter e;
-                  errors_l#set_text (flush_str_formatter ());
+                  errors_l#set_text (asprintf "%a@." Errors.report e);
                   errors_l#misc#show ()
              ));
   ignore(button_cancel#connect#clicked ~callback: pop_w#destroy);

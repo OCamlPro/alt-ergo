@@ -133,8 +133,9 @@ module Sim_Wrap = struct
     | Sim.Core.Sat _ -> ()
     | Sim.Core.Unsat ex ->
       let ex = Lazy.force ex in
-      if get_debug_fm() then
-        fprintf fmt "[fm] simplex derived unsat: %a@." Explanation.print ex;
+      Printer.print_dbg ~debug:(get_debug_fm())
+        ~module_name:"IntervalCalculus" ~function_name:"check_unsat_result"
+        "simplex derived unsat: %a@." Explanation.print ex;
       raise (Ex.Inconsistent (ex, env.classes))
 
   let solve env _i =
@@ -210,9 +211,10 @@ module Sim_Wrap = struct
   (* not used for the moment *)
   let case_split =
     let gen_cs x n s orig =
-      if get_debug_fm () then
-        fprintf fmt "[Sim_CS-%d] %a = %a of size %a@."
-          orig X.print x Q.print n  Q.print s;
+      Printer.print_dbg ~debug:(get_debug_fm ())
+        ~module_name:"IntervalCalculus" ~function_name:"case_split"
+        "[Sim_CS-%d] %a = %a of size %a@."
+        orig X.print x Q.print n  Q.print s;
       let ty = X.type_info x in
       let r1 = x in
       let r2 = alien_of (P.create [] n  ty) in
@@ -293,7 +295,9 @@ module Sim_Wrap = struct
         let {Sim.Core.max_v; is_le; reason} = Lazy.force mx in
         set_new_bound reason (Q.mult q max_v) ~is_le:is_le i
     in
-    if get_debug_fpa()>=2 then fprintf fmt "#infer bounds for %a@." P.print p;
+    Printer.print_dbg ~debug:(get_debug_fpa () >= 2)
+      ~module_name:"IntervalCalculus" ~function_name:"infer_best_bounds"
+      "#infer bounds for %a@." P.print p;
     let ty = P.type_info p in
     let sim = if ty == Ty.Tint then env.int_sim else env.rat_sim in
     let i = I.undefined ty in
@@ -302,8 +306,9 @@ module Sim_Wrap = struct
     assert (sim.Sim.Core.status == Sim.Core.SAT);
     let i = best_bnd lp ~upper:true sim i I.new_borne_sup in
     let i = best_bnd lp ~upper:false sim i I.new_borne_inf in
-    if get_debug_fpa () >= 2 then
-      fprintf fmt "## inferred bounds for %a: %a@." P.print p I.print i;
+    Printer.print_dbg ~debug:(get_debug_fpa () >= 2)
+      ~module_name:"IntervalCalculus" ~function_name:"infer_best_bounds"
+      "## inferred bounds for %a: %a@." P.print p I.print i;
     i
 
 end
@@ -315,11 +320,9 @@ module MP = struct
     assert
       (let _p0, c0, d0 = P.normal_form_pos p in
        let b = Q.is_zero c0 && Q.is_one d0 in
-       begin
-         if not b then
-           fprintf fmt "[IC.assert_normalized_poly] %a is not normalized@."
-             P.print p
-       end;
+       Printer.print_err ~error:(not b)
+         "[IC.assert_normalized_poly] %a is not normalized@."
+         P.print p;
        b)
 
   let n_add p i old ({ polynomes; _ } as env) =
@@ -361,10 +364,8 @@ module MX = struct
   let assert_is_alien x =
     assert (
       let b = is_alien x in
-      begin
-        if not b then
-          fprintf fmt "[IC.assert_is_alien] %a is not an alien@." X.print x
-      end;
+      Printer.print_err ~error:(not b)
+        "[IC.assert_is_alien] %a is not an alien@," X.print x;
       b
     )
 
@@ -407,32 +408,32 @@ end
    normalized polys *)
 let generic_find xp env =
   let is_mon = is_alien xp in
-  if get_debug_fm () then
-    fprintf fmt "generic_find: %a ... " X.print xp;
+  Printer.print_dbg ~debug:(get_debug_fm ())
+    ~module_name:"IntervalCalculus" ~function_name:"generic_find"
+    "generic_find: %a ... " X.print xp;
   try
     if not is_mon then raise Not_found;
     let i, use = MX.n_find xp env.monomes in
-    if get_debug_fm () then fprintf fmt "found@.";
+    Printer.print_dbg ~header:false ~debug:(get_debug_fm ()) "found@.";
     i, use, is_mon
   with Not_found ->
     (* according to this implem, it means that we can find aliens in polys
        but not in monomes. FIX THIS => an interval of x in monomes and in
        polys may be differents !!! *)
-    if get_debug_fm () then
-      fprintf fmt "not_found@.";
+    Printer.print_dbg ~header:false ~debug:(get_debug_fm ()) "not_found@,";
     let p0 = poly_of xp in
     let p, c = P.separate_constant p0 in
     let p, c0, d = P.normal_form_pos p in
-    if get_debug_fm() then
-      fprintf fmt "normalized into %a + %a * %a@."
-        Q.print c Q.print d P.print p;
+    Printer.print_dbg ~header:false ~debug:(get_debug_fm ())
+      "normalized into %a + %a * %a@,"
+      Q.print c Q.print d P.print p;
     assert (Q.sign d <> 0 && Q.sign c0 = 0);
     let ty = P.type_info p0 in
     let ip =
       try MP.n_find p env.polynomes with Not_found -> I.undefined ty
     in
-    if get_debug_fm() then
-      fprintf fmt "scaling %a by %a@." I.print ip Q.print d;
+    Printer.print_dbg ~header:false ~debug:(get_debug_fm ())
+      "scaling %a by %a@." I.print ip Q.print d;
     let ip = I.affine_scale ~const:c ~coef:d ip in
     ip, SX.empty, is_mon
 
@@ -458,93 +459,125 @@ let generic_add x j use is_mon env =
 
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
+  open Printer
 
   let assume a expl =
-    if get_debug_fm () then begin
-      fprintf fmt "[fm] We assume: %a@." LR.print (LR.make a);
-      fprintf fmt "explanations: %a@." Explanation.print expl
-    end
+    print_dbg ~debug:(get_debug_fm ())
+      ~module_name:"IntervalCalculus" ~function_name:"assume"
+      "@[<v 2>We assume: %a@,explanations: %a@]@."
+      LR.print (LR.make a)
+      Explanation.print expl
 
   let print_use fmt use =
     SX.iter (fprintf fmt "%a, " X.print) use
 
   let env env =
     if get_debug_fm () then begin
-      fprintf fmt "------------ FM: inequations-------------------------@.";
+      print_dbg
+        ~module_name:"IntervalCalculus" ~function_name:"env"
+        "@,------------ FM: inequations-------------------------@,";
       MPL.iter
         (fun a { Oracle.ple0 = p; is_le = is_le; _ } ->
-           fprintf fmt "%a%s0  |  %a@."
+           print_dbg ~header:false "%a%s0  |  %a@,"
              P.print p (if is_le then "<=" else "<") E.print a
         )env.inequations;
-      fprintf fmt "------------ FM: monomes ----------------------------@.";
+      print_dbg ~header:false
+        "------------ FM: monomes ----------------------------@,";
       MX.iter
         (fun x (i, use) ->
-           fprintf fmt "%a : %a |-use-> {%a}@."
+           print_dbg ~header:false "%a : %a |-use-> {%a}@,"
              X.print x I.print i print_use use)
         env.monomes;
-      fprintf fmt "------------ FM: polynomes---------------------------@.";
+      print_dbg ~header:false
+        "------------ FM: polynomes---------------------------@,";
       MP.iter
         (fun p i ->
-           fprintf fmt "%a : %a@."
-             P.print p I.print i)
+           print_dbg ~header:false "%a : %a@," P.print p I.print i)
         env.polynomes;
-      fprintf fmt "-----------------------------------------------------@."
+      print_dbg ~header:false
+        "-----------------------------------------------------@."
     end
 
   let implied_equalities l =
-    if get_debug_fm () then
-      begin
-        fprintf fmt "[fm] %d implied equalities@." (List.length l);
-        List.iter
-          (fun (ra, _, ex, _) ->
-             fprintf fmt "  %a %a@."
-               LR.print (LR.make ra) Explanation.print ex) l
-      end
+    let print fmt (ra, _, ex, _) =
+      fprintf fmt "@,%a %a"
+        LR.print (LR.make ra)
+        Explanation.print ex
+    in
+    print_dbg ~debug:(get_debug_fm ())
+      ~module_name:"IntervalCalculus" ~function_name:"implied_equalities"
+      "@[<v 2> %d implied equalities %a@]@."
+      (List.length l)
+      (pp_list_no_space print) l
 
   let case_split r1 r2 =
-    if get_debug_fm () then
-      fprintf fmt "[case-split] %a = %a@." X.print r1 X.print r2
+    print_dbg ~debug:(get_debug_fm ())
+      ~module_name:"IntervalCalculus" ~function_name:"case-split"
+      "%a = %a@." X.print r1 X.print r2
 
   let no_case_split s =
-    if get_debug_fm () then fprintf fmt "[case-split] %s : nothing@." s
-
+    print_dbg ~debug:(get_debug_fm ())
+      ~module_name:"IntervalCalculus" ~function_name:"case-split"
+      "%s : nothing@." s
 
   let inconsistent_interval expl =
-    if get_debug_fm () then
-      fprintf fmt "interval inconsistent %a@." Explanation.print expl
+    print_dbg ~debug:(get_debug_fm ())
+      ~module_name:"IntervalCalculus"
+      ~function_name:"inconsistent_interval"
+      "interval inconsistent %a@." Explanation.print expl
 
   let added_inequation kind ineq =
     if get_debug_fm () then begin
-      fprintf fmt "[fm] I derived the (%s) inequality: %a %s 0@."
+      print_dbg
+        ~module_name:"IntervalCalculus" ~function_name:"added_inequation"
+        "I derived the (%s) inequality: %a %s 0@,"
         kind P.print ineq.Oracle.ple0
         (if ineq.Oracle.is_le then "<=" else "<");
-      fprintf fmt "from the following combination:@.";
+      print_dbg ~header:false "from the following combination:@,";
       Util.MI.iter
         (fun _a (coef, ple0, is_le) ->
-           fprintf fmt "\t%a * (%a %s 0) + @."
+           print_dbg ~header:false
+             "\t%a * (%a %s 0) +"
              Q.print coef P.print ple0 (if is_le then "<=" else "<")
         )ineq.Oracle.dep;
-      fprintf fmt "\t0@.@."
+      print_dbg ~header:false "\t0@."
     end
 
   let tighten_interval_modulo_eq_begin p1 p2 =
-    if get_debug_fm () then begin
-      fprintf fmt "@.[fm] tighten intervals modulo eq: %a = %a@."
-        P.print p1 P.print p2;
-    end
+    print_dbg ~debug:(get_debug_fm ())
+      ~module_name:"IntervalCalculus"
+      ~function_name:"tighten_interval_modulo_eq_begin"
+      "tighten intervals modulo eq: %a = %a@."
+      P.print p1 P.print p2
 
   let tighten_interval_modulo_eq_middle p1 p2 i1 i2 j =
-    if get_debug_fm () then begin
-      fprintf fmt "  %a has interval %a@." P.print p1 I.print i1;
-      fprintf fmt "  %a has interval %a@." P.print p2 I.print i2;
-      fprintf fmt "  intersection is %a@." I.print j;
-    end
+    print_dbg ~debug:(get_debug_fm ())
+      ~module_name:"IntervalCalculus"
+      ~function_name:"tighten_interval_modulo_eq_middle"
+      "%a has interval %a@,\
+       %a has interval %a@,\
+       intersection is %a@."
+      P.print p1 I.print i1
+      P.print p2 I.print i2
+      I.print j
 
   let tighten_interval_modulo_eq_end p1 p2 b1 b2 =
     if get_debug_fm () then begin
-      if b1 then fprintf fmt "  > improve interval of %a@.@." P.print p1;
-      if b2 then fprintf fmt "  > improve interval of %a@.@." P.print p2;
-      if not b1 && not b2 then fprintf fmt "  > no improvement@.@."
+      if b1 then
+        print_dbg
+          ~module_name:"IntervalCalculus"
+          ~function_name:"tighten_interval_modulo_eq_end"
+          "> improve interval of %a@." P.print p1;
+      if b2 then
+        print_dbg
+          ~module_name:"IntervalCalculus"
+          ~function_name:"tighten_interval_modulo_eq_end"
+          "> improve interval of %a" P.print p2;
+      if not b1 && not b2 then
+        print_dbg
+          ~module_name:"IntervalCalculus"
+          ~function_name:"tighten_interval_modulo_eq_end"
+          "> no improvement"
     end
 
 end
@@ -1078,8 +1111,9 @@ let is_normalized_poly uf p =
   let rp, _  = Uf.find_r uf p in
   if X.equal p rp then true
   else begin
-    fprintf fmt "%a <= 0 NOT normalized@." X.print p;
-    fprintf fmt "It is equal to %a@." X.print rp;
+    Printer.print_err
+      "%a <= 0 NOT normalized@,It is equal to %a@."
+      X.print p X.print rp;
     false
   end
 
@@ -1209,7 +1243,10 @@ let polynomes_relational_deductions env p_rels =
 
 
 let fm uf are_eq rclass_of env eqs =
-  if get_debug_fm () then fprintf fmt "[fm] in fm/fm-simplex@.";
+  Printer.print_dbg ~debug:(get_debug_fm ())
+    ~module_name:"IntervalCalculus"
+    ~function_name:"fm"
+    "in fm/fm-simplex@.";
   Options.tool_req 4 "TR-Arith-Fm";
   let ineqs =
     MPL.fold (fun _ v acc ->
@@ -1233,7 +1270,10 @@ let fm uf are_eq rclass_of env eqs =
          env, eqs
       )(env, eqs) pbs
   in
-  if get_debug_fm () then fprintf fmt "[fm] out fm/fm-simplex@.";
+  Printer.print_dbg ~debug:(get_debug_fm ())
+    ~module_name:"IntervalCalculus"
+    ~function_name:"fm"
+    "out fm/fm-simplex@.";
   res
 
 let is_num r =
@@ -1846,10 +1886,11 @@ let fm_simplex_unbounded_integers_encoding env uf =
     (fun simplex (p, uints) ->
        match uints with
        | [] ->
-         fprintf fmt "Intervals already empty !!!!@.";
+         Printer.print_err "Intervals already empty !!!!@.";
          assert false
        | _::_::_ ->
-         fprintf fmt "case-split over unions of intervals is needed !!!!@.";
+         Printer.print_err
+           "case-split over unions of intervals is needed !!!@.";
          assert false
 
        | [(mn, ex_mn), (mx, ex_mx)] ->
@@ -1923,9 +1964,11 @@ let model_from_simplex sim is_int env uf =
          else
            let t = fct (Q.to_string q) in
            let r, _ = X.make t in
-           if get_debug_interpretation() then
-             fprintf fmt "[%s simplex] %a = %a@."
-               (if is_int then "integer" else "rational") X.print v X.print r;
+           Printer.print_dbg ~debug:(get_debug_interpretation ())
+             ~module_name:"IntervalCalculus" ~function_name:"model_from_simplex"
+             "[%s simplex] %a = %a@."
+             (if is_int then "integer" else "rational")
+             X.print v X.print r;
            (v, r, Explanation.empty) :: acc
       )[] (List.rev main_vars)
 
@@ -1986,7 +2029,8 @@ let best_interval_of optimized env p =
       with I.NotConsistent expl ->
         if true (*get_debug_fpa() >= 2*) then begin
           [@ocaml.ppwarning "TODO: find an example triggering this case!"]
-          fprintf fmt "TODO: should check that this is correct !!!!@."
+          Printer.print_wrn
+            "TODO: should check that this is correct !!!!@."
         end;
         raise (Ex.Inconsistent (expl, env.classes))
 
@@ -2007,11 +2051,12 @@ let integrate_mapsTo_bindings sbs maps_to =
            let mk, _ = X.make t in
            match P.is_const (poly_of mk) with
            | None ->
-             if get_debug_fpa() >= 2 then begin
-               fprintf fmt "bad semantic trigger %a |-> %a"
-                 Sy.print x E.print tx;
-               fprintf fmt " left-hand side is not a constant!@.";
-             end;
+             Printer.print_dbg ~debug:(get_debug_fpa () >= 2)
+               ~module_name:"IntervalCalculus"
+               ~function_name:"integrate_maps_to_bindings"
+               "bad semantic trigger %a |-> %a@,\
+                left-hand side is not a constant!@."
+               Sy.print x E.print tx;
              raise Exit
            | Some c ->
              let tc = mk_const_term (E.type_info t) c in
@@ -2038,9 +2083,12 @@ let extend_with_domain_substitution =
                mk_const_term ty q1
 
              | Some (q1,_), Some (q2,_) ->
-               fprintf fmt "%a <= %a <= %a@."
-                 Q.print q1 Sy.print lb_var Q.print q2;
-               Format.eprintf "Which value should we choose ?@.";
+               Printer.print_err
+                 "[Error] %a <= %a <= %a@,\
+                  Which value should we choose ?@."
+                 Q.print q1
+                 Sy.print lb_var
+                 Q.print q2;
                assert (Q.compare q2 q1 >= 0);
                assert false
 
@@ -2056,8 +2104,8 @@ let extend_with_domain_substitution =
   fun (sbt, sbty) idoms ->
     try Some (aux idoms sbt, sbty)
     with Exit ->
-      if get_debug_fpa() >=2 then
-        fprintf fmt "[IC] extend_with_domain_substitution failed !@.";
+      Printer.print_dbg ~debug:(get_debug_fpa() >=2)
+        "extend_with_domain_substitution failed !@.";
       None
 
 let terms_linear_dep { linear_dep ; _ } lt =
@@ -2178,10 +2226,10 @@ let new_facts_for_axiom
                 *)
           let lem_name = E.name_of_lemma orig in
           let s = sbs, sty in
-          if get_debug_fpa () >= 2 then begin
-            fprintf fmt "[IC] try to extend synt sbt %a of ax %a@."
-              (Symbols.Map.print E.print) sbs E.print orig;
-          end;
+          Printer.print_dbg ~debug:(get_debug_fpa () >= 2)
+            ~module_name:"IntervalCalculus" ~function_name:"new_facts_for_axiom"
+            "try to extend synt sbt %a of ax %a@,"
+            (Symbols.Map.print E.print) sbs E.print orig;
           match tr.E.guard with
           | Some _ -> assert false (*guards not supported for TH axioms*)
 
@@ -2190,20 +2238,23 @@ let new_facts_for_axiom
             env, acc
 
           | None when not (terms_linear_dep env torig) ->
-            if get_debug_fpa () >= 2 then
-              fprintf fmt "semantic matching failed(1)@.";
+            Printer.print_dbg
+              ~header:false ~debug:(get_debug_fpa () >= 2)
+              "semantic matching failed(1)@.";
             env, acc
 
           | None ->
             match semantic_matching lem_name tr s env uf optimized with
             | env, None ->
-              if get_debug_fpa () >= 2 then
-                fprintf fmt "semantic matching failed(2)@.";
+              Printer.print_dbg
+                ~header:false ~debug:(get_debug_fpa () >= 2)
+                "semantic matching failed(2)@.";
               env, acc
             | env, Some sbs ->
-              if get_debug_fpa () >= 2 then
-                fprintf fmt "semantic matching succeeded:@.%a@."
-                  (Symbols.Map.print E.print) (fst sbs);
+              Printer.print_dbg
+                ~header:false ~debug:(get_debug_fpa () >= 2)
+                "semantic matching succeeded:@,%a@."
+                (Symbols.Map.print E.print) (fst sbs);
               let nf = E.apply_subst sbs f in
               let accepted = selector nf orig in
               record_this_instance nf accepted lorig;
@@ -2263,7 +2314,10 @@ let syntactic_matching menv env uf _selector =
          if get_debug_fpa () >= 2 then begin
            let cpt = ref 0 in
            List.iter (fun (_, l) -> List.iter (fun _ -> incr cpt) l) res;
-           fprintf fmt "syntactic matching of Ax %s: got %d substs@."
+           Printer.print_dbg
+             ~module_name:"IntervalCalculus"
+             ~function_name:"syntactic_matching"
+             "syntactic matching of Ax %s: got %d substs@."
              (E.name_of_lemma f) !cpt
          end;
          res:: accu
@@ -2272,7 +2326,9 @@ let syntactic_matching menv env uf _selector =
   {env with syntactic_matching = synt_match}
 
 let instantiate ~do_syntactic_matching match_terms env uf selector =
-  if get_debug_fpa () >= 2 then fprintf fmt "entering IC.instantiate@.";
+  Printer.print_dbg  ~debug:(get_debug_fpa () >= 2)
+    ~module_name:"IntervalCalculus" ~function_name:"instanciate"
+    "entering IC.instantiate@.";
   let optimized = ref (SP.empty) in
   let t_infos, t_subterms = match_terms in
   let menv = EM.make ~max_t_depth:100 t_infos t_subterms [] in
@@ -2288,7 +2344,9 @@ let instantiate ~do_syntactic_matching match_terms env uf selector =
       )(env, []) env.syntactic_matching
   in
   if get_debug_fpa () >= 2 then
-    fprintf fmt "IC.instantiate: %d insts generated@." (List.length insts);
+    Printer.print_dbg ~debug:(get_debug_fpa () >= 2)
+      ~module_name:"IntervalCalculus" ~function_name:"instanciate"
+      "IC.instantiate: %d insts generated@." (List.length insts);
   env, insts
 
 
@@ -2350,9 +2408,10 @@ let assume_th_elt t th_elt dep =
   | Util.NIA | Util.NRA | Util.FPA ->
     let th_form = separate_semantic_triggers ax_form in
     let th_elt = {th_elt with Expr.ax_form} in
-    if get_debug_fpa () >= 2 then
-      fprintf fmt "[IC][Theory %s][%s] %a@."
-        th_name kd_str E.print th_form;
+    Printer.print_dbg ~debug:(get_debug_fpa () >= 2)
+      ~module_name:"IntervalCalculus" ~function_name:"assume_th_elt"
+      "[Theory %s][%s] %a@."
+      th_name kd_str E.print th_form;
     assert (not (ME.mem th_form t.th_axioms));
     {t with th_axioms = ME.add th_form (th_elt, dep) t.th_axioms}
 

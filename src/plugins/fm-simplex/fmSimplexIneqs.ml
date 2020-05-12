@@ -46,26 +46,33 @@ module Container : Inequalities.Container_SIG = struct
       fprintf fmt "(%s , %s)" (Q.to_string re) (Q.to_string eps)
 
     let print_answer (vof,vals) =
-      fprintf fmt "vof = %a@." print_couple vof;
-      fprintf fmt "@.assignement returned by the Simplex@.";
-      List.iter
-        (fun (l,v) ->
-           fprintf fmt "  L(%d) -> %a@." l print_couple v
-        )vals
+      let print fmt (l,v) =
+        fprintf fmt "L(%d) -> %a@," l print_couple v
+      in
+      Printer.print_dbg
+        "vof = %a@,\
+         @[<v 2>assignement returned by the Simplex@,\
+         %a@."
+        print_couple vof
+        (Printer.pp_list_no_space print) vals
 
     let print_parsed_answer answer =
       if get_debug_fm() then
         match answer with
         | Unsat { vof; vals; _ } ->
-          fprintf fmt "I read: the simplex problem is not feasible (<=)@.";
+          Printer.print_dbg
+            "I read: the simplex problem is not feasible (<=)@.";
           print_answer (vof,vals)
         | Eq_unsat ->
-          fprintf fmt "I read: the simplex problem is not feasible (=)@."
+          Printer.print_dbg
+            "I read: the simplex problem is not feasible (=)@."
         | Unbound { vof; vals; _ } ->
-          fprintf fmt "I read: the simplex problem is not bounnded@.";
+          Printer.print_dbg
+            "I read: the simplex problem is not bounnded@.";
           print_answer (vof,vals)
         | Max { vof; vals; _ }  ->
-          fprintf fmt "I read: the simplex problem has a solution@.";
+          Printer.print_dbg
+            "I read: the simplex problem has a solution@.";
           print_answer (vof,vals)
 
     let add_to_sum ld sum l_m =
@@ -82,7 +89,7 @@ module Container : Inequalities.Container_SIG = struct
            let l_m, c = P.to_list ineq.ple0 in
            assert (Q.is_int c);
            if l_m == [] then begin
-             fprintf fmt "%a <= 0@." P.print ineq.ple0;
+             Printer.print_err "%a <= 0@." P.print ineq.ple0;
              assert false
            end
            else
@@ -119,25 +126,31 @@ module Container : Inequalities.Container_SIG = struct
 
     let tighten_polynomials
         add_ineqs are_eq acc sum ctt lambdas nb_constrs constrs =
+      Printer.print_dbg ~debug:(get_debug_fm())
+        "tighten_polynomials@,";
       let max_ctt, equas, s_neq = polynomials_bounding_pb sum ctt lambdas in
       let r_max_ctt,r_equas,r_s_neq = SCache.make_repr max_ctt equas s_neq in
       let sim_res =
         match SCache.already_registered r_max_ctt r_equas r_s_neq with
         | None ->
-          if !dsimplex then fprintf fmt "Simplex poly in@.";
+          Printer.print_dbg ~header:false ~debug:!dsimplex
+            "Simplex poly in@,";
           incr cpt;
-          if !dsimplex then fprintf fmt "new simplex %d@." !cpt;
+          Printer.print_dbg ~header:false ~debug:!dsimplex
+            "new simplex %d@," !cpt;
           let res = Simplex_Q.main max_ctt equas s_neq nb_constrs in
-          if !dsimplex then fprintf fmt "Simplex poly out@.";
+          Printer.print_dbg ~header:false ~debug:!dsimplex
+            "Simplex poly out@.";
           SCache.register r_max_ctt r_equas r_s_neq !cpt res ;
           res
         | Some (n, res, ctt') ->
           if SCache.MI.compare Q.compare r_max_ctt ctt' = 0 then begin
-            if !dsimplex then fprintf fmt "reuse RESULTS of simplex %d@." n;
+            Printer.print_dbg ~debug:!dsimplex
+              "reuse RESULTS of simplex %d@." n;
             res
           end
           else begin
-            if !dsimplex then fprintf fmt "reuse  simplex %d@." n;
+            Printer.print_dbg ~debug:!dsimplex "reuse  simplex %d@." n;
             let res = Simplex_Q.partial_restart res max_ctt in
             res
           end
@@ -182,28 +195,34 @@ module Container : Inequalities.Container_SIG = struct
     let tighten_monomial
         add_ineqs are_eq acc x sum_x is_pos sum ctt lambdas nb_constrs constrs
       =
-      if false || get_debug_fm() then fprintf fmt "tighten_monomial %s%a@."
-          (if is_pos then "+" else "-") X.print x;
+      Printer.print_dbg ~debug:(get_debug_fm())
+        "tighten_monomial %s%a,"
+        (if is_pos then "+" else "-") X.print x;
       let max_ctt, equas, s_neq =
         monomial_bounding_pb sum ctt lambdas x sum_x is_pos in
       let r_max_ctt,r_equas,r_s_neq = SCache.make_repr max_ctt equas s_neq in
       let sim_res =
         match SCache.already_registered_mon x r_max_ctt r_equas r_s_neq with
         | None ->
-          if !dsimplex then fprintf fmt "Simplex monomes in@.";
+          Printer.print_dbg ~header:false ~debug:!dsimplex
+            "Simplex monomes in@,";
           incr cpt;
-          if !dsimplex then fprintf fmt "new simplex %d@." !cpt;
+          Printer.print_dbg ~header:false ~debug:!dsimplex
+            "new simplex %d@," !cpt;
           let res = Simplex_Q.main max_ctt equas s_neq nb_constrs in
-          if !dsimplex then fprintf fmt "Simplex monomes out@.";
+          Printer.print_dbg ~header:false ~debug:!dsimplex
+            "Simplex monomes out@.";
           SCache.register_mon x r_max_ctt r_equas r_s_neq !cpt res ;
           res
         | Some (n, res, ctt') ->
           if SCache.MI.compare Q.compare r_max_ctt ctt' = 0 then begin
-            if !dsimplex then fprintf fmt "reuse RESULTS of simplex %d@." n;
+            Printer.print_dbg ~header:false ~debug:!dsimplex
+              "reuse RESULTS of simplex %d@." n;
             res
           end
           else begin
-            if !dsimplex then fprintf fmt "reuse  simplex %d@." n;
+            Printer.print_dbg ~header:false ~debug:!dsimplex
+              "reuse  simplex %d@." n;
             let res = Simplex_Q.partial_restart res max_ctt in
             res
           end
@@ -257,13 +276,12 @@ module Container : Inequalities.Container_SIG = struct
         )sum acc
 
     let fm_simplex add_ineqs are_eq acc constrs nb_constrs =
-      if get_debug_fm() then
-        begin
-          fprintf fmt "begin fm-simplex: nb_constrs = %d@." nb_constrs;
-          List.iter
-            (fun (id, { ple0 ; _ }) ->
-               fprintf fmt "%d) %a <= 0@." id P.print ple0) constrs;
-        end;
+      let print fmt (id, { ple0 ; _ }) =
+        fprintf fmt "%d) %a <= 0" id P.print ple0 in
+      Printer.print_dbg ~debug:(get_debug_fm())
+        "begin fm-simplex: nb_constrs = %d@,%a@."
+        nb_constrs
+        (Printer.pp_list_no_space print) constrs;
       let sum, ctt, lambdas = generalized_fm_projection constrs in
       let acc =
         if MX.is_empty sum then acc
@@ -276,7 +294,7 @@ module Container : Inequalities.Container_SIG = struct
               add_ineqs are_eq acc sum ctt lambdas nb_constrs constrs
           else acc
       in
-      if get_debug_fm() then fprintf fmt "end fm-simplex@.@.";
+      Printer.print_dbg ~debug:(get_debug_fm()) "end fm-simplex@.";
       acc
 
     let list_of_mineqs mp =

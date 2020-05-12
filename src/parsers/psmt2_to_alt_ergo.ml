@@ -113,7 +113,7 @@ module Translate = struct
         | TInt  -> mk_int_const loc s
         | TReal -> mk_real_const loc (better_num_of_string s)
         | _ ->
-          Format.eprintf "%s@." (to_string ty);
+          Printer.print_err "%s@." (to_string ty);
           assert false
       end
     | Const_Str _  -> assert false (* to do *)
@@ -210,7 +210,7 @@ module Translate = struct
     | "is", [constr], [e] ->
       mk_algebraic_test (pos name) e constr
     | _ ->
-      Format.eprintf "TODO: handle other underscored IDs@.";
+      Printer.print_err "[TODO] handle other underscored IDs@.";
       assert false
 
   let translate_qual_identifier qid params raw_params=
@@ -225,8 +225,9 @@ module Translate = struct
       let tl = List.map (translate_term pars) term_list in
       (tl, true) :: acc
     | Named _ ->
-      if Options.get_verbose () then
-        Printf.eprintf "[Warning] (! :named not yet supported)\n%!";
+      Printer.print_wrn
+        ~warning:(Options.get_verbose () || Options.get_debug_warnings ())
+        "(! :named not yet supported)%!@.";
       acc
 
   and translate_quantif f svl pars t =
@@ -306,7 +307,7 @@ module Translate = struct
       let name =
         match name_of_assert term with
         | Some s -> s
-        | None -> Printf.sprintf "unamed__assert__%d" !cpt
+        | None -> Format.sprintf "unamed__assert__%d" !cpt
       in
       mk_generic_axiom pos name (translate_assert_term (pars,term))
 
@@ -349,8 +350,9 @@ module Translate = struct
     with Invalid_argument _ -> assert false
 
   let not_supported s =
-    if Options.get_verbose () then
-      Format.eprintf "; %S : Not yet supported@." s
+    Printer.print_wrn
+      ~warning:(Options.get_verbose () || Options.get_debug_warnings ())
+      "%S : Not yet supported@." s
 
   let translate_command acc command =
     match command.c with
@@ -375,7 +377,7 @@ module Translate = struct
       (translate_decl_fun symbol params ret):: acc
     | Cmd_DeclareSort(symbol,n) ->
       let n = int_of_string n in
-      let pars = init n (fun i -> Printf.sprintf "'a_%d" i) in
+      let pars = init n (fun i -> Format.sprintf "'a_%d" i) in
       (mk_abstract_type_decl (pos command) pars symbol.c) :: acc
     | Cmd_DefineFun(fun_def,term)
     | Cmd_DefineFunRec(fun_def,term) ->
@@ -424,7 +426,8 @@ module Translate = struct
     Smtlib_typing.typing commands;
 
     if Options.get_type_smt2 () then begin
-      Printf.eprintf "%s%!" (Smtlib_options.status ());
+      Printer.print_dbg
+        "%s@." (Smtlib_options.status ());
       []
     end
     else begin
@@ -451,7 +454,7 @@ let aux aux_fun token lexbuf =
     let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
     let lex = Lexing.lexeme lexbuf in
     Parsing.clear_parser ();
-    Smtlib_error.print Format.err_formatter (Options.get_file ())
+    Smtlib_error.print (Options.get_fmt_err ()) (Options.get_file ())
       (Syntax_error (lex)) loc;
     Errors.error (Errors.Syntax_error (loc,""))
   | Smtlib_error.Error (e , p) ->
@@ -461,7 +464,7 @@ let aux aux_fun token lexbuf =
         Some loc -> loc
       | None -> Lexing.dummy_pos,Lexing.dummy_pos
     in
-    Smtlib_error.print Format.err_formatter (Options.get_file ()) e loc;
+    Smtlib_error.print (get_fmt_err ()) (Options.get_file ()) e loc;
     Errors.error (Errors.Syntax_error (loc,""))
 
 let file_parser token lexbuf =

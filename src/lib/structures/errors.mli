@@ -113,9 +113,3 @@ val run_error : run_error -> 'a
 
 (** Print a message on the formatter corresponding to the error *)
 val report : Format.formatter -> error -> unit
-
-(** Print the input error as error *)
-val print_error : Format.formatter -> error -> unit
-
-(** Print the input error as warning *)
-val print_warning : Format.formatter -> error -> unit

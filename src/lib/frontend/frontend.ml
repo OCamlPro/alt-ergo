@@ -84,7 +84,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let check_produced_unsat_core dep =
     if get_verbose () then
-      fprintf fmt "checking the unsat-core:\n-------------------\n%a@."
+      Printer.print_vrb
+        "checking the unsat-core:@,-------------------@,%a@."
         (Ex.print_unsat_core ~tab:false) dep;
     try
       let pb = E.Set.elements (Ex.formulas_of dep) in
@@ -209,7 +210,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     with
     | SAT.Sat t ->
       print_status (Sat (d,t)) (Steps.get_steps ());
-      if get_model () then SAT.print_model ~header:true std_formatter t;
+      if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;
       env , consistent, dep
     | SAT.Unsat dep' ->
       let dep = Ex.union dep dep' in
@@ -218,7 +219,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       env , false, dep
     | SAT.I_dont_know t ->
       print_status (Unknown (d, t)) (Steps.get_steps ());
-      if get_model () then SAT.print_model ~header:true std_formatter t;
+      if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;
       env , consistent, dep
     | Util.Timeout as e ->
       print_status (Timeout (Some d)) (Steps.get_steps ());
@@ -234,56 +235,57 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     match status with
     | Unsat (d, dep) ->
       let loc = d.st_loc in
-      if Options.get_answers_with_locs () then
-        eprintf "; %aValid (%2.4f) (%d steps)%s@."
-          Loc.report loc time steps (goal_name d);
-      printf "unsat@.";
+      Printer.print_vrb ~verbose:(get_answers_with_locs ())
+        "; %aValid (%2.4f) (%d steps)%s@."
+        Loc.report loc time steps (goal_name d);
+      Printer.print_std "unsat@.";
       if get_unsat_core() &&
          not (get_debug_unsat_core()) &&
          not (get_save_used_context())
       then
-        printf "(\n%a)@." (Ex.print_unsat_core ~tab:true) dep
+        Printer.print_fmt (Options.get_fmt_usc ())
+          "(@,%a)@."
+          (Ex.print_unsat_core ~tab:true) dep
 
 
     | Inconsistent _ ->
       ()
-      (*
-      let loc = d.st_loc in
-      if Options.get_verbose () && Options.get_answers_with_locs () then
-        eprintf "; %aInconsistent assumption@." report_loc loc
-*)
+    (* let loc = d.st_loc in
+       if Options.get_verbose () && Options.get_answers_with_locs () then
+       Printer.print_dbg
+       "; %aInconsistent assumption@." report_loc loc *)
 
     | Unknown (d, _) ->
       let loc = d.st_loc in
-      if Options.get_answers_with_locs () then
-        eprintf "; %aI don't know (%2.4f) (%d steps)%s@."
-          Loc.report loc time steps (goal_name d);
-      printf "unknown@."
+      Printer.print_vrb ~verbose:(get_answers_with_locs ())
+        "; %aI don't know (%2.4f) (%d steps)%s@."
+        Loc.report loc time steps (goal_name d);
+      Printer.print_std "unknown@."
 
     | Sat (d, _) ->
       let loc = d.st_loc in
-      if Options.get_answers_with_locs () then
-        eprintf "; %aInvalid (%2.4f) (%d steps)%s@."
-          Loc.report loc time steps (goal_name d);
-      printf "sat@."
+      Printer.print_vrb ~verbose:(get_answers_with_locs ())
+        "; %aInvalid (%2.4f) (%d steps)%s@."
+        Loc.report loc time steps (goal_name d);
+      Printer.print_std "sat@."
 
     | Timeout (Some d) ->
       let loc = d.st_loc in
-      if Options.get_answers_with_locs () then
-        eprintf "; %aTimeout (%2.4f) (%d steps)%s@."
-          Loc.report loc time steps (goal_name d);
-      printf "timeout@."
+      Printer.print_vrb ~verbose:(get_answers_with_locs ())
+        "; %aTimeout (%2.4f) (%d steps)%s@."
+        Loc.report loc time steps (goal_name d);
+      Printer.print_std "timeout@."
 
     | Timeout None ->
-      if Options.get_answers_with_locs () then
-        eprintf "; %aTimeout (%2.4f) (%d steps)@."
-          Loc.report Loc.dummy time steps;
-      printf "timeout@."
+      Printer.print_vrb ~verbose:(get_answers_with_locs ())
+        "; %aTimeout (%2.4f) (%d steps)@."
+        Loc.report Loc.dummy time steps;
+      Printer.print_std "timeout@."
 
     | Preprocess ->
-      if Options.get_answers_with_locs () then
-        eprintf "; %aPreprocessing (%2.4f) (%d steps)@."
-          Loc.report Loc.dummy time steps
+      Printer.print_vrb ~verbose:(get_answers_with_locs ())
+        "; %aPreprocessing (%2.4f) (%d steps)"
+        Loc.report Loc.dummy time steps
 
 
   let print_status_valid_mode status steps =
@@ -295,40 +297,48 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     match status with
     | Unsat (d, dep) ->
       let loc = d.st_loc in
-      printf "%aValid (%2.4f) (%d steps)%s@."
+      Printer.print_std
+        "%aValid (%2.4f) (%d steps)%s@."
         report_loc loc time steps (goal_name d);
       if get_unsat_core() &&
          not (get_debug_unsat_core()) &&
          not (get_save_used_context())
       then
-        printf "unsat-core:\n%a@." (Ex.print_unsat_core ~tab:true) dep
+        Printer.print_fmt (Options.get_fmt_usc ())
+          "unsat-core:@,%a@."
+          (Ex.print_unsat_core ~tab:true) dep
 
     | Inconsistent d ->
       let loc = d.st_loc in
-      if Options.get_verbose () then
-        eprintf "%aInconsistent assumption@." report_loc loc
+      Printer.print_vrb ~verbose:(get_verbose ())
+        "%aInconsistent assumption@."
+        report_loc loc
 
     | Sat (d, _) ->
       let loc = d.st_loc in
-      printf "%aInvalid (%2.4f) (%d steps)%s@."
+      Printer.print_std
+        "%aInvalid (%2.4f) (%d steps)%s@."
         report_loc loc time steps (goal_name d)
 
     | Unknown (d, _) ->
       let loc = d.st_loc in
-      printf "%aI don't know (%2.4f) (%d steps)%s@."
+      Printer.print_std
+        "%aI don't know (%2.4f) (%d steps)%s@."
         report_loc loc time steps (goal_name d)
 
     | Timeout (Some d) ->
       let loc = d.st_loc in
-      printf "%aTimeout (%2.4f) (%d steps)%s@."
+      Printer.print_std "%aTimeout (%2.4f) (%d steps)%s@."
         report_loc loc time steps (goal_name d);
 
     | Timeout None ->
-      printf "%aTimeout (%2.4f) (%d steps)@."
+      Printer.print_std
+        "%aTimeout (%2.4f) (%d steps)@."
         report_loc Loc.dummy time steps;
 
     | Preprocess ->
-      printf "%aPreprocessing (%2.4f) (%d steps)@."
+      Printer.print_std
+        "%aPreprocessing (%2.4f) (%d steps)@."
         report_loc Loc.dummy time steps
 
   let print_status status steps =
@@ -354,7 +364,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       if Sys.file_exists uc_f then init_with_replay_used None uc_f
       else
         begin
-          fprintf fmt
+          Printer.print_wrn
             "File %s not found! Option -replay-used will be ignored@." uc_f;
           None
         end

@@ -146,11 +146,12 @@ let clean_trigger ~in_theory name trig =
       if sz_l = sz_s then trig
       else
         let trig' = ME.fold (fun t _ acc -> t :: acc) res [] in
-        if get_verbose () then begin
-          fprintf fmt "@.AXIOM: %s@." name;
-          fprintf fmt "from multi-trig of sz %d : %a@." sz_l E.print_list trig;
-          fprintf fmt "to   multi-trig of sz %d : %a@." sz_s E.print_list trig';
-        end;
+        Printer.print_vrb ~verbose:(get_verbose ())
+          "AXIOM: %s@, \
+           from multi-trig of sz %d : %a@, \
+           to   multi-trig of sz %d : %a@."
+          name
+          sz_l E.print_list trig sz_s E.print_list trig';
         trig'
 
 let rec make_term up_qv t =

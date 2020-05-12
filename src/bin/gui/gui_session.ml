@@ -42,15 +42,18 @@ let resulting_ids = Hashtbl.create 17
 
 let save actions ac =
   (* (match ac with *)
-  (*   | Prune id -> Format.eprintf "Prune %d@." id *)
-  (*   | IncorrectPrune id -> Format.eprintf "Incorrectprune %d@." id *)
-  (*   | Unprune id -> Format.eprintf "Unrune %d@." id *)
+  (*   | Prune id -> *)
+  (*       Printer.print_dbg "Prune %d" id *)
+  (*   | IncorrectPrune id -> *)
+  (*       Printer.print_dbg "Incorrectprune %d" id *)
+  (*   | Unprune id -> *)
+  (*       Printer.print_dbg "Unrune %d" id *)
   (*   | AddInstance (id, name, vars) -> *)
-  (*     Format.eprintf "AddInstance %d %s@." id name *)
+  (*       Printer.print_dbg "AddInstance %d %s" id name *)
   (*   | AddTrigger (id, inst_buf, trs) -> *)
-  (*     Format.eprintf "AddTriger %d %b %s@." id inst_buf trs *)
+  (*       Printer.print_dbg "AddTriger %d %b %s" id inst_buf trs *)
   (*   | LimitLemma (id, name, nb) -> *)
-  (*     Format.eprintf "LimitLemma %d-%s %d@." id name nb *)
+  (*       Printer.print_dbg "LimitLemma %d-%s %d" id name nb *)
   (* ); *)
   Stack.push ac actions
 

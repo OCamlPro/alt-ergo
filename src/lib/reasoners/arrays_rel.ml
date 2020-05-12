@@ -105,13 +105,18 @@ let empty _ =
 
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
+  open Printer
 
-  let assume fmt la =
-    if get_debug_arrays () && la != [] then begin
-      fprintf fmt "[Arrays.Rel] We assume@.";
-      L.iter (fun (a,_,_,_) -> fprintf fmt "  > %a@."
-                 LR.print (LR.make a)) la;
-    end
+  let assume la =
+    let print fmt (a,_,_,_) =
+      fprintf fmt "> %a@,"
+        LR.print (LR.make a)
+    in
+    Printer.print_dbg ~debug:(get_debug_arrays () && la != [])
+      ~module_name:"Arrays_rel"
+      ~function_name:"assume"
+      "@[<v 2>We assume: @,%a" (pp_list_no_space print) la;
+    flush_dbg ~debug:(get_debug_arrays () && la != []) ()
 
   (* unused --
      let print_gets fmt = G.iter (fun t -> fprintf fmt "%a@." E.print t.g)
@@ -133,21 +138,31 @@ module Debug = struct
      end
   *)
 
-  let new_equalities fmt st =
-    if get_debug_arrays () then
-      begin
-        fprintf fmt "[Arrays] %d implied equalities@."
-          (Conseq.cardinal st);
-        Conseq.iter (fun (a,ex) -> fprintf fmt "  %a : %a@."
-                        E.print a Ex.print ex) st
-      end
+  let new_equalities st =
+    Printer.print_dbg ~debug:(get_debug_arrays ())
+      ~module_name:"Arrays_rel"
+      ~function_name:"new_equalities"
+      "@[<v 2>%d implied equalities@."
+      (Conseq.cardinal st);
+
+    Conseq.iter (fun (a,ex) ->
+        Printer.print_dbg ~debug:(get_debug_arrays ())
+          ~header:false
+          "%a : %a" E.print a Ex.print ex
+      ) st;
+    flush_dbg ~debug:(get_debug_arrays ()) ()
 
   let case_split a =
-    if get_debug_arrays () then
-      fprintf fmt "[Arrays.case-split] %a@." LR.print a
+    print_dbg ~debug:(get_debug_arrays ())
+      ~module_name:"Arrays_rel"
+      ~function_name:"case_split"
+      "%a@." LR.print a
 
   let case_split_none () =
-    if get_debug_arrays () then fprintf fmt "[Arrays.case-split] Nothing@."
+    print_dbg ~debug:(get_debug_arrays ())
+      ~module_name:"Arrays_rel"
+      ~function_name:"case_split_none"
+      "Nothing@."
 
 end
 (*BISECT-IGNORE-END*)
@@ -407,12 +422,12 @@ let assume env uf la =
   let env = count_splits env la in
 
   (* instantiation des axiomes des tableaux *)
-  Debug.assume fmt la;
+  Debug.assume la;
   let env = new_terms env la in
   let env, atoms = new_splits are_eq are_neq env Conseq.empty class_of in
   let env, atoms = new_equalities env atoms la class_of in
   (*Debug.env fmt env;*)
-  Debug.new_equalities fmt atoms;
+  Debug.new_equalities atoms;
   let l =
     Conseq.fold (fun (a,ex) l ->
         ((Sig_rel.LTerm a, ex, Th_util.Other)::l)) atoms []

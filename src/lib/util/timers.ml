@@ -26,8 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-
 type ty_module =
   | M_None
   | M_Typing
@@ -191,16 +189,17 @@ let accumulate env cur m f =
 let accumulate_cumulative_mode name env m f cur =
   if Options.get_cumulative_time_profiling() then
     begin
-      if Options.get_debug() then
-        eprintf "@.%s time of %s , %s@."
-          name (string_of_ty_module m) (string_of_ty_function f);
+      Printer.print_dbg ~debug:(Options.get_debug ())
+        "@[<v 2>%s time of %s , %s@,"
+        name (string_of_ty_module m) (string_of_ty_function f);
       List.iter
         (fun (m, f, _) ->
-           if Options.get_debug() then
-             eprintf "  also update time of %s , %s@."
-               (string_of_ty_module m) (string_of_ty_function f);
+           Printer.print_dbg ~header:false ~debug:(Options.get_debug ())
+             "also update time of %s , %s@,"
+             (string_of_ty_module m) (string_of_ty_function f);
            accumulate env cur m f
-        )env.stack
+        )env.stack;
+      Printer.flush_dbg ~debug:(Options.get_debug ()) ()
     end
 
 (** save the current timer and start the timer m x f **)

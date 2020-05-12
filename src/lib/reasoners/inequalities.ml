@@ -198,6 +198,7 @@ module Container : Container_SIG = struct
     end
 
     module Debug = struct
+      open Printer
 
       let list_of_ineqs fmt =
         List.iter (fprintf fmt "%a  " print_inequation)
@@ -206,19 +207,18 @@ module Container : Container_SIG = struct
         MINEQS.iter (fun _ (i , _) -> fprintf fmt "%a  " print_inequation i)
 
       let cross x vars cpos cneg others =
-        if Options.get_debug_fm () then begin
-          fprintf Options.fmt "[fm] We cross on %a (%d vars remaining)@."
-            X.print x (MX.cardinal vars);
-          fprintf Options.fmt "with:@. cpos = %a@. cneg = %a@. others = %a@."
-            list_of_ineqs cpos list_of_ineqs cneg map_of_ineqs others
-        end
+        print_dbg ~debug:(get_debug_fm ())
+          ~module_name:"Inequalities" ~function_name:"cross"
+          "We cross on %a (%d vars remaining)@,\
+           with:@. cpos = %a@. cneg = %a@. others = %a@."
+          X.print x (MX.cardinal vars)
+          list_of_ineqs cpos list_of_ineqs cneg map_of_ineqs others
 
       let cross_result x ninqs =
-        if Options.get_debug_fm () then
-          fprintf Options.fmt
-            "result of eliminating %a: at most %d new ineqs (not printed)@."
-            X.print x ninqs
-
+        print_dbg ~debug:(get_debug_fm ())
+          ~module_name:"Inequalities" ~function_name:"cross_result"
+          "result of eliminating %a: at most %d new ineqs (not printed)@."
+          X.print x ninqs
     end
 
     let mult_list c dep =
@@ -366,11 +366,11 @@ let set_current mdl = current := mdl
 let load_current_inequalities_reasoner () =
   match Options.get_inequalities_plugin () with
   | "" ->
-    if Options.get_debug_fm () then
-      eprintf "[Dynlink] Using the 'FM module' for arithmetic inequalities@."
+    Printer.print_dbg ~debug:(get_debug_fm ())
+      "[Dynlink] Using the 'FM module' for arithmetic inequalities@."
 
   | path ->
-    MyDynlink.load err_formatter (Options.get_debug_fm ()) path
+    MyDynlink.load (Options.get_debug_fm ()) path
       "'inequalities' reasoner (FM module)"
 
 let get_current () =

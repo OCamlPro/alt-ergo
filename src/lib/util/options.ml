@@ -26,7 +26,38 @@
 (*                                                                            *)
 (******************************************************************************)
 
-let fmt = Format.err_formatter
+(* Global formatter declarations and setters, can't be directly used *)
+let std_fmt = ref Format.std_formatter
+let err_fmt = ref Format.err_formatter
+
+let set_std_fmt f = std_fmt := f
+let set_err_fmt f = err_fmt := f
+
+(* Formatter declarations, getters and setters *)
+let fmt_std = std_fmt
+let fmt_err = err_fmt
+let fmt_wrn = err_fmt
+let fmt_vrb = err_fmt
+let fmt_dbg = err_fmt
+let fmt_mdl = std_fmt
+let fmt_usc = std_fmt
+
+let get_fmt_std () = !fmt_std
+let get_fmt_err () = !fmt_err
+let get_fmt_wrn () = !fmt_wrn
+let get_fmt_vrb () = !fmt_vrb
+let get_fmt_dbg () = !fmt_dbg
+let get_fmt_mdl () = !fmt_mdl
+let get_fmt_usc () = !fmt_usc
+
+let set_fmt_std f = fmt_std := f
+let set_fmt_err f = fmt_err := f
+let set_fmt_wrn f = fmt_wrn := f
+let set_fmt_vrb f = fmt_vrb := f
+let set_fmt_dbg f = fmt_dbg := f
+let set_fmt_mdl f = fmt_mdl := f
+let set_fmt_usc f = fmt_usc := f
+
 
 (* Declaration of all the options as refs with default values *)
 
@@ -68,7 +99,6 @@ let debug_interpretation = ref false
 let debug_ite = ref false
 let debug_matching = ref 0
 let debug_sat = ref false
-let debug_sat_simple = ref false
 let debug_split = ref false
 let debug_sum = ref false
 let debug_triggers = ref false
@@ -97,7 +127,6 @@ let set_debug_interpretation b = debug_interpretation := b
 let set_debug_ite b = debug_ite := b
 let set_debug_matching i = debug_matching := i
 let set_debug_sat b = debug_sat := b
-let set_debug_sat_simple b = debug_sat_simple := b
 let set_debug_split b = debug_split := b
 let set_debug_sum b = debug_sum := b
 let set_debug_triggers b = debug_triggers := b
@@ -126,7 +155,6 @@ let get_debug_interpretation () = !debug_interpretation
 let get_debug_ite () = !debug_ite
 let get_debug_matching () = !debug_matching
 let get_debug_sat () = !debug_sat
-let get_debug_sat_simple () = !debug_sat_simple
 let get_debug_split () = !debug_split
 let get_debug_sum () = !debug_sum
 let get_debug_triggers () = !debug_triggers
@@ -175,7 +203,7 @@ let get_save_used_context () = !save_used_context
 
 (** Execution options *)
 
-let answers_with_loc = ref false
+let answers_with_loc = ref true
 let frontend = ref "legacy"
 let input_format = ref Native
 let infer_input_format = ref true
@@ -460,7 +488,7 @@ let exec_thread_yield () = !thread_yield ()
 let exec_timeout () = !timeout ()
 
 let tool_req n msg =
-  if get_rule () = n then Format.fprintf fmt "[rule] %s@." msg
+  if get_rule () = n then Format.fprintf (get_fmt_dbg ()) "[rule] %s@." msg
 
 (** Simple Timer module **)
 module Time = struct
@@ -502,21 +530,25 @@ let set_is_gui b =
   match !is_gui with
   | None -> is_gui := Some b
   | Some _ ->
-    Format.eprintf "Error in Options.set_is_gui: is_gui is already set!@.";
+    Format.fprintf Format.err_formatter
+      "[Error] Error in Options.set_is_gui: is_gui is already set!@.";
     assert false
 
 let get_is_gui () =
   match !is_gui with
   | Some b -> b
   | None ->
-    Format.eprintf "Error in Options.get_is_gui: is_gui is not set!@.";
+    Format.fprintf Format.err_formatter
+      "[Error] Error in Options.get_is_gui: is_gui is not set!@.";
     assert false
 
+let set_file_for_js filename =
+  set_file filename;
+  set_js_mode true
+
+(* Printer **)
 let print_output_format fmt msg =
   match get_output_format () with
   | Smtlib2 -> Format.fprintf fmt "; %s" msg;
   | Native | Why3 | Unknown _ -> Format.fprintf fmt "%s" msg
 
-let set_file_for_js filename =
-  set_file filename;
-  set_js_mode true
