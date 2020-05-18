@@ -56,7 +56,7 @@ See [Alt-Ergo @ OCamlPro] or contact us at [alt-ergo@ocamlpro.com] for more deta
 [documentation for developers]: https://ocamlpro.github.io/alt-ergo/dev/
 [installing informations]: ./INSTALL.md
 [https://alt-ergo.ocamlpro.com]: https://alt-ergo.ocamlpro.com
-[latest]: https://alt-ergo.ocamlpro.com/download_manager.php?target=alt-ergo-2.3.1.tar.gz
+[latest]: https://alt-ergo.ocamlpro.com/http/alt-ergo-2.3.2/alt-ergo-2.3.2.tar.gz
 [LICENSE]: ./LICENSE.md
 [LRI]: https://www.lri.fr
 [OCamlPro]: https://www.ocamlpro.com
