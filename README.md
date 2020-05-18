@@ -64,6 +64,6 @@ See [Alt-Ergo @ OCamlPro] or contact us at [alt-ergo@ocamlpro.com] for more deta
 [opam]: https://opam.ocaml.org
 [releases' page]: https://github.com/OCamlPro/alt-ergo/releases/tag/2.3.1
 [Satisfiability Modulo Theories]: https://en.wikipedia.org/wiki/Satisfiability_modulo_theories
-[try Alt-Ergo]: https://alt-ergo.ocamlpro.com/try.php
+[try Alt-Ergo]: https://alt-ergo.ocamlpro.com/try.html
 [USAGE]: ./USAGE.md
 [Why3]: http://why3.lri.fr/
