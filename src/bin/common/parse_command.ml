@@ -1,3 +1,14 @@
+(******************************************************************************)
+(*                                                                            *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                     *)
+(*     Copyright (C) 2018-2020 --- OCamlPro SAS                               *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the license indicated      *)
+(*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
+(*     present, please contact us to clarify licensing.                       *)
+(*                                                                            *)
+(******************************************************************************)
+
 open AltErgoLib
 open Options
 open Cmdliner
@@ -116,8 +127,8 @@ let mk_dbg_opt_spl2 debug_explanations debug_fm debug_fpa debug_gc
   `Ok()
 
 let mk_dbg_opt_spl3 debug_split debug_sum debug_triggers debug_types
-    debug_typing debug_uf debug_unsat_core debug_use debug_warnings rule
-  =
+    debug_typing debug_uf debug_unsat_core debug_use debug_warnings distributed
+    rule =
   let rule = value_of_rule rule in
   set_debug_split debug_split;
   set_debug_sum debug_sum;
@@ -128,6 +139,7 @@ let mk_dbg_opt_spl3 debug_split debug_sum debug_triggers debug_types
   set_debug_unsat_core debug_unsat_core;
   set_debug_use debug_use;
   set_debug_warnings debug_warnings;
+  set_debug_distrib distributed;
   set_rule rule;
   `Ok()
 
@@ -334,6 +346,14 @@ let mk_theory_opt disable_adts inequalities_plugin no_ac no_contracongru
   set_no_contracongru no_contracongru;
   `Ok()
 
+let mk_distrib_opt threads_number options_file
+    global_timelimit
+  =
+  set_distributed_threads_number threads_number;
+  set_distributed_options_file options_file;
+  set_distributed_time_limit global_timelimit;
+  `Ok()
+
 let halt_opt version_info where =
   let handle_where w =
     let res = match w with
@@ -365,7 +385,7 @@ let halt_opt version_info where =
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
 
-let mk_opts file () () () () () () halt_opt (gc) () () () () () () ()
+let mk_opts file () () () () () () halt_opt (gc) () () () () () () () ()
   =
 
   if halt_opt then `Ok false
@@ -404,6 +424,7 @@ let s_quantifiers = "QUANTIFIERS OPTIONS"
 let s_sat = "SAT OPTIONS"
 let s_term = "TERM OPTIONS"
 let s_theory = "THEORY OPTIONS"
+let s_distrib = "DISTRIBUTED OPTIONS"
 
 (* Parsers *)
 
@@ -556,6 +577,10 @@ let parse_dbg_opt_spl3 =
     let doc = "Set the debugging flag of warnings." in
     Arg.(value & flag & info ["dwarnings"] ~docs ~doc) in
 
+  let debug_distributed =
+    let doc = "Set the debugging flag of distributed." in
+    Arg.(value & flag & info ["ddistributed"] ~docs ~doc) in
+
   let rule =
     let doc =
       "$(docv) = parsing|typing|sat|cc|arith, output rule used on stderr." in
@@ -573,6 +598,7 @@ let parse_dbg_opt_spl3 =
              debug_unsat_core $
              debug_use $
              debug_warnings $
+             debug_distributed $
              rule
             ))
 
@@ -1103,6 +1129,36 @@ let parse_theory_opt =
             )
        )
 
+let parse_distrib_opt =
+
+  let docs = s_distrib in
+
+  let threads_number =
+    let doc =
+      "Maximum number of threads used \
+       (must include an options file)." in
+    let docv = "VAL" in
+    Arg.(value & opt int (get_distributed_threads_number ()) &
+         info ["threads-number"] ~docv ~docs ~doc) in
+
+  let options_file =
+    let doc =
+      "Give a list of configuration (options and timelimit) for each instance \
+       of Alt-Ergo that will be run \
+       (use default.conf if missing)" in
+    Arg.(value & opt string "default.conf" & info ["options-file"] ~docs ~doc) in
+
+  let global_timelimit =
+    let doc =
+      "Global time limit." in
+    Arg.(value & opt int (get_distributed_time_limit ())
+         & info ["global-timelimit"] ~docs ~doc) in
+
+  Term.(ret (const mk_distrib_opt $
+             threads_number $ options_file $ global_timelimit
+            ))
+
+
 let main =
 
   let file =
@@ -1167,7 +1223,7 @@ let main =
              parse_execution_opt $ parse_halt_opt $ parse_internal_opt $
              parse_limit_opt $ parse_output_opt $ parse_profiling_opt $
              parse_quantifiers_opt $ parse_sat_opt $ parse_term_opt $
-             parse_theory_opt
+             parse_theory_opt $ parse_distrib_opt
             )),
   Term.info "alt-ergo" ~version:Version._version ~doc ~exits ~man
 

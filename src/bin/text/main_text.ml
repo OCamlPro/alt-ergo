@@ -36,7 +36,7 @@ include Main_input
 
 (* done here to initialize options,
    before the instantiations of functors *)
-let () =
+let parse_command () =
   try Parse_command.parse_cmdline_arguments ()
   with Parse_command.Exit_parse_command i -> exit i
 
@@ -53,7 +53,7 @@ module FE = Frontend.Make (SAT)
 
 let timers = Timers.empty ()
 
-let () =
+let init_sigint () =
   (* what to do with Ctrl+C ? *)
   Sys.set_signal Sys.sigint(*-6*)
     (Sys.Signal_handle (fun _ ->
@@ -66,7 +66,7 @@ let () =
        )
     )
 
-let () =
+let init_sigterm_quit () =
   (* put the test here because Windows does not handle Sys.Signal_handle
      correctly *)
   if Options.get_profiling() then
@@ -81,7 +81,7 @@ let () =
            )
       )[ Sys.sigterm (*-11*); Sys.sigquit (*-9*)]
 
-let () =
+let init_sigprof () =
   (* put the test here because Windows does not handle Sys.Signal_handle
      correctly *)
   if Options.get_profiling() then
@@ -92,12 +92,18 @@ let () =
          )
       )
 
-let () =
+let init_sigalarm () =
   if not (get_model ()) then
     try
       Sys.set_signal Sys.sigvtalrm
         (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
     with Invalid_argument _ -> ()
+
+let init_signals () =
+  init_sigint ();
+  init_sigterm_quit ();
+  init_sigprof ();
+  init_sigalarm ()
 
 let init_profiling () =
   if Options.get_profiling () then begin
@@ -161,7 +167,9 @@ let typed_loop all_context state td =
       { state with ctx = cnf; }
   end
 
-let () =
+let main () =
+  parse_command ();
+  init_signals ();
   let (module I : Input.S) = Input.find (Options.get_frontend ()) in
   let parsed =
     try
@@ -209,7 +217,7 @@ let () =
     global = [];
   } in
   let _ : _ state = Seq.fold_left typing_loop state parsed in
-  Options.Time.unset_timeout ~is_gui:false;
+  Options.Time.unset_timeout ~is_gui:false
 
 (*
   match d with

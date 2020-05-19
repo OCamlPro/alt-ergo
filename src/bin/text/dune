@@ -4,12 +4,12 @@
 )
 
 (executable
-  (name         Main_text)
+  (name         Main_distributed)
   (public_name  alt-ergo)
   (package      alt-ergo)
   (libraries    alt_ergo_common alt-ergo-parsers stdlib-shims)
   (link_flags   (:include flags.dune))
-  (modules      Main_input Main_text)
+  (modules      Main_input Main_text Main_distributed)
 )
 
 ; Rule to generate a man page for alt-ergo

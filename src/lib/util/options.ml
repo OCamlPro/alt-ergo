@@ -79,6 +79,7 @@ let debug_unsat_core = ref false
 let debug_use = ref false
 let debug_warnings = ref false
 let rule = ref (-1)
+let debug_distrib = ref false
 
 let set_debug b = debug := b
 let set_debug_ac b = debug_ac := b
@@ -108,6 +109,7 @@ let set_debug_unsat_core b = debug_unsat_core := b
 let set_debug_use b = debug_use := b
 let set_debug_warnings b = debug_warnings := b
 let set_rule b = rule := b
+let set_debug_distrib b = debug_distrib := b
 
 let get_debug () = !debug
 let get_debug_ac () = !debug_ac
@@ -137,6 +139,7 @@ let get_debug_unsat_core () = !debug_unsat_core
 let get_debug_use () = !debug_use
 let get_debug_warnings () = !debug_warnings
 let get_rule () = !rule
+let get_debug_distrib () = !debug_distrib
 
 (** Case split options *)
 
@@ -424,6 +427,20 @@ let get_no_theory () = !no_theory
 let get_restricted () = !restricted
 let get_tighten_vars () = !tighten_vars
 let get_use_fpa () = !use_fpa
+
+(** Options for the distributed version *)
+
+let distributed_threads_number = ref 0
+let distributed_options_file = ref ""
+let distributed_time_limit = ref 0
+
+let set_distributed_threads_number n = distributed_threads_number := n
+let set_distributed_options_file s = distributed_options_file := s
+let set_distributed_time_limit n = distributed_time_limit := n
+
+let get_distributed_threads_number () = !distributed_threads_number
+let get_distributed_options_file () = !distributed_options_file
+let get_distributed_time_limit () = !distributed_time_limit
 
 (** Other options *)
 

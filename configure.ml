@@ -36,8 +36,8 @@ let () =
     match !pkg with
     | "" -> pkg := s
     | _ ->
-        Format.eprintf "Anonymous argument ignored: '%s'@." s;
-        exit 1
+      Format.eprintf "Anonymous argument ignored: '%s'@." s;
+      exit 1
   in
   let usage = "./configure [options]" in
   Arg.parse args anon_fun usage
@@ -46,8 +46,8 @@ let () =
 let update name r f =
   match !r with
   | "" ->
-      r := f ();
-      Format.printf "Using default value for '%s' : %s@." name !r
+    r := f ();
+    Format.printf "Using default value for '%s' : %s@." name !r
   | s -> Format.printf "Using provided value for '%s' : %s@." name s
 
 (* small wrapper around opam var *)

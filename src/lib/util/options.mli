@@ -148,6 +148,8 @@ val set_debug_use : bool -> unit
 (** Set [debug_warnings] accessible with {!val:get_debug_warnings} *)
 val set_debug_warnings : bool -> unit
 
+val set_debug_distrib : bool -> unit
+
 (** Set [profiling] accessible with {!val:get_profiling} *)
 val set_profiling : bool -> float -> unit
 
@@ -499,6 +501,8 @@ val get_debug_triggers : unit -> bool
 
 (** Get the debugging flag for interpretation generatation. *)
 val get_debug_interpretation : unit -> bool
+
+val get_debug_distrib : unit -> bool
 
 (** {3 Additional getters} *)
 
@@ -902,6 +906,15 @@ val get_tighten_vars : unit -> bool
 (** [true] if support for floating-point arithmetic is enabled. *)
 val get_use_fpa : unit -> bool
 (** Default to [false] *)
+
+val set_distributed_threads_number : int -> unit
+val set_distributed_options_file : string -> unit
+val set_distributed_time_limit : int -> unit
+
+val get_distributed_threads_number : unit -> int
+val get_distributed_options_file : unit -> string
+val get_distributed_time_limit : unit -> int
+
 
 (** Possible values are
     {ul {- 0 : parsing} {- 1 : typing} {- 2 : sat} {- 3 : cc} {- 4 : arith}}
