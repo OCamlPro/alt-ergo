@@ -1025,13 +1025,13 @@ let parse_sat_opt =
     Arg.(value & flag & info ["no-sat-learning"] ~docs ~doc) in
 
   let no_tableaux_cdcl_in_instantiation =
-    let doc = "When satML is used, this disables the use of a tableaux-like\
+    let doc = "When satML is used, this disables the use of a tableaux-like \
                method for instantiations with the CDCL solver." in
     Arg.(value & flag &
          info ["no-tableaux-cdcl-in-instantiation"] ~docs ~doc) in
 
   let no_tableaux_cdcl_in_theories =
-    let doc = "When satML is used, this disables the use of a tableaux-like\
+    let doc = "When satML is used, this disables the use of a tableaux-like \
                method for theories with the CDCL solver." in
     Arg.(value & flag & info ["no-tableaux-cdcl-in-theories"] ~docs ~doc) in
 
