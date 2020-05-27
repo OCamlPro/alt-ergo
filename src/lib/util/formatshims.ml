@@ -1,5 +1,17 @@
 (******************************************************************************)
 (*                                                                            *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                     *)
+(*     Copyright (C) 2018-2020 --- OCamlPro SAS                               *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the license indicated      *)
+(*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
+(*     present, please contact us to clarify licensing.                       *)
+(*                                                                            *)
+(*     Some parts of this file are exctracted from the                        *)
+(*     projectOcaml-containers :                                              *)
+(* https://github.com/c-cube/ocaml-containers/blob/master/src/core/mkshims.ml *)
+(*     Thanks to Simon Cruanes                                                *)
+(*                                                                            *)
 (******************************************************************************)
 
 module C = Configurator.V1
