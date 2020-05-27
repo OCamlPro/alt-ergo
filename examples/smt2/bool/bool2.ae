@@ -1,0 +1,4 @@
+logic x : bool
+logic y : bool
+goal g:
+ ("model:":x) and ("model:":y)
