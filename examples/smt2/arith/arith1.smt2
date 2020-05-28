@@ -1,5 +1,5 @@
 (set-logic ALL)
 (declare-const x Int)
-(assert (not (<= x 42)))
+(assert (<= x 42))
 (check-sat)
 (get-model)
