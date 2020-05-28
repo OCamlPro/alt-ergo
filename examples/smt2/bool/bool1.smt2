@@ -1,8 +1,15 @@
 (set-logic QF_UF)
-(set-option :produce-models true) ; enable model generation
+; (set-option :produce-models true) ; enable model generation
 (declare-const p Bool)
 (declare-const q Bool)
-(assert (!(=> (not p) q) :named ass1))
+; (declare-const t Int)
+(define-fun nq () Bool q)
+(assert (=> (not p) (not nq)))
 (check-sat)
 (get-model)
+(get-assignment)
+(assert q)
+(check-sat)
+(get-model)
+(get-assignment)
 (exit)
