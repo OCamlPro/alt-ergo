@@ -1,0 +1,2 @@
+logic x : int
+goal g : ("model:":x) < 42
