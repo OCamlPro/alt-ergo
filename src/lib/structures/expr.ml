@@ -635,7 +635,7 @@ let add_label =
   let add_aux lbl t = Labels.replace labels t lbl in
   fun lbl e ->
     match e with
-    | { f = Sy.Form _; _ } -> ()
+    | { f = Sy.Form _; _ } -> (* add_aux lbl e *) assert false
     | { f = Sy.Lit _; _ } | { ty = Ty.Tbool; _ } ->
       add_aux lbl e;
       add_aux lbl (neg e)
