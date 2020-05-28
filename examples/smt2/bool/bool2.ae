@@ -1,4 +1,4 @@
 logic x : bool
 logic y : bool
-goal g:
- ("model:":x) and ("model:":y)
+goal g2:
+ ("model:":(x and ("model:":y)))
