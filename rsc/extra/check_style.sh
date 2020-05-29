@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/sh
 
 # === Check_style ===
 #
