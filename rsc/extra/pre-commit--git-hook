@@ -3,7 +3,12 @@
 git_repo=`git rev-parse --show-toplevel`
 cd $git_repo/rsc/extra
 
-./check_style.sh
-./check_indentation.sh
+res=`./check_style.sh`
+echo $res
 
-exit $?
+if [ "$res" = "All files have correct style" ] ; then
+	./check_indentation.sh
+	exit $?
+else
+  exit 1
+fi
