@@ -134,26 +134,26 @@ else
   fi
 fi
 
-#looking for camlzip library
+#looking for zip library
 
 if test "$USEOCAMLFIND" = yes; then
-  CAMLZIPLIB=$(ocamlfind query -i-format camlzip)
+  ZIPLIB=$(ocamlfind query -i-format zip)
 fi
 
-if test -n "$CAMLZIPLIB";then
-  echo "ocamlfind found camlzip in $CAMLZIPLIB"
-  CAMLZIP=yes
+if test -n "$ZIPLIB";then
+  echo "ocamlfind found zip in $ZIPLIB"
+  ZIP=yes
 else
-  AC_CHECK_FILE($OCAMLLIB/zip/zip.cma,CAMLZIP=yes,CAMLZIP=no)
-  if test "$CAMLZIP" = no ; then
-    AC_CHECK_FILE($OCAMLLIB/zip.cma,CAMLZIP=yes,CAMLZIP=no)
-    if test "$CAMLZIP" = no ; then
-      AC_MSG_ERROR(Cannot find camlzip library.)
+  AC_CHECK_FILE($OCAMLLIB/zip/zip.cma,ZIP=yes,ZIP=no)
+  if test "$ZIP" = no ; then
+    AC_CHECK_FILE($OCAMLLIB/zip.cma,ZIP=yes,ZIP=no)
+    if test "$ZIP" = no ; then
+      AC_MSG_ERROR(Cannot find zip library.)
     else
-  	CAMLZIPLIB=""
+  	ZIPLIB=""
      fi
   else
-     CAMLZIPLIB="-I +zip"
+     ZIPLIB="-I +zip"
   fi
 fi
 
@@ -314,7 +314,7 @@ AC_SUBST(OCAMLLIB)
 #AC_SUBST(OCAMLGRAPHLIB)
 AC_SUBST(ZARITHLIB)
 AC_SUBST(NUMLIB)
-AC_SUBST(CAMLZIPLIB)
+AC_SUBST(ZIPLIB)
 AC_SUBST(OCAMLWEB)
 AC_SUBST(LABLGTK2LIB)
 AC_SUBST(OCPLIBSIMPLEXLIB)
