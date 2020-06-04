@@ -187,12 +187,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
     let print_nb_related env =
       print_vrb ~verbose:(get_verbose ())
-        "----------------------------------------------------@, \
-         nb_related_to_both = %d@, \
-         nb_related_to_goal = %d@, \
-         nb_related_to_hypo = %d@, \
-         nb_unrelated       = %d@, \
-         ----------------------------------------------------@."
+        "@[<v 0>----------------------------------------------------@,\
+         nb_related_to_both = %d@,\
+         nb_related_to_goal = %d@,\
+         nb_related_to_hypo = %d@,\
+         nb_unrelated       = %d@,\
+         ----------------------------------------------------@]@."
         env.nb_related_to_both
         env.nb_related_to_goal
         env.nb_related_to_hypo
