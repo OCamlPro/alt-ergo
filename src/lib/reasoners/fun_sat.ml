@@ -480,8 +480,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let print_decisions_in_the_sats msg env =
     if Options.get_tableaux_cdcl () && get_verbose() then begin
       Printer.print_vrb
-        "-----------------------------------------------------@, \
-         >> %s@, \
+        "-----------------------------------------------------@,\
+         >> %s@,\
          decisions in DfsSAT are:@,"
         msg;
       let l = ME.bindings env.decisions in
