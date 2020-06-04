@@ -294,7 +294,7 @@ module Shostak(X : ALIEN) = struct
 
     let print_sliced_sys l =
       let print fmt (a,b) =
-        fprintf fmt " %a == %a\n" print a print b
+        fprintf fmt " %a == %a@," print a print b
       in
       Printer.print_dbg ~debug:(Options.get_debug_bitv ())
         ~module_name:"Bitv"
