@@ -514,8 +514,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              with Not_found ->
                ok := false;
                Printer.print_err
-                 "Aie! decision %a is only in satML !!@, \
-                  nb decisions in DfsSAT: %d \
+                 "Aie! decision %a is only in satML !!@,\
+                  nb decisions in DfsSAT: %d\
                   nb decisions in satML:  %d@."
                  E.print d
                  (ME.cardinal env.decisions)
