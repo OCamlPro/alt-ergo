@@ -102,7 +102,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let matching tr =
       print_dbg ~debug:(get_debug_matching() >= 3)
         ~module_name:"Matching" ~function_name:"matching"
-        "(multi-)trigger: %a@, \
+        "(multi-)trigger: %a@,\
          ========================================================@."
         E.print_list tr.E.content
 
