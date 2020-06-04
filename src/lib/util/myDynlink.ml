@@ -58,7 +58,7 @@ let load verbose p msg =
     | Error m2 ->
       if not (verbose) then begin
         Printer.print_err
-          "@,[Dynlink] Loading the %s in plugin %S failed!@, \
+          "@,[Dynlink] Loading the %s in plugin %S failed!@,\
            >> Failure message: %s@."
           msg p
           (error_message m1);
