@@ -282,8 +282,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       print_dbg
         ~debug:(Options.get_debug_fpa() > 1 || Options.get_debug_sat())
         ~module_name:"Satml_frontend" ~function_name:"theory_instance"
-        "@[<v 2>%s >@, \
-         hypotheses: %a@, \
+        "@[<v 2>%s >@,\
+         hypotheses: %a@,\
          conclusion: %a@]@."
         (E.name_of_lemma_opt gf.E.lem)
         print_f_conj hyp
