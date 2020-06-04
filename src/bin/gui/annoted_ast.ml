@@ -2369,7 +2369,7 @@ let findbyid_atyped_decl  stop_decl id (td, tyenv) =
   else if stop_decl then raise (Foundannot (AD (td, tyenv)))
   else match td.c with
     | ATheory (_, _, _, _) ->
-      Printer.print_err "11 !";
+      Printer.print_err "11!";
       assert false
     | ARewriting (_,_, _)
     | ALogic _ | ATypeDecl _  -> ()
