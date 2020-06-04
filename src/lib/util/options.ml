@@ -538,7 +538,7 @@ let get_is_gui () =
   match !is_gui with
   | Some b -> b
   | None ->
-    Format.fprintf Format.err_formatter
+    Format.fprintf (get_fmt_err ())
       "[Error] Error in Options.get_is_gui: is_gui is not set!@.";
     assert false
 
