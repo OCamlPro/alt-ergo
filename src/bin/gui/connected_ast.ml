@@ -225,7 +225,7 @@ let tag_callback t env sbuf ~origin:_y z i =
         begin
           let tyt = match find t sbuf env.ast with
             | Some (AT at) ->
-              asprintf ": %a" Ty.print at.c.at_ty
+              asprintf ": %a@." Ty.print at.c.at_ty
             | _ -> "" in
           env.st_ctx#pop ();
           ignore(env.st_ctx#push tyt);
