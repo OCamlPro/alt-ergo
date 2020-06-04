@@ -148,13 +148,13 @@ module Main : S = struct
       in
       print_dbg ~debug:(get_debug_cc ())
         ~module_name:"Ccx" ~function_name:"facts"
-        "I am in %s with the following facts@,\
+        "@[<v 0>I am in %s with the following facts@,\
          ---- Begin Facts -----------------------------------@,\
          Equalities:@,%a@,\
          Disequalities:@,%a@,\
          Inequalities:@,%a@,\
          Touched:@,%a@,\
-         ---- End   Facts -----------------------------------@."
+         ---- End   Facts -----------------------------------@]@."
         msg aux f.equas aux f.diseqs aux f.ineqs aux2 f.touched
 
     let cc r1 r2 =
