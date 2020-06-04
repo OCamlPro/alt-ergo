@@ -485,7 +485,7 @@ let make_instance (buffer:sbuffer) vars entries afc goal_form tyenv =
     Printer.print_dbg "@,";
     List.iter (fun (v,e) ->
         Printer.print_dbg ~header:false
-          "%a -> %s@." Symbols.print_clean (fst v) e)
+          "%a -> %s@," Symbols.print_clean (fst v) e)
       (List.combine vars (List.rev entries));
   end;
   let aform, _, goal_used =
