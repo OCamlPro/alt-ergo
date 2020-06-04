@@ -629,7 +629,7 @@ struct
               in
               Printer.print_dbg ~debug:(get_debug_interpretation())
                 ~module_name:"Shostak" ~function_name:"choose_adequate_model"
-                "@[<v 2>What to choose for term %a with rep %a ?? \
+                "@[<v 2>What to choose for term %a with rep %a?\
                  %a@]@,"
                 Expr.print t
                 print rep
