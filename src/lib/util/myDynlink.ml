@@ -48,7 +48,7 @@ let load verbose p msg =
     end;
     let pp = Format.sprintf "%s/%s" Config.pluginsdir p in
     Printer.print_vrb ~verbose:verbose
-      "[Dynlink] Loading the %s in %S ... with prefix %S .."
+      "[Dynlink] Loading the %s in %S... with prefix %S..."
       msg p Config.pluginsdir;
     try
       loadfile pp;
