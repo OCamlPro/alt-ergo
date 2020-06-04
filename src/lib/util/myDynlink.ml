@@ -53,7 +53,7 @@ let load verbose p msg =
     try
       loadfile pp;
       Printer.print_vrb ~verbose:verbose
-        "Success !@."
+        "Success!@."
     with
     | Error m2 ->
       if not (verbose) then begin
