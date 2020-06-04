@@ -1005,9 +1005,9 @@ val get_fmt_vrb : unit -> Format.formatter
 val get_fmt_dbg : unit -> Format.formatter
 (** Default to [err_fmt] *)
 
-(** Value specifying the formatter use to output model *)
+(** Value specifying the formatter used to output model *)
 val get_fmt_mdl : unit -> Format.formatter
-(** Default to [std_fmt] *)
+(** Default to [Format.std_formatter] *)
 
 (** Value specifying the formatter use to output unsat core *)
 val get_fmt_usc : unit -> Format.formatter
