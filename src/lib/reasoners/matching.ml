@@ -127,7 +127,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let match_one_pat_against { sbs; sty; _ } pat0 t =
       print_dbg ~debug:(get_debug_matching() >= 3)
         ~module_name:"Matching" ~function_name:"match_one_pat_against"
-        "match_pat: %a  against term %a@, \
+        "match_pat: %a  against term %a@,\
          with subst:  sbs= %a | sty= %a@."
         E.print pat0
         E.print t
