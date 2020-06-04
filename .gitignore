@@ -19,7 +19,7 @@ AB-Why3-plugin.cma
 AB-Why3-plugin.cmxs
 fm-simplex-plugin.cma
 fm-simplex-plugin.cmxs
-rsc/extra/ocamldot/_build
+rsc/extra/ocpchecker/ocp-checker
 
 # Generated documentation files
 rsc/extra/index.html
