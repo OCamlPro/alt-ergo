@@ -68,7 +68,7 @@ module Container : Inequalities.Container_SIG = struct
             "I read: the simplex problem is not feasible (=)@."
         | Unbound { vof; vals; _ } ->
           Printer.print_dbg
-            "I read: the simplex problem is not bounnded@.";
+            "I read: the simplex problem is not bounded@.";
           print_answer (vof,vals)
         | Max { vof; vals; _ }  ->
           Printer.print_dbg
@@ -341,4 +341,3 @@ end
 let () =
   Inequalities.set_current
     (module Container : Inequalities.Container_SIG)
-
