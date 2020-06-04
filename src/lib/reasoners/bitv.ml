@@ -304,7 +304,7 @@ module Shostak(X : ALIEN) = struct
 
     let print_c_solve_res l =
       let print fmt (a,b) =
-        fprintf fmt " %a == %a\n" print a print_S_ast b
+        fprintf fmt " %a == %a@," print a print_S_ast b
       in
       Printer.print_dbg ~debug:(Options.get_debug_bitv ())
         ~module_name:"Bitv"
