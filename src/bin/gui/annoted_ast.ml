@@ -2092,7 +2092,7 @@ let findtags sl l =
 let findtags_using r l =
   match r with
   | ATheory _ ->
-    Printer.print_err "7 !";
+    Printer.print_err "7!";
     assert false
   | AAxiom _
   | ARewriting _
