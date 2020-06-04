@@ -1058,7 +1058,7 @@ let start_gui all_used_context =
 
          let annoted_ast = annot buf1 l in
          Printer.print_dbg ~debug:(get_debug ())
-           "Computing dependencies ... ";
+           "Computing dependencies...";
          let dep = make_dep annoted_ast in
          Printer.print_dbg ~header:false ~debug:(get_debug ())
            "Done@.";
