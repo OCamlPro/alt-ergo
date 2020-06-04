@@ -530,7 +530,7 @@ let set_is_gui b =
   match !is_gui with
   | None -> is_gui := Some b
   | Some _ ->
-    Format.fprintf Format.err_formatter
+    Format.fprintf (get_fmt_err ())
       "[Error] Error in Options.set_is_gui: is_gui is already set!@.";
     assert false
 
@@ -551,4 +551,3 @@ let print_output_format fmt msg =
   match get_output_format () with
   | Smtlib2 -> Format.fprintf fmt "; %s" msg;
   | Native | Why3 | Unknown _ -> Format.fprintf fmt "%s" msg
-
