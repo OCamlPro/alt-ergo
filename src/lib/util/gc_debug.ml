@@ -36,13 +36,13 @@ let init () =
 
               Printer.print_dbg
                 ~module_name:"Gc_debug"
-                "[major collections] %d th@,\
+                "@[<v 0>[major collections] %d th@,\
                  [minor collections] %d th@,\
                  [stack used] %d words@,\
                  [size of major heap] %d words@,\
                  [max size major heap] %d words@,\
                  [major words diff] %0f Kwords@,\
-                 [minor words diff] %0f Kwords@."
+                 [minor words diff] %0f Kwords@]@."
                 e.major_collections
                 e.minor_collections
                 e.stack_size
