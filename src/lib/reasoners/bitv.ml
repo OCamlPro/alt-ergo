@@ -314,7 +314,7 @@ module Shostak(X : ALIEN) = struct
 
     let print_partition_res l =
       let print fmt (t,cte_l) =
-        fprintf fmt " %a%a \n" print t
+        fprintf fmt " %a%a@," print t
           (fun fmt ->
              List.iter (fun l' -> fprintf fmt " == %a" print_S_ast l'))
           cte_l
