@@ -997,9 +997,9 @@ val get_fmt_err : unit -> Format.formatter
 val get_fmt_wrn : unit -> Format.formatter
 (** Default to [Format.err_formatter] *)
 
-(** Value specifying the formatter use to output verbose informations *)
+(** Value specifying the formatter used to output verbose informations *)
 val get_fmt_vrb : unit -> Format.formatter
-(** Default to [err_fmt] *)
+(** Default to [Format.err_formatter] *)
 
 (** Value specifying the formatter use to output debug informations *)
 val get_fmt_dbg : unit -> Format.formatter
