@@ -251,7 +251,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let internal_axiom_def f a at =
       print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Satml_frontend" ~function_name:"internal_axiom_def"
-        "I assume an internal axiom: %a <-> %a@, \
+        "I assume an internal axiom: %a <-> %a@,\
          at of a is %a@."
         E.print a E.print f
         Atom.pr_atom at
