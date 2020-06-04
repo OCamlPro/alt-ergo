@@ -106,7 +106,7 @@ let start_stag t =
   with Not_found -> ""
 
 let stop_stag t =
-  try Printf.sprintf "\027[%sm" (to_value (close_tag (style_of_tag t)))
+  try Printf.sprintf "\x1B[%sm" (to_value (close_tag (style_of_tag t)))
   with Not_found -> ""
 
 let add_colors formatter =
