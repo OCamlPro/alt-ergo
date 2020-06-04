@@ -378,9 +378,9 @@ let halt_opt version_info where =
   let handle_version_info vi =
     if vi then (
       Printer.print_std
-        "Version          = %s@,\
+        "@[<v 0>Version          = %s@,\
          Release date     = %s@,\
-         Release commit   = %s@."
+         Release commit   = %s@]@."
         Version._version
         Version._release_date
         Version._release_commit;
