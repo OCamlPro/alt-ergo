@@ -1140,8 +1140,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             env.gamma SE.empty
         in
         Printer.print_fmt (Options.get_fmt_mdl ())
-          "--- SAT model found ---@, \
-           %a@, \
+          "--- SAT model found ---@,\
+           %a@,\
            --- / SAT model  ---@."
           print_prop_model m;
         raise (IUnsat (Ex.make_deps m, []))
