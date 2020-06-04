@@ -255,7 +255,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                  | E.Not_a_form -> assert false)
             in
             asprintf
-              "LITERAL (%s : %s) %a@, \
+              "LITERAL (%s : %s) %a@,\
                ==========================================@,"
               n s E.print a
           | E.Unit _   ->
