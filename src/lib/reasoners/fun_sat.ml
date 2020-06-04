@@ -1182,8 +1182,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | None ->
         Printer.print_fmt (Options.get_fmt_mdl ())
           "[FunSat]@, \
-           It seems that no model has been computed so for.@, \
-           You may need to change your model generation strategy@, \
+           It seems that no model has been computed so for.@,\
+           You may need to change your model generation strategy@,\
            ,or to increase your timeout.@."
       | Some env ->
         let cs_tbox = Th.get_case_split_env env.tbox in
