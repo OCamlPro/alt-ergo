@@ -989,9 +989,9 @@ val set_err_fmt : Format.formatter -> unit
 val get_fmt_std : unit -> Format.formatter
 (** Default to [Format.std_formatter] *)
 
-(** Value specifying the formatter use to output errors *)
+(** Value specifying the formatter used to output errors *)
 val get_fmt_err : unit -> Format.formatter
-(** Default to [err_fmt] *)
+(** Default to [Format.err_formatter] *)
 
 (** Value specifying the formatter use to output warnings *)
 val get_fmt_wrn : unit -> Format.formatter
