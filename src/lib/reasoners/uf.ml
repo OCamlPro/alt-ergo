@@ -200,9 +200,9 @@ module Debug = struct
   let all env =
     print_dbg ~debug:(get_debug_uf ())
       ~module_name:"Uf" ~function_name:"all"
-      "-------------------------------------------------@,\
+      "@[<v 0>-------------------------------------------------@,\
        %a%a%a%a%a\
-       -------------------------------------------------@."
+       -------------------------------------------------@]@."
       pmake env.make
       prepr env.repr
       prules env.ac_rs
