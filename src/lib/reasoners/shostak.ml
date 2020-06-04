@@ -417,11 +417,11 @@ struct
       in
       print_dbg ~debug:(get_debug_combine ())
         ~module_name:"Shostak" ~function_name:"abstraction_result"
-        "== get_debug_abstraction_result ==@, \
-         Initial equaliy:   %a = %a@, \
-         abstracted equality: %a = %a@, \
-         @[<v 2>selectors elimination result:@, \
-         %a @]@."
+        "== get_debug_abstraction_result ==@,\
+         Initial equaliy:   %a = %a@,\
+         abstracted equality: %a = %a@,\
+         @[<v 2>selectors elimination result:@,\
+         %a@]@."
         CX.print oa CX.print ob CX.print a CX.print b
         (pp_list_no_space print) acc
 
