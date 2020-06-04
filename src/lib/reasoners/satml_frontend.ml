@@ -127,7 +127,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                | E.Not_a_form -> assert false)
           in
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume a literal (%s : %s) %a@, \
+            "I assume a literal (%s : %s) %a@,\
              ================================================@."
             n s E.print a;
 
