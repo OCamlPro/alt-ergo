@@ -27,6 +27,8 @@ Alt-Ergo supports file extensions:
 
 ### Plugins
 
+See the [AB-Why3 README] file for the documentation of the AB-Why3 plugin
+
 The Fm-Simplex plugin can be used as follows:
 
         $ alt-ergo --inequalities-plugin fm-simplex-plugin.cmxs [other-options] file.<ext>
@@ -75,3 +77,5 @@ plugins in `Z:\some\path\share\alt-ergo\preludes` and
 
 [small example]: examples/lib_usage.ml
 [documentation]: https://ocamlpro.github.io/alt-ergo/dev/alt-ergo-lib/index.html
+[AB-Why3 README]: src/plugins/AB-Why3/README.md
+

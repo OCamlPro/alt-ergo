@@ -20,7 +20,7 @@ To compile the sources, you will need the following libraries :
   psmt2-frontend
 ```
 
-To compile the GUI you will also need 
+To compile the GUI you will also need
 ```
   lablgtk2
   gtksourceview2
@@ -52,31 +52,31 @@ depending on whether ocamlopt is installed or only ocamlc is detected.
 
   2. Install with `make install`
 
-  3. Uninstall with `make uninstall` 
+  3. Uninstall with `make uninstall`
 
 ### Alt-Ergo library
 
   1. Compile with `make alt-ergo-lib`
 
-  2. Install with `make install-lib` 
+  2. Install with `make install-lib`
 
 ### Alt-Ergo parsers
 
   1. Compile with `make alt-ergo-parsers`
 
-  2. Install with `make install-parsers` 
+  2. Install with `make install-parsers`
 
 ### Alt-Ergo binary
 
   1. Compile with `make alt-ergo`
 
-  2. Install with `make install-bin` 
+  2. Install with `make install-bin`
 
 ### AltGr-Ergo binary
 
   1. Compile with `make altgr-ergo`
 
-  2. Install with `make install-gui` 
+  2. Install with `make install-gui`
 
 
 
@@ -110,4 +110,4 @@ You can find more information in the [AB-Why3 README]
 This plugin has been "inlined" in Alt-Ergo sources.
 
 
-[AB-Why3 README]: plugins/AB-Why3/README.md
+[AB-Why3 README]: src/plugins/AB-Why3/README.md
