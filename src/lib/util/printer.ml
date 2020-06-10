@@ -148,7 +148,7 @@ let init_output_format () =
 let print_std s =
   fprintf (Options.get_fmt_std ()) s
 
-let print_err ?(header=true) ?(error=true) s =
+let print_err ?(header=(Options.get_output_with_headers ())) ?(error=true) s =
   if error then begin
     if header then
       fprintf (Options.get_fmt_err ())
@@ -157,7 +157,7 @@ let print_err ?(header=true) ?(error=true) s =
   end
   else ifprintf err_formatter s
 
-let print_wrn ?(header=true) ?(warning=true) s =
+let print_wrn ?(header=(Options.get_output_with_headers ())) ?(warning=true) s =
   if warning then begin
     if header then
       fprintf (Options.get_fmt_wrn ())
@@ -166,7 +166,7 @@ let print_wrn ?(header=true) ?(warning=true) s =
   end
   else ifprintf err_formatter s
 
-let print_dbg ?(header=true) ?(debug=true)
+let print_dbg ?(header=(Options.get_output_with_headers ())) ?(debug=true)
     ?(module_name="") ?(function_name="") s =
   if debug then begin
     if header then begin

@@ -287,6 +287,9 @@ val set_answers_with_loc : bool -> unit
 (** Set [output_with_colors] accessible with {!val:get_output_with_colors} *)
 val set_output_with_colors : bool -> unit
 
+(** Set [output_with_headers] accessible with {!val:get_output_with_headers} *)
+val set_output_with_headers : bool -> unit
+
 (** Set [infer_input_format] accessible with {!val:get_infer_input_format} *)
 val set_infer_input_format : 'a option -> unit
 
@@ -542,6 +545,10 @@ val get_answers_with_locs  : unit -> bool
 
 (** [true] if the outputs are printed with colors *)
 val get_output_with_colors  : unit -> bool
+(** Default to [true] *)
+
+(** [true] if the outputs are printed with headers *)
+val get_output_with_headers  : unit -> bool
 (** Default to [true] *)
 
 (** Valuget_e of the currently selected parsing and typing frontend. *)

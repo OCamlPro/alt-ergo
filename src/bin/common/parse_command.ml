@@ -184,10 +184,12 @@ let mk_context_opt replay replay_all_used_context replay_used_context
   `Ok()
 
 let mk_execution_opt frontend input_format parse_only parsers
-    preludes no_locs_in_answers no_colors_in_output type_only type_smt2
+    preludes no_locs_in_answers no_colors_in_output no_headers_in_output
+    type_only type_smt2
   =
   let answers_with_loc = not no_locs_in_answers in
   let output_with_colors = not no_colors_in_output in
+  let output_with_headers = not no_headers_in_output in
   set_infer_input_format input_format;
   let input_format = match input_format with
     | None -> Native
@@ -195,6 +197,7 @@ let mk_execution_opt frontend input_format parse_only parsers
   in
   set_answers_with_loc answers_with_loc;
   set_output_with_colors output_with_colors;
+  set_output_with_headers output_with_headers;
   set_input_format input_format;
   set_parse_only parse_only;
   set_parsers parsers;
@@ -708,8 +711,13 @@ let parse_execution_opt =
 
   let no_colors_in_output =
     let doc =
-      "Do not print output with colors and pretty printing." in
+      "Do not print output with colors." in
     Arg.(value & flag & info ["no-colors-in-output"] ~docs ~doc) in
+
+  let no_headers_in_output =
+    let doc =
+      "Do not print output with headers." in
+    Arg.(value & flag & info ["no-headers-in-output"] ~docs ~doc) in
 
   let type_only =
     let doc = "Stop after typing." in
@@ -722,7 +730,8 @@ let parse_execution_opt =
 
   Term.(ret (const mk_execution_opt $
              frontend $ input_format $ parse_only $ parsers $ preludes $
-             no_locs_in_answers $ no_colors_in_output $ type_only $ type_smt2
+             no_locs_in_answers $ no_colors_in_output $ no_headers_in_output $
+             type_only $ type_smt2
             ))
 
 let parse_halt_opt =
