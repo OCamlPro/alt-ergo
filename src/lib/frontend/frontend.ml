@@ -225,81 +225,24 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       print_status (Timeout (Some d)) (Steps.get_steps ());
       raise e
 
-  let goal_name d =
-    match d.st_decl with
-    | Query(n,_,_) -> sprintf " (goal %s)" n
-    | _ -> ""
-
-  let print_status_output_smtlib status steps =
-    let time = Time.value() in
-    match status with
-    | Unsat (d, dep) ->
-      let loc = d.st_loc in
-      Printer.print_vrb ~verbose:(get_answers_with_locs ())
-        "; %aValid (%2.4f) (%d steps)%s@."
-        Loc.report loc time steps (goal_name d);
-      Printer.print_std "unsat@.";
-      if get_unsat_core() &&
-         not (get_debug_unsat_core()) &&
-         not (get_save_used_context())
-      then
-        Printer.print_fmt (Options.get_fmt_usc ())
-          "(@,%a)@."
-          (Ex.print_unsat_core ~tab:true) dep
-
-
-    | Inconsistent _ ->
-      ()
-    (* let loc = d.st_loc in
-       if Options.get_verbose () && Options.get_answers_with_locs () then
-       Printer.print_dbg
-       "; %aInconsistent assumption@." report_loc loc *)
-
-    | Unknown (d, _) ->
-      let loc = d.st_loc in
-      Printer.print_vrb ~verbose:(get_answers_with_locs ())
-        "; %aI don't know (%2.4f) (%d steps)%s@."
-        Loc.report loc time steps (goal_name d);
-      Printer.print_std "unknown@."
-
-    | Sat (d, _) ->
-      let loc = d.st_loc in
-      Printer.print_vrb ~verbose:(get_answers_with_locs ())
-        "; %aInvalid (%2.4f) (%d steps)%s@."
-        Loc.report loc time steps (goal_name d);
-      Printer.print_std "sat@."
-
-    | Timeout (Some d) ->
-      let loc = d.st_loc in
-      Printer.print_vrb ~verbose:(get_answers_with_locs ())
-        "; %aTimeout (%2.4f) (%d steps)%s@."
-        Loc.report loc time steps (goal_name d);
-      Printer.print_std "timeout@."
-
-    | Timeout None ->
-      Printer.print_vrb ~verbose:(get_answers_with_locs ())
-        "; %aTimeout (%2.4f) (%d steps)@."
-        Loc.report Loc.dummy time steps;
-      Printer.print_std "timeout@."
-
-    | Preprocess ->
-      Printer.print_vrb ~verbose:(get_answers_with_locs ())
-        "; %aPreprocessing (%2.4f) (%d steps)"
-        Loc.report Loc.dummy time steps
-
-
-  let print_status_valid_mode status steps =
-    let time = Time.value() in
-    let report_loc fmt loc =
-      if get_js_mode () then fprintf fmt "# [answer] "
-      else if Options.get_answers_with_locs () then Loc.report fmt loc
+  let print_status status steps =
+    let validity_mode =
+      match Options.get_output_format () with
+      | Smtlib2 -> false
+      | Native | Why3 | Unknown _ -> true
     in
+    let get_goal_name d =
+      match d.st_decl with
+      | Query(g,_,_) -> Some g
+      | _ -> None
+    in
+    let time = Time.value() in
+
     match status with
     | Unsat (d, dep) ->
       let loc = d.st_loc in
-      Printer.print_std
-        "%aValid (%2.4f) (%d steps)%s@."
-        report_loc loc time steps (goal_name d);
+      Printer.print_status_unsat ~validity_mode
+        (Some loc) (Some time) (Some steps) (get_goal_name d);
       if get_unsat_core() &&
          not (get_debug_unsat_core()) &&
          not (get_save_used_context())
@@ -310,41 +253,36 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
     | Inconsistent d ->
       let loc = d.st_loc in
-      Printer.print_vrb ~verbose:(get_verbose ())
-        "%aInconsistent assumption@."
-        report_loc loc
+      Printer.print_status_inconsistent ~validity_mode
+        (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Sat (d, _) ->
       let loc = d.st_loc in
-      Printer.print_std
-        "%aInvalid (%2.4f) (%d steps)%s@."
-        report_loc loc time steps (goal_name d)
+      Printer.print_status_sat ~validity_mode
+        (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Unknown (d, _) ->
       let loc = d.st_loc in
-      Printer.print_std
-        "%aI don't know (%2.4f) (%d steps)%s@."
-        report_loc loc time steps (goal_name d)
+      Printer.print_status_unknown ~validity_mode
+        (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout (Some d) ->
       let loc = d.st_loc in
-      Printer.print_std "%aTimeout (%2.4f) (%d steps)%s@."
-        report_loc loc time steps (goal_name d);
+      Printer.print_status_unsat ~validity_mode
+        (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout None ->
-      Printer.print_std
-        "%aTimeout (%2.4f) (%d steps)@."
-        report_loc Loc.dummy time steps;
+      Printer.print_status_unsat ~validity_mode
+        None (Some time) (Some steps) None;
 
     | Preprocess ->
-      Printer.print_std
-        "%aPreprocessing (%2.4f) (%d steps)@."
-        report_loc Loc.dummy time steps
+      Printer.print_status_preprocess ~validity_mode
+        (Some time) (Some steps)
 
-  let print_status status steps =
-    match Options.get_output_format () with
-    | Smtlib2 -> print_status_output_smtlib status steps
-    | Native | Why3 | Unknown _ -> print_status_valid_mode status steps
+
+
+
+
 
   let init_with_replay_used acc f =
     assert (Sys.file_exists f);

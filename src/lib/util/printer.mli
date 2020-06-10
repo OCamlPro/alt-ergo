@@ -71,3 +71,43 @@ val pp_list_no_space :
   (Format.formatter -> 'a -> unit) ->
   Format.formatter -> 'a list -> unit
 
+
+val print_status_unsat :
+  ?validity_mode:bool ->
+  Loc.t option ->
+  float option ->
+  int option ->
+  string option -> unit
+
+val print_status_sat :
+  ?validity_mode:bool ->
+  Loc.t option ->
+  float option ->
+  int option ->
+  string option -> unit
+
+val print_status_unknown :
+  ?validity_mode:bool ->
+  Loc.t option ->
+  float option ->
+  int option ->
+  string option -> unit
+
+val print_status_timeout :
+  ?validity_mode:bool ->
+  Loc.t option ->
+  float option ->
+  int option ->
+  string option -> unit
+
+val print_status_inconsistent :
+  ?validity_mode:bool ->
+  Loc.t option ->
+  float option ->
+  int option ->
+  string option -> unit
+
+val print_status_preprocess :
+  ?validity_mode:bool ->
+  float option ->
+  int option -> unit

@@ -284,6 +284,9 @@ val set_replay_used_context : bool -> unit
 (** Set [answers_with_loc] accessible with {!val:get_answers_with_loc} *)
 val set_answers_with_loc : bool -> unit
 
+(** Set [output_with_colors] accessible with {!val:get_output_with_colors} *)
+val set_output_with_colors : bool -> unit
+
 (** Set [infer_input_format] accessible with {!val:get_infer_input_format} *)
 val set_infer_input_format : 'a option -> unit
 
@@ -535,6 +538,10 @@ val get_save_used_context : unit -> bool
 
 (** [true] if the locations of goals is shown when printing solver's answers. *)
 val get_answers_with_locs  : unit -> bool
+(** Default to [true] *)
+
+(** [true] if the outputs are printed with colors *)
+val get_output_with_colors  : unit -> bool
 (** Default to [true] *)
 
 (** Valuget_e of the currently selected parsing and typing frontend. *)

@@ -204,6 +204,7 @@ let get_save_used_context () = !save_used_context
 (** Execution options *)
 
 let answers_with_loc = ref true
+let output_with_colors = ref true
 let frontend = ref "legacy"
 let input_format = ref Native
 let infer_input_format = ref true
@@ -214,6 +215,7 @@ let type_only = ref false
 let type_smt2 = ref false
 
 let set_answers_with_loc b = answers_with_loc := b
+let set_output_with_colors b = output_with_colors := b
 let set_frontend f = frontend := f
 let set_input_format f = input_format := f
 let set_infer_input_format f = infer_input_format := (f = None)
@@ -224,6 +226,7 @@ let set_type_only b = type_only := b
 let set_type_smt2 b = type_smt2 := b
 
 let get_answers_with_locs () = !answers_with_loc
+let get_output_with_colors () = !output_with_colors
 let get_frontend () = !frontend
 let get_input_format () = !input_format
 let get_infer_input_format () = !infer_input_format
