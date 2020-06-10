@@ -1,2 +1,7 @@
 logic x : int
-goal g : ("model:":x) < 42
+logic f : int -> int
+
+(*axiom A1: forall x:int. f(x) < 100*)
+
+check_sat g :
+  x <= 42 and x >= 0 and f(x) >= 42 and x + f(x) = 50
