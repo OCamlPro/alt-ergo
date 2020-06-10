@@ -54,7 +54,8 @@
         "false"      , FALSE;
         "forall"     , FORALL;
         "function"   , FUNC;
-        "goal"       , GOAL;
+        "check_valid", CHECK_VALID;
+        "check_sat"  , CHECK_SAT;
         "if"         , IF;
         "in"         , IN;
         "int"        , INT;
