@@ -1,8 +1,6 @@
 (declare-fun f (Int) Int)
-(declare-fun a () Int) ; a is a constant
-(declare-const b Int) ; syntax sugar for (declare-fun b () Int)
-(assert (> a 20))
-(assert (> b a))
-(assert (= (f 10) 1))
+(declare-const a Int)
+(declare-const b Int)
+(assert (= (f a) (f b)))
 (check-sat)
 (get-model)
