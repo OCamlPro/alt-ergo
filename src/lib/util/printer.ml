@@ -122,12 +122,32 @@ let init_colors () =
   add_colors (Options.get_fmt_dbg ())
 
 (************** Output Format *************)
-(* let pp_smt =
-   let smt = match Options.get_output_format () with
+let clean_dbg_print = ref true
+let clean_wrn_print = ref true
+
+let pp_smt clean_print =
+  let smt = match Options.get_output_format () with
     | Smtlib2 -> true
     | Native | Why3 | Unknown _ -> false
-   in sprintf "%s" (if smt then "; " else "")
-*)
+  in sprintf
+    (if smt && !clean_print then
+       begin clean_print := false; "@,; " end
+     else "")
+
+let pp_std_smt () =
+  match !clean_dbg_print, !clean_wrn_print with
+  | true, true -> ()
+  | false, true ->
+    clean_dbg_print := true;
+    fprintf (Options.get_fmt_std ()) "@,"
+  | true, false ->
+    clean_wrn_print := true;
+    fprintf (Options.get_fmt_std ()) "@,"
+  | false, false ->
+    clean_dbg_print := true;
+    clean_wrn_print := true;
+    fprintf (Options.get_fmt_std ()) "@,"
+
 let add_smt formatter =
   let old_fs = Format_shims.pp_get_formatter_out_functions formatter () in
   let out_newline () = old_fs.out_string "\n; " 0 3 in
@@ -137,15 +157,14 @@ let add_smt formatter =
 let init_output_format () =
   match Options.get_output_format () with
   | Smtlib2 ->
-    add_smt (Options.get_fmt_err ());
     add_smt (Options.get_fmt_wrn ());
     add_smt (Options.get_fmt_dbg ())
-  (*   add_smt (Options.get_fmt_std ()) *)
   | Native | Why3 | Unknown _ -> ()
 
 
 (************** Printers *************)
 let print_std s =
+  pp_std_smt ();
   fprintf (Options.get_fmt_std ()) s
 
 let print_err ?(header=(Options.get_output_with_headers ())) ?(error=true) s =
@@ -159,6 +178,7 @@ let print_err ?(header=(Options.get_output_with_headers ())) ?(error=true) s =
 
 let print_wrn ?(header=(Options.get_output_with_headers ())) ?(warning=true) s =
   if warning then begin
+    fprintf (Options.get_fmt_err ()) "%s" (pp_smt clean_wrn_print);
     if header then
       fprintf (Options.get_fmt_wrn ())
         "@[<v 9>@{<fg_orange>@{<bold>[Warning]@}@}" ;
@@ -169,6 +189,7 @@ let print_wrn ?(header=(Options.get_output_with_headers ())) ?(warning=true) s =
 let print_dbg ?(header=(Options.get_output_with_headers ())) ?(debug=true)
     ?(module_name="") ?(function_name="") s =
   if debug then begin
+    fprintf (Options.get_fmt_err ()) "%s" (pp_smt clean_dbg_print);
     if header then begin
       let fname =if String.equal function_name ""
         then ""
@@ -205,7 +226,7 @@ let pp_list_no_space f fmt l =
   pp_print_list ~pp_sep:pp_sep_nospace f fmt l
 
 
-(*** Status printer **)
+(******** Status printers *********)
 let status_time t =
   match t with
     None -> ""
@@ -240,6 +261,7 @@ let print_status_value v color =
 
 let print_status ?(validity_mode=true)
     (validity_status,unsat_status) loc time steps goal color =
+  pp_std_smt ();
   begin if validity_mode then begin
       print_status_loc loc;
       print_status_value validity_status color;

@@ -167,6 +167,7 @@ let () =
   let (module I : Input.S) = Input.find (Options.get_frontend ()) in
   Printer.init_colors ();
   Printer.init_output_format ();
+
   let parsed =
     try
       Options.Time.start ();
