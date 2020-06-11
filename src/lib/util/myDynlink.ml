@@ -52,7 +52,7 @@ let load verbose p msg =
       msg p Config.pluginsdir;
     try
       loadfile pp;
-      Printer.print_dbg ~header:false ~debug:verbose 
+      Printer.print_dbg ~header:false ~debug:verbose
         "Success!@."
     with
     | Error m2 ->
