@@ -65,7 +65,14 @@ val pp_list_no_space :
   (Format.formatter -> 'a -> unit) ->
   Format.formatter -> 'a list -> unit
 
+(** {2 Status Printer} *)
 
+(** Print unsat status message from the frontend on the standard output.
+    If validity_mode is set, the status print :
+    `Valid (<time>s) (<steps> steps) (goal <goal_name>)`
+    else, we print `unsat`.
+    If a location is given, we report it only in validity_mode before printing
+    the status. *)
 val print_status_unsat :
   ?validity_mode:bool ->
   Loc.t option ->
@@ -73,6 +80,12 @@ val print_status_unsat :
   int option ->
   string option -> unit
 
+(** Print sat status message from the frontend on the standard output.
+    If validity_mode is set, the status print :
+    `Invalid (<time>s) (<steps> steps) (goal <goal_name>)`
+    else, we print `sat`.
+    If a location is given, we report it only in validity_mode before printing
+    the status. *)
 val print_status_sat :
   ?validity_mode:bool ->
   Loc.t option ->
@@ -80,6 +93,12 @@ val print_status_sat :
   int option ->
   string option -> unit
 
+(** Print unknown status message from the frontend on the standard output.
+    If validity_mode is set, the status print :
+    `I don't Know (<time>s) (<steps> steps) (goal <goal_name>)`
+    else, we print `unknown`.
+    If a location is given, we report it only in validity_mode before printing
+    the status. *)
 val print_status_unknown :
   ?validity_mode:bool ->
   Loc.t option ->
@@ -87,6 +106,12 @@ val print_status_unknown :
   int option ->
   string option -> unit
 
+(** Print timeout status message from the frontend on the standard output.
+    If validity_mode is set, the status print :
+    `Timeout (<time>s) (<steps> steps) (goal <goal_name>)`
+    else, we print `timeout`.
+    If a location is given, we report it only in validity_mode before printing
+    the status. *)
 val print_status_timeout :
   ?validity_mode:bool ->
   Loc.t option ->
@@ -94,6 +119,12 @@ val print_status_timeout :
   int option ->
   string option -> unit
 
+(** Print inconsistent status message from the frontend on the standard output.
+    If validity_mode is set, the status print :
+    `Inconsistent assumption (<time>s) (<steps> steps) (goal <goal_name>)`
+    else, we print nothing.
+    If a location is given, we report it only in validity_mode before printing
+    the status. *)
 val print_status_inconsistent :
   ?validity_mode:bool ->
   Loc.t option ->
@@ -101,6 +132,10 @@ val print_status_inconsistent :
   int option ->
   string option -> unit
 
+(** Print preprocess status message from the frontend on the standard output.
+    If validity_mode is set, the status print :
+    `Preprocess (<time>s) (<steps> steps)`
+    else, we print nothing. *)
 val print_status_preprocess :
   ?validity_mode:bool ->
   float option ->
