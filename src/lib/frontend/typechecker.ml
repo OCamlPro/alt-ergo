@@ -335,7 +335,7 @@ let symbol_of = function
   | _ -> assert false
 
 let append_type msg ty =
-  asprintf "%s %a@." msg Ty.print ty
+  asprintf "%s %a" msg Ty.print ty
 
 let type_var_desc env p loc =
   try
