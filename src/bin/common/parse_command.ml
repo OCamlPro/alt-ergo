@@ -1219,6 +1219,7 @@ let main =
       `Pre "Or you can write to: \n   alt-ergo@ocamlpro.com";
       `S Manpage.s_authors;
       `Pre "CURRENT AUTHORS\n\
+           \   Sylvain Conchon\n\
            \   Albin Coquereau\n\
            \   Guillaume Bury\n\
            \   Mattias Roux";
