@@ -248,7 +248,7 @@ let print_status_loc loc =
   | Some loc ->
     if Options.get_answers_with_locs () then
       fprintf (Options.get_fmt_std ())
-        "%a"
+        "%a@,"
         Loc.report loc
 
 let print_status_value v color =
