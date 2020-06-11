@@ -1011,10 +1011,6 @@ val get_fmt_err : unit -> Format.formatter
 val get_fmt_wrn : unit -> Format.formatter
 (** Default to [Format.err_formatter] *)
 
-(** Value specifying the formatter used to output verbose informations *)
-val get_fmt_vrb : unit -> Format.formatter
-(** Default to [Format.err_formatter] *)
-
 (** Value specifying the formatter used to output debug informations *)
 val get_fmt_dbg : unit -> Format.formatter
 (** Default to [Format.err_formatter] *)
@@ -1035,9 +1031,6 @@ val set_fmt_err : Format.formatter -> unit
 
 (** Set [fmt_wrn] accessible with {!val:get_fmt_wrn} *)
 val set_fmt_wrn : Format.formatter -> unit
-
-(** Set [fmt_vrb] accessible with {!val:get_fmt_vrb} *)
-val set_fmt_vrb : Format.formatter -> unit
 
 (** Set [fmt_dbg] accessible with {!val:get_fmt_dbg} *)
 val set_fmt_dbg : Format.formatter -> unit

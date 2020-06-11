@@ -146,7 +146,8 @@ let clean_trigger ~in_theory name trig =
       if sz_l = sz_s then trig
       else
         let trig' = ME.fold (fun t _ acc -> t :: acc) res [] in
-        Printer.print_vrb ~verbose:(get_verbose ())
+        Printer.print_dbg ~debug:(get_verbose ()) ~module_name:"Cnf"
+          ~function_name:"clean_trigger"
           "AXIOM: %s@, \
            from multi-trig of sz %d : %a@, \
            to   multi-trig of sz %d : %a@."

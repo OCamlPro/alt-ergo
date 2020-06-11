@@ -45,12 +45,6 @@ val print_dbg :
 (** If debug (true by default) is true, then flush the debug formatter *)
 val flush_dbg : ?debug:bool -> unit -> unit
 
-(** Print verbose message on the verbose formatter accessible with
-    {!val:Options.get_fmt_vrb} and set by default to stderr.
-    Prints only if verbose (true by default) is true. *)
-val print_vrb :
-  ?verbose:bool -> ('a, Format.formatter, unit) format -> 'a
-
 (** Print message on the given formatter. *)
 val print_fmt :
   Format.formatter -> ('a, Format.formatter, unit) format -> 'a

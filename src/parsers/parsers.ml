@@ -109,7 +109,8 @@ let extract_zip_file f =
   try
     match MyZip.entries cin with
     | [e] when not (MyZip.is_directory e) ->
-      Printer.print_vrb ~verbose:(get_verbose ())
+      Printer.print_dbg ~debug:(get_verbose ())
+        ~module_name:"Parsers" ~function_name:"extract_zip_file"
         "I'll read the content of '%s' in the given zip@."
         (MyZip.filename e);
       let content = MyZip.read_entry cin e in
@@ -126,8 +127,9 @@ let extract_zip_file f =
     raise e
 
 let parse_input_file file =
-  Printer.print_vrb ~verbose:(get_verbose ())
-    "[input_lang] parsing file \"%s\"@." file;
+  Printer.print_dbg ~debug:(get_verbose ())
+    ~module_name:"Parsers" ~function_name:"parse_input_file"
+    "parsing file \"%s\"@." file;
   let cin, lb, opened_cin, ext =
     if Filename.check_suffix file ".zip" then
       let ext = Filename.extension (Filename.chop_extension file) in

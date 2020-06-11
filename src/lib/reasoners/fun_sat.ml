@@ -186,7 +186,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     open Printer
 
     let print_nb_related env =
-      print_vrb ~verbose:(get_verbose ())
+      print_dbg ~debug:(get_verbose ())
+        ~module_name:"Fun_sat" ~function_name:"print_nb_related"
         "@[<v 0>----------------------------------------------------@,\
          nb_related_to_both = %d@,\
          nb_related_to_goal = %d@,\
@@ -241,10 +242,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"assume"
           "at level (%d, %d) I assume a @," env.dlevel env.plevel;
-        let d_msg = match E.form_view f with
+        begin match E.form_view f with
           | E.Not_a_form -> assert false
           | E.Literal a ->
-            let s = asprintf "%a@." E.print_list terms in
             let n = match lem with
               | None -> ""
               | Some ff ->
@@ -254,27 +254,26 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                  | E.Let _ | E.Iff _ | E.Xor _ -> ""
                  | E.Not_a_form -> assert false)
             in
-            asprintf
-              "LITERAL (%s : %s) %a@,\
-               ==========================================@,"
-              n s E.print a
+            print_dbg ~header:false
+              "LITERAL (%s : %a) %a@,"
+              n E.print_list terms E.print a
           | E.Unit _   ->
-            "conjunction"
+            print_dbg ~header:false "conjunction"
           | E.Clause _ ->
-            asprintf "clause %a" E.print f
+            print_dbg ~header:false "clause %a" E.print f
           | E.Lemma _  ->
-            asprintf "%d-atom lemma \"%a\"" (E.size f) E.print f
+            print_dbg ~header:false "%d-atom lemma \"%a\"" (E.size f) E.print f
           | E.Skolem _ ->
-            asprintf "skolem %a" E.print f
+            print_dbg ~header:false "skolem %a" E.print f
           | E.Let _ ->
-            asprintf "let-in %a" E.print f
+            print_dbg ~header:false "let-in %a" E.print f
           | E.Iff _ ->
-            asprintf "equivalence %a" E.print f
+            print_dbg ~header:false "equivalence %a" E.print f
           | E.Xor _ ->
-            asprintf "neg-equivalence/xor %a" E.print f
-        in
-        print_dbg ~header:false "%s@." d_msg;
-        print_vrb ~verbose:(get_verbose ())
+            print_dbg ~header:false "neg-equivalence/xor %a" E.print f
+        end;
+        print_dbg ~header:false "@.";
+        print_dbg ~header:false ~debug:(get_verbose ())
           "with explanations : %a@." Explanation.print dep
 
     let unsat () =
@@ -479,7 +478,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   (* hybrid functions*)
   let print_decisions_in_the_sats msg env =
     if Options.get_tableaux_cdcl () && get_verbose() then begin
-      Printer.print_vrb
+      Printer.print_dbg ~module_name:"Fun_sat"
+        ~function_name:"print_decisions_in_the_sats"
         "-----------------------------------------------------@,\
          >> %s@,\
          decisions in DfsSAT are:@,"
@@ -488,15 +488,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let l = List.fast_sort (fun (_,i) (_,j) -> j - i) l in
       List.iter
         (fun (f, i) ->
-           Printer.print_vrb "%d  -> %a@," i E.print f
+           Printer.print_dbg ~header:false "%d  -> %a@," i E.print f
         )l;
-      Printer.print_vrb "decisions in satML are:@,";
+      Printer.print_dbg ~header:false "decisions in satML are:@,";
       List.iter
         (fun (i, f) ->
-           Printer.print_vrb
+           Printer.print_dbg ~header:false
              "%d  -> %a@," i E.print f
         )(CDCL.get_decisions !(env.cdcl));
-      Printer.print_vrb
+      Printer.print_dbg ~header:false
         "-----------------------------------------------------@."
     end
 
@@ -1543,7 +1543,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         else
           match CDCL.is_true !(env.cdcl) a.E.ff with
           | Some (ex, _lvl) -> (* it is a propagation in satML *)
-            Printer.print_vrb ~verbose:(get_verbose ())
+            Printer.print_dbg ~debug:(get_verbose ())
               "Youpii ! Better BJ thanks to satML@.";
             let ex = Lazy.force ex in
             assert (not (Ex.mem (Ex.Bj f) ex));

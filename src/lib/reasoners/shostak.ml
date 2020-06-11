@@ -636,7 +636,7 @@ struct
                 (Printer.pp_list_no_space print_aux) l;
               assert false
         in
-        r, asprintf "%a@." print r (* it's a EUF constant *)
+        r, asprintf "%a" print r (* it's a EUF constant *)
     in
     Printer.print_dbg ~debug:(get_debug_interpretation())
       ~module_name:"Shostak" ~function_name:"choose_adequate_model"

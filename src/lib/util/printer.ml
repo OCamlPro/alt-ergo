@@ -210,11 +210,6 @@ let print_dbg ?(header=(Options.get_output_with_headers ())) ?(debug=true)
 let flush_dbg ?(debug=true) () =
   if debug then fprintf (Options.get_fmt_dbg ()) "@."
 
-let print_vrb ?verbose:(v=true) s =
-  if v then
-    print_dbg s
-  else ifprintf err_formatter s
-
 let print_fmt fmt s =
   fprintf fmt s
 

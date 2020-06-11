@@ -116,7 +116,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             (E.size f) E.print f
 
         | E.Literal a ->
-          let s = asprintf "%a@." E.print_list terms in
           let n = match lem with
             | None -> ""
             | Some ff ->
@@ -127,9 +126,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                | E.Not_a_form -> assert false)
           in
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume a literal (%s : %s) %a@,\
+            "I assume a literal (%s : %a) %a@,\
              ================================================@."
-            n s E.print a;
+            n E.print_list terms E.print a;
 
         | E.Skolem _ ->
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"

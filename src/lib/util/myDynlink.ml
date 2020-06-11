@@ -31,34 +31,34 @@ end
 include Dynlink
 
 let load verbose p msg =
-  Printer.print_vrb ~verbose:verbose
-    "[Dynlink] Loading the %s in %S ..." msg p;
+  Printer.print_dbg ~debug:verbose ~module_name:"Dynlink"
+    "Loading the %s in %S ..." msg p;
   try
     loadfile p;
-    Printer.print_vrb ~verbose:verbose
+    Printer.print_dbg ~header:false ~debug:verbose
       "Success!@."
   with
   | Error m1 ->
     if verbose then begin
-      Printer.print_vrb
-        "@.[Dynlink] Loading the %s in plugin %S failed!@."
+      Printer.print_dbg ~header:false
+        "@, Loading the %s in plugin %S failed!@."
         msg p;
       Printer.print_err
         ">> Failure message: %s@." (error_message m1);
     end;
     let pp = Format.sprintf "%s/%s" Config.pluginsdir p in
-    Printer.print_vrb ~verbose:verbose
-      "[Dynlink] Loading the %s in %S... with prefix %S..."
+    Printer.print_dbg ~debug:verbose ~module_name:"Dynlink"
+      "Loading the %s in %S... with prefix %S..."
       msg p Config.pluginsdir;
     try
       loadfile pp;
-      Printer.print_vrb ~verbose:verbose
+      Printer.print_dbg ~header:false ~debug:verbose 
         "Success!@."
     with
     | Error m2 ->
       if not (verbose) then begin
         Printer.print_err
-          "@,[Dynlink] Loading the %s in plugin %S failed!@,\
+          "@, Loading the %s in plugin %S failed!@,\
            >> Failure message: %s@."
           msg p
           (error_message m1);

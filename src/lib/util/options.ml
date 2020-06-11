@@ -37,7 +37,6 @@ let set_err_fmt f = err_fmt := f
 let fmt_std = std_fmt
 let fmt_err = err_fmt
 let fmt_wrn = err_fmt
-let fmt_vrb = err_fmt
 let fmt_dbg = err_fmt
 let fmt_mdl = std_fmt
 let fmt_usc = std_fmt
@@ -45,7 +44,6 @@ let fmt_usc = std_fmt
 let get_fmt_std () = !fmt_std
 let get_fmt_err () = !fmt_err
 let get_fmt_wrn () = !fmt_wrn
-let get_fmt_vrb () = !fmt_vrb
 let get_fmt_dbg () = !fmt_dbg
 let get_fmt_mdl () = !fmt_mdl
 let get_fmt_usc () = !fmt_usc
@@ -53,7 +51,6 @@ let get_fmt_usc () = !fmt_usc
 let set_fmt_std f = fmt_std := f
 let set_fmt_err f = fmt_err := f
 let set_fmt_wrn f = fmt_wrn := f
-let set_fmt_vrb f = fmt_vrb := f
 let set_fmt_dbg f = fmt_dbg := f
 let set_fmt_mdl f = fmt_mdl := f
 let set_fmt_usc f = fmt_usc := f

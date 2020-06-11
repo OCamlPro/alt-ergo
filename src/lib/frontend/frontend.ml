@@ -83,10 +83,10 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     end
 
   let check_produced_unsat_core dep =
-    if get_verbose () then
-      Printer.print_vrb
-        "checking the unsat-core:@,-------------------@,%a@."
-        (Ex.print_unsat_core ~tab:false) dep;
+    Printer.print_dbg ~debug:(get_verbose ()) ~module_name:"Frontend"
+      ~function_name:"check_produced_unsat_core"
+      "checking the unsat-core:@,-------------------@,%a@."
+      (Ex.print_unsat_core ~tab:false) dep;
     try
       let pb = E.Set.elements (Ex.formulas_of dep) in
       let env =

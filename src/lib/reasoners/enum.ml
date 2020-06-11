@@ -197,6 +197,6 @@ module Shostak (X : ALIEN) = struct
            by CS are not created and added to UF *)
         match embed r with Cons _ -> r | _ -> assert false
     in
-    r, asprintf "%a@." X.print r  (* it's a EUF constant *)
+    r, asprintf "%a" X.print r  (* it's a EUF constant *)
 
 end
