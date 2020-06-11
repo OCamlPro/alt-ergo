@@ -248,7 +248,7 @@ let print_status_loc loc =
   | Some loc ->
     if Options.get_answers_with_locs () then
       fprintf (Options.get_fmt_std ())
-        "%a@,"
+        "%a"
         Loc.report loc
 
 let print_status_value v color =
@@ -284,7 +284,7 @@ let print_status_unsat ?(validity_mode=true) loc
 let print_status_sat ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode ("Invalid","sat") loc
-    time steps goal "fg_green"
+    time steps goal "fg_cyan"
 
 let print_status_inconsistent ?(validity_mode=true) loc
     time steps goal =
@@ -308,4 +308,4 @@ let print_status_preprocess ?(validity_mode=true)
     time steps =
   print_status ~validity_mode
     ("Preprocessing","") None
-    time steps None "fg_blue"
+    time steps None "fg_magenta"
