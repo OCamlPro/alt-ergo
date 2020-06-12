@@ -52,7 +52,7 @@ module Container : Inequalities.Container_SIG = struct
       Printer.print_dbg
         "vof = %a@,\
          @[<v 2>assignement returned by the Simplex@,\
-         %a@."
+         %a"
         print_couple vof
         (Printer.pp_list_no_space print) vals
 
@@ -61,18 +61,18 @@ module Container : Inequalities.Container_SIG = struct
         match answer with
         | Unsat { vof; vals; _ } ->
           Printer.print_dbg
-            "I read: the simplex problem is not feasible (<=)@.";
+            "I read: the simplex problem is not feasible (<=)";
           print_answer (vof,vals)
         | Eq_unsat ->
           Printer.print_dbg
-            "I read: the simplex problem is not feasible (=)@."
+            "I read: the simplex problem is not feasible (=)"
         | Unbound { vof; vals; _ } ->
           Printer.print_dbg
-            "I read: the simplex problem is not bounded@.";
+            "I read: the simplex problem is not bounded";
           print_answer (vof,vals)
         | Max { vof; vals; _ }  ->
           Printer.print_dbg
-            "I read: the simplex problem has a solution@.";
+            "I read: the simplex problem has a solution";
           print_answer (vof,vals)
 
     let add_to_sum ld sum l_m =
@@ -89,7 +89,7 @@ module Container : Inequalities.Container_SIG = struct
            let l_m, c = P.to_list ineq.ple0 in
            assert (Q.is_int c);
            if l_m == [] then begin
-             Printer.print_err "%a <= 0@." P.print ineq.ple0;
+             Printer.print_err "%a <= 0" P.print ineq.ple0;
              assert false
            end
            else
@@ -140,17 +140,17 @@ module Container : Inequalities.Container_SIG = struct
             "new simplex %d@," !cpt;
           let res = Simplex_Q.main max_ctt equas s_neq nb_constrs in
           Printer.print_dbg ~header:false ~debug:!dsimplex
-            "Simplex poly out@.";
+            "Simplex poly out";
           SCache.register r_max_ctt r_equas r_s_neq !cpt res ;
           res
         | Some (n, res, ctt') ->
           if SCache.MI.compare Q.compare r_max_ctt ctt' = 0 then begin
             Printer.print_dbg ~debug:!dsimplex
-              "reuse RESULTS of simplex %d@." n;
+              "reuse RESULTS of simplex %d" n;
             res
           end
           else begin
-            Printer.print_dbg ~debug:!dsimplex "reuse  simplex %d@." n;
+            Printer.print_dbg ~debug:!dsimplex "reuse  simplex %d" n;
             let res = Simplex_Q.partial_restart res max_ctt in
             res
           end
@@ -211,7 +211,7 @@ module Container : Inequalities.Container_SIG = struct
             "new simplex %d@," !cpt;
           let res = Simplex_Q.main max_ctt equas s_neq nb_constrs in
           Printer.print_dbg ~header:false ~debug:!dsimplex
-            "Simplex monomes out@.";
+            "Simplex monomes out";
           SCache.register_mon x r_max_ctt r_equas r_s_neq !cpt res ;
           res
         | Some (n, res, ctt') ->
