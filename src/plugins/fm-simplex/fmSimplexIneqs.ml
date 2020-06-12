@@ -222,7 +222,7 @@ module Container : Inequalities.Container_SIG = struct
           end
           else begin
             Printer.print_dbg ~header:false ~debug:!dsimplex
-              "reuse  simplex %d@." n;
+              "reuse  simplex %d" n;
             let res = Simplex_Q.partial_restart res max_ctt in
             res
           end
