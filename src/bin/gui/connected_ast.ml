@@ -801,7 +801,7 @@ and popup_trigger t qid env (sbuf:sbuffer) offset () =
                   pop_w#destroy ()
                 with
                 | Errors.Error e ->
-                  errors_l#set_text (asprintf "%a@." Errors.report e);
+                  errors_l#set_text (asprintf "%a" Errors.report e);
                   errors_l#misc#show ()
              ));
   ignore(button_cancel#connect#clicked ~callback: pop_w#destroy);
