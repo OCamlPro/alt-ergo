@@ -182,7 +182,7 @@ let tag_callback t env sbuf ~origin:_y z i =
           begin
             let tyt = match find t sbuf env.ast with
               | Some (AT at) ->
-                asprintf ": %a@." Ty.print_full at.c.at_ty
+                asprintf ": %a" Ty.print_full at.c.at_ty
               | Some (AF _) -> ": formula"
               | Some (QF _) -> ": quantified formula"
               | Some (AD ({ c = ATheory _ ; _ }, _)) -> ": Theory"
