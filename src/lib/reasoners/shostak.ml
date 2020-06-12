@@ -404,7 +404,7 @@ struct
       in
       print_dbg ~debug:(get_debug_combine ())
         ~module_name:"Shostak" ~function_name:"print_sbt"
-        "@[<v 2>%s subst:@,%a@]@."
+        "@[<v 2>%s subst:@,%a@]"
         msg
         (pp_list_no_space print) sbs
 
@@ -417,29 +417,29 @@ struct
       in
       print_dbg ~debug:(get_debug_combine ())
         ~module_name:"Shostak" ~function_name:"abstraction_result"
-        "== get_debug_abstraction_result ==@,\
+        "@[<v 0>== get_debug_abstraction_result ==@,\
          Initial equaliy:   %a = %a@,\
          abstracted equality: %a = %a@,\
          @[<v 2>selectors elimination result:@,\
-         %a@]@."
+         %a@]@]"
         CX.print oa CX.print ob CX.print a CX.print b
         (pp_list_no_space print) acc
 
     let solve_one a b =
       print_dbg ~debug:(get_debug_combine ())
         ~module_name:"Shostak" ~function_name:"solve_one"
-        "solve one %a = %a@." CX.print a CX.print b
+        "solve one %a = %a" CX.print a CX.print b
 
     let debug_abstract_selectors a =
       print_dbg ~debug:(get_debug_combine ())
         ~module_name:"Shostak" ~function_name:"abstract_selectors"
-        "abstract selectors of %a@." CX.print a
+        "abstract selectors of %a" CX.print a
 
     let assert_have_mem_types tya tyb =
       assert (
         not (Options.get_enable_assertions()) ||
         if not (Ty.compare tya tyb = 0) then (
-          print_err "@,Tya = %a  and @,Tyb = %a@."
+          print_err "@[<v 0>@,Tya = %a  and @,Tyb = %a@]"
             Ty.print tya Ty.print tyb;
           false)
         else true)
@@ -496,7 +496,7 @@ struct
           match p.v with
           | Ac _ -> true | Term _ -> SX.mem p original
           | _ ->
-            Printer.print_err "%a@." CX.print p;
+            Printer.print_err "%a" CX.print p;
             assert false
         )sbs
     in
@@ -513,7 +513,7 @@ struct
 
   let solve_uninterpreted r1 r2 pb = (* r1 != r2*)
     Printer.print_dbg ~debug:(get_debug_combine ())
-      "solve uninterpreted %a = %a@." print r1 print r2;
+      "solve uninterpreted %a = %a" print r1 print r2;
     if CX.str_cmp r1 r2 > 0 then { pb with sbt = (r1,r2)::pb.sbt }
     else { pb with sbt = (r2,r1)::pb.sbt }
 
@@ -585,7 +585,7 @@ struct
     in
     Printer.print_dbg ~debug:(get_debug_interpretation ())
       ~module_name:"Shostak" ~function_name:"assign_value"
-      "assign value to representative %a : %s@."
+      "assign value to representative %a : %s"
       print r
       (match opt with
        | None -> asprintf "None"
@@ -630,7 +630,7 @@ struct
               Printer.print_dbg ~debug:(get_debug_interpretation())
                 ~module_name:"Shostak" ~function_name:"choose_adequate_model"
                 "@[<v 2>What to choose for term %a with rep %a?\
-                 %a@]@,"
+                 %a@]"
                 Expr.print t
                 print rep
                 (Printer.pp_list_no_space print_aux) l;
@@ -640,7 +640,7 @@ struct
     in
     Printer.print_dbg ~debug:(get_debug_interpretation())
       ~module_name:"Shostak" ~function_name:"choose_adequate_model"
-      "%a selected as a model for %a@."
+      "%a selected as a model for %a"
       print r Expr.print t;
     r, pprint
 
