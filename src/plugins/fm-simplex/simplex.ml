@@ -455,7 +455,6 @@ module Simplex (C : Coef_Type) = struct
                Vec.push sbt ln
            with Trivial -> ()
         )eqs;
-      Printer.flush_dbg ~debug:(!dsimplex) ();
       normalize_sbt sbt zsbt
 
     (*
@@ -501,7 +500,6 @@ module Simplex (C : Coef_Type) = struct
       Printer.print_dbg ~debug:(!dsimplex)
         "@[<v 2>ZERO substs:@,%a"
         (Printer.pp_list_no_space print) zsbt;
-      Printer.flush_dbg ~debug:(!dsimplex) ();
       let p_sneq = create_strict len s_neq h_i_s in
       List.iter (subst_in_p p_sneq) sbt;
       List.iter (z_subst_in_p p_sneq) zsbt;

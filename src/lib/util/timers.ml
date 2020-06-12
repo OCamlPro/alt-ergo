@@ -198,8 +198,7 @@ let accumulate_cumulative_mode name env m f cur =
              "also update time of %s , %s@,"
              (string_of_ty_module m) (string_of_ty_function f);
            accumulate env cur m f
-        )env.stack;
-      Printer.flush_dbg ~debug:(Options.get_debug ()) ()
+        )env.stack
     end
 
 (** save the current timer and start the timer m x f **)

@@ -173,8 +173,7 @@ module Main : S = struct
         print_dbg ~debug:(get_debug_cc ())
           ~module_name:"Ccx" ~function_name:"make_ctx"
           "constraints of make(%a)@,%a"
-          Expr.print t (pp_list_no_space print) ctx;
-        flush_dbg ~debug:(get_debug_cc ()) ()
+          Expr.print t (pp_list_no_space print) ctx
 
     let rel_add_cst t ctx =
       if ctx != [] then
@@ -186,8 +185,7 @@ module Main : S = struct
         print_dbg ~debug:(get_debug_cc ())
           ~module_name:"Ccx" ~function_name:"rel_add_cst"
           "constraints of Rel.add(%a)@,%a"
-          Expr.print t (pp_list_no_space print) ctx;
-        flush_dbg ~debug:(get_debug_cc ()) ()
+          Expr.print t (pp_list_no_space print) ctx
 
     let add_to_use t =
       print_dbg ~debug:(get_debug_cc ())

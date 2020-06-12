@@ -184,8 +184,7 @@ module Main_Default : S = struct
              end
            | Tadt _ ->
              print_dbg ~header:false "%a@," Ty.print_full ty
-        )types;
-      flush_dbg ()
+        )types
 
     let print_arrow_type fmt xs =
       match xs with
@@ -205,8 +204,7 @@ module Main_Default : S = struct
              (Hstring.view hs)
              print_arrow_type xs
              Ty.print ty
-        )logics;
-      flush_dbg ()
+        )logics
 
     let print_declarations l =
       let st = subterms_of_assumed l in
@@ -582,11 +580,9 @@ module Main_Default : S = struct
                  )hyps;
                Printer.print_dbg ~header:false
                  "conclusion: %a@," Expr.print f;
-            ) inst;
-          Printer.flush_dbg ()
+            ) inst
         end
-      ) l;
-    Printer.flush_dbg ()
+      ) l
 
   let theories_instances ~do_syntactic_matching t_match t selector dlvl ilvl =
     let gamma, instances =

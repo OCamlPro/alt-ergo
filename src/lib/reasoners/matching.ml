@@ -169,8 +169,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
              print_dbg ~header:false
                ">>> sbs = %a  and  sbty = %a@,"
                (SubstE.print E.print) gsbt.sbs Ty.print_subst gsbt.sty
-          )res;
-      flush_dbg ~debug:(get_debug_matching () >= 1) ()
+          )res
 
   end
   (*BISECT-IGNORE-END*)

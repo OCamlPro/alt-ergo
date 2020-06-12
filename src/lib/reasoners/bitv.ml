@@ -299,8 +299,7 @@ module Shostak(X : ALIEN) = struct
       Printer.print_dbg ~debug:(Options.get_debug_bitv ())
         ~module_name:"Bitv"
         ~function_name:"slicing"
-        "%a" (pp_list_no_space print) l;
-      flush_dbg ~debug:(Options.get_debug_bitv ()) ()
+        "%a" (pp_list_no_space print) l
 
     let print_c_solve_res l =
       let print fmt (a,b) =
@@ -309,8 +308,7 @@ module Shostak(X : ALIEN) = struct
       Printer.print_dbg ~debug:(Options.get_debug_bitv ())
         ~module_name:"Bitv"
         ~function_name:"c_solve"
-        "(map)c_solve :@,%a" (pp_list_no_space print) l;
-      flush_dbg ~debug:(Options.get_debug_bitv ()) ()
+        "(map)c_solve :@,%a" (pp_list_no_space print) l
 
     let print_partition_res l =
       let print fmt (t,cte_l) =
@@ -322,8 +320,7 @@ module Shostak(X : ALIEN) = struct
       Printer.print_dbg ~debug:(Options.get_debug_bitv ())
         ~module_name:"Bitv"
         ~function_name:"partition"
-        "%a" (pp_list_no_space print) l;
-      flush_dbg ~debug:(Options.get_debug_bitv ()) ()
+        "%a" (pp_list_no_space print) l
 
     let print_final_solution l =
       let print fmt (a,value) =
@@ -332,8 +329,7 @@ module Shostak(X : ALIEN) = struct
       Printer.print_dbg ~debug:(Options.get_debug_bitv ())
         ~module_name:"Bitv"
         ~function_name:"solution"
-        "%a" (pp_list_no_space print) l;
-      flush_dbg ~debug:(Options.get_debug_bitv ()) ()
+        "%a" (pp_list_no_space print) l
   end
   (*BISECT-IGNORE-END*)
 

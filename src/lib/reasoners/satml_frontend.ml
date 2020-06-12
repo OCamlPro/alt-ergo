@@ -237,8 +237,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         print_dbg ~module_name:"Satml_frontend" ~function_name:"add_terms_of"
           "@[<v 2>[%s] add_terms_of:@," src;
         SE.iter (fun e ->
-            print_dbg ~header:false ">> %a@," E.print e) terms;
-        flush_dbg ()
+            print_dbg ~header:false ">> %a@," E.print e) terms
       end
 
     (* unused --

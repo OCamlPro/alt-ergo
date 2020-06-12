@@ -118,8 +118,7 @@ let print g =
            Printer.print_dbg ~header:false "%a" X.print t;
            Printer.print_dbg ~header:false "%a@,"
              print_sterms_and_atoms (st,sa);
-        ) g;
-      Printer.flush_dbg ()
+        ) g
     end
 
 let mem = MX.mem

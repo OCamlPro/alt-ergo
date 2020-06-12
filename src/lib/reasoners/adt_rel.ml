@@ -562,7 +562,6 @@ let update_cs_modulo_eq r1 r2 ex env eqs =
            MHs.add hs l mhs
         )old mhs
     in
-    Printer.flush_dbg ~debug:(get_debug_adt ()) ();
     { env with selectors = MX.add r2 _new env.selectors }, !eqs
   with Not_found -> env, eqs
 

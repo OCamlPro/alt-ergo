@@ -115,8 +115,7 @@ module Debug = struct
     Printer.print_dbg ~debug:(get_debug_arrays () && la != [])
       ~module_name:"Arrays_rel"
       ~function_name:"assume"
-      "@[<v 2>We assume: @,%a" (pp_list_no_space print) la;
-    flush_dbg ~debug:(get_debug_arrays () && la != []) ()
+      "@[<v 2>We assume: @,%a" (pp_list_no_space print) la
 
   (* unused --
      let print_gets fmt = G.iter (fun t -> fprintf fmt "%a@." E.print t.g)
@@ -149,8 +148,7 @@ module Debug = struct
         Printer.print_dbg ~debug:(get_debug_arrays ())
           ~header:false
           "%a : %a" E.print a Ex.print ex
-      ) st;
-    flush_dbg ~debug:(get_debug_arrays ()) ()
+      ) st
 
   let case_split a =
     print_dbg ~debug:(get_debug_arrays ())
