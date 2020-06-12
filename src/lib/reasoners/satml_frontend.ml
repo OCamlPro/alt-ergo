@@ -91,12 +91,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let pred_def f =
       print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Satml_frontend" ~function_name:"pred_def"
-        "I assume a predicate: %a@." E.print f
+        "I assume a predicate: %a" E.print f
 
     let unsat gf =
       print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Satml_frontend" ~function_name:"unsat"
-        "unsat of %a ?@." E.print gf.E.ff
+        "unsat of %a ?" E.print gf.E.ff
 
     let assume gf =
       let { E.ff = f; lem; from_terms = terms; _ } = gf in
@@ -108,11 +108,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
         | E.Clause _ ->
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume a clause %a@." E.print f
+            "I assume a clause %a" E.print f
 
         | E.Lemma _ ->
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume a [%d-atom] lemma: %a@."
+            "I assume a [%d-atom] lemma: %a"
             (E.size f) E.print f
 
         | E.Literal a ->
@@ -126,32 +126,32 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                | E.Not_a_form -> assert false)
           in
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume a literal (%s : %a) %a@,\
-             ================================================@."
+            "@[<v 0>I assume a literal (%s : %a) %a@,\
+             ================================================@]"
             n E.print_list terms E.print a;
 
         | E.Skolem _ ->
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume a skolem %a@." E.print f
+            "I assume a skolem %a" E.print f
 
         | E.Let _ ->
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume a let-In %a@." E.print f
+            "I assume a let-In %a" E.print f
 
         | E.Iff _ ->
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume an equivalence %a@." E.print f
+            "I assume an equivalence %a" E.print f
 
         | E.Xor _ ->
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume an neg-equivalence/Xor %a@." E.print f
+            "I assume a neg-equivalence/Xor %a" E.print f
 
       end
 
     let simplified_form f f' =
       print_dbg ~debug:(get_debug_sat () && get_verbose ())
         ~module_name:"Satml_frontend" ~function_name:"simplified_form"
-        "@[<v 2>Simplified form of: %a@,  is: %a@]"
+        "@[<v 2>Simplified form of: %a@,is: %a@]"
         E.print f
         FF.print f'
 
@@ -194,7 +194,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           mode;
         FF.Map.iter (fun f (md, _) ->
             print_dbg ~header:false "-> %d : %a@," md FF.print f) env.conj;
-        print_dbg ~header:false "@]@,%a@."
+        print_dbg ~header:false "@]@,%a"
           model env;
       end
 
@@ -230,7 +230,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let atoms_from_sat_branch f =
       print_dbg ~debug:(get_verbose () && get_debug_sat ())
         ~module_name:"Satml_frontend" ~function_name:"atoms_from_sat_branch"
-        "[extract_and_add_terms from] %a@." FF.print f
+        "[extract_and_add_terms from] %a" FF.print f
 
     let add_terms_of src terms =
       if get_verbose () && get_debug_sat () then begin
@@ -250,7 +250,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Satml_frontend" ~function_name:"internal_axiom_def"
         "I assume an internal axiom: %a <-> %a@,\
-         at of a is %a@."
+         at of a is %a"
         E.print a E.print f
         Atom.pr_atom at
 
@@ -282,7 +282,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         ~module_name:"Satml_frontend" ~function_name:"theory_instance"
         "@[<v 2>%s >@,\
          hypotheses: %a@,\
-         conclusion: %a@]@."
+         conclusion: %a@]"
         (E.name_of_lemma_opt gf.E.lem)
         print_f_conj hyp
         E.print gf.E.ff;
@@ -451,7 +451,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let register_abstraction (env, new_abstr_vars) (f, (af, at)) =
     Printer.print_dbg ~debug:(get_debug_sat () && get_verbose ())
       ~module_name:"Satml_frontend" ~function_name:"register_abstraction"
-      "abstraction of %a is %a@." E.print f FF.print af;
+      "abstraction of %a is %a" E.print f FF.print af;
     let lat = Atom.literal at in
     let new_abstr_vars =
       if not (Atom.is_true at) then at :: new_abstr_vars else new_abstr_vars
@@ -495,7 +495,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       (fun acc a ->
          Printer.print_dbg ~debug:(get_debug_sat () && get_verbose ())
            ~module_name:"Satml_frontend" ~function_name:"expand_skolems"
-           "expand skolem of %a@." E.print a;
+           "expand skolem of %a" E.print a;
          try
            let { E.ff = f; _ } as gf = ME.find a env.skolems in
            if not (Options.get_cdcl_tableaux ()) &&
@@ -510,7 +510,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          let gf = mk_gf E.vrai in
          Printer.print_dbg ~debug:(get_debug_sat () && get_verbose ())
            ~module_name:"Satml_frontend" ~function_name:"inst_env_from_atoms"
-           "terms_of_atom %a @." E.print a;
+           "terms_of_atom %a" E.print a;
          let inst = Inst.add_terms inst (E.max_ground_terms_of_lit a) gf in
          (* ax <-> a, if ax exists in axs_of_abstr *)
          try
@@ -640,7 +640,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           if FF.equal ff FF.vrai then SE.empty
           else begin
             Printer.print_err
-              "%a not found in env.conj@." FF.print ff;
+              "%a not found in env.conj" FF.print ff;
             assert false
           end
       in
@@ -708,7 +708,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let { E.ff = f; _ } = gf in
     Printer.print_dbg ~debug:(get_debug_sat () && get_verbose ())
       ~module_name:"Satml_frontend" ~function_name:"pre_assume"
-      "Entry of pre_assume: Given %a@." E.print f;
+      "Entry of pre_assume: Given %a" E.print f;
     if SE.mem f acc.seen_f then env, acc
     else
       let acc = {acc with seen_f = SE.add f acc.seen_f} in
