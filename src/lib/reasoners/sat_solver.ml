@@ -14,10 +14,10 @@ let get_current () =
   | Util.Tableaux | Util.Tableaux_CDCL ->
     Printer.print_dbg ~debug:(Options.get_verbose ())
       ~module_name:"Sat_solver"
-      "use Tableaux-like solver@.";
+      "use Tableaux-like solver";
     (module Fun_sat : Sat_solver_sig.SatContainer)
   | Util.CDCL | Util.CDCL_Tableaux ->
     Printer.print_dbg ~debug:(Options.get_verbose ())
       ~module_name:"Sat_solver"
-      "use CDCL solver@.";
+      "use CDCL solver";
     (module Satml_frontend : Sat_solver_sig.SatContainer)
