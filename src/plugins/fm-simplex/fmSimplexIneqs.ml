@@ -294,7 +294,7 @@ module Container : Inequalities.Container_SIG = struct
               add_ineqs are_eq acc sum ctt lambdas nb_constrs constrs
           else acc
       in
-      Printer.print_dbg ~debug:(get_debug_fm()) "end fm-simplex@.";
+      Printer.print_dbg ~debug:(get_debug_fm()) "end fm-simplex";
       acc
 
     let list_of_mineqs mp =
