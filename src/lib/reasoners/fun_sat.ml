@@ -272,43 +272,42 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | E.Xor _ ->
             print_dbg ~header:false "neg-equivalence/xor %a" E.print f
         end;
-        print_dbg ~header:false "@.";
         print_dbg ~header:false ~debug:(get_verbose ())
-          "with explanations : %a@." Explanation.print dep
+          "with explanations : %a" Explanation.print dep
 
     let unsat () =
       print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"unsat"
-        "unsat@."
+        "unsat"
 
     let decide f env =
       print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"decide"
-        "I decide: at level (%d, %d), on %a@."
+        "I decide: at level (%d, %d), on %a"
         env.dlevel env.plevel E.print f
 
     let instantiate env =
       print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"instanciate"
-        "I instantiate at level (%d, %d). Inst level = %d@."
+        "I instantiate at level (%d, %d). Inst level = %d"
         env.dlevel env.plevel env.ilevel
 
     let backtracking f env =
       print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"backtracking"
-        "backtrack: at level (%d, %d), and assume not %a@."
+        "backtrack: at level (%d, %d), and assume not %a"
         env.dlevel env.plevel E.print f
 
     let backjumping f env =
       print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"backjumping"
-        "backjump: at level (%d, %d), I ignore the case %a@."
+        "backjump: at level (%d, %d), I ignore the case %a"
         env.dlevel env.plevel E.print f
 
     let elim _ _ =
       print_dbg ~debug:(get_debug_sat () && get_verbose ())
         ~module_name:"Fun_sat" ~function_name:"elim"
-        "elim@."
+        "elim"
 
     let red _ _ =
       print_dbg ~debug:(get_debug_sat () && get_verbose ())
@@ -328,13 +327,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let gamma g =
       if get_debug_sat () && get_verbose () then begin
         print_dbg ~module_name:"Fun_sat" ~function_name:"gamma"
-          "--- GAMMA ---------------------@,";
+          "@[<v 0>--- GAMMA ---------------------@,";
         ME.iter (fun f (_, ex, dlvl, plvl) ->
             print_dbg ~header:false
               "(%d, %d) %a \t->\t%a@,"
               dlvl plvl E.print f Ex.print ex) g;
         print_dbg ~header:false
-          " - / GAMMA ---------------------";
+          " - / GAMMA ---------------------@]";
       end
 
     let bottom classes =
@@ -480,7 +479,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if Options.get_tableaux_cdcl () && get_verbose() then begin
       Printer.print_dbg ~module_name:"Fun_sat"
         ~function_name:"print_decisions_in_the_sats"
-        "-----------------------------------------------------@,\
+        "@[<v 0>-----------------------------------------------------@,\
          >> %s@,\
          decisions in DfsSAT are:@,"
         msg;
@@ -497,7 +496,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              "%d  -> %a@," i E.print f
         )(CDCL.get_decisions !(env.cdcl));
       Printer.print_dbg ~header:false
-        "-----------------------------------------------------@."
+        "-----------------------------------------------------@]@."
     end
 
   let cdcl_same_decisions env =
@@ -514,9 +513,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              with Not_found ->
                ok := false;
                Printer.print_err
-                 "Aie! decision %a is only in satML !!@,\
+                 "Ouch! Decision %a is only in satML!@,\
                   nb decisions in DfsSAT: %d\
-                  nb decisions in satML:  %d@."
+                  nb decisions in satML:  %d"
                  E.print d
                  (ME.cardinal env.decisions)
                  (List.length cdcl_decs);
@@ -524,7 +523,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           )env.decisions cdcl_decs
       in
       if decs != ME.empty then begin
-        Printer.print_err "Aie ! some decisions only in DfsSAT@.";
+        Printer.print_err "Ouch! Some decisions are only in DfsSAT";
         ok := false;
       end;
       !ok
@@ -561,7 +560,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let cdcl_assume delay env l =
     Printer.print_dbg ~debug:(get_debug_sat() && get_verbose())
-      ~module_name:"Fun_sat" ~function_name:"cdcl_assume" "@.";
+      ~module_name:"Fun_sat" ~function_name:"cdcl_assume" "";
     let gamma = env.gamma in
     try
       let l =
@@ -576,26 +575,26 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | CDCL.Bottom (ex, l, cdcl) ->
       Printer.print_dbg ~debug:(get_debug_sat() && get_verbose())
         ~module_name:"Fun_sat" ~function_name:"cdcl_assume"
-        "conflict@.";
+        "conflict";
       env.cdcl := cdcl;
       assert (cdcl_known_decisions ex env);
       raise (IUnsat(ex, l))
 
   let cdcl_decide env f dlvl =
     Printer.print_dbg ~debug:(get_debug_sat() && get_verbose())
-      ~module_name:"Fun_sat" ~function_name:"cdcl_decide" "@.";
+      ~module_name:"Fun_sat" ~function_name:"cdcl_decide" "";
     try
       env.cdcl := CDCL.decide !(env.cdcl) f dlvl
     with
     | CDCL.Bottom (ex, l, _cdcl) ->
       Printer.print_dbg ~debug:(get_debug_sat() && get_verbose())
         ~module_name:"Fun_sat" ~function_name:"cdcl_decide"
-        "conflict@.";
+        "conflict";
       assert (cdcl_known_decisions ex env);
       (* no need to save cdcl here *)
       raise (IUnsat(ex, l))
     | e ->
-      Printer.print_err "%s@." (Printexc.to_string e);
+      Printer.print_err "%s" (Printexc.to_string e);
       assert false
 
   let cdcl_forget_decision env f lvl =
@@ -604,7 +603,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     with
     | _ ->
       Printer.print_err
-        "@[<v 2>cdcl_backjump error:@,%s@]@."
+        "@[<v 2>cdcl_backjump error:@,%s@]"
         (Printexc.get_backtrace ());
       assert false
 
@@ -630,7 +629,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       try
         Printer.print_dbg ~debug:(get_debug_sat())
           ~module_name:"Fun_sat" ~function_name:"do_case_split"
-          "performing case-split@.";
+          "performing case-split";
         let tbox, new_terms = Th.do_case_split env.tbox in
         let inst =
           Inst.add_terms env.inst new_terms (mk_gf E.vrai "" false false) in
@@ -745,7 +744,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         | Some (ex, _lvl) ->
           let ex = Lazy.force ex in
           Printer.print_dbg ~debug:(get_debug_sat() && get_verbose())
-            "red thanks to satML@.";
+            "red thanks to satML";
           assert (cdcl_known_decisions ex env);
           Some(ex, []), true
         | None ->
@@ -859,7 +858,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           (fun (facts, ufacts, inst, mf, gf) (a, ff, ex, dlvl, plvl) ->
              if not (E.is_ground a) then begin
                Printer.print_err
-                 "%a is not ground@." E.print a;
+                 "%a is not ground" E.print a;
                assert false
              end;
              let facts = (a, ex, dlvl, plvl) :: facts in
@@ -869,7 +868,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              in
              if not ff.E.mf then begin
                Printer.print_err
-                 "%a@." E.print ff.E.ff;
+                 "%a" E.print ff.E.ff;
                assert false
              end;
              let inst =
@@ -887,7 +886,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             if Options.get_profiling() then Profiling.theory_conflict();
             Printer.print_dbg ~debug:(get_debug_sat())
               ~module_name:"Fun_sat" ~function_name:"theory_assume"
-              "solved by unit_tbox@.";
+              "solved by unit_tbox";
             raise e
         else env.unit_tbox, SE.empty, 0
       in
@@ -1140,9 +1139,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             env.gamma SE.empty
         in
         Printer.print_fmt (Options.get_fmt_mdl ())
-          "--- SAT model found ---@,\
+          "@[<v 0>--- SAT model found ---@,\
            %a@,\
-           --- / SAT model  ---@."
+           --- / SAT model  ---@]"
           print_prop_model m;
         raise (IUnsat (Ex.make_deps m, []))
       end
@@ -1153,7 +1152,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | Some env -> raise (I_dont_know env)
       | None ->
         Printer.print_fmt (Options.get_fmt_mdl ())
-          "[all-models] No SAT models found@."
+          "[all-models] No SAT models found"
 
 
   let compute_concrete_model env origin =
@@ -1181,10 +1180,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       match !latest_saved_env with
       | None ->
         Printer.print_fmt (Options.get_fmt_mdl ())
-          "[FunSat]@, \
-           It seems that no model has been computed so for.@,\
+          "@[<v 0>[FunSat]@, \
+           It seems that no model has been computed so far.@,\
            You may need to change your model generation strategy@,\
-           ,or to increase your timeout.@."
+           or to increase your timeout.@]"
       | Some env ->
         let cs_tbox = Th.get_case_split_env env.tbox in
         let uf = Ccx.Main.get_union_find cs_tbox in
@@ -1258,7 +1257,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                  Ex.union dep ex, ({gf with E.ff=f}, ex) :: acc
                | None ->
                  Printer.print_err
-                   "Bad inst ! Hyp %a is not true !@." E.print f;
+                   "Bad inst! Hyp %a is not true!" E.print f;
                  assert false
              end
            | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
@@ -1544,7 +1543,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           match CDCL.is_true !(env.cdcl) a.E.ff with
           | Some (ex, _lvl) -> (* it is a propagation in satML *)
             Printer.print_dbg ~debug:(get_verbose ())
-              "Youpii ! Better BJ thanks to satML@.";
+              "Better backjump thanks to satML";
             let ex = Lazy.force ex in
             assert (not (Ex.mem (Ex.Bj f) ex));
             Ex.union dep' ex
@@ -1587,7 +1586,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Printer.print_dbg
         ~header:false ~debug:(get_verbose () || get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"backward_instantiation_rec"
-        "backward: %d goal-related hyps (+%d)@."
+        "backward: %d goal-related hyps (+%d)"
         nb2 (nb2-nb1);
 
       if (new_i1 || new_i2) && nb1 < nb2 then
@@ -1639,19 +1638,19 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       in
       Printer.print_dbg ~debug:(get_verbose () || get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"backward_instantiation"
-        "%a@."
+        "@[<v 0>%a@]"
         (Printer.pp_list_no_space print) l;
       let env = assume env l in
       Debug.print_nb_related env;
       Printer.print_dbg ~debug:(get_verbose () || get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"backward_instantiation"
-        "done (after %2.4f seconds)@."
+        "done (after %2.4f seconds)"
         (Options.Time.value ());
       env
     with IUnsat _ as e ->
       Printer.print_dbg ~debug:(get_verbose () || get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"backward_instantiation"
-        "solved with backward !@.";
+        "solved with backward!";
       raise e
 
   let unsat env gf =
