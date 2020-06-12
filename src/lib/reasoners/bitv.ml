@@ -294,7 +294,7 @@ module Shostak(X : ALIEN) = struct
 
     let print_sliced_sys l =
       let print fmt (a,b) =
-        fprintf fmt " %a == %a@," print a print b
+        fprintf fmt " %a == %a@ " print a print b
       in
       Printer.print_dbg ~debug:(Options.get_debug_bitv ())
         ~module_name:"Bitv"
@@ -304,7 +304,7 @@ module Shostak(X : ALIEN) = struct
 
     let print_c_solve_res l =
       let print fmt (a,b) =
-        fprintf fmt " %a == %a@," print a print_S_ast b
+        fprintf fmt " %a == %a@ " print a print_S_ast b
       in
       Printer.print_dbg ~debug:(Options.get_debug_bitv ())
         ~module_name:"Bitv"
@@ -314,7 +314,7 @@ module Shostak(X : ALIEN) = struct
 
     let print_partition_res l =
       let print fmt (t,cte_l) =
-        fprintf fmt " %a%a@," print t
+        fprintf fmt " %a%a@ " print t
           (fun fmt ->
              List.iter (fun l' -> fprintf fmt " == %a" print_S_ast l'))
           cte_l
@@ -327,7 +327,7 @@ module Shostak(X : ALIEN) = struct
 
     let print_final_solution l =
       let print fmt (a,value) =
-        fprintf fmt " %a = %a@," print a print_C_ast value
+        fprintf fmt " %a = %a@ " print a print_C_ast value
       in
       Printer.print_dbg ~debug:(Options.get_debug_bitv ())
         ~module_name:"Bitv"
@@ -763,7 +763,7 @@ module Shostak(X : ALIEN) = struct
   let subst x subs biv =
     Printer.print_dbg ~debug:(Options.get_debug_bitv ())
       ~module_name:"Bitv" ~function_name:"subst"
-      "subst %a |-> %a in %a@." X.print x X.print subs print biv;
+      "subst %a |-> %a in %a" X.print x X.print subs print biv;
     if biv = [] then is_mine biv
     else
       let r = Canonizer.sigma (subst_rec x subs (to_i_ast biv)) in
