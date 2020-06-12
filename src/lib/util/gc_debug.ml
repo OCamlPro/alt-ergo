@@ -42,7 +42,7 @@ let init () =
                  [size of major heap] %d words@,\
                  [max size major heap] %d words@,\
                  [major words diff] %0f Kwords@,\
-                 [minor words diff] %0f Kwords@]@."
+                 [minor words diff] %0f Kwords@]"
                 e.major_collections
                 e.minor_collections
                 e.stack_size

@@ -36,15 +36,15 @@ let load verbose p msg =
   try
     loadfile p;
     Printer.print_dbg ~header:false ~debug:verbose
-      "Success!@."
+      "Success!"
   with
   | Error m1 ->
     if verbose then begin
       Printer.print_dbg ~header:false
-        "@, Loading the %s in plugin %S failed!@."
+        "@, Loading the %s in plugin %S failed!"
         msg p;
       Printer.print_err
-        ">> Failure message: %s@." (error_message m1);
+        ">> Failure message: %s" (error_message m1);
     end;
     let pp = Format.sprintf "%s/%s" Config.pluginsdir p in
     Printer.print_dbg ~debug:verbose ~module_name:"Dynlink"
@@ -53,18 +53,18 @@ let load verbose p msg =
     try
       loadfile pp;
       Printer.print_dbg ~header:false ~debug:verbose
-        "Success!@."
+        "Success!"
     with
     | Error m2 ->
       if not (verbose) then begin
         Printer.print_err
           "@, Loading the %s in plugin %S failed!@,\
-           >> Failure message: %s@."
+           >> Failure message: %s"
           msg p
           (error_message m1);
       end;
       Errors.run_error
         (Dynlink_error
            (Format.sprintf
-              "Trying to load the plugin from %S failed too!@. \
-               >> Failure message: %s@." pp (error_message m2)))
+              "@[<v 0>Trying to load the plugin from %S failed too!@,\
+               >> Failure message: %s@]" pp (error_message m2)))
