@@ -202,7 +202,7 @@ module Debug = struct
       ~module_name:"Uf" ~function_name:"all"
       "@[<v 0>-------------------------------------------------@,\
        %a%a%a%a%a\
-       -------------------------------------------------@]@."
+       -------------------------------------------------@]"
       pmake env.make
       prepr env.repr
       prules env.ac_rs
@@ -211,18 +211,18 @@ module Debug = struct
 
   let lookup_not_found t env =
     print_err
-      "Uf: %a Not_found in env@." E.print t;
+      "Uf: %a Not_found in env" E.print t;
     all env
 
 
   let canon_of r rr =
     print_dbg ~debug:(get_rewriting () && get_verbose ())
-      "canon %a = %a@." X.print r X.print rr
+      "canon %a = %a" X.print r X.print rr
 
   let init_leaf p =
     print_dbg ~debug:(get_debug_uf ())
       ~module_name:"Uf" ~function_name:"init_leaf"
-      "init leaf : %a@." X.print p
+      "init leaf : %a" X.print p
 
   let critical_pair rx ry =
     print_dbg ~debug:(get_debug_uf ())
@@ -232,55 +232,55 @@ module Debug = struct
   let collapse_mult g2 d2 =
     print_dbg ~debug:(get_debug_ac ())
       ~module_name:"Uf" ~function_name:"collapse_mult"
-      "collapse *: %a = %a@."
+      "collapse *: %a = %a"
       X.print g2 X.print d2
 
   let collapse g2 d2 =
     print_dbg ~debug:(get_debug_ac ())
       ~module_name:"Uf" ~function_name:"collapse"
-      "collapse: %a = %a@."
+      "collapse: %a = %a"
       X.print g2 X.print d2
 
   let compose p v g d =
     print_dbg ~debug:(get_debug_ac ())
       ~module_name:"Uf" ~function_name:"compose"
-      "compose : %a -> %a on %a and %a@."
+      "compose : %a -> %a on %a and %a"
       X.print p X.print v
       Ac.print g X.print d
 
   let x_solve rr1 rr2 dep =
     print_dbg ~debug:(get_debug_uf ())
       ~module_name:"Uf" ~function_name:"x_solve"
-      "x-solve: %a = %a %a@."
+      "x-solve: %a = %a %a"
       X.print rr1 X.print rr2 Ex.print dep
 
   let ac_solve p v dep =
     print_dbg ~debug:(get_debug_uf ())
       ~module_name:"Uf" ~function_name:"ac_solve"
-      "ac-solve: %a |-> %a %a@."
+      "ac-solve: %a |-> %a %a"
       X.print p X.print v Ex.print dep
 
   let ac_x r1 r2 =
     print_dbg ~debug:(get_debug_uf ())
       ~module_name:"Uf" ~function_name:"ac_x"
-      "ac(x): delta (%a) = delta (%a)@."
+      "ac(x): delta (%a) = delta (%a)"
       X.print r1 X.print r2
 
   let distinct d =
     print_dbg ~debug:(get_debug_uf ())
       ~module_name:"Uf" ~function_name:"distinct"
-      "distinct %a@." LX.print d
+      "distinct %a" LX.print d
 
   let are_distinct t1 t2 =
     print_dbg ~debug:(get_debug_uf ())
       ~module_name:"Uf" ~function_name:"are_distinct"
-      "are_distinct %a %a @." E.print t1 E.print t2
+      "are_distinct %a %a" E.print t1 E.print t2
 
 
   let check_inv_repr_normalized =
     let trace orig =
       print_err
-        "[uf.%s] invariant broken when calling check_inv_repr_normalized@."
+        "[uf.%s] invariant broken when calling check_inv_repr_normalized"
         orig
     in
     fun orig repr ->
@@ -1026,7 +1026,7 @@ let assign_next env =
     | Some (s, rep, is_cs) ->
       Printer.print_dbg ~debug:(get_debug_interpretation())
         ~module_name:"Uf" ~function_name:"assign_next"
-        "TRY assign-next %a = %a@." X.print rep E.print s;
+        "TRY assign-next %a = %a" X.print rep E.print s;
         (*
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           modify this to be able to returns CS on terms. This way,
