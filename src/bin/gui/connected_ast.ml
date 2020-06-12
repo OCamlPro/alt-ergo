@@ -638,7 +638,7 @@ and popup_axiom t env _offset () =
               ~border_width:5 ~packing:pop_w#vbox#add () in
           let entries,_ = List.fold_left
               (fun (entries,i) (s,ty) ->
-                 let text = asprintf "%a : %a = @."
+                 let text = asprintf "%a : %a = "
                      Symbols.print_clean s Ty.print ty in
                  ignore(
                    GMisc.label ~text ~xalign:1.0
