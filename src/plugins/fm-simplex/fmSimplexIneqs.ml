@@ -217,7 +217,7 @@ module Container : Inequalities.Container_SIG = struct
         | Some (n, res, ctt') ->
           if SCache.MI.compare Q.compare r_max_ctt ctt' = 0 then begin
             Printer.print_dbg ~header:false ~debug:!dsimplex
-              "reuse RESULTS of simplex %d@." n;
+              "reuse RESULTS of simplex %d" n;
             res
           end
           else begin
