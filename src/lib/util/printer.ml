@@ -166,23 +166,25 @@ let init_output_format () =
 let print_std s =
   pp_std_smt ();
   fprintf (Options.get_fmt_std ()) s
+let flush fmt = Format.fprintf fmt "@."
 
-let print_err ?(header=(Options.get_output_with_headers ())) ?(error=true) s =
+let print_err ?(flush:true) ?(header=(Options.get_output_with_headers ())) ?(error=true) s =
   if error then begin
+    let fmt = Options.get_fmt_err () in  
+    fprintf fmt "@[<v 0>";
     if header then
-      fprintf (Options.get_fmt_err ())
-        "@[<v 7>@{<fg_red>@{<bold>[Error]@}@}";
-    fprintf (Options.get_fmt_err ()) s
+      fprintf fmt "@[<v 7>@{<fg_red>@{<bold>[Error]@}@}";
+    if flush then kfprintf flush fmt s else fprintf fmt s
   end
   else ifprintf err_formatter s
 
 let print_wrn ?(header=(Options.get_output_with_headers ())) ?(warning=true) s =
   if warning then begin
-    fprintf (Options.get_fmt_err ()) "%s" (pp_smt clean_wrn_print);
+    let fmt = Options.get_fmt_wrn () in
+    fprintf fmt "@[<v 0>%s" (pp_smt clean_wrn_print);
     if header then
-      fprintf (Options.get_fmt_wrn ())
-        "@[<v 9>@{<fg_orange>@{<bold>[Warning]@}@}" ;
-    fprintf (Options.get_fmt_wrn ()) s
+      fprintf fmt "@[<v 9>@{<fg_orange>@{<bold>[Warning]@}@}" ;
+    kfprintf flush fmt s
   end
   else ifprintf err_formatter s
 
