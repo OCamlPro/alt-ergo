@@ -97,13 +97,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let add_term t =
       print_dbg ~debug:(get_debug_matching() >= 3)
         ~module_name:"Matching" ~function_name:"add_term"
-        "add_term:  %a@." E.print t
+        "add_term:  %a" E.print t
 
     let matching tr =
       print_dbg ~debug:(get_debug_matching() >= 3)
         ~module_name:"Matching" ~function_name:"matching"
-        "(multi-)trigger: %a@,\
-         ========================================================@."
+        "@[<v 0>(multi-)trigger: %a@,\
+         ========================================================@]"
         E.print_list tr.E.content
 
     let match_pats_modulo pat lsubsts =
@@ -114,21 +114,21 @@ module Make (X : Arg) : S with type theory = X.t = struct
         in
         print_dbg
           ~module_name:"Matching" ~function_name:"match_pats_modulo"
-          "@[<v 2>match_pat_modulo: %a  with accumulated substs@,%a@."
+          "@[<v 2>match_pat_modulo: %a  with accumulated substs@,%a@]"
           E.print pat (pp_list_no_space print) lsubsts
 
     let match_one_pat { sbs; sty; _ } pat0 =
       print_dbg ~debug:(get_debug_matching() >= 3)
         ~module_name:"Matching" ~function_name:"match_one_pat"
-        "match_pat: %a  with subst:  sbs= %a | sty= %a@."
+        "match_pat: %a with subst: sbs= %a | sty= %a"
         E.print pat0 (SubstE.print E.print) sbs Ty.print_subst sty
 
 
     let match_one_pat_against { sbs; sty; _ } pat0 t =
       print_dbg ~debug:(get_debug_matching() >= 3)
         ~module_name:"Matching" ~function_name:"match_one_pat_against"
-        "match_pat: %a  against term %a@,\
-         with subst:  sbs= %a | sty= %a@."
+        "@[<v 0>match_pat: %a against term %a@,\
+         with subst:  sbs= %a | sty= %a@]"
         E.print pat0
         E.print t
         (SubstE.print E.print) sbs
@@ -137,13 +137,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let match_term { sbs; sty; _ } t pat =
       print_dbg ~debug:(get_debug_matching() >= 3)
         ~module_name:"Matching" ~function_name:"match_term"
-        "I match %a against %a with subst: sbs=%a | sty= %a@."
+        "I match %a against %a with subst: sbs=%a | sty= %a"
         E.print pat E.print t (SubstE.print E.print) sbs Ty.print_subst sty
 
     let match_list { sbs; sty; _ } pats xs =
       print_dbg ~debug:(get_debug_matching() >= 3)
         ~module_name:"Matching" ~function_name:"match_list"
-        "I match %a against %a with subst: sbs=%a | sty= %a@."
+        "I match %a against %a with subst: sbs=%a | sty= %a"
         E.print_list pats
         E.print_list xs
         (SubstE.print E.print) sbs
@@ -152,7 +152,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let match_class_of t cl =
       print_dbg ~debug:(get_debug_matching() >= 3)
         ~module_name:"Matching" ~function_name:"match_class_of"
-        "class_of (%a)  = { %a }@."
+        "class_of (%a) = { %a }"
         E.print t
         (fun fmt -> List.iter (fprintf fmt "%a , " E.print)) cl
 
@@ -219,7 +219,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           List.fold_left add_rec env xs
         | E.Not_a_term {is_lit} ->
           Printer.print_err
-            "%a is not a term, is_lit = %b@." E.print t is_lit;
+            "%a is not a term, is_lit = %b" E.print t is_lit;
           assert false
     in
     if info.term_age > age_limite () then env else add_rec env t
@@ -539,7 +539,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           Printer.print_dbg
             ~debug:(get_debug_matching() >= 1 && get_verbose())
             ~module_name:"Matching" ~function_name:"matching"
-            "skip matching for %a : cpt = %d@."
+            "skip matching for %a : cpt = %d"
             E.print pat_info.trigger_orig !cpt;
           pat_info, []
 
@@ -666,7 +666,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
            in
            Printer.print_dbg ~debug:(Options.get_debug_triggers ())
              ~module_name:"Matching" ~function_name:"add_triggers"
-             "@[<v 2>triggers of %s are:@,%a@."
+             "@[<v 2>triggers of %s are:@,%a@]"
              name E.print_triggers tgs;
            List.fold_left
              (fun env tr ->
