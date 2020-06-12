@@ -673,7 +673,7 @@ and popup_axiom t env _offset () =
 
               with
               | Errors.Error e ->
-                errors_l#set_text (asprintf "%a@." Errors.report e);
+                errors_l#set_text (asprintf "%a" Errors.report e);
                 errors_l#misc#show ()
            ));
 
