@@ -138,6 +138,7 @@ AltErgoLib.Errors
 AltErgoLib.Steps
 AltErgoLib.Options
 AltErgoLib.Version
+AltErgoLib.Printer
 }
 
 Stdlib extensions/replacements/wrappers:

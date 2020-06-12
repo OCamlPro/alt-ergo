@@ -30,35 +30,41 @@ end
 
 include Dynlink
 
-let load fmt get_verbose p msg =
-  if get_verbose then
-    Format.fprintf fmt "[Dynlink] Loading the %s in %S ...@." msg p;
+let load verbose p msg =
+  Printer.print_dbg ~flushed:false ~debug:verbose ~module_name:"Dynlink"
+    "Loading the %s in %S ..." msg p;
   try
     loadfile p;
-    if get_verbose then Format.fprintf fmt "Success !@.@."
+    Printer.print_dbg ~header:false ~debug:verbose
+      "Success!"
   with
   | Error m1 ->
-    if get_verbose then begin
-      Format.fprintf fmt "[Dynlink] Loading the %s in plugin %S failed!@."
+    if verbose then begin
+      Printer.print_dbg ~header:false
+        "@, Loading the %s in plugin %S failed!"
         msg p;
-      Format.fprintf fmt ">> Failure message: %s@.@." (error_message m1);
+      Printer.print_err
+        ">> Failure message: %s" (error_message m1);
     end;
     let pp = Format.sprintf "%s/%s" Config.pluginsdir p in
-    if get_verbose then
-      Format.fprintf fmt "[Dynlink] Loading the %s in %S ... with prefix %S@."
-        msg p Config.pluginsdir;
+    Printer.print_dbg  ~flushed:false ~debug:verbose ~module_name:"Dynlink"
+      "Loading the %s in %S... with prefix %S..."
+      msg p Config.pluginsdir;
     try
       loadfile pp;
-      if get_verbose then Format.fprintf fmt "Success !@.@."
+      Printer.print_dbg ~header:false ~debug:verbose
+        "Success!"
     with
     | Error m2 ->
-      if not get_verbose then begin
-        Format.fprintf fmt
-          "[Dynlink] Loading the %s in plugin %S failed!@." msg p;
-        Format.fprintf fmt ">> Failure message: %s@.@." (error_message m1);
+      if not (verbose) then begin
+        Printer.print_err
+          "@, Loading the %s in plugin %S failed!@,\
+           >> Failure message: %s"
+          msg p
+          (error_message m1);
       end;
       Errors.run_error
         (Dynlink_error
            (Format.sprintf
-              "Trying to load the plugin from %S failed too!@. \
-               >> Failure message: %s@.@." pp (error_message m2)))
+              "@[<v 0>Trying to load the plugin from %S failed too!@ \
+               >> Failure message: %s@]" pp (error_message m2)))

@@ -369,6 +369,7 @@ struct
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
+    open Printer
 
     let print fmt r =
       if get_term_like_pp () then
@@ -395,44 +396,50 @@ struct
         | Ac t    -> fprintf fmt "Ac:[%a]" AC.print t
 
     let print_sbt msg sbs =
-      if get_debug_combine () then begin
-        let c = ref 0 in
-        fprintf fmt "%s subst:@." msg;
-        List.iter
-          (fun (p,v) ->
-             incr c;
-             fprintf fmt " %d) %a |-> %a@." !c print p print v) sbs;
-        fprintf fmt "@."
-      end
+      let c = ref 0 in
+      let print fmt (p,v) =
+        incr c;
+        fprintf fmt "<%d) %a |-> %a@ "
+          !c print p print v
+      in
+      print_dbg ~debug:(get_debug_combine ())
+        ~module_name:"Shostak" ~function_name:"print_sbt"
+        "@[<v 2>%s subst:@ %a@]"
+        msg
+        (pp_list_no_space print) sbs
 
     let debug_abstraction_result oa ob a b acc =
-      if get_debug_combine () then begin
-        fprintf fmt "@.== get_debug_abstraction_result ==@.";
-        fprintf fmt "@.Initial equaliy:   %a = %a@." CX.print oa CX.print ob;
-        fprintf fmt "abstracted equality: %a = %a@." CX.print a CX.print b;
-        fprintf fmt "selectors elimination result:@.";
-        let cpt = ref 0 in
-        List.iter
-          (fun (p,v) ->
-             incr cpt;
-             fprintf fmt "\t(%d) %a |-> %a@." !cpt CX.print p CX.print v
-          )acc;
-        fprintf fmt "@."
-      end
+      let c = ref 0 in
+      let print fmt (p,v) =
+        incr c;
+        fprintf fmt "(%d) %a |-> %a@ "
+          !c CX.print p CX.print v
+      in
+      print_dbg ~debug:(get_debug_combine ())
+        ~module_name:"Shostak" ~function_name:"abstraction_result"
+        "@[<v 0>== get_debug_abstraction_result ==@ \
+         Initial equaliy:   %a = %a@ \
+         abstracted equality: %a = %a@ \
+         @[<v 2>selectors elimination result:@ \
+         %a@]@]"
+        CX.print oa CX.print ob CX.print a CX.print b
+        (pp_list_no_space print) acc
 
     let solve_one a b =
-      if get_debug_combine () then
-        fprintf fmt "solve one %a = %a@." CX.print a CX.print b
+      print_dbg ~debug:(get_debug_combine ())
+        ~module_name:"Shostak" ~function_name:"solve_one"
+        "solve one %a = %a" CX.print a CX.print b
 
     let debug_abstract_selectors a =
-      if get_debug_combine () then
-        fprintf fmt "abstract selectors of %a@." CX.print a
+      print_dbg ~debug:(get_debug_combine ())
+        ~module_name:"Shostak" ~function_name:"abstract_selectors"
+        "abstract selectors of %a" CX.print a
 
     let assert_have_mem_types tya tyb =
       assert (
         not (Options.get_enable_assertions()) ||
         if not (Ty.compare tya tyb = 0) then (
-          fprintf fmt "@.Tya = %a  and @.Tyb = %a@.@."
+          print_err "@[<v 0>@ Tya = %a  and @ Tyb = %a@]"
             Ty.print tya Ty.print tyb;
           false)
         else true)
@@ -489,7 +496,7 @@ struct
           match p.v with
           | Ac _ -> true | Term _ -> SX.mem p original
           | _ ->
-            Format.eprintf "Ici: %a@." CX.print p;
+            Printer.print_err "%a" CX.print p;
             assert false
         )sbs
     in
@@ -505,8 +512,8 @@ struct
     List.fold_right (fun (p,v)r  -> CX.subst p v r) sbt r
 
   let solve_uninterpreted r1 r2 pb = (* r1 != r2*)
-    if get_debug_combine () then
-      fprintf fmt "solve uninterpreted %a = %a@." print r1 print r2;
+    Printer.print_dbg ~debug:(get_debug_combine ())
+      "solve uninterpreted %a = %a" print r1 print r2;
     if CX.str_cmp r1 r2 > 0 then { pb with sbt = (r1,r2)::pb.sbt }
     else { pb with sbt = (r2,r1)::pb.sbt }
 
@@ -576,13 +583,13 @@ struct
         else Some (Expr.fresh_name ty, false) (* false <-> not a case-split *)
       | _               -> assert false
     in
-    if get_debug_interpretation() then
-      begin
-        fprintf fmt "[combine] assign value to representative %a : " print r;
-        match opt with
-        | None -> fprintf fmt "None@."
-        | Some(res, _is_cs) -> fprintf fmt " %a@." Expr.print res
-      end;
+    Printer.print_dbg ~debug:(get_debug_interpretation ())
+      ~module_name:"Shostak" ~function_name:"assign_value"
+      "assign value to representative %a : %s"
+      print r
+      (match opt with
+       | None -> asprintf "None"
+       | Some(res, _is_cs) -> asprintf "%a" Expr.print res);
     opt
 
   let choose_adequate_model t rep l =
@@ -615,25 +622,26 @@ struct
             match term_extract rep with
             | Some t, true when (Expr.depth t) = 1 -> rep
             | _ ->
-              if get_debug_interpretation() then begin
-                fprintf fmt "[Combine.choose_adequate_model] ";
-                fprintf fmt "What to choose for term %a with rep %a ??@."
-                  Expr.print t print rep;
-                List.iter
-                  (fun (t, r) ->
-                     fprintf fmt "  > impossible case: %a -- %a@."
-                       Expr.print t print r
-                  )l;
-              end;
+              let print_aux fmt (t,r) =
+                fprintf fmt "> impossible case: %a -- %a@ "
+                  Expr.print t
+                  print r
+              in
+              Printer.print_dbg ~debug:(get_debug_interpretation())
+                ~module_name:"Shostak" ~function_name:"choose_adequate_model"
+                "@[<v 2>What to choose for term %a with rep %a?\
+                 %a@]"
+                Expr.print t
+                print rep
+                (Printer.pp_list_no_space print_aux) l;
               assert false
         in
-        ignore (flush_str_formatter ());
-        fprintf str_formatter "%a" print r; (* it's a EUF constant *)
-        r, flush_str_formatter ()
+        r, asprintf "%a" print r (* it's a EUF constant *)
     in
-    if get_debug_interpretation() then
-      fprintf fmt "[combine] %a selected as a model for %a@."
-        print r Expr.print t;
+    Printer.print_dbg ~debug:(get_debug_interpretation())
+      ~module_name:"Shostak" ~function_name:"choose_adequate_model"
+      "%a selected as a model for %a"
+      print r Expr.print t;
     r, pprint
 
 end

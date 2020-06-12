@@ -444,7 +444,8 @@ module Decls = struct
                  | Tvar {v ; value = None}   ->
                    if equal vty ty then sbt else M.add v ty sbt
                  | _ ->
-                   fprintf fmt "vty = %a and ty = %a@." print vty print ty;
+                   Printer.print_err "vty = %a and ty = %a"
+                     print vty print ty;
                    assert false
               )M.empty params args
           with Invalid_argument _ -> assert false
@@ -464,8 +465,7 @@ module Decls = struct
         add name params body;
         body
     with Not_found ->
-      if get_debug_adt () then
-        fprintf fmt "%a not found@." Hstring.print name;
+      Printer.print_err "%a not found" Hstring.print name;
       assert false
 end
 
@@ -490,8 +490,8 @@ let t_adt ?(body=None) s ty_vars =
     | None -> ()
     | Some [] -> assert false
     | Some ([_] as cases) ->
-      if get_debug_adt () then
-        Format.eprintf "should be registered as a record@.";
+      Printer.print_dbg ~debug:(get_debug_adt ()) ~module_name:"Ty"
+        "should be registered as a record";
       let cases =
         List.map (fun (s, l) ->
             let l =

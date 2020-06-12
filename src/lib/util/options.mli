@@ -34,11 +34,6 @@
     of the program
 *)
 
-(** Standard output formatter for
-    {{:https://caml.inria.fr/pub/docs/manual-ocaml/libref/Format.html} Format}
-*)
-val fmt : Format.formatter
-
 (** Type used to describe the type of models wanted *)
 type model = MNone | MDefault | MAll | MComplete
 
@@ -117,9 +112,6 @@ val set_debug_matching : int -> unit
 
 (** Set [debug_sat] accessible with {!val:get_debug_sat} *)
 val set_debug_sat : bool -> unit
-
-(** Set [debug_sat_simple] accessible with {!val:get_debug_sat_simple} *)
-val set_debug_sat_simple : bool -> unit
 
 (** Set [debug_split] accessible with {!val:get_debug_split} *)
 val set_debug_split : bool -> unit
@@ -292,6 +284,12 @@ val set_replay_used_context : bool -> unit
 (** Set [answers_with_loc] accessible with {!val:get_answers_with_loc} *)
 val set_answers_with_loc : bool -> unit
 
+(** Set [output_with_colors] accessible with {!val:get_output_with_colors} *)
+val set_output_with_colors : bool -> unit
+
+(** Set [output_with_headers] accessible with {!val:get_output_with_headers} *)
+val set_output_with_headers : bool -> unit
+
 (** Set [infer_input_format] accessible with {!val:get_infer_input_format} *)
 val set_infer_input_format : 'a option -> unit
 
@@ -456,9 +454,6 @@ val get_debug_ac : unit -> bool
 (** Get the debugging flag of SAT. *)
 val get_debug_sat : unit -> bool
 
-(** Get the debugging flag of SAT (simple output). *)
-val get_debug_sat_simple : unit -> bool
-
 (** Get the debugging flag of typing. *)
 val get_debug_typing : unit -> bool
 
@@ -546,6 +541,14 @@ val get_save_used_context : unit -> bool
 
 (** [true] if the locations of goals is shown when printing solver's answers. *)
 val get_answers_with_locs  : unit -> bool
+(** Default to [true] *)
+
+(** [true] if the outputs are printed with colors *)
+val get_output_with_colors  : unit -> bool
+(** Default to [true] *)
+
+(** [true] if the outputs are printed with headers *)
+val get_output_with_headers  : unit -> bool
 (** Default to [true] *)
 
 (** Valuget_e of the currently selected parsing and typing frontend. *)
@@ -978,5 +981,62 @@ val match_extension : string -> input_format
 val set_is_gui : bool -> unit
 val get_is_gui : unit -> bool
 
+
+(** {3 Printer and formatter } *)
+(** This functions are use to print or set the formatter used to output results
+    debug or error informations *)
+
 (** Print message as comment in the corresponding output format *)
 val print_output_format: Format.formatter -> string -> unit
+
+(** Set the std formatter used by default to output the results [fmt_std],
+    model [fmt_mdl] and unsat core [fmt_usc]. *)
+val set_std_fmt : Format.formatter -> unit
+(** Default to [Format.std_formatter] *)
+
+(** Set the err formatter used by default to output error [fmt_err],
+    debug [fmt_dbg] and warning [fmt_wrn] informations. *)
+val set_err_fmt : Format.formatter -> unit
+(** Default to [Format.err_formatter] *)
+
+(** Value specifying the formatter used to output results *)
+val get_fmt_std : unit -> Format.formatter
+(** Default to [Format.std_formatter] *)
+
+(** Value specifying the formatter used to output errors *)
+val get_fmt_err : unit -> Format.formatter
+(** Default to [Format.err_formatter] *)
+
+(** Value specifying the formatter used to output warnings *)
+val get_fmt_wrn : unit -> Format.formatter
+(** Default to [Format.err_formatter] *)
+
+(** Value specifying the formatter used to output debug informations *)
+val get_fmt_dbg : unit -> Format.formatter
+(** Default to [Format.err_formatter] *)
+
+(** Value specifying the formatter used to output model *)
+val get_fmt_mdl : unit -> Format.formatter
+(** Default to [Format.std_formatter] *)
+
+(** Value specifying the formatter used to output unsat core *)
+val get_fmt_usc : unit -> Format.formatter
+(** Default to [Format.std_formatter] *)
+
+(** Set [fmt_std] accessible with {!val:get_fmt_std} *)
+val set_fmt_std : Format.formatter -> unit
+
+(** Set [fmt_err] accessible with {!val:get_fmt_err} *)
+val set_fmt_err : Format.formatter -> unit
+
+(** Set [fmt_wrn] accessible with {!val:get_fmt_wrn} *)
+val set_fmt_wrn : Format.formatter -> unit
+
+(** Set [fmt_dbg] accessible with {!val:get_fmt_dbg} *)
+val set_fmt_dbg : Format.formatter -> unit
+
+(** Set [fmt_mdl] accessible with {!val:get_fmt_mdl} *)
+val set_fmt_mdl : Format.formatter -> unit
+
+(** Set [fmt_usc] accessible with {!val:get_fmt_usc} *)
+val set_fmt_usc : Format.formatter -> unit

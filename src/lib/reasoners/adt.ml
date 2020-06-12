@@ -32,7 +32,9 @@ end
 
 (* TODO: can this function be replace with Ty.assoc_destrs ?? *)
 let constr_of_destr ty dest =
-  if get_debug_adt () then fprintf fmt "ty = %a@." Ty.print ty;
+  Printer.print_dbg ~debug:(get_debug_adt ())
+    ~module_name:"Adt" ~function_name:"constr_of_destr"
+    "ty = %a" Ty.print ty;
   match ty with
   | Ty.Tadt (s, params) ->
     let bdy = Ty.type_body s params in
@@ -107,7 +109,7 @@ module Shostak (X : ALIEN) = struct
         begin
           try snd @@ List.find (fun (lbl, _) -> Hs.equal d_name lbl) c.c_args
           with Not_found ->
-            fprintf fmt "is_mine %a failed@." print u;
+            Printer.print_err "is_mine %a failed" print u;
             assert false
         end
       | _ -> X.embed u
@@ -144,7 +146,9 @@ module Shostak (X : ALIEN) = struct
 
   let make t =
     assert (not (get_disable_adts ()));
-    if get_debug_adt () then eprintf "[ADTs] make %a@." E.print t;
+    Printer.print_dbg ~debug:(get_debug_adt ())
+      ~module_name:"Adt" ~function_name:"make"
+      "make %a" E.print t;
     let { E.f; xs; ty; _ } = match E.term_view t with
       | E.Term t -> t
       | E.Not_a_term _ -> assert false
@@ -331,14 +335,15 @@ module Shostak (X : ALIEN) = struct
           let cons =
             E.mk_term (Sy.constr (Hs.view constr)) xs (X.type_info d_arg)
           in
-          if get_debug_adt () then
-            fprintf fmt "abstr with equality %a == %a@."
-              X.print d_arg E.print cons;
+          Printer.print_dbg ~flushed:false ~debug:(get_debug_adt ())
+            ~module_name:"Adt" ~function_name:"abstract_selectors"
+            "abstr with equality %a == %a@ "
+            X.print d_arg E.print cons;
           let cons, _ = make cons in
           let acc = (d_arg, cons) :: acc in
           let xx = is_mine @@ Select {s with d_arg = cons} in
-          if get_debug_adt () then
-            fprintf fmt "%a becomes %a@." X.print x  X.print xx;
+          Printer.print_dbg ~debug:(get_debug_adt ()) ~header:false
+            "%a becomes %a" X.print x  X.print xx;
           xx, acc
 
         | _ ->
@@ -350,8 +355,9 @@ module Shostak (X : ALIEN) = struct
     List.exists (fun y -> X.equal x y) (X.leaves e)
 
   let solve r1 r2 pb =
-    if get_debug_adt () then
-      Format.eprintf "[ADTs] solve %a = %a@." X.print r1 X.print r2;
+    Printer.print_dbg ~debug:(get_debug_adt ())
+      ~module_name:"Adt" ~function_name:"solve"
+      "solve %a = %a" X.print r1 X.print r2;
     assert (not (get_disable_adts ()));
     match embed r1, embed r2 with
     | Select _, _ | _, Select _ -> assert false (* should be eliminated *)
@@ -405,11 +411,13 @@ module Shostak (X : ALIEN) = struct
 
 
   let assign_value _ _ _ =
-    fprintf fmt "[ADTs.models] assign_value currently not implemented";
+    Printer.print_err
+      "[ADTs.models] assign_value currently not implemented";
     assert false
 
   let choose_adequate_model _ _ _ =
-    fprintf fmt "[ADTs.models] choose_adequate_model currently not implemented";
+    Printer.print_err
+      "[ADTs.models] choose_adequate_model currently not implemented";
     assert false
 
 end

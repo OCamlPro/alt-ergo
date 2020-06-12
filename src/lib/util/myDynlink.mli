@@ -26,6 +26,6 @@ val error_message : error -> string
 val loadfile : string -> unit
 (** Load a compiled file, as in {!Dynlink.loadfile}. *)
 
-val load : Format.formatter -> bool -> string -> string -> unit
+val load : bool -> string -> string -> unit
 (** Same as loadfile but try to load plugins dir if loadfile raise an Error
     @raise Errors.Error if the plugin failed to be loaded *)

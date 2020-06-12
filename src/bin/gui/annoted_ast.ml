@@ -235,7 +235,7 @@ module HTag = Hashtbl.Make (struct
 let increase_size envs =
   Pango.Font.set_size monospace_font
     (Pango.Font.get_size monospace_font + 2000);
-  (* eprintf "%d +@." (Pango.Font.get_size monospace_font); *)
+  (* Printer.print_dbg "%d +" (Pango.Font.get_size monospace_font); *)
   List.iter (fun env ->
       env.goal_view#misc#modify_font monospace_font;
       env.inst_view#misc#modify_font monospace_font;
@@ -244,7 +244,7 @@ let increase_size envs =
 
 
 let decrease_size envs =
-  (* eprintf "%d +@." (Pango.Font.get_size monospace_font); *)
+  (* Printer.print_dbg "%d +" (Pango.Font.get_size monospace_font); *)
   Pango.Font.set_size monospace_font
     (Pango.Font.get_size monospace_font - 2000);
   List.iter (fun env ->
@@ -1608,8 +1608,7 @@ and add_rwt errors (buffer:sbuffer) indent tags r =
   let tags = r.tag::r.ptag::tags in
   append_indent buffer indent;
   append_buf buffer ~tags "forall ";
-  fprintf str_formatter "%a. " print_var_list rv;
-  append_buf buffer ~tags (flush_str_formatter ());
+  append_buf buffer ~tags (asprintf "%a. @." print_var_list rv);
   add_aterm errors indent buffer tags rl;
   append_buf buffer ~tags " = ";
   add_aterm errors indent buffer tags rr
@@ -1639,8 +1638,7 @@ and add_quant_form errors (buffer:sbuffer) indent offset tags qf =
   let offset = offset + indent_size in
   let {aqf_bvars = bv; aqf_triggers = trs;
        aqf_form = aaf; aqf_hyp; _ } = qf.c in
-  fprintf str_formatter "%a " print_var_list bv;
-  append_buf buffer ~tags (flush_str_formatter ());
+  append_buf buffer ~tags (asprintf "%a @." print_var_list bv);
   let ntags = qf.tag::qf.ptag::tags in
   let multi_line_triggers =
     List.length trs > 2 ||
@@ -1811,10 +1809,10 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
   if indent <> 0 then append_indent buffer indent;
   match d.c with
   | ATheory (_loc, name, ext, l) ->
-    fprintf str_formatter "theory %s extends %s =" name
-      (Util.string_of_th_ext ext);
     let ntags = d.tag :: d.ptag :: tags in
-    append_buf buffer ~tags:ntags (flush_str_formatter());
+    append_buf buffer ~tags:ntags
+      (sprintf "theory %s extends %s =" name
+         (Util.string_of_th_ext ext));
     append_buf buffer "\n\n";
     List.iter
       (add_atyped_decl errors buffer ~indent:(indent+1) ~tags:ntags) l;
@@ -1829,7 +1827,7 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
       else match ax_kd with
         | Util.Default -> "axiom"
         | Util.Propagator ->
-          Format.eprintf "[warning] may become 'propagator' in the future@.";
+          Printer.print_wrn "may become 'propagator' in the future";
           "axiom"
     in
     let ntags = d.tag :: d.ptag :: tags in
@@ -1865,18 +1863,17 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
     append_buf buffer "\n\n"
 
   | ALogic (_loc, ls, ty, _) ->
-    fprintf str_formatter
-      "logic %a : %a" print_string_list ls print_plogic_type ty;
     d.line <- buffer#line_count;
     let tags = d.tag :: d.ptag :: tags in
-    append_buf buffer ~tags (flush_str_formatter());
+    append_buf buffer ~tags
+      (asprintf "logic %a : %a@."  print_string_list ls print_plogic_type ty);
     append_buf buffer "\n\n"
 
   | APredicate_def (_loc, p, spptl, af) ->
     let spptl = List.map (fun (x, y, _) -> (x, y)) spptl in
-    fprintf str_formatter "predicate %s %a =" p print_pred_type_list spptl;
     let tags = d.tag :: d.ptag :: tags in
-    append_buf buffer ~tags (flush_str_formatter());
+    append_buf buffer ~tags
+      (asprintf "predicate %s %a =" p print_pred_type_list spptl);
     append_buf buffer "\n";
     d.line <- buffer#line_count;
     append_indent buffer (indent+1);
@@ -1885,10 +1882,10 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
 
   | AFunction_def (_loc, f, spptl, ty, _, af) ->
     let spptl = List.map (fun (x, y, _) -> (x, y)) spptl in
-    fprintf str_formatter "function %s (%a) : %a =" f
-      print_string_ppure_type_list spptl print_ppure_type ty;
     let tags = d.tag :: d.ptag :: tags in
-    append_buf buffer ~tags (flush_str_formatter());
+    append_buf buffer ~tags
+      (asprintf "function %s (%a) : %a =" f
+         print_string_ppure_type_list spptl print_ppure_type ty);
     append_buf buffer "\n";
     d.line <- buffer#line_count;
     append_indent buffer (indent+1);
@@ -1896,23 +1893,23 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
     append_buf buffer "\n\n"
 
   | ATypeDecl (_loc, ls, s, Abstract, _) ->
-    fprintf str_formatter "type %a%s" print_astring_list ls s;
     d.line <- buffer#line_count;
-    append_buf buffer ~tags:(d.tag :: d.ptag :: tags) (flush_str_formatter());
+    append_buf buffer ~tags:(d.tag :: d.ptag :: tags)
+      (asprintf "type %a%s" print_astring_list ls s);
     append_buf buffer "\n\n"
 
   | ATypeDecl (_loc, ls, s, Enum lc, _) ->
-    fprintf str_formatter "type %a%s = %a"
-      print_astring_list ls s (print_string_sep " | ") lc;
     d.line <- buffer#line_count;
-    append_buf buffer ~tags:(d.tag :: d.ptag :: tags) (flush_str_formatter());
+    append_buf buffer ~tags:(d.tag :: d.ptag :: tags)
+      (asprintf "type %a%s = %a"
+         print_astring_list ls s (print_string_sep " | ") lc);
     append_buf buffer "\n\n"
 
   | ATypeDecl (_loc, ls, s, Record (_, rt), _) ->
-    fprintf str_formatter "type %a%s = { %a }"
-      print_astring_list ls s	print_record_type rt;
     d.line <- buffer#line_count;
-    append_buf buffer ~tags:(d.tag :: d.ptag :: tags) (flush_str_formatter());
+    append_buf buffer ~tags:(d.tag :: d.ptag :: tags)
+      (asprintf "type %a%s = { %a }"
+         print_astring_list ls s print_record_type rt);
     append_buf buffer "\n\n"
 
   | ATypeDecl (_loc, _ls, _s, Algebraic _, _) ->
@@ -2095,7 +2092,7 @@ let findtags sl l =
 let findtags_using r l =
   match r with
   | ATheory _ ->
-    fprintf fmt "7 !@.";
+    Printer.print_err "7!";
     assert false
   | AAxiom _
   | ARewriting _
@@ -2372,7 +2369,7 @@ let findbyid_atyped_decl  stop_decl id (td, tyenv) =
   else if stop_decl then raise (Foundannot (AD (td, tyenv)))
   else match td.c with
     | ATheory (_, _, _, _) ->
-      fprintf fmt "11 !@.";
+      Printer.print_err "11!";
       assert false
     | ARewriting (_,_, _)
     | ALogic _ | ATypeDecl _  -> ()

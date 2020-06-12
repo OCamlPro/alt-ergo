@@ -400,7 +400,8 @@ let rec print_silent fmt t =
           fprintf fmt "(lemma: %s forall %a[%a].@  %a)"
             name
             print_binders binders
-            print_triggers user_trs print_silent main
+            print_triggers user_trs
+            print_silent main
         else
           fprintf fmt "(lem %s)" name
 
@@ -416,7 +417,8 @@ let rec print_silent fmt t =
     fprintf fmt
       "(let%a %a =@ %a in@ %a)"
       (fun fmt x -> if Options.get_verbose () then
-          fprintf fmt " [sko = %a]" print x.let_sko) x
+          fprintf fmt
+            " [sko = %a]" print x.let_sko) x
       Sy.print x.let_v print x.let_e print_silent x.in_e
 
   (* Literals *)
@@ -535,11 +537,8 @@ and print_list_sep sep fmt = function
 and print_list fmt = print_list_sep "," fmt
 
 and print_triggers fmt trs =
-  let first = ref true in
   List.iter (fun { content = l; _ } ->
-      fprintf fmt "%s%a"
-        (if !first then "" else " | ") print_list l;
-      first := false;
+      fprintf fmt "| %a@," print_list l;
     ) trs
 
 
@@ -881,8 +880,8 @@ let mk_forall_ter =
         let q = match form_view lem with Lemma q -> q | _ -> assert false in
         assert (equal q.main f (* should be true *));
         if compare_quant q new_q <> 0 then raise Exit;
-        if get_debug_warnings () then
-          eprintf "[warning] (sub) axiom %s replaced with %s@." name q.name;
+        Printer.print_wrn ~warning:(get_debug_warnings ())
+          "(sub) axiom %s replaced with %s" name q.name;
         lem
       with Not_found | Exit ->
         let d = new_q.main.depth in (* + 1 ?? *)
@@ -1048,8 +1047,11 @@ let no_capture_issue s_t binders =
   if SMap.is_empty capt_bind then true
   else
     begin
-      eprintf "captures between@.%aand%a!@.(captured = %a)@.@."
-        (SMap.print print) s_t print_binders binders print_binders capt_bind;
+      Printer.print_wrn
+        "captures between@,%aand%a!@,(captured = %a)"
+        (SMap.print print) s_t
+        print_binders binders
+        print_binders capt_bind;
       false
     end
 
@@ -1486,14 +1488,15 @@ let mk_let let_v let_e in_e _id =
   mk_let_aux {let_v; let_e; in_e; let_sko; is_bool}
 
 let skolemize { main = f; binders; sko_v; sko_vty; _ } =
-  let tyvars =
-    ignore (flush_str_formatter ());
-    List.iter (fun ty ->
-        assert (Ty.Svty.is_empty (Ty.vty_of ty));
-        fprintf str_formatter "<%a>" Ty.print ty
-      ) sko_vty;
-    flush_str_formatter ()
+  let print fmt ty =
+    assert (Ty.Svty.is_empty (Ty.vty_of ty));
+    fprintf fmt "<%a>" Ty.print ty
   in
+  let pp_sep_nospace fmt () = fprintf fmt "" in
+  let pp_list fmt l =
+    pp_print_list ~pp_sep:pp_sep_nospace print fmt l in
+  let tyvars = asprintf "[%a]" pp_list sko_vty in
+
   let mk_sym cpt s =
     (* garder le suffixe "__" car cela influence l'ordre *)
     Sy.name (Format.sprintf "!?__%s%s!%d" s tyvars cpt)
@@ -2204,7 +2207,7 @@ let mk_exists name loc binders trs f id ~toplevel ~decl_kind =
     mk_forall name loc SMap.empty trs tmp id ~toplevel ~decl_kind
 
 
-let rec compile_match mk_destr mk_tester e cases accu =
+let rec compile_match mk_destr mker e cases accu =
   match cases with
   | [] -> accu
 
@@ -2223,14 +2226,15 @@ let rec compile_match mk_destr mk_tester e cases accu =
     match l with
       [] -> _then
     | _ ->
-      let _else = compile_match mk_destr mk_tester e l accu in
-      let cond = mk_tester e name in
+      let _else = compile_match mk_destr mker e l accu in
+      let cond = mker e name in
       mk_ite cond _then _else 0
 
 (* TO BE REMOVED *)
 let debug_compile_match e cases res =
   if get_debug_adt () then begin
-    fprintf fmt "compilation of: match %a with@." print e;
+    Printer.print_dbg  ~flushed:false ~module_name:"Expr"
+      "compilation of: match %a with@ " print e;
     let p_list_vars fmt l =
       match l with
         [] -> ()
@@ -2244,15 +2248,17 @@ let debug_compile_match e cases res =
       (fun (p, v) ->
          match p with
          | Typed.Constr {name; args} ->
-           fprintf fmt "| %a %a -> %a@."
+           Printer.print_dbg  ~flushed:false ~header:false
+             "| %a %a -> %a@ "
              Hstring.print name
              p_list_vars args
              print v;
          | Typed.Var x ->
-           fprintf fmt "| %a -> %a@." Var.print x print v;
+           Printer.print_dbg  ~flushed:false ~header:false
+             "| %a -> %a@ " Var.print x print v;
       )cases;
-    fprintf fmt "end@.";
-    fprintf fmt "@.result is: %a@.@." print res;
+    Printer.print_dbg ~header:false
+      "end@ result is: %a" print res;
   end
 
 let mk_match e cases =
@@ -2264,7 +2270,7 @@ let mk_match e cases =
     | Ty.Tsum _ -> (fun _hs -> assert false) (* no destructors for Tsum *)
     | _ -> assert false
   in
-  let mk_tester =
+  let mker =
     match ty with
     | Ty.Tadt _ ->
       (fun e name -> mk_builtin ~is_pos:true (Sy.IsConstr name) [e])
@@ -2279,7 +2285,7 @@ let mk_match e cases =
 
     | _ -> assert false
   in
-  let res = compile_match mk_destr mk_tester e cases e in
+  let res = compile_match mk_destr mker e cases e in
   debug_compile_match e cases res;
   res
   [@ocaml.ppwarning "TODO: introduce a let if e is a big expr"]

@@ -9,7 +9,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(* empty interface *)
+(** Prints some debug info about the GC's activity. *)
+val init : unit -> unit
 
 (** Gc logging
 

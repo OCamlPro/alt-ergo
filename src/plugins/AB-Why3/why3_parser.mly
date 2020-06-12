@@ -81,7 +81,7 @@ open Parsed
     | { Parsed.pp_desc = PPvar "bool" ; _ } -> bool_type
     | { Parsed.pp_desc = PPvar "real" ; _ } -> real_type
     | { Parsed.pp_desc = PPvar s; pp_loc } ->  mk_external_type pp_loc pl s
-    | _ -> Format.eprintf "TODO@."; assert false
+    | _ -> Printer.print_err "[TODO]"; assert false
 
   let mk_apply loc (f : Parsed.lexpr) a =
     match f with
@@ -102,7 +102,7 @@ open Parsed
        mk_application loc "add" [a; empty]
     | { pp_desc = PPvar s ; _ } -> mk_application loc s [a]
     | { pp_desc = PPapp (s, l) ; _ } -> mk_application loc s (l @ [a])
-    | _ ->  Format.eprintf "TODO@."; assert false
+    | _ ->  Printer.print_err "[TODO]"; assert false
 
   let mk_infix_ident id loc t1 t2 =
     let get_infix_ident i =
@@ -132,7 +132,8 @@ open Parsed
       | "<<|" -> mk_application loc "infix_lslsbr" [t1; t2]
       | "/|\\" | "/|" -> mk_application loc "infix_slbr" [t1; t2]
       | "\\|/" | "|/" -> mk_application loc "infix_brsl" [t1; t2]
-      | s ->  Format.eprintf "TODO: translate symbols %S@." s; assert false
+      | s ->  Printer.print_err "[TODO] translate symbols %S" s;
+       assert false
 
   let mk_tuple_record exp_list loc =
   let length = string_of_int (List.length exp_list) in
@@ -155,7 +156,8 @@ open Parsed
   let hack_mod var { id_str; id_loc; _ }  =
     match var.pp_desc, id_str with
     | PPvar "Power", "power" ->
-       (*Format.eprintf "%s\n" "hack";*) mk_var id_loc "power1"
+       (* Printer.print_dbg "hack";*)
+        mk_var id_loc "power1"
     | _ -> mk_var id_loc id_str
 
 %}
@@ -232,10 +234,10 @@ file_parser:
 | logic_file { $1 }
 
 lexpr_parser:
-| logic_file { Format.eprintf "TODO@."; assert false }
+| logic_file { Printer.print_err "[TODO]"; assert false }
 
 trigger_parser:
-| logic_file  { Format.eprintf "TODO@."; assert false }
+| logic_file  { Printer.print_err "[TODO]"; assert false }
 
 
 (* Theories, modules, namespaces *)
@@ -518,7 +520,8 @@ term_:
                       | { id_str = "prefix -" ; _ }
                       | { id_str = "infix -" ; _ } ->
                          mk_minus (floc $startpos $endpos) $2
-                      | _ -> Format.eprintf "TODO@."; assert false
+                      | _ ->
+                      Printer.print_err "[TODO]"; assert false
                     }
 | l = term ; o = bin_op ; r = term
     { o (floc $startpos $endpos) l r }
@@ -583,7 +586,7 @@ term_arg_:
                       | { id_str = "prefix -" ; _ }
                       | { id_str = "infix -" ; _ } ->
                          mk_minus (floc $startpos $endpos) a
-                      | _ -> Format.eprintf "TODO@."; assert false
+                      | _ -> Printer.print_err "[TODO]"; assert false
                     }
 | term_sub_                 { $1 }
 
@@ -595,7 +598,8 @@ term_dot_:
                       | { id_str = "prefix -" ; _ }
                       | { id_str = "infix -" ; _ } ->
                          mk_minus (floc $startpos $endpos) a
-                      | _ -> Format.eprintf "TODO@."; assert false
+                      | _ ->
+                        Printer.print_err "[TODO]"; assert false
                     }
 | term_sub_ { $1 }
 
@@ -607,7 +611,7 @@ term_sub_:
                          mk_minus (floc $startpos $endpos) td
                       | {Parsed.pp_desc = PPvar s ; _ } ->
                          mk_dot_record (floc $startpos $endpos) td s
-                      | _ -> Format.eprintf "TODO@."; assert false
+                      | _ -> Printer.print_err "[TODO]"; assert false
                     }
 | LEFTPAR term RIGHTPAR                             { $2 }
 | LEFTPAR RIGHTPAR

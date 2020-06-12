@@ -27,7 +27,6 @@
 (******************************************************************************)
 
 open Options
-open Format
 
 module A  = Xliteral
 module L  = List
@@ -54,40 +53,54 @@ let empty classes = { mx = MX.empty; classes = classes;
 
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
+  open Printer
 
   let assume bol r1 r2 =
-    if get_debug_sum () then
-      fprintf fmt "[Sum.Rel] we assume %a %s %a@."
-        X.print r1 (if bol then "=" else "<>") X.print r2
+    print_dbg ~debug:(get_debug_sum ())
+      ~module_name:"Enum_rel" ~function_name:"assume"
+      "we assume %a %s %a"
+      X.print r1 (if bol then "=" else "<>") X.print r2
 
   let print_env env =
     if get_debug_sum () then begin
-      fprintf fmt "--SUM env ---------------------------------@.";
+      Printer.print_dbg ~flushed:false
+        ~module_name:"Enum_rel" ~function_name:"print_env"
+        "@[<v 2>--SUM env ---------------------------------@ ";
       MX.iter
         (fun r (hss, ex) ->
-           fprintf fmt "%a ::= " X.print r;
+           Printer.print_dbg  ~flushed:false ~header:false
+             "%a ::= " X.print r;
            begin
              match HSS.elements hss with
                []      -> ()
              | hs :: l ->
-               fprintf fmt " %s" (Hs.view hs);
-               L.iter (fun hs -> fprintf fmt " | %s" (Hs.view hs)) l
+               Printer.print_dbg  ~flushed:false ~header:false
+                 " %s" (Hs.view hs);
+               L.iter (fun hs ->
+                   Printer.print_dbg  ~flushed:false ~header:false
+                     " | %s" (Hs.view hs)) l
            end;
-           fprintf fmt " : %a@." Ex.print ex;
-
+           Printer.print_dbg ~flushed:false ~header:false
+             " : %a@ " Ex.print ex;
         ) env.mx;
-      fprintf fmt "-------------------------------------------@.";
+      Printer.print_dbg ~header:false
+        "@ -------------------------------------------";
     end
 
   let case_split r r' =
-    if get_debug_sum () then
-      fprintf fmt "[case-split] %a = %a@." X.print r X.print r'
+    Printer.print_dbg ~debug:(get_debug_sum ())
+      ~module_name:"Enum_rel" ~function_name:"case_split"
+      "%a = %a" X.print r X.print r'
 
   let no_case_split () =
-    if get_debug_sum () then fprintf fmt "[case-split] sum: nothing@."
+    Printer.print_dbg ~debug:(get_debug_sum ())
+      ~module_name:"Enum_rel" ~function_name:"no_case_split"
+      "sum: nothing"
 
   let add r =
-    if get_debug_sum () then fprintf fmt "Sum.Rel.add: %a@." X.print r
+    Printer.print_dbg ~debug:(get_debug_sum ())
+      ~module_name:"Enum_rel" ~function_name:"add"
+      "%a" X.print r
 
 end
 (*BISECT-IGNORE-END*)

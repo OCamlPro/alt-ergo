@@ -70,7 +70,8 @@ module Z : NumbersInterface.ZSig with type t = Big_int.big_int = struct
   let my_lcm a b =
     try div (mult a b) (my_gcd a b)
     with e ->
-      Format.printf "my_lcm %a %a failed with:@.%s@."
+      Format.fprintf Format.err_formatter
+        "[Error] my_lcm %a %a failed with:@.%s@."
         print a print b (Printexc.to_string e);
       assert false
 
@@ -88,7 +89,8 @@ module Z : NumbersInterface.ZSig with type t = Big_int.big_int = struct
       let nm = div_num n1 n2 in
       big_int_of_num (floor_num nm)
     with e ->
-      Format.printf "fdiv %a %a failed with:@.%s@."
+      Format.fprintf Format.err_formatter
+        "[Error] fdiv %a %a failed with:@.%s@."
         print a print b (Printexc.to_string e);
       assert false
 
@@ -101,7 +103,8 @@ module Z : NumbersInterface.ZSig with type t = Big_int.big_int = struct
       let nm = div_num n1 n2 in
       big_int_of_num (ceiling_num nm)
     with e ->
-      Format.printf "cdiv %a %a failed with:@.%s@."
+      Format.fprintf Format.err_formatter
+        "[Error] cdiv %a %a failed with:@.%s@."
         print a print b (Printexc.to_string e);
       assert false
 

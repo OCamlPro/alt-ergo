@@ -10,10 +10,9 @@
 
 open AltErgoLib
 open Options
-open Format
 
 let load () =
   List.iter
     (fun p ->
-       MyDynlink.load err_formatter (get_verbose ()) p "parser"
+       MyDynlink.load (get_verbose ()) p "parser"
     )(Options.get_parsers())

@@ -55,6 +55,31 @@ let format_printer fmt format =
 
 let format_conv = Arg.conv ~docv:"FMT" (format_parser, format_printer)
 
+type formatter = Stdout | Stderr | Other of string
+
+let value_of_fmt = function
+  | Stdout -> Format.std_formatter
+  | Stderr -> Format.err_formatter
+  | Other s ->
+    let oc = open_out s in
+    at_exit (fun () -> close_out oc);
+    Format.formatter_of_out_channel oc
+
+let formatter_parser = function
+  | "stdout" -> Ok Stdout
+  | "stderr" -> Ok Stderr
+  | s -> Ok (Other s)
+
+let formatter_to_string = function
+  | Stdout -> "stdout"
+  | Stderr -> "stderr"
+  | Other s -> s
+
+let formatter_printer fmt formatter =
+  Format.fprintf fmt "%s" (formatter_to_string formatter)
+
+let formatter_conv = Arg.conv ~docv:"FMT" (formatter_parser, formatter_printer)
+
 type rule = RParsing | RTyping | RSat | RCC | RArith | RNone
 
 let value_of_rule = function
@@ -102,7 +127,7 @@ let mk_dbg_opt_spl1 debug debug_ac debug_adt debug_arith debug_arrays
   `Ok()
 
 let mk_dbg_opt_spl2 debug_explanations debug_fm debug_fpa debug_gc
-    debug_interpretation debug_ite debug_matching debug_sat debug_sat_simple
+    debug_interpretation debug_ite debug_matching debug_sat
   =
   set_debug_explanations debug_explanations;
   set_debug_fm debug_fm;
@@ -112,7 +137,6 @@ let mk_dbg_opt_spl2 debug_explanations debug_fm debug_fpa debug_gc
   set_debug_ite debug_ite;
   set_debug_matching debug_matching;
   set_debug_sat debug_sat;
-  set_debug_sat_simple debug_sat_simple;
   `Ok()
 
 let mk_dbg_opt_spl3 debug_split debug_sum debug_triggers debug_types
@@ -160,15 +184,20 @@ let mk_context_opt replay replay_all_used_context replay_used_context
   `Ok()
 
 let mk_execution_opt frontend input_format parse_only parsers
-    preludes no_locs_in_answers type_only type_smt2
+    preludes no_locs_in_answers no_colors_in_output no_headers_in_output
+    type_only type_smt2
   =
   let answers_with_loc = not no_locs_in_answers in
+  let output_with_colors = not no_colors_in_output in
+  let output_with_headers = not no_headers_in_output in
   set_infer_input_format input_format;
   let input_format = match input_format with
     | None -> Native
     | Some fmt -> fmt
   in
   set_answers_with_loc answers_with_loc;
+  set_output_with_colors output_with_colors;
+  set_output_with_headers output_with_headers;
   set_input_format input_format;
   set_parse_only parse_only;
   set_parsers parsers;
@@ -183,7 +212,7 @@ let mk_internal_opt disable_weaks enable_assertions gc_policy
   let gc_policy = match gc_policy with
     | 0 | 1 | 2 -> gc_policy
     | _ ->
-      Format.eprintf "[warning] Gc_policy value must be 0[default], 1 or 2@.";
+      Printer.print_wrn "Gc_policy value must be 0[default], 1 or 2";
       0
   in
   set_disable_weaks disable_weaks;
@@ -197,7 +226,8 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     match t with
     | Some t ->
       if Sys.win32 then (
-        Format.eprintf "timelimit not supported on Win32 (ignored)@.";
+        Printer.print_wrn
+          "timelimit not supported on Win32 (ignored)";
         d
       )
       else t
@@ -347,14 +377,18 @@ let halt_opt version_info where =
                 "\"\nAccepted options are lib, plugins, preludes, data or man")
     in
     match res with
-    | `Ok path -> Format.printf "%s@." path
+    | `Ok path -> Printer.print_std "%s@." path
     | `Error m -> raise (Error (false, m))
   in
   let handle_version_info vi =
     if vi then (
-      Format.printf "Version          = %s@." Version._version;
-      Format.printf "Release date     = %s@." Version._release_date;
-      Format.printf "Release commit   = %s@." Version._release_commit;
+      Printer.print_std
+        "@[<v 0>Version          = %s@,\
+         Release date     = %s@,\
+         Release commit   = %s@]@."
+        Version._version
+        Version._release_date
+        Version._release_commit;
     )
   in
   try
@@ -365,7 +399,7 @@ let halt_opt version_info where =
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
 
-let mk_opts file () () () () () () halt_opt (gc) () () () () () () ()
+let mk_opts file () () () () () () halt_opt (gc) () () () () () () () ()
   =
 
   if halt_opt then `Ok false
@@ -389,6 +423,12 @@ let mk_opts file () () () () () () halt_opt (gc) () () () () () () ()
     `Ok true
   end
 
+let mk_fmt_opt std_fmt err_fmt
+  =
+  set_std_fmt (value_of_fmt std_fmt);
+  set_err_fmt (value_of_fmt err_fmt);
+  `Ok()
+
 (* Custom sections *)
 
 let s_debug = "DEBUG OPTIONS"
@@ -404,6 +444,7 @@ let s_quantifiers = "QUANTIFIERS OPTIONS"
 let s_sat = "SAT OPTIONS"
 let s_term = "TERM OPTIONS"
 let s_theory = "THEORY OPTIONS"
+let s_fmt = "FORMATTER OPTIONS"
 
 (* Parsers *)
 
@@ -498,10 +539,6 @@ let parse_dbg_opt_spl2 =
     let doc = "Set the debugging flag of sat." in
     Arg.(value & flag & info ["dsat"] ~docs ~doc) in
 
-  let debug_sat_simple =
-    let doc = "Set the debugging flag of sat (simple output)." in
-    Arg.(value & flag & info ["dsats"] ~docs ~doc) in
-
   Term.(ret (const mk_dbg_opt_spl2 $
 
              debug_explanations $
@@ -511,8 +548,7 @@ let parse_dbg_opt_spl2 =
              debug_interpretation $
              debug_ite $
              debug_matching $
-             debug_sat $
-             debug_sat_simple
+             debug_sat
             ))
 
 let parse_dbg_opt_spl3 =
@@ -673,6 +709,16 @@ let parse_execution_opt =
       "Do not show the locations of goals when printing solver's answers." in
     Arg.(value & flag & info ["no-locs-in-answers"] ~docs ~doc) in
 
+  let no_colors_in_output =
+    let doc =
+      "Do not print output with colors." in
+    Arg.(value & flag & info ["no-colors-in-output"] ~docs ~doc) in
+
+  let no_headers_in_output =
+    let doc =
+      "Do not print output with headers." in
+    Arg.(value & flag & info ["no-headers-in-output"] ~docs ~doc) in
+
   let type_only =
     let doc = "Stop after typing." in
     Arg.(value & flag & info ["type-only"] ~docs ~doc) in
@@ -684,7 +730,8 @@ let parse_execution_opt =
 
   Term.(ret (const mk_execution_opt $
              frontend $ input_format $ parse_only $ parsers $ preludes $
-             no_locs_in_answers $ type_only $ type_smt2
+             no_locs_in_answers $ no_colors_in_output $ no_headers_in_output $
+             type_only $ type_smt2
             ))
 
 let parse_halt_opt =
@@ -1103,6 +1150,30 @@ let parse_theory_opt =
             )
        )
 
+let parse_fmt_opt =
+
+  let docs = s_fmt in
+
+  let std_formatter =
+    let doc = Format.sprintf
+        "Set the standard formatter used by default to output the results,
+    models and unsat cores. Possible values are %s."
+        (Arg.doc_alts ["stdout"; "stderr"; "<filename>"]) in
+    Arg.(value & opt formatter_conv Stdout & info ["std-formatter"] ~docs ~doc)
+  in
+
+  let err_formatter =
+    let doc = Format.sprintf
+        "Set the error formatter used by default to output error, debug and
+         warning informations. Possible values are %s."
+        (Arg.doc_alts ["stdout"; "stderr"; "<filename>"]) in
+    Arg.(value & opt formatter_conv Stderr & info ["err-formatter"] ~docs ~doc)
+  in
+
+  Term.(ret (const mk_fmt_opt $
+             std_formatter $ err_formatter
+            ))
+
 let main =
 
   let file =
@@ -1137,6 +1208,7 @@ let main =
       `S s_theory;
       `S s_case_split;
       `S s_halt;
+      `S s_fmt;
       `S s_debug;
       `P "These options are used to output debug info for the concerned \
           part of the solver.\
@@ -1147,6 +1219,7 @@ let main =
       `Pre "Or you can write to: \n   alt-ergo@ocamlpro.com";
       `S Manpage.s_authors;
       `Pre "CURRENT AUTHORS\n\
+           \   Sylvain Conchon\n\
            \   Albin Coquereau\n\
            \   Guillaume Bury\n\
            \   Mattias Roux";
@@ -1167,7 +1240,7 @@ let main =
              parse_execution_opt $ parse_halt_opt $ parse_internal_opt $
              parse_limit_opt $ parse_output_opt $ parse_profiling_opt $
              parse_quantifiers_opt $ parse_sat_opt $ parse_term_opt $
-             parse_theory_opt
+             parse_theory_opt $ parse_fmt_opt
             )),
   Term.info "alt-ergo" ~version:Version._version ~doc ~exits ~man
 

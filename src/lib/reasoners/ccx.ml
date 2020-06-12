@@ -131,6 +131,7 @@ module Main : S = struct
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
+    open Printer
 
     let facts (f : r facts) msg =
       let aux fmt q =
@@ -145,79 +146,87 @@ module Main : S = struct
         Util.MI.iter
           (fun _ x -> fprintf fmt "%a |-> ... (See Uf)@." X.print x) mp
       in
-      if get_debug_cc () then begin
-        fprintf fmt "I am in %s with the following facts@." msg;
-        fprintf fmt "---- Begin Facts -----------------------------------@.";
-        fprintf fmt "Equalities:@.%a" aux f.equas;
-        fprintf fmt "Disequalities:@.%a" aux f.diseqs;
-        fprintf fmt "Inequalities:@.%a" aux f.ineqs;
-        fprintf fmt "Touched:@.%a" aux2 f.touched;
-        fprintf fmt "---- End   Facts -----------------------------------@.@.";
-      end
+      print_dbg ~debug:(get_debug_cc ())
+        ~module_name:"Ccx" ~function_name:"facts"
+        "@[<v 0>I am in %s with the following facts@ \
+         ---- Begin Facts -----------------------------------@ \
+         Equalities:@ %a@ \
+         Disequalities:@ %a@ \
+         Inequalities:@ %a@ \
+         Touched:@ %a@ \
+         ---- End   Facts -----------------------------------@]"
+        msg aux f.equas aux f.diseqs aux f.ineqs aux2 f.touched
 
     let cc r1 r2 =
-      if get_debug_cc () then
-        fprintf fmt "[cc] congruence closure : %a = %a@."
-          X.print r1 X.print r2
+      print_dbg ~debug:(get_debug_cc ())
+        ~module_name:"Ccx" ~function_name:"cc"
+        "congruence closure : %a = %a"
+        X.print r1 X.print r2
 
     let make_cst t ctx =
-      if get_debug_cc () then
-        if ctx != [] then
-          begin
-            fprintf fmt "[cc] constraints of make(%a)@." Expr.print t;
-            let c = ref 0 in
-            List.iter
-              (fun a ->
-                 incr c;
-                 fprintf fmt " %d) %a@." !c E.print a) ctx
-          end
+      if ctx != [] then
+        let c = ref 0 in
+        let print fmt a =
+          incr c;
+          fprintf fmt " %d) %a@ " !c E.print a
+        in
+        print_dbg ~debug:(get_debug_cc ())
+          ~module_name:"Ccx" ~function_name:"make_ctx"
+          "constraints of make(%a)@ %a"
+          Expr.print t (pp_list_no_space print) ctx
 
     let rel_add_cst t ctx =
-      if get_debug_cc () then
-        if ctx != [] then
-          begin
-            fprintf fmt "[cc] constraints of Rel.add(%a)@." Expr.print t;
-            let c = ref 0 in
-            List.iter
-              (fun (a, _ex) ->
-                 incr c;
-                 fprintf fmt " %d) %a@." !c (A.print_view X.print) a) ctx
-          end
+      if ctx != [] then
+        let c = ref 0 in
+        let print fmt (a, _ex) =
+          incr c;
+          fprintf fmt " %d) %a@ " !c (A.print_view X.print) a
+        in
+        print_dbg ~debug:(get_debug_cc ())
+          ~module_name:"Ccx" ~function_name:"rel_add_cst"
+          "constraints of Rel.add(%a)@ %a"
+          Expr.print t (pp_list_no_space print) ctx
 
     let add_to_use t =
-      if get_debug_cc () then
-        fprintf fmt "[cc] add_to_use: %a@." E.print t
+      print_dbg ~debug:(get_debug_cc ())
+        ~module_name:"Ccx" ~function_name:"add_to_use"
+        "%a" E.print t
 
     (* unused --
-       let lrepr fmt = List.iter (fprintf fmt "%a " X.print)
+       let lrepr fmt =
+       List.iter (fprintf fmt) "%a " X.print)
 
        let leaves t lvs =
-       fprintf fmt "[cc] leaves of %a@.@."
-        E.print t; lrepr fmt lvs
+       print_dbg
+        (asprintf "[cc] leaves of %a" E.print t); lrepr (get_fmt_dbg ()) lvs
     *)
 
     let contra_congruence a ex =
-      if get_debug_cc () then
-        fprintf fmt "[cc] find that %a %a by contra-congruence@."
-          E.print a Ex.print ex
+      print_dbg ~debug:(get_debug_cc ())
+        ~module_name:"Ccx" ~function_name:"contra_congruence"
+        "find that %a %a by contra-congruence"
+        E.print a Ex.print ex
 
     let assume_literal sa =
-      if get_debug_cc () then
-        fprintf fmt "[cc] assume literal : %a@." LR.print (LR.make sa)
+      print_dbg ~debug:(get_debug_cc ())
+        ~module_name:"Ccx" ~function_name:"assume_literal"
+        "assume literal : %a" LR.print (LR.make sa)
 
     let congruent a ex =
-      if get_debug_cc () then
-        fprintf fmt "[cc] new fact by conrgruence : %a ex[%a]@."
-          E.print a Ex.print ex
+      print_dbg ~debug:(get_debug_cc ())
+        ~module_name:"Ccx" ~function_name:"congruent"
+        "new fact by congruence : %a ex[%a]"
+        E.print a Ex.print ex
 
     let cc_result p v touched =
-      if get_debug_cc() then begin
-        fprintf fmt "[cc] the binding %a -> %a touched:@." X.print p X.print v;
-        List.iter
-          (fun (x, y, _) ->
-             fprintf fmt "  > %a ~~ becomes ~> %a@." X.print x X.print y)
-          touched
-      end
+      let print fmt (x,y,_) =
+        fprintf fmt "  > %a ~~ becomes ~> %a" X.print x X.print y
+      in
+      print_dbg ~debug:(get_debug_cc ())
+        ~module_name:"Ccx" ~function_name:"cc_result"
+        "the binding %a -> %a touched:@,%a"
+        X.print p X.print v
+        (pp_list_no_space print) touched
 
   end
   (*BISECT-IGNORE-END*)

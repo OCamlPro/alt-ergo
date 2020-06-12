@@ -45,4 +45,4 @@ val register_produced_terms :
   unit
 
 val print : bool -> int -> Timers.t -> Format.formatter -> unit
-val switch : unit -> unit
+val switch : Format.formatter -> unit

@@ -143,6 +143,7 @@ let cl_extract env =
 
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
+  open Printer
 
   (* unused --
      let rs_print fmt = SetX.iter (fprintf fmt "\t%a@." X.print)
@@ -152,30 +153,37 @@ module Debug = struct
     MapL.iter (fun k dep -> fprintf fmt "%a %a" LX.print k Ex.print dep)
 
   let pmake fmt m =
-    fprintf fmt "[.] map:\n";
-    ME.iter (fun t r -> fprintf fmt "%a -> %a\n" E.print t X.print r) m
+    fprintf fmt "@[<v 2>map:@,";
+    ME.iter (fun t r -> fprintf fmt "%a -> %a@," E.print t X.print r) m;
+    fprintf fmt "@]@,"
 
   let prepr fmt m =
-    fprintf fmt "------------- UF: Representatives map ----------------@.";
+    fprintf fmt
+      "@[<v 2>------------- UF: Representatives map ----------------@,";
     MapX.iter
       (fun r (rr,dep) ->
-         fprintf fmt "%a --> %a %a\n" X.print r X.print rr Ex.print dep) m
+         fprintf fmt "%a --> %a %a@," X.print r X.print rr Ex.print dep) m;
+    fprintf fmt "@]@,"
 
   let prules fmt s =
-    fprintf fmt "------------- UF: AC rewrite rules ----------------------@.";
+    fprintf fmt
+      "@[<v 2>------------- UF: AC rewrite rules ----------------------@,";
     RS.iter
       (fun _ srl ->
          SetRL.iter
-           (fun (ac,d,dep)-> fprintf fmt "%a ~~> %a %a\n"
+           (fun (ac,d,dep)-> fprintf fmt "%a ~~> %a %a@,"
                X.print (X.ac_embed ac) X.print d Ex.print dep
            )srl
-      )s
+      )s;
+    fprintf fmt "@]@,"
 
   let pclasses fmt m =
-    fprintf fmt "------------- UF: Class map --------------------------@.";
+    fprintf fmt
+      "@[<v 2>------------- UF: Class map --------------------------@,";
     MapX.iter
-      (fun k s -> fprintf fmt "%a -> %a\n" X.print k E.print_list
-          (SE.elements s)) m
+      (fun k s -> fprintf fmt "%a -> %a@," X.print k E.print_list
+          (SE.elements s)) m;
+    fprintf fmt "@]@,"
 
   (* unused --
      let pgamma fmt m =
@@ -184,82 +192,96 @@ module Debug = struct
   *)
 
   let pneqs fmt m =
-    fprintf fmt "------------- UF: Disequations map--------------------@.";
-    MapX.iter (fun k s -> fprintf fmt "%a -> %a\n" X.print k lm_print s) m
+    fprintf fmt
+      "@[<v 2>------------- UF: Disequations map--------------------@ ";
+    MapX.iter (fun k s -> fprintf fmt "%a -> %a@ " X.print k lm_print s) m;
+    fprintf fmt "@]@ "
 
-  let all fmt env =
-    if get_debug_uf () then
-      begin
-        fprintf fmt "-------------------------------------------------@.";
-        fprintf fmt "%a %a %a %a %a"
-          pmake env.make
-          prepr env.repr
-          prules env.ac_rs
-          pclasses env.classes
-          pneqs env.neqs;
-        fprintf fmt "-------------------------------------------------@."
-      end
+  let all env =
+    print_dbg ~debug:(get_debug_uf ())
+      ~module_name:"Uf" ~function_name:"all"
+      "@[<v 0>-------------------------------------------------@ \
+       %a%a%a%a%a\
+       -------------------------------------------------@]"
+      pmake env.make
+      prepr env.repr
+      prules env.ac_rs
+      pclasses env.classes
+      pneqs env.neqs
 
   let lookup_not_found t env =
-    fprintf fmt "Uf: %a Not_found in env@." E.print t;
-    all fmt env
+    print_err
+      "Uf: %a Not_found in env" E.print t;
+    all env
 
 
   let canon_of r rr =
-    if get_rewriting () && get_verbose () then
-      fprintf fmt "canon %a = %a@." X.print r X.print rr
+    print_dbg ~debug:(get_rewriting () && get_verbose ())
+      "canon %a = %a" X.print r X.print rr
 
   let init_leaf p =
-    if get_debug_uf () then fprintf fmt "init_leaf: %a@." X.print p
+    print_dbg ~debug:(get_debug_uf ())
+      ~module_name:"Uf" ~function_name:"init_leaf"
+      "init leaf : %a" X.print p
 
   let critical_pair rx ry =
-    if get_debug_uf () then
-      fprintf fmt "[uf] critical pair: %a = %a@." X.print rx X.print ry
+    print_dbg ~debug:(get_debug_uf ())
+      ~module_name:"Uf" ~function_name:"critical_pair"
+      "critical pair : %a = %a@." X.print rx X.print ry
 
   let collapse_mult g2 d2 =
-    if get_debug_ac () then
-      fprintf fmt "[uf] collapse *: %a = %a@."
-        X.print g2 X.print d2
-
+    print_dbg ~debug:(get_debug_ac ())
+      ~module_name:"Uf" ~function_name:"collapse_mult"
+      "collapse *: %a = %a"
+      X.print g2 X.print d2
 
   let collapse g2 d2 =
-    if get_debug_ac () then
-      fprintf fmt "[uf] collapse: %a = %a@."
-        X.print g2 X.print d2
+    print_dbg ~debug:(get_debug_ac ())
+      ~module_name:"Uf" ~function_name:"collapse"
+      "collapse: %a = %a"
+      X.print g2 X.print d2
 
   let compose p v g d =
-    if get_debug_ac () then
-      Format.eprintf "Compose : %a -> %a on %a and %a@."
-        X.print p X.print v
-        Ac.print g X.print d
+    print_dbg ~debug:(get_debug_ac ())
+      ~module_name:"Uf" ~function_name:"compose"
+      "compose : %a -> %a on %a and %a"
+      X.print p X.print v
+      Ac.print g X.print d
 
   let x_solve rr1 rr2 dep =
-    if get_debug_uf () then
-      printf "[uf] x-solve: %a = %a %a@."
-        X.print rr1 X.print rr2 Ex.print dep
+    print_dbg ~debug:(get_debug_uf ())
+      ~module_name:"Uf" ~function_name:"x_solve"
+      "x-solve: %a = %a %a"
+      X.print rr1 X.print rr2 Ex.print dep
 
   let ac_solve p v dep =
-    if get_debug_uf () then
-      printf "[uf] ac-solve: %a |-> %a %a@." X.print p X.print v Ex.print dep
+    print_dbg ~debug:(get_debug_uf ())
+      ~module_name:"Uf" ~function_name:"ac_solve"
+      "ac-solve: %a |-> %a %a"
+      X.print p X.print v Ex.print dep
 
   let ac_x r1 r2 =
-    if get_debug_uf () then
-      printf "[uf] ac(x): delta (%a) = delta (%a)@."
-        X.print r1 X.print r2
+    print_dbg ~debug:(get_debug_uf ())
+      ~module_name:"Uf" ~function_name:"ac_x"
+      "ac(x): delta (%a) = delta (%a)"
+      X.print r1 X.print r2
 
   let distinct d =
-    if get_debug_uf () then fprintf fmt "[uf] distinct %a@." LX.print d
+    print_dbg ~debug:(get_debug_uf ())
+      ~module_name:"Uf" ~function_name:"distinct"
+      "distinct %a" LX.print d
 
   let are_distinct t1 t2 =
-    if get_debug_uf () then
-      printf " [uf] are_distinct %a %a @." E.print t1 E.print t2
+    print_dbg ~debug:(get_debug_uf ())
+      ~module_name:"Uf" ~function_name:"are_distinct"
+      "are_distinct %a %a" E.print t1 E.print t2
 
 
   let check_inv_repr_normalized =
     let trace orig =
-      fprintf fmt
-        "[uf.%s] invariant broken when calling %s@."
-        "check_inv_repr_normalized" orig
+      print_err
+        "[uf.%s] invariant broken when calling check_inv_repr_normalized"
+        orig
     in
     fun orig repr ->
       MapX.iter
@@ -733,7 +755,7 @@ let rec ac_x eqs env tch =
     Debug.ac_x r1 r2;
     let sbs, dep = x_solve env r1 r2 dep in
     let env, tch = List.fold_left (ac_solve eqs dep) (env, tch) sbs in
-    if get_debug_uf () then Debug.all fmt env;
+    if get_debug_uf () then Debug.all env;
     ac_x eqs env tch
 
 let union env r1 r2 dep =
@@ -758,7 +780,7 @@ let union env r1 r2 dep =
 
 
 let rec distinct env rl dep =
-  Debug.all fmt env;
+  Debug.all env;
   let d = LX.mk_distinct false rl in
   Debug.distinct d;
   let env, _, newds =
@@ -1002,8 +1024,9 @@ let assign_next env =
     match !acc with
     | None -> assert false
     | Some (s, rep, is_cs) ->
-      if Options.get_debug_interpretation() then
-        fprintf fmt "TRY assign-next %a = %a@." X.print rep E.print s;
+      Printer.print_dbg ~debug:(get_debug_interpretation())
+        ~module_name:"Uf" ~function_name:"assign_next"
+        "TRY assign-next %a = %a" X.print rep E.print s;
         (*
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           modify this to be able to returns CS on terms. This way,
@@ -1108,44 +1131,54 @@ module SMT2LikeModelOutput = struct
          | [[], rep] ->
            (*printf "  (%a %a)  ; %a@."
              (print_symb ty) f x_print rep Ty.print ty*)
-           printf "  (%a %a)@." (print_symb ty) f x_print rep
+           Printer.print_fmt ~flushed:false (get_fmt_mdl ())
+             "(%a %a)@ " (print_symb ty) f x_print rep
          | _ -> assert false
       )cprofs
 
   let output_functions_model fprofs =
-    if not (Profile.is_empty fprofs) then printf "@.";
-    (*printf "@.; functions:@.";*)
-    Profile.iter
-      (fun (f, _xs_ty, ty) st ->
-         (*printf "  ; fun %a : %a -> %a@."
-           (print_symb ty) f Ty.print_list xs_ty Ty.print ty;*)
-         Profile.V.iter
-           (fun (xs, rep) ->
-              printf "  ((%a %a) %a)@."
-                (print_symb ty) f print_args xs x_print rep;
-              List.iter (fun (_,x) -> assert_has_depth_one x) xs;
-           )st;
-         printf "@."
-      ) fprofs
-
-  let output_arrays_model arrays =
-    (*printf "; arrays:@.";*)
-    Profile.iter
-      (fun (f, xs_ty, ty) st ->
-         match xs_ty with
-           [_] ->
-           (*printf "  ; array %a : %a -> %a@."
-             (print_symb ty) f Ty.print tyi Ty.print ty;*)
+    if not (Profile.is_empty fprofs) then begin
+      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
+      (*printf "@.; functions:@.";*)
+      Profile.iter
+        (fun (f, _xs_ty, ty) st ->
+           (*printf "  ; fun %a : %a -> %a@."
+             (print_symb ty) f Ty.print_list xs_ty Ty.print ty;*)
            Profile.V.iter
              (fun (xs, rep) ->
-                printf "  ((%a %a) %a)@."
+                Printer.print_fmt ~flushed:false (get_fmt_mdl ())
+                  "((%a %a) %a)@ "
                   (print_symb ty) f print_args xs x_print rep;
                 List.iter (fun (_,x) -> assert_has_depth_one x) xs;
              )st;
-           printf "@."
-         | _ -> assert false
+           Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@]@ ";
+        ) fprofs;
+      Printer.print_fmt (get_fmt_mdl ()) "@]";
+    end
 
-      ) arrays
+  let output_arrays_model arrays =
+    if not (Profile.is_empty arrays) then begin
+      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
+      (*printf "; arrays:@.";*)
+      Profile.iter
+        (fun (f, xs_ty, ty) st ->
+           match xs_ty with
+             [_] ->
+             (*printf "  ; array %a : %a -> %a@."
+               (print_symb ty) f Ty.print tyi Ty.print ty;*)
+             Profile.V.iter
+               (fun (xs, rep) ->
+                  Printer.print_fmt ~flushed:false (get_fmt_mdl ())
+                    "((%a %a) %a)@ "
+                    (print_symb ty) f print_args xs x_print rep;
+                  List.iter (fun (_,x) -> assert_has_depth_one x) xs;
+               )st;
+             Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@]@ ";
+           | _ -> assert false
+
+        ) arrays;
+      Printer.print_fmt (get_fmt_mdl ()) "@]";
+    end
 
 end
 (* of module SMT2LikeModelOutput *)
@@ -1236,9 +1269,9 @@ let output_concrete_model ({ make; _ } as env) =
         ) make (Profile.empty, Profile.empty, Profile.empty, ME.empty)
     in
     if i > 0 then begin
-      printf "(\n";
+      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "(@ ";
       SMT2LikeModelOutput.output_constants_model constants;
       SMT2LikeModelOutput.output_functions_model functions;
       SMT2LikeModelOutput.output_arrays_model arrays;
-      printf ")@.";
+      Printer.print_fmt (get_fmt_mdl ()) ")";
     end

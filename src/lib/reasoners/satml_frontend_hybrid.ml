@@ -13,7 +13,6 @@
 module Make (Th : Theory.S) = struct
 
   open Options
-  open Format
 
   module E = Expr
   module ME = E.Map
@@ -95,13 +94,15 @@ module Make (Th : Theory.S) = struct
         end
       | Some _, Some _ -> assert false
       | Some _, None ->
-        if get_verbose () && get_debug_sat () then
-          fprintf fmt "!!! [dlvl=%d] %a becomes true before deciding@."
-            dlvl E.print f;
+        Printer.print_dbg ~debug:(get_verbose () && get_debug_sat ())
+          ~module_name:"Satml_frontend_hybrid" ~function_name:"decide_aux"
+          "!!! [dlvl=%d] %a becomes true before deciding"
+          dlvl E.print f;
       | None, Some (ex, _) ->
-        if get_verbose () && get_debug_sat () then
-          fprintf fmt "!!! [dlvl=%d] %a becomes false before deciding@."
-            dlvl E.print f;(* Satml_types.Atom.pr_atom (fst f); *)
+        Printer.print_dbg ~debug:(get_verbose () && get_debug_sat ())
+          ~module_name:"Satml_frontend_hybrid" ~function_name:"decide_aux"
+          "!!! [dlvl=%d] %a becomes false before deciding"
+          dlvl E.print f;(* Satml_types.Atom.pr_atom (fst f); *)
         let ex = Ex.union (Ex.singleton (Ex.Bj f)) (Lazy.force ex) in
         raise (Bottom (ex, [], env))
         (*SAT.print_env ();*)

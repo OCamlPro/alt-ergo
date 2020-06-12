@@ -216,27 +216,17 @@ let report fmt = function
     Options.print_output_format fmt
       (Format.sprintf "Parser Error: %s" s);
   | Lexical_error (l,s) ->
-    Loc.report err_formatter l;
+    Loc.report fmt l;
     Options.print_output_format fmt
       (Format.sprintf "Lexical Error: %s" s);
   | Syntax_error (l,s) ->
-    Loc.report err_formatter l;
+    Loc.report fmt l;
     Options.print_output_format fmt
       (Format.sprintf "Syntax Error: %s" s);
   | Typing_error (l,e) ->
-    Loc.report err_formatter l;
+    Loc.report fmt l;
     Options.print_output_format fmt "Typing Error: ";
     report_typing_error fmt e
   | Run_error e ->
     Options.print_output_format fmt "Fatal Error: ";
     report_run_error fmt e
-
-let print_error fmt e =
-  Options.print_output_format fmt "[Error] ";
-  report fmt e;
-  Format.fprintf fmt "@."
-
-let print_warning fmt e =
-  Options.print_output_format fmt "[Warning] ";
-  report fmt e;
-  Format.fprintf fmt "@."

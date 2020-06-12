@@ -133,7 +133,7 @@ let inf = Glib.Utf8.from_unichar 8734
 let () =
   try
     let _ = GMain.init () in ()
-  with Gtk.Error s -> eprintf "%s@." s
+  with Gtk.Error s -> Printer.print_err "%s" s
 
 let () =
   Sys.set_signal Sys.sigint
@@ -243,8 +243,7 @@ let pop_model sat_env () =
       ~wrap_mode:`CHAR () in
   let _ = tv1#misc#modify_font monospace_font in
   let _ = tv1#set_editable false in
-  fprintf str_formatter "%a" (SAT.print_model ~header:false) sat_env;
-  let model_text = (flush_str_formatter()) in
+  let model_text = asprintf "%a@." (SAT.print_model ~header:false) sat_env in
   buf1#set_text model_text;
   pop_w#show ()
 
@@ -494,15 +493,22 @@ let empty_sat_inst inst_model =
 exception Abort_thread
 
 let update_status image label buttonclean env s steps =
-  let satmode = (* smtfile() || smt2file() ||  satmode()*) false in
+  let satmode =
+    match Options.get_output_format () with
+    | Smtlib2 -> true
+    | Native | Why3 | Unknown _ -> false in
   match s with
   | FE.Unsat (d,dep) ->
     let time = Options.Time.value () in
-    if not satmode then Loc.report std_formatter d.st_loc;
-    if satmode then printf "@{<C.F_Red>unsat@}@."
-    else printf "@{<C.F_Green>Valid@} (%2.4f) (%d)@." time steps;
+    if not satmode then
+      Printer.print_std "%a" Loc.report d.st_loc;
+    if satmode then
+      Printer.print_std "@{<C.F_Red>unsat@}"
+    else
+      Printer.print_std "@{<C.F_Green>Valid@} (%2.4f) (%d)" time steps;
     if get_unsat_core () then begin
-      printf "unsat-core:\n%a@." (Explanation.print_unsat_core ~tab:true) dep;
+      Printer.print_fmt (Options.get_fmt_usc ()) "unsat-core:@ %a"
+        (Explanation.print_unsat_core ~tab:true) dep;
       show_used_lemmas env dep
     end;
     image#set_stock `YES;
@@ -513,25 +519,29 @@ let update_status image label buttonclean env s steps =
 
   | FE.Inconsistent d ->
     if not satmode then
-      (Loc.report std_formatter d.st_loc;
-       fprintf fmt "Inconsistent assumption@.")
-    else printf "unsat@.";
+      Printer.print_err "%a@ Inconsistent assumption" Loc.report d.st_loc
+    else
+      Printer.print_std "unsat";
     image#set_stock `EXECUTE;
     label#set_text "  Inconsistent assumption"
 
   | FE.Unknown (d, t) ->
     if not satmode then
-      (Loc.report std_formatter d.st_loc; printf "I don't know.@.")
-    else printf "unknown@.";
+      Printer.print_std "%a@ I don't know." Loc.report d.st_loc
+    else
+      Printer.print_std "unknown";
     image#set_stock `NO;
     label#set_text (sprintf "  I don't know (%2.2f s)"
                       (Options.Time.value()));
     if get_model () then pop_model t ()
 
   | FE.Sat (d, t) ->
-    if not satmode then Loc.report std_formatter d.st_loc;
-    if satmode then printf "unknown (sat)@."
-    else printf "I don't know@.";
+    if not satmode then
+      Printer.print_std "%a" Loc.report d.st_loc;
+    if satmode then
+      Printer.print_std "unknown (sat)"
+    else
+      Printer.print_std "I don't know";
     image#set_stock `NO;
     label#set_text
       (sprintf "  I don't know (sat) (%2.2f s)" (Options.Time.value()));
@@ -547,7 +557,7 @@ let update_aborted image label buttonstop buttonrun timers_model = function
   | Abort_thread ->
     Options.Time.unset_timeout ~is_gui:true;
     Timers.update timers_model.timers;
-    if get_debug () then fprintf fmt "alt-ergo thread terminated@.";
+    Printer.print_dbg ~debug:(get_debug ()) "alt-ergo thread terminated";
     image#set_stock `DIALOG_QUESTION;
     label#set_text "  Process aborted";
     buttonstop#misc#hide ();
@@ -555,8 +565,8 @@ let update_aborted image label buttonstop buttonrun timers_model = function
   | Util.Timeout ->
     Options.Time.unset_timeout ~is_gui:true;
     Timers.update timers_model.timers;
-    if get_debug () then
-      fprintf fmt "alt-ergo thread terminated (timeout)@.";
+    Printer.print_dbg ~debug:(get_debug ())
+      "alt-ergo thread terminated (timeout)";
     image#set_stock `CUT;
     label#set_text "  Timeout";
     buttonstop#misc#hide ();
@@ -565,12 +575,13 @@ let update_aborted image label buttonstop buttonrun timers_model = function
     Options.Time.unset_timeout ~is_gui:true;
     Timers.update timers_model.timers;
     let message = sprintf "Error: %s" (Printexc.to_string e) in
-    if get_debug () then fprintf fmt "alt-ergo thread terminated@.";
+    Printer.print_dbg ~debug:(get_debug ())
+      "alt-ergo thread terminated";
     image#set_stock `DIALOG_ERROR;
     label#set_text (" "^message);
     buttonstop#misc#hide ();
     buttonrun#misc#show ();
-    fprintf fmt "%s@." message;
+    Printer.print_err "%s" message;
     pop_error ~error:true ~message ()
 
 
@@ -614,7 +625,7 @@ let force_interrupt old_action_ref n =
     raise Abort_thread;
   match !old_action_ref with
   | Sys.Signal_handle f -> f n
-  | _ -> fprintf fmt "Not in threaded mode@."
+  | _ -> Printer.print_err "Not in threaded mode"
 
 
 
@@ -629,8 +640,8 @@ let kill_thread thread () =
 
 let run_replay env used_context =
   let ast = to_ast env.ast in
-  if get_debug () then
-    fprintf fmt "AST : \n-----\n%a@." print_typed_decl_list ast;
+  Printer.print_dbg ~debug:(get_debug ())
+    "AST : @ -----@ %a" print_typed_decl_list ast;
 
   let ast_pruned = [ast] in
 
@@ -665,8 +676,8 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
   clear_used_lemmas_tags env;
 
   let ast = to_ast env.ast in
-  if get_debug () then
-    fprintf fmt "AST : \n-----\n%a@." print_typed_decl_list ast;
+  Printer.print_dbg ~debug:(get_debug ())
+    "AST : @ -----@ %a" print_typed_decl_list ast;
 
   let ast_pruned = [ast] in
 
@@ -686,7 +697,8 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
          (fun () ->
             (try
                (* Thread.yield (); *)
-               if get_debug () then fprintf fmt "Starting alt-ergo thread@.";
+               Printer.print_dbg ~debug:(get_debug ())
+                 "Starting alt-ergo thread";
                Options.Time.start ();
                Options.Time.set_timeout ~is_gui:true (Options.get_timelimit ());
                Timers.set_timer_start (Timers.start timers_model.timers);
@@ -709,8 +721,8 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
                wrapper_update_aborted
                  image label buttonstop buttonrun timers_model e
             );
-            if get_debug () then
-              fprintf fmt "Send done signal to waiting thread@.";
+            Printer.print_dbg ~debug:(get_debug ())
+              "Send done signal to waiting thread";
             wrapper_reset buttonstop buttonrun;
             Thread.delay 0.001;
             GMain.Timeout.remove to_id;
@@ -970,7 +982,9 @@ let start_gui all_used_context =
   Options.set_thread_yield Thread.yield;
 
   (* TODO: crash : change this*)
-  set_timeout (fun () -> printf "Timeout@."; raise Util.Timeout);
+  set_timeout (fun () ->
+      Printer.print_std "Timeout";
+      raise Util.Timeout);
 
 
   let w =
@@ -1046,9 +1060,11 @@ let start_gui all_used_context =
          buf2#set_style_scheme scheme;
 
          let annoted_ast = annot buf1 l in
-         if get_debug () then fprintf fmt "Computing dependencies ... ";
+         Printer.print_dbg ~flushed:false ~debug:(get_debug ())
+           "Computing dependencies...";
          let dep = make_dep annoted_ast in
-         if get_debug () then fprintf fmt "Done@.";
+         Printer.print_dbg ~header:false ~debug:(get_debug ())
+           "Done";
 
 
          let text = List.fold_left
@@ -1300,7 +1316,8 @@ let start_gui all_used_context =
     `I ("Quit", quit envs)
   ] in
 
-  let not_implemented _ = eprintf "Not implemented@."
+  let not_implemented _ =
+    Printer.print_err "Not implemented"
   in
 
 
@@ -1514,8 +1531,8 @@ let () =
   with
   | Sys_error _ -> start_gui all_used_context
   | Util.Timeout ->
-    Format.eprintf "Timeout@.";
+    Printer.print_err "Timeout";
     exit 142
   | Errors.Error e ->
-    Errors.print_error Format.err_formatter e;
+    Printer.print_err "%a" Errors.report e;
     exit 1

@@ -42,9 +42,9 @@ let parsers = ref ([] : (string * (module PARSER_INTERFACE)) list)
 let register_parser ~lang new_parser =
   if List.mem_assoc lang !parsers then
     begin
-      eprintf
-        "Warning: A parser for extension %S is already registered. \
-         It will be hidden !@." lang;
+      Printer.print_wrn
+        "A parser for extension %S is already registered. \
+         It will be hidden !" lang;
     end;
   parsers := (lang, new_parser) :: !parsers
 
@@ -52,10 +52,10 @@ let find_parser ext_opt format =
   try List.assoc ext_opt !parsers
   with Not_found ->
     if String.equal ext_opt ".why" then begin
-      eprintf
-        "Warning: please use the AB-Why3 plugin for file in Why3 format. \
+      Printer.print_wrn
+        "please use the AB-Why3 plugin for file in Why3 format. \
          .why and .mlw extensions are depreciated and used for Why3 files. \
-         Continue with native Alt-Ergo parsers !@.";
+         Continue with native Alt-Ergo parsers!";
       try List.assoc ".ae" !parsers
       with Not_found ->
         error (Parser_error ("Error: no parser registered for the provided \
@@ -68,7 +68,8 @@ let set_output_format fmt =
   if Options.get_infer_output_format () then
     match fmt with
     | Options.Unknown s ->
-      Format.eprintf "Warning: The output format %s is not supported@." s
+      Printer.print_wrn
+        "The output format %s is not supported" s
     | fmt -> Options.set_output_format fmt
 
 let get_input_parser fmt =
@@ -108,10 +109,10 @@ let extract_zip_file f =
   try
     match MyZip.entries cin with
     | [e] when not (MyZip.is_directory e) ->
-      if get_verbose () then
-        eprintf
-          "I'll read the content of '%s' in the given zip@."
-          (MyZip.filename e);
+      Printer.print_dbg ~debug:(get_verbose ())
+        ~module_name:"Parsers" ~function_name:"extract_zip_file"
+        "I'll read the content of '%s' in the given zip"
+        (MyZip.filename e);
       let content = MyZip.read_entry cin e in
       MyZip.close_in cin;
       content
@@ -126,7 +127,9 @@ let extract_zip_file f =
     raise e
 
 let parse_input_file file =
-  if get_verbose() then fprintf fmt "[input_lang] parsing file \"%s\"@." file;
+  Printer.print_dbg ~debug:(get_verbose ())
+    ~module_name:"Parsers" ~function_name:"parse_input_file"
+    "parsing file \"%s\"" file;
   let cin, lb, opened_cin, ext =
     if Filename.check_suffix file ".zip" then
       let ext = Filename.extension (Filename.chop_extension file) in

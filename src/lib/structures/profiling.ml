@@ -129,7 +129,8 @@ let instantiation ilvl =
   incr state.instantiation_rounds;
   incr state.instantiation_lvl;
   if not (!(state.instantiation_lvl) = ilvl) then begin
-    Format.eprintf "state.instantiation_lvl = %d et ilvl = %d@."
+    Printer.print_err
+      "state.instantiation_lvl = %d et ilvl = %d"
       !(state.instantiation_lvl) ilvl;
     assert false
   end
@@ -206,7 +207,8 @@ let decision d origin =
   incr state.decisions;
   incr state.decision_lvl;
   if not (!(state.decision_lvl) = d) then begin
-    Format.eprintf "state.decision_lvl = %d et d = %d@."
+    Printer.print_err
+      "state.decision_lvl = %d et d = %d"
       !(state.decision_lvl) d;
     assert false
   end;
@@ -416,7 +418,7 @@ let columns =
        float_resize total sz);
   ]
 
-let print_initial_info () =
+let print_initial_info fmt =
   if !initial_info then begin
     initial_info := false;
     let max =
@@ -506,7 +508,7 @@ let print_timers header steps fmt timers =
 
 let (@@) a b = if a <> 0 then a else b
 
-let print_instances_generation forced _steps _timers =
+let print_instances_generation forced _steps fmt _timers =
   if not forced && !(state.instances_map_printed) then
     fprintf fmt "[Instances profiling] No change since last print@."
   else
@@ -598,7 +600,7 @@ let print_instances_generation forced _steps _timers =
       fprintf fmt "}@."*)
     ()
 
-let print_call_tree _forced _steps timers =
+let print_call_tree _forced _steps fmt timers =
   let stack = Timers.get_stack timers in
   List.iter
     (fun (k, f, id) ->
@@ -613,7 +615,7 @@ let print_call_tree _forced _steps timers =
     (string_resize (Timers.string_of_ty_function f) 10)
     (int_resize id 7)
 
-let switch () =
+let switch fmt =
   let next, next_msg = match !mode with
     | Stats    -> Timers, "Time"
     | Timers   -> CallTree, "CallTree"
@@ -634,7 +636,7 @@ let float_print fmt v =
   else if (Stdlib.compare v 100.) < 0 then fprintf fmt "%0.4f" v
   else fprintf fmt "%0.3f" v
 
-let line_of_module arr f =
+let line_of_module arr fmt f =
   fprintf fmt "%s " (string_resize (Timers.string_of_ty_function f) 13);
   let cpt = ref 0. in
   List.iter
@@ -646,7 +648,7 @@ let line_of_module arr f =
   fprintf fmt "| %a        |@." float_print !cpt
 
 
-let line_of_sum_module timers =
+let line_of_sum_module fmt timers =
   for _ = 0 to 206 do fprintf fmt "-" done;
   fprintf fmt "|@.";
   fprintf fmt "%s " (string_resize "" 13);
@@ -656,7 +658,7 @@ let line_of_sum_module timers =
     Timers.all_modules;
   fprintf fmt "| GTimer %a |@." float_print (Options.Time.value())
 
-let timers_table forced timers =
+let timers_table forced fmt timers =
   if not forced then ignore(Sys.command("clear"));
   Timers.update timers;
   fprintf fmt "@.";
@@ -670,12 +672,12 @@ let timers_table forced timers =
   fprintf fmt "|@.";
   let arr_timers = Timers.get_timers_array timers in
   List.iter
-    (line_of_module arr_timers)
+    (line_of_module arr_timers fmt)
     Timers.all_functions;
-  line_of_sum_module timers
+  line_of_sum_module fmt timers
 
 let print all steps timers fmt =
-  print_initial_info ();
+  print_initial_info fmt;
   set_sigprof();
   if all then begin
     mode := Stats;
@@ -685,14 +687,14 @@ let print all steps timers fmt =
     mode := Timers;
     print_timers true steps fmt timers;
     fprintf fmt "@.";
-    timers_table true timers;
+    timers_table true fmt timers;
     fprintf fmt "@.";
-    print_instances_generation true steps timers;
+    print_instances_generation true steps fmt timers;
     fprintf fmt "@.";
   end
   else match !mode with
     | Stats           -> print_stats false steps fmt timers
     | Timers          -> print_timers false steps fmt timers
-    | CallTree        -> print_call_tree false steps timers
-    | FunctionsTimers -> timers_table false timers;
-    | Instances       -> print_instances_generation false steps timers
+    | CallTree        -> print_call_tree false steps fmt timers
+    | FunctionsTimers -> timers_table false fmt timers;
+    | Instances       -> print_instances_generation false steps fmt timers

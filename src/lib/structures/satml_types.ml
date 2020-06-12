@@ -401,9 +401,9 @@ module Atom : ATOM = struct
         else l := b :: !l
       done;
       if !cpt <> 1 then begin
-        fprintf fmt "cpt = %d@." !cpt;
-        fprintf fmt "a = %a@." pr_atom a;
-        fprintf fmt "c = %a@." pr_clause c;
+        Printer.print_err
+          "cpt = %d@ a = %a@ c = %a"
+          !cpt pr_atom a pr_clause c;
         assert false
       end;
       !l
@@ -741,13 +741,15 @@ module Flat_Formula : FLAT_FORMULA = struct
     | [], [] -> assert false
 
     | _::_::_, _ ->
-      if get_debug () then
-        fprintf fmt "Failure: many distinct atoms@.";
+      Printer.print_dbg ~debug:(get_debug_sat ())
+        ~module_name:"Satml_types" ~function_name:"extract_common"
+        "Failure: many distinct atoms";
       None
 
     | [_] as common, _ ->
-      if get_debug () then
-        fprintf fmt "TODO: Should have one toplevel common atom@.";
+      Printer.print_dbg ~debug:(get_debug_sat ())
+        ~module_name:"Satml_types" ~function_name:"extract_common"
+        "TODO: Should have one toplevel common atom";
       begin
         try
           (*  a + (a . B_1) + ... (a . B_n) = a *)
@@ -757,8 +759,9 @@ module Flat_Formula : FLAT_FORMULA = struct
       end
 
     | [], ad::ands' ->
-      if get_debug () then
-        fprintf fmt "Should look for internal common parts@.";
+      Printer.print_dbg ~debug:(get_debug_sat ())
+        ~module_name:"Satml_types" ~function_name:"extract_common"
+        "Should look for internal common parts";
       let common = List.fold_left intersect_list ad ands' in
       match common with
         [] -> None

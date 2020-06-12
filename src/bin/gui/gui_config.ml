@@ -120,5 +120,6 @@ let style = !style
 let wrap = !wrap
 
 let not_supported msg =
-  Format.eprintf "%S currently not supported by the GUI@." msg;
+  AltErgoLib.Printer.print_err
+    "%S currently not supported by the GUI" msg;
   assert false
