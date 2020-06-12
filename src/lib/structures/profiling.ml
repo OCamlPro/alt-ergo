@@ -130,7 +130,7 @@ let instantiation ilvl =
   incr state.instantiation_lvl;
   if not (!(state.instantiation_lvl) = ilvl) then begin
     Printer.print_err
-      "state.instantiation_lvl = %d et ilvl = %d@."
+      "state.instantiation_lvl = %d et ilvl = %d"
       !(state.instantiation_lvl) ilvl;
     assert false
   end
@@ -208,7 +208,7 @@ let decision d origin =
   incr state.decision_lvl;
   if not (!(state.decision_lvl) = d) then begin
     Printer.print_err
-      "state.decision_lvl = %d et d = %d@."
+      "state.decision_lvl = %d et d = %d"
       !(state.decision_lvl) d;
     assert false
   end;

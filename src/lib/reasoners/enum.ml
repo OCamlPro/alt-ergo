@@ -74,22 +74,22 @@ module Shostak (X : ALIEN) = struct
     let solve_bis a b =
       print_dbg ~debug:(get_debug_sum ())
         ~module_name:"Enum" ~function_name:"solve"
-        "@[<v 2>we solve %a = %a@," X.print a X.print b
+        "@[<v 2>we solve %a = %a@ " X.print a X.print b
 
     let solve_bis_result res =
       if get_debug_sum () then
         match res with
         | [p,v] ->
           print_dbg ~header:false
-            "we get: %a |-> %a@]@." X.print p X.print v
+            "we get: %a |-> %a@]" X.print p X.print v
         | []    ->
           print_dbg ~header:false
-            "the equation is trivial@."
+            "the equation is trivial"
         | _ -> assert false
 
     let solve_bis_unsolvable () =
       print_dbg ~debug:(get_debug_sum ())
-        "the equation is unsolvable@]@."
+        "the equation is unsolvable@]"
 
   end
   (*BISECT-IGNORE-END*)

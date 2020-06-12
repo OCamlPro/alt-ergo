@@ -482,11 +482,11 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
 let make_instance (buffer:sbuffer) vars entries afc goal_form tyenv =
   let goal_vars = list_vars_in_form goal_form.c in
   if get_debug () then begin
-    Printer.print_dbg "@,";
     List.iter (fun (v,e) ->
-        Printer.print_dbg ~header:false
-          "%a -> %s@," Symbols.print_clean (fst v) e)
+        Printer.print_dbg ~flushed:false ~header:false
+          "%a -> %s@ " Symbols.print_clean (fst v) e)
       (List.combine vars (List.rev entries));
+    Printer.print_dbg ""
   end;
   let aform, _, goal_used =
     unquantify_aform buffer tyenv (List.combine vars (List.rev entries)) []

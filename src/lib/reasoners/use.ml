@@ -112,13 +112,14 @@ let print g =
       in
       Printer.print_dbg
         ~module_name:"Use" ~function_name:"print"
-        "@[<v 2>gamma :@,";
+        "@[<v 2>gamma :@ ";
       MX.iter
         (fun t (st,sa) ->
-           Printer.print_dbg ~header:false "%a" X.print t;
-           Printer.print_dbg ~header:false "%a@,"
+           Printer.print_dbg ~header:false "%a " X.print t;
+           Printer.print_dbg ~header:false "%a@ "
              print_sterms_and_atoms (st,sa);
-        ) g
+        ) g;
+      Printer.print_dbg ~header:false "@]"
     end
 
 let mem = MX.mem

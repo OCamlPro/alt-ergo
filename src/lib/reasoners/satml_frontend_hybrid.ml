@@ -96,12 +96,12 @@ module Make (Th : Theory.S) = struct
       | Some _, None ->
         Printer.print_dbg ~debug:(get_verbose () && get_debug_sat ())
           ~module_name:"Satml_frontend_hybrid" ~function_name:"decide_aux"
-          "!!! [dlvl=%d] %a becomes true before deciding@."
+          "!!! [dlvl=%d] %a becomes true before deciding"
           dlvl E.print f;
       | None, Some (ex, _) ->
         Printer.print_dbg ~debug:(get_verbose () && get_debug_sat ())
           ~module_name:"Satml_frontend_hybrid" ~function_name:"decide_aux"
-          "!!! [dlvl=%d] %a becomes false before deciding@."
+          "!!! [dlvl=%d] %a becomes false before deciding"
           dlvl E.print f;(* Satml_types.Atom.pr_atom (fst f); *)
         let ex = Ex.union (Ex.singleton (Ex.Bj f)) (Lazy.force ex) in
         raise (Bottom (ex, [], env))

@@ -121,5 +121,5 @@ let wrap = !wrap
 
 let not_supported msg =
   AltErgoLib.Printer.print_err
-    "%S currently not supported by the GUI@." msg;
+    "%S currently not supported by the GUI" msg;
   assert false

@@ -148,9 +148,9 @@ let clean_trigger ~in_theory name trig =
         let trig' = ME.fold (fun t _ acc -> t :: acc) res [] in
         Printer.print_dbg ~debug:(get_verbose ()) ~module_name:"Cnf"
           ~function_name:"clean_trigger"
-          "AXIOM: %s@, \
-           from multi-trig of sz %d : %a@, \
-           to   multi-trig of sz %d : %a@."
+          "AXIOM: %s@ \
+           from multi-trig of sz %d : %a@ \
+           to   multi-trig of sz %d : %a"
           name
           sz_l E.print_list trig sz_s E.print_list trig';
         trig'

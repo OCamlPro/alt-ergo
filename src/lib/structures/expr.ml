@@ -881,7 +881,7 @@ let mk_forall_ter =
         assert (equal q.main f (* should be true *));
         if compare_quant q new_q <> 0 then raise Exit;
         Printer.print_wrn ~warning:(get_debug_warnings ())
-          "(sub) axiom %s replaced with %s@." name q.name;
+          "(sub) axiom %s replaced with %s" name q.name;
         lem
       with Not_found | Exit ->
         let d = new_q.main.depth in (* + 1 ?? *)
@@ -1048,7 +1048,7 @@ let no_capture_issue s_t binders =
   else
     begin
       Printer.print_wrn
-        "captures between@,%aand%a!@,(captured = %a)@."
+        "captures between@,%aand%a!@,(captured = %a)"
         (SMap.print print) s_t
         print_binders binders
         print_binders capt_bind;
@@ -2233,8 +2233,8 @@ let rec compile_match mk_destr mker e cases accu =
 (* TO BE REMOVED *)
 let debug_compile_match e cases res =
   if get_debug_adt () then begin
-    Printer.print_dbg ~module_name:"Expr"
-      "compilation of: match %a with@," print e;
+    Printer.print_dbg  ~flushed:false ~module_name:"Expr"
+      "compilation of: match %a with@ " print e;
     let p_list_vars fmt l =
       match l with
         [] -> ()
@@ -2248,17 +2248,17 @@ let debug_compile_match e cases res =
       (fun (p, v) ->
          match p with
          | Typed.Constr {name; args} ->
-           Printer.print_dbg ~header:false
-             "| %a %a -> %a@,"
+           Printer.print_dbg  ~flushed:false ~header:false
+             "| %a %a -> %a@ "
              Hstring.print name
              p_list_vars args
              print v;
          | Typed.Var x ->
-           Printer.print_dbg ~header:false
-             "| %a -> %a@," Var.print x print v;
+           Printer.print_dbg  ~flushed:false ~header:false
+             "| %a -> %a@ " Var.print x print v;
       )cases;
     Printer.print_dbg ~header:false
-      "end@,result is: %a@." print res;
+      "end@ result is: %a" print res;
   end
 
 let mk_match e cases =

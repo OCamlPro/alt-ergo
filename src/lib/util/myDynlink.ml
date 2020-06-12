@@ -31,7 +31,7 @@ end
 include Dynlink
 
 let load verbose p msg =
-  Printer.print_dbg ~debug:verbose ~module_name:"Dynlink"
+  Printer.print_dbg ~flushed:false ~debug:verbose ~module_name:"Dynlink"
     "Loading the %s in %S ..." msg p;
   try
     loadfile p;
@@ -47,7 +47,7 @@ let load verbose p msg =
         ">> Failure message: %s" (error_message m1);
     end;
     let pp = Format.sprintf "%s/%s" Config.pluginsdir p in
-    Printer.print_dbg ~debug:verbose ~module_name:"Dynlink"
+    Printer.print_dbg  ~flushed:false ~debug:verbose ~module_name:"Dynlink"
       "Loading the %s in %S... with prefix %S..."
       msg p Config.pluginsdir;
     try
@@ -66,5 +66,5 @@ let load verbose p msg =
       Errors.run_error
         (Dynlink_error
            (Format.sprintf
-              "@[<v 0>Trying to load the plugin from %S failed too!@,\
+              "@[<v 0>Trying to load the plugin from %S failed too!@ \
                >> Failure message: %s@]" pp (error_message m2)))

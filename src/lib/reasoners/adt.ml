@@ -34,7 +34,7 @@ end
 let constr_of_destr ty dest =
   Printer.print_dbg ~debug:(get_debug_adt ())
     ~module_name:"Adt" ~function_name:"constr_of_destr"
-    "ty = %a@." Ty.print ty;
+    "ty = %a" Ty.print ty;
   match ty with
   | Ty.Tadt (s, params) ->
     let bdy = Ty.type_body s params in
@@ -109,7 +109,7 @@ module Shostak (X : ALIEN) = struct
         begin
           try snd @@ List.find (fun (lbl, _) -> Hs.equal d_name lbl) c.c_args
           with Not_found ->
-            Printer.print_err "is_mine %a failed@." print u;
+            Printer.print_err "is_mine %a failed" print u;
             assert false
         end
       | _ -> X.embed u
@@ -148,7 +148,7 @@ module Shostak (X : ALIEN) = struct
     assert (not (get_disable_adts ()));
     Printer.print_dbg ~debug:(get_debug_adt ())
       ~module_name:"Adt" ~function_name:"make"
-      "make %a@." E.print t;
+      "make %a" E.print t;
     let { E.f; xs; ty; _ } = match E.term_view t with
       | E.Term t -> t
       | E.Not_a_term _ -> assert false
@@ -335,15 +335,15 @@ module Shostak (X : ALIEN) = struct
           let cons =
             E.mk_term (Sy.constr (Hs.view constr)) xs (X.type_info d_arg)
           in
-          Printer.print_dbg ~debug:(get_debug_adt ())
+          Printer.print_dbg ~flushed:false ~debug:(get_debug_adt ())
             ~module_name:"Adt" ~function_name:"abstract_selectors"
-            "abstr with equality %a == %a@,"
+            "abstr with equality %a == %a@ "
             X.print d_arg E.print cons;
           let cons, _ = make cons in
           let acc = (d_arg, cons) :: acc in
           let xx = is_mine @@ Select {s with d_arg = cons} in
           Printer.print_dbg ~debug:(get_debug_adt ()) ~header:false
-            "%a becomes %a@." X.print x  X.print xx;
+            "%a becomes %a" X.print x  X.print xx;
           xx, acc
 
         | _ ->
@@ -357,7 +357,7 @@ module Shostak (X : ALIEN) = struct
   let solve r1 r2 pb =
     Printer.print_dbg ~debug:(get_debug_adt ())
       ~module_name:"Adt" ~function_name:"solve"
-      "solve %a = %a@." X.print r1 X.print r2;
+      "solve %a = %a" X.print r1 X.print r2;
     assert (not (get_disable_adts ()));
     match embed r1, embed r2 with
     | Select _, _ | _, Select _ -> assert false (* should be eliminated *)
@@ -412,12 +412,12 @@ module Shostak (X : ALIEN) = struct
 
   let assign_value _ _ _ =
     Printer.print_err
-      "[ADTs.models] assign_value currently not implemented@.";
+      "[ADTs.models] assign_value currently not implemented";
     assert false
 
   let choose_adequate_model _ _ _ =
     Printer.print_err
-      "[ADTs.models] choose_adequate_model currently not implemented@.";
+      "[ADTs.models] choose_adequate_model currently not implemented";
     assert false
 
 end

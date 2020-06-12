@@ -14,14 +14,15 @@
 (** {2 Printer} *)
 
 (** Print message on the standard formatter accessible with
-    {!val:Options.get_fmt_std} and set by default to stdout *)
-val print_std : ('a, Format.formatter, unit) format -> 'a
+    {!val:Options.get_fmt_std} and set by default to stdout
+    The std formatter is flushed after the print if flushed is set *)
+val print_std : ?flushed:bool -> ('a, Format.formatter, unit) format -> 'a
 
 (** Print error message on the error formatter accessible with
     {!val:Options.get_fmt_err} and set by default to stderr.
     Prints only if error (true by default) is true.
     If header is set, prints a header "[Error]".
-    The std formatter is flushed after the print if flushed is set *)
+    The err formatter is flushed after the print if flushed is set *)
 val print_err :
   ?flushed:bool ->
   ?header:bool ->
@@ -53,9 +54,12 @@ val print_dbg :
   ?function_name:string ->
   ('a, Format.formatter, unit) format -> 'a
 
-(** Print message on the given formatter. *)
+(** Print message on the given formatter.
+    The given formatter is flushed after the print if flushed is set*)
 val print_fmt :
-  Format.formatter -> ('a, Format.formatter, unit) format -> 'a
+  ?flushed:bool ->
+  Format.formatter ->
+  ('a, Format.formatter, unit) format -> 'a
 
 
 (** {2 Utils} *)

@@ -187,13 +187,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
     let new_instances mode env =
       if get_debug_sat () then begin
-        print_dbg
+        print_dbg ~flushed:false
           ~module_name:"Satml_frontend" ~function_name:"new_instances"
           "@[<v 2>I GENERATE NEW INSTANCES (%s)#################@,\
            @[<v 2>(1) ground problem:@,"
           mode;
         FF.Map.iter (fun f (md, _) ->
-            print_dbg ~header:false "-> %d : %a@," md FF.print f) env.conj;
+            print_dbg ~flushed:false ~header:false
+              "-> %d : %a@," md FF.print f) env.conj;
         print_dbg ~header:false "@]@,%a"
           model env;
       end
@@ -234,10 +235,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
     let add_terms_of src terms =
       if get_verbose () && get_debug_sat () then begin
-        print_dbg ~module_name:"Satml_frontend" ~function_name:"add_terms_of"
+        print_dbg ~flushed:false ~module_name:"Satml_frontend"
+          ~function_name:"add_terms_of"
           "@[<v 2>[%s] add_terms_of:@," src;
         SE.iter (fun e ->
-            print_dbg ~header:false ">> %a@," E.print e) terms
+            print_dbg ~flushed:false ~header:false
+              ">> %a@," E.print e) terms;
+        print_dbg ~header:false "@]"
       end
 
     (* unused --

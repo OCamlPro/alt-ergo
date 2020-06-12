@@ -150,41 +150,42 @@ module Main_Default : S = struct
 
     let print_types_decls types =
       let open Ty in
-      print_dbg "@[<v 2>[Theory] types decls:@,";
+      print_dbg ~flushed:false "@[<v 2>[Theory] types decls:@ ";
       Hstring.Map.iter
         (fun _ ty ->
            match ty with
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> ()
            | Tvar _ -> assert false
-           | Text _ -> print_dbg "type %a@," Ty.print ty
+           | Text _ -> print_dbg ~flushed:false "type %a@ " Ty.print ty
            | Tsum (_, l) ->
-             print_dbg ~header:false "type %a = " Ty.print ty;
+             print_dbg ~flushed:false ~header:false "type %a = " Ty.print ty;
              begin match l with
                | [] -> assert false
                | e::l ->
                  let print fmt e = fprintf fmt " | %s" (Hstring.view e) in
-                 print_dbg ~header:false "%s@,%a@,"
+                 print_dbg ~flushed:false ~header:false "%s@ %a@ "
                    (Hstring.view e)
                    (pp_list_no_space print) l;
              end
 
            | Trecord { Ty.lbs; _ } ->
-             print_dbg ~header:false "type %a = " Ty.print ty;
+             print_dbg ~flushed:false ~header:false "type %a = " Ty.print ty;
              begin match lbs with
                | [] -> assert false
                | (lbl, ty)::l ->
                  let print fmt (lbl,ty) =
                    fprintf fmt " ; %s :%a"
                      (Hstring.view lbl) Ty.print ty in
-                 print_dbg ~header:false
+                 print_dbg ~flushed:false ~header:false
                    "{ %s : %a%a"
                    (Hstring.view lbl) Ty.print ty
                    (pp_list_no_space print) l;
-                 print_dbg ~header:false " }@,"
+                 print_dbg ~flushed:false ~header:false " }@ "
              end
            | Tadt _ ->
-             print_dbg ~header:false "%a@," Ty.print_full ty
-        )types
+             print_dbg ~flushed:false ~header:false "%a@ " Ty.print_full ty
+        )types;
+      print_dbg ~header:false "@]"
 
     let print_arrow_type fmt xs =
       match xs with
@@ -195,16 +196,17 @@ module Main_Default : S = struct
         fprintf fmt " -> "
 
     let print_logics logics =
-      print_dbg "@[<v 2>[Theory] logics:@,";
+      print_dbg "@[<v 2>[Theory] logics:@ ";
       Hstring.Map.iter
         (fun hs (xs, ty, is_ac) ->
            print_dbg ~header:false
-             "logic %s%s : %a%a@,"
+             "logic %s%s : %a%a@ "
              (if is_ac == Sy.Ac then "ac " else "")
              (Hstring.view hs)
              print_arrow_type xs
              Ty.print ty
-        )logics
+        )logics;
+      print_dbg ~header:false "@]"
 
     let print_declarations l =
       let st = subterms_of_assumed l in
@@ -219,30 +221,30 @@ module Main_Default : S = struct
       fun l ->
         if get_debug_cc () then begin
           print_dbg ~module_name:"Theory" ~function_name:"assumed"
-            "Assumed facts (in this order):@.";
+            "Assumed facts (in this order):";
           print_declarations l;
           incr cpt;
-          print_dbg "goal g_%d :@." !cpt;
+          print_dbg ~flushed:false "goal g_%d :@ " !cpt;
           List.iter
             (fun l ->
-               print_dbg ~header:false "(*call to assume*)@,";
+               print_dbg ~flushed:false ~header:false "(*call to assume*)@ ";
                match List.rev l with
                | [] -> assert false
                | (a,dlvl,plvl)::l ->
-                 print_dbg ~header:false
+                 print_dbg ~flushed:false ~header:false
                    "( (* %d , %d *) %a "
                    dlvl plvl
                    E.print a;
                  List.iter
                    (fun (a, dlvl, plvl) ->
-                      print_dbg ~header:false
-                        " and@, (* %d , %d *) %a "
+                      print_dbg ~flushed:false ~header:false
+                        " and@  (* %d , %d *) %a "
                         dlvl plvl
                         E.print a
                    ) l;
-                 print_dbg ~header:false "@, ) ->"
+                 print_dbg ~flushed:false ~header:false "@  ) ->"
             ) (List.rev l);
-          print_dbg ~header:false "false@.";
+          print_dbg ~header:false "false";
         end
 
     let theory_of k = match k with
@@ -256,15 +258,15 @@ module Main_Default : S = struct
       match choices with
       | [] -> ()
       | _ ->
-        fprintf fmt "@[<v 2>Stack of choices:@,";
+        fprintf fmt "@[<v 2>Stack of choices:@ ";
         List.iter
           (fun (rx, lit_orig, _, ex) ->
              match lit_orig with
              | Th_util.CS(k, _) ->
-               fprintf fmt "  > %s  cs: %a (because %a)@,"
+               fprintf fmt "  > %s  cs: %a (because %a)@ "
                  (theory_of k) LR.print (LR.make rx) Ex.print ex
              | Th_util.NCS(k, _) ->
-               fprintf fmt "  > %s ncs: %a (because %a)@,"
+               fprintf fmt "  > %s ncs: %a (because %a)@ "
                  (theory_of k) LR.print (LR.make rx) Ex.print ex
              | _ -> assert false
           )choices;
@@ -273,13 +275,13 @@ module Main_Default : S = struct
     let begin_case_split choices =
       print_dbg ~debug:(get_debug_split ())
         ~module_name:"Theory" ~function_name:"begin_case_split"
-        "%a@."
+        "%a"
         made_choices choices
 
     let end_case_split choices =
       print_dbg ~debug:(get_debug_split ())
         ~module_name:"Theory" ~function_name:"end_case_split"
-        "%a@."
+        "%a"
         made_choices choices
 
     (* unused --
@@ -293,30 +295,30 @@ module Main_Default : S = struct
     let split_backtrack neg_c ex_c =
       print_dbg ~debug:(get_debug_split ())
         ~module_name:"Theory" ~function_name:"split_backtrack"
-        "I backtrack on %a : %a@."
+        "I backtrack on %a : %a"
         print_lr_view neg_c Ex.print ex_c
 
     let split_assume c ex_c =
       print_dbg ~debug:(get_debug_split ())
         ~module_name:"Theory" ~function_name:"split assume"
-        "I assume %a : %a@."
+        "I assume %a : %a"
         print_lr_view c Ex.print ex_c
 
     let split_backjump c dep =
       print_dbg ~debug:(get_debug_split ())
         ~module_name:"Theory" ~function_name:"split_backjump"
-        "I backjump on %a : %a@."
+        "I backjump on %a : %a"
         print_lr_view c Ex.print dep
 
     let query a =
       print_dbg ~debug:(get_debug_cc ())
         ~module_name:"Theory" ~function_name:"query"
-        "query : %a@." E.print a
+        "query : %a" E.print a
 
     let split_sat_contradicts_cs filt_choices =
       print_dbg ~debug:(get_debug_split ())
         ~module_name:"Theory" ~function_name:"split_sat_contradicts_cs"
-        "The SAT contradicts CS! I'll replay choices@,%a@."
+        "The SAT contradicts CS! I'll replay choices@ %a"
         made_choices filt_choices
 
   end
@@ -402,7 +404,7 @@ module Main_Default : S = struct
           in
           Debug.split_backtrack neg_c dep;
           Printer.print_dbg ~debug:(get_bottom_classes ())
-            "bottom (case-split):%a@."
+            "bottom (case-split):%a"
             Expr.print_tagged_classes classes;
           aux ch None dl base_env [neg_c, lit_orig, CNeg, dep]
     in
@@ -544,10 +546,10 @@ module Main_Default : S = struct
 
   let get_debug_theories_instances th_instances ilvl dlvl =
     let module MF = Expr.Map in
-    Printer.print_dbg
+    Printer.print_dbg ~flushed:false
       ~module_name:"Theory" ~function_name:"theories_instances"
       "@[<v 2>dec. level = %d, instant.\
-       level = %d, %d new Th instances@,"
+       level = %d, %d new Th instances@ "
       dlvl ilvl (List.length th_instances);
     let mp =
       List.fold_left
@@ -567,22 +569,24 @@ module Main_Default : S = struct
     in
     let l = List.fast_sort (fun (_,m,_) (_,n,_) -> n - m) l in
     List.iter (fun (f, m, inst) ->
-        Printer.print_dbg ~header:false
-          "%3d  -->  %a@," m Expr.print f;
+        Printer.print_dbg ~flushed:false ~header:false
+          "%3d  -->  %a@ " m Expr.print f;
         if true then begin
           MF.iter
             (fun f hyps ->
-               Printer.print_dbg ~header:false "@[<v 2>[inst]@,";
+               Printer.print_dbg ~flushed:false ~header:false
+                 "@[<v 2>[inst]@ ";
                List.iter
                  (fun h ->
-                    Printer.print_dbg ~header:false
-                      "hypothesis: %a@," Expr.print h;
+                    Printer.print_dbg ~flushed:false ~header:false
+                      "hypothesis: %a@ " Expr.print h;
                  )hyps;
-               Printer.print_dbg ~header:false
-                 "conclusion: %a@," Expr.print f;
+               Printer.print_dbg ~flushed:false ~header:false
+                 "@]conclusion: %a@ " Expr.print f;
             ) inst
         end
-      ) l
+      ) l;
+    Printer.print_dbg ~header:false "@]"
 
   let theories_instances ~do_syntactic_matching t_match t selector dlvl ilvl =
     let gamma, instances =

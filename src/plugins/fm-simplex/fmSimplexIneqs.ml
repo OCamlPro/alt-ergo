@@ -49,9 +49,9 @@ module Container : Inequalities.Container_SIG = struct
       let print fmt (l,v) =
         fprintf fmt "L(%d) -> %a@," l print_couple v
       in
-      Printer.print_dbg
-        "vof = %a@,\
-         @[<v 2>assignement returned by the Simplex@,\
+      Printer.print_dbg ~header:false
+        "vof = %a@ \
+         @[<v 2>assignement returned by the Simplex@ \
          %a"
         print_couple vof
         (Printer.pp_list_no_space print) vals
@@ -126,18 +126,18 @@ module Container : Inequalities.Container_SIG = struct
 
     let tighten_polynomials
         add_ineqs are_eq acc sum ctt lambdas nb_constrs constrs =
-      Printer.print_dbg ~debug:(get_debug_fm())
-        "tighten_polynomials@,";
+      Printer.print_dbg ~flushed:false ~debug:(get_debug_fm())
+        "tighten_polynomials@ ";
       let max_ctt, equas, s_neq = polynomials_bounding_pb sum ctt lambdas in
       let r_max_ctt,r_equas,r_s_neq = SCache.make_repr max_ctt equas s_neq in
       let sim_res =
         match SCache.already_registered r_max_ctt r_equas r_s_neq with
         | None ->
-          Printer.print_dbg ~header:false ~debug:!dsimplex
-            "Simplex poly in@,";
+          Printer.print_dbg ~flushed:false ~header:false ~debug:!dsimplex
+            "Simplex poly in@ ";
           incr cpt;
-          Printer.print_dbg ~header:false ~debug:!dsimplex
-            "new simplex %d@," !cpt;
+          Printer.print_dbg ~flushed:false ~header:false ~debug:!dsimplex
+            "new simplex %d@ " !cpt;
           let res = Simplex_Q.main max_ctt equas s_neq nb_constrs in
           Printer.print_dbg ~header:false ~debug:!dsimplex
             "Simplex poly out";
@@ -195,8 +195,8 @@ module Container : Inequalities.Container_SIG = struct
     let tighten_monomial
         add_ineqs are_eq acc x sum_x is_pos sum ctt lambdas nb_constrs constrs
       =
-      Printer.print_dbg ~debug:(get_debug_fm())
-        "tighten_monomial %s%a,"
+      Printer.print_dbg ~flushed:false ~debug:(get_debug_fm())
+        "tighten_monomial %s%a "
         (if is_pos then "+" else "-") X.print x;
       let max_ctt, equas, s_neq =
         monomial_bounding_pb sum ctt lambdas x sum_x is_pos in
@@ -204,11 +204,11 @@ module Container : Inequalities.Container_SIG = struct
       let sim_res =
         match SCache.already_registered_mon x r_max_ctt r_equas r_s_neq with
         | None ->
-          Printer.print_dbg ~header:false ~debug:!dsimplex
-            "Simplex monomes in@,";
+          Printer.print_dbg ~flushed:false ~header:false ~debug:!dsimplex
+            "Simplex monomes in@ ";
           incr cpt;
-          Printer.print_dbg ~header:false ~debug:!dsimplex
-            "new simplex %d@," !cpt;
+          Printer.print_dbg ~flushed:false ~header:false ~debug:!dsimplex
+            "new simplex %d@ " !cpt;
           let res = Simplex_Q.main max_ctt equas s_neq nb_constrs in
           Printer.print_dbg ~header:false ~debug:!dsimplex
             "Simplex monomes out";
@@ -279,7 +279,7 @@ module Container : Inequalities.Container_SIG = struct
       let print fmt (id, { ple0 ; _ }) =
         fprintf fmt "%d) %a <= 0" id P.print ple0 in
       Printer.print_dbg ~debug:(get_debug_fm())
-        "begin fm-simplex: nb_constrs = %d@,%a"
+        "begin fm-simplex: nb_constrs = %d@ %a"
         nb_constrs
         (Printer.pp_list_no_space print) constrs;
       let sum, ctt, lambdas = generalized_fm_projection constrs in

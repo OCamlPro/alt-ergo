@@ -58,45 +58,49 @@ module Debug = struct
   let assume bol r1 r2 =
     print_dbg ~debug:(get_debug_sum ())
       ~module_name:"Enum_rel" ~function_name:"assume"
-      "we assume %a %s %a@."
+      "we assume %a %s %a"
       X.print r1 (if bol then "=" else "<>") X.print r2
 
   let print_env env =
     if get_debug_sum () then begin
-      Printer.print_dbg
+      Printer.print_dbg ~flushed:false
         ~module_name:"Enum_rel" ~function_name:"print_env"
-        "@[<v 2>--SUM env ---------------------------------@,";
+        "@[<v 2>--SUM env ---------------------------------@ ";
       MX.iter
         (fun r (hss, ex) ->
-           Printer.print_dbg ~header:false "%a ::= " X.print r;
+           Printer.print_dbg  ~flushed:false ~header:false
+             "%a ::= " X.print r;
            begin
              match HSS.elements hss with
                []      -> ()
              | hs :: l ->
-               Printer.print_dbg ~header:false " %s" (Hs.view hs);
+               Printer.print_dbg  ~flushed:false ~header:false
+                 " %s" (Hs.view hs);
                L.iter (fun hs ->
-                   Printer.print_dbg ~header:false " | %s" (Hs.view hs)) l
+                   Printer.print_dbg  ~flushed:false ~header:false
+                     " | %s" (Hs.view hs)) l
            end;
-           Printer.print_dbg ~header:false " : %a@," Ex.print ex;
+           Printer.print_dbg ~flushed:false ~header:false
+             " : %a@ " Ex.print ex;
         ) env.mx;
       Printer.print_dbg ~header:false
-        "@.-------------------------------------------@.";
+        "@ -------------------------------------------";
     end
 
   let case_split r r' =
     Printer.print_dbg ~debug:(get_debug_sum ())
       ~module_name:"Enum_rel" ~function_name:"case_split"
-      "%a = %a@." X.print r X.print r'
+      "%a = %a" X.print r X.print r'
 
   let no_case_split () =
     Printer.print_dbg ~debug:(get_debug_sum ())
       ~module_name:"Enum_rel" ~function_name:"no_case_split"
-      "sum: nothing@."
+      "sum: nothing"
 
   let add r =
     Printer.print_dbg ~debug:(get_debug_sum ())
       ~module_name:"Enum_rel" ~function_name:"add"
-      "%a@." X.print r
+      "%a" X.print r
 
 end
 (*BISECT-IGNORE-END*)

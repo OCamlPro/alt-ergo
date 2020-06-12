@@ -402,7 +402,7 @@ module Atom : ATOM = struct
       done;
       if !cpt <> 1 then begin
         Printer.print_err
-          "cpt = %d@,a = %a@,c = %a@."
+          "cpt = %d@ a = %a@ c = %a"
           !cpt pr_atom a pr_clause c;
         assert false
       end;
@@ -743,13 +743,13 @@ module Flat_Formula : FLAT_FORMULA = struct
     | _::_::_, _ ->
       Printer.print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Satml_types" ~function_name:"extract_common"
-        "Failure: many distinct atoms@.";
+        "Failure: many distinct atoms";
       None
 
     | [_] as common, _ ->
       Printer.print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Satml_types" ~function_name:"extract_common"
-        "TODO: Should have one toplevel common atom@.";
+        "TODO: Should have one toplevel common atom";
       begin
         try
           (*  a + (a . B_1) + ... (a . B_n) = a *)
@@ -761,7 +761,7 @@ module Flat_Formula : FLAT_FORMULA = struct
     | [], ad::ands' ->
       Printer.print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Satml_types" ~function_name:"extract_common"
-        "Should look for internal common parts@.";
+        "Should look for internal common parts";
       let common = List.fold_left intersect_list ad ands' in
       match common with
         [] -> None

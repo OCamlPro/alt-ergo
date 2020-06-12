@@ -303,7 +303,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       else
         begin
           Printer.print_wrn
-            "File %s not found! Option -replay-used will be ignored@." uc_f;
+            "File %s not found! Option -replay-used will be ignored" uc_f;
           None
         end
     else

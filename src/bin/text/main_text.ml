@@ -59,8 +59,8 @@ let () =
     (Sys.Signal_handle (fun _ ->
          if Options.get_profiling() then Profiling.switch (get_fmt_err ())
          else begin
-           Printer.print_wrn "User wants me to stop.@.";
-           Printer.print_std "unknown@.";
+           Printer.print_wrn "User wants me to stop.";
+           Printer.print_std "unknown";
            exit 1
          end
        )
@@ -185,11 +185,11 @@ let () =
       FE.print_status (FE.Timeout None) 0;
       exit 142
     | Parsing.Parse_error ->
-      Printer.print_err "%a@." Errors.report
+      Printer.print_err "%a" Errors.report
         (Syntax_error ((Lexing.dummy_pos,Lexing.dummy_pos),""));
       exit 1
     | Errors.Error e ->
-      Printer.print_err "%a@." Errors.report e;
+      Printer.print_err "%a" Errors.report e;
       exit 1
 
   in
@@ -203,7 +203,7 @@ let () =
         List.fold_left (typed_loop all_used_context) { state with env; } l
       with
         Errors.Error e ->
-        Printer.print_err "%a@." Errors.report e;
+        Printer.print_err "%a" Errors.report e;
         exit 1
     end
   in

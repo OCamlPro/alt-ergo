@@ -113,7 +113,7 @@ module Translate = struct
         | TInt  -> mk_int_const loc s
         | TReal -> mk_real_const loc (better_num_of_string s)
         | _ ->
-          Printer.print_err "%s@." (to_string ty);
+          Printer.print_err "%s" (to_string ty);
           assert false
       end
     | Const_Str _  -> assert false (* to do *)
@@ -210,7 +210,7 @@ module Translate = struct
     | "is", [constr], [e] ->
       mk_algebraic_test (pos name) e constr
     | _ ->
-      Printer.print_err "[TODO] handle other underscored IDs@.";
+      Printer.print_err "[TODO] handle other underscored IDs";
       assert false
 
   let translate_qual_identifier qid params raw_params=
@@ -227,7 +227,7 @@ module Translate = struct
     | Named _ ->
       Printer.print_wrn
         ~warning:(Options.get_verbose () || Options.get_debug_warnings ())
-        "(! :named not yet supported)%!@.";
+        "(! :named not yet supported)%!";
       acc
 
   and translate_quantif f svl pars t =
@@ -352,7 +352,7 @@ module Translate = struct
   let not_supported s =
     Printer.print_wrn
       ~warning:(Options.get_verbose () || Options.get_debug_warnings ())
-      "%S : Not yet supported@." s
+      "%S : Not yet supported" s
 
   let translate_command acc command =
     match command.c with
@@ -427,7 +427,7 @@ module Translate = struct
 
     if Options.get_type_smt2 () then begin
       Printer.print_dbg
-        "%s@." (Smtlib_options.status ());
+        "%s" (Smtlib_options.status ());
       []
     end
     else begin

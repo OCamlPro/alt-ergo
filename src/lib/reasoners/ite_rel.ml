@@ -73,7 +73,7 @@ let add_aux env t =
     | Some (p, t1, t2) ->
       Printer.print_dbg ~debug:(get_debug_ite ())
         ~module_name:"Ite_rel" ~function_name:"add_aux"
-        "(if %a then %a else %a)@."
+        "(if %a then %a else %a)"
         E.print p E.print t1 E.print t2;
       try
         let ex = ME.find p env.assumed_pos_preds in
@@ -103,7 +103,7 @@ let extract_preds env la =
                 not (ME.mem t env.assumed_neg_preds) ->
            Printer.print_dbg ~debug:(get_debug_ite ())
              ~module_name:"Ite_rel" ~function_name:"assume"
-             "%a@." E.print a;
+             "%a" E.print a;
            TB.add (t, is_neg) expl acc
          | _ -> acc
     )TB.empty la
@@ -118,7 +118,7 @@ let extract_pending_deductions env =
          in
          Printer.print_dbg ~debug:(get_debug_ite ())
            ~module_name:"Ite_rel" ~function_name:"assume"
-           "deduce that %a with expl %a@."
+           "deduce that %a with expl %a"
            E.print a Ex.print ex;
          (Sig_rel.LTerm a, ex, Th_util.Other) :: acc)
       env.pending_deds []

@@ -209,15 +209,15 @@ module Container : Container_SIG = struct
       let cross x vars cpos cneg others =
         print_dbg ~debug:(get_debug_fm ())
           ~module_name:"Inequalities" ~function_name:"cross"
-          "We cross on %a (%d vars remaining)@,\
-           with:@. cpos = %a@. cneg = %a@. others = %a@."
+          "We cross on %a (%d vars remaining)@ \
+           with:@. cpos = %a@. cneg = %a@. others = %a"
           X.print x (MX.cardinal vars)
           list_of_ineqs cpos list_of_ineqs cneg map_of_ineqs others
 
       let cross_result x ninqs =
         print_dbg ~debug:(get_debug_fm ())
           ~module_name:"Inequalities" ~function_name:"cross_result"
-          "result of eliminating %a: at most %d new ineqs (not printed)@."
+          "result of eliminating %a: at most %d new ineqs (not printed)"
           X.print x ninqs
     end
 
@@ -367,7 +367,7 @@ let load_current_inequalities_reasoner () =
   match Options.get_inequalities_plugin () with
   | "" ->
     Printer.print_dbg ~debug:(get_debug_fm ())
-      "[Dynlink] Using the 'FM module' for arithmetic inequalities@."
+      "[Dynlink] Using the 'FM module' for arithmetic inequalities"
 
   | path ->
     MyDynlink.load (Options.get_debug_fm ()) path

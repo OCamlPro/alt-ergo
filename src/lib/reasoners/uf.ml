@@ -193,14 +193,14 @@ module Debug = struct
 
   let pneqs fmt m =
     fprintf fmt
-      "@[<v 2>------------- UF: Disequations map--------------------@,";
-    MapX.iter (fun k s -> fprintf fmt "%a -> %a@," X.print k lm_print s) m;
-    fprintf fmt "@]@,"
+      "@[<v 2>------------- UF: Disequations map--------------------@ ";
+    MapX.iter (fun k s -> fprintf fmt "%a -> %a@ " X.print k lm_print s) m;
+    fprintf fmt "@]@ "
 
   let all env =
     print_dbg ~debug:(get_debug_uf ())
       ~module_name:"Uf" ~function_name:"all"
-      "@[<v 0>-------------------------------------------------@,\
+      "@[<v 0>-------------------------------------------------@ \
        %a%a%a%a%a\
        -------------------------------------------------@]"
       pmake env.make
@@ -1131,50 +1131,54 @@ module SMT2LikeModelOutput = struct
          | [[], rep] ->
            (*printf "  (%a %a)  ; %a@."
              (print_symb ty) f x_print rep Ty.print ty*)
-           Printer.print_fmt (get_fmt_mdl ())
-             "  (%a %a)@," (print_symb ty) f x_print rep
+           Printer.print_fmt ~flushed:false (get_fmt_mdl ())
+             "(%a %a)@ " (print_symb ty) f x_print rep
          | _ -> assert false
       )cprofs
 
   let output_functions_model fprofs =
-    if not (Profile.is_empty fprofs) then
-      Printer.print_fmt (get_fmt_mdl ()) "@[<v 2>@,";
-    (*printf "@.; functions:@.";*)
-    Profile.iter
-      (fun (f, _xs_ty, ty) st ->
-         (*printf "  ; fun %a : %a -> %a@."
-           (print_symb ty) f Ty.print_list xs_ty Ty.print ty;*)
-         Profile.V.iter
-           (fun (xs, rep) ->
-              Printer.print_fmt (get_fmt_mdl ())
-                "((%a %a) %a)@,"
-                (print_symb ty) f print_args xs x_print rep;
-              List.iter (fun (_,x) -> assert_has_depth_one x) xs;
-           )st;
-         Printer.print_fmt (get_fmt_mdl ()) "@]@,";
-      ) fprofs
-
-  let output_arrays_model arrays =
-    if not (Profile.is_empty arrays) then
-      Printer.print_fmt (get_fmt_mdl ()) "@[<v 2>@,";
-    (*printf "; arrays:@.";*)
-    Profile.iter
-      (fun (f, xs_ty, ty) st ->
-         match xs_ty with
-           [_] ->
-           (*printf "  ; array %a : %a -> %a@."
-             (print_symb ty) f Ty.print tyi Ty.print ty;*)
+    if not (Profile.is_empty fprofs) then begin
+      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
+      (*printf "@.; functions:@.";*)
+      Profile.iter
+        (fun (f, _xs_ty, ty) st ->
+           (*printf "  ; fun %a : %a -> %a@."
+             (print_symb ty) f Ty.print_list xs_ty Ty.print ty;*)
            Profile.V.iter
              (fun (xs, rep) ->
-                Printer.print_fmt (get_fmt_mdl ())
-                  "((%a %a) %a)@,"
+                Printer.print_fmt ~flushed:false (get_fmt_mdl ())
+                  "((%a %a) %a)@ "
                   (print_symb ty) f print_args xs x_print rep;
                 List.iter (fun (_,x) -> assert_has_depth_one x) xs;
              )st;
-           Printer.print_fmt (get_fmt_mdl ()) "@]@,";
-         | _ -> assert false
+           Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@]@ ";
+        ) fprofs;
+      Printer.print_fmt (get_fmt_mdl ()) "@]";
+    end
 
-      ) arrays
+  let output_arrays_model arrays =
+    if not (Profile.is_empty arrays) then begin
+      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
+      (*printf "; arrays:@.";*)
+      Profile.iter
+        (fun (f, xs_ty, ty) st ->
+           match xs_ty with
+             [_] ->
+             (*printf "  ; array %a : %a -> %a@."
+               (print_symb ty) f Ty.print tyi Ty.print ty;*)
+             Profile.V.iter
+               (fun (xs, rep) ->
+                  Printer.print_fmt ~flushed:false (get_fmt_mdl ())
+                    "((%a %a) %a)@ "
+                    (print_symb ty) f print_args xs x_print rep;
+                  List.iter (fun (_,x) -> assert_has_depth_one x) xs;
+               )st;
+             Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@]@ ";
+           | _ -> assert false
+
+        ) arrays;
+      Printer.print_fmt (get_fmt_mdl ()) "@]";
+    end
 
 end
 (* of module SMT2LikeModelOutput *)
@@ -1265,9 +1269,9 @@ let output_concrete_model ({ make; _ } as env) =
         ) make (Profile.empty, Profile.empty, Profile.empty, ME.empty)
     in
     if i > 0 then begin
-      Printer.print_fmt (get_fmt_mdl ()) "(@,";
+      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "(@ ";
       SMT2LikeModelOutput.output_constants_model constants;
       SMT2LikeModelOutput.output_functions_model functions;
       SMT2LikeModelOutput.output_arrays_model arrays;
-      Printer.print_fmt (get_fmt_mdl ()) ")@.";
+      Printer.print_fmt (get_fmt_mdl ()) ")";
     end

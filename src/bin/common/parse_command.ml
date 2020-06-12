@@ -212,7 +212,7 @@ let mk_internal_opt disable_weaks enable_assertions gc_policy
   let gc_policy = match gc_policy with
     | 0 | 1 | 2 -> gc_policy
     | _ ->
-      Printer.print_wrn "Gc_policy value must be 0[default], 1 or 2@.";
+      Printer.print_wrn "Gc_policy value must be 0[default], 1 or 2";
       0
   in
   set_disable_weaks disable_weaks;
@@ -227,7 +227,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     | Some t ->
       if Sys.win32 then (
         Printer.print_wrn
-          "timelimit not supported on Win32 (ignored)@.";
+          "timelimit not supported on Win32 (ignored)";
         d
       )
       else t

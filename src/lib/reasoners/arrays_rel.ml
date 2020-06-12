@@ -115,7 +115,7 @@ module Debug = struct
     Printer.print_dbg ~debug:(get_debug_arrays () && la != [])
       ~module_name:"Arrays_rel"
       ~function_name:"assume"
-      "@[<v 2>We assume: @,%a" (pp_list_no_space print) la
+      "@[<v 2>We assume: @ %a" (pp_list_no_space print) la
 
   (* unused --
      let print_gets fmt = G.iter (fun t -> fprintf fmt "%a@." E.print t.g)
@@ -141,7 +141,7 @@ module Debug = struct
     Printer.print_dbg ~debug:(get_debug_arrays ())
       ~module_name:"Arrays_rel"
       ~function_name:"new_equalities"
-      "@[<v 2>%d implied equalities@."
+      "@[<v 2>%d implied equalities"
       (Conseq.cardinal st);
 
     Conseq.iter (fun (a,ex) ->
@@ -154,13 +154,13 @@ module Debug = struct
     print_dbg ~debug:(get_debug_arrays ())
       ~module_name:"Arrays_rel"
       ~function_name:"case_split"
-      "%a@." LR.print a
+      "%a" LR.print a
 
   let case_split_none () =
     print_dbg ~debug:(get_debug_arrays ())
       ~module_name:"Arrays_rel"
       ~function_name:"case_split_none"
-      "Nothing@."
+      "Nothing"
 
 end
 (*BISECT-IGNORE-END*)

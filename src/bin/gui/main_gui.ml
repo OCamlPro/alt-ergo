@@ -498,13 +498,13 @@ let update_status image label buttonclean env s steps =
   | FE.Unsat (d,dep) ->
     let time = Options.Time.value () in
     if not satmode then
-      Printer.print_std "%a@." Loc.report d.st_loc;
+      Printer.print_std "%a" Loc.report d.st_loc;
     if satmode then
-      Printer.print_std "@{<C.F_Red>unsat@}@."
+      Printer.print_std "@{<C.F_Red>unsat@}"
     else
-      Printer.print_std "@{<C.F_Green>Valid@} (%2.4f) (%d)@." time steps;
+      Printer.print_std "@{<C.F_Green>Valid@} (%2.4f) (%d)" time steps;
     if get_unsat_core () then begin
-      Printer.print_fmt (Options.get_fmt_usc ()) "unsat-core:@,%a@."
+      Printer.print_fmt (Options.get_fmt_usc ()) "unsat-core:@ %a"
         (Explanation.print_unsat_core ~tab:true) dep;
       show_used_lemmas env dep
     end;
@@ -516,17 +516,17 @@ let update_status image label buttonclean env s steps =
 
   | FE.Inconsistent d ->
     if not satmode then
-      Printer.print_err "%a@,Inconsistent assumption@." Loc.report d.st_loc
+      Printer.print_err "%a@ Inconsistent assumption" Loc.report d.st_loc
     else
-      Printer.print_std "unsat@.";
+      Printer.print_std "unsat";
     image#set_stock `EXECUTE;
     label#set_text "  Inconsistent assumption"
 
   | FE.Unknown (d, t) ->
     if not satmode then
-      Printer.print_std "%a@,I don't know.@." Loc.report d.st_loc
+      Printer.print_std "%a@ I don't know." Loc.report d.st_loc
     else
-      Printer.print_std "unknown@.";
+      Printer.print_std "unknown";
     image#set_stock `NO;
     label#set_text (sprintf "  I don't know (%2.2f s)"
                       (Options.Time.value()));
@@ -534,11 +534,11 @@ let update_status image label buttonclean env s steps =
 
   | FE.Sat (d, t) ->
     if not satmode then
-      Printer.print_std "%a@." Loc.report d.st_loc;
+      Printer.print_std "%a" Loc.report d.st_loc;
     if satmode then
-      Printer.print_std "unknown (sat)@."
+      Printer.print_std "unknown (sat)"
     else
-      Printer.print_std "I don't know@.";
+      Printer.print_std "I don't know";
     image#set_stock `NO;
     label#set_text
       (sprintf "  I don't know (sat) (%2.2f s)" (Options.Time.value()));
@@ -554,7 +554,7 @@ let update_aborted image label buttonstop buttonrun timers_model = function
   | Abort_thread ->
     Options.Time.unset_timeout ~is_gui:true;
     Timers.update timers_model.timers;
-    Printer.print_dbg ~debug:(get_debug ()) "alt-ergo thread terminated@.";
+    Printer.print_dbg ~debug:(get_debug ()) "alt-ergo thread terminated";
     image#set_stock `DIALOG_QUESTION;
     label#set_text "  Process aborted";
     buttonstop#misc#hide ();
@@ -563,7 +563,7 @@ let update_aborted image label buttonstop buttonrun timers_model = function
     Options.Time.unset_timeout ~is_gui:true;
     Timers.update timers_model.timers;
     Printer.print_dbg ~debug:(get_debug ())
-      "alt-ergo thread terminated (timeout)@.";
+      "alt-ergo thread terminated (timeout)";
     image#set_stock `CUT;
     label#set_text "  Timeout";
     buttonstop#misc#hide ();
@@ -573,12 +573,12 @@ let update_aborted image label buttonstop buttonrun timers_model = function
     Timers.update timers_model.timers;
     let message = sprintf "Error: %s" (Printexc.to_string e) in
     Printer.print_dbg ~debug:(get_debug ())
-      "alt-ergo thread terminated@.";
+      "alt-ergo thread terminated";
     image#set_stock `DIALOG_ERROR;
     label#set_text (" "^message);
     buttonstop#misc#hide ();
     buttonrun#misc#show ();
-    Printer.print_err "%s@." message;
+    Printer.print_err "%s" message;
     pop_error ~error:true ~message ()
 
 
@@ -622,7 +622,7 @@ let force_interrupt old_action_ref n =
     raise Abort_thread;
   match !old_action_ref with
   | Sys.Signal_handle f -> f n
-  | _ -> Printer.print_err "Not in threaded mode@."
+  | _ -> Printer.print_err "Not in threaded mode"
 
 
 
@@ -638,7 +638,7 @@ let kill_thread thread () =
 let run_replay env used_context =
   let ast = to_ast env.ast in
   Printer.print_dbg ~debug:(get_debug ())
-    "AST : @,-----@,%a@." print_typed_decl_list ast;
+    "AST : @ -----@ %a" print_typed_decl_list ast;
 
   let ast_pruned = [ast] in
 
@@ -674,7 +674,7 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
 
   let ast = to_ast env.ast in
   Printer.print_dbg ~debug:(get_debug ())
-    "AST : @,-----@,%a@." print_typed_decl_list ast;
+    "AST : @ -----@ %a" print_typed_decl_list ast;
 
   let ast_pruned = [ast] in
 
@@ -695,7 +695,7 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
             (try
                (* Thread.yield (); *)
                Printer.print_dbg ~debug:(get_debug ())
-                 "Starting alt-ergo thread@.";
+                 "Starting alt-ergo thread";
                Options.Time.start ();
                Options.Time.set_timeout ~is_gui:true (Options.get_timelimit ());
                Timers.set_timer_start (Timers.start timers_model.timers);
@@ -980,7 +980,7 @@ let start_gui all_used_context =
 
   (* TODO: crash : change this*)
   set_timeout (fun () ->
-      Printer.print_std "Timeout@.";
+      Printer.print_std "Timeout";
       raise Util.Timeout);
 
 
@@ -1057,11 +1057,11 @@ let start_gui all_used_context =
          buf2#set_style_scheme scheme;
 
          let annoted_ast = annot buf1 l in
-         Printer.print_dbg ~debug:(get_debug ())
+         Printer.print_dbg ~flushed:false ~debug:(get_debug ())
            "Computing dependencies...";
          let dep = make_dep annoted_ast in
          Printer.print_dbg ~header:false ~debug:(get_debug ())
-           "Done@.";
+           "Done";
 
 
          let text = List.fold_left
@@ -1314,7 +1314,7 @@ let start_gui all_used_context =
   ] in
 
   let not_implemented _ =
-    Printer.print_err "Not implemented@."
+    Printer.print_err "Not implemented"
   in
 
 
@@ -1528,8 +1528,8 @@ let () =
   with
   | Sys_error _ -> start_gui all_used_context
   | Util.Timeout ->
-    Printer.print_err "Timeout@.";
+    Printer.print_err "Timeout";
     exit 142
   | Errors.Error e ->
-    Printer.print_err "%a@." Errors.report e;
+    Printer.print_err "%a" Errors.report e;
     exit 1

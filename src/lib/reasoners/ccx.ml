@@ -148,19 +148,19 @@ module Main : S = struct
       in
       print_dbg ~debug:(get_debug_cc ())
         ~module_name:"Ccx" ~function_name:"facts"
-        "@[<v 0>I am in %s with the following facts@,\
-         ---- Begin Facts -----------------------------------@,\
-         Equalities:@,%a@,\
-         Disequalities:@,%a@,\
-         Inequalities:@,%a@,\
-         Touched:@,%a@,\
-         ---- End   Facts -----------------------------------@]@."
+        "@[<v 0>I am in %s with the following facts@ \
+         ---- Begin Facts -----------------------------------@ \
+         Equalities:@ %a@ \
+         Disequalities:@ %a@ \
+         Inequalities:@ %a@ \
+         Touched:@ %a@ \
+         ---- End   Facts -----------------------------------@]"
         msg aux f.equas aux f.diseqs aux f.ineqs aux2 f.touched
 
     let cc r1 r2 =
       print_dbg ~debug:(get_debug_cc ())
         ~module_name:"Ccx" ~function_name:"cc"
-        "congruence closure : %a = %a@."
+        "congruence closure : %a = %a"
         X.print r1 X.print r2
 
     let make_cst t ctx =
@@ -168,11 +168,11 @@ module Main : S = struct
         let c = ref 0 in
         let print fmt a =
           incr c;
-          fprintf fmt " %d) %a@," !c E.print a
+          fprintf fmt " %d) %a@ " !c E.print a
         in
         print_dbg ~debug:(get_debug_cc ())
           ~module_name:"Ccx" ~function_name:"make_ctx"
-          "constraints of make(%a)@,%a"
+          "constraints of make(%a)@ %a"
           Expr.print t (pp_list_no_space print) ctx
 
     let rel_add_cst t ctx =
@@ -180,17 +180,17 @@ module Main : S = struct
         let c = ref 0 in
         let print fmt (a, _ex) =
           incr c;
-          fprintf fmt " %d) %a@," !c (A.print_view X.print) a
+          fprintf fmt " %d) %a@ " !c (A.print_view X.print) a
         in
         print_dbg ~debug:(get_debug_cc ())
           ~module_name:"Ccx" ~function_name:"rel_add_cst"
-          "constraints of Rel.add(%a)@,%a"
+          "constraints of Rel.add(%a)@ %a"
           Expr.print t (pp_list_no_space print) ctx
 
     let add_to_use t =
       print_dbg ~debug:(get_debug_cc ())
         ~module_name:"Ccx" ~function_name:"add_to_use"
-        "%a@." E.print t
+        "%a" E.print t
 
     (* unused --
        let lrepr fmt =
@@ -204,27 +204,27 @@ module Main : S = struct
     let contra_congruence a ex =
       print_dbg ~debug:(get_debug_cc ())
         ~module_name:"Ccx" ~function_name:"contra_congruence"
-        "find that %a %a by contra-congruence@."
+        "find that %a %a by contra-congruence"
         E.print a Ex.print ex
 
     let assume_literal sa =
       print_dbg ~debug:(get_debug_cc ())
         ~module_name:"Ccx" ~function_name:"assume_literal"
-        "assume literal : %a@." LR.print (LR.make sa)
+        "assume literal : %a" LR.print (LR.make sa)
 
     let congruent a ex =
       print_dbg ~debug:(get_debug_cc ())
         ~module_name:"Ccx" ~function_name:"congruent"
-        "new fact by conrgruence : %a ex[%a]@."
+        "new fact by congruence : %a ex[%a]"
         E.print a Ex.print ex
 
     let cc_result p v touched =
       let print fmt (x,y,_) =
-        fprintf fmt "  > %a ~~ becomes ~> %a@." X.print x X.print y
+        fprintf fmt "  > %a ~~ becomes ~> %a" X.print x X.print y
       in
       print_dbg ~debug:(get_debug_cc ())
         ~module_name:"Ccx" ~function_name:"cc_result"
-        "the binding %a -> %a touched:@,%a@."
+        "the binding %a -> %a touched:@,%a"
         X.print p X.print v
         (pp_list_no_space print) touched
 

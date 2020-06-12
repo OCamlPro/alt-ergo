@@ -119,9 +119,9 @@ module Make (X : Sig.X) = struct
                 c1 < 0 && c2 > 0 ||
                 c1 > 0 && c2 < 0) then begin
           print_err
-            "Ac.compare:@,%a vs %a@, = %d@,\
-             But@,\
-             Ac.compare:@,%a vs %a@, = %d@."
+            "Ac.compare:@ %a vs %a@  = %d@ \
+             But@ \
+             Ac.compare:@ %a vs %a@  = %d"
             print a print b c1 print b print a c2;
           false
         end
@@ -130,7 +130,7 @@ module Make (X : Sig.X) = struct
 
     let subst p v tm =
       print_dbg ~debug:(get_debug_ac ())
-        "[ac] subst %a by %a in %a@."
+        "[ac] subst %a by %a in %a"
         X.print p X.print v X.print (X.ac_embed tm)
 
   end

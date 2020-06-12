@@ -163,11 +163,12 @@ let init_output_format () =
 
 
 (************** Printers *************)
-let print_std s =
-  pp_std_smt ();
-  fprintf (Options.get_fmt_std ()) s
-
 let flush fmt = Format.fprintf fmt "@."
+
+let print_std ?(flushed=true) s =
+  pp_std_smt ();
+  let fmt = Options.get_fmt_std () in
+  if flushed then kfprintf flush fmt s else fprintf fmt s
 
 let print_err ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     ?(error=true) s =
@@ -215,8 +216,8 @@ let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
   end
   else ifprintf err_formatter s
 
-let print_fmt fmt s =
-  fprintf fmt s
+let print_fmt ?(flushed=true) fmt s =
+  if flushed then kfprintf flush fmt s else fprintf fmt s
 
 (* Utils *)
 

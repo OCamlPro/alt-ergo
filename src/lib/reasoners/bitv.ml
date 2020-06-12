@@ -308,7 +308,7 @@ module Shostak(X : ALIEN) = struct
       Printer.print_dbg ~debug:(Options.get_debug_bitv ())
         ~module_name:"Bitv"
         ~function_name:"c_solve"
-        "(map)c_solve :@,%a" (pp_list_no_space print) l
+        "(map)c_solve :@ %a" (pp_list_no_space print) l
 
     let print_partition_res l =
       let print fmt (t,cte_l) =

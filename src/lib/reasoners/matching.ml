@@ -102,19 +102,19 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let matching tr =
       print_dbg ~debug:(get_debug_matching() >= 3)
         ~module_name:"Matching" ~function_name:"matching"
-        "@[<v 0>(multi-)trigger: %a@,\
+        "@[<v 0>(multi-)trigger: %a@ \
          ========================================================@]"
         E.print_list tr.E.content
 
     let match_pats_modulo pat lsubsts =
       if get_debug_matching() >= 3 then
         let print fmt { sbs; sty; _ } =
-          fprintf fmt ">>> sbs= %a | sty= %a@,"
+          fprintf fmt ">>> sbs= %a | sty= %a@ "
             (SubstE.print E.print) sbs Ty.print_subst sty
         in
         print_dbg
           ~module_name:"Matching" ~function_name:"match_pats_modulo"
-          "@[<v 2>match_pat_modulo: %a  with accumulated substs@,%a@]"
+          "@[<v 2>match_pat_modulo: %a  with accumulated substs@ %a@]"
           E.print pat (pp_list_no_space print) lsubsts
 
     let match_one_pat { sbs; sty; _ } pat0 =
@@ -127,7 +127,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let match_one_pat_against { sbs; sty; _ } pat0 t =
       print_dbg ~debug:(get_debug_matching() >= 3)
         ~module_name:"Matching" ~function_name:"match_one_pat_against"
-        "@[<v 0>match_pat: %a against term %a@,\
+        "@[<v 0>match_pat: %a against term %a@ \
          with subst:  sbs= %a | sty= %a@]"
         E.print pat0
         E.print t
@@ -159,7 +159,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let candidate_substitutions pat_info res =
       print_dbg ~debug:(get_debug_matching() >= 1)
         ~module_name:"Matching" ~function_name:"candidate_substitutions"
-        "@[<v 2>%3d candidate substitutions for Axiom %a with trigger %a@,"
+        "@[<v 2>%3d candidate substitutions for Axiom %a with trigger %a@ "
         (List.length res)
         E.print pat_info.trigger_orig
         E.print_list pat_info.trigger.E.content;
@@ -167,7 +167,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         List.iter
           (fun gsbt ->
              print_dbg ~header:false
-               ">>> sbs = %a  and  sbty = %a@,"
+               ">>> sbs = %a  and  sbty = %a@ "
                (SubstE.print E.print) gsbt.sbs Ty.print_subst gsbt.sty
           )res
 
@@ -666,7 +666,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
            in
            Printer.print_dbg ~debug:(Options.get_debug_triggers ())
              ~module_name:"Matching" ~function_name:"add_triggers"
-             "@[<v 2>triggers of %s are:@,%a@]"
+             "@[<v 2>triggers of %s are:@ %a@]"
              name E.print_triggers tgs;
            List.fold_left
              (fun env tr ->

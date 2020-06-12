@@ -95,7 +95,7 @@ module Shostak
     let solve_aux r1 r2 =
       Printer.print_dbg ~debug:(get_debug_arith ())
         ~module_name:"Arith" ~function_name:"solve_aux"
-        "we solve %a=%a@." X.print r1 X.print r2
+        "we solve %a=%a" X.print r1 X.print r2
 
     let solve_one r1 r2 sbs =
       let c = ref 0 in
@@ -105,7 +105,7 @@ module Shostak
       in
       Printer.print_dbg ~debug:(get_debug_arith ())
         ~module_name:"Arith" ~function_name:"solve_one"
-        "solving %a = %a yields:@,%a@."
+        "solving %a = %a yields:@,%a"
         X.print r1 X.print r2
         (Printer.pp_list_no_space print) sbs
   end
@@ -678,13 +678,13 @@ module Shostak
     try
       Printer.print_dbg ~debug:(get_debug_arith ())
         ~module_name:"Arith" ~function_name:"solve"
-        "Try solving with unsafe mode.@.";
+        "Try solving with unsafe mode.";
       solve_one pb r1 r2 lvs true (* true == unsafe mode *)
     with Unsafe ->
     try
       Printer.print_dbg ~debug:(get_debug_arith ())
         ~module_name:"Arith" ~function_name:"solve"
-        "Cancel unsafe solving mode. Try safe mode@.";
+        "Cancel unsafe solving mode. Try safe mode";
       solve_one pb r1 r2 lvs false (* false == safe mode *)
     with Unsafe ->
       assert false
@@ -782,7 +782,7 @@ module Shostak
   let choose_adequate_model t r l =
     Printer.print_dbg ~debug:(get_debug_interpretation ())
       ~module_name:"Arith" ~function_name:"choose_adequate_model"
-      "choose_adequate_model for %a@." E.print t;
+      "choose_adequate_model for %a" E.print t;
     let l = List.filter (fun (_, r) -> P.is_const (embed r) != None) l in
     let r =
       match l with

@@ -188,12 +188,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let print_nb_related env =
       print_dbg ~debug:(get_verbose ())
         ~module_name:"Fun_sat" ~function_name:"print_nb_related"
-        "@[<v 0>----------------------------------------------------@,\
-         nb_related_to_both = %d@,\
-         nb_related_to_goal = %d@,\
-         nb_related_to_hypo = %d@,\
-         nb_unrelated       = %d@,\
-         ----------------------------------------------------@]@."
+        "@[<v 0>----------------------------------------------------@ \
+         nb_related_to_both = %d@ \
+         nb_related_to_goal = %d@ \
+         nb_related_to_hypo = %d@ \
+         nb_unrelated       = %d@ \
+         ----------------------------------------------------@]"
         env.nb_related_to_both
         env.nb_related_to_goal
         env.nb_related_to_hypo
@@ -202,8 +202,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let propagations (env, bcp, tcp, ap_delta, lits) =
       print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"propagations"
-        "|lits| = %d , B = %b , T = %b , \
-         |Delta| = %d, |ap_Delta| = %d@."
+        "|lits| = %d, B = %b, T = %b, \
+         |Delta| = %d, |ap_Delta| = %d"
         (List.length lits) bcp tcp
         (List.length env.delta)
         (List.length ap_delta)
@@ -223,25 +223,25 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       in
       print_dbg ~debug:(get_verbose () && get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"is_it_unsat"
-        "the following %s is unsat ? :@,%a@."
+        "the following %s is unsat ? :@ %a"
         s E.print gf.E.ff
 
     let pred_def f =
       print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"pred_def"
-        "I assume a predicate: %a@." E.print f
+        "I assume a predicate: %a" E.print f
 
     let unsat_rec dep =
       print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"unsat_rec"
-        "unsat_rec : %a@." Ex.print dep
+        "unsat_rec : %a" Ex.print dep
 
     let assume gf dep env =
       if get_debug_sat () then
         let { E.ff = f; lem; from_terms = terms; _ } = gf in
-        print_dbg
+        print_dbg ~flushed:false
           ~module_name:"Fun_sat" ~function_name:"assume"
-          "at level (%d, %d) I assume a @," env.dlevel env.plevel;
+          "at level (%d, %d) I assume a @ " env.dlevel env.plevel;
         begin match E.form_view f with
           | E.Not_a_form -> assert false
           | E.Literal a ->
@@ -255,7 +255,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                  | E.Not_a_form -> assert false)
             in
             print_dbg ~header:false
-              "LITERAL (%s : %a) %a@,"
+              "LITERAL (%s : %a) %a@ "
               n E.print_list terms E.print a
           | E.Unit _   ->
             print_dbg ~header:false "conjunction"
@@ -312,7 +312,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let red _ _ =
       print_dbg ~debug:(get_debug_sat () && get_verbose ())
         ~module_name:"Fun_sat" ~function_name:"red"
-        "red@."
+        "red"
 
     (* let delta d =
        print_dbg ~debug:(get_verbose () || get_debug_sat ())
@@ -327,10 +327,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let gamma g =
       if get_debug_sat () && get_verbose () then begin
         print_dbg ~module_name:"Fun_sat" ~function_name:"gamma"
-          "@[<v 0>--- GAMMA ---------------------@,";
+          "@[<v 0>--- GAMMA ---------------------@ ";
         ME.iter (fun f (_, ex, dlvl, plvl) ->
             print_dbg ~header:false
-              "(%d, %d) %a \t->\t%a@,"
+              "(%d, %d) %a \t->\t%a@ "
               dlvl plvl E.print f Ex.print ex) g;
         print_dbg ~header:false
           " - / GAMMA ---------------------@]";
@@ -343,23 +343,23 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let inconsistent expl env =
       print_dbg ~debug:(get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"inconsistent"
-        "inconsistent at level (%d, %d), reason : %a@."
+        "inconsistent at level (%d, %d), reason : %a"
         env.dlevel env.plevel Ex.print expl
 
     let in_mk_theories_instances () =
       print_dbg
         ~debug:(Options.get_debug_fpa() > 0 || get_debug_sat())
         ~module_name:"Fun_sat" ~function_name:"in_mk_theories_instances"
-        "entering mk_theories_instances:@."
+        "entering mk_theories_instances:"
 
     let out_mk_theories_instances normal_exit =
       print_dbg
         ~debug:(Options.get_debug_fpa() > 0 || get_debug_sat())
         ~module_name:"Fun_sat" ~function_name:"out_mk_theories_instances"
         (if normal_exit then
-           "normal exit of mk_theories_instances.@."
+           "normal exit of mk_theories_instances."
          else
-           "exit mk_theories_instances with Inconsist.@.")
+           "exit mk_theories_instances with Inconsist.")
 
     let print_f_conj fmt hyp =
       match hyp with
@@ -372,9 +372,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       print_dbg
         ~debug:(Options.get_debug_fpa() > 1 || Options.get_debug_sat())
         ~module_name:"Fun_sat" ~function_name:"print_theory_instances"
-        "@[<v 2>@.%s >@, \
-         hypotheses: %a@, \
-         conclusion: %a@]@."
+        "@[<v 2>@ %s >@ \
+         hypotheses: %a@ \
+         conclusion: %a@]"
         (E.name_of_lemma_opt gf.E.lem)
         print_f_conj hyp
         E.print gf.E.ff
@@ -429,12 +429,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let print_model ~header fmt t =
     Format.print_flush ();
-    if header then fprintf fmt "\nModel\n@.";
+    if header then fprintf fmt "\nModel\n";
     let pm = extract_prop_model t in
     if not (SE.is_empty pm) then begin
       fprintf fmt "Propositional:";
       print_prop_model fmt pm;
-      fprintf fmt "\n@.";
+      fprintf fmt "\n";
     end;
     Th.print_model fmt t.tbox
 
@@ -452,7 +452,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           Sys.set_signal alrm
             (Sys.Signal_handle (fun _ ->
                  Printer.print_fmt (Options.get_fmt_mdl ())
-                   "%a@." (print_model ~header:true) t;
+                   "%a" (print_model ~header:true) t;
                  Options.exec_timeout ()))
         with Invalid_argument _ -> ()
     else fun _ -> ()
@@ -477,26 +477,28 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   (* hybrid functions*)
   let print_decisions_in_the_sats msg env =
     if Options.get_tableaux_cdcl () && get_verbose() then begin
-      Printer.print_dbg ~module_name:"Fun_sat"
+      Printer.print_dbg ~flushed:false ~module_name:"Fun_sat"
         ~function_name:"print_decisions_in_the_sats"
-        "@[<v 0>-----------------------------------------------------@,\
-         >> %s@,\
-         decisions in DfsSAT are:@,"
+        "@[<v 0>-----------------------------------------------------@ \
+         >> %s@ \
+         decisions in DfsSAT are:@ "
         msg;
       let l = ME.bindings env.decisions in
       let l = List.fast_sort (fun (_,i) (_,j) -> j - i) l in
       List.iter
         (fun (f, i) ->
-           Printer.print_dbg ~header:false "%d  -> %a@," i E.print f
+           Printer.print_dbg ~flushed:false ~header:false
+             "%d  -> %a@ " i E.print f
         )l;
-      Printer.print_dbg ~header:false "decisions in satML are:@,";
+      Printer.print_dbg ~flushed:false ~header:false
+        "decisions in satML are:@ ";
       List.iter
         (fun (i, f) ->
-           Printer.print_dbg ~header:false
-             "%d  -> %a@," i E.print f
+           Printer.print_dbg ~flushed:false ~header:false
+             "%d  -> %a@ " i E.print f
         )(CDCL.get_decisions !(env.cdcl));
       Printer.print_dbg ~header:false
-        "-----------------------------------------------------@]@."
+        "-----------------------------------------------------@]"
     end
 
   let cdcl_same_decisions env =
@@ -1139,8 +1141,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             env.gamma SE.empty
         in
         Printer.print_fmt (Options.get_fmt_mdl ())
-          "@[<v 0>--- SAT model found ---@,\
-           %a@,\
+          "@[<v 0>--- SAT model found ---@ \
+           %a@ \
            --- / SAT model  ---@]"
           print_prop_model m;
         raise (IUnsat (Ex.make_deps m, []))
@@ -1568,9 +1570,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if rnd > max_rnd then env
     else
       let nb1 = env.nb_related_to_goal in
-      Printer.print_dbg ~debug:(get_verbose () || get_debug_sat ())
+      Printer.print_dbg ~flushed:false ~debug:(get_verbose () || get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"backward_instantiation_rec"
-        "round %d / %d@," rnd max_rnd;
+        "round %d / %d@ " rnd max_rnd;
       let mconf =
         {Util.nb_triggers = get_nb_triggers ();
          no_ematching = get_no_ematching();

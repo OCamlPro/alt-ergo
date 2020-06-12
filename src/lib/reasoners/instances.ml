@@ -110,14 +110,14 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         in
         print_dbg
           ~module_name:"Instances" ~function_name:"new_facts_of_axiom"
-          "[Instances.split_and_filter_insts]@,\
-           %3d different new instances generated for %s@."
+          "[Instances.split_and_filter_insts]@ \
+           %3d different new instances generated for %s"
           (ME.cardinal insts_ok) name
 
     let new_mround ilvl kind =
       print_dbg ~debug:(get_debug_matching () >= 1)
         ~module_name:"Instance" ~function_name:"new_mround"
-        "[matching] new %s matching round: ilevel = %d...@."
+        "[matching] new %s matching round: ilevel = %d..."
         kind ilvl
 
   end

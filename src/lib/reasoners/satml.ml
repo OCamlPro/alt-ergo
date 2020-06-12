@@ -953,7 +953,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           match v.reason with None -> () | Some c -> l := c :: !l
         done;
         Printer.print_dbg ~header:false
-          "@[<v 2>UNSAT Deduction made from:@,%a@."
+          "@[<v 2>UNSAT Deduction made from:@ %a@]"
           (Printer.pp_list_no_space print_aux) !l;
         let uc = HUC.create 17 in
         let rec roots todo =
@@ -973,7 +973,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             | prems -> roots prems; roots r
         in roots !l;
         let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
-        Printer.print_dbg ~debug:false "@[<v 2>UNSAT_CORE:@,%a@."
+        Printer.print_dbg ~debug:false "@[<v 2>UNSAT_CORE:@ %a@]"
           (Printer.pp_list_no_space print_aux) unsat_core;
         env.is_unsat <- true;
         let unsat_core = Some unsat_core in
@@ -1002,7 +1002,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           ) dep []
       in
       Printer.print_dbg ~header:false
-        "@[<v 2>T-UNSAT Deduction made from:@,%a@."
+        "@[<v 2>T-UNSAT Deduction made from:@ %a@]"
         (Printer.pp_list_no_space print_aux) l;
       let uc = HUC.create 17 in
       let rec roots todo =
@@ -1023,7 +1023,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       in roots l;
       let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
       Printer.print_dbg ~header:false
-        "@[<v 2>T-UNSAT_CORE:@,%a@."
+        "@[<v 2>T-UNSAT_CORE:@ %a@]"
         (Printer.pp_list_no_space print_aux) unsat_core;
       env.is_unsat <- true;
       let unsat_core = Some unsat_core in
@@ -1093,8 +1093,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     report_conflict env (all_propagations env);
     if nb_assigns env <> env.simpDB_assigns && env.simpDB_props <= 0 then begin
       Printer.print_dbg ~debug:(get_debug_sat ())
-        ~module_name:"Satml" ~function_name:"simplify"
-        "@.";
+        ~module_name:"Satml" ~function_name:"simplify" "";
       (*theory_simplify ();*)
       if Vec.size env.learnts > 0 then remove_satisfied env env.learnts;
       if env.remove_satisfied then remove_satisfied env env.clauses;
@@ -1518,7 +1517,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         Vec.push env.clauses clause;
         Printer.print_dbg ~debug:(get_debug_sat () && get_verbose ())
           ~module_name:"Satml" ~function_name:"add_clause"
-          "add_clause: %a@." Atom.pr_clause clause;
+          "add_clause: %a" Atom.pr_clause clause;
 
         if a.neg.is_true then begin (* clause is false *)
           let lvl = List.fold_left (fun m a -> max m a.var.level) 0 atoms in
@@ -1538,7 +1537,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       | [a]   ->
         Printer.print_dbg ~debug:(get_debug_sat () && get_verbose ())
           ~module_name:"Satml" ~function_name:"add_clause"
-          "add_atom: %a@." Atom.pr_atom a;
+          "add_atom: %a" Atom.pr_atom a;
         let lvl = a.var.level in
         assert (lvl <> 0);
         begin
@@ -1653,7 +1652,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         List.iter (add_clause env f ~cnumber) nunit_cnf;
 
         Printer.print_dbg ~debug:(get_verbose ())
-          "%d clauses@,%d learnts@."
+          "%d clauses@ %d learnts"
           (Vec.size env.clauses)
           (Vec.size env.learnts);
     end;
@@ -1730,7 +1729,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       List.iter (add_clause env vraie_form ~cnumber:0) cnf;
 
       Printer.print_dbg ~debug:(get_verbose ())
-        "%d clauses@,%d learnts@."
+        "%d clauses@ %d learnts"
         (Vec.size env.clauses)
         (Vec.size env.learnts);
 

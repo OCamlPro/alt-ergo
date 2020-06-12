@@ -399,12 +399,12 @@ struct
       let c = ref 0 in
       let print fmt (p,v) =
         incr c;
-        fprintf fmt "<%d) %a |-> %a@,"
+        fprintf fmt "<%d) %a |-> %a@ "
           !c print p print v
       in
       print_dbg ~debug:(get_debug_combine ())
         ~module_name:"Shostak" ~function_name:"print_sbt"
-        "@[<v 2>%s subst:@,%a@]"
+        "@[<v 2>%s subst:@ %a@]"
         msg
         (pp_list_no_space print) sbs
 
@@ -412,15 +412,15 @@ struct
       let c = ref 0 in
       let print fmt (p,v) =
         incr c;
-        fprintf fmt "(%d) %a |-> %a@,"
+        fprintf fmt "(%d) %a |-> %a@ "
           !c CX.print p CX.print v
       in
       print_dbg ~debug:(get_debug_combine ())
         ~module_name:"Shostak" ~function_name:"abstraction_result"
-        "@[<v 0>== get_debug_abstraction_result ==@,\
-         Initial equaliy:   %a = %a@,\
-         abstracted equality: %a = %a@,\
-         @[<v 2>selectors elimination result:@,\
+        "@[<v 0>== get_debug_abstraction_result ==@ \
+         Initial equaliy:   %a = %a@ \
+         abstracted equality: %a = %a@ \
+         @[<v 2>selectors elimination result:@ \
          %a@]@]"
         CX.print oa CX.print ob CX.print a CX.print b
         (pp_list_no_space print) acc
@@ -439,7 +439,7 @@ struct
       assert (
         not (Options.get_enable_assertions()) ||
         if not (Ty.compare tya tyb = 0) then (
-          print_err "@[<v 0>@,Tya = %a  and @,Tyb = %a@]"
+          print_err "@[<v 0>@ Tya = %a  and @ Tyb = %a@]"
             Ty.print tya Ty.print tyb;
           false)
         else true)
@@ -623,7 +623,7 @@ struct
             | Some t, true when (Expr.depth t) = 1 -> rep
             | _ ->
               let print_aux fmt (t,r) =
-                fprintf fmt "> impossible case: %a -- %a@,"
+                fprintf fmt "> impossible case: %a -- %a@ "
                   Expr.print t
                   print r
               in
