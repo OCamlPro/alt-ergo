@@ -166,51 +166,54 @@ let init_output_format () =
 let print_std s =
   pp_std_smt ();
   fprintf (Options.get_fmt_std ()) s
+
 let flush fmt = Format.fprintf fmt "@."
 
-let print_err ?(flush:true) ?(header=(Options.get_output_with_headers ())) ?(error=true) s =
+let print_err ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
+    ?(error=true) s =
   if error then begin
-    let fmt = Options.get_fmt_err () in  
+    let fmt = Options.get_fmt_err () in
     fprintf fmt "@[<v 0>";
     if header then
       fprintf fmt "@[<v 7>@{<fg_red>@{<bold>[Error]@}@}";
-    if flush then kfprintf flush fmt s else fprintf fmt s
+    if flushed then kfprintf flush fmt s else fprintf fmt s
   end
   else ifprintf err_formatter s
 
-let print_wrn ?(header=(Options.get_output_with_headers ())) ?(warning=true) s =
+let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
+    ?(warning=true) s =
   if warning then begin
     let fmt = Options.get_fmt_wrn () in
     fprintf fmt "@[<v 0>%s" (pp_smt clean_wrn_print);
     if header then
       fprintf fmt "@[<v 9>@{<fg_orange>@{<bold>[Warning]@}@}" ;
-    kfprintf flush fmt s
+    if flushed then kfprintf flush fmt s else fprintf fmt s
   end
   else ifprintf err_formatter s
 
-let print_dbg ?(header=(Options.get_output_with_headers ())) ?(debug=true)
-    ?(module_name="") ?(function_name="") s =
+let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
+    ?(debug=true) ?(module_name="") ?(function_name="") s =
   if debug then begin
-    fprintf (Options.get_fmt_err ()) "%s" (pp_smt clean_dbg_print);
+    let fmt = Options.get_fmt_dbg () in
+    fprintf fmt "@[<v 0>%s" (pp_smt clean_dbg_print);
     if header then begin
-      let fname =if String.equal function_name ""
+      let fname =
+        if String.equal function_name ""
         then ""
         else sprintf "[%s]" function_name
       in
-      let mname =if String.equal module_name ""
+      let mname =
+        if String.equal module_name ""
         then ""
         else sprintf "[%s]" module_name
       in
-      fprintf (Options.get_fmt_dbg ())
+      fprintf fmt
         "@{<fg_blue>@{<bold>[Debug]%s%s@}@}@,@[<v 0>"
         mname fname;
     end;
-    fprintf (Options.get_fmt_dbg ()) s
+    if flushed then kfprintf flush fmt s else fprintf fmt s
   end
   else ifprintf err_formatter s
-
-let flush_dbg ?(debug=true) () =
-  if debug then fprintf (Options.get_fmt_dbg ()) "@."
 
 let print_fmt fmt s =
   fprintf fmt s
