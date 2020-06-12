@@ -81,7 +81,7 @@ module Shostak (X : ALIEN) = struct
         match res with
         | [p,v] ->
           print_dbg ~header:false
-            "we get: %a |-> %a@." X.print p X.print v
+            "we get: %a |-> %a@]@." X.print p X.print v
         | []    ->
           print_dbg ~header:false
             "the equation is trivial@."
