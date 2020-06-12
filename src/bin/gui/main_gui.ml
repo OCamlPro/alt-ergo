@@ -493,7 +493,10 @@ let empty_sat_inst inst_model =
 exception Abort_thread
 
 let update_status image label buttonclean env s steps =
-  let satmode = (* smtfile() || smt2file() ||  satmode()*) false in
+  let satmode =
+    match Options.get_output_format () with
+    | Smtlib2 -> true
+    | Native | Why3 | Unknown _ -> false in
   match s with
   | FE.Unsat (d,dep) ->
     let time = Options.Time.value () in

@@ -554,7 +554,8 @@ let update_cs_modulo_eq r1 r2 ex env eqs =
       MHs.fold
         (fun hs l mhs ->
            if trivial_tester r2 hs then begin
-             Printer.print_dbg ~flushed:false ~header:false ~debug:(get_debug_adt ())
+             Printer.print_dbg
+               ~flushed:false ~header:false ~debug:(get_debug_adt ())
                "make deduction because %a ? %a is trivial@ "
                X.print r2 Hs.print hs;
              List.iter

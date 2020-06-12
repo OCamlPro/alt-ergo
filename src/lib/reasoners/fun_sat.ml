@@ -1570,7 +1570,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if rnd > max_rnd then env
     else
       let nb1 = env.nb_related_to_goal in
-      Printer.print_dbg ~flushed:false ~debug:(get_verbose () || get_debug_sat ())
+      Printer.print_dbg
+        ~flushed:false ~debug:(get_verbose () || get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"backward_instantiation_rec"
         "round %d / %d@ " rnd max_rnd;
       let mconf =
