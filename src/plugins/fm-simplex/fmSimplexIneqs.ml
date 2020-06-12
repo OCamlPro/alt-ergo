@@ -279,7 +279,7 @@ module Container : Inequalities.Container_SIG = struct
       let print fmt (id, { ple0 ; _ }) =
         fprintf fmt "%d) %a <= 0" id P.print ple0 in
       Printer.print_dbg ~debug:(get_debug_fm())
-        "begin fm-simplex: nb_constrs = %d@,%a@."
+        "begin fm-simplex: nb_constrs = %d@,%a"
         nb_constrs
         (Printer.pp_list_no_space print) constrs;
       let sum, ctt, lambdas = generalized_fm_projection constrs in
