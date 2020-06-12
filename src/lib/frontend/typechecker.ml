@@ -394,7 +394,7 @@ let check_pattern_matching missing dead loc =
           | Var v -> (Var.view v).Var.hs
         ) dead
     in
-    Printer.print_wrn "%a@."
+    Printer.print_wrn "%a"
       Errors.report (Typing_error(loc,MatchUnusedCases dead))
 
 let mk_adequate_app p s te_args ty logic_kind =
