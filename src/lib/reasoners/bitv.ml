@@ -730,7 +730,7 @@ module Shostak(X : ALIEN) = struct
   let solve_bis u t =
     Printer.print_dbg ~debug:(Options.get_debug_bitv ())
       ~module_name:"Bitv" ~function_name:"solve_bis"
-      "solve %a = %a@." X.print u X.print t;
+      "solve %a = %a" X.print u X.print t;
 
     match X.extract u , X.extract t with
     | None   , None   -> if X.str_cmp u t > 0 then [u,t] else [t,u]
