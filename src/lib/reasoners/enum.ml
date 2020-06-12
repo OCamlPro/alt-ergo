@@ -89,7 +89,7 @@ module Shostak (X : ALIEN) = struct
 
     let solve_bis_unsolvable () =
       print_dbg ~debug:(get_debug_sum ())
-        "the equation is unsolvable@."
+        "the equation is unsolvable@]@."
 
   end
   (*BISECT-IGNORE-END*)
