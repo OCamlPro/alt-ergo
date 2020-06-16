@@ -1,0 +1,35 @@
+EXCLUDE_QUERY_DIR
+B /home/travis/.opam/4.04.2/lib/cmdliner
+B /home/travis/.opam/4.04.2/lib/dune-configurator
+B /home/travis/.opam/4.04.2/lib/dune-configurator/_caml
+B /home/travis/.opam/4.04.2/lib/dune-configurator/_dune_lang
+B /home/travis/.opam/4.04.2/lib/dune-configurator/_ocaml_config
+B /home/travis/.opam/4.04.2/lib/dune-configurator/_result
+B /home/travis/.opam/4.04.2/lib/dune-configurator/_stdune
+B /home/travis/.opam/4.04.2/lib/num
+B /home/travis/.opam/4.04.2/lib/ocaml
+B /home/travis/.opam/4.04.2/lib/ocplib-simplex
+B /home/travis/.opam/4.04.2/lib/seq
+B /home/travis/.opam/4.04.2/lib/stdlib-shims
+B /home/travis/.opam/4.04.2/lib/zarith
+B ../../_build/default/src/lib/.AltErgoLib.objs/byte
+B ../../_build/default/src/lib/.formatshims.eobjs/byte
+S /home/travis/.opam/4.04.2/lib/cmdliner
+S /home/travis/.opam/4.04.2/lib/dune-configurator
+S /home/travis/.opam/4.04.2/lib/dune-configurator/_caml
+S /home/travis/.opam/4.04.2/lib/dune-configurator/_dune_lang
+S /home/travis/.opam/4.04.2/lib/dune-configurator/_ocaml_config
+S /home/travis/.opam/4.04.2/lib/dune-configurator/_result
+S /home/travis/.opam/4.04.2/lib/dune-configurator/_stdune
+S /home/travis/.opam/4.04.2/lib/num
+S /home/travis/.opam/4.04.2/lib/ocaml
+S /home/travis/.opam/4.04.2/lib/ocplib-simplex
+S /home/travis/.opam/4.04.2/lib/seq
+S /home/travis/.opam/4.04.2/lib/stdlib-shims
+S /home/travis/.opam/4.04.2/lib/zarith
+S .
+S frontend
+S reasoners
+S structures
+S util
+FLG -w @1..3@5..28@30..39@43@46..47@49..57@61..62-40 -strict-sequence -strict-formats -short-paths -keep-locs -bin-annot -w -22 -open AltErgoLib -w @1..3@5..28@30..39@43@46..47@49..57@61..62-40 -strict-sequence -strict-formats -short-paths -keep-locs -bin-annot -w -22
