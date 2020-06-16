@@ -32,3 +32,9 @@ mkdir -p ./$VERSION
 cp rsc/extra/index.html ./
 cp -r _build/default/_doc/_html/* ./$VERSION/
 
+# Clean build artifacts
+rm -rf _build
+rm Makefile.config
+rm -rf rsc/extra/index.html
+rm -rf src/bin/text/flags.dune
+rm -rf src/lib/util/config.ml
