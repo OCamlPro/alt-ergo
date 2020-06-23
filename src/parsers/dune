@@ -3,12 +3,12 @@
   (package alt-ergo-parsers)
 )
 
-(ocamllex (modules why_lexer))
+(ocamllex (modules native_lexer))
 
 (menhir
   (infer    true)
   (flags    --fixed-exception)
-  (modules  why_parser)
+  (modules  native_parser)
 )
 
 (library
@@ -21,7 +21,7 @@
       ; psmt2
       Psmt2_to_alt_ergo
       ; AE format
-      Why_lexer Why_parser
+      Native_lexer Native_parser
     )
 )
 
