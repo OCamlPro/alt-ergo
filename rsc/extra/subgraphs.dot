@@ -23,8 +23,8 @@ subgraph cluster_parsers {
     label="Native";
     style=filled;
     color=white;
-    "Why_parser";
-    "Why_lexer";
+    "Native_parser";
+    "Native_lexer";
   }
 }
 

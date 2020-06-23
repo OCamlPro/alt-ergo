@@ -10,8 +10,8 @@ offer an interface to register a parser
 {3 Native input parser}
 The native input language of Alt-Ergo is defined by these two following modules :
 {!modules:
-AltErgoParsers.Why_parser
-AltErgoParsers.Why_lexer
+AltErgoParsers.Native_parser
+AltErgoParsers.Native_lexer
 }
 
 {3 SMT-LIB2 input parser}
