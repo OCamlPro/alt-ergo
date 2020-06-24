@@ -32,10 +32,10 @@
   open Options
 
   open Lexing
-  open Why_parser
+  open Native_parser
 
   let assoc_keyword =
-    let tbl : (string, Why_parser.token) Hashtbl.t = Hashtbl.create 256 in
+    let tbl : (string, Native_parser.token) Hashtbl.t = Hashtbl.create 256 in
     let kw_list =
       [
         "ac"         , AC;
@@ -269,9 +269,9 @@ and parse_string str_buf = parse
         Parsing.clear_parser ();
         Errors.error (Errors.Syntax_error (loc, lex))
 
-    let file    = aux Why_parser.file_parser    parse_token
-    let expr    = aux Why_parser.lexpr_parser   parse_token
-    let trigger = aux Why_parser.trigger_parser parse_token
+    let file    = aux Native_parser.file_parser    parse_token
+    let expr    = aux Native_parser.lexpr_parser   parse_token
+    let trigger = aux Native_parser.trigger_parser parse_token
   end
 
   let () =
