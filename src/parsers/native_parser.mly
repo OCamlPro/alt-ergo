@@ -151,7 +151,7 @@ decl:
    { mk_goal ($startpos, $endpos) name body }
 
 | CHECK_SAT name = ident COLON body = lexpr
-   { mk_goal ($startpos, $endpos) name (mk_not ($startpos, $endpos) body) }
+   { mk_check_sat ($startpos, $endpos) name body }
 
 theory_elts:
 | /* */  { [] }
