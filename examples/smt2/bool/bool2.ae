@@ -1,4 +1,10 @@
-logic x : bool
-logic y : bool
-goal g2:
- ("model:":(x and ("model:":y)))
+logic x: bool
+logic y: bool
+goal ga1: x and y
+goal ga2: x and not x
+goal go1: x or y
+goal go2: x or not x
+check_sat ga1: x and y
+check_sat ga2: x and not x
+check_sat go1: x or y
+check_sat go2: x or not x

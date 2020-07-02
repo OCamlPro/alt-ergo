@@ -96,6 +96,8 @@ and pp_desc =
   | PPisConstr of lexpr * string
   | PPproject of bool * lexpr * string
 
+val pp_lexpr : Format.formatter -> lexpr -> unit
+
 (* Declarations. *)
 
 type plogic_type =
@@ -115,6 +117,7 @@ type decl =
   | Axiom of Loc.t * string * Util.axiom_kind * lexpr
   | Rewriting of Loc.t * string * lexpr list
   | Goal of Loc.t * string * lexpr
+  | Check_sat of Loc.t * string * lexpr
   | Logic of Loc.t * Symbols.name_kind * (string * string) list * plogic_type
   | Predicate_def of
       Loc.t * (string * string) *
