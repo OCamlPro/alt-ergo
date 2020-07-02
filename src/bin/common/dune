@@ -10,7 +10,7 @@
 )
 
 (library
- (name             alt_ergo_common)
- (libraries        alt-ergo-lib cmdliner)
- (modules Parse_command)
+ (name        alt_ergo_common)
+ (libraries   alt-ergo-lib cmdliner)
+ (modules     Parse_command Signals)
 )

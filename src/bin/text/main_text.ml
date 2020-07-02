@@ -53,53 +53,6 @@ module FE = Frontend.Make (SAT)
 
 let timers = Timers.empty ()
 
-let () =
-  (* what to do with Ctrl+C ? *)
-  Sys.set_signal Sys.sigint(*-6*)
-    (Sys.Signal_handle (fun _ ->
-         if Options.get_profiling() then Profiling.switch (get_fmt_err ())
-         else begin
-           Printer.print_wrn "User wants me to stop.";
-           Printer.print_std "unknown";
-           exit 1
-         end
-       )
-    )
-
-let () =
-  (* put the test here because Windows does not handle Sys.Signal_handle
-     correctly *)
-  if Options.get_profiling() then
-    List.iter
-      (fun sign ->
-         Sys.set_signal sign
-           (Sys.Signal_handle
-              (fun _ ->
-                 Profiling.print true (Steps.get_steps ()) timers
-                   (get_fmt_err ());
-                 exit 1
-              )
-           )
-      )[ Sys.sigterm (*-11*); Sys.sigquit (*-9*)]
-
-let () =
-  (* put the test here because Windows does not handle Sys.Signal_handle
-     correctly *)
-  if Options.get_profiling() then
-    Sys.set_signal Sys.sigprof (*-21*)
-      (Sys.Signal_handle
-         (fun _ ->
-            Profiling.print false (Steps.get_steps ()) timers (get_fmt_err ());
-         )
-      )
-
-let () =
-  if not (get_model ()) then
-    try
-      Sys.set_signal Sys.sigvtalrm
-        (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
-    with Invalid_argument _ -> ()
-
 let init_profiling () =
   if Options.get_profiling () then begin
     Timers.reset timers;
@@ -163,8 +116,16 @@ let typed_loop all_context state td =
   end
 
 let () =
+  Signals.init_sig_int ();
+  Signals.init_sig_alarm ();
+  Signals.init_sig_term_quit timers;
+  Signals.init_sig_prof timers;
   Gc_debug.init ();
+
+  AltErgoParsers.Native_lexer.register_native ();
+  AltErgoParsers.Psmt2_to_alt_ergo.register_psmt2 ();
   let (module I : Input.S) = Input.find (Options.get_frontend ()) in
+
   Printer.init_colors ();
   Printer.init_output_format ();
 
