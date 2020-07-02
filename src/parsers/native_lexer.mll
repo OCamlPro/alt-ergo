@@ -45,6 +45,8 @@
         "bool"       , BOOL;
         "case_split" , CASESPLIT;
         "check"      , CHECK;
+        "check_sat"  , CHECK_SAT;
+        "check_valid", CHECK_VALID;
         "cut"        , CUT;
         "distinct"   , DISTINCT;
         "else"       , ELSE;
@@ -54,8 +56,7 @@
         "false"      , FALSE;
         "forall"     , FORALL;
         "function"   , FUNC;
-        "check_valid", CHECK_VALID;
-        "check_sat"  , CHECK_SAT;
+        "goal"       , CHECK_VALID;
         "if"         , IF;
         "in"         , IN;
         "int"        , INT;
