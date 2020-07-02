@@ -241,7 +241,7 @@ and pp_lexprl_bool_list fmt tl =
     (Format.pp_print_list ~pp_sep:pp_sep_comma (fun fmt (lel, b) ->
          Format.fprintf fmt "(%a, %b)" pp_lexpr_list lel b)) tl
 
-(* Declarations. *)
+(* Declarations *)
 
 type plogic_type =
   | PPredicate of ppure_type list
