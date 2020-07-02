@@ -151,12 +151,13 @@ let print_rwt pp fmt r =
 
 (** Goal sort *)
 
-type goal_sort = Cut | Check | Thm
+type goal_sort = Cut | Check | Thm | Sat
 
 let print_goal_sort fmt = function
   | Cut -> Format.fprintf fmt "cut"
   | Check -> Format.fprintf fmt "check"
   | Thm -> Format.fprintf fmt "thm"
+  | Sat -> Format.fprintf fmt "sat"
 
 
 (** Logic type *)
@@ -329,7 +330,7 @@ and print_formula fmt f =
     fprintf fmt "if %a then %a else %a"
       print_formula cond print_formula f1 print_formula f2
   | TFop(op, [f1; f2]) ->
-    fprintf fmt "%a %s %a" print_formula f1 (string_of_op op) print_formula f2
+    fprintf fmt "(%a %s %a)" print_formula f1 (string_of_op op) print_formula f2
   | TFforall { qf_bvars = l; qf_triggers = t; qf_form = f; _ } ->
     fprintf fmt "forall %a [%a]. %a"
       print_binders l print_triggers t print_formula f

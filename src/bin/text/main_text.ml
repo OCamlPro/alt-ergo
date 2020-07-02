@@ -95,14 +95,14 @@ let solve all_context (cnf, goal_name) =
 let typed_loop all_context state td =
   if get_type_only () then state else begin
     match td.Typed.c with
-    | Typed.TGoal (_, kind, name, _) ->
+    | Typed.TGoal (_, kind, name, f) ->
       let l = state.local @ state.global @ state.ctx in
       let cnf = List.rev @@ Cnf.make l td in
       let () = solve all_context (cnf, name) in
       begin match kind with
         | Typed.Check
         | Typed.Cut -> { state with local = []; }
-        | _ -> { state with global = []; local = []; }
+        | Typed.Thm | Typed.Sat -> { state with global = []; local = []; }
       end
     | Typed.TAxiom (_, s, _, _) when Typed.is_global_hyp s ->
       let cnf = Cnf.make state.global td in

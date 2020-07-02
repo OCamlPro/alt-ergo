@@ -70,6 +70,8 @@ let mk_non_ground_predicate_def loc named_ident args expr =
 let mk_goal loc name expr =
   Goal (loc, name, expr)
 
+let mk_check_sat loc name expr =
+  Check_sat (loc, name, expr)
 
 (** Declaration of theories, generic axioms and rewriting rules **)
 
@@ -308,4 +310,3 @@ let mk_algebraic_test loc expr cstr =
 
 let mk_algebraic_project loc ~guarded expr cstr =
   mk_localized loc (PPproject (guarded, expr, cstr))
-

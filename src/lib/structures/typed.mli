@@ -243,7 +243,9 @@ type goal_sort =
   | Check
   (** Check if some intermediate assertion is prouvable *)
   | Thm
-  (** The goal to be proved *)
+  (** The goal to be proved valid *)
+  | Sat
+  (** The goal to be proved satisfiable *)
 (** Goal sort. Used in typed declarations. *)
 
 val fresh_hypothesis_name : goal_sort -> string

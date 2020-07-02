@@ -846,7 +846,8 @@ let rec print_typed_decl fmt td = match td.Typed.c with
     fprintf fmt "axiom %s : %a" s print_tform tf
   | TRewriting (_, s, rwtl) ->
     fprintf fmt "rewriting %s : %a" s print_rwt_list rwtl
-  | TGoal (_, Thm, s, tf) -> fprintf fmt "goal %s : %a" s print_tform tf
+  | TGoal (_, Thm, s, tf) -> fprintf fmt "check valid %s : %a" s print_tform tf
+  | TGoal (_, Sat, s, tf) -> fprintf fmt "check sat %s : %a" s print_tform tf
   | TGoal (_, Check, s, tf) -> fprintf fmt "check %s : %a" s print_tform tf
   | TGoal (_, Cut, s, tf) -> fprintf fmt "cut %s : %a" s print_tform tf
   | TLogic (_, ls, ty) ->
@@ -1853,7 +1854,11 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
       | _ -> AFop (AOPnot, [aaform])
     in
     let goal_str =
-      match gs with Thm -> "goal" | Check -> "check" | Cut -> "cut" in
+      match gs with
+      | Thm -> "check valid"
+      | Sat -> "check sat"
+      | Check -> "check"
+      | Cut -> "cut" in
     let tags = d.tag :: d.ptag :: tags in
     append_buf buffer ~tags (sprintf "%s %s :" goal_str s);
     append_buf buffer "\n";
