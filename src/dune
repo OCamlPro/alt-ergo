@@ -1,9 +1,17 @@
 (env
  (dev
+  ;; This profil is used (default) to dev without optimisation and blocking warnings.
   (flags
-   (:standard -bin-annot -w -22))
-  (ocamlopt_flags -g -O3 -unbox-closures))
+   (:standard -bin-annot -w -22 -warn-error -A))
+  (ocamlopt_flags -g))
+ (warnings
+  ;; This profile can be used to simply enable all warnings.
+  (flags
+   (:standard -bin-annot -w +A -warn-error -A))
+  (ocamlopt_flags -g))
  (release
+  ;; The release profile has optimisation enable.
   (flags
-   (:standard -bin-annot -w -22))
-  (ocamlopt_flags -O3 -unbox-closures)))
+   (:standard -bin-annot -w -A+K+X+Y+Z-22 -warn-error +X+K+Y+Z))
+  (ocamlopt_flags -O3 -unbox-closures))
+)
