@@ -129,17 +129,10 @@ module FE = Frontend.Make(SAT)
 let inf = Glib.Utf8.from_unichar 8734
 
 (* GTK *)
-
-let () =
+let init_gtk () =
   try
     let _ = GMain.init () in ()
   with Gtk.Error s -> Printer.print_err "%s" s
-
-let () =
-  Sys.set_signal Sys.sigint
-    (Sys.Signal_handle
-       (fun _ -> print_endline "User wants me to stop."; exit 1))
-
 
 let save_session envs =
   let session_cout =
@@ -832,7 +825,7 @@ let goto_lemma (view:GTree.view) inst_model buffer
   with Not_found -> ()
 
 
-let colormap = Gdk.Color.get_system_colormap ()
+let colormap () = Gdk.Color.get_system_colormap ()
 
 let set_color_inst inst_model renderer (istore:GTree.model) row =
   let id = istore#get ~row ~column:inst_model.icol_tag in
@@ -846,7 +839,7 @@ let set_color_inst inst_model renderer (istore:GTree.model) row =
   else if inst_model.max <> 0 then
     let perc = (nb_inst * 65535) / inst_model.max in
     let red_n =
-      Gdk.Color.alloc ~colormap (`RGB (perc, 0, 0)) in
+      Gdk.Color.alloc ~colormap:(colormap ()) (`RGB (perc, 0, 0)) in
     renderer#set_properties [`FOREGROUND_GDK red_n]
   else
     renderer#set_properties [`FOREGROUND_SET false];
@@ -1515,13 +1508,13 @@ let start_replay session_cin all_used_context =
 
 
 let () =
-  if not (get_model ()) then
-    try
-      Sys.set_signal Sys.sigalrm
-        (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
-    with Invalid_argument _ -> ()
+  init_gtk ();
+  Signals.init_sig_int ();
+  Signals.init_sig_alarm ();
 
-let () =
+  Native_lexer.register_native ();
+  Psmt2_to_alt_ergo.register_psmt2 ();
+
   let all_used_context = FE.init_all_used_context () in
   try
     Options.set_is_gui true;

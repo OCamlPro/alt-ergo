@@ -274,7 +274,7 @@ and parse_string str_buf = parse
     let trigger = aux Native_parser.trigger_parser parse_token
   end
 
-  let () =
+  let register_native () =
     (*register this parser in Input_lang: 3 different extensions recognized *)
     let p = (module Parser : Parsers.PARSER_INTERFACE) in
     Parsers.register_parser ~lang:".ae" p
