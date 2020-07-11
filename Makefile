@@ -365,4 +365,4 @@ release-distclean:
 .PHONY: generated-clean dune-clean makefile-distclean release-distclean
 
 emacs-edit:
-	emacs `find . -name '*'.ml* | grep -v _build` &
+	emacs `find . -name '*'.ml* | grep -v _build | grep -v _opam` &
