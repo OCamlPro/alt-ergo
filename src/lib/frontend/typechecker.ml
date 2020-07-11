@@ -2188,11 +2188,16 @@ let rec type_decl (acc, env) d =
   | Predicate_def(loc,n,l,e)
   | Function_def(loc,n,l,_,e) ->
     check_duplicate_params l;
-    let ty =
+    let infix, ty  =
       let l = List.map (fun (_,_,x) -> x) l in
       match d with
-      | Function_def(_,_,_,t,_) -> PFunction(l,t)
-      | Predicate_def _ -> PPredicate l
+      | Function_def(_,_,_,PPTbool,_) ->
+        (* cast functions that returns bools into predicates *)
+        PPiff, PPredicate l
+      | Function_def(_,_,_,t,_) ->
+        PPeq, PFunction(l,t)
+      | Predicate_def _ ->
+        PPiff, PPredicate l
       | _ -> assert false
     in
     let l = List.map (fun (_,x,t) -> (x,t)) l in
@@ -2202,7 +2207,6 @@ let rec type_decl (acc, env) d =
 
     let lvar = List.map (fun (x,_) -> {pp_desc=PPvar x;pp_loc=loc}) l in
     let p = {pp_desc=PPapp(n,lvar) ; pp_loc=loc } in
-    let infix = match d with Function_def _ -> PPeq | _ -> PPiff in
     let f = { pp_desc = PPinfix(p,infix,e) ; pp_loc = loc } in
     let f = make_pred loc [] f l in
     let f = type_form env f in
