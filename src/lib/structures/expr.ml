@@ -1855,17 +1855,18 @@ module Triggers = struct
         let llt, llt_ok =
           SLLT.fold
             (fun (l, bv2, vty2) (llt, llt_ok) ->
-               let bv3 = SSet.union bv2 bv1 in
-               let vty3 = Svty.union vty2 vty1 in
-               let e = t::l, bv3, vty3 in
                if SSet.equal bv1 bv2 && Svty.equal vty1 vty2 then
                  (* t doesn't bring new vars *)
                  llt, llt_ok
                else
-               if SSet.subset bv bv3 && Svty.subset vty vty3 then
-                 llt, SLLT.add e llt_ok
-               else
-                 SLLT.add e llt, llt_ok)
+                 let bv3 = SSet.union bv2 bv1 in
+                 let vty3 = Svty.union vty2 vty1 in
+                 let e = t::l, bv3, vty3 in
+                 if SSet.subset bv bv3 && Svty.subset vty vty3 then
+                   llt, SLLT.add e llt_ok
+                 else
+                   SLLT.add e llt, llt_ok
+            )
             llt (llt, llt_ok)
         in
         parties_rec (SLLT.add ([t], bv1, vty1) llt, llt_ok) l
