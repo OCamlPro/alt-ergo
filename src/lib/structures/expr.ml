@@ -1855,7 +1855,7 @@ module Triggers = struct
         let llt, llt_ok =
           SLLT.fold
             (fun (l, bv2, vty2) (llt, llt_ok) ->
-               if SSet.equal bv1 bv2 && Svty.equal vty1 vty2 then
+               if SSet.subset bv1 bv2 && Svty.subset vty1 vty2 then
                  (* t doesn't bring new vars *)
                  llt, llt_ok
                else
