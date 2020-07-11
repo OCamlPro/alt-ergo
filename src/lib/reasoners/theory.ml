@@ -329,6 +329,11 @@ module Main_Default : S = struct
     | CNeg (* The choice has been already negated *)
 
 
+  type choice =
+    X.r Xliteral.view * Th_util.lit_origin * choice_sign * Ex.t
+  (** the choice, the size, choice_sign,  the explication set,
+        the explication for this choice. *)
+
   type t = {
     assumed_set : E.Set.t;
     assumed : (E.t * int * int) list list;
@@ -336,10 +341,7 @@ module Main_Default : S = struct
     terms : Expr.Set.t;
     gamma : CC_X.t;
     gamma_finite : CC_X.t;
-    choices :
-      (X.r Xliteral.view * Th_util.lit_origin * choice_sign * Ex.t) list;
-    (** the choice, the size, choice_sign,  the explication set,
-        the explication for this choice. *)
+    choices : choice list
   }
 
   let look_for_sat ?(bad_last=None) ch t base_env l ~for_model =
@@ -411,7 +413,7 @@ module Main_Default : S = struct
     aux ch bad_last (List.rev t.choices) base_env l
 
   (* remove old choices involving fresh variables that are no longer in UF *)
-  let filter_choice uf (ra,_,_,_) =
+  let filter_valid_choice uf (ra,_,_,_) =
     let l = match ra with
       | A.Eq(r1, r2) -> [r1; r2]
       | A.Distinct (_, l) -> l
@@ -427,6 +429,35 @@ module Main_Default : S = struct
               | _ -> true
            )(X.leaves r)
       )l
+
+  (* 1. Remove case-split decisions contain fresh variables (introduced by
+     theories solvers) that are not in the theories' environment anymore
+     (because of backtrack)
+     2. Remove implications that are due to decisions removed in 1. *)
+  let filter_choices uf (choices : choice list) =
+    let candidates_to_keep, to_ignore =
+      List.partition (filter_valid_choice uf) choices in
+    let ignored_decisions =
+      List.fold_left
+        (fun ex (_, _, ch, _) ->
+           match ch with
+           | CPos (Ex.Fresh _ as e) -> Ex.add_fresh e ex
+           | CPos _ -> assert false
+           | CNeg -> ex
+        )Ex.empty to_ignore
+    in
+    List.filter
+      (fun (_,_,_,ex) ->
+         try
+           Ex.iter_atoms
+             (function
+               | Ex.Fresh _ as fr when Ex.mem fr ignored_decisions -> raise Exit
+               | _ -> ()
+             )ex;
+           true
+         with Exit -> (* ignore implicated related to ignored decisions *)
+           false
+      )candidates_to_keep
 
 
   let try_it t facts ~for_model =
@@ -444,7 +475,7 @@ module Main_Default : S = struct
             (* we replay the conflict in look_for_sat, so we can
                safely ignore the explanation which is not useful *)
             let uf =  CC_X.get_union_find t.gamma in
-            let filt_choices = List.filter (filter_choice uf) t.choices in
+            let filt_choices = filter_choices uf t.choices in
             Debug.split_sat_contradicts_cs filt_choices;
             look_for_sat ~bad_last:(Some (dep, classes))
               [] { t with choices = []} t.gamma filt_choices ~for_model
