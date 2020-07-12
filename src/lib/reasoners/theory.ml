@@ -148,9 +148,9 @@ module Main_Default : S = struct
              Hstring.Map.add hs ty mp
         )sty Hstring.Map.empty
 
-    let print_types_decls types =
+    let print_types_decls ?(header=true) types =
       let open Ty in
-      print_dbg ~flushed:false "@[<v 2>[Theory] types decls:@ ";
+      print_dbg ~flushed:false ~header "@[<v 2>(* types decls: *)@ ";
       Hstring.Map.iter
         (fun _ ty ->
            match ty with
@@ -195,11 +195,11 @@ module Main_Default : S = struct
         List.iter (fprintf fmt ", %a" Ty.print) l;
         fprintf fmt " -> "
 
-    let print_logics logics =
-      print_dbg "@[<v 2>[Theory] logics:@ ";
+    let print_logics ?(header=true) logics =
+      print_dbg ~header "@[<v 2>(* logics: *)@ ";
       Hstring.Map.iter
         (fun hs (xs, ty, is_ac) ->
-           print_dbg ~header:false
+           print_dbg ~flushed:false ~header:false
              "logic %s%s : %a%a@ "
              (if is_ac == Sy.Ac then "ac " else "")
              (Hstring.view hs)
@@ -208,13 +208,13 @@ module Main_Default : S = struct
         )logics;
       print_dbg ~header:false "@]"
 
-    let print_declarations l =
+    let print_declarations ?(header=true) l =
       let st = subterms_of_assumed l in
       let sty = types_of_subterms st in
       let types = types_of_assumed sty in
       let logics = logics_of_assumed st in
-      print_types_decls types;
-      print_logics logics
+      print_types_decls ~header types;
+      print_logics ~header logics
 
     let assumed =
       let cpt = ref 0 in
@@ -222,12 +222,12 @@ module Main_Default : S = struct
         if get_debug_cc () then begin
           print_dbg ~module_name:"Theory" ~function_name:"assumed"
             "Assumed facts (in this order):";
-          print_declarations l;
+          print_declarations ~header:false l;
           incr cpt;
-          print_dbg ~flushed:false "goal g_%d :@ " !cpt;
+          print_dbg ~flushed:false ~header:false "goal g_%d :@ " !cpt;
           List.iter
             (fun l ->
-               print_dbg ~flushed:false ~header:false "(*call to assume*)@ ";
+               print_dbg ~flushed:false ~header:false "(* call to assume *)@ ";
                match List.rev l with
                | [] -> assert false
                | (a,dlvl,plvl)::l ->
@@ -238,11 +238,11 @@ module Main_Default : S = struct
                  List.iter
                    (fun (a, dlvl, plvl) ->
                       print_dbg ~flushed:false ~header:false
-                        " and@  (* %d , %d *) %a "
+                        " and@ (* %d , %d *) %a "
                         dlvl plvl
                         E.print a
                    ) l;
-                 print_dbg ~flushed:false ~header:false "@  ) ->"
+                 print_dbg ~flushed:false ~header:false ") ->@ "
             ) (List.rev l);
           print_dbg ~header:false "false";
         end
