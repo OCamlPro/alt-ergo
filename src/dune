@@ -12,6 +12,6 @@
  (release
   ;; The release profile has optimisation enable.
   (flags
-   (:standard -bin-annot -w -A+K+X+Y+Z-22 -warn-error +X+K+Y+Z))
+   (:standard -bin-annot))
   (ocamlopt_flags -O3 -unbox-closures))
 )
