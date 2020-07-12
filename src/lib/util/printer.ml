@@ -116,10 +116,12 @@ let add_colors formatter =
     (Format_shims.update_stag_functions old_fs start_stag stop_stag)
 
 let init_colors () =
-  add_colors (Options.get_fmt_std ());
-  add_colors (Options.get_fmt_wrn ());
-  add_colors (Options.get_fmt_err ());
-  add_colors (Options.get_fmt_dbg ())
+  if Options.get_output_with_colors () then begin
+    add_colors (Options.get_fmt_std ());
+    add_colors (Options.get_fmt_wrn ());
+    add_colors (Options.get_fmt_err ());
+    add_colors (Options.get_fmt_dbg ())
+  end
 
 (************** Output Format *************)
 let clean_dbg_print = ref true
