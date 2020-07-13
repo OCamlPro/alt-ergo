@@ -95,7 +95,7 @@ let solve all_context (cnf, goal_name) =
 let typed_loop all_context state td =
   if get_type_only () then state else begin
     match td.Typed.c with
-    | Typed.TGoal (_, kind, name, f) ->
+    | Typed.TGoal (_, kind, name, _) ->
       let l = state.local @ state.global @ state.ctx in
       let cnf = List.rev @@ Cnf.make l td in
       let () = solve all_context (cnf, name) in
