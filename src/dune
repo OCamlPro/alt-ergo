@@ -7,7 +7,7 @@
   (flags
    (:standard -bin-annot -w +A -warn-error -A))
   (ocamlopt_flags -g))
- (release ;; The release profile has optimisation enable.
+ (release ;; The release profile has optimizations enabled.
   (flags
    (:standard -bin-annot))
   (ocamlopt_flags -O3 -unbox-closures))
