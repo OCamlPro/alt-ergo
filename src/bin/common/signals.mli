@@ -27,3 +27,6 @@ val init_sig_prof : AltErgoLib.Timers.t -> unit
 
 (** Add signal handler for alarm signal (timeout). Raise timeout *)
 val init_sig_alarm : unit -> unit
+
+(** Add signal handler for virtual alarm signal (timeout). Raise timeout *)
+val init_sig_vtalarm : unit -> unit
