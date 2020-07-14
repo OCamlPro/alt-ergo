@@ -391,7 +391,7 @@ let rec unquantify_aform (buffer:sbuffer) tyenv vars_entries
               (v'::nbv, used, goal_used, cdr_ve, v'::uplet, lets)
             else
               let lb = Lexing.from_string e in
-              let lexpr = Parsers.parse_expr lb in
+              let lexpr = Parsers.parse_expr ~lang:".ae" lb in
               let at, gu =
                 try
                   let tt = Typechecker.type_expr tyenv uplet lexpr in
@@ -716,7 +716,7 @@ and add_trigger ?(register=true) t qid env str offset (sbuf:sbuffer) =
         let tags = iter#tags in
         let iter = sbuf#get_iter (`OFFSET (iter#offset)) in
         let lb = Lexing.from_string str in
-        let lexprs, _ = Parsers.parse_trigger lb in
+        let lexprs, _ = Parsers.parse_trigger ~lang:".ae" lb in
         let atl = List.fold_right
             (fun lexpr l->
                let tt = Typechecker.type_expr tyenv

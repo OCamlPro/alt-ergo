@@ -482,7 +482,7 @@ module Parser : Parsers.PARSER_INTERFACE = struct
   let trigger = aux trigger_parser Smtlib_lexer.token
 end
 
-let () =
+let register_psmt2 () =
   (*register this parser in Input_lang: 2 different extensions recognized *)
   let p = (module Parser : Parsers.PARSER_INTERFACE) in
   Parsers.register_parser ~lang:".smt2" p;
