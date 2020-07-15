@@ -178,7 +178,10 @@ let print_err ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     let fmt = Options.get_fmt_err () in
     fprintf fmt "@[<v 0>";
     if header then
-      fprintf fmt "@[<v 7>@{<fg_red>@{<bold>[Error]@}@}";
+      if Options.get_output_with_colors () then
+        fprintf fmt "@[<v 7>@{<fg_red>@{<bold>[Error]@}@}"
+      else
+        fprintf fmt "@[<v 7>[Error]";
     if flushed then kfprintf flush fmt s else fprintf fmt s
   end
   else ifprintf err_formatter s
@@ -189,7 +192,10 @@ let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     let fmt = Options.get_fmt_wrn () in
     fprintf fmt "@[<v 0>%s" (pp_smt clean_wrn_print);
     if header then
-      fprintf fmt "@[<v 9>@{<fg_orange>@{<bold>[Warning]@}@}" ;
+      if Options.get_output_with_colors () then
+        fprintf fmt "@[<v 9>@{<fg_orange>@{<bold>[Warning]@}@}"
+      else
+        fprintf fmt "@[<v 9>[Warning]" ;
     if flushed then kfprintf flush fmt s else fprintf fmt s
   end
   else ifprintf err_formatter s
@@ -210,9 +216,13 @@ let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
         then ""
         else sprintf "[%s]" module_name
       in
-      fprintf fmt
-        "@{<fg_blue>@{<bold>[Debug]%s%s@}@}@,@[<v 0>"
-        mname fname;
+      if Options.get_output_with_colors () then
+        fprintf fmt
+          "@{<fg_blue>@{<bold>[Debug]%s%s@}@}@,@[<v 0>"
+          mname fname
+      else
+        fprintf fmt
+          "[Debug]%s%s@,@[<v 0>" mname fname
     end;
     if flushed then kfprintf flush fmt s else fprintf fmt s
   end
