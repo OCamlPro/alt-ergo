@@ -117,7 +117,7 @@ let typed_loop all_context state td =
 
 let () =
   Signals.init_sig_int ();
-  Signals.init_sig_alarm ();
+  Signals.init_sig_vtalarm ();
   Signals.init_sig_term_quit timers;
   Signals.init_sig_prof timers;
   Gc_debug.init ();
