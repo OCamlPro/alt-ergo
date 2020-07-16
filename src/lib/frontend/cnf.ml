@@ -155,7 +155,7 @@ let clean_trigger ~in_theory name trig =
           sz_l E.print_list trig sz_s E.print_list trig';
         trig'
 
-let rec make_term up_qv t =
+let rec make_term up_qv quant_basename t =
   let rec mk_term { c = { tt_ty = ty; tt_desc = tt; _ }; _ } =
     let ty = Ty.shorten ty in
     match tt with
@@ -238,8 +238,9 @@ let rec make_term up_qv t =
     | TTite(cond, t1, t2) ->
       let cond =
         make_form
-          up_qv "" cond Loc.dummy
+          up_qv quant_basename cond Loc.dummy
           ~decl_kind:E.Daxiom (* not correct, but not a problem *)
+          ~toplevel:false
       in
       let t1 = mk_term t1 in
       let t2 = mk_term t2 in
@@ -249,67 +250,69 @@ let rec make_term up_qv t =
       E.mk_term (Sy.destruct ~guarded:b (Hstring.view s)) [mk_term t] ty
 
     | TTmatch (e, pats) ->
-      let e = make_term up_qv e in
+      let e = make_term up_qv quant_basename e in
       let pats =
-        List.rev_map (fun (p, t) -> p, make_term up_qv t) (List.rev pats)
+        List.rev_map (fun (p, t) ->
+            p, make_term up_qv quant_basename t) (List.rev pats)
       in
       E.mk_match e pats
 
     | TTform e ->
       make_form
-        up_qv "" e Loc.dummy
+        up_qv quant_basename e Loc.dummy
         ~decl_kind:E.Daxiom (* not correct, but not a problem *)
+        ~toplevel:false
   in
   mk_term t
 
 
-and make_trigger ~in_theory name up_qv hyp (e, from_user) =
+and make_trigger ~in_theory name up_qv quant_basename hyp (e, from_user) =
   let content, guard = match e with
     | [{ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }]
       when Sy.equal s Sy.fake_eq ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map (make_term up_qv) trs in
+      let trs = List.map (make_term up_qv quant_basename) trs in
       let lit =
         E.mk_eq ~iff:true
-          (make_term up_qv t1)
-          (make_term up_qv t2)
+          (make_term up_qv quant_basename t1)
+          (make_term up_qv quant_basename t2)
       in
       trs, Some lit
 
     | [{ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }]
       when Sy.equal s Sy.fake_neq ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map (make_term up_qv) trs in
+      let trs = List.map (make_term up_qv quant_basename) trs in
       let lit =
         E.mk_distinct ~iff:true
-          [make_term up_qv t1;
-           make_term up_qv t2]
+          [make_term up_qv quant_basename t1;
+           make_term up_qv quant_basename t2]
       in
       trs, Some lit
 
     | [{ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }]
       when Sy.equal s Sy.fake_le ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map (make_term up_qv) trs in
+      let trs = List.map (make_term up_qv quant_basename) trs in
       let lit =
         E.mk_builtin ~is_pos:true Sy.LE
-          [make_term up_qv t1;
-           make_term up_qv t2]
+          [make_term up_qv quant_basename t1;
+           make_term up_qv quant_basename t2]
       in
       trs, Some lit
 
     | [{ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }]
       when Sy.equal s Sy.fake_lt ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map (make_term up_qv) trs in
+      let trs = List.map (make_term up_qv quant_basename) trs in
       let lit =
         E.mk_builtin ~is_pos:true Sy.LT
-          [make_term up_qv t1;
-           make_term up_qv t2]
+          [make_term up_qv quant_basename t1;
+           make_term up_qv quant_basename t2]
       in
       trs, Some lit
 
-    | lt -> List.map (make_term up_qv) lt, None
+    | lt -> List.map (make_term up_qv quant_basename) lt, None
   in
   let t_depth =
     List.fold_left (fun z t -> max z (E.depth t)) 0 content in
@@ -320,9 +323,9 @@ and make_trigger ~in_theory name up_qv hyp (e, from_user) =
     hyp; from_user;
   }
 
-and make_form up_qv name_base f loc ~decl_kind : E.t =
+and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
   let name_tag = ref 0 in
-  let rec mk_form up_qv toplevel c id =
+  let rec mk_form up_qv ~toplevel c id =
     match c with
     | TFatom a ->
       begin match a.c with
@@ -332,19 +335,19 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
           E.faux
         | TAeq [t1;t2] ->
           E.mk_eq ~iff:true
-            (make_term up_qv t1)
-            (make_term up_qv t2)
+            (make_term up_qv name_base t1)
+            (make_term up_qv name_base t2)
         | TApred (t, negated) ->
-          let res = make_term up_qv t in
+          let res = make_term up_qv name_base t in
           if negated then E.neg res else res
 
         | TAneq lt | TAdistinct lt ->
-          let lt = List.map (make_term up_qv) lt in
+          let lt = List.map (make_term up_qv name_base) lt in
           E.mk_distinct ~iff:true lt
         | TAle [t1;t2] ->
           E.mk_builtin ~is_pos:true Sy.LE
-            [make_term up_qv t1;
-             make_term up_qv t2]
+            [make_term up_qv name_base t1;
+             make_term up_qv name_base t2]
         | TAlt [t1;t2] ->
           begin match t1.c.tt_ty with
             | Ty.Tint ->
@@ -353,27 +356,27 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
                       tt_desc = TTconst(Tint "1")}; annot = t1.annot} in
               let tt2 =
                 E.mk_term (Sy.Op Sy.Minus)
-                  [make_term up_qv t2;
-                   make_term up_qv one]
+                  [make_term up_qv name_base t2;
+                   make_term up_qv name_base one]
                   Ty.Tint
               in
               E.mk_builtin ~is_pos:true Sy.LE
-                [make_term up_qv t1; tt2]
+                [make_term up_qv name_base t1; tt2]
             | _ ->
               E.mk_builtin ~is_pos:true Sy.LT
-                [make_term up_qv t1;
-                 make_term up_qv t2]
+                [make_term up_qv name_base t1;
+                 make_term up_qv name_base t2]
           end
         | TTisConstr (t, lbl) ->
           E.mk_builtin ~is_pos:true (Sy.IsConstr lbl)
-            [make_term up_qv t]
+            [make_term up_qv name_base t]
 
         | _ -> assert false
       end
 
     | TFop(((OPand | OPor | OPxor) as op),[f1;f2]) ->
-      let ff1 = mk_form up_qv false f1.c f1.annot in
-      let ff2 = mk_form up_qv false f2.c f2.annot in
+      let ff1 = mk_form up_qv ~toplevel:false f1.c f1.annot in
+      let ff2 = mk_form up_qv ~toplevel:false f2.c f2.annot in
       begin match op with
         | OPand -> E.mk_and ff1 ff2 false id
         | OPor -> E.mk_or ff1 ff2 false id
@@ -381,19 +384,19 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
         | _ -> assert false
       end
     | TFop(OPimp,[f1;f2]) ->
-      let ff1 = mk_form up_qv false f1.c f1.annot in
-      let ff2 = mk_form up_qv false f2.c f2.annot in
+      let ff1 = mk_form up_qv ~toplevel:false f1.c f1.annot in
+      let ff2 = mk_form up_qv ~toplevel:false f2.c f2.annot in
       E.mk_imp ff1 ff2 id
     | TFop(OPnot,[f]) ->
-      E.neg @@ mk_form up_qv false f.c f.annot
+      E.neg @@ mk_form up_qv ~toplevel:false f.c f.annot
     | TFop(OPif, [cond; f2;f3]) ->
-      let cond = mk_form up_qv false cond.c cond.annot in
-      let ff2  = mk_form up_qv false f2.c f2.annot in
-      let ff3  = mk_form up_qv false f3.c f3.annot in
+      let cond = mk_form up_qv ~toplevel:false cond.c cond.annot in
+      let ff2  = mk_form up_qv ~toplevel:false f2.c f2.annot in
+      let ff3  = mk_form up_qv ~toplevel:false f3.c f3.annot in
       E.mk_if cond ff2 ff3 id
     | TFop(OPiff,[f1;f2]) ->
-      let ff1 = mk_form up_qv false f1.c f1.annot in
-      let ff2 = mk_form up_qv false f2.c f2.annot in
+      let ff1 = mk_form up_qv ~toplevel:false f1.c f1.annot in
+      let ff2 = mk_form up_qv ~toplevel:false f2.c f2.annot in
       E.mk_iff ff1 ff2 id
     | (TFforall qf | TFexists qf) as f ->
       let name =
@@ -408,14 +411,15 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
       let binders = E.mk_binders qvars in
       (*let upvars = varset_of_list qf.qf_upvars in*)
       let ff =
-        mk_form up_qv false qf.qf_form.c qf.qf_form.annot in
+        mk_form up_qv ~toplevel:false qf.qf_form.c qf.qf_form.annot in
 
       let hyp =
-        List.map (fun f -> mk_form up_qv false f.c f.annot) qf.qf_hyp
+        List.map (fun f -> mk_form up_qv ~toplevel:false f.c f.annot) qf.qf_hyp
       in
       let in_theory = decl_kind == E.Dtheory in
       let trs =
-        List.map (make_trigger ~in_theory name up_qv hyp) qf.qf_triggers in
+        List.map
+          (make_trigger ~in_theory name up_qv name_base hyp) qf.qf_triggers in
       let func = match f with
         | TFforall _ -> E.mk_forall
         | TFexists _ -> E.mk_exists
@@ -429,11 +433,11 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
           (fun (sy, e) ->
              sy,
              match e with
-             | TletTerm t -> make_term up_qv t
-             | TletForm g -> mk_form up_qv false g.c g.annot
+             | TletTerm t -> make_term up_qv name_base t
+             | TletForm g -> mk_form up_qv ~toplevel:false g.c g.annot
           )(List.rev binders)
       in
-      let res = mk_form up_qv false lf.c lf.annot in
+      let res = mk_form up_qv ~toplevel:false lf.c lf.annot in
       List.fold_left
         (fun acc (sy, e) ->
            E.mk_let sy e acc id
@@ -441,26 +445,27 @@ and make_form up_qv name_base f loc ~decl_kind : E.t =
         )res binders
 
     | TFnamed(lbl, f) ->
-      let ff = mk_form up_qv false f.c f.annot in
+      let ff = mk_form up_qv ~toplevel:false f.c f.annot in
       E.add_label lbl ff;
       ff
 
     | TFmatch (e, pats) ->
-      let e = make_term up_qv e in
+      let e = make_term up_qv name_base e in
       let pats =
-        List.rev_map (fun (p, f) -> p, mk_form up_qv false f.c f.annot)
+        List.rev_map (fun (p, f) ->
+            p, mk_form up_qv ~toplevel:false f.c f.annot)
           (List.rev pats)
       in
       E.mk_match e pats
 
     | _ -> assert false
   in
-  mk_form up_qv true f.c f.annot
+  mk_form up_qv ~toplevel f.c f.annot
 
 (* wrapper of function make_form *)
 let make_form name f loc ~decl_kind =
   let ff =
-    make_form Sy.Map.empty name f loc ~decl_kind
+    make_form Sy.Map.empty name f loc ~decl_kind ~toplevel:true
   in
   assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
   let ff = E.purify_form ff in
@@ -490,8 +495,8 @@ let make_rule ({rwt_left = t1; rwt_right = t2; rwt_vars} as r) =
   let up_qv =
     List.fold_left (fun z (sy, ty) -> Sy.Map.add sy ty z) Sy.Map.empty rwt_vars
   in
-  let s1 = make_term up_qv t1 in
-  let s2 = make_term up_qv t2 in
+  let s1 = make_term up_qv "" t1 in
+  let s2 = make_term up_qv "" t2 in
   assert (E.is_pure s1);
   assert (E.is_pure s2);
   { r with rwt_left = s1; rwt_right = s2 }
