@@ -168,7 +168,7 @@ and 'a tatom =
   (** Term predicate, negated if the boolean is true.
       [TApred (t, negated)] is satisfied iff [t <=> not negated] *)
 
-  | TTisConstr of ('a tterm, 'a) annoted  * Hstring.t
+  | TTisConstr of 'a atterm  * Hstring.t
   (** Test if the given term's head symbol is identitical to the
       provided ADT consturctor *)
 
@@ -323,4 +323,3 @@ val print_rwt :
   (Format.formatter -> 'a -> unit) ->
   Format.formatter -> 'a rwt_rule -> unit
 (** Print a rewrite rule *)
-
