@@ -255,34 +255,35 @@ let status_goal g =
     None -> ""
   | Some g -> sprintf " (goal %s)" g
 
-let print_status_loc loc =
+let print_status_loc fmt loc =
   match loc with
   | None -> ()
   | Some loc ->
     if Options.get_answers_with_locs () then
-      fprintf (Options.get_fmt_std ())
+      fprintf fmt
         "%a@,"
         Loc.report loc
 
-let print_status_value v =
-  fprintf (Options.get_fmt_std ()) "%s" v
+let print_status_value fmt v =
+  fprintf fmt "%s" v
 
 let print_status ?(validity_mode=true)
     (validity_status,unsat_status) loc time steps goal =
   pp_std_smt ();
+  let formatter = (Options.get_fmt_std ()) in
   begin if validity_mode then begin
-      print_status_loc loc;
-      print_status_value validity_status;
-      fprintf (Options.get_fmt_std ())
-        "%s%s%s"
+      fprintf formatter
+        "%a%a%s%s%s"
+        print_status_loc loc
+        print_status_value validity_status
         (status_time time)
         (status_steps steps)
         (status_goal goal);
     end
     else
-      print_status_value unsat_status
+      print_status_value formatter unsat_status
   end;
-  fprintf (Options.get_fmt_std ()) "@."
+  fprintf formatter "@."
 
 let print_status_unsat ?(validity_mode=true) loc
     time steps goal =
