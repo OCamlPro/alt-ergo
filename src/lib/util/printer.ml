@@ -260,9 +260,7 @@ let print_status_loc fmt loc =
   | None -> ()
   | Some loc ->
     if Options.get_answers_with_locs () then
-      fprintf fmt
-        "%a@,"
-        Loc.report loc
+      fprintf fmt "%a " Loc.report loc
 
 let print_status_value fmt v =
   fprintf fmt "%s" v
@@ -271,19 +269,22 @@ let print_status ?(validity_mode=true)
     (validity_status,unsat_status) loc time steps goal =
   pp_std_smt ();
   let formatter = (Options.get_fmt_std ()) in
-  begin if validity_mode then begin
-      fprintf formatter
-        "%a%a%s%s%s"
-        print_status_loc loc
-        print_status_value validity_status
-        (status_time time)
-        (status_steps steps)
-        (status_goal goal);
-    end
-    else
-      print_status_value formatter unsat_status
-  end;
-  fprintf formatter "@."
+  let native_output_fmt, comment_if_smt2 =
+    if validity_mode then formatter, ""
+    else (Options.get_fmt_dbg ()), "; "
+  in
+  (* print validity status. Commented and in debug fmt if in unsat mode *)
+  fprintf native_output_fmt
+    "%s%a%a%s%s%s@."
+    comment_if_smt2
+    print_status_loc loc
+    print_status_value validity_status
+    (status_time time)
+    (status_steps steps)
+    (status_goal goal);
+  if not validity_mode && String.length unsat_status > 0 then
+    (* print SMT2 status if not in validity mode *)
+    fprintf formatter "%a@." print_status_value unsat_status
 
 let print_status_unsat ?(validity_mode=true) loc
     time steps goal =
