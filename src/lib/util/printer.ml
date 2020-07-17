@@ -264,20 +264,15 @@ let print_status_loc loc =
         "%a@,"
         Loc.report loc
 
-let print_status_value v color =
-  if Options.get_output_with_colors () then
-    fprintf (Options.get_fmt_std ())
-      "@{<%s>@{<bold>%s@}@}"
-      color v
-  else fprintf (Options.get_fmt_std ())
-      "%s" v
+let print_status_value v =
+  fprintf (Options.get_fmt_std ()) "%s" v
 
 let print_status ?(validity_mode=true)
-    (validity_status,unsat_status) loc time steps goal color =
+    (validity_status,unsat_status) loc time steps goal =
   pp_std_smt ();
   begin if validity_mode then begin
       print_status_loc loc;
-      print_status_value validity_status color;
+      print_status_value validity_status;
       fprintf (Options.get_fmt_std ())
         "%s%s%s"
         (status_time time)
@@ -285,40 +280,40 @@ let print_status ?(validity_mode=true)
         (status_goal goal);
     end
     else
-      print_status_value unsat_status color
+      print_status_value unsat_status
   end;
   fprintf (Options.get_fmt_std ()) "@."
 
 let print_status_unsat ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode ("Valid","unsat") loc
-    time steps goal "fg_green"
+    time steps goal
 
 let print_status_sat ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode ("Invalid","sat") loc
-    time steps goal "fg_cyan"
+    time steps goal
 
 let print_status_inconsistent ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode
     ("Inconsistent assumption","") loc
-    time steps goal "fg_red"
+    time steps goal
 
 let print_status_unknown ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode
     ("I don't know","unknown") loc
-    time steps goal "fg_blue"
+    time steps goal
 
 let print_status_timeout ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode
     ("Timeout","timeout") loc
-    time steps goal "fg_orange"
+    time steps goal
 
 let print_status_preprocess ?(validity_mode=true)
     time steps =
   print_status ~validity_mode
     ("Preprocessing","") None
-    time steps None "fg_magenta"
+    time steps None
