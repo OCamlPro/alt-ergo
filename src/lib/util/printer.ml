@@ -266,9 +266,9 @@ let print_status_value fmt v =
   fprintf fmt "%s" v
 
 let print_status ?(validity_mode=true)
+    ?(formatter=Options.get_fmt_std ())
     (validity_status,unsat_status) loc time steps goal =
   pp_std_smt ();
-  let formatter = (Options.get_fmt_std ()) in
   let native_output_fmt, comment_if_smt2 =
     if validity_mode then formatter, ""
     else (Options.get_fmt_dbg ()), "; "
@@ -299,6 +299,7 @@ let print_status_sat ?(validity_mode=true) loc
 let print_status_inconsistent ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode
+    ~formatter:(Options.get_fmt_dbg ())
     ("Inconsistent assumption","") loc
     time steps goal
 
@@ -317,5 +318,6 @@ let print_status_timeout ?(validity_mode=true) loc
 let print_status_preprocess ?(validity_mode=true)
     time steps =
   print_status ~validity_mode
+    ~formatter:(Options.get_fmt_dbg ())
     ("Preprocessing","") None
     time steps None
