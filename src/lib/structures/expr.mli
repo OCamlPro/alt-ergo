@@ -30,14 +30,14 @@
 
 type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
 
+type t
+
 type decl_kind =
   | Dtheory
   | Daxiom
   | Dgoal
-  | Dpredicate of string
-  | Dfunction of string
-
-type t
+  | Dpredicate of t
+  | Dfunction of t
 
 type view = private {
   f: Symbols.t;

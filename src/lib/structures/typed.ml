@@ -75,26 +75,26 @@ and 'a atterm = ('a tterm, 'a) annoted
 and 'a tt_desc =
   | TTconst of tconstant
   | TTvar of Symbols.t
-  | TTinfix of ('a tterm, 'a) annoted * Symbols.t * ('a tterm, 'a) annoted
-  | TTprefix of Symbols.t * ('a tterm, 'a) annoted
-  | TTapp of Symbols.t * ('a tterm, 'a) annoted list
-  | TTmapsTo of Var.t * ('a tterm, 'a) annoted
+  | TTinfix of 'a atterm * Symbols.t * 'a atterm
+  | TTprefix of Symbols.t * 'a atterm
+  | TTapp of Symbols.t * 'a atterm list
+  | TTmapsTo of Var.t * 'a atterm
   | TTinInterval of 'a atterm * Symbols.bound * Symbols.bound
   (* bool = true <-> interval is_open *)
 
-  | TTget of ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
+  | TTget of 'a atterm * 'a atterm
   | TTset of
-      ('a tterm, 'a) annoted * ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
+      'a atterm * 'a atterm * 'a atterm
   | TTextract of
-      ('a tterm, 'a) annoted * ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
-  | TTconcat of ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
-  | TTdot of ('a tterm, 'a) annoted * Hstring.t
-  | TTrecord of (Hstring.t * ('a tterm, 'a) annoted) list
-  | TTlet of (Symbols.t * ('a tterm, 'a) annoted) list * ('a tterm, 'a) annoted
-  | TTnamed of Hstring.t * ('a tterm, 'a) annoted
-  | TTite of ('a tform, 'a) annoted *
-             ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
-  | TTproject of bool * ('a tterm, 'a) annoted  * Hstring.t
+      'a atterm * 'a atterm * 'a atterm
+  | TTconcat of 'a atterm * 'a atterm
+  | TTdot of 'a atterm * Hstring.t
+  | TTrecord of (Hstring.t * 'a atterm) list
+  | TTlet of (Symbols.t * 'a atterm) list * 'a atterm
+  | TTnamed of Hstring.t * 'a atterm
+  | TTite of 'a atform *
+             'a atterm * 'a atterm
+  | TTproject of bool * 'a atterm  * Hstring.t
   | TTmatch of 'a atterm * (pattern * 'a atterm) list
   | TTform of 'a atform
 
@@ -103,38 +103,38 @@ and 'a atatom = ('a tatom, 'a) annoted
 and 'a tatom =
   | TAtrue
   | TAfalse
-  | TAeq of ('a tterm, 'a) annoted list
-  | TAdistinct of ('a tterm, 'a) annoted list
-  | TAneq of ('a tterm, 'a) annoted list
-  | TAle of ('a tterm, 'a) annoted list
-  | TAlt of ('a tterm, 'a) annoted list
-  | TApred of ('a tterm, 'a) annoted * bool (* true <-> negated *)
-  | TTisConstr of ('a tterm, 'a) annoted  * Hstring.t
+  | TAeq of 'a atterm list
+  | TAdistinct of 'a atterm list
+  | TAneq of 'a atterm list
+  | TAle of 'a atterm list
+  | TAlt of 'a atterm list
+  | TApred of 'a atterm * bool (* true <-> negated *)
+  | TTisConstr of 'a atterm  * Hstring.t
 
 and 'a quant_form = {
   (* quantified variables that appear in the formula *)
   qf_bvars : (Symbols.t * Ty.t) list ;
   qf_upvars : (Symbols.t * Ty.t) list ;
-  qf_triggers : (('a tterm, 'a) annoted list * bool) list ;
-  qf_hyp : ('a tform, 'a) annoted list;
-  qf_form : ('a tform, 'a) annoted
+  qf_triggers : ('a atterm list * bool) list ;
+  qf_hyp : 'a atform list;
+  qf_form : 'a atform
 }
 
 and 'a atform = ('a tform, 'a) annoted
 
 and 'a tform =
-  | TFatom of ('a tatom, 'a) annoted
-  | TFop of oplogic * (('a tform, 'a) annoted) list
+  | TFatom of 'a atatom
+  | TFop of oplogic * ('a atform) list
   | TFforall of 'a quant_form
   | TFexists of 'a quant_form
   | TFlet of (Symbols.t * Ty.t) list *
-             (Symbols.t * 'a tlet_kind) list * ('a tform, 'a) annoted
-  | TFnamed of Hstring.t * ('a tform, 'a) annoted
+             (Symbols.t * 'a tlet_kind) list * 'a atform
+  | TFnamed of Hstring.t * 'a atform
   | TFmatch of 'a atterm * (pattern * 'a atform) list
 
 and 'a tlet_kind =
-  | TletTerm of ('a tterm, 'a) annoted
-  | TletForm of ('a tform, 'a) annoted
+  | TletTerm of 'a atterm
+  | TletForm of 'a atform
 
 
 (** Rewrite rules *)
@@ -175,16 +175,16 @@ and 'a tdecl =
      declarations *)
   | TTheory of
       Loc.t * string * Util.theories_extensions * ('a tdecl, 'a) annoted list
-  | TAxiom of Loc.t * string * Util.axiom_kind * ('a tform, 'a) annoted
-  | TRewriting of Loc.t * string * (('a tterm, 'a) annoted rwt_rule) list
-  | TGoal of Loc.t * goal_sort * string * ('a tform, 'a) annoted
+  | TAxiom of Loc.t * string * Util.axiom_kind * 'a atform
+  | TRewriting of Loc.t * string * ('a atterm rwt_rule) list
+  | TGoal of Loc.t * goal_sort * string * 'a atform
   | TLogic of Loc.t * string list * tlogic_type
   | TPredicate_def of
       Loc.t * string *
-      (string * Ty.t) list * ('a tform, 'a) annoted
+      (string * Ty.t) list * 'a atform
   | TFunction_def of
       Loc.t * string *
-      (string * Ty.t) list * Ty.t * ('a tform, 'a) annoted
+      (string * Ty.t) list * Ty.t * 'a atform
   | TTypeDecl of Loc.t * Ty.t
 
 (*****)
@@ -373,4 +373,3 @@ let is_local_hyp s =
 
 let is_global_hyp s =
   try String.equal (String.sub s 0 2) "@H" with Invalid_argument _ -> false
-

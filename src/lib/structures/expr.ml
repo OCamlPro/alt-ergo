@@ -38,13 +38,6 @@ module SSet = Sy.Set
 
 type binders = (Ty.t * int) SMap.t (*int tag in globally unique *)
 
-type decl_kind =
-  | Dtheory
-  | Daxiom
-  | Dgoal
-  | Dpredicate of string
-  | Dfunction of string
-
 type t = view
 
 and view = {
@@ -60,6 +53,13 @@ and view = {
   pure : bool;
   mutable neg : t option
 }
+
+and decl_kind =
+  | Dtheory
+  | Daxiom
+  | Dgoal
+  | Dpredicate of t
+  | Dfunction of t
 
 and bind_kind =
   | B_none
@@ -2009,7 +2009,7 @@ module Triggers = struct
            )e.vars
       )full_trs
 
-  let max_terms f exclude =
+  let max_terms f ~exclude =
     let eq = equal in
     let rec max_terms acc (e : t) =
       let open Sy in
@@ -2034,28 +2034,6 @@ module Triggers = struct
       | { f = Lit _; _ } -> (*List.fold_left max_terms acc e.xs*)raise Exit
     in
     try max_terms [] f with Exit -> []
-
-  let head_is_name s a =
-    match a.f with
-    | Sy.Name(hs, _) -> String.equal (Hstring.view hs) s
-    | _ -> false
-
-  let term_definition s e =
-    match e.f, e.xs with
-    | (Sy.Lit Sy.L_eq | Sy.Form Sy.F_Iff), [a;b] ->
-      if head_is_name s a then a
-      else if head_is_name s b then b
-      else assert false
-
-    | Sy.Lit Sy.L_neg_pred, [a] when head_is_name s a ->
-      a
-    | _ -> (* in case of simplifications *)
-      if head_is_name s e then e
-      else
-        let s = TSet.filter (head_is_name s) (max_pure_subterms e) in
-        match TSet.elements s with
-        | [u] -> u
-        | _ -> assert false
 
   let expand_lets terms lets =
     let sbt =
@@ -2101,14 +2079,13 @@ module Triggers = struct
       let vterm = SMap.fold (fun sy _ s -> SSet.add sy s) binders SSet.empty in
       match decl_kind, f with
       | Dtheory, _ -> assert false
-      | (Dpredicate s | Dfunction s), _ ->
-        let e = term_definition s f in
+      | (Dpredicate e | Dfunction e), _ ->
         let defn = match f with
           | { f = (Sy.Form Sy.F_Iff | Sy.Lit Sy.L_eq) ; xs = [e1; e2]; _ } ->
             if equal e e1 then e2 else if equal e e2 then e1 else f
           | _ -> f
         in
-        let tt = max_terms defn e in
+        let tt = max_terms defn ~exclude:e in
         let tt = List.fast_sort (fun a b -> depth b - depth a) tt in
         filter_good_triggers (vterm, vtype) @@ triggers_of_list [[e]; tt]
 
@@ -2298,6 +2275,15 @@ let is_pure e = e.pure
 
 module Purification = struct
 
+  (* lets_counter is used to order 'let' constructs before they are added to the
+     'lets' map. This way, we keep their order in the original expression, and
+     reconstruct them correctly in mk_lifted. *)
+  let lets_counter = ref 0
+
+  let add_let sy e lets =
+    incr lets_counter;
+    SMap.add sy (e, !lets_counter) lets
+
   let rec purify_term t lets =
     if t.pure then t, lets
     else
@@ -2305,11 +2291,11 @@ module Purification = struct
       | Sy.Let, B_let { let_v; let_e; in_e; _ } ->
         let let_e, lets = purify_term let_e lets in
         let in_e , lets = purify_term in_e  lets in
-        in_e, SMap.add let_v let_e lets
+        in_e, add_let let_v let_e lets
 
       | (Sy.Lit _ | Sy.Form _), _ ->
         let fresh_sy = Sy.fresh ~is_var:true "Pur-F" in
-        mk_term fresh_sy [] t.ty , SMap.add fresh_sy t lets
+        mk_term fresh_sy [] t.ty , add_let fresh_sy t lets
 
       | _ -> (* detect ITEs *)
         match term_view t with
@@ -2318,7 +2304,7 @@ module Purification = struct
           match t.xs with
           | [_;_;_] when is_ite t.f ->
             let fresh_sy = Sy.fresh ~is_var:true "Pur-Ite" in
-            mk_term fresh_sy [] t.ty , SMap.add fresh_sy t lets
+            mk_term fresh_sy [] t.ty , add_let fresh_sy t lets
 
           | _ ->
             let xs, lets =
@@ -2443,13 +2429,17 @@ module Purification = struct
         end
 
   and mk_lifted e lets =
-    SMap.fold (*beware of ordering: to be checked *)
-      (fun let_v let_e acc ->
+    let ord_lets =  (*beware of ordering: to be checked *)
+      List.fast_sort
+        (fun (_, (_,cpt1)) (_,(_,cpt2)) -> cpt1 - cpt2) (SMap.bindings lets)
+    in
+    List.fold_left
+      (fun acc (let_v, (let_e, _cpt)) ->
          let let_e, lets =
            purify_non_toplevel_ite let_e SMap.empty in
          assert (let_e.ty != Ty.Tbool || SMap.is_empty lets);
          mk_lifted (mk_let let_v let_e acc 0) lets
-      )lets e
+      )e ord_lets
 
   and purify_non_toplevel_ite e lets =
     match e.f, e.xs with
@@ -2464,8 +2454,15 @@ module Purification = struct
 
 end
 
-(*let purify_literal = Purification.purify_literal*)
-let purify_form = Purification.purify_form
+(*
+let purify_literal a =
+  Purification.lets_counter := 0;
+  Purification.purify_literal a
+*)
+
+let purify_form f =
+  Purification.lets_counter := 0;
+  Purification.purify_form f
 
 module Set = TSet
 module Map = TMap
