@@ -255,70 +255,69 @@ let status_goal g =
     None -> ""
   | Some g -> sprintf " (goal %s)" g
 
-let print_status_loc loc =
+let print_status_loc fmt loc =
   match loc with
   | None -> ()
   | Some loc ->
     if Options.get_answers_with_locs () then
-      fprintf (Options.get_fmt_std ())
-        "%a@,"
-        Loc.report loc
+      fprintf fmt "%a " Loc.report loc
 
-let print_status_value v color =
-  if Options.get_output_with_colors () then
-    fprintf (Options.get_fmt_std ())
-      "@{<%s>@{<bold>%s@}@}"
-      color v
-  else fprintf (Options.get_fmt_std ())
-      "%s" v
+let print_status_value fmt v =
+  fprintf fmt "%s" v
 
 let print_status ?(validity_mode=true)
-    (validity_status,unsat_status) loc time steps goal color =
+    ?(formatter=Options.get_fmt_std ())
+    (validity_status,unsat_status) loc time steps goal =
   pp_std_smt ();
-  begin if validity_mode then begin
-      print_status_loc loc;
-      print_status_value validity_status color;
-      fprintf (Options.get_fmt_std ())
-        "%s%s%s"
-        (status_time time)
-        (status_steps steps)
-        (status_goal goal);
-    end
-    else
-      print_status_value unsat_status color
-  end;
-  fprintf (Options.get_fmt_std ()) "@."
+  let native_output_fmt, comment_if_smt2 =
+    if validity_mode then formatter, ""
+    else (Options.get_fmt_dbg ()), "; "
+  in
+  (* print validity status. Commented and in debug fmt if in unsat mode *)
+  fprintf native_output_fmt
+    "%s%a%a%s%s%s@."
+    comment_if_smt2
+    print_status_loc loc
+    print_status_value validity_status
+    (status_time time)
+    (status_steps steps)
+    (status_goal goal);
+  if not validity_mode && String.length unsat_status > 0 then
+    (* print SMT2 status if not in validity mode *)
+    fprintf formatter "%a@." print_status_value unsat_status
 
 let print_status_unsat ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode ("Valid","unsat") loc
-    time steps goal "fg_green"
+    time steps goal
 
 let print_status_sat ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode ("Invalid","sat") loc
-    time steps goal "fg_cyan"
+    time steps goal
 
 let print_status_inconsistent ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode
+    ~formatter:(Options.get_fmt_dbg ())
     ("Inconsistent assumption","") loc
-    time steps goal "fg_red"
+    time steps goal
 
 let print_status_unknown ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode
     ("I don't know","unknown") loc
-    time steps goal "fg_blue"
+    time steps goal
 
 let print_status_timeout ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode
     ("Timeout","timeout") loc
-    time steps goal "fg_orange"
+    time steps goal
 
 let print_status_preprocess ?(validity_mode=true)
     time steps =
   print_status ~validity_mode
+    ~formatter:(Options.get_fmt_dbg ())
     ("Preprocessing","") None
-    time steps None "fg_magenta"
+    time steps None
