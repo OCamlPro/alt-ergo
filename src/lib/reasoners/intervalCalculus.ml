@@ -425,6 +425,9 @@ let generic_find xp env =
     let p0 = poly_of xp in
     let p, c = P.separate_constant p0 in
     let p, c0, d = P.normal_form_pos p in
+    (* in case we are on integers, c, may be rational (eg, coming from
+       Fourier-Motzkin.*)
+    let c = if P.type_info p == Ty.Tint then Q.floor c else c in
     Printer.print_dbg ~flushed:false ~header:false ~debug:(get_debug_fm ())
       "normalized into %a + %a * %a@ "
       Q.print c Q.print d P.print p;
