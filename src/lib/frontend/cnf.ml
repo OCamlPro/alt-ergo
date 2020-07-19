@@ -479,12 +479,37 @@ let mk_assume acc f name loc =
   {st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
 
+(* extract defining term of the function or predicate. From the
+   transformation of the parsed AST above, the typed AST is either of the
+   form:
+   - "forall x. defn <-> typed_e", if defn is a pred defn or returns a
+     result of type bool
+   - "forall x. defn = typed_e", if defn is a function defn whose
+     return type is not bool
+
+   where forall x. is optional (like in 'predicate p = q or r')
+*)
+let defining_term f =
+  if get_verbose () then
+    Format.eprintf "defining term of %a@." Typed.print_formula f;
+  match f.c with
+  | TFforall {qf_form={c=TFop(OPiff,[{c=TFatom {c=TApred(d,_);_};_};_]); _}; _}
+  | TFforall {qf_form={c=TFatom {c=TAeq[d;_];_}; _}; _}
+  | TFop(OPiff,[{c=TFatom {c=TApred(d,_);_};_};_])
+  | TFatom {c=TAeq[d;_];_} ->
+    d
+  | _ -> assert false
+
 let mk_function acc f name loc =
-  let ff = make_form name f loc ~decl_kind:(E.Dfunction name) in
+  let defn = defining_term f in
+  let defn = make_term Sy.Map.empty "" defn in
+  let ff = make_form name f loc ~decl_kind:(E.Dfunction defn) in
   {st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
 let mk_preddef acc f name loc =
-  let ff = make_form name f loc ~decl_kind: (E.Dpredicate name) in
+  let defn = defining_term f in
+  let defn = make_term Sy.Map.empty "" defn in
+  let ff = make_form name f loc ~decl_kind: (E.Dpredicate defn) in
   {st_decl=PredDef (ff, name) ; st_loc=loc} :: acc
 
 let mk_query acc n f loc sort =

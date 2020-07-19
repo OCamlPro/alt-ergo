@@ -38,13 +38,6 @@ module SSet = Sy.Set
 
 type binders = (Ty.t * int) SMap.t (*int tag in globally unique *)
 
-type decl_kind =
-  | Dtheory
-  | Daxiom
-  | Dgoal
-  | Dpredicate of string
-  | Dfunction of string
-
 type t = view
 
 and view = {
@@ -60,6 +53,13 @@ and view = {
   pure : bool;
   mutable neg : t option
 }
+
+and decl_kind =
+  | Dtheory
+  | Daxiom
+  | Dgoal
+  | Dpredicate of t
+  | Dfunction of t
 
 and bind_kind =
   | B_none
@@ -2009,7 +2009,7 @@ module Triggers = struct
            )e.vars
       )full_trs
 
-  let max_terms f exclude =
+  let max_terms f ~exclude =
     let eq = equal in
     let rec max_terms acc (e : t) =
       let open Sy in
@@ -2034,28 +2034,6 @@ module Triggers = struct
       | { f = Lit _; _ } -> (*List.fold_left max_terms acc e.xs*)raise Exit
     in
     try max_terms [] f with Exit -> []
-
-  let head_is_name s a =
-    match a.f with
-    | Sy.Name(hs, _) -> String.equal (Hstring.view hs) s
-    | _ -> false
-
-  let term_definition s e =
-    match e.f, e.xs with
-    | (Sy.Lit Sy.L_eq | Sy.Form Sy.F_Iff), [a;b] ->
-      if head_is_name s a then a
-      else if head_is_name s b then b
-      else assert false
-
-    | Sy.Lit Sy.L_neg_pred, [a] when head_is_name s a ->
-      a
-    | _ -> (* in case of simplifications *)
-      if head_is_name s e then e
-      else
-        let s = TSet.filter (head_is_name s) (max_pure_subterms e) in
-        match TSet.elements s with
-        | [u] -> u
-        | _ -> assert false
 
   let expand_lets terms lets =
     let sbt =
@@ -2101,14 +2079,13 @@ module Triggers = struct
       let vterm = SMap.fold (fun sy _ s -> SSet.add sy s) binders SSet.empty in
       match decl_kind, f with
       | Dtheory, _ -> assert false
-      | (Dpredicate s | Dfunction s), _ ->
-        let e = term_definition s f in
+      | (Dpredicate e | Dfunction e), _ ->
         let defn = match f with
           | { f = (Sy.Form Sy.F_Iff | Sy.Lit Sy.L_eq) ; xs = [e1; e2]; _ } ->
             if equal e e1 then e2 else if equal e e2 then e1 else f
           | _ -> f
         in
-        let tt = max_terms defn e in
+        let tt = max_terms defn ~exclude:e in
         let tt = List.fast_sort (fun a b -> depth b - depth a) tt in
         filter_good_triggers (vterm, vtype) @@ triggers_of_list [[e]; tt]
 
