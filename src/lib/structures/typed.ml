@@ -312,6 +312,8 @@ and print_atom fmt a =
     else print_term fmt t
   | TTisConstr (t1, s) ->
     fprintf fmt "%a ? %s" print_term t1 (Hstring.view s)
+  | TAdistinct l ->
+    fprintf fmt "distinct(%a)" print_term_list l
   | _ -> assert false
 
 and print_triggers fmt l =

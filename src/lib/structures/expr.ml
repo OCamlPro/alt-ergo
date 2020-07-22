@@ -990,33 +990,30 @@ let mk_eq ~iff t1 t2 =
     else
       mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) [t1; t2]
 
-let mk_nary_eq ~iff l =
-  let l = List.fast_sort (fun a b -> compare b a) l in (* decreasing *)
-  match l with
-  | [] | [_] | [_;_] -> assert false
-  | _ ->
-    let _, l =
-      List.fold_left
-        (fun ((last, acc) as accu) e ->
-           match last with
-           | Some d -> if equal d e then accu else Some e, e :: acc
-           | None -> Some e, e :: acc
-        )(None, []) l
-    in
+let mk_nary_eq l =
+  try
+    let l = List.fast_sort (fun a b -> compare b a) l in (* decreasing *)
     match l with
-    | [] -> assert false (* not possible *)
-    | [_] -> vrai (* all the elements are physically equal *)
-    | [a; b] -> mk_eq ~iff a b
-    | (e :: r) as l ->
+    | [] | [_] | [_;_] -> assert false
+    | e::r ->
+      let _ =
+        List.fold_left
+          (fun last e ->
+             if equal last e then raise Exit;
+             e
+          ) e r
+      in
       if type_info e == Ty.Tbool then
         List.fold_left (fun x y -> mk_iff x y 0) e  r
       else
         mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) l
+  with Exit ->
+    vrai
 
 let mk_distinct ~iff tl =
   match tl with
   | [a; b] -> neg (mk_eq ~iff a b)
-  | _ -> neg (mk_nary_eq ~iff tl)
+  | _ -> neg (mk_nary_eq tl)
 
 let mk_builtin ~is_pos n l =
   let pos =
@@ -1134,7 +1131,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
         begin match xs' with
           | [] | [_] -> assert false
           | [a; b] ->  mk_eq ~iff:true a b
-          | _ -> mk_nary_eq ~iff:true xs'
+          | _ -> mk_nary_eq xs'
         end
 
       | Sy.Lit Sy.L_neg_eq, _ ->
@@ -2329,7 +2326,7 @@ module Purification = struct
         match l with
         | [] | [_] -> assert false
         | [a; b ] -> mk_eq ~iff:true a b
-        | l -> mk_nary_eq ~iff:true l
+        | l -> mk_nary_eq l
       ) l
 
   and purify_distinct l =
