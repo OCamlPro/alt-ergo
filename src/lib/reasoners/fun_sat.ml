@@ -1662,17 +1662,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         "solved with backward!";
       raise e
 
-  let unsat env gf =
-    Debug.is_it_unsat gf;
+  let unsat env =
     try
-      if Options.get_tableaux_cdcl () then
-        cdcl_assume false env [gf,Ex.empty];
-      let env = assume env [gf, Ex.empty] in
-      let env =
-        {env with inst = (* add all the terms of the goal to matching env *)
-                    Inst.add_terms env.inst
-                      (E.max_ground_terms_rec_of_form gf.E.ff) gf}
-      in
       (* this includes axioms and ground preds but not general predicates *)
       let max_t = max_term_depth_in_sat env in
       let env = {env with inst = Inst.register_max_term_depth env.inst max_t} in
@@ -1726,6 +1717,155 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       assert (Ex.has_no_bj dep);
       dep
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
+
+
+  let filter cell =
+    Z.to_int (Z.pow (Z.of_int 2) cell)
+
+
+  module Seen =
+    Set.Make
+      (struct
+        type t = E.Set.t
+        let compare = E.Set.compare
+      end)
+
+  let mk_proj delta len_delta proj =
+    let l = ref [] in
+    for i = 0 to len_delta -  1 do
+      let (g1, g2, ex, _) = List.nth delta i in
+      let bit = filter i in
+      let res = proj land bit in
+      l := (if (res = 0) then (g1, ex) else g2, ex) :: !l;
+    done;
+    !l
+
+  let pr_path fmt p =
+    match List.rev p with
+    | [] -> ()
+    | x::l ->
+      Format.fprintf fmt "%d" x;
+      List.iter (Format.fprintf fmt ":%d") l
+
+  type kind = In | Out
+
+  let print_debug kind parents len_delta =
+    let where, closing =
+      match kind with
+      | In  -> "In" , "has"
+      | Out -> "Out", "had"
+    in
+    Format.eprintf
+      "[%s] Parent Path is [%a]. We %s %d disjunctions (%d (sub-)cases)@\n"
+      where
+      pr_path parents
+      closing
+      len_delta
+      (filter len_delta)
+
+  let nb_timeouts = ref 0
+  let nb_solved = ref 0
+  let nb_unknown = ref 0
+
+  let branch_status curr_path status =
+    let time = Time.value() in
+    (*let loc = None in
+    let time = None in
+    let steps = None in
+    let goal_name = None in
+    Printer.print_status_unknown ~validity_mode
+      loc time steps goal_name
+    *)
+    Format.eprintf " %s (%2.4f secs)(%d steps) (branch <%a>)@\n"
+      status time (Steps.get_steps ()) pr_path curr_path
+
+  let rec split env parents =
+    match env.delta with
+    | [] ->
+      Steps.reset_steps ();
+      begin
+        try
+          let _d = unsat env in
+          branch_status parents "Valid (call to unsat)";
+          incr nb_solved;
+          _d
+        with
+        | IUnsat (_dep, _classes) ->
+          assert false (* handled by unsat function above *)
+      end
+    | delta ->
+      let len_delta = List.length delta in
+      pp_open_box err_formatter 2;
+      print_debug In parents len_delta;
+      for proj = 0 to (filter len_delta) - 1 do
+        let curr_path = proj :: parents in
+        Format.eprintf "path <%a>@\n" pr_path curr_path;
+        Options.Time.unset_timeout ~is_gui:false;
+        let ll = mk_proj delta len_delta proj in
+        try
+          Options.Time.start ();
+          Options.Time.set_timeout ~is_gui:false (Options.get_timelimit ());
+          Steps.reset_steps ();
+          let env = assume {env with delta = []} ll in
+          let _d = split env curr_path in
+          ()
+        with
+        | IUnsat (_dep, _classes) ->
+          branch_status curr_path "Valid (trivial)";
+          incr nb_solved;
+          ()
+
+        | I_dont_know _ ->
+          branch_status curr_path "Unknown";
+          incr nb_unknown;
+          ()
+
+        | Util.Timeout ->
+          branch_status curr_path "Timeout";
+          incr nb_timeouts;
+        | e ->
+          Format.eprintf "Aie: %s@." (Printexc.to_string e);
+          assert false
+      done;
+      pp_close_box err_formatter ();
+      print_debug Out parents len_delta;
+      Ex.empty
+
+  let () =
+    at_exit
+      (fun () ->
+         Format.eprintf "@.nb solved:  %d@." !nb_solved;
+         Format.eprintf "nb unknown: %d@." !nb_unknown;
+         Format.eprintf "nb timeout: %d@.@." !nb_timeouts;
+      )
+
+  let unsat env gf =
+    Debug.is_it_unsat gf;
+    if Options.get_tableaux_cdcl () then
+      cdcl_assume false env [gf,Ex.empty];
+    let env = assume env [gf, Ex.empty] in
+    if Options.get_tableaux_cdcl () then
+      cdcl_assume false env [gf,Ex.empty];
+    let env = assume env [gf, Ex.empty] in
+    let env =
+      {env with inst = (* add all the terms of the goal to matching env *)
+                  Inst.add_terms env.inst
+                    (E.max_ground_terms_rec_of_form gf.E.ff) gf}
+    in
+    if Options.get_split_vc () then
+      begin
+        Format.eprintf "[debug] split-vc ON@.";
+        Format.eprintf "[debug] the clauses of each level are encoded as a \
+                        number ranging from 0 to 2^(number of clauses). Each \
+                        number in a path encodes in binary whether left-hand \
+                        sides (bit = 0) or right-hand-sides (bit = 1) of clauses \
+                        are selected\n@.";
+        split env []
+      end
+    else begin
+      Format.eprintf "split-vc OFF@.";
+      unsat env
+    end
 
   let assume env fg dep =
     try

@@ -300,7 +300,7 @@ let mk_quantifiers_opt greedy instantiate_after_backjump
 
 let mk_sat_opt get_bottom_classes disable_flat_formulas_simplification
     enable_restarts no_arith_matching no_backjumping
-    no_backward no_decisions no_decisions_on
+    no_backward split_vc no_decisions no_decisions_on
     no_minimal_bj no_sat_learning no_tableaux_cdcl_in_instantiation
     no_tableaux_cdcl_in_theories sat_plugin sat_solver
   =
@@ -342,6 +342,7 @@ let mk_sat_opt get_bottom_classes disable_flat_formulas_simplification
     set_minimal_bj minimal_bj;
     set_no_backjumping no_backjumping;
     set_no_backward no_backward;
+    set_split_vc split_vc;
     set_no_decisions no_decisions;
     set_no_decisions_on no_decisions_on;
     set_no_sat_learning no_sat_learning;
@@ -1012,6 +1013,12 @@ let parse_sat_opt =
        the default SAT solver before deciding." in
     Arg.(value & flag & info ["no-backward"] ~docs ~doc) in
 
+  let split_vc =
+    let doc =
+      "Split disjunctions in hypotheses and conclusion before exploring each \
+       branch. Experimenta, only available in 'Tableaux' SAT solver." in
+    Arg.(value & flag & info ["split-vc"] ~docs ~doc) in
+
 
   let no_decisions =
     let doc = "Disable decisions at the SAT level." in
@@ -1066,7 +1073,7 @@ let parse_sat_opt =
   Term.(ret (const mk_sat_opt $
              get_bottom_classes $ disable_flat_formulas_simplification $
              enable_restarts $ no_arith_matching $
-             no_backjumping $ no_backward $ no_decisions $ no_decisions_on $
+             no_backjumping $ no_backward $ split_vc $ no_decisions $ no_decisions_on $
              no_minimal_bj $ no_sat_learning $
              no_tableaux_cdcl_in_instantiation $
              no_tableaux_cdcl_in_theories $ sat_plugin $ sat_solver

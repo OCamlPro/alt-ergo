@@ -225,7 +225,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       print_status (Timeout (Some d)) (Steps.get_steps ());
       raise e
 
-  let print_status status steps =
+  let print_status_main status steps =
     let validity_mode =
       match Options.get_output_format () with
       | Smtlib2 -> false
@@ -279,7 +279,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       Printer.print_status_preprocess ~validity_mode
         (Some time) (Some steps)
 
-
+  let print_status status steps =
+    if Options.get_split_vc() then
+      Format.printf "[print final status muted] option split-vc is set@."
+    else
+      print_status_main status steps
 
 
 

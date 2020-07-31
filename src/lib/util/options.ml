@@ -354,6 +354,7 @@ let enable_restarts = ref false
 let minimal_bj = ref false
 let no_backjumping = ref false
 let no_backward = ref false
+let split_vc = ref false
 let no_decisions = ref false
 let no_decisions_on = ref Util.SS.empty
 let no_sat_learning = ref false
@@ -371,6 +372,7 @@ let set_enable_restarts b = enable_restarts := b
 let set_minimal_bj b = minimal_bj := b
 let set_no_backjumping b = no_backjumping := b
 let set_no_backward b = no_backward := b
+let set_split_vc b = split_vc := b
 let set_no_decisions b = no_decisions := b
 let set_no_decisions_on s = no_decisions_on := s
 let set_no_sat_learning b = no_sat_learning := b
@@ -389,6 +391,7 @@ let get_enable_restarts () = !enable_restarts
 let get_minimal_bj () = !minimal_bj
 let get_no_backjumping () = !no_backjumping
 let get_no_backward () = !no_backward
+let get_split_vc () = !split_vc
 let get_no_decisions () = !no_decisions
 let get_can_decide_on s =
   let ss = !no_decisions_on in

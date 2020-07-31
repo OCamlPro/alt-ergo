@@ -358,6 +358,9 @@ val set_no_backjumping : bool -> unit
 (** Set [no_backward] accessible with {!val:get_no_backward} *)
 val set_no_backward : bool -> unit
 
+(** Set [split_vc] accessible with {!val:get_split_vc} *)
+val set_split_vc : bool -> unit
+
 (** Set [no_decisions] accessible with {!val:get_no_decisions} *)
 val set_no_decisions : bool -> unit
 
@@ -883,6 +886,10 @@ val get_no_tcp : unit -> bool
 (** [true] if backward reasoning step (starting from the goal) done in
     the default SAT solver before deciding is disabled. *)
 val get_no_backward : unit -> bool
+(** Default to [false] *)
+
+(** [true] if split-vc option is set. *)
+val get_split_vc : unit -> bool
 (** Default to [false] *)
 
 (** [true] if decisions at the SAT level are disabled. *)
