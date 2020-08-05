@@ -110,6 +110,7 @@ let () =
   let () = Format.fprintf fmt "prefix=%s@." !prefix in
   let () = Format.fprintf fmt "libdir=%s@." !libdir in
   let () = Format.fprintf fmt "sharedir=%s@." !sharedir in
+  let () = Format.fprintf fmt "mandir=%s@." !mandir in
   let () = close_out ch in
   let () = Format.printf "done.@." in
   ()

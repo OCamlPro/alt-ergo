@@ -159,19 +159,22 @@ non-regression: all
 install: all
 	$(DUNE) install $(DUNE_FLAGS)		\
 		--prefix $(prefix)						\
-		--libdir $(libdir)
+		--libdir $(libdir)						\
+		--mandir $(mandir)
 
 # Use dune to uninstall the lib, bin, and gui
 uninstall:
 	$(DUNE) uninstall $(DUNE_FLAGS)	\
 		--prefix $(prefix)						\
-		--libdir $(libdir)
+		--libdir $(libdir)						\
+		--mandir $(mandir)
 
 # Install only the lib
 install-lib:
 	$(DUNE) install $(DUNE_FLAGS)		\
 		--prefix $(prefix)						\
 		--libdir $(libdir)						\
+		--mandir $(mandir)						\
 		-p alt-ergo-lib alt-ergo-lib
 
 # Uninstall the lib
@@ -179,6 +182,7 @@ uninstall-lib:
 	$(DUNE) uninstall $(DUNE_FLAGS)	\
 		--prefix $(prefix)						\
 		--libdir $(libdir)						\
+		--mandir $(mandir)						\
 		-p alt-ergo-lib alt-ergo-lib
 
 
@@ -187,6 +191,7 @@ install-parsers:
 	$(DUNE) install $(DUNE_FLAGS)		\
 		--prefix $(prefix)						\
 		--libdir $(libdir)						\
+		--mandir $(mandir)						\
 		-p alt-ergo-parsers alt-ergo-parsers
 
 # Uninstall the parsers
@@ -194,6 +199,7 @@ uninstall-parsers:
 	$(DUNE) uninstall $(DUNE_FLAGS)	\
 		--prefix $(prefix)						\
 		--libdir $(libdir)						\
+		--mandir $(mandir)						\
 		-p alt-ergo-parsers alt-ergo-parsers
 
 # Install only the binary
@@ -201,6 +207,7 @@ install-bin:
 	$(DUNE) install $(DUNE_FLAGS)		\
 		--prefix $(prefix)						\
 		--libdir $(libdir)						\
+		--mandir $(mandir)						\
 		-p alt-ergo alt-ergo
 
 # Uninstall the binary
@@ -208,6 +215,7 @@ uninstall-bin:
 	$(DUNE) uninstall $(DUNE_FLAGS)	\
 		--prefix $(prefix)						\
 		--libdir $(libdir)						\
+		--mandir $(mandir)						\
 		-p alt-ergo alt-ergo
 
 # Install only the binary
@@ -215,6 +223,7 @@ install-gui:
 	$(DUNE) install $(DUNE_FLAGS)		\
 		--prefix $(prefix)						\
 		--libdir $(libdir)						\
+		--mandir $(mandir)						\
 		-p altgr-ergo altgr-ergo
 
 # Uninstall the lib
@@ -222,6 +231,7 @@ uninstall-gui:
 	$(DUNE) uninstall $(DUNE_FLAGS)	\
 		--prefix $(prefix)						\
 		--libdir $(libdir)						\
+		--mandir $(mandir)						\
 		-p altgr-ergo altgr-ergo
 
 .PHONY: install uninstall
