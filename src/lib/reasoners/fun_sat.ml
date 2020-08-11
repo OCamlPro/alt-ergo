@@ -1750,24 +1750,26 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   type kind = In | Out
 
   let print_debug kind parents len_delta =
-    let where, closing =
-      match kind with
-      | In  -> "In" , "has"
-      | Out -> "Out", "had"
-    in
-    Format.eprintf
-      "[%s] Parent Path is [%a]. We %s %d disjunctions (%d (sub-)cases)@\n"
-      where
-      pr_path parents
-      closing
-      len_delta
-      (filter len_delta)
+    match kind with
+    | In  ->
+      pp_open_box err_formatter 3;
+      Format.eprintf
+        "%sWe have %d disjunctions (%d sub-cases)@\n"
+        (if parents == [] then "Toplevel: " else "")
+        len_delta
+        (filter len_delta);
+
+
+    | Out ->
+      pp_close_box err_formatter ();
+      Format.eprintf "--- end <%a> --- @\n" pr_path parents
+
 
   let nb_timeouts = ref 0
   let nb_solved = ref 0
   let nb_unknown = ref 0
 
-  let branch_status curr_path status =
+  let branch_status status =
     let time = Time.value() in
     (*let loc = None in
     let time = None in
@@ -1776,8 +1778,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Printer.print_status_unknown ~validity_mode
       loc time steps goal_name
     *)
-    Format.eprintf " %s (%2.4f secs)(%d steps) (branch <%a>)@\n"
-      status time (Steps.get_steps ()) pr_path curr_path
+    Format.eprintf " %s (%2.4f secs)(%d steps)@\n"
+      status time (Steps.get_steps ())
 
   let rec split env parents =
     match env.delta with
@@ -1785,21 +1787,23 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Steps.reset_steps ();
       begin
         try
-          let _d = unsat env in
-          branch_status parents "Valid (call to unsat)";
+          let _dep = unsat env in
+          branch_status "Valid (call to unsat)";
+          if get_save_used_context () then
+            Format.eprintf
+              " (used_context # %a)@\n" (Ex.print_unsat_core ~tab:false) _dep;
           incr nb_solved;
-          _d
+          _dep
         with
         | IUnsat (_dep, _classes) ->
           assert false (* handled by unsat function above *)
       end
     | delta ->
       let len_delta = List.length delta in
-      pp_open_box err_formatter 2;
       print_debug In parents len_delta;
       for proj = 0 to (filter len_delta) - 1 do
         let curr_path = proj :: parents in
-        Format.eprintf "path <%a>@\n" pr_path curr_path;
+        Format.eprintf "path <%a>: " pr_path curr_path;
         Options.Time.unset_timeout ~is_gui:false;
         let ll = mk_proj delta len_delta proj in
         try
@@ -1811,23 +1815,25 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           ()
         with
         | IUnsat (_dep, _classes) ->
-          branch_status curr_path "Valid (trivial)";
+          branch_status "Valid (trivial)";
+          if get_save_used_context () then
+            Format.eprintf " (used_context # %a)@\n"
+              (Ex.print_unsat_core ~tab:false) _dep;
           incr nb_solved;
           ()
 
         | I_dont_know _ ->
-          branch_status curr_path "Unknown";
+          branch_status "Unknown";
           incr nb_unknown;
           ()
 
         | Util.Timeout ->
-          branch_status curr_path "Timeout";
+          branch_status "Timeout";
           incr nb_timeouts;
         | e ->
           Format.eprintf "Aie: %s@." (Printexc.to_string e);
           assert false
       done;
-      pp_close_box err_formatter ();
       print_debug Out parents len_delta;
       Ex.empty
 

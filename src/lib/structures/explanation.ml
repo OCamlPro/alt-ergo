@@ -118,12 +118,21 @@ let print fmt ex =
     fprintf fmt "}"
   end
 
-let print_unsat_core ?(tab=false) fmt dep =
+let _print_unsat_core ?(tab=false) fmt dep =
   iter_atoms
     (function
       | RootDep s ->
         if tab then Format.fprintf fmt "  %s@." s (* tab is too big *)
         else Format.fprintf fmt "%s@." s
+      | Dep _ -> ()
+      | Bj _ | Fresh _ | Literal _ -> assert false
+    ) dep
+
+let print_unsat_core ?(tab=false) fmt dep =
+  iter_atoms
+    (function
+      | RootDep s ->
+        Format.fprintf fmt "%s " s
       | Dep _ -> ()
       | Bj _ | Fresh _ | Literal _ -> assert false
     ) dep
