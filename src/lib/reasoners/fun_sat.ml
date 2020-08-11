@@ -1781,7 +1781,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Format.eprintf " %s (%2.4f secs)(%d steps)@\n"
       status time (Steps.get_steps ())
 
+  let partially_reset_refs env =
+    env.unit_facts_cache := ME.empty;
+    env.cdcl := CDCL.empty ();
+    env.model_gen_mode := false;
+    env.heuristics := Heuristics.empty ();
+    ()
+
   let rec split env parents =
+    partially_reset_refs env;
     match env.delta with
     | [] ->
       Steps.reset_steps ();
