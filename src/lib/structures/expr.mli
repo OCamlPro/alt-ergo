@@ -138,6 +138,7 @@ val form_view : t -> form_view
 (** pretty printing *)
 
 val print : Format.formatter -> t -> unit
+val print_normalized : normal_form:(t -> t) -> Format.formatter -> t -> unit
 val print_list : Format.formatter -> t list -> unit
 val print_list_sep : string -> Format.formatter -> t list -> unit
 val print_triggers : Format.formatter -> trigger list -> unit

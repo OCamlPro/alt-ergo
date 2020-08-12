@@ -376,38 +376,38 @@ let print_binders =
       print_one fmt e;
       List.iter (fun e -> fprintf fmt ", %a" print_one e) l
 
-let rec print_silent fmt t =
-  let { f ; xs ; ty; bind; _ } = t in
+let rec print_silent ~hook fmt t =
+  let { f ; xs ; ty; bind; _ } = hook t in
   match f, xs with
   (* Formulas *)
   | Sy.Form form, xs ->
     begin
       match form, xs, bind with
       | Sy.F_Unit _, [f1; f2], _ ->
-        fprintf fmt "@[(%a /\\@ %a)@]" print_silent f1 print_silent f2
+        fprintf fmt "@[(%a /\\@ %a)@]" (print_silent ~hook) f1 (print_silent ~hook) f2
 
       | Sy.F_Iff, [f1; f2], _ ->
-        fprintf fmt "@[(%a <->@ %a)@]" print_silent f1 print_silent f2
+        fprintf fmt "@[(%a <->@ %a)@]" (print_silent ~hook) f1 (print_silent ~hook) f2
 
       | Sy.F_Xor, [f1; f2], _ ->
-        fprintf fmt "@[(%a xor@ %a)@]" print_silent f1 print_silent f2
+        fprintf fmt "@[(%a xor@ %a)@]" (print_silent ~hook) f1 (print_silent ~hook) f2
 
       | Sy.F_Clause _, [f1; f2], _ ->
-        fprintf fmt "@[(%a \\/@ %a)@]" print_silent f1 print_silent f2
+        fprintf fmt "@[(%a \\/@ %a)@]" (print_silent ~hook) f1 (print_silent ~hook) f2
 
       | Sy.F_Lemma, [], B_lemma { user_trs ; main ; name ; binders; _ } ->
         if get_verbose () then
           fprintf fmt "(lemma: %s forall %a[%a].@  %a)"
             name
             print_binders binders
-            print_triggers user_trs
-            print_silent main
+            (print_triggers ~hook) user_trs
+            (print_silent ~hook) main
         else
           fprintf fmt "(lem %s)" name
 
       | Sy.F_Skolem, [], B_skolem { main; binders; _ } ->
         fprintf fmt "(<sko exists %a.> %a)"
-          print_binders binders print_silent main
+          print_binders binders (print_silent ~hook) main
 
       | _ -> assert false
     end
@@ -418,8 +418,8 @@ let rec print_silent fmt t =
       "(let%a %a =@ %a in@ %a)"
       (fun fmt x -> if Options.get_verbose () then
           fprintf fmt
-            " [sko = %a]" print x.let_sko) x
-      Sy.print x.let_v print x.let_e print_silent x.in_e
+            " [sko = %a]" (print ~hook) x.let_sko) x
+      Sy.print x.let_v (print ~hook) x.let_e (print_silent ~hook) x.in_e
 
   (* Literals *)
   | Sy.Lit lit, xs ->
@@ -427,35 +427,35 @@ let rec print_silent fmt t =
       match lit, xs with
       | Sy.L_eq, a::l ->
         fprintf fmt "(%a%a)"
-          print a (fun fmt -> List.iter (fprintf fmt " = %a" print)) l
+          (print ~hook) a (fun fmt -> List.iter (fprintf fmt " = %a" (print ~hook))) l
 
       | Sy.L_neg_eq, [a; b] ->
-        fprintf fmt "(%a <> %a)" print a print b
+        fprintf fmt "(%a <> %a)" (print ~hook) a (print ~hook) b
 
       | Sy.L_neg_eq, a::l ->
         fprintf fmt "distinct(%a%a)"
-          print a (fun fmt -> List.iter (fprintf fmt ", %a" print)) l
+          (print ~hook) a (fun fmt -> List.iter (fprintf fmt ", %a" (print ~hook))) l
 
       | Sy.L_built Sy.LE, [a;b] ->
-        fprintf fmt "(%a <= %a)" print a print b
+        fprintf fmt "(%a <= %a)" (print ~hook) a (print ~hook) b
 
       | Sy.L_built Sy.LT, [a;b] ->
-        fprintf fmt "(%a < %a)" print a print b
+        fprintf fmt "(%a < %a)" (print ~hook) a (print ~hook) b
 
       | Sy.L_neg_built Sy.LE, [a; b] ->
-        fprintf fmt "(%a > %a)" print a print b
+        fprintf fmt "(%a > %a)" (print ~hook) a (print ~hook) b
 
       | Sy.L_neg_built Sy.LT, [a; b] ->
-        fprintf fmt "(%a >= %a)" print a print b
+        fprintf fmt "(%a >= %a)" (print ~hook) a (print ~hook) b
 
       | Sy.L_neg_pred, [a] ->
-        fprintf fmt "(not %a)" print a
+        fprintf fmt "(not %a)" (print ~hook) a
 
       | Sy.L_built (Sy.IsConstr hs), [e] ->
-        fprintf fmt "(%a ? %a)" print e Hstring.print hs
+        fprintf fmt "(%a ? %a)" (print ~hook) e Hstring.print hs
 
       | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
-        fprintf fmt "not (%a ? %a)" print e Hstring.print hs
+        fprintf fmt "not (%a ? %a)" (print ~hook) e Hstring.print hs
 
       | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
         | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
@@ -466,19 +466,19 @@ let rec print_silent fmt t =
     end
 
   | Sy.Op Sy.Get, [e1; e2] ->
-    fprintf fmt "%a[%a]" print e1 print e2
+    fprintf fmt "%a[%a]" (print ~hook) e1 (print ~hook) e2
 
   | Sy.Op Sy.Set, [e1; e2; e3] ->
-    fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3
+    fprintf fmt "%a[%a<-%a]" (print ~hook) e1 (print ~hook) e2 (print ~hook) e3
 
   | Sy.Op Sy.Concat, [e1; e2] ->
-    fprintf fmt "%a@@%a" print e1 print e2
+    fprintf fmt "%a@@%a" (print ~hook) e1 (print ~hook) e2
 
   | Sy.Op Sy.Extract, [e1; e2; e3] ->
-    fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
+    fprintf fmt "%a^{%a,%a}" (print ~hook) e1 (print ~hook) e2 (print ~hook) e3
 
   | Sy.Op (Sy.Access field), [e] ->
-    fprintf fmt "%a.%s" print e (Hstring.view field)
+    fprintf fmt "%a.%s" (print ~hook) e (Hstring.view field)
 
   | Sy.Op (Sy.Record), _ ->
     begin match ty with
@@ -487,7 +487,7 @@ let rec print_silent fmt t =
         fprintf fmt "{";
         ignore (List.fold_left2 (fun first (field,_) e ->
             fprintf fmt "%s%s = %a"  (if first then "" else "; ")
-              (Hstring.view field) print e;
+              (Hstring.view field) (print ~hook) e;
             false
           ) true lbs xs);
         fprintf fmt "}";
@@ -498,49 +498,64 @@ let rec print_silent fmt t =
   | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||
                             op == Sy.Max_real || op == Sy.Max_int ||
                             op == Sy.Min_real || op == Sy.Min_int ->
-    fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
+    fprintf fmt "%a(%a,%a)" Sy.print f (print ~hook) e1 (print ~hook) e2
 
   (* TODO: introduce PrefixOp in the future to simplify this ? *)
   | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
-    fprintf fmt "%a(%a)" Hstring.print hs print_list l
+    fprintf fmt "%a(%a)" Hstring.print hs (print_list ~hook) l
 
   | Sy.Op _, [e1; e2] ->
-    fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
+    fprintf fmt "(%a %a %a)" (print ~hook) e1 Sy.print f (print ~hook) e2
 
   | Sy.Op Sy.Destruct (hs, grded), [e] ->
     fprintf fmt "%a#%s%a"
-      print e (if grded then "" else "!") Hstring.print hs
+      (print ~hook) e (if grded then "" else "!") Hstring.print hs
 
 
   | Sy.In(lb, rb), [t] ->
-    fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
+    fprintf fmt "(%a in %a, %a)" (print ~hook) t Sy.print_bound lb Sy.print_bound rb
 
 
   | _, [] ->
     fprintf fmt "%a" Sy.print f
 
   | _, _ ->
-    fprintf fmt "%a(%a)" Sy.print f print_list xs
+    fprintf fmt "%a(%a)" Sy.print f (print_list ~hook) xs
 
-and print_verbose fmt t =
-  fprintf fmt "(%a : %a)" print_silent t Ty.print t.ty
+and print_verbose ~hook fmt t =
+  fprintf fmt "(%a : %a)" (print_silent ~hook)  t Ty.print t.ty
 
-and print fmt t =
-  if Options.get_debug () then print_verbose fmt t
-  else print_silent fmt t
+and print ~hook fmt t =
+  if Options.get_debug () then print_verbose ~hook fmt t
+  else print_silent ~hook fmt t
 
-and print_list_sep sep fmt = function
+and print_list_sep ~hook sep fmt = function
   | [] -> ()
-  | [t] -> print fmt t
-  | t::l -> Format.fprintf fmt "%a%s%a" print t sep (print_list_sep sep) l
+  | [t] -> print ~hook fmt t
+  | t::l -> Format.fprintf fmt "%a%s%a" (print ~hook) t sep (print_list_sep ~hook sep) l
 
-and print_list fmt = print_list_sep "," fmt
+and print_list ~hook fmt = print_list_sep ~hook "," fmt
 
-and print_triggers fmt trs =
+and print_triggers ~hook fmt trs =
   List.iter (fun { content = l; _ } ->
-      fprintf fmt "| %a@," print_list l;
+      fprintf fmt "| %a@," (print_list ~hook) l;
     ) trs
 
+
+let print_normalized ~normal_form fmt t =
+  print ~hook:normal_form fmt t
+
+let print fmt t =
+  print ~hook:(fun e -> e) fmt t
+
+let print_list fmt t =
+  print_list ~hook:(fun e -> e) fmt t
+
+let print_list_sep fmt t =
+  print_list_sep ~hook:(fun e -> e) fmt t
+
+let print_triggers fmt t =
+  print_triggers ~hook:(fun e -> e) fmt t
 
 (** Some auxiliary functions *)
 
