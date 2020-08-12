@@ -1794,35 +1794,59 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     ()
 
 
-  let output_simple_form ccx gf =
+  let do_output_form uf gf =
+    let normal_form e = Uf.term_repr uf e in
+    if gf.E.gdist >= 0 then
+      Format.eprintf "%a -> (* goal: gdist = %d *)@\n"
+        (E.print_normalized ~normal_form) gf.E.ff  gf.E.gdist
+    else
+    if gf.E.hdist >= 0 then
+      Format.eprintf "%a -> (* hyp: hdist = %d *)@\n"
+        (E.print_normalized ~normal_form) gf.E.ff  gf.E.hdist
+    else
+      Format.eprintf "%a -> @\n" (E.print_normalized ~normal_form) gf.E.ff
+
+  let is_internal s =
+    String.contains s '#'
+
+  let output_simple_form uf gf =
     match E.form_view gf.E.ff with
     | E.Not_a_form -> assert false
     | E.Unit _
     | E.Clause _
     | E.Iff _
     | E.Xor _
-    | E.Lemma _
     | E.Let _ ->
       (*Format.eprintf "(* ignore %s*) true -> @\n" (Debug.kind_of_form gf)*)
       ()
+
+    | E.Lemma q ->
+      if is_internal q.E.name then
+        do_output_form uf gf
+
     | E.Skolem _
     | E.Literal _ ->
-      let normal_form e = e(*Ccx.Main.term_repr ccx e ~init_term:false*) in
-      if gf.E.gdist >= 0 then
-        Format.eprintf "%a -> (* goal: gdist = %d *)@\n"
-          (E.print_normalized ~normal_form) gf.E.ff  gf.E.gdist
-      else
-      if gf.E.hdist >= 0 then
-        Format.eprintf "%a -> (* hyp: hdist = %d *)@\n"
-          (E.print_normalized ~normal_form) gf.E.ff  gf.E.hdist
-      else
-        Format.eprintf "%a -> @\n" (E.print_normalized ~normal_form) gf.E.ff
+      do_output_form uf gf
 
   let output_unproved_conjunct env =
     if Options.get_split_vc () < 0 then
-      let ccx = Th.get_real_env env.tbox in
+      let uf = Ccx.Main.get_union_find @@ Th.get_real_env env.tbox in
+      let eq_classes = Uf.eq_classes uf in
       pp_open_box err_formatter 3;
-      ME.iter (fun _f (gf, _, _, _) -> output_simple_form ccx gf) env.gamma;
+      List.iter
+        (fun (_s, eqv) ->
+           let e = SE.choose eqv in
+           let e = Uf.term_repr uf e in
+           if SE.cardinal eqv >= 2 then begin
+             Format.eprintf "@\n(* class of repr %a *)@\n" E.print e;
+             SE.iter
+               (fun e' ->
+                  if not (E.equal e e') then
+                    Format.eprintf "%a = %a -> (* UF *)@\n" E.print e' E.print e
+               )eqv
+           end
+        )eq_classes;
+      ME.iter (fun _f (gf, _, _, _) -> output_simple_form uf gf) env.gamma;
       pp_close_box err_formatter ();
       Format.eprintf "false@\n"
 
