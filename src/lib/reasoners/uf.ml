@@ -929,16 +929,27 @@ let rclass_of env r =
   with Not_found -> SE.empty
 
 let term_repr uf t =
-  let st = class_of uf t in
-  SE.fold
-    (fun s t ->
-       let c =
-         let c = (E.depth t) - (E.depth s) in
-         if c <> 0 then c
-         else E.compare s t
-       in
-       if c > 0 then s else t
-    ) st t
+  try
+    let rt, _ = MapX.find (ME.find t uf.make) uf.repr in
+    let st = MapX.find rt uf.classes in
+    SE.fold
+      (fun s t ->
+         let c =
+           let c = (E.depth t) - (E.depth s) in
+           if c <> 0 then c
+           else
+             let rs = try ME.find s uf.make with Not_found -> assert false in
+             if X.leaves rs == [] then 1 (* choose theory terms if same depth *)
+             else
+               let rt = try ME.find t uf.make with Not_found -> assert false in
+               if X.leaves rt == [] then -1 (* choose theory terms if same depth *)
+               else
+                 E.compare s t
+         in
+         if c > 0 then s else t
+      ) st t
+  with Not_found -> t
+
 
 let class_of env t = SE.elements (class_of env t)
 
@@ -1275,3 +1286,6 @@ let output_concrete_model ({ make; _ } as env) =
       SMT2LikeModelOutput.output_arrays_model arrays;
       Printer.print_fmt (get_fmt_mdl ()) ")";
     end
+
+let eq_classes env =
+  MapX.bindings env.classes
