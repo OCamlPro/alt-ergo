@@ -1662,7 +1662,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         "solved with backward!";
       raise e
 
-  let pre_instantiate env =
+  let pre_instantiate ?(keep_all=false) env =
       (* this includes axioms and ground preds but not general predicates *)
       let max_t = max_term_depth_in_sat env in
       let env = {env with inst = Inst.register_max_term_depth env.inst max_t} in
@@ -1691,9 +1691,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env, _ = semantic_th_inst  env env.inst ~rm_clauses:true ~loop:4 in
 
       (* goal directed for lemmas *)
-      let gd, _ =
+      let gd, ngd =
         inst_lemmas mconf  env env.inst env.tbox (selector env) env.ilevel
       in
+      let gd = if keep_all then gd @ ngd else gd in
       if Options.get_tableaux_cdcl () then
         cdcl_assume false env gd;
       if Options.get_profiling() then Profiling.instances gd;
@@ -1919,7 +1920,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           let env =
             if abs (Options.get_split_vc ()) > 1 then
               let () = Format.eprintf "pre-instantiate before split@\n" in
-              pre_instantiate @@ pre_instantiate @@ pre_instantiate env
+              let keep_all = abs (Options.get_split_vc ()) > 2 in
+              if keep_all then
+                Format.eprintf "I'll keep instances not related to the \
+                                conclusion in pre-instantiate@\n";
+              pre_instantiate ~keep_all env
             else
               env
           in
