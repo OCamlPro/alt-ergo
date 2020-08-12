@@ -1662,8 +1662,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         "solved with backward!";
       raise e
 
-  let unsat env =
-    try
+  let pre_instantiate env =
       (* this includes axioms and ground preds but not general predicates *)
       let max_t = max_term_depth_in_sat env in
       let env = {env with inst = Inst.register_max_term_depth env.inst max_t} in
@@ -1702,7 +1701,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
       let env, _ = syntactic_th_inst env env.inst ~rm_clauses:true in
       let env, _ = semantic_th_inst  env env.inst ~rm_clauses:true ~loop:4 in
+      env
 
+  let unsat env =
+    try
+      let env = pre_instantiate env in
       let d = back_tracking env in
       assert (Ex.has_no_bj d);
       get_all_models_answer ();
@@ -1752,10 +1755,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let print_debug kind parents len_delta =
     match kind with
     | In  ->
+      Format.eprintf "@\n";
       pp_open_box err_formatter 3;
       Format.eprintf
         "%sWe have %d disjunctions (%d sub-cases)@\n"
-        (if parents == [] then "Toplevel: " else "")
+        (if parents == [] then "Toplevel: " else " ")
         len_delta
         (filter len_delta);
 
@@ -1788,6 +1792,40 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     env.heuristics := Heuristics.empty ();
     ()
 
+
+  let output_simple_form ccx gf =
+    match E.form_view gf.E.ff with
+    | E.Not_a_form -> assert false
+    | E.Unit _
+    | E.Clause _
+    | E.Iff _
+    | E.Xor _
+    | E.Lemma _
+    | E.Let _ ->
+      (*Format.eprintf "(* ignore %s*) true -> @\n" (Debug.kind_of_form gf)*)
+      ()
+    | E.Skolem _
+    | E.Literal _ ->
+      let normal_form e = e(*Ccx.Main.term_repr ccx e ~init_term:false*) in
+      if gf.E.gdist >= 0 then
+        Format.eprintf "%a -> (* goal: gdist = %d *)@\n"
+          (E.print_normalized ~normal_form) gf.E.ff  gf.E.gdist
+      else
+      if gf.E.hdist >= 0 then
+        Format.eprintf "%a -> (* hyp: hdist = %d *)@\n"
+          (E.print_normalized ~normal_form) gf.E.ff  gf.E.hdist
+      else
+        Format.eprintf "%a -> @\n" (E.print_normalized ~normal_form) gf.E.ff
+
+  let output_unproved_conjunct env =
+    if Options.get_split_vc () < 0 then
+      let ccx = Th.get_real_env env.tbox in
+      pp_open_box err_formatter 3;
+      ME.iter (fun _f (gf, _, _, _) -> output_simple_form ccx gf) env.gamma;
+      pp_close_box err_formatter ();
+      Format.eprintf "false@\n"
+
+
   let rec split env parents =
     partially_reset_refs env;
     match env.delta with
@@ -1805,6 +1843,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         with
         | IUnsat (_dep, _classes) ->
           assert false (* handled by unsat function above *)
+
+        | I_dont_know _ ->
+          branch_status "Unknown";
+          incr nb_unknown;
+          output_unproved_conjunct env;
+          Ex.empty
+
+        | Util.Timeout ->
+          branch_status "Timeout";
+          incr nb_timeouts;
+          output_unproved_conjunct env;
+          Ex.empty
       end
     | delta ->
       let len_delta = List.length delta in
@@ -1829,15 +1879,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
               (Ex.print_unsat_core ~tab:false) _dep;
           incr nb_solved;
           ()
-
-        | I_dont_know _ ->
-          branch_status "Unknown";
-          incr nb_unknown;
-          ()
-
-        | Util.Timeout ->
-          branch_status "Timeout";
-          incr nb_timeouts;
         | e ->
           Format.eprintf "Aie: %s@." (Printexc.to_string e);
           assert false
@@ -1854,32 +1895,50 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       )
 
   let unsat env gf =
-    Debug.is_it_unsat gf;
-    if Options.get_tableaux_cdcl () then
-      cdcl_assume false env [gf,Ex.empty];
-    let env = assume env [gf, Ex.empty] in
-    if Options.get_tableaux_cdcl () then
-      cdcl_assume false env [gf,Ex.empty];
-    let env = assume env [gf, Ex.empty] in
-    let env =
-      {env with inst = (* add all the terms of the goal to matching env *)
-                  Inst.add_terms env.inst
-                    (E.max_ground_terms_rec_of_form gf.E.ff) gf}
-    in
-    if Options.get_split_vc () then
-      begin
-        Format.eprintf "[debug] split-vc ON@.";
-        Format.eprintf "[debug] the clauses of each level are encoded as a \
-                        number ranging from 0 to 2^(number of clauses). Each \
-                        number in a path encodes in binary whether left-hand \
-                        sides (bit = 0) or right-hand-sides (bit = 1) of clauses \
-                        are selected\n@.";
-        split env []
+    try
+      Debug.is_it_unsat gf;
+      if Options.get_tableaux_cdcl () then
+        cdcl_assume false env [gf,Ex.empty];
+      let env = assume env [gf, Ex.empty] in
+      if Options.get_tableaux_cdcl () then
+        cdcl_assume false env [gf,Ex.empty];
+      let env = assume env [gf, Ex.empty] in
+      let env =
+        {env with inst = (* add all the terms of the goal to matching env *)
+                    Inst.add_terms env.inst
+                      (E.max_ground_terms_rec_of_form gf.E.ff) gf}
+      in
+      if Options.get_split_vc () <> 0 then
+        begin
+          Format.eprintf "[debug] split-vc ON@.";
+          Format.eprintf "[debug] the clauses of each level are encoded as a \
+                          number ranging from 0 to 2^(number of clauses). Each \
+                          number in a path encodes in binary whether left-hand \
+                          sides (bit = 0) or right-hand-sides (bit = 1) of clauses \
+                          are selected\n@.";
+          let env =
+            if abs (Options.get_split_vc ()) > 1 then
+              let () = Format.eprintf "pre-instantiate before split@\n" in
+              pre_instantiate @@ pre_instantiate @@ pre_instantiate env
+            else
+              env
+          in
+          split env []
+        end
+      else begin
+        Format.eprintf "split-vc OFF@.";
+        unsat env
       end
-    else begin
-      Format.eprintf "split-vc OFF@.";
-      unsat env
-    end
+    with
+    | IUnsat (dep, classes) ->
+      Debug.bottom classes;
+      Debug.unsat ();
+      get_all_models_answer ();
+      terminated_normally := true;
+      assert (Ex.has_no_bj dep);
+      dep
+    | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
+
 
   let assume env fg dep =
     try

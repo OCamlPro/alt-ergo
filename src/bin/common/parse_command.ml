@@ -1016,9 +1016,11 @@ let parse_sat_opt =
   let split_vc =
     let doc =
       "Split disjunctions in hypotheses and conclusion before exploring each \
-       branch. Experimenta, only available in 'Tableaux' SAT solver." in
-    Arg.(value & flag & info ["split-vc"] ~docs ~doc) in
-
+       branch. Experimental, only available in 'Tableaux' SAT solver. 0 = \
+       disabled, 1 = enabled, 2 = enabled + pre-instantiation before split, \
+       negative = output non-closed branches." in
+    Arg.(value & opt int (get_split_vc ()) &
+         info ["split-vc"] ~docs ~doc) in
 
   let no_decisions =
     let doc = "Disable decisions at the SAT level." in

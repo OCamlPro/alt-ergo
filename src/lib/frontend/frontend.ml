@@ -280,7 +280,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         (Some time) (Some steps)
 
   let print_status status steps =
-    if Options.get_split_vc() then
+    if Options.get_split_vc() <> 0 then
       Format.printf "[print final status muted] option split-vc is set@."
     else
       print_status_main status steps
