@@ -1570,6 +1570,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if rnd > max_rnd then env
     else
       let nb1 = env.nb_related_to_goal in
+      let nc1 = env.nb_related_to_hypo in
       Printer.print_dbg
         ~flushed:false ~debug:(get_verbose () || get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"backward_instantiation_rec"
@@ -1586,15 +1587,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env, new_i1 = inst_and_assume mconf env inst_predicates env.inst in
       let env, new_i2 = inst_and_assume mconf env inst_lemmas env.inst in
       let nb2 = env.nb_related_to_goal in
+      let nc2 = env.nb_related_to_hypo in
       Printer.print_dbg
         ~header:false ~debug:(get_verbose () || get_debug_sat ())
         ~module_name:"Fun_sat" ~function_name:"backward_instantiation_rec"
         "backward: %d goal-related hyps (+%d)"
         nb2 (nb2-nb1);
-
-      if (new_i1 || new_i2) && nb1 < nb2 then
+      if not new_i1 && not new_i2 then
+        env
+      else if nb2 > nb1 then
         backward_instantiation_rec env (rnd+1) max_rnd
-      else env
+      else if nc2 > nc1 then
+        backward_instantiation_rec env (rnd+1) (max_rnd / 2)
+      else
+        env
 
 
   let backward_instantiation env deepest_term =
@@ -1613,7 +1619,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       (*Options.set_normalize_instances true;*)
       Options.set_max_split Numbers.Q.zero;
 
-      let max_rnd = 2 * deepest_term in
+      let max_rnd = 3 * deepest_term in
       let modified_env = backward_instantiation_rec env 1 max_rnd in
 
       Options.set_no_ematching no_ematching;
@@ -1675,7 +1681,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         if Options.get_no_backward () then env
         else backward_instantiation env max_t
       in
-
       let env = new_inst_level env in
 
       let env, _ = syntactic_th_inst env env.inst ~rm_clauses:true in

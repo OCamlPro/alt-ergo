@@ -1401,6 +1401,10 @@ let rec resolution_of_disj is_back f binders free_vty acc =
   | Clause(g,f, true) ->
     if is_back then resolution_of_disj is_back f binders free_vty acc
     else resolution_of_disj is_back g binders free_vty acc
+  | Iff(f1, f2) ->
+    resolution_of_disj is_back f2 binders free_vty @@
+    resolution_of_disj is_back f1 binders free_vty acc
+
   | _ -> acc
 
 let rec resolution_of_toplevel_conj is_back f binders free_vty acc =
@@ -1440,28 +1444,43 @@ let cand_is_more_general cand other =
   try matches cand other; true
   with Exit -> false
 
-let resolution_triggers ~is_back { main = f; binders; _ } =
+let resolution_triggers ~is_back { kind; main = f; binders; _ } =
   if Options.get_no_backward () then []
   else
-    let free_vty = f.vty in
-    let cand =
-      resolution_of_toplevel_conj is_back f binders free_vty TSet.empty in
-    let others =
-      TSet.filter (fun t -> not (TSet.mem t cand))
-        (sub_terms_of_formula f)
-    in
-    TSet.fold
-      (fun t acc ->
-         if TSet.exists (cand_is_more_general t) others then acc
-         else
-           { content = [t];
-             hyp = [];
-             semantic = [];
-             t_depth = t.depth;
-             from_user = false;
-             guard = None
-           } :: acc
-      )cand []
+    match kind with
+    | Dpredicate t | Dfunction t ->
+      if type_info t != Ty.Tbool then []
+      else
+        [ { content = [t];
+            hyp = [];
+            semantic = [];
+            t_depth = t.depth;
+            from_user = false;
+            guard = None
+          } ]
+    | Dtheory -> []
+    | Daxiom
+    | Dgoal ->
+      let free_vty = f.vty in
+      let cand =
+        resolution_of_toplevel_conj is_back f binders free_vty TSet.empty in
+      let others =
+        TSet.filter (fun t -> not (TSet.mem t cand)) (sub_terms_of_formula f)
+      in
+      TSet.fold
+        (fun t acc ->
+           if type_info t != Ty.Tbool ||
+              TSet.exists (cand_is_more_general t) others then
+             acc
+           else
+             { content = [t];
+               hyp = [];
+               semantic = [];
+               t_depth = t.depth;
+               from_user = false;
+               guard = None
+             } :: acc
+        )cand []
 
 let free_type_vars_as_types e =
   Ty.Svty.fold
