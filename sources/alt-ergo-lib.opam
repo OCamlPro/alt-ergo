@@ -20,6 +20,7 @@ depends: [
 ]
 conflicts: [
   "alt-ergo-free"
+  "alt-ergo-lib-free"
 ]
 homepage: "http://alt-ergo.ocamlpro.com/"
 dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"
