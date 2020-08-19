@@ -21,7 +21,7 @@ addons:
       - libgtk2.0-dev
       - libexpat1-dev
       - python
-      - py-pip
+      - python-pip
 
 # Global environment variables
 env:
