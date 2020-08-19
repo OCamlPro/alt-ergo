@@ -2,7 +2,7 @@
 
 ## Built-in types
 
-Alt-Ergo has support for the following built-in types.
+Alt-Ergo's native language includes the following built-in types.
 Creation and manipulation of values having those types are covered in [built-in operators](#built-in-operators).
 
 ### Boolean types
@@ -17,21 +17,21 @@ Creation and manipulation of values having those types are covered in [built-in 
  * `real` for reals. This type actually represents the smallest extension of the rationals which is algebraically closed and closed by exponentiation. Rationals with arbitrary precision are used under the hood. 
 
 ### Unit type
- `unit` is Alt-Ergo's [unit type](https://en.wikipedia.org/wiki/Unit_type).
+ `unit` is Alt-Ergo native language's [unit type](https://en.wikipedia.org/wiki/Unit_type).
 
 ### Bitvectors
  `bitv` are fixed-size binary words of arbitrary length.
  There exists a bitvector type `bitv[n]` for each non-zero positive integer `n`. For example, `bitv[8]` is a bitvector of length `8`.
 
 ### Type variables
- Alt-Ergo's type system supports prenex polymorphism. This allows efficient reasoning about generic data structure.
+ Alt-Ergo's native language's type system supports prenex polymorphism. This allows efficient reasoning about generic data structure.
  Type variables can be created implicitly, and are implicitly universally quantified in all formulas. Any formula which requires a type can accept a type variable.
  Type variable may be used to parametrize datatypes, as we will see when we will create new types, or in the following example of `farray`.
  
  Type variables are indicated by an apostrophe `'`. For example, `'a` is a type variable.
 
 ### Polymorphic functional arrays
- Alt-Ergo supports functional polymorphic arrays, represented by the `farray` type, and has a built-in theory to reason about them.
+ Alt-Ergo's native language includes functional polymorphic arrays, represented by the `farray` type, and has a built-in theory to reason about them.
 
  The `farray` is parametrized by two types: the type of their indexes (default is `int`) and the type of their values (no default).
  Array can be accessed using any index of valid type.
@@ -55,7 +55,7 @@ For all those operators, `bool` and `prop` are fully interchangeable.
 
 #### The `bool`/`prop` conflict
 
-Prior to Alt-Ergo 2.3.0, Alt-Ergo handled differently boolean variables `bool` and propositional variables `prop`.
+Prior to Alt-Ergo 2.3.0, Alt-Ergo's native language handled differently boolean variables `bool` and propositional variables `prop`.
 The two keywords still exist in Alt-Ergo 2.3.0, but those two types have been made fully compatible: any function or operator taking a `bool` or a `prop` as an argument accepts both.
 
 The historical separation comes from Alt-Ergo origins in the Coq ecosystem: in Coq, `prop` is much richer than `bool`. 

@@ -50,8 +50,6 @@ More information on this strategy and the language extension can be found in [th
 
 ### `theory [...] extends [...] = [...] end`
 
-### `axiom`
-
 ### `case_split`
 
 ### Semantic triggers
@@ -71,4 +69,4 @@ They correspond to the following constructs.
 <maps_to_trigger>     ::= <alias_id> '|->' <expr>
 ```
 
-[TODO: make complete explanation once this can be tester]
+[TODO: complete this explanation]

@@ -87,14 +87,16 @@ They hold several fields, which be accessed.
 (* Declaration of records *)
 <record_type_declaration>      ::= 'type' ( <type_variable> | <type_variable_list_sep_comma> )? <type_id> '=' <record_type>
 <type_variable_list_sep_comma> ::= '(' <type_variable> ( ';' <type_variable> )* ')'
-<record_type>                  ::= '{' <field> ( ',' <field> )* '}'
-<field>                        ::= <field_id> ':' <field_type>
+<record_type>                  ::= '{' <field_def> ( ',' <field_def> )* '}'
+<field_def>                    ::= <field_id> ':' <field_type>
 
 (* Access *)
 <record_access_expr>           ::= <record_id> '.' <field_id>
-```
 
-[TODO: check if they can be created inline]
+(* Inline record declaration *)
+<record_value>                 ::= '{' <field_value> ( ',' <field_value> )* '}'
+<field_value>                    ::= <field_id> '=' <value>
+```
 
 ### Examples
 ```
@@ -185,6 +187,8 @@ It is possible to create enumerations, and to use records in order to construct 
 <record_type>                  ::= '{' <field> ( ',' <field> )* '}'
 <field>                        ::= <field_id> ':' <field_type>
 
-(* Usage of ADT *)
-[TODO]
+(* ADT usage *)
+(* TODO *)
 ``` 
+
+Values of ADT can be created through the ADT's constructors, with the same syntax as functions.

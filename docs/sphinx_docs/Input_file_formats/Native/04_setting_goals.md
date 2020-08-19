@@ -41,7 +41,8 @@ goal g:
 In other word, `cut` and `check` allow to test if intermediate goals can be proven, without having any influence whatsoever on the behaviour of Alt-Ergo on other goals.
 
 `cut` and `check` seem to not be supported by Alt-Ergo 2.3.0 (but those keywords are still reserved).
-[TODO: check if this is entirely the case]
+
+[WIP: complete]
 
 #### Syntax
 ```

@@ -13,7 +13,7 @@ The `logic` keyword allows the user to define new uninterpreted (typed) symbols.
 Those symbols may be used to represent simple variables, uninterpreted functions, data structures, ...
 Constraints on those symbols may be added via the `axiom` keyword.
 
-Please refer to section [Types](02_types/index) for more information on the types of symbols which can be created.
+Please refer to section [Types](02_types/index) for more information on the types of symbols that can be created.
 
 #### Syntax
 ```
@@ -77,7 +77,7 @@ axiom commutative: forall x,y:int. f(x,y) = f(y,x)
 ```
 However, handling universally-quantified axioms is challenging for this kind of solvers. It is necessary to create 'instances' of those axioms in order to use them, and the number of instances can quickly become overwhelming.
 
-In Alt-Ergo, one can simply write
+In Alt-Ergo's native language, one can simply write
 ```
 logic ac f: int, int -> int
 ```

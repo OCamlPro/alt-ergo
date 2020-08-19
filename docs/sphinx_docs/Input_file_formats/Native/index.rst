@@ -1,9 +1,7 @@
 
  
-Documentation
-=============
-
-[TODO: intro]
+Alt-Ergo's native language
+==========================
 
 .. toctree::
    :maxdepth: 2
@@ -16,4 +14,4 @@ Documentation
     Theories <05_theories>
     Control Flow <06_control_flow>
     Syntax of declarations and expressions <07_syntax_of_declarations_and_expressions>
-    TODO and issues <TODO_and_issues>
+    TODOs <TODOs>

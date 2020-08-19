@@ -2,16 +2,14 @@
 
 # Control flow
 
-[TODO: intro + all]
-
 ## `let [...] in`
 
-Like in OCaml, named local expressions can be defined using the standard phrase `let name = expression in [...]`.
+Like in OCaml, let expressions are available. They allow for named local expressions, which are written `let name = expression in [...]`.
 Name defined like this only have local scope.
 
 #### Syntax
 ```
-<expr_with_local_expr> ::= 'let' <let_binders> 'in' <expr>
+<let_expression>       ::= 'let' <let_binders> 'in' <expr>
 <let_binders>          ::= <id> '=' <expr> ( ',' <id> '=' <expr> )*
 ```
 
@@ -24,7 +22,10 @@ function average(a:real, b:real):real =
 
 ## `match [...] with`
 
-Pattern matching, a [Really Cool Feature](https://ocaml.org/learn/tutorials/data_types_and_matching.html) present in most functional languages, is available in Alt-Ergo as well.
+Pattern matching, a [Really Cool Feature](https://ocaml.org/learn/tutorials/data_types_and_matching.html) present in most functional languages, is available in Alt-Ergo's native language as well.
+
+Warning: the only patterns that can be matched are constructors of algebraic datatypes.
+Moreover, constructors can't be nested in a pattern.
 
 #### Syntax
 ```
@@ -48,10 +49,9 @@ function height(t: 'a tree):int =
     end
 ```
 
-
 ## `if [...] then [...] else`
 
-The simple construct `if then else` for conditional expressions if available in Alt-Ergo.
+The simple construct `if then else` for conditional expressions is available in Alt-Ergo's native language.
 
 #### Syntax
 ```
