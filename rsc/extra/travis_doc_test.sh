@@ -20,7 +20,7 @@ echo "Calling configure script..."
 echo "Building documentation..."
 make doc | tee $LOGFILE
 
-# NOTE: currently dune has no option to fail on odoc warnings,
+# NOTE: currently dune has no option to fail on odoc or sphinx warnings,
 #       so we use a dirty grep to look for errors in the log
 echo "Checking for warnings or errors during documentation building..."
 ! grep File $LOGFILE

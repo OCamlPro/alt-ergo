@@ -20,6 +20,8 @@ addons:
       - zlib1g-dev
       - libgtk2.0-dev
       - libexpat1-dev
+      - python
+      - py-pip
 
 # Global environment variables
 env:
@@ -40,10 +42,15 @@ before_install:
   - eval `opam config env`
   # Install odoc & ocp-indent
   - opam install odoc ocp-indent.1.8.1
+  # Install sphinx libs
+  - pip install --user sphinx
+  - pip install --user recommonmark
+  - pip install --user sphinx_rtd_theme
+  - pip install --user sphinx-markdown-tables
   # Set the verbose option *after* compiling the compiler
   # and installing odoc, else the log oveflows
   - export OPAMVERBOSE=1
-
+  
 # Install dependencies
 install:
   - opam pin add --no-action .

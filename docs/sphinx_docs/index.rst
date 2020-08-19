@@ -14,3 +14,9 @@ Welcome to Alt-Ergo's documentation!
    API documentation         <API/index.md>
    Developer's documentation <Dev/index.md>
    About                     <About/index.md>
+
+
+`Legacy odoc directory`_
+===========================
+
+.. _Legacy odoc directory: /odoc/index.html
