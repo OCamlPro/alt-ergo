@@ -658,16 +658,16 @@ module Make (X : Arg) : S with type theory = X.t = struct
       (fun lem (age, dep) env ->
          match E.form_view lem with
          | E.Lemma ({ E.main = f; name; _ } as q) ->
-           let tgs =
+           let tgs, kind =
              match mconf.Util.backward with
-             | Util.Normal   -> triggers_of q mconf
-             | Util.Backward -> backward_triggers q
-             | Util.Forward  -> forward_triggers q
+             | Util.Normal   -> triggers_of q mconf, "Normal"
+             | Util.Backward -> backward_triggers q, "Backward"
+             | Util.Forward  -> forward_triggers q, "Forward"
            in
            Printer.print_dbg ~debug:(Options.get_debug_triggers ())
              ~module_name:"Matching" ~function_name:"add_triggers"
-             "@[<v 2>triggers of %s are:@ %a@]"
-             name E.print_triggers tgs;
+             "@[<v 2>%s triggers of %s are:@ %a@]"
+             kind name E.print_triggers tgs;
            List.fold_left
              (fun env tr ->
                 let info =
