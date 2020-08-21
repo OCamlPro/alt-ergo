@@ -367,8 +367,8 @@ public-release:
 
 # Cleanup generated files
 generated-clean:
-	$(SPHINXBUILD) -M clean "$(SPHINX_DOC_DIR)" "$(SPHINX_BUILD_DIR)" \
-	&& rm -rf $(GENERATED)
+	$(SPHINXBUILD) -M clean "$(SPHINX_DOC_DIR)" "$(SPHINX_BUILD_DIR)"
+	rm -rf $(GENERATED)
 
 # Clean build artifacts
 dune-clean:

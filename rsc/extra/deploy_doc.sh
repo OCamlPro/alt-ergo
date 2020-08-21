@@ -1,4 +1,4 @@
-#!/bin/bash -ve
+#!/bin/sh -e
 
 # === deploy_doc ===
 #
@@ -8,9 +8,10 @@
 # files. Travis will automatically commit the changes
 # and push it to the repo
 
-# Legacy ODOC directory hidden in a ODOC_DIR folder
 VERSION=$1
-OLD_ODOC_DIR := "odoc"
+ODOC_DIR="odoc"
+ODOC_BUILD_DIR="_build/default/_doc/_html/"
+SPHINX_BUILD_DIR="_build/sphinx_docs/html"
 
 # Cd to the extra dir regardless of where the script was called
 git_repo=`git rev-parse --show-toplevel`
@@ -20,21 +21,17 @@ cd $git_repo
 # has correctly been built.
 make doc
 
-# Generate version index page
-(cd rsc/extra && asciidoc index.adoc)
-
 # Checkout gh-pages
 git fetch origin +gh-pages:gh-pages
 git checkout gh-pages
 
 # Create necessary directories if they do not exists
-mkdir -p $(OLD_ODOC_DIR)
-mkdir -p $(OLD_ODOC_DIR)/$VERSION
+mkdir -p $ODOC_DIR
+mkdir -p $ODOC_DIR/$VERSION
 
 # Copy doc to the right locations
-cp -r _build/sphinx_docs_html ./
-cp rsc/extra/index.html ./$(OLD_ODOC_DIR)/
-cp -r _build/default/_doc/_html/* ./$(OLD_ODOC_DIR)/$VERSION/
+cp -r $ODOC_BUILD_DIR/* ./$ODOC_DIR/$VERSION/
+cp -r $SPHINX_BUILD_DIR/* ./
 
 # Clean build artifacts
 rm -rf _build
