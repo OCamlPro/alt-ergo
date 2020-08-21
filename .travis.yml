@@ -50,7 +50,6 @@ before_install:
   # Set the verbose option *after* compiling the compiler
   # and installing odoc, else the log oveflows
   - export OPAMVERBOSE=1
-  
 # Install dependencies
 install:
   - opam pin add --no-action .
