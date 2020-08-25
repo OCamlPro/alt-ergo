@@ -1174,7 +1174,7 @@ module SMT2LikeModelOutput = struct
     let output_constants_why3_counterexample cprofs fprofs =
       (* Models.Sorts.iter (fun f (nbargs, t) ->
        *     Format.eprintf "Sort: %s(%d): %s@." f nbargs t) !Models.h; *)
-      Printer.print_fmt ~flushed:false (get_fmt_mdl()) "@[<v 2>(model@,";
+      Printer.print_fmt ~flushed:false (get_fmt_mdl()) "@[<v 0>(model@,";
       let qtmks = Profile.fold
           (fun (f, _xs_ty, ty) st acc ->
              Profile.V.fold
@@ -1336,7 +1336,7 @@ let output_concrete_model ({ make; _ } as env) =
     in
     if i > 0 then
       if Options.get_why3_counterexample() then begin
-        Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>unknown@ ";
+        Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 0>unknown@ ";
         SMT2LikeModelOutput.output_constants_why3_counterexample
           constants functions;
         Printer.print_fmt (get_fmt_mdl ()) "@])";
