@@ -11,7 +11,7 @@
 VERSION=$1
 ODOC_DIR="odoc"
 ODOC_BUILD_DIR="_build/default/_doc/_html/"
-SPHINX_BUILD_DIR="_build/sphinx_docs/html"
+SPHINX_BUILD_DIR="_build/sphinx_docs/"
 
 # Cd to the extra dir regardless of where the script was called
 git_repo=`git rev-parse --show-toplevel`
