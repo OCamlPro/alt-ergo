@@ -1105,6 +1105,8 @@ module Profile = struct
 
   let iter = P.iter
 
+  let fold = P.fold
+
   let empty = P.empty
 
   let is_empty = P.is_empty
@@ -1119,6 +1121,13 @@ module SMT2LikeModelOutput = struct
 
   let x_print fmt (_ , ppr) = fprintf fmt "%s" ppr
 
+  let x_print_why3 fmt (_ , ppr) =
+    fprintf fmt "%s"
+      (match ppr with
+       | "True" -> "true"
+       | "False" -> "false"
+       | _ -> ppr)
+
   let print_args fmt l =
     match l with
     | [] -> assert false
@@ -1129,70 +1138,115 @@ module SMT2LikeModelOutput = struct
       List.iter (fun (_, e) -> fprintf fmt " %a" x_print e) l
 
   let print_symb ty fmt f =
-    match f, ty with
-    | Sy.Op Sy.Record, Ty.Trecord { Ty.name ; _ } ->
-      fprintf fmt "%a__%s" Sy.print f (Hstring.view name)
+      match f, ty with
+      | Sy.Op Sy.Record, Ty.Trecord { Ty.name ; _ } ->
+        fprintf fmt "%a__%s" Sy.print f (Hstring.view name)
 
-    | _ -> Sy.print fmt f
+      | _ -> Sy.print fmt f
 
-  let output_constants_model cprofs =
-    (*printf "; constants:@.";*)
-    Profile.iter
-      (fun (f, _xs_ty, ty) st ->
-         match Profile.V.elements st with
-         | [[], rep] ->
-           (*printf "  (%a %a)  ; %a@."
-             (print_symb ty) f x_print rep Ty.print ty*)
-           Printer.print_fmt ~flushed:false (get_fmt_mdl ())
-             "(%a %a)@ " (print_symb ty) f x_print rep
-         | _ -> assert false
-      )cprofs
-
-  let output_functions_model fprofs =
-    if not (Profile.is_empty fprofs) then begin
-      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
-      (*printf "@.; functions:@.";*)
+    let output_constants_model cprofs =
+      (*printf "; constants:@.";*)
       Profile.iter
         (fun (f, _xs_ty, ty) st ->
-           (*printf "  ; fun %a : %a -> %a@."
-             (print_symb ty) f Ty.print_list xs_ty Ty.print ty;*)
-           Profile.V.iter
-             (fun (xs, rep) ->
-                Printer.print_fmt ~flushed:false (get_fmt_mdl ())
-                  "((%a %a) %a)@ "
-                  (print_symb ty) f print_args xs x_print rep;
-                List.iter (fun (_,x) -> assert_has_depth_one x) xs;
-             )st;
-           Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@]@ ";
-        ) fprofs;
-      Printer.print_fmt (get_fmt_mdl ()) "@]";
-    end
+           match Profile.V.elements st with
+           | [[], rep] ->
+             (*printf "  (%a %a)  ; %a@."
+               (print_symb ty) f x_print rep Ty.print ty*)
+             Printer.print_fmt ~flushed:false (get_fmt_mdl ())
+               "(s(%d): %a, rep: %a)@ " (List.length _xs_ty) (print_symb ty) f x_print rep
+           | _ -> assert false
+        ) cprofs
 
-  let output_arrays_model arrays =
-    if not (Profile.is_empty arrays) then begin
-      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
-      (*printf "; arrays:@.";*)
+    let pp_type fmt t =
+      let open Ty in
+      Format.fprintf fmt "%s" (match t with
+          | Tint -> "Int"
+          | Treal -> "Real"
+          | Tbool -> "Bool"
+          | Text (_, t) -> Hstring.view t
+          | _ -> asprintf "%a" print t
+        )
+
+    let get_qtmk f qtmks =
+      try Models.Sorts.find f qtmks
+      with Not_found -> f
+
+    let output_constants_why3_counterexample cprofs fprofs =
+      (* Models.Sorts.iter (fun f (nbargs, t) ->
+       *     Format.eprintf "Sort: %s(%d): %s@." f nbargs t) !Models.h; *)
+      Printer.print_fmt ~flushed:false (get_fmt_mdl()) "@[<v 2>(model@,";
+      let qtmks = Profile.fold
+          (fun (f, _xs_ty, ty) st acc ->
+             Profile.V.fold
+               (fun (xs, rep) acc ->
+                  let s = asprintf "%a" (print_symb ty) f in
+                  let rep = asprintf "%a" x_print rep in
+                  match Models.get_type s, Models.get_type rep with
+                  | Some ts, Some tr when String.equal ts tr ->
+                    Models.Sorts.add
+                      rep (Format.asprintf "(%s %a)" s print_args xs)
+                      acc
+                  | _ -> acc;
+               ) st acc;
+          ) fprofs Models.Sorts.empty in
       Profile.iter
-        (fun (f, xs_ty, ty) st ->
-           match xs_ty with
-             [_] ->
-             (*printf "  ; array %a : %a -> %a@."
-               (print_symb ty) f Ty.print tyi Ty.print ty;*)
+        (fun (f, _xs_ty, ty) st ->
+           match Profile.V.elements st with
+           | [[], rep] ->
+             let rep = Format.asprintf "%a" x_print_why3 rep in
+             Printer.print_fmt ~flushed:false (get_fmt_mdl ())
+               "(define-fun %a () %a %s)@ "
+               (print_symb ty) f pp_type ty (get_qtmk rep qtmks)
+           | _ -> assert false
+        ) cprofs
+
+    let output_functions_model fprofs =
+      if not (Profile.is_empty fprofs) then begin
+        Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
+        (*printf "@.; functions:@.";*)
+        Profile.iter
+          (fun (f, _xs_ty, ty) st ->
+             (*printf "  ; fun %a : %a -> %a@."
+               (print_symb ty) f Ty.print_list xs_ty Ty.print ty;*)
+             Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
              Profile.V.iter
                (fun (xs, rep) ->
                   Printer.print_fmt ~flushed:false (get_fmt_mdl ())
-                    "((%a %a) %a)@ "
+                    "((s: %a, args: %a) rep: %a)@ "
                     (print_symb ty) f print_args xs x_print rep;
                   List.iter (fun (_,x) -> assert_has_depth_one x) xs;
                )st;
              Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@]@ ";
-           | _ -> assert false
+          ) fprofs;
+        Printer.print_fmt (get_fmt_mdl ()) "@]";
+      end
 
-        ) arrays;
-      Printer.print_fmt (get_fmt_mdl ()) "@]";
-    end
+    let output_arrays_model arrays =
+      if not (Profile.is_empty arrays) then begin
+        Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
+        (*printf "; arrays:@.";*)
+        Profile.iter
+          (fun (f, xs_ty, ty) st ->
+             match xs_ty with
+               [_] ->
+               (*printf "  ; array %a : %a -> %a@."
+                 (print_symb ty) f Ty.print tyi Ty.print ty;*)
+               Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
+               Profile.V.iter
+                 (fun (xs, rep) ->
+                    Printer.print_fmt ~flushed:false (get_fmt_mdl ())
+                      "((%a %a) %a)@ "
+                      (print_symb ty) f print_args xs x_print rep;
+                    List.iter (fun (_,x) -> assert_has_depth_one x) xs;
+                 )st;
+               Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@]@ ";
+             | _ -> assert false
 
-end
+          ) arrays;
+        Printer.print_fmt (get_fmt_mdl ()) "@]";
+      end
+
+  end
 (* of module SMT2LikeModelOutput *)
 
 let is_a_good_model_value (x, _) =
@@ -1280,10 +1334,25 @@ let output_concrete_model ({ make; _ } as env) =
 
         ) make (Profile.empty, Profile.empty, Profile.empty, ME.empty)
     in
-    if i > 0 then begin
-      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "(@ ";
-      SMT2LikeModelOutput.output_constants_model constants;
-      SMT2LikeModelOutput.output_functions_model functions;
-      SMT2LikeModelOutput.output_arrays_model arrays;
-      Printer.print_fmt (get_fmt_mdl ()) ")";
+    if i > 0 then
+      if Options.get_why3_counterexample() then begin
+        Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>unknown@ ";
+        SMT2LikeModelOutput.output_constants_why3_counterexample
+          constants functions;
+        Printer.print_fmt (get_fmt_mdl ()) "@])";
+        (* Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>ME@ ";
+         * ME.iter (fun t r ->
+         *     Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "%a -> %a@ "
+         *       Expr.print t X.print r) make;
+         * Printer.print_fmt (get_fmt_mdl ()) "@])"; *)
+      end
+      else begin
+        Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>(@ ";
+        Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "Constants@ ";
+        SMT2LikeModelOutput.output_constants_model constants;
+        Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "Functions@ ";
+        SMT2LikeModelOutput.output_functions_model functions;
+        Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "Arrays@ ";
+        SMT2LikeModelOutput.output_arrays_model arrays;
+        Printer.print_fmt (get_fmt_mdl ()) "@])";
     end

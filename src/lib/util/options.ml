@@ -294,12 +294,14 @@ let model = ref MNone
 let output_format = ref Native
 let infer_output_format = ref true
 let unsat_core = ref false
+let why3_counterexample = ref false
 
 let set_interpretation b = interpretation := b
 let set_model b = model := b
 let set_output_format b = output_format := b
 let set_infer_output_format f = infer_output_format := f = None
 let set_unsat_core b = unsat_core := b
+let set_why3_counterexample b = why3_counterexample := b
 
 let get_interpretation () = !interpretation
 let get_model () = !model = MDefault || !model = MComplete
@@ -308,6 +310,7 @@ let get_all_models () = !model = MAll
 let get_output_format () = !output_format
 let get_infer_output_format () = !infer_output_format
 let get_unsat_core () = !unsat_core || !save_used_context || !debug_unsat_core
+let get_why3_counterexample () = !why3_counterexample
 
 (** Profiling options *)
 
@@ -424,7 +427,7 @@ let get_tableaux_cdcl () = !tableaux_cdcl
 let disable_ites = ref false
 let inline_lets = ref false
 let rewriting = ref false
-let term_like_pp = ref false
+let term_like_pp = ref true
 
 let set_disable_ites b = disable_ites := b
 let set_inline_lets b = inline_lets := b

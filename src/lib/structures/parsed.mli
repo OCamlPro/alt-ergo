@@ -52,6 +52,9 @@ type ppure_type =
   | PPTvarid of string * Loc.t
   | PPTexternal of ppure_type list * string * Loc.t
 
+val pp_ppure_type : Format.formatter -> ppure_type -> unit
+val pp_ppure_type_list : Format.formatter -> ppure_type list -> unit
+
 type pattern =
   { pat_loc : Loc.t; pat_desc : string * string list }
 
@@ -97,6 +100,7 @@ and pp_desc =
   | PPproject of bool * lexpr * string
 
 val pp_lexpr : Format.formatter -> lexpr -> unit
+val pp_lexpr_list : Format.formatter -> lexpr list -> unit
 
 (* Declarations. *)
 
