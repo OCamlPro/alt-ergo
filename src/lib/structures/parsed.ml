@@ -93,6 +93,38 @@ type ppure_type =
   | PPTvarid of string * Loc.t
   | PPTexternal of ppure_type list * string * Loc.t
 
+let pp_sep_comma fmt () = Format.fprintf fmt ","
+
+let pp_sep_space fmt () = Format.fprintf fmt " "
+
+let rec pp_ppure_type fmt t =
+  Format.fprintf fmt "%s"
+    (match t with
+     | PPTint -> "int"
+     | PPTbool -> "bool"
+     | PPTreal -> "real"
+     | PPTunit -> "unit"
+     | PPTbitv i -> Format.asprintf "bitv[%d]" i
+     | PPTvarid (s, _) -> Format.asprintf "varid[%s]" s
+     | PPTexternal (ppl, s, _) ->
+       Format.asprintf "%a %s" pp_ppure_type_list ppl s
+    )
+
+and pp_ppure_type_list fmt tl =
+  Format.fprintf fmt "@[<h>%a@]"
+    (Format.pp_print_list ~pp_sep:pp_sep_comma (fun fmt t ->
+         Format.fprintf fmt "%a" pp_ppure_type t)) tl
+
+and pp_str_ppure_type_list fmt tl =
+  Format.fprintf fmt "@[<h>%a@]"
+    (Format.pp_print_list ~pp_sep:pp_sep_comma (fun fmt (s, t) ->
+         Format.fprintf fmt "(%s, %a)" s pp_ppure_type t)) tl
+
+and pp_str_str_ppure_type_list fmt tl =
+  Format.fprintf fmt "@[<h>%a@]"
+    (Format.pp_print_list ~pp_sep:pp_sep_comma (fun fmt (s1, s2, t) ->
+         Format.fprintf fmt "(%s, %s, %a)" s1 s2 pp_ppure_type t)) tl
+
 type pattern =
   { pat_loc : Loc.t; pat_desc : string * string list }
 
@@ -143,7 +175,7 @@ let rec pp_lexpr fmt {pp_desc; _} =
   | PPvar s ->
     fprintf fmt "%s" s
   | PPapp (s, lel) ->
-    fprintf fmt "%s %a" s (pp_print_list pp_lexpr) lel
+    fprintf fmt "PPapp(%s, %a)" s (pp_print_list ~pp_sep:pp_sep_space pp_lexpr) lel
   | PPmapsTo (s, le) ->
     fprintf fmt "[%s -> %a]" s pp_lexpr le
   | PPinInterval (le, b1, le1, le2, b2) ->
@@ -158,9 +190,9 @@ let rec pp_lexpr fmt {pp_desc; _} =
   | PPconst c->
     fprintf fmt "%a" pp_const c
   | PPinfix (le1, op, le2) ->
-    fprintf fmt "(%a %a %a)" pp_lexpr le1 pp_inf_op op pp_lexpr le2
+    fprintf fmt "inf: (%a %a %a)" pp_lexpr le1 pp_inf_op op pp_lexpr le2
   | PPprefix (op, le) ->
-    fprintf fmt "%a %a" pp_pre_op op pp_lexpr le
+    fprintf fmt "pre: %a %a" pp_pre_op op pp_lexpr le
   | PPget (arr, ind) ->
     fprintf fmt "%a[%a]" pp_lexpr arr pp_lexpr ind
   | PPset (arr, ind, v) ->
@@ -180,26 +212,35 @@ let rec pp_lexpr fmt {pp_desc; _} =
   | PPif (cond, bthen, belse) ->
     fprintf fmt "if %a then %a else %a"
       pp_lexpr cond pp_lexpr bthen pp_lexpr belse
-  | _ -> assert false
   (* Used for an experiment so not complete but will be completed *)
-  (* | PPforall of
-   *     (string * ppure_type) list * (lexpr list * bool) list * lexpr list * lexpr
-   * | PPexists of
-   *     (string * ppure_type) list * (lexpr list * bool) list * lexpr list * lexpr
-   * | PPforall_named of
-   *     (string * string * ppure_type) list * (lexpr list * bool) list *
-   *     lexpr list * lexpr
-   * | PPexists_named of
-   *     (string * string * ppure_type) list * (lexpr list * bool) list *
-   *     lexpr list * lexpr
-   * | PPnamed of string * lexpr
-   * | PPlet of (string * lexpr) list * lexpr
-   * | PPcheck of lexpr
-   * | PPcut of lexpr
-   * | PPcast of lexpr * ppure_type
-   * | PPmatch of lexpr * (pattern * lexpr) list
-   * | PPisConstr of lexpr * string
-   * | PPproject of bool * lexpr * string *)
+  | PPforall (spptl, lebl, lel, le) ->
+    fprintf fmt "forall %a. [%a] [%a] %a"
+      pp_str_ppure_type_list spptl pp_lexprl_bool_list lebl
+      pp_lexpr_list lel pp_lexpr le
+  | PPexists (_spptl, _lebl, _lel, _le) -> fprintf fmt "exists"
+  | PPforall_named (sspptl, lebl, lel, le) ->
+    fprintf fmt "foralln %a. [%a] [%a] %a"
+      pp_str_str_ppure_type_list sspptl pp_lexprl_bool_list lebl
+      pp_lexpr_list lel pp_lexpr le
+  | PPexists_named (_spptl, _lebl, _lel, _le) -> fprintf fmt "existsn"
+  | PPnamed (s, le) -> fprintf fmt "Named: %s %a" s pp_lexpr le
+  | PPlet (_slel, _le) -> fprintf fmt "let"
+  | PPcheck le -> fprintf fmt "check %a" pp_lexpr le
+  | PPcut le -> fprintf fmt "cut %a" pp_lexpr le
+  | PPcast (le, ppt) -> fprintf fmt "cast %a -> %a" pp_lexpr le pp_ppure_type ppt
+  | PPmatch (_le, _plel) -> fprintf fmt "match"
+  | PPisConstr (le, s) -> fprintf fmt "isConstr: %a %s" pp_lexpr le s
+  | PPproject (b, le, s) -> fprintf fmt "project: %b %a %s" b pp_lexpr le s
+
+and pp_lexpr_list fmt tl =
+  Format.fprintf fmt "@[<h>%a@]"
+    (Format.pp_print_list ~pp_sep:pp_sep_comma (fun fmt e ->
+         Format.fprintf fmt "%a" pp_lexpr e)) tl
+
+and pp_lexprl_bool_list fmt tl =
+  Format.fprintf fmt "@[<h>%a@]"
+    (Format.pp_print_list ~pp_sep:pp_sep_comma (fun fmt (lel, b) ->
+         Format.fprintf fmt "(%a, %b)" pp_lexpr_list lel b)) tl
 
 (* Declarations. *)
 

@@ -37,7 +37,7 @@
     Polynome Records Records_rel Satml_frontend_hybrid Satml_frontend Satml
     Sat_solver Sat_solver_sig Sig Sig_rel Theory Uf Use
     ; structures
-    Commands Errors Explanation Fpa_rounding
+    Commands Errors Explanation Fpa_rounding Models
     Parsed Profiling Satml_types Symbols
     Expr Var Ty Typed Xliteral
     ; util

@@ -127,7 +127,6 @@ let main () =
       Printer.print_err "%a" Errors.report e;
       exit 1
   in
-
   let all_used_context = FE.init_all_used_context () in
   if Options.get_timelimit_per_goal() then
     FE.print_status FE.Preprocess 0;
