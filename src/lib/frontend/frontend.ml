@@ -301,13 +301,15 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout (Some d) ->
-      let loc = d.st_loc in
-      Printer.print_status_timeout ~validity_mode
-        (Some loc) (Some time) (Some steps) (get_goal_name d);
+      if not (Options.get_why3_counterexample ()) then
+        let loc = d.st_loc in
+        Printer.print_status_timeout ~validity_mode
+          (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout None ->
-      Printer.print_status_timeout ~validity_mode
-        None (Some time) (Some steps) None;
+      if not (Options.get_why3_counterexample ()) then
+        Printer.print_status_timeout ~validity_mode
+          None (Some time) (Some steps) None;
 
     | Preprocess ->
       Printer.print_status_preprocess ~validity_mode
