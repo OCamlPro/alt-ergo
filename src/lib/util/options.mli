@@ -721,6 +721,8 @@ val get_last_interpretation : unit -> bool
 val get_interpretation_use_underscore : unit -> bool
 (** Default to [false] *)
 
+val get_why3_counterexample : unit -> bool
+
 (** Value specifying the default output format. possible values are
     {ul {- native} {- smtlib2} {- why3}}
     . *)

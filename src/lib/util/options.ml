@@ -304,6 +304,7 @@ let output_format = ref Native
 let model_type = ref Value
 let infer_output_format = ref true
 let unsat_core = ref false
+let why3_counterexample = ref false
 
 let set_interpretation b = interpretation := b
 let set_interpretation_use_underscore b = interpretation_use_underscore := b
@@ -323,6 +324,7 @@ let get_model_type () = !model_type
 let get_model_type_constraints () = !model_type = Constraints
 let get_infer_output_format () = !infer_output_format
 let get_unsat_core () = !unsat_core || !save_used_context || !debug_unsat_core
+let get_why3_counterexample () = !why3_counterexample
 
 (** Profiling options *)
 

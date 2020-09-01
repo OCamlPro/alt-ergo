@@ -1076,11 +1076,11 @@ let output_concrete_model fmt ~prop_model env =
   if Options.get_interpretation () then
     let functions, constants, arrays, _ =
       compute_concrete_model env in
-    Models.output_concrete_model fmt prop_model ~functions ~constants ~arrays
+    Models_output.output_concrete_model fmt prop_model ~functions ~constants
+      ~arrays
 
 let save_cache () =
   LX.save_cache ()
 
 let reinit_cache () =
   LX.reinit_cache ()
-
