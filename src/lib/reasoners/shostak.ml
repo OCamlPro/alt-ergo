@@ -372,7 +372,7 @@ struct
     open Printer
 
     let print fmt r =
-      if get_term_like_pp () then
+      if get_term_like_pp () then begin
         match r.v with
         | X1 t    -> fprintf fmt "%a" X1.print t
         | X2 t    -> fprintf fmt "%a" X2.print t
@@ -383,7 +383,8 @@ struct
         | X7 t    -> fprintf fmt "%a" X7.print t
         | Term t  -> fprintf fmt "%a" Expr.print t
         | Ac t    -> fprintf fmt "%a" AC.print t
-      else
+      end
+      else begin
         match r.v with
         | X1 t    -> fprintf fmt "X1(%s):[%a]" X1.name X1.print t
         | X2 t    -> fprintf fmt "X2(%s):[%a]" X2.name X2.print t
@@ -394,6 +395,7 @@ struct
         | X7 t    -> fprintf fmt "X7(%s):[%a]" X7.name X7.print t
         | Term t  -> fprintf fmt "FT:[%a]" Expr.print t
         | Ac t    -> fprintf fmt "Ac:[%a]" AC.print t
+      end
 
     let print_sbt msg sbs =
       let c = ref 0 in

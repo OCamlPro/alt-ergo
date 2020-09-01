@@ -189,6 +189,8 @@ val set_input_format : input_format -> unit
     A negative value (-1, -2, or -3) will disable interpretation display. *)
 val set_interpretation : int -> unit
 
+val set_why3_counterexample : bool -> unit
+
 (** Set [max_split] accessible with {!val:get_max_split} *)
 val set_max_split : Numbers.Q.t -> unit
 
@@ -197,9 +199,9 @@ val set_max_split : Numbers.Q.t -> unit
     Possible values are :
     {ul {- Default} {- Complete} {- All}}
 *)
-val set_model : model -> unit
+                                    val set_model : model -> unit
 
-(** Set [nb_triggers] accessible with {!val:get_nb_triggers} *)
+                                    (** Set [nb_triggers] accessible with {!val:get_nb_triggers} *)
 val set_nb_triggers : int -> unit
 
 (** Set [no_ac] accessible with {!val:get_no_ac} *)
@@ -692,6 +694,8 @@ val get_all_models : unit -> bool
     generation phase. *)
 val get_interpretation : unit -> int
 (** Default to [0] *)
+
+val get_why3_counterexample : unit -> bool
 
 (** Value specifying the default output format. possible values are
     {ul {- native} {- smtlib2} {- why3}}
