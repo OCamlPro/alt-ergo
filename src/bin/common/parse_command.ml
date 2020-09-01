@@ -283,6 +283,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     `Ok()
 
 let mk_output_opt interpretation model unsat_core output_format
+    why3_counterexample
   =
   set_infer_output_format output_format;
   let output_format = match output_format with
@@ -293,6 +294,7 @@ let mk_output_opt interpretation model unsat_core output_format
   set_model model;
   set_unsat_core unsat_core;
   set_output_format output_format;
+  set_why3_counterexample why3_counterexample;
   `Ok()
 
 let mk_profiling_opt cumulative_time_profiling profiling
@@ -375,10 +377,10 @@ let mk_sat_opt get_bottom_classes disable_flat_formulas_simplification
     `Ok()
   | `Error m -> `Error (false, m)
 
-let mk_term_opt disable_ites inline_lets rewriting term_like_pp
+let mk_term_opt disable_ites inline_lets rewriting no_term_like_pp
   =
   set_rewriting rewriting;
-  set_term_like_pp term_like_pp;
+  set_term_like_pp (not no_term_like_pp);
   set_disable_ites disable_ites;
   set_inline_lets inline_lets;
   `Ok()
@@ -911,6 +913,11 @@ let parse_output_opt =
     let doc = "Experimental support for computing and printing unsat-cores." in
     Arg.(value & flag & info ["u"; "unsat-core"] ~doc) in
 
+  let why3_counterexample =
+    let doc = "Experimental support for computing and printing \
+               counter-examples for Why3." in
+    Arg.(value & flag & info ["w"; "why3-ce"] ~doc) in
+
   let output_format =
     let doc =
       Format.sprintf
@@ -929,7 +936,8 @@ let parse_output_opt =
   in
 
   Term.(ret (const mk_output_opt $
-             interpretation $ model $ unsat_core $ output_format
+             interpretation $ model $ unsat_core $
+             output_format $ why3_counterexample
             ))
 
 let parse_profiling_opt =
@@ -1140,12 +1148,12 @@ let parse_term_opt =
     let doc = "Use rewriting instead of axiomatic approach." in
     Arg.(value & flag & info ["rwt"; "rewriting"] ~docs ~doc) in
 
-  let term_like_pp =
+  let no_term_like_pp =
     let doc = "Output semantic values as terms." in
-    Arg.(value & flag & info ["term-like-pp"] ~docs ~doc) in
+    Arg.(value & flag & info ["no-term-like-pp"] ~docs ~doc) in
 
   Term.(ret (const mk_term_opt $
-             disable_ites $ inline_lets $ rewriting $ term_like_pp
+             disable_ites $ inline_lets $ rewriting $ no_term_like_pp
             ))
 
 let parse_theory_opt =
