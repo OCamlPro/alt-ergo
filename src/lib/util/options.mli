@@ -53,6 +53,10 @@ type input_format =
     {!val:set_output_format} *)
 type output_format = input_format
 
+(** Type used to register the status, if known, of the input problem *)
+type known_status =
+    Status_Sat | Status_Unsat | Status_Unknown | Status_Undefined of string
+
 (** {2 Setter functions} *)
 
 (** {3 Setters for debug flags} *)
@@ -256,6 +260,9 @@ val set_unsat_core : bool -> unit
 
 (** Set [verbose] accessible with {!val:get_verbose} *)
 val set_verbose : bool -> unit
+
+(** Set [status] accessible with {!val:get_status} *)
+val set_status : string -> unit
 
 (** Set [file] accessible with {!val:get_file} *)
 val set_file : string -> unit
@@ -914,6 +921,10 @@ val get_rule : unit -> int
 (** Default to [-1] *)
 
 (** {4 Files} *)
+
+(** Value specifying the status of the file given to Alt-Ergo *)
+val get_status : unit -> known_status
+(** Default to [Status_Unknown] *)
 
 (** [true] if the JavaScript mode is activated *)
 val get_js_mode : unit -> bool

@@ -226,6 +226,22 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       raise e
 
   let print_status status steps =
+    let check_status_consistency s =
+      let known_status = get_status () in
+      match s with
+      | Unsat _ ->
+        if known_status == Status_Sat then begin
+          Printer.print_wrn
+            "This file is known to be Sat but Alt-Ergo return Unsat";
+        end
+      | Sat _ ->
+        if known_status == Status_Unsat then begin
+          Printer.print_wrn
+            "This file is known to be Unsat but Alt-Ergo return Sat";
+        end
+      | Inconsistent _ | Unknown _ | Timeout _ | Preprocess ->
+        assert false
+    in
     let validity_mode =
       match Options.get_output_format () with
       | Smtlib2 -> false
@@ -249,7 +265,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       then
         Printer.print_fmt (Options.get_fmt_usc ())
           "unsat-core:@,%a@."
-          (Ex.print_unsat_core ~tab:true) dep
+          (Ex.print_unsat_core ~tab:true) dep;
+      check_status_consistency status;
 
     | Inconsistent d ->
       let loc = d.st_loc in
@@ -260,6 +277,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       let loc = d.st_loc in
       Printer.print_status_sat ~validity_mode
         (Some loc) (Some time) (Some steps) (get_goal_name d);
+      check_status_consistency status;
 
     | Unknown (d, _) ->
       let loc = d.st_loc in
