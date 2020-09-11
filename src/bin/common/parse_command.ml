@@ -218,7 +218,7 @@ let mk_execution_opt frontend input_format parse_only parsers
   set_preludes preludes;
   `Ok()
 
-let mk_internal_opt disable_weaks enable_assertions gc_policy
+let mk_internal_opt disable_weaks enable_assertions warning_as_error gc_policy
   =
   let gc_policy = match gc_policy with
     | 0 | 1 | 2 -> gc_policy
@@ -228,6 +228,7 @@ let mk_internal_opt disable_weaks enable_assertions gc_policy
   in
   set_disable_weaks disable_weaks;
   set_enable_assertions enable_assertions;
+  set_warning_as_error warning_as_error;
   `Ok(gc_policy)
 
 let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
@@ -779,6 +780,10 @@ let parse_internal_opt =
     let doc = "Enable verification of some heavy invariants." in
     Arg.(value & flag & info ["enable-assertions"] ~docs ~doc) in
 
+  let warning_as_error =
+    let doc = "Enable warning as error" in
+    Arg.(value & flag & info ["warning-as-error"] ~docs ~doc) in
+
   let gc_policy =
     let doc =
       "Set the gc policy allocation. 0 = next-fit policy, 1 = \
@@ -788,7 +793,7 @@ let parse_internal_opt =
     Arg.(value & opt int 0 & info ["gc-policy"] ~docv ~docs ~doc) in
 
   Term.(ret (const mk_internal_opt $
-             disable_weaks $ enable_assertions $ gc_policy
+             disable_weaks $ enable_assertions $ warning_as_error $ gc_policy
             ))
 
 let parse_limit_opt =

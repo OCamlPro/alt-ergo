@@ -315,6 +315,9 @@ val set_disable_weaks : bool -> unit
 (** Set [enable_assertions] accessible with {!val:get_enable_assertions} *)
 val set_enable_assertions : bool -> unit
 
+(** Set [warning_as_error] accessible with {!val:get_warning_as_error} *)
+val set_warning_as_error : bool -> unit
+
 (** Set [timelimit_interpretation] accessible with
     {!val:get_timelimit_interpretation} *)
 val set_timelimit_interpretation : float -> unit
@@ -603,6 +606,10 @@ val get_disable_weaks : unit -> bool
 
 (** [true] if verification of some heavy invariants is enabled. *)
 val get_enable_assertions : unit -> bool
+(** Default to [false] *)
+
+(** [true] if warning are set as error. *)
+val get_warning_as_error : unit -> bool
 (** Default to [false] *)
 
 (** {4 Limit options} *)

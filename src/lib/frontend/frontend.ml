@@ -233,11 +233,13 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         if known_status == Status_Sat then begin
           Printer.print_wrn
             "This file is known to be Sat but Alt-Ergo return Unsat";
+          Errors.warning_as_error ()
         end
       | Sat _ ->
         if known_status == Status_Unsat then begin
           Printer.print_wrn
             "This file is known to be Unsat but Alt-Ergo return Sat";
+          Errors.warning_as_error ()
         end
       | Inconsistent _ | Unknown _ | Timeout _ | Preprocess ->
         assert false
@@ -253,7 +255,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | _ -> None
     in
     let time = Time.value() in
-
     match status with
     | Unsat (d, dep) ->
       let loc = d.st_loc in
