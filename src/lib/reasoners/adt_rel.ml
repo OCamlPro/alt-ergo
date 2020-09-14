@@ -642,10 +642,10 @@ let assume env uf la =
       | Sig_rel.LTerm a -> fprintf fmt "%a" E.print a;
       | _ -> assert false
     in
-    Printer.print_dbg ~debug:(get_debug_adt ())
-      ~module_name:"Adt_rel" ~function_name:"assume"
-      "assume deduced %d equalities@ %a" (List.length eqs)
-      (Printer.pp_list_no_space print) eqs;
+    if get_debug_adt () then
+      Printer.print_dbg ~module_name:"Adt_rel" ~function_name:"assume"
+        "assume deduced %d equalities@ %a" (List.length eqs)
+        (Printer.pp_list_no_space print) eqs;
     env, { Sig_rel.assume = eqs; remove = [] }
 
 

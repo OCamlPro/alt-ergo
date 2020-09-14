@@ -186,27 +186,27 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     open Printer
 
     let print_nb_related env =
-      print_dbg ~debug:(get_verbose ())
-        ~module_name:"Fun_sat" ~function_name:"print_nb_related"
-        "@[<v 0>----------------------------------------------------@ \
-         nb_related_to_both = %d@ \
-         nb_related_to_goal = %d@ \
-         nb_related_to_hypo = %d@ \
-         nb_unrelated       = %d@ \
-         ----------------------------------------------------@]"
-        env.nb_related_to_both
-        env.nb_related_to_goal
-        env.nb_related_to_hypo
-        env.nb_unrelated
+      if get_verbose () then
+        print_dbg ~module_name:"Fun_sat" ~function_name:"print_nb_related"
+          "@[<v 0>----------------------------------------------------@ \
+           nb_related_to_both = %d@ \
+           nb_related_to_goal = %d@ \
+           nb_related_to_hypo = %d@ \
+           nb_unrelated       = %d@ \
+           ----------------------------------------------------@]"
+          env.nb_related_to_both
+          env.nb_related_to_goal
+          env.nb_related_to_hypo
+          env.nb_unrelated
 
     let propagations (env, bcp, tcp, ap_delta, lits) =
-      print_dbg ~debug:(get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"propagations"
-        "|lits| = %d, B = %b, T = %b, \
-         |Delta| = %d, |ap_Delta| = %d"
-        (List.length lits) bcp tcp
-        (List.length env.delta)
-        (List.length ap_delta)
+      if get_debug_sat () then
+        print_dbg ~module_name:"Fun_sat" ~function_name:"propagations"
+          "|lits| = %d, B = %b, T = %b, \
+           |Delta| = %d, |ap_Delta| = %d"
+          (List.length lits) bcp tcp
+          (List.length env.delta)
+          (List.length ap_delta)
 
     let is_it_unsat gf =
       let s =

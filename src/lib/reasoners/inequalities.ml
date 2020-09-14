@@ -207,12 +207,12 @@ module Container : Container_SIG = struct
         MINEQS.iter (fun _ (i , _) -> fprintf fmt "%a  " print_inequation i)
 
       let cross x vars cpos cneg others =
-        print_dbg ~debug:(get_debug_fm ())
-          ~module_name:"Inequalities" ~function_name:"cross"
-          "We cross on %a (%d vars remaining)@ \
-           with:@. cpos = %a@. cneg = %a@. others = %a"
-          X.print x (MX.cardinal vars)
-          list_of_ineqs cpos list_of_ineqs cneg map_of_ineqs others
+        if get_debug_fm () then
+          print_dbg ~module_name:"Inequalities" ~function_name:"cross"
+            "We cross on %a (%d vars remaining)@ \
+             with:@. cpos = %a@. cneg = %a@. others = %a"
+            X.print x (MX.cardinal vars)
+            list_of_ineqs cpos list_of_ineqs cneg map_of_ineqs others
 
       let cross_result x ninqs =
         print_dbg ~debug:(get_debug_fm ())

@@ -921,23 +921,22 @@ module Simplex (C : Coef_Type) = struct
         D.result_extraction "max" ctx_ex co_ex distr;
 
         let res = infos_of distr q co_ex ctx_ex in
-        Printer.print_dbg ~debug:(!dsimplex)
-          ">result size %d" (List.length res.vals);
+        if !dsimplex then
+          Printer.print_dbg ">result size %d" (List.length res.vals);
         Max res
 
       | I_unbound (ctx_ex,co_ex) ->
         D.result_extraction "unbound" ctx_ex co_ex distr;
         let res = infos_of distr q co_ex ctx_ex in
-        Printer.print_dbg ~debug:(!dsimplex)
-          ">result size %d" (List.length res.vals);
+        if !dsimplex then
+          Printer.print_dbg ">result size %d" (List.length res.vals);
         Unbound res
 
       | I_unsat (ctx_ex,co_ex) ->
         D.result_extraction "unsat" ctx_ex co_ex distr;
         let res = infos_of distr q co_ex ctx_ex in
-        Printer.print_dbg ~debug:(!dsimplex)
-          ">result size %d"
-          (List.length res.vals);
+        if !dsimplex then
+          Printer.print_dbg ">result size %d" (List.length res.vals);
         Unsat res
 
     let core_main co matrix distr =
@@ -1014,16 +1013,18 @@ module Simplex (C : Coef_Type) = struct
           {a2=Array.make len Q.zero; c2=Q.zero,Q.zero} in
         Array.iteri
           (fun i ld ->
-             Printer.print_dbg
-               ~flushed:false  ~header:false ~debug:(!dsimplex)
-               "> AVANT: cost: %a@ \
-                traitement de l'index %d@ " (D.ppoly (D.max_poly cost)) cost i;
+             if !dsimplex then
+               Printer.print_dbg
+                 ~flushed:false  ~header:false
+                 "> AVANT: cost: %a@ \
+                  traitement de l'index %d@ "
+                 (D.ppoly (D.max_poly cost)) cost i;
              begin
                try
                  let q = List.assoc ld max_ctt in
-                 Printer.print_dbg
-                   ~flushed:false ~header:false ~debug:(!dsimplex)
-                   "L%d associe a %s@ " ld (Q.to_string q);
+                 if !dsimplex then
+                   Printer.print_dbg ~flushed:false ~header:false
+                     "L%d associe a %s@ " ld (Q.to_string q);
                  try
                    cost.a2.(i) <- Q.add cost.a2.(i) q
                  with Invalid_argument s ->
@@ -1043,8 +1044,9 @@ module Simplex (C : Coef_Type) = struct
              end;
 
           )rr.distr;
-        Printer.print_dbg ~header:false ~debug:(!dsimplex)
-          "> RES cost: %a" (D.ppoly (D.max_poly cost)) cost;
+        if !dsimplex then
+          Printer.print_dbg ~header:false
+            "> RES cost: %a" (D.ppoly (D.max_poly cost)) cost;
 
         (* XXX *)
         let leng = Array.length cost.a2 in

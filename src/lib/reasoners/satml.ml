@@ -1651,10 +1651,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         List.iter (add_clause env f ~cnumber) unit_cnf;
         List.iter (add_clause env f ~cnumber) nunit_cnf;
 
-        Printer.print_dbg ~debug:(get_verbose ())
-          "%d clauses@ %d learnts"
-          (Vec.size env.clauses)
-          (Vec.size env.learnts);
+        if get_verbose () then
+          Printer.print_dbg
+            "%d clauses@ %d learnts"
+            (Vec.size env.clauses)
+            (Vec.size env.learnts);
     end;
     (* do it after add clause and before T-propagate, disable bcp*)
     update_lazy_cnf env ~do_bcp:false mff ~dec_lvl;
@@ -1728,10 +1729,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       List.iter (add_clause env vraie_form ~cnumber:0) cnf;
 
-      Printer.print_dbg ~debug:(get_verbose ())
-        "%d clauses@ %d learnts"
-        (Vec.size env.clauses)
-        (Vec.size env.learnts);
+      if get_verbose () then
+        Printer.print_dbg
+          "%d clauses@ %d learnts"
+          (Vec.size env.clauses)
+          (Vec.size env.learnts);
 
       (* do it after add clause and before T-propagate, disable bcp*)
       (* do bcp globally *)

@@ -505,16 +505,17 @@ module Debug = struct
     end
 
   let implied_equalities l =
-    let print fmt (ra, _, ex, _) =
-      fprintf fmt "@,%a %a"
-        LR.print (LR.make ra)
-        Explanation.print ex
-    in
-    print_dbg ~debug:(get_debug_fm ())
-      ~module_name:"IntervalCalculus" ~function_name:"implied_equalities"
-      "@[<v 2> %d implied equalities %a@]"
-      (List.length l)
-      (pp_list_no_space print) l
+    if get_debug_fm () then
+      let print fmt (ra, _, ex, _) =
+        fprintf fmt "@,%a %a"
+          LR.print (LR.make ra)
+          Explanation.print ex
+      in
+      print_dbg
+        ~module_name:"IntervalCalculus" ~function_name:"implied_equalities"
+        "@[<v 2> %d implied equalities %a@]"
+        (List.length l)
+        (pp_list_no_space print) l
 
   let case_split r1 r2 =
     print_dbg ~debug:(get_debug_fm ())

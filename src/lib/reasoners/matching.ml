@@ -157,12 +157,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
         (fun fmt -> List.iter (fprintf fmt "%a , " E.print)) cl
 
     let candidate_substitutions pat_info res =
-      print_dbg ~debug:(get_debug_matching() >= 1)
-        ~module_name:"Matching" ~function_name:"candidate_substitutions"
-        "@[<v 2>%3d candidate substitutions for Axiom %a with trigger %a@ "
-        (List.length res)
-        E.print pat_info.trigger_orig
-        E.print_list pat_info.trigger.E.content;
+      if get_debug_matching () >= 1 then
+        print_dbg
+          ~module_name:"Matching" ~function_name:"candidate_substitutions"
+          "@[<v 2>%3d candidate substitutions for Axiom %a with trigger %a@ "
+          (List.length res)
+          E.print pat_info.trigger_orig
+          E.print_list pat_info.trigger.E.content;
       if get_debug_matching() >= 2 then
         List.iter
           (fun gsbt ->
