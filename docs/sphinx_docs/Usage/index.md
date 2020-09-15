@@ -24,6 +24,14 @@ Alt-Ergo supports file extensions:
 - `.psmt2`, `.smt2` for (our polymorphic extension of) the SMT-LIB 2
   standard
 
+See the [Input section] for more information about the format of the input files
+
+### Output
+The results of an Alt-ergo's execution have the following form :
+```
+File "<path_to_file>/<filename>", line <l>, characters <n-m>: <status> (<time in seconde>) (<number of steps> steps) (goal <name of the goal>)
+```
+The status can be `Valid`, `Invalid` or `I don't know`. If the input file is in the SMT-LIB 2 format the status will be either `unsat`, `sat`, `unknown`. You can force the status to be print in the SMT-LIB 2 form with the option `--output smtlib2`.
 
 ### Plugins
 
@@ -36,7 +44,7 @@ The Fm-Simplex plugin can be used as follows:
 
    Alt-Ergo will try to load a local plugin called
    "fm-simplex-plugin.cmxs". If this fails, Alt-Ergo tries to load it
-   from the default plugins directory (run "alt-ergo --where plugins"
+   from the default plugins directory (run `alt-ergo --where plugins`
    to see its absolute path). You can also provide a relative or an
    absolute path as shown by the second command above. Also, you
    should replace ".cmxs" by ".cma" if you are working with bytcode
@@ -77,4 +85,5 @@ plugins in `Z:\some\path\share\alt-ergo\preludes` and
 
 [small example]: examples/lib_usage.ml
 [API documentation]: ../API/index.md
-[AB-Why3 README]: src/plugins/AB-Why3/README.md
+[AB-Why3 README]: ../Plugins/ab_why3.md
+[Input section]: ../Input_file_formats/index
