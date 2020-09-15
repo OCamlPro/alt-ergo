@@ -159,9 +159,9 @@ let add_smt formatter =
 let remove_formatting formatter =
   let old_fs = Format_shims.pp_get_formatter_out_functions formatter () in
   let out_newline () = old_fs.out_string "" 0 0 in
-  let out_indent _n = old_fs.out_indent 0 in
-  Format_shims.pp_set_formatter_out_functions formatter
-    { old_fs with out_newline; out_indent }
+  let out_spaces _n = old_fs.out_spaces 0 in
+  Format.pp_set_formatter_out_functions formatter
+    { old_fs with out_newline; out_spaces }
 
 (* This function is used to force a newline when the option removing the
    formatting is enable *)
