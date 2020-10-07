@@ -31,12 +31,14 @@ end
 include Dynlink
 
 let load verbose p msg =
-  Printer.print_dbg ~flushed:false ~debug:verbose ~module_name:"Dynlink"
-    "Loading the %s in %S ..." msg p;
+  if verbose then
+    Printer.print_dbg ~flushed:false ~module_name:"Dynlink"
+      "Loading the %s in %S ..." msg p;
   try
     loadfile p;
-    Printer.print_dbg ~header:false ~debug:verbose
-      "Success!"
+    if verbose then
+      Printer.print_dbg ~header:false
+        "Success!"
   with
   | Error m1 ->
     if verbose then begin
@@ -47,13 +49,15 @@ let load verbose p msg =
         ">> Failure message: %s" (error_message m1);
     end;
     let pp = Format.sprintf "%s/%s" Config.pluginsdir p in
-    Printer.print_dbg  ~flushed:false ~debug:verbose ~module_name:"Dynlink"
-      "Loading the %s in %S... with prefix %S..."
-      msg p Config.pluginsdir;
+    if verbose then
+      Printer.print_dbg  ~flushed:false ~module_name:"Dynlink"
+        "Loading the %s in %S... with prefix %S..."
+        msg p Config.pluginsdir;
     try
       loadfile pp;
-      Printer.print_dbg ~header:false ~debug:verbose
-        "Success!"
+      if verbose then
+        Printer.print_dbg ~header:false
+          "Success!"
     with
     | Error m2 ->
       if not (verbose) then begin

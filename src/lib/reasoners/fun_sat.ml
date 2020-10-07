@@ -221,20 +221,23 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         | E.Xor _ -> "xor"
         | E.Let _ -> "let"
       in
-      print_dbg ~debug:(get_verbose () && get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"is_it_unsat"
-        "the following %s is unsat ? :@ %a"
-        s E.print gf.E.ff
+      if get_verbose () && get_debug_sat () then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"is_it_unsat"
+          "the following %s is unsat ? :@ %a"
+          s E.print gf.E.ff
 
     let pred_def f =
-      print_dbg ~debug:(get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"pred_def"
-        "I assume a predicate: %a" E.print f
+      if get_debug_sat () then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"pred_def"
+          "I assume a predicate: %a" E.print f
 
     let unsat_rec dep =
-      print_dbg ~debug:(get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"unsat_rec"
-        "unsat_rec : %a" Ex.print dep
+      if get_debug_sat () then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"unsat_rec"
+          "unsat_rec : %a" Ex.print dep
 
     let assume gf dep env =
       if get_debug_sat () then
@@ -272,47 +275,55 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | E.Xor _ ->
             print_dbg ~header:false "neg-equivalence/xor %a" E.print f
         end;
-        print_dbg ~header:false ~debug:(get_verbose ())
-          "with explanations : %a" Explanation.print dep
+        if get_verbose () then
+          print_dbg ~header:false
+            "with explanations : %a" Explanation.print dep
 
     let unsat () =
-      print_dbg ~debug:(get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"unsat"
-        "unsat"
+      if get_debug_sat () then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"unsat"
+          "unsat"
 
     let decide f env =
-      print_dbg ~debug:(get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"decide"
-        "I decide: at level (%d, %d), on %a"
-        env.dlevel env.plevel E.print f
+      if get_debug_sat () then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"decide"
+          "I decide: at level (%d, %d), on %a"
+          env.dlevel env.plevel E.print f
 
     let instantiate env =
-      print_dbg ~debug:(get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"instanciate"
-        "I instantiate at level (%d, %d). Inst level = %d"
-        env.dlevel env.plevel env.ilevel
+      if get_debug_sat () then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"instanciate"
+          "I instantiate at level (%d, %d). Inst level = %d"
+          env.dlevel env.plevel env.ilevel
 
     let backtracking f env =
-      print_dbg ~debug:(get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"backtracking"
-        "backtrack: at level (%d, %d), and assume not %a"
-        env.dlevel env.plevel E.print f
+      if get_debug_sat () then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"backtracking"
+          "backtrack: at level (%d, %d), and assume not %a"
+          env.dlevel env.plevel E.print f
 
     let backjumping f env =
-      print_dbg ~debug:(get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"backjumping"
-        "backjump: at level (%d, %d), I ignore the case %a"
-        env.dlevel env.plevel E.print f
+      if get_debug_sat () then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"backjumping"
+          "backjump: at level (%d, %d), I ignore the case %a"
+          env.dlevel env.plevel E.print f
 
     let elim _ _ =
-      print_dbg ~debug:(get_debug_sat () && get_verbose ())
-        ~module_name:"Fun_sat" ~function_name:"elim"
-        "elim"
+      if get_debug_sat () && get_verbose () then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"elim"
+          "elim"
 
     let red _ _ =
-      print_dbg ~debug:(get_debug_sat () && get_verbose ())
-        ~module_name:"Fun_sat" ~function_name:"red"
-        "red"
+      if get_debug_sat () && get_verbose () then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"red"
+          "red"
 
     (* let delta d =
        print_dbg ~debug:(get_verbose () || get_debug_sat ())
@@ -337,29 +348,30 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
 
     let bottom classes =
-      print_dbg ~debug:(get_bottom_classes ())
-        "bottom:%a@?" E.print_tagged_classes classes
+      if get_bottom_classes () then
+        print_dbg "bottom:%a@?" E.print_tagged_classes classes
 
     let inconsistent expl env =
-      print_dbg ~debug:(get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"inconsistent"
-        "inconsistent at level (%d, %d), reason : %a"
-        env.dlevel env.plevel Ex.print expl
+      if get_debug_sat () then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"inconsistent"
+          "inconsistent at level (%d, %d), reason : %a"
+          env.dlevel env.plevel Ex.print expl
 
     let in_mk_theories_instances () =
-      print_dbg
-        ~debug:(Options.get_debug_fpa() > 0 || get_debug_sat())
-        ~module_name:"Fun_sat" ~function_name:"in_mk_theories_instances"
-        "entering mk_theories_instances:"
+      if Options.get_debug_fpa() > 0 || get_debug_sat () then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"in_mk_theories_instances"
+          "entering mk_theories_instances:"
 
     let out_mk_theories_instances normal_exit =
-      print_dbg
-        ~debug:(Options.get_debug_fpa() > 0 || get_debug_sat())
-        ~module_name:"Fun_sat" ~function_name:"out_mk_theories_instances"
-        (if normal_exit then
-           "normal exit of mk_theories_instances."
-         else
-           "exit mk_theories_instances with Inconsist.")
+      if Options.get_debug_fpa() > 0 || get_debug_sat() then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"out_mk_theories_instances"
+          (if normal_exit then
+             "normal exit of mk_theories_instances."
+           else
+             "exit mk_theories_instances with Inconsist.")
 
     let print_f_conj fmt hyp =
       match hyp with
@@ -369,15 +381,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         List.iter (fun f -> fprintf fmt " /\\  %a" E.print f) l
 
     let print_theory_instance hyp gf =
-      print_dbg
-        ~debug:(Options.get_debug_fpa() > 1 || Options.get_debug_sat())
-        ~module_name:"Fun_sat" ~function_name:"print_theory_instances"
-        "@[<v 2>@ %s >@ \
-         hypotheses: %a@ \
-         conclusion: %a@]"
-        (E.name_of_lemma_opt gf.E.lem)
-        print_f_conj hyp
-        E.print gf.E.ff
+      if Options.get_debug_fpa() > 1 || Options.get_debug_sat() then
+        print_dbg
+          ~module_name:"Fun_sat" ~function_name:"print_theory_instances"
+          "@[<v 2>@ %s >@ \
+           hypotheses: %a@ \
+           conclusion: %a@]"
+          (E.name_of_lemma_opt gf.E.lem)
+          print_f_conj hyp
+          E.print gf.E.ff
 
   end
   (*BISECT-IGNORE-END*)
@@ -561,8 +573,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
 
   let cdcl_assume delay env l =
-    Printer.print_dbg ~debug:(get_debug_sat() && get_verbose())
-      ~module_name:"Fun_sat" ~function_name:"cdcl_assume" "";
+    if get_debug_sat() && get_verbose() then
+      Printer.print_dbg
+        ~module_name:"Fun_sat" ~function_name:"cdcl_assume" "";
     let gamma = env.gamma in
     try
       let l =
@@ -575,23 +588,26 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       env.cdcl := CDCL.assume delay !(env.cdcl) l
     with
     | CDCL.Bottom (ex, l, cdcl) ->
-      Printer.print_dbg ~debug:(get_debug_sat() && get_verbose())
-        ~module_name:"Fun_sat" ~function_name:"cdcl_assume"
-        "conflict";
+      if get_debug_sat() && get_verbose() then
+        Printer.print_dbg
+          ~module_name:"Fun_sat" ~function_name:"cdcl_assume"
+          "conflict";
       env.cdcl := cdcl;
       assert (cdcl_known_decisions ex env);
       raise (IUnsat(ex, l))
 
   let cdcl_decide env f dlvl =
-    Printer.print_dbg ~debug:(get_debug_sat() && get_verbose())
-      ~module_name:"Fun_sat" ~function_name:"cdcl_decide" "";
+    if get_debug_sat() && get_verbose() then
+      Printer.print_dbg
+        ~module_name:"Fun_sat" ~function_name:"cdcl_decide" "";
     try
       env.cdcl := CDCL.decide !(env.cdcl) f dlvl
     with
     | CDCL.Bottom (ex, l, _cdcl) ->
-      Printer.print_dbg ~debug:(get_debug_sat() && get_verbose())
-        ~module_name:"Fun_sat" ~function_name:"cdcl_decide"
-        "conflict";
+      if get_debug_sat() && get_verbose() then
+        Printer.print_dbg
+          ~module_name:"Fun_sat" ~function_name:"cdcl_decide"
+          "conflict";
       assert (cdcl_known_decisions ex env);
       (* no need to save cdcl here *)
       raise (IUnsat(ex, l))
@@ -629,9 +645,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let do_case_split env origin =
     if Options.get_case_split_policy () == origin then
       try
-        Printer.print_dbg ~debug:(get_debug_sat())
-          ~module_name:"Fun_sat" ~function_name:"do_case_split"
-          "performing case-split";
+        if get_debug_sat () then
+          Printer.print_dbg
+            ~module_name:"Fun_sat" ~function_name:"do_case_split"
+            "performing case-split";
         let tbox, new_terms = Th.do_case_split env.tbox in
         let inst =
           Inst.add_terms env.inst new_terms (mk_gf E.vrai "" false false) in
@@ -745,8 +762,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         match CDCL.is_true !(env.cdcl) (E.neg ff.E.ff) with
         | Some (ex, _lvl) ->
           let ex = Lazy.force ex in
-          Printer.print_dbg ~debug:(get_debug_sat() && get_verbose())
-            "red thanks to satML";
+          if get_debug_sat() && get_verbose() then
+            Printer.print_dbg "red thanks to satML";
           assert (cdcl_known_decisions ex env);
           Some(ex, []), true
         | None ->
@@ -886,9 +903,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           with Ex.Inconsistent (reason, _) as e ->
             assert (Ex.has_no_bj reason);
             if Options.get_profiling() then Profiling.theory_conflict();
-            Printer.print_dbg ~debug:(get_debug_sat())
-              ~module_name:"Fun_sat" ~function_name:"theory_assume"
-              "solved by unit_tbox";
+            if get_debug_sat () then
+              Printer.print_dbg
+                ~module_name:"Fun_sat" ~function_name:"theory_assume"
+                "solved by unit_tbox";
             raise e
         else env.unit_tbox, SE.empty, 0
       in
@@ -1544,8 +1562,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         else
           match CDCL.is_true !(env.cdcl) a.E.ff with
           | Some (ex, _lvl) -> (* it is a propagation in satML *)
-            Printer.print_dbg ~debug:(get_verbose ())
-              "Better backjump thanks to satML";
+            if get_verbose () then
+              Printer.print_dbg
+                "Better backjump thanks to satML";
             let ex = Lazy.force ex in
             assert (not (Ex.mem (Ex.Bj f) ex));
             Ex.union dep' ex
@@ -1571,10 +1590,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     else
       let nb1 = env.nb_related_to_goal in
       let nc1 = env.nb_related_to_hypo in
-      Printer.print_dbg
-        ~flushed:false ~debug:(get_verbose () || get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"backward_instantiation_rec"
-        "round %d / %d@ " rnd max_rnd;
+      if get_verbose () || get_debug_sat () then
+        Printer.print_dbg
+          ~flushed:false
+          ~module_name:"Fun_sat"
+          ~function_name:"backward_instantiation_rec"
+          "round %d / %d@ " rnd max_rnd;
       let mconf =
         {Util.nb_triggers = get_nb_triggers ();
          no_ematching = get_no_ematching();
@@ -1588,11 +1609,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env, new_i2 = inst_and_assume mconf env inst_lemmas env.inst in
       let nb2 = env.nb_related_to_goal in
       let nc2 = env.nb_related_to_hypo in
-      Printer.print_dbg
-        ~header:false ~debug:(get_verbose () || get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"backward_instantiation_rec"
-        "backward: %d goal-related hyps (+%d)"
-        nb2 (nb2-nb1);
+      if get_verbose () || get_debug_sat () then
+        Printer.print_dbg
+          ~header:false
+          ~module_name:"Fun_sat"
+          ~function_name:"backward_instantiation_rec"
+          "backward: %d goal-related hyps (+%d)"
+          nb2 (nb2-nb1);
       if not new_i1 && not new_i2 then
         env
       else if nb2 > nb1 then
@@ -1645,21 +1668,24 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let print fmt (ff, _ex) =
         fprintf fmt "%2d : %a@," ff.E.gdist E.print ff.E.ff
       in
-      Printer.print_dbg ~debug:(get_verbose () || get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"backward_instantiation"
-        "@[<v 0>%a@]"
-        (Printer.pp_list_no_space print) l;
+      if get_verbose () || get_debug_sat () then
+        Printer.print_dbg
+          ~module_name:"Fun_sat" ~function_name:"backward_instantiation"
+          "@[<v 0>%a@]"
+          (Printer.pp_list_no_space print) l;
       let env = assume env l in
       Debug.print_nb_related env;
-      Printer.print_dbg ~debug:(get_verbose () || get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"backward_instantiation"
-        "done (after %2.4f seconds)"
-        (Options.Time.value ());
+      if get_verbose () || get_debug_sat () then
+        Printer.print_dbg
+          ~module_name:"Fun_sat" ~function_name:"backward_instantiation"
+          "done (after %2.4f seconds)"
+          (Options.Time.value ());
       env
     with IUnsat _ as e ->
-      Printer.print_dbg ~debug:(get_verbose () || get_debug_sat ())
-        ~module_name:"Fun_sat" ~function_name:"backward_instantiation"
-        "solved with backward!";
+      if get_verbose () || get_debug_sat () then
+        Printer.print_dbg
+          ~module_name:"Fun_sat" ~function_name:"backward_instantiation"
+          "solved with backward!";
       raise e
 
   let unsat env gf =

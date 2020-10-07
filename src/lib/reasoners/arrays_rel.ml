@@ -112,10 +112,11 @@ module Debug = struct
       fprintf fmt "> %a@,"
         LR.print (LR.make a)
     in
-    Printer.print_dbg ~debug:(get_debug_arrays () && la != [])
-      ~module_name:"Arrays_rel"
-      ~function_name:"assume"
-      "@[<v 2>We assume: @ %a" (pp_list_no_space print) la
+    if get_debug_arrays () && la != [] then
+      Printer.print_dbg
+        ~module_name:"Arrays_rel"
+        ~function_name:"assume"
+        "@[<v 2>We assume: @ %a" (pp_list_no_space print) la
 
   (* unused --
      let print_gets fmt = G.iter (fun t -> fprintf fmt "%a@." E.print t.g)
@@ -151,16 +152,18 @@ module Debug = struct
     end
 
   let case_split a =
-    print_dbg ~debug:(get_debug_arrays ())
-      ~module_name:"Arrays_rel"
-      ~function_name:"case_split"
-      "%a" LR.print a
+    if get_debug_arrays () then
+      print_dbg
+        ~module_name:"Arrays_rel"
+        ~function_name:"case_split"
+        "%a" LR.print a
 
   let case_split_none () =
-    print_dbg ~debug:(get_debug_arrays ())
-      ~module_name:"Arrays_rel"
-      ~function_name:"case_split_none"
-      "Nothing"
+    if get_debug_arrays () then
+      print_dbg
+        ~module_name:"Arrays_rel"
+        ~function_name:"case_split_none"
+        "Nothing"
 
 end
 (*BISECT-IGNORE-END*)

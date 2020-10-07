@@ -215,10 +215,11 @@ module Container : Container_SIG = struct
             list_of_ineqs cpos list_of_ineqs cneg map_of_ineqs others
 
       let cross_result x ninqs =
-        print_dbg ~debug:(get_debug_fm ())
-          ~module_name:"Inequalities" ~function_name:"cross_result"
-          "result of eliminating %a: at most %d new ineqs (not printed)"
-          X.print x ninqs
+        if get_debug_fm () then
+          print_dbg
+            ~module_name:"Inequalities" ~function_name:"cross_result"
+            "result of eliminating %a: at most %d new ineqs (not printed)"
+            X.print x ninqs
     end
 
     let mult_list c dep =
@@ -366,8 +367,9 @@ let set_current mdl = current := mdl
 let load_current_inequalities_reasoner () =
   match Options.get_inequalities_plugin () with
   | "" ->
-    Printer.print_dbg ~debug:(get_debug_fm ())
-      "[Dynlink] Using the 'FM module' for arithmetic inequalities"
+    if Options.get_debug_fm () then
+      Printer.print_dbg
+        "[Dynlink] Using the 'FM module' for arithmetic inequalities"
 
   | path ->
     MyDynlink.load (Options.get_debug_fm ()) path

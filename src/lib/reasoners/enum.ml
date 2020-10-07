@@ -72,9 +72,10 @@ module Shostak (X : ALIEN) = struct
       | Alien x -> fprintf fmt "%a" X.print x
 
     let solve_bis a b =
-      print_dbg ~debug:(get_debug_sum ())
-        ~module_name:"Enum" ~function_name:"solve"
-        "@[<v 2>we solve %a = %a@ " X.print a X.print b
+      if get_debug_sum () then
+        print_dbg
+          ~module_name:"Enum" ~function_name:"solve"
+          "@[<v 2>we solve %a = %a@ " X.print a X.print b
 
     let solve_bis_result res =
       if get_debug_sum () then
@@ -88,8 +89,9 @@ module Shostak (X : ALIEN) = struct
         | _ -> assert false
 
     let solve_bis_unsolvable () =
-      print_dbg ~debug:(get_debug_sum ())
-        "the equation is unsolvable@]"
+      if get_debug_sum () then
+        print_dbg
+          "the equation is unsolvable@]"
 
   end
   (*BISECT-IGNORE-END*)

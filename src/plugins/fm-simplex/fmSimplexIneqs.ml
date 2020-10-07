@@ -126,31 +126,34 @@ module Container : Inequalities.Container_SIG = struct
 
     let tighten_polynomials
         add_ineqs are_eq acc sum ctt lambdas nb_constrs constrs =
-      Printer.print_dbg ~flushed:false ~debug:(get_debug_fm())
-        "tighten_polynomials@ ";
+      if get_debug_fm() then
+        Printer.print_dbg ~flushed:false "tighten_polynomials@ ";
       let max_ctt, equas, s_neq = polynomials_bounding_pb sum ctt lambdas in
       let r_max_ctt,r_equas,r_s_neq = SCache.make_repr max_ctt equas s_neq in
       let sim_res =
         match SCache.already_registered r_max_ctt r_equas r_s_neq with
         | None ->
-          Printer.print_dbg ~flushed:false ~header:false ~debug:!dsimplex
-            "Simplex poly in@ ";
+          if !dsimplex then
+            Printer.print_dbg ~flushed:false ~header:false
+              "Simplex poly in@ ";
           incr cpt;
-          Printer.print_dbg ~flushed:false ~header:false ~debug:!dsimplex
-            "new simplex %d@ " !cpt;
+          if !dsimplex then
+            Printer.print_dbg ~flushed:false ~header:false
+              "new simplex %d@ " !cpt;
           let res = Simplex_Q.main max_ctt equas s_neq nb_constrs in
-          Printer.print_dbg ~header:false ~debug:!dsimplex
-            "Simplex poly out";
+          if !dsimplex then
+            Printer.print_dbg ~header:false "Simplex poly out";
           SCache.register r_max_ctt r_equas r_s_neq !cpt res ;
           res
         | Some (n, res, ctt') ->
           if SCache.MI.compare Q.compare r_max_ctt ctt' = 0 then begin
-            Printer.print_dbg ~debug:!dsimplex
-              "reuse RESULTS of simplex %d" n;
+            if !dsimplex then Printer.print_dbg
+                "reuse RESULTS of simplex %d" n;
             res
           end
           else begin
-            Printer.print_dbg ~debug:!dsimplex "reuse  simplex %d" n;
+            if !dsimplex then
+              Printer.print_dbg "reuse  simplex %d" n;
             let res = Simplex_Q.partial_restart res max_ctt in
             res
           end
@@ -195,34 +198,40 @@ module Container : Inequalities.Container_SIG = struct
     let tighten_monomial
         add_ineqs are_eq acc x sum_x is_pos sum ctt lambdas nb_constrs constrs
       =
-      Printer.print_dbg ~flushed:false ~debug:(get_debug_fm())
-        "tighten_monomial %s%a "
-        (if is_pos then "+" else "-") X.print x;
+      if get_debug_fm() then
+        Printer.print_dbg ~flushed:false
+          "tighten_monomial %s%a "
+          (if is_pos then "+" else "-") X.print x;
       let max_ctt, equas, s_neq =
         monomial_bounding_pb sum ctt lambdas x sum_x is_pos in
       let r_max_ctt,r_equas,r_s_neq = SCache.make_repr max_ctt equas s_neq in
       let sim_res =
         match SCache.already_registered_mon x r_max_ctt r_equas r_s_neq with
         | None ->
-          Printer.print_dbg ~flushed:false ~header:false ~debug:!dsimplex
-            "Simplex monomes in@ ";
+          if !dsimplex then
+            Printer.print_dbg ~flushed:false ~header:false
+              "Simplex monomes in@ ";
           incr cpt;
-          Printer.print_dbg ~flushed:false ~header:false ~debug:!dsimplex
-            "new simplex %d@ " !cpt;
+          if !dsimplex then
+            Printer.print_dbg ~flushed:false ~header:false
+              "new simplex %d@ " !cpt;
           let res = Simplex_Q.main max_ctt equas s_neq nb_constrs in
-          Printer.print_dbg ~header:false ~debug:!dsimplex
-            "Simplex monomes out";
+          if !dsimplex then
+            Printer.print_dbg ~header:false
+              "Simplex monomes out";
           SCache.register_mon x r_max_ctt r_equas r_s_neq !cpt res ;
           res
         | Some (n, res, ctt') ->
           if SCache.MI.compare Q.compare r_max_ctt ctt' = 0 then begin
-            Printer.print_dbg ~header:false ~debug:!dsimplex
-              "reuse RESULTS of simplex %d" n;
+            if !dsimplex then
+              Printer.print_dbg ~header:false
+                "reuse RESULTS of simplex %d" n;
             res
           end
           else begin
-            Printer.print_dbg ~header:false ~debug:!dsimplex
-              "reuse  simplex %d" n;
+            if !dsimplex then
+              Printer.print_dbg ~header:false
+                "reuse  simplex %d" n;
             let res = Simplex_Q.partial_restart res max_ctt in
             res
           end
@@ -278,10 +287,11 @@ module Container : Inequalities.Container_SIG = struct
     let fm_simplex add_ineqs are_eq acc constrs nb_constrs =
       let print fmt (id, { ple0 ; _ }) =
         fprintf fmt "%d) %a <= 0" id P.print ple0 in
-      Printer.print_dbg ~debug:(get_debug_fm())
-        "begin fm-simplex: nb_constrs = %d@ %a"
-        nb_constrs
-        (Printer.pp_list_no_space print) constrs;
+      if get_debug_fm () then
+        Printer.print_dbg
+          "begin fm-simplex: nb_constrs = %d@ %a"
+          nb_constrs
+          (Printer.pp_list_no_space print) constrs;
       let sum, ctt, lambdas = generalized_fm_projection constrs in
       let acc =
         if MX.is_empty sum then acc
@@ -294,7 +304,8 @@ module Container : Inequalities.Container_SIG = struct
               add_ineqs are_eq acc sum ctt lambdas nb_constrs constrs
           else acc
       in
-      Printer.print_dbg ~debug:(get_debug_fm()) "end fm-simplex";
+      if get_debug_fm () then
+        Printer.print_dbg  "end fm-simplex";
       acc
 
     let list_of_mineqs mp =

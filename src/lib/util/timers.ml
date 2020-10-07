@@ -201,7 +201,8 @@ let accumulate_cumulative_mode name env m f cur =
                (string_of_ty_module m) (string_of_ty_function f);
            accumulate env cur m f
         )env.stack;
-      Printer.print_dbg ~debug:(Options.get_debug ()) ~header:false "@]"
+      if Options.get_debug () then
+        Printer.print_dbg ~header:false "@]"
     end
 
 (** save the current timer and start the timer m x f **)

@@ -973,7 +973,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             | prems -> roots prems; roots r
         in roots !l;
         let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
-        Printer.print_dbg ~debug:false "@[<v 2>UNSAT_CORE:@ %a@]"
+        Printer.print_dbg ~header:false "@[<v 2>UNSAT_CORE:@ %a@]"
           (Printer.pp_list_no_space print_aux) unsat_core;
         env.is_unsat <- true;
         let unsat_core = Some unsat_core in
@@ -1092,8 +1092,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     (* report possible propagation conflict *)
     report_conflict env (all_propagations env);
     if nb_assigns env <> env.simpDB_assigns && env.simpDB_props <= 0 then begin
-      Printer.print_dbg ~debug:(get_debug_sat ())
-        ~module_name:"Satml" ~function_name:"simplify" "";
+      if get_debug_sat () then
+        Printer.print_dbg ~module_name:"Satml" ~function_name:"simplify" "";
       (*theory_simplify ();*)
       if Vec.size env.learnts > 0 then remove_satisfied env env.learnts;
       if env.remove_satisfied then remove_satisfied env env.clauses;
@@ -1515,9 +1515,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         let clause = make_clause name atoms vraie_form size false init in
         attach_clause env clause;
         Vec.push env.clauses clause;
-        Printer.print_dbg ~debug:(get_debug_sat () && get_verbose ())
-          ~module_name:"Satml" ~function_name:"add_clause"
-          "add_clause: %a" Atom.pr_clause clause;
+        if get_debug_sat () && get_verbose () then
+          Printer.print_dbg ~module_name:"Satml" ~function_name:"add_clause"
+            "add_clause: %a" Atom.pr_clause clause;
 
         if a.neg.is_true then begin (* clause is false *)
           let lvl = List.fold_left (fun m a -> max m a.var.level) 0 atoms in
@@ -1535,9 +1535,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
                              are well set, unit and bottom are \
                              detected ..."]
       | [a]   ->
-        Printer.print_dbg ~debug:(get_debug_sat () && get_verbose ())
-          ~module_name:"Satml" ~function_name:"add_clause"
-          "add_atom: %a" Atom.pr_atom a;
+        if (get_debug_sat () && get_verbose ()) then
+          Printer.print_dbg ~module_name:"Satml" ~function_name:"add_clause"
+            "add_atom: %a" Atom.pr_atom a;
         let lvl = a.var.level in
         assert (lvl <> 0);
         begin
