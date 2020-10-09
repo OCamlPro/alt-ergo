@@ -1146,7 +1146,8 @@ module SMT2LikeModelOutput = struct
            (*printf "  (%a %a)  ; %a@."
              (print_symb ty) f x_print rep Ty.print ty*)
            Printer.print_fmt ~flushed:false (get_fmt_mdl ())
-             "(s(%d): %a, rep: %a)@ " (List.length _xs_ty) (print_symb ty) f x_print rep
+             "(s(%d): %a, rep: %a)@ "
+             (List.length _xs_ty) (print_symb ty) f x_print rep
          | _ -> assert false
       ) cprofs
 
