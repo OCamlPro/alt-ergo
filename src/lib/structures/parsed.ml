@@ -175,7 +175,8 @@ let rec pp_lexpr fmt {pp_desc; _} =
   | PPvar s ->
     fprintf fmt "%s" s
   | PPapp (s, lel) ->
-    fprintf fmt "PPapp(%s, %a)" s (pp_print_list ~pp_sep:pp_sep_space pp_lexpr) lel
+    fprintf fmt "PPapp(%s, %a)" s
+      (pp_print_list ~pp_sep:pp_sep_space pp_lexpr) lel
   | PPmapsTo (s, le) ->
     fprintf fmt "[%s -> %a]" s pp_lexpr le
   | PPinInterval (le, b1, le1, le2, b2) ->
@@ -227,7 +228,8 @@ let rec pp_lexpr fmt {pp_desc; _} =
   | PPlet (_slel, _le) -> fprintf fmt "let"
   | PPcheck le -> fprintf fmt "check %a" pp_lexpr le
   | PPcut le -> fprintf fmt "cut %a" pp_lexpr le
-  | PPcast (le, ppt) -> fprintf fmt "cast %a -> %a" pp_lexpr le pp_ppure_type ppt
+  | PPcast (le, ppt) ->
+    fprintf fmt "cast %a -> %a" pp_lexpr le pp_ppure_type ppt
   | PPmatch (_le, _plel) -> fprintf fmt "match"
   | PPisConstr (le, s) -> fprintf fmt "isConstr: %a %s" pp_lexpr le s
   | PPproject (b, le, s) -> fprintf fmt "project: %b %a %s" b pp_lexpr le s
