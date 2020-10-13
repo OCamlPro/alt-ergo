@@ -129,9 +129,10 @@ module Make (X : Sig.X) = struct
       )
 
     let subst p v tm =
-      print_dbg ~debug:(get_debug_ac ())
-        "[ac] subst %a by %a in %a"
-        X.print p X.print v X.print (X.ac_embed tm)
+      if get_debug_ac () then
+        print_dbg
+          "[ac] subst %a by %a in %a"
+          X.print p X.print v X.print (X.ac_embed tm)
 
   end
   (*BISECT-IGNORE-END*)

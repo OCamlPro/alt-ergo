@@ -296,19 +296,21 @@ module Shostak(X : ALIEN) = struct
       let print fmt (a,b) =
         fprintf fmt " %a == %a@ " print a print b
       in
-      Printer.print_dbg ~debug:(Options.get_debug_bitv ())
-        ~module_name:"Bitv"
-        ~function_name:"slicing"
-        "%a" (pp_list_no_space print) l
+      if Options.get_debug_bitv () then
+        Printer.print_dbg
+          ~module_name:"Bitv"
+          ~function_name:"slicing"
+          "%a" (pp_list_no_space print) l
 
     let print_c_solve_res l =
       let print fmt (a,b) =
         fprintf fmt " %a == %a@ " print a print_S_ast b
       in
-      Printer.print_dbg ~debug:(Options.get_debug_bitv ())
-        ~module_name:"Bitv"
-        ~function_name:"c_solve"
-        "(map)c_solve :@ %a" (pp_list_no_space print) l
+      if Options.get_debug_bitv () then
+        Printer.print_dbg
+          ~module_name:"Bitv"
+          ~function_name:"c_solve"
+          "(map)c_solve :@ %a" (pp_list_no_space print) l
 
     let print_partition_res l =
       let print fmt (t,cte_l) =
@@ -317,19 +319,21 @@ module Shostak(X : ALIEN) = struct
              List.iter (fun l' -> fprintf fmt " == %a" print_S_ast l'))
           cte_l
       in
-      Printer.print_dbg ~debug:(Options.get_debug_bitv ())
-        ~module_name:"Bitv"
-        ~function_name:"partition"
-        "%a" (pp_list_no_space print) l
+      if Options.get_debug_bitv () then
+        Printer.print_dbg
+          ~module_name:"Bitv"
+          ~function_name:"partition"
+          "%a" (pp_list_no_space print) l
 
     let print_final_solution l =
       let print fmt (a,value) =
         fprintf fmt " %a = %a@ " print a print_C_ast value
       in
-      Printer.print_dbg ~debug:(Options.get_debug_bitv ())
-        ~module_name:"Bitv"
-        ~function_name:"solution"
-        "%a" (pp_list_no_space print) l
+      if Options.get_debug_bitv () then
+        Printer.print_dbg
+          ~module_name:"Bitv"
+          ~function_name:"solution"
+          "%a" (pp_list_no_space print) l
   end
   (*BISECT-IGNORE-END*)
 
@@ -724,9 +728,10 @@ module Shostak(X : ALIEN) = struct
 
   (* ne resout pas quand c'est deja resolu *)
   let solve_bis u t =
-    Printer.print_dbg ~debug:(Options.get_debug_bitv ())
-      ~module_name:"Bitv" ~function_name:"solve_bis"
-      "solve %a = %a" X.print u X.print t;
+    if Options.get_debug_bitv () then
+      Printer.print_dbg
+        ~module_name:"Bitv" ~function_name:"solve_bis"
+        "solve %a = %a" X.print u X.print t;
 
     match X.extract u , X.extract t with
     | None   , None   -> if X.str_cmp u t > 0 then [u,t] else [t,u]
@@ -757,9 +762,10 @@ module Shostak(X : ALIEN) = struct
         bv = Canonizer.I_Comp(subst_rec x subs u ,subst_rec x subs v)}
 
   let subst x subs biv =
-    Printer.print_dbg ~debug:(Options.get_debug_bitv ())
-      ~module_name:"Bitv" ~function_name:"subst"
-      "subst %a |-> %a in %a" X.print x X.print subs print biv;
+    if Options.get_debug_bitv () then
+      Printer.print_dbg
+        ~module_name:"Bitv" ~function_name:"subst"
+        "subst %a |-> %a in %a" X.print x X.print subs print biv;
     if biv = [] then is_mine biv
     else
       let r = Canonizer.sigma (subst_rec x subs (to_i_ast biv)) in

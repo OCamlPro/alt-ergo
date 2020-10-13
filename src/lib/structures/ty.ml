@@ -490,8 +490,9 @@ let t_adt ?(body=None) s ty_vars =
     | None -> ()
     | Some [] -> assert false
     | Some ([_] as cases) ->
-      Printer.print_dbg ~debug:(get_debug_adt ()) ~module_name:"Ty"
-        "should be registered as a record";
+      if get_debug_adt () then
+        Printer.print_dbg ~module_name:"Ty"
+          "should be registered as a record";
       let cases =
         List.map (fun (s, l) ->
             let l =

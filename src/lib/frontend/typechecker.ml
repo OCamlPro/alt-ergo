@@ -1251,10 +1251,11 @@ and type_trigger in_theory env l =
          try type_term env t
          with Error _ ->
            ignore (type_form env t);
-           Printer.print_dbg ~debug:(get_verbose ())
-             ~module_name:"Typechecker" ~function_name:"type_trigger"
-             "%a The given trigger is not a term and is ignored"
-             Loc.report t.pp_loc;
+           if get_verbose () then
+             Printer.print_dbg
+               ~module_name:"Typechecker" ~function_name:"type_trigger"
+               "%a The given trigger is not a term and is ignored"
+               Loc.report t.pp_loc;
            (* hack to typecheck *)
            type_term env {t with pp_desc = PPconst ConstVoid}
     )l

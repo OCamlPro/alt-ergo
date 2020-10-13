@@ -204,32 +204,29 @@ let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
   else ifprintf err_formatter s
 
 let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
-    ?(debug=true) ?(module_name="") ?(function_name="") s =
-  if debug then begin
-    let fmt = Options.get_fmt_dbg () in
-    fprintf fmt "@[<v 0>%s" (pp_smt clean_dbg_print);
-    if header then begin
-      let fname =
-        if String.equal function_name ""
-        then ""
-        else sprintf "[%s]" function_name
-      in
-      let mname =
-        if String.equal module_name ""
-        then ""
-        else sprintf "[%s]" module_name
-      in
-      if Options.get_output_with_colors () then
-        fprintf fmt
-          "@{<fg_blue>@{<bold>[Debug]%s%s@}@}@,@[<v 0>"
-          mname fname
-      else
-        fprintf fmt
-          "[Debug]%s%s@,@[<v 0>" mname fname
-    end;
-    if flushed then kfprintf flush fmt s else fprintf fmt s
-  end
-  else ifprintf err_formatter s
+    ?(module_name="") ?(function_name="") s =
+  let fmt = Options.get_fmt_dbg () in
+  fprintf fmt "@[<v 0>%s" (pp_smt clean_dbg_print);
+  if header then begin
+    let fname =
+      if String.equal function_name ""
+      then ""
+      else sprintf "[%s]" function_name
+    in
+    let mname =
+      if String.equal module_name ""
+      then ""
+      else sprintf "[%s]" module_name
+    in
+    if Options.get_output_with_colors () then
+      fprintf fmt
+        "@{<fg_blue>@{<bold>[Debug]%s%s@}@}@,@[<v 0>"
+        mname fname
+    else
+      fprintf fmt
+        "[Debug]%s%s@,@[<v 0>" mname fname
+  end;
+  if flushed then kfprintf flush fmt s else fprintf fmt s
 
 let print_fmt ?(flushed=true) fmt s =
   if flushed then kfprintf flush fmt s else fprintf fmt s
