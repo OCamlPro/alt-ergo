@@ -899,7 +899,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
      greedy = true;
     }
 
-
   let do_instantiation env sa mconf msg ~dec_lvl =
     Debug.new_instances msg env;
     let l = instantiate_ground_preds env [] sa in
