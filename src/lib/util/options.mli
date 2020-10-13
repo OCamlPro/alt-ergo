@@ -297,6 +297,10 @@ val set_output_with_colors : bool -> unit
 (** Set [output_with_headers] accessible with {!val:get_output_with_headers} *)
 val set_output_with_headers : bool -> unit
 
+(** Set [output_with_formatting] accessible with
+    {!val:get_output_with_formatting} *)
+val set_output_with_formatting : bool -> unit
+
 (** Set [infer_input_format] accessible with {!val:get_infer_input_format} *)
 val set_infer_input_format : 'a option -> unit
 
@@ -559,6 +563,10 @@ val get_output_with_colors  : unit -> bool
 
 (** [true] if the outputs are printed with headers *)
 val get_output_with_headers  : unit -> bool
+(** Default to [true] *)
+
+(** [true] if the outputs are printed with formatting rules *)
+val get_output_with_formatting  : unit -> bool
 (** Default to [true] *)
 
 (** Valuget_e of the currently selected parsing and typing frontend. *)

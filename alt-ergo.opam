@@ -29,7 +29,7 @@ license: [
 ]
 
 build: [
-  ["./configure" name]
+  ["ocaml" "unix.cma" "configure.ml" name]
   ["dune" "subst"] {pinned}
   ["dune" "build" "-p" name "-j" jobs]
 ]
