@@ -1364,29 +1364,35 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let greedy_instantiation env =
     if get_greedy () then return_answer env 1 (fun e -> raise (I_dont_know e));
-    let gre_inst =
-      ME.fold
-        (fun f (gf,_,_,_) inst ->
-           Inst.add_terms inst (E.max_ground_terms_rec_of_form f) gf)
-        env.gamma env.inst
+    let rec greedy_instantiation_aux env greedier =
+      let gre_inst =
+        ME.fold
+          (fun f (gf,_,_,_) inst ->
+             Inst.add_terms inst (E.max_ground_terms_rec_of_form f) gf)
+          env.gamma env.inst
+      in
+      let env = new_inst_level env in
+      let mconf =
+        {Util.nb_triggers = max 10 (get_nb_triggers () * 10);
+         no_ematching = false;
+         triggers_var = if greedier then true else get_triggers_var ();
+         use_cs = true;
+         backward = Util.Normal;
+         greedy = true;
+        }
+      in
+      let env, ok1 = inst_and_assume mconf env inst_predicates gre_inst in
+      let env, ok2 = inst_and_assume mconf env inst_lemmas gre_inst in
+      let env, ok3 = syntactic_th_inst env gre_inst ~rm_clauses:false in
+      let env, ok4 = semantic_th_inst  env gre_inst ~rm_clauses:false ~loop:4 in
+      let env = do_case_split env Util.AfterMatching in
+      if ok1 || ok2 || ok3 || ok4 then env
+      else if not greedier then greedy_instantiation_aux env true
+      else
+        return_answer env 1
+          (fun e -> raise (I_dont_know e))
     in
-    let env = new_inst_level env in
-    let mconf =
-      {Util.nb_triggers = max 10 (get_nb_triggers () * 10);
-       no_ematching = false;
-       triggers_var = true;
-       use_cs = true;
-       backward = Util.Normal;
-       greedy = true;
-      }
-    in
-    let env, ok1 = inst_and_assume mconf env inst_predicates gre_inst in
-    let env, ok2 = inst_and_assume mconf env inst_lemmas gre_inst in
-    let env, ok3 = syntactic_th_inst env gre_inst ~rm_clauses:false in
-    let env, ok4 = semantic_th_inst  env gre_inst ~rm_clauses:false ~loop:4 in
-    let env = do_case_split env Util.AfterMatching in
-    if ok1 || ok2 || ok3 || ok4 then env
-    else return_answer env 1 (fun e -> raise (I_dont_know e))
+    greedy_instantiation_aux env false
 
   let normal_instantiation env try_greedy =
     Debug.print_nb_related env;

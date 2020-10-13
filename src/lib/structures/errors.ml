@@ -85,6 +85,7 @@ type error =
   | Syntax_error of Loc.t * string
   | Typing_error of Loc.t * typing_error
   | Run_error of run_error
+  | Warning_as_error
 
 exception Error of error
 
@@ -95,6 +96,10 @@ let typing_error e loc =
 
 let run_error e =
   error (Run_error e)
+
+let warning_as_error () =
+  if Options.get_warning_as_error () then
+    error (Warning_as_error)
 
 let report_typing_error fmt = function
   | BitvExtract(i,j) ->
@@ -230,3 +235,4 @@ let report fmt = function
   | Run_error e ->
     Options.print_output_format fmt "Fatal Error: ";
     report_run_error fmt e
+  | Warning_as_error -> ()
