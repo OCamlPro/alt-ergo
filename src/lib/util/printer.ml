@@ -156,6 +156,24 @@ let add_smt formatter =
   Format_shims.pp_set_formatter_out_functions formatter
     { old_fs with out_newline }
 
+let remove_formatting formatter =
+  let old_fs = Format_shims.pp_get_formatter_out_functions formatter () in
+  let out_newline () = old_fs.out_string "" 0 0 in
+  let out_spaces _n = old_fs.out_spaces 0 in
+  Format.pp_set_formatter_out_functions formatter
+    { old_fs with out_newline; out_spaces }
+
+(* This function is used to force a newline when the option removing the
+   formatting is enable *)
+let force_new_line formatter =
+  if not (Options.get_output_with_formatting ()) then
+    let old_fs = Format_shims.pp_get_formatter_out_functions formatter () in
+    let out_newline () = old_fs.out_string "\n" 0 1 in
+    Format_shims.pp_set_formatter_out_functions formatter
+      { old_fs with out_newline };
+    Format.fprintf formatter "@.";
+    remove_formatting formatter
+
 let init_output_format () =
   match Options.get_output_format () with
   | Smtlib2 ->
@@ -218,6 +236,8 @@ let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
       then ""
       else sprintf "[%s]" module_name
     in
+    (* we force a newline to split the print at every print with header *)
+    force_new_line fmt;
     if Options.get_output_with_colors () then
       fprintf fmt
         "@{<fg_blue>@{<bold>[Debug]%s%s@}@}@,@[<v 0>"
@@ -227,6 +247,7 @@ let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
         "[Debug]%s%s@,@[<v 0>" mname fname
   end;
   if flushed then kfprintf flush fmt s else fprintf fmt s
+
 
 let print_fmt ?(flushed=true) fmt s =
   if flushed then kfprintf flush fmt s else fprintf fmt s
