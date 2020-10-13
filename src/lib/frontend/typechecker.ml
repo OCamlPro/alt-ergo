@@ -395,7 +395,8 @@ let check_pattern_matching missing dead loc =
         ) dead
     in
     Printer.print_wrn "%a"
-      Errors.report (Typing_error(loc,MatchUnusedCases dead))
+      Errors.report (Typing_error(loc,MatchUnusedCases dead));
+    Errors.warning_as_error ()
 
 let mk_adequate_app p s te_args ty logic_kind =
   let hp = Hstring.make p in

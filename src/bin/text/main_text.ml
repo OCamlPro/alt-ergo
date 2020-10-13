@@ -163,8 +163,9 @@ let () =
         let l, env = I.type_parsed state.env p in
         List.fold_left (typed_loop all_used_context) { state with env; } l
       with
-        Errors.Error e ->
-        Printer.print_err "%a" Errors.report e;
+      | Errors.Error e ->
+        if e != Warning_as_error then
+          Printer.print_err "%a" Errors.report e;
         exit 1
     end
   in

@@ -188,14 +188,17 @@ let print_err ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
 
 let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     ?(warning=true) s =
+  if Options.get_warning_as_error () then
+    print_err ~flushed ~header ~error:warning s
+  else
   if warning then begin
     let fmt = Options.get_fmt_wrn () in
     fprintf fmt "@[<v 0>%s" (pp_smt clean_wrn_print);
     if header then
       if Options.get_output_with_colors () then
-        fprintf fmt "@[<v 9>@{<fg_orange>@{<bold>[Warning]@}@}"
+        fprintf fmt "@[<v 9>@{<fg_orange>@{<bold>[Warning]@}@} "
       else
-        fprintf fmt "@[<v 9>[Warning]" ;
+        fprintf fmt "@[<v 9>[Warning] " ;
     if flushed then kfprintf flush fmt s else fprintf fmt s
   end
   else ifprintf err_formatter s

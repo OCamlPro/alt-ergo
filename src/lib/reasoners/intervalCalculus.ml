@@ -2037,7 +2037,8 @@ let best_interval_of optimized env p =
         if true (*get_debug_fpa() >= 2*) then begin
           [@ocaml.ppwarning "TODO: find an example triggering this case!"]
           Printer.print_wrn
-            "TODO: should check that this is correct !!!"
+            "TODO: should check that this is correct !!!";
+          Errors.warning_as_error ()
         end;
         raise (Ex.Inconsistent (expl, env.classes))
 
