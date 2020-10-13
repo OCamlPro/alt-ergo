@@ -884,6 +884,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let greedy_mconf () =
     {Util.nb_triggers = Stdlib.max 10 (get_nb_triggers () * 10);
      no_ematching = false;
+     triggers_var = get_triggers_var ();
+     use_cs = true;
+     backward = Util.Normal;
+     greedy = true;
+    }
+
+  let greedier_mconf () =
+    {Util.nb_triggers = Stdlib.max 10 (get_nb_triggers () * 10);
+     no_ematching = false;
      triggers_var = true;
      use_cs = true;
      backward = Util.Normal;
@@ -929,7 +938,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         )(env, false)
         [ frugal_mconf (), "frugal-inst", false, true ;
           normal_mconf (), "normal-inst", false, false;
-          greedy_mconf (), "greedy-inst", true , false ]
+          greedy_mconf (), "greedy-inst", true , false;
+          greedier_mconf (), "greedier-inst", true, false ]
 
 
   let rec unsat_rec env ~first_call:_ : unit =
