@@ -630,11 +630,16 @@ struct
         X6.choose_adequate_model t rep l
       | Ty.Trecord _ -> X2.choose_adequate_model t rep l
       | Ty.Tfarray _ -> X4.choose_adequate_model t rep l
+<<<<<<< HEAD
       | Ty.Tbool ->
         (* case split is now supposed to be done for internal bools if
            needed as well *)
         assert (is_bool_const rep);
         rep, Format.asprintf "%a" print rep
+||||||| parent of 6738c964 (Directly use rep of bool value for counterexamples)
+=======
+      | Ty.Tbool -> rep, asprintf "%a" print rep
+>>>>>>> 6738c964 (Directly use rep of bool value for counterexamples)
       | _            ->
         let acc =
           List.fold_left
