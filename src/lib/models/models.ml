@@ -230,7 +230,7 @@ module SmtlibCounterExample = struct
           match find_destrs destr destrs with
           | None -> fprintf fmt "<missing value for %s> " destr
           | Some rep -> fprintf fmt "%s " rep
-        ) (List.rev lbs)
+        ) lbs
     in
     match Records.find_opt (Hstring.view n) !records with
     | None -> assert false
