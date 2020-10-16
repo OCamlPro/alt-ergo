@@ -1045,210 +1045,13 @@ let assign_next env =
   Debug.check_invariants "assign_next" env;
   res, env
 
-module Profile = struct
 
-  module P = Map.Make
-      (struct
-        type t = Sy.t * Ty.t list * Ty.t
-
-        let (|||) c1 c2 = if c1 <> 0 then c1 else c2
-
-        let compare (a1, b1, c1)  (a2, b2, c2) =
-          let l1_l2 = List.length b1 - List.length b2 in
-          let c = l1_l2 ||| (Ty.compare c1 c2) ||| (Sy.compare a1 a2) in
-          if c <> 0 then c
-          else
-            let c = ref 0 in
-            try
-              List.iter2
-                (fun ty1 ty2 ->
-                   let d = Ty.compare ty1 ty2 in
-                   if d <> 0 then begin c := d; raise Exit end
-                ) b1 b2;
-              0
-            with
-            | Exit -> assert (!c <> 0); !c
-            | Invalid_argument _ -> assert false
-      end)
-
-  module V = Set.Make
-      (struct
-        type t = (E.t * (X.r * string)) list * (X.r * string)
-        let compare (l1, (v1,_)) (l2, (v2,_)) =
-          let c = X.hash_cmp v1 v2 in
-          if c <> 0 then c
-          else
-            let c = ref 0 in
-            try
-              List.iter2
-                (fun (_,(x,_)) (_,(y,_)) ->
-                   let d = X.hash_cmp x y in
-                   if d <> 0 then begin c := d; raise Exit end
-                ) l1 l2;
-              !c
-            with
-            | Exit -> !c
-            | Invalid_argument _ -> List.length l1 - List.length l2
-      end)
-
-  let add p v mp =
-    let prof_p = try P.find p mp with Not_found -> V.empty in
-    if V.mem v prof_p then mp
-    else P.add p (V.add v prof_p) mp
-
-  let iter = P.iter
-
-  let fold = P.fold
-
-  let empty = P.empty
-
-  let is_empty = P.is_empty
-end
-
-let assert_has_depth_one (e, _) =
-  match X.term_extract e with
-  | Some t, true -> assert (E.const_term t);
-  | _ -> ()
-
-module SMT2LikeModelOutput = struct
-
-  let x_print fmt (_ , ppr) = fprintf fmt "%s" ppr
-
-  let x_print_why3 fmt (_ , ppr) =
-    fprintf fmt "%s"
-      (match ppr with
-       | "True" -> "true"
-       | "False" -> "false"
-       | _ -> ppr)
-
-  let print_args fmt l =
-    match l with
-    | [] -> assert false
-    | [_,e] ->
-      fprintf fmt "%a" x_print e;
-    | (_,e) :: l ->
-      fprintf fmt "%a" x_print e;
-      List.iter (fun (_, e) -> fprintf fmt " %a" x_print e) l
-
-  let print_symb ty fmt f =
-    match f, ty with
-    | Sy.Op Sy.Record, Ty.Trecord { Ty.name ; _ } ->
-      fprintf fmt "%a__%s" Sy.print f (Hstring.view name)
-
-    | _ -> Sy.print fmt f
-
-  let output_constants_model cprofs =
-    (*printf "; constants:@.";*)
-    Profile.iter
-      (fun (f, _xs_ty, ty) st ->
-         match Profile.V.elements st with
-         | [[], rep] ->
-           (*printf "  (%a %a)  ; %a@."
-             (print_symb ty) f x_print rep Ty.print ty*)
-           Printer.print_fmt ~flushed:false (get_fmt_mdl ())
-             "(s(%d): %a, rep: %a)@ "
-             (List.length _xs_ty) (print_symb ty) f x_print rep
-         | _ -> assert false
-      ) cprofs
-
-  let pp_type fmt t =
-    let open Ty in
-    Format.fprintf fmt "%s" (match t with
-        | Tint -> "Int"
-        | Treal -> "Real"
-        | Tbool -> "Bool"
-        | Text (_, t) -> Hstring.view t
-        | _ -> asprintf "%a" print t
-      )
-
-  let get_qtmk f qtmks =
-    try Models.Sorts.find f qtmks
-    with Not_found -> f
-
-  let output_constants_why3_counterexample cprofs fprofs =
-    (* Models.Sorts.iter (fun f (nbargs, t) ->
-     *     Format.eprintf "Sort: %s(%d): %s@." f nbargs t) !Models.h; *)
-    Printer.print_fmt ~flushed:false (get_fmt_mdl()) "@[<v 0>(model@,";
-    let qtmks = Profile.fold
-        (fun (f, _xs_ty, ty) st acc ->
-           Profile.V.fold
-             (fun (xs, rep) acc ->
-                let s = asprintf "%a" (print_symb ty) f in
-                let rep = asprintf "%a" x_print rep in
-                match Models.get_type s, Models.get_type rep with
-                | Some ts, Some tr when String.equal ts tr ->
-                  Models.Sorts.add
-                    rep (Format.asprintf "(%s %a)" s print_args xs)
-                    acc
-                | _ -> acc;
-             ) st acc;
-        ) fprofs Models.Sorts.empty in
-    Profile.iter
-      (fun (f, _xs_ty, ty) st ->
-         match Profile.V.elements st with
-         | [[], rep] ->
-           let rep = Format.asprintf "%a" x_print_why3 rep in
-           Printer.print_fmt ~flushed:false (get_fmt_mdl ())
-             "(define-fun %a () %a %s)@ "
-             (print_symb ty) f pp_type ty (get_qtmk rep qtmks)
-         | _ -> assert false
-      ) cprofs
-
-  let output_functions_model fprofs =
-    if not (Profile.is_empty fprofs) then begin
-      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
-      (*printf "@.; functions:@.";*)
-      Profile.iter
-        (fun (f, _xs_ty, ty) st ->
-           (*printf "  ; fun %a : %a -> %a@."
-             (print_symb ty) f Ty.print_list xs_ty Ty.print ty;*)
-           Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
-           Profile.V.iter
-             (fun (xs, rep) ->
-                Printer.print_fmt ~flushed:false (get_fmt_mdl ())
-                  "((s: %a, args: %a) rep: %a)@ "
-                  (print_symb ty) f print_args xs x_print rep;
-                List.iter (fun (_,x) -> assert_has_depth_one x) xs;
-             )st;
-           Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@]@ ";
-        ) fprofs;
-      Printer.print_fmt (get_fmt_mdl ()) "@]";
-    end
-
-  let output_arrays_model arrays =
-    if not (Profile.is_empty arrays) then begin
-      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
-      (*printf "; arrays:@.";*)
-      Profile.iter
-        (fun (f, xs_ty, ty) st ->
-           match xs_ty with
-             [_] ->
-             (*printf "  ; array %a : %a -> %a@."
-               (print_symb ty) f Ty.print tyi Ty.print ty;*)
-             Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>@ ";
-             Profile.V.iter
-               (fun (xs, rep) ->
-                  Printer.print_fmt ~flushed:false (get_fmt_mdl ())
-                    "((%a %a) %a)@ "
-                    (print_symb ty) f print_args xs x_print rep;
-                  List.iter (fun (_,x) -> assert_has_depth_one x) xs;
-               )st;
-             Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@]@ ";
-           | _ -> assert false
-
-        ) arrays;
-      Printer.print_fmt (get_fmt_mdl ()) "@]";
-    end
-
-end
-(* of module SMT2LikeModelOutput *)
-
+(**** Counter examples functions ****)
 let is_a_good_model_value (x, _) =
   match X.leaves x with
     [] -> true
   | [y] -> X.equal x y
   | _ -> false
-
 
 let model_repr_of_term t env mrepr =
   try ME.find t mrepr, mrepr
@@ -1266,93 +1069,66 @@ let model_repr_of_term t env mrepr =
     let e = X.choose_adequate_model t rep cls in
     e, ME.add t e mrepr
 
+let compute_concrete_model ({ make; _ } as env) =
+  ME.fold
+    (fun t _mk ((fprofs, cprofs, carrays, mrepr) as acc) ->
+       let { E.f; xs; ty; _ } =
+         match E.term_view t with
+         | E.Not_a_term _ -> assert false
+         | E.Term tt -> tt
+       in
+       if X.is_solvable_theory_symbol f ty
+       || E.is_fresh t || E.is_fresh_skolem t
+       || E.equal t E.vrai || E.equal t E.faux
+       then
+         acc
+       else
+         let xs, tys, mrepr =
+           List.fold_left
+             (fun (xs, tys, mrepr) x ->
+                let rep_x, mrepr = model_repr_of_term x env mrepr in
+                assert (is_a_good_model_value rep_x);
+                (x, rep_x)::xs,
+                (E.type_info x)::tys,
+                mrepr
+             ) ([],[], mrepr) (List.rev xs)
+         in
+         let rep, mrepr = model_repr_of_term t env mrepr in
+         assert (is_a_good_model_value rep);
+         match f, xs, ty with
+         | Sy.Op Sy.Set, _, _ -> acc
 
-let output_concrete_model ({ make; _ } as env) =
-  if get_interpretation () then
-    let why3_counterexample =
-      let why3_output =
-        match Options.get_output_format () with
-        | Why3 -> true
-        | Smtlib2 | Native | Unknown _ -> false
-      in
-      why3_output || Options.get_why3_counterexample ()
-    in
-    let functions, constants, arrays, _ =
-      ME.fold
-        (fun t _mk ((fprofs, cprofs, carrays, mrepr) as acc) ->
-           let { E.f; xs; ty; _ } =
-             match E.term_view t with
-             | E.Not_a_term _ -> assert false
-             | E.Term tt -> tt
-           in
-           if X.is_solvable_theory_symbol f ty
-           || E.is_fresh t || E.is_fresh_skolem t
-           || E.equal t E.vrai || E.equal t E.faux
-           then
-             acc
+         | Sy.Op Sy.Get, [(_,(a,_));((_,(i,_)) as e)], _ ->
+           begin
+             match X.term_extract a with
+             | Some ta, true ->
+               let { E.f = f_ta; xs=xs_ta; _ } =
+                 match E.term_view ta with
+                 | E.Not_a_term _ -> assert false
+                 | E.Term tt -> tt
+               in
+               assert (xs_ta == []);
+               fprofs,
+               cprofs,
+               Models.Profile.add (f_ta,[X.type_info i], ty) ([e], rep) carrays,
+               mrepr
+
+             | _ -> assert false
+           end
+
+         | _ ->
+           if tys == [] then
+             fprofs, Models.Profile.add (f, tys, ty) (xs, rep) cprofs, carrays,
+             mrepr
            else
-             let xs, tys, mrepr =
-               List.fold_left
-                 (fun (xs, tys, mrepr) x ->
-                    let rep_x, mrepr = model_repr_of_term x env mrepr in
-                    assert (is_a_good_model_value rep_x);
-                    (x, rep_x)::xs,
-                    (E.type_info x)::tys,
-                    mrepr
-                 ) ([],[], mrepr) (List.rev xs)
-             in
-             let rep, mrepr = model_repr_of_term t env mrepr in
-             assert (is_a_good_model_value rep);
-             match f, xs, ty with
-             | Sy.Op Sy.Set, _, _ -> acc
+             Models.Profile.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
+             mrepr
 
-             | Sy.Op Sy.Get, [(_,(a,_));((_,(i,_)) as e)], _ ->
-               begin
-                 match X.term_extract a with
-                 | Some ta, true ->
-                   let { E.f = f_ta; xs=xs_ta; _ } =
-                     match E.term_view ta with
-                     | E.Not_a_term _ -> assert false
-                     | E.Term tt -> tt
-                   in
-                   assert (xs_ta == []);
-                   fprofs,
-                   cprofs,
-                   Profile.add (f_ta,[X.type_info i], ty) ([e], rep) carrays,
-                   mrepr
+    ) make
+    (Models.Profile.empty, Models.Profile.empty, Models.Profile.empty, ME.empty)
 
-                 | _ -> assert false
-               end
-
-             | _ ->
-               if tys == [] then
-                 fprofs, Profile.add (f, tys, ty) (xs, rep) cprofs, carrays,
-                 mrepr
-               else
-                 Profile.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
-                 mrepr
-
-        ) make (Profile.empty, Profile.empty, Profile.empty, ME.empty)
-    in
-    if why3_counterexample then begin
-      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 0>unknown@ ";
-      SMT2LikeModelOutput.output_constants_why3_counterexample
-        constants functions;
-      Printer.print_fmt (get_fmt_mdl ()) "@])";
-
-      (* Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>ME@ ";
-       * ME.iter (fun t r ->
-       *     Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "%a -> %a@ "
-       *       Expr.print t X.print r) make;
-       * Printer.print_fmt (get_fmt_mdl ()) "@])"; *)
-    end
-    else begin
-      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "@[<v 2>(@ ";
-      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "Constants@ ";
-      SMT2LikeModelOutput.output_constants_model constants;
-      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "Functions@ ";
-      SMT2LikeModelOutput.output_functions_model functions;
-      Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "Arrays@ ";
-      SMT2LikeModelOutput.output_arrays_model arrays;
-      Printer.print_fmt (get_fmt_mdl ()) "@])";
-    end
+let output_concrete_model fmt env =
+  if get_interpretation () then
+    let functions, constants, arrays, _ =
+      compute_concrete_model env in
+    Models.output_concrete_model fmt functions constants arrays
