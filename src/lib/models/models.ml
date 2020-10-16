@@ -201,6 +201,45 @@ let debug = false
 
 module SmtlibCounterExample = struct
 
+  module Records = Map.Make(String)
+  let records = ref Records.empty
+
+  let add_records_destr record destr rep =
+    match Records.find_opt record !records with
+    | None ->
+      records := Records.add record [(destr,rep)] !records
+    | Some destrs ->
+      records := Records.add record ((destr,rep) :: destrs) !records
+
+  let mk_records_constr
+      { Ty.name = n; record_constr = cstr; lbs = lbs; _} =
+    let rec find_destrs destr destrs =
+      match destrs with
+      | [] -> None
+      | (d,rep) :: destrs ->
+        let s = Str.regexp_string destr in
+        try let _ = Str.search_forward s d 0 in
+          Some rep
+        with Not_found ->
+          find_destrs destr destrs
+    in
+
+    let print_destr fmt (destrs,lbs) =
+      List.iter (fun (destr, _ty_destr) ->
+          let destr = Hstring.view destr in
+          match find_destrs destr destrs with
+          | None -> fprintf fmt "<missing value for %s> " destr
+          | Some rep -> fprintf fmt "%s " rep
+        ) (List.rev lbs)
+    in
+    match Records.find_opt (Hstring.view n) !records with
+    | None -> assert false
+    | Some [] -> assert false
+    | Some destrs ->
+      asprintf "%s %a"
+        (Hstring.view cstr)
+        print_destr (destrs,lbs)
+
   let x_print fmt (_ , ppr) = fprintf fmt "%s" ppr
 
   let x_print_why3 fmt (_ , ppr) =
@@ -228,13 +267,23 @@ module SmtlibCounterExample = struct
 
   let pp_type fmt t =
     let open Ty in
+    (*     let print_destr fmt (destr, ty) =
+           fprintf fmt "(%s:%a) " (Hstring.view destr) print ty
+           in *)
     Format.fprintf fmt "%s" (match t with
         | Tint -> "Int"
         | Treal -> "Real"
         | Tbool -> "Bool"
         | Text (_, t) -> Hstring.view t
-        | Trecord { args = lv; name = n; record_constr = cstr ; _} ->
-          asprintf "%a %s %s" print_list lv (Hstring.view n) (Hstring.view cstr)
+        | Trecord { args = lv; name = n; _ } ->
+          (*           asprintf "(args:%a) %s (constr:%s) (destr:%a)"
+                       print_list lv
+                       (Hstring.view n)
+                       (Hstring.view cstr)
+                       (Printer.pp_list_no_space print_destr) lbs *)
+          asprintf "%a %s"
+            print_list lv
+            (Hstring.view n)
         | _ -> asprintf "%a" print t
       )
 
@@ -257,18 +306,29 @@ module SmtlibCounterExample = struct
            Profile.V.fold
              (fun (xs, rep) acc ->
 
+
                 let print_xs fmt (e,(r,xs)) =
                   fprintf fmt "(%a / %a / %s), " E.print e X.print r xs
                 in
                 let print_rep fmt (r,rep) =
                   fprintf fmt "(%a %s) " X.print r rep
                 in
+
                 if debug then
                   Printer.print_dbg ~header:false "xs:%a / rep:%a"
                     (Printer.pp_list_no_space print_xs) xs
                     print_rep rep;
                 let s = asprintf "%a" (print_symb ty) f in
                 let rep = asprintf "%a" x_print rep in
+
+                begin match xs_ty with
+                  | [Ty.Trecord r] ->
+                    add_records_destr
+                      (Hstring.view r.name)
+                      (Sy.to_string f)
+                      rep
+                  | _ -> ()
+                end;
 
                 match get_type s, get_type rep with
                 | Some ts, Some tr when String.equal ts tr ->
@@ -307,6 +367,15 @@ module SmtlibCounterExample = struct
            if debug then
              Printer.print_dbg ~header:false "rep:%s / lsit lenght %d"
                rep (List.length xs_ty);
+
+           let qtmks =
+             match ty with
+             | Ty.Trecord r ->
+               let constr = mk_records_constr r in
+               let sconstr = sprintf "(%s)" constr in
+               Sorts.add rep sconstr qtmks
+             | _ -> qtmks
+           in
 
            Printer.print_fmt ~flushed:false fmt
              "(define-fun %a () %a %s)@ "
