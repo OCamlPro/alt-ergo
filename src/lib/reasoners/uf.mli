@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+(** {1 Uf module} *)
+
 type t
 
 type r = Shostak.Combine.r
@@ -68,8 +70,19 @@ val is_normalized : t -> r -> bool
 val assign_next : t -> (r Xliteral.view * bool * Th_util.lit_origin) list * t
 val output_concrete_model : t -> unit
 
-val save_cache : unit -> unit
-(* saves the module's cache *)
+(** {2 Counterexample function} *)
 
-val reinit_cache : unit -> unit
+(** Compute a counterexample using the Uf environment and then print it on the
+    given formatter with the corresponding format setted with
+    Options.get_output_format *)
+val output_concrete_model :
+  Format.formatter ->
+  prop_model:Expr.Set.t ->
+  t ->
+  unit
+
+(** saves the module's cache *)
+val save_cache : unit -> unit
+
 (** reinitializes the module's cache with the saved one *)
+val reinit_cache : unit -> unit
