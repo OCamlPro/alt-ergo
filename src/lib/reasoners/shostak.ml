@@ -611,6 +611,7 @@ struct
         X6.choose_adequate_model t rep l
       | Ty.Trecord _ -> X2.choose_adequate_model t rep l
       | Ty.Tfarray _ -> X4.choose_adequate_model t rep l
+      | Ty.Tbool -> rep, asprintf "%a" print rep
       | _            ->
         let acc =
           List.fold_left
