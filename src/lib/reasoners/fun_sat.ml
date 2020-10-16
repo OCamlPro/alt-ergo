@@ -1214,7 +1214,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | Some env ->
         let cs_tbox = Th.get_case_split_env env.tbox in
         let uf = Ccx.Main.get_union_find cs_tbox in
-        Uf.output_concrete_model uf
+        Uf.output_concrete_model (get_fmt_mdl ()) uf
     end;
     return_function ()
 
@@ -1232,7 +1232,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let env = compute_concrete_model env compute in
     let uf = Ccx.Main.get_union_find (Th.get_case_split_env env.tbox) in
     Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
-    Uf.output_concrete_model uf;
+    Uf.output_concrete_model (get_fmt_mdl ()) uf;
     terminated_normally := true;
     return_function env
 
