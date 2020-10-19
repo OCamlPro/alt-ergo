@@ -601,6 +601,12 @@ struct
     opt
 
   let choose_adequate_model t rep l =
+    let is_true_or_false r = 
+      let re,_rb = term_extract r in
+      match re with
+      | None -> false
+      | Some e -> (Expr.equal Expr.vrai e) || (Expr.equal Expr.faux e)
+    in
     let r, pprint =
       match Expr.type_info t with
       | Ty.Tint
@@ -611,7 +617,8 @@ struct
         X6.choose_adequate_model t rep l
       | Ty.Trecord _ -> X2.choose_adequate_model t rep l
       | Ty.Tfarray _ -> X4.choose_adequate_model t rep l
-      | Ty.Tbool -> rep, asprintf "%a" print rep
+      | Ty.Tbool     when is_true_or_false rep ->
+        rep, asprintf "%a" print rep
       | _            ->
         let acc =
           List.fold_left
