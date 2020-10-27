@@ -157,10 +157,11 @@ let () =
   let all_used_context = FE.init_all_used_context () in
   if Options.get_timelimit_per_goal() then
     FE.print_status FE.Preprocess 0;
+  let assertion_stack = ref (Stack.create ()) in
   let typing_loop state p =
     if get_parse_only () then state else begin
       try
-        let l, env = I.type_parsed state.env p in
+        let l, env = I.type_parsed state.env assertion_stack p in
         List.fold_left (typed_loop all_used_context) { state with env; } l
       with
       | Errors.Error e ->

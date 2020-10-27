@@ -1997,6 +1997,7 @@ let type_one_th_decl env e =
   | TypeDecl ((loc, _, _, _)::_) ->
     typing_error WrongDeclInTheory loc
   | TypeDecl [] -> assert false
+  | Push _ | Pop _ -> assert false
 
 let is_recursive_type =
   let rec exit_if_has_type s ppty =
@@ -2143,9 +2144,20 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     assert (not is_recursive); (* Abstract types are not recursive *)
     acc, env
 
-let rec type_decl (acc, env) d =
+let rec type_decl (acc, env) d assertion_stack =
   Types.to_tyvars := MString.empty;
   match d with
+  | Push loc ->
+    Stack.push env !assertion_stack;
+    let td = {c = TPush(loc); annot = new_id () } in
+    (td,env) :: acc ,env
+  | Pop loc -> begin
+      try
+        let env = Stack.pop !assertion_stack in
+        let td = {c = TPop(loc); annot = new_id () } in
+        (td,env) :: acc, env
+      with Stack.Empty -> typing_error EmptyAssertionStack loc
+    end
   | Theory (loc, name, ext, l) ->
     Options.tool_req 1 "TR-Typing-TheoryDecl$_F$";
     let tl = List.map (type_one_th_decl env) l in
@@ -2247,7 +2259,8 @@ let rec type_decl (acc, env) d =
     (* A. Typing types that are not recursive *)
     let acc, env =
       List.fold_left
-        (fun accu x -> type_decl accu (TypeDecl [x])) (acc, env) not_rec
+        (fun accu x ->
+           type_decl accu (TypeDecl [x]) assertion_stack) (acc, env) not_rec
     in
 
     (* B. Typing types that are recursive *)
@@ -2279,14 +2292,16 @@ let rec type_decl (acc, env) d =
          type_user_defined_type_body ~is_recursive:true env acc ty_d)
       (acc, env) are_rec
 
-let type_parsed env d =
-  let l, env' = type_decl ([], env) d in
+let type_parsed env s d =
+  let l, env' = type_decl ([], env) d s in
   List.rev_map fst l, env'
 
 let type_file ld =
   let env = Env.empty in
+  let s = ref (Stack.create ()) in
   let ltd, env =
-    List.fold_left type_decl ([], env) ld
+    List.fold_left 
+      (fun acc d -> type_decl acc d s) ([], env) ld
   in
   List.rev ltd, env
 

@@ -186,6 +186,8 @@ and 'a tdecl =
       Loc.t * string *
       (string * Ty.t) list * Ty.t * 'a atform
   | TTypeDecl of Loc.t * Ty.t
+  | TPush of Loc.t
+  | TPop of Loc.t
 
 (*****)
 
@@ -358,6 +360,10 @@ let rec print_tdecl fmt = function
          ~pp:(print_rwt print_term)) l
   | TGoal (_, sort, name, f) ->
     Format.fprintf fmt "goal %s: @[<hov>%a@]" name print_formula f
+  | TPush ->
+    Format.fprintf fmt "push"
+  | TPop ->
+    Format.fprintf fmt "pop"
 
 and print_atdecl fmt a = print_tdecl fmt a.c
 *)

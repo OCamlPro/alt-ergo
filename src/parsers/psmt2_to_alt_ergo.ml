@@ -349,6 +349,16 @@ module Translate = struct
       List.map2 translate_datatype_decl sort_dec datatype_dec
     with Invalid_argument _ -> assert false
 
+  let translate_push n pos =
+    try let n = int_of_string n in
+      List.init n (fun _i -> mk_push pos)
+    with _ -> assert false
+
+  let translate_pop n pos =
+    try let n = int_of_string n in
+      List.init n (fun _i -> mk_pop pos)
+    with _ -> assert false
+
   let not_supported s =
     Printer.print_wrn
       ~warning:(Options.get_verbose () || Options.get_debug_warnings ())
@@ -401,8 +411,8 @@ module Translate = struct
     | Cmd_SetLogic _ -> not_supported "set-logic"; acc
     | Cmd_SetOption _ -> not_supported "set-option"; acc
     | Cmd_SetInfo _ -> not_supported "set-info"; acc
-    | Cmd_Push _ -> not_supported "push"; assert false
-    | Cmd_Pop _ -> not_supported "pop"; assert false
+    | Cmd_Push n -> (translate_push n (pos command)) @ acc
+    | Cmd_Pop n -> (translate_pop n (pos command)) @ acc
     | Cmd_Exit -> acc
 
   let init () =
@@ -443,6 +453,7 @@ end
 
 let aux aux_fun token lexbuf =
   try
+    Smtlib_options.set_filename (Options.get_file ());
     Smtlib_options.set_keep_loc true;
     let res = aux_fun token lexbuf in
     Options.set_status (Smtlib_options.status ());

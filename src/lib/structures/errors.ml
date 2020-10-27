@@ -71,6 +71,7 @@ type typing_error =
   | MatchNotExhaustive of Hstring.t list
   | MatchUnusedCases of Hstring.t list
   | NotAdtConstr of string * Ty.t
+  | EmptyAssertionStack
 
 type run_error =
   | Invalid_steps_count of int
@@ -203,6 +204,9 @@ let report_typing_error fmt = function
   | NotAdtConstr (lbl, ty) ->
     fprintf fmt
       "The symbol %s is not a constructor of the type %a" lbl Ty.print ty
+  | EmptyAssertionStack ->
+    fprintf fmt
+      "Empty assertion stack. The number of pop command is greater the the push ones"
 
 let report_run_error fmt = function
   | Invalid_steps_count i ->

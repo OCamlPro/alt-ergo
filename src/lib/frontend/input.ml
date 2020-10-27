@@ -26,7 +26,8 @@ module type S = sig
 
   val empty_env : env
 
-  val type_parsed : env -> parsed -> int Typed.atdecl list * env
+  val type_parsed :
+    env -> env Stack.t ref -> parsed -> int Typed.atdecl list * env
 
 end
 
