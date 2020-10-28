@@ -475,14 +475,9 @@ let make_form name f loc ~decl_kind =
     let id = E.id ff in
     E.mk_forall name loc Symbols.Map.empty [] ff id ~toplevel:true ~decl_kind
 
-let mk_assume acc f name loc g_opt =
-  let f = make_form name f loc ~decl_kind:E.Daxiom in
-  match g_opt with
-  | None ->
-    {st_decl=Assume(name, f, true) ; st_loc=loc} :: acc
-  | Some g ->
-    let ff = E.mk_imp g f 1 in
-    {st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
+let mk_assume acc f name loc =
+  let ff = make_form name f loc ~decl_kind:E.Daxiom in
+  {st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
 
 (* extract defining term of the function or predicate. From the
@@ -545,31 +540,20 @@ let mk_theory acc l th_name extends _loc =
        {st_decl=ThAssume th_elt ; st_loc=loc} :: acc
     )acc l
 
-let assertion_stack = Stack.create ()
-let bvar = ref None
-
 let make acc d =
   match d.c with
-  | TPush _loc ->
-    let b = E.mk_term (Sy.fresh ~is_var:true "guard") [] Ty.Tbool in
-    bvar := Some b;
-    Stack.push b assertion_stack;
-    acc
+  | TPush loc ->
+    {st_decl=Push ; st_loc=loc} :: acc
   | TPop loc ->
-    let nbvar = Stack.pop assertion_stack in
-    if Stack.is_empty assertion_stack then
-      bvar := None
-    else
-      bvar := Some (Stack.top assertion_stack);
-    (* {st_decl= Assume("", E.neg nbvar, true) ; st_loc=loc} :: acc *)
-    acc
-  | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
+    {st_decl=Pop ; st_loc=loc} :: acc
+  | TTheory(loc, name, ext, l) ->
+    mk_theory acc l name ext loc
   | TAxiom(loc, name, Util.Default, f) ->
-    mk_assume acc f name loc !bvar
+    mk_assume acc f name loc
   | TAxiom(_, _, Util.Propagator, _) -> assert false
   | TRewriting(loc, _, lr) ->
     {st_decl=RwtDef(List.map make_rule lr); st_loc=loc} :: acc
-  | TGoal(loc, sort, n, f) -> 
+  | TGoal(loc, sort, n, f) ->
     mk_query acc  n f loc sort
   | TPredicate_def(loc, n, _args, f) ->
     mk_preddef acc f n loc

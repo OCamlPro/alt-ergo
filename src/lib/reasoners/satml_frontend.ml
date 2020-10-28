@@ -25,6 +25,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let reset_refs () = Steps.reset_steps ()
 
+  type incremental = {
+    current_guard: E.t option;
+    stack_guard: E.t Stack.t;
+    pos_guards: SE.t;
+    neg_guards: SE.t;
+  }
+
   type t = {
     satml : SAT.t;
     ff_hcons_env : FF.hcons_env;
@@ -39,7 +46,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     inst : Inst.t;
     ground_preds : (E.gformula * Ex.t) ME.t; (* key <-> f *)
     skolems : E.gformula ME.t; (* key <-> f *)
-    add_inst: E.t -> bool;
+    add_inst : E.t -> bool;
+    incremental : incremental;
+  }
+
+  let empty_incremental () = {
+    current_guard = None;
+    stack_guard = Stack.create ();
+    pos_guards = SE.empty;
+    neg_guards = SE.empty;
   }
 
   let empty () =
@@ -56,6 +71,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       inst = Inst.empty;
       ground_preds = ME.empty;
       skolems = ME.empty;
+      incremental = empty_incremental ();
       add_inst = fun _ -> true;
     }
 
@@ -326,7 +342,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if get_debug_sat () then
     fprintf fmt "unsat_core: %a@." Atom.pr_clause c;
     Ex.union (Ex.singleton (Ex.Dep f)) ex
-    )Ex.empty lc*)
+  )Ex.empty lc*)
 
   let selector env f orig =
     (Options.get_cdcl_tableaux () || not (ME.mem f env.gamma))
@@ -819,7 +835,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     fprintf fmt "pending : %d unit cnf@." (List.length unit);
     fprintf fmt "pending : %d non-unit cnf@." (List.length nunit);
     fprintf fmt "pending : updated = %b@." updated;
-    *)
+  *)
     if SE.is_empty seen_f then begin
       assert (FF.Map.is_empty activate);
       assert (new_vars == []);
@@ -1023,6 +1039,31 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if get_all_models () then fails "all_models";
     if get_model () then fails "model"
 
+  let push env =
+    let b = E.fresh_name Ty.Tbool in
+    Stack.push b env.incremental.stack_guard;
+    let incremental =
+      { env.incremental with
+        current_guard = Some b;
+        pos_guards = SE.add b env.incremental.pos_guards;
+      } in
+    {env with incremental}
+
+  let pop env =
+    let neg_b = Stack.pop env.incremental.stack_guard in
+    let b =
+      if Stack.is_empty env.incremental.stack_guard then
+        None
+      else Some (Stack.top env.incremental.stack_guard)
+    in
+    {env with
+     incremental =
+       { env.incremental with
+         current_guard = b;
+         pos_guards = SE.remove neg_b env.incremental.pos_guards;
+         neg_guards = SE.add (E.neg neg_b) env.incremental.neg_guards;
+       }
+    }
 
   let unsat env gf =
     checks_implemented_features ();
@@ -1036,6 +1077,41 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     try
       assert (SAT.decision_level env.satml == 0);
+      let pushed_assertions =
+        SE.fold (fun e acc ->
+            {E.ff=e;
+             origin_name = gf.origin_name;
+             hdist = -1;
+             gdist = 0;
+             trigger_depth = max_int;
+             nb_reductions = 0;
+             age=0;
+             lem=None;
+             mf=gf.mf;
+             gf=true;
+             from_terms = [];
+             theory_elim = true;
+            } :: acc
+          ) env.incremental.pos_guards [] in
+
+      let pushed_assertions =
+        SE.fold (fun e acc ->
+            {E.ff=e;
+             origin_name = gf.origin_name;
+             hdist = -1;
+             gdist = 0;
+             trigger_depth = max_int;
+             nb_reductions = 0;
+             age=0;
+             lem=None;
+             mf=gf.mf;
+             gf=true;
+             from_terms = [];
+             theory_elim = true;
+            } :: acc
+          ) env.incremental.neg_guards pushed_assertions in
+
+      let env, _updated = assume_aux ~dec_lvl:0 env pushed_assertions in
       let env, _updated = assume_aux ~dec_lvl:0 env [gf] in
       let max_t = max_term_depth_in_sat env in
       let env = {env with inst = Inst.register_max_term_depth env.inst max_t} in
@@ -1052,10 +1128,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end;
       dep
 
+  let add_guard env gf =
+    match env.incremental.current_guard with
+    | None -> gf
+    | Some e ->
+      let guarded_e = E.mk_imp e gf.E.ff 1 in
+      {gf with E.ff = guarded_e}
+
   let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)
     assert (SAT.decision_level env.satml == 0);
-    try fst (assume_aux ~dec_lvl:0 env [gf])
+    try fst (assume_aux ~dec_lvl:0 env [add_guard env gf])
     with IUnsat (_env, dep) -> raise (Unsat dep)
 
   (* instrumentation of relevant exported functions for profiling *)

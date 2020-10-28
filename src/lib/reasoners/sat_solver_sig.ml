@@ -40,6 +40,9 @@ module type S = sig
   val empty : unit -> t
   val empty_with_inst : (Expr.t -> bool) -> t
 
+  val push : t -> t
+  val pop : t -> t
+
   (* [assume env f] assume a new formula [f] in [env]. Raises Unsat if
      [f] is unsatisfiable in [env] *)
   val assume : t -> Expr.gformula -> Explanation.t -> t

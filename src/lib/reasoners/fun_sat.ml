@@ -1809,6 +1809,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ -> assert false
       end
 
+  let push _env = failwith "push command not supported in tableaux sat"
+  let pop _env = failwith "pop command not supported in tableaux sat"
+
   let unsat env fg =
     if Options.get_timers() then
       try

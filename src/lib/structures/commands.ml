@@ -36,6 +36,8 @@ type sat_decl_aux =
   | RwtDef of (Expr.t rwt_rule) list
   | Query of string *  Expr.t * goal_sort
   | ThAssume of Expr.th_elt
+  | Push
+  | Pop
 
 type sat_tdecl = {
   st_loc : Loc.t;
@@ -58,6 +60,8 @@ let print_aux fmt = function
       name print_goal_sort sort Expr.print e
   | ThAssume t ->
     Format.fprintf fmt "th assume %a" Expr.print_th_elt t
+  | Push -> Format.fprintf fmt "Push"
+  | Pop ->  Format.fprintf fmt "Pop"
 
 let print fmt decl = print_aux fmt decl.st_decl
 
