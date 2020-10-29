@@ -137,6 +137,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   end
 
+  type incremental = {
+    current_guard: E.t option;
+    stack_guard: E.t Stack.t;
+    guards: SE.t;
+  }
 
   type t = {
     (* The field gamma contains the current Boolean model (true formulas) of
@@ -166,6 +171,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     heuristics : Heuristics.t ref;
     model_gen_mode : bool ref;
     ground_preds : (E.t * Explanation.t) ME.t; (* key <-> f *)
+    incremental : incremental;
     add_inst: E.t -> bool;
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
   }
@@ -1694,11 +1700,44 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           "solved with backward!";
       raise e
 
+  let push env =
+    let b = E.fresh_name Ty.Tbool in
+    Stack.push b env.incremental.stack_guard;
+    let incremental =
+      { env.incremental with
+        current_guard = Some b;
+        guards = SE.add b env.incremental.guards;
+      } in
+    {env with incremental}
+
+  let pop env =
+    let neg_b = Stack.pop env.incremental.stack_guard in
+    let b =
+      if Stack.is_empty env.incremental.stack_guard then
+        None
+      else Some (Stack.top env.incremental.stack_guard)
+    in
+    let guards = SE.remove neg_b env.incremental.guards in
+    let guards = SE.add (E.neg neg_b) guards in
+    {env with incremental = { env.incremental with
+                              current_guard = b;
+                              guards = guards;}}
+
   let unsat env gf =
     Debug.is_it_unsat gf;
     try
-      if Options.get_tableaux_cdcl () then
+      let pushed_assertions =
+        SE.fold (fun e acc ->
+            (mk_gf e "" true true, Ex.empty) :: acc
+          ) env.incremental.guards [] in
+
+      if Options.get_tableaux_cdcl () then begin
+        cdcl_assume false env pushed_assertions;
         cdcl_assume false env [gf,Ex.empty];
+      end;
+
+      let env = assume env pushed_assertions in
+
       let env = assume env [gf, Ex.empty] in
       let env =
         {env with inst = (* add all the terms of the goal to matching env *)
@@ -1759,11 +1798,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       dep
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
 
+  let add_guard env gf =
+    match env.incremental.current_guard with
+    | None -> gf
+    | Some e ->
+      let guarded_e = E.mk_imp e gf.E.ff 1 in
+      {gf with E.ff = guarded_e}
+
   let assume env fg dep =
     try
       if Options.get_tableaux_cdcl () then
-        cdcl_assume false env [fg,dep];
-      assume env [fg,dep]
+        cdcl_assume false env [add_guard env fg,dep];
+      assume env [add_guard env fg,dep]
     with
     | IUnsat (d, classes) ->
       terminated_normally := true;
@@ -1809,9 +1855,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ -> assert false
       end
 
-  let push _env = failwith "push command not supported in tableaux sat"
-  let pop _env = failwith "pop command not supported in tableaux sat"
-
   let unsat env fg =
     if Options.get_timers() then
       try
@@ -1841,6 +1884,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     all_models_sat_env := None;
     latest_saved_env := None;
     terminated_normally := false
+
+  let empty_incremental () = {
+    current_guard = None;
+    stack_guard = Stack.create ();
+    guards = SE.empty;
+  }
 
   let empty () =
     (* initialize some structures in SAT.empty. Otherwise, E.faux is never
@@ -1873,6 +1922,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       model_gen_mode = ref false;
       ground_preds = ME.empty;
       unit_facts_cache = ref ME.empty;
+      incremental = empty_incremental ();
       add_inst = fun _ -> true;
     }
     in

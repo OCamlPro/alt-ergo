@@ -206,7 +206,8 @@ let report_typing_error fmt = function
       "The symbol %s is not a constructor of the type %a" lbl Ty.print ty
   | EmptyAssertionStack ->
     fprintf fmt
-      "Empty assertion stack. The number of pop command is greater the the push ones"
+      "Empty assertion stack. \
+       The number of pop command is greater the the push ones"
 
 let report_run_error fmt = function
   | Invalid_steps_count i ->
