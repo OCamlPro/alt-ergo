@@ -68,12 +68,8 @@ val mk_theory_case_split : Loc.t -> string -> lexpr -> decl
 
 (** Declaration of stack assertions commands *)
 
-(** Push new assertion  level  onto  the  assertion  stack *)
 val mk_push : Loc.t -> decl
 
-(** Pop an assertion level from the assertion stack,
-    Note that the first assertion level,
-    which is notcreated by a push command, cannot be popped.*)
 val mk_pop : Loc.t -> decl
 
 (** Making pure and logic types *)

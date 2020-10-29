@@ -28,8 +28,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   type incremental = {
     current_guard: E.t option;
     stack_guard: E.t Stack.t;
-    pos_guards: SE.t;
-    neg_guards: SE.t;
+    guards: SE.t;
   }
 
   type t = {
@@ -53,8 +52,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let empty_incremental () = {
     current_guard = None;
     stack_guard = Stack.create ();
-    pos_guards = SE.empty;
-    neg_guards = SE.empty;
+    guards = SE.empty;
   }
 
   let empty () =
@@ -1045,7 +1043,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let incremental =
       { env.incremental with
         current_guard = Some b;
-        pos_guards = SE.add b env.incremental.pos_guards;
+        guards = SE.add b env.incremental.guards;
       } in
     {env with incremental}
 
@@ -1056,14 +1054,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         None
       else Some (Stack.top env.incremental.stack_guard)
     in
-    {env with
-     incremental =
-       { env.incremental with
-         current_guard = b;
-         pos_guards = SE.remove neg_b env.incremental.pos_guards;
-         neg_guards = SE.add (E.neg neg_b) env.incremental.neg_guards;
-       }
-    }
+    let guards = SE.remove neg_b env.incremental.guards in
+    let guards = SE.add (E.neg neg_b) guards in
+    {env with incremental = { env.incremental with
+                              current_guard = b;
+                              guards = guards;}}
 
   let unsat env gf =
     checks_implemented_features ();
@@ -1079,39 +1074,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       assert (SAT.decision_level env.satml == 0);
       let pushed_assertions =
         SE.fold (fun e acc ->
-            {E.ff=e;
-             origin_name = gf.origin_name;
-             hdist = -1;
-             gdist = 0;
-             trigger_depth = max_int;
-             nb_reductions = 0;
-             age=0;
-             lem=None;
-             mf=gf.mf;
-             gf=true;
-             from_terms = [];
-             theory_elim = true;
-            } :: acc
-          ) env.incremental.pos_guards [] in
-
-      let pushed_assertions =
-        SE.fold (fun e acc ->
-            {E.ff=e;
-             origin_name = gf.origin_name;
-             hdist = -1;
-             gdist = 0;
-             trigger_depth = max_int;
-             nb_reductions = 0;
-             age=0;
-             lem=None;
-             mf=gf.mf;
-             gf=true;
-             from_terms = [];
-             theory_elim = true;
-            } :: acc
-          ) env.incremental.neg_guards pushed_assertions in
-
+            mk_gf e :: acc
+          ) env.incremental.guards [] in
       let env, _updated = assume_aux ~dec_lvl:0 env pushed_assertions in
+
       let env, _updated = assume_aux ~dec_lvl:0 env [gf] in
       let max_t = max_term_depth_in_sat env in
       let env = {env with inst = Inst.register_max_term_depth env.inst max_t} in

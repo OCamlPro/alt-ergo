@@ -31,6 +31,11 @@ module Translate = struct
     | None -> Loc.dummy
     | Some p -> p
 
+  let must_not_happen loc s =
+    let s = Format.sprintf
+        "psmt2-frontend typing should unsure that case can't happen : %s" s in
+    raise (Errors.error (Errors.Syntax_error (loc,s)))
+
   (**************************************************************************)
   let translate_left_assoc f id params =
     match params with
@@ -352,12 +357,14 @@ module Translate = struct
   let translate_push n pos =
     try let n = int_of_string n in
       List.init n (fun _i -> mk_push pos)
-    with _ -> assert false
+    with _ ->
+      must_not_happen pos "int of string conversion error in push command"
 
   let translate_pop n pos =
     try let n = int_of_string n in
       List.init n (fun _i -> mk_pop pos)
-    with _ -> assert false
+    with _ ->
+      must_not_happen pos "int of string conversion error in pop command"
 
   let not_supported s =
     Printer.print_wrn

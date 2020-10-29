@@ -1994,10 +1994,10 @@ let type_one_th_decl env e =
   | Goal(loc, _, _)
   | Predicate_def(loc,_,_,_)
   | Function_def(loc,_,_,_,_)
-  | TypeDecl ((loc, _, _, _)::_) ->
+  | TypeDecl ((loc, _, _, _)::_)
+  | Push loc | Pop loc ->
     typing_error WrongDeclInTheory loc
   | TypeDecl [] -> assert false
-  | Push _ | Pop _ -> assert false
 
 let is_recursive_type =
   let rec exit_if_has_type s ppty =
@@ -2300,7 +2300,7 @@ let type_file ld =
   let env = Env.empty in
   let s = ref (Stack.create ()) in
   let ltd, env =
-    List.fold_left 
+    List.fold_left
       (fun acc d -> type_decl acc d s) ([], env) ld
   in
   List.rev ltd, env

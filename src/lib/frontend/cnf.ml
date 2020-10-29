@@ -542,23 +542,16 @@ let mk_theory acc l th_name extends _loc =
 
 let make acc d =
   match d.c with
-  | TPush loc ->
-    {st_decl=Push ; st_loc=loc} :: acc
-  | TPop loc ->
-    {st_decl=Pop ; st_loc=loc} :: acc
-  | TTheory(loc, name, ext, l) ->
-    mk_theory acc l name ext loc
-  | TAxiom(loc, name, Util.Default, f) ->
-    mk_assume acc f name loc
+  | TPush loc -> {st_decl=Push ; st_loc=loc} :: acc
+  | TPop loc -> {st_decl=Pop ; st_loc=loc} :: acc
+  | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
+  | TAxiom(loc, name, Util.Default, f) -> mk_assume acc f name loc
   | TAxiom(_, _, Util.Propagator, _) -> assert false
   | TRewriting(loc, _, lr) ->
     {st_decl=RwtDef(List.map make_rule lr); st_loc=loc} :: acc
-  | TGoal(loc, sort, n, f) ->
-    mk_query acc  n f loc sort
-  | TPredicate_def(loc, n, _args, f) ->
-    mk_preddef acc f n loc
-  | TFunction_def(loc, n, _args, _rety, f) ->
-    mk_function acc f n loc
+  | TGoal(loc, sort, n, f) -> mk_query acc n f loc sort
+  | TPredicate_def(loc, n, _args, f) -> mk_preddef acc f n loc
+  | TFunction_def(loc, n, _args, _rety, f) -> mk_function acc f n loc
   | TTypeDecl _ | TLogic _  -> acc
 
 

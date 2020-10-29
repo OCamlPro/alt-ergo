@@ -298,11 +298,10 @@ and 'a tdecl =
       contents [body]. This new type may either be abstract,
       a record type, or an enumeration. *)
   | TPush of Loc.t
-  (** Push new assertion  level  onto  the  assertion  stack *)
+  (** Push new assertion level onto the assertion  stack *)
   | TPop of Loc.t
-  (** Pop an assertion level from the assertion stack,
-      Note that the first assertion level,
-      which is notcreated by a push command, cannot be popped.*)
+  (** Pop an assertion level from the assertion stack *)
+
 (** Typed declarations. *)
 (* TODO: wrap this in a record to factorize away
    the location and name of the declaration ? *)
