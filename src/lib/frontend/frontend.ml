@@ -143,10 +143,10 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   let process_decl print_status used_context ((env, consistent, dep) as acc) d =
     try
       match d.st_decl with
-      | Push ->
-        SAT.push env, consistent, dep
+      | Push -> SAT.push env, consistent, dep
       | Pop ->
-        SAT.pop env, consistent, dep
+        (* Reset the constitency for each pop command *)
+        SAT.pop env, true, dep
       | Assume(n, f, mf) ->
         let is_hyp = try (Char.equal '@' n.[0]) with _ -> false in
         if not is_hyp && unused_context n used_context then
