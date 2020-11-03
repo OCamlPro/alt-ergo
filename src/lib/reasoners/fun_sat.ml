@@ -173,7 +173,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     ground_preds : (E.t * Explanation.t) ME.t; (* key <-> f *)
     incremental : incremental;
     add_inst: E.t -> bool;
-    unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
+    unit_facts_cache : (E.gformula * Ex.t) ME.t Stack.t;
   }
 
   let all_models_sat_env = ref None
@@ -674,13 +674,19 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       true
     with Not_found -> false
 
+  let unit_facts env =
+    try Stack.top env.unit_facts_cache
+    with Stack.Empty ->
+      Stack.push ME.empty env.unit_facts_cache;
+      ME.empty
 
   let update_unit_facts env ff dep =
     let f = ff.E.ff in
-    if get_sat_learning () && not (ME.mem f !(env.unit_facts_cache)) then
+    if get_sat_learning () && not (ME.mem f (unit_facts env)) then
       begin
         assert (Ex.has_no_bj dep);
-        env.unit_facts_cache := ME.add f (ff, dep) !(env.unit_facts_cache)
+        let _ = Stack.pop env.unit_facts_cache in
+        Stack.push (ME.add f (ff, dep) (unit_facts env)) env.unit_facts_cache
       end
 
   let learn_clause ({ gamma; _ } as env) ff0 dep =
@@ -739,7 +745,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let nf = E.neg ff.E.ff in
     let nff = {ff with E.ff = nf} in
     try
-      let _, ex = ME.find nf !(env.unit_facts_cache) in
+      let _, ex = ME.find nf (unit_facts env) in
       Some(ex, []), true
     with Not_found ->
     try
@@ -809,7 +815,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     fun env gf red ->
       let nf = E.neg red in
-      try let ff, _ = ME.find nf !(env.unit_facts_cache) in aux gf ff
+      try let ff, _ = ME.find nf (unit_facts env) in aux gf ff
       with Not_found ->
       try let ff, _, _, _ = ME.find nf env.gamma in aux gf ff
       with Not_found -> gf
@@ -1272,7 +1278,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            with Not_found ->
            try
              (*if no_sat_learning() then raise Not_found;*)
-             let _, ex = ME.find f !(env.unit_facts_cache) in
+             let _, ex = ME.find f (unit_facts env) in
              Ex.union dep ex, ({gf with E.ff=f}, ex) :: acc
            with Not_found ->
            match E.form_view f with
@@ -1428,7 +1434,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let propagate_unit_facts_in_cache env =
     if get_no_sat_learning() then None
     else
-      let cache = !(env.unit_facts_cache) in
+      let cache = (unit_facts env) in
       let in_cache f =
         try Some (snd (ME.find f cache))
         with Not_found -> None
@@ -1701,8 +1707,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       raise e
 
   let push env =
+    if Options.get_tableaux_cdcl () then
+      Errors.run_error
+        (Errors.Unsupported_feature
+           "Incremental commands are not implemented in \
+            Tableaux(CDCL) solver ! \
+            Please use the Tableaux or CDLC SAT solvers instead"
+        );
     let b = E.fresh_name Ty.Tbool in
     Stack.push b env.incremental.stack_guard;
+
+    Stack.push (unit_facts env) env.unit_facts_cache;
+
     let incremental =
       { env.incremental with
         current_guard = Some b;
@@ -1711,12 +1727,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     {env with incremental}
 
   let pop env =
+    if Options.get_tableaux_cdcl () then
+      Errors.run_error
+        (Errors.Unsupported_feature
+           "Incremental commands are not implemented in \
+            Tableaux(CDCL) solver ! \
+            Please use the Tableaux or CDLC SAT solvers instead"
+        );
     let neg_b = Stack.pop env.incremental.stack_guard in
     let b =
       if Stack.is_empty env.incremental.stack_guard then
         None
       else Some (Stack.top env.incremental.stack_guard)
     in
+    let _ = Stack.pop env.unit_facts_cache in
     let guards = SE.remove neg_b env.incremental.guards in
     let guards = SE.add (E.neg neg_b) guards in
     {env with incremental = { env.incremental with
@@ -1921,7 +1945,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       heuristics = ref (Heuristics.empty ());
       model_gen_mode = ref false;
       ground_preds = ME.empty;
-      unit_facts_cache = ref ME.empty;
+      unit_facts_cache = Stack.create ();
       incremental = empty_incremental ();
       add_inst = fun _ -> true;
     }
