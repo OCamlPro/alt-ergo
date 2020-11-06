@@ -1791,14 +1791,16 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let pop env =
     let g = Vec.last env.increm_guards in
     Vec.pop env.increm_guards;
-    env.next_dec_guard <- Vec.size env.increm_guards; (* all previous guards are decided *)
+    (* all previous guards are decided *)
+    env.next_dec_guard <- Vec.size env.increm_guards;
     g.is_guard <- false;
     g.neg.is_guard <- false;
     assert (not g.var.na.is_true); (* atom not false *)
     if g.var.pa.is_true then (* if already decided  *)
       begin
         cancel_until env (g.var.level - 1); (* undo its decision *)
-        env.next_dec_guard <- Vec.size env.increm_guards (* all previous guards are decided *)
+        (* all previous guards are decided *)
+        env.next_dec_guard <- Vec.size env.increm_guards
       end;
     enqueue env g.neg env.next_dec_guard None
 
