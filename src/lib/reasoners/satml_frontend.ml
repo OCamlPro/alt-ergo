@@ -452,7 +452,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       {env with inst = Inst.add_predicate env.inst (mk_gf f) dep}
     else
       begin
-        assert (not (ME.mem a_t env.ground_preds));
+        if Stack.is_empty env.incremental.stack_guard then
+          assert (not (ME.mem a_t env.ground_preds));
         let f_simpl = factorize_iff a_t f in
         (* a_t <-> f_simpl *)
         let not_a_t = E.neg a_t in
