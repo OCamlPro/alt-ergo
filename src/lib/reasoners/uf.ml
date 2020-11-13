@@ -882,13 +882,13 @@ let mapt_choose m =
    with Exit -> ());
   match !r with Some b -> b | _ -> raise Not_found
 
-let model env =
+let model ~complete_model env =
   let eqs =
     MapX.fold (fun r cl acc ->
         let l, to_rel =
           List.fold_left (fun (l, to_rel) t ->
               let rt = ME.find t env.make in
-              if get_complete_model () || E.is_in_model t then
+              if complete_model || E.is_in_model t then
                 if X.equal rt r then l, (t,rt)::to_rel
                 else t::l, (t,rt)::to_rel
               else l, to_rel
@@ -901,9 +901,9 @@ let model env =
       let x, rx = mapt_choose makes in
       let makes = ME.remove x makes in
       let acc =
-        if get_complete_model () || E.is_in_model x then
+        if complete_model || E.is_in_model x then
           ME.fold (fun y ry acc ->
-              if (get_complete_model () || E.is_in_model y)
+              if (complete_model || E.is_in_model y)
               && (already_distinct env [rx; ry]
                   || already_distinct env [ry; rx])
               then [y; x]::acc
@@ -1127,8 +1127,8 @@ let compute_concrete_model ({ make; _ } as env) =
     ) make
     (Models.Profile.empty, Models.Profile.empty, Models.Profile.empty, ME.empty)
 
-let output_concrete_model fmt env =
+let output_concrete_model fmt prop_model env =
   if get_interpretation () then
     let functions, constants, arrays, _ =
       compute_concrete_model env in
-    Models.output_concrete_model fmt functions constants arrays
+    Models.output_concrete_model fmt prop_model functions constants arrays

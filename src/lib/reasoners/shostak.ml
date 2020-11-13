@@ -600,7 +600,7 @@ struct
     opt
 
   let choose_adequate_model t rep l =
-    let is_true_or_false r = 
+    let is_true_or_false r =
       let re,_rb = term_extract r in
       match re with
       | None -> false
