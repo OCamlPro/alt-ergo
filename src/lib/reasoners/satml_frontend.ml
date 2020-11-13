@@ -330,7 +330,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Format.print_flush ();
     if header then fprintf fmt "\nModel\n@.";
     print_propositional_model env fmt;
-    Th.print_model fmt (SAT.current_tbox env.satml)
+    Th.print_model fmt ~complete_model:(get_complete_model ())
+      (SAT.current_tbox env.satml)
 
   let make_explanation _ = Ex.empty
   (*

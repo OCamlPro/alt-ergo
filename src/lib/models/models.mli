@@ -34,6 +34,7 @@ end
     corresponding format setted with Options.get_output_format *)
 val output_concrete_model :
   Format.formatter ->
+  Expr.Set.t ->
   Profile.V.t Profile.P.t ->
   Profile.V.t Profile.P.t ->
   Profile.V.t Profile.P.t ->

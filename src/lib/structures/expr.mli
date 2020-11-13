@@ -39,7 +39,7 @@ type decl_kind =
   | Dpredicate of t
   | Dfunction of t
 
-type view = private {
+type view = {
   f: Symbols.t;
   xs: t list;
   ty: Ty.t;
@@ -169,6 +169,7 @@ val is_fresh_skolem : t -> bool
 val is_int : t -> bool
 val is_real : t -> bool
 val type_info : t -> Ty.t
+val symbol_info : t -> Symbols.t
 
 
 (** Labeling and models *)
