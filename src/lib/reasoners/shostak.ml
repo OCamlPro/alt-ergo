@@ -620,7 +620,7 @@ struct
     opt
 
   let choose_adequate_model t rep l =
-    let is_true_or_false r = 
+    let is_true_or_false r =
       let re,_rb = term_extract r in
       match re with
       | None -> false
@@ -636,23 +636,8 @@ struct
         X6.choose_adequate_model t rep l
       | Ty.Trecord _ -> X2.choose_adequate_model t rep l
       | Ty.Tfarray _ -> X4.choose_adequate_model t rep l
-<<<<<<< HEAD
-<<<<<<< HEAD
-      | Ty.Tbool ->
-        (* case split is now supposed to be done for internal bools if
-           needed as well *)
-        assert (is_bool_const rep);
-        rep, Format.asprintf "%a" print rep
-||||||| parent of 6738c964 (Directly use rep of bool value for counterexamples)
-=======
-      | Ty.Tbool -> rep, asprintf "%a" print rep
->>>>>>> 6738c964 (Directly use rep of bool value for counterexamples)
-||||||| parent of e67707a8 (Clean choose_adequate_model for boolean constant)
-      | Ty.Tbool -> rep, asprintf "%a" print rep
-=======
       | Ty.Tbool     when is_true_or_false rep ->
-        rep, asprintf "%a" print rep
->>>>>>> e67707a8 (Clean choose_adequate_model for boolean constant)
+        rep, Format.asprintf "%a" print rep
       | _            ->
         let acc =
           List.fold_left
