@@ -740,6 +740,10 @@ val get_why3_counterexample : unit -> bool
 val get_output_format : unit -> output_format
 (** Default to [Native] *)
 
+(** True if the output format is set to smtlib2 or why3 *)
+val get_output_smtlib : unit -> bool
+(** Default to [false] *)
+
 (** [true] if Alt-Ergo infers automatically the output format according to the
     the file extension or the input format if set. *)
 val get_infer_output_format : unit -> bool

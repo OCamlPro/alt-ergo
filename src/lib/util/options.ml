@@ -323,6 +323,8 @@ let get_model () = !model = MDefault || !model = MComplete
 let get_complete_model () = !model = MComplete
 let get_all_models () = !model = MAll
 let get_output_format () = !output_format
+let get_output_smtlib () =
+  (!output_format = Smtlib2) || (!output_format = Why3)
 let get_infer_output_format () = !infer_output_format
 let get_unsat_core () = !unsat_core || !save_used_context || !debug_unsat_core
 let get_why3_counterexample () = !why3_counterexample
