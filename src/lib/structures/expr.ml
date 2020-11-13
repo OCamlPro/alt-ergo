@@ -427,36 +427,65 @@ let rec print_silent fmt t =
     begin
       match lit, xs with
       | Sy.L_eq, a::l ->
-        fprintf fmt "(%a%a)"
-          print a (fun fmt -> List.iter (fprintf fmt " = %a" print)) l
+        if get_output_smtlib () then
+          fprintf fmt "(= %a%a)"
+            print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
+        else
+          fprintf fmt "(%a%a)"
+            print a (fun fmt -> List.iter (fprintf fmt " = %a" print)) l
 
       | Sy.L_neg_eq, [a; b] ->
-        fprintf fmt "(%a <> %a)" print a print b
+        if get_output_smtlib () then
+          fprintf fmt "(not (= %a %a))" print a print b
+        else
+          fprintf fmt "(%a <> %a)" print a print b
 
       | Sy.L_neg_eq, a::l ->
-        fprintf fmt "distinct(%a%a)"
-          print a (fun fmt -> List.iter (fprintf fmt ", %a" print)) l
+        if get_output_smtlib () then
+          fprintf fmt "(distinct %a%a)"
+            print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
+        else
+          fprintf fmt "distinct(%a%a)"
+            print a (fun fmt -> List.iter (fprintf fmt ", %a" print)) l
 
       | Sy.L_built Sy.LE, [a;b] ->
-        fprintf fmt "(%a <= %a)" print a print b
+        if get_output_smtlib () then
+          fprintf fmt "(<= %a %a)" print a print b
+        else
+          fprintf fmt "(%a <= %a)" print a print b
 
       | Sy.L_built Sy.LT, [a;b] ->
-        fprintf fmt "(%a < %a)" print a print b
+        if get_output_smtlib () then
+          fprintf fmt "(< %a %a)" print a print b
+        else
+          fprintf fmt "(%a < %a)" print a print b
 
       | Sy.L_neg_built Sy.LE, [a; b] ->
-        fprintf fmt "(%a > %a)" print a print b
+        if get_output_smtlib () then
+          fprintf fmt "(> %a %a)" print a print b
+        else
+          fprintf fmt "(%a > %a)" print a print b
 
       | Sy.L_neg_built Sy.LT, [a; b] ->
-        fprintf fmt "(%a >= %a)" print a print b
+        if get_output_smtlib () then
+          fprintf fmt "(>= %a %a)" print a print b
+        else
+          fprintf fmt "(%a >= %a)" print a print b
 
       | Sy.L_neg_pred, [a] ->
         fprintf fmt "(not %a)" print a
 
       | Sy.L_built (Sy.IsConstr hs), [e] ->
-        fprintf fmt "(%a ? %a)" print e Hstring.print hs
+        if get_output_smtlib () then
+          fprintf fmt "((_ is %a) %a)" Hstring.print hs print e
+        else
+          fprintf fmt "(%a ? %a)" print e Hstring.print hs
 
       | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
-        fprintf fmt "not (%a ? %a)" print e Hstring.print hs
+        if get_output_smtlib () then
+          fprintf fmt "(not ((_ is %a) %a))" Hstring.print hs print e
+        else
+          fprintf fmt "not (%a ? %a)" print e Hstring.print hs
 
       | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
         | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
@@ -467,10 +496,19 @@ let rec print_silent fmt t =
     end
 
   | Sy.Op Sy.Get, [e1; e2] ->
-    fprintf fmt "%a[%a]" print e1 print e2
+    if get_output_smtlib () then
+      fprintf fmt "(select %a %a)" print e1 print e2
+    else
+      fprintf fmt "%a[%a]" print e1 print e2
 
   | Sy.Op Sy.Set, [e1; e2; e3] ->
-    fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3
+    if get_output_smtlib () then
+      fprintf fmt "(store %a %a %a)"
+        print e1
+        print e2
+        print e3
+    else
+      fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3
 
   | Sy.Op Sy.Concat, [e1; e2] ->
     fprintf fmt "%a@@%a" print e1 print e2
@@ -479,7 +517,10 @@ let rec print_silent fmt t =
     fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
 
   | Sy.Op (Sy.Access field), [e] ->
-    fprintf fmt "%a.%s" print e (Hstring.view field)
+    if get_output_smtlib () then
+      fprintf fmt "(%s %a)" (Hstring.view field) print e
+    else
+      fprintf fmt "%a.%s" print e (Hstring.view field)
 
   | Sy.Op (Sy.Record), _ ->
     begin match ty with
@@ -506,7 +547,10 @@ let rec print_silent fmt t =
     fprintf fmt "%a(%a)" Hstring.print hs print_list l
 
   | Sy.Op _, [e1; e2] ->
-    fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
+    if get_output_smtlib () then
+      fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
+    else
+      fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
 
   | Sy.Op Sy.Destruct (hs, grded), [e] ->
     fprintf fmt "%a#%s%a"
@@ -521,7 +565,10 @@ let rec print_silent fmt t =
     fprintf fmt "%a" Sy.print f
 
   | _, _ ->
-    fprintf fmt "%a(%a)" Sy.print f print_list xs
+    if get_output_smtlib () then
+      fprintf fmt "(%a %a)" Sy.print f print_list xs
+    else
+      fprintf fmt "%a(%a)" Sy.print f print_list xs
 
 and print_verbose fmt t =
   fprintf fmt "(%a : %a)" print_silent t Ty.print t.ty
@@ -546,6 +593,7 @@ and print_triggers fmt trs =
 (** Some auxiliary functions *)
 
 let type_info t = t.ty
+let symbol_info t = t.f
 
 (* unused
    let is_term e = match e.f with
