@@ -451,11 +451,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | E.Let _ | E.Iff _ | E.Xor _ -> false
     | E.Not_a_form -> assert false
 
-  let extract_prop_model t =
+  let extract_prop_model ~complete_model t =
     let s = ref SE.empty in
     ME.iter
       (fun f _ ->
-         if (get_complete_model () && is_literal f) || E.is_in_model f then
+         if (complete_model && is_literal f) || E.is_in_model f then
            s := SE.add f !s
       )
       t.gamma;
@@ -467,13 +467,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let print_model ~header fmt t =
     Format.print_flush ();
     if header then fprintf fmt "\nModel\n";
-    let pm = extract_prop_model t in
+    let pm = extract_prop_model ~complete_model:(get_complete_model ()) t in
     if not (SE.is_empty pm) then begin
       fprintf fmt "Propositional:";
       print_prop_model fmt pm;
       fprintf fmt "\n";
     end;
-    Th.print_model fmt t.tbox
+    Th.print_model fmt ~complete_model:(get_complete_model ()) t.tbox
 
 
   let refresh_model_handler =
@@ -1243,7 +1243,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | Some env ->
         let cs_tbox = Th.get_case_split_env env.tbox in
         let uf = Ccx.Main.get_union_find cs_tbox in
-        Uf.output_concrete_model (get_fmt_mdl ()) uf
+        let prop_model = extract_prop_model ~complete_model:true env in
+        Uf.output_concrete_model (get_fmt_mdl ()) prop_model uf;
     end;
     return_function ()
 
@@ -1261,7 +1262,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let env = compute_concrete_model env compute in
     let uf = Ccx.Main.get_union_find (Th.get_case_split_env env.tbox) in
     Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
-    Uf.output_concrete_model (get_fmt_mdl ()) uf;
+
+    let prop_model = extract_prop_model ~complete_model:true env in
+    Uf.output_concrete_model (get_fmt_mdl ()) prop_model uf;
+
     terminated_normally := true;
     return_function env
 
