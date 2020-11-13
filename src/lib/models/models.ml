@@ -109,6 +109,8 @@ module Profile = struct
   let is_empty = P.is_empty
 end
 
+let constraints = ref Sorts.empty
+
 let assert_has_depth_one (e, _) =
   match X.term_extract e with
   | Some t, true -> assert (E.depth t = 1);
@@ -265,27 +267,63 @@ module SmtlibCounterExample = struct
 
     | _ -> Sy.print fmt f
 
-  let pp_type fmt t =
+  let to_string_type t =
     let open Ty in
-    (*     let print_destr fmt (destr, ty) =
-           fprintf fmt "(%s:%a) " (Hstring.view destr) print ty
-           in *)
-    Format.fprintf fmt "%s" (match t with
-        | Tint -> "Int"
-        | Treal -> "Real"
-        | Tbool -> "Bool"
-        | Text (_, t) -> Hstring.view t
-        | Trecord { args = lv; name = n; _ } ->
-          (*           asprintf "(args:%a) %s (constr:%s) (destr:%a)"
-                       print_list lv
-                       (Hstring.view n)
-                       (Hstring.view cstr)
-                       (Printer.pp_list_no_space print_destr) lbs *)
-          asprintf "%a %s"
-            print_list lv
-            (Hstring.view n)
-        | _ -> asprintf "%a" print t
-      )
+    match t with
+    | Tint -> "Int"
+    | Treal -> "Real"
+    | Tbool -> "Bool"
+    | Text (_, t) -> Hstring.view t
+    | Trecord { args = lv; name = n; _ } ->
+      (*           asprintf "(args:%a) %s (constr:%s) (destr:%a)"
+                   print_list lv
+                   (Hstring.view n)
+                   (Hstring.view cstr)
+                   (Printer.pp_list_no_space print_destr) lbs *)
+      asprintf "%a %s"
+        print_list lv
+        (Hstring.view n)
+    | _ -> asprintf "%a" print t
+
+  let pp_type fmt t =
+    Format.fprintf fmt "%s" (to_string_type t)
+
+  let pp_term fmt t =
+    match E.symbol_info t with
+    | Sy.Name (n,_) -> begin
+        try
+          let constraint_name,_ty_name =
+            Sorts.find (Hstring.view n) !constraints in
+          fprintf fmt "%s" constraint_name
+        with _ ->
+          let constraint_name = "c_"^(Hstring.view n)  in
+          constraints := Sorts.add (Hstring.view n)
+              (constraint_name,to_string_type (E.type_info t)) !constraints;
+          fprintf fmt "%s" constraint_name
+      end
+    | _ -> E.print fmt t
+
+  let print_fun_def fmt name args ty t =
+    let i = ref 0 in
+    let print_args fmt ty =
+      incr i;
+      (** TODO create fresh variable *)
+      Format.fprintf fmt "(%s %a)"
+        (sprintf "x_%d" !i)
+        pp_type ty
+    in
+    let defined_value =
+      try
+        fst (Sorts.find (Sy.to_string name) !constraints)
+      with _ -> t
+    in
+
+    Printer.print_fmt ~flushed:false fmt
+      "(define-fun %a (%a) %a %s)@ "
+      (print_symb ty) name
+      (Printer.pp_list_space print_args) args
+      pp_type ty
+      defined_value
 
   let get_qtmk f qtmks =
     try Sorts.find f qtmks
@@ -294,7 +332,6 @@ module SmtlibCounterExample = struct
   let output_constants_counterexample fmt cprofs fprofs =
     (* Sorts.iter (fun f (nbargs, t) ->
      *     Format.eprintf "Sort: %s(%d): %s@." f nbargs t) !h; *)
-    Printer.print_fmt ~flushed:false (get_fmt_mdl()) "@[<v 0>(model@,";
     let qtmks = Profile.fold
         (fun (f, xs_ty, ty) st acc ->
            if debug then
@@ -305,8 +342,6 @@ module SmtlibCounterExample = struct
 
            Profile.V.fold
              (fun (xs, rep) acc ->
-
-
                 let print_xs fmt (e,(r,xs)) =
                   fprintf fmt "(%a / %a / %s), " E.print e X.print r xs
                 in
@@ -377,9 +412,7 @@ module SmtlibCounterExample = struct
              | _ -> qtmks
            in
 
-           Printer.print_fmt ~flushed:false fmt
-             "(define-fun %a () %a %s)@ "
-             (print_symb ty) f pp_type ty (get_qtmk rep qtmks)
+           print_fun_def fmt f [] ty (get_qtmk rep qtmks)
          | _ -> assert false
       ) cprofs
 
@@ -387,34 +420,37 @@ end
 (* of module SmtlibCounterExample *)
 
 module Why3CounterExample = struct
-  let output_constraints fmt constraints =
-    let print_constraints fmt _constraint =
-      (* TODO *)
-      fprintf fmt ""
-    in
-    Printer.print_fmt fmt ";; Constraints@ %a"
-      (Printer.pp_list_no_space print_constraints) constraints
+
+  let output_constraints fmt prop_model =
+    SE.iter (fun e ->
+        (fprintf str_formatter "(assert %a)@ " SmtlibCounterExample.pp_term e)
+      ) prop_model;
+    Sorts.iter (fun _ (name,ty) ->
+        Printer.print_fmt ~flushed:false fmt "(declare-const %s %s)@ " name ty
+      ) !constraints;
+    Printer.print_fmt fmt "%s" (flush_str_formatter ())
+
 end
 (* of module Why3CounterExample *)
 
-let output_concrete_model fmt functions constants arrays =
+let output_concrete_model fmt props functions constants arrays =
   if get_interpretation () then
     if
       Options.get_output_format () == Why3 ||
       Options.get_output_format () == Smtlib2 ||
       (Options.get_why3_counterexample ()) then begin
 
+      Printer.print_fmt ~flushed:false fmt "@[<v 0>unknown@ ";
+      Printer.print_fmt ~flushed:false fmt "@[<v 2>(model@,";
       if Options.get_output_format () == Why3 ||
          (Options.get_why3_counterexample ()) then begin
-        (* TODO : add a printer to output constraint with assertions *)
-        Why3CounterExample.output_constraints fmt []
+        Why3CounterExample.output_constraints fmt props
       end;
 
-      Printer.print_fmt ~flushed:false fmt "@[<v 0>unknown@ ";
       SmtlibCounterExample.output_constants_counterexample fmt
         constants functions;
 
-      Printer.print_fmt fmt "@])";
+      Printer.print_fmt fmt "@]@ )";
     end
     else if Options.get_output_format () == Native then begin
       Printer.print_fmt ~flushed:false fmt "@[<v 2>(@ ";
