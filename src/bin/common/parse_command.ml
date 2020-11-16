@@ -288,7 +288,7 @@ let mk_profiling_opt cumulative_time_profiling profiling
   set_cumulative_time_profiling cumulative_time_profiling;
   `Ok()
 
-let mk_quantifiers_opt greedy instantiate_after_backjump
+let mk_quantifiers_opt smtcomp_mode greedy instantiate_after_backjump
     max_multi_triggers_size nb_triggers
     no_ematching no_user_triggers normalize_instances triggers_var
   =
@@ -296,6 +296,7 @@ let mk_quantifiers_opt greedy instantiate_after_backjump
   set_no_ematching no_ematching;
   set_nb_triggers nb_triggers;
   set_normalize_instances normalize_instances;
+  set_smtcomp_mode smtcomp_mode;
   set_greedy greedy;
   set_instantiate_after_backjump instantiate_after_backjump;
   set_max_multi_triggers_size max_multi_triggers_size;
@@ -943,6 +944,10 @@ let parse_quantifiers_opt =
 
   let docs = s_quantifiers in
 
+  let smtcomp_mode =
+    let doc = "Enable more instantiation." in
+    Arg.(value & flag & info ["smtcomp-mode"] ~doc) in
+
   let greedy =
     let doc = "Use all available ground terms in instantiation." in
     Arg.(value & flag & info ["g"; "greedy"] ~doc) in
@@ -987,10 +992,10 @@ let parse_quantifiers_opt =
     let doc = "Allows variables as triggers." in
     Arg.(value & flag & info ["triggers-var"] ~docs ~doc) in
 
-  Term.(ret (const mk_quantifiers_opt $ greedy $ instantiate_after_backjump $
-             max_multi_triggers_size $ nb_triggers $
-             no_ematching $ no_user_triggers $ normalize_instances $
-             triggers_var
+  Term.(ret (const mk_quantifiers_opt $ smtcomp_mode $ greedy $
+             instantiate_after_backjump $ max_multi_triggers_size $
+             nb_triggers $ no_ematching $ no_user_triggers $
+             normalize_instances $ triggers_var
             ))
 
 let parse_sat_opt =

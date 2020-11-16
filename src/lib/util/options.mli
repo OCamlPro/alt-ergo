@@ -167,6 +167,9 @@ val set_fm_cross_limit : Numbers.Q.t -> unit
 (** Set [frontend] accessible with {!val:get_frontend} *)
 val set_frontend : string -> unit
 
+(** Set [smtcomp_mode] accessible with {!val:get_smtcomp_mode} *)
+val set_smtcomp_mode : bool -> unit
+
 (** Set [greedy] accessible with {!val:get_greedy} *)
 val set_greedy : bool -> unit
 
@@ -734,6 +737,10 @@ val get_verbose : unit -> bool
 (** Default to [false] *)
 
 (** {4 Quantifier options} *)
+
+(** [true] if smtcomp_mode is set. This mode add an instantiation phase *)
+val get_smtcomp_mode : unit -> bool
+(** Defautl to [false] *)
 
 (** [true] if all available ground terms are used in instantiation. *)
 val get_greedy : unit -> bool
