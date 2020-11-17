@@ -1252,7 +1252,7 @@ let rec annot_of_typed_decl (buffer:sbuffer) td =
       let ls, s, lc = downgrade_type_decl ty in
       ATypeDecl (loc, ls, s, lc, ty)
     | TPush _ | TPop _ ->
-      Gui_config.not_supported "Algebraic datatypes"
+      Gui_config.not_supported "Incremental commands"
   in
   new_annot buffer c td.Typed.annot ptag
 
