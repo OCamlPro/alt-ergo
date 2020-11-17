@@ -1864,7 +1864,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        inst = Inst.add_predicate env.inst gf dep }
     else
       begin
-        assert (not (ME.mem a_t env.ground_preds));
+        if Stack.is_empty env.incremental.stack_guard then
+          assert (not (ME.mem a_t env.ground_preds));
         if E.equal a_t f || E.equal (E.neg a_t) f then assume env gf dep
         else match E.form_view f with
           | E.Iff(f1, f2) ->
