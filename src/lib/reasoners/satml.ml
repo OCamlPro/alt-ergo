@@ -482,6 +482,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let cancel_until env lvl =
     cancel_ff_lvls_until env lvl;
     let repush = ref [] in
+
     if decision_level env > lvl then begin
       env.qhead <- Vec.get env.trail_lim lvl;
       for c = Vec.size env.trail - 1 downto env.qhead do
@@ -1792,7 +1793,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     let g = Vec.last env.increm_guards in
     Vec.pop env.increm_guards;
     (* all previous guards are decided *)
-    env.next_dec_guard <- Vec.size env.increm_guards;
+    (* env.next_dec_guard <- Vec.size env.increm_guards; *)
     g.is_guard <- false;
     g.neg.is_guard <- false;
     assert (not g.var.na.is_true); (* atom not false *)

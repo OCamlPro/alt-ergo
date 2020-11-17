@@ -26,7 +26,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let reset_refs () = Steps.reset_steps ()
 
   type incremental = {
-
     current_guard: E.t option;
     stack_guard: E.t Stack.t;
   }
