@@ -36,6 +36,26 @@ let model_printer fmt model = Format.fprintf fmt "%s" (model_to_string model)
 
 let model_conv = Arg.conv ~docv:"MDL" (model_parser, model_printer)
 
+let instantiation_heuristic_parser = function
+  | "frugal" | "light" -> Ok IFrugal
+  | "default" | "normal" -> Ok INormal
+  | "greedy" | "heavy" -> Ok IGreedy
+  | s ->
+    Error (`Msg ("Option --instantiation-heuristic does not accept\
+                  the argument \"" ^ s))
+
+let instantiation_heuristic_to_string = function
+  | IFrugal -> "frugal"
+  | INormal -> "normal"
+  | IGreedy -> "greedy"
+
+let instantiation_heuristic_printer fmt instantiation_heuristic =
+  Format.fprintf fmt "%s"
+    (instantiation_heuristic_to_string instantiation_heuristic)
+
+let instantiation_heuristic_conv =
+  Arg.conv ~docv:"VAL"
+    (instantiation_heuristic_parser, instantiation_heuristic_printer)
 
 (* When adding another parser, remember to change this list too as it
    is used in the documentation *)
@@ -288,7 +308,7 @@ let mk_profiling_opt cumulative_time_profiling profiling
   set_cumulative_time_profiling cumulative_time_profiling;
   `Ok()
 
-let mk_quantifiers_opt smtcomp_mode greedy instantiate_after_backjump
+let mk_quantifiers_opt instantiation_heuristic instantiate_after_backjump
     max_multi_triggers_size nb_triggers
     no_ematching no_user_triggers normalize_instances triggers_var
   =
@@ -296,8 +316,7 @@ let mk_quantifiers_opt smtcomp_mode greedy instantiate_after_backjump
   set_no_ematching no_ematching;
   set_nb_triggers nb_triggers;
   set_normalize_instances normalize_instances;
-  set_smtcomp_mode smtcomp_mode;
-  set_greedy greedy;
+  set_instantiation_heuristic instantiation_heuristic;
   set_instantiate_after_backjump instantiate_after_backjump;
   set_max_multi_triggers_size max_multi_triggers_size;
   set_triggers_var triggers_var;
@@ -944,13 +963,20 @@ let parse_quantifiers_opt =
 
   let docs = s_quantifiers in
 
-  let smtcomp_mode =
-    let doc = "Enable more instantiation." in
-    Arg.(value & flag & info ["smtcomp-mode"] ~doc) in
-
-  let greedy =
-    let doc = "Use all available ground terms in instantiation." in
-    Arg.(value & flag & info ["g"; "greedy"] ~doc) in
+  let instantiation_heuristic =
+    let doc = Format.sprintf
+        "Change the instantiation heuristic. \
+         $(docv) must be %s. By default %s is used for both sat solvers. \
+         %s does one less phase of instantiation. \
+         %s use all available ground terms in instantiation."
+        (Arg.doc_alts ["light"; "normal"; "heavy"])
+        (Arg.doc_quote "normal")
+        (Arg.doc_quote "light")
+        (Arg.doc_quote "heavy")
+    in
+    let docv = "VAL" in
+    Arg.(value & opt instantiation_heuristic_conv INormal &
+         info ["instantiation-heuristic"] ~docv ~docs ~doc) in
 
   let instantiate_after_backjump =
     let doc =
@@ -992,7 +1018,7 @@ let parse_quantifiers_opt =
     let doc = "Allows variables as triggers." in
     Arg.(value & flag & info ["triggers-var"] ~docs ~doc) in
 
-  Term.(ret (const mk_quantifiers_opt $ smtcomp_mode $ greedy $
+  Term.(ret (const mk_quantifiers_opt $ instantiation_heuristic $
              instantiate_after_backjump $ max_multi_triggers_size $
              nb_triggers $ no_ematching $ no_user_triggers $
              normalize_instances $ triggers_var

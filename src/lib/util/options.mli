@@ -37,6 +37,9 @@
 (** Type used to describe the type of models wanted *)
 type model = MNone | MDefault | MAll | MComplete
 
+(** Type used to describe the type of heuristic for instantiation wanted *)
+type instantiation_heuristic  = IFrugal | INormal | IGreedy
+
 (** Type used to describe the type of input wanted by
     {!val:set_input_format} *)
 type input_format =
@@ -167,11 +170,9 @@ val set_fm_cross_limit : Numbers.Q.t -> unit
 (** Set [frontend] accessible with {!val:get_frontend} *)
 val set_frontend : string -> unit
 
-(** Set [smtcomp_mode] accessible with {!val:get_smtcomp_mode} *)
-val set_smtcomp_mode : bool -> unit
-
-(** Set [greedy] accessible with {!val:get_greedy} *)
-val set_greedy : bool -> unit
+(** Set [instantiation_heuristic ] accessible with
+    {!val:get_instantiation_heuristic} *)
+val set_instantiation_heuristic : instantiation_heuristic -> unit
 
 (** Set [inline_lets] accessible with {!val:get_inline_lets} *)
 val set_inline_lets : bool -> unit
@@ -738,11 +739,12 @@ val get_verbose : unit -> bool
 
 (** {4 Quantifier options} *)
 
-(** [true] if smtcomp_mode is set. This mode add an instantiation phase *)
-val get_smtcomp_mode : unit -> bool
-(** Defautl to [false] *)
+(** Value specifying the instantiation heuristic. possible values are
+    {ul {- frugal} {- normal} {- greedy}}. *)
+val get_instantiation_heuristic : unit -> instantiation_heuristic
+(** Default to [INormal] *)
 
-(** [true] if all available ground terms are used in instantiation. *)
+(** [true] is the greedy instantiation heuristic is set *)
 val get_greedy : unit -> bool
 (** Default to [false] *)
 

@@ -59,6 +59,7 @@ let set_fmt_usc f = fmt_usc := f
 (* Declaration of all the options as refs with default values *)
 
 type model = MNone | MDefault | MAll | MComplete
+type instantiation_heuristic = IFrugal | INormal | IGreedy
 
 type input_format = Native | Smtlib2 | Why3 (* | SZS *) | Unknown of string
 type output_format = input_format
@@ -332,8 +333,7 @@ let get_verbose () = !verbose
 
 (** Quantifiers options *)
 
-let smtcomp_mode = ref false
-let greedy = ref false
+let instantiation_heuristic = ref INormal
 let instantiate_after_backjump = ref false
 let max_multi_triggers_size = ref 4
 let nb_triggers = ref 2
@@ -342,8 +342,7 @@ let no_user_triggers = ref false
 let normalize_instances = ref false
 let triggers_var = ref false
 
-let set_smtcomp_mode b = smtcomp_mode := b
-let set_greedy b = greedy := b
+let set_instantiation_heuristic i = instantiation_heuristic := i
 let set_instantiate_after_backjump b = instantiate_after_backjump := b
 let set_max_multi_triggers_size b = max_multi_triggers_size := b
 let set_nb_triggers b = nb_triggers := b
@@ -352,8 +351,8 @@ let set_no_user_triggers b = no_user_triggers := b
 let set_normalize_instances b = normalize_instances := b
 let set_triggers_var b = triggers_var := b
 
-let get_smtcomp_mode () = !smtcomp_mode
-let get_greedy () = !greedy
+let get_instantiation_heuristic () = !instantiation_heuristic
+let get_greedy () = !instantiation_heuristic = IGreedy
 let get_instantiate_after_backjump () = !instantiate_after_backjump
 let get_max_multi_triggers_size () = !max_multi_triggers_size
 let get_nb_triggers () = !nb_triggers

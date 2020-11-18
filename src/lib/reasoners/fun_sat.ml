@@ -1363,41 +1363,45 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       aux_rec ~rm_clauses env inst loop nb_ok, !nb_ok > 0
 
   let greedy_instantiation env =
-    if not (get_smtcomp_mode ()) then
+    match get_instantiation_heuristic () with
+    | IFrugal ->
       return_answer env 1
         (fun e -> raise (I_dont_know e))
-    else begin
-      if get_greedy () then return_answer env 1 (fun e -> raise (I_dont_know e));
-      let rec greedy_instantiation_aux env greedier =
-        let gre_inst =
-          ME.fold
-            (fun f (gf,_,_,_) inst ->
-               Inst.add_terms inst (E.max_ground_terms_rec_of_form f) gf)
-            env.gamma env.inst
+    | INormal | IGreedy ->
+      begin
+        if get_greedy () then
+          return_answer env 1 (fun e -> raise (I_dont_know e));
+        let rec greedy_instantiation_aux env greedier =
+          let gre_inst =
+            ME.fold
+              (fun f (gf,_,_,_) inst ->
+                 Inst.add_terms inst (E.max_ground_terms_rec_of_form f) gf)
+              env.gamma env.inst
+          in
+          let env = new_inst_level env in
+          let mconf =
+            {Util.nb_triggers = max 10 (get_nb_triggers () * 10);
+             no_ematching = false;
+             triggers_var = if greedier then true else get_triggers_var ();
+             use_cs = true;
+             backward = Util.Normal;
+             greedy = true;
+            }
+          in
+          let env, ok1 = inst_and_assume mconf env inst_predicates gre_inst in
+          let env, ok2 = inst_and_assume mconf env inst_lemmas gre_inst in
+          let env, ok3 = syntactic_th_inst env gre_inst ~rm_clauses:false in
+          let env, ok4 =
+            semantic_th_inst  env gre_inst ~rm_clauses:false ~loop:4 in
+          let env = do_case_split env Util.AfterMatching in
+          if ok1 || ok2 || ok3 || ok4 then env
+          else if not greedier then greedy_instantiation_aux env true
+          else
+            return_answer env 1
+              (fun e -> raise (I_dont_know e))
         in
-        let env = new_inst_level env in
-        let mconf =
-          {Util.nb_triggers = max 10 (get_nb_triggers () * 10);
-           no_ematching = false;
-           triggers_var = if greedier then true else get_triggers_var ();
-           use_cs = true;
-           backward = Util.Normal;
-           greedy = true;
-          }
-        in
-        let env, ok1 = inst_and_assume mconf env inst_predicates gre_inst in
-        let env, ok2 = inst_and_assume mconf env inst_lemmas gre_inst in
-        let env, ok3 = syntactic_th_inst env gre_inst ~rm_clauses:false in
-        let env, ok4 = semantic_th_inst  env gre_inst ~rm_clauses:false ~loop:4 in
-        let env = do_case_split env Util.AfterMatching in
-        if ok1 || ok2 || ok3 || ok4 then env
-        else if not greedier then greedy_instantiation_aux env true
-        else
-          return_answer env 1
-            (fun e -> raise (I_dont_know e))
-      in
-      greedy_instantiation_aux env false 
-    end
+        greedy_instantiation_aux env false
+      end
 
   let normal_instantiation env try_greedy =
     Debug.print_nb_related env;
@@ -1642,14 +1646,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let no_ematching = Options.get_no_ematching () in
       let no_nla = Options.get_no_nla () in
       let no_ac = Options.get_no_ac () in
-      let greedy = Options.get_greedy () in
+      let instantiation_heuristic = Options.get_instantiation_heuristic () in
       (*let normalize_instances = Options.normalize_instances () in*)
       let max_split = Options.get_max_split () in
 
       Options.set_no_ematching true;
       Options.set_no_nla true;
       Options.set_no_ac  true;
-      Options.set_greedy true;
+      Options.set_instantiation_heuristic IGreedy;
       (*Options.set_normalize_instances true;*)
       Options.set_max_split Numbers.Q.zero;
 
@@ -1659,7 +1663,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Options.set_no_ematching no_ematching;
       Options.set_no_nla no_nla;
       Options.set_no_ac  no_ac;
-      Options.set_greedy greedy;
+      Options.set_instantiation_heuristic instantiation_heuristic;
       (*Options.set_normalize_instances normalize_instances;*)
       Options.set_max_split max_split;
 
