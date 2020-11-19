@@ -301,14 +301,12 @@ let model = ref MNone
 let output_format = ref Native
 let infer_output_format = ref true
 let unsat_core = ref false
-let why3_counterexample = ref false
 
 let set_interpretation b = interpretation := b
 let set_model b = model := b
 let set_output_format b = output_format := b
 let set_infer_output_format f = infer_output_format := f = None
 let set_unsat_core b = unsat_core := b
-let set_why3_counterexample b = why3_counterexample := b
 
 let get_interpretation () =
   !interpretation = IFirst ||
@@ -327,7 +325,6 @@ let get_output_smtlib () =
   (!output_format = Smtlib2) || (!output_format = Why3)
 let get_infer_output_format () = !infer_output_format
 let get_unsat_core () = !unsat_core || !save_used_context || !debug_unsat_core
-let get_why3_counterexample () = !why3_counterexample
 
 (** Profiling options *)
 
