@@ -82,9 +82,12 @@ let assoc_destrs hs cases =
 let print_generic body_of =
   let h = Hashtbl.create 17 in
   let rec print body_of fmt = function
-    | Tint -> fprintf fmt "int"
-    | Treal -> fprintf fmt "real"
-    | Tbool -> fprintf fmt "bool"
+    | Tint -> if get_output_smtlib () then fprintf fmt "Int"
+      else fprintf fmt "int"
+    | Treal -> if get_output_smtlib () then fprintf fmt "Real"
+      else fprintf fmt "real"
+    | Tbool -> if get_output_smtlib () then fprintf fmt "Bool"
+      else fprintf fmt "bool"
     | Tunit -> fprintf fmt "unit"
     | Tbitv n -> fprintf fmt "bitv[%d]" n
     | Tvar{v=v ; value = None} -> fprintf fmt "'a_%d" v
@@ -98,22 +101,37 @@ let print_generic body_of =
     | Tvar{ value = Some t; _ } ->
       (*fprintf fmt "('a_%d->%a)" v print t *)
       print body_of fmt t
-    | Text(l, s) -> fprintf fmt "%a <ext>%s" print_list l (Hstring.view s)
+    | Text(l, s) when l == [] ->
+      if get_output_smtlib () then fprintf fmt "%s" (Hstring.view s)
+      else fprintf fmt "<ext>%s" (Hstring.view s)
+    | Text(l,s) ->
+      if get_output_smtlib () then
+        fprintf fmt "(%a %s)" print_list l (Hstring.view s)
+      else fprintf fmt "%a <ext>%s" print_list l (Hstring.view s)
     | Tfarray (t1, t2) ->
-      fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
+      if get_output_smtlib () then
+        fprintf fmt "(Array %a %a)"  (print body_of) t1 (print body_of) t2
+      else
+        fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
     | Tsum(s, _) -> fprintf fmt "<sum>%s" (Hstring.view s)
     | Trecord { args = lv; name = n; lbs = lbls; _ } ->
-      fprintf fmt "%a <record>%s" print_list lv (Hstring.view n);
-      if body_of != None then begin
-        fprintf fmt " = {";
-        let first = ref true in
-        List.iter
-          (fun (s, t) ->
-             fprintf fmt "%s%s : %a" (if !first then "" else "; ")
-               (Hstring.view s) (print body_of) t;
-             first := false
-          ) lbls;
-        fprintf fmt "}"
+      if get_output_smtlib () then begin
+        if lv == [] then fprintf fmt "%s" (Hstring.view n)
+        else fprintf fmt "%a %s" print_list lv (Hstring.view n)
+      end
+      else begin
+        fprintf fmt "%a <record>%s" print_list lv (Hstring.view n);
+        if body_of != None then begin
+          fprintf fmt " = {";
+          let first = ref true in
+          List.iter
+            (fun (s, t) ->
+               fprintf fmt "%s%s : %a" (if !first then "" else "; ")
+                 (Hstring.view s) (print body_of) t;
+               first := false
+            ) lbls;
+          fprintf fmt "}"
+        end
       end
     | Tadt (n, lv) ->
       fprintf fmt "%a <adt>%s" print_list lv (Hstring.view n);
