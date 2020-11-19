@@ -437,13 +437,11 @@ let output_concrete_model fmt props functions constants arrays =
   if get_interpretation () then
     if
       Options.get_output_format () == Why3 ||
-      Options.get_output_format () == Smtlib2 ||
-      (Options.get_why3_counterexample ()) then begin
+      Options.get_output_format () == Smtlib2 then begin
 
       Printer.print_fmt ~flushed:false fmt "@[<v 0>unknown@ ";
       Printer.print_fmt ~flushed:false fmt "@[<v 2>(model@,";
-      if Options.get_output_format () == Why3 ||
-         (Options.get_why3_counterexample ()) then begin
+      if Options.get_output_format () == Why3 then begin
         Why3CounterExample.output_constraints fmt props
       end;
 
