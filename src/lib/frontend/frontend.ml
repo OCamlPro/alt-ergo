@@ -257,12 +257,9 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | _ -> None
     in
     let why3_counterexample =
-      let why3_output =
-        match Options.get_output_format () with
-        | Why3 -> true
-        | Smtlib2 | Native | Unknown _ -> false
-      in
-      why3_output || Options.get_why3_counterexample ()
+      match Options.get_output_format () with
+      | Why3 | Smtlib2 -> true
+      | Native | Unknown _ -> false
     in
 
     let time = Time.value() in
