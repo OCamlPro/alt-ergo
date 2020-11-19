@@ -306,7 +306,6 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     `Ok()
 
 let mk_output_opt interpretation model unsat_core output_format
-    why3_counterexample
   =
   set_infer_output_format output_format;
   let output_format = match output_format with
@@ -317,7 +316,6 @@ let mk_output_opt interpretation model unsat_core output_format
   set_model model;
   set_unsat_core unsat_core;
   set_output_format output_format;
-  set_why3_counterexample why3_counterexample;
   `Ok()
 
 let mk_profiling_opt cumulative_time_profiling profiling
@@ -937,11 +935,6 @@ let parse_output_opt =
     let doc = "Experimental support for computing and printing unsat-cores." in
     Arg.(value & flag & info ["u"; "unsat-core"] ~doc) in
 
-  let why3_counterexample =
-    let doc = "Experimental support for computing and printing \
-               counter-examples for Why3." in
-    Arg.(value & flag & info ["w"; "why3-ce"] ~doc) in
-
   let output_format =
     let doc =
       Format.sprintf
@@ -961,7 +954,7 @@ let parse_output_opt =
 
   Term.(ret (const mk_output_opt $
              interpretation $ model $ unsat_core $
-             output_format $ why3_counterexample
+             output_format
             ))
 
 let parse_profiling_opt =
