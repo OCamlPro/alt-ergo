@@ -201,11 +201,9 @@ module SmtlibCounterExample = struct
   let records = ref Records.empty
 
   let add_records_destr record destr rep =
-    match Records.find_opt record !records with
-    | None ->
-      records := Records.add record [(destr,rep)] !records
-    | Some destrs ->
+    try let destrs = Records.find record !records in
       records := Records.add record ((destr,rep) :: destrs) !records
+    with Not_found -> records := Records.add record [(destr,rep)] !records
 
   let mk_records_constr
       { Ty.name = n; record_constr = cstr; lbs = lbs; _} =
@@ -225,13 +223,11 @@ module SmtlibCounterExample = struct
           | Some rep -> fprintf fmt "%s " rep
         ) lbs
     in
-    match Records.find_opt (Hstring.view n) !records with
-    | None -> assert false
-    | Some [] -> assert false
-    | Some destrs ->
+    try let destrs = Records.find (Hstring.view n) !records in
       asprintf "%s %a"
         (Hstring.view cstr)
         print_destr (destrs,lbs)
+    with Not_found -> assert false
 
   let x_print fmt (_ , ppr) = fprintf fmt "%s" ppr
 
