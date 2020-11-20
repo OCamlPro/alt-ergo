@@ -106,14 +106,17 @@ let print_generic body_of =
       else fprintf fmt "<ext>%s" (Hstring.view s)
     | Text(l,s) ->
       if get_output_smtlib () then
-        fprintf fmt "(%a %s)" print_list l (Hstring.view s)
+        fprintf fmt "(%s %a)" (Hstring.view s) print_list l
       else fprintf fmt "%a <ext>%s" print_list l (Hstring.view s)
     | Tfarray (t1, t2) ->
       if get_output_smtlib () then
         fprintf fmt "(Array %a %a)"  (print body_of) t1 (print body_of) t2
       else
         fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
-    | Tsum(s, _) -> fprintf fmt "<sum>%s" (Hstring.view s)
+    | Tsum(s, _) ->
+      if get_output_smtlib () then
+        fprintf fmt "%s" (Hstring.view s)
+      else fprintf fmt "<sum>%s" (Hstring.view s)
     | Trecord { args = lv; name = n; lbs = lbls; _ } ->
       if get_output_smtlib () then begin
         if lv == [] then fprintf fmt "%s" (Hstring.view n)
