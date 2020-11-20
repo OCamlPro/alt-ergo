@@ -218,13 +218,11 @@ module SmtlibCounterExample = struct
           | Some rep -> fprintf fmt "%s " rep
         ) lbs
     in
-    match Records.find_opt (Hstring.view n) !records with
-    | None -> assert false
-    | Some [] -> assert false
-    | Some destrs ->
+    try let destrs = Records.find (Hstring.view n) !records in
       asprintf "%s %a"
         (Hstring.view cstr)
         print_destr (destrs,lbs)
+    with Not_found -> assert false
 
   let x_print fmt (_ , ppr) = fprintf fmt "%s" ppr
 
