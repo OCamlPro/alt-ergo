@@ -324,6 +324,9 @@ module SmtlibCounterExample = struct
         ) fprofs;
       Printer.print_fmt fmt "@]";
     end
+
+  let output_arrays_counterexample fmt _arrays =
+    fprintf fmt "@ ; Arrays not yet supported@ "
 end
 (* of module SmtlibCounterExample *)
 
@@ -357,6 +360,8 @@ let output_concrete_model fmt props functions constants arrays =
       SmtlibCounterExample.output_functions_counterexample fmt functions;
       fprintf fmt "@ ; Constants@ ";
       SmtlibCounterExample.output_constants_counterexample fmt constants;
+
+      SmtlibCounterExample.output_arrays_counterexample fmt arrays;
 
       Printer.print_fmt fmt "@]@ )";
     end
