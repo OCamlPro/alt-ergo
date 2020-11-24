@@ -224,6 +224,11 @@ module SmtlibCounterExample = struct
         print_destr (destrs,lbs)
     with Not_found -> assert false
 
+  (* let add_records_destr record destr rep =
+    try let destrs = Records.find record !records in
+      records := Records.add record ((destr,rep) :: destrs) !records
+    with Not_found -> records := Records.add record [(destr,rep)] !records *)
+
   let x_print fmt (_ , ppr) = fprintf fmt "%s" ppr
 
   let to_string_type t =
@@ -298,12 +303,14 @@ module SmtlibCounterExample = struct
     | (_,e) :: l ->
       fprintf fmt "%a" x_print e;
       List.iter (fun (_, e) -> fprintf fmt " %a" x_print e) l
+
   let print_symb ty fmt f =
     match f, ty with
     | Sy.Op Sy.Record, Ty.Trecord { Ty.name ; _ } ->
       fprintf fmt "%a__%s" Sy.print f (Hstring.view name)
 
     | _ -> Sy.print fmt f
+
   let output_functions_counterexample fmt fprofs =
     if not (Profile.is_empty fprofs) then begin
       Printer.print_fmt ~flushed:false fmt "@[<v 2>@ ";
