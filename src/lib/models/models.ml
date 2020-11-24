@@ -197,38 +197,6 @@ end
 
 module SmtlibCounterExample = struct
 
-  module Records = Map.Make(String)
-  let records = ref Records.empty
-
-  let add_records_destr record destr rep =
-    try let destrs = Records.find record !records in
-      records := Records.add record ((destr,rep) :: destrs) !records
-    with Not_found -> records := Records.add record [(destr,rep)] !records
-
-  let mk_records_constr
-      { Ty.name = n; record_constr = cstr; lbs = lbs; _} =
-    let rec find_destrs destr destrs =
-      match destrs with
-      | [] -> None
-      | (d,rep) :: destrs ->
-        if String.equal d destr then Some rep
-        else find_destrs destr destrs
-    in
-
-    let print_destr fmt (destrs,lbs) =
-      List.iter (fun (destr, _ty_destr) ->
-          let destr = Hstring.view destr in
-          match find_destrs destr destrs with
-          | None -> fprintf fmt "<missing value for %s> " destr
-          | Some rep -> fprintf fmt "%s " rep
-        ) lbs
-    in
-    try let destrs = Records.find (Hstring.view n) !records in
-      asprintf "%s %a"
-        (Hstring.view cstr)
-        print_destr (destrs,lbs)
-    with Not_found -> assert false
-
   let x_print fmt (_ , ppr) = fprintf fmt "%s" ppr
 
   let to_string_type t =
@@ -248,6 +216,73 @@ module SmtlibCounterExample = struct
           fprintf fmt "%s" constraint_name
       end
     | _ -> E.print fmt t
+
+  module Records = Map.Make(String)
+  module Destructors = Map.Make(String)
+  let records = ref Records.empty
+
+  let add_records_destr record_name destr_name rep =
+    let destrs =
+      try Records.find record_name !records
+      with Not_found -> Destructors.empty
+    in
+    let destrs =
+      Destructors.add destr_name rep destrs in
+    records := Records.add record_name destrs !records
+
+  let mk_records_constr record_name
+      { Ty.name = _n; record_constr = cstr; lbs = lbs; _} =
+    let find_destrs destr destrs =
+      try let rep = Destructors.find destr destrs in
+        Some rep
+      with Not_found -> None
+    in
+
+    let print_destr fmt (destrs,lbs) =
+      List.iter (fun (destr, _ty_destr) ->
+          let destr = Hstring.view destr in
+          match find_destrs destr destrs with
+          | None ->
+            if Options.get_verbose () ||
+               Options.get_debug_interpretation () then
+              fprintf fmt "<missing value for %s> " destr
+            else
+              fprintf fmt "_ "
+          | Some rep -> fprintf fmt "%s " rep
+        ) lbs
+    in
+    let destrs =
+      try Records.find (Sy.to_string record_name) !records
+      with Not_found -> Destructors.empty
+    in
+    asprintf "%s %a"
+      (Hstring.view cstr)
+      print_destr (destrs,lbs)
+
+  let add_record_constr record_name { Ty.name = _n; record_constr = _cstr; lbs = lbs; _} xs_values =
+    List.iter2 (fun (destr,_) (rep,_) ->
+        add_records_destr
+          record_name
+          (Hstring.view destr)
+          (asprintf "%a" Expr.print rep)
+      ) lbs xs_values
+
+  let check_records xs_ty_named xs_values f ty rep =
+    match xs_ty_named with
+    | [Ty.Trecord _r, _arg] -> begin
+        match xs_values with
+        | [record_name,_] ->
+          add_records_destr
+            (asprintf "%a" Expr.print record_name)
+            (Sy.to_string f)
+            rep
+        | [] | _ -> ()
+      end
+    | _ ->
+      match ty with
+      | Ty.Trecord r ->
+        add_record_constr rep r xs_values
+      | _ -> ()
 
   let print_fun_def fmt name args ty t =
     let print_args fmt (ty,name) =
@@ -275,7 +310,7 @@ module SmtlibCounterExample = struct
            let rep =
              match ty with
              | Ty.Trecord r ->
-               let constr = mk_records_constr r in
+               let constr = mk_records_constr f r in
                sprintf "(%s)" constr
              | _ -> rep
            in
@@ -283,15 +318,6 @@ module SmtlibCounterExample = struct
            print_fun_def fmt f [] ty rep
          | _ -> assert false
       ) cprofs
-
-  let check_is_destr ty f rep =
-    match ty with
-    | [Ty.Trecord r] ->
-      add_records_destr
-        (Hstring.view r.name)
-        (Sy.to_string f)
-        rep
-    | _ -> ()
 
   let output_functions_counterexample fmt fprofs =
     Profile.iter
@@ -304,7 +330,7 @@ module SmtlibCounterExample = struct
            let representants =
              Profile.V.fold (fun (xs_values,(rep,srep)) acc ->
                  assert ((List.length xs_ty_named) = (List.length xs_values));
-                 check_is_destr xs_ty f srep;
+                 check_records xs_ty_named xs_values f ty srep;
                  (xs_values,rep) :: acc
                ) st [] in
 
