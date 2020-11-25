@@ -332,6 +332,8 @@ module SmtlibCounterExample = struct
          | _ -> assert false
       ) cprofs
 
+  module Rep = Map.Make(String)
+
   let output_functions_counterexample fmt fprofs =
     Profile.iter
       (fun (f, xs_ty, ty) st ->
@@ -341,36 +343,55 @@ module SmtlibCounterExample = struct
 
          let rep =
            let representants =
-             Profile.V.fold (fun (xs_values,(rep,srep)) acc ->
+             Profile.V.fold (fun (xs_values,(_rep,srep)) acc ->
                  assert ((List.length xs_ty_named) = (List.length xs_values));
                  check_records xs_ty_named xs_values f ty srep;
-                 (xs_values,rep) :: acc
-               ) st [] in
+                 let reps = try Rep.find srep acc with Not_found -> [] in
+                 Rep.add srep (xs_values :: reps) acc
+               ) st Rep.empty in
+
+           let representants = Rep.fold (fun srep xs_values_list acc ->
+               (srep,xs_values_list) :: acc) representants [] in
+
+           let rec mk_ite_and xs tys =
+             match xs, tys with
+             | [],[] -> assert false
+             | [xs,_],[_ty,name] ->
+               asprintf "(= %s %a)" name pp_term xs
+             | (xs,_) :: l1, (_ty,name) :: l2 ->
+               asprintf "(and (= %s %a) %s)"
+                 name
+                 pp_term xs
+                 (mk_ite_and l1 l2)
+             | _, _ -> assert false
+           in
+
+           let mk_ite_or l =
+             let pp_or_list fmt xs_values =
+               fprintf fmt "%s" (mk_ite_and xs_values xs_ty_named)
+             in
+             match l with
+             | [] -> assert false
+             | [xs_values] -> mk_ite_and xs_values xs_ty_named
+             | xs_values :: l ->
+               asprintf "(or %s %a)"
+                 (mk_ite_and xs_values xs_ty_named)
+                 (Printer.pp_list_space pp_or_list) l
+           in
 
            let rec reps_aux reps =
              match reps with
-             | [] -> assert false
-             | [_xs_values,rep] ->
-               asprintf "%a" X.print rep
-             | (xs_values,rep) :: l ->
-               let rec mk_ite_cond xs tys =
-                 match xs, tys with
-                 | [],[] -> assert false
-                 | [xs,_],[_ty,name] ->
-                   asprintf "(= %s %a)" name pp_term xs
-                 | (xs,_) :: l1, (_ty,name) :: l2 ->
-                   asprintf "(and (= %s %a) %s)"
-                     name
-                     pp_term xs
-                     (mk_ite_cond l1 l2)
-                 | _, _ -> assert false
-               in
-               asprintf "(ite %s %a %s)"
-                 (mk_ite_cond xs_values xs_ty_named)
-                 X.print rep
+             | [] -> asprintf "%a" pp_dummy_value_of_type ty
+             | (srep,xs_values_list) :: l ->
+               asprintf "(ite %s %s %s)"
+                 (mk_ite_or xs_values_list)
+                 srep
                  (reps_aux l)
            in
-           reps_aux representants
+           if List.length representants = 1 then
+             sprintf "%s" (fst (List.hd representants))
+           else
+             reps_aux representants
          in
          print_fun_def fmt f xs_ty_named ty rep;
       ) fprofs
