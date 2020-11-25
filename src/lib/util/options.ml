@@ -294,12 +294,14 @@ let get_timelimit_per_goal () = !timelimit_per_goal
 (** Output options *)
 
 let interpretation = ref INone
+let interpretation_dummy_value = ref true
 let model = ref MNone
 let output_format = ref Native
 let infer_output_format = ref true
 let unsat_core = ref false
 
 let set_interpretation b = interpretation := b
+let set_interpretation_dummy_value b = interpretation_dummy_value := b
 let set_model b = model := b
 let set_output_format b = output_format := b
 let set_infer_output_format f = infer_output_format := f = None
@@ -314,6 +316,7 @@ let get_first_interpretation () = !interpretation = IFirst
 let get_before_dec_interpretation () = !interpretation = IBefore_dec
 let get_before_inst_interpretation () = !interpretation = IBefore_inst
 let get_before_end_interpretation () = !interpretation = IBefore_end
+let get_interpretation_dummy_value () = !interpretation_dummy_value
 let get_model () = !model = MDefault || !model = MComplete
 let get_complete_model () = !model = MComplete
 let get_all_models () = !model = MAll
