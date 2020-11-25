@@ -202,35 +202,37 @@ module SmtlibCounterExample = struct
   let to_string_type t =
     asprintf "%a" Ty.print t
 
+  let pp_term fmt t =
+    if Options.get_output_format () == Why3 then
+      match E.symbol_info t with
+      | Sy.Name (n,_) -> begin
+          try
+            let constraint_name,_ty_name =
+              Sorts.find (Hstring.view n) !constraints in
+            fprintf fmt "%s" constraint_name
+          with _ ->
+            let constraint_name = "c_"^(Hstring.view n)  in
+            constraints := Sorts.add (Hstring.view n)
+                (constraint_name,to_string_type (E.type_info t)) !constraints;
+            fprintf fmt "%s" constraint_name
+        end
+      | _ -> E.print fmt t
+    else
+      E.print fmt t
+
   let dummy_value_of_type ty =
     match ty with
       Ty.Tint -> "0"
     | Ty.Treal -> "0.0"
     | Ty.Tbool -> "false"
-    | _ -> asprintf "%a" Expr.print (Expr.fresh_name ty)
+    | _ -> asprintf "%a" pp_term (Expr.fresh_name ty)
 
   let pp_dummy_value_of_type fmt ty =
-
     if Options.get_interpretation_dummy_value () then
       let d = dummy_value_of_type ty in
       fprintf fmt "%s " d
     else
       fprintf fmt "_ "
-
-  let pp_term fmt t =
-    match E.symbol_info t with
-    | Sy.Name (n,_) -> begin
-        try
-          let constraint_name,_ty_name =
-            Sorts.find (Hstring.view n) !constraints in
-          fprintf fmt "%s" constraint_name
-        with _ ->
-          let constraint_name = "c_"^(Hstring.view n)  in
-          constraints := Sorts.add (Hstring.view n)
-              (constraint_name,to_string_type (E.type_info t)) !constraints;
-          fprintf fmt "%s" constraint_name
-      end
-    | _ -> E.print fmt t
 
   module Records = Map.Make(String)
   module Destructors = Map.Make(String)
@@ -275,7 +277,7 @@ module SmtlibCounterExample = struct
         add_records_destr
           record_name
           (Hstring.view destr)
-          (asprintf "%a" Expr.print rep)
+          (asprintf "%a" pp_term rep)
       ) lbs xs_values
 
   let check_records xs_ty_named xs_values f ty rep =
@@ -355,11 +357,11 @@ module SmtlibCounterExample = struct
                  match xs, tys with
                  | [],[] -> assert false
                  | [xs,_],[_ty,name] ->
-                   asprintf "(= %s %a)" name Expr.print xs
+                   asprintf "(= %s %a)" name pp_term xs
                  | (xs,_) :: l1, (_ty,name) :: l2 ->
                    asprintf "(and (= %s %a) %s)"
                      name
-                     Expr.print xs
+                     pp_term xs
                      (mk_ite_cond l1 l2)
                  | _, _ -> assert false
                in
@@ -388,7 +390,7 @@ module Why3CounterExample = struct
     Sorts.iter (fun _ (name,ty) ->
         Printer.print_fmt ~flushed:false fmt "(declare-const %s %s)@ " name ty
       ) !constraints;
-    Printer.print_fmt fmt "%s" assertions
+    Printer.print_fmt fmt ~flushed:false "%s" assertions
 
 end
 (* of module Why3CounterExample *)
