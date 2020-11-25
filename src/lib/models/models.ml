@@ -237,6 +237,21 @@ module SmtlibCounterExample = struct
   let pp_type fmt t =
     Format.fprintf fmt "%s" (to_string_type t)
 
+  (* let dummy_value_of_type ty =
+    match ty with
+      Ty.Tint -> "0"
+    | Ty.Treal -> "0.0"
+    | Ty.Tbool -> "false"
+    | _ -> asprintf "%a" Expr.print (Expr.fresh_name ty)
+
+  let pp_dummy_value_of_type fmt ty =
+
+    if Options.get_interpretation_dummy_value () then
+      let d = dummy_value_of_type ty in
+      fprintf fmt "%s " d
+    else
+      fprintf fmt "_ " *)
+
   let pp_term fmt t =
     match E.symbol_info t with
     | Sy.Name (n,_) -> begin

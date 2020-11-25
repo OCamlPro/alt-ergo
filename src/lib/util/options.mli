@@ -724,6 +724,10 @@ val get_last_interpretation : unit -> bool
 val get_interpretation_use_underscore : unit -> bool
 (** Default to [false] *)
 
+(** [true] if the interpretation is set to output dummy values instean of _ *)
+(* val get_interpretation_dummy_value : unit -> bool *)
+(** Default to [false] *)
+
 (** Value specifying the default output format. possible values are
     {ul {- native} {- smtlib2} {- why3}}
     . *)
