@@ -308,7 +308,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     set_timelimit_per_goal timelimit_per_goal;
     `Ok()
 
-let mk_output_opt interpretation model unsat_core output_format
+let mk_output_opt interpretation dummy_value model unsat_core output_format
   =
   set_infer_output_format output_format;
   let output_format = match output_format with
@@ -316,6 +316,7 @@ let mk_output_opt interpretation model unsat_core output_format
     | Some fmt -> fmt
   in
   set_interpretation interpretation;
+  set_interpretation_dummy_value (not dummy_value);
   set_model model;
   set_unsat_core unsat_core;
   set_output_format output_format;
@@ -934,6 +935,11 @@ let parse_output_opt =
     Arg.(value & opt interpretation_conv INone &
          info ["interpretation"] ~docv ~docs ~doc) in
 
+  let dummy_value =
+    let doc = "Output \"_\" instead of dummy fresh value in interpretation" in
+    Arg.(value & flag & info
+           ["interpretation-dummy-value";"dummy-value"] ~doc) in
+
   let model =
     let doc = Format.sprintf
         "Experimental support for models on labeled terms. \
@@ -966,7 +972,7 @@ let parse_output_opt =
   in
 
   Term.(ret (const mk_output_opt $
-             interpretation $ model $ unsat_core $
+             interpretation $ dummy_value $ model $ unsat_core $
              output_format
             ))
 
