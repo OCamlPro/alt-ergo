@@ -202,6 +202,21 @@ module SmtlibCounterExample = struct
   let to_string_type t =
     asprintf "%a" Ty.print t
 
+  let dummy_value_of_type ty =
+    match ty with
+      Ty.Tint -> "0"
+    | Ty.Treal -> "0.0"
+    | Ty.Tbool -> "false"
+    | _ -> asprintf "%a" Expr.print (Expr.fresh_name ty)
+
+  let pp_dummy_value_of_type fmt ty =
+
+    if Options.get_interpretation_dummy_value () then
+      let d = dummy_value_of_type ty in
+      fprintf fmt "%s " d
+    else
+      fprintf fmt "_ "
+
   let pp_term fmt t =
     match E.symbol_info t with
     | Sy.Name (n,_) -> begin
@@ -239,15 +254,11 @@ module SmtlibCounterExample = struct
     in
 
     let print_destr fmt (destrs,lbs) =
-      List.iter (fun (destr, _ty_destr) ->
+      List.iter (fun (destr, ty_destr) ->
           let destr = Hstring.view destr in
           match find_destrs destr destrs with
           | None ->
-            if Options.get_verbose () ||
-               Options.get_debug_interpretation () then
-              fprintf fmt "<missing value for %s> " destr
-            else
-              fprintf fmt "_ "
+            pp_dummy_value_of_type fmt ty_destr
           | Some rep -> fprintf fmt "%s " rep
         ) lbs
     in
