@@ -242,10 +242,9 @@ module SmtlibCounterExample = struct
       Ty.Tint -> "0"
     | Ty.Treal -> "0.0"
     | Ty.Tbool -> "false"
-    | _ -> asprintf "%a" Expr.print (Expr.fresh_name ty)
+    | _ -> asprintf "%a" pp_term (Expr.fresh_name ty)
 
   let pp_dummy_value_of_type fmt ty =
-
     if Options.get_interpretation_dummy_value () then
       let d = dummy_value_of_type ty in
       fprintf fmt "%s " d
@@ -361,7 +360,7 @@ module Why3CounterExample = struct
     Sorts.iter (fun _ (name,ty) ->
         Printer.print_fmt ~flushed:false fmt "(declare-const %s %s)@ " name ty
       ) !constraints;
-    Printer.print_fmt fmt "%s" assertions
+    Printer.print_fmt fmt ~flushed:false "%s" assertions
 
 end
 (* of module Why3CounterExample *)
