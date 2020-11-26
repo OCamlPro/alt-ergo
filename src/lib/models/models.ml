@@ -228,7 +228,7 @@ module SmtlibCounterExample = struct
     | _ -> asprintf "%a" pp_term (Expr.fresh_name ty)
 
   let pp_dummy_value_of_type fmt ty =
-    if Options.get_interpretation_dummy_value () then
+    if not (Options.get_interpretation_use_underscore ()) then
       let d = dummy_value_of_type ty in
       fprintf fmt "%s " d
     else
@@ -272,7 +272,8 @@ module SmtlibCounterExample = struct
       (Hstring.view cstr)
       print_destr (destrs,lbs)
 
-  let add_record_constr record_name { Ty.name = _n; record_constr = _cstr; lbs = lbs; _} xs_values =
+  let add_record_constr record_name
+      { Ty.name = _n; record_constr = _cstr; lbs = lbs; _} xs_values =
     List.iter2 (fun (destr,_) (rep,_) ->
         add_records_destr
           record_name
@@ -382,6 +383,14 @@ module SmtlibCounterExample = struct
            let rec reps_aux reps =
              match reps with
              | [] -> asprintf "%a" pp_dummy_value_of_type ty
+             | [srep,xs_values_list] ->
+               if Options.get_interpretation_use_underscore () then
+                 asprintf "(ite %s %s %s)"
+                   (mk_ite_or xs_values_list)
+                   srep
+                   (reps_aux [])
+               else
+                 srep
              | (srep,xs_values_list) :: l ->
                asprintf "(ite %s %s %s)"
                  (mk_ite_or xs_values_list)
