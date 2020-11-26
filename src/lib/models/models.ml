@@ -245,7 +245,7 @@ module SmtlibCounterExample = struct
     | _ -> asprintf "%a" pp_term (Expr.fresh_name ty)
 
   let pp_dummy_value_of_type fmt ty =
-    if Options.get_interpretation_dummy_value () then
+    if not (Options.get_interpretation_use_underscore ()) then
       let d = dummy_value_of_type ty in
       fprintf fmt "%s " d
     else
