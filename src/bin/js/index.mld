@@ -1,0 +1,33 @@
+{1 Alt-ergo in Javascript}
+
+{2 Alt-ergo for node-js}
+
+A simple javascript version of the alt-ergo package is available with the command [make js-node].
+The command [make js-node] will create the javascript file [alt-ergo.js].
+This file allows you to run alt-ergo in command line with [node] like [node alt-ergo.js <options> <input_file>].
+This command uses the Alt-Ergo_common internal lib (see {{:index_common.html}[Alt_ergo_common]}) for parsing command line, input file, and main solving loop.
+
+To run this command you will need the following aditionnal dependencies: [js_of_ocaml-compiler] and [zarith_stubs_js].
+The [--timeout] option is ignored due to a lack of js primitives
+Zip files are not recognised file extension.
+
+{2 The Alt-ergo web worker}
+
+A web worker of the alt-ergo solver is available with the command [make js-worker].
+This web worker takes a string corresponding to the input file to solve, and a Json file that correspond to the set of options to set. It uses Js_of_ocaml Worker's and Lwt. At the end of solving it returns a Json file correspondinf to results, debug informations, etc.
+The [data-encoding] library is used to encode and decode messages to/from the worker.
+
+Options and results format are available in {!module:AltErgoJs.worker_interface} module.
+The module {!module:AltErgoJs.options_interface} takes an `options` types from the worker_interface. Only option fields with values are set.
+
+To run this command you will need the following aditionnal dependencies: [js_of_ocaml] [js_of_ocaml-lwt] [data-encoding] and [zarith_stubs_js].
+The [--timeout] option is ignored due to a lack of js primitives
+Zip files are not recognised file extension.
+
+{2 The Alt-ergo web worker small example}
+
+A small example of how to use the Alt-Ergo web worker can be build with the command [make js-example]. This command also makes the web worker if it has not already been built.
+
+To run this command you will need the following aditionnal dependencies: [js_of_ocaml] [js_of_ocaml-lwt] [js_of_ocaml-ppx] [data-encoding] and [lwt_ppx].
+The [--timeout] option is ignored due to a lack of js primitives but a timeout can be set using lwt sleep function.
+Zip files are not recognised file extension.

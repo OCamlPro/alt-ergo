@@ -1,12 +1,23 @@
 alt_ergo_bin=$1
 timelimit=$2
+simple_test=$3
 
 files=""
 files="$files `find valid/ -name '*'.ae`"
 files="$files `find valid/ -name '*'.zip`"
 
+## Test sat options if simple_test is not set
+if $simple_test
+then
+    min_bj="--no-minimal-bj"
+    tab_th="--no-tableaux-cdcl-in-theories"
+    tab_inst="--no-tableaux-cdcl-in-instantiation"
+    tab_th_inst="--no-tableaux-cdcl-in-theories --no-tableaux-cdcl-in-instantiation"
+    min_bj_tab_th_inst="--no-minimal-bj --no-tableaux-cdcl-in-theories --no-tableaux-cdcl-in-instantiation"
+fi
+
 ## run Alt-Ergo with imperative SAT solver assisted with tableaux on valid tests
-for options in "" "--no-minimal-bj" "--no-tableaux-cdcl-in-theories" "--no-tableaux-cdcl-in-instantiation"  "--no-tableaux-cdcl-in-theories --no-tableaux-cdcl-in-instantiation" "--no-minimal-bj --no-tableaux-cdcl-in-theories --no-tableaux-cdcl-in-instantiation"
+for options in "" $min_bj $tab_th $tab_inst $tab_th_inst $min_bj_tab_th_inst
 do
     cpt=0
     for f in $files
@@ -54,7 +65,7 @@ done
 echo "[run_valid > tableaux solver with cdcl test] $cpt files considered"
 
 ## run Alt-Ergo with imperative SAT solver on valid tests
-for options in "" "--no-minimal-bj"
+for options in "" $min_bj
 do
     cpt=0
     for f in $files

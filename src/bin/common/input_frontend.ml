@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2018-2018 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2018-2020 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the license indicated      *)
 (*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
@@ -14,26 +14,36 @@ open AltErgoParsers
 
 (* === LEGACY input method === *)
 
-let () =
+let register_legacy () =
   let module M : Input.S = struct
 
     (* Parsing *)
 
     type parsed = Parsed.decl
 
+    let parse_file ~file ~format =
+      let l = Parsers.parse_problem_as_string ~file ~format in
+      Lists.to_seq l
+
     let parse_files ~filename ~preludes =
       let l = Parsers.parse_problem ~filename ~preludes in
       Lists.to_seq l
 
-    (** Typechecking *)
+    (* Typechecking *)
 
     include Typechecker
 
   end in
+  (* Register the parser for natif format *)
+  AltErgoParsers.Native_lexer.register_native ();
+  (* Register the parser for smt2 format *)
+  AltErgoParsers.Psmt2_to_alt_ergo.register_psmt2 ();
+  (* Register the legacy frontend *)
   Input.register "legacy" (module M)
 
+
 (*
-(* === DOLMEN inut method === *)
+(* === DOLMEN input method === *)
 
 let () =
   let module M : Input.S = struct

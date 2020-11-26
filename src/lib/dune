@@ -46,4 +46,8 @@
     Options Timers Util Vec Version ZarithNumbers Steps Printer Format_shims
   )
 
+ (js_of_ocaml
+  (javascript_files missing_primitives.js)
+ )
+
 )

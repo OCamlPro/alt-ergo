@@ -562,7 +562,7 @@ val get_save_used_context : unit -> bool
 (** {4 Execution options} *)
 
 (** [true] if the locations of goals is shown when printing solver's answers. *)
-val get_answers_with_locs  : unit -> bool
+val get_answers_with_loc  : unit -> bool
 (** Default to [true] *)
 
 (** [true] if the outputs are printed with colors *)

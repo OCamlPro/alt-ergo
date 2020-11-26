@@ -38,10 +38,10 @@ open Connected_ast
 open Format
 open Options
 
-(* done here to initialize options,
+(* done here to initialize parser and options,
    before the instantiations of functors *)
 let () =
-  try Parse_command.parse_cmdline_arguments ()
+  try Parse_command.parse_cmdline_arguments ();
   with Parse_command.Exit_parse_command i -> exit i
 
 module SatCont = (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer)
@@ -1526,9 +1526,7 @@ let start_replay session_cin all_used_context =
 let () =
   Gui_config.init ();
   init_gtk ();
-  Signals.init_sig_int ();
-  Signals.init_sig_alarm ();
-
+  Signals_profiling.init_signals ();
   Native_lexer.register_native ();
   Psmt2_to_alt_ergo.register_psmt2 ();
 

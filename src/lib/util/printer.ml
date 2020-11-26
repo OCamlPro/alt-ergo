@@ -286,7 +286,7 @@ let print_status_loc fmt loc =
   match loc with
   | None -> ()
   | Some loc ->
-    if Options.get_answers_with_locs () then
+    if Options.get_answers_with_loc () then
       fprintf fmt "%a " Loc.report loc
 
 let print_status_value fmt (v,color) =

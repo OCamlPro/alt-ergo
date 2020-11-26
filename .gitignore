@@ -24,8 +24,15 @@ rsc/extra/ocpchecker/ocp-checker
 # Generated documentation files
 rsc/extra/index.html
 
+# Generated Js related files
+alt-ergo.js
+www/
+
 # Generated release files
 public-release
+
+# Generated formater files
+rsc/extra/ocpChecker/ocp-checker
 
 # Generated tmp files
 *.make.revision

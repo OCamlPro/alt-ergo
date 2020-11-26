@@ -1,8 +1,12 @@
 # ocaml is not a recognized language by travis, and using it
 # make travis default to ruby, whose setup is a bit time-consuming.
-# Hence, we currently use c given it's the most lightweight
-# in terms of language setup for the VMs.
-language: c
+# Hence, we currently use node_js given it's the simplest way to have
+# node-js pre-installed on the VMs which is usefull to test our
+# JS implementation of Alt-Ergo.
+language: node_js
+# Ensure that we use a recent version of node-js
+node-js:
+  - node
 # Cache the opam directory to avoid re-compiling the compiler
 cache:
   directories:
@@ -56,9 +60,8 @@ install:
 # Remove source pins before the cache is updated, to avoid
 # having the alt-ergo sources in the cache
 before_cache:
-  - opam uninstall alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-  - opam pin remove alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-
+  - opam uninstall alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo alt-ergo-js
+  - opam pin remove alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo alt-ergo-js
 
 # Order stages to test style and indent first,
 # then run non-regression tests, and finally,
@@ -66,6 +69,7 @@ before_cache:
 stages:
   - pre-check
   - test
+  - js-test
   - documentation
 
 jobs:
@@ -150,6 +154,13 @@ jobs:
       name: "non-regression (4.10.0+flambda)"
       script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
       env: OPAMBUILDTEST=true OCAML_VERSION=4.10.0+flambda
+
+    # === JS stage ===
+    # Javascript (with tests)
+    - stage: "js-test"
+      name: "js node, worker and example build (4.07.0)"
+      script: rsc/extra/travis_js_test.sh ${LOCAL_INSTALL_DIR}
+      env: OPAMBUILDTEST=false OCAML_VERSION=4.07.0
 
     # === Doc stage ===
     # Next branch (upload doc in gh-pages)

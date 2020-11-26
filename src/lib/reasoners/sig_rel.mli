@@ -79,5 +79,7 @@ module type RELATION = sig
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
 
+  val retrieve_used_context :
+    t -> Explanation.t -> Expr.t list * Expr.t list
 end
 

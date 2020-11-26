@@ -9,24 +9,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-
-(** {1 Signals module used at start-up to handle  signals for system} *)
-
-(** Add signal handler for Ctrl+C,
-    if profiling is set, swotch beetwen display
-    else print warning message and unknown and then exit 1 *)
-val init_sig_int : unit -> unit
-
-(** Add signal handler for termination signal if profiling is set.
-    print steps counter and then exit 1 *)
-val init_sig_term_quit : AltErgoLib.Timers.t -> unit
-
-(** Add signal handler for profiling interruption signal if profiling is set.
-    Print steps counter. *)
-val init_sig_prof : AltErgoLib.Timers.t -> unit
-
-(** Add signal handler for alarm signal (timeout). Raise timeout *)
-val init_sig_alarm : unit -> unit
-
-(** Add signal handler for virtual alarm signal (timeout). Raise timeout *)
-val init_sig_vtalarm : unit -> unit
+(** Register the legacy frontend with parser for natif and smt2/psmt2 format
+    as Input *)
+val register_legacy : unit -> unit

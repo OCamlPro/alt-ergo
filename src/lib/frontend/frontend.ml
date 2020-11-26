@@ -313,11 +313,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       Printer.print_status_preprocess ~validity_mode
         (Some time) (Some steps)
 
-
-
-
-
-
   let init_with_replay_used acc f =
     assert (Sys.file_exists f);
     let cin = open_in f in

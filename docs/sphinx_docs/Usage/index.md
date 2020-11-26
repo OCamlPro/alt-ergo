@@ -83,6 +83,29 @@ On windows, a binary at path `Z:\some\path\bin\alt-ergo` will look for preludes 
 plugins in `Z:\some\path\share\alt-ergo\preludes` and
 `Z:\some\path\share\alt-ergo\plugins` respectively.
 
+## Javascript
+
+Alt-Ergo can be compiled in Javascript see [INSTALL.md] for more informations.
+
+### Js-node
+
+The Javascript version of Alt-Ergo compatible with node-js is executed with the following commands:
+
+        $ node alt-ergo.js  [options] file.<ext>
+
+Note that timeout options and zip files are not supported with this version because of the lack of js primitives.
+
+### Js-worker
+
+For the Alt-Ergo web worker usage see the small example (`make js-example`) and the file [worker_example.ml]. This example uses the Alt-Ergo web worker through [Lwt] and uses [js_of_ocaml] to build an html page where you can write a small example, run the worker, and see the results.
+The communication between the Js and the worker is done through Json files with the use of the `data_encoding` library. You can see an example of the produce Json files in [json_example.json].
+
+[worker_example.ml]: src/bin/js/worker_example.ml
+[json_example.json]: src/bin/js/json_example.json
+[INSTALL.md]: INSTALL.md
+[small example]: examples/lib_usage.ml
 [API documentation]: ../API/index.md
 [AB-Why3 README]: ../Plugins/ab_why3.md
 [Input section]: ../Input_file_formats/index
+[Lwt]: https://ocsigen.org/lwt/
+[js_of_ocaml]: https://ocsigen.org/js_of_ocaml/

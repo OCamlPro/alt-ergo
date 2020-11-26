@@ -3,11 +3,11 @@
 {2 The Alt-ergo prover}
 
 The alt-ergo package installs the {e alt-ergo} binary, whose documentation
-is available through the {e --help} option.
+is available through the manpage or {e --help} option.
 
-{3 Command Line Parsing}
+{3 Alt_Ergo_common }
 
-The command line parsing is computed in our common internal library (see {{:index_common.html}[Alt_ergo_common]}) using {{:https://erratique.ch/software/cmdliner}[cmdliner]}
+This package uses the Alt-Ergo_common internal lib (see {{:index_common.html}[Alt_ergo_common]}) for parsing command line, input file, and main solving loop.
 
 {3 Plugins}
 

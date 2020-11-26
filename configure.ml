@@ -20,6 +20,10 @@ let mandir = ref ""
 
 let static = ref false
 
+(* this option add the possibility to choose the library that handle numbers \
+   in Alt-Ergo between zarith and nums *)
+let numbers_lib = ref "zarith"
+
 let pkg = ref ""
 
 (* Parse command line arguments *)
@@ -31,14 +35,15 @@ let () =
         ("--libdir", Arg.Set_string libdir, "<path> lib directory");
         ("--mandir", Arg.Set_string mandir, "<path> man directory");
         ("--static", Arg.Set static, " Enable statically compilation");
+        ("--numbers_lib", Arg.Set_string numbers_lib, " Choose numbers library between Zarith and Nums");
       ]
   in
   let anon_fun s =
     match !pkg with
     | "" -> pkg := s
     | _ ->
-        Format.eprintf "Anonymous argument ignored: '%s'@." s;
-        exit 1
+      Format.eprintf "Anonymous argument ignored: '%s'@." s;
+      exit 1
   in
   let usage = "./configure [options]" in
   Arg.parse args anon_fun usage
@@ -112,6 +117,7 @@ let () =
   in
   let () = Format.fprintf fmt {|let libdir = "%s"@.|} !libdir in
   let () = Format.fprintf fmt {|let mandir = "%s"@.|} !mandir in
+  let () = Format.fprintf fmt {|let numbers_lib = "%s"@.|} !numbers_lib in
   let () = Format.fprintf fmt {|
 (* Dynamic configuration, relative to the executable path *)
 
@@ -181,7 +187,10 @@ let () =
 
 (* run dune to check that dependencies are installed *)
 let () =
-  let p_opt = match !pkg with "" -> "" | s -> Format.asprintf "-p %s" s in
+  let p_opt =
+    match !pkg with
+      "" -> "--only-packages=alt-ergo-lib,alt-ergo-parsers,alt-ergo,altgr-ergo"
+    | s -> Format.asprintf "-p %s" s in
   let cmd =
     Format.asprintf
       "dune external-lib-deps --display=quiet --missing %s @install" p_opt

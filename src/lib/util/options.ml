@@ -26,20 +26,23 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(* Global formatter declarations and setters, can't be directly used *)
-let std_fmt = ref Format.std_formatter
-let err_fmt = ref Format.err_formatter
-
-let set_std_fmt f = std_fmt := f
-let set_err_fmt f = err_fmt := f
-
 (* Formatter declarations, getters and setters *)
-let fmt_std = std_fmt
-let fmt_err = err_fmt
-let fmt_wrn = err_fmt
-let fmt_dbg = err_fmt
-let fmt_mdl = std_fmt
-let fmt_usc = std_fmt
+let fmt_std = ref Format.std_formatter
+let fmt_err = ref Format.err_formatter
+let fmt_wrn = ref Format.err_formatter
+let fmt_dbg = ref Format.err_formatter
+let fmt_mdl = ref Format.std_formatter
+let fmt_usc = ref Format.std_formatter
+
+let set_std_fmt f =
+  fmt_std := f;
+  fmt_mdl := f;
+  fmt_usc := f
+
+let set_err_fmt f =
+  fmt_err := f;
+  fmt_wrn := f;
+  fmt_dbg := f
 
 let get_fmt_std () = !fmt_std
 let get_fmt_err () = !fmt_err
@@ -239,7 +242,7 @@ let set_preludes p = preludes := p
 let set_type_only b = type_only := b
 let set_type_smt2 b = type_smt2 := b
 
-let get_answers_with_locs () = !answers_with_loc
+let get_answers_with_loc () = !answers_with_loc
 let get_output_with_colors () = !output_with_colors
 let get_output_with_headers () = !output_with_headers
 let get_output_with_formatting () = !output_with_formatting
@@ -301,7 +304,7 @@ let unsat_core = ref false
 let set_interpretation b = interpretation := b
 let set_model b = model := b
 let set_output_format b = output_format := b
-let set_infer_output_format f = infer_output_format := f = None
+let set_infer_output_format f = infer_output_format := (f = None)
 let set_unsat_core b = unsat_core := b
 
 let get_interpretation () = !interpretation
