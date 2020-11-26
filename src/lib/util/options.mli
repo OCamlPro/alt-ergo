@@ -196,9 +196,9 @@ val set_input_format : input_format -> unit
 *)
 val set_interpretation : interpretation -> unit
 
-(** Set [interpretation_dummy_value] accessible with
-    {!val:get_interpretation_dummy_value} *)
-val set_interpretation_dummy_value : bool -> unit
+(** Set [interpretation_use_underscore] accessible with
+    {!val:get_interpretation_use_underscore} *)
+val set_interpretation_use_underscore : bool -> unit
 
 (** Set [max_split] accessible with {!val:get_max_split} *)
 val set_max_split : Numbers.Q.t -> unit
@@ -726,8 +726,9 @@ val get_before_inst_interpretation : unit -> bool
 val get_before_end_interpretation : unit -> bool
 (** Default to [false] *)
 
-(** [true] if the interpretation is set to output dummy values instean of _ *)
-val get_interpretation_dummy_value : unit -> bool
+(** [true] if the interpretation_use_underscore is set to output _
+    instead of fresh values *)
+val get_interpretation_use_underscore : unit -> bool
 (** Default to [false] *)
 
 (** Value specifying the default output format. possible values are
