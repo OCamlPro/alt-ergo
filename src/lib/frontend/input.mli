@@ -44,7 +44,7 @@ module type S = sig
   (** The empty/initial environment *)
 
   val type_parsed :
-    env -> env Stack.t ref -> parsed -> int Typed.atdecl list * env
+    env -> env Stack.t -> parsed -> int Typed.atdecl list * env
     (** Parse and typecheck some input file,
         together with some prelude files. *)
 

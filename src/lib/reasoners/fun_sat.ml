@@ -1706,7 +1706,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           "solved with backward!";
       raise e
 
-  let push env =
+  let push env to_push =
     if Options.get_tableaux_cdcl () then
       Errors.run_error
         (Errors.Unsupported_feature
@@ -1714,38 +1714,52 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             Tableaux(CDCL) solver ! \
             Please use the Tableaux or CDLC SAT solvers instead"
         );
-    let b = E.fresh_name Ty.Tbool in
-    Stack.push b env.incremental.stack_guard;
+    let rec push_aux acc n =
+      if n <= 0 then acc
+      else
+        let b = E.fresh_name Ty.Tbool in
+        Stack.push b acc.incremental.stack_guard;
 
-    Stack.push (unit_facts env) env.unit_facts_cache;
+        Stack.push (unit_facts acc) acc.unit_facts_cache;
 
-    let incremental =
-      { env.incremental with
-        current_guard = Some b;
-        guards = SE.add b env.incremental.guards;
-      } in
-    {env with incremental}
-
-  let pop env =
-    if Options.get_tableaux_cdcl () then
-      Errors.run_error
-        (Errors.Unsupported_feature
-           "Incremental commands are not implemented in \
-            Tableaux(CDCL) solver ! \
-            Please use the Tableaux or CDLC SAT solvers instead"
-        );
-    let neg_b = Stack.pop env.incremental.stack_guard in
-    let b =
-      if Stack.is_empty env.incremental.stack_guard then
-        None
-      else Some (Stack.top env.incremental.stack_guard)
+        let incremental =
+          { acc.incremental with
+            current_guard = Some b;
+            guards = SE.add b acc.incremental.guards;
+          } in
+        push_aux
+          {acc with incremental}
+          (n-1)
     in
-    let _ = Stack.pop env.unit_facts_cache in
-    let guards = SE.remove neg_b env.incremental.guards in
-    let guards = SE.add (E.neg neg_b) guards in
-    {env with incremental = { env.incremental with
-                              current_guard = b;
-                              guards = guards;}}
+    push_aux env to_push
+
+  let pop env to_pop =
+    if Options.get_tableaux_cdcl () then
+      Errors.run_error
+        (Errors.Unsupported_feature
+           "Incremental commands are not implemented in \
+            Tableaux(CDCL) solver ! \
+            Please use the Tableaux or CDLC SAT solvers instead"
+        );
+    let rec pop_aux acc n =
+      if n <= 0 then acc
+      else
+        let neg_b = Stack.pop acc.incremental.stack_guard in
+        let b =
+          if Stack.is_empty acc.incremental.stack_guard then
+            None
+          else Some (Stack.top acc.incremental.stack_guard)
+        in
+        let _ = Stack.pop acc.unit_facts_cache in
+        let guards = SE.remove neg_b acc.incremental.guards in
+        let guards = SE.add (E.neg neg_b) guards in
+        pop_aux
+          {acc with incremental = { acc.incremental with
+                                    current_guard = b;
+                                    guards = guards;}}
+          (n-1)
+    in
+    pop_aux env to_pop
 
   let unsat env gf =
     Debug.is_it_unsat gf;

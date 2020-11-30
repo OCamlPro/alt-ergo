@@ -542,8 +542,8 @@ let mk_theory acc l th_name extends _loc =
 
 let make acc d =
   match d.c with
-  | TPush loc -> {st_decl=Push ; st_loc=loc} :: acc
-  | TPop loc -> {st_decl=Pop ; st_loc=loc} :: acc
+  | TPush (loc,n) -> {st_decl=Push n; st_loc=loc} :: acc
+  | TPop (loc,n) -> {st_decl=Pop n; st_loc=loc} :: acc
   | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
   | TAxiom(loc, name, Util.Default, f) -> mk_assume acc f name loc
   | TAxiom(_, _, Util.Propagator, _) -> assert false

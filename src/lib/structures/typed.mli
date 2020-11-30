@@ -297,10 +297,10 @@ and 'a tdecl =
       declares a type [t], with parameters [vars], and with
       contents [body]. This new type may either be abstract,
       a record type, or an enumeration. *)
-  | TPush of Loc.t
-  (** Push new assertion level onto the assertion  stack *)
-  | TPop of Loc.t
-  (** Pop an assertion level from the assertion stack *)
+  | TPush of Loc.t * int
+  (** Push new assertions level onto the assertion  stack *)
+  | TPop of Loc.t * int
+  (** Pop an assertions level from the assertion stack *)
 
 (** Typed declarations. *)
 (* TODO: wrap this in a record to factorize away

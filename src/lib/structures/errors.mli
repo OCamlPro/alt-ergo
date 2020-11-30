@@ -77,7 +77,7 @@ type typing_error =
   | MatchNotExhaustive of Hstring.t list
   | MatchUnusedCases of Hstring.t list
   | NotAdtConstr of string * Ty.t
-  | EmptyAssertionStack
+  | BadPopCommand of {pushed : int; to_pop : int}
 
 (** Errors that can be raised at solving*)
 type run_error =

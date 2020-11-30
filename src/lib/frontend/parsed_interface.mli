@@ -68,9 +68,9 @@ val mk_theory_case_split : Loc.t -> string -> lexpr -> decl
 
 (** Declaration of stack assertions commands *)
 
-val mk_push : Loc.t -> decl
+val mk_push : Loc.t -> int -> decl
 
-val mk_pop : Loc.t -> decl
+val mk_pop : Loc.t -> int -> decl
 
 (** Making pure and logic types *)
 

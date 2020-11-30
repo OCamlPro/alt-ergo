@@ -1037,37 +1037,52 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if get_all_models () then fails "all_models";
     if get_model () then fails "model"
 
-  let push env =
-    let b = E.fresh_name Ty.Tbool in
-    let mf_b = mk_gf b in
-    let env, pending = pre_assume_aux env [mf_b] in
+  let push env to_push =
+    let rec push_aux acc n =
+      if n <= 0 then acc
+      else
+        let b = E.fresh_name Ty.Tbool in
+        let mf_b = mk_gf b in
+        let acc, pending = pre_assume_aux acc [mf_b] in
 
-    SAT.set_new_proxies env.satml env.proxies;
-    let nbv = FF.nb_made_vars env.ff_hcons_env in
-    let unit, nunit = SAT.new_vars env.satml ~nbv
-        pending.new_vars pending.unit pending.nunit in
+        SAT.set_new_proxies acc.satml acc.proxies;
+        let nbv = FF.nb_made_vars acc.ff_hcons_env in
+        let unit, nunit = SAT.new_vars acc.satml ~nbv
+            pending.new_vars pending.unit pending.nunit in
 
-    begin match unit, nunit with
-      | [[guard]], [] ->
-        SAT.push env.satml guard;
-      | _, _ -> assert false
-    end;
-    Stack.push b env.incremental.stack_guard;
-    {env with incremental =
-                {env.incremental with
-                 current_guard = Some b;} }
-
-  let pop env =
-    SAT.pop env.satml;
-    let _ = Stack.pop env.incremental.stack_guard in
-    let b =
-      if Stack.is_empty env.incremental.stack_guard then
-        None
-      else Some (Stack.top env.incremental.stack_guard)
+        begin match unit, nunit with
+          | [[guard]], [] ->
+            SAT.push acc.satml guard;
+          | _, _ -> assert false
+        end;
+        Stack.push b acc.incremental.stack_guard;
+        push_aux
+          {acc with incremental =
+                      {acc.incremental with
+                       current_guard = Some b;} }
+          (n-1)
     in
-    {env with incremental =
-                { env.incremental with
-                  current_guard = b;}}
+    push_aux env to_push
+
+  let pop env to_pop =
+    let rec pop_aux acc n =
+      if n <= 0  then acc
+      else begin
+        SAT.pop acc.satml;
+        let _ = Stack.pop acc.incremental.stack_guard in
+        let b =
+          if Stack.is_empty acc.incremental.stack_guard then
+            None
+          else Some (Stack.top acc.incremental.stack_guard)
+        in
+        pop_aux
+          {acc with incremental =
+                      { acc.incremental with
+                        current_guard = b;}}
+          (n-1)
+      end
+    in
+    pop_aux env to_pop
 
   let add_guard env gf =
     match env.incremental.current_guard with

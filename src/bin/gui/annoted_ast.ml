@@ -863,10 +863,10 @@ let rec print_typed_decl fmt td = match td.Typed.c with
     fprintf fmt "theory %s extends %s =\n%a\nend@."
       (Util.string_of_th_ext th_ext) name
       (fun fmt -> List.iter (print_typed_decl fmt)) decls
-  | TPush _loc ->
-    fprintf fmt "push"
-  | TPop _loc ->
-    fprintf fmt "pop"
+  | TPush (_loc,n) ->
+    fprintf fmt "push %d" n
+  | TPop (_loc,n) ->
+    fprintf fmt "pop %d" n
 
 let print_typed_decl_list fmt = List.iter (fprintf fmt "%a@." print_typed_decl)
 

@@ -354,22 +354,11 @@ module Translate = struct
       List.map2 translate_datatype_decl sort_dec datatype_dec
     with Invalid_argument _ -> assert false
 
-  let rec list_init acc n f =
-    if n > 0 then
-      list_init (f :: acc) (n - 1) f
-    else acc
-
-  let translate_push n pos =
+  let translate_push_pop fun_push_pop n pos =
     try let n = int_of_string n in
-      list_init [] n (mk_push pos)
+      fun_push_pop pos n
     with _ ->
-      must_not_happen pos "int of string conversion error in push command"
-
-  let translate_pop n pos =
-    try let n = int_of_string n in
-      list_init [] n (mk_pop pos)
-    with _ ->
-      must_not_happen pos "int of string conversion error in pop command"
+      must_not_happen pos "int of string conversion error in push/pop command"
 
   let not_supported s =
     Printer.print_wrn
@@ -423,8 +412,8 @@ module Translate = struct
     | Cmd_SetLogic _ -> not_supported "set-logic"; acc
     | Cmd_SetOption _ -> not_supported "set-option"; acc
     | Cmd_SetInfo _ -> not_supported "set-info"; acc
-    | Cmd_Push n -> (translate_push n (pos command)) @ acc
-    | Cmd_Pop n -> (translate_pop n (pos command)) @ acc
+    | Cmd_Push n -> translate_push_pop mk_push n (pos command) :: acc
+    | Cmd_Pop n -> translate_push_pop mk_pop n (pos command) :: acc
     | Cmd_Exit -> acc
 
   let init () =

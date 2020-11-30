@@ -42,7 +42,7 @@ val type_expr :
          so that the list argument can be ommitted ? *)
 
 val type_parsed :
-  env -> env Stack.t ref -> Parsed.decl -> int Typed.atdecl list * env
+  env -> env Stack.t -> Parsed.decl -> int Typed.atdecl list * env
 (** Type a single declaration.
     @raise Typing_error {!Errors.Typing_error} *)
 

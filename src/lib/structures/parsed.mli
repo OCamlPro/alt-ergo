@@ -123,7 +123,7 @@ type decl =
       Loc.t * (string * string) *
       (Loc.t * string * ppure_type) list * ppure_type * lexpr
   | TypeDecl of type_decl list
-  | Push of Loc.t
-  | Pop of Loc.t
+  | Push of Loc.t * int
+  | Pop of Loc.t * int
 
 type file = decl list

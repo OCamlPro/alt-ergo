@@ -93,11 +93,11 @@ let mk_theory_case_split loc name expr =
 
 (** Declaration of stack assertions commands *)
 
-let mk_push loc =
-  Push loc
+let mk_push loc n =
+  Push (loc, n)
 
-let mk_pop loc =
-  Pop loc
+let mk_pop loc n =
+  Pop (loc, n)
 
 (** Making pure and logic types *)
 

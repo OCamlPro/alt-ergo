@@ -186,8 +186,8 @@ and 'a tdecl =
       Loc.t * string *
       (string * Ty.t) list * Ty.t * 'a atform
   | TTypeDecl of Loc.t * Ty.t
-  | TPush of Loc.t
-  | TPop of Loc.t
+  | TPush of Loc.t * int
+  | TPop of Loc.t * int
 
 (*****)
 

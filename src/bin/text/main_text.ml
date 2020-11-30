@@ -157,7 +157,7 @@ let () =
   let all_used_context = FE.init_all_used_context () in
   if Options.get_timelimit_per_goal() then
     FE.print_status FE.Preprocess 0;
-  let assertion_stack = ref (Stack.create ()) in
+  let assertion_stack = Stack.create () in
   let typing_loop state p =
     if get_parse_only () then state else begin
       try

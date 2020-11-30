@@ -1995,7 +1995,7 @@ let type_one_th_decl env e =
   | Predicate_def(loc,_,_,_)
   | Function_def(loc,_,_,_,_)
   | TypeDecl ((loc, _, _, _)::_)
-  | Push loc | Pop loc ->
+  | Push (loc,_) | Pop (loc,_) ->
     typing_error WrongDeclInTheory loc
   | TypeDecl [] -> assert false
 
@@ -2144,20 +2144,30 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     assert (not is_recursive); (* Abstract types are not recursive *)
     acc, env
 
+let rec push_pop_env f n s =
+  if n <= 1 then
+    f s
+  else
+    let _ = f s in
+    push_pop_env f (n-1) s
+
 let rec type_decl (acc, env) d assertion_stack =
   Types.to_tyvars := MString.empty;
   match d with
-  | Push loc ->
-    Stack.push env !assertion_stack;
-    let td = {c = TPush(loc); annot = new_id () } in
+  | Push (loc,n) ->
+    push_pop_env (Stack.push env) n assertion_stack;
+    let td = {c = TPush(loc,n); annot = new_id () } in
     (td,env) :: acc ,env
-  | Pop loc -> begin
-      try
-        let env = Stack.pop !assertion_stack in
-        let td = {c = TPop(loc); annot = new_id () } in
-        (td,env) :: acc, env
-      with Stack.Empty -> typing_error EmptyAssertionStack loc
-    end
+  | Pop (loc,n) ->
+    let assertion_context_number = Stack.length assertion_stack in
+    if n > assertion_context_number then
+      typing_error (BadPopCommand
+                      {pushed = assertion_context_number; to_pop = n}) loc
+    else
+      let env = push_pop_env Stack.pop n assertion_stack in
+      let td = {c = TPop(loc,n); annot = new_id () } in
+      (td,env) :: acc, env
+
   | Theory (loc, name, ext, l) ->
     Options.tool_req 1 "TR-Typing-TheoryDecl$_F$";
     let tl = List.map (type_one_th_decl env) l in
@@ -2298,7 +2308,7 @@ let type_parsed env s d =
 
 let type_file ld =
   let env = Env.empty in
-  let s = ref (Stack.create ()) in
+  let s = Stack.create () in
   let ltd, env =
     List.fold_left
       (fun acc d -> type_decl acc d s) ([], env) ld

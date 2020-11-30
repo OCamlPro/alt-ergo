@@ -40,12 +40,12 @@ module type S = sig
   val empty : unit -> t
   val empty_with_inst : (Expr.t -> bool) -> t
 
-  (* [push env] add a new assertion level. A guard is added for every expr
+  (* [push env n] add n new assertion levels. A guard is added for every expr
      assumed at the current assertion level *)
-  val push : t -> t
+  val push : t -> int ->  t
 
-  (* [pop env] remove an assertion level. *)
-  val pop : t -> t
+  (* [pop env n] remove n assertion levels. *)
+  val pop : t -> int -> t
 
   (* [assume env f] assume a new formula [f] in [env]. Raises Unsat if
      [f] is unsatisfiable in [env] *)
