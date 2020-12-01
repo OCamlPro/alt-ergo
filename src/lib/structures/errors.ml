@@ -72,6 +72,7 @@ type typing_error =
   | MatchUnusedCases of Hstring.t list
   | NotAdtConstr of string * Ty.t
   | BadPopCommand of {pushed : int; to_pop : int}
+  | ShouldBePositive of int
 
 type run_error =
   | Invalid_steps_count of int
@@ -207,6 +208,9 @@ let report_typing_error fmt = function
   | BadPopCommand {pushed; to_pop} ->
     fprintf fmt
       "Cannot pop %d assertion contexts. Only %d have been pushed" to_pop pushed
+  | ShouldBePositive n ->
+    fprintf fmt
+      "This integer : %d should be positive" n
 
 let report_run_error fmt = function
   | Invalid_steps_count i ->

@@ -298,9 +298,9 @@ and 'a tdecl =
       contents [body]. This new type may either be abstract,
       a record type, or an enumeration. *)
   | TPush of Loc.t * int
-  (** Push new assertions level onto the assertion  stack *)
+  (** [push (loc,n)] pushs n new assertions levels onto the assertion stack *)
   | TPop of Loc.t * int
-  (** Pop an assertions level from the assertion stack *)
+  (** [pop (loc,n)] pops n assertions levels from the assertion stack *)
 
 (** Typed declarations. *)
 (* TODO: wrap this in a record to factorize away

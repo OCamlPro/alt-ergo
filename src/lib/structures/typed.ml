@@ -360,10 +360,10 @@ let rec print_tdecl fmt = function
          ~pp:(print_rwt print_term)) l
   | TGoal (_, sort, name, f) ->
     Format.fprintf fmt "goal %s: @[<hov>%a@]" name print_formula f
-  | TPush ->
-    Format.fprintf fmt "push"
-  | TPop ->
-    Format.fprintf fmt "pop"
+  | TPush (_loc,n) ->
+    Format.fprintf fmt "push %d" n
+  | TPop (_loc,n) ->
+    Format.fprintf fmt "pop %d" n
 
 and print_atdecl fmt a = print_tdecl fmt a.c
 *)

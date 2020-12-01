@@ -2148,17 +2148,21 @@ let rec push_pop_env f n s =
   if n <= 1 then
     f s
   else
-    let _ = f s in
+    let _env = f s in
     push_pop_env f (n-1) s
 
 let rec type_decl (acc, env) d assertion_stack =
   Types.to_tyvars := MString.empty;
   match d with
   | Push (loc,n) ->
+    if n < 0 then
+      typing_error (ShouldBePositive n) loc;
     push_pop_env (Stack.push env) n assertion_stack;
     let td = {c = TPush(loc,n); annot = new_id () } in
-    (td,env) :: acc ,env
+    (td,env) :: acc, env
   | Pop (loc,n) ->
+    if n < 0 then
+      typing_error (ShouldBePositive n) loc;
     let assertion_context_number = Stack.length assertion_stack in
     if n > assertion_context_number then
       typing_error (BadPopCommand

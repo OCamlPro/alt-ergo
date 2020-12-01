@@ -33,7 +33,8 @@ module Translate = struct
 
   let must_not_happen loc s =
     let s = Format.sprintf
-        "psmt2-frontend typing should unsure that case can't happen : %s" s in
+        "psmt2-frontend typing should ensure that this case can't happen : %s" s
+    in
     raise (Errors.error (Errors.Syntax_error (loc,s)))
 
   (**************************************************************************)
@@ -356,6 +357,8 @@ module Translate = struct
 
   let translate_push_pop fun_push_pop n pos =
     try let n = int_of_string n in
+      if n < 0 then
+        must_not_happen pos "negative integer n in push n /pop n command";
       fun_push_pop pos n
     with _ ->
       must_not_happen pos "int of string conversion error in push/pop command"

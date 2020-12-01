@@ -460,7 +460,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     a.var.vpremise <- []
 
   let enqueue_assigned env a =
-    if a.neg.is_guard then raise (Unsat None);
+    if a.neg.is_guard then begin
+      (* if the negation of a is (still) a guard, it should be forced to true
+         during the first decisions.
+         If the SAT tries to deduce that a.neg is true (ie. a is false),
+         then we have detected an inconsistency. *)
+      assert (a.var.level <= env.next_dec_guard);
+      (* guards are necessarily decided/propagated before all other atoms *)
+      raise (Unsat None);
+    end;
     assert (a.is_true || a.neg.is_true);
     if a.timp = 1 then begin
       a.timp <- -1;
@@ -482,7 +490,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let cancel_until env lvl =
     cancel_ff_lvls_until env lvl;
     let repush = ref [] in
-
     if decision_level env > lvl then begin
       env.qhead <- Vec.get env.trail_lim lvl;
       for c = Vec.size env.trail - 1 downto env.qhead do
@@ -570,7 +577,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let enqueue env a lvl reason =
     assert (not a.is_true && not a.neg.is_true &&
             a.var.level < 0 && a.var.reason == None && lvl >= 0);
-    if a.neg.is_guard then raise (Unsat None);
+    if a.neg.is_guard then begin
+      (* if the negation of a is (still) a guard, it should be forced to true
+         during the first decisions.
+         If the SAT tries to deduce that a.neg is true (ie. a is false),
+         then we have detected an inconsistency. *)
+      assert (a.var.level <= env.next_dec_guard);
+      (* guards are necessarily decided/propagated before all other atoms *)
+      raise (Unsat None);
+    end;
     (* Garder la reason car elle est utile pour les unsat-core *)
     (*let reason = if lvl = 0 then None else reason in*)
     a.is_true <- true;
@@ -1790,19 +1805,19 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     Vec.push env.increm_guards guard
 
   let pop env =
+    (assert (not (Vec.is_empty env.increm_guards)));
     let g = Vec.last env.increm_guards in
     Vec.pop env.increm_guards;
-    (* all previous guards are decided *)
-    (* env.next_dec_guard <- Vec.size env.increm_guards; *)
     g.is_guard <- false;
     g.neg.is_guard <- false;
     assert (not g.var.na.is_true); (* atom not false *)
     if g.var.pa.is_true then (* if already decided  *)
       begin
+        (assert (g.var.level > 0));
         cancel_until env (g.var.level - 1); (* undo its decision *)
         (* all previous guards are decided *)
         env.next_dec_guard <- Vec.size env.increm_guards
       end;
-    enqueue env g.neg env.next_dec_guard None
+    enqueue env g.neg 0 None
 
 end
