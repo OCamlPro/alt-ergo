@@ -32,9 +32,10 @@ end
 
 (* TODO: can this function be replace with Ty.assoc_destrs ?? *)
 let constr_of_destr ty dest =
-  Printer.print_dbg ~debug:(get_debug_adt ())
-    ~module_name:"Adt" ~function_name:"constr_of_destr"
-    "ty = %a" Ty.print ty;
+  if get_debug_adt () then
+    Printer.print_dbg
+      ~module_name:"Adt" ~function_name:"constr_of_destr"
+      "ty = %a" Ty.print ty;
   match ty with
   | Ty.Tadt (s, params) ->
     let bdy = Ty.type_body s params in
@@ -146,9 +147,10 @@ module Shostak (X : ALIEN) = struct
 
   let make t =
     assert (not (get_disable_adts ()));
-    Printer.print_dbg ~debug:(get_debug_adt ())
-      ~module_name:"Adt" ~function_name:"make"
-      "make %a" E.print t;
+    if get_debug_adt () then
+      Printer.print_dbg
+        ~module_name:"Adt" ~function_name:"make"
+        "make %a" E.print t;
     let { E.f; xs; ty; _ } = match E.term_view t with
       | E.Term t -> t
       | E.Not_a_term _ -> assert false
@@ -335,15 +337,17 @@ module Shostak (X : ALIEN) = struct
           let cons =
             E.mk_term (Sy.constr (Hs.view constr)) xs (X.type_info d_arg)
           in
-          Printer.print_dbg ~flushed:false ~debug:(get_debug_adt ())
-            ~module_name:"Adt" ~function_name:"abstract_selectors"
-            "abstr with equality %a == %a@ "
-            X.print d_arg E.print cons;
+          if get_debug_adt () then
+            Printer.print_dbg ~flushed:false
+              ~module_name:"Adt" ~function_name:"abstract_selectors"
+              "abstr with equality %a == %a@ "
+              X.print d_arg E.print cons;
           let cons, _ = make cons in
           let acc = (d_arg, cons) :: acc in
           let xx = is_mine @@ Select {s with d_arg = cons} in
-          Printer.print_dbg ~debug:(get_debug_adt ()) ~header:false
-            "%a becomes %a" X.print x  X.print xx;
+          if get_debug_adt () then
+            Printer.print_dbg ~header:false
+              "%a becomes %a" X.print x  X.print xx;
           xx, acc
 
         | _ ->
@@ -355,9 +359,10 @@ module Shostak (X : ALIEN) = struct
     List.exists (fun y -> X.equal x y) (X.leaves e)
 
   let solve r1 r2 pb =
-    Printer.print_dbg ~debug:(get_debug_adt ())
-      ~module_name:"Adt" ~function_name:"solve"
-      "solve %a = %a" X.print r1 X.print r2;
+    if get_debug_adt () then
+      Printer.print_dbg
+        ~module_name:"Adt" ~function_name:"solve"
+        "solve %a = %a" X.print r1 X.print r2;
     assert (not (get_disable_adts ()));
     match embed r1, embed r2 with
     | Select _, _ | _, Select _ -> assert false (* should be eliminated *)

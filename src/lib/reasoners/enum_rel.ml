@@ -56,10 +56,11 @@ module Debug = struct
   open Printer
 
   let assume bol r1 r2 =
-    print_dbg ~debug:(get_debug_sum ())
-      ~module_name:"Enum_rel" ~function_name:"assume"
-      "we assume %a %s %a"
-      X.print r1 (if bol then "=" else "<>") X.print r2
+    if get_debug_sum () then
+      print_dbg
+        ~module_name:"Enum_rel" ~function_name:"assume"
+        "we assume %a %s %a"
+        X.print r1 (if bol then "=" else "<>") X.print r2
 
   let print_env env =
     if get_debug_sum () then begin
@@ -88,19 +89,22 @@ module Debug = struct
     end
 
   let case_split r r' =
-    Printer.print_dbg ~debug:(get_debug_sum ())
-      ~module_name:"Enum_rel" ~function_name:"case_split"
-      "%a = %a" X.print r X.print r'
+    if get_debug_sum () then
+      Printer.print_dbg
+        ~module_name:"Enum_rel" ~function_name:"case_split"
+        "%a = %a" X.print r X.print r'
 
   let no_case_split () =
-    Printer.print_dbg ~debug:(get_debug_sum ())
-      ~module_name:"Enum_rel" ~function_name:"no_case_split"
-      "sum: nothing"
+    if get_debug_sum () then
+      Printer.print_dbg
+        ~module_name:"Enum_rel" ~function_name:"no_case_split"
+        "sum: nothing"
 
   let add r =
-    Printer.print_dbg ~debug:(get_debug_sum ())
-      ~module_name:"Enum_rel" ~function_name:"add"
-      "%a" X.print r
+    if get_debug_sum () then
+      Printer.print_dbg
+        ~module_name:"Enum_rel" ~function_name:"add"
+        "%a" X.print r
 
 end
 (*BISECT-IGNORE-END*)

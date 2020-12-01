@@ -196,11 +196,13 @@ let mk_context_opt replay replay_all_used_context replay_used_context
 
 let mk_execution_opt frontend input_format parse_only parsers
     preludes no_locs_in_answers no_colors_in_output no_headers_in_output
+    no_formatting_in_output
     type_only type_smt2
   =
   let answers_with_loc = not no_locs_in_answers in
   let output_with_colors = not no_colors_in_output in
   let output_with_headers = not no_headers_in_output in
+  let output_with_formatting = not no_formatting_in_output in
   set_infer_input_format input_format;
   let input_format = match input_format with
     | None -> Native
@@ -209,6 +211,7 @@ let mk_execution_opt frontend input_format parse_only parsers
   set_answers_with_loc answers_with_loc;
   set_output_with_colors output_with_colors;
   set_output_with_headers output_with_headers;
+  set_output_with_formatting output_with_formatting;
   set_input_format input_format;
   set_parse_only parse_only;
   set_parsers parsers;
@@ -218,7 +221,7 @@ let mk_execution_opt frontend input_format parse_only parsers
   set_preludes preludes;
   `Ok()
 
-let mk_internal_opt disable_weaks enable_assertions gc_policy
+let mk_internal_opt disable_weaks enable_assertions warning_as_error gc_policy
   =
   let gc_policy = match gc_policy with
     | 0 | 1 | 2 -> gc_policy
@@ -228,6 +231,7 @@ let mk_internal_opt disable_weaks enable_assertions gc_policy
   in
   set_disable_weaks disable_weaks;
   set_enable_assertions enable_assertions;
+  set_warning_as_error warning_as_error;
   `Ok(gc_policy)
 
 let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
@@ -730,6 +734,11 @@ let parse_execution_opt =
       "Do not print output with headers." in
     Arg.(value & flag & info ["no-headers-in-output"] ~docs ~doc) in
 
+  let no_formatting_in_output =
+    let doc =
+      "Do not use any formatting rule in output." in
+    Arg.(value & flag & info ["no-formatting-in-output"] ~docs ~doc) in
+
   let type_only =
     let doc = "Stop after typing." in
     Arg.(value & flag & info ["type-only"] ~docs ~doc) in
@@ -742,7 +751,7 @@ let parse_execution_opt =
   Term.(ret (const mk_execution_opt $
              frontend $ input_format $ parse_only $ parsers $ preludes $
              no_locs_in_answers $ no_colors_in_output $ no_headers_in_output $
-             type_only $ type_smt2
+             no_formatting_in_output $ type_only $ type_smt2
             ))
 
 let parse_halt_opt =
@@ -779,6 +788,10 @@ let parse_internal_opt =
     let doc = "Enable verification of some heavy invariants." in
     Arg.(value & flag & info ["enable-assertions"] ~docs ~doc) in
 
+  let warning_as_error =
+    let doc = "Enable warning as error" in
+    Arg.(value & flag & info ["warning-as-error"] ~docs ~doc) in
+
   let gc_policy =
     let doc =
       "Set the gc policy allocation. 0 = next-fit policy, 1 = \
@@ -788,7 +801,7 @@ let parse_internal_opt =
     Arg.(value & opt int 0 & info ["gc-policy"] ~docv ~docs ~doc) in
 
   Term.(ret (const mk_internal_opt $
-             disable_weaks $ enable_assertions $ gc_policy
+             disable_weaks $ enable_assertions $ warning_as_error $ gc_policy
             ))
 
 let parse_limit_opt =

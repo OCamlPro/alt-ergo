@@ -115,10 +115,11 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
           (ME.cardinal insts_ok) name
 
     let new_mround ilvl kind =
-      print_dbg ~debug:(get_debug_matching () >= 1)
-        ~module_name:"Instance" ~function_name:"new_mround"
-        "[matching] new %s matching round: ilevel = %d..."
-        kind ilvl
+      if get_debug_matching () >= 1 then
+        print_dbg
+          ~module_name:"Instance" ~function_name:"new_mround"
+          "[matching] new %s matching round: ilevel = %d..."
+          kind ilvl
 
   end
 

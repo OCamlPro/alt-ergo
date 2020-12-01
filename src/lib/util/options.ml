@@ -71,6 +71,16 @@ let match_extension e =
   (* | ".szs" -> SZS *)
   | s -> Unknown s
 
+type known_status =
+    Status_Sat | Status_Unsat | Status_Unknown | Status_Undefined of string
+
+let match_known_status s =
+  match s with
+  | "sat" -> Status_Sat
+  | "unsat" -> Status_Unsat
+  | "unknown" -> Status_Unknown
+  | s -> Status_Undefined s
+
 (* We don't want to handle functions with more than 10 arguments so
    we need to split the debug options to gather them in the end.
    Problems with this way of doing is the options in each "group" are sorted
@@ -203,6 +213,7 @@ let get_save_used_context () = !save_used_context
 let answers_with_loc = ref true
 let output_with_colors = ref true
 let output_with_headers = ref true
+let output_with_formatting = ref true
 let frontend = ref "legacy"
 let input_format = ref Native
 let infer_input_format = ref true
@@ -215,6 +226,7 @@ let type_smt2 = ref false
 let set_answers_with_loc b = answers_with_loc := b
 let set_output_with_colors b = output_with_colors := b
 let set_output_with_headers b = output_with_headers := b
+let set_output_with_formatting b = output_with_formatting := b
 let set_frontend f = frontend := f
 let set_input_format f = input_format := f
 let set_infer_input_format f = infer_input_format := (f = None)
@@ -227,6 +239,7 @@ let set_type_smt2 b = type_smt2 := b
 let get_answers_with_locs () = !answers_with_loc
 let get_output_with_colors () = !output_with_colors
 let get_output_with_headers () = !output_with_headers
+let get_output_with_formatting () = !output_with_formatting
 let get_frontend () = !frontend
 let get_input_format () = !input_format
 let get_infer_input_format () = !infer_input_format
@@ -240,12 +253,15 @@ let get_type_smt2 () = !type_smt2
 
 let disable_weaks = ref false
 let enable_assertions = ref false
+let warning_as_error = ref false
 
 let set_disable_weaks b = disable_weaks := b
 let set_enable_assertions b = enable_assertions := b
+let set_warning_as_error b = warning_as_error := b
 
 let get_disable_weaks () = !disable_weaks
 let get_enable_assertions () = !enable_assertions
+let get_warning_as_error () = !warning_as_error
 
 (** Limit options *)
 
@@ -460,11 +476,13 @@ let get_use_fpa () = !use_fpa
 
 let timers = ref false
 let file = ref ""
+let status = ref Status_Unknown
 let session_file = ref ""
 let used_context_file = ref ""
 let js_mode = ref false
 
 let set_timers b = timers := b
+let set_status s = status := match_known_status s
 let set_file f = file := f
 let set_session_file f = session_file := f
 let set_used_context_file f = used_context_file := f
@@ -472,6 +490,7 @@ let set_js_mode b = js_mode := b
 
 let get_timers () = !timers || !profiling
 let get_file () = !file
+let get_status () = !status
 let get_session_file () = !session_file
 let get_used_context_file () = !used_context_file
 let get_js_mode () = !js_mode

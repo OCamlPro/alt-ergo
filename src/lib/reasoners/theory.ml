@@ -273,53 +273,61 @@ module Main_Default : S = struct
         fprintf fmt "==============================================@."
 
     let begin_case_split choices =
-      print_dbg ~debug:(get_debug_split ())
-        ~module_name:"Theory" ~function_name:"begin_case_split"
-        "%a"
-        made_choices choices
+      if get_debug_split () then
+        print_dbg
+          ~module_name:"Theory" ~function_name:"begin_case_split"
+          "%a"
+          made_choices choices
 
     let end_case_split choices =
-      print_dbg ~debug:(get_debug_split ())
-        ~module_name:"Theory" ~function_name:"end_case_split"
-        "%a"
-        made_choices choices
+      if get_debug_split () then
+        print_dbg
+          ~module_name:"Theory" ~function_name:"end_case_split"
+          "%a"
+          made_choices choices
 
     (* unused --
        let split_size sz =
-        print_dbg ~debug:(get_debug_split ())
+       if get_debug_split () then
+        print_dbg
         ">size case-split: %s" (Numbers.Q.to_string sz)
     *)
 
     let print_lr_view fmt ch = LR.print fmt (LR.make ch)
 
     let split_backtrack neg_c ex_c =
-      print_dbg ~debug:(get_debug_split ())
-        ~module_name:"Theory" ~function_name:"split_backtrack"
-        "I backtrack on %a : %a"
-        print_lr_view neg_c Ex.print ex_c
+      if get_debug_split () then
+        print_dbg
+          ~module_name:"Theory" ~function_name:"split_backtrack"
+          "I backtrack on %a : %a"
+          print_lr_view neg_c Ex.print ex_c
 
     let split_assume c ex_c =
-      print_dbg ~debug:(get_debug_split ())
-        ~module_name:"Theory" ~function_name:"split assume"
-        "I assume %a : %a"
-        print_lr_view c Ex.print ex_c
+      if get_debug_split () then
+        print_dbg
+          ~module_name:"Theory" ~function_name:"split assume"
+          "I assume %a : %a"
+          print_lr_view c Ex.print ex_c
 
     let split_backjump c dep =
-      print_dbg ~debug:(get_debug_split ())
-        ~module_name:"Theory" ~function_name:"split_backjump"
-        "I backjump on %a : %a"
-        print_lr_view c Ex.print dep
+      if get_debug_split () then
+        print_dbg
+          ~module_name:"Theory" ~function_name:"split_backjump"
+          "I backjump on %a : %a"
+          print_lr_view c Ex.print dep
 
     let query a =
-      print_dbg ~debug:(get_debug_cc ())
-        ~module_name:"Theory" ~function_name:"query"
-        "query : %a" E.print a
+      if get_debug_cc () then
+        print_dbg
+          ~module_name:"Theory" ~function_name:"query"
+          "query : %a" E.print a
 
     let split_sat_contradicts_cs filt_choices =
-      print_dbg ~debug:(get_debug_split ())
-        ~module_name:"Theory" ~function_name:"split_sat_contradicts_cs"
-        "The SAT contradicts CS! I'll replay choices@ %a"
-        made_choices filt_choices
+      if get_debug_split () then
+        print_dbg
+          ~module_name:"Theory" ~function_name:"split_sat_contradicts_cs"
+          "The SAT contradicts CS! I'll replay choices@ %a"
+          made_choices filt_choices
 
   end
   (*BISECT-IGNORE-END*)
@@ -405,9 +413,10 @@ module Main_Default : S = struct
             | _ -> assert false
           in
           Debug.split_backtrack neg_c dep;
-          Printer.print_dbg ~debug:(get_bottom_classes ())
-            "bottom (case-split):%a"
-            Expr.print_tagged_classes classes;
+          if get_bottom_classes () then
+            Printer.print_dbg
+              "bottom (case-split):%a"
+              Expr.print_tagged_classes classes;
           aux ch None dl base_env [neg_c, lit_orig, CNeg, dep]
     in
     aux ch bad_last (List.rev t.choices) base_env l

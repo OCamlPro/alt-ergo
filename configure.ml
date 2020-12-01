@@ -29,6 +29,7 @@ let () =
       [
         ("--prefix", Arg.Set_string prefix, "<path> prefix directory");
         ("--libdir", Arg.Set_string libdir, "<path> lib directory");
+        ("--mandir", Arg.Set_string mandir, "<path> man directory");
         ("--static", Arg.Set static, " Enable statically compilation");
       ]
   in
@@ -42,21 +43,52 @@ let () =
   let usage = "./configure [options]" in
   Arg.parse args anon_fun usage
 
+(* Small wrapper to read all the contents of a channel *)
+let read_all ch =
+  let b = Buffer.create 113 in
+  try
+    while true do
+      Buffer.add_channel b ch 30
+    done;
+    assert false
+  with End_of_file -> Buffer.contents b
+
+(* lazily check that opam is present *)
+let opam_check = lazy (
+  let cmd = Format.asprintf "which opam" in
+  let ch = Unix.open_process_in cmd in
+  let _ = read_all ch in
+  let res = Unix.close_process_in ch in
+  match res with
+  | Unix.WEXITED 0 ->
+    Format.printf "Found opam in path.@."
+  | _ ->
+    Format.eprintf "ERROR: Couldn't find opam in env.@\n%a@."
+      Format.pp_print_text "To solve this, you can either install opam, \
+                            provide an explicit value to the `--prefix` argument \
+                            of this script, or provide explicit values to both \
+                            the `--libdir` and `--mandir` options of this script.";
+    exit 1
+)
+
 (* Small wrapper to set options *)
 let update name r f =
   match !r with
   | "" ->
-      r := f ();
-      Format.printf "Using default value for '%s' : %s@." name !r
-  | s -> Format.printf "Using provided value for '%s' : %s@." name s
+    r := f ();
+    Format.printf "Using default value for '%s' : %s@." name !r
+  | s ->
+    Format.printf "Using provided value for '%s' : %s@." name s
 
 (* small wrapper around opam var *)
 let opam_var v =
-  let cmd = Format.asprintf "opam config var %s" v in
+  let () = Lazy.force opam_check in
+  let cmd = Format.asprintf "opam config var --readonly %s" v in
   let ch = Unix.open_process_in cmd in
   let s = input_line ch in
   let _ = Unix.close_process_in ch in
   s
+
 
 (* Compute actual values for config options *)
 let () =
@@ -135,16 +167,6 @@ let () =
   let () = close_out ch in
   let () = Format.printf "done.@." in
   ()
-
-(* Small wrapper to read all the contents of a channel *)
-let read_all ch =
-  let b = Buffer.create 113 in
-  try
-    while true do
-      Buffer.add_channel b ch 30
-    done;
-    assert false
-  with End_of_file -> Buffer.contents b
 
 (* check that dune is present *)
 let () =

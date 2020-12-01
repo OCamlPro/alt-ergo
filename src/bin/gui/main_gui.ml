@@ -550,7 +550,8 @@ let update_aborted image label buttonstop buttonrun timers_model = function
   | Abort_thread ->
     Options.Time.unset_timeout ~is_gui:true;
     Timers.update timers_model.timers;
-    Printer.print_dbg ~debug:(get_debug ()) "alt-ergo thread terminated";
+    if get_debug () then
+      Printer.print_dbg "alt-ergo thread terminated";
     image#set_stock `DIALOG_QUESTION;
     label#set_text "  Process aborted";
     buttonstop#misc#hide ();
@@ -558,8 +559,9 @@ let update_aborted image label buttonstop buttonrun timers_model = function
   | Util.Timeout ->
     Options.Time.unset_timeout ~is_gui:true;
     Timers.update timers_model.timers;
-    Printer.print_dbg ~debug:(get_debug ())
-      "alt-ergo thread terminated (timeout)";
+    if get_debug () then
+      Printer.print_dbg
+        "alt-ergo thread terminated (timeout)";
     image#set_stock `CUT;
     label#set_text "  Timeout";
     buttonstop#misc#hide ();
@@ -568,8 +570,9 @@ let update_aborted image label buttonstop buttonrun timers_model = function
     Options.Time.unset_timeout ~is_gui:true;
     Timers.update timers_model.timers;
     let message = sprintf "Error: %s" (Printexc.to_string e) in
-    Printer.print_dbg ~debug:(get_debug ())
-      "alt-ergo thread terminated";
+    if get_debug () then
+      Printer.print_dbg
+        "alt-ergo thread terminated";
     image#set_stock `DIALOG_ERROR;
     label#set_text (" "^message);
     buttonstop#misc#hide ();
@@ -633,8 +636,9 @@ let kill_thread thread () =
 
 let run_replay env used_context =
   let ast = to_ast env.ast in
-  Printer.print_dbg ~debug:(get_debug ())
-    "AST : @ -----@ %a" print_typed_decl_list ast;
+  if get_debug () then
+    Printer.print_dbg
+      "AST : @ -----@ %a" print_typed_decl_list ast;
 
   let ast_pruned = [ast] in
 
@@ -669,8 +673,9 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
   clear_used_lemmas_tags env;
 
   let ast = to_ast env.ast in
-  Printer.print_dbg ~debug:(get_debug ())
-    "AST : @ -----@ %a" print_typed_decl_list ast;
+  if get_debug () then
+    Printer.print_dbg
+      "AST : @ -----@ %a" print_typed_decl_list ast;
 
   let ast_pruned = [ast] in
 
@@ -690,8 +695,9 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
          (fun () ->
             (try
                (* Thread.yield (); *)
-               Printer.print_dbg ~debug:(get_debug ())
-                 "Starting alt-ergo thread";
+               if get_debug () then
+                 Printer.print_dbg
+                   "Starting alt-ergo thread";
                Options.Time.start ();
                Options.Time.set_timeout ~is_gui:true (Options.get_timelimit ());
                Timers.set_timer_start (Timers.start timers_model.timers);
@@ -714,8 +720,9 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
                wrapper_update_aborted
                  image label buttonstop buttonrun timers_model e
             );
-            Printer.print_dbg ~debug:(get_debug ())
-              "Send done signal to waiting thread";
+            if get_debug () then
+              Printer.print_dbg
+                "Send done signal to waiting thread";
             wrapper_reset buttonstop buttonrun;
             Thread.delay 0.001;
             GMain.Timeout.remove to_id;
@@ -1053,11 +1060,13 @@ let start_gui all_used_context =
          buf2#set_style_scheme scheme;
 
          let annoted_ast = annot buf1 l in
-         Printer.print_dbg ~flushed:false ~debug:(get_debug ())
-           "Computing dependencies...";
+         if get_debug () then
+           Printer.print_dbg ~flushed:false
+             "Computing dependencies...";
          let dep = make_dep annoted_ast in
-         Printer.print_dbg ~header:false ~debug:(get_debug ())
-           "Done";
+         if get_debug () then
+           Printer.print_dbg ~header:false
+             "Done";
 
 
          let text = List.fold_left
