@@ -74,4 +74,8 @@ val assign_next : t -> (r Xliteral.view * bool * Th_util.lit_origin) list * t
 (** Compute a counterexample using the Uf environment and then print it on the
     given formatter with the corresponding format setted with
     Options.get_output_format *)
-val output_concrete_model : Format.formatter -> Expr.Set.t -> t -> unit
+val output_concrete_model :
+  Format.formatter ->
+  prop_model:Expr.Set.t ->
+  t ->
+  unit
