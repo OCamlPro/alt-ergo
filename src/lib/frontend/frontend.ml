@@ -142,7 +142,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep f_name)
     else Ex.empty
 
-  let process_decl print_status used_context s ((env, consistent, dep) as acc) d =
+  let process_decl print_status used_context s
+      ((env, consistent, dep) as acc) d =
     try
       match d.st_decl with
       | Push n ->
