@@ -74,6 +74,12 @@ module type S = sig
 
   val get_assumed : t -> E.Set.t
 
+  val output_concrete_model :
+    Format.formatter ->
+    prop_model:Expr.Set.t ->
+    t ->
+    unit
+
 end
 
 module Main_Default : S = struct
@@ -745,6 +751,9 @@ module Main_Default : S = struct
 
   let get_assumed env = env.assumed_set
 
+  let output_concrete_model fmt ~prop_model env =
+    CC_X.output_concrete_model fmt ~prop_model env.gamma_finite
+
 end
 
 module Main_Empty : S = struct
@@ -780,4 +789,5 @@ module Main_Empty : S = struct
   let assume_th_elt e _ _ = e
   let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []
   let get_assumed env = env.assumed_set
+  let output_concrete_model _fmt ~prop_model:_ _env = ()
 end
