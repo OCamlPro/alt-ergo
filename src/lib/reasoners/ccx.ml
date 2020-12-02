@@ -88,6 +88,11 @@ module type S = sig
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) -> t * instances
 
+  val output_concrete_model :
+    Format.formatter ->
+    prop_model:Expr.Set.t ->
+    t ->
+    unit
 end
 
 module Main : S = struct
@@ -778,5 +783,7 @@ module Main : S = struct
     in
     Uf.term_repr env.uf t
 
+  let output_concrete_model fmt ~prop_model env =
+    Uf.output_concrete_model fmt ~prop_model env.uf
 
 end
