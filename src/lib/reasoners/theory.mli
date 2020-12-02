@@ -59,6 +59,12 @@ module type S = sig
 
   val get_assumed : t -> Expr.Set.t
 
+  val output_concrete_model :
+    Format.formatter ->
+    prop_model:Expr.Set.t ->
+    t ->
+    unit
+
   val reinit_cpt : unit -> unit
   (** reinitializes the counter to zero *)
 
