@@ -58,6 +58,13 @@ module type S = sig
     int -> int -> t * Sig_rel.instances
 
   val get_assumed : t -> Expr.Set.t
+
+  val output_concrete_model :
+    Format.formatter ->
+    prop_model:Expr.Set.t ->
+    t ->
+    unit
+
 end
 
 module Main_Default : S
