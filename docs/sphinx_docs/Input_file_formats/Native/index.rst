@@ -20,4 +20,3 @@ A full description of the syntax is available in [the last chapter](07_syntax_of
     Theories <05_theories>
     Control Flow <06_control_flow>
     Syntax of declarations and expressions <07_syntax_of_declarations_and_expressions>
-    TODOs <TODOs>
