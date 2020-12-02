@@ -74,6 +74,9 @@ type matching_env =
     backward : inst_kind
   }
 
+val sequentialise_n:
+  ('a -> 'b) -> int -> 'a -> 'b
+
 val print_list:
   sep:string ->
   pp:(Format.formatter -> 'a -> unit) ->

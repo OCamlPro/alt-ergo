@@ -116,6 +116,13 @@ type matching_env =
     backward : inst_kind
   }
 
+let rec sequentialise_n f n s =
+  if n <= 1 then
+    f s
+  else
+    let _ = f s in
+    sequentialise_n f (n-1) s
+
 let print_list ~sep ~pp fmt l =
   match l with
     [] -> ()

@@ -641,6 +641,7 @@ let run_replay env used_context =
       "AST : @ -----@ %a" print_typed_decl_list ast;
 
   let ast_pruned = [ast] in
+  let consistent_dep = Stack.create () in
 
   Options.Time.start ();
   Options.Time.set_timeout ~is_gui:true (Options.get_timelimit ());
@@ -648,8 +649,9 @@ let run_replay env used_context =
     (fun dcl ->
        let cnf = Cnf.make_list dcl in
        ignore (List.fold_left
-                 (FE.process_decl FE.print_status used_context)
-                 (empty_sat_inst env.insts, true, Explanation.empty) cnf)
+                 (FE.process_decl FE.print_status used_context consistent_dep)
+                 (empty_sat_inst env.insts, true, Explanation.empty)
+                 cnf)
     ) ast_pruned;
   Options.Time.unset_timeout ~is_gui:true
 
@@ -703,6 +705,7 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
                Timers.set_timer_start (Timers.start timers_model.timers);
                Timers.set_timer_pause (Timers.pause timers_model.timers);
 
+               let consistent_dep = Stack.create () in
                List.iter
                  (fun dcl ->
                     let cnf = Cnf.make_list dcl in
@@ -710,7 +713,7 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
                       (List.fold_left
                          (FE.process_decl
                             (wrapper_update_status image label buttonclean env)
-                            used_context)
+                            used_context consistent_dep)
                          (empty_sat_inst inst_model, true, Explanation.empty)
                          cnf)
                  ) ast_pruned;

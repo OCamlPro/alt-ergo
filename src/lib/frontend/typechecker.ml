@@ -2144,20 +2144,13 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     assert (not is_recursive); (* Abstract types are not recursive *)
     acc, env
 
-let rec push_pop_env f n s =
-  if n <= 1 then
-    f s
-  else
-    let _env = f s in
-    push_pop_env f (n-1) s
-
 let rec type_decl (acc, env) d assertion_stack =
   Types.to_tyvars := MString.empty;
   match d with
   | Push (loc,n) ->
     if n < 0 then
       typing_error (ShouldBePositive n) loc;
-    push_pop_env (Stack.push env) n assertion_stack;
+    Util.sequentialise_n (Stack.push env) n assertion_stack;
     let td = {c = TPush(loc,n); annot = new_id () } in
     (td,env) :: acc, env
   | Pop (loc,n) ->
@@ -2168,7 +2161,7 @@ let rec type_decl (acc, env) d assertion_stack =
       typing_error (BadPopCommand
                       {pushed = assertion_context_number; to_pop = n}) loc
     else
-      let env = push_pop_env Stack.pop n assertion_stack in
+      let env = Util.sequentialise_n Stack.pop n assertion_stack in
       let td = {c = TPop(loc,n); annot = new_id () } in
       (td,env) :: acc, env
 
