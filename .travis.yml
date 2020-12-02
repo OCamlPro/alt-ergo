@@ -43,10 +43,7 @@ before_install:
   # Install odoc & ocp-indent
   - opam install odoc ocp-indent.1.8.1
   # Install sphinx libs
-  - pip install --user sphinx
-  - pip install --user recommonmark
-  - pip install --user sphinx_rtd_theme
-  - pip install --user sphinx-markdown-tables
+  - pip install --user -r docs/sphinx_docs/requirements.txt
   # Set the verbose option *after* compiling the compiler
   # and installing odoc, else the log oveflows
   - export OPAMVERBOSE=1
