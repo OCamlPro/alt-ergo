@@ -93,6 +93,7 @@ type error =
   | Syntax_error of Loc.t * string (** Error used by the parser*)
   | Typing_error of Loc.t * typing_error (** Error used at typing *)
   | Run_error of run_error (** Error used during solving *)
+  | Warning_as_error
 
 (** {2 Exceptions } *)
 
@@ -108,6 +109,11 @@ val typing_error : typing_error -> Loc.t -> 'a
 
 (** Raise the input {!run_error} as {!Run_error} *)
 val run_error : run_error -> 'a
+
+(** Raise [Warning_as_error] as {!Error}
+    if the option warning-as-error is set
+    This function can be use after warning *)
+val warning_as_error : unit -> unit
 
 (** {2 Printing } *)
 

@@ -53,6 +53,10 @@ type input_format =
     {!val:set_output_format} *)
 type output_format = input_format
 
+(** Type used to register the status, if known, of the input problem *)
+type known_status =
+    Status_Sat | Status_Unsat | Status_Unknown | Status_Undefined of string
+
 (** {2 Setter functions} *)
 
 (** {3 Setters for debug flags} *)
@@ -257,6 +261,9 @@ val set_unsat_core : bool -> unit
 (** Set [verbose] accessible with {!val:get_verbose} *)
 val set_verbose : bool -> unit
 
+(** Set [status] accessible with {!val:get_status} *)
+val set_status : string -> unit
+
 (** Set [file] accessible with {!val:get_file} *)
 val set_file : string -> unit
 
@@ -290,6 +297,10 @@ val set_output_with_colors : bool -> unit
 (** Set [output_with_headers] accessible with {!val:get_output_with_headers} *)
 val set_output_with_headers : bool -> unit
 
+(** Set [output_with_formatting] accessible with
+    {!val:get_output_with_formatting} *)
+val set_output_with_formatting : bool -> unit
+
 (** Set [infer_input_format] accessible with {!val:get_infer_input_format} *)
 val set_infer_input_format : 'a option -> unit
 
@@ -307,6 +318,9 @@ val set_disable_weaks : bool -> unit
 
 (** Set [enable_assertions] accessible with {!val:get_enable_assertions} *)
 val set_enable_assertions : bool -> unit
+
+(** Set [warning_as_error] accessible with {!val:get_warning_as_error} *)
+val set_warning_as_error : bool -> unit
 
 (** Set [timelimit_interpretation] accessible with
     {!val:get_timelimit_interpretation} *)
@@ -551,6 +565,10 @@ val get_output_with_colors  : unit -> bool
 val get_output_with_headers  : unit -> bool
 (** Default to [true] *)
 
+(** [true] if the outputs are printed with formatting rules *)
+val get_output_with_formatting  : unit -> bool
+(** Default to [true] *)
+
 (** Valuget_e of the currently selected parsing and typing frontend. *)
 val get_frontend : unit -> string
 (** Default to [legacy] *)
@@ -596,6 +614,10 @@ val get_disable_weaks : unit -> bool
 
 (** [true] if verification of some heavy invariants is enabled. *)
 val get_enable_assertions : unit -> bool
+(** Default to [false] *)
+
+(** [true] if warning are set as error. *)
+val get_warning_as_error : unit -> bool
 (** Default to [false] *)
 
 (** {4 Limit options} *)
@@ -914,6 +936,10 @@ val get_rule : unit -> int
 (** Default to [-1] *)
 
 (** {4 Files} *)
+
+(** Value specifying the status of the file given to Alt-Ergo *)
+val get_status : unit -> known_status
+(** Default to [Status_Unknown] *)
 
 (** [true] if the JavaScript mode is activated *)
 val get_js_mode : unit -> bool

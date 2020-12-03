@@ -198,16 +198,17 @@ module Debug = struct
     fprintf fmt "@]@ "
 
   let all env =
-    print_dbg ~debug:(get_debug_uf ())
-      ~module_name:"Uf" ~function_name:"all"
-      "@[<v 0>-------------------------------------------------@ \
-       %a%a%a%a%a\
-       -------------------------------------------------@]"
-      pmake env.make
-      prepr env.repr
-      prules env.ac_rs
-      pclasses env.classes
-      pneqs env.neqs
+    if get_debug_uf () then
+      print_dbg
+        ~module_name:"Uf" ~function_name:"all"
+        "@[<v 0>-------------------------------------------------@ \
+         %a%a%a%a%a\
+         -------------------------------------------------@]"
+        pmake env.make
+        prepr env.repr
+        prules env.ac_rs
+        pclasses env.classes
+        pneqs env.neqs
 
   let lookup_not_found t env =
     print_err
@@ -216,65 +217,75 @@ module Debug = struct
 
 
   let canon_of r rr =
-    print_dbg ~debug:(get_rewriting () && get_verbose ())
-      "canon %a = %a" X.print r X.print rr
+    if get_rewriting () && get_verbose () then
+      print_dbg "canon %a = %a" X.print r X.print rr
 
   let init_leaf p =
-    print_dbg ~debug:(get_debug_uf ())
-      ~module_name:"Uf" ~function_name:"init_leaf"
-      "init leaf : %a" X.print p
+    if get_debug_uf () then
+      print_dbg
+        ~module_name:"Uf" ~function_name:"init_leaf"
+        "init leaf : %a" X.print p
 
   let critical_pair rx ry =
-    print_dbg ~debug:(get_debug_uf ())
-      ~module_name:"Uf" ~function_name:"critical_pair"
-      "critical pair : %a = %a@." X.print rx X.print ry
+    if get_debug_uf () then
+      print_dbg
+        ~module_name:"Uf" ~function_name:"critical_pair"
+        "critical pair : %a = %a@." X.print rx X.print ry
 
   let collapse_mult g2 d2 =
-    print_dbg ~debug:(get_debug_ac ())
-      ~module_name:"Uf" ~function_name:"collapse_mult"
-      "collapse *: %a = %a"
-      X.print g2 X.print d2
+    if get_debug_ac () then
+      print_dbg
+        ~module_name:"Uf" ~function_name:"collapse_mult"
+        "collapse *: %a = %a"
+        X.print g2 X.print d2
 
   let collapse g2 d2 =
-    print_dbg ~debug:(get_debug_ac ())
-      ~module_name:"Uf" ~function_name:"collapse"
-      "collapse: %a = %a"
-      X.print g2 X.print d2
+    if get_debug_ac () then
+      print_dbg
+        ~module_name:"Uf" ~function_name:"collapse"
+        "collapse: %a = %a"
+        X.print g2 X.print d2
 
   let compose p v g d =
-    print_dbg ~debug:(get_debug_ac ())
-      ~module_name:"Uf" ~function_name:"compose"
-      "compose : %a -> %a on %a and %a"
-      X.print p X.print v
-      Ac.print g X.print d
+    if get_debug_ac () then
+      print_dbg
+        ~module_name:"Uf" ~function_name:"compose"
+        "compose : %a -> %a on %a and %a"
+        X.print p X.print v
+        Ac.print g X.print d
 
   let x_solve rr1 rr2 dep =
-    print_dbg ~debug:(get_debug_uf ())
-      ~module_name:"Uf" ~function_name:"x_solve"
-      "x-solve: %a = %a %a"
-      X.print rr1 X.print rr2 Ex.print dep
+    if get_debug_uf () then
+      print_dbg
+        ~module_name:"Uf" ~function_name:"x_solve"
+        "x-solve: %a = %a %a"
+        X.print rr1 X.print rr2 Ex.print dep
 
   let ac_solve p v dep =
-    print_dbg ~debug:(get_debug_uf ())
-      ~module_name:"Uf" ~function_name:"ac_solve"
-      "ac-solve: %a |-> %a %a"
-      X.print p X.print v Ex.print dep
+    if get_debug_uf () then
+      print_dbg
+        ~module_name:"Uf" ~function_name:"ac_solve"
+        "ac-solve: %a |-> %a %a"
+        X.print p X.print v Ex.print dep
 
   let ac_x r1 r2 =
-    print_dbg ~debug:(get_debug_uf ())
-      ~module_name:"Uf" ~function_name:"ac_x"
-      "ac(x): delta (%a) = delta (%a)"
-      X.print r1 X.print r2
+    if get_debug_uf () then
+      print_dbg
+        ~module_name:"Uf" ~function_name:"ac_x"
+        "ac(x): delta (%a) = delta (%a)"
+        X.print r1 X.print r2
 
   let distinct d =
-    print_dbg ~debug:(get_debug_uf ())
-      ~module_name:"Uf" ~function_name:"distinct"
-      "distinct %a" LX.print d
+    if get_debug_uf () then
+      print_dbg
+        ~module_name:"Uf" ~function_name:"distinct"
+        "distinct %a" LX.print d
 
   let are_distinct t1 t2 =
-    print_dbg ~debug:(get_debug_uf ())
-      ~module_name:"Uf" ~function_name:"are_distinct"
-      "are_distinct %a %a" E.print t1 E.print t2
+    if get_debug_uf () then
+      print_dbg
+        ~module_name:"Uf" ~function_name:"are_distinct"
+        "are_distinct %a %a" E.print t1 E.print t2
 
 
   let check_inv_repr_normalized =
@@ -1024,9 +1035,10 @@ let assign_next env =
     match !acc with
     | None -> assert false
     | Some (s, rep, is_cs) ->
-      Printer.print_dbg ~debug:(get_debug_interpretation())
-        ~module_name:"Uf" ~function_name:"assign_next"
-        "TRY assign-next %a = %a" X.print rep E.print s;
+      if get_debug_interpretation () then
+        Printer.print_dbg
+          ~module_name:"Uf" ~function_name:"assign_next"
+          "TRY assign-next %a = %a" X.print rep E.print s;
         (*
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           modify this to be able to returns CS on terms. This way,

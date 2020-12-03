@@ -146,13 +146,14 @@ let clean_trigger ~in_theory name trig =
       if sz_l = sz_s then trig
       else
         let trig' = ME.fold (fun t _ acc -> t :: acc) res [] in
-        Printer.print_dbg ~debug:(get_verbose ()) ~module_name:"Cnf"
-          ~function_name:"clean_trigger"
-          "AXIOM: %s@ \
-           from multi-trig of sz %d : %a@ \
-           to   multi-trig of sz %d : %a"
-          name
-          sz_l E.print_list trig sz_s E.print_list trig';
+        if get_verbose () then
+          Printer.print_dbg ~module_name:"Cnf"
+            ~function_name:"clean_trigger"
+            "AXIOM: %s@ \
+             from multi-trig of sz %d : %a@ \
+             to   multi-trig of sz %d : %a"
+            name
+            sz_l E.print_list trig sz_s E.print_list trig';
         trig'
 
 let rec make_term up_qv quant_basename t =

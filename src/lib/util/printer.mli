@@ -42,14 +42,12 @@ val print_wrn :
 
 (** Print debug message on the debug formatter accessible with
     {!val:Options.get_fmt_dbg} and set by default to stderr.
-    Prints only if debug (true by default) is true.
     If header is set, prints a header "[Debug][<module_name>][<function_name>]"
     if module_name and function_name are set.
     The dbg formatter is flushed after the print if flushed is set *)
 val print_dbg :
   ?flushed:bool ->
   ?header:bool ->
-  ?debug:bool ->
   ?module_name:string ->
   ?function_name:string ->
   ('a, Format.formatter, unit) format -> 'a

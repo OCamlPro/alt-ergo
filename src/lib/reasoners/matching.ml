@@ -95,16 +95,18 @@ module Make (X : Arg) : S with type theory = X.t = struct
   module Debug = struct
     open Printer
     let add_term t =
-      print_dbg ~debug:(get_debug_matching() >= 3)
-        ~module_name:"Matching" ~function_name:"add_term"
-        "add_term:  %a" E.print t
+      if get_debug_matching() >= 3 then
+        print_dbg
+          ~module_name:"Matching" ~function_name:"add_term"
+          "add_term:  %a" E.print t
 
     let matching tr =
-      print_dbg ~debug:(get_debug_matching() >= 3)
-        ~module_name:"Matching" ~function_name:"matching"
-        "@[<v 0>(multi-)trigger: %a@ \
-         ========================================================@]"
-        E.print_list tr.E.content
+      if get_debug_matching() >= 3 then
+        print_dbg
+          ~module_name:"Matching" ~function_name:"matching"
+          "@[<v 0>(multi-)trigger: %a@ \
+           ========================================================@]"
+          E.print_list tr.E.content
 
     let match_pats_modulo pat lsubsts =
       if get_debug_matching() >= 3 then
@@ -118,51 +120,57 @@ module Make (X : Arg) : S with type theory = X.t = struct
           E.print pat (pp_list_no_space print) lsubsts
 
     let match_one_pat { sbs; sty; _ } pat0 =
-      print_dbg ~debug:(get_debug_matching() >= 3)
-        ~module_name:"Matching" ~function_name:"match_one_pat"
-        "match_pat: %a with subst: sbs= %a | sty= %a"
-        E.print pat0 (SubstE.print E.print) sbs Ty.print_subst sty
+      if get_debug_matching() >= 3 then
+        print_dbg
+          ~module_name:"Matching" ~function_name:"match_one_pat"
+          "match_pat: %a with subst: sbs= %a | sty= %a"
+          E.print pat0 (SubstE.print E.print) sbs Ty.print_subst sty
 
 
     let match_one_pat_against { sbs; sty; _ } pat0 t =
-      print_dbg ~debug:(get_debug_matching() >= 3)
-        ~module_name:"Matching" ~function_name:"match_one_pat_against"
-        "@[<v 0>match_pat: %a against term %a@ \
-         with subst:  sbs= %a | sty= %a@]"
-        E.print pat0
-        E.print t
-        (SubstE.print E.print) sbs
-        Ty.print_subst sty
+      if get_debug_matching() >= 3 then
+        print_dbg
+          ~module_name:"Matching" ~function_name:"match_one_pat_against"
+          "@[<v 0>match_pat: %a against term %a@ \
+           with subst:  sbs= %a | sty= %a@]"
+          E.print pat0
+          E.print t
+          (SubstE.print E.print) sbs
+          Ty.print_subst sty
 
     let match_term { sbs; sty; _ } t pat =
-      print_dbg ~debug:(get_debug_matching() >= 3)
-        ~module_name:"Matching" ~function_name:"match_term"
-        "I match %a against %a with subst: sbs=%a | sty= %a"
-        E.print pat E.print t (SubstE.print E.print) sbs Ty.print_subst sty
+      if get_debug_matching() >= 3 then
+        print_dbg
+          ~module_name:"Matching" ~function_name:"match_term"
+          "I match %a against %a with subst: sbs=%a | sty= %a"
+          E.print pat E.print t (SubstE.print E.print) sbs Ty.print_subst sty
 
     let match_list { sbs; sty; _ } pats xs =
-      print_dbg ~debug:(get_debug_matching() >= 3)
-        ~module_name:"Matching" ~function_name:"match_list"
-        "I match %a against %a with subst: sbs=%a | sty= %a"
-        E.print_list pats
-        E.print_list xs
-        (SubstE.print E.print) sbs
-        Ty.print_subst sty
+      if get_debug_matching() >= 3 then
+        print_dbg
+          ~module_name:"Matching" ~function_name:"match_list"
+          "I match %a against %a with subst: sbs=%a | sty= %a"
+          E.print_list pats
+          E.print_list xs
+          (SubstE.print E.print) sbs
+          Ty.print_subst sty
 
     let match_class_of t cl =
-      print_dbg ~debug:(get_debug_matching() >= 3)
-        ~module_name:"Matching" ~function_name:"match_class_of"
-        "class_of (%a) = { %a }"
-        E.print t
-        (fun fmt -> List.iter (fprintf fmt "%a , " E.print)) cl
+      if get_debug_matching() >= 3 then
+        print_dbg
+          ~module_name:"Matching" ~function_name:"match_class_of"
+          "class_of (%a) = { %a }"
+          E.print t
+          (fun fmt -> List.iter (fprintf fmt "%a , " E.print)) cl
 
     let candidate_substitutions pat_info res =
-      print_dbg ~debug:(get_debug_matching() >= 1)
-        ~module_name:"Matching" ~function_name:"candidate_substitutions"
-        "@[<v 2>%3d candidate substitutions for Axiom %a with trigger %a@ "
-        (List.length res)
-        E.print pat_info.trigger_orig
-        E.print_list pat_info.trigger.E.content;
+      if get_debug_matching () >= 1 then
+        print_dbg
+          ~module_name:"Matching" ~function_name:"candidate_substitutions"
+          "@[<v 2>%3d candidate substitutions for Axiom %a with trigger %a@ "
+          (List.length res)
+          E.print pat_info.trigger_orig
+          E.print_list pat_info.trigger.E.content;
       if get_debug_matching() >= 2 then
         List.iter
           (fun gsbt ->
@@ -536,11 +544,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
           Debug.candidate_substitutions pat_info res;
           pat_info, res
         with Exit ->
-          Printer.print_dbg
-            ~debug:(get_debug_matching() >= 1 && get_verbose())
-            ~module_name:"Matching" ~function_name:"matching"
-            "skip matching for %a : cpt = %d"
-            E.print pat_info.trigger_orig !cpt;
+          if get_debug_matching() >= 1 && get_verbose() then
+            Printer.print_dbg
+              ~module_name:"Matching" ~function_name:"matching"
+              "skip matching for %a : cpt = %d"
+              E.print pat_info.trigger_orig !cpt;
           pat_info, []
 
   let reset_cache_refs () =
@@ -664,10 +672,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
              | Util.Backward -> backward_triggers q, "Backward"
              | Util.Forward  -> forward_triggers q, "Forward"
            in
-           Printer.print_dbg ~debug:(Options.get_debug_triggers ())
-             ~module_name:"Matching" ~function_name:"add_triggers"
-             "@[<v 2>%s triggers of %s are:@ %a@]"
-             kind name E.print_triggers tgs;
+           if get_debug_triggers () then
+             Printer.print_dbg
+               ~module_name:"Matching" ~function_name:"add_triggers"
+               "@[<v 2>%s triggers of %s are:@ %a@]"
+               kind name E.print_triggers tgs;
            List.fold_left
              (fun env tr ->
                 let info =

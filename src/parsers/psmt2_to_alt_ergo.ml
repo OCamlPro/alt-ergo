@@ -445,6 +445,7 @@ let aux aux_fun token lexbuf =
   try
     Smtlib_options.set_keep_loc true;
     let res = aux_fun token lexbuf in
+    Options.set_status (Smtlib_options.status ());
     Parsing.clear_parser ();
     res
   with
