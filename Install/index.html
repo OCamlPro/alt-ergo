@@ -1,0 +1,373 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html4" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Installation &mdash; Doc-Alt-Ergo  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/dac_theme_modif.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Usage" href="../Usage/index.html" />
+    <link rel="prev" title="Welcome to Alt-Ergo’s documentation!" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> Doc-Alt-Ergo
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Install</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#from-a-package-manager">From a package manager</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#on-debian">On Debian</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#from-sources">From sources</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#build-and-install">Build and Install</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#everything-binaries-plugins-library">Everything (binaries, plugins, library, …)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#alt-ergo-library">Alt-Ergo library</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#alt-ergo-parsers">Alt-Ergo parsers</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#alt-ergo-binary">Alt-Ergo binary</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#altgr-ergo-binary">AltGr-Ergo binary</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#plugins">Plugins</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#the-satml-plugin">The SatML Plugin</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#the-fm-simplex-plugin">The Fm-Simplex Plugin</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#the-ab-why3-parser-plugin">The AB-Why3 parser plugin</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#the-profiler-plugin">The profiler plugin</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../Usage/index.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Input_file_formats/index.html">Input file formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../API/index.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Dev/index.html">Developer's documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../About/index.html">About</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Doc-Alt-Ergo</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Installation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="from-a-package-manager">
+<h2>From a package manager<a class="headerlink" href="#from-a-package-manager" title="Permalink to this headline">¶</a></h2>
+<p>Alt-ergo is available on <a class="reference external" href="https://opam.ocaml.org/">opam</a>, the ocaml package manager with the following command :</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">opam</span> <span class="n">install</span> <span class="n">alt</span><span class="o">-</span><span class="n">ergo</span>
+</pre></div>
+</div>
+<p>You can also install the GUI with</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">opam</span> <span class="n">install</span> <span class="n">altgr</span><span class="o">-</span><span class="n">ergo</span>
+</pre></div>
+</div>
+<p>This two command will install the Alt-ergo library <code class="docutils literal notranslate"><span class="pre">alt-ergo-lib</span></code> and the parsers <code class="docutils literal notranslate"><span class="pre">alt-ergo-parsers</span></code>, as well as other librairies detailled in <a class="reference external" href="#dependencies">dependencies</a>.</p>
+<div class="section" id="on-debian">
+<h3>On Debian<a class="headerlink" href="#on-debian" title="Permalink to this headline">¶</a></h3>
+<p>Alt-ergo is also available in the debian package manager <a class="reference external" href="https://packages.debian.org/buster/alt-ergo">here</a>. You can install it with the following command :</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sudo</span> <span class="n">apt</span> <span class="n">install</span> <span class="n">alt</span><span class="o">-</span><span class="n">ergo</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="from-sources">
+<h2>From sources<a class="headerlink" href="#from-sources" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="dependencies">
+<h3>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h3>
+<p>External dependencies graph generated with <code class="docutils literal notranslate"><span class="pre">dune-deps</span></code> (use <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">archi</span></code> for source files dependencies):</p>
+<p><img alt="../_images/deps.png" src="../_images/deps.png" /></p>
+<p>To compile the sources, you will need the following libraries :</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="n">ocaml</span> <span class="o">&gt;=</span> <span class="mf">4.04</span><span class="o">.</span><span class="mi">0</span>
+  <span class="n">dune</span> <span class="o">&gt;=</span> <span class="mf">1.5</span>
+  <span class="n">zarith</span>
+  <span class="n">camlzip</span>
+  <span class="n">menhir</span>
+  <span class="n">ocplib</span><span class="o">-</span><span class="n">simplex</span> <span class="o">&gt;=</span> <span class="mf">0.4</span>
+  <span class="n">seq</span>
+  <span class="n">cmdliner</span>
+  <span class="n">stdlib</span><span class="o">-</span><span class="n">shims</span>
+  <span class="n">psmt2</span><span class="o">-</span><span class="n">frontend</span>
+</pre></div>
+</div>
+<p>To compile the GUI you will also need</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="n">lablgtk2</span>
+  <span class="n">gtksourceview2</span>
+</pre></div>
+</div>
+<p>You may need superuser permissions to perform the installation.</p>
+</div>
+<div class="section" id="configuration">
+<h3>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h3>
+<ol class="simple">
+<li>Configure with <code class="docutils literal notranslate"><span class="pre">./configure</span></code> to generate Makefile.config,
+in order to build everything (lib, parsers, binaries, and GUI).</li>
+<li>Alternatively, you can configure with <code class="docutils literal notranslate"><span class="pre">./configure</span> <span class="pre">-prefix</span> <span class="pre">some-absolute-path-prefix</span></code> to add a prefix for installation
+directories. You may also want to use <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">gen</span> <span class="pre">&amp;&amp;</span> <span class="pre">cat</span> <span class="pre">lib/util/config.ml</span></code>
+to see directories where things will be installed.</li>
+<li>You can use <code class="docutils literal notranslate"><span class="pre">./configure</span> <span class="pre">&lt;package&gt;</span></code> to select which package you
+want to build. <code class="docutils literal notranslate"><span class="pre">&lt;package&gt;</span></code> may be one of: alt-ergo-lib, alt-ergo-parsers,
+alt-ergo, altgr-ergo.</li>
+</ol>
+</div>
+<div class="section" id="build-and-install">
+<h3>Build and Install<a class="headerlink" href="#build-and-install" title="Permalink to this headline">¶</a></h3>
+<p>The steps below will build and install native or bytecode binaries
+depending on whether ocamlopt is installed or only ocamlc is detected.</p>
+<div class="section" id="everything-binaries-plugins-library">
+<h4>Everything (binaries, plugins, library, …)<a class="headerlink" href="#everything-binaries-plugins-library" title="Permalink to this headline">¶</a></h4>
+<ol class="simple">
+<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span></code></li>
+<li>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install</span></code></li>
+<li>Uninstall with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">uninstall</span></code></li>
+</ol>
+</div>
+<div class="section" id="alt-ergo-library">
+<h4>Alt-Ergo library<a class="headerlink" href="#alt-ergo-library" title="Permalink to this headline">¶</a></h4>
+<ol class="simple">
+<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">alt-ergo-lib</span></code></li>
+<li>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-lib</span></code></li>
+</ol>
+</div>
+<div class="section" id="alt-ergo-parsers">
+<h4>Alt-Ergo parsers<a class="headerlink" href="#alt-ergo-parsers" title="Permalink to this headline">¶</a></h4>
+<ol class="simple">
+<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">alt-ergo-parsers</span></code></li>
+<li>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-parsers</span></code></li>
+</ol>
+</div>
+<div class="section" id="alt-ergo-binary">
+<h4>Alt-Ergo binary<a class="headerlink" href="#alt-ergo-binary" title="Permalink to this headline">¶</a></h4>
+<ol class="simple">
+<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">alt-ergo</span></code></li>
+<li>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-bin</span></code></li>
+</ol>
+</div>
+<div class="section" id="altgr-ergo-binary">
+<h4>AltGr-Ergo binary<a class="headerlink" href="#altgr-ergo-binary" title="Permalink to this headline">¶</a></h4>
+<ol class="simple">
+<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">altgr-ergo</span></code></li>
+<li>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-gui</span></code></li>
+</ol>
+</div>
+</div>
+<div class="section" id="plugins">
+<h3>Plugins<a class="headerlink" href="#plugins" title="Permalink to this headline">¶</a></h3>
+<p>The steps below will build and install additional plugins (extension
+.cmxs if ocamlopt is installed or .cma if only ocamlc is detected).</p>
+<div class="section" id="the-satml-plugin">
+<h4>The SatML Plugin<a class="headerlink" href="#the-satml-plugin" title="Permalink to this headline">¶</a></h4>
+<p>satML is now inlined and compiled directly with Alt-Ergo’s source code</p>
+</div>
+<div class="section" id="the-fm-simplex-plugin">
+<h4>The Fm-Simplex Plugin<a class="headerlink" href="#the-fm-simplex-plugin" title="Permalink to this headline">¶</a></h4>
+<ol class="simple">
+<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">fm-simplex</span></code></li>
+<li>The Fm-Simplex plugin is currently built and installed
+at the same time as the alt-ergo binary.</li>
+</ol>
+</div>
+<div class="section" id="the-ab-why3-parser-plugin">
+<h4>The AB-Why3 parser plugin<a class="headerlink" href="#the-ab-why3-parser-plugin" title="Permalink to this headline">¶</a></h4>
+<ol class="simple">
+<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">AB-Why3</span></code></li>
+<li>The AB-Why3 plugin is currently built and installed
+at the same time as the alt-ergo binary.</li>
+</ol>
+<p>You can find more information in the <a class="reference internal" href="../Plugins/ab_why3.html"><span class="doc">AB-Why3 README</span></a></p>
+</div>
+<div class="section" id="the-profiler-plugin">
+<h4>The profiler plugin<a class="headerlink" href="#the-profiler-plugin" title="Permalink to this headline">¶</a></h4>
+<p>This plugin has been “inlined” in Alt-Ergo sources.</p>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../Usage/index.html" class="btn btn-neutral float-right" title="Usage" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../index.html" class="btn btn-neutral float-left" title="Welcome to Alt-Ergo’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Alt-Ergo devs
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,784 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html4" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Changes &mdash; Doc-Alt-Ergo  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/dac_theme_modif.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Copyright" href="license.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> Doc-Alt-Ergo
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../Install/index.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Usage/index.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Input_file_formats/index.html">Input file formats</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../API/index.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Dev/index.html">Developer's documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">About</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Changes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dev-version">dev version</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-2-3-2-march-23-2020">version 2.3.2, March 23, 2020</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-2-3-1-february-18-2020">version 2.3.1, February 18, 2020</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-2-3-0-february-11-2019">version 2.3.0, February 11, 2019</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-2-2-0-april-21-2018">version 2.2.0, April 21, 2018</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-2-1-0-march-14-2018">version 2.1.0, March 14, 2018</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-2-0-0-november-14-2017">version 2.0.0, November 14, 2017</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-1-30-november-21-2016">version 1.30, November 21, 2016</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-1-20-february-09-2016">version 1.20, February 09, 2016</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-1-10-october-19-2015">version 1.10, October 19, 2015</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-1-00-january-29-2015">version 1.00, January 29, 2015</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-99-1-december-30-2014">version 0.99.1, December 30, 2014</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-95-2-september-20th-2013">version 0.95.2, September 20th, 2013</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-95-1-march-05th-2013">version 0.95.1, March 05th, 2013</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-95-january-11th-2013">version 0.95, January 11th, 2013</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-94-december-2nd-2011">version 0.94, December 2nd, 2011</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-93-1-may-9th-2011">version 0.93.1, May 9th, 2011</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-93-april-12th-2011">version 0.93, April 12th, 2011</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-92-2-october-22nd-2">version 0.92.2, October 22nd, 2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-91-may-19th-2010">version 0.91, May 19th, 2010</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-9-july-17th-2009">version 0.9, July 17th, 2009</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-8-july-21st-2008">version 0.8, July 21st, 2008</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-7-3-march-5th-2008">version 0.7.3, March 5th, 2008</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-7-october-11th-2007">version 0.7, October 11th, 2007</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-6-february-1st-2007">version 0.6, February 1st, 2007</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-0-5-october-12th-2006">version 0.5, October 12th, 2006</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference external" href="https://alt-ergo.ocamlpro.com/try.html">Try-Alt-Ergo</a></li>
+<li class="toctree-l2"><a class="reference external" href="https://alt-ergo.ocamlpro.com/">Alt-Ergo's website</a></li>
+<li class="toctree-l2"><a class="reference external" href="https://alt-ergo.ocamlpro.com/#publications">Scientific publications</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Doc-Alt-Ergo</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="index.html">About</a> &raquo;</li>
+        
+      <li>Changes</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="changes">
+<h1>Changes<a class="headerlink" href="#changes" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="dev-version">
+<h2>dev version<a class="headerlink" href="#dev-version" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="version-2-3-2-march-23-2020">
+<h2>version 2.3.2, March 23, 2020<a class="headerlink" href="#version-2-3-2-march-23-2020" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Minor release:<ul>
+<li>Fix preludes installation</li>
+<li>Fix altgr-ergo building rule</li>
+<li>Fix issue with dynlink of parsers</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="version-2-3-1-february-18-2020">
+<h2>version 2.3.1, February 18, 2020<a class="headerlink" href="#version-2-3-1-february-18-2020" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Minor release:<ul>
+<li>Fix issue #248. Avoid double rounding int intervals</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="version-2-3-0-february-11-2019">
+<h2>version 2.3.0, February 11, 2019<a class="headerlink" href="#version-2-3-0-february-11-2019" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>General improvements:<ul>
+<li>Switched build system to use dune</li>
+<li>use flambda optimization options if available</li>
+</ul>
+</li>
+<li>Frontend:<ul>
+<li>native alt-ergo format now supports algebraic datatypes</li>
+<li>SMTLIB-2 ADT logic is now supported as well</li>
+<li>extended/better support for if-then-else and let-bindings
+mixing terms and formulas</li>
+<li>accept unknown file formats as long as a parser
+is specified on the command line, or the parser associated with
+the default language (that can be modified with option
+-default-lang) is able to parse it</li>
+<li>‘-save’/’-replay-used-context’ options now work with multiple
+files to accomodate multiple goals in a single file</li>
+<li>‘-proof’ option becomes ‘-unsat-core’. Now, it shows the names of
+the assertions / axioms / definitions used in the proof instead of
+the formulas themselves</li>
+<li>‘-unsat-mode’ changes output to SAT/UNSAT/Unknown rather than
+Valid/Invalid/I don’t know. This option is set automatically is
+the PSMT2-frontend library is used</li>
+</ul>
+</li>
+<li>Reasoners:<ul>
+<li>added support for Algebraic Datatypes</li>
+<li>improve handling of let and if-then-else bindings</li>
+<li>there are now 4 core solvers (default is cdcl-tableaux):<ul>
+<li>cdcl : CDCL solver</li>
+<li>cdcl-tableaux : CDCL extended with Tableau boolean model simplification</li>
+<li>tableaux : Fonctional SAT solver with Tableau boolean model simplification</li>
+<li>tableaux-cdcl : Same as Tableaux, but using a CDCL solver for boolean constraints</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Instantiation:<ul>
+<li>Triggers computation is done lazily in the backend</li>
+<li>Triggers are periodically recomputed with different heuristics</li>
+</ul>
+</li>
+<li>Data structures:<ul>
+<li>Term, Literal and Formula modules are now merged in a new Expr
+module. This enables arbitrary mixing of terms and formulas as done
+in SMT-LIB2 language</li>
+<li>A lot of improvements in Expr module: more simplifications for
+quantified formulas, better elimination of let-in construct,
+additional constructs in the backend (iff, If-Then-Else, …),
+code reviewing and performances improvements …</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="version-2-2-0-april-21-2018">
+<h2>version 2.2.0, April 21, 2018<a class="headerlink" href="#version-2-2-0-april-21-2018" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Frontend:<ul>
+<li>new experimental support for the SMT2 standard, and for PSMT2: a
+conservative extension of SMT2 with prenex polymorphism</li>
+<li>Alt-Ergo’s library is now compiled (with make) and installed (with
+make install). A small example on how to use it is provided in
+examples/lib_usage.ml</li>
+<li>extension of Alt-Ergo’s native language to support “xor” construct,
+“Let x = form in form”, and “If form then term/form else
+term/form”. Previously, only “Let x = term in term/form”, and “If
+term : Bool then term/form else term/form” were supported</li>
+</ul>
+</li>
+<li>Instantiation:<ul>
+<li>add a new option “-max-multi-triggers-size <n>” to ignore
+multi-triggers containing “a lot” of terms. Default value for n = 4</li>
+<li>small improvement in triggers inference</li>
+</ul>
+</li>
+<li>Reasoners:<ul>
+<li>extending the backend to handle “If-Then-Else” on terms</li>
+<li>improvements and refactoring in the CDCL SAT solver</li>
+<li>soundness bugfix in UF module</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="version-2-1-0-march-14-2018">
+<h2>version 2.1.0, March 14, 2018<a class="headerlink" href="#version-2-1-0-march-14-2018" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>SAT-solving:<ul>
+<li>important improvements in the CDCL SAT engine, which is now the
+default SAT-solver. Proofs are models generation are currently not
+available with CDCL. The old SAT-solver can be activated with option
+“-sat-solver Tableaux”</li>
+</ul>
+</li>
+<li>Instantiation:<ul>
+<li>Add a very weak form of matching modulo arithmetic. This can be
+disabled with option “-no-arith-matching”</li>
+<li>[Formula.mk_forall/exists] remove (big) triggers that are subsumed by smaller ones</li>
+<li>Simplify quantified formulas when relevant instances/skolems can be deduced
+from the formulas (eg. exists x : int. x = 1 and P(x) ~~&gt; P(1),
+and forall x : int. x &lt;&gt; 1 or P(x) ~~&gt; P(1))</li>
+</ul>
+</li>
+<li>Frontend:<ul>
+<li>improve handling of multiple goals per file. Add the ability to
+set a timelimit per goal in this case with option
+“-timelimit-per-goal”</li>
+<li>add the ability to dynamically load new parsers with option
+“-parser”.</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="version-2-0-0-november-14-2017">
+<h2>version 2.0.0, November 14, 2017<a class="headerlink" href="#version-2-0-0-november-14-2017" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">integration of floating-point arithmetic reasoning: this is done via
+the support of the rounding operator as done in the Gappa tool. FPA
+reasoning can be enabled by calling Alt-Ergo as follows:</p>
+<p>alt-ergo -use-fpa -prelude fpa-theory-2017-01-04-16h00.why file.why</p>
+<p>where fpa-theory-2017-01-04-16h00.why is a prelude distributed with
+Alt-Ergo. More details about the integration are given in this
+paper: https://hal.inria.fr/hal-01522770, and dditional benchmarks
+can be found here:
+https://gitlab.com/OCamlPro-Iguernlala/Three-Tier-FPA-Benchs</p>
+</li>
+<li><p class="first">a new lightweight reasoning step before SAT solving that enables a
+kind of backward reasoning/goal unfolding (can be disabled with
+option -no-backward)</p>
+</li>
+<li><p class="first">integration of a simple cache mechanism for unit facts in the SAT
+(learnt clauses, assumed facts, instances, theory deductions, …)
+to improve BCP (can be disabled with option -no-sat-learning)</p>
+</li>
+<li><p class="first">the code of the profiler is now integrated in Alt-Ergo and is
+statically linked</p>
+</li>
+<li><p class="first">deep code refactoring. In particular, one can easily build an
+Alt-Ergo library or define/register a new parser</p>
+</li>
+<li><p class="first">add the ability to parse preludes with -prelude &lt;prelude_1.why&gt; …
+-prelude &lt;prelude_n.why&gt;</p>
+</li>
+<li><p class="first">add the ability to disable weak pointers in hash-consing module
+using option -disable-weaks (useful for more determinism)</p>
+</li>
+<li><p class="first">GUI: goals are now shown in positive form</p>
+</li>
+<li><p class="first">bugfix related to -timelimit option (use of ITIMER_VIRTUAL instead
+of ITIMER_REAL except for the GUI)</p>
+</li>
+<li><p class="first">bugfix in UF related to normalization of terms in presence of AC
+symbols</p>
+</li>
+<li><p class="first">new options -no-decisions and -no-fm to disable decisions in the SAT
+and the Fourier-Motzkin algorithm, respectively</p>
+</li>
+<li><p class="first">new improvements and heuristics in the SAT, terms, formulas,
+congruence closure, profiler, …</p>
+</li>
+<li><p class="first">update licensing: most files are now licensed under the terms of the
+Apache license v2. Some recent OCamlPro additions are licensed under
+the terms of the OCamlPro Non-Commercial Purpose License v1</p>
+</li>
+</ul>
+</div>
+<div class="section" id="version-1-30-november-21-2016">
+<h2>version 1.30, November 21, 2016<a class="headerlink" href="#version-1-30-november-21-2016" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>experimental support for models generation (for more details, see
+http://www.ocamlpro.com/2016/11/21/release-of-alt-ergo-1-30-with-experimental-support-for-models-generation/).</li>
+<li>simplify formulas of the form “forall x : t. x &lt;&gt; t or F” when t
+does not contain x. The only relevant instance in this case is
+“(x &lt;&gt; t or F) {x |-&gt; t}”. In a similar way, this allows to simplify
+formulas of the form “exists x : t. x = t and F” to “F {x |-&gt; t}”.</li>
+<li>integration of general simplex in IntervalCalculus based on
+ocplib-simplex.</li>
+<li>important parts of Intervals and IntervalCalculus have been
+rewritten and improved.</li>
+<li>improve tightening of intervals for non-linear variables, and of the
+CP-like loop.</li>
+<li>extend Fourier-Motzkin to deduce more bounds based on relational
+dependencies of the form “c * x &lt;= (Sum_i d_i * y_i) + e”</li>
+<li>various improvements in the default SAT solver, Term, Formula,
+IntervalCalculus, Matching, Numbers, case-split, …</li>
+<li>various (soundness and/or completeness) bug fixes in Uf, Intervals,
+IntervalCalculus, Theory, Formula, type-checking, Triggers,
+fm-simplex and satML, …</li>
+<li>new option “-inst-after-bj” that forces an instantiation round after
+each backtracking/backjumping in the default SAT solver.</li>
+<li>new option “-no-backjumping” that disables backjumping in the
+default SAT solver (for debugging).</li>
+<li>new option “-fm-cross-limit” that controls the number of
+intermediate inequalities produces by Fourier-Motzking. Default
+value is 10,000.</li>
+<li>new option “-no-ac” to be able to deactivate the AC theory</li>
+<li>new option “-no-NLA” that disables non-linear arithmetic reasoning
+(*, /, %). Non-linear multiplication remains AC.</li>
+</ul>
+</div>
+<div class="section" id="version-1-20-february-09-2016">
+<h2>version 1.20, February 09, 2016<a class="headerlink" href="#version-1-20-february-09-2016" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>default value of option -age-bound increased from 10 to 50</li>
+<li>bugfix when using option –all-models</li>
+<li>improvements in Matching: a set of instances may cause more than one
+conflict. It’s better to detect the more precise one</li>
+<li>remove case-split limit for the theory of arrays</li>
+<li>bugfix in the profiler plugin</li>
+<li>improvements in the default SAT solver</li>
+</ul>
+</div>
+<div class="section" id="version-1-10-october-19-2015">
+<h2>version 1.10, October 19, 2015<a class="headerlink" href="#version-1-10-october-19-2015" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Improvements and bug fixes in the satML plugin</li>
+<li>Improvement of the solver of linear arithmetic in presence of
+non-linear arithmetic parts in the equations to be solved</li>
+<li>Many improvements in case-split analysis. In particular, this is now
+performed by explicit calls from the SAT solver. Its behavior can be
+controlled with the new option “-case-split-policy”. Possible values
+for this option are: “after-theory-assume” (default),
+“before-matching”, and “after-matching”.</li>
+<li>Alt-Ergo can now be called on zipped files (eg. <file>.mlw.zip or
+<file>.why.zip). Decompression is done on the fly with camlzip.</li>
+<li>Soundness bug fixes in arithmetic, interval calculus, union-find,
+…</li>
+<li>Code reviewing/refactoring/rewriting/optimization in many parts of
+the solver</li>
+</ul>
+</div>
+<div class="section" id="version-1-00-january-29-2015">
+<h2>version 1.00, January 29, 2015<a class="headerlink" href="#version-1-00-january-29-2015" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">General Improvements:</p>
+<p>** theories data structures: semantic values (internal theories
+representation of terms) are now hash-consed. This enables the
+use of hash-based comparison (instead of structural comparison)
+when possible</p>
+<p>** theories combination: the dispatcher component, that sends
+literals assumed by the SAT solver to different theories
+depending on whether these literals are equalities,
+disequalities or inequalities, has been re-implemented. The new
+code is much simpler and enables new optimizations and
+factorizations</p>
+<p>** case-split analysis: we made several improvements in the
+heuristics of the case-split analysis mechanism over finite
+domains</p>
+<p>** explanations propagation: we improved explanations propagation
+in congruence closure and linear arithmetic algorithms. This
+makes the proofs faster thanks to a better back-jumping in the
+SAT solver part</p>
+<p>** linear integer arithmetic: we re-implemented several parts of
+linear arithmetic and introduced important improvements in the
+Fourier-Motzkin algorithm to make it run on smaller sub-problems
+avoiding some redundant executions. These optimizations allowed
+a significant speed up on our internal benchmarks</p>
+<p>** data structures: we optimized hash-consing and some functions in
+the “formula” and “literal” modules</p>
+<p>** SAT solving: we made a lot of improvements to the default
+SAT-solver and to the SatML plugin. In particular, the decision
+procedure part now receives facts (literals) in bulk from the
+solvers, rather than individually, trimming the costs of
+intermediate calls to theories reasoners, such as
+Fourier-Motzkin</p>
+<p>** Matching: we extended the E-matching algorithm to also perform
+matching modulo the theory of records. In addition, we
+simplified matching heuristics and optimized the E-matching
+process to avoid computing the same instances several times</p>
+<p>** Memory management: thanks to the ocp-memprof tool
+(http://memprof.typerex.org/), we identified some parts of
+Alt-Ergo that needed some improvements in order to avoid useless
+memory allocations, and thus unburden the OCaml garbage
+collector</p>
+<p>** the function that retrieves the used axioms and predicates (when
+option ‘save-used-context’ is set) has been improved</p>
+</li>
+<li><p class="first">Bug Fixes:</p>
+<p>** 6 in the “inequalities” module of linear arithmetic</p>
+<p>** 4 in the “formula” module</p>
+<p>** 3 in the “ty” module used for types representation and
+manipulation</p>
+<p>** 2 in the “theories front-end” module that interacts with the
+SAT solvers</p>
+<p>** 1 in the “congruence closure” algorithm</p>
+<p>** 1 in “existential quantifiers elimination” module</p>
+<p>** 1 in the “type-checker”</p>
+<p>** 1 in the “AC theory” of associative and commutative function
+symbols</p>
+<p>** 1 in the “union-find” module</p>
+</li>
+<li><p class="first">New OCamlPro Plugins:</p>
+<p>** profiling plugin: when activated, this plugin records and prints
+some information about the current execution of Alt-Ergo every ‘n’
+seconds: In particular, one can observe a module being activated,
+a function being called, the amount of time spent in every
+module/function, the current decision/instantiation level, the
+number of decisions/instantiations that have been made so far, the
+number of case-splits, of boolean/theory conflicts, of assumptions
+in the decision procedure, of generated instances per axiom, …</p>
+<p>** fm-simplex plugin: when activated, this plugin is used instead of
+the Fourier-Motzkin method to infer bounds for linear integer
+arithmetic affine forms (which are used in the case-split analysis
+process). This module uses the Simplex algorithm to simulate
+particular runs of Fourier-Motzkin. In practice, the new algorithm
+scales better on linear integer arithmetic problems containing
+lots of inequalities</p>
+</li>
+<li><p class="first">New Options:</p>
+<p>-version-info: prints some information about this version of
+Alt-Ergo (release and compilation dates, release commit ID)</p>
+<p>-no-theory: deactivate theory reasoning. In this case, only the
+SAT-solver and the matching parts are used</p>
+<p>-inequalities-plugin: specify a plugin to use, instead of the
+“default” Fourier-Motzkin algorithm, to handle inequalities of
+linear arithmetic</p>
+<p>-tighten-vars: when this option is set, the Fm-Simplex plugin will
+try to infer bounds for integer variables as well. Note that this
+option may be very expensive</p>
+<p>-profiling-plugin: specify a profiling plugin to use to monitor an
+execution of Alt-Ergo</p>
+<p>-profiling <delay>: makes the profiling module prints its information
+every <delay> seconds</p>
+<p>-no-tcp: deactivate constraints propagation modulo theories</p>
+</li>
+<li><p class="first">Removed Capabilities:</p>
+<p>** the pruning module used in the frontend is not available anymore</p>
+<p>** the SMT and SMT2 front-ends have been removed. We plan to implement a
+new front-end for SMT2 in upcoming releases</p>
+</li>
+</ul>
+</div>
+<div class="section" id="version-0-99-1-december-30-2014">
+<h2>version 0.99.1, December 30, 2014<a class="headerlink" href="#version-0-99-1-december-30-2014" title="Permalink to this headline">¶</a></h2>
+<p>o the “SAT solving” part can now be delegated to an external plugin;</p>
+<p>o new experimental SAT solver based on mini-SAT, provided as a
+plugin. This solver is, in general, more efficient on ground
+problems;</p>
+<p>o heuristics simplification in the default SAT solver and in the
+matching (instantiation) module;</p>
+<p>o re-implementation of internal literals representation;</p>
+<p>o improvement of theories combination architecture;</p>
+<p>o rewriting some parts of the formulas module;</p>
+<p>o bugfixes in records and numbers modules;</p>
+<p>o new option “-no-Ematching” to perform matching without equality
+reasoning (i.e. without considering “equivalence classes”). This
+option is very useful for benchmarks coming from Atelier-B;</p>
+<p>o two new experimental options: “-save-used-context” and
+“-replay-used-context”. When the goal is proved valid, the first option
+allows to save the names of useful axioms into a “.used” file. The
+second one is used to replay the proof using only the axioms listed
+in the corresponding “.used” file. Note that the replay may fail
+because of the absence of necessary ground terms generated by
+useless axioms (that are not included in .used file) during the
+initial run.</p>
+</div>
+<div class="section" id="version-0-95-2-september-20th-2013">
+<h2>version 0.95.2, September 20th, 2013<a class="headerlink" href="#version-0-95-2-september-20th-2013" title="Permalink to this headline">¶</a></h2>
+<p>o Alt-Ergo is now maintained and distributed by OCamlPro, while
+academic research is conducted in partnership with the VALS team
+(LRI),
+o source code is reorganized into sub-directories,
+o quantifiers instantiation heuristics are simplified,
+o bug-fixes in matching, nums, records, sums,
+o improvement of the GUI when opening big files.</p>
+</div>
+<div class="section" id="version-0-95-1-march-05th-2013">
+<h2>version 0.95.1, March 05th, 2013<a class="headerlink" href="#version-0-95-1-march-05th-2013" title="Permalink to this headline">¶</a></h2>
+<p>o bug fixes (existantial elimination, Euclidean division)
+o minor enhancement (transformation of boolean equalities into equivalences)
+o minor enhancement (sort axioms/definitions instances according to their size)</p>
+</div>
+<div class="section" id="version-0-95-january-11th-2013">
+<h2>version 0.95, January 11th, 2013<a class="headerlink" href="#version-0-95-january-11th-2013" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Main changes in the solver:</li>
+</ul>
+<hr class="docutils" />
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">o</span> <span class="n">new</span> <span class="n">combination</span> <span class="n">method</span> <span class="k">for</span> <span class="n">Shostak</span> <span class="n">solvers</span>
+
+<span class="n">o</span> <span class="n">improvement</span> <span class="n">of</span> <span class="n">non</span><span class="o">-</span><span class="n">linear</span> <span class="n">multiplication</span> <span class="n">distribution</span> <span class="n">over</span> <span class="n">addition</span>
+
+<span class="n">o</span> <span class="nb">input</span> <span class="n">language</span> <span class="n">extension</span><span class="p">:</span> <span class="n">polymorphic</span> <span class="n">declaration</span> <span class="n">are</span> <span class="n">now</span> <span class="n">allowed</span> <span class="p">(</span><span class="n">logic</span> <span class="n">x</span><span class="p">:</span> <span class="s1">&#39;a)</span>
+
+<span class="n">o</span> <span class="nb">input</span> <span class="n">language</span> <span class="n">extension</span><span class="p">:</span> <span class="n">the</span> <span class="n">types</span> <span class="n">of</span> <span class="n">terms</span> <span class="n">can</span> <span class="n">now</span> <span class="n">be</span> <span class="n">forced</span> <span class="ow">in</span> <span class="n">a</span> <span class="n">formula</span> <span class="n">using</span> <span class="n">the</span> <span class="n">construct</span> <span class="o">&lt;</span><span class="n">term</span><span class="o">&gt;</span> <span class="p">:</span> <span class="o">&lt;</span><span class="nb">type</span><span class="o">&gt;</span> <span class="p">(</span><span class="n">see</span> <span class="n">man</span> <span class="k">for</span> <span class="n">an</span> <span class="n">example</span><span class="p">)</span>
+
+<span class="n">o</span> <span class="nb">input</span> <span class="n">language</span> <span class="n">modification</span><span class="p">:</span> <span class="n">a</span> <span class="n">label</span> <span class="n">should</span> <span class="n">be</span> <span class="n">a</span> <span class="n">string</span><span class="o">.</span> <span class="n">The</span> <span class="n">construct</span> <span class="o">&lt;</span><span class="n">label</span><span class="o">&gt;</span> <span class="p">:</span> <span class="o">&lt;</span><span class="n">term</span><span class="o">&gt;</span> <span class="ow">is</span> <span class="n">replaced</span> <span class="n">by</span> <span class="s2">&quot;&lt;label&gt;&quot;</span> <span class="p">:</span> <span class="o">&lt;</span><span class="n">term</span><span class="o">&gt;</span>
+
+<span class="n">o</span> <span class="n">new</span> <span class="n">keywords</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">syntax</span><span class="p">:</span> <span class="n">inversion</span><span class="p">,</span> <span class="n">check</span><span class="p">,</span> <span class="n">cut</span> <span class="ow">and</span> <span class="n">include</span>
+
+<span class="n">o</span> <span class="n">experimental</span> <span class="n">options</span> <span class="k">for</span> <span class="n">theories</span> <span class="n">models</span> <span class="n">generation</span><span class="p">:</span>
+    <span class="o">-</span><span class="n">model</span> <span class="n">option</span><span class="p">:</span> <span class="n">model</span> <span class="n">on</span> <span class="n">labeled</span> <span class="n">terms</span>
+    <span class="o">-</span><span class="n">complete</span><span class="o">-</span><span class="n">model</span> <span class="n">option</span><span class="p">:</span> <span class="n">complete</span> <span class="n">model</span>
+
+<span class="n">o</span> <span class="o">-</span><span class="n">timelimit</span> <span class="n">n</span> <span class="n">option</span><span class="p">:</span> <span class="nb">set</span> <span class="n">the</span> <span class="n">time</span> <span class="n">limit</span> <span class="n">to</span> <span class="n">n</span> <span class="n">seconds</span> <span class="p">(</span><span class="ow">not</span> <span class="n">supported</span> <span class="n">on</span> <span class="n">Windows</span><span class="p">)</span>
+
+<span class="n">o</span> <span class="n">bug</span> <span class="n">fixes</span> 
+</pre></div>
+</div>
+<ul class="simple">
+<li>Main changes in the graphical interface:</li>
+</ul>
+<hr class="docutils" />
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">o</span> <span class="n">the</span> <span class="n">number</span> <span class="n">of</span> <span class="n">instances</span> <span class="k">for</span> <span class="n">each</span> <span class="n">axiom</span> <span class="n">are</span> <span class="n">now</span> <span class="n">shown</span> <span class="n">on</span> <span class="n">the</span> <span class="n">right</span> <span class="n">of</span> <span class="n">the</span> <span class="n">GUI</span>
+
+<span class="n">o</span> <span class="n">the</span> <span class="n">number</span> <span class="n">of</span> <span class="n">instances</span> <span class="n">of</span> <span class="n">each</span> <span class="n">axiom</span> <span class="n">can</span> <span class="n">be</span> <span class="n">limited</span> <span class="n">by</span> <span class="n">the</span> <span class="n">user</span>
+
+<span class="n">o</span> <span class="n">the</span> <span class="n">modifications</span> <span class="n">made</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">GUI</span> <span class="n">can</span> <span class="n">now</span> <span class="n">be</span> <span class="n">saved</span> <span class="ow">in</span> <span class="n">a</span> <span class="n">session</span> <span class="n">file</span> <span class="o">&lt;</span><span class="n">f</span><span class="o">&gt;.</span><span class="n">agr</span>
+
+<span class="n">o</span> <span class="n">session</span> <span class="n">files</span> <span class="n">can</span> <span class="n">be</span> <span class="n">replayed</span> <span class="k">with</span> <span class="o">-</span><span class="n">replay</span> <span class="n">option</span>
+
+<span class="n">o</span> <span class="n">models</span> <span class="n">can</span> <span class="n">be</span> <span class="n">displayed</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">GUI</span>
+
+<span class="n">o</span> <span class="n">unsat</span><span class="o">-</span><span class="n">cores</span> <span class="p">(</span><span class="o">-</span><span class="n">proof</span> <span class="n">option</span><span class="p">)</span> <span class="n">can</span> <span class="n">be</span> <span class="n">used</span> <span class="n">to</span> <span class="n">simplify</span> <span class="n">the</span> <span class="n">context</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="version-0-94-december-2nd-2011">
+<h2>version 0.94, December 2nd, 2011<a class="headerlink" href="#version-0-94-december-2nd-2011" title="Permalink to this headline">¶</a></h2>
+<p>o the theory of records replaces the theory of pairs
+o bug fixes
+(intervals, term data-structure, stack-overflows, matching,
+existentials, distincts, CC, GUI)
+o improvements
+(SMT-Lib2 front-end, intervals, case-splits,
+triggers, lets)
+o multiset ordering for AC(X)
+o manual lemma instantiation in the GUI</p>
+</div>
+<div class="section" id="version-0-93-1-may-9th-2011">
+<h2>version 0.93.1, May 9th, 2011<a class="headerlink" href="#version-0-93-1-may-9th-2011" title="Permalink to this headline">¶</a></h2>
+<p>o bug fixes (distinct, let-in, explanations)</p>
+</div>
+<div class="section" id="version-0-93-april-12th-2011">
+<h2>version 0.93, April 12th, 2011<a class="headerlink" href="#version-0-93-april-12th-2011" title="Permalink to this headline">¶</a></h2>
+<p>o -steps <i> stops Alt-Ergo after a given number of steps
+o -max-split option to limit the number of case-splits
+o new polymorphic theory of arrays: (‘a, ‘b) farray
+o explanations (-proof option)
+o Built-in support for enumeration types
+o graphical frontend (altgr-ergo), needs to be compiled with make
+gui &amp;&amp; make install-gui
+o new predicate distinct (a,b,c, …) to express that constants
+a,b,c,… are pairwise distinct
+o new constructs: let x = <term> in <term>
+let x = <term> in <formula>
+o partial support for / (division) operator
+o bug fixes</p>
+</div>
+<div class="section" id="version-0-92-2-october-22nd-2">
+<h2>version 0.92.2, October 22nd, 2<a class="headerlink" href="#version-0-92-2-october-22nd-2" title="Permalink to this headline">¶</a></h2>
+<p>o New built-in syntax for the theory of arrays
+o Fixes a bug in the arithmetic module
+o Allows folding and unfolding of predicate definitions
+o Fixes other bugs</p>
+</div>
+<div class="section" id="version-0-91-may-19th-2010">
+<h2>version 0.91, May 19th, 2010<a class="headerlink" href="#version-0-91-may-19th-2010" title="Permalink to this headline">¶</a></h2>
+<p>o experimental support for the theory of functional polymorphic
+arrays with the -arrays option
+o the -pairs option should now be used for the built-in support of
+polymorphic pairs
+o support the equality part of the omega test with the -omega option
+o partial support for non-linear arithmetics
+o support case split on integer variables
+o new support for Euclidean division and modulo operators
+o new environment variable ERGOLIB to specify the library directory</p>
+</div>
+<div class="section" id="version-0-9-july-17th-2009">
+<h2>version 0.9, July 17th, 2009<a class="headerlink" href="#version-0-9-july-17th-2009" title="Permalink to this headline">¶</a></h2>
+<p>o support AC symbols
+o support for C-like hexadecimal floating-point constants
+o handle the division operator</p>
+</div>
+<div class="section" id="version-0-8-july-21st-2008">
+<h2>version 0.8, July 21st, 2008<a class="headerlink" href="#version-0-8-july-21st-2008" title="Permalink to this headline">¶</a></h2>
+<p>o pretty output with the -color option
+o the SAT solver part is now equipped with a backjumping mechanism
+o now handles the flet and let SMT-lib constructs
+o goal directed strategy
+o pruning strategy (-select option)
+o incremental strategy for instantiation of lemmas
+o fail if a parameter is bound twice in a definition
+o treatment of existential formulas have been slightly improved
+o decision procedure for polymorphic pairs
+o decision procedure for bit-vectors
+o combination scheme for several decision procedures</p>
+</div>
+<div class="section" id="version-0-7-3-march-5th-2008">
+<h2>version 0.7.3, March 5th, 2008<a class="headerlink" href="#version-0-7-3-march-5th-2008" title="Permalink to this headline">¶</a></h2>
+<p>o renamings in the interfaces
+o provides an API for alt-ergo (make api or make api.byte)
+o handles the modulo operator (%) as an uninterpreted symbol
+o allow labels on any term, not only on predicates</p>
+</div>
+<div class="section" id="version-0-7-october-11th-2007">
+<h2>version 0.7, October 11th, 2007<a class="headerlink" href="#version-0-7-october-11th-2007" title="Permalink to this headline">¶</a></h2>
+<p>o trigger construction has been improved
+o preliminary implementation of combination scheme (Arithmetic+pairs)
+o the SAT loop has been improved</p>
+</div>
+<div class="section" id="version-0-6-february-1st-2007">
+<h2>version 0.6, February 1st, 2007<a class="headerlink" href="#version-0-6-february-1st-2007" title="Permalink to this headline">¶</a></h2>
+<p>o new CC(X) architecture (it can know directly handle relation symbols)<br />o fully handles the polymorphism of the logic</p>
+</div>
+<div class="section" id="version-0-5-october-12th-2006">
+<h2>version 0.5, October 12th, 2006<a class="headerlink" href="#version-0-5-october-12th-2006" title="Permalink to this headline">¶</a></h2>
+<p>o first (beta) release</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="license.html" class="btn btn-neutral float-left" title="Copyright" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Alt-Ergo devs
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
