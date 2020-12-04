@@ -33,6 +33,11 @@ mkdir -p $ODOC_DIR/$VERSION
 cp -r $ODOC_BUILD_DIR/* ./$ODOC_DIR/$VERSION/
 cp -r $SPHINX_BUILD_DIR/* ./
 
+# Bypass Jekyll
+touch .nojekyll
+touch $ODOC_DIR/.nojekyll
+touch $ODOC_DIR/$VERSION/.nojekyll
+
 # Clean build artifacts
 rm -rf _build
 rm Makefile.config
