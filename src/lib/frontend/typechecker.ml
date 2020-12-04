@@ -2150,7 +2150,8 @@ let rec type_decl (acc, env) d assertion_stack =
   | Push (loc,n) ->
     if n < 0 then
       typing_error (ShouldBePositive n) loc;
-    Util.sequentialise_n (Stack.push env) n assertion_stack;
+    Util.loop ~f:(fun _n env () -> Stack.push env assertion_stack)
+      ~max:n ~elt:env ~init:();
     let td = {c = TPush(loc,n); annot = new_id () } in
     (td,env) :: acc, env
   | Pop (loc,n) ->
@@ -2161,7 +2162,8 @@ let rec type_decl (acc, env) d assertion_stack =
       typing_error (BadPopCommand
                       {pushed = assertion_context_number; to_pop = n}) loc
     else
-      let env = Util.sequentialise_n Stack.pop n assertion_stack in
+      let env = Util.loop ~f:(fun _n () _env -> Stack.pop assertion_stack)
+          ~max:n ~elt:() ~init:env in
       let td = {c = TPop(loc,n); annot = new_id () } in
       (td,env) :: acc, env
 

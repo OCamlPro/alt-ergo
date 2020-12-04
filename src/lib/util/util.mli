@@ -74,8 +74,16 @@ type matching_env =
     backward : inst_kind
   }
 
-val sequentialise_n:
-  ('a -> 'b) -> int -> 'a -> 'b
+(** Loops from 0 to [max] and returns
+    [(f max elt ... (f 1 elt (f 0 elt init)))...)].
+    Returns [init] if [max] < 0
+*)
+val loop:
+  f : (int -> 'a -> 'b -> 'b) ->
+  max : int ->
+  elt : 'a ->
+  init : 'b ->
+  'b
 
 val print_list:
   sep:string ->

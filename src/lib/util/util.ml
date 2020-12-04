@@ -116,12 +116,18 @@ type matching_env =
     backward : inst_kind
   }
 
-let rec sequentialise_n f n s =
-  if n <= 1 then
-    f s
-  else
-    let _ = f s in
-    sequentialise_n f (n-1) s
+let loop
+    ~(f : int -> 'a -> 'b -> 'b)
+    ~(max : int)
+    ~(elt : 'a)
+    ~(init : 'b) : 'b
+  =
+  let rec loop_aux cpt acc =
+    if cpt > max then acc
+    else
+      loop_aux (cpt+1) (f cpt elt acc)
+  in
+  loop_aux 0 init
 
 let print_list ~sep ~pp fmt l =
   match l with

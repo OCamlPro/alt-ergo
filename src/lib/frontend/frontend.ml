@@ -142,15 +142,19 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep f_name)
     else Ex.empty
 
-  let process_decl print_status used_context s
+  let process_decl print_status used_context consistent_dep_stack
       ((env, consistent, dep) as acc) d =
     try
       match d.st_decl with
       | Push n ->
-        Util.sequentialise_n (Stack.push (consistent,dep)) n s;
+        Util.loop ~f:(fun _n env () -> Stack.push env consistent_dep_stack)
+          ~max:n ~elt:(consistent,dep) ~init:();
         SAT.push env n, consistent, dep
       | Pop n ->
-        let consistent,dep = Util.sequentialise_n Stack.pop n s in
+        let consistent,dep =
+          Util.loop ~f:(fun _n () _env -> Stack.pop consistent_dep_stack)
+            ~max:n ~elt:() ~init:(consistent,dep)
+        in
         SAT.pop env n, consistent, dep
       | Assume(n, f, mf) ->
         let is_hyp = try (Char.equal '@' n.[0]) with _ -> false in
