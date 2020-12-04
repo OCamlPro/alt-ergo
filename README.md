@@ -16,9 +16,12 @@ Alt-Ergo's website: [https://alt-ergo.ocamlpro.com].
 
 ## Documentation
 
-See enclosed [USAGE] for information on how to use Alt-Ergo.
+See our [general documentation] wich contains
 
-There's also an online [documentation for developers] available.
+* [installing informations]
+* the [usage section] for information on how to use Alt-Ergo.
+* A section about [input file format] supported by Alt-Ergo.
+* [API] and [developers documentation].
 
 ## Download
 
@@ -33,11 +36,11 @@ opam install alt-ergo
 Alt-Ergo is freely available for non-commercial uses (such as academic and exploratory trials) under the [OCamlPro non-commercial license 1.0].
 
 For commercial use, see the [Alt-Ergo Users' Club]. Club members with adequate membership can have access to Alt-Ergo under the [Apache Software License version 2.0].
-See enclosed [LICENSE] file for more detail.
+See the [license section] for more detail.
 
 ## Build
 
-See [installing informations] file.
+See [installing informations] section.
 
 ## Contributing
 
@@ -52,18 +55,21 @@ See [Alt-Ergo @ OCamlPro] or contact us at [alt-ergo@ocamlpro.com] for more deta
 [Alt-Ergo @ OCamlPro]: https://alt-ergo.ocamlpro.com/#services
 [Alt-Ergo Users' Club]: https://alt-ergo.ocamlpro.com/#club
 [Apache Software License version 2.0]: ./licenses/Apache-License-2.0.txt
-[contributing guidelines]: ./CONTRIBUTING.md
-[documentation for developers]: https://ocamlpro.github.io/alt-ergo/dev/
-[installing informations]: ./INSTALL.md
+[API]: https://ocamlpro.github.io/alt-ergo/API/index.html
+[contributing guidelines]: https://ocamlpro.github.io/alt-ergo/Dev/contributing.html
+[developers documentation]: https://ocamlpro.github.io/alt-ergo/Dev/index.html
+[general documentation]: https://ocamlpro.github.io/alt-ergo/
+[input file format]: https://ocamlpro.github.io/alt-ergo/Input_file_formats/index.html
+[installing informations]: https://ocamlpro.github.io/alt-ergo/Install/index.html
 [https://alt-ergo.ocamlpro.com]: https://alt-ergo.ocamlpro.com
 [latest]: https://alt-ergo.ocamlpro.com/http/alt-ergo-2.3.2/alt-ergo-2.3.2.tar.gz
-[LICENSE]: ./LICENSE.md
+[license section]: https://ocamlpro.github.io/alt-ergo/About/license.html
 [LRI]: https://www.lri.fr
 [OCamlPro]: https://www.ocamlpro.com
 [OCamlPro non-commercial license 1.0]: ./licenses/OCamlPro-Non-Commercial-License.txt
 [opam]: https://opam.ocaml.org
-[releases' page]: https://github.com/OCamlPro/alt-ergo/releases/tag/2.3.1
+[releases' page]: https://github.com/OCamlPro/alt-ergo/releases/
 [Satisfiability Modulo Theories]: https://en.wikipedia.org/wiki/Satisfiability_modulo_theories
 [try Alt-Ergo]: https://alt-ergo.ocamlpro.com/try.html
-[USAGE]: ./USAGE.md
+[usage section]: https://ocamlpro.github.io/alt-ergo/Usage/index.html
 [Why3]: http://why3.lri.fr/
