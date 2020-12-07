@@ -1054,6 +1054,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         end;
         Stack.push b acc.guards.stack_guard;
 
+        Steps.push_steps ();
+
         {acc with guards =
                     {acc.guards with
                      current_guard = b;} }
@@ -1072,6 +1074,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
               Expr.vrai
             else Stack.top acc.guards.stack_guard
           in
+
+          Steps.pop_steps ();
+
           {acc with guards =
                       { acc.guards with
                         current_guard = b;}})

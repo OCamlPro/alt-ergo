@@ -178,8 +178,40 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let all_models_sat_env = ref None
   let latest_saved_env = ref None
-  let terminated_normally = ref false
+  let terminated_normally = ref true
 
+  let refs_stack = Stack.create ()
+
+  let reset_refs () =
+    all_models_sat_env := None;
+    latest_saved_env := None;
+    terminated_normally := true;
+    Stack.clear refs_stack;
+    Steps.reset_steps ()
+
+  let save_refs env =
+    Stack.push (
+      !all_models_sat_env,
+      !latest_saved_env,
+      !terminated_normally,
+      env.model_gen_mode,
+      env.unit_facts_cache
+    ) refs_stack;
+    Steps.push_steps ()
+
+  let restore_refs env =
+    let p_all_models_sat_env,
+        p_latest_saved_env,
+        p_terminated_normally,
+        p_model_gen_mode,
+        p_unit_facts_cache
+      =
+      Stack.pop refs_stack in
+    all_models_sat_env := p_all_models_sat_env;
+    latest_saved_env := p_latest_saved_env;
+    terminated_normally := p_terminated_normally;
+    Steps.pop_steps ();
+    { env with model_gen_mode = p_model_gen_mode; unit_facts_cache = p_unit_facts_cache}
 
   exception Sat of t
   exception Unsat of Ex.t
@@ -1719,6 +1751,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           let b = E.fresh_name Ty.Tbool in
           Stack.push b acc.guards.stack_guard;
           Stack.push (unit_facts acc) acc.unit_facts_cache;
+
+          save_refs env;
+
           {acc with guards =
                       { acc.guards with
                         current_guard = b;
@@ -1747,6 +1782,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           let gf_neg_guard = mk_gf (E.neg guard_to_neg) "" true true in
           let negated_old_guards =
             (gf_neg_guard, Ex.empty ) :: acc.guards.negated_old_guards in
+
+          let acc = restore_refs acc in
+
           {acc with guards =
                       { acc.guards with
                         current_guard = b;
@@ -1904,13 +1942,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         raise e
     else assume env fg
 
-  let reset_refs () =
-    Steps.reset_steps ();
-    all_models_sat_env := None;
-    latest_saved_env := None;
-    terminated_normally := false
-
-  let empty_incremental () = {
+  let empty_guards () = {
     current_guard = Expr.vrai;
     stack_guard = Stack.create ();
     negated_old_guards = [];
@@ -1947,7 +1979,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       model_gen_mode = ref false;
       ground_preds = ME.empty;
       unit_facts_cache = Stack.create ();
-      guards = empty_incremental ();
+      guards = empty_guards ();
       add_inst = fun _ -> true;
     }
     in
