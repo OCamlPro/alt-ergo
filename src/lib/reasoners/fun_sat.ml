@@ -137,10 +137,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   end
 
-  type incremental = {
-    current_guard: E.t option;
+  type guards = {
+    current_guard: E.t;
     stack_guard: E.t Stack.t;
-    guards: SE.t;
+    negated_old_guards: (E.gformula * Ex.t) list;
   }
 
   type t = {
@@ -171,7 +171,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     heuristics : Heuristics.t ref;
     model_gen_mode : bool ref;
     ground_preds : (E.t * Explanation.t) ME.t; (* key <-> f *)
-    incremental : incremental;
+    guards : guards;
     add_inst: E.t -> bool;
     unit_facts_cache : (E.gformula * Ex.t) ME.t Stack.t;
   }
@@ -1714,24 +1714,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             Tableaux(CDCL) solver ! \
             Please use the Tableaux or CDLC SAT solvers instead"
         );
-    let rec push_aux acc n =
-      if n <= 0 then acc
-      else
-        let b = E.fresh_name Ty.Tbool in
-        Stack.push b acc.incremental.stack_guard;
-
-        Stack.push (unit_facts acc) acc.unit_facts_cache;
-
-        let incremental =
-          { acc.incremental with
-            current_guard = Some b;
-            guards = SE.add b acc.incremental.guards;
-          } in
-        push_aux
-          {acc with incremental}
-          (n-1)
-    in
-    push_aux env to_push
+    Util.loop
+      ~f:(fun _n () acc ->
+          let b = E.fresh_name Ty.Tbool in
+          Stack.push b acc.guards.stack_guard;
+          Stack.push (unit_facts acc) acc.unit_facts_cache;
+          {acc with guards =
+                      { acc.guards with
+                        current_guard = b;
+                      }})
+      ~max:to_push
+      ~elt:()
+      ~init:env
 
   let pop env to_pop =
     if Options.get_tableaux_cdcl () then
@@ -1741,40 +1735,35 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             Tableaux(CDCL) solver ! \
             Please use the Tableaux or CDLC SAT solvers instead"
         );
-    let rec pop_aux acc n =
-      if n <= 0 then acc
-      else
-        let neg_b = Stack.pop acc.incremental.stack_guard in
-        let b =
-          if Stack.is_empty acc.incremental.stack_guard then
-            None
-          else Some (Stack.top acc.incremental.stack_guard)
-        in
-        let _ = Stack.pop acc.unit_facts_cache in
-        let guards = SE.remove neg_b acc.incremental.guards in
-        let guards = SE.add (E.neg neg_b) guards in
-        pop_aux
-          {acc with incremental = { acc.incremental with
-                                    current_guard = b;
-                                    guards = guards;}}
-          (n-1)
-    in
-    pop_aux env to_pop
+    Util.loop
+      ~f:(fun _n () acc ->
+          let guard_to_neg = Stack.pop acc.guards.stack_guard in
+          let b =
+            if Stack.is_empty acc.guards.stack_guard then
+              Expr.vrai
+            else Stack.top acc.guards.stack_guard
+          in
+          let _ = Stack.pop acc.unit_facts_cache in
+          let gf_neg_guard = mk_gf (E.neg guard_to_neg) "" true true in
+          let negated_old_guards =
+            (gf_neg_guard, Ex.empty ) :: acc.guards.negated_old_guards in
+          {acc with guards =
+                      { acc.guards with
+                        current_guard = b;
+                        negated_old_guards = negated_old_guards;}})
+      ~max:to_pop
+      ~elt:()
+      ~init:env
 
   let unsat env gf =
     Debug.is_it_unsat gf;
     try
-      let pushed_assertions =
-        SE.fold (fun e acc ->
-            (mk_gf e "" true true, Ex.empty) :: acc
-          ) env.incremental.guards [] in
-
       if Options.get_tableaux_cdcl () then begin
-        cdcl_assume false env pushed_assertions;
+        cdcl_assume false env env.guards.negated_old_guards;
         cdcl_assume false env [gf,Ex.empty];
       end;
 
-      let env = assume env pushed_assertions in
+      let env = assume env env.guards.negated_old_guards in
 
       let env = assume env [gf, Ex.empty] in
       let env =
@@ -1837,11 +1826,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
 
   let add_guard env gf =
-    match env.incremental.current_guard with
-    | None -> gf
-    | Some e ->
-      let guarded_e = E.mk_imp e gf.E.ff 1 in
-      {gf with E.ff = guarded_e}
+    let current_guard = env.guards.current_guard in
+    {gf with E.ff = E.mk_imp current_guard gf.E.ff 1}
 
   let assume env fg dep =
     try
@@ -1878,7 +1864,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        inst = Inst.add_predicate env.inst gf dep }
     else
       begin
-        if Stack.is_empty env.incremental.stack_guard then
+        if Stack.is_empty env.guards.stack_guard then
           assert (not (ME.mem a_t env.ground_preds));
         if E.equal a_t f || E.equal (E.neg a_t) f then assume env gf dep
         else match E.form_view f with
@@ -1925,9 +1911,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     terminated_normally := false
 
   let empty_incremental () = {
-    current_guard = None;
+    current_guard = Expr.vrai;
     stack_guard = Stack.create ();
-    guards = SE.empty;
+    negated_old_guards = [];
   }
 
   let empty () =
@@ -1961,7 +1947,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       model_gen_mode = ref false;
       ground_preds = ME.empty;
       unit_facts_cache = Stack.create ();
-      incremental = empty_incremental ();
+      guards = empty_incremental ();
       add_inst = fun _ -> true;
     }
     in

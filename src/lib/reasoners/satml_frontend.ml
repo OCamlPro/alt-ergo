@@ -25,8 +25,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let reset_refs () = Steps.reset_steps ()
 
-  type incremental = {
-    current_guard: E.t option;
+  type guards = {
+    current_guard: E.t;
     stack_guard: E.t Stack.t;
   }
 
@@ -45,11 +45,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     ground_preds : (E.gformula * Ex.t) ME.t; (* key <-> f *)
     skolems : E.gformula ME.t; (* key <-> f *)
     add_inst : E.t -> bool;
-    incremental : incremental;
+    guards : guards;
   }
 
-  let empty_incremental () = {
-    current_guard = None;
+  let empty_guards () = {
+    current_guard = Expr.vrai;
     stack_guard = Stack.create ();
   }
 
@@ -67,7 +67,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       inst = Inst.empty;
       ground_preds = ME.empty;
       skolems = ME.empty;
-      incremental = empty_incremental ();
+      guards = empty_guards ();
       add_inst = fun _ -> true;
     }
 
@@ -451,7 +451,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       {env with inst = Inst.add_predicate env.inst (mk_gf f) dep}
     else
       begin
-        if Stack.is_empty env.incremental.stack_guard then
+        if Stack.is_empty env.guards.stack_guard then
           assert (not (ME.mem a_t env.ground_preds));
         let f_simpl = factorize_iff a_t f in
         (* a_t <-> f_simpl *)
@@ -1038,14 +1038,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if get_model () then fails "model"
 
   let push env to_push =
-    let rec push_aux acc n =
-      if n <= 0 then acc
-      else
+    Util.loop ~f:(fun _n () acc ->
         let b = E.fresh_name Ty.Tbool in
         let mf_b = mk_gf b in
         let acc, pending = pre_assume_aux acc [mf_b] in
 
-        SAT.set_new_proxies acc.satml acc.proxies;
         let nbv = FF.nb_made_vars acc.ff_hcons_env in
         let unit, nunit = SAT.new_vars acc.satml ~nbv
             pending.new_vars pending.unit pending.nunit in
@@ -1055,41 +1052,36 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             SAT.push acc.satml guard;
           | _, _ -> assert false
         end;
-        Stack.push b acc.incremental.stack_guard;
-        push_aux
-          {acc with incremental =
-                      {acc.incremental with
-                       current_guard = Some b;} }
-          (n-1)
-    in
-    push_aux env to_push
+        Stack.push b acc.guards.stack_guard;
+
+        {acc with guards =
+                    {acc.guards with
+                     current_guard = b;} }
+      )
+      ~max:to_push
+      ~elt:()
+      ~init:env
 
   let pop env to_pop =
-    let rec pop_aux acc n =
-      if n <= 0  then acc
-      else begin
-        SAT.pop acc.satml;
-        let _ = Stack.pop acc.incremental.stack_guard in
-        let b =
-          if Stack.is_empty acc.incremental.stack_guard then
-            None
-          else Some (Stack.top acc.incremental.stack_guard)
-        in
-        pop_aux
-          {acc with incremental =
-                      { acc.incremental with
-                        current_guard = b;}}
-          (n-1)
-      end
-    in
-    pop_aux env to_pop
+    Util.loop
+      ~f:(fun _n () acc ->
+          SAT.pop acc.satml;
+          let _ = Stack.pop acc.guards.stack_guard in
+          let b =
+            if Stack.is_empty acc.guards.stack_guard then
+              Expr.vrai
+            else Stack.top acc.guards.stack_guard
+          in
+          {acc with guards =
+                      { acc.guards with
+                        current_guard = b;}})
+      ~max:to_pop
+      ~elt:()
+      ~init:env
 
   let add_guard env gf =
-    match env.incremental.current_guard with
-    | None -> gf
-    | Some e ->
-      let guarded_e = E.mk_imp e gf.E.ff 1 in
-      {gf with E.ff = guarded_e}
+    let current_guard = env.guards.current_guard in
+    {gf with E.ff = E.mk_imp current_guard gf.E.ff 1}
 
   let unsat env gf =
     checks_implemented_features ();
