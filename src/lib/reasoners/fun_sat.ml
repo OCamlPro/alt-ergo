@@ -173,7 +173,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     ground_preds : (E.t * Explanation.t) ME.t; (* key <-> f *)
     guards : guards;
     add_inst: E.t -> bool;
-    unit_facts_cache : (E.gformula * Ex.t) ME.t Stack.t;
+    unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
   }
 
   let all_models_sat_env = ref None
@@ -195,7 +195,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       !latest_saved_env,
       !terminated_normally,
       env.model_gen_mode,
-      env.unit_facts_cache
+      !(env.unit_facts_cache)
     ) refs_stack;
     Steps.push_steps ()
 
@@ -211,7 +211,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     latest_saved_env := p_latest_saved_env;
     terminated_normally := p_terminated_normally;
     Steps.pop_steps ();
-    { env with model_gen_mode = p_model_gen_mode; unit_facts_cache = p_unit_facts_cache}
+    { env with
+      model_gen_mode = p_model_gen_mode;
+      unit_facts_cache = ref p_unit_facts_cache}
 
   exception Sat of t
   exception Unsat of Ex.t
@@ -706,19 +708,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       true
     with Not_found -> false
 
-  let unit_facts env =
-    try Stack.top env.unit_facts_cache
-    with Stack.Empty ->
-      Stack.push ME.empty env.unit_facts_cache;
-      ME.empty
-
   let update_unit_facts env ff dep =
     let f = ff.E.ff in
-    if get_sat_learning () && not (ME.mem f (unit_facts env)) then
+    if get_sat_learning () && not (ME.mem f !(env.unit_facts_cache)) then
       begin
         assert (Ex.has_no_bj dep);
-        let _ = Stack.pop env.unit_facts_cache in
-        Stack.push (ME.add f (ff, dep) (unit_facts env)) env.unit_facts_cache
+        env.unit_facts_cache := ME.add f (ff, dep) !(env.unit_facts_cache)
       end
 
   let learn_clause ({ gamma; _ } as env) ff0 dep =
@@ -777,7 +772,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let nf = E.neg ff.E.ff in
     let nff = {ff with E.ff = nf} in
     try
-      let _, ex = ME.find nf (unit_facts env) in
+      let _, ex = ME.find nf !(env.unit_facts_cache) in
       Some(ex, []), true
     with Not_found ->
     try
@@ -847,7 +842,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     fun env gf red ->
       let nf = E.neg red in
-      try let ff, _ = ME.find nf (unit_facts env) in aux gf ff
+      try let ff, _ = ME.find nf !(env.unit_facts_cache) in aux gf ff
       with Not_found ->
       try let ff, _, _, _ = ME.find nf env.gamma in aux gf ff
       with Not_found -> gf
@@ -1310,7 +1305,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            with Not_found ->
            try
              (*if no_sat_learning() then raise Not_found;*)
-             let _, ex = ME.find f (unit_facts env) in
+             let _, ex = ME.find f !(env.unit_facts_cache) in
              Ex.union dep ex, ({gf with E.ff=f}, ex) :: acc
            with Not_found ->
            match E.form_view f with
@@ -1466,7 +1461,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let propagate_unit_facts_in_cache env =
     if get_no_sat_learning() then None
     else
-      let cache = (unit_facts env) in
+      let cache = !(env.unit_facts_cache) in
       let in_cache f =
         try Some (snd (ME.find f cache))
         with Not_found -> None
@@ -1748,12 +1743,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         );
     Util.loop
       ~f:(fun _n () acc ->
+          save_refs env;
           let b = E.fresh_name Ty.Tbool in
           Stack.push b acc.guards.stack_guard;
-          Stack.push (unit_facts acc) acc.unit_facts_cache;
-
-          save_refs env;
-
           {acc with guards =
                       { acc.guards with
                         current_guard = b;
@@ -1772,19 +1764,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         );
     Util.loop
       ~f:(fun _n () acc ->
+          let acc = restore_refs acc in
           let guard_to_neg = Stack.pop acc.guards.stack_guard in
           let b =
             if Stack.is_empty acc.guards.stack_guard then
               Expr.vrai
             else Stack.top acc.guards.stack_guard
           in
-          let _ = Stack.pop acc.unit_facts_cache in
           let gf_neg_guard = mk_gf (E.neg guard_to_neg) "" true true in
           let negated_old_guards =
             (gf_neg_guard, Ex.empty ) :: acc.guards.negated_old_guards in
-
-          let acc = restore_refs acc in
-
           {acc with guards =
                       { acc.guards with
                         current_guard = b;
@@ -1978,7 +1967,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       heuristics = ref (Heuristics.empty ());
       model_gen_mode = ref false;
       ground_preds = ME.empty;
-      unit_facts_cache = Stack.create ();
+      unit_facts_cache = ref ME.empty;
       guards = empty_guards ();
       add_inst = fun _ -> true;
     }
