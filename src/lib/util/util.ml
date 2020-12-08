@@ -123,7 +123,7 @@ let loop
     ~(init : 'b) : 'b
   =
   let rec loop_aux cpt acc =
-    if cpt > max then acc
+    if cpt >= max then acc
     else
       loop_aux (cpt+1) (f cpt elt acc)
   in
