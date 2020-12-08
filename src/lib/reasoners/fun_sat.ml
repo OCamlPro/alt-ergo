@@ -194,7 +194,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       !all_models_sat_env,
       !latest_saved_env,
       !terminated_normally,
-      env.model_gen_mode,
       !(env.unit_facts_cache)
     ) refs_stack;
     Steps.push_steps ()
@@ -203,7 +202,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let p_all_models_sat_env,
         p_latest_saved_env,
         p_terminated_normally,
-        p_model_gen_mode,
         p_unit_facts_cache
       =
       Stack.pop refs_stack in
@@ -212,7 +210,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     terminated_normally := p_terminated_normally;
     Steps.pop_steps ();
     { env with
-      model_gen_mode = p_model_gen_mode;
       unit_facts_cache = ref p_unit_facts_cache}
 
   exception Sat of t
@@ -1774,10 +1771,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           let gf_neg_guard = mk_gf (E.neg guard_to_neg) "" true true in
           let negated_old_guards =
             (gf_neg_guard, Ex.empty ) :: acc.guards.negated_old_guards in
+          acc.model_gen_mode := false;
           {acc with guards =
                       { acc.guards with
                         current_guard = b;
-                        negated_old_guards = negated_old_guards;}})
+                        negated_old_guards = negated_old_guards;}}
+        )
       ~max:to_pop
       ~elt:()
       ~init:env
