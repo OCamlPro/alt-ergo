@@ -52,10 +52,14 @@ let mult_a = ref 0
 let all_steps = Stack.create ()
 
 let push_steps () =
-  Stack.push (!naive_steps,!steps,!mult_f,!mult_m,!mult_s,!mult_uf,!mult_b,!mult_a) all_steps
+  Stack.push
+    (!naive_steps,!steps,!mult_f,!mult_m,
+     !mult_s,!mult_uf,!mult_b,!mult_a)
+    all_steps
 
 let pop_steps () =
-  let p_naive_steps,p_steps, p_mult_f, p_mult_m, p_mult_s, p_mult_uf, p_mult_b, p_mult_a =
+  let p_naive_steps,p_steps, p_mult_f, p_mult_m,
+      p_mult_s, p_mult_uf, p_mult_b, p_mult_a =
     Stack.pop all_steps in
   naive_steps := p_naive_steps;
   steps := p_steps;
