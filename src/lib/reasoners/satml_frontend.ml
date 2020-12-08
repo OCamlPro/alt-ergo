@@ -1039,20 +1039,21 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let create_guard env =
     let expr_guard = E.fresh_name Ty.Tbool in
-    (* simplify will create a new var corresponding of the lit expr_guard *)
-    let _ff, _axs, new_vars =
+    let ff, axs, new_vars =
       FF.simplify env.ff_hcons_env expr_guard
         (fun f -> ME.find f env.abstr_of_axs) []
     in
-    (* we recover the atom atom_guard corresponding of the expr expr_guard *)
-    let atom_guard, new_vars =
-      FF.atom_of_lit env.ff_hcons_env expr_guard false new_vars in
-    let nbv = FF.nb_made_vars env.ff_hcons_env in
-
-    (* Need to use new_vars function to add the new_var corresponding to
-       the atom atom_guard in the satml env *)
-    let _ = SAT.new_vars env.satml ~nbv new_vars [[atom_guard]] [] in
-    expr_guard, atom_guard
+    assert (axs == []);
+    match FF.view ff, new_vars with
+    | FF.UNIT atom_guard, [v] ->
+      assert (Atom.eq_atom atom_guard v.pa);
+      let nbv = FF.nb_made_vars env.ff_hcons_env in
+      (* Need to use new_vars function to add the new_var corresponding to
+         the atom atom_guard in the satml env *)
+      let u, nu = SAT.new_vars env.satml ~nbv new_vars [] [] in
+      assert (u == [] && nu == []);
+      expr_guard, atom_guard
+    | _ -> assert false
 
   let push env to_push =
     Util.loop ~f:(fun _n () acc ->

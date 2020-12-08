@@ -127,13 +127,6 @@ module type FLAT_FORMULA = sig
     t * (Expr.t * (t * Atom.atom)) list
     * Atom.var list
 
-  val atom_of_lit :
-    hcons_env ->
-    Expr.t ->
-    bool ->
-    Atom.var list ->
-    Atom.atom * Atom.var list
-
   val get_proxy_of : t ->
     (Atom.atom * Atom.atom list * bool) Util.MI.t -> Atom.atom option
 
