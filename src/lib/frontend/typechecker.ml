@@ -2162,10 +2162,11 @@ let rec type_decl (acc, env) d assertion_stack =
       typing_error (BadPopCommand
                       {pushed = assertion_context_number; to_pop = n}) loc
     else
+      let old_env = env in
       let env = Util.loop ~f:(fun _n () _env -> Stack.pop assertion_stack)
           ~max:n ~elt:() ~init:env in
       let td = {c = TPop(loc,n); annot = new_id () } in
-      (td,env) :: acc, env
+      (td,old_env) :: acc, env
 
   | Theory (loc, name, ext, l) ->
     Options.tool_req 1 "TR-Typing-TheoryDecl$_F$";
