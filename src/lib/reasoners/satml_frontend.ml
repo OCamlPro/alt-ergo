@@ -855,18 +855,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | Satml.Unsat (lc) -> raise (IUnsat (env, make_explanation lc))
       | Satml.Sat -> assert false
 
-  let pre_assume_aux env l =
+  let assume_aux_bis ~dec_lvl env l =
+    (*fprintf fmt "@.assume aux: %d@." (List.length l);*)
     let pending = {
       seen_f = SE.empty; activate = FF.Map.empty;
       new_vars = []; unit = []; nunit = []; updated = false;
       new_abstr_vars = [];
     }
     in
-    List.fold_left pre_assume (env, pending) l
-
-  let assume_aux_bis ~dec_lvl env l =
-    (*fprintf fmt "@.assume aux: %d@." (List.length l);*)
-    let env, pending = pre_assume_aux env l in
+    let env, pending = List.fold_left pre_assume (env, pending) l in
     cdcl_assume env pending ~dec_lvl;
     env, pending.updated, pending.new_abstr_vars
 

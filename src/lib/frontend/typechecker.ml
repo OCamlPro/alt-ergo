@@ -2308,10 +2308,10 @@ let type_parsed env s d =
 
 let type_file ld =
   let env = Env.empty in
-  let s = Stack.create () in
+  let assertion_stack = Stack.create () in
   let ltd, env =
     List.fold_left
-      (fun acc d -> type_decl acc d s) ([], env) ld
+      (fun acc d -> type_decl acc d assertion_stack) ([], env) ld
   in
   List.rev ltd, env
 
