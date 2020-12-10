@@ -140,7 +140,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   type guards = {
     current_guard: E.t;
     stack_guard: E.t Stack.t;
-    negated_old_guards: (E.gformula * Ex.t) list;
+    guards: (E.gformula * Ex.t) ME.t;
   }
 
   type t = {
@@ -1741,11 +1741,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Util.loop
       ~f:(fun _n () acc ->
           save_refs env;
-          let b = E.fresh_name Ty.Tbool in
-          Stack.push b acc.guards.stack_guard;
+          let new_guard = E.fresh_name Ty.Tbool in
+          Stack.push new_guard acc.guards.stack_guard;
+          let guards = ME.add new_guard
+              (mk_gf new_guard "" true true,Ex.empty)
+              acc.guards.guards in
           {acc with guards =
                       { acc.guards with
-                        current_guard = b;
+                        current_guard = new_guard;
+                        guards = guards;
                       }})
       ~max:to_push
       ~elt:()
@@ -1763,19 +1767,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       ~f:(fun _n () acc ->
           let acc = restore_refs acc in
           let guard_to_neg = Stack.pop acc.guards.stack_guard in
-          let b =
+          let new_current_guard =
             if Stack.is_empty acc.guards.stack_guard then
               Expr.vrai
             else Stack.top acc.guards.stack_guard
           in
-          let gf_neg_guard = mk_gf (E.neg guard_to_neg) "" true true in
-          let negated_old_guards =
-            (gf_neg_guard, Ex.empty ) :: acc.guards.negated_old_guards in
+          let guards = ME.add guard_to_neg
+              (mk_gf (E.neg guard_to_neg) "" true true,Ex.empty)
+              acc.guards.guards
+          in
           acc.model_gen_mode := false;
           {acc with guards =
                       { acc.guards with
-                        current_guard = b;
-                        negated_old_guards = negated_old_guards;}}
+                        current_guard = new_current_guard;
+                        guards = guards;}}
         )
       ~max:to_pop
       ~elt:()
@@ -1784,13 +1789,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let unsat env gf =
     Debug.is_it_unsat gf;
     try
+      let guards_to_assume =
+        ME.fold (fun _g gf_guard_with_ex acc ->
+            gf_guard_with_ex :: acc
+          ) env.guards.guards [] in
+
       if Options.get_tableaux_cdcl () then begin
-        cdcl_assume false env env.guards.negated_old_guards;
+        cdcl_assume false env guards_to_assume;
         cdcl_assume false env [gf,Ex.empty];
       end;
 
-      let env = assume env env.guards.negated_old_guards in
-
+      let env = assume env guards_to_assume in
       let env = assume env [gf, Ex.empty] in
       let env =
         {env with inst = (* add all the terms of the goal to matching env *)
@@ -1933,7 +1942,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let empty_guards () = {
     current_guard = Expr.vrai;
     stack_guard = Stack.create ();
-    negated_old_guards = [];
+    guards = ME.empty;
   }
 
   let empty () =
