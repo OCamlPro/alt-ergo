@@ -59,7 +59,7 @@ let set_fmt_usc f = fmt_usc := f
 (* Declaration of all the options as refs with default values *)
 
 type model = MNone | MDefault | MAll | MComplete
-type instantiation_heuristic = IFrugal | INormal | IGreedy
+type instantiation_heuristic = INormal | IAuto | IGreedy
 
 type input_format = Native | Smtlib2 | Why3 (* | SZS *) | Unknown of string
 type output_format = input_format
@@ -333,7 +333,7 @@ let get_verbose () = !verbose
 
 (** Quantifiers options *)
 
-let instantiation_heuristic = ref INormal
+let instantiation_heuristic = ref IAuto
 let instantiate_after_backjump = ref false
 let max_multi_triggers_size = ref 4
 let nb_triggers = ref 2

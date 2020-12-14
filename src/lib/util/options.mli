@@ -38,7 +38,7 @@
 type model = MNone | MDefault | MAll | MComplete
 
 (** Type used to describe the type of heuristic for instantiation wanted *)
-type instantiation_heuristic  = IFrugal | INormal | IGreedy
+type instantiation_heuristic  = INormal | IAuto | IGreedy
 
 (** Type used to describe the type of input wanted by
     {!val:set_input_format} *)
@@ -740,9 +740,9 @@ val get_verbose : unit -> bool
 (** {4 Quantifier options} *)
 
 (** Value specifying the instantiation heuristic. possible values are
-    {ul {- frugal} {- normal} {- greedy}}. *)
+    {ul {- normal} {- auto} {- greedy}}. *)
 val get_instantiation_heuristic : unit -> instantiation_heuristic
-(** Default to [INormal] *)
+(** Default to [IAuto] *)
 
 (** [true] is the greedy instantiation heuristic is set *)
 val get_greedy : unit -> bool

@@ -1364,10 +1364,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let greedy_instantiation env =
     match get_instantiation_heuristic () with
-    | IFrugal ->
+    | INormal ->
       return_answer env 1
         (fun e -> raise (I_dont_know e))
-    | INormal | IGreedy ->
+    | IAuto | IGreedy ->
       let rec greedy_instantiation_aux env greedier =
         let gre_inst =
           ME.fold

@@ -948,10 +948,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              do_instantiation env sa mconf debug ~dec_lvl
         )(env, false)
         (match get_instantiation_heuristic () with
-         | IFrugal ->
+         | INormal ->
            [ frugal_mconf (), "frugal-inst", false, true ;
              normal_mconf (), "normal-inst", false, false ]
-         | INormal | IGreedy ->
+         | IAuto | IGreedy ->
            [ frugal_mconf (), "frugal-inst", false, true ;
              normal_mconf (), "normal-inst", false, false;
              greedy_mconf (), "greedy-inst", true , false;

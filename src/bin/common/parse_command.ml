@@ -37,16 +37,16 @@ let model_printer fmt model = Format.fprintf fmt "%s" (model_to_string model)
 let model_conv = Arg.conv ~docv:"MDL" (model_parser, model_printer)
 
 let instantiation_heuristic_parser = function
-  | "frugal" | "light" -> Ok IFrugal
-  | "default" | "normal" -> Ok INormal
-  | "greedy" | "heavy" -> Ok IGreedy
+  | "normal" -> Ok INormal
+  | "auto" -> Ok IAuto
+  | "greedy" -> Ok IGreedy
   | s ->
     Error (`Msg ("Option --instantiation-heuristic does not accept\
                   the argument \"" ^ s))
 
 let instantiation_heuristic_to_string = function
-  | IFrugal -> "frugal"
   | INormal -> "normal"
+  | IAuto -> "auto"
   | IGreedy -> "greedy"
 
 let instantiation_heuristic_printer fmt instantiation_heuristic =
@@ -969,13 +969,13 @@ let parse_quantifiers_opt =
          $(docv) must be %s. By default %s is used for both sat solvers. \
          %s does one less phase of instantiation. \
          %s use all available ground terms in instantiation."
-        (Arg.doc_alts ["light"; "normal"; "heavy"])
+        (Arg.doc_alts ["normal"; "auto"; "greedy"])
+        (Arg.doc_quote "auto")
         (Arg.doc_quote "normal")
-        (Arg.doc_quote "light")
-        (Arg.doc_quote "heavy")
+        (Arg.doc_quote "greedy")
     in
     let docv = "VAL" in
-    Arg.(value & opt instantiation_heuristic_conv INormal &
+    Arg.(value & opt instantiation_heuristic_conv IAuto &
          info ["instantiation-heuristic"] ~docv ~docs ~doc) in
 
   let instantiate_after_backjump =
