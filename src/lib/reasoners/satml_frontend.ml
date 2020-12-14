@@ -947,11 +947,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              let sa = instantiation_context env ~greedy_round ~frugal in
              do_instantiation env sa mconf debug ~dec_lvl
         )(env, false)
-        [ frugal_mconf (), "frugal-inst", false, true ;
-          normal_mconf (), "normal-inst", false, false;
-          greedy_mconf (), "greedy-inst", true , false;
-          greedier_mconf (), "greedier-inst", true, false ]
-
+        (match get_instantiation_heuristic () with
+         | INormal ->
+           [ frugal_mconf (), "frugal-inst", false, true ;
+             normal_mconf (), "normal-inst", false, false ]
+         | IAuto | IGreedy ->
+           [ frugal_mconf (), "frugal-inst", false, true ;
+             normal_mconf (), "normal-inst", false, false;
+             greedy_mconf (), "greedy-inst", true , false;
+             greedier_mconf (), "greedier-inst", true, false ])
 
   let rec unsat_rec env ~first_call:_ : unit =
     try SAT.solve env.satml; assert false
