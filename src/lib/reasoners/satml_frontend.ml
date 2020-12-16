@@ -502,7 +502,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       new_abstr_vars
     end
 
-  let expand_skolems env acc sa =
+  let expand_skolems env acc sa inst_quantif =
     List.fold_left
       (fun acc a ->
          if get_debug_sat () && get_verbose () then
@@ -510,14 +510,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              ~module_name:"Satml_frontend" ~function_name:"expand_skolems"
              "expand skolem of %a" E.print a;
          try
-           let { E.ff = f; _ } as gf = ME.find a env.skolems in
-           if not (Options.get_cdcl_tableaux ()) &&
-              ME.mem f env.gamma then acc
-           else gf :: acc
+           if inst_quantif a then
+             let { E.ff = f; _ } as gf = ME.find a env.skolems in
+             if not (Options.get_cdcl_tableaux ()) && ME.mem f env.gamma then
+               acc
+             else
+               gf :: acc
+           else
+             acc
          with Not_found -> acc
       ) acc sa
 
-  let inst_env_from_atoms env acc sa =
+  let inst_env_from_atoms env acc sa inst_quantif =
     List.fold_left
       (fun (inst, acc) a ->
          let gf = mk_gf E.vrai in
@@ -529,7 +533,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          (* ax <-> a, if ax exists in axs_of_abstr *)
          try
            let ax, at = ME.find a env.axs_of_abstr in
-           internal_axiom_def ax a at inst, acc
+           if inst_quantif a then
+             internal_axiom_def ax a at inst, acc
+           else
+             inst, acc
          with Not_found -> inst, acc
       ) (env.inst, acc) sa
 
@@ -683,7 +690,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | true , false -> atoms_from_bmodel env
       | true,  true  -> atoms_from_lazy_greedy env
     in
-    SE.elements sa
+    let inst_quantif =
+      if get_cdcl_tableaux_inst () then
+        let frugal = atoms_from_lazy_sat ~frugal:true env in
+        (fun a -> SE.mem a frugal)
+      else
+        (fun _ -> true)
+    in
+    SE.elements sa, inst_quantif
     [@ocaml.ppwarning "Issue for greedy: terms inside lemmas not extracted"]
 
   let terms_from_dec_proc env =
@@ -702,8 +716,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                        that are facts with TRUE by mk_lit (and simplify)"]
 
 
-  let new_instances use_cs env sa acc =
-    let inst, acc = inst_env_from_atoms env acc sa in
+  let new_instances use_cs env sa inst_quantif acc =
+    let inst, acc = inst_env_from_atoms env acc sa inst_quantif in
     let inst = terms_from_dec_proc {env with inst=inst} in
     mround use_cs {env with inst = inst} acc
 
@@ -867,7 +881,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     match bot_abstr_vars with
     | [] -> env, updated
     | _ ->
-      let res = expand_skolems env [] bot_abstr_vars in
+      let res = expand_skolems env [] bot_abstr_vars (fun _ -> true) in
       if res == [] then env, updated
       else
         let env, updated' = assume_aux ~dec_lvl env res in
@@ -910,11 +924,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
      greedy = true;
     }
 
-  let do_instantiation env sa mconf msg ~dec_lvl =
+  let do_instantiation env sa inst_quantif mconf msg ~dec_lvl =
     Debug.new_instances msg env;
     let l = instantiate_ground_preds env [] sa in
-    let l = expand_skolems env l sa in
-    let l = new_instances mconf env sa l in
+    let l = expand_skolems env l sa inst_quantif in
+    let l = new_instances mconf env sa inst_quantif l in
     let env, updated = assume_aux ~dec_lvl env l in
     env, updated
 
@@ -930,22 +944,25 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Force_normal ->
       let mconf = frugal_mconf () in (* take frugal_mconf if normal is forced *)
       let env = {env with last_forced_normal = nb_mrounds} in
-      let sa = instantiation_context env ~greedy_round:false ~frugal:false in
-      do_instantiation env sa mconf "normal-inst (forced)" ~dec_lvl
+      let sa, inst_quantif =
+        instantiation_context env ~greedy_round:false ~frugal:false in
+      do_instantiation env sa inst_quantif mconf "normal-inst (forced)" ~dec_lvl
 
     | Force_greedy ->
       let mconf = normal_mconf () in (*take normal_mconf if greedy is forced*)
       let env = {env with last_forced_greedy = nb_mrounds} in
-      let sa = instantiation_context env ~greedy_round:true ~frugal:false in
-      do_instantiation env sa mconf "greedy-inst (forced)" ~dec_lvl
+      let sa, inst_quantif =
+        instantiation_context env ~greedy_round:true ~frugal:true in
+      do_instantiation env sa inst_quantif mconf "greedy-inst (forced)" ~dec_lvl
 
     | Auto ->
       List.fold_left
         (fun ((env, updated) as acc) (mconf, debug, greedy_round, frugal) ->
            if updated then acc
            else
-             let sa = instantiation_context env ~greedy_round ~frugal in
-             do_instantiation env sa mconf debug ~dec_lvl
+             let sa, inst_quantif =
+               instantiation_context env ~greedy_round ~frugal in
+             do_instantiation env sa inst_quantif mconf debug ~dec_lvl
         )(env, false)
         (match get_instantiation_heuristic () with
          | INormal ->
