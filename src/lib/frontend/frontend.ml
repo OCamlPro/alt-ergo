@@ -256,6 +256,15 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | Query(g,_,_) -> Some g
       | _ -> None
     in
+    let why3_counterexample =
+      let why3_output =
+        match Options.get_output_format () with
+        | Why3 -> true
+        | Smtlib2 | Native | Unknown _ -> false
+      in
+      why3_output || Options.get_why3_counterexample ()
+    in
+
     let time = Time.value() in
     match status with
     | Unsat (d, dep) ->
@@ -288,13 +297,13 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout (Some d) ->
-      if not (Options.get_why3_counterexample ()) then
+      if not why3_counterexample then
         let loc = d.st_loc in
         Printer.print_status_timeout ~validity_mode
           (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout None ->
-      if not (Options.get_why3_counterexample ()) then
+      if not why3_counterexample then
         Printer.print_status_timeout ~validity_mode
           None (Some time) (Some steps) None;
 
