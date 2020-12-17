@@ -348,7 +348,9 @@ let get_verbose () = !verbose
 
 (** Quantifiers options *)
 
+
 let instantiation_heuristic = ref IAuto
+let fast = ref false
 let instantiate_after_backjump = ref false
 let max_multi_triggers_size = ref 4
 let nb_triggers = ref 2
@@ -357,7 +359,9 @@ let no_user_triggers = ref false
 let normalize_instances = ref false
 let triggers_var = ref false
 
+
 let set_instantiation_heuristic i = instantiation_heuristic := i
+let set_fast b = fast := b
 let set_instantiate_after_backjump b = instantiate_after_backjump := b
 let set_max_multi_triggers_size b = max_multi_triggers_size := b
 let set_nb_triggers b = nb_triggers := b
@@ -368,6 +372,7 @@ let set_triggers_var b = triggers_var := b
 
 let get_instantiation_heuristic () = !instantiation_heuristic
 let get_greedy () = !instantiation_heuristic = IGreedy
+let get_fast () = !fast
 let get_instantiate_after_backjump () = !instantiate_after_backjump
 let get_max_multi_triggers_size () = !max_multi_triggers_size
 let get_nb_triggers () = !nb_triggers
