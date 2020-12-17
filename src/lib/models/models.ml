@@ -357,9 +357,11 @@ module Why3CounterExample = struct
     let assertions = SE.fold (fun e acc ->
         (asprintf "%s(assert %a)@ " acc SmtlibCounterExample.pp_term e)
       ) prop_model "" in
+    Printer.print_fmt ~flushed:false fmt "@ ; constants@ ";
     Sorts.iter (fun _ (name,ty) ->
         Printer.print_fmt ~flushed:false fmt "(declare-const %s %s)@ " name ty
       ) !constraints;
+    Printer.print_fmt ~flushed:false fmt "@ ; assertions@ ";
     Printer.print_fmt fmt ~flushed:false "%s" assertions
 
 end
