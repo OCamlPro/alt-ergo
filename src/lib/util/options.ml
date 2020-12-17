@@ -63,6 +63,7 @@ let set_fmt_usc f = fmt_usc := f
 
 type model = MNone | MDefault | MAll | MComplete
 type instantiation_heuristic = INormal | IAuto | IGreedy
+type interpretation = INone | IFirst | IBefore_inst | IBefore_dec | IBefore_end
 
 type input_format = Native | Smtlib2 | Why3 (* | SZS *) | Unknown of string
 type output_format = input_format
@@ -295,7 +296,7 @@ let get_timelimit_per_goal () = !timelimit_per_goal
 
 (** Output options *)
 
-let interpretation = ref 0
+let interpretation = ref INone
 let model = ref MNone
 let output_format = ref Native
 let infer_output_format = ref true
@@ -309,7 +310,15 @@ let set_infer_output_format f = infer_output_format := f = None
 let set_unsat_core b = unsat_core := b
 let set_why3_counterexample b = why3_counterexample := b
 
-let get_interpretation () = !interpretation
+let get_interpretation () =
+  !interpretation = IFirst ||
+  !interpretation = IBefore_dec ||
+  !interpretation = IBefore_inst ||
+  !interpretation = IBefore_end
+let get_first_interpretation () = !interpretation = IFirst
+let get_before_dec_interpretation () = !interpretation = IBefore_dec
+let get_before_inst_interpretation () = !interpretation = IBefore_inst
+let get_before_end_interpretation () = !interpretation = IBefore_end
 let get_model () = !model = MDefault || !model = MComplete
 let get_complete_model () = !model = MComplete
 let get_all_models () = !model = MAll
