@@ -34,7 +34,15 @@ module type S = sig
   val empty : t
   val add_terms : t -> Expr.Set.t -> Expr.gformula -> t
   val add_lemma : t -> Expr.gformula -> Explanation.t -> t
-  val add_predicate : t -> Expr.gformula -> Explanation.t -> t
+  val add_predicate :
+    t ->
+    name:string ->
+    Expr.gformula ->
+    Explanation.t ->
+    t
+
+  val ground_pred_defn:
+    Expr.t -> t -> (Expr.t * Explanation.t) option
 
   val m_lemmas :
     Util.matching_env ->

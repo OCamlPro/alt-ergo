@@ -41,7 +41,15 @@ module type S = sig
   val empty : t
   val add_terms : t -> SE.t -> Expr.gformula -> t
   val add_lemma : t -> Expr.gformula -> Ex.t -> t
-  val add_predicate : t -> Expr.gformula -> Ex.t -> t
+  val add_predicate :
+    t ->
+    name:string ->
+    Expr.gformula ->
+    Ex.t ->
+    t
+
+  val ground_pred_defn:
+    Expr.t -> t -> (Expr.t * Explanation.t) option
 
   val m_lemmas :
     Util.matching_env ->
@@ -88,6 +96,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   type t = {
     lemmas : (int * Ex.t) ME.t;
     predicates : (int * Ex.t) ME.t;
+    ground_preds : (E.t * Explanation.t) ME.t; (* key <-> f *)
     matching : EM.t;
   }
 
@@ -95,6 +104,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     lemmas = ME.empty ;
     matching = EM.empty;
     predicates = ME.empty;
+    ground_preds = ME.empty
   }
 
   module Debug = struct
@@ -134,15 +144,37 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     { env with
       matching = SE.fold (EM.add_term infos) s env.matching }
 
-  let add_predicate env gf ex =
-    let { Expr.ff = f; age = age; _ } = gf in
-    { env with
-      predicates = ME.add f (age, ex) env.predicates;
-      (* this is not done in SAT*)
-      matching = EM.max_term_depth env.matching (E.depth f)
-    }
+  let add_predicate env ~name gf ex =
+    match E.form_view gf.E.ff with
+    | E.Iff(f1, f2) ->
+      let p = E.mk_term (Symbols.name name) [] Ty.Tbool in
+      let defn =
+        if E.equal f1 p then f2
+        else if E.equal f2 p then f1
+        else assert false
+      in
+      let gp = ME.add p (defn, ex) env.ground_preds in
+      let gp = ME.add (E.neg p) (E.neg defn, ex) gp in
+      {env with ground_preds = gp}
+
+    | E.Lemma _ ->
+      let { Expr.ff = f; age = age; _ } = gf in
+      { env with
+        predicates = ME.add f (age, ex) env.predicates;
+        (* this is not done in SAT*)
+        matching = EM.max_term_depth env.matching (E.depth f)
+      }
+    | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
+    | E.Literal _ | E.Skolem _ | E.Let _ -> assert false
+
+  let ground_pred_defn (p : E.t) env =
+    ME.find_opt p env.ground_preds
 
   let register_max_term_depth env mx =
+    let aux mx f = max mx (E.depth f) in
+    let mx =
+      ME.fold (fun _ (f,_) mx -> aux mx f) env.ground_preds mx
+    in
     {env with matching = EM.max_term_depth env.matching mx}
 
   let record_this_instance f accepted lorig =
@@ -353,17 +385,17 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         raise e
     else add_lemma env gf dep
 
-  let add_predicate env gf =
+  let add_predicate env ~name gf =
     if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Match Timers.F_add_predicate;
-        let res = add_predicate env gf in
+        let res = add_predicate env ~name gf in
         Timers.exec_timer_pause Timers.M_Match Timers.F_add_predicate;
         res
       with e ->
         Timers.exec_timer_pause Timers.M_Match Timers.F_add_predicate;
         raise e
-    else add_predicate env gf
+    else add_predicate env ~name gf
 
   let m_lemmas mconf env tbox selector ilvl =
     if Options.get_timers() then

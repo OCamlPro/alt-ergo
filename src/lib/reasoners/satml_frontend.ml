@@ -42,7 +42,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     axs_of_abstr : (E.t * Atom.atom) ME.t;
     proxies : (Atom.atom * Atom.atom list * bool) Util.MI.t;
     inst : Inst.t;
-    ground_preds : (E.gformula * Ex.t) ME.t; (* key <-> f *)
     skolems : E.gformula ME.t; (* key <-> f *)
     add_inst : E.t -> bool;
     guards : guards;
@@ -65,7 +64,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       axs_of_abstr = ME.empty;
       proxies = Util.MI.empty;
       inst = Inst.empty;
-      ground_preds = ME.empty;
       skolems = ME.empty;
       guards = empty_guards ();
       add_inst = fun _ -> true;
@@ -431,37 +429,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       )acc l
 
 
-  let factorize_iff a_t f =
-    if E.equal a_t f then E.vrai
-    else if E.equal (E.neg a_t) f then E.faux
-    else match E.form_view f with
-      | E.Iff(f1, f2) ->
-        if E.equal f1 a_t then f2
-        else if E.equal f2 a_t then f1
-        else assert false
-      | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
-      | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ ->
-        assert false
-
   let pred_def env f name dep _loc =
     (* dep currently not used. No unsat-cores in satML yet *)
     Debug.pred_def f;
-    let a_t = E.mk_term (Symbols.name name) [] Ty.Tbool in
-    if not (SE.mem a_t (E.max_ground_terms_rec_of_form f)) then
-      {env with inst = Inst.add_predicate env.inst (mk_gf f) dep}
-    else
-      begin
-        if Stack.is_empty env.guards.stack_guard then
-          assert (not (ME.mem a_t env.ground_preds));
-        let f_simpl = factorize_iff a_t f in
-        (* a_t <-> f_simpl *)
-        let not_a_t = E.neg a_t in
-        let a_imp = E.mk_or not_a_t f_simpl false 0 in
-        let not_a_imp = E.mk_or a_t (E.neg f_simpl) false 0 in
-        let gp = ME.add a_t (mk_gf a_imp, dep) env.ground_preds in
-        let gp = ME.add not_a_t (mk_gf not_a_imp, dep) gp in
-        {env with ground_preds = gp}
-      end
+    { env with
+      inst =
+        Inst.add_predicate env.inst ~name (mk_gf f) dep }
 
   let axiom_def env gf ex =
     {env with inst = Inst.add_lemma env.inst gf ex}
@@ -708,8 +681,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let instantiate_ground_preds env acc sa =
     List.fold_left
       (fun acc a ->
-         try (fst (ME.find a env.ground_preds)) :: acc
-         with Not_found -> acc
+         match Inst.ground_pred_defn a env.inst with
+         | Some (res, _dep) ->
+           (* This is only true when ground predicates are at toplevel.
+              This is in particular false in incremental mode *)
+           (mk_gf res)  :: acc
+         | None ->
+           acc
       )acc sa
     [@ocaml.ppwarning "!!! Possibles issues du to replacement of atoms \
                        that are facts with TRUE by mk_lit (and simplify)"]
@@ -1013,8 +991,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   (* copied from sat_solvers.ml *)
   let max_term_depth_in_sat env =
     let aux mx f = Stdlib.max mx (E.depth f) in
-    let max_t = ME.fold (fun f _ mx -> aux mx f) env.gamma 0 in
-    ME.fold (fun _ ({ E.ff = f; _ }, _) mx -> aux mx f) env.ground_preds max_t
+    ME.fold (fun f _ mx -> aux mx f) env.gamma 0
 
 
   let checks_implemented_features () =

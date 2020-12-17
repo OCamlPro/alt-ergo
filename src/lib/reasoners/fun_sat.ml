@@ -170,7 +170,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     inst : Inst.t;
     heuristics : Heuristics.t ref;
     model_gen_mode : bool ref;
-    ground_preds : (E.t * Explanation.t) ME.t; (* key <-> f *)
     guards : guards;
     add_inst: E.t -> bool;
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
@@ -1077,13 +1076,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             let lits = (a, ff, dep, env.dlevel, env.plevel)::lits in
             let acc = env, true, true, ap_delta, lits in
             begin
-              try (* ground preds bahave like proxies of lazy CNF *)
-                let af, adep = ME.find a env.ground_preds in
+              (* ground preds bahave like proxies of lazy CNF *)
+              match Inst.ground_pred_defn a env.inst with
+              | Some (af, adep) ->
                 if Options.get_tableaux_cdcl () then
                   cdcl_assume false env
                     [{ff with E.ff = E.mk_imp f af (E.id f)}, adep];
                 asm_aux acc [{ff with E.ff = af}, Ex.union dep adep]
-              with Not_found -> acc
+              | None -> acc
             end
 
           | E.Skolem quantif ->
@@ -1622,8 +1622,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let max_term_depth_in_sat env =
     let aux mx f = max mx (E.depth f) in
-    let max_t = ME.fold (fun f _ mx -> aux mx f) env.gamma 0 in
-    ME.fold (fun _ (f,_) mx -> aux mx f) env.ground_preds max_t
+    ME.fold (fun f _ mx -> aux mx f) env.gamma 0
 
 
   let rec backward_instantiation_rec env rnd max_rnd =
@@ -1877,43 +1876,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
 
 
-  (* unused --
-     let factorize_iff a_t f =
-     if E.equal a_t f then E.vrai
-     else if E.equal (E.neg a_t) f then E.faux
-     else match E.form_view f with
-      | E.Iff(f1, f2) ->
-        if E.equal f1 a_t then f2
-        else if E.equal f2 a_t then f1
-        else assert false
-      | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
-      | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ -> assert false
-  *)
-
   let pred_def env f name dep _loc =
     Debug.pred_def f;
     let gf = mk_gf f name true false in
-    let a_t = E.mk_term (Symbols.name name) [] Ty.Tbool in
-    if not (SE.mem a_t (E.max_ground_terms_rec_of_form f)) then
-      {env with
-       inst = Inst.add_predicate env.inst gf dep }
-    else
-      begin
-        if Stack.is_empty env.guards.stack_guard then
-          assert (not (ME.mem a_t env.ground_preds));
-        if E.equal a_t f || E.equal (E.neg a_t) f then assume env gf dep
-        else match E.form_view f with
-          | E.Iff(f1, f2) ->
-            let f_simpl =
-              if E.equal f1 a_t then f2
-              else (if E.equal f2 a_t then f1 else assert false)
-            in
-            let gp = ME.add a_t (f_simpl, dep) env.ground_preds in
-            let gp = ME.add (E.neg a_t) (E.neg f_simpl, dep) gp in
-            {env with ground_preds = gp}
-          | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
-          | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ -> assert false
-      end
+    { env with
+      inst =
+        Inst.add_predicate env.inst ~name gf dep }
 
   let unsat env fg =
     if Options.get_timers() then
@@ -1974,7 +1942,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       inst = inst;
       heuristics = ref (Heuristics.empty ());
       model_gen_mode = ref false;
-      ground_preds = ME.empty;
       unit_facts_cache = ref ME.empty;
       guards = empty_guards ();
       add_inst = fun _ -> true;
