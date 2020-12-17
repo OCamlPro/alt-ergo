@@ -278,7 +278,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | Query(g,_,_) -> Some g
       | _ -> None
     in
-
     let time = Time.value() in
     match status with
     | Unsat (d, dep) ->

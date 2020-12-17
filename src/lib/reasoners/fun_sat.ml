@@ -350,7 +350,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            "(%a or %a), %a"
            E.print f1.E.ff E.print f2.E.ff Ex.print ex) d;
          print_dbg ~debug:(get_verbose () || get_debug_sat ())
-           "[sat] --------------------- Delta -" *)
+         "[sat] --------------------- Delta -" *)
 
     let gamma g =
       if Options.(get_debug_sat () && get_verbose ()) then begin
@@ -1462,6 +1462,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   and back_tracking env =
     try
+      (* TODO: generate model there produce regressions in tests. Why? *)
+      let env = compute_concrete_model env false in
       if env.delta == [] || Options.get_no_decisions() then
         back_tracking (normal_instantiation env true)
       else
