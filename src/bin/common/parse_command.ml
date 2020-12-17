@@ -57,6 +57,29 @@ let instantiation_heuristic_conv =
   Arg.conv ~docv:"VAL"
     (instantiation_heuristic_parser, instantiation_heuristic_printer)
 
+let interpretation_parser = function
+  | "none" -> Ok INone
+  | "first" -> Ok IFirst
+  | "before_inst" -> Ok IBefore_inst
+  | "before_dec" -> Ok IBefore_dec
+  | "before_end" -> Ok IBefore_end
+  | s ->
+    Error
+      (`Msg ("Option --interpretation does not accept the argument \"" ^ s))
+
+let interpretation_to_string = function
+  | INone -> "none"
+  | IFirst -> "first"
+  | IBefore_inst -> "before_inst"
+  | IBefore_dec -> "before_dec"
+  | IBefore_end -> "before_end"
+
+let interpretation_printer fmt interpretation =
+  Format.fprintf fmt "%s" (interpretation_to_string interpretation)
+
+let interpretation_conv =
+  Arg.conv ~docv:"MDL" (interpretation_parser, interpretation_printer)
+
 (* When adding another parser, remember to change this list too as it
    is used in the documentation *)
 let formats_list =
@@ -460,10 +483,11 @@ let mk_opts file () () () () () () halt_opt (gc) () () () () () () () ()
     `Ok true
   end
 
-let mk_fmt_opt std_fmt err_fmt
+let mk_fmt_opt std_fmt err_fmt mdl_fmt
   =
   set_std_fmt (value_of_fmt std_fmt);
   set_err_fmt (value_of_fmt err_fmt);
+  set_fmt_mdl (value_of_fmt mdl_fmt);
   `Ok()
 
 (* Custom sections *)
@@ -883,15 +907,19 @@ let parse_output_opt =
   let docs = s_output in
 
   let interpretation =
-    let doc =
-      "Experimental support for counter-example generation. Possible \
-       values are 1, 2, or 3 to compute an interpretation before returning \
-       Unknown, before instantiation (1), or before every decision (2) or \
-       instantiation (3). A negative value (-1, -2, or -3) will disable \
-       interpretation display. Note that $(b, --max-split) limitation will \
-       be ignored in model generation phase." in
+    let doc = Format.sprintf
+        "Experimental support for counter-example generation. \
+         $(docv) must be %s. %s shows the first computed interpretation. \
+         %s compute an interpretation before every decision, \
+         %s before every instantiation and %s only before returning unknown. \
+         Note that $(b, --max-split) limitation will \
+         be ignored in model generation phase."
+        (Arg.doc_alts
+           ["none"; "first"; "before_dec"; "before_inst"; "before_end"])
+        (Arg.doc_quote "first") (Arg.doc_quote "before_dec")
+        (Arg.doc_quote "before_inst") (Arg.doc_quote "before_end") in
     let docv = "VAL" in
-    Arg.(value & opt int (get_interpretation ()) &
+    Arg.(value & opt interpretation_conv INone &
          info ["interpretation"] ~docv ~docs ~doc) in
 
   let model =
@@ -1233,8 +1261,16 @@ let parse_fmt_opt =
     Arg.(value & opt formatter_conv Stderr & info ["err-formatter"] ~docs ~doc)
   in
 
+  let mdl_formatter =
+    let doc = Format.sprintf
+        "Set the model formatter used by default to output model and
+         interpretation. Possible values are %s."
+        (Arg.doc_alts ["stdout"; "stderr"; "<filename>"]) in
+    Arg.(value & opt formatter_conv Stdout & info ["mdl-formatter"] ~docs ~doc)
+  in
+
   Term.(ret (const mk_fmt_opt $
-             std_formatter $ err_formatter
+             std_formatter $ err_formatter $ mdl_formatter
             ))
 
 let main =

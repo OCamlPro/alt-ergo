@@ -1034,7 +1034,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Errors.run_error (Errors.Unsupported_feature msg)
     in
     let open Options in
-    if get_interpretation () <> 0 then fails "interpretation";
+    if get_interpretation () then fails "interpretation";
     if get_save_used_context () then fails "save_used_context";
     if get_unsat_core () then fails "unsat_core";
     if get_all_models () then fails "all_models";
