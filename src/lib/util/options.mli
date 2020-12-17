@@ -37,8 +37,12 @@
 (** Type used to describe the type of models wanted *)
 type model = MNone | MDefault | MAll | MComplete
 
+
 (** Type used to describe the type of heuristic for instantiation wanted *)
 type instantiation_heuristic  = INormal | IAuto | IGreedy
+
+(** Type used to describe the type of interpretation wanted *)
+type interpretation = INone | IFirst | IBefore_inst | IBefore_dec | IBefore_end
 
 (** Type used to describe the type of input wanted by
     {!val:set_input_format} *)
@@ -183,11 +187,11 @@ val set_input_format : input_format -> unit
 (** Set [interpretation] accessible with {!val:get_interpretation}
 
     Possible values are :
-    {ol {- Unknown} {- Before instantiation}
-    {- Before every decision or instantiation}}
-
-    A negative value (-1, -2, or -3) will disable interpretation display. *)
-val set_interpretation : int -> unit
+    {ol {- First} {- Before every instantiation}
+     {- Before every decision and instantiation}
+     {- Before end}}
+*)
+val set_interpretation : interpretation -> unit
 
 val set_why3_counterexample : bool -> unit
 
@@ -199,9 +203,9 @@ val set_max_split : Numbers.Q.t -> unit
     Possible values are :
     {ul {- Default} {- Complete} {- All}}
 *)
-                                    val set_model : model -> unit
+val set_model : model -> unit
 
-                                    (** Set [nb_triggers] accessible with {!val:get_nb_triggers} *)
+(** Set [nb_triggers] accessible with {!val:get_nb_triggers} *)
 val set_nb_triggers : int -> unit
 
 (** Set [no_ac] accessible with {!val:get_no_ac} *)
@@ -676,7 +680,7 @@ val get_timelimit_per_goal : unit -> bool
     {ul {- None} {- Default} {- Complete : shows a complete model}
     {- All : shows all models}}
 
-    Which are used in the two setters below. This option answers
+    Which are used in the two getters below. This option answers
     [true] if the model is set to Default or Complete
 *)
 val get_model : unit -> bool
@@ -686,22 +690,44 @@ val get_model : unit -> bool
 val get_complete_model : unit -> bool
 (** Default to [false] *)
 
-(** [true] if the model is set to all models? *)
+(** [true] if the model is set to all models *)
 val get_all_models : unit -> bool
 (** Default to [false] *)
 
 (** Experimental support for counter-example generation.
 
     Possible values are :
-    {ol {- Unknown} {- Before instantiation}
-    {- Before every decision or instantiation}}
+     {ol {- First} {- Before every instantiation}
+      {- Before every decision and instantiation}
+      {- Before end}}
 
-    A negative value (-1, -2, or -3) will disable interpretation display.
+    Which are used in the four getters below. This option answers
+    [true] if the interpretation is set to First, Before_end, Before_dec
+    or Before_inst.
 
     Note that {!val:get_max_split} limitation will be ignored in model
     generation phase. *)
-val get_interpretation : unit -> int
-(** Default to [0] *)
+val get_interpretation : unit -> bool
+(** Default to [false] *)
+
+(** [true] if the interpretation is set to first interpretation *)
+val get_first_interpretation : unit -> bool
+(** Default to [false] *)
+
+(** [true] if the interpretation is set to compute interpretation
+    before every decision *)
+val get_before_dec_interpretation : unit -> bool
+(** Default to [false] *)
+
+(** [true] if the interpretation is set to compute interpretation
+    before every instantiation *)
+val get_before_inst_interpretation : unit -> bool
+(** Default to [false] *)
+
+(** [true] if the interpretation is set to compute interpretation
+    before the solver return unknown *)
+val get_before_end_interpretation : unit -> bool
+(** Default to [false] *)
 
 val get_why3_counterexample : unit -> bool
 
