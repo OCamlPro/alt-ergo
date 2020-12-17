@@ -333,7 +333,7 @@ let mk_profiling_opt cumulative_time_profiling profiling
   set_cumulative_time_profiling cumulative_time_profiling;
   `Ok()
 
-let mk_quantifiers_opt instantiation_heuristic instantiate_after_backjump
+let mk_quantifiers_opt instantiation_heuristic fast instantiate_after_backjump
     max_multi_triggers_size nb_triggers
     no_ematching no_user_triggers normalize_instances triggers_var
   =
@@ -342,6 +342,7 @@ let mk_quantifiers_opt instantiation_heuristic instantiate_after_backjump
   set_nb_triggers nb_triggers;
   set_normalize_instances normalize_instances;
   set_instantiation_heuristic instantiation_heuristic;
+  set_fast fast;
   set_instantiate_after_backjump instantiate_after_backjump;
   set_max_multi_triggers_size max_multi_triggers_size;
   set_triggers_var triggers_var;
@@ -1014,6 +1015,11 @@ let parse_quantifiers_opt =
     Arg.(value & opt instantiation_heuristic_conv IAuto &
          info ["instantiation-heuristic"] ~docv ~docs ~doc) in
 
+  let fast =
+    let doc = "Heuristic that disable heavy instantiation with triggers-var \
+               (greedier)" in
+    Arg.(value & flag & info ["fast"] ~docs ~doc) in
+
   let instantiate_after_backjump =
     let doc =
       "Make a (normal) instantiation round after every backjump/backtrack." in
@@ -1054,7 +1060,7 @@ let parse_quantifiers_opt =
     let doc = "Allows variables as triggers." in
     Arg.(value & flag & info ["triggers-var"] ~docs ~doc) in
 
-  Term.(ret (const mk_quantifiers_opt $ instantiation_heuristic $
+  Term.(ret (const mk_quantifiers_opt $ instantiation_heuristic $ fast $
              instantiate_after_backjump $ max_multi_triggers_size $
              nb_triggers $ no_ematching $ no_user_triggers $
              normalize_instances $ triggers_var
