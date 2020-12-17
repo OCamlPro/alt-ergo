@@ -432,9 +432,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let pred_def env f name dep _loc =
     (* dep currently not used. No unsat-cores in satML yet *)
     Debug.pred_def f;
+    let guard = env.guards.current_guard in
     { env with
       inst =
-        Inst.add_predicate env.inst ~name (mk_gf f) dep }
+        Inst.add_predicate env.inst ~guard ~name (mk_gf f) dep }
 
   let axiom_def env gf ex =
     {env with inst = Inst.add_lemma env.inst gf ex}
@@ -682,10 +683,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     List.fold_left
       (fun acc a ->
          match Inst.ground_pred_defn a env.inst with
-         | Some (res, _dep) ->
-           (* This is only true when ground predicates are at toplevel.
-              This is in particular false in incremental mode *)
-           (mk_gf res)  :: acc
+         | Some (guard, res, _dep) ->
+           (* To be correct in incremental mode, we'll generate the
+              formula "guard -> (a -> res)" *)
+           let tmp = E.mk_imp a res 0 in
+           let tmp = E.mk_imp guard tmp 0 in
+           (mk_gf tmp)  :: acc
          | None ->
            acc
       )acc sa
@@ -1047,7 +1050,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Util.loop
       ~f:(fun _n () acc ->
           SAT.pop acc.satml;
-          let _ = Stack.pop acc.guards.stack_guard in
+          let guard_to_neg = Stack.pop acc.guards.stack_guard in
+          let inst = Inst.pop ~guard:guard_to_neg env.inst in
           let b =
             if Stack.is_empty acc.guards.stack_guard then
               Expr.vrai
@@ -1056,7 +1060,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
           Steps.pop_steps ();
 
-          {acc with guards =
+          {acc with inst;
+                    guards =
                       { acc.guards with
                         current_guard = b;}})
       ~max:to_pop

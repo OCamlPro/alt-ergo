@@ -51,7 +51,7 @@ module type S = sig
   val add_term : term_info -> E.t -> t -> t
   val max_term_depth : t -> int -> t
   val add_triggers :
-    Util.matching_env -> t -> (int * Explanation.t) ME.t -> t
+    Util.matching_env -> t -> (Expr.t * int * Explanation.t) ME.t -> t
   val terms_info : t -> info ME.t * E.t list ME.t SubstE.t
   val query :
     Util.matching_env -> t -> theory -> (trigger_info * gsubst list) list
@@ -663,7 +663,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   let add_triggers mconf env formulas =
     ME.fold
-      (fun lem (age, dep) env ->
+      (fun lem (guard, age, dep) env ->
          match E.form_view lem with
          | E.Lemma ({ E.main = f; name; _ } as q) ->
            let tgs, kind =
@@ -684,7 +684,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
                     trigger_age = age ;
                     trigger_orig = lem ;
                     trigger_formula = f ;
-                    trigger_dep = dep}
+                    trigger_dep = dep;
+                    trigger_increm_guard = guard
+                  }
                 in
                 add_trigger info env
              ) env tgs

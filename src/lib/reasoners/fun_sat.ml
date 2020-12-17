@@ -1078,7 +1078,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             begin
               (* ground preds bahave like proxies of lazy CNF *)
               match Inst.ground_pred_defn a env.inst with
-              | Some (af, adep) ->
+              | Some (guard, af, adep) ->
+                (* in fun-SAT, guards are either forced to TRUE, or
+                   Inst.ground_preds is cleaned when the guard is
+                   propagated to FALSE *)
+                assert (ME.mem guard env.gamma);
                 if Options.get_tableaux_cdcl () then
                   cdcl_assume false env
                     [{ff with E.ff = E.mk_imp f af (E.id f)}, adep];
@@ -1766,6 +1770,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       ~f:(fun _n () acc ->
           let acc = restore_refs acc in
           let guard_to_neg = Stack.pop acc.guards.stack_guard in
+          let inst = Inst.pop ~guard:guard_to_neg env.inst in
           let new_current_guard =
             if Stack.is_empty acc.guards.stack_guard then
               Expr.vrai
@@ -1776,7 +1781,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
               acc.guards.guards
           in
           acc.model_gen_mode := false;
-          {acc with guards =
+          {acc with inst;
+                    guards =
                       { acc.guards with
                         current_guard = new_current_guard;
                         guards = guards;}}
@@ -1879,9 +1885,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let pred_def env f name dep _loc =
     Debug.pred_def f;
     let gf = mk_gf f name true false in
+    let guard = env.guards.current_guard in
     { env with
       inst =
-        Inst.add_predicate env.inst ~name gf dep }
+        Inst.add_predicate env.inst ~guard ~name gf dep }
 
   let unsat env fg =
     if Options.get_timers() then

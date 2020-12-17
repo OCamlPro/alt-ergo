@@ -36,13 +36,18 @@ module type S = sig
   val add_lemma : t -> Expr.gformula -> Explanation.t -> t
   val add_predicate :
     t ->
+    guard:Expr.t ->
     name:string ->
     Expr.gformula ->
     Explanation.t ->
     t
 
+  (* the first returned expr is the guard (incremental mode),
+     the second one is the defn of the given predicate *)
   val ground_pred_defn:
-    Expr.t -> t -> (Expr.t * Explanation.t) option
+    Expr.t -> t -> (Expr.t * Expr.t * Explanation.t) option
+
+  val pop : t -> guard:Expr.t -> t
 
   val m_lemmas :
     Util.matching_env ->
