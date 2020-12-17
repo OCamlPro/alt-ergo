@@ -195,28 +195,189 @@ module AECounterExample = struct
 end
 (* of module AECounterExample *)
 
-module SmtlibCounterExample = struct
-
-  let x_print fmt (_ , ppr) = fprintf fmt "%s" ppr
+module Pp_smtlib_term = struct
 
   let to_string_type t =
     asprintf "%a" Ty.print t
 
+  let rec print fmt t =
+    let f,xs,ty = E.get_infos t in
+    match f, xs with
+
+    | Sy.Lit lit, xs ->
+      begin
+        match lit, xs with
+        | Sy.L_eq, a::l ->
+          if get_output_smtlib () then
+            fprintf fmt "(= %a%a)"
+              print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
+          else
+            fprintf fmt "(%a%a)"
+              print a (fun fmt -> List.iter (fprintf fmt " = %a" print)) l
+
+        | Sy.L_neg_eq, [a; b] ->
+          if get_output_smtlib () then
+            fprintf fmt "(not (= %a %a))" print a print b
+          else
+            fprintf fmt "(%a <> %a)" print a print b
+
+        | Sy.L_neg_eq, a::l ->
+          if get_output_smtlib () then
+            fprintf fmt "(distinct %a%a)"
+              print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
+          else
+            fprintf fmt "distinct(%a%a)"
+              print a (fun fmt -> List.iter (fprintf fmt ", %a" print)) l
+
+        | Sy.L_built Sy.LE, [a;b] ->
+          if get_output_smtlib () then
+            fprintf fmt "(<= %a %a)" print a print b
+          else
+            fprintf fmt "(%a <= %a)" print a print b
+
+        | Sy.L_built Sy.LT, [a;b] ->
+          if get_output_smtlib () then
+            fprintf fmt "(< %a %a)" print a print b
+          else
+            fprintf fmt "(%a < %a)" print a print b
+
+        | Sy.L_neg_built Sy.LE, [a; b] ->
+          if get_output_smtlib () then
+            fprintf fmt "(> %a %a)" print a print b
+          else
+            fprintf fmt "(%a > %a)" print a print b
+
+        | Sy.L_neg_built Sy.LT, [a; b] ->
+          if get_output_smtlib () then
+            fprintf fmt "(>= %a %a)" print a print b
+          else
+            fprintf fmt "(%a >= %a)" print a print b
+
+        | Sy.L_neg_pred, [a] ->
+          fprintf fmt "(not %a)" print a
+
+        | Sy.L_built (Sy.IsConstr hs), [e] ->
+          if get_output_smtlib () then
+            fprintf fmt "((_ is %a) %a)" Hstring.print hs print e
+          else
+            fprintf fmt "(%a ? %a)" print e Hstring.print hs
+
+        | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
+          if get_output_smtlib () then
+            fprintf fmt "(not ((_ is %a) %a))" Hstring.print hs print e
+          else
+            fprintf fmt "not (%a ? %a)" print e Hstring.print hs
+
+        | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
+          | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
+          | Sy.L_built (Sy.IsConstr _)
+          | Sy.L_neg_built (Sy.IsConstr _)) , _ ->
+          assert false
+
+      end
+
+    | Sy.Op Sy.Get, [e1; e2] ->
+      if get_output_smtlib () then
+        fprintf fmt "(select %a %a)" print e1 print e2
+      else
+        fprintf fmt "%a[%a]" print e1 print e2
+
+    | Sy.Op Sy.Set, [e1; e2; e3] ->
+      if get_output_smtlib () then
+        fprintf fmt "(store %a %a %a)"
+          print e1
+          print e2
+          print e3
+      else
+        fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3
+
+    | Sy.Op Sy.Concat, [e1; e2] ->
+      fprintf fmt "%a@@%a" print e1 print e2
+
+    | Sy.Op Sy.Extract, [e1; e2; e3] ->
+      fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
+
+    | Sy.Op (Sy.Access field), [e] ->
+      if get_output_smtlib () then
+        fprintf fmt "(%s %a)" (Hstring.view field) print e
+      else
+        fprintf fmt "%a.%s" print e (Hstring.view field)
+
+    | Sy.Op (Sy.Record), _ ->
+      begin match ty with
+        | Ty.Trecord { Ty.lbs = lbs; _ } ->
+          assert (List.length xs = List.length lbs);
+          fprintf fmt "{";
+          ignore (List.fold_left2 (fun first (field,_) e ->
+              fprintf fmt "%s%s = %a"  (if first then "" else "; ")
+                (Hstring.view field) print e;
+              false
+            ) true lbs xs);
+          fprintf fmt "}";
+        | _ -> assert false
+      end
+
+    (* TODO: introduce PrefixOp in the future to simplify this ? *)
+    | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||
+                              op == Sy.Max_real || op == Sy.Max_int ||
+                              op == Sy.Min_real || op == Sy.Min_int ->
+      fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
+
+    (* TODO: introduce PrefixOp in the future to simplify this ? *)
+    | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
+      fprintf fmt "%a(%a)" Hstring.print hs print_list l
+
+    | Sy.Op _, [e1; e2] ->
+      if get_output_smtlib () then
+        fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
+      else
+        fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
+
+    | Sy.Op Sy.Destruct (hs, grded), [e] ->
+      fprintf fmt "%a#%s%a"
+        print e (if grded then "" else "!") Hstring.print hs
+
+
+    | Sy.In(lb, rb), [t] ->
+      fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
+
+    | Sy.Name (n,_), _ -> begin
+        try
+          let constraint_name,_ty_name =
+            Sorts.find (Hstring.view n) !constraints in
+          fprintf fmt "%s" constraint_name
+        with _ ->
+          let constraint_name = "c_"^(Hstring.view n)  in
+          constraints := Sorts.add (Hstring.view n)
+              (constraint_name,to_string_type (E.type_info t)) !constraints;
+          fprintf fmt "%s" constraint_name
+      end
+
+    | _, [] ->
+      fprintf fmt "%a" Sy.print f
+
+    | _, _ ->
+      if get_output_smtlib () then
+        fprintf fmt "(%a %a)" Sy.print f print_list xs
+      else
+        fprintf fmt "%a(%a)" Sy.print f print_list xs
+
+  and print_list_sep sep fmt = function
+    | [] -> ()
+    | [t] -> print fmt t
+    | t::l -> Format.fprintf fmt "%a%s%a" print t sep (print_list_sep sep) l
+
+  and print_list fmt = print_list_sep "," fmt
+
+end
+
+module SmtlibCounterExample = struct
+
+  let x_print fmt (_ , ppr) = fprintf fmt "%s" ppr
+
   let pp_term fmt t =
     if Options.get_output_format () == Why3 then
-      match E.symbol_info t with
-      | Sy.Name (n,_) -> begin
-          try
-            let constraint_name,_ty_name =
-              Sorts.find (Hstring.view n) !constraints in
-            fprintf fmt "%s" constraint_name
-          with _ ->
-            let constraint_name = "c_"^(Hstring.view n)  in
-            constraints := Sorts.add (Hstring.view n)
-                (constraint_name,to_string_type (E.type_info t)) !constraints;
-            fprintf fmt "%s" constraint_name
-        end
-      | _ -> E.print fmt t
+      Pp_smtlib_term.print fmt t
     else
       E.print fmt t
 
@@ -417,9 +578,11 @@ module Why3CounterExample = struct
     let assertions = SE.fold (fun e acc ->
         (asprintf "%s(assert %a)@ " acc SmtlibCounterExample.pp_term e)
       ) prop_model "" in
+    Printer.print_fmt ~flushed:false fmt "@ ; constants@ ";
     Sorts.iter (fun _ (name,ty) ->
         Printer.print_fmt ~flushed:false fmt "(declare-const %s %s)@ " name ty
       ) !constraints;
+    Printer.print_fmt ~flushed:false fmt "@ ; assertions@ ";
     Printer.print_fmt fmt ~flushed:false "%s" assertions
 
 end
