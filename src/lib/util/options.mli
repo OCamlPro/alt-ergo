@@ -178,6 +178,9 @@ val set_frontend : string -> unit
     {!val:get_instantiation_heuristic} *)
 val set_instantiation_heuristic : instantiation_heuristic -> unit
 
+(** Set [fast] accessible with {!val:get_fast} *)
+val set_fast : bool -> unit
+
 (** Set [inline_lets] accessible with {!val:get_inline_lets} *)
 val set_inline_lets : bool -> unit
 
@@ -784,6 +787,10 @@ val get_instantiation_heuristic : unit -> instantiation_heuristic
 
 (** [true] is the greedy instantiation heuristic is set *)
 val get_greedy : unit -> bool
+(** Default to [false] *)
+
+(** [true] if greedier instantiation phase is disable. *)
+val get_fast : unit -> bool
 (** Default to [false] *)
 
 (** [true] if a (normal) instantiation round is made after every
