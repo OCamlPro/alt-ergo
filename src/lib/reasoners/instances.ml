@@ -153,8 +153,20 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     { env with
       matching = SE.fold (EM.add_term infos) s env.matching }
 
+  let add_ground_pred env ~guard p np defn ex =
+    let gp = ME.add p (guard, defn, ex) env.ground_preds in
+    let gp = ME.add np (guard, E.neg defn, ex) gp in
+    let guarded = try ME.find guard env.guards with Not_found -> [] in
+    let guarded = (p, true) :: (np, true) :: guarded in
+    { env with ground_preds = gp;
+               guards = ME.add guard guarded env.guards
+    }
+
+
   let add_predicate env ~guard ~name gf ex =
     let { Expr.ff = f; age = age; _ } = gf in
+    let env = { env with
+                matching = EM.max_term_depth env.matching (E.depth f) } in
     match E.form_view f with
     | E.Iff(f1, f2) ->
       let p = E.mk_term (Symbols.name name) [] Ty.Tbool in
@@ -164,25 +176,27 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         else if E.equal f2 p then f1
         else assert false
       in
-      let gp = ME.add p (guard, defn, ex) env.ground_preds in
-      let gp = ME.add np (guard, E.neg defn, ex) gp in
-      let guarded = try ME.find guard env.guards with Not_found -> [] in
-      let guarded = (p, true) :: (np, true) :: guarded in
-      {env with ground_preds = gp;
-                matching = EM.max_term_depth env.matching (E.depth f);
-                guards = ME.add guard guarded env.guards
-      }
+      add_ground_pred env ~guard p np defn ex
+
+    | E.Literal _ ->
+      let p = E.mk_term (Symbols.name name) [] Ty.Tbool in
+      let np = E.neg p in
+      let defn =
+        if E.equal p f then E.vrai
+        else if E.equal np f then E.faux
+        else assert false
+      in
+      add_ground_pred env ~guard p np defn ex
 
     | E.Lemma _ ->
       let guarded = try ME.find guard env.guards with Not_found -> [] in
       { env with
         predicates = ME.add f (guard, age, ex) env.predicates;
-        (* this is not done in SAT*)
-        matching = EM.max_term_depth env.matching (E.depth f);
         guards = ME.add guard ((f, false) :: guarded) env.guards
       }
     | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
-    | E.Literal _ | E.Skolem _ | E.Let _ -> assert false
+    | E.Skolem _ | E.Let _ ->
+      assert false
 
   let pop env ~guard =
     try
