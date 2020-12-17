@@ -170,7 +170,7 @@ val is_int : t -> bool
 val is_real : t -> bool
 val type_info : t -> Ty.t
 val symbol_info : t -> Symbols.t
-
+val get_infos : t -> Symbols.t * t list * Ty.t
 
 (** Labeling and models *)
 
