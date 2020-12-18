@@ -354,16 +354,39 @@ module Translate = struct
       ~warning:(Options.get_verbose () || Options.get_debug_warnings ())
       "%S : Not yet supported" s
 
+  let translate_prop_literal x =
+    match x.c with
+    | PropLit sy ->
+      mk_application (pos x) sy.c []
+
+    | PropLitNot sy ->
+      let ps = pos x in
+      mk_not ps (mk_application ps sy.c [])
+
+  let count_goals = ref 0
+
   let translate_command acc command =
+    let ps = pos command in
     match command.c with
     | Cmd_Assert(assert_term) ->
       (translate_assert (pos command) assert_term) :: acc
     | Cmd_CheckEntailment(assert_term) ->
       (translate_goal (pos command) assert_term) :: acc
     | Cmd_CheckSat ->
-      (mk_goal (pos command) "g" (mk_false_const (pos command))) :: acc
-    | Cmd_CheckSatAssum _ ->
-      not_supported "check-sat-assuming"; assert false
+      incr count_goals;
+      let gname = "g_" ^ (string_of_int !count_goals) in
+      (mk_goal ps gname (mk_false_const ps)) :: acc
+
+    | Cmd_CheckSatAssum l ->
+      let l = List.rev_map (fun e -> translate_prop_literal e) (List.rev l) in
+      let e = match l with
+        | [e] -> e
+        | _ -> translate_left_assoc mk_and command l
+      in
+      incr count_goals;
+      let gname = "g_" ^ (string_of_int !count_goals) in
+      (mk_goal ps gname (mk_not ps e)) :: acc
+
     | Cmd_DeclareConst(symbol,const_dec) ->
       (translate_decl_fun symbol [] (translate_const_dec const_dec)) :: acc
     | Cmd_DeclareDataType(symbol,datatype_dec) ->
