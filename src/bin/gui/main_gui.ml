@@ -1382,6 +1382,10 @@ let start_gui all_used_context =
     let set_all_models b =
       if b then set_model MAll else set_model MNone in
     let set_model b = if b then set_model MDefault else set_model MNone in
+    let set_greedy b =
+      if b then
+        set_instantiation_heuristic IGreedy
+      else set_instantiation_heuristic INormal in
     [
       `C ("Unsat cores", get_unsat_core (), set_unsat_core);
       `S;
