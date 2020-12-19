@@ -107,10 +107,12 @@ end
 
 let constraints = ref Sorts.empty
 
-let assert_has_depth_one (e, _) =
+let assert_has_depth_one_at_most (e, _) =
   match X.term_extract e with
-  | Some t, true -> assert (E.depth t = 1);
-  | _ -> ()
+  | Some t, true ->
+    assert (E.depth t <= 1); (* true and false have depth = -1 *)
+  | _ ->
+    ()
 
 module AECounterExample = struct
 
@@ -160,7 +162,7 @@ module AECounterExample = struct
                 Printer.print_fmt ~flushed:false fmt
                   "((s: %a, args: %a) rep: %a)@ "
                   (print_symb ty) f print_args xs x_print rep;
-                List.iter (fun (_,x) -> assert_has_depth_one x) xs;
+                List.iter (fun (_,x) -> assert_has_depth_one_at_most x) xs;
              )st;
            Printer.print_fmt ~flushed:false fmt "@]@ ";
         ) fprofs;
@@ -183,7 +185,7 @@ module AECounterExample = struct
                   Printer.print_fmt ~flushed:false fmt
                     "((%a %a) %a)@ "
                     (print_symb ty) f print_args xs x_print rep;
-                  List.iter (fun (_,x) -> assert_has_depth_one x) xs;
+                  List.iter (fun (_,x) -> assert_has_depth_one_at_most x) xs;
                )st;
              Printer.print_fmt ~flushed:false fmt "@]@ ";
            | _ -> assert false
