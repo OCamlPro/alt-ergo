@@ -574,6 +574,8 @@ struct
            c
         )sbs
 
+  let is_bool_const r = equal r (top()) || equal r (bot())
+
   let assign_value r distincts eq =
     let opt = match r.v, type_info r with
       | _, Ty.Tint
@@ -584,6 +586,25 @@ struct
       | _, Ty.Tsum _    -> X5.assign_value r distincts eq
       | _, Ty.Tadt _    when not (Options.get_disable_adts()) ->
         X6.assign_value r distincts eq
+
+      | Term _t, Ty.Tbool ->
+        if is_bool_const r then None
+        else
+          begin
+            let eq = List.filter (fun (_t, r) -> is_bool_const r) eq in
+            match eq with
+            | (e,_r)::_ -> Some (e, false) (* false <-> not a case-split *)
+            | [] ->
+              let dist = List.filter (fun r -> is_bool_const r) distincts in
+              match dist with
+              | {v = Term e; _}::_ ->
+                Some (Expr.neg e, true) (* safety: consider it as case-splut *)
+              | _::_ ->
+                assert false
+              | [] ->
+                Some (Expr.faux, true) (* true <-> make a case split *)
+          end
+
       | Term t, ty      -> (* case disable_adts() handled here *)
         if (Expr.depth t) = 1 ||
            List.exists (fun (t,_) -> (Expr.depth t) = 1) eq then None
@@ -601,12 +622,6 @@ struct
     opt
 
   let choose_adequate_model t rep l =
-    let is_true_or_false r =
-      let re,_rb = term_extract r in
-      match re with
-      | None -> false
-      | Some e -> (Expr.equal Expr.vrai e) || (Expr.equal Expr.faux e)
-    in
     let r, pprint =
       match Expr.type_info t with
       | Ty.Tint
@@ -617,7 +632,10 @@ struct
         X6.choose_adequate_model t rep l
       | Ty.Trecord _ -> X2.choose_adequate_model t rep l
       | Ty.Tfarray _ -> X4.choose_adequate_model t rep l
-      | Ty.Tbool     when is_true_or_false rep ->
+      | Ty.Tbool ->
+        (* case split is now supposed to be done for internal bools if
+           needed as well *)
+        assert (is_bool_const rep);
         rep, asprintf "%a" print rep
       | _            ->
         let acc =
