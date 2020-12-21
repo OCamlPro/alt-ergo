@@ -43,6 +43,8 @@ type trigger_info = {
   trigger_orig : Expr.t ; (* lemme d'origine *)
   trigger_formula : Expr.t ; (* formule associee au trigger *)
   trigger_dep : Explanation.t ;
+  trigger_increm_guard : Expr.t
+  (* guard associated to push in incremental mode *)
 }
 
 type term_info = {
@@ -58,4 +60,3 @@ type info = {
   t_orig : Expr.t list;
   but : bool  (* le terme a-t-il un lien avec le but final de la PO *)
 }
-

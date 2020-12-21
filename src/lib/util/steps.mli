@@ -65,3 +65,11 @@ val cs_steps : unit -> int
 
 (** Increase the number of case-split steps *)
 val incr_cs_steps : unit -> unit
+
+(** {2 Incrementality} *)
+
+val push_steps : unit -> unit
+(** Save all the steps value in an internal stack for each push command *)
+
+val pop_steps : unit -> unit
+(** Pop the last steps value when a pop command is processed *)

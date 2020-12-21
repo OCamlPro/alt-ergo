@@ -25,6 +25,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let reset_refs () = Steps.reset_steps ()
 
+  type guards = {
+    current_guard: E.t;
+    stack_guard: E.t Stack.t;
+  }
+
   type t = {
     satml : SAT.t;
     ff_hcons_env : FF.hcons_env;
@@ -37,10 +42,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     axs_of_abstr : (E.t * Atom.atom) ME.t;
     proxies : (Atom.atom * Atom.atom list * bool) Util.MI.t;
     inst : Inst.t;
-    ground_preds : (E.gformula * Ex.t) ME.t; (* key <-> f *)
     skolems : E.gformula ME.t; (* key <-> f *)
-    add_inst: E.t -> bool;
+    add_inst : E.t -> bool;
+    guards : guards;
   }
+
+  let empty_guards () = {
+    current_guard = Expr.vrai;
+    stack_guard = Stack.create ();
+  }
+
+  let init_guards () =
+    let guards = empty_guards () in
+    Stack.push Expr.vrai guards.stack_guard;
+    guards
 
   let empty () =
     { gamma = ME.empty;
@@ -54,8 +69,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       axs_of_abstr = ME.empty;
       proxies = Util.MI.empty;
       inst = Inst.empty;
-      ground_preds = ME.empty;
       skolems = ME.empty;
+      guards = init_guards ();
       add_inst = fun _ -> true;
     }
 
@@ -326,7 +341,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if get_debug_sat () then
     fprintf fmt "unsat_core: %a@." Atom.pr_clause c;
     Ex.union (Ex.singleton (Ex.Dep f)) ex
-    )Ex.empty lc*)
+  )Ex.empty lc*)
 
   let selector env f orig =
     (Options.get_cdcl_tableaux () || not (ME.mem f env.gamma))
@@ -419,36 +434,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       )acc l
 
 
-  let factorize_iff a_t f =
-    if E.equal a_t f then E.vrai
-    else if E.equal (E.neg a_t) f then E.faux
-    else match E.form_view f with
-      | E.Iff(f1, f2) ->
-        if E.equal f1 a_t then f2
-        else if E.equal f2 a_t then f1
-        else assert false
-      | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
-      | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ ->
-        assert false
-
   let pred_def env f name dep _loc =
     (* dep currently not used. No unsat-cores in satML yet *)
     Debug.pred_def f;
-    let a_t = E.mk_term (Symbols.name name) [] Ty.Tbool in
-    if not (SE.mem a_t (E.max_ground_terms_rec_of_form f)) then
-      {env with inst = Inst.add_predicate env.inst (mk_gf f) dep}
-    else
-      begin
-        assert (not (ME.mem a_t env.ground_preds));
-        let f_simpl = factorize_iff a_t f in
-        (* a_t <-> f_simpl *)
-        let not_a_t = E.neg a_t in
-        let a_imp = E.mk_or not_a_t f_simpl false 0 in
-        let not_a_imp = E.mk_or a_t (E.neg f_simpl) false 0 in
-        let gp = ME.add a_t (mk_gf a_imp, dep) env.ground_preds in
-        let gp = ME.add not_a_t (mk_gf not_a_imp, dep) gp in
-        {env with ground_preds = gp}
-      end
+    let guard = env.guards.current_guard in
+    { env with
+      inst =
+        Inst.add_predicate env.inst ~guard ~name (mk_gf f) dep }
 
   let axiom_def env gf ex =
     {env with inst = Inst.add_lemma env.inst gf ex}
@@ -709,8 +701,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let instantiate_ground_preds env acc sa =
     List.fold_left
       (fun acc a ->
-         try (fst (ME.find a env.ground_preds)) :: acc
-         with Not_found -> acc
+         match Inst.ground_pred_defn a env.inst with
+         | Some (guard, res, _dep) ->
+           (* To be correct in incremental mode, we'll generate the
+              formula "guard -> (a -> res)" *)
+           let tmp = E.mk_imp a res 0 in
+           let tmp = E.mk_imp guard tmp 0 in
+           (mk_gf tmp)  :: acc
+         | None ->
+           acc
       )acc sa
     [@ocaml.ppwarning "!!! Possibles issues du to replacement of atoms \
                        that are facts with TRUE by mk_lit (and simplify)"]
@@ -833,7 +832,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     fprintf fmt "pending : %d unit cnf@." (List.length unit);
     fprintf fmt "pending : %d non-unit cnf@." (List.length nunit);
     fprintf fmt "pending : updated = %b@." updated;
-    *)
+  *)
     if SE.is_empty seen_f then begin
       assert (FF.Map.is_empty activate);
       assert (new_vars == []);
@@ -853,9 +852,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         (*SAT.update_lazy_cnf activate ~dec_lvl;*)
         SAT.assume env.satml unit nunit f ~cnumber:0 activate ~dec_lvl;
       with
-      | Satml.Unsat (lc)  -> raise (IUnsat (env, make_explanation lc))
+      | Satml.Unsat (lc) -> raise (IUnsat (env, make_explanation lc))
       | Satml.Sat -> assert false
-
 
   let assume_aux_bis ~dec_lvl env l =
     let pending = {
@@ -868,7 +866,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let env, pending = List.fold_left pre_assume (env, pending) l in
     cdcl_assume env pending ~dec_lvl;
     env, pending.updated, pending.new_abstr_vars
-
 
   let rec assume_aux ~dec_lvl env l =
     let env, updated, new_abstr_vars = assume_aux_bis ~dec_lvl env l in
@@ -1023,8 +1020,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   (* copied from sat_solvers.ml *)
   let max_term_depth_in_sat env =
     let aux mx f = Stdlib.max mx (E.depth f) in
-    let max_t = ME.fold (fun f _ mx -> aux mx f) env.gamma 0 in
-    ME.fold (fun _ ({ E.ff = f; _ }, _) mx -> aux mx f) env.ground_preds max_t
+    ME.fold (fun f _ mx -> aux mx f) env.gamma 0
 
 
   let checks_implemented_features () =
@@ -1044,9 +1040,62 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if get_all_models () then fails "all_models";
     if get_model () then fails "model"
 
+  let create_guard env =
+    let expr_guard = E.fresh_name Ty.Tbool in
+    let ff, axs, new_vars =
+      FF.simplify env.ff_hcons_env expr_guard
+        (fun f -> ME.find f env.abstr_of_axs) []
+    in
+    assert (axs == []);
+    match FF.view ff, new_vars with
+    | FF.UNIT atom_guard, [v] ->
+      assert (Atom.eq_atom atom_guard v.pa);
+      let nbv = FF.nb_made_vars env.ff_hcons_env in
+      (* Need to use new_vars function to add the new_var corresponding to
+         the atom atom_guard in the satml env *)
+      let u, nu = SAT.new_vars env.satml ~nbv new_vars [] [] in
+      assert (u == [] && nu == []);
+      expr_guard, atom_guard
+    | _ -> assert false
+
+  let push env to_push =
+    Util.loop ~f:(fun _n () acc ->
+        let expr_guard, atom_guard = create_guard acc in
+        SAT.push acc.satml atom_guard;
+        Stack.push expr_guard acc.guards.stack_guard;
+        Steps.push_steps ();
+        {acc with guards =
+                    {acc.guards with
+                     current_guard = expr_guard;} }
+      )
+      ~max:to_push
+      ~elt:()
+      ~init:env
+
+  let pop env to_pop =
+    Util.loop
+      ~f:(fun _n () acc ->
+          SAT.pop acc.satml;
+          let guard_to_neg = Stack.pop acc.guards.stack_guard in
+          let inst = Inst.pop ~guard:guard_to_neg env.inst in
+          assert (not (Stack.is_empty acc.guards.stack_guard));
+          let b = Stack.top acc.guards.stack_guard in
+          Steps.pop_steps ();
+          {acc with inst;
+                    guards =
+                      { acc.guards with
+                        current_guard = b;}})
+      ~max:to_pop
+      ~elt:()
+      ~init:env
+
+  let add_guard env gf =
+    let current_guard = env.guards.current_guard in
+    {gf with E.ff = E.mk_imp current_guard gf.E.ff 1}
 
   let unsat env gf =
     checks_implemented_features ();
+    let gf = add_guard env gf in
     Debug.unsat gf;
     (*fprintf fmt "FF.unsat@.";*)
     (* In dfs_sat goals' terms are added to env.inst *)
@@ -1076,7 +1125,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)
     assert (SAT.decision_level env.satml == 0);
-    try fst (assume_aux ~dec_lvl:0 env [gf])
+    try fst (assume_aux ~dec_lvl:0 env [add_guard env gf])
     with IUnsat (_env, dep) -> raise (Unsat dep)
 
   (* instrumentation of relevant exported functions for profiling *)

@@ -118,7 +118,7 @@ module ME =
     end)
 
 (* clean trigger:
-     remove useless terms in multi-triggers after inlining of lets*)
+   remove useless terms in multi-triggers after inlining of lets*)
 let clean_trigger ~in_theory name trig =
   if in_theory then trig
   else
@@ -542,6 +542,8 @@ let mk_theory acc l th_name extends _loc =
 
 let make acc d =
   match d.c with
+  | TPush (loc,n) -> {st_decl=Push n; st_loc=loc} :: acc
+  | TPop (loc,n) -> {st_decl=Pop n; st_loc=loc} :: acc
   | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
   | TAxiom(loc, name, Util.Default, f) -> mk_assume acc f name loc
   | TAxiom(_, _, Util.Propagator, _) -> assert false

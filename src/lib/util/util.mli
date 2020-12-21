@@ -74,6 +74,17 @@ type matching_env =
     backward : inst_kind
   }
 
+(** Loops from 0 to [max] and returns
+    [(f max elt ... (f 1 elt (f 0 elt init)))...)].
+    Returns [init] if [max] < 0
+*)
+val loop:
+  f : (int -> 'a -> 'b -> 'b) ->
+  max : int ->
+  elt : 'a ->
+  init : 'b ->
+  'b
+
 val print_list:
   sep:string ->
   pp:(Format.formatter -> 'a -> unit) ->

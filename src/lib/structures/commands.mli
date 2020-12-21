@@ -37,6 +37,8 @@ type sat_decl_aux =
   | RwtDef of (Expr.t rwt_rule) list
   | Query of string *  Expr.t * goal_sort
   | ThAssume of Expr.th_elt
+  | Push of int
+  | Pop of int
 
 type sat_tdecl = {
   st_loc : Loc.t;

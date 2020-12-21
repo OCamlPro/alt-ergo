@@ -49,7 +49,9 @@ module type S = sig
   val process_decl:
     (status -> int -> unit) ->
     used_context ->
-    sat_env * bool * Ex.t -> Commands.sat_tdecl ->
+    (bool * Ex.t) Stack.t ->
+    sat_env * bool * Ex.t ->
+    Commands.sat_tdecl ->
     sat_env * bool * Ex.t
 
   val print_status : status -> int -> unit
@@ -140,9 +142,20 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep f_name)
     else Ex.empty
 
-  let process_decl print_status used_context ((env, consistent, dep) as acc) d =
+  let process_decl print_status used_context consistent_dep_stack
+      ((env, consistent, dep) as acc) d =
     try
       match d.st_decl with
+      | Push n ->
+        Util.loop ~f:(fun _n env () -> Stack.push env consistent_dep_stack)
+          ~max:n ~elt:(consistent,dep) ~init:();
+        SAT.push env n, consistent, dep
+      | Pop n ->
+        let consistent,dep =
+          Util.loop ~f:(fun _n () _env -> Stack.pop consistent_dep_stack)
+            ~max:n ~elt:() ~init:(consistent,dep)
+        in
+        SAT.pop env n, consistent, dep
       | Assume(n, f, mf) ->
         let is_hyp = try (Char.equal '@' n.[0]) with _ -> false in
         if not is_hyp && unused_context n used_context then

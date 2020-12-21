@@ -41,7 +41,18 @@ module type S = sig
   val empty : t
   val add_terms : t -> SE.t -> Expr.gformula -> t
   val add_lemma : t -> Expr.gformula -> Ex.t -> t
-  val add_predicate : t -> Expr.gformula -> Ex.t -> t
+  val add_predicate :
+    t ->
+    guard:Expr.t ->
+    name:string ->
+    Expr.gformula ->
+    Ex.t ->
+    t
+
+  val ground_pred_defn:
+    Expr.t -> t -> (Expr.t * Expr.t * Explanation.t) option
+
+  val pop : t -> guard:Expr.t -> t
 
   val m_lemmas :
     Util.matching_env ->
@@ -85,16 +96,24 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   type tbox = X.t
   type instances = (Expr.gformula * Ex.t) list
 
+  type guard = E.t
+
   type t = {
-    lemmas : (int * Ex.t) ME.t;
-    predicates : (int * Ex.t) ME.t;
+    guards : (E.t * bool) list ME.t;
+    (* from guards to list of guarded predicates.
+       bool = true <-> pred is ground *)
+    lemmas : (guard * int * Ex.t) ME.t;
+    predicates : (guard * int * Ex.t) ME.t;
+    ground_preds : (guard * E.t * Explanation.t) ME.t; (* key <-> f *)
     matching : EM.t;
   }
 
   let empty = {
+    guards = ME.empty;
     lemmas = ME.empty ;
     matching = EM.empty;
     predicates = ME.empty;
+    ground_preds = ME.empty
   }
 
   module Debug = struct
@@ -134,13 +153,70 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     { env with
       matching = SE.fold (EM.add_term infos) s env.matching }
 
-  let add_predicate env gf ex =
-    let { Expr.ff = f; age = age; _ } = gf in
-    { env with
-      predicates = ME.add f (age, ex) env.predicates;
-      (* this is not done in SAT*)
-      matching = EM.max_term_depth env.matching (E.depth f)
+  let add_ground_pred env ~guard p np defn ex =
+    let gp = ME.add p (guard, defn, ex) env.ground_preds in
+    let gp = ME.add np (guard, E.neg defn, ex) gp in
+    let guarded = try ME.find guard env.guards with Not_found -> [] in
+    let guarded = (p, true) :: (np, true) :: guarded in
+    { env with ground_preds = gp;
+               guards = ME.add guard guarded env.guards
     }
+
+
+  let add_predicate env ~guard ~name gf ex =
+    let { Expr.ff = f; age = age; _ } = gf in
+    let env = { env with
+                matching = EM.max_term_depth env.matching (E.depth f) } in
+    match E.form_view f with
+    | E.Iff(f1, f2) ->
+      let p = E.mk_term (Symbols.name name) [] Ty.Tbool in
+      let np = E.neg p in
+      let defn =
+        if E.equal f1 p then f2
+        else if E.equal f2 p then f1
+        else assert false
+      in
+      add_ground_pred env ~guard p np defn ex
+
+    | E.Literal _ ->
+      let p = E.mk_term (Symbols.name name) [] Ty.Tbool in
+      let np = E.neg p in
+      let defn =
+        if E.equal p f then E.vrai
+        else if E.equal np f then E.faux
+        else assert false
+      in
+      add_ground_pred env ~guard p np defn ex
+
+    | E.Lemma _ ->
+      let guarded = try ME.find guard env.guards with Not_found -> [] in
+      { env with
+        predicates = ME.add f (guard, age, ex) env.predicates;
+        guards = ME.add guard ((f, false) :: guarded) env.guards
+      }
+    | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
+    | E.Skolem _ | E.Let _ ->
+      assert false
+
+  let pop env ~guard =
+    try
+      let guarded = ME.find guard env.guards in
+      let ground, non_ground =
+        List.fold_left
+          (fun (ground, non_ground) (f, is_ground) ->
+             if is_ground then ME.remove f ground, non_ground
+             else ground, ME.remove f non_ground
+          )(env.ground_preds, env.predicates) guarded
+      in
+      { env with guards = ME.remove guard env.guards;
+                 predicates = non_ground;
+                 ground_preds = ground }
+    with Not_found ->
+      env
+
+  let ground_pred_defn (p : E.t) env =
+    try Some (ME.find p env.ground_preds)
+    with Not_found -> None
 
   let register_max_term_depth env mx =
     {env with matching = EM.max_term_depth env.matching mx}
@@ -195,7 +271,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     List.fold_left
       (fun acc ({Matching_types.trigger_formula=f;
                  trigger_age=age; trigger_dep=dep; trigger_orig=orig;
-                 trigger = tr},
+                 trigger = tr; trigger_increm_guard},
                 subst_list) ->
         let cpt = ref 0 in
         let kept = ref 0 in
@@ -213,6 +289,8 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
             | Some a when X.query (Expr.apply_subst s a) tbox==None -> acc
             | _ ->
               let nf = E.apply_subst s f in
+              (* add the incrementaly guard to nf, if any *)
+              let nf = E.mk_imp trigger_increm_guard nf 0 in
               if inst_is_seen_during_this_round orig nf acc then acc
               else
                 let accepted = selector nf orig in
@@ -318,14 +396,16 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     mround env env.predicates tbox selector ilvl "predicates" mconf
 
   let add_lemma env gf dep =
+    let guard = E.vrai in
+    (* lemmas are already guarded outside instances.ml *)
     let { Expr.ff = orig; age = age; _ } = gf in
     let age, dep =
       try
-        let age' , dep' = ME.find orig env.lemmas in
+        let _, age' , dep' = ME.find orig env.lemmas in
         min age age' , Ex.union dep dep'
       with Not_found -> age, dep
     in
-    { env with lemmas = ME.add orig (age,dep) env.lemmas }
+    { env with lemmas = ME.add orig (guard, age,dep) env.lemmas }
 
   (*** add wrappers to profile exported functions ***)
 
@@ -353,17 +433,17 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         raise e
     else add_lemma env gf dep
 
-  let add_predicate env gf =
+  let add_predicate env ~guard ~name gf =
     if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Match Timers.F_add_predicate;
-        let res = add_predicate env gf in
+        let res = add_predicate env ~guard ~name gf in
         Timers.exec_timer_pause Timers.M_Match Timers.F_add_predicate;
         res
       with e ->
         Timers.exec_timer_pause Timers.M_Match Timers.F_add_predicate;
         raise e
-    else add_predicate env gf
+    else add_predicate env ~guard ~name gf
 
   let m_lemmas mconf env tbox selector ilvl =
     if Options.get_timers() then

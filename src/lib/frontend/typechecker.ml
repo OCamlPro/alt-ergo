@@ -1994,7 +1994,8 @@ let type_one_th_decl env e =
   | Goal(loc, _, _)
   | Predicate_def(loc,_,_,_)
   | Function_def(loc,_,_,_,_)
-  | TypeDecl ((loc, _, _, _)::_) ->
+  | TypeDecl ((loc, _, _, _)::_)
+  | Push (loc,_) | Pop (loc,_) ->
     typing_error WrongDeclInTheory loc
   | TypeDecl [] -> assert false
 
@@ -2143,9 +2144,30 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     assert (not is_recursive); (* Abstract types are not recursive *)
     acc, env
 
-let rec type_decl (acc, env) d =
+let rec type_decl (acc, env) d assertion_stack =
   Types.to_tyvars := MString.empty;
   match d with
+  | Push (loc,n) ->
+    if n < 0 then
+      typing_error (ShouldBePositive n) loc;
+    Util.loop ~f:(fun _n env () -> Stack.push env assertion_stack)
+      ~max:n ~elt:env ~init:();
+    let td = {c = TPush(loc,n); annot = new_id () } in
+    (td,env) :: acc, env
+  | Pop (loc,n) ->
+    if n < 0 then
+      typing_error (ShouldBePositive n) loc;
+    let assertion_context_number = Stack.length assertion_stack in
+    if n > assertion_context_number then
+      typing_error (BadPopCommand
+                      {pushed = assertion_context_number; to_pop = n}) loc
+    else
+      let old_env = env in
+      let env = Util.loop ~f:(fun _n () _env -> Stack.pop assertion_stack)
+          ~max:n ~elt:() ~init:env in
+      let td = {c = TPop(loc,n); annot = new_id () } in
+      (td,old_env) :: acc, env
+
   | Theory (loc, name, ext, l) ->
     Options.tool_req 1 "TR-Typing-TheoryDecl$_F$";
     let tl = List.map (type_one_th_decl env) l in
@@ -2247,7 +2269,8 @@ let rec type_decl (acc, env) d =
     (* A. Typing types that are not recursive *)
     let acc, env =
       List.fold_left
-        (fun accu x -> type_decl accu (TypeDecl [x])) (acc, env) not_rec
+        (fun accu x ->
+           type_decl accu (TypeDecl [x]) assertion_stack) (acc, env) not_rec
     in
 
     (* B. Typing types that are recursive *)
@@ -2279,14 +2302,16 @@ let rec type_decl (acc, env) d =
          type_user_defined_type_body ~is_recursive:true env acc ty_d)
       (acc, env) are_rec
 
-let type_parsed env d =
-  let l, env' = type_decl ([], env) d in
+let type_parsed env s d =
+  let l, env' = type_decl ([], env) d s in
   List.rev_map fst l, env'
 
 let type_file ld =
   let env = Env.empty in
+  let assertion_stack = Stack.create () in
   let ltd, env =
-    List.fold_left type_decl ([], env) ld
+    List.fold_left
+      (fun acc d -> type_decl acc d assertion_stack) ([], env) ld
   in
   List.rev ltd, env
 

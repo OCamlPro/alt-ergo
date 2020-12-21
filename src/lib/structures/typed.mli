@@ -297,6 +297,11 @@ and 'a tdecl =
       declares a type [t], with parameters [vars], and with
       contents [body]. This new type may either be abstract,
       a record type, or an enumeration. *)
+  | TPush of Loc.t * int
+  (** [push (loc,n)] pushs n new assertions levels onto the assertion stack *)
+  | TPop of Loc.t * int
+  (** [pop (loc,n)] pops n assertions levels from the assertion stack *)
+
 (** Typed declarations. *)
 (* TODO: wrap this in a record to factorize away
    the location and name of the declaration ? *)
