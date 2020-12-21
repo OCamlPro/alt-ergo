@@ -137,9 +137,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   end
 
+  type refs = {
+    unit_facts : (E.gformula * Ex.t) ME.t
+  }
+
   type guards = {
     current_guard: E.t;
-    stack_guard: E.t Stack.t;
+    stack_elt: (E.t *  refs) Stack.t;
     guards: (E.gformula * Ex.t) ME.t;
   }
 
@@ -177,39 +181,24 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let all_models_sat_env = ref None
   let latest_saved_env = ref None
-  let terminated_normally = ref true
-
-  let refs_stack = Stack.create ()
+  let terminated_normally = ref false
 
   let reset_refs () =
     all_models_sat_env := None;
     latest_saved_env := None;
-    terminated_normally := true;
-    Stack.clear refs_stack;
+    terminated_normally := false;
     Steps.reset_steps ()
 
-  let save_refs env =
-    Stack.push (
-      !all_models_sat_env,
-      !latest_saved_env,
-      !terminated_normally,
-      !(env.unit_facts_cache)
-    ) refs_stack;
+  let save_guard_and_refs env new_guard =
+    let refs = {unit_facts = !(env.unit_facts_cache)} in
+    Stack.push (new_guard,refs) env.guards.stack_elt;
     Steps.push_steps ()
 
-  let restore_refs env =
-    let p_all_models_sat_env,
-        p_latest_saved_env,
-        p_terminated_normally,
-        p_unit_facts_cache
-      =
-      Stack.pop refs_stack in
-    all_models_sat_env := p_all_models_sat_env;
-    latest_saved_env := p_latest_saved_env;
-    terminated_normally := p_terminated_normally;
+  let restore_guards_and_refs env =
+    let guard,refs = Stack.pop env.guards.stack_elt in
     Steps.pop_steps ();
     { env with
-      unit_facts_cache = ref p_unit_facts_cache}
+      unit_facts_cache = ref refs.unit_facts}, guard
 
   exception Sat of t
   exception Unsat of Ex.t
@@ -1743,9 +1732,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         );
     Util.loop
       ~f:(fun _n () acc ->
-          save_refs env;
           let new_guard = E.fresh_name Ty.Tbool in
-          Stack.push new_guard acc.guards.stack_guard;
+          save_guard_and_refs acc new_guard;
           let guards = ME.add new_guard
               (mk_gf new_guard "" true true,Ex.empty)
               acc.guards.guards in
@@ -1768,25 +1756,24 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         );
     Util.loop
       ~f:(fun _n () acc ->
-          let acc = restore_refs acc in
-          let guard_to_neg = Stack.pop acc.guards.stack_guard in
+          let acc,guard_to_neg = restore_guards_and_refs acc in
           let inst = Inst.pop ~guard:guard_to_neg env.inst in
-          let new_current_guard =
-            if Stack.is_empty acc.guards.stack_guard then
-              Expr.vrai
-            else Stack.top acc.guards.stack_guard
-          in
+          assert (not (Stack.is_empty acc.guards.stack_elt));
+          let new_current_guard,_ = Stack.top acc.guards.stack_elt in
           let guards = ME.add guard_to_neg
               (mk_gf (E.neg guard_to_neg) "" true true,Ex.empty)
               acc.guards.guards
           in
           acc.model_gen_mode := false;
+          all_models_sat_env := None;
+          latest_saved_env := None;
+          terminated_normally := false;
           {acc with inst;
                     guards =
                       { acc.guards with
                         current_guard = new_current_guard;
-                        guards = guards;}}
-        )
+                        guards = guards;
+                      }})
       ~max:to_pop
       ~elt:()
       ~init:env
@@ -1916,9 +1903,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let empty_guards () = {
     current_guard = Expr.vrai;
-    stack_guard = Stack.create ();
+    stack_elt = Stack.create ();
     guards = ME.empty;
   }
+
+  let init_guards () =
+    let guards = empty_guards () in
+    Stack.push (Expr.vrai,{unit_facts = ME.empty}) guards.stack_elt;
+    guards
 
   let empty () =
     (* initialize some structures in SAT.empty. Otherwise, E.faux is never
@@ -1950,7 +1942,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       heuristics = ref (Heuristics.empty ());
       model_gen_mode = ref false;
       unit_facts_cache = ref ME.empty;
-      guards = empty_guards ();
+      guards = init_guards ();
       add_inst = fun _ -> true;
     }
     in

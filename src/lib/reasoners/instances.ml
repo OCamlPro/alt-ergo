@@ -215,7 +215,8 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
       env
 
   let ground_pred_defn (p : E.t) env =
-    ME.find_opt p env.ground_preds
+    try Some (ME.find p env.ground_preds)
+    with Not_found -> None
 
   let register_max_term_depth env mx =
     {env with matching = EM.max_term_depth env.matching mx}

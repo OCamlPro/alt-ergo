@@ -946,6 +946,7 @@ module Flat_Formula : FLAT_FORMULA = struct
                   abstr f new_proxies proxies_mp new_vars in
                 f :: l, new_proxies, proxies_mp, new_vars
               ) ([],new_proxies,proxies_mp,new_vars) l in
+          let l = List.rev l in
           let p,new_vars =
             atom_of_lit hcons (mk_new_proxy f.tag) false new_vars in
           let is_and = match f.view with

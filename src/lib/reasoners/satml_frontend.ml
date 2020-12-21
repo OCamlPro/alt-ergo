@@ -52,6 +52,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     stack_guard = Stack.create ();
   }
 
+  let init_guards () =
+    let guards = empty_guards () in
+    Stack.push Expr.vrai guards.stack_guard;
+    guards
+
   let empty () =
     { gamma = ME.empty;
       satml = SAT.empty ();
@@ -65,7 +70,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       proxies = Util.MI.empty;
       inst = Inst.empty;
       skolems = ME.empty;
-      guards = empty_guards ();
+      guards = init_guards ();
       add_inst = fun _ -> true;
     }
 
@@ -837,13 +842,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | Satml.Sat -> assert false
 
   let assume_aux_bis ~dec_lvl env l =
-    (*fprintf fmt "@.assume aux: %d@." (List.length l);*)
     let pending = {
       seen_f = SE.empty; activate = FF.Map.empty;
       new_vars = []; unit = []; nunit = []; updated = false;
       new_abstr_vars = [];
     }
     in
+    (*fprintf fmt "@.assume aux: %d@." (List.length l);*)
     let env, pending = List.fold_left pre_assume (env, pending) l in
     cdcl_assume env pending ~dec_lvl;
     env, pending.updated, pending.new_abstr_vars
@@ -1052,14 +1057,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           SAT.pop acc.satml;
           let guard_to_neg = Stack.pop acc.guards.stack_guard in
           let inst = Inst.pop ~guard:guard_to_neg env.inst in
-          let b =
-            if Stack.is_empty acc.guards.stack_guard then
-              Expr.vrai
-            else Stack.top acc.guards.stack_guard
-          in
-
+          assert (not (Stack.is_empty acc.guards.stack_guard));
+          let b = Stack.top acc.guards.stack_guard in
           Steps.pop_steps ();
-
           {acc with inst;
                     guards =
                       { acc.guards with
