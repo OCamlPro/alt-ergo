@@ -365,28 +365,29 @@ module Translate = struct
 
   let count_goals = ref 0
 
+  let translate_check_sat command l =
+    let loc = pos command in
+    incr count_goals;
+    let gname = "g_" ^ (string_of_int !count_goals) in
+    let l = List.rev_map (fun e -> translate_prop_literal e) (List.rev l) in
+    let e =
+      match l with
+      | [] -> mk_false_const loc
+      | [e] -> mk_not loc e
+      | _ -> mk_not loc (translate_left_assoc mk_and command l)
+    in
+    mk_goal loc gname e
+
   let translate_command acc command =
-    let ps = pos command in
     match command.c with
     | Cmd_Assert(assert_term) ->
       (translate_assert (pos command) assert_term) :: acc
     | Cmd_CheckEntailment(assert_term) ->
       (translate_goal (pos command) assert_term) :: acc
     | Cmd_CheckSat ->
-      incr count_goals;
-      let gname = "g_" ^ (string_of_int !count_goals) in
-      (mk_goal ps gname (mk_false_const ps)) :: acc
-
+      (translate_check_sat command []) :: acc
     | Cmd_CheckSatAssum l ->
-      let l = List.rev_map (fun e -> translate_prop_literal e) (List.rev l) in
-      let e = match l with
-        | [e] -> e
-        | _ -> translate_left_assoc mk_and command l
-      in
-      incr count_goals;
-      let gname = "g_" ^ (string_of_int !count_goals) in
-      (mk_goal ps gname (mk_not ps e)) :: acc
-
+      (translate_check_sat command l) :: acc
     | Cmd_DeclareConst(symbol,const_dec) ->
       (translate_decl_fun symbol [] (translate_const_dec const_dec)) :: acc
     | Cmd_DeclareDataType(symbol,datatype_dec) ->
