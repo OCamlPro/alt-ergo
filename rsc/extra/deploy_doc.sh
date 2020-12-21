@@ -1,4 +1,4 @@
-#!/bin/bash -ve
+#!/bin/sh -e
 
 # === deploy_doc ===
 #
@@ -9,6 +9,9 @@
 # and push it to the repo
 
 VERSION=$1
+ODOC_DIR="odoc"
+ODOC_BUILD_DIR="_build/default/_doc/_html/"
+SPHINX_BUILD_DIR="_build/sphinx_docs/"
 
 # Cd to the extra dir regardless of where the script was called
 git_repo=`git rev-parse --show-toplevel`
@@ -18,19 +21,22 @@ cd $git_repo
 # has correctly been built.
 make doc
 
-# Generate version index page
-(cd rsc/extra && asciidoc index.adoc)
-
 # Checkout gh-pages
 git fetch origin +gh-pages:gh-pages
 git checkout gh-pages
 
 # Create necessary directories if they do not exists
-mkdir -p ./$VERSION
+mkdir -p $ODOC_DIR
+mkdir -p $ODOC_DIR/$VERSION
 
 # Copy doc to the right locations
-cp rsc/extra/index.html ./
-cp -r _build/default/_doc/_html/* ./$VERSION/
+cp -r $ODOC_BUILD_DIR/* ./$ODOC_DIR/$VERSION/
+cp -r $SPHINX_BUILD_DIR/* ./
+
+# Bypass Jekyll
+touch .nojekyll
+touch $ODOC_DIR/.nojekyll
+touch $ODOC_DIR/$VERSION/.nojekyll
 
 # Clean build artifacts
 rm -rf _build

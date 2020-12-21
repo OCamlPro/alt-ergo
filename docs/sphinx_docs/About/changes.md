@@ -1,8 +1,10 @@
-dev version
-===========
+# Changes
 
-version 2.3.2, March 23, 2020
-================================
+## dev version
+
+
+## version 2.3.2, March 23, 2020
+
 
 * Minor release:
 
@@ -11,16 +13,16 @@ version 2.3.2, March 23, 2020
   -  Fix issue with dynlink of parsers
 
 
-version 2.3.1, February 18, 2020
-================================
+## version 2.3.1, February 18, 2020
+
 
 * Minor release:
 
   - Fix issue #248. Avoid double rounding int intervals
 
 
-version 2.3.0, February 11, 2019
-================================
+## version 2.3.0, February 11, 2019
+
 
 * General improvements:
 
@@ -82,8 +84,8 @@ version 2.3.0, February 11, 2019
     additional constructs in the backend (iff, If-Then-Else, ...),
     code reviewing and performances improvements ...
 
-version 2.2.0, April 21, 2018
-================================
+## version 2.2.0, April 21, 2018
+
 
 * Frontend:
 
@@ -115,8 +117,8 @@ version 2.2.0, April 21, 2018
   - soundness bugfix in UF module
 
 
-version 2.1.0, March 14, 2018
-================================
+## version 2.1.0, March 14, 2018
+
 
 * SAT-solving:
 
@@ -147,8 +149,8 @@ version 2.1.0, March 14, 2018
 
 
 
-version 2.0.0, November 14, 2017
-================================
+## version 2.0.0, November 14, 2017
+
 
 * integration of floating-point arithmetic reasoning: this is done via
   the support of the rounding operator as done in the Gappa tool. FPA
@@ -200,8 +202,7 @@ version 2.0.0, November 14, 2017
   Apache license v2. Some recent OCamlPro additions are licensed under
   the terms of the OCamlPro Non-Commercial Purpose License v1
 
-version 1.30, November 21, 2016
-==============================
+## version 1.30, November 21, 2016
 
 * experimental support for models generation (for more details, see
    http://www.ocamlpro.com/2016/11/21/release-of-alt-ergo-1-30-with-experimental-support-for-models-generation/).
@@ -246,8 +247,7 @@ version 1.30, November 21, 2016
    (*, /, %). Non-linear multiplication remains AC.
 
 
-version 1.20, February 09, 2016
-==============================
+## version 1.20, February 09, 2016
 
 * default value of option -age-bound increased from 10 to 50
 
@@ -263,8 +263,7 @@ version 1.20, February 09, 2016
 * improvements in the default SAT solver
 
 
-version 1.10, October 19, 2015
-==============================
+## version 1.10, October 19, 2015
 
 * Improvements and bug fixes in the satML plugin
 
@@ -287,8 +286,7 @@ version 1.10, October 19, 2015
   the solver
 
 
-version 1.00, January 29, 2015
-==============================
+## version 1.00, January 29, 2015
 
 * General Improvements:
 
@@ -421,8 +419,8 @@ version 1.00, January 29, 2015
      new front-end for SMT2 in upcoming releases
 
 
-version 0.99.1, December 30, 2014
-=================================
+## version 0.99.1, December 30, 2014
+
   o the "SAT solving" part can now be delegated to an external plugin;
 
   o new experimental SAT solver based on mini-SAT, provided as a
@@ -453,8 +451,8 @@ version 0.99.1, December 30, 2014
   useless axioms (that are not included in .used file) during the
   initial run.
 
-version 0.95.2, September 20th, 2013
-====================================
+## version 0.95.2, September 20th, 2013
+
 
   o Alt-Ergo is now maintained and distributed by OCamlPro, while
     academic research is conducted in partnership with the VALS team
@@ -464,15 +462,13 @@ version 0.95.2, September 20th, 2013
   o bug-fixes in matching, nums, records, sums,
   o improvement of the GUI when opening big files.
 
-version 0.95.1, March 05th, 2013
-=================================
+## version 0.95.1, March 05th, 2013
 
   o bug fixes (existantial elimination, Euclidean division)
   o minor enhancement (transformation of boolean equalities into equivalences)
   o minor enhancement (sort axioms/definitions instances according to their size)
 
-version 0.95, January 11th, 2013
-=================================
+## version 0.95, January 11th, 2013
 
   + Main changes in the solver:
   -----------------------------
@@ -513,8 +509,7 @@ version 0.95, January 11th, 2013
     o unsat-cores (-proof option) can be used to simplify the context
 
 
-version 0.94, December 2nd, 2011
-=================================
+## version 0.94, December 2nd, 2011
 
   o the theory of records replaces the theory of pairs
   o bug fixes 
@@ -527,13 +522,11 @@ version 0.94, December 2nd, 2011
   o manual lemma instantiation in the GUI
 
 
-version 0.93.1, May 9th, 2011
-=================================
+## version 0.93.1, May 9th, 2011
 
   o bug fixes (distinct, let-in, explanations)
 
-version 0.93, April 12th, 2011
-=================================
+## version 0.93, April 12th, 2011
 
   o -steps <i> stops Alt-Ergo after a given number of steps
   o -max-split option to limit the number of case-splits
@@ -549,16 +542,15 @@ version 0.93, April 12th, 2011
   o partial support for / (division) operator
   o bug fixes
 
-version 0.92.2, October 22nd, 2010
-=====================================
+## version 0.92.2, October 22nd, 2
+
 
   o New built-in syntax for the theory of arrays
   o Fixes a bug in the arithmetic module
   o Allows folding and unfolding of predicate definitions
   o Fixes other bugs
 
-version 0.91, May 19th, 2010
-===============================
+## version 0.91, May 19th, 2010
 
   o experimental support for the theory of functional polymorphic 
     arrays with the -arrays option
@@ -570,15 +562,13 @@ version 0.91, May 19th, 2010
   o new support for Euclidean division and modulo operators
   o new environment variable ERGOLIB to specify the library directory
     
-version 0.9, July 17th, 2009
-===============================
+## version 0.9, July 17th, 2009
 
   o support AC symbols
   o support for C-like hexadecimal floating-point constants
   o handle the division operator 
 
-version 0.8, July 21st, 2008
-===============================
+## version 0.8, July 21st, 2008
 
   o pretty output with the -color option
   o the SAT solver part is now equipped with a backjumping mechanism
@@ -592,31 +582,23 @@ version 0.8, July 21st, 2008
   o decision procedure for bit-vectors
   o combination scheme for several decision procedures  
 
-version 0.7.3, March 5th, 2008
-===============================
+## version 0.7.3, March 5th, 2008
 
   o renamings in the interfaces
   o provides an API for alt-ergo (make api or make api.byte)
   o handles the modulo operator (%) as an uninterpreted symbol
   o allow labels on any term, not only on predicates
 
-version 0.7, October 11th, 2007
-===============================
+## version 0.7, October 11th, 2007
   o trigger construction has been improved
   o preliminary implementation of combination scheme (Arithmetic+pairs)
   o the SAT loop has been improved
 
 
-version 0.6, February 1st, 2007
-===============================
+## version 0.6, February 1st, 2007
 
   o new CC(X) architecture (it can know directly handle relation symbols)  
   o fully handles the polymorphism of the logic
 
-version 0.5, October 12th, 2006
-===============================
+## version 0.5, October 12th, 2006
   o first (beta) release
-
-Local Variables: 
-mode: text
-End: 

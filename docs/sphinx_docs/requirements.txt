@@ -1,0 +1,9 @@
+#
+####### requirements.txt #######
+#
+###### Requirements for sphinx doc ######
+sphinx
+recommonmark
+sphinx_rtd_theme
+sphinx-markdown-tables
+#
