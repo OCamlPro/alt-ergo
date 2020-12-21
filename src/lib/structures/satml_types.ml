@@ -39,6 +39,7 @@ module type ATOM = sig
       mutable watched : clause Vec.t;
       mutable is_true : bool;
       mutable timp : int;
+      mutable is_guard : bool;
       aid : int }
 
   and clause =
@@ -175,6 +176,7 @@ module Atom : ATOM = struct
       mutable watched : clause Vec.t;
       mutable is_true : bool;
       mutable timp : int;
+      mutable is_guard : bool;
       aid : int }
 
   and clause =
@@ -212,6 +214,7 @@ module Atom : ATOM = struct
       watched = {Vec.dummy=dummy_clause; data=[||]; sz=0};
       neg = dummy_atom;
       is_true = false;
+      is_guard = false;
       aid = -102 }
   and dummy_clause =
     { name = "";
@@ -305,6 +308,7 @@ module Atom : ATOM = struct
           watched = Vec.make 10 dummy_clause;
           neg = na;
           is_true = false;
+          is_guard = false;
           timp = 0;
           aid = cpt_fois_2 (* aid = vid*2 *) }
       and na =
@@ -313,6 +317,7 @@ module Atom : ATOM = struct
           watched = Vec.make 10 dummy_clause;
           neg = pa;
           is_true = false;
+          is_guard = false;
           timp = 0;
           aid = cpt_fois_2 + 1 (* aid = vid*2+1 *) } in
       HT.add hcons.tbl lit var;
@@ -900,9 +905,8 @@ module Flat_Formula : FLAT_FORMULA = struct
   (* CNF_ABSTR a la Tseitin *)
 
   let atom_of_lit hcons lit is_neg new_vars =
-    let a, l = Atom.add_atom hcons.atoms lit !new_vars in
-    new_vars := l;
-    if is_neg then a.Atom.neg else a
+    let a, l = Atom.add_atom hcons.atoms lit new_vars in
+    if is_neg then a.Atom.neg,l else a,l
 
   let mk_new_proxy n =
     let hs = Hs.make ("PROXY__" ^ (string_of_int n)) in
@@ -929,26 +933,30 @@ module Flat_Formula : FLAT_FORMULA = struct
       ((p.Atom.neg) :: l) :: acc
 
   let cnf_abstr hcons f proxies_mp new_vars =
-    let proxies_mp = ref proxies_mp in
-    let new_proxies = ref [] in
-    let new_vars = ref new_vars in
-    let rec abstr f = match f.view with
-      | UNIT a -> a
+    let rec abstr f new_proxies proxies_mp new_vars =
+      match f.view with
+      | UNIT a -> a, new_proxies, proxies_mp, new_vars
       | AND l | OR l ->
-        match get_proxy_of f !proxies_mp with
-        | Some p -> p
+        match get_proxy_of f proxies_mp with
+        | Some p -> p, new_proxies, proxies_mp, new_vars
         | None ->
-          let l = List.rev (List.rev_map abstr l) in
-          let p = atom_of_lit hcons (mk_new_proxy f.tag) false new_vars in
+          let l, new_proxies, proxies_mp, new_vars =
+            List.fold_left (fun (l,new_proxies,proxies_mp,new_vars) f ->
+                let f, new_proxies, proxies_mp, new_vars =
+                  abstr f new_proxies proxies_mp new_vars in
+                f :: l, new_proxies, proxies_mp, new_vars
+              ) ([],new_proxies,proxies_mp,new_vars) l in
+          let l = List.rev l in
+          let p,new_vars =
+            atom_of_lit hcons (mk_new_proxy f.tag) false new_vars in
           let is_and = match f.view with
             | AND _ -> true | OR _ -> false | UNIT _ -> assert false
           in
-          new_proxies := (p, l, is_and) :: !new_proxies;
-          proxies_mp := Util.MI.add f.tag (p, l, is_and) !proxies_mp;
-          p
+          let new_proxies = (p, l, is_and) :: new_proxies in
+          let proxies_mp = Util.MI.add f.tag (p, l, is_and) proxies_mp in
+          p, new_proxies, proxies_mp, new_vars
     in
-    let abstr_f = abstr f in
-    abstr_f, !new_proxies, !proxies_mp, !new_vars
+    abstr f [] proxies_mp new_vars
 
   let get_atom hcons a = Atom.get_atom hcons.atoms a
 

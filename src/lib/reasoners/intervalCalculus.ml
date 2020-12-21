@@ -2241,7 +2241,8 @@ let new_facts_for_axiom
     ~do_syntactic_matching menv uf selector optimized substs accu =
   List.fold_left
     (fun acc ({trigger_formula=f; trigger_age=age; trigger_dep=dep;
-               trigger_orig=orig; trigger = tr}, subst_list) ->
+               trigger_orig=orig; trigger = tr; trigger_increm_guard},
+              subst_list) ->
       List.fold_left
         (fun (env, acc)
           {sbs = sbs;
@@ -2291,6 +2292,9 @@ let new_facts_for_axiom
                   "semantic matching succeeded:@ %a"
                   (Symbols.Map.print E.print) (fst sbs);
               let nf = E.apply_subst sbs f in
+              (* incrementality/push. Although it's not supported for
+                 theories *)
+              let nf = E.mk_imp trigger_increm_guard nf 0 in
               let accepted = selector nf orig in
               record_this_instance nf accepted lorig;
               if accepted then begin
@@ -2343,7 +2347,7 @@ let syntactic_matching menv env uf _selector =
     ME.fold
       (fun f (_th_ax, dep) accu ->
          (* currently, No diff between propagators and case-split axs *)
-         let forms = ME.singleton f (0 (*0 = age *), dep) in
+         let forms = ME.singleton f (E.vrai, 0 (*0 = age *), dep) in
          let menv = EM.add_triggers mconf menv forms in
          let res = EM.query mconf menv uf in
          if get_debug_fpa () >= 2 then begin

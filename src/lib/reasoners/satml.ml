@@ -82,6 +82,9 @@ module type SAT_ML = sig
   val decide : t -> Atom.atom -> unit
   val conflict_analyze_and_fix : t -> conflict_origin -> unit
 
+  val push : t -> Satml_types.Atom.atom -> unit
+  val pop : t -> unit
+
 end
 
 module MFF = FF.Map
@@ -214,6 +217,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       mutable ff_lvl : int MFF.t;
 
       mutable lvl_ff : SFF.t Util.MI.t;
+
+      mutable increm_guards : atom Vec.t;
+
+      mutable next_dec_guard : int;
     }
 
   exception Conflict of clause
@@ -317,6 +324,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       ff_lvl = MFF.empty;
 
       lvl_ff = Util.MI.empty;
+
+      increm_guards = Vec.make 1 dummy_atom;
+
+      next_dec_guard = 0;
     }
 
 
@@ -435,6 +446,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       false
     with Exit -> true
 
+  let is_assigned a =
+    a.is_true || a.neg.is_true
+
   let unassign_atom a =
     a.is_true <- false;
     a.neg.is_true <- false;
@@ -446,6 +460,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     a.var.vpremise <- []
 
   let enqueue_assigned env a =
+    if a.neg.is_guard then begin
+      (* if the negation of a is (still) a guard, it should be forced to true
+         during the first decisions.
+         If the SAT tries to deduce that a.neg is true (ie. a is false),
+         then we have detected an inconsistency. *)
+      assert (a.var.level <= env.next_dec_guard);
+      (* guards are necessarily decided/propagated before all other atoms *)
+      raise (Unsat None);
+    end;
     assert (a.is_true || a.neg.is_true);
     if a.timp = 1 then begin
       a.timp <- -1;
@@ -477,6 +500,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         end
         else begin
           unassign_atom a;
+          if a.is_guard then
+            env.next_dec_guard <- env.next_dec_guard - 1;
           insert_var_order env a.var
         end
       done;
@@ -520,8 +545,17 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     else v
 
   let pick_branch_lit env =
-    let v = pick_branch_var env in
-    v.na
+    if env.next_dec_guard < Vec.size env.increm_guards then
+      begin
+        let a = Vec.get env.increm_guards env.next_dec_guard in
+        (assert (not (a.neg.is_guard || a.neg.is_true)));
+        env.next_dec_guard <- env.next_dec_guard + 1;
+        a
+      end
+    else
+      let v = pick_branch_var env in
+      v.na
+
 
   let debug_enqueue_level a lvl reason =
     match reason with
@@ -543,6 +577,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let enqueue env a lvl reason =
     assert (not a.is_true && not a.neg.is_true &&
             a.var.level < 0 && a.var.reason == None && lvl >= 0);
+    if a.neg.is_guard then begin
+      (* if the negation of a is (still) a guard, it should be forced to true
+         during the first decisions.
+         If the SAT tries to deduce that a.neg is true (ie. a is false),
+         then we have detected an inconsistency. *)
+      assert (a.var.level <= env.next_dec_guard);
+      (* guards are necessarily decided/propagated before all other atoms *)
+      raise (Unsat None);
+    end;
     (* Garder la reason car elle est utile pour les unsat-core *)
     (*let reason = if lvl = 0 then None else reason in*)
     a.is_true <- true;
@@ -1753,5 +1796,28 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     | Sat -> ()
     | Stopped -> ()
     | Unsat _ -> assert false
+
+  let push env guard =
+    assert (not (is_assigned guard));
+    guard.is_guard <- true;
+    guard.neg.is_guard <- false;
+    cancel_until env env.next_dec_guard;
+    Vec.push env.increm_guards guard
+
+  let pop env =
+    (assert (not (Vec.is_empty env.increm_guards)));
+    let g = Vec.last env.increm_guards in
+    Vec.pop env.increm_guards;
+    g.is_guard <- false;
+    g.neg.is_guard <- false;
+    assert (not g.var.na.is_true); (* atom not false *)
+    if g.var.pa.is_true then (* if already decided  *)
+      begin
+        (assert (g.var.level > 0));
+        cancel_until env (g.var.level - 1); (* undo its decision *)
+        (* all previous guards are decided *)
+        env.next_dec_guard <- Vec.size env.increm_guards
+      end;
+    enqueue env g.neg 0 None
 
 end

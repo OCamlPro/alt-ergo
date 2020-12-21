@@ -91,6 +91,13 @@ let mk_theory_axiom loc name expr =
 let mk_theory_case_split loc name expr =
   Axiom (loc, name, Util.Default, expr)
 
+(** Declaration of stack assertions commands *)
+
+let mk_push loc n =
+  Push (loc, n)
+
+let mk_pop loc n =
+  Pop (loc, n)
 
 (** Making pure and logic types *)
 

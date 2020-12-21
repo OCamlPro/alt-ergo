@@ -31,6 +31,12 @@ module Translate = struct
     | None -> Loc.dummy
     | Some p -> p
 
+  let must_not_happen loc s =
+    let s = Format.sprintf
+        "psmt2-frontend typing should ensure that this case can't happen : %s" s
+    in
+    raise (Errors.error (Errors.Syntax_error (loc,s)))
+
   (**************************************************************************)
   let translate_left_assoc f id params =
     match params with
@@ -349,6 +355,14 @@ module Translate = struct
       List.map2 translate_datatype_decl sort_dec datatype_dec
     with Invalid_argument _ -> assert false
 
+  let translate_push_pop fun_push_pop n pos =
+    try let n = int_of_string n in
+      if n < 0 then
+        must_not_happen pos "negative integer n in push n /pop n command";
+      fun_push_pop pos n
+    with _ ->
+      must_not_happen pos "int of string conversion error in push/pop command"
+
   let not_supported s =
     Printer.print_wrn
       ~warning:(Options.get_verbose () || Options.get_debug_warnings ())
@@ -425,8 +439,8 @@ module Translate = struct
     | Cmd_SetLogic _ -> not_supported "set-logic"; acc
     | Cmd_SetOption _ -> not_supported "set-option"; acc
     | Cmd_SetInfo _ -> not_supported "set-info"; acc
-    | Cmd_Push _ -> not_supported "push"; assert false
-    | Cmd_Pop _ -> not_supported "pop"; assert false
+    | Cmd_Push n -> translate_push_pop mk_push n (pos command) :: acc
+    | Cmd_Pop n -> translate_push_pop mk_pop n (pos command) :: acc
     | Cmd_Exit -> acc
 
   let init () =
@@ -467,6 +481,7 @@ end
 
 let aux aux_fun token lexbuf =
   try
+    Smtlib_options.set_filename (Options.get_file ());
     Smtlib_options.set_keep_loc true;
     let res = aux_fun token lexbuf in
     Options.set_status (Smtlib_options.status ());

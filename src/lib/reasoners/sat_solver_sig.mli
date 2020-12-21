@@ -33,22 +33,34 @@ module type S = sig
   exception Unsat of Explanation.t
   exception I_dont_know of t
 
-  (* the empty sat-solver context *)
+  (** the empty sat-solver context *)
   val empty : unit -> t
   val empty_with_inst : (Expr.t -> bool) -> t
 
-  (* [assume env f] assume a new formula [f] in [env]. Raises Unsat if
-     [f] is unsatisfiable in [env] *)
+  (** [push env n] add n new assertion levels.
+      A guard g is added for every expression e assumed at the current
+      assertion level.
+      Ie. assuming e after the push will become g -> e,
+      a g will be forced to be true (but not propagated at level 0) *)
+  val push : t -> int -> t
+
+  (** [pop env n] remove an assertion level.
+      Internally, the guard g introduced in the push correponsding to this pop
+      will be propagated to false (at level 0) *)
+  val pop : t -> int -> t
+
+  (** [assume env f] assume a new formula [f] in [env]. Raises Unsat if
+      [f] is unsatisfiable in [env] *)
   val assume : t -> Expr.gformula -> Explanation.t -> t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
 
-  (* [pred_def env f] assume a new predicate definition [f] in [env]. *)
+  (** [pred_def env f] assume a new predicate definition [f] in [env]. *)
   val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> t
 
-  (* [unsat env f size] checks the unsatisfiability of [f] in
-     [env]. Raises I_dont_know when the proof tree's height reaches
-     [size]. Raises Sat if [f] is satisfiable in [env] *)
+  (** [unsat env f size] checks the unsatisfiability of [f] in
+      [env]. Raises I_dont_know when the proof tree's height reaches
+      [size]. Raises Sat if [f] is satisfiable in [env] *)
   val unsat : t -> Expr.gformula -> Explanation.t
 
   val print_model : header:bool -> Format.formatter -> t -> unit
