@@ -41,7 +41,8 @@ val type_expr :
 (* TODO: give the env a proper module with binding functions,
          so that the list argument can be ommitted ? *)
 
-val type_parsed : env -> Parsed.decl -> int Typed.atdecl list * env
+val type_parsed :
+  env -> env Stack.t -> Parsed.decl -> int Typed.atdecl list * env
 (** Type a single declaration.
     @raise Typing_error {!Errors.Typing_error} *)
 

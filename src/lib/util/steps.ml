@@ -49,6 +49,27 @@ let mult_uf = ref 0
 let mult_b = ref 0
 let mult_a = ref 0
 
+let all_steps = Stack.create ()
+
+let push_steps () =
+  Stack.push
+    (!naive_steps,!steps,!mult_f,!mult_m,
+     !mult_s,!mult_uf,!mult_b,!mult_a)
+    all_steps
+
+let pop_steps () =
+  let p_naive_steps,p_steps, p_mult_f, p_mult_m,
+      p_mult_s, p_mult_uf, p_mult_b, p_mult_a =
+    Stack.pop all_steps in
+  naive_steps := p_naive_steps;
+  steps := p_steps;
+  mult_f := p_mult_f;
+  mult_m := p_mult_m;
+  mult_s := p_mult_s;
+  mult_uf := p_mult_uf;
+  mult_b := p_mult_b;
+  mult_a := p_mult_a
+
 (* Multipliers are here to homogeneize the global step counter *)
 let incr k =
   begin
@@ -99,6 +120,7 @@ let incr k =
 
 
 let reset_steps () =
+  Stack.clear all_steps;
   naive_steps := 0;
   steps := 0;
   mult_f := 0;

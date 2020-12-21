@@ -31,6 +31,7 @@ module type ATOM = sig
       mutable watched : clause Vec.t;
       mutable is_true : bool;
       mutable timp : int;
+      mutable is_guard : bool;
       aid : int }
 
   and clause =

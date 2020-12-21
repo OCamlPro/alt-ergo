@@ -31,6 +31,12 @@ module Translate = struct
     | None -> Loc.dummy
     | Some p -> p
 
+  let must_not_happen loc s =
+    let s = Format.sprintf
+        "psmt2-frontend typing should ensure that this case can't happen : %s" s
+    in
+    raise (Errors.error (Errors.Syntax_error (loc,s)))
+
   (**************************************************************************)
   let translate_left_assoc f id params =
     match params with
@@ -349,10 +355,42 @@ module Translate = struct
       List.map2 translate_datatype_decl sort_dec datatype_dec
     with Invalid_argument _ -> assert false
 
+  let translate_push_pop fun_push_pop n pos =
+    try let n = int_of_string n in
+      if n < 0 then
+        must_not_happen pos "negative integer n in push n /pop n command";
+      fun_push_pop pos n
+    with _ ->
+      must_not_happen pos "int of string conversion error in push/pop command"
+
   let not_supported s =
     Printer.print_wrn
       ~warning:(Options.get_verbose () || Options.get_debug_warnings ())
       "%S : Not yet supported" s
+
+  let translate_prop_literal x =
+    match x.c with
+    | PropLit sy ->
+      mk_application (pos x) sy.c []
+
+    | PropLitNot sy ->
+      let ps = pos x in
+      mk_not ps (mk_application ps sy.c [])
+
+  let count_goals = ref 0
+
+  let translate_check_sat command l =
+    let loc = pos command in
+    incr count_goals;
+    let gname = "g_" ^ (string_of_int !count_goals) in
+    let l = List.rev_map (fun e -> translate_prop_literal e) (List.rev l) in
+    let e =
+      match l with
+      | [] -> mk_false_const loc
+      | [e] -> mk_not loc e
+      | _ -> mk_not loc (translate_left_assoc mk_and command l)
+    in
+    mk_goal loc gname e
 
   let translate_command acc command =
     match command.c with
@@ -361,9 +399,9 @@ module Translate = struct
     | Cmd_CheckEntailment(assert_term) ->
       (translate_goal (pos command) assert_term) :: acc
     | Cmd_CheckSat ->
-      (mk_goal (pos command) "g" (mk_false_const (pos command))) :: acc
-    | Cmd_CheckSatAssum _ ->
-      not_supported "check-sat-assuming"; assert false
+      (translate_check_sat command []) :: acc
+    | Cmd_CheckSatAssum l ->
+      (translate_check_sat command l) :: acc
     | Cmd_DeclareConst(symbol,const_dec) ->
       (translate_decl_fun symbol [] (translate_const_dec const_dec)) :: acc
     | Cmd_DeclareDataType(symbol,datatype_dec) ->
@@ -401,8 +439,8 @@ module Translate = struct
     | Cmd_SetLogic _ -> not_supported "set-logic"; acc
     | Cmd_SetOption _ -> not_supported "set-option"; acc
     | Cmd_SetInfo _ -> not_supported "set-info"; acc
-    | Cmd_Push _ -> not_supported "push"; assert false
-    | Cmd_Pop _ -> not_supported "pop"; assert false
+    | Cmd_Push n -> translate_push_pop mk_push n (pos command) :: acc
+    | Cmd_Pop n -> translate_push_pop mk_pop n (pos command) :: acc
     | Cmd_Exit -> acc
 
   let init () =
@@ -443,6 +481,7 @@ end
 
 let aux aux_fun token lexbuf =
   try
+    Smtlib_options.set_filename (Options.get_file ());
     Smtlib_options.set_keep_loc true;
     let res = aux_fun token lexbuf in
     Options.set_status (Smtlib_options.status ());

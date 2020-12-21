@@ -72,6 +72,7 @@ type 'a state = {
 
 let solve all_context (cnf, goal_name) =
   let used_context = FE.choose_used_context all_context ~goal_name in
+  let consistent_dep_stack = Stack.create () in
   init_profiling ();
   try
     if Options.get_timelimit_per_goal() then
@@ -82,7 +83,7 @@ let solve all_context (cnf, goal_name) =
     SAT.reset_refs ();
     let _ =
       List.fold_left
-        (FE.process_decl FE.print_status used_context)
+        (FE.process_decl FE.print_status used_context consistent_dep_stack)
         (SAT.empty (), true, Explanation.empty) cnf
     in
     if Options.get_timelimit_per_goal() then
@@ -157,10 +158,11 @@ let () =
   let all_used_context = FE.init_all_used_context () in
   if Options.get_timelimit_per_goal() then
     FE.print_status FE.Preprocess 0;
+  let assertion_stack = Stack.create () in
   let typing_loop state p =
     if get_parse_only () then state else begin
       try
-        let l, env = I.type_parsed state.env p in
+        let l, env = I.type_parsed state.env assertion_stack p in
         List.fold_left (typed_loop all_used_context) { state with env; } l
       with
       | Errors.Error e ->

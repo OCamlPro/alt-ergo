@@ -74,6 +74,9 @@ module type SAT_ML = sig
   val decide : t -> Atom.atom -> unit
   val conflict_analyze_and_fix : t -> conflict_origin -> unit
 
+  val push : t -> Satml_types.Atom.atom -> unit
+  val pop : t -> unit
+
 end
 
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t

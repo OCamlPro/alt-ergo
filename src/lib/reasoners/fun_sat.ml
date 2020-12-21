@@ -137,6 +137,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   end
 
+  type refs = {
+    unit_facts : (E.gformula * Ex.t) ME.t
+  }
+
+  type guards = {
+    current_guard: E.t;
+    stack_elt: (E.t *  refs) Stack.t;
+    guards: (E.gformula * Ex.t) ME.t;
+  }
 
   type t = {
     (* The field gamma contains the current Boolean model (true formulas) of
@@ -165,7 +174,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     inst : Inst.t;
     heuristics : Heuristics.t ref;
     model_gen_mode : bool ref;
-    ground_preds : (E.t * Explanation.t) ME.t; (* key <-> f *)
+    guards : guards;
     add_inst: E.t -> bool;
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
   }
@@ -174,6 +183,22 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let latest_saved_env = ref None
   let terminated_normally = ref false
 
+  let reset_refs () =
+    all_models_sat_env := None;
+    latest_saved_env := None;
+    terminated_normally := false;
+    Steps.reset_steps ()
+
+  let save_guard_and_refs env new_guard =
+    let refs = {unit_facts = !(env.unit_facts_cache)} in
+    Stack.push (new_guard,refs) env.guards.stack_elt;
+    Steps.push_steps ()
+
+  let restore_guards_and_refs env =
+    let guard,refs = Stack.pop env.guards.stack_elt in
+    Steps.pop_steps ();
+    { env with
+      unit_facts_cache = ref refs.unit_facts}, guard
 
   exception Sat of t
   exception Unsat of Ex.t
@@ -668,7 +693,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       true
     with Not_found -> false
 
-
   let update_unit_facts env ff dep =
     let f = ff.E.ff in
     if get_sat_learning () && not (ME.mem f !(env.unit_facts_cache)) then
@@ -1041,13 +1065,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             let lits = (a, ff, dep, env.dlevel, env.plevel)::lits in
             let acc = env, true, true, ap_delta, lits in
             begin
-              try (* ground preds bahave like proxies of lazy CNF *)
-                let af, adep = ME.find a env.ground_preds in
+              (* ground preds bahave like proxies of lazy CNF *)
+              match Inst.ground_pred_defn a env.inst with
+              | Some (guard, af, adep) ->
+                (* in fun-SAT, guards are either forced to TRUE, or
+                   Inst.ground_preds is cleaned when the guard is
+                   propagated to FALSE *)
+                assert (ME.mem guard env.gamma);
                 if Options.get_tableaux_cdcl () then
                   cdcl_assume false env
                     [{ff with E.ff = E.mk_imp f af (E.id f)}, adep];
                 asm_aux acc [{ff with E.ff = af}, Ex.union dep adep]
-              with Not_found -> acc
+              | None -> acc
             end
 
           | E.Skolem quantif ->
@@ -1591,8 +1620,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let max_term_depth_in_sat env =
     let aux mx f = max mx (E.depth f) in
-    let max_t = ME.fold (fun f _ mx -> aux mx f) env.gamma 0 in
-    ME.fold (fun _ (f,_) mx -> aux mx f) env.ground_preds max_t
+    ME.fold (fun f _ mx -> aux mx f) env.gamma 0
 
 
   let rec backward_instantiation_rec env rnd max_rnd =
@@ -1699,11 +1727,76 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           "solved with backward!";
       raise e
 
+  let push env to_push =
+    if Options.get_tableaux_cdcl () then
+      Errors.run_error
+        (Errors.Unsupported_feature
+           "Incremental commands are not implemented in \
+            Tableaux(CDCL) solver ! \
+            Please use the Tableaux or CDLC SAT solvers instead"
+        );
+    Util.loop
+      ~f:(fun _n () acc ->
+          let new_guard = E.fresh_name Ty.Tbool in
+          save_guard_and_refs acc new_guard;
+          let guards = ME.add new_guard
+              (mk_gf new_guard "" true true,Ex.empty)
+              acc.guards.guards in
+          {acc with guards =
+                      { acc.guards with
+                        current_guard = new_guard;
+                        guards = guards;
+                      }})
+      ~max:to_push
+      ~elt:()
+      ~init:env
+
+  let pop env to_pop =
+    if Options.get_tableaux_cdcl () then
+      Errors.run_error
+        (Errors.Unsupported_feature
+           "Incremental commands are not implemented in \
+            Tableaux(CDCL) solver ! \
+            Please use the Tableaux or CDLC SAT solvers instead"
+        );
+    Util.loop
+      ~f:(fun _n () acc ->
+          let acc,guard_to_neg = restore_guards_and_refs acc in
+          let inst = Inst.pop ~guard:guard_to_neg env.inst in
+          assert (not (Stack.is_empty acc.guards.stack_elt));
+          let new_current_guard,_ = Stack.top acc.guards.stack_elt in
+          let guards = ME.add guard_to_neg
+              (mk_gf (E.neg guard_to_neg) "" true true,Ex.empty)
+              acc.guards.guards
+          in
+          acc.model_gen_mode := false;
+          all_models_sat_env := None;
+          latest_saved_env := None;
+          terminated_normally := false;
+          {acc with inst;
+                    guards =
+                      { acc.guards with
+                        current_guard = new_current_guard;
+                        guards = guards;
+                      }})
+      ~max:to_pop
+      ~elt:()
+      ~init:env
+
   let unsat env gf =
     Debug.is_it_unsat gf;
     try
-      if Options.get_tableaux_cdcl () then
+      let guards_to_assume =
+        ME.fold (fun _g gf_guard_with_ex acc ->
+            gf_guard_with_ex :: acc
+          ) env.guards.guards [] in
+
+      if Options.get_tableaux_cdcl () then begin
+        cdcl_assume false env guards_to_assume;
         cdcl_assume false env [gf,Ex.empty];
+      end;
+
+      let env = assume env guards_to_assume in
       let env = assume env [gf, Ex.empty] in
       let env =
         {env with inst = (* add all the terms of the goal to matching env *)
@@ -1764,11 +1857,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       dep
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
 
+  let add_guard env gf =
+    let current_guard = env.guards.current_guard in
+    {gf with E.ff = E.mk_imp current_guard gf.E.ff 1}
+
   let assume env fg dep =
     try
       if Options.get_tableaux_cdcl () then
-        cdcl_assume false env [fg,dep];
-      assume env [fg,dep]
+        cdcl_assume false env [add_guard env fg,dep];
+      assume env [add_guard env fg,dep]
     with
     | IUnsat (d, classes) ->
       terminated_normally := true;
@@ -1777,42 +1874,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
 
 
-  (* unused --
-     let factorize_iff a_t f =
-     if E.equal a_t f then E.vrai
-     else if E.equal (E.neg a_t) f then E.faux
-     else match E.form_view f with
-      | E.Iff(f1, f2) ->
-        if E.equal f1 a_t then f2
-        else if E.equal f2 a_t then f1
-        else assert false
-      | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
-      | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ -> assert false
-  *)
-
   let pred_def env f name dep _loc =
     Debug.pred_def f;
     let gf = mk_gf f name true false in
-    let a_t = E.mk_term (Symbols.name name) [] Ty.Tbool in
-    if not (SE.mem a_t (E.max_ground_terms_rec_of_form f)) then
-      {env with
-       inst = Inst.add_predicate env.inst gf dep }
-    else
-      begin
-        assert (not (ME.mem a_t env.ground_preds));
-        if E.equal a_t f || E.equal (E.neg a_t) f then assume env gf dep
-        else match E.form_view f with
-          | E.Iff(f1, f2) ->
-            let f_simpl =
-              if E.equal f1 a_t then f2
-              else (if E.equal f2 a_t then f1 else assert false)
-            in
-            let gp = ME.add a_t (f_simpl, dep) env.ground_preds in
-            let gp = ME.add (E.neg a_t) (E.neg f_simpl, dep) gp in
-            {env with ground_preds = gp}
-          | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
-          | E.Literal _ | E.Lemma _ | E.Skolem _ | E.Let _ -> assert false
-      end
+    let guard = env.guards.current_guard in
+    { env with
+      inst =
+        Inst.add_predicate env.inst ~guard ~name gf dep }
 
   let unsat env fg =
     if Options.get_timers() then
@@ -1838,11 +1906,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         raise e
     else assume env fg
 
-  let reset_refs () =
-    Steps.reset_steps ();
-    all_models_sat_env := None;
-    latest_saved_env := None;
-    terminated_normally := false
+  let empty_guards () = {
+    current_guard = Expr.vrai;
+    stack_elt = Stack.create ();
+    guards = ME.empty;
+  }
+
+  let init_guards () =
+    let guards = empty_guards () in
+    Stack.push (Expr.vrai,{unit_facts = ME.empty}) guards.stack_elt;
+    guards
 
   let empty () =
     (* initialize some structures in SAT.empty. Otherwise, E.faux is never
@@ -1873,8 +1946,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       inst = inst;
       heuristics = ref (Heuristics.empty ());
       model_gen_mode = ref false;
-      ground_preds = ME.empty;
       unit_facts_cache = ref ME.empty;
+      guards = init_guards ();
       add_inst = fun _ -> true;
     }
     in
