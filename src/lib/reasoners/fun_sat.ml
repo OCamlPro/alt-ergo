@@ -1374,7 +1374,7 @@ are not Th-reduced";
   let greedy_instantiation env =
     match get_instantiation_heuristic () with
     | INormal ->
-      return_answer env (get_before_end_interpretation ())
+      return_answer env (get_last_interpretation ())
         (fun e -> raise (I_dont_know e))
     | IAuto | IGreedy ->
       let rec greedy_instantiation_aux env greedier =
@@ -1403,7 +1403,7 @@ are not Th-reduced";
         if ok1 || ok2 || ok3 || ok4 then env
         else if not greedier then greedy_instantiation_aux env true
         else
-          return_answer env (get_before_end_interpretation ())
+          return_answer env (get_last_interpretation ())
             (fun e -> raise (I_dont_know e))
       in
       greedy_instantiation_aux env false
@@ -1412,7 +1412,7 @@ are not Th-reduced";
   let normal_instantiation env try_greedy =
     Debug.print_nb_related env;
     let env = do_case_split env Util.BeforeMatching in
-    let env = compute_concrete_model env (get_before_inst_interpretation ()) in
+    let env = compute_concrete_model env (get_every_interpretation ()) in
     let env = new_inst_level env in
     let mconf =
       {Util.nb_triggers = get_nb_triggers ();
@@ -1506,7 +1506,6 @@ are not Th-reduced";
 
   and back_tracking env =
     try
-      let env = compute_concrete_model env (get_before_dec_interpretation ()) in
       if env.delta == [] || Options.get_no_decisions() then
         back_tracking (normal_instantiation env true)
       else
