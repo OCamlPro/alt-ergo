@@ -63,7 +63,7 @@ let set_fmt_usc f = fmt_usc := f
 
 type model = MNone | MDefault | MAll | MComplete
 type instantiation_heuristic = INormal | IAuto | IGreedy
-type interpretation = INone | IFirst | IBefore_inst | IBefore_dec | IBefore_end
+type interpretation = INone | IFirst | IEvery | ILast
 
 type input_format = Native | Smtlib2 | Why3 (* | SZS *) | Unknown of string
 type output_format = input_format
@@ -310,15 +310,10 @@ let set_output_format b = output_format := b
 let set_infer_output_format f = infer_output_format := f = None
 let set_unsat_core b = unsat_core := b
 
-let get_interpretation () =
-  !interpretation = IFirst ||
-  !interpretation = IBefore_dec ||
-  !interpretation = IBefore_inst ||
-  !interpretation = IBefore_end
+let get_interpretation () = !interpretation <> INone
 let get_first_interpretation () = !interpretation = IFirst
-let get_before_dec_interpretation () = !interpretation = IBefore_dec
-let get_before_inst_interpretation () = !interpretation = IBefore_inst
-let get_before_end_interpretation () = !interpretation = IBefore_end
+let get_every_interpretation () = !interpretation = IEvery
+let get_last_interpretation () = !interpretation = ILast
 let get_interpretation_use_underscore () = !interpretation_use_underscore
 let get_model () = !model = MDefault || !model = MComplete
 let get_complete_model () = !model = MComplete
