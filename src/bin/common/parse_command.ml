@@ -60,9 +60,8 @@ let instantiation_heuristic_conv =
 let interpretation_parser = function
   | "none" -> Ok INone
   | "first" -> Ok IFirst
-  | "before_inst" -> Ok IBefore_inst
-  | "before_dec" -> Ok IBefore_dec
-  | "before_end" -> Ok IBefore_end
+  | "every" -> Ok IEvery
+  | "last" -> Ok ILast
   | s ->
     Error
       (`Msg ("Option --interpretation does not accept the argument \"" ^ s))
@@ -70,9 +69,8 @@ let interpretation_parser = function
 let interpretation_to_string = function
   | INone -> "none"
   | IFirst -> "first"
-  | IBefore_inst -> "before_inst"
-  | IBefore_dec -> "before_dec"
-  | IBefore_end -> "before_end"
+  | IEvery -> "every"
+  | ILast -> "last"
 
 let interpretation_printer fmt interpretation =
   Format.fprintf fmt "%s" (interpretation_to_string interpretation)

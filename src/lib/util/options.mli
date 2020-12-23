@@ -42,7 +42,7 @@ type model = MNone | MDefault | MAll | MComplete
 type instantiation_heuristic  = INormal | IAuto | IGreedy
 
 (** Type used to describe the type of interpretation wanted *)
-type interpretation = INone | IFirst | IBefore_inst | IBefore_dec | IBefore_end
+type interpretation = INone | IFirst | IEvery | ILast
 
 (** Type used to describe the type of input wanted by
     {!val:set_input_format} *)
@@ -717,18 +717,13 @@ val get_first_interpretation : unit -> bool
 (** Default to [false] *)
 
 (** [true] if the interpretation is set to compute interpretation
-    before every decision *)
-val get_before_dec_interpretation : unit -> bool
-(** Default to [false] *)
-
-(** [true] if the interpretation is set to compute interpretation
     before every instantiation *)
-val get_before_inst_interpretation : unit -> bool
+val get_every_interpretation : unit -> bool
 (** Default to [false] *)
 
 (** [true] if the interpretation is set to compute interpretation
     before the solver return unknown *)
-val get_before_end_interpretation : unit -> bool
+val get_last_interpretation : unit -> bool
 (** Default to [false] *)
 
 (** [true] if the interpretation_use_underscore is set to output _
