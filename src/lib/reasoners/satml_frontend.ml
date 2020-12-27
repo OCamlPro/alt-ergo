@@ -676,7 +676,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       env.gamma SE.empty
 
   let instantiation_context env ~greedy_round ~frugal =
-    let sa = match greedy_round || get_greedy (), get_cdcl_tableaux_inst () with
+    let sa = match greedy_round, get_cdcl_tableaux_inst () with
       | false, false -> atoms_from_sat_branches env
       | false, true  -> atoms_from_lazy_sat ~frugal env
       | true , false -> atoms_from_bmodel env
@@ -891,7 +891,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
      triggers_var = get_triggers_var ();
      use_cs = false;
      backward = Util.Normal;
-     greedy = get_greedy ();
+     greedy = false;
     }
 
   let normal_mconf () =
@@ -900,7 +900,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
      triggers_var = get_triggers_var ();
      use_cs = false;
      backward = Util.Normal;
-     greedy = get_greedy ();
+     greedy = false;
     }
 
   let greedy_mconf () =
@@ -965,11 +965,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          | INormal ->
            [ frugal_mconf (), "frugal-inst", false, true ;
              normal_mconf (), "normal-inst", false, false ]
-         | IAuto | IGreedy ->
+         | IAuto ->
            [ frugal_mconf (), "frugal-inst", false, true ;
              normal_mconf (), "normal-inst", false, false;
              greedy_mconf (), "greedy-inst", true , false;
-             greedier_mconf (), "greedier-inst", true, false ])
+             greedier_mconf (), "greedier-inst", true, false]
+         | IGreedy ->
+           [ greedy_mconf (), "greedy-inst", true , false;
+             greedier_mconf (), "greedier-inst", true, false])
 
   let rec unsat_rec env ~first_call:_ : unit =
     try SAT.solve env.satml; assert false
