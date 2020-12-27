@@ -1,0 +1,9 @@
+type t = A | B | C of { c_1 : int }
+
+type s = X | Y | Z of { c_2 : s }
+
+logic e : t
+
+goal g_invalid_1:
+  forall u : s.
+  u = Z(u)

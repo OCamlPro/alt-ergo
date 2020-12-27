@@ -1,0 +1,8 @@
+type t = A of {a : int} | B of { b : real} | C of { c : t }
+
+goal g:
+forall x : t.
+match x with
+| A(x) -> 1
+| B -> 3
+end <= 2

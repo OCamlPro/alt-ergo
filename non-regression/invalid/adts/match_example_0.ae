@@ -1,0 +1,22 @@
+type t =
+  A of {a_1 : int} | B of { b_11 : int ; b12 : real} | C | D | E
+
+logic e : t
+logic n : int
+
+axiom ax_n : n >= 9
+
+axiom ax_e:
+  e = A(n) or e = B(n*n, 0.) or e = E
+
+axiom ax_neg_goal :
+ match e with
+ | A(u) -> u >= 8
+ | B(u,v) -> u >= 80 and v = 0.
+ | E -> true
+ | x -> false
+ | _ -> false
+ end
+
+goal g:
+  false
