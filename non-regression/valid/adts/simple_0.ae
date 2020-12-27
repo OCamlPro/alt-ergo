@@ -1,0 +1,42 @@
+type t = A | B | C of { c_1 : int }
+
+type s = X | Y | Z of { c_2 : s }
+
+logic e : t
+
+goal g_valid_1:
+  A <> B
+
+goal g_valid_2:
+  A <> C(0)
+
+goal g_valid_3_1:
+  C(10)#c_1 = 10
+
+goal g_valid_3_2:
+  forall z : t.
+  z#c_1 <> 10 ->
+  z = C(10) ->
+  false
+
+goal g_valid_4:
+ forall m, n : int.
+ C(m) <> C(n) ->
+ m <> n
+
+goal g_valid_5:
+ forall m, n : int.
+ C(m) = C(n) ->
+ m = n
+
+goal g_valid_6:
+  forall u : s.
+  u <> Z(u)
+
+goal g_valid_7:
+  forall a, b, c, d : s.
+  a = Z(b) ->
+  b = Z(c) ->
+  c = Z(d) ->
+  d = Z(a) ->
+  false

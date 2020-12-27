@@ -245,12 +245,15 @@ let assume env uf la =
 
 let add env _ r _ = add_aux env r, []
 
-let case_split env _ ~for_model =
+let case_split env uf ~for_model =
   let acc = MX.fold
       (fun r (hss, _) acc ->
-         let sz = HSS.cardinal hss in
-         if sz = 1 then acc
-         else match acc with
+         let x, _ = Uf.find_r uf r in
+         match embed x with
+         | Cons _ -> acc (* already bound to an Enum const *)
+         | _ -> (* cs even if sz below is equal to 1 *)
+           let sz = HSS.cardinal hss in
+           match acc with
            | Some (n,_,_) when n <= sz -> acc
            | _ -> Some (sz, r, HSS.choose hss)
       ) env.mx None

@@ -1,0 +1,18 @@
+type t =
+  A of { a_1 : int} | B of {b_11 : int ; b_12 : real } | C | D | E
+
+logic e : t
+logic n : int
+
+axiom ax_n : n >= 9
+
+goal g_valid:
+  e = A(n) ->
+  e ? A
+
+axiom ax_e:
+  e = A(n) or e = B(n*n, 0.) or e = E
+
+goal g_valid:
+ e ? B ->
+ e#b_11 >= 81 and e#b_12 = 0.

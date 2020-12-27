@@ -1,0 +1,41 @@
+type foo = Foo_A | Foo_B | Foo_C of { c_field : foo } (* recursive *)
+
+type bar = Bar_X of { xxx : foo } | Bar_Y
+
+
+type simple =
+       S_A of { simple_sel_A1 : int ; simple_sel_A2 : int }
+     | S_B of { simple_sel_B1 : int }
+     | S_C of { simple_sel_C1 : timple ; simple_sel_C2 : bool }
+
+and timple =
+      T_X of { simple_sel_X1 : int ; simple_sel_X2 : simple }
+    | T_Y of { simple_sel_Y1 : real ; simple_sel_Y2 : int }
+
+
+type ('a, 'b) s =
+       A of { sel_A1 : 'a ; sel_A2 : int }
+     | B of { sel_B1 : 'b }
+     | C of { sel_C1 : ('b, 'a) t ; sel_C2 : bool }
+
+and ('c, 'd) t =
+      X of { sel_X1 : 'c ; sel_X2 : ('c, int) s }
+    | Y of { sel_Y1 : real ; sel_Y2 : 'd }
+
+type u
+type v
+
+logic a : (u, v) s
+
+logic b : (u, u) t
+
+logic c : u
+
+goal g_1_valid:
+     not (a ? A) ->
+     not (a ? B) ->
+     a ? C
+
+goal g3_valid:
+  b = Y(0. , c) ->
+  (not (b ? X) and b#sel_Y1 >= 0.)

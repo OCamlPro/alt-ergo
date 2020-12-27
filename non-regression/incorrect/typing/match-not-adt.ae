@@ -1,0 +1,9 @@
+type t = A of {a : int} | B of { b : real} | C of { c : t }
+
+goal g:
+forall x : t.
+match x#a with
+| A(x) -> true
+| B(y) -> false
+| C(z) -> true
+end

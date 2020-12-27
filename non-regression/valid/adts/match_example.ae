@@ -1,0 +1,24 @@
+type ('a, 'b) t =
+  A of {a_1 : 'a}
+  | B of {b_11 : 'a ; b12 : 'b}
+  | C
+  | D
+  | E
+
+logic e : (int, real) t
+logic n : int
+
+axiom ax_n : n >= 9
+
+axiom ax_e:
+  e = A(n) or e = B(n*n, 0.) or e = E
+
+(* TODO *)
+goal g:
+ match e with
+ | A(u) -> u >= 8
+ | B (u,v) -> u >= 80 and v = 0.
+ | E -> true
+ | _ -> false
+ end and
+ 3 <= 2+2
