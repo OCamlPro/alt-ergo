@@ -1,0 +1,14 @@
+type s = A of { a1 : int; a2 : int ; a3 : bool}
+and  t = B of { b1 : int ; b2 : int; b3 : real}
+
+
+goal g:
+forall x : s.
+forall y : t.
+x#a1 = x#a2 ->
+y#b1 = y#b2 ->
+x#a1 = y#b1 ->
+x#a2 = y#b2
+
+
+

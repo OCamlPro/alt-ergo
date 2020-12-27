@@ -1,0 +1,7 @@
+type 'a t = A of { a : 'a } | B of { b : int }
+type s = C of { c : int } | D of { d : int }
+
+
+goal g:
+forall x : int t.
+x#c = 1

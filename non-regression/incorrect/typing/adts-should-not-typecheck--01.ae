@@ -1,0 +1,3 @@
+type t = A of { a : int } | B of { b : int }
+
+type s = C of { a : int } | D of { d : int }

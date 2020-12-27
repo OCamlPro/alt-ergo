@@ -1,0 +1,25 @@
+type ('a, 'b) t =
+  A of {a_1 : 'a}
+  | B of {b_11 : 'a ; b12 : 'b}
+  | C
+  | D
+  | E
+
+logic e : (int, real) t
+logic n : int
+logic P : bool -> prop
+
+axiom ax_n : n >= 9
+
+axiom ax_e:
+  e = A(n) or e = B(n*n, 0.) or e = E
+
+(* TODO *)
+goal g:
+ match e with
+ | A(u) -> u * u
+ | B (u,v) -> u
+ | E -> 100
+ | _ -> 100
+ end
+ >= 80

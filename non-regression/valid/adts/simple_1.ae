@@ -1,0 +1,71 @@
+type t = A | B | C of { c_1 : int }
+
+logic e : t
+
+(**)
+goal g_valid_1_1:
+  not (e ? B) ->
+  not (e ? C) ->
+  (e ? A)
+
+goal g_valid_1_2:
+  not (e ? B) ->
+  not (e ? C) ->
+  (e = A)
+
+(**)
+goal g_valid_2_1:
+  not (e ? C) ->
+  not (e ? A) ->
+  (e ? B)
+
+goal g_valid_2_2:
+  not (e ? C) ->
+  not (e ? A) ->
+  (e = B)
+
+(**)
+goal g_valid_3_1:
+  not (e ? C) ->
+  (e ? A or e ? B)
+
+goal g_valid_3_2:
+  not (e ? C) ->
+  (e = B or e = A)
+
+
+goal g_valid_3_2:
+  not (e ? C) ->
+  (e ? A or e = B)
+
+(**)
+goal g_valid_4_1:
+  e ? A ->
+  e ? B ->
+  false
+
+goal g_valid_4_2:
+  e ? C ->
+  e ? B ->
+  false
+
+(**)
+goal g_valid_5_1:
+  forall n : int.
+  n >= 0 -> (* just here for E-matching *)
+  not (e ? A) ->
+  not (e ? B) ->
+  exists x : int[x]. e = C(x)
+
+goal g_valid_5_2:
+  forall n : int.
+  not (e ? A) ->
+  not (e ? B) ->
+  e = C(e#c_1)
+
+goal g_valid_5_3:
+  forall n : int.
+  (e ? C) ->
+  e = C(e#c_1)
+
+
