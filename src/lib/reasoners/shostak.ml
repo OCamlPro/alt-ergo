@@ -630,7 +630,7 @@ struct
         X6.choose_adequate_model t rep l
       | Ty.Trecord _ -> X2.choose_adequate_model t rep l
       | Ty.Tfarray _ -> X4.choose_adequate_model t rep l
-      | Ty.Tbool     when is_true_or_false rep ->
+      | Ty.Tbool     (* when is_true_or_false rep  *)->
         rep, Format.asprintf "%a" print rep
       | _            ->
         let acc =

@@ -341,7 +341,7 @@ module SmtlibCounterExample = struct
                 Printer.print_fmt ~flushed:false fmt
                   "((s: %a, args: %a) rep: %a)@ "
                   (print_symb ty) f print_args xs x_print rep;
-                List.iter (fun (_,x) -> assert_has_depth_one x) xs;
+(*                 List.iter (fun (_,x) -> assert_has_depth_one x) xs; *)
              )st;
            Printer.print_fmt ~flushed:false fmt "@]@ ";
         ) fprofs;
