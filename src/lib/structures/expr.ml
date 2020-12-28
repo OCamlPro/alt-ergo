@@ -593,7 +593,7 @@ and print_triggers fmt trs =
 
 let type_info t = t.ty
 let symbol_info t = t.f
-let get_infos t = t.f, t.xs, t.ty
+let get_infos t = t
 
 (* unused
    let is_term e = match e.f with
