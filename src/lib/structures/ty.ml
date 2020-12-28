@@ -82,11 +82,14 @@ let assoc_destrs hs cases =
 let print_generic body_of =
   let h = Hashtbl.create 17 in
   let rec print body_of fmt = function
-    | Tint -> if get_output_smtlib () then fprintf fmt "Int"
+    | Tint ->
+      if get_output_smtlib () then fprintf fmt "Int"
       else fprintf fmt "int"
-    | Treal -> if get_output_smtlib () then fprintf fmt "Real"
+    | Treal ->
+      if get_output_smtlib () then fprintf fmt "Real"
       else fprintf fmt "real"
-    | Tbool -> if get_output_smtlib () then fprintf fmt "Bool"
+    | Tbool ->
+      if get_output_smtlib () then fprintf fmt "Bool"
       else fprintf fmt "bool"
     | Tunit -> fprintf fmt "unit"
     | Tbitv n -> fprintf fmt "bitv[%d]" n
