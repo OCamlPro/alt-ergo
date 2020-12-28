@@ -39,7 +39,7 @@ type decl_kind =
   | Dpredicate of t
   | Dfunction of t
 
-type view = {
+type view = private {
   f: Symbols.t;
   xs: t list;
   ty: Ty.t;
