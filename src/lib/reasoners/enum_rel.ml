@@ -40,7 +40,7 @@ open Sh
 
 module Ex = Explanation
 
-module MX = Map.Make(struct type t = X.r let compare = X.hash_cmp end)
+module MX = Shostak.MXH
 module HSS = Set.Make (struct type t=Hs.t let compare = Hs.compare end)
 
 module LR = Uf.LX

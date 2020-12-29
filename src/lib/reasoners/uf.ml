@@ -45,10 +45,10 @@ module LX =
 module MapL = Emap.Make(LX)
 
 module MapX = struct
-  include Map.Make(struct type t = X.r let compare = X.hash_cmp end)
+  include Shostak.MXH
   let find m x = Steps.incr (Steps.Uf); find m x
 end
-module SetX = Set.Make(struct type t = X.r let compare = X.hash_cmp end)
+module SetX = Shostak.SXH
 
 module SetXX = Set.Make(struct
     type t = X.r * X.r

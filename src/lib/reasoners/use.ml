@@ -41,7 +41,7 @@ module SA =
 
 module X = Shostak.Combine
 
-module MX = Map.Make(struct type t = X.r let compare = X.hash_cmp end)
+module MX = Shostak.MXH
 
 type t = (SE.t * SA.t) MX.t
 type r = X.r
