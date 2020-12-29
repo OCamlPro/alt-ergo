@@ -1,0 +1,14 @@
+theory Test
+
+       use int.Int
+
+       function x [@model] [@model_trace:X] : int
+       function  y [@model] [@model_trace:Y] : int
+       function  z [@model] [@model_trace:Z] : int
+
+       goal g:
+           x >= y ->
+           y - 3 * z >= 0 ->
+           z >= 10 ->
+           false
+end

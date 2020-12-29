@@ -1,0 +1,14 @@
+logic x : int
+logic y : int
+logic P : int -> prop
+logic Q : prop
+
+goal g:
+maximize(x,1) ->
+maximize(y,2) ->
+
+P(x) -> (* just to introduce x and set its max to +infinity *)
+ (Q and (0 <= y <= 10)) or (not Q and (1000 <= y <= 1000)) ->
+
+(*x <= 50 ->*)
+ false

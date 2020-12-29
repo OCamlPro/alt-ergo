@@ -1,0 +1,13 @@
+logic z : int
+logic x : int
+logic y : int
+
+goal g :
+minimize(z,1) ->
+minimize(y,3) ->
+maximize(x,2) ->
+(y <= x) ->
+(0 <= (y - (3 * z))) ->
+(10 <= z) ->
+false
+(* min(z) = 10, max(x)= +infinity, min(y) not relevant since x doesn't has a max *)

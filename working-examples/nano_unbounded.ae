@@ -1,0 +1,4 @@
+goal g :
+forall x : int.
+maximize(x,1) ->
+x >= 0 -> false

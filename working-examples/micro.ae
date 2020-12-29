@@ -1,0 +1,20 @@
+goal g1 :
+  forall x : int.
+  forall z : int.
+  maximize(x,1) ->
+  maximize(z,2) ->
+  2 * x <= 125 ->
+  0 <= z <= 10 ->
+  false
+
+(* z is a "don't care" in this second example, because y is already
+unbounded. (although y and z are independant *)
+
+goal g :
+  forall y : int.
+  minimize(y,1) ->
+  3 * y <= 125 ->
+  forall z : int.
+  maximize(z,2) ->
+  0 <= z <= 10 ->
+  false
