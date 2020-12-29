@@ -1,0 +1,4 @@
+goal g :
+forall x : real.
+minimize(x,1) ->
+x*x*x > 33. -> false
