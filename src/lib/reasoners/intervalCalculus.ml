@@ -49,8 +49,8 @@ module P = Shostak.Polynome
 
 module MP0 = Map.Make(P)
 module SP = Set.Make(P)
-module SX = Set.Make(struct type t = X.r let compare = X.hash_cmp end)
-module MX0 = Map.Make(struct type t = X.r let compare = X.hash_cmp end)
+module SX = Shostak.SXH
+module MX0 = Shostak.MXH
 module MPL = Expr.Map
 
 module Oracle = OracleContainer.Make(P)

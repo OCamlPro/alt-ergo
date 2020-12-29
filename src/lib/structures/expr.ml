@@ -642,7 +642,11 @@ let add_label =
     | _ ->
       add_aux lbl e
 
-let label t = try Labels.find labels t with Not_found -> Hstring.empty
+let label t =
+  try Labels.find labels t
+  with Not_found ->
+    let { f = f; _ } = t in
+    Sy.label f
 
 let is_model_label =
   let model = "model:" in

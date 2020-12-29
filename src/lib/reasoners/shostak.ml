@@ -744,3 +744,19 @@ module Adt = X6
 module Ite = X7
 module Polynome = TX1
 module Ac = AC
+
+(** map of semantic values using Combine.hash_cmp *)
+module MXH =
+  Map.Make(struct type t = Combine.r let compare = Combine.hash_cmp end)
+
+(** set of semantic values using Combine.hash_cmp *)
+module SXH =
+  Set.Make(struct type t = Combine.r let compare = Combine.hash_cmp end)
+
+(** map of semantic values using structural compare Combine.str_cmp *)
+module MXS =
+  Map.Make(struct type t = Combine.r let compare = Combine.hash_cmp end)
+
+(** set of semantic values using structural compare Combine.str_cmp *)
+module SXS =
+  Set.Make(struct type t = Combine.r let compare = Combine.hash_cmp end)

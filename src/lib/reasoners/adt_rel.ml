@@ -26,7 +26,7 @@ module Hs = Hstring
 module HSS = Hs.Set
 module Sy = Symbols
 
-module MX = Map.Make (struct type t = X.r let compare = X.hash_cmp end)
+module MX = Shostak.MXH
 module LR = Uf.LX
 module SLR = Set.Make(LR)
 module MHs = Hs.Map

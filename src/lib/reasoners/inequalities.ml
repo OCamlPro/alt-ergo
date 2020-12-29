@@ -96,7 +96,7 @@ module Container : Container_SIG = struct
     module X = Shostak.Combine
     module P = P
     module MP = Map.Make(P)
-    module MX = Map.Make(struct type t = X.r let compare = X.hash_cmp end)
+    module MX = Shostak.MXH
 
     let age_cpt = ref Z.zero
 
