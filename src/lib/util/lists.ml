@@ -43,3 +43,17 @@ let to_seq l =
   in
   aux l
 
+let partition_map ?(keep_ordering=true) f l =
+  let rec part left right = function
+    | [] ->
+      if keep_ordering then List.rev left, List.rev right
+      else left, right
+    | x :: l ->
+      let left, right =
+        match f x with
+        | Ok x   -> x :: left, right
+        | Error x -> left, x :: right
+      in
+      part left right l
+  in
+  part [] [] l
