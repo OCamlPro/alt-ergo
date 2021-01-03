@@ -671,8 +671,9 @@ let assume env uf la =
 
 let two = Numbers.Q.from_int 2
 
-let case_split env _ ~for_model =
-  if get_disable_adts () || not (get_enable_adts_cs()) then
+let case_split env _ ~for_model ~to_optimize =
+  if to_optimize != None || get_disable_adts () || not (get_enable_adts_cs())
+  then
     Sig_rel.Split []
   else
     begin
