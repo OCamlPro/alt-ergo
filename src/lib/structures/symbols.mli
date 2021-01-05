@@ -41,6 +41,7 @@ type operator =
   | Constr of Hstring.t (* enums, adts *)
   | Destruct of Hstring.t * bool
   | Tite
+  | Optimize of {order : int; is_max : bool}
 
 type lit =
   (* literals *)
