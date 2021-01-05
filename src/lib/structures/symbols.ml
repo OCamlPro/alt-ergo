@@ -44,6 +44,7 @@ type operator =
   | Constr of Hstring.t (* enums, adts *)
   | Destruct of Hstring.t * bool
   | Tite
+  | Optimize of {order : int; is_max : bool}
 
 type lit =
   (* literals *)
@@ -126,13 +127,18 @@ let compare_operators op1 op2 =
       | Destruct (h1, b1), Destruct(h2, b2) ->
         let c = Stdlib.compare b1 b2 in
         if c <> 0 then c else Hstring.compare h1 h2
+      | Optimize {order=o1; is_max=b1}, Optimize {order=o2; is_max=b2} ->
+        let c = o1 - o2 in
+        if c <> 0 then c
+        else Stdlib.compare b1 b2
+
       | _ , (Plus | Minus | Mult | Div | Modulo
             | Concat | Extract | Get | Set | Fixed | Float | Reach
             | Access _ | Record | Sqrt_real | Abs_int | Abs_real
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
             | Integer_log2 | Pow | Integer_round
-            | Constr _ | Destruct _ | Tite) -> assert false
+            | Constr _ | Destruct _ | Tite | Optimize _) -> assert false
     )
 
 let compare_builtin b1 b2 =
@@ -313,6 +319,9 @@ let to_string ?(show_vars=true) x = match x with
   | Form form -> string_of_form form
   | Let -> "let"
 
+  | Op (Optimize {order; is_max=true}) -> Format.sprintf "maximize(-,%d)" order
+  | Op (Optimize {order; is_max=false}) -> Format.sprintf "minimize(-,%d)" order
+
 let to_string_clean s = to_string ~show_vars:false s
 let to_string s = to_string ~show_vars:true s
 
@@ -363,4 +372,3 @@ end = struct
   let print pr_elt fmt sbt =
     iter (fun k v -> fprintf fmt "%a -> %a  " print k pr_elt v) sbt
 end
-
