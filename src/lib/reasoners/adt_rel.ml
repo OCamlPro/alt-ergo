@@ -672,7 +672,8 @@ let assume env uf la =
 let two = Numbers.Q.from_int 2
 
 let case_split env _ ~for_model =
-  if get_disable_adts () || not (get_enable_adts_cs()) then []
+  if get_disable_adts () || not (get_enable_adts_cs()) then
+    Sig_rel.Split []
   else
     begin
       assert (not for_model);
@@ -689,10 +690,10 @@ let case_split env _ ~for_model =
             "found hs = %a" Hs.print hs;
         (* cs on negative version would be better in general *)
         let cs =  LR.mkv_builtin false (Sy.IsConstr hs) [r] in
-        [ cs, true, Th_util.CS(Th_util.Th_adt, two) ]
+        Sig_rel.Split [ cs, true, Th_util.CS(Th_util.Th_adt, two) ]
       with Not_found ->
         Debug.no_case_split ();
-        []
+        Sig_rel.Split []
     end
 
 let query env uf (ra, _, ex, _) =
