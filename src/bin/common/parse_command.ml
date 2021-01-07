@@ -294,7 +294,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
   else
     let fm_cross_limit = Numbers.Q.from_string fm_cross_limit in
     let timelimit = set_limit timelimit 0. in
-    let timelimit_interpretation = set_limit timelimit_interpretation 1. in
+    let timelimit_interpretation = set_limit timelimit_interpretation 0. in
     set_age_bound age_bound;
     set_fm_cross_limit fm_cross_limit;
     set_timelimit_interpretation timelimit_interpretation;
