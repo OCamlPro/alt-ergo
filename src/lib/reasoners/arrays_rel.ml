@@ -259,8 +259,30 @@ let get_of_set are_eq are_dist gtype (env,acc) class_of =
            let env =
              {env with new_terms =
                          E.Set.add get_stab env.new_terms } in
+           let env, acc = update_env
+               are_eq are_dist dep env acc gi si p p_ded n n_ded in
+
+           (*** also deduce that:
+                  stab[si] = v <-> stab = stab[si <- v ]
+                Usefull for extensionality
+           *)
+           let get_stab2  = E.mk_term (Sy.Op Sy.Get) [stab;si] gty in
+           let xsv, _ = X.make sv in
+           let xget_stab2, _ = X.make get_stab2 in
+
+           let p'   = LR.mk_eq xget_stab2 xsv in
+           let p'_ded   = E.mk_eq ~iff:false set stab in
+
+           let n'   = LR.mk_distinct false [xget_stab2; xsv] in
+           let n'_ded   = E.mk_distinct ~iff:false [set; stab] in
+
+           let env =
+             {env with new_terms = E.Set.add get_stab2 env.new_terms } in
+
+           let are_dist _ _ = None in
+           let are_eq _ _ = None in (* because get_stab2 is not added to env *)
            update_env
-             are_eq are_dist dep env acc gi si p p_ded n n_ded
+             are_eq are_dist Ex.empty env acc get_stab2 sv p' p'_ded n' n'_ded
          | _ -> (env,acc)
     ) (env,acc) (class_of gtab)
 
