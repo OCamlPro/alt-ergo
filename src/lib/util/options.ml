@@ -212,9 +212,9 @@ let get_save_used_context () = !save_used_context
 (** Execution options *)
 
 let answers_with_loc = ref true
-let output_with_colors = ref true
-let output_with_headers = ref true
-let output_with_formatting = ref true
+let output_with_colors = ref false
+let output_with_headers = ref false
+let output_with_formatting = ref false
 let frontend = ref "legacy"
 let input_format = ref Native
 let infer_input_format = ref true

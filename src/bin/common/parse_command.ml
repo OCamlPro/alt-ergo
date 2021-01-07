@@ -215,14 +215,14 @@ let mk_context_opt replay replay_all_used_context replay_used_context
   `Ok()
 
 let mk_execution_opt frontend input_format parse_only parsers
-    preludes no_locs_in_answers no_colors_in_output no_headers_in_output
-    no_formatting_in_output
+    preludes no_locs_in_answers colors_in_output headers_in_output
+    formatting_in_output pretty_output
     type_only type_smt2
   =
   let answers_with_loc = not no_locs_in_answers in
-  let output_with_colors = not no_colors_in_output in
-  let output_with_headers = not no_headers_in_output in
-  let output_with_formatting = not no_formatting_in_output in
+  let output_with_colors = colors_in_output || pretty_output in
+  let output_with_headers = headers_in_output || pretty_output in
+  let output_with_formatting = formatting_in_output || pretty_output in
   set_infer_input_format input_format;
   let input_format = match input_format with
     | None -> Native
@@ -744,20 +744,25 @@ let parse_execution_opt =
       "Do not show the locations of goals when printing solver's answers." in
     Arg.(value & flag & info ["no-locs-in-answers"] ~docs ~doc) in
 
-  let no_colors_in_output =
+  let colors_in_output =
     let doc =
-      "Do not print output with colors." in
-    Arg.(value & flag & info ["no-colors-in-output"] ~docs ~doc) in
+      "Print output with colors." in
+    Arg.(value & flag & info ["colors-in-output"] ~docs ~doc) in
 
-  let no_headers_in_output =
+  let headers_in_output =
     let doc =
-      "Do not print output with headers." in
-    Arg.(value & flag & info ["no-headers-in-output"] ~docs ~doc) in
+      "Print output with headers." in
+    Arg.(value & flag & info ["headers-in-output"] ~docs ~doc) in
 
-  let no_formatting_in_output =
+  let formatting_in_output =
     let doc =
-      "Do not use any formatting rule in output." in
-    Arg.(value & flag & info ["no-formatting-in-output"] ~docs ~doc) in
+      "Use formatting rule in output." in
+    Arg.(value & flag & info ["formatting-in-output"] ~docs ~doc) in
+
+  let pretty_output =
+    let doc =
+      "Print output with formatting rules, headers and colors" in
+    Arg.(value & flag & info ["p"; "pretty-output"] ~docs ~doc) in
 
   let type_only =
     let doc = "Stop after typing." in
@@ -770,8 +775,8 @@ let parse_execution_opt =
 
   Term.(ret (const mk_execution_opt $
              frontend $ input_format $ parse_only $ parsers $ preludes $
-             no_locs_in_answers $ no_colors_in_output $ no_headers_in_output $
-             no_formatting_in_output $ type_only $ type_smt2
+             no_locs_in_answers $ colors_in_output $ headers_in_output $
+             formatting_in_output $ pretty_output $ type_only $ type_smt2
             ))
 
 let parse_halt_opt =
