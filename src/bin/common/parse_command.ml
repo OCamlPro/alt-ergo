@@ -1391,13 +1391,16 @@ let main =
   in
   Cmd.v info term
 
+let auto_set_implied_options () =
+  if Options.get_interpretation () then
+    Options.set_fm_cross_limit Numbers.Q.m_one
+
 let parse_cmdline_arguments () =
   let r = Cmd.eval_value main in
   match r with
-  | Ok `Ok true -> ()
+  | Ok `Ok true -> auto_set_implied_options ()
   | Ok `Ok false -> raise (Exit_parse_command 0)
   | Ok `Version | Ok `Help -> exit 0
   | Error `Parse -> exit Cmd.Exit.cli_error
   | Error `Term -> exit Cmd.Exit.internal_error
   | Error `Exn -> exit Cmd.Exit.internal_error
-
