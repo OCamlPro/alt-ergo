@@ -274,7 +274,8 @@ let age_bound = ref 50
 let fm_cross_limit = ref (Numbers.Q.from_int 10_000)
 let steps_bound = ref (-1)
 let timelimit = ref 0.
-let timelimit_interpretation = ref (if Sys.win32 then 0. else 1.)
+(* let timelimit_interpretation = ref (if Sys.win32 then 0. else 1.) *)
+let timelimit_interpretation = ref 0.
 let timelimit_per_goal = ref false
 
 let set_age_bound i = age_bound := i
