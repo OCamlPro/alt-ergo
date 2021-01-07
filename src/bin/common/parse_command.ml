@@ -1342,9 +1342,13 @@ let main =
             )),
   Term.info "alt-ergo" ~version:Version._version ~doc ~exits ~man
 
+let auto_set_implied_options () =
+  if Options.get_interpretation () then
+    Options.set_fm_cross_limit Numbers.Q.m_one
+
 let parse_cmdline_arguments () =
   let r = Cmdliner.Term.(eval main) in
   match r with
   | `Ok false -> raise (Exit_parse_command 0)
-  | `Ok true -> ()
+  | `Ok true -> auto_set_implied_options ()
   | e -> exit @@ Term.(exit_status_of_result e)
