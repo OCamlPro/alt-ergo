@@ -292,12 +292,14 @@ let get_timelimit_per_goal () = !timelimit_per_goal
 
 let interpretation = ref INone
 let interpretation_use_underscore = ref false
+let objectives_in_interpretation = ref false
 let output_format = ref Native
 let infer_output_format = ref true
 let unsat_core = ref false
 
 let set_interpretation b = interpretation := b
 let set_interpretation_use_underscore b = interpretation_use_underscore := b
+let set_objectives_in_interpretation b = objectives_in_interpretation := b
 let set_output_format b = output_format := b
 let set_infer_output_format f = infer_output_format := f = None
 let set_unsat_core b = unsat_core := b
@@ -307,6 +309,7 @@ let get_first_interpretation () = !interpretation = IFirst
 let get_every_interpretation () = !interpretation = IEvery
 let get_last_interpretation () = !interpretation = ILast
 let get_interpretation_use_underscore () = !interpretation_use_underscore
+let get_objectives_in_interpretation () = !objectives_in_interpretation
 let get_output_format () = !output_format
 let get_output_smtlib () =
   (!output_format = Smtlib2) || (!output_format = Why3)
