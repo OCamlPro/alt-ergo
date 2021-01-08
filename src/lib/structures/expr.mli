@@ -176,7 +176,6 @@ val [@inline always] get_infos : t -> view
 
 val add_label : Hstring.t -> t -> unit
 val label : t -> Hstring.t
-val is_in_model : t -> bool
 val name_of_lemma : t -> string
 val name_of_lemma_opt : t option -> string
 val print_tagged_classes : Format.formatter -> Set.t list -> unit
