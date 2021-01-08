@@ -951,6 +951,17 @@ let parse_output_opt =
     let doc = "Output \"_\" instead of fresh value in interpretation" in
     let docv = "VAL" in
     Arg.(value & flag & info
+           ["interpretation-use-underscore";"use-underscore"] ~docv ~docs ~doc) in
+
+  let model =
+    let doc = Format.sprintf
+        "Experimental support for models on labeled terms. \
+         $(docv) must be %s. %s shows a complete model and %s shows \
+         all models."
+        (Arg.doc_alts ["none"; "default"; "complete"; "all"])
+        (Arg.doc_quote "complete") (Arg.doc_quote "all") in
+    let docv = "VAL" in
+    Arg.(value & flag & info
            ["interpretation-use-underscore";"use-underscore"]
            ~docv ~docs ~doc) in
 
