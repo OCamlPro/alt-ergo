@@ -288,7 +288,8 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     set_timelimit_per_goal timelimit_per_goal;
     `Ok()
 
-let mk_output_opt interpretation use_underscore unsat_core output_format
+let mk_output_opt interpretation use_underscore
+    objectives_in_interpretation unsat_core output_format
   =
   set_infer_output_format output_format;
   let output_format = match output_format with
@@ -297,6 +298,7 @@ let mk_output_opt interpretation use_underscore unsat_core output_format
   in
   set_interpretation interpretation;
   set_interpretation_use_underscore use_underscore;
+  set_objectives_in_interpretation objectives_in_interpretation;
   set_unsat_core unsat_core;
   set_output_format output_format;
   `Ok()
@@ -919,6 +921,16 @@ let parse_output_opt =
     Arg.(value & flag & info
            ["interpretation-use-underscore";"use-underscore"]
            ~docv ~docs ~doc) in
+  let objectives_in_interpretation =
+    let doc = " inline pretty-printing of optimized expressions in the \
+               model instead of a dedicated section '(objectives \
+               ...)'. Be aware that a part of the model may be shrunk \
+               or not accurate if some expressions to optimize are \
+               unbounded." in
+    Arg.(value & flag & info
+           ["objectives-in-interpretation";"objectives-in-model";
+            "obj-in-interpretation";"obj-in-model"] ~doc) in
+
 
   let unsat_core =
     let doc = "Experimental support for computing and printing unsat-cores." in
@@ -942,7 +954,8 @@ let parse_output_opt =
   in
 
   Term.(ret (const mk_output_opt $
-             interpretation $ use_underscore $ unsat_core $
+             interpretation $ use_underscore $
+             objectives_in_interpretation $ unsat_core $
              output_format
             ))
 
