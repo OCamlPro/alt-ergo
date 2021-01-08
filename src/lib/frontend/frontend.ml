@@ -227,7 +227,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       (* This case should mainly occur when a query has a non-unsat result,
          so we want to print the status in this case. *)
       print_status (Sat (d,t)) (Steps.get_steps ());
-      if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;
+      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
       env , consistent, dep
     | SAT.Unsat dep' ->
       (* This case should mainly occur when a new assumption results in an unsat
@@ -242,7 +242,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          Instead, it'd be better to accumulate in `consistent` a 3-case adt
          and not a simple bool. *)
       print_status (Unknown (d, t)) (Steps.get_steps ());
-      if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;
+      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
       env , consistent, dep
     | Util.Timeout as e ->
       (* In this case, we obviously want to print the status,

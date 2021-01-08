@@ -174,15 +174,6 @@ let instantiate ~do_syntactic_matching t_match env uf selector =
   {r1=r1; r2=r2; r3=r3; r4=r4; r5=r5; r6=r6; r7=r7},
   l7 |@| l6 |@| l5 |@| l4 |@| l3 |@| l2 |@| l1
 
-let print_model fmt env rs =
-  Rel1.print_model fmt env.r1 rs;
-  Rel2.print_model fmt env.r2 rs;
-  Rel3.print_model fmt env.r3 rs;
-  Rel4.print_model fmt env.r4 rs;
-  Rel5.print_model fmt env.r5 rs;
-  Rel6.print_model fmt env.r6 rs;
-  Rel7.print_model fmt env.r7 rs
-
 let new_terms env =
   let t1 = Rel1.new_terms env.r1 in
   let t2 = Rel2.new_terms env.r2 in
@@ -197,4 +188,3 @@ let new_terms env =
           (Expr.Set.union t4
              (Expr.Set.union t5
                 (Expr.Set.union t6 t7)) )))
-
