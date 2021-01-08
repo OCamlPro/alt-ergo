@@ -34,15 +34,35 @@
     of the program
 *)
 
-(** Type used to describe the type of models wanted *)
-type model = MNone | MDefault | MAll | MComplete
+(** Type used to describe the type of models wanted by
+   {!val:set_model} *)
+type model =
+  | MNone        (** Default, No models computed  *)
+  | MDefault     (** Output model for variable annotated with "model:" *)
+  | MComplete    (** Output complete boolean and theory model *)
+  | MAll         (** Output propositional model *)
 
+(** Type used to describe the type of heuristic for instantiation wanted by
+   {!val:set_instantiation_heuristic} *)
+type instantiation_heuristic =
+  | INormal      (** Least costly heuristic for instantiation, instantiate on
+                     a reduced set of term *)
+  | IAuto        (** Default Heuristic that try to do the normal heuristic and
+                     then try a greedier instantiation if no new instance have
+                     been made *)
+  | IGreedy      (** Force instantiation to be the greedier as possible,
+                     use all available ground terms *)
 
-(** Type used to describe the type of heuristic for instantiation wanted *)
-type instantiation_heuristic  = INormal | IAuto | IGreedy
-
-(** Type used to describe the type of interpretation wanted *)
-type interpretation = INone | IFirst | IEvery | ILast
+(** Type used to describe the type of interpretation wanted by
+   {!val:set_interpretation} *)
+type interpretation =
+  | INone        (** Default, No interpretation computed *)
+  | IFirst       (** Compute an interpretation after the first instantiation
+                     and output it at the end of the executionn *)
+  | IEvery       (** Compute an interpretation before every instantiation
+                     and return the last one computed *)
+  | ILast        (** Compute only the last interpretation just before
+                     returning SAT/Unknown *)
 
 (** Type used to describe the type of input wanted by
     {!val:set_input_format} *)
