@@ -147,7 +147,6 @@ end
 (* ################################################################ *)
 
 
-let print_model _ _ _ = ()
 let new_terms env = env.new_terms
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
