@@ -926,8 +926,9 @@ let parse_output_opt =
 
   let use_underscore =
     let doc = "Output \"_\" instead of fresh value in interpretation" in
+    let docv = "VAL" in
     Arg.(value & flag & info
-           ["interpretation-use-underscore";"use-underscore"] ~doc) in
+           ["interpretation-use-underscore";"use-underscore"] ~docv ~docs ~doc) in
 
   let model =
     let doc = Format.sprintf
