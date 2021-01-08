@@ -66,8 +66,6 @@ module type S = sig
      [size]. Raises Sat if [f] is satisfiable in [env] *)
   val unsat : t -> Expr.gformula -> Explanation.t
 
-  val print_model : header:bool -> Format.formatter -> t -> unit
-
   val reset_refs : unit -> unit
 end
 

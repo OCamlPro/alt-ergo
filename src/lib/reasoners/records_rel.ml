@@ -34,7 +34,6 @@ let assume _ _ _ =
 let query _ _ _ = None
 let case_split _ _ ~for_model:_ = []
 let add env _ _ _ = env, []
-let print_model _ _ _ = ()
 let new_terms _ = Expr.Set.empty
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 

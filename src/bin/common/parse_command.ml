@@ -18,24 +18,6 @@ exception Error of bool * string
 (* Exception used to exit with corresponding retcode *)
 exception Exit_parse_command of int
 
-let model_parser = function
-  | "none" -> Ok MNone
-  | "default" -> Ok MDefault
-  | "complete" -> Ok MComplete
-  | "all" -> Ok MAll
-  | s ->
-    Error (`Msg ("Option --model does not accept the argument \"" ^ s))
-
-let model_to_string = function
-  | MNone -> "none"
-  | MDefault -> "default"
-  | MComplete -> "complete"
-  | MAll -> "all"
-
-let model_printer fmt model = Format.fprintf fmt "%s" (model_to_string model)
-
-let model_conv = Arg.conv ~docv:"MDL" (model_parser, model_printer)
-
 let instantiation_heuristic_parser = function
   | "normal" -> Ok INormal
   | "auto" -> Ok IAuto
@@ -303,7 +285,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     set_timelimit_per_goal timelimit_per_goal;
     `Ok()
 
-let mk_output_opt interpretation use_underscore model unsat_core output_format
+let mk_output_opt interpretation use_underscore unsat_core output_format
   =
   set_infer_output_format output_format;
   let output_format = match output_format with
@@ -312,7 +294,6 @@ let mk_output_opt interpretation use_underscore model unsat_core output_format
   in
   set_interpretation interpretation;
   set_interpretation_use_underscore use_underscore;
-  set_model model;
   set_unsat_core unsat_core;
   set_output_format output_format;
   `Ok()
@@ -930,16 +911,6 @@ let parse_output_opt =
     Arg.(value & flag & info
            ["interpretation-use-underscore";"use-underscore"] ~docv ~docs ~doc) in
 
-  let model =
-    let doc = Format.sprintf
-        "Experimental support for models on labeled terms. \
-         $(docv) must be %s. %s shows a complete model and %s shows \
-         all models."
-        (Arg.doc_alts ["none"; "default"; "complete"; "all"])
-        (Arg.doc_quote "complete") (Arg.doc_quote "all") in
-    let docv = "VAL" in
-    Arg.(value & opt model_conv MNone & info ["m"; "model"] ~docv ~doc) in
-
   let unsat_core =
     let doc = "Experimental support for computing and printing unsat-cores." in
     Arg.(value & flag & info ["u"; "unsat-core"] ~doc) in
@@ -962,7 +933,7 @@ let parse_output_opt =
   in
 
   Term.(ret (const mk_output_opt $
-             interpretation $ use_underscore $ model $ unsat_core $
+             interpretation $ use_underscore $ unsat_core $
              output_format
             ))
 
