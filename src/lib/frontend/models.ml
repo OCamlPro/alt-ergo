@@ -25,6 +25,12 @@ module MS = Map.Make(String)
 
 let constraints = ref MS.empty
 
+type objective_value =
+  | Obj_pinfty
+  | Obj_minfty
+  | Obj_val of string
+  | Obj_unk
+
 module Pp_smtlib_term = struct
 
   let to_string_type t =
@@ -406,6 +412,29 @@ module SmtlibCounterExample = struct
   let output_arrays_counterexample fmt _arrays =
     fprintf fmt "@ ; Arrays not yet supported@ "
 
+  let output_objectives fmt objectives =
+    (* TODO: we can decide to print objectives to stderr if
+       Options.get_objectives_in_interpretation() is enabled *)
+    if not (Options.get_objectives_in_interpretation()) &&
+       not (Util.MI.is_empty objectives)
+    then begin
+      Format.fprintf fmt "@[<v 3>(objectives";
+      Util.MI.iter
+        (fun _i (e, x) ->
+           Format.fprintf fmt "@ (%a %a)"
+             E.print e
+             (fun fmt () ->
+                match x with
+                | Obj_pinfty -> Format.fprintf fmt "+oo"
+                | Obj_minfty -> Format.fprintf fmt "-oo"
+                | Obj_val s -> Format.fprintf fmt "%s" s
+                | Obj_unk -> Format.fprintf fmt "(interval -oo +oo)"
+             ) ()
+        )objectives;
+      Printer.print_fmt fmt "@]@ )"
+    end
+
+
 end
 (* of module SmtlibCounterExample *)
 
@@ -433,7 +462,7 @@ module Why3CounterExample = struct
 end
 (* of module Why3CounterExample *)
 
-let output_concrete_model fmt props functions constants arrays =
+let output_concrete_model fmt props functions constants arrays ~objectives =
   if get_interpretation () then begin
     Printer.print_fmt ~flushed:false fmt "@[<v 0>unknown@ ";
     Printer.print_fmt ~flushed:false fmt "@[<v 2>(model@,";
@@ -452,4 +481,5 @@ let output_concrete_model fmt props functions constants arrays =
     SmtlibCounterExample.output_arrays_counterexample fmt arrays;
 
     Printer.print_fmt fmt "@]@ )";
-  end;
+    SmtlibCounterExample.output_objectives fmt objectives;
+  end
