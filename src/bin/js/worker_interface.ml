@@ -113,6 +113,7 @@ let frontend_encoding =
   ]
 
 type instantiation_heuristic =  INormal | IAuto | IGreedy
+type interpretation = INone | IFirst | IEvery | ILast
 
 let instantiation_heuristic_encoding =
   union [
@@ -131,6 +132,30 @@ let instantiation_heuristic_encoding =
       (constant "IGreedy")
       (function IGreedy -> Some () | _ -> None)
       (fun () -> IGreedy);
+  ]
+
+let interpretation_encoding =
+  union [
+    case(Tag 1)
+      ~title:"INone"
+      (constant "INone")
+      (function INone -> Some () | _ -> None)
+      (fun () -> INone);
+    case(Tag 2)
+      ~title:"IFirst"
+      (constant "IFirst")
+      (function IFirst -> Some () | _ -> None)
+      (fun () -> IFirst);
+    case(Tag 3)
+      ~title:"IEvery"
+      (constant "IEvery")
+      (function IEvery -> Some () | _ -> None)
+      (fun () -> IEvery);
+    case(Tag 4)
+      ~title:"ILast"
+      (constant "ILast")
+      (function ILast -> Some () | _ -> None)
+      (fun () -> ILast);
   ]
 
 type options = {
@@ -187,7 +212,7 @@ type options = {
   fm_cross_limit : int option;
   steps_bound : int option;
 
-  interpretation : int option;
+  interpretation : interpretation option;
 
   output_format : output_format option;
   unsat_core : bool option;
@@ -433,7 +458,7 @@ let opt3_encoding =
        (opt "age_bound" int31)
        (opt "fm_cross_limit" int31)
        (opt "steps_bound" int31)
-       (opt "interpretation" int31)
+       (opt "interpretation" interpretation_encoding)
        (opt "output_format" format_encoding)
        (opt "unsat_core" bool)
     )
