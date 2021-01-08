@@ -15,7 +15,7 @@ module type S = sig
 
   (* Parsing *)
 
-  type parsed = Parsed.decl
+  type parsed
 
   val parse_files :
     filename:string -> preludes:string list -> parsed Seq.t
