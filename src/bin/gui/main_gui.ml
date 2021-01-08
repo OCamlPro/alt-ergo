@@ -216,33 +216,6 @@ let pop_error ?(error=false) ~message () =
   pop_w#show ()
 
 
-(* unused function
-   let pop_model _sat_env () =
-   let pop_w = GWindow.dialog
-      ~title:"Model"
-      ~destroy_with_parent:true
-      ~position:`CENTER
-      ~width:400
-      ~height:300 ()
-   in
-
-   let sw1 = GBin.scrolled_window
-      ~vpolicy:`AUTOMATIC
-      ~hpolicy:`AUTOMATIC
-      ~packing:pop_w#vbox#add () in
-   let buf1 = GSourceView3.source_buffer () in
-   let tv1 = GSourceView3.source_view ~source_buffer:buf1 ~packing:(sw1#add)
-      ~wrap_mode:`CHAR () in
-   let _ = tv1#misc#modify_font font in
-   let _ = tv1#set_editable false in
-   (* let model_text =
-     asprintf "%a@." (SAT.print_model ~header:false) sat_env
-   in
-   * buf1#set_text model_text; *)
-   pop_w#show ()*)
-
-
-
 let compare_rows icol_number (model:#GTree.model) row1 row2 =
   let t1 = model#get ~row:row1 ~column:icol_number in
   let t2 = model#get ~row:row2 ~column:icol_number in

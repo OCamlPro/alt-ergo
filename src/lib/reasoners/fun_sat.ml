@@ -1132,7 +1132,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       (* No conflict by direct assume, empty cache *)
       ignore (update_instances_cache (Some []));
       env, true
-
   let compute_concrete_model env compute =
     let compute =
       if Options.get_first_interpretation () then
