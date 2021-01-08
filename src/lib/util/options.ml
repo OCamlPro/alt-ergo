@@ -58,7 +58,7 @@ let set_fmt_usc f = fmt_usc := f
 
 (* Declaration of all the options as refs with default values *)
 
-type model = MNone | MDefault | MAll | MComplete
+type model = MNone | MDefault | MComplete | MAll
 type instantiation_heuristic = INormal | IAuto | IGreedy
 type interpretation = INone | IFirst | IEvery | ILast
 
