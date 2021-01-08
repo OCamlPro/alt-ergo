@@ -887,7 +887,11 @@ module Main_Default : S = struct
   let get_assumed env = env.assumed_set
 
   let output_concrete_model fmt ~prop_model env =
-    CC_X.output_concrete_model fmt ~prop_model env.gamma_finite
+    CC_X.output_concrete_model
+      fmt
+      ~prop_model
+      ~optimized_splits:env.objectives
+      env.gamma_finite
 
 end
 
