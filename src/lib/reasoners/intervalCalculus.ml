@@ -1832,33 +1832,6 @@ let add =
         env.improved MP.empty
 *)
 
-let print_model fmt env rs = match rs with
-  | [] -> ()
-  | _ ->
-    fprintf fmt "Relation:";
-    List.iter (fun (t, r) ->
-        let p = poly_of r in
-        let ty = P.type_info p in
-        if ty == Ty.Tint || ty == Ty.Treal then
-          let p', c, d = P.normal_form_pos p in
-          let pu' =
-            try MP.n_find p' env.polynomes
-            with Not_found -> I.undefined ty
-          in
-          let pm' =
-            try intervals_from_monomes ~monomes_inited:false env p'
-            with Not_found -> I.undefined ty
-          in
-          let u' = I.intersect pu' pm' in
-          if I.is_point u' == None && I.is_undefined u' then
-            let u =
-              I.scale d
-                (I.add u'
-                   (I.point c ty Explanation.empty)) in
-            fprintf fmt "\n %a ∈ %a" E.print t I.pretty_print u
-      ) rs;
-    fprintf fmt "\n@."
-
 let new_terms _ = SE.empty
 
 let case_split_union_of_intervals =

@@ -56,7 +56,6 @@ module type S = sig
     t * Expr.Set.t * int
 
   val query : E.t -> t -> Th_util.answer
-  val print_model : Format.formatter -> complete_model:bool -> t -> unit
   val cl_extract : t -> Expr.Set.t list
   val extract_ground_terms : t -> Expr.Set.t
   val get_real_env : t -> Ccx.Main.t
@@ -708,9 +707,6 @@ module Main_Default : S = struct
     let t, _, _ = assume true [a, Ex.empty, 0, -1] t in
     t
 
-  let print_model fmt ~complete_model t =
-    CC_X.print_model fmt ~complete_model t.gamma_finite
-
   let cl_extract env = CC_X.cl_extract env.gamma
 
   let assume ?(ordered=true) facts t =
@@ -775,7 +771,6 @@ module Main_Empty : S = struct
 
   let query _ _ = None
 
-  let print_model _ ~complete_model:_ _ = ()
   let cl_extract _ = []
   let extract_ground_terms _ = Expr.Set.empty
 

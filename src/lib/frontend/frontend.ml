@@ -225,7 +225,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     with
     | SAT.Sat t ->
       print_status (Sat (d,t)) (Steps.get_steps ());
-      if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;
+      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
       env , consistent, dep
     | SAT.Unsat dep' ->
       let dep = Ex.union dep dep' in
@@ -234,7 +234,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       env , false, dep
     | SAT.I_dont_know t ->
       print_status (Unknown (d, t)) (Steps.get_steps ());
-      if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;
+      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
       env , consistent, dep
     | Util.Timeout as e ->
       print_status (Timeout (Some d)) (Steps.get_steps ());

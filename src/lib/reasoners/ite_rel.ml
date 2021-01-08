@@ -174,7 +174,6 @@ let assume env uf la =
 let case_split _ _ ~for_model:_ = []
 
 let query _ _ _ = None
-let print_model _ _ _ = ()
 
 let new_terms _ = E.Set.empty
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
