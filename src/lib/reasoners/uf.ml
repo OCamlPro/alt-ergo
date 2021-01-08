@@ -882,16 +882,14 @@ let mapt_choose m =
    with Exit -> ());
   match !r with Some b -> b | _ -> raise Not_found
 
-let model ~complete_model env =
+let model env =
   let eqs =
     MapX.fold (fun r cl acc ->
         let l, to_rel =
           List.fold_left (fun (l, to_rel) t ->
               let rt = ME.find t env.make in
-              if complete_model || E.is_in_model t then
                 if X.equal rt r then l, (t,rt)::to_rel
                 else t::l, (t,rt)::to_rel
-              else l, to_rel
             ) ([], []) (SE.elements cl) in
         (r, l, to_rel)::acc
       ) env.classes []
@@ -901,15 +899,12 @@ let model ~complete_model env =
       let x, rx = mapt_choose makes in
       let makes = ME.remove x makes in
       let acc =
-        if complete_model || E.is_in_model x then
           ME.fold (fun y ry acc ->
-              if (complete_model || E.is_in_model y)
-              && (already_distinct env [rx; ry]
+              if (already_distinct env [rx; ry]
                   || already_distinct env [ry; rx])
               then [y; x]::acc
               else acc
             ) makes acc
-        else acc
       in extract_neqs acc makes
     with Not_found -> acc
   in
