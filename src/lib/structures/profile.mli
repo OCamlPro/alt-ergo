@@ -9,14 +9,20 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(** {1 Models module} *)
+module P : Map.S with type key =
+                        Symbols.t * Ty.t list * Ty.t
 
-(** Print the given counterexample on the given formatter with the
-    corresponding format setted with Options.get_output_format *)
-val output_concrete_model :
-  Format.formatter ->
-  Expr.Set.t ->
-  Profile.V.t Profile.P.t ->
-  Profile.V.t Profile.P.t ->
-  Profile.V.t Profile.P.t ->
-  unit
+module V : Set.S with type elt =
+                        (Expr.t * (Shostak.Combine.r * string)) list *
+                        (Shostak.Combine.r * string)
+
+
+val add : P.key -> V.elt -> V.t P.t -> V.t P.t
+
+val iter : (P.key -> 'a -> unit) -> 'a P.t -> unit
+
+val fold : (P.key -> 'a -> 'b -> 'b) -> 'a P.t -> 'b -> 'b
+
+val empty : 'a P.t
+
+val is_empty : 'a P.t -> bool
