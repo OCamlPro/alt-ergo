@@ -295,7 +295,7 @@ let get_timelimit_per_goal () = !timelimit_per_goal
 (** Output options *)
 
 let interpretation = ref INone
-let interpretation_use_underscore = ref true
+let interpretation_use_underscore = ref false
 let model = ref MNone
 let output_format = ref Native
 let infer_output_format = ref true
