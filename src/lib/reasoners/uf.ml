@@ -871,6 +871,44 @@ let already_distinct env lr =
     true
   with Not_found -> false
 
+let mapt_choose m =
+  let r = ref None in
+  (try
+     ME.iter (fun x rx ->
+         r := Some (x, rx); raise Exit
+       ) m
+   with Exit -> ());
+  match !r with Some b -> b | _ -> raise Not_found
+
+let model env =
+  let eqs =
+    MapX.fold (fun r cl acc ->
+        let l, to_rel =
+          List.fold_left (fun (l, to_rel) t ->
+              let rt = ME.find t env.make in
+                if X.equal rt r then l, (t,rt)::to_rel
+                else t::l, (t,rt)::to_rel
+            ) ([], []) (SE.elements cl) in
+        (r, l, to_rel)::acc
+      ) env.classes []
+  in
+  let rec extract_neqs acc makes =
+    try
+      let x, rx = mapt_choose makes in
+      let makes = ME.remove x makes in
+      let acc =
+          ME.fold (fun y ry acc ->
+              if (already_distinct env [rx; ry]
+                  || already_distinct env [ry; rx])
+              then [y; x]::acc
+              else acc
+            ) makes acc
+      in extract_neqs acc makes
+    with Not_found -> acc
+  in
+  let neqs = extract_neqs [] env.make in
+  eqs, neqs
+
 let find env t =
   Options.tool_req 3 "TR-UFX-Find";
   Env.lookup_by_t t env

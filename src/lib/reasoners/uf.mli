@@ -57,6 +57,7 @@ val class_of : t -> Expr.t -> Expr.t list
 val rclass_of : t -> r -> Expr.Set.t
 
 val cl_extract : t -> Expr.Set.t list
+val model : t -> (r * Expr.t list * (Expr.t * r) list) list * (Expr.t list) list
 
 val print : t -> unit
 val term_repr : t -> Expr.t -> Expr.t
