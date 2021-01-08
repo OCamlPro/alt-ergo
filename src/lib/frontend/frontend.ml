@@ -279,11 +279,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | Query(g,_,_) -> Some g
       | _ -> None
     in
-    let why3_counterexample =
-      match Options.get_output_format () with
-      | Why3 | Smtlib2 -> true
-      | Native | Unknown _ -> false
-    in
 
     let time = Time.value() in
     match status with
@@ -317,13 +312,17 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout (Some d) ->
-      if not why3_counterexample then
+      if Options.get_interpretation () then
+        Printer.print_wrn "Timeout"
+      else
         let loc = d.st_loc in
         Printer.print_status_timeout ~validity_mode
           (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout None ->
-      if not why3_counterexample then
+       if Options.get_interpretation () then
+        Printer.print_wrn "Timeout"
+      else
         Printer.print_status_timeout ~validity_mode
           None (Some time) (Some steps) None;
 
