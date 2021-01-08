@@ -1183,7 +1183,7 @@ let parse_term_opt =
     Arg.(value & flag & info ["rwt"; "rewriting"] ~docs ~doc) in
 
   let no_term_like_pp =
-    let doc = "Output semantic values as terms." in
+    let doc = "Do not output semantic values as terms." in
     Arg.(value & flag & info ["no-term-like-pp"] ~docs ~doc) in
 
   Term.(ret (const mk_term_opt $
