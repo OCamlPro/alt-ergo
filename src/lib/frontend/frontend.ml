@@ -320,7 +320,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout None ->
-       if Options.get_interpretation () then
+      if Options.get_interpretation () then
         Printer.print_wrn "Timeout"
       else
         Printer.print_status_timeout ~validity_mode
