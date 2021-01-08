@@ -13,8 +13,6 @@
 
 module Sorts : Map.S with type key = string
 
-val sorts : Parsed.decl Seq.t -> unit
-
 module Profile : sig
 
   module P : Map.S with type key =
