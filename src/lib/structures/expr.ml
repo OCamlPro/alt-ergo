@@ -697,28 +697,6 @@ let label t =
     let { f = f; _ } = t in
     Sy.label f
 
-let is_model_label =
-  let model = "model:" in
-  fun h ->
-    try String.equal (String.sub (Hstring.view h) 0 6) model
-    with Invalid_argument _ -> false
-
-let rec is_in_model_rec depth { f = f; xs = xs ; _ } =
-  let lb = Sy.label f in
-  (is_model_label lb
-   &&
-   (try depth <= Scanf.sscanf (Hstring.view lb) "model:%d" (fun x -> x)
-    with Scanf.Scan_failure _ | End_of_file-> true))
-  ||
-  List.exists (is_in_model_rec (depth +1)) xs
-
-let rec is_in_model e =
-  is_model_label (label e) ||
-  match e with
-  | { f = Sy.Form _; _ } -> false
-  | { f = Sy.Lit _ ; xs; _ } -> List.exists is_in_model xs
-  | _ -> is_in_model_rec 0 e
-
 let print_tagged_classes =
   let is_labeled t = not (Hstring.equal (label t) Hstring.empty) in
   fun fmt l ->
