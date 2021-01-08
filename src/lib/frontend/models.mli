@@ -11,8 +11,6 @@
 
 (** {1 Models module} *)
 
-module Sorts : Map.S with type key = string
-
 module Profile : sig
 
   module P : Map.S with type key =
