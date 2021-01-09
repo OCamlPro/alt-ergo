@@ -179,12 +179,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
   }
 
-  let all_models_sat_env = ref None
   let latest_saved_env = ref None
   let terminated_normally = ref false
 
   let reset_refs () =
-    all_models_sat_env := None;
     latest_saved_env := None;
     terminated_normally := false;
     Steps.reset_steps ()
@@ -455,44 +453,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let s = ref SE.empty in
     ME.iter
       (fun f _ ->
-         if (complete_model && is_literal f) || E.is_in_model f then
+         if complete_model && is_literal f then
            s := SE.add f !s
       )
       t.gamma;
     !s
 
-  let print_prop_model fmt s =
-    SE.iter (fprintf fmt "\n %a" E.print) s
-
-  let print_model ~header fmt t =
-    Format.print_flush ();
-    if header then fprintf fmt "\nModel\n";
-    let pm = extract_prop_model ~complete_model:(get_complete_model ()) t in
-    if not (SE.is_empty pm) then begin
-      fprintf fmt "Propositional:";
-      print_prop_model fmt pm;
-      fprintf fmt "\n";
-    end;
-    Th.print_model fmt ~complete_model:(get_complete_model ()) t.tbox
-
-
-  let refresh_model_handler =
-    if get_model () then
-      fun t ->
-        try
-          let alrm =
-            if Options.get_is_gui() then
-              Sys.sigalrm (* troubles with GUI+VTARLM *)
-            else
-              Sys.sigvtalrm
-          in
-          Sys.set_signal alrm
-            (Sys.Signal_handle (fun _ ->
-                 Printer.print_fmt (Options.get_fmt_mdl ())
-                   "%a" (print_model ~header:true) t;
-                 Options.exec_timeout ()))
-        with Invalid_argument _ -> ()
-    else fun _ -> ()
 
   (* sat-solver *)
 
@@ -980,7 +946,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       (fun
         ((env, _bcp, tcp, ap_delta, lits) as acc)
         ({ E.ff = f; _ } as ff, dep) ->
-        refresh_model_handler env;
         Options.exec_thread_yield ();
         let dep = add_dep f dep in
         let dep_gamma = add_dep_of_formula f dep in
@@ -1177,32 +1142,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       ignore (update_instances_cache (Some []));
       env, true
 
-  let update_all_models_option env =
-    if get_all_models () then
-      begin
-        (* should be used when all_models () is activated only *)
-        if !all_models_sat_env == None then all_models_sat_env := Some env;
-        let m =
-          ME.fold
-            (fun f _ s -> if is_literal f then SE.add f s else s)
-            env.gamma SE.empty
-        in
-        Printer.print_fmt (Options.get_fmt_mdl ())
-          "@[<v 0>--- SAT model found ---@ \
-           %a@ \
-           --- / SAT model  ---@]"
-          print_prop_model m;
-        raise (IUnsat (Ex.make_deps m, []))
-      end
-
-  let get_all_models_answer () =
-    if get_all_models () then
-      match !all_models_sat_env with
-      | Some env -> raise (I_dont_know env)
-      | None ->
-        Printer.print_fmt (Options.get_fmt_mdl ())
-          "[all-models] No SAT models found"
-
 
   let compute_concrete_model env compute =
     let compute =
@@ -1256,7 +1195,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
 
   let return_answer env compute return_function =
-    update_all_models_option env;
     let env = compute_concrete_model env compute in
     Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
 
@@ -1776,7 +1714,6 @@ are not Th-reduced";
               acc.guards.guards
           in
           acc.model_gen_mode := false;
-          all_models_sat_env := None;
           latest_saved_env := None;
           terminated_normally := false;
           {acc with inst;
@@ -1850,14 +1787,12 @@ are not Th-reduced";
 
       let d = back_tracking env in
       assert (Ex.has_no_bj d);
-      get_all_models_answer ();
       terminated_normally := true;
       d
     with
     | IUnsat (dep, classes) ->
       Debug.bottom classes;
       Debug.unsat ();
-      get_all_models_answer ();
       terminated_normally := true;
       assert (Ex.has_no_bj dep);
       dep

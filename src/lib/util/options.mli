@@ -34,16 +34,8 @@
     of the program
 *)
 
-(** Type used to describe the type of models wanted by
-   {!val:set_model} *)
-type model =
-  | MNone        (** Default, No models computed  *)
-  | MDefault     (** Output model for variable annotated with "model:" *)
-  | MComplete    (** Output complete boolean and theory model *)
-  | MAll         (** Output propositional model *)
-
 (** Type used to describe the type of heuristic for instantiation wanted by
-   {!val:set_instantiation_heuristic} *)
+    {!val:set_instantiation_heuristic} *)
 type instantiation_heuristic =
   | INormal      (** Least costly heuristic for instantiation, instantiate on
                      a reduced set of term *)
@@ -54,7 +46,7 @@ type instantiation_heuristic =
                      use all available ground terms *)
 
 (** Type used to describe the type of interpretation wanted by
-   {!val:set_interpretation} *)
+    {!val:set_interpretation} *)
 type interpretation =
   | INone        (** Default, No interpretation computed *)
   | IFirst       (** Compute an interpretation after the first instantiation
@@ -219,13 +211,6 @@ val set_interpretation_use_underscore : bool -> unit
 
 (** Set [max_split] accessible with {!val:get_max_split} *)
 val set_max_split : Numbers.Q.t -> unit
-
-(** Set [model] accessible with {!val:get_model}
-
-    Possible values are :
-    {ul {- Default} {- Complete} {- All}}
-*)
-val set_model : model -> unit
 
 (** Set [nb_triggers] accessible with {!val:get_nb_triggers} *)
 val set_nb_triggers : int -> unit
@@ -687,26 +672,6 @@ val get_timelimit_per_goal : unit -> bool
 (** Default to [false] *)
 
 (** {4 Output options} *)
-
-(** Experimental support for models on labeled terms.
-
-    Possible values are
-    {ul {- None} {- Default} {- Complete : shows a complete model}
-    {- All : shows all models}}
-
-    Which are used in the two getters below. This option answers
-    [true] if the model is set to Default or Complete
-*)
-val get_model : unit -> bool
-(** Default to [false] *)
-
-(** [true] if the model is set to complete model *)
-val get_complete_model : unit -> bool
-(** Default to [false] *)
-
-(** [true] if the model is set to all models *)
-val get_all_models : unit -> bool
-(** Default to [false] *)
 
 (** Experimental support for counter-example generation.
 

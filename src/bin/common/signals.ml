@@ -53,15 +53,13 @@ let init_sig_prof timers =
       )
 
 let init_sig_vtalarm () =
-  if not (get_model ()) then
-    try
-      Sys.set_signal Sys.sigvtalrm
-        (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
-    with Invalid_argument _ -> ()
+  try
+    Sys.set_signal Sys.sigvtalrm
+      (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
+  with Invalid_argument _ -> ()
 
 let init_sig_alarm () =
-  if not (get_model ()) then
-    try
-      Sys.set_signal Sys.sigalrm
-        (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
-    with Invalid_argument _ -> ()
+  try
+    Sys.set_signal Sys.sigalrm
+      (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
+  with Invalid_argument _ -> ()
