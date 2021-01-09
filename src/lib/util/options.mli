@@ -35,7 +35,7 @@
 *)
 
 (** Type used to describe the type of heuristic for instantiation wanted by
-   {!val:set_instantiation_heuristic} *)
+    {!val:set_instantiation_heuristic} *)
 type instantiation_heuristic =
   | INormal      (** Least costly heuristic for instantiation, instantiate on
                      a reduced set of term *)
@@ -46,7 +46,7 @@ type instantiation_heuristic =
                      use all available ground terms *)
 
 (** Type used to describe the type of interpretation wanted by
-   {!val:set_interpretation} *)
+    {!val:set_interpretation} *)
 type interpretation =
   | INone        (** Default, No interpretation computed *)
   | IFirst       (** Compute an interpretation after the first instantiation

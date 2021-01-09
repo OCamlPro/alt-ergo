@@ -917,7 +917,8 @@ let parse_output_opt =
     let doc = "Output \"_\" instead of fresh value in interpretation" in
     let docv = "VAL" in
     Arg.(value & flag & info
-           ["interpretation-use-underscore";"use-underscore"] ~docv ~docs ~doc) in
+           ["interpretation-use-underscore";"use-underscore"]
+           ~docv ~docs ~doc) in
 
   let unsat_core =
     let doc = "Experimental support for computing and printing unsat-cores." in
