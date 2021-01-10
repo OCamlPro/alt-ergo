@@ -173,18 +173,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     unit_tbox : Th.t; (* theory env of facts at level 0 *)
     inst : Inst.t;
     heuristics : Heuristics.t ref;
-    model_gen_mode : bool ref;
+    model_gen_phase : bool ref;
     guards : guards;
     add_inst: E.t -> bool;
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
+    last_saved_model : Models.t Lazy.t option ref;
   }
 
-  let latest_saved_env = ref None
-  let terminated_normally = ref false
-
   let reset_refs () =
-    latest_saved_env := None;
-    terminated_normally := false;
     Steps.reset_steps ()
 
   let save_guard_and_refs env new_guard =
@@ -198,9 +194,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     { env with
       unit_facts_cache = ref refs.unit_facts}, guard
 
+  type timeout_reason =
+    | NoTimeout
+    | Assume
+    | ProofSearch
+    | ModelGen
+
   exception Sat of t
-  exception Unsat of Ex.t
-  exception I_dont_know of t
+  exception Unsat of Explanation.t
+  exception I_dont_know of { env : t; timeout : timeout_reason }
   exception IUnsat of Ex.t * SE.t list
 
 
@@ -441,23 +443,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Options.tool_req 2 "TR-Sat-Conflict-2";
       env.heuristics := Heuristics.bump_activity !(env.heuristics) expl;
       raise (IUnsat (expl, classes))
-
-  let is_literal f =
-    match E.form_view f with
-    | E.Literal _ -> true
-    | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
-    | E.Let _ | E.Iff _ | E.Xor _ -> false
-    | E.Not_a_form -> assert false
-
-  let extract_prop_model ~complete_model t =
-    let s = ref SE.empty in
-    ME.iter
-      (fun f _ ->
-         if complete_model && is_literal f then
-           s := SE.add f !s
-      )
-      t.gamma;
-    !s
 
 
   (* sat-solver *)
@@ -1141,21 +1126,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       env, true
 
 
-  let compute_concrete_model env compute =
+  let may_update_last_saved_model env compute =
     let compute =
-      if Options.get_first_interpretation () then
-        match !latest_saved_env with
-        | Some _ -> false
-        | None -> true
-      else compute
+      if not (Options.get_first_interpretation ()) then compute
+      else !(env.last_saved_model) == None
     in
     if not compute then env
     else begin
       try
-        (* to push pending stuff *)
-        let env = do_case_split env (Options.get_case_split_policy ()) in
-        let env = {env with tbox = Th.compute_concrete_model env.tbox} in
-        latest_saved_env := Some env;
+        (* also performs case-split and pushes pending atoms to CS *)
+        let model = Th.compute_concrete_model env.tbox in
+        env.last_saved_model := model;
         env
       with Ex.Inconsistent (expl, classes) ->
         Debug.inconsistent expl env;
@@ -1164,66 +1145,36 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         raise (IUnsat (expl, classes))
     end
 
-  let return_cached_model return_function =
+
+  let update_model_and_return_unknown env compute_model ~timeout =
+    try
+      let env = may_update_last_saved_model env compute_model in
+      Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
+      raise (I_dont_know {env; timeout })
+    with Util.Timeout when !(env.model_gen_phase) ->
+      (* In this case, timeout reason becomes 'ModelGen' *)
+      raise (I_dont_know {env; timeout = ModelGen })
+
+  let model_gen_on_timeout env =
     let i = get_interpretation () in
-    assert i;
-    assert (not !terminated_normally);
-    terminated_normally := true; (* to avoid loops *)
-    begin
-      match !latest_saved_env with
-      | None ->
-        Printer.print_fmt (Options.get_fmt_mdl ())
-          "@[<v 0>[FunSat]@, \
-           It seems that no model has been computed so far.@,\
-           You may need to change your model generation strategy@,\
-           or to increase your timeout.@]"
-      | Some env ->
-        let prop_model = extract_prop_model ~complete_model:true env in
-        Th.output_concrete_model (get_fmt_mdl ()) ~prop_model env.tbox;
-    end;
-    return_function ()
-
-
-  let () =
-    at_exit
-      (fun () ->
-         if not !terminated_normally && (get_interpretation ()) then
-           return_cached_model (fun () -> ())
-      )
-
-
-  let return_answer env compute return_function =
-    let env = compute_concrete_model env compute in
-    Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
-
-    let prop_model = extract_prop_model ~complete_model:true env in
-    Th.output_concrete_model (get_fmt_mdl ()) ~prop_model env.tbox;
-
-    terminated_normally := true;
-    return_function env
-
-
-  let switch_to_model_gen env =
-    not !terminated_normally &&
-    not !(env.model_gen_mode) &&
-    get_interpretation ()
-
-
-  let do_switch_to_model_gen env =
-    let i = get_interpretation () in
-    assert i;
-    if not !(env.model_gen_mode) &&
-       Stdlib.(<>) (Options.get_timelimit_interpretation ()) 0. then
-      begin
-        Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
-        Options.Time.set_timeout
-          ~is_gui:(Options.get_is_gui())
-          (Options.get_timelimit_interpretation ());
-        env.model_gen_mode := true;
-        return_answer env i (fun _ -> raise Util.Timeout)
-      end
+    let ti = Options.get_timelimit_interpretation () in
+    if not i || (* not asked to gen a model *)
+       !(env.model_gen_phase) ||  (* we timeouted in model-gen-phase *)
+       Stdlib.(=) ti 0. (* no time allocated for extra model search *)
+    then
+      raise (I_dont_know {env; timeout = ProofSearch})
     else
-      return_cached_model (fun () -> raise Util.Timeout)
+      begin
+        (* Beware: models generated on timeout of ProofSearch phase may
+           be incohrent wrt. the ground part of the pb (ie. if delta
+           is not empty ? *)
+        env.model_gen_phase := true;
+        let is_gui = Options.get_is_gui() in
+        Options.Time.unset_timeout ~is_gui;
+        Options.Time.set_timeout ~is_gui ti;
+        update_model_and_return_unknown
+          env i ~timeout:ProofSearch (* may becomes ModelGen *)
+      end
 
 
   let reduce_hypotheses tcp_cache tmp_cache env acc (hyp, gf, dep) =
@@ -1336,8 +1287,9 @@ are not Th-reduced";
   let greedy_instantiation env =
     match get_instantiation_heuristic () with
     | INormal ->
-      return_answer env (get_last_interpretation ())
-        (fun e -> raise (I_dont_know e))
+      update_model_and_return_unknown
+        env (get_last_interpretation ())
+        ~timeout:NoTimeout (* may becomes ModelGen *)
     | IAuto | IGreedy ->
       let rec greedy_instantiation_aux env greedier =
         let gre_inst =
@@ -1365,8 +1317,9 @@ are not Th-reduced";
         if ok1 || ok2 || ok3 || ok4 then env
         else if not greedier then greedy_instantiation_aux env true
         else
-          return_answer env (get_last_interpretation ())
-            (fun e -> raise (I_dont_know e))
+          update_model_and_return_unknown
+            env (get_last_interpretation ())
+            ~timeout:NoTimeout (* may becomes ModelGen *)
       in
       greedy_instantiation_aux env false
 
@@ -1374,7 +1327,7 @@ are not Th-reduced";
   let normal_instantiation env try_greedy =
     Debug.print_nb_related env;
     let env = do_case_split env Util.BeforeMatching in
-    let env = compute_concrete_model env (get_every_interpretation ()) in
+    let env = may_update_last_saved_model env (get_every_interpretation ()) in
     let env = new_inst_level env in
     let mconf =
       {Util.nb_triggers = get_nb_triggers ();
@@ -1480,7 +1433,7 @@ are not Th-reduced";
           with No_suitable_decision ->
             back_tracking (normal_instantiation env true)
     with
-    | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
+    | Util.Timeout -> model_gen_on_timeout env
 
   and make_one_decision env =
     try
@@ -1711,9 +1664,8 @@ are not Th-reduced";
               (mk_gf (E.neg guard_to_neg) "" true true,Ex.empty)
               acc.guards.guards
           in
-          acc.model_gen_mode := false;
-          latest_saved_env := None;
-          terminated_normally := false;
+          acc.model_gen_phase := false;
+          env.last_saved_model := None;
           {acc with inst;
                     guards =
                       { acc.guards with
@@ -1785,16 +1737,14 @@ are not Th-reduced";
 
       let d = back_tracking env in
       assert (Ex.has_no_bj d);
-      terminated_normally := true;
       d
     with
     | IUnsat (dep, classes) ->
       Debug.bottom classes;
       Debug.unsat ();
-      terminated_normally := true;
       assert (Ex.has_no_bj dep);
       dep
-    | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
+    | Util.Timeout -> model_gen_on_timeout env
 
   let add_guard env gf =
     let current_guard = env.guards.current_guard in
@@ -1807,10 +1757,12 @@ are not Th-reduced";
       assume env [add_guard env fg,dep]
     with
     | IUnsat (d, classes) ->
-      terminated_normally := true;
       Debug.bottom classes;
       raise (Unsat d)
-    | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
+    | Util.Timeout ->
+      (* don't attempt to compute a model if timeout before
+         calling unsat function *)
+      raise (I_dont_know {env; timeout = Assume})
 
 
   let pred_def env f name dep _loc =
@@ -1884,10 +1836,11 @@ are not Th-reduced";
       unit_tbox = tbox;
       inst = inst;
       heuristics = ref (Heuristics.empty ());
-      model_gen_mode = ref false;
+      model_gen_phase = ref false;
       unit_facts_cache = ref ME.empty;
       guards = init_guards ();
-      add_inst = fun _ -> true;
+      add_inst = (fun _ -> true);
+      last_saved_model = ref None;
     }
     in
     assume env gf_true Ex.empty
@@ -1898,4 +1851,8 @@ are not Th-reduced";
 
   let assume_th_elt env th_elt dep =
     {env with tbox = Th.assume_th_elt env.tbox th_elt dep}
+
+  (** returns the latest model stored in the env if any *)
+  let get_model env = !(env.last_saved_model)
+
 end
