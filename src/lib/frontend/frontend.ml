@@ -142,6 +142,32 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep f_name)
     else Ex.empty
 
+  let timeout_reason_to_string = function
+    | None -> "(?)"
+    | Some SAT.NoTimeout -> "NoTimeout"
+    | Some SAT.Assume -> "Assume"
+    | Some SAT.ProofSearch -> "ProofSearch"
+    | Some SAT.ModelGen -> "ModelGen"
+
+  let print_model env timeout =
+    let get_m = Options.get_interpretation () in
+    let s = timeout_reason_to_string timeout in
+    match SAT.get_model env with
+    | None ->
+      if get_m then
+        Printer.print_fmt (Options.get_fmt_err ())
+          "@[<v 0>It seems that no model has been computed so \
+           far. You may need to change your model generation strategy \
+           or to increase your timeouts. Returned timeout reason = %s@]" s
+
+    | Some m ->
+      assert (get_m);
+      if get_m then
+        Printer.print_fmt
+          (Options.get_fmt_err ()) "@[<v 0>; Returned timeout reason = %s@]" s;
+      let m = Lazy.force m in
+      Models.output_concrete_model (get_fmt_mdl ()) m
+
   let process_decl print_status used_context consistent_dep_stack
       ((env, consistent, dep) as acc) d =
     try
@@ -225,19 +251,27 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     with
     | SAT.Sat t ->
       print_status (Sat (d,t)) (Steps.get_steps ());
-      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
+      print_model env (Some SAT.NoTimeout);
       env , consistent, dep
     | SAT.Unsat dep' ->
       let dep = Ex.union dep dep' in
       if get_debug_unsat_core () then check_produced_unsat_core dep;
       print_status (Inconsistent d) (Steps.get_steps ());
       env , false, dep
-    | SAT.I_dont_know t ->
-      print_status (Unknown (d, t)) (Steps.get_steps ());
-      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
+    | SAT.I_dont_know {env; timeout} ->
+      (* TODO: always print Unknown for why3 ? *)
+      let status =
+        if timeout != NoTimeout then (Timeout (Some d))
+        else (Unknown (d, env))
+      in
+      print_status status (Steps.get_steps ());
+      print_model env (Some timeout);
+      if timeout != NoTimeout then raise Util.Timeout;
       env , consistent, dep
+
     | Util.Timeout as e ->
       print_status (Timeout (Some d)) (Steps.get_steps ());
+      print_model env None;
       raise e
 
   let print_status status steps =
