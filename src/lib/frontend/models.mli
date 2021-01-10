@@ -17,13 +17,17 @@ type objective_value =
   | Obj_val of string
   | Obj_unk
 
+type t = {
+  propositional : Expr.Set.t;
+  constants : Profile.V.t Profile.P.t;
+  functions : Profile.V.t Profile.P.t;
+  arrays : Profile.V.t Profile.P.t;
+  objectives : (Expr.t * objective_value) Util.MI.t;
+}
+
 (** Print the given counterexample on the given formatter with the
     corresponding format setted with Options.get_output_format *)
 val output_concrete_model :
   Format.formatter ->
-  Expr.Set.t ->
-  Profile.V.t Profile.P.t ->
-  Profile.V.t Profile.P.t ->
-  Profile.V.t Profile.P.t ->
-  objectives:(Expr.t * objective_value) Util.MI.t ->
+  t ->
   unit
