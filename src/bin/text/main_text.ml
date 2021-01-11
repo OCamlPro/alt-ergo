@@ -117,68 +117,73 @@ let typed_loop all_context state td =
   end
 
 let () =
-  Signals.init_sig_int ();
-  Signals.init_sig_vtalarm ();
-  Signals.init_sig_term_quit timers;
-  Signals.init_sig_prof timers;
-  Gc_debug.init ();
+  try begin
+    Signals.init_sig_int ();
+    Signals.init_sig_vtalarm ();
+    Signals.init_sig_term_quit timers;
+    Signals.init_sig_prof timers;
+    Gc_debug.init ();
 
-  AltErgoParsers.Native_lexer.register_native ();
-  AltErgoParsers.Psmt2_to_alt_ergo.register_psmt2 ();
-  let (module I : Input.S) = Input.find (Options.get_frontend ()) in
+    AltErgoParsers.Native_lexer.register_native ();
+    AltErgoParsers.Psmt2_to_alt_ergo.register_psmt2 ();
+    let (module I : Input.S) = Input.find (Options.get_frontend ()) in
 
-  Printer.init_colors ();
-  Printer.init_output_format ();
+    Printer.init_colors ();
+    Printer.init_output_format ();
 
-  let parsed =
-    try
-      Options.Time.start ();
-      if not (Options.get_timelimit_per_goal()) then
-        Options.Time.set_timeout ~is_gui:false (Options.get_timelimit ());
-
-      Options.set_is_gui false;
-      init_profiling ();
-
-      let filename = get_file () in
-      let preludes = Options.get_preludes () in
-      I.parse_files ~filename ~preludes
-    with
-    | Util.Timeout ->
-      FE.print_status (FE.Timeout None) 0;
-      exit 142
-    | Parsing.Parse_error ->
-      Printer.print_err "%a" Errors.report
-        (Syntax_error ((Lexing.dummy_pos,Lexing.dummy_pos),""));
-      exit 1
-    | Errors.Error e ->
-      Printer.print_err "%a" Errors.report e;
-      exit 1
-
-  in
-  let all_used_context = FE.init_all_used_context () in
-  if Options.get_timelimit_per_goal() then
-    FE.print_status FE.Preprocess 0;
-  let assertion_stack = Stack.create () in
-  let typing_loop state p =
-    if get_parse_only () then state else begin
+    let parsed =
       try
-        let l, env = I.type_parsed state.env assertion_stack p in
-        List.fold_left (typed_loop all_used_context) { state with env; } l
+        Options.Time.start ();
+        if not (Options.get_timelimit_per_goal()) then
+          Options.Time.set_timeout ~is_gui:false (Options.get_timelimit ());
+
+        Options.set_is_gui false;
+        init_profiling ();
+
+        let filename = get_file () in
+        let preludes = Options.get_preludes () in
+        I.parse_files ~filename ~preludes
       with
-      | Errors.Error e ->
-        if e != Warning_as_error then
-          Printer.print_err "%a" Errors.report e;
+      | Util.Timeout ->
+        FE.print_status (FE.Timeout None) 0;
+        exit 142
+      | Parsing.Parse_error ->
+        Printer.print_err "%a" Errors.report
+          (Syntax_error ((Lexing.dummy_pos,Lexing.dummy_pos),""));
         exit 1
-    end
-  in
-  let state = {
-    env = I.empty_env;
-    ctx = [];
-    local = [];
-    global = [];
-  } in
-  let _ : _ state = Seq.fold_left typing_loop state parsed in
-  Options.Time.unset_timeout ~is_gui:false;
+      | Errors.Error e ->
+        Printer.print_err "%a" Errors.report e;
+        exit 1
+
+    in
+    let all_used_context = FE.init_all_used_context () in
+    if Options.get_timelimit_per_goal() then
+      FE.print_status FE.Preprocess 0;
+    let assertion_stack = Stack.create () in
+    let typing_loop state p =
+      if get_parse_only () then state else begin
+        try
+          let l, env = I.type_parsed state.env assertion_stack p in
+          List.fold_left (typed_loop all_used_context) { state with env; } l
+        with
+        | Errors.Error e ->
+          if e != Warning_as_error then
+            Printer.print_err "%a" Errors.report e;
+          exit 1
+      end
+    in
+    let state = {
+      env = I.empty_env;
+      ctx = [];
+      local = [];
+      global = [];
+    } in
+    let _ : _ state = Seq.fold_left typing_loop state parsed in
+    Options.Time.unset_timeout ~is_gui:false;
+  end
+  with Util.Timeout ->
+    FE.print_status (FE.Timeout None) 0;
+    exit 142
 
  (*
   match d with
