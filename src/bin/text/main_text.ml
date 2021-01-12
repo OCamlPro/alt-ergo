@@ -156,8 +156,8 @@ let () =
         exit 1
 
     in
-  (* let fun_decls = Seq.filter
-     (function Parsed.Function_def _ -> true | _ -> false) parsed in *)
+    (* let fun_decls = Seq.filter
+       (function Parsed.Function_def _ -> true | _ -> false) parsed in *)
 
     let all_used_context = FE.init_all_used_context () in
     if Options.get_timelimit_per_goal() then
