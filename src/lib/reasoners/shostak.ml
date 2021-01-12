@@ -330,11 +330,10 @@ struct
   let is_solvable_theory_symbol sb ty =
     X1.is_mine_symb sb ty ||
     not (get_restricted ()) &&
-    ((*X2.is_mine_symb sb || print records*)
-      X3.is_mine_symb sb ty ||
-      X4.is_mine_symb sb ty ||
-      X5.is_mine_symb sb ty)(* ||
-                               AC.is_mine_symb sb*)
+    (X2.is_mine_symb sb ty ||
+     X3.is_mine_symb sb ty ||
+     X4.is_mine_symb sb ty ||
+     X5.is_mine_symb sb ty)
 
 
   let is_a_leaf r = match r.v with
