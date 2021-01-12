@@ -762,7 +762,7 @@ let parse_execution_opt =
   let pretty_output =
     let doc =
       "Print output with formatting rules, headers and colors" in
-    Arg.(value & flag & info ["p"; "pretty-output"] ~docs ~doc) in
+    Arg.(value & flag & info ["p"; "pretty-output"] ~doc) in
 
   let type_only =
     let doc = "Stop after typing." in

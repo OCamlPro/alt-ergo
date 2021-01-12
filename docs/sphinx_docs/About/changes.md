@@ -2,6 +2,56 @@
 
 ## dev version
 
+* General improvements:
+
+  - Add Sphinx general documentation
+
+* Frontend
+
+  - Switch command line parsing to use cmdliner. Use `--<option name>` instead of `-<option name>`
+
+  - Change supported extension of file with Alt-Ergo's native syntax from `.mlw` and `.why` to `.ae`
+
+  - Add support for smtlib2 incremental commands (push, pop, check-sat-assuming)
+
+  - Add `--input` (resp `--output`) option to manually set the input (resp output) file format
+
+  - Add `--err-formatter` and `--std-formatter` options to set output formatters
+
+  - Add `--pretty-output` option to add better debug formatting and to add colors
+
+  - Check consistency of smt2 status between results and info (if present in input file)
+
+  - Add exponentiation operation, `**` in native Alt-Ergo syntax
+
+  - Fix `--steps-count` and improve the way steps are counted
+
+* Reasoners:
+
+  - Add support for incremental command
+
+  - Add new prelude for FPA and B set theory
+
+* Instantiation
+
+  - Add `--instantiation-heuristic` option that can enable lighter or heavier instantiation
+
+  - Reduce the number of forall/exists when instantiating in CDCL-Tableaux sat solver
+
+* Build:
+
+  - Update build system with proper dune-project and tree structure
+
+  - A manpage is now installed with the opam installation
+
+  - Add configure option `-static` to configure for statically linked compilation
+
+* Others
+
+  - Add option `--gc-policy` to set the allocation policy of the garbage collector
+
+  - Multiple bugfixes
+
 
 ## version 2.3.2, March 23, 2020
 
