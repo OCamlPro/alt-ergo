@@ -295,7 +295,7 @@ let print_status ?(validity_mode=true)
   pp_std_smt ();
   let native_output_fmt, comment_if_smt2 =
     if validity_mode then formatter, ""
-    else (Options.get_fmt_dbg ()), "; "
+    else (Options.get_fmt_dbg ()), (pp_smt clean_dbg_print)
   in
   (* print validity status. Commented and in debug fmt if in unsat mode *)
   fprintf native_output_fmt
@@ -306,9 +306,11 @@ let print_status ?(validity_mode=true)
     (status_time time)
     (status_steps steps)
     (status_goal goal);
-  if not validity_mode && String.length unsat_status > 0 then
+  if not validity_mode && String.length unsat_status > 0 then begin
+    pp_std_smt ();
     (* print SMT2 status if not in validity mode *)
     fprintf formatter "%a@." print_status_value (unsat_status,color)
+  end
 
 let print_status_unsat ?(validity_mode=true) loc
     time steps goal =
