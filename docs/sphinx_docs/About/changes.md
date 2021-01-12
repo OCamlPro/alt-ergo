@@ -2,6 +2,9 @@
 
 ## dev version
 
+
+## version 2.4.0, JAnuary 12, 2020
+
 * General improvements:
 
   - Add Sphinx general documentation
