@@ -409,7 +409,7 @@ module Shostak (X : ALIEN) = struct
     | Access _ -> None
 
     | Record (_, ty) ->
-      if List.exists (fun (t,_) -> (Expr.depth t) = 1) eq
+      if List.exists (fun (t,_) -> Expr.const_term t) eq
       then None
       else Some (Expr.fresh_name ty, false)
 
@@ -425,7 +425,7 @@ module Shostak (X : ALIEN) = struct
     let acc =
       List.fold_left
         (fun acc (s, r) ->
-           if (Expr.depth s) <> 1 then acc
+           if not (Expr.const_term s) then acc
            else
              match acc with
              | Some(s', _) when Expr.compare s' s > 0 -> acc
