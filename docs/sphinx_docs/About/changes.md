@@ -13,7 +13,7 @@
 
   - Switch command line parsing to use cmdliner. Use `--<option name>` instead of `-<option name>`
 
-  - Change supported extension of file with Alt-Ergo's native syntax from `.mlw` and `.why` to `.ae`
+  - Change supported extension of file with Alt-Ergo's native syntax with `.ae`. `.mlw` and `.why` extension are still supported but depreciated.
 
   - Add support for smtlib2 incremental commands (push, pop, check-sat-assuming)
 
@@ -25,21 +25,21 @@
 
   - Check consistency of smt2 status between results and info (if present in input file)
 
-  - Add exponentiation operation, `**` in native Alt-Ergo syntax
+  - Add exponentiation operation, `**` in native Alt-Ergo syntax. The operator is fully interpreted when applied to constants
 
-  - Fix `--steps-count` and improve the way steps are counted
+  - Fix `--steps-count` and improve the way steps are counted (AdaCore contribution)
 
 * Reasoners:
 
   - Add support for incremental command
 
-  - Add new prelude for FPA and B set theory
+  - Add new version of preludes for FPA and B set theory
 
 * Instantiation
 
   - Add `--instantiation-heuristic` option that can enable lighter or heavier instantiation
 
-  - Reduce the number of forall/exists when instantiating in CDCL-Tableaux sat solver
+  - Reduce the instantiation context (considered foralls / exists) in CDCL-Tableaux to better mimic the Tableaux-like SAT solver
 
 * Build:
 
