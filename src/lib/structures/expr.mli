@@ -316,3 +316,6 @@ type th_elt =
 val print_th_elt : Format.formatter -> th_elt -> unit
 
 val is_pure : t -> bool
+
+val const_term : t -> bool
+(** return true iff the given argument is a term without arguments *)

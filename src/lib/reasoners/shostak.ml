@@ -582,8 +582,8 @@ struct
       | _, Ty.Tadt _    when not (Options.get_disable_adts()) ->
         X6.assign_value r distincts eq
       | Term t, ty      -> (* case disable_adts() handled here *)
-        if (Expr.depth t) = 1 ||
-           List.exists (fun (t,_) -> (Expr.depth t) = 1) eq then None
+        if Expr.const_term t ||
+           List.exists (fun (t,_) -> Expr.const_term t) eq then None
         else Some (Expr.fresh_name ty, false) (* false <-> not a case-split *)
       | _               -> assert false
     in
@@ -612,7 +612,7 @@ struct
         let acc =
           List.fold_left
             (fun acc (s, r) ->
-               if (Expr.depth s) <= 1 then
+               if Expr.const_term s then
                  match acc with
                  | Some(s', _) when Expr.compare s' s > 0 -> acc
                  | _ -> Some (s, r)
@@ -625,7 +625,7 @@ struct
           | Some (_,r) -> r
           | None ->
             match term_extract rep with
-            | Some t, true when (Expr.depth t) = 1 -> rep
+            | Some t, true when Expr.const_term t -> rep
             | _ ->
               let print_aux fmt (t,r) =
                 fprintf fmt "> impossible case: %a -- %a@ "

@@ -137,9 +137,9 @@ type form_view =
 
 (** Comparison and hashing functions *)
 
-(* We keep true and false as repr * ordering is influenced by depth
-   otherwise, we compare tag2 - tag1 so that fresh vars will be
-   smaller *)
+(* We keep true and false as repr * ordering is influenced by
+   depth. Constants are smaller. Otherwise, we compare tag2 - tag1 so
+   that fresh vars will be smaller *)
 let compare t1 t2 =
   if t1 == t2 then 0
   else
@@ -698,7 +698,13 @@ let is_ite s = match s with
 
 let mk_term s l ty =
   assert (match s with Sy.Lit _ | Sy.Form _ -> false | _ -> true);
-  let d = 1 + List.fold_left (fun z t -> max z t.depth) 0 l in
+  let d = match l with
+    | [] ->
+      1 (*no args ? depth = 1 (ie. current app s, ie constant)*)
+    | _ ->
+      (* if args, d is 1 + max_depth of args (equals at least to 1 *)
+      1 + List.fold_left (fun z t -> max z t.depth) 1 l
+  in
   let nb_nodes = List.fold_left (fun z t -> z + t.nb_nodes) 1 l in
   let vars = free_vars_non_form s l ty in
   let vty = free_type_vars_non_form l ty in
@@ -859,15 +865,17 @@ let mk_ite cond th el id =
   if ty == Ty.Tbool then mk_if cond th el id
   else mk_term (Sy.Op Sy.Tite) [cond; th; el] ty
 
-let not_an_app e =
+let [@inline always] const_term e =
   (* we use this function because depth is currently not correct to
      detect constants (not incremented in some situations due to
      some regression) *)
-  match e with
-  | { f = (Sy.Form _ | Sy.Lit _ | Sy.Let); _ }  -> false
-  | { xs = []; _ } -> assert (depth e <= 1); true
-  | _ -> false
-
+  match e.f with
+  | Sy.Form _ | Sy.Lit _ | Sy.Let  -> false
+  | True | False | Void | Name _ | Int _ | Real _ | Bitv _
+  | Op _ | Var _ | In _ | MapsTo _ ->
+    let res = (e.xs == []) in
+    assert (res == (depth e <= 1));
+    res
 
 let mk_forall_ter =
   let env = F_Htbl.create 101 in
@@ -951,7 +959,7 @@ let mk_positive_lit s neg_s l =
     | True | False | Void | Name _ | Int _ | Real _ | Bitv _
     | Op _ | Var _ | In _ | MapsTo _ | Let -> false
   );
-  let d = 1 + List.fold_left (fun z t -> max z t.depth) 0 l in
+  let d = 1 + List.fold_left (fun z t -> max z t.depth) 1 l in
   let nb_nodes = List.fold_left (fun z t -> z + t.nb_nodes) 1 l in
   let vars = free_vars_non_form s l ty in
   let vty = free_type_vars_non_form l ty in
@@ -1196,7 +1204,7 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
   try
     let _, nb_occ = SMap.find let_v in_e.vars in
     if nb_occ = 1 && (let_e.pure (*1*) || Sy.equal let_v in_e.f) ||
-       not_an_app let_e then (* inline in these situations *)
+       const_term let_e then (* inline in these situations *)
       apply_subst_aux (SMap.singleton let_v let_e, Ty.esubst) in_e
     else
       let ty = type_info in_e in
