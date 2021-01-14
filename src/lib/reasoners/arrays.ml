@@ -60,7 +60,7 @@ module Shostak (X : ALIEN) = struct
   let abstract_selectors _ _ = assert false
   let solve _ _ = assert false
   let assign_value r _ eq =
-    if List.exists (fun (t,_) -> (Expr.depth t) = 1) eq then None
+    if List.exists (fun (t,_) -> Expr.const_term t) eq then None
     else
       match X.term_extract r with
       | Some _, true ->
@@ -71,7 +71,7 @@ module Shostak (X : ALIEN) = struct
     let acc =
       List.fold_left
         (fun acc (s, r) ->
-           if (Expr.depth s) <> 1 then acc
+           if not (Expr.const_term s) then acc
            else
              match acc with
              | Some(s', _) when Expr.compare s' s > 0 -> acc

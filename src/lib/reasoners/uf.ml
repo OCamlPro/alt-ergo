@@ -1112,7 +1112,7 @@ end
 
 let assert_has_depth_one (e, _) =
   match X.term_extract e with
-  | Some t, true -> assert (E.depth t = 1);
+  | Some t, true -> assert (E.const_term t);
   | _ -> ()
 
 module SMT2LikeModelOutput = struct
