@@ -171,16 +171,24 @@ module Pp_smtlib_term = struct
     | Sy.In(lb, rb), [t] ->
       fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
 
-    | Sy.Name (n,_), _ -> begin
-        try
-          let constraint_name,_ty_name =
-            MS.find (Hstring.view n) !constraints in
-          fprintf fmt "%s" constraint_name
-        with _ ->
-          let constraint_name = "c_"^(Hstring.view n)  in
-          constraints := MS.add (Hstring.view n)
-              (constraint_name,to_string_type (E.type_info t)) !constraints;
-          fprintf fmt "%s" constraint_name
+    | Sy.Name (n,_), l -> begin
+        let constraint_name =
+          try let constraint_name,_,_ =
+                (MS.find (Hstring.view n) !constraints) in
+            constraint_name
+          with _ ->
+            let constraint_name = "c_"^(Hstring.view n)  in
+            constraints := MS.add (Hstring.view n)
+                (constraint_name,
+                 to_string_type (E.type_info t),
+                 List.map (fun e -> to_string_type (E.type_info e)) l
+                ) !constraints;
+            constraint_name
+        in
+        match l with
+        | [] -> fprintf fmt "%s" constraint_name
+        | l ->
+          fprintf fmt "(%s %a)" constraint_name (Printer.pp_list_space print) l;
       end
 
     | _, [] ->
@@ -292,7 +300,7 @@ module SmtlibCounterExample = struct
       Format.fprintf fmt "(%s %a)" name Ty.print ty in
     let defined_value =
       try
-        fst (MS.find (Sy.to_string name) !constraints)
+        let res,_,_ = (MS.find (Sy.to_string name) !constraints) in res
       with _ -> t
     in
 
@@ -408,8 +416,16 @@ module Why3CounterExample = struct
         (asprintf "%s(assert %a)@ " acc SmtlibCounterExample.pp_term e)
       ) prop_model "" in
     Printer.print_fmt ~flushed:false fmt "@ ; constants@ ";
-    MS.iter (fun _ (name,ty) ->
-        Printer.print_fmt ~flushed:false fmt "(declare-const %s %s)@ " name ty
+    MS.iter (fun _ (name,ty,args_ty) ->
+        match args_ty with
+        | [] ->
+          Printer.print_fmt ~flushed:false fmt "(declare-const %s %s)@ "
+            name ty
+        | l ->
+          Printer.print_fmt ~flushed:false fmt "(declate-fun %s (%s) %s)@ "
+            name
+            (String.concat " " l)
+            ty
       ) !constraints;
     Printer.print_fmt ~flushed:false fmt "@ ; assertions@ ";
     Printer.print_fmt fmt ~flushed:false "%s" assertions
