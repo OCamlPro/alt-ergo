@@ -1365,7 +1365,7 @@ are not Th-reduced";
       let env = do_case_split env Util.AfterMatching in
       if ok1 || ok2 || ok3 || ok4 then env
       else
-          return_answer env (get_last_interpretation ())
+        return_answer env (get_last_interpretation ())
           (fun e -> raise (I_dont_know e))
 
 
