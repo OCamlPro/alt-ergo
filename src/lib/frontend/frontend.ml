@@ -162,8 +162,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Some m ->
       assert (get_m);
       if get_m then
-        Printer.print_fmt
-          (Options.get_fmt_err ()) "@[<v 0>; Returned timeout reason = %s@]" s;
+        Printer.print_dbg "@[<v 0>; Returned timeout reason = %s@]" s;
       let m = Lazy.force m in
       Models.output_concrete_model (get_fmt_mdl ()) m
 
@@ -346,16 +345,23 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout (Some d) ->
-      if Options.get_interpretation () then
-        Printer.print_wrn "Timeout"
+      if Options.get_interpretation () then begin
+        Printer.print_wrn "Timeout";
+        let loc = d.st_loc in
+        Printer.print_status_unknown ~validity_mode
+          (Some loc) (Some time) (Some steps) (get_goal_name d);
+      end
       else
         let loc = d.st_loc in
         Printer.print_status_timeout ~validity_mode
           (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout None ->
-      if Options.get_interpretation () then
-        Printer.print_wrn "Timeout"
+      if Options.get_interpretation () then begin
+        Printer.print_wrn "Timeout";
+        Printer.print_status_unknown ~validity_mode
+          None (Some time) (Some steps) None;
+      end
       else
         Printer.print_status_timeout ~validity_mode
           None (Some time) (Some steps) None;
