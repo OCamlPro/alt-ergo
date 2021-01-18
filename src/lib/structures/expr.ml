@@ -2460,6 +2460,9 @@ module Purification = struct
           | _, (B_lemma _ | B_skolem _ | B_none | B_let _) -> assert false
         end
 
+      | Sy.Op Sy.Optimize _ ->
+        purify_literal e
+
       | Sy.Void | Sy.Int _ | Sy.Real _ | Sy.Bitv _ | Sy.Op _ | Sy.MapsTo _ ->
         assert false (* not formulas *)
 
