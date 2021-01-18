@@ -250,6 +250,7 @@ let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
 
 
 let print_fmt ?(flushed=true) fmt s =
+  pp_std_smt ();
   if flushed then kfprintf flush fmt s else fprintf fmt s
 
 (* Utils *)
