@@ -364,21 +364,30 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout (Some d) ->
-      let loc = d.st_loc in
-      Printer.print_status_timeout ~validity_mode
-        (Some loc) (Some time) (Some steps) (get_goal_name d);
+      if Options.get_interpretation () then begin
+        Printer.print_wrn "Timeout";
+        let loc = d.st_loc in
+        Printer.print_status_unknown ~validity_mode
+          (Some loc) (Some time) (Some steps) (get_goal_name d);
+      end
+      else
+        let loc = d.st_loc in
+        Printer.print_status_timeout ~validity_mode
+          (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout None ->
-      Printer.print_status_timeout ~validity_mode
-        None (Some time) (Some steps) None;
+      if Options.get_interpretation () then begin
+        Printer.print_wrn "Timeout";
+        Printer.print_status_unknown ~validity_mode
+          None (Some time) (Some steps) None;
+      end
+      else
+        Printer.print_status_timeout ~validity_mode
+          None (Some time) (Some steps) None;
 
     | Preprocess ->
       Printer.print_status_preprocess ~validity_mode
         (Some time) (Some steps)
-
-
-
-
 
 
   let init_with_replay_used acc f =
