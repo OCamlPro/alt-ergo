@@ -215,13 +215,13 @@ let mk_context_opt replay replay_all_used_context replay_used_context
   `Ok()
 
 let mk_execution_opt frontend input_format parse_only parsers
-    preludes no_locs_in_answers colors_in_output headers_in_output
+    preludes no_locs_in_answers colors_in_output no_headers_in_output
     formatting_in_output pretty_output
     type_only type_smt2
   =
   let answers_with_loc = not no_locs_in_answers in
   let output_with_colors = colors_in_output || pretty_output in
-  let output_with_headers = headers_in_output || pretty_output in
+  let output_with_headers = (not no_headers_in_output) || pretty_output in
   let output_with_formatting = formatting_in_output || pretty_output in
   set_infer_input_format input_format;
   let input_format = match input_format with
@@ -748,10 +748,10 @@ let parse_execution_opt =
       "Print output with colors." in
     Arg.(value & flag & info ["colors-in-output"] ~docs ~doc) in
 
-  let headers_in_output =
+  let no_headers_in_output =
     let doc =
-      "Print output with headers." in
-    Arg.(value & flag & info ["headers-in-output"] ~docs ~doc) in
+      "Print output without headers." in
+    Arg.(value & flag & info ["no-headers-in-output"] ~docs ~doc) in
 
   let formatting_in_output =
     let doc =
@@ -774,7 +774,7 @@ let parse_execution_opt =
 
   Term.(ret (const mk_execution_opt $
              frontend $ input_format $ parse_only $ parsers $ preludes $
-             no_locs_in_answers $ colors_in_output $ headers_in_output $
+             no_locs_in_answers $ colors_in_output $ no_headers_in_output $
              formatting_in_output $ pretty_output $ type_only $ type_smt2
             ))
 
