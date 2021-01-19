@@ -342,16 +342,15 @@ let mk_sat_opt get_bottom_classes disable_flat_formulas_simplification
 
   let cdcl_tableaux_inst = not no_tableaux_cdcl_in_instantiation in
   let cdcl_tableaux_th = not no_tableaux_cdcl_in_theories in
-  let tableaux_cdcl = false in
   let res = match sat_solver with
     | "CDCL" | "satML" ->
-      `Ok(Util.CDCL, false, false, tableaux_cdcl)
+      `Ok(Util.CDCL, false, false, false)
     | "CDCL-Tableaux" | "satML-Tableaux" | "CDCL-tableaux" | "satML-tableaux" ->
-      `Ok(Util.CDCL_Tableaux, true, true, tableaux_cdcl)
+      `Ok(Util.CDCL_Tableaux, cdcl_tableaux_inst, cdcl_tableaux_th, false)
     | "tableaux" | "Tableaux" | "tableaux-like" | "Tableaux-like" ->
-      `Ok(Util.Tableaux, false, cdcl_tableaux_th, tableaux_cdcl)
+      `Ok(Util.Tableaux, false, false, false)
     | "tableaux-cdcl" | "Tableaux-CDCL" | "tableaux-CDCL" | "Tableaux-cdcl" ->
-      `Ok(Util.Tableaux_CDCL, cdcl_tableaux_inst, cdcl_tableaux_th, true)
+      `Ok(Util.Tableaux_CDCL, false, false, true)
     | _ -> `Error ("Args parsing error: unkown SAT solver " ^ sat_solver)
   in
   match res with
