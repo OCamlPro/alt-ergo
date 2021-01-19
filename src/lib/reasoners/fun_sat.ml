@@ -1355,7 +1355,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         semantic_th_inst  env gre_inst ~rm_clauses:false ~loop:4 in
       let env = do_case_split env Util.AfterMatching in
       if ok1 || ok2 || ok3 || ok4 then env
-        else if not greedier || (get_fast ()) then greedy_instantiation_aux env true
       else
         return_answer env (Options.get_last_interpretation ())
           (fun e -> raise (I_dont_know e))
