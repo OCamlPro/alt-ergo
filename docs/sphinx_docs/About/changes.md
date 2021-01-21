@@ -56,6 +56,15 @@
   - Multiple bugfixes
 
 
+## version 2.3.3, August 19, 2020
+
+
+* Minor release:
+
+  - Fix configure use of bash
+  - Add conflict instructions with the Alt-ergo-free package
+
+
 ## version 2.3.2, March 23, 2020
 
 
