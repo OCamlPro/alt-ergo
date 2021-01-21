@@ -20,7 +20,7 @@ They are distributed under the terms of the
 
 The other files that refer to a file 'License.OCamlPro' are Copyright
 (C) --- OCamlPro SAS. They are distributed under the terms of the
-license indicated in [License.OCamlPro].
+license indicated in [License.OCamlPro] (with [OCamlPro-Non-Commercial-License]).
 
 Note that some plugins may have different licenses. For instance the
 sources of the AB-Why3 plugin are governed by the
@@ -37,10 +37,11 @@ license it is distributed.
 The binaries (tools, plugins, ...) that are generated from the OCaml
 source files are Copyright (C) --- OCamlPro SAS. They are distributed
 under the terms of the license indicated in the file
-[License.OCamlPro], except for the AB-Why3 plugin, which is
+[License.OCamlPro] (with [OCamlPro-Non-Commercial-License]), except for the AB-Why3 plugin, which is
 distributed under the terms of the [GNU Lesser General Public License version 2.1].
 
 [License.OCamlPro]: licenses/License.OCamlPro
+[OCamlPro-Non-Commercial-License]: licenses/OCamlPro-Non-Commercial-License.pdf
 [AB-Why3 README]: src/plugins/AB-Why3/README.md
 [GNU Lesser General Public License version 2.1]: licenses/LGPL-License.txt
 [Apache Software License version 2.0]: licenses/Apache-License-2.0.txt
