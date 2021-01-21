@@ -941,15 +941,8 @@ let rclass_of env r =
 
 let term_repr uf t =
   let st = class_of uf t in
-  SE.fold
-    (fun s t ->
-       let c =
-         let c = (E.depth t) - (E.depth s) in
-         if c <> 0 then c
-         else E.compare s t
-       in
-       if c > 0 then s else t
-    ) st t
+  try SE.min_elt st
+  with Not_found -> t
 
 let class_of env t = SE.elements (class_of env t)
 

@@ -968,7 +968,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          | IAuto ->
            [ frugal_mconf (), "frugal-inst", false, true ;
              normal_mconf (), "normal-inst", false, false;
-             greedy_mconf (), "greedy-inst", true , false;
              greedier_mconf (), "greedier-inst", true, false]
          | IGreedy ->
            [ greedy_mconf (), "greedy-inst", true , false;

@@ -138,14 +138,15 @@ type form_view =
 (** Comparison and hashing functions *)
 
 (* We keep true and false as repr * ordering is influenced by
-   depth. Constants are smaller. Otherwise, we compare tag2 - tag1 so
+   depth. Constants are smaller. Otherwise, we compare tag1 - tag2 so
    that fresh vars will be smaller *)
+(* XXX Uf.term_repr sensitive to the way this function is coded *)
 let compare t1 t2 =
   if t1 == t2 then 0
   else
     let c = t1.depth - t2.depth in
     if c <> 0 then c
-    else t2.tag - t1.tag
+    else t1.tag - t2.tag
 
 let equal t1 t2 =  t1 == t2
 
