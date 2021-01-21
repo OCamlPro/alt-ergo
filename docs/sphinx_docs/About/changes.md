@@ -3,7 +3,7 @@
 ## dev version
 
 
-## version 2.4.0, JAnuary 12, 2020
+## version 2.4.0, January 22, 2021
 
 * General improvements:
 
