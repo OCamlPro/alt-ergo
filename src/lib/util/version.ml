@@ -30,7 +30,7 @@
    DO NOT CHANGE its format *)
 
 
-let _version="dev"
+let _version="2.4.0"
 
 let _release_commit = "(not released)"
 
