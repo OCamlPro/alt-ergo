@@ -1,0 +1,7 @@
+type 'a s
+
+type t =
+   A of {a : t s}
+ | B
+
+goal invalid : false

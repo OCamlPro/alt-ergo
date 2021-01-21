@@ -1,0 +1,26 @@
+
+(documentation
+  (package alt-ergo)
+)
+
+(executable
+  (name         Main_text)
+  (public_name  alt-ergo)
+  (package      alt-ergo)
+  (libraries    alt_ergo_common alt-ergo-parsers stdlib-shims)
+  (link_flags   (:include flags.dune))
+  (modules      Main_input Main_text)
+)
+
+; Rule to generate a man page for alt-ergo
+(rule
+  (target  alt-ergo.1)
+  (action (with-outputs-to %{target} (run alt-ergo --help=groff)))
+)
+
+; Install the man page
+(install
+ (files    alt-ergo.1)
+ (section  man)
+ (package  alt-ergo)
+)

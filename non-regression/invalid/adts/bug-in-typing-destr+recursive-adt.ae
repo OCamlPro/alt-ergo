@@ -1,0 +1,6 @@
+type t = A of {a : int} | B of { b : real} | C of { c : t }
+
+goal g_invalid:
+  forall x : t.
+  let y = x#a in
+  false

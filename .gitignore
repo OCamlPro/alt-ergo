@@ -4,20 +4,25 @@ META
 
 # Generated source files
 *.merlin
-sources/Makefile.config
-sources/lib/util/config.ml
+Makefile.config
+src/lib/util/config.ml
+src/bin/text/flags.dune
 
 # Generated installation files
-sources/*.install
+*.install
 
 # Generated build artifacts
-sources/_build
-sources/alt-ergo
-sources/altgr-ergo
-extra/ocamldot/_build
+_build
+alt-ergo
+altgr-ergo
+AB-Why3-plugin.cma
+AB-Why3-plugin.cmxs
+fm-simplex-plugin.cma
+fm-simplex-plugin.cmxs
+rsc/extra/ocpchecker/ocp-checker
 
 # Generated documentation files
-extra/index.html
+rsc/extra/index.html
 
 # Generated release files
 public-release
@@ -30,3 +35,4 @@ mlw
 tmp/
 *.tmp
 alt-ergo/tmp/
+_opam

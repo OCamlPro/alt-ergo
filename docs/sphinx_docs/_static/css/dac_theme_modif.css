@@ -1,0 +1,8 @@
+/* Theme modification for the documentation included in Try-Alt-Ergo (Doc-Alt-Ergo).
+ * The original theme is sphinx_rtd_theme
+ */
+
+/* Used for larger body */
+.wy-nav-content {
+    max-width: 1200px !important;
+} 

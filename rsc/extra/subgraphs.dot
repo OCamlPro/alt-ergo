@@ -1,0 +1,209 @@
+//############################################################################
+
+//#Why_parser
+subgraph cluster_parsers {
+  label="PARSERS";
+  style=filled;
+  color=lightgrey;
+  subgraph cluster_parsers__common {
+    label="Common";
+    style=filled;
+    color=white;
+    "Parsers";
+    "Parsers_loader";
+    "MyZip";
+  }
+    subgraph cluster_parsers__psmt2 {
+    label="PSmt2";
+    style=filled;
+    color=white;
+    "Psmt2_to_alt_ergo";
+  }
+    subgraph cluster_parsers__native {
+    label="Native";
+    style=filled;
+    color=white;
+    "Native_parser";
+    "Native_lexer";
+  }
+}
+
+
+//# tools / text
+//subgraph cluster_tools__text {
+//        label="tools / text";
+//        style=filled;
+//	color=lightgrey;
+//}
+
+//# tools
+subgraph cluster_bin {
+  label="BIN";
+  style=filled;
+  color=lightgrey;
+  subgraph cluster_bin__text {
+    label="Text";
+    style=filled;
+    color=white;
+    "Main_input";
+    "Main_text";
+    "Main_gui";
+  }
+  subgraph cluster_bin__gui {
+    label="Gui";
+    style=filled;
+    color=white;
+    "Gui_replay";
+    "Gui_session";
+    "Gui_config";
+    "Annoted_ast";
+    "Connected_ast";
+  }
+}
+
+subgraph cluster_plugins {
+  label="PLUGINS";
+  style=filled;
+  color=lightgrey;
+  subgraph cluster_plugins__ab_why3 {
+    label="AB-Why3";
+    style=filled;
+    color=white;
+    "Why3_lexer";
+    "Why3_parser";
+    "Why3_ptree";
+    "Why3_loc";
+  }
+  subgraph cluster_plugins__fm_simplex {
+    label="FM-Simplex";
+    style=filled;
+    color=white;
+    "FmSimplexIneqs";
+    "Simplex_cache";
+    "Simplex";
+  }
+}
+
+subgraph cluster_lib {
+  label="LIB";
+  style=filled;
+  color=lightgrey;
+
+  //#reasoners
+  subgraph cluster_lib__reasoners {
+    label="Reasoners";
+    style=filled;
+    color=white;
+    "Adt_rel";
+    "Arrays_rel";
+    "Theory";
+    "Ccx";
+    "Relation";
+    "Intervals";
+    "Inequalities";
+    "IntervalCalculus";
+    "Records_rel";
+    "Ite_rel";
+    "Sig_rel";
+    "Enum_rel";
+    "Bitv_rel";
+    "Uf";
+    "Use";
+    "Matching";
+    "Instances";
+    "Matching_types";
+
+  subgraph cluster_lib__reasoners__satml {
+    label="Sat";
+    style=filled;
+    color=lightgrey;
+    "Sat_solver";
+    "Sat_solver_sig";
+    "Satml_frontend";
+    "Satml_frontend_hybrid";
+    "Fun_sat";
+    "Satml";
+  }
+
+  ##reasoners__shostak
+  subgraph cluster_lib__reasoners__shostak {
+    label="Shostak";
+    style=filled;
+    color=lightgrey;
+    "Shostak";
+    "Ac";
+    "Adt";
+    "Arith";
+    "Arrays";
+    "Bitv";
+    "Enum";
+    "Ite";
+    "Polynome";
+    "Records";
+    "Sig";
+    "Th_util"
+    }
+  }
+
+
+  //#structures
+  subgraph cluster_lib__structures {
+    label="Structures";
+    style=filled;
+    color=white;
+    "Explanation";
+    "Var";
+    "Symbols";
+    "Expr";
+    "Xliteral";
+    "Ty";
+    "Parsed";
+    "Typed";
+    "Commands";
+    "Errors";
+    "Fpa_rounding";
+    "Profiling";
+    "Satml_types";
+
+  }
+
+  //#frontend
+  subgraph cluster_lib__frontend {
+    label="Frontend";
+    style=filled;
+    color=white;
+    "Frontend";
+    "Cnf";
+    "Typechecker";
+    "Parsed_interface";
+    "Input";
+  }
+
+  //#util
+  subgraph cluster_lib__util {
+    label="Util";
+    style=filled;
+    color=white;
+    "Gc_debug";
+    "Steps";
+    "Emap";
+    "Options";
+    "Timers";
+    "Config";
+    "Version";
+    "Util";
+    "Vec";
+    "Iheap";
+    "Lists";
+    "Loc";
+    "Hconsing";
+    "Hstring";
+    "Numbers";
+    "NumsNumbers";
+    "ZarithNumbers";
+    "NumbersInterface";
+    "MyUnix";
+    "MyDynlink"
+  }
+
+}

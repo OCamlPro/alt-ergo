@@ -1,0 +1,11 @@
+type t = A of {a : int} | B of { b : real} | C of { c : t }
+
+goal g_invalid:
+forall x : t.
+match x with
+| A(x) -> true
+| A(x) -> true
+| x -> false
+| B(x) -> true
+| B(x) -> true
+end

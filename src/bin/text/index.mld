@@ -1,0 +1,22 @@
+{1 Alt-ergo}
+
+{2 The Alt-ergo prover}
+
+The alt-ergo package installs the {e alt-ergo} binary, whose documentation
+is available through the {e --help} option.
+
+{3 Command Line Parsing}
+
+The command line parsing is computed in our common internal library (see {{:index_common.html}[Alt_ergo_common]}) using {{:https://erratique.ch/software/cmdliner}[cmdliner]}
+
+{3 Plugins}
+
+{4 Why3 parser}
+for the Why3 parser plugin documentation see
+{{:index_abwhy3.html}
+    [ABWhy3]}
+
+{4 Fourier Motzkin simplex}
+for the Fourier Motzkin simplex plugin documentation see
+{{:index_fmsimplex.html}
+    [FMsimplex]}

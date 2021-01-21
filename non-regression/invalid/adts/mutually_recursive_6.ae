@@ -1,0 +1,9 @@
+type t = A | B of { bb : s }
+
+and  s = X of { xx : t } | Y
+
+goal g_invalid:
+  forall e : t.
+  (e#bb ? X or e#bb ? Y) ->
+  e ? B ->
+  false

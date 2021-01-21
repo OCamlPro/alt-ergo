@@ -1,0 +1,10 @@
+{1 Altgr-ergo}
+
+{2 The Altgr-ergo prover}
+
+The altgr-ergo package installs the {e altgr-ergo} binary, which is a
+graphical interface to the {e alt-ergo} automated theorem prover.
+
+{3 Command Line Parsing}
+
+The command line parsing is computed in our common internal library (see {{:index_common.html}[Alt_ergo_common]}) using {{:https://erratique.ch/software/cmdliner}[cmdliner]}

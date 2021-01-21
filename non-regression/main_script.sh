@@ -44,26 +44,26 @@ trap "rm $main_script_out $main_script_err" EXIT
 score=0
 total=0
 
-big_total=`ls challenges/*/*.mlw | wc -l`
+big_total=`ls challenges/*/*.ae | wc -l`
 for kind in `ls challenges/`
 do
     echo ""
     echo -n "challenges/$kind"
-    for mlw in `ls challenges/$kind/*.mlw`
+    for ae in `ls challenges/$kind/*.ae`
     do
         tput hpa 25
         total=`expr $total + 1`
         echo -n "$total / $big_total"
-        timeout 2 $pr $mlw $opt 1> $main_script_out 2> $main_script_err
+        timeout 2 $pr $ae $opt 1> $main_script_out 2> $main_script_err
         if grep -q -w Valid $main_script_out ; then
 	    score=`expr $score + 1`
-            echo "\e[32m    > [OK] ../non-regression/$mlw\e[39m"
-        else 
-            echo ../non-regression/$mlw >> main_script.log
+            echo "\e[32m    > [OK] ../non-regression/$ae\e[39m"
+        else
+            echo ../non-regression/$ae >> main_script.log
             cat $main_script_out >> main_script.log
             cat $main_script_err >> main_script.log
             echo "" >> main_script.log
-            echo "    > [KO] ../non-regression/$mlw"
+            echo "    > [KO] ../non-regression/$ae"
         fi
     done
 done
@@ -82,25 +82,25 @@ echo "$limit"
 score=0
 total=0
 
-big_total=`ls valid/*/*.mlw | wc -l`
+big_total=`ls valid/*/*.ae | wc -l`
 for kind in `ls valid/`
 do
     echo ""
     echo -n "valid/$kind"
-    for mlw in `ls valid/$kind/*.mlw`
+    for ae in `ls valid/$kind/*.ae`
     do
         tput hpa 25
         total=`expr $total + 1`
         echo -n "$total / $big_total"
-        timeout 2 $pr $mlw $opt 1> $main_script_out 2> $main_script_err
+        timeout 2 $pr $ae $opt 1> $main_script_out 2> $main_script_err
         if grep -q -w Valid $main_script_out ; then
 	    score=`expr $score + 1`
-        else 
-            echo ../non-regression/$mlw >> main_script.log
+        else
+            echo ../non-regression/$ae >> main_script.log
             cat $main_script_out >> main_script.log
             cat $main_script_err >> main_script.log
             echo "" >> main_script.log
-            echo "    > [KO] ../non-regression/$mlw"
+            echo "    > [KO] ../non-regression/$ae"
         fi
     done
 done
@@ -119,25 +119,25 @@ echo "$limit"
 score=0
 total=0
 
-big_total=`ls invalid/*/*.mlw | wc -l`
+big_total=`ls invalid/*/*.ae | wc -l`
 for kind in `ls invalid/`
 do
     echo ""
     echo -n "invalid/$kind"
-    for mlw in `ls invalid/$kind/*.mlw`
+    for ae in `ls invalid/$kind/*.ae`
     do
         tput hpa 25
         total=`expr $total + 1`
         echo -n "$total / $big_total"
-        timeout 2 $pr $mlw $opt 1> $main_script_out 2> $main_script_err
+        timeout 2 $pr $ae $opt 1> $main_script_out 2> $main_script_err
         if grep -q -w "I don't know" $main_script_out ; then
 	    score=`expr $score + 1`
-        else 
-            echo ../non-regression/$mlw >> main_script.log
+        else
+            echo ../non-regression/$ae >> main_script.log
             cat $main_script_out >> main_script.log
             cat $main_script_err >> main_script.log
             echo "" >> main_script.log
-            echo "    > [KO] ../non-regression/$mlw"
+            echo "    > [KO] ../non-regression/$ae"
         fi
     done
 done
@@ -149,30 +149,30 @@ echo "$limit"
 echo " Score Invalid: $score/$total : $percent% (-$diff)"
 echo "$limit"
 
- 
+
 ## Incorrect
 ################################################################################################
 
 score=0
 total=0
 
-big_total=`ls incorrect/*/*.mlw | wc -l`
+big_total=`ls incorrect/*/*.ae | wc -l`
 for kind in `ls incorrect/`
 do
     echo ""
     echo -n "incorrect/$kind"
-    for mlw in `ls incorrect/$kind/*.mlw`
+    for ae in `ls incorrect/$kind/*.ae`
     do
         tput hpa 25
         total=`expr $total + 1`
         echo -n "$total / $big_total"
-        timeout 2 $pr $mlw $opt 1> $main_script_out 2> $main_script_err
+        timeout 2 $pr $ae $opt 1> $main_script_out 2> $main_script_err
         if [ $? -eq 0 ] ; then
-            echo ../non-regression/$mlw >> main_script.log
+            echo ../non-regression/$ae >> main_script.log
             cat $main_script_out >> main_script.log
             cat $main_script_err >> main_script.log
             echo "" >> main_script.log
-            echo "    > [KO] ../non-regression/$mlw"
+            echo "    > [KO] ../non-regression/$ae"
         else
             score=`expr $score + 1`
         fi
