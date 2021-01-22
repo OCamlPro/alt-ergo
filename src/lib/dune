@@ -21,7 +21,7 @@
 
   ; external dependencies
   (libraries
-     cmdliner seq unix num str zarith dynlink ocplib-simplex stdlib-shims)
+     seq unix num str zarith dynlink ocplib-simplex stdlib-shims)
 
   ; .mli only modules *also* need to be in this field
   (modules_without_implementation matching_types numbersInterface sig sig_rel)
