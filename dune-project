@@ -10,7 +10,7 @@
 (source (github OCamlPro/alt-ergo))
 ; Not specifying bug_reports since it defaults to the github issue page
 (homepage "https://alt-ergo.ocamlpro.com/")
-(documentation "https://ocamlpro.github.io/alt-ergo/dev/")
+(documentation "https://ocamlpro.github.io/alt-ergo")
 
 (using menhir 2.0)
 
