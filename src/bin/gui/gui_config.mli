@@ -42,6 +42,10 @@ val load : unit -> unit
 (** Write the configuration file to the default location *)
 val write : unit -> unit
 
+(** Try to load the configuration file from the default location,
+    if not present try to write it to the default location *)
+val init : unit -> unit
+
 (** Update the size of the window *)
 val update_window_size : int -> int -> unit
 

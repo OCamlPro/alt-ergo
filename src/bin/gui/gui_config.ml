@@ -106,9 +106,6 @@ let init () =
     load ();
   with Sys_error _ -> write ()
 
-
-let () = init ()
-
 let window_width = !window_width
 let window_height = !window_height
 let indent_size = !indent_size
