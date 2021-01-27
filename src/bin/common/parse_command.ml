@@ -943,8 +943,8 @@ let parse_profiling_opt =
   let profiling =
     let doc =
       "Activate the profiling module with the given frequency. \
-       Use Ctrl-C to switch between different views and \\\"Ctrl \
-       + AltGr + \" to exit." in
+       Use Ctrl-C to switch between different views and \"Ctrl \
+       + AltGr + \\\\ \" to exit." in
     let docv = "DELAY" in
     Arg.(value & opt (some float) None & info ["profiling"] ~docv ~docs ~doc) in
 

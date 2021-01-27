@@ -1524,6 +1524,7 @@ let start_replay session_cin all_used_context =
 
 
 let () =
+  Gui_config.init ();
   init_gtk ();
   Signals.init_sig_int ();
   Signals.init_sig_alarm ();
