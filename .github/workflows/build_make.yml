@@ -1,0 +1,199 @@
+name: Build Make
+
+# For any push we try to build the project with make
+# When a PR is open we do more test such as test more make rules
+on: [push,pull_request]
+
+env:
+  OCAML_DEFAULT_VERSION: 4.10.0
+
+jobs:
+  make_all:
+    # Basic test to check if the project build with make.
+    # If this test fails, no more make building test are done
+    name: Make all
+
+    strategy:
+      matrix:
+        cache-name:
+          - make-all
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Retrieve opam cache
+        uses: actions/cache@v2
+        id: cache-opam
+        with:
+          path: ~/.opam
+          key: v1-${{ runner.os }}-alt-ergo-${{ matrix.cache-name }}-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
+
+      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
+
+      - name: Set git user
+        run: |
+          git config --global user.name github-actions
+          git config --global user.email github-actions-bot@users.noreply.github.com
+
+      - name: Pin no action
+        run: opam pin add . -y --no-action
+
+      - name: Install depext
+        run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+        # if: steps.cache-opam.outputs.cache-hit != 'true'
+
+      - name: Install deps
+        run: opam install -y ./*.opam --deps-only --with-test
+        if: steps.cache-opam.outputs.cache-hit != 'true'
+
+      - name: Fixup
+        run: opam upgrade --fixup
+        if: steps.cache-opam.outputs.cache-hit == 'true'
+
+      - name: Make
+        run: opam exec -- make
+
+  make_release:
+    # Test every make release rule
+    name: Make release
+
+    # Only if in pull request or a push on main or next
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
+
+    strategy:
+      matrix:
+        cache-name:
+          - make-release
+
+    needs: make_all
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Retrieve opam cache
+        uses: actions/cache@v2
+        id: cache-opam
+        with:
+          path: ~/.opam
+          key: v1-${{ runner.os }}-alt-ergo-${{ matrix.cache-name }}-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
+
+      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
+
+      - name: Set git user
+        run: |
+          git config --global user.name github-actions
+          git config --global user.email github-actions-bot@users.noreply.github.com
+
+      - name: Pin no action
+        run: opam pin add . -y --no-action
+
+      - name: Alt-Ergo-lib
+        run: |
+          opam depext -y alt-ergo-lib
+          opam install -y ./alt-ergo-lib.opam --deps-only --with-test
+          opam exec -- ./configure alt-ergo-lib
+          opam exec -- make alt-ergo-lib
+
+      - name: Alt-Ergo-parsers
+        run: |
+          opam depext -y alt-ergo-parsers
+          opam install -y ./alt-ergo-parsers.opam --deps-only --with-test
+          opam exec -- ./configure alt-ergo-parsers
+          opam exec -- make alt-ergo-parsers
+
+      - name: Alt-Ergo
+        run: |
+          opam depext -y alt-ergo
+          opam install -y ./alt-ergo.opam --deps-only --with-test
+          opam exec -- ./configure alt-ergo
+          opam exec -- make alt-ergo
+
+      - name: Altgr-Ergo
+        run: |
+          opam depext -y altgr-ergo
+          opam install -y ./altgr-ergo.opam --deps-only --with-test
+          opam exec -- ./configure altgr-ergo
+          opam exec -- make altgr-ergo
+
+  make_install:
+    # Test every install/uninstall rules
+    name: Make install
+
+    # Only if in pull request
+    if: github.event_name == 'pull_request'
+
+    needs: make_all
+
+    strategy:
+      matrix:
+        cache-name:
+          - make-install
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Retrieve opam cache
+        uses: actions/cache@v2
+        id: cache-opam
+        with:
+          path: ~/.opam
+          key: v1-${{ runner.os }}-alt-ergo-${{ matrix.cache-name }}-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
+
+      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
+
+      - name: Set git user
+        run: |
+          git config --global user.name github-actions
+          git config --global user.email github-actions-bot@users.noreply.github.com
+
+      - name: Pin no action
+        run: opam pin add . -y --no-action
+
+      - name: Build
+        run: |
+          opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+          opam install -y ./*.opam --deps-only --with-test
+          opam exec -- make
+
+      - name: Install/Uninstall Alt-Ergo-lib
+        run: |
+          opam exec -- make install-lib
+          opam exec -- make uninstall-lib
+
+      - name: Install/Uninstall Alt-Ergo-parsers
+        run: |
+          opam exec -- make install-parsers
+          opam exec -- make uninstall-parsers
+
+      - name: Install/Uninstall Alt-Ergo
+        run: |
+          opam exec -- make install-bin
+          opam exec -- make uninstall-bin
+
+      - name: Install/Uninstall Altgr-Ergo
+        run: |
+          opam exec -- make install-gui
+          opam exec -- make uninstall-gui
+
+      - name: Install/Uninstall All
+        run: |
+          opam exec -- make install
+          opam exec -- make uninstall

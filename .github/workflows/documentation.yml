@@ -1,0 +1,114 @@
+name: Documentation
+
+# Trigger the documentation build for any push, pull request and any branch only deploy on next
+on: [push, pull_request]
+
+env:
+  OCAML_DEFAULT_VERSION: 4.10.0
+
+jobs:
+  ocaml_docs:
+    # Build the documentation from the ocaml comments
+    # If this test fails, no more test
+    name: OCaml documentation
+
+    strategy:
+       matrix:
+        cache-name:
+          - odoc
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Retrieve opam cache
+        uses: actions/cache@v2
+        id: cache-opam
+        with:
+          path: ~/.opam
+          key: v1-${{ runner.os }}-alt-ergo-${{ matrix.cache-name }}-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
+
+      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
+
+      - name: Set git user
+        run: |
+          git config --global user.name github-actions
+          git config --global user.email github-actions-bot@users.noreply.github.com
+
+      - run: opam pin add . -y --no-action
+      - run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+        # if: steps.cache-opam.outputs.cache-hit != 'true'
+      - run: opam install -y ./*.opam --deps-only --with-test
+        # if: steps.cache-opam.outputs.cache-hit != 'true'
+      - run: opam upgrade --fixup
+        # if: steps.cache-opam.outputs.cache-hit == 'true'
+      - run: opam install odoc
+      - name: Make OCaml documentation
+        run: opam exec -- make odoc
+
+      - name: Upload ocaml documentation
+        uses: actions/upload-artifact@v2
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/next' || github.ref == 'refs/heads/main'
+        with:
+          name: ocaml_doc
+          path: _build/default/_doc/_html/
+
+  sphinx_docs:
+    # Build the sphinx documentation
+    name: Sphinx documentation
+    # We only run this if the ocaml documentation build is successful
+    needs: ocaml_docs
+    # Sphinx documentation is only builded if a PR is open or when it's pushed on next or main
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/next' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+      - uses: ammaraskar/sphinx-action@master
+        with:
+          docs-folder: "docs/sphinx_docs/"
+          build-command: "sphinx-build -b html . _build"
+
+      - name: Upload sphinx documentation
+        uses: actions/upload-artifact@v2
+        with:
+          name: sphinx_doc
+          path: docs/sphinx_docs/_build
+
+  deploy_docs:
+    # Deploy the documentation only on next
+    name: Deploy documentation
+    if: github.ref == 'refs/heads/next'
+
+    needs: sphinx_docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download ocaml documentation
+        uses: actions/download-artifact@v2
+        with:
+          name: ocaml_doc
+          path: _build/odoc/dev
+
+      - name: Download sphinx documentation
+        uses: actions/download-artifact@v2
+        with:
+          name: sphinx_doc
+          path: _build
+
+      - run: |
+          touch _build/.nojekyll
+          touch _build/odoc/.nojekyll
+          touch _build/odoc/dev/.nojekyll
+
+      - name: deploy-doc
+        uses: JamesIves/github-pages-deploy-action@3.6.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: _build
+          CLEAN: false
