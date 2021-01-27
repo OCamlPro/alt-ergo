@@ -1,14 +1,16 @@
 name: Main Workflow
 
 on:
-  pull_request:
-    branches:
-      - main
-      - next
-  push:
-    branches:
-      - main
-      - next
+  workflow_run:
+    workflows: ["Linter","Build make"]
+    pull_request:
+      branches:
+        - main
+        - next
+    push:
+      branches:
+        - main
+        - next
 jobs:
   build:
     strategy:
