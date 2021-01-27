@@ -9,8 +9,6 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
-          - windows-latest
         ocaml-version:
           - 4.10.0
         skip_test:
@@ -44,13 +42,13 @@ jobs:
       - run: opam pin add . -y --no-action
 
       - run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-        if: steps.cache-opam.outputs.cache-hit != 'true'
+        # if: steps.cache-opam.outputs.cache-hit != 'true'
 
       - run: opam install -y ./*.opam --deps-only --with-test
-        if: steps.cache-opam.outputs.cache-hit != 'true'
+        # if: steps.cache-opam.outputs.cache-hit != 'true'
 
       - run: opam upgrade --fixup
-        if: steps.cache-opam.outputs.cache-hit == 'true'
+        # if: steps.cache-opam.outputs.cache-hit == 'true'
 
       - name: Make
         run: |
