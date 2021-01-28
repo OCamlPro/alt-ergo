@@ -3,17 +3,67 @@ name: Build
 on: push
 
 jobs:
-  simple_build:
-    name: Ubuntu build
+  make_all:
+    # Basic test to check if the project build with make.
+    # If this test fails, no more building test and non-regression is done
+    name: Make all build
+
     strategy:
-      fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
+        # Setup the main ocaml version and os to test
         ocaml-version:
           - 4.10.0
-        skip_test:
-          - false
+        os:
+          - ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Retrieve opam cache
+        uses: actions/cache@v2
+        id: cache-opam
+        with:
+          path: ~/.opam
+          key: v1-${{ runner.os }}-alt-ergo-${{ matrix.ocaml-version }}-${{ hashFiles('*.opam') }}
+#          restore-keys: |
+#            v1-${{ runner.os }}-opam-${{ matrix.ocaml-version }}-
+
+      - name: Use OCaml ${{ matrix.ocaml-version }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ matrix.ocaml-version }}
+
+      - name: Set git user
+        run: |
+          git config --global user.name github-actions
+          git config --global user.email github-actions-bot@users.noreply.github.com
+
+      - run: opam pin add . -y --no-action
+      - run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+        # if: steps.cache-opam.outputs.cache-hit != 'true'
+      - run: opam install -y ./*.opam --deps-only --with-test
+        # if: steps.cache-opam.outputs.cache-hit != 'true'
+      - run: opam upgrade --fixup
+        # if: steps.cache-opam.outputs.cache-hit == 'true'
+      - name: Make
+        run: opam exec -- make
+
+  make_release:
+    # Test every make release rule
+    name: Make release
+
+    strategy:
+      matrix:
+        # Setup the main ocaml version and os to test
+        ocaml-version:
+          - 4.10.0
+        os:
+          - ubuntu-latest
+
+    needs: make_all
 
     runs-on: ${{ matrix.os }}
 
@@ -42,33 +92,122 @@ jobs:
 
       - run: opam pin add . -y --no-action
 
-      - run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-        # if: steps.cache-opam.outputs.cache-hit != 'true'
-
-      - run: opam install -y ./*.opam --deps-only --with-test
-        # if: steps.cache-opam.outputs.cache-hit != 'true'
-
-      - run: opam upgrade --fixup
-        # if: steps.cache-opam.outputs.cache-hit == 'true'
-
-      - name: Make
+      - name: Alt-Ergo-lib
         run: |
-          eval $(opam env)
-          make
+          opam depext -y alt-ergo-lib
+          opam install -y ./alt-ergo-lib.opam --deps-only --with-test
+          opam exec -- ./configure alt-ergo-lib
+          opam exec -- make alt-ergo-lib
 
-  os_build:
-    name: Windows and MacOS Build
+      - name: Alt-Ergo-parsers
+        run: |
+          opam depext -y alt-ergo-parsers
+          opam install -y ./alt-ergo-parsers.opam --deps-only --with-test
+          opam exec -- ./configure alt-ergo-parsers
+          opam exec -- make alt-ergo-parsers
+
+      - name: Alt-Ergo
+        run: |
+          opam depext -y alt-ergo
+          opam install -y ./alt-ergo.opam --deps-only --with-test
+          opam exec -- ./configure alt-ergo
+          opam exec -- make alt-ergo
+
+      - name: Altgr-Ergo
+        run: |
+          opam depext -y altgr-ergo
+          opam install -y ./altgr-ergo.opam --deps-only --with-test
+          opam exec -- ./configure altgr-ergo
+          opam exec -- make altgr-ergo
+
+  make_install:
+    # Test every install/uninstall rules
+    name: Make install
+
+    needs: make_all
+
     strategy:
-      fail-fast: false
       matrix:
+        # Setup the main ocaml version and os to test
+        ocaml-version:
+          - 4.10.0
         os:
           - ubuntu-latest
-          - macos-latest
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Retrieve opam cache
+        uses: actions/cache@v2
+        id: cache-opam
+        with:
+          path: ~/.opam
+          key: v1-${{ runner.os }}-alt-ergo-${{ matrix.ocaml-version }}-${{ hashFiles('*.opam') }}
+#          restore-keys: |
+#            v1-${{ runner.os }}-opam-${{ matrix.ocaml-version }}-
+
+      - name: Use OCaml ${{ matrix.ocaml-version }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ matrix.ocaml-version }}
+
+      - name: Set git user
+        run: |
+          git config --global user.name github-actions
+          git config --global user.email github-actions-bot@users.noreply.github.com
+
+      - run: opam pin add . -y --no-action
+
+      - name: Build
+        run: |
+          opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+          opam install -y ./*.opam --deps-only --with-test
+          opam exec -- make
+
+      - name: Install/Uninstall Alt-Ergo-lib
+        run: |
+          opam exec -- make install-lib
+          opam exec -- make uninstall-lib
+
+      - name: Install/Uninstall Alt-Ergo-parsers
+        run: |
+          opam exec -- make install-parsers
+          opam exec -- make uninstall-parsers
+
+      - name: Install/Uninstall Alt-Ergo
+        run: |
+          opam exec -- make install-bin
+          opam exec -- make uninstall-bin
+
+      - name: Install/Uninstall Altgr-Ergo
+        run: |
+          opam exec -- make install-gui
+          opam exec -- make uninstall-gui
+
+      - name: Install/Uninstall All
+        run: |
+          opam exec -- make install
+          opam exec -- make uninstall
+
+
+  opam_install_os:
+    # Test to install all package on different os with opam
+    name: opam install os
+
+    needs: make_all
+
+    strategy:
+      matrix:
+        # Setup the main ocaml version to test
+        ocaml-version:
+          - 4.10.0
+        os:
+          - ubuntu-latest
           - windows-latest
-        ocaml-version:
-          - 4.10.0
-        skip_test:
-          - false
+          - macos-latest
 
     runs-on: ${{ matrix.os }}
 
@@ -106,18 +245,20 @@ jobs:
       - run: opam upgrade --fixup
         # if: steps.cache-opam.outputs.cache-hit == 'true'
 
-      - name: Make
-        run: |
-          eval $(opam env)
-          make
+      - name: opam install
+        run: opam install .
 
 
-  ocaml_version_build:
-    name: Build supported ocaml versions
+  opam_install_ocaml_versions:
+    # Test different versions of OCaml
+    name: opam install OCaml versions
+
+    needs: make_all
+
     strategy:
-      fail-fast: false
       matrix:
-        os:
+        # Setup ocaml versions and os to test
+        os-test:
           - ubuntu-latest
         ocaml-version:
           - 4.04.2
@@ -126,9 +267,6 @@ jobs:
           - 4.07.1
           - 4.08.1
           - 4.09.1
-          - 4.10.0
-        skip_test:
-          - false
 
     runs-on: ${{ matrix.os }}
 
@@ -166,7 +304,5 @@ jobs:
       - run: opam upgrade --fixup
         # if: steps.cache-opam.outputs.cache-hit == 'true'
 
-      - name: Make
-        run: |
-          eval $(opam env)
-          make
+      - name: opam install
+        run: opam install .
