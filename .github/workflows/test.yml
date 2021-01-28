@@ -6,14 +6,11 @@ jobs:
   simple_tests:
     name: Simple tests
     strategy:
-      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
         ocaml-version:
           - 4.10.0
-        skip_test:
-          - false
 
     runs-on: ${{ matrix.os }}
 
@@ -41,28 +38,25 @@ jobs:
           git config --global user.email github-actions-bot@users.noreply.github.com
 
       - run: opam pin add . -y --no-action
-
       - run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
         # if: steps.cache-opam.outputs.cache-hit != 'true'
-
       - run: opam install -y ./*.opam --deps-only --with-test
         # if: steps.cache-opam.outputs.cache-hit != 'true'
-
       - run: opam upgrade --fixup
         # if: steps.cache-opam.outputs.cache-hit == 'true'
-
       - run: opam install -y .
 
       - name: Run install test
-        run: |
-          eval $(opam env)
-          rsc/extra/non_regression.sh
-
+        run: opam exec -- rsc/extra/non_regression.sh
 
   complete_tests:
     name: Complete tests
+
+    needs: simple_tests
+
+    # if: github.event_name == 'pull_request'
+
     strategy:
-      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
@@ -73,9 +67,6 @@ jobs:
           - 4.07.1
           - 4.08.1
           - 4.09.1
-          - 4.10.0
-        skip_test:
-          - false
 
     runs-on: ${{ matrix.os }}
 
@@ -103,19 +94,12 @@ jobs:
           git config --global user.email github-actions-bot@users.noreply.github.com
 
       - run: opam pin add . -y --no-action
-
       - run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
         # if: steps.cache-opam.outputs.cache-hit != 'true'
-
       - run: opam install -y ./*.opam --deps-only --with-test
         # if: steps.cache-opam.outputs.cache-hit != 'true'
-
       - run: opam upgrade --fixup
         # if: steps.cache-opam.outputs.cache-hit == 'true'
-
       - run: opam install -y .
-
       - name: Run install test
-        run: |
-          eval $(opam env)
-          rsc/extra/non_regression.sh
+        run: opam exec -- rsc/extra/non_regression.sh
