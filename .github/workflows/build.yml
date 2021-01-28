@@ -119,7 +119,7 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-       ocaml-version:
+        ocaml-version:
           - 4.04.2
           - 4.05.0
           - 4.06.1

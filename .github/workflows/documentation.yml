@@ -64,6 +64,8 @@ jobs:
       - run: opam upgrade --fixup
         # if: steps.cache-opam.outputs.cache-hit == 'true'
 
+      - run: opam install odoc
+
       - name: Make OCaml documentation
         run: |
           eval $(opam env)
