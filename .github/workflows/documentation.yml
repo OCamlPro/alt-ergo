@@ -51,6 +51,11 @@ jobs:
       - name: Make OCaml documentation
         run: opam exec -- make odoc
 
+      - name: Upload ocaml documentation
+        uses: actions/upload-artifact@v2
+        with:
+          name: ocaml_doc
+          path: _build/default/_doc/_html/
 
   sphinx_docs:
     # Build the sphinx documentation
@@ -70,6 +75,12 @@ jobs:
       - run: ls docs/sphinx_docs
       - run: ls docs/sphinx_docs/_build
 
+      - name: Upload sphinx documentation
+        uses: actions/upload-artifact@v2
+        with:
+          name: sphinx_doc
+          path: docs/sphinx_docs/_build
+
   deploy_docs:
     # Deploy the documentation
     name: Deploy documentation
@@ -79,10 +90,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Download ocaml documentation
+        uses: actions/download-artifact@v2
+        with:
+          name: ocaml_doc
+          path: docs/odoc/dev
+
+      - name: Download sphinx documentation
+        uses: actions/download-artifact@v2
+        with:
+          name: sphinx_doc
+          path: docs
+
+      - run: |
+          touch docs/.nojekyll
+          touch docs/odoc/.nojekyll
+          touch docs/odoc/dev/.nojekyll
+
       - name: deploy-doc
         uses: JamesIves/github-pages-deploy-action@3.6.2
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages
-          FOLDER: docs/
+          FOLDER: docs
           CLEAN: true
