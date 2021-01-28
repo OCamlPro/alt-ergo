@@ -3,32 +3,19 @@ name: Documentation
 on: push
 
 jobs:
-  sphinx_docs:
-    name: Sphinx documentation
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v1
-      - uses: ammaraskar/sphinx-action@master
-        with:
-          docs-folder: "docs/sphinx_docs/"
-          build-command: "sphinx-build -b html . _build"
-
   ocaml_docs:
+    # Build the documentation from the ocaml comments
+    # If this test fails, no more test
     name: OCaml documentation
 
     strategy:
-      fail-fast: false
-      matrix:
+       matrix:
         os:
           - ubuntu-latest
         ocaml-version:
           - 4.10.0
-        skip_test:
-          - false
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout code
@@ -54,19 +41,48 @@ jobs:
           git config --global user.email github-actions-bot@users.noreply.github.com
 
       - run: opam pin add . -y --no-action
-
       - run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
         # if: steps.cache-opam.outputs.cache-hit != 'true'
-
       - run: opam install -y ./*.opam --deps-only --with-test
         # if: steps.cache-opam.outputs.cache-hit != 'true'
-
       - run: opam upgrade --fixup
         # if: steps.cache-opam.outputs.cache-hit == 'true'
-
       - run: opam install odoc
-
       - name: Make OCaml documentation
-        run: |
-          eval $(opam env)
-          make odoc
+        run: opam exec -- make odoc
+
+
+  sphinx_docs:
+    # Build the sphinx documentation
+    name: Sphinx documentation
+
+    needs: ocaml_docs
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+      - uses: ammaraskar/sphinx-action@master
+        with:
+          docs-folder: "docs/sphinx_docs/"
+          build-command: "sphinx-build -b html . _build"
+
+      - run: ls docs/sphinx_docs
+      - run: ls docs/sphinx_docs/_build
+
+  deploy_docs:
+    # Deploy the documentation
+    name: Deploy documentation
+
+    needs: sphinx_docs
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: deploy-doc
+        uses: JamesIves/github-pages-deploy-action@3.6.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: docs/
+          CLEAN: true
