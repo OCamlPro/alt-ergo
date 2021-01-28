@@ -1,16 +1,7 @@
-name: Main Workflow
+name: Test
 
-on:
-  workflow_run:
-    workflows: ["Linter","Build make"]
-    pull_request:
-      branches:
-        - main
-        - next
-    push:
-      branches:
-        - main
-        - next
+on: push
+
 jobs:
   build:
     strategy:
@@ -18,18 +9,10 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
-          - windows-latest
         ocaml-version:
           - 4.10.0
         skip_test:
           - false
-
-        include:
-          - os: ubuntu-latest
-            ocaml-version: 4.07.0
-            skip_test: true
-
 
     runs-on: ${{ matrix.os }}
 
@@ -59,12 +42,17 @@ jobs:
       - run: opam pin add . -y --no-action
 
       - run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-        if: steps.cache-opam.outputs.cache-hit != 'true'
+        # if: steps.cache-opam.outputs.cache-hit != 'true'
 
       - run: opam install -y ./*.opam --deps-only --with-test
-        if: steps.cache-opam.outputs.cache-hit != 'true'
+        # if: steps.cache-opam.outputs.cache-hit != 'true'
 
       - run: opam upgrade --fixup
-        if: steps.cache-opam.outputs.cache-hit == 'true'
+        # if: steps.cache-opam.outputs.cache-hit == 'true'
 
-      - run: make
+      - run: opam install -y .
+
+      - name: Run install test
+        run: |
+          eval $(opam env)
+          rsc/extra/non_regression.sh
