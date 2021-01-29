@@ -1,6 +1,12 @@
 name: Documentation
 
-on: push
+on:
+  # Trigger the documentation build for any push, pull request and any branch
+  # This build is also trigger when a commit is merged in next so we need to deploy the new gh-pages
+  push:
+  pull_request:
+  branch:
+    - next
 
 jobs:
   ocaml_docs:

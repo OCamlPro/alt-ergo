@@ -258,7 +258,7 @@ jobs:
     strategy:
       matrix:
         # Setup ocaml versions and os to test
-        os-test:
+        os:
           - ubuntu-latest
         ocaml-version:
           - 4.04.2
