@@ -1,12 +1,7 @@
 name: Documentation
 
-on:
-  # Trigger the documentation build for any push, pull request and any branch
-  # This build is also trigger when a commit is merged in next so we need to deploy the new gh-pages
-  push:
-  pull_request:
-  branch:
-    - next
+# Trigger the documentation build for any push, pull request and any branch only deploy on next
+on: [push, pull_request]
 
 jobs:
   ocaml_docs:
@@ -66,9 +61,10 @@ jobs:
   sphinx_docs:
     # Build the sphinx documentation
     name: Sphinx documentation
-
+    # We only run this if the ocaml documentation build is successful
     needs: ocaml_docs
-
+    # Sphinx documentation is only builded if a PR is open
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
@@ -88,13 +84,12 @@ jobs:
           path: docs/sphinx_docs/_build
 
   deploy_docs:
-    # Deploy the documentation
+    # Deploy the documentation only on next
     name: Deploy documentation
+    if: github.ref == 'refs/heads/next'
 
     needs: sphinx_docs
-
     runs-on: ubuntu-latest
-
     steps:
       - name: Download ocaml documentation
         uses: actions/download-artifact@v2
