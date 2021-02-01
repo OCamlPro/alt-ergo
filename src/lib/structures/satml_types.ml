@@ -897,7 +897,8 @@ module Flat_Formula : FLAT_FORMULA = struct
         let g = E.neg @@ E.elim_iff f1 f2 (E.id f) ~with_conj:parent_disj in
         simp topl ~parent_disj g
 
-      | E.Let letin -> simp false ~parent_disj:false (E.elim_let letin)
+      | E.Let letin ->
+        simp false ~parent_disj:false (E.elim_let ~recursive:true letin)
     in
     let res = simp true ~parent_disj:false f in
     res, !lem, !new_vars
