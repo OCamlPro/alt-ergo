@@ -103,7 +103,6 @@ See more details on http://alt-ergo.ocamlpro.com/"
   dune-configurator
   num
   (ocplib-simplex (>= 0.4))
-  menhir
   zarith
   seq
   stdlib-shims
