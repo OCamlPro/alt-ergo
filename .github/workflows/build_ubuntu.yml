@@ -98,11 +98,17 @@ jobs:
         # Setup ocaml versions to test
         ocaml-version:
           - 4.04.2
+          - 4.04.2+flambda
           - 4.05.0
+          - 4.05.0+flambda
           - 4.06.1
+          - 4.06.1+flambda
           - 4.07.1
+          - 4.07.1+flambda
           - 4.08.1
+          - 4.08.1+flambda
           - 4.09.1
+          - 4.09.1+flambda
 
     runs-on: ubuntu-latest
 
@@ -157,11 +163,17 @@ jobs:
       matrix:
         ocaml-version:
           - 4.04.2
+          - 4.04.2+flambda
           - 4.05.0
+          - 4.05.0+flambda
           - 4.06.1
+          - 4.06.1+flambda
           - 4.07.1
+          - 4.07.1+flambda
           - 4.08.1
+          - 4.08.1+flambda
           - 4.09.1
+          - 4.09.1+flambda
 
     runs-on: ubuntu-latest
 
