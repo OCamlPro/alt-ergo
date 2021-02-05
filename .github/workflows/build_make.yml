@@ -10,6 +10,7 @@ env:
 jobs:
   make_all:
     # Basic test to check if the project build with make.
+    # This test also check that .opam files are synced with dune-project
     # If this test fails, no more make building test are done
     name: Make all
 
@@ -57,7 +58,17 @@ jobs:
         if: steps.cache-opam.outputs.cache-hit == 'true'
 
       - name: Make
+        # make use dune build which update .opam file if the dune-project is update
         run: opam exec -- make
+
+      - name: Check opam files
+        # Check that opam files are unchanged
+        run: |
+          if git diff --exit-code *.opam ; then
+          echo "opam files ok" ;
+          else
+          exit 1 ;
+          fi
 
   make_release:
     # Test every make release rule
