@@ -777,6 +777,73 @@ and update_monome are_eq expl use_x env x =
   let ui = I.intersect ui u in
   MX.n_add x (ui, (SX.union use_x use_x')) u env
 
+
+
+let sort = List.fast_sort (fun (x,_) (y,_) -> X.str_cmp x y)
+
+let compact xs =
+  let rec f acc = function
+    | [] -> acc
+    | [(x,n)] -> (x,n) :: acc
+    | (x,n) :: (y,m) :: r ->
+      if X.equal x y then f acc ((x,n+m) :: r)
+      else f ((x,n)::acc) ((y,m) :: r)
+  in
+  f [] (sort xs) (* increasing order - f's result in a decreasing order*)
+
+let tighten_by_dividing =
+  let deduce env orig_x x ac args =
+    let l = compact args in
+    let xac = Shostak.Combine.ac_embed {ac with l} in
+    Format.eprintf "%a = %a x %a@."
+      X.print orig_x  X.print xac X.print x;
+    let i_orig =
+      try MX.n_find orig_x env.monomes |> fst
+      with Not_found -> I.undefined (X.type_info orig_x)
+    in
+    let i_xac =
+      try MX.n_find xac env.monomes |> fst
+      with Not_found -> I.undefined (X.type_info xac)
+    in
+    Format.eprintf "i_orign: %a@." I.print i_orig;
+    Format.eprintf "i_xac:  %a@." I.print i_xac;
+    match I.doesnt_contain_0 i_xac with
+    | None ->
+      Format.eprintf "no deduction@.";
+      env
+    | Some (expl, _) ->
+      let ded = I.div i_orig i_xac in
+      let old_i =
+        try MX.n_find x env.monomes |> fst
+        with Not_found -> I.undefined (X.type_info x)
+      in
+      Format.eprintf "deduce interval %a for %a@."
+        I.print ded X.print x;
+      Format.eprintf "old interval is %a@."
+        I.print old_i;
+
+
+    env
+  in
+  let rec aux orig_x env ac past next =
+    match next with
+    | [] -> env
+    | (x, 1) :: next ->
+      let env = deduce env orig_x x ac (List.rev_append past next) in
+      aux orig_x env ac ((x, 1) :: past) next
+
+    | (x, n) :: next ->
+      assert (n > 1);
+      let next = (x, n - 1) :: next in
+      let env = deduce env orig_x x ac (List.rev_append past next) in
+      aux orig_x env ac ((x, 1) :: past) next
+  in
+  fun env orig_x ac ->
+    if not (Symbols.equal ac.h (Symbols.Op Symbols.Mult)) then env
+    else
+      aux orig_x env ac [] ac.l
+
+
 let rec tighten_ac are_eq x env expl =
   let ty = X.type_info x in
   let u, _use_x =
@@ -819,6 +886,8 @@ let rec tighten_ac are_eq x env expl =
           env
       in
       env
+    | Some ac ->
+      tighten_by_dividing env x ac
     | _ -> env
   with Q.Not_a_float -> env
 
