@@ -151,13 +151,14 @@ let print_rwt pp fmt r =
 
 (** Goal sort *)
 
-type goal_sort = Cut | Check | Thm | Sat
+type goal_sort = Cut | Check | Thm | Sat | AllSat of string list
 
 let print_goal_sort fmt = function
   | Cut -> Format.fprintf fmt "cut"
   | Check -> Format.fprintf fmt "check"
   | Thm -> Format.fprintf fmt "thm"
   | Sat -> Format.fprintf fmt "sat"
+  | AllSat _ -> Format.fprintf fmt "all-sat"
 
 
 (** Logic type *)

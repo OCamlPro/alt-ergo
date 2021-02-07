@@ -1851,4 +1851,14 @@ are not Th-reduced";
   (** returns the latest model stored in the env if any *)
   let get_model env = !(env.last_saved_model)
 
+  let get_propositional_model env =
+    ME.fold (fun f _ acc ->
+        match E.lit_view f with
+        | E.Not_a_lit _ -> acc
+        | _ -> E.Set.add f acc
+      ) env.gamma E.Set.empty
+
+  let reset_last_saved_model env =
+    { env with last_saved_model = ref None}
+
 end
