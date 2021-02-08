@@ -37,7 +37,7 @@ jobs:
           git config --global user.name github-actions
           git config --global user.email github-actions-bot@users.noreply.github.com
 
-      - name: Pin no actio
+      - name: Pin no action
         run: opam pin add . -y --no-action
 
       - name: Install depext
