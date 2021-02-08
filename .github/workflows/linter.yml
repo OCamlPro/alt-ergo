@@ -42,6 +42,11 @@ jobs:
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
+      # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
+      # in any opam call
+      - name: Setup opam variables
+        run: export OPAMYES=true
+
       # Install ocp-indent with the fixed version
       # Do nothing if ocp-indent is already installed
       - name: Install ocp-indent ${{ matrix.ocp-indent-version }}
@@ -82,10 +87,15 @@ jobs:
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      # Install dependancies of the ocpchecker executable
+      # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
+      # in any opam call
+      - name: Setup opam variables
+        run: export OPAMYES=true
+
+      # Install dependencies of the ocpchecker executable
       # Dune and stdlib-shims is needed to build the executable
       # Since this executable has no opam file we need to manually add
-      # dependancies here
+      # dependencies here
       - name: opam install ocpchecker deps
         run: opam install dune stdlib-shims
 
