@@ -305,6 +305,10 @@ val set_output_with_headers : bool -> unit
     {!val:get_output_with_formatting} *)
 val set_output_with_formatting : bool -> unit
 
+(** Set [output_with_forced_flush] accessible with
+    {!val:get_output_with_forced_flush} *)
+val set_output_with_forced_flush : bool -> unit
+
 (** Set [infer_input_format] accessible with {!val:get_infer_input_format} *)
 val set_infer_input_format : 'a option -> unit
 
@@ -571,6 +575,10 @@ val get_output_with_headers  : unit -> bool
 
 (** [true] if the outputs are printed with formatting rules *)
 val get_output_with_formatting  : unit -> bool
+(** Default to [true] *)
+
+(** [true] if the outputs are flushed at the end of every print *)
+val get_output_with_forced_flush  : unit -> bool
 (** Default to [true] *)
 
 (** Valuget_e of the currently selected parsing and typing frontend. *)

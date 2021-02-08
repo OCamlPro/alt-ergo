@@ -216,13 +216,15 @@ let mk_context_opt replay replay_all_used_context replay_used_context
 
 let mk_execution_opt frontend input_format parse_only parsers
     preludes no_locs_in_answers colors_in_output no_headers_in_output
-    formatting_in_output pretty_output
+    formatting_in_output no_forced_flush_in_output pretty_output
     type_only type_smt2
   =
   let answers_with_loc = not no_locs_in_answers in
   let output_with_colors = colors_in_output || pretty_output in
   let output_with_headers = (not no_headers_in_output) || pretty_output in
   let output_with_formatting = formatting_in_output || pretty_output in
+  let output_with_forced_flush =
+    (not no_forced_flush_in_output) && (not pretty_output) in
   set_infer_input_format input_format;
   let input_format = match input_format with
     | None -> Native
@@ -232,6 +234,7 @@ let mk_execution_opt frontend input_format parse_only parsers
   set_output_with_colors output_with_colors;
   set_output_with_headers output_with_headers;
   set_output_with_formatting output_with_formatting;
+  set_output_with_forced_flush output_with_forced_flush;
   set_input_format input_format;
   set_parse_only parse_only;
   set_parsers parsers;
@@ -758,6 +761,11 @@ let parse_execution_opt =
       "Use formatting rule in output." in
     Arg.(value & flag & info ["formatting-in-output"] ~docs ~doc) in
 
+  let no_forced_flush_in_output =
+    let doc =
+      "Print output without forced flush at the end of each print." in
+    Arg.(value & flag & info ["no-forced-flush-in-output"] ~docs ~doc) in
+
   let pretty_output =
     let doc =
       "Print output with formatting rules, headers and colors" in
@@ -775,7 +783,8 @@ let parse_execution_opt =
   Term.(ret (const mk_execution_opt $
              frontend $ input_format $ parse_only $ parsers $ preludes $
              no_locs_in_answers $ colors_in_output $ no_headers_in_output $
-             formatting_in_output $ pretty_output $ type_only $ type_smt2
+             formatting_in_output $ no_forced_flush_in_output $ pretty_output $
+             type_only $ type_smt2
             ))
 
 let parse_halt_opt =
