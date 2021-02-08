@@ -1,0 +1,96 @@
+name: Linter
+
+on: push
+
+env:
+  OCAML_DEFAULT_VERSION: 4.10.0
+
+jobs:
+  check_indentation:
+    # Check that all `.ml` and `.mli` file are correctly indent with ocp-indent
+    name: Check indentation
+
+    strategy:
+      matrix:
+        ocp-indent-version:
+          # Fixed ocp-indent version. A PR with updated indented code is needed
+          # if this version is changed
+          - 1.8.1
+
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the code of the current branch
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Retrieve the opam cache with unique key
+      # A new cache is created/used if the `.opam` files changes or
+      # if we use another ocaml version
+      # This action only retrieve de .opam/ directory
+      - name: Retrieve opam cache
+        uses: actions/cache@v2
+        id: cache-opam
+        with:
+          path: ~/.opam
+          key: v1-${{ runner.os }}-alt-ergo-indentation-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
+
+      # Get an OCaml environment with opam installed and the proper ocaml version
+      # opam will used opam cache environment if retrieved
+      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
+
+      # Install ocp-indent with the fixed version
+      # Do nothing if ocp-indent is already installed
+      - name: Install ocp-indent ${{ matrix.ocp-indent-version }}
+        run: opam install ocp-indent.${{ matrix.ocp-indent-version }}
+
+      # Run indentation script, this script returns exit code 1 if some files
+      # are not well indented
+      - name: Run check_indentation.sh script
+        run: opam exec -- rsc/extra/check_indentation.sh
+
+  check_style:
+    # Check that all `.ml` and `.mli` files don't have line longer than
+    # 80 characters
+    name: Check style
+
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the code of the current branch
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Retrieve the opam cache with unique key
+      # A new cache is created/used if the `.opam` files changes or
+      # if we use another ocaml version
+      # This action only retrieve de .opam/ directory
+      - name: Retrieve opam cache
+        uses: actions/cache@v2
+        id: cache-opam
+        with:
+          path: ~/.opam
+          key: v1-${{ runner.os }}-alt-ergo-style-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
+
+      # Get an OCaml environment with opam installed and the proper ocaml version
+      # opam will used opam cache environment if retrieved
+      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
+
+      # Install dependancies of the ocpchecker executable
+      # Dune and stdlib-shims is needed to build the executable
+      # Since this executable has no opam file we need to manually add
+      # dependancies here
+      - name: opam install ocpchecker deps
+        run: opam install dune stdlib-shims
+
+      # Run check style script, this script build ocpchecker and run it on
+      # every *.ml and *.mli file, it returns exit code 1 if some files
+      # have line longer than 80 characters
+      - name: Run check_style.sh script
+        run: opam exec -- rsc/extra/check_style.sh
