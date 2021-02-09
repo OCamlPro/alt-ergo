@@ -421,7 +421,7 @@ module Why3CounterExample = struct
           Printer.print_fmt ~flushed:false fmt "(declare-const %s %s)@ "
             name ty
         | l ->
-          Printer.print_fmt ~flushed:false fmt "(declate-fun %s (%s) %s)@ "
+          Printer.print_fmt ~flushed:false fmt "(declare-fun %s (%s) %s)@ "
             name
             (String.concat " " l)
             ty
