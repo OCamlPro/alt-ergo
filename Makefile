@@ -277,9 +277,9 @@ doc: odoc sphinx-doc
 
 # Build the sphinx documentation
 sphinx-doc:
-	cp -r LICENSE.md $(SPHINX_DOC_DIR)/About/license.md
+	# cp LICENSE.md $(SPHINX_DOC_DIR)/About/license.md
+	# cp -r licenses $(SPHINX_DOC_DIR)/About
 	$(SPHINXBUILD) "$(SPHINX_DOC_DIR)" "$(SPHINX_BUILD_DIR)"
-	cp -r licenses $(SPHINX_BUILD_DIR)/About
 
 # Build the odoc
 odoc: gen
