@@ -6,63 +6,62 @@ on: [push,pull_request]
 
 env:
   OCAML_DEFAULT_VERSION: 4.10.0
+  # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
+  # in any opam call
+  OPAMYES: true
 
 jobs:
   make_all:
-    # Basic test to check if the project build with make.
-    # This test also check that .opam files are synced with dune-project
+    # Basic test to check if the project build with `make`.
+    # This test also check that `.opam` files are synced with dune-project
     # If this test fails, no more make building test are done
     name: Make all
-
-    strategy:
-      matrix:
-        cache-name:
-          - make-all
 
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout the code of the current branch
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Retrieve the opam cache with unique key
+      # A new cache is created/used if the `.opam` files changes or
+      # if we use another ocaml version
+      # This action only retrieve de .opam/ directory
       - name: Retrieve opam cache
         uses: actions/cache@v2
         id: cache-opam
         with:
           path: ~/.opam
-          key: v1-${{ runner.os }}-alt-ergo-${{ matrix.cache-name }}-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
+          key: v1-${{ runner.os }}-alt-ergo-make-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
 
+      # Get an OCaml environment with opam installed and the proper ocaml version
+      # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: avsm/setup-ocaml@v1
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      - name: Set git user
-        run: |
-          git config --global user.name github-actions
-          git config --global user.email github-actions-bot@users.noreply.github.com
-
+      # Pin the packages, this is needed for opam depext
+      # remove this step when opam 2.1 will be used
       - name: Pin no action
-        run: opam pin add . -y --no-action
+        run: opam pin add . --no-action
 
-      - name: Install depext
-        run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-        # if: steps.cache-opam.outputs.cache-hit != 'true'
+      # Install external dependencies
+      # remove this step when opam 2.1 will be used
+      - name: opam install depext
+        run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
-      - name: Install deps
-        run: opam install -y ./*.opam --deps-only --with-test
-        if: steps.cache-opam.outputs.cache-hit != 'true'
+      # Install dependencies
+      - name: opam install deps
+        run: opam install ./*.opam --deps-only
 
-      - name: Fixup
-        run: opam upgrade --fixup
-        if: steps.cache-opam.outputs.cache-hit == 'true'
-
+      # make use `dune build` which update .opam file if the dune-project is updated
       - name: Make
-        # make use dune build which update .opam file if the dune-project is update
         run: opam exec -- make
 
+      # Check that opam files are unchanged
       - name: Check opam files
-        # Check that opam files are unchanged
         run: |
           if git diff --exit-code *.opam ; then
           echo "opam files ok" ;
@@ -71,140 +70,146 @@ jobs:
           fi
 
   make_release:
-    # Test every make release rule
-    name: Make release
+    # Test every make package with release profile
+    name: Make package release
 
     # Only if in pull request or a push on main or next
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
-
-    strategy:
-      matrix:
-        cache-name:
-          - make-release
 
     needs: make_all
 
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        # Setup package name to test
+        package:
+          - alt-ergo-lib
+          - alt-ergo-parsers
+          - alt-ergo
+          - altgr-ergo
+
     steps:
+      # Checkout the code of the current branch
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Retrieve the opam cache with unique key
+      # A new cache is created/used if the `.opam` files changes or
+      # if we use another ocaml version
+      # This action only retrieve de .opam/ directory
       - name: Retrieve opam cache
         uses: actions/cache@v2
         id: cache-opam
         with:
           path: ~/.opam
-          key: v1-${{ runner.os }}-alt-ergo-${{ matrix.cache-name }}-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
+          key: v1-${{ runner.os }}-alt-ergo-${{ matrix.package }}-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
 
+      # Get an OCaml environment with opam installed and the proper ocaml version
+      # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: avsm/setup-ocaml@v1
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      - name: Set git user
-        run: |
-          git config --global user.name github-actions
-          git config --global user.email github-actions-bot@users.noreply.github.com
-
+      # Pin the packages, this is needed for opam depext
+      # remove this step when opam 2.1 will be used
       - name: Pin no action
-        run: opam pin add . -y --no-action
+        run: opam pin add . --no-action
 
-      - name: Alt-Ergo-lib
-        run: |
-          opam depext -y alt-ergo-lib
-          opam install -y ./alt-ergo-lib.opam --deps-only --with-test
-          opam exec -- ./configure alt-ergo-lib
-          opam exec -- make alt-ergo-lib
+      # Install external dependencies
+      # remove this step when opam 2.1 will be used
+      - name: opam install depext
+        run: opam depext ${{ matrix.package }}
 
-      - name: Alt-Ergo-parsers
-        run: |
-          opam depext -y alt-ergo-parsers
-          opam install -y ./alt-ergo-parsers.opam --deps-only --with-test
-          opam exec -- ./configure alt-ergo-parsers
-          opam exec -- make alt-ergo-parsers
+      # Install dependencies
+      - name: opam install deps
+        run: opam install ./${{ matrix.package }}.opam --deps-only
 
-      - name: Alt-Ergo
-        run: |
-          opam depext -y alt-ergo
-          opam install -y ./alt-ergo.opam --deps-only --with-test
-          opam exec -- ./configure alt-ergo
-          opam exec -- make alt-ergo
+      # Run configure script for the package
+      - name: Configure ${{ matrix.package }}
+        run: opam exec -- ./configure ${{ matrix.package }}
 
-      - name: Altgr-Ergo
-        run: |
-          opam depext -y altgr-ergo
-          opam install -y ./altgr-ergo.opam --deps-only --with-test
-          opam exec -- ./configure altgr-ergo
-          opam exec -- make altgr-ergo
+      # Make the package
+      - name: Install ${{ matrix.package }}
+        run: opam exec -- make ${{ matrix.package }}
 
   make_install:
     # Test every install/uninstall rules
     name: Make install
 
-    # Only if in pull request
-    if: github.event_name == 'pull_request'
+    # Only if in pull request or a push on main or next
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
 
     needs: make_all
 
     strategy:
       matrix:
-        cache-name:
-          - make-install
+        # Setup package to install
+        package:
+          - lib
+          - parsers
+          - bin
+          - gui
+          - all
 
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout the code of the current branch
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Retrieve the opam cache with unique key
+      # A new cache is created/used if the `.opam` files changes or
+      # if we use another ocaml version
+      # This action only retrieve de .opam/ directory
       - name: Retrieve opam cache
         uses: actions/cache@v2
         id: cache-opam
         with:
           path: ~/.opam
-          key: v1-${{ runner.os }}-alt-ergo-${{ matrix.cache-name }}-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
+          key: v1-${{ runner.os }}-alt-ergo-make-${{ matrix.package }}-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
 
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: avsm/setup-ocaml@v1
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      - name: Set git user
-        run: |
-          git config --global user.name github-actions
-          git config --global user.email github-actions-bot@users.noreply.github.com
+      # Get an OCaml environment with opam installed and the proper ocaml version
+      # opam will used opam cache environment if retrieved
+      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
+      # Pin the packages, this is needed for opam depext
+      # remove this step when opam 2.1 will be used
       - name: Pin no action
-        run: opam pin add . -y --no-action
+        run: opam pin add . --no-action
 
+      # Install all depext and deps and then build the project
+      # This step is needed since the install rule does not build the project
       - name: Build
         run: |
           opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-          opam install -y ./*.opam --deps-only --with-test
+          opam install -y ./*.opam --deps-only
           opam exec -- make
 
-      - name: Install/Uninstall Alt-Ergo-lib
-        run: |
-          opam exec -- make install-lib
-          opam exec -- make uninstall-lib
+      # Install the package in opam files
+      - name: Install ${{ matrix.package }}
+        run: opam exec -- make install-${{ matrix.package }}
 
-      - name: Install/Uninstall Alt-Ergo-parsers
-        run: |
-          opam exec -- make install-parsers
-          opam exec -- make uninstall-parsers
+      # Try to look for lib or bin files in opam root
+      # This test fails if the libs or bins can't be found
+      - name: Look for lib/bin in opam root
+        run: ./rsc/extra/check_installed_package.sh ${{ matrix.package }} false
 
-      - name: Install/Uninstall Alt-Ergo
-        run: |
-          opam exec -- make install-bin
-          opam exec -- make uninstall-bin
+      # Uninstall the package
+      - name: Uninstall ${{ matrix.package }}
+        run: opam exec -- make uninstall-${{ matrix.package }}
 
-      - name: Install/Uninstall Altgr-Ergo
-        run: |
-          opam exec -- make install-gui
-          opam exec -- make uninstall-gui
-
-      - name: Install/Uninstall All
-        run: |
-          opam exec -- make install
-          opam exec -- make uninstall
+      # Try to look for lib or bin files in opam root
+      # This test fails if the libs or bins can be found
+      - name: Look for lib/bin in opam root
+        run: ./rsc/extra/check_installed_package.sh ${{ matrix.package }} true

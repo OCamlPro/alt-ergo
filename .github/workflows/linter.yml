@@ -4,6 +4,9 @@ on: push
 
 env:
   OCAML_DEFAULT_VERSION: 4.10.0
+  # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
+  # in any opam call
+  OPAMYES: true
 
 jobs:
   check_indentation:
@@ -41,11 +44,6 @@ jobs:
         uses: avsm/setup-ocaml@v1
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
-
-      # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
-      # in any opam call
-      - name: Setup opam variables
-        run: export OPAMYES=true
 
       # Install ocp-indent with the fixed version
       # Do nothing if ocp-indent is already installed
@@ -86,11 +84,6 @@ jobs:
         uses: avsm/setup-ocaml@v1
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
-
-      # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
-      # in any opam call
-      - name: Setup opam variables
-        run: export OPAMYES=true
 
       # Install dependencies of the ocpchecker executable
       # Dune and stdlib-shims is needed to build the executable

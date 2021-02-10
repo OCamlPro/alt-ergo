@@ -184,14 +184,14 @@ non-regression: all
 # be copied, and where they should be copied
 
 # Use dune to install the lib, bin, and gui
-install: all
+install-all: all
 	$(DUNE) install $(DUNE_FLAGS)		\
 		--prefix $(prefix)						\
 		--libdir $(libdir)						\
 		--mandir $(mandir)
 
 # Use dune to uninstall the lib, bin, and gui
-uninstall:
+uninstall-all:
 	$(DUNE) uninstall $(DUNE_FLAGS)	\
 		--prefix $(prefix)						\
 		--libdir $(libdir)						\
