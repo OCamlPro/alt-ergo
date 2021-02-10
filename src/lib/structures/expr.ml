@@ -2338,7 +2338,7 @@ module Purification = struct
     else
       match t.f, t.bind with
       | Sy.Let, B_let { let_v; let_e; in_e; _ } ->
-        let let_e, lets = purify_term let_e lets in
+        (* let_e is purified when processing the lets map *)
         let in_e , lets = purify_term in_e  lets in
         in_e, add_let let_v let_e lets
 
@@ -2423,9 +2423,7 @@ module Purification = struct
           | [], B_let ({ let_e; in_e; _ } as letin) ->
             if let_e.pure && in_e.pure then e
             else
-              let let_e', lets =
-                purify_term let_e SMap.empty
-              in
+              let let_e', lets = purify_non_toplevel_ite let_e SMap.empty in
               let in_e' = purify_form in_e in
               if let_e == let_e' && in_e == in_e' then e
               else
@@ -2484,8 +2482,7 @@ module Purification = struct
     in
     List.fold_left
       (fun acc (let_v, (let_e, _cpt)) ->
-         let let_e, lets =
-           purify_non_toplevel_ite let_e SMap.empty in
+         let let_e, lets = purify_non_toplevel_ite let_e SMap.empty in
          assert (let_e.ty != Ty.Tbool || SMap.is_empty lets);
          mk_lifted (mk_let let_v let_e acc 0) lets
       )e ord_lets
