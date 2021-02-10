@@ -22,6 +22,7 @@ depends: [
   "zarith"
   "seq"
   "stdlib-shims"
+  "odoc" {with-doc}
 ]
 dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"
 # This part comes from the template. Please edit alt-ergo.opam.template

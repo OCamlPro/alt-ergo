@@ -12,6 +12,9 @@ on: [push, pull_request]
 
 env:
   OCAML_DEFAULT_VERSION: 4.10.0
+  # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
+  # in any opam call
+  OPAMYES: true
 
 jobs:
   # For any push and PR, build the documentation from the ocaml comments
@@ -22,6 +25,9 @@ jobs:
     name: OCaml documentation
 
     runs-on: ubuntu-latest
+
+    env:
+      OPAMWITHDOC: true
 
     steps:
       # Checkout the code of the current branch
@@ -46,11 +52,6 @@ jobs:
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
-      # in any opam call
-      - name: Setup opam variables
-        run: export OPAMYES=true
-
       # Pin the packages, this is needed for opam depext
       # remove this step when opam 2.1 will be used
       - name: opam pin no action
@@ -63,13 +64,9 @@ jobs:
         if: steps.cache-opam.outputs.cache-hit != 'true'
 
       # Install dependencies if the cache is not retrieved
+      # odoc is installed as deps with { with-doc } in opam files
       - name: opam install deps
-        run: opam install ./*.opam --deps-only --with-test
-        if: steps.cache-opam.outputs.cache-hit != 'true'
-
-      # Install odoc if the cache is not retrieved
-      - name: opam install odoc
-        run: opam install odoc
+        run: opam install ./*.opam --deps-only
         if: steps.cache-opam.outputs.cache-hit != 'true'
 
       # Try to upgrade installed packages and fix dependencies if needed,
@@ -137,7 +134,10 @@ jobs:
 
     if: github.ref == 'refs/heads/next'
 
-    needs: sphinx_docs
+    needs:
+      - ocaml_docs
+      - sphinx_docs
+
     runs-on: ubuntu-latest
     steps:
       # Retrieve ocaml documentation artifact
