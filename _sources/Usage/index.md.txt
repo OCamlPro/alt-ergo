@@ -2,7 +2,7 @@
 
 ## Library
 
-Since version 2.2.0, Alt-Ergo's library is also compiled and installed. You can find this [small example] using the API. See the [API documentation] for more information.
+Since version 2.2.0, Alt-Ergo's library is also compiled and installed. See the [API documentation] for more information.
 
 ## Run
 
@@ -83,7 +83,6 @@ On windows, a binary at path `Z:\some\path\bin\alt-ergo` will look for preludes 
 plugins in `Z:\some\path\share\alt-ergo\preludes` and
 `Z:\some\path\share\alt-ergo\plugins` respectively.
 
-[small example]: examples/lib_usage.ml
 [API documentation]: ../API/index.md
 [AB-Why3 README]: ../Plugins/ab_why3.md
 [Input section]: ../Input_file_formats/index
