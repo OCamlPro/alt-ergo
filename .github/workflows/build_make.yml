@@ -60,14 +60,12 @@ jobs:
       - name: Make
         run: opam exec -- make
 
-      # Check that opam files are unchanged
-      - name: Check opam files
-        run: |
-          if git diff --exit-code *.opam ; then
-          echo "opam files ok" ;
-          else
-          exit 1 ;
-          fi
+      # Monitor changes in repo's files
+      # If there are some changes, stop the workflow and suggest changes in the PR
+      - uses: getsentry/action-git-diff-suggestions@main
+        with:
+          message: 'The following changes have been made after `make`:'
+
 
   make_release:
     # Test every make package with release profile
