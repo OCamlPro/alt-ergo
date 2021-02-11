@@ -1,6 +1,6 @@
 name: Build MacOS
 
-# This workflow try to build and test Alt-ergo on a macos system
+# This workflow try to build and test Alt-Ergo on a MacOS system
 # If the build succed, the opam cache containing the binary is used
 # for the test and upload jobs (An artifact with the alt-ergo binary is uploaded)
 # It only runs on `next` or `main` branch
@@ -56,9 +56,16 @@ jobs:
       - name: opam install depext
         run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
-      # Install dependencies
+      # Install dependencies if the cache is not retrieved
       - name: Install deps
         run: opam install  ./*.opam --deps-only --with-test
+        if: steps.cache-opam.outputs.cache-hit != 'true'
+
+      # Try to upgrade installed packages and fix dependencies if needed,
+      # when the cache is retrieved
+      - name: Fixup
+        run: opam upgrade --fixup
+        if: steps.cache-opam.outputs.cache-hit == 'true'
 
       # Build and install with opam
       - name: Install
@@ -112,9 +119,16 @@ jobs:
       - name: opam install depext
         run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
-      # Install dependencies
+      # Install dependencies if the cache is not retrieved
       - name: opam install deps
         run: opam install ./*.opam --deps-only
+        if: steps.cache-opam.outputs.cache-hit != 'true'
+
+      # Try to upgrade installed packages and fix dependencies if needed,
+      # when the cache is retrieved
+      - name: Fixup
+        run: opam upgrade --fixup
+        if: steps.cache-opam.outputs.cache-hit == 'true'
 
       # Alt-Ergo is already installed in the cache.
       # The previous steps are usefull in case the project needs specific

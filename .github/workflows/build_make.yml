@@ -52,9 +52,16 @@ jobs:
       - name: opam install depext
         run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
-      # Install dependencies
+      # Install dependencies if the cache is not retrieve
       - name: opam install deps
         run: opam install ./*.opam --deps-only
+        if: steps.cache-opam.outputs.cache-hit != 'true'
+
+      # Try to upgrade installed packages and fix dependencies if needed,
+      # when the cache is retrieved
+      - name: Fixup
+        run: opam upgrade --fixup
+        if: steps.cache-opam.outputs.cache-hit == 'true'
 
       # make use `dune build` which update .opam file if the dune-project is updated
       - name: Make
@@ -120,9 +127,16 @@ jobs:
       - name: opam install depext
         run: opam depext ${{ matrix.package }}
 
-      # Install dependencies
+      # Install dependencies if the cache is not retrieved
       - name: opam install deps
         run: opam install ./${{ matrix.package }}.opam --deps-only
+        if: steps.cache-opam.outputs.cache-hit != 'true'
+
+      # Try to upgrade installed packages and fix dependencies if needed,
+      # when the cache is retrieved
+      - name: Fixup
+        run: opam upgrade --fixup
+        if: steps.cache-opam.outputs.cache-hit == 'true'
 
       # Run configure script for the package
       - name: Configure ${{ matrix.package }}

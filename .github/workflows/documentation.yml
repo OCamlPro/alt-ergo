@@ -57,11 +57,10 @@ jobs:
       - name: opam pin no action
         run: opam pin add . --no-action
 
-      # Install external dependencies if the cache is not retrieved
+      # Install external dependencies
       # remove this step when opam 2.1 will be used
       - name: opam install depext
         run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-        if: steps.cache-opam.outputs.cache-hit != 'true'
 
       # Install dependencies if the cache is not retrieved
       # odoc is installed as deps with { with-doc } in opam files
