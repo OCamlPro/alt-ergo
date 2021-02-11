@@ -68,6 +68,16 @@ jobs:
       - name: Install
         run: opam install .
 
+      # Run non regression tests
+      - name: Run non regression tests
+        run: opam exec -- rsc/extra/non_regression.sh
+
+      # Convert non-regression script to be able to run them on windows
+      - name: Convert non-regression script to dos
+        run: |
+          dos2unix rsc/extra/non_regression.sh
+          dos2unix non-regression/*.sh
+
       # Get and Set version of the installed alt-ergo binary
       # Get and Set the path where alt-ergo binary is located
       - name: Get version and path as variable
@@ -84,13 +94,3 @@ jobs:
         with:
           name: alt-ergo-${{ steps.get_version_path.outputs.version }}-${{ runner.os }}-${{ env.OCAML_DEFAULT_VERSION }}
           path: "${{ steps.get_version_path.outputs.path }}/alt-ergo.exe"
-
-      # Convert non-regression script to be able to run them on windows
-      - name: Convert non-regression script to dos
-        run: |
-          dos2unix rsc/extra/non_regression.sh
-          dos2unix non-regression/*.sh
-
-      # Run non regression tests
-      - name: Run non regression tests
-        run: opam exec -- rsc/extra/non_regression.sh

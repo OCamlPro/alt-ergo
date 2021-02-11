@@ -23,22 +23,22 @@
 ## Ubuntu workflow
 
 - install with opam (push,blocking)
-  - run non-regression tests (push,blocking)
-    - install all supported ocaml versions (pr,blocking)
-      - run non-regression tests on all supported ocaml versions (pr)
+  run non-regression tests
+    - install all supported ocaml versions (pr)
+      run non-regression tests on all supported ocaml versions
     - upload the alt-ergo binary (pushed on `next`/`main`)
 
 ## MacOS workflow (pushed on `next`/`main`)
 
 - install with opam
-  - run non-regression tests
-  - upload the alt-ergo binary
+  run non-regression tests
+  upload the alt-ergo binary
 
 ## Windows workflow (pushed on `next`/`main`)
 
 - install with opam
-  - run non-regression tests
-  - upload the alt-ergo binary
+  run non-regression tests
+  upload the alt-ergo binary
 
 ## Docker workflow (pushed on `next`/`main`)
 - use specific ocp docker container
