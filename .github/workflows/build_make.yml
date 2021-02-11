@@ -129,7 +129,7 @@ jobs:
         run: opam exec -- ./configure ${{ matrix.package }}
 
       # Make the package
-      - name: Install ${{ matrix.package }}
+      - name: Make ${{ matrix.package }}
         run: opam exec -- make ${{ matrix.package }}
 
   make_install:
