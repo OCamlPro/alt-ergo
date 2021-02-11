@@ -68,15 +68,15 @@ jobs:
       - name: Install
         run: opam install .
 
-      # Run non regression tests
-      - name: Run non regression tests
-        run: opam exec -- rsc/extra/non_regression.sh
-
       # Convert non-regression script to be able to run them on windows
       - name: Convert non-regression script to dos
         run: |
           dos2unix rsc/extra/non_regression.sh
           dos2unix non-regression/*.sh
+
+      # Run non regression tests
+      - name: Run non regression tests
+        run: opam exec -- rsc/extra/non_regression.sh
 
       # Get and Set version of the installed alt-ergo binary
       # Get and Set the path where alt-ergo binary is located
