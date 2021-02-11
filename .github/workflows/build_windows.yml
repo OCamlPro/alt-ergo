@@ -1,5 +1,6 @@
 name: Build Windows
 
+# This workflow Builds and tests Alt-Ergo on a Windows system using cygwin
 on:
   push:
     branches:
@@ -8,220 +9,88 @@ on:
 
 env:
   OCAML_DEFAULT_VERSION: 4.10.0
+  # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
+  # in any opam call
+  OPAMYES: true
 
 jobs:
-  # All windows, windows cache is buggy so we use only on job to do everything
   all_windows:
+    # Test to install all package and test the binary on Windows with opam
     name: All Windows
 
     runs-on: windows-latest
 
     steps:
+      # Checkout the code of the current branch
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Retrieve the opam cache with unique key
+      # A new cache is created/used if the `.opam` files changes or
+      # if we use another ocaml version
+      # This action only retrieve de .opam/ directory
       - name: Retrieve opam cache
         uses: actions/cache@v2
         id: cache-opam
         with:
-          path: ~/.opam
+          path: C:/cygwin/home/runneradmin/.opam
           key: v1-${{ runner.os }}-alt-ergo-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
 
+      # Get an OCaml environment with opam installed and the proper ocaml version
+      # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: avsm/setup-ocaml@v1
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      - name: Set git user
-        run: |
-          git config --global user.name github-actions
-          git config --global user.email github-actions-bot@users.noreply.github.com
+      # Pin the packages, this is needed for opam depext
+      # remove this step when opam 2.1 will be used
+      - name: Pin no action
+        run: opam pin add . --no-action
 
-      - name: Pin no actio
-        run: opam pin add . -y --no-action
+      # Install external dependencies
+      # remove this step when opam 2.1 will be used
+      - name: opam install depext
+        run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
-      - name: Install depext
-        run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-        if: steps.cache-opam.outputs.cache-hit != 'true'
-
+      # Install dependencies if the cache is not retrieved
       - name: Install deps
-        run: opam install -y ./*.opam --deps-only --with-test
+        run: opam install  ./*.opam --deps-only --with-test
         if: steps.cache-opam.outputs.cache-hit != 'true'
 
+      # Try to upgrade installed packages and fix dependencies if needed,
+      # when the cache is retrieved
       - name: Fixup
         run: opam upgrade --fixup
         if: steps.cache-opam.outputs.cache-hit == 'true'
 
+      # Build and install with opam
       - name: Install
         run: opam install .
 
-      - name: Get version and path
+      # Get and Set version of the installed alt-ergo binary
+      # Get and Set the path where alt-ergo binary is located
+      - name: Get version and path as variable
         id: get_version_path
         run: |
           echo "::set-output name=version::$(opam exec -- alt-ergo --version)"
           echo "::set-output name=path::$(opam var bin)"
 
+      # Upload Alt-Ergo binary as an artifact
+      # the artifact name contains the alt-ergo version as well as the system
+      # is builded on and the ocaml compiler version used
       - name: Upload Alt-Ergo binary
         uses: actions/upload-artifact@v2
         with:
           name: alt-ergo-${{ steps.get_version_path.outputs.version }}-${{ runner.os }}-${{ env.OCAML_DEFAULT_VERSION }}
           path: "${{ steps.get_version_path.outputs.path }}/alt-ergo.exe"
 
+      # Convert non-regression script to be able to run them on windows
       - name: Convert non-regression script to dos
         run: |
           dos2unix rsc/extra/non_regression.sh
           dos2unix non-regression/*.sh
 
+      # Run non regression tests
       - name: Run non regression tests
         run: opam exec -- rsc/extra/non_regression.sh
-
-
-
-################################################################################
-# Windows
-################################################################################
-  # install_windows:
-  #   # Test to install all package on different os with opam
-  #   name: Install Windows
-
-  #   if: github.event_name == 'pull_request' || github.ref == 'refs/heads/next' || github.ref == 'refs/heads/main'
-
-  #   needs:
-  #     - tests_ubuntu
-
-  #   runs-on: windows-latest
-
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-
-  #     - name: Retrieve opam cache
-  #       uses: actions/cache@v2
-  #       id: cache-opam
-  #       with:
-  #         path: ~/.opam
-  #         key: v1-${{ runner.os }}-alt-ergo-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
-
-  #     - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-  #       uses: avsm/setup-ocaml@v1
-  #       with:
-  #         ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
-
-  #     - name: Set git user
-  #       run: |
-  #         git config --global user.name github-actions
-  #         git config --global user.email github-actions-bot@users.noreply.github.com
-
-  #     - name: Pin no actio
-  #       run: opam pin add . -y --no-action
-
-  #     - name: Install depext
-  #       run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-  #       # if: steps.cache-opam.outputs.cache-hit != 'true'
-
-  #     - name: Install deps
-  #       run: opam install -y ./*.opam --deps-only --with-test
-  #       if: steps.cache-opam.outputs.cache-hit != 'true'
-
-  #     - name: Fixup
-  #       run: opam upgrade --fixup
-  #       if: steps.cache-opam.outputs.cache-hit == 'true'
-
-  #     - name: Install
-  #       run: opam install .
-
-  # tests_windows:
-  #   name: Tests Windows
-
-  #   # Only if in pull request
-  #   if: github.event_name == 'pull_request'
-
-  #   needs:
-  #     - install_windows
-
-  #   runs-on: windows-latest
-
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-
-  #     - name: Retrieve opam cache
-  #       uses: actions/cache@v2
-  #       id: cache-opam
-  #       with:
-  #         path: ~/.opam
-  #         key: v1-${{ runner.os }}-alt-ergo-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
-
-  #     - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-  #       uses: avsm/setup-ocaml@v1
-  #       with:
-  #         ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
-
-  #     - name: Set git user
-  #       run: |
-  #         git config --global user.name github-actions
-  #         git config --global user.email github-actions-bot@users.noreply.github.com
-
-  #     - name: Pin no actio
-  #       run: opam pin add . -y --no-action
-
-  #     - name: Install depext
-  #       run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-  #       if: steps.cache-opam.outputs.cache-hit != 'true'
-
-  #     - name: Install deps
-  #       run: opam install -y ./*.opam --deps-only --with-test
-  #       if: steps.cache-opam.outputs.cache-hit != 'true'
-
-  #     - name: Fixup
-  #       run: opam upgrade --fixup
-  #       if: steps.cache-opam.outputs.cache-hit == 'true'
-
-  #     - name: Install
-  #       run: opam install .
-
-  #     - name: Convert non-regression script to dos
-  #       run: |
-  #         dos2unix rsc/extra/non_regression.sh
-  #         dos2unix non-regression/*.sh
-
-  #     - name: Run non regression tests
-  #       run: opam exec -- rsc/extra/non_regression.sh
-
-    # upload_windows:
-  #   name: Upload Windows
-
-  #   if: github.event_name == 'pull_request' || github.ref == 'refs/heads/next' || github.ref == 'refs/heads/main'
-
-  #   needs:
-  #     - install_windows
-
-  #   runs-on: windows-latest
-
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-
-  #     - name: Retrieve opam cache
-  #       uses: actions/cache@v2
-  #       id: cache-opam
-  #       with:
-  #         path: ~/.opam
-  #         key: v1-${{ runner.os }}-alt-ergo-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
-
-  #     - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-  #       uses: avsm/setup-ocaml@v1
-  #       with:
-  #         ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
-
-  #     - name: Get version and path
-  #       id: get_version_path
-  #       run: |
-  #         echo "::set-output name=version::$(opam exec -- alt-ergo --version)"
-  #         echo "::set-output name=path::$(opam var bin)"
-
-  #     - name: Upload Alt-Ergo binary
-  #       uses: actions/upload-artifact@v2
-  #       with:
-  #         name: alt-ergo-${{ steps.get_version_path.outputs.version }}-${{ runner.os }}-${{ env.OCAML_DEFAULT_VERSION }}
-  #         path: "${{ steps.get_version_path.outputs.path }}\alt-ergo"
