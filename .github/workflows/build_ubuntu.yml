@@ -59,16 +59,9 @@ jobs:
       - name: Install depext
         run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
-      # Install dependencies if the cache is not retrieved
+      # Install dependencies
       - name: Install deps
         run: opam install ./*.opam --deps-only --with-test
-        if: steps.cache-opam.outputs.cache-hit != 'true'
-
-      # Try to upgrade installed packages and fix dependencies if needed,
-      # when the cache is retrieved
-      - name: Fixup
-        run: opam upgrade --fixup
-        if: steps.cache-opam.outputs.cache-hit == 'true'
 
       # Build and install with opam
       - name: Install
@@ -159,16 +152,9 @@ jobs:
       - name: opam install depext
         run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
-      # Install dependencies if the cache is not retrieved
+      # Install dependencies
       - name: Install deps
         run: opam install  ./*.opam --deps-only --with-test
-        if: steps.cache-opam.outputs.cache-hit != 'true'
-
-      # Try to upgrade installed packages and fix dependencies if needed,
-      # when the cache is retrieved
-      - name: Fixup
-        run: opam upgrade --fixup
-        if: steps.cache-opam.outputs.cache-hit == 'true'
 
       # Build and install with opam
       - name: Install
