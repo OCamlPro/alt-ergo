@@ -81,10 +81,11 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    env:
-      # The with-test flag is set to true to force installation of deps and
-      # depext needed to run the alt-ergo tests
-      OPAMWITHTEST: true
+    # Alt-Ergo's depext crashs with with-test flag to yes
+    # env:
+    #   # The with-test flag is set to true to force installation of deps and
+    #   # depext needed to run the alt-ergo tests
+    #   OPAMWITHTEST: true
 
     steps:
       # Checkout the code of the current branch
@@ -121,7 +122,7 @@ jobs:
 
       # Install dependencies if the cache is not retrieved
       - name: opam install deps
-        run: opam install ./*.opam --deps-only
+        run: opam install ./*.opam --deps-only --with-test
         if: steps.cache-opam.outputs.cache-hit != 'true'
 
       # Try to upgrade installed packages and fix dependencies if needed,
@@ -276,7 +277,7 @@ jobs:
 
       # Install dependencies if the cache is not retrieved
       - name: opam install deps
-        run: opam install ./*.opam --deps-only
+        run: opam install ./*.opam --deps-only --with-test
         if: steps.cache-opam.outputs.cache-hit != 'true'
 
       # Try to upgrade installed packages and fix dependencies if needed,
