@@ -1,5 +1,9 @@
 name: Build MacOS
 
+# This workflow try to build and test Alt-ergo on a macos system
+# If the build succed, the opam cache containing the binary is used
+# for the test and upload jobs (An artifact with the alt-ergo binary is uploaded)
+# It only runs on `next` or `main` branch
 on:
   push:
     branches:
@@ -8,18 +12,26 @@ on:
 
 env:
   OCAML_DEFAULT_VERSION: 4.10.0
+  # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
+  # in any opam call
+  OPAMYES: true
 
 jobs:
   install_macos:
-    # Test to install all package on mac with opam
+    # Test to install all package on MacOS with opam
     name: Install MacOS
 
     runs-on: macos-latest
 
     steps:
+      # Checkout the code of the current branch
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Retrieve the opam cache with unique key
+      # A new cache is created/used if the `.opam` files changes or
+      # if we use another ocaml version
+      # This action only retrieve de .opam/ directory
       - name: Retrieve opam cache
         uses: actions/cache@v2
         id: cache-opam
@@ -27,35 +39,34 @@ jobs:
           path: ~/.opam
           key: v1-${{ runner.os }}-alt-ergo-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
 
+      # Get an OCaml environment with opam installed and the proper ocaml version
+      # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: avsm/setup-ocaml@v1
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      - name: Set git user
-        run: |
-          git config --global user.name github-actions
-          git config --global user.email github-actions-bot@users.noreply.github.com
-
+      # Pin the packages, this is needed for opam depext
+      # remove this step when opam 2.1 will be used
       - name: Pin no action
-        run: opam pin add . -y --no-action
+        run: opam pin add . --no-action
 
-      - name: Install depext
-        run: opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-        # if: steps.cache-opam.outputs.cache-hit != 'true'
+      # Install external dependencies
+      # remove this step when opam 2.1 will be used
+      - name: opam install depext
+        run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
+      # Install dependencies
       - name: Install deps
-        run: opam install -y ./*.opam --deps-only --with-test
-        if: steps.cache-opam.outputs.cache-hit != 'true'
+        run: opam install  ./*.opam --deps-only --with-test
 
-      - name: Fixup
-        run: opam upgrade --fixup
-        if: steps.cache-opam.outputs.cache-hit == 'true'
-
+      # Build and install with opam
       - name: Install
         run: opam install .
 
   tests_macos:
+    # Recover the previous opam cache and run the non-regression test with
+    # the alt-ergo binary contained in the cache
     name: Tests MacOS
 
     needs:
@@ -63,10 +74,20 @@ jobs:
 
     runs-on: macos-latest
 
+    env:
+      # The with-test flag is set to true to force installation of deps and
+      # depext needed to run the alt-ergo tests
+      OPAMWITHTEST: true
+
     steps:
+      # Checkout the code of the current branch
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Retrieve the opam cache with unique key
+      # A new cache is created/used if the `.opam` files changes or
+      # if we use another ocaml version
+      # This action only retrieve de .opam/ directory
       - name: Retrieve opam cache
         uses: actions/cache@v2
         id: cache-opam
@@ -74,17 +95,38 @@ jobs:
           path: ~/.opam
           key: v1-${{ runner.os }}-alt-ergo-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
 
+      # Get an OCaml environment with opam installed and the proper ocaml version
+      # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: avsm/setup-ocaml@v1
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
+      # Pin the packages, this is needed for opam depext
+      # remove this step when opam 2.1 will be used
+      - name: Pin no action
+        run: opam pin add . --no-action
+
+      # Install external dependencies
+      # remove this step when opam 2.1 will be used
+      - name: opam install depext
+        run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+
+      # Install dependencies
+      - name: opam install deps
+        run: opam install ./*.opam --deps-only
+
+      # Alt-Ergo is already installed in the cache.
+      # The previous steps are usefull in case the project needs specific
+      # dependencies to run tests.
+
+      # Run non regression tests using alt-ergo binary installed in the .opam cache
       - name: Run non regression tests
         run: opam exec -- rsc/extra/non_regression.sh
 
 
   upload_macos:
-    # Test to install all package on mac with opam
+    # Recover the opam cache and upload the alt-ergo binary as artifact
     name: Upload MacOS
 
     needs:
@@ -93,9 +135,14 @@ jobs:
     runs-on: macos-latest
 
     steps:
+      # Checkout the code of the current branch
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Retrieve the opam cache with unique key
+      # A new cache is created/used if the `.opam` files changes or
+      # if we use another ocaml version
+      # This action only retrieve de .opam/ directory
       - name: Retrieve opam cache
         uses: actions/cache@v2
         id: cache-opam
@@ -103,18 +150,24 @@ jobs:
           path: ~/.opam
           key: v1-${{ runner.os }}-alt-ergo-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
 
+      # Get an OCaml environment with opam installed and the proper ocaml version
+      # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: avsm/setup-ocaml@v1
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      - name: Get version and path
+      # Get and Set version of the installed alt-ergo binary
+      # Get and Set the path where alt-ergo binary is located
+      - name: Get version and path as variable
         id: get_version_path
         run: |
           echo "::set-output name=version::$(opam exec -- alt-ergo --version)"
           echo "::set-output name=path::$(opam var bin)"
 
-      # Upload Alt-Ergo binary if actions is triggered on next or in a PR
+      # Upload Alt-Ergo binary as an artifact
+      # the artifact name contains the alt-ergo version as well as the system
+      # is builded on and the ocaml compiler version used
       - name: Upload Alt-Ergo binary
         uses: actions/upload-artifact@v2
         with:
