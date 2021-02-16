@@ -46,7 +46,7 @@ module type SHOSTAK = sig
   val is_mine_symb : Symbols.t -> Ty.t -> bool
 
   (** Give a representant of a term of the theory*)
-  val make : combine:bool -> Expr.t -> r * Expr.t list
+  val make : with_facts:bool -> Expr.t -> r * Expr.t list
 
   val term_extract : r -> Expr.t option * bool (* original term ? *)
 
@@ -94,7 +94,7 @@ end
 module type X = sig
   type r
 
-  val make : combine:bool -> Expr.t -> r * Expr.t list
+  val make : with_facts:bool -> Expr.t -> r * Expr.t list
 
   val type_info : r -> Ty.t
 

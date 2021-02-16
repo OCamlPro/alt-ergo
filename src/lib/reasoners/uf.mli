@@ -33,7 +33,7 @@ type r = Shostak.Combine.r
 module LX : Xliteral.S with type elt = r
 
 val empty : unit -> t
-val add : combine:bool -> t -> Expr.t -> t * Expr.t list
+val add : with_facts:bool -> t -> Expr.t -> t * Expr.t list
 
 val mem : t -> Expr.t -> bool
 

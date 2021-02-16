@@ -266,7 +266,7 @@ struct
       | Ac t   -> if equal p r then v else AC.subst p v t
       | Term _ -> if equal p r then v else r
 
-  let make ~combine t =
+  let make ~with_facts t =
     let { Expr.f = sb; ty; _ } =
       match Expr.term_view t with
       | Expr.Not_a_term _ -> assert false
@@ -283,14 +283,22 @@ struct
       not_restricted && X7.is_mine_symb sb ty,
       AC.is_mine_symb sb ty
     with
-    | true  , false , false , false, false, false, false, false -> X1.make ~combine t
-    | false , true  , false , false, false, false, false, false -> X2.make ~combine t
-    | false , false , true  , false, false, false, false, false -> X3.make ~combine t
-    | false , false , false , true , false, false, false, false -> X4.make ~combine t
-    | false , false , false , false, true , false, false, false -> X5.make ~combine t
-    | false , false , false , false, false, true , false, false -> X6.make ~combine t
-    | false , false , false , false, false, false, true , false -> X7.make ~combine t
-    | false , false , false , false, false, false, false, true  -> AC.make ~combine t
+    | true  , false , false , false, false, false, false, false ->
+      X1.make ~with_facts t
+    | false , true  , false , false, false, false, false, false ->
+      X2.make ~with_facts t
+    | false , false , true  , false, false, false, false, false ->
+      X3.make ~with_facts t
+    | false , false , false , true , false, false, false, false ->
+      X4.make ~with_facts t
+    | false , false , false , false, true , false, false, false ->
+      X5.make ~with_facts t
+    | false , false , false , false, false, true , false, false ->
+      X6.make ~with_facts t
+    | false , false , false , false, false, false, true , false ->
+      X7.make ~with_facts t
+    | false , false , false , false, false, false, false, true  ->
+      AC.make ~with_facts t
     | false , false , false , false, false, false, false, false ->
       term_embed t, []
     | _ -> assert false

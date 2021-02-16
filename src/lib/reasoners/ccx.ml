@@ -242,7 +242,8 @@ module Main : S = struct
   end
   (*BISECT-IGNORE-END*)
 
-  let one, _ = X.make ~combine:true (Expr.mk_term (Sy.name "@bottom") [] Ty.Tint)
+  let one, _ =
+    X.make ~with_facts:false (Expr.mk_term (Sy.name "@bottom") [] Ty.Tint)
 
   let concat_leaves uf l =
     let concat_rec acc t =
@@ -489,9 +490,9 @@ module Main : S = struct
       in
       let env = List.fold_left (fun env t -> add_term ~combine env facts t ex) env xs in
       (* we update uf and use *)
-      let nuf, ctx = Uf.add ~combine env.uf t in
+      let nuf, ctx = Uf.add ~with_facts:combine env.uf t in
       Debug.make_cst t ctx;
-      if combine then
+      if combine then (* If combine = false, ctx should be empty anyway *)
         List.iter (fun a -> add_fact facts (LTerm a, ex, Th_util.Other)) ctx;
       (*or Ex.empty ?*)
 

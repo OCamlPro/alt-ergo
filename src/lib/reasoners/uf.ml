@@ -331,7 +331,7 @@ module Env = struct
 
   let lookup_by_t___without_failure t env =
     try MapX.find (ME.find t env.make) env.repr
-    with Not_found -> fst (X.make ~combine:true t), Ex.empty
+    with Not_found -> fst (X.make ~with_facts:false t), Ex.empty
 
   let lookup_by_r r env =
     Options.exec_thread_yield ();
@@ -552,8 +552,8 @@ module Env = struct
            else init_leaves env x
       ) env (X.leaves mkr)
 
-  let init_term ~combine env t =
-    let mkr, ctx = X.make ~combine t in
+  let init_term ~with_facts env t =
+    let mkr, ctx = X.make ~with_facts t in
     let rp, ex = normal_form env mkr in
     let env =
       {env with
@@ -714,11 +714,11 @@ module Env = struct
 
 end
 
-let add ~combine env t =
+let add ~with_facts env t =
   Options.tool_req 3 "TR-UFX-Add";
   if ME.mem t env.make then env, []
   else
-    let env, l = Env.init_term ~combine env t in
+    let env, l = Env.init_term ~with_facts env t in
     Debug.check_invariants "add" env;
     env, l
 
@@ -956,25 +956,25 @@ let empty () =
     ac_rs = RS.empty
   }
   in
-  let env, _ = add ~combine:true env E.vrai in
-  let env, _ = add ~combine:true env E.faux in
+  let env, _ = add ~with_facts:false env E.vrai in
+  let env, _ = add ~with_facts:false env E.faux in
   distinct env [X.top (); X.bot ()] Ex.empty
 
 let make uf t = ME.find t uf.make
 
 (*** add wrappers to profile exported functions ***)
 
-let add ~combine env t =
+let add ~with_facts env t =
   if Options.get_timers() then
     try
       Timers.exec_timer_start Timers.M_UF Timers.F_add_terms;
-      let res = add ~combine env t  in
+      let res = add ~with_facts env t  in
       Timers.exec_timer_pause Timers.M_UF Timers.F_add_terms;
       res
     with e ->
       Timers.exec_timer_pause Timers.M_UF Timers.F_add_terms;
       raise e
-  else add ~combine env t
+  else add ~with_facts env t
 
 
 let is_normalized env r =
@@ -1038,7 +1038,7 @@ let assign_next env =
           we will not modify env in this function
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         *)
-      let env, _ =  add ~combine:true env s in (* important for termination *)
+      let env, _ = add ~with_facts:false env s in (* important for termination *)
       let eq = LX.view (LX.mk_eq rep (make env s)) in
       [eq, is_cs, Th_util.CS (Th_util.Th_UF, Numbers.Q.one)], env
   in

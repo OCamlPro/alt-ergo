@@ -221,13 +221,13 @@ module Shostak(X : ALIEN) = struct
       let res = f_aux (!tmp) [] in
       bitv_to_icomp (List.hd res) (List.tl res)
 
-    let make ~combine t =
-      let rec make_rec t' ctx = match E.term_view t' with
+    let make =
+      let rec make_rec ~with_facts t' ctx = match E.term_view t' with
         | E.Term { E.f = Sy.Bitv s; _ } -> string_to_bitv s, ctx
         | E.Term { E.f = Sy.Op Sy.Concat ;
                    xs = [t1;t2] ; ty = Ty.Tbitv n; _ } ->
-          let r1, ctx = make_rec t1 ctx in
-          let r2, ctx = make_rec t2 ctx in
+          let r1, ctx = make_rec ~with_facts t1 ctx in
+          let r2, ctx = make_rec ~with_facts t2 ctx in
           { bv = I_Comp (r1, r2) ; sz = n }, ctx
         | E.Term { E.f = Sy.Op Sy.Extract;
                    xs = [t1;ti;tj] ; ty = Ty.Tbitv _; _ } ->
@@ -236,17 +236,17 @@ module Shostak(X : ALIEN) = struct
             | E.Term { E.f = Sy.Int i; _ } , E.Term { E.f = Sy.Int j; _ } ->
               let i = int_of_string (Hstring.view i) in
               let j = int_of_string (Hstring.view j) in
-              let r1, ctx = make_rec t1 ctx in
+              let r1, ctx = make_rec ~with_facts t1 ctx in
               { sz = j - i + 1 ; bv = I_Ext (r1,i,j)}, ctx
             | _ -> assert false
           end
         | E.Term { E.ty = Ty.Tbitv n; _ } ->
-          let r', ctx' = X.make ~combine t' in
+          let r', ctx' = X.make ~with_facts t' in
           let ctx = ctx' @ ctx in
           {bv = I_Other (Alien r') ; sz = n}, ctx
         | _ -> assert false
-      in
-      let r, ctx = make_rec t [] in
+      in fun ~with_facts t ->
+      let r, ctx = make_rec ~with_facts t [] in
       sigma r, ctx
   end
 
@@ -681,8 +681,8 @@ module Shostak(X : ALIEN) = struct
 
   let print = Debug.print_C_ast
 
-  let make ~combine t =
-    let r, ctx = Canonizer.make ~combine t in
+  let make ~with_facts t =
+    let r, ctx = Canonizer.make ~with_facts t in
     is_mine r, ctx
 
   let color _ = assert false

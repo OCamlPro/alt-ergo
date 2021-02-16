@@ -162,8 +162,8 @@ module Shostak (X : ALIEN) = struct
   let type_info = function
     | Record (_, ty) | Access (_, _, ty) | Other (_, ty) -> ty
 
-  let make ~combine t =
-    let rec make_rec t ctx =
+  let make =
+    let rec make_rec ~with_facts t ctx =
       let { E.f; xs; ty; _ } =
         match E.term_view t with
         | E.Not_a_term _ -> assert false
@@ -175,11 +175,16 @@ module Shostak (X : ALIEN) = struct
         let l, ctx =
           List.fold_right2
             (fun x (lb, _) (l, ctx) ->
-               let r, ctx = make_rec x ctx in
-               let tyr = type_info r in
-               let dlb = E.mk_term (Symbols.Op (Symbols.Access lb)) [t] tyr in
-               let c = E.mk_eq ~iff:false dlb x in
-               (lb, r)::l, c::ctx
+               let r, ctx = make_rec ~with_facts x ctx in
+               let ctx =
+                 if with_facts then
+                   let tyr = type_info r in
+                   let dlb =
+                     E.mk_term (Symbols.Op (Symbols.Access lb)) [t] tyr in
+                   let c = E.mk_eq ~iff:false dlb x in
+                   c :: ctx
+                 else ctx in
+               (lb, r)::l, ctx
             )
             xs lbs ([], ctx)
         in
@@ -188,16 +193,16 @@ module Shostak (X : ALIEN) = struct
         begin
           match xs with
           | [x] ->
-            let r, ctx = make_rec x ctx in
+            let r, ctx = make_rec ~with_facts x ctx in
             Access (a, r, ty), ctx
           | _ -> assert false
         end
 
       | _, _ ->
-        let r, ctx' = X.make ~combine t in
+        let r, ctx' = X.make ~with_facts t in
         Other (r, ty), ctx'@ctx
-    in
-    let r, ctx = make_rec t [] in
+    in fun ~with_facts t ->
+    let r, ctx = make_rec ~with_facts t [] in
     let is_m = is_mine r in
     is_m, ctx
 
@@ -380,17 +385,17 @@ module Shostak (X : ALIEN) = struct
     | Access _ , _ -> assert false
     | _ , Access _ -> assert false
 
-  let make ~combine t =
+  let make ~with_facts t =
     if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Records Timers.F_make;
-        let res = make ~combine t in
+        let res = make ~with_facts t in
         Timers.exec_timer_pause Timers.M_Records Timers.F_make;
         res
       with e ->
         Timers.exec_timer_pause Timers.M_Records Timers.F_make;
         raise e
-    else make ~combine t
+    else make ~with_facts t
 
   let solve r1 r2 pb =
     if Options.get_timers() then

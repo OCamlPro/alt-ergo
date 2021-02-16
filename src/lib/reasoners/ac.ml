@@ -41,7 +41,7 @@ module type S = sig
   type t = r Sig.ac
 
   (* builds an embeded semantic value from an AC term *)
-  val make : combine:bool -> Expr.t -> r * Expr.t list
+  val make : with_facts:bool -> Expr.t -> r * Expr.t list
 
   (* tells whether the given term is AC*)
   val is_mine_symb : Sy.t -> Ty.t -> bool
@@ -160,7 +160,7 @@ module Make (X : Sig.X) = struct
   let fold_flatten sy f =
     List.fold_left (fun z (rt,n) -> flatten sy ((f rt),n) z) []
 
-  let abstract2 sy t r acc =
+  let abstract2 ~with_facts sy t r acc =
     match X.ac_extract r with
     | Some ac when Sy.equal sy ac.h -> r, acc
     | None -> r, acc
@@ -168,27 +168,39 @@ module Make (X : Sig.X) = struct
       | Expr.Term { Expr.f = Sy.Name (hs, Sy.Ac); xs; ty; _ } ->
         let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
         let aro_t = Expr.mk_term aro_sy xs ty  in
-        let eq = Expr.mk_eq ~iff:false aro_t t in
-        X.term_embed aro_t, eq::acc
+        let acc =
+          if with_facts then
+            let eq = Expr.mk_eq ~iff:false aro_t t in
+            eq :: acc
+          else acc in
+        X.term_embed aro_t, acc
       | Expr.Term { Expr.f = Sy.Op Sy.Mult; xs; ty; _ } ->
         let aro_sy = Sy.name "@*" in
         let aro_t = Expr.mk_term aro_sy xs ty  in
-        let eq = Expr.mk_eq ~iff:false aro_t t in
-        X.term_embed aro_t, eq::acc
+        let acc =
+          if with_facts then
+            let eq = Expr.mk_eq ~iff:false aro_t t in
+            eq :: acc
+          else acc in
+        X.term_embed aro_t, acc
       | Expr.Term { Expr.ty; _ } ->
         let k = Expr.fresh_name ty in
-        let eq = Expr.mk_eq ~iff:false k t in
-        X.term_embed k, eq::acc
+        let acc =
+          if with_facts then
+            let eq = Expr.mk_eq ~iff:false k t in
+            eq :: acc
+          else acc in
+        X.term_embed k, acc
       | Expr.Not_a_term _ -> assert false
 
-  let make ~combine t =
+  let make ~with_facts t =
     Timers.exec_timer_start Timers.M_AC Timers.F_make;
     let x = match Expr.term_view t with
       | Expr.Term { Expr.f = sy; xs = [a;b]; ty; _ } when Sy.is_ac sy ->
-        let ra, ctx1 = X.make ~combine a in
-        let rb, ctx2 = X.make ~combine b in
-        let ra, ctx = abstract2 sy a ra (ctx1 @ ctx2) in
-        let rb, ctx = abstract2 sy b rb ctx in
+        let ra, ctx1 = X.make ~with_facts a in
+        let rb, ctx2 = X.make ~with_facts b in
+        let ra, ctx = abstract2 ~with_facts sy a ra (ctx1 @ ctx2) in
+        let rb, ctx = abstract2 ~with_facts sy b rb ctx in
         let rxs = [ ra,1 ; rb,1 ] in
         X.ac_embed {h=sy; l=compact (fold_flatten sy (fun x -> x) rxs); t=ty;
                     distribute = true},
