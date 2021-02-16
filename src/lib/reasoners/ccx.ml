@@ -50,6 +50,7 @@ module type S = sig
   val add_fact : r facts -> r fact -> unit
 
   val add_term :
+    combine:bool ->
     t ->
     r facts -> (* acc *)
     Expr.t ->
@@ -57,6 +58,7 @@ module type S = sig
     t * r facts
 
   val add :
+    combine:bool ->
     t ->
     r facts -> (* acc *)
     E.t ->
@@ -240,7 +242,7 @@ module Main : S = struct
   end
   (*BISECT-IGNORE-END*)
 
-  let one, _ = X.make (Expr.mk_term (Sy.name "@bottom") [] Ty.Tint)
+  let one, _ = X.make ~combine:true (Expr.mk_term (Sy.name "@bottom") [] Ty.Tint)
 
   let concat_leaves uf l =
     let concat_rec acc t =
@@ -471,7 +473,7 @@ module Main : S = struct
     let env = clean_use env result.remove in
     env, result.assume
 
-  let rec add_term env facts t ex =
+  let rec add_term ~combine env facts t ex =
     Options.exec_thread_yield ();
     (* nothing to do if the term already exists *)
     if Uf.mem env.uf t then env
@@ -485,11 +487,12 @@ module Main : S = struct
         | E.Not_a_term _ -> assert false (* see what to do here *)
         | E.Term tt -> tt
       in
-      let env = List.fold_left (fun env t -> add_term env facts t ex) env xs in
+      let env = List.fold_left (fun env t -> add_term ~combine env facts t ex) env xs in
       (* we update uf and use *)
-      let nuf, ctx  = Uf.add env.uf t in
+      let nuf, ctx = Uf.add ~combine env.uf t in
       Debug.make_cst t ctx;
-      List.iter (fun a -> add_fact facts (LTerm a, ex, Th_util.Other)) ctx;
+      if combine then
+        List.iter (fun a -> add_fact facts (LTerm a, ex, Th_util.Other)) ctx;
       (*or Ex.empty ?*)
 
       let rt, _ = Uf.find nuf t in
@@ -514,22 +517,22 @@ module Main : S = struct
       env
     end
 
-  let add env facts a ex =
+  let add ~combine env facts a ex =
     match E.lit_view a with
     | E.Not_a_lit _ -> assert false
     | E.Pred (t1, _) ->
-      add_term env facts t1 ex
+      add_term ~combine env facts t1 ex
     | E.Eq (t1, t2) ->
-      let env = add_term env facts t1 ex in
-      add_term env facts t2 ex
+      let env = add_term ~combine env facts t1 ex in
+      add_term ~combine env facts t2 ex
     | E.Eql lt ->
       List.fold_left
-        (fun env t-> add_term env facts t ex) env  lt
+        (fun env t-> add_term ~combine env facts t ex) env  lt
     | E.Distinct lt
     | E.Builtin (_, _, lt) ->
       let env =
         List.fold_left
-          (fun env t-> add_term env facts t ex)
+          (fun env t-> add_term ~combine env facts t ex)
           env  lt
       in
       let lvs = concat_leaves env.uf lt in (* A verifier *)
@@ -540,10 +543,10 @@ module Main : S = struct
              use = Use.add rx (st,SetA.add (a, ex) sa) env.use }
         ) env lvs
 
-  let semantic_view env (a, ex, orig) facts =
+  let semantic_view ~combine env (a, ex, orig) facts =
     match a with
     | LTerm a -> (* Over terms: add terms + term_canonical_view *)
-      let env = add env facts a ex in
+      let env = add ~combine env facts a ex in
       let sa, ex = term_canonical_view env a ex in
       env, (sa, Some a, ex, orig)
 
@@ -579,7 +582,7 @@ module Main : S = struct
       Debug.facts facts "equalities";
       let e = Q.pop facts.equas in
       Q.push e facts.ineqs; (*XXX also added in touched by congruence_closure*)
-      let env, (sa, _, ex, _) =  semantic_view env e facts in
+      let env, (sa, _, ex, _) = semantic_view ~combine:true env e facts in
       Debug.assume_literal sa;
       let env = match sa with
         | A.Pred (r1,neg) ->
@@ -615,7 +618,7 @@ module Main : S = struct
       Debug.facts facts "disequalities";
       let e = Q.pop facts.diseqs in
       Q.push e facts.ineqs;
-      let env, (sa, _, ex, orig) = semantic_view env e facts in
+      let env, (sa, _, ex, orig) = semantic_view ~combine:true env e facts in
       Debug.assume_literal sa;
       let env = match sa with
         | A.Distinct (false, lr) -> assume_dist env facts lr ex
@@ -633,7 +636,7 @@ module Main : S = struct
     if Q.is_empty facts.ineqs then env, List.rev ineqs
     else
       let e = Q.pop facts.ineqs in
-      let env, e' = semantic_view env e facts in
+      let env, e' = semantic_view ~combine:true env e facts in
       let ineqs = e'::ineqs in
       let ineqs =
         match e with
@@ -693,12 +696,12 @@ module Main : S = struct
         ~do_syntactic_matching t_match env.relation env.uf selector in
     {env with relation=rel}, th_instances
 
-  let add_term env facts t ex =
-    let env = add_term env facts t ex in
+  let add_term ~combine env facts t ex =
+    let env = add_term ~combine env facts t ex in
     env, facts
 
-  let add env facts a ex =
-    let env = add env facts a ex in
+  let add ~combine env facts a ex =
+    let env = add ~combine env facts a ex in
     env, facts
 
   (* End: new implementation of add, add_term, assume_literals and all that *)
@@ -758,8 +761,8 @@ module Main : S = struct
     else
     if init_terms then
       let facts = empty_facts() in
-      let env, facts = add_term env facts t1 Ex.empty in
-      let env, facts = add_term env facts t2 Ex.empty in
+      let env, facts = add_term ~combine:true env facts t1 Ex.empty in
+      let env, facts = add_term ~combine:true env facts t2 Ex.empty in
       try
         let env, _ = assume_literals env [] facts in
         Uf.are_equal env.uf t1 t2 ~added_terms:true
@@ -771,8 +774,8 @@ module Main : S = struct
     let env =
       if not init_term then env
       else
-        let facts = empty_facts() in
-        let env, facts = add_term env facts t Ex.empty in
+        let facts = empty_facts () in
+        let env, facts = add_term ~combine:true env facts t Ex.empty in
         fst (assume_literals env [] facts) (* may raise Inconsistent *)
     in
     Uf.term_repr env.uf t

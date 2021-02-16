@@ -43,6 +43,7 @@ module type S = sig
   val add_fact : r Sig_rel.facts -> r Sig_rel.fact -> unit
 
   val add_term :
+    combine:bool ->
     t ->
     r Sig_rel.facts -> (* acc *)
     Expr.t ->
@@ -50,6 +51,7 @@ module type S = sig
     t * r Sig_rel.facts
 
   val add :
+    combine:bool ->
     t ->
     r Sig_rel.facts -> (* acc *)
     Expr.t ->

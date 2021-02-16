@@ -731,12 +731,12 @@ and update_monome are_eq expl use_x env x =
             let ra, ea =
               let (ra, _) as e = Uf.find env.new_uf a in
               if List.filter (X.equal x) (X.leaves ra) == [] then e
-              else fst (X.make a), Explanation.empty (*otherwise, we loop*)
+              else fst (X.make ~combine:true a), Explanation.empty (*otherwise, we loop*)
             in
             let rb, eb =
               let (rb, _) as e = Uf.find env.new_uf b in
               if List.filter (X.equal x) (X.leaves rb) == [] then e
-              else fst (X.make b), Explanation.empty (*otherwise, we loop*)
+              else fst (X.make ~combine:true b), Explanation.empty (*otherwise, we loop*)
             in
             let expl = Explanation.union expl (Explanation.union ea eb) in
             let pa = poly_of ra in
@@ -1988,7 +1988,7 @@ let model_from_simplex sim is_int env uf =
            acc
          else
            let t = fct (Q.to_string q) in
-           let r, _ = X.make t in
+           let r, _ = X.make ~combine:true t in
            if get_debug_interpretation () then
              Printer.print_dbg
                ~module_name:"IntervalCalculus"
@@ -2076,7 +2076,7 @@ let integrate_mapsTo_bindings sbs maps_to =
            let x = Sy.Var x in
            assert (not (Symbols.Map.mem x sbt));
            let t = E.apply_subst sbs tx in
-           let mk, _ = X.make t in
+           let mk, _ = X.make ~combine:true t in
            match P.is_const (poly_of mk) with
            | None ->
              if get_debug_fpa () >= 2 then
@@ -2162,7 +2162,7 @@ let domain_matching _lem_name tr sbt env uf optimized =
            | E.Interval (t, lb, ub) ->
              let tt = E.apply_subst sbt t in
              assert (E.is_ground tt);
-             let uf, _ = Uf.add uf tt in
+             let uf, _ = Uf.add ~combine:true uf tt in
              let rr, _ex = Uf.find uf tt in
              let p = poly_of rr in
              let p', c', d = P.normal_form_pos p in
@@ -2176,16 +2176,16 @@ let domain_matching _lem_name tr sbt env uf optimized =
 
            | E.NotTheoryConst t ->
              let tt = E.apply_subst sbt t in
-             let uf, _ = Uf.add uf tt in
+             let uf, _ = Uf.add ~combine:true uf tt in
              if X.leaves (fst (Uf.find uf tt)) == [] ||
-                X.leaves (fst (X.make tt)) == [] then
+                X.leaves (fst (X.make ~combine:true tt)) == [] then
                raise (Sem_match_fails env);
              idoms, maps_to, env, uf
 
            | E.IsTheoryConst t ->
              let tt = E.apply_subst sbt t in
-             let uf, _ = Uf.add uf tt in
-             let r, _ = X.make tt in
+             let uf, _ = Uf.add ~combine:true uf tt in
+             let r, _ = X.make ~combine:true tt in
              if X.leaves r != [] then raise (Sem_match_fails env);
              idoms, maps_to, env, uf
 
@@ -2194,8 +2194,8 @@ let domain_matching _lem_name tr sbt env uf optimized =
              let y = E.apply_subst sbt y in
              if not (terms_linear_dep env [x;y]) then
                raise (Sem_match_fails env);
-             let uf, _ = Uf.add uf x in
-             let uf, _ = Uf.add uf y in
+             let uf, _ = Uf.add ~combine:true uf x in
+             let uf, _ = Uf.add ~combine:true uf y in
              idoms, maps_to, env, uf
         )(Var.Map.empty, [], env, uf) tr.E.semantic
     in

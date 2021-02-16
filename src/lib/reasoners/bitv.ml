@@ -221,7 +221,7 @@ module Shostak(X : ALIEN) = struct
       let res = f_aux (!tmp) [] in
       bitv_to_icomp (List.hd res) (List.tl res)
 
-    let make t =
+    let make ~combine t =
       let rec make_rec t' ctx = match E.term_view t' with
         | E.Term { E.f = Sy.Bitv s; _ } -> string_to_bitv s, ctx
         | E.Term { E.f = Sy.Op Sy.Concat ;
@@ -241,7 +241,7 @@ module Shostak(X : ALIEN) = struct
             | _ -> assert false
           end
         | E.Term { E.ty = Ty.Tbitv n; _ } ->
-          let r', ctx' = X.make t' in
+          let r', ctx' = X.make ~combine t' in
           let ctx = ctx' @ ctx in
           {bv = I_Other (Alien r') ; sz = n}, ctx
         | _ -> assert false
@@ -681,8 +681,8 @@ module Shostak(X : ALIEN) = struct
 
   let print = Debug.print_C_ast
 
-  let make t =
-    let r, ctx = Canonizer.make t in
+  let make ~combine t =
+    let r, ctx = Canonizer.make ~combine t in
     is_mine r, ctx
 
   let color _ = assert false

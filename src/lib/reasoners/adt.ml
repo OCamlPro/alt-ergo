@@ -145,7 +145,7 @@ module Shostak (X : ALIEN) = struct
 
     | _ -> false
 
-  let make t =
+  let make ~combine t =
     assert (not (get_disable_adts ()));
     if get_debug_adt () then
       Printer.print_dbg
@@ -158,7 +158,7 @@ module Shostak (X : ALIEN) = struct
     let sx, ctx =
       List.fold_left
         (fun (args, ctx) s ->
-           let rs, ctx' = X.make s in
+           let rs, ctx' = X.make ~combine s in
            rs :: args, List.rev_append ctx' ctx
         )([], []) xs
     in
@@ -342,7 +342,7 @@ module Shostak (X : ALIEN) = struct
               ~module_name:"Adt" ~function_name:"abstract_selectors"
               "abstr with equality %a == %a@ "
               X.print d_arg E.print cons;
-          let cons, _ = make cons in
+          let cons, _ = make ~combine:true cons in
           let acc = (d_arg, cons) :: acc in
           let xx = is_mine @@ Select {s with d_arg = cons} in
           if get_debug_adt () then

@@ -41,7 +41,7 @@ module type S = sig
   type t = r Sig.ac
 
   (* builds an embeded semantic value from an AC term *)
-  val make : Expr.t -> r * Expr.t list
+  val make : combine:bool -> Expr.t -> r * Expr.t list
 
   (* tells whether the given term is AC*)
   val is_mine_symb : Sy.t -> Ty.t -> bool
@@ -181,12 +181,12 @@ module Make (X : Sig.X) = struct
         X.term_embed k, eq::acc
       | Expr.Not_a_term _ -> assert false
 
-  let make t =
+  let make ~combine t =
     Timers.exec_timer_start Timers.M_AC Timers.F_make;
     let x = match Expr.term_view t with
       | Expr.Term { Expr.f = sy; xs = [a;b]; ty; _ } when Sy.is_ac sy ->
-        let ra, ctx1 = X.make a in
-        let rb, ctx2 = X.make b in
+        let ra, ctx1 = X.make ~combine a in
+        let rb, ctx2 = X.make ~combine b in
         let ra, ctx = abstract2 sy a ra (ctx1 @ ctx2) in
         let rb, ctx = abstract2 sy b rb ctx in
         let rxs = [ ra,1 ; rb,1 ] in

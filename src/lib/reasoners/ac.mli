@@ -35,7 +35,7 @@ module type S = sig
   type t = r Sig.ac
 
   (* builds an embeded semantic value from an AC term *)
-  val make : Expr.t -> r * Expr.t list
+  val make : combine:bool -> Expr.t -> r * Expr.t list
 
   (* tells whether the given term is AC*)
   val is_mine_symb : Symbols.t -> Ty.t -> bool

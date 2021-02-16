@@ -162,7 +162,7 @@ module Shostak (X : ALIEN) = struct
   let type_info = function
     | Record (_, ty) | Access (_, _, ty) | Other (_, ty) -> ty
 
-  let make t =
+  let make ~combine t =
     let rec make_rec t ctx =
       let { E.f; xs; ty; _ } =
         match E.term_view t with
@@ -194,7 +194,7 @@ module Shostak (X : ALIEN) = struct
         end
 
       | _, _ ->
-        let r, ctx' = X.make t in
+        let r, ctx' = X.make ~combine t in
         Other (r, ty), ctx'@ctx
     in
     let r, ctx = make_rec t [] in
@@ -380,17 +380,17 @@ module Shostak (X : ALIEN) = struct
     | Access _ , _ -> assert false
     | _ , Access _ -> assert false
 
-  let make t =
+  let make ~combine t =
     if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Records Timers.F_make;
-        let res = make t in
+        let res = make ~combine t in
         Timers.exec_timer_pause Timers.M_Records Timers.F_make;
         res
       with e ->
         Timers.exec_timer_pause Timers.M_Records Timers.F_make;
         raise e
-    else make t
+    else make ~combine t
 
   let solve r1 r2 pb =
     if Options.get_timers() then

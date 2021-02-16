@@ -160,11 +160,11 @@ module Shostak
     let c3 = E.mk_eq ~iff:false t1 t3 in
     c3 :: c2 :: c1 :: ctx
 
-  let mk_euc_division p p2 t1 t2 ctx =
+  let mk_euc_division ~combine p p2 t1 t2 ctx =
     match P.to_list p2 with
     | [], coef_p2 ->
       let md = E.mk_term (Sy.Op Sy.Modulo) [t1;t2] Ty.Tint in
-      let r, ctx' = X.make md in
+      let r, ctx' = X.make ~combine md in
       let rp =
         P.mult_const (Q.div Q.one coef_p2) (embed r) in
       P.sub p rp, ctx' @ ctx
@@ -202,8 +202,8 @@ module Shostak
     | None -> raise Exit
     | Some res -> assert (Q.compare (Q.mult res res) q >= 0); res
 
-  let mk_partial_interpretation_1 aux_func coef p_acc ty t x =
-    let r_x, _ = X.make x in
+  let mk_partial_interpretation_1 ~combine aux_func coef p_acc ty t x =
+    let r_x, _ = X.make ~combine x in
     try
       match P.to_list (embed r_x) with
       | [], d ->
@@ -214,9 +214,9 @@ module Shostak
       let a = X.term_embed t in
       P.add (P.create [coef, a] Q.zero ty) p_acc
 
-  let mk_partial_interpretation_2 aux_func coef p_acc ty t x y =
-    let px = embed (fst (X.make x)) in
-    let py = embed (fst (X.make y)) in
+  let mk_partial_interpretation_2 ~combine aux_func coef p_acc ty t x y =
+    let px = embed (fst (X.make ~combine x)) in
+    let py = embed (fst (X.make ~combine y)) in
     try
       match P.is_const px, P.is_const py with
       | Some c_x, Some c_y ->
@@ -226,7 +226,7 @@ module Shostak
     with Exit ->
       P.add (P.create [coef, (X.term_embed t)] Q.zero ty) p_acc
 
-  let rec mke coef p t ctx =
+  let rec mke ~combine coef p t ctx =
     let { E.f = sb ; xs; ty; _ } =
       match E.term_view t with
       | E.Not_a_term _ -> assert false
@@ -238,32 +238,32 @@ module Shostak
       P.add_const c p, ctx
 
     | Sy.Op Sy.Mult, [t1;t2] ->
-      let p1, ctx = mke coef (empty_polynome ty) t1 ctx in
-      let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
+      let p1, ctx = mke ~combine coef (empty_polynome ty) t1 ctx in
+      let p2, ctx = mke ~combine Q.one (empty_polynome ty) t2 ctx in
       if get_no_nla() && P.is_const p1 == None && P.is_const p2 == None
       then
         (* becomes uninterpreted *)
         let tau = E.mk_term (Sy.name ~kind:Sy.Ac "@*") [t1; t2] ty in
-        let xtau, ctx' = X.make tau in
+        let xtau, ctx' = X.make ~combine tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
         P.add p (P.mult p1 p2), ctx
 
     | Sy.Op Sy.Div, [t1;t2] ->
-      let p1, ctx = mke Q.one (empty_polynome ty) t1 ctx in
-      let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
+      let p1, ctx = mke ~combine Q.one (empty_polynome ty) t1 ctx in
+      let p2, ctx = mke ~combine Q.one (empty_polynome ty) t2 ctx in
       if get_no_nla() &&
          (P.is_const p2 == None ||
           (ty == Ty.Tint && P.is_const p1 == None)) then
         (* becomes uninterpreted *)
         let tau = E.mk_term (Sy.name "@/") [t1; t2] ty in
-        let xtau, ctx' = X.make tau in
+        let xtau, ctx' = X.make ~combine tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
         let p3, ctx =
           try
             let p, approx = P.div p1 p2 in
-            if approx then mk_euc_division p p2 t1 t2 ctx
+            if approx then mk_euc_division ~combine p p2 t1 t2 ctx
             else p, ctx
           with Division_by_zero | Polynome.Maybe_zero ->
             P.create [Q.one, X.term_embed t] Q.zero ty, ctx
@@ -271,21 +271,21 @@ module Shostak
         P.add p (P.mult_const coef p3), ctx
 
     | Sy.Op Sy.Plus , l ->
-      List.fold_left (fun (p, ctx) u -> mke coef p u ctx )(p, ctx) l
+      List.fold_left (fun (p, ctx) u -> mke ~combine coef p u ctx )(p, ctx) l
 
     | Sy.Op Sy.Minus , [t1;t2] ->
-      let p2, ctx = mke (Q.minus coef) p t2 ctx in
-      mke coef p2 t1 ctx
+      let p2, ctx = mke ~combine (Q.minus coef) p t2 ctx in
+      mke ~combine coef p2 t1 ctx
 
     | Sy.Op Sy.Modulo , [t1;t2] ->
-      let p1, ctx = mke Q.one (empty_polynome ty) t1 ctx in
-      let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
+      let p1, ctx = mke ~combine Q.one (empty_polynome ty) t1 ctx in
+      let p2, ctx = mke ~combine Q.one (empty_polynome ty) t2 ctx in
       if get_no_nla() &&
          (P.is_const p1 == None || P.is_const p2 == None)
       then
         (* becomes uninterpreted *)
         let tau = E.mk_term (Sy.name "@%") [t1; t2] ty in
-        let xtau, ctx' = X.make tau in
+        let xtau, ctx' = X.make ~combine tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
         let p3, ctx =
@@ -307,50 +307,50 @@ module Shostak
         let res, _, _ = Fpa_rounding.float_of_rational prec exp mode e in
         res
       in
-      mk_partial_interpretation_1 aux_func coef p ty t x, ctx
+      mk_partial_interpretation_1 ~combine aux_func coef p ty t x, ctx
 
     | Sy.Op Sy.Integer_round, [mode; x] ->
       let aux_func = Fpa_rounding.round_to_integer mode in
-      mk_partial_interpretation_1 aux_func coef p ty t x, ctx
+      mk_partial_interpretation_1 ~combine aux_func coef p ty t x, ctx
 
     | Sy.Op (Sy.Abs_int | Sy.Abs_real) , [x] ->
-      mk_partial_interpretation_1 Q.abs coef p ty t x, ctx
+      mk_partial_interpretation_1 ~combine Q.abs coef p ty t x, ctx
 
     | Sy.Op Sy.Sqrt_real, [x] ->
-      mk_partial_interpretation_1 exact_sqrt_or_Exit coef p ty t x, ctx
+      mk_partial_interpretation_1 ~combine exact_sqrt_or_Exit coef p ty t x, ctx
 
     | Sy.Op Sy.Sqrt_real_default, [x] ->
-      mk_partial_interpretation_1 default_sqrt_or_Exit coef p ty t x, ctx
+      mk_partial_interpretation_1 ~combine default_sqrt_or_Exit coef p ty t x, ctx
 
     | Sy.Op Sy.Sqrt_real_excess, [x] ->
-      mk_partial_interpretation_1 excess_sqrt_or_Exit coef p ty t x, ctx
+      mk_partial_interpretation_1 ~combine excess_sqrt_or_Exit coef p ty t x, ctx
 
     | Sy.Op Sy.Real_of_int, [x] ->
-      mk_partial_interpretation_1 (fun d -> d) coef p ty t x, ctx
+      mk_partial_interpretation_1 ~combine (fun d -> d) coef p ty t x, ctx
 
     | Sy.Op Sy.Int_floor, [x] ->
-      mk_partial_interpretation_1 Q.floor coef p ty t x, ctx
+      mk_partial_interpretation_1 ~combine Q.floor coef p ty t x, ctx
 
     | Sy.Op Sy.Int_ceil, [x] ->
-      mk_partial_interpretation_1 Q.ceiling coef p ty t x, ctx
+      mk_partial_interpretation_1 ~combine Q.ceiling coef p ty t x, ctx
 
     | Sy.Op (Sy.Max_int | Sy.Max_real), [x;y] ->
       let aux_func c d = if Q.compare c d >= 0 then c else d in
-      mk_partial_interpretation_2 aux_func coef p ty t x y, ctx
+      mk_partial_interpretation_2 ~combine aux_func coef p ty t x y, ctx
 
     | Sy.Op (Sy.Min_int | Sy.Min_real), [x;y] ->
       let aux_func c d = if Q.compare c d <= 0 then c else d in
-      mk_partial_interpretation_2 aux_func coef p ty t x y, ctx
+      mk_partial_interpretation_2 ~combine aux_func coef p ty t x y, ctx
 
     | Sy.Op Sy.Integer_log2, [x] ->
       let aux_func q =
         if Q.compare_to_0 q <= 0 then raise Exit;
         Q.from_int (Fpa_rounding.integer_log_2 q)
       in
-      mk_partial_interpretation_1 aux_func coef p ty t x, ctx
+      mk_partial_interpretation_1 ~combine aux_func coef p ty t x, ctx
 
     | Sy.Op Sy.Pow, [x; y] ->
-      mk_partial_interpretation_2
+      mk_partial_interpretation_2 ~combine
         (fun x y -> calc_power x y ty) coef p ty t x y, ctx
 
     | Sy.Op Sy.Fixed, _ ->
@@ -360,16 +360,16 @@ module Shostak
     (*** <end>: partial handling of some arith/FPA operators **)
 
     | _ ->
-      let a, ctx' = X.make t in
+      let a, ctx' = X.make ~combine t in
       let ctx = ctx' @ ctx in
       match P.extract a with
       | Some p' -> P.add p (P.mult_const coef p'), ctx
       | _ -> P.add p (P.create [coef, a] Q.zero ty), ctx
 
-  let make t =
+  let make ~combine t =
     tool_req 4 "TR-Arith-Make";
     let ty = E.type_info t in
-    let p, ctx = mke Q.one (empty_polynome ty) t [] in
+    let p, ctx = mke ~combine Q.one (empty_polynome ty) t [] in
     is_mine p, ctx
 
   let rec expand p n acc =
@@ -692,17 +692,17 @@ module Shostak
     with Unsafe ->
       assert false
 
-  let make t =
+  let make ~combine t =
     if get_timers() then
       try
         Timers.exec_timer_start Timers.M_Arith Timers.F_make;
-        let res = make t in
+        let res = make ~combine t in
         Timers.exec_timer_pause Timers.M_Arith Timers.F_make;
         res
       with e ->
         Timers.exec_timer_pause Timers.M_Arith Timers.F_make;
         raise e
-    else make t
+    else make ~combine t
 
   let solve r1 r2 pb =
     if get_timers() then

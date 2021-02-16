@@ -246,8 +246,8 @@ let get_of_set are_eq are_dist gtype (env,acc) class_of =
          in
          match Sy.is_set f, xs with
          | true , [stab;si;sv] ->
-           let xi, _ = X.make gi in
-           let xj, _ = X.make si in
+           let xi, _ = X.make ~combine:true gi in
+           let xj, _ = X.make ~combine:true si in
            let get_stab  = E.mk_term (Sy.Op Sy.Get) [stab;gi] gty in
            let p       = LR.mk_eq xi xj in
            let p_ded   = E.mk_eq ~iff:false get sv in
@@ -304,8 +304,8 @@ let get_and_set are_eq are_dist gtype (env,acc) class_of =
        else
          begin
            let env = {env with seen = Tmap.update get set env.seen} in
-           let xi, _ = X.make gi in
-           let xj, _ = X.make si in
+           let xi, _ = X.make ~combine:true gi in
+           let xj, _ = X.make ~combine:true si in
            let get_stab  = E.mk_term (Sy.Op Sy.Get) [stab;gi] gty in
            let gt_of_st  = E.mk_term (Sy.Op Sy.Get) [set;gi] gty in
            let p       = LR.mk_eq xi xj in
