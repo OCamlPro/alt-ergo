@@ -553,7 +553,7 @@ module Env = struct
       ) env (X.leaves mkr)
 
   let init_term env t =
-    let mkr, ctx = X.make t in
+    let mkr, ctx = X.make_semantic t in
     let rp, ex = normal_form env mkr in
     let env =
       {env with

@@ -295,6 +295,13 @@ struct
       term_embed t, []
     | _ -> assert false
 
+  let make_semantic =
+    let cache = Hashtbl.create 43 in
+    fun t ->
+      match Hashtbl.find_opt cache t with
+        | None -> let res = make t in Hashtbl.add cache t res; res
+        | Some res -> res
+
   let fully_interpreted sb ty =
     let not_restricted = not (get_restricted ()) in
     match
