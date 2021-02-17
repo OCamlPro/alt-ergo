@@ -85,7 +85,8 @@ type r = X.r
 type t = {
 
   (* term -> [t] *)
-  make : r ME.t;
+  make : (r * E.t list) ME.t ref;
+  added : SE.t;
 
   (* representative table *)
   repr : (r * Ex.t) MapX.t;
@@ -105,6 +106,16 @@ type t = {
 }
 
 
+let do_make t env =
+  try ME.find t !(env.make)
+  with Not_found ->
+    let res = X.make t in
+    env.make := ME.add t res !(env.make);
+    res
+
+let find_mk t env =
+  fst (ME.find t !(env.make))
+
 exception Found_term of E.t
 
 (* hack: would need an inverse map from semantic values to terms *)
@@ -115,7 +126,7 @@ let terms_of_distinct env l = match LX.view l with
           try
             let cl = MapX.find r env.classes in
             SE.iter (fun t ->
-                if X.equal (ME.find t env.make) r then
+                if X.equal (find_mk t env) r then
                   raise (Found_term t)) cl;
             acc
           with
@@ -154,7 +165,7 @@ module Debug = struct
 
   let pmake fmt m =
     fprintf fmt "@[<v 2>map:@,";
-    ME.iter (fun t r -> fprintf fmt "%a -> %a@," E.print t X.print r) m;
+    ME.iter (fun t (r, _) -> fprintf fmt "%a -> %a@," E.print t X.print r) m;
     fprintf fmt "@]@,"
 
   let prepr fmt m =
@@ -204,7 +215,7 @@ module Debug = struct
         "@[<v 0>-------------------------------------------------@ \
          %a%a%a%a%a\
          -------------------------------------------------@]"
-        pmake env.make
+        pmake !(env.make)
         prepr env.repr
         prules env.ac_rs
         pclasses env.classes
@@ -320,18 +331,18 @@ end
 
 module Env = struct
 
-  let mem env t = ME.mem t env.make
+  let mem env t = SE.mem t env.added
 
   let lookup_by_t t env =
     Options.exec_thread_yield ();
-    try MapX.find (ME.find t env.make) env.repr
+    try MapX.find (find_mk t env) env.repr
     with Not_found ->
       Debug.lookup_not_found t env;
       assert false (*X.make t, Ex.empty*) (* XXXX *)
 
   let lookup_by_t___without_failure t env =
-    try MapX.find (ME.find t env.make) env.repr
-    with Not_found -> fst (X.make t), Ex.empty
+    try MapX.find (find_mk t env) env.repr
+    with Not_found -> fst (do_make t env), Ex.empty
 
   let lookup_by_r r env =
     Options.exec_thread_yield ();
@@ -513,15 +524,17 @@ module Env = struct
       if in_repr then MapX.find p env.repr
       else normal_form env p
     in
-    let mk_env = env.make in
-    let make =
+    let mk_env = !(env.make) in
+    let make, added =
       match X.term_extract p with
-      | Some t, true when not (ME.mem t mk_env) -> ME.add t p mk_env
-      | _ -> mk_env
+      | Some t, true when not (ME.mem t mk_env) ->
+        ME.add t (p, []) mk_env, SE.add t env.added
+      | _ -> mk_env, env.added
     in
+    env.make := make;
     let env =
       { env with
-        make    = make;
+        added   = added;
         repr    =
           if in_repr then env.repr
           else MapX.add p (rp, ex_rp) env.repr;
@@ -553,11 +566,12 @@ module Env = struct
       ) env (X.leaves mkr)
 
   let init_term env t =
-    let mkr, ctx = X.make t in
+    let mkr, ctx = do_make t env in
     let rp, ex = normal_form env mkr in
+    assert (ME.mem t !(env.make));
     let env =
       {env with
-       make    = ME.add t mkr env.make;
+       added   = SE.add t env.added;
        repr    = MapX.add mkr (rp,ex) env.repr;
        classes = add_to_classes t rp env.classes;
        gamma   = add_to_gamma mkr rp env.gamma;
@@ -716,7 +730,7 @@ end
 
 let add env t =
   Options.tool_req 3 "TR-UFX-Add";
-  if ME.mem t env.make then env, []
+  if SE.mem t env.added then env, []
   else
     let env, l = Env.init_term env t in
     Debug.check_invariants "add" env;
@@ -876,7 +890,7 @@ let already_distinct env lr =
 let mapt_choose m =
   let r = ref None in
   (try
-     ME.iter (fun x rx ->
+     ME.iter (fun x (rx, _) ->
          r := Some (x, rx); raise Exit
        ) m
    with Exit -> ());
@@ -887,7 +901,7 @@ let model env =
     MapX.fold (fun r cl acc ->
         let l, to_rel =
           List.fold_left (fun (l, to_rel) t ->
-              let rt = ME.find t env.make in
+              let rt = find_mk t env in
               if get_complete_model () || E.is_in_model t then
                 if X.equal rt r then l, (t,rt)::to_rel
                 else t::l, (t,rt)::to_rel
@@ -902,7 +916,7 @@ let model env =
       let makes = ME.remove x makes in
       let acc =
         if get_complete_model () || E.is_in_model x then
-          ME.fold (fun y ry acc ->
+          ME.fold (fun y (ry, _) acc ->
               if (get_complete_model () || E.is_in_model y)
               && (already_distinct env [rx; ry]
                   || already_distinct env [ry; rx])
@@ -913,7 +927,7 @@ let model env =
       in extract_neqs acc makes
     with Not_found -> acc
   in
-  let neqs = extract_neqs [] env.make in
+  let neqs = extract_neqs [] !(env.make) in
   eqs, neqs
 
 
@@ -931,7 +945,7 @@ let mem = Env.mem
 
 let class_of env t =
   try
-    let rt, _ = MapX.find (ME.find t env.make) env.repr in
+    let rt, _ = MapX.find (find_mk t env) env.repr in
     MapX.find rt env.classes
   with Not_found -> SE.singleton t
 
@@ -948,7 +962,8 @@ let class_of env t = SE.elements (class_of env t)
 
 let empty () =
   let env = {
-    make  = ME.empty;
+    make  = ref ME.empty;
+    added = SE.empty;
     repr = MapX.empty;
     classes = MapX.empty;
     gamma = MapX.empty;
@@ -960,7 +975,7 @@ let empty () =
   let env, _ = add env E.faux in
   distinct env [X.top (); X.bot ()] Ex.empty
 
-let make uf t = ME.find t uf.make
+let make uf t = find_mk t uf
 
 (*** add wrappers to profile exported functions ***)
 
@@ -1013,7 +1028,7 @@ let assign_next env =
       MapX.iter
         (fun r eclass ->
            let eclass =
-             try SE.fold (fun t z -> (t, ME.find t env.make)::z) eclass []
+             try SE.fold (fun t z -> (t, find_mk t env)::z) eclass []
              with Not_found -> assert false
            in
            let opt =
@@ -1198,14 +1213,14 @@ let is_a_good_model_value (x, _) =
 let model_repr_of_term t env mrepr =
   try ME.find t mrepr, mrepr
   with Not_found ->
-    let mk = try ME.find t env.make with Not_found -> assert false in
+    let mk = try find_mk t env with Not_found -> assert false in
     let rep,_ = try MapX.find mk env.repr with Not_found -> assert false in
     let cls =
       try SE.elements (MapX.find rep env.classes)
       with Not_found -> assert false
     in
     let cls =
-      try List.rev_map (fun s -> s, ME.find s env.make) cls
+      try List.rev_map (fun s -> s, find_mk s env) cls
       with Not_found -> assert false
     in
     let e = X.choose_adequate_model t rep cls in
@@ -1271,7 +1286,7 @@ let output_concrete_model ({ make; _ } as env) =
                  Profile.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
                  mrepr
 
-        ) make (Profile.empty, Profile.empty, Profile.empty, ME.empty)
+        ) !make (Profile.empty, Profile.empty, Profile.empty, ME.empty)
     in
     if i > 0 then begin
       Printer.print_fmt ~flushed:false (get_fmt_mdl ()) "(@ ";
