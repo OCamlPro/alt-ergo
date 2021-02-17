@@ -639,7 +639,7 @@ module Main_Default : S = struct
     let add_and_process_conseqs a t =
       (* !!! query does not modify gamma_finite anymore *)
       Options.exec_thread_yield ();
-      let gamma, facts = CC_X.add ~combine:true t.gamma (CC_X.empty_facts()) a Ex.empty in
+      let gamma, facts = CC_X.add t.gamma (CC_X.empty_facts()) a Ex.empty in
       let gamma, _ = CC_X.assume_literals gamma [] facts in
       { t with gamma = gamma }
     in
@@ -678,7 +678,7 @@ module Main_Default : S = struct
 
   let add_term_in_gm gm t =
     let facts = CC_X.empty_facts() in
-    let gm, facts = CC_X.add_term ~combine:true gm facts t Ex.empty in
+    let gm, facts = CC_X.add_term gm facts t Ex.empty in
     fst (CC_X.assume_literals gm [] facts) (* may raise Inconsistent *)
 
   let add_term env t ~add_in_cs =
@@ -688,8 +688,8 @@ module Main_Default : S = struct
 
   let empty () =
     let env = CC_X.empty () in
-    let env, _ = CC_X.add_term ~combine:true env (CC_X.empty_facts()) E.vrai Ex.empty in
-    let env, _ = CC_X.add_term ~combine:true env (CC_X.empty_facts()) E.faux Ex.empty in
+    let env, _ = CC_X.add_term env (CC_X.empty_facts()) E.vrai Ex.empty in
+    let env, _ = CC_X.add_term env (CC_X.empty_facts()) E.faux Ex.empty in
     let t =
       { gamma = env;
         gamma_finite = env;

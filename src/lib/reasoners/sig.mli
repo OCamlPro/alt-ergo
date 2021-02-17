@@ -45,7 +45,8 @@ module type SHOSTAK = sig
   (** return true if the symbol and the type are owned by the theory*)
   val is_mine_symb : Symbols.t -> Ty.t -> bool
 
-  (** Give a representant of a term of the theory*)
+  (** Give a representant of a term of the theory & a list of facts implied by it.
+      This list is not computed if with_facts = false *)
   val make : with_facts:bool -> Expr.t -> r * Expr.t list
 
   val term_extract : r -> Expr.t option * bool (* original term ? *)
@@ -95,6 +96,8 @@ module type X = sig
   type r
 
   val make : with_facts:bool -> Expr.t -> r * Expr.t list
+
+  val make_semantic : Expr.t -> r * Expr.t list
 
   val type_info : r -> Ty.t
 
