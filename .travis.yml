@@ -75,33 +75,25 @@ jobs:
     # style check
       name: "Style check"
       script: rsc/extra/check_style.sh
-      env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
+      env: OPAMBUILDTEST=false OCAML_VERSION=4.05.0
     # indentation check
     - stage: "pre-check"
       name: "Indent check"
       script: rsc/extra/check_indentation.sh
-      env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
+      env: OPAMBUILDTEST=false OCAML_VERSION=4.05.0
 
     # === Build Tests ===
     # Installation (no tests)
     - stage: "test"
       name: "install (no tests)"
       script: rsc/extra/travis_install_test.sh
-      env: OPAMBUILDTEST=false OCAML_VERSION=4.04.2
+      env: OPAMBUILDTEST=false OCAML_VERSION=4.05.0
     # Installation (with tests)
     - stage: "test"
       name: "install (with tests)"
       script: rsc/extra/travis_install_test.sh
-      env: OPAMBUILDTEST=true OCAML_VERSION=4.04.2
+      env: OPAMBUILDTEST=true OCAML_VERSION=4.05.0
     # Non-regression tests
-    - stage: "test"
-      name: "non-regression (4.04.2)"
-      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
-      env: OPAMBUILDTEST=true OCAML_VERSION=4.04.2
-    - stage: "test"
-      name: "non-regression (4.04.2+flambda)"
-      script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
-      env: OPAMBUILDTEST=true OCAML_VERSION=4.04.2+flambda
     - stage: "test"
       name: "non-regression (4.05.0)"
       script: rsc/extra/travis_local_test.sh ${LOCAL_INSTALL_DIR}
