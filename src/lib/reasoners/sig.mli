@@ -96,8 +96,6 @@ module type X = sig
 
   val make : Expr.t -> r * Expr.t list
 
-  val make_semantic : Expr.t -> r * Expr.t list
-
   val type_info : r -> Ty.t
 
   val str_cmp : r -> r -> int

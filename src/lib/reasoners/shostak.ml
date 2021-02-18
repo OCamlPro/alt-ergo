@@ -30,6 +30,8 @@ open Format
 open Options
 open Sig
 
+module H = Hashtbl.Make(Expr)
+
 (*** Combination module of Shostak theories ***)
 
 [@@@ocaml.warning "-60"]
@@ -294,13 +296,6 @@ struct
     | false , false , false , false, false, false, false, false ->
       term_embed t, []
     | _ -> assert false
-
-  let make_semantic =
-    let cache = Hashtbl.create 43 in
-    fun t ->
-      match Hashtbl.find_opt cache t with
-        | None -> let res = make t in Hashtbl.add cache t res; res
-        | Some res -> res
 
   let fully_interpreted sb ty =
     let not_restricted = not (get_restricted ()) in
@@ -740,7 +735,17 @@ and AC : Ac.S
   with type r = CX.r =
   Ac.Make(CX)
 
-module Combine = CX
+module Combine = struct
+  include CX
+
+  let make =
+    let cache = H.create 43 in
+    fun t ->
+      match H.find_opt cache t with
+        | None -> let res = make t in H.add cache t res; res
+        | Some res -> res
+end
+
 module Arith = X1
 module Records = X2
 module Bitv = X3
