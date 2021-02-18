@@ -742,8 +742,8 @@ module Combine = struct
     let cache = H.create 43 in
     fun t ->
       match H.find_opt cache t with
-        | None -> let res = make t in H.add cache t res; res
-        | Some res -> res
+      | None -> let res = make t in H.add cache t res; res
+      | Some res -> res
 end
 
 module Arith = X1
