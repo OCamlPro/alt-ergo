@@ -104,8 +104,6 @@ jobs:
       matrix:
         # Setup ocaml versions to test
         ocaml-version:
-          - 4.04.2
-          - 4.04.2+flambda
           - 4.05.0
           - 4.05.0+flambda
           - 4.06.1

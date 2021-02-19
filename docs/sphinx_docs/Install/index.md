@@ -31,8 +31,8 @@ External dependencies graph generated with `dune-deps` (use `make archi` for sou
 
 To compile the sources, you will need the following libraries :
 ```
-  ocaml >= 4.04.0
-  dune >= 1.5
+  ocaml >= 4.05.0
+  dune >= 2.0
   zarith
   camlzip
   menhir
