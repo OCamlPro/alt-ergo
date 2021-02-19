@@ -114,6 +114,8 @@ jobs:
           - 4.08.1+flambda
           - 4.09.1
           - 4.09.1+flambda
+          - 4.11.1
+          - 4.11.1+flambda
 
     runs-on: ubuntu-latest
 
