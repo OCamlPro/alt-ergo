@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html4" lang="en" >
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
   
@@ -30,10 +30,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -177,18 +177,16 @@
 <p>External contributions to Alt-Ergo may be proposed using git’s standard pull request mechanism from your <code class="docutils literal notranslate"><span class="pre">base</span></code> branch to our <code class="docutils literal notranslate"><span class="pre">target</span></code> one ( <code class="docutils literal notranslate"><span class="pre">next</span></code> by default).
 The following terms apply to all such contributions:</p>
 <ul>
-<li><p class="first">We require all pull requests to pass :</p>
+<li><p>We require all pull requests to pass :</p>
 <ul class="simple">
-<li>Our non regression suite, you can run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">non-regression</span></code> to check if your changes affect the performance and answers of Alt-Ergo.</li>
-<li>Our style checking, every lines should length 80 columns maximum and should be indent with ocp-indent.
-We strongly recommand to use the following command line so the indent and style checking will be done automatically when commiting.</li>
+<li><p>Our non regression suite, you can run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">non-regression</span></code> to check if your changes affect the performance and answers of Alt-Ergo.</p></li>
+<li><p>Our style checking, every lines should length 80 columns maximum and should be indent with ocp-indent.
+We strongly recommand to use the following command line so the indent and style checking will be done automatically when commiting.</p></li>
 </ul>
 <p><code class="docutils literal notranslate"><span class="pre">cp</span> <span class="pre">rsc/extra/pre-commit-git-hook</span> <span class="pre">.git/hooks/pre-commit</span></code></p>
 </li>
-<li><p class="first">Pull request should be rebased and up to date from the <code class="docutils literal notranslate"><span class="pre">base</span></code> branch to be merged.</p>
-</li>
-<li><p class="first">All commits will be squashed into one when merged into the <code class="docutils literal notranslate"><span class="pre">base</span></code> branch. A PR with only one commit is appreciated if the modification are minimal. Else, we ask for a clean commit history with relevant messages since it facilitates the review.</p>
-</li>
+<li><p>Pull request should be rebased and up to date from the <code class="docutils literal notranslate"><span class="pre">base</span></code> branch to be merged.</p></li>
+<li><p>All commits will be squashed into one when merged into the <code class="docutils literal notranslate"><span class="pre">base</span></code> branch. A PR with only one commit is appreciated if the modification are minimal. Else, we ask for a clean commit history with relevant messages since it facilitates the review.</p></li>
 </ul>
 </div>
 <div class="section" id="legal-guidelines">

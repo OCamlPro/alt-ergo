@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html4" lang="en" >
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
   
@@ -30,10 +30,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../../_static/doctools.js"></script>
-        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../../../_static/js/theme.js"></script>
 
@@ -318,19 +318,19 @@ They hold several fields, which be accessed.</p>
 <div class="section" id="id3">
 <h3>Examples<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
 <ul>
-<li><p class="first">When no recursion is involved, we usually talk of <em>enumerations</em>, or simply <em>enums</em>, which are the simplest examples of ADT.</p>
+<li><p>When no recursion is involved, we usually talk of <em>enumerations</em>, or simply <em>enums</em>, which are the simplest examples of ADT.</p>
 <p><em>Example:</em></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">type</span> <span class="n">poker_suit</span> <span class="o">=</span> <span class="n">diamond</span> <span class="o">|</span> <span class="n">club</span> <span class="o">|</span> <span class="n">heart</span> <span class="o">|</span> <span class="n">spade</span>
 </pre></div>
 </div>
 </li>
-<li><p class="first">Records may be used in ADT to give additionnal structure.</p>
+<li><p>Records may be used in ADT to give additionnal structure.</p>
 <p><em>Example:</em></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">type</span> <span class="s1">&#39;a and_infty = infty | number of { x:&#39;</span><span class="n">a</span> <span class="p">}</span>
 </pre></div>
 </div>
 </li>
-<li><p class="first">More complex examples involve recursion.</p>
+<li><p>More complex examples involve recursion.</p>
 <p><em>Example:</em></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">type</span> <span class="n">nat</span> <span class="o">=</span> <span class="n">zero</span> <span class="o">|</span> <span class="n">succ</span> <span class="n">of</span> <span class="p">{</span> <span class="n">x</span><span class="p">:</span><span class="n">nat</span> <span class="p">}</span>
 
@@ -339,20 +339,20 @@ They hold several fields, which be accessed.</p>
 </pre></div>
 </div>
 </li>
-<li><p class="first">ADT may be parametrized.</p>
+<li><p>ADT may be parametrized.</p>
 <p><em>Example:</em></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">type</span> <span class="s1">&#39;a tree = NIL | Node of { left:&#39;</span><span class="n">a</span> <span class="n">tree</span><span class="p">;</span> <span class="n">val</span><span class="p">:</span><span class="s1">&#39;a; right:&#39;</span><span class="n">a</span> <span class="n">tree</span> <span class="p">}</span>
 </pre></div>
 </div>
 </li>
-<li><p class="first">It is possible to define mutually recursive structures by using the keyword <code class="docutils literal notranslate"><span class="pre">and</span></code>.</p>
+<li><p>It is possible to define mutually recursive structures by using the keyword <code class="docutils literal notranslate"><span class="pre">and</span></code>.</p>
 <p><em>Example:</em></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">type</span>  <span class="s1">&#39;a tree   = Empty | Node of { val:&#39;</span><span class="n">a</span><span class="p">;</span> <span class="n">children</span><span class="p">:</span><span class="s1">&#39;a forest }</span>
 <span class="ow">and</span>   <span class="s1">&#39;a forest = Nil   | Cons of { head:&#39;</span><span class="n">a</span> <span class="n">tree</span><span class="p">;</span> <span class="n">tail</span><span class="p">:</span><span class="s1">&#39;a forest }</span>
 </pre></div>
 </div>
 </li>
-<li><p class="first">ADT can be used like any type. Constructors can be called just as functions (if they are defined as records) or as constants (otherwise).
+<li><p>ADT can be used like any type. Constructors can be called just as functions (if they are defined as records) or as constants (otherwise).
 <em>Example:</em></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">type</span> <span class="s1">&#39;a tree = NIL | Node of { left:&#39;</span><span class="n">a</span> <span class="n">tree</span><span class="p">;</span> <span class="n">val</span><span class="p">:</span><span class="s1">&#39;a; right:&#39;</span><span class="n">a</span> <span class="n">tree</span> <span class="p">}</span>
 <span class="n">logic</span> <span class="n">t</span><span class="p">:</span><span class="nb">int</span> <span class="n">tree</span>

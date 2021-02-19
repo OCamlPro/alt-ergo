@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html4" lang="en" >
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
   
@@ -30,10 +30,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -214,8 +214,8 @@
 <p>External dependencies graph generated with <code class="docutils literal notranslate"><span class="pre">dune-deps</span></code> (use <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">archi</span></code> for source files dependencies):</p>
 <p><img alt="../_images/deps.png" src="../_images/deps.png" /></p>
 <p>To compile the sources, you will need the following libraries :</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="n">ocaml</span> <span class="o">&gt;=</span> <span class="mf">4.04</span><span class="o">.</span><span class="mi">0</span>
-  <span class="n">dune</span> <span class="o">&gt;=</span> <span class="mf">1.5</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="n">ocaml</span> <span class="o">&gt;=</span> <span class="mf">4.05</span><span class="o">.</span><span class="mi">0</span>
+  <span class="n">dune</span> <span class="o">&gt;=</span> <span class="mf">2.0</span>
   <span class="n">zarith</span>
   <span class="n">camlzip</span>
   <span class="n">menhir</span>
@@ -236,14 +236,14 @@
 <div class="section" id="configuration">
 <h3>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h3>
 <ol class="simple">
-<li>Configure with <code class="docutils literal notranslate"><span class="pre">./configure</span></code> to generate Makefile.config,
-in order to build everything (lib, parsers, binaries, and GUI).</li>
-<li>Alternatively, you can configure with <code class="docutils literal notranslate"><span class="pre">./configure</span> <span class="pre">-prefix</span> <span class="pre">some-absolute-path-prefix</span></code> to add a prefix for installation
+<li><p>Configure with <code class="docutils literal notranslate"><span class="pre">./configure</span></code> to generate Makefile.config,
+in order to build everything (lib, parsers, binaries, and GUI).</p></li>
+<li><p>Alternatively, you can configure with <code class="docutils literal notranslate"><span class="pre">./configure</span> <span class="pre">-prefix</span> <span class="pre">some-absolute-path-prefix</span></code> to add a prefix for installation
 directories. You may also want to use <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">gen</span> <span class="pre">&amp;&amp;</span> <span class="pre">cat</span> <span class="pre">lib/util/config.ml</span></code>
-to see directories where things will be installed.</li>
-<li>You can use <code class="docutils literal notranslate"><span class="pre">./configure</span> <span class="pre">&lt;package&gt;</span></code> to select which package you
+to see directories where things will be installed.</p></li>
+<li><p>You can use <code class="docutils literal notranslate"><span class="pre">./configure</span> <span class="pre">&lt;package&gt;</span></code> to select which package you
 want to build. <code class="docutils literal notranslate"><span class="pre">&lt;package&gt;</span></code> may be one of: alt-ergo-lib, alt-ergo-parsers,
-alt-ergo, altgr-ergo.</li>
+alt-ergo, altgr-ergo.</p></li>
 </ol>
 </div>
 <div class="section" id="build-and-install">
@@ -253,37 +253,37 @@ depending on whether ocamlopt is installed or only ocamlc is detected.</p>
 <div class="section" id="everything-binaries-plugins-library">
 <h4>Everything (binaries, plugins, library, …)<a class="headerlink" href="#everything-binaries-plugins-library" title="Permalink to this headline">¶</a></h4>
 <ol class="simple">
-<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span></code></li>
-<li>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install</span></code></li>
-<li>Uninstall with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">uninstall</span></code></li>
+<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span></code></p></li>
+<li><p>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install</span></code></p></li>
+<li><p>Uninstall with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">uninstall</span></code></p></li>
 </ol>
 </div>
 <div class="section" id="alt-ergo-library">
 <h4>Alt-Ergo library<a class="headerlink" href="#alt-ergo-library" title="Permalink to this headline">¶</a></h4>
 <ol class="simple">
-<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">alt-ergo-lib</span></code></li>
-<li>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-lib</span></code></li>
+<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">alt-ergo-lib</span></code></p></li>
+<li><p>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-lib</span></code></p></li>
 </ol>
 </div>
 <div class="section" id="alt-ergo-parsers">
 <h4>Alt-Ergo parsers<a class="headerlink" href="#alt-ergo-parsers" title="Permalink to this headline">¶</a></h4>
 <ol class="simple">
-<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">alt-ergo-parsers</span></code></li>
-<li>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-parsers</span></code></li>
+<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">alt-ergo-parsers</span></code></p></li>
+<li><p>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-parsers</span></code></p></li>
 </ol>
 </div>
 <div class="section" id="alt-ergo-binary">
 <h4>Alt-Ergo binary<a class="headerlink" href="#alt-ergo-binary" title="Permalink to this headline">¶</a></h4>
 <ol class="simple">
-<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">alt-ergo</span></code></li>
-<li>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-bin</span></code></li>
+<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">alt-ergo</span></code></p></li>
+<li><p>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-bin</span></code></p></li>
 </ol>
 </div>
 <div class="section" id="altgr-ergo-binary">
 <h4>AltGr-Ergo binary<a class="headerlink" href="#altgr-ergo-binary" title="Permalink to this headline">¶</a></h4>
 <ol class="simple">
-<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">altgr-ergo</span></code></li>
-<li>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-gui</span></code></li>
+<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">altgr-ergo</span></code></p></li>
+<li><p>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-gui</span></code></p></li>
 </ol>
 </div>
 </div>
@@ -298,17 +298,17 @@ depending on whether ocamlopt is installed or only ocamlc is detected.</p>
 <div class="section" id="the-fm-simplex-plugin">
 <h4>The Fm-Simplex Plugin<a class="headerlink" href="#the-fm-simplex-plugin" title="Permalink to this headline">¶</a></h4>
 <ol class="simple">
-<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">fm-simplex</span></code></li>
-<li>The Fm-Simplex plugin is currently built and installed
-at the same time as the alt-ergo binary.</li>
+<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">fm-simplex</span></code></p></li>
+<li><p>The Fm-Simplex plugin is currently built and installed
+at the same time as the alt-ergo binary.</p></li>
 </ol>
 </div>
 <div class="section" id="the-ab-why3-parser-plugin">
 <h4>The AB-Why3 parser plugin<a class="headerlink" href="#the-ab-why3-parser-plugin" title="Permalink to this headline">¶</a></h4>
 <ol class="simple">
-<li>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">AB-Why3</span></code></li>
-<li>The AB-Why3 plugin is currently built and installed
-at the same time as the alt-ergo binary.</li>
+<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">AB-Why3</span></code></p></li>
+<li><p>The AB-Why3 plugin is currently built and installed
+at the same time as the alt-ergo binary.</p></li>
 </ol>
 <p>You can find more information in the <a class="reference internal" href="../Plugins/ab_why3.html"><span class="doc">AB-Why3 README</span></a></p>
 </div>

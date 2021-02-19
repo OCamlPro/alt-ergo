@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html4" lang="en" >
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
   
@@ -30,10 +30,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../../_static/doctools.js"></script>
-        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../../../_static/js/theme.js"></script>
 
@@ -198,15 +198,15 @@ Creation and manipulation of values having those types are covered in <a class="
 <div class="section" id="boolean-types">
 <h3>Boolean types<a class="headerlink" href="#boolean-types" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">bool</span></code>, the preferred type to represent propositional variables. Boolean constants are <code class="docutils literal notranslate"><span class="pre">true</span></code> and <code class="docutils literal notranslate"><span class="pre">false</span></code>.</li>
-<li><code class="docutils literal notranslate"><span class="pre">prop</span></code>, an historical type still supported in Alt-Ergo 2.3.0.<br />The historical separation comes from Alt-Ergo origins in the Coq ecosystem: in Coq, <code class="docutils literal notranslate"><span class="pre">prop</span></code> is much richer than <code class="docutils literal notranslate"><span class="pre">bool</span></code>.<br />In Alt-Ergo 2.3.0, <code class="docutils literal notranslate"><span class="pre">prop</span></code> and <code class="docutils literal notranslate"><span class="pre">bool</span></code> have been merged in order to simplify interactions with the <a class="reference external" href="http://smtlib.cs.uiowa.edu/">SMT-LIB </a> standard.<br />More information on the <code class="docutils literal notranslate"><span class="pre">bool</span></code>/<code class="docutils literal notranslate"><span class="pre">prop</span></code> conflict can be found in <a class="reference external" href="#the-bool-prop-conflict">this section</a>.</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bool</span></code>, the preferred type to represent propositional variables. Boolean constants are <code class="docutils literal notranslate"><span class="pre">true</span></code> and <code class="docutils literal notranslate"><span class="pre">false</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prop</span></code>, an historical type still supported in Alt-Ergo 2.3.0.<br />The historical separation comes from Alt-Ergo origins in the Coq ecosystem: in Coq, <code class="docutils literal notranslate"><span class="pre">prop</span></code> is much richer than <code class="docutils literal notranslate"><span class="pre">bool</span></code>.<br />In Alt-Ergo 2.3.0, <code class="docutils literal notranslate"><span class="pre">prop</span></code> and <code class="docutils literal notranslate"><span class="pre">bool</span></code> have been merged in order to simplify interactions with the <a class="reference external" href="http://smtlib.cs.uiowa.edu/">SMT-LIB </a> standard.<br />More information on the <code class="docutils literal notranslate"><span class="pre">bool</span></code>/<code class="docutils literal notranslate"><span class="pre">prop</span></code> conflict can be found in <a class="reference external" href="#the-bool-prop-conflict">this section</a>.</p></li>
 </ul>
 </div>
 <div class="section" id="numeric-types">
 <h3>Numeric types<a class="headerlink" href="#numeric-types" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">int</span></code> for (arbitrary large) integers.</li>
-<li><code class="docutils literal notranslate"><span class="pre">real</span></code> for reals. This type actually represents the smallest extension of the rationals which is algebraically closed and closed by exponentiation. Rationals with arbitrary precision are used under the hood.</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">int</span></code> for (arbitrary large) integers.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">real</span></code> for reals. This type actually represents the smallest extension of the rationals which is algebraically closed and closed by exponentiation. Rationals with arbitrary precision are used under the hood.</p></li>
 </ul>
 </div>
 <div class="section" id="unit-type">
@@ -286,14 +286,14 @@ The two keywords still exist in Alt-Ergo 2.3.0, but those two types have been ma
 In Alt-Ergo 2.3.0, <code class="docutils literal notranslate"><span class="pre">prop</span></code> and <code class="docutils literal notranslate"><span class="pre">bool</span></code> have been merged in order to simplify interactions with the <a class="reference external" href="http://smtlib.cs.uiowa.edu/">SMT-LIB </a> standard.</p>
 <p>Note that <code class="docutils literal notranslate"><span class="pre">bool</span></code> can be used in more syntactic constructs than <code class="docutils literal notranslate"><span class="pre">prop</span></code>.</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">prop</span></code> <strong>cannot</strong> be the input or output type of a <em>interpreted function</em> (<code class="docutils literal notranslate"><span class="pre">function</span></code> keyword), whereas <code class="docutils literal notranslate"><span class="pre">bool</span></code> can.</li>
-<li><code class="docutils literal notranslate"><span class="pre">prop</span></code> <strong>cannot</strong> be used in the <em>declaration of new types</em> (<code class="docutils literal notranslate"><span class="pre">type</span></code> keyword), whereas <code class="docutils literal notranslate"><span class="pre">bool</span></code> can.</li>
-<li><code class="docutils literal notranslate"><span class="pre">prop</span></code> <strong>cannot</strong> be used as the value of a type variable, whereas <code class="docutils literal notranslate"><span class="pre">bool</span></code> can.</li>
-<li><code class="docutils literal notranslate"><span class="pre">prop</span></code> <strong>cannot</strong> be the input of an <em>uninterpreted function</em> (<code class="docutils literal notranslate"><span class="pre">logic</span></code> keyword), whereas <code class="docutils literal notranslate"><span class="pre">bool</span></code> can.
-In all other cases, it is advised the use <code class="docutils literal notranslate"><span class="pre">prop</span></code> rather than <code class="docutils literal notranslate"><span class="pre">bool</span></code>, because it is better handled internally by Alt-Ergo. However, using <code class="docutils literal notranslate"><span class="pre">bool</span></code> would be correct.</li>
-<li><code class="docutils literal notranslate"><span class="pre">prop</span></code> and <code class="docutils literal notranslate"><span class="pre">bool</span></code> <strong>can</strong> be the output type of an <em>uninterpreted function</em> (<code class="docutils literal notranslate"><span class="pre">logic</span></code> keyword).</li>
-<li><code class="docutils literal notranslate"><span class="pre">prop</span></code> and <code class="docutils literal notranslate"><span class="pre">bool</span></code> <strong>can</strong> be the type of an <em>uninterpreted variable</em> (<code class="docutils literal notranslate"><span class="pre">logic</span></code> keyword).
-Note that a <code class="docutils literal notranslate"><span class="pre">predicate</span></code> has <code class="docutils literal notranslate"><span class="pre">prop</span></code> output type.</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prop</span></code> <strong>cannot</strong> be the input or output type of a <em>interpreted function</em> (<code class="docutils literal notranslate"><span class="pre">function</span></code> keyword), whereas <code class="docutils literal notranslate"><span class="pre">bool</span></code> can.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prop</span></code> <strong>cannot</strong> be used in the <em>declaration of new types</em> (<code class="docutils literal notranslate"><span class="pre">type</span></code> keyword), whereas <code class="docutils literal notranslate"><span class="pre">bool</span></code> can.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prop</span></code> <strong>cannot</strong> be used as the value of a type variable, whereas <code class="docutils literal notranslate"><span class="pre">bool</span></code> can.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prop</span></code> <strong>cannot</strong> be the input of an <em>uninterpreted function</em> (<code class="docutils literal notranslate"><span class="pre">logic</span></code> keyword), whereas <code class="docutils literal notranslate"><span class="pre">bool</span></code> can.
+In all other cases, it is advised the use <code class="docutils literal notranslate"><span class="pre">prop</span></code> rather than <code class="docutils literal notranslate"><span class="pre">bool</span></code>, because it is better handled internally by Alt-Ergo. However, using <code class="docutils literal notranslate"><span class="pre">bool</span></code> would be correct.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prop</span></code> and <code class="docutils literal notranslate"><span class="pre">bool</span></code> <strong>can</strong> be the output type of an <em>uninterpreted function</em> (<code class="docutils literal notranslate"><span class="pre">logic</span></code> keyword).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prop</span></code> and <code class="docutils literal notranslate"><span class="pre">bool</span></code> <strong>can</strong> be the type of an <em>uninterpreted variable</em> (<code class="docutils literal notranslate"><span class="pre">logic</span></code> keyword).
+Note that a <code class="docutils literal notranslate"><span class="pre">predicate</span></code> has <code class="docutils literal notranslate"><span class="pre">prop</span></code> output type.</p></li>
 </ul>
 </div>
 <div class="section" id="examples">

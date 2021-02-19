@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html4" lang="en" >
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
   
@@ -30,10 +30,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../_static/doctools.js"></script>
-        <script type="text/javascript" src="../../_static/language_data.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
@@ -205,10 +205,10 @@
 <h1>Declaration of symbols<a class="headerlink" href="#declaration-of-symbols" title="Permalink to this headline">¶</a></h1>
 <p>In order to introduce the problem’s vocabulary, the user can declare its own symbols.</p>
 <ul class="simple">
-<li>Simple variables and uninterpreted functions.</li>
-<li>Associative and commutative symbols (a special case of uninterpreted functions).</li>
-<li>Interpreted functions.</li>
-<li>Predicated (a special case of interpreted functions).</li>
+<li><p>Simple variables and uninterpreted functions.</p></li>
+<li><p>Associative and commutative symbols (a special case of uninterpreted functions).</p></li>
+<li><p>Interpreted functions.</p></li>
+<li><p>Predicated (a special case of interpreted functions).</p></li>
 </ul>
 <div class="section" id="logic-uninterpreted-symbols">
 <h2><code class="docutils literal notranslate"><span class="pre">logic</span></code>: uninterpreted symbols<a class="headerlink" href="#logic-uninterpreted-symbols" title="Permalink to this headline">¶</a></h2>
@@ -280,7 +280,7 @@ It is indeed possible to write</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">logic</span> <span class="n">ac</span> <span class="n">f</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 </pre></div>
 </div>
-<p>in order to specify that <code class="docutils literal notranslate"><span class="pre">f</span></code> is an AC-symbol. Once this is done, Alt-Ergo will use the built-in <a class="reference external" href="https://www.lri.fr/%7Econchon/publis/conchon-lmcs2012.pdf">AC(X) algorithm</a> to handle this symbol much more efficiently than what would have been possible through axioms.</p>
+<p>in order to specify that <code class="docutils literal notranslate"><span class="pre">f</span></code> is an AC-symbol. Once this is done, Alt-Ergo will use the built-in <a class="reference external" href="https://www.lri.fr/~conchon/publis/conchon-lmcs2012.pdf">AC(X) algorithm</a> to handle this symbol much more efficiently than what would have been possible through axioms.</p>
 <div class="section" id="id1">
 <h3>Syntax<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">logic_ac_declaration</span><span class="o">&gt;</span> <span class="p">::</span><span class="o">=</span> <span class="s2">&quot;logic&quot;</span> <span class="s2">&quot;ac&quot;</span> <span class="o">&lt;</span><span class="n">identifier_list</span><span class="o">&gt;</span> <span class="s2">&quot;:&quot;</span> <span class="o">&lt;</span><span class="nb">type</span><span class="o">&gt;</span>
