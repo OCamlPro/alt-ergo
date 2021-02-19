@@ -15,5 +15,5 @@ echo "which alt-ergo == `which alt-ergo`"
 echo "alt-ergo --version == `alt-ergo --version`"
 
 # Run the tests
-sh ./run_valid.sh "alt-ergo" "0.5"
-sh ./run_invalid.sh "alt-ergo" "0.5"
+sh ./run_valid.sh "alt-ergo" "1"
+sh ./run_invalid.sh "alt-ergo" "1"

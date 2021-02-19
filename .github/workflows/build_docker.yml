@@ -1,0 +1,37 @@
+name: Build with ocp Docker container
+
+# The goal of this workflow is to test the installation of the project with opam
+# on a specific light docker container instead of using default GH-actions one.
+
+on:
+  push:
+    branches:
+      - next
+      - main
+
+jobs:
+  install_docker:
+    name: opam install on a specific docker container
+
+    runs-on: ubuntu-latest
+
+    # Retrieve and use a light docker container on which ocaml 4.10 is installed
+    # as a system compiler. This container also contains opam 2.1.
+    container:
+      image: ocamlpro/ocaml:4.10
+
+    steps:
+      # This line is needed to acces and use opam. We are unable to set the user
+      # to `ocaml` with the container parameters
+      - run: sudo chmod a+wx .
+
+      # Checkout the code of the current branch
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Create a switch with the system compiler (no compilation needed).
+      # And then, install external (no need for depext with opam 2.1) and libs deps.
+      - run: opam switch create . ocaml-system --deps-only
+
+      # Install the project packages
+      - run: opam install .

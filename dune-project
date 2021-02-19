@@ -30,7 +30,8 @@ See more details on https://alt-ergo.ocamlpro.com/")
   (alt-ergo-parsers (= :version))
    menhir
    cmdliner
- )
+  (odoc :with-doc)
+  )
 )
 
 ; Second package, the alt-ergo gui binary
@@ -55,7 +56,8 @@ See more details on https://alt-ergo.ocamlpro.com/"
   lablgtk
   conf-gtksourceview
   cmdliner
- )
+  (odoc :with-doc)
+)
 )
 
 ; Third package, the alt-ergo parsers library
@@ -80,6 +82,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (camlzip (>= 1.07))
   menhir
   stdlib-shims
+  (odoc :with-doc)
  )
 )
 
@@ -106,5 +109,6 @@ See more details on http://alt-ergo.ocamlpro.com/"
   zarith
   seq
   stdlib-shims
+  (odoc :with-doc)
  )
 )

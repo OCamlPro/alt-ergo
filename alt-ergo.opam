@@ -18,6 +18,7 @@ depends: [
   "alt-ergo-parsers" {= version}
   "menhir"
   "cmdliner"
+  "odoc" {with-doc}
 ]
 dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"
 # This part comes from the template. Please edit alt-ergo.opam.template
