@@ -113,15 +113,16 @@ jobs:
 
     # === Doc stage ===
     # Next branch (upload doc in gh-pages)
+    # The documentation is now deploy with the Github actions workflow
     - stage: "documentation"
       name: "doc build && dev upload"
       script: rsc/extra/travis_doc_test.sh
-      before_deploy: ./rsc/extra/deploy_doc.sh dev
+      # before_deploy: ./rsc/extra/deploy_doc.sh dev
       env: OPAMBUILDTEST=false OCAML_VERSION=4.11.1
-      deploy:
-        provider: pages
-        skip-cleanup: true
-        github-token: $GITHUB_TOKEN
-        keep-history: true
-        on:
-          branch: next
+      # deploy:
+      #   provider: pages
+      #   skip-cleanup: true
+      #   github-token: $GITHUB_TOKEN
+      #   keep-history: true
+      #   on:
+      #     branch: next
