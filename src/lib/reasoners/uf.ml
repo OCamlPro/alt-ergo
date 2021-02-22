@@ -1096,9 +1096,23 @@ let compute_concrete_model_of_val
         Profile.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
         mrepr
 
-let compute_concrete_model
-    ?(inline_obj_in_model=Util.MI.empty)
-    ({ make; _ } as env) =
+
+(* A map of expressions / terms, ordered by depth first, and then by
+   Expr.compare for expressions with same depth. This structure will
+   be used to build a model, by starting with the inner/smaller terms
+   first. The values associated to the key will be their make *)
+module MED = Map.Make
+    (struct
+      type t = Expr.t
+      let compare a b =
+        let c = Expr.depth a - Expr.depth b in
+        if c <> 0 then c
+        else Expr.compare a b
+    end)
+
+let terms env = ME.fold MED.add env.make MED.empty
+
+let compute_concrete_model ?(inline_obj_in_model=Util.MI.empty) env =
   let bounded, pinfty, minfty =
     Util.MI.fold
       (fun _ord v ((bounded, pinfty, minfty) as acc) ->
@@ -1112,7 +1126,11 @@ let compute_concrete_model
       ) inline_obj_in_model (SetX.empty, SetX.empty, SetX.empty)
   in
   let not_unbounded = pinfty == SetX.empty && minfty == SetX.empty in
-  ME.fold
+  (* Here, we fold on each term that appears in the 'make' map,
+     starting from those with smaller depth, and we compute a concrete
+     model for it. For the objectives (if any), we check if it should
+     be +/- infinity *)
+  MED.fold
     (fun t mk acc ->
        if SetX.mem mk pinfty then
          (* mk's optimum is +infinity *)
@@ -1128,8 +1146,16 @@ let compute_concrete_model
          compute_concrete_model_of_val env t acc None
        else
          acc
-    ) make
-    (Profile.empty, Profile.empty, Profile.empty, ME.empty)
+    ) (terms env)
+    (
+      Profile.empty, (* functions profile *)
+      Profile.empty, (* constants profile *)
+      Profile.empty, (* arrays profile *)
+      (ME.empty : (r * string) ME.t) (* a mapping from terms to
+                                        representatives/values in
+                                        model as a semantic value and
+                                        as a string *)
+    )
 
 let compute_objectives optimized_splits env mrepr =
   let seen_infinity = ref false in
