@@ -369,12 +369,12 @@ module SmtlibCounterExample = struct
            let rec mk_ite_and xs tys =
              match xs, tys with
              | [],[] -> assert false
-             | [xs,_],[_ty,name] ->
-               asprintf "(= %s %a)" name pp_term xs
-             | (xs,_) :: l1, (_ty,name) :: l2 ->
-               asprintf "(and (= %s %a) %s)"
+             | [_,(_,xs)],[_ty,name] ->
+               asprintf "(= %s %s)" name xs
+             | (_,(_,xs)) :: l1, (_ty,name) :: l2 ->
+               asprintf "(and (= %s %s) %s)"
                  name
-                 pp_term xs
+                 xs
                  (mk_ite_and l1 l2)
              | _, _ -> assert false
            in
