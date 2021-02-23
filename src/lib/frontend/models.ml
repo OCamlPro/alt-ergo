@@ -433,17 +433,17 @@ module SmtlibCounterExample = struct
     if not (Options.get_objectives_in_interpretation()) &&
        not (Util.MI.is_empty objectives)
     then begin
-      Format.fprintf fmt "@[<v 3>(objectives";
+      Printer.print_fmt fmt "@[<v 3>(objectives";
       Util.MI.iter
         (fun _i (e, x) ->
-           Format.fprintf fmt "@ (%a %a)"
+           Printer.print_fmt ~flushed:false fmt "@ (%a %a)"
              E.print e
              (fun fmt () ->
                 match x with
-                | Obj_pinfty -> Format.fprintf fmt "+oo"
-                | Obj_minfty -> Format.fprintf fmt "-oo"
-                | Obj_val s -> Format.fprintf fmt "%s" s
-                | Obj_unk -> Format.fprintf fmt "(interval -oo +oo)"
+                | Obj_pinfty -> fprintf fmt "+oo"
+                | Obj_minfty -> fprintf fmt "-oo"
+                | Obj_val s -> fprintf fmt "%s" s
+                | Obj_unk -> fprintf fmt "(interval -oo +oo)"
              ) ()
         )objectives;
       Printer.print_fmt fmt "@]@ )"
@@ -484,15 +484,15 @@ let output_concrete_model ~pp_prop_model fmt m =
       Why3CounterExample.output_constraints fmt m.propositional
     end;
 
-    fprintf fmt "@ ; Functions@ ";
+    Printer.print_fmt ~flushed:false fmt "@ ; Functions@ ";
     let records = SmtlibCounterExample.output_functions_counterexample
         ~is_array:false fmt  MS.empty m.functions in
 
-    fprintf fmt "@ ; Constants@ ";
+    Printer.print_fmt ~flushed:false fmt "@ ; Constants@ ";
     SmtlibCounterExample.output_constants_counterexample
       fmt records m.constants;
 
-    fprintf fmt "@ ; Arrays content@ ";
+    Printer.print_fmt ~flushed:false fmt "@ ; Arrays content@ ";
     SmtlibCounterExample.output_arrays_counterexample fmt m.arrays;
 
     Printer.print_fmt fmt "@]@ )";
