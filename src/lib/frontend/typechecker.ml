@@ -2400,3 +2400,6 @@ let type_expr env vars t =
 type env = Env.t
 
 let empty_env = Env.empty
+
+let get_env_logics env =
+  MString.fold (fun s _ acc -> Util.SS.add s acc) env.Env.logics Util.SS.empty
