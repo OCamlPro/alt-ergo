@@ -63,3 +63,5 @@ val split_goals_and_cnf :
   (int Typed.atdecl * 'a) list ->
   (Commands.sat_tdecl list * string) list
 
+val get_env_logics : env -> Util.SS.t
+(** Recover the logic names of the input file *)

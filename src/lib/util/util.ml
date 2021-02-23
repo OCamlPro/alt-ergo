@@ -31,7 +31,7 @@ module SI = Set.Make(struct type t = int
     let compare (x: int) y = Stdlib.compare x y end)
 
 module SS = Set.Make(String)
-
+module MS = Map.Make(String)
 
 (** Different values for -case-split-policy option:
     -after-theory-assume (default value): after assuming facts in

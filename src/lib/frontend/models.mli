@@ -32,6 +32,7 @@ type t = {
 (** Print the given counterexample on the given formatter with the
     corresponding format setted with Options.get_output_format *)
 val output_concrete_model :
+  used_logics:Util.SS.t ->
   pp_prop_model:bool ->
   Format.formatter ->
   t ->

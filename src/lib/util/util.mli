@@ -18,6 +18,7 @@ exception Not_implemented of string
 module MI : Map.S with type key = int
 module SI : Set.S with type elt = int
 module SS : Set.S with type elt = string
+module MS : Map.S with type key = string
 
 (** Different values for -case-split-policy option:
     -after-theory-assume (default value): after assuming facts in

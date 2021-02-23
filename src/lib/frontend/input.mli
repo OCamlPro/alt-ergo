@@ -48,8 +48,10 @@ module type S = sig
 
   val type_parsed :
     env -> env Stack.t -> parsed -> int Typed.atdecl list * env
-    (** Parse and typecheck some input file,
-        together with some prelude files. *)
+  (** Parse and typecheck some input file,
+      together with some prelude files. *)
+
+  val get_env_logics : env -> Util.SS.t
 
 end
 

@@ -24,6 +24,8 @@ module SE = Expr.Set
 module MS = Map.Make(String)
 
 let constraints = ref MS.empty
+let used_names = ref Util.SS.empty
+let used_fresh = ref Util.MS.empty
 
 type objective_value =
   | Obj_pinfty
@@ -38,15 +40,46 @@ type t = {
   arrays : ModelMap.V.t ModelMap.P.t;
   objectives : (Expr.t * objective_value) Util.MI.t;
   terms_values : (X.r * string) ME.t (* a map from terms to their values
-                                      in the model (as a
-                                      representative of type X.r and
-                                      as a string *)
+                                        in the model (as a
+                                        representative of type X.r and
+                                        as a string *)
 }
 
 module Pp_smtlib_term = struct
 
   let to_string_type t =
     asprintf "%a" Ty.print t
+
+  let cpt = ref 0
+  let check_used_logics name =
+    let rec aux s acc =
+      if Util.SS.mem s !used_names then begin
+        try Util.MS.find s acc
+        with Not_found ->
+          incr cpt;
+          let res = sprintf "%s_%d" s !cpt in
+          let acc = Util.MS.add s res acc in
+          aux s acc
+      end
+      else s
+    in
+    aux name !used_fresh
+
+  let fresh_arg i =
+    check_used_logics (sprintf "arg_%d" i)
+
+  let check_fresh s =
+    if Hstring.is_fresh_skolem s || Hstring.is_fresh_string s then
+      check_used_logics (sprintf "ae_%s" s)
+    else
+      s
+
+  let hstring_view h =
+    let s = Hstring.view h in
+    check_fresh s
+
+  let print_hstring fmt h =
+    fprintf fmt "%s" (hstring_view h)
 
   let rec print fmt t =
     let {E.f;xs;ty; _} = E.term_view t in
@@ -105,15 +138,15 @@ module Pp_smtlib_term = struct
 
         | Sy.L_built (Sy.IsConstr hs), [e] ->
           if get_output_smtlib () then
-            fprintf fmt "((_ is %a) %a)" Hstring.print hs print e
+            fprintf fmt "((_ is %a) %a)" print_hstring hs print e
           else
-            fprintf fmt "(%a ? %a)" print e Hstring.print hs
+            fprintf fmt "(%a ? %a)" print e print_hstring hs
 
         | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
           if get_output_smtlib () then
-            fprintf fmt "(not ((_ is %a) %a))" Hstring.print hs print e
+            fprintf fmt "(not ((_ is %a) %a))" print_hstring hs print e
           else
-            fprintf fmt "not (%a ? %a)" print e Hstring.print hs
+            fprintf fmt "not (%a ? %a)" print e print_hstring hs
 
         | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
           | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
@@ -146,9 +179,9 @@ module Pp_smtlib_term = struct
 
     | Sy.Op (Sy.Access field), [e] ->
       if get_output_smtlib () then
-        fprintf fmt "(%s %a)" (Hstring.view field) print e
+        fprintf fmt "(%a %a)" print_hstring field print e
       else
-        fprintf fmt "%a.%s" print e (Hstring.view field)
+        fprintf fmt "%a.%a" print e print_hstring field
 
     | Sy.Op (Sy.Record), _ ->
       begin match ty with
@@ -156,8 +189,8 @@ module Pp_smtlib_term = struct
           assert (List.length xs = List.length lbs);
           fprintf fmt "{";
           ignore (List.fold_left2 (fun first (field,_) e ->
-              fprintf fmt "%s%s = %a"  (if first then "" else "; ")
-                (Hstring.view field) print e;
+              fprintf fmt "%s%a = %a"  (if first then "" else "; ")
+                print_hstring field print e;
               false
             ) true lbs xs);
           fprintf fmt "}";
@@ -172,7 +205,7 @@ module Pp_smtlib_term = struct
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
     | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
-      fprintf fmt "%a(%a)" Hstring.print hs print_list l
+      fprintf fmt "%a(%a)" print_hstring hs print_list l
 
     | Sy.Op _, [e1; e2] ->
       if get_output_smtlib () then
@@ -182,31 +215,36 @@ module Pp_smtlib_term = struct
 
     | Sy.Op Sy.Destruct (hs, grded), [e] ->
       fprintf fmt "%a#%s%a"
-        print e (if grded then "" else "!") Hstring.print hs
+        print e (if grded then "" else "!") print_hstring hs
 
 
     | Sy.In(lb, rb), [t] ->
       fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
 
-    | Sy.Name (n,_), l -> begin
-        let constraint_name =
-          try let constraint_name,_,_ =
-                (MS.find (Hstring.view n) !constraints) in
-            constraint_name
-          with _ ->
-            let constraint_name = "c_"^(Hstring.view n)  in
-            constraints := MS.add (Hstring.view n)
-                (constraint_name,
-                 to_string_type (E.type_info t),
-                 List.map (fun e -> to_string_type (E.type_info e)) l
-                ) !constraints;
-            constraint_name
-        in
-        match l with
-        | [] -> fprintf fmt "%s" constraint_name
-        | l ->
-          fprintf fmt "(%s %a)" constraint_name (Printer.pp_list_space print) l;
-      end
+    | Sy.Name (n,_), l ->
+      if Options.get_output_format () == Why3 then
+        begin
+          let constraint_name =
+            try let constraint_name,_,_ =
+                  (MS.find (hstring_view n) !constraints) in
+              constraint_name
+            with _ ->
+              let constraint_name = "c_"^(hstring_view n)  in
+              constraints := MS.add (hstring_view n)
+                  (constraint_name,
+                   to_string_type (E.type_info t),
+                   List.map (fun e -> to_string_type (E.type_info e)) l
+                  ) !constraints;
+              constraint_name
+          in
+          match l with
+          | [] -> fprintf fmt "%s" constraint_name
+          | l ->
+            fprintf fmt "(%s %a)"
+              constraint_name (Printer.pp_list_space print) l;
+        end
+      else
+        fprintf fmt "%a" print_hstring n
 
     | _, [] ->
       fprintf fmt "%a" Sy.print f
@@ -269,7 +307,7 @@ module SmtlibCounterExample = struct
 
     let print_destr fmt (destrs,lbs) =
       List.iter (fun (destr, ty_destr) ->
-          let destr = Hstring.view destr in
+          let destr = Pp_smtlib_term.hstring_view destr in
           match find_destrs destr destrs with
           | None ->
             pp_dummy_value_of_type fmt ty_destr
@@ -280,8 +318,8 @@ module SmtlibCounterExample = struct
       try MS.find (Sy.to_string record_name) records
       with Not_found -> MS.empty
     in
-    asprintf "%s %a"
-      (Hstring.view cstr)
+    asprintf "%a %a"
+      Pp_smtlib_term.print_hstring cstr
       print_destr (destrs,lbs)
 
   let add_record_constr records record_name
@@ -290,7 +328,7 @@ module SmtlibCounterExample = struct
         add_records_destr
           records
           record_name
-          (Hstring.view destr)
+          (Pp_smtlib_term.hstring_view destr)
           (asprintf "%a" pp_term rep)
       ) records lbs xs_values
 
@@ -318,7 +356,7 @@ module SmtlibCounterExample = struct
     let defined_value =
       try
         let res,_,_ = (MS.find (Sy.to_string name) !constraints) in res
-      with _ -> t
+      with _ -> Pp_smtlib_term.check_fresh t
     in
 
     Printer.print_fmt ~flushed:false fmt
@@ -353,7 +391,7 @@ module SmtlibCounterExample = struct
     ModelMap.iter
       (fun (f, xs_ty, ty) st ->
          let xs_ty_named = List.mapi (fun i ty ->
-             ty,(sprintf "arg_%d" i)
+             ty,Pp_smtlib_term.fresh_arg i
            ) xs_ty in
 
          let rep =
@@ -373,11 +411,11 @@ module SmtlibCounterExample = struct
              match xs, tys with
              | [],[] -> assert false
              | [_,(_,xs)],[_ty,name] ->
-               asprintf "(= %s %s)" name xs
+               asprintf "(= %s %s)" name (Pp_smtlib_term.check_fresh xs)
              | (_,(_,xs)) :: l1, (_ty,name) :: l2 ->
                asprintf "(and (= %s %s) %s)"
                  name
-                 xs
+                 (Pp_smtlib_term.check_fresh xs)
                  (mk_ite_and l1 l2)
              | _, _ -> assert false
            in
@@ -464,6 +502,7 @@ module Why3CounterExample = struct
         | [] ->
           Printer.print_fmt ~flushed:false fmt "(declare-const %s %s)@ "
             name ty
+
         | l ->
           Printer.print_fmt ~flushed:false fmt "(declare-fun %s (%s) %s)@ "
             name
@@ -475,8 +514,8 @@ module Why3CounterExample = struct
 
 end
 (* of module Why3CounterExample *)
-
-let output_concrete_model ~pp_prop_model fmt m =
+let output_concrete_model ~used_logics ~pp_prop_model fmt m =
+  used_names := used_logics;
   if get_interpretation () then begin
     Printer.print_fmt ~flushed:false fmt "@[<v 2>(model@,";
     if pp_prop_model || Options.get_output_format () == Why3 then begin

@@ -47,7 +47,7 @@ module type S = sig
 
   val process_decl:
     (status -> int -> unit) ->
-    used_context ->
+    used_context -> Util.SS.t ->
     (bool * Ex.t) Stack.t ->
     sat_env * bool * Ex.t ->
     Commands.sat_tdecl ->
@@ -148,7 +148,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Some SAT.ProofSearch -> "ProofSearch"
     | Some SAT.ModelGen -> "ModelGen"
 
-  let print_model ?(all_sat=false) model_opt timeout =
+  let print_model ?(all_sat=false) used_logics model_opt timeout =
     let pp_prop_model = all_sat || Options.get_show_prop_model () in
     let get_m = Options.get_interpretation () || pp_prop_model in
     let s = timeout_reason_to_string timeout in
@@ -165,7 +165,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       if get_m then
         Printer.print_dbg "@[<v 0>; Returned timeout reason = %s@]" s;
       let m = Lazy.force m in
-      Models.output_concrete_model ~pp_prop_model (get_fmt_mdl ()) m
+      Models.output_concrete_model ~used_logics ~pp_prop_model
+        (get_fmt_mdl ()) m
 
   let filter_by_all_sat propositional filter =
     if filter == E.Set.empty then propositional
@@ -175,8 +176,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
            E.Set.mem t filter || E.Set.mem (E.neg t) filter
         )propositional
 
-  let rec process_decl print_status used_context consistent_dep_stack
-      ((env, consistent, dep) as acc) d =
+  let rec process_decl print_status used_context used_names
+      consistent_dep_stack ((env, consistent, dep) as acc) d =
     try
       match d.st_decl with
       | Push n ->
@@ -261,7 +262,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          so we want to print the status in this case. *)
       print_status (Sat (d,t)) (Steps.get_steps ());
       process_unknown
-        print_status used_context consistent_dep_stack
+        print_status used_context used_names consistent_dep_stack
         env dep d SAT.NoTimeout
 
     | SAT.Unsat dep' ->
@@ -285,7 +286,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       in *)
       print_status status (Steps.get_steps ());
       process_unknown
-        print_status used_context consistent_dep_stack
+        print_status used_context used_names consistent_dep_stack
         env dep d timeout
 
     | Util.Timeout as e ->
@@ -294,11 +295,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       print_status (Timeout (Some d)) (Steps.get_steps ());
       (* dont call 'process_unknown' in this case. Timeout stops
          all-models listing *)
-      print_model (SAT.get_model env) None;
+      print_model used_names (SAT.get_model env) None;
       raise e
 
-  and process_unknown
-      print_status used_context consistent_dep_stack env dep d timeout_kind =
+  and process_unknown print_status used_context used_names consistent_dep_stack
+      env dep d timeout_kind =
     match d.st_decl with
     | Assume _ | PredDef _ | RwtDef _ | Push _ | Pop _ | ThAssume _->
       (* cannot raise Sat or Unknown in this case *)
@@ -353,7 +354,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         let m = Lazy.force m in
         let propositional = filter_by_all_sat m.propositional filter in
         let m = { m with propositional } in
-        print_model ~all_sat:true (Some (lazy m)) (Some timeout_kind);
+        print_model ~all_sat:true used_names
+          (Some (lazy m)) (Some timeout_kind);
         (* we build the conjunction that corresponds to the current
            filtered model *)
         let f =
@@ -376,13 +378,13 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           Options.Time.set_timeout
             ~is_gui:(Options.get_is_gui()) (Options.get_timelimit ());
           let env = SAT.reset_last_saved_model env in
-          process_decl
-            print_status used_context consistent_dep_stack (env, true, dep) d
+          process_decl print_status used_context used_names
+            consistent_dep_stack (env, true, dep) d
 
       | _ ->
         (* 2. default case + case where a simple interpretation is
            requested *)
-        print_model m (Some timeout_kind);
+        print_model used_names m (Some timeout_kind);
         env , true, dep
 
   let print_status status steps =

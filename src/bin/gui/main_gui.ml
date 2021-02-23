@@ -620,7 +620,8 @@ let run_replay env used_context =
     (fun dcl ->
        let cnf = Cnf.make_list dcl in
        ignore (List.fold_left
-                 (FE.process_decl FE.print_status used_context consistent_dep)
+                 (FE.process_decl FE.print_status used_context Util.SS.empty
+                    consistent_dep)
                  (empty_sat_inst env.insts, true, Explanation.empty)
                  cnf)
     ) ast_pruned;
@@ -684,7 +685,7 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
                       (List.fold_left
                          (FE.process_decl
                             (wrapper_update_status image label buttonclean env)
-                            used_context consistent_dep)
+                            used_context Util.SS.empty consistent_dep)
                          (empty_sat_inst inst_model, true, Explanation.empty)
                          cnf)
                  ) ast_pruned;
