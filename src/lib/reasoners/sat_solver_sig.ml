@@ -78,7 +78,7 @@ module type S = sig
   val get_model: t -> Models.t Lazy.t option
 
   (** returns the latest solver's boolean assignation for literals
-     that is validated by the theories *)
+      that is validated by the theories *)
   val get_propositional_model: t -> Expr.Set.t
 
   (** reset last saved model, if any *)

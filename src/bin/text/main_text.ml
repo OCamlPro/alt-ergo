@@ -70,7 +70,7 @@ type 'a state = {
   global : Commands.sat_tdecl list;
 }
 
-let solve all_context (cnf, goal_name) =
+let solve all_context used_names (cnf, goal_name) =
   let used_context = FE.choose_used_context all_context ~goal_name in
   let consistent_dep_stack = Stack.create () in
   init_profiling ();
@@ -83,7 +83,8 @@ let solve all_context (cnf, goal_name) =
     SAT.reset_refs ();
     let _ =
       List.fold_left
-        (FE.process_decl FE.print_status used_context consistent_dep_stack)
+        (FE.process_decl FE.print_status used_context used_names
+           consistent_dep_stack)
         (SAT.empty (), true, Explanation.empty) cnf
     in
     if Options.get_timelimit_per_goal() then
@@ -93,13 +94,13 @@ let solve all_context (cnf, goal_name) =
   with Util.Timeout ->
     if not (Options.get_timelimit_per_goal()) then exit 142
 
-let typed_loop all_context state td =
+let typed_loop all_context use_names state td =
   if get_type_only () then state else begin
     match td.Typed.c with
     | Typed.TGoal (_, kind, name, _) ->
       let l = state.local @ state.global @ state.ctx in
       let cnf = List.rev @@ Cnf.make l td in
-      let () = solve all_context (cnf, name) in
+      let () = solve all_context use_names (cnf, name) in
       begin match kind with
         | Typed.Check
         | Typed.Cut -> { state with local = []; }
@@ -168,7 +169,9 @@ let () =
       if get_parse_only () then state else begin
         try
           let l, env = I.type_parsed state.env assertion_stack p in
-          List.fold_left (typed_loop all_used_context) { state with env; } l
+          let used_names = I.get_env_logics state.env in
+          List.fold_left (typed_loop all_used_context used_names)
+            { state with env; } l
         with
         | Errors.Error e ->
           if e != Warning_as_error then
