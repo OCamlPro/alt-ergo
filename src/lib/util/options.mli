@@ -737,12 +737,12 @@ val get_objectives_in_interpretation : unit -> bool
 (** Default to [false] *)
 
 (** [true] if the all_models flag is set to generate all propositional
-   models *)
+    models *)
 val get_all_models : unit -> bool
 (** Default to [false] *)
 
 (** [true] if the show_prop_model flag is set to also output the
-   propositional model, when a model is requested *)
+    propositional model, when a model is requested *)
 val get_show_prop_model : unit -> bool
 (** Default to [false] *)
 

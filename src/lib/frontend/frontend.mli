@@ -42,7 +42,7 @@ module type S = sig
 
   val process_decl:
     (status -> int -> unit) ->
-    used_context ->
+    used_context -> Util.SS.t ->
     (bool * Explanation.t) Stack.t ->
     sat_env * bool * Explanation.t ->
     Commands.sat_tdecl ->

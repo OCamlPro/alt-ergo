@@ -31,6 +31,8 @@ module type S = sig
   val type_parsed :
     env -> env Stack.t -> parsed -> int Typed.atdecl list * env
 
+  val get_env_logics : env -> Util.SS.t
+
 end
 
 let input_methods = ref []
