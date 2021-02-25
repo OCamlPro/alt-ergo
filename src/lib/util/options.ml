@@ -300,6 +300,7 @@ let all_models = ref false
 let show_prop_model = ref false
 let output_format = ref Native
 let infer_output_format = ref true
+let timeout_as_unknown = ref false
 let unsat_core = ref false
 
 let set_interpretation b = interpretation := b
@@ -309,6 +310,7 @@ let set_all_models b = all_models := b
 let set_show_prop_model b = show_prop_model := b
 let set_output_format b = output_format := b
 let set_infer_output_format f = infer_output_format := f = None
+let set_timeout_as_unknown b = timeout_as_unknown := b
 let set_unsat_core b = unsat_core := b
 
 let get_interpretation () = !interpretation <> INone
@@ -323,6 +325,7 @@ let get_output_format () = !output_format
 let get_output_smtlib () =
   (!output_format = Smtlib2) || (!output_format = Why3)
 let get_infer_output_format () = !infer_output_format
+let get_timeout_as_unknwon () = !timeout_as_unknown
 let get_unsat_core () = !unsat_core || !save_used_context || !debug_unsat_core
 
 (** Profiling options *)
