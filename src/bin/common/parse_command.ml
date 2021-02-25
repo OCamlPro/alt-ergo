@@ -957,28 +957,34 @@ let parse_output_opt =
     Arg.(value & flag & info
            ["interpretation-use-underscore";"use-underscore"]
            ~docv ~docs ~doc) in
+
   let objectives_in_interpretation =
     let doc = " inline pretty-printing of optimized expressions in the \
                model instead of a dedicated section '(objectives \
                ...)'. Be aware that a part of the model may be shrunk \
                or not accurate if some expressions to optimize are \
                unbounded." in
+    let docv = "VAL" in
     Arg.(value & flag & info
            ["objectives-in-interpretation";"objectives-in-model";
-            "obj-in-interpretation";"obj-in-model"] ~doc) in
+            "obj-in-interpretation";"obj-in-model"] ~docv ~docs ~doc) in
+
   let all_models =
     let doc = " enable all-models (or all-sat) feature, in which case, \
                all possible boolean models will be explored. If \
                --interpretation is also set, an interpretation for \
                each boolean model will also be displayed. Note that \
                timeouts are set per model/SAT branch in this case." in
+    let docv = "VAL" in
     Arg.(value & flag & info
-           ["all-models"; "all-sat"] ~doc) in
+           ["all-models"; "all-sat"] ~docv ~docs ~doc) in
+
   let show_prop_model =
     let doc = " also show the propositional if a model is requested \
                (with --interpretation or with --all-models options)." in
+    let docv = "VAL" in
     Arg.(value & flag & info
-           ["show-prop-model"; "show-propositional-model"] ~doc) in
+           ["show-prop-model"; "show-propositional-model"] ~docv ~docs ~doc) in
 
   let model =
     let doc = Format.sprintf
