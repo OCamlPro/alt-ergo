@@ -68,6 +68,14 @@ module Pp_smtlib_term = struct
   let fresh_arg i =
     check_used_logics (sprintf "arg_%d" i)
 
+  let cpt_fresh_type_value = ref 0
+  let fresh_type_value ty =
+    incr cpt_fresh_type_value;
+    check_used_logics
+      (sprintf "val_%s_%d"
+         (to_string_type ty)
+         !cpt_fresh_type_value)
+
   let check_fresh s =
     if Hstring.is_fresh_skolem s || Hstring.is_fresh_string s then
       check_used_logics (sprintf "ae_%s" s)
@@ -279,7 +287,7 @@ module SmtlibCounterExample = struct
       Ty.Tint -> "0"
     | Ty.Treal -> "0.0"
     | Ty.Tbool -> "false"
-    | _ -> asprintf "%a" pp_term (Expr.fresh_name ty)
+    | _ -> Pp_smtlib_term.fresh_type_value ty
 
   let pp_dummy_value_of_type fmt ty =
     if not (Options.get_interpretation_use_underscore ()) then
@@ -287,6 +295,12 @@ module SmtlibCounterExample = struct
       fprintf fmt "%s " d
     else
       fprintf fmt "_ "
+
+  let pp_value_of_type fmt (v,ty) =
+    if Hstring.is_fresh_skolem v || Hstring.is_fresh_string v then
+      pp_dummy_value_of_type fmt ty
+    else
+      fprintf fmt "%s" v
 
   let add_records_destr records record_name destr_name rep =
     let destrs =
@@ -356,7 +370,7 @@ module SmtlibCounterExample = struct
     let defined_value =
       try
         let res,_,_ = (MS.find (Sy.to_string name) !constraints) in res
-      with _ -> Pp_smtlib_term.check_fresh t
+      with _ -> asprintf "%a" pp_value_of_type (t,ty)
     in
 
     Printer.print_fmt ~flushed:false fmt
@@ -440,14 +454,14 @@ module SmtlibCounterExample = struct
                if Options.get_interpretation_use_underscore () then
                  asprintf "(ite %s %s %s)"
                    (mk_ite_or xs_values_list)
-                   srep
+                   (Pp_smtlib_term.check_fresh srep)
                    (reps_aux [])
                else
-                 srep
+                 Pp_smtlib_term.check_fresh srep
              | (srep,xs_values_list) :: l ->
                asprintf "(ite %s %s %s)"
                  (mk_ite_or xs_values_list)
-                 srep
+                 (Pp_smtlib_term.check_fresh srep)
                  (reps_aux l)
            in
            if List.length representants = 1 then
