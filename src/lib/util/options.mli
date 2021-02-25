@@ -300,6 +300,9 @@ val set_triggers_var : bool -> unit
 (** Set [type_smt2] accessible with {!val:get_type_smt2} *)
 val set_type_smt2 : bool -> unit
 
+(** Set [timeout_as_unknown] accessible with {!val:get_timeout_as_unknown} *)
+val set_timeout_as_unknown : bool -> unit
+
 (** Set [unsat_core] accessible with {!val:get_unsat_core} *)
 val set_unsat_core : bool -> unit
 
@@ -789,6 +792,11 @@ val get_model_type_constraints : unit -> bool
     the file extension or the input format if set. *)
 val get_infer_output_format : unit -> bool
 (** Default to [true] *)
+
+(** [true] if Alt-Ergo returns [unknown] instead of [timeout] when the timelimit
+    is reached *)
+val get_timeout_as_unknwon : unit -> bool
+(** Default to [false] *)
 
 (** [true] if experimental support for unsat-cores is on. *)
 val get_unsat_core : unit -> bool

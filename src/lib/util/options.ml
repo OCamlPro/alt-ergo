@@ -332,6 +332,7 @@ let show_prop_model = ref false
 let output_format = ref Native
 let model_type = ref Value
 let infer_output_format = ref true
+let timeout_as_unknown = ref false
 let unsat_core = ref false
 
 let set_interpretation b = interpretation := b
@@ -343,6 +344,7 @@ let set_show_prop_model b = show_prop_model := b
 let set_output_format b = output_format := b
 let set_model_type t = model_type := t
 let set_infer_output_format b = infer_output_format := b
+let set_timeout_as_unknown b = timeout_as_unknown := b
 let set_unsat_core b = unsat_core := b
 
 let equal_mode a b =
@@ -385,6 +387,7 @@ let get_output_smtlib () = equal_output_format !output_format Smtlib2
 let get_model_type () = !model_type
 let get_model_type_constraints () = equal_mode_type !model_type Constraints
 let get_infer_output_format () = !infer_output_format
+let get_timeout_as_unknwon () = !timeout_as_unknown
 let get_unsat_core () = !unsat_core || !save_used_context || !debug_unsat_core
 
 (** Profiling options *)
