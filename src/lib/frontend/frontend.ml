@@ -273,7 +273,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | SAT.I_dont_know {env; timeout} ->
       (* TODO: always print Unknown for why3 ? *)
       let status =
-        if timeout != NoTimeout then (Timeout (Some d))
+        if timeout != NoTimeout && (not (get_timeout_as_unknwon ())) then
+          (Timeout (Some d))
         else (Unknown (d, env))
       in
       print_status status (Steps.get_steps ());
@@ -282,7 +283,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         env dep d timeout
 
     | Util.Timeout as e ->
-      print_status (Timeout (Some d)) (Steps.get_steps ());
+      print_status (
+        if get_timeout_as_unknwon () then
+          (Unknown (d, env))
+        else Timeout (Some d))
+        (Steps.get_steps ());
       (* dont call 'process_unknown' in this case. Timeout stops
          all-models listing *)
       print_model used_names (SAT.get_model env) None;
