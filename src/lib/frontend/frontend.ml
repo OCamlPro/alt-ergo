@@ -279,20 +279,22 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          Instead, it'd be better to accumulate in `consistent` a 3-case adt
          and not a simple bool. *)
       (* TODO: always print Unknown for why3 ? *)
-      let status = Unknown (d, env) in
-      (* let status =
-        if timeout != NoTimeout then (Timeout (Some d))
+      let status =
+        if timeout != NoTimeout && (not (Options.get_timeout_as_unknwon ()))
+        then (Timeout (Some d))
         else (Unknown (d, env))
-      in *)
+      in
       print_status status (Steps.get_steps ());
       process_unknown
         print_status used_context used_names consistent_dep_stack
         env dep d timeout
 
     | Util.Timeout as e ->
-      (* In this case, we obviously want to print the status,
-         since we exit right after  *)
-      print_status (Timeout (Some d)) (Steps.get_steps ());
+      print_status (
+        if Options.get_timeout_as_unknwon () then
+          (Unknown (d, env))
+        else Timeout (Some d))
+        (Steps.get_steps ());
       (* dont call 'process_unknown' in this case. Timeout stops
          all-models listing *)
       print_model used_names (SAT.get_model env) None;

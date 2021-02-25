@@ -314,7 +314,8 @@ let mk_models_opt b =
 
 let mk_output_opt
     interpretation use_underscore objectives_in_interpretation
-    all_models show_prop_model unsat_core output_format model_type models
+    all_models show_prop_model timeout_as_unknown unsat_core output_format
+    model_type models
   =
   let `Ok () = mk_models_opt models in
   set_infer_output_format output_format;
@@ -332,6 +333,7 @@ let mk_output_opt
   set_objectives_in_interpretation objectives_in_interpretation;
   set_all_models all_models;
   set_show_prop_model show_prop_model;
+  set_timeout_as_unknown timeout_as_unknown;
   set_unsat_core unsat_core;
   set_output_format output_format;
   set_model_type model_type;
@@ -959,7 +961,7 @@ let parse_output_opt =
            ~docv ~docs ~doc) in
 
   let objectives_in_interpretation =
-    let doc = " inline pretty-printing of optimized expressions in the \
+    let doc = "Inline pretty-printing of optimized expressions in the \
                model instead of a dedicated section '(objectives \
                ...)'. Be aware that a part of the model may be shrunk \
                or not accurate if some expressions to optimize are \
@@ -970,7 +972,7 @@ let parse_output_opt =
             "obj-in-interpretation";"obj-in-model"] ~docv ~docs ~doc) in
 
   let all_models =
-    let doc = " enable all-models (or all-sat) feature, in which case, \
+    let doc = "Enable all-models (or all-sat) feature, in which case, \
                all possible boolean models will be explored. If \
                --interpretation is also set, an interpretation for \
                each boolean model will also be displayed. Note that \
@@ -980,7 +982,7 @@ let parse_output_opt =
            ["all-models"; "all-sat"] ~docv ~docs ~doc) in
 
   let show_prop_model =
-    let doc = " also show the propositional if a model is requested \
+    let doc = "Also show the propositional if a model is requested \
                (with --interpretation or with --all-models options)." in
     let docv = "VAL" in
     Arg.(value & flag & info
@@ -997,6 +999,12 @@ let parse_output_opt =
     Arg.(value & flag & info
            ["interpretation-use-underscore";"use-underscore"]
            ~docv ~docs ~doc) in
+
+  let timeout_as_unknown =
+    let doc = "Returns unknown status instead of timeout" in
+    let docv = "VAL" in
+    Arg.(value & flag & info
+           ["timeout-as-unknown"; "to-as-unknown"] ~docv ~docs ~doc) in
 
   let unsat_core =
     let doc = "Experimental support for computing and printing unsat-cores." in
@@ -1045,7 +1053,7 @@ let parse_output_opt =
   Term.(ret (const mk_output_opt $
              interpretation $ use_underscore $
              objectives_in_interpretation $ all_models $ show_prop_model $
-             unsat_core $ output_format $ model_type $ mdls
+             timeout_as_unknown $ unsat_core $ output_format $ model_type $ mdls
             ))
 
 let parse_profiling_opt =
