@@ -31,6 +31,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   }
 
   type t = {
+    pending_assumes : E.gformula list;
     satml : SAT.t;
     ff_hcons_env : FF.hcons_env;
     nb_mrounds : int;
@@ -59,6 +60,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let empty () =
     { gamma = ME.empty;
+      pending_assumes = [];
       satml = SAT.empty ();
       ff_hcons_env = FF.empty_hcons_env ();
       nb_mrounds = 0;
@@ -1097,16 +1099,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let unsat env gf =
     checks_implemented_features ();
-    let gf = add_guard env gf in
-    Debug.unsat gf;
-    (*fprintf fmt "FF.unsat@.";*)
-    (* In dfs_sat goals' terms are added to env.inst *)
-    let env =
-      {env with inst =
-                  Inst.add_terms env.inst
-                    (E.max_ground_terms_rec_of_form gf.E.ff) gf}
-    in
     try
+      let env, _upd = assume_aux ~dec_lvl:0 env env.pending_assumes in
+      let env = { env with pending_assumes = [] } in
+      let gf = add_guard env gf in
+      Debug.unsat gf;
+      (*fprintf fmt "FF.unsat@.";*)
+      (* In dfs_sat goals' terms are added to env.inst *)
+      let env =
+        {env with inst =
+                    Inst.add_terms env.inst
+                      (E.max_ground_terms_rec_of_form gf.E.ff) gf}
+      in
       assert (SAT.decision_level env.satml == 0);
       let env, _updated = assume_aux ~dec_lvl:0 env [gf] in
       let max_t = max_term_depth_in_sat env in
@@ -1126,9 +1130,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)
-    assert (SAT.decision_level env.satml == 0);
-    try fst (assume_aux ~dec_lvl:0 env [add_guard env gf])
-    with IUnsat (_env, dep) -> raise (Unsat dep)
+    { env with pending_assumes = (add_guard env gf) :: env.pending_assumes }
+
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
