@@ -396,3 +396,6 @@ release-distclean:
 
 emacs-edit:
 	emacs `find . -name '*'.ml* | grep -v _build | grep -v _opam` &
+
+modules-dep-graph dep-graph:
+	rsc/extra/gen-modules-dep-graph.sh
