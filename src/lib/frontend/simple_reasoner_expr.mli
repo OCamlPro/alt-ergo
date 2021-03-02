@@ -24,10 +24,13 @@ val has_changed : _ simp -> bool
     defined below.
 *)
 
-module type Dom =
-sig
+type 'abs_val add_constraint_res =
+  | AlreadyTrue (* The constraint is already true *)
+  | AlreadyFalse (* The constraint is already false*)
+  | NewConstraint of 'abs_val (* The new abstract value *)
+
+module type Dom = sig
   type v
-  type expr
 
   (** Top/Bottom value *)
   val top : v
@@ -40,42 +43,20 @@ sig
   val join : v -> v -> v
 
   (** Add constraint *)
-  val add_constraint : expr -> v -> v
+  val add_constraint : Expr.t -> Expr.t -> Symbols.lit -> v -> v add_constraint_res
 
-  (** Constants *)
-  val vrai : v
-  val faux : v
-end
-
-(** Expr is the signature of the module dedicated to
-    the representation of expressions that are to be
-    simplified. *)
-module type Expr = sig
-  type t
-  val equal : t -> t -> bool
-  val mk_term : Symbols.t -> t list -> Ty.t -> t
-  val get_comp : t -> Symbols.t
-  val get_sub_expr : t -> t list
-  val get_type : t -> Ty.t
-  val neg : t -> t
-  val vrai : t
-  val faux : t
-  val int : string -> t
-  val real : string -> t
-  val print : Format.formatter -> t -> unit
+  val pp : Format.formatter -> v -> unit
 end
 
 (** This is the signature of the simplifyer. *)
 module type S =
 sig
   type v
-  type expr
 
   (** Simplifies an expression and returns its associated abstract value. *)
-  val simp_expr : expr -> (expr, v) simp
+  val simp_expr : Expr.t -> (Expr.t, v) simp
 end
 
 module SimpleReasoner
-    (E : Expr)
-    (D : Dom with type expr = E.t)
-  : S with type expr = E.t and type v = D.v
+    (D : Dom)
+  : S with type v = D.v

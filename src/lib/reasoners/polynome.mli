@@ -34,6 +34,13 @@ module type S = sig
   val mult : r -> r -> r
 end
 
+module type Calc = sig
+  type t
+  val one : t
+  val add : t -> t -> t
+  val mul : Numbers.Q.t -> t -> t
+end
+
 module type T = sig
 
   type r
@@ -79,6 +86,16 @@ module type T = sig
   val abstract_selectors : t -> (r * r) list -> t * (r * r) list
 
   val separate_constant : t -> t * Numbers.Q.t
+
+  val fold_on_vars : (r -> Numbers.Q.t -> 'acc -> 'acc) -> t -> 'acc -> 'acc
+
+  module M : Map.S with type key = r
+
+  module Eval (C : Calc) : sig
+    exception MissingVar
+    val eval : C.t M.t -> t -> C.t
+  end
+
 end
 
 module type EXTENDED_Polynome = sig

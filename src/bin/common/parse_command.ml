@@ -436,7 +436,7 @@ let halt_opt version_info where =
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
 
-let mk_opts file () () () () () () halt_opt (gc) () () () () () () () ()
+let mk_opts file () () () () () () halt_opt (gc) () () () () () () () () ()
   =
 
   if halt_opt then `Ok false
@@ -482,6 +482,7 @@ let s_sat = "SAT OPTIONS"
 let s_term = "TERM OPTIONS"
 let s_theory = "THEORY OPTIONS"
 let s_fmt = "FORMATTER OPTIONS"
+let s_simp = "SIMPLIFIER"
 
 (* Parsers *)
 

@@ -320,9 +320,6 @@ val is_pure : t -> bool
 val const_term : t -> bool
 (** return true iff the given argument is a term without arguments *)
 
-(** SimpExpr defines a simplifyer functor for expressions of type t
-    (defined in this file). *)
-module SimpExpr :
-  functor
-    (D : Simple_reasoner_expr.Dom with type expr = t)
-    -> Simple_reasoner_expr.S with type expr = t and type v = D.v
+val get_symb : t -> Symbols.t
+
+val get_sub_expr : t -> t list

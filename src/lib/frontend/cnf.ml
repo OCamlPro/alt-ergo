@@ -35,29 +35,14 @@ module E = Expr
 module Sy = Symbols
 module SE = E.Set
 module SRE = Simple_reasoner_expr
-
-(** Simplifyer not using the theory *)
-module DummySimp =
-  Expr.SimpExpr
-    (struct
-      type expr = Expr.t
-      type v = unit
-      let top = ()
-      let bottom = ()
-      let compare _ _ = Some 0
-      let join _ _ = ()
-      let add_constraint _ _ = ()
-      let vrai = ()
-      let faux = ()
-    end
-    )
+module Smp = Simplifiers
 
 let choose_preproc () :
-  (module Simple_reasoner_expr.S with type expr = Expr.t and type v = unit) =
+  (module Simple_reasoner_expr.S) =
   if not (Options.get_simplify_th ()) then
-    (module DummySimp)
+    (module Smp.DummySimp)
   else
-    (module DummySimp)
+    (module Smp.IntervalsSimp)
 
 module SimpExprPreproc () = (val (choose_preproc ()))
 
