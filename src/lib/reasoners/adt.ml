@@ -66,7 +66,7 @@ module Shostak (X : ALIEN) = struct
     not (get_disable_adts ()) &&
     match sy, ty with
     | Sy.Op (Sy.Constr _), Ty.Tadt _ -> true
-    | Sy.Op Sy.Destruct _, _ -> true
+    | Sy.Op Sy.Destruct (_,guarded), _ -> not guarded
     | _ -> false
 
   let embed r =
