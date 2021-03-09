@@ -150,8 +150,7 @@ type options = {
 }
 
 type statistics =
-  (string * int * int) list *
-  (string * int * int) list
+  (string * int * int * int) list
 
 (** Record type that contains all results that can be returned by the
     Alt-Ergo's worker. *)

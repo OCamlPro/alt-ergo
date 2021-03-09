@@ -32,8 +32,8 @@ let check_buffer_content b =
 
 let check_context_content c =
   match c with
-  | [],[] -> None
-  | [],_ | _,[] | _,_ -> Some c
+  | [] -> None
+  | _ -> Some c
 
 let main file =
   let buf_std = Buffer.create 10 in
@@ -48,7 +48,9 @@ let main file =
   Options.set_fmt_mdl (Format.formatter_of_buffer buf_mdl);
   let buf_usc = Buffer.create 10 in
   Options.set_fmt_usc (Format.formatter_of_buffer buf_usc);
+
   let context = ref ([],[]) in
+  let tbl = Hashtbl.create 53 in
 
   Input_frontend.register_legacy ();
 
@@ -64,13 +66,22 @@ let main file =
 
   let module FE = Frontend.Make (SAT) in
 
+  let add_inst orig =
+    let id = Expr.uid orig in
+    begin
+      try incr (snd (Hashtbl.find tbl id))
+      with Not_found -> Hashtbl.add tbl id (orig, ref 1)
+    end;
+    true
+  in
+
   let compute_used_context env dep =
     let compute_used_context_aux l =
       List.fold_left (fun acc f ->
           match Expr.form_view f with
           | Lemma {name=name;loc=loc;_} ->
             let b,e = loc in
-            (name,b.Lexing.pos_lnum,e.Lexing.pos_lnum) :: acc
+            (Expr.uid f,name,b.Lexing.pos_lnum,e.Lexing.pos_lnum) :: acc
           | _ -> acc
         )[] l in
     let used,unused = SAT.retrieve_used_context env dep in
@@ -84,7 +95,7 @@ let main file =
       List.fold_left
         (FE.process_decl
            FE.print_status used_context consistent_dep_stack)
-        (SAT.empty (), true, Explanation.empty) cnf in
+        (SAT.empty_with_inst add_inst, true, Explanation.empty) cnf in
 
     if Options.get_save_used_context () then begin
       (* Format.eprintf "Solve finished, print context@."; *)
@@ -156,12 +167,28 @@ let main file =
           Seq.fold_left typing_loop state (parsed ()) in ()
     with Exit -> () end;
 
+
+  let compute_statistics (used,unused) =
+    let aux stats l =
+      List.fold_left (fun acc (id,name,pos_start,pos_end) ->
+          match Hashtbl.find_opt tbl id with
+          | Some (_f,nb) ->
+             (name,pos_start,pos_end,!nb) :: acc
+          | None ->
+             (name,pos_start,pos_end,0) :: acc
+        ) stats l in
+    let used_stats = aux [] used in
+    let stats = aux used_stats unused in
+    List.rev stats
+  in
+
   {
     Worker_interface.results = check_buffer_content buf_std;
     Worker_interface.errors = check_buffer_content buf_err;
     Worker_interface.warnings = check_buffer_content buf_wrn;
     Worker_interface.debugs = check_buffer_content buf_dbg;
-    Worker_interface.statistics = check_context_content !context;
+    Worker_interface.statistics =
+      check_context_content (compute_statistics (!context));
     Worker_interface.model = check_buffer_content buf_mdl;
     Worker_interface.unsat_core = check_buffer_content buf_usc;
   }
