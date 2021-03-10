@@ -26,22 +26,5 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Alt_ergo_common
-
-(* Register input method and parsers *)
-let register_input () =
-  Input_frontend.register_legacy ()
-
-(* done here to initialize options,
-   before the instantiations of functors *)
-let parse_cmdline () =
-  try Parse_command.parse_cmdline_arguments ()
-  with Parse_command.Exit_parse_command i -> exit i
-
-let () =
-  register_input ();
-  parse_cmdline ();
-  AltErgoLib.Printer.init_colors ();
-  AltErgoLib.Printer.init_output_format ();
-  Signals_profiling.init_signals ();
-  Solving_loop.main ()
+(** Main function solve the input problem *)
+val main : unit -> unit
