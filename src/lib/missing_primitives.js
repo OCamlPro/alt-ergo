@@ -11,21 +11,3 @@ function unix_times () {
 function unix_setitimer () {
   return BLOCK(0, 0, 0, 0)
 }
-
-// Camlzip primitives
-//Provides: camlzip_inflateEnd
-function  camlzip_inflateEnd () {
-  return BLOCK(0, 0, 0, 0)
-}
-//Provides: camlzip_inflateInit
-function camlzip_inflateInit () {
-  return BLOCK(0, 0, 0, 0)
-}
-//Provides: camlzip_inflate_bytecode
-function camlzip_inflate_bytecode () {
-  return BLOCK(0, 0, 0, 0)
-}
-//Provides: camlzip_update_crc32
-function camlzip_update_crc32 () {
-  return BLOCK(0, 0, 0, 0)
-}
