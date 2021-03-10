@@ -1,0 +1,12 @@
+{1 Alt-ergo in Javascript}
+
+{2 Alt-ergo for node-js}
+
+A simple javascript version of the alt-ergo package is available with the command [make js-node].
+The command [make js-node] will create the javascript file [alt-ergo.js].
+This file allows you to run alt-ergo in command line with [node] like [node alt-ergo.js <options> <input_file>].
+This command uses the Alt-Ergo_common internal lib (see {{:index_common.html}[Alt_ergo_common]}) for parsing command line, input file, and main solving loop.
+
+To run this command you will need the following aditionnal dependencies: [js_of_ocaml-compiler] and [zarith_stubs_js].
+The [--timeout] option is ignored due to a lack of js primitives
+Zip files are not recognised file extension.
