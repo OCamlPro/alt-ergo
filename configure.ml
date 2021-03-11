@@ -206,10 +206,7 @@ let () =
 
 (* run dune to check that dependencies are installed *)
 let () =
-  let p_opt =
-    match !pkg with
-    | "" -> "--only-packages=alt-ergo-lib,alt-ergo-parsers,alt-ergo,altgr-ergo"
-    | s -> Format.asprintf "-p %s" s in
+  let p_opt = match !pkg with "" -> "" | s -> Format.asprintf "-p %s" s in
   let cmd =
     Format.asprintf
       "dune external-lib-deps --display=quiet --missing %s @install" p_opt
