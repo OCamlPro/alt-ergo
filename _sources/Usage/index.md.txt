@@ -83,6 +83,16 @@ On windows, a binary at path `Z:\some\path\bin\alt-ergo` will look for preludes 
 plugins in `Z:\some\path\share\alt-ergo\preludes` and
 `Z:\some\path\share\alt-ergo\plugins` respectively.
 
+### Javascript
+
+Alt-Ergo can be compiled in Javascript see [INSTALL.md] for more informations.
+
+The Javascript version of Alt-Ergo compatible with node-js is executed with the following command:
+
+        $ node alt-ergo.js  [options] file.<ext>
+
+Note that timeout options and zip files are not supported with this version because of the lack of js primitives.
+
 [API documentation]: ../API/index.md
 [AB-Why3 README]: ../Plugins/ab_why3.md
 [Input section]: ../Input_file_formats/index

@@ -97,6 +97,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#plugins">Plugins</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#preludes">Preludes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#plugins-and-preludes-directories">Plugins and Preludes directories</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#javascript">Javascript</a></li>
 </ul>
 </li>
 </ul>
@@ -256,6 +257,15 @@ executable, as well as preludes and plugins, can be relocated.</p>
 On windows, a binary at path <code class="docutils literal notranslate"><span class="pre">Z:\some\path\bin\alt-ergo</span></code> will look for preludes and
 plugins in <code class="docutils literal notranslate"><span class="pre">Z:\some\path\share\alt-ergo\preludes</span></code> and
 <code class="docutils literal notranslate"><span class="pre">Z:\some\path\share\alt-ergo\plugins</span></code> respectively.</p>
+</div>
+<div class="section" id="javascript">
+<h3>Javascript<a class="headerlink" href="#javascript" title="Permalink to this headline">¶</a></h3>
+<p>Alt-Ergo can be compiled in Javascript see [INSTALL.md] for more informations.</p>
+<p>The Javascript version of Alt-Ergo compatible with node-js is executed with the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    $ node alt-ergo.js  [options] file.&lt;ext&gt;
+</pre></div>
+</div>
+<p>Note that timeout options and zip files are not supported with this version because of the lack of js primitives.</p>
 </div>
 </div>
 </div>
