@@ -8,3 +8,20 @@
     (flags --no-source-map)
   )
 )
+
+(library
+  (name         worker_interface)
+  (libraries    js_of_ocaml data-encoding)
+  (modules      worker_interface)
+)
+
+; Rule to build a web worker running Alt-Ergo
+(executable
+  (name         worker_js)
+  (libraries    worker_interface alt_ergo_common zarith_stubs_js js_of_ocaml js_of_ocaml-lwt)
+  (modules      worker_js options_interface)
+  (modes        byte js)
+  (js_of_ocaml
+    (flags --no-source-map)
+  )
+)

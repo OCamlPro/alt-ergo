@@ -276,8 +276,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       Printer.print_status_unsat ~validity_mode
         (Some loc) (Some time) (Some steps) (get_goal_name d);
       if get_unsat_core() &&
-         not (get_debug_unsat_core()) &&
-         not (get_save_used_context())
+         not (get_debug_unsat_core())
+         (* && not (get_save_used_context()) *)
       then
         Printer.print_fmt (Options.get_fmt_usc ())
           "unsat-core:@,%a@."
