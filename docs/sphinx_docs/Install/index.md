@@ -101,7 +101,15 @@ depending on whether ocamlopt is installed or only ocamlc is detected.
 
   2. Install with `make install-gui`
 
+#### Alt-Ergo in javascript
 
+  1. Compile with `make js-node`
+
+For this build rule you will need the following aditional libraries :
+```
+Js_of_ocaml-compiler
+zarith_stubs_js
+```
 
 ### Plugins
 
