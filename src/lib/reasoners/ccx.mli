@@ -79,6 +79,9 @@ module type S = sig
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) -> t * Sig_rel.instances
+
+  val retrieve_used_context :
+    t -> Explanation.t -> Expr.t list * Expr.t list
 end
 
 module Main : S

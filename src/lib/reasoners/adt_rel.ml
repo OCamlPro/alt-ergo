@@ -715,5 +715,6 @@ let query env uf (ra, _, ex, _) =
     with
     | Ex.Inconsistent (expl, classes) -> Some (expl, classes)
 
+let retrieve_used_context _ _ = [], []
 
 (* ################################################################ *)

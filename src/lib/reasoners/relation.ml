@@ -174,6 +174,18 @@ let instantiate ~do_syntactic_matching t_match env uf selector =
   {r1=r1; r2=r2; r3=r3; r4=r4; r5=r5; r6=r6; r7=r7},
   l7 |@| l6 |@| l5 |@| l4 |@| l3 |@| l2 |@| l1
 
+let retrieve_used_context env dep =
+  Options.exec_thread_yield ();
+  let r1, l1 = Rel1.retrieve_used_context env.r1 dep in
+  let r2, l2 = Rel2.retrieve_used_context env.r2 dep in
+  let r3, l3 = Rel3.retrieve_used_context env.r3 dep in
+  let r4, l4 = Rel4.retrieve_used_context env.r4 dep in
+  let r5, l5 = Rel5.retrieve_used_context env.r5 dep in
+  let r6, l6 = Rel6.retrieve_used_context env.r6 dep in
+  let r7, l7 = Rel7.retrieve_used_context env.r7 dep in
+  r7|@| r6 |@| r5 |@| r4 |@| r3 |@| r2 |@| r1,
+  l7 |@| l6 |@| l5 |@| l4 |@| l3 |@| l2 |@| l1
+
 let print_model fmt env rs =
   Rel1.print_model fmt env.r1 rs;
   Rel2.print_model fmt env.r2 rs;

@@ -1159,6 +1159,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     SAT.assume_th_elt env.satml th_elt dep;
     env
 
+  let retrieve_used_context env dep =
+    let l1, l2 = Inst.retrieve_used_context env.inst dep in
+    let r1, r2 = Th.retrieve_used_context (SAT.current_tbox env.satml) dep in
+    List.rev_append l1 r1, List.rev_append l2 r2
+
 end
 
 (*

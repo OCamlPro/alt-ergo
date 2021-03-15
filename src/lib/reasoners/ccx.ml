@@ -87,6 +87,8 @@ module type S = sig
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) -> t * instances
 
+  val retrieve_used_context :
+    t -> Explanation.t -> Expr.t list * Expr.t list
 end
 
 module Main : S = struct
@@ -777,5 +779,5 @@ module Main : S = struct
     in
     Uf.term_repr env.uf t
 
-
+  let retrieve_used_context _ _ = [], []
 end
