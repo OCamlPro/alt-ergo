@@ -1,0 +1,10 @@
+; Rule to build a js version runnable with node-js of Alt-Ergo
+(executable
+  (name         main_text_js)
+  (libraries    alt_ergo_common zarith_stubs_js)
+  (modules      main_text_js)
+  (modes        byte js)
+  (js_of_ocaml
+    (flags --no-source-map)
+  )
+)

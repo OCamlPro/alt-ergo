@@ -7,9 +7,9 @@
   (name         Main_text)
   (public_name  alt-ergo)
   (package      alt-ergo)
-  (libraries    alt_ergo_common alt-ergo-parsers stdlib-shims)
+  (libraries    alt_ergo_common)
   (link_flags   (:include flags.dune))
-  (modules      Main_input Main_text)
+  (modules      Main_text)
 )
 
 ; Rule to generate a man page for alt-ergo

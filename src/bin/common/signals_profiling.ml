@@ -26,22 +26,71 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Alt_ergo_common
+open AltErgoLib
+open Options
 
-(* Register input method and parsers *)
-let register_input () =
-  Input_frontend.register_legacy ()
+let timers = Timers.empty ()
 
-(* done here to initialize options,
-   before the instantiations of functors *)
-let parse_cmdline () =
-  try Parse_command.parse_cmdline_arguments ()
-  with Parse_command.Exit_parse_command i -> exit i
+let get_timers () = timers
 
-let () =
-  register_input ();
-  parse_cmdline ();
-  AltErgoLib.Printer.init_colors ();
-  AltErgoLib.Printer.init_output_format ();
-  Signals_profiling.init_signals ();
-  Solving_loop.main ()
+let init_sigterm_6 () =
+  (* what to do with Ctrl+C ? *)
+  Sys.set_signal Sys.sigint(*-6*)
+    (Sys.Signal_handle (fun _ ->
+         if Options.get_profiling() then Profiling.switch (get_fmt_err ())
+         else begin
+           Printer.print_wrn "User wants me to stop.";
+           Printer.print_std "unknown";
+           exit 1
+         end
+       )
+    )
+
+let init_sigterm_11_9 () =
+  (* put the test here because Windows does not handle Sys.Signal_handle
+     correctly *)
+  if Options.get_profiling() then
+    List.iter
+      (fun sign ->
+         Sys.set_signal sign
+           (Sys.Signal_handle
+              (fun _ ->
+                 Profiling.print true (Steps.get_steps ())
+                   timers (get_fmt_err ());
+                 exit 1
+              )
+           )
+      )[ Sys.sigterm (*-11*); Sys.sigquit (*-9*)]
+
+let init_sigterm_21 () =
+  (* put the test here because Windows does not handle Sys.Signal_handle
+     correctly *)
+  if Options.get_profiling() then
+    Sys.set_signal Sys.sigprof (*-21*)
+      (Sys.Signal_handle
+         (fun _ ->
+            Profiling.print false (Steps.get_steps ()) timers (get_fmt_err ());
+         )
+      )
+
+let init_sigalarm () =
+  if not (get_model ()) then
+    try
+      Sys.set_signal Sys.sigvtalrm
+        (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
+    with Invalid_argument _ -> ()
+
+let init_profiling () =
+  if Options.get_profiling () then begin
+    Timers.reset timers;
+    assert (Options.get_timers());
+    Timers.set_timer_start (Timers.start timers);
+    Timers.set_timer_pause (Timers.pause timers);
+    Profiling.init ();
+  end
+
+let init_signals () =
+  init_sigterm_6 ();
+  init_sigterm_11_9 ();
+  init_sigterm_21 ();
+  init_sigalarm ()
