@@ -322,7 +322,18 @@ js-worker: gen
 	$(DUNE) build $(DUNE_FLAGS) --profile=release $(BJS_DIR)/worker_js.bc.js
 	ln -sf $(DEFAULT_DIR)/$(BJS_DIR)/worker_js.bc.js alt-ergo-worker.js \
 
-.PHONY: js-node js-worker
+# Build a small web example using the alt-ergo web worker
+# This example is available in the www/ directory
+# zarith_stubs_js, js_of_ocaml and js_of_ocaml-lwt js_of_ocaml-ppx lwt_ppx packages are needed for this rule
+js-example: gen js-worker
+	$(DUNE) build $(DUNE_FLAGS) --profile=release $(BJS_DIR)/worker_example.bc.js
+	mkdir -p www
+	cp $(EXTRA_DIR)/worker_example.html www/index.html
+	cd www \
+	&& ln -sf ../$(DEFAULT_DIR)/$(BJS_DIR)/worker_js.bc.js alt-ergo-worker.js \
+	&& ln -sf ../$(DEFAULT_DIR)/$(BJS_DIR)/worker_example.bc.js alt-ergo-main.js
+
+.PHONY: js-node js-worker js-example
 
 # ================
 # Dependency graph
@@ -399,6 +410,10 @@ generated-clean:
 dune-clean:
 	$(DUNE) clean
 
+# Clean js example files
+js-clean:
+	rm -rf www
+
 # Clean ocamldot's build artifacts
 ocamldot-clean:
 	cd $(EXTRA_DIR)/ocamldot && $(MAKE) clean
@@ -411,7 +426,7 @@ makefile-distclean: generated-clean
 release-distclean:
 	rm -rf public-release
 
-.PHONY: generated-clean dune-clean makefile-distclean release-distclean
+.PHONY: generated-clean dune-clean js-clean makefile-distclean release-distclean
 
 emacs-edit:
 	emacs `find . -name '*'.ml* | grep -v _build | grep -v _opam` &
