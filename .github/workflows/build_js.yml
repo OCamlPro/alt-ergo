@@ -1,13 +1,16 @@
 name: Build Javascript
 
 # this worflow try to build and test the javascript version of Alt-Ergo
-# If a PR is open, we try to build the js code and run it with node on our tests
-
-on: [push,pull_request]
+# It only runs on `next` or `main` branch
+on:
+  push:
+    branches:
+      - next
+      - main
 
 env:
   OCAML_DEFAULT_VERSION: 4.10.0
-  # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
+  # Add OPAMYES=true to the environment, this is usefull to replace `-y` option
   # in any opam call
   OPAMYES: true
   # Alt-Ergo's depext crashs with with-test flag to yes
@@ -80,4 +83,13 @@ jobs:
 
       # Run simple test with node
       - name: Run simple example with node
-        run: opam exec -- node alt-ergo.js examples/valid/ac_arith.ae
+        run: opam exec -- node alt-ergo.js non-regression/valid/everything/f1.ae
+
+      # Upload Alt-Ergo.js an artifact
+      # the artifact name contains the system is builded on and the ocaml
+      # compiler version used
+      - name: Upload alt-ergo.js
+        uses: actions/upload-artifact@v2
+        with:
+          name: alt-ergo-js-${{ runner.os }}-${{ env.OCAML_DEFAULT_VERSION }}
+          path: "alt-ergo.js"
