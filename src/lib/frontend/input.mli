@@ -34,6 +34,9 @@ module type S = sig
   type parsed
   (** The type of a parsed statement. *)
 
+  val parse_file : file:string -> format:string option -> parsed Seq.t
+  (** Parse a file as a string with the given format or the input_format set *)
+
   val parse_files : filename:string -> preludes:string list -> parsed Seq.t
   (** Parse a file (and some preludes). *)
 
