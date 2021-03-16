@@ -73,9 +73,9 @@ depending on whether ocamlopt is installed or only ocamlc is detected.
 
   1. Compile with `make`
 
-  2. Install with `make install`
+  2. Install with `make install-all`
 
-  3. Uninstall with `make uninstall`
+  3. Uninstall with `make uninstall-all`
 
 #### Alt-Ergo library
 
