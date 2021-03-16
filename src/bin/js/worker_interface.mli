@@ -149,9 +149,14 @@ type options = {
   file : string option;
 }
 
+(** type that contains a list of the axiom used (or not) in instances.
+    axiom name, start pos, end pos, number of time its used in insstances *)
 type statistics =
   (string * int * int * int) list
 
+(** Type used to return the status of solving
+    This can be usefull to match status instead of analysing
+    results and errors fields *)
 type status =
   | Unsat of int
   | Inconsistent of int

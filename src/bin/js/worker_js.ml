@@ -22,6 +22,7 @@ type 'a state = {
   global : Commands.sat_tdecl list;
 }
 
+(* If the buffer is not empty split the string in strings at each newline *)
 let check_buffer_content b =
   let buf_cont = Buffer.contents b in
   if String.equal buf_cont "" then
@@ -36,6 +37,9 @@ let check_context_content c =
   | _ -> Some c
 
 let main worker_id file =
+
+  (* Create buffer for each formatter
+     The content of this buffers are then retrieved and send as results *)
   let buf_std = Buffer.create 10 in
   Options.set_fmt_std (Format.formatter_of_buffer buf_std);
   let buf_err = Buffer.create 10 in
@@ -49,11 +53,15 @@ let main worker_id file =
   let buf_usc = Buffer.create 10 in
   Options.set_fmt_usc (Format.formatter_of_buffer buf_usc);
 
+  (* Status updated regarding if AE succed or failed
+     (error or steplimit reached) *)
   let returned_status = ref (Worker_interface.Unknown 0) in
 
   let context = ref ([],[]) in
   let tbl = Hashtbl.create 53 in
 
+
+  (* Initialisation *)
   Input_frontend.register_legacy ();
 
   let module SatCont =
@@ -68,6 +76,7 @@ let main worker_id file =
 
   let module FE = Frontend.Make (SAT) in
 
+  (* Aux function used to record axioms used in instantiations *)
   let add_inst orig =
     let id = Expr.uid orig in
     begin
@@ -113,12 +122,7 @@ let main worker_id file =
         (SAT.empty_with_inst add_inst, true, Explanation.empty) cnf in
 
     if Options.get_save_used_context () then begin
-      (* Format.eprintf "Solve finished, print context@."; *)
       context := compute_used_context env dep;
-
-      (* List.iter (fun (used,_,_) ->
-          Format.eprintf "Used : %s@." used
-         ) (fst !context); *)
     end;
   in
 
@@ -162,9 +166,9 @@ let main worker_id file =
             | Steps_limit _ ->
               returned_status :=
                 Worker_interface.LimitReached "Steps limit"
-            | _ -> ()
+            | _ -> returned_status := Worker_interface.Error "Run error"
           end
-        | _ -> ()
+        | _ -> returned_status := Worker_interface.Error "Error"
       end;
       Printer.print_err "%a" Errors.report e;
       raise Exit
@@ -207,6 +211,7 @@ let main worker_id file =
     List.rev stats
   in
 
+  (* returns a records with compatible worker_interface fields *)
   {
     Worker_interface.worker_id = worker_id;
     Worker_interface.status = !returned_status;
@@ -219,7 +224,6 @@ let main worker_id file =
     Worker_interface.model = check_buffer_content buf_mdl;
     Worker_interface.unsat_core = check_buffer_content buf_usc;
   }
-
 
 
 (** Worker initialisation
@@ -238,12 +242,16 @@ let () =
           let filecontent = String.concat "\n" filecontent in
           (* Format.eprintf
              "file content : @, %s @,@, end of file @." filecontent; *)
+
+          (* Extract options and set them *)
           let options = Worker_interface.options_from_json json_options in
           Options_interface.set_options options;
 
+          (* Run the worker on the input file (filecontent) *)
           let results = main worker_id filecontent in
+
+          (* Convert results and returns them *)
           Worker.post_message (Worker_interface.results_to_json results);
-          (* Worker.post_message results; *)
           Lwt.return ();
         )
     )

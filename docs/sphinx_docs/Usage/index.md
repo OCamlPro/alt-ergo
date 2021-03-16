@@ -83,9 +83,11 @@ On windows, a binary at path `Z:\some\path\bin\alt-ergo` will look for preludes 
 plugins in `Z:\some\path\share\alt-ergo\preludes` and
 `Z:\some\path\share\alt-ergo\plugins` respectively.
 
-### Javascript
+## Javascript
 
-Alt-Ergo can be compiled in Javascript see [INSTALL.md] for more informations.
+Alt-Ergo can be compiled in Javascript see the [install section] for more informations.
+
+### Js-node
 
 The Javascript version of Alt-Ergo compatible with node-js is executed with the following command:
 
@@ -93,6 +95,54 @@ The Javascript version of Alt-Ergo compatible with node-js is executed with the 
 
 Note that timeout options and zip files are not supported with this version because of the lack of js primitives.
 
+### Js-worker
+
+A web worker of the alt-ergo solver is available with the command `make js-worker`. It uses Js_of_ocaml Worker's and Lwt. The `data-encoding` library is used to encode and decode messages to/from the worker. Since the messages are in JSon format, the Alt-Ergo worker can be used from any javascript code.
+
+#### Inputs
+
+This web worker takes a json file composed of a list of string representing each line of an input file. This json file can also be composed of an optional worker identifier (integer) and an optional name for the file to solve. The following code shows an example of a such json file :
+
+```
+{"filename": "testfile",
+ "worker_id": 42,
+ "content": [ "goal g : true" ] }
+```
+
+The worker also take a Json file that correspond to the options to set in Alt-Ergo, like the following example :
+
+```
+{"debug": true,
+ "sat_solver": "Tableaux",
+ "steps_bound": 1000 }
+```
+
+#### Outpus
+
+At the end of solving it returns a Json file corresponding to results, debug informations, etc:
+
+```
+{"worker_id": 42, "status": { "Unsat": 0 },
+"results": [ "Valid (0.1940) (0 steps) (goal g)", "" ],
+"debugs": [ "[Debug][Sat_solver]", "use Tableaux-like solver", "" ],
+"model": [ "[all-models] No SAT models found", "" ],
+"unsat_core": [ "unsat-core:", "", "", "" ],
+"errors": [ "" ],
+"warnings": [ "" ],
+"statistics": [ [], [] ] }
+```
+
+Options and results formats are available in `worker_interface` module. In this module you can also find functions to easily encode inputs and decode outputs.
+Look at the `worker_json_example.json` in the ressources `rsc` of the project to learn more.
+
+### Js-worker example
+
+A small example of how to use the Alt-Ergo web worker can be build with the command ```make js-example```. This command also makes the web worker if it has not already been built. It produces a `www` directory with an html page where you can write a small example, run the worker, and see the results. You can also look at the console of your browser to look at the json file send
+
+
+[install section]: ../Install/index.md
+[Lwt]: https://ocsigen.org/lwt/
+[js_of_ocaml]: https://ocsigen.org/js_of_ocaml/
 [API documentation]: ../API/index.md
 [AB-Why3 README]: ../Plugins/ab_why3.md
 [Input section]: ../Input_file_formats/index
