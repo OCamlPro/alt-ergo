@@ -1,13 +1,6 @@
-(documentation
-  (package alt-ergo-js)
-  (mld_files :standard)
-)
-
 ; Rule to build a js version runnable with node-js of Alt-Ergo
 (executable
   (name         main_text_js)
-  (public_name  alt-ergo-js-node)
-  (package      alt-ergo-js)
   (libraries    alt_ergo_common zarith_stubs_js)
   (modules      main_text_js)
   (modes        byte js)
@@ -18,7 +11,6 @@
 
 (library
   (name         worker_interface)
-  (public_name alt-ergo-js)
   (libraries    js_of_ocaml data-encoding)
   (modules      worker_interface)
 )
@@ -26,8 +18,6 @@
 ; Rule to build a web worker running Alt-Ergo
 (executable
   (name         worker_js)
-  (public_name  alt-ergo-js-worker)
-  (package      alt-ergo-js)
   (libraries    worker_interface alt_ergo_common zarith_stubs_js js_of_ocaml js_of_ocaml-lwt)
   (modules      worker_js options_interface)
   (modes        byte js)
@@ -36,27 +26,14 @@
   )
 )
 
-
 ; Rule to build a small js example running the Alt-Ergo web worker
 (executable
   (name         worker_example)
-  (public_name  alt-ergo-js-example)
-  (package      alt-ergo-js)
   (libraries    worker_interface zarith_stubs_js js_of_ocaml js_of_ocaml-lwt)
   (modules      worker_example)
   (modes        byte js)
   (preprocess (pps js_of_ocaml-ppx lwt_ppx))
   (js_of_ocaml
     (flags --no-source-map)
-  )
-)
-
-; Copy the webworker and the node compatible code in the share section
-(install
-  (package alt-ergo-js)
-  (section share)
-  (files
-    (worker_js.bc.js as alt-ergo-worker.js)
-    (main_text_js.bc.js as alt-ergo-node.js)
   )
 )

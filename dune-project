@@ -113,31 +113,3 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (odoc :with-doc)
  )
 )
-
-; Fifth package, the javascript versions of Alt-Ergo
-
-(package
- (name alt-ergo-js)
- (synopsis "The Alt-Ergo SMT prover in Javascript")
- (description "\
-  This is a package that contains the following :
-  - alt-ergo-js-node which build a js version of Alt-Ergo runnable with node js
-  - alt-ergo-js-worker which build a web worker running Alt-Ergo
-  - alt-ergo-js-example build a small js example running the Alt-Ergo web worker
-  Only the Bytecode version of this executables are installed.
-  "
- )
- (license "OCamlPro Non-Commercial Purpose License, version 1")
-
- (depends
-  (ocaml (>= 4.07.0))
-  (dune (>= 2.0))
-  (alt-ergo-lib (= :version))
-  (alt-ergo-parsers (= :version))
-  (js_of_ocaml (>= 3.6.0))
-  js_of_ocaml-lwt
-  lwt_ppx
-  (zarith_stubs_js (>= 0.14.0))
-  data-encoding
- )
-)
