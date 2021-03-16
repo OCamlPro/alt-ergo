@@ -26,20 +26,23 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(* Global formatter declarations and setters, can't be directly used *)
-let std_fmt = ref Format.std_formatter
-let err_fmt = ref Format.err_formatter
-
-let set_std_fmt f = std_fmt := f
-let set_err_fmt f = err_fmt := f
-
 (* Formatter declarations, getters and setters *)
-let fmt_std = std_fmt
-let fmt_err = err_fmt
-let fmt_wrn = err_fmt
-let fmt_dbg = err_fmt
-let fmt_mdl = std_fmt
-let fmt_usc = std_fmt
+let fmt_std = ref Format.std_formatter
+let fmt_err = ref Format.err_formatter
+let fmt_wrn = ref Format.err_formatter
+let fmt_dbg = ref Format.err_formatter
+let fmt_mdl = ref Format.std_formatter
+let fmt_usc = ref Format.std_formatter
+
+let set_std_fmt f =
+  fmt_std := f;
+  fmt_mdl := f;
+  fmt_usc := f
+
+let set_err_fmt f =
+  fmt_err := f;
+  fmt_wrn := f;
+  fmt_dbg := f
 
 let get_fmt_std () = !fmt_std
 let get_fmt_err () = !fmt_err
