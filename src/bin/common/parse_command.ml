@@ -171,7 +171,8 @@ let mk_dbg_opt_spl2 debug_explanations debug_fm debug_fpa debug_gc
   `Ok()
 
 let mk_dbg_opt_spl3 debug_split debug_sum debug_triggers debug_types
-    debug_typing debug_uf debug_unsat_core debug_use debug_warnings rule
+    debug_typing debug_uf debug_unsat_core debug_use debug_warnings
+    debug_simplify rule
   =
   let rule = value_of_rule rule in
   set_debug_split debug_split;
@@ -183,6 +184,7 @@ let mk_dbg_opt_spl3 debug_split debug_sum debug_triggers debug_types
   set_debug_unsat_core debug_unsat_core;
   set_debug_use debug_use;
   set_debug_warnings debug_warnings;
+  set_debug_simplify debug_simplify;
   set_rule rule;
   `Ok()
 

@@ -281,7 +281,7 @@ val set_simplify : Util.simplify -> unit
 val set_simplify_th : bool -> unit
 
 (** Set [simplify_verbose] accessible with {!val:get_simplify_verbose} *)
-val set_simplify_verbose : bool -> unit
+val set_debug_simplify : bool -> unit
 
 (** Setters used by parse_command *)
 
@@ -980,7 +980,7 @@ val get_simplify_th : unit -> bool
 (** Default to [true] *)
 
 (** Gets the simplify verbose mode: [false] => no verbose *)
-val get_simplify_verbose : unit -> bool
+val get_debug_simplify : unit -> bool
 (** Default to [false] *)
 
 (** Value specifying the file given to Alt-Ergo *)

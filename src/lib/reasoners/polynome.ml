@@ -90,8 +90,7 @@ module type T = sig
   module M : Map.S with type key = r
 
   module Eval (C : Calc) : sig
-    exception MissingVar
-    val eval : C.t M.t -> t -> C.t
+    val eval : (r -> C.t) -> t -> C.t
   end
 end
 
@@ -374,13 +373,8 @@ module Make (X : S) = struct
 
   module Eval (C : Calc) = struct
 
-    exception MissingVar
-
-    let eval_monom(map : C.t M.t) (r : r) (q : Q.t) (acc : C.t)  =
-      match M.find_opt r map with
-      | None -> raise MissingVar
-      | Some v ->
-        C.add acc (C.mul q v)
+    let eval_monom (map : r -> C.t) (r : r) (q : Q.t) (acc : C.t)  =
+      C.add acc (C.mul q (map r))
 
     let eval map p =
       M.fold (eval_monom map) p.m (C.mul p.c C.one)

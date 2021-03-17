@@ -16,7 +16,9 @@ module A = Shostak.Arith
 module P = Shostak.Polynome
 module M = P.M
 
-let verb = Options.get_simplify_verbose
+exception EmptyInterval
+
+let verb = Options.get_debug_simplify
 
 let silent (msg : ('a, Format.formatter, unit) format) =
   Format.ifprintf Format.std_formatter msg
@@ -34,12 +36,20 @@ module DummySimp =
   SRE.SimpleReasoner
     (struct
       type v = unit
+      type state = unit
       let top = ()
       let bottom = ()
       let compare _ _ = Some 0
       let join _ _ = ()
       let add_constraint _ _ _ _ = SRE.NewConstraint ()
       let pp fmt _ = Format.fprintf fmt "()"
+      let unknown = ()
+      let faux = ()
+      let vrai = ()
+      let pp_v fmt _ = Format.fprintf fmt "()"
+      let eval_expr _ _ = ()
+      let v_join _ _ = ()
+      let add_raw_value _ _ _ = ()
     end
     )
 
@@ -64,18 +74,27 @@ let compare_abs_val cmp v1 v2 =
   | Value v1, Value v2 -> cmp v1 v2
 
 module IntervalsDomain :
-  SRE.Dom with type v = Intervals.t abstract_value M.t abstract_value = struct
-  type v = Intervals.t abstract_value M.t abstract_value
+  SRE.Dom
+  with type v = Intervals.t abstract_value
+   and type state = Intervals.t abstract_value M.t abstract_value = struct
+  type v = Intervals.t abstract_value
+  type state = v M.t abstract_value
 
   let top = Top
-  let bottom : v = Bottom
+  let bottom = Bottom
 
+  let faux = Value (Intervals.point Q.zero Ty.Tbool Explanation.empty)
+  let vrai = Value (Intervals.point Q.one  Ty.Tbool Explanation.empty)
+  let unknown = Top
+
+  let pp_v = pp_abs_val Intervals.print
   let pp fmt v =
     pp_abs_val
       (fun fmt -> M.iter
-          (fun r i -> Format.fprintf fmt "%a = %a"
+          (fun r i -> Format.fprintf fmt "\n%a = %a"
               R.print r
-              (pp_abs_val Intervals.print) i))
+              pp_v i
+          ))
       fmt
       v
 
@@ -138,6 +157,14 @@ module IntervalsDomain :
 
   let compare = compare_abs_val compare
 
+  let v_join v1 v2 =
+    match v1, v2 with
+    | Top, _
+    | _, Top -> Top
+    | v, Bottom
+    | Bottom, v -> v
+    | Value v1, Value v2 -> Value (Intervals.merge v1 v2)
+
   let join =
     M.merge
       (fun _k v1 v2 ->
@@ -146,14 +173,7 @@ module IntervalsDomain :
          | ((Some _) as v), None -> v
 
          | None, None -> assert false
-
-         | Some Top, Some _
-         | Some _, Some Top -> Some Top
-
-         | ((Some _) as v), Some Bottom
-         | Some Bottom, ((Some _) as v) -> v
-
-         | Some (Value v1), Some (Value v2) -> Some (Value (Intervals.merge v1 v2)))
+         | Some i1, Some i2 -> Some (v_join i1 i2))
 
   let join v1 v2 =
     match v1, v2 with
@@ -163,8 +183,8 @@ module IntervalsDomain :
     | v, Bottom -> v
     | Value i1, Value i2 -> Value (join i1 i2)
 
-  let eval_constraint (ty : Ty.t) (v : v) (p : P.t) : Intervals.t abstract_value =
-    match v with
+  let eval_constraint (ty : Ty.t) (s : state) (p : P.t) : Intervals.t abstract_value =
+    match s with
     | Top -> begin
       match P.to_list p with
         | [], q -> Value (Intervals.point q ty Explanation.empty)
@@ -173,7 +193,7 @@ module IntervalsDomain :
     | Bottom -> Bottom
     | Value v ->
       let ty = P.type_info p in
-      let module E = P.Eval (struct
+      let module Ev = P.Eval (struct
           type t = Intervals.t abstract_value
           let one = Value (Intervals.point Q.one ty Explanation.empty)
           let add i1 i2 =
@@ -191,11 +211,15 @@ module IntervalsDomain :
               else Top
             | Bottom -> Bottom
             | Value i ->
-              Value (Intervals.affine_scale ~const:Q.zero ~coef i)
+              Value (Intervals.scale coef i)
         end) in (* todo: apply functor statically for each type *)
-      E.eval v p
+      let map r =
+        match M.find_opt r v with
+        | None -> Top
+        | Some v -> v in
+      Ev.eval map p
 
-  let rfind ty k (v : v) = match v with
+  let rfind ty k (v : state) = match v with
     | Bottom -> failwith "Value is bottom: Should have been checked beforehand"
     | Top -> Intervals.undefined ty
     | Value m -> match M.find_opt k m with
@@ -203,52 +227,61 @@ module IntervalsDomain :
       | Some Bottom -> failwith "Internal value is bottom: Should have been checked beforehand"
       | Some (Value i) -> i
 
-  let radd k b v = match v with
-    | Top -> Value (M.add k b M.empty)
-    | Value m -> Value (M.add k b m)
-    | Bottom -> v
+  let radd k b v =
+    match b with
+    | Top -> v
+    | _ -> match v with
+      | Top -> Value (M.add k b M.empty)
+      | Value m -> Value (M.add k b m)
+      | Bottom -> v
 
   let fix_point
       (narrow : rinter:Intervals.t -> prev_inter:Intervals.t -> Intervals.t * bool)
       (ty : Ty.t)
       (constraints : (Q.t * R.r * P.t) list)
-      (v : v) =
-    let rec aux v =
+      (s : state) =
+    let rec aux s =
       let new_vars, keep_iterating =
         List.fold_left
-          (fun ((v : v), keep_iterating) (q,r,p) ->
+          (fun ((s : state), keep_iterating) (q,r,p) ->
              (* Calculates the interval of `p` given the value of `vars` *)
              debug "[fix_point] Constraint %a%a R %a@." Q.print q R.print r P.print p;
-             match eval_constraint ty v p with
+             debug "[fix_point] Evaluating with state %a@." pp s;
+             match eval_constraint ty s p with
              | Top
-             | Bottom  -> v, false
+             | Bottom  -> s, false
              | Value i ->
                (* Deducing the value of `r` *)
                debug "[fix_point] %a = %a@." P.print p Intervals.print i;
 
                if Intervals.is_undefined i then begin
                  debug "[fix_point] No information, continuing@.";
-                 v, keep_iterating
+                 s, keep_iterating
                end else begin
                  debug "[fix_point] Narrowing@.";
                  let rinter = Intervals.scale (Q.div Q.one q) i in
-                 let prev_inter = rfind ty r v in
+                 debug "[fix_point] Inteval of %a by the constraint : %a@." R.print r Intervals.print rinter;
+                 let prev_inter = rfind ty r s in
                  let ri, change = narrow ~rinter ~prev_inter in
-                 debug "[fix_point] %a ~~> %a@." Intervals.print rinter Intervals.print prev_inter;
+                 debug "[fix_point] Old interval of %a : %a@."
+                   R.print r Intervals.print prev_inter;
+                 debug "[fix_point] New interval of %a : %a@."
+                   R.print r Intervals.print ri;
+                 
                  if change then
-                   radd r (Value ri) v, change
+                   radd r (Value ri) s, change
                  else
-                   v, keep_iterating
+                   s, keep_iterating
                end
           )
-          (v, false)
+          (s, false)
           constraints in
-      if keep_iterating then aux new_vars else v in
-    aux v
+      if keep_iterating then aux new_vars else s in
+    aux s
 
   let narrow_eq ~rinter ~prev_inter =
     debug "[fix_point] Narrow EQ@.";
-    if Intervals.contained_in rinter prev_inter
+    if Intervals.contained_in rinter prev_inter && not (Intervals.equal rinter prev_inter)
     then rinter, true
     else prev_inter, false
 
@@ -264,28 +297,45 @@ module IntervalsDomain :
       else prev_inter, false
 
   let narrow_le ~rinter ~prev_inter =
-    debug "[fix_point] Narrow LE@.";
+    debug "[fix_point] Narrow LE ; r_inter = %a -- previous_inter = %a @."
+      Intervals.print rinter Intervals.print prev_inter
+    ;
     try
       let bound   , _, is_le = Intervals.borne_sup rinter in
       let prev_sup =
         try
-          let s, _, _ = Intervals.borne_sup prev_inter in s
+          let s, _, _ = Intervals.borne_sup prev_inter in Some s
         with
-          Intervals.No_finite_bound -> (* A value satisfying the next condition *)
-          Q.sub bound Q.one in
-      if Q.compare bound prev_sup <= 0 then begin
-        debug "[fix_point] %a <= %a@." Q.print bound Q.print prev_sup;
-        prev_inter, false
-      end else
-        (* The new upper bound is lower than then previous one,
-           replacing it *)
+          Intervals.No_finite_bound -> None in
+      match prev_sup with
+      | None ->
+        debug "[fix_point] New constraint upper bound: %a" Q.print bound;
         Intervals.new_borne_sup
           Explanation.empty
           bound
           ~is_le
           prev_inter, true
+      | Some prev_sup ->
+        if Q.compare bound prev_sup >= 0 then begin
+          debug "[fix_point] Constraint upper bound %a >= %a previous upper bound@."
+            Q.print bound Q.print prev_sup;
+          debug "[fix_point] No need for more narrowing@.";
+          prev_inter, false
+        end else begin
+          (* The new upper bound is lower than then previous one,
+             replacing it *)
+          debug "[fix_point] Constraint upper bound %a < %a previous upper bound@."
+            Q.print bound Q.print prev_sup;
+          debug "[fix_point] Narrowing@.";
+          Intervals.new_borne_sup
+            Explanation.empty
+            bound
+            ~is_le
+            prev_inter, true
+      end
     with
     | Intervals.No_finite_bound -> prev_inter, false
+    | Intervals.NotConsistent _ -> raise EmptyInterval
 
   let narrow_lt ~rinter ~prev_inter =
     debug "[fix_point] Narrow LT@.";
@@ -293,22 +343,37 @@ module IntervalsDomain :
       let bound   , _, _ = Intervals.borne_sup rinter in
       let prev_sup =
         try
-          let s, _, _ = Intervals.borne_sup prev_inter in s
+          let s, _, _ = Intervals.borne_sup prev_inter in Some s
         with
-          Intervals.No_finite_bound -> (* A value satisfying the next condition *)
-          Q.sub bound Q.one in
-      if Q.compare bound prev_sup <= 0 then
-        (* The new upper bound is higher then the previous one,
-           keeping it *)
-        prev_inter, false
-      else
-        (* The new upper bound is lower than then previous one,
-           replacing it *)
+          Intervals.No_finite_bound -> None in
+      match prev_sup with
+      | None ->
+        debug "[fix_point] New constraint upper bound: %a" Q.print bound;
         Intervals.new_borne_sup
           Explanation.empty
           bound
           ~is_le:false
           prev_inter, true
+      | Some prev_sup ->
+        if Q.compare bound prev_sup >= 0 then begin
+          (* The new upper bound is higher then the previous one,
+             keeping it *)
+          debug "[fix_point] Constraint upper bound %a >= %a previous upper bound"
+            Q.print bound Q.print prev_sup;
+          debug "[fix_point] No need for more narrowing";
+          prev_inter, false
+        end else begin
+          (* The new upper bound is lower than then previous one,
+             replacing it *)
+          debug "[fix_point] Constraint upper bound %a < %a previous upper bound"
+            Q.print bound Q.print prev_sup;
+          debug "[fix_point] Narrowing";
+          Intervals.new_borne_sup
+            Explanation.empty
+            bound
+            ~is_le:false
+            prev_inter, true
+        end
     with
     | Intervals.No_finite_bound -> prev_inter, false
 
@@ -317,32 +382,43 @@ module IntervalsDomain :
     try
       let bound   , _, _ = Intervals.borne_inf rinter in
       let prev_inf =
-        try let s , _, _ = Intervals.borne_inf prev_inter in s with
-        | Intervals.No_finite_bound -> (* A value satisfying the next condition *)
-          Q.add bound Q.one
+        try
+          let s , _, _ = Intervals.borne_inf prev_inter in Some s
+        with
+        | Intervals.No_finite_bound ->
+          None
       in
-      if Q.compare prev_inf bound > 0 then
-        prev_inter, false
-      else
+      match prev_inf with
+      | None ->
         Intervals.new_borne_inf Explanation.empty bound ~is_le:false prev_inter, true
+      | Some prev_inf ->
+        if Q.compare prev_inf bound >= 0 then
+          prev_inter, false
+        else
+          Intervals.new_borne_inf Explanation.empty bound ~is_le:false prev_inter, true
     with
     | Intervals.No_finite_bound -> prev_inter, false
+    | Intervals.NotConsistent _ -> raise EmptyInterval
 
   let narrow_ge ~rinter ~prev_inter =
     debug "[fix_point] Narrow GE@.";
     try
       let bound   , _, is_le = Intervals.borne_inf rinter in
       let prev_inf =
-        try let s , _, _ = Intervals.borne_inf prev_inter in s with
-        | Intervals.No_finite_bound -> (* A value satisfying the next condition *)
-          Q.add bound Q.one
+        try let s , _, _ = Intervals.borne_inf prev_inter in Some s with
+        | Intervals.No_finite_bound -> None
       in
-      if Q.compare prev_inf bound > 0 then
-        prev_inter, false
-      else
+      match prev_inf with
+      | None ->
         Intervals.new_borne_inf Explanation.empty bound ~is_le prev_inter, true
+      | Some prev_inf ->
+        if Q.compare prev_inf bound >= 0 then
+          prev_inter, false
+        else
+          Intervals.new_borne_inf Explanation.empty bound ~is_le prev_inter, true
     with
     | Intervals.No_finite_bound -> prev_inter, false
+    | Intervals.NotConsistent _ -> raise EmptyInterval
 
   let fix_point_eq  = fix_point narrow_eq
   let fix_point_neq = fix_point narrow_neq
@@ -411,20 +487,44 @@ module IntervalsDomain :
           failwith "Check constraint : todo (even a better error message would be nice)"
     end
 
+  let to_arith e = A.embed @@ fst @@ R.make e
+
   (* Adding constraint l1 R l2, with R = (lit). *)
   let add_constraint l1 l2 lit v =
     match v with
     | Bottom -> failwith "Add constraint with bottom is forbidden"
     | _ ->
-
-      let p1 = A.embed @@ fst (R.make l1) in
-      let p2 = A.embed @@ fst (R.make l2) in
+      let l = Symbols.Lit lit in (* Only for debug *)
+      debug "[add_constraint] Adding constraint  %a %a %a to environment@."
+        E.print l1 Symbols.print l E.print l2;
+      let p1 = to_arith l1  in
+      let p2 = to_arith l2 in
+      let p = P.sub p1 p2 in
+      debug "[add_constraint] Constraint : %a %a 0@." P.print p Symbols.print l;
       let ty = P.type_info p1 in
 
       (* l1 R l2 <=> p + c R 0 *)
-      let (p, c, _cst) = P.normal_form_pos (P.sub p1 p2) in
+      let (p, c, cst) = P.normal_form_pos p in
+      let is_neg = Q.compare cst Q.zero < 0 in
+      let p, c, lit =
+        if is_neg then
+          P.mult_const Q.m_one p,
+          Q.mult Q.m_one c,
+          match lit with
+          | L_built LE -> Symbols.L_neg_built LT
+          | L_built LT -> L_neg_built LE
+          | L_neg_built LE -> L_built LT
+          | L_neg_built LT -> L_built LE
+          | l -> l
+        else p, c, lit in
 
-      debug "Constraint : %a + %a R 0@." P.print p Q.print c;
+      let p, c, _cst =
+        let den = Q.from_z @@ Q.den c in
+        P.mult_const den p, Q.from_z @@ Q.num c, Q.mult den cst in
+
+      debug "[add_constraint] Normalized constraint : %a + %a %a 0@."
+        P.print p Q.print c Symbols.print l;
+      debug "[add_constraint] Known information: %a@." pp v;
 
       let mc = Q.minus c in
 
@@ -433,13 +533,32 @@ module IntervalsDomain :
       | Some false -> AlreadyFalse
       | None ->
       (* p = \Sum (q_i * r_i)
-         p R c <=> \A i. q_i * r_i = p - (q_i * r_i) - c *)
+         p R c <=> \A i. q_i * r_i R (q_i * r_i) - p + c *)
       let constraints =
         P.fold_on_vars
-          (fun r q acc_cstr -> ((q, r, P.sub p (P.create [q,r] c ty)) :: acc_cstr))
+          (fun r q acc_cstr -> ((q, r, P.sub (P.create [q,r] c ty) p) :: acc_cstr))
           p
           [] in
-      NewConstraint (fix_point lit ty constraints v)
+      try
+        let new_constraint = fix_point lit ty constraints v in
+        debug "[add_constraint] New constraint: %a@." pp new_constraint;
+        NewConstraint new_constraint
+      with
+      | EmptyInterval ->
+        (* fix_point calculation reduced a variable to the empty interval *)
+        debug "[add_constraint] Inconsistent interval, returning `false`@.";
+        AlreadyFalse
+
+  let eval_expr e s =
+    match E.term_view e with
+    | Not_a_term _ -> unknown
+    | Term _ ->
+      eval_constraint (E.type_info e) s (A.embed @@ fst @@ R.make e)
+
+  let add_raw_value e v (s : state) =
+    let r = fst @@ R.make e in
+    debug "[add_raw_value] Adding %a = %a in %a@." R.print r pp_v v pp s ;
+    radd r v s
 end
 
 module IntervalsSimp =

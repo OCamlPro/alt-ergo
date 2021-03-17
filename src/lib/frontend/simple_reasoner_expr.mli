@@ -29,23 +29,37 @@ type 'abs_val add_constraint_res =
   | AlreadyFalse (* The constraint is already false*)
   | NewConstraint of 'abs_val (* The new abstract value *)
 
+(** Dom is the signature of the abstact domain. *)
 module type Dom = sig
-  type v
+  type v (* The raw abstract value. For the interval domain, an interval *)
+  type state (* The global state representation. Usually a map of 'v's *)
 
   (** Top/Bottom value *)
-  val top : v
-  val bottom : v
+  val top : state
+  val bottom : state
+
+  val vrai : v
+  val faux : v
+  val unknown : v
 
   (** (Partial) Compare function *)
-  val compare : v -> v -> int option
+  val compare : state -> state -> int option
 
   (** Join operator *)
-  val join : v -> v -> v
+  val join : state -> state -> state
+  val v_join : v -> v -> v
 
   (** Add constraint *)
-  val add_constraint : Expr.t -> Expr.t -> Symbols.lit -> v -> v add_constraint_res
+  val add_constraint : Expr.t -> Expr.t -> Symbols.lit -> state -> state add_constraint_res
 
-  val pp : Format.formatter -> v -> unit
+  (** If possible, adds `expr` to `state` with the value `v` *)
+  val add_raw_value : Expr.t -> v -> state -> state
+
+  (** Evaluates an expression in the given state. *)
+  val eval_expr : Expr.t -> state -> v
+
+  val pp : Format.formatter -> state -> unit
+  val pp_v : Format.formatter -> v -> unit
 end
 
 (** This is the signature of the simplifyer. *)

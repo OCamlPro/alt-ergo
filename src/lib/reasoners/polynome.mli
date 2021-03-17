@@ -92,8 +92,7 @@ module type T = sig
   module M : Map.S with type key = r
 
   module Eval (C : Calc) : sig
-    exception MissingVar
-    val eval : C.t M.t -> t -> C.t
+    val eval : (r -> C.t) -> t -> C.t
   end
 
 end
