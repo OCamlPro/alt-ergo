@@ -211,7 +211,7 @@ module IntervalsDomain :
               else Top
             | Bottom -> Bottom
             | Value i ->
-              Value (Intervals.scale coef i)
+              Value (Intervals.mult (Intervals.point coef ty Explanation.empty) i)
         end) in (* todo: apply functor statically for each type *)
       let map r =
         match M.find_opt r v with
@@ -259,15 +259,18 @@ module IntervalsDomain :
                  s, keep_iterating
                end else begin
                  debug "[fix_point] Narrowing@.";
-                 let rinter = Intervals.scale (Q.div Q.one q) i in
-                 debug "[fix_point] Inteval of %a by the constraint : %a@." R.print r Intervals.print rinter;
+                 debug "[fix_point] Dividing %a by %a@."
+                   Intervals.print i Q.print q;
+                 let rinter = Intervals.div i (Intervals.point q ty Explanation.empty) in
+                 debug "[fix_point] Inteval of %a by the constraint : %a@."
+                   R.print r
+                   Intervals.print rinter;
                  let prev_inter = rfind ty r s in
                  let ri, change = narrow ~rinter ~prev_inter in
                  debug "[fix_point] Old interval of %a : %a@."
                    R.print r Intervals.print prev_inter;
                  debug "[fix_point] New interval of %a : %a@."
                    R.print r Intervals.print ri;
-                 
                  if change then
                    radd r (Value ri) s, change
                  else
@@ -279,6 +282,7 @@ module IntervalsDomain :
       if keep_iterating then aux new_vars else s in
     aux s
 
+  (* todo: narrow on upper bound then on lower bound *)
   let narrow_eq ~rinter ~prev_inter =
     debug "[fix_point] Narrow EQ@.";
     if Intervals.contained_in rinter prev_inter && not (Intervals.equal rinter prev_inter)
@@ -358,16 +362,16 @@ module IntervalsDomain :
         if Q.compare bound prev_sup >= 0 then begin
           (* The new upper bound is higher then the previous one,
              keeping it *)
-          debug "[fix_point] Constraint upper bound %a >= %a previous upper bound"
+          debug "[fix_point] Constraint upper bound %a >= %a previous upper bound@."
             Q.print bound Q.print prev_sup;
           debug "[fix_point] No need for more narrowing";
           prev_inter, false
         end else begin
           (* The new upper bound is lower than then previous one,
              replacing it *)
-          debug "[fix_point] Constraint upper bound %a < %a previous upper bound"
+          debug "[fix_point] Constraint upper bound %a < %a previous upper bound@."
             Q.print bound Q.print prev_sup;
-          debug "[fix_point] Narrowing";
+          debug "[fix_point] Narrowing@.";
           Intervals.new_borne_sup
             Explanation.empty
             bound
