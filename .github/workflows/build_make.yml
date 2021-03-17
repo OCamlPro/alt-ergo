@@ -132,6 +132,10 @@ jobs:
       - name: Make ${{ matrix.package }}
         run: opam exec -- make ${{ matrix.package }}
 
+      # Clean repo
+      - name: Unpin the repo
+        run: opam pin remove .
+
   make_install:
     # Test every install/uninstall rules
     name: Make install
