@@ -509,7 +509,24 @@ module IntervalsDomain :
 
       (* l1 R l2 <=> p + c R 0 *)
       let (p, c, cst) = P.normal_form_pos p in
-      let is_neg = Q.compare cst Q.zero < 0 in
+
+      let p, c =
+        let den = Q.from_z @@ Q.den c in
+        P.mult_const den p, Q.from_z @@ Q.num c in
+
+      let lit =
+        if Q.compare cst Q.zero < 0 then
+          match lit with
+           | L_built LE -> Symbols.L_neg_built LT
+           | L_built LT -> L_neg_built LE
+           | L_neg_built LE -> L_built LT
+           | L_neg_built LT -> L_built LE
+           | l -> l
+        else lit
+      in
+
+(*
+     let is_neg = Q.compare cst Q.zero < 0 in
       let p, c, lit =
         if is_neg then
           P.mult_const Q.m_one p,
@@ -520,27 +537,27 @@ module IntervalsDomain :
           | L_neg_built LE -> L_built LT
           | L_neg_built LT -> L_built LE
           | l -> l
-        else p, c, lit in
-
-      let p, c, _cst =
-        let den = Q.from_z @@ Q.den c in
-        P.mult_const den p, Q.from_z @@ Q.num c, Q.mult den cst in
+        else p, c, lit in *)
 
       debug "[add_constraint] Normalized constraint : %a + %a %a 0@."
-        P.print p Q.print c Symbols.print l;
+        P.print p Q.print c Symbols.print (Lit lit);
       debug "[add_constraint] Known information: %a@." pp v;
 
+      (* Checking if p R -c *)
       let mc = Q.minus c in
-
       match check_constraint ty lit p mc v with
       | Some true  -> SRE.AlreadyTrue
       | Some false -> AlreadyFalse
       | None ->
+      (* p R -c cannot be deduced from state : adding constraint *)
       (* p = \Sum (q_i * r_i)
-         p R c <=> \A i. q_i * r_i R (q_i * r_i) - p + c *)
+         p R -c <=> \A i. q_i * r_i R (q_i * r_i) - p - c *)
       let constraints =
         P.fold_on_vars
-          (fun r q acc_cstr -> ((q, r, P.sub (P.create [q,r] c ty) p) :: acc_cstr))
+          (fun r q acc_cstr ->
+            let p' = P.sub (P.create [q,r] mc ty) p in
+            debug "[add_constraint] Partial constraint for %a*%a: %a" Q.print q R.print r P.print p';
+            ((q, r, p') :: acc_cstr))
           p
           [] in
       try
