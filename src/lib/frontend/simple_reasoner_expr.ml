@@ -541,11 +541,12 @@ module SimpleReasoner
             let v_exp = E.mk_term let_v [] (E.type_info let_e) in
             let simp_let = simp_expr state let_e in
             let state = D.add_raw_value v_exp simp_let.v state in
-            let simp_in = simp_expr state in_e in {
-              exp = E.mk_let let_v simp_let.exp simp_in.exp (-43);
-              diff = simp_let.diff || simp_in.diff;
-              v = simp_in.v
-            }
+            let simp_in = simp_expr state in_e in
+            let diff = simp_let.diff || simp_in.diff in
+            let exp =
+              if diff then E.mk_let let_v simp_let.exp simp_in.exp (-43)
+              else e
+            in {exp; diff; v = simp_in.v}
           | _ -> assert false
         end
 
