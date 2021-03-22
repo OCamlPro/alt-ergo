@@ -520,15 +520,22 @@ let make_form name f loc ~decl_kind =
     | Util.SPreprocess | Util.SAll ->
       let module S = SimpExprPreproc () in
       let smp_form = S.simp_expr form in
-      if SRE.has_changed smp_form then SRE.get_expr smp_form
-      else form
+      if SRE.has_changed smp_form then
+        let exp = SRE.get_expr smp_form in
+        exp
+      else begin
+        form
+      end
   in
+  Shostak.Combine.empty_cache ();
   assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
   let ff = E.purify_form ff in
-  if Ty.Svty.is_empty (E.free_type_vars ff) then ff
-  else
+  if Ty.Svty.is_empty (E.free_type_vars ff) then begin
+    ff
+  end else begin
     let id = E.id ff in
     E.mk_forall name loc Symbols.Map.empty [] ff id ~toplevel:true ~decl_kind
+  end
 
 let mk_assume acc f name loc =
   let ff = make_form name f loc ~decl_kind:E.Daxiom in
