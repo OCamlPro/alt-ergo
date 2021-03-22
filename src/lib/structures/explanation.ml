@@ -30,12 +30,14 @@ open Format
 
 module E = Expr
 
+type rootdep = { name : string; f : Expr.t; loc : Loc.t}
+
 type exp =
   | Literal of Satml_types.Atom.atom
   | Fresh of int
   | Bj of E.t
   | Dep of E.t
-  | RootDep of string (* name of the toplevel formula *)
+  | RootDep of rootdep
 
 module S =
   Set.Make
@@ -45,7 +47,7 @@ module S =
         | Fresh i1, Fresh i2 -> i1 - i2
         | Literal a  , Literal b   -> Satml_types.Atom.cmp_atom a b
         | Dep e1  , Dep e2   -> E.compare e1 e2
-        | RootDep s, RootDep t -> String.compare s t
+        | RootDep r1, RootDep r2 -> E.compare r1.f r2.f
         | Bj e1   , Bj e2    -> E.compare e1 e2
 
         | Literal _, _ -> -1
@@ -112,18 +114,27 @@ let print fmt ex =
         | Literal a -> fprintf fmt "{Literal:%a}, " Satml_types.Atom.pr_atom a
         | Fresh i -> Format.fprintf fmt "{Fresh:%i}" i;
         | Dep f -> Format.fprintf fmt "{Dep:%a}" E.print f
-        | RootDep s -> Format.fprintf fmt "{RootDep:%s}" s
+        | RootDep r -> Format.fprintf fmt "{RootDep:%s}" r.name
         | Bj f -> Format.fprintf fmt "{BJ:%a}" E.print f
       ) ex;
     fprintf fmt "}"
   end
 
+let get_unsat_core dep =
+  fold_atoms
+    (fun a acc ->
+       match a with
+       | RootDep r -> r :: acc
+       | Dep _ -> acc
+       | Bj _ | Fresh _ | Literal _ -> assert false
+    ) dep []
+
 let print_unsat_core ?(tab=false) fmt dep =
   iter_atoms
     (function
-      | RootDep s ->
-        if tab then Format.fprintf fmt "  %s@." s (* tab is too big *)
-        else Format.fprintf fmt "%s@." s
+      | RootDep r ->
+        if tab then Format.fprintf fmt "  %s@." r.name (* tab is too big *)
+        else Format.fprintf fmt "%s@." r.name
       | Dep _ -> ()
       | Bj _ | Fresh _ | Literal _ -> assert false
     ) dep

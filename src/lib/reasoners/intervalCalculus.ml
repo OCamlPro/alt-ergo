@@ -2469,14 +2469,3 @@ let instantiate ~do_syntactic_matching env uf selector =
       Timers.exec_timer_pause Timers.M_Arith Timers.F_instantiate;
       raise e
   else instantiate ~do_syntactic_matching env uf selector
-
-let retrieve_used_context env dep =
-  let deps = Ex.formulas_of dep in
-  let used, unused =
-    SE.fold
-      (fun f ((used, assumed) as acc) ->
-         if ME.mem f env.th_axioms then f :: used, ME.remove f assumed else acc
-      ) deps ([], env.th_axioms)
-  in
-  let unused = ME.fold (fun f _ acc -> f::acc) unused [] in
-  used, unused

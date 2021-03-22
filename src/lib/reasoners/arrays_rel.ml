@@ -460,6 +460,3 @@ let assume_th_elt t th_elt _ =
   | Util.Arrays ->
     failwith "This Theory does not support theories extension"
   | _ -> t
-
-let retrieve_used_context _ _ = [], []
-

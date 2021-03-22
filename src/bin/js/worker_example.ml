@@ -55,7 +55,7 @@ let solve () =
      answers_with_loc = Some false;
      model = Some Worker_interface.MAll;
      sat_solver = Some Worker_interface.Tableaux;
-     save_used_context = Some true;
+     unsat_core = Some true;
     } in
 
   let worker = Worker.create "./alt-ergo-worker.js" in
@@ -168,8 +168,12 @@ let statistics = document##createTextNode (Js.string "")
 (* update statistics text area *)
 let print_statistics = function
   | None -> ()
-  | Some _sta ->
-    statistics##.data := Js.string "stats"
+  | Some l ->
+    let stats = List.fold_left (fun acc (name,begin_pos,end_pos,nb,used) ->
+        (Format.sprintf "%s \n %s (%d-%d) #%d: %b"
+           acc name begin_pos end_pos nb used)
+      ) "" l in
+    statistics##.data := Js.string stats
 
 let onload _ =
   let main = Js.Opt.get (document##getElementById (Js.string "main"))

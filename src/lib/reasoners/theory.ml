@@ -75,9 +75,6 @@ module type S = sig
 
   val get_assumed : t -> E.Set.t
 
-  val retrieve_used_context :
-    t -> Explanation.t -> Expr.t list * Expr.t list
-
 end
 
 module Main_Default : S = struct
@@ -748,8 +745,6 @@ module Main_Default : S = struct
 
   let get_assumed env = env.assumed_set
 
-  let retrieve_used_context env dep =
-    CC_X.retrieve_used_context env.gamma dep
 end
 
 module Main_Empty : S = struct
@@ -781,7 +776,7 @@ module Main_Empty : S = struct
   let do_case_split env = env, E.Set.empty
   let add_term env _ ~add_in_cs:_ = env
   let compute_concrete_model e = e
-  let retrieve_used_context _env _dep = [],[]
+
   let assume_th_elt e _ _ = e
   let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []
   let get_assumed env = env.assumed_set

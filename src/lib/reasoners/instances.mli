@@ -70,8 +70,6 @@ module type S = sig
   val matching_terms_info :
     t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
 
-  val retrieve_used_context : t -> Explanation.t -> Expr.t list * Expr.t list
-
 end
 
 module Make (X : Theory.S) : S with type tbox = X.t

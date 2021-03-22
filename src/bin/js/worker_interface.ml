@@ -874,10 +874,10 @@ let options_from_json options =
   | Error _e -> assert false
 
 type statistics =
-  (string * int * int * int) list
+  (string * int * int * int * bool) list
 
 let statistics_encoding =
-  list (tup4 string int31 int31 int31)
+  list (tup5 string int31 int31 int31 bool)
 
 type status =
   | Unsat of int

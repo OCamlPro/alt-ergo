@@ -149,10 +149,11 @@ type options = {
   file : string option;
 }
 
-(** type that contains a list of the axiom used (or not) in instances.
-    axiom name, start pos, end pos, number of time its used in insstances *)
+(** type that contains a list of the axiom used in instances.
+    axiom name, start pos, end pos, number of time its used in insstances,
+    true if its usefull to solve the goal (from unsat core) *)
 type statistics =
-  (string * int * int * int) list
+  (string * int * int * int * bool) list
 
 (** Type used to return the status of solving
     This can be usefull to match status instead of analysing

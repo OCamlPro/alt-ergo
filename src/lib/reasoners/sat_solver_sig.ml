@@ -69,9 +69,6 @@ module type S = sig
   val print_model : header:bool -> Format.formatter -> t -> unit
 
   val reset_refs : unit -> unit
-
-  val retrieve_used_context :
-    t -> Explanation.t -> Expr.t list * Expr.t list
 end
 
 

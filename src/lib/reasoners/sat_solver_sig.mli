@@ -70,11 +70,6 @@ module type S = sig
   val print_model : header:bool -> Format.formatter -> t -> unit
 
   val reset_refs : unit -> unit
-
-  (** [retrieve_used_context env dep] retrieve the lemmas and axioms used
-      to solve the goal  *)
-  val retrieve_used_context :
-    t -> Explanation.t -> Expr.t list * Expr.t list
 end
 
 

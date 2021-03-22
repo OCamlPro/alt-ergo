@@ -28,12 +28,13 @@
 
 type t
 
+type rootdep = { name : string; f : Expr.t; loc : Loc.t}
 type exp =
   | Literal of Satml_types.Atom.atom
   | Fresh of int
   | Bj of Expr.t
   | Dep of Expr.t
-  | RootDep of string (* name of the toplevel formula *)
+  | RootDep of rootdep
 
 exception Inconsistent of t * Expr.Set.t list
 
@@ -65,6 +66,8 @@ val remove : exp -> t -> t
 val add_fresh : exp -> t -> t
 
 val print : Format.formatter -> t -> unit
+
+val get_unsat_core : t -> rootdep list
 
 val print_unsat_core : ?tab:bool -> Format.formatter -> t -> unit
 

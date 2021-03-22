@@ -57,7 +57,8 @@ let main worker_id file =
      (error or steplimit reached) *)
   let returned_status = ref (Worker_interface.Unknown 0) in
 
-  let context = ref ([],[]) in
+  (* let context = ref ([],[]) in *)
+  let unsat_core = ref [] in
   let tbl = Hashtbl.create 53 in
 
 
@@ -86,18 +87,6 @@ let main worker_id file =
     true
   in
 
-  let compute_used_context env dep =
-    let compute_used_context_aux l =
-      List.fold_left (fun acc f ->
-          match Expr.form_view f with
-          | Lemma {name=name;loc=loc;_} ->
-            let b,e = loc in
-            (Expr.uid f,name,b.Lexing.pos_lnum,e.Lexing.pos_lnum) :: acc
-          | _ -> acc
-        )[] l in
-    let used,unused = SAT.retrieve_used_context env dep in
-    (compute_used_context_aux used,compute_used_context_aux unused) in
-
   let get_status_and_print status n =
     returned_status :=
       begin match status with
@@ -121,8 +110,8 @@ let main worker_id file =
            get_status_and_print used_context consistent_dep_stack)
         (SAT.empty_with_inst add_inst, true, Explanation.empty) cnf in
 
-    if Options.get_save_used_context () then begin
-      context := compute_used_context env dep;
+    if Options.get_unsat_core () then begin
+      unsat_core := Explanation.get_unsat_core dep;
     end;
   in
 
@@ -196,20 +185,26 @@ let main worker_id file =
           Seq.fold_left typing_loop state (parsed ()) in ()
     with Exit -> () end;
 
-
-  let compute_statistics (used,unused) =
-    let aux stats l =
-      List.fold_left (fun acc (id,name,pos_start,pos_end) ->
-          match Hashtbl.find_opt tbl id with
-          | Some (_f,nb) ->
-            (name,pos_start,pos_end,!nb) :: acc
-          | None ->
-            (name,pos_start,pos_end,0) :: acc
-        ) stats l in
-    let used_stats = aux [] used in
-    let stats = aux used_stats unused in
-    List.rev stats
+  let compute_statistics () =
+    let used =
+      List.fold_left (fun acc ({Explanation.name;f;loc} as r) ->
+          Util.MI.add (Expr.uid f) r acc
+        ) Util.MI.empty (!unsat_core) in
+    Hashtbl.fold (fun id (f,nb) acc ->
+        match Util.MI.find_opt id used with
+        | None -> begin
+            match Expr.form_view f with
+            | Lemma {name=name;loc=loc;_} ->
+              let b,e = loc in
+              (name,b.Lexing.pos_lnum,e.Lexing.pos_lnum,!nb,false) :: acc
+            | _ -> acc
+          end
+        | Some r ->
+          let b,e = r.loc in
+          (r.name,b.Lexing.pos_lnum,e.Lexing.pos_lnum,!nb,true) :: acc
+      ) tbl []
   in
+
 
   (* returns a records with compatible worker_interface fields *)
   {
@@ -220,7 +215,7 @@ let main worker_id file =
     Worker_interface.warnings = check_buffer_content buf_wrn;
     Worker_interface.debugs = check_buffer_content buf_dbg;
     Worker_interface.statistics =
-      check_context_content (compute_statistics (!context));
+      check_context_content (compute_statistics ());
     Worker_interface.model = check_buffer_content buf_mdl;
     Worker_interface.unsat_core = check_buffer_content buf_usc;
   }

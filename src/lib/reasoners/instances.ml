@@ -75,8 +75,6 @@ module type S = sig
   val matching_terms_info :
     t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
 
-  val retrieve_used_context :  t -> Explanation.t -> Expr.t list * Expr.t list
-
 end
 
 module Make(X : Theory.S) : S with type tbox = X.t = struct
@@ -473,22 +471,4 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 
   let matching_terms_info env = EM.terms_info env.matching
 
-  let retrieve_used_context env dep =
-    let deps = Ex.formulas_of dep in
-    let used, unlems, unpreds =
-      SE.fold
-        (fun f ((used, lems, preds) as acc) ->
-           if ME.mem f lems then f :: used, ME.remove f lems, preds
-           else if ME.mem f preds then f :: used, lems, ME.remove f preds
-           else
-             match E.form_view f with
-             | E.Lemma _ ->
-               (* An axiom that does not appear in lems because of inconsist. *)
-               f :: used, lems, preds
-             | _ -> acc
-        ) deps ([], env.lemmas, env.predicates)
-    in
-    let unused = ME.fold (fun f _ acc -> f::acc) unlems [] in
-    let unused = ME.fold (fun f _ acc -> f::acc) unpreds unused in
-    used, unused
 end

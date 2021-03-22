@@ -180,5 +180,3 @@ let new_terms _ = E.Set.empty
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
 let assume_th_elt t _ _ = t
-
-let retrieve_used_context _ _ = [], []
