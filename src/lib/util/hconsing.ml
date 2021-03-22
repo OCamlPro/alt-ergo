@@ -42,6 +42,7 @@ end
 module type S =
 sig
   type t
+  val empty : unit -> unit
   val make : t -> t
   val elements : unit -> t list
 end
@@ -61,6 +62,11 @@ struct
   let retain_list = ref []
 
   let next_id = ref 0
+
+  let empty () =
+    next_id := 0;
+    retain_list := [];
+    HWeak.clear storage
 
   let make d =
     let d = Hashed.set_id !next_id d in
