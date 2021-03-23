@@ -97,7 +97,16 @@
 <li class="toctree-l3"><a class="reference internal" href="#plugins">Plugins</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#preludes">Preludes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#plugins-and-preludes-directories">Plugins and Preludes directories</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#javascript">Javascript</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#javascript">Javascript</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#js-node">Js-node</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#js-worker">Js-worker</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#inputs">Inputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#outpus">Outpus</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#js-worker-example">Js-worker example</a></li>
 </ul>
 </li>
 </ul>
@@ -258,14 +267,56 @@ On windows, a binary at path <code class="docutils literal notranslate"><span cl
 plugins in <code class="docutils literal notranslate"><span class="pre">Z:\some\path\share\alt-ergo\preludes</span></code> and
 <code class="docutils literal notranslate"><span class="pre">Z:\some\path\share\alt-ergo\plugins</span></code> respectively.</p>
 </div>
+</div>
 <div class="section" id="javascript">
-<h3>Javascript<a class="headerlink" href="#javascript" title="Permalink to this headline">¶</a></h3>
-<p>Alt-Ergo can be compiled in Javascript see [INSTALL.md] for more informations.</p>
+<h2>Javascript<a class="headerlink" href="#javascript" title="Permalink to this headline">¶</a></h2>
+<p>Alt-Ergo can be compiled in Javascript see the <a class="reference internal" href="../Install/index.html"><span class="doc">install section</span></a> for more informations.</p>
+<div class="section" id="js-node">
+<h3>Js-node<a class="headerlink" href="#js-node" title="Permalink to this headline">¶</a></h3>
 <p>The Javascript version of Alt-Ergo compatible with node-js is executed with the following command:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    $ node alt-ergo.js  [options] file.&lt;ext&gt;
 </pre></div>
 </div>
 <p>Note that timeout options and zip files are not supported with this version because of the lack of js primitives.</p>
+</div>
+<div class="section" id="js-worker">
+<h3>Js-worker<a class="headerlink" href="#js-worker" title="Permalink to this headline">¶</a></h3>
+<p>A web worker of the alt-ergo solver is available with the command <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js-worker</span></code>. It uses Js_of_ocaml Worker’s and Lwt. The <code class="docutils literal notranslate"><span class="pre">data-encoding</span></code> library is used to encode and decode messages to/from the worker. Since the messages are in JSon format, the Alt-Ergo worker can be used from any javascript code.</p>
+<div class="section" id="inputs">
+<h4>Inputs<a class="headerlink" href="#inputs" title="Permalink to this headline">¶</a></h4>
+<p>This web worker takes a json file composed of a list of string representing each line of an input file. This json file can also be composed of an optional worker identifier (integer) and an optional name for the file to solve. The following code shows an example of a such json file :</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="s2">&quot;testfile&quot;</span><span class="p">,</span>
+ <span class="s2">&quot;worker_id&quot;</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span>
+ <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;goal g : true&quot;</span> <span class="p">]</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>The worker also take a Json file that correspond to the options to set in Alt-Ergo, like the following example :</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;debug&quot;</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span>
+ <span class="s2">&quot;sat_solver&quot;</span><span class="p">:</span> <span class="s2">&quot;Tableaux&quot;</span><span class="p">,</span>
+ <span class="s2">&quot;steps_bound&quot;</span><span class="p">:</span> <span class="mi">1000</span> <span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="outpus">
+<h4>Outpus<a class="headerlink" href="#outpus" title="Permalink to this headline">¶</a></h4>
+<p>At the end of solving it returns a Json file corresponding to results, debug informations, etc:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;worker_id&quot;</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="s2">&quot;Unsat&quot;</span><span class="p">:</span> <span class="mi">0</span> <span class="p">},</span>
+<span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;Valid (0.1940) (0 steps) (goal g)&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span> <span class="p">],</span>
+<span class="s2">&quot;debugs&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;[Debug][Sat_solver]&quot;</span><span class="p">,</span> <span class="s2">&quot;use Tableaux-like solver&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span> <span class="p">],</span>
+<span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;[all-models] No SAT models found&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span> <span class="p">],</span>
+<span class="s2">&quot;unsat_core&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;unsat-core:&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span> <span class="p">],</span>
+<span class="s2">&quot;errors&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;&quot;</span> <span class="p">],</span>
+<span class="s2">&quot;warnings&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;&quot;</span> <span class="p">],</span>
+<span class="s2">&quot;statistics&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="p">[],</span> <span class="p">[]</span> <span class="p">]</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>Options and results formats are available in <code class="docutils literal notranslate"><span class="pre">worker_interface</span></code> module. In this module you can also find functions to easily encode inputs and decode outputs.
+Look at the <code class="docutils literal notranslate"><span class="pre">worker_json_example.json</span></code> in the ressources <code class="docutils literal notranslate"><span class="pre">rsc</span></code> of the project to learn more.</p>
+</div>
+</div>
+<div class="section" id="js-worker-example">
+<h3>Js-worker example<a class="headerlink" href="#js-worker-example" title="Permalink to this headline">¶</a></h3>
+<p>A small example of how to use the Alt-Ergo web worker can be build with the command <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js-example</span></code>. This command also makes the web worker if it has not already been built. It produces a <code class="docutils literal notranslate"><span class="pre">www</span></code> directory with an html page where you can write a small example, run the worker, and see the results. You can also look at the console of your browser to look at the json file sent</p>
 </div>
 </div>
 </div>

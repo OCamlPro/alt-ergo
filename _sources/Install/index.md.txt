@@ -101,7 +101,7 @@ depending on whether ocamlopt is installed or only ocamlc is detected.
 
   2. Install with `make install-gui`
 
-#### Alt-Ergo in javascript
+#### Alt-Ergo with Nodejs
 
   1. Compile with `make js-node`
 
@@ -109,6 +109,34 @@ For this build rule you will need the following aditional libraries :
 ```
 Js_of_ocaml-compiler
 zarith_stubs_js
+```
+
+#### Alt-Ergo web worker
+
+  1. Compile with `make js-worker`
+
+For this build rule you will need the following aditional libraries :
+```
+js_of_ocaml
+js_of_ocaml-lwt
+zarith_stubs_js
+data-encoding
+```
+
+#### Alt-Ergo web worker small example
+
+  1. Compile with `make js-example`
+
+This command create a `www/` directory in which you can find a small js example running in the `index.html` file
+
+For this build rule you will need the following aditional libraries :
+```
+js_of_ocaml
+js_of_ocaml-lwt
+js_of_ocaml-ppx
+lwt_ppx
+zarith_stubs_js
+data-encoding
 ```
 
 ### Plugins

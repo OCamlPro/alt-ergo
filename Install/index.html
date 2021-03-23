@@ -102,7 +102,9 @@
 <li class="toctree-l4"><a class="reference internal" href="#alt-ergo-parsers">Alt-Ergo parsers</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#alt-ergo-binary">Alt-Ergo binary</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#altgr-ergo-binary">AltGr-Ergo binary</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#alt-ergo-in-javascript">Alt-Ergo in javascript</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#alt-ergo-with-nodejs">Alt-Ergo with Nodejs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#alt-ergo-web-worker">Alt-Ergo web worker</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#alt-ergo-web-worker-small-example">Alt-Ergo web worker small example</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#plugins">Plugins</a><ul>
@@ -287,14 +289,43 @@ depending on whether ocamlopt is installed or only ocamlc is detected.</p>
 <li><p>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-gui</span></code></p></li>
 </ol>
 </div>
-<div class="section" id="alt-ergo-in-javascript">
-<h4>Alt-Ergo in javascript<a class="headerlink" href="#alt-ergo-in-javascript" title="Permalink to this headline">¶</a></h4>
+<div class="section" id="alt-ergo-with-nodejs">
+<h4>Alt-Ergo with Nodejs<a class="headerlink" href="#alt-ergo-with-nodejs" title="Permalink to this headline">¶</a></h4>
 <ol class="simple">
 <li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js-node</span></code></p></li>
 </ol>
 <p>For this build rule you will need the following aditional libraries :</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Js_of_ocaml</span><span class="o">-</span><span class="n">compiler</span>
 <span class="n">zarith_stubs_js</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="alt-ergo-web-worker">
+<h4>Alt-Ergo web worker<a class="headerlink" href="#alt-ergo-web-worker" title="Permalink to this headline">¶</a></h4>
+<ol class="simple">
+<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js-worker</span></code></p></li>
+</ol>
+<p>For this build rule you will need the following aditional libraries :</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">js_of_ocaml</span>
+<span class="n">js_of_ocaml</span><span class="o">-</span><span class="n">lwt</span>
+<span class="n">zarith_stubs_js</span>
+<span class="n">data</span><span class="o">-</span><span class="n">encoding</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="alt-ergo-web-worker-small-example">
+<h4>Alt-Ergo web worker small example<a class="headerlink" href="#alt-ergo-web-worker-small-example" title="Permalink to this headline">¶</a></h4>
+<ol class="simple">
+<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js-example</span></code></p></li>
+</ol>
+<p>This command create a <code class="docutils literal notranslate"><span class="pre">www/</span></code> directory in which you can find a small js example running in the <code class="docutils literal notranslate"><span class="pre">index.html</span></code> file</p>
+<p>For this build rule you will need the following aditional libraries :</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">js_of_ocaml</span>
+<span class="n">js_of_ocaml</span><span class="o">-</span><span class="n">lwt</span>
+<span class="n">js_of_ocaml</span><span class="o">-</span><span class="n">ppx</span>
+<span class="n">lwt_ppx</span>
+<span class="n">zarith_stubs_js</span>
+<span class="n">data</span><span class="o">-</span><span class="n">encoding</span>
 </pre></div>
 </div>
 </div>
