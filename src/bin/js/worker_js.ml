@@ -36,7 +36,7 @@ let check_context_content c =
   | [] -> None
   | _ -> Some c
 
-let main worker_id file =
+let main worker_id content =
 
   (* Create buffer for each formatter
      The content of this buffers are then retrieved and send as results *)
@@ -142,7 +142,7 @@ let main worker_id file =
     try
       Options.Time.start ();
       Options.set_is_gui false;
-      I.parse_file ~file ~format:None
+      I.parse_file ~content ~format:None
     with
     | Parsing.Parse_error ->
       Printer.print_err "%a" Errors.report

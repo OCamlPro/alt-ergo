@@ -21,8 +21,8 @@ let register_legacy () =
 
     type parsed = Parsed.decl
 
-    let parse_file ~file ~format =
-      let l = Parsers.parse_problem_as_string ~file ~format in
+    let parse_file ~content ~format =
+      let l = Parsers.parse_problem_as_string ~content ~format in
       Lists.to_seq l
 
     let parse_files ~filename ~preludes =

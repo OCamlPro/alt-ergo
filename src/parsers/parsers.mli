@@ -66,8 +66,9 @@ val parse_problem : filename:string -> preludes:string list -> Parsed.file
     @raise Errors.Error
     @raise Parsing.Parse_Error *)
 
-val parse_problem_as_string : file:string -> format:string option -> Parsed.file
-(** Parses the given input file.
+val parse_problem_as_string :
+  content:string -> format:string option -> Parsed.file
+(** Parses the given input file as a string.
     Parser is chosen depending on the given format or the input_format set.
     @raise Errors.Error
     @raise Parsing.Parse_Error *)

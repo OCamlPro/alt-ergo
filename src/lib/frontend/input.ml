@@ -17,7 +17,7 @@ module type S = sig
 
   type parsed
 
-  val parse_file : file:string -> format:string option -> parsed Seq.t
+  val parse_file : content:string -> format:string option -> parsed Seq.t
 
   val parse_files :
     filename:string -> preludes:string list -> parsed Seq.t

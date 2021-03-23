@@ -171,10 +171,10 @@ let parse_problem ~filename ~preludes =
        List.rev_append (List.rev (parse_input_file prelude)) acc)
     acc (List.rev preludes)
 
-let parse_problem_as_string ~file ~format =
+let parse_problem_as_string ~content ~format =
   Parsers_loader.load ();
   try
-    let lb = Lexing.from_string file in
+    let lb = Lexing.from_string content in
     parse_file ?lang:format lb
   with
   | Errors.Error e -> raise (Error e)
