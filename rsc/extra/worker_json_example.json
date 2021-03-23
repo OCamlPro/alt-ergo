@@ -1,0 +1,55 @@
+// Example of json file that contains a filename and the content of the file
+{ "filename": "Try-alt-ergo",
+  "worker_id": 42,
+  "content":
+  "type 'a set\n\nlogic empty : 'a set\nlogic add : 'a , 'a set -> 'a set\n\\logic mem : 'a , 'a set -> prop\n\naxiom mem_empty:\n  forall x : 'a.\n  not mem(x, empty : 'a set)\n\naxiom mem_add:\n  forall x, y : 'a. forall s : 'a set.\n  mem(x, add(y, s)) <->\n  (x = y or mem(x, s))\n\nlogic is1, is2 : int set\nlogic iss : int set set\n\ngoal g_4:\n  is1 = is2 -> \n  (not mem(1, add(2+3, empty : int set))) and\n  mem (is1, add (is2, iss)) "
+}
+
+// Example of Json file that represent all options that can be set in the worker :
+{
+    "debug": false, "debug_ac": false, "debug_adt": false,
+    "debug_arith": false, "debug_arrays": false, "debug_bitv": false,
+    "debug_cc": false, "debug_combine": false, "debug_constr": false,
+    "debug_explanations": false, "debug_fm": false, "debug_fpa": 0,
+    "debug_gc": false, "debug_interpretation": false, "debug_ite": false,
+    "debug_matching": 0, "debug_sat": false, "debug_split": false,
+    "debug_sum": false, "debug_triggers": false, "debug_types": false,
+    "debug_typing": false, "debug_uf": false, "debug_unsat_core": false,
+    "debug_use": false, "debug_warnings": false, "rule": 0,
+    "case_split_policy": "AfterTheoryAssume", "enable_adts_cs": false,
+    "max_split": 0, "replay": false, "replay_all_used_context": false,
+    "save_used_context": false, "answers_with_loc": false,
+    "answers_with_loc": false, "frontend": "Legacy", "input_format": "Native",
+    "infer_input_format": false, "parse_only": false, "parsers": [],
+    "preludes": [], "type_only": false, "type_smt2": false,
+    "disable_weaks": false, "enable_assertions": false, "age_bound": 100,
+    "fm_cross_limit": 100, "steps_bound": 1000, "interpretation": 3,
+    "model": "MAll", "output_format": "Smtlib2", "infer_output_format": false,
+    "unsat_core": false, "verbose": false, "greedy": false,
+    "instanciate_after_backjump": false, "max_multi_triggers_size": 4,
+    "nb_triggers": 2, "no_ematching": false, "no_user_triggers": false,
+    "normalize_instances": false, "triggers_var": false,
+    "arith_matchin": false, "bottom_classes": false,
+    "cdcl_tableaux_inst": false, "cdcl_tableaux_th": false,
+    "disable_flat_formulas_simplifiaction": false, "enable_restarts": false,
+    "minimal_bj": false, "no_backjumping": false, "no_backward": false,
+    "no_decisions": false, "no_decisions_on": [], "no_sat_learning": false,
+    "sat_solver": "Tableaux", "tableaux_cdcl": false, "disable_ites": false,
+    "inline_lets": false, "rewriting": false, "term_like_pp": false,
+    "disable_adts": false, "no_ac": false, "no_contracongru": false,
+    "no_fm": false, "no_nla": false, "no_tcp": false, "no_theory": false,
+    "restricted": false, "tighten_vars": false, "use_fpa": false,
+    "timers": false, "file": "try-alt-ergo"
+}
+
+// Example of Json file that represent the results from a run of the Worker
+{
+    "worker_id": 42, "status": { "Unsat": 0 },
+    "results": [ "Valid (0.1940) (0 steps) (goal g)", "" ],
+    "debugs": [ "[Debug][Sat_solver]", "use Tableaux-like solver", "" ],
+    "model": [ "[all-models] No SAT models found", "" ],
+    "unsat_core": [ "unsat-core:", "", "", "" ]
+    "errors": [ "" ],
+    "warnings": [ "" ],
+    "statistics": [ [], [] ],
+}
