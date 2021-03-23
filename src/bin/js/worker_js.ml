@@ -104,7 +104,7 @@ let main worker_id content =
     let used_context = FE.choose_used_context all_context ~goal_name in
     let consistent_dep_stack = Stack.create () in
     SAT.reset_refs ();
-    let env,_,dep =
+    let _,_,dep =
       List.fold_left
         (FE.process_decl
            get_status_and_print used_context consistent_dep_stack)
@@ -187,7 +187,7 @@ let main worker_id content =
 
   let compute_statistics () =
     let used =
-      List.fold_left (fun acc ({Explanation.name;f;loc} as r) ->
+      List.fold_left (fun acc ({Explanation.f;_} as r) ->
           Util.MI.add (Expr.uid f) r acc
         ) Util.MI.empty (!unsat_core) in
     Hashtbl.fold (fun id (f,nb) acc ->
