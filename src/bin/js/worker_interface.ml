@@ -873,11 +873,35 @@ let options_from_json options =
     }
   | Error _e -> assert false
 
+type used_axiom =
+  | Used
+  | Unused
+  | Unknown
+
+let used_axiom_encoding =
+  union [
+    case(Tag 1)
+      ~title:"Used"
+      (constant "Used")
+      (function Used -> Some () | _ -> None)
+      (fun () -> Used);
+    case(Tag 2)
+      ~title:"Unused"
+      (constant "Unused")
+      (function Unused -> Some () | _ -> None)
+      (fun () -> Unused);
+    case(Tag 3)
+      ~title:"Unknown"
+      (constant "Unknown")
+      (function Unknown -> Some () | _ -> None)
+      (fun () -> Unknown);
+  ]
+
 type statistics =
-  (string * int * int * int * bool) list
+  (string * int * int * int * used_axiom) list
 
 let statistics_encoding =
-  list (tup5 string int31 int31 int31 bool)
+  list (tup5 string int31 int31 int31 used_axiom_encoding)
 
 type status =
   | Unsat of int

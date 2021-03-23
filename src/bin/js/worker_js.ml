@@ -196,12 +196,16 @@ let main worker_id content =
             match Expr.form_view f with
             | Lemma {name=name;loc=loc;_} ->
               let b,e = loc in
-              (name,b.Lexing.pos_lnum,e.Lexing.pos_lnum,!nb,false) :: acc
+              let used =
+                if Options.get_unsat_core () then Worker_interface.Unused
+                else Worker_interface.Unknown in
+              (name,b.Lexing.pos_lnum,e.Lexing.pos_lnum,!nb,used) :: acc
             | _ -> acc
           end
         | Some r ->
           let b,e = r.loc in
-          (r.name,b.Lexing.pos_lnum,e.Lexing.pos_lnum,!nb,true) :: acc
+          (r.name,b.Lexing.pos_lnum,e.Lexing.pos_lnum,!nb,Worker_interface.Used)
+          :: acc
       ) tbl []
   in
 

@@ -170,7 +170,12 @@ let print_statistics = function
   | None -> ()
   | Some l ->
     let stats = List.fold_left (fun acc (name,begin_pos,end_pos,nb,used) ->
-        (Format.sprintf "%s \n %s (%d-%d) #%d: %b"
+        let used = match used with
+          | Worker_interface.Used -> "Used"
+          | Worker_interface.Unused -> "Unused"
+          | Worker_interface.Unknown -> "_"
+        in
+        (Format.sprintf "%s \n %s (%d-%d) #%d: %s"
            acc name begin_pos end_pos nb used)
       ) "" l in
     statistics##.data := Js.string stats
