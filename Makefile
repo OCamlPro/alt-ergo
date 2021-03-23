@@ -317,15 +317,15 @@ js-node: gen
 	ln -sf $(DEFAULT_DIR)/$(BJS_DIR)/main_text_js.bc.js alt-ergo.js
 
 # Build a web worker for alt-ergo
-# zarith_stubs_js, js_of_ocaml and js_of_ocaml-lwt packages are needed for this rule
+# zarith_stubs_js, data-encoding, js_of_ocaml and js_of_ocaml-lwt packages are needed for this rule
 js-worker: gen
 	$(DUNE) build $(DUNE_FLAGS) --profile=release $(BJS_DIR)/worker_js.bc.js
 	ln -sf $(DEFAULT_DIR)/$(BJS_DIR)/worker_js.bc.js alt-ergo-worker.js \
 
 # Build a small web example using the alt-ergo web worker
 # This example is available in the www/ directory
-# zarith_stubs_js, js_of_ocaml and js_of_ocaml-lwt js_of_ocaml-ppx lwt_ppx packages are needed for this rule
-js-example: gen js-worker
+# zarith_stubs_js, data-encoding, js_of_ocaml and js_of_ocaml-lwt js_of_ocaml-ppx lwt_ppx packages are needed for this rule
+js-example: js-worker
 	$(DUNE) build $(DUNE_FLAGS) --profile=release $(BJS_DIR)/worker_example.bc.js
 	mkdir -p www
 	cp $(EXTRA_DIR)/worker_example.html www/index.html

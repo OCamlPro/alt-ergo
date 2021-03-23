@@ -34,23 +34,41 @@ subgraph cluster_bin {
         label="BIN";
         style=filled;
         color=lightgray;
+        subgraph cluster_bin__common {
+                label="Common";
+                style=filled;
+                color=lightblue;
+                "Input_frontend";
+                "Parse_command";
+                "Signals_profiling";
+                "Solving_loop";
+        }
         subgraph cluster_bin__text {
                 label="Text";
                 style=filled;
                 color=lightblue;
-                "Main_input";
                 "Main_text";
-                "Main_gui";
         }
         subgraph cluster_bin__gui {
                 label="Gui";
                 style=filled;
                 color=lightblue;
+                "Main_gui"
                 "Gui_replay";
                 "Gui_session";
                 "Gui_config";
                 "Annoted_ast";
                 "Connected_ast";
+        }
+        subgraph cluster_bin__js {
+                label="JS";
+                style=filled;
+                color=lightblue;
+                "Main_text_js";
+                "Options_interface";
+                "Worker_example";
+                "Worker_interface";
+                "Worker_js";
         }
 }
 
