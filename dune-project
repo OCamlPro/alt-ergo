@@ -1,4 +1,5 @@
 (lang dune 2.0)
+(allow_approximate_merlin)
 
 ; Since we want to generate opam files we need to provide informations ;
 (generate_opam_files true)
