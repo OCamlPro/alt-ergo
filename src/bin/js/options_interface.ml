@@ -43,14 +43,6 @@ let get_sat_solver = function
     | Tableaux -> Some Util.Tableaux
     | Tableaux_CDCL -> Some Util.Tableaux_CDCL
 
-let get_model = function
-  | None -> None
-  | Some m -> match m with
-    | MNone -> Some Options.MNone
-    | MComplete -> Some Options.MComplete
-    | MAll -> Some Options.MAll
-    | MDefault -> Some Options.MDefault
-
 let get_instantiation_heuristic = function
   | None -> None
   | Some m -> match m with
@@ -138,7 +130,6 @@ let set_options r =
   set_options_opt Options.set_steps_bound r.steps_bound;
 
   set_options_opt Options.set_interpretation r.interpretation;
-  set_options_opt Options.set_model (get_model r.model);
 
   set_options_opt Options.set_output_format
     (get_output_format r.output_format);

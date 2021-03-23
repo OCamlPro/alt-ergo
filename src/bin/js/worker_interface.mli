@@ -18,8 +18,6 @@
 (** Types extract from AltErgoLib Utils.util and Utils.options usefull for
     interact with the worker *)
 
-type model = MNone | MDefault | MAll | MComplete
-
 type input_format = Native | Smtlib2 | Why3 (* | SZS *) | Unknown of string
 type output_format = input_format
 
@@ -97,7 +95,6 @@ type options = {
   steps_bound : int option;
 
   interpretation : int option;
-  model : model option;
 
   output_format : output_format option;
   unsat_core : bool option;

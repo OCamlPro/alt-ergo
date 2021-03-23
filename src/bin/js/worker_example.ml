@@ -53,7 +53,7 @@ let solve () =
      debug = Some true;
      verbose = Some true;
      answers_with_loc = Some false;
-     model = Some Worker_interface.MAll;
+     interpretation = Some 1;
      sat_solver = Some Worker_interface.Tableaux;
      unsat_core = Some true;
     } in

@@ -13,37 +13,6 @@ open Data_encoding
 
 (** Types extract from AltErgoLib Utils.util and Utils.options *)
 
-type model = MNone | MDefault | MAll | MComplete
-
-let model_encoding =
-  union [
-    case
-      (Tag 1)
-      ~title:"MNone"
-      (constant "MNone")
-      (function MNone -> Some () | _ -> None)
-      (fun () -> MNone);
-    case
-      (Tag 2)
-      ~title:"MDefault"
-      (constant "MDefault")
-      (function MDefault -> Some () | _ -> None)
-      (fun () -> MDefault);
-    case
-      (Tag 3)
-      ~title:"MAll"
-      (constant "MAll")
-      (function MAll -> Some () | _ -> None)
-      (fun () -> MAll);
-    case
-      (Tag 4)
-      ~title:"MComplete"
-      (constant "MComplete")
-      (function MComplete -> Some () | _ -> None)
-      (fun () -> MComplete);
-
-  ]
-
 type input_format = Native | Smtlib2 | Why3 (* | SZS *) | Unknown of string
 type output_format = input_format
 
@@ -219,7 +188,6 @@ type options = {
   steps_bound : int option;
 
   interpretation : int option;
-  model : model option;
 
   output_format : output_format option;
   unsat_core : bool option;
@@ -326,7 +294,6 @@ let init_options () = {
   steps_bound = None;
 
   interpretation = None;
-  model = None;
 
   output_format = None;
   unsat_core = None;
@@ -460,14 +427,13 @@ let opt3_encoding =
   conv
     (fun opt3 -> opt3)
     (fun opt3 -> opt3)
-    (obj9
+    (obj8
        (opt "disable_weaks" bool)
        (opt "enable_assertions" bool)
        (opt "age_bound" int31)
        (opt "fm_cross_limit" int31)
        (opt "steps_bound" int31)
        (opt "interpretation" int31)
-       (opt "model" model_encoding)
        (opt "output_format" format_encoding)
        (opt "unsat_core" bool)
     )
@@ -611,7 +577,6 @@ let options_to_json opt =
      opt.fm_cross_limit,
      opt.steps_bound,
      opt.interpretation,
-     opt.model,
      opt.output_format,
      opt.unsat_core)
   in
@@ -738,7 +703,6 @@ let options_from_json options =
          fm_cross_limit,
          steps_bound,
          interpretation,
-         model,
          output_format,
          unsat_core) = all_opt3 in
     let (verbose,
@@ -829,7 +793,6 @@ let options_from_json options =
       fm_cross_limit;
       steps_bound;
       interpretation;
-      model;
       output_format;
       unsat_core;
       verbose;
