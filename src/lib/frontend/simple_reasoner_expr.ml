@@ -108,6 +108,9 @@ module type S =
 sig
   type v
 
+  (** Empties the simplifier caches *)
+  val empty_caches : unit -> unit
+
   (** Simplifies an expression. *)
   val simp_expr : Expr.t -> (Expr.t, v) simp
 end
@@ -122,6 +125,11 @@ module SimpleReasoner
 
   let constraint_cache : (state * state add_constraint_res) list E.Map.t ref =
     ref E.Map.empty
+
+
+  let empty_caches () =
+    simp_cache := E.Map.empty;
+    constraint_cache := E.Map.empty
 
   let add_cache cache exp state smp =
     let c = !cache in

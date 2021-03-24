@@ -520,6 +520,11 @@ let make_form name f loc ~decl_kind =
     | Util.SPreprocess | Util.SAll ->
       let module S = SimpExprPreproc () in
       let smp_form = S.simp_expr form in
+      let () =
+        (* Emptying the caches modified by the simplifier.
+           St : This is necessary for having consistent results. *)
+        Shostak.Combine.empty_cache ();
+        S.empty_caches () in
       if SRE.has_changed smp_form then
         let exp = SRE.get_expr smp_form in
         exp
@@ -527,7 +532,6 @@ let make_form name f loc ~decl_kind =
         form
       end
   in
-  Shostak.Combine.empty_cache ();
   assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
   let ff = E.purify_form ff in
   if Ty.Svty.is_empty (E.free_type_vars ff) then begin

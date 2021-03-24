@@ -67,6 +67,9 @@ module type S =
 sig
   type v
 
+  (** Empties the simplifier caches *)
+  val empty_caches : unit -> unit
+
   (** Simplifies an expression and returns its associated abstract value. *)
   val simp_expr : Expr.t -> (Expr.t, v) simp
 end

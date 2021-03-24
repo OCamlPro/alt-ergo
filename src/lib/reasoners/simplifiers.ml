@@ -219,21 +219,23 @@ module IntervalsDomain :
         | Some v -> v in
       Ev.eval map p
 
-  let rfind ty k (v : state) = match v with
+  let rfind ty k (s : state) = match s with
     | Bottom -> failwith "Value is bottom: Should have been checked beforehand"
     | Top -> Intervals.undefined ty
-    | Value m -> match M.find_opt k m with
+    | Value m ->
+      match M.find_opt k m with
       | None | Some Top -> Intervals.undefined ty
       | Some Bottom -> failwith "Internal value is bottom: Should have been checked beforehand"
-      | Some (Value i) -> i
+      | Some ((Value i) as v) ->
+        debug "[rfind] Found %a in state %a, associated to %a@." R.print k pp s pp_v v; i
 
-  let radd k b v =
+  let radd k b s =
     match b with
-    | Top -> v
-    | _ -> match v with
+    | Top -> s
+    | _ -> match s with
       | Top -> Value (M.add k b M.empty)
       | Value m -> Value (M.add k b m)
-      | Bottom -> v
+      | Bottom -> s
 
   let fix_point
       (narrow : rinter:Intervals.t -> prev_inter:Intervals.t -> Intervals.t * bool)
@@ -252,7 +254,7 @@ module IntervalsDomain :
              | Bottom  -> s, false
              | Value i ->
                (* Deducing the value of `r` *)
-               debug "[fix_point] %a = %a@." P.print p Intervals.print i;
+               debug "[fix_point] %a R %a@." P.print p Intervals.print i;
 
                if Intervals.is_undefined i then begin
                  debug "[fix_point] No information, continuing@.";
@@ -262,10 +264,11 @@ module IntervalsDomain :
                  debug "[fix_point] Dividing %a by %a@."
                    Intervals.print i Q.print q;
                  let rinter = Intervals.div i (Intervals.point q ty Explanation.empty) in
-                 debug "[fix_point] Inteval of %a by the constraint : %a@."
+                 debug "[fix_point] Interval of %a by the constraint : %a@."
                    R.print r
                    Intervals.print rinter;
                  let prev_inter = rfind ty r s in
+                 debug "[fix_point] Interval of %a in %a: %a@." R.print r pp s Intervals.print prev_inter;                 
                  let ri, change = narrow ~rinter ~prev_inter in
                  debug "[fix_point] Old interval of %a : %a@."
                    R.print r Intervals.print prev_inter;
@@ -296,12 +299,13 @@ module IntervalsDomain :
     match Intervals.is_point rinter with
     | None -> prev_inter, false
     | Some (q, _) ->
-      if Intervals.contains prev_inter q then
+      if Intervals.contains prev_inter q then begin
+        let () = debug "Excluding %a from %a@." Q.print q Intervals.print prev_inter in
         Intervals.exclude rinter prev_inter, true
-      else prev_inter, false
+      end else prev_inter, false
 
   let narrow_le ~rinter ~prev_inter =
-    debug "[fix_point] Narrow LE ; r_inter = %a -- previous_inter = %a @."
+    debug "[fix_point] Narrow LE ; r_inter = %a -- previous_inter = %a@."
       Intervals.print rinter Intervals.print prev_inter
     ;
     try
@@ -313,7 +317,7 @@ module IntervalsDomain :
           Intervals.No_finite_bound -> None in
       match prev_sup with
       | None ->
-        debug "[fix_point] New constraint upper bound: %a" Q.print bound;
+        debug "[fix_point] New constraint upper bound: %a@." Q.print bound;
         Intervals.new_borne_sup
           Explanation.empty
           bound
