@@ -44,8 +44,8 @@ module DummySimp =
       let add_constraint _ _ _ _ = SRE.NewConstraint ()
       let pp fmt _ = Format.fprintf fmt "()"
       let unknown = ()
-      let faux = ()
-      let vrai = ()
+      let _false = ()
+      let _true = ()
       let pp_v fmt _ = Format.fprintf fmt "()"
       let eval_expr _ _ = ()
       let v_join _ _ = ()
@@ -83,8 +83,8 @@ module IntervalsDomain :
   let top = Top
   let bottom = Bottom
 
-  let faux = Value (Intervals.point Q.zero Ty.Tbool Explanation.empty)
-  let vrai = Value (Intervals.point Q.one  Ty.Tbool Explanation.empty)
+  let _false = Value (Intervals.point Q.zero Ty.Tbool Explanation.empty)
+  let _true = Value (Intervals.point Q.one  Ty.Tbool Explanation.empty)
   let unknown = Top
 
   let pp_v = pp_abs_val Intervals.print

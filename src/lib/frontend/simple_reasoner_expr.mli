@@ -38,8 +38,8 @@ module type Dom = sig
   val top : state
   val bottom : state
 
-  val vrai : v
-  val faux : v
+  val _true : v
+  val _false : v
   val unknown : v
 
   (** (Partial) Compare function *)

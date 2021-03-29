@@ -79,8 +79,8 @@ module type Dom = sig
   val top : state
   val bottom : state
 
-  val vrai : v
-  val faux : v
+  val _true : v
+  val _false : v
   val unknown : v
 
   (** (Partial) Compare function *)
@@ -155,8 +155,8 @@ module SimpleReasoner
 
   let identity v exp = {exp; diff = false; v = D.eval_expr exp v}
 
-  let simp_true = {exp = E.vrai; diff = true; v = D.vrai}
-  let simp_false = {exp = E.faux; diff = true; v = D.faux}
+  let simp_true = {exp = E.vrai; diff = true; v = D._true}
+  let simp_false = {exp = E.faux; diff = true; v = D._false}
 
   let is_true e = E.equal e.exp E.vrai
   let is_false e = E.equal e.exp E.faux
