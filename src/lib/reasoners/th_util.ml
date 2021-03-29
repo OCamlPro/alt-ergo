@@ -26,7 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(** An answer type. If it is Some (thing), then the answer is yes,
+(** An answer type.
+    If it is Some (thing) then the answer is 'true' (for a boolean query),
     otherwise it is unknown. *)
 type answer = (Explanation.t * Expr.Set.t list) option
 
