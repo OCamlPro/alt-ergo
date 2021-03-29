@@ -205,17 +205,6 @@ and 'a tdecl =
   | TPush of Loc.t * int
   | TPop of Loc.t * int
 
-let eq_list eq l1 l2 =
-  let rec loop l1 l2 =
-    match l1, l2 with
-      [],[] -> true
-    | hd1 :: tl1, hd2 :: tl2 ->
-      if eq hd1 hd2
-      then loop tl1 tl2
-      else false
-    | _,_ -> false
-  in loop l1 l2
-
 let eq_tconstant (c1 : tconstant) (c2 : tconstant) : bool =
   match c1, c2 with
     Tint s1, Tint s2
@@ -230,7 +219,7 @@ let eq_pattern (p1 : pattern) (p2 : pattern) : bool =
     Constr {name = name2; args = args2} ->
     Hstring.equal name1 name2
     &&
-    eq_list
+    Util.eq_list
       (fun (x1,s1,t1) (x2,s2,t2) ->
          Var.equal x1 x2 &&
          Hstring.equal s1 s2 &&
@@ -259,7 +248,7 @@ and eq_tt_desc (e1 : 'a tt_desc) (e2 : 'a tt_desc) : bool =
 
   | TTapp (s1, l1), TTapp (s2, l2) ->
     Symbols.equal s1 s2 &&
-    eq_list
+    Util.eq_list
       (fun t1 t2 -> eq_tterm t1.c t2.c)
       l1 l2
 
@@ -284,13 +273,13 @@ and eq_tt_desc (e1 : 'a tt_desc) (e2 : 'a tt_desc) : bool =
     eq_tterm t1.c t2.c
 
   | TTrecord l1, TTrecord l2 ->
-    eq_list
+    Util.eq_list
       (fun  (s1,t1) (s2,t2) -> Hstring.equal s1 s2 && eq_tterm t1.c t2.c)
       l1 l2
 
   | TTlet (l1, t1), TTlet (l2, t2) ->
     eq_tterm t1.c t2.c &&
-    eq_list
+    Util.eq_list
       (fun (s1, t1) (s2, t2) ->
          Symbols.equal s1 s2 && eq_tterm t1.c t2.c)
       l1
@@ -305,7 +294,7 @@ and eq_tt_desc (e1 : 'a tt_desc) (e2 : 'a tt_desc) : bool =
 
   | TTmatch (t1, l1), TTmatch (t2, l2) ->
     eq_tterm t1.c t2.c &&
-    eq_list
+    Util.eq_list
       (fun (p1,t1) (p2,t2) ->
          eq_pattern p1 p2 && eq_tterm t1.c t2.c
       )
@@ -324,7 +313,7 @@ and eq_tatom (a1 : 'a tatom) (a2 : 'a tatom) : bool =
   | TAneq l1, TAneq l2
   | TAle l1, TAle l2
   | TAlt l1, TAlt l2 ->
-    eq_list
+    Util.eq_list
       (fun t1 t2 -> eq_tterm t1.c t2.c)
       l1
       l2
@@ -337,17 +326,17 @@ and eq_tatom (a1 : 'a tatom) (a2 : 'a tatom) : bool =
 
 and eq_quant_form (q1 : 'a quant_form) (q2 : 'a quant_form) : bool =
   let stylist =
-    eq_list
+    Util.eq_list
       (fun (s1,t1) (s2, t2) -> Symbols.equal s1 s2 && Ty.equal t1 t2)
   in
   stylist q1.qf_bvars q2.qf_bvars &&
   stylist q1.qf_upvars q2.qf_upvars &&
-  eq_list (fun f1 f2 -> eq_tform f1.c f2.c) q1.qf_hyp q2.qf_hyp &&
+  Util.eq_list (fun f1 f2 -> eq_tform f1.c f2.c) q1.qf_hyp q2.qf_hyp &&
   eq_tform q1.qf_form.c q2.qf_form.c &&
-  eq_list
+  Util.eq_list
     (fun (tlist1,b1) (tlist2,b2) ->
        (b1 && (not b2) || (not b1) && b2) &&
-       eq_list
+       Util.eq_list
          (fun t1 t2 -> eq_tterm t1.c t2.c)
          tlist1
          tlist2)
@@ -360,7 +349,7 @@ and eq_tform (f1 : 'a tform) (f2 : 'a tform) : bool =
 
   | TFop (op1, l1), TFop (op2, l2) ->
     (Stdlib.(=)) op1 op2 &&
-    eq_list
+    Util.eq_list
       (fun f1 f2 -> eq_tform f1.c f2.c)
       l1
       l2
@@ -371,11 +360,11 @@ and eq_tform (f1 : 'a tform) (f2 : 'a tform) : bool =
 
   | TFlet (stlist1, slklist1,f1), TFlet (stlist2, slklist2,f2) ->
     let stylist =
-      eq_list
+      Util.eq_list
         (fun (s1,t1) (s2, t2) -> Symbols.equal s1 s2 && Ty.equal t1 t2)
     in
     stylist stlist1 stlist2 &&
-    eq_list
+    Util.eq_list
       (fun (s1,lf1) (s2, lf2) -> Symbols.equal s1 s2 && eq_tlet_kind lf1 lf2)
       slklist1 slklist2
     &&
@@ -386,7 +375,7 @@ and eq_tform (f1 : 'a tform) (f2 : 'a tform) : bool =
 
   | TFmatch (t1, pfl1), TFmatch (t2, pfl2) ->
     eq_tterm t1.c t2.c &&
-    eq_list
+    Util.eq_list
       (fun (p1, f1) (p2, f2) -> eq_pattern p1 p2 && eq_tform f1.c f2.c)
       pfl1
       pfl2
