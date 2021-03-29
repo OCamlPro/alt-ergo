@@ -217,31 +217,6 @@ let pop_error ?(error=false) ~message () =
   pop_w#show ()
 
 
-let pop_model sat_env () =
-  let pop_w = GWindow.dialog
-      ~title:"Model"
-      ~allow_grow:true
-      ~destroy_with_parent:true
-      ~position:`CENTER
-      ~width:400
-      ~height:300 ()
-  in
-
-  let sw1 = GBin.scrolled_window
-      ~vpolicy:`AUTOMATIC
-      ~hpolicy:`AUTOMATIC
-      ~packing:pop_w#vbox#add () in
-  let buf1 = GSourceView2.source_buffer () in
-  let tv1 = GSourceView2.source_view ~source_buffer:buf1 ~packing:(sw1#add)
-      ~wrap_mode:`CHAR () in
-  let _ = tv1#misc#modify_font monospace_font in
-  let _ = tv1#set_editable false in
-  let model_text = asprintf "%a@." (SAT.print_model ~header:false) sat_env in
-  buf1#set_text model_text;
-  pop_w#show ()
-
-
-
 let compare_rows icol_number (model:#GTree.model) row1 row2 =
   let t1 = model#get ~row:row1 ~column:icol_number in
   let t2 = model#get ~row:row2 ~column:icol_number in
@@ -518,7 +493,7 @@ let update_status image label buttonclean env s steps =
     image#set_stock `EXECUTE;
     label#set_text "  Inconsistent assumption"
 
-  | FE.Unknown (d, t) ->
+  | FE.Unknown (d, _t) ->
     if not satmode then
       Printer.print_std "%a@ I don't know." Loc.report d.st_loc
     else
@@ -526,9 +501,8 @@ let update_status image label buttonclean env s steps =
     image#set_stock `NO;
     label#set_text (sprintf "  I don't know (%2.2f s)"
                       (Options.Time.value()));
-    if get_model () then pop_model t ()
 
-  | FE.Sat (d, t) ->
+  | FE.Sat (d, _t) ->
     if not satmode then
       Printer.print_std "%a" Loc.report d.st_loc;
     if satmode then
@@ -538,7 +512,6 @@ let update_status image label buttonclean env s steps =
     image#set_stock `NO;
     label#set_text
       (sprintf "  I don't know (sat) (%2.2f s)" (Options.Time.value()));
-    if get_model () then pop_model t ()
 
   | FE.Timeout _ ->
     assert false (* should not happen in GUI ? *)
@@ -1377,21 +1350,12 @@ let start_gui all_used_context =
   ] in
 
   let options_entries =
-    let set_complete_model b =
-      if b then set_model MComplete else set_model MNone in
-    let set_all_models b =
-      if b then set_model MAll else set_model MNone in
-    let set_model b = if b then set_model MDefault else set_model MNone in
     let set_greedy b =
       if b then
         set_instantiation_heuristic IGreedy
       else set_instantiation_heuristic INormal in
     [
       `C ("Unsat cores", get_unsat_core (), set_unsat_core);
-      `S;
-      `C ("Model", get_model (), set_model);
-      `C ("Complete model", get_complete_model (), set_complete_model);
-      `C ("All models", get_all_models (), set_all_models);
       `S;
       `C ("Variables in triggers", get_triggers_var (), set_triggers_var);
       `C ("Greedy", get_greedy (), set_greedy);

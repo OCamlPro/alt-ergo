@@ -1,0 +1,7 @@
+(set-logic QF_UF)
+(declare-const x Bool)
+(declare-const y Bool)
+(assert (or x (not x)))
+(check-sat)
+(get-model)
+(get-assignment)

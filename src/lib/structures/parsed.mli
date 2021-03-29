@@ -52,6 +52,9 @@ type ppure_type =
   | PPTvarid of string * Loc.t
   | PPTexternal of ppure_type list * string * Loc.t
 
+val pp_ppure_type : Format.formatter -> ppure_type -> unit
+val pp_ppure_type_list : Format.formatter -> ppure_type list -> unit
+
 type pattern =
   { pat_loc : Loc.t; pat_desc : string * string list }
 
@@ -96,6 +99,9 @@ and pp_desc =
   | PPisConstr of lexpr * string
   | PPproject of bool * lexpr * string
 
+val pp_lexpr : Format.formatter -> lexpr -> unit
+val pp_lexpr_list : Format.formatter -> lexpr list -> unit
+
 (* Declarations. *)
 
 type plogic_type =
@@ -115,6 +121,7 @@ type decl =
   | Axiom of Loc.t * string * Util.axiom_kind * lexpr
   | Rewriting of Loc.t * string * lexpr list
   | Goal of Loc.t * string * lexpr
+  | Check_sat of Loc.t * string * lexpr
   | Logic of Loc.t * Symbols.name_kind * (string * string) list * plogic_type
   | Predicate_def of
       Loc.t * (string * string) *

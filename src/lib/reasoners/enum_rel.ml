@@ -302,8 +302,6 @@ let query env uf la =
   else query env uf la
 
 
-let print_model _ _ _ = ()
-
 let new_terms _ = Expr.Set.empty
 
 let instantiate ~do_syntactic_matching:_ _ env _ _  = env, []

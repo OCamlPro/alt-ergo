@@ -67,8 +67,6 @@ module type S = sig
 
   (** [print_model header fmt env] print propositional model and theory model
       on the corresponding fmt. *)
-  val print_model : header:bool -> Format.formatter -> t -> unit
-
   val reset_refs : unit -> unit
 end
 

@@ -225,7 +225,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     with
     | SAT.Sat t ->
       print_status (Sat (d,t)) (Steps.get_steps ());
-      if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;
+      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
       env , consistent, dep
     | SAT.Unsat dep' ->
       let dep = Ex.union dep dep' in
@@ -234,7 +234,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       env , false, dep
     | SAT.I_dont_know t ->
       print_status (Unknown (d, t)) (Steps.get_steps ());
-      if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;
+      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
       env , consistent, dep
     | Util.Timeout as e ->
       print_status (Timeout (Some d)) (Steps.get_steps ());
@@ -269,6 +269,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | Query(g,_,_) -> Some g
       | _ -> None
     in
+
     let time = Time.value() in
     match status with
     | Unsat (d, dep) ->
@@ -301,13 +302,19 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout (Some d) ->
-      let loc = d.st_loc in
-      Printer.print_status_timeout ~validity_mode
-        (Some loc) (Some time) (Some steps) (get_goal_name d);
+      if Options.get_interpretation () then
+        Printer.print_wrn "Timeout"
+      else
+        let loc = d.st_loc in
+        Printer.print_status_timeout ~validity_mode
+          (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout None ->
-      Printer.print_status_timeout ~validity_mode
-        None (Some time) (Some steps) None;
+      if Options.get_interpretation () then
+        Printer.print_wrn "Timeout"
+      else
+        Printer.print_status_timeout ~validity_mode
+          None (Some time) (Some steps) None;
 
     | Preprocess ->
       Printer.print_status_preprocess ~validity_mode

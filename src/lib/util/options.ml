@@ -61,8 +61,8 @@ let set_fmt_usc f = fmt_usc := f
 
 (* Declaration of all the options as refs with default values *)
 
-type model = MNone | MDefault | MAll | MComplete
 type instantiation_heuristic = INormal | IAuto | IGreedy
+type interpretation = INone | IFirst | IEvery | ILast
 
 type input_format = Native | Smtlib2 | Why3 (* | SZS *) | Unknown of string
 type output_format = input_format
@@ -276,7 +276,8 @@ let age_bound = ref 50
 let fm_cross_limit = ref (Numbers.Q.from_int 10_000)
 let steps_bound = ref (-1)
 let timelimit = ref 0.
-let timelimit_interpretation = ref (if Sys.win32 then 0. else 1.)
+(* let timelimit_interpretation = ref (if Sys.win32 then 0. else 1.) *)
+let timelimit_interpretation = ref 0.
 let timelimit_per_goal = ref false
 
 let set_age_bound i = age_bound := i
@@ -295,23 +296,26 @@ let get_timelimit_per_goal () = !timelimit_per_goal
 
 (** Output options *)
 
-let interpretation = ref 0
-let model = ref MNone
+let interpretation = ref INone
+let interpretation_use_underscore = ref false
 let output_format = ref Native
 let infer_output_format = ref true
 let unsat_core = ref false
 
 let set_interpretation b = interpretation := b
-let set_model b = model := b
+let set_interpretation_use_underscore b = interpretation_use_underscore := b
 let set_output_format b = output_format := b
 let set_infer_output_format f = infer_output_format := f = None
 let set_unsat_core b = unsat_core := b
 
-let get_interpretation () = !interpretation
-let get_model () = !model = MDefault || !model = MComplete
-let get_complete_model () = !model = MComplete
-let get_all_models () = !model = MAll
+let get_interpretation () = !interpretation <> INone
+let get_first_interpretation () = !interpretation = IFirst
+let get_every_interpretation () = !interpretation = IEvery
+let get_last_interpretation () = !interpretation = ILast
+let get_interpretation_use_underscore () = !interpretation_use_underscore
 let get_output_format () = !output_format
+let get_output_smtlib () =
+  (!output_format = Smtlib2) || (!output_format = Why3)
 let get_infer_output_format () = !infer_output_format
 let get_unsat_core () = !unsat_core || !save_used_context || !debug_unsat_core
 
@@ -339,6 +343,7 @@ let get_verbose () = !verbose
 
 (** Quantifiers options *)
 
+
 let instantiation_heuristic = ref IAuto
 let instantiate_after_backjump = ref false
 let max_multi_triggers_size = ref 4
@@ -347,6 +352,7 @@ let no_ematching = ref false
 let no_user_triggers = ref false
 let normalize_instances = ref false
 let triggers_var = ref false
+
 
 let set_instantiation_heuristic i = instantiation_heuristic := i
 let set_instantiate_after_backjump b = instantiate_after_backjump := b
@@ -430,7 +436,7 @@ let get_tableaux_cdcl () = !tableaux_cdcl
 let disable_ites = ref false
 let inline_lets = ref false
 let rewriting = ref false
-let term_like_pp = ref false
+let term_like_pp = ref true
 
 let set_disable_ites b = disable_ites := b
 let set_inline_lets b = inline_lets := b

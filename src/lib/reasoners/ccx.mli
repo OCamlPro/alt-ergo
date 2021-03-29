@@ -71,7 +71,6 @@ module type S = sig
   val are_distinct : t -> Expr.t -> Expr.t -> Th_util.answer
   val cl_extract : t -> Expr.Set.t list
   val term_repr : t -> Expr.t -> init_term:bool -> Expr.t
-  val print_model : Format.formatter -> t -> unit
   val get_union_find : t -> Uf.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
@@ -79,6 +78,12 @@ module type S = sig
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) -> t * Sig_rel.instances
+
+  val output_concrete_model :
+    Format.formatter ->
+    prop_model:Expr.Set.t ->
+    t ->
+    unit
 end
 
 module Main : S

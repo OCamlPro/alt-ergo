@@ -75,6 +75,11 @@ val pp_list_no_space :
   (Format.formatter -> 'a -> unit) ->
   Format.formatter -> 'a list -> unit
 
+(** Print list with separator *)
+val pp_list_space :
+  (Format.formatter -> 'a -> unit) ->
+  Format.formatter -> 'a list -> unit
+
 (** {2 Status Printer} *)
 
 (** Print unsat status message from the frontend on the standard output.

@@ -72,12 +72,8 @@ module type RELATION = sig
     t -> Uf.t -> (Expr.t -> Expr.t -> bool) ->
     t * instances
 
-  val print_model :
-    Format.formatter -> t -> (Expr.t * Shostak.Combine.r) list -> unit
-
   val new_terms : t -> Expr.Set.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
 
 end
-

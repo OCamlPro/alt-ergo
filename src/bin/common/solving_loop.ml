@@ -87,7 +87,7 @@ let main () =
         begin match kind with
           | Typed.Check
           | Typed.Cut -> { state with local = []; }
-          | _ -> { state with global = []; local = []; }
+          | Typed.Thm | Typed.Sat -> { state with global = []; local = []; }
         end
       | Typed.TAxiom (_, s, _, _) when Typed.is_global_hyp s ->
         let cnf = Cnf.make state.global td in
@@ -127,7 +127,6 @@ let main () =
       Printer.print_err "%a" Errors.report e;
       exit 1
   in
-
   let all_used_context = FE.init_all_used_context () in
   if Options.get_timelimit_per_goal() then
     FE.print_status FE.Preprocess 0;

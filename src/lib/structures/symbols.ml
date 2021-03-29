@@ -268,7 +268,11 @@ let to_string ?(show_vars=true) x = match x with
   | Op Mult -> "*"
   | Op Div -> "/"
   | Op Modulo -> "%"
-  | Op (Access s) -> "@Access_"^(Hstring.view s)
+  | Op (Access s) ->
+    if get_output_smtlib () then
+      (Hstring.view s)
+    else
+      "@Access_"^(Hstring.view s)
   | Op (Constr s) -> (Hstring.view s)
   | Op (Destruct (s,g)) ->
     Format.sprintf "%s%s" (if g then "" else "!") (Hstring.view s)

@@ -18,24 +18,6 @@ exception Error of bool * string
 (* Exception used to exit with corresponding retcode *)
 exception Exit_parse_command of int
 
-let model_parser = function
-  | "none" -> Ok MNone
-  | "default" -> Ok MDefault
-  | "complete" -> Ok MComplete
-  | "all" -> Ok MAll
-  | s ->
-    Error (`Msg ("Option --model does not accept the argument \"" ^ s))
-
-let model_to_string = function
-  | MNone -> "none"
-  | MDefault -> "default"
-  | MComplete -> "complete"
-  | MAll -> "all"
-
-let model_printer fmt model = Format.fprintf fmt "%s" (model_to_string model)
-
-let model_conv = Arg.conv ~docv:"MDL" (model_parser, model_printer)
-
 let instantiation_heuristic_parser = function
   | "normal" -> Ok INormal
   | "auto" -> Ok IAuto
@@ -56,6 +38,27 @@ let instantiation_heuristic_printer fmt instantiation_heuristic =
 let instantiation_heuristic_conv =
   Arg.conv ~docv:"VAL"
     (instantiation_heuristic_parser, instantiation_heuristic_printer)
+
+let interpretation_parser = function
+  | "none" -> Ok INone
+  | "first" -> Ok IFirst
+  | "every" -> Ok IEvery
+  | "last" -> Ok ILast
+  | s ->
+    Error
+      (`Msg ("Option --interpretation does not accept the argument \"" ^ s))
+
+let interpretation_to_string = function
+  | INone -> "none"
+  | IFirst -> "first"
+  | IEvery -> "every"
+  | ILast -> "last"
+
+let interpretation_printer fmt interpretation =
+  Format.fprintf fmt "%s" (interpretation_to_string interpretation)
+
+let interpretation_conv =
+  Arg.conv ~docv:"MDL" (interpretation_parser, interpretation_printer)
 
 (* When adding another parser, remember to change this list too as it
    is used in the documentation *)
@@ -276,7 +279,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
   else
     let fm_cross_limit = Numbers.Q.from_string fm_cross_limit in
     let timelimit = set_limit timelimit 0. in
-    let timelimit_interpretation = set_limit timelimit_interpretation 1. in
+    let timelimit_interpretation = set_limit timelimit_interpretation 0. in
     set_age_bound age_bound;
     set_fm_cross_limit fm_cross_limit;
     set_timelimit_interpretation timelimit_interpretation;
@@ -285,7 +288,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     set_timelimit_per_goal timelimit_per_goal;
     `Ok()
 
-let mk_output_opt interpretation model unsat_core output_format
+let mk_output_opt interpretation use_underscore unsat_core output_format
   =
   set_infer_output_format output_format;
   let output_format = match output_format with
@@ -293,7 +296,7 @@ let mk_output_opt interpretation model unsat_core output_format
     | Some fmt -> fmt
   in
   set_interpretation interpretation;
-  set_model model;
+  set_interpretation_use_underscore use_underscore;
   set_unsat_core unsat_core;
   set_output_format output_format;
   `Ok()
@@ -377,10 +380,10 @@ let mk_sat_opt get_bottom_classes disable_flat_formulas_simplification
     `Ok()
   | `Error m -> `Error (false, m)
 
-let mk_term_opt disable_ites inline_lets rewriting term_like_pp
+let mk_term_opt disable_ites inline_lets rewriting no_term_like_pp
   =
   set_rewriting rewriting;
-  set_term_like_pp term_like_pp;
+  set_term_like_pp (not no_term_like_pp);
   set_disable_ites disable_ites;
   set_inline_lets inline_lets;
   `Ok()
@@ -460,10 +463,11 @@ let mk_opts file () () () () () () halt_opt (gc) () () () () () () () ()
     `Ok true
   end
 
-let mk_fmt_opt std_fmt err_fmt
+let mk_fmt_opt std_fmt err_fmt mdl_fmt
   =
   set_std_fmt (value_of_fmt std_fmt);
   set_err_fmt (value_of_fmt err_fmt);
+  set_fmt_mdl (value_of_fmt mdl_fmt);
   `Ok()
 
 (* Custom sections *)
@@ -894,26 +898,27 @@ let parse_output_opt =
   let docs = s_output in
 
   let interpretation =
-    let doc =
-      "Experimental support for counter-example generation. Possible \
-       values are 1, 2, or 3 to compute an interpretation before returning \
-       Unknown, before instantiation (1), or before every decision (2) or \
-       instantiation (3). A negative value (-1, -2, or -3) will disable \
-       interpretation display. Note that $(b, --max-split) limitation will \
-       be ignored in model generation phase." in
+    let doc = Format.sprintf
+        "Experimental support for counter-example generation. \
+         $(docv) must be %s. %s shows the first computed interpretation. \
+         %s compute an interpretation before every decision, \
+         %s before every instantiation and %s only before returning unknown. \
+         Note that $(b, --max-split) limitation will \
+         be ignored in model generation phase."
+        (Arg.doc_alts
+           ["none"; "first"; "before_dec"; "before_inst"; "before_end"])
+        (Arg.doc_quote "first") (Arg.doc_quote "before_dec")
+        (Arg.doc_quote "before_inst") (Arg.doc_quote "before_end") in
     let docv = "VAL" in
-    Arg.(value & opt int (get_interpretation ()) &
+    Arg.(value & opt interpretation_conv INone &
          info ["interpretation"] ~docv ~docs ~doc) in
 
-  let model =
-    let doc = Format.sprintf
-        "Experimental support for models on labeled terms. \
-         $(docv) must be %s. %s shows a complete model and %s shows \
-         all models."
-        (Arg.doc_alts ["none"; "default"; "complete"; "all"])
-        (Arg.doc_quote "complete") (Arg.doc_quote "all") in
+  let use_underscore =
+    let doc = "Output \"_\" instead of fresh value in interpretation" in
     let docv = "VAL" in
-    Arg.(value & opt model_conv MNone & info ["m"; "model"] ~docv ~doc) in
+    Arg.(value & flag & info
+           ["interpretation-use-underscore";"use-underscore"]
+           ~docv ~docs ~doc) in
 
   let unsat_core =
     let doc = "Experimental support for computing and printing unsat-cores." in
@@ -937,7 +942,8 @@ let parse_output_opt =
   in
 
   Term.(ret (const mk_output_opt $
-             interpretation $ model $ unsat_core $ output_format
+             interpretation $ use_underscore $ unsat_core $
+             output_format
             ))
 
 let parse_profiling_opt =
@@ -1093,13 +1099,13 @@ let parse_sat_opt =
     Arg.(value & flag & info ["no-sat-learning"] ~docs ~doc) in
 
   let no_tableaux_cdcl_in_instantiation =
-    let doc = "When satML is used, this disables the use of a tableaux-like\
+    let doc = "When satML is used, this disables the use of a tableaux-like \
                method for instantiations with the CDCL solver." in
     Arg.(value & flag &
          info ["no-tableaux-cdcl-in-instantiation"] ~docs ~doc) in
 
   let no_tableaux_cdcl_in_theories =
-    let doc = "When satML is used, this disables the use of a tableaux-like\
+    let doc = "When satML is used, this disables the use of a tableaux-like \
                method for theories with the CDCL solver." in
     Arg.(value & flag & info ["no-tableaux-cdcl-in-theories"] ~docs ~doc) in
 
@@ -1148,12 +1154,12 @@ let parse_term_opt =
     let doc = "Use rewriting instead of axiomatic approach." in
     Arg.(value & flag & info ["rwt"; "rewriting"] ~docs ~doc) in
 
-  let term_like_pp =
-    let doc = "Output semantic values as terms." in
-    Arg.(value & flag & info ["term-like-pp"] ~docs ~doc) in
+  let no_term_like_pp =
+    let doc = "Do not output semantic values as terms." in
+    Arg.(value & flag & info ["no-term-like-pp"] ~docs ~doc) in
 
   Term.(ret (const mk_term_opt $
-             disable_ites $ inline_lets $ rewriting $ term_like_pp
+             disable_ites $ inline_lets $ rewriting $ no_term_like_pp
             ))
 
 let parse_theory_opt =
@@ -1238,8 +1244,16 @@ let parse_fmt_opt =
     Arg.(value & opt formatter_conv Stderr & info ["err-formatter"] ~docs ~doc)
   in
 
+  let mdl_formatter =
+    let doc = Format.sprintf
+        "Set the model formatter used by default to output model and
+         interpretation. Possible values are %s."
+        (Arg.doc_alts ["stdout"; "stderr"; "<filename>"]) in
+    Arg.(value & opt formatter_conv Stdout & info ["mdl-formatter"] ~docs ~doc)
+  in
+
   Term.(ret (const mk_fmt_opt $
-             std_formatter $ err_formatter
+             std_formatter $ err_formatter $ mdl_formatter
             ))
 
 let main =
@@ -1312,9 +1326,13 @@ let main =
             )),
   Term.info "alt-ergo" ~version:Version._version ~doc ~exits ~man
 
+let auto_set_implied_options () =
+  if Options.get_interpretation () then
+    Options.set_fm_cross_limit Numbers.Q.m_one
+
 let parse_cmdline_arguments () =
   let r = Cmdliner.Term.(eval main) in
   match r with
   | `Ok false -> raise (Exit_parse_command 0)
-  | `Ok true -> ()
+  | `Ok true -> auto_set_implied_options ()
   | e -> exit @@ Term.(exit_status_of_result e)

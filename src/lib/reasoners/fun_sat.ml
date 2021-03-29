@@ -179,12 +179,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
   }
 
-  let all_models_sat_env = ref None
   let latest_saved_env = ref None
   let terminated_normally = ref false
 
   let reset_refs () =
-    all_models_sat_env := None;
     latest_saved_env := None;
     terminated_normally := false;
     Steps.reset_steps ()
@@ -358,7 +356,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            "(%a or %a), %a"
            E.print f1.E.ff E.print f2.E.ff Ex.print ex) d;
          print_dbg ~debug:(get_verbose () || get_debug_sat ())
-           "[sat] --------------------- Delta -" *)
+         "[sat] --------------------- Delta -" *)
 
     let gamma g =
       if get_debug_sat () && get_verbose () then begin
@@ -451,48 +449,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | E.Let _ | E.Iff _ | E.Xor _ -> false
     | E.Not_a_form -> assert false
 
-  let extract_prop_model t =
+  let extract_prop_model ~complete_model t =
     let s = ref SE.empty in
     ME.iter
       (fun f _ ->
-         if (get_complete_model () && is_literal f) || E.is_in_model f then
+         if complete_model && is_literal f then
            s := SE.add f !s
       )
       t.gamma;
     !s
 
-  let print_prop_model fmt s =
-    SE.iter (fprintf fmt "\n %a" E.print) s
-
-  let print_model ~header fmt t =
-    Format.print_flush ();
-    if header then fprintf fmt "\nModel\n";
-    let pm = extract_prop_model t in
-    if not (SE.is_empty pm) then begin
-      fprintf fmt "Propositional:";
-      print_prop_model fmt pm;
-      fprintf fmt "\n";
-    end;
-    Th.print_model fmt t.tbox
-
-
-  let refresh_model_handler =
-    if get_model () then
-      fun t ->
-        try
-          let alrm =
-            if Options.get_is_gui() then
-              Sys.sigalrm (* troubles with GUI+VTARLM *)
-            else
-              Sys.sigvtalrm
-          in
-          Sys.set_signal alrm
-            (Sys.Signal_handle (fun _ ->
-                 Printer.print_fmt (Options.get_fmt_mdl ())
-                   "%a" (print_model ~header:true) t;
-                 Options.exec_timeout ()))
-        with Invalid_argument _ -> ()
-    else fun _ -> ()
 
   (* sat-solver *)
 
@@ -980,7 +946,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       (fun
         ((env, _bcp, tcp, ap_delta, lits) as acc)
         ({ E.ff = f; _ } as ff, dep) ->
-        refresh_model_handler env;
         Options.exec_thread_yield ();
         let dep = add_dep f dep in
         let dep_gamma = add_dep_of_formula f dep in
@@ -1177,36 +1142,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       ignore (update_instances_cache (Some []));
       env, true
 
-  let update_all_models_option env =
-    if get_all_models () then
-      begin
-        (* should be used when all_models () is activated only *)
-        if !all_models_sat_env == None then all_models_sat_env := Some env;
-        let m =
-          ME.fold
-            (fun f _ s -> if is_literal f then SE.add f s else s)
-            env.gamma SE.empty
-        in
-        Printer.print_fmt (Options.get_fmt_mdl ())
-          "@[<v 0>--- SAT model found ---@ \
-           %a@ \
-           --- / SAT model  ---@]"
-          print_prop_model m;
-        raise (IUnsat (Ex.make_deps m, []))
-      end
 
-  let get_all_models_answer () =
-    if get_all_models () then
-      match !all_models_sat_env with
-      | Some env -> raise (I_dont_know env)
-      | None ->
-        Printer.print_fmt (Options.get_fmt_mdl ())
-          "[all-models] No SAT models found"
-
-
-  let compute_concrete_model env origin =
-    if abs (get_interpretation ()) <> origin then env
-    else
+  let compute_concrete_model env compute =
+    let compute =
+      if Options.get_first_interpretation () then
+        match !latest_saved_env with
+        | Some _ -> false
+        | None -> true
+      else compute
+    in
+    if not compute then env
+    else begin
       try
         (* to push pending stuff *)
         let env = do_case_split env (Options.get_case_split_policy ()) in
@@ -1218,11 +1164,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         Options.tool_req 2 "TR-Sat-Conflict-2";
         env.heuristics := Heuristics.bump_activity !(env.heuristics) expl;
         raise (IUnsat (expl, classes))
-
+    end
 
   let return_cached_model return_function =
-    let i = abs(get_interpretation ()) in
-    assert (i = 1 || i = 2 || i = 3);
+    let i = get_interpretation () in
+    assert i;
     assert (not !terminated_normally);
     terminated_normally := true; (* to avoid loops *)
     begin
@@ -1234,9 +1180,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            You may need to change your model generation strategy@,\
            or to increase your timeout.@]"
       | Some env ->
-        let cs_tbox = Th.get_case_split_env env.tbox in
-        let uf = Ccx.Main.get_union_find cs_tbox in
-        Uf.output_concrete_model uf
+        let prop_model = extract_prop_model ~complete_model:true env in
+        Th.output_concrete_model (get_fmt_mdl ()) ~prop_model env.tbox;
     end;
     return_function ()
 
@@ -1244,18 +1189,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let () =
     at_exit
       (fun () ->
-         let i = abs(get_interpretation ()) in
-         if not !terminated_normally && (i = 1 || i = 2 || i = 3) then
+         if not !terminated_normally && (get_interpretation ()) then
            return_cached_model (fun () -> ())
       )
 
 
-  let return_answer env orig return_function =
-    update_all_models_option env;
-    let env = compute_concrete_model env orig in
-    let uf = Ccx.Main.get_union_find (Th.get_case_split_env env.tbox) in
+  let return_answer env compute return_function =
+    let env = compute_concrete_model env compute in
     Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
-    Uf.output_concrete_model uf;
+
+    let prop_model = extract_prop_model ~complete_model:true env in
+    Th.output_concrete_model (get_fmt_mdl ()) ~prop_model env.tbox;
+
     terminated_normally := true;
     return_function env
 
@@ -1263,13 +1208,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let switch_to_model_gen env =
     not !terminated_normally &&
     not !(env.model_gen_mode) &&
-    let i = abs (get_interpretation ()) in
-    (i = 1 || i = 2 || i = 3)
+    get_interpretation ()
 
 
   let do_switch_to_model_gen env =
-    let i = abs (get_interpretation ()) in
-    assert (i = 1 || i = 2 || i = 3);
+    let i = get_interpretation () in
+    assert i;
     if not !(env.model_gen_mode) &&
        Stdlib.(<>) (Options.get_timelimit_interpretation ()) 0. then
       begin
@@ -1313,7 +1257,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            | E.Let _ | E.Iff _ | E.Xor _ ->
              Printer.print_err
                "Currently, arbitrary formulas in Hyps
-                are not Th-reduced";
+are not Th-reduced";
              assert false
            | E.Not_a_form ->
              assert false
@@ -1394,7 +1338,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let greedy_instantiation env =
     match get_instantiation_heuristic () with
     | INormal ->
-      return_answer env 1
+      return_answer env (get_last_interpretation ())
         (fun e -> raise (I_dont_know e))
     | IAuto | IGreedy ->
       let gre_inst =
@@ -1421,13 +1365,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env = do_case_split env Util.AfterMatching in
       if ok1 || ok2 || ok3 || ok4 then env
       else
-        return_answer env 1
+        return_answer env (get_last_interpretation ())
           (fun e -> raise (I_dont_know e))
+
 
   let normal_instantiation env try_greedy =
     Debug.print_nb_related env;
     let env = do_case_split env Util.BeforeMatching in
-    let env = compute_concrete_model env 2 in
+    let env = compute_concrete_model env (get_every_interpretation ()) in
     let env = new_inst_level env in
     let mconf =
       {Util.nb_triggers = get_nb_triggers ();
@@ -1521,7 +1466,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   and back_tracking env =
     try
-      let env = compute_concrete_model env 3 in
       if env.delta == [] || Options.get_no_decisions() then
         back_tracking (normal_instantiation env true)
       else
@@ -1766,7 +1710,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
               acc.guards.guards
           in
           acc.model_gen_mode := false;
-          all_models_sat_env := None;
           latest_saved_env := None;
           terminated_normally := false;
           {acc with inst;
@@ -1840,14 +1783,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
       let d = back_tracking env in
       assert (Ex.has_no_bj d);
-      get_all_models_answer ();
       terminated_normally := true;
       d
     with
     | IUnsat (dep, classes) ->
       Debug.bottom classes;
       Debug.unsat ();
-      get_all_models_answer ();
       terminated_normally := true;
       assert (Ex.has_no_bj dep);
       dep

@@ -23,7 +23,7 @@ echo "content of lib == $x"
 # Compile the lib_usage caml file
 cd $git_repo/examples
 ocamlfind ocamlopt -linkpkg -package \
-	  stdlib-shims,num,zarith,ocplib-simplex,psmt2-frontend,unix,str,zip,dynlink,cmdliner \
+	  stdlib-shims,num,zarith,ocplib-simplex,psmt2-frontend,unix,str,zip,dynlink,cmdliner,seq \
 	  -o lib_usage \
 	  -I $lib_path AltErgoLib.cmxa \
 	  lib_usage.ml

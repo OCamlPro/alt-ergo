@@ -15,7 +15,7 @@ open AltErgoParsers
 (* === LEGACY input method === *)
 
 let register_legacy () =
-  let module M : Input.S = struct
+  let module M : Input.S with type parsed = Parsed.decl = struct
 
     (* Parsing *)
 

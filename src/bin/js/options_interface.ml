@@ -50,6 +50,14 @@ let get_instantiation_heuristic = function
     | IAuto -> Some Options.IAuto
     | IGreedy -> Some Options.IGreedy
 
+let get_interpretation = function
+  | None -> None
+  | Some m -> match m with
+    | INone -> Some Options.INone
+    | IFirst -> Some Options.IFirst
+    | IEvery -> Some Options.IEvery
+    | ILast -> Some Options.ILast
+
 let get_no_decisions_on = function
   | None -> None
   | Some l ->
@@ -129,7 +137,8 @@ let set_options r =
   set_options_opt Options.set_fm_cross_limit (get_numbers r.fm_cross_limit);
   set_options_opt Options.set_steps_bound r.steps_bound;
 
-  set_options_opt Options.set_interpretation r.interpretation;
+  set_options_opt Options.set_interpretation
+    (get_interpretation r.interpretation);
 
   set_options_opt Options.set_output_format
     (get_output_format r.output_format);

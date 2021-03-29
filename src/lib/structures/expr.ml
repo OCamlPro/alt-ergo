@@ -427,36 +427,65 @@ let rec print_silent fmt t =
     begin
       match lit, xs with
       | Sy.L_eq, a::l ->
-        fprintf fmt "(%a%a)"
-          print a (fun fmt -> List.iter (fprintf fmt " = %a" print)) l
+        if get_output_smtlib () then
+          fprintf fmt "(= %a%a)"
+            print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
+        else
+          fprintf fmt "(%a%a)"
+            print a (fun fmt -> List.iter (fprintf fmt " = %a" print)) l
 
       | Sy.L_neg_eq, [a; b] ->
-        fprintf fmt "(%a <> %a)" print a print b
+        if get_output_smtlib () then
+          fprintf fmt "(not (= %a %a))" print a print b
+        else
+          fprintf fmt "(%a <> %a)" print a print b
 
       | Sy.L_neg_eq, a::l ->
-        fprintf fmt "distinct(%a%a)"
-          print a (fun fmt -> List.iter (fprintf fmt ", %a" print)) l
+        if get_output_smtlib () then
+          fprintf fmt "(distinct %a%a)"
+            print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
+        else
+          fprintf fmt "distinct(%a%a)"
+            print a (fun fmt -> List.iter (fprintf fmt ", %a" print)) l
 
       | Sy.L_built Sy.LE, [a;b] ->
-        fprintf fmt "(%a <= %a)" print a print b
+        if get_output_smtlib () then
+          fprintf fmt "(<= %a %a)" print a print b
+        else
+          fprintf fmt "(%a <= %a)" print a print b
 
       | Sy.L_built Sy.LT, [a;b] ->
-        fprintf fmt "(%a < %a)" print a print b
+        if get_output_smtlib () then
+          fprintf fmt "(< %a %a)" print a print b
+        else
+          fprintf fmt "(%a < %a)" print a print b
 
       | Sy.L_neg_built Sy.LE, [a; b] ->
-        fprintf fmt "(%a > %a)" print a print b
+        if get_output_smtlib () then
+          fprintf fmt "(> %a %a)" print a print b
+        else
+          fprintf fmt "(%a > %a)" print a print b
 
       | Sy.L_neg_built Sy.LT, [a; b] ->
-        fprintf fmt "(%a >= %a)" print a print b
+        if get_output_smtlib () then
+          fprintf fmt "(>= %a %a)" print a print b
+        else
+          fprintf fmt "(%a >= %a)" print a print b
 
       | Sy.L_neg_pred, [a] ->
         fprintf fmt "(not %a)" print a
 
       | Sy.L_built (Sy.IsConstr hs), [e] ->
-        fprintf fmt "(%a ? %a)" print e Hstring.print hs
+        if get_output_smtlib () then
+          fprintf fmt "((_ is %a) %a)" Hstring.print hs print e
+        else
+          fprintf fmt "(%a ? %a)" print e Hstring.print hs
 
       | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
-        fprintf fmt "not (%a ? %a)" print e Hstring.print hs
+        if get_output_smtlib () then
+          fprintf fmt "(not ((_ is %a) %a))" Hstring.print hs print e
+        else
+          fprintf fmt "not (%a ? %a)" print e Hstring.print hs
 
       | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
         | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
@@ -467,10 +496,19 @@ let rec print_silent fmt t =
     end
 
   | Sy.Op Sy.Get, [e1; e2] ->
-    fprintf fmt "%a[%a]" print e1 print e2
+    if get_output_smtlib () then
+      fprintf fmt "(select %a %a)" print e1 print e2
+    else
+      fprintf fmt "%a[%a]" print e1 print e2
 
   | Sy.Op Sy.Set, [e1; e2; e3] ->
-    fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3
+    if get_output_smtlib () then
+      fprintf fmt "(store %a %a %a)"
+        print e1
+        print e2
+        print e3
+    else
+      fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3
 
   | Sy.Op Sy.Concat, [e1; e2] ->
     fprintf fmt "%a@@%a" print e1 print e2
@@ -479,7 +517,10 @@ let rec print_silent fmt t =
     fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
 
   | Sy.Op (Sy.Access field), [e] ->
-    fprintf fmt "%a.%s" print e (Hstring.view field)
+    if get_output_smtlib () then
+      fprintf fmt "(%s %a)" (Hstring.view field) print e
+    else
+      fprintf fmt "%a.%s" print e (Hstring.view field)
 
   | Sy.Op (Sy.Record), _ ->
     begin match ty with
@@ -506,7 +547,10 @@ let rec print_silent fmt t =
     fprintf fmt "%a(%a)" Hstring.print hs print_list l
 
   | Sy.Op _, [e1; e2] ->
-    fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
+    if get_output_smtlib () then
+      fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
+    else
+      fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
 
   | Sy.Op Sy.Destruct (hs, grded), [e] ->
     fprintf fmt "%a#%s%a"
@@ -521,7 +565,10 @@ let rec print_silent fmt t =
     fprintf fmt "%a" Sy.print f
 
   | _, _ ->
-    fprintf fmt "%a(%a)" Sy.print f print_list xs
+    if get_output_smtlib () then
+      fprintf fmt "(%a %a)" Sy.print f print_list xs
+    else
+      fprintf fmt "%a(%a)" Sy.print f print_list xs
 
 and print_verbose fmt t =
   fprintf fmt "(%a : %a)" print_silent t Ty.print t.ty
@@ -546,6 +593,8 @@ and print_triggers fmt trs =
 (** Some auxiliary functions *)
 
 let type_info t = t.ty
+let symbol_info t = t.f
+let get_infos t = t
 
 (* unused
    let is_term e = match e.f with
@@ -636,7 +685,7 @@ let add_label =
   let add_aux lbl t = Labels.replace labels t lbl in
   fun lbl e ->
     match e with
-    | { f = Sy.Form _; _ } -> ()
+    | { f = Sy.Form _; _ } -> (* add_aux lbl e *) assert false
     | { f = Sy.Lit _; _ } | { ty = Ty.Tbool; _ } ->
       add_aux lbl e;
       add_aux lbl (neg e)
@@ -648,28 +697,6 @@ let label t =
   with Not_found ->
     let { f = f; _ } = t in
     Sy.label f
-
-let is_model_label =
-  let model = "model:" in
-  fun h ->
-    try String.equal (String.sub (Hstring.view h) 0 6) model
-    with Invalid_argument _ -> false
-
-let rec is_in_model_rec depth { f = f; xs = xs ; _ } =
-  let lb = Sy.label f in
-  (is_model_label lb
-   &&
-   (try depth <= Scanf.sscanf (Hstring.view lb) "model:%d" (fun x -> x)
-    with Scanf.Scan_failure _ | End_of_file-> true))
-  ||
-  List.exists (is_in_model_rec (depth +1)) xs
-
-let rec is_in_model e =
-  is_model_label (label e) ||
-  match e with
-  | { f = Sy.Form _; _ } -> false
-  | { f = Sy.Lit _ ; xs; _ } -> List.exists is_in_model xs
-  | _ -> is_in_model_rec 0 e
 
 let print_tagged_classes =
   let is_labeled t = not (Hstring.equal (label t) Hstring.empty) in

@@ -74,11 +74,10 @@ let init_sigterm_21 () =
       )
 
 let init_sigalarm () =
-  if not (get_model ()) then
-    try
-      Sys.set_signal Sys.sigvtalrm
-        (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
-    with Invalid_argument _ -> ()
+  try
+    Sys.set_signal Sys.sigvtalrm
+      (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
+  with Invalid_argument _ -> ()
 
 let init_profiling () =
   if Options.get_profiling () then begin
