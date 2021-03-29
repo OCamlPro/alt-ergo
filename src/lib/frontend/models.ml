@@ -404,7 +404,7 @@ module SmtlibCounterExample = struct
     !records
 
   let output_arrays_counterexample fmt _arrays =
-    fprintf fmt "@ ; Arrays not yet supported@ "
+    Printer.print_fmt fmt "@ ; Arrays not yet supported@ "
 
 end
 (* of module SmtlibCounterExample *)
@@ -441,11 +441,11 @@ let output_concrete_model fmt props functions constants arrays =
       Why3CounterExample.output_constraints fmt props
     end;
 
-    fprintf fmt "@ ; Functions@ ";
+    Printer.print_fmt fmt "@ ; Functions@ ";
     let records = SmtlibCounterExample.output_functions_counterexample
         fmt  MS.empty functions in
 
-    fprintf fmt "@ ; Constants@ ";
+    Printer.print_fmt fmt "@ ; Constants@ ";
     SmtlibCounterExample.output_constants_counterexample
       fmt records constants;
 
