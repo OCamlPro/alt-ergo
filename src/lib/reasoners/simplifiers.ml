@@ -186,10 +186,10 @@ module IntervalsDomain :
   let eval_constraint (ty : Ty.t) (s : state) (p : P.t) : Intervals.t abstract_value =
     match s with
     | Top -> begin
-      match P.to_list p with
+        match P.to_list p with
         | [], q -> Value (Intervals.point q ty Explanation.empty)
         | _ -> Top
-    end
+      end
     | Bottom -> Bottom
     | Value v ->
       let ty = P.type_info p in
@@ -340,7 +340,7 @@ module IntervalsDomain :
             bound
             ~is_le
             prev_inter, true
-      end
+        end
     with
     | Intervals.No_finite_bound -> prev_inter, false
     | Intervals.NotConsistent _ -> raise EmptyInterval
@@ -493,7 +493,7 @@ module IntervalsDomain :
           failwith "Check constraint: do not handle IsConstr"
         | L_neg_pred ->
           failwith "Check constraint : todo (even a better error message would be nice)"
-    end
+      end
 
   let to_arith e = A.embed @@ fst @@ R.make e
 
@@ -521,11 +521,11 @@ module IntervalsDomain :
       let lit =
         if Q.compare cst Q.zero < 0 then
           match lit with
-           | L_built LE -> Symbols.L_neg_built LT
-           | L_built LT -> L_neg_built LE
-           | L_neg_built LE -> L_built LT
-           | L_neg_built LT -> L_built LE
-           | l -> l
+          | L_built LE -> Symbols.L_neg_built LT
+          | L_built LT -> L_neg_built LE
+          | L_neg_built LE -> L_built LT
+          | L_neg_built LT -> L_built LE
+          | l -> l
         else lit
       in
 
@@ -553,26 +553,26 @@ module IntervalsDomain :
       | Some true  -> SRE.AlreadyTrue
       | Some false -> AlreadyFalse
       | None ->
-      (* p R -c cannot be deduced from state : adding constraint *)
-      (* p = \Sum (q_i * r_i)
-         p R -c <=> \A i. q_i * r_i R (q_i * r_i) - p - c *)
-      let constraints =
-        P.fold_on_vars
-          (fun r q acc_cstr ->
-            let p' = P.sub (P.create [q,r] mc ty) p in
-            debug "[add_constraint] Partial constraint for %a*%a: %a" Q.print q R.print r P.print p';
-            ((q, r, p') :: acc_cstr))
-          p
-          [] in
-      try
-        let new_constraint = fix_point lit ty constraints v in
-        debug "[add_constraint] New constraint: %a@." pp new_constraint;
-        NewConstraint new_constraint
-      with
-      | EmptyInterval ->
-        (* fix_point calculation reduced a variable to the empty interval *)
-        debug "[add_constraint] Inconsistent interval, returning `false`@.";
-        AlreadyFalse
+        (* p R -c cannot be deduced from state : adding constraint *)
+        (* p = \Sum (q_i * r_i)
+           p R -c <=> \A i. q_i * r_i R (q_i * r_i) - p - c *)
+        let constraints =
+          P.fold_on_vars
+            (fun r q acc_cstr ->
+               let p' = P.sub (P.create [q,r] mc ty) p in
+               debug "[add_constraint] Partial constraint for %a*%a: %a" Q.print q R.print r P.print p';
+               ((q, r, p') :: acc_cstr))
+            p
+            [] in
+        try
+          let new_constraint = fix_point lit ty constraints v in
+          debug "[add_constraint] New constraint: %a@." pp new_constraint;
+          NewConstraint new_constraint
+        with
+        | EmptyInterval ->
+          (* fix_point calculation reduced a variable to the empty interval *)
+          debug "[add_constraint] Inconsistent interval, returning `false`@.";
+          AlreadyFalse
 
   let eval_expr e s =
     match E.term_view e with

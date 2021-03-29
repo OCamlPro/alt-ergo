@@ -46,10 +46,10 @@ let fold_left_stop
   in __fold acc l
 
 type ('expr, 'abs_val) simp = {
-    exp : 'expr;
-    diff : bool;
-    v : 'abs_val
-  }
+  exp : 'expr;
+  diff : bool;
+  v : 'abs_val
+}
 
 let pp_simp pp_abs_val fmt s =
   Format.fprintf fmt "%a:%a" E.print s.exp pp_abs_val s.v
@@ -375,7 +375,7 @@ module SimpleReasoner
         let sth : (E.t, v) simp = simp_expr cth th in
         let sel : (E.t, v) simp = simp_expr cel el in
         [scond; sth; sel]
-      end
+    end
 
   and simp_form
       (state : state)
@@ -500,31 +500,31 @@ module SimpleReasoner
           v = D.unknown
         }
       | Symbols.Form f, _ -> begin
-        debug "[simp_expr] Formula: %a@." Symbols.print symb;
-        let l = simp_form state f elist in
-        match l with
-        | [] -> assert false
-        | hd :: tl ->
-          if hd.diff || List.exists (fun e -> e.diff) tl then
-            begin
-              let make =
-                (match f with
-                 | F_Unit b   -> (fun e e' -> E.mk_and e e' b)
-                 | F_Clause b -> (fun e e' -> E.mk_or e e' b)
-                 | F_Iff      -> E.mk_iff
-                 | F_Xor      -> E.mk_xor
-                 | F_Skolem | F_Lemma -> assert false) in
-              List.fold_left
-                (fun sexp term ->
-                   {sexp with exp = make sexp.exp term.exp (-44)})
-                hd tl
-            end
-          else {
-            exp = e;
-            diff = false;
-            v = D.unknown
-          }
-      end
+          debug "[simp_expr] Formula: %a@." Symbols.print symb;
+          let l = simp_form state f elist in
+          match l with
+          | [] -> assert false
+          | hd :: tl ->
+            if hd.diff || List.exists (fun e -> e.diff) tl then
+              begin
+                let make =
+                  (match f with
+                   | F_Unit b   -> (fun e e' -> E.mk_and e e' b)
+                   | F_Clause b -> (fun e e' -> E.mk_or e e' b)
+                   | F_Iff      -> E.mk_iff
+                   | F_Xor      -> E.mk_xor
+                   | F_Skolem | F_Lemma -> assert false) in
+                List.fold_left
+                  (fun sexp term ->
+                     {sexp with exp = make sexp.exp term.exp (-44)})
+                  hd tl
+              end
+            else {
+              exp = e;
+              diff = false;
+              v = D.unknown
+            }
+        end
       | Symbols.Lit _, _ -> begin
           debug
             "[simp_expr] Litteral : %a@."
