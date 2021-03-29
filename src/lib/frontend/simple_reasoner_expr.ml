@@ -52,7 +52,9 @@ type ('expr, 'abs_val) simp = {
 }
 
 let pp_simp pp_abs_val fmt s =
-  Format.fprintf fmt "%a:%a" E.print s.exp pp_abs_val s.v
+  Format.fprintf fmt "%a:%a"
+    E.print s.exp
+    pp_abs_val s.v
 
 let get_expr e = e.exp
 let get_abs_val e = e.v
@@ -91,7 +93,12 @@ module type Dom = sig
   val v_join : v -> v -> v
 
   (** Add constraint *)
-  val add_constraint : Expr.t -> Expr.t -> Symbols.lit -> state -> state add_constraint_res
+  val add_constraint :
+    Expr.t ->
+    Expr.t ->
+    Symbols.lit ->
+    state ->
+    state add_constraint_res
 
   (** If possible, adds `expr` to `state` with the value `v` *)
   val add_raw_value : Expr.t -> v -> state -> state
@@ -121,7 +128,8 @@ module SimpleReasoner
   type state = D.state
   type v = D.v
 
-  let (simp_cache : (state * (Expr.t, v) simp) list Expr.Map.t ref) = ref E.Map.empty
+  let (simp_cache : (state * (Expr.t, v) simp) list Expr.Map.t ref) =
+    ref E.Map.empty
 
   let constraint_cache : (state * state add_constraint_res) list E.Map.t ref =
     ref E.Map.empty
@@ -217,7 +225,8 @@ module SimpleReasoner
       if is_form then
         add_form_constraint state e
       else
-        failwith "add_lit_constraint should be only called on litterals or formulas"
+        failwith
+          "add_lit_constraint should be only called on litterals or formulas"
 
   and add_lit_constraint (state : state) (e : Expr.t) =
     match find_cache constraint_cache e state with
@@ -322,10 +331,12 @@ module SimpleReasoner
 
     | Lemma _
     | Skolem _ ->
-      debug "[add_form_constraint] Lemma/Skolem: not using it@."; NewConstraint state
+      debug "[add_form_constraint] Lemma/Skolem: not using it@.";
+      NewConstraint state
 
     | Not_a_form ->
-      failwith "add_form_constraint should be only called on litterals or formulas"
+      failwith
+        "add_form_constraint should be only called on litterals or formulas"
 
   and add_form_constraint state e =
     match find_cache constraint_cache e state with
@@ -341,7 +352,9 @@ module SimpleReasoner
       (th : E.t)
       (el : E.t) :
     (E.t, v) simp list =
-    debug "[simp_ite] Simplifying condition %a with %a@." E.print cond D.pp state;
+    debug "[simp_ite] Simplifying condition %a with %a@."
+      E.print cond
+      D.pp state;
     let scond = simp_expr state cond in
     debug "[simp_ite] New condition %a ~~> %a@." E.print cond E.print scond.exp;
     if is_true scond then begin
@@ -404,7 +417,8 @@ module SimpleReasoner
                else (
                  debug "[simp_form] Keeping %a@." E.print e;
                  match state &&& esimp.exp with
-                 | AlreadyTrue | AlreadyFalse -> failwith "Should have simplify beforehand"
+                 | AlreadyTrue
+                 | AlreadyFalse -> failwith "Should have simplify beforehand"
                  | NewConstraint state ->
                    (state, (esimp :: simp_exps)))
                , false
@@ -455,7 +469,8 @@ module SimpleReasoner
       List.map (identity state) elist
 
   and simp_expr_no_cache state (e : E.t) : (E.t, v) simp =
-    debug "[simp_expr] Simplifying expression %a with %a@." E.print e D.pp state;
+    debug "[simp_expr] Simplifying expression %a with %a@."
+      E.print e D.pp state;
     let res =
       let ty = E.type_info e in
       let elist = E.get_sub_expr e in
@@ -467,7 +482,8 @@ module SimpleReasoner
           debug "[simp_expr] Ite treated@.";
           match simp with
           | [branch] ->
-            debug "[simp_expr] Simplification cut a branch, yielding %a@." Expr.print branch.exp;
+            debug "[simp_expr] Simplification cut a branch, yielding %a@."
+              Expr.print branch.exp;
             branch
           | [cond; th; el] ->
             if cond.diff || th.diff || el.diff then

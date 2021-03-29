@@ -538,7 +538,8 @@ and print_term_binders ?(annot=no_print) fmt l =
     List.iter (fun (sy, t) ->
         fprintf fmt ", %a = %a" Symbols.print sy (print_term ~annot) t) l
 
-and print_term_list ?(annot=no_print) fmt = List.iter (fprintf fmt "%a," (print_term ~annot))
+and print_term_list ?(annot=no_print) fmt =
+  List.iter (fprintf fmt "%a," (print_term ~annot))
 
 and print_atom ?(annot=no_print) fmt a =
   match a.c with
@@ -574,9 +575,14 @@ and print_formula ?(annot=no_print) fmt f =
     fprintf fmt "not %a" (print_formula ~annot) f
   | TFop(OPif, [cond; f1;f2]) ->
     fprintf fmt "if %a then %a else %a"
-      (print_formula ~annot) cond (print_formula ~annot) f1 (print_formula ~annot) f2
+      (print_formula ~annot) cond
+      (print_formula ~annot) f1
+      (print_formula ~annot) f2
   | TFop(op, [f1; f2]) ->
-    fprintf fmt "%a %s %a" (print_formula ~annot) f1 (string_of_op op) (print_formula ~annot) f2
+    fprintf fmt "%a %s %a"
+      (print_formula ~annot) f1
+      (string_of_op op)
+      (print_formula ~annot) f2
   | TFforall { qf_bvars = l; qf_triggers = t; qf_form = f; _ } ->
     fprintf fmt "forall %a [%a]. %a"
       print_binders l (print_triggers ~annot) t (print_formula ~annot) f

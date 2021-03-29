@@ -300,7 +300,7 @@ let rec make_term up_qv quant_basename t =
   | Util.SPreprocess | Util.SAll ->
     let module S = SimpExprPreproc () in
     let smp_term = S.simp_expr  term in
-    if SRE.has_changed smp_term 
+    if SRE.has_changed smp_term
     then SRE.get_expr smp_term
     else term *)
 

@@ -50,7 +50,12 @@ module type Dom = sig
   val v_join : v -> v -> v
 
   (** Add constraint *)
-  val add_constraint : Expr.t -> Expr.t -> Symbols.lit -> state -> state add_constraint_res
+  val add_constraint :
+    Expr.t ->
+    Expr.t ->
+    Symbols.lit ->
+    state ->
+    state add_constraint_res
 
   (** If possible, adds `expr` to `state` with the value `v` *)
   val add_raw_value : Expr.t -> v -> state -> state
