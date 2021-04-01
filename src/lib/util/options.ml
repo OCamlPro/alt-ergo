@@ -554,23 +554,10 @@ let compare  (a: int) (b: int) = Stdlib.compare a b
 
 (* extra **)
 
-let is_gui = ref None
+let is_gui = ref false
 
-let set_is_gui b =
-  match !is_gui with
-  | None -> is_gui := Some b
-  | Some _ ->
-    Format.fprintf (get_fmt_err ())
-      "[Error] Error in Options.set_is_gui: is_gui is already set!@.";
-    assert false
-
-let get_is_gui () =
-  match !is_gui with
-  | Some b -> b
-  | None ->
-    Format.fprintf (get_fmt_err ())
-      "[Error] Error in Options.get_is_gui: is_gui is not set!@.";
-    assert false
+let set_is_gui b = is_gui := b
+let get_is_gui () = !is_gui
 
 let set_file_for_js filename =
   set_file filename;
