@@ -306,23 +306,84 @@ and 'a tdecl =
 (* TODO: wrap this in a record to factorize away
    the location and name of the declaration ? *)
 
+(** {5. Toplevel constants} *)
+val true_atatom : int atatom
+val false_atatom : int atatom
 
-(** {5 Printing} *)
+val true_tform : int tform
+val false_tform : int tform
 
-val print_term : Format.formatter -> _ atterm -> unit
-(** Print annoted typed terms. Ignore the annotations. *)
+val true_atform : int atform
+val false_atform : int atform
 
-val print_formula : Format.formatter -> _ atform -> unit
-(**Print annoted typed formulas; Ignores the annotations. *)
+val true_term : int tterm
+val false_term : int tterm
 
-val print_binders : Format.formatter -> (Symbols.t * Ty.t) list -> unit
+val true_atterm : int atterm
+val false_atterm : int atterm
+
+(** {6. Structural equality} *)
+
+val eq_tterm : 'a tterm -> 'a tterm -> bool
+
+val eq_tt_desc : 'a tt_desc -> 'a tt_desc -> bool
+
+val eq_tatom : 'a tatom -> 'a tatom -> bool
+
+val eq_quant_form : 'a quant_form -> 'a quant_form -> bool
+
+val eq_tform : 'a tform -> 'a tform -> bool
+
+val eq_tlet_kind : 'a tlet_kind -> 'a tlet_kind -> bool
+
+(** {7 Printing} *)
+
+val string_of_op : oplogic -> string
+
+type 'annot annot_printer = Format.formatter -> 'annot -> unit
+type ('a,'annot) annoted_printer =
+  Format.formatter -> ('a,'annot) annoted -> unit
+
+val no_print : _ annot_printer
+val int_print : int annot_printer
+
+val print_atom :
+  ?annot: 'annot annot_printer -> Format.formatter -> 'annot atatom -> unit
+
+(** Print annoted typed terms. If no annot function is given, ignores
+    the annotations. *)
+val print_term :
+  ?annot: 'annot annot_printer -> Format.formatter -> 'annot atterm -> unit
+
+(** Print annoted typed formulas. If no annot function is given, ignores
+    the annotations. *)
+val print_formula :
+  ?annot: 'annot annot_printer -> Format.formatter -> 'annot atform -> unit
+
 (** Print a list of bound typed variables. *)
+val print_binders : Format.formatter -> (Symbols.t * Ty.t) list -> unit
 
-val print_triggers : Format.formatter -> ('a atterm list * bool) list -> unit
+val print_triggers :
+  ?annot: 'annot annot_printer ->
+  Format.formatter -> ('annot atterm list * bool) list -> unit
 (** Print a list of triggers. *)
 
 val print_goal_sort : Format.formatter -> goal_sort -> unit
 (** Print a goal sort *)
+
+(*
+val print_tdecl :
+  ?annot: 'annot annot_printer ->
+  Format.formatter -> 'annot tdecl -> unit
+
+val print_atdecl :
+  ?annot: 'annot annot_printer -> Format.formatter -> 'annot atdecl -> unit
+*)
+
+val print_annot :
+  'annot annot_printer ->
+  ('a,'annot) annoted_printer ->
+  Format.formatter -> ('a,'annot) annoted -> unit
 
 val print_rwt :
   (Format.formatter -> 'a -> unit) ->

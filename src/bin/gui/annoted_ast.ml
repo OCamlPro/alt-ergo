@@ -739,15 +739,18 @@ and print_tt_desc fmt = function
   | TTnamed (lbl, t) -> fprintf fmt "%s:%a" (Hstring.view lbl) print_tterm t
   | TTinInterval(e, lb, ub) ->
     fprintf fmt "%a in %a, %a"
-      print_term e
+      (print_term ~annot:no_print) e
       Symbols.print_bound lb
       Symbols.print_bound ub
 
-  | TTmapsTo(x,e) -> fprintf fmt "%a |-> %a" Var.print x print_term e
+  | TTmapsTo(x,e) ->
+    fprintf fmt "%a |-> %a" Var.print x (print_term ~annot:no_print) e
 
   | TTite(f,t1, t2) ->
     fprintf fmt "(if %a then %a else %a)"
-      print_tform f print_term t1 print_term t2
+      print_tform f
+      (print_term ~annot:no_print) t1
+      (print_term ~annot:no_print) t2
 
   | TTproject (_, _, _) | TTmatch (_, _) ->
     Gui_config.not_supported "Algebraic datatypes"
@@ -759,9 +762,13 @@ and print_term_binders fmt l =
   match l with
   | [] -> assert false
   | (sy, t) :: l ->
-    fprintf fmt "%a = %a" Symbols.print_clean sy print_term t;
+    fprintf fmt "%a = %a" Symbols.print_clean sy (print_term ~annot:no_print) t;
     List.iter (fun (sy, t) ->
-        fprintf fmt ",\n%a = %a" Symbols.print_clean sy print_term t) l
+        fprintf
+          fmt
+          ",\n%a = %a"
+          Symbols.print_clean sy
+          (print_term ~annot:no_print) t) l
 
 and print_tatom fmt a = match a.Typed.c with
   | TAtrue -> fprintf fmt "true"
@@ -814,7 +821,7 @@ and print_tform2 fmt f = match f.Typed.c with
 and print_mixed_binders =
   let aux fmt e =
     match e with
-    | TletTerm t -> fprintf fmt "%a" print_term t
+    | TletTerm t -> fprintf fmt "%a" (print_term ~annot:no_print) t
     | TletForm f -> fprintf fmt "%a" print_tform2 f
   in fun fmt binders ->
     match binders with

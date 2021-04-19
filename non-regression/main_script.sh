@@ -54,6 +54,7 @@ do
         tput hpa 25
         total=`expr $total + 1`
         echo -n "$total / $big_total"
+	echo "$pr $ae $opt 1>  $main_script_out 2> $main_script_err"
         timeout 2 $pr $ae $opt 1> $main_script_out 2> $main_script_err
         if grep -q -w Valid $main_script_out ; then
 	    score=`expr $score + 1`

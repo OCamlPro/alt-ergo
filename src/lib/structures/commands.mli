@@ -32,7 +32,7 @@ open Typed
 (* Sat entry *)
 
 type sat_decl_aux =
-  | Assume of string * Expr.t * bool
+  | Assume of string * Expr.t * bool (* axioms / asserts *)
   | PredDef of Expr.t * string (*name of the predicate*)
   | RwtDef of (Expr.t rwt_rule) list
   | Query of string *  Expr.t * goal_sort

@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+(** An answer type. If it is Some (thing), then the answer is yes,
+    otherwise it is unknown. *)
 type answer = (Explanation.t * Expr.Set.t list) option
 
 

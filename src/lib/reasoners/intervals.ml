@@ -1157,6 +1157,37 @@ let match_interval lb ub i accu =
   try Some (match_interval_upper ub i (match_interval_lower lb i accu))
   with Exit -> None
 
+(* todo: iterate on both lists at the same time for linear cplxty *)
+let contained_in (lb, ub) i =
+  List.exists
+    (fun (lb', ub') ->
+       (
+         match lb, lb' with
+         | _, Minfty -> true
+         | Pinfty, _
+         | _, Pinfty -> assert false
+         | Minfty, _ -> false
+         | Large (q, _), (Large (q', _) | Strict (q', _))
+         | Strict (q, _), Strict (q', _) ->
+           Q.compare q q' >= 0
+         | Strict (q, _), Large (q', _) ->
+           Q.compare q q' > 0
+       ) &&
+       (
+         match ub, ub' with
+         | _, Pinfty -> true
+         | Minfty, _
+         | _, Minfty -> assert false
+         | Pinfty, _ -> false
+         | Large (q, _), (Large (q', _) | Strict (q', _))
+         | Strict (q, _), Strict (q', _) ->
+           Q.compare q q' <= 0
+         | Strict (q, _), Large (q', _) ->
+           Q.compare q q' < 0
+       )) i.ints
+
+let contained_in i1 i2 =
+  List.for_all (fun i -> contained_in i i2) i1.ints
 
 (*****************)
 
