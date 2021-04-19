@@ -42,6 +42,8 @@ module type Dom = sig
   val _false : v
   val unknown : v
 
+  val to_bool : v -> bool option
+
   (** (Partial) Compare function *)
   val compare : state -> state -> int option
 
@@ -51,8 +53,7 @@ module type Dom = sig
 
   (** Add constraint *)
   val add_constraint :
-    Expr.t ->
-    Expr.t ->
+    Expr.t list ->
     Symbols.lit ->
     state ->
     state add_constraint_res

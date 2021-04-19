@@ -41,11 +41,12 @@ module DummySimp =
       let bottom = ()
       let compare _ _ = Some 0
       let join _ _ = ()
-      let add_constraint _ _ _ _ = SRE.NewConstraint ()
+      let add_constraint _ _ _ = SRE.NewConstraint ()
       let pp fmt _ = Format.fprintf fmt "()"
       let unknown = ()
       let _false = ()
       let _true = ()
+      let to_bool _ = None
       let pp_v fmt _ = Format.fprintf fmt "()"
       let eval_expr _ _ = ()
       let v_join _ _ = ()
@@ -73,21 +74,49 @@ let compare_abs_val cmp v1 v2 =
   | _, Bottom -> Some 1
   | Value v1, Value v2 -> cmp v1 v2
 
+type abstract_bool =
+  | True
+  | False
+  | TrueOrFalse
+
+let pp_abstract_bool fmt = function
+  | True -> Format.fprintf fmt "{t}"
+  | False -> Format.fprintf fmt "{f}"
+  | TrueOrFalse -> Format.fprintf fmt "{t;f}"
+
+
+type interval =
+  | Bool of bool
+  | Interval of Intervals.t
+
+let pp_interval fmt = function
+  | Interval i -> Intervals.print fmt i
+  | Bool b -> Format.fprintf fmt "%b" b
+
 module IntervalsDomain :
   SRE.Dom
-  with type v = Intervals.t abstract_value
-   and type state = Intervals.t abstract_value M.t abstract_value = struct
-  type v = Intervals.t abstract_value
+  with type v = interval abstract_value
+   and type state = interval abstract_value M.t abstract_value = struct
+  type v = interval abstract_value
   type state = v M.t abstract_value
 
   let top = Top
   let bottom = Bottom
 
-  let _false = Value (Intervals.point Q.zero Ty.Tbool Explanation.empty)
-  let _true = Value (Intervals.point Q.one  Ty.Tbool Explanation.empty)
+  let _false = Value (Bool false)
+  let _true = Value (Bool true)
   let unknown = Top
 
-  let pp_v = pp_abs_val Intervals.print
+  let to_bool =
+    function
+    | Top
+    | Bottom
+    | Value (Interval _) -> None
+    | Value (Bool b) -> Some b
+
+
+  let pp_v = pp_abs_val pp_interval
+
   let pp fmt v =
     pp_abs_val
       (fun fmt -> M.iter
@@ -98,14 +127,25 @@ module IntervalsDomain :
       fmt
       v
 
+  let compare_intervals_t i1 i2 =
+    if Intervals.contained_in i1 i2
+    then if Intervals.equal i1 i2
+         then Some 0
+         else Some (-1)
+    else if Intervals.contained_in i2 i1 then Some 1
+    else None
+
+  let compare_bool b1 b2 = Some (Bool.compare b1 b2)
+
+  let compare_intervals i1 i2 =
+    match i1, i2 with
+      | Interval i1, Interval i2 -> compare_intervals_t i1 i2
+      | Bool b1, Bool b2 -> compare_bool b1 b2
+      | Bool _, Interval _ -> Some 1
+      | Interval _, Bool _ -> Some (-1)
+
   let compare =
-    let compare_intervals =
-      compare_abs_val (fun i1 i2 ->
-          if Intervals.contained_in i1 i2 then
-            if Intervals.equal i1 i2 then Some 0 else Some (-1)
-          else if Intervals.contained_in i2 i1 then Some 1
-          else None
-        ) in
+    let compare_intervals = compare_abs_val compare_intervals in
     fun m1 m2 ->
       (* Compares two maps.
          Maps are compared itetatively ; the result is saved on a reference
@@ -160,7 +200,11 @@ module IntervalsDomain :
     | _, Top -> Top
     | v, Bottom
     | Bottom, v -> v
-    | Value v1, Value v2 -> Value (Intervals.merge v1 v2)
+    | Value (Interval v1), Value (Interval v2) -> Value (Interval (Intervals.merge v1 v2))
+    | Value (Bool b1), Value (Bool b2) ->
+      if b1 = b2 then v1 else Top
+    | Value (Bool _), Value (Interval _)
+    | Value (Interval _), Value (Bool _) -> failwith "Cannot v_join boolean & integer"
 
   let join =
     M.merge
@@ -183,40 +227,43 @@ module IntervalsDomain :
   let eval_constraint
       (ty : Ty.t)
       (s : state)
-      (p : P.t) : Intervals.t abstract_value =
+      (p : P.t) : interval abstract_value =
     match s with
     | Top -> begin
         match P.to_list p with
-        | [], q -> Value (Intervals.point q ty Explanation.empty)
+        | [], q -> Value (Interval (Intervals.point q ty Explanation.empty))
         | _ -> Top
       end
     | Bottom -> Bottom
     | Value v ->
       let ty = P.type_info p in
       let module Ev = P.Eval (struct
-          type t = Intervals.t abstract_value
-          let one = Value (Intervals.point Q.one ty Explanation.empty)
+          type t = interval abstract_value
+          let one = Value (Interval (Intervals.point Q.one ty Explanation.empty))
           let add i1 i2 =
             match i1, i2 with
             | Top, _
             | _, Top ->  Top
             | Bottom, _
             | _, Bottom -> Bottom
-            | Value i1, Value i2 -> Value (Intervals.add i1 i2)
+            | Value (Bool _), _
+            | _, Value (Bool _) -> failwith "[add] Cannot evaluate polynomial with boolean values"
+            | Value (Interval i1), Value (Interval i2) -> Value (Interval (Intervals.add i1 i2))
           let mul coef i =
             match i with
             | Top ->
               if Q.equal coef Q.zero then
-                Value (Intervals.point Q.zero ty Explanation.empty)
+                Value (Interval (Intervals.point Q.zero ty Explanation.empty))
               else Top
             | Bottom -> Bottom
-            | Value i ->
-              Value (
+            | Value (Bool _) -> failwith "[mul] Cannot evaluate polynomial with boolean values"
+            | Value (Interval i) ->
+              Value (Interval (
                 Intervals.mult
                   (Intervals.point coef ty Explanation.empty)
                   i
-              )
-        end) in (* todo: apply functor statically for each type *)
+              ))
+        end) in (* todo: apply functor statically for each possible interval type *)
       let map r =
         match M.find_opt r v with
         | None -> Top
@@ -231,10 +278,11 @@ module IntervalsDomain :
       | None | Some Top -> Intervals.undefined ty
       | Some Bottom ->
         failwith "Internal value is bottom: Should have been checked beforehand"
-      | Some ((Value i) as v) ->
+      | Some ((Value (Interval i)) as v) ->
         debug "[rfind] Found %a in state %a, associated to %a@."
           R.print k pp s pp_v v;
         i
+      | Some (Value (Bool _)) -> failwith "[rfind] Cannot return interval associated to boolean"
 
   let radd k b s =
     match b with
@@ -263,7 +311,8 @@ module IntervalsDomain :
              match eval_constraint ty s p with
              | Top
              | Bottom  -> s, false
-             | Value i ->
+             | Value (Bool _) -> assert false
+             | Value (Interval i) ->
                (* Deducing the value of `r` *)
                debug "[fix_point] %a R %a@." P.print p Intervals.print i;
 
@@ -289,7 +338,7 @@ module IntervalsDomain :
                  debug "[fix_point] New interval of %a : %a@."
                    R.print r Intervals.print ri;
                  if change then
-                   radd r (Value ri) s, change
+                   radd r (Value (Interval ri)) s, change
                  else
                    s, keep_iterating
                end
@@ -299,17 +348,6 @@ module IntervalsDomain :
       if keep_iterating then aux new_vars else s in
     aux s
 
-  (* todo: narrow on upper bound then on lower bound *)
-  let narrow_eq ~rinter ~prev_inter =
-    debug "[fix_point] Narrow EQ@.";
-    if
-      begin
-        Intervals.contained_in rinter prev_inter &&
-        not (Intervals.equal rinter prev_inter)
-      end
-    then rinter, true
-    else prev_inter, false
-
   let narrow_neq ~rinter ~prev_inter =
     (* If r <> p and p \in rinter, then if rinter is a point,
        then we can deduce informations, else we can't *)
@@ -317,11 +355,14 @@ module IntervalsDomain :
     match Intervals.is_point rinter with
     | None -> prev_inter, false
     | Some (q, _) ->
-      if Intervals.contains prev_inter q then begin
-        let () = debug "Excluding %a from %a@."
-            Q.print q Intervals.print prev_inter in
-        Intervals.exclude rinter prev_inter, true
-      end else prev_inter, false
+      try
+        if Intervals.contains prev_inter q then begin
+          let () = debug "Excluding %a from %a@."
+              Q.print q Intervals.print prev_inter in
+          Intervals.exclude rinter prev_inter, true
+        end else prev_inter, false
+      with
+      | Intervals.NotConsistent _ -> raise EmptyInterval
 
   let narrow_le ~rinter ~prev_inter =
     debug "[fix_point] Narrow LE ; r_inter = %a -- previous_inter = %a@."
@@ -407,6 +448,8 @@ module IntervalsDomain :
         end
     with
     | Intervals.No_finite_bound -> prev_inter, false
+    | Intervals.NotConsistent _ -> raise EmptyInterval
+
 
   let narrow_gt ~rinter ~prev_inter =
     debug "[fix_point] Narrow GT@.";
@@ -461,6 +504,14 @@ module IntervalsDomain :
     | Intervals.No_finite_bound -> prev_inter, false
     | Intervals.NotConsistent _ -> raise EmptyInterval
 
+  let narrow_eq ~rinter ~prev_inter =
+    debug "[fix_point] Narrow EQ@.";
+    let rinter', change1 = narrow_le ~rinter ~prev_inter in
+    debug "[fix_point] After LE: %a@." Intervals.print rinter;
+    let rinter, change2 = narrow_ge ~rinter ~prev_inter:rinter' in
+    debug "[fix_point] After GE: %a@." Intervals.print rinter;
+    rinter, change1 || change2
+
   let fix_point_eq  = fix_point narrow_eq
   let fix_point_neq = fix_point narrow_neq
   let fix_point_le  = fix_point narrow_le
@@ -490,7 +541,8 @@ module IntervalsDomain :
     let interval = eval_constraint ty v p in
     match interval with
     | Top | Bottom -> None
-    | Value i -> begin
+    | Value (Bool _) -> assert false
+    | Value (Interval i) -> begin
         let inf =
           try let (inf, _, _) = Intervals.borne_inf i in inf with
           | Intervals.No_finite_bound -> Q.sub c Q.one in
@@ -534,9 +586,6 @@ module IntervalsDomain :
 
   (* Adding constraint l1 R l2, with R = (lit). *)
   let add_constraint l1 l2 lit v =
-    match v with
-    | Bottom -> failwith "Add constraint with bottom is forbidden"
-    | _ ->
       let l = Symbols.Lit lit in (* Only for debug *)
       debug "[add_constraint] Adding constraint  %a %a %a to environment@."
         E.print l1 Symbols.print l E.print l2;
@@ -581,7 +630,7 @@ module IntervalsDomain :
           P.fold_on_vars
             (fun r q acc_cstr ->
                let p' = P.sub (P.create [q,r] mc ty) p in
-               debug "[add_constraint] Partial constraint for %a*%a: %a"
+               debug "[add_constraint] Partial constraint for %a*%a: %a@."
                  Q.print q R.print r P.print p';
                ((q, r, p') :: acc_cstr))
             p
@@ -595,6 +644,16 @@ module IntervalsDomain :
           (* fix_point calculation reduced a variable to the empty interval *)
           debug "[add_constraint] Inconsistent interval, returning `false`@.";
           AlreadyFalse
+
+  let add_constraint elist lit v =
+    match v with
+    | Bottom -> failwith "Add constraint with bottom is forbidden"
+    | _ ->
+      match elist with
+      | [l1; l2] -> add_constraint l1 l2 lit v
+      | _ ->
+        debug "[add_constraint] Bad number of litterals, ending";
+        NewConstraint v
 
   let eval_expr e s =
     match E.term_view e with
