@@ -1,0 +1,14 @@
+logic x : int
+logic y : int
+logic z : int
+
+(* Here, we don't see that "y" is unbounded. We even don't print any model for it (with or without optimization *)
+(** => fixed with the new syntax to provide optimization constraints *)
+goal g :
+maximize(x,1) ->
+minimize(y,2) ->
+minimize(z,3) ->
+
+10 <= x <= 100 ->
+ 10 <= z <= 100 ->
+ false
