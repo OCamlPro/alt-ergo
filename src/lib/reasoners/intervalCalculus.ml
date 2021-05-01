@@ -2129,7 +2129,7 @@ let optimizing_split env uf opt =
 
     | Sim.Core.Max(mx,_sol) ->
       let {Sim.Core.max_v; _} = Lazy.force mx in
-      let max_p = Q.add max_v c in
+      let max_p = Q.add max_v.bvalue.v c in
       let optim = if to_max then max_p else Q.mult Q.m_one max_p in
       Format.eprintf
         "%a has a %s: %a@."

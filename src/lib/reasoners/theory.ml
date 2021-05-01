@@ -658,7 +658,7 @@ module Main_Default : S = struct
       List.fold_left
         (fun objectives (a, _, _) ->
            match E.term_view a with
-           | Term {E.f = Sy.Op Sy.Optimize {order;is_max}; xs = [e]; _} ->
+           | {E.f = Sy.Op Sy.Optimize {order;is_max}; xs = [e]; _} ->
              let r =
                try Uf.make uf e
                with Not_found ->
@@ -671,7 +671,7 @@ module Main_Default : S = struct
                  let y = Util.MI.find order objectives in
                  if not (X.equal r y.Th_util.r) then begin
                    Printer.print_fmt ~flushed:true
-                     (Options.get_fmt_err())
+                     (Options.Output.get_fmt_err())
                      "Optimization problem illformed. %a and %a have \
                       the same order %d@."
                      X.print r X.print y.Th_util.r order;
@@ -682,10 +682,10 @@ module Main_Default : S = struct
                  reset_cs_env := true;
                  Util.MI.add order x objectives
              end
-           | Term {E.f = Sy.Op Sy.Optimize _; xs = _; _} -> assert false
-           | Term _ -> objectives
-           | Not_a_term {is_lit = true} -> objectives
-           | Not_a_term {is_lit = false} -> assert false
+           | {E.f = Sy.Op Sy.Optimize _; xs = _; _} -> assert false
+           | _ -> objectives
+           (* | Not_a_term {is_lit = true} -> objectives
+              | Not_a_term {is_lit = false} -> assert false *)
         ) objectives assumed
     in
     res, !reset_cs_env
@@ -892,7 +892,11 @@ module Main_Default : S = struct
   let get_assumed env = env.assumed_set
 
   let output_concrete_model fmt ~prop_model env =
-    CC_X.output_concrete_model fmt ~prop_model env.gamma_finite
+    CC_X.output_concrete_model
+      fmt
+      ~prop_model
+      ~optimized_splits:env.objectives
+      env.gamma_finite
 
   let reinit_cpt () =
     Debug.reinit_cpt ()

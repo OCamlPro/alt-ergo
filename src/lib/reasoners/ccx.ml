@@ -89,6 +89,7 @@ module type S = sig
   val output_concrete_model :
     Format.formatter ->
     prop_model:Expr.Set.t ->
+    optimized_splits:Th_util.optimized_split Util.MI.t ->
     t ->
     unit
 end
@@ -741,7 +742,7 @@ module Main : S = struct
     in
     Uf.term_repr env.uf t
 
-  let output_concrete_model fmt ~prop_model env =
-    Uf.output_concrete_model fmt ~prop_model env.uf
+  let output_concrete_model fmt ~prop_model ~optimized_splits env =
+    Uf.output_concrete_model fmt ~prop_model ~optimized_splits env.uf
 
 end

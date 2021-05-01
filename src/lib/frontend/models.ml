@@ -45,6 +45,12 @@ module MX = Shostak.MXH
 
 let constraints = ref MS.empty
 
+type objective_value =
+  | Obj_pinfty
+  | Obj_minfty
+  | Obj_val of string
+  | Obj_unk
+
 module Pp_smtlib_term = struct
 
   let to_string_type t =
@@ -416,6 +422,32 @@ module SmtlibCounterExample = struct
          | _ -> ()
       ) fprofs;
     !records
+
+  let output_arrays_counterexample fmt _arrays =
+    fprintf fmt "@ ; Arrays not yet supported@ "
+
+  let output_objectives fmt objectives =
+    (* TODO: we can decide to print objectives to stderr if
+       Options.get_objectives_in_interpretation() is enabled *)
+    if not (Options.get_objectives_in_interpretation()) &&
+       not (Util.MI.is_empty objectives)
+    then begin
+      Format.fprintf fmt "@[<v 3>(objectives";
+      Util.MI.iter
+        (fun _i (e, x) ->
+           Format.fprintf fmt "@ (%a %a)"
+             E.print e
+             (fun fmt () ->
+                match x with
+                | Obj_pinfty -> Format.fprintf fmt "+oo"
+                | Obj_minfty -> Format.fprintf fmt "-oo"
+                | Obj_val s -> Format.fprintf fmt "%s" s
+                | Obj_unk -> Format.fprintf fmt "(interval -oo +oo)"
+             ) ()
+        )objectives;
+      Printer.print_fmt fmt "@]@ )"
+    end
+
 end
 (* of module SmtlibCounterExample *)
 
@@ -477,7 +509,7 @@ let rec pp_value ppk ppf = function
 let pp_constant ppf (_sy, t) =
   Fmt.pf ppf "%a" SmtlibCounterExample.pp_abstract_value_of_type t
 
-let output_concrete_model fmt props ~functions ~constants ~arrays =
+let output_concrete_model fmt props ~functions ~constants ~arrays ~objectives =
   if ModelMap.(is_suspicious functions || is_suspicious constants
                || is_suspicious arrays) then
     Format.fprintf fmt "; This model is a best-effort. It includes symbols
@@ -529,3 +561,4 @@ let output_concrete_model fmt props ~functions ~constants ~arrays =
     pp_x fmt records constants;
 
   Printer.print_fmt fmt "@]@,)";
+  SmtlibCounterExample.output_objectives fmt objectives

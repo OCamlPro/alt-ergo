@@ -80,6 +80,7 @@ module type S = sig
   val output_concrete_model :
     Format.formatter ->
     prop_model:Expr.Set.t ->
+    optimized_splits:Th_util.optimized_split Util.MI.t ->
     t ->
     unit
 end
