@@ -58,7 +58,7 @@ module type S = sig
   val extract_ground_terms : t -> Expr.Set.t
   val get_real_env : t -> Ccx.Main.t
   val get_case_split_env : t -> Ccx.Main.t
-  val do_case_split : t -> t * Expr.Set.t
+  val do_case_split : t -> Util.case_split_policy -> t * Expr.Set.t
   val add_term : t -> Expr.t -> add_in_cs:bool -> t
   val compute_concrete_model : t -> t
 
@@ -563,8 +563,11 @@ module Main_Default : S = struct
 
     {t with terms = Expr.Set.union t.terms choices_terms}, choices_terms
 
-  let do_case_split t =
-    do_case_split_aux t ~for_model:false
+  let do_case_split t origin =
+    if Options.get_case_split_policy () == origin then
+      do_case_split_aux t ~for_model:false
+    else
+      t, SE.empty
 
   (* facts are sorted in decreasing order with respect to (dlvl, plvl) *)
   let assume ordered in_facts t =
@@ -788,7 +791,7 @@ module Main_Empty : S = struct
   let empty_ccx = CC_X.empty ()
   let get_real_env _ = empty_ccx
   let get_case_split_env _ = empty_ccx
-  let do_case_split env = env, E.Set.empty
+  let do_case_split env _ = env, E.Set.empty
   let add_term env _ ~add_in_cs:_ = env
   let compute_concrete_model e = e
 
