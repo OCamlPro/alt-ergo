@@ -75,6 +75,10 @@ module type S = sig
   val abstract_selectors : t -> (r * r) list -> r * (r * r) list
 
   val compact : (r * int) list -> (r * int) list
+
+  val assign_value :
+    r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
+
 end
 
 module Make (X : Sig.X) = struct
@@ -300,10 +304,55 @@ module Make (X : Sig.X) = struct
     let xac = X.ac_embed {ac with l = compact args} in
     xac, acc
 
-  (* Ne suffit pas. Il faut aussi prevoir le collapse ? *)
-  (*try List.assoc xac acc, acc
-    with Not_found ->
-    let v = X.term_embed (Expr.fresh_name ac.t) in
-    v, (xac, v) :: acc*)
+  let assign_value _r _distincts _eq =
+    None
+    (* Models Gen for AC symbols is not done yet.  The code below would
+       work, but the way models are currently generated makes the result
+       of 'assign_value' not visible in the printed models, because we
+       inspect the 'make : Expr.t -> X.r' to extract the
+       model. Unfortunately, some AC expressions introduced by the AC(X)
+       algorithm don't have their corresponding terms and don't appear
+       in the 'make' map *)
 
+    (*
+    let is_fresh (r, _) =
+    match X.term_extract r with
+    | Some t, true -> Expr.is_fresh t
+    | _ -> false
+
+  let assign_value =
+    let cache = ref Ty.Map.empty in
+    let module SX = Set.Make(struct type t=r let compare = X.hash_cmp end) in
+    let exception Found of Expr.t in
+    fun r distincts eq ->
+      if List.exists (fun (t,(_:r)) -> Expr.const_term t) eq then
+        None
+      else
+        (*match X.ac_extract r with
+        | None -> assert false
+        | Some ac ->
+          if List.for_all is_fresh ac.Sig.l then None
+            else*) begin
+            let ty = X.type_info r in
+            let q = ref (Queue.create ()) in
+            try
+              let qc = Ty.Map.find ty !cache in
+              let sdist =
+                List.fold_left (fun s r -> SX.add r s) SX.empty distincts in
+              Queue.iter
+                (fun (kt, kx) ->
+                   if not (SX.mem kx sdist) then raise (Found kt)
+                )qc;
+              q := qc;
+              raise Not_found
+            with
+            | Found kt ->
+              Some (kt , true)
+            | Not_found ->
+              let fresh = Expr.fresh_name ty in
+              Queue.push (fresh, X.term_embed fresh) !q;
+              cache := Ty.Map.add ty !q !cache;
+              Some (fresh , false)
+          end
+*)
 end

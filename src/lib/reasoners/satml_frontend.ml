@@ -1199,7 +1199,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           )dep true
       end;
       dep
-    | (Util.Timeout | I_dont_know _) as e -> raise e
+    | (Util.Timeout | I_dont_know _ | Assert_failure _ ) as e -> raise e
     | e ->
       Printer.print_dbg
         ~module_name:"Satml_frontend" ~function_name:"unsat"

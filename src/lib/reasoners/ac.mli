@@ -73,6 +73,9 @@ module type S = sig
 
   val compact : (r * int) list -> (r * int) list
 
+  val assign_value :
+    r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
+
 end
 
 module Make (X : Sig.X) : S with type r = X.r
