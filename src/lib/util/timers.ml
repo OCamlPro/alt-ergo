@@ -81,6 +81,8 @@ type ty_function =
   | F_new_facts
   | F_apply_subst
   | F_instantiate
+  | F_FM
+  | F_Cube_test
 
 let ftag f = match f with
   | F_add           -> 0
@@ -103,8 +105,10 @@ let ftag f = match f with
   | F_new_facts     -> 17
   | F_apply_subst   -> 18
   | F_instantiate   -> 19
+  | F_FM            -> 20
+  | F_Cube_test     -> 21
 
-let nb_ftag = 20
+let nb_ftag = 22
 
 let string_of_ty_module k = match k with
   | M_None   -> "None"
@@ -143,6 +147,8 @@ let string_of_ty_function f = match f with
   | F_new_facts     -> "new_facts"
   | F_apply_subst   -> "apply_subst"
   | F_instantiate   -> "instantiate"
+  | F_FM   -> "F_FM"
+  | F_Cube_test   -> "F_Cube_test"
 
 type t = {
   (* current time *)
@@ -277,6 +283,8 @@ let all_functions =
       F_new_facts;
       F_apply_subst;
       F_instantiate;
+      F_FM;
+      F_Cube_test;
     ]
   in
   assert (List.length l = nb_ftag);

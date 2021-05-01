@@ -63,6 +63,8 @@ type ty_function =
   | F_new_facts
   | F_apply_subst
   | F_instantiate
+  | F_FM
+  | F_Cube_test
 
 (** environment of internal timers **)
 type t
