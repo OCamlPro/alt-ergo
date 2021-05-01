@@ -308,7 +308,7 @@ module SmtlibCounterExample = struct
         add_record_constr records rep r xs_values
       | _ -> records
 
-  let print_fun_def fmt name args ty t =
+  let print_fun_def ~is_array fmt name args ty t =
     let print_args fmt (ty,name) =
       Format.fprintf fmt "(%s %a)" name Ty.print ty in
     let defined_value =
@@ -318,7 +318,8 @@ module SmtlibCounterExample = struct
     in
 
     Printer.print_fmt ~flushed:false fmt
-      "(define-fun %a (%a) %a %s)@ "
+      "(define-%s %a (%a) %a %s)@ "
+      (if is_array then "array" else "fun")
       Sy.print name
       (Printer.pp_list_space (print_args)) args
       Ty.print ty
@@ -339,11 +340,11 @@ module SmtlibCounterExample = struct
              | _ -> rep
            in
 
-           print_fun_def fmt f [] ty rep
+           print_fun_def ~is_array:false fmt f [] ty rep
          | _ -> assert false
       ) cprofs
 
-  let output_functions_counterexample fmt records fprofs =
+  let output_functions_counterexample ?(is_array=false) fmt records fprofs =
     let  records = ref records in
     ModelMap.iter
       (fun (f, xs_ty, ty) st ->
@@ -412,12 +413,14 @@ module SmtlibCounterExample = struct
            else
              reps_aux representants
          in
-         print_fun_def fmt f xs_ty_named ty rep;
+         print_fun_def ~is_array fmt f xs_ty_named ty rep;
       ) fprofs;
     !records
 
-  let output_arrays_counterexample fmt _arrays =
-    fprintf fmt "@ ; Arrays not yet supported@ "
+  let output_arrays_counterexample fmt arrays =
+    let _records = output_functions_counterexample
+        ~is_array:true fmt  MS.empty arrays in
+    ()
 
   let output_objectives fmt objectives =
     (* TODO: we can decide to print objectives to stderr if
@@ -479,12 +482,13 @@ let output_concrete_model fmt m =
 
     fprintf fmt "@ ; Functions@ ";
     let records = SmtlibCounterExample.output_functions_counterexample
-        fmt  MS.empty m.functions in
+        ~is_array:false fmt  MS.empty m.functions in
 
     fprintf fmt "@ ; Constants@ ";
     SmtlibCounterExample.output_constants_counterexample
       fmt records m.constants;
 
+    fprintf fmt "@ ; Arrays content@ ";
     SmtlibCounterExample.output_arrays_counterexample fmt m.arrays;
 
     Printer.print_fmt fmt "@]@ )";
