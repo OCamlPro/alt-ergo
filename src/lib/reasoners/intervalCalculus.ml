@@ -1730,24 +1730,24 @@ let solve_cube_integers env are_eq sim =
               - we assumed constraints l_i <= ctx_i
 
               - radius is maximized by setting ctx_i's slake variables
-              that appear in 'obj' to their min 'l_i'
+                that appear in 'obj' to their min 'l_i'
 
               - 'obj' evaluates to a constant, and the coefficients of
-              the constraints ctx_i in it are negative (because we hit
-              max for objective with lower bounds).
+                the constraints ctx_i in it are negative (because we hit
+                max for objective with lower bounds).
 
               - if we rather transform the constraints to
                  0 <= (- l_i) + ctx_i
               - then, we multiply them by the abs (positive) value of
-              their coefficients in obj (without changin ineq's direction)
+                their coefficients in obj (without changin ineq's direction)
                  0 <= (- q) ((- l_i) + ctx_i)
 
               - finally, the SUM (- q) ((- l_i) + ctx_i) is actually equal to
-              obj.
+                obj.
 
               - Now, we can use, FM/FM-Simplex bounds deduction mecanism:
-              -> 0 <= (- q) ((- l_i) + ctx_i) <= max_v
-              -> ctx_i <= l_i + floor (max_v / (-q))
+                -> 0 <= (- q) ((- l_i) + ctx_i) <= max_v
+                -> ctx_i <= l_i + floor (max_v / (-q))
 
               Hence, an upper bound for ctx_i
            *)
@@ -2256,11 +2256,6 @@ let optimizing_split env uf opt =
   let p = poly_of repr in
   match P.is_const p with
   | Some optim ->
-    Format.eprintf
-      "%a has a %s: %a@."
-      E.print e
-      (if to_max then "maximum" else "minimum")
-      Q.print optim;
     let r2 = alien_of (P.create [] optim  ty) in
     let t2 = mk_const_term optim ty in
     Debug.case_split r1 r2;
@@ -2279,9 +2274,6 @@ let optimizing_split env uf opt =
     | Sim.Core.Sat _   -> assert false (* because we maximized *)
     | Sim.Core.Unsat _ -> assert false (* we know sim is SAT *)
     | Sim.Core.Unbounded _ ->
-      Format.eprintf
-        "%a is unbounded. Let other methods assign a value for it@."
-        E.print e;
       let value = if to_max then Th_util.Pinfinity else Th_util.Minfinity in
       Sig_rel.Optimized_split { opt with value }
 
@@ -2289,12 +2281,6 @@ let optimizing_split env uf opt =
       let {Sim.Core.max_v; _} = Lazy.force mx in
       let max_p = Q.add max_v c in
       let optim = if to_max then max_p else Q.mult Q.m_one max_p in
-      Format.eprintf
-        "%a has a %s: %a@."
-        E.print e
-        (if to_max then "maximum" else "minimum")
-        Q.print optim;
-
       let r2 = alien_of (P.create [] optim  ty) in
       Debug.case_split r1 r2;
       let t2 = mk_const_term optim ty in
