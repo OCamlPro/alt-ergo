@@ -59,8 +59,7 @@ module type S = sig
     t * (r Sig_rel.literal * Explanation.t * Th_util.lit_origin) list
 
   val case_split :
-    t -> for_model:bool ->
-    (r Xliteral.view * bool * Th_util.lit_origin) list * t
+    t -> for_model:bool -> Sig_rel.case_split * t
   val query :  t -> Expr.t -> Th_util.answer
   val new_terms : t -> Expr.Set.t
   val class_of : t -> Expr.t -> Expr.Set.t

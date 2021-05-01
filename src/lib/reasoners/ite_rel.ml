@@ -221,7 +221,7 @@ let assume env uf la =
       raise e
   else assume env uf la
 
-let case_split _ _ ~for_model:_ = []
+let case_split _ _ ~for_model:_ = Sig_rel.Split []
 
 let query _ _ _ = None
 

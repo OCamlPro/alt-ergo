@@ -49,6 +49,9 @@ type 'a result = {
   remove: Expr.t list;
 }
 
+type case_split =
+  | Split of (Shostak.Combine.r Xliteral.view * bool * Th_util.lit_origin) list
+
 module type RELATION = sig
   type t
 
@@ -61,7 +64,7 @@ module type RELATION = sig
   val case_split :
     t -> Uf.t ->
     for_model:bool ->
-    (Shostak.Combine.r Xliteral.view * bool * Th_util.lit_origin) list
+    case_split
   (** case_split env returns a list of equalities *)
 
   val add : t -> Uf.t -> Shostak.Combine.r -> Expr.t ->
