@@ -149,10 +149,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Some SAT.ProofSearch -> "ProofSearch"
     | Some SAT.ModelGen -> "ModelGen"
 
-  let print_model env timeout =
-    let get_m = Options.get_interpretation () in
+  let print_model ?(all_sat=false) model_opt timeout =
+    let pp_prop_model = all_sat || Options.get_show_prop_model () in
+    let get_m = Options.get_interpretation () || pp_prop_model in
     let s = timeout_reason_to_string timeout in
-    match SAT.get_model env with
+    match model_opt with
     | None ->
       if get_m then
         Printer.print_fmt (Options.get_fmt_err ())
@@ -165,9 +166,17 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       if get_m then
         Printer.print_dbg "@[<v 0>; Returned timeout reason = %s@]" s;
       let m = Lazy.force m in
-      Models.output_concrete_model (get_fmt_mdl ()) m
+      Models.output_concrete_model ~pp_prop_model (get_fmt_mdl ()) m
 
-  let process_decl print_status used_context consistent_dep_stack
+  let filter_by_all_sat propositional filter =
+    if filter == E.Set.empty then propositional
+    else
+      E.Set.filter
+        (fun t ->
+           E.Set.mem t filter || E.Set.mem (E.neg t) filter
+        )propositional
+
+  let rec process_decl print_status used_context consistent_dep_stack
       ((env, consistent, dep) as acc) d =
     try
       match d.st_decl with
@@ -250,13 +259,16 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     with
     | SAT.Sat t ->
       print_status (Sat (d,t)) (Steps.get_steps ());
-      print_model env (Some SAT.NoTimeout);
-      env , consistent, dep
+      process_unknown
+        print_status used_context consistent_dep_stack
+        env dep d SAT.NoTimeout
+
     | SAT.Unsat dep' ->
       let dep = Ex.union dep dep' in
       if get_debug_unsat_core () then check_produced_unsat_core dep;
       print_status (Inconsistent d) (Steps.get_steps ());
       env , false, dep
+
     | SAT.I_dont_know {env; timeout} ->
       (* TODO: always print Unknown for why3 ? *)
       let status =
@@ -264,14 +276,103 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         else (Unknown (d, env))
       in
       print_status status (Steps.get_steps ());
-      print_model env (Some timeout);
-      if timeout != NoTimeout then raise Util.Timeout;
-      env , consistent, dep
+      process_unknown
+        print_status used_context consistent_dep_stack
+        env dep d timeout
 
     | Util.Timeout as e ->
       print_status (Timeout (Some d)) (Steps.get_steps ());
-      print_model env None;
+      (* dont call 'process_unknown' in this case. Timeout stops
+         all-models listing *)
+      print_model (SAT.get_model env) None;
       raise e
+
+  and process_unknown
+      print_status used_context consistent_dep_stack env dep d timeout_kind =
+    match d.st_decl with
+    | Assume _ | PredDef _ | RwtDef _ | Push _ | Pop _ | ThAssume _->
+      (* cannot raise Sat or Unknown in this case *)
+      assert false
+
+    | Query(n, _, sort) ->
+      (* 1. check if we are in all-sat mode, and build the filter
+         that'll be applied on the boolean model *)
+      let all_sat_mode =
+        match sort with
+        | AllSat l ->
+          (* 1.A SMT command check-all-sat *)
+          Some (List.fold_left
+                  (fun acc s ->
+                     (*transform string to propositional vars (E.t)*)
+                     let t = E.mk_term (Symbols.name s) [] Ty.Tbool in
+                     E.Set.add t acc
+                  )E.Set.empty l)
+
+        | Thm | Sat ->
+          (* 1.B if user rather set option --alll-models: empty
+             filter. Otherwise, all_sat_mode = None *)
+          if Options.get_all_models () then Some E.Set.empty
+          else None
+
+        | Cut | Check ->
+          (* 1.3 all_sat_mode = None for cut and check *)
+          None
+      in
+      let m = match SAT.get_model env with
+        | None ->
+          if all_sat_mode != None then
+            (* all-sat enabled but interpretation disabled. No timeout
+               here! Return a model with just the propositional part
+            *)
+            Some (lazy {
+                Models.propositional = SAT.get_propositional_model env;
+                constants = Profile.P.empty;
+                functions = Profile.P.empty;
+                arrays = Profile.P.empty;
+                objectives = Util.MI.empty }
+              )
+          else
+            None
+        | Some _ as md -> md
+      in
+      match m, all_sat_mode with
+      | Some m, Some filter ->
+        (* 1. case where all-bool-models wrt. given filter is
+           requested *)
+        let m = Lazy.force m in
+        let propositional = filter_by_all_sat m.propositional filter in
+        let m = { m with propositional } in
+        print_model ~all_sat:true (Some (lazy m)) (Some timeout_kind);
+        (* we build the conjunction that corresponds to the current
+           filtered model *)
+        let f =
+          Expr.Set.fold
+            (fun e acc -> E.mk_and e acc false 0) propositional E.vrai
+        in
+        if E.equal f E.vrai then
+          begin
+            (* this may happen if current propositional model is empty
+               (for instance, in case of timeout and no model computed
+               so far). We should stop to avoid infinite loop *)
+            if timeout_kind != NoTimeout then raise Util.Timeout;
+            env , true, dep
+          end
+        else
+          (* we negate and propagate the current filtered boolean model
+             to force the SAT to explore other branches *)
+          let d = { d with st_decl = Query(n, E.neg f, sort) } in
+          (* re-set timelimit *)
+          Options.Time.set_timeout
+            ~is_gui:(Options.get_is_gui()) (Options.get_timelimit ());
+          let env = SAT.reset_last_saved_model env in
+          process_decl
+            print_status used_context consistent_dep_stack (env, true, dep) d
+
+      | _ ->
+        (* 2. default case + case where a simple interpretation is
+           requested *)
+        print_model m (Some timeout_kind);
+        env , true, dep
 
   let print_status status steps =
     let check_status_consistency s =
@@ -335,7 +436,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout (Some d) ->
-      if Options.get_interpretation () then begin
+      if Options.get_interpretation () &&
+         Options.get_output_format () == Why3 then begin
         Printer.print_wrn "Timeout";
         let loc = d.st_loc in
         Printer.print_status_unknown ~validity_mode
@@ -347,7 +449,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout None ->
-      if Options.get_interpretation () then begin
+      if Options.get_interpretation () &&
+         Options.get_output_format () == Why3 then begin
         Printer.print_wrn "Timeout";
         Printer.print_status_unknown ~validity_mode
           None (Some time) (Some steps) None;

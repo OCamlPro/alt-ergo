@@ -1672,7 +1672,21 @@ are not Th-reduced";
       ~elt:()
       ~init:env
 
+  (* in case of all-models and/or call to solver with old
+       unbacktracked decisions *)
+  let check_no_decision_in_env env =
+    if env.dlevel > 0 then
+      Errors.run_error
+        (Errors.Unsupported_feature
+           "Some of the enabled features are not provided by the \
+            Fun_SAT solver. Please consider switching to \
+            CDCL(Tableaux) instead."
+        )
+
   let unsat env gf =
+    (* in case of all-models and/or call to solver with old
+       unbacktracked decisions *)
+    check_no_decision_in_env env;
     Debug.is_it_unsat gf;
     try
       let guards_to_assume =
@@ -1747,6 +1761,9 @@ are not Th-reduced";
     {gf with E.ff = E.mk_imp current_guard gf.E.ff 1}
 
   let assume env fg dep =
+    (* in case of all-models and/or call to solver with old
+       unbacktracked decisions *)
+    check_no_decision_in_env env;
     try
       if Options.get_tableaux_cdcl () then
         cdcl_assume false env [add_guard env fg,dep];
@@ -1850,5 +1867,15 @@ are not Th-reduced";
 
   (** returns the latest model stored in the env if any *)
   let get_model env = !(env.last_saved_model)
+
+  let get_propositional_model env =
+    ME.fold (fun f _ acc ->
+        match E.lit_view f with
+        | E.Not_a_lit _ -> acc
+        | _ -> E.Set.add f acc
+      ) env.gamma E.Set.empty
+
+  let reset_last_saved_model env =
+    { env with last_saved_model = ref None}
 
 end

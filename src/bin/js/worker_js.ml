@@ -124,7 +124,8 @@ let main worker_id content =
       begin match kind with
         | Typed.Check
         | Typed.Cut -> { state with local = []; }
-        | Typed.Thm | Typed.Sat -> { state with global = []; local = []; }
+        | Typed.Thm | Typed.Sat | Typed.AllSat _ ->
+          { state with global = []; local = []; }
       end
     | Typed.TAxiom (_, s, _, _) when Typed.is_global_hyp s ->
       let cnf = Cnf.make state.global td in
