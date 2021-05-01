@@ -978,13 +978,19 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            [ greedy_mconf (), "greedy-inst", true , false;
              greedier_mconf (), "greedier-inst", true, false])
 
+  let do_case_split env policy =
+    match SAT.do_case_split env.satml policy with
+    | C_none -> env
+    | C_bool _ -> assert false
+    | C_theory expl -> raise (Ex.Inconsistent (expl, []))
+
   let rec unsat_rec env ~first_call:_ : unit =
     try SAT.solve env.satml; assert false
     with
     | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
     | Satml.Sat ->
       try
-        (*if first_call then SAT.cancel_until 0;*)
+        let env = do_case_split env Util.BeforeMatching in
         let env = {env with nb_mrounds = env.nb_mrounds + 1}
                   [@ocaml.ppwarning
                     "TODO: first intantiation a la DfsSAT before searching ..."]
@@ -999,6 +1005,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         (*let strat = Auto in*)
         let dec_lvl = SAT.decision_level env.satml in
         let env, updated = instantiation env strat dec_lvl in
+        let env = do_case_split env Util.AfterMatching in
         let env, updated =
           if not updated && strat != Auto then instantiation env Auto dec_lvl
           else env, updated

@@ -89,6 +89,7 @@ module type SAT_ML = sig
 
   val reason_of_deduction: Atom.atom -> Atom.Set.t
   val assume_simple : t -> Atom.atom list list -> unit
+  val do_case_split : t -> Util.case_split_policy -> conflict_origin
 
   val decide : t -> Atom.atom -> unit
   val conflict_analyze_and_fix : t -> conflict_origin -> unit
@@ -99,4 +100,3 @@ module type SAT_ML = sig
 end
 
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t
-

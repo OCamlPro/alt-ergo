@@ -95,6 +95,8 @@ module type SAT_ML = sig
 
   val assume_simple : t -> Atom.atom list list -> unit
 
+  val do_case_split : t -> Util.case_split_policy -> conflict_origin
+
   val decide : t -> Atom.atom -> unit
   val conflict_analyze_and_fix : t -> conflict_origin -> unit
 
@@ -708,11 +710,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
 
   let do_case_split env origin =
-    if Options.get_case_split_policy () != Util.AfterTheoryAssume then
-      failwith
-        "Only AfterTheoryAssume case-split policy is supported by satML";
     try
-      let tenv, _ = Th.do_case_split env.tenv origin in
+      let tenv, _terms = Th.do_case_split env.tenv origin in
+      (* TODO: terms not added to matching !!! *)
       env.tenv <- tenv;
       C_none
     with Ex.Inconsistent (expl, _) ->
