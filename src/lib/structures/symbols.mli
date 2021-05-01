@@ -50,6 +50,7 @@ type operator =
   | Sqrt_real | Sqrt_real_default | Sqrt_real_excess
   | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
   | Max_real | Max_int | Min_real | Min_int | Integer_log2
+  | Optimize of {order : int; is_max : bool}
 
 type lit =
   (* literals *)

@@ -123,8 +123,8 @@ module Pp_smtlib_term = struct
     | Sy.Op Sy.Concat, [e1; e2] ->
       fprintf fmt "%a@@%a" print e1 print e2
 
-    | Sy.Op Sy.Extract, [e1; e2; e3] ->
-      fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
+    | Sy.Op (Sy.Extract (i, j)), [e] ->
+      fprintf fmt "%a^{%d,%d}" print e i j
 
     | Sy.Op (Sy.Access field), [e] ->
       if get_output_smtlib () then
