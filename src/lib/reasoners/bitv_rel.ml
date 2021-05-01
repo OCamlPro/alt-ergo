@@ -68,7 +68,7 @@ let assume env uf la =
   let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
   { delayed }, result
 let query _ _ _ = None
-let case_split _ _ ~for_model:_ = Sig_rel.Split []
+let case_split _ _ ~for_model:_ ~to_optimize:_ = Sig_rel.Split []
 let add env uf r t =
   let delayed, eqs = Rel_utils.Delayed.add env.delayed uf r t in
   { delayed }, eqs

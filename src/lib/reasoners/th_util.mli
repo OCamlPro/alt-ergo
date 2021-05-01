@@ -77,3 +77,19 @@ type lit_origin =
   (** Literals of {!Other} are those that are not covered by any of the cases
       described above. In particular, user assertions, SAT decisions, SAT
       propagations and theory propagations all have the {!Other} origin. *)
+
+type split_info = Shostak.Combine.r Xliteral.view * bool * lit_origin
+
+type optimized_split_value =
+  | Minfinity
+  | Value of split_info
+  | Pinfinity
+  | Unknown
+
+type optimized_split =
+  { r : Shostak.Combine.r;
+    e : Expr.t;
+    value : optimized_split_value;
+    is_max : bool; (* for linear arithmetic: is_max <-> (opt = maximize) *)
+    order : int (* ordering assigned by the user for this variable *)
+  }

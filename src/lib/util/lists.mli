@@ -64,3 +64,11 @@ val equal : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
     respectively, we have [eq ai bi].
 
     This is a backport of List.equal from OCaml 4.12.0 *)
+
+val partition_map :
+  ?keep_ordering:bool ->
+  ('a -> ('b, 'c) result) -> 'a list -> 'b list * 'c list
+(** Similar to List.partition, but also applies a map on the elements
+    of the resulting lists on the fly. Ordering of elements will not be
+    kept if [keep_ordering] is unset (Default value is [keep_ordering =
+    true]), in which case, resulting lists are reverted *)

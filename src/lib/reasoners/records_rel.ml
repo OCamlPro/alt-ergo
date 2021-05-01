@@ -34,7 +34,7 @@ let empty _ = ()
 let assume _ _ _ =
   (), { Sig_rel.assume = []; remove = []}
 let query _ _ _ = None
-let case_split _ _ ~for_model:_ = Sig_rel.Split []
+let case_split _ _ ~for_model:_ ~to_optimize:_ = Sig_rel.Split []
 let add env _ _ _ = env, []
 let new_terms _ = Expr.Set.empty
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
