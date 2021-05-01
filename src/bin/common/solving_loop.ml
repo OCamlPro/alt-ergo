@@ -99,7 +99,7 @@ let main () =
           | Ty.Check
           | Ty.Cut ->
             { state with solver_ctx = { state.solver_ctx with local = []; }}
-          | Ty.Thm | Ty.Sat ->
+          | Ty.Thm | Ty.Sat | Ty.AllSat _ ->
             { state with solver_ctx = {
                   state.solver_ctx with global = []; local = [];
                 }}

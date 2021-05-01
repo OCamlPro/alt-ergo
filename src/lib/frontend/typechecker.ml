@@ -2028,6 +2028,7 @@ let type_one_th_decl env e =
   | Rewriting(loc, _, _)
   | Goal(loc, _, _)
   | Check_sat(loc, _, _)
+  | Check_all_sat(loc, _, _)
   | Predicate_def(loc,_,_,_)
   | Function_def(loc,_,_,_,_)
   | MutRecDefs ((loc,_,_,_,_) :: _)
@@ -2297,6 +2298,14 @@ let rec type_decl (acc, env) d assertion_stack =
     (*let f = move_up f in*)
     let f = alpha_renaming_env env f in
     type_and_intro_goal acc env Sat n f, env
+
+  | Check_all_sat(loc, n, l) ->
+    Options.tool_req 1 "TR-Typing-CheckAllSatDecl$_F$";
+    let f = { pp_loc = loc; pp_desc = PPconst ConstFalse} in
+    List.iter (fun s ->
+        ignore (type_form env {pp_desc = PPapp(s,[]); pp_loc = loc})
+      ) l;
+    type_and_intro_goal acc env (AllSat l) n f, env
 
   | MutRecDefs l ->
     let rev_l, env =

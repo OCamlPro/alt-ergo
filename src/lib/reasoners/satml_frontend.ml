@@ -1250,6 +1250,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                     (E.max_ground_terms_rec_of_form gf.E.ff) gf}
     in
     try
+      SAT.cancel_until env.satml 0;
       assert (SAT.decision_level env.satml == 0);
       let env, _updated = assume_aux ~dec_lvl:0 env [gf] in
       let max_t = max_term_depth_in_sat env in
@@ -1336,7 +1337,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Shostak.Combine.save_cache ();
     Uf.save_cache ()
 
-  let get_model env = !(env.last_saved_model);
+  let get_model env = !(env.last_saved_model)
+
+  let get_propositional_model env =
+    let tbox = SAT.current_tbox env.satml in
+    Th.get_assumed tbox
+
+  let reset_last_saved_model env =
+    { env with last_saved_model = ref None}
 
 end
 

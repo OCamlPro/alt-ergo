@@ -38,6 +38,7 @@ let parse_cmdline () =
   try Parse_command.parse_cmdline_arguments ()
   with Parse_command.Exit_parse_command i -> exit i
 
+
 let () =
   register_input ();
   parse_cmdline ();

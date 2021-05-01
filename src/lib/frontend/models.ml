@@ -472,10 +472,10 @@ module Why3CounterExample = struct
 end
 (* of module Why3CounterExample *)
 
-let output_concrete_model fmt m =
+let output_concrete_model ~pp_prop_model fmt m =
   if get_interpretation () then begin
     Printer.print_fmt ~flushed:false fmt "@[<v 2>(model@,";
-    if Options.get_output_format () == Why3 then begin
+    if pp_prop_model || Options.get_output_format () == Why3 then begin
       Why3CounterExample.output_constraints fmt m.propositional
     end;
 
