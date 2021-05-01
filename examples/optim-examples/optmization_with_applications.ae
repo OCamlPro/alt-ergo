@@ -1,0 +1,14 @@
+logic x : int
+logic y : int
+
+logic f : int -> int
+
+goal g :
+
+minimize(x,1) ->
+maximize(f(y),2) ->
+maximize(f(x),4) ->
+
+x >= 10 ->
+  f(x) + 2 * x <= 0 ->
+  f(y) <= 0 -> false

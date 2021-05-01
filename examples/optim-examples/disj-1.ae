@@ -1,0 +1,38 @@
+logic x, y : int
+logic p, q : int -> prop
+
+(*
+goal g: (* max is 200 *)
+maximize(x, 1) ->
+0 <= x <= 1000 ->
+((x <= 50) or (x <= 200)) ->
+false
+*)
+
+(*
+goal g: (* max is 200 *)
+  maximize(x, 1) ->
+  ((y >= 10) or (y <= 200)) ->
+  false
+*)
+
+
+(*
+goal g:
+maximize(x, 1) ->
+(p(x) or q(x))
+*)
+
+(*
+goal g: (* max is x = 50, y = 500 *)
+  maximize(x, 1) ->
+  maximize(y, 2) ->
+  ((x <= 50 and y <= 300) or (x = 50 and y <= 500)) ->
+  false
+*)
+
+goal g: (* max is x = 50, y = 500 *)
+  maximize(x, 1) ->
+  maximize(y, 2) ->
+  ((x <= 40 and y <= 500) or (x <= 50 and y <= 300)) ->
+  false
