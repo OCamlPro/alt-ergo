@@ -34,9 +34,15 @@
 module type S = sig
   type t
 
+  type timeout_reason =
+    | NoTimeout
+    | Assume
+    | ProofSearch
+    | ModelGen
+
   exception Sat of t
   exception Unsat of Explanation.t
-  exception I_dont_know of t
+  exception I_dont_know of { env : t; timeout : timeout_reason }
 
   (* the empty sat-solver context *)
   val empty : unit -> t
@@ -74,7 +80,8 @@ module type S = sig
   val reinit_ctx : unit -> unit
 
   (** [get_model t] produces the current model. *)
-  val get_model : t -> unit
+  val get_model: t -> Models.t Lazy.t option
+
 end
 
 

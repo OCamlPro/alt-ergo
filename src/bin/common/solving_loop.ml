@@ -489,7 +489,17 @@ let main () =
       | {contents = `Get_model; _ } ->
         if Options.get_interpretation () then
           match State.get partial_model_key st with
-          | Some partial_model -> SAT.get_model partial_model; st
+          | Some partial_model ->
+            begin
+              match SAT.get_model partial_model with
+              | Some (lazy model) ->
+                Models.output_concrete_model
+                  (Options.Output.get_fmt_regular ()) model;
+                st
+              | _ ->
+                (* TODO: is it reachable? *)
+                st
+            end
           | None ->
             (* TODO: add the location of the statement. *)
             Printer.print_smtlib_err "No model produced.";
