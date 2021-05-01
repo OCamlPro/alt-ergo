@@ -504,7 +504,7 @@ module Translate = struct
       []
     end
     else begin
-      let l = List.fold_left translate_command [] (List.rev commands) in
+      let l = List.rev @@ List.fold_left translate_command [] commands in
       (init ()) @ l
     end
 
