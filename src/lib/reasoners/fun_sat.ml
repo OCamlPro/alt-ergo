@@ -626,22 +626,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         )(Ex.formulas_of exp)
 
   let do_case_split env origin =
-    if Options.get_case_split_policy () == origin then
-      try
-        if Options.get_debug_sat () then
-          Printer.print_dbg
-            ~module_name:"Fun_sat" ~function_name:"do_case_split"
-            "performing case-split";
-        let tbox, new_terms = Th.do_case_split env.tbox in
-        let inst =
-          Inst.add_terms env.inst new_terms (mk_gf E.vrai "" false false) in
-        {env with tbox = tbox; inst = inst}
-      with Ex.Inconsistent (expl, classes) ->
-        Debug.inconsistent expl env;
-        Options.tool_req 2 "TR-Sat-Conflict-2";
-        env.heuristics := Heuristics.bump_activity !(env.heuristics) expl;
-        raise (IUnsat (expl, classes))
-    else env
+    try
+      if Options.get_debug_sat () then
+        Printer.print_dbg
+          ~module_name:"Fun_sat" ~function_name:"do_case_split"
+          "performing case-split";
+      let tbox, new_terms = Th.do_case_split env.tbox origin in
+      let inst =
+        Inst.add_terms env.inst new_terms (mk_gf E.vrai "" false false) in
+      {env with tbox = tbox; inst = inst}
+    with Ex.Inconsistent (expl, classes) ->
+      Debug.inconsistent expl env;
+      Options.tool_req 2 "TR-Sat-Conflict-2";
+      env.heuristics := Heuristics.bump_activity !(env.heuristics) expl;
+      raise (IUnsat (expl, classes))
 
   let b_elim f env =
     try
