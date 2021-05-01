@@ -387,7 +387,7 @@ let count_splits env la =
     List.fold_left
       (fun nb (_,_,_,i) ->
          match i with
-         | Th_util.CS (Th_util.Th_sum, n) -> Numbers.Q.mult nb n
+         | Th_util.CS (_, Th_util.Th_sum, n) -> Numbers.Q.mult nb n
          | _ -> nb
       )env.size_splits la
   in
@@ -703,7 +703,7 @@ let case_split env _ ~for_model ~to_optimize =
             "found hs = %a" Hs.print hs;
         (* cs on negative version would be better in general *)
         let cs =  LR.mkv_builtin false (Sy.IsConstr hs) [r] in
-        Sig_rel.Split [ cs, true, Th_util.CS(Th_util.Th_adt, two) ]
+        Sig_rel.Split [ cs, true, Th_util.CS(None, Th_util.Th_adt, two) ]
       with Not_found ->
         Debug.no_case_split ();
         Sig_rel.Split []

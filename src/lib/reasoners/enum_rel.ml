@@ -189,7 +189,7 @@ let count_splits env la =
     List.fold_left
       (fun nb (_,_,_,i) ->
          match i with
-         | Th_util.CS (Th_util.Th_sum, n) -> Numbers.Q.mult nb n
+         | Th_util.CS (_, Th_util.Th_sum, n) -> Numbers.Q.mult nb n
          | _ -> nb
       )env.size_splits la
   in
@@ -271,7 +271,8 @@ let case_split env uf ~for_model ~to_optimize =
       then
         let r' = Sh.is_mine (Cons(hs,X.type_info r)) in
         Debug.case_split r r';
-        Sig_rel.Split [LR.mkv_eq r r', true, Th_util.CS (Th_util.Th_sum, n)]
+        Sig_rel.Split
+          [LR.mkv_eq r r', true, Th_util.CS (None, Th_util.Th_sum, n)]
       else
         Sig_rel.Split []
     | None ->

@@ -395,7 +395,7 @@ let case_split env _ ~for_model:_ ~to_optimize =
     try
       let a = LR.neg (LRset.choose env.split) in
       Debug.case_split a;
-      Sig_rel.Split [LR.view a, true, Th_util.CS (Th_util.Th_arrays, two)]
+      Sig_rel.Split [LR.view a, true, Th_util.CS (None, Th_util.Th_arrays, two)]
     with Not_found ->
       Debug.case_split_none ();
       Sig_rel.Split []
@@ -405,7 +405,7 @@ let count_splits env la =
     List.fold_left
       (fun nb (_,_,_,i) ->
          match i with
-         | Th_util.CS (Th_util.Th_arrays, n) -> Numbers.Q.mult nb n
+         | Th_util.CS (_, Th_util.Th_arrays, n) -> Numbers.Q.mult nb n
          | _ -> nb
       )env.size_splits la
   in

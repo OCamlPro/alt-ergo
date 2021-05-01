@@ -242,7 +242,7 @@ module Sim_Wrap = struct
       let ty = X.type_info x in
       let r1 = x in
       let r2 = alien_of (P.create [] n  ty) in
-      [LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, s)]
+      [LR.mkv_eq r1 r2, true, Th_util.CS (None, Th_util.Th_arith, s)]
     in
     let aux_1 uf x (info,_) acc =
       assert (X.type_info x == Ty.Tint);
@@ -1501,7 +1501,7 @@ let count_splits env la =
     List.fold_left
       (fun nb (_,_,_,i) ->
          match i with
-         | Th_util.CS (Th_util.Th_arith, n) -> Numbers.Q.mult nb n
+         | Th_util.CS (_, Th_util.Th_arith, n) -> Numbers.Q.mult nb n
          | _ -> nb
       )env.size_splits la
   in
@@ -1793,7 +1793,7 @@ let case_split_polynomes env =
     let r1 = alien_of p in
     let r2 = alien_of (P.create [] n  (P.type_info p)) in
     Debug.case_split r1 r2;
-    [LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, s)], s
+    [LR.mkv_eq r1 r2, true, Th_util.CS (None, Th_util.Th_arith, s)], s
   | None ->
     Debug.no_case_split "polynomes";
     [], Q.zero
@@ -1819,7 +1819,7 @@ let case_split_monomes env =
     let r1 = x in
     let r2 = alien_of (P.create [] n  ty) in
     Debug.case_split r1 r2;
-    [LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, s)], s
+    [LR.mkv_eq r1 r2, true, Th_util.CS (None, Th_util.Th_arith, s)], s
   | None ->
     Debug.no_case_split "monomes";
     [], Q.zero
@@ -1829,7 +1829,7 @@ let check_size for_model env res =
   else
     match res with
     | [] -> res
-    | [_, _, Th_util.CS (Th_util.Th_arith, s)] ->
+    | [_, _, Th_util.CS (_, Th_util.Th_arith, s)] ->
       if Numbers.Q.compare (Q.mult s env.size_splits) (get_max_split ()) <= 0 ||
          Numbers.Q.sign  (get_max_split ()) < 0 then res
       else []
@@ -1933,7 +1933,7 @@ let case_split_union_of_intervals =
         if Q.is_zero eps then L.LE else (assert (Q.is_m_one eps); L.LT)
       in
       [LR.mkv_builtin true pred [r1; r2], true,
-       Th_util.CS (Th_util.Th_arith, Q.one)]
+       Th_util.CS (None, Th_util.Th_arith, Q.one)]
 
 
 (*****)
@@ -2071,7 +2071,7 @@ let model_from_simplex sim is_int env uf =
 let model_from_unbounded_domains =
   let mk_cs acc (x, v, _ex) =
     ((LR.view (LR.mk_eq x v)), true,
-     Th_util.CS (Th_util.Th_arith, Q.from_int 2)) :: acc
+     Th_util.CS (None, Th_util.Th_arith, Q.from_int 2)) :: acc
   in
   fun env uf ->
     assert (env.int_sim.Sim.Core.status == Sim.Core.SAT);
@@ -2085,11 +2085,17 @@ let model_from_unbounded_domains =
     let l2 = model_from_simplex int_sim true  env uf in
     List.fold_left mk_cs (List.fold_left mk_cs [] l1) l2
 
+let mk_const_term c ty =
+  let c = Q.to_string c in
+  match ty with
+  | Ty.Tint -> E.int c
+  | Ty.Treal -> E.real c
+  | _ -> assert false
 
 let optimizing_split env uf opt =
   (* soundness: if there are expressions to optmize, this should be
      done without waiting for ~for_model flag to be true *)
-  let {Th_util.order=_; r = _; is_max = to_max; e; value } = opt in
+  let {Th_util.order; r = r; is_max = to_max; e; value } = opt in
   assert (match value with
         Value _ -> false
       | _ -> true
@@ -2106,8 +2112,10 @@ let optimizing_split env uf opt =
       (if to_max then "maximum" else "minimum")
       Q.print optim;
     let r2 = alien_of (P.create [] optim  ty) in
+    let t2 = mk_const_term optim ty in
     Debug.case_split r1 r2;
-    let s = LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one) in
+    let o = Some {Th_util.opt_ord = order; opt_val = Th_util.Value t2} in
+    let s = LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one) in
     Sig_rel.Optimized_split { opt with value = Value s; }
 
   | None ->
@@ -2139,7 +2147,9 @@ let optimizing_split env uf opt =
 
       let r2 = alien_of (P.create [] optim  ty) in
       Debug.case_split r1 r2;
-      let s = LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one) in
+      let t2 = mk_const_term optim ty in
+      let o = Some {Th_util.opt_ord = order; opt_val = Th_util.Value t2} in
+      let s = LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one) in
       Sig_rel.Optimized_split { opt with value = Value s; }
 
 
