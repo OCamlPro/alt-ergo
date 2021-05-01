@@ -1097,6 +1097,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              issue.@.@.";
           assert false
         end;
+        let is_gui = Options.get_is_gui() in
+        Options.Time.unset_timeout ~is_gui;
+        Options.Time.set_timeout ~is_gui (Options.get_timelimit ());
         unsat_rec_prem env ~first_call:false
     end
 
