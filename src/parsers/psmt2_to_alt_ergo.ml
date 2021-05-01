@@ -407,7 +407,7 @@ module Translate = struct
     let cpt = ref 0 in
     fun ~is_maximize pos term ->
       Printer.print_wrn
-        "TODO: currently, only works if the file contains check-sat@.";
+        "Warning: optimize commands only work if the file contains check-sat@.";
       assert (name_of_assert term == None);
       incr cpt;
       let e = translate_term [] term in
