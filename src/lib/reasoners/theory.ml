@@ -268,9 +268,13 @@ module Main_Default : S = struct
         List.iter
           (fun (rx, lit_orig, _, ex) ->
              match lit_orig with
-             | Th_util.CS(k, _) ->
+             | Th_util.CS(None, k, _) ->
                Format.fprintf fmt "  > %s  cs: %a (because %a)@ "
                  (theory_of k) LR.print (LR.make rx) Ex.print ex
+             | Th_util.CS(Some o, k, _) ->
+               Format.fprintf fmt "  > %s  Optim-cs(ord=%d): %a (because %a)@ "
+                 (theory_of k) o.Th_util.opt_ord
+                 LR.print (LR.make rx) Ex.print ex
              | Th_util.NCS(k, _) ->
                Format.fprintf fmt "  > %s ncs: %a (because %a)@ "
                  (theory_of k) LR.print (LR.make rx) Ex.print ex
@@ -381,6 +385,8 @@ module Main_Default : S = struct
 
   exception Found of Th_util.optimized_split
 
+  (* TODO: this function could be optimized if "objectives" structure
+     is coded differently *)
   let next_optimization env ~for_model =
     try
       Util.MI.iter (fun _ x ->
@@ -406,6 +412,24 @@ module Main_Default : S = struct
       None
     with Found x ->
       Some x
+
+  (* TODO: this function could be optimized if "objectives" structure
+     is coded differently *)
+  let partial_objectives_reset objectives to_flip =
+    match to_flip with
+    | None -> objectives
+    | Some {Th_util.opt_ord; _} ->
+      Util.MI.fold
+        (fun ord v acc ->
+           if ord < opt_ord then
+             (*don't change older optims that are still valid splits*)
+             acc
+           else
+             match v.Th_util.value with
+             | Th_util.Unknown -> acc (* not optimized yet *)
+             | Value _ -> Util.MI.add ord {v with value = Unknown} acc
+             | Pinfinity | Minfinity -> assert false (* may happen? *)
+        )objectives objectives
 
   let look_for_sat ?(bad_last=None) ch env l ~for_model =
     let rec aux ch bad_last dl env li =
@@ -477,8 +501,8 @@ module Main_Default : S = struct
           Options.tool_req 3 "TR-CCX-CS-Case-Split-Progress";
           (* The choice participates to the inconsistency *)
           let neg_c = LR.view (LR.neg (LR.make c)) in
-          let lit_orig = match lit_orig with
-            | Th_util.CS(k, sz) -> Th_util.NCS(k, sz)
+          let lit_orig, is_opt = match lit_orig with
+            | Th_util.CS(is_opt, k, sz) -> Th_util.NCS(k, sz), is_opt
             | _ -> assert false
           in
           Debug.split_backtrack neg_c dep;
@@ -486,6 +510,9 @@ module Main_Default : S = struct
             Printer.print_dbg
               "bottom (case-split):%a"
               Expr.print_tagged_classes classes;
+          let env =
+            { env with objectives =
+                         partial_objectives_reset env.objectives is_opt } in
           aux ch None dl env [neg_c, lit_orig, CNeg, dep]
     in
     aux ch bad_last (List.rev env.choices) env l
@@ -551,6 +578,14 @@ module Main_Default : S = struct
                        choices. We're not in try-it *)
     }
 
+  let has_no_infinity objectives =
+    Util.MI.for_all
+      (fun _ {Th_util.value; _} ->
+         match value with
+         | Pinfinity | Minfinity -> false
+         | Value _ | Unknown -> true
+      )objectives
+
   let try_it t facts ~for_model =
     Options.exec_thread_yield ();
     Debug.begin_case_split t.choices;
@@ -571,6 +606,14 @@ module Main_Default : S = struct
                safely ignore the explanation which is not useful *)
             let uf =  CC_X.get_union_find t.gamma in
             let filt_choices = filter_choices uf t.choices in
+            let filt_choices =
+              if Util.MI.is_empty t.objectives ||
+                 has_no_infinity t.objectives
+                 (* otherwise, we may be unsound because infty optims
+                    are not propagated *)
+              then filt_choices
+              else []
+            in
             Debug.split_sat_contradicts_cs filt_choices;
             (* re-init gamma_finite with gamma *)
             let t = reset_case_split_env t in

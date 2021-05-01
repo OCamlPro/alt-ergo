@@ -38,24 +38,27 @@ type theory =
   | Th_arrays
   | Th_UF
 
+type 'a optimized_split_value =
+  | Minfinity
+  | Value of 'a
+  | Pinfinity
+  | Unknown
+
+type optimization =
+  { opt_ord : int; opt_val : Expr.t optimized_split_value }
+
 type lit_origin =
   | Subst
-  | CS of theory * Numbers.Q.t
+  | CS of optimization option * theory * Numbers.Q.t
   | NCS of theory * Numbers.Q.t
   | Other
 
 type split_info = Shostak.Combine.r Xliteral.view * bool * lit_origin
 
-type optimized_split_value =
-  | Minfinity
-  | Value of split_info
-  | Pinfinity
-  | Unknown
-
 type optimized_split =
   { r : Shostak.Combine.r;
     e : Expr.t;
-    value : optimized_split_value;
+    value : split_info optimized_split_value;
     is_max : bool; (* for linear arithmetic: is_max <-> (opt = maximize) *)
     order : int (* ordering assigned by the user for this variable *)
   }

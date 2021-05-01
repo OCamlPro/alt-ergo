@@ -141,17 +141,21 @@ let case_split env uf ~for_model ~to_optimize =
     List.fast_sort (fun a b -> a .Th_util.order - b.Th_util.order) unbounded in
   match unbounded with
   | [] ->
+    assert (to_optimize == None);
     let splits = List.fold_left (|@|) [] splits in
     Sig_rel.Split (
       List.fast_sort
         (fun (_,_,sz1) (_,_,sz2) ->
            match sz1, sz2 with
-           | Th_util.CS(_,sz1), Th_util.CS(_,sz2) -> Numbers.Q.compare sz1 sz2
+           | Th_util.CS(_,_,sz1), Th_util.CS(_,_,sz2) ->
+             Numbers.Q.compare sz1 sz2
            | _ -> assert false
         )splits
     )
-  | u :: _ ->
+  | [u] ->
+    assert (to_optimize != None);
     Sig_rel.Optimized_split u
+  | _ -> assert false (* optimize one expr per call *)
 
 let add env uf r t =
   Options.exec_thread_yield ();

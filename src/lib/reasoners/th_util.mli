@@ -38,6 +38,15 @@ type theory =
   | Th_arrays
   | Th_UF
 
+type 'a optimized_split_value =
+  | Minfinity
+  | Value of 'a
+  | Pinfinity
+  | Unknown
+
+type optimization =
+  { opt_ord : int; opt_val : Expr.t optimized_split_value }
+
 (** Indicates where asserted literals come from.
 
     Note that literals are deduplicated before being propagated to the
@@ -53,7 +62,7 @@ type lit_origin =
       In practice, a {!Subst} equality [r = rr] is generated when the
       corresponding substitution is performed by CC(X), i.e. when [rr] becomes
       the class representative for [r]. *)
-  | CS of theory * Numbers.Q.t
+  | CS of optimization option * theory * Numbers.Q.t
   (** Literals of {!CS} origin come from the case splits performed by a
       specific theory. Usually, they are equalities of the shape [x = v] where
       [x] is an uninterpreted term and [v] a value; however, this is not
@@ -80,16 +89,10 @@ type lit_origin =
 
 type split_info = Shostak.Combine.r Xliteral.view * bool * lit_origin
 
-type optimized_split_value =
-  | Minfinity
-  | Value of split_info
-  | Pinfinity
-  | Unknown
-
 type optimized_split =
   { r : Shostak.Combine.r;
     e : Expr.t;
-    value : optimized_split_value;
+    value : split_info optimized_split_value;
     is_max : bool; (* for linear arithmetic: is_max <-> (opt = maximize) *)
     order : int (* ordering assigned by the user for this variable *)
   }
