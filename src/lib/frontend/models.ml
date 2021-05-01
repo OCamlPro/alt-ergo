@@ -543,4 +543,4 @@ let output_concrete_model fmt m =
   (* Arrays *)
   (*     SmtlibCounterExample.output_arrays_counterexample fmt m.arrays; *)
 
-  Printer.print_fmt fmt "@]@,)";
+  Printer.print_fmt fmt "@]@,)"
