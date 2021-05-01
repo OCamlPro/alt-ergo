@@ -362,35 +362,42 @@ module Main_Default : S = struct
     choices : choice list
   }
 
-  let look_for_sat ?(bad_last=None) ch t base_env l ~for_model =
-    let rec aux ch bad_last dl base_env li =
+  let add_explanations_to_splits l =
+    List.map
+      (fun (c, is_cs, size) ->
+         Steps.incr_cs_steps();
+         let exp = Ex.fresh_exp () in
+         let ex_c_exp =
+           if is_cs then Ex.add_fresh exp Ex.empty else Ex.empty
+         in
+         (* A new explanation in order to track the choice *)
+         (c, size, CPos exp, ex_c_exp)) l
+
+
+  let look_for_sat ?(bad_last=None) ch env l ~for_model =
+    let rec aux ch bad_last dl env li =
       Options.exec_thread_yield ();
       match li, bad_last with
       | [], _ ->
         begin
           Options.tool_req 3 "TR-CCX-CS-Case-Split";
-          let l, base_env = CC_X.case_split base_env ~for_model in
+          let l, base_env = CC_X.case_split env.gamma_finite ~for_model in
+          let env = {env with gamma_finite = base_env} in
           match l with
           | [] ->
-            { t with gamma_finite = base_env; choices = List.rev dl }, ch
-          | l ->
-            let l =
-              List.map
-                (fun (c, is_cs, size) ->
-                   Steps.incr_cs_steps();
-                   let exp = Ex.fresh_exp () in
-                   let ex_c_exp =
-                     if is_cs then Ex.add_fresh exp Ex.empty else Ex.empty
-                   in
-                   (* A new explanation in order to track the choice *)
-                   (c, size, CPos exp, ex_c_exp)) l in
-            aux ch None dl base_env l
+            { env with choices = List.rev dl }, ch
+
+          | new_splits ->
+            let new_splits = add_explanations_to_splits new_splits in
+            aux ch None dl env new_splits
+
         end
       | ((c, lit_orig, CNeg, ex_c) as a)::l, _ ->
         let facts = CC_X.empty_facts () in
         CC_X.add_fact facts (LSem c,ex_c,lit_orig);
-        let base_env, ch = CC_X.assume_literals base_env ch facts in
-        aux ch bad_last (a::dl) base_env l
+        let base_env, ch = CC_X.assume_literals env.gamma_finite ch facts in
+        let env = { env with gamma_finite = base_env} in
+        aux ch bad_last (a::dl) env l
 
       (* This optimisation is not correct with the current explanation *)
       (* | [(c, lit_orig, CPos exp, ex_c)], Yes (dep,_) -> *)
@@ -404,9 +411,10 @@ module Main_Default : S = struct
           Debug.split_assume c ex_c_exp;
           let facts = CC_X.empty_facts () in
           CC_X.add_fact facts (LSem c, ex_c_exp, lit_orig);
-          let base_env, ch =  CC_X.assume_literals base_env ch facts in
+          let base_env, ch =  CC_X.assume_literals env.gamma_finite ch facts in
+          let env = { env with gamma_finite = base_env} in
           Options.tool_req 3 "TR-CCX-CS-Normal-Run";
-          aux ch bad_last (a::dl) base_env l
+          aux ch bad_last (a::dl) env l
         with Ex.Inconsistent (dep, classes) ->
         match Ex.remove_fresh exp dep with
         | None ->
@@ -427,9 +435,9 @@ module Main_Default : S = struct
             Printer.print_dbg
               "bottom (case-split):%a"
               Expr.print_tagged_classes classes;
-          aux ch None dl base_env [neg_c, lit_orig, CNeg, dep]
+          aux ch None dl env [neg_c, lit_orig, CNeg, dep]
     in
-    aux ch bad_last (List.rev t.choices) base_env l
+    aux ch bad_last (List.rev env.choices) env l
 
   (* remove old choices involving fresh variables that are no longer in UF *)
   let filter_valid_choice uf (ra,_,_,_) =
@@ -484,11 +492,15 @@ module Main_Default : S = struct
     Debug.begin_case_split t.choices;
     let r =
       try
-        if t.choices == [] then look_for_sat [] t t.gamma [] ~for_model
+        if t.choices == [] then
+          (* no splits yet: init gamma_finite with gamma *)
+          let t = { t with gamma_finite = t.gamma } in
+          look_for_sat [] t [] ~for_model
         else
           try
-            let env, ch = CC_X.assume_literals t.gamma_finite [] facts in
-            look_for_sat ch t env [] ~for_model
+            let base_env, ch = CC_X.assume_literals t.gamma_finite [] facts in
+            let t = { t with gamma_finite = base_env } in
+            look_for_sat ch t [] ~for_model
           with Ex.Inconsistent (dep, classes) ->
             Options.tool_req 3 "TR-CCX-CS-Case-Split-Erase-Choices";
             (* we replay the conflict in look_for_sat, so we can
@@ -496,8 +508,10 @@ module Main_Default : S = struct
             let uf =  CC_X.get_union_find t.gamma in
             let filt_choices = filter_choices uf t.choices in
             Debug.split_sat_contradicts_cs filt_choices;
+            (* re-init gamma_finite with gamma *)
+            let t = { t with gamma_finite = t.gamma } in
             look_for_sat ~bad_last:(Some (dep, classes))
-              [] { t with choices = []} t.gamma filt_choices ~for_model
+              [] { t with choices = []} filt_choices ~for_model
       with Ex.Inconsistent (d, cl) ->
         Debug.end_case_split t.choices;
         Options.tool_req 3 "TR-CCX-CS-Conflict";
