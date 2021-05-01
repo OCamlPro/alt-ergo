@@ -478,6 +478,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     a.var.vpremise <- []
 
   let enqueue_assigned env (a : Atom.atom) =
+    if Options.get_debug_sat () then
+      Printer.print_dbg "[satml] enqueue_assigned: %a@." Atom.pr_atom a;
     if a.neg.is_guard then begin
       (* if the negation of a is (still) a guard, it should be forced to true
          during the first decisions.
@@ -506,6 +508,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   (* annule tout jusqu'a lvl *exclu*  *)
   let cancel_until env lvl =
+    if Options.get_debug_sat () then
+      Printer.print_dbg
+        "[satml] cancel until %d (current is %d)@." lvl (decision_level env);
     cancel_ff_lvls_until env lvl;
     let repush = ref [] in
     if decision_level env > lvl then begin
@@ -609,8 +614,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     a.is_true <- true;
     a.var.level <- lvl;
     a.var.reason <- reason;
-    (* Printer.print_dbg
-       "enqueue: %a@." Debug.atom a; *)
+    if Options.get_debug_sat () then
+      Printer.print_dbg "[satml] enqueue: %a@." Atom.pr_atom a;
     Vec.push env.trail a;
     a.var.index <- Vec.size env.trail;
     if Options.get_enable_assertions() then  debug_enqueue_level a lvl reason
@@ -810,16 +815,21 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   (*   Some dep *)
 
   let unit_theory_propagate env _full_q lazy_q =
+    let nb_f = ref 0 in
     let facts =
       Queue.fold
         (fun acc (ta : Atom.atom) ->
            assert (ta.is_true);
            assert (ta.var.level >= 0);
-           if ta.var.level = 0 then
+           if ta.var.level = 0 then begin
+             incr nb_f;
              (ta.lit, Ex.empty, 0, env.cpt_current_propagations) :: acc
+           end
            else acc
         )[] lazy_q
     in
+    if Options.get_debug_sat () then
+      Printer.print_dbg "[satml] Unit theory_propagate of %d atoms@." !nb_f;
     if facts == [] then C_none
     else
       try
@@ -854,8 +864,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     | C_theory _ as res -> res
     | C_bool _ -> assert false
     | C_none ->
+      let nb_f = ref 0 in
       while not (Queue.is_empty tatoms_queue) do
         let a = Queue.pop tatoms_queue in
+        incr nb_f;
         let ta =
           if a.is_true then a
           else if a.neg.is_true then a.neg (* TODO: useful ?? *)
@@ -884,6 +896,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           facts := (ta.lit, ex, dlvl,env.cpt_current_propagations) :: !facts;
         env.cpt_current_propagations <- env.cpt_current_propagations + 1
       done;
+      if Options.get_debug_sat () then
+        Printer.print_dbg "[satml] Theory_propagate of %d atoms@." !nb_f;
       Queue.clear env.tatoms_queue;
       Queue.clear env.th_tableaux;
       if !facts == [] then C_none
@@ -913,6 +927,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     (*assert (Queue.is_empty env.tqueue);*)
     while env.qhead < Vec.size env.trail do
       let a = Vec.get env.trail env.qhead in
+      if Options.get_debug_sat () then
+        Printer.print_dbg "[satml] propagate atom %a@." Atom.pr_atom a;
       env.qhead <- env.qhead + 1;
       incr num_props;
       propagate_atom env a res;
@@ -1473,8 +1489,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         let current_level = decision_level env in
         env.cpt_current_propagations <- 0;
         assert (next.var.level < 0);
-        (* Printer.print_dbg
-           "decide: %a" Atom.pr_atom next; *)
+        if Options.get_debug_sat () then
+          Printer.print_dbg "[satml] decide: %a" Atom.pr_atom next;
         enqueue env next current_level None
       | Some(c,sz) ->
         record_learnt_clause env ~is_T_learn:true (decision_level env) c [] sz
