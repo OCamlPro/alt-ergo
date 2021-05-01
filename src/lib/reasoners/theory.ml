@@ -547,7 +547,7 @@ module Main_Default : S = struct
       let _, d2, p2 = e2 in
       (d1 > d2 || d1 = d2 && p1 > p2) && is_ordered_list ((e2::l)::r)
 
-  let do_case_split t =
+  let do_case_split_aux t ~for_model =
     let in_facts_l = t.cs_pending_facts in
     let t = {t with cs_pending_facts = []} in
     let facts = CC_X.empty_facts () in
@@ -557,11 +557,14 @@ module Main_Default : S = struct
             CC_X.add_fact facts (LTerm a, ex, Th_util.Other))
       ) in_facts_l;
 
-    let t, ch = try_it t facts ~for_model:false in
+    let t, ch = try_it t facts ~for_model in
     let choices = extract_terms_from_choices SE.empty t.choices in
     let choices_terms = extract_terms_from_assumed choices ch in
 
     {t with terms = Expr.Set.union t.terms choices_terms}, choices_terms
+
+  let do_case_split t =
+    do_case_split_aux t ~for_model:false
 
   (* facts are sorted in decreasing order with respect to (dlvl, plvl) *)
   let assume ordered in_facts t =
@@ -744,7 +747,7 @@ module Main_Default : S = struct
   let get_case_split_env t = t.gamma_finite
 
   let compute_concrete_model env =
-    fst (try_it env (CC_X.empty_facts ()) ~for_model:true)
+    fst @@ do_case_split_aux env ~for_model:true
 
 
   let assume_th_elt t th_elt dep =
