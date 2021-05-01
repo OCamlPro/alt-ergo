@@ -45,6 +45,13 @@ module MX = Shostak.MXH
 
 let constraints = ref MS.empty
 
+type t = {
+  propositional : Expr.Set.t;
+  constants : ModelMap.t;
+  functions : ModelMap.t;
+  arrays : ModelMap.t;
+}
+
 module Pp_smtlib_term = struct
 
   let to_string_type t =
@@ -483,56 +490,61 @@ let rec pp_value ppk ppf = function
 let pp_constant ppf (_sy, t) =
   Fmt.pf ppf "%a" SmtlibCounterExample.pp_abstract_value_of_type t
 
-let output_concrete_model fmt props ~functions ~constants ~arrays =
+let output_concrete_model fmt m =
   SmtlibCounterExample.reset_counter ();
-  if ModelMap.(is_suspicious functions || is_suspicious constants
-               || is_suspicious arrays) then
+  if ModelMap.(is_suspicious m.functions || is_suspicious m.constants
+               || is_suspicious m.arrays) then
     Format.fprintf fmt "; This model is a best-effort. It includes symbols
         for which model generation is known to be incomplete. @.";
 
-  Format.fprintf fmt "@[<v 2>(";
-  if Options.get_model_type_constraints () then
-    begin
-      Why3CounterExample.output_constraints fmt props;
-      Format.fprintf fmt "@ ; values"
+    Format.fprintf fmt "@[<v 2>(";
+    Why3CounterExample.output_constraints fmt m.propositional;
+
+    Printer.print_fmt ~flushed:false fmt "@[<v 0>unknown@ ";
+    Printer.print_fmt ~flushed:false fmt "@[<v 2>(model@,";
+    if Options.get_output_format () == Why3 then begin
+      Why3CounterExample.output_constraints fmt m.propositional
     end;
 
-  let values = Hashtbl.create 17 in
-  (* Add the constants *)
-  ModelMap.iter (fun (f, xs_ty, _) st ->
-      assert (Lists.is_empty xs_ty);
+    let values = Hashtbl.create 17 in
+    (* Add the constants *)
+    ModelMap.iter (fun (f, xs_ty, _) st ->
+        assert (Lists.is_empty xs_ty);
+        ModelMap.V.iter (fun (keys, (value_r, value_s)) ->
+            assert (Lists.is_empty keys);
+            Hashtbl.add values f (value (value_r, value_s))
+          ) st
+      ) m.constants;
 
-      ModelMap.V.iter (fun (keys, (value_r, value_s)) ->
-          assert (Lists.is_empty keys);
-          Hashtbl.add values f (value (value_r, value_s)))
-        st) constants;
+    (* Add the arrays values, when applicable *)
+    ModelMap.iter (fun (f, xs_ty, ty) st ->
+        let root =
+          try Hashtbl.find values f
+          with Not_found -> Constant (f, Tfarray (List.hd xs_ty, ty))
+        in
+        Hashtbl.replace values f @@
+        ModelMap.V.fold (fun (keys, rs) acc ->
+            Store (acc, value (snd (List.hd keys)), value rs)) st root
+      ) m.arrays;
 
-  (* Add the arrays values, when applicable *)
-  ModelMap.iter (fun (f, xs_ty, ty) st ->
-      let root =
-        try Hashtbl.find values f
-        with Not_found -> Constant (f, Tfarray (List.hd xs_ty, ty))
-      in
-      Hashtbl.replace values f @@
-      ModelMap.V.fold (fun (keys, rs) acc ->
-          Store (acc, value (snd (List.hd keys)), value rs))
-        st root)
-    arrays;
+    let pp_value =
+      pp_value (fun ppf (sy, _) ->
+          pp_value pp_constant ppf (Hashtbl.find values sy))
+    in
 
-  let pp_value =
-    pp_value (fun ppf (sy, _) ->
-        pp_value pp_constant ppf (Hashtbl.find values sy))
-  in
+    let pp_x ppf xs = pp_value ppf (value xs) in
 
-  let pp_x ppf xs = pp_value ppf (value xs) in
+    (* Functions *)
+    let records =
+      SmtlibCounterExample.output_functions_counterexample
+        pp_x fmt MS.empty m.functions
+    in
 
-  (* Functions *)
-  let records = SmtlibCounterExample.output_functions_counterexample
-      pp_x fmt  MS.empty functions
-  in
+    (* Constants *)
+    SmtlibCounterExample.output_constants_counterexample
+      pp_x fmt records m.constants;
 
-  (* Constants *)
-  SmtlibCounterExample.output_constants_counterexample
-    pp_x fmt records constants;
+    (* Arrays *)
+(*     SmtlibCounterExample.output_arrays_counterexample fmt m.arrays; *)
 
   Printer.print_fmt fmt "@]@,)";

@@ -1074,14 +1074,20 @@ let compute_concrete_model ({ make; _ } as env) =
     ) make
     (ModelMap.empty, ModelMap.empty, ModelMap.empty, ME.empty)
 
-let output_concrete_model fmt ~prop_model env =
-  if Options.get_interpretation () then
-    let functions, constants, arrays, _ =
-      compute_concrete_model env in
-    Models.output_concrete_model fmt prop_model ~functions ~constants ~arrays
-
 let save_cache () =
   LX.save_cache ()
 
 let reinit_cache () =
   LX.reinit_cache ()
+
+let extract_concrete_model ~prop_model env =
+  if Options.get_interpretation () then
+    Some (lazy (
+        let functions, constants, arrays, _mrepr =
+          compute_concrete_model env
+        in
+        { Models.propositional = prop_model;
+          functions; constants; arrays }
+      ))
+  else
+    None
