@@ -1006,6 +1006,14 @@ let is_a_good_model_value (x, _) =
   | [y] -> X.equal x y
   | _ -> false
 
+let is_const_term (x, _) =
+  match X.term_extract x with
+  | Some t, _ ->
+    E.const_term t
+  | _ ->
+    (*cannot test for theories which don't implement term_extract*)
+    true
+
 let model_repr_of_term t env mrepr unbounded =
   try ME.find t mrepr, mrepr
   with Not_found ->
@@ -1052,6 +1060,7 @@ let compute_concrete_model_of_val
       List.fold_left
         (fun (xs, tys, mrepr) x ->
            let rep_x, mrepr = model_repr_of_term x env mrepr None in
+           assert (is_const_term rep_x);
            (x, rep_x)::xs,
            (E.type_info x)::tys,
            mrepr
@@ -1059,6 +1068,7 @@ let compute_concrete_model_of_val
     in
     let rep, mrepr = model_repr_of_term t env mrepr unbounded in
     assert (is_a_good_model_value rep);
+    assert (is_const_term rep);
     match f, xs, ty with
     | Sy.Op Sy.Set, _, _ -> acc
 
