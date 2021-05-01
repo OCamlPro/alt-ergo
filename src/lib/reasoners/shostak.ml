@@ -607,7 +607,7 @@ struct
         if Expr.const_term t ||
            List.exists (fun (t,_) -> Expr.const_term t) eq then None
         else Some (Expr.fresh_name ty, false) (* false <-> not a case-split *)
-      | _               -> assert false
+      | _               -> AC.assign_value r distincts eq
     in
     if Options.get_debug_interpretation () then
       Printer.print_dbg
