@@ -318,7 +318,7 @@ module SmtlibCounterExample = struct
         add_record_constr records rep r xs_values
       | _ -> records
 
-  let print_fun_def fmt name args ty t =
+  let print_fun_def ~is_array fmt name args ty t =
     let print_args fmt (ty,name) =
       Format.fprintf fmt "(%s %a)" name Ty.pp_smtlib ty in
     let defined_value =
@@ -329,7 +329,8 @@ module SmtlibCounterExample = struct
     in
 
     Format.fprintf fmt
-      "@ (@[define-fun %a (%a) %a@ %t)@]"
+      "@ (@[define-%s %a (%a) %a@ %t)@]"
+      (if is_array then "array" else "fun")
       Sy.print name
       (Printer.pp_list_space (print_args)) args
       Ty.pp_smtlib ty
@@ -349,11 +350,12 @@ module SmtlibCounterExample = struct
              | _ -> dprintf "%a" pp rep
            in
 
-           print_fun_def fmt f [] ty rep
-         | _ -> assert false)
+           print_fun_def ~is_array:false fmt f [] ty rep
+         | _ -> assert false
+      )
 
-  let output_functions_counterexample pp fmt records fprofs =
-    let  records = ref records in
+  let output_functions_counterexample ?(is_array=false) pp fmt records fprofs =
+    let records = ref records in
     ModelMap.iter
       (fun (f, xs_ty, ty) st ->
          let xs_ty_named = List.mapi (fun i ty ->
@@ -426,13 +428,16 @@ module SmtlibCounterExample = struct
             because they could be record accessors that must be added to the
             `records` reference *)
          match f with
-         | Sy.Name (_, _, false) -> print_fun_def fmt f xs_ty_named ty rep
+         | Sy.Name (_, _, false) ->
+           print_fun_def ~is_array fmt f xs_ty_named ty rep
          | _ -> ()
       ) fprofs;
     !records
 
-  let output_arrays_counterexample fmt _arrays =
-    fprintf fmt "@ ; Arrays not yet supported@ "
+  let output_arrays_counterexample pp fmt arrays =
+    let _records = output_functions_counterexample
+        ~is_array:true pp fmt MS.empty arrays in
+    ()
 
   let output_objectives fmt objectives =
     (* TODO: we can decide to print objectives to stderr if
@@ -565,7 +570,7 @@ let output_concrete_model fmt m =
     (* Functions *)
     let records =
       SmtlibCounterExample.output_functions_counterexample
-        pp_x fmt MS.empty m.functions
+        ~is_array:false pp_x fmt MS.empty m.functions
     in
 
     (* Constants *)
@@ -573,7 +578,7 @@ let output_concrete_model fmt m =
       pp_x fmt records m.constants;
 
     (* Arrays *)
-    SmtlibCounterExample.output_arrays_counterexample fmt m.arrays;
+    SmtlibCounterExample.output_arrays_counterexample pp_x fmt m.arrays;
 
     Printer.print_fmt fmt "@]@,)";
     SmtlibCounterExample.output_objectives fmt m.objectives
