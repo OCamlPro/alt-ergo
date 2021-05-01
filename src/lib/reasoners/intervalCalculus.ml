@@ -117,6 +117,12 @@ type t = {
   size_splits : Q.t;
   int_sim : Sim.Core.t;
   rat_sim : Sim.Core.t;
+  cube_sim : Sim.Core.t option;
+  (* some cube-simplex, or None if not enabled *)
+
+  cube_sim_res : Sim.Core.result option;
+  (* some result for cube, or None if not available *)
+
   new_uf : Uf.t;
   th_axioms : (Expr.th_elt * Explanation.t) ME.t;
   linear_dep : SE.t ME.t;
@@ -646,6 +652,32 @@ module Debug = struct
           "> no improvement"
     end
 
+  let optimum obj q =
+    if get_debug_fm () then
+      print_dbg
+        ~module_name:"IntervalCalculus" ~function_name:"solve_cube_integers"
+        "cube deduction: max radius = %a = %a"
+        Sim.Core.P.print obj Q.print q
+
+  let cube_bound r q =
+    if get_debug_fm () then
+      print_dbg
+        ~module_name:"IntervalCalculus" ~function_name:"solve_cube_integers"
+        "cube deduction: %a <= %a" X.print r Q.print q
+
+  let cube_unbounded () =
+    if get_debug_fm () then
+      print_dbg
+        ~module_name:"IntervalCalculus" ~function_name:"solve_cube_integers"
+        "cube deduction: pb unbounded"
+
+  let cube_unsat () =
+    if get_debug_fm () then
+      print_dbg
+        ~module_name:"IntervalCalculus" ~function_name:"solve_cube_integers"
+        "cube deduction: pb unsat"
+
+
 end
 (*BISECT-IGNORE-END*)
 
@@ -671,6 +703,8 @@ let empty classes = {
   th_axioms = ME.empty;
   linear_dep = ME.empty;
   syntactic_matching = [];
+  cube_sim = None;
+  cube_sim_res = None;
 }
 
 (*let up_improved env p oldi newi =
@@ -1007,7 +1041,7 @@ let update_intervals are_eq env eqs expl (a, x, v) is_le =
   let env =  tighten_non_lin are_eq x use_x env expl in
   env, (find_eq eqs x u env)
 
-let update_ple0 are_eq env p0 is_le expl =
+let update_ple0 are_eq env p0 ~is_le expl =
   if P.is_empty p0 then env
   else
     let ty = P.type_info p0 in
@@ -1033,7 +1067,8 @@ let update_ple0 are_eq env p0 is_le expl =
     in
     let env =
       if I.is_strict_smaller u pu then
-        update_monomes_from_poly p u (MP.n_add p u pu env)
+        let env = MP.n_add p u pu env in
+        update_monomes_from_poly p u env
       else env
     in
     match P.to_list p0 with
@@ -1109,7 +1144,7 @@ let add_inequations are_eq acc x_opt lin =
                     Some x -> P.compare x p = 0 | _ -> is_le && n=0
                 in
                 let p' = P.sub (P.create [] (Q.div c coef) ty) p in
-                update_ple0 are_eq env p' is_le expl
+                update_ple0 are_eq env p' ~is_le expl
              ) ineq.Oracle.dep env
          in
          env, eqs, rels
@@ -1344,6 +1379,18 @@ let fm uf are_eq rclass_of env eqs =
       ~function_name:"fm"
       "out fm/fm-simplex";
   res
+
+let fm uf are_eq rclass_of env eqs =
+  if Options.get_timers() then
+    try
+      Timers.exec_timer_start Timers.M_Arith Timers.F_FM;
+      let res = fm uf are_eq rclass_of env eqs in
+      Timers.exec_timer_pause Timers.M_Arith Timers.F_FM;
+      res
+    with e ->
+      Timers.exec_timer_pause Timers.M_Arith Timers.F_FM;
+      raise e
+  else fm uf are_eq rclass_of env eqs
 
 let is_num r =
   let ty = X.type_info r in ty == Ty.Tint || ty == Ty.Treal
@@ -1609,6 +1656,196 @@ let update_used_by_pow env r1 p2 orig  eqs =
       ) s eqs
   with Exit | Not_found -> eqs
 
+(* extract non trivial constraints on integer expressions from maps of
+   intervals *)
+let int_constraints_from_map_intervals =
+  let aux p xp i uf acc =
+    if Uf.is_normalized uf xp && I.is_point i == None
+       && P.type_info p == Ty.Tint
+    then (p, I.bounds_of i) :: acc
+    else acc
+  in
+  fun env uf ->
+    let acc =
+      MP.fold (fun p i acc -> aux p (alien_of p) i uf acc) env.polynomes []
+    in
+    MX.fold (fun x (i,_) acc -> aux (poly_of x) x i uf acc) env.monomes acc
+
+
+let exists_in_simplex sim x =
+  Sim.Core.(MX.mem x sim.basic) || Sim.Core.(MX.mem x sim.non_basic)
+
+(* used radius in cube-test implementation *)
+let radius = X.term_embed @@ Expr.mk_term (Sy.name "!radius") [] Ty.Tint
+let cube_obj = Sim.Core.P.from_list [radius, Q.one]
+
+let fm_simplex_cube_integers_encoding env uf has_eqs =
+  let simplex =
+    match env.cube_sim with
+    | Some cube when not has_eqs ->
+      cube (* reuse existing simplex *)
+    | _ ->
+      (* existing simplex, if any, not normalized wrt eqs ? reset it *)
+      Sim.Core.empty ~is_int:true ~check_invs:true ~debug:0
+  in
+  let simplex, _ = (* assert that radius >= 0 *)
+    Sim.Assert.var
+      simplex radius (Some (Q.zero, Q.zero)) Ex.empty None Ex.empty in
+  List.fold_left
+    (fun simplex (p, uints) ->
+       let (mn, ex_mn), (mx, ex_mx) =
+         match uints, List.rev uints with
+         | [], [] ->
+           (None, Ex.empty), (None, Ex.empty)
+         | ((mn, ex_mn), _) ::_, (_, (mx, ex_mx)) :: _ ->
+           (mn, ex_mn), (mx, ex_mx)
+         | [], _ | _, [] -> assert false
+       in
+       if mn == None && mx == None then simplex
+       else
+         let l, c = P.to_list p in
+         assert (Q.sign c = 0);
+         let l = List.rev_map (fun (c, x) -> x, c) (List.rev l) in
+         let cst0 =
+           List.fold_left (fun z (_, c) -> Q.add z (Q.abs c))Q.zero l
+         in
+         let cst = Q.div cst0 (Q.from_int 2) in
+         let p_radius = P.create [cst, radius] Q.zero Ty.Tint in
+
+         (* mn  <= p - cst * r constraint *)
+         let pge = P.sub p p_radius in
+
+         (* p + cst * r <= mx constraint, inverted as a lower bound *)
+         let ple = P.mult_const Q.m_one @@ P.add p p_radius in
+         let xpge = alien_of pge in
+         let xple = alien_of ple in
+         let lpge = P.to_list pge |> fst |> List.map (fun (a, b) -> b, a) in
+         let lple = P.to_list ple |> fst |> List.map (fun (a, b) -> b, a) in
+         let simplex = (* assert lower bound *)
+           if mn == None then simplex
+           else
+             fst @@
+             if exists_in_simplex simplex xpge then
+               Sim.Assert.var
+                 simplex xpge mn ex_mn None Ex.empty
+             else
+               Sim.Assert.poly
+                 simplex (Sim.Core.P.from_list lpge) xpge
+                 mn ex_mn None Ex.empty
+         in
+         let rev_mx =
+           match mx with
+           | None -> None
+           | Some (a, b) -> Some (Q.mult Q.m_one a, Q.mult Q.m_one b)
+         in
+         let simplex =
+           if rev_mx == None then simplex
+           else
+             fst @@
+             (* assert upper bound -> inverted as a lower bound *)
+             if exists_in_simplex simplex xple then
+               Sim.Assert.var
+                 simplex xple rev_mx ex_mx None Ex.empty
+             else
+               Sim.Assert.poly
+                 simplex (Sim.Core.P.from_list lple) xple
+                 rev_mx ex_mx None Ex.empty
+         in
+         simplex
+    ) simplex (int_constraints_from_map_intervals env uf)
+
+
+let solve_cube_integers env are_eq sim =
+  let sim, mx_res = Sim.Solve.maximize sim cube_obj in
+  let resu = Sim.Result.get mx_res sim in
+  let env = {env with cube_sim = Some sim; cube_sim_res = Some resu} in
+  match resu with
+  | Sim.Core.Unknown ->
+    assert false (* because we maximized *)
+
+  | Sim.Core.Sat _   ->
+    assert false (* because we maximized *)
+
+  | Sim.Core.Unsat ex ->
+    Debug.cube_unsat ();
+    raise (Ex.Inconsistent (Lazy.force ex, env.classes))
+
+  | Sim.Core.Unbounded _ ->
+    Debug.cube_unbounded ();
+    env
+
+  | Sim.Core.Max(mx,_sol) -> (* implied bounds or eqs *)
+    let {Sim.Core.max_v; _} = Lazy.force mx in
+    let obj = match mx_res with None -> assert false | Some (p, _) -> p in
+    Debug.optimum obj max_v;
+    let deds, ex = (* deductions + explanation *)
+      List.fold_left
+        (fun (l, ex) (x0, q) ->
+           let x_info, _ =
+             try Sim.Core.MX.find x0 sim.non_basic
+             with Not_found -> assert false
+           in
+           let rv = alien_of (P.create [] Q.zero Ty.Tint) in
+           let x = X.subst radius rv x0 in (* remove radius from x *)
+           (* necessiraly equals low min or max bound *)
+           let (l_i, w) as value = x_info.value in
+           assert (Q.sign w = 0); (* no strict ineqs on Ints *)
+           (* why is this deduction correct:
+              - we assumed constraints l_i <= ctx_i
+
+              - radius is maximized by setting ctx_i's slake variables
+              that appear in 'obj' to their min 'l_i'
+
+              - 'obj' evaluates to a constant, and the coefficients of
+              the constraints ctx_i in it are negative (because we hit
+              max for objective with lower bounds).
+
+              - if we rather transform the constraints to
+                 0 <= (- l_i) + ctx_i
+              - then, we multiply them by the abs (positive) value of
+              their coefficients in obj (without changin ineq's direction)
+                 0 <= (- q) ((- l_i) + ctx_i)
+
+              - finally, the SUM (- q) ((- l_i) + ctx_i) is actually equal to
+              obj.
+
+              - Now, we can use, FM/FM-Simplex bounds deduction mecanism:
+              -> 0 <= (- q) ((- l_i) + ctx_i) <= max_v
+              -> ctx_i <= l_i + floor (max_v / (-q))
+
+              Hence, an upper bound for ctx_i
+           *)
+           assert (Q.sign q < 0);
+           assert (Sim.Core.equals_optimum value x_info.mini);
+           let ded = Q.add l_i @@ Q.floor @@ Q.div max_v @@ Q.abs q in
+           (x, ded) :: l, Ex.union ex x_info.min_ex
+        )([], Ex.empty) (Sim.Core.P.bindings obj)
+    in
+    List.fold_left (fun env (x, max_bnd) ->
+        Debug.cube_bound x max_bnd;
+        let p0 = P.sub (poly_of x) (P.create [] max_bnd Ty.Tint) in
+        update_ple0 are_eq env p0 ~is_le:true ex
+      ) env deds
+
+
+let cube_test env are_eq uf has_eqs =
+  let csim = fm_simplex_cube_integers_encoding env uf has_eqs in
+  let env = {env with cube_sim = Some csim; cube_sim_res = None} in
+  solve_cube_integers env are_eq csim
+
+
+let cube_test env are_eq uf has_eqs =
+  if Options.get_timers() then
+    try
+      Timers.exec_timer_start Timers.M_Arith Timers.F_Cube_test;
+      let res = cube_test env are_eq uf has_eqs in
+      Timers.exec_timer_pause Timers.M_Arith Timers.F_Cube_test;
+      res
+    with e ->
+      Timers.exec_timer_pause Timers.M_Arith Timers.F_Cube_test;
+      raise e
+  else cube_test env are_eq uf has_eqs
+
 let assume ~query env uf la =
   Oracle.incr_age ();
   let env = count_splits env la in
@@ -1621,6 +1858,7 @@ let assume ~query env uf la =
   in
   Debug.env env;
   let nb_num = ref 0 in
+  let has_eqs = ref false in
   let env, eqs, new_ineqs, to_remove =
     List.fold_left
       (fun ((env, eqs, new_ineqs, rm) as acc) (a, root, expl, orig) ->
@@ -1652,7 +1890,7 @@ let assume ~query env uf la =
                  in
                  let env =
                    update_ple0
-                     are_eq env ineq.Oracle.ple0 (n == L.LE) expl
+                     are_eq env ineq.Oracle.ple0 ~is_le:(n == L.LE) expl
                  in
                  {env with inequations=add_ineq root ineq env.inequations},
                  eqs, true, rm
@@ -1678,6 +1916,7 @@ let assume ~query env uf la =
              end
 
            | L.Eq(r1, r2) when is_num r1 && is_num r2 ->
+             has_eqs := true;
              incr nb_num;
              let p1 = poly_of r1 in
              let p2 = poly_of r2 in
@@ -1704,10 +1943,13 @@ let assume ~query env uf la =
     if !nb_num = 0 || query then env, {Sig_rel.assume=[]; remove = to_remove}
     else
       (* we only call fm when new ineqs are assumed *)
+
       let env, eqs =
-        if new_ineqs && not (Options.get_no_fm ()) then
+        if not new_ineqs then env, eqs
+        else if not (Options.get_no_fm ()) then
           fm uf are_eq rclass_of env eqs
-        else env, eqs
+        else
+          cube_test env are_eq uf !has_eqs, eqs
       in
       let env = Sim_Wrap.solve env 1 in
       let env = loop_update_intervals are_eq env 0 in
