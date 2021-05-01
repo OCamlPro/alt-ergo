@@ -2234,6 +2234,7 @@ let type_one_th_decl env e =
   | Rewriting(loc, _, _)
   | Goal(loc, _, _)
   | Check_sat(loc, _, _)
+  | Check_all_sat(loc, _, _)
   | Predicate_def(loc,_,_,_)
   | Function_def(loc,_,_,_,_)
   | MutRecDefs ((loc,_,_,_,_) :: _)
@@ -2391,12 +2392,10 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
 let declare_fun env loc n ?(defined=false) ?ret_ty l  =
   check_duplicate_params l;
   let infix, ty  =
-    let l = List.map (fun (_,_,x) -> x) l in
+    let l = List.map (fun (_ ,_ , x) -> x) l in
     match ret_ty with
-    | None | Some PPTbool ->
-      PPiff, PPredicate l
-    | Some ty ->
-      PPeq, PFunction(l,ty)
+    | None | Some PPTbool -> PPiff, PPredicate l
+    | Some ty -> PPeq, PFunction(l,ty)
   in
   let mk_symb hs = Symbols.name hs ~defined ~kind:Symbols.Other in
   let tlogic, env = Env.add_logics env mk_symb [n] ty loc in (* TODO *)
@@ -2523,6 +2522,14 @@ let rec type_decl (acc, env) d assertion_stack =
 
   | Function_def(loc,n,l,ret_ty,e) ->
     type_fun (acc, env) loc n l ~ret_ty e
+
+  | Check_all_sat(loc, n, l) ->
+    Options.tool_req 1 "TR-Typing-CheckAllSatDecl$_F$";
+    let f = { pp_loc = loc; pp_desc = PPconst ConstFalse} in
+    List.iter (fun s ->
+        ignore (type_form env {pp_desc = PPapp(s,[]); pp_loc = loc})
+      ) l;
+    type_and_intro_goal acc env (AllSat l) n f, env
 
   | TypeDecl [] ->
     assert false

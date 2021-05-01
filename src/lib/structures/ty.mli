@@ -286,6 +286,9 @@ type goal_sort =
   (** The goal to be proved valid *)
   | Sat
   (** The goal to be proved satisfiable *)
+  | AllSat of string list
+  (** Rather generate all models involving the given list of
+      propositional variables *)
 (** Goal sort. Used in typed declarations. *)
 
 val fresh_hypothesis_name : goal_sort -> string

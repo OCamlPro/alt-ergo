@@ -390,6 +390,13 @@ module Translate = struct
 
   let count_goals = ref 0
 
+  let translate_check_all_sat command l =
+    let loc = pos command in
+    incr count_goals;
+    let gname = "g_" ^ (string_of_int !count_goals) in
+    let l = List.rev_map (fun symb -> symb.c) (List.rev l) in
+    mk_check_all_sat loc gname l
+
   let translate_check_sat command l =
     let loc = pos command in
     incr count_goals;
@@ -434,6 +441,8 @@ module Translate = struct
       (translate_check_sat command []) :: acc
     | Cmd_CheckSatAssum l ->
       (translate_check_sat command l) :: acc
+    | Cmd_CheckAllSat l ->
+      (translate_check_all_sat command l) :: acc
     | Cmd_DeclareConst(symbol,const_dec) ->
       (translate_decl_fun symbol [] (translate_const_dec const_dec)) :: acc
     | Cmd_DeclareDataType(symbol,datatype_dec) ->

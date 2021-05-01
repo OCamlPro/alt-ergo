@@ -45,9 +45,9 @@ type t = {
 }
 
 (** Print the given counterexample on the given formatter with the
-    corresponding format set with Options.get_output_format.
-    - functions: the functions of the model;
-    - constants: the variables of the model;
-    - arrays: (experimental) the arrays of the model.
-*)
-val output_concrete_model : Format.formatter -> t -> unit
+    corresponding format setted with Options.get_output_format. *)
+val output_concrete_model :
+  pp_prop_model:bool ->
+  Format.formatter ->
+  t ->
+  unit

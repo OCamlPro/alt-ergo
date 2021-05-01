@@ -226,6 +226,14 @@ val set_interpretation_use_underscore : bool -> unit
     {!val:get_objectives_in_interpretation} *)
 val set_objectives_in_interpretation : bool -> unit
 
+(** Set [all_models] accessible with
+    {!val:get_all_models} *)
+val set_all_models : bool -> unit
+
+(** Set [show_prop_model] accessible with
+    {!val:get_show_prop_model} *)
+val set_show_prop_model : bool -> unit
+
 (** Set [max_split] accessible with {!val:get_max_split} *)
 val set_max_split : Numbers.Q.t -> unit
 
@@ -744,6 +752,16 @@ val get_interpretation_use_underscore : unit -> bool
     be shrunk or not accurate if some expressions to optimize are
     unbounded. *)
 val get_objectives_in_interpretation : unit -> bool
+(** Default to [false] *)
+
+(** [true] if the all_models flag is set to generate all propositional
+    models *)
+val get_all_models : unit -> bool
+(** Default to [false] *)
+
+(** [true] if the show_prop_model flag is set to also output the
+    propositional model, when a model is requested *)
+val get_show_prop_model : unit -> bool
 (** Default to [false] *)
 
 (** Value specifying the default output format. possible values are

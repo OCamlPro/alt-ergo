@@ -522,7 +522,7 @@ let rec pp_value ppk ppf = function
 let pp_constant ppf (_sy, t) =
   Fmt.pf ppf "%a" SmtlibCounterExample.pp_abstract_value_of_type t
 
-let output_concrete_model fmt m =
+let output_concrete_model ~pp_prop_model:_ fmt m =
   if Options.get_interpretation () then begin
     (* TODO: does we need to check also m.propositional ? *)
     if ModelMap.(is_suspicious m.functions || is_suspicious m.constants
@@ -532,12 +532,6 @@ let output_concrete_model fmt m =
 
     Format.fprintf fmt "@[<v 2>(";
     Why3CounterExample.output_constraints fmt m.propositional;
-
-    Printer.print_fmt ~flushed:false fmt "@[<v 0>unknown@ ";
-    Printer.print_fmt ~flushed:false fmt "@[<v 2>(model@,";
-    if Options.get_output_format () == Why3 then begin
-      Why3CounterExample.output_constraints fmt m.propositional
-    end;
 
     let values = Hashtbl.create 17 in
     (* Add the constants *)

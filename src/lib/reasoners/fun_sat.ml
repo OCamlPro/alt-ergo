@@ -1668,7 +1668,21 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       ~elt:()
       ~init:env
 
+  (* in case of all-models and/or call to solver with old
+       unbacktracked decisions *)
+  let check_no_decision_in_env env =
+    if env.dlevel > 0 then
+      Errors.run_error
+        (Errors.Unsupported_feature
+           "Some of the enabled features are not provided by the \
+            Fun_SAT solver. Please consider switching to \
+            CDCL(Tableaux) instead."
+        )
+
   let unsat env gf =
+    (* in case of all-models and/or call to solver with old
+       unbacktracked decisions *)
+    check_no_decision_in_env env;
     Debug.is_it_unsat gf;
     try
       let guards_to_assume =
@@ -1744,6 +1758,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     {gf with E.ff = E.mk_imp current_guard gf.E.ff}
 
   let assume env fg dep =
+    (* in case of all-models and/or call to solver with old
+       unbacktracked decisions *)
+    check_no_decision_in_env env;
     try
       if Options.get_tableaux_cdcl () then
         cdcl_assume false env [add_guard env fg,dep];
@@ -1874,5 +1891,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Hstring.save_cache ();
     Shostak.Combine.save_cache ();
     Uf.save_cache ()
+
+  let get_propositional_model env =
+    ME.fold (fun f _ acc -> E.Set.add f acc) env.gamma E.Set.empty
+
+  let reset_last_saved_model env =
+    { env with last_saved_model = ref None}
 
 end
