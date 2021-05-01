@@ -647,6 +647,45 @@ module Main_Default : S = struct
     else
       t, SE.empty
 
+  let update_objectives objectives assumed gamma =
+    let uf = CC_X.get_union_find gamma in
+    let reset_cs_env = ref false in
+    let res =
+      List.fold_left
+        (fun objectives (a, _, _) ->
+           match E.term_view a with
+           | Term {E.f = Sy.Op Sy.Optimize {order;is_max}; xs = [e]; _} ->
+             let r =
+               try Uf.make uf e
+               with Not_found ->
+                 (* gamma is already initialized with fresh terms *)
+                 assert false
+             in
+             let x = Th_util.{ r; e; value = Unknown; is_max; order } in
+             begin
+               try
+                 let y = Util.MI.find order objectives in
+                 if not (X.equal r y.Th_util.r) then begin
+                   Printer.print_fmt ~flushed:true
+                     (Options.get_fmt_err())
+                     "Optimization problem illformed. %a and %a have \
+                      the same order %d@."
+                     X.print r X.print y.Th_util.r order;
+                   assert false
+                 end;
+                 objectives
+               with Not_found ->
+                 reset_cs_env := true;
+                 Util.MI.add order x objectives
+             end
+           | Term {E.f = Sy.Op Sy.Optimize _; xs = _; _} -> assert false
+           | Term _ -> objectives
+           | Not_a_term {is_lit = true} -> objectives
+           | Not_a_term {is_lit = false} -> assert false
+        ) objectives assumed
+    in
+    res, !reset_cs_env
+
   (* facts are sorted in decreasing order with respect to (dlvl, plvl) *)
   let assume ordered in_facts t =
     let facts = CC_X.empty_facts () in
@@ -673,9 +712,16 @@ module Main_Default : S = struct
       assert (not ordered || is_ordered_list t.assumed);
 
       let gamma, _ = CC_X.assume_literals t.gamma [] facts in
+      (* update to optimize with the new gamma *)
+      let objectives, reset_cs_env =
+        update_objectives t.objectives assumed gamma in
       let new_terms = CC_X.new_terms gamma in
-      {t with gamma = gamma; terms = Expr.Set.union t.terms new_terms},
-      new_terms, cpt
+      let t =  {t with
+                gamma = gamma; terms = Expr.Set.union t.terms new_terms;
+                objectives }
+      in
+      let t = if reset_cs_env then reset_case_split_env t else t in
+      t, new_terms, cpt
 
   let get_debug_theories_instances th_instances ilvl dlvl =
     let module MF = Expr.Map in
