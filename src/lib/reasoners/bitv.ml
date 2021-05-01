@@ -35,9 +35,7 @@ module E = Expr
 
 type sort_var = A | B | C
 
-type tvar = { var : int ; sorte : sort_var }
-
-type 'a xterm = Var of tvar | Alien of 'a
+type tvar = { var : int ; sorte : sort_var; fresh : E.t }
 
 type 'a alpha_term = {
   bv : 'a;
@@ -46,8 +44,8 @@ type 'a alpha_term = {
 
 type 'a simple_term_aux =
   | Cte of bool
-  | Other of 'a xterm
-  | Ext of 'a xterm * int * int * int (*// id * size * i * j //*)
+  | Other of 'a
+  | Ext of 'a * int * int * int (*// id * size * i * j //*)
 
 type 'a simple_term = ('a simple_term_aux) alpha_term
 
@@ -86,22 +84,10 @@ module Shostak(X : ALIEN) = struct
     | None ->
       begin
         match X.type_info r with
-        | Ty.Tbitv n -> [{bv = Other (Alien r) ; sz = n}]
+        | Ty.Tbitv n -> [{bv = Other r ; sz = n}]
         | _  -> assert false
       end
     | Some b -> b
-
-  let compare_xterm xt1 xt2 = match xt1,xt2 with
-    | Var v1, Var v2 ->
-      let c1 = compare v1.sorte v2.sorte in
-      if c1 <> 0 then c1
-      else -(compare v1.var v2.var)
-    (* on inverse le signe : les variables les plus fraiches sont
-       les plus jeunes (petites)*)
-
-    | Alien t1, Alien t2 -> X.str_cmp t1 t2
-    | Var _, Alien _ -> 1
-    | Alien _, Var _ -> -1
 
   let compare_simple_term st1 st2 =
     if st1.sz <> st2.sz then st1.sz - st2.sz
@@ -112,14 +98,14 @@ module Shostak(X : ALIEN) = struct
         | Cte false , _ | _ , Cte true -> -1
         | _ , Cte false | Cte true,_ -> 1
 
-        | Other t1 , Other t2 -> compare_xterm t1 t2
+        | Other t1 , Other t2 -> X.str_cmp t1 t2
         | _ , Other _ -> -1
         | Other _ , _ -> 1
         | Ext(t1,s1,i1,_) , Ext(t2,s2,i2,_) ->
           let c1 = compare s1 s2 in
           if c1<>0 then c1
           else let c2 = compare i1 i2 in
-            if c2 <> 0 then c2 else compare_xterm t1 t2
+            if c2 <> 0 then c2 else X.str_cmp t1 t2
       end
 
   module ST_Set = Set.Make (
@@ -143,7 +129,7 @@ module Shostak(X : ALIEN) = struct
 
     type term_aux  =
       | I_Cte of bool
-      | I_Other of X.r xterm
+      | I_Other of X.r
       | I_Ext of term * int * int
       | I_Comp of term * term
 
@@ -243,7 +229,7 @@ module Shostak(X : ALIEN) = struct
         | E.Term { E.ty = Ty.Tbitv n; _ } ->
           let r', ctx' = X.make t' in
           let ctx = ctx' @ ctx in
-          {bv = I_Other (Alien r') ; sz = n}, ctx
+          {bv = I_Other r' ; sz = n}, ctx
         | _ -> assert false
       in
       let r, ctx = make_rec t [] in
@@ -254,10 +240,10 @@ module Shostak(X : ALIEN) = struct
   module Debug = struct
     open Printer
 
-    let print_tvar fmt ({var=v;sorte=s},sz) =
-      fprintf fmt "%s_%d[%d]@?"
+    let print_tvar fmt ({var=v;sorte=s; fresh},sz) =
+      fprintf fmt "%s_%d(fresh=%a)[%d]@?"
         (match s with | A -> "a" | B -> "b" | C -> "c")
-        v sz
+        v E.print fresh sz
 
     (* unused
        open Canonizer
@@ -271,13 +257,9 @@ module Shostak(X : ALIEN) = struct
 
     let print fmt ast = match ast.bv with
       | Cte b -> fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
-      | Other (Alien t) -> fprintf fmt "%a@?" X.print t
-      | Other (Var tv) -> fprintf fmt "%a@?" print_tvar (tv,ast.sz)
-      | Ext (Alien t,_,i,j) ->
+      | Other t -> fprintf fmt "%a@?" X.print t
+      | Ext (t,_,i,j) ->
         fprintf fmt "%a@?" X.print t;
-        fprintf fmt "<%d,%d>@?" i j
-      | Ext (Var tv,_,i,j) ->
-        fprintf fmt "%a@?" print_tvar (tv,ast.sz);
         fprintf fmt "<%d,%d>@?" i j
 
     let print_C_ast fmt = function
@@ -379,11 +361,14 @@ module Shostak(X : ALIEN) = struct
       in f_rec [] (t,u)
 
     let fresh_var =
-      let cpt = ref 0 in fun t -> incr cpt; { var = !cpt ; sorte = t}
+      let cpt = ref 0 in
+      fun size t ->
+        let ty = Ty.Tbitv size in
+        incr cpt; { var = !cpt ; sorte = t; fresh = Expr.fresh_name ty }
 
     let fresh_bitv genre size =
       if size <= 0 then []
-      else [ { bv = S_Var (fresh_var genre) ; sz = size } ]
+      else [ { bv = S_Var (fresh_var size genre) ; sz = size } ]
 
     let cte_vs_other bol st = st , [{bv = S_Cte bol ; sz = st.sz}]
 
@@ -444,11 +429,8 @@ module Shostak(X : ALIEN) = struct
       let c_solve (st1,st2) = match st1.bv,st2.bv with
         |Cte _, Cte _ -> raise Util.Unsolvable (* forcement un 1 et un 0 *)
 
-        |Cte b, Other (Var _) -> [cte_vs_other b st2]
-        |Other (Var _), Cte b -> [cte_vs_other b st1]
-
-        |Cte b, Other (Alien _) -> [cte_vs_other b st2]
-        |Other (Alien _), Cte b -> [cte_vs_other b st1]
+        |Cte b, Other _ -> [cte_vs_other b st2]
+        |Other _, Cte b -> [cte_vs_other b st1]
 
         |Cte b, Ext(xt,s_xt,i,j) -> [cte_vs_ext b xt s_xt i j]
         |Ext(xt,s_xt,i,j), Cte b -> [cte_vs_ext b xt s_xt i j]
@@ -489,9 +471,9 @@ module Shostak(X : ALIEN) = struct
       |S_Cte _ -> {var with sz = s1},{var with sz = s2},None
       |S_Var v ->
         let (fs,sn,tr) = match v.sorte with
-          |A -> (fresh_var A), (fresh_var A), A
-          |B -> (fresh_var B), (fresh_var B), B
-          |C -> (fresh_var C), (fresh_var C), C
+          |A -> (fresh_var s1 A), (fresh_var s2 A), A
+          |B -> (fresh_var s1 B), (fresh_var s2 B), B
+          |C -> (fresh_var s1 C), (fresh_var s2 C), C
         in {bv = S_Var fs; sz = s1},{bv = S_Var sn; sz = s2},Some tr
 
     let rec slice_composition eq pat (ac_eq,c_sub) = match (eq,pat) with
@@ -587,7 +569,7 @@ module Shostak(X : ALIEN) = struct
              begin
                match (get_rep v).bv with
                |S_Cte b -> Cte b
-               |S_Var tv -> Other (Var tv)
+               |S_Var tv -> Other (X.term_embed tv.fresh)
              end
         }in
       let rec cnf_max l = match l with
@@ -650,17 +632,11 @@ module Shostak(X : ALIEN) = struct
   (* should use hashed compare to be faster, not structural comparison *)
   let equal bv1 bv2 = compare_mine bv1 bv2 = 0
 
-  let hash_xterm = function
-    | Var {var = i; sorte = A} -> 11 * i
-    | Var {var = i; sorte = B} -> 17 * i
-    | Var {var = i; sorte = C} -> 19 * i
-    | Alien r -> 23 * X.hash r
-
   let hash_simple_term_aux = function
     | Cte b -> 11 * Hashtbl.hash b
-    | Other x -> 17 * hash_xterm x
+    | Other x -> 17 * X.hash x
     | Ext (x, a, b, c) ->
-      hash_xterm x + 19 * (a + b + c)
+      X.hash x + 19 * (a + b + c)
 
   let hash l =
     List.fold_left
@@ -671,13 +647,10 @@ module Shostak(X : ALIEN) = struct
       (fun acc x ->
          match x.bv with
          | Cte _  -> acc
-         | Ext( Var v,sz,_,_) ->
-           (X.embed [{bv=Other (Var v) ; sz = sz }])::acc
-         | Other (Var _)  -> (X.embed [x])::acc
-         | Other (Alien t) | Ext(Alien t,_,_,_) -> (X.leaves t)@acc
+         | Other t | Ext(t,_,_,_) -> (X.leaves t)@acc
       ) [] bitv
 
-  let is_mine = function [{ bv = Other (Alien r); _ }] -> r | bv -> X.embed bv
+  let is_mine = function [{ bv = Other r; _ }] -> r | bv -> X.embed bv
 
   let print = Debug.print_C_ast
 
@@ -710,19 +683,12 @@ module Shostak(X : ALIEN) = struct
   let extract r ty =
     match X.extract r with
       Some (_::_ as bv) -> to_i_ast bv
-    | None -> {bv =  Canonizer.I_Other (Alien r); sz = ty}
+    | None -> {bv =  Canonizer.I_Other r; sz = ty}
     | Some [] -> assert false
-
-  let extract_xterm r =
-    match X.extract r with
-      Some ([{ bv = Other (Var _ as x); _ }]) -> x
-    | None -> Alien r
-    | _ -> assert false
 
   let var_or_term x =
     match x.bv with
-      Other (Var _) -> X.embed [x]
-    | Other (Alien r) -> r
+    | Other r -> r
     | _ -> assert false
 
 
@@ -747,11 +713,9 @@ module Shostak(X : ALIEN) = struct
 
 
   let rec subst_rec x subs biv =
-    match biv.bv , extract_xterm x with
+    match biv.bv , x with
     | Canonizer.I_Cte _ , _ -> biv
-    | Canonizer.I_Other (Var y) , Var z when y=z -> extract subs biv.sz
-    | Canonizer.I_Other (Var _) , _ -> biv
-    | Canonizer.I_Other (Alien tt) , _ ->
+    | Canonizer.I_Other tt , _ ->
       if X.equal x tt then
         extract subs biv.sz
       else extract (X.subst x subs tt) biv.sz
