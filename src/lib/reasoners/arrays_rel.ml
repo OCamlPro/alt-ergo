@@ -391,10 +391,10 @@ let case_split env _ ~for_model:_ =
   try
     let a = LR.neg (LRset.choose env.split) in
     Debug.case_split a;
-    [LR.view a, true, Th_util.CS (Th_util.Th_arrays, two)]
+    Sig_rel.Split [LR.view a, true, Th_util.CS (Th_util.Th_arrays, two)]
   with Not_found ->
     Debug.case_split_none ();
-    []
+    Sig_rel.Split []
 
 let count_splits env la =
   let nb =

@@ -384,10 +384,10 @@ module Main_Default : S = struct
           let l, base_env = CC_X.case_split env.gamma_finite ~for_model in
           let env = {env with gamma_finite = base_env} in
           match l with
-          | [] ->
+          | Sig_rel.Split [] ->
             { env with choices = List.rev dl }, ch
 
-          | new_splits ->
+          | Sig_rel.Split new_splits ->
             let new_splits = add_explanations_to_splits new_splits in
             aux ch None dl env new_splits
 

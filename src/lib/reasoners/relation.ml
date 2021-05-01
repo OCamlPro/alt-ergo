@@ -131,14 +131,20 @@ let case_split env uf ~for_model =
   let seq5 = Rel5.case_split env.r5 uf ~for_model in
   let seq6 = Rel6.case_split env.r6 uf ~for_model in
   let seq7 = Rel7.case_split env.r7 uf ~for_model in
-  let l = seq1 |@| seq2 |@| seq3 |@| seq4 |@| seq5 |@| seq6 |@| seq7 in
-  List.sort
-    (fun (_,_,sz1) (_,_,sz2) ->
-       match sz1, sz2 with
-       | Th_util.CS(_,sz1), Th_util.CS(_,sz2) -> Numbers.Q.compare sz1 sz2
-       | _ -> assert false
-    )l
-
+  let splits =
+    List.rev_map (function
+        | Sig_rel.Split l -> l
+      ) [ seq1; seq2; seq3; seq4; seq5; seq6; seq7 ]
+  in
+  let splits = List.fold_left (|@|) [] splits in
+  Sig_rel.Split (
+    List.fast_sort
+      (fun (_,_,sz1) (_,_,sz2) ->
+         match sz1, sz2 with
+         | Th_util.CS(_,sz1), Th_util.CS(_,sz2) -> Numbers.Q.compare sz1 sz2
+         | _ -> assert false
+      )splits
+  )
 
 let add env uf r t =
   Options.exec_thread_yield ();

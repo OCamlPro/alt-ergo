@@ -68,7 +68,7 @@ module type S = sig
 
   val case_split :
     t -> for_model:bool ->
-    (r Xliteral.view * bool * Th_util.lit_origin) list * t
+    Sig_rel.case_split * t
   val query :  t -> E.t -> Th_util.answer
   val new_terms : t -> Expr.Set.t
   val class_of : t -> Expr.t -> Expr.Set.t
@@ -689,13 +689,14 @@ module Main : S = struct
   (* End: new implementation of add, add_term, assume_literals and all that *)
 
   let case_split env ~for_model =
-    match Rel.case_split env.relation env.uf ~for_model with
-    | [] when for_model ->
+    let cs = Rel.case_split env.relation env.uf ~for_model in
+    match cs with
+    | Sig_rel.Split [] when for_model ->
       let l, uf = Uf.assign_next env.uf in
       (* try to not to modify uf in the future. It's currently done only
          to add fresh terms in UF to avoid loops *)
-      l, {env with uf}
-    | l -> l, env
+      Sig_rel.Split l, {env with uf}
+    | Sig_rel.Split _ -> cs, env
 
   let query env a =
     let ra, ex_ra = term_canonical_view env a Ex.empty in

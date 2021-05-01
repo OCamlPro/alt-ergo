@@ -2087,15 +2087,14 @@ let case_split env uf ~for_model =
   let res = default_case_split env uf ~for_model in
   match res with
   | [] ->
-    if not for_model then []
+    if not for_model then Sig_rel.Split []
     else
       begin
         match case_split_union_of_intervals env uf with
-        | [] -> model_from_unbounded_domains env uf
-        | l -> l
+        | [] -> Sig_rel.Split (model_from_unbounded_domains env uf)
+        | l -> Sig_rel.Split l
       end
-  | _ -> res
-
+  | _ -> Sig_rel.Split res
 
 (*** part dedicated to FPA reasoning ************************************)
 
