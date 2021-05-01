@@ -77,12 +77,11 @@ module type S = sig
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) -> t * Sig_rel.instances
 
-  val output_concrete_model :
-    Format.formatter ->
+  val extract_concrete_model :
     prop_model:Expr.Set.t ->
     optimized_splits:Th_util.optimized_split Util.MI.t ->
     t ->
-    unit
+    Models.t Lazy.t option
 end
 
 module Main : S
