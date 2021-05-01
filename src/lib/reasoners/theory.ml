@@ -72,9 +72,8 @@ module type S = sig
     int -> int -> t * Sig_rel.instances
 
   val get_assumed : t -> E.Set.t
-
   val reinit_cpt : unit -> unit
-
+  val get_objectives : t -> Th_util.optimized_split Util.MI.t
 end
 
 module Main_Default : S = struct
@@ -937,6 +936,7 @@ module Main_Default : S = struct
   let reinit_cpt () =
     Debug.reinit_cpt ()
 
+  let get_objectives env = env.objectives
 end
 
 module Main_Empty : S = struct
@@ -971,6 +971,8 @@ module Main_Empty : S = struct
   let assume_th_elt e _ _ = e
   let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []
   let get_assumed env = env.assumed_set
+
   let reinit_cpt () = ()
 
+  let get_objectives _env = Util.MI.empty
 end

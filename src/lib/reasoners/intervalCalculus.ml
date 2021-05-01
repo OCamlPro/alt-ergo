@@ -2097,12 +2097,12 @@ let optimizing_split env uf opt =
      done without waiting for ~for_model flag to be true *)
   let {Th_util.order; r = r; is_max = to_max; e; value } = opt in
   assert (match value with
-        Value _ -> false
-      | _ -> true
+      | Unknown -> true
+      | _ -> false
     );
   let repr, _ = Uf.find uf e in
   let ty = E.type_info e in
-  let r1 = repr in
+  let r1 = r in (* instead of repr, which may be a constant *)
   let p = poly_of repr in
   match P.is_const p with
   | Some optim ->
