@@ -60,6 +60,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     skolems : E.gformula ME.t; (* key <-> f *)
     add_inst : E.t -> bool;
     guards : guards;
+    last_saved_model : Models.t Lazy.t option ref;
+    model_gen_phase : bool ref;
   }
 
   let empty_guards () = {
@@ -86,7 +88,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       inst = Inst.empty;
       skolems = ME.empty;
       guards = init_guards ();
-      add_inst = fun _ -> true;
+      add_inst = (fun _ -> true);
+      last_saved_model = ref None;
+      model_gen_phase = ref false;
     }
 
   let empty_with_inst add_inst =
@@ -984,13 +988,66 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | C_bool _ -> assert false
     | C_theory expl -> raise (Ex.Inconsistent (expl, []))
 
+  let may_update_last_saved_model env compute =
+    let compute =
+      if not (Options.get_first_interpretation ()) then compute
+      else !(env.last_saved_model) == None
+    in
+    if not compute then env
+    else begin
+      try
+        (* also performs case-split and pushes pending atoms to CS *)
+        let model = Th.compute_concrete_model (SAT.current_tbox env.satml) in
+        env.last_saved_model := model;
+        env
+      with Ex.Inconsistent (_expl, _classes) as e ->
+        raise e
+
+    end
+
+  let update_model_and_return_unknown env compute_model ~timeout =
+    try
+      let env = may_update_last_saved_model env compute_model in
+      Options.Time.unset_timeout ();
+      raise (I_dont_know {env; timeout })
+    with Util.Timeout when !(env.model_gen_phase) ->
+      (* In this case, timeout reason becomes 'ModelGen' *)
+      raise (I_dont_know {env; timeout = ModelGen })
+
+
+  let model_gen_on_timeout env =
+    let i = Options.get_interpretation () in
+    let ti = Options.get_timelimit_interpretation () in
+    if not i || (* not asked to gen a model *)
+       !(env.model_gen_phase) ||  (* we timeouted in model-gen-phase *)
+       Stdlib.(=) ti 0. (* no time allocated for extra model search *)
+    then
+      raise (I_dont_know {env; timeout = ProofSearch})
+    else
+      begin
+        (* Beware: models generated on timeout of ProofSearch phase may
+           be incohrent wrt. the ground part of the pb (ie. if delta
+           is not empty ? *)
+        env.model_gen_phase := true;
+        Options.Time.unset_timeout ();
+        Options.Time.set_timeout ti;
+        update_model_and_return_unknown
+          env i ~timeout:ProofSearch (* may becomes ModelGen *)
+      end
+
   let rec unsat_rec env ~first_call:_ : unit =
     try SAT.solve env.satml; assert false
     with
     | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
+    | Util.Timeout -> model_gen_on_timeout env
+
     | Satml.Sat ->
       try
         let env = do_case_split env Util.BeforeMatching in
+        let env =
+          may_update_last_saved_model env
+            (Options.get_every_interpretation ())
+        in
         let env = {env with nb_mrounds = env.nb_mrounds + 1}
                   [@ocaml.ppwarning
                     "TODO: first intantiation a la DfsSAT before searching ..."]
@@ -1019,15 +1076,24 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           else
             env
         in
-        if not updated then raise (I_dont_know {env; timeout = ProofSearch});
+        if not updated then
+          update_model_and_return_unknown
+            env (Options.get_last_interpretation ())
+            ~timeout:NoTimeout; (* may becomes ModelGen *)
         unsat_rec env ~first_call:false
 
-      with Ex.Inconsistent (expl, _cls) -> (*may be raised during matching*)
-      try
-        SAT.conflict_analyze_and_fix env.satml (Satml.C_theory expl);
-        unsat_rec env ~first_call:false
       with
+      | Util.Timeout -> model_gen_on_timeout env
       | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
+      | Ex.Inconsistent (expl, _cls) -> (*may be raised during matching or CS*)
+        begin
+          try
+            SAT.conflict_analyze_and_fix env.satml (Satml.C_theory expl);
+            unsat_rec env ~first_call:false
+          with
+          | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
+          | Util.Timeout -> model_gen_on_timeout env
+        end
 
   (* copied from sat_solvers.ml *)
   let max_term_depth_in_sat env =
@@ -1046,7 +1112,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Errors.run_error (Errors.Unsupported_feature msg)
     in
     let open Options in
-    if get_interpretation () then fails "interpretation";
     if get_save_used_context () then fails "save_used_context";
     if get_unsat_core () then fails "unsat_core"
 
@@ -1091,6 +1156,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           assert (not (Stack.is_empty acc.guards.stack_guard));
           let b = Stack.top acc.guards.stack_guard in
           Steps.pop_steps ();
+          acc.model_gen_phase := false;
+          env.last_saved_model := None;
           {acc with inst;
                     guards =
                       { acc.guards with
@@ -1121,7 +1188,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env = {env with inst = Inst.register_max_term_depth env.inst max_t} in
       unsat_rec env ~first_call:true;
       assert false
-    with IUnsat (_env, dep) ->
+    with
+    | IUnsat (_env, dep) ->
       assert begin
         Ex.fold_atoms
           (fun e b -> match e with
@@ -1131,12 +1199,22 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           )dep true
       end;
       dep
+    | (Util.Timeout | I_dont_know _) as e -> raise e
+    | e ->
+      Printer.print_dbg
+        ~module_name:"Satml_frontend" ~function_name:"unsat"
+        "%s" (Printexc.to_string e);
+      assert false
 
   let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)
     assert (SAT.decision_level env.satml == 0);
     try fst (assume_aux ~dec_lvl:0 env [add_guard env gf])
-    with IUnsat (_env, dep) -> raise (Unsat dep)
+    with | IUnsat (_env, dep) -> raise (Unsat dep)
+         | Util.Timeout ->
+           (* don't attempt to compute a model if timeout before
+              calling unsat function *)
+           raise (I_dont_know {env; timeout = Assume})
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
@@ -1167,7 +1245,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     SAT.assume_th_elt env.satml th_elt dep;
     env
 
-  let get_model _env = None
+  let get_model env = !(env.last_saved_model)
 
   let reinit_ctx () =
     Steps.reinit_steps ();
