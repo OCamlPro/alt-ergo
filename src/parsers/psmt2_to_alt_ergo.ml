@@ -403,10 +403,31 @@ module Translate = struct
     in
     mk_goal loc gname e
 
+  let translate_optimize =
+    let cpt = ref 0 in
+    fun ~is_maximize pos term ->
+      Printer.print_wrn
+        "TODO: currently, only works if the file contains check-sat@.";
+      assert (name_of_assert term == None);
+      incr cpt;
+      let e = translate_term [] term in
+      let func = if is_maximize then mk_maximize else mk_minimize in
+      let e = func pos e (string_of_int !cpt) in
+      let name = Format.sprintf "unamed__assert__%d" !cpt in
+      mk_generic_axiom pos name e
+
   let translate_command acc command =
     match command.c with
     | Cmd_Assert(assert_term) ->
       (translate_assert (pos command) assert_term) :: acc
+
+    | Cmd_Maximize t ->
+      (translate_optimize ~is_maximize:true (pos command) t) :: acc
+
+
+    | Cmd_Minimize t ->
+      (translate_optimize ~is_maximize:false (pos command) t) :: acc
+
     | Cmd_CheckEntailment(assert_term) ->
       (translate_goal (pos command) assert_term) :: acc
     | Cmd_CheckSat ->
