@@ -41,7 +41,10 @@ type t = {
   constants : ModelMap.t;
   functions : ModelMap.t;
   arrays : ModelMap.t;
-  objectives: (Expr.t * objective_value) Util.MI.t
+  objectives: (Expr.t * objective_value) Util.MI.t;
+  terms_values : (Shostak.Combine.r * string) Expr.Map.t
+  (** A map from terms to their values in the model (as a
+      representative of type X.r and as a string. *)
 }
 
 val output_concrete_model : t Fmt.t

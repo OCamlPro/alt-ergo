@@ -56,7 +56,8 @@ type t = {
   constants : ModelMap.t;
   functions : ModelMap.t;
   arrays : ModelMap.t;
-  objectives: (Expr.t * objective_value) Util.MI.t
+  objectives: (Expr.t * objective_value) Util.MI.t;
+  terms_values : (Shostak.Combine.r * string) Expr.Map.t
 }
 
 module Pp_smtlib_term = struct

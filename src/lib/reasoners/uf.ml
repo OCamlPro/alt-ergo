@@ -1182,7 +1182,8 @@ let extract_concrete_model ~prop_model ~optimized_splits env =
         in
         let objectives = compute_objectives ~optimized_splits env mrepr in
         { Models.propositional = prop_model;
-          functions; constants; arrays; objectives }
+          functions; constants; arrays; objectives;
+          terms_values = mrepr }
       ))
   else
     None
