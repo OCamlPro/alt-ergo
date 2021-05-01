@@ -79,6 +79,8 @@ val mk_goal : Loc.t -> string -> lexpr -> decl
 
 val mk_check_sat : Loc.t -> string -> lexpr -> decl
 
+val mk_check_all_sat : Loc.t -> string -> string list -> decl
+
 (** Declaration of theories, generic axioms and rewriting rules **)
 
 val mk_theory : Loc.t -> string -> string -> decl list -> decl

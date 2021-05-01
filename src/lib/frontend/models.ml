@@ -490,7 +490,7 @@ let rec pp_value ppk ppf = function
 let pp_constant ppf (_sy, t) =
   Fmt.pf ppf "%a" SmtlibCounterExample.pp_abstract_value_of_type t
 
-let output_concrete_model fmt m =
+let output_concrete_model ~pp_prop_model:_ fmt m =
   SmtlibCounterExample.reset_counter ();
   if ModelMap.(is_suspicious m.functions || is_suspicious m.constants
                || is_suspicious m.arrays) then

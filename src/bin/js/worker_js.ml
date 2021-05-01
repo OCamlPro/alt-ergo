@@ -145,7 +145,107 @@ let main worker_id content =
         begin match kind with
           | Ty.Check
           | Ty.Cut -> { state with local = []; }
-          | Ty.Thm | Ty.Sat -> { state with global = []; local = []; }
+          | Ty.Thm | Ty.Sat | Ty.AllSat _ ->
+            { state with global = []; local = []; }
+        end
+      | Typed.TAxiom (_, s, _, _) when Ty.is_global_hyp s ->
+        let cnf = Cnf.make state.global td in
+        { state with global = cnf; }
+      | Typed.TAxiom (_, s, _, _) when Ty.is_local_hyp s ->
+        let cnf = Cnf.make state.local td in
+        { state with local = cnf; }
+      | _ ->
+        let cnf = Cnf.make state.ctx td in
+        { state with ctx = cnf; }
+    in
+
+    let (module I : Input.S) = Input.find (Options.get_frontend ()) in
+    let parsed () =
+      try
+        Options.Time.start ();
+        I.parse_file ~content ~format:None
+      with
+      | Parsing.Parse_error ->
+        Printer.print_err "%a" Errors.report
+          (Syntax_error ((Lexing.dummy_pos,Lexing.dummy_pos),""));
+        raise Exit
+      | Errors.Error e ->
+        begin match e with
+          | Errors.Run_error r -> begin
+              match r with
+              | Steps_limit _ ->
+                returned_status :=
+                  Worker_interface.LimitReached "Steps limit"
+              | _ -> returned_status := Worker_interface.Error "Run error"
+            end
+          | _ -> returned_status := Worker_interface.Error "Error"
+        end;
+        Printer.print_err "%a" Errors.report e;
+        raise Exit
+    in
+    let all_used_context = FE.init_all_used_context () in
+    let assertion_stack = Stack.create () in
+    let typing_loop state p =
+      try
+        let l, env = I.type_parsed state.env assertion_stack p in
+        List.fold_left (typed_loop all_used_context) { state with env; } l
+      with Errors.Error e ->
+        Printer.print_err "%a" Errors.report e;
+        raise Exit
+    in
+
+    let state = {
+      env = I.empty_env;
+      ctx = [];
+      local = [];
+      global = [];
+    } in
+
+    begin
+      try let _ : _ state =
+            Seq.fold_left typing_loop state (parsed ()) in ()
+      with Exit -> () end;
+
+    let get_status_and_print status n =
+      returned_status :=
+        begin match status with
+          | FE.Unsat _ -> Worker_interface.Unsat n
+          | FE.Inconsistent _ -> Worker_interface.Inconsistent n
+          | FE.Sat _ -> Worker_interface.Sat n
+          | FE.Unknown _ -> Worker_interface.Unknown n
+          | FE.Timeout _ -> Worker_interface.LimitReached "timeout"
+          | FE.Preprocess -> Worker_interface.Unknown n
+        end;
+      FE.print_status status n
+    in
+
+    let solve all_context (cnf, goal_name) =
+      let used_context = FE.choose_used_context all_context ~goal_name in
+      let consistent_dep_stack = Stack.create () in
+      SAT.reset_refs ();
+      let _,_,dep =
+        let env = SAT.empty_with_inst add_inst in
+        List.fold_left
+          (FE.process_decl
+             get_status_and_print used_context consistent_dep_stack)
+          (env, `Unknown env, Explanation.empty) cnf
+      in
+      if Options.get_unsat_core () then begin
+        unsat_core := Explanation.get_unsat_core dep;
+      end;
+    in
+
+    let typed_loop all_context state td =
+      match td.Typed.c with
+      | Typed.TGoal (_, kind, name, _) ->
+        let l = state.local @ state.global @ state.ctx in
+        let cnf = List.rev @@ Cnf.make l td in
+        let () = solve all_context (cnf, name) in
+        begin match kind with
+          | Ty.Check
+          | Ty.Cut -> { state with local = []; }
+          | Ty.Thm | Ty.Sat | Ty.AllSat _ ->
+            { state with global = []; local = []; }
         end
       | Typed.TAxiom (_, s, _, _) when Ty.is_global_hyp s ->
         let cnf = Cnf.make state.global td in
@@ -224,12 +324,10 @@ let main worker_id content =
             end
           | Some r ->
             let b,e = r.loc in
-            (r.name,b.Lexing.pos_lnum,e.Lexing.pos_lnum,
-             !nb,Worker_interface.Used)
+            (r.name,b.Lexing.pos_lnum,e.Lexing.pos_lnum,!nb,Worker_interface.Used)
             :: acc
         ) tbl []
     in
-
 
     (* returns a records with compatible worker_interface fields *)
     {

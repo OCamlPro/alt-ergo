@@ -366,8 +366,8 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     `Ok()
 
 let mk_output_opt
-    interpretation use_underscore unsat_core output_format model_type
-    () () () ()
+    interpretation use_underscore all_models show_prop_model unsat_core
+    output_format model_type () () () ()
   =
   set_infer_output_format (Option.is_none output_format);
   let output_format = match output_format with
@@ -380,6 +380,8 @@ let mk_output_opt
   in
   set_interpretation interpretation;
   set_interpretation_use_underscore use_underscore;
+  set_all_models all_models;
+  set_show_prop_model show_prop_model;
   set_unsat_core unsat_core;
   set_output_format output_format;
   set_model_type model_type;
@@ -1032,11 +1034,29 @@ let parse_output_opt =
     let docv = "VAL" in
     Arg.(value & flag & info
            ["interpretation-use-underscore";"use-underscore"]
-           ~docv ~docs:s_models ~doc ~deprecated) in
+           ~docv ~docs:s_models ~doc ~deprecated)
+  in
+  let all_models =
+    let doc = "Enable all-models (or all-sat) feature, in which case, \
+               all possible boolean models will be explored. If \
+               --interpretation is also set, an interpretation for \
+               each boolean model will also be displayed. Note that \
+               timeouts are set per model/SAT branch in this case."
+    in
+    Arg.(value & flag & info ["all-models"; "all-sat"] ~doc)
+  in
+  let show_prop_model =
+    let doc = " also show the propositional if a model is requested \
+               (with --interpretation or with --all-models options)."
+    in
+    Arg.(value & flag & info
+           ["show-prop-model"; "show-propositional-model"] ~doc)
+  in
 
   let unsat_core =
     let doc = "Experimental support for computing and printing unsat-cores." in
-    Arg.(value & flag & info ["u"; "unsat-core"] ~doc ~docs) in
+    Arg.(value & flag & info ["u"; "unsat-core"] ~doc ~docs)
+  in
 
   let output_format =
     let doc =
@@ -1082,8 +1102,9 @@ let parse_output_opt =
   in
 
   Term.(ret (const mk_output_opt $
-             interpretation $ use_underscore $ unsat_core $
-             output_format $ model_type $
+             interpretation $ use_underscore $
+             all_models $ show_prop_model $
+             unsat_core $ output_format $ model_type $
              set_dump_models $ set_dump_models_on $
              set_sat_options $ set_frontend
             ))

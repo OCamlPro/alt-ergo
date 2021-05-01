@@ -92,6 +92,9 @@ let mk_goal loc name expr =
 let mk_check_sat loc name expr =
   Check_sat (loc, name, expr)
 
+let mk_check_all_sat loc name llexpr =
+  Check_all_sat (loc, name, llexpr)
+
 (** Declaration of theories, generic axioms and rewriting rules **)
 
 let mk_theory loc name ext expr =

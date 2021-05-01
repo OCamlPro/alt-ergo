@@ -121,7 +121,7 @@ let main () =
           | Ty.Cut ->
             { state with solver_ctx =
                            { state.solver_ctx with local = []}}
-          | Ty.Thm | Ty.Sat ->
+          | Ty.Thm | Ty.Sat | Ty.AllSat _ ->
             { state with solver_ctx = {
                   state.solver_ctx with global = []; local = []}}
         end
@@ -482,7 +482,7 @@ let main () =
         if Options.get_interpretation () then
           match State.get partial_model_key st with
           | Some (lazy model) ->
-            Models.output_concrete_model
+            Models.output_concrete_model ~pp_prop_model:false
               (Options.Output.get_fmt_regular ()) model;
             st
           | None ->
