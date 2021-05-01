@@ -1,0 +1,13 @@
+logic m1, m2, ae : prop
+logic A, M, S : int
+
+axiom a1:
+ if ae then A = 0 else A = 1
+
+axiom a2:
+ if (m1 or m2) then M = 0 else M = 1
+
+goal g:
+ S = A + M ->
+ minimize(S, 1) ->
+ false

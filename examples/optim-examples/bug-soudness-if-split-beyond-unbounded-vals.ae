@@ -1,0 +1,12 @@
+logic x, y, z : int
+
+axiom a: 0 <= x <= 33
+
+axiom a: minimize (z, 3)
+axiom a: maximize (x, 1)
+axiom a: maximize (y, 2)
+
+goal g:
+ 1 <= z <= 11 ->
+ 0 <= y  <= 10 ->
+ false

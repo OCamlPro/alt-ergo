@@ -1,0 +1,11 @@
+logic x : int
+logic f : int -> int
+logic P : int -> prop
+
+goal g:
+  maximize(x,1) ->
+  maximize(f(x), 2) ->
+  P(x) ->
+  0 <= f(x) <= 100 ->
+  1 <= x <= 5 -> (* ordering of constraints is important *)
+  false
