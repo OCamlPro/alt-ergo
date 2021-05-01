@@ -11,6 +11,12 @@
 
 (** {1 Models module} *)
 
+type objective_value =
+  | Obj_pinfty
+  | Obj_minfty
+  | Obj_val of string
+  | Obj_unk
+
 (** Print the given counterexample on the given formatter with the
     corresponding format setted with Options.get_output_format *)
 val output_concrete_model :
@@ -19,4 +25,5 @@ val output_concrete_model :
   ModelMap.V.t ModelMap.P.t ->
   ModelMap.V.t ModelMap.P.t ->
   ModelMap.V.t ModelMap.P.t ->
+  objectives:(Expr.t * objective_value) Util.MI.t ->
   unit

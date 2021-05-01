@@ -2123,15 +2123,18 @@ let optimizing_split env uf opt =
 
     | Sim.Core.Max(mx,_sol) ->
       let {Sim.Core.max_v; _} = Lazy.force mx in
-      let max_p = Q.add max_v c in
-      let optim = if to_max then max_p else Q.mult Q.m_one max_p in
+      let max_p = Q.add max_v.bvalue.v c in
+      let optim =
+        if to_max then max_p
+        else Q.mult Q.m_one max_p
+      in
       Format.eprintf
         "%a has a %s: %a@."
         E.print e
         (if to_max then "maximum" else "minimum")
         Q.print optim;
 
-      let r2 = alien_of (P.create [] optim  ty) in
+      let r2 = alien_of (P.create [] optim ty) in
       Debug.case_split r1 r2;
       let s = LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one) in
       Sig_rel.Optimized_split { opt with value = Value s; }

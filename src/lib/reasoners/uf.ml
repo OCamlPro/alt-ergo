@@ -1006,42 +1006,50 @@ let is_a_good_model_value (x, _) =
   | [y] -> X.equal x y
   | _ -> false
 
-let model_repr_of_term t env mrepr =
+let model_repr_of_term t env mrepr unbounded =
   try ME.find t mrepr, mrepr
   with Not_found ->
     let mk = try ME.find t env.make with Not_found -> assert false in
     let rep,_ = try MapX.find mk env.repr with Not_found -> assert false in
-    let cls =
-      try SE.elements (MapX.find rep env.classes)
-      with Not_found -> assert false
-    in
-    let cls =
-      try List.rev_map (fun s -> s, ME.find s env.make) cls
-      with Not_found -> assert false
-    in
-    let e = X.choose_adequate_model t rep cls in
-    e, ME.add t e mrepr
+    match unbounded with
+    | Some string_repr -> (rep, string_repr), mrepr
+    | None ->
+      let cls =
+        try SE.elements (MapX.find rep env.classes)
+        with Not_found -> assert false
+      in
+      let cls =
+        try List.rev_map (fun s -> s, ME.find s env.make) cls
+        with Not_found -> assert false
+      in
+      let e = X.choose_adequate_model t rep cls in
+      e, ME.add t e mrepr
+
+let is_optimization_op = function
+  | Sy.Op Sy.Optimize _ -> true
+  | _ -> false
 
 let compute_concrete_model_of_val
-    env t ((fprofs, cprofs, carrays, mrepr) as acc) =
+    env t ((fprofs, cprofs, carrays, mrepr) as acc) unbounded =
   let { E.f; xs; ty; _ } = E.term_view t in
   if X.is_solvable_theory_symbol f ty
   || E.is_fresh t || E.is_fresh_skolem t
   || E.equal t E.vrai || E.equal t E.faux
+  || is_optimization_op f
   then
     acc
   else
     let xs, tys, mrepr =
       List.fold_left
         (fun (xs, tys, mrepr) x ->
-           let rep_x, mrepr = model_repr_of_term x env mrepr in
+           let rep_x, mrepr = model_repr_of_term x env mrepr None in
            assert (is_a_good_model_value rep_x);
            (x, rep_x)::xs,
            (E.type_info x)::tys,
            mrepr
         ) ([],[], mrepr) (List.rev xs)
     in
-    let rep, mrepr = model_repr_of_term t env mrepr in
+    let rep, mrepr = model_repr_of_term t env mrepr unbounded in
     assert (is_a_good_model_value rep);
     match f, xs, ty with
     | Sy.Op Sy.Set, _, _ -> acc
@@ -1068,22 +1076,88 @@ let compute_concrete_model_of_val
         ModelMap.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
         mrepr
 
-  let compute_concrete_model ({ make; _ } as env) =
+let compute_concrete_model ~optimized_splits ({ make; _ } as env) =
+  let bounded, pinfty, minfty =
+    Util.MI.fold
+      (fun _ord v ((bounded, pinfty, minfty) as acc) ->
+         let {Th_util.value; r; order = _; is_max = _; e=_} = v in
+         match value with
+         | Value _ ->
+           SetX.add v.Th_util.r bounded, pinfty, minfty
+         | Pinfinity  -> bounded, SetX.add r pinfty, minfty
+         | Minfinity -> bounded, pinfty, SetX.add r minfty
+         | Unknown -> acc
+      ) optimized_splits (SetX.empty, SetX.empty, SetX.empty)
+  in
+  let not_unbounded = pinfty == SetX.empty && minfty == SetX.empty in
   ME.fold
-    (fun t _mk acc ->
-       compute_concrete_model_of_val env t acc
+    (fun t mk acc ->
+       if SetX.mem mk pinfty then
+         (* mk's optimum is +infinity *)
+         compute_concrete_model_of_val env t acc (Some "+oo")
+       else
+       if SetX.mem mk minfty then
+         (* mk's optimum is -infinity *)
+         compute_concrete_model_of_val env t acc (Some "-oo")
+       else
+       if not_unbounded || SetX.mem mk bounded then
+         (* either the pb is bounded (or it isn't an optimization pb)
+            or we have an optimum for mk *)
+         compute_concrete_model_of_val env t acc None
+       else
+         acc
     ) make
     (ModelMap.empty, ModelMap.empty, ModelMap.empty, ME.empty)
-
-let output_concrete_model fmt ~prop_model env =
-  if Options.get_interpretation () then
-    let functions, constants, arrays, _ =
-      compute_concrete_model env in
-    Models_output.output_concrete_model fmt prop_model ~functions ~constants
-      ~arrays
 
 let save_cache () =
   LX.save_cache ()
 
 let reinit_cache () =
   LX.reinit_cache ()
+
+let compute_objectives optimized_splits env mrepr =
+  let seen_infinity = ref false in
+  Util.MI.map
+    (fun {Th_util.e; value; r=_; is_max=_; order=_} ->
+       e,
+       (if !seen_infinity then Models.Obj_unk
+        else
+          match value with
+          | Pinfinity -> seen_infinity := true; Obj_pinfty
+          | Minfinity -> seen_infinity := true; Obj_minfty
+          | Value _ ->
+            let (_r_x, r_s), _mrepr = model_repr_of_term e env mrepr None in
+            Obj_val r_s
+          | Unknown ->
+            (* in this case, we should have !seen_infinity == true.
+               Which is handled in the if branch. Moreover, we
+               continue optimization now even if infinity is
+               encountered. *)
+            assert false
+       )
+    ) optimized_splits
+
+let output_concrete_model fmt ~prop_model ~optimized_splits env =
+  if Options.get_interpretation () then begin
+    if Options.get_objectives_in_interpretation() then
+      begin
+        (* take optimized_splits into account for model, but don't
+           print it in a separate section *)
+        let functions, constants, arrays, _mrepr =
+          compute_concrete_model env ~optimized_splits
+        in
+        Models.output_concrete_model fmt prop_model functions constants arrays
+          ~objectives:Util.MI.empty
+      end
+    else
+      begin
+        (* don't take optimized_splits into account for model, but
+           print it in a separate section *)
+        let functions, constants, arrays, mrepr =
+          compute_concrete_model env ~optimized_splits:Util.MI.empty
+        in
+        let objectives = compute_objectives optimized_splits env mrepr in
+        Models.output_concrete_model
+          fmt prop_model functions constants arrays ~objectives
+      end
+  end
