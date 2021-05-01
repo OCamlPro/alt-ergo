@@ -1394,6 +1394,20 @@ and type_form ?(in_theory=false) env f =
       check_pattern_matching missing dead f.pp_loc;
       TFmatch (e, filtered_pats)
 
+    | PPoptimize {expr; order; is_max} ->
+      Options.tool_req 1 "TR-Typing-Optmize$_F$";
+      let e = type_term env expr in
+      let order =
+        try int_of_string order
+        with _ -> Errors.typing_error (ShouldBeIntLiteral order) f.pp_loc
+      in
+      let term = TTapp(Symbols.Op (Symbols.Optimize {order; is_max}), [e]) in
+      let t1 = {
+        c = {tt_desc=term; tt_ty=Ty.Tbool};
+        annot=new_id (); }
+      in
+      TFatom { c = TApred (t1, false); annot=new_id () }
+
     | _ ->
       let te1 = type_term env f in
       let ty = te1.c.tt_ty in
@@ -1662,6 +1676,8 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
   | PPproject (_, e, _) ->
     no_alpha_renaming_b s e
 
+  | PPoptimize {expr; order=_; is_max=_} ->
+    no_alpha_renaming_b s expr
 
 let rec alpha_renaming_b ((up, m) as s) f =
   match f.pp_desc with
@@ -1919,6 +1935,11 @@ let rec alpha_renaming_b ((up, m) as s) f =
     let ff1 = alpha_renaming_b s f1 in
     if f1 == ff1 then f
     else {f with pp_desc = PPisConstr(ff1, a)}
+
+  | PPoptimize {expr; order; is_max} ->
+    let e' = alpha_renaming_b s expr in
+    if expr == e' then f
+    else {f with pp_desc = PPoptimize {expr=e'; order; is_max}}
 
 
 let alpha_renaming_b s f =

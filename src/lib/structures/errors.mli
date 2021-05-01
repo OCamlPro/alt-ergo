@@ -83,6 +83,7 @@ type typing_error =
   | BadPopCommand of {pushed : int; to_pop : int}
   | ShouldBePositive of int
   | PolymorphicEnum of string
+  | ShouldBeIntLiteral of string
 
 (** Errors that can be raised at solving*)
 type run_error =

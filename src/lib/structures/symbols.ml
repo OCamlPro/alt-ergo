@@ -55,6 +55,7 @@ type operator =
   | Int_floor | Int_ceil | Integer_log2
   | Max_real | Max_int | Min_real | Min_int
   | Not_theory_constant | Is_theory_constant | Linear_dependency
+  | Optimize of {order : int; is_max : bool}
 
 type lit =
   (* literals *)
@@ -143,6 +144,10 @@ let compare_operators op1 op2 =
         let r = Int.compare i1 i2 in
         if r = 0 then Int.compare j1 j2 else r
       | Int2BV n1, Int2BV n2 -> Int.compare n1 n2
+      | Optimize {order=o1; is_max=b1}, Optimize {order=o2; is_max=b2} ->
+        let c = o1 - o2 in
+        if c <> 0 then c
+        else Stdlib.compare b1 b2
       | _ , (Plus | Minus | Mult | Div | Modulo | Real_is_int
             | Concat | Extract _ | Get | Set | Fixed | Float | Reach
             | Access _ | Record | Sqrt_real | Abs_int | Abs_real
@@ -151,7 +156,7 @@ let compare_operators op1 op2 =
             | Integer_log2 | Pow | Integer_round
             | BVnot | BVand | BVor | Int2BV _ | BV2Nat
             | Not_theory_constant | Is_theory_constant | Linear_dependency
-            | Constr _ | Destruct _ | Tite) -> assert false
+            | Constr _ | Destruct _ | Tite | Optimize _) -> assert false
     )
 
 let compare_builtin b1 b2 =
@@ -340,6 +345,9 @@ let to_string ?(show_vars=true) x = match x with
   | Lit lit -> string_of_lit lit
   | Form form -> string_of_form form
   | Let -> "let"
+
+  | Op (Optimize {order; is_max=true}) -> Format.sprintf "maximize(-,%d)" order
+  | Op (Optimize {order; is_max=false}) -> Format.sprintf "minimize(-,%d)" order
 
 let to_string_clean s = to_string ~show_vars:false s
 let to_string s = to_string ~show_vars:true s
