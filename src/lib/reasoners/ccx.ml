@@ -88,6 +88,7 @@ module type S = sig
 
   val extract_concrete_model :
     prop_model:Expr.Set.t ->
+    optimized_splits:Th_util.optimized_split Util.MI.t ->
     t ->
     Models.t Lazy.t option
 
@@ -749,6 +750,6 @@ module Main : S = struct
     in
     Uf.term_repr env.uf t
 
-  let extract_concrete_model ~prop_model env =
-    Uf.extract_concrete_model ~prop_model env.uf
+  let extract_concrete_model ~prop_model ~optimized_splits env =
+    Uf.extract_concrete_model ~prop_model ~optimized_splits env.uf
 end

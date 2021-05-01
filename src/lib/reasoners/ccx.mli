@@ -79,6 +79,7 @@ module type S = sig
 
   val extract_concrete_model :
     prop_model:Expr.Set.t ->
+    optimized_splits:Th_util.optimized_split Util.MI.t ->
     t ->
     Models.t Lazy.t option
 end
