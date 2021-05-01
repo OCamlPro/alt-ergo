@@ -73,9 +73,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let empty_with_inst add_inst =
     { (empty ()) with add_inst = add_inst }
 
+  type timeout_reason =
+    | NoTimeout
+    | Assume
+    | ProofSearch
+    | ModelGen
+
   exception Sat of t
   exception Unsat of Explanation.t
-  exception I_dont_know of t
+  exception I_dont_know of { env : t; timeout : timeout_reason }
 
   exception IUnsat of t * Explanation.t
 
@@ -987,7 +993,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           else
             env
         in
-        if not updated then raise (I_dont_know env);
+        if not updated then raise (I_dont_know {env; timeout = ProofSearch});
         unsat_rec env ~first_call:false
 
       with Ex.Inconsistent (expl, _cls) -> (*may be raised during matching*)
@@ -1159,6 +1165,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Hstring.save_cache ();
     Shostak.Combine.save_cache ();
     Uf.save_cache ()
+
+  let get_model _env = None
 
 end
 

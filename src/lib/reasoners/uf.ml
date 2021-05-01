@@ -1076,7 +1076,9 @@ let compute_concrete_model_of_val
         ModelMap.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
         mrepr
 
-let compute_concrete_model ~optimized_splits ({ make; _ } as env) =
+let compute_concrete_model
+    ?(inline_obj_in_model=Util.MI.empty)
+    ({ make; _ } as env) =
   let bounded, pinfty, minfty =
     Util.MI.fold
       (fun _ord v ((bounded, pinfty, minfty) as acc) ->
@@ -1087,7 +1089,7 @@ let compute_concrete_model ~optimized_splits ({ make; _ } as env) =
          | Pinfinity  -> bounded, SetX.add r pinfty, minfty
          | Minfinity -> bounded, pinfty, SetX.add r minfty
          | Unknown -> acc
-      ) optimized_splits (SetX.empty, SetX.empty, SetX.empty)
+      ) inline_obj_in_model (SetX.empty, SetX.empty, SetX.empty)
   in
   let not_unbounded = pinfty == SetX.empty && minfty == SetX.empty in
   ME.fold
@@ -1120,7 +1122,10 @@ let compute_objectives optimized_splits env mrepr =
   Util.MI.map
     (fun {Th_util.e; value; r=_; is_max=_; order=_} ->
        e,
-       (if !seen_infinity then Models.Obj_unk
+       (if !seen_infinity then begin
+           (* every objective after 'oo' is printed as ]-oo, +oo[ *)
+           Models.Obj_unk
+         end
         else
           match value with
           | Pinfinity -> seen_infinity := true; Obj_pinfty
@@ -1137,27 +1142,23 @@ let compute_objectives optimized_splits env mrepr =
        )
     ) optimized_splits
 
-let output_concrete_model fmt ~prop_model ~optimized_splits env =
-  if Options.get_interpretation () then begin
-    if Options.get_objectives_in_interpretation() then
-      begin
-        (* take optimized_splits into account for model, but don't
-           print it in a separate section *)
-        let functions, constants, arrays, _mrepr =
-          compute_concrete_model env ~optimized_splits
+let extract_concrete_model ~prop_model ~optimized_splits env =
+  if Options.get_interpretation () then
+    Some (lazy (
+        let inline_obj_in_model =
+          if Options.get_objectives_in_interpretation() then
+            (* take optimized_splits into account for model, but don't
+               print it in a separate section *)
+            optimized_splits
+          else
+            Util.MI.empty
         in
-        Models.output_concrete_model fmt prop_model functions constants arrays
-          ~objectives:Util.MI.empty
-      end
-    else
-      begin
-        (* don't take optimized_splits into account for model, but
-           print it in a separate section *)
         let functions, constants, arrays, mrepr =
-          compute_concrete_model env ~optimized_splits:Util.MI.empty
+          compute_concrete_model env ~inline_obj_in_model
         in
         let objectives = compute_objectives optimized_splits env mrepr in
-        Models.output_concrete_model
-          fmt prop_model functions constants arrays ~objectives
-      end
-  end
+        { Models.propositional = prop_model;
+          functions; constants; arrays; objectives }
+      ))
+  else
+    None

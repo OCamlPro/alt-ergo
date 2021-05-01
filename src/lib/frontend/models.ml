@@ -31,6 +31,14 @@ type objective_value =
   | Obj_val of string
   | Obj_unk
 
+type t = {
+  propositional : Expr.Set.t;
+  constants : ModelMap.V.t ModelMap.P.t;
+  functions : ModelMap.V.t ModelMap.P.t;
+  arrays : ModelMap.V.t ModelMap.P.t;
+  objectives : (Expr.t * objective_value) Util.MI.t;
+}
+
 module Pp_smtlib_term = struct
 
   let to_string_type t =
@@ -461,24 +469,24 @@ module Why3CounterExample = struct
 end
 (* of module Why3CounterExample *)
 
-let output_concrete_model fmt props functions constants arrays ~objectives =
+let output_concrete_model fmt m =
   if get_interpretation () then begin
     Printer.print_fmt ~flushed:false fmt "@[<v 0>unknown@ ";
     Printer.print_fmt ~flushed:false fmt "@[<v 2>(model@,";
     if Options.get_output_format () == Why3 then begin
-      Why3CounterExample.output_constraints fmt props
+      Why3CounterExample.output_constraints fmt m.propositional
     end;
 
     fprintf fmt "@ ; Functions@ ";
     let records = SmtlibCounterExample.output_functions_counterexample
-        fmt  MS.empty functions in
+        fmt  MS.empty m.functions in
 
     fprintf fmt "@ ; Constants@ ";
     SmtlibCounterExample.output_constants_counterexample
-      fmt records constants;
+      fmt records m.constants;
 
-    SmtlibCounterExample.output_arrays_counterexample fmt arrays;
+    SmtlibCounterExample.output_arrays_counterexample fmt m.arrays;
 
     Printer.print_fmt fmt "@]@ )";
-    SmtlibCounterExample.output_objectives fmt objectives;
+    SmtlibCounterExample.output_objectives fmt m.objectives;
   end

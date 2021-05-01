@@ -47,7 +47,9 @@ module type S = sig
   val do_case_split : t -> Util.case_split_policy -> t * Expr.Set.t
   val add_term : t -> Expr.t -> add_in_cs:bool -> t
 
-  val compute_concrete_model : t -> t
+  val compute_concrete_model :
+    t ->
+    Models.t Lazy.t option
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :
@@ -57,16 +59,7 @@ module type S = sig
     int -> int -> t * Sig_rel.instances
 
   val get_assumed : t -> Expr.Set.t
-
-  val output_concrete_model :
-    Format.formatter ->
-    prop_model:Expr.Set.t ->
-    t ->
-    unit
-
   val reinit_cpt : unit -> unit
-  (** reinitializes the counter to zero *)
-
 end
 
 module Main_Default : S
