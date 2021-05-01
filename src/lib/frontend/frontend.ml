@@ -329,7 +329,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                 constants = Profile.P.empty;
                 functions = Profile.P.empty;
                 arrays = Profile.P.empty;
-                objectives = Util.MI.empty }
+                objectives = Util.MI.empty;
+                terms_values = Expr.Map.empty }
               )
           else
             None
