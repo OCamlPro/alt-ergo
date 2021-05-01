@@ -1656,6 +1656,27 @@ let update_used_by_pow env r1 p2 orig  eqs =
       ) s eqs
   with Exit | Not_found -> eqs
 
+let exists_in_simplex sim x =
+  Sim.Core.(MX.mem x sim.basic) || Sim.Core.(MX.mem x sim.non_basic)
+
+(* used radius in cube-test implementation *)
+let radius = X.term_embed @@ Expr.mk_term (Sy.name "!radius") [] Ty.Tint
+let cube_obj = Sim.Core.P.from_list [radius, Q.one]
+
+let bnd_to_simplex_bound ((bnd, explanation) : I.bnd) : Sim.Core.bound option =
+  match bnd with
+  | None -> None
+  | Some (bnd, offset) ->
+    let bvalue =
+      if Q.equal offset Q.one
+      then Sim.Core.R2.lower bnd
+      else if Q.equal offset Q.m_one
+      then Sim.Core.R2.upper bnd
+      else if Q.equal offset Q.zero
+      then Sim.Core.R2.of_r bnd
+      else assert false (* alt-ergo style *)
+    in Some {bvalue; explanation}
+
 (* extract non trivial constraints on integer expressions from maps of
    intervals *)
 let int_constraints_from_map_intervals =
@@ -1671,14 +1692,6 @@ let int_constraints_from_map_intervals =
     in
     MX.fold (fun x (i,_) acc -> aux (poly_of x) x i uf acc) env.monomes acc
 
-
-let exists_in_simplex sim x =
-  Sim.Core.(MX.mem x sim.basic) || Sim.Core.(MX.mem x sim.non_basic)
-
-(* used radius in cube-test implementation *)
-let radius = X.term_embed @@ Expr.mk_term (Sy.name "!radius") [] Ty.Tint
-let cube_obj = Sim.Core.P.from_list [radius, Q.one]
-
 let fm_simplex_cube_integers_encoding env uf has_eqs =
   let simplex =
     match env.cube_sim with
@@ -1686,19 +1699,17 @@ let fm_simplex_cube_integers_encoding env uf has_eqs =
       cube (* reuse existing simplex *)
     | _ ->
       (* existing simplex, if any, not normalized wrt eqs ? reset it *)
-      Sim.Core.empty ~is_int:true ~check_invs:true ~debug:0
+      Sim.Core.empty ~is_int:true ~check_invs:true
   in
   let simplex, _ = (* assert that radius >= 0 *)
-    Sim.Assert.var
-      simplex radius (Some (Q.zero, Q.zero)) Ex.empty None Ex.empty in
+    Sim.Assert.var simplex radius
+  in
   List.fold_left
     (fun simplex (p, uints) ->
        let (mn, ex_mn), (mx, ex_mx) =
          match uints, List.rev uints with
-         | [], [] ->
-           (None, Ex.empty), (None, Ex.empty)
-         | ((mn, ex_mn), _) ::_, (_, (mx, ex_mx)) :: _ ->
-           (mn, ex_mn), (mx, ex_mx)
+         | [], [] -> (None, Ex.empty), (None, Ex.empty)
+         | (min, _) ::_, (_, max) :: _ -> min, max
          | [], _ | _, [] -> assert false
        in
        if mn == None && mx == None then simplex
@@ -1707,7 +1718,7 @@ let fm_simplex_cube_integers_encoding env uf has_eqs =
          assert (Q.sign c = 0);
          let l = List.rev_map (fun (c, x) -> x, c) (List.rev l) in
          let cst0 =
-           List.fold_left (fun z (_, c) -> Q.add z (Q.abs c))Q.zero l
+           List.fold_left (fun z (_, c) -> Q.add z (Q.abs c)) Q.zero l
          in
          let cst = Q.div cst0 (Q.from_int 2) in
          let p_radius = P.create [cst, radius] Q.zero Ty.Tint in
@@ -1722,16 +1733,16 @@ let fm_simplex_cube_integers_encoding env uf has_eqs =
          let lpge = P.to_list pge |> fst |> List.map (fun (a, b) -> b, a) in
          let lple = P.to_list ple |> fst |> List.map (fun (a, b) -> b, a) in
          let simplex = (* assert lower bound *)
-           if mn == None then simplex
-           else
+           match mn with
+           | None -> simplex
+           | Some _ ->
+             let min = bnd_to_simplex_bound (mn, ex_mn) in
              fst @@
              if exists_in_simplex simplex xpge then
-               Sim.Assert.var
-                 simplex xpge mn ex_mn None Ex.empty
+               Sim.Assert.var simplex xpge ?min
              else
                Sim.Assert.poly
-                 simplex (Sim.Core.P.from_list lpge) xpge
-                 mn ex_mn None Ex.empty
+                 simplex (Sim.Core.P.from_list lpge) xpge ?min
          in
          let rev_mx =
            match mx with
@@ -1739,17 +1750,17 @@ let fm_simplex_cube_integers_encoding env uf has_eqs =
            | Some (a, b) -> Some (Q.mult Q.m_one a, Q.mult Q.m_one b)
          in
          let simplex =
-           if rev_mx == None then simplex
-           else
-             fst @@
-             (* assert upper bound -> inverted as a lower bound *)
-             if exists_in_simplex simplex xple then
-               Sim.Assert.var
-                 simplex xple rev_mx ex_mx None Ex.empty
-             else
-               Sim.Assert.poly
-                 simplex (Sim.Core.P.from_list lple) xple
-                 rev_mx ex_mx None Ex.empty
+           match rev_mx with
+           | None -> simplex
+           | Some _ ->
+               let max = bnd_to_simplex_bound (mx, ex_mx) in
+               fst @@
+               (* assert upper bound -> inverted as a lower bound *)
+               if exists_in_simplex simplex xple then
+                 Sim.Assert.var simplex xple ?max
+               else
+                 Sim.Assert.poly
+                   simplex (Sim.Core.P.from_list lple) xple ?max
          in
          simplex
     ) simplex (int_constraints_from_map_intervals env uf)
@@ -1777,7 +1788,7 @@ let solve_cube_integers env are_eq sim =
   | Sim.Core.Max(mx,_sol) -> (* implied bounds or eqs *)
     let {Sim.Core.max_v; _} = Lazy.force mx in
     let obj = match mx_res with None -> assert false | Some (p, _) -> p in
-    Debug.optimum obj max_v;
+    Debug.optimum obj (max_v.bvalue.v);
     let deds, ex = (* deductions + explanation *)
       List.fold_left
         (fun (l, ex) (x0, q) ->
@@ -1788,37 +1799,44 @@ let solve_cube_integers env are_eq sim =
            let rv = alien_of (P.create [] Q.zero Ty.Tint) in
            let x = X.subst radius rv x0 in (* remove radius from x *)
            (* necessiraly equals low min or max bound *)
-           let (l_i, w) as value = x_info.value in
+           let (l_i, w) =
+             (x_info.value.v, x_info.value.offset)
+           in
            assert (Q.sign w = 0); (* no strict ineqs on Ints *)
            (* why is this deduction correct:
               - we assumed constraints l_i <= ctx_i
 
               - radius is maximized by setting ctx_i's slake variables
-              that appear in 'obj' to their min 'l_i'
+                that appear in 'obj' to their min 'l_i'
 
               - 'obj' evaluates to a constant, and the coefficients of
-              the constraints ctx_i in it are negative (because we hit
-              max for objective with lower bounds).
+                the constraints ctx_i in it are negative (because we hit
+                max for objective with lower bounds).
 
               - if we rather transform the constraints to
                  0 <= (- l_i) + ctx_i
               - then, we multiply them by the abs (positive) value of
-              their coefficients in obj (without changin ineq's direction)
+                their coefficients in obj (without changin ineq's direction)
                  0 <= (- q) ((- l_i) + ctx_i)
 
               - finally, the SUM (- q) ((- l_i) + ctx_i) is actually equal to
-              obj.
+                obj.
 
               - Now, we can use, FM/FM-Simplex bounds deduction mecanism:
-              -> 0 <= (- q) ((- l_i) + ctx_i) <= max_v
-              -> ctx_i <= l_i + floor (max_v / (-q))
+                -> 0 <= (- q) ((- l_i) + ctx_i) <= max_v
+                -> ctx_i <= l_i + floor (max_v / (-q))
 
               Hence, an upper bound for ctx_i
            *)
            assert (Q.sign q < 0);
-           assert (Sim.Core.equals_optimum value x_info.mini);
-           let ded = Q.add l_i @@ Q.floor @@ Q.div max_v @@ Q.abs q in
-           (x, ded) :: l, Ex.union ex x_info.min_ex
+           assert (Sim.Core.equals_optimum x_info.value x_info.mini);
+           let ded = Q.add l_i @@ Q.floor @@ Q.div max_v.bvalue.v @@ Q.abs q in
+           let ex =
+             match x_info.mini with
+             | Some { explanation; _ } -> Ex.union ex explanation
+             | None -> ex
+           in
+           (x, ded) :: l, ex
         )([], Ex.empty) (Sim.Core.P.bindings obj)
     in
     List.fold_left (fun env (x, max_bnd) ->
@@ -2174,34 +2192,6 @@ let case_split_union_of_intervals =
 
 (*****)
 
-let bnd_to_simplex_bound ((bnd, explanation) : I.bnd) : Sim.Core.bound option =
-  match bnd with
-  | None -> None
-  | Some (bnd, offset) ->
-    let bvalue =
-      if Q.equal offset Q.one
-      then Sim.Core.R2.lower bnd
-      else if Q.equal offset Q.m_one
-      then Sim.Core.R2.upper bnd
-      else if Q.equal offset Q.zero
-      then Sim.Core.R2.of_r bnd
-      else assert false (* alt-ergo style *)
-    in Some {bvalue; explanation}
-
-let int_constraints_from_map_intervals =
-  let aux p xp i uf acc =
-    if Uf.is_normalized uf xp && I.is_point i == None
-       && P.type_info p == Ty.Tint
-    then (p, I.bounds_of i) :: acc
-    else acc
-  in
-  fun env uf ->
-    let acc =
-      MP.fold (fun p i acc -> aux p (alien_of p) i uf acc) env.polynomes []
-    in
-    MX.fold (fun x (i,_) acc -> aux (poly_of x) x i uf acc) env.monomes acc
-
-
 let fm_simplex_unbounded_integers_encoding env uf =
   let simplex = Sim.Core.empty ~is_int:true ~check_invs:true in
   let int_ctx = int_constraints_from_map_intervals env uf in
@@ -2342,11 +2332,6 @@ let optimizing_split env uf opt =
   let p = poly_of repr in
   match P.is_const p with
   | Some optim ->
-    Format.eprintf
-      "%a has a %s: %a@."
-      E.print e
-      (if to_max then "maximum" else "minimum")
-      Q.print optim;
     let r2 = alien_of (P.create [] optim  ty) in
     let t2 = mk_const_term optim ty in
     Debug.case_split r1 r2;
@@ -2365,9 +2350,6 @@ let optimizing_split env uf opt =
     | Sim.Core.Sat _   -> assert false (* because we maximized *)
     | Sim.Core.Unsat _ -> assert false (* we know sim is SAT *)
     | Sim.Core.Unbounded _ ->
-      Format.eprintf
-        "%a is unbounded. Let other methods assign a value for it@."
-        E.print e;
       let value = if to_max then Th_util.Pinfinity else Th_util.Minfinity in
       Sig_rel.Optimized_split { opt with value }
 
@@ -2378,12 +2360,6 @@ let optimizing_split env uf opt =
         if to_max then max_p
         else Q.mult Q.m_one max_p
       in
-      Format.eprintf
-        "%a has a %s: %a@."
-        E.print e
-        (if to_max then "maximum" else "minimum")
-        Q.print optim;
-
       let r2 = alien_of (P.create [] optim ty) in
       Debug.case_split r1 r2;
       let t2 = mk_const_term optim ty in

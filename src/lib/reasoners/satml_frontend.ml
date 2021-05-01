@@ -1064,22 +1064,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                E.mk_or and_ ((if is_max then gt else lt) e tv) false 0
             )((if is_max then gt else lt) e tv) l
         in
-        Format.eprintf
-          "Obj %a has an optimum. Should continue beyond SAT to try to \
-           find a better opt than v = %a@."
-          Expr.print e Expr.print tv;
-        Format.eprintf "neg is %a@." E.print neg;
         let l = [mk_gf neg] in
-        Format.eprintf
-          "TODO: can we add the clause without 'cancel_until 0' ?";
+        (* TODO: can we add the clause without 'cancel_until 0' ? *)
         SAT.cancel_until env.satml 0;
         let env, updated = assume_aux ~dec_lvl:0 env l in
-        if not updated then begin
-          Format.eprintf
-            "env not updated after injection of neg! termination \
-             issue.@.@.";
-          assert false
-        end;
+        assert (updated);
         let is_gui = Options.get_is_gui() in
         Options.Time.unset_timeout ~is_gui;
         Options.Time.set_timeout ~is_gui (Options.get_timelimit ());

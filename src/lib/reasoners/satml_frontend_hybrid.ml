@@ -58,9 +58,10 @@ module Make (Th : Theory.S) = struct
               SE.add (formula_of_atom env a) acc)
               (SAT.reason_of_deduction p) SE.empty in
           lazy (Ex.make_deps r) in
-        Some (l_ex,Atom.level p)
+        Some (l_ex, Atom.level p)
       else None
-    | None -> assert false
+    | None ->
+        Util.failwith "No proxy formula for the formula %a" E.print f
 
   let forget_decision env f lvl =
     let l_ok, _ =

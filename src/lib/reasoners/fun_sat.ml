@@ -588,6 +588,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     try
       env.cdcl := CDCL.forget_decision !(env.cdcl) f lvl
     with
+    (* TODO: remove this dangerous match. *)
     | _ ->
       Printer.print_err
         "@[<v 2>cdcl_backjump error:@,%s@]"
@@ -769,8 +770,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       with Not_found ->
       try let ff, _, _, _ = ME.find nf env.gamma in aux gf ff
       with Not_found -> gf
-
-
 
   let do_bcp env tcp tcp_cache tmp_cache delta acc =
     let tcp = tcp && not (Options.get_no_tcp ()) in
@@ -1689,8 +1688,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     check_no_decision_in_env env;
     Debug.is_it_unsat gf;
     try
-      let env = assume env env.pending_assumes in
-      let env = { env with pending_assumes = [] } in
+      (* let env = assume env env.pending_assumes in
+      let env = { env with pending_assumes = [] } in *)
       let guards_to_assume =
         ME.fold (fun _g gf_guard_with_ex acc ->
             gf_guard_with_ex :: acc
@@ -1767,7 +1766,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     (* in case of all-models and/or call to solver with old
        unbacktracked decisions *)
     check_no_decision_in_env env;
-    if Options.get_process_when_assuming() then
+    if true then
+      (* TODO: fix regressions when we disable this option. *)
+(*     if Options.get_process_when_assuming() then *)
       try
         if Options.get_tableaux_cdcl () then
           cdcl_assume false env [add_guard env fg,dep];
