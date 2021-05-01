@@ -334,3 +334,9 @@ let mk_algebraic_test loc expr cstr =
 
 let mk_algebraic_project loc ~guarded expr cstr =
   mk_localized loc (PPproject (guarded, expr, cstr))
+
+let mk_maximize loc expr order =
+  mk_localized loc (PPoptimize {order; expr; is_max = true})
+
+let mk_minimize loc expr order =
+  mk_localized loc (PPoptimize {order; expr; is_max = false})

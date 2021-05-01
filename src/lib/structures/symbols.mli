@@ -55,6 +55,7 @@ type operator =
   | Int_floor | Int_ceil | Integer_log2
   | Max_real | Max_int | Min_real | Min_int
   | Not_theory_constant | Is_theory_constant | Linear_dependency
+  | Optimize of {order : int; is_max : bool}
 
 type lit =
   (* literals *)

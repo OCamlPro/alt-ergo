@@ -77,6 +77,7 @@ type typing_error =
   | BadPopCommand of {pushed : int; to_pop : int}
   | ShouldBePositive of int
   | PolymorphicEnum of string
+  | ShouldBeIntLiteral of string
 
 type run_error =
   | Invalid_steps_count of int
@@ -198,18 +199,15 @@ let report_typing_error fmt = function
   | ShouldBeADT ty ->
     fprintf fmt "%a is not an algebraic, a record or an enumeration datatype"
       Ty.print ty
-
   | MatchNotExhaustive missing ->
     fprintf fmt
       "Pattern-matching is not exhaustive. These cases are missing: %a"
       (Util.print_list ~sep:" |" ~pp:Hstring.print) missing
-
   | MatchUnusedCases dead ->
     fprintf fmt
       "Pattern-matching contains unreachable cases. These cases are\
        removed: %a"
       (Util.print_list ~sep:" |" ~pp:Hstring.print) dead
-
   | NotAdtConstr (lbl, ty) ->
     fprintf fmt
       "The identifiant %s is not a constructor of an algebraic data type. \
@@ -221,10 +219,12 @@ let report_typing_error fmt = function
   | ShouldBePositive n ->
     fprintf fmt
       "This integer : %d should be positive" n
-
   | PolymorphicEnum n ->
     fprintf fmt
       "Polymorphic enum definition for %s is not supported" n
+  | ShouldBeIntLiteral s ->
+    fprintf fmt
+      "This expression : %s should be an integer constant" s
 
 let report_run_error fmt = function
   | Invalid_steps_count i ->
