@@ -455,6 +455,9 @@ val set_tighten_vars : bool -> unit
 (** Set [use_fpa] accessible with {!val:get_use_fpa} *)
 val set_use_fpa : bool -> unit
 
+(** Set [process_when_assuming] accessible with {!val:get_process_when_assuming} *)
+val set_process_when_assuming : bool -> unit
+
 (** Set [session_file] accessible with {!val:get_session_file} *)
 val set_session_file : string -> unit
 
@@ -1020,6 +1023,12 @@ val get_tighten_vars : unit -> bool
 
 (** [true] if support for floating-point arithmetic is enabled. *)
 val get_use_fpa : unit -> bool
+(** Default to [false] *)
+
+(** [true] if SAT engine processes assumed formulas before unsat is
+   called (ie. adding them to SAT's env, translation to CNF, bcp,
+   propagation to theories, ... *)
+val get_process_when_assuming : unit -> bool
 (** Default to [false] *)
 
 (** Possible values are
