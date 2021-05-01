@@ -339,6 +339,7 @@ let mk_sat_opt get_bottom_classes disable_flat_formulas_simplification
     no_backward no_decisions no_decisions_on
     no_minimal_bj no_sat_learning no_tableaux_cdcl_in_instantiation
     no_tableaux_cdcl_in_theories sat_plugin sat_solver
+    process_when_assuming
   =
   let arith_matching = not no_arith_matching in
   let mk_no_decisions_on ndo =
@@ -383,6 +384,7 @@ let mk_sat_opt get_bottom_classes disable_flat_formulas_simplification
     set_sat_plugin sat_plugin;
     set_sat_solver sat_solver;
     set_tableaux_cdcl tableaux_cdcl;
+    set_process_when_assuming process_when_assuming;
     `Ok()
   | `Error m -> `Error (false, m)
 
@@ -1167,13 +1169,20 @@ let parse_sat_opt =
     Arg.(value & opt string "CDCL-Tableaux" &
          info ["sat-solver"] ~docv ~docs ~doc) in
 
+  let process_when_assuming =
+    let doc = "Process assumed formulas on the fly before SAT.unsat is \
+               called (ie. adding formulas to SAT's env, translation \
+               to CNF, bcp, propagation to theories, ..." in
+    Arg.(value & flag & info ["process-when-assuming"] ~docs ~doc) in
+
   Term.(ret (const mk_sat_opt $
              get_bottom_classes $ disable_flat_formulas_simplification $
              enable_restarts $ no_arith_matching $
              no_backjumping $ no_backward $ no_decisions $ no_decisions_on $
              no_minimal_bj $ no_sat_learning $
              no_tableaux_cdcl_in_instantiation $
-             no_tableaux_cdcl_in_theories $ sat_plugin $ sat_solver
+             no_tableaux_cdcl_in_theories $ sat_plugin $ sat_solver $
+             process_when_assuming
             ))
 
 let parse_term_opt =

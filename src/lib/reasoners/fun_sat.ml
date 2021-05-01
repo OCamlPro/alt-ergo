@@ -157,6 +157,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        - plvl is the propagation level (w.r.t. dlvl) of the formula.
          It forms with dlvl a total ordering on the formulas in gamma.
     *)
+    pending_assumes : (E.gformula * Ex.t) list;
     gamma : (E.gformula * Ex.t * int * int) ME.t;
     nb_related_to_goal : int;
     nb_related_to_hypo : int;
@@ -1689,6 +1690,8 @@ are not Th-reduced";
     check_no_decision_in_env env;
     Debug.is_it_unsat gf;
     try
+      let env = assume env env.pending_assumes in
+      let env = { env with pending_assumes = [] } in
       let guards_to_assume =
         ME.fold (fun _g gf_guard_with_ex acc ->
             gf_guard_with_ex :: acc
@@ -1764,18 +1767,23 @@ are not Th-reduced";
     (* in case of all-models and/or call to solver with old
        unbacktracked decisions *)
     check_no_decision_in_env env;
-    try
-      if Options.get_tableaux_cdcl () then
-        cdcl_assume false env [add_guard env fg,dep];
-      assume env [add_guard env fg,dep]
-    with
-    | IUnsat (d, classes) ->
-      Debug.bottom classes;
-      raise (Unsat d)
-    | Util.Timeout ->
-      (* don't attempt to compute a model if timeout before
-         calling unsat function *)
-      raise (I_dont_know {env; timeout = Assume})
+    if Options.get_process_when_assuming() then
+      try
+        if Options.get_tableaux_cdcl () then
+          cdcl_assume false env [add_guard env fg,dep];
+        assume env [add_guard env fg,dep]
+      with
+      | IUnsat (d, classes) ->
+        Debug.bottom classes;
+        raise (Unsat d)
+      | Util.Timeout ->
+        (* don't attempt to compute a model if timeout before
+           calling unsat function *)
+        raise (I_dont_know {env; timeout = Assume})
+    else
+      { env with
+        pending_assumes =
+          (add_guard env fg, dep) :: env.pending_assumes }
 
 
   let pred_def env f name dep _loc =
@@ -1833,6 +1841,7 @@ are not Th-reduced";
     let tbox = Th.add_term tbox E.vrai ~add_in_cs:true in
     let tbox = Th.add_term tbox E.faux ~add_in_cs:true in
     let env = {
+      pending_assumes = [];
       gamma = ME.empty;
       nb_related_to_goal = 0;
       nb_related_to_hypo = 0;
