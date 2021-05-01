@@ -1043,7 +1043,6 @@ let compute_concrete_model_of_val
       List.fold_left
         (fun (xs, tys, mrepr) x ->
            let rep_x, mrepr = model_repr_of_term x env mrepr None in
-           assert (is_a_good_model_value rep_x);
            (x, rep_x)::xs,
            (E.type_info x)::tys,
            mrepr
