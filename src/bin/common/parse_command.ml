@@ -366,8 +366,8 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     `Ok()
 
 let mk_output_opt
-    interpretation use_underscore unsat_core output_format model_type
-    () () ()
+    interpretation use_underscore objectives_in_interpretation unsat_core
+    output_format model_type () () ()
   =
   set_infer_output_format (Option.is_none output_format);
   let output_format = match output_format with
@@ -380,6 +380,7 @@ let mk_output_opt
   in
   set_interpretation interpretation;
   set_interpretation_use_underscore use_underscore;
+  set_objectives_in_interpretation objectives_in_interpretation;
   set_unsat_core unsat_core;
   set_output_format output_format;
   set_model_type model_type;
@@ -1032,12 +1033,22 @@ let parse_output_opt =
     let docv = "VAL" in
     Arg.(value & flag & info
            ["interpretation-use-underscore";"use-underscore"]
-           ~docv ~docs:s_models ~doc ~deprecated) in
-
+           ~docv ~docs:s_models ~doc ~deprecated)
+  in
+  let objectives_in_interpretation =
+    let doc = " inline pretty-printing of optimized expressions in the \
+               model instead of a dedicated section '(objectives \
+               ...)'. Be aware that a part of the model may be shrunk \
+               or not accurate if some expressions to optimize are \
+               unbounded." in
+    Arg.(value & flag & info
+           ["objectives-in-interpretation";"objectives-in-model";
+            "obj-in-interpretation";"obj-in-model"] ~doc)
+  in
   let unsat_core =
     let doc = "Experimental support for computing and printing unsat-cores." in
-    Arg.(value & flag & info ["u"; "unsat-core"] ~doc ~docs) in
-
+    Arg.(value & flag & info ["u"; "unsat-core"] ~doc ~docs)
+  in
   let output_format =
     let doc =
       Format.sprintf
@@ -1078,11 +1089,11 @@ let parse_output_opt =
   in
 
   Term.(ret (const mk_output_opt $
-             interpretation $ use_underscore $ unsat_core $
+             interpretation $ use_underscore $
+             objectives_in_interpretation $ unsat_core $
              output_format $ model_type $
              set_dump_models $ set_sat_options $
-             set_frontend
-            ))
+             set_frontend))
 
 let parse_profiling_opt =
 
