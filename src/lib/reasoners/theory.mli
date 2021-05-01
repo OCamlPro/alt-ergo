@@ -46,7 +46,7 @@ module type S = sig
   val extract_ground_terms : t -> Expr.Set.t
   val get_real_env : t -> Ccx.Main.t
   val get_case_split_env : t -> Ccx.Main.t
-  val do_case_split : t -> t * Expr.Set.t
+  val do_case_split : t -> Util.case_split_policy -> t * Expr.Set.t
   val add_term : t -> Expr.t -> add_in_cs:bool -> t
 
   val compute_concrete_model : t -> t

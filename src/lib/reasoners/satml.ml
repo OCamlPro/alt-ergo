@@ -706,14 +706,12 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     if Options.get_case_split_policy () != Util.AfterTheoryAssume then
       failwith
         "Only AfterTheoryAssume case-split policy is supported by satML";
-    if Options.get_case_split_policy () == origin then
-      try
-        let tenv, _ = Th.do_case_split env.tenv in
-        env.tenv <- tenv;
-        C_none
-      with Ex.Inconsistent (expl, _) ->
-        C_theory expl
-    else C_none
+    try
+      let tenv, _ = Th.do_case_split env.tenv origin in
+      env.tenv <- tenv;
+      C_none
+    with Ex.Inconsistent (expl, _) ->
+      C_theory expl
 
   module SA = Atom.Set
 
