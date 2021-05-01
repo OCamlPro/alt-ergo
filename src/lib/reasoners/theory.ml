@@ -669,37 +669,40 @@ module Main_Default : S = struct
       { t with gamma = gamma }
     in
     fun a t ->
-      if Options.get_profiling() then Profiling.query();
-      Options.exec_thread_yield ();
-      Debug.query a;
-      try
-        match E.lit_view a with
-        | E.Eq (t1, t2)  ->
-          let t = add_and_process_conseqs a t in
-          CC_X.are_equal t.gamma t1 t2 ~init_terms:false
+      if Options.get_no_tcp () then None
+      else begin
+        if Options.get_profiling() then Profiling.query();
+        Options.exec_thread_yield ();
+        Debug.query a;
+        try
+          match E.lit_view a with
+          | E.Eq (t1, t2)  ->
+            let t = add_and_process_conseqs a t in
+            CC_X.are_equal t.gamma t1 t2 ~init_terms:false
 
-        | E.Distinct [t1; t2] ->
-          let na = E.neg a in
-          let t = add_and_process_conseqs na t in (* na ? *)
-          CC_X.are_distinct t.gamma t1 t2
+          | E.Distinct [t1; t2] ->
+            let na = E.neg a in
+            let t = add_and_process_conseqs na t in (* na ? *)
+            CC_X.are_distinct t.gamma t1 t2
 
-        | E.Distinct _ | E.Eql _ ->
-          (* we only assume toplevel distinct with more that one arg.
-             not interesting to do a query in this case ?? or query ? *)
-          None
+          | E.Distinct _ | E.Eql _ ->
+            (* we only assume toplevel distinct with more that one arg.
+               not interesting to do a query in this case ?? or query ? *)
+            None
 
-        | E.Pred (t1,b) ->
-          let t = add_and_process_conseqs a t in
-          if b
-          then CC_X.are_distinct t.gamma t1 Expr.vrai
-          else CC_X.are_equal t.gamma t1 Expr.vrai ~init_terms:false
+          | E.Pred (t1,b) ->
+            let t = add_and_process_conseqs a t in
+            if b
+            then CC_X.are_distinct t.gamma t1 Expr.vrai
+            else CC_X.are_equal t.gamma t1 Expr.vrai ~init_terms:false
 
-        | _ ->
-          let na = E.neg a in
-          let t = add_and_process_conseqs na t in
-          CC_X.query t.gamma na
-      with Ex.Inconsistent (d, classes) ->
-        Some (d, classes)
+          | _ ->
+            let na = E.neg a in
+            let t = add_and_process_conseqs na t in
+            CC_X.query t.gamma na
+        with Ex.Inconsistent (d, classes) ->
+          Some (d, classes)
+      end
 
   let add_term_in_gm gm t =
     let facts = CC_X.empty_facts() in
