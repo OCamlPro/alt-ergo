@@ -65,6 +65,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     unknown_reason : Sat_solver_sig.unknown_reason option;
     (** The reason why satml raised [I_dont_know] if it does; [None] by
         default. *)
+
+    objectives : Th_util.optimized_split Util.MI.t option ref
   }
 
   let empty_guards () = {
@@ -95,6 +97,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       last_saved_model = ref None;
       model_gen_phase = ref false;
       unknown_reason = None;
+      objectives = ref None
     }
 
   let empty_with_inst add_inst =
@@ -1035,6 +1038,69 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           env i ~unknown_reason:(Timeout ProofSearch) (* may becomes ModelGen *)
       end
 
+
+  let [@inline always] gt a b = E.mk_builtin ~is_pos:false Symbols.LE [a;b]
+  let [@inline always] lt a b = E.mk_builtin ~is_pos:true  Symbols.LT [a;b]
+
+  let analyze_unknown_for_objectives env unknown_exn unsat_rec_prem : unit =
+    let obj = Th.get_objectives (SAT.current_tbox env.satml) in
+    if Util.MI.is_empty obj then raise unknown_exn;
+    env.objectives := Some obj;
+    let seen_infinity = ref false in
+    let acc =
+      Util.MI.fold
+        (fun _ {Th_util.e; value; r=_; is_max; order=_} acc ->
+           if !seen_infinity then acc
+           else
+             match value with
+             | Pinfinity ->
+               seen_infinity := true; acc
+             | Minfinity ->
+               seen_infinity := true; acc
+             | Value (_,_, Th_util.CS (Some {opt_val = Value v; _},_,_)) ->
+               (* hack-ish to get the value of type expr *)
+               (e, v, is_max) :: acc
+             | Value _ ->
+               assert false
+             | Unknown ->
+               assert false
+        ) obj []
+    in
+    begin match acc with
+      | [] ->
+        (* first objective is infinity *)
+        assert (!seen_infinity);
+        raise unknown_exn;
+
+      | (e,tv, is_max)::l ->
+        let neg =
+          List.fold_left
+            (fun acc (e, tv, is_max) ->
+               let eq = E.mk_eq e tv ~iff: false in
+               let and_ = E.mk_and acc eq false in
+               E.mk_or and_ ((if is_max then gt else lt) e tv) false
+            )((if is_max then gt else lt) e tv) l
+        in
+        Format.eprintf
+          "Obj %a has an optimum. Should continue beyond SAT to try to \
+           find a better opt than v = %a@."
+          Expr.print e Expr.print tv;
+        Format.eprintf "neg is %a@." E.print neg;
+        let l = [mk_gf neg] in
+        Format.eprintf
+          "TODO: can we add the clause without 'cancel_until 0' ?";
+        SAT.cancel_until env.satml 0;
+        let env, updated = assume_aux ~dec_lvl:0 env l in
+        if not updated then begin
+          Format.eprintf
+            "env not updated after injection of neg! termination \
+             issue.@.@.";
+          assert false
+        end;
+        unsat_rec_prem env ~first_call:false
+    end
+
+
   let rec unsat_rec env ~first_call:_ : unit =
     try SAT.solve env.satml; assert false
     with
@@ -1094,6 +1160,27 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
           | Util.Timeout -> model_gen_on_timeout env
         end
+
+  let rec unsat_rec_prem env ~first_call : unit =
+    try
+      unsat_rec env ~first_call
+    with
+    | I_dont_know env as e ->
+      begin
+        try analyze_unknown_for_objectives env e unsat_rec_prem
+        with
+        | IUnsat (env, _) ->
+          assert (!(env.objectives) != None);
+          (* objectives is a ref, it's necessiraly updated as a
+             side-effect to best value *)
+          raise (I_dont_know env)
+      end
+    | Util.Timeout as e -> raise e
+
+    | IUnsat (env, _) as e ->
+      if !(env.objectives) == None then raise e;
+      (* TODO: put the correct objectives *)
+      raise (I_dont_know env)
 
   (* copied from sat_solvers.ml *)
   let max_term_depth_in_sat env =
@@ -1186,7 +1273,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env, _updated = assume_aux ~dec_lvl:0 env [gf] in
       let max_t = max_term_depth_in_sat env in
       let env = {env with inst = Inst.register_max_term_depth env.inst max_t} in
-      unsat_rec env ~first_call:true;
+      unsat_rec_prem env ~first_call:true;
       assert false
     with
     | IUnsat (_env, dep) ->
