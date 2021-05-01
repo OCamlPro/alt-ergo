@@ -50,7 +50,8 @@ type 'a result = {
 }
 
 type case_split =
-  | Split of (Shostak.Combine.r Xliteral.view * bool * Th_util.lit_origin) list
+  | Split of Th_util.split_info list
+  | Optimized_split of Th_util.optimized_split
 
 module type RELATION = sig
   type t
@@ -64,6 +65,7 @@ module type RELATION = sig
   val case_split :
     t -> Uf.t ->
     for_model:bool ->
+    to_optimize: Th_util.optimized_split option ->
     case_split
   (** case_split env returns a list of equalities *)
 

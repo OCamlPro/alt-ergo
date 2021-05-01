@@ -359,7 +359,8 @@ module Main_Default : S = struct
     terms : Expr.Set.t;
     gamma : CC_X.t;
     gamma_finite : CC_X.t;
-    choices : choice list
+    choices : choice list;
+    objectives : Th_util.optimized_split Util.MI.t;
   }
 
   let add_explanations_to_splits l =
@@ -373,6 +374,42 @@ module Main_Default : S = struct
          (* A new explanation in order to track the choice *)
          (c, size, CPos exp, ex_c_exp)) l
 
+  let register_optimized_split objectives u =
+    try
+      let x = Util.MI.find u.Th_util.order objectives in
+      assert (E.equal x.Th_util.e u.Th_util.e); (* and its Value ... *)
+      Util.MI.add u.Th_util.order u objectives
+    with Not_found ->
+      assert false
+
+
+  exception Found of Th_util.optimized_split
+
+  let next_optimization env ~for_model =
+    try
+      Util.MI.iter (fun _ x ->
+          match x.Th_util.value with
+          | Value _ ->
+            ()
+          | Pinfinity | Minfinity ->
+            (* We should block case-split at infinite values.
+               Otherwise. Otherwise, we may have soundness issues. We
+               may think an objective is unbounded, but some late
+               constraints may make it bounded.
+
+               An alternative is to only allow further splits when we
+               know that no extra-assumpptions will be propagated to
+               the env. Hence the test 'if for_model' *)
+            if for_model then ()
+            else
+              raise (Found { x with Th_util.value = Unknown })
+
+          | Unknown ->
+            raise (Found { x with Th_util.value = Unknown })
+        )env.objectives;
+      None
+    with Found x ->
+      Some x
 
   let look_for_sat ?(bad_last=None) ch env l ~for_model =
     let rec aux ch bad_last dl env li =
@@ -381,7 +418,9 @@ module Main_Default : S = struct
       | [], _ ->
         begin
           Options.tool_req 3 "TR-CCX-CS-Case-Split";
-          let l, base_env = CC_X.case_split env.gamma_finite ~for_model in
+          let to_optimize = next_optimization ~for_model env in
+          let l, base_env = CC_X.case_split
+              env.gamma_finite ~for_model ~to_optimize in
           let env = {env with gamma_finite = base_env} in
           match l with
           | Sig_rel.Split [] ->
@@ -390,6 +429,22 @@ module Main_Default : S = struct
           | Sig_rel.Split new_splits ->
             let new_splits = add_explanations_to_splits new_splits in
             aux ch None dl env new_splits
+
+          | Sig_rel.Optimized_split u ->
+            let to_opt = register_optimized_split env.objectives u in
+            let env = {env with objectives = to_opt} in
+            begin
+              match u.value with
+              | Value v ->
+                let splits = add_explanations_to_splits [v] in
+                aux ch None dl env splits
+              | Pinfinity | Minfinity ->
+                if for_model then
+                  aux ch None dl env []
+                else
+                  { env with choices = List.rev dl }, ch
+              | Unknown -> assert false
+            end
 
         end
       | ((c, lit_orig, CNeg, ex_c) as a)::l, _ ->
@@ -487,6 +542,19 @@ module Main_Default : S = struct
       )candidates_to_keep
 
 
+  let reset_objectives objectives =
+    Util.MI.map (fun x -> Th_util.({ x with value = Unknown }) ) objectives
+
+  let reset_case_split_env t =
+    { t with
+      objectives = reset_objectives t.objectives;
+      cs_pending_facts = []; (* be sure it's always correct when this
+                                function is called *)
+      gamma_finite = t.gamma; (* we'll take gamma directly *)
+      choices = []; (* we'll not be able to attempt to replay
+                       choices. We're not in try-it *)
+    }
+
   let try_it t facts ~for_model =
     Options.exec_thread_yield ();
     Debug.begin_case_split t.choices;
@@ -494,7 +562,7 @@ module Main_Default : S = struct
       try
         if t.choices == [] then
           (* no splits yet: init gamma_finite with gamma *)
-          let t = { t with gamma_finite = t.gamma } in
+          let t = reset_case_split_env t in
           look_for_sat [] t [] ~for_model
         else
           try
@@ -509,7 +577,7 @@ module Main_Default : S = struct
             let filt_choices = filter_choices uf t.choices in
             Debug.split_sat_contradicts_cs filt_choices;
             (* re-init gamma_finite with gamma *)
-            let t = { t with gamma_finite = t.gamma } in
+            let t = reset_case_split_env t in
             look_for_sat ~bad_last:(Some (dep, classes))
               [] { t with choices = []} filt_choices ~for_model
       with Ex.Inconsistent (d, cl) ->
@@ -729,7 +797,9 @@ module Main_Default : S = struct
         assumed_set = E.Set.empty;
         assumed = [];
         cs_pending_facts = [];
-        terms = Expr.Set.empty }
+        terms = Expr.Set.empty;
+        objectives = Util.MI.empty;
+      }
     in
     let a = E.mk_distinct ~iff:false [E.vrai; E.faux] in
     let t, _, _ = assume true [a, Ex.empty, 0, -1] t in

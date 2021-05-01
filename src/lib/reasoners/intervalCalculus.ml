@@ -2083,7 +2083,7 @@ let model_from_unbounded_domains =
     List.fold_left mk_cs (List.fold_left mk_cs [] l1) l2
 
 
-let case_split env uf ~for_model =
+let case_split env uf ~for_model ~to_optimize:_ =
   let res = default_case_split env uf ~for_model in
   match res with
   | [] ->

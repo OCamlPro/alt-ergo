@@ -244,34 +244,39 @@ let assume env uf la =
 
 let add env _ r _ = add_aux env r, []
 
-let case_split env uf ~for_model =
-  let acc = MX.fold
-      (fun r (hss, _) acc ->
-         let x, _ = Uf.find_r uf r in
-         match Sh.embed x with
-         | Cons _ -> acc (* already bound to an Enum const *)
-         | _ -> (* cs even if sz below is equal to 1 *)
-           let sz = HSS.cardinal hss in
-           match acc with
-           | Some (n,_,_) when n <= sz -> acc
-           | _ -> Some (sz, r, HSS.choose hss)
-      ) env.mx None
-  in
-  match acc with
-  | Some (n,r,hs) ->
-    let n = Numbers.Q.from_int n in
-    if for_model ||
-       Numbers.Q.compare
-         (Numbers.Q.mult n env.size_splits) (Options.get_max_split ()) <= 0  ||
-       Numbers.Q.sign  (Options.get_max_split ()) < 0 then
-      let r' = Sh.is_mine (Cons(hs,X.type_info r)) in
-      Debug.case_split r r';
-      Sig_rel.Split [LR.mkv_eq r r', true, Th_util.CS(Th_util.Th_sum, n)]
-    else
-      Sig_rel.Split []
-  | None ->
-    Debug.no_case_split ();
+let case_split env uf ~for_model ~to_optimize =
+  if to_optimize != None then
+    (* no classical splits if we have something to optimize *)
     Sig_rel.Split []
+  else
+    let acc = MX.fold
+        (fun r (hss, _) acc ->
+           let x, _ = Uf.find_r uf r in
+           match Sh.embed x with
+           | Cons _ -> acc (* already bound to an Enum const *)
+           | _ -> (* cs even if sz below is equal to 1 *)
+             let sz = HSS.cardinal hss in
+             match acc with
+             | Some (n,_,_) when n <= sz -> acc
+             | _ -> Some (sz, r, HSS.choose hss)
+        ) env.mx None
+    in
+    match acc with
+    | Some (n,r,hs) ->
+      let n = Numbers.Q.from_int n in
+      if for_model ||
+         Numbers.Q.compare
+           (Numbers.Q.mult n env.size_splits) (Options.get_max_split ()) <= 0
+         || Numbers.Q.sign  (Options.get_max_split ()) < 0
+      then
+        let r' = Sh.is_mine (Cons(hs,X.type_info r)) in
+        Debug.case_split r r';
+        Sig_rel.Split [LR.mkv_eq r r', true, Th_util.CS (Th_util.Th_sum, n)]
+      else
+        Sig_rel.Split []
+    | None ->
+      Debug.no_case_split ();
+      Sig_rel.Split []
 
 let query env uf a_ex =
   try ignore(assume env uf [a_ex]); None

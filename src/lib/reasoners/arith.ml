@@ -843,7 +843,12 @@ module Shostak
       | [] ->
         (* We do this, because terms of some semantic values created
            by CS are not created and added to UF *)
-        assert (P.is_const (embed r) != None);
+        if (P.is_const (embed r) == None) then begin
+          Printer.print_dbg
+            ~module_name:"Arith" ~function_name:"choose_adequate_model"
+            "no adequate model found for %a" X.print r;
+          assert false
+        end;
         r
 
       | (_,r)::l ->

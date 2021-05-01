@@ -384,17 +384,21 @@ let new_equalities env eqs la class_of =
 (* choisir une egalite sur laquelle on fait un case-split *)
 let two = Numbers.Q.from_int 2
 
-let case_split env _ ~for_model:_ =
+let case_split env _ ~for_model:_ ~to_optimize =
   (*if Numbers.Q.compare
     (Numbers.Q.mult two env.size_splits) (max_split ()) <= 0  ||
     Numbers.Q.sign  (max_split ()) < 0 then*)
-  try
-    let a = LR.neg (LRset.choose env.split) in
-    Debug.case_split a;
-    Sig_rel.Split [LR.view a, true, Th_util.CS (Th_util.Th_arrays, two)]
-  with Not_found ->
-    Debug.case_split_none ();
+  if to_optimize != None then
+    (* no classical splits if we have something to optimize *)
     Sig_rel.Split []
+  else
+    try
+      let a = LR.neg (LRset.choose env.split) in
+      Debug.case_split a;
+      Sig_rel.Split [LR.view a, true, Th_util.CS (Th_util.Th_arrays, two)]
+    with Not_found ->
+      Debug.case_split_none ();
+      Sig_rel.Split []
 
 let count_splits env la =
   let nb =

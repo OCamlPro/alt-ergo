@@ -68,6 +68,7 @@ module type S = sig
 
   val case_split :
     t -> for_model:bool ->
+    to_optimize: Th_util.optimized_split option ->
     Sig_rel.case_split * t
   val query :  t -> E.t -> Th_util.answer
   val new_terms : t -> Expr.Set.t
@@ -688,8 +689,8 @@ module Main : S = struct
 
   (* End: new implementation of add, add_term, assume_literals and all that *)
 
-  let case_split env ~for_model =
-    let cs = Rel.case_split env.relation env.uf ~for_model in
+  let case_split env ~for_model ~to_optimize =
+    let cs = Rel.case_split env.relation env.uf ~for_model ~to_optimize in
     match cs with
     | Sig_rel.Split [] when for_model ->
       let l, uf = Uf.assign_next env.uf in
@@ -697,6 +698,7 @@ module Main : S = struct
          to add fresh terms in UF to avoid loops *)
       Sig_rel.Split l, {env with uf}
     | Sig_rel.Split _ -> cs, env
+    | Sig_rel.Optimized_split _ -> cs, env
 
   let query env a =
     let ra, ex_ra = term_canonical_view env a Ex.empty in
