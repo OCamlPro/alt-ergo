@@ -357,8 +357,9 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                 constants = ModelMap.empty;
                 functions = ModelMap.empty;
                 arrays = ModelMap.empty;
-                objectives = Util.MI.empty }
-              )
+                objectives = Util.MI.empty;
+                terms_values = Expr.Map.empty
+              })
           else
             None
         | Some _ as md -> md

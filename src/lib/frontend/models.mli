@@ -42,6 +42,10 @@ type t = {
   functions : ModelMap.t;
   arrays : ModelMap.t;
   objectives : (Expr.t * objective_value) Util.MI.t;
+
+  terms_values : (Shostak.Combine.r * string) Expr.Map.t
+  (* a map from terms to their values in the model (as a
+     representative of type X.r and as a string *)
 }
 
 (** Print the given counterexample on the given formatter with the

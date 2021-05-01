@@ -57,6 +57,10 @@ type t = {
   functions : ModelMap.t;
   arrays : ModelMap.t;
   objectives : (Expr.t * objective_value) Util.MI.t;
+  terms_values : (X.r * string) ME.t (* a map from terms to their values
+                                        in the model (as a
+                                        representative of type X.r and
+                                        as a string *)
 }
 
 module Pp_smtlib_term = struct
