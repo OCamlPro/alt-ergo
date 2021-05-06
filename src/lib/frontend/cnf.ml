@@ -433,6 +433,17 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
       let ff =
         mk_form up_qv ~toplevel:false qf.qf_form.c qf.qf_form.annot in
 
+      (* S : Formulas are purified afterwards.
+         Purification binds literals & formulas inside terms by
+         to fresh variables.
+         This purification may omit some expressions in quantified
+         formulas, hence a purification step is made here, just before
+         creating the said quantification.
+
+         TODO : on-the-fly purification
+      *)
+      let ff = E.purify_form ff in
+
       let hyp =
         List.map (fun f -> mk_form up_qv ~toplevel:false f.c f.annot) qf.qf_hyp
       in
