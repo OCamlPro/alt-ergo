@@ -89,6 +89,22 @@ let format_printer fmt format =
 
 let format_conv = Arg.conv ~docv:"FMT" (format_parser, format_printer)
 
+let model_type_parser = function
+  | "value" -> Ok Value
+  | "constraints" -> Ok Constraints
+  | s ->
+    Error (`Msg (Format.sprintf
+                   "The model kind %s is invalid. Only \"value\" and \
+                    \"constraints\" are allowed" s))
+
+let model_type_printer fmt format =
+  Format.fprintf fmt "%s"
+    (match format with
+     | Value -> "value"
+     | Constraints -> "constaints")
+
+let model_type_conv = Arg.conv ~docv:"MTYP" (model_type_parser, model_type_printer)
+
 type formatter = Stdout | Stderr | Other of string
 
 let value_of_fmt = function
@@ -288,17 +304,22 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     set_timelimit_per_goal timelimit_per_goal;
     `Ok()
 
-let mk_output_opt interpretation use_underscore unsat_core output_format
+let mk_output_opt interpretation use_underscore unsat_core output_format model_type
   =
   set_infer_output_format output_format;
   let output_format = match output_format with
     | None -> Native
     | Some fmt -> fmt
   in
+  let model_type = match model_type with
+    | None -> Value
+    | Some v -> v
+  in
   set_interpretation interpretation;
   set_interpretation_use_underscore use_underscore;
   set_unsat_core unsat_core;
   set_output_format output_format;
+  set_model_type model_type;
   `Ok()
 
 let mk_profiling_opt cumulative_time_profiling profiling
@@ -941,9 +962,20 @@ let parse_output_opt =
     Arg.(value & opt (some format_conv) None & info ["o"; "output"] ~docv ~doc)
   in
 
+  let model_type =
+    let doc =
+      Format.sprintf
+        "Control the output model type of the solver, $(docv) must be %s."
+        (Arg.doc_alts [ "value"; "constraint" ])
+    in
+    let docv = "MTYP" in
+    Arg.(value & opt (some model_type_conv) None & info ["mt"; "model-type"] ~docv ~doc)
+  in
+
+
   Term.(ret (const mk_output_opt $
              interpretation $ use_underscore $ unsat_core $
-             output_format
+             output_format $ model_type
             ))
 
 let parse_profiling_opt =

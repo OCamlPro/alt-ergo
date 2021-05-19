@@ -67,6 +67,8 @@ type interpretation = INone | IFirst | IEvery | ILast
 type input_format = Native | Smtlib2 | Why3 (* | SZS *) | Unknown of string
 type output_format = input_format
 
+type model_type = Value | Constraints
+
 let match_extension e =
   match e with
   | ".ae" -> Native
@@ -299,12 +301,14 @@ let get_timelimit_per_goal () = !timelimit_per_goal
 let interpretation = ref INone
 let interpretation_use_underscore = ref false
 let output_format = ref Native
+let model_type = ref Value
 let infer_output_format = ref true
 let unsat_core = ref false
 
 let set_interpretation b = interpretation := b
 let set_interpretation_use_underscore b = interpretation_use_underscore := b
 let set_output_format b = output_format := b
+let set_model_type t = model_type := t
 let set_infer_output_format f = infer_output_format := f = None
 let set_unsat_core b = unsat_core := b
 
@@ -314,8 +318,9 @@ let get_every_interpretation () = !interpretation = IEvery
 let get_last_interpretation () = !interpretation = ILast
 let get_interpretation_use_underscore () = !interpretation_use_underscore
 let get_output_format () = !output_format
-let get_output_smtlib () =
-  (!output_format = Smtlib2) || (!output_format = Why3)
+let get_output_smtlib () = !output_format = Smtlib2
+let get_model_type () = !model_type
+let get_model_type_constraints () = !model_type = Constraints
 let get_infer_output_format () = !infer_output_format
 let get_unsat_core () = !unsat_core || !save_used_context || !debug_unsat_core
 
