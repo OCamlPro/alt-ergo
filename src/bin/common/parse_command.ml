@@ -103,7 +103,8 @@ let model_type_printer fmt format =
      | Value -> "value"
      | Constraints -> "constaints")
 
-let model_type_conv = Arg.conv ~docv:"MTYP" (model_type_parser, model_type_printer)
+let model_type_conv =
+  Arg.conv ~docv:"MTYP" (model_type_parser, model_type_printer)
 
 type formatter = Stdout | Stderr | Other of string
 
@@ -304,7 +305,8 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     set_timelimit_per_goal timelimit_per_goal;
     `Ok()
 
-let mk_output_opt interpretation use_underscore unsat_core output_format model_type
+let mk_output_opt
+    interpretation use_underscore unsat_core output_format model_type
   =
   set_infer_output_format output_format;
   let output_format = match output_format with
@@ -969,7 +971,11 @@ let parse_output_opt =
         (Arg.doc_alts [ "value"; "constraint" ])
     in
     let docv = "MTYP" in
-    Arg.(value & opt (some model_type_conv) None & info ["mt"; "model-type"] ~docv ~doc)
+    Arg.(
+      value &
+      opt (some model_type_conv) None &
+      info ["mt"; "model-type"] ~docv ~doc
+    )
   in
 
 
