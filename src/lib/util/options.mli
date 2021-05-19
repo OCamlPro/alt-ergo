@@ -68,6 +68,8 @@ type input_format =
   (*   | SZS                        * Not yet implemented SZS format   *)
   | Unknown of string          (** Unknown file format *)
 
+type model_type = Value | Constraints
+
 (** Type used to describe the type of output wanted by
     {!val:set_output_format} *)
 type output_format = input_format
@@ -235,6 +237,9 @@ val set_normalize_instances : bool -> unit
 
 (** Set [output_format] accessible with {!val:get_output_format} *)
 val set_output_format : output_format -> unit
+
+(** Set [model_type] accessible with {!val:get_model_type} *)
+val set_model_type : model_type -> unit
 
 (** Set [parse_only] accessible with {!val:get_parse_only} *)
 val set_parse_only : bool -> unit
@@ -722,8 +727,19 @@ val get_interpretation_use_underscore : unit -> bool
 val get_output_format : unit -> output_format
 (** Default to [Native] *)
 
-(** True if the output format is set to smtlib2 or why3 *)
+(** [true] if the output format is set to smtlib2 or why3 *)
 val get_output_smtlib : unit -> bool
+(** Default to [false] *)
+
+(** Value specifying the default model type. possible values are
+    {ul {- value} {- constraints}}
+    . *)
+val get_model_type : unit -> model_type
+(** Default to [Value] *)
+
+(** [true] if the model kind is set to constraints
+    . *)
+val get_model_type_constraints : unit -> bool
 (** Default to [false] *)
 
 (** [true] if Alt-Ergo infers automatically the output format according to the
