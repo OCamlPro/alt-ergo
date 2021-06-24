@@ -104,9 +104,10 @@ let update name r f =
 let opam_var v =
   let () = Lazy.force opam_check in
   let cmd = Format.asprintf "opam config var --readonly %s" v in
-  let ch = Unix.open_process_in cmd in
+  let env = Array.append [| "OPAMCLI=2.0" |] (Unix.environment ()) in
+  let (ch, _, _) as proc = Unix.open_process_full cmd env in
   let s = input_line ch in
-  let _ = Unix.close_process_in ch in
+  let _ = Unix.close_process_full proc in
   s
 
 
