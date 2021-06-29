@@ -286,7 +286,7 @@ VERSION=$(shell grep "=" lib/util/version.ml | cut -d"=" -f2 | head -n 1)
 
 # Some convenient variables
 PUBLIC_VERSION=$(VERSION)
-PUBLIC_RELEASE=alt-ergo-$(PUBLIC_VERSION)
+PUBLIC_RELEASE=alt-ergo-free-$(PUBLIC_VERSION)
 PUBLIC_TARGZ=$(PUBLIC_RELEASE).tar.gz
 FILES_DEST=../public-release/$(PUBLIC_RELEASE)/$(PUBLIC_RELEASE)
 
@@ -295,7 +295,7 @@ public-release:
 	mkdir -p $(FILES_DEST)
 	cp configure configure.ml *.opam dune-project dune $(FILES_DEST)
 	git clean -dfx
-	cp ../License.OCamlPro ../OCamlPro-Non-Commercial-License.txt ../OCamlPro-Non-Commercial-License.pdf ../LGPL-License.txt ../Apache-License-2.0.txt $(FILES_DEST)/
+	cp ../License.OCamlPro ../LGPL-License.txt ../Apache-License-2.0.txt $(FILES_DEST)/
 	cp ../README.md ../LICENSE.md ../COPYING.md $(FILES_DEST)/
 	cp Makefile $(FILES_DEST)/
 	cp INSTALL.md alt-ergo.opam CHANGES $(FILES_DEST)/
