@@ -136,11 +136,18 @@ let borne_inf = function
   | { ints = (Strict (v, ex), _) :: _; _ } -> v, ex, false
   | _ -> raise No_finite_bound
 
+let only_borne_inf ({ ints; _ } as t) =
+  { t with ints = List.map (function (inf, _) -> (inf, Pinfty)) ints; }
+
 let borne_sup { ints; _ } =
   match List.rev ints with
   | (_, Large (v, ex))::_ -> v, ex, true
   | (_, Strict (v, ex))::_ -> v, ex, false
   | _ -> raise No_finite_bound
+
+let only_borne_sup ({ ints; _ } as t) =
+  { t with ints = List.map (function (_, sup) -> (Minfty, sup)) ints; }
+
 
 let explain_borne = function
   | Large (_, e) | Strict (_, e) -> e
