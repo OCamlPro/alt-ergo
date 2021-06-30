@@ -4,6 +4,7 @@ timelimit=$2
 files=""
 files="$files `find invalid/ -name '*'.ae`"
 files="$files `find invalid/ -name '*'.zip`"
+files="$files `find invalid/ -name '*'.smt2`"
 
 ## run Alt-Ergo with imperative SAT solver assisted with tableaux on invalid tests
 for options in "" "--no-minimal-bj" "--no-tableaux-cdcl-in-theories" "--no-tableaux-cdcl-in-instantiation" "--no-tableaux-cdcl-in-theories --no-tableaux-cdcl-in-instantiation" "--no-minimal-bj --no-tableaux-cdcl-in-theories --no-tableaux-cdcl-in-instantiation"
