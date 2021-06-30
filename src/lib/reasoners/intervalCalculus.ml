@@ -450,7 +450,7 @@ let generic_find ?(only_inf=false) xp env =
        This interacts badly with callers who only care about the lower bound,
        as these callers do not catch the inconsisten exception, and this can
        lead to the solver returning Unsat/Valid even when it is incorrect to
-       do so. (see issue #460, PR #342, and PR #### ). *)
+       do so. (see issues #460 #340, and PRs #342 and #465). *)
     let ip =
       if only_inf then
         if Q.sign d >= 0 then
