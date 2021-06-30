@@ -4,6 +4,7 @@ timelimit=$2
 files=""
 files="$files `find valid/ -name '*'.ae`"
 files="$files `find valid/ -name '*'.zip`"
+files="$files `find valid/ -name '*'.smt2`"
 
 ## run Alt-Ergo with imperative SAT solver assisted with tableaux on valid tests
 for options in "" "--no-minimal-bj" "--no-tableaux-cdcl-in-theories" "--no-tableaux-cdcl-in-instantiation"  "--no-tableaux-cdcl-in-theories --no-tableaux-cdcl-in-instantiation" "--no-minimal-bj --no-tableaux-cdcl-in-theories --no-tableaux-cdcl-in-instantiation"
@@ -12,7 +13,7 @@ do
     for f in $files
     do
         cpt=`expr $cpt + 1`
-        res=`$alt_ergo_bin --timelimit $timelimit $options --sat-solver CDCL-Tableaux $f`
+        res=`$alt_ergo_bin -o native --timelimit $timelimit $options --sat-solver CDCL-Tableaux $f`
         if [ "`echo $res | grep -c "Valid"`" -eq "0" ]
         then
             echo "[run_valid > default cdcl solver with tableaux] issue with file $f"
@@ -28,7 +29,7 @@ cpt=0
 for f in $files
 do
     cpt=`expr $cpt + 1`
-    res=`$alt_ergo_bin --timelimit $timelimit --sat-solver Tableaux $f`
+    res=`$alt_ergo_bin -o native --timelimit $timelimit --sat-solver Tableaux $f`
     if [ "`echo $res | grep -c "Valid"`" -eq "0" ]
     then
         echo "[run_valid > tableaux solver] issue with file $f"
@@ -43,7 +44,7 @@ cpt=0
 for f in $files
 do
     cpt=`expr $cpt + 1`
-    res=`$alt_ergo_bin --timelimit $timelimit --sat-solver Tableaux-CDCL $f`
+    res=`$alt_ergo_bin -o native --timelimit $timelimit --sat-solver Tableaux-CDCL $f`
     if [ "`echo $res | grep -c "Valid"`" -eq "0" ]
     then
         echo "[run_valid > tableaux solver with cdcl] issue with file $f"
@@ -60,7 +61,7 @@ do
     for f in $files
     do
         cpt=`expr $cpt + 1`
-        res=`$alt_ergo_bin --timelimit $timelimit $options --sat-solver CDCL $f`
+        res=`$alt_ergo_bin -o native --timelimit $timelimit $options --sat-solver CDCL $f`
         if [ "`echo $res | grep -c "Valid"`" -eq "0" ]
         then
             echo "[run_valid > cdcl solver] issue with file $f"
@@ -76,7 +77,7 @@ done
 # for f in $files
 # do
 #     cpt=`expr $cpt + 1`
-#     res=`$alt_ergo_bin -timelimit $timelimit -inequalities-plugin fm-simplex-plugin.cmxs $f`
+#     res=`$alt_ergo_bin -o native -timelimit $timelimit -inequalities-plugin fm-simplex-plugin.cmxs $f`
 #     if [ "`echo $res | grep -c ":Valid"`" -eq "0" ]
 #     then
 #         echo "[run_valid > fm-simplex-plugin test] issue with file $f"
@@ -92,7 +93,7 @@ done
 # for f in $files
 # do
 #     cpt=`expr $cpt + 1`
-#     res=`$alt_ergo_bin -timelimit $timelimit -sat-plugin satML-plugin.cmxs -inequalities-plugin fm-simplex-plugin.cmxs $f`
+#     res=`$alt_ergo_bin -o native -timelimit $timelimit -sat-plugin satML-plugin.cmxs -inequalities-plugin fm-simplex-plugin.cmxs $f`
 #     if [ "`echo $res | grep -c ":Valid"`" -eq "0" ]
 #     then
 #         echo "[run_valid > satML-plugin+fm-simplex-plugin test] issue with file $f"
