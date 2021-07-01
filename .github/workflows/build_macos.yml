@@ -67,7 +67,7 @@ jobs:
 
       # Build and install with opam
       - name: Install
-        run: opam install .
+        run: opam reinstall .
 
       # Run non regression tests
       - name: Run non regression tests

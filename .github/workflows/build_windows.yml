@@ -59,7 +59,7 @@ jobs:
 
       # Build and install with opam
       - name: Install
-        run: opam install .
+        run: opam reinstall .
 
       # Convert non-regression script to be able to run them on windows
       - name: Convert non-regression script to dos
