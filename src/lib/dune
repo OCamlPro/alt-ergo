@@ -41,7 +41,7 @@
     Parsed Profiling Satml_types Symbols
     Expr Var Ty Typed Xliteral
     ; util
-    Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
+    Log Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
     MyDynlink MyUnix Numbers NumsNumbers NumbersInterface
     Options Timers Util Vec Version ZarithNumbers Steps Printer Format_shims
   )
