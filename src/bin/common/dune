@@ -3,7 +3,6 @@
   (mld_files :standard)
 )
 
-
 (documentation
   (package altgr-ergo)
   (mld_files :standard)
@@ -11,6 +10,6 @@
 
 (library
  (name        alt_ergo_common)
- (libraries   alt-ergo-lib cmdliner)
- (modules     Parse_command Signals)
+ (libraries   alt-ergo-lib alt-ergo-parsers stdlib-shims cmdliner)
+ (modules     Parse_command Input_frontend Signals_profiling Solving_loop)
 )

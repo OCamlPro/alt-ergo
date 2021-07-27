@@ -53,6 +53,8 @@ module type S = sig
       [f] is unsatisfiable in [env] *)
   val assume : t -> Expr.gformula -> Explanation.t -> t
 
+  (** [assume env f exp] assume a new formula [f] with the explanation [exp]
+      in the theories environment of [env]. *)
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
 
   (** [pred_def env f] assume a new predicate definition [f] in [env]. *)
@@ -63,6 +65,8 @@ module type S = sig
       [size]. Raises Sat if [f] is satisfiable in [env] *)
   val unsat : t -> Expr.gformula -> Explanation.t
 
+  (** [print_model header fmt env] print propositional model and theory model
+      on the corresponding fmt. *)
   val print_model : header:bool -> Format.formatter -> t -> unit
 
   val reset_refs : unit -> unit

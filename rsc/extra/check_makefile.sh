@@ -20,7 +20,7 @@ echo "=+= [check_makefile.sh] building and installing ... =+="
 make bin
 make gui
 make plugins
-make install
+make install-all
 make clean
 
 # WARNING: the next lines are commented because it made the output hard to read

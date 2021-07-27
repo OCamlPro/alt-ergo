@@ -1,0 +1,59 @@
+{1 Alt-ergo in Javascript}
+
+{2 Alt-ergo for node-js}
+
+A simple javascript version of the alt-ergo package is available with the command [make js-node].
+The command [make js-node] will create the javascript file [alt-ergo.js].
+This file allows you to run alt-ergo in command line with [node] like [node alt-ergo.js <options> <input_file>].
+This command uses the Alt-Ergo_common internal lib (see {{:../alt-ergo/index_common.html}[Alt_ergo_common]}) for parsing command line, input file, and main solving loop.
+
+To run this command you will need the following aditionnal dependencies: [js_of_ocaml-compiler] and [zarith_stubs_js].
+The [--timeout] option is ignored due to a lack of js primitives
+Zip files are not recognised file extension.
+
+{2 The Alt-ergo web worker}
+
+A web worker of the alt-ergo solver is available with the command [make js-worker]. It uses Js_of_ocaml Worker's and Lwt. The [data-encoding] library is used to encode and decode messages to/from the worker.
+
+{3 Inputs }
+
+This web worker takes a json file composed of a list of string representing each line of an input file. This json file can also be composed of an optional worker identifier (integer) and an optional name for the file to solve. The following code shows an example of a such json file :
+
+[ {"filename": "testfile", "worker_id": 42, "content": [ "goal g : true" ] } ]
+
+The worker also take a Json file that correspond to the options to set in Alt-Ergo, like the following example :
+
+[ {"debug": true, "sat_solver": "Tableaux", "steps_bound": 1000} ]
+
+{3 Outpus }
+
+At the end of solving it returns a Json file corresponding to results, debug informations, etc:
+
+[ { "worker_id": 42, "status": { "Unsat": 0 },
+"results": [ "Valid (0.1940) (0 steps) (goal g)", "" ],
+"debugs": [ "[Debug][Sat_solver]", "use Tableaux-like solver", "" ],
+"model": [ "[all-models] No SAT models found", "" ],
+"unsat_core": [ "unsat-core:", "", "", "" ],
+"errors": [ "" ],
+"warnings": [ "" ],
+"statistics": [ [], [] ],
+ } ]
+
+Options and results formats are available in {!module:Worker_interface.worker_interface} module.
+Look at the [worker_json_example.json] in the ressources [rsc] of the project to learn more.
+
+{3 Dependancies}
+
+To run [make js-worker] you will need the following additionnal dependencies: [js_of_ocaml] [js_of_ocaml-lwt] [data-encoding] and [zarith_stubs_js].
+
+The [--timeout] option is ignored due to a lack of js primitives
+Zip files are not recognised file extension.
+
+{2 The Alt-ergo web worker small example}
+
+A small example of how to use the Alt-Ergo web worker can be build with the command [make js-example]. This command also makes the web worker if it has not already been built. It produces a [www] directory with an [index.html] file.
+
+To run this command you will need the following aditionnal dependencies: [js_of_ocaml] [js_of_ocaml-lwt] [js_of_ocaml-ppx] [data-encoding] and [lwt_ppx].
+
+The [--timeout] option is ignored due to a lack of js primitives but a timeout can be set using lwt sleep function.
+Zip files are not recognised file extension.

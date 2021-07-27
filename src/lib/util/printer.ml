@@ -188,7 +188,8 @@ let flush fmt = Format.fprintf fmt "@."
 let print_std ?(flushed=true) s =
   pp_std_smt ();
   let fmt = Options.get_fmt_std () in
-  if flushed then kfprintf flush fmt s else fprintf fmt s
+  if flushed || Options.get_output_with_forced_flush ()
+  then kfprintf flush fmt s else fprintf fmt s
 
 let print_err ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     ?(error=true) s =
@@ -200,7 +201,8 @@ let print_err ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
         fprintf fmt "@[<v 7>@{<fg_red>@{<bold>[Error]@}@}"
       else
         fprintf fmt "@[<v 7>[Error]";
-    if flushed then kfprintf flush fmt s else fprintf fmt s
+    if flushed || Options.get_output_with_forced_flush ()
+    then kfprintf flush fmt s else fprintf fmt s
   end
   else ifprintf err_formatter s
 
@@ -217,7 +219,8 @@ let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
         fprintf fmt "@[<v 9>@{<fg_orange>@{<bold>[Warning]@}@} "
       else
         fprintf fmt "@[<v 9>[Warning] " ;
-    if flushed then kfprintf flush fmt s else fprintf fmt s
+    if flushed || Options.get_output_with_forced_flush ()
+    then kfprintf flush fmt s else fprintf fmt s
   end
   else ifprintf err_formatter s
 
@@ -246,11 +249,14 @@ let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
       fprintf fmt
         "[Debug]%s%s@,@[<v 0>" mname fname
   end;
-  if flushed then kfprintf flush fmt s else fprintf fmt s
+  if flushed || Options.get_output_with_forced_flush ()
+  then kfprintf flush fmt s else fprintf fmt s
 
 
 let print_fmt ?(flushed=true) fmt s =
-  if flushed then kfprintf flush fmt s else fprintf fmt s
+  pp_std_smt ();
+  if flushed || Options.get_output_with_forced_flush () then
+    kfprintf flush fmt s else fprintf fmt s
 
 (* Utils *)
 

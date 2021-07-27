@@ -1,9 +1,19 @@
 {1 Alt_ergo_common}
 
-{2 Command line parsing}
+{2 Main Solving }
 
-The alt-ergo-common package is used for parsing the command line with {{:https://erratique.ch/software/cmdliner}[cmdliner]}
-See
-{!modules:
-Alt_ergo_common.Parse_command
-}
+The solving loop is done in the {!module:Alt_ergo_common.solving_loop} module. This module uses the registered input method (parser and typechecker) to compute the input file (see {!section:input}). It relies on initialised options (see {!section:cmdline}).
+
+{2:cmdline Command line parsing}
+
+The command line parsing is done with {{:https://erratique.ch/software/cmdliner}[cmdliner]} in the module {!module:Alt_ergo_common.Parse_command}. This module initialises options of the Alt-Ergo-Lib library.
+
+{2:input Input Frontend }
+
+The {!module:Alt_ergo_common.input_frontend} module register an input method capable of parsing and typechecking the input files
+
+The legacy frontend is used to parse and typecheck file with the native Alt-Ergo syntaxe and also the smtlib2 and psmt2 syntaxe.
+
+{2:signals Signals and profiling }
+
+The {!module:Alt_ergo_common.signals_profiling} module initialise handlers for system signals and profiling informations and timers.

@@ -29,7 +29,6 @@
 open Format
 open Options
 open Sig
-module A = Xliteral
 
 module Sy = Symbols
 module E = Expr
@@ -143,16 +142,16 @@ module Shostak
      c4. t2 <> 0 (already checked) *)
   let mk_modulo md t1 t2 p2 ctx =
     let zero = E.int "0" in
-    let c1 = E.mk_builtin ~is_pos:true A.LE [zero; md] in
+    let c1 = E.mk_builtin ~is_pos:true Symbols.LE [zero; md] in
     let c2 =
       match P.is_const p2 with
       | Some n2 ->
         let an2 = Q.abs n2 in
         assert (Q.is_int an2);
         let t2 = E.int (Q.to_string an2) in
-        E.mk_builtin ~is_pos:true A.LT [md; t2]
+        E.mk_builtin ~is_pos:true Symbols.LT [md; t2]
       | None ->
-        E.mk_builtin ~is_pos:true A.LT [md; t2]
+        E.mk_builtin ~is_pos:true Symbols.LT [md; t2]
     in
     let k  = E.fresh_name Ty.Tint in
     let t3 = E.mk_term (Sy.Op Sy.Mult) [t2;k] Ty.Tint in
@@ -270,9 +269,8 @@ module Shostak
         in
         P.add p (P.mult_const coef p3), ctx
 
-    | Sy.Op Sy.Plus , [t1;t2] ->
-      let p2, ctx = mke coef p t2 ctx in
-      mke coef p2 t1 ctx
+    | Sy.Op Sy.Plus , l ->
+      List.fold_left (fun (p, ctx) u -> mke coef p u ctx )(p, ctx) l
 
     | Sy.Op Sy.Minus , [t1;t2] ->
       let p2, ctx = mke (Q.minus coef) p t2 ctx in

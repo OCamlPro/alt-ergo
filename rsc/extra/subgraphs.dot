@@ -2,208 +2,240 @@
 
 //#Why_parser
 subgraph cluster_parsers {
-  label="PARSERS";
-  style=filled;
-  color=lightgrey;
-  subgraph cluster_parsers__common {
-    label="Common";
-    style=filled;
-    color=white;
-    "Parsers";
-    "Parsers_loader";
-    "MyZip";
-  }
-    subgraph cluster_parsers__psmt2 {
-    label="PSmt2";
-    style=filled;
-    color=white;
-    "Psmt2_to_alt_ergo";
-  }
-    subgraph cluster_parsers__native {
-    label="Native";
-    style=filled;
-    color=white;
-    "Native_parser";
-    "Native_lexer";
-  }
+        label="PARSERS";
+        style=filled;
+        color=lightgray;
+        subgraph cluster_parsers__common {
+                label="Common";
+                style=filled;
+                color=lightblue;
+                "Parsers";
+                "Parsers_loader";
+                "MyZip";
+        }
+        subgraph cluster_parsers__psmt2 {
+                label="PSmt2";
+                style=filled;
+                color=lightblue;
+                "Psmt2_to_alt_ergo";
+        }
+        subgraph cluster_parsers__native {
+                label="Native";
+                style=filled;
+                color=lightblue;
+                "Native_parser";
+                "Native_lexer";
+        }
 }
 
-
-//# tools / text
-//subgraph cluster_tools__text {
-//        label="tools / text";
-//        style=filled;
-//	color=lightgrey;
-//}
 
 //# tools
 subgraph cluster_bin {
-  label="BIN";
-  style=filled;
-  color=lightgrey;
-  subgraph cluster_bin__text {
-    label="Text";
-    style=filled;
-    color=white;
-    "Main_input";
-    "Main_text";
-    "Main_gui";
-  }
-  subgraph cluster_bin__gui {
-    label="Gui";
-    style=filled;
-    color=white;
-    "Gui_replay";
-    "Gui_session";
-    "Gui_config";
-    "Annoted_ast";
-    "Connected_ast";
-  }
+        label="BIN";
+        style=filled;
+        color=lightgray;
+        subgraph cluster_bin__common {
+                label="Common";
+                style=filled;
+                color=lightblue;
+                "Input_frontend";
+                "Parse_command";
+                "Signals_profiling";
+                "Solving_loop";
+        }
+        subgraph cluster_bin__text {
+                label="Text";
+                style=filled;
+                color=lightblue;
+                "Main_text";
+        }
+        subgraph cluster_bin__gui {
+                label="Gui";
+                style=filled;
+                color=lightblue;
+                "Main_gui"
+                "Gui_replay";
+                "Gui_session";
+                "Gui_config";
+                "Annoted_ast";
+                "Connected_ast";
+        }
+        subgraph cluster_bin__js {
+                label="JS";
+                style=filled;
+                color=lightblue;
+                "Main_text_js";
+                "Options_interface";
+                "Worker_example";
+                "Worker_interface";
+                "Worker_js";
+        }
 }
 
 subgraph cluster_plugins {
-  label="PLUGINS";
-  style=filled;
-  color=lightgrey;
-  subgraph cluster_plugins__ab_why3 {
-    label="AB-Why3";
-    style=filled;
-    color=white;
-    "Why3_lexer";
-    "Why3_parser";
-    "Why3_ptree";
-    "Why3_loc";
-  }
-  subgraph cluster_plugins__fm_simplex {
-    label="FM-Simplex";
-    style=filled;
-    color=white;
-    "FmSimplexIneqs";
-    "Simplex_cache";
-    "Simplex";
-  }
+        label="PLUGINS";
+        style=filled;
+        color=lightgray;
+        subgraph cluster_plugins__ab_why3 {
+                label="AB-Why3";
+                style=filled;
+                color=lightblue;
+                "Why3_lexer";
+                "Why3_parser";
+                "Why3_ptree";
+                "Why3_loc";
+        }
+        subgraph cluster_plugins__fm_simplex {
+                label="FM-Simplex";
+                style=filled;
+                color=lightblue;
+                "FmSimplexIneqs";
+                "Simplex_cache";
+                "Simplex";
+        }
 }
 
 subgraph cluster_lib {
-  label="LIB";
-  style=filled;
-  color=lightgrey;
+        label="LIB";
+        style=filled;
+        color=lemonchiffon;
 
-  //#reasoners
-  subgraph cluster_lib__reasoners {
-    label="Reasoners";
-    style=filled;
-    color=white;
-    "Adt_rel";
-    "Arrays_rel";
-    "Theory";
-    "Ccx";
-    "Relation";
-    "Intervals";
-    "Inequalities";
-    "IntervalCalculus";
-    "Records_rel";
-    "Ite_rel";
-    "Sig_rel";
-    "Enum_rel";
-    "Bitv_rel";
-    "Uf";
-    "Use";
-    "Matching";
-    "Instances";
-    "Matching_types";
+        //#reasoners
+        subgraph cluster_lib__reasoners {
+                label="Reasoners";
+                style=filled;
+                color=lightgray;
 
-  subgraph cluster_lib__reasoners__satml {
-    label="Sat";
-    style=filled;
-    color=lightgrey;
-    "Sat_solver";
-    "Sat_solver_sig";
-    "Satml_frontend";
-    "Satml_frontend_hybrid";
-    "Fun_sat";
-    "Satml";
-  }
+                subgraph cluster_lib__reasoners__satml {
+                        label="Sat";
+                        style=filled;
+                        color=lightblue;
+                        "Sat_solver";
+                        "Sat_solver_sig";
+                        "Satml_frontend";
+                        "Satml_frontend_hybrid";
+                        "Fun_sat";
+                        "Satml";
+                }
 
-  ##reasoners__shostak
-  subgraph cluster_lib__reasoners__shostak {
-    label="Shostak";
-    style=filled;
-    color=lightgrey;
-    "Shostak";
-    "Ac";
-    "Adt";
-    "Arith";
-    "Arrays";
-    "Bitv";
-    "Enum";
-    "Ite";
-    "Polynome";
-    "Records";
-    "Sig";
-    "Th_util"
-    }
-  }
+                subgraph cluster_lib__reasoners__instantiation {
+                        label="instantiation";
+                        style=filled;
+                        color=lightblue;
+                        "Matching";
+                        "Instances";
+                        "Matching_types";
+                }
+
+                ##reasoners__shostak
+                subgraph cluster_lib__reasoners__shostak {
+                        label="StatelessShostak";
+                        style=filled;
+                        color=lightblue;
+                        "Shostak";
+                        "Ac";
+                        "Adt";
+                        "Arith";
+                        "Arrays";
+                        "Bitv";
+                        "Enum";
+                        "Ite";
+                        "Polynome";
+                        "Records";
+                        "Sig";
+                }
+
+                ##reasoners__shostak
+                subgraph cluster_lib__reasoners__relations {
+                        label="StatefulRelations";
+                        style=filled;
+                        color=lightblue;
+                        "Adt_rel";
+                        "Arrays_rel";
+                        "Ite_rel";
+                        "Sig_rel";
+                        "Enum_rel";
+                        "Bitv_rel";
+                        "Relation";
+                        "Intervals";
+                        "Inequalities";
+                        "IntervalCalculus";
+                        "Records_rel";
+                        "Uf";
+                        "Th_util";
+                        "Use";
+                }
+                ##reasoners__shostak
+                subgraph cluster_lib__reasoners__theories_dispatcher {
+                        label="Theories-dispatcher";
+                        style=filled;
+                        color=lightblue;
+                        "Theory";
+                        "Ccx";
+                }
+        }
 
 
-  //#structures
-  subgraph cluster_lib__structures {
-    label="Structures";
-    style=filled;
-    color=white;
-    "Explanation";
-    "Var";
-    "Symbols";
-    "Expr";
-    "Xliteral";
-    "Ty";
-    "Parsed";
-    "Typed";
-    "Commands";
-    "Errors";
-    "Fpa_rounding";
-    "Profiling";
-    "Satml_types";
+        //#structures
+        subgraph cluster_lib__structures {
+                label="Structures";
+                style=filled;
+                color=lightblue;
+                "Explanation";
+                "Var";
+                "Symbols";
+                "Expr";
+                "Xliteral";
+                "Ty";
+                "Parsed";
+                "Typed";
+                "Commands";
+                "Errors";
+                "Fpa_rounding";
+                "Profiling";
+                "Satml_types"
+        }
 
-  }
+        //#frontend
+        subgraph cluster_lib__frontend {
+                label="Frontend";
+                style=filled;
+                color=lightblue;
+                "Frontend";
+                "Cnf";
+                "Typechecker";
+                "Parsed_interface";
+                "Input";
+                "Parse_command"
+        }
 
-  //#frontend
-  subgraph cluster_lib__frontend {
-    label="Frontend";
-    style=filled;
-    color=white;
-    "Frontend";
-    "Cnf";
-    "Typechecker";
-    "Parsed_interface";
-    "Input";
-  }
-
-  //#util
-  subgraph cluster_lib__util {
-    label="Util";
-    style=filled;
-    color=white;
-    "Gc_debug";
-    "Steps";
-    "Emap";
-    "Options";
-    "Timers";
-    "Config";
-    "Version";
-    "Util";
-    "Vec";
-    "Iheap";
-    "Lists";
-    "Loc";
-    "Hconsing";
-    "Hstring";
-    "Numbers";
-    "NumsNumbers";
-    "ZarithNumbers";
-    "NumbersInterface";
-    "MyUnix";
-    "MyDynlink"
-  }
+        //#util
+        subgraph cluster_lib__util {
+                label="Util";
+                style=filled;
+                color=lightblue;
+                "Gc_debug";
+                "Steps";
+                "Emap";
+                "Options";
+                "Timers";
+                "Config";
+                "Version";
+                "Util";
+                "Vec";
+                "Iheap";
+                "Lists";
+                "Loc";
+                "Hconsing";
+                "Hstring";
+                "Numbers";
+                "NumsNumbers";
+                "ZarithNumbers";
+                "NumbersInterface";
+                "MyUnix";
+                "MyDynlink";
+                "Signals";
+                "Printer"
+        }
 
 }

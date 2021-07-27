@@ -1574,7 +1574,7 @@ let mk_let_equiv let_sko let_e id  =
     if type_info let_e == Ty.Tbool then mk_iff let_sko let_e id
     else mk_eq ~iff:true let_sko let_e
 
-let elim_let =
+let rec elim_let =
   let ground_sko sko =
     if is_ground sko then sko
     else
@@ -1585,23 +1585,43 @@ let elim_let =
       in
       apply_subst (sbt, Ty.esubst) sko
   in
-  fun { let_v; let_e; in_e; let_sko; _ } ->
+  fun ~recursive ~conjs subst { let_v; let_e; in_e; let_sko; _ } ->
     assert (SMap.mem let_v (free_vars in_e SMap.empty));
     (* usefull when let_sko still contains variables that are not in
        ie_e due to simplification *)
+    let let_sko = apply_subst (subst, Ty.esubst) let_sko in
     let let_sko = ground_sko let_sko in
+    assert (is_ground let_sko);
+    let let_e = apply_subst (subst, Ty.esubst) let_e in
     if let_sko.nb_nodes >= let_e.nb_nodes && let_e.pure then
-      apply_subst_aux (SMap.singleton let_v let_e, Ty.esubst) in_e
+      let subst = SMap.add let_v let_e subst in
+      elim_let_rec subst in_e ~recursive ~conjs
       [@ocaml.ppwarning "TODO: should also inline form in form. But \
                          not possible to detect if we are not \
                          inlining a form inside a term"]
     else
+      let subst = SMap.add let_v let_sko subst in
       let id = id in_e in
-      let f' = apply_subst_aux (SMap.singleton let_v let_sko, Ty.esubst) in_e in
       let equiv = mk_let_equiv let_sko let_e id in
-      let res = mk_and equiv f' false id in
-      assert (is_ground res);
-      res
+      let conjs = (fun f' -> mk_and equiv f' false id) :: conjs in
+      elim_let_rec subst in_e ~recursive ~conjs
+
+and elim_let_rec subst in_e ~recursive ~conjs =
+  match form_view in_e with
+  | Let letin when recursive -> elim_let ~recursive ~conjs subst letin
+  | _ ->
+    let f = apply_subst (subst, Ty.esubst) in_e in
+    List.fold_left (fun acc func -> func acc) f conjs
+
+
+let elim_let ~recursive letin =
+  (* use a list of conjunctions for non inlined lets
+     (ie. Let-sko = let-in branche /\ ...)
+     to have tail-calls in the mutually recursive functions above *)
+  let res = elim_let ~recursive ~conjs:[] SMap.empty letin in
+  assert (is_ground res);
+  res
+
 
 let elim_iff f1 f2 id ~with_conj =
   if with_conj then
@@ -2318,7 +2338,7 @@ module Purification = struct
     else
       match t.f, t.bind with
       | Sy.Let, B_let { let_v; let_e; in_e; _ } ->
-        let let_e, lets = purify_term let_e lets in
+        (* let_e is purified when processing the lets map *)
         let in_e , lets = purify_term in_e  lets in
         in_e, add_let let_v let_e lets
 
@@ -2403,9 +2423,7 @@ module Purification = struct
           | [], B_let ({ let_e; in_e; _ } as letin) ->
             if let_e.pure && in_e.pure then e
             else
-              let let_e', lets =
-                purify_term let_e SMap.empty
-              in
+              let let_e', lets = purify_non_toplevel_ite let_e SMap.empty in
               let in_e' = purify_form in_e in
               if let_e == let_e' && in_e == in_e' then e
               else
@@ -2464,8 +2482,7 @@ module Purification = struct
     in
     List.fold_left
       (fun acc (let_v, (let_e, _cpt)) ->
-         let let_e, lets =
-           purify_non_toplevel_ite let_e SMap.empty in
+         let let_e, lets = purify_non_toplevel_ite let_e SMap.empty in
          assert (let_e.ty != Ty.Tbool || SMap.is_empty lets);
          mk_lifted (mk_let let_v let_e acc 0) lets
       )e ord_lets

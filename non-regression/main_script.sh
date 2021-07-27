@@ -1,4 +1,9 @@
+#!/bin/bash
+
 rm -f main_script.log
+
+retcode=0
+
 
 ## Given parameters
 ################################################################################################
@@ -32,11 +37,15 @@ while [ $cpt -lt $COLS ]; do
     limit=`echo -n $limit-`
 done
 
-echo -n "$limit"
-
 main_script_out=$(mktemp)
 main_script_err=$(mktemp)
 trap "rm $main_script_out $main_script_err" EXIT
+
+## Finding files
+################################################################################################
+
+files_pat=("-name" "*.ae" "-or" "-name" "*.smt2" "-or" "-name" "*.zip")
+
 
 ## Challenges
 ################################################################################################
@@ -44,36 +53,34 @@ trap "rm $main_script_out $main_script_err" EXIT
 score=0
 total=0
 
-big_total=`ls challenges/*/*.ae | wc -l`
+big_total=`find challenges "${files_pat[@]}" | wc -l`
 for kind in `ls challenges/`
 do
-    echo ""
     echo -n "challenges/$kind"
-    for ae in `ls challenges/$kind/*.ae`
+    for ae in `find challenges/$kind/ "${files_pat[@]}"`
     do
         tput hpa 25
         total=`expr $total + 1`
         echo -n "$total / $big_total"
-        timeout 2 $pr $ae $opt 1> $main_script_out 2> $main_script_err
+        timeout 2 $pr -o native $ae $opt 1> $main_script_out 2> $main_script_err
         if grep -q -w Valid $main_script_out ; then
-	    score=`expr $score + 1`
-            echo "\e[32m    > [OK] ../non-regression/$ae\e[39m"
-        else
-            echo ../non-regression/$ae >> main_script.log
-            cat $main_script_out >> main_script.log
-            cat $main_script_err >> main_script.log
-            echo "" >> main_script.log
-            echo "    > [KO] ../non-regression/$ae"
+            score=`expr $score + 1`
+            echo "    > [OK] ../non-regression/$ae"
+        #else
+            #echo ../non-regression/$ae >> main_script.log
+            #cat $main_script_out >> main_script.log
+            #cat $main_script_err >> main_script.log
+            #echo "" >> main_script.log
+            #echo "    > [KO] ../non-regression/$ae"
         fi
     done
 done
 
 percent=`expr 100 \* $score / $total`
 diff=`expr $total - $score`
-echo ""
+echo -ne "\r                                   \r"
 echo "$limit"
-echo " Score Challenges: $score/$total : $percent% (-$diff) "
-echo "$limit"
+echo -e " Score Challenges:\t $score/$total :\t\t $percent% (-$diff) "
 
 
 ## Valid
@@ -82,35 +89,34 @@ echo "$limit"
 score=0
 total=0
 
-big_total=`ls valid/*/*.ae | wc -l`
+big_total=`find valid "${files_pat[@]}" | wc -l`
 for kind in `ls valid/`
 do
-    echo ""
+    echo -ne "\r                                   \r"
     echo -n "valid/$kind"
-    for ae in `ls valid/$kind/*.ae`
+    for ae in `find valid/$kind/ "${files_pat[@]}"`
     do
         tput hpa 25
         total=`expr $total + 1`
         echo -n "$total / $big_total"
-        timeout 2 $pr $ae $opt 1> $main_script_out 2> $main_script_err
+        timeout 2 $pr -o native $ae $opt 1> $main_script_out 2> $main_script_err
         if grep -q -w Valid $main_script_out ; then
-	    score=`expr $score + 1`
+            score=`expr $score + 1`
         else
+            retcode=1
             echo ../non-regression/$ae >> main_script.log
             cat $main_script_out >> main_script.log
             cat $main_script_err >> main_script.log
             echo "" >> main_script.log
-            echo "    > [KO] ../non-regression/$ae"
+            echo -e "\e[31m    > [KO] ../non-regression/$ae\e[39m"
         fi
     done
 done
 
 percent=`expr 100 \* $score / $total`
 diff=`expr $total - $score`
-echo ""
-echo "$limit"
-echo " Score Valid: $score/$total : $percent% (-$diff) "
-echo "$limit"
+echo -ne "\r                                   \r"
+echo -e " Score Valid:\t\t $score/$total :\t $percent% (-$diff) "
 
 
 ## Invalid
@@ -119,35 +125,34 @@ echo "$limit"
 score=0
 total=0
 
-big_total=`ls invalid/*/*.ae | wc -l`
+big_total=`find invalid "${files_pat[@]}" | wc -l`
 for kind in `ls invalid/`
 do
-    echo ""
+    echo -ne "\r                                   \r"
     echo -n "invalid/$kind"
-    for ae in `ls invalid/$kind/*.ae`
+    for ae in `find invalid/$kind/ "${files_pat[@]}"`
     do
         tput hpa 25
         total=`expr $total + 1`
         echo -n "$total / $big_total"
-        timeout 2 $pr $ae $opt 1> $main_script_out 2> $main_script_err
+        timeout 2 $pr -o native $ae $opt 1> $main_script_out 2> $main_script_err
         if grep -q -w "I don't know" $main_script_out ; then
-	    score=`expr $score + 1`
+	          score=`expr $score + 1`
         else
+            retcode=1
             echo ../non-regression/$ae >> main_script.log
             cat $main_script_out >> main_script.log
             cat $main_script_err >> main_script.log
             echo "" >> main_script.log
-            echo "    > [KO] ../non-regression/$ae"
+            echo "\e[31m    > [KO] ../non-regression/$ae\e[39m"
         fi
     done
 done
 
 percent=`expr 100 \* $score / $total`
 diff=`expr $total - $score`
-echo ""
-echo "$limit"
-echo " Score Invalid: $score/$total : $percent% (-$diff)"
-echo "$limit"
+echo -ne "\r                                   \r"
+echo -e " Score Invalid:\t\t $score/$total :\t $percent% (-$diff)"
 
 
 ## Incorrect
@@ -156,23 +161,24 @@ echo "$limit"
 score=0
 total=0
 
-big_total=`ls incorrect/*/*.ae | wc -l`
+big_total=`find incorrect "${files_pat[@]}" | wc -l`
 for kind in `ls incorrect/`
 do
-    echo ""
+    echo -ne "\r                                   \r"
     echo -n "incorrect/$kind"
-    for ae in `ls incorrect/$kind/*.ae`
+    for ae in `find incorrect/$kind "${files_pat[@]}"`
     do
         tput hpa 25
         total=`expr $total + 1`
         echo -n "$total / $big_total"
-        timeout 2 $pr $ae $opt 1> $main_script_out 2> $main_script_err
+        timeout 2 $pr -o native $ae $opt 1> $main_script_out 2> $main_script_err
         if [ $? -eq 0 ] ; then
+            retcode=1
             echo ../non-regression/$ae >> main_script.log
             cat $main_script_out >> main_script.log
             cat $main_script_err >> main_script.log
             echo "" >> main_script.log
-            echo "    > [KO] ../non-regression/$ae"
+            echo "\e[31m    > [KO] ../non-regression/$ae\e[39m"
         else
             score=`expr $score + 1`
         fi
@@ -181,7 +187,15 @@ done
 
 percent=`expr 100 \* $score / $total`
 diff=`expr $total - $score`
-echo ""
+echo -ne "\r                                   \r"
+echo -e " Score Invalid:\t\t $score/$total :\t $percent% (-$diff)"
+echo -e " Score Incorrect:\t $score/$total :\t $percent% (-$diff)"
 echo "$limit"
-echo " Score Incorrect: $score/$total : $percent% (-$diff)"
-echo "$limit"
+
+if [ $retcode -eq 0 ]; then
+  echo -e "\e[32m[OK] All tests have passed\e[39m"
+  echo ""
+else
+  echo -e "\e[31m[KO] Some tests have failed !\e[39m"
+  echo ""
+fi

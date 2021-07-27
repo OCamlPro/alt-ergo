@@ -1,0 +1,165 @@
+name: Build Ubuntu
+
+# this worflow try to build and test Alt-Ergo on a Ubuntu system
+# For any push we try to build and install the project with opam
+# It its succed we run Alt-Ergo`s non-regression test.
+# If this tests succed, and a PR is open, we try to build and run tests
+# on different ocaml compiler versions.
+
+on: [push,pull_request]
+
+env:
+  OCAML_DEFAULT_VERSION: 4.10.0
+  # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
+  # in any opam call
+  OPAMYES: true
+  # Alt-Ergo's depext crashs with with-test flag to yes
+  #   # The with-test flag is set to true to force installation of deps and
+  #   # depext needed to run the alt-ergo tests
+  #   OPAMWITHTEST: true
+
+jobs:
+  install_and_test_ubuntu:
+    # Basic test to check if the project build with opam.
+    # If this test fails, no more building test with opam and non-regression are done
+    name: Install and Test on Ubuntu
+
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the code of the current branch
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Retrieve the opam cache with unique key
+      # A new cache is created/used if the `.opam` files changes or
+      # if we use another ocaml version
+      # This action only retrieve de .opam/ directory
+      - name: Retrieve opam cache
+        uses: actions/cache@v2
+        id: cache-opam
+        with:
+          path: ~/.opam
+          key: v1-${{ runner.os }}-alt-ergo-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
+
+      # Get an OCaml environment with opam installed and the proper ocaml version
+      # opam will used opam cache environment if retrieved
+      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
+
+      # Pin the packages, this is needed for opam depext
+      # remove this step when opam 2.1 will be used
+      - name: Pin no action
+        run: opam pin add . --no-action
+
+      # Install external dependencies
+      # remove this step when opam 2.1 will be used
+      - name: Install depext
+        run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+
+      # Install dependencies
+      - name: Install deps
+        run: opam install ./*.opam --deps-only --with-test
+
+      # Build and install with opam
+      - name: Install
+        run: opam reinstall .
+
+      # Run non regression tests
+      - name: Run non regression tests
+        run: opam exec -- rsc/extra/non_regression.sh
+
+      # Get and Set version of the installed alt-ergo binary
+      # Get and Set the path where alt-ergo binary is located
+      - name: Get version and path
+        id: get_version_path
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
+        run: |
+          echo "::set-output name=version::$(opam exec -- alt-ergo --version)"
+          echo "::set-output name=path::$(opam var bin)"
+
+      # Upload Alt-Ergo binary as an artifact
+      # the artifact name contains the alt-ergo version as well as the system
+      # is builded on and the ocaml compiler version used
+      - name: Upload Alt-Ergo binary
+        uses: actions/upload-artifact@v2
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
+        with:
+          name: alt-ergo-${{ steps.get_version_path.outputs.version }}-${{ runner.os }}-${{ env.OCAML_DEFAULT_VERSION }}
+          path: "${{ steps.get_version_path.outputs.path }}/alt-ergo"
+
+
+  install_and_test_ocaml_versions:
+    # Test different versions of OCaml
+    name: Install and test OCaml versions on Ubuntu
+
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/next' || github.ref == 'refs/heads/main'
+
+    needs:
+      - install_and_test_ubuntu
+
+    strategy:
+      matrix:
+        # Setup ocaml versions to test
+        ocaml-version:
+          - 4.05.0
+          - 4.05.0+flambda
+          - 4.06.1
+          - 4.06.1+flambda
+          - 4.07.1
+          - 4.07.1+flambda
+          - 4.08.1
+          - 4.08.1+flambda
+          - 4.09.1
+          - 4.09.1+flambda
+          - 4.11.1
+          - 4.11.1+flambda
+
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the code of the current branch
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Retrieve the opam cache with unique key
+      # A new cache is created/used if the `.opam` files changes or
+      # if we use another ocaml version
+      # This action only retrieve de .opam/ directory
+      - name: Retrieve opam cache
+        uses: actions/cache@v2
+        id: cache-opam
+        with:
+          path: ~/.opam
+          key: v1-${{ runner.os }}-alt-ergo-${{ matrix.ocaml-version }}-${{ hashFiles('*.opam') }}
+
+      # Get an OCaml environment with opam installed and the proper ocaml version
+      # opam will used opam cache environment if retrieved
+      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
+
+      # Pin the packages, this is needed for opam depext
+      # remove this step when opam 2.1 will be used
+      - name: Pin no action
+        run: opam pin add . --no-action
+
+      # Install external dependencies
+      # remove this step when opam 2.1 will be used
+      - name: opam install depext
+        run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+
+      # Install dependencies
+      - name: Install deps
+        run: opam install  ./*.opam --deps-only --with-test
+
+      # Build and install with opam
+      - name: Install
+        run: opam reinstall .
+
+      # Run non regression tests
+      - name: Run non regression tests
+        run: opam exec -- rsc/extra/non_regression.sh

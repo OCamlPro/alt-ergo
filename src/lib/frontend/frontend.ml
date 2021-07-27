@@ -138,8 +138,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | None -> false
     | Some s -> not (Util.SS.mem name s)
 
-  let mk_root_dep f_name =
-    if Options.get_unsat_core () then Ex.singleton (Ex.RootDep f_name)
+  let mk_root_dep name f loc =
+    if Options.get_unsat_core () then Ex.singleton (Ex.RootDep {name;f;loc})
     else Ex.empty
 
   let process_decl print_status used_context consistent_dep_stack
@@ -161,7 +161,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         if not is_hyp && unused_context n used_context then
           acc
         else
-          let dep = if is_hyp then Ex.empty else mk_root_dep n in
+          let dep = if is_hyp then Ex.empty else mk_root_dep n f d.st_loc in
           if consistent then
             SAT.assume env
               {E.ff=f;
@@ -182,7 +182,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | PredDef (f, name) ->
         if unused_context name used_context then acc
         else
-          let dep = mk_root_dep name in
+          let dep = mk_root_dep name f d.st_loc in
           SAT.pred_def env f name dep d.st_loc, consistent, dep
 
       | RwtDef _ -> assert false
@@ -212,12 +212,12 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         print_status (Unsat (d, dep)) (Steps.get_steps ());
         env, false, dep
 
-      | ThAssume ({ Expr.ax_name; _ } as th_elt) ->
+      | ThAssume ({ Expr.ax_name; Expr.ax_form ; _ } as th_elt) ->
         if unused_context ax_name used_context then
           acc
         else
         if consistent then
-          let dep = mk_root_dep ax_name in
+          let dep = mk_root_dep ax_name ax_form d.st_loc in
           let env = SAT.assume_th_elt env th_elt dep in
           env, consistent, dep
         else env, consistent, dep

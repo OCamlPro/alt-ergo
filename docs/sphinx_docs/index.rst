@@ -14,10 +14,11 @@ You can also learn more about our partners with the `Alt-Ergo Users' Club <https
 .. toctree::
    :maxdepth: 2
    :caption: Contents
-   
+
    Install                   <Install/index>
    Usage                     <Usage/index>
    Input file formats        <Input_file_formats/index>
    API documentation         <API/index>
+   Plugins                   <Plugins/index>
    Developer's documentation <Dev/index>
    About                     <About/index>

@@ -1,0 +1,39 @@
+; Rule to build a js version runnable with node-js of Alt-Ergo
+(executable
+  (name         main_text_js)
+  (libraries    alt_ergo_common zarith_stubs_js)
+  (modules      main_text_js)
+  (modes        byte js)
+  (js_of_ocaml
+    (flags --no-source-map)
+  )
+)
+
+(library
+  (name         worker_interface)
+  (libraries    js_of_ocaml data-encoding)
+  (modules      worker_interface)
+)
+
+; Rule to build a web worker running Alt-Ergo
+(executable
+  (name         worker_js)
+  (libraries    worker_interface alt_ergo_common zarith_stubs_js js_of_ocaml js_of_ocaml-lwt)
+  (modules      worker_js options_interface)
+  (modes        byte js)
+  (js_of_ocaml
+    (flags --no-source-map)
+  )
+)
+
+; Rule to build a small js example running the Alt-Ergo web worker
+(executable
+  (name         worker_example)
+  (libraries    worker_interface zarith_stubs_js js_of_ocaml js_of_ocaml-lwt)
+  (modules      worker_example)
+  (modes        byte js)
+  (preprocess (pps js_of_ocaml-ppx lwt_ppx))
+  (js_of_ocaml
+    (flags --no-source-map)
+  )
+)

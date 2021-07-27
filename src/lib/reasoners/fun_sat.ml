@@ -1092,7 +1092,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
           | E.Let letin ->
             Options.tool_req 2 "TR-Sat-Assume-Let";
-            let elim_let = E.elim_let letin in
+            let elim_let = E.elim_let ~recursive:true letin in
             let ff = {ff with E.ff = elim_let} in
             if Options.get_tableaux_cdcl () then begin
               let f_imp_f' = E.mk_imp f elim_let (E.id f) in

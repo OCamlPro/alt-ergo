@@ -410,12 +410,13 @@ end
 
 (* generic find for values that may be non-alien or non
    normalized polys *)
-let generic_find xp env =
+let generic_find ?(only_inf=false) xp env =
   let is_mon = is_alien xp in
   if get_debug_fm () then
     Printer.print_dbg ~flushed:false
       ~module_name:"IntervalCalculus" ~function_name:"generic_find"
-      "generic_find: %a ... " X.print xp;
+      "Searching %s for: %a ... "
+      (if only_inf then "a lower bound" else "an interval") X.print xp;
   try
     if not is_mon then raise Not_found;
     let i, use = MX.n_find xp env.monomes in
@@ -432,23 +433,42 @@ let generic_find xp env =
     let p0 = poly_of xp in
     let p, c = P.separate_constant p0 in
     let p, c0, d = P.normal_form_pos p in
-    (* in case we are on integers, c, may be rational (eg, coming from
-       Fourier-Motzkin.*)
-    let c = if P.type_info p == Ty.Tint then Q.floor c else c in
     if get_debug_fm () then
       Printer.print_dbg ~flushed:false ~header:false
-        "normalized into %a + %a * %a@ "
+        "normalized into %a + %a * ( %a )@ "
         Q.print c Q.print d P.print p;
     assert (Q.sign d <> 0 && Q.sign c0 = 0);
     let ty = P.type_info p0 in
     let ip =
       try MP.n_find p env.polynomes with Not_found -> I.undefined ty
     in
+    (* In some cases when this function is called, the caller only care about
+       the lower bound of the given polynome. However, the affine scaling logic
+       we apply later can detect empty intervals, and if it reaches an empty
+       interval, the function will raise, in order to let its caller know the
+       interval is not consistent/reachable/satisfiable.
+       This interacts badly with callers who only care about the lower bound,
+       as these callers do not catch the inconsisten exception, and this can
+       lead to the solver returning Unsat/Valid even when it is incorrect to
+       do so. (see issues #460 #340, and PRs #342 and #465). *)
+    let ip =
+      if only_inf then
+        if Q.sign d >= 0 then
+          I.only_borne_inf ip
+        else
+          I.only_borne_sup ip
+      else
+        ip
+    in
     if get_debug_fm () then
       Printer.print_dbg ~header:false
-        "scaling %a by %a" I.print ip Q.print d;
-    let ip = I.affine_scale ~const:c ~coef:d ip in
-    ip, SX.empty, is_mon
+        "@[<v>found interval: %a for %a,@ scaling interval by * %a, then + %a@]"
+        I.print ip P.print p Q.print d Q.print c;
+    let new_ip = I.affine_scale ~const:c ~coef:d ip in
+    if get_debug_fm () then
+      Printer.print_dbg ~header:false
+        "scaled %a into %a" I.print ip I.print new_ip;
+    new_ip, SX.empty, is_mon
 
 
 (* generic add for values that may be non-alien or non
@@ -1206,7 +1226,7 @@ let refine_x_bounds ix env rels is_low =
             -> not is_low : low_bnd(pi) / (-c) is an up_bnd of x
          *)
          assert (is_low == (Q.sign m_cx > 0));
-         let ip, _, _ = generic_find (alien_of p) env in
+         let ip, _, _ = generic_find ~only_inf:true (alien_of p) env in
          let b, ex_b, is_le = I.borne_inf ip in (* invariant, see above *)
          let b = Q.div b m_cx in
          let func = if is_low then I.new_borne_inf else I.new_borne_sup in

@@ -282,7 +282,7 @@ val mk_match : t -> (Typed.pattern * t) list -> t
 
 val skolemize : quantified -> t
 
-val elim_let : letin -> t
+val elim_let : recursive:bool -> letin -> t
 
 val elim_iff : t -> t -> int -> with_conj:bool -> t
 

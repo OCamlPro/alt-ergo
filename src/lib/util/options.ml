@@ -26,20 +26,23 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(* Global formatter declarations and setters, can't be directly used *)
-let std_fmt = ref Format.std_formatter
-let err_fmt = ref Format.err_formatter
-
-let set_std_fmt f = std_fmt := f
-let set_err_fmt f = err_fmt := f
-
 (* Formatter declarations, getters and setters *)
-let fmt_std = std_fmt
-let fmt_err = err_fmt
-let fmt_wrn = err_fmt
-let fmt_dbg = err_fmt
-let fmt_mdl = std_fmt
-let fmt_usc = std_fmt
+let fmt_std = ref Format.std_formatter
+let fmt_err = ref Format.err_formatter
+let fmt_wrn = ref Format.err_formatter
+let fmt_dbg = ref Format.err_formatter
+let fmt_mdl = ref Format.std_formatter
+let fmt_usc = ref Format.std_formatter
+
+let set_std_fmt f =
+  fmt_std := f;
+  fmt_mdl := f;
+  fmt_usc := f
+
+let set_err_fmt f =
+  fmt_err := f;
+  fmt_wrn := f;
+  fmt_dbg := f
 
 let get_fmt_std () = !fmt_std
 let get_fmt_err () = !fmt_err
@@ -214,7 +217,8 @@ let get_save_used_context () = !save_used_context
 let answers_with_loc = ref true
 let output_with_colors = ref false
 let output_with_headers = ref true
-let output_with_formatting = ref false
+let output_with_formatting = ref true
+let output_with_forced_flush = ref true
 let frontend = ref "legacy"
 let input_format = ref Native
 let infer_input_format = ref true
@@ -228,6 +232,7 @@ let set_answers_with_loc b = answers_with_loc := b
 let set_output_with_colors b = output_with_colors := b
 let set_output_with_headers b = output_with_headers := b
 let set_output_with_formatting b = output_with_formatting := b
+let set_output_with_forced_flush b = output_with_forced_flush := b
 let set_frontend f = frontend := f
 let set_input_format f = input_format := f
 let set_infer_input_format f = infer_input_format := (f = None)
@@ -241,6 +246,7 @@ let get_answers_with_locs () = !answers_with_loc
 let get_output_with_colors () = !output_with_colors
 let get_output_with_headers () = !output_with_headers
 let get_output_with_formatting () = !output_with_formatting
+let get_output_with_forced_flush () = !output_with_forced_flush
 let get_frontend () = !frontend
 let get_input_format () = !input_format
 let get_infer_input_format () = !infer_input_format
@@ -548,23 +554,10 @@ let compare  (a: int) (b: int) = Stdlib.compare a b
 
 (* extra **)
 
-let is_gui = ref None
+let is_gui = ref false
 
-let set_is_gui b =
-  match !is_gui with
-  | None -> is_gui := Some b
-  | Some _ ->
-    Format.fprintf (get_fmt_err ())
-      "[Error] Error in Options.set_is_gui: is_gui is already set!@.";
-    assert false
-
-let get_is_gui () =
-  match !is_gui with
-  | Some b -> b
-  | None ->
-    Format.fprintf (get_fmt_err ())
-      "[Error] Error in Options.get_is_gui: is_gui is not set!@.";
-    assert false
+let set_is_gui b = is_gui := b
+let get_is_gui () = !is_gui
 
 let set_file_for_js filename =
   set_file filename;

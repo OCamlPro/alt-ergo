@@ -6,9 +6,9 @@ You can [try Alt-Ergo] online.
 Also see the [Alt-Ergo Users' Club].
 
 ## Build status
-next | master
+next | main
 ------------ | -------------
-[![Build Status (next)](https://travis-ci.org/OCamlPro/alt-ergo.svg?branch=next)](https://travis-ci.org/OCamlPro/alt-ergo) | [![Build Status (master)](https://travis-ci.org/OCamlPro/alt-ergo.svg?branch=master)](https://travis-ci.org/OCamlPro/alt-ergo) 
+[![Build Status (next)](https://travis-ci.org/OCamlPro/alt-ergo.svg?branch=next)](https://travis-ci.org/OCamlPro/alt-ergo) | [![Build Status (main)](https://travis-ci.org/OCamlPro/alt-ergo.svg?branch=main)](https://travis-ci.org/OCamlPro/alt-ergo) 
 
 ## Website
 

@@ -47,6 +47,14 @@ val new_borne_sup : Explanation.t -> Numbers.Q.t -> is_le : bool -> t -> t
 
 val new_borne_inf : Explanation.t -> Numbers.Q.t -> is_le : bool -> t -> t
 
+val only_borne_sup : t -> t
+(** Keep only the upper bound of the interval,
+    setting the lower bound to minus infty. *)
+
+val only_borne_inf : t -> t
+(** Keep only the lower bound of the interval,
+    setting the upper bound to plus infty. *)
+
 val is_point : t -> (Numbers.Q.t * Explanation.t) option
 
 val intersect : t -> t -> t

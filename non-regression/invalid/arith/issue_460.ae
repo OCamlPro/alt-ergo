@@ -1,0 +1,23 @@
+logic div : int, int -> int
+
+predicate in_range(x: int) =
+  ((1 <= x) and (x <= 100))
+
+axiom Div_sign_neg :
+  (forall x:int. forall y:int. (((x <= 0) and (0 <  y)) -> (div(x, y) <= 0)))
+
+
+logic x : int
+logic y : int
+logic z : int
+
+axiom cdiv_cases :
+  forall n:int. forall d:int [div(n, d)].
+  (0 <= n -> not (d = 0) -> div(n, d) = (n / d))
+  and
+  (n <= 0 -> not (d = 0) -> div(n, d) = (-((-n) / d)))
+
+goal defqtvc :
+  in_range(y) ->
+  z = (div((y - 1), 8) + 1) ->
+  2 <= y

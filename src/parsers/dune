@@ -23,5 +23,8 @@
       ; AE format
       Native_lexer Native_parser
     )
-)
 
+ (js_of_ocaml
+  (javascript_files missing_primitives.js)
+ )
+)

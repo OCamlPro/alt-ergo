@@ -36,3 +36,8 @@ tmp/
 *.tmp
 alt-ergo/tmp/
 _opam
+
+# Generated javascript files
+alt-ergo.js
+alt-ergo-worker.js
+www/
