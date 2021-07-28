@@ -17,7 +17,7 @@ depends: [
   "alt-ergo-lib" {= version}
   "alt-ergo-parsers" {= version}
   "menhir"
-  "cmdliner"
+  "cmdliner" {>= "1.0.0"}
   "odoc" {with-doc}
 ]
 dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"
@@ -31,6 +31,6 @@ license: [
 
 build: [
   ["ocaml" "unix.cma" "configure.ml" name "--libdir" lib "--mandir" man]
-  ["dune" "subst"] {pinned}
+  ["dune" "subst"] {dev}
   ["dune" "build" "-p" name "-j" jobs]
 ]

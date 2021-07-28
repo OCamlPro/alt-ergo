@@ -30,7 +30,7 @@ See more details on https://alt-ergo.ocamlpro.com/")
   (alt-ergo-lib (= :version))
   (alt-ergo-parsers (= :version))
    menhir
-   cmdliner
+  (cmdliner (>= 1.0.0))
   (odoc :with-doc)
   )
 )
@@ -56,7 +56,7 @@ See more details on https://alt-ergo.ocamlpro.com/"
   (alt-ergo-parsers (= :version))
   lablgtk
   conf-gtksourceview
-  cmdliner
+  (cmdliner (>= 1.0.0))
   (odoc :with-doc)
 )
 )
@@ -107,7 +107,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   dune-configurator
   num
   (ocplib-simplex (>= 0.4))
-  zarith
+  (zarith (>= 1.4))
   seq
   stdlib-shims
   (odoc :with-doc)
