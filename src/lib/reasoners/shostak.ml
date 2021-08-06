@@ -501,9 +501,11 @@ struct
       List.filter (fun (p,_) ->
           match p.v with
           | Ac _ -> true | Term _ -> SX.mem p original
-          | _ ->
-            Printer.print_err "%a" CX.print p;
-            assert false
+          | _ -> false
+            (*
+              Printer.print_err "%a" CX.print p;
+              assert false
+            *)
         )sbs
     in
     Debug.print_sbt "Triangular and cleaned" sbs;
