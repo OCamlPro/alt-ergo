@@ -1015,8 +1015,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         unsat_rec env ~first_call:false
       with
       | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
+      | I_dont_know _ as e -> raise e
       | _ -> assert false
-
 
   (* copied from sat_solvers.ml *)
   let max_term_depth_in_sat env =

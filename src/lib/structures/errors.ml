@@ -95,7 +95,11 @@ exception Error of error
 
 let error e = raise (Error e)
 
-let typing_error e loc =
+let typing_error ?ae_loc e loc =
+  let () =
+    match ae_loc with
+    | None -> ()
+    | Some ae_loc -> Format.printf "Error at %s@." ae_loc in
   error (Typing_error (loc,e))
 
 let run_error e =

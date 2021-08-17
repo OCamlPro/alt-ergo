@@ -109,7 +109,7 @@ exception Error of error
 val error : error -> 'a
 
 (** Raise the input {!typing_error} as {!Typing_error} *)
-val typing_error : typing_error -> Loc.t -> 'a
+val typing_error : ?ae_loc:string -> typing_error -> Loc.t -> 'a
 
 (** Raise the input {!run_error} as {!Run_error} *)
 val run_error : run_error -> 'a
