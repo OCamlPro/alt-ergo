@@ -785,6 +785,7 @@ let rec type_term ?(call_from_type_form=false) env f =
           let ty = e.c.tt_ty in
           List.iter
             (fun (_, e) ->
+               Ty.unify ty e.c.tt_ty;
                if not (Ty.equal ty e.c.tt_ty) then
                  typing_error (ShouldHaveType(e.c.tt_ty, ty)) loc
             )l;
