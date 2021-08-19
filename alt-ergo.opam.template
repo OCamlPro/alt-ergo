@@ -7,7 +7,7 @@ license: [
 ]
 
 build: [
-  ["ocaml" "unix.cma" "configure.ml" name "--libdir" lib "--mandir" man]
+  ["ocaml" "unix.cma" "configure.ml" name "--prefix" prefix "--libdir" lib "--mandir" man]
   ["dune" "subst"] {pinned}
   ["dune" "build" "-p" name "-j" jobs]
 ]
