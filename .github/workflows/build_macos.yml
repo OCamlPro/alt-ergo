@@ -63,7 +63,7 @@ jobs:
 
       # Install dependencies
       - name: Install deps
-        run: opam install  ./*.opam --deps-only --with-test
+        run: opam install  ./*.opam --deps-only --with-test --depext
 
 
       # Build and install with opam
