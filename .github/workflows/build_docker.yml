@@ -6,6 +6,7 @@ name: Build with ocp Docker container
 on:
   push:
     branches:
+      - fix-ci
       - next
       - main
 
