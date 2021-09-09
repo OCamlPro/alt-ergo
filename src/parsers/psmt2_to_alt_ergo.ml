@@ -441,6 +441,9 @@ module Translate = struct
     | Cmd_SetInfo _ -> not_supported "set-info"; acc
     | Cmd_Push n -> translate_push_pop mk_push n (pos command) :: acc
     | Cmd_Pop n -> translate_push_pop mk_pop n (pos command) :: acc
+    | Cmd_CheckAllSat _ -> not_supported "check-all-sat"; acc
+    | Cmd_Maximize _ -> not_supported "maximize"; acc
+    | Cmd_Minimize _ -> not_supported "minimize"; acc
     | Cmd_Exit -> acc
 
   let init () =
