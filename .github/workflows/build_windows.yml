@@ -4,6 +4,7 @@ name: Build Windows
 on:
   push:
     branches:
+      - fix-ci
       - next
       - main
 

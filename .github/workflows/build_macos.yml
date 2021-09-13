@@ -6,6 +6,7 @@ name: Build MacOS
 on:
   push:
     branches:
+      - fix-ci
       - next
       - main
 
@@ -57,12 +58,12 @@ jobs:
 
       # Install external dependencies
       # remove this step when opam 2.1 will be used
-      - name: opam install depext
-        run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+      #- name: opam install depext
+      #  run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
       # Install dependencies
       - name: Install deps
-        run: opam install  ./*.opam --deps-only --with-test
+        run: opam install  ./*.opam --deps-only --with-test --depext
 
 
       # Build and install with opam
