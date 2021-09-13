@@ -188,7 +188,6 @@ done
 percent=`expr 100 \* $score / $total`
 diff=`expr $total - $score`
 echo -ne "\r                                   \r"
-echo -e " Score Invalid:\t\t $score/$total :\t $percent% (-$diff)"
 echo -e " Score Incorrect:\t $score/$total :\t $percent% (-$diff)"
 echo "$limit"
 
