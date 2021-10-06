@@ -102,6 +102,14 @@ val borne_sup : t -> Numbers.Q.t * Explanation.t * bool
 
 val div : t -> t -> t
 
+val coerce : Ty.t -> t -> t
+(** Coerce an interval to the given type. The main use of that function is
+    to round a rational interval to an integer interval. This is particularly
+    useful to avoid roudning too many times when manipulating intervals that
+    at the end represent an integer interval, but whose intermediate state do
+    not need to represent integer intervals (e.g. computing the interval for
+    an integer polynome from the intervals of the monomes). *)
+
 val mk_closed :
   Numbers.Q.t -> Numbers.Q.t -> bool -> bool ->
   Explanation.t -> Explanation.t -> Ty.t -> t
@@ -122,7 +130,7 @@ type bnd = (Numbers.Q.t * Numbers.Q.t) option * Explanation.t
      and 0 for large bounds
 *)
 
-val  bounds_of : t -> (bnd * bnd) list
+val bounds_of : t -> (bnd * bnd) list
 
 val contains : t -> Numbers.Q.t -> bool
 
