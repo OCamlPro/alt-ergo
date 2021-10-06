@@ -494,11 +494,12 @@ let generic_add x j use is_mon env =
 module Debug = struct
   open Printer
 
-  let assume a expl =
+  let assume ~query a expl =
     if get_debug_fm () then
       print_dbg
         ~module_name:"IntervalCalculus" ~function_name:"assume"
-        "@[<v 2>We assume: %a@,explanations: %a@]"
+        "@[<v 2>%s We assume: %a@,explanations: %a@]"
+        (if query then "[query]" else "")
         LR.print (LR.make a)
         Explanation.print expl
 
@@ -1578,7 +1579,7 @@ let assume ~query env uf la =
     List.fold_left
       (fun ((env, eqs, new_ineqs, rm) as acc) (a, root, expl, orig) ->
          let a = normal_form a in
-         Debug.assume a expl;
+         Debug.assume ~query a expl;
          Steps.incr (Interval_Calculus);
          try
            match a with
