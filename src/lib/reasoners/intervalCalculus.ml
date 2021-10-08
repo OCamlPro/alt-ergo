@@ -693,7 +693,7 @@ let intervals_from_monomes ?(monomes_inited=true) env p =
              if monomes_inited then assert false;
              I.undefined (X.type_info x), SX.empty
          in
-       I.add (I.scale a (I.coerce Ty.Treal i_x)) i
+         I.add (I.scale a (I.coerce Ty.Treal i_x)) i
       ) (I.point v Ty.Treal Explanation.empty) pl
   in
   I.coerce (P.type_info p) rational_interval
@@ -1848,7 +1848,9 @@ let add =
       let p = poly_of r in
       Debug.add p;
       if is_num r then
-        let env = init_monomes_of_poly are_eq env p SX.empty Explanation.empty in
+        let env =
+          init_monomes_of_poly are_eq env p SX.empty Explanation.empty
+        in
         add_used_by t r env
       else env, []
     with I.NotConsistent expl ->
