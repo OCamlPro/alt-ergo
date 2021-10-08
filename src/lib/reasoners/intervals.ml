@@ -492,6 +492,8 @@ let scale_interval_neg n (b1, b2) =
 
 let affine_scale ~const ~coef uints =
   Options.tool_req 4 "TR-Arith-Axiomes scale";
+  Format.eprintf "affine_scale: %a * %a + %a@\n"
+    print uints Q.print coef Q.print const;
   if Q.equal coef Q.one then
     { uints with ints = List.map (translate const) uints.ints; }
   else

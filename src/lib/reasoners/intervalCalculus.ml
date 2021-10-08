@@ -448,7 +448,7 @@ let generic_find ?(only_inf=false) xp env =
        interval, the function will raise, in order to let its caller know the
        interval is not consistent/reachable/satisfiable.
        This interacts badly with callers who only care about the lower bound,
-       as these callers do not catch the inconsisten exception, and this can
+       as these callers do not catch the inconsistent exception, and this can
        lead to the solver returning Unsat/Valid even when it is incorrect to
        do so. (see issues #460 #340, and PRs #342 and #465). *)
     let ip =
@@ -561,11 +561,12 @@ module Debug = struct
         "%s : nothing" s
 
   let inconsistent_interval expl =
-    if get_debug_fm () then
+    if get_debug_fm () then (
       print_dbg
         ~module_name:"IntervalCalculus"
         ~function_name:"inconsistent_interval"
         "interval inconsistent %a" Explanation.print expl
+    )
 
   let added_inequation kind ineq =
     if get_debug_fm () then begin
@@ -684,7 +685,14 @@ let intervals_from_monomes ?(monomes_inited=true) env p =
            if monomes_inited then assert false;
            I.undefined (X.type_info x), SX.empty
        in
-       I.add (I.scale a i_x) i
+       Format.eprintf "intervals_from_monomes: %a@ " X.print x;
+       Format.eprintf
+         "a: %a@\ni_x: %a@\ni: %a@\n"
+         Q.print a I.print i_x I.print i;
+       (* TODO: fix this HERE *)
+       let tmp = I.scale a i_x in
+       Format.eprintf "tmp: %a@\n" I.print tmp;
+       I.add tmp i
     ) (I.point v (P.type_info p) Explanation.empty) pl
 
 
@@ -700,16 +708,23 @@ let cannot_be_equal_to_zero env p ip =
 
 
 let rec init_monomes_of_poly are_eq env p use_p expl =
-  List.fold_left
+  Format.eprintf "@[<v 2>init_monomes_of_poly: %a@ " P.print p;
+  let res =
+    List.fold_left
     (fun env (_, x) ->
+       Format.eprintf "init: %a!@ " X.print x;
        try
          let u, old_use_x = MX.n_find x env.monomes in
          MX.n_add x (u, SX.union old_use_x use_p) u env
        with Not_found ->
          update_monome are_eq expl use_p env x
     ) env (fst (P.to_list p))
+  in
+  Format.eprintf "end@ @]@ ";
+  res
 
 and init_alien are_eq expl p (normal_p, c, d) ty use_x env =
+  Format.eprintf "@[<v 2>init_alien: %a@ " P.print p;
   let env = init_monomes_of_poly are_eq env p use_x expl in
   let i = intervals_from_monomes env p in
   let i =
@@ -720,11 +735,11 @@ and init_alien are_eq expl p (normal_p, c, d) ty use_x env =
       I.intersect i old_i
     with Not_found -> i
   in
+  Format.eprintf "end@ @]@ ";
   env, i
 
-
-
 and update_monome are_eq expl use_x env x =
+  Format.eprintf "@[<v 2>update_monome: %a@ " X.print x;
   let ty = X.type_info x in
   let ui, env = match  X.ac_extract x with
     | Some { h; l; _ }
@@ -796,7 +811,9 @@ and update_monome are_eq expl use_x env x =
     try MX.n_find x env.monomes
     with Not_found -> I.undefined (X.type_info x), use_x in
   let ui = I.intersect ui u in
-  MX.n_add x (ui, (SX.union use_x use_x')) u env
+  let res = MX.n_add x (ui, (SX.union use_x use_x')) u env in
+  Format.eprintf "end@ @]@ ";
+  res
 
 let rec tighten_ac are_eq x env expl =
   let ty = X.type_info x in
@@ -1834,15 +1851,21 @@ let add =
     if E.equal t1 t2 then Some (Explanation.empty, []) else None
   in
   fun env new_uf r t ->
+    Debug.env env;
+    Format.eprintf "@[<v 2>add@ r: %a@ t: %a@]@." X.print r E.print t;
     try
       let env = {env with new_uf} in
+      let p = poly_of r in
+      Format.eprintf "poly: %a@." P.print p;
       if is_num r then
-        let env = init_monomes_of_poly are_eq env
-            (poly_of r) SX.empty Explanation.empty in
+        let env = init_monomes_of_poly are_eq env p SX.empty Explanation.empty in
+        Format.eprintf "foo@.";
         add_used_by t r env
       else env, []
     with I.NotConsistent expl ->
-      Debug.inconsistent_interval expl ;
+      let bt = Printexc.get_raw_backtrace () in
+      Format.eprintf "@.bt: %s@." (Printexc.raw_backtrace_to_string bt);
+      Debug.inconsistent_interval expl;
       raise (Ex.Inconsistent (expl, env.classes))
 
 (*
