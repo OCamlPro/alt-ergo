@@ -73,7 +73,7 @@ module Debug = struct
       print_interval fmt e;
       List.iter (fprintf fmt " U %a" print_interval) l
 
-  let print fmt { ints; expl = e; is_int = _; } =
+  let print fmt { ints; expl = e; _ } =
     print_list fmt ints;
     if get_verbose () || get_unsat_core () then
       fprintf fmt " %a" Ex.print e

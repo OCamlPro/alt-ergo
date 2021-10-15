@@ -690,7 +690,7 @@ let intervals_from_monomes ?(monomes_inited=true) env p =
          let i_x, _  =
            try MX.n_find x env.monomes
            with Not_found ->
-             if monomes_inited then assert false;
+             assert (not monomes_inited);
              I.undefined (X.type_info x), SX.empty
          in
          I.add (I.scale a (I.coerce Ty.Treal i_x)) i
