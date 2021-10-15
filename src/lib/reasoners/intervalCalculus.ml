@@ -448,7 +448,7 @@ let generic_find ?(only_inf=false) xp env =
        interval, the function will raise, in order to let its caller know the
        interval is not consistent/reachable/satisfiable.
        This interacts badly with callers who only care about the lower bound,
-       as these callers do not catch the inconsisten exception, and this can
+       as these callers do not catch the inconsistent exception, and this can
        lead to the solver returning Unsat/Valid even when it is incorrect to
        do so. (see issues #460 #340, and PRs #342 and #465). *)
     let ip =
@@ -494,11 +494,18 @@ let generic_add x j use is_mon env =
 module Debug = struct
   open Printer
 
-  let assume a expl =
+  let add p =
+    if get_debug_fm () then
+      print_dbg
+        ~module_name:"IntervalCalculus" ~function_name:"add"
+        "@[<v 2>New polynome added: %a]" P.print p
+
+  let assume ~query a expl =
     if get_debug_fm () then
       print_dbg
         ~module_name:"IntervalCalculus" ~function_name:"assume"
-        "@[<v 2>We assume: %a@,explanations: %a@]"
+        "@[<v 2>%s We assume: %a@,explanations: %a@]"
+        (if query then "[query]" else "")
         LR.print (LR.make a)
         Explanation.print expl
 
@@ -675,17 +682,21 @@ let mult_bornes_vars vars env ty =
     The monomes are supposed to be already added in env **)
 let intervals_from_monomes ?(monomes_inited=true) env p =
   let pl, v = P.to_list p in
-  List.fold_left
-    (fun i (a, x) ->
-       let i_x, _  =
-         try MX.n_find x env.monomes
-         with Not_found ->
-           if monomes_inited then assert false;
-           I.undefined (X.type_info x), SX.empty
-       in
-       I.add (I.scale a i_x) i
-    ) (I.point v (P.type_info p) Explanation.empty) pl
-
+  (* in the case of integer polynomes, ensure that we only round once
+     at the end, and not at every add/scale operation on intervals. *)
+  let rational_interval =
+    List.fold_left
+      (fun i (a, x) ->
+         let i_x, _  =
+           try MX.n_find x env.monomes
+           with Not_found ->
+             assert (not monomes_inited);
+             I.undefined (X.type_info x), SX.empty
+         in
+         I.add (I.scale a (I.coerce Ty.Treal i_x)) i
+      ) (I.point v Ty.Treal Explanation.empty) pl
+  in
+  I.coerce (P.type_info p) rational_interval
 
 (* because, it's not sufficient to look in the interval that corresponds to
    the normalized form of p ... *)
@@ -720,8 +731,6 @@ and init_alien are_eq expl p (normal_p, c, d) ty use_x env =
     with Not_found -> i
   in
   env, i
-
-
 
 and update_monome are_eq expl use_x env x =
   let ty = X.type_info x in
@@ -1578,7 +1587,7 @@ let assume ~query env uf la =
     List.fold_left
       (fun ((env, eqs, new_ineqs, rm) as acc) (a, root, expl, orig) ->
          let a = normal_form a in
-         Debug.assume a expl;
+         Debug.assume ~query a expl;
          Steps.incr (Interval_Calculus);
          try
            match a with
@@ -1833,15 +1842,19 @@ let add =
     if E.equal t1 t2 then Some (Explanation.empty, []) else None
   in
   fun env new_uf r t ->
+    Debug.env env;
     try
       let env = {env with new_uf} in
+      let p = poly_of r in
+      Debug.add p;
       if is_num r then
-        let env = init_monomes_of_poly are_eq env
-            (poly_of r) SX.empty Explanation.empty in
+        let env =
+          init_monomes_of_poly are_eq env p SX.empty Explanation.empty
+        in
         add_used_by t r env
       else env, []
     with I.NotConsistent expl ->
-      Debug.inconsistent_interval expl ;
+      Debug.inconsistent_interval expl;
       raise (Ex.Inconsistent (expl, env.classes))
 
 (*

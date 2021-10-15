@@ -168,7 +168,9 @@ module Make (X : S) = struct
       else begin
         M.iter
           (fun t n -> fprintf fmt "%s*%a " (Q.to_string n) X.print t) p.m;
-        fprintf fmt "%s" (Q.to_string p.c);
+        fprintf fmt "%s%s"
+          (if Q.compare_to_0 p.c >= 0 then "+ " else "")
+          (Q.to_string p.c);
         fprintf fmt " [%a]" Ty.print p.ty
       end
   end

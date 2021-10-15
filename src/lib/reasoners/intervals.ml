@@ -492,28 +492,33 @@ let scale_interval_neg n (b1, b2) =
 
 let affine_scale ~const ~coef uints =
   Options.tool_req 4 "TR-Arith-Axiomes scale";
-  if Q.equal coef Q.one then
-    { uints with ints = List.map (translate const) uints.ints; }
-  else
-    let sgn = Q.sign coef in
-    let aux =
-      if sgn = 0 then scale_interval_zero
-      else if sgn > 0 then scale_interval_pos
-      else scale_interval_neg
-    in
-    let rl = List.rev_map (fun bornes ->
-        translate const (aux coef bornes)
-      ) uints.ints in
-    let l =
-      if uints.is_int then rev_normalize_int_bounds rl uints.expl coef
-      else List.rev rl
-    in
-    let res = union_intervals { uints with ints = l } in
-    assert (res.ints != []);
-    res
+  let sgn = Q.sign coef in
+  let aux =
+    if sgn = 0 then scale_interval_zero
+    else if sgn > 0 then scale_interval_pos
+    else scale_interval_neg
+  in
+  let rl = List.rev_map (fun bornes ->
+      translate const (aux coef bornes)
+    ) uints.ints in
+  let l =
+    if uints.is_int then rev_normalize_int_bounds rl uints.expl coef
+    else List.rev rl
+  in
+  let res = union_intervals { uints with ints = l } in
+  assert (res.ints != []);
+  res
 
 let scale coef uints =
   affine_scale ~const:Q.zero ~coef uints
+
+let coerce ty uints =
+  match ty with
+  | Ty.Treal -> { uints with is_int = false; }
+  | Ty.Tint  ->
+    if uints.is_int then uints
+    else scale Q.one { uints with is_int = true; }
+  | _ -> assert false
 
 let add_interval is_int l (b1,b2) =
   List.fold_right
