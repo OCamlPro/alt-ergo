@@ -2433,6 +2433,30 @@ module Purification = struct
           | _, (B_lemma _ | B_skolem _ | B_none | B_let _) -> assert false
         end
 
+      (* When e is an access to a functional array
+         in which the stored values are booleans *)
+      | Sy.Op Get ->
+        begin match e.xs with
+          | [x; y] ->
+            let x' =
+              if is_pure x then x
+              else
+                let x', lets = purify_term x SMap.empty in
+                mk_lifted x' lets
+            in
+            let y' =
+              if is_pure y then y
+              else
+                match y.ty with
+                | Ty.Tbool -> purify_form y
+                | _ ->
+                  let y', lets = purify_term y SMap.empty in
+                  mk_lifted y' lets
+            in
+            mk_term e.f [x'; y'] e.ty
+          | _ -> assert false
+        end
+
       | Sy.Void | Sy.Int _ | Sy.Real _ | Sy.Bitv _ | Sy.Op _ | Sy.MapsTo _ ->
         assert false (* not formulas *)
 
