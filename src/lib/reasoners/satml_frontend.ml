@@ -1159,6 +1159,22 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     SAT.assume_th_elt env.satml th_elt dep;
     env
 
+  let reinit_ctx () =
+    reset_refs ();
+    Th.reset_cpt ();
+    Symbols.reset_fresh_sy_cpt ();
+    Symbols.clear_labels ();
+    Var.reset_cnt ();
+    Satml_types.Flat_Formula.reset_cpt ();
+    Ty.reinit_decls ();
+    IntervalCalculus.reinit ();
+    Inst.reset_em_cache ();
+    (* the following four calls must be done in that order *)
+    Expr.reinit ();
+    Hstring.reinit ();
+    Shostak.Combine.empty_cache ();
+    Uf.reinit ()
+
 end
 
 (*

@@ -79,6 +79,8 @@ module type S = sig
     ('are_eq -> 'acc -> P.r option -> t list -> 'acc) -> 'are_eq -> 'acc ->
     MINEQS.mp -> 'acc
 
+  val reset_age_cpt : unit -> unit
+
 end
 
 module type Container_SIG = sig
@@ -352,6 +354,9 @@ module Container : Container_SIG = struct
       failwith msg
 
     let available = fourierMotzkin
+
+    let reset_age_cpt () =
+      age_cpt := Z.zero
 
   end
 end

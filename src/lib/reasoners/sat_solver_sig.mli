@@ -70,6 +70,11 @@ module type S = sig
   val print_model : header:bool -> Format.formatter -> t -> unit
 
   val reset_refs : unit -> unit
+
+  (** [reinit_ctx ()] reinitializes the resolution context.
+      The order in which the calls are done is important. *)
+  val reinit_ctx : unit -> unit
+
 end
 
 

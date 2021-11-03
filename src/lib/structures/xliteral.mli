@@ -86,6 +86,10 @@ module type S = sig
   val uid : t -> int
   val elements : t -> elt list
 
+  val reinit : unit -> unit
+  (** Clears the labels hash table and empties the hashconsing functor
+      instance's cache *)
+
   module Map : Map.S with type key = t
   module Set : Set.S with type elt = t
 end

@@ -118,6 +118,9 @@ struct
 
   module HC = Hconsing.Make(View)
 
+  let empty_cache () =
+    HC.reinit ()
+
   let hcons v = HC.make v
 
   (* end: Hconsing modules and functions *)
@@ -738,12 +741,23 @@ and AC : Ac.S
 module Combine = struct
   include CX
 
-  let make =
+  let make, empty_cache =
     let cache = H.create 1024 in
-    fun t ->
+    let make t =
       match H.find_opt cache t with
       | None -> let res = make t in H.add cache t res; res
       | Some res -> res
+    in
+    let empty () =
+      empty_cache ();
+      H.clear cache;
+      (* the next line is necessary to reset the cache and Hconsing cache to
+        their initial states. It has to be done after reinitialising
+        the Expr and Symbols modules *)
+      ignore @@ make (Expr.mk_term (Symbols.name "@bottom") [] Ty.Tint)
+    in
+    make, empty
+
 end
 
 module Arith = X1

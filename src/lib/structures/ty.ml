@@ -467,6 +467,9 @@ module Decls = struct
     with Not_found ->
       Printer.print_err "%a not found" Hstring.print name;
       assert false
+
+  let reinit () = decls := MH.empty
+
 end
 
 let type_body name args = Decls.body name args
@@ -662,3 +665,5 @@ let print_subst fmt sbt =
 
 let print_full =
   fst (print_generic (Some type_body)) (Some type_body)
+
+let reinit_decls () = Decls.reinit ()

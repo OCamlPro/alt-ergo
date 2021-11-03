@@ -1280,3 +1280,8 @@ let output_concrete_model ({ make; _ } as env) =
       SMT2LikeModelOutput.output_arrays_model arrays;
       Printer.print_fmt (get_fmt_mdl ()) ")";
     end
+
+let reinit () =
+  LX.reinit ();
+  (* the next line is necessary to put the module back to its initial state *)
+  (ignore @@ distinct (empty ()) [X.bot () ;X.top ()] Ex.empty)

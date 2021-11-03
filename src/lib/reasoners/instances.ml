@@ -75,6 +75,8 @@ module type S = sig
   val matching_terms_info :
     t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
 
+  val reset_em_cache : unit -> unit
+
 end
 
 module Make(X : Theory.S) : S with type tbox = X.t = struct
@@ -470,5 +472,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     else m_predicates env tbox selector ilvl mconf
 
   let matching_terms_info env = EM.terms_info env.matching
+
+  let reset_em_cache () = EM.reinit_caches ()
 
 end

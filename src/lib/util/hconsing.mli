@@ -76,6 +76,11 @@ module type S = sig
   type t
   (** The type of value used. *)
 
+  val reinit : ?n:int -> unit -> unit
+  (** Resets the hashconsing storage, the retain_list
+      and sets the value of next_id to n which is
+      equal to zero by default *)
+
   val make : t -> t
   (** Hashcons a value [t], either returning [t], or a value equal
       to [t] that was hashconsed previously. *)

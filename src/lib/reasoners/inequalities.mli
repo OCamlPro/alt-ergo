@@ -71,6 +71,9 @@ module type S = sig
     ('are_eq -> 'acc -> P.r option -> t list -> 'acc) -> 'are_eq -> 'acc ->
     MINEQS.mp -> 'acc
 
+  val reset_age_cpt : unit -> unit
+  (** Resets the age counter to zero *)
+
 end
 
 
