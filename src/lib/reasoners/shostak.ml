@@ -752,8 +752,8 @@ module Combine = struct
       empty_cache ();
       H.clear cache;
       (* the next line is necessary to reset the cache and Hconsing cache to
-        their initial states. It has to be done after reinitialising
-        the Expr and Symbols modules *)
+         their initial states. It has to be done after reinitialising
+         the Expr and Symbols modules *)
       ignore @@ make (Expr.mk_term (Symbols.name "@bottom") [] Ty.Tint)
     in
     make, empty
