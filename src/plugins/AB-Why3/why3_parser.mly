@@ -218,14 +218,6 @@ open Parsed
 %nonassoc prec_prefix_op
 %nonassoc OPPREF
 
-(* Type declarations. *)
-
-(* The symbol [clone_subst] is strange, as its type is underspecified:
-   it is [_ option] for an arbitrary type [_]. This can cause Menhir to
-   fail. To work around the problem, we declare an arbitrary type. The
-   symbol [use] exhibits the same problem. *)
-%type<unit option> clone_subst use
-
 (* Entry points *)
 
 %type <AltErgoLib.Parsed.lexpr list * bool> trigger_parser
@@ -282,21 +274,21 @@ use_clone:
 
 use:
 | boption(IMPORT) tqualid
-    { None }
+    { () }
 | boption(IMPORT) tqualid AS uident
-    { None }
+    { () }
 | EXPORT tqualid
-    { None }
+    { () }
 
 clone_subst:
-| NAMESPACE ns EQUAL ns         { None }
-| TYPE qualid ty_var* EQUAL ty  { None }
-| CONSTANT  qualid EQUAL qualid { None }
-| FUNCTION  qualid EQUAL qualid { None }
-| PREDICATE qualid EQUAL qualid { None }
-| VAL       qualid EQUAL qualid { None }
-| LEMMA     qualid              { None }
-| GOAL      qualid              { None }
+| NAMESPACE ns EQUAL ns         { () }
+| TYPE qualid ty_var* EQUAL ty  { () }
+| CONSTANT  qualid EQUAL qualid { () }
+| FUNCTION  qualid EQUAL qualid { () }
+| PREDICATE qualid EQUAL qualid { () }
+| VAL       qualid EQUAL qualid { () }
+| LEMMA     qualid              { () }
+| GOAL      qualid              { () }
 
 ns:
 | uqualid { Some $1 }
