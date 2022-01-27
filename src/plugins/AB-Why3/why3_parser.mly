@@ -274,21 +274,21 @@ use_clone:
 
 use:
 | boption(IMPORT) tqualid
-    { None }
+    { () }
 | boption(IMPORT) tqualid AS uident
-    { None }
+    { () }
 | EXPORT tqualid
-    { None }
+    { () }
 
 clone_subst:
-| NAMESPACE ns EQUAL ns         { None }
-| TYPE qualid ty_var* EQUAL ty  { None }
-| CONSTANT  qualid EQUAL qualid { None }
-| FUNCTION  qualid EQUAL qualid { None }
-| PREDICATE qualid EQUAL qualid { None }
-| VAL       qualid EQUAL qualid { None }
-| LEMMA     qualid              { None }
-| GOAL      qualid              { None }
+| NAMESPACE ns EQUAL ns         { () }
+| TYPE qualid ty_var* EQUAL ty  { () }
+| CONSTANT  qualid EQUAL qualid { () }
+| FUNCTION  qualid EQUAL qualid { () }
+| PREDICATE qualid EQUAL qualid { () }
+| VAL       qualid EQUAL qualid { () }
+| LEMMA     qualid              { () }
+| GOAL      qualid              { () }
 
 ns:
 | uqualid { Some $1 }
