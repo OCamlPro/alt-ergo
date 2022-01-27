@@ -6,7 +6,6 @@
 (ocamllex (modules why3_lexer))
 
 (menhir
-  (infer    false)
   (flags    --fixed-exception)
   (modules  why3_parser)
 )
