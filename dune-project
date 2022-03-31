@@ -30,7 +30,7 @@ See more details on https://alt-ergo.ocamlpro.com/")
   (alt-ergo-lib (= :version))
   (alt-ergo-parsers (= :version))
    menhir
-   cmdliner
+  (cmdliner (>= 1.1.0))
   (odoc :with-doc)
   )
 )
@@ -56,7 +56,7 @@ See more details on https://alt-ergo.ocamlpro.com/"
   (alt-ergo-parsers (= :version))
   lablgtk
   conf-gtksourceview
-  cmdliner
+  (cmdliner (>= 1.1.0))
   (odoc :with-doc)
 )
 )
