@@ -1320,9 +1320,9 @@ let main =
 let parse_cmdline_arguments () =
   let r = Cmd.eval_value main in
   match r with
-  | Ok `Ok false -> raise (Exit_parse_command 0)
   | Ok `Ok true -> ()
-  | Ok `Version | Ok `Help -> ()
+  | Ok `Ok false -> raise (Exit_parse_command 0)
+  | Ok `Version | Ok `Help -> exit 0
   | Error `Parse -> exit Cmd.Exit.cli_error
   | Error `Term -> exit Cmd.Exit.internal_error
   | Error `Exn -> exit Cmd.Exit.internal_error
