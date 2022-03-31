@@ -167,7 +167,7 @@ altgr-ergo:
 
 # Run non-regression tests using the scripts in
 # non-regression
-non-regression: all
+non-regression: bin
 	cp $(INSTALL_DIR)/default/bin/alt-ergo non-regression/alt-ergo.opt
 	cd non-regression &&  ./non-regression.sh
 	rm non-regression/alt-ergo.opt
