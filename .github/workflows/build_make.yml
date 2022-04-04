@@ -219,6 +219,10 @@ jobs:
       - name: Look for lib/bin in opam root
         run: ./rsc/extra/check_installed_package.sh ${{ matrix.package }} false
 
+      # Debug step
+      - name: Debug printing step
+        run: tree `opam var root`
+
       # Uninstall the package
       - name: Uninstall ${{ matrix.package }}
         run: opam exec -- make uninstall-${{ matrix.package }}
