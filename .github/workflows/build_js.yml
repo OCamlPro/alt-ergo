@@ -26,6 +26,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Update apt-get database
+      - name: Update apt-get database
+        run: sudo apt-get update
+
       # Retrieve the opam cache with unique key
       # A new cache is created/used if the `.opam` files changes or
       # if we use another ocaml version
