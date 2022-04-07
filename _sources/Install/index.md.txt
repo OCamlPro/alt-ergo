@@ -45,8 +45,8 @@ To compile the sources, you will need the following libraries :
 
 To compile the GUI you will also need
 ```
-  lablgtk2
-  gtksourceview2
+  lablgtk # includes lablgtk2 and gtksourceview2
+  conf-gtksourceview
 ```
 You may need superuser permissions to perform the installation.
 
