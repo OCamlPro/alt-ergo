@@ -2376,7 +2376,8 @@ module Purification = struct
   and purify_eq l =
     purify_generic (fun l ->
         match l with
-        | [] | [_] -> assert false
+        | [] | [_] ->
+          failwith "unexpected expression in purify_eq"
         | [a; b ] -> mk_eq ~iff:true a b
         | l -> mk_nary_eq l
       ) l
@@ -2391,13 +2392,14 @@ module Purification = struct
     purify_generic (fun l ->
         match l with
         | [e] -> if is_neg then neg e else e
-        | _ -> assert false
+        | _ -> failwith "unexpected expression in purify_predicate"
       ) [p]
 
   and purify_literal e =
     if List.for_all is_pure e.xs then e (* this is OK for lits and terms *)
     else match lit_view e with
-      | Not_a_lit _ -> assert false
+      | Not_a_lit _ ->
+        failwith "unexpected expression in purify_literal: not a literal"
       | Eq (a, b)  ->
         assert (a.ty != Ty.Tbool);
         (* TODO: translate to iff *)
@@ -2430,11 +2432,34 @@ module Purification = struct
                 mk_lifted
                   (mk_let_aux {letin with let_e = let_e'; in_e = in_e'})
                   lets
-          | _, (B_lemma _ | B_skolem _ | B_none | B_let _) -> assert false
+          | _, (B_lemma _ | B_skolem _ | B_none | B_let _) ->
+            failwith "unexpected expression in purify_form"
+        end
+
+      (* When e is an access to a functional array
+         in which the stored values are booleans *)
+      | Sy.Op Get ->
+        begin match e.xs with
+          | [fa; i] ->
+            let fa', lets =
+              if is_pure fa then fa, SMap.empty
+              else
+                purify_term fa SMap.empty
+            in
+            let i', lets =
+              if is_pure i then i, lets
+              else
+                match i.ty with
+                | Ty.Tbool -> purify_form i, lets
+                | _ -> purify_term i lets
+            in
+            if i == i' && fa == fa' then e
+            else mk_lifted (mk_term e.f [fa'; i'] e.ty) lets
+          | _ -> failwith "unexpected expression in purify_form"
         end
 
       | Sy.Void | Sy.Int _ | Sy.Real _ | Sy.Bitv _ | Sy.Op _ | Sy.MapsTo _ ->
-        assert false (* not formulas *)
+        failwith "unexpected expression in purify_form: not a formula"
 
       | Sy.Lit _ -> purify_literal e
       | Sy.Form x ->
@@ -2472,7 +2497,7 @@ module Purification = struct
           | (Sy.F_Unit _ | Sy.F_Clause _ | Sy.F_Iff
             | Sy.F_Xor | Sy.F_Skolem | Sy.F_Lemma),
             _, _ ->
-            assert false
+            failwith "unexpected expression in purify_form"
         end
 
   and mk_lifted e lets =
