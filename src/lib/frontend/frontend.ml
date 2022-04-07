@@ -144,6 +144,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let process_decl print_status used_context consistent_dep_stack
       ((env, consistent, dep) as acc) d =
+    Format.eprintf "@\n[COMMAND]@\n%a@." Commands.print d;
     try
       match d.st_decl with
       | Push n ->
@@ -224,19 +225,29 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
     with
     | SAT.Sat t ->
+      (* This case should mainly occur when a query has a non-unsat result,
+         so we want to print the status in this case. *)
       print_status (Sat (d,t)) (Steps.get_steps ());
       if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;
       env , consistent, dep
     | SAT.Unsat dep' ->
+      (* This case should mainly occur when a new assumption results in an unsat
+         env, in which case we do not want to print status, since the correct
+         status should be printed at the next query. *)
       let dep = Ex.union dep dep' in
       if get_debug_unsat_core () then check_produced_unsat_core dep;
-      print_status (Inconsistent d) (Steps.get_steps ());
+      (* print_status (Inconsistent d) (Steps.get_steps ()); *)
       env , false, dep
     | SAT.I_dont_know t ->
+      (* In this case, it's not clear whether we want to print the status.
+         Instead, it'd be better to accumulate in `consistent` a 3-case adt
+         and not a simple bool. *)
       print_status (Unknown (d, t)) (Steps.get_steps ());
       if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;
       env , consistent, dep
     | Util.Timeout as e ->
+      (* In this case, we obviously want to print the status,
+         since we exit right after  *)
       print_status (Timeout (Some d)) (Steps.get_steps ());
       raise e
 

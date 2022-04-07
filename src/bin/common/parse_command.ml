@@ -1253,9 +1253,9 @@ let main =
     Arg.(value & pos ~rev:true 0 (some string) None & i) in
 
   let doc = "Execute Alt-Ergo on the given file." in
-  let exits = Term.default_exits in
-  let to_exit = Term.(exit_info ~doc:"on timeout errors" ~max:142 142) in
-  let dft_errors = Term.(exit_info ~doc:"on default errors" ~max:1 1) in
+  let exits = Cmd.Exit.defaults in
+  let to_exit = Cmd.Exit.info ~doc:"on timeout errors" ~max:142 142 in
+  let dft_errors = Cmd.Exit.info ~doc:"on default errors" ~max:1 1 in
   let exits = to_exit :: dft_errors :: exits in
 
   (* Specify the order in which the sections should appear
@@ -1301,20 +1301,29 @@ let main =
     ]
   in
 
-  Term.(ret (const mk_opts $
-             file $
-             parse_case_split_opt $ parse_context_opt $
-             parse_dbg_opt_spl1 $ parse_dbg_opt_spl2 $ parse_dbg_opt_spl3 $
-             parse_execution_opt $ parse_halt_opt $ parse_internal_opt $
-             parse_limit_opt $ parse_output_opt $ parse_profiling_opt $
-             parse_quantifiers_opt $ parse_sat_opt $ parse_term_opt $
-             parse_theory_opt $ parse_fmt_opt
-            )),
-  Term.info "alt-ergo" ~version:Version._version ~doc ~exits ~man
+  let term =
+    Term.(ret (const mk_opts $
+               file $
+               parse_case_split_opt $ parse_context_opt $
+               parse_dbg_opt_spl1 $ parse_dbg_opt_spl2 $ parse_dbg_opt_spl3 $
+               parse_execution_opt $ parse_halt_opt $ parse_internal_opt $
+               parse_limit_opt $ parse_output_opt $ parse_profiling_opt $
+               parse_quantifiers_opt $ parse_sat_opt $ parse_term_opt $
+               parse_theory_opt $ parse_fmt_opt
+              ))
+  in
+  let info =
+    Cmd.info "alt-ergo" ~version:Version._version ~doc ~exits ~man
+  in
+  Cmd.v info term
 
 let parse_cmdline_arguments () =
-  let r = Cmdliner.Term.(eval main) in
+  let r = Cmd.eval_value main in
   match r with
-  | `Ok false -> raise (Exit_parse_command 0)
-  | `Ok true -> ()
-  | e -> exit @@ Term.(exit_status_of_result e)
+  | Ok `Ok true -> ()
+  | Ok `Ok false -> raise (Exit_parse_command 0)
+  | Ok `Version | Ok `Help -> exit 0
+  | Error `Parse -> exit Cmd.Exit.cli_error
+  | Error `Term -> exit Cmd.Exit.internal_error
+  | Error `Exn -> exit Cmd.Exit.internal_error
+
