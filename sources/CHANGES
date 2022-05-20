@@ -1,6 +1,12 @@
 dev version
 ===========
 
+version 2.3.3-free, August 19, 2020
+================================
+
+Same as 2.3.3, but the OCamlPro Non Commercial licence is replaced by
+the Apache 2.0 licence.
+
 version 2.3.3, August 19, 2020
 ================================
 
