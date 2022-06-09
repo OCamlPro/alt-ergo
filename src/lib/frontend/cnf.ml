@@ -156,14 +156,19 @@ let clean_trigger ~in_theory name trig =
             sz_l E.print_list trig sz_s E.print_list trig';
         trig'
 
-let concat_chainable p_op p_ty t acc =
-  match E.term_view t with
-  | Term {E.f; xs; ty; _} ->
-    if Symbols.equal p_op f && Ty.equal p_ty ty then
-      List.rev_append (List.rev xs) acc
-    else
-      t :: acc
-  | _ -> t :: acc
+(* let concat_chainable p_op p_ty t acc =
+ *   match E.term_view t with
+ *   | Term {E.f; xs; ty; _} ->
+ *     if Symbols.equal p_op f && Ty.equal p_ty ty then begin
+ *       Format.printf "Flattening %a into %a@." Expr.print_list xs Expr.print_list acc;
+ *       let res = List.rev_append (List.rev xs) acc in
+ *       Format.printf "Result: %a@." Expr.print_list res;
+ *       (t :: acc)
+ *       (\* res *\)
+ *     end
+ *     else
+ *       t :: acc
+ *   | _ -> t :: acc *)
 
 let rec make_term up_qv quant_basename t =
   let rec mk_term { c = { tt_ty = ty; tt_desc = tt; _ }; _ } =
@@ -197,13 +202,13 @@ let rec make_term up_qv quant_basename t =
       begin
         let t2 = mk_term t2 in (*keep old mk_term order -> avoid regression*)
         let t1 = mk_term t1 in
-        match s, ty with
-        | Sy.Op Sy.Plus, (Ty.Tint | Ty.Treal) ->
-          let args = concat_chainable s ty t2 [] in
-          let args = concat_chainable s ty t1 args in
-          let args = List.fast_sort E.compare args in
-          E.mk_term s args ty
-        | _ -> E.mk_term s [t1; t2] ty
+        (* match s, ty with
+         * | Sy.Op Sy.Plus, (Ty.Tint | Ty.Treal) ->
+         *   let args = concat_chainable s ty t2 [] in
+         *   let args = concat_chainable s ty t1 args in
+         *   (\* let args = List.fast_sort E.compare args in *\)
+         *   E.mk_term s args ty
+         * | _ -> *) E.mk_term s [t1; t2] ty
       end
 
     | TTprefix ((Sy.Op Sy.Minus) as s, n) ->
