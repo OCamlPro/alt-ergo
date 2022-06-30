@@ -31,7 +31,7 @@ open Parsed
 open Typed
 open Gui_session
 
-type sbuffer = GSourceView2.source_buffer
+type sbuffer = GSourceView3.source_buffer
 
 type error_model = {
   mutable some : bool;
@@ -182,9 +182,9 @@ module MTag : Map.S with type key = GText.tag
 
 type env = {
   buffer : sbuffer;
-  goal_view : GSourceView2.source_view;
+  goal_view : GSourceView3.source_view;
   inst_buffer : sbuffer;
-  inst_view : GSourceView2.source_view;
+  inst_view : GSourceView3.source_view;
   errors : error_model;
   insts : inst_model;
   st_ctx : GMisc.statusbar_context;
@@ -202,21 +202,19 @@ type env = {
   resulting_ids : (string * int) list;
 }
 
-val monospace_font : Pango.font_description
-val general_font : Pango.font_description
-
+val font : GPango.font_description
 
 val increase_size : env list -> unit
 val decrease_size : env list -> unit
 val reset_size : env list -> unit
-val set_font : env list -> string -> unit
+val set_font : ?family:string -> ?size:int -> ?ratio:float -> unit -> unit
 
 
 val create_env :
   sbuffer ->
-  GSourceView2.source_view ->
+  GSourceView3.source_view ->
   sbuffer ->
-  GSourceView2.source_view ->
+  GSourceView3.source_view ->
   error_model ->
   inst_model ->
   GMisc.statusbar_context ->

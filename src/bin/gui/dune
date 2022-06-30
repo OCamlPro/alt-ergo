@@ -7,8 +7,8 @@
   (name         Main_gui)
   (public_name  altgr-ergo)
   (package      altgr-ergo)
-  (libraries    alt_ergo_common threads.posix lablgtk2 lablgtk2.sourceview2)
-  (modules      Gui_session Gui_config Annoted_ast Connected_ast
+  (libraries    alt_ergo_common threads.posix lablgtk3 lablgtk3-sourceview3)
+  (modules      Gui_util Gui_session Gui_config Annoted_ast Connected_ast
                 Gui_replay Main_gui)
   (link_flags   (-linkall))
 )
