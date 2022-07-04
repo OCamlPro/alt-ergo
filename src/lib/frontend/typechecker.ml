@@ -221,12 +221,14 @@ module Env = struct
     types : Types.t ;
     logics : (Symbols.t * profile * logic_kind) MString.t;
     (* logic symbols' map *)
+    last_answer_loc: Loc.t option;
   }
 
   let empty = {
     var_map = MString.empty;
     types = Types.empty;
-    logics = MString.empty
+    logics = MString.empty;
+    last_answer_loc = None;
   }
 
   let add env lv fvar ty =
@@ -1993,6 +1995,7 @@ let type_one_th_decl env e =
   | Logic (loc, _, _, _)
   | Rewriting(loc, _, _)
   | Goal(loc, _, _)
+  | Answer (loc, _)
   | Predicate_def(loc,_,_,_)
   | Function_def(loc,_,_,_,_)
   | TypeDecl ((loc, _, _, _)::_)
@@ -2208,7 +2211,15 @@ let rec type_decl (acc, env) d assertion_stack =
     Options.tool_req 1 "TR-Typing-GoalDecl$_F$";
     (*let f = move_up f in*)
     let f = alpha_renaming_env env f in
-    type_and_intro_goal acc env Thm n f, env
+    type_and_intro_goal acc env Thm n f, { env with last_answer_loc = None }
+
+  | Answer (loc, _) ->
+    begin match env.last_answer_loc with None -> () | Some ls_pos ->
+      Printer.print_wrn
+        "Ignored \"answer\" statement preceeding another \"answer\" \
+         statement: %a" Loc.report ls_pos
+    end;
+    acc, { env with last_answer_loc = Some loc }
 
   | Predicate_def(loc,n,l,e)
   | Function_def(loc,n,l,_,e) ->

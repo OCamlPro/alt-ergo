@@ -50,6 +50,9 @@ val mk_non_ground_predicate_def :
 
 val mk_goal : Loc.t -> string -> lexpr -> decl
 
+(** Stating the expected answer of the next goal  *)
+
+val mk_answer : Loc.t -> answer -> decl
 
 (** Declaration of theories, generic axioms and rewriting rules **)
 

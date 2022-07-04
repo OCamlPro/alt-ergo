@@ -70,6 +70,10 @@ let mk_non_ground_predicate_def loc named_ident args expr =
 let mk_goal loc name expr =
   Goal (loc, name, expr)
 
+(** Stating the expected answer of the next goal  *)
+
+let mk_answer loc answer =
+  Answer (loc, answer)
 
 (** Declaration of theories, generic axioms and rewriting rules **)
 

@@ -43,6 +43,7 @@
 %token MATCH WITH THEORY EXTENDS END QM
 %token AND LEFTARROW RIGHTARROW AC AT AXIOM CASESPLIT REWRITING
 %token BAR HAT
+%token ANSWER VALID UNKNOWN
 %token BOOL COLON COMMA PV DISTINCT DOT SHARP ELSE OF EOF EQUAL
 %token EXISTS FALSE VOID FORALL FUNC GE GOAL GT CHECK CUT
 %token IF IN INT BITV MAPS_TO
@@ -149,6 +150,13 @@ decl:
 
 | GOAL name = ident COLON body = lexpr
    { mk_goal ($startpos, $endpos) name body }
+
+| ANSWER COLON ans = answer
+  { mk_answer ($startpos, $endpos) ans }
+
+answer:
+| VALID   { Parsed.Valid }
+| UNKNOWN { Parsed.Unknown }
 
 theory_elts:
 | /* */  { [] }

@@ -110,11 +110,14 @@ type body_type_decl =
 
 type type_decl = Loc.t * string list * string * body_type_decl
 
+type answer = Valid | Unknown
+
 type decl =
   | Theory of Loc.t * string * string * decl list
   | Axiom of Loc.t * string * Util.axiom_kind * lexpr
   | Rewriting of Loc.t * string * lexpr list
   | Goal of Loc.t * string * lexpr
+  | Answer of Loc.t * answer
   | Logic of Loc.t * Symbols.name_kind * (string * string) list * plogic_type
   | Predicate_def of
       Loc.t * (string * string) *
