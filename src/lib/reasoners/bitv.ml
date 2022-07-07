@@ -49,7 +49,6 @@ type 'a simple_term = ('a simple_term_aux) alpha_term
 
 type 'a abstract =  ('a simple_term) list
 
-
 (* for the solver *)
 
 type solver_simple_term_aux =
@@ -58,12 +57,18 @@ type solver_simple_term_aux =
 
 type solver_simple_term = solver_simple_term_aux alpha_term
 
+type 'a sys_solve_elt = 'a simple_term_aux alpha_term * solver_simple_term_aux alpha_term list
+
+type 'a sys_solve = 'a sys_solve_elt list
 
 module type ALIEN = sig
   include Sig.X
   val embed : r abstract -> r
   val extract : r -> (r abstract) option
 end
+
+let compare_alpha_term cmp a1 a2 =
+  if a1.sz <> a2.sz then a1.sz - a2.sz else cmp a1.bv a2.bv
 
 module Shostak(X : ALIEN) = struct
 
@@ -99,11 +104,8 @@ module Shostak(X : ALIEN) = struct
     | Var _, Alien _ -> 1
     | Alien _, Var _ -> -1
 
-  let compare_simple_term st1 st2 =
-    if st1.sz <> st2.sz then st1.sz - st2.sz
-    else
-      begin
-        match st1.bv,st2.bv with
+  let compare_simple_term = compare_alpha_term (fun st1 st2 ->
+      match st1, st2 with
         | Cte b,Cte b' -> compare b b'
         | Cte false , _ | _ , Cte true -> -1
         | _ , Cte false | Cte true,_ -> 1
@@ -111,28 +113,28 @@ module Shostak(X : ALIEN) = struct
         | Other t1 , Other t2 -> compare_xterm t1 t2
         | _ , Other _ -> -1
         | Other _ , _ -> 1
+
         | Ext(t1,s1,i1,_) , Ext(t2,s2,i2,_) ->
           let c1 = compare s1 s2 in
           if c1<>0 then c1
           else let c2 = compare i1 i2 in
             if c2 <> 0 then c2 else compare_xterm t1 t2
-      end
+    )
+
+  let compare_solver_simple_term = compare_alpha_term (fun st1 st2 ->
+      match st1, st2 with
+      | S_Cte b, S_Cte b' -> compare b b'
+      | S_Cte false, _ | _, S_Cte true -> -1
+      | _ , S_Cte false | S_Cte true,_ -> 1
+      | S_Var v1, S_Var v2 ->
+        let c1 = compare v1.sorte v2.sorte
+        in if c1 <> 0 then c1 else compare v1.var v2.var
+    )
 
   module ST_Set = Set.Make (
     struct
       type t = solver_simple_term
-      let compare st1 st2 =
-        if st1.sz <> st2.sz then st1.sz - st2.sz
-        else
-          begin
-            match st1.bv,st2.bv with
-            | S_Cte b, S_Cte b' -> compare b b'
-            | S_Cte false, _ | _, S_Cte true -> -1
-            | _ , S_Cte false | S_Cte true,_ -> 1
-            | S_Var v1, S_Var v2 ->
-              let c1 = compare v1.sorte v2.sorte
-              in if c1 <> 0 then c1 else compare v1.var v2.var
-          end
+      let compare = compare_solver_simple_term
     end)
 
   module Canonizer = struct
@@ -144,6 +146,33 @@ module Shostak(X : ALIEN) = struct
       | I_Comp of term * term
 
     and term = term_aux alpha_term
+
+    let rec compare_term_aux t1 t2 = match t1, t2 with
+      | I_Cte true, I_Cte true
+      | I_Cte false, I_Cte false -> 0
+      | I_Cte true, I_Cte _ -> 1
+      | I_Cte _, I_Cte _ -> -1
+
+      | I_Other xterm1, I_Other xterm2 -> compare_xterm xterm1 xterm2
+
+      | I_Ext (t, i, j), I_Ext (t', i', j') ->
+        if i <> i' then i - i'
+        else if j <> j' then j - j'
+        else compare_term t t'
+
+      | I_Comp (t1, t2), I_Comp (t1', t2') ->
+        let cmp = compare_term t1 t1' in
+        if cmp = 0 then compare t2 t2' else cmp
+
+      | I_Cte _, (I_Other _ | I_Ext _ | I_Comp _ ) -> 1
+      | I_Other _, (I_Ext _ | I_Comp _ ) -> 1
+      | I_Ext _, I_Comp _ -> 1
+
+      | I_Comp _, (I_Cte _ | I_Other _ | I_Ext _) -> -1
+      | I_Ext _, (I_Cte _ | I_Other _) -> -1
+      | I_Other _, I_Cte _ -> -1
+
+    and compare_term t1 t2 = compare_alpha_term compare_term_aux t1 t2
 
     (** **)
     let rec alpha t = match t.bv with
@@ -192,7 +221,7 @@ module Shostak(X : ALIEN) = struct
         begin
           match s.bv , t.bv with
           |I_Cte b1,I_Cte b2 when b1=b2 ->beta({s with sz=s.sz+t.sz}::tl')
-          |I_Ext(d1,i,j),I_Ext(d2,k,l) when d1=d2 && l=i-1 ->
+          |I_Ext(d1,i,j),I_Ext(d2,k,l) when compare_term d1 d2 = 0 && l=i-1 ->
             let tmp = {sz = s.sz + t.sz ; bv = I_Ext(d1,k,j)}
             in if k=0 then (simple_t tmp)::(beta tl') else beta (tmp::tl')
           |_ -> (simple_t s)::(beta (t::tl'))
@@ -441,7 +470,7 @@ module Shostak(X : ALIEN) = struct
         ({ bv = Other xt ; sz = siz } , a3 @ (!acc) @ a1)
       end
 
-    let sys_solve sys =
+    let sys_solve sys : r sys_solve =
       let c_solve (st1,st2) = match st1.bv,st2.bv with
         |Cte _, Cte _ -> raise Util.Unsolvable (* forcement un 1 et un 0 *)
 
@@ -460,16 +489,16 @@ module Shostak(X : ALIEN) = struct
 
         |Ext(xt,s_xt,i,j), Other _ -> other_vs_ext st2 xt s_xt i j
         |Ext(id,s,i,j), Ext(id',s',i',j') ->
-          if id <> id' then ext1_vs_ext2 (id,s,i,j) (id',s',i',j')
+          if compare_xterm id id' <> 0 then ext1_vs_ext2 (id,s,i,j) (id',s',i',j')
           else[ext_vs_ext id s (if i<i' then (i,i') else (i',i)) (j - i + 1)]
 
       in List.flatten (List.map c_solve sys)
 
 
-    let partition l =
+    let partition cmp l =
       let rec add acc (t,cnf) = match acc with
         |[] -> [(t,[cnf])]
-        |(t',cnf')::r -> if t = t' then (t',cnf::cnf')::r
+        |(t',cnf')::r -> if cmp t t' = 0 then (t',cnf::cnf')::r
           else (t',cnf')::(add r (t,cnf))
       in List.fold_left add [] l
 
@@ -504,7 +533,7 @@ module Shostak(X : ALIEN) = struct
           in begin
             match flag with
             |Some B -> let comp' = List.fold_right
-                           (fun s_t acc -> if s_t <> st then s_t::acc
+                           (fun s_t acc -> if compare_solver_simple_term s_t st <> 0 then s_t::acc
                              else st_n::res::acc
                            )comp  []
               in slice_composition (res::comp') pt (st_n::ac_eq,c_sub)
@@ -607,7 +636,6 @@ module Shostak(X : ALIEN) = struct
            t,cnf_max (List.map to_external_ast (List.hd vls))
         )unif_slic
 
-
     let solve u v =
       if u = v then raise Valid
       else begin
@@ -618,7 +646,7 @@ module Shostak(X : ALIEN) = struct
           begin
             let st_sys = slice u v in
             let sys_sols = sys_solve st_sys in
-            let parts = partition sys_sols in
+            let parts = partition compare_simple_term sys_sols in
             let unif_slic = equations_slice parts in
             let eq_pr = equalities_propagation unif_slic in
             let sol = build_solution unif_slic eq_pr in
