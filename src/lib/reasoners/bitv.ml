@@ -57,10 +57,6 @@ type solver_simple_term_aux =
 
 type solver_simple_term = solver_simple_term_aux alpha_term
 
-type 'a sys_solve_elt = 'a simple_term_aux alpha_term * solver_simple_term_aux alpha_term list
-
-type 'a sys_solve = 'a sys_solve_elt list
-
 module type ALIEN = sig
   include Sig.X
   val embed : r abstract -> r
@@ -106,19 +102,19 @@ module Shostak(X : ALIEN) = struct
 
   let compare_simple_term = compare_alpha_term (fun st1 st2 ->
       match st1, st2 with
-        | Cte b,Cte b' -> compare b b'
-        | Cte false , _ | _ , Cte true -> -1
-        | _ , Cte false | Cte true,_ -> 1
+      | Cte b,Cte b' -> compare b b'
+      | Cte false , _ | _ , Cte true -> -1
+      | _ , Cte false | Cte true,_ -> 1
 
-        | Other t1 , Other t2 -> compare_xterm t1 t2
-        | _ , Other _ -> -1
-        | Other _ , _ -> 1
+      | Other t1 , Other t2 -> compare_xterm t1 t2
+      | _ , Other _ -> -1
+      | Other _ , _ -> 1
 
-        | Ext(t1,s1,i1,_) , Ext(t2,s2,i2,_) ->
-          let c1 = compare s1 s2 in
-          if c1<>0 then c1
-          else let c2 = compare i1 i2 in
-            if c2 <> 0 then c2 else compare_xterm t1 t2
+      | Ext(t1,s1,i1,_) , Ext(t2,s2,i2,_) ->
+        let c1 = compare s1 s2 in
+        if c1<>0 then c1
+        else let c2 = compare i1 i2 in
+          if c2 <> 0 then c2 else compare_xterm t1 t2
     )
 
   let compare_solver_simple_term = compare_alpha_term (fun st1 st2 ->
@@ -470,7 +466,7 @@ module Shostak(X : ALIEN) = struct
         ({ bv = Other xt ; sz = siz } , a3 @ (!acc) @ a1)
       end
 
-    let sys_solve sys : r sys_solve =
+    let sys_solve sys =
       let c_solve (st1,st2) = match st1.bv,st2.bv with
         |Cte _, Cte _ -> raise Util.Unsolvable (* forcement un 1 et un 0 *)
 
@@ -489,8 +485,9 @@ module Shostak(X : ALIEN) = struct
 
         |Ext(xt,s_xt,i,j), Other _ -> other_vs_ext st2 xt s_xt i j
         |Ext(id,s,i,j), Ext(id',s',i',j') ->
-          if compare_xterm id id' <> 0 then ext1_vs_ext2 (id,s,i,j) (id',s',i',j')
-          else[ext_vs_ext id s (if i<i' then (i,i') else (i',i)) (j - i + 1)]
+          if compare_xterm id id' <> 0
+          then ext1_vs_ext2 (id,s,i,j) (id',s',i',j')
+          else [ext_vs_ext id s (if i<i' then (i,i') else (i',i)) (j - i + 1)]
 
       in List.flatten (List.map c_solve sys)
 
@@ -532,10 +529,12 @@ module Shostak(X : ALIEN) = struct
         else let (st_n,res,flag) = slice_var st n
           in begin
             match flag with
-            |Some B -> let comp' = List.fold_right
-                           (fun s_t acc -> if compare_solver_simple_term s_t st <> 0 then s_t::acc
-                             else st_n::res::acc
-                           )comp  []
+            |Some B ->
+              let comp' = List.fold_right (fun s_t acc ->
+                  if compare_solver_simple_term s_t st <> 0
+                  then s_t::acc
+                  else st_n::res::acc
+                ) comp []
               in slice_composition (res::comp') pt (st_n::ac_eq,c_sub)
 
             |Some C -> let ac' = (st_n::ac_eq,(st,(st_n,res))::c_sub)
