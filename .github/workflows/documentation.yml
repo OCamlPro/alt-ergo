@@ -70,12 +70,15 @@ jobs:
       # odoc is installed as deps with { with-doc } in opam files
       - name: opam install deps
         run: opam install ./*.opam --deps-only
-        if: steps.cache-opam.outputs.cache-hit != 'true'
 
       # Try to upgrade installed packages and fix dependencies if needed,
       # when the cache is retrieved
       - run: opam upgrade --fixup
         if: steps.cache-opam.outputs.cache-hit == 'true'
+
+      # List the packages (debug)
+      - name: List packages
+        run: opam exec -- opam list
 
       # Make the documentation
       - name: Make OCaml documentation
