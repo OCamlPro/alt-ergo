@@ -144,7 +144,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let process_decl print_status used_context consistent_dep_stack
       ((env, consistent, dep) as acc) d =
-    Format.eprintf "@\n[COMMAND]@\n%a@." Commands.print d;
     try
       match d.st_decl with
       | Push n ->
