@@ -52,7 +52,7 @@ jobs:
       # Get an OCaml environment with opam installed and the proper ocaml version
       # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-        uses: avsm/setup-ocaml@v1
+        uses: avsm/setup-ocaml@v2
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
@@ -70,12 +70,12 @@ jobs:
       # odoc is installed as deps with { with-doc } in opam files
       - name: opam install deps
         run: opam install ./*.opam --deps-only
-        if: steps.cache-opam.outputs.cache-hit != 'true'
+      # if: steps.cache-opam.outputs.cache-hit != 'true'
 
       # Try to upgrade installed packages and fix dependencies if needed,
       # when the cache is retrieved
-      - run: opam upgrade --fixup
-        if: steps.cache-opam.outputs.cache-hit == 'true'
+      # - run: opam upgrade --fixup
+      #  if: steps.cache-opam.outputs.cache-hit == 'true'
 
       # Make the documentation
       - name: Make OCaml documentation

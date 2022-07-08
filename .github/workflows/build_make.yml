@@ -42,7 +42,7 @@ jobs:
       # Get an OCaml environment with opam installed and the proper ocaml version
       # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-        uses: avsm/setup-ocaml@v1
+        uses: avsm/setup-ocaml@v2
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
@@ -114,7 +114,7 @@ jobs:
       # Get an OCaml environment with opam installed and the proper ocaml version
       # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-        uses: avsm/setup-ocaml@v1
+        uses: avsm/setup-ocaml@v2
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
@@ -186,14 +186,14 @@ jobs:
           key: v1-${{ runner.os }}-alt-ergo-make-${{ matrix.package }}-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
 
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-        uses: avsm/setup-ocaml@v1
+        uses: avsm/setup-ocaml@v2
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
       # Get an OCaml environment with opam installed and the proper ocaml version
       # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-        uses: avsm/setup-ocaml@v1
+        uses: avsm/setup-ocaml@v2
         with:
           ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
 
