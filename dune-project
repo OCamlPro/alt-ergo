@@ -56,6 +56,7 @@ See more details on https://alt-ergo.ocamlpro.com/"
   (alt-ergo-parsers (= :version))
   lablgtk3
   conf-gtksourceview3
+  lablgtk3-sourceview3
   (cmdliner (>= 1.1.0))
   (odoc :with-doc)
 )
