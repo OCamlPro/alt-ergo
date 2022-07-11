@@ -603,8 +603,8 @@ and popup_axiom t env _offset () =
       (* ~icon:(GdkPixbuf.from_xpm_data Logo.xpm_logo) ()  *)
   in
   let bbox = GPack.button_box `HORIZONTAL ~border_width:5 ~layout:`END
-               ~spacing:10
-      ~packing:pop_w#action_area#add () in
+      ~spacing:10 ~packing:pop_w#action_area#add ()
+  in
 
   let button_ok = GButton.button ~packing:bbox#add () in
   let phbox = GPack.hbox ~packing:button_ok#add () in
@@ -758,8 +758,8 @@ and popup_trigger t qid env (sbuf:sbuffer) offset () =
       (* ~icon:(GdkPixbuf.from_xpm_data Logo.xpm_logo) ()  *)
   in
   let bbox = GPack.button_box `HORIZONTAL ~border_width:5 ~layout:`END
-               ~spacing:10
-      ~packing:pop_w#action_area#add () in
+      ~spacing:10 ~packing:pop_w#action_area#add ()
+  in
 
   let button_ok = GButton.button ~packing:bbox#add () in
   let phbox = GPack.hbox ~packing:button_ok#add () in
@@ -781,9 +781,11 @@ and popup_trigger t qid env (sbuf:sbuffer) offset () =
   let sw1 = GBin.scrolled_window
       ~vpolicy:`AUTOMATIC
       ~hpolicy:`AUTOMATIC
-      ~packing:pop_w#vbox#add () in
+      ~packing:pop_w#vbox#add ()
+  in
   let tv1 = GSourceView3.source_view ~source_buffer:buf1 ~packing:(sw1#add)
-              ~show_line_numbers:true ~wrap_mode:`CHAR() in
+       ~show_line_numbers:true ~wrap_mode:`CHAR()
+  in
   let _ = tv1#misc#modify_font font in
   let _ = tv1#set_editable true in
 
