@@ -26,6 +26,9 @@ jobs:
       # to `ocaml` with the container parameters
       - run: sudo chmod a+wx .
 
+      - name: Reclaim cache directory
+        run: chown -R 1001:1001 /github/home/.cache
+
       # Checkout the code of the current branch
       - name: Checkout code
         uses: actions/checkout@v2
