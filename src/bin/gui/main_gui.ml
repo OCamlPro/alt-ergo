@@ -198,8 +198,9 @@ let pop_error ?(error=false) ~message () =
       ~width:400 ()
   in
   let bbox = GPack.button_box `HORIZONTAL ~border_width:5 ~layout:`END
-               (*~child_height:20 ~child_width:85*) ~spacing:10
-      ~packing:pop_w#action_area#add () in
+      (*~child_height:20 ~child_width:85*) ~spacing:10
+      ~packing:pop_w#action_area#add ()
+  in
 
   let button_ok = GButton.button ~packing:bbox#add () in
   let phbox = GPack.hbox ~packing:button_ok#add () in
@@ -975,7 +976,7 @@ let start_gui all_used_context =
 
   (* TODO: crash : change this*)
   set_timeout (fun () ->
-      Printer.print_std "Timeout TODO";
+      Printer.print_std "Timeout";
       raise Util.Timeout);
 
   let w =
