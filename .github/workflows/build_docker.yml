@@ -5,6 +5,8 @@ name: Build with ocp Docker container
 
 on:
   pull_requests:
+    branches:
+      - fix-ci
 
   push:
     branches:
