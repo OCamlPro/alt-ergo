@@ -3,7 +3,12 @@ name: Build with ocp Docker container
 # The goal of this workflow is to test the installation of the project with opam
 # on a specific light docker container instead of using default GH-actions one.
 
-on: [push,pull_request]
+on:
+  push:
+    branches:
+      - fix-ci
+      - next
+      - main
 
 jobs:
   install_docker:
@@ -15,24 +20,15 @@ jobs:
     # as a system compiler. This container also contains opam 2.1.
     container:
       image: ocamlpro/ocaml:4.10
-      options: --user root
 
     steps:
-
-      # Checkout the code of the current branch
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Switch to ocaml user
-      - run: su ocaml
-
       # This line is needed to acces and use opam. We are unable to set the user
       # to `ocaml` with the container parameters
       - run: sudo chmod a+wx .
 
-      # This line is needed to allow the working directory to be used even
-      # the ocaml user do not have rights on it.
-      - run: CURRENTDIR=$(basename $(pwd)); git config --global --add safe.directory /__w/$CURRENTDIR/$CURRENTDIR
+      # Checkout the code of the current branch
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       # Create a switch with the system compiler (no compilation needed).
       # And then, install external (no need for depext with opam 2.1) and libs deps.
