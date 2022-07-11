@@ -3,13 +3,14 @@ name: Build with ocp Docker container
 # The goal of this workflow is to test the installation of the project with opam
 # on a specific light docker container instead of using default GH-actions one.
 
-on: [
-  pull_requests,
+on:
+  pull_requests:
+
   push:
     branches:
       - next
       - main
-]
+
 
 jobs:
   install_docker:
@@ -28,7 +29,7 @@ jobs:
       - run: sudo chmod a+wx .
 
       - name: Reclaim cache directory
-        run: chown -R 1001:1001 .
+        run: sudo chown -R 1001:1001 .
 
       # Checkout the code of the current branch
       - name: Checkout code
