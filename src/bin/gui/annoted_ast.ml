@@ -35,7 +35,8 @@ open Options
 open Gui_config
 open Gui_session
 
-let font = GPango.font_description_from_string (font_family ^ " " ^ (string_of_int font_size))
+let font_str = Format.sprintf "%s %i" font_family font_size
+let font = GPango.font_description_from_string font_str
 let font_size = font#size
 
 let make_indent nb =
