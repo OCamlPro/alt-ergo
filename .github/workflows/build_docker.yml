@@ -27,7 +27,7 @@ jobs:
       - run: sudo chmod a+wx .
 
       - name: Reclaim cache directory
-        run: chown -R 1001:1001 /github/home/.cache
+        run: chown -R 1001:1001 .
 
       # Checkout the code of the current branch
       - name: Checkout code
