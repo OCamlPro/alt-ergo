@@ -35,14 +35,14 @@ open Options
 open Gui_config
 open Gui_session
 
-let monospace_font = Pango.Font.from_string monospace_font
-let general_font = Pango.Font.from_string general_font
-
+let font_str = Format.sprintf "%s %i" font_family font_size
+let font = GPango.font_description_from_string font_str
+let font_size = font#size
 
 let make_indent nb =
-  String.make (min max_indent (nb * indent_size)) ' '
+  String.make (min max_indent (nb * indent_size)) ' ' 
 
-type sbuffer = GSourceView2.source_buffer
+type sbuffer = GSourceView3.source_buffer
 
 type error_model = {
   mutable some : bool;
@@ -203,9 +203,9 @@ module MTag = Map.Make (struct
 
 type env = {
   buffer : sbuffer;
-  goal_view : GSourceView2.source_view;
+  goal_view : GSourceView3.source_view;
   inst_buffer : sbuffer;
-  inst_view : GSourceView2.source_view;
+  inst_view : GSourceView3.source_view;
   errors : error_model;
   insts : inst_model;
   st_ctx : GMisc.statusbar_context;
@@ -229,53 +229,31 @@ module HTag = Hashtbl.Make (struct
     let hash t = t#get_oid
   end)
 
-
-
-
-let increase_size envs =
-  Pango.Font.set_size monospace_font
-    (Pango.Font.get_size monospace_font + 2000);
-  (* Printer.print_dbg "%d +" (Pango.Font.get_size monospace_font); *)
+let set_font ?(family=font#family) ?(size=font#size) ?(ratio=1.) () =
+  let new_sz = int_of_float ((float_of_int size) *. ratio) in
+  font#modify ~family:family ~size:new_sz ();
+  Gui_config.update_font_family font#family;
+  Gui_config.update_font_size font#size
+  
+let update_font envs =
   List.iter (fun env ->
-      env.goal_view#misc#modify_font monospace_font;
-      env.inst_view#misc#modify_font monospace_font;
-    ) envs;
-  Gui_config.update_monospace_font (Pango.Font.to_string monospace_font)
-
+      env.goal_view#misc#modify_font font;
+      env.inst_view#misc#modify_font font) envs
+  
+let increase_size envs =
+  set_font ~ratio:1.1 ();
+  (* Printer.print_dbg "Increase font size: %d" font#size; *)
+  update_font envs
 
 let decrease_size envs =
-  (* Printer.print_dbg "%d +" (Pango.Font.get_size monospace_font); *)
-  Pango.Font.set_size monospace_font
-    (Pango.Font.get_size monospace_font - 2000);
-  List.iter (fun env ->
-      env.goal_view#misc#modify_font monospace_font;
-      env.inst_view#misc#modify_font monospace_font;
-    ) envs;
-  Gui_config.update_monospace_font (Pango.Font.to_string monospace_font)
-
+  set_font ~ratio:0.9 ();
+  (* Printer.print_dbg "Decrease font size: %d" font#size; *)
+  update_font envs
 
 let reset_size envs =
-  Pango.Font.set_size monospace_font
-    (Pango.Font.get_size
-       (Pango.Font.from_string Gui_config.monospace_font));
-  List.iter (fun env ->
-      env.goal_view#misc#modify_font monospace_font;
-      env.inst_view#misc#modify_font monospace_font;
-    ) envs;
-  Gui_config.update_monospace_font (Pango.Font.to_string monospace_font)
-
-
-
-let set_font envs font =
-  let f = Pango.Font.from_string font in
-  Pango.Font.set_family monospace_font (Pango.Font.get_family f);
-  Pango.Font.set_size monospace_font (Pango.Font.get_size f);
-  List.iter (fun env ->
-      env.goal_view#misc#modify_font monospace_font;
-      env.inst_view#misc#modify_font monospace_font;
-    ) envs;
-  Gui_config.update_monospace_font (Pango.Font.to_string monospace_font)
-
+  set_font ~size: font_size ();
+  (* Printer.print_dbg "Reset font size: %d" font#size; *)
+  update_font envs
 
 type buffer_pending = {
   tags_ranges : ((sbuffer * int * int) list) HTag.t;
@@ -364,9 +342,9 @@ let create_env buf1 tv1 (buf2:sbuffer) tv2 errors insts st_ctx ast dep
 let create_replay_env buf1 errors insts ast actions resulting_ids =
   {
     buffer = buf1;
-    inst_buffer = GSourceView2.source_buffer ();
-    goal_view = GSourceView2.source_view ();
-    inst_view = GSourceView2.source_view ();
+    inst_buffer = GSourceView3.source_buffer ();
+    goal_view = GSourceView3.source_view ();
+    inst_view = GSourceView3.source_view ();
     errors = errors;
     insts = insts;
     st_ctx = (GMisc.statusbar ())#new_context ~name:"";

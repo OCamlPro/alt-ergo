@@ -598,14 +598,13 @@ and add_instance ?(register=true) env id af ax_kd aname entries =
 and popup_axiom t env _offset () =
   let pop_w = GWindow.dialog
       ~title:"Instantiate axiom"
-      ~allow_grow:true
       ~position:`MOUSE
       ~width:400 ()
       (* ~icon:(GdkPixbuf.from_xpm_data Logo.xpm_logo) ()  *)
   in
   let bbox = GPack.button_box `HORIZONTAL ~border_width:5 ~layout:`END
-      ~child_height:20 ~child_width:85 ~spacing:10
-      ~packing:pop_w#action_area#add () in
+      ~spacing:10 ~packing:pop_w#action_area#add ()
+  in
 
   let button_ok = GButton.button ~packing:bbox#add () in
   let phbox = GPack.hbox ~packing:button_ok#add () in
@@ -692,10 +691,11 @@ and axiom_callback t env ~origin:y z i =
         let z = GdkEvent.Button.cast z in
         if GdkEvent.Button.button z = 3 then
           let menu = GMenu.menu () in
-          let image = GMisc.image ~stock:`ADD () in
-          let menuitem = GMenu.image_menu_item ~image
-              ~label:"Instanciate axiom ..." ~packing:menu#append () in
-          ignore(menuitem#connect#activate
+          let menu_item = GMenu.menu_item ~packing:menu#append () in
+          let vbox = GPack.hbox ~packing:menu_item#add () in
+          let _ = GMisc.label ~text:"Instanciate axiom ..." ~packing:vbox#add () in
+          let _ = GMisc.image ~stock:`ADD ~icon_size:`MENU ~packing:vbox#add () in
+          ignore(menu_item#connect#activate
                    ~callback:(popup_axiom t env offset));
           menu#popup ~button:3 ~time:(GdkEvent.Button.time z);
           true
@@ -753,14 +753,13 @@ and readd_trigger ?(register=true) env id str inst_buf =
 and popup_trigger t qid env (sbuf:sbuffer) offset () =
   let pop_w = GWindow.dialog
       ~title:"Add new (multi) trigger"
-      ~allow_grow:true
       ~width:400
       ~height:100 ()
       (* ~icon:(GdkPixbuf.from_xpm_data Logo.xpm_logo) ()  *)
   in
   let bbox = GPack.button_box `HORIZONTAL ~border_width:5 ~layout:`END
-      ~child_height:20 ~child_width:85 ~spacing:10
-      ~packing:pop_w#action_area#add () in
+      ~spacing:10 ~packing:pop_w#action_area#add ()
+  in
 
   let button_ok = GButton.button ~packing:bbox#add () in
   let phbox = GPack.hbox ~packing:button_ok#add () in
@@ -772,20 +771,22 @@ and popup_trigger t qid env (sbuf:sbuffer) offset () =
   ignore(GMisc.image ~stock:`CANCEL ~packing:phbox#add ());
   ignore(GMisc.label ~text:"Cancel" ~packing:phbox#add ());
 
-  let lmanager = GSourceView2.source_language_manager ~default:true in
+  let lmanager = GSourceView3.source_language_manager ~default:true in
   let source_language = lmanager#language "alt-ergo" in
   let buf1 = match source_language with
     | Some language ->
-      GSourceView2.source_buffer ~language
+      GSourceView3.source_buffer ~language
         ~highlight_syntax:true ~highlight_matching_brackets:true ()
-    | None -> GSourceView2.source_buffer () in
+    | None -> GSourceView3.source_buffer () in
   let sw1 = GBin.scrolled_window
       ~vpolicy:`AUTOMATIC
       ~hpolicy:`AUTOMATIC
-      ~packing:pop_w#vbox#add () in
-  let tv1 = GSourceView2.source_view ~source_buffer:buf1 ~packing:(sw1#add)
-      ~show_line_numbers:true ~wrap_mode:`CHAR() in
-  let _ = tv1#misc#modify_font monospace_font in
+      ~packing:pop_w#vbox#add ()
+  in
+  let tv1 = GSourceView3.source_view ~source_buffer:buf1 ~packing:(sw1#add)
+       ~show_line_numbers:true ~wrap_mode:`CHAR()
+  in
+  let _ = tv1#misc#modify_font font in
   let _ = tv1#set_editable true in
 
   let errors_l = GMisc.label ~text:"" ~packing:pop_w#vbox#pack () in
@@ -819,10 +820,11 @@ and triggers_callback t qid env sbuf ~origin:y z i =
         let z = GdkEvent.Button.cast z in
         if GdkEvent.Button.button z = 3 then
           let menu = GMenu.menu () in
-          let image = GMisc.image ~stock:`ADD () in
-          let menuitem = GMenu.image_menu_item ~image
-              ~label:"Add trigger(s) ..." ~packing:menu#append () in
-          ignore(menuitem#connect#activate
+          let menu_item = GMenu.menu_item ~packing:menu#append () in
+          let vbox = GPack.hbox ~packing:menu_item#add () in
+          let _ = GMisc.label ~text:"Add trigger(s) ..." ~packing:vbox#add () in
+          let _ = GMisc.image ~stock:`ADD ~icon_size:`MENU ~packing:vbox#add () in    
+          ignore(menu_item#connect#activate
                    ~callback:(popup_trigger t qid env sbuf offset));
           menu#popup ~button:3 ~time:(GdkEvent.Button.time z);
           true
@@ -965,20 +967,19 @@ let clear_used_lemmas_tags env =
   env.proof_toptags <- []
 
 let show_used_lemmas env expl =
-  let colormap = Gdk.Color.get_system_colormap () in
   let atags,ftags = findtags_proof expl env.ast in
   clear_used_lemmas_tags env;
   let max_mul = MTag.fold (fun _ m acc -> max acc m) ftags 0 in
   let green_0 =
-    Gdk.Color.alloc ~colormap (`RGB (65535*3/4, 65535, 65535*3/4))
+    Gdk.Color.color_parse (Gui_util.dec_to_hex_color (65535*3/4) 65535 (65535*3/4))
   in
   List.iter (fun t -> t#set_property (`BACKGROUND_GDK green_0)) atags;
   MTag.iter (fun t m ->
       let perc = ((max_mul - m) * 65535) / max_mul in
-      let green_n = Gdk.Color.alloc ~colormap
-          (`RGB (perc*1/2, (perc + 2*65535) /3, perc*1/2)) in
+      let green_n = Gdk.Color.color_parse
+          (Gui_util.dec_to_hex_color (perc*1/2) ((perc + 2*65535) /3) (perc*1/2)) in
       t#set_property (`BACKGROUND_GDK green_n)) ftags;
-  env.proof_tags <- ftags;
+  env.proof_tags <- ftags; 
   env.proof_toptags <- atags
 
 

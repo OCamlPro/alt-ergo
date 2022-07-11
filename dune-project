@@ -54,8 +54,9 @@ See more details on https://alt-ergo.ocamlpro.com/"
   (dune (and (>= 2.0) (< 3.0)))
   (alt-ergo-lib (= :version))
   (alt-ergo-parsers (= :version))
-  lablgtk
-  conf-gtksourceview
+  lablgtk3
+  conf-gtksourceview3
+  lablgtk3-sourceview3
   (cmdliner (>= 1.1.0))
   (odoc :with-doc)
 )

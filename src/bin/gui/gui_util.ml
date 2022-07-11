@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (*     The Alt-Ergo theorem prover                                            *)
-(*     Copyright (C) 2006-2013                                                *)
+(*     Copyright (C) 2006-2022                                                *)
 (*                                                                            *)
 (*     Sylvain Conchon                                                        *)
 (*     Evelyne Contejean                                                      *)
@@ -10,6 +10,7 @@
 (*     Mohamed Iguernelala                                                    *)
 (*     Stephane Lescuyer                                                      *)
 (*     Alain Mebsout                                                          *)
+(*     Pierre Villemot                                                        *)
 (*                                                                            *)
 (*     CNRS - INRIA - Universite Paris Sud                                    *)
 (*                                                                            *)
@@ -26,35 +27,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
-val window_width : int
-val window_height : int
-val indent_size : int
-val max_indent : int
-val max_indents : int
-val font_family : string
-val font_size : int
-val style : string
-val wrap : bool
-
-(** Load the configuration from default location *)
-val load : unit -> unit
-
-(** Write the configuration file to the default location *)
-val write : unit -> unit
-
-(** Try to load the configuration file from the default location,
-    if not present try to write it to the default location *)
-val init : unit -> unit
-
-(** Update the size of the window *)
-val update_window_size : int -> int -> unit
-
-(** Update the monospace font *)
-val update_font_family : string -> unit
-
-(** Update the font size *)
-val update_font_size : int -> unit
-
-val update_wrap : bool -> unit
-
-val not_supported : string -> 'a
+let dec_to_hex_color red green blue =
+  let r = Printf.sprintf "%04x" red in
+  let g = Printf.sprintf "%04x" green in
+  let b = Printf.sprintf "%04x" blue in
+  "#" ^ r ^ g ^ b

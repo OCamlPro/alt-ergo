@@ -44,8 +44,8 @@ let window_height = ref 700
 let indent_size = ref 2
 let max_indent = ref 80
 let max_indents = ref 15
-let monospace_font = ref "monospace"
-let general_font = ref "sans"
+let font_family = ref "monospace"
+let font_size = ref 11
 let style = ref "tango"
 let wrap = ref false
 
@@ -63,10 +63,10 @@ let load () =
         max_indent := int_of_string value
       | [ "max_indents"; value ] ->
         max_indents := int_of_string value
-      | [ "monospace_font"; value ] ->
-        monospace_font := value
-      | [ "general_font"; value ] ->
-        general_font := value
+      | [ "font_family"; value ] ->
+        font_family := value
+      | [ "font_size"; value ] ->
+        font_size := int_of_string value
       | [ "style"; value ] ->
         style := value
       | [ "wrap"; value ] ->
@@ -85,8 +85,8 @@ let write () =
   output_string oc (sprintf "indent_size:%d\n" !indent_size);
   output_string oc (sprintf "max_indent:%d\n" !max_indent);
   output_string oc (sprintf "max_indents:%d\n" !max_indents);
-  output_string oc (sprintf "monospace_font:%s\n" !monospace_font);
-  output_string oc (sprintf "general_font:%s\n" !general_font);
+  output_string oc (sprintf "font_family:%s\n" !font_family);
+  output_string oc (sprintf "font_size:%s\n" (string_of_int !font_size));
   output_string oc (sprintf "style:%s\n" !style);
   output_string oc (sprintf "wrap:%b\n" !wrap);
   close_out oc
@@ -94,9 +94,12 @@ let write () =
 let update_window_size width height =
   window_width := width;
   window_height := height
+ 
+let update_font_family family =
+  font_family := family
 
-let update_monospace_font desc =
-  monospace_font := desc
+let update_font_size size =
+  font_size := size
 
 let update_wrap b =
   wrap := b
@@ -111,8 +114,8 @@ let window_height = !window_height
 let indent_size = !indent_size
 let max_indent = !max_indent
 let max_indents = !max_indents
-let monospace_font = !monospace_font
-let general_font = !general_font
+let font_family = !font_family
+let font_size = !font_size
 let style = !style
 let wrap = !wrap
 

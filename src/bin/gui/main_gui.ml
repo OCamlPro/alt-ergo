@@ -194,13 +194,13 @@ let show_about () =
 let pop_error ?(error=false) ~message () =
   let pop_w = GWindow.dialog
       ~title:(if error then "Error" else "Warning")
-      ~allow_grow:true
       ~position:`CENTER
       ~width:400 ()
   in
   let bbox = GPack.button_box `HORIZONTAL ~border_width:5 ~layout:`END
-      ~child_height:20 ~child_width:85 ~spacing:10
-      ~packing:pop_w#action_area#add () in
+      (*~child_height:20 ~child_width:85*) ~spacing:10
+      ~packing:pop_w#action_area#add ()
+  in
 
   let button_ok = GButton.button ~packing:bbox#add () in
   let phbox = GPack.hbox ~packing:button_ok#add () in
@@ -220,7 +220,6 @@ let pop_error ?(error=false) ~message () =
 let pop_model sat_env () =
   let pop_w = GWindow.dialog
       ~title:"Model"
-      ~allow_grow:true
       ~destroy_with_parent:true
       ~position:`CENTER
       ~width:400
@@ -231,10 +230,10 @@ let pop_model sat_env () =
       ~vpolicy:`AUTOMATIC
       ~hpolicy:`AUTOMATIC
       ~packing:pop_w#vbox#add () in
-  let buf1 = GSourceView2.source_buffer () in
-  let tv1 = GSourceView2.source_view ~source_buffer:buf1 ~packing:(sw1#add)
-      ~wrap_mode:`CHAR () in
-  let _ = tv1#misc#modify_font monospace_font in
+  let buf1 = GSourceView3.source_buffer () in
+  let tv1 = GSourceView3.source_view ~source_buffer:buf1 ~packing:(sw1#add)
+              ~wrap_mode:`CHAR () in
+  let _ = tv1#misc#modify_font font in
   let _ = tv1#set_editable false in
   let model_text = asprintf "%a@." (SAT.print_model ~header:false) sat_env in
   buf1#set_text model_text;
@@ -778,7 +777,7 @@ let empty_error_model () =
 
 
 let goto_error (view:GTree.view) error_model buffer
-    (sv:GSourceView2.source_view)  path _column =
+    (sv:GSourceView3.source_view)  path _column =
   let model = view#model in
   let row = model#get_iter path in
   let line = model#get ~row ~column:error_model.rcol_line in
@@ -815,10 +814,8 @@ let create_error_view error_model buffer sv ~packing () =
            ~callback:(goto_error view error_model buffer sv));
   view
 
-
-
 let goto_lemma (view:GTree.view) inst_model buffer
-    (sv:GSourceView2.source_view) env path _column =
+    (sv:GSourceView3.source_view) env path _column =
   let model = view#model in
   let row = model#get_iter path in
   let id = model#get ~row ~column:inst_model.icol_tag in
@@ -834,9 +831,6 @@ let goto_lemma (view:GTree.view) inst_model buffer
     env.last_tag <- t;
   with Not_found -> ()
 
-
-let colormap () = Gdk.Color.get_system_colormap ()
-
 let set_color_inst inst_model renderer (istore:GTree.model) row =
   let id = istore#get ~row ~column:inst_model.icol_tag in
   let _, nb_inst, _, limit = Hashtbl.find inst_model.h id in
@@ -848,8 +842,7 @@ let set_color_inst inst_model renderer (istore:GTree.model) row =
     renderer#set_properties [`FOREGROUND "blue"]
   else if inst_model.max <> 0 then
     let perc = (nb_inst * 65535) / inst_model.max in
-    let red_n =
-      Gdk.Color.alloc ~colormap:(colormap ()) (`RGB (perc, 0, 0)) in
+    let red_n = Gdk.Color.color_parse (Gui_util.dec_to_hex_color perc 0 0) in
     renderer#set_properties [`FOREGROUND_GDK red_n]
   else
     renderer#set_properties [`FOREGROUND_SET false];
@@ -937,7 +930,7 @@ let prev_ends i buf found_all_tag =
   if !iter#compare buf#start_iter <= 0 then raise Not_found;
   !iter
 
-let search_next ?(backward=false) (sv:GSourceView2.source_view)
+let search_next ?(backward=false) (sv:GSourceView3.source_view)
     (buf:sbuffer) found_tag found_all_tag () =
   try
     let iter = buf#get_iter_at_char buf#cursor_position in
@@ -956,17 +949,15 @@ let search_next ?(backward=false) (sv:GSourceView2.source_view)
     buf#place_cursor ~where:i2
   with Not_found -> ()
 
-let search_one buf str result iter found_all_tag =
-  result :=
-    GSourceView2.iter_forward_search !iter []
-      ~start:buf#start_iter ~stop:buf#end_iter str;
+let search_one buf str result (iter:GText.iter ref) found_all_tag =
+  result := !iter#forward_search str;
   match !result with
   | None -> ()
-  | Some (i1, i2) ->
+  | Some (i1, i2) -> 
     buf#apply_tag found_all_tag ~start:i1 ~stop:i2;
     iter := i2
 
-let search_all entry (_sv:GSourceView2.source_view)
+let search_all entry (_sv:GSourceView3.source_view)
     (buf:sbuffer) found_tag found_all_tag () =
   buf#remove_tag found_tag ~start:buf#start_iter ~stop:buf#end_iter;
   buf#remove_tag found_all_tag ~start:buf#start_iter ~stop:buf#end_iter;
@@ -979,7 +970,6 @@ let search_all entry (_sv:GSourceView2.source_view)
       search_one buf str result iter found_all_tag
     done
 
-
 let start_gui all_used_context =
   Options.set_timers true;
   Options.set_thread_yield Thread.yield;
@@ -989,12 +979,9 @@ let start_gui all_used_context =
       Printer.print_std "Timeout";
       raise Util.Timeout);
 
-
   let w =
     GWindow.window
       ~title:"AltGr-Ergo"
-      ~allow_grow:true
-      ~allow_shrink:true
       ~position:`CENTER
       ~width:window_width
       ~height:window_height ()
@@ -1003,14 +990,14 @@ let start_gui all_used_context =
   ignore (w#misc#connect#size_allocate ~callback:(fun r ->
       Gui_config.update_window_size r.Gtk.width r.Gtk.height));
 
-  let lmanager = GSourceView2.source_language_manager ~default:true in
+  let lmanager = GSourceView3.source_language_manager ~default:true in
   lmanager#set_search_path
     (String.concat Filename.dir_sep
        [Config.datadir; "gtksourceview-2.0"; "language-specs"] ::
      lmanager#search_path);
   let source_language = lmanager#language "alt-ergo" in
 
-  let smanager = GSourceView2.source_style_scheme_manager ~default:true in
+  let smanager = GSourceView3.source_style_scheme_manager ~default:true in
   let scheme = smanager#style_scheme Gui_config.style in
   let filename = get_file () in
   let preludes = Options.get_preludes () in
@@ -1049,15 +1036,15 @@ let start_gui all_used_context =
          in
          let buf1 = match source_language with
            | Some language ->
-             GSourceView2.source_buffer ~language
+             GSourceView3.source_buffer ~language
                ~highlight_syntax:true ~highlight_matching_brackets:true ()
-           | None -> GSourceView2.source_buffer () in
+           | None -> GSourceView3.source_buffer () in
 
          let buf2 = match source_language with
            | Some language ->
-             GSourceView2.source_buffer ~language
+             GSourceView3.source_buffer ~language
                ~highlight_syntax:true ~highlight_matching_brackets:true ()
-           | None -> GSourceView2.source_buffer () in
+           | None -> GSourceView3.source_buffer () in
 
          buf1#set_style_scheme scheme;
          buf2#set_style_scheme scheme;
@@ -1097,7 +1084,8 @@ let start_gui all_used_context =
 
          let toolbox = GPack.hbox ~border_width:0 ~packing:rbox#pack () in
 
-         let toolbar = GButton.toolbar ~tooltips:true ~packing:toolbox#add () in
+         let toolbar = GButton.toolbar (*~tooltips:true*)
+                         ~packing:toolbox#add ~style: `BOTH () in
          toolbar#set_icon_size `DIALOG;
 
          let hb = GPack.paned `HORIZONTAL
@@ -1134,8 +1122,7 @@ let start_gui all_used_context =
              ~row_spacings:1 ~col_spacings:8 ~border_width:4
              ~packing:fr5#add () in
 
-
-         let st = GMisc.statusbar ~has_resize_grip:false ~border_width:0
+         let st = GMisc.statusbar ~border_width:0
              ~packing:vbox#pack () in
          let st_ctx = st#new_context ~name:"Type" in
 
@@ -1153,11 +1140,11 @@ let start_gui all_used_context =
              ~packing:fr1#add ()
          in
          let tv1 =
-           GSourceView2.source_view ~source_buffer:buf1 ~packing:(sw1#add)
+           GSourceView3.source_view ~source_buffer:buf1 ~packing:(sw1#add)
              ~show_line_numbers:true ~wrap_mode:(if wrap then `CHAR else `NONE)
              ~highlight_current_line:true ()
          in
-         let _ = tv1#misc#modify_font monospace_font in
+         let _ = tv1#misc#modify_font font in
          let _ = tv1#set_editable false in
 
          let sw2 = GBin.scrolled_window
@@ -1166,11 +1153,11 @@ let start_gui all_used_context =
              ~packing:fr2#add ()
          in
          let tv2 =
-           GSourceView2.source_view ~source_buffer:buf2 ~packing:(sw2#add)
+           GSourceView3.source_view ~source_buffer:buf2 ~packing:(sw2#add)
              ~show_line_numbers:false ~wrap_mode:(if wrap then `CHAR else `NONE)
              ~highlight_current_line:true ()
          in
-         let _ = tv2#misc#modify_font monospace_font in
+         let _ = tv2#misc#modify_font font in
          let _ = tv2#set_editable false in
 
 
@@ -1178,60 +1165,47 @@ let start_gui all_used_context =
              st_ctx annoted_ast dep actions resulting_ids in
          connect env;
 
-         ignore (toolbar#insert_toggle_button
-                   ~text:" Remove context"
-                   ~icon:(GMisc.image ~stock:`CUT
-                            ~icon_size:`LARGE_TOOLBAR ())#coerce
-                   ~callback:(remove_context env) ());
+         let remove_ctx_button = GButton.toggle_tool_button ~label:" Remove context"
+                                   ~stock:`CUT ~packing:toolbar#insert () in
+         ignore(remove_ctx_button#connect#clicked ~callback:(remove_context env));
+     
+         let run_button = GButton.tool_button ~label:" Run Alt-Ergo"
+                            ~stock:`EXECUTE () in 
+         toolbar#insert run_button;
 
-         let buttonrun = toolbar#insert_button
-             ~text:" Run Alt-Ergo"
-             ~icon:(GMisc.image ~stock:`EXECUTE  ~icon_size:`LARGE_TOOLBAR()
-                   )#coerce () in
+         let stop_button = GButton.tool_button ~label:" Abort" ~stock:`STOP () in 
+         stop_button#misc#hide ();
 
-         let buttonstop = toolbar#insert_button
-             ~text:" Abort"
-             ~icon:(GMisc.image ~stock:`STOP  ~icon_size:`LARGE_TOOLBAR()
-                   )#coerce () in
-         buttonstop#misc#hide ();
+         (* TODO: Use toolbar#insert instead of insert_space *)
+         (*toolbar#insert_space ();*)
 
-         toolbar#insert_space ();
-
-         let resultbox = GPack.hbox () in
+         let tool_item = GButton.tool_item () in
+         let result_box = GPack.hbox ~packing:tool_item#add () in
          let result_image = GMisc.image ~icon_size:`LARGE_TOOLBAR
-             ~stock:`DIALOG_QUESTION ~packing:resultbox#add () in
+             ~stock:`DIALOG_QUESTION ~packing:result_box#add () in
          let result_label = GMisc.label
-             ~text:" " ~packing:resultbox#add () in
+             ~text:" " ~packing:result_box#add () in
 
-         ignore(toolbar#insert_widget resultbox#coerce);
+         ignore(toolbar#insert tool_item);
 
-         let buttonclean = toolbar#insert_button
-             ~text:" Clean unused"
-             ~icon:(GMisc.image ~stock:`CLEAR  ~icon_size:`LARGE_TOOLBAR()
-                   )#coerce () in
-         buttonclean#misc#hide ();
+         let clean_button = GButton.tool_button ~label:" Clean unused" ~stock:`CLEAR () in
+         toolbar#insert clean_button;
+         clean_button#misc#hide ();
 
          let toolsearch =
-           GButton.toolbar ~tooltips:true ~packing:(toolbox#pack ~fill:true) ()
+           GButton.toolbar (*~tooltips:true*) ~packing:(toolbox#pack ~fill:true) ()
          in
          toolsearch#set_icon_size `DIALOG;
 
-         let search_box = GPack.hbox ~spacing:5 ~border_width:5 () in
+         let tool_item = GButton.tool_item ~packing:toolsearch#insert () in
+         let search_box = GPack.hbox ~spacing:5 ~border_width:5 ~packing:tool_item#add () in
          ignore(GMisc.image ~icon_size:`LARGE_TOOLBAR
                   ~stock:`FIND ~packing:search_box#add ());
          let search_entry = GEdit.entry ~packing:search_box#add () in
 
-         ignore(toolsearch#insert_widget search_box#coerce);
-
-         let button_seach_forw = toolsearch#insert_button
-             (* ~text:"Search" *)
-             ~icon:(GMisc.image ~stock:`GO_DOWN  ~icon_size:`LARGE_TOOLBAR()
-                   )#coerce () in
-         let button_seach_back = toolsearch#insert_button
-             (* ~text:"Search" *)
-             ~icon:(GMisc.image ~stock:`GO_UP  ~icon_size:`LARGE_TOOLBAR()
-                   )#coerce () in
-
+         let search_forw_button = GButton.tool_button ~stock:`GO_DOWN ~packing:toolsearch#insert () in
+         let search_back_button = GButton.tool_button ~stock:`GO_UP ~packing:toolsearch#insert () in
+       
          let found_all_tag = buf1#create_tag [`BACKGROUND "yellow"] in
          let found_tag = buf1#create_tag [`BACKGROUND "orange"] in
 
@@ -1248,13 +1222,11 @@ let start_gui all_used_context =
                       else false
                     ));
 
-         ignore(button_seach_forw#connect#clicked
+         ignore(search_forw_button#connect#clicked
                   ~callback:(search_next tv1 buf1 found_tag found_all_tag));
-         ignore(button_seach_back#connect#clicked
+         ignore(search_back_button#connect#clicked
                   ~callback:(search_next ~backward:true
                                tv1 buf1 found_tag found_all_tag));
-
-
 
          let sw3 = GBin.scrolled_window
              ~vpolicy:`AUTOMATIC
@@ -1284,12 +1256,12 @@ let start_gui all_used_context =
 
          let thread = ref None in
 
-         ignore(buttonrun#connect#clicked
+         ignore(run_button#connect#clicked
                   ~callback:(
-                    run buttonrun buttonstop buttonclean inst_model timers_model
+                    run run_button stop_button clean_button inst_model timers_model
                       result_image result_label thread env used_context));
 
-         ignore(buttonstop#connect#clicked
+         ignore(stop_button#connect#clicked
                   ~callback:(kill_thread thread));
 
          ignore(eventBox#event#connect#key_press
@@ -1300,7 +1272,7 @@ let start_gui all_used_context =
 
          Hashtbl.add note_search !nb_page
            (search_entry,
-            run buttonrun buttonstop buttonclean inst_model
+            run run_button stop_button clean_button inst_model
               timers_model result_image result_label thread env used_context);
 
          env::acc
@@ -1317,7 +1289,7 @@ let start_gui all_used_context =
 
   let file_entries = [
     `I ("Save session", save_dialog "Cancel" envs);
-    `S;
+    (*`S;*)
     `I ("Quit", quit envs)
   ] in
 
@@ -1339,8 +1311,8 @@ let start_gui all_used_context =
         )) envs
   in
 
-
-  let choose_font () =
+  (* The GtkFontChooserDialog is not yet implemented by lablgtk3. *)           
+  (*let choose_font () =
     let font_win = GWindow.font_selection_dialog
         ~parent:w
         ~destroy_with_parent:true
@@ -1352,24 +1324,24 @@ let start_gui all_used_context =
     );
     ignore (font_win#run ());
     ignore (font_win#misc#hide ())
-  in
+    in*)
 
 
   let debug_entries = [
     `C ("SAT", get_debug_sat (), set_debug_sat);
-    `S;
+    (*`S;*)
     `C ("CC", get_debug_cc (), set_debug_cc);
     `C ("Use", get_debug_use (), set_debug_use);
     `C ("UF", get_debug_uf (), set_debug_uf);
     `C ("AC", get_debug_ac (), set_debug_ac);
-    `S;
+    (*`S;*)
     `C ("Arith", get_debug_arith (), set_debug_arith);
     `C ("Fourier-Motzkin", get_debug_fm (), set_debug_fm);
     `C ("Arrays", get_debug_arrays (), set_debug_arrays);
     `C ("Bit-vectors", get_debug_bitv (), set_debug_bitv);
     `C ("Sum", get_debug_sum (), set_debug_sum);
     `C ("Records", false, not_implemented);
-    `S;
+    (*`S;*)
     `C ("Case split", get_debug_split (), set_debug_split);
     `C ("Replay unsat cores", get_debug_unsat_core (), set_debug_unsat_core);
     `C ("Typing", get_debug_typing (), set_debug_typing);
@@ -1388,21 +1360,21 @@ let start_gui all_used_context =
       else set_instantiation_heuristic INormal in
     [
       `C ("Unsat cores", get_unsat_core (), set_unsat_core);
-      `S;
+      (*`S;*)
       `C ("Model", get_model (), set_model);
       `C ("Complete model", get_complete_model (), set_complete_model);
       `C ("All models", get_all_models (), set_all_models);
-      `S;
+      (*`S;*)
       `C ("Variables in triggers", get_triggers_var (), set_triggers_var);
       `C ("Greedy", get_greedy (), set_greedy);
       `C ("Contra congruence", not (get_no_contracongru ()),
           fun b -> set_no_contracongru (not b));
-      `S;
+      (*`S;*)
       `C ("Restricted", get_restricted (), set_restricted);
-      `S;
+      (*`S;*)
       `C ("Wrap lines", wrap, set_wrap_lines);
-      `S;
-      `I ("Change font", choose_font);
+      (*`S;*)
+      (*`I ("Change font", choose_font);*)
       `I ("Increase font size", fun () -> increase_size envs);
       `I ("Decrease font size", fun () -> decrease_size envs);
       `I ("Reset font size", fun () -> reset_size envs);
@@ -1418,7 +1390,7 @@ let start_gui all_used_context =
   (*   `M ("Options", options_entries); *)
   (*   `M ("Help", help_entries) *)
   (* ] in *)
-
+ 
   let create_menu label menubar =
     let item = GMenu.menu_item ~label ~packing:menubar#append () in
     GMenu.menu ~packing:item#set_submenu ()
@@ -1494,7 +1466,7 @@ let start_replay session_cin all_used_context =
     (fun (l, goal_name) ->
        let used_context = FE.choose_used_context all_used_context ~goal_name in
 
-       let buf1 = GSourceView2.source_buffer () in
+       let buf1 = GSourceView3.source_buffer () in
 
        let annoted_ast = annot buf1 l in
 
@@ -1521,7 +1493,6 @@ let start_replay session_cin all_used_context =
     | Some c -> close_in c
     | None -> ()
   end
-
 
 let () =
   Gui_config.init ();
