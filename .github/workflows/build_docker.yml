@@ -15,18 +15,24 @@ jobs:
     # as a system compiler. This container also contains opam 2.1.
     container:
       image: ocamlpro/ocaml:4.10
+      options: --user root
 
     steps:
-      # This line is needed to acces and use opam. We are unable to set the user
-      # to `ocaml` with the container parameters
-      - run: sudo chmod a+wx .
-
-      - name: Reclaim cache directory
-        run: sudo chown -R 1001:1001 .
 
       # Checkout the code of the current branch
       - name: Checkout code
         uses: actions/checkout@v2
+
+      # Switch to ocaml user
+      - run: su ocaml
+
+      # This line is needed to acces and use opam. We are unable to set the user
+      # to `ocaml` with the container parameters
+      - run: sudo chmod a+wx .
+
+      # This line is needed to allow the working directory to be used even
+      # the ocaml user do not have rights on it.
+      - run: git config --global --add safe.directory /__w/alt-ergo/alt-ergo
 
       # Create a switch with the system compiler (no compilation needed).
       # And then, install external (no need for depext with opam 2.1) and libs deps.
