@@ -58,12 +58,12 @@ jobs:
 
       # Install dependencies
       - name: Install deps
-        run: opam install  ./*.opam --deps-only --with-test --depext
+        run: opam install  ./*.opam --deps-only --with-test
 
 
       # Build and install with opam
       - name: Install
-        run: opam reinstall .
+        run: opam reinstall . --depext
 
       # Run non regression tests
       - name: Run non regression tests
