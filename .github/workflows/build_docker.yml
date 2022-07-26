@@ -3,16 +3,7 @@ name: Build with ocp Docker container
 # The goal of this workflow is to test the installation of the project with opam
 # on a specific light docker container instead of using default GH-actions one.
 
-on:
-  pull_requests:
-    branches:
-      - fix-ci
-
-  push:
-    branches:
-      - next
-      - main
-
+on: [push,pull_request]
 
 jobs:
   install_docker:
