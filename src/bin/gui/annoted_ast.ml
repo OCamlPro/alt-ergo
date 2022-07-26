@@ -40,7 +40,7 @@ let font = GPango.font_description_from_string font_str
 let font_size = font#size
 
 let make_indent nb =
-  String.make (min max_indent (nb * indent_size)) ' ' 
+  String.make (min max_indent (nb * indent_size)) ' '
 
 type sbuffer = GSourceView3.source_buffer
 
@@ -234,12 +234,12 @@ let set_font ?(family=font#family) ?(size=font#size) ?(ratio=1.) () =
   font#modify ~family:family ~size:new_sz ();
   Gui_config.update_font_family font#family;
   Gui_config.update_font_size font#size
-  
+
 let update_font envs =
   List.iter (fun env ->
       env.goal_view#misc#modify_font font;
       env.inst_view#misc#modify_font font) envs
-  
+
 let increase_size envs =
   set_font ~ratio:1.1 ();
   (* Printer.print_dbg "Increase font size: %d" font#size; *)
