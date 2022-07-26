@@ -232,7 +232,7 @@ let pop_model sat_env () =
       ~packing:pop_w#vbox#add () in
   let buf1 = GSourceView3.source_buffer () in
   let tv1 = GSourceView3.source_view ~source_buffer:buf1 ~packing:(sw1#add)
-              ~wrap_mode:`CHAR () in
+      ~wrap_mode:`CHAR () in
   let _ = tv1#misc#modify_font font in
   let _ = tv1#set_editable false in
   let model_text = asprintf "%a@." (SAT.print_model ~header:false) sat_env in
@@ -1085,7 +1085,7 @@ let start_gui all_used_context =
          let toolbox = GPack.hbox ~border_width:0 ~packing:rbox#pack () in
 
          let toolbar = GButton.toolbar (*~tooltips:true*)
-                         ~packing:toolbox#add ~style: `BOTH () in
+             ~packing:toolbox#add ~style: `BOTH () in
          toolbar#set_icon_size `DIALOG;
 
          let hb = GPack.paned `HORIZONTAL
@@ -1174,7 +1174,7 @@ let start_gui all_used_context =
          );
 
          let run_button = GButton.tool_button ~label:" Run Alt-Ergo"
-                            ~stock:`EXECUTE () in
+             ~stock:`EXECUTE () in
          toolbar#insert run_button;
 
          let stop_button =
