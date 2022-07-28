@@ -438,7 +438,7 @@ let halt_opt version_info where =
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
 
-let mk_opts file () () () () () () halt_opt (gc) () () () () () () () () ()
+let mk_opts file () () () () () () halt_opt (gc) () () () () () () () ()
   =
 
   if halt_opt then `Ok false
@@ -632,6 +632,10 @@ let parse_dbg_opt_spl3 =
     let doc = "Set the debugging flag of warnings." in
     Arg.(value & flag & info ["dwarnings"] ~docs ~doc) in
 
+  let debug_simplify =
+    let doc = "Set the debugging flag of the simplifier." in
+    Arg.(value & flag & info ["dsimplify"] ~docs ~doc) in
+
   let rule =
     let doc =
       "$(docv) = parsing|typing|sat|cc|arith, output rule used on stderr." in
@@ -649,6 +653,7 @@ let parse_dbg_opt_spl3 =
              debug_unsat_core $
              debug_use $
              debug_warnings $
+             debug_simplify $
              rule
             ))
 
@@ -1281,6 +1286,7 @@ let main =
       `S s_halt;
       `S s_fmt;
       `S s_debug;
+      `S s_simp;
       `P "These options are used to output debug info for the concerned \
           part of the solver.\
           They are $(b,not) used to check internal consistency.";
