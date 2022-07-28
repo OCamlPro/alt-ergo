@@ -52,7 +52,6 @@ type theories_extensions =
 type simplify =
   | SNo
   | SPreprocess
-  | SAll
 
 type axiom_kind = Default | Propagator
 

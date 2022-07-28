@@ -438,7 +438,7 @@ let halt_opt version_info where =
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
 
-let mk_opts file () () () () () () halt_opt (gc) () () () () () () () ()
+let mk_opts file () () () () () () halt_opt (gc) () () () () () () () () ()
   =
 
   if halt_opt then `Ok false
@@ -467,6 +467,12 @@ let mk_fmt_opt std_fmt err_fmt
   set_std_fmt (value_of_fmt std_fmt);
   set_err_fmt (value_of_fmt err_fmt);
   `Ok()
+
+let mk_simplify simp_opt use_th =
+  set_simplify
+    (if simp_opt then SPreprocess else SNo);
+  set_simplify_th use_th;
+  `Ok ()
 
 (* Custom sections *)
 
@@ -1250,6 +1256,19 @@ let parse_fmt_opt =
              std_formatter $ err_formatter
             ))
 
+let simplifier =
+  let docs = s_simp in
+
+  let simplify =
+    let doc = "Activates the formula preprocessing" in
+    Arg.(value & flag & info ["simplify"] ~docs ~doc)
+  in
+  let simplify_th =
+    let doc = "Activates the use of theories during formula preprocessing" in
+    Arg.(value & flag & info ["simplify-th"] ~docs ~doc)
+  in
+  Term.(ret (const mk_simplify $ simplify $ simplify_th))
+
 let main =
 
   let file =
@@ -1318,7 +1337,7 @@ let main =
                parse_execution_opt $ parse_halt_opt $ parse_internal_opt $
                parse_limit_opt $ parse_output_opt $ parse_profiling_opt $
                parse_quantifiers_opt $ parse_sat_opt $ parse_term_opt $
-               parse_theory_opt $ parse_fmt_opt
+               parse_theory_opt $ parse_fmt_opt $ simplifier
               ))
   in
   let info =

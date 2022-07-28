@@ -293,16 +293,16 @@ let rec make_term up_qv quant_basename t =
         up_qv quant_basename e Loc.dummy
         ~decl_kind:E.Daxiom (* not correct, but not a problem *)
         ~toplevel:false
-  in mk_term t (*
+  in (*mk_term t*)
   let term = mk_term t in
   match Options.get_simplify () with
   | Util.SNo -> term
-  | Util.SPreprocess | Util.SAll ->
+  | Util.SPreprocess ->
     let module S = SimpExprPreproc () in
     let smp_term = S.simp_expr  term in
     if SRE.has_changed smp_term
     then SRE.get_expr smp_term
-    else term *)
+    else term
 
 and make_trigger ~in_theory name up_qv quant_basename hyp (e, from_user) =
   let content, guard = match e with
@@ -517,7 +517,7 @@ let make_form name f loc ~decl_kind =
     let form = make_form Sy.Map.empty name f loc ~decl_kind ~toplevel:true in
     match Options.get_simplify () with
       Util.SNo -> form
-    | Util.SPreprocess | Util.SAll ->
+    | Util.SPreprocess ->
       let module S = SimpExprPreproc () in
       (*Format.printf "Simplifying@.";*)
       let smp_form = S.simp_expr form in
