@@ -2,6 +2,32 @@
 
 ## dev version
 
+## version 2.4.2, August, 02, 2022
+
+* Minor release
+
+  - Migrating to lablgtk3
+
+  - Update of CI
+
+  - Compatibility with dune.3+
+
+  - Miscellaneous bug fixes (type unification, term purification, ...)
+
+## version 2.4.1, July, 27, 2021
+
+* Minor release
+
+  - Improvement of term purification
+
+  - Implementation of a semantic term construction cache
+
+  - Replacement of Travis-CI by GitHub actions
+
+  - Improvement of documentation
+
+  - Unsoundness fixes
+
 
 ## version 2.4.0, January 22, 2021
 
