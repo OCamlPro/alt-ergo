@@ -88,8 +88,10 @@ module type Dom = sig
   val _true : v
   val _false : v
   val unknown : v
+  val const_int : Numbers.Q.t -> v
 
   val to_bool : v -> bool option
+  val to_int : v -> Numbers.Q.t option
 
   (** (Partial) Compare function *)
   val compare : state -> state -> int option
@@ -165,11 +167,29 @@ module SimpleReasoner
 
   let simp_true = {exp = E.vrai; diff = true; v = D._true}
   let simp_false = {exp = E.faux; diff = true; v = D._false}
+  let simp_int i = {exp = E.int (Numbers.Q.to_string i); diff = true; v = D.const_int i}
 
   let is_true e = E.equal e.exp E.vrai
   let is_false e = E.equal e.exp E.faux
   let bool_unknown = D.v_join D._true D._false
 
+  let to_const state e =
+    let ty = E.type_info e in
+    let eval_e = D.eval_expr e state in
+    match ty with
+    | Tbool -> begin
+        match D.to_bool eval_e with
+        | Some true -> simp_true
+        | Some false -> simp_false
+        | None -> identity state e
+      end
+    | Tint -> begin
+        match D.to_int eval_e with
+        | Some i -> simp_int i
+        | None -> identity state e
+      end
+    | _ ->
+      identity state e
 
   let rec add_lit_constraint (state : state) (e : Expr.t)
     : state * (Expr.t, v) simp =
@@ -676,14 +696,8 @@ module SimpleReasoner
 
       | Symbols.Let, _ -> assert false
       | Symbols.Name _, _ ->
-        begin
-          debug "[simp_expr] Name@.";
-          state,
-          match D.to_bool (D.eval_expr e state) with
-          | Some true -> simp_true
-          | Some false -> simp_false
-          | None -> identity state e
-        end
+        debug "[simp_expr] Name@.";
+        state, to_const state e
       | _ ->
         debug
           "[simp_expr] Other: %a@."

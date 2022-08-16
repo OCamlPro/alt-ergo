@@ -46,7 +46,9 @@ module DummySimp =
       let unknown = ()
       let _false = ()
       let _true = ()
+      let const_int _ = ()
       let to_bool _ = None
+      let to_int _ = None
       let pp_v fmt _ = Format.fprintf fmt "()"
       let eval_expr _ _ = ()
       let v_join _ _ = ()
@@ -105,6 +107,7 @@ module IntervalsDomain :
 
   let _false = Value (Bool false)
   let _true = Value (Bool true)
+  let const_int i = Value (Interval (Intervals.point i Ty.Tint Explanation.empty))
   let unknown = Top
 
   let to_bool =
@@ -114,6 +117,15 @@ module IntervalsDomain :
     | Value (Interval _) -> None
     | Value (Bool b) -> Some b
 
+  let to_int = function
+    | Value (Interval i) -> begin
+        match Intervals.is_point i with
+        | Some (i, _) -> Some i
+        | None -> None
+      end
+    | Top
+    | Bottom
+    | Value (Bool _) -> None
 
   let pp_v = pp_abs_val pp_interval
 

@@ -41,8 +41,10 @@ module type Dom = sig
   val _true : v
   val _false : v
   val unknown : v
+  val const_int : Numbers.Q.t -> v
 
   val to_bool : v -> bool option
+  val to_int : v -> Numbers.Q.t option
 
   (** (Partial) Compare function *)
   val compare : state -> state -> int option

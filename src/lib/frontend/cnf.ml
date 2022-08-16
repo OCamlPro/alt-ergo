@@ -525,15 +525,11 @@ let make_form name f loc ~decl_kind =
         (* Emptying the caches modified by the simplifier.
            St : This is necessary for having consistent results. *)
         Shostak.Combine.empty_cache ();
-         S.empty_caches (); () in *)
-      if SRE.has_changed smp_form then
-        (*let () = Format.printf "Simplification over: success@." in*)
-        let exp = SRE.get_expr smp_form in
-        exp
-      else begin
-        (*let () = Format.printf "Simplification over: fail@." in*)
-        form
-      end
+        S.empty_caches (); ()
+      in *)
+      if SRE.has_changed smp_form
+      then SRE.get_expr smp_form
+      else form
   in
   assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
   let ff = E.purify_form ff in
