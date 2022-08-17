@@ -121,8 +121,8 @@ struct
   let save_cache () =
     HC.save_cache ()
 
-    let reinit_cache () =
-      HC.reinit_cache ()
+  let reinit_cache () =
+    HC.reinit_cache ()
 
   let hcons v = HC.make v
 

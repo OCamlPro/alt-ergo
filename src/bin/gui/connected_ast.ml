@@ -826,9 +826,7 @@ and triggers_callback t qid env sbuf ~origin:y z i =
           let menu = GMenu.menu () in
           let menu_item = GMenu.menu_item ~packing:menu#append () in
           let vbox = GPack.hbox ~packing:menu_item#add () in
-          let _ =
-            GMisc.label ~text:"Add trigger(s) ..." ~packing:vbox#add ()
-          in
+          let _ = GMisc.label ~text:"Add trigger(s) ..." ~packing:vbox#add () in
           let _ =
             GMisc.image ~stock:`ADD ~icon_size:`MENU ~packing:vbox#add ()
           in
@@ -979,18 +977,15 @@ let show_used_lemmas env expl =
   clear_used_lemmas_tags env;
   let max_mul = MTag.fold (fun _ m acc -> max acc m) ftags 0 in
   let green_0 =
-    Gdk.Color.color_parse (
-      Gui_util.dec_to_hex_color (65535*3/4) 65535 (65535*3/4)
-    )
+    Gdk.Color.color_parse
+      (Gui_util.dec_to_hex_color (65535*3/4) 65535 (65535*3/4))
   in
   List.iter (fun t -> t#set_property (`BACKGROUND_GDK green_0)) atags;
   MTag.iter (fun t m ->
       let perc = ((max_mul - m) * 65535) / max_mul in
-      let green_n = Gdk.Color.color_parse
-          (Gui_util.dec_to_hex_color
-             (perc*1/2)
-             ((perc + 2*65535) /3) (perc*1/2)
-          )
+      let green_n =
+        Gdk.Color.color_parse @@
+        Gui_util.dec_to_hex_color (perc*1/2) ((perc + 2*65535) /3) (perc*1/2)
       in
       t#set_property (`BACKGROUND_GDK green_n)) ftags;
   env.proof_tags <- ftags;
