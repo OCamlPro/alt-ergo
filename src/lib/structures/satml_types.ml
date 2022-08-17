@@ -466,7 +466,7 @@ module type FLAT_FORMULA = sig
     Atom.atom list list ->
     Atom.atom * Atom.atom list * bool -> Atom.atom list list
 
-  val reset_cpt : unit -> unit
+  val reinit_cpt : unit -> unit
 
   module Set : Set.S with type elt = t
   module Map : Map.S with type key = t
@@ -963,7 +963,7 @@ module Flat_Formula : FLAT_FORMULA = struct
 
   let get_atom hcons a = Atom.get_atom hcons.atoms a
 
-  let reset_cpt () =
+  let reinit_cpt () =
     cpt := 0
 
   module Set = Set.Make(struct type t'=t type t=t' let compare=compare end)

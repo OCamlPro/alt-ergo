@@ -2503,6 +2503,6 @@ let instantiate ~do_syntactic_matching env uf selector =
       raise e
   else instantiate ~do_syntactic_matching env uf selector
 
-let reinit () =
+let reinit_cache () =
   Oracle.reset_age_cpt ();
   EM.reinit_caches ()

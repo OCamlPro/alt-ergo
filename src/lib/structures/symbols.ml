@@ -316,7 +316,7 @@ let print_clean fmt s = Format.fprintf fmt "%s" (to_string_clean s)
 let print fmt s = Format.fprintf fmt "%s" (to_string s)
 
 
-let fresh, reset_fresh_sy_cpt =
+let fresh, reinit_fresh_sy_cpt =
   let cpt = ref 0 in
   let fresh ?(is_var=false) s =
     incr cpt;
@@ -324,10 +324,10 @@ let fresh, reset_fresh_sy_cpt =
     let s = (Format.sprintf "!?__%s%i" s (!cpt)) in
     if is_var then var @@ Var.of_string s else name s
   in
-  let reset_fresh_sy_cpt () =
+  let reinit_fresh_sy_cpt () =
     cpt := 0
   in
-  fresh, reset_fresh_sy_cpt
+  fresh, reinit_fresh_sy_cpt
 
 let is_get f = equal f (Op Get)
 let is_set f = equal f (Op Set)

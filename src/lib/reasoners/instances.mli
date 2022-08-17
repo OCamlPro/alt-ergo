@@ -70,8 +70,8 @@ module type S = sig
   val matching_terms_info :
     t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
 
-  val reset_em_cache : unit -> unit
-  (** Empties the e-matching functor instance's inner cache *)
+  val reinit_em_cache : unit -> unit
+  (** Reinitializes the E-matching functor instance's inner cache *)
 
 end
 

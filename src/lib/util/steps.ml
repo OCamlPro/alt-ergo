@@ -130,6 +130,25 @@ let reset_steps () =
   mult_b := 0;
   mult_a := 0
 
+let save_steps, reinit_steps =
+  let saved_mult_uf = ref 0 in
+  (* only [mult_uf] is non-zero after initializing the solver modules *)
+  let save_steps () =
+    saved_mult_uf := !mult_uf
+  in
+  let reinit_steps () =
+    Stack.clear all_steps;
+    naive_steps := 0;
+    steps := 0;
+    mult_f := 0;
+    mult_m := 0;
+    mult_s := 0;
+    mult_uf := !saved_mult_uf;
+    mult_b := 0;
+    mult_a := 0
+  in
+  save_steps, reinit_steps
+
 (* Return the max steps between naive and refine steps counting. Both counter
  * are compute at execution. The first one count the number of terms sent to the
  * theories environment, the second one count steps depending of the theories

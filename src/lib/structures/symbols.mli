@@ -110,7 +110,7 @@ val print_clean : Format.formatter -> t -> unit
 
 val fresh : ?is_var:bool -> string -> t
 
-val reset_fresh_sy_cpt : unit -> unit
+val reinit_fresh_sy_cpt : unit -> unit
 (** Resets to 0 the fresh symbol counter *)
 
 val is_get : t -> bool

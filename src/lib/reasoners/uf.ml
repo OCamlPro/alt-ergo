@@ -1281,7 +1281,9 @@ let output_concrete_model ({ make; _ } as env) =
       Printer.print_fmt (get_fmt_mdl ()) ")";
     end
 
-let reinit () =
-  LX.reinit ();
-  (* the next line is necessary to put the module back to its initial state *)
-  (ignore @@ distinct (empty ()) [X.bot () ;X.top ()] Ex.empty)
+let save_cache () =
+  LX.save_cache ()
+
+let reinit_cache () =
+  LX.reinit_cache ()
+

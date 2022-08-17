@@ -59,8 +59,8 @@ module type S = sig
 
   val get_assumed : t -> Expr.Set.t
 
-  val reset_cpt : unit -> unit
-  (** resets the counter to zero *)
+  val reinit_cpt : unit -> unit
+  (** reinitializes the counter to zero *)
 
 end
 

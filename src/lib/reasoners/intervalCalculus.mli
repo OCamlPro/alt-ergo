@@ -28,6 +28,6 @@
 
 include Sig_rel.RELATION
 
-val reinit : unit -> unit
-(** Empties the e-matching functor instance's inner cache
+val reinit_cache : unit -> unit
+(** Reinitializes the E-matching functor instance's inner cache
     And resets the Inequalities module counter to zero *)

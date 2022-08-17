@@ -28,9 +28,13 @@ val print : Format.formatter -> t -> unit
 
 val to_string : t -> string
 
-val reset_cnt : unit -> unit
-(** resets the counter to 1, because after intializing the modules it is set to
-    1 when initializing the [underscore] constant in the Symbols module *)
+val save_cnt: unit -> unit
+(** Saves the values of the counter  *)
+
+val reinit_cnt: unit -> unit
+(** Reinitializes the counter to the saved value with [save_cnt], 1 if no value
+    is saved, since after the initialization of the modules [cnt] is set to 1
+    when initializing the [underscore] constant in the Symbols module *)
 
 module Map : Map.S with type key = t
 

@@ -57,6 +57,12 @@ val incr  : incr_kind -> unit
 val reset_steps : unit -> unit
 (** Reset the global steps counter *)
 
+val save_steps : unit -> unit
+(** Saves the step counters *)
+
+val reinit_steps : unit -> unit
+(** Reinitializes the step counters *)
+
 val get_steps : unit -> int
 (** Return the number of steps *)
 

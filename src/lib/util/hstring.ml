@@ -30,7 +30,7 @@ open Options
 
 type t = { content : string ; id : int}
 
-module S =
+module HC =
   Hconsing.Make(struct
     type elt = t
     let hash s = Hashtbl.hash s.content
@@ -40,7 +40,7 @@ module S =
     let disable_weaks () = Options.get_disable_weaks ()
   end)
 
-let make s = S.make {content = s; id = - 1}
+let make s = HC.make {content = s; id = - 1}
 
 let view s = s.content
 
@@ -81,23 +81,11 @@ let is_fresh_skolem s =
     assert (String.compare s "index out of bounds" = 0);
     false
 
-let reinit () =
-  (*
-    "~n:25" because of the constants initialized in:
-        hstring.ml:           empty
-        ty.ml:                tunit
-        symbols.ml:           underscore, fake_eq, fake_neq, fake_lt, fake_le
-        fpa_rounding.ml:      fpa_rounding_mode (mode_constrs (x11), mode_ty),
-                              _No__rounding_mode
-        arith.ml:             mod_symb
-        intervals.ml:         is_question_mark
-        intervalCalculus.ml:  not_theory_const, is_theory_const, linear_dep
-        ccx.ml, use.ml:       one
+let save_cache () =
+  HC.save_cache ()
 
-    The value is not reset to 26 because the next_id is incremented in
-    the call to Hconsing.make in Shostak.Combine.empty.
-  *)
-  S.reinit ~n:25 ();
+let reinit_cache () =
+  HC.reinit_cache ();
   reset_fresh_string_cpt ()
 
 module Arg = struct type t'= t type t = t' let compare = compare end

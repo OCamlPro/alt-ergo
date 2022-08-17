@@ -144,7 +144,7 @@ module type FLAT_FORMULA = sig
     Atom.atom list list ->
     Atom.atom * Atom.atom list * bool -> Atom.atom list list
 
-  val reset_cpt : unit -> unit
+  val reinit_cpt : unit -> unit
   (** Resets to 0 the counter *)
 
   module Set : Set.S with type elt = t
