@@ -89,7 +89,7 @@ module type S = sig
   val save_cache : unit -> unit
   (** Saves the modules cache  *)
 
-  val reinit_cnt: unit -> unit
+  val reinit_cache: unit -> unit
   (** Reinitializes the module's cache *)
 
   module Map : Map.S with type key = t
