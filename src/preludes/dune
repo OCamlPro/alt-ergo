@@ -1,7 +1,7 @@
 
 (install
   (package alt-ergo)
-  (section share)
+  (section lib)
   (files
     (b-set-theory-prelude-2018-09-28.ae as preludes/b-set-theory-prelude-2018-09-28.ae)
     (b-set-theory-prelude-2020-02-28.ae as preludes/b-set-theory-prelude-2020-02-28.ae)

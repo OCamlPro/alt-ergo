@@ -16,4 +16,4 @@ echo "===== [ with Tableaux-CDCL ] =============================================
 ./main_script.sh "--sat-solver Tableaux-CDCL"
 
 echo "===== [ WITH FM-SIMPLEX ] ====================================================================================";
-./main_script.sh "--inequalities-plugin `pwd`/../sources/_build/install/default/share/plugins/fm-simplex-plugin.cmxs"
+./main_script.sh "--inequalities-plugin `pwd`/../sources/_build/install/default/lib/plugins/fm-simplex-plugin.cmxs"

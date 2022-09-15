@@ -160,7 +160,7 @@ let datadir =
   abs_exe_path
   |> Filename.dirname
   |> follow Filename.parent_dir_name
-  |> follow "share"
+  |> follow "lib"
   |> follow "alt-ergo"
 
 let pluginsdir = datadir |> follow "plugins"
