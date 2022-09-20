@@ -2,614 +2,650 @@
 
 ; Auto-generated part begin
 (rule
- (target testfile-everything012_2b8932791180f5a59968429fd0c9b707.output)
+ (target testfile-everything012_cdcl_tableaux.output)
  (deps (:input testfile-everything012.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff testfile-everything012.expected 
-     testfile-everything012_2b8932791180f5a59968429fd0c9b707.output)))
+     testfile-everything012_cdcl_tableaux.output)))
 
 (rule
- (target testfile-everything012_a46cb9096e2da23457ead6baa5402a57.output)
+ (target testfile-everything012_cdcl.output)
  (deps (:input testfile-everything012.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL-Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff testfile-everything012.expected 
-     testfile-everything012_a46cb9096e2da23457ead6baa5402a57.output)))
+     testfile-everything012_cdcl.output)))
 
 (rule
- (target testfile-everything012_14b0726f12755882c994d2198b7a6ba3.output)
+ (target testfile-everything012_tableaux_cdcl.output)
  (deps (:input testfile-everything012.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff testfile-everything012.expected 
-     testfile-everything012_14b0726f12755882c994d2198b7a6ba3.output)))
+     testfile-everything012_tableaux_cdcl.output)))
 
 (rule
- (target testfile-everything012_20e0c1d3d5669c7cad23f95551336437.output)
+ (target testfile-everything012_tableaux.output)
  (deps (:input testfile-everything012.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux-CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff testfile-everything012.expected 
-     testfile-everything012_20e0c1d3d5669c7cad23f95551336437.output)))
+     testfile-everything012_tableaux.output)))
 
 (rule
- (target ite-7_2b8932791180f5a59968429fd0c9b707.output)
+ (target ite-7_cdcl_tableaux.output)
  (deps (:input ite-7.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-7.expected 
-     ite-7_2b8932791180f5a59968429fd0c9b707.output)))
+     ite-7_cdcl_tableaux.output)))
 
 (rule
- (target ite-7_a46cb9096e2da23457ead6baa5402a57.output)
+ (target ite-7_cdcl.output)
  (deps (:input ite-7.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL-Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-7.expected 
-     ite-7_a46cb9096e2da23457ead6baa5402a57.output)))
+     ite-7_cdcl.output)))
 
 (rule
- (target ite-7_14b0726f12755882c994d2198b7a6ba3.output)
+ (target ite-7_tableaux_cdcl.output)
  (deps (:input ite-7.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-7.expected 
-     ite-7_14b0726f12755882c994d2198b7a6ba3.output)))
+     ite-7_tableaux_cdcl.output)))
 
 (rule
- (target ite-7_20e0c1d3d5669c7cad23f95551336437.output)
+ (target ite-7_tableaux.output)
  (deps (:input ite-7.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux-CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-7.expected 
-     ite-7_20e0c1d3d5669c7cad23f95551336437.output)))
+     ite-7_tableaux.output)))
 
 (rule
- (target ite-6_2b8932791180f5a59968429fd0c9b707.output)
+ (target ite-6_cdcl_tableaux.output)
  (deps (:input ite-6.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-6.expected 
-     ite-6_2b8932791180f5a59968429fd0c9b707.output)))
+     ite-6_cdcl_tableaux.output)))
 
 (rule
- (target ite-6_a46cb9096e2da23457ead6baa5402a57.output)
+ (target ite-6_cdcl.output)
  (deps (:input ite-6.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL-Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-6.expected 
-     ite-6_a46cb9096e2da23457ead6baa5402a57.output)))
+     ite-6_cdcl.output)))
 
 (rule
- (target ite-6_14b0726f12755882c994d2198b7a6ba3.output)
+ (target ite-6_tableaux_cdcl.output)
  (deps (:input ite-6.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-6.expected 
-     ite-6_14b0726f12755882c994d2198b7a6ba3.output)))
+     ite-6_tableaux_cdcl.output)))
 
 (rule
- (target ite-6_20e0c1d3d5669c7cad23f95551336437.output)
+ (target ite-6_tableaux.output)
  (deps (:input ite-6.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux-CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-6.expected 
-     ite-6_20e0c1d3d5669c7cad23f95551336437.output)))
+     ite-6_tableaux.output)))
 
 (rule
- (target ite-5_2b8932791180f5a59968429fd0c9b707.output)
+ (target ite-5_cdcl_tableaux.output)
  (deps (:input ite-5.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-5.expected 
-     ite-5_2b8932791180f5a59968429fd0c9b707.output)))
+     ite-5_cdcl_tableaux.output)))
 
 (rule
- (target ite-5_a46cb9096e2da23457ead6baa5402a57.output)
+ (target ite-5_cdcl.output)
  (deps (:input ite-5.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL-Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-5.expected 
-     ite-5_a46cb9096e2da23457ead6baa5402a57.output)))
+     ite-5_cdcl.output)))
 
 (rule
- (target ite-5_14b0726f12755882c994d2198b7a6ba3.output)
+ (target ite-5_tableaux_cdcl.output)
  (deps (:input ite-5.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-5.expected 
-     ite-5_14b0726f12755882c994d2198b7a6ba3.output)))
+     ite-5_tableaux_cdcl.output)))
 
 (rule
- (target ite-5_20e0c1d3d5669c7cad23f95551336437.output)
+ (target ite-5_tableaux.output)
  (deps (:input ite-5.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux-CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-5.expected 
-     ite-5_20e0c1d3d5669c7cad23f95551336437.output)))
+     ite-5_tableaux.output)))
 
 (rule
- (target ite-5-should-be-enhanced_2b8932791180f5a59968429fd0c9b707.output)
+ (target ite-5-should-be-enhanced_cdcl_tableaux.output)
  (deps (:input ite-5-should-be-enhanced.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-5-should-be-enhanced.expected 
-     ite-5-should-be-enhanced_2b8932791180f5a59968429fd0c9b707.output)))
+     ite-5-should-be-enhanced_cdcl_tableaux.output)))
 
 (rule
- (target ite-5-should-be-enhanced_a46cb9096e2da23457ead6baa5402a57.output)
+ (target ite-5-should-be-enhanced_cdcl.output)
  (deps (:input ite-5-should-be-enhanced.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL-Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-5-should-be-enhanced.expected 
-     ite-5-should-be-enhanced_a46cb9096e2da23457ead6baa5402a57.output)))
+     ite-5-should-be-enhanced_cdcl.output)))
 
 (rule
- (target ite-5-should-be-enhanced_14b0726f12755882c994d2198b7a6ba3.output)
+ (target ite-5-should-be-enhanced_tableaux_cdcl.output)
  (deps (:input ite-5-should-be-enhanced.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-5-should-be-enhanced.expected 
-     ite-5-should-be-enhanced_14b0726f12755882c994d2198b7a6ba3.output)))
+     ite-5-should-be-enhanced_tableaux_cdcl.output)))
 
 (rule
- (target ite-5-should-be-enhanced_20e0c1d3d5669c7cad23f95551336437.output)
+ (target ite-5-should-be-enhanced_tableaux.output)
  (deps (:input ite-5-should-be-enhanced.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux-CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-5-should-be-enhanced.expected 
-     ite-5-should-be-enhanced_20e0c1d3d5669c7cad23f95551336437.output)))
+     ite-5-should-be-enhanced_tableaux.output)))
 
 (rule
- (target ite-4-bugfix_2b8932791180f5a59968429fd0c9b707.output)
+ (target ite-4-bugfix_cdcl_tableaux.output)
  (deps (:input ite-4-bugfix.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-4-bugfix.expected 
-     ite-4-bugfix_2b8932791180f5a59968429fd0c9b707.output)))
+     ite-4-bugfix_cdcl_tableaux.output)))
 
 (rule
- (target ite-4-bugfix_a46cb9096e2da23457ead6baa5402a57.output)
+ (target ite-4-bugfix_cdcl.output)
  (deps (:input ite-4-bugfix.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL-Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-4-bugfix.expected 
-     ite-4-bugfix_a46cb9096e2da23457ead6baa5402a57.output)))
+     ite-4-bugfix_cdcl.output)))
 
 (rule
- (target ite-4-bugfix_14b0726f12755882c994d2198b7a6ba3.output)
+ (target ite-4-bugfix_tableaux_cdcl.output)
  (deps (:input ite-4-bugfix.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-4-bugfix.expected 
-     ite-4-bugfix_14b0726f12755882c994d2198b7a6ba3.output)))
+     ite-4-bugfix_tableaux_cdcl.output)))
 
 (rule
- (target ite-4-bugfix_20e0c1d3d5669c7cad23f95551336437.output)
+ (target ite-4-bugfix_tableaux.output)
  (deps (:input ite-4-bugfix.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux-CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-4-bugfix.expected 
-     ite-4-bugfix_20e0c1d3d5669c7cad23f95551336437.output)))
+     ite-4-bugfix_tableaux.output)))
 
 (rule
- (target ite-3_2b8932791180f5a59968429fd0c9b707.output)
+ (target ite-3_cdcl_tableaux.output)
  (deps (:input ite-3.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-3.expected 
-     ite-3_2b8932791180f5a59968429fd0c9b707.output)))
+     ite-3_cdcl_tableaux.output)))
 
 (rule
- (target ite-3_a46cb9096e2da23457ead6baa5402a57.output)
+ (target ite-3_cdcl.output)
  (deps (:input ite-3.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL-Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-3.expected 
-     ite-3_a46cb9096e2da23457ead6baa5402a57.output)))
+     ite-3_cdcl.output)))
 
 (rule
- (target ite-3_14b0726f12755882c994d2198b7a6ba3.output)
+ (target ite-3_tableaux_cdcl.output)
  (deps (:input ite-3.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-3.expected 
-     ite-3_14b0726f12755882c994d2198b7a6ba3.output)))
+     ite-3_tableaux_cdcl.output)))
 
 (rule
- (target ite-3_20e0c1d3d5669c7cad23f95551336437.output)
+ (target ite-3_tableaux.output)
  (deps (:input ite-3.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux-CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-3.expected 
-     ite-3_20e0c1d3d5669c7cad23f95551336437.output)))
+     ite-3_tableaux.output)))
 
 (rule
- (target ite-2_2b8932791180f5a59968429fd0c9b707.output)
+ (target ite-2_cdcl_tableaux.output)
  (deps (:input ite-2.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-2.expected 
-     ite-2_2b8932791180f5a59968429fd0c9b707.output)))
+     ite-2_cdcl_tableaux.output)))
 
 (rule
- (target ite-2_a46cb9096e2da23457ead6baa5402a57.output)
+ (target ite-2_cdcl.output)
  (deps (:input ite-2.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL-Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-2.expected 
-     ite-2_a46cb9096e2da23457ead6baa5402a57.output)))
+     ite-2_cdcl.output)))
 
 (rule
- (target ite-2_14b0726f12755882c994d2198b7a6ba3.output)
+ (target ite-2_tableaux_cdcl.output)
  (deps (:input ite-2.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-2.expected 
-     ite-2_14b0726f12755882c994d2198b7a6ba3.output)))
+     ite-2_tableaux_cdcl.output)))
 
 (rule
- (target ite-2_20e0c1d3d5669c7cad23f95551336437.output)
+ (target ite-2_tableaux.output)
  (deps (:input ite-2.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux-CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-2.expected 
-     ite-2_20e0c1d3d5669c7cad23f95551336437.output)))
+     ite-2_tableaux.output)))
 
 (rule
- (target ite-1_2b8932791180f5a59968429fd0c9b707.output)
+ (target ite-1_cdcl_tableaux.output)
  (deps (:input ite-1.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-1.expected 
-     ite-1_2b8932791180f5a59968429fd0c9b707.output)))
+     ite-1_cdcl_tableaux.output)))
 
 (rule
- (target ite-1_a46cb9096e2da23457ead6baa5402a57.output)
+ (target ite-1_cdcl.output)
  (deps (:input ite-1.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL-Tableaux 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-1.expected 
-     ite-1_a46cb9096e2da23457ead6baa5402a57.output)))
+     ite-1_cdcl.output)))
 
 (rule
- (target ite-1_14b0726f12755882c994d2198b7a6ba3.output)
+ (target ite-1_tableaux_cdcl.output)
  (deps (:input ite-1.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-1.expected 
-     ite-1_14b0726f12755882c994d2198b7a6ba3.output)))
+     ite-1_tableaux_cdcl.output)))
 
 (rule
- (target ite-1_20e0c1d3d5669c7cad23f95551336437.output)
+ (target ite-1_tableaux.output)
  (deps (:input ite-1.ae))
  (package alt-ergo-lib)
  (action
   (chdir %{workspace_root}
    (with-stdout-to %{target}
-    (with-accepted-exit-codes 0
-     (run alt-ergo --sat-solver Tableaux-CDCL 
-      --output=smtlib2 
-      --timelimit=1 %{input}))))))
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
 (rule
  (alias runtest)
   (package alt-ergo-lib)
    (action (diff ite-1.expected 
-     ite-1_20e0c1d3d5669c7cad23f95551336437.output)))
+     ite-1_tableaux.output)))
 ; Auto-generated part end
