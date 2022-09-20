@@ -3,12 +3,7 @@ name: Build MacOS
 # This workflow try to build and test Alt-Ergo on a MacOS system
 # If the build succed, an artifact with the alt-ergo binary is uploaded
 # It only runs on `next` or `main` branch
-on:
-  push:
-    branches:
-      - fix-ci
-      - next
-      - main
+on: [push,pull_request]
 
 env:
   OCAML_DEFAULT_VERSION: 4.10.0
@@ -63,7 +58,7 @@ jobs:
 
       # Install dependencies
       - name: Install deps
-        run: opam install  ./*.opam --deps-only --with-test --depext
+        run: opam install  ./*.opam --deps-only --with-test
 
 
       # Build and install with opam
