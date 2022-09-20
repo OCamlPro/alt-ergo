@@ -94,7 +94,7 @@ let write () =
 let update_window_size width height =
   window_width := width;
   window_height := height
- 
+
 let update_font_family family =
   font_family := family
 

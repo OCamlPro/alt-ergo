@@ -232,7 +232,7 @@ let pop_model sat_env () =
       ~packing:pop_w#vbox#add () in
   let buf1 = GSourceView3.source_buffer () in
   let tv1 = GSourceView3.source_view ~source_buffer:buf1 ~packing:(sw1#add)
-              ~wrap_mode:`CHAR () in
+      ~wrap_mode:`CHAR () in
   let _ = tv1#misc#modify_font font in
   let _ = tv1#set_editable false in
   let model_text = asprintf "%a@." (SAT.print_model ~header:false) sat_env in
@@ -953,7 +953,7 @@ let search_one buf str result (iter:GText.iter ref) found_all_tag =
   result := !iter#forward_search str;
   match !result with
   | None -> ()
-  | Some (i1, i2) -> 
+  | Some (i1, i2) ->
     buf#apply_tag found_all_tag ~start:i1 ~stop:i2;
     iter := i2
 
@@ -1085,7 +1085,7 @@ let start_gui all_used_context =
          let toolbox = GPack.hbox ~border_width:0 ~packing:rbox#pack () in
 
          let toolbar = GButton.toolbar (*~tooltips:true*)
-                         ~packing:toolbox#add ~style: `BOTH () in
+             ~packing:toolbox#add ~style: `BOTH () in
          toolbar#set_icon_size `DIALOG;
 
          let hb = GPack.paned `HORIZONTAL
@@ -1165,15 +1165,21 @@ let start_gui all_used_context =
              st_ctx annoted_ast dep actions resulting_ids in
          connect env;
 
-         let remove_ctx_button = GButton.toggle_tool_button ~label:" Remove context"
-                                   ~stock:`CUT ~packing:toolbar#insert () in
-         ignore(remove_ctx_button#connect#clicked ~callback:(remove_context env));
-     
+         let remove_ctx_button =
+           GButton.toggle_tool_button ~label:" Remove context"
+             ~stock:`CUT ~packing:toolbar#insert ()
+         in
+         ignore (
+           remove_ctx_button#connect#clicked ~callback:(remove_context env)
+         );
+
          let run_button = GButton.tool_button ~label:" Run Alt-Ergo"
-                            ~stock:`EXECUTE () in 
+             ~stock:`EXECUTE () in
          toolbar#insert run_button;
 
-         let stop_button = GButton.tool_button ~label:" Abort" ~stock:`STOP () in 
+         let stop_button =
+           GButton.tool_button ~label:" Abort" ~stock:`STOP ()
+         in
          stop_button#misc#hide ();
 
          (* TODO: Use toolbar#insert instead of insert_space *)
@@ -1188,24 +1194,35 @@ let start_gui all_used_context =
 
          ignore(toolbar#insert tool_item);
 
-         let clean_button = GButton.tool_button ~label:" Clean unused" ~stock:`CLEAR () in
+         let clean_button =
+           GButton.tool_button ~label:" Clean unused" ~stock:`CLEAR ()
+         in
          toolbar#insert clean_button;
          clean_button#misc#hide ();
 
          let toolsearch =
-           GButton.toolbar (*~tooltips:true*) ~packing:(toolbox#pack ~fill:true) ()
+           GButton.toolbar
+             (*~tooltips:true*)
+             ~packing:(toolbox#pack ~fill:true)
+             ()
          in
          toolsearch#set_icon_size `DIALOG;
 
          let tool_item = GButton.tool_item ~packing:toolsearch#insert () in
-         let search_box = GPack.hbox ~spacing:5 ~border_width:5 ~packing:tool_item#add () in
+         let search_box =
+           GPack.hbox ~spacing:5 ~border_width:5 ~packing:tool_item#add ()
+         in
          ignore(GMisc.image ~icon_size:`LARGE_TOOLBAR
                   ~stock:`FIND ~packing:search_box#add ());
          let search_entry = GEdit.entry ~packing:search_box#add () in
 
-         let search_forw_button = GButton.tool_button ~stock:`GO_DOWN ~packing:toolsearch#insert () in
-         let search_back_button = GButton.tool_button ~stock:`GO_UP ~packing:toolsearch#insert () in
-       
+         let search_forw_button =
+           GButton.tool_button ~stock:`GO_DOWN ~packing:toolsearch#insert ()
+         in
+         let search_back_button =
+           GButton.tool_button ~stock:`GO_UP ~packing:toolsearch#insert ()
+         in
+
          let found_all_tag = buf1#create_tag [`BACKGROUND "yellow"] in
          let found_tag = buf1#create_tag [`BACKGROUND "orange"] in
 
@@ -1258,8 +1275,10 @@ let start_gui all_used_context =
 
          ignore(run_button#connect#clicked
                   ~callback:(
-                    run run_button stop_button clean_button inst_model timers_model
-                      result_image result_label thread env used_context));
+                    run
+                      run_button stop_button clean_button inst_model
+                      timers_model result_image result_label thread env
+                      used_context));
 
          ignore(stop_button#connect#clicked
                   ~callback:(kill_thread thread));
@@ -1311,7 +1330,7 @@ let start_gui all_used_context =
         )) envs
   in
 
-  (* The GtkFontChooserDialog is not yet implemented by lablgtk3. *)           
+  (* The GtkFontChooserDialog is not yet implemented by lablgtk3. *)
   (*let choose_font () =
     let font_win = GWindow.font_selection_dialog
         ~parent:w
@@ -1390,7 +1409,7 @@ let start_gui all_used_context =
   (*   `M ("Options", options_entries); *)
   (*   `M ("Help", help_entries) *)
   (* ] in *)
- 
+
   let create_menu label menubar =
     let item = GMenu.menu_item ~label ~packing:menubar#append () in
     GMenu.menu ~packing:item#set_submenu ()
