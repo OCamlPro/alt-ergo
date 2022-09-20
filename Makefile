@@ -159,34 +159,20 @@ altgr-ergo:
 
 .PHONY: alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
-
-# =====================
-# Non-regressions tests
-# =====================
-
-# Run non-regression tests using the scripts in
-# non-regression
-# non-regression: bin
-# 	cp $(INSTALL_DIR)/default/bin/alt-ergo non-regression/alt-ergo.opt
-#	cd non-regression &&  ./non-regression.sh
-#	rm non-regression/alt-ergo.opt
-
-# .PHONY: non-regression
-
 # ==============
 # Generate tests
 # ==============
 
 # Generate new Dune tests from the problems in 
 # the directory tests/.
-gentests: $(wildcard tests/**/*)
-	dune exec -- tools/gentests.exe tests/
+gentest: $(wildcard tests/**/*)
+	dune exec -- tools/gentest.exe tests/
 
 # Run non-regression tests.
 runtest: bin
 	dune runtest
 
-.PHONY: gentests runtest
+.PHONY: gentest runtest
 
 # ============
 # Installation
