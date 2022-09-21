@@ -32,7 +32,7 @@ jobs:
     steps:
       # Checkout the code of the current branch
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Update apt-get database
       - name: Update apt-get database
@@ -52,9 +52,9 @@ jobs:
       # Get an OCaml environment with opam installed and the proper ocaml version
       # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-        uses: avsm/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-version: ${{ env.OCAML_DEFAULT_VERSION }}
+          ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
 
       # Pin the packages, this is needed for opam depext
       # remove this step when opam 2.1 will be used
@@ -111,7 +111,7 @@ jobs:
     steps:
       # Checkout the code of the current branch
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Build the sphinx documentation
       # and automatically print any error or warning

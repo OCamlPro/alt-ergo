@@ -21,7 +21,7 @@ jobs:
 
       # Checkout the code of the current branch
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Switch to ocaml user
       - run: su ocaml
@@ -32,7 +32,7 @@ jobs:
 
       # This line is needed to allow the working directory to be used even
       # the ocaml user do not have rights on it.
-      - run: git config --global --add safe.directory /__w/alt-ergo/alt-ergo
+      - run: CURRENTDIR=$(basename $(pwd)); git config --global --add safe.directory /__w/$CURRENTDIR/$CURRENTDIR
 
       # Create a switch with the system compiler (no compilation needed).
       # And then, install external (no need for depext with opam 2.1) and libs deps.
