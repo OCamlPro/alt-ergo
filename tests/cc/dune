@@ -13,11 +13,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc016.expected 
-     testfile-cc016_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc016.expected 
+      testfile-cc016_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc016_cdcl.output)
@@ -31,11 +31,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc016.expected 
-     testfile-cc016_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc016.expected 
+      testfile-cc016_cdcl.output)))
 
 (rule
  (target testfile-cc016_tableaux_cdcl.output)
@@ -49,11 +49,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc016.expected 
-     testfile-cc016_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc016.expected 
+      testfile-cc016_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc016_tableaux.output)
@@ -67,11 +67,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc016.expected 
-     testfile-cc016_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc016.expected 
+      testfile-cc016_tableaux.output)))
 
 (rule
  (target testfile-cc015_cdcl_tableaux.output)
@@ -85,11 +85,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc015.expected 
-     testfile-cc015_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc015.expected 
+      testfile-cc015_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc015_cdcl.output)
@@ -103,11 +103,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc015.expected 
-     testfile-cc015_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc015.expected 
+      testfile-cc015_cdcl.output)))
 
 (rule
  (target testfile-cc015_tableaux_cdcl.output)
@@ -121,11 +121,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc015.expected 
-     testfile-cc015_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc015.expected 
+      testfile-cc015_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc015_tableaux.output)
@@ -139,11 +139,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc015.expected 
-     testfile-cc015_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc015.expected 
+      testfile-cc015_tableaux.output)))
 
 (rule
  (target testfile-cc014_cdcl_tableaux.output)
@@ -157,11 +157,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc014.expected 
-     testfile-cc014_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc014.expected 
+      testfile-cc014_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc014_cdcl.output)
@@ -175,11 +175,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc014.expected 
-     testfile-cc014_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc014.expected 
+      testfile-cc014_cdcl.output)))
 
 (rule
  (target testfile-cc014_tableaux_cdcl.output)
@@ -193,11 +193,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc014.expected 
-     testfile-cc014_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc014.expected 
+      testfile-cc014_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc014_tableaux.output)
@@ -211,11 +211,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc014.expected 
-     testfile-cc014_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc014.expected 
+      testfile-cc014_tableaux.output)))
 
 (rule
  (target testfile-cc013_cdcl_tableaux.output)
@@ -229,11 +229,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc013.expected 
-     testfile-cc013_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc013.expected 
+      testfile-cc013_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc013_cdcl.output)
@@ -247,11 +247,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc013.expected 
-     testfile-cc013_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc013.expected 
+      testfile-cc013_cdcl.output)))
 
 (rule
  (target testfile-cc013_tableaux_cdcl.output)
@@ -265,11 +265,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc013.expected 
-     testfile-cc013_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc013.expected 
+      testfile-cc013_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc013_tableaux.output)
@@ -283,11 +283,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc013.expected 
-     testfile-cc013_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc013.expected 
+      testfile-cc013_tableaux.output)))
 
 (rule
  (target testfile-cc012_cdcl_tableaux.output)
@@ -301,11 +301,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc012.expected 
-     testfile-cc012_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc012.expected 
+      testfile-cc012_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc012_cdcl.output)
@@ -319,11 +319,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc012.expected 
-     testfile-cc012_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc012.expected 
+      testfile-cc012_cdcl.output)))
 
 (rule
  (target testfile-cc012_tableaux_cdcl.output)
@@ -337,11 +337,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc012.expected 
-     testfile-cc012_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc012.expected 
+      testfile-cc012_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc012_tableaux.output)
@@ -355,11 +355,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc012.expected 
-     testfile-cc012_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc012.expected 
+      testfile-cc012_tableaux.output)))
 
 (rule
  (target testfile-cc011_cdcl_tableaux.output)
@@ -373,11 +373,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc011.expected 
-     testfile-cc011_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc011.expected 
+      testfile-cc011_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc011_cdcl.output)
@@ -391,11 +391,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc011.expected 
-     testfile-cc011_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc011.expected 
+      testfile-cc011_cdcl.output)))
 
 (rule
  (target testfile-cc011_tableaux_cdcl.output)
@@ -409,11 +409,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc011.expected 
-     testfile-cc011_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc011.expected 
+      testfile-cc011_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc011_tableaux.output)
@@ -427,11 +427,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc011.expected 
-     testfile-cc011_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc011.expected 
+      testfile-cc011_tableaux.output)))
 
 (rule
  (target testfile-cc010_cdcl_tableaux.output)
@@ -445,11 +445,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc010.expected 
-     testfile-cc010_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc010.expected 
+      testfile-cc010_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc010_cdcl.output)
@@ -463,11 +463,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc010.expected 
-     testfile-cc010_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc010.expected 
+      testfile-cc010_cdcl.output)))
 
 (rule
  (target testfile-cc010_tableaux_cdcl.output)
@@ -481,11 +481,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc010.expected 
-     testfile-cc010_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc010.expected 
+      testfile-cc010_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc010_tableaux.output)
@@ -499,11 +499,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc010.expected 
-     testfile-cc010_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc010.expected 
+      testfile-cc010_tableaux.output)))
 
 (rule
  (target testfile-cc009_cdcl_tableaux.output)
@@ -517,11 +517,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc009.expected 
-     testfile-cc009_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc009.expected 
+      testfile-cc009_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc009_cdcl.output)
@@ -535,11 +535,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc009.expected 
-     testfile-cc009_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc009.expected 
+      testfile-cc009_cdcl.output)))
 
 (rule
  (target testfile-cc009_tableaux_cdcl.output)
@@ -553,11 +553,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc009.expected 
-     testfile-cc009_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc009.expected 
+      testfile-cc009_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc009_tableaux.output)
@@ -571,11 +571,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc009.expected 
-     testfile-cc009_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc009.expected 
+      testfile-cc009_tableaux.output)))
 
 (rule
  (target testfile-cc008_cdcl_tableaux.output)
@@ -589,11 +589,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc008.expected 
-     testfile-cc008_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc008.expected 
+      testfile-cc008_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc008_cdcl.output)
@@ -607,11 +607,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc008.expected 
-     testfile-cc008_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc008.expected 
+      testfile-cc008_cdcl.output)))
 
 (rule
  (target testfile-cc008_tableaux_cdcl.output)
@@ -625,11 +625,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc008.expected 
-     testfile-cc008_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc008.expected 
+      testfile-cc008_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc008_tableaux.output)
@@ -643,11 +643,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc008.expected 
-     testfile-cc008_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc008.expected 
+      testfile-cc008_tableaux.output)))
 
 (rule
  (target testfile-cc007_cdcl_tableaux.output)
@@ -661,11 +661,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc007.expected 
-     testfile-cc007_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc007.expected 
+      testfile-cc007_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc007_cdcl.output)
@@ -679,11 +679,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc007.expected 
-     testfile-cc007_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc007.expected 
+      testfile-cc007_cdcl.output)))
 
 (rule
  (target testfile-cc007_tableaux_cdcl.output)
@@ -697,11 +697,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc007.expected 
-     testfile-cc007_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc007.expected 
+      testfile-cc007_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc007_tableaux.output)
@@ -715,11 +715,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc007.expected 
-     testfile-cc007_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc007.expected 
+      testfile-cc007_tableaux.output)))
 
 (rule
  (target testfile-cc006_cdcl_tableaux.output)
@@ -733,11 +733,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc006.expected 
-     testfile-cc006_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc006.expected 
+      testfile-cc006_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc006_cdcl.output)
@@ -751,11 +751,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc006.expected 
-     testfile-cc006_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc006.expected 
+      testfile-cc006_cdcl.output)))
 
 (rule
  (target testfile-cc006_tableaux_cdcl.output)
@@ -769,11 +769,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc006.expected 
-     testfile-cc006_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc006.expected 
+      testfile-cc006_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc006_tableaux.output)
@@ -787,11 +787,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc006.expected 
-     testfile-cc006_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc006.expected 
+      testfile-cc006_tableaux.output)))
 
 (rule
  (target testfile-cc005_cdcl_tableaux.output)
@@ -805,11 +805,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc005.expected 
-     testfile-cc005_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc005.expected 
+      testfile-cc005_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc005_cdcl.output)
@@ -823,11 +823,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc005.expected 
-     testfile-cc005_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc005.expected 
+      testfile-cc005_cdcl.output)))
 
 (rule
  (target testfile-cc005_tableaux_cdcl.output)
@@ -841,11 +841,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc005.expected 
-     testfile-cc005_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc005.expected 
+      testfile-cc005_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc005_tableaux.output)
@@ -859,11 +859,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc005.expected 
-     testfile-cc005_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc005.expected 
+      testfile-cc005_tableaux.output)))
 
 (rule
  (target testfile-cc004_cdcl_tableaux.output)
@@ -877,11 +877,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc004.expected 
-     testfile-cc004_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc004.expected 
+      testfile-cc004_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc004_cdcl.output)
@@ -895,11 +895,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc004.expected 
-     testfile-cc004_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc004.expected 
+      testfile-cc004_cdcl.output)))
 
 (rule
  (target testfile-cc004_tableaux_cdcl.output)
@@ -913,11 +913,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc004.expected 
-     testfile-cc004_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc004.expected 
+      testfile-cc004_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc004_tableaux.output)
@@ -931,11 +931,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc004.expected 
-     testfile-cc004_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc004.expected 
+      testfile-cc004_tableaux.output)))
 
 (rule
  (target testfile-cc003_cdcl_tableaux.output)
@@ -949,11 +949,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc003.expected 
-     testfile-cc003_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc003.expected 
+      testfile-cc003_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc003_cdcl.output)
@@ -967,11 +967,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc003.expected 
-     testfile-cc003_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc003.expected 
+      testfile-cc003_cdcl.output)))
 
 (rule
  (target testfile-cc003_tableaux_cdcl.output)
@@ -985,11 +985,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc003.expected 
-     testfile-cc003_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc003.expected 
+      testfile-cc003_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc003_tableaux.output)
@@ -1003,11 +1003,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc003.expected 
-     testfile-cc003_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc003.expected 
+      testfile-cc003_tableaux.output)))
 
 (rule
  (target testfile-cc002_cdcl_tableaux.output)
@@ -1021,11 +1021,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc002.expected 
-     testfile-cc002_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc002.expected 
+      testfile-cc002_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc002_cdcl.output)
@@ -1039,11 +1039,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc002.expected 
-     testfile-cc002_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc002.expected 
+      testfile-cc002_cdcl.output)))
 
 (rule
  (target testfile-cc002_tableaux_cdcl.output)
@@ -1057,11 +1057,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc002.expected 
-     testfile-cc002_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc002.expected 
+      testfile-cc002_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc002_tableaux.output)
@@ -1075,11 +1075,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc002.expected 
-     testfile-cc002_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc002.expected 
+      testfile-cc002_tableaux.output)))
 
 (rule
  (target testfile-cc001_cdcl_tableaux.output)
@@ -1093,11 +1093,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc001.expected 
-     testfile-cc001_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc001.expected 
+      testfile-cc001_cdcl_tableaux.output)))
 
 (rule
  (target testfile-cc001_cdcl.output)
@@ -1111,11 +1111,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc001.expected 
-     testfile-cc001_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc001.expected 
+      testfile-cc001_cdcl.output)))
 
 (rule
  (target testfile-cc001_tableaux_cdcl.output)
@@ -1129,11 +1129,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc001.expected 
-     testfile-cc001_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc001.expected 
+      testfile-cc001_tableaux_cdcl.output)))
 
 (rule
  (target testfile-cc001_tableaux.output)
@@ -1147,11 +1147,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-cc001.expected 
-     testfile-cc001_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-cc001.expected 
+      testfile-cc001_tableaux.output)))
 
 (rule
  (target testfile-ac_cc002_cdcl_tableaux.output)
@@ -1165,11 +1165,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL-Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-ac_cc002.expected 
-     testfile-ac_cc002_cdcl_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-ac_cc002.expected 
+      testfile-ac_cc002_cdcl_tableaux.output)))
 
 (rule
  (target testfile-ac_cc002_cdcl.output)
@@ -1183,11 +1183,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-ac_cc002.expected 
-     testfile-ac_cc002_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-ac_cc002.expected 
+      testfile-ac_cc002_cdcl.output)))
 
 (rule
  (target testfile-ac_cc002_tableaux_cdcl.output)
@@ -1201,11 +1201,11 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux-CDCL %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-ac_cc002.expected 
-     testfile-ac_cc002_tableaux_cdcl.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-ac_cc002.expected 
+      testfile-ac_cc002_tableaux_cdcl.output)))
 
 (rule
  (target testfile-ac_cc002_tableaux.output)
@@ -1219,9 +1219,9 @@
       (run alt-ergo --output=smtlib2 
        --timelimit=1 
        --sat-solver Tableaux %{input})))))))
-(rule
- (alias runtest)
-  (package alt-ergo-lib)
-   (action (diff testfile-ac_cc002.expected 
-     testfile-ac_cc002_tableaux.output)))
+ (rule
+  (alias runtest)
+   (package alt-ergo-lib)
+    (action (diff testfile-ac_cc002.expected 
+      testfile-ac_cc002_tableaux.output)))
 ; Auto-generated part end

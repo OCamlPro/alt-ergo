@@ -204,12 +204,12 @@ end = struct
       (target %a)@ \
       (deps (:input %s))@ \
       (package alt-ergo-lib)@ \
-        @[<v 1>(action@ \
-          @[<v 1>(chdir %%{workspace_root}@ \
-            @[<v 1>(with-stdout-to %%{target}@ \
-              @[<v 1>(ignore-stderr@ \
-                @[<v 1>(with-accepted-exit-codes 0@ \
-                  @[<v 1>(run %a)))))))@]@]@]@]@]@]@]@\n\
+      @[<v 1>(action@ \
+        @[<v 1>(chdir %%{workspace_root}@ \
+          @[<v 1>(with-stdout-to %%{target}@ \
+            @[<v 1>(ignore-stderr@ \
+              @[<v 1>(with-accepted-exit-codes 0@ \
+                @[<v 1>(run %a)))))))@]@]@]@]@]@]@\n\
     @[<v 1>(rule@ \
       @[<v 1>(alias runtest)@ \
       @[<v 1>(package alt-ergo-lib)@ \
@@ -221,47 +221,6 @@ end = struct
     pp_output tst 
 end
 
-module Counter : sig
-  type t = {
-    created: int * int; 
-    updated: int * int; 
-    total: int * int 
-  }
-
-  type s = Created of int | Updated of int | Total of int
-
-  val zero : t
-  val combine : t -> t -> t
-  val incr : t -> s -> t
-end = struct
-  type t = {
-    created: int * int; 
-    updated: int * int; 
-    total: int * int 
-  }
-
-  type s = Created of int | Updated of int | Total of int
-
-  let zero = {created=(0, 0); updated=(0, 0); total=(0, 0)}
-
-  let combine res1 res2 = {
-    created = (fst res1.created + fst res2.created, 
-      snd res1.created + snd res2.created); 
-    updated = (fst res1.updated + fst res2.updated,
-      snd res1.updated + snd res2.updated);
-    total = (fst res1.total + fst res2.total,
-      snd res1.total + snd res2.total);
-  }
-
-  let incr res = function
-    | Created i -> 
-        { res with created = (fst res.created + 1, snd res.created + i) } 
-    | Updated i -> 
-        { res with updated = (fst res.updated + 1, snd res.updated + i) } 
-    | Total i -> 
-        { res with total = (fst res.total + 1, snd res.total + i) } 
-end
-
 module Batch : sig
   type t
   (** Type of a batch. *)
@@ -269,9 +228,8 @@ module Batch : sig
   val make: path: string -> cmds: Cmd.t list -> pb_files: string list -> t
   (** Set up a batch of tests. *)
 
-  val generate_dune_file : t -> Counter.t 
-  (** Produce a dune file containing tests for each subdirectories. Return
-      the numbers of tests and batches affected. *)
+  val generate_dune_file : t -> unit 
+  (** Produce a dune file containing tests for each subdirectories. *)
 end = struct 
   type t = {
     path: string;
@@ -298,8 +256,6 @@ end = struct
       fprintf fmt "; Auto-generated part end@."
 
   let generate_dune_file batch =
-    let res = Counter.zero in
-    let num_tests = List.length batch.tests in
     let dune_filename = Filename.concat batch.path "dune" in
     let digest =
       if File.exists dune_filename then
@@ -309,21 +265,15 @@ end = struct
     let ch = open_out dune_filename in
     let fmt = Format.formatter_of_out_channel ch in
     pp_stanza fmt batch;
-    let res = match digest with
-    | Some d -> begin 
+    let () = match digest with
+    | Some d -> 
         if not @@ Digest.equal d (Digest.file dune_filename) then (
-          Format.printf "update dune file\n";
-          Counter.incr res (Updated num_tests) 
+          Format.printf "Updating %s\n" dune_filename
         )
-        else res
-      end
-    | None -> (
-        Format.printf "new dune file\n";
-        Counter.incr res (Created num_tests) 
-      )
+    | None -> 
+        Format.printf "Creating %s\n" dune_filename 
     in
-    close_out ch;
-    Counter.incr res (Total num_tests)
+    close_out ch
 end
 
 (* Test if a file is actually a problem for Alt-Ergo. *)
@@ -333,15 +283,15 @@ let is_a_problem file =
 (* Generate a dune file for each subfolder of the path given as argument. *)
 let rec generate path cmds =
   let files, folders = File.scan_folder path in
-  let res = match List.filter is_a_problem files with
-  | [] -> Counter.zero
+  let () = match List.filter is_a_problem files with
+  | [] -> ()
   | pb_files -> (
     let batch = Batch.make ~path ~cmds ~pb_files in
     Batch.generate_dune_file batch 
   ) in
-  List.fold_left (fun res path ->
-    generate path cmds |> Counter.combine res 
-  ) res (List.map (Filename.concat path) folders)
+  List.iter (fun path ->
+    generate path cmds 
+  ) (List.map (Filename.concat path) folders)
 
 let () = 
   let path = 
@@ -369,9 +319,5 @@ let () =
     ; "--sat-solver CDCL-Tableaux" ])] 
   in
   let cmds = List.map (fun (name, args) -> Cmd.make ~name ~bin ~args) solvers in
-  let res = generate path cmds in
-  Format.printf "created: %i batches@\n updated: %i batches@\n total: %i batches@\n" 
-    (fst res.created) (fst res.updated) (fst res.total); 
-  Format.printf "created: %i tests@\n updated: %i tests@\n total: %i tests@\n" 
-    (snd res.created) (snd res.updated) (snd res.total) 
+  generate path cmds
 

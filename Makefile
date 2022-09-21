@@ -172,7 +172,12 @@ gentest: $(wildcard tests/**/*)
 runtest: bin
 	dune runtest
 
-.PHONY: gentest runtest
+# Promote new outputs of the tests.
+promote:
+	dune promote 
+
+
+.PHONY: gentest runtest promote
 
 # ============
 # Installation
