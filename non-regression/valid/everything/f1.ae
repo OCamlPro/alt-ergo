@@ -1,0 +1,162 @@
+logic match_bool : bool, 'a, 'a -> 'a
+
+type ('a1,
+'a2) tuple2
+
+logic Tuple2 : 'a3, 'a4 -> ('a3, 'a4) tuple2
+
+
+logic match_tuple2 : ('a1, 'a2) tuple2, 'a5 -> 'a5
+
+
+logic Tuple2_proj_1 : ('a3, 'a4) tuple2 -> 'a3
+
+logic Tuple2_proj_2 : ('a3, 'a4) tuple2 -> 'a4
+
+logic match_tuple0 : unit, 'a6 -> 'a6
+
+type unit1
+
+logic ignore : 'a7 -> unit
+
+
+type ('a8,
+'b) arrow
+
+type 'a9 ref
+
+logic prefix_ex : 'a10 ref -> 'a10
+
+
+type label
+
+logic at : 'a11, label -> 'a11
+
+
+logic old : 'a12 -> 'a12
+
+
+type exn
+
+predicate lt_nat(x: int, y: int) = ((0 <= y) and (x <  y))
+
+type 'a13 list
+
+logic Nil : 'a13 list
+
+
+logic Cons : 'a13, 'a13 list -> 'a13 list
+
+
+logic match_list : 'a13 list, 'a14, 'a14 -> 'a14
+
+
+logic Cons_proj_1 : 'a13 list -> 'a13
+
+
+logic Cons_proj_2 : 'a13 list -> 'a13 list
+
+logic length : 'a15 list -> int
+
+
+
+
+axiom Length_nonnegative : (forall l:'a16 list. (0 <= length(l)))
+
+
+axiom Length_nil : (forall l:'a17 list. ((length(l) = 0) <-> (l = Nil)))
+
+
+logic append : 'a18 list, 'a18 list -> 'a18 list
+
+
+axiom append_def :
+  (forall l1:'a18 list. forall l2:'a18 list [append(l1, l2)]. ((append(Nil,
+  l2) = l2) and
+  (forall x:'a18. forall x1:'a18 list. (append(Cons(x, x1), l2) = Cons(x,
+  append(x1, l2))))))
+
+
+axiom Append_assoc :
+  (forall l1:'a19 list. forall l2:'a19 list. forall l3:'a19 list. (append(l1,
+  append(l2, l3)) = append(append(l1, l2), l3)))
+
+
+
+
+axiom Append_length :
+  (forall l1:'a21 list. forall l2:'a21 list. (length(append(l1,
+  l2)) = (length(l1) + length(l2))))
+
+
+logic reverse : 'a22 list -> 'a22 list
+
+axiom Reverse_length : (forall l:'a23 list. (length(reverse(l)) = length(l)))
+
+
+type 'a24 queue
+
+logic Q : 'a24 list, int, 'a24 list, int -> 'a24 queue
+
+
+logic match_queue : 'a24 queue, 'a25 -> 'a25
+
+
+axiom match_queue_Q :
+  (forall z:'a25. forall u:'a24 list. forall u1:int. forall u2:'a24 list.
+  forall u3:int [match_queue(Q(u, u1, u2, u3), z)]. (match_queue(Q(u, u1, u2,
+  u3), z) = z))
+
+
+logic Q_proj_1 : 'a24 queue -> 'a24 list
+
+
+axiom Q_proj_1_def :
+  (forall u:'a24 list. forall u1:int. forall u2:'a24 list. forall u3:int
+  [Q(u, u1, u2, u3)]. (Q_proj_1(Q(u, u1, u2, u3)) = u))
+
+
+logic Q_proj_2 : 'a24 queue -> int
+
+
+axiom Q_proj_2_def :
+  (forall u:'a24 list. forall u1:int. forall u2:'a24 list. forall u3:int
+  [Q(u, u1, u2, u3)]. (Q_proj_2(Q(u, u1, u2, u3)) = u1))
+
+
+logic Q_proj_3 : 'a24 queue -> 'a24 list
+
+
+axiom Q_proj_3_def :
+  (forall u:'a24 list. forall u1:int. forall u2:'a24 list. forall u3:int
+  [Q(u, u1, u2, u3)]. (Q_proj_3(Q(u, u1, u2, u3)) = u2))
+
+
+logic Q_proj_4 : 'a24 queue -> int
+
+
+axiom Q_proj_4_def :
+  (forall u:'a24 list. forall u1:int. forall u2:'a24 list. forall u3:int
+  [Q(u, u1, u2, u3)]. (Q_proj_4(Q(u, u1, u2, u3)) = u3))
+
+
+function front(u: 'a24 queue) : 'a24 list = match_queue(u, Q_proj_1(u))
+
+
+function lenf(u: 'a24 queue) : int = match_queue(u, Q_proj_2(u))
+
+
+function lenr(u: 'a24 queue) : int = match_queue(u, Q_proj_4(u))
+
+
+function rear(u: 'a24 queue) : 'a24 list = match_queue(u, Q_proj_3(u))
+      
+
+predicate inv(q: 'a26 queue) = ((length(front(q)) = lenf(q)) and
+  ((length(rear(q)) = lenr(q)) and (lenr(q) <= lenf(q))))
+
+
+goal WP_create :
+  (forall f:'a28 list.
+  (forall r:'a28 list. ((not (length(r) <= length(f))) -> inv(Q(append(f,
+  reverse(r)), (length(f) + length(r)), Nil, 0)))))
