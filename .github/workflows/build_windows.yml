@@ -1,6 +1,6 @@
 name: Build Windows
 
-# This workflow Builds and tests Alt-Ergo on a Windows system using cygwin
+# This workflow builds and tests Alt-Ergo on a Windows system using cygwin
 on:
   push:
     branches:
@@ -26,10 +26,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Retrieve the opam cache with unique key
-      # A new cache is created/used if the `.opam` files changes or
-      # if we use another ocaml version
-      # This action only retrieve de .opam/ directory
+      # Retrieve the opam cache with unique key.
+      # A new cache is created/used if the .opam`files changes or
+      # if we use another ocaml version.
+      # This action only retrieve the .opam/ directory
       - name: Retrieve opam cache
         uses: actions/cache@v2
         id: cache-opam
@@ -62,15 +62,9 @@ jobs:
       - name: Install
         run: opam reinstall .
 
-      # Convert non-regression script to be able to run them on windows
-      - name: Convert non-regression script to dos
-        run: |
-          dos2unix rsc/extra/non_regression.sh
-          dos2unix non-regression/*.sh
-
-      # Run non regression tests
-      - name: Run non regression tests
-        run: opam exec -- rsc/extra/non_regression.sh
+      # Run tests
+      - name: Run tests
+        run: make runtest
 
       # Get and Set version of the installed alt-ergo binary
       # Get and Set the path where alt-ergo binary is located

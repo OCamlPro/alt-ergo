@@ -1,10 +1,10 @@
 name: Build Ubuntu
 
-# this worflow try to build and test Alt-Ergo on a Ubuntu system
-# For any push we try to build and install the project with opam
-# It its succed we run Alt-Ergo`s non-regression test.
-# If this tests succed, and a PR is open, we try to build and run tests
-# on different ocaml compiler versions.
+# This worflow try to build and test Alt-Ergo on a Ubuntu system.
+# For any push we try to build and install the project with opam.
+# If it's succeed, we run Alt-Ergo`s tests.
+# If these tests succeed and a PR is open, we try to build and 
+# run tests on different ocaml compiler versions.
 
 on: [push,pull_request]
 
@@ -71,9 +71,9 @@ jobs:
       - name: Install
         run: opam reinstall .
 
-      # Run non regression tests
-      - name: Run non regression tests
-        run: opam exec -- rsc/extra/non_regression.sh
+      # Run tests
+      - name: Run tests
+        run: make runtest
 
       # Get and Set version of the installed alt-ergo binary
       # Get and Set the path where alt-ergo binary is located
@@ -84,9 +84,9 @@ jobs:
           echo "::set-output name=version::$(opam exec -- alt-ergo --version)"
           echo "::set-output name=path::$(opam var bin)"
 
-      # Upload Alt-Ergo binary as an artifact
-      # the artifact name contains the alt-ergo version as well as the system
-      # is builded on and the ocaml compiler version used
+      # Upload Alt-Ergo binary as an artifact.
+      # The artifact name contains the alt-ergo version as well 
+      # as the system is builded on and the ocaml compiler version used.
       - name: Upload Alt-Ergo binary
         uses: actions/upload-artifact@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
@@ -168,6 +168,6 @@ jobs:
       - name: Install
         run: opam reinstall .
 
-      # Run non regression tests
-      - name: Run non regression tests
-        run: opam exec -- rsc/extra/non_regression.sh
+      # Run tests
+      - name: Run tests
+        run: make runtest 

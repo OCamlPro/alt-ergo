@@ -169,7 +169,7 @@ module Test : sig
   type t
   (** Type of a test. *)
 
-  val make: cmd: Cmd.t -> pb_file: string -> t 
+  val make: alias: string -> cmd: Cmd.t -> pb_file: string -> t 
   (** Set up the test. *)
 
   val pp_output: t printer
@@ -182,11 +182,12 @@ module Test : sig
   (** Pretty print the dune test. *)
 end = struct
   type t = {
+    alias: string;
     cmd: Cmd.t;
     pb_file: string
   }
 
-  let make ~cmd ~pb_file = {cmd; pb_file}
+  let make ~alias ~cmd ~pb_file = {alias; cmd; pb_file}
 
   let pp_output fmt tst =
     let filename = Filename.chop_extension tst.pb_file in
@@ -211,12 +212,13 @@ end = struct
               @[<v 1>(with-accepted-exit-codes 0@ \
                 @[<v 1>(run %a)))))))@]@]@]@]@]@]@\n\
     @[<v 1>(rule@ \
-      @[<v 1>(alias runtest)@ \
+      @[<v 1>(alias %s)@ \
       @[<v 1>(package alt-ergo-lib)@ \
       @[<v 1>(action (diff %a @, %a)))@]@]@]@]@."
     pp_output tst
     tst.pb_file
     Cmd.pp tst.cmd
+    tst.alias
     pp_expected_output tst 
     pp_output tst 
 end
@@ -225,7 +227,8 @@ module Batch : sig
   type t
   (** Type of a batch. *)
 
-  val make: path: string -> cmds: Cmd.t list -> pb_files: string list -> t
+  val make: alias: string -> path: string -> cmds: Cmd.t list 
+    -> pb_files: string list -> t
   (** Set up a batch of tests. *)
 
   val generate_dune_file : t -> unit 
@@ -237,10 +240,10 @@ end = struct
     tests: Test.t list;
   }
   
-  let make ~path ~cmds ~pb_files =
+  let make ~alias ~path ~cmds ~pb_files =
     let tests = List.fold_left (fun acc1 pb_file -> 
       List.fold_left (fun acc2 cmd -> 
-        (Test.make ~cmd ~pb_file) :: acc2
+        (Test.make ~alias ~cmd ~pb_file) :: acc2
     ) acc1 cmds) [] pb_files
     in
     {path; cmds; tests}
@@ -278,22 +281,78 @@ end
 
 (* Test if a file is actually a problem for Alt-Ergo. *)
 let is_a_problem file = 
-  File.has_extension_in file [".ae"; ".smt2"; ".pstm2"; ".zip"]
+  File.has_extension_in file [".ae"; ".smt2"; ".pstm2"]
 
 (* Generate a dune file for each subfolder of the path given as argument. *)
-let rec generate path cmds =
+let rec generate alias path cmds =
   let files, folders = File.scan_folder path in
   let () = match List.filter is_a_problem files with
   | [] -> ()
   | pb_files -> (
-    let batch = Batch.make ~path ~cmds ~pb_files in
+    let batch = Batch.make ~alias ~path ~cmds ~pb_files in
     Batch.generate_dune_file batch 
   ) in
   List.iter (fun path ->
-    generate path cmds 
+    generate alias path cmds 
   ) (List.map (Filename.concat path) folders)
 
-let () = 
+module Sexp : sig
+  type t
+  val atom : string -> t
+  val list: t list -> t
+  val pp : t printer
+end = struct 
+  type t = 
+    | Atom of string
+    | List of t list
+
+  let atom str = Atom str
+  let list lst = List lst
+
+  let rec _parser (buffer, lst, res) str =
+    let (buffer, lst, res) = match List.hd str with
+    | '(' -> 
+      let (buffer, lst, res) = 
+        _parser (buffer, lst, res) (List.tl str)
+      in
+      (buffer, lst, res)
+    | ' ' -> (
+      let buffer, lst = 
+        if String.length buffer <> 0 then 
+          String.empty, Atom buffer :: lst 
+        else 
+          String.empty, lst 
+      in
+      (buffer, lst, res))
+    | _ as c -> 
+        let buffer = Format.sprintf "%s%c" buffer c in
+        (buffer, lst, res)
+    in
+    (buffer, lst, res)
+          
+
+  let parser str =
+    let explode str = List.init (String.length str) (String.get str) in
+    let (_, _, res) = explode str |> _parser ("", [], List []) in
+    res
+
+  let rec pp =
+    let pp_sep fmt () = Format.fprintf fmt ", @," in
+    let pp_list fmt lst = 
+      Format.pp_print_list ~pp_sep pp fmt lst 
+    in
+    fun fmt -> function
+    | Atom str -> 
+        Format.fprintf fmt " @[<v 1>(%s)@]" str
+    | List lst ->
+        Format.fprintf fmt "@[<v 1>(%a)@]" pp_list lst
+end
+
+let () =
+  let config = Sexp.(
+      list [atom "alt-ergo"]
+    ) 
+  in
   let path = 
     if Array.length Sys.argv >= 2 then
       Sys.argv.(1)
@@ -319,5 +378,5 @@ let () =
     ; "--sat-solver CDCL-Tableaux" ])] 
   in
   let cmds = List.map (fun (name, args) -> Cmd.make ~name ~bin ~args) solvers in
-  generate path cmds
+  generate "runtest" path cmds
 
