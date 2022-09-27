@@ -26,7 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-[@@@ocaml.warning "-33"]
 (*** Combination module of Relations ***)
 
 module Rel1 : Sig_rel.RELATION = IntervalCalculus
