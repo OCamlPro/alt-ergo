@@ -26,12 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-open Sig
 module Hs = Hstring
 module E = Expr
-
 
 type 'a abstract =
   | Record of (Hs.t * 'a abstract) list * Ty.t
@@ -58,16 +54,16 @@ module Shostak (X : ALIEN) = struct
 
     let rec print fmt = function
       | Record (lbs, _) ->
-        fprintf fmt "{";
+        Format.fprintf fmt "{";
         let _ = List.fold_left
             (fun first (lb, e) ->
-               fprintf fmt "%s%s = %a"
+               Format.fprintf fmt "%s%s = %a"
                  (if first then "" else "; ") (Hs.view lb) print e;
                false
             ) true lbs in
-        fprintf fmt "}"
+        Format.fprintf fmt "}"
       | Access(a, e, _) ->
-        fprintf fmt "%a.%s" print e (Hs.view a)
+        Format.fprintf fmt "%a.%s" print e (Hs.view a)
       | Other(t, _) -> X.print fmt t
 
   end
@@ -357,9 +353,9 @@ module Shostak (X : ALIEN) = struct
 
   let orient_solved p v pb =
     if List.mem p (X.leaves v) then raise Util.Unsolvable;
-    { pb with sbt = (p,v) :: pb.sbt }
+    Sig.{ pb with sbt = (p,v) :: pb.sbt }
 
-  let solve r1 r2 pb =
+  let solve r1 r2 (pb : _ Sig.solve_pb) =
     match embed r1, embed r2 with
     | Record (l1, _), Record (l2, _) ->
       let eqs =
@@ -434,7 +430,7 @@ module Shostak (X : ALIEN) = struct
     in
     match acc with
     | Some (_,r) ->
-      r, asprintf "%a" X.print r  (* it's a EUF constant *)
+      r, Format.asprintf "%a" X.print r  (* it's a EUF constant *)
     | _ -> assert false
 
 end
