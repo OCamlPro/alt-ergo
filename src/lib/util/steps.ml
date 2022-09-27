@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-open Errors
-
 (* Define the type of increment *)
 type incr_kind =
     Matching           (* Matching step increment *)
@@ -102,10 +99,10 @@ let incr k =
       (* Since n refers to the number of terms sent to the theories no
        * multiplier is needed here *)
       if n < 0 then
-        run_error (Invalid_steps_count n);
+        Errors.run_error (Errors.Invalid_steps_count n);
       naive_steps := !naive_steps + n;
   end;
-  let steps_bound = get_steps_bound () in
+  let steps_bound = Options.get_steps_bound () in
   if steps_bound <> -1
   && ((Stdlib.compare !steps ((steps_bound)) > 0)
       || (Stdlib.compare !naive_steps ((steps_bound)) > 0)) then
@@ -115,7 +112,7 @@ let incr k =
         else if !steps > 0 then !steps
         else steps_bound
       in
-      run_error (Steps_limit n)
+      Errors.run_error (Errors.Steps_limit n)
     end
 
 
