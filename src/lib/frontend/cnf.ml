@@ -26,11 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-open Format
-open Typed
-open Commands
-
 module E = Expr
 module Sy = Symbols
 module SE = E.Set
@@ -146,7 +141,7 @@ let clean_trigger ~in_theory name trig =
       if sz_l = sz_s then trig
       else
         let trig' = ME.fold (fun t _ acc -> t :: acc) res [] in
-        if get_verbose () then
+        if Options.get_verbose () then
           Printer.print_dbg ~module_name:"Cnf"
             ~function_name:"clean_trigger"
             "AXIOM: %s@ \
@@ -166,7 +161,8 @@ let concat_chainable p_op p_ty t acc =
   | _ -> t :: acc
 
 let rec make_term up_qv quant_basename t =
-  let rec mk_term { c = { tt_ty = ty; tt_desc = tt; _ }; _ } =
+  let rec mk_term ({ c = { tt_ty = ty; tt_desc = tt; _ }; _ } 
+  : (_ Typed.tterm, _) Typed.annoted) =
     let ty = Ty.shorten ty in
     match tt with
     | TTconst Ttrue ->
@@ -288,7 +284,8 @@ let rec make_term up_qv quant_basename t =
 
 and make_trigger ~in_theory name up_qv quant_basename hyp (e, from_user) =
   let content, guard = match e with
-    | [{ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }]
+    | [({ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ } 
+      : (_ Typed.tterm, _) Typed.annoted)]
       when Sy.equal s Sy.fake_eq ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv quant_basename) trs in
@@ -345,7 +342,7 @@ and make_trigger ~in_theory name up_qv quant_basename hyp (e, from_user) =
 
 and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
   let name_tag = ref 0 in
-  let rec mk_form up_qv ~toplevel c id =
+  let rec mk_form up_qv ~toplevel (c : _ Typed.tform) id =
     match c with
     | TFatom a ->
       begin match a.c with
@@ -371,7 +368,7 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
         | TAlt [t1;t2] ->
           begin match t1.c.tt_ty with
             | Ty.Tint ->
-              let one =
+              let one : (_ Typed.tterm, _) Typed.annoted =
                 {c = {tt_ty = Ty.Tint;
                       tt_desc = TTconst(Tint "1")}; annot = t1.annot} in
               let tt2 =
@@ -421,7 +418,7 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
     | (TFforall qf | TFexists qf) as f ->
       let name =
         if !name_tag = 0 then name_base
-        else sprintf "#%s#sub-%d" name_base !name_tag
+        else Format.sprintf "#%s#sub-%d" name_base !name_tag
       in
       incr name_tag;
       let up_qv =
@@ -445,7 +442,8 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
       let ff = E.purify_form ff in
 
       let hyp =
-        List.map (fun f -> mk_form up_qv ~toplevel:false f.c f.annot) qf.qf_hyp
+        List.map (fun (f : _ Typed.annoted) -> 
+          mk_form up_qv ~toplevel:false f.c f.annot) qf.qf_hyp
       in
       let in_theory = decl_kind == E.Dtheory in
       let trs =
@@ -461,7 +459,7 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
     | TFlet(_,binders,lf) ->
       let binders =
         List.rev_map
-          (fun (sy, e) ->
+          (fun (sy, (e : _ Typed.tlet_kind))  ->
              sy,
              match e with
              | TletTerm t -> make_term up_qv name_base t
@@ -483,7 +481,7 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
     | TFmatch (e, pats) ->
       let e = make_term up_qv name_base e in
       let pats =
-        List.rev_map (fun (p, f) ->
+        List.rev_map (fun (p, (f : _ Typed.annoted)) ->
             p, mk_form up_qv ~toplevel:false f.c f.annot)
           (List.rev pats)
       in
@@ -507,7 +505,7 @@ let make_form name f loc ~decl_kind =
 
 let mk_assume acc f name loc =
   let ff = make_form name f loc ~decl_kind:E.Daxiom in
-  {st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
+  Commands.{st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
 
 (* extract defining term of the function or predicate. From the
@@ -521,7 +519,7 @@ let mk_assume acc f name loc =
    where forall x. is optional (like in 'predicate p = q or r')
 *)
 let defining_term f =
-  if get_verbose () then
+  if Options.get_verbose () then
     Format.eprintf "defining term of %a@." Typed.print_formula f;
   match f.c with
   | TFforall {qf_form={c=TFop(OPiff,[{c=TFatom {c=TApred(d,_);_};_};_]); _}; _}
@@ -535,19 +533,20 @@ let mk_function acc f name loc =
   let defn = defining_term f in
   let defn = make_term Sy.Map.empty "" defn in
   let ff = make_form name f loc ~decl_kind:(E.Dfunction defn) in
-  {st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
+  Commands.{st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
 let mk_preddef acc f name loc =
   let defn = defining_term f in
   let defn = make_term Sy.Map.empty "" defn in
   let ff = make_form name f loc ~decl_kind: (E.Dpredicate defn) in
-  {st_decl=PredDef (ff, name) ; st_loc=loc} :: acc
+  Commands.{st_decl=PredDef (ff, name) ; st_loc=loc} :: acc
 
 let mk_query acc n f loc sort =
   let ff = make_form "" f loc ~decl_kind:E.Dgoal in
-  {st_decl=Query(n, ff, sort) ; st_loc=loc} :: acc
+  Commands.{st_decl=Query(n, ff, sort) ; st_loc=loc} :: acc
 
-let make_rule ({rwt_left = t1; rwt_right = t2; rwt_vars} as r) =
+let make_rule (({rwt_left = t1; rwt_right = t2; rwt_vars} as r) 
+  : _ Typed.rwt_rule) =
   let up_qv =
     List.fold_left (fun z (sy, ty) -> Sy.Map.add sy ty z) Sy.Map.empty rwt_vars
   in
@@ -559,7 +558,7 @@ let make_rule ({rwt_left = t1; rwt_right = t2; rwt_vars} as r) =
 
 let mk_theory acc l th_name extends _loc =
   List.fold_left
-    (fun acc e ->
+    (fun acc (e : (_ Typed.tdecl ,_) Typed.annoted) ->
        let loc, ax_name, f, axiom_kind =
          match e.c with
          | TAxiom (loc, name, ax_kd, f) -> loc, name, f, ax_kd
@@ -567,13 +566,13 @@ let mk_theory acc l th_name extends _loc =
        in
        let ax_form = make_form ax_name f loc ~decl_kind:E.Dtheory in
        let th_elt = {Expr.th_name; axiom_kind; extends; ax_form; ax_name} in
-       {st_decl=ThAssume th_elt ; st_loc=loc} :: acc
+       Commands.{st_decl=ThAssume th_elt ; st_loc=loc} :: acc
     )acc l
 
-let make acc d =
+let make acc (d : (_ Typed.tdecl, _) Typed.annoted) =
   match d.c with
-  | TPush (loc,n) -> {st_decl=Push n; st_loc=loc} :: acc
-  | TPop (loc,n) -> {st_decl=Pop n; st_loc=loc} :: acc
+  | TPush (loc,n) -> Commands.{st_decl=Push n; st_loc=loc} :: acc
+  | TPop (loc,n) -> Commands.{st_decl=Pop n; st_loc=loc} :: acc
   | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
   | TAxiom(loc, name, Util.Default, f) -> mk_assume acc f name loc
   | TAxiom(_, _, Util.Propagator, _) -> assert false
