@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-
 module Z = Numbers.Z
 module Q = Numbers.Q
 
@@ -155,23 +152,24 @@ module Make (X : S) = struct
              else "-", Q.to_string (Q.minus n), "*"
            in
            zero := false;
-           fprintf fmt "%s%s%s%a" s n op X.print x
+           Format.fprintf fmt "%s%s%s%a" s n op X.print x
         ) p.m;
       let s, n =
         if Q.sign p.c > 0 then (if !zero then "" else "+"), Q.to_string p.c
         else if Q.sign p.c < 0 then "-", Q.to_string (Q.minus p.c)
         else (if !zero then "","0" else "","") in
-      fprintf fmt "%s%s" s n
+      Format.fprintf fmt "%s%s" s n
 
     let print fmt p =
       if Options.get_term_like_pp () then pprint fmt p
       else begin
-        M.iter
-          (fun t n -> fprintf fmt "%s*%a " (Q.to_string n) X.print t) p.m;
-        fprintf fmt "%s%s"
-          (if Q.compare_to_0 p.c >= 0 then "+ " else "")
-          (Q.to_string p.c);
-        fprintf fmt " [%a]" Ty.print p.ty
+        M.iter (fun t n -> 
+          Format.fprintf fmt "%s*%a " (Q.to_string n) X.print t
+        ) p.m;
+        Format.fprintf fmt "%s%s"
+        (if Q.compare_to_0 p.c >= 0 then "+ " else "")
+        (Q.to_string p.c);
+        Format.fprintf fmt " [%a]" Ty.print p.ty
       end
   end
   (*BISECT-IGNORE-END*)
