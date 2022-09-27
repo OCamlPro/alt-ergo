@@ -296,58 +296,6 @@ let rec generate alias path cmds =
     generate alias path cmds 
   ) (List.map (Filename.concat path) folders)
 
-module Sexp : sig
-  type t
-  val atom : string -> t
-  val list: t list -> t
-  val pp : t printer
-end = struct 
-  type t = 
-    | Atom of string
-    | List of t list
-
-  let atom str = Atom str
-  let list lst = List lst
-
-  let rec _parser (buffer, lst, res) str =
-    let (buffer, lst, res) = match List.hd str with
-    | '(' -> 
-      let (buffer, lst, res) = 
-        _parser (buffer, lst, res) (List.tl str)
-      in
-      (buffer, lst, res)
-    | ' ' -> (
-      let buffer, lst = 
-        if String.length buffer <> 0 then 
-          String.empty, Atom buffer :: lst 
-        else 
-          String.empty, lst 
-      in
-      (buffer, lst, res))
-    | _ as c -> 
-        let buffer = Format.sprintf "%s%c" buffer c in
-        (buffer, lst, res)
-    in
-    (buffer, lst, res)
-          
-
-  let parser str =
-    let explode str = List.init (String.length str) (String.get str) in
-    let (_, _, res) = explode str |> _parser ("", [], List []) in
-    res
-
-  let rec pp =
-    let pp_sep fmt () = Format.fprintf fmt ", @," in
-    let pp_list fmt lst = 
-      Format.pp_print_list ~pp_sep pp fmt lst 
-    in
-    fun fmt -> function
-    | Atom str -> 
-        Format.fprintf fmt " @[<v 1>(%s)@]" str
-    | List lst ->
-        Format.fprintf fmt "@[<v 1>(%a)@]" pp_list lst
-end
-
 let () =
   let config = Sexp.(
       list [atom "alt-ergo"]

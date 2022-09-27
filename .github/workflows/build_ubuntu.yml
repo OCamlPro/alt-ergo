@@ -170,4 +170,4 @@ jobs:
 
       # Run tests
       - name: Run tests
-        run: make runtest 
+        run: opam exec -- make runtest 
