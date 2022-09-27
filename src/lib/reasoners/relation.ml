@@ -27,8 +27,6 @@
 (******************************************************************************)
 
 [@@@ocaml.warning "-33"]
-open Options
-
 (*** Combination module of Relations ***)
 
 module Rel1 : Sig_rel.RELATION = IntervalCalculus
@@ -44,9 +42,6 @@ module Rel5 : Sig_rel.RELATION = Enum_rel
 module Rel6 : Sig_rel.RELATION = Adt_rel
 
 module Rel7 : Sig_rel.RELATION = Ite_rel
-
-
-open Sig_rel
 
 type t = {
   r1: Rel1.t;
@@ -75,23 +70,24 @@ let (|@|) l1 l2 =
 
 let assume env uf sa =
   Options.exec_thread_yield ();
-  let env1, { assume = a1; remove = rm1} =
+  let env1, ({ assume = a1; remove = rm1}:_ Sig_rel.result) =
     Rel1.assume env.r1 uf sa in
-  let env2, { assume = a2; remove = rm2} =
+  let env2, ({ assume = a2; remove = rm2}:_ Sig_rel.result) =
     Rel2.assume env.r2 uf sa in
-  let env3, { assume = a3; remove = rm3} =
+  let env3, ({ assume = a3; remove = rm3}:_ Sig_rel.result) =
     Rel3.assume env.r3 uf sa in
-  let env4, { assume = a4; remove = rm4} =
+  let env4, ({ assume = a4; remove = rm4}:_ Sig_rel.result) =
     Rel4.assume env.r4 uf sa in
-  let env5, { assume = a5; remove = rm5} =
+  let env5, ({ assume = a5; remove = rm5}:_ Sig_rel.result) =
     Rel5.assume env.r5 uf sa in
-  let env6, { assume = a6; remove = rm6} =
+  let env6, ({ assume = a6; remove = rm6}:_ Sig_rel.result) =
     Rel6.assume env.r6 uf sa in
-  let env7, { assume = a7; remove = rm7} =
+  let env7, ({ assume = a7; remove = rm7}:_ Sig_rel.result) =
     Rel7.assume env.r7 uf sa in
   {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6; r7=env7},
-  { assume = a1 |@| a2 |@| a3 |@| a4 |@| a5 |@| a6 |@| a7;
-    remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6 |@| rm7}
+  ({ assume = a1 |@| a2 |@| a3 |@| a4 |@| a5 |@| a6 |@| a7;
+    remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6 |@| rm7} 
+  : _ Sig_rel.result)
 
 let assume_th_elt env th_elt dep =
   Options.exec_thread_yield ();
