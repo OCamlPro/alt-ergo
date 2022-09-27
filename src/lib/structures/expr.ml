@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-
 module Sy = Symbols
 module SMap = Sy.Map
 module SSet = Sy.Set
@@ -366,15 +363,15 @@ let term_view t =
 
 let print_binders =
   let print_one fmt (sy, (ty, _)) =
-    fprintf fmt "%a:%a" Sy.print sy Ty.print ty
+    Format.fprintf fmt "%a:%a" Sy.print sy Ty.print ty
   in fun fmt b ->
     match SMap.bindings b with
     | [] ->
       (* can happen when quantifying only on type variables *)
-      fprintf fmt "(no term variables)"
+      Format.fprintf fmt "(no term variables)"
     | e::l ->
       print_one fmt e;
-      List.iter (fun e -> fprintf fmt ", %a" print_one e) l
+      List.iter (fun e -> Format.fprintf fmt ", %a" print_one e) l
 
 (* let print_list_sep sep pp fmt =
  *   Format.pp_print_list ~pp_sep:(fun fmt _ -> Format.fprintf fmt sep) pp fmt
@@ -537,7 +534,7 @@ module SmtPrinter = struct
       fprintf fmt "%a" Sy.print f
 
     | _, _ ->
-      fprintf fmt "(%a %a)" Sy.print f (Util.print_list ~sep:"," ~pp:print) xs
+      Format.fprintf fmt "(%a %a)" Sy.print f (Util.print_list ~sep:"," ~pp:print) xs
 
   and print_triggers fmt trs =
     List.iter (fun { content = l; _ } ->
@@ -864,7 +861,7 @@ let print_tagged_classes =
     List.iter (fun cl ->
         let cl = List.filter is_labeled (TSet.elements cl) in
         if cl != [] then
-          fprintf fmt "\n{ %a }" (print_list_sep " , ") cl) l
+          Format.fprintf fmt "\n{ %a }" (print_list_sep " , ") cl) l
 
 
 (** smart constructors for terms *)
@@ -1080,7 +1077,7 @@ let mk_forall_ter =
         let q = match form_view lem with Lemma q -> q | _ -> assert false in
         assert (equal q.main f (* should be true *));
         if compare_quant q new_q <> 0 then raise Exit;
-        Printer.print_wrn ~warning:(get_debug_warnings ())
+        Printer.print_wrn ~warning:(Options.get_debug_warnings ())
           "(sub) axiom %s replaced with %s" name q.name;
         lem
       with Not_found | Exit ->
@@ -1503,11 +1500,6 @@ let apply_subst, clear_subst_cache =
       let c_sbty = try Msbt.find sbt c_sbt with Not_found -> Msbty.empty in
       cache := TMap.add f (Msbt.add sbt (Msbty.add sbty nf c_sbty) c_sbt) ch;
       nf
-  in
-  let clear_subst_cache () =
-    cache := TMap.empty
-  in
-  apply_subst, clear_subst_cache
 
 let apply_subst s t =
   if Options.get_timers() then
@@ -1711,12 +1703,12 @@ let mk_let let_v let_e in_e _id =
 let skolemize { main = f; binders; sko_v; sko_vty; _ } =
   let print fmt ty =
     assert (Ty.Svty.is_empty (Ty.vty_of ty));
-    fprintf fmt "<%a>" Ty.print ty
+    Format.fprintf fmt "<%a>" Ty.print ty
   in
-  let pp_sep_nospace fmt () = fprintf fmt "" in
+  let pp_sep_nospace fmt () = Format.fprintf fmt "" in
   let pp_list fmt l =
-    pp_print_list ~pp_sep:pp_sep_nospace print fmt l in
-  let tyvars = asprintf "[%a]" pp_list sko_vty in
+    Format.pp_print_list ~pp_sep:pp_sep_nospace print fmt l in
+  let tyvars = Format.asprintf "[%a]" pp_list sko_vty in
 
   let mk_sym cpt s =
     (* garder le suffixe "__" car cela influence l'ordre *)
@@ -2419,7 +2411,7 @@ let mk_exists name loc binders trs f id ~toplevel ~decl_kind =
        a forall quantification without term variables (ie. only with
        type variables). 2 - we keep the triggers of 'exists' to try
        to instantiate these type variables *)
-    let nm = sprintf "#%s#sub-%d" name 0 in
+    let nm = Format.sprintf "#%s#sub-%d" name 0 in
     let tmp =
       neg (mk_forall nm loc binders trs (neg f) id ~toplevel:false ~decl_kind)
     in
@@ -2451,7 +2443,7 @@ let rec compile_match mk_destr mker e cases accu =
 
 (* TO BE REMOVED *)
 let debug_compile_match e cases res =
-  if get_debug_adt () then begin
+  if Options.get_debug_adt () then begin
     Printer.print_dbg  ~flushed:false ~module_name:"Expr"
       "compilation of: match %a with@ " print e;
     let p_list_vars fmt l =
@@ -2459,9 +2451,9 @@ let debug_compile_match e cases res =
         [] -> ()
       | [e,_,_] -> Var.print fmt e
       | (e,_,_) :: l ->
-        fprintf fmt "(%a" Var.print e;
-        List.iter (fun (e,_,_) -> fprintf fmt ", %a" Var.print e) l;
-        fprintf fmt ")"
+        Format.fprintf fmt "(%a" Var.print e;
+        List.iter (fun (e,_,_) -> Format.fprintf fmt ", %a" Var.print e) l;
+        Format.fprintf fmt ")"
     in
     List.iter
       (fun (p, v) ->
