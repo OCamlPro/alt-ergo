@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-
 module Z = Numbers.Z
 module Q = Numbers.Q
 
@@ -115,7 +112,7 @@ module Container : Container_SIG = struct
     }
 
     let print_inequation fmt ineq =
-      fprintf fmt "%a %s 0 %a" P.print ineq.ple0
+      Format.fprintf fmt "%a %s 0 %a" P.print ineq.ple0
         (if ineq.is_le then "<=" else "<") Explanation.print ineq.expl
 
     let create_ineq p1 p2 is_le a expl =
@@ -203,13 +200,13 @@ module Container : Container_SIG = struct
       open Printer
 
       let list_of_ineqs fmt =
-        List.iter (fprintf fmt "%a  " print_inequation)
+        List.iter (Format.fprintf fmt "%a  " print_inequation)
 
       let map_of_ineqs fmt =
-        MINEQS.iter (fun _ (i , _) -> fprintf fmt "%a  " print_inequation i)
+        MINEQS.iter (fun _ (i , _) -> Format.fprintf fmt "%a  " print_inequation i)
 
       let cross x vars cpos cneg others =
-        if get_debug_fm () then
+        if Options.get_debug_fm () then
           print_dbg ~module_name:"Inequalities" ~function_name:"cross"
             "We cross on %a (%d vars remaining)@ \
              with:@. cpos = %a@. cneg = %a@. others = %a"
@@ -217,7 +214,7 @@ module Container : Container_SIG = struct
             list_of_ineqs cpos list_of_ineqs cneg map_of_ineqs others
 
       let cross_result x ninqs =
-        if get_debug_fm () then
+        if Options.get_debug_fm () then
           print_dbg
             ~module_name:"Inequalities" ~function_name:"cross_result"
             "result of eliminating %a: at most %d new ineqs (not printed)"
@@ -323,8 +320,8 @@ module Container : Container_SIG = struct
             let acc = add_ineqs are_eq acc s_x cneg in
             let size_res = Q.from_int (nb_pos * nb_neg) in
             let mp', nb_inqs =
-              if Q.compare size_res (get_fm_cross_limit ()) >= 0 &&
-                 Q.sign (get_fm_cross_limit()) >= 0 then
+              if Q.compare size_res (Options.get_fm_cross_limit ()) >= 0 &&
+                 Q.sign (Options.get_fm_cross_limit()) >= 0 then
                 let u_cpos = List.filter monome_ineq cpos in
                 let u_cneg = List.filter monome_ineq cneg in
                 let mp', nb_inq1 = match u_cpos with
