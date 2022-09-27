@@ -380,7 +380,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           env.dlevel env.plevel Ex.print expl
 
     let in_mk_theories_instances () =
-      if Options.(get_debug_fpa () > 0 || get_debug_sat ()) then
+      if Options.get_debug_fpa() > 0 || get_debug_sat () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"in_mk_theories_instances"
           "entering mk_theories_instances:"
@@ -658,8 +658,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let update_unit_facts env ff dep =
     let f = ff.E.ff in
-    if Options.get_sat_learning ()
-    && not (ME.mem f !(env.unit_facts_cache)) then
+    if Options.get_sat_learning () && not (ME.mem f !(env.unit_facts_cache)) then
       begin
         assert (Ex.has_no_bj dep);
         env.unit_facts_cache := ME.add f (ff, dep) !(env.unit_facts_cache)
@@ -772,7 +771,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let dep = add_dep f dep in
     match E.form_view f with
     | E.Unit (f1, f2) ->
-      if not (Options.get_unsat_core ()) then dep
+      if not (get_unsat_core ()) then dep
       else add_dep_of_formula f2 (add_dep_of_formula f1 dep)
     | E.Lemma _ | E.Clause _ | E.Literal _ | E.Skolem _
     | E.Let _ | E.Iff _ | E.Xor _ -> dep
