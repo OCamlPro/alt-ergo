@@ -26,14 +26,9 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-open Matching_types
-
 module E = Expr
 module ME = E.Map
 module SubstE = Symbols.Map
-
 
 module type S = sig
   type t
@@ -48,13 +43,14 @@ module type S = sig
     Matching_types.trigger_info list ->
     t
 
-  val add_term : term_info -> E.t -> t -> t
+  val add_term : Matching_types.term_info -> E.t -> t -> t
   val max_term_depth : t -> int -> t
   val add_triggers :
     Util.matching_env -> t -> (Expr.t * int * Explanation.t) ME.t -> t
-  val terms_info : t -> info ME.t * E.t list ME.t SubstE.t
+  val terms_info : t -> Matching_types.info ME.t * E.t list ME.t SubstE.t
   val query :
-    Util.matching_env -> t -> theory -> (trigger_info * gsubst list) list
+    Util.matching_env -> t -> theory -> 
+      (Matching_types.trigger_info * Matching_types.gsubst list) list
 
   val reinit_caches : unit -> unit
 
@@ -73,9 +69,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   type t = {
     fils : E.t list ME.t SubstE.t ;
-    info : info ME.t ;
+    info : Matching_types.info ME.t ;
     max_t_depth : int;
-    pats : trigger_info list
+    pats : Matching_types.trigger_info list
   }
 
   exception Echec
@@ -97,13 +93,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
   module Debug = struct
     open Printer
     let add_term t =
-      if get_debug_matching() >= 3 then
+      if Options.get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"add_term"
           "add_term:  %a" E.print t
 
     let matching tr =
-      if get_debug_matching() >= 3 then
+      if Options.get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"matching"
           "@[<v 0>(multi-)trigger: %a@ \
@@ -111,9 +107,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
           E.print_list tr.E.content
 
     let match_pats_modulo pat lsubsts =
-      if get_debug_matching() >= 3 then
-        let print fmt { sbs; sty; _ } =
-          fprintf fmt ">>> sbs= %a | sty= %a@ "
+      if Options.get_debug_matching() >= 3 then
+        let print fmt Matching_types.{ sbs; sty; _ } =
+          Format.fprintf fmt ">>> sbs= %a | sty= %a@ "
             (SubstE.print E.print) sbs Ty.print_subst sty
         in
         print_dbg
@@ -121,16 +117,16 @@ module Make (X : Arg) : S with type theory = X.t = struct
           "@[<v 2>match_pat_modulo: %a  with accumulated substs@ %a@]"
           E.print pat (pp_list_no_space print) lsubsts
 
-    let match_one_pat { sbs; sty; _ } pat0 =
-      if get_debug_matching() >= 3 then
+    let match_one_pat Matching_types.{ sbs; sty; _ } pat0 =
+      if Options.get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_one_pat"
           "match_pat: %a with subst: sbs= %a | sty= %a"
           E.print pat0 (SubstE.print E.print) sbs Ty.print_subst sty
 
 
-    let match_one_pat_against { sbs; sty; _ } pat0 t =
-      if get_debug_matching() >= 3 then
+    let match_one_pat_against Matching_types.{ sbs; sty; _ } pat0 t =
+      if Options.get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_one_pat_against"
           "@[<v 0>match_pat: %a against term %a@ \
@@ -140,15 +136,15 @@ module Make (X : Arg) : S with type theory = X.t = struct
           (SubstE.print E.print) sbs
           Ty.print_subst sty
 
-    let match_term { sbs; sty; _ } t pat =
-      if get_debug_matching() >= 3 then
+    let match_term Matching_types.{ sbs; sty; _ } t pat =
+      if Options.get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_term"
           "I match %a against %a with subst: sbs=%a | sty= %a"
           E.print pat E.print t (SubstE.print E.print) sbs Ty.print_subst sty
 
-    let match_list { sbs; sty; _ } pats xs =
-      if get_debug_matching() >= 3 then
+    let match_list Matching_types.{ sbs; sty; _ } pats xs =
+      if Options.get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_list"
           "I match %a against %a with subst: sbs=%a | sty= %a"
@@ -158,22 +154,23 @@ module Make (X : Arg) : S with type theory = X.t = struct
           Ty.print_subst sty
 
     let match_class_of t cl =
-      if get_debug_matching() >= 3 then
+      if Options.get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_class_of"
           "class_of (%a) = { %a }"
           E.print t
-          (fun fmt -> List.iter (fprintf fmt "%a , " E.print)) cl
+          (fun fmt -> List.iter (Format.fprintf fmt "%a , " E.print)) cl
 
     let candidate_substitutions pat_info res =
-      if get_debug_matching () >= 1 then
+      let open Matching_types in
+      if Options.get_debug_matching () >= 1 then
         print_dbg
           ~module_name:"Matching" ~function_name:"candidate_substitutions"
           "@[<v 2>%3d candidate substitutions for Axiom %a with trigger %a@ "
           (List.length res)
           E.print pat_info.trigger_orig
           E.print_list pat_info.trigger.E.content;
-      if get_debug_matching() >= 2 then
+      if Options.get_debug_matching() >= 2 then
         List.iter
           (fun gsbt ->
              print_dbg ~header:false
@@ -191,6 +188,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     with Not_found -> g , b
 
   let add_term info t env =
+    let open Matching_types in
     Debug.add_term t;
     let rec add_rec env t =
       if ME.mem t env.info then env
@@ -238,9 +236,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   let all_terms
       f ty env tbox
-      {sbs=s_t; sty=s_ty; gen=g; goal=b;
+      ({sbs=s_t; sty=s_ty; gen=g; goal=b;
        s_term_orig=s_torig;
-       s_lem_orig = s_lorig} lsbt_acc =
+       s_lem_orig = s_lorig}: Matching_types.gsubst) lsbt_acc =
+         let open Matching_types in
     SubstE.fold
       (fun _ s l ->
          ME.fold
@@ -297,14 +296,16 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let are_equal_full tbox t s =
     wrap_are_equal_generic tbox t s true cache_are_equal_full
 
-  let add_msymb tbox f t ({ sbs = s_t; _ } as sg) max_t_depth =
+  let add_msymb tbox f t ({ sbs = s_t; _ } as sg : Matching_types.gsubst) 
+  max_t_depth =
     if SubstE.mem f s_t then
       let s = SubstE.find f s_t in
       if are_equal_full tbox t s == None then raise Echec;
       sg
     else
       let t =
-        if (E.depth t) > max_t_depth || get_normalize_instances () then
+        if (E.depth t) > max_t_depth || 
+        Options.get_normalize_instances () then
           X.term_repr tbox t ~init_term:true
         else t
       in
@@ -378,7 +379,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
         | _ -> []
 
   let rec match_term mconf env tbox
-      ({ sty = s_ty; gen = g; goal = b; _ } as sg) pat t =
+      ({ sty = s_ty; gen = g; goal = b; _ } as sg : Matching_types.gsubst) 
+      pat t =
     Options.exec_thread_yield ();
     Debug.match_term sg t pat;
     let { E.f = f_pat; xs = pats; ty = ty_pat; _ } =
@@ -471,7 +473,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     match f with
     | Symbols.Var _ -> all_terms f ty env tbox sg lsbt_acc
     | _ ->
-      let { sty; gen = g; goal = b; _ } = sg in
+      let Matching_types.{ sty; gen = g; goal = b; _ } = sg in
       let f_aux t xs lsbt =
         (* maybe put 3 as a rational parameter in the future *)
         let too_big = (E.depth t) > 3 * env.max_t_depth in
@@ -508,6 +510,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
 
   let matching mconf env tbox pat_info =
+    let open Matching_types in
     let pats = pat_info.trigger in
     let pats_list = List.stable_sort trig_weight pats.E.content in
     Debug.matching pats;
@@ -546,7 +549,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           Debug.candidate_substitutions pat_info res;
           pat_info, res
         with Exit ->
-          if get_debug_matching() >= 1 && get_verbose() then
+          if Options.(get_debug_matching() >= 1 && get_verbose()) then
             Printer.print_dbg
               ~module_name:"Matching" ~function_name:"matching"
               "skip matching for %a : cpt = %d"
@@ -689,7 +692,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
              | Util.Backward -> backward_triggers q, "Backward"
              | Util.Forward  -> forward_triggers q, "Forward"
            in
-           if get_debug_triggers () then
+           if Options.get_debug_triggers () then
              Printer.print_dbg
                ~module_name:"Matching" ~function_name:"add_triggers"
                "@[<v 2>%s triggers of %s are:@ %a@]"
@@ -697,7 +700,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
            List.fold_left
              (fun env tr ->
                 let info =
-                  { trigger = tr;
+                  Matching_types.{ trigger = tr;
                     trigger_age = age ;
                     trigger_orig = lem ;
                     trigger_formula = f ;
