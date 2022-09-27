@@ -161,8 +161,8 @@ let concat_chainable p_op p_ty t acc =
   | _ -> t :: acc
 
 let rec make_term up_qv quant_basename t =
-  let rec mk_term ({ c = { tt_ty = ty; tt_desc = tt; _ }; _ } 
-  : (_ Typed.tterm, _) Typed.annoted) =
+  let rec mk_term ({ c = { tt_ty = ty; tt_desc = tt; _ }; _ }
+                   : (_ Typed.tterm, _) Typed.annoted) =
     let ty = Ty.shorten ty in
     match tt with
     | TTconst Ttrue ->
@@ -284,8 +284,8 @@ let rec make_term up_qv quant_basename t =
 
 and make_trigger ~in_theory name up_qv quant_basename hyp (e, from_user) =
   let content, guard = match e with
-    | [({ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ } 
-      : (_ Typed.tterm, _) Typed.annoted)]
+    | [({ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }
+        : (_ Typed.tterm, _) Typed.annoted)]
       when Sy.equal s Sy.fake_eq ->
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv quant_basename) trs in
@@ -442,8 +442,8 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
       let ff = E.purify_form ff in
 
       let hyp =
-        List.map (fun (f : _ Typed.annoted) -> 
-          mk_form up_qv ~toplevel:false f.c f.annot) qf.qf_hyp
+        List.map (fun (f : _ Typed.annoted) ->
+            mk_form up_qv ~toplevel:false f.c f.annot) qf.qf_hyp
       in
       let in_theory = decl_kind == E.Dtheory in
       let trs =
@@ -545,8 +545,8 @@ let mk_query acc n f loc sort =
   let ff = make_form "" f loc ~decl_kind:E.Dgoal in
   Commands.{st_decl=Query(n, ff, sort) ; st_loc=loc} :: acc
 
-let make_rule (({rwt_left = t1; rwt_right = t2; rwt_vars} as r) 
-  : _ Typed.rwt_rule) =
+let make_rule (({rwt_left = t1; rwt_right = t2; rwt_vars} as r)
+               : _ Typed.rwt_rule) =
   let up_qv =
     List.fold_left (fun z (sy, ty) -> Sy.Map.add sy ty z) Sy.Map.empty rwt_vars
   in

@@ -140,10 +140,10 @@ module Main : S = struct
         Q.iter
           (fun (lit,_,_) ->
              match lit with
-             | Sig_rel.LSem sa -> 
-                 Format.fprintf fmt "  > LSem  %a@." LR.print (LR.make sa)
-             | Sig_rel.LTerm a -> 
-                 Format.fprintf fmt "  > LTerm %a@."E.print a
+             | Sig_rel.LSem sa ->
+               Format.fprintf fmt "  > LSem  %a@." LR.print (LR.make sa)
+             | Sig_rel.LTerm a ->
+               Format.fprintf fmt "  > LTerm %a@."E.print a
           )q
       in
       let aux2 fmt mp =

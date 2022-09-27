@@ -150,15 +150,16 @@ module Debug = struct
 
   let pmake fmt m =
     Format.fprintf fmt "@[<v 2>map:@,";
-    ME.iter (fun t r -> 
-      Format.fprintf fmt "%a -> %a@," E.print t X.print r) m;
+    ME.iter (fun t r ->
+        Format.fprintf fmt "%a -> %a@," E.print t X.print r) m;
     Format.fprintf fmt "@]@,"
 
   let prepr fmt m =
     Format.fprintf fmt
       "@[<v 2>------------- UF: Representatives map ----------------@,";
     MapX.iter (fun r (rr,dep) ->
-      Format.fprintf fmt "%a --> %a %a@," X.print r X.print rr Ex.print dep) m;
+        Format.fprintf fmt "%a --> %a %a@," X.print r X.print rr Ex.print dep
+      ) m;
     Format.fprintf fmt "@]@,"
 
   let prules fmt s =
@@ -190,8 +191,8 @@ module Debug = struct
   let pneqs fmt m =
     Format.fprintf fmt
       "@[<v 2>------------- UF: Disequations map--------------------@ ";
-    MapX.iter (fun k s -> 
-      Format.fprintf fmt "%a -> %a@ " X.print k lm_print s) m;
+    MapX.iter (fun k s ->
+        Format.fprintf fmt "%a -> %a@ " X.print k lm_print s) m;
     Format.fprintf fmt "@]@ "
 
   let all env =

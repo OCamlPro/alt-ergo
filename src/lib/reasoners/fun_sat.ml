@@ -451,7 +451,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let s = ref SE.empty in
     ME.iter
       (fun f _ ->
-         if complete_model && is_literal f then
+         if (Options.get_complete_model () && is_literal f) 
+        || E.is_in_model f then
            s := SE.add f !s
       )
       t.gamma;
@@ -658,7 +659,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let update_unit_facts env ff dep =
     let f = ff.E.ff in
-    if Options.get_sat_learning () && not (ME.mem f !(env.unit_facts_cache)) then
+    if Options.get_sat_learning ()
+    && not (ME.mem f !(env.unit_facts_cache)) then
       begin
         assert (Ex.has_no_bj dep);
         env.unit_facts_cache := ME.add f (ff, dep) !(env.unit_facts_cache)
@@ -1144,7 +1146,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       ignore (update_instances_cache (Some []));
       env, true
 
-
   let compute_concrete_model env compute =
     let compute =
       if Options.get_first_interpretation () then
@@ -1169,7 +1170,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     end
 
   let return_cached_model return_function =
-    let i = get_interpretation () in
+    let i = Options.get_interpretation () in
     assert i;
     assert (not !terminated_normally);
     terminated_normally := true; (* to avoid loops *)
@@ -1197,7 +1198,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
    *        if not !terminated_normally && (get_interpretation ()) then
    *          return_cached_model (fun () -> ())
    *     ) *)
-
 
   let return_answer env compute return_function =
     let env = compute_concrete_model env compute in

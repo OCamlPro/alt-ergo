@@ -78,7 +78,7 @@ let assoc_destrs hs cases =
 (*** pretty print ***)
 let print_generic body_of =
   let h = Hashtbl.create 17 in
-  let rec print = 
+  let rec print =
     let fprintf = Format.fprintf in
     fun body_of fmt -> function
     | Tint ->

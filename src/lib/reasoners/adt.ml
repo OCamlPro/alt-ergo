@@ -365,7 +365,7 @@ module Shostak (X : ALIEN) = struct
     | Tester _, _ | _, Tester _ -> assert false (* not interpreted *)
     | Alien _, Alien _ ->
       Sig.{ pb with
-        sbt = (if X.str_cmp r1 r2 > 0 then r1, r2 else r2, r1) :: pb.sbt }
+            sbt = (if X.str_cmp r1 r2 > 0 then r1, r2 else r2, r1) :: pb.sbt }
 
     | Alien r, Constr _ ->
       if is_alien_of r2 r then raise Util.Unsolvable;
@@ -379,13 +379,13 @@ module Shostak (X : ALIEN) = struct
       if not (Hstring.equal c1.c_name c2.c_name) then raise Util.Unsolvable;
       try
         Sig.{pb with
-         eqs =
-           List.fold_left2
-             (fun eqs (hs1, v1) (hs2, v2) ->
-                assert (Hstring.equal hs1 hs2);
-                (v1, v2) :: eqs
-             )pb.eqs c1.c_args c2.c_args
-        }
+             eqs =
+               List.fold_left2
+                 (fun eqs (hs1, v1) (hs2, v2) ->
+                    assert (Hstring.equal hs1 hs2);
+                    (v1, v2) :: eqs
+                 )pb.eqs c1.c_args c2.c_args
+            }
       with Invalid_argument _ -> assert false
 
   let subst p v s =

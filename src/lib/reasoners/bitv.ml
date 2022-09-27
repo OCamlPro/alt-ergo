@@ -265,7 +265,7 @@ module Shostak(X : ALIEN) = struct
        | I_Comp(u,v) -> fprintf fmt "@[(%a * %a)@]" print_I_ast u print_I_ast v
     *)
 
-    let print fmt ast = 
+    let print fmt ast =
       let open Format in
       match ast.bv with
       | Cte b -> fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz

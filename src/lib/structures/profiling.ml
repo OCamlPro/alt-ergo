@@ -534,7 +534,7 @@ let print_instances_generation forced _steps fmt _timers =
     in
     List.iter
       (let fprintf = Format.fprintf in
-        fun (name, i, card, r) ->
+       fun (name, i, card, r) ->
          fprintf fmt "ratio kept/all: %s| " (float_resize r 8);
          fprintf fmt "<> insts: %s| " (int_resize card 5);
          fprintf fmt "kept: %s| " (int_resize i.kept 7);
@@ -631,78 +631,78 @@ let switch fmt =
 let float_print =
   let fprintf = Format.fprintf in
   fun fmt v ->
-  if Stdlib.(=) v 0. then fprintf fmt "--     "
-  else if (Stdlib.compare v 10.) < 0 then fprintf fmt "%0.5f" v
-  else if (Stdlib.compare v 100.) < 0 then fprintf fmt "%0.4f" v
-  else fprintf fmt "%0.3f" v
+    if Stdlib.(=) v 0. then fprintf fmt "--     "
+    else if (Stdlib.compare v 10.) < 0 then fprintf fmt "%0.5f" v
+    else if (Stdlib.compare v 100.) < 0 then fprintf fmt "%0.4f" v
+    else fprintf fmt "%0.3f" v
 
 let line_of_module =
-  let fprintf = Format.fprintf in 
+  let fprintf = Format.fprintf in
   fun arr fmt f ->
-  fprintf fmt "%s " (string_resize (Timers.string_of_ty_function f) 13);
-  let cpt = ref 0. in
-  List.iter
-    (fun m ->
-       let v = arr.(Timers.mtag m).(Timers.ftag f) in
-       cpt := !cpt +. v;
-       fprintf fmt "| %a  " float_print v
-    ) Timers.all_modules;
-  fprintf fmt "| %a        |@." float_print !cpt
+    fprintf fmt "%s " (string_resize (Timers.string_of_ty_function f) 13);
+    let cpt = ref 0. in
+    List.iter
+      (fun m ->
+         let v = arr.(Timers.mtag m).(Timers.ftag f) in
+         cpt := !cpt +. v;
+         fprintf fmt "| %a  " float_print v
+      ) Timers.all_modules;
+    fprintf fmt "| %a        |@." float_print !cpt
 
 
-let line_of_sum_module = 
-  let fprintf = Format.fprintf in 
+let line_of_sum_module =
+  let fprintf = Format.fprintf in
   fun fmt timers ->
-  for _ = 0 to 206 do fprintf fmt "-" done;
-  fprintf fmt "|@.";
-  fprintf fmt "%s " (string_resize "" 13);
-  List.iter
-    (fun m ->
-       fprintf fmt "| %a  " float_print (Timers.get_sum timers m))
-    Timers.all_modules;
-  fprintf fmt "| GTimer %a |@." float_print (Options.Time.value())
+    for _ = 0 to 206 do fprintf fmt "-" done;
+    fprintf fmt "|@.";
+    fprintf fmt "%s " (string_resize "" 13);
+    List.iter
+      (fun m ->
+         fprintf fmt "| %a  " float_print (Timers.get_sum timers m))
+      Timers.all_modules;
+    fprintf fmt "| GTimer %a |@." float_print (Options.Time.value())
 
 let timers_table =
   let fprintf = Format.fprintf in
   fun forced fmt timers ->
-  if not forced then ignore(Sys.command("clear"));
-  Timers.update timers;
-  fprintf fmt "@.";
-  fprintf fmt "              ";
-  List.iter
-    (fun f ->
-       fprintf fmt"| %s" (string_resize (Timers.string_of_ty_module f) 9))
-    Timers.all_modules;
-  fprintf fmt "|@.";
-  for _ = 0 to 206 do fprintf fmt "-" done;
-  fprintf fmt "|@.";
-  let arr_timers = Timers.get_timers_array timers in
-  List.iter
-    (line_of_module arr_timers fmt)
-    Timers.all_functions;
-  line_of_sum_module fmt timers
+    if not forced then ignore(Sys.command("clear"));
+    Timers.update timers;
+    fprintf fmt "@.";
+    fprintf fmt "              ";
+    List.iter
+      (fun f ->
+         fprintf fmt"| %s" (string_resize (Timers.string_of_ty_module f) 9))
+      Timers.all_modules;
+    fprintf fmt "|@.";
+    for _ = 0 to 206 do fprintf fmt "-" done;
+    fprintf fmt "|@.";
+    let arr_timers = Timers.get_timers_array timers in
+    List.iter
+      (line_of_module arr_timers fmt)
+      Timers.all_functions;
+    line_of_sum_module fmt timers
 
 let print =
-  let fprintf = Format.fprintf in 
+  let fprintf = Format.fprintf in
   fun all steps timers fmt ->
-  print_initial_info fmt;
-  set_sigprof();
-  if all then begin
-    mode := Stats;
-    fprintf fmt "@.";
-    print_stats true steps fmt timers;
-    fprintf fmt "@.";
-    mode := Timers;
-    print_timers true steps fmt timers;
-    fprintf fmt "@.";
-    timers_table true fmt timers;
-    fprintf fmt "@.";
-    print_instances_generation true steps fmt timers;
-    fprintf fmt "@.";
-  end
-  else match !mode with
-    | Stats           -> print_stats false steps fmt timers
-    | Timers          -> print_timers false steps fmt timers
-    | CallTree        -> print_call_tree false steps fmt timers
-    | FunctionsTimers -> timers_table false fmt timers;
-    | Instances       -> print_instances_generation false steps fmt timers
+    print_initial_info fmt;
+    set_sigprof();
+    if all then begin
+      mode := Stats;
+      fprintf fmt "@.";
+      print_stats true steps fmt timers;
+      fprintf fmt "@.";
+      mode := Timers;
+      print_timers true steps fmt timers;
+      fprintf fmt "@.";
+      timers_table true fmt timers;
+      fprintf fmt "@.";
+      print_instances_generation true steps fmt timers;
+      fprintf fmt "@.";
+    end
+    else match !mode with
+      | Stats           -> print_stats false steps fmt timers
+      | Timers          -> print_timers false steps fmt timers
+      | CallTree        -> print_call_tree false steps fmt timers
+      | FunctionsTimers -> timers_table false fmt timers;
+      | Instances       -> print_instances_generation false steps fmt timers

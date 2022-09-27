@@ -86,8 +86,8 @@ let assume env uf sa =
     Rel7.assume env.r7 uf sa in
   {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6; r7=env7},
   ({ assume = a1 |@| a2 |@| a3 |@| a4 |@| a5 |@| a6 |@| a7;
-    remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6 |@| rm7} 
-  : _ Sig_rel.result)
+     remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6 |@| rm7}
+   : _ Sig_rel.result)
 
 let assume_th_elt env th_elt dep =
   Options.exec_thread_yield ();

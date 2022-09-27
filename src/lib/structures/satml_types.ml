@@ -253,8 +253,8 @@ module Atom : ATOM = struct
       done
 
     let clause fmt { name; atoms=arr; cpremise=cp; _ } =
-      Format.fprintf fmt "%s:{ %a} cpremise={{%a}}" name atoms_vec arr premise cp
-
+      Format.fprintf fmt "%s:{ %a} cpremise={{%a}}" name atoms_vec
+        arr premise cp
   end
 
   let pr_atom = Debug.atom

@@ -164,7 +164,9 @@ module Main_Default : S = struct
              begin match l with
                | [] -> assert false
                | e::l ->
-                 let print fmt e = Format.fprintf fmt " | %s" (Hstring.view e) in
+                 let print fmt e =
+                   Format.fprintf fmt " | %s" (Hstring.view e)
+                 in
                  print_dbg ~flushed:false ~header:false "%s@ %a@ "
                    (Hstring.view e)
                    (pp_list_no_space print) l;

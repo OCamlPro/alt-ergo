@@ -163,12 +163,12 @@ module Make (X : S) = struct
     let print fmt p =
       if Options.get_term_like_pp () then pprint fmt p
       else begin
-        M.iter (fun t n -> 
-          Format.fprintf fmt "%s*%a " (Q.to_string n) X.print t
-        ) p.m;
+        M.iter (fun t n ->
+            Format.fprintf fmt "%s*%a " (Q.to_string n) X.print t
+          ) p.m;
         Format.fprintf fmt "%s%s"
-        (if Q.compare_to_0 p.c >= 0 then "+ " else "")
-        (Q.to_string p.c);
+          (if Q.compare_to_0 p.c >= 0 then "+ " else "")
+          (Q.to_string p.c);
         Format.fprintf fmt " [%a]" Ty.print p.ty
       end
   end

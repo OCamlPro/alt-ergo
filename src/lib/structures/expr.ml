@@ -381,9 +381,10 @@ let print_binders =
 module SmtPrinter = struct
 
   let rec print_formula fmt form xs bind =
+    let fprintf = Format.fprintf in
     match form, xs, bind with
     | Sy.F_Unit _, [f1; f2], _ ->
-      fprintf fmt "@[(and %a %a)@]" print_silent f1 print_silent f2
+      Format.fprintf fmt "@[(and %a %a)@]" print_silent f1 print_silent f2
 
     | Sy.F_Iff, [f1; f2], _ ->
       fprintf fmt "@[(= %a %a)@]" print_silent f1 print_silent f2
@@ -450,6 +451,7 @@ module SmtPrinter = struct
       assert false
 
   and print_silent fmt t =
+    let fprintf = Format.fprintf in
     let { f ; xs ; ty; bind; _ } = t in
     match f, xs with
     (* Formulas *)
@@ -538,22 +540,26 @@ module SmtPrinter = struct
 
   and print_triggers fmt trs =
     List.iter (fun { content = l; _ } ->
-        fprintf fmt "| %a@,"  (Util.print_list ~sep:"," ~pp:print) l;
+        Format.fprintf fmt "| %a@,"  (Util.print_list ~sep:"," ~pp:print) l;
       ) trs
 
-  and print_verbose fmt t = print fmt t
-  (* Not displaying types when int SMT format *)
+and print_list_sep sep fmt = function
+  | [] -> ()
+  | [t] -> print fmt t
+  | t::l -> Format.fprintf fmt "%a%s%a" print t sep (print_list_sep sep) l
 
-  and print fmt t =
-    if Options.get_debug () then print_verbose fmt t
-    else print_silent fmt t
+and print_list fmt = print_list_sep "," fmt
 
-end
+and print_triggers fmt trs =
+  List.iter (fun { content = l; _ } ->
+      Format.fprintf fmt "| %a@," print_list l;
+    ) trs
 
 module AEPrinter = struct
 
   (* Same as SmtPrinter.print_formula *)
   let rec print_formula fmt form xs bind =
+    let fprintf = Format.fprintf in
     match form, xs, bind with
     | Sy.F_Unit _, [f1; f2], _ ->
       fprintf fmt "@[(%a /\\@ %a)@]" print_silent f1 print_silent f2

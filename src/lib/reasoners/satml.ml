@@ -620,7 +620,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     check_levels mlvl (decision_level env);
     mlvl
 
-  let propagate_in_clause env (a : Atom.atom) (c : Atom.clause) i watched new_sz =
+  let propagate_in_clause env (a : Atom.atom) (c : Atom.clause)
+      i watched new_sz =
     let atoms = c.atoms in
     let first = Vec.get atoms 0 in
     if first == a.neg then begin (* le literal faux doit etre dans .(1) *)
@@ -1155,8 +1156,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         enqueue env fuip 0 None
       | fuip :: _ ->
         let name = Atom.fresh_lname () in
-        let lclause = 
-          Atom.make_clause name learnt vraie_form size true history 
+        let lclause =
+          Atom.make_clause name learnt vraie_form size true history
         in
         Vec.push env.learnts lclause;
         attach_clause env lclause;
@@ -1213,8 +1214,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     done;
     List.iter (fun (q : Atom.atom) -> q.var.seen <- false) !seen;
     let learnt = SA.elements !learnt in
-    let learnt = List.fast_sort (fun (a : Atom.atom) (b : Atom.atom) -> 
-      b.var.level - a.var.level) learnt in
+    let learnt = List.fast_sort (fun (a : Atom.atom) (b : Atom.atom) ->
+        b.var.level - a.var.level) learnt in
     let size = List.length learnt in
     let bj_level =
       if Options.get_minimal_bj () then
@@ -1545,8 +1546,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
                  end
                  else a::atoms, init
               ) ([], init0) atoms in
-          List.fast_sort (fun (a : Atom.atom) (b : Atom.atom) -> 
-            a.var.vid - b.var.vid) atoms, init
+          List.fast_sort (fun (a : Atom.atom) (b : Atom.atom) ->
+              a.var.vid - b.var.vid) atoms, init
         else partition atoms init0
       in
       let size = List.length atoms in
@@ -1564,8 +1565,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             "add_clause: %a" Atom.pr_clause clause;
 
         if a.neg.is_true then begin (* clause is false *)
-          let lvl = 
-            List.fold_left (fun m (a : Atom.atom) -> max m a.var.level) 0 atoms 
+          let lvl =
+            List.fold_left (fun m (a : Atom.atom) -> max m a.var.level) 0 atoms
           in
           cancel_until env lvl;
           conflict_analyze_and_fix env (C_bool clause)

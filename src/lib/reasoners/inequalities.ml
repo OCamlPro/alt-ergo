@@ -203,7 +203,8 @@ module Container : Container_SIG = struct
         List.iter (Format.fprintf fmt "%a  " print_inequation)
 
       let map_of_ineqs fmt =
-        MINEQS.iter (fun _ (i , _) -> Format.fprintf fmt "%a  " print_inequation i)
+        MINEQS.iter (fun _ (i , _) ->
+            Format.fprintf fmt "%a  " print_inequation i)
 
       let cross x vars cpos cneg others =
         if Options.get_debug_fm () then

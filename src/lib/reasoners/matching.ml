@@ -49,8 +49,8 @@ module type S = sig
     Util.matching_env -> t -> (Expr.t * int * Explanation.t) ME.t -> t
   val terms_info : t -> Matching_types.info ME.t * E.t list ME.t SubstE.t
   val query :
-    Util.matching_env -> t -> theory -> 
-      (Matching_types.trigger_info * Matching_types.gsubst list) list
+    Util.matching_env -> t -> theory ->
+    (Matching_types.trigger_info * Matching_types.gsubst list) list
 
   val reinit_caches : unit -> unit
 
@@ -237,9 +237,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let all_terms
       f ty env tbox
       ({sbs=s_t; sty=s_ty; gen=g; goal=b;
-       s_term_orig=s_torig;
-       s_lem_orig = s_lorig}: Matching_types.gsubst) lsbt_acc =
-         let open Matching_types in
+        s_term_orig=s_torig;
+        s_lem_orig = s_lorig}: Matching_types.gsubst) lsbt_acc =
+    let open Matching_types in
     SubstE.fold
       (fun _ s l ->
          ME.fold
@@ -296,16 +296,16 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let are_equal_full tbox t s =
     wrap_are_equal_generic tbox t s true cache_are_equal_full
 
-  let add_msymb tbox f t ({ sbs = s_t; _ } as sg : Matching_types.gsubst) 
-  max_t_depth =
+  let add_msymb tbox f t ({ sbs = s_t; _ } as sg : Matching_types.gsubst)
+      max_t_depth =
     if SubstE.mem f s_t then
       let s = SubstE.find f s_t in
       if are_equal_full tbox t s == None then raise Echec;
       sg
     else
       let t =
-        if (E.depth t) > max_t_depth || 
-        Options.get_normalize_instances () then
+        if (E.depth t) > max_t_depth ||
+           Options.get_normalize_instances () then
           X.term_repr tbox t ~init_term:true
         else t
       in
@@ -379,7 +379,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         | _ -> []
 
   let rec match_term mconf env tbox
-      ({ sty = s_ty; gen = g; goal = b; _ } as sg : Matching_types.gsubst) 
+      ({ sty = s_ty; gen = g; goal = b; _ } as sg : Matching_types.gsubst)
       pat t =
     Options.exec_thread_yield ();
     Debug.match_term sg t pat;
@@ -701,12 +701,12 @@ module Make (X : Arg) : S with type theory = X.t = struct
              (fun env tr ->
                 let info =
                   Matching_types.{ trigger = tr;
-                    trigger_age = age ;
-                    trigger_orig = lem ;
-                    trigger_formula = f ;
-                    trigger_dep = dep;
-                    trigger_increm_guard = guard
-                  }
+                                   trigger_age = age ;
+                                   trigger_orig = lem ;
+                                   trigger_formula = f ;
+                                   trigger_dep = dep;
+                                   trigger_increm_guard = guard
+                                 }
                 in
                 add_trigger info env
              ) env tgs

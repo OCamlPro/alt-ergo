@@ -175,7 +175,7 @@ module Types = struct
       List.iter
         (fun (lb, _) ->
            try ignore (Hstring.list_assoc lb l)
-           with Not_found -> 
+           with Not_found ->
              Errors.typing_error (WrongLabel(lb, ty)) loc) lbs;
       ty
     | _ -> assert false
@@ -278,7 +278,7 @@ module Env = struct
       List.fold_left
         (fun logics (n, lbl) ->
            let sy = mk_symb n in
-           if MString.mem n logics then 
+           if MString.mem n logics then
              Errors.typing_error (SymbAlreadyDefined n) loc;
            let lbl = Hstring.make lbl in
            if not (Hstring.equal lbl Hstring.empty) then
@@ -475,12 +475,12 @@ let rec type_term ?(call_from_type_form=false) env f =
         | Ty.Treal, Ty.Treal ->
           Options.tool_req 1 (append_type "TR-Typing-OpBin type" ty2);
           TTinfix(te1,s,te2), ty2
-        | Ty.Tint, _ -> 
-            Errors.typing_error (ShouldHaveType(ty2,Ty.Tint)) t2.pp_loc
-        | Ty.Treal, _ -> 
-            Errors.typing_error (ShouldHaveType(ty2,Ty.Treal)) t2.pp_loc
-        | _ -> 
-            Errors.typing_error (ShouldHaveTypeIntorReal ty1) t1.pp_loc
+        | Ty.Tint, _ ->
+          Errors.typing_error (ShouldHaveType(ty2,Ty.Tint)) t2.pp_loc
+        | Ty.Treal, _ ->
+          Errors.typing_error (ShouldHaveType(ty2,Ty.Treal)) t2.pp_loc
+        | _ ->
+          Errors.typing_error (ShouldHaveTypeIntorReal ty1) t1.pp_loc
       end
     | PPinfix(t1, PPmod, t2) ->
       begin
@@ -493,8 +493,8 @@ let rec type_term ?(call_from_type_form=false) env f =
         | Ty.Tint, Ty.Tint ->
           Options.tool_req 1 (append_type "TR-Typing-OpMod type" ty1);
           TTinfix(te1,s,te2) , ty1
-        | _ -> 
-            Errors.typing_error (ShouldHaveTypeInt ty1) t1.pp_loc
+        | _ ->
+          Errors.typing_error (ShouldHaveTypeInt ty1) t1.pp_loc
       end
     | PPinfix(t1, (PPpow_int | PPpow_real as op), t2) ->
       begin
@@ -548,12 +548,12 @@ let rec type_term ?(call_from_type_form=false) env f =
           Options.tool_req 1
             (append_type "TR-Typing-OpConcat type" (Ty.Tbitv (n+m)));
           TTconcat(te1, te2), Ty.Tbitv (n+m)
-        | Ty.Tbitv _ , _ -> 
-            Errors.typing_error (ShouldHaveTypeBitv ty2) t2.pp_loc
-        | _ , Ty.Tbitv _ -> 
-            Errors.typing_error (ShouldHaveTypeBitv ty1) t1.pp_loc
-        | _ -> 
-            Errors.typing_error (ShouldHaveTypeBitv ty1) t1.pp_loc
+        | Ty.Tbitv _ , _ ->
+          Errors.typing_error (ShouldHaveTypeBitv ty2) t2.pp_loc
+        | _ , Ty.Tbitv _ ->
+          Errors.typing_error (ShouldHaveTypeBitv ty1) t1.pp_loc
+        | _ ->
+          Errors.typing_error (ShouldHaveTypeBitv ty1) t1.pp_loc
       end
     | PPextract(e, ({ pp_desc=PPconst(ConstInt i); _ } as ei),
                 ({ pp_desc = PPconst(ConstInt j); _ } as ej)) ->
@@ -564,17 +564,17 @@ let rec type_term ?(call_from_type_form=false) env f =
         let j = int_of_string j in
         match tye with
         | Ty.Tbitv n ->
-          if i>j then 
+          if i>j then
             Errors.typing_error (BitvExtract(i,j)) loc;
-          if j>=n then 
+          if j>=n then
             Errors.typing_error (BitvExtractRange(n,j) ) loc;
           let tei = type_term env ei in
           let tej = type_term env ej in
           Options.tool_req 1
             (append_type "TR-Typing-OpExtract type" (Ty.Tbitv (j-i+1)));
           TTextract(te, tei, tej), Ty.Tbitv (j-i+1)
-        | _ -> 
-            Errors.typing_error (ShouldHaveType(tye,Ty.Tbitv (j+1))) loc
+        | _ ->
+          Errors.typing_error (ShouldHaveType(tye,Ty.Tbitv (j+1))) loc
       end
     | PPget (t1, t2) ->
       begin
@@ -665,7 +665,7 @@ let rec type_term ?(call_from_type_form=false) env f =
                      lb, te) lbs ty_lbs
               in
               TTrecord(lbs), ty
-            with Ty.TypeClash(t1,t2) -> 
+            with Ty.TypeClash(t1,t2) ->
               Errors.typing_error (Unification(t1,t2)) loc
           end
         | _ -> Errors.typing_error ShouldBeARecord loc
@@ -697,7 +697,7 @@ let rec type_term ?(call_from_type_form=false) env f =
           List.iter
             (fun (lb, _) ->
                try ignore (Hstring.list_assoc lb ty_lbs)
-               with Not_found -> 
+               with Not_found ->
                  Errors.typing_error (NoLabelInType(lb, ty)) loc) lbs;
           TTrecord(nlbs), ty
         | _ ->  Errors.typing_error ShouldBeARecord loc
@@ -705,7 +705,7 @@ let rec type_term ?(call_from_type_form=false) env f =
     | PPlet(l, t2) ->
       let _ =
         List.fold_left (fun z (sy,_) ->
-            if Util.SS.mem sy z then 
+            if Util.SS.mem sy z then
               Errors.typing_error (DuplicatePattern sy) loc;
             Util.SS.add sy z
           )Util.SS.empty l
@@ -760,7 +760,7 @@ let rec type_term ?(call_from_type_form=false) env f =
             TTdot (te, Hstring.make lbl), Ty.shorten result
 
           | _ -> assert false
-        with Ty.TypeClash(t1,t2) -> 
+        with Ty.TypeClash(t1,t2) ->
           Errors.typing_error (Unification(t1,t2)) loc
       end
 
@@ -969,8 +969,8 @@ and type_form ?(in_theory=false) env f =
             List.iter (Ty.unify t) lt_args;
             TFatom { c = TAdistinct te_args; annot=new_id () }
           with
-          | Ty.TypeClash(t1,t2) -> 
-              Errors.typing_error (Unification(t1,t2)) f.pp_loc
+          | Ty.TypeClash(t1,t2) ->
+            Errors.typing_error (Unification(t1,t2)) f.pp_loc
         end
       in r
 
@@ -995,7 +995,7 @@ and type_form ?(in_theory=false) env f =
           | PPeq -> TFatom (mk_ta_eq tt1 tt2)
           | PPneq -> TFatom (mk_ta_neq tt1 tt2)
           | _ -> assert false
-        with Ty.TypeClash(t1,t2) -> 
+        with Ty.TypeClash(t1,t2) ->
           Errors.typing_error (Unification(t1,t2)) f.pp_loc
       in r
     | PPinfix(t1, (PPlt | PPgt | PPge | PPle as op), t2) ->
@@ -1020,7 +1020,7 @@ and type_form ?(in_theory=false) env f =
             in
             TFatom {c = top; annot=new_id ()}
           | _ -> Errors.typing_error (ShouldHaveTypeIntorReal ty) t1.pp_loc
-        with Ty.TypeClash(t1,t2) -> 
+        with Ty.TypeClash(t1,t2) ->
           Errors.typing_error (Unification(t1,t2)) f.pp_loc
       in r
 
@@ -1038,7 +1038,7 @@ and type_form ?(in_theory=false) env f =
             let r = TFatom {c = top; annot=new_id ()} in
             r
           | _ -> Errors.typing_error (NotAdtConstr (lbl, result)) f.pp_loc
-        with Ty.TypeClash(t1,t2) -> 
+        with Ty.TypeClash(t1,t2) ->
           Errors.typing_error (Unification(t1,t2)) f.pp_loc
       end
 
@@ -1216,8 +1216,8 @@ and type_pattern p env ty ty_body =
         List.fold_left2
           (fun env v (_, ty) -> Env.add_ty_var env [v] ty) env args prof
       with
-        Invalid_argument _ -> 
-          Errors.typing_error (WrongNumberofArgs f) pat_loc
+        Invalid_argument _ ->
+        Errors.typing_error (WrongNumberofArgs f) pat_loc
     in
     let args =
       List.map2
@@ -1243,10 +1243,10 @@ and type_trigger in_theory env l =
   List.map
     (fun t ->
        match in_theory, t.pp_desc with
-       | false, PPinInterval _ -> 
-           Errors.typing_error ThSemTriggerError t.pp_loc
-       | false, PPmapsTo _ -> 
-           Errors.typing_error ThSemTriggerError t.pp_loc
+       | false, PPinInterval _ ->
+         Errors.typing_error ThSemTriggerError t.pp_loc
+       | false, PPmapsTo _ ->
+         Errors.typing_error ThSemTriggerError t.pp_loc
        | true, PPinInterval (e, a,b, c, d) ->
          let te = type_term env e in
          let tt_ty = te.c.tt_ty in
@@ -1366,7 +1366,7 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
   | PPlet(l, f2) ->
     let _ =
       List.fold_left (fun z (sy,_) ->
-          if Util.SS.mem sy z then 
+          if Util.SS.mem sy z then
             Errors.typing_error (DuplicatePattern sy) f.pp_loc;
           Util.SS.add sy z
         )Util.SS.empty l
@@ -1570,7 +1570,7 @@ let rec alpha_renaming_b ((up, m) as s) f =
   | PPlet(l, f2) ->
     let _ =
       List.fold_left (fun z (sy,_) ->
-          if Util.SS.mem sy z then 
+          if Util.SS.mem sy z then
             Errors.typing_error (DuplicatePattern sy) f.pp_loc;
           Util.SS.add sy z
         )Util.SS.empty l
@@ -2181,8 +2181,8 @@ let rec type_decl (acc, env) d assertion_stack =
       Errors.typing_error (ShouldBePositive n) loc;
     let assertion_context_number = Stack.length assertion_stack in
     if n > assertion_context_number then
-      Errors.typing_error (BadPopCommand
-                      {pushed = assertion_context_number; to_pop = n}) loc
+      Errors.typing_error
+        (BadPopCommand {pushed = assertion_context_number; to_pop = n}) loc
     else
       let old_env = env in
       let env = Util.loop ~f:(fun _n () _env -> Stack.pop assertion_stack)
