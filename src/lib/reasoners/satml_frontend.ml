@@ -10,10 +10,6 @@
 (******************************************************************************)
 
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
-
-  open Options
-  open Format
-
   module SAT = Satml.Make(Th)
   module Inst = Instances.Make(Th)
   module Ex = Explanation
@@ -104,20 +100,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     open Printer
 
     let pred_def f =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Satml_frontend" ~function_name:"pred_def"
           "I assume a predicate: %a" E.print f
 
     let unsat gf =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Satml_frontend" ~function_name:"unsat"
           "unsat of %a ?" E.print gf.E.ff
 
     let assume gf =
       let { E.ff = f; lem; from_terms = terms; _ } = gf in
-      if get_debug_sat () then begin
+      if Options.get_debug_sat () then begin
         match E.form_view f with
         | E.Not_a_form -> assert false
 
@@ -166,7 +162,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
 
     let simplified_form f f' =
-      if get_debug_sat () && get_verbose () then
+      if Options.(get_debug_sat () && get_verbose ()) then
         print_dbg
           ~module_name:"Satml_frontend" ~function_name:"simplified_form"
           "@[<v 2>Simplified form of: %a@,is: %a@]"
@@ -192,19 +188,19 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     *)
 
     let model fmt env =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         let model = SAT.boolean_model env.satml in
         let print fmt a =
-          fprintf fmt " %f | %a@,"
+          Format.fprintf fmt " %f | %a@,"
             (Atom.weight a)
             Atom.pr_atom a
         in
-        fprintf fmt
+        Format.fprintf fmt
           "@[<v 2>(2) satML's model:@,%a@]"
           (pp_list_no_space print) (List.rev model)
 
     let new_instances mode env =
-      if get_debug_sat () then begin
+      if Options.get_debug_sat () then begin
         print_dbg ~flushed:false
           ~module_name:"Satml_frontend" ~function_name:"new_instances"
           "@[<v 2>I GENERATE NEW INSTANCES (%s)#################@,\
@@ -247,13 +243,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     *)
 
     let atoms_from_sat_branch f =
-      if get_verbose () && get_debug_sat () then
+      if Options.(get_verbose () && get_debug_sat ()) then
         print_dbg
           ~module_name:"Satml_frontend" ~function_name:"atoms_from_sat_branch"
           "[extract_and_add_terms from] %a" FF.print f
 
     let add_terms_of src terms =
-      if get_verbose () && get_debug_sat () then begin
+      if Options.(get_verbose () && get_debug_sat ()) then begin
         print_dbg ~flushed:false ~module_name:"Satml_frontend"
           ~function_name:"add_terms_of"
           "@[<v 2>[%s] add_terms_of:@," src;
@@ -271,7 +267,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     *)
 
     let internal_axiom_def f a at =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Satml_frontend" ~function_name:"internal_axiom_def"
           "I assume an internal axiom: %a <-> %a@,\
@@ -297,10 +293,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
     let print_f_conj fmt hyp =
       match hyp with
-      | [] -> fprintf fmt "True";
+      | [] -> Format.fprintf fmt "True";
       | e::l ->
-        fprintf fmt "%a" E.print e;
-        List.iter (fun f -> fprintf fmt " /\\  %a" E.print f) l
+        Format.fprintf fmt "%a" E.print e;
+        List.iter (fun f -> Format.fprintf fmt " /\\  %a" E.print f) l
 
     let print_theory_instance hyp gf =
       if Options.get_debug_fpa() > 1 || Options.get_debug_sat() then
@@ -315,7 +311,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   end
   (*BISECT-IGNORE-END*)
-
 
   let make_explanation _ = Ex.empty
   (*
@@ -437,7 +432,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Inst.add_lemma inst gax ex
 
   let register_abstraction (env, new_abstr_vars) (f, (af, at)) =
-    if get_debug_sat () && get_verbose () then
+    if Options.(get_debug_sat () && get_verbose ()) then
       Printer.print_dbg
         ~module_name:"Satml_frontend" ~function_name:"register_abstraction"
         "abstraction of %a is %a" E.print f FF.print af;
@@ -482,7 +477,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let expand_skolems env acc sa inst_quantif =
     List.fold_left
       (fun acc a ->
-         if get_debug_sat () && get_verbose () then
+         if Options.(get_debug_sat () && get_verbose ()) then
            Printer.print_dbg
              ~module_name:"Satml_frontend" ~function_name:"expand_skolems"
              "expand skolem of %a" E.print a;
@@ -502,7 +497,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     List.fold_left
       (fun (inst, acc) a ->
          let gf = mk_gf E.vrai in
-         if get_debug_sat () && get_verbose () then
+         if Options.(get_debug_sat () && get_verbose ()) then
            Printer.print_dbg
              ~module_name:"Satml_frontend" ~function_name:"inst_env_from_atoms"
              "terms_of_atom %a" E.print a;
@@ -661,14 +656,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       env.gamma SE.empty
 
   let instantiation_context env ~greedy_round ~frugal =
-    let sa = match greedy_round, get_cdcl_tableaux_inst () with
+    let sa = match greedy_round, Options.get_cdcl_tableaux_inst () with
       | false, false -> atoms_from_sat_branches env
       | false, true  -> atoms_from_lazy_sat ~frugal env
       | true , false -> atoms_from_bmodel env
       | true,  true  -> atoms_from_lazy_greedy env
     in
     let inst_quantif =
-      if get_cdcl_tableaux_inst () then
+      if Options.get_cdcl_tableaux_inst () then
         let frugal = atoms_from_lazy_sat ~frugal:true env in
         (fun a -> SE.mem a frugal)
       else
@@ -718,7 +713,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let pre_assume (env, acc) gf =
     let { E.ff = f; _ } = gf in
-    if get_debug_sat () && get_verbose () then
+    if Options.(get_debug_sat () && get_verbose ()) then
       Printer.print_dbg
         ~module_name:"Satml_frontend" ~function_name:"pre_assume"
         "Entry of pre_assume: Given %a" E.print f;
@@ -871,6 +866,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
 
   let frugal_mconf () =
+    let open Options in
     {Util.nb_triggers = get_nb_triggers ();
      no_ematching = get_no_ematching();
      triggers_var = get_triggers_var ();
@@ -880,6 +876,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     }
 
   let normal_mconf () =
+    let open Options in
     {Util.nb_triggers = Stdlib.max 2 (get_nb_triggers () * 2);
      no_ematching = get_no_ematching();
      triggers_var = get_triggers_var ();
@@ -889,6 +886,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     }
 
   let greedy_mconf () =
+    let open Options in
     {Util.nb_triggers = Stdlib.max 10 (get_nb_triggers () * 10);
      no_ematching = false;
      triggers_var = get_triggers_var ();
@@ -898,6 +896,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     }
 
   let greedier_mconf () =
+    let open Options in
     {Util.nb_triggers = Stdlib.max 10 (get_nb_triggers () * 10);
      no_ematching = false;
      triggers_var = true;
@@ -946,7 +945,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                instantiation_context env ~greedy_round ~frugal in
              do_instantiation env sa inst_quantif mconf debug ~dec_lvl
         )(env, false)
-        (match get_instantiation_heuristic () with
+        (match Options.get_instantiation_heuristic () with
          | INormal ->
            [ frugal_mconf (), "frugal-inst", false, true ;
              normal_mconf (), "normal-inst", false, false ]
