@@ -26,8 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-
 type typing_error =
   | BitvExtract of int*int
   | BitvExtractRange of int*int
@@ -103,7 +101,9 @@ let warning_as_error () =
   if Options.get_warning_as_error () then
     error (Warning_as_error)
 
-let report_typing_error fmt = function
+let report_typing_error =
+  let open Format in fun fmt ->
+  function
   | BitvExtract(i,j) ->
     fprintf fmt "bitvector extraction malformed (%d>%d)" i j
   | BitvExtractRange(n,j) ->
@@ -212,7 +212,8 @@ let report_typing_error fmt = function
     fprintf fmt
       "This integer : %d should be positive" n
 
-let report_run_error fmt = function
+let report_run_error = 
+  let open Format in fun fmt -> function
   | Invalid_steps_count i ->
     fprintf fmt "%d is not a valid number of steps" i
   | Steps_limit i ->
