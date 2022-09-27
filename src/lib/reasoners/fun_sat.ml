@@ -451,7 +451,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let s = ref SE.empty in
     ME.iter
       (fun f _ ->
-         if complete_model && is_literal f then
+         if (Options.get_complete_model () && is_literal f) 
+        || E.is_in_model f then
            s := SE.add f !s
       )
       t.gamma;
@@ -658,7 +659,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let update_unit_facts env ff dep =
     let f = ff.E.ff in
-    if Options.get_sat_learning () && not (ME.mem f !(env.unit_facts_cache)) then
+    if Options.get_sat_learning ()
+    && not (ME.mem f !(env.unit_facts_cache)) then
       begin
         assert (Ex.has_no_bj dep);
         env.unit_facts_cache := ME.add f (ff, dep) !(env.unit_facts_cache)
