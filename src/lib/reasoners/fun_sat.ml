@@ -26,14 +26,10 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-open Format
-
 module E = Expr
 module SE = E.Set
 module ME = E.Map
 module Ex = Explanation
-
 
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module Inst = Instances.Make(Th)
@@ -179,10 +175,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
   }
 
+  let all_models_sat_env = ref None
   let latest_saved_env = ref None
   let terminated_normally = ref false
 
   let reset_refs () =
+    all_models_sat_env := None;
     latest_saved_env := None;
     terminated_normally := false;
     Steps.reset_steps ()
@@ -209,7 +207,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     open Printer
 
     let print_nb_related env =
-      if get_verbose () then
+      if Options.get_verbose () then
         print_dbg ~module_name:"Fun_sat" ~function_name:"print_nb_related"
           "@[<v 0>----------------------------------------------------@ \
            nb_related_to_both = %d@ \
@@ -223,7 +221,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           env.nb_unrelated
 
     let propagations (env, bcp, tcp, ap_delta, lits) =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         print_dbg ~module_name:"Fun_sat" ~function_name:"propagations"
           "|lits| = %d, B = %b, T = %b, \
            |Delta| = %d, |ap_Delta| = %d"
@@ -244,26 +242,26 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         | E.Xor _ -> "xor"
         | E.Let _ -> "let"
       in
-      if get_verbose () && get_debug_sat () then
+      if Options.get_verbose () && Options.get_debug_sat () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"is_it_unsat"
           "the following %s is unsat ? :@ %a"
           s E.print gf.E.ff
 
     let pred_def f =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"pred_def"
           "I assume a predicate: %a" E.print f
 
     let unsat_rec dep =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"unsat_rec"
           "unsat_rec : %a" Ex.print dep
 
     let assume gf dep env =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         let { E.ff = f; lem; from_terms = terms; _ } = gf in
         print_dbg ~flushed:false
           ~module_name:"Fun_sat" ~function_name:"assume"
@@ -298,52 +296,52 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | E.Xor _ ->
             print_dbg ~header:false "neg-equivalence/xor %a" E.print f
         end;
-        if get_verbose () then
+        if Options.get_verbose () then
           print_dbg ~header:false
             "with explanations : %a" Explanation.print dep
 
     let unsat () =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"unsat"
           "unsat"
 
     let decide f env =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"decide"
           "I decide: at level (%d, %d), on %a"
           env.dlevel env.plevel E.print f
 
     let instantiate env =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"instanciate"
           "I instantiate at level (%d, %d). Inst level = %d"
           env.dlevel env.plevel env.ilevel
 
     let backtracking f env =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"backtracking"
           "backtrack: at level (%d, %d), and assume not %a"
           env.dlevel env.plevel E.print f
 
     let backjumping f env =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"backjumping"
           "backjump: at level (%d, %d), I ignore the case %a"
           env.dlevel env.plevel E.print f
 
     let elim _ _ =
-      if get_debug_sat () && get_verbose () then
+      if Options.(get_debug_sat () && get_verbose ()) then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"elim"
           "elim"
 
     let red _ _ =
-      if get_debug_sat () && get_verbose () then
+      if Options.(get_debug_sat () && get_verbose ()) then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"red"
           "red"
@@ -356,10 +354,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            "(%a or %a), %a"
            E.print f1.E.ff E.print f2.E.ff Ex.print ex) d;
          print_dbg ~debug:(get_verbose () || get_debug_sat ())
-         "[sat] --------------------- Delta -" *)
+           "[sat] --------------------- Delta -" *)
 
     let gamma g =
-      if get_debug_sat () && get_verbose () then begin
+      if Options.(get_debug_sat () && get_verbose ()) then begin
         print_dbg ~module_name:"Fun_sat" ~function_name:"gamma"
           "@[<v 0>--- GAMMA ---------------------@ ";
         ME.iter (fun f (_, ex, dlvl, plvl) ->
@@ -371,24 +369,24 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
 
     let bottom classes =
-      if get_bottom_classes () then
+      if Options.get_bottom_classes () then
         print_dbg "bottom:%a@?" E.print_tagged_classes classes
 
     let inconsistent expl env =
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"inconsistent"
           "inconsistent at level (%d, %d), reason : %a"
           env.dlevel env.plevel Ex.print expl
 
     let in_mk_theories_instances () =
-      if Options.get_debug_fpa() > 0 || get_debug_sat () then
+      if Options.(get_debug_fpa () > 0 || get_debug_sat ()) then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"in_mk_theories_instances"
           "entering mk_theories_instances:"
 
     let out_mk_theories_instances normal_exit =
-      if Options.get_debug_fpa() > 0 || get_debug_sat() then
+      if Options.(get_debug_fpa () > 0 || get_debug_sat ()) then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"out_mk_theories_instances"
           (if normal_exit then
@@ -398,10 +396,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
     let print_f_conj fmt hyp =
       match hyp with
-      | [] -> fprintf fmt "True";
+      | [] -> Format.fprintf fmt "True";
       | e::l ->
-        fprintf fmt "%a" E.print e;
-        List.iter (fun f -> fprintf fmt " /\\  %a" E.print f) l
+        Format.fprintf fmt "%a" E.print e;
+        List.iter (fun f -> Format.fprintf fmt " /\\  %a" E.print f) l
 
     let print_theory_instance hyp gf =
       if Options.get_debug_fpa() > 1 || Options.get_debug_sat() then
@@ -459,7 +457,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       t.gamma;
     !s
 
-
   (* sat-solver *)
 
   let mk_gf f name mf gf =
@@ -479,7 +476,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   (* hybrid functions*)
   let print_decisions_in_the_sats msg env =
-    if Options.get_tableaux_cdcl () && get_verbose() then begin
+    if Options.(get_tableaux_cdcl () && get_verbose ()) then begin
       Printer.print_dbg ~flushed:false ~module_name:"Fun_sat"
         ~function_name:"print_decisions_in_the_sats"
         "@[<v 0>-----------------------------------------------------@ \
@@ -505,7 +502,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     end
 
   let cdcl_same_decisions env =
-    if Options.get_tableaux_cdcl () && get_enable_assertions () then begin
+    if Options.(get_tableaux_cdcl () && get_enable_assertions ()) then begin
       let cdcl_decs = CDCL.get_decisions !(env.cdcl) in
       let ok = ref true in
       let decs =
@@ -564,7 +561,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
 
   let cdcl_assume delay env l =
-    if get_debug_sat() && get_verbose() then
+    if Options.(get_debug_sat () && get_verbose ()) then
       Printer.print_dbg
         ~module_name:"Fun_sat" ~function_name:"cdcl_assume" "";
     let gamma = env.gamma in
@@ -579,7 +576,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       env.cdcl := CDCL.assume delay !(env.cdcl) l
     with
     | CDCL.Bottom (ex, l, cdcl) ->
-      if get_debug_sat() && get_verbose() then
+      if Options.(get_debug_sat () && get_verbose ()) then
         Printer.print_dbg
           ~module_name:"Fun_sat" ~function_name:"cdcl_assume"
           "conflict";
@@ -588,14 +585,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       raise (IUnsat(ex, l))
 
   let cdcl_decide env f dlvl =
-    if get_debug_sat() && get_verbose() then
+    if Options.(get_debug_sat () && get_verbose ()) then
       Printer.print_dbg
         ~module_name:"Fun_sat" ~function_name:"cdcl_decide" "";
     try
       env.cdcl := CDCL.decide !(env.cdcl) f dlvl
     with
     | CDCL.Bottom (ex, l, _cdcl) ->
-      if get_debug_sat() && get_verbose() then
+      if Options.(get_debug_sat () && get_verbose ()) then
         Printer.print_dbg
           ~module_name:"Fun_sat" ~function_name:"cdcl_decide"
           "conflict";
@@ -622,7 +619,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     cdcl_assume delay env [ff, Ex.empty]
 
   let profile_conflicting_instances exp =
-    if Options.get_profiling() then
+    if Options.get_profiling () then
       SE.iter
         (fun f ->
            match E.form_view f with
@@ -636,7 +633,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let do_case_split env origin =
     if Options.get_case_split_policy () == origin then
       try
-        if get_debug_sat () then
+        if Options.get_debug_sat () then
           Printer.print_dbg
             ~module_name:"Fun_sat" ~function_name:"do_case_split"
             "performing case-split";
@@ -661,14 +658,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let update_unit_facts env ff dep =
     let f = ff.E.ff in
-    if get_sat_learning () && not (ME.mem f !(env.unit_facts_cache)) then
+    if Options.get_sat_learning () && not (ME.mem f !(env.unit_facts_cache)) then
       begin
         assert (Ex.has_no_bj dep);
         env.unit_facts_cache := ME.add f (ff, dep) !(env.unit_facts_cache)
       end
 
   let learn_clause ({ gamma; _ } as env) ff0 dep =
-    if get_sat_learning () then
+    if Options.get_sat_learning () then
       let fl, dep =
         Ex.fold_atoms
           (fun e (l, ex) ->
@@ -752,7 +749,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         match CDCL.is_true !(env.cdcl) (E.neg ff.E.ff) with
         | Some (ex, _lvl) ->
           let ex = Lazy.force ex in
-          if get_debug_sat() && get_verbose() then
+          if Options.(get_debug_sat () && get_verbose ()) then
             Printer.print_dbg "red thanks to satML";
           assert (cdcl_known_decisions ex env);
           Some(ex, []), true
@@ -762,10 +759,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let add_dep f dep =
     match E.form_view f with
     | E.Literal _ ->
-      if not (get_unsat_core ()) || Ex.mem (Ex.Bj f) dep then dep
+      if not (Options.get_unsat_core ()) || Ex.mem (Ex.Bj f) dep then dep
       else Ex.union (Ex.singleton (Ex.Dep f)) dep
     | E.Clause _ ->
-      if get_unsat_core () then Ex.union (Ex.singleton (Ex.Dep f)) dep
+      if Options.get_unsat_core () then Ex.union (Ex.singleton (Ex.Dep f)) dep
       else dep
     | E.Unit _ | E.Lemma _ | E.Skolem _ | E.Let _ | E.Iff _ | E.Xor _ -> dep
     | E.Not_a_form -> assert false
@@ -774,7 +771,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let dep = add_dep f dep in
     match E.form_view f with
     | E.Unit (f1, f2) ->
-      if not (get_unsat_core ()) then dep
+      if not (Options.get_unsat_core ()) then dep
       else add_dep_of_formula f2 (add_dep_of_formula f1 dep)
     | E.Lemma _ | E.Clause _ | E.Literal _ | E.Skolem _
     | E.Let _ | E.Iff _ | E.Xor _ -> dep
@@ -893,7 +890,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           with Ex.Inconsistent (reason, _) as e ->
             assert (Ex.has_no_bj reason);
             if Options.get_profiling() then Profiling.theory_conflict();
-            if get_debug_sat () then
+            if Options.get_debug_sat () then
               Printer.print_dbg
                 ~module_name:"Fun_sat" ~function_name:"theory_assume"
                 "solved by unit_tbox";
@@ -950,7 +947,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         let dep = add_dep f dep in
         let dep_gamma = add_dep_of_formula f dep in
         (* propagate all unit facts to cache *)
-        if get_sat_learning () && Ex.has_no_bj dep_gamma then
+        if Options.get_sat_learning () && Ex.has_no_bj dep_gamma then
           update_unit_facts env ff dep_gamma;
         Debug.gamma env.gamma;
         (try
@@ -969,7 +966,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         end
         else
           let env =
-            if ff.E.mf && get_greedy () then
+            if ff.E.mf && Options.get_greedy () then
               { env with inst=
                            Inst.add_terms
                              env.inst (E.max_ground_terms_rec_of_form f) ff }
@@ -1126,7 +1123,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     (* do this to avoid loosing instances when a conflict is detected
        directly with some of these instances only, ie before assumign
        the others *)
-    if get_sat_learning () then
+    if Options.get_sat_learning () then
       List.iter
         (fun (gf, dep) ->
            if Ex.has_no_bj dep then update_unit_facts env gf dep;
@@ -1342,7 +1339,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       aux_rec ~rm_clauses env inst loop nb_ok, !nb_ok > 0
 
   let greedy_instantiation env =
-    match get_instantiation_heuristic () with
+    match Options.get_instantiation_heuristic () with
     | INormal ->
       (* S: This seems spurious!
          On example UFDT/20170428-Barrett/cdt-cade2015/data/gandl/cotree/
@@ -1359,7 +1356,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       in
       let env = new_inst_level env in
       let mconf =
-        {Util.nb_triggers = max 10 (get_nb_triggers () * 10);
+        {Util.nb_triggers = max 10 (Options.get_nb_triggers () * 10);
          no_ematching = false;
          triggers_var = true;
          use_cs = true;
@@ -1377,7 +1374,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       else
         return_answer env (get_last_interpretation ())
           (fun e -> raise (I_dont_know e))
-
 
   let normal_instantiation env try_greedy =
     try
@@ -1409,7 +1405,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   (* should be merged with do_bcp/red/elim ?
      calls to debug hooks are missing *)
   let propagate_unit_facts_in_cache env =
-    if get_no_sat_learning() then None
+    if Options.get_no_sat_learning() then None
     else
       let cache = !(env.unit_facts_cache) in
       let in_cache f =
@@ -1532,7 +1528,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           Profiling.reset_ilevel env.ilevel;
         end;
         let not_a = {a with E.ff = E.neg f} in
-        if get_sat_learning () then learn_clause env not_a dep';
+        if Options.get_sat_learning () then learn_clause env not_a dep';
         let env = {env with delta=l} in
         (* in the section below, we try to backjump further with latest
            generated instances if any *)
@@ -1556,7 +1552,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         else
           match CDCL.is_true !(env.cdcl) a.E.ff with
           | Some (ex, _lvl) -> (* it is a propagation in satML *)
-            if get_verbose () then
+            if Options.get_verbose () then
               Printer.print_dbg
                 "Better backjump thanks to satML";
             let ex = Lazy.force ex in
@@ -1583,13 +1579,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     else
       let nb1 = env.nb_related_to_goal in
       let nc1 = env.nb_related_to_hypo in
-      if get_verbose () || get_debug_sat () then
+      if Options.(get_verbose () || get_debug_sat ()) then
         Printer.print_dbg
           ~flushed:false
           ~module_name:"Fun_sat"
           ~function_name:"backward_instantiation_rec"
           "round %d / %d@ " rnd max_rnd;
       let mconf =
+        let open Options in
         {Util.nb_triggers = get_nb_triggers ();
          no_ematching = get_no_ematching();
          triggers_var = get_triggers_var ();
@@ -1602,7 +1599,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env, new_i2 = inst_and_assume mconf env inst_lemmas env.inst in
       let nb2 = env.nb_related_to_goal in
       let nc2 = env.nb_related_to_hypo in
-      if get_verbose () || get_debug_sat () then
+      if Options.(get_verbose () || get_debug_sat ()) then
         Printer.print_dbg
           ~header:false
           ~module_name:"Fun_sat"
@@ -1620,7 +1617,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
 
   let backward_instantiation env deepest_term =
-
     let no_ematching = Options.get_no_ematching () in
     let no_nla = Options.get_no_nla () in
     let no_ac = Options.get_no_ac () in
@@ -1660,16 +1656,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       in
       let l = List.rev_map (fun (ff, ex, _) -> ff, ex) l in
       let print fmt (ff, _ex) =
-        fprintf fmt "%2d : %a@," ff.E.gdist E.print ff.E.ff
+        Format.fprintf fmt "%2d : %a@," ff.E.gdist E.print ff.E.ff
       in
-      if get_verbose () || get_debug_sat () then
+      if Options.(get_verbose () || get_debug_sat ()) then
         Printer.print_dbg
           ~module_name:"Fun_sat" ~function_name:"backward_instantiation"
           "@[<v 0>%a@]"
           (Printer.pp_list_no_space print) l;
       let env = assume env l in
       Debug.print_nb_related env;
-      if get_verbose () || get_debug_sat () then
+      if Options.(get_verbose () || get_debug_sat ()) then
         Printer.print_dbg
           ~module_name:"Fun_sat" ~function_name:"backward_instantiation"
           "done (after %2.4f seconds)"
@@ -1682,7 +1678,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Options.set_instantiation_heuristic instantiation_heuristic;
       Options.set_max_split max_split;
 
-      if get_verbose () || get_debug_sat () then
+      if Options.(get_verbose () || get_debug_sat ()) then
         Printer.print_dbg
           ~module_name:"Fun_sat" ~function_name:"backward_instantiation"
           "solved with backward!";
@@ -1777,6 +1773,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env, _ = semantic_th_inst  env env.inst ~rm_clauses:true ~loop:4 in
 
       let mconf =
+        let open Options in
         {Util.nb_triggers = get_nb_triggers ();
          no_ematching = get_no_ematching();
          triggers_var = get_triggers_var ();
