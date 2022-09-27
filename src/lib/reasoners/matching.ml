@@ -701,12 +701,12 @@ module Make (X : Arg) : S with type theory = X.t = struct
              (fun env tr ->
                 let info =
                   Matching_types.{ trigger = tr;
-                                   trigger_age = age ;
-                                   trigger_orig = lem ;
-                                   trigger_formula = f ;
-                                   trigger_dep = dep;
-                                   trigger_increm_guard = guard
-                                 }
+                    trigger_age = age ;
+                    trigger_orig = lem ;
+                    trigger_formula = f ;
+                    trigger_dep = dep;
+                    trigger_increm_guard = guard
+                  }
                 in
                 add_trigger info env
              ) env tgs
