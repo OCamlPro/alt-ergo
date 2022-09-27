@@ -9,9 +9,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-open Format
-
 type view = {
   hs : Hstring.t ;
   id : int ;
@@ -44,10 +41,10 @@ let equal a b = compare a b = 0
 let hash { id; _ } = id
 
 let to_string {hs ; id} =
-  sprintf "%s~%d" (Hstring.view hs) id
+  Format.sprintf "%s~%d" (Hstring.view hs) id
 
 let print fmt v =
-  fprintf fmt "%s" (to_string v)
+  Format.fprintf fmt "%s" (to_string v)
 
 let save_cnt, reinit_cnt =
   let saved_cnt = ref 0 in
