@@ -13,7 +13,8 @@ do
     for f in $files
     do
         cpt=`expr $cpt + 1`
-        res=`$alt_ergo_bin -o native --timelimit $timelimit $options --sat-solver CDCL-Tableaux $f`
+        opt=`(echo $f | grep -q 'valid/osdp/') && echo "--polynomial-plugin=osdp-plugin.cmxs"`
+        res=`$alt_ergo_bin -o native --timelimit $timelimit $options $opt --sat-solver CDCL-Tableaux $f`
         if [ "`echo $res | grep -c "Valid"`" -eq "0" ]
         then
             echo "[run_valid > default cdcl solver with tableaux] issue with file $f"
@@ -29,7 +30,8 @@ cpt=0
 for f in $files
 do
     cpt=`expr $cpt + 1`
-    res=`$alt_ergo_bin -o native --timelimit $timelimit --sat-solver Tableaux $f`
+    opt=`(echo $f | grep -q 'valid/osdp/') && echo "--polynomial-plugin=osdp-plugin.cmxs"`
+    res=`$alt_ergo_bin -o native --timelimit $timelimit $opt --sat-solver Tableaux $f`
     if [ "`echo $res | grep -c "Valid"`" -eq "0" ]
     then
         echo "[run_valid > tableaux solver] issue with file $f"
@@ -44,7 +46,8 @@ cpt=0
 for f in $files
 do
     cpt=`expr $cpt + 1`
-    res=`$alt_ergo_bin -o native --timelimit $timelimit --sat-solver Tableaux-CDCL $f`
+    opt=`(echo $f | grep -q 'valid/osdp/') && echo "--polynomial-plugin=osdp-plugin.cmxs"`
+    res=`$alt_ergo_bin -o native --timelimit $timelimit $opt --sat-solver Tableaux-CDCL $f`
     if [ "`echo $res | grep -c "Valid"`" -eq "0" ]
     then
         echo "[run_valid > tableaux solver with cdcl] issue with file $f"
@@ -61,7 +64,8 @@ do
     for f in $files
     do
         cpt=`expr $cpt + 1`
-        res=`$alt_ergo_bin -o native --timelimit $timelimit $options --sat-solver CDCL $f`
+        opt=`(echo $f | grep -q 'valid/osdp/') && echo "--polynomial-plugin=osdp-plugin.cmxs"`
+        res=`$alt_ergo_bin -o native --timelimit $timelimit $options $opt --sat-solver CDCL $f`
         if [ "`echo $res | grep -c "Valid"`" -eq "0" ]
         then
             echo "[run_valid > cdcl solver] issue with file $f"
@@ -77,7 +81,8 @@ done
 # for f in $files
 # do
 #     cpt=`expr $cpt + 1`
-#     res=`$alt_ergo_bin -o native -timelimit $timelimit -inequalities-plugin fm-simplex-plugin.cmxs $f`
+#     opt=`(echo $f | grep -q 'valid/osdp/') && echo "--polynomial-plugin=osdp-plugin.cmxs"`
+#     res=`$alt_ergo_bin -o native -timelimit $timelimit $opt -inequalities-plugin fm-simplex-plugin.cmxs $f`
 #     if [ "`echo $res | grep -c ":Valid"`" -eq "0" ]
 #     then
 #         echo "[run_valid > fm-simplex-plugin test] issue with file $f"
@@ -93,7 +98,8 @@ done
 # for f in $files
 # do
 #     cpt=`expr $cpt + 1`
-#     res=`$alt_ergo_bin -o native -timelimit $timelimit -sat-plugin satML-plugin.cmxs -inequalities-plugin fm-simplex-plugin.cmxs $f`
+#     opt=`(echo $f | grep -q 'valid/osdp/') && echo "--polynomial-plugin=osdp-plugin.cmxs"`
+#     res=`$alt_ergo_bin -o native -timelimit $timelimit $opt -sat-plugin satML-plugin.cmxs -inequalities-plugin fm-simplex-plugin.cmxs $f`
 #     if [ "`echo $res | grep -c ":Valid"`" -eq "0" ]
 #     then
 #         echo "[run_valid > satML-plugin+fm-simplex-plugin test] issue with file $f"

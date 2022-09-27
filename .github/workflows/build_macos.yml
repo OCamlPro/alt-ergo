@@ -48,13 +48,14 @@ jobs:
 
       # Pin the packages, this is needed for opam depext
       # remove this step when opam 2.1 will be used
+      # Don't install alt-ergo-osdp since depext not available on MacOS
       - name: Pin no action
-        run: opam pin add . --no-action
+        run: mv alt-ergo-osdp.opam alt-ergo-osdp.noinstall && opam pin add . --no-action
 
       # Install external dependencies
       # remove this step when opam 2.1 will be used
       #- name: opam install depext
-      #  run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo alt-ergo-osdp
+      #  run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
       # Install dependencies
       - name: Install deps
@@ -63,11 +64,12 @@ jobs:
 
       # Build and install with opam
       - name: Install
-        run: opam reinstall .
+        run: opam install  ./*.opam
 
       # Run non regression tests
+      # don't run the OSDP tests since we don't have it
       - name: Run non regression tests
-        run: opam exec -- rsc/extra/non_regression.sh
+        run: rm -rf non-regression/valid/osdp && opam exec -- rsc/extra/non_regression.sh
 
       # Get and Set version of the installed alt-ergo binary
       # Get and Set the path where alt-ergo binary is located

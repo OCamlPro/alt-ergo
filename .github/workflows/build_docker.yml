@@ -36,6 +36,8 @@ jobs:
 
       # Create a switch with the system compiler (no compilation needed).
       # And then, install external (no need for depext with opam 2.1) and libs deps.
+      # Don't install alt-ergo-osdp since depext not available
+      - run: mv alt-ergo-osdp.opam alt-ergo-osdp.noinstall
       - run: opam switch create . ocaml-system --deps-only
 
       # Install the project packages
