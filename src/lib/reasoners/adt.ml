@@ -9,10 +9,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-open Format
-open Sig
-
 module Sy = Symbols
 module E  = Expr
 module Hs = Hstring
@@ -32,7 +28,7 @@ end
 
 (* TODO: can this function be replace with Ty.assoc_destrs ?? *)
 let constr_of_destr ty dest =
-  if get_debug_adt () then
+  if Options.get_debug_adt () then
     Printer.print_dbg
       ~module_name:"Adt" ~function_name:"constr_of_destr"
       "ty = %a" Ty.print ty;
@@ -63,7 +59,7 @@ module Shostak (X : ALIEN) = struct
   [@@ocaml.ppwarning "XXX: IsConstr not interpreted currently. Maybe \
                       it's OK"]
   let is_mine_symb sy ty =
-    not (get_disable_adts ()) &&
+    not (Options.get_disable_adts ()) &&
     match sy, ty with
     | Sy.Op (Sy.Constr _), Ty.Tadt _ -> true
     | Sy.Op Sy.Destruct (_,guarded), _ -> not guarded
@@ -76,25 +72,25 @@ module Shostak (X : ALIEN) = struct
 
   let print fmt = function
     | Alien x ->
-      fprintf fmt "%a" X.print x
+      Format.fprintf fmt "%a" X.print x
 
     | Constr { c_name; c_args; _ } ->
-      fprintf fmt "%a" Hs.print c_name;
+      Format.fprintf fmt "%a" Hs.print c_name;
       begin
         match c_args with
           [] -> ()
         | (lbl, v) :: l ->
-          fprintf fmt "(%a : %a " Hs.print lbl X.print v;
+          Format.fprintf fmt "(%a : %a " Hs.print lbl X.print v;
           List.iter
             (fun (lbl, v) ->
-               fprintf fmt "; %a : %a" Hs.print lbl X.print v) l;
-          fprintf fmt ")"
+               Format.fprintf fmt "; %a : %a" Hs.print lbl X.print v) l;
+          Format.fprintf fmt ")"
       end
 
     | Select d ->
-      fprintf fmt "%a#!!%a" X.print d.d_arg Hs.print d.d_name
+      Format.fprintf fmt "%a#!!%a" X.print d.d_arg Hs.print d.d_name
     | Tester t ->
-      fprintf fmt "(%a ? %a)" X.print t.t_arg Hs.print t.t_name
+      Format.fprintf fmt "(%a ? %a)" X.print t.t_arg Hs.print t.t_name
 
 
   let is_mine u =
@@ -146,8 +142,8 @@ module Shostak (X : ALIEN) = struct
     | _ -> false
 
   let make t =
-    assert (not (get_disable_adts ()));
-    if get_debug_adt () then
+    assert (not @@ Options.get_disable_adts ());
+    if Options.get_debug_adt () then
       Printer.print_dbg
         ~module_name:"Adt" ~function_name:"make"
         "make %a" E.print t;
@@ -337,7 +333,7 @@ module Shostak (X : ALIEN) = struct
           let cons =
             E.mk_term (Sy.constr (Hs.view constr)) xs (X.type_info d_arg)
           in
-          if get_debug_adt () then
+          if Options.get_debug_adt () then
             Printer.print_dbg ~flushed:false
               ~module_name:"Adt" ~function_name:"abstract_selectors"
               "abstr with equality %a == %a@ "
@@ -345,7 +341,7 @@ module Shostak (X : ALIEN) = struct
           let cons, _ = make cons in
           let acc = (d_arg, cons) :: acc in
           let xx = is_mine @@ Select {s with d_arg = cons} in
-          if get_debug_adt () then
+          if Options.get_debug_adt () then
             Printer.print_dbg ~header:false
               "%a becomes %a" X.print x  X.print xx;
           xx, acc
@@ -359,30 +355,30 @@ module Shostak (X : ALIEN) = struct
     List.exists (fun y -> X.equal x y) (X.leaves e)
 
   let solve r1 r2 pb =
-    if get_debug_adt () then
+    if Options.get_debug_adt () then
       Printer.print_dbg
         ~module_name:"Adt" ~function_name:"solve"
         "solve %a = %a" X.print r1 X.print r2;
-    assert (not (get_disable_adts ()));
+    assert (not @@ Options.get_disable_adts ());
     match embed r1, embed r2 with
     | Select _, _ | _, Select _ -> assert false (* should be eliminated *)
     | Tester _, _ | _, Tester _ -> assert false (* not interpreted *)
     | Alien _, Alien _ ->
-      { pb with
+      Sig.{ pb with
         sbt = (if X.str_cmp r1 r2 > 0 then r1, r2 else r2, r1) :: pb.sbt }
 
     | Alien r, Constr _ ->
       if is_alien_of r2 r then raise Util.Unsolvable;
-      { pb with sbt = (r, r2) :: pb.sbt }
+      Sig.{ pb with sbt = (r, r2) :: pb.sbt }
 
     | Constr _, Alien r ->
       if is_alien_of r1 r then raise Util.Unsolvable;
-      { pb with sbt = (r, r1) :: pb.sbt }
+      Sig.{ pb with sbt = (r, r1) :: pb.sbt }
 
     | Constr c1, Constr c2 ->
       if not (Hstring.equal c1.c_name c2.c_name) then raise Util.Unsolvable;
       try
-        {pb with
+        Sig.{pb with
          eqs =
            List.fold_left2
              (fun eqs (hs1, v1) (hs2, v2) ->
@@ -394,7 +390,7 @@ module Shostak (X : ALIEN) = struct
 
   let subst p v s =
     (*TODO: detect when there are no changes to improve *)
-    assert (not (get_disable_adts ()));
+    assert (not @@ Options.get_disable_adts ());
     match s with
     | Alien r -> if X.equal p r then v else X.subst p v r
     | Constr c ->
