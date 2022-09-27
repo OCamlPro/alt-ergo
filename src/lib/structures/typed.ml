@@ -26,12 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-
-[@@@ocaml.warning "-33"]
-open Options
-
-
 (** Anotations (used by the GUI). *)
 
 type ('a, 'b) annoted =
@@ -200,12 +194,14 @@ let string_of_op = function
   | _ -> assert false
 
 let print_binder fmt (s, t) =
-  fprintf fmt "%a :%a" Symbols.print s Ty.print t
+  Format.fprintf fmt "%a :%a" Symbols.print s Ty.print t
 
 let print_binders fmt l =
-  List.iter (fun c -> fprintf fmt "%a, " print_binder c) l
+  List.iter (fun c -> Format.fprintf fmt "%a, " print_binder c) l
 
-let rec print_term fmt t = match t.c.tt_desc with
+let rec print_term =
+  let fprintf = Format.fprintf in 
+  fun fmt t -> match t.c.tt_desc with
   | TTconst Ttrue ->
     fprintf fmt "true"
   | TTconst Tfalse ->
@@ -290,14 +286,15 @@ and print_term_binders fmt l =
   match l with
   | [] -> assert false
   | (sy, t) :: l ->
-    fprintf fmt "%a = %a" Symbols.print sy print_term t;
+    Format.fprintf fmt "%a = %a" Symbols.print sy print_term t;
     List.iter (fun (sy, t) ->
-        fprintf fmt ", %a = %a" Symbols.print sy print_term t) l
+        Format.fprintf fmt ", %a = %a" Symbols.print sy print_term t) l
 
-and print_term_list fmt = List.iter (fprintf fmt "%a," print_term)
+and print_term_list fmt = List.iter (Format.fprintf fmt "%a," print_term)
 
-and print_atom fmt a =
-  match a.c with
+and print_atom =
+  let fprintf = Format.fprintf in 
+  fun fmt a -> match a.c with
   | TAtrue ->
     fprintf fmt "True"
   | TAfalse ->
@@ -320,10 +317,11 @@ and print_atom fmt a =
   | _ -> assert false
 
 and print_triggers fmt l =
-  List.iter (fun (tr, _) -> fprintf fmt "%a | " print_term_list tr) l
+  List.iter (fun (tr, _) -> Format.fprintf fmt "%a | " print_term_list tr) l
 
-and print_formula fmt f =
-  match f.c with
+and print_formula =
+  let fprintf = Format.fprintf in 
+  fun fmt f -> match f.c with
   | TFatom a ->
     print_atom fmt a
   | TFop(OPnot, [f]) ->
