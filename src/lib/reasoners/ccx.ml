@@ -113,12 +113,11 @@ module Main : S = struct
 
   let empty_facts () =
     Sig_rel.{ equas   = Queue.create ();
-              ineqs   = Queue.create ();
-              diseqs  = Queue.create ();
-              touched = Util.MI.empty }
+      ineqs   = Queue.create ();
+      diseqs  = Queue.create ();
+      touched = Util.MI.empty }
 
   let add_fact facts ((lit, _, _) as e) =
-    let open Sig_rel in
     match lit with
     | LSem Xliteral.Pred _ | LSem Xliteral.Eq _ ->
       Queue.push e facts.equas
@@ -141,9 +140,9 @@ module Main : S = struct
           (fun (lit,_,_) ->
              match lit with
              | Sig_rel.LSem sa ->
-               Format.fprintf fmt "  > LSem  %a@." LR.print (LR.make sa)
+                 Format.fprintf fmt "  > LSem  %a@." LR.print (LR.make sa)
              | Sig_rel.LTerm a ->
-               Format.fprintf fmt "  > LTerm %a@."E.print a
+                 Format.fprintf fmt "  > LTerm %a@."E.print a
           )q
       in
       let aux2 fmt mp =
