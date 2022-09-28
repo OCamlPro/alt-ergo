@@ -2,6 +2,177 @@
 
 ; Auto-generated part begin
 (rule
+ (target testfile-quant014_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant014.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant014.expected 
+      testfile-quant014_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant014_ci_cdcl.output)
+ (deps (:input testfile-quant014.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant014.expected 
+      testfile-quant014_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant014_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant014.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant014.expected 
+      testfile-quant014_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant014_ci_tableaux.output)
+ (deps (:input testfile-quant014.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant014.expected 
+      testfile-quant014_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant014_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant014.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant014.expected 
+      testfile-quant014_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant014_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant014.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant014.expected 
+      testfile-quant014_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant014_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant014.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant014.expected 
+      testfile-quant014_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant014_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant014.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant014.expected 
+      testfile-quant014_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant014_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant014.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant014.expected 
+      testfile-quant014_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-quant014_cdcl_tableaux.output)
  (deps (:input testfile-quant014.ae))
  (package alt-ergo-lib)
@@ -72,6 +243,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-quant014.expected 
       testfile-quant014_tableaux.output)))
+
+(rule
+ (target testfile-quant013_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant013.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant013.expected 
+      testfile-quant013_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant013_ci_cdcl.output)
+ (deps (:input testfile-quant013.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant013.expected 
+      testfile-quant013_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant013_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant013.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant013.expected 
+      testfile-quant013_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant013_ci_tableaux.output)
+ (deps (:input testfile-quant013.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant013.expected 
+      testfile-quant013_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant013_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant013.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant013.expected 
+      testfile-quant013_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant013_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant013.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant013.expected 
+      testfile-quant013_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant013_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant013.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant013.expected 
+      testfile-quant013_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant013_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant013.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant013.expected 
+      testfile-quant013_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant013_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant013.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant013.expected 
+      testfile-quant013_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-quant013_cdcl_tableaux.output)
@@ -146,6 +488,177 @@
       testfile-quant013_tableaux.output)))
 
 (rule
+ (target testfile-quant012_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant012.expected 
+      testfile-quant012_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant012_ci_cdcl.output)
+ (deps (:input testfile-quant012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant012.expected 
+      testfile-quant012_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant012_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant012.expected 
+      testfile-quant012_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant012_ci_tableaux.output)
+ (deps (:input testfile-quant012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant012.expected 
+      testfile-quant012_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant012_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant012.expected 
+      testfile-quant012_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant012_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant012.expected 
+      testfile-quant012_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant012_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant012.expected 
+      testfile-quant012_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant012_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant012.expected 
+      testfile-quant012_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant012_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant012.expected 
+      testfile-quant012_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-quant012_cdcl_tableaux.output)
  (deps (:input testfile-quant012.ae))
  (package alt-ergo-lib)
@@ -216,6 +729,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-quant012.expected 
       testfile-quant012_tableaux.output)))
+
+(rule
+ (target testfile-quant011_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant011.expected 
+      testfile-quant011_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant011_ci_cdcl.output)
+ (deps (:input testfile-quant011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant011.expected 
+      testfile-quant011_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant011_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant011.expected 
+      testfile-quant011_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant011_ci_tableaux.output)
+ (deps (:input testfile-quant011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant011.expected 
+      testfile-quant011_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant011_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant011.expected 
+      testfile-quant011_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant011_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant011.expected 
+      testfile-quant011_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant011_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant011.expected 
+      testfile-quant011_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant011_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant011.expected 
+      testfile-quant011_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant011_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant011.expected 
+      testfile-quant011_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-quant011_cdcl_tableaux.output)
@@ -290,6 +974,177 @@
       testfile-quant011_tableaux.output)))
 
 (rule
+ (target testfile-quant010_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant010.expected 
+      testfile-quant010_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant010_ci_cdcl.output)
+ (deps (:input testfile-quant010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant010.expected 
+      testfile-quant010_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant010_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant010.expected 
+      testfile-quant010_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant010_ci_tableaux.output)
+ (deps (:input testfile-quant010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant010.expected 
+      testfile-quant010_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant010_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant010.expected 
+      testfile-quant010_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant010_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant010.expected 
+      testfile-quant010_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant010_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant010.expected 
+      testfile-quant010_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant010_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant010.expected 
+      testfile-quant010_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant010_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant010.expected 
+      testfile-quant010_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-quant010_cdcl_tableaux.output)
  (deps (:input testfile-quant010.ae))
  (package alt-ergo-lib)
@@ -360,6 +1215,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-quant010.expected 
       testfile-quant010_tableaux.output)))
+
+(rule
+ (target testfile-quant009_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant009.expected 
+      testfile-quant009_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant009_ci_cdcl.output)
+ (deps (:input testfile-quant009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant009.expected 
+      testfile-quant009_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant009_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant009.expected 
+      testfile-quant009_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant009_ci_tableaux.output)
+ (deps (:input testfile-quant009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant009.expected 
+      testfile-quant009_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant009_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant009.expected 
+      testfile-quant009_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant009_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant009.expected 
+      testfile-quant009_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant009_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant009.expected 
+      testfile-quant009_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant009_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant009.expected 
+      testfile-quant009_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant009_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant009.expected 
+      testfile-quant009_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-quant009_cdcl_tableaux.output)
@@ -434,6 +1460,177 @@
       testfile-quant009_tableaux.output)))
 
 (rule
+ (target testfile-quant008_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant008.expected 
+      testfile-quant008_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant008_ci_cdcl.output)
+ (deps (:input testfile-quant008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant008.expected 
+      testfile-quant008_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant008_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant008.expected 
+      testfile-quant008_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant008_ci_tableaux.output)
+ (deps (:input testfile-quant008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant008.expected 
+      testfile-quant008_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant008_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant008.expected 
+      testfile-quant008_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant008_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant008.expected 
+      testfile-quant008_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant008_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant008.expected 
+      testfile-quant008_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant008_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant008.expected 
+      testfile-quant008_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant008_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant008.expected 
+      testfile-quant008_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-quant008_cdcl_tableaux.output)
  (deps (:input testfile-quant008.ae))
  (package alt-ergo-lib)
@@ -504,6 +1701,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-quant008.expected 
       testfile-quant008_tableaux.output)))
+
+(rule
+ (target testfile-quant007_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant007.expected 
+      testfile-quant007_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant007_ci_cdcl.output)
+ (deps (:input testfile-quant007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant007.expected 
+      testfile-quant007_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant007_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant007.expected 
+      testfile-quant007_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant007_ci_tableaux.output)
+ (deps (:input testfile-quant007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant007.expected 
+      testfile-quant007_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant007_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant007.expected 
+      testfile-quant007_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant007_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant007.expected 
+      testfile-quant007_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant007_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant007.expected 
+      testfile-quant007_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant007_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant007.expected 
+      testfile-quant007_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant007_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant007.expected 
+      testfile-quant007_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-quant007_cdcl_tableaux.output)
@@ -578,6 +1946,177 @@
       testfile-quant007_tableaux.output)))
 
 (rule
+ (target testfile-quant006_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant006.expected 
+      testfile-quant006_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant006_ci_cdcl.output)
+ (deps (:input testfile-quant006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant006.expected 
+      testfile-quant006_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant006_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant006.expected 
+      testfile-quant006_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant006_ci_tableaux.output)
+ (deps (:input testfile-quant006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant006.expected 
+      testfile-quant006_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant006_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant006.expected 
+      testfile-quant006_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant006_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant006.expected 
+      testfile-quant006_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant006_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant006.expected 
+      testfile-quant006_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant006_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant006.expected 
+      testfile-quant006_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant006_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant006.expected 
+      testfile-quant006_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-quant006_cdcl_tableaux.output)
  (deps (:input testfile-quant006.ae))
  (package alt-ergo-lib)
@@ -648,6 +2187,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-quant006.expected 
       testfile-quant006_tableaux.output)))
+
+(rule
+ (target testfile-quant005_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant005.expected 
+      testfile-quant005_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant005_ci_cdcl.output)
+ (deps (:input testfile-quant005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant005.expected 
+      testfile-quant005_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant005_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant005.expected 
+      testfile-quant005_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant005_ci_tableaux.output)
+ (deps (:input testfile-quant005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant005.expected 
+      testfile-quant005_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant005_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant005.expected 
+      testfile-quant005_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant005_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant005.expected 
+      testfile-quant005_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant005_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant005.expected 
+      testfile-quant005_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant005_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant005.expected 
+      testfile-quant005_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant005_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant005.expected 
+      testfile-quant005_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-quant005_cdcl_tableaux.output)
@@ -722,6 +2432,177 @@
       testfile-quant005_tableaux.output)))
 
 (rule
+ (target testfile-quant004_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant004.expected 
+      testfile-quant004_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant004_ci_cdcl.output)
+ (deps (:input testfile-quant004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant004.expected 
+      testfile-quant004_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant004_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant004.expected 
+      testfile-quant004_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant004_ci_tableaux.output)
+ (deps (:input testfile-quant004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant004.expected 
+      testfile-quant004_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant004_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant004.expected 
+      testfile-quant004_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant004_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant004.expected 
+      testfile-quant004_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant004_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant004.expected 
+      testfile-quant004_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant004_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant004.expected 
+      testfile-quant004_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant004_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant004.expected 
+      testfile-quant004_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-quant004_cdcl_tableaux.output)
  (deps (:input testfile-quant004.ae))
  (package alt-ergo-lib)
@@ -792,6 +2673,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-quant004.expected 
       testfile-quant004_tableaux.output)))
+
+(rule
+ (target testfile-quant003_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant003.expected 
+      testfile-quant003_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant003_ci_cdcl.output)
+ (deps (:input testfile-quant003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant003.expected 
+      testfile-quant003_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant003_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant003.expected 
+      testfile-quant003_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant003_ci_tableaux.output)
+ (deps (:input testfile-quant003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant003.expected 
+      testfile-quant003_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant003_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant003.expected 
+      testfile-quant003_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant003.expected 
+      testfile-quant003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant003_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant003.expected 
+      testfile-quant003_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant003.expected 
+      testfile-quant003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant003_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant003.expected 
+      testfile-quant003_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-quant003_cdcl_tableaux.output)
@@ -866,6 +2918,177 @@
       testfile-quant003_tableaux.output)))
 
 (rule
+ (target testfile-quant002_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant002.expected 
+      testfile-quant002_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant002_ci_cdcl.output)
+ (deps (:input testfile-quant002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant002.expected 
+      testfile-quant002_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant002_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant002.expected 
+      testfile-quant002_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant002_ci_tableaux.output)
+ (deps (:input testfile-quant002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant002.expected 
+      testfile-quant002_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant002_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant002.expected 
+      testfile-quant002_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant002.expected 
+      testfile-quant002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant002_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant002.expected 
+      testfile-quant002_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant002.expected 
+      testfile-quant002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant002_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant002.expected 
+      testfile-quant002_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-quant002_cdcl_tableaux.output)
  (deps (:input testfile-quant002.ae))
  (package alt-ergo-lib)
@@ -936,6 +3159,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-quant002.expected 
       testfile-quant002_tableaux.output)))
+
+(rule
+ (target testfile-quant001_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant001.expected 
+      testfile-quant001_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant001_ci_cdcl.output)
+ (deps (:input testfile-quant001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant001.expected 
+      testfile-quant001_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant001_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant001.expected 
+      testfile-quant001_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant001_ci_tableaux.output)
+ (deps (:input testfile-quant001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant001.expected 
+      testfile-quant001_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant001_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant001.expected 
+      testfile-quant001_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant001.expected 
+      testfile-quant001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant001_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant001.expected 
+      testfile-quant001_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant001.expected 
+      testfile-quant001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant001_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant001.expected 
+      testfile-quant001_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-quant001_cdcl_tableaux.output)
@@ -1010,6 +3404,177 @@
       testfile-quant001_tableaux.output)))
 
 (rule
+ (target testfile-quant-arith-002_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant-arith-002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-002.expected 
+      testfile-quant-arith-002_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant-arith-002_ci_cdcl.output)
+ (deps (:input testfile-quant-arith-002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-002.expected 
+      testfile-quant-arith-002_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant-arith-002_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant-arith-002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-002.expected 
+      testfile-quant-arith-002_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant-arith-002_ci_tableaux.output)
+ (deps (:input testfile-quant-arith-002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-002.expected 
+      testfile-quant-arith-002_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant-arith-002_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant-arith-002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-002.expected 
+      testfile-quant-arith-002_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant-arith-002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant-arith-002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-002.expected 
+      testfile-quant-arith-002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant-arith-002_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant-arith-002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-002.expected 
+      testfile-quant-arith-002_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant-arith-002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant-arith-002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-002.expected 
+      testfile-quant-arith-002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant-arith-002_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant-arith-002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-002.expected 
+      testfile-quant-arith-002_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-quant-arith-002_cdcl_tableaux.output)
  (deps (:input testfile-quant-arith-002.ae))
  (package alt-ergo-lib)
@@ -1080,6 +3645,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-quant-arith-002.expected 
       testfile-quant-arith-002_tableaux.output)))
+
+(rule
+ (target testfile-quant-arith-001_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant-arith-001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-001.expected 
+      testfile-quant-arith-001_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-quant-arith-001_ci_cdcl.output)
+ (deps (:input testfile-quant-arith-001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-001.expected 
+      testfile-quant-arith-001_ci_cdcl.output)))
+
+(rule
+ (target testfile-quant-arith-001_ci_tableaux_cdcl.output)
+ (deps (:input testfile-quant-arith-001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-001.expected 
+      testfile-quant-arith-001_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-quant-arith-001_ci_tableaux.output)
+ (deps (:input testfile-quant-arith-001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-001.expected 
+      testfile-quant-arith-001_ci_tableaux.output)))
+
+(rule
+ (target testfile-quant-arith-001_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant-arith-001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-001.expected 
+      testfile-quant-arith-001_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant-arith-001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-quant-arith-001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-001.expected 
+      testfile-quant-arith-001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-quant-arith-001_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-quant-arith-001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-001.expected 
+      testfile-quant-arith-001_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-quant-arith-001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-quant-arith-001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-001.expected 
+      testfile-quant-arith-001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-quant-arith-001_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-quant-arith-001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-quant-arith-001.expected 
+      testfile-quant-arith-001_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-quant-arith-001_cdcl_tableaux.output)
@@ -1154,6 +3890,177 @@
       testfile-quant-arith-001_tableaux.output)))
 
 (rule
+ (target testfile-list012_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list012.expected 
+      testfile-list012_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-list012_ci_cdcl.output)
+ (deps (:input testfile-list012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list012.expected 
+      testfile-list012_ci_cdcl.output)))
+
+(rule
+ (target testfile-list012_ci_tableaux_cdcl.output)
+ (deps (:input testfile-list012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list012.expected 
+      testfile-list012_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-list012_ci_tableaux.output)
+ (deps (:input testfile-list012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list012.expected 
+      testfile-list012_ci_tableaux.output)))
+
+(rule
+ (target testfile-list012_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list012.expected 
+      testfile-list012_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list012_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list012.expected 
+      testfile-list012_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list012_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-list012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list012.expected 
+      testfile-list012_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-list012_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-list012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list012.expected 
+      testfile-list012_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-list012_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list012.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list012.expected 
+      testfile-list012_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-list012_cdcl_tableaux.output)
  (deps (:input testfile-list012.ae))
  (package alt-ergo-lib)
@@ -1224,6 +4131,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-list012.expected 
       testfile-list012_tableaux.output)))
+
+(rule
+ (target testfile-list011_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list011.expected 
+      testfile-list011_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-list011_ci_cdcl.output)
+ (deps (:input testfile-list011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list011.expected 
+      testfile-list011_ci_cdcl.output)))
+
+(rule
+ (target testfile-list011_ci_tableaux_cdcl.output)
+ (deps (:input testfile-list011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list011.expected 
+      testfile-list011_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-list011_ci_tableaux.output)
+ (deps (:input testfile-list011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list011.expected 
+      testfile-list011_ci_tableaux.output)))
+
+(rule
+ (target testfile-list011_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list011.expected 
+      testfile-list011_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list011_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list011.expected 
+      testfile-list011_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list011_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-list011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list011.expected 
+      testfile-list011_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-list011_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-list011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list011.expected 
+      testfile-list011_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-list011_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list011.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list011.expected 
+      testfile-list011_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-list011_cdcl_tableaux.output)
@@ -1298,6 +4376,177 @@
       testfile-list011_tableaux.output)))
 
 (rule
+ (target testfile-list010_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list010.expected 
+      testfile-list010_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-list010_ci_cdcl.output)
+ (deps (:input testfile-list010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list010.expected 
+      testfile-list010_ci_cdcl.output)))
+
+(rule
+ (target testfile-list010_ci_tableaux_cdcl.output)
+ (deps (:input testfile-list010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list010.expected 
+      testfile-list010_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-list010_ci_tableaux.output)
+ (deps (:input testfile-list010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list010.expected 
+      testfile-list010_ci_tableaux.output)))
+
+(rule
+ (target testfile-list010_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list010.expected 
+      testfile-list010_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list010_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list010.expected 
+      testfile-list010_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list010_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-list010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list010.expected 
+      testfile-list010_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-list010_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-list010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list010.expected 
+      testfile-list010_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-list010_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list010.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list010.expected 
+      testfile-list010_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-list010_cdcl_tableaux.output)
  (deps (:input testfile-list010.ae))
  (package alt-ergo-lib)
@@ -1368,6 +4617,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-list010.expected 
       testfile-list010_tableaux.output)))
+
+(rule
+ (target testfile-list009_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list009.expected 
+      testfile-list009_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-list009_ci_cdcl.output)
+ (deps (:input testfile-list009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list009.expected 
+      testfile-list009_ci_cdcl.output)))
+
+(rule
+ (target testfile-list009_ci_tableaux_cdcl.output)
+ (deps (:input testfile-list009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list009.expected 
+      testfile-list009_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-list009_ci_tableaux.output)
+ (deps (:input testfile-list009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list009.expected 
+      testfile-list009_ci_tableaux.output)))
+
+(rule
+ (target testfile-list009_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list009.expected 
+      testfile-list009_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list009_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list009.expected 
+      testfile-list009_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list009_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-list009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list009.expected 
+      testfile-list009_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-list009_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-list009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list009.expected 
+      testfile-list009_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-list009_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list009.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list009.expected 
+      testfile-list009_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-list009_cdcl_tableaux.output)
@@ -1442,6 +4862,177 @@
       testfile-list009_tableaux.output)))
 
 (rule
+ (target testfile-list008_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list008.expected 
+      testfile-list008_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-list008_ci_cdcl.output)
+ (deps (:input testfile-list008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list008.expected 
+      testfile-list008_ci_cdcl.output)))
+
+(rule
+ (target testfile-list008_ci_tableaux_cdcl.output)
+ (deps (:input testfile-list008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list008.expected 
+      testfile-list008_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-list008_ci_tableaux.output)
+ (deps (:input testfile-list008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list008.expected 
+      testfile-list008_ci_tableaux.output)))
+
+(rule
+ (target testfile-list008_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list008.expected 
+      testfile-list008_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list008_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list008.expected 
+      testfile-list008_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list008_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-list008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list008.expected 
+      testfile-list008_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-list008_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-list008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list008.expected 
+      testfile-list008_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-list008_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list008.expected 
+      testfile-list008_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-list008_cdcl_tableaux.output)
  (deps (:input testfile-list008.ae))
  (package alt-ergo-lib)
@@ -1512,6 +5103,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-list008.expected 
       testfile-list008_tableaux.output)))
+
+(rule
+ (target testfile-list007_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list007.expected 
+      testfile-list007_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-list007_ci_cdcl.output)
+ (deps (:input testfile-list007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list007.expected 
+      testfile-list007_ci_cdcl.output)))
+
+(rule
+ (target testfile-list007_ci_tableaux_cdcl.output)
+ (deps (:input testfile-list007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list007.expected 
+      testfile-list007_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-list007_ci_tableaux.output)
+ (deps (:input testfile-list007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list007.expected 
+      testfile-list007_ci_tableaux.output)))
+
+(rule
+ (target testfile-list007_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list007.expected 
+      testfile-list007_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list007_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list007.expected 
+      testfile-list007_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list007_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-list007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list007.expected 
+      testfile-list007_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-list007_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-list007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list007.expected 
+      testfile-list007_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-list007_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list007.expected 
+      testfile-list007_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-list007_cdcl_tableaux.output)
@@ -1586,6 +5348,177 @@
       testfile-list007_tableaux.output)))
 
 (rule
+ (target testfile-list006_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list006.expected 
+      testfile-list006_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-list006_ci_cdcl.output)
+ (deps (:input testfile-list006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list006.expected 
+      testfile-list006_ci_cdcl.output)))
+
+(rule
+ (target testfile-list006_ci_tableaux_cdcl.output)
+ (deps (:input testfile-list006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list006.expected 
+      testfile-list006_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-list006_ci_tableaux.output)
+ (deps (:input testfile-list006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list006.expected 
+      testfile-list006_ci_tableaux.output)))
+
+(rule
+ (target testfile-list006_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list006.expected 
+      testfile-list006_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list006_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list006.expected 
+      testfile-list006_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list006_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-list006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list006.expected 
+      testfile-list006_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-list006_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-list006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list006.expected 
+      testfile-list006_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-list006_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list006.expected 
+      testfile-list006_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-list006_cdcl_tableaux.output)
  (deps (:input testfile-list006.ae))
  (package alt-ergo-lib)
@@ -1656,6 +5589,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-list006.expected 
       testfile-list006_tableaux.output)))
+
+(rule
+ (target testfile-list005_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list005.expected 
+      testfile-list005_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-list005_ci_cdcl.output)
+ (deps (:input testfile-list005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list005.expected 
+      testfile-list005_ci_cdcl.output)))
+
+(rule
+ (target testfile-list005_ci_tableaux_cdcl.output)
+ (deps (:input testfile-list005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list005.expected 
+      testfile-list005_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-list005_ci_tableaux.output)
+ (deps (:input testfile-list005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list005.expected 
+      testfile-list005_ci_tableaux.output)))
+
+(rule
+ (target testfile-list005_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list005.expected 
+      testfile-list005_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list005_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list005.expected 
+      testfile-list005_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list005_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-list005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list005.expected 
+      testfile-list005_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-list005_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-list005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list005.expected 
+      testfile-list005_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-list005_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list005.expected 
+      testfile-list005_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-list005_cdcl_tableaux.output)
@@ -1730,6 +5834,177 @@
       testfile-list005_tableaux.output)))
 
 (rule
+ (target testfile-list004_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list004.expected 
+      testfile-list004_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-list004_ci_cdcl.output)
+ (deps (:input testfile-list004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list004.expected 
+      testfile-list004_ci_cdcl.output)))
+
+(rule
+ (target testfile-list004_ci_tableaux_cdcl.output)
+ (deps (:input testfile-list004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list004.expected 
+      testfile-list004_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-list004_ci_tableaux.output)
+ (deps (:input testfile-list004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list004.expected 
+      testfile-list004_ci_tableaux.output)))
+
+(rule
+ (target testfile-list004_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list004.expected 
+      testfile-list004_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list004_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list004.expected 
+      testfile-list004_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list004_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-list004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list004.expected 
+      testfile-list004_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-list004_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-list004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list004.expected 
+      testfile-list004_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-list004_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list004.expected 
+      testfile-list004_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-list004_cdcl_tableaux.output)
  (deps (:input testfile-list004.ae))
  (package alt-ergo-lib)
@@ -1800,6 +6075,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-list004.expected 
       testfile-list004_tableaux.output)))
+
+(rule
+ (target testfile-list003_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list003.expected 
+      testfile-list003_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-list003_ci_cdcl.output)
+ (deps (:input testfile-list003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list003.expected 
+      testfile-list003_ci_cdcl.output)))
+
+(rule
+ (target testfile-list003_ci_tableaux_cdcl.output)
+ (deps (:input testfile-list003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list003.expected 
+      testfile-list003_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-list003_ci_tableaux.output)
+ (deps (:input testfile-list003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list003.expected 
+      testfile-list003_ci_tableaux.output)))
+
+(rule
+ (target testfile-list003_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list003.expected 
+      testfile-list003_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list003.expected 
+      testfile-list003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list003_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-list003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list003.expected 
+      testfile-list003_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-list003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-list003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list003.expected 
+      testfile-list003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-list003_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list003.expected 
+      testfile-list003_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-list003_cdcl_tableaux.output)
@@ -1874,6 +6320,177 @@
       testfile-list003_tableaux.output)))
 
 (rule
+ (target testfile-list002_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list002.expected 
+      testfile-list002_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-list002_ci_cdcl.output)
+ (deps (:input testfile-list002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list002.expected 
+      testfile-list002_ci_cdcl.output)))
+
+(rule
+ (target testfile-list002_ci_tableaux_cdcl.output)
+ (deps (:input testfile-list002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list002.expected 
+      testfile-list002_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-list002_ci_tableaux.output)
+ (deps (:input testfile-list002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list002.expected 
+      testfile-list002_ci_tableaux.output)))
+
+(rule
+ (target testfile-list002_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list002.expected 
+      testfile-list002_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list002.expected 
+      testfile-list002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list002_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-list002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list002.expected 
+      testfile-list002_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-list002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-list002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list002.expected 
+      testfile-list002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-list002_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list002.expected 
+      testfile-list002_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-list002_cdcl_tableaux.output)
  (deps (:input testfile-list002.ae))
  (package alt-ergo-lib)
@@ -1944,6 +6561,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-list002.expected 
       testfile-list002_tableaux.output)))
+
+(rule
+ (target testfile-list001_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list001.expected 
+      testfile-list001_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-list001_ci_cdcl.output)
+ (deps (:input testfile-list001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list001.expected 
+      testfile-list001_ci_cdcl.output)))
+
+(rule
+ (target testfile-list001_ci_tableaux_cdcl.output)
+ (deps (:input testfile-list001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list001.expected 
+      testfile-list001_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-list001_ci_tableaux.output)
+ (deps (:input testfile-list001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list001.expected 
+      testfile-list001_ci_tableaux.output)))
+
+(rule
+ (target testfile-list001_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list001.expected 
+      testfile-list001_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-list001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list001.expected 
+      testfile-list001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-list001_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-list001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list001.expected 
+      testfile-list001_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-list001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-list001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list001.expected 
+      testfile-list001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-list001_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-list001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-list001.expected 
+      testfile-list001_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-list001_cdcl_tableaux.output)
@@ -2018,6 +6806,177 @@
       testfile-list001_tableaux.output)))
 
 (rule
+ (target testfile-github003_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-github003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github003.expected 
+      testfile-github003_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-github003_ci_cdcl.output)
+ (deps (:input testfile-github003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github003.expected 
+      testfile-github003_ci_cdcl.output)))
+
+(rule
+ (target testfile-github003_ci_tableaux_cdcl.output)
+ (deps (:input testfile-github003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github003.expected 
+      testfile-github003_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-github003_ci_tableaux.output)
+ (deps (:input testfile-github003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github003.expected 
+      testfile-github003_ci_tableaux.output)))
+
+(rule
+ (target testfile-github003_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-github003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github003.expected 
+      testfile-github003_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-github003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-github003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github003.expected 
+      testfile-github003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-github003_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-github003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github003.expected 
+      testfile-github003_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-github003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-github003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github003.expected 
+      testfile-github003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-github003_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-github003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github003.expected 
+      testfile-github003_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-github003_cdcl_tableaux.output)
  (deps (:input testfile-github003.ae))
  (package alt-ergo-lib)
@@ -2090,6 +7049,177 @@
       testfile-github003_tableaux.output)))
 
 (rule
+ (target testfile-github002_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-github002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github002.expected 
+      testfile-github002_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-github002_ci_cdcl.output)
+ (deps (:input testfile-github002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github002.expected 
+      testfile-github002_ci_cdcl.output)))
+
+(rule
+ (target testfile-github002_ci_tableaux_cdcl.output)
+ (deps (:input testfile-github002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github002.expected 
+      testfile-github002_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-github002_ci_tableaux.output)
+ (deps (:input testfile-github002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github002.expected 
+      testfile-github002_ci_tableaux.output)))
+
+(rule
+ (target testfile-github002_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-github002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github002.expected 
+      testfile-github002_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-github002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-github002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github002.expected 
+      testfile-github002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-github002_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-github002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github002.expected 
+      testfile-github002_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-github002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-github002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github002.expected 
+      testfile-github002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-github002_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-github002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github002.expected 
+      testfile-github002_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-github002_cdcl_tableaux.output)
  (deps (:input testfile-github002.ae))
  (package alt-ergo-lib)
@@ -2160,6 +7290,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-github002.expected 
       testfile-github002_tableaux.output)))
+
+(rule
+ (target testfile-github001_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-github001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github001.expected 
+      testfile-github001_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-github001_ci_cdcl.output)
+ (deps (:input testfile-github001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github001.expected 
+      testfile-github001_ci_cdcl.output)))
+
+(rule
+ (target testfile-github001_ci_tableaux_cdcl.output)
+ (deps (:input testfile-github001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github001.expected 
+      testfile-github001_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-github001_ci_tableaux.output)
+ (deps (:input testfile-github001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github001.expected 
+      testfile-github001_ci_tableaux.output)))
+
+(rule
+ (target testfile-github001_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-github001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github001.expected 
+      testfile-github001_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-github001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-github001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github001.expected 
+      testfile-github001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-github001_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-github001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github001.expected 
+      testfile-github001_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-github001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-github001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github001.expected 
+      testfile-github001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-github001_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-github001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-github001.expected 
+      testfile-github001_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-github001_cdcl_tableaux.output)

@@ -2,6 +2,177 @@
 
 ; Auto-generated part begin
 (rule
+ (target testfile-polymorphism008_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism008.expected 
+      testfile-polymorphism008_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-polymorphism008_ci_cdcl.output)
+ (deps (:input testfile-polymorphism008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism008.expected 
+      testfile-polymorphism008_ci_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism008_ci_tableaux_cdcl.output)
+ (deps (:input testfile-polymorphism008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism008.expected 
+      testfile-polymorphism008_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism008_ci_tableaux.output)
+ (deps (:input testfile-polymorphism008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism008.expected 
+      testfile-polymorphism008_ci_tableaux.output)))
+
+(rule
+ (target testfile-polymorphism008_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism008.expected 
+      testfile-polymorphism008_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism008_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism008.expected 
+      testfile-polymorphism008_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism008_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-polymorphism008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism008.expected 
+      testfile-polymorphism008_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism008_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-polymorphism008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism008.expected 
+      testfile-polymorphism008_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-polymorphism008_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism008.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism008.expected 
+      testfile-polymorphism008_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-polymorphism008_cdcl_tableaux.output)
  (deps (:input testfile-polymorphism008.ae))
  (package alt-ergo-lib)
@@ -72,6 +243,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-polymorphism008.expected 
       testfile-polymorphism008_tableaux.output)))
+
+(rule
+ (target testfile-polymorphism007_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism007.expected 
+      testfile-polymorphism007_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-polymorphism007_ci_cdcl.output)
+ (deps (:input testfile-polymorphism007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism007.expected 
+      testfile-polymorphism007_ci_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism007_ci_tableaux_cdcl.output)
+ (deps (:input testfile-polymorphism007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism007.expected 
+      testfile-polymorphism007_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism007_ci_tableaux.output)
+ (deps (:input testfile-polymorphism007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism007.expected 
+      testfile-polymorphism007_ci_tableaux.output)))
+
+(rule
+ (target testfile-polymorphism007_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism007.expected 
+      testfile-polymorphism007_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism007_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism007.expected 
+      testfile-polymorphism007_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism007_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-polymorphism007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism007.expected 
+      testfile-polymorphism007_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism007_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-polymorphism007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism007.expected 
+      testfile-polymorphism007_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-polymorphism007_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism007.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism007.expected 
+      testfile-polymorphism007_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-polymorphism007_cdcl_tableaux.output)
@@ -146,6 +488,177 @@
       testfile-polymorphism007_tableaux.output)))
 
 (rule
+ (target testfile-polymorphism006_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism006.expected 
+      testfile-polymorphism006_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-polymorphism006_ci_cdcl.output)
+ (deps (:input testfile-polymorphism006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism006.expected 
+      testfile-polymorphism006_ci_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism006_ci_tableaux_cdcl.output)
+ (deps (:input testfile-polymorphism006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism006.expected 
+      testfile-polymorphism006_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism006_ci_tableaux.output)
+ (deps (:input testfile-polymorphism006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism006.expected 
+      testfile-polymorphism006_ci_tableaux.output)))
+
+(rule
+ (target testfile-polymorphism006_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism006.expected 
+      testfile-polymorphism006_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism006_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism006.expected 
+      testfile-polymorphism006_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism006_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-polymorphism006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism006.expected 
+      testfile-polymorphism006_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism006_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-polymorphism006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism006.expected 
+      testfile-polymorphism006_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-polymorphism006_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism006.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism006.expected 
+      testfile-polymorphism006_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-polymorphism006_cdcl_tableaux.output)
  (deps (:input testfile-polymorphism006.ae))
  (package alt-ergo-lib)
@@ -216,6 +729,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-polymorphism006.expected 
       testfile-polymorphism006_tableaux.output)))
+
+(rule
+ (target testfile-polymorphism005_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism005.expected 
+      testfile-polymorphism005_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-polymorphism005_ci_cdcl.output)
+ (deps (:input testfile-polymorphism005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism005.expected 
+      testfile-polymorphism005_ci_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism005_ci_tableaux_cdcl.output)
+ (deps (:input testfile-polymorphism005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism005.expected 
+      testfile-polymorphism005_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism005_ci_tableaux.output)
+ (deps (:input testfile-polymorphism005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism005.expected 
+      testfile-polymorphism005_ci_tableaux.output)))
+
+(rule
+ (target testfile-polymorphism005_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism005.expected 
+      testfile-polymorphism005_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism005_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism005.expected 
+      testfile-polymorphism005_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism005_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-polymorphism005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism005.expected 
+      testfile-polymorphism005_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism005_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-polymorphism005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism005.expected 
+      testfile-polymorphism005_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-polymorphism005_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism005.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism005.expected 
+      testfile-polymorphism005_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-polymorphism005_cdcl_tableaux.output)
@@ -290,6 +974,177 @@
       testfile-polymorphism005_tableaux.output)))
 
 (rule
+ (target testfile-polymorphism004_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism004.expected 
+      testfile-polymorphism004_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-polymorphism004_ci_cdcl.output)
+ (deps (:input testfile-polymorphism004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism004.expected 
+      testfile-polymorphism004_ci_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism004_ci_tableaux_cdcl.output)
+ (deps (:input testfile-polymorphism004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism004.expected 
+      testfile-polymorphism004_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism004_ci_tableaux.output)
+ (deps (:input testfile-polymorphism004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism004.expected 
+      testfile-polymorphism004_ci_tableaux.output)))
+
+(rule
+ (target testfile-polymorphism004_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism004.expected 
+      testfile-polymorphism004_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism004_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism004.expected 
+      testfile-polymorphism004_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism004_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-polymorphism004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism004.expected 
+      testfile-polymorphism004_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism004_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-polymorphism004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism004.expected 
+      testfile-polymorphism004_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-polymorphism004_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism004.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism004.expected 
+      testfile-polymorphism004_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-polymorphism004_cdcl_tableaux.output)
  (deps (:input testfile-polymorphism004.ae))
  (package alt-ergo-lib)
@@ -360,6 +1215,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-polymorphism004.expected 
       testfile-polymorphism004_tableaux.output)))
+
+(rule
+ (target testfile-polymorphism003_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism003.expected 
+      testfile-polymorphism003_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-polymorphism003_ci_cdcl.output)
+ (deps (:input testfile-polymorphism003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism003.expected 
+      testfile-polymorphism003_ci_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism003_ci_tableaux_cdcl.output)
+ (deps (:input testfile-polymorphism003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism003.expected 
+      testfile-polymorphism003_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism003_ci_tableaux.output)
+ (deps (:input testfile-polymorphism003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism003.expected 
+      testfile-polymorphism003_ci_tableaux.output)))
+
+(rule
+ (target testfile-polymorphism003_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism003.expected 
+      testfile-polymorphism003_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism003.expected 
+      testfile-polymorphism003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism003_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-polymorphism003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism003.expected 
+      testfile-polymorphism003_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-polymorphism003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism003.expected 
+      testfile-polymorphism003_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-polymorphism003_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism003.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism003.expected 
+      testfile-polymorphism003_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-polymorphism003_cdcl_tableaux.output)
@@ -434,6 +1460,177 @@
       testfile-polymorphism003_tableaux.output)))
 
 (rule
+ (target testfile-polymorphism002_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism002.expected 
+      testfile-polymorphism002_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-polymorphism002_ci_cdcl.output)
+ (deps (:input testfile-polymorphism002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism002.expected 
+      testfile-polymorphism002_ci_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism002_ci_tableaux_cdcl.output)
+ (deps (:input testfile-polymorphism002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism002.expected 
+      testfile-polymorphism002_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism002_ci_tableaux.output)
+ (deps (:input testfile-polymorphism002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism002.expected 
+      testfile-polymorphism002_ci_tableaux.output)))
+
+(rule
+ (target testfile-polymorphism002_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism002.expected 
+      testfile-polymorphism002_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism002.expected 
+      testfile-polymorphism002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism002_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-polymorphism002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism002.expected 
+      testfile-polymorphism002_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-polymorphism002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism002.expected 
+      testfile-polymorphism002_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-polymorphism002_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism002.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism002.expected 
+      testfile-polymorphism002_ci_tableaux_cdcl_no_minimal_bj.output)))
+
+(rule
  (target testfile-polymorphism002_cdcl_tableaux.output)
  (deps (:input testfile-polymorphism002.ae))
  (package alt-ergo-lib)
@@ -504,6 +1701,177 @@
    (package alt-ergo-lib)
     (action (diff testfile-polymorphism002.expected 
       testfile-polymorphism002_tableaux.output)))
+
+(rule
+ (target testfile-polymorphism001_ci_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism001.expected 
+      testfile-polymorphism001_ci_cdcl_no_minimal_bj.output)))
+
+(rule
+ (target testfile-polymorphism001_ci_cdcl.output)
+ (deps (:input testfile-polymorphism001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism001.expected 
+      testfile-polymorphism001_ci_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism001_ci_tableaux_cdcl.output)
+ (deps (:input testfile-polymorphism001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux-CDCL %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism001.expected 
+      testfile-polymorphism001_ci_tableaux_cdcl.output)))
+
+(rule
+ (target testfile-polymorphism001_ci_tableaux.output)
+ (deps (:input testfile-polymorphism001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver Tableaux %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism001.expected 
+      testfile-polymorphism001_ci_tableaux.output)))
+
+(rule
+ (target testfile-polymorphism001_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism001.expected 
+      testfile-polymorphism001_ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)
+ (deps (:input testfile-polymorphism001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism001.expected 
+      testfile-polymorphism001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism001_ci_no_tableaux_cdcl_in_instantiation.output)
+ (deps (:input testfile-polymorphism001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-instantiation %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism001.expected 
+      testfile-polymorphism001_ci_no_tableaux_cdcl_in_instantiation.output)))
+
+(rule
+ (target testfile-polymorphism001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)
+ (deps (:input testfile-polymorphism001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-tableaux-cdcl-in-theories %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism001.expected 
+      testfile-polymorphism001_ci_cdcl_tableaux_no_tableaux_cdcl_in_theories.output)))
+
+(rule
+ (target testfile-polymorphism001_ci_tableaux_cdcl_no_minimal_bj.output)
+ (deps (:input testfile-polymorphism001.ae))
+ (package alt-ergo-lib)
+ (action
+  (chdir %{workspace_root}
+   (with-stdout-to %{target}
+    (ignore-stderr
+     (with-accepted-exit-codes 0
+      (run alt-ergo --output=smtlib2 
+       --timelimit=1 
+       --sat-solver CDCL-Tableaux 
+       --no-minimal-bj %{input})))))))
+ (rule
+  (alias runtest-ci)
+   (package alt-ergo-lib)
+    (action (diff testfile-polymorphism001.expected 
+      testfile-polymorphism001_ci_tableaux_cdcl_no_minimal_bj.output)))
 
 (rule
  (target testfile-polymorphism001_cdcl_tableaux.output)

@@ -26,8 +26,8 @@ module File : sig
   (** [diff file1 file2] performs a diff between [fl1] and [fl2]. *)
 
   val contains: string -> string -> bool
-  (* [contains pattern fl] checks if the [fl] contains the pattern
-     [pat]. *)
+  (** [contains pattern fl] checks if the [fl] contains the pattern
+      [pat]. *)
 
   val touch: string -> string -> bool
   (** [touch fl] creates the file [fl] if it doesn't exist yet. *)
@@ -131,11 +131,15 @@ module Cmd : sig
   type t 
   (** Type of a command. *)
 
-  val make : name: string -> bin: string -> args: string list -> t
+  val make : name: string -> group: string -> 
+    bin: string -> args: string list -> t
   (** Create a new command. *)
 
   val name : t -> string
   (** Return the name of the command. *)
+
+  val group : t -> string
+  (** Return the group of the command. *)
 
   val digest: t -> string
   (** Produce a digest of the arguments of the command. *)
@@ -145,13 +149,15 @@ module Cmd : sig
 end = struct
   type t = {
     name: string;     (* Name of the command. *)
+    group: string;
     bin: string;      (* Name of the binary. *)
     args: string list (* Argurments of the command. *)
   }
 
-  let make ~name ~bin ~args = {name; bin; args}
+  let make ~name ~group ~bin ~args = {name; group; bin; args}
 
   let name cmd = cmd.name
+  let group cmd = cmd.group
 
   let digest cmd = 
     List.fold_left (fun acc arg -> arg ^ acc) "" cmd.args
@@ -169,7 +175,7 @@ module Test : sig
   type t
   (** Type of a test. *)
 
-  val make: alias: string -> cmd: Cmd.t -> pb_file: string -> t 
+  val make: cmd: Cmd.t -> pb_file: string -> t 
   (** Set up the test. *)
 
   val pp_output: t printer
@@ -182,12 +188,11 @@ module Test : sig
   (** Pretty print the dune test. *)
 end = struct
   type t = {
-    alias: string;
     cmd: Cmd.t;
     pb_file: string
   }
 
-  let make ~alias ~cmd ~pb_file = {alias; cmd; pb_file}
+  let make ~cmd ~pb_file = {cmd; pb_file}
 
   let pp_output fmt tst =
     let filename = Filename.chop_extension tst.pb_file in
@@ -218,7 +223,7 @@ end = struct
     pp_output tst
     tst.pb_file
     Cmd.pp tst.cmd
-    tst.alias
+    (Cmd.group tst.cmd)
     pp_expected_output tst 
     pp_output tst 
 end
@@ -227,12 +232,12 @@ module Batch : sig
   type t
   (** Type of a batch. *)
 
-  val make: alias: string -> path: string -> cmds: Cmd.t list 
+  val make: path: string -> cmds: Cmd.t list 
     -> pb_files: string list -> t
   (** Set up a batch of tests. *)
 
   val generate_dune_file : t -> unit 
-  (** Produce a dune file containing tests for each subdirectories. *)
+  (** Produce a dune file containing tests of the batch. *)
 end = struct 
   type t = {
     path: string;
@@ -240,10 +245,10 @@ end = struct
     tests: Test.t list;
   }
   
-  let make ~alias ~path ~cmds ~pb_files =
+  let make ~path ~cmds ~pb_files =
     let tests = List.fold_left (fun acc1 pb_file -> 
       List.fold_left (fun acc2 cmd -> 
-        (Test.make ~alias ~cmd ~pb_file) :: acc2
+        (Test.make ~cmd ~pb_file) :: acc2
     ) acc1 cmds) [] pb_files
     in
     {path; cmds; tests}
@@ -284,23 +289,19 @@ let is_a_problem file =
   File.has_extension_in file [".ae"; ".smt2"; ".pstm2"]
 
 (* Generate a dune file for each subfolder of the path given as argument. *)
-let rec generate alias path cmds =
+let rec generate path cmds =
   let files, folders = File.scan_folder path in
   let () = match List.filter is_a_problem files with
   | [] -> ()
   | pb_files -> (
-    let batch = Batch.make ~alias ~path ~cmds ~pb_files in
+    let batch = Batch.make ~path ~cmds ~pb_files in
     Batch.generate_dune_file batch 
   ) in
   List.iter (fun path ->
-    generate alias path cmds 
+    generate path cmds 
   ) (List.map (Filename.concat path) folders)
 
 let () =
-  let config = Sexp.(
-      list [atom "alt-ergo"]
-    ) 
-  in
   let path = 
     if Array.length Sys.argv >= 2 then
       Sys.argv.(1)
@@ -308,23 +309,72 @@ let () =
   in
   let bin = "alt-ergo" in
   let solvers = [
-    ("tableaux", [
+    ("runtest", "tableaux", [
       "--output=smtlib2"
     ; "--timelimit=1"
     ; "--sat-solver Tableaux" ])
-  ; ("tableaux_cdcl", [
+  ; ("runtest", "tableaux_cdcl", [
       "--output=smtlib2"
     ; "--timelimit=1"
     ; "--sat-solver Tableaux-CDCL" ])
-  ; ("cdcl", [
+  ; ("runtest", "cdcl", [
       "--output=smtlib2"
     ; "--timelimit=1"
     ; "--sat-solver CDCL" ])
-  ; ("cdcl_tableaux", [
+  ; ("runtest", "cdcl_tableaux", [
       "--output=smtlib2"
     ; "--timelimit=1"
-    ; "--sat-solver CDCL-Tableaux" ])] 
+    ; "--sat-solver CDCL-Tableaux" ])
+  ; ("runtest-ci", "ci_tableaux_cdcl_no_minimal_bj", [
+      "--output=smtlib2"
+    ; "--timelimit=1"
+    ; "--sat-solver CDCL-Tableaux"
+    ; "--no-minimal-bj" ])
+  ; ("runtest-ci", "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories", [
+      "--output=smtlib2"
+    ; "--timelimit=1"
+    ; "--sat-solver CDCL-Tableaux"
+    ; "--no-tableaux-cdcl-in-theories" ])
+  ; ("runtest-ci", "ci_no_tableaux_cdcl_in_instantiation", [
+      "--output=smtlib2"
+    ; "--timelimit=1"
+    ; "--sat-solver CDCL-Tableaux"
+    ; "--no-tableaux-cdcl-in-instantiation" ])
+  ; ("runtest-ci", "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation", [
+      "--output=smtlib2"
+    ; "--timelimit=1"
+    ; "--sat-solver CDCL-Tableaux"
+    ; "--no-tableaux-cdcl-in-theories"
+    ; "--no-tableaux-cdcl-in-instantiation" ])
+  ; ("runtest-ci", "ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories\
+    _and_instantiation", [
+      "--output=smtlib2"
+    ; "--timelimit=1"
+    ; "--sat-solver CDCL-Tableaux"
+    ; "--no-minimal-bj"
+    ; "--no-tableaux-cdcl-in-theories"
+    ; "--no-tableaux-cdcl-in-instantiation" ])
+  ; ("runtest-ci", "ci_tableaux", [
+      "--output=smtlib2"
+    ; "--timelimit=1"
+    ; "--sat-solver Tableaux" ])
+  ; ("runtest-ci", "ci_tableaux_cdcl", [
+      "--output=smtlib2"
+    ; "--timelimit=1"
+    ; "--sat-solver Tableaux-CDCL" ])
+  ; ("runtest-ci", "ci_cdcl", [
+      "--output=smtlib2"
+    ; "--timelimit=1"
+    ; "--sat-solver CDCL" ])
+  ; ("runtest-ci", "ci_cdcl_no_minimal_bj", [
+      "--output=smtlib2"
+    ; "--timelimit=1"
+    ; "--sat-solver Tableaux-CDCL"
+    ; "--no-minimal-bj" ])] 
   in
-  let cmds = List.map (fun (name, args) -> Cmd.make ~name ~bin ~args) solvers in
-  generate "runtest" path cmds
+  let cmds = List.map (fun (group, name, args) -> 
+    Cmd.make ~name ~group ~bin ~args) solvers 
+  in
+  generate path cmds
+
 

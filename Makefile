@@ -172,12 +172,17 @@ gentest: $(wildcard tests/**/*)
 runtest: bin
 	dune runtest
 
+# Run non-regression tests for the CI.
+runtest-ci: bin
+	dune build @runtest-ci
+
+
 # Promote new outputs of the tests.
 promote:
 	dune promote 
 
 
-.PHONY: gentest runtest promote
+.PHONY: gentest runtest runtest-ci promote
 
 # ============
 # Installation

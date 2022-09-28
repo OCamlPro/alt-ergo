@@ -73,7 +73,7 @@ jobs:
 
       # Run tests
       - name: Run tests
-        run: make runtest
+        run: make runtest-ci
 
       # Get and Set version of the installed alt-ergo binary
       # Get and Set the path where alt-ergo binary is located
@@ -170,4 +170,4 @@ jobs:
 
       # Run tests
       - name: Run tests
-        run: opam exec -- make runtest 
+        run: opam exec -- make runtest-ci
