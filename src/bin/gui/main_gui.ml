@@ -194,7 +194,6 @@ let show_about () =
 let pop_error ?(error=false) ~message () =
   let pop_w = GWindow.dialog
       ~title:(if error then "Error" else "Warning")
-      ~allow_grow:true
       ~position:`CENTER
       ~width:400 ()
   in
@@ -236,8 +235,8 @@ let pop_model sat_env () =
       ~wrap_mode:`CHAR () in
   let _ = tv1#misc#modify_font font in
   let _ = tv1#set_editable false in
-  let model_text = asprintf "%a@." (SAT.print_model ~header:false) sat_env in
-  buf1#set_text model_text;
+  (* let model_text = asprintf "%a@." (SAT.print_model ~header:false) sat_env in
+   * buf1#set_text model_text; *)
   pop_w#show ()
 
 
@@ -832,9 +831,6 @@ let goto_lemma (view:GTree.view) inst_model buffer
     env.last_tag <- t;
   with Not_found -> ()
 
-
-let colormap () = Gdk.Color.get_system_colormap ()
-
 let set_color_inst inst_model renderer (istore:GTree.model) row =
   let id = istore#get ~row ~column:inst_model.icol_tag in
   let _, nb_inst, _, limit = Hashtbl.find inst_model.h id in
@@ -988,8 +984,8 @@ let start_gui all_used_context =
   let w =
     GWindow.window
       ~title:"AltGr-Ergo"
-      ~allow_grow:true
-      ~allow_shrink:true
+      (* ~allow_grow:true *)
+      (* ~allow_shrink:true *)
       ~position:`CENTER
       ~width:window_width
       ~height:window_height ()
@@ -1385,9 +1381,9 @@ let start_gui all_used_context =
     [
       `C ("Unsat cores", get_unsat_core (), set_unsat_core);
       (*`S;*)
-      `C ("Model", get_model (), set_model);
-      `C ("Complete model", get_complete_model (), set_complete_model);
-      `C ("All models", get_all_models (), set_all_models);
+      (* `C ("Model", get_model (), set_model);
+       * `C ("Complete model", get_complete_model (), set_complete_model);
+       * `C ("All models", get_all_models (), set_all_models); *)
       (*`S;*)
       `C ("Variables in triggers", get_triggers_var (), set_triggers_var);
       `C ("Greedy", get_greedy (), set_greedy);
