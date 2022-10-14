@@ -61,6 +61,9 @@ module type S = sig
   (* replaces the first argument by the second one in the given AC value *)
   val subst : r -> r -> t -> r
 
+  (* attempt to retrieve a term *)
+  val term_extract : t -> Expr.t option
+
   (* add flatten the 2nd arg w.r.t HS.t, add it to the given list
      and compact the result *)
   val add : Symbols.t -> r * int -> (r * int) list -> (r * int) list

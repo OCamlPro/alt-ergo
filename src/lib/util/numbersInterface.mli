@@ -146,4 +146,6 @@ module type QSig = sig
   val div_2exp: t -> int -> t
   (** divides the first argument by 2^(the second argument) *)
 
+  val to_zarith : t -> Q.t
+  val of_zarith : Q.t -> t
 end

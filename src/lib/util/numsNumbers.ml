@@ -241,5 +241,7 @@ module Q : NumbersInterface.QSig with module Z = Z = struct
 
   let div_2exp t n = div t (power (Int 2) n)
 
+  let to_zarith t = Q.of_string (Num.string_of_num t)
+  let of_zarith t = Num.num_of_string (Q.to_string t)  (* TODO: test and fix *)
 end
 

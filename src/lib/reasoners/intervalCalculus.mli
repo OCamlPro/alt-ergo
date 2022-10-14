@@ -27,3 +27,5 @@
 (******************************************************************************)
 
 include Sig_rel.RELATION
+
+val refresh_plugins: unit -> unit

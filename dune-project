@@ -1,5 +1,4 @@
-(lang dune 2.0)
-(allow_approximate_merlin)
+(lang dune 2.9)
 
 ; Since we want to generate opam files we need to provide informations ;
 (generate_opam_files true)
@@ -112,5 +111,39 @@ See more details on http://alt-ergo.ocamlpro.com/"
   seq
   stdlib-shims
   (odoc :with-doc)
+ )
+)
+
+; Fifth package, the alt-ergo OSDP plugin
+
+(package
+ (name alt-ergo-osdp)
+ (synopsis "The Alt-Ergo SMT prover: OSDP PLugin")
+ (description "\
+This is the OSDP plugin for the Alt-Ergo SMT solver.
+
+Alt-Ergo is an automatic theorem prover of mathematical formulas. It was developed at LRI, and is now maintained at OCamlPro.
+
+See more details on http://alt-ergo.ocamlpro.com/
+
+The OSDP plugin relies on the OSDP library to attempt to solve goals
+with polynomial inequalities using SDP (SemiDefinite Programming)
+numerical solvers as backend. Despite the numerical solvers providing
+only approximate solutions, the OSDP library performs an a-posteriori
+rigorous check to ensure soundness. The ValidSDP library provides a
+Coq verified version of this soundness check.
+
+To use, run alt-ergo with option
+alt-ergo --polynomial-plugin osdp-plugin.cmxs"
+ ) (license "LGPL-3.0-or-later")
+
+ (depends
+  (ocaml (>= 4.05.0))
+  (dune (>= 2.9))
+  dune-configurator
+  alt-ergo
+  (alt-ergo-lib (= :version))
+  alt-ergo
+  (osdp (>= 1.1.0))
  )
 )

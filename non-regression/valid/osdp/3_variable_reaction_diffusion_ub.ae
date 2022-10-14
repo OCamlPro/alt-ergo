@@ -1,0 +1,12 @@
+logic x1 : real
+logic x2 : real
+logic x3 : real
+axiom ax0: (- (5.0)) <= x1
+axiom ax1: x1 <= 5.0
+axiom ax2: (- (5.0)) <= x2
+axiom ax3: x2 <= 5.0
+axiom ax4: (- (5.0)) <= x3
+axiom ax5: x3 <= 5.0
+goal g:
+  (- (x1)) + 2.0 * x2 + (- (x3)) + (- (0.835634534 * x2 * (1.0 + x2)))
+  < 10.4388

@@ -104,6 +104,7 @@ let debug_combine = ref false
 let debug_constr = ref false
 let debug_explanations = ref false
 let debug_fm = ref false
+let debug_sdp = ref false
 let debug_fpa = ref 0
 let debug_gc = ref false
 let debug_interpretation = ref false
@@ -132,6 +133,7 @@ let set_debug_combine b = debug_combine := b
 let set_debug_constr b = debug_constr := b
 let set_debug_explanations b = debug_explanations := b
 let set_debug_fm b = debug_fm := b
+let set_debug_sdp b = debug_sdp := b
 let set_debug_fpa i = debug_fpa := i
 let set_debug_gc b = debug_gc := b
 let set_debug_interpretation b = debug_interpretation := b
@@ -160,6 +162,7 @@ let get_debug_combine () = !debug_combine
 let get_debug_constr () = !debug_constr
 let get_debug_explanations () = !debug_explanations
 let get_debug_fm () = !debug_fm
+let get_debug_sdp () = !debug_sdp
 let get_debug_fpa () = !debug_fpa
 let get_debug_gc () = !debug_gc
 let get_debug_interpretation () = !debug_interpretation
@@ -446,9 +449,11 @@ let get_term_like_pp () = !term_like_pp
 
 let disable_adts = ref false
 let inequalities_plugin = ref ""
+let polynomial_plugin = ref ""
 let no_ac = ref false
 let no_contracongru = ref false
 let no_fm = ref false
+let no_sdp = ref false
 let no_nla = ref false
 let no_tcp = ref false
 let no_theory = ref false
@@ -458,9 +463,11 @@ let use_fpa = ref false
 
 let set_disable_adts b = disable_adts := b
 let set_inequalities_plugin b = inequalities_plugin := b
+let set_polynomial_plugin b = polynomial_plugin := b
 let set_no_ac b = no_ac := b
 let set_no_contracongru b = no_contracongru := b
 let set_no_fm b = no_fm := b
+let set_no_sdp b = no_sdp := b
 let set_no_nla b = no_nla := b
 let set_no_tcp b = no_tcp := b
 let set_no_theory b = no_theory := b
@@ -470,9 +477,11 @@ let set_use_fpa b = use_fpa := b
 
 let get_disable_adts () = !disable_adts
 let get_inequalities_plugin () = !inequalities_plugin
+let get_polynomial_plugin () = !polynomial_plugin
 let get_no_ac () = !no_ac
 let get_no_contracongru () = !no_contracongru
 let get_no_fm () = !no_fm
+let get_no_sdp () = !no_sdp
 let get_no_nla () = !no_nla
 let get_no_tcp () = !no_tcp
 let get_no_theory () = !no_theory

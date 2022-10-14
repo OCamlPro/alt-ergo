@@ -97,6 +97,9 @@ val set_debug_explanations : bool -> unit
 (** Set [debug_fm] accessible with {!val:get_debug_fm} *)
 val set_debug_fm : bool -> unit
 
+(** Set [debug_sdp] accessible with {!val:get_debug_sdp} *)
+val set_debug_sdp : bool -> unit
+
 (** Set [debug_fpa] accessible with {!val:get_debug_fpa} *)
 val set_debug_fpa : int -> unit
 
@@ -407,8 +410,14 @@ val set_disable_adts : bool -> unit
 (** Set [inequalities_plugin] accessible with {!val:get_inequalities_plugin} *)
 val set_inequalities_plugin : string -> unit
 
+(** Set [polynomial_plugin] accessible with {!val:get_polynomial_plugin} *)
+val set_polynomial_plugin : string -> unit
+
 (** Set [no_fm] accessible with {!val:get_no_fm} *)
 val set_no_fm : bool -> unit
+
+(** Set [no_sdp] accessible with {!val:get_no_sdp} *)
+val set_no_sdp : bool -> unit
 
 (** Set [no_tcp] accessible with {!val:get_no_tcp} *)
 val set_no_tcp : bool -> unit
@@ -453,6 +462,9 @@ val get_debug_uf : unit -> bool
 
 (** Get the debugging flag of inequalities. *)
 val get_debug_fm : unit -> bool
+
+(** Get the debugging flag of polynomial. *)
+val get_debug_sdp : unit -> bool
 
 (** Get the debugging value of floating-point. *)
 val get_debug_fpa : unit -> int
@@ -894,7 +906,11 @@ val get_disable_adts : unit -> bool
 (** Value specifying which module is used to handle inequalities
     of linear arithmetic. *)
 val get_inequalities_plugin : unit -> string
-(** Default to [false] *)
+(** Default to [""] *)
+
+(** Value specifying which module is used to handle polynomoial. *)
+val get_polynomial_plugin : unit -> string
+(** Default to [""] *)
 
 (** [true] if the AC (Associative and Commutative) theory is disabled
     for function symbols. *)
@@ -907,6 +923,10 @@ val get_no_contracongru : unit -> bool
 
 (** [true] if Fourier-Motzkin algorithm is disabled. *)
 val get_no_fm : unit -> bool
+(** Default to [false] *)
+
+(** [true] if SDP algorithm is disabled. *)
+val get_no_sdp : unit -> bool
 (** Default to [false] *)
 
 (** [true] if non-linear arithmetic reasoning (i.e. non-linear

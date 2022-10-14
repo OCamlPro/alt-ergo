@@ -42,6 +42,9 @@ module I = Intervals
 module OracleContainer =
   (val (Inequalities.get_current ()) : Inequalities.Container_SIG)
 
+(* Refresh plugins after proper parse of parameters. *)
+let refresh_plugins () =
+  PolynomialInequalities.refresh ()
 
 module X = Shostak.Combine
 
@@ -54,6 +57,7 @@ module MX0 = Shostak.MXH
 module MPL = Expr.Map
 
 module Oracle = OracleContainer.Make(P)
+module PolynomialIneqs = PolynomialInequalities.Container
 
 module SE = Expr.Set
 module ME = Expr.Map
@@ -1673,6 +1677,15 @@ let assume ~query env uf la =
       in
       let env = Sim_Wrap.solve env 1 in
       let env = loop_update_intervals are_eq env 0 in
+      let () =
+        if new_ineqs then
+          let polys =
+            List.filter
+              (fun (p, i) ->
+                 Uf.is_normalized uf (alien_of p) && not (I.is_undefined i))
+              (MP.bindings env.polynomes) in
+          PolynomialIneqs.test_polynomes polys in
+
       let env, eqs = equalities_from_intervals env eqs in
 
       Debug.env env;

@@ -52,7 +52,7 @@ jobs:
       # Install external dependencies
       # remove this step when opam 2.1 will be used
       - name: opam install depext
-        run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+        run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo alt-ergo-osdp
 
       # Install dependencies
       - name: Install deps

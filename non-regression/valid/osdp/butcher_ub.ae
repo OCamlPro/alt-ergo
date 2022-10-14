@@ -1,0 +1,21 @@
+logic x1 : real
+logic x2 : real
+logic x3 : real
+logic x4 : real
+logic x5 : real
+logic x6 : real
+axiom ax0: (- (1.0)) <= x1
+axiom ax1: x1 <= 0.0
+axiom ax2: (- (0.1)) <= x2
+axiom ax3: x2 <= 0.9
+axiom ax4: (- (0.1)) <= x3
+axiom ax5: x3 <= 0.5
+axiom ax6: (- (1.0)) <= x4
+axiom ax7: x4 <= (- (0.1))
+axiom ax8: (- (0.1)) <= x5
+axiom ax9: x5 <= (- (0.05))
+axiom ax10: (- (0.1)) <= x6
+axiom ax11: x6 <= (- (0.03))
+goal g:
+  x6 * x2 * x2 + x5 * x3 * x3 + (- (x1 * x4 * x4)) + x4 * x4 * x4 + x4 * x4
+  + (- (1.0 / 3.0 * x1)) + 4.0 / 3.0 * x4 < 0.2191

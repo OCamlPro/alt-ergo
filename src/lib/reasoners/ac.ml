@@ -67,6 +67,9 @@ module type S = sig
   (* replaces the first argument by the second one in the given AC value *)
   val subst : r -> r -> t -> r
 
+  (* attempt to retrieve a term *)
+  val term_extract : t -> Expr.t option
+
   (* add flatten the 2nd arg w.r.t HS.t, add it to the given list
      and compact the result *)
   val add : Sy.t -> r * int -> (r * int) list -> (r * int) list
@@ -278,6 +281,23 @@ module Make (X : Sig.X) = struct
     Timers.exec_timer_pause Timers.M_AC Timers.F_subst;
     t
 
+
+  let term_extract {h=h;l=l;t=t; distribute=_} =
+    let expand =
+      List.fold_left
+        (fun l (x,n) -> let l= ref l in for _=1 to n do l:=x::!l done; !l) [] in
+    let l =
+      List.fold_left
+        (fun l e -> match l with
+           | None -> None
+           | Some l ->
+             match X.term_extract e with
+             | None, _ -> None
+             | Some e, _ -> Some (e :: l))
+        (Some []) (expand l) in
+    match l with
+    | None -> None
+    | Some l -> Some (Expr.mk_term h l t)
 
   let add h arg arg_l =
     Timers.exec_timer_start Timers.M_AC Timers.F_add;

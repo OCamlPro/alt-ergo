@@ -67,6 +67,8 @@ type ty_function =
   | F_add_terms
   | F_are_equal
   | F_assume
+  | F_sdp
+  | F_osdp
   | F_class_of
   | F_leaves
   | F_make
@@ -86,6 +88,8 @@ let ftag f = match f with
   | F_add           -> 0
   | F_add_lemma     -> 1
   | F_assume        -> 2
+  | F_sdp           -> 20
+  | F_osdp          -> 21
   | F_class_of      -> 3
   | F_leaves        -> 4
   | F_make          -> 5
@@ -104,7 +108,7 @@ let ftag f = match f with
   | F_apply_subst   -> 18
   | F_instantiate   -> 19
 
-let nb_ftag = 20
+let nb_ftag = 22
 
 let string_of_ty_module k = match k with
   | M_None   -> "None"
@@ -126,6 +130,8 @@ let string_of_ty_function f = match f with
   | F_add           -> "add"
   | F_add_lemma     -> "add_lemma"
   | F_assume        -> "assume"
+  | F_sdp           -> "sdp"
+  | F_osdp          -> "osdp"
   | F_class_of      -> "class_of"
   | F_leaves        -> "leaves"
   | F_make          -> "make"
@@ -263,6 +269,8 @@ let all_functions =
       F_add_terms;
       F_are_equal;
       F_assume;
+      F_sdp;
+      F_osdp;
       F_class_of;
       F_leaves;
       F_make;

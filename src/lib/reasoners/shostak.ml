@@ -163,7 +163,7 @@ struct
     | X5 _ -> X5.term_extract r
     | X6 _ -> X6.term_extract r
     | X7 _ -> X7.term_extract r
-    | Ac _ -> None, false (* SYLVAIN : TODO *)
+    | Ac r -> AC.term_extract r, false
     | Term t -> Some t, true
 
   let top () = term_embed Expr.vrai
