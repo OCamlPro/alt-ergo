@@ -305,9 +305,20 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     set_timelimit_per_goal timelimit_per_goal;
     `Ok()
 
+
+
+let mk_models_opt b =
+  if b then begin
+    set_interpretation IEvery;
+    set_instantiation_heuristic INormal;
+    set_sat_solver Tableaux
+  end;
+  `Ok ()
+
 let mk_output_opt
-    interpretation use_underscore unsat_core output_format model_type
+    interpretation use_underscore unsat_core output_format model_type models
   =
+  let `Ok () = mk_models_opt models in
   set_infer_output_format output_format;
   let output_format = match output_format with
     | None -> Native
@@ -462,7 +473,7 @@ let halt_opt version_info where =
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
 
-let mk_opts file () () () () () () halt_opt (gc) () () () () () () () () ()
+let mk_opts file () () () () () () halt_opt (gc) () () () () () () () ()
   =
 
   if halt_opt then `Ok false
@@ -492,14 +503,6 @@ let mk_fmt_opt std_fmt err_fmt mdl_fmt
   set_err_fmt (value_of_fmt err_fmt);
   set_fmt_mdl (value_of_fmt mdl_fmt);
   `Ok()
-
-let mk_models_opt b =
-  if b then begin
-    set_interpretation IEvery;
-    set_instantiation_heuristic INormal;
-    set_sat_solver Tableaux
-  end;
-  `Ok ()
 
 (* Custom sections *)
 
@@ -988,10 +991,17 @@ let parse_output_opt =
     )
   in
 
-
+  let mdls =
+    let doc =
+      "Simply activates the models in alt-ergo. This is achieved by setting \
+       some parameters by default: interpretation = every; instanciation heuristic = normal; \
+       sat-solver = tableaux"
+    in
+    Arg.(value & flag & info ~doc ~docs ["models"])
+  in
   Term.(ret (const mk_output_opt $
              interpretation $ use_underscore $ unsat_core $
-             output_format $ model_type
+             output_format $ model_type $ mdls
             ))
 
 let parse_profiling_opt =
@@ -1304,18 +1314,6 @@ let parse_fmt_opt =
              std_formatter $ err_formatter $ mdl_formatter
             ))
 
-let parse_models_opt =
-  let docs = s_models in
-
-  let mdls =
-    let doc =
-      "Activates the models in alt-ergo. This is achieved by acitvating \
-       some parameters: interpretation = every; instanciation heuristic = normal; \
-       sat-solver = tableaux"
-    in
-    Arg.(value & flag & info ~doc ~docs ["models"])
-  in Term.(ret (const mk_models_opt $ mdls))
-
 let main =
 
   let file =
@@ -1384,7 +1382,7 @@ let main =
                parse_execution_opt $ parse_halt_opt $ parse_internal_opt $
                parse_limit_opt $ parse_output_opt $ parse_profiling_opt $
                parse_quantifiers_opt $ parse_sat_opt $ parse_term_opt $
-               parse_theory_opt $ parse_fmt_opt $ parse_models_opt
+               parse_theory_opt $ parse_fmt_opt
               ))
   in
   let info =
