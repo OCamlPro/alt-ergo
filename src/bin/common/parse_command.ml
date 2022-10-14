@@ -462,7 +462,7 @@ let halt_opt version_info where =
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
 
-let mk_opts file () () () () () () halt_opt (gc) () () () () () () () ()
+let mk_opts file () () () () () () halt_opt (gc) () () () () () () () () ()
   =
 
   if halt_opt then `Ok false
@@ -493,6 +493,14 @@ let mk_fmt_opt std_fmt err_fmt mdl_fmt
   set_fmt_mdl (value_of_fmt mdl_fmt);
   `Ok()
 
+let mk_models_opt b =
+  if b then begin
+    set_interpretation IEvery;
+    set_instantiation_heuristic INormal;
+    set_sat_solver Tableaux
+  end;
+  `Ok ()
+
 (* Custom sections *)
 
 let s_debug = "DEBUG OPTIONS"
@@ -509,6 +517,8 @@ let s_sat = "SAT OPTIONS"
 let s_term = "TERM OPTIONS"
 let s_theory = "THEORY OPTIONS"
 let s_fmt = "FORMATTER OPTIONS"
+let s_models = "MODEL OPTIONS"
+
 
 (* Parsers *)
 
@@ -1294,6 +1304,18 @@ let parse_fmt_opt =
              std_formatter $ err_formatter $ mdl_formatter
             ))
 
+let parse_models_opt =
+  let docs = s_models in
+
+  let mdls =
+    let doc =
+      "Activates the models in alt-ergo. This is achieved by acitvating \
+       some parameters: interpretation = every; instanciation heuristic = normal; \
+       sat-solver = tableaux"
+    in
+    Arg.(value & flag & info ~doc ~docs ["models"])
+  in Term.(ret (const mk_models_opt $ mdls))
+
 let main =
 
   let file =
@@ -1329,6 +1351,7 @@ let main =
       `S s_case_split;
       `S s_halt;
       `S s_fmt;
+      `S s_models;
       `S s_debug;
       `P "These options are used to output debug info for the concerned \
           part of the solver.\
@@ -1361,7 +1384,7 @@ let main =
                parse_execution_opt $ parse_halt_opt $ parse_internal_opt $
                parse_limit_opt $ parse_output_opt $ parse_profiling_opt $
                parse_quantifiers_opt $ parse_sat_opt $ parse_term_opt $
-               parse_theory_opt $ parse_fmt_opt
+               parse_theory_opt $ parse_fmt_opt $ parse_models_opt
               ))
   in
   let info =
