@@ -305,8 +305,6 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     set_timelimit_per_goal timelimit_per_goal;
     `Ok()
 
-
-
 let mk_models_opt b =
   if b then begin
     set_interpretation IEvery;
@@ -328,7 +326,8 @@ let mk_output_opt
     | None -> Value
     | Some v -> v
   in
-  set_interpretation interpretation;
+  if not models && interpretation != INone
+  then set_interpretation interpretation;
   set_interpretation_use_underscore use_underscore;
   set_unsat_core unsat_core;
   set_output_format output_format;
@@ -1174,14 +1173,16 @@ let parse_sat_opt =
          info ["sat-plugin"] ~docs ~doc) in
 
   let sat_solver =
+    let default, sum_up = "CDCL-Tableaux", "satML" in
     let doc = Format.sprintf
-        "Choose the SAT solver to use. Default value is CDCL (i.e. satML \
+        "Choose the SAT solver to use. Default value is %s (i.e. %s\
          solver). Possible options are %s."
+        default sum_up
         (Arg.doc_alts ["CDCL"; "satML"; "CDCL-Tableaux";
                        "satML-Tableaux"; "Tableaux-CDCL"])
     in
     let docv = "SAT" in
-    Arg.(value & opt string "CDCL-Tableaux" &
+    Arg.(value & opt string default &
          info ["sat-solver"] ~docv ~docs ~doc) in
 
   Term.(ret (const mk_sat_opt $
@@ -1380,8 +1381,9 @@ let main =
                parse_case_split_opt $ parse_context_opt $
                parse_dbg_opt_spl1 $ parse_dbg_opt_spl2 $ parse_dbg_opt_spl3 $
                parse_execution_opt $ parse_halt_opt $ parse_internal_opt $
-               parse_limit_opt $ parse_output_opt $ parse_profiling_opt $
-               parse_quantifiers_opt $ parse_sat_opt $ parse_term_opt $
+               parse_limit_opt $ parse_profiling_opt $
+               parse_quantifiers_opt $ parse_sat_opt $
+               parse_term_opt $ parse_output_opt $
                parse_theory_opt $ parse_fmt_opt
               ))
   in
