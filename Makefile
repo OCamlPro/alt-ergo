@@ -103,26 +103,26 @@ gui: gen
 # fm-simplex plugin
 fm-simplex:
 	$(DUNE) build $(DUNE_FLAGS) \
-		$(INSTALL_DIR)/default/share/alt-ergo/plugins/fm-simplex-plugin.cma \
-		$(INSTALL_DIR)/default/share/alt-ergo/plugins/fm-simplex-plugin.cmxs
-	ln -sf $(INSTALL_DIR)/default/share/alt-ergo/plugins/fm-simplex-plugin.cma fm-simplex-plugin.cma
-	ln -sf $(INSTALL_DIR)/default/share/alt-ergo/plugins/fm-simplex-plugin.cmxs fm-simplex-plugin.cmxs
+		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cma \
+		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cmxs
+	ln -sf $(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cma fm-simplex-plugin.cma
+	ln -sf $(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cmxs fm-simplex-plugin.cmxs
 
 # Ab-Why3 plugin
 AB-Why3:
 	$(DUNE) build $(DUNE_FLAGS) \
-		$(INSTALL_DIR)/default/share/alt-ergo/plugins/AB-Why3-plugin.cma \
-		$(INSTALL_DIR)/default/share/alt-ergo/plugins/AB-Why3-plugin.cmxs
-	ln -sf $(INSTALL_DIR)/default/share/alt-ergo/plugins/AB-Why3-plugin.cma AB-Why3-plugin.cma
-	ln -sf $(INSTALL_DIR)/default/share/alt-ergo/plugins/AB-Why3-plugin.cmxs AB-Why3-plugin.cmxs
+		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cma \
+		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cmxs
+	ln -sf $(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cma AB-Why3-plugin.cma
+	ln -sf $(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cmxs AB-Why3-plugin.cmxs
 
 # Build all plugins
 plugins:
 	$(DUNE) build $(DUNE_FLAGS) \
-		$(INSTALL_DIR)/default/share/alt-ergo/plugins/fm-simplex-plugin.cma \
-		$(INSTALL_DIR)/default/share/alt-ergo/plugins/fm-simplex-plugin.cmxs \
-		$(INSTALL_DIR)/default/share/alt-ergo/plugins/AB-Why3-plugin.cma \
-		$(INSTALL_DIR)/default/share/alt-ergo/plugins/AB-Why3-plugin.cmxs
+		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cma \
+		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cmxs \
+		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cma \
+		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cmxs
 
 # Alias to build all targets using dune
 # Hopefully more efficient than making "all" depend
