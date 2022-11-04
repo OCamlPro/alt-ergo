@@ -993,7 +993,8 @@ let parse_output_opt =
   let mdls =
     let doc =
       "Simply activates the models in alt-ergo. This is achieved by setting \
-       some parameters by default: interpretation = every; instanciation heuristic = normal; \
+       some parameters by default: interpretation = every; instanciation \
+       heuristic = normal; \
        sat-solver = tableaux"
     in
     Arg.(value & flag & info ~doc ~docs ["models"])
