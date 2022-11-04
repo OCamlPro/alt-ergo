@@ -78,10 +78,10 @@ executable, as well as preludes and plugins, can be relocated.
 
 For instance, on a Linux system, assuming the `alt-ergo` executable is at some path
 `some/path/bin/alt-ergo`, theses directories are respectively located at
-`some/path/share/alt-ergo/plugins/` and `some/path/share/alt-ergo/preludes/`.
+`some/path/lib/alt-ergo/plugins/` and `some/path/lib/alt-ergo/preludes/`.
 On windows, a binary at path `Z:\some\path\bin\alt-ergo` will look for preludes and
-plugins in `Z:\some\path\share\alt-ergo\preludes` and
-`Z:\some\path\share\alt-ergo\plugins` respectively.
+plugins in `Z:\some\path\lib\alt-ergo\preludes` and
+`Z:\some\path\lib\alt-ergo\plugins` respectively.
 
 ## Javascript
 
