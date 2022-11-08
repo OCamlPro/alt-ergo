@@ -14,6 +14,16 @@ exception Unsolvable
 
 exception Cmp of int
 
+exception Not_implemented of string
+
+let () =
+  Printexc.register_printer
+    (function
+      | Not_implemented s ->
+        Some (Format.sprintf "Feature not implemented (%s)" s)
+      | _ -> None
+    )
+
 module MI = Map.Make(struct type t = int
     let compare (x: int) y = Stdlib.compare x y end)
 

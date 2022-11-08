@@ -1185,18 +1185,21 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            You may need to change your model generation strategy@,\
            or to increase your timeout.@]"
       | Some env ->
+        Printer.print_fmt (Options.get_fmt_mdl ())
+          "@[<v 0>[FunSat]@, \
+           A model has been computed. However, I failed \
+           while computing it so may be incorrect.@]";
         let prop_model = extract_prop_model ~complete_model:true env in
         Th.output_concrete_model (get_fmt_mdl ()) ~prop_model env.tbox;
     end;
     return_function ()
 
-
-  let () =
-    at_exit
-      (fun () ->
-         if not !terminated_normally && (get_interpretation ()) then
-           return_cached_model (fun () -> ())
-      )
+  (* let () =
+   *   at_exit
+   *     (fun () ->
+   *        if not !terminated_normally && (get_interpretation ()) then
+   *          return_cached_model (fun () -> ())
+   *     ) *)
 
 
   let return_answer env compute return_function =
@@ -1231,7 +1234,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end
     else
       return_cached_model (fun () -> raise Util.Timeout)
-
 
   let reduce_hypotheses tcp_cache tmp_cache env acc (hyp, gf, dep) =
     Debug.print_theory_instance hyp gf;
@@ -1375,27 +1377,31 @@ are not Th-reduced";
 
 
   let normal_instantiation env try_greedy =
-    Debug.print_nb_related env;
-    let env = do_case_split env Util.BeforeMatching in
-    let env = compute_concrete_model env (get_every_interpretation ()) in
-    let env = new_inst_level env in
-    let mconf =
-      {Util.nb_triggers = get_nb_triggers ();
-       no_ematching = get_no_ematching();
-       triggers_var = get_triggers_var ();
-       use_cs = false;
-       backward = Util.Normal;
-       greedy = get_greedy ();
-      }
-    in
-    let env, ok1 = inst_and_assume mconf env inst_predicates env.inst in
-    let env, ok2 = inst_and_assume mconf env inst_lemmas env.inst in
-    let env, ok3 = syntactic_th_inst env env.inst ~rm_clauses:false in
-    let env, ok4 = semantic_th_inst  env env.inst ~rm_clauses:false ~loop:4 in
-    let env = do_case_split env Util.AfterMatching in
-    if ok1 || ok2 || ok3 || ok4 then env
-    else if try_greedy then greedy_instantiation env else env
-
+    try
+      Debug.print_nb_related env;
+      let env = do_case_split env Util.BeforeMatching in
+      let env = compute_concrete_model env (get_every_interpretation ()) in
+      let env = new_inst_level env in
+      let mconf =
+        {Util.nb_triggers = get_nb_triggers ();
+         no_ematching = get_no_ematching();
+         triggers_var = get_triggers_var ();
+         use_cs = false;
+         backward = Util.Normal;
+         greedy = get_greedy ();
+        }
+      in
+      let env, ok1 = inst_and_assume mconf env inst_predicates env.inst in
+      let env, ok2 = inst_and_assume mconf env inst_lemmas env.inst in
+      let env, ok3 = syntactic_th_inst env env.inst ~rm_clauses:false in
+      let env, ok4 = semantic_th_inst  env env.inst ~rm_clauses:false ~loop:4 in
+      let env = do_case_split env Util.AfterMatching in
+      if ok1 || ok2 || ok3 || ok4 then env
+      else if try_greedy then greedy_instantiation env else env
+    with | Util.Not_implemented s ->
+      Printer.print_err "Feature %s is not implemented. \
+                         I can't conclude." s;
+      raise (I_dont_know env)
 
   (* should be merged with do_bcp/red/elim ?
      calls to debug hooks are missing *)

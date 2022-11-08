@@ -799,10 +799,14 @@ module Shostak(X : ALIEN) = struct
   let solve r1 r2 pb =
     {pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}
 
-  let assign_value _ __ =
-    failwith "[Bitv.assign_value] not implemented for theory Bitv"
+  let assign_value _ _ _ =
+    Printer.print_err
+      "[Bitv.models] assign_value currently not implemented";
+    raise (Util.Not_implemented "Models for bit-vectors")
 
   let choose_adequate_model _ _ =
-    assert false
+    Printer.print_err
+      "[Bitv.models] choose_adequate_model currently not implemented";
+    raise (Util.Not_implemented "Models for bit-vectors")
 
 end
