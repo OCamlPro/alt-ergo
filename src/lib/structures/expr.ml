@@ -1633,6 +1633,25 @@ let elim_iff f1 f2 id ~with_conj =
       (mk_and f1 f2 false id)
       (mk_and (neg f1) (neg f2) false id) false id
 
+
+let concat_chainable p_op p_ty t acc =
+  match term_view t with
+  | Term {f; xs; ty; _} ->
+    if Symbols.equal p_op f && Ty.equal p_ty ty then
+      List.rev_append (List.rev xs) acc
+    else
+      t :: acc
+  | _ -> t :: acc
+
+let mk_plus t1 t2 ty =
+  let s = Sy.Op Sy.Plus in
+  let args = concat_chainable (Sy.Op Sy.Plus) ty t2 [] in
+  let args = concat_chainable s ty t1 args in
+  let args = List.fast_sort compare args in
+  mk_term s args ty
+  (* mk_term (Sy.Op Sy.Plus) [t1; t2] ty *)
+
+
 module Triggers = struct
 
   module Svty = Ty.Svty
