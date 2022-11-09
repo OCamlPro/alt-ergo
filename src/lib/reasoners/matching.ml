@@ -474,21 +474,22 @@ module Make (X : Arg) : S with type theory = X.t = struct
       let { sty; gen = g; goal = b; _ } = sg in
       let f_aux t xs lsbt =
         (* maybe put 3 as a rational parameter in the future *)
-        let too_big = (E.depth t) > 3 * env.max_t_depth in
-        if too_big then lsbt
-        else
-          try
-            Debug.match_one_pat_against sg pat0 t;
-            let s_ty = Ty.matching sty ty (E.type_info t) in
-            let gen, but = infos max (||) t g b env in
-            let sg =
-              { sg with
-                sty = s_ty; gen = gen; goal = but;
-                s_term_orig = t::sg.s_term_orig }
-            in
-            let aux = match_list mconf env tbox sg pats xs in
-            List.rev_append aux lsbt
-          with Echec | Ty.TypeClash _ -> lsbt
+        (* let too_big = (E.depth t) > 3 * env.max_t_depth in
+         * if too_big then
+         *   lsbt
+         * else *)
+        try
+          Debug.match_one_pat_against sg pat0 t;
+          let s_ty = Ty.matching sty ty (E.type_info t) in
+          let gen, but = infos max (||) t g b env in
+          let sg =
+            { sg with
+              sty = s_ty; gen = gen; goal = but;
+              s_term_orig = t::sg.s_term_orig }
+          in
+          let aux = match_list mconf env tbox sg pats xs in
+          List.rev_append aux lsbt
+        with Echec | Ty.TypeClash _ -> lsbt
       in
       try ME.fold f_aux (SubstE.find f env.fils) lsbt_acc
       with Not_found -> lsbt_acc

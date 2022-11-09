@@ -189,8 +189,8 @@ let rec make_term up_qv quant_basename t =
         let t2 = mk_term t2 in (*keep old mk_term order -> avoid regression*)
         let t1 = mk_term t1 in
         match s, ty with
-        | Sy.Op Sy.Plus, (Ty.Tint | Ty.Treal) ->
-          E.mk_plus t1 t2 ty
+        | Sy.Op Sy.Plus, (Ty.Tint | Ty.Treal) -> E.mk_plus t1 t2 ty
+        | Sy.Op Sy.Mult, (Ty.Tint | Ty.Treal) -> E.mk_mult t1 t2 ty
         | _ -> E.mk_term s [t1; t2] ty
       end
 

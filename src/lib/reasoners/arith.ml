@@ -154,7 +154,7 @@ module Shostak
         E.mk_builtin ~is_pos:true Symbols.LT [md; t2]
     in
     let k  = E.fresh_name Ty.Tint in
-    let t3 = E.mk_term (Sy.Op Sy.Mult) [t2;k] Ty.Tint in
+    let t3 = E.mk_mult t2 k Ty.Tint in
     let t3 = E.mk_plus t3 md Ty.Tint in
     let c3 = E.mk_eq ~iff:false t1 t3 in
     c3 :: c2 :: c1 :: ctx
@@ -236,17 +236,34 @@ module Shostak
       let c = Q.mult coef (Q.from_string (Hstring.view n)) in
       P.add_const c p, ctx
 
-    | Sy.Op Sy.Mult, [t1;t2] ->
+    | Sy.Op Sy.Mult, [] -> assert false
+
+    | Sy.Op Sy.Mult, t1 :: tl ->
       let p1, ctx = mke coef (empty_polynome ty) t1 ctx in
-      let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
-      if get_no_nla() && P.is_const p1 == None && P.is_const p2 == None
+      let plist, ctx = List.fold_left
+          (fun (plist, ctx) t ->
+             let p, ctx = mke Q.one (empty_polynome ty) t ctx
+             in
+             p :: plist, ctx
+          )
+          ([], ctx)
+          tl
+      in
+      let plist = List.rev plist in
+      if
+        get_no_nla() &&
+        P.is_const p1 == None &&
+        List.for_all (fun p -> P.is_const p == None) plist
       then
         (* becomes uninterpreted *)
-        let tau = E.mk_term (Sy.name ~kind:Sy.Ac "@*") [t1; t2] ty in
+        let tau = E.mk_term (Sy.name ~kind:Sy.Ac "@*") xs ty in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
-        P.add p (P.mult p1 p2), ctx
+        let mult_poly =
+          List.fold_left P.mult p1 plist
+        in
+        P.add p mult_poly, ctx
 
     | Sy.Op Sy.Div, [t1;t2] ->
       let p1, ctx = mke Q.one (empty_polynome ty) t1 ctx in
