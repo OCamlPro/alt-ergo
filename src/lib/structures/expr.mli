@@ -279,6 +279,7 @@ val mk_exists :
 val mk_let : Symbols.t -> t -> t -> int -> t
 
 val mk_plus : t -> t -> Ty.t -> t
+val mk_mult : t -> t -> Ty.t -> t
 
 val mk_match : t -> (Typed.pattern * t) list -> t
 

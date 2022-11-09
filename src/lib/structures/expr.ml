@@ -1643,14 +1643,20 @@ let concat_chainable p_op p_ty t acc =
       t :: acc
   | _ -> t :: acc
 
-let mk_plus t1 t2 ty =
-  let s = Sy.Op Sy.Plus in
-  let args = concat_chainable (Sy.Op Sy.Plus) ty t2 [] in
+let mk_chained s t1 t2 ty =
+  let args = concat_chainable s ty t2 [] in
   let args = concat_chainable s ty t1 args in
-  let args = List.fast_sort compare args in
-  mk_term s args ty
-  (* mk_term (Sy.Op Sy.Plus) [t1; t2] ty *)
 
+  (* S: Applying List.rev helps alt-ergo matching more efficiently.
+     It actually fails to prove some goals if not reversed (see issue 505,
+     'facto' examples) *)
+  let args = List.rev @@ List.fast_sort compare args in
+
+  mk_term s args ty
+
+let mk_plus = mk_chained (Sy.Op Sy.Plus)
+
+let mk_mult = mk_chained (Sy.Op Sy.Mult)
 
 module Triggers = struct
 
