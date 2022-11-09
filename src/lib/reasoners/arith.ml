@@ -155,7 +155,7 @@ module Shostak
     in
     let k  = E.fresh_name Ty.Tint in
     let t3 = E.mk_term (Sy.Op Sy.Mult) [t2;k] Ty.Tint in
-    let t3 = E.mk_term (Sy.Op Sy.Plus) [t3;md] Ty.Tint in
+    let t3 = E.mk_plus t3 md Ty.Tint in
     let c3 = E.mk_eq ~iff:false t1 t3 in
     c3 :: c2 :: c1 :: ctx
 

@@ -358,7 +358,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     [E.mk_term (Symbols.Op Symbols.Minus) [t; d] ty ; d]
 
   let minus_of_plus t d ty =
-    [E.mk_term (Symbols.Op Symbols.Plus)  [t; d] ty ; d]
+    [E.mk_plus t d ty; d]
 
   let linear_arithmetic_matching f_pat pats _ty_pat t =
     match E.term_view t with
