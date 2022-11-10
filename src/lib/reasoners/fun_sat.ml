@@ -1262,9 +1262,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              end
            | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
            | E.Let _ | E.Iff _ | E.Xor _ ->
-             Printer.print_err
-               "Currently, arbitrary formulas in Hyps
-are not Th-reduced";
+             Printer.print_err "Currently, arbitrary formulas in Hyps \
+                                are not Th-reduced";
              assert false
            | E.Not_a_form ->
              assert false

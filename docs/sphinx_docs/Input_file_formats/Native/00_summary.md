@@ -33,8 +33,9 @@ Reserved keywords are the following.
 
 The list of all reserved keywords, in alphabetical order, is:
 ```
-ac, and, axiom, bitv, bool, case_split, check, cut, distinct, else, end, exists, extends,
-false, forall, function, goal, if, in, int, let, logic, not, xor, predicate, prop, 
-real, rewriting, then, theory, true, type, unit, void, match, with, of
+ac, and, axiom, bitv, bool, case_split, check, check_sat, chevk_valid, cut,
+distinct, else, end, exists, extends, false, forall, function, goal, if, in,
+int, let, logic, not, xor, predicate, prop, real, rewriting, then, theory,
+true, type, unit, void, match, with, of
 ```
 Note that preludes (additional theories which may be loaded) may reserve more keywords.

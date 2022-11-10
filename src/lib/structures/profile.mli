@@ -9,6 +9,11 @@
 (*                                                                            *)
 (******************************************************************************)
 
+(** Maps of values for alt-ergo's models.
+    Elements are sorted by symbols/types (P) and accumulated as sets
+    of expressions matching the P.key type (V).
+*)
+
 module P : Map.S with type key =
                         Symbols.t * Ty.t list * Ty.t
 

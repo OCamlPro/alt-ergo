@@ -433,7 +433,7 @@ module Why3CounterExample = struct
 end
 (* of module Why3CounterExample *)
 
-let output_concrete_model fmt props functions constants arrays =
+let output_concrete_model fmt props ~functions ~constants ~arrays =
   if get_interpretation () then begin
     Printer.print_fmt ~flushed:false fmt "@[<v 0>unknown@ ";
     Printer.print_fmt ~flushed:false fmt "@[<v 2>(model@,";

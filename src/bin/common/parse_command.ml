@@ -307,7 +307,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
 
 let mk_models_opt b =
   if b then begin
-    set_interpretation IEvery;
+    set_interpretation ILast;
     set_instantiation_heuristic INormal;
     set_sat_solver Tableaux
   end;
@@ -934,16 +934,16 @@ let parse_output_opt =
 
   let interpretation =
     let doc = Format.sprintf
-        "Experimental support for counter-example generation. \
+        "Best effort support for counter-example generation. \
          $(docv) must be %s. %s shows the first computed interpretation. \
          %s compute an interpretation before every decision, \
-         %s before every instantiation and %s only before returning unknown. \
+         and %s only before returning unknown. \
          Note that $(b, --max-split) limitation will \
          be ignored in model generation phase."
         (Arg.doc_alts
-           ["none"; "first"; "before_dec"; "before_inst"; "before_end"])
-        (Arg.doc_quote "first") (Arg.doc_quote "before_dec")
-        (Arg.doc_quote "before_inst") (Arg.doc_quote "before_end") in
+           ["none"; "first"; "every"; "last"])
+        (Arg.doc_quote "first") (Arg.doc_quote "every")
+        (Arg.doc_quote "last") in
     let docv = "VAL" in
     Arg.(value & opt interpretation_conv INone &
          info ["interpretation"] ~docv ~docs ~doc) in
@@ -993,11 +993,11 @@ let parse_output_opt =
   let mdls =
     let doc =
       "Simply activates the models in alt-ergo. This is achieved by setting \
-       some parameters by default: interpretation = every; instanciation \
+       some parameters by default: interpretation = last; instanciation \
        heuristic = normal; \
        sat-solver = tableaux"
     in
-    Arg.(value & flag & info ~doc ~docs ["models"])
+    Arg.(value & flag & info ~doc ~docs ["model"])
   in
   Term.(ret (const mk_output_opt $
              interpretation $ use_underscore $ unsat_core $
@@ -1304,16 +1304,16 @@ let parse_fmt_opt =
     Arg.(value & opt formatter_conv Stderr & info ["err-formatter"] ~docs ~doc)
   in
 
-  let mdl_formatter =
+  let model_output =
     let doc = Format.sprintf
         "Set the model formatter used by default to output model and
          interpretation. Possible values are %s."
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"]) in
-    Arg.(value & opt formatter_conv Stdout & info ["mdl-formatter"] ~docs ~doc)
+    Arg.(value & opt formatter_conv Stdout & info ["model-output"] ~docs ~doc)
   in
 
   Term.(ret (const mk_fmt_opt $
-             std_formatter $ err_formatter $ mdl_formatter
+             std_formatter $ err_formatter $ model_output
             ))
 
 let main =

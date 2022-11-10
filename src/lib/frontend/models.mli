@@ -12,11 +12,15 @@
 (** {1 Models module} *)
 
 (** Print the given counterexample on the given formatter with the
-    corresponding format setted with Options.get_output_format *)
+    corresponding format set with Options.get_output_format.
+    - functions: the functions of the model;
+    - constants: the variables of the model;
+    - arrays: (experimental) the arrays of the model.
+*)
 val output_concrete_model :
   Format.formatter ->
   Expr.Set.t ->
-  Profile.V.t Profile.P.t ->
-  Profile.V.t Profile.P.t ->
-  Profile.V.t Profile.P.t ->
+  functions:Profile.V.t Profile.P.t ->
+  constants:Profile.V.t Profile.P.t ->
+  arrays:Profile.V.t Profile.P.t ->
   unit

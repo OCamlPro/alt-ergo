@@ -5,7 +5,7 @@
 (generate_opam_files true)
 
 (name alt-ergo)
-(version models)
+(version dev)
 (authors "Alt-Ergo developers")
 (maintainers "Alt-Ergo developers")
 (source (github OCamlPro/alt-ergo))
