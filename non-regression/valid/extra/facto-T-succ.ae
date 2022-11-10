@@ -1,0 +1,26 @@
+(* this is the prelude for Alt-Ergo, version >= 2.4.0 *)
+(* this is a prelude for Alt-Ergo integer arithmetic *)
+type string
+
+logic match_bool : bool, 'a, 'a -> 'a
+
+axiom match_bool_True :
+  (forall z:'a. forall z1:'a. (match_bool(true, z, z1) = z))
+
+axiom match_bool_False :
+  (forall z:'a. forall z1:'a. (match_bool(false, z, z1) = z1))
+
+axiom CompatOrderMult :
+  (forall x:int. forall y:int. forall z:int. ((x <= y) -> ((0 <= z) ->
+  ((x * z) <= (y * z)))))
+
+predicate is_sint32(x: int) = (((-2147483648) <= x) and (x <  2147483648))
+
+logic factorial : int -> int
+
+axiom factorial_def :
+  (forall n:int.
+  (factorial(n) = (if (n <= 0) then 1 else (n * factorial(((- 1) + n))))))
+
+goal succ :
+  (forall i:int. ((0 <  i) -> ((i * factorial(((- 1) + i))) = factorial(i))))

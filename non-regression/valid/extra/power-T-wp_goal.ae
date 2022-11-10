@@ -1,0 +1,37 @@
+(* this is the prelude for Alt-Ergo, version >= 2.4.0 *)
+(* this is a prelude for Alt-Ergo integer arithmetic *)
+type string
+
+logic match_bool : bool, 'a, 'a -> 'a
+
+axiom match_bool_True :
+  (forall z:'a. forall z1:'a. (match_bool(true, z, z1) = z))
+
+axiom match_bool_False :
+  (forall z:'a. forall z1:'a. (match_bool(false, z, z1) = z1))
+
+axiom CompatOrderMult :
+  (forall x:int. forall y:int. forall z:int. ((x <= y) -> ((0 <= z) ->
+  ((x * z) <= (y * z)))))
+
+logic is_power : int, int, int -> prop
+
+axiom Q_zero : (forall x:int. is_power(x, 0, 1))
+
+axiom Q_N :
+  (forall x:int. forall n:int. forall r:int. ((0 <  n) -> (is_power(x,
+  ((- 1) + n), r) -> is_power(x, n, (r * x)))))
+
+axiom is_power_inversion :
+  (forall z:int. forall z1:int. forall z2:int. (is_power(z, z1, z2) ->
+  (((z1 = 0) and (z2 = 1)) or
+  (exists r:int. ((0 <  z1) and (is_power(z, ((- 1) + z1), r) and
+  (z2 = (r * z))))))))
+
+axiom power_even :
+  (forall x:int. forall n:int. forall r:int. ((0 <= n) -> (is_power((x * x),
+  n, r) -> is_power(x, (2 * n), r))))
+
+goal wp_goal :
+  (forall i:int. forall i1:int. forall i2:int. ((0 <= i1) ->
+  (is_power((i * i), i1, i2) -> is_power(i, (1 + (2 * i1)), (i * i2)))))
