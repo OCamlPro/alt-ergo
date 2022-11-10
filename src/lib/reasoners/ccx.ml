@@ -276,13 +276,14 @@ module Main : S = struct
         | E.Not_a_term _ -> assert false
         | E.Term tt -> tt
       in
-      if Symbols.equal f1 f2 && Ty.equal ty1 ty2 then
+      if Symbols.equal f1 f2 && Ty.equal ty1 ty2 && List.length xs1 = List.length xs2 then
         try
           let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
           let a = E.mk_eq ~iff:false t1 t2 in
           Debug.congruent a ex;
           Q.push (LTerm a, ex, Th_util.Other) facts.equas
-        with Exit -> ()
+        with
+        | Exit -> ()
 
   let congruents env facts t1 s =
     match E.term_view t1 with
