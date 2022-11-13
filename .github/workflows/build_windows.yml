@@ -62,6 +62,10 @@ jobs:
       - name: Install
         run: opam reinstall .
 
+      # Generate tests
+      - name: Generate tests
+        run: opam exec -- make gentest
+
       # Run tests
       - name: Run tests
         run: opam exec -- make runtest-ci
