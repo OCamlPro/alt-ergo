@@ -65,9 +65,13 @@ jobs:
       - name: Install
         run: opam reinstall .
 
-      # Run non regression tests
-      - name: Run non regression tests
-        run: opam exec -- rsc/extra/non_regression.sh
+      # Generate tests
+      - name: Generate tests
+        run: opam exec -- make gentest
+
+      # Run tests
+      - name: Run tests
+        run: opam exec -- make runtest-ci
 
       # Get and Set version of the installed alt-ergo binary
       # Get and Set the path where alt-ergo binary is located

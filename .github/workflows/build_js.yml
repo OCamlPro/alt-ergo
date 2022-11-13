@@ -82,7 +82,7 @@ jobs:
 
       # Run simple test with node
       - name: Run simple example with node
-        run: opam exec -- node alt-ergo.js non-regression/valid/everything/f1.ae
+        run: opam exec -- node alt-ergo.js tests/unsat/everything/f1.ae
 
       # Upload Alt-Ergo.js as an artifact
       # the artifact name contains the system is builded on and the ocaml
