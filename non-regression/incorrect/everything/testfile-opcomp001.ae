@@ -1,3 +1,0 @@
-
-goal g1: forall x:int. forall y:real. x=y
-

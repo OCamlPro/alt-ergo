@@ -1,3 +1,0 @@
-type t = {a : int; b : int}
-logic p : t -> prop
-goal g: p({a = 0; b = 1})

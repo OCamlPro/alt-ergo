@@ -1,5 +1,0 @@
- 
-type t
-goal g22 : forall x,y : t. x>=y
-
-

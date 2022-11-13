@@ -1,3 +1,0 @@
-goal g:
-  forall b : int.
-  b*b >= b

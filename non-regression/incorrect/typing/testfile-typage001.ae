@@ -1,5 +1,0 @@
-logic P : int -> prop
-
-axiom a1: forall x:int. P(x)
-
-goal g1: forall a:real. P(a)

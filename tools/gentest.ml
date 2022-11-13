@@ -165,7 +165,7 @@ end = struct
     |> Digest.to_hex 
 
   let pp fmt cmd =
-    let pp_sep fmt () = Format.fprintf fmt " @," in
+    let pp_sep fmt () = Format.fprintf fmt " " in
     let pp_arg fmt = Format.fprintf fmt "%s" in
     let pp_args fmt = Format.pp_print_list ~pp_sep pp_arg fmt in
     Format.fprintf fmt "%s %a %%{input}" cmd.bin pp_args cmd.args
@@ -175,11 +175,11 @@ module Test : sig
   type t
   (** Type of a test. *)
 
-  val make: cmd: Cmd.t -> pb_file: string -> t 
+  val make: path: string -> cmd: Cmd.t -> pb_file: string -> t 
   (** Set up the test. *)
 
-  val pp_output: t printer
-  (** Pretty print the filename of the output of the test. *)
+  (*val pp_output: t printer
+  (** Pretty print the filename of the output of the test. *)*)
   
   val pp_expected_output: t printer
   (** Pretty print the filename of the expected output of the test. *)
@@ -188,44 +188,58 @@ module Test : sig
   (** Pretty print the dune test. *)
 end = struct
   type t = {
+    path: string;
     cmd: Cmd.t;
     pb_file: string
   }
 
-  let make ~cmd ~pb_file = {cmd; pb_file}
+  let make ~path ~cmd ~pb_file = {path; cmd; pb_file}
 
-  let pp_output fmt tst =
+  (*let pp_output fmt tst =
     let filename = Filename.chop_extension tst.pb_file in
     let name = Cmd.name tst.cmd in
     Format.fprintf fmt "%s_%s.output" filename name
 
   let pp_expected_output fmt tst =
     let filename = Filename.chop_extension tst.pb_file in
-    Format.fprintf fmt "%s.expected" filename
+    Format.fprintf fmt "%s.expected" filename*)
+
+  let pp_expected_output fmt {path; pb_file; _} =
+    (match String.split_on_char '/' path with
+    | "tests" :: "sat" :: _ -> "sat"
+    | "tests" :: "unsat" :: _ -> "unsat"
+    | "tests" :: "unknown" :: _ -> "unknown"
+    | _ ->
+        let full_path = Filename.concat path pb_file in
+        let msg = 
+          Format.sprintf "unknown expected answer for the test %s" full_path
+        in
+        raise (Failure msg))
+    |> Format.fprintf fmt "%s"
 
   let pp_stanza fmt tst =
-    Format.fprintf fmt 
-    "@[<v 1>\
-    (rule@ \
-      (target %a)@ \
-      (deps (:input %s))@ \
-      (package alt-ergo-lib)@ \
-      @[<v 1>(action@ \
-        @[<v 1>(chdir %%{workspace_root}@ \
-          @[<v 1>(with-stdout-to %%{target}@ \
-            @[<v 1>(ignore-stderr@ \
-              @[<v 1>(with-accepted-exit-codes 0@ \
-                @[<v 1>(run %a)))))))@]@]@]@]@]@]@\n\
-    @[<v 1>(rule@ \
+    try
+      Format.fprintf fmt 
+      "@[<v 1>\
+      (rule@ \
+        (alias %s)@ \
+        (deps (:input %s))@ \
+        (package alt-ergo-lib)@ \
+        @[<v 1>(action@ \
+          @[<v 1>(chdir %%{workspace_root}@ \
+            @[<v 1>(ignore-stdout@ \
+              @[<v 1>(ignore-stderr@ \
+                @[<v 1>(with-accepted-exit-codes 0@ \
+                  @[<v 1>(system \"%a | grep -e '^%a'\")))))))@]@]@]@]@]@]@."
+      (Cmd.group tst.cmd)
+      tst.pb_file
+      Cmd.pp tst.cmd
+      pp_expected_output tst
+    with Failure msg -> Format.printf "%s@." msg
+    (* @[<v 1>(rule@ \
       @[<v 1>(alias %s)@ \
       @[<v 1>(package alt-ergo-lib)@ \
-      @[<v 1>(action (diff %a @, %a)))@]@]@]@]@."
-    pp_output tst
-    tst.pb_file
-    Cmd.pp tst.cmd
-    (Cmd.group tst.cmd)
-    pp_expected_output tst 
-    pp_output tst 
+      @[<v 1>(action (diff %a @, %a)))@]@]@]@]@.*)
 end
 
 module Batch : sig
@@ -248,7 +262,7 @@ end = struct
   let make ~path ~cmds ~pb_files =
     let tests = List.fold_left (fun acc1 pb_file -> 
       List.fold_left (fun acc2 cmd -> 
-        (Test.make ~cmd ~pb_file) :: acc2
+        (Test.make ~path ~cmd ~pb_file) :: acc2
     ) acc1 cmds) [] pb_files
     in
     {path; cmds; tests}

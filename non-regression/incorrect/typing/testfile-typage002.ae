@@ -1,4 +1,0 @@
-
-logic P : int -> prop
-goal g2: forall a:unit. P(a)
-

@@ -1,2 +1,0 @@
-logic a : (int, int) farray
-goal g: false
