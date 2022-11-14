@@ -308,7 +308,6 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
 let mk_models_opt b =
   if b then begin
     set_interpretation ILast;
-    set_instantiation_heuristic INormal;
     set_sat_solver Tableaux
   end;
   `Ok ()

@@ -1344,6 +1344,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let greedy_instantiation env =
     match get_instantiation_heuristic () with
     | INormal ->
+      (* S: This seems spurious!
+         On example UFDT/20170428-Barrett/cdt-cade2015/data/gandl/cotree/
+         x2015_09_10_16_49_52_978_1009894.smt_in.smt2,
+         this returns a wrong model. *)
       return_answer env (get_last_interpretation ())
         (fun e -> raise (I_dont_know e))
     | IAuto | IGreedy ->
