@@ -747,9 +747,9 @@ let print_list fmt = print_list_sep "," fmt
 
 (** Some auxiliary functions *)
 
-let type_info t = t.ty
-let symbol_info t = t.f
-let get_infos t = t
+let [@inline always] type_info t = t.ty
+let [@inline always] symbol_info t = t.f
+let [@inline always] get_infos t = t
 
 (* unused
    let is_term e = match e.f with
