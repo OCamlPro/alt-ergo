@@ -118,6 +118,8 @@ struct
 
   module HC = Hconsing.Make(View)
 
+  let empty_cache () = HC.empty ()
+
   let hcons v = HC.make v
 
   (* end: Hconsing modules and functions *)
@@ -738,12 +740,16 @@ and AC : Ac.S
 module Combine = struct
   include CX
 
-  let make =
+  let make, empty_cache =
     let cache = H.create 1024 in
-    fun t ->
+    let make t =
       match H.find_opt cache t with
       | None -> let res = make t in H.add cache t res; res
-      | Some res -> res
+      | Some res -> res in
+    let empty () =
+      empty_cache ();
+      H.clear cache in
+    make, empty
 end
 
 module Arith = X1

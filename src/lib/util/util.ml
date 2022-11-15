@@ -54,6 +54,10 @@ type theories_extensions =
   | NIA
   | FPA
 
+type simplify =
+  | SNo
+  | SPreprocess
+
 type axiom_kind = Default | Propagator
 
 let th_ext_of_string ext =
@@ -144,3 +148,13 @@ let rec print_list_pp ~sep ~pp fmt = function
     Format.fprintf fmt "%a %a" pp x sep ();
     print_list_pp ~sep ~pp fmt l
 
+let eq_list eq l1 l2 =
+  let rec loop l1 l2 =
+    match l1, l2 with
+      [],[] -> true
+    | hd1 :: tl1, hd2 :: tl2 ->
+      if eq hd1 hd2
+      then loop tl1 tl2
+      else false
+    | _,_ -> false
+  in loop l1 l2

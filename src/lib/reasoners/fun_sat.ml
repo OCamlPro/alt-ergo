@@ -34,7 +34,6 @@ module SE = E.Set
 module ME = E.Map
 module Ex = Explanation
 
-
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module Inst = Instances.Make(Th)
   module CDCL = Satml_frontend_hybrid.Make(Th)
@@ -974,7 +973,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        nb_related_to_goal = t.nb_related_to_goal + 1;
        nb_related_to_hypo = t.nb_related_to_hypo + 1}
 
-
   let rec asm_aux acc list =
     List.fold_left
       (fun
@@ -1121,7 +1119,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         Options.tool_req 2 "TR-Sat-Conflict-2";
         env.heuristics := Heuristics.bump_activity !(env.heuristics) expl;
         raise (IUnsat (expl, classes))
-
 
   let new_inst_level env =
     let new_ilevel = env.ilevel + 1 in

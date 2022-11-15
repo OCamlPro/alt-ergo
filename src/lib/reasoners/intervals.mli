@@ -150,3 +150,5 @@ type interval_matching =
 val match_interval:
   Symbols.bound -> Symbols.bound -> t -> interval_matching ->
   interval_matching option
+
+val contained_in : t -> t -> bool

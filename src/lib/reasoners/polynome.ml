@@ -40,6 +40,13 @@ module type S = sig
   val mult : r -> r -> r
 end
 
+module type Calc = sig
+  type t
+  val one : t
+  val add : t -> t -> t
+  val mul : Q.t -> t -> t
+end
+
 module type T = sig
 
   type r
@@ -77,6 +84,14 @@ module type T = sig
   val abstract_selectors : t -> (r * r) list -> t * (r * r) list
 
   val separate_constant : t -> t * Numbers.Q.t
+
+  val fold_on_vars : (r -> Numbers.Q.t -> 'acc -> 'acc) -> t -> 'acc -> 'acc
+
+  module M : Map.S with type key = r
+
+  module Eval (C : Calc) : sig
+    val eval : (r -> C.t) -> t -> C.t
+  end
 end
 
 module type EXTENDED_Polynome = sig
@@ -354,4 +369,14 @@ module Make (X : S) = struct
 
   let separate_constant t = { t with c = Q.zero}, t.c
 
+  let fold_on_vars f p = M.fold f p.m
+
+  module Eval (C : Calc) = struct
+
+    let eval_monom (map : r -> C.t) (r : r) (q : Q.t) (acc : C.t)  =
+      C.add acc (C.mul q (map r))
+
+    let eval map p =
+      M.fold (eval_monom map) p.m (C.mul p.c C.one)
+  end
 end

@@ -319,3 +319,7 @@ val is_pure : t -> bool
 
 val const_term : t -> bool
 (** return true iff the given argument is a term without arguments *)
+
+val get_symb : t -> Symbols.t
+
+val get_sub_expr : t -> t list

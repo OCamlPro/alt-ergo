@@ -34,6 +34,17 @@ open Commands
 module E = Expr
 module Sy = Symbols
 module SE = E.Set
+module SRE = Simple_reasoner_expr
+module Smp = Simplifiers
+
+let choose_preproc () :
+  (module Simple_reasoner_expr.S) =
+  if not (Options.get_simplify_th ()) then
+    (module Smp.DummySimp)
+  else
+    (module Smp.IntervalsSimp)
+
+module SimpExprPreproc () = (val (choose_preproc ()))
 
 [@@ocaml.ppwarning "TODO: Change Symbols.Float to store FP numeral \
                     constants (eg, <24, -149> for single) instead of \
@@ -282,9 +293,16 @@ let rec make_term up_qv quant_basename t =
         up_qv quant_basename e Loc.dummy
         ~decl_kind:E.Daxiom (* not correct, but not a problem *)
         ~toplevel:false
-  in
-  mk_term t
-
+  in (*mk_term t*)
+  let term = mk_term t in
+  match Options.get_simplify () with
+  | Util.SNo -> term
+  | Util.SPreprocess ->
+    let module S = SimpExprPreproc () in
+    let smp_term = S.simp_expr  term in
+    if SRE.has_changed smp_term
+    then SRE.get_expr smp_term
+    else term
 
 and make_trigger ~in_theory name up_qv quant_basename hyp (e, from_user) =
   let content, guard = match e with
@@ -496,14 +514,31 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
 (* wrapper of function make_form *)
 let make_form name f loc ~decl_kind =
   let ff =
-    make_form Sy.Map.empty name f loc ~decl_kind ~toplevel:true
+    let form = make_form Sy.Map.empty name f loc ~decl_kind ~toplevel:true in
+    match Options.get_simplify () with
+      Util.SNo -> form
+    | Util.SPreprocess ->
+      let module S = SimpExprPreproc () in
+      (*Format.printf "Simplifying@.";*)
+      let smp_form = S.simp_expr form in
+      (* let () =
+        (* Emptying the caches modified by the simplifier.
+           St : This is necessary for having consistent results. *)
+        Shostak.Combine.empty_cache ();
+        S.empty_caches (); ()
+      in *)
+      if SRE.has_changed smp_form
+      then SRE.get_expr smp_form
+      else form
   in
   assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
   let ff = E.purify_form ff in
-  if Ty.Svty.is_empty (E.free_type_vars ff) then ff
-  else
+  if Ty.Svty.is_empty (E.free_type_vars ff) then begin
+    ff
+  end else begin
     let id = E.id ff in
     E.mk_forall name loc Symbols.Map.empty [] ff id ~toplevel:true ~decl_kind
+  end
 
 let mk_assume acc f name loc =
   let ff = make_form name f loc ~decl_kind:E.Daxiom in
@@ -522,7 +557,7 @@ let mk_assume acc f name loc =
 *)
 let defining_term f =
   if get_verbose () then
-    Format.eprintf "defining term of %a@." Typed.print_formula f;
+    Format.eprintf "defining term of %a@." (Typed.print_formula ?annot:None) f;
   match f.c with
   | TFforall {qf_form={c=TFop(OPiff,[{c=TFatom {c=TApred(d,_);_};_};_]); _}; _}
   | TFforall {qf_form={c=TFatom {c=TAeq[d;_];_}; _}; _}
@@ -565,12 +600,16 @@ let mk_theory acc l th_name extends _loc =
          | TAxiom (loc, name, ax_kd, f) -> loc, name, f, ax_kd
          | _ -> assert false
        in
-       let ax_form = make_form ax_name f loc ~decl_kind:E.Dtheory in
+       let ax_form =
+         make_form ax_name f loc ~decl_kind:E.Dtheory
+       in
        let th_elt = {Expr.th_name; axiom_kind; extends; ax_form; ax_name} in
        {st_decl=ThAssume th_elt ; st_loc=loc} :: acc
-    )acc l
+    )
+    acc
+    l
 
-let make acc d =
+let make acc (d : (int Typed.tdecl, 'a) Typed.annoted) =
   match d.c with
   | TPush (loc,n) -> {st_decl=Push n; st_loc=loc} :: acc
   | TPop (loc,n) -> {st_decl=Pop n; st_loc=loc} :: acc

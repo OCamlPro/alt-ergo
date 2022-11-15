@@ -49,6 +49,10 @@ type theories_extensions =
   | NIA
   | FPA
 
+type simplify =
+  | SNo
+  | SPreprocess
+
 type axiom_kind = Default | Propagator
 
 val th_ext_of_string : string -> theories_extensions option
@@ -94,3 +98,5 @@ val print_list_pp:
   sep:(Format.formatter -> unit -> unit) ->
   pp:(Format.formatter -> 'a -> unit) ->
   Format.formatter -> 'a list -> unit
+
+val eq_list : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool

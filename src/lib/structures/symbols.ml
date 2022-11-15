@@ -30,9 +30,10 @@ open Format
 open Options
 
 type builtin =
-    LE | LT (* arithmetic *)
-  | IsConstr of Hstring.t (* ADT tester *)
+    LE | LT               (** Arithmetic *)
+  | IsConstr of Hstring.t (** ADT tester *)
 
+(** Operators on integer and reals, plus constructors/destructors & ITEs *)
 type operator =
     Plus | Minus | Mult | Div | Modulo
   | Concat | Extract | Get | Set | Fixed | Float
@@ -45,18 +46,20 @@ type operator =
   | Destruct of Hstring.t * bool
   | Tite
 
+(** Literals : relations between values *)
 type lit =
-  (* literals *)
   | L_eq
   | L_built of builtin
   | L_neg_eq
   | L_neg_built of builtin
   | L_neg_pred
 
+(** Formulas : composition of expressions *)
 type form =
-  (* formulas *)
-  | F_Unit of bool
-  | F_Clause of bool
+  | F_Unit of bool   (** F_Unit b <=> (AND),
+                         b = true => the formula was an implication  *)
+  | F_Clause of bool (** F_Clause b <=> (OR),
+                         b = true => the formula was an implication *)
   | F_Iff
   | F_Xor
   | F_Lemma
@@ -68,7 +71,6 @@ type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
 
 type bound = (* private *)
   { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
-
 
 type t =
   | True

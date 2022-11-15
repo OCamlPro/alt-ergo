@@ -76,6 +76,9 @@ module type S = sig
   type t
   (** The type of value used. *)
 
+  val empty : unit -> unit
+  (** Resets the hashconsing storage *)
+
   val make : t -> t
   (** Hashcons a value [t], either returning [t], or a value equal
       to [t] that was hashconsed previously. *)

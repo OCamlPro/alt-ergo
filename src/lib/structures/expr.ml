@@ -43,9 +43,9 @@ type t = view
 and view = {
   f: Sy.t;
   xs: t list;
-  ty: Ty.t;
+  ty: Ty.t; (* expression type *)
   bind : bind_kind;
-  tag: int;
+  tag: int; (* S : always = -42 ? *)
   vars : (Ty.t * int) SMap.t; (* vars to types and nb of occurences *)
   vty : Ty.Svty.t;
   depth: int;
@@ -124,14 +124,14 @@ type lit_view =
   | Not_a_lit of { is_form : bool }
 
 type form_view =
-  | Unit of t*t  (* unit clauses *)
-  | Clause of t*t*bool      (* a clause (t1 or t2) bool <-> is implication *)
+  | Unit of t * t          (* unit clauses *)
+  | Clause of t * t * bool (* a clause (t1 or t2) bool <-> is implication *)
   | Iff of t * t
   | Xor of t * t
-  | Literal of t   (* an atom *)
-  | Lemma of quantified   (* a lemma *)
-  | Skolem of quantified  (* lazy skolemization *)
-  | Let of letin (* a binding of an expr *)
+  | Literal of t           (* an atom *)
+  | Lemma of quantified    (* a lemma *)
+  | Skolem of quantified   (* lazy skolemization *)
+  | Let of letin           (* a binding of an expr *)
   | Not_a_form
 
 
@@ -2567,3 +2567,6 @@ type th_elt =
 
 let print_th_elt fmt t =
   Format.fprintf fmt "%s/%s: @[<hov>%a@]" t.th_name t.ax_name print t.ax_form
+
+let get_symb e = e.f
+let get_sub_expr e = e.xs

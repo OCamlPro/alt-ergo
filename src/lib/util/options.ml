@@ -488,6 +488,9 @@ let status = ref Status_Unknown
 let session_file = ref ""
 let used_context_file = ref ""
 let js_mode = ref false
+let simplify = ref Util.SNo
+let simplify_th = ref true
+let debug_simplify = ref false
 
 let set_timers b = timers := b
 let set_status s = status := match_known_status s
@@ -495,6 +498,9 @@ let set_file f = file := f
 let set_session_file f = session_file := f
 let set_used_context_file f = used_context_file := f
 let set_js_mode b = js_mode := b
+let set_simplify s = simplify := s
+let set_simplify_th b = simplify_th := b
+let set_debug_simplify b = debug_simplify := b
 
 let get_timers () = !timers || !profiling
 let get_file () = !file
@@ -502,6 +508,9 @@ let get_status () = !status
 let get_session_file () = !session_file
 let get_used_context_file () = !used_context_file
 let get_js_mode () = !js_mode
+let get_simplify () = !simplify
+let get_simplify_th () = !simplify_th
+let get_debug_simplify () = !debug_simplify
 
 (** particular getters : functions that are immediately executed **************)
 
