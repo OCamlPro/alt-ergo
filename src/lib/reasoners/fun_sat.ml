@@ -1987,7 +1987,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Shostak.Combine.reinit_cache ();
     Uf.reinit_cache ()
 
-  let _ =
+  let () =
     Steps.save_steps ();
     Var.save_cnt ();
     Expr.save_cache ();
