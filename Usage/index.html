@@ -43,7 +43,10 @@
 <li class="toctree-l2"><a class="reference internal" href="#library">Library</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#run">Run</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#files-extensions">Files extensions</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#output">Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#output">Output</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#about-alt-ergo-s-output">About alt-ergo’s output</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="#plugins">Plugins</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#preludes">Preludes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#plugins-and-preludes-directories">Plugins and Preludes directories</a></li>
@@ -128,6 +131,13 @@ standard</p></li>
 </pre></div>
 </div>
 <p>The status can be <code class="docutils literal notranslate"><span class="pre">Valid</span></code>, <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> or <code class="docutils literal notranslate"><span class="pre">I</span> <span class="pre">don't</span> <span class="pre">know</span></code>. If the input file is in the SMT-LIB 2 format the status will be either <code class="docutils literal notranslate"><span class="pre">unsat</span></code>, <code class="docutils literal notranslate"><span class="pre">sat</span></code>, <code class="docutils literal notranslate"><span class="pre">unknown</span></code>. You can force the status to be print in the SMT-LIB 2 form with the option <code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">smtlib2</span></code>.</p>
+<div class="section" id="about-alt-ergo-s-output">
+<h4>About alt-ergo’s output<a class="headerlink" href="#about-alt-ergo-s-output" title="Permalink to this headline">¶</a></h4>
+<p>When alt-ergo tries to prove a property (with the native input language), it
+actually tries to prove the unsatisfiability of the property negation. That is
+why you get <code class="docutils literal notranslate"><span class="pre">unsat</span></code> as an SMT-LIB 2 format output while proving a <code class="docutils literal notranslate"><span class="pre">Valid</span></code>
+property. The same goes for <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> and <code class="docutils literal notranslate"><span class="pre">sat</span></code>.</p>
+</div>
 </div>
 <div class="section" id="plugins">
 <h3>Plugins<a class="headerlink" href="#plugins" title="Permalink to this headline">¶</a></h3>
