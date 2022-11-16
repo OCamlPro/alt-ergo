@@ -33,6 +33,12 @@ File "<path_to_file>/<filename>", line <l>, characters <n-m>: <status> (<time in
 ```
 The status can be `Valid`, `Invalid` or `I don't know`. If the input file is in the SMT-LIB 2 format the status will be either `unsat`, `sat`, `unknown`. You can force the status to be print in the SMT-LIB 2 form with the option `--output smtlib2`.
 
+#### About alt-ergo's output
+When alt-ergo tries to prove a property (with the native input language), it
+actually tries to prove the unsatisfiability of the property negation. That is
+why you get `unsat` as an SMT-LIB 2 format output while proving a `Valid`
+property. The same goes for `Invalid` and `sat`.
+
 ### Plugins
 
 See the [AB-Why3 README] file for the documentation of the AB-Why3 plugin
@@ -78,10 +84,10 @@ executable, as well as preludes and plugins, can be relocated.
 
 For instance, on a Linux system, assuming the `alt-ergo` executable is at some path
 `some/path/bin/alt-ergo`, theses directories are respectively located at
-`some/path/share/alt-ergo/plugins/` and `some/path/share/alt-ergo/preludes/`.
+`some/path/lib/alt-ergo/plugins/` and `some/path/lib/alt-ergo/preludes/`.
 On windows, a binary at path `Z:\some\path\bin\alt-ergo` will look for preludes and
-plugins in `Z:\some\path\share\alt-ergo\preludes` and
-`Z:\some\path\share\alt-ergo\plugins` respectively.
+plugins in `Z:\some\path\lib\alt-ergo\preludes` and
+`Z:\some\path\lib\alt-ergo\plugins` respectively.
 
 ## Javascript
 
