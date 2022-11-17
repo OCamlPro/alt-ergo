@@ -386,16 +386,16 @@ module SmtPrinter = struct
   let rec print_formula fmt form xs bind =
     match form, xs, bind with
     | Sy.F_Unit _, [f1; f2], _ ->
-      fprintf fmt "@[(%a /\\@ %a)@]" print_silent f1 print_silent f2
+      fprintf fmt "@[(and %a %a)@]" print_silent f1 print_silent f2
 
     | Sy.F_Iff, [f1; f2], _ ->
-      fprintf fmt "@[(%a <->@ %a)@]" print_silent f1 print_silent f2
+      fprintf fmt "@[(= %a %a)@]" print_silent f1 print_silent f2
 
     | Sy.F_Xor, [f1; f2], _ ->
-      fprintf fmt "@[(%a xor@ %a)@]" print_silent f1 print_silent f2
+      fprintf fmt "@[(not (= %a %a))@]" print_silent f1 print_silent f2
 
     | Sy.F_Clause _, [f1; f2], _ ->
-      fprintf fmt "@[(%a \\/@ %a)@]" print_silent f1 print_silent f2
+      fprintf fmt "@[(or %a %a)@]" print_silent f1 print_silent f2
 
     | Sy.F_Lemma, [], B_lemma { user_trs ; main ; name ; binders; _ } ->
       if get_verbose () then

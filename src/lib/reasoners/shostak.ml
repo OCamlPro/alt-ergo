@@ -605,7 +605,7 @@ struct
               let dist = List.filter (fun r -> is_bool_const r) distincts in
               match dist with
               | {v = Term e; _}::_ ->
-                Some (Expr.neg e, true) (* safety: consider it as case-splut *)
+                Some (Expr.neg e, true) (* safety: consider it as case-split *)
               | _::_ ->
                 assert false
               | [] ->
