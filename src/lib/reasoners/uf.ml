@@ -1066,7 +1066,7 @@ let compute_concrete_model ({ make; _ } as env) =
                assert (xs_ta == []);
                fprofs,
                cprofs,
-               Profile.add (f_ta,[X.type_info i], ty) ([e], rep) carrays,
+               ModelMap.add (f_ta,[X.type_info i], ty) ([e], rep) carrays,
                mrepr
 
              | _ -> assert false
@@ -1074,14 +1074,14 @@ let compute_concrete_model ({ make; _ } as env) =
 
          | _ ->
            if tys == [] then
-             fprofs, Profile.add (f, tys, ty) (xs, rep) cprofs, carrays,
+             fprofs, ModelMap.add (f, tys, ty) (xs, rep) cprofs, carrays,
              mrepr
            else
-             Profile.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
+             ModelMap.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
              mrepr
 
     ) make
-    (Profile.empty, Profile.empty, Profile.empty, ME.empty)
+    (ModelMap.empty, ModelMap.empty, ModelMap.empty, ME.empty)
 
 let output_concrete_model fmt ~prop_model env =
   if get_interpretation () then

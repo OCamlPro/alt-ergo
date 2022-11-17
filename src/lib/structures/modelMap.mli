@@ -21,13 +21,16 @@ module V : Set.S with type elt =
                         (Expr.t * (Shostak.Combine.r * string)) list *
                         (Shostak.Combine.r * string)
 
+type key = P.key
+type elt = V.t
+type t = V.t P.t
 
-val add : P.key -> V.elt -> V.t P.t -> V.t P.t
+val add : key -> V.elt -> t -> t
 
-val iter : (P.key -> 'a -> unit) -> 'a P.t -> unit
+val iter : (key -> elt -> unit) -> t -> unit
 
-val fold : (P.key -> 'a -> 'b -> 'b) -> 'a P.t -> 'b -> 'b
+val fold : (key -> elt -> 'acc -> 'acc) -> t -> 'acc -> 'acc
 
-val empty : 'a P.t
+val empty : t
 
-val is_empty : 'a P.t -> bool
+val is_empty : t -> bool

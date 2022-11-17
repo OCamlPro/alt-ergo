@@ -312,10 +312,10 @@ module SmtlibCounterExample = struct
       defined_value
 
   let output_constants_counterexample fmt records cprofs =
-    Profile.iter
+    ModelMap.iter
       (fun (f, xs_ty, ty) st ->
          assert (xs_ty == []);
-         match Profile.V.elements st with
+         match ModelMap.V.elements st with
          | [[], rep] ->
            let rep = Format.asprintf "%a" x_print rep in
            let rep =
@@ -332,7 +332,7 @@ module SmtlibCounterExample = struct
 
   let output_functions_counterexample fmt records fprofs =
     let  records = ref records in
-    Profile.iter
+    ModelMap.iter
       (fun (f, xs_ty, ty) st ->
          let xs_ty_named = List.mapi (fun i ty ->
              ty,(sprintf "arg_%d" i)
@@ -340,7 +340,7 @@ module SmtlibCounterExample = struct
 
          let rep =
            let representants =
-             Profile.V.fold (fun (xs_values,(_rep,srep)) acc ->
+             ModelMap.V.fold (fun (xs_values,(_rep,srep)) acc ->
                  assert ((List.length xs_ty_named) = (List.length xs_values));
                  records :=
                    check_records !records xs_ty_named xs_values f ty srep;

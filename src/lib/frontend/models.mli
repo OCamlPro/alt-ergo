@@ -20,7 +20,7 @@
 val output_concrete_model :
   Format.formatter ->
   Expr.Set.t ->
-  functions:Profile.V.t Profile.P.t ->
-  constants:Profile.V.t Profile.P.t ->
-  arrays:Profile.V.t Profile.P.t ->
+  functions:ModelMap.t ->
+  constants:ModelMap.t ->
+  arrays:ModelMap.t ->
   unit
