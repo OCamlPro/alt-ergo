@@ -1919,7 +1919,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     {env with tbox = Th.assume_th_elt env.tbox th_elt dep}
 
   let reinit_ctx () =
-    all_models_sat_env := None;
+    (* all_models_sat_env := None; *)
     latest_saved_env := None;
     terminated_normally := false;
     Steps.reinit_steps ();
