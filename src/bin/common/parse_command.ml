@@ -979,7 +979,7 @@ let parse_output_opt =
     let doc =
       Format.sprintf
         "Control the output model type of the solver, $(docv) must be %s."
-        (Arg.doc_alts [ "value"; "constraint" ])
+        (Arg.doc_alts [ "value"; "constraints" ])
     in
     let docv = "MTYP" in
     Arg.(
@@ -1305,8 +1305,7 @@ let parse_fmt_opt =
 
   let model_output =
     let doc = Format.sprintf
-        "Set the model formatter used by default to output model and
-         interpretation. Possible values are %s."
+        "Set the output used for the model generation. Possible values are %s."
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"]) in
     Arg.(value & opt formatter_conv Stdout & info ["model-output"] ~docs ~doc)
   in

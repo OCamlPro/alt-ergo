@@ -1958,7 +1958,6 @@ let type_goal acc env_g loc sort n goal =
 
 
 let rec type_and_intro_goal acc env sort n f =
-  (* let b = (\* smtfile() || smt2file() || satmode()*\) false in *)
   let axioms, (goal, env_g) =
     intro_hypothesis env (match sort with Sat -> false | _ -> true) f in
   let loc = f.pp_loc in

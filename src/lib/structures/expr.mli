@@ -168,9 +168,9 @@ val is_fresh : t -> bool
 val is_fresh_skolem : t -> bool
 val is_int : t -> bool
 val is_real : t -> bool
-val [@inline always] type_info : t -> Ty.t
-val [@inline always] symbol_info : t -> Symbols.t
-val [@inline always] get_infos : t -> view
+val type_info : t -> Ty.t
+val symbol_info : t -> Symbols.t
+val get_infos : t -> view
 
 (** Labeling and models *)
 

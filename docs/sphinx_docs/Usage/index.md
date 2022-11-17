@@ -30,6 +30,9 @@ See the [Input section] for more information about the format of the input files
 Since 2.5.0, Alt-Ergo also generates models in the case it concludes on the satisfiability of
 the formula.
 There is two ways to activate model generation:
+
+- with the `--model` option;
+
 - `with the --interpretation=VALUE`, where VALUE can be equal to:
   * "none", and alt-ergo will not generate models (by default);
   * "first", and alt-ergo will output the first model it finds;
@@ -37,8 +40,7 @@ There is two ways to activate model generation:
   * "last", and alt-ergo will output the last model it computes before returning 'unknown'.
   Note that this mode only works with the option `--sat-solver tableaux`.
 
-- with the `--model option`, setting the interpretation option to 'last', and the sat-solver
-to 'tableaux.
+NB: the `--model` option is equivalent to `--interpretation every --sat-solver tableaux`.
 
 The default model format is the SMT format.
 
