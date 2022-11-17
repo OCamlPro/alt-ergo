@@ -86,6 +86,12 @@ module type S = sig
   val uid : t -> int
   val elements : t -> elt list
 
+  val save_cache : unit -> unit
+  (** Saves the modules cache  *)
+
+  val reinit_cache: unit -> unit
+  (** Reinitializes the module's cache *)
+
   module Map : Map.S with type key = t
   module Set : Set.S with type elt = t
 end

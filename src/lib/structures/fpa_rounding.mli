@@ -65,3 +65,6 @@ val float_of_rational :
 (** [round_to_integer mode x] rounds the rational [x] to an integer
     depending on the rounding mode [mode] *)
 val round_to_integer:  Expr.t -> Numbers.Q.t -> Numbers.Q.t
+
+(** Empties the module's inner cache *)
+val empty_cache : unit -> unit

@@ -94,6 +94,12 @@ end
 module type X = sig
   type r
 
+  val save_cache : unit -> unit
+  (** saves the module's current cache *)
+
+  val reinit_cache : unit -> unit
+  (** restores the module's cache *)
+
   val make : Expr.t -> r * Expr.t list
 
   val type_info : r -> Ty.t

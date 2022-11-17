@@ -118,6 +118,12 @@ struct
 
   module HC = Hconsing.Make(View)
 
+  let save_cache () =
+    HC.save_cache ()
+
+  let reinit_cache () =
+    HC.reinit_cache ()
+
   let hcons v = HC.make v
 
   (* end: Hconsing modules and functions *)
@@ -738,12 +744,25 @@ and AC : Ac.S
 module Combine = struct
   include CX
 
-  let make =
+  let make, save_cache, reinit_cache =
     let cache = H.create 1024 in
-    fun t ->
+    let cache_copy = ref None in
+    let make t =
       match H.find_opt cache t with
       | None -> let res = make t in H.add cache t res; res
       | Some res -> res
+    in
+    let save_cache_aux () =
+      save_cache ();
+      cache_copy := (Some (H.copy cache));
+    in
+    let reinit_cache_aux () =
+      reinit_cache ();
+      H.clear cache;
+      H.iter (H.add cache) (Option.get !cache_copy)
+    in
+    make, save_cache_aux, reinit_cache_aux
+
 end
 
 module Arith = X1

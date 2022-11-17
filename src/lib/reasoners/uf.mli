@@ -67,3 +67,9 @@ val is_normalized : t -> r -> bool
 
 val assign_next : t -> (r Xliteral.view * bool * Th_util.lit_origin) list * t
 val output_concrete_model : t -> unit
+
+val save_cache : unit -> unit
+(* saves the module's cache *)
+
+val reinit_cache : unit -> unit
+(** reinitializes the module's cache with the saved one *)

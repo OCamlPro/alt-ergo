@@ -75,6 +75,8 @@ module type S = sig
 
   val get_assumed : t -> E.Set.t
 
+  val reinit_cpt : unit -> unit
+
 end
 
 module Main_Default : S = struct
@@ -216,9 +218,9 @@ module Main_Default : S = struct
       print_types_decls ~header types;
       print_logics ~header logics
 
-    let assumed =
+    let assumed, reinit_cpt =
       let cpt = ref 0 in
-      fun l ->
+      let assumed l =
         if get_debug_cc () then begin
           print_dbg ~module_name:"Theory" ~function_name:"assumed"
             "Assumed facts (in this order):";
@@ -246,6 +248,11 @@ module Main_Default : S = struct
             ) (List.rev l);
           print_dbg ~header:false "false";
         end
+      in
+      let reinit_cpt () =
+        cpt := 0
+      in
+      assumed, reinit_cpt
 
     let theory_of k = match k with
       | Th_util.Th_arith  -> "Th_arith "
@@ -745,6 +752,9 @@ module Main_Default : S = struct
 
   let get_assumed env = env.assumed_set
 
+  let reinit_cpt () =
+    Debug.reinit_cpt ()
+
 end
 
 module Main_Empty : S = struct
@@ -780,4 +790,7 @@ module Main_Empty : S = struct
   let assume_th_elt e _ _ = e
   let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []
   let get_assumed env = env.assumed_set
+
+  let reinit_cpt () = ()
+
 end

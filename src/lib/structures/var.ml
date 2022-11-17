@@ -49,5 +49,16 @@ let to_string {hs ; id} =
 let print fmt v =
   fprintf fmt "%s" (to_string v)
 
+let save_cnt, reinit_cnt =
+  let saved_cnt = ref 0 in
+  let save_cnt () =
+    saved_cnt := !cpt
+  in
+  let reinit_cnt () =
+    cpt := !saved_cnt
+  in
+  save_cnt, reinit_cnt
+
+
 module Set = Set.Make(struct type t = view let compare = compare end)
 module Map = Map.Make(struct type t = view let compare = compare end)

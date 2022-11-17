@@ -110,6 +110,9 @@ val print_clean : Format.formatter -> t -> unit
 
 val fresh : ?is_var:bool -> string -> t
 
+val reinit_fresh_sy_cpt : unit -> unit
+(** Resets to 0 the fresh symbol counter *)
+
 val is_get : t -> bool
 val is_set : t -> bool
 
@@ -124,6 +127,9 @@ val label : t -> Hstring.t
 
 val print_bound : Format.formatter -> bound -> unit
 val string_of_bound : bound -> string
+
+val clear_labels : unit -> unit
+(** Empties the labels Hashtable *)
 
 module Set : Set.S with type elt = t
 

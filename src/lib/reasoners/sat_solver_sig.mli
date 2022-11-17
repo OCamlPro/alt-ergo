@@ -70,6 +70,10 @@ module type S = sig
   val print_model : header:bool -> Format.formatter -> t -> unit
 
   val reset_refs : unit -> unit
+
+  (** [reinit_ctx ()] reinitializes the solving context. *)
+  val reinit_ctx : unit -> unit
+
 end
 
 

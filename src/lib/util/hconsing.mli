@@ -76,6 +76,12 @@ module type S = sig
   type t
   (** The type of value used. *)
 
+  val save_cache: unit -> unit
+  (** Saves the module's cache *)
+
+  val reinit_cache: unit -> unit
+  (** Reinitializes the module's cache *)
+
   val make : t -> t
   (** Hashcons a value [t], either returning [t], or a value equal
       to [t] that was hashconsed previously. *)

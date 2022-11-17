@@ -2502,3 +2502,7 @@ let instantiate ~do_syntactic_matching env uf selector =
       Timers.exec_timer_pause Timers.M_Arith Timers.F_instantiate;
       raise e
   else instantiate ~do_syntactic_matching env uf selector
+
+let reinit_cache () =
+  Oracle.reset_age_cpt ();
+  EM.reinit_caches ()

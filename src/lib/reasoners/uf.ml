@@ -1280,3 +1280,10 @@ let output_concrete_model ({ make; _ } as env) =
       SMT2LikeModelOutput.output_arrays_model arrays;
       Printer.print_fmt (get_fmt_mdl ()) ")";
     end
+
+let save_cache () =
+  LX.save_cache ()
+
+let reinit_cache () =
+  LX.reinit_cache ()
+

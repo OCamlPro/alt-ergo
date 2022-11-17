@@ -70,6 +70,9 @@ module type S = sig
   val matching_terms_info :
     t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
 
+  val reinit_em_cache : unit -> unit
+  (** Reinitializes the E-matching functor instance's inner cache *)
+
 end
 
 module Make (X : Theory.S) : S with type tbox = X.t

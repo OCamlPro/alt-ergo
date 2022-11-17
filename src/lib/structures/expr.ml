@@ -27,7 +27,6 @@
 (******************************************************************************)
 
 open Format
-open Hconsing
 open Options
 
 module Sy = Symbols
@@ -305,7 +304,7 @@ module H = struct
 end
 
 module Labels = Hashtbl.Make(H)
-module HC = Make(H)
+module HC = Hconsing.Make(H)
 module Hsko = Hashtbl.Make(H)
 
 module F_Htbl : Hashtbl.S with type key = t =
@@ -553,9 +552,9 @@ let type_info t = t.ty
    | _ -> true (* bool vars are terms *)
 *)
 
-let mk_binders =
+let mk_binders, reset_binders_cpt =
   let cpt = ref 0 in
-  fun st ->
+  let mk_binders st =
     TSet.fold
       (fun t sym ->
          incr cpt;
@@ -563,6 +562,11 @@ let mk_binders =
          | { f = (Sy.Var _) as v; ty; _ } -> SMap.add v (ty, !cpt) sym
          | _ -> assert false
       )st SMap.empty
+  in
+  let reset_binders_cpt () =
+    cpt := 0
+  in
+  mk_binders, reset_binders_cpt
 
 
 let merge_vars acc b =
@@ -1305,9 +1309,9 @@ and find_particular_subst =
       end
 
 
-let apply_subst =
+let apply_subst, clear_subst_cache =
   let (cache : t Msbty.t Msbt.t TMap.t ref) = ref TMap.empty in
-  fun ((sbt, sbty) as s) f ->
+  let apply_subst ((sbt, sbty) as s) f =
     let ch = !cache in
     try TMap.find f ch |> Msbt.find sbt |> Msbty.find sbty
     with Not_found ->
@@ -1316,6 +1320,11 @@ let apply_subst =
       let c_sbty = try Msbt.find sbt c_sbt with Not_found -> Msbty.empty in
       cache := TMap.add f (Msbt.add sbt (Msbty.add sbty nf c_sbty) c_sbt) ch;
       nf
+  in
+  let clear_subst_cache () =
+    cache := TMap.empty
+  in
+  apply_subst, clear_subst_cache
 
 let apply_subst s t =
   if Options.get_timers() then
@@ -2567,3 +2576,12 @@ type th_elt =
 
 let print_th_elt fmt t =
   Format.fprintf fmt "%s/%s: @[<hov>%a@]" t.th_name t.ax_name print t.ax_form
+
+let save_cache () =
+  HC.save_cache ()
+
+let reinit_cache () =
+  reset_binders_cpt ();
+  clear_subst_cache ();
+  Labels.clear labels;
+  HC.reinit_cache ()

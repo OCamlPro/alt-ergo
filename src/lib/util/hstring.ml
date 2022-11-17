@@ -30,7 +30,7 @@ open Options
 
 type t = { content : string ; id : int}
 
-module S =
+module HC =
   Hconsing.Make(struct
     type elt = t
     let hash s = Hashtbl.hash s.content
@@ -40,7 +40,7 @@ module S =
     let disable_weaks () = Options.get_disable_weaks ()
   end)
 
-let make s = S.make {content = s; id = - 1}
+let make s = HC.make {content = s; id = - 1}
 
 let view s = s.content
 
@@ -58,11 +58,16 @@ let rec list_assoc x = function
   | [] -> raise Not_found
   | (y, v) :: l -> if equal x y then v else list_assoc x l
 
-let fresh_string =
+let fresh_string, reset_fresh_string_cpt =
   let cpt = ref 0 in
-  fun () ->
+  let fresh_string () =
     incr cpt;
     "!k" ^ (string_of_int !cpt)
+  in
+  let reset_fresh_string_cpt () =
+    cpt := 0
+  in
+  fresh_string, reset_fresh_string_cpt
 
 let is_fresh_string s =
   try s.[0] == '!' && s.[1] == 'k'
@@ -75,6 +80,13 @@ let is_fresh_skolem s =
   with Invalid_argument s ->
     assert (String.compare s "index out of bounds" = 0);
     false
+
+let save_cache () =
+  HC.save_cache ()
+
+let reinit_cache () =
+  HC.reinit_cache ();
+  reset_fresh_string_cpt ()
 
 module Arg = struct type t'= t type t = t' let compare = compare end
 module Set : Set.S with type elt = t = Set.Make(Arg)

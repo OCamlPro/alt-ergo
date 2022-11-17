@@ -56,6 +56,8 @@ module type S = sig
   val query :
     Util.matching_env -> t -> theory -> (trigger_info * gsubst list) list
 
+  val reinit_caches : unit -> unit
+
 end
 
 module type Arg = sig
@@ -631,9 +633,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   module HE = Hashtbl.Make (E)
 
-  let triggers_of =
+  let triggers_of, clear_triggers_of_trs_tbl =
     let trs_tbl = HEI.create 101 in
-    fun q mconf ->
+    let triggers_of q mconf =
       match q.E.user_trs with
       | _::_ as l -> l
       | [] ->
@@ -642,24 +644,39 @@ module Make (X : Arg) : S with type theory = X.t = struct
           let trs = E.make_triggers q.E.main q.E.binders q.E.kind mconf in
           HEI.add trs_tbl (q.E.main, mconf) trs;
           trs
+    in
+    let clear_triggers_of_trs_tbl () =
+      HEI.clear trs_tbl
+    in
+    triggers_of, clear_triggers_of_trs_tbl
 
-  let backward_triggers =
+  let backward_triggers, clear_backward_triggers_trs_tbl =
     let trs_tbl = HE.create 101 in
-    fun q ->
+    let backward_triggers q =
       try HE.find trs_tbl q.E.main
       with Not_found ->
         let trs = E.resolution_triggers ~is_back:true q in
         HE.add trs_tbl q.E.main trs;
         trs
+    in
+    let clear_backward_triggers_trs_tbl () =
+      HE.clear trs_tbl
+    in
+    backward_triggers, clear_backward_triggers_trs_tbl
 
-  let forward_triggers =
+  let forward_triggers, clear_forward_triggers_trs_tbl =
     let trs_tbl = HE.create 101 in
-    fun q ->
+    let forward_triggers q =
       try HE.find trs_tbl q.E.main
       with Not_found ->
         let trs = E.resolution_triggers ~is_back:false q in
         HE.add trs_tbl q.E.main trs;
         trs
+    in
+    let clear_forward_triggers_trs_tbl () =
+      HE.clear trs_tbl
+    in
+    forward_triggers, clear_forward_triggers_trs_tbl
 
   let add_triggers mconf env formulas =
     ME.fold
@@ -696,5 +713,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
       ) formulas env
 
   let terms_info env = env.info, env.fils
+
+  let reinit_caches () =
+    clear_triggers_of_trs_tbl ();
+    clear_backward_triggers_trs_tbl ();
+    clear_forward_triggers_trs_tbl ();
+    reset_cache_refs ()
 
 end

@@ -266,3 +266,5 @@ val monomorphize: t -> t
 (** Return a monomorphized variant of the given type, where
     type variable without values have been replaced by abstract types. *)
 
+val reinit_decls : unit -> unit
+(** Empties the decls cache *)
