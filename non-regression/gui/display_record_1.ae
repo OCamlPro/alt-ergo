@@ -1,2 +1,0 @@
-type t = {a : int; b : int}
-goal g: false
