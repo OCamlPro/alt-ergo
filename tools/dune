@@ -1,4 +1,6 @@
 (executable
   (name gentest)
   (modules gentest)
-  (libraries unix))
+  (libraries
+    unix
+    fpath))
