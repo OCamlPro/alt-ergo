@@ -78,7 +78,7 @@ module type S = sig
   val are_distinct : t -> Expr.t -> Expr.t -> Th_util.answer
   val cl_extract : t -> Expr.Set.t list
   val term_repr : t -> Expr.t -> init_term:bool -> Expr.t
-  val print_model : Format.formatter -> t -> unit
+
   val get_union_find : t -> Uf.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
@@ -87,6 +87,11 @@ module type S = sig
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) -> t * instances
 
+  val output_concrete_model :
+    Format.formatter ->
+    prop_model:Expr.Set.t ->
+    t ->
+    unit
 end
 
 module Main : S = struct
@@ -726,30 +731,6 @@ module Main : S = struct
 
   let get_union_find env = env.uf
 
-  let print_model fmt env =
-    let zero = ref true in
-    let eqs, neqs = Uf.model env.uf in
-    let rs =
-      List.fold_left (fun acc (r, l, to_rel) ->
-          if l != [] then begin
-            if !zero then begin
-              fprintf fmt "Theory:";
-              zero := false;
-            end;
-            fprintf fmt "\n %a = %a" (E.print_list_sep " = ") l X.print r;
-          end;
-          to_rel@acc
-        ) [] eqs in
-    List.iter (fun lt ->
-        if !zero then begin
-          fprintf fmt "Theory:";
-          zero := false;
-        end;
-        fprintf fmt "\n %a" (E.print_list_sep " <> ") lt;
-      ) neqs;
-    if not !zero then fprintf fmt "\n@.";
-    Rel.print_model fmt env.relation rs
-
   let assume_th_elt env th_elt dep =
     {env with relation = Rel.assume_th_elt env.relation th_elt dep}
 
@@ -777,5 +758,7 @@ module Main : S = struct
     in
     Uf.term_repr env.uf t
 
+  let output_concrete_model fmt ~prop_model env =
+    Uf.output_concrete_model fmt ~prop_model env.uf
 
 end

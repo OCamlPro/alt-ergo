@@ -1958,9 +1958,8 @@ let type_goal acc env_g loc sort n goal =
 
 
 let rec type_and_intro_goal acc env sort n f =
-  let b = (* smtfile() || smt2file() || satmode()*) false in
   let axioms, (goal, env_g) =
-    intro_hypothesis env (not b) f in
+    intro_hypothesis env (match sort with Sat -> false | _ -> true) f in
   let loc = f.pp_loc in
   let acc =
     List.fold_left
@@ -1993,6 +1992,7 @@ let type_one_th_decl env e =
   | Logic (loc, _, _, _)
   | Rewriting(loc, _, _)
   | Goal(loc, _, _)
+  | Check_sat(loc, _, _)
   | Predicate_def(loc,_,_,_)
   | Function_def(loc,_,_,_,_)
   | TypeDecl ((loc, _, _, _)::_)
@@ -2209,6 +2209,12 @@ let rec type_decl (acc, env) d assertion_stack =
     (*let f = move_up f in*)
     let f = alpha_renaming_env env f in
     type_and_intro_goal acc env Thm n f, env
+
+  | Check_sat(_loc, n, f) ->
+    Options.tool_req 1 "TR-Typing-CheckSatDecl$_F$";
+    (*let f = move_up f in*)
+    let f = alpha_renaming_env env f in
+    type_and_intro_goal acc env Sat n f, env
 
   | Predicate_def(loc,n,l,e)
   | Function_def(loc,n,l,_,e) ->

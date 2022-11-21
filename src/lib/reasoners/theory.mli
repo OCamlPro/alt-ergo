@@ -40,7 +40,6 @@ module type S = sig
     t * Expr.Set.t * int
 
   val query : Expr.t -> t -> Th_util.answer
-  val print_model : Format.formatter -> t -> unit
   val cl_extract : t -> Expr.Set.t list
   val extract_ground_terms : t -> Expr.Set.t
   val get_real_env : t -> Ccx.Main.t
@@ -58,6 +57,12 @@ module type S = sig
     int -> int -> t * Sig_rel.instances
 
   val get_assumed : t -> Expr.Set.t
+
+  val output_concrete_model :
+    Format.formatter ->
+    prop_model:Expr.Set.t ->
+    t ->
+    unit
 
   val reinit_cpt : unit -> unit
   (** reinitializes the counter to zero *)

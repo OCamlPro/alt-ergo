@@ -235,8 +235,8 @@ let pop_model sat_env () =
       ~wrap_mode:`CHAR () in
   let _ = tv1#misc#modify_font font in
   let _ = tv1#set_editable false in
-  let model_text = asprintf "%a@." (SAT.print_model ~header:false) sat_env in
-  buf1#set_text model_text;
+  (* let model_text = asprintf "%a@." (SAT.print_model ~header:false) sat_env in
+   * buf1#set_text model_text; *)
   pop_w#show ()
 
 
@@ -517,7 +517,7 @@ let update_status image label buttonclean env s steps =
     image#set_stock `EXECUTE;
     label#set_text "  Inconsistent assumption"
 
-  | FE.Unknown (d, t) ->
+  | FE.Unknown (d, _t) ->
     if not satmode then
       Printer.print_std "%a@ I don't know." Loc.report d.st_loc
     else
@@ -525,9 +525,8 @@ let update_status image label buttonclean env s steps =
     image#set_stock `NO;
     label#set_text (sprintf "  I don't know (%2.2f s)"
                       (Options.Time.value()));
-    if get_model () then pop_model t ()
 
-  | FE.Sat (d, t) ->
+  | FE.Sat (d, _t) ->
     if not satmode then
       Printer.print_std "%a" Loc.report d.st_loc;
     if satmode then
@@ -537,7 +536,6 @@ let update_status image label buttonclean env s steps =
     image#set_stock `NO;
     label#set_text
       (sprintf "  I don't know (sat) (%2.2f s)" (Options.Time.value()));
-    if get_model () then pop_model t ()
 
   | FE.Timeout _ ->
     assert false (* should not happen in GUI ? *)
@@ -814,6 +812,8 @@ let create_error_view error_model buffer sv ~packing () =
            ~callback:(goto_error view error_model buffer sv));
   view
 
+
+
 let goto_lemma (view:GTree.view) inst_model buffer
     (sv:GSourceView3.source_view) env path _column =
   let model = view#model in
@@ -970,6 +970,7 @@ let search_all entry (_sv:GSourceView3.source_view)
       search_one buf str result iter found_all_tag
     done
 
+
 let start_gui all_used_context =
   Options.set_timers true;
   Options.set_thread_yield Thread.yield;
@@ -979,9 +980,12 @@ let start_gui all_used_context =
       Printer.print_std "Timeout";
       raise Util.Timeout);
 
+
   let w =
     GWindow.window
       ~title:"AltGr-Ergo"
+      (* ~allow_grow:true *)
+      (* ~allow_shrink:true *)
       ~position:`CENTER
       ~width:window_width
       ~height:window_height ()
@@ -1245,6 +1249,8 @@ let start_gui all_used_context =
                   ~callback:(search_next ~backward:true
                                tv1 buf1 found_tag found_all_tag));
 
+
+
          let sw3 = GBin.scrolled_window
              ~vpolicy:`AUTOMATIC
              ~hpolicy:`AUTOMATIC
@@ -1368,11 +1374,6 @@ let start_gui all_used_context =
   ] in
 
   let options_entries =
-    let set_complete_model b =
-      if b then set_model MComplete else set_model MNone in
-    let set_all_models b =
-      if b then set_model MAll else set_model MNone in
-    let set_model b = if b then set_model MDefault else set_model MNone in
     let set_greedy b =
       if b then
         set_instantiation_heuristic IGreedy
@@ -1380,9 +1381,9 @@ let start_gui all_used_context =
     [
       `C ("Unsat cores", get_unsat_core (), set_unsat_core);
       (*`S;*)
-      `C ("Model", get_model (), set_model);
-      `C ("Complete model", get_complete_model (), set_complete_model);
-      `C ("All models", get_all_models (), set_all_models);
+      (* `C ("Model", get_model (), set_model);
+       * `C ("Complete model", get_complete_model (), set_complete_model);
+       * `C ("All models", get_all_models (), set_all_models); *)
       (*`S;*)
       `C ("Variables in triggers", get_triggers_var (), set_triggers_var);
       `C ("Greedy", get_greedy (), set_greedy);

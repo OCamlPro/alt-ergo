@@ -59,5 +59,3 @@ val register : string -> (module S) -> unit
 val find : string -> (module S)
 (** Find an input method by name.
     @raise Method_not_registered if the name is not registered. *)
-
-

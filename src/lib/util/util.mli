@@ -13,6 +13,7 @@ exception Timeout
 exception Unsolvable
 
 exception Cmp of int
+exception Not_implemented of string
 
 module MI : Map.S with type key = int
 module SI : Set.S with type elt = int

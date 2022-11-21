@@ -227,7 +227,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       (* This case should mainly occur when a query has a non-unsat result,
          so we want to print the status in this case. *)
       print_status (Sat (d,t)) (Steps.get_steps ());
-      if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;
+      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
       env , consistent, dep
     | SAT.Unsat dep' ->
       (* This case should mainly occur when a new assumption results in an unsat
@@ -242,7 +242,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          Instead, it'd be better to accumulate in `consistent` a 3-case adt
          and not a simple bool. *)
       print_status (Unknown (d, t)) (Steps.get_steps ());
-      if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;
+      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
       env , consistent, dep
     | Util.Timeout as e ->
       (* In this case, we obviously want to print the status,
@@ -279,6 +279,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | Query(g,_,_) -> Some g
       | _ -> None
     in
+
     let time = Time.value() in
     match status with
     | Unsat (d, dep) ->
@@ -311,13 +312,19 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout (Some d) ->
-      let loc = d.st_loc in
-      Printer.print_status_timeout ~validity_mode
-        (Some loc) (Some time) (Some steps) (get_goal_name d);
+      if Options.get_interpretation () then
+        Printer.print_wrn "Timeout"
+      else
+        let loc = d.st_loc in
+        Printer.print_status_timeout ~validity_mode
+          (Some loc) (Some time) (Some steps) (get_goal_name d);
 
     | Timeout None ->
-      Printer.print_status_timeout ~validity_mode
-        None (Some time) (Some steps) None;
+      if Options.get_interpretation () then
+        Printer.print_wrn "Timeout"
+      else
+        Printer.print_status_timeout ~validity_mode
+          None (Some time) (Some steps) None;
 
     | Preprocess ->
       Printer.print_status_preprocess ~validity_mode

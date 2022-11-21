@@ -317,21 +317,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   (*BISECT-IGNORE-END*)
 
 
-  let print_propositional_model env fmt =
-    let model = SAT.boolean_model env.satml in
-    fprintf fmt "Propositional:";
-    List.iter
-      (fun at ->
-         (fprintf fmt "\n %a" E.print) (Atom.literal at)
-      ) model;
-    fprintf fmt "\n@."
-
-  let print_model ~header fmt env =
-    Format.print_flush ();
-    if header then fprintf fmt "\nModel\n@.";
-    print_propositional_model env fmt;
-    Th.print_model fmt (SAT.current_tbox env.satml)
-
   let make_explanation _ = Ex.empty
   (*
     if get_debug_sat () then
@@ -1036,11 +1021,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Errors.run_error (Errors.Unsupported_feature msg)
     in
     let open Options in
-    if get_interpretation () <> 0 then fails "interpretation";
+    if get_interpretation () then fails "interpretation";
     if get_save_used_context () then fails "save_used_context";
-    if get_unsat_core () then fails "unsat_core";
-    if get_all_models () then fails "all_models";
-    if get_model () then fails "model"
+    if get_unsat_core () then fails "unsat_core"
 
   let create_guard env =
     let expr_guard = E.fresh_name Ty.Tbool in

@@ -56,7 +56,6 @@ module type S = sig
     t * Expr.Set.t * int
 
   val query : E.t -> t -> Th_util.answer
-  val print_model : Format.formatter -> t -> unit
   val cl_extract : t -> Expr.Set.t list
   val extract_ground_terms : t -> Expr.Set.t
   val get_real_env : t -> Ccx.Main.t
@@ -64,7 +63,6 @@ module type S = sig
   val do_case_split : t -> t * Expr.Set.t
   val add_term : t -> Expr.t -> add_in_cs:bool -> t
   val compute_concrete_model : t -> t
-
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :
@@ -74,6 +72,12 @@ module type S = sig
     int -> int -> t * Sig_rel.instances
 
   val get_assumed : t -> E.Set.t
+
+  val output_concrete_model :
+    Format.formatter ->
+    prop_model:Expr.Set.t ->
+    t ->
+    unit
 
   val reinit_cpt : unit -> unit
 
@@ -710,8 +714,6 @@ module Main_Default : S = struct
     let t, _, _ = assume true [a, Ex.empty, 0, -1] t in
     t
 
-  let print_model fmt t = CC_X.print_model fmt t.gamma_finite
-
   let cl_extract env = CC_X.cl_extract env.gamma
 
   let assume ?(ordered=true) facts t =
@@ -752,6 +754,9 @@ module Main_Default : S = struct
 
   let get_assumed env = env.assumed_set
 
+  let output_concrete_model fmt ~prop_model env =
+    CC_X.output_concrete_model fmt ~prop_model env.gamma_finite
+
   let reinit_cpt () =
     Debug.reinit_cpt ()
 
@@ -776,7 +781,6 @@ module Main_Empty : S = struct
 
   let query _ _ = None
 
-  let print_model _ _ = ()
   let cl_extract _ = []
   let extract_ground_terms _ = Expr.Set.empty
 
@@ -790,7 +794,6 @@ module Main_Empty : S = struct
   let assume_th_elt e _ _ = e
   let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []
   let get_assumed env = env.assumed_set
-
+  let output_concrete_model _fmt ~prop_model:_ _env = ()
   let reinit_cpt () = ()
-
 end

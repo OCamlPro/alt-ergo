@@ -418,11 +418,11 @@ module Shostak (X : ALIEN) = struct
   let assign_value _ _ _ =
     Printer.print_err
       "[ADTs.models] assign_value currently not implemented";
-    assert false
+    raise (Util.Not_implemented "Models for ADTs")
 
   let choose_adequate_model _ _ _ =
     Printer.print_err
       "[ADTs.models] choose_adequate_model currently not implemented";
-    assert false
+    raise (Util.Not_implemented "Models for ADTs")
 
 end

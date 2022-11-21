@@ -379,7 +379,7 @@ struct
     open Printer
 
     let print fmt r =
-      if get_term_like_pp () then
+      if get_term_like_pp () then begin
         match r.v with
         | X1 t    -> fprintf fmt "%a" X1.print t
         | X2 t    -> fprintf fmt "%a" X2.print t
@@ -390,7 +390,8 @@ struct
         | X7 t    -> fprintf fmt "%a" X7.print t
         | Term t  -> fprintf fmt "%a" Expr.print t
         | Ac t    -> fprintf fmt "%a" AC.print t
-      else
+      end
+      else begin
         match r.v with
         | X1 t    -> fprintf fmt "X1(%s):[%a]" X1.name X1.print t
         | X2 t    -> fprintf fmt "X2(%s):[%a]" X2.name X2.print t
@@ -401,6 +402,7 @@ struct
         | X7 t    -> fprintf fmt "X7(%s):[%a]" X7.name X7.print t
         | Term t  -> fprintf fmt "FT:[%a]" Expr.print t
         | Ac t    -> fprintf fmt "Ac:[%a]" AC.print t
+      end
 
     let print_sbt msg sbs =
       let c = ref 0 in
@@ -579,6 +581,8 @@ struct
            c
         )sbs
 
+  let is_bool_const r = equal r (top()) || equal r (bot())
+
   let assign_value r distincts eq =
     let opt = match r.v, type_info r with
       | _, Ty.Tint
@@ -589,6 +593,25 @@ struct
       | _, Ty.Tsum _    -> X5.assign_value r distincts eq
       | _, Ty.Tadt _    when not (Options.get_disable_adts()) ->
         X6.assign_value r distincts eq
+
+      | Term _t, Ty.Tbool ->
+        if is_bool_const r then None
+        else
+          begin
+            let eq = List.filter (fun (_t, r) -> is_bool_const r) eq in
+            match eq with
+            | (e,_r)::_ -> Some (e, false) (* false <-> not a case-split *)
+            | [] ->
+              let dist = List.filter (fun r -> is_bool_const r) distincts in
+              match dist with
+              | {v = Term e; _}::_ ->
+                Some (Expr.neg e, true) (* safety: consider it as case-split *)
+              | _::_ ->
+                assert false
+              | [] ->
+                Some (Expr.faux, true) (* true <-> make a case split *)
+          end
+
       | Term t, ty      -> (* case disable_adts() handled here *)
         if Expr.const_term t ||
            List.exists (fun (t,_) -> Expr.const_term t) eq then None
@@ -616,6 +639,11 @@ struct
         X6.choose_adequate_model t rep l
       | Ty.Trecord _ -> X2.choose_adequate_model t rep l
       | Ty.Tfarray _ -> X4.choose_adequate_model t rep l
+      | Ty.Tbool ->
+        (* case split is now supposed to be done for internal bools if
+           needed as well *)
+        assert (is_bool_const rep);
+        rep, asprintf "%a" print rep
       | _            ->
         let acc =
           List.fold_left

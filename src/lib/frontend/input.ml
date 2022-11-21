@@ -41,4 +41,3 @@ let register name ((module M : S) as m) =
 let find name =
   try List.assoc name !input_methods
   with Not_found -> raise (Method_not_registered name)
-

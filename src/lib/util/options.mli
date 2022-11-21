@@ -34,11 +34,27 @@
     of the program
 *)
 
-(** Type used to describe the type of models wanted *)
-type model = MNone | MDefault | MAll | MComplete
+(** Type used to describe the type of heuristic for instantiation wanted by
+    {!val:set_instantiation_heuristic} *)
+type instantiation_heuristic =
+  | INormal      (** Least costly heuristic for instantiation, instantiate on
+                     a reduced set of term *)
+  | IAuto        (** Default Heuristic that try to do the normal heuristic and
+                     then try a greedier instantiation if no new instance have
+                     been made *)
+  | IGreedy      (** Force instantiation to be the greedier as possible,
+                     use all available ground terms *)
 
-(** Type used to describe the type of heuristic for instantiation wanted *)
-type instantiation_heuristic  = INormal | IAuto | IGreedy
+(** Type used to describe the type of interpretation wanted by
+    {!val:set_interpretation} *)
+type interpretation =
+  | INone        (** Default, No interpretation computed *)
+  | IFirst       (** Compute an interpretation after the first instantiation
+                     and output it at the end of the executionn *)
+  | IEvery       (** Compute an interpretation before every instantiation
+                     and return the last one computed *)
+  | ILast        (** Compute only the last interpretation just before
+                     returning SAT/Unknown *)
 
 (** Type used to describe the type of input wanted by
     {!val:set_input_format} *)
@@ -51,6 +67,8 @@ type input_format =
   | Why3                       (** Why3 file format *)
   (*   | SZS                        * Not yet implemented SZS format   *)
   | Unknown of string          (** Unknown file format *)
+
+type model_type = Value | Constraints
 
 (** Type used to describe the type of output wanted by
     {!val:set_output_format} *)
@@ -183,21 +201,18 @@ val set_input_format : input_format -> unit
 (** Set [interpretation] accessible with {!val:get_interpretation}
 
     Possible values are :
-    {ol {- Unknown} {- Before instantiation}
-    {- Before every decision or instantiation}}
+    {ol {- First} {- Before every instantiation}
+     {- Before every decision and instantiation}
+     {- Before end}}
+*)
+val set_interpretation : interpretation -> unit
 
-    A negative value (-1, -2, or -3) will disable interpretation display. *)
-val set_interpretation : int -> unit
+(** Set [interpretation_use_underscore] accessible with
+    {!val:get_interpretation_use_underscore} *)
+val set_interpretation_use_underscore : bool -> unit
 
 (** Set [max_split] accessible with {!val:get_max_split} *)
 val set_max_split : Numbers.Q.t -> unit
-
-(** Set [model] accessible with {!val:get_model}
-
-    Possible values are :
-    {ul {- Default} {- Complete} {- All}}
-*)
-val set_model : model -> unit
 
 (** Set [nb_triggers] accessible with {!val:get_nb_triggers} *)
 val set_nb_triggers : int -> unit
@@ -222,6 +237,9 @@ val set_normalize_instances : bool -> unit
 
 (** Set [output_format] accessible with {!val:get_output_format} *)
 val set_output_format : output_format -> unit
+
+(** Set [model_type] accessible with {!val:get_model_type} *)
+val set_model_type : model_type -> unit
 
 (** Set [parse_only] accessible with {!val:get_parse_only} *)
 val set_parse_only : bool -> unit
@@ -668,44 +686,61 @@ val get_timelimit_per_goal : unit -> bool
 
 (** {4 Output options} *)
 
-(** Experimental support for models on labeled terms.
-
-    Possible values are
-    {ul {- None} {- Default} {- Complete : shows a complete model}
-    {- All : shows all models}}
-
-    Which are used in the two setters below. This option answers
-    [true] if the model is set to Default or Complete
-*)
-val get_model : unit -> bool
-(** Default to [false] *)
-
-(** [true] if the model is set to complete model *)
-val get_complete_model : unit -> bool
-(** Default to [false] *)
-
-(** [true] if the model is set to all models? *)
-val get_all_models : unit -> bool
-(** Default to [false] *)
-
 (** Experimental support for counter-example generation.
 
     Possible values are :
-    {ol {- Unknown} {- Before instantiation}
-    {- Before every decision or instantiation}}
+     {ol {- First} {- Before every instantiation}
+      {- Before every decision and instantiation}
+      {- Before end}}
 
-    A negative value (-1, -2, or -3) will disable interpretation display.
+    Which are used in the four getters below. This option answers
+    [true] if the interpretation is set to First, Before_end, Before_dec
+    or Before_inst.
 
     Note that {!val:get_max_split} limitation will be ignored in model
     generation phase. *)
-val get_interpretation : unit -> int
-(** Default to [0] *)
+val get_interpretation : unit -> bool
+(** Default to [false] *)
+
+(** [true] if the interpretation is set to first interpretation *)
+val get_first_interpretation : unit -> bool
+(** Default to [false] *)
+
+(** [true] if the interpretation is set to compute interpretation
+    before every instantiation *)
+val get_every_interpretation : unit -> bool
+(** Default to [false] *)
+
+(** [true] if the interpretation is set to compute interpretation
+    before the solver return unknown *)
+val get_last_interpretation : unit -> bool
+(** Default to [false] *)
+
+(** [true] if the interpretation_use_underscore is set to output _
+    instead of fresh values *)
+val get_interpretation_use_underscore : unit -> bool
+(** Default to [false] *)
 
 (** Value specifying the default output format. possible values are
     {ul {- native} {- smtlib2} {- why3}}
     . *)
 val get_output_format : unit -> output_format
 (** Default to [Native] *)
+
+(** [true] if the output format is set to smtlib2 or why3 *)
+val get_output_smtlib : unit -> bool
+(** Default to [false] *)
+
+(** Value specifying the default model type. possible values are
+    {ul {- value} {- constraints}}
+    . *)
+val get_model_type : unit -> model_type
+(** Default to [Value] *)
+
+(** [true] if the model kind is set to constraints
+    . *)
+val get_model_type_constraints : unit -> bool
+(** Default to [false] *)
 
 (** [true] if Alt-Ergo infers automatically the output format according to the
     the file extension or the input format if set. *)
