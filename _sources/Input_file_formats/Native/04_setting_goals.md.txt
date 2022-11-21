@@ -49,4 +49,45 @@ In other word, `cut` and `check` allow to test if intermediate goals can be prov
 <check_declaration> ::= 'check' <expr>
 <cut_declaration>   ::= 'cut' <expr>
 ```
- 
+
+## `check_valid`
+
+This keyword is an alias for `goal`.
+
+## `check_sat`
+
+This keyword is used just like `goal` and `check_valid`, but it describes a property that alt-ergo will
+try to prove invalid. This keywork has been introduced in the version 2.5.0 as a part of the model
+instanciation, and in this version `alt-ergo` never returns `SAT`, but `unknown` instead.
+
+### Example
+
+test.ae
+```
+logic x, y : int
+
+check_sat g: x = y
+```
+
+```
+$ alt-ergo test.ae --model
+
+unknown
+
+(model
+
+ ; Functions
+
+ ; Constants
+
+(define-fun x () int 0)
+
+(define-fun y () int 0)
+
+ ; Arrays not yet supported
+
+
+)
+File "test.ae", line 3, characters 14-19: I don't know (0.0030) (2 steps) (goal g)
+
+```

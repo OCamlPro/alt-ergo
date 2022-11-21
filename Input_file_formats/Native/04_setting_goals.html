@@ -56,6 +56,11 @@
 <li class="toctree-l5"><a class="reference internal" href="#id1">Syntax</a></li>
 </ul>
 </li>
+<li class="toctree-l4"><a class="reference internal" href="#check-valid"><code class="docutils literal notranslate"><span class="pre">check_valid</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#check-sat"><code class="docutils literal notranslate"><span class="pre">check_sat</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="05_theories.html"> Theories</a></li>
@@ -144,6 +149,46 @@ In other word, <code class="docutils literal notranslate"><span class="pre">cut<
 <h3>Syntax<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">check_declaration</span><span class="o">&gt;</span> <span class="p">::</span><span class="o">=</span> <span class="s1">&#39;check&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
 <span class="o">&lt;</span><span class="n">cut_declaration</span><span class="o">&gt;</span>   <span class="p">::</span><span class="o">=</span> <span class="s1">&#39;cut&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="check-valid">
+<h2><code class="docutils literal notranslate"><span class="pre">check_valid</span></code><a class="headerlink" href="#check-valid" title="Permalink to this headline">¶</a></h2>
+<p>This keyword is an alias for <code class="docutils literal notranslate"><span class="pre">goal</span></code>.</p>
+</div>
+<div class="section" id="check-sat">
+<h2><code class="docutils literal notranslate"><span class="pre">check_sat</span></code><a class="headerlink" href="#check-sat" title="Permalink to this headline">¶</a></h2>
+<p>This keyword is used just like <code class="docutils literal notranslate"><span class="pre">goal</span></code> and <code class="docutils literal notranslate"><span class="pre">check_valid</span></code>, but it describes a property that alt-ergo will
+try to prove invalid. This keywork has been introduced in the version 2.5.0 as a part of the model
+instanciation, and in this version <code class="docutils literal notranslate"><span class="pre">alt-ergo</span></code> never returns <code class="docutils literal notranslate"><span class="pre">SAT</span></code>, but <code class="docutils literal notranslate"><span class="pre">unknown</span></code> instead.</p>
+<div class="section" id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
+<p>test.ae</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">logic</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="p">:</span> <span class="nb">int</span>
+
+<span class="n">check_sat</span> <span class="n">g</span><span class="p">:</span> <span class="n">x</span> <span class="o">=</span> <span class="n">y</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ alt-ergo test.ae --model
+
+unknown
+
+(model
+
+ ; Functions
+
+ ; Constants
+
+(define-fun x () int 0)
+
+(define-fun y () int 0)
+
+ ; Arrays not yet supported
+
+
+)
+File &quot;test.ae&quot;, line 3, characters 14-19: I don&#39;t know (0.0030) (2 steps) (goal g)
 </pre></div>
 </div>
 </div>

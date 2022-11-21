@@ -43,6 +43,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#library">Library</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#run">Run</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#files-extensions">Files extensions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#generating-models">Generating models</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#output">Output</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#about-alt-ergo-s-output">About alt-ergo’s output</a></li>
 </ul>
@@ -123,6 +124,26 @@ allow to enable the old Tableaux-like SAT-solver:</p>
 standard</p></li>
 </ul>
 <p>See the <a class="reference internal" href="../Input_file_formats/index.html"><span class="doc">Input section</span></a> for more information about the format of the input files</p>
+</div>
+<div class="section" id="generating-models">
+<h3>Generating models<a class="headerlink" href="#generating-models" title="Permalink to this headline">¶</a></h3>
+<p>Since 2.5.0, Alt-Ergo also generates models in the case it concludes on the satisfiability of
+the formula.
+There is two ways to activate model generation:</p>
+<ul class="simple">
+<li><p>with the <code class="docutils literal notranslate"><span class="pre">--model</span></code> option;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">with</span> <span class="pre">the</span> <span class="pre">--interpretation=VALUE</span></code>, where VALUE can be equal to:</p>
+<ul>
+<li><p>“none”, and alt-ergo will not generate models (by default);</p></li>
+<li><p>“first”, and alt-ergo will output the first model it finds;</p></li>
+<li><p>“every”, alt alt-ergo will compute a model before each decision</p></li>
+<li><p>“last”, and alt-ergo will output the last model it computes before returning ‘unknown’.
+Note that this mode only works with the option <code class="docutils literal notranslate"><span class="pre">--sat-solver</span> <span class="pre">tableaux</span></code>.</p></li>
+</ul>
+</li>
+</ul>
+<p>NB: the <code class="docutils literal notranslate"><span class="pre">--model</span></code> option is equivalent to <code class="docutils literal notranslate"><span class="pre">--interpretation</span> <span class="pre">every</span> <span class="pre">--sat-solver</span> <span class="pre">tableaux</span></code>.</p>
+<p>The default model format is the SMT format.</p>
 </div>
 <div class="section" id="output">
 <h3>Output<a class="headerlink" href="#output" title="Permalink to this headline">¶</a></h3>
