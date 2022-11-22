@@ -1,0 +1,10 @@
+type t =
+  A
+| B of {c : int}
+| C
+
+goal g:
+match A with
+| A -> 1 <= 1
+| B(_) -> 2 <= 1
+end

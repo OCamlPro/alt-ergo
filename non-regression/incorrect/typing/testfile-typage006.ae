@@ -1,0 +1,8 @@
+
+logic Q : 'a tab -> prop
+
+axiom a2 : forall x:'a tab. Q(x)
+
+type t
+
+goal g7: forall a:t. Q(a)

@@ -1,0 +1,4 @@
+
+type t
+goal g19 : forall x,y : t. x<y
+

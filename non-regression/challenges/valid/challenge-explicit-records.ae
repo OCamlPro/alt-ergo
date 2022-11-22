@@ -1,0 +1,28 @@
+(*
+only proved
+- with models generation
+- if H-1 is added to the context
+- if foo_records is added to the context
+*)
+
+type t = { CH : int }
+
+logic m : t
+logic z : int
+
+axiom my_ax :
+ forall x:int[x].
+ m <> { CH = x } or x = 0
+
+(*
+(*H-1*)
+axiom foo_records:
+forall m : t[m]. exists z : int.
+  m = {CH = z}
+*)
+
+goal g :
+(* (*H-2*) m = {CH = y} ->*)
+(m <> { CH = 0 } or m = { CH = 1 }) ->
+false
+
