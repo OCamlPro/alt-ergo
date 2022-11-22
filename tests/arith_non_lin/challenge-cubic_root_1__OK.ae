@@ -1,0 +1,26 @@
+(* this is the prelude for Alt-Ergo, any versions *)
+(* this is a prelude for Alt-Ergo integer arithmetic *)
+logic match_bool : bool, 'a, 'a -> 'a
+
+axiom match_bool_True :
+  (forall z:'a. forall z1:'a. (match_bool(true, z, z1) = z))
+
+axiom match_bool_False :
+  (forall z:'a. forall z1:'a. (match_bool(false, z, z1) = z1))
+
+axiom CompatOrderMult :
+  (forall x:int. forall y:int. forall z:int. ((x <= y) -> ((0 <= z) ->
+  ((x * z) <= (y * z)))))
+
+type 'a ref = { contents : 'a
+}
+
+function cube(x: int) : int = ((x * x) * x)
+
+goal WP_parameter_cubic_root :
+  (forall x:int. ((0 <= x) ->
+  (forall y:int. forall b:int. forall a:int. (((cube((b - 1)) <= x) and
+  ((y = cube(b)) and (a = (b * b)))) -> ((y <= x) ->
+  (forall y1:int. ((y1 = (((y + (3 * a)) + (3 * b)) + 1)) ->
+  (forall a1:int. ((a1 = ((a + (2 * b)) + 1)) ->
+  (forall b1:int. ((b1 = (b + 1)) -> (y1 = cube(b1)))))))))))))
