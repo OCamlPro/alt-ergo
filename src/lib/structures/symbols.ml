@@ -266,7 +266,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op Div -> "/"
   | Op Modulo -> "%"
   | Op (Access s) ->
-    if get_output_smtlib () then
+    if Options.get_output_smtlib () then
       (Hstring.view s)
     else
       "@Access_"^(Hstring.view s)

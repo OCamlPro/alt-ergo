@@ -640,7 +640,7 @@ struct
         (* case split is now supposed to be done for internal bools if
            needed as well *)
         assert (is_bool_const rep);
-        rep, asprintf "%a" print rep
+        rep, Format.asprintf "%a" print rep
       | _            ->
         let acc =
           List.fold_left

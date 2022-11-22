@@ -263,10 +263,10 @@ let pp_sep_nospace fmt () = Format.fprintf fmt ""
 let pp_list_no_space f fmt l =
   Format.pp_print_list ~pp_sep:pp_sep_nospace f fmt l
 
-let pp_sep_space fmt () = fprintf fmt " "
+let pp_sep_space fmt () = Format.fprintf fmt " "
 
 let pp_list_space f fmt l =
-  pp_print_list ~pp_sep:pp_sep_space f fmt l
+  Format.pp_print_list ~pp_sep:pp_sep_space f fmt l
 
 (******** Status printers *********)
 let status_time t =

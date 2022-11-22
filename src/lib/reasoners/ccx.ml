@@ -113,9 +113,9 @@ module Main : S = struct
 
   let empty_facts () =
     Sig_rel.{ equas   = Queue.create ();
-      ineqs   = Queue.create ();
-      diseqs  = Queue.create ();
-      touched = Util.MI.empty }
+              ineqs   = Queue.create ();
+              diseqs  = Queue.create ();
+              touched = Util.MI.empty }
 
   let add_fact facts ((lit, _, _) as e) =
     let open Sig_rel in

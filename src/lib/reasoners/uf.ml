@@ -1081,7 +1081,7 @@ let compute_concrete_model ({ make; _ } as env) =
     (ModelMap.empty, ModelMap.empty, ModelMap.empty, ME.empty)
 
 let output_concrete_model fmt ~prop_model env =
-  if get_interpretation () then
+  if Options.get_interpretation () then
     let functions, constants, arrays, _ =
       compute_concrete_model env in
     Models.output_concrete_model fmt prop_model ~functions ~constants ~arrays

@@ -396,7 +396,7 @@ module SmtPrinter = struct
       fprintf fmt "@[(or %a %a)@]" print_silent f1 print_silent f2
 
     | Sy.F_Lemma, [], B_lemma { user_trs ; main ; name ; binders; _ } ->
-      if get_verbose () then
+      if Options.get_verbose () then
         fprintf fmt "(lemma: %s forall %a[%a].@  %a)"
           name
           print_binders binders
@@ -412,6 +412,7 @@ module SmtPrinter = struct
     | _ -> assert false
 
   and print_lit fmt lit xs =
+    let fprintf = Format.fprintf in
     match lit, xs with
     | Sy.L_eq, a::l ->
       fprintf fmt "(= %a%a)"
@@ -470,13 +471,13 @@ module SmtPrinter = struct
     | Sy.Lit lit, xs -> print_lit fmt lit xs
 
     | Sy.Op Sy.Get, [e1; e2] ->
-      if get_output_smtlib () then
+      if Options.get_output_smtlib () then
         fprintf fmt "(select %a %a)" print e1 print e2
       else
         fprintf fmt "%a[%a]" print e1 print e2
 
     | Sy.Op Sy.Set, [e1; e2; e3] ->
-      if get_output_smtlib () then
+      if Options.get_output_smtlib () then
         fprintf fmt "(store %a %a %a)"
           print e1
           print e2
@@ -491,7 +492,7 @@ module SmtPrinter = struct
       fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
 
     | Sy.Op (Sy.Access field), [e] ->
-      if get_output_smtlib () then
+      if Options.get_output_smtlib () then
         fprintf fmt "(%s %a)" (Hstring.view field) print e
       else
         fprintf fmt "%a.%s" print e (Hstring.view field)
@@ -536,24 +537,22 @@ module SmtPrinter = struct
       fprintf fmt "%a" Sy.print f
 
     | _, _ ->
-      Format.fprintf fmt "(%a %a)" Sy.print f (Util.print_list ~sep:"," ~pp:print) xs
+      Format.fprintf fmt "(%a %a)" Sy.print f
+        (Util.print_list ~sep:"," ~pp:print) xs
 
   and print_triggers fmt trs =
     List.iter (fun { content = l; _ } ->
         Format.fprintf fmt "| %a@,"  (Util.print_list ~sep:"," ~pp:print) l;
       ) trs
 
-and print_list_sep sep fmt = function
-  | [] -> ()
-  | [t] -> print fmt t
-  | t::l -> Format.fprintf fmt "%a%s%a" print t sep (print_list_sep sep) l
+  and print_verbose fmt t = print fmt t
+  (* Not displaying types when int SMT format *)
 
-and print_list fmt = print_list_sep "," fmt
+  and print fmt t =
+    if Options.get_debug () then print_verbose fmt t
+    else print_silent fmt t
 
-and print_triggers fmt trs =
-  List.iter (fun { content = l; _ } ->
-      Format.fprintf fmt "| %a@," print_list l;
-    ) trs
+end
 
 module AEPrinter = struct
 
@@ -574,7 +573,7 @@ module AEPrinter = struct
       fprintf fmt "@[(%a \\/@ %a)@]" print_silent f1 print_silent f2
 
     | Sy.F_Lemma, [], B_lemma { user_trs ; main ; name ; binders; _ } ->
-      if get_verbose () then
+      if Options.get_verbose () then
         fprintf fmt "(lemma: %s forall %a[%a].@  %a)"
           name
           print_binders binders
@@ -590,6 +589,7 @@ module AEPrinter = struct
     | _ -> assert false
 
   and print_lit fmt lit xs =
+    let fprintf = Format.fprintf in
     match lit, xs with
     | Sy.L_eq, a::l ->
       fprintf fmt "(%a%a)"
@@ -630,6 +630,7 @@ module AEPrinter = struct
       assert false
 
   and print_silent fmt t =
+    let fprintf = Format.fprintf in
     let { f ; xs ; ty; bind; _ } = t in
     match f, xs with
     (* Formulas *)
@@ -648,13 +649,13 @@ module AEPrinter = struct
     | Sy.Lit lit, xs -> print_lit fmt lit xs
 
     | Sy.Op Sy.Get, [e1; e2] ->
-      if get_output_smtlib () then
+      if Options.get_output_smtlib () then
         fprintf fmt "(select %a %a)" print e1 print e2
       else
         fprintf fmt "%a[%a]" print e1 print e2
 
     | Sy.Op Sy.Set, [e1; e2; e3] ->
-      if get_output_smtlib () then
+      if Options.get_output_smtlib () then
         fprintf fmt "(store %a %a %a)"
           print e1
           print e2
@@ -669,7 +670,7 @@ module AEPrinter = struct
       fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
 
     | Sy.Op (Sy.Access field), [e] ->
-      if get_output_smtlib () then
+      if Options.get_output_smtlib () then
         fprintf fmt "(%s %a)" (Hstring.view field) print e
       else
         fprintf fmt "%a.%s" print e (Hstring.view field)
@@ -700,7 +701,7 @@ module AEPrinter = struct
         Hstring.print hs (Util.print_list ~sep:"," ~pp:print) l
 
     | Sy.Op _, [e1; e2] ->
-      if get_output_smtlib () then
+      if Options.get_output_smtlib () then
         fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
       else
         fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
@@ -722,11 +723,11 @@ module AEPrinter = struct
 
   and print_triggers fmt trs =
     List.iter (fun { content = l; _ } ->
-        fprintf fmt "| %a@," (Util.print_list ~sep:"," ~pp:print) l;
+        Format.fprintf fmt "| %a@," (Util.print_list ~sep:"," ~pp:print) l;
       ) trs
 
   and print_verbose fmt t =
-    fprintf fmt "(%a : %a)" print_silent t Ty.print t.ty
+    Format.fprintf fmt "(%a : %a)" print_silent t Ty.print t.ty
 
   and print fmt t =
     if Options.get_debug () then print_verbose fmt t
@@ -735,12 +736,12 @@ module AEPrinter = struct
 end
 
 let print fmt =
-  if get_output_smtlib ()
+  if Options.get_output_smtlib ()
   then SmtPrinter.print fmt
   else AEPrinter.print fmt
 
 let print_triggers fmt =
-  if get_output_smtlib ()
+  if Options.get_output_smtlib ()
   then SmtPrinter.print_triggers fmt
   else AEPrinter.print_triggers fmt
 
@@ -1506,6 +1507,11 @@ let apply_subst, clear_subst_cache =
       let c_sbty = try Msbt.find sbt c_sbt with Not_found -> Msbty.empty in
       cache := TMap.add f (Msbt.add sbt (Msbty.add sbty nf c_sbty) c_sbt) ch;
       nf
+  in
+  let clear_subst_cache () =
+    cache := TMap.empty
+  in
+  apply_subst, clear_subst_cache
 
 let apply_subst s t =
   if Options.get_timers() then

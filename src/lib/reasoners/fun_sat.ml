@@ -451,8 +451,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let s = ref SE.empty in
     ME.iter
       (fun f _ ->
-         if (Options.get_complete_model () && is_literal f) 
-        || E.is_in_model f then
+         if complete_model && is_literal f then
            s := SE.add f !s
       )
       t.gamma;
@@ -1188,7 +1187,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            A model has been computed. However, I failed \
            while computing it so may be incorrect.@]";
         let prop_model = extract_prop_model ~complete_model:true env in
-        Th.output_concrete_model (get_fmt_mdl ()) ~prop_model env.tbox;
+        Th.output_concrete_model (Options.get_fmt_mdl ()) ~prop_model env.tbox;
     end;
     return_function ()
 
@@ -1204,7 +1203,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
 
     let prop_model = extract_prop_model ~complete_model:true env in
-    Th.output_concrete_model (get_fmt_mdl ()) ~prop_model env.tbox;
+    Th.output_concrete_model (Options.get_fmt_mdl ()) ~prop_model env.tbox;
 
     terminated_normally := true;
     return_function env
@@ -1213,11 +1212,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let switch_to_model_gen env =
     not !terminated_normally &&
     not !(env.model_gen_mode) &&
-    get_interpretation ()
+    Options.get_interpretation ()
 
 
   let do_switch_to_model_gen env =
-    let i = get_interpretation () in
+    let i = Options.get_interpretation () in
     assert i;
     if not !(env.model_gen_mode) &&
        Stdlib.(<>) (Options.get_timelimit_interpretation ()) 0. then
@@ -1345,7 +1344,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          On example UFDT/20170428-Barrett/cdt-cade2015/data/gandl/cotree/
          x2015_09_10_16_49_52_978_1009894.smt_in.smt2,
          this returns a wrong model. *)
-      return_answer env (get_last_interpretation ())
+      return_answer env (Options.get_last_interpretation ())
         (fun e -> raise (I_dont_know e))
     | IAuto | IGreedy ->
       let gre_inst =
@@ -1372,22 +1371,24 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env = do_case_split env Util.AfterMatching in
       if ok1 || ok2 || ok3 || ok4 then env
       else
-        return_answer env (get_last_interpretation ())
+        return_answer env (Options.get_last_interpretation ())
           (fun e -> raise (I_dont_know e))
 
   let normal_instantiation env try_greedy =
     try
       Debug.print_nb_related env;
       let env = do_case_split env Util.BeforeMatching in
-      let env = compute_concrete_model env (get_every_interpretation ()) in
+      let env = compute_concrete_model env
+          (Options.get_every_interpretation ())
+      in
       let env = new_inst_level env in
       let mconf =
-        {Util.nb_triggers = get_nb_triggers ();
-         no_ematching = get_no_ematching();
-         triggers_var = get_triggers_var ();
+        {Util.nb_triggers = Options.get_nb_triggers ();
+         no_ematching = Options.get_no_ematching();
+         triggers_var = Options.get_triggers_var ();
          use_cs = false;
          backward = Util.Normal;
-         greedy = get_greedy ();
+         greedy = Options.get_greedy ();
         }
       in
       let env, ok1 = inst_and_assume mconf env inst_predicates env.inst in
