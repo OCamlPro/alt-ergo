@@ -451,8 +451,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let s = ref SE.empty in
     ME.iter
       (fun f _ ->
-         if (Options.get_complete_model () && is_literal f) 
-        || E.is_in_model f then
+         if complete_model && is_literal f then
            s := SE.add f !s
       )
       t.gamma;

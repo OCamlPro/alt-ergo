@@ -545,17 +545,14 @@ module SmtPrinter = struct
         Format.fprintf fmt "| %a@,"  (Util.print_list ~sep:"," ~pp:print) l;
       ) trs
 
-and print_list_sep sep fmt = function
-  | [] -> ()
-  | [t] -> print fmt t
-  | t::l -> Format.fprintf fmt "%a%s%a" print t sep (print_list_sep sep) l
+  and print_verbose fmt t = print fmt t
+  (* Not displaying types when int SMT format *)
 
-and print_list fmt = print_list_sep "," fmt
+  and print fmt t =
+    if Options.get_debug () then print_verbose fmt t
+    else print_silent fmt t
 
-and print_triggers fmt trs =
-  List.iter (fun { content = l; _ } ->
-      Format.fprintf fmt "| %a@," print_list l;
-    ) trs
+end
 
 module AEPrinter = struct
 
