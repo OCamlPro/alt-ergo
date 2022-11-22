@@ -1,8 +1,0 @@
-logic b1, b2, b3 : bool
-logic g: bool -> int
-
-goal g:
-   g(b1) = 1 ->
-   g(b2) = 2 ->
-   g(b3) = 3 ->
-   false

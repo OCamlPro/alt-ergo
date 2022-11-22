@@ -1,6 +1,0 @@
-logic a, b : real
-
-goal g:
- a <= b ->
- b > 0. ->
- a/b <= 1.
