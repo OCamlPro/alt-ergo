@@ -31,15 +31,15 @@ module File : sig
 
   val touch: string -> string -> bool
   (** [touch fl] creates the file [fl] if it doesn't exist yet. *)
-  
+
   val cat: string printer
   (** [cat fl] pretty prints the content of the file [fl]. *)
-  
+
   val is_empty: string -> bool
   (** [is_empty file] check if the file [fl] is empty. *)
-  
+
   val has_extension_in : string -> string list -> bool
-  (** [has_extension_in fl exts] checks if the [fl] has an extension 
+  (** [has_extension_in fl exts] checks if the [fl] has an extension
       in the list [exts]. *)
 end = struct
   let exists fl =
@@ -86,7 +86,7 @@ end = struct
     res
 
   let contains pat fl =
-    let cmd = Format.asprintf {|grep -q "%s" %s|} pat fl 
+    let cmd = Format.asprintf {|grep -q "%s" %s|} pat fl
     in
     let ch = Unix.open_process_in cmd in
     let _ = read_all ch in
@@ -94,7 +94,7 @@ end = struct
     match res with
     | Unix.WEXITED 0 -> true
     | _ -> false
- 
+
   let touch fl contents =
     if Sys.file_exists fl then
       true
@@ -144,7 +144,7 @@ module Cmd : sig
   val digest: t -> string
   (** Produce a digest of the arguments of the command. *)
 
-  val pp: t printer 
+  val pp: t printer
   (** Pretty print a command. *)
 end = struct
   type t = {
@@ -159,10 +159,10 @@ end = struct
   let name cmd = cmd.name
   let group cmd = cmd.group
 
-  let digest cmd = 
+  let digest cmd =
     List.fold_left (fun acc arg -> arg ^ acc) "" cmd.args
     |> Digest.string
-    |> Digest.to_hex 
+    |> Digest.to_hex
 
   let pp fmt cmd =
     let pp_sep fmt () = Format.fprintf fmt " @," in
@@ -180,10 +180,10 @@ module Test : sig
 
   val pp_output: t printer
   (** Pretty print the filename of the output of the test. *)
- 
+
   val pp_expected_output: t printer
   (** Pretty print the filename of the expected output of the test. *)
- 
+
   val pp_stanza: t printer
   (** Pretty print the dune test. *)
 end = struct
@@ -204,12 +204,12 @@ end = struct
     Format.fprintf fmt "%s.expected" filename
 
   let pp_stanza fmt tst =
-    Format.fprintf fmt 
+    Format.fprintf fmt
     "@[<v 1>\
     (rule@ \
       (target %a)@ \
       (deps (:input %s))@ \
-      (package alt-ergo-lib)@ \
+      (package alt-ergo)@ \
       @[<v 1>(action@ \
         @[<v 1>(chdir %%{workspace_root}@ \
           @[<v 1>(with-stdout-to %%{target}@ \
@@ -218,14 +218,14 @@ end = struct
                 @[<v 1>(run %a)))))))@]@]@]@]@]@]@\n\
     @[<v 1>(rule@ \
       @[<v 1>(alias %s)@ \
-      @[<v 1>(package alt-ergo-lib)@ \
+      @[<v 1>(package alt-ergo)@ \
       @[<v 1>(action (diff %a @, %a)))@]@]@]@]@."
     pp_output tst
     tst.pb_file
     Cmd.pp tst.cmd
     (Cmd.group tst.cmd)
-    pp_expected_output tst 
-    pp_output tst 
+    pp_expected_output tst
+    pp_output tst
 end
 
 module Batch : sig
@@ -244,7 +244,7 @@ end = struct
     cmds: Cmd.t list;
     tests: Test.t list;
   }
- 
+
   let make ~path ~cmds ~pb_files =
     let tests = List.fold_left (fun acc1 pb_file ->
       List.fold_left (fun acc2 cmd ->
@@ -274,11 +274,11 @@ end = struct
     let fmt = Format.formatter_of_out_channel ch in
     pp_stanza fmt batch;
     let () = match digest with
-    | Some d -> 
+    | Some d ->
         if not @@ Digest.equal d (Digest.file dune_filename) then (
           Format.printf "Updating %s\n" dune_filename
         )
-    | None -> 
+    | None ->
         Format.printf "Creating %s\n" dune_filename
     in
     close_out ch
