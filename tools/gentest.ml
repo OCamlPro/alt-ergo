@@ -18,26 +18,6 @@ module File : sig
   val scan_folder: string -> (string list * string list)
   (** [scan_folder fd] scans recursively the folder [fd]. *)
 
-  val read_all: in_channel -> string
-  (** [read_all ch] reads completely the channel [ch] and
-      returns its content. *)
-
-  val diff: string -> string -> string
-  (** [diff file1 file2] performs a diff between [fl1] and [fl2]. *)
-
-  val contains: string -> string -> bool
-  (** [contains pattern fl] checks if the [fl] contains the pattern
-      [pat]. *)
-
-  val touch: string -> string -> bool
-  (** [touch fl] creates the file [fl] if it doesn't exist yet. *)
-
-  val cat: string printer
-  (** [cat fl] pretty prints the content of the file [fl]. *)
-
-  val is_empty: string -> bool
-  (** [is_empty file] check if the file [fl] is empty. *)
-
   val has_extension_in : string -> string list -> bool
   (** [has_extension_in fl exts] checks if the [fl] has an extension
       in the list [exts]. *)
@@ -68,61 +48,6 @@ end = struct
     in
     aux [] [] handle
 
-  let read_all ch =
-    let buf = Buffer.create 113 in
-    try
-      while true do
-        Buffer.add_channel buf ch 30
-      done;
-      assert false
-    with End_of_file ->
-      Buffer.contents buf
-
-  let diff fl1 fl2 =
-    let cmd = Format.asprintf "diff %s %s" fl1 fl2 in
-    let ch = Unix.open_process_in cmd in
-    let res = read_all ch in
-    ignore (Unix.close_process_in ch);
-    res
-
-  let contains pat fl =
-    let cmd = Format.asprintf {|grep -q "%s" %s|} pat fl
-    in
-    let ch = Unix.open_process_in cmd in
-    let _ = read_all ch in
-    let res = Unix.close_process_in ch in
-    match res with
-    | Unix.WEXITED 0 -> true
-    | _ -> false
-
-  let touch fl contents =
-    if Sys.file_exists fl then
-      true
-    else
-      let ch = open_out fl in
-      output_string ch contents;
-      close_out ch;
-      false
-
-  let cat fmt fl =
-    let ch = open_in fl in
-    try while true do
-      let s = input_line ch in
-      Format.fprintf fmt "%s@\n" s
-    done
-    with End_of_file ->
-    Format.fprintf fmt "@."
-
-  let is_empty fl =
-    let ch = open_in fl in
-    let res =
-      try
-        let _ = input_char ch in
-      false
-    with End_of_file -> true in
-    close_in ch;
-    res
-
   let has_extension_in file =
     List.mem (Filename.extension file)
 end
@@ -141,9 +66,6 @@ module Cmd : sig
   val group : t -> string
   (** Return the group of the command. *)
 
-  val digest: t -> string
-  (** Produce a digest of the arguments of the command. *)
-
   val pp: t printer
   (** Pretty print a command. *)
 end = struct
@@ -159,11 +81,6 @@ end = struct
   let name cmd = cmd.name
   let group cmd = cmd.group
 
-  let digest cmd =
-    List.fold_left (fun acc arg -> arg ^ acc) "" cmd.args
-    |> Digest.string
-    |> Digest.to_hex
-
   let pp fmt cmd =
     let pp_sep fmt () = Format.fprintf fmt " @," in
     let pp_arg fmt = Format.fprintf fmt "%s" in
@@ -177,12 +94,6 @@ module Test : sig
 
   val make: cmd: Cmd.t -> pb_file: string -> t
   (** Set up the test. *)
-
-  val pp_output: t printer
-  (** Pretty print the filename of the output of the test. *)
-
-  val pp_expected_output: t printer
-  (** Pretty print the filename of the expected output of the test. *)
 
   val pp_stanza: t printer
   (** Pretty print the dune test. *)
