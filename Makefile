@@ -91,27 +91,23 @@ lib: gen
 
 # Build the cli/text alt-ergo bin (dev)
 bin: gen
-	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo
+	$(DUNE) build $(DUNE_FLAGS) --profile=dev -p alt-ergo
 
 # Build the GUI (dev)
 gui: gen
-	$(DUNE) build $(DUNE_FLAGS) -p altgr-ergo
+	$(DUNE) build $(DUNE_FLAGS) --profile=dev -p altgr-ergo
 
 # fm-simplex plugin
 fm-simplex:
 	$(DUNE) build $(DUNE_FLAGS) \
 		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cma \
 		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cmxs
-	ln -sf $(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cma fm-simplex-plugin.cma
-	ln -sf $(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cmxs fm-simplex-plugin.cmxs
 
 # Ab-Why3 plugin
 AB-Why3:
 	$(DUNE) build $(DUNE_FLAGS) \
 		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cma \
 		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cmxs
-	ln -sf $(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cma AB-Why3-plugin.cma
-	ln -sf $(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cmxs AB-Why3-plugin.cmxs
 
 # Build all plugins
 plugins:
@@ -126,9 +122,7 @@ plugins:
 # on "lib", "bin" and "gui", since dune can
 # parralelize more
 all: gen
-	$(DUNE) build $(DUNE_FLAGS) @install
-	ln -sf $(INSTALL_DIR)/default/bin/alt-ergo alt-ergo
-	ln -sf $(INSTALL_DIR)/default/bin/altgr-ergo altgr-ergo
+	$(DUNE) build $(DUNE_FLAGS)
 
 # declare these targets as phony to avoid name clashes with existing directories,
 # particularly the "plugins" target
@@ -141,19 +135,19 @@ all: gen
 
 # Build the alt-ergo-lib (release)
 alt-ergo-lib: gen
-	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo-lib @install
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo-lib @install
 
 # Build the alt-ergo-parsers (release)
 alt-ergo-parsers: gen
-	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo-parsers @install
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo-parsers @install
 
 # Build the cli/text alt-ergo (release)
 alt-ergo: gen
-	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo @install
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo @install
 
 # Build the GUI (release)
 altgr-ergo: gen
-	$(DUNE) build $(DUNE_FLAGS) -p altgr-ergo @install
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p altgr-ergo @install
 
 .PHONY: alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
 
@@ -168,7 +162,7 @@ gentest: $(wildcard tests/**/*)
 
 # Run non-regression tests.
 runtest: bin
-	dune runtest
+	dune build @runtest
 
 # Run non-regression tests for the CI.
 runtest-ci: bin
