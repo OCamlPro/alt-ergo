@@ -31,7 +31,28 @@ See more details on https://alt-ergo.ocamlpro.com/")
    menhir
   (cmdliner (>= 1.1.0))
   (odoc :with-doc)
-  )
+ )
+)
+
+(package
+  (name alt-ergo-js)
+  (synopsis "The Alt-Ergo SMT prover")
+  (description "\
+Alt-Ergo is an automatic theorem prover of mathematical formulas. It was developed at LRI, and is now maintained at OCamlPro.
+
+See more details on https://alt-ergo.ocamlpro.com/")
+ (depends
+  (ocaml (>= 4.05.0))
+  (dune (and (>= 3.0)))
+  (alt-ergo-lib (= :version))
+  (alt-ergo-parsers (= :version))
+  js_of_ocaml
+  js_of_ocaml-lwt
+  js_of_ocaml-ppx
+  data-encoding
+  zarith_stubs_js
+  lwt_ppx
+ )
 )
 
 ; Second package, the alt-ergo gui binary
@@ -58,7 +79,7 @@ See more details on https://alt-ergo.ocamlpro.com/"
   lablgtk3-sourceview3
   (cmdliner (>= 1.1.0))
   (odoc :with-doc)
-)
+ )
 )
 
 ; Third package, the alt-ergo parsers library
@@ -110,7 +131,6 @@ See more details on http://alt-ergo.ocamlpro.com/"
   zarith
   seq
   stdlib-shims
-  fpath
   (odoc :with-doc)
  )
 )
