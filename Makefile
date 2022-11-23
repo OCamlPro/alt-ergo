@@ -91,13 +91,11 @@ lib: gen
 
 # Build the cli/text alt-ergo bin (dev)
 bin: gen
-	$(DUNE) build $(DUNE_FLAGS) $(INSTALL_DIR)/default/bin/alt-ergo
-	ln -sf $(INSTALL_DIR)/default/bin/alt-ergo alt-ergo
+	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo
 
 # Build the GUI (dev)
 gui: gen
-	$(DUNE) build $(DUNE_FLAGS) $(INSTALL_DIR)/default/bin/altgr-ergo
-	ln -sf $(INSTALL_DIR)/default/bin/altgr-ergo altgr-ergo
+	$(DUNE) build $(DUNE_FLAGS) -p altgr-ergo
 
 # fm-simplex plugin
 fm-simplex:
@@ -142,19 +140,19 @@ all: gen
 # =====================
 
 # Build the alt-ergo-lib (release)
-alt-ergo-lib:
+alt-ergo-lib: gen
 	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo-lib @install
 
 # Build the alt-ergo-parsers (release)
-alt-ergo-parsers:
+alt-ergo-parsers: gen
 	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo-parsers @install
 
 # Build the cli/text alt-ergo (release)
-alt-ergo:
+alt-ergo: gen
 	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo @install
 
 # Build the GUI (release)
-altgr-ergo:
+altgr-ergo: gen
 	$(DUNE) build $(DUNE_FLAGS) -p altgr-ergo @install
 
 .PHONY: alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
@@ -163,7 +161,7 @@ altgr-ergo:
 # Generate tests
 # ==============
 
-# Generate new Dune tests from the problems in 
+# Generate new Dune tests from the problems in
 # the directory tests/.
 gentest: $(wildcard tests/**/*)
 	dune exec -- tools/gentest.exe tests/
@@ -176,11 +174,9 @@ runtest: bin
 runtest-ci: bin
 	dune build @runtest-ci
 
-
 # Promote new outputs of the tests.
 promote:
-	dune promote 
-
+	dune promote
 
 .PHONY: gentest runtest runtest-ci promote
 
@@ -276,7 +272,6 @@ uninstall-gui:
 .PHONY: install-bin uninstall-bin
 .PHONY: install-gui uninstall-gui
 .PHONY: install-parsers uninstall-parsers
-
 
 # ========================
 # Documentation generation
