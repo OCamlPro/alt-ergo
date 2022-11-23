@@ -90,6 +90,7 @@ jobs:
           - alt-ergo-parsers
           - alt-ergo
           - altgr-ergo
+          - alt-ergo-js
 
     steps:
       # Checkout the code of the current branch

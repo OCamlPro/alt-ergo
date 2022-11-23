@@ -122,7 +122,7 @@ plugins:
 # on "lib", "bin" and "gui", since dune can
 # parralelize more
 all: gen
-	$(DUNE) build $(DUNE_FLAGS)
+	$(DUNE) build $(DUNE_FLAGS) --profile=dev
 
 # declare these targets as phony to avoid name clashes with existing directories,
 # particularly the "plugins" target
