@@ -11,5 +11,4 @@
 (library
  (name        alt_ergo_common)
  (libraries   alt-ergo-lib alt-ergo-parsers stdlib-shims cmdliner)
- (modules     Parse_command Input_frontend Signals_profiling Solving_loop)
-)
+ (modules     Parse_command Input_frontend Signals_profiling Solving_loop))
