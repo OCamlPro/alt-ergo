@@ -37,7 +37,7 @@ include Makefile.config
 # Some variables to help with adding
 # flags and/or renaming the dune binary
 DUNE=dune
-DUNE_FLAGS=
+DUNE_FLAGS?=
 
 # Definining the sphinx build command
 SPHINXBUILD = sphinx-build
@@ -86,7 +86,7 @@ lib: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(LIB_DIR)/all
 
 bin: gen
-	$(DUNE) build $(DUNE_FLAGS) @$(BTEXT_DIR)/
+	$(DUNE) build $(DUNE_FLAGS) @$(BTEXT_DIR)/all
 
 gui: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(BGUI_DIR)/all
