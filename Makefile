@@ -91,11 +91,11 @@ bin: gen
 gui: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(BGUI_DIR)/all
 
+js: gen
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo-js @install
+
 parsers: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(PARSERS_DIR)/all
-
-js: gen
-	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo-js
 
 fm-simplex: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(PLUGINS_DIR)/fm-simplex/all
@@ -110,32 +110,15 @@ plugins: gen
 # Hopefully more efficient than making "all" depend
 # on "lib", "bin" and "gui", since dune can
 # parralelize more
+# WARNING: we have to exclude alt-ergo-js because of the issue
+# https://github.com/ocaml/dune/issues/5563
 all: gen
-	$(DUNE) build $(DUNE_FLAGS)
+	$(DUNE) build $(DUNE_FLAGS) \
+	--only-package=alt-ergo-lib,alt-ergo,altgr-ergo,alt-ergo-parsers
 
 # declare these targets as phony to avoid name clashes with existing directories,
 # particularly the "plugins" target
-.PHONY: lib bin gui fm-simplex AB-Why3 plugins all
-
-# =====================
-# Build rules (release)
-# =====================
-alt-ergo-lib: gen
-	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo-lib @install
-
-alt-ergo-parsers: gen
-	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo-parsers @install
-
-alt-ergo: gen
-	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo @install
-
-altgr-ergo: gen
-	$(DUNE) build $(DUNE_FLAGS) --profile=release -p altgr-ergo @install
-
-alt-ergo-js: gen
-	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo-js @install
-
-.PHONY: alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo alt-ergo-js
+.PHONY: lib bin gui fm-simplex AB-Why3 plugins js all
 
 # ==============
 # Generate tests
