@@ -86,7 +86,7 @@ lib: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(LIB_DIR)/all
 
 bin: gen
-	$(DUNE) build $(DUNE_FLAGS) @$(BTEXT_DIR)/all
+	$(DUNE) build $(DUNE_FLAGS) @$(BTEXT_DIR)/
 
 gui: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(BGUI_DIR)/all
@@ -120,18 +120,17 @@ all: gen
 # =====================
 # Build rules (release)
 # =====================
-
 alt-ergo-lib: gen
-	$(DUNE) build $(DUNE_FLAGS) --profile=release @$(LIB_DIR)/all @install
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo-lib @install
 
 alt-ergo-parsers: gen
-	$(DUNE) build $(DUNE_FLAGS) --profile=release @$(PARSERS_DIR)/all @install
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo-parsers @install
 
 alt-ergo: gen
-	$(DUNE) build $(DUNE_FLAGS) --profile=release @$(BTEXT_DIR)/all @install
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo @install
 
 altgr-ergo: gen
-	$(DUNE) build $(DUNE_FLAGS) --profile=release @$(BGUI_DIR)/all @install
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p altgr-ergo @install
 
 alt-ergo-js: gen
 	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo-js @install
