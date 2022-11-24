@@ -81,6 +81,7 @@ distclean: makefile-distclean release-distclean
 # =================
 # Build rules (dev)
 # =================
+
 lib: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(LIB_DIR)/all
 
@@ -91,7 +92,7 @@ gui: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(BGUI_DIR)/all
 
 js: gen
-	$(DUNE) build $(DUNE_FLAGS) @$(BJS_DIR)/all
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo-js @install
 
 parsers: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(PARSERS_DIR)/all
@@ -109,8 +110,11 @@ plugins: gen
 # Hopefully more efficient than making "all" depend
 # on "lib", "bin" and "gui", since dune can
 # parralelize more
+# WARNING: we have to exclude alt-ergo-js because of the issue
+# https://github.com/ocaml/dune/issues/5563
 all: gen
-	$(DUNE) build $(DUNE_FLAGS)
+	$(DUNE) build $(DUNE_FLAGS) \
+	--only-package=alt-ergo-lib,alt-ergo,altgr-ergo,alt-ergo-parsers
 
 # declare these targets as phony to avoid name clashes with existing directories,
 # particularly the "plugins" target
@@ -133,7 +137,7 @@ runtest: bin
 runtest-ci: bin
 	dune build @runtest-ci
 
-# Promote new expected outputs of the tests.
+# Promote new outputs of the tests.
 promote:
 	dune promote
 
