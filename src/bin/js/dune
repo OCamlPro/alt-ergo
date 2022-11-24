@@ -7,13 +7,16 @@
   (modules main_text_js)
   (modes byte js)
   (js_of_ocaml
-    (flags --no-source-map)))
+    (flags --no-source-map)
+  )
+)
 
 (library
   (name worker_interface)
   (package alt-ergo-js)
   (libraries js_of_ocaml data-encoding)
-  (modules worker_interface))
+  (modules worker_interface)
+)
 
 ; Rule to build a web worker running Alt-Ergo
 (executable
@@ -22,7 +25,9 @@
   (modules worker_js options_interface)
   (modes byte js)
   (js_of_ocaml
-    (flags --no-source-map)))
+    (flags --no-source-map)
+  )
+)
 
 ; Rule to build a small js example running the Alt-Ergo web worker
 (executable
@@ -32,4 +37,6 @@
   (modes byte js)
   (preprocess (pps js_of_ocaml-ppx lwt_ppx))
   (js_of_ocaml
-    (flags --no-source-map)))
+    (flags --no-source-map)
+  )
+)
