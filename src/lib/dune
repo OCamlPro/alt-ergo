@@ -1,18 +1,22 @@
 (executable
  (name formatshims)
  (modules formatshims)
- (libraries dune.configurator))
+ (libraries dune.configurator)
+)
 
 (rule
  (targets format_shims.ml)
  (deps ./formatshims.exe)
  (action
-  (run ./formatshims.exe)))
+  (run ./formatshims.exe)
+ )
+)
 
 (include_subdirs unqualified)
 
 (documentation
-  (package alt-ergo-lib))
+ (package alt-ergo-lib)
+)
 
 (library
   (name AltErgoLib)
@@ -45,4 +49,6 @@
     Options Timers Util Vec Version ZarithNumbers Steps Printer Format_shims)
 
  (js_of_ocaml
-  (javascript_files missing_primitives.js)))
+  (javascript_files missing_primitives.js)
+ )
+)
