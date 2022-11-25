@@ -163,7 +163,10 @@ module Sim_Wrap = struct
 
   let extract_bound i get_lb =
     let func, q =
-      if get_lb then I.borne_inf, Sim.Core.R2.lower else I.borne_sup, Sim.Core.R2.upper in
+      if get_lb
+      then I.borne_inf, Sim.Core.R2.lower
+      else I.borne_sup, Sim.Core.R2.upper
+    in
     try
       let bnd, explanation, large = func i in
       let bvalue =
@@ -178,7 +181,8 @@ module Sim_Wrap = struct
     match _old, _new with
     | None, None -> true
     | None, Some _ | Some _, None -> false
-    | Some Sim.Core.{bvalue = r1; _}, Some Sim.Core.{bvalue = r2; _} -> Sim.Core.R2.equal r1 r2
+    | Some Sim.Core.{bvalue = r1; _}, Some Sim.Core.{bvalue = r2; _} ->
+      Sim.Core.R2.equal r1 r2
 
   let add_if_better p _old _new simplex =
     (* p is in normal form pos *)
@@ -2012,7 +2016,7 @@ let model_from_simplex sim is_int env uf =
     raise (Ex.Inconsistent(Lazy.force ex, env.classes))
 
   | Sim.Core.Sat sol ->
-    let {Sim.Core.main_vars; slake_vars; int_sol; epsilon = _} = Lazy.force sol in
+    let {Sim.Core.main_vars; slake_vars; int_sol; epsilon=_} = Lazy.force sol in
     let main_vars, _slake_vars =
       if int_sol || not is_int then main_vars, slake_vars
       else round_to_integers main_vars, round_to_integers slake_vars
