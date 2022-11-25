@@ -40,7 +40,7 @@ jobs:
       # if we use another ocaml version
       # This action only retrieve de .opam/ directory
       - name: Retrieve opam cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache-opam
         with:
           path: ~/.opam
