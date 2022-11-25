@@ -217,27 +217,30 @@ let pop_error ?(error=false) ~message () =
   pop_w#show ()
 
 
-let pop_model sat_env () =
-  let pop_w = GWindow.dialog
+(* unused function
+   let pop_model _sat_env () =
+   let pop_w = GWindow.dialog
       ~title:"Model"
       ~destroy_with_parent:true
       ~position:`CENTER
       ~width:400
       ~height:300 ()
-  in
+   in
 
-  let sw1 = GBin.scrolled_window
+   let sw1 = GBin.scrolled_window
       ~vpolicy:`AUTOMATIC
       ~hpolicy:`AUTOMATIC
       ~packing:pop_w#vbox#add () in
-  let buf1 = GSourceView3.source_buffer () in
-  let tv1 = GSourceView3.source_view ~source_buffer:buf1 ~packing:(sw1#add)
+   let buf1 = GSourceView3.source_buffer () in
+   let tv1 = GSourceView3.source_view ~source_buffer:buf1 ~packing:(sw1#add)
       ~wrap_mode:`CHAR () in
-  let _ = tv1#misc#modify_font font in
-  let _ = tv1#set_editable false in
-  (* let model_text = asprintf "%a@." (SAT.print_model ~header:false) sat_env in
+   let _ = tv1#misc#modify_font font in
+   let _ = tv1#set_editable false in
+   (* let model_text =
+     asprintf "%a@." (SAT.print_model ~header:false) sat_env
+   in
    * buf1#set_text model_text; *)
-  pop_w#show ()
+   pop_w#show ()*)
 
 
 
