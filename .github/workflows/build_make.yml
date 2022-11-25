@@ -46,22 +46,9 @@ jobs:
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      - name: Update opam repository
-        run: opam update
-
-      # Pin the packages, this is needed for opam depext
-      # remove this step when opam 2.1 will be used
-      - name: Pin no action
-        run: opam pin add . --no-action
-
-      # Install external dependencies
-      # remove this step when opam 2.1 will be used
-      - name: opam install depext
-        run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-
-      # Install dependencies
+     # Install dependencies
       - name: opam install deps
-        run: opam install ./*.opam --deps-only
+        run: opam install . --deps-only
 
       # make use `dune build` which update .opam file if the dune-project is updated
       - name: Make
@@ -122,19 +109,9 @@ jobs:
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      # Pin the packages, this is needed for opam depext
-      # remove this step when opam 2.1 will be used
-      - name: Pin no action
-        run: opam pin add . --no-action
-
-      # Install external dependencies
-      # remove this step when opam 2.1 will be used
-      - name: opam install depext
-        run: opam depext ${{ matrix.package }}
-
       # Install dependencies
       - name: opam install deps
-        run: opam install ./${{ matrix.package }}.opam --deps-only
+        run: opam install ./${{ matrix.package }}.opam --deps-only --with-test
 
       # Run configure script for the package
       - name: Configure ${{ matrix.package }}
@@ -201,17 +178,11 @@ jobs:
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      # Pin the packages, this is needed for opam depext
-      # remove this step when opam 2.1 will be used
-      - name: Pin no action
-        run: opam pin add . --no-action
-
       # Install all depext and deps and then build the project
       # This step is needed since the install rule does not build the project
       - name: Build
         run: |
-          opam depext -y alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-          opam install -y ./*.opam --deps-only
+          opam install . --deps-only
           opam exec -- make
 
       # Install the package in opam files

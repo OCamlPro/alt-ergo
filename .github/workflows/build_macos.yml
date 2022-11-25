@@ -46,23 +46,9 @@ jobs:
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      - name: Update opam repository
-        run: opam update
-
-      # Pin the packages, this is needed for opam depext
-      # remove this step when opam 2.1 will be used
-      - name: Pin no action
-        run: opam pin add . --no-action
-
-      # Install external dependencies
-      # remove this step when opam 2.1 will be used
-      #- name: opam install depext
-      #  run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-
       # Install dependencies
       - name: Install deps
-        run: opam install  ./*.opam --deps-only --with-test
-
+        run: opam install  . --deps-only --with-test
 
       # Build and install with opam
       - name: Install
