@@ -38,6 +38,9 @@ jobs:
       # the ocaml user do not have rights on it.
       - run: CURRENTDIR=$(basename $(pwd)); git config --global --add safe.directory /__w/$CURRENTDIR/$CURRENTDIR
 
+      - name: Update opam repository
+        run: opam update
+
       # Create a switch with the system compiler (no compilation needed).
       # And then, install external (no need for depext with opam 2.1) and libs deps.
       - run: opam switch create . ocaml-system --deps-only
