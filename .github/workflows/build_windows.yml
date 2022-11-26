@@ -9,7 +9,7 @@ on:
       - main
 
 env:
-  OCAML_DEFAULT_VERSION: 4.14.0
+  OCAML_DEFAULT_VERSION: 4.10.0
   # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
   # in any opam call
   OPAMYES: true
@@ -44,8 +44,8 @@ jobs:
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
           opam-repositories: |
+            windows: https://github.com/fdopen/opam-repository-mingw.git
             default: https://github.com/ocaml/opam-repository.git
-          opam-depext: false
 
       # Install dependencies
       - name: Install deps
