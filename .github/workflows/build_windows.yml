@@ -43,6 +43,8 @@ jobs:
         uses: ocaml/setup-ocaml@v2
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
+          opam-repositories: |
+            default: https://github.com/ocaml/opam-repository.git
 
       # Install dependencies
       - name: Install deps
