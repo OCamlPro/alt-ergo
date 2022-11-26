@@ -43,7 +43,6 @@ jobs:
         uses: ocaml/setup-ocaml@v2
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
-          opam-depext: false
 
       # Install dependencies
       - name: Install deps
