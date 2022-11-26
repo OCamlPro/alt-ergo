@@ -45,6 +45,7 @@ jobs:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
           opam-repositories: |
             default: https://github.com/ocaml/opam-repository.git
+          opam-depext: false
 
       # Install dependencies
       - name: Install deps
