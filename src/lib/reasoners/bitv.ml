@@ -219,24 +219,27 @@ module Shostak(X : ALIEN) = struct
 
     let make t =
       let rec make_rec t' ctx = match E.term_view t' with
-        | E.Term { E.f = Sy.Bitv s; _ } -> string_to_bitv s, ctx
-        | E.Term { E.f = Sy.Op Sy.Concat ;
-                   xs = [t1;t2] ; ty = Ty.Tbitv n; _ } ->
+        | { E.f = Sy.Bitv s; _ } -> string_to_bitv s, ctx
+        | { E.f = Sy.Op Sy.Concat ;
+            xs = [t1;t2] ; ty = Ty.Tbitv n; _ } ->
           let r1, ctx = make_rec t1 ctx in
           let r2, ctx = make_rec t2 ctx in
           { bv = I_Comp (r1, r2) ; sz = n }, ctx
-        | E.Term { E.f = Sy.Op Sy.Extract;
-                   xs = [t1;ti;tj] ; ty = Ty.Tbitv _; _ } ->
+        | { E.f = Sy.Op Sy.Extract;
+            xs = [t1;ti;tj] ; ty = Ty.Tbitv _; _ } ->
           begin
-            match E.term_view ti , E.term_view tj with
-            | E.Term { E.f = Sy.Int i; _ } , E.Term { E.f = Sy.Int j; _ } ->
+            match E.term_view ti, E.term_view tj with
+            | { E.f = Sy.Int i; _ } , { E.f = Sy.Int j; _ } ->
               let i = int_of_string (Hstring.view i) in
               let j = int_of_string (Hstring.view j) in
               let r1, ctx = make_rec t1 ctx in
               { sz = j - i + 1 ; bv = I_Ext (r1,i,j)}, ctx
-            | _ -> assert false
+            | _ ->
+              Printer.print_err "Expected two integer, got %a and %a"
+                E.print ti E.print tj;
+              assert false
           end
-        | E.Term { E.ty = Ty.Tbitv n; _ } ->
+        | { E.ty = Ty.Tbitv n; _ } ->
           let r', ctx' = X.make t' in
           let ctx = ctx' @ ctx in
           {bv = I_Other (Alien r') ; sz = n}, ctx

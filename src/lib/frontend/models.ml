@@ -31,7 +31,7 @@ module Pp_smtlib_term = struct
     asprintf "%a" Ty.print t
 
   let rec print fmt t =
-    let {E.f;xs;ty; _} = E.get_infos t in
+    let {E.f;xs;ty; _} = E.term_view t in
     match f, xs with
 
     | Sy.Lit lit, xs ->

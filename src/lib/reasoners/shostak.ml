@@ -30,6 +30,7 @@ module H = Hashtbl.Make(Expr)
 
 (*** Combination module of Shostak theories ***)
 
+[@@@ocaml.warning "-60"]
 module rec CX : sig
   include Sig.X
 
@@ -270,11 +271,7 @@ struct
       | Term _ -> if equal p r then v else r
 
   let make t =
-    let { Expr.f = sb; ty; _ } =
-      match Expr.term_view t with
-      | Expr.Not_a_term _ -> assert false
-      | Expr.Term tt -> tt
-    in
+    let { Expr.f = sb; ty; _ } = Expr.term_view t in
     let not_restricted = not @@ Options.get_restricted () in
     match
       X1.is_mine_symb sb ty,
@@ -520,14 +517,14 @@ struct
   let apply_subst_right r sbt =
     List.fold_right (fun (p,v)r  -> CX.subst p v r) sbt r
 
-  let solve_uninterpreted r1 r2 (pb : _ Sig.solve_pb) = (* r1 != r2*)
+  let solve_uninterpreted r1 r2 (pb : r Sig.solve_pb) = (* r1 != r2*)
     if Options.get_debug_combine () then
       Printer.print_dbg
         "solve uninterpreted %a = %a" print r1 print r2;
     if CX.str_cmp r1 r2 > 0 then { pb with sbt = (r1,r2)::pb.sbt }
     else { pb with sbt = (r2,r1)::pb.sbt }
 
-  let rec solve_list (pb : _ Sig.solve_pb) =
+  let rec solve_list (pb : r Sig.solve_pb) =
     match pb.eqs with
     | [] ->
       Debug.print_sbt "Should be triangular and cleaned" pb.sbt;

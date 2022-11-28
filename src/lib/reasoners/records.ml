@@ -160,11 +160,7 @@ module Shostak (X : ALIEN) = struct
 
   let make t =
     let rec make_rec t ctx =
-      let { E.f; xs; ty; _ } =
-        match E.term_view t with
-        | E.Not_a_term _ -> assert false
-        | E.Term tt -> tt
-      in
+      let { E.f; xs; ty; _ } = E.term_view t in
       match f, ty with
       | Symbols.Op (Symbols.Record), Ty.Trecord { Ty.lbs; _ } ->
         assert (List.length xs = List.length lbs);
