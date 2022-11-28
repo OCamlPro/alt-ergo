@@ -526,7 +526,6 @@ module Main_Default : S = struct
          match a with
          | LTerm r -> begin
              match E.lit_view r with
-             | E.Not_a_lit _ -> assert false
              | E.Eq (t1, t2) ->
                SE.add t1 (SE.add t2 acc)
              | E.Eql l | E.Distinct l | E.Builtin (_, _, l) ->

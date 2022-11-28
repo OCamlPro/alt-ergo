@@ -128,7 +128,6 @@ module Main : S = struct
       | E.Pred _ | E.Eq _ | E.Eql _ -> Queue.push e facts.equas
       | E.Distinct _ -> Queue.push e facts.diseqs
       | E.Builtin _  -> Queue.push e facts.ineqs
-      | E.Not_a_lit _ -> assert false
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
@@ -288,7 +287,6 @@ module Main : S = struct
 
   let view find va ex_a =
     match va with
-    | E.Not_a_lit _ -> assert false
     | E.Pred (t1, b) ->
       let r1, ex1 = find t1 in
       let ex = Ex.union ex1 ex_a in
@@ -502,7 +500,6 @@ module Main : S = struct
 
   let add env facts a ex =
     match E.lit_view a with
-    | E.Not_a_lit _ -> assert false
     | E.Pred (t1, _) ->
       add_term env facts t1 ex
     | E.Eq (t1, t2) ->

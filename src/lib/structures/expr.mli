@@ -111,7 +111,7 @@ type lit_view = private
   | Distinct of t list
   | Builtin of bool * Symbols.builtin * t list
   | Pred of t * bool
-  | Not_a_lit of { is_form : bool }
+  (* | Not_a_lit of { is_form : bool } *)
 
 type form_view = private
   | Unit of t*t  (* unit clauses *)

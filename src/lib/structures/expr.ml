@@ -113,7 +113,6 @@ type lit_view =
   | Distinct of t list
   | Builtin of bool * Sy.builtin * t list
   | Pred of t * bool
-  | Not_a_lit of { is_form : bool }
 
 type form_view =
   | Unit of t*t  (* unit clauses *)
@@ -312,10 +311,12 @@ module F_Htbl : Hashtbl.S with type key = t =
 
 let lit_view t =
   let { f; xs; ty; _ } = t in
-  if ty != Ty.Tbool then Not_a_lit {is_form = false}
+  if ty != Ty.Tbool then
+    Util.failwith "Calling lit_view on a non boolean expression"
   else
     match f with
-    | Sy.Form _  -> Not_a_lit {is_form = true}
+    | Sy.Form _  ->
+      Util.failwith "Calling lit_view on a formula"
     | Sy.Lit lit ->
       begin match lit, xs with
         | (Sy.L_eq | Sy.L_neg_eq), ([] | [_]) -> assert false
@@ -2226,10 +2227,7 @@ module Triggers = struct
          }
       ) l
 
-  let is_literal e =
-    match lit_view e with
-    | Not_a_lit _ -> false
-    | _ -> true
+  let is_literal e = try let _ = lit_view e in true with Failure _ -> false
 
   let trs_in_scope full_trs f =
     STRS.filter
@@ -2580,8 +2578,6 @@ module Purification = struct
   and purify_literal e =
     if List.for_all is_pure e.xs then e (* this is OK for lits and terms *)
     else match lit_view e with
-      | Not_a_lit _ ->
-        failwith "unexpected expression in purify_literal: not a literal"
       | Eq (a, b)  ->
         assert (a.ty != Ty.Tbool);
         (* TODO: translate to iff *)
