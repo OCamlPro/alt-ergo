@@ -35,7 +35,7 @@ jobs:
       # if we use another ocaml version
       # This action only retrieve de .opam/ directory
       - name: Retrieve opam cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache-opam
         with:
           path: ~/.opam
@@ -48,28 +48,9 @@ jobs:
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      # Pin the packages, this is needed for opam depext
-      # remove this step when opam 2.1 will be used
-      - name: Pin no action
-        run: opam pin add . --no-action
-
-      # Install external dependencies
-      # remove this step when opam 2.1 will be used
-      - name: Install depext
-        run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
-
       # Install dependencies
       - name: Install deps
-        run: opam install ./*.opam --deps-only --with-test
-
-      # Add alt-ergo.js dependencies
-      - name: Install Js_of_ocaml and zarith_stubs_js
-        run: opam install js_of_ocaml zarith_stubs_js
-
-      # Fix zarith version to 1.11 since 1.12 add features not implemented yet
-      # in the stubs
-      - name: install fixed zarith version
-        run: opam install zarith.1.11
+        run: opam install ./alt-ergo-js.opam --deps-only --with-test
 
       # compile Alt-Ergo with Js_of_ocaml
       - name: Make alt-ergo.js
@@ -81,8 +62,9 @@ jobs:
           node-version: '14'
 
       # Run simple test with node
+      # TODO: use gentest to run more tests there.
       - name: Run simple example with node
-        run: opam exec -- node alt-ergo.js tests/unsat/everything/f1.ae
+        run: opam exec -- node alt-ergo.js tests/everything/f1.ae
 
       # Upload Alt-Ergo.js as an artifact
       # the artifact name contains the system is builded on and the ocaml
@@ -93,10 +75,6 @@ jobs:
         with:
           name: alt-ergo-js-${{ runner.os }}-${{ env.OCAML_DEFAULT_VERSION }}
           path: "alt-ergo.js"
-
-      # Add alt-ergo-worker.js dependencies
-      - name: Install data-encoding js_of_ocaml-lwt
-        run: opam install data-encoding js_of_ocaml-lwt
 
       # compile the Alt-Ergo web worker with Js_of_ocaml
       - name: Make alt-ergo-worker.js

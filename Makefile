@@ -37,7 +37,7 @@ include Makefile.config
 # Some variables to help with adding
 # flags and/or renaming the dune binary
 DUNE=dune
-DUNE_FLAGS=
+DUNE_FLAGS?=
 
 # Definining the sphinx build command
 SPHINXBUILD = sphinx-build
@@ -82,105 +82,81 @@ distclean: makefile-distclean release-distclean
 # Build rules (dev)
 # =================
 
-# Build the alt-ergo lib (dev)
 lib: gen
-	$(DUNE) build $(DUNE_FLAGS) \
-		$(LIB_DIR)/AltErgoLib.cma \
-		$(LIB_DIR)/AltErgoLib.cmxa \
-		$(LIB_DIR)/AltErgoLib.cmxs
+	$(DUNE) build $(DUNE_FLAGS) @$(LIB_DIR)/all
 
-# Build the cli/text alt-ergo bin (dev)
 bin: gen
-	$(DUNE) build $(DUNE_FLAGS) $(INSTALL_DIR)/default/bin/alt-ergo
-	ln -sf $(INSTALL_DIR)/default/bin/alt-ergo alt-ergo
+	$(DUNE) build $(DUNE_FLAGS) @$(BTEXT_DIR)/all
 
-# Build the GUI (dev)
 gui: gen
-	$(DUNE) build $(DUNE_FLAGS) $(INSTALL_DIR)/default/bin/altgr-ergo
-	ln -sf $(INSTALL_DIR)/default/bin/altgr-ergo altgr-ergo
+	$(DUNE) build $(DUNE_FLAGS) @$(BGUI_DIR)/all
 
-# fm-simplex plugin
-fm-simplex:
-	$(DUNE) build $(DUNE_FLAGS) \
-		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cma \
-		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cmxs
-	ln -sf $(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cma fm-simplex-plugin.cma
-	ln -sf $(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cmxs fm-simplex-plugin.cmxs
+parsers: gen
+	$(DUNE) build $(DUNE_FLAGS) @$(PARSERS_DIR)/all
 
-# Ab-Why3 plugin
-AB-Why3:
-	$(DUNE) build $(DUNE_FLAGS) \
-		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cma \
-		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cmxs
-	ln -sf $(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cma AB-Why3-plugin.cma
-	ln -sf $(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cmxs AB-Why3-plugin.cmxs
+js: gen
+	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo-js
 
-# Build all plugins
-plugins:
-	$(DUNE) build $(DUNE_FLAGS) \
-		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cma \
-		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/fm-simplex-plugin.cmxs \
-		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cma \
-		$(INSTALL_DIR)/default/lib/alt-ergo/plugins/AB-Why3-plugin.cmxs
+fm-simplex: gen
+	$(DUNE) build $(DUNE_FLAGS) @$(PLUGINS_DIR)/fm-simplex/all
+
+AB-Why3: gen
+	$(DUNE) build $(DUNE_FLAGS) @$(PLUGINS_DIR)/AB-Why3/all
+
+plugins: gen
+	$(DUNE) build $(DUNE_FLAGS) @$(PLUGINS_DIR)/all
 
 # Alias to build all targets using dune
 # Hopefully more efficient than making "all" depend
 # on "lib", "bin" and "gui", since dune can
 # parralelize more
 all: gen
-	$(DUNE) build $(DUNE_FLAGS) @install
-	ln -sf $(INSTALL_DIR)/default/bin/alt-ergo alt-ergo
-	ln -sf $(INSTALL_DIR)/default/bin/altgr-ergo altgr-ergo
+	$(DUNE) build $(DUNE_FLAGS)
 
 # declare these targets as phony to avoid name clashes with existing directories,
 # particularly the "plugins" target
 .PHONY: lib bin gui fm-simplex AB-Why3 plugins all
 
-
 # =====================
 # Build rules (release)
 # =====================
+alt-ergo-lib: gen
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo-lib @install
 
-# Build the alt-ergo-lib (release)
-alt-ergo-lib:
-	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo-lib @install
+alt-ergo-parsers: gen
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo-parsers @install
 
-# Build the alt-ergo-parsers (release)
-alt-ergo-parsers:
-	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo-parsers @install
+alt-ergo: gen
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo @install
 
-# Build the cli/text alt-ergo (release)
-alt-ergo:
-	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo @install
+altgr-ergo: gen
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p altgr-ergo @install
 
-# Build the GUI (release)
-altgr-ergo:
-	$(DUNE) build $(DUNE_FLAGS) -p altgr-ergo @install
+alt-ergo-js: gen
+	$(DUNE) build $(DUNE_FLAGS) --profile=release -p alt-ergo-js @install
 
-.PHONY: alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo
+.PHONY: alt-ergo-lib alt-ergo-parsers alt-ergo altgr-ergo alt-ergo-js
 
 # ==============
 # Generate tests
 # ==============
 
-# Generate new Dune tests from the problems in 
+# Generate new Dune tests from the problems in
 # the directory tests/.
 gentest: $(wildcard tests/**/*)
 	dune exec -- tools/gentest.exe tests/
 
 # Run non-regression tests.
 runtest: bin
-	dune runtest
+	dune build @runtest
 
 # Run non-regression tests for the CI.
 runtest-ci: bin
 	dune build @runtest-ci
 
-
 # Promote new outputs of the tests.
 promote:
-	dune promote 
-
+	dune promote
 
 .PHONY: gentest runtest runtest-ci promote
 
@@ -276,7 +252,6 @@ uninstall-gui:
 .PHONY: install-bin uninstall-bin
 .PHONY: install-gui uninstall-gui
 .PHONY: install-parsers uninstall-parsers
-
 
 # ========================
 # Documentation generation

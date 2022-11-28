@@ -1,4 +1,5 @@
 (executable
-  (name gentest)
-  (modules gentest)
-  (libraries unix))
+ (name gentest)
+ (modules gentest)
+ (libraries unix)
+)

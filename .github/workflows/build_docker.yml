@@ -2,8 +2,12 @@ name: Build with ocp Docker container
 
 # The goal of this workflow is to test the installation of the project with opam
 # on a specific light docker container instead of using default GH-actions one.
-
-on: [push,pull_request]
+on:
+  push:
+    branches:
+      - fix-ci
+      - next
+      - main
 
 jobs:
   install_docker:
@@ -33,6 +37,9 @@ jobs:
       # This line is needed to allow the working directory to be used even
       # the ocaml user do not have rights on it.
       - run: CURRENTDIR=$(basename $(pwd)); git config --global --add safe.directory /__w/$CURRENTDIR/$CURRENTDIR
+
+      - name: Update opam repository
+        run: opam update
 
       # Create a switch with the system compiler (no compilation needed).
       # And then, install external (no need for depext with opam 2.1) and libs deps.
