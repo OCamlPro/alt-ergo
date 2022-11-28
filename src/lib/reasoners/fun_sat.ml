@@ -230,7 +230,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let is_it_unsat gf =
       let s =
         match E.form_view gf.E.ff with
-        | E.Not_a_form -> assert false
         | E.Lemma _   -> "lemma"
         | E.Clause _  -> "clause"
         | E.Unit _    -> "conjunction"
@@ -265,16 +264,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           ~module_name:"Fun_sat" ~function_name:"assume"
           "at level (%d, %d) I assume a @ " env.dlevel env.plevel;
         begin match E.form_view f with
-          | E.Not_a_form -> assert false
           | E.Literal a ->
             let n = match lem with
               | None -> ""
-              | Some ff ->
-                (match E.form_view ff with
-                 | E.Lemma xx -> xx.E.name
-                 | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-                 | E.Let _ | E.Iff _ | E.Xor _ -> ""
-                 | E.Not_a_form -> assert false)
+              | Some ff -> begin
+                  match E.form_view ff with
+                  | E.Lemma xx -> xx.E.name
+                  | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+                  | E.Let _ | E.Iff _ | E.Xor _ -> ""
+                end
             in
             print_dbg ~header:false
               "LITERAL (%s : %a) %a@ "
@@ -419,7 +417,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | E.Lemma _ -> env.add_inst orig
       | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
       | E.Let _ | E.Iff _ | E.Xor _ -> true
-      | E.Not_a_form -> assert false
     end
 
   let inst_predicates mconf env inst tbox selector ilvl =
@@ -443,7 +440,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | E.Literal _ -> true
     | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
     | E.Let _ | E.Iff _ | E.Xor _ -> false
-    | E.Not_a_form -> assert false
 
   let extract_prop_model ~complete_model t =
     let s = ref SE.empty in
@@ -625,7 +621,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              Profiling.conflicting_instance name loc
            | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
            | E.Let _ | E.Iff _ | E.Xor _ -> ()
-           | E.Not_a_form -> assert false
         )(Ex.formulas_of exp)
 
   let do_case_split env origin =
@@ -713,7 +708,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       ans
     | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
     | E.Let _ | E.Iff _ | E.Xor _ -> None
-    | E.Not_a_form -> assert false
 
   let red tcp_cache tmp_cache ff env tcp =
     let nf = E.neg ff.E.ff in
@@ -736,7 +730,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           ans, false
         | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
         | E.Let _ | E.Iff _ | E.Xor _ -> None, false
-        | E.Not_a_form -> assert false
 
   let red tcp_cache tmp_cache ff env tcp =
     match red tcp_cache tmp_cache ff env tcp with
@@ -764,7 +757,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if Options.get_unsat_core () then Ex.union (Ex.singleton (Ex.Dep f)) dep
       else dep
     | E.Unit _ | E.Lemma _ | E.Skolem _ | E.Let _ | E.Iff _ | E.Xor _ -> dep
-    | E.Not_a_form -> assert false
 
   let rec add_dep_of_formula f dep =
     let dep = add_dep f dep in
@@ -774,7 +766,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       else add_dep_of_formula f2 (add_dep_of_formula f1 dep)
     | E.Lemma _ | E.Clause _ | E.Literal _ | E.Skolem _
     | E.Let _ | E.Iff _ | E.Xor _ -> dep
-    | E.Not_a_form -> assert false
 
   (* currently:
      => this is not done modulo theories
@@ -980,7 +971,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           in
           let env = update_nb_related env ff in
           match E.form_view f with
-          | E.Not_a_form -> assert false
           | E.Iff (f1, f2) ->
             let id = E.id f in
             let g = E.elim_iff f1 f2 id ~with_conj:true in
@@ -1259,8 +1249,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              Printer.print_err "Currently, arbitrary formulas in Hyps \
                                 are not Th-reduced";
              assert false
-           | E.Not_a_form ->
-             assert false
         )(dep, acc) hyp
     in
     (gf, dep) :: acc
@@ -1268,7 +1256,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let does_not_contain_a_disjunction =
     let rec aux f =
       match E.form_view f with
-      | E.Not_a_form -> assert false
       | E.Literal _ -> true
       | E.Unit(f1, f2) -> aux f1 && aux f2
       | E.Clause _ | E.Iff _ | E.Xor _ -> false

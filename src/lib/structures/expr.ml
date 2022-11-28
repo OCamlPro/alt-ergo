@@ -123,7 +123,6 @@ type form_view =
   | Lemma of quantified   (* a lemma *)
   | Skolem of quantified  (* lazy skolemization *)
   | Let of letin (* a binding of an expr *)
-  | Not_a_form
 
 
 (** Comparison and hashing functions *)
@@ -307,48 +306,6 @@ module F_Htbl : Hashtbl.S with type key = t =
     let equal = equal
   end)
 
-(** different views of an expression *)
-
-let lit_view t =
-  let { f; xs; ty; _ } = t in
-  if ty != Ty.Tbool then
-    Util.failwith "Calling lit_view on a non boolean expression"
-  else
-    match f with
-    | Sy.Form _  ->
-      Util.failwith "Calling lit_view on a formula"
-    | Sy.Lit lit ->
-      begin match lit, xs with
-        | (Sy.L_eq | Sy.L_neg_eq), ([] | [_]) -> assert false
-        | Sy.L_eq, [a;b] -> Eq (a, b)
-        | Sy.L_eq, l     -> Eql l
-        | Sy.L_neg_eq, l -> Distinct l
-        | Sy.L_built x, l -> Builtin(true, x, l)
-        | Sy.L_neg_built x, l -> Builtin(false, x, l)
-        | Sy.L_neg_pred, [a] -> Pred(a, true)
-        | Sy.L_neg_pred, _ -> assert false
-      end
-    | _ -> Pred(t, false)
-
-let form_view t =
-  let { f; xs; bind; _ } = t in
-  if t.ty != Ty.Tbool then Not_a_form
-  else
-    match f, xs, bind with
-    | Sy.Form (Sy.F_Unit _), [a;b], _ -> Unit (a, b)
-    | Sy.Form (Sy.F_Clause i), [a;b], _ -> Clause (a, b, i)
-    | Sy.Form Sy.F_Iff, [a;b], _ -> Iff(a, b)
-    | Sy.Form Sy.F_Xor, [a;b], _ -> Xor(a, b)
-    | Sy.Form Sy.F_Lemma, [], B_lemma lem -> Lemma lem
-    | Sy.Form Sy.F_Skolem, [], B_skolem sko -> Skolem sko
-    | Sy.Lit (Sy.L_eq | Sy.L_neg_eq | Sy.L_neg_pred |
-              Sy.L_built _ | Sy.L_neg_built _), _, _ ->
-      Literal t
-    | Sy.Let, [], B_let ({ is_bool = true; _ } as x) -> Let x
-
-    | _ -> Literal t
-
-let[@inline always] term_view t = t
 
 (** pretty printing *)
 
@@ -739,6 +696,51 @@ let print_triggers fmt =
 let print_list_sep sep = Util.print_list ~sep ~pp:print
 
 let print_list fmt = print_list_sep "," fmt
+
+(** different views of an expression *)
+
+let lit_view t =
+  let { f; xs; ty; _ } = t in
+  if ty != Ty.Tbool then
+    Util.failwith "Calling lit_view on a non boolean expression %a"
+      print t
+  else
+    match f with
+    | Sy.Form _  ->
+      Util.failwith "Calling lit_view on a formula %a" print t
+    | Sy.Lit lit ->
+      begin match lit, xs with
+        | (Sy.L_eq | Sy.L_neg_eq), ([] | [_]) -> assert false
+        | Sy.L_eq, [a;b] -> Eq (a, b)
+        | Sy.L_eq, l     -> Eql l
+        | Sy.L_neg_eq, l -> Distinct l
+        | Sy.L_built x, l -> Builtin(true, x, l)
+        | Sy.L_neg_built x, l -> Builtin(false, x, l)
+        | Sy.L_neg_pred, [a] -> Pred(a, true)
+        | Sy.L_neg_pred, _ -> assert false
+      end
+    | _ -> Pred(t, false)
+
+let form_view t =
+  let { f; xs; bind; _ } = t in
+  if t.ty != Ty.Tbool then
+    Util.failwith "Term %a is not a formula" print t
+  else
+    match f, xs, bind with
+    | Sy.Form (Sy.F_Unit _), [a;b], _ -> Unit (a, b)
+    | Sy.Form (Sy.F_Clause i), [a;b], _ -> Clause (a, b, i)
+    | Sy.Form Sy.F_Iff, [a;b], _ -> Iff(a, b)
+    | Sy.Form Sy.F_Xor, [a;b], _ -> Xor(a, b)
+    | Sy.Form Sy.F_Lemma, [], B_lemma lem -> Lemma lem
+    | Sy.Form Sy.F_Skolem, [], B_skolem sko -> Skolem sko
+    | Sy.Lit (Sy.L_eq | Sy.L_neg_eq | Sy.L_neg_pred |
+              Sy.L_built _ | Sy.L_neg_built _), _, _ ->
+      Literal t
+    | Sy.Let, [], B_let ({ is_bool = true; _ } as x) -> Let x
+
+    | _ -> Literal t
+
+let[@inline always] term_view t = t
 
 (** Some auxiliary functions *)
 
@@ -1440,7 +1442,6 @@ and find_particular_subst =
      x can be replaced with 1 *)
   let rec find_subst v tv f =
     match form_view f with
-    | Not_a_form -> assert false
     | Unit _ | Lemma _ | Skolem _ | Let _ | Iff _ | Xor _ -> ()
     | Clause(f1, f2,_) -> find_subst v tv f1; find_subst v tv f2
     | Literal a ->
@@ -1559,7 +1560,6 @@ let max_ground_terms_of_lit =
 let atoms_rec_of_form =
   let rec atoms only_ground acc f =
     match form_view f with
-    | Not_a_form -> assert false
     | Literal a ->
       if not only_ground || is_ground a then TSet.add a acc else acc
 
@@ -1626,7 +1626,6 @@ let sub_terms_of_formula f =
       let acc = aux xx.in_e acc in
       if type_info xx.let_e == Ty.Tbool then aux xx.let_e acc
       else sub_terms acc xx.let_e
-    | Not_a_form -> assert false
   in
   aux f TSet.empty
 

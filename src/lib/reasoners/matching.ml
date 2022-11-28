@@ -691,7 +691,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
              ) env tgs
 
          | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-         | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
+         | E.Let _ | E.Iff _ | E.Xor _ -> assert false
       ) formulas env
 
   let terms_info env = env.info, env.fils

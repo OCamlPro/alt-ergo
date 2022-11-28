@@ -456,7 +456,6 @@ let add_inst ({ h; _ } as inst_model) orig =
     | Expr.Lemma _ | Expr.Unit _ | Expr.Clause _ | Expr.Literal _
     | Expr.Skolem _ | Expr.Let _ | Expr.Iff _ | Expr.Xor _ ->
       string_of_int id
-    | Expr.Not_a_form -> assert false
   in
   let r, n, limit, to_add =
     try

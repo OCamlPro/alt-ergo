@@ -127,7 +127,6 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
           | E.Lemma { E.name = s; _ } -> s
           | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
           | E.Let _ | E.Iff _ | E.Xor _ -> "!(no-name)"
-          | E.Not_a_form -> assert false
         in
         print_dbg
           ~module_name:"Instances" ~function_name:"new_facts_of_axiom"
@@ -196,7 +195,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         predicates = ME.add f (guard, age, ex) env.predicates;
         guards = ME.add guard ((f, false) :: guarded) env.guards
       }
-    | E.Not_a_form | E.Unit _ | E.Clause _ | E.Xor _
+    | E.Unit _ | E.Clause _ | E.Xor _
     | E.Skolem _ | E.Let _ ->
       assert false
 
@@ -228,7 +227,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     | E.Lemma { E.name; loc; _ } ->
       Profiling.new_instance_of name f loc accepted
     | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-    | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
+    | E.Let _ | E.Iff _ | E.Xor _ -> assert false
 
   let profile_produced_terms env lorig nf s trs =
     let st0 =
@@ -238,7 +237,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     let name, loc, _ = match Expr.form_view lorig with
       | E.Lemma { E.name; main; loc; _ } -> name, loc, main
       | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-      | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
+      | E.Let _ | E.Iff _ | E.Xor _ -> assert false
     in
     let st1 = E.max_ground_terms_rec_of_form nf in
     let diff = Expr.Set.diff st1 st0 in
@@ -355,7 +354,6 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
       | E.Unit(f1,f2) -> max (size f1) (size f2)
       | E.Lemma _ | E.Clause _ | E.Literal _ | E.Skolem _
       | E.Let _ | E.Iff _ | E.Xor _ -> E.size f
-      | E.Not_a_form -> assert false
     in
     fun lf ->
       List.fast_sort

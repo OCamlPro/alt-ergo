@@ -111,7 +111,6 @@ type lit_view = private
   | Distinct of t list
   | Builtin of bool * Symbols.builtin * t list
   | Pred of t * bool
-  (* | Not_a_lit of { is_form : bool } *)
 
 type form_view = private
   | Unit of t*t  (* unit clauses *)
@@ -122,7 +121,6 @@ type form_view = private
   | Lemma of quantified   (* a lemma *)
   | Skolem of quantified  (* lazy skolemization *)
   | Let of letin (* a binding of an expr *)
-  | Not_a_form
 
 (** different views of an expression *)
 

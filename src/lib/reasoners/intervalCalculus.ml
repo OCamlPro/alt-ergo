@@ -2259,7 +2259,7 @@ let record_this_instance f accepted lorig =
     | E.Lemma { E.name; loc; _ } ->
       Profiling.new_instance_of name f loc accepted
     | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-    | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
+    | E.Let _ | E.Iff _ | E.Xor _ -> assert false
 
 let profile_produced_terms menv lorig nf s trs =
   if Options.get_profiling() then
@@ -2270,7 +2270,7 @@ let profile_produced_terms menv lorig nf s trs =
     let name, loc, _ = match E.form_view lorig with
       | E.Lemma { E.name; main; loc; _ } -> name, loc, main
       | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-      | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
+      | E.Let _ | E.Iff _ | E.Xor _ -> assert false
     in
     let st1 = E.max_ground_terms_rec_of_form nf in
     let diff = SE.diff st1 st0 in
@@ -2440,7 +2440,7 @@ let separate_semantic_triggers =
       match E.form_view th_form with
       | E.Lemma q -> q
       | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-      | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
+      | E.Let _ | E.Iff _ | E.Xor _ -> assert false
     in
     let r_triggers =
       List.rev_map
