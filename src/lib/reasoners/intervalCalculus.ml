@@ -98,6 +98,7 @@ module SimVar = struct
     else fprintf fmt "s!%d" (X.hash x) (* slake vars *)
 end
 
+
 module Sim = OcplibSimplex.Basic.Make(SimVar)(Numbers.Q)(Explanation)
 
 type used_by = {
@@ -162,24 +163,33 @@ module Sim_Wrap = struct
 
   let extract_bound i get_lb =
     let func, q =
-      if get_lb then I.borne_inf, Q.one else I.borne_sup, Q.m_one in
+      if get_lb
+      then I.borne_inf, Sim.Core.R2.lower
+      else I.borne_sup, Sim.Core.R2.upper
+    in
     try
-      let bnd, expl, large = func i in
-      Some (bnd, if large then Q.zero else q), expl
-    with I.No_finite_bound -> None, Explanation.empty
+      let bnd, explanation, large = func i in
+      let bvalue =
+        if large
+        then Sim.Core.R2.of_r bnd
+        else q bnd
+      in
+      Some Sim.Core.{bvalue; explanation}
+    with I.No_finite_bound -> None
 
   let same_bnds _old _new =
     match _old, _new with
     | None, None -> true
     | None, Some _ | Some _, None -> false
-    | Some(s,t), Some(u, v) -> Q.equal s u && Q.equal t v
+    | Some Sim.Core.{bvalue = r1; _}, Some Sim.Core.{bvalue = r2; _} ->
+      Sim.Core.R2.equal r1 r2
 
   let add_if_better p _old _new simplex =
     (* p is in normal form pos *)
-    let old_mn, _old_mn_ex = extract_bound _old true in
-    let old_mx, _old_mx_ex = extract_bound _old false in
-    let new_mn, new_mn_ex = extract_bound _new true in
-    let new_mx, new_mx_ex = extract_bound _new false in
+    let old_mn = extract_bound _old true in
+    let old_mx = extract_bound _old false in
+    let new_mn = extract_bound _new true in
+    let new_mx = extract_bound _new false in
     if same_bnds old_mn new_mn && same_bnds old_mx new_mx then simplex
     else
       let l, z = P.to_list p in
@@ -189,11 +199,17 @@ module Sim_Wrap = struct
           [] -> assert false
         | [c, x] ->
           assert (Q.is_one c);
-          Sim.Assert.var simplex x new_mn new_mn_ex new_mx new_mx_ex
+          Sim.(Assert.var
+                 simplex x
+                 ?min:new_mn
+                 ?max:new_mx
+              )
         | _ ->
           let l = List.rev_map (fun (c, x) -> x, c) l in
-          Sim.Assert.poly simplex (Sim.Core.P.from_list l) (alien_of p)
-            new_mn new_mn_ex new_mx new_mx_ex
+          Sim.(Assert.poly simplex (Core.P.from_list l) (alien_of p)
+                 ?min:new_mn
+                 ?max:new_mx
+              )
       in
       (* we don't solve immediately. It may be expensive *)
       simplex
@@ -202,12 +218,12 @@ module Sim_Wrap = struct
   let finite_non_point_dom info =
     match info.Sim.Core.mini, info.Sim.Core.maxi with
     | None, _ | _, None -> None
-    | Some (a, b), Some(x,y) ->
-      assert (Q.is_zero b); (*called on integers only *)
-      assert (Q.is_zero y);
-      let c = Q.compare a x in
+    | Some {bvalue = a; _}, Some {bvalue = x; _} ->
+      assert (Sim.Core.R2.is_pure_rational a);
+      assert (Sim.Core.R2.is_pure_rational x);
+      let c = Sim.Core.R2.compare a x in
       assert (c <= 0); (* because simplex says sat *)
-      if c = 0 then None else Some (Q.sub x a)
+      if c = 0 then None else Some (Q.sub x.v a.v)
 
   (* not used for the moment *)
   let case_split =
@@ -229,8 +245,8 @@ module Sim_Wrap = struct
           (Sim.Core.equals_optimum info.Sim.Core.value info.Sim.Core.mini ||
            Sim.Core.equals_optimum info.Sim.Core.value info.Sim.Core.maxi)
           && Uf.is_normalized uf x ->
-        let v, _ = info.Sim.Core.value in
-        assert (Q.is_int v);
+        let v = info.Sim.Core.value in
+        assert (Q.is_int v.v);
         begin
           match acc with
           | Some (_,_,s') when Q.compare s' s <= 0 -> acc
@@ -239,16 +255,16 @@ module Sim_Wrap = struct
       | _ -> acc
     in
     let aux_2 env uf x (info,_) acc =
-      let v, _ = info.Sim.Core.value in
+      let v = info.Sim.Core.value in
       assert (X.type_info x == Ty.Tint);
       match finite_non_point_dom info with
-      | Some s when Q.is_int v && Uf.is_normalized uf x ->
+      | Some s when Q.is_int v.v && Uf.is_normalized uf x ->
         let fnd1, cont1 =
-          try true, I.contains (fst (MX0.find x env.monomes)) v
+          try true, I.contains (fst (MX0.find x env.monomes)) v.v
           with Not_found -> false, true
         in
         let fnd2, cont2 =
-          try true, I.contains (MP0.find (poly_of x) env.polynomes) v
+          try true, I.contains (MP0.find (poly_of x) env.polynomes) v.v
           with Not_found -> false, true
         in
         if (fnd1 || fnd2) && cont1 && cont2 then
@@ -269,7 +285,7 @@ module Sim_Wrap = struct
         Sim.Core.MX.fold (aux_1 uf) int_sim.Sim.Core.basic acc
       in
       match acc with
-      | Some (x, n, s) -> gen_cs x n s 1
+      | Some (x, n, s) -> gen_cs x n.v s 1
       (*!!!disable case-split that separates and interval into two parts*)
       | None ->
         let acc =
@@ -279,7 +295,7 @@ module Sim_Wrap = struct
           Sim.Core.MX.fold (aux_2 env uf) int_sim.Sim.Core.basic acc
         in
         match acc with
-        | Some (x, n, s) -> gen_cs x n s 2
+        | Some (x, n, s) -> gen_cs x n.v s 2
         | None -> []
 
 
@@ -294,8 +310,8 @@ module Sim_Wrap = struct
       | Sim.Core.Unsat _ -> assert false (* we know sim is SAT *)
       | Sim.Core.Unbounded _ -> i
       | Sim.Core.Max(mx,_sol) ->
-        let {Sim.Core.max_v; is_le; reason} = Lazy.force mx in
-        set_new_bound reason (Q.mult q max_v) ~is_le:is_le i
+        let {Sim.Core.max_v; is_le} = Lazy.force mx in
+        set_new_bound max_v.explanation (Q.mult q max_v.bvalue.v) ~is_le:is_le i
     in
     if get_debug_fpa () >= 2 then
       Printer.print_dbg
@@ -647,10 +663,10 @@ let empty classes = {
 
   rat_sim =
     Sim.Solve.solve
-      (Sim.Core.empty ~is_int:false ~check_invs:false ~debug:0);
+      (Sim.Core.empty ~is_int:false ~check_invs:false);
   int_sim =
     Sim.Solve.solve
-      (Sim.Core.empty ~is_int:true ~check_invs:false ~debug:0);
+      (Sim.Core.empty ~is_int:true ~check_invs:false);
 
   th_axioms = ME.empty;
   linear_dep = ME.empty;
@@ -1896,6 +1912,20 @@ let case_split_union_of_intervals =
 
 (*****)
 
+let bnd_to_simplex_bound ((bnd, explanation) : I.bnd) : Sim.Core.bound option =
+  match bnd with
+  | None -> None
+  | Some (bnd, offset) ->
+    let bvalue =
+      if Q.equal offset Q.one
+      then Sim.Core.R2.lower bnd
+      else if Q.equal offset Q.m_one
+      then Sim.Core.R2.upper bnd
+      else if Q.equal offset Q.zero
+      then Sim.Core.R2.of_r bnd
+      else assert false (* alt-ergo style *)
+    in Some {bvalue; explanation}
+
 let int_constraints_from_map_intervals =
   let aux p xp i uf acc =
     if Uf.is_normalized uf xp && I.is_point i == None
@@ -1911,7 +1941,7 @@ let int_constraints_from_map_intervals =
 
 
 let fm_simplex_unbounded_integers_encoding env uf =
-  let simplex = Sim.Core.empty ~is_int:true ~check_invs:true ~debug:0 in
+  let simplex = Sim.Core.empty ~is_int:true ~check_invs:true in
   let int_ctx = int_constraints_from_map_intervals env uf in
   List.fold_left
     (fun simplex (p, uints) ->
@@ -1933,21 +1963,27 @@ let fm_simplex_unbounded_integers_encoding env uf =
          in
          let cst = Q.div cst0 (Q.from_int 2) in
          assert (mn == None || mx == None);
-         let mn =
-           match mn with
-           | None -> None
-           | Some (q, q') -> Some (Q.add q cst, q')
+         let min =
+           let mn =
+             match mn with
+             | None -> None
+             | Some (q, q') -> Some (Q.add q cst, q')
+           in
+           bnd_to_simplex_bound (mn, ex_mn)
          in
-         let mx =
-           match mx with
-           | None -> None
-           | Some (q, q') -> Some (Q.sub q cst, q')
+         let max =
+           let mx =
+             match mx with
+             | None -> None
+             | Some (q, q') -> Some (Q.sub q cst, q')
+           in
+           bnd_to_simplex_bound (mx, ex_mx)
          in
          match l with
          | [] -> assert false
          | [x, c] ->
            assert (Q.is_one c);
-           Sim.Assert.var simplex x mn ex_mn mx ex_mx |> fst
+           Sim.Assert.var simplex x ?min ?max |> fst
          | _ ->
            let xp = alien_of p in
            let sim_p =
@@ -1955,7 +1991,7 @@ let fm_simplex_unbounded_integers_encoding env uf =
              | Some res -> res
              | None -> Sim.Core.P.from_list l
            in
-           Sim.Assert.poly simplex sim_p xp mn ex_mn mx ex_mx |> fst
+           Sim.Assert.poly simplex sim_p xp ?min ?max |> fst
 
     ) simplex int_ctx
 
@@ -1980,7 +2016,7 @@ let model_from_simplex sim is_int env uf =
     raise (Ex.Inconsistent(Lazy.force ex, env.classes))
 
   | Sim.Core.Sat sol ->
-    let {Sim.Core.main_vars; slake_vars; int_sol} = Lazy.force sol in
+    let {Sim.Core.main_vars; slake_vars; int_sol; epsilon=_} = Lazy.force sol in
     let main_vars, _slake_vars =
       if int_sol || not is_int then main_vars, slake_vars
       else round_to_integers main_vars, round_to_integers slake_vars
