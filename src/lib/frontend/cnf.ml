@@ -341,7 +341,7 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
         | TFexists _ -> E.mk_exists
         | _ -> assert false
       in
-      func name loc binders trs ff id ~toplevel ~decl_kind
+      func ~name ~loc binders trs ff ~gid:id ~toplevel ~decl_kind
 
     | TFlet(_,binders,lf) ->
       let binders =
@@ -388,7 +388,7 @@ let make_form name f loc ~decl_kind =
   if Ty.Svty.is_empty (E.free_type_vars ff) then ff
   else
     let id = E.id ff in
-    E.mk_forall name loc Symbols.Map.empty [] ff id ~toplevel:true ~decl_kind
+    E.mk_forall ~name ~loc Symbols.Map.empty [] ff ~gid:id ~toplevel:true ~decl_kind
 
 let mk_assume acc f name loc =
   let ff = make_form name f loc ~decl_kind:E.Daxiom in

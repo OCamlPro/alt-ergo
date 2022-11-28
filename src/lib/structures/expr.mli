@@ -46,11 +46,11 @@ type term_view = private {
   f: Symbols.t;                      (** Top symbol. *)
   (* TODO: Rename this field to args. *)
   xs: t list;                        (** List of the arguments. *)
-  ty: Ty.t;                          (** Type witness *)
-  bind : bind_kind;                  (** Kind of binding. @see  *)
+  ty: Ty.t;                          (** Type witness. *)
+  bind : bind_kind;                  (** Kind of binding. *)
   (* TODO: Rename this field to id. *)
   tag: int;                          (** Identifiant used by the Hconsing
-                                         module *)
+                                         module. *)
   vars : (Ty.t * int) Symbols.Map.t;
   (** Correspondance between variables and their type witness and number of
       occurences in the expression. *)
@@ -349,23 +349,23 @@ val clean_trigger: in_theory:bool -> string -> trigger -> trigger
 val resolution_triggers: is_back:bool -> quantified -> trigger list
 
 val mk_forall :
-  string -> (* name *)
-  Loc.t -> (* location in the original file *)
+  name:string ->
+  loc:Loc.t ->
   binders -> (* quantified variables *)
   trigger list -> (* triggers *)
   t -> (* quantified formula *)
-  int -> (* id, for the GUI *)
+  gid:int -> (* id, for the GUI *)
   toplevel:bool -> (* for future triggers computation in presence of vty *)
   decl_kind:decl_kind ->
   t
 
 val mk_exists :
-  string -> (* name *)
-  Loc.t -> (* location in the original file *)
+  name:string ->
+  loc:Loc.t ->
   binders -> (* quantified variables *)
   trigger list -> (* triggers *)
   t -> (* quantified formula *)
-  int -> (* id, for the GUI *)
+  gid:int -> (* id, for the GUI *)
   toplevel:bool -> (* for future triggers computation in presence of
                       vty, and to construct a toplevel forall that
                       cover vtys *)

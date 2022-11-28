@@ -1534,7 +1534,6 @@ and find_particular_subst =
         if SMap.is_empty sbt then None else Some sbt
       end
 
-
 let apply_subst, clear_subst_cache =
   let (cache : t Msbty.t Msbt.t TMap.t ref) = ref TMap.empty in
   let apply_subst ((sbt, sbty) as s) f =
@@ -2438,7 +2437,7 @@ end
 
 let make_triggers = Triggers.make
 
-let mk_forall name loc binders trs f id ~toplevel ~decl_kind =
+let mk_forall ~name ~loc binders trs f ~gid ~toplevel ~decl_kind =
   let decl_kind =
     if toplevel then decl_kind
     else match decl_kind with
@@ -2460,21 +2459,21 @@ let mk_forall name loc binders trs f id ~toplevel ~decl_kind =
   let trs = Triggers.check_user_triggers f toplevel binders trs ~decl_kind in
   mk_forall_bis
     {name; loc; binders; toplevel;
-     user_trs = trs; main = f; sko_v; sko_vty; kind = decl_kind} id
+     user_trs = trs; main = f; sko_v; sko_vty; kind = decl_kind} gid
 
-let mk_exists name loc binders trs f id ~toplevel ~decl_kind =
+let mk_exists ~name ~loc binders trs f ~gid ~toplevel ~decl_kind =
   if not toplevel || Ty.Svty.is_empty f.vty then
-    neg (mk_forall name loc binders trs (neg f) id ~toplevel ~decl_kind)
+    neg (mk_forall ~name ~loc binders trs (neg f) ~gid ~toplevel ~decl_kind)
   else
     (* If there are type variables in a toplevel exists: 1 - we add
        a forall quantification without term variables (ie. only with
        type variables). 2 - we keep the triggers of 'exists' to try
        to instantiate these type variables *)
-    let nm = Format.sprintf "#%s#sub-%d" name 0 in
     let tmp =
-      neg (mk_forall nm loc binders trs (neg f) id ~toplevel:false ~decl_kind)
+      let name = sprintf "#%s#sub-%d" name 0 in
+      neg (mk_forall ~name ~loc binders trs (neg f) ~gid ~toplevel:false ~decl_kind)
     in
-    mk_forall name loc SMap.empty trs tmp id ~toplevel ~decl_kind
+    mk_forall ~name ~loc SMap.empty trs tmp ~gid ~toplevel ~decl_kind
 
 
 let rec compile_match mk_destr mker e cases accu =

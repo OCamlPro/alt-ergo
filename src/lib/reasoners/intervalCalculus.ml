@@ -2476,8 +2476,8 @@ let separate_semantic_triggers =
         )user_trs
     in
     E.mk_forall
-      q.E.name q.E.loc q.E.binders (List.rev r_triggers) q.E.main
-      (E.id th_form) ~toplevel:true ~decl_kind:E.Dtheory
+      ~name:q.E.name ~loc:q.E.loc q.E.binders (List.rev r_triggers) q.E.main
+      ~gid:(E.id th_form) ~toplevel:true ~decl_kind:E.Dtheory
 
 let assume_th_elt t th_elt dep =
   let { Expr.axiom_kind; ax_form; th_name; extends; _ } = th_elt in
