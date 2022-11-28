@@ -2226,7 +2226,11 @@ module Triggers = struct
          }
       ) l
 
-  let is_literal e = try let _ = lit_view e in true with Failure _ -> false
+  (* Should return false iff lit_view fails with Failure _, but this version
+     does not build the literal view. *)
+  let is_literal e =
+    e.ty == Ty.Tbool &&
+    match e.f with Sy.Form _ -> false | _ -> true
 
   let trs_in_scope full_trs f =
     STRS.filter
