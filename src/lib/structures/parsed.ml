@@ -26,8 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-[@@@ocaml.warning "-33"]
-
 type constant =
   | ConstBitv of string
   | ConstInt of string

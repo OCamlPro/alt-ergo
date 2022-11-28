@@ -30,7 +30,6 @@ module H = Hashtbl.Make(Expr)
 
 (*** Combination module of Shostak theories ***)
 
-[@@@ocaml.warning "-60"]
 module rec CX : sig
   include Sig.X
 

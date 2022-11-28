@@ -9,10 +9,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-open Format
-open Sig
-
 module Sy = Symbols
 module E  = Expr
 module Hs = Hstring
