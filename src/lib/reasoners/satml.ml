@@ -1156,8 +1156,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         enqueue env fuip 0 None
       | fuip :: _ ->
         let name = Atom.fresh_lname () in
-        let lclause = 
-          Atom.make_clause name learnt vraie_form size true history 
+        let lclause =
+          Atom.make_clause name learnt vraie_form size true history
         in
         Vec.push env.learnts lclause;
         attach_clause env lclause;
@@ -1214,8 +1214,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     done;
     List.iter (fun (q : Atom.atom) -> q.var.seen <- false) !seen;
     let learnt = SA.elements !learnt in
-    let learnt = List.fast_sort (fun (a : Atom.atom) (b : Atom.atom) -> 
-      b.var.level - a.var.level) learnt in
+    let learnt = List.fast_sort (fun (a : Atom.atom) (b : Atom.atom) ->
+        b.var.level - a.var.level) learnt in
     let size = List.length learnt in
     let bj_level =
       if Options.get_minimal_bj () then

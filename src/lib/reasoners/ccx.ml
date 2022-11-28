@@ -117,8 +117,8 @@ module Main : S = struct
               diseqs  = Queue.create ();
               touched = Util.MI.empty }
 
-  let add_fact facts ((lit, _, _) as e) =
-    match lit with
+  let add_fact (facts : _ Sig_rel.facts) ((lit, _, _) as e) =
+    match (lit : _ Sig_rel.literal) with
     | LSem Xliteral.Pred _ | LSem Xliteral.Eq _ ->
       Queue.push e facts.equas
     | LSem Xliteral.Distinct _ -> Queue.push e facts.diseqs
@@ -140,9 +140,9 @@ module Main : S = struct
           (fun (lit,_,_) ->
              match lit with
              | Sig_rel.LSem sa ->
-                 Format.fprintf fmt "  > LSem  %a@." LR.print (LR.make sa)
+               Format.fprintf fmt "  > LSem  %a@." LR.print (LR.make sa)
              | Sig_rel.LTerm a ->
-                 Format.fprintf fmt "  > LTerm %a@."E.print a
+               Format.fprintf fmt "  > LTerm %a@."E.print a
           )q
       in
       let aux2 fmt mp =
