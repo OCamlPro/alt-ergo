@@ -418,6 +418,9 @@ val print_th_elt : Format.formatter -> th_elt -> unit
 val type_info : t -> Ty.t
 (** [type_info t] returns the type of the expression [t]. *)
 
+val symbol_info : t -> Symbols.t
+val get_infos : t -> view
+
 val print : Format.formatter -> t -> unit
 (** [print fmt exp] pretty prints the expression [exp] with
     the printer [fmt]. *)
@@ -447,3 +450,9 @@ val neg : t -> t
 (** [neg exp] returns the negative form of an expression [exp] of type
     {!constructor:Ty.Tbool}.
     Raise an assertion if [exp] is not of type {!constructor:Ty.Tbool}. *)
+
+val save_cache: unit -> unit
+(** Saves the modules cache *)
+
+val reinit_cache: unit -> unit
+(** Reinitializes the module's cache *)
