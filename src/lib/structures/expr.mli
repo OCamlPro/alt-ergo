@@ -157,13 +157,13 @@ val print_list : Format.formatter -> t list -> unit
 val print_list_sep : string -> Format.formatter -> t list -> unit
 val print_triggers : Format.formatter -> trigger list -> unit
 
-val mk_ite : t -> t -> t -> int -> t
+val mk_ite : t -> t -> t -> t
 (** [mk_ite cond th el] produces the expression
     [if cond then th else el]. If the expression [th] and [el] are
     of type {!constructor:Ty.Tbool}, the function produces the formula
     [mk_if cond th el] instead. *)
 
-val mk_let : Symbols.t -> t -> t -> int -> t
+val mk_let : Symbols.t -> t -> t -> t
 (** [mk_let sy exp1 exp2] constructs the expression [let sy = exp1 in exp2].
     Obvious substitution are inlined during the construction. *)
 
@@ -216,24 +216,24 @@ val vrai : t
 val faux : t
 (** The formula bottom. *)
 
-val mk_or  : t -> t -> bool -> int -> t
+val mk_or  : t -> t -> bool -> t
 (** [mk_or f1 f2] produces a formula equivalent to the {e disjunction} of the
     formula [f1] and [f2], that is {m f1 \lor f2}. *)
 
-val mk_and : t -> t -> bool -> int -> t
+val mk_and : t -> t -> bool -> t
 (** [mk_and f1 f2] produces a formula equivalent to the {e conjunction} of
     the formula [f1] and [f2], that is {m f1 \land f2}. *)
 
-val mk_imp : t -> t -> int -> t
+val mk_imp : t -> t -> t
 (** [mk_imp f1 f2] produces a formula equivalent to {m f1 \implies f2}. *)
 
-val mk_iff : t -> t -> int -> t
+val mk_iff : t -> t -> t
 (** [mk_iff f1 f2] produces a formula equivalent to {m f1 \iff f2}. *)
 
-val mk_if : t -> t -> t -> int -> t
+val mk_if : t -> t -> t -> t
 (** [mk_if f1 f2] produces a formula equivalent to {m f1 \vee f2}. *)
 
-val mk_xor : t -> t -> int -> t
+val mk_xor : t -> t -> t
 (** [mk_xor f1 f2] produces a formula equivalent to the {e exclusive
     disjunction} of the formula [f1] and [f2], that is {m f1 \oplus f2}. *)
 
@@ -354,7 +354,6 @@ val mk_forall :
   binders -> (* quantified variables *)
   trigger list -> (* triggers *)
   t -> (* quantified formula *)
-  gid:int -> (* id, for the GUI *)
   toplevel:bool -> (* for future triggers computation in presence of vty *)
   decl_kind:decl_kind ->
   t
@@ -365,7 +364,6 @@ val mk_exists :
   binders -> (* quantified variables *)
   trigger list -> (* triggers *)
   t -> (* quantified formula *)
-  gid:int -> (* id, for the GUI *)
   toplevel:bool -> (* for future triggers computation in presence of
                       vty, and to construct a toplevel forall that
                       cover vtys *)
@@ -376,7 +374,7 @@ val skolemize : quantified -> t
 
 val elim_let : recursive:bool -> letin -> t
 
-val elim_iff : t -> t -> int -> with_conj:bool -> t
+val elim_iff : t -> t -> with_conj:bool -> t
 (** [elim_iff f1 f2 with_conj] constructs an equivalent formula
     to {m f1 \iff f2} using a combinaison of negations, disjunctions
     and conjuctions instead of the built-in symbol {!constructor:Sy.F_Iff}.
@@ -439,7 +437,6 @@ val free_type_vars : t -> Ty.Svty.t
 (** [free_type_vars exp] returns the set of the free type variables
     occuring in the expression [exp]. *)
 
-val id : t -> int
 val size : t -> int
 (** [size exp] returns the size of the expression [exp]. *)
 

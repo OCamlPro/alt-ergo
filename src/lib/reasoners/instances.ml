@@ -291,7 +291,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
             | _ ->
               let nf = E.apply_subst s f in
               (* add the incrementaly guard to nf, if any *)
-              let nf = E.mk_imp trigger_increm_guard nf 0 in
+              let nf = E.mk_imp trigger_increm_guard nf in
               if inst_is_seen_during_this_round orig nf acc then acc
               else
                 let accepted = selector nf orig in

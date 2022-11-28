@@ -551,7 +551,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     (* try to keep the decision ordering *)
     let l = List.fast_sort (fun (_,i) (_,j) -> j - i) l in
-    List.fold_left (fun acc (f, _) -> E.mk_imp f acc (E.id f)) acc0 l
+    List.fold_left (fun acc (f, _) -> E.mk_imp f acc) acc0 l
 
 
   let cdcl_assume delay env l =
@@ -676,7 +676,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let fl = List.fast_sort (fun (_, d1) (_,d2) -> d1 - d2) fl in
       let f =
         List.fold_left
-          (fun acc (f, _) -> E.mk_or f acc false (E.id f))
+          (fun acc (f, _) -> E.mk_or f acc false)
           ff0.E.ff fl
       in
       update_unit_facts env {ff0 with E.ff=f} dep
@@ -972,20 +972,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           let env = update_nb_related env ff in
           match E.form_view f with
           | E.Iff (f1, f2) ->
-            let id = E.id f in
-            let g = E.elim_iff f1 f2 id ~with_conj:true in
+            let g = E.elim_iff f1 f2 ~with_conj:true in
             if Options.get_tableaux_cdcl () then begin
-              let f_imp_g = E.mk_imp f g id in
+              let f_imp_g = E.mk_imp f g in
               (* correct to put <-> ?*)
               cdcl_assume false env [{ff with E.ff=f_imp_g}, Ex.empty]
             end;
             asm_aux (env, true, tcp, ap_delta, lits) [{ff with E.ff = g}, dep]
 
           | E.Xor (f1, f2) ->
-            let id = E.id f in
-            let g = E.elim_iff f1 f2 id ~with_conj:false |> E.neg in
+            let g = E.elim_iff f1 f2 ~with_conj:false |> E.neg in
             if Options.get_tableaux_cdcl () then begin
-              let f_imp_g = E.mk_imp f g id in
+              let f_imp_g = E.mk_imp f g in
               (* should do something similar for Let ? *)
               cdcl_assume false env [{ff with E.ff=f_imp_g}, Ex.empty]
             end;
@@ -1025,7 +1023,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                 assert (ME.mem guard env.gamma);
                 if Options.get_tableaux_cdcl () then
                   cdcl_assume false env
-                    [{ff with E.ff = E.mk_imp f af (E.id f)}, adep];
+                    [{ff with E.ff = E.mk_imp f af}, adep];
                 asm_aux acc [{ff with E.ff = af}, Ex.union dep adep]
               | None -> acc
             end
@@ -1034,7 +1032,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             Options.tool_req 2 "TR-Sat-Assume-Sko";
             let f' = E.skolemize quantif  in
             if Options.get_tableaux_cdcl () then begin
-              let f_imp_f' = E.mk_imp f f' (E.id f) in
+              let f_imp_f' = E.mk_imp f f' in
               (* correct to put <-> ?*)
               (* should do something similar for Let ? *)
               cdcl_assume false env [{ff with E.ff=f_imp_f'}, Ex.empty]
@@ -1046,7 +1044,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             let elim_let = E.elim_let ~recursive:true letin in
             let ff = {ff with E.ff = elim_let} in
             if Options.get_tableaux_cdcl () then begin
-              let f_imp_f' = E.mk_imp f elim_let (E.id f) in
+              let f_imp_f' = E.mk_imp f elim_let in
               (* correct to put <-> ?*)
               (* should do something similar for Let ? *)
               cdcl_assume false env [{ff with E.ff=f_imp_f'}, Ex.empty]
@@ -1800,7 +1798,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let add_guard env gf =
     let current_guard = env.guards.current_guard in
-    {gf with E.ff = E.mk_imp current_guard gf.E.ff 1}
+    {gf with E.ff = E.mk_imp current_guard gf.E.ff}
 
   let assume env fg dep =
     try

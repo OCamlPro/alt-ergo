@@ -887,10 +887,10 @@ module Flat_Formula : FLAT_FORMULA = struct
 
       | E.Iff(f1, f2) ->
         simp topl ~parent_disj @@
-        E.elim_iff f1 f2 (E.id f) ~with_conj:(not parent_disj)
+        E.elim_iff f1 f2 ~with_conj:(not parent_disj)
 
       | E.Xor(f1, f2) ->
-        let g = E.neg @@ E.elim_iff f1 f2 (E.id f) ~with_conj:parent_disj in
+        let g = E.neg @@ E.elim_iff f1 f2 ~with_conj:parent_disj in
         simp topl ~parent_disj g
 
       | E.Let letin ->

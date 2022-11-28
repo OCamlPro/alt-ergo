@@ -2335,7 +2335,7 @@ let new_facts_for_axiom
               let nf = E.apply_subst sbs f in
               (* incrementality/push. Although it's not supported for
                  theories *)
-              let nf = E.mk_imp trigger_increm_guard nf 0 in
+              let nf = E.mk_imp trigger_increm_guard nf in
               let accepted = selector nf orig in
               record_this_instance nf accepted lorig;
               if accepted then begin
@@ -2477,7 +2477,7 @@ let separate_semantic_triggers =
     in
     E.mk_forall
       ~name:q.E.name ~loc:q.E.loc q.E.binders (List.rev r_triggers) q.E.main
-      ~gid:(E.id th_form) ~toplevel:true ~decl_kind:E.Dtheory
+      ~toplevel:true ~decl_kind:E.Dtheory
 
 let assume_th_elt t th_elt dep =
   let { Expr.axiom_kind; ax_form; th_name; extends; _ } = th_elt in

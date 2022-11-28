@@ -448,24 +448,24 @@ let refresh_instances ({ istore; _ } as inst_model) () =
 
 
 let add_inst ({ h; _ } as inst_model) orig =
-  let id = Expr.id orig in
+  (* TODO: The hashtbl h is used as a list *)
   let name =
     match Expr.form_view orig with
     | Expr.Lemma { Expr.name = n ; _ } when Stdlib.(<>) n "" -> n
     | Expr.Lemma _ | Expr.Unit _ | Expr.Clause _ | Expr.Literal _
     | Expr.Skolem _ | Expr.Let _ | Expr.Iff _ | Expr.Xor _ ->
-      string_of_int id
+      string_of_int 0
   in
   let r, n, limit, to_add =
     try
-      let r, n, _, limit = Hashtbl.find h id in
+      let r, n, _, limit = Hashtbl.find h 0 in
       r, n, limit, false
     with Not_found -> ref None, ref 0, ref (-1), true
   in
   if !limit <> -1 && !limit < !n + 1 then false
   else begin
     incr n;
-    if to_add then Hashtbl.add h id (r, n, name, limit);
+    if to_add then Hashtbl.add h 0 (r, n, name, limit);
     inst_model.max <- max inst_model.max !n;
     Thread.yield ();
     true

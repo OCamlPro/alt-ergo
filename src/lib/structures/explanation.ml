@@ -158,10 +158,10 @@ let rec literals_of_acc lit fs f acc = match E.form_view f with
   | E.Literal _ ->
     if lit then f :: acc else acc
   | E.Iff(f1, f2) ->
-    let g = E.elim_iff f1 f2 (E.id f) ~with_conj:true in
+    let g = E.elim_iff f1 f2 ~with_conj:true in
     literals_of_acc lit fs g acc
   | E.Xor(f1, f2) ->
-    let g = E.neg @@ E.elim_iff f1 f2 (E.id f) ~with_conj:false in
+    let g = E.neg @@ E.elim_iff f1 f2 ~with_conj:false in
     literals_of_acc lit fs g acc
   | E.Unit (f1,f2) ->
     let acc = literals_of_acc false fs f1 acc in
@@ -183,10 +183,10 @@ let literals_of ex =
 module MI = Util.MI
 
 let literals_ids_of ex =
-  List.fold_left (fun acc f ->
-      let i = E.id f in
-      let m = try MI.find i acc with Not_found -> 0 in
-      MI.add i (m + 1) acc
+  (* WHY: why the gui id was used there also? *)
+  List.fold_left (fun acc _ ->
+      let m = try MI.find 0 acc with Not_found -> 0 in
+      MI.add 0 (m + 1) acc
     ) MI.empty (literals_of ex)
 
 
