@@ -471,8 +471,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
     | _ ->
       let { sty; gen = g; goal = b; _ } = sg in
       let f_aux t xs lsbt =
-        (* maybe put 5 as a rational parameter in the future *)
-        let too_big = (E.depth t) > 5 * env.max_t_depth in
+        (* maybe put 4 as a rational parameter in the future *)
+        let too_big = (E.depth t) > 4 * env.max_t_depth in
         if too_big then
           lsbt
         else
