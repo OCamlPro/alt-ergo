@@ -471,11 +471,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
     | _ ->
       let { sty; gen = g; goal = b; _ } = sg in
       let f_aux t xs lsbt =
-        (* maybe put 3 as a rational parameter in the future *)
-        (* let too_big = (E.depth t) > 3 * env.max_t_depth in
-         * if too_big then
-         *   lsbt
-         * else *)
+        (* maybe put 5 as a rational parameter in the future *)
+        let too_big = (E.depth t) > 5 * env.max_t_depth in
+        if too_big then
+          lsbt
+        else
         try
           Debug.match_one_pat_against sg pat0 t;
           let s_ty = Ty.matching sty ty (E.type_info t) in
