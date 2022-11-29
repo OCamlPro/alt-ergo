@@ -94,7 +94,7 @@ and letin = private {
   let_sko : t; (* fresh symb. with free vars *)
   is_bool : bool;
 }
-(** Type of a let expression: let let_v = let_e in in_e. *)
+(** Type of a let expression [let let_v = let_e in in_e]. *)
 
 and semantic_trigger =
   | Interval of t * Symbols.bound * Symbols.bound
@@ -165,7 +165,7 @@ val mk_ite : t -> t -> t -> t
 
 val mk_let : Symbols.t -> t -> t -> t
 (** [mk_let sy exp1 exp2] constructs the expression [let sy = exp1 in exp2].
-    Obvious substitution are inlined during the construction. *)
+    Obvious substitutions are inlined during the construction. *)
 
 val mk_match : t -> (Typed.pattern * t) list -> t
 
@@ -173,7 +173,7 @@ val mk_match : t -> (Typed.pattern * t) list -> t
 
 val mk_term : Symbols.t -> t list -> Ty.t -> t
 (** [mk_term sy args ty] creates a term whose the top symbol is
-    [sy], the arguments are [args] and its type is [ty]. *)
+    [sy], the arguments are [args] and its type witness is [ty]. *)
 
 val pred : t -> t
 (** [pred t] produces the expression [t-1].  *)
@@ -217,18 +217,20 @@ val faux : t
 (** The formula bottom. *)
 
 val mk_or  : t -> t -> bool -> t
-(** [mk_or f1 f2] produces a formula equivalent to the {e disjunction} of the
-    formula [f1] and [f2], that is {m f1 \lor f2}. *)
+(** [mk_or f1 f2] produces a formula equivalent to the {e disjunction}
+    {m f1 \lor f2} of the formula [f1] and [f2]. *)
 
 val mk_and : t -> t -> bool -> t
-(** [mk_and f1 f2] produces a formula equivalent to the {e conjunction} of
-    the formula [f1] and [f2], that is {m f1 \land f2}. *)
+(** [mk_and f1 f2] produces a formula equivalent to the {e conjunction}
+    {m f1 \land f2} of the formula [f1] and [f2]. *)
 
 val mk_imp : t -> t -> t
-(** [mk_imp f1 f2] produces a formula equivalent to {m f1 \implies f2}. *)
+(** [mk_imp f1 f2] produces a formula equivalent to the {e implication}
+    {m f1 \implies f2}. *)
 
 val mk_iff : t -> t -> t
-(** [mk_iff f1 f2] produces a formula equivalent to {m f1 \iff f2}. *)
+(** [mk_iff f1 f2] produces a formula equivalent to the {e equivalence}
+    {m f1 \iff f2}. *)
 
 val mk_if : t -> t -> t -> t
 (** [mk_if f1 f2] produces a formula equivalent to {m f1 \vee f2}. *)
