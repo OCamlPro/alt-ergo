@@ -167,11 +167,7 @@ end
 
 (* met a jour gets et tbset en utilisant l'ensemble des termes donne*)
 let rec update_gets_sets acc t =
-  let { E.f; xs; ty; _ } =
-    match E.term_view t with
-    | E.Not_a_term _ -> assert false
-    | E.Term tt -> tt
-  in
+  let { E.f; xs; ty; _ } = E.term_view t in
   let gets, tbset = List.fold_left update_gets_sets acc xs in
   match Sy.is_get f, Sy.is_set f, xs with
   | true , false, [a;i]   -> G.add {g=t; gt=a; gi=i; gty=ty} gets, tbset
@@ -236,11 +232,7 @@ let get_of_set are_eq are_dist gtype (env,acc) class_of =
        if Tmap.splited get set env.seen then (env,acc)
        else
          let env = {env with seen = Tmap.update get set env.seen} in
-         let { E.f; xs; _ } =
-           match E.term_view set with
-           | E.Not_a_term _ -> assert false
-           | E.Term tt -> tt
-         in
+         let { E.f; xs; _ } = E.term_view set in
          match Sy.is_set f, xs with
          | true , [stab;si;sv] ->
            let xi, _ = X.make gi in

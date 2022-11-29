@@ -152,13 +152,11 @@ let clean_trigger ~in_theory name trig =
         trig'
 
 let concat_chainable p_op p_ty t acc =
-  match E.term_view t with
-  | Term {E.f; xs; ty; _} ->
-    if Symbols.equal p_op f && Ty.equal p_ty ty then
-      List.rev_append (List.rev xs) acc
-    else
-      t :: acc
-  | _ -> t :: acc
+  let {E.f; xs; ty; _} = E.term_view t in
+  if Symbols.equal p_op f && Ty.equal p_ty ty then
+    List.rev_append (List.rev xs) acc
+  else
+    t :: acc
 
 let rec make_term up_qv quant_basename t =
   let rec mk_term ({ c = { tt_ty = ty; tt_desc = tt; _ }; _ }

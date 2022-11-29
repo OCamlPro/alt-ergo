@@ -147,10 +147,7 @@ module Shostak (X : ALIEN) = struct
       Printer.print_dbg
         ~module_name:"Adt" ~function_name:"make"
         "make %a" E.print t;
-    let { E.f; xs; ty; _ } = match E.term_view t with
-      | E.Term t -> t
-      | E.Not_a_term _ -> assert false
-    in
+    let { E.f; xs; ty; _ } = E.term_view t in
     let sx, ctx =
       List.fold_left
         (fun (args, ctx) s ->

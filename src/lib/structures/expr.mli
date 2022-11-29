@@ -39,7 +39,7 @@ type decl_kind =
   | Dpredicate of t
   | Dfunction of t
 
-type view = private {
+type term_view = private {
   f: Symbols.t;
   xs: t list;
   ty: Ty.t;
@@ -105,10 +105,6 @@ module Map : Map.S with type key = t
 
 type subst = t Symbols.Map.t * Ty.subst
 
-type term_view = private
-  | Term of view
-  | Not_a_term of {is_lit : bool}
-
 type lit_view = private
   | Eq of t * t
   | Eql of t list
@@ -170,7 +166,6 @@ val is_int : t -> bool
 val is_real : t -> bool
 val type_info : t -> Ty.t
 val symbol_info : t -> Symbols.t
-val get_infos : t -> view
 
 (** Labeling and models *)
 

@@ -162,26 +162,25 @@ module Make (X : Sig.X) = struct
     | Some ac when Sy.equal sy ac.h -> r, acc
     | None -> r, acc
     | Some _ -> match Expr.term_view t with
-      | Expr.Term { Expr.f = Sy.Name (hs, Sy.Ac); xs; ty; _ } ->
+      | { Expr.f = Sy.Name (hs, Sy.Ac); xs; ty; _ } ->
         let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
-      | Expr.Term { Expr.f = Sy.Op Sy.Mult; xs; ty; _ } ->
+      | { Expr.f = Sy.Op Sy.Mult; xs; ty; _ } ->
         let aro_sy = Sy.name "@*" in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
-      | Expr.Term { Expr.ty; _ } ->
+      | { Expr.ty; _ } ->
         let k = Expr.fresh_name ty in
         let eq = Expr.mk_eq ~iff:false k t in
         X.term_embed k, eq::acc
-      | Expr.Not_a_term _ -> assert false
 
   let make t =
     Timers.exec_timer_start Timers.M_AC Timers.F_make;
     let x = match Expr.term_view t with
-      | Expr.Term { Expr.f = sy; xs = [a;b]; ty; _ } when Sy.is_ac sy ->
+      | { Expr.f = sy; xs = [a;b]; ty; _ } when Sy.is_ac sy ->
         let ra, ctx1 = X.make a in
         let rb, ctx2 = X.make b in
         let ra, ctx = abstract2 sy a ra (ctx1 @ ctx2) in
@@ -190,7 +189,11 @@ module Make (X : Sig.X) = struct
         X.ac_embed {h=sy; l=compact (fold_flatten sy (fun x -> x) rxs); t=ty;
                     distribute = true},
         ctx
-      | _ -> assert false
+      | {xs; _} ->
+        Printer.print_err
+          "AC theory expects only terms with 2 arguments; \
+           got %i (%a)." (List.length xs) Expr.print_list xs;
+        assert false
     in
     Timers.exec_timer_pause Timers.M_AC Timers.F_make;
     x

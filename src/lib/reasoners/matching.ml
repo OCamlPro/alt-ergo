@@ -193,42 +193,37 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let rec add_rec env t =
       if ME.mem t env.info then env
       else
-        match E.term_view t with
-        | E.Term { E.f = f; xs = xs; _ } ->
-          let env =
-            let map_f =
-              try SubstE.find f env.fils with Not_found -> ME.empty in
+        let { E.f = f; xs = xs; _ } = E.term_view t in
+        let env =
+          let map_f =
+            try SubstE.find f env.fils with Not_found -> ME.empty in
 
-            (* - l'age d'un terme est le min entre l'age passe en argument
-               et l'age dans la map
-               - un terme est en lien avec le but de la PO seulement s'il
-                 ne peut etre produit autrement (d'ou le &&)
-               - le lemme de provenance est le dernier lemme
-            *)
-            let g, b =
-              infos min (&&) t info.term_age info.term_from_goal env in
-            let from_lems =
-              List.fold_left
-                (fun acc t ->
-                   try (ME.find t env.info).lem_orig @ acc
-                   with Not_found -> acc)
-                (match info.term_from_formula with None -> [] | Some a -> [a])
-                info.term_from_terms
-            in
-            { env with
-              fils = SubstE.add f (ME.add t xs map_f) env.fils;
-              info =
-                ME.add t
-                  { age=g; lem_orig = from_lems; but=b;
-                    t_orig = info.term_from_terms }
-                  env.info
-            }
+          (* - l'age d'un terme est le min entre l'age passe en argument
+             et l'age dans la map
+             - un terme est en lien avec le but de la PO seulement s'il
+               ne peut etre produit autrement (d'ou le &&)
+             - le lemme de provenance est le dernier lemme
+          *)
+          let g, b =
+            infos min (&&) t info.term_age info.term_from_goal env in
+          let from_lems =
+            List.fold_left
+              (fun acc t ->
+                 try (ME.find t env.info).lem_orig @ acc
+                 with Not_found -> acc)
+              (match info.term_from_formula with None -> [] | Some a -> [a])
+              info.term_from_terms
           in
-          List.fold_left add_rec env xs
-        | E.Not_a_term {is_lit} ->
-          Printer.print_err
-            "%a is not a term, is_lit = %b" E.print t is_lit;
-          assert false
+          { env with
+            fils = SubstE.add f (ME.add t xs map_f) env.fils;
+            info =
+              ME.add t
+                { age=g; lem_orig = from_lems; but=b;
+                  t_orig = info.term_from_terms }
+                env.info
+          }
+        in
+        List.fold_left add_rec env xs
     in
     if info.term_age > age_limite () then env else add_rec env t
 
@@ -362,32 +357,26 @@ module Make (X : Arg) : S with type theory = X.t = struct
     [E.mk_term (Symbols.Op Symbols.Plus)  [t; d] ty ; d]
 
   let linear_arithmetic_matching f_pat pats _ty_pat t =
-    match E.term_view t with
-    | E.Not_a_term _ -> assert false
-    | E.Term { E.ty; _ } ->
-      if not (Options.get_arith_matching ()) ||
-         ty != Ty.Tint && ty != Ty.Treal then []
-      else
-        match f_pat, pats with
-        | Symbols.Op Symbols.Plus, [p1; p2] ->
-          if E.is_ground p2 then [plus_of_minus t p2 ty]
-          else if E.is_ground p1 then [plus_of_minus t p1 ty] else []
+    let ty = E.type_info t in
+    if not (Options.get_arith_matching ()) ||
+       ty != Ty.Tint && ty != Ty.Treal then []
+    else
+      match f_pat, pats with
+      | Symbols.Op Symbols.Plus, [p1; p2] ->
+        if E.is_ground p2 then [plus_of_minus t p2 ty]
+        else if E.is_ground p1 then [plus_of_minus t p1 ty] else []
 
-        | Symbols.Op Symbols.Minus, [p1; p2] ->
-          if E.is_ground p2 then [minus_of_plus t p2 ty]
-          else if E.is_ground p1 then [minus_of_plus t p1 ty] else []
-        | _ -> []
+      | Symbols.Op Symbols.Minus, [p1; p2] ->
+        if E.is_ground p2 then [minus_of_plus t p2 ty]
+        else if E.is_ground p1 then [minus_of_plus t p1 ty] else []
+      | _ -> []
 
   let rec match_term mconf env tbox
       ({ sty = s_ty; gen = g; goal = b; _ } as sg : Matching_types.gsubst)
       pat t =
     Options.exec_thread_yield ();
     Debug.match_term sg t pat;
-    let { E.f = f_pat; xs = pats; ty = ty_pat; _ } =
-      match E.term_view pat with
-      | E.Not_a_term _ -> assert false
-      | E.Term tt -> tt
-    in
+    let { E.f = f_pat; xs = pats; ty = ty_pat; _ } = E.term_view pat in
     match f_pat with
     |  Symbols.Var _ when Symbols.equal f_pat Symbols.underscore ->
       begin
@@ -420,11 +409,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           let cl =
             List.fold_left
               (fun l t ->
-                 let { E.f = f; xs = xs; ty = ty; _ } =
-                   match E.term_view t with
-                   | E.Not_a_term _ -> assert false
-                   | E.Term tt -> tt
-                 in
+                 let { E.f = f; xs = xs; ty = ty; _ } = E.term_view t in
                  if Symbols.compare f_pat f = 0 then xs::l
                  else
                    begin
@@ -465,11 +450,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     Steps.incr (Steps.Matching);
     Debug.match_one_pat sg pat0;
     let pat = E.apply_subst (sg.sbs, sg.sty) pat0 in
-    let { E.f = f; xs = pats; ty = ty; _ } =
-      match E.term_view pat with
-      | E.Not_a_term _ -> assert false
-      | E.Term tt -> tt
-    in
+    let { E.f = f; xs = pats; ty = ty; _ } = E.term_view pat in
     match f with
     | Symbols.Var _ -> all_terms f ty env tbox sg lsbt_acc
     | _ ->
@@ -500,14 +481,12 @@ module Make (X : Arg) : S with type theory = X.t = struct
     List.fold_left (match_one_pat mconf env tbox pat) [] lsubsts
 
   let trig_weight s t =
-    match E.term_view s, E.term_view t with
-    | E.Not_a_term _, _ | _, E.Not_a_term _ -> assert false
-    | E.Term { E.f = Symbols.Name _; _ },
-      E.Term { E.f = Symbols.Op _; _ }   -> -1
-    | E.Term { E.f = Symbols.Op _; _ },
-      E.Term { E.f = Symbols.Name _; _ } -> 1
+    let sf = E.(term_view s).f in
+    let tf = E.(term_view t).f in
+    match sf, tf with
+    | Symbols.Name _, Symbols.Op _ -> -1
+    | Symbols.Op _, Symbols.Name _ -> -1
     | _ -> (E.depth t) - (E.depth s)
-
 
   let matching mconf env tbox pat_info =
     let open Matching_types in

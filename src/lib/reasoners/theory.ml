@@ -103,9 +103,8 @@ module Main_Default : S = struct
       SE.fold
         (fun t mp ->
            match E.term_view t with
-           | E.Not_a_term _ -> assert false
-           | E.Term { E.f = Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac));
-                      xs; ty; _ } ->
+           | { E.f = Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac));
+               xs; ty; _ } ->
              let xs = List.map E.type_info xs in
              let xs, ty =
                try
@@ -121,7 +120,7 @@ module Main_Default : S = struct
              Hstring.Map.add hs (xs, ty, is_ac) mp
 
            | _ -> mp
-        )st Hstring.Map.empty
+        ) st Hstring.Map.empty
 
     let types_of_assumed sty =
       let open Ty in

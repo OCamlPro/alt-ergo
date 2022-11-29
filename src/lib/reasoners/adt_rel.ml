@@ -177,8 +177,7 @@ let deduce_is_constr uf r h eqs env ex =
         in
         begin
           match E.term_view t with
-          | E.Not_a_term _ -> assert false
-          | E.Term { E.ty = Ty.Tadt (name,params) as ty; _ } ->
+          | { E.ty = Ty.Tadt (name,params) as ty; _ } ->
             (* Only do this deduction for finite types ??
                  may not terminate in some cases otherwise.
                  eg. type t = A of t
@@ -330,10 +329,7 @@ let add_guarded_destr env uf t hs e t_ty =
 let add_aux env (uf:uf) (r:r) t =
   if Options.get_disable_adts () then env
   else
-    let { E.f = sy; xs; ty; _ } = match E.term_view t with
-      | E.Term t -> t
-      | E.Not_a_term _ -> assert false
-    in
+    let { E.f = sy; xs; ty; _ } = E.term_view t in
     let env = add_adt env uf t r sy ty in
     match sy, xs with
     | Sy.Op Sy.Destruct (hs, true), [e] -> (* guarded *)

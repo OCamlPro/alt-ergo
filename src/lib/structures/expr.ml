@@ -34,9 +34,9 @@ module SSet = Sy.Set
 
 type binders = (Ty.t * int) SMap.t (*int tag in globally unique *)
 
-type t = view
+type t = term_view
 
-and view = {
+and term_view = {
   f: Sy.t;
   xs: t list;
   ty: Ty.t;
@@ -106,10 +106,6 @@ and trigger = {
 type expr = t
 
 type subst = expr SMap.t * Ty.subst
-
-type term_view =
-  | Term of view
-  | Not_a_term of {is_lit : bool}
 
 type lit_view =
   | Eq of t * t
@@ -351,13 +347,7 @@ let form_view t =
 
     | _ -> Literal t
 
-let term_view t =
-  let { f; ty; _ } = t in
-  if ty != Ty.Tbool then Term t
-  else match f with
-    | Sy.Form _ -> Not_a_term {is_lit = false}
-    | Sy.Lit _  -> Not_a_term {is_lit = true}
-    | _ -> Term t (* bool term *)
+let[@inline always] term_view t = t
 
 (** pretty printing *)
 
@@ -753,7 +743,6 @@ let print_list fmt = print_list_sep "," fmt
 
 let [@inline always] type_info t = t.ty
 let [@inline always] symbol_info t = t.f
-let [@inline always] get_infos t = t
 
 (* unused
    let is_term e = match e.f with
@@ -2543,22 +2532,19 @@ module Purification = struct
         mk_term fresh_sy [] t.ty , add_let fresh_sy t lets
 
       | _ -> (* detect ITEs *)
-        match term_view t with
-        | Not_a_term _ -> assert false (* should not happen ? *)
-        | Term t ->
-          match t.xs with
-          | [_;_;_] when is_ite t.f ->
-            let fresh_sy = Sy.fresh ~is_var:true "Pur-Ite" in
-            mk_term fresh_sy [] t.ty , add_let fresh_sy t lets
+        match t.xs with
+        | [_;_;_] when is_ite t.f ->
+          let fresh_sy = Sy.fresh ~is_var:true "Pur-Ite" in
+          mk_term fresh_sy [] t.ty , add_let fresh_sy t lets
 
-          | _ ->
-            let xs, lets =
-              List.fold_left (fun (acc, lets) t ->
-                  let t', lets' = purify_term t lets in
-                  t' :: acc, lets'
-                ) ([], lets) (List.rev t.xs)
-            in
-            mk_term t.f xs t.ty, lets
+        | _ ->
+          let xs, lets =
+            List.fold_left (fun (acc, lets) t ->
+                let t', lets' = purify_term t lets in
+                t' :: acc, lets'
+              ) ([], lets) (List.rev t.xs)
+          in
+          mk_term t.f xs t.ty, lets
 
   and purify_generic mk l =
     let l, lets =

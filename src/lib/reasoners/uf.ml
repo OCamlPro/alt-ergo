@@ -1025,11 +1025,7 @@ let model_repr_of_term t env mrepr =
 let compute_concrete_model ({ make; _ } as env) =
   ME.fold
     (fun t _mk ((fprofs, cprofs, carrays, mrepr) as acc) ->
-       let { E.f; xs; ty; _ } =
-         match E.term_view t with
-         | E.Not_a_term _ -> assert false
-         | E.Term tt -> tt
-       in
+       let { E.f; xs; ty; _ } = E.term_view t in
        if X.is_solvable_theory_symbol f ty
        || E.is_fresh t || E.is_fresh_skolem t
        || E.equal t E.vrai || E.equal t E.faux
@@ -1055,11 +1051,7 @@ let compute_concrete_model ({ make; _ } as env) =
            begin
              match X.term_extract a with
              | Some ta, true ->
-               let { E.f = f_ta; xs=xs_ta; _ } =
-                 match E.term_view ta with
-                 | E.Not_a_term _ -> assert false
-                 | E.Term tt -> tt
-               in
+               let { E.f = f_ta; xs=xs_ta; _ } = E.term_view ta in
                assert (xs_ta == []);
                fprofs,
                cprofs,
