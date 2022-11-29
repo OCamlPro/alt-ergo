@@ -115,8 +115,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let { E.ff = f; lem; from_terms = terms; _ } = gf in
       if Options.get_debug_sat () then begin
         match E.form_view f with
-        | E.Not_a_form -> assert false
-
         | E.Unit _ -> ()
 
         | E.Clause _ ->
@@ -131,12 +129,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         | E.Literal a ->
           let n = match lem with
             | None -> ""
-            | Some ff ->
-              (match E.form_view ff with
-               | E.Lemma xx -> xx.E.name
-               | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-               | E.Let _ | E.Iff _ | E.Xor _ -> ""
-               | E.Not_a_form -> assert false)
+            | Some ff -> begin
+                match E.form_view ff with
+                | E.Lemma xx -> xx.E.name
+                | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+                | E.Let _ | E.Iff _ | E.Xor _ -> ""
+              end
           in
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
             "@[<v 0>I assume a literal (%s : %a) %a@,\
@@ -329,7 +327,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | E.Lemma _ -> env.add_inst orig
       | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
       | E.Let _ | E.Iff _ | E.Xor _ -> true
-      | E.Not_a_form -> assert false
     end
 
   (* <begin> copied from sat_solvers.ml *)
@@ -464,7 +461,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let ded = match E.neg f |> E.form_view with
         | E.Skolem q -> E.skolemize q
         | E.Unit _ | E.Clause _ | E.Literal _ | E.Lemma _
-        | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
+        | E.Let _ | E.Iff _ | E.Xor _ -> assert false
       in
       (*XXX TODO: internal skolems*)
       let f = E.mk_or lat ded false 0 in
@@ -750,7 +747,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           (* This assert is not true assert (dec_lvl = 0); *)
           axiom_def env gf Ex.empty, {acc with updated = true}
 
-        | E.Not_a_form -> assert false
         | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
         | E.Let _ | E.Iff _ | E.Xor _ ->
           let ff, axs, new_vars =

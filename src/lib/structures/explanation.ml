@@ -155,7 +155,6 @@ let bj_formulas_of s =
     ) s E.Set.empty
 
 let rec literals_of_acc lit fs f acc = match E.form_view f with
-  | E.Not_a_form -> assert false
   | E.Literal _ ->
     if lit then f :: acc else acc
   | E.Iff(f1, f2) ->

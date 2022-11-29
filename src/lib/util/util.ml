@@ -154,3 +154,4 @@ let rec print_list_pp ~sep ~pp fmt = function
     Format.fprintf fmt "%a %a" pp x sep ();
     print_list_pp ~sep ~pp fmt l
 
+let failwith msg = Format.kasprintf failwith msg

@@ -855,7 +855,6 @@ module Flat_Formula : FLAT_FORMULA = struct
     let new_vars = ref new_vars in
     let rec simp topl ~parent_disj f =
       match E.form_view f with
-      | E.Not_a_form -> assert false
       | E.Literal a ->
         let ff, l = mk_lit hcons a !new_vars in
         new_vars := l;
@@ -1016,6 +1015,4 @@ module Proxy_formula = struct
         | E.Let _ | E.Skolem _ | E.Lemma _ | E.Literal _ | E.Iff _
         | E.Xor _ ->
           a, (proxies, inv_proxies, new_vars, cnf)
-
-        | E.Not_a_form -> assert false
 end
