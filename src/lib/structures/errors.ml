@@ -199,7 +199,8 @@ let report_typing_error fmt = function
 
   | MatchUnusedCases dead ->
     fprintf fmt
-      "Pattern-matching contains unreachable cases. These cases are removed: %a"
+      "Pattern-matching contains unreachable cases. These cases are\
+       removed: %a"
       (Util.print_list ~sep:" |" ~pp:Hstring.print) dead
 
   | NotAdtConstr (lbl, ty) ->
@@ -207,7 +208,8 @@ let report_typing_error fmt = function
       "The symbol %s is not a constructor of the type %a" lbl Ty.print ty
   | BadPopCommand {pushed; to_pop} ->
     fprintf fmt
-      "Cannot pop %d assertion contexts. Only %d have been pushed" to_pop pushed
+      "Cannot pop %d assertion contexts. Only %d have been pushed"
+      to_pop pushed
   | ShouldBePositive n ->
     fprintf fmt
       "This integer : %d should be positive" n

@@ -26,15 +26,10 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-open Sig
-
 module H = Hashtbl.Make(Expr)
 
 (*** Combination module of Shostak theories ***)
 
-[@@@ocaml.warning "-60"]
 module rec CX : sig
   include Sig.X
 
@@ -280,7 +275,7 @@ struct
       | Expr.Not_a_term _ -> assert false
       | Expr.Term tt -> tt
     in
-    let not_restricted = not (get_restricted ()) in
+    let not_restricted = not @@ Options.get_restricted () in
     match
       X1.is_mine_symb sb ty,
       not_restricted && X2.is_mine_symb sb ty,
@@ -304,7 +299,7 @@ struct
     | _ -> assert false
 
   let fully_interpreted sb ty =
-    let not_restricted = not (get_restricted ()) in
+    let not_restricted = not @@ Options.get_restricted () in
     match
       X1.is_mine_symb sb ty,
       not_restricted && X2.is_mine_symb sb ty,
@@ -337,7 +332,7 @@ struct
 
   let is_solvable_theory_symbol sb ty =
     X1.is_mine_symb sb ty ||
-    not (get_restricted ()) &&
+    not (Options.get_restricted ()) &&
     (X2.is_mine_symb sb ty ||
      X3.is_mine_symb sb ty ||
      X4.is_mine_symb sb ty ||
@@ -379,7 +374,8 @@ struct
     open Printer
 
     let print fmt r =
-      if get_term_like_pp () then begin
+      let open Format in
+      if Options.get_term_like_pp () then begin
         match r.v with
         | X1 t    -> fprintf fmt "%a" X1.print t
         | X2 t    -> fprintf fmt "%a" X2.print t
@@ -408,10 +404,10 @@ struct
       let c = ref 0 in
       let print fmt (p,v) =
         incr c;
-        fprintf fmt "<%d) %a |-> %a@ "
+        Format.fprintf fmt "<%d) %a |-> %a@ "
           !c print p print v
       in
-      if get_debug_combine () then
+      if Options.get_debug_combine () then
         print_dbg
           ~module_name:"Shostak" ~function_name:"print_sbt"
           "@[<v 2>%s subst:@ %a@]"
@@ -422,10 +418,10 @@ struct
       let c = ref 0 in
       let print fmt (p,v) =
         incr c;
-        fprintf fmt "(%d) %a |-> %a@ "
+        Format.fprintf fmt "(%d) %a |-> %a@ "
           !c CX.print p CX.print v
       in
-      if get_debug_combine () then
+      if Options.get_debug_combine () then
         print_dbg
           ~module_name:"Shostak" ~function_name:"abstraction_result"
           "@[<v 0>== get_debug_abstraction_result ==@ \
@@ -437,13 +433,13 @@ struct
           (pp_list_no_space print) acc
 
     let solve_one a b =
-      if get_debug_combine () then
+      if Options.get_debug_combine () then
         print_dbg
           ~module_name:"Shostak" ~function_name:"solve_one"
           "solve one %a = %a" CX.print a CX.print b
 
     let debug_abstract_selectors a =
-      if get_debug_combine () then
+      if Options.get_debug_combine () then
         print_dbg
           ~module_name:"Shostak" ~function_name:"abstract_selectors"
           "abstract selectors of %a" CX.print a
@@ -524,14 +520,14 @@ struct
   let apply_subst_right r sbt =
     List.fold_right (fun (p,v)r  -> CX.subst p v r) sbt r
 
-  let solve_uninterpreted r1 r2 pb = (* r1 != r2*)
-    if get_debug_combine () then
+  let solve_uninterpreted r1 r2 (pb : _ Sig.solve_pb) = (* r1 != r2*)
+    if Options.get_debug_combine () then
       Printer.print_dbg
         "solve uninterpreted %a = %a" print r1 print r2;
     if CX.str_cmp r1 r2 > 0 then { pb with sbt = (r1,r2)::pb.sbt }
     else { pb with sbt = (r2,r1)::pb.sbt }
 
-  let rec solve_list pb =
+  let rec solve_list (pb : _ Sig.solve_pb) =
     match pb.eqs with
     | [] ->
       Debug.print_sbt "Should be triangular and cleaned" pb.sbt;
@@ -618,14 +614,14 @@ struct
         else Some (Expr.fresh_name ty, false) (* false <-> not a case-split *)
       | _               -> assert false
     in
-    if get_debug_interpretation () then
+    if Options.get_debug_interpretation () then
       Printer.print_dbg
         ~module_name:"Shostak" ~function_name:"assign_value"
         "assign value to representative %a : %s"
         print r
         (match opt with
-         | None -> asprintf "None"
-         | Some(res, _is_cs) -> asprintf "%a" Expr.print res);
+         | None -> Format.asprintf "None"
+         | Some(res, _is_cs) -> Format.asprintf "%a" Expr.print res);
     opt
 
   let choose_adequate_model t rep l =
@@ -643,7 +639,7 @@ struct
         (* case split is now supposed to be done for internal bools if
            needed as well *)
         assert (is_bool_const rep);
-        rep, asprintf "%a" print rep
+        rep, Format.asprintf "%a" print rep
       | _            ->
         let acc =
           List.fold_left
@@ -664,11 +660,11 @@ struct
             | Some t, true when Expr.const_term t -> rep
             | _ ->
               let print_aux fmt (t,r) =
-                fprintf fmt "> impossible case: %a -- %a@ "
+                Format.fprintf fmt "> impossible case: %a -- %a@ "
                   Expr.print t
                   print r
               in
-              if get_debug_interpretation () then
+              if Options.get_debug_interpretation () then
                 Printer.print_dbg
                   ~module_name:"Shostak" ~function_name:"choose_adequate_model"
                   "@[<v 2>What to choose for term %a with rep %a?\
@@ -678,9 +674,9 @@ struct
                   (Printer.pp_list_no_space print_aux) l;
               assert false
         in
-        r, asprintf "%a" print r (* it's a EUF constant *)
+        r, Format.asprintf "%a" print r (* it's a EUF constant *)
     in
-    if get_debug_interpretation () then
+    if Options.get_debug_interpretation () then
       Printer.print_dbg
         ~module_name:"Shostak" ~function_name:"choose_adequate_model"
         "%a selected as a model for %a"

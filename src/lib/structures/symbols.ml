@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-
 type builtin =
     LE | LT (* arithmetic *)
   | IsConstr of Hstring.t (* ADT tester *)
@@ -111,7 +108,7 @@ let is_ac x = match x with
 
 let underscore =
   Random.self_init ();
-  var @@ Var.of_string @@ sprintf "_%d" (Random.int 1_000_000)
+  var @@ Var.of_string @@ Format.sprintf "_%d" (Random.int 1_000_000)
 
 let compare_kinds k1 k2 =
   Util.compare_algebraic k1 k2
@@ -244,9 +241,9 @@ let string_of_lit lit = match lit with
   | L_neg_built LE -> ">"
   | L_neg_built LT -> ">="
   | L_built (IsConstr h) ->
-    sprintf "? %s" (Hstring.view h)
+    Format.sprintf "? %s" (Hstring.view h)
   | L_neg_built (IsConstr h) ->
-    sprintf "?not? %s" (Hstring.view h)
+    Format.sprintf "?not? %s" (Hstring.view h)
 
 let string_of_form f = match f with
   | F_Unit _ -> "/\\"
@@ -269,7 +266,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op Div -> "/"
   | Op Modulo -> "%"
   | Op (Access s) ->
-    if get_output_smtlib () then
+    if Options.get_output_smtlib () then
       (Hstring.view s)
     else
       "@Access_"^(Hstring.view s)
@@ -368,6 +365,6 @@ module Map : sig
 end = struct
   include Map.Make (struct type t = s let compare = compare end)
   let print pr_elt fmt sbt =
-    iter (fun k v -> fprintf fmt "%a -> %a  " print k pr_elt v) sbt
+    iter (fun k v -> Format.fprintf fmt "%a -> %a  " print k pr_elt v) sbt
 end
 

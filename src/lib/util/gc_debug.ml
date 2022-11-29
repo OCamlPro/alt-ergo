@@ -9,9 +9,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-open Gc
-
 (*
  major_collections; (* num of completed major collection cycles *)
  minor_collections; (* num of minor collections *)
@@ -25,13 +22,13 @@ open Gc
 *)
 
 let init () =
-  if get_debug_gc() then
+  if Options.get_debug_gc() then
     begin
-      let tmp = ref (quick_stat ()) in
+      let tmp = ref (Gc.quick_stat ()) in
       ignore
-        (create_alarm
+        (Gc.create_alarm
            (fun () ->
-              let e = quick_stat () in
+              let e = Gc.quick_stat () in
               let d = !tmp in
 
               Printer.print_dbg

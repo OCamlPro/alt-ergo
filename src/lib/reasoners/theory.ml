@@ -26,10 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-open Sig_rel
-
 module X = Shostak.Combine
 module Ex = Explanation
 module E = Expr
@@ -168,7 +164,9 @@ module Main_Default : S = struct
              begin match l with
                | [] -> assert false
                | e::l ->
-                 let print fmt e = fprintf fmt " | %s" (Hstring.view e) in
+                 let print fmt e =
+                   Format.fprintf fmt " | %s" (Hstring.view e)
+                 in
                  print_dbg ~flushed:false ~header:false "%s@ %a@ "
                    (Hstring.view e)
                    (pp_list_no_space print) l;
@@ -180,7 +178,7 @@ module Main_Default : S = struct
                | [] -> assert false
                | (lbl, ty)::l ->
                  let print fmt (lbl,ty) =
-                   fprintf fmt " ; %s :%a"
+                   Format.fprintf fmt " ; %s :%a"
                      (Hstring.view lbl) Ty.print ty in
                  print_dbg ~flushed:false ~header:false
                    "{ %s : %a%a"
@@ -197,9 +195,9 @@ module Main_Default : S = struct
       match xs with
       | [] -> ()
       | e :: l ->
-        fprintf fmt "%a" Ty.print e;
-        List.iter (fprintf fmt ", %a" Ty.print) l;
-        fprintf fmt " -> "
+        Format.fprintf fmt "%a" Ty.print e;
+        List.iter (Format.fprintf fmt ", %a" Ty.print) l;
+        Format.fprintf fmt " -> "
 
     let print_logics ?(header=true) logics =
       print_dbg ~header "@[<v 2>(* logics: *)@ ";
@@ -225,7 +223,7 @@ module Main_Default : S = struct
     let assumed, reinit_cpt =
       let cpt = ref 0 in
       let assumed l =
-        if get_debug_cc () then begin
+        if Options.get_debug_cc () then begin
           print_dbg ~module_name:"Theory" ~function_name:"assumed"
             "Assumed facts (in this order):";
           print_declarations ~header:false l;
@@ -269,29 +267,29 @@ module Main_Default : S = struct
       match choices with
       | [] -> ()
       | _ ->
-        fprintf fmt "@[<v 2>Stack of choices:@ ";
+        Format.fprintf fmt "@[<v 2>Stack of choices:@ ";
         List.iter
           (fun (rx, lit_orig, _, ex) ->
              match lit_orig with
              | Th_util.CS(k, _) ->
-               fprintf fmt "  > %s  cs: %a (because %a)@ "
+               Format.fprintf fmt "  > %s  cs: %a (because %a)@ "
                  (theory_of k) LR.print (LR.make rx) Ex.print ex
              | Th_util.NCS(k, _) ->
-               fprintf fmt "  > %s ncs: %a (because %a)@ "
+               Format.fprintf fmt "  > %s ncs: %a (because %a)@ "
                  (theory_of k) LR.print (LR.make rx) Ex.print ex
              | _ -> assert false
           )choices;
-        fprintf fmt "==============================================@."
+        Format.fprintf fmt "==============================================@."
 
     let begin_case_split choices =
-      if get_debug_split () then
+      if Options.get_debug_split () then
         print_dbg
           ~module_name:"Theory" ~function_name:"begin_case_split"
           "%a"
           made_choices choices
 
     let end_case_split choices =
-      if get_debug_split () then
+      if Options.get_debug_split () then
         print_dbg
           ~module_name:"Theory" ~function_name:"end_case_split"
           "%a"
@@ -307,34 +305,34 @@ module Main_Default : S = struct
     let print_lr_view fmt ch = LR.print fmt (LR.make ch)
 
     let split_backtrack neg_c ex_c =
-      if get_debug_split () then
+      if Options.get_debug_split () then
         print_dbg
           ~module_name:"Theory" ~function_name:"split_backtrack"
           "I backtrack on %a : %a"
           print_lr_view neg_c Ex.print ex_c
 
     let split_assume c ex_c =
-      if get_debug_split () then
+      if Options.get_debug_split () then
         print_dbg
           ~module_name:"Theory" ~function_name:"split assume"
           "I assume %a : %a"
           print_lr_view c Ex.print ex_c
 
     let split_backjump c dep =
-      if get_debug_split () then
+      if Options.get_debug_split () then
         print_dbg
           ~module_name:"Theory" ~function_name:"split_backjump"
           "I backjump on %a : %a"
           print_lr_view c Ex.print dep
 
     let query a =
-      if get_debug_cc () then
+      if Options.get_debug_cc () then
         print_dbg
           ~module_name:"Theory" ~function_name:"query"
           "query : %a" E.print a
 
     let split_sat_contradicts_cs filt_choices =
-      if get_debug_split () then
+      if Options.get_debug_split () then
         print_dbg
           ~module_name:"Theory" ~function_name:"split_sat_contradicts_cs"
           "The SAT contradicts CS! I'll replay choices@ %a"
@@ -424,7 +422,7 @@ module Main_Default : S = struct
             | _ -> assert false
           in
           Debug.split_backtrack neg_c dep;
-          if get_bottom_classes () then
+          if Options.get_bottom_classes () then
             Printer.print_dbg
               "bottom (case-split):%a"
               Expr.print_tagged_classes classes;
@@ -525,7 +523,7 @@ module Main_Default : S = struct
 
   let extract_terms_from_assumed =
     List.fold_left
-      (fun acc (a, _, _) ->
+      (fun acc ((a : _ Sig_rel.literal), _, _) ->
          match a with
          | LTerm r -> begin
              match E.lit_view r with
@@ -642,7 +640,7 @@ module Main_Default : S = struct
   let theories_instances ~do_syntactic_matching t_match t selector dlvl ilvl =
     let gamma, instances =
       CC_X.theories_instances ~do_syntactic_matching t_match t.gamma selector in
-    if get_debug_fpa() > 0 then
+    if Options.get_debug_fpa() > 0 then
       get_debug_theories_instances instances dlvl ilvl;
     {t with gamma = gamma}, instances
 

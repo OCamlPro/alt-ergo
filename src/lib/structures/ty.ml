@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-
 type t =
   | Tint
   | Treal
@@ -81,100 +78,102 @@ let assoc_destrs hs cases =
 (*** pretty print ***)
 let print_generic body_of =
   let h = Hashtbl.create 17 in
-  let rec print body_of fmt = function
-    | Tint ->
-      if get_output_smtlib () then fprintf fmt "Int"
-      else fprintf fmt "int"
-    | Treal ->
-      if get_output_smtlib () then fprintf fmt "Real"
-      else fprintf fmt "real"
-    | Tbool ->
-      if get_output_smtlib () then fprintf fmt "Bool"
-      else fprintf fmt "bool"
-    | Tunit -> fprintf fmt "unit"
-    | Tbitv n -> fprintf fmt "bitv[%d]" n
-    | Tvar{v=v ; value = None} -> fprintf fmt "'a_%d" v
-    | Tvar{v=v ; value = Some (Trecord { args = l; name = n; _ } as t) } ->
-      if Hashtbl.mem h v then
-        fprintf fmt "%a %s" print_list l (Hstring.view n)
-      else
-        (Hashtbl.add h v ();
-         (*fprintf fmt "('a_%d->%a)" v print t *)
-         print body_of fmt t)
-    | Tvar{ value = Some t; _ } ->
-      (*fprintf fmt "('a_%d->%a)" v print t *)
-      print body_of fmt t
-    | Text(l, s) when l == [] ->
-      if get_output_smtlib () then fprintf fmt "%s" (Hstring.view s)
-      else fprintf fmt "<ext>%s" (Hstring.view s)
-    | Text(l,s) ->
-      if get_output_smtlib () then
-        fprintf fmt "(%s %a)" (Hstring.view s) print_list l
-      else fprintf fmt "%a <ext>%s" print_list l (Hstring.view s)
-    | Tfarray (t1, t2) ->
-      if get_output_smtlib () then
-        fprintf fmt "(Array %a %a)"  (print body_of) t1 (print body_of) t2
-      else
-        fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
-    | Tsum(s, _) ->
-      if get_output_smtlib () then
-        fprintf fmt "%s" (Hstring.view s)
-      else fprintf fmt "<sum>%s" (Hstring.view s)
-    | Trecord { args = lv; name = n; lbs = lbls; _ } ->
-      if get_output_smtlib () then begin
-        if lv == [] then fprintf fmt "%s" (Hstring.view n)
-        else fprintf fmt "%a %s" print_list lv (Hstring.view n)
-      end
-      else begin
-        fprintf fmt "%a <record>%s" print_list lv (Hstring.view n);
-        if body_of != None then begin
-          fprintf fmt " = {";
-          let first = ref true in
-          List.iter
-            (fun (s, t) ->
-               fprintf fmt "%s%s : %a" (if !first then "" else "; ")
-                 (Hstring.view s) (print body_of) t;
-               first := false
-            ) lbls;
-          fprintf fmt "}"
+  let rec print =
+    let open Format in
+    fun body_of fmt -> function
+      | Tint ->
+        if Options.get_output_smtlib () then fprintf fmt "Int"
+        else fprintf fmt "int"
+      | Treal ->
+        if Options.get_output_smtlib () then fprintf fmt "Real"
+        else fprintf fmt "real"
+      | Tbool ->
+        if Options.get_output_smtlib () then fprintf fmt "Bool"
+        else fprintf fmt "bool"
+      | Tunit -> fprintf fmt "unit"
+      | Tbitv n -> fprintf fmt "bitv[%d]" n
+      | Tvar{v=v ; value = None} -> fprintf fmt "'a_%d" v
+      | Tvar{v=v ; value = Some (Trecord { args = l; name = n; _ } as t) } ->
+        if Hashtbl.mem h v then
+          fprintf fmt "%a %s" print_list l (Hstring.view n)
+        else
+          (Hashtbl.add h v ();
+           (*fprintf fmt "('a_%d->%a)" v print t *)
+           print body_of fmt t)
+      | Tvar{ value = Some t; _ } ->
+        (*fprintf fmt "('a_%d->%a)" v print t *)
+        print body_of fmt t
+      | Text(l, s) when l == [] ->
+        if Options.get_output_smtlib () then fprintf fmt "%s" (Hstring.view s)
+        else fprintf fmt "<ext>%s" (Hstring.view s)
+      | Text(l,s) ->
+        if Options.get_output_smtlib () then
+          fprintf fmt "(%s %a)" (Hstring.view s) print_list l
+        else fprintf fmt "%a <ext>%s" print_list l (Hstring.view s)
+      | Tfarray (t1, t2) ->
+        if Options.get_output_smtlib () then
+          fprintf fmt "(Array %a %a)"  (print body_of) t1 (print body_of) t2
+        else
+          fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
+      | Tsum(s, _) ->
+        if Options.get_output_smtlib () then
+          fprintf fmt "%s" (Hstring.view s)
+        else fprintf fmt "<sum>%s" (Hstring.view s)
+      | Trecord { args = lv; name = n; lbs = lbls; _ } ->
+        if Options.get_output_smtlib () then begin
+          if lv == [] then fprintf fmt "%s" (Hstring.view n)
+          else fprintf fmt "%a %s" print_list lv (Hstring.view n)
         end
-      end
-    | Tadt (n, lv) ->
-      fprintf fmt "%a <adt>%s" print_list lv (Hstring.view n);
-      begin match body_of with
-        | None -> ()
-        | Some type_body ->
-          let cases = match type_body n lv with
-            | Adt cases -> cases
-          in
-          fprintf fmt " = {";
-          let first = ref true in
-          List.iter
-            (fun {constr = s ; destrs = t} ->
-               fprintf fmt "%s%s%a" (if !first then "" else " | ")
-                 (Hstring.view s) print_adt_tuple t;
-               first := false
-            ) cases;
-          fprintf fmt "}"
-      end
+        else begin
+          fprintf fmt "%a <record>%s" print_list lv (Hstring.view n);
+          if body_of != None then begin
+            fprintf fmt " = {";
+            let first = ref true in
+            List.iter
+              (fun (s, t) ->
+                 fprintf fmt "%s%s : %a" (if !first then "" else "; ")
+                   (Hstring.view s) (print body_of) t;
+                 first := false
+              ) lbls;
+            fprintf fmt "}"
+          end
+        end
+      | Tadt (n, lv) ->
+        fprintf fmt "%a <adt>%s" print_list lv (Hstring.view n);
+        begin match body_of with
+          | None -> ()
+          | Some type_body ->
+            let cases = match type_body n lv with
+              | Adt cases -> cases
+            in
+            fprintf fmt " = {";
+            let first = ref true in
+            List.iter
+              (fun {constr = s ; destrs = t} ->
+                 fprintf fmt "%s%s%a" (if !first then "" else " | ")
+                   (Hstring.view s) print_adt_tuple t;
+                 first := false
+              ) cases;
+            fprintf fmt "}"
+        end
 
   and print_adt_tuple fmt = function
     | [] -> ()
     | (d, e)::l ->
-      fprintf fmt " of { %a : %a " Hstring.print d (print None) e;
+      Format.fprintf fmt " of { %a : %a " Hstring.print d (print None) e;
       List.iter
         (fun (d, e) ->
-           fprintf fmt "; %a : %a " Hstring.print d (print None) e
+           Format.fprintf fmt "; %a : %a " Hstring.print d (print None) e
         ) l;
-      fprintf fmt "}"
+      Format.fprintf fmt "}"
 
   and print_list fmt = function
     | [] -> ()
-    | [t] -> fprintf fmt "%a " (print body_of) t
+    | [t] -> Format.fprintf fmt "%a " (print body_of) t
     | t::l ->
-      fprintf fmt "(%a" (print body_of) t;
-      List.iter (fprintf fmt ", %a" (print body_of)) l;
-      fprintf fmt ")"
+      Format.fprintf fmt "(%a" (print body_of) t;
+      List.iter (Format.fprintf fmt ", %a" (print body_of)) l;
+      Format.fprintf fmt ")"
   in
   print, print_list
 
@@ -517,7 +516,7 @@ let t_adt ?(body=None) s ty_vars =
     | None -> ()
     | Some [] -> assert false
     | Some ([_] as cases) ->
-      if get_debug_adt () then
+      if Options.get_debug_adt () then
         Printer.print_dbg ~module_name:"Ty"
           "should be registered as a record";
       let cases =
@@ -547,7 +546,7 @@ let trecord ?(record_constr="{") lv n lbs =
   let lbs, record_constr =
     if String.equal record_constr "{" then
       List.sort (fun (l1, _) (l2, _) -> Hstring.compare l1 l2) lbs,
-      sprintf "%s___%s" record_constr n
+      Format.sprintf "%s___%s" record_constr n
     else lbs, record_constr
   in
   let record_constr = Hstring.make record_constr in
@@ -681,11 +680,9 @@ let rec monomorphize ty =
   | Tadt(name, params) ->
     Tadt(name, List.map monomorphize params)
 
-
-
 let print_subst fmt sbt =
-  M.iter (fun n ty -> fprintf fmt "%d -> %a" n print ty) sbt;
-  fprintf fmt "@?"
+  M.iter (fun n ty -> Format.fprintf fmt "%d -> %a" n print ty) sbt;
+  Format.fprintf fmt "@?"
 
 let print_full =
   fst (print_generic (Some type_body)) (Some type_body)

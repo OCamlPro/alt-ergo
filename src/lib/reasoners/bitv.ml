@@ -26,10 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Sig
-
-
 module Sy = Symbols
 module E = Expr
 
@@ -255,7 +251,7 @@ module Shostak(X : ALIEN) = struct
     open Printer
 
     let print_tvar fmt ({var=v;sorte=s},sz) =
-      fprintf fmt "%s_%d[%d]@?"
+      Format.fprintf fmt "%s_%d[%d]@?"
         (match s with | A -> "a" | B -> "b" | C -> "c")
         v sz
 
@@ -269,7 +265,9 @@ module Shostak(X : ALIEN) = struct
        | I_Comp(u,v) -> fprintf fmt "@[(%a * %a)@]" print_I_ast u print_I_ast v
     *)
 
-    let print fmt ast = match ast.bv with
+    let print fmt ast =
+      let open Format in
+      match ast.bv with
       | Cte b -> fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
       | Other (Alien t) -> fprintf fmt "%a@?" X.print t
       | Other (Var tv) -> fprintf fmt "%a@?" print_tvar (tv,ast.sz)
@@ -282,19 +280,19 @@ module Shostak(X : ALIEN) = struct
 
     let print_C_ast fmt = function
         [] -> assert false
-      | x::l -> print fmt x; List.iter (fprintf fmt " @@ %a" print) l
+      | x::l -> print fmt x; List.iter (Format.fprintf fmt " @@ %a" print) l
 
     let print_s fmt ast = match ast.bv with
-      | S_Cte b -> fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
-      | S_Var tv -> fprintf fmt "%a@?" print_tvar (tv,ast.sz)
+      | S_Cte b -> Format.fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
+      | S_Var tv -> Format.fprintf fmt "%a@?" print_tvar (tv,ast.sz)
 
     let print_S_ast fmt = function
         [] -> assert false
-      | x::l -> print_s fmt x; List.iter (fprintf fmt " @@ %a" print_s) l
+      | x::l -> print_s fmt x; List.iter (Format.fprintf fmt " @@ %a" print_s) l
 
     let print_sliced_sys l =
       let print fmt (a,b) =
-        fprintf fmt " %a == %a@ " print a print b
+        Format.fprintf fmt " %a == %a@ " print a print b
       in
       if Options.get_debug_bitv () then
         Printer.print_dbg
@@ -304,7 +302,7 @@ module Shostak(X : ALIEN) = struct
 
     let print_c_solve_res l =
       let print fmt (a,b) =
-        fprintf fmt " %a == %a@ " print a print_S_ast b
+        Format.fprintf fmt " %a == %a@ " print a print_S_ast b
       in
       if Options.get_debug_bitv () then
         Printer.print_dbg
@@ -314,9 +312,9 @@ module Shostak(X : ALIEN) = struct
 
     let print_partition_res l =
       let print fmt (t,cte_l) =
-        fprintf fmt " %a%a@ " print t
+        Format.fprintf fmt " %a%a@ " print t
           (fun fmt ->
-             List.iter (fun l' -> fprintf fmt " == %a" print_S_ast l'))
+             List.iter (fun l' -> Format.fprintf fmt " == %a" print_S_ast l'))
           cte_l
       in
       if Options.get_debug_bitv () then
@@ -327,7 +325,7 @@ module Shostak(X : ALIEN) = struct
 
     let print_final_solution l =
       let print fmt (a,value) =
-        fprintf fmt " %a = %a@ " print a print_C_ast value
+        Format.fprintf fmt " %a = %a@ " print a print_C_ast value
       in
       if Options.get_debug_bitv () then
         Printer.print_dbg
@@ -797,7 +795,7 @@ module Shostak(X : ALIEN) = struct
   let abstract_selectors v acc = is_mine v, acc
 
   let solve r1 r2 pb =
-    {pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}
+    Sig.{pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}
 
   let assign_value _ _ _ =
     Printer.print_err

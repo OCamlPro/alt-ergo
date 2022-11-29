@@ -26,10 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-open Sig
-
 module X = Shostak.Combine
 
 module Ac = Shostak.Ac
@@ -72,10 +68,10 @@ module RS = struct
   let find k m =
     try find k m with Not_found -> SetRL.empty
 
-  let add_rule (({ h ; _ }, _, _) as rul) mp =
+  let add_rule (({ Sig.h ; _ }, _, _) as rul) mp =
     add h (SetRL.add rul (find h mp)) mp
 
-  let remove_rule (({ h ; _ }, _, _) as rul) mp =
+  let remove_rule (({ Sig.h ; _ }, _, _) as rul) mp =
     add h (SetRL.remove rul (find h mp)) mp
 
 end
@@ -133,7 +129,7 @@ let terms_of_distinct env l = match LX.view l with
 
 
 let cl_extract env =
-  if get_bottom_classes () then
+  if Options.get_bottom_classes () then
     let classes = MapX.fold (fun _ cl acc -> cl :: acc) env.classes [] in
     MapX.fold (fun _ ml acc ->
         MapL.fold (fun l _ acc -> (terms_of_distinct env l) @ acc) ml acc
@@ -150,40 +146,41 @@ module Debug = struct
   *)
 
   let lm_print fmt =
-    MapL.iter (fun k dep -> fprintf fmt "%a %a" LX.print k Ex.print dep)
+    MapL.iter (fun k dep -> Format.fprintf fmt "%a %a" LX.print k Ex.print dep)
 
   let pmake fmt m =
-    fprintf fmt "@[<v 2>map:@,";
-    ME.iter (fun t r -> fprintf fmt "%a -> %a@," E.print t X.print r) m;
-    fprintf fmt "@]@,"
+    Format.fprintf fmt "@[<v 2>map:@,";
+    ME.iter (fun t r ->
+        Format.fprintf fmt "%a -> %a@," E.print t X.print r) m;
+    Format.fprintf fmt "@]@,"
 
   let prepr fmt m =
-    fprintf fmt
+    Format.fprintf fmt
       "@[<v 2>------------- UF: Representatives map ----------------@,";
-    MapX.iter
-      (fun r (rr,dep) ->
-         fprintf fmt "%a --> %a %a@," X.print r X.print rr Ex.print dep) m;
-    fprintf fmt "@]@,"
+    MapX.iter (fun r (rr,dep) ->
+        Format.fprintf fmt "%a --> %a %a@," X.print r X.print rr Ex.print dep
+      ) m;
+    Format.fprintf fmt "@]@,"
 
   let prules fmt s =
-    fprintf fmt
+    Format.fprintf fmt
       "@[<v 2>------------- UF: AC rewrite rules ----------------------@,";
     RS.iter
       (fun _ srl ->
          SetRL.iter
-           (fun (ac,d,dep)-> fprintf fmt "%a ~~> %a %a@,"
+           (fun (ac,d,dep)-> Format.fprintf fmt "%a ~~> %a %a@,"
                X.print (X.ac_embed ac) X.print d Ex.print dep
            )srl
       )s;
-    fprintf fmt "@]@,"
+    Format.fprintf fmt "@]@,"
 
   let pclasses fmt m =
-    fprintf fmt
+    Format.fprintf fmt
       "@[<v 2>------------- UF: Class map --------------------------@,";
     MapX.iter
-      (fun k s -> fprintf fmt "%a -> %a@," X.print k E.print_list
+      (fun k s -> Format.fprintf fmt "%a -> %a@," X.print k E.print_list
           (SE.elements s)) m;
-    fprintf fmt "@]@,"
+    Format.fprintf fmt "@]@,"
 
   (* unused --
      let pgamma fmt m =
@@ -192,13 +189,14 @@ module Debug = struct
   *)
 
   let pneqs fmt m =
-    fprintf fmt
+    Format.fprintf fmt
       "@[<v 2>------------- UF: Disequations map--------------------@ ";
-    MapX.iter (fun k s -> fprintf fmt "%a -> %a@ " X.print k lm_print s) m;
-    fprintf fmt "@]@ "
+    MapX.iter (fun k s ->
+        Format.fprintf fmt "%a -> %a@ " X.print k lm_print s) m;
+    Format.fprintf fmt "@]@ "
 
   let all env =
-    if get_debug_uf () then
+    if Options.get_debug_uf () then
       print_dbg
         ~module_name:"Uf" ~function_name:"all"
         "@[<v 0>-------------------------------------------------@ \
@@ -217,37 +215,37 @@ module Debug = struct
 
 
   let canon_of r rr =
-    if get_rewriting () && get_verbose () then
+    if Options.(get_rewriting () && get_verbose ()) then
       print_dbg "canon %a = %a" X.print r X.print rr
 
   let init_leaf p =
-    if get_debug_uf () then
+    if Options.get_debug_uf () then
       print_dbg
         ~module_name:"Uf" ~function_name:"init_leaf"
         "init leaf : %a" X.print p
 
   let critical_pair rx ry =
-    if get_debug_uf () then
+    if Options.get_debug_uf () then
       print_dbg
         ~module_name:"Uf" ~function_name:"critical_pair"
         "critical pair : %a = %a@." X.print rx X.print ry
 
   let collapse_mult g2 d2 =
-    if get_debug_ac () then
+    if Options.get_debug_ac () then
       print_dbg
         ~module_name:"Uf" ~function_name:"collapse_mult"
         "collapse *: %a = %a"
         X.print g2 X.print d2
 
   let collapse g2 d2 =
-    if get_debug_ac () then
+    if Options.get_debug_ac () then
       print_dbg
         ~module_name:"Uf" ~function_name:"collapse"
         "collapse: %a = %a"
         X.print g2 X.print d2
 
   let compose p v g d =
-    if get_debug_ac () then
+    if Options.get_debug_ac () then
       print_dbg
         ~module_name:"Uf" ~function_name:"compose"
         "compose : %a -> %a on %a and %a"
@@ -255,34 +253,34 @@ module Debug = struct
         Ac.print g X.print d
 
   let x_solve rr1 rr2 dep =
-    if get_debug_uf () then
+    if Options.get_debug_uf () then
       print_dbg
         ~module_name:"Uf" ~function_name:"x_solve"
         "x-solve: %a = %a %a"
         X.print rr1 X.print rr2 Ex.print dep
 
   let ac_solve p v dep =
-    if get_debug_uf () then
+    if Options.get_debug_uf () then
       print_dbg
         ~module_name:"Uf" ~function_name:"ac_solve"
         "ac-solve: %a |-> %a %a"
         X.print p X.print v Ex.print dep
 
   let ac_x r1 r2 =
-    if get_debug_uf () then
+    if Options.get_debug_uf () then
       print_dbg
         ~module_name:"Uf" ~function_name:"ac_x"
         "ac(x): delta (%a) = delta (%a)"
         X.print r1 X.print r2
 
   let distinct d =
-    if get_debug_uf () then
+    if Options.get_debug_uf () then
       print_dbg
         ~module_name:"Uf" ~function_name:"distinct"
         "distinct %a" LX.print d
 
   let are_distinct t1 t2 =
-    if get_debug_uf () then
+    if Options.get_debug_uf () then
       print_dbg
         ~module_name:"Uf" ~function_name:"are_distinct"
         "are_distinct %a %a" E.print t1 E.print t2
@@ -567,7 +565,7 @@ module Env = struct
     in
     (init_new_ac_leaves env mkr), ctx
 
-  let head_cp eqs env pac ({ h ; _ } as ac) v dep =
+  let head_cp eqs env pac ({ Sig.h ; _ } as ac) v dep =
     try (*if RS.mem h env.ac_rs then*)
       SetRL.iter
         (fun (g, d, dep_rl) ->
@@ -766,7 +764,7 @@ let rec ac_x eqs env tch =
     Debug.ac_x r1 r2;
     let sbs, dep = x_solve env r1 r2 dep in
     let env, tch = List.fold_left (ac_solve eqs dep) (env, tch) sbs in
-    if get_debug_uf () then Debug.all env;
+    if Options.get_debug_uf () then Debug.all env;
     ac_x eqs env tch
 
 let union env r1 r2 dep =
@@ -984,7 +982,7 @@ let assign_next env =
     match !acc with
     | None -> assert false
     | Some (s, rep, is_cs) ->
-      if get_debug_interpretation () then
+      if Options.get_debug_interpretation () then
         Printer.print_dbg
           ~module_name:"Uf" ~function_name:"assign_next"
           "TRY assign-next %a = %a" X.print rep E.print s;
@@ -1000,7 +998,6 @@ let assign_next env =
   in
   Debug.check_invariants "assign_next" env;
   res, env
-
 
 (**** Counter examples functions ****)
 let is_a_good_model_value (x, _) =
@@ -1084,7 +1081,7 @@ let compute_concrete_model ({ make; _ } as env) =
     (ModelMap.empty, ModelMap.empty, ModelMap.empty, ME.empty)
 
 let output_concrete_model fmt ~prop_model env =
-  if get_interpretation () then
+  if Options.get_interpretation () then
     let functions, constants, arrays, _ =
       compute_concrete_model env in
     Models.output_concrete_model fmt prop_model ~functions ~constants ~arrays

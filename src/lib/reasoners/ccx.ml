@@ -26,15 +26,11 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-
 module X = Shostak.Combine
 module Ex = Explanation
 module E = Expr
 module A = Xliteral
 module SE = Expr.Set
-open Sig_rel
 
 module Sy = Symbols
 
@@ -45,28 +41,28 @@ module type S = sig
 
   val empty : unit -> t
 
-  val empty_facts : unit -> r facts
+  val empty_facts : unit -> r Sig_rel.facts
 
-  val add_fact : r facts -> r fact -> unit
+  val add_fact : r Sig_rel.facts -> r Sig_rel.fact -> unit
 
   val add_term :
     t ->
-    r facts -> (* acc *)
+    r Sig_rel.facts -> (* acc *)
     Expr.t ->
     Explanation.t ->
-    t * r facts
+    t * r Sig_rel.facts
 
   val add :
     t ->
-    r facts -> (* acc *)
+    r Sig_rel.facts -> (* acc *)
     E.t ->
-    Explanation.t -> t * r facts
+    Explanation.t -> t * r Sig_rel.facts
 
   val assume_literals :
     t ->
-    (r literal * Explanation.t * Th_util.lit_origin) list ->
-    r facts ->
-    t * (r literal * Explanation.t * Th_util.lit_origin) list
+    (r Sig_rel.literal * Explanation.t * Th_util.lit_origin) list ->
+    r Sig_rel.facts ->
+    t * (r Sig_rel.literal * Explanation.t * Th_util.lit_origin) list
 
   val case_split :
     t -> for_model:bool ->
@@ -85,7 +81,7 @@ module type S = sig
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
-    t -> (Expr.t -> Expr.t -> bool) -> t * instances
+    t -> (Expr.t -> Expr.t -> bool) -> t * Sig_rel.instances
 
   val output_concrete_model :
     Format.formatter ->
@@ -116,13 +112,13 @@ module Main : S = struct
   }
 
   let empty_facts () =
-    { equas   = Queue.create ();
-      ineqs   = Queue.create ();
-      diseqs  = Queue.create ();
-      touched = Util.MI.empty }
+    Sig_rel.{ equas   = Queue.create ();
+              ineqs   = Queue.create ();
+              diseqs  = Queue.create ();
+              touched = Util.MI.empty }
 
-  let add_fact facts ((lit, _, _) as e) =
-    match lit with
+  let add_fact (facts: r Sig_rel.facts) ((lit, _, _) as e) =
+    match (lit: r Sig_rel.literal) with
     | LSem Xliteral.Pred _ | LSem Xliteral.Eq _ ->
       Queue.push e facts.equas
     | LSem Xliteral.Distinct _ -> Queue.push e facts.diseqs
@@ -138,20 +134,22 @@ module Main : S = struct
   module Debug = struct
     open Printer
 
-    let facts (f : r facts) msg =
+    let facts (f: r Sig_rel.facts) msg =
       let aux fmt q =
         Q.iter
           (fun (lit,_,_) ->
-             match lit with
-             | LSem sa -> fprintf fmt "  > LSem  %a@." LR.print (LR.make sa)
-             | LTerm a -> fprintf fmt "  > LTerm %a@."E.print a
+             match (lit: r Sig_rel.literal) with
+             | LSem sa ->
+               Format.fprintf fmt "  > LSem  %a@." LR.print (LR.make sa)
+             | LTerm a ->
+               Format.fprintf fmt "  > LTerm %a@."E.print a
           )q
       in
       let aux2 fmt mp =
         Util.MI.iter
-          (fun _ x -> fprintf fmt "%a |-> ... (See Uf)@." X.print x) mp
+          (fun _ x -> Format.fprintf fmt "%a |-> ... (See Uf)@." X.print x) mp
       in
-      if get_debug_cc () then
+      if Options.get_debug_cc () then
         print_dbg
           ~module_name:"Ccx" ~function_name:"facts"
           "@[<v 0>I am in %s with the following facts@ \
@@ -164,7 +162,7 @@ module Main : S = struct
           msg aux f.equas aux f.diseqs aux f.ineqs aux2 f.touched
 
     let cc r1 r2 =
-      if get_debug_cc () then
+      if Options.get_debug_cc () then
         print_dbg
           ~module_name:"Ccx" ~function_name:"cc"
           "congruence closure : %a = %a"
@@ -175,9 +173,9 @@ module Main : S = struct
         let c = ref 0 in
         let print fmt a =
           incr c;
-          fprintf fmt " %d) %a@ " !c E.print a
+          Format.fprintf fmt " %d) %a@ " !c E.print a
         in
-        if get_debug_cc () then
+        if Options.get_debug_cc () then
           print_dbg
             ~module_name:"Ccx" ~function_name:"make_ctx"
             "constraints of make(%a)@ %a"
@@ -188,16 +186,16 @@ module Main : S = struct
         let c = ref 0 in
         let print fmt (a, _ex) =
           incr c;
-          fprintf fmt " %d) %a@ " !c (A.print_view X.print) a
+          Format.fprintf fmt " %d) %a@ " !c (A.print_view X.print) a
         in
-        if get_debug_cc () then
+        if Options.get_debug_cc () then
           print_dbg
             ~module_name:"Ccx" ~function_name:"rel_add_cst"
             "constraints of Rel.add(%a)@ %a"
             Expr.print t (pp_list_no_space print) ctx
 
     let add_to_use t =
-      if get_debug_cc () then
+      if Options.get_debug_cc () then
         print_dbg
           ~module_name:"Ccx" ~function_name:"add_to_use"
           "%a" E.print t
@@ -212,20 +210,20 @@ module Main : S = struct
     *)
 
     let contra_congruence a ex =
-      if get_debug_cc () then
+      if Options.get_debug_cc () then
         print_dbg
           ~module_name:"Ccx" ~function_name:"contra_congruence"
           "find that %a %a by contra-congruence"
           E.print a Ex.print ex
 
     let assume_literal sa =
-      if get_debug_cc () then
+      if Options.get_debug_cc () then
         print_dbg
           ~module_name:"Ccx" ~function_name:"assume_literal"
           "assume literal : %a" LR.print (LR.make sa)
 
     let congruent a ex =
-      if get_debug_cc () then
+      if Options.get_debug_cc () then
         print_dbg
           ~module_name:"Ccx" ~function_name:"congruent"
           "new fact by congruence : %a ex[%a]"
@@ -233,9 +231,9 @@ module Main : S = struct
 
     let cc_result p v touched =
       let print fmt (x,y,_) =
-        fprintf fmt "  > %a ~~ becomes ~> %a" X.print x X.print y
+        Format.fprintf fmt "  > %a ~~ becomes ~> %a" X.print x X.print y
       in
-      if get_debug_cc () then
+      if Options.get_debug_cc () then
         print_dbg
           ~module_name:"Ccx" ~function_name:"cc_result"
           "the binding %a -> %a touched:@,%a"
@@ -264,7 +262,7 @@ module Main : S = struct
       | Some (dep, _) -> Ex.union ex dep
       | None -> raise Exit
 
-  let equal_only_by_congruence env facts t1 t2 =
+  let equal_only_by_congruence env (facts: r Sig_rel.facts) t1 t2 =
     if not (E.equal t1 t2) then
       let { E.f = f1; xs = xs1; ty = ty1; _ } =
         match E.term_view t1 with
@@ -281,10 +279,10 @@ module Main : S = struct
           let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
           let a = E.mk_eq ~iff:false t1 t2 in
           Debug.congruent a ex;
-          Q.push (LTerm a, ex, Th_util.Other) facts.equas
+          Q.push (Sig_rel.LTerm a, ex, Th_util.Other) facts.equas
         with Exit -> ()
 
-  let congruents env facts t1 s =
+  let congruents env (facts: r Sig_rel.facts) t1 s =
     match E.term_view t1 with
     | E.Term { E.xs = []; _ } -> ()
     | E.Term { E.f; ty; _ } when X.fully_interpreted f ty -> ()
@@ -344,7 +342,7 @@ module Main : S = struct
 
   (* Begin: new implementation of add, add_term, assume_literals and all that *)
 
-  let new_facts_by_contra_congruence env facts r bol =
+  let new_facts_by_contra_congruence env (facts: r Sig_rel.facts) r bol =
     match X.term_extract r with
     | None, _ -> ()
     | Some _, false -> () (* not an original term *)
@@ -364,9 +362,7 @@ module Main : S = struct
                    | Some (ex_r, _) ->
                      let a = E.mk_distinct ~iff:false [x; y] in
                      Debug.contra_congruence a ex_r;
-                     Q.push
-                       (LTerm a, ex_r, Th_util.Other)
-                       facts.diseqs
+                     Q.push (Sig_rel.LTerm a, ex_r, Th_util.Other) facts.diseqs
                    | None -> assert false
                  end
              | _ -> ()
@@ -397,7 +393,7 @@ module Main : S = struct
     else if X.equal (fst (Uf.find_r env.uf r)) (X.bot()) then
       new_facts_by_contra_congruence env facts r E.vrai
 
-  let congruence_closure env (facts:r facts) r1 r2 ex =
+  let congruence_closure env (facts: r Sig_rel.facts) r1 r2 ex =
     Options.exec_thread_yield ();
     Debug.cc r1 r2;
     let uf, res = Uf.union env.uf r1 r2 ex in
@@ -546,7 +542,7 @@ module Main : S = struct
         ) env lvs
 
   let semantic_view env (a, ex, orig) facts =
-    match a with
+    match (a: r Sig_rel.literal) with
     | LTerm a -> (* Over terms: add terms + term_canonical_view *)
       let env = add env facts a ex in
       let sa, ex = term_canonical_view env a ex in
@@ -578,7 +574,7 @@ module Main : S = struct
     if Uf.already_distinct env.uf lr then env
     else  {env with uf = Uf.distinct env.uf lr ex}
 
-  let rec assume_equalities env choices facts =
+  let rec assume_equalities env choices (facts: r Sig_rel.facts) =
     if Q.is_empty facts.equas then env, choices
     else begin
       Debug.facts facts "equalities";
@@ -614,7 +610,7 @@ module Main : S = struct
       assume_equalities env choices facts
     end
 
-  let rec assume_disequalities env choices facts =
+  let rec assume_disequalities env choices (facts: r Sig_rel.facts) =
     if Q.is_empty facts.diseqs then env, choices
     else begin
       Debug.facts facts "disequalities";
@@ -626,7 +622,7 @@ module Main : S = struct
         | A.Distinct (false, lr) -> assume_dist env facts lr ex
         | A.Distinct (true, _) -> assert false
         | A.Pred _ ->
-          Q.push (LSem sa, ex, orig) facts.equas;
+          Q.push (Sig_rel.LSem sa, ex, orig) facts.equas;
           env
         | _ -> assert false
       in
@@ -634,7 +630,7 @@ module Main : S = struct
       else env, choices (* Return to give priority to equalities *)
     end
 
-  let rec norm_queue env ineqs (facts:r facts) =
+  let rec norm_queue env ineqs (facts:r Sig_rel.facts) =
     if Q.is_empty facts.ineqs then env, List.rev ineqs
     else
       let e = Q.pop facts.ineqs in
@@ -650,7 +646,7 @@ module Main : S = struct
       in
       norm_queue env ineqs facts
 
-  let add_touched uf acc (facts:r facts) =
+  let add_touched uf acc (facts:r Sig_rel.facts) =
     let acc =
       Util.MI.fold
         (fun _ x acc ->
@@ -662,7 +658,7 @@ module Main : S = struct
     facts.touched <- Util.MI.empty;
     acc
 
-  let assume_inequalities env choices facts =
+  let assume_inequalities env choices (facts: r Sig_rel.facts) =
     Options.tool_req 3 "TR-CCX-Builtin";
     if Q.is_empty facts.ineqs then env, choices
     else begin
@@ -674,7 +670,7 @@ module Main : S = struct
       env, List.rev_append l choices
     end
 
-  let rec assume_literals env choices facts =
+  let rec assume_literals env choices (facts: r Sig_rel.facts) =
     match Q.is_empty facts.equas with
     | false ->
       let env, choices = assume_equalities env choices facts in

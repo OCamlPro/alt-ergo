@@ -9,14 +9,9 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-
 module ME = Expr.Map
 module E = Expr
 module Hs = Hstring
-
-
 
 module type ATOM = sig
 
@@ -233,33 +228,33 @@ module Atom : ATOM = struct
     let level a =
       match a.var.level, a.var.reason with
       | n, _ when n < 0 -> assert false
-      | 0, Some c -> sprintf "->0/%s" c.name
+      | 0, Some c -> Format.sprintf "->0/%s" c.name
       | 0, None   -> "@0"
-      | n, Some c -> sprintf "->%d/%s" n c.name
-      | n, None   -> sprintf "@@%d" n
+      | n, Some c -> Format.sprintf "->%d/%s" n c.name
+      | n, None   -> Format.sprintf "@@%d" n
 
     let value a =
-      if a.is_true then sprintf "[T%s]" (level a)
-      else if a.neg.is_true then sprintf "[F%s]" (level a)
+      if a.is_true then Format.sprintf "[T%s]" (level a)
+      else if a.neg.is_true then Format.sprintf "[F%s]" (level a)
       else ""
 
     let premise fmt v =
-      List.iter (fun { name = name; _ } -> fprintf fmt "%s," name) v
+      List.iter (fun { name = name; _ } -> Format.fprintf fmt "%s," name) v
 
     let atom fmt a =
-      fprintf fmt "%s%d%s [index=%d | lit:%a] vpremise={{%a}}"
+      Format.fprintf fmt "%s%d%s [index=%d | lit:%a] vpremise={{%a}}"
         (sign a) (a.var.vid+1) (value a) a.var.index E.print a.lit
         premise a.var.vpremise
 
 
     let atoms_vec fmt vec =
       for i = 0 to Vec.size vec - 1 do
-        fprintf fmt "%a ; " atom (Vec.get vec i)
+        Format.fprintf fmt "%a ; " atom (Vec.get vec i)
       done
 
     let clause fmt { name; atoms=arr; cpremise=cp; _ } =
-      fprintf fmt "%s:{ %a} cpremise={{%a}}" name atoms_vec arr premise cp
-
+      Format.fprintf fmt "%s:{ %a} cpremise={{%a}}" name atoms_vec
+        arr premise cp
   end
 
   let pr_atom = Debug.atom
@@ -488,25 +483,25 @@ module Flat_Formula : FLAT_FORMULA = struct
   let sp() = let s = ref "" in for _ = 1 to !cpt do s := " " ^ !s done; !s ^ !s
 
   let rec print fmt fa = match fa.view with
-    | UNIT a -> fprintf fmt "%a" Atom.pr_atom a
+    | UNIT a -> Format.fprintf fmt "%a" Atom.pr_atom a
     | AND s  ->
       incr cpt;
-      fprintf fmt "(and%a" print_list s;
+      Format.fprintf fmt "(and%a" print_list s;
       decr cpt;
-      fprintf fmt "@.%s)" (sp())
+      Format.fprintf fmt "@.%s)" (sp())
 
     | OR s   ->
       incr cpt;
-      fprintf fmt "(or%a" print_list s;
+      Format.fprintf fmt "(or%a" print_list s;
       decr cpt;
-      fprintf fmt "@.%s)" (sp())
+      Format.fprintf fmt "@.%s)" (sp())
 
   and print_list fmt l =
     match l with
     | [] -> assert false
     | e::l ->
-      fprintf fmt "@.%s%a" (sp()) print e;
-      List.iter(fprintf fmt "@.%s%a" (sp()) print) l
+      Format.fprintf fmt "@.%s%a" (sp()) print e;
+      List.iter(Format.fprintf fmt "@.%s%a" (sp()) print) l
 
 
   let print fmt f = cpt := 0; print fmt f
@@ -595,7 +590,7 @@ module Flat_Formula : FLAT_FORMULA = struct
   let mk_lit hcons a acc =
     let at, acc = Atom.add_atom hcons.atoms a acc in
     let at =
-      if get_disable_flat_formulas_simplification () then at
+      if Options.get_disable_flat_formulas_simplification () then at
       else
       if at.Atom.var.Atom.level = 0 then
         if at.Atom.is_true then Atom.vrai_atom
@@ -664,7 +659,7 @@ module Flat_Formula : FLAT_FORMULA = struct
              match e.view with
              | AND l -> merge_and_check so l, nso
              | UNIT a when
-                 not (get_disable_flat_formulas_simplification ()) &&
+                 not (Options.get_disable_flat_formulas_simplification ()) &&
                  a.Atom.var.Atom.level = 0 ->
                begin
                  if a.Atom.neg.Atom.is_true then (aaz a; raise Exit); (* XXX*)
@@ -748,14 +743,14 @@ module Flat_Formula : FLAT_FORMULA = struct
     | [], [] -> assert false
 
     | _::_::_, _ ->
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         Printer.print_dbg
           ~module_name:"Satml_types" ~function_name:"extract_common"
           "Failure: many distinct atoms";
       None
 
     | [_] as common, _ ->
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         Printer.print_dbg
           ~module_name:"Satml_types" ~function_name:"extract_common"
           "TODO: Should have one toplevel common atom";
@@ -768,7 +763,7 @@ module Flat_Formula : FLAT_FORMULA = struct
       end
 
     | [], ad::ands' ->
-      if get_debug_sat () then
+      if Options.get_debug_sat () then
         Printer.print_dbg
           ~module_name:"Satml_types" ~function_name:"extract_common"
           "Should look for internal common parts";
@@ -787,7 +782,7 @@ module Flat_Formula : FLAT_FORMULA = struct
              match e.view with
              | OR l  -> merge_and_check so l, nso
              | UNIT a  when
-                 not (get_disable_flat_formulas_simplification ()) &&
+                 not (Options.get_disable_flat_formulas_simplification ()) &&
                  a.Atom.var.Atom.level = 0 ->
                begin
                  if a.Atom.is_true then (aaz a; raise Exit); (* XXX *)

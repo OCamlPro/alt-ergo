@@ -9,8 +9,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-
 type 'a t = { mutable dummy: 'a; mutable data : 'a array; mutable sz : int }
 
 let make capa d = {data = Array.make capa d; sz = 0; dummy = d}

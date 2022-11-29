@@ -26,10 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-
-
-
 type builtin = Symbols.builtin =
     LE | LT | (* arithmetic *)
     IsConstr of Hstring.t (* ADT tester *)

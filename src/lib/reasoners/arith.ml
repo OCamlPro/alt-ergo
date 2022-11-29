@@ -26,10 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-open Sig
-
 module Sy = Symbols
 module E = Expr
 
@@ -92,7 +88,7 @@ module Shostak
   module Debug = struct
 
     let solve_aux r1 r2 =
-      if get_debug_arith () then
+      if Options.get_debug_arith () then
         Printer.print_dbg
           ~module_name:"Arith" ~function_name:"solve_aux"
           "we solve %a=%a" X.print r1 X.print r2
@@ -101,9 +97,9 @@ module Shostak
       let c = ref 0 in
       let print fmt (p,v) =
         incr c;
-        fprintf fmt  "%d) %a |-> %a@." !c X.print p X.print v
+        Format.fprintf fmt  "%d) %a |-> %a@." !c X.print p X.print v
       in
-      if get_debug_arith () then
+      if Options.get_debug_arith () then
         Printer.print_dbg
           ~module_name:"Arith" ~function_name:"solve_one"
           "solving %a = %a yields:@,%a"
@@ -239,7 +235,7 @@ module Shostak
     | Sy.Op Sy.Mult, [t1;t2] ->
       let p1, ctx = mke coef (empty_polynome ty) t1 ctx in
       let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
-      if get_no_nla() && P.is_const p1 == None && P.is_const p2 == None
+      if Options.get_no_nla() && P.is_const p1 == None && P.is_const p2 == None
       then
         (* becomes uninterpreted *)
         let tau = E.mk_term (Sy.name ~kind:Sy.Ac "@*") [t1; t2] ty in
@@ -251,7 +247,7 @@ module Shostak
     | Sy.Op Sy.Div, [t1;t2] ->
       let p1, ctx = mke Q.one (empty_polynome ty) t1 ctx in
       let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
-      if get_no_nla() &&
+      if Options.get_no_nla() &&
          (P.is_const p2 == None ||
           (ty == Ty.Tint && P.is_const p1 == None)) then
         (* becomes uninterpreted *)
@@ -279,7 +275,7 @@ module Shostak
     | Sy.Op Sy.Modulo , [t1;t2] ->
       let p1, ctx = mke Q.one (empty_polynome ty) t1 ctx in
       let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
-      if get_no_nla() &&
+      if Options.get_no_nla() &&
          (P.is_const p1 == None || P.is_const p2 == None)
       then
         (* becomes uninterpreted *)
@@ -366,7 +362,7 @@ module Shostak
       | _ -> P.add p (P.create [coef, a] Q.zero ty), ctx
 
   let make t =
-    tool_req 4 "TR-Arith-Make";
+    Options.tool_req 4 "TR-Arith-Make";
     let ty = E.type_info t in
     let p, ctx = mke Q.one (empty_polynome ty) t [] in
     is_mine p, ctx
@@ -375,7 +371,7 @@ module Shostak
     assert (n >=0);
     if n = 0 then acc else expand p (n-1) (p::acc)
 
-  let unsafe_ac_to_arith { l = rl; t = ty; _ } =
+  let unsafe_ac_to_arith Sig.{ l = rl; t = ty; _ } =
     let mlt = List.fold_left (fun l (r,n) -> expand (embed r)n l) [] rl in
     List.fold_left P.mult (P.create [] Q.one ty) mlt
 
@@ -418,7 +414,7 @@ module Shostak
       (fst (P.to_list p))
 
   let color ac =
-    match ac.l with
+    match ac.Sig.l with
     | [(_, 1)] -> assert false
     | _ ->
       let p = unsafe_ac_to_arith ac in
@@ -598,7 +594,7 @@ module Shostak
     with Not_found -> is_null p
 
 
-  let unsafe_ac_to_arith { l = rl; t = ty; _ } =
+  let unsafe_ac_to_arith Sig.{ l = rl; t = ty; _ } =
     let mlt = List.fold_left (fun l (r, n) -> expand (embed r) n l) [] rl in
     List.fold_left P.mult (P.create [] Q.one ty) mlt
 
@@ -619,7 +615,7 @@ module Shostak
     else pp
 
   let solve_aux r1 r2 unsafe_mode =
-    tool_req 4 "TR-Arith-Solve";
+    Options.tool_req 4 "TR-Arith-Solve";
     Debug.solve_aux r1 r2;
     let p = P.sub (embed r1) (embed r2) in
     let pp = polynome_distribution p unsafe_mode in
@@ -670,20 +666,20 @@ module Shostak
     let sbt = solve_aux r1 r2 unsafe_mode in
     let sbt = make_idemp r1 r2 sbt lvs unsafe_mode in (*may raise Unsafe*)
     Debug.solve_one r1 r2 sbt;
-    {pb with sbt = List.rev_append sbt pb.sbt}
+    Sig.{pb with sbt = List.rev_append sbt pb.sbt}
 
   let solve r1 r2 pb =
     let lvs = List.fold_right SX.add (X.leaves r1) SX.empty in
     let lvs = List.fold_right SX.add (X.leaves r2) lvs in
     try
-      if get_debug_arith () then
+      if Options.get_debug_arith () then
         Printer.print_dbg
           ~module_name:"Arith" ~function_name:"solve"
           "Try solving with unsafe mode.";
       solve_one pb r1 r2 lvs true (* true == unsafe mode *)
     with Unsafe ->
     try
-      if get_debug_arith () then
+      if Options.get_debug_arith () then
         Printer.print_dbg
           ~module_name:"Arith" ~function_name:"solve"
           "Cancel unsafe solving mode. Try safe mode";
@@ -692,7 +688,7 @@ module Shostak
       assert false
 
   let make t =
-    if get_timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Arith Timers.F_make;
         let res = make t in
@@ -704,7 +700,7 @@ module Shostak
     else make t
 
   let solve r1 r2 pb =
-    if get_timers() then
+    if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Arith Timers.F_solve;
         let res = solve r1 r2 pb in
@@ -782,7 +778,7 @@ module Shostak
         else Format.sprintf "(- %s)" (pprint_positive_const (Q.abs c))
 
   let choose_adequate_model t r l =
-    if get_debug_interpretation () then
+    if Options.get_debug_interpretation () then
       Printer.print_dbg
         ~module_name:"Arith" ~function_name:"choose_adequate_model"
         "choose_adequate_model for %a" E.print t;

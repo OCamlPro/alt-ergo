@@ -26,10 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-open Format
-open Sig
-
 module Sy = Symbols
 module E  = Expr
 module Hs = Hstring
@@ -68,17 +64,17 @@ module Shostak (X : ALIEN) = struct
     open Printer
 
     let print fmt = function
-      | Cons (hs,_) -> fprintf fmt "%s" (Hs.view hs)
-      | Alien x -> fprintf fmt "%a" X.print x
+      | Cons (hs,_) -> Format.fprintf fmt "%s" (Hs.view hs)
+      | Alien x -> Format.fprintf fmt "%a" X.print x
 
     let solve_bis a b =
-      if get_debug_sum () then
+      if Options.get_debug_sum () then
         print_dbg
           ~module_name:"Enum" ~function_name:"solve"
           "@[<v 2>we solve %a = %a@ " X.print a X.print b
 
     let solve_bis_result res =
-      if get_debug_sum () then
+      if Options.get_debug_sum () then
         match res with
         | [p,v] ->
           print_dbg ~header:false
@@ -89,7 +85,7 @@ module Shostak (X : ALIEN) = struct
         | _ -> assert false
 
     let solve_bis_unsolvable () =
-      if get_debug_sum () then
+      if Options.get_debug_sum () then
         print_dbg
           "the equation is unsolvable@]"
 
@@ -166,7 +162,7 @@ module Shostak (X : ALIEN) = struct
   let term_extract _ = None, false
 
   let solve r1 r2 pb =
-    {pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}
+    Sig.{pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}
 
   let solve r1 r2 pb =
     if Options.get_timers() then
@@ -199,6 +195,6 @@ module Shostak (X : ALIEN) = struct
            by CS are not created and added to UF *)
         match embed r with Cons _ -> r | _ -> assert false
     in
-    r, asprintf "%a" X.print r  (* it's a EUF constant *)
+    r, Format.asprintf "%a" X.print r  (* it's a EUF constant *)
 
 end

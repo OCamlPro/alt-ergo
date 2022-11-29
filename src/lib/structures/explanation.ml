@@ -26,8 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-
 module E = Expr
 
 type rootdep = { name : string; f : Expr.t; loc : Loc.t}
@@ -108,14 +106,15 @@ let remove_fresh fe s =
 let add_fresh fe s = S.add fe s
 
 let print fmt ex =
+  let open Format in
   if Options.get_debug_explanations () then begin
     fprintf fmt "{";
     S.iter (function
         | Literal a -> fprintf fmt "{Literal:%a}, " Satml_types.Atom.pr_atom a
-        | Fresh i -> Format.fprintf fmt "{Fresh:%i}" i;
-        | Dep f -> Format.fprintf fmt "{Dep:%a}" E.print f
-        | RootDep r -> Format.fprintf fmt "{RootDep:%s}" r.name
-        | Bj f -> Format.fprintf fmt "{BJ:%a}" E.print f
+        | Fresh i -> fprintf fmt "{Fresh:%i}" i;
+        | Dep f -> fprintf fmt "{Dep:%a}" E.print f
+        | RootDep r -> fprintf fmt "{RootDep:%s}" r.name
+        | Bj f -> fprintf fmt "{BJ:%a}" E.print f
       ) ex;
     fprintf fmt "}"
   end

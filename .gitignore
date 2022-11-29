@@ -1,5 +1,6 @@
 # Metadata files
 .gitignore
+*.orig
 META
 
 # Generated source files

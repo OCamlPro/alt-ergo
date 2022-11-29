@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-open Format
-
 module Sy = Symbols
 module E  = Expr
 module A  = Xliteral
@@ -109,10 +106,10 @@ module Debug = struct
 
   let assume la =
     let print fmt (a,_,_,_) =
-      fprintf fmt "> %a@,"
+      Format.fprintf fmt "> %a@,"
         LR.print (LR.make a)
     in
-    if get_debug_arrays () && la != [] then
+    if Options.get_debug_arrays () && la != [] then
       Printer.print_dbg
         ~module_name:"Arrays_rel"
         ~function_name:"assume"
@@ -139,7 +136,7 @@ module Debug = struct
   *)
 
   let new_equalities st =
-    if get_debug_arrays () then begin
+    if Options.get_debug_arrays () then begin
       Printer.print_dbg
         ~module_name:"Arrays_rel"
         ~function_name:"new_equalities"
@@ -152,14 +149,14 @@ module Debug = struct
     end
 
   let case_split a =
-    if get_debug_arrays () then
+    if Options.get_debug_arrays () then
       print_dbg
         ~module_name:"Arrays_rel"
         ~function_name:"case_split"
         "%a" LR.print a
 
   let case_split_none () =
-    if get_debug_arrays () then
+    if Options.get_debug_arrays () then
       print_dbg
         ~module_name:"Arrays_rel"
         ~function_name:"case_split_none"
@@ -437,7 +434,7 @@ let assume env uf la =
 
 
 let assume env uf la =
-  if get_timers() then
+  if Options.get_timers() then
     try
       Timers.exec_timer_start Timers.M_Arrays Timers.F_assume;
       let res =assume env uf la in

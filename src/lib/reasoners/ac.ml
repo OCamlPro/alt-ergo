@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-open Format
-
 module HS = Hstring
 module Sy = Symbols
 
@@ -59,7 +56,7 @@ module type S = sig
   val type_info : t -> Ty.t
 
   (* prints the AC semantic value *)
-  val print : formatter -> t -> unit
+  val print : Format.formatter -> t -> unit
 
   (* returns the leaves of the given AC semantic value *)
   val leaves : t -> r list
@@ -92,26 +89,26 @@ module Make (X : Sig.X) = struct
 
     let print_x fmt v =
       match X.leaves v with
-      | [w] when X.equal v w -> fprintf fmt "%a" X.print v
-      | _ -> fprintf fmt "(%a)" X.print v
+      | [w] when X.equal v w -> Format.fprintf fmt "%a" X.print v
+      | _ -> Format.fprintf fmt "(%a)" X.print v
 
 
     let rec pr_elt sep fmt (e,n) =
       assert (n >=0);
       if n = 0 then ()
-      else fprintf fmt "%s%a%a" sep print_x e (pr_elt sep) (e,n-1)
+      else Format.fprintf fmt "%s%a%a" sep print_x e (pr_elt sep) (e,n-1)
 
     let pr_xs sep fmt = function
       | [] -> assert false
       | (p,n)::l  ->
-        fprintf fmt "%a" print_x p;
-        List.iter (fprintf fmt "%a" (pr_elt sep))((p,n-1)::l)
+        Format.fprintf fmt "%a" print_x p;
+        List.iter (Format.fprintf fmt "%a" (pr_elt sep))((p,n-1)::l)
 
     let print fmt { h; l; _ } =
       if Sy.equal h (Sy.Op Sy.Mult) then
-        fprintf fmt "%a" (pr_xs "'*'") l
+        Format.fprintf fmt "%a" (pr_xs "'*'") l
       else
-        fprintf fmt "%a(%a)" Sy.print h (pr_xs ",") l
+        Format.fprintf fmt "%a(%a)" Sy.print h (pr_xs ",") l
 
     let assert_compare a b c1 c2 =
       assert (
@@ -129,7 +126,7 @@ module Make (X : Sig.X) = struct
       )
 
     let subst p v tm =
-      if get_debug_ac () then
+      if Options.get_debug_ac () then
         print_dbg
           "[ac] subst %a by %a in %a"
           X.print p X.print v X.print (X.ac_embed tm)
@@ -198,7 +195,7 @@ module Make (X : Sig.X) = struct
     Timers.exec_timer_pause Timers.M_AC Timers.F_make;
     x
 
-  let is_mine_symb sy _ = get_no_ac() == false && Sy.is_ac sy
+  let is_mine_symb sy _ = (not @@ Options.get_no_ac ()) && Sy.is_ac sy
 
   let type_info { t = ty; _ } = ty
 

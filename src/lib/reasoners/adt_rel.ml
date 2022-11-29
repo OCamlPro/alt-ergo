@@ -9,12 +9,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-open Format
-
 module X = Shostak.Combine
-module Sh = Shostak.Adt
-open Sh
+module Th = Shostak.Adt
 
 type r = X.r
 type uf = Uf.t
@@ -67,14 +63,14 @@ module Debug = struct
   open Printer
 
   let assume a =
-    if get_debug_adt () then
+    if Options.get_debug_adt () then
       print_dbg
         ~module_name:"Adt_rel"
         ~function_name:"assume"
         " we assume %a" LR.print (LR.make a)
 
   let print_env loc env =
-    if get_debug_adt () then begin
+    if Options.get_debug_adt () then begin
       print_dbg ~flushed:false ~module_name:"Adt_rel" ~function_name:"print_env"
         "@ @[<v 2>--ADT env %s ---------------------------------@ " loc;
       MX.iter
@@ -129,14 +125,14 @@ module Debug = struct
   *)
 
   let no_case_split () =
-    if get_debug_adt () then
+    if Options.get_debug_adt () then
       print_dbg
         ~module_name:"Adt_rel"
         ~function_name:"case-split"
         "nothing"
 
   let add r =
-    if get_debug_adt () then
+    if Options.get_debug_adt () then
       print_dbg
         ~module_name:"Adt_rel"
         ~function_name:"add"
@@ -164,7 +160,7 @@ let seen_tester r hs env =
 let deduce_is_constr uf r h eqs env ex =
   let r, ex' = try Uf.find_r uf r with Not_found -> assert false in
   let ex = Ex.union ex ex' in
-  match embed r with
+  match Th.embed r with
   | Adt.Alien r ->
     begin match X.term_extract r with
       | Some t, _ ->
@@ -172,7 +168,7 @@ let deduce_is_constr uf r h eqs env ex =
           if seen_tester r h env then eqs
           else
             let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr h) [t] in
-            if get_debug_adt () then
+            if Options.get_debug_adt () then
               Printer.print_dbg
                 ~module_name:"Adt_rel"
                 ~function_name:"deduce_is_constr"
@@ -202,7 +198,7 @@ let deduce_is_constr uf r h eqs env ex =
             let cons = E.mk_term (Sy.constr (Hs.view h)) xs ty in
             let env = {env with new_terms = SE.add cons env.new_terms} in
             let eq = E.mk_eq t cons ~iff:false in
-            if get_debug_adt () then
+            if Options.get_debug_adt () then
               Printer.print_dbg
                 ~module_name:"Adt_rel"
                 ~function_name:"deduce equal to constr"
@@ -232,7 +228,7 @@ let add_adt env uf t r sy ty =
   else
     match sy, ty with
     | Sy.Op Sy.Constr hs, Ty.Tadt _ ->
-      if get_debug_adt () then
+      if Options.get_debug_adt () then
         Printer.print_dbg
           ~module_name:"Adt_rel" ~function_name:"add_adt"
           "new ADT expr(C): %a" E.print t;
@@ -240,7 +236,7 @@ let add_adt env uf t r sy ty =
                    MX.add r (HSS.singleton hs, Ex.empty) env.domains }
 
     | _, Ty.Tadt _ ->
-      if get_debug_adt () then
+      if Options.get_debug_adt () then
         Printer.print_dbg
           ~module_name:"Adt_rel" ~function_name:"add_adt"
           "new ADT expr: %a" E.print t;
@@ -266,12 +262,12 @@ let update_tester r hs env =
   {env with seen_testers = MX.add r (HSS.add hs old) env.seen_testers}
 
 let trivial_tester r hs =
-  match embed r with (* can filter further/better *)
+  match Th.embed r with (* can filter further/better *)
   | Adt.Constr { c_name; _ } -> Hstring.equal c_name hs
   | _ -> false
 
 let constr_of_destr ty dest =
-  if get_debug_adt () then
+  if Options.get_debug_adt () then
     Printer.print_dbg
       ~module_name:"Adt_rel" ~function_name:"constr_of_destr"
       "ty = %a" Ty.print ty;
@@ -295,7 +291,7 @@ let constr_of_destr ty dest =
 [@@ocaml.ppwarning "XXX improve. For each selector, store its \
                     corresponding constructor when typechecking ?"]
 let add_guarded_destr env uf t hs e t_ty =
-  if get_debug_adt () then
+  if Options.get_debug_adt () then
     Printer.print_dbg ~flushed:false
       ~module_name:"Adt_rel" ~function_name:"add_guarded_destr"
       "new (guarded) Destr: %a@ " E.print t;
@@ -308,7 +304,7 @@ let add_guarded_destr env uf t hs e t_ty =
   *)
   let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr c) [e] in
   let eq = E.mk_eq access t ~iff:false in
-  if get_debug_adt () then
+  if Options.get_debug_adt () then
     Printer.print_dbg ~header:false
       "associated with constr %a@,%a => %a"
       Hstring.print c
@@ -332,7 +328,7 @@ let add_guarded_destr env uf t hs e t_ty =
 
 [@@ocaml.ppwarning "working with X.term_extract r would be sufficient ?"]
 let add_aux env (uf:uf) (r:r) t =
-  if get_disable_adts () then env
+  if Options.get_disable_adts () then env
   else
     let { E.f = sy; xs; ty; _ } = match E.term_view t with
       | E.Term t -> t
@@ -341,7 +337,7 @@ let add_aux env (uf:uf) (r:r) t =
     let env = add_adt env uf t r sy ty in
     match sy, xs with
     | Sy.Op Sy.Destruct (hs, true), [e] -> (* guarded *)
-      if get_debug_adt () then
+      if Options.get_debug_adt () then
         Printer.print_dbg
           ~module_name:"Adt_rel" ~function_name:"add_aux"
           "add guarded destruct: %a" E.print t;
@@ -350,7 +346,7 @@ let add_aux env (uf:uf) (r:r) t =
 
     | Sy.Op Sy.Destruct (_, false), [_] ->
       (* not guarded *)
-      if get_debug_adt () then
+      if Options.get_debug_adt () then
         Printer.print_dbg
           ~module_name:"Adt_rel" ~function_name:"add_aux"
           "[ADTs] add unguarded destruct: %a" E.print t;
@@ -441,11 +437,11 @@ let assoc_and_remove_selector hs r env =
     [], env
 
 let assume_is_constr uf hs r dep env eqs =
-  match embed r with
+  match Th.embed r with
   | Adt.Constr{ c_name; _ } when not (Hs.equal c_name hs) ->
     raise (Ex.Inconsistent (dep, env.classes));
   | _ ->
-    if get_debug_adt () then
+    if Options.get_debug_adt () then
       Printer.print_dbg
         ~module_name:"Adt_rel" ~function_name:"assume_is_constr"
         "assume is constr %a %a" X.print r Hs.print hs;
@@ -476,7 +472,7 @@ let assume_is_constr uf hs r dep env eqs =
       {env with domains = MX.add r (HSS.singleton hs, ex) env.domains} , eqs
 
 let assume_not_is_constr uf hs r dep env eqs =
-  match embed r with
+  match Th.embed r with
   | Adt.Constr{ c_name; _ } when Hs.equal c_name hs ->
     raise (Ex.Inconsistent (dep, env.classes));
   | _ ->
@@ -541,7 +537,7 @@ let add_eq uf hss sm1 sm2 dep env eqs =
 
 let add_aux env r =
   Debug.add r;
-  match embed r with
+  match Th.embed r with
   | Adt.Alien r when not (MX.mem r env.domains) ->
     begin match values_of (X.type_info r) with
       | Some s -> { env with domains = MX.add r (s, Ex.empty) env.domains }
@@ -559,7 +555,7 @@ let update_cs_modulo_eq r1 r2 ex env eqs =
      r1 |-> r2, because LR.mkv_eq may swap r1 and r2 *)
   try
     let old = MX.find r1 env.selectors in
-    if get_debug_adt () then
+    if Options.get_debug_adt () then
       Printer.print_dbg ~flushed:false
         ~module_name:"Adt_rel" ~function_name:"update_cs_modulo_eq"
         "update selectors modulo eq: %a |-> %a@ "
@@ -570,7 +566,7 @@ let update_cs_modulo_eq r1 r2 ex env eqs =
       MHs.fold
         (fun hs l mhs ->
            if trivial_tester r2 hs then begin
-             if get_debug_adt () then
+             if Options.get_debug_adt () then
                Printer.print_dbg
                  ~flushed:false ~header:false
                  "make deduction because %a ? %a is trivial@ "
@@ -583,7 +579,7 @@ let update_cs_modulo_eq r1 r2 ex env eqs =
            MHs.add hs l mhs
         )old mhs
     in
-    if get_debug_adt () then
+    if Options.get_debug_adt () then
       Printer.print_dbg ~header:false "";
     { env with selectors = MX.add r2 _new env.selectors }, !eqs
   with Not_found -> env, eqs
@@ -601,7 +597,7 @@ let remove_redundancies la =
     )la
 
 let assume env uf la =
-  if get_disable_adts () then
+  if Options.get_disable_adts () then
     env, { Sig_rel.assume = []; remove = [] }
   else
     let la = remove_redundancies la in (* should be done globally in CCX *)
@@ -612,9 +608,9 @@ let assume env uf la =
       | None     -> env, eqs
       | Some hss ->
         if bol then
-          add_eq uf hss (embed r1) (embed r2) dep env eqs
+          add_eq uf hss (Th.embed r1) (Th.embed r2) dep env eqs
         else
-          add_diseq uf hss (embed r1) (embed r2) dep env eqs
+          add_diseq uf hss (Th.embed r1) (Th.embed r2) dep env eqs
     in
     Debug.print_env "before assume" env;
     let env, eqs =
@@ -657,10 +653,10 @@ let assume env uf la =
     Debug.print_env "after assume" env;
     let print fmt (a,_,_) =
       match a with
-      | Sig_rel.LTerm a -> fprintf fmt "%a" E.print a;
+      | Sig_rel.LTerm a -> Format.fprintf fmt "%a" E.print a;
       | _ -> assert false
     in
-    if get_debug_adt () then
+    if Options.get_debug_adt () then
       Printer.print_dbg ~module_name:"Adt_rel" ~function_name:"assume"
         "assume deduced %d equalities@ %a" (List.length eqs)
         (Printer.pp_list_no_space print) eqs;
@@ -672,19 +668,19 @@ let assume env uf la =
 let two = Numbers.Q.from_int 2
 
 let case_split env _ ~for_model =
-  if get_disable_adts () || not (get_enable_adts_cs()) then []
+  if Options.get_disable_adts () || not (Options.get_enable_adts_cs()) then []
   else
     begin
       assert (not for_model);
-      if get_debug_adt () then Debug.print_env "before cs" env;
+      if Options.get_debug_adt () then Debug.print_env "before cs" env;
       try
         let r, mhs = MX.choose env.selectors in
-        if get_debug_adt () then
+        if Options.get_debug_adt () then
           Printer.print_dbg ~flushed:false
             ~module_name:"Adt_rel" ~function_name:"case_split"
             "found r = %a@ " X.print r;
         let hs, _ = MHs.choose mhs in
-        if get_debug_adt () then
+        if Options.get_debug_adt () then
           Printer.print_dbg ~header:false
             "found hs = %a" Hs.print hs;
         (* cs on negative version would be better in general *)
@@ -696,7 +692,7 @@ let case_split env _ ~for_model =
     end
 
 let query env uf (ra, _, ex, _) =
-  if get_disable_adts () then None
+  if Options.get_disable_adts () then None
   else
     try
       match ra with

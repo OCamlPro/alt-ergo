@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-[@@@ocaml.warning "-33"]
-open Options
-
 module type HASHED =
 sig
   type elt

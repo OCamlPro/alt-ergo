@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-open Format
-
 module E = Expr
 module SE = E.Set
 
@@ -94,21 +91,21 @@ let congr_close_up g p touched =
     (find p g) touched
 
 let print g =
-  if get_debug_use () then
+  if Options.get_debug_use () then
     begin
-      let sterms fmt = SE.iter (fprintf fmt "%a " E.print) in
+      let sterms fmt = SE.iter (Format.fprintf fmt "%a " E.print) in
       let satoms fmt =
         SA.iter
           (fun (a,e) ->
-             fprintf fmt "%a %a" E.print a Explanation.print e)
+             Format.fprintf fmt "%a %a" E.print a Explanation.print e)
       in
       let print_sterms_and_atoms fmt (st,sa) =
         match SE.is_empty st,SA.is_empty sa with
-        | true, true -> fprintf fmt ""
-        | false, true -> fprintf fmt " is used by {%a}" sterms st
-        | true,false -> fprintf fmt " is used by {%a}" satoms sa
+        | true, true -> Format.fprintf fmt ""
+        | false, true -> Format.fprintf fmt " is used by {%a}" sterms st
+        | true,false -> Format.fprintf fmt " is used by {%a}" satoms sa
         | false, false ->
-          fprintf fmt " is used by {%a} and {%a}" sterms st satoms sa
+          Format.fprintf fmt " is used by {%a} and {%a}" sterms st satoms sa
       in
       Printer.print_dbg
         ~module_name:"Use" ~function_name:"print"

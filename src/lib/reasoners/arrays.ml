@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Options
-open Format
-
 type 'a abstract = unit
 
 module type ALIEN = sig
@@ -80,7 +77,7 @@ module Shostak (X : ALIEN) = struct
     in
     match acc with
     | Some (_, r) ->
-      r, asprintf "%a" X.print r (* it's a EUF constant *)
+      r, Format.asprintf "%a" X.print r (* it's a EUF constant *)
 
     | _ -> assert false
 

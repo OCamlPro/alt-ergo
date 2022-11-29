@@ -26,9 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Format
-open Options
-
 module Q = Numbers.Q
 
 module Ex = Explanation
@@ -51,12 +48,12 @@ exception No_finite_bound
 module Debug = struct
 
   let print_borne fmt = function
-    | Minfty -> fprintf fmt "-inf"
-    | Pinfty -> fprintf fmt "+inf"
+    | Minfty -> Format.fprintf fmt "-inf"
+    | Pinfty -> Format.fprintf fmt "+inf"
     | Strict (v, e) | Large (v, e) ->
-      fprintf fmt "%s" (Q.to_string v);
-      if get_verbose () || get_unsat_core () then
-        fprintf fmt " %a" Ex.print e
+      Format.fprintf fmt "%s" (Q.to_string v);
+      if Options.(get_verbose () || get_unsat_core ()) then
+        Format.fprintf fmt " %a" Ex.print e
 
   let print_interval fmt (b1,b2) =
     let c1, c2 = match b1, b2 with
@@ -65,18 +62,18 @@ module Debug = struct
       | _, Large _ -> ']', ']'
       | _, _ -> ']', '['
     in
-    fprintf fmt "%c%a;%a%c" c1 print_borne b1 print_borne b2 c2
+    Format.fprintf fmt "%c%a;%a%c" c1 print_borne b1 print_borne b2 c2
 
   let print_list fmt = function
-    | [] -> fprintf fmt "[empty]"
+    | [] -> Format.fprintf fmt "[empty]"
     | e::l ->
       print_interval fmt e;
-      List.iter (fprintf fmt " U %a" print_interval) l
+      List.iter (Format.fprintf fmt " U %a" print_interval) l
 
   let print fmt { ints; expl = e; _ } =
     print_list fmt ints;
-    if get_verbose () || get_unsat_core () then
-      fprintf fmt " %a" Ex.print e
+    if Options.(get_verbose () || get_unsat_core ()) then
+      Format.fprintf fmt " %a" Ex.print e
 
 end
 (*BISECT-IGNORE-END*)

@@ -13,8 +13,6 @@ module Sy = Symbols
 module Hs = Hstring
 module E = Expr
 
-open Options
-
 module Q = Numbers.Q
 module Z = Numbers.Z
 

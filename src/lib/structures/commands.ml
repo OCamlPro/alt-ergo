@@ -26,15 +26,13 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Typed
-
 (* Sat entry *)
 
 type sat_decl_aux =
   | Assume of string * Expr.t * bool
   | PredDef of Expr.t * string (*name of the predicate*)
-  | RwtDef of (Expr.t rwt_rule) list
-  | Query of string *  Expr.t * goal_sort
+  | RwtDef of (Expr.t Typed.rwt_rule) list
+  | Query of string *  Expr.t * Typed.goal_sort
   | ThAssume of Expr.th_elt
   | Push of int
   | Pop of int
@@ -53,11 +51,11 @@ let print_aux fmt = function
     Format.fprintf fmt "rwrts: @[<v>%a@]"
       (Util.print_list_pp
          ~sep:Format.pp_print_space
-         ~pp:(print_rwt Expr.print)
+         ~pp:(Typed.print_rwt Expr.print)
       ) l
   | Query (name, e, sort) ->
     Format.fprintf fmt "query %s(%a): @[<hov>%a@]"
-      name print_goal_sort sort Expr.print e
+      name Typed.print_goal_sort sort Expr.print e
   | ThAssume t ->
     Format.fprintf fmt "th assume %a" Expr.print_th_elt t
   | Push n -> Format.fprintf fmt "Push %d" n
