@@ -381,7 +381,7 @@ let print_binders =
 module SmtPrinter = struct
 
   let rec print_formula fmt form xs bind =
-    let fprintf = Format.fprintf in
+    let open Format in
     match form, xs, bind with
     | Sy.F_Unit _, [f1; f2], _ ->
       Format.fprintf fmt "@[(and %a %a)@]" print_silent f1 print_silent f2
@@ -412,7 +412,7 @@ module SmtPrinter = struct
     | _ -> assert false
 
   and print_lit fmt lit xs =
-    let fprintf = Format.fprintf in
+    let open Format in
     match lit, xs with
     | Sy.L_eq, a::l ->
       fprintf fmt "(= %a%a)"
@@ -452,7 +452,7 @@ module SmtPrinter = struct
       assert false
 
   and print_silent fmt t =
-    let fprintf = Format.fprintf in
+    let open Format in
     let { f ; xs ; ty; bind; _ } = t in
     match f, xs with
     (* Formulas *)
@@ -558,7 +558,7 @@ module AEPrinter = struct
 
   (* Same as SmtPrinter.print_formula *)
   let rec print_formula fmt form xs bind =
-    let fprintf = Format.fprintf in
+    let open Format in
     match form, xs, bind with
     | Sy.F_Unit _, [f1; f2], _ ->
       fprintf fmt "@[(%a /\\@ %a)@]" print_silent f1 print_silent f2
@@ -589,7 +589,7 @@ module AEPrinter = struct
     | _ -> assert false
 
   and print_lit fmt lit xs =
-    let fprintf = Format.fprintf in
+    let open Format in
     match lit, xs with
     | Sy.L_eq, a::l ->
       fprintf fmt "(%a%a)"
@@ -630,7 +630,7 @@ module AEPrinter = struct
       assert false
 
   and print_silent fmt t =
-    let fprintf = Format.fprintf in
+    let open Format in
     let { f ; xs ; ty; bind; _ } = t in
     match f, xs with
     (* Formulas *)

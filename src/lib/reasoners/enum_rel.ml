@@ -33,7 +33,7 @@ module Hs = Hstring
 type 'a abstract = 'a Enum.abstract = Cons of Hs.t * Ty.t |  Alien of 'a
 
 module X = Shostak.Combine
-module Th = Shostak.Enum
+module Sh = Shostak.Enum
 
 module Ex = Explanation
 
@@ -124,7 +124,7 @@ let add_diseq hss sm1 sm2 dep env eqs =
       if HSS.cardinal enum = 1 then
         let h' = HSS.choose enum in
         env,
-        (Sig_rel.LSem (LR.mkv_eq r (Th.is_mine (Cons(h',ty)))),
+        (Sig_rel.LSem (LR.mkv_eq r (Sh.is_mine (Cons(h',ty)))),
          ex, Th_util.Other)::eqs
       else env, eqs
 
@@ -137,7 +137,7 @@ let add_diseq hss sm1 sm2 dep env eqs =
         let ex = Ex.union dep ex1 in
         let h' = HSS.choose enum1 in
         let ty = X.type_info r1 in
-        (Sig_rel.LSem (LR.mkv_eq r1 (Th.is_mine (Cons(h',ty)))),
+        (Sig_rel.LSem (LR.mkv_eq r1 (Sh.is_mine (Cons(h',ty)))),
          ex, Th_util.Other)::eqs
       else eqs
     in
@@ -146,7 +146,7 @@ let add_diseq hss sm1 sm2 dep env eqs =
         let ex = Ex.union dep ex2 in
         let h' = HSS.choose enum2 in
         let ty = X.type_info r2 in
-        (Sig_rel.LSem (LR.mkv_eq r2 (Th.is_mine (Cons(h',ty)))),
+        (Sig_rel.LSem (LR.mkv_eq r2 (Sh.is_mine (Cons(h',ty)))),
          ex, Th_util.Other)::eqs
       else eqs
     in
@@ -176,7 +176,7 @@ let add_eq hss sm1 sm2 dep env eqs =
     if HSS.cardinal diff = 1 then
       let h' = HSS.choose diff in
       let ty = X.type_info r1 in
-      env, (Sig_rel.LSem (LR.mkv_eq r1 (Th.is_mine (Cons(h',ty)))),
+      env, (Sig_rel.LSem (LR.mkv_eq r1 (Sh.is_mine (Cons(h',ty)))),
             ex, Th_util.Other)::eqs
     else env, eqs
 
@@ -195,7 +195,7 @@ let count_splits env la =
 
 let add_aux env r =
   Debug.add r;
-  match Th.embed r, values_of r with
+  match Sh.embed r, values_of r with
   | Alien r, Some hss ->
     if MX.mem r env.mx then env else
       { env with mx = MX.add r (hss, Ex.empty) env.mx }
@@ -214,9 +214,9 @@ let assume env uf la =
     | Some hss ->
       Debug.assume bol r1 r2;
       if bol then
-        add_eq hss (Th.embed r1) (Th.embed r2) dep env eqs
+        add_eq hss (Sh.embed r1) (Sh.embed r2) dep env eqs
       else
-        add_diseq hss (Th.embed r1) (Th.embed r2) dep env eqs
+        add_diseq hss (Sh.embed r1) (Sh.embed r2) dep env eqs
   in
   Debug.print_env env;
   let env, eqs =
@@ -246,7 +246,7 @@ let case_split env uf ~for_model =
   let acc = MX.fold
       (fun r (hss, _) acc ->
          let x, _ = Uf.find_r uf r in
-         match Th.embed x with
+         match Sh.embed x with
          | Cons _ -> acc (* already bound to an Enum const *)
          | _ -> (* cs even if sz below is equal to 1 *)
            let sz = HSS.cardinal hss in
@@ -262,7 +262,7 @@ let case_split env uf ~for_model =
        Numbers.Q.compare
          (Numbers.Q.mult n env.size_splits) (Options.get_max_split ()) <= 0  ||
        Numbers.Q.sign  (Options.get_max_split ()) < 0 then
-      let r' = Th.is_mine (Cons(hs,X.type_info r)) in
+      let r' = Sh.is_mine (Cons(hs,X.type_info r)) in
       Debug.case_split r r';
       [LR.mkv_eq r r', true, Th_util.CS(Th_util.Th_sum, n)]
     else []

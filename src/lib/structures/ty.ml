@@ -79,7 +79,7 @@ let assoc_destrs hs cases =
 let print_generic body_of =
   let h = Hashtbl.create 17 in
   let rec print =
-    let fprintf = Format.fprintf in
+    let open Format in
     fun body_of fmt -> function
       | Tint ->
         if Options.get_output_smtlib () then fprintf fmt "Int"

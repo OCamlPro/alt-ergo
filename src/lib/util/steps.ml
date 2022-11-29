@@ -28,7 +28,7 @@
 
 (* Define the type of increment *)
 type incr_kind =
-    Matching           (* Matching step increment *)
+  | Matching           (* Matching step increment *)
   | Interval_Calculus  (* Arith : Interval Calculus increment *)
   | Fourier            (* Arith : FourierMotzkin step increment *)
   | Omega              (* Arith : number of omega procedure on  Real and Int *)
@@ -99,7 +99,7 @@ let incr k =
       (* Since n refers to the number of terms sent to the theories no
        * multiplier is needed here *)
       if n < 0 then
-        Errors.run_error (Errors.Invalid_steps_count n);
+        Errors.run_error (Invalid_steps_count n);
       naive_steps := !naive_steps + n;
   end;
   let steps_bound = Options.get_steps_bound () in
@@ -112,9 +112,8 @@ let incr k =
         else if !steps > 0 then !steps
         else steps_bound
       in
-      Errors.run_error (Errors.Steps_limit n)
+      Errors.run_error (Steps_limit n)
     end
-
 
 let reset_steps () =
   Stack.clear all_steps;
@@ -152,7 +151,6 @@ let save_steps, reinit_steps =
  * used *)
 let get_steps () =
   max !naive_steps !steps
-
 
 (** Functions useful for case-split steps *)
 let cs_steps_cpt = ref 0

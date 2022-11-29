@@ -195,7 +195,7 @@ module Make (X : Sig.X) = struct
     Timers.exec_timer_pause Timers.M_AC Timers.F_make;
     x
 
-  let is_mine_symb sy _ = Options.get_no_ac() == false && Sy.is_ac sy
+  let is_mine_symb sy _ = (not @@ Options.get_no_ac ()) && Sy.is_ac sy
 
   let type_info { t = ty; _ } = ty
 

@@ -106,7 +106,7 @@ let remove_fresh fe s =
 let add_fresh fe s = S.add fe s
 
 let print fmt ex =
-  let fprintf = Format.fprintf in
+  let open Format in
   if Options.get_debug_explanations () then begin
     fprintf fmt "{";
     S.iter (function

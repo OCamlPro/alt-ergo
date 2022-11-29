@@ -121,13 +121,12 @@ module Types = struct
             let ty = MString.find s env.to_ty in
             let vars = check_number_args loc lty ty in
             Ty.instantiate vars lty ty
-          with Not_found ->
-            Errors.typing_error (Errors.UnknownType s) loc
+          with Not_found -> Errors.typing_error (UnknownType s) loc
       end
 
   let add_decl ~recursive env vars id body loc =
     if MString.mem id env.to_ty && not recursive then
-      Errors.typing_error (Errors.ClashType id) loc;
+      Errors.typing_error (ClashType id) loc;
     let ty_vars = fresh_vars ~recursive vars loc in
     match body with
     | Abstract ->
@@ -455,10 +454,8 @@ let rec type_term ?(call_from_type_form=false) env f =
           Options.tool_req 1 (append_type "TR-Typing-App type" t);
           mk_adequate_app p s te_args t kind, t
         with
-        | Ty.TypeClash(t1,t2) ->
-          Errors.typing_error (Unification(t1,t2)) loc
-        | Invalid_argument _ ->
-          Errors.typing_error (WrongNumberofArgs p) loc
+        | Ty.TypeClash(t1,t2) -> Errors.typing_error (Unification(t1,t2)) loc
+        | Invalid_argument _ -> Errors.typing_error (WrongNumberofArgs p) loc
       end
 
     | PPinfix(t1,(PPadd | PPsub | PPmul | PPdiv as op),t2) ->
@@ -493,8 +490,7 @@ let rec type_term ?(call_from_type_form=false) env f =
         | Ty.Tint, Ty.Tint ->
           Options.tool_req 1 (append_type "TR-Typing-OpMod type" ty1);
           TTinfix(te1,s,te2) , ty1
-        | _ ->
-          Errors.typing_error (ShouldHaveTypeInt ty1) t1.pp_loc
+        | _ -> Errors.typing_error (ShouldHaveTypeInt ty1) t1.pp_loc
       end
     | PPinfix(t1, (PPpow_int | PPpow_real as op), t2) ->
       begin
@@ -564,10 +560,8 @@ let rec type_term ?(call_from_type_form=false) env f =
         let j = int_of_string j in
         match tye with
         | Ty.Tbitv n ->
-          if i>j then
-            Errors.typing_error (BitvExtract(i,j)) loc;
-          if j>=n then
-            Errors.typing_error (BitvExtractRange(n,j) ) loc;
+          if i>j then Errors.typing_error (BitvExtract(i,j)) loc;
+          if j>=n then Errors.typing_error (BitvExtractRange(n,j) ) loc;
           let tei = type_term env ei in
           let tej = type_term env ej in
           Options.tool_req 1
@@ -611,8 +605,7 @@ let rec type_term ?(call_from_type_form=false) env f =
             TTset(te1, te2, te3), ty1
           | _ -> Errors.typing_error ShouldHaveTypeArray t1.pp_loc
         with
-        | Ty.TypeClash(t, t') ->
-          Errors.typing_error (Unification(t, t')) loc
+        | Ty.TypeClash(t, t') -> Errors.typing_error (Unification(t, t')) loc
       end
     | PPif(cond,t2,t3) ->
       begin
@@ -742,8 +735,7 @@ let rec type_term ?(call_from_type_form=false) env f =
           Ty.unify te.c.tt_ty ty;
           te.c.tt_desc, Ty.shorten te.c.tt_ty
         with
-        | Ty.TypeClash(t1,t2) ->
-          Errors.typing_error (Unification(t1,t2)) loc
+        | Ty.TypeClash(t1,t2) -> Errors.typing_error (Unification(t1,t2)) loc
       end
 
     | PPproject (grded, t, lbl) ->
@@ -758,7 +750,6 @@ let rec type_term ?(call_from_type_form=false) env f =
           | _, {Env.args = [arg] ; result}, Env.RecordDestr ->
             Ty.unify te.c.tt_ty arg;
             TTdot (te, Hstring.make lbl), Ty.shorten result
-
           | _ -> assert false
         with Ty.TypeClash(t1,t2) ->
           Errors.typing_error (Unification(t1,t2)) loc
@@ -777,8 +768,7 @@ let rec type_term ?(call_from_type_form=false) env f =
           [{Ty.constr = record_constr; destrs = lbs}]
         | Ty.Tsum (_,l) ->
           List.map (fun e -> {Ty.constr = e; destrs = []}) l
-        | _ ->
-          Errors.typing_error (ShouldBeADT ty) loc
+        | _ -> Errors.typing_error (ShouldBeADT ty) loc
       in
       let pats =
         List.rev @@
@@ -804,7 +794,6 @@ let rec type_term ?(call_from_type_form=false) env f =
           ty
       in
       TTmatch (e, filtered_pats), ty
-
     | _ ->
       if call_from_type_form then Errors.typing_error SyntaxError loc;
       TTform (type_form env f), Ty.Tbool
@@ -919,8 +908,7 @@ and type_form ?(in_theory=false) env f =
           let t1 = {c = {tt_desc=TTvar s; tt_ty=Ty.Tbool};
                     annot = new_id ()} in
           TFatom (mk_ta_eq t1 t2)
-        | _ ->
-          Errors.typing_error (NotAPropVar p) f.pp_loc
+        | _ -> Errors.typing_error (NotAPropVar p) f.pp_loc
       in
       r
 

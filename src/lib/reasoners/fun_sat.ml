@@ -175,12 +175,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
   }
 
-  let all_models_sat_env = ref None
   let latest_saved_env = ref None
   let terminated_normally = ref false
 
   let reset_refs () =
-    all_models_sat_env := None;
     latest_saved_env := None;
     terminated_normally := false;
     Steps.reset_steps ()

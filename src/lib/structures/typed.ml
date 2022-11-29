@@ -200,7 +200,7 @@ let print_binders fmt l =
   List.iter (fun c -> Format.fprintf fmt "%a, " print_binder c) l
 
 let rec print_term =
-  let fprintf = Format.fprintf in
+  let open Format in
   fun fmt t -> match t.c.tt_desc with
     | TTconst Ttrue ->
       fprintf fmt "true"
@@ -294,7 +294,7 @@ and print_term_binders fmt l =
 and print_term_list fmt = List.iter (Format.fprintf fmt "%a," print_term)
 
 and print_atom =
-  let fprintf = Format.fprintf in
+  let open Format in
   fun fmt a -> match a.c with
     | TAtrue ->
       fprintf fmt "True"
@@ -321,7 +321,7 @@ and print_triggers fmt l =
   List.iter (fun (tr, _) -> Format.fprintf fmt "%a | " print_term_list tr) l
 
 and print_formula =
-  let fprintf = Format.fprintf in
+  let open Format in
   fun fmt f -> match f.c with
     | TFatom a ->
       print_atom fmt a

@@ -12,19 +12,18 @@
 module SE = Expr.Set
 module MS = Map.Make(String)
 
-type inst_info =
-  {
-    loc : Loc.t;
-    kept : int;
-    ignored : int;
-    all_insts : SE.t;
-    confl : int;
-    decided : int;
-    consumed : SE.t;
-    all : SE.t;
-    produced : SE.t;
-    _new : SE.t;
-  }
+type inst_info = {
+  loc : Loc.t;
+  kept : int;
+  ignored : int;
+  all_insts : SE.t;
+  confl : int;
+  decided : int;
+  consumed : SE.t;
+  all : SE.t;
+  produced : SE.t;
+  _new : SE.t;
+}
 
 type t = {
   decisions : int ref;
@@ -54,30 +53,30 @@ type t = {
   instances_map_printed : bool ref
 }
 
-let state =
-  { decisions = ref 0;
-    assumes = ref 0;
-    assumes_current_lvl = ref 0;
-    queries = ref 0;
-    instantiation_rounds = ref 0;
-    instances = ref 0;
-    decision_lvl = ref 0;
-    instantiation_lvl = ref 0;
+let state = {
+  decisions = ref 0;
+  assumes = ref 0;
+  assumes_current_lvl = ref 0;
+  queries = ref 0;
+  instantiation_rounds = ref 0;
+  instances = ref 0;
+  decision_lvl = ref 0;
+  instantiation_lvl = ref 0;
 
-    th_conflicts = ref 0;
-    b_conflicts = ref 0;
-    bcp_th_conflicts = ref 0;
-    bcp_b_conflicts = ref 0;
-    bcp_mix_conflicts = ref 0;
+  th_conflicts = ref 0;
+  b_conflicts = ref 0;
+  bcp_th_conflicts = ref 0;
+  bcp_b_conflicts = ref 0;
+  bcp_mix_conflicts = ref 0;
 
-    t_red  = ref 0;
-    b_red  = ref 0;
-    t_elim = ref 0;
-    b_elim = ref 0;
+  t_red  = ref 0;
+  b_red  = ref 0;
+  t_elim = ref 0;
+  b_elim = ref 0;
 
-    instances_map = ref MS.empty;
-    instances_map_printed = ref false
-  }
+  instances_map = ref MS.empty;
+  instances_map_printed = ref false
+}
 
 let set_sigprof () =
   let tm =
@@ -533,7 +532,7 @@ let print_instances_generation forced _steps fmt _timers =
         ) insts
     in
     List.iter
-      (let fprintf = Format.fprintf in
+      (let open Format in
        fun (name, i, card, r) ->
          fprintf fmt "ratio kept/all: %s| " (float_resize r 8);
          fprintf fmt "<> insts: %s| " (int_resize card 5);
@@ -629,7 +628,7 @@ let switch fmt =
 
 
 let float_print =
-  let fprintf = Format.fprintf in
+  let open Format in
   fun fmt v ->
     if Stdlib.(=) v 0. then fprintf fmt "--     "
     else if (Stdlib.compare v 10.) < 0 then fprintf fmt "%0.5f" v
@@ -637,7 +636,7 @@ let float_print =
     else fprintf fmt "%0.3f" v
 
 let line_of_module =
-  let fprintf = Format.fprintf in
+  let open Format in
   fun arr fmt f ->
     fprintf fmt "%s " (string_resize (Timers.string_of_ty_function f) 13);
     let cpt = ref 0. in
@@ -651,7 +650,7 @@ let line_of_module =
 
 
 let line_of_sum_module =
-  let fprintf = Format.fprintf in
+  let open Format in
   fun fmt timers ->
     for _ = 0 to 206 do fprintf fmt "-" done;
     fprintf fmt "|@.";
@@ -663,7 +662,7 @@ let line_of_sum_module =
     fprintf fmt "| GTimer %a |@." float_print (Options.Time.value())
 
 let timers_table =
-  let fprintf = Format.fprintf in
+  let open Format in
   fun forced fmt timers ->
     if not forced then ignore(Sys.command("clear"));
     Timers.update timers;
@@ -683,7 +682,7 @@ let timers_table =
     line_of_sum_module fmt timers
 
 let print =
-  let fprintf = Format.fprintf in
+  let open Format in
   fun all steps timers fmt ->
     print_initial_info fmt;
     set_sigprof();

@@ -117,8 +117,8 @@ module Main : S = struct
               diseqs  = Queue.create ();
               touched = Util.MI.empty }
 
-  let add_fact (facts : _ Sig_rel.facts) ((lit, _, _) as e) =
-    match (lit : _ Sig_rel.literal) with
+  let add_fact (facts: r Sig_rel.facts) ((lit, _, _) as e) =
+    match (lit: r Sig_rel.literal) with
     | LSem Xliteral.Pred _ | LSem Xliteral.Eq _ ->
       Queue.push e facts.equas
     | LSem Xliteral.Distinct _ -> Queue.push e facts.diseqs
@@ -134,14 +134,14 @@ module Main : S = struct
   module Debug = struct
     open Printer
 
-    let facts (f : r Sig_rel.facts) msg =
+    let facts (f: r Sig_rel.facts) msg =
       let aux fmt q =
         Q.iter
           (fun (lit,_,_) ->
-             match lit with
-             | Sig_rel.LSem sa ->
+             match (lit: r Sig_rel.literal) with
+             | LSem sa ->
                Format.fprintf fmt "  > LSem  %a@." LR.print (LR.make sa)
-             | Sig_rel.LTerm a ->
+             | LTerm a ->
                Format.fprintf fmt "  > LTerm %a@."E.print a
           )q
       in
@@ -262,7 +262,7 @@ module Main : S = struct
       | Some (dep, _) -> Ex.union ex dep
       | None -> raise Exit
 
-  let equal_only_by_congruence env facts t1 t2 =
+  let equal_only_by_congruence env (facts: r Sig_rel.facts) t1 t2 =
     if not (E.equal t1 t2) then
       let { E.f = f1; xs = xs1; ty = ty1; _ } =
         match E.term_view t1 with
@@ -279,10 +279,10 @@ module Main : S = struct
           let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
           let a = E.mk_eq ~iff:false t1 t2 in
           Debug.congruent a ex;
-          Q.push (Sig_rel.LTerm a, ex, Th_util.Other) facts.Sig_rel.equas
+          Q.push (Sig_rel.LTerm a, ex, Th_util.Other) facts.equas
         with Exit -> ()
 
-  let congruents env facts t1 s =
+  let congruents env (facts: r Sig_rel.facts) t1 s =
     match E.term_view t1 with
     | E.Term { E.xs = []; _ } -> ()
     | E.Term { E.f; ty; _ } when X.fully_interpreted f ty -> ()
@@ -342,7 +342,7 @@ module Main : S = struct
 
   (* Begin: new implementation of add, add_term, assume_literals and all that *)
 
-  let new_facts_by_contra_congruence env facts r bol =
+  let new_facts_by_contra_congruence env (facts: r Sig_rel.facts) r bol =
     match X.term_extract r with
     | None, _ -> ()
     | Some _, false -> () (* not an original term *)
@@ -362,9 +362,7 @@ module Main : S = struct
                    | Some (ex_r, _) ->
                      let a = E.mk_distinct ~iff:false [x; y] in
                      Debug.contra_congruence a ex_r;
-                     Q.push
-                       (Sig_rel.LTerm a, ex_r, Th_util.Other)
-                       facts.Sig_rel.diseqs
+                     Q.push (Sig_rel.LTerm a, ex_r, Th_util.Other) facts.diseqs
                    | None -> assert false
                  end
              | _ -> ()
@@ -395,7 +393,7 @@ module Main : S = struct
     else if X.equal (fst (Uf.find_r env.uf r)) (X.bot()) then
       new_facts_by_contra_congruence env facts r E.vrai
 
-  let congruence_closure env (facts:r Sig_rel.facts) r1 r2 ex =
+  let congruence_closure env (facts: r Sig_rel.facts) r1 r2 ex =
     Options.exec_thread_yield ();
     Debug.cc r1 r2;
     let uf, res = Uf.union env.uf r1 r2 ex in
@@ -544,8 +542,8 @@ module Main : S = struct
         ) env lvs
 
   let semantic_view env (a, ex, orig) facts =
-    match a with
-    | Sig_rel.LTerm a -> (* Over terms: add terms + term_canonical_view *)
+    match (a: r Sig_rel.literal) with
+    | LTerm a -> (* Over terms: add terms + term_canonical_view *)
       let env = add env facts a ex in
       let sa, ex = term_canonical_view env a ex in
       env, (sa, Some a, ex, orig)
@@ -576,8 +574,8 @@ module Main : S = struct
     if Uf.already_distinct env.uf lr then env
     else  {env with uf = Uf.distinct env.uf lr ex}
 
-  let rec assume_equalities env choices facts =
-    if Q.is_empty facts.Sig_rel.equas then env, choices
+  let rec assume_equalities env choices (facts: r Sig_rel.facts) =
+    if Q.is_empty facts.equas then env, choices
     else begin
       Debug.facts facts "equalities";
       let e = Q.pop facts.equas in
@@ -633,7 +631,7 @@ module Main : S = struct
     end
 
   let rec norm_queue env ineqs (facts:r Sig_rel.facts) =
-    if Q.is_empty facts.Sig_rel.ineqs then env, List.rev ineqs
+    if Q.is_empty facts.ineqs then env, List.rev ineqs
     else
       let e = Q.pop facts.ineqs in
       let env, e' = semantic_view env e facts in
