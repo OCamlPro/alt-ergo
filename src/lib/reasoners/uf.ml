@@ -327,6 +327,8 @@ module Env = struct
       Debug.lookup_not_found t env;
       assert false (*X.make t, Ex.empty*) (* XXXX *)
 
+  (* TODO: it would be cleaner to have a unique function look_by_t
+     that return an option. *)
   let lookup_by_t___without_failure t env =
     try MapX.find (ME.find t env.make) env.repr
     with Not_found -> fst (X.make t), Ex.empty

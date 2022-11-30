@@ -526,12 +526,12 @@ module Main_Default : S = struct
          match a with
          | LTerm r -> begin
              match E.lit_view r with
-             | E.Eq (t1, t2) ->
-               SE.add t1 (SE.add t2 acc)
+             | E.Eq {lhs; rhs} ->
+               SE.add lhs (SE.add rhs acc)
              | E.Eql l | E.Distinct l | E.Builtin (_, _, l) ->
                List.fold_right SE.add l acc
-             | E.Pred (t1, _) ->
-               SE.add t1 acc
+             | E.Pred (lhs, _) ->
+               SE.add lhs acc
 
            end
          | _ -> acc)
@@ -656,14 +656,14 @@ module Main_Default : S = struct
       Debug.query a;
       try
         match E.lit_view a with
-        | E.Eq (t1, t2)  ->
+        | E.Eq {lhs; rhs}  ->
           let t = add_and_process_conseqs a t in
-          CC_X.are_equal t.gamma t1 t2 ~init_terms:false
+          CC_X.are_equal t.gamma lhs rhs ~init_terms:false
 
-        | E.Distinct [t1; t2] ->
+        | E.Distinct [lhs; rhs] ->
           let na = E.neg a in
           let t = add_and_process_conseqs na t in (* na ? *)
-          CC_X.are_distinct t.gamma t1 t2
+          CC_X.are_distinct t.gamma lhs rhs
 
         | E.Distinct _ | E.Eql _ ->
           (* we only assume toplevel distinct with more that one arg.

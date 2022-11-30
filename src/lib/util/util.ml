@@ -93,7 +93,7 @@ let string_of_th_ext ext =
   | NIA -> "NIA"
   | FPA -> "FPA"
 
-let [@inline always] compare_algebraic s1 s2 f_same_constrs_with_args =
+let[@inline always] compare_algebraic s1 s2 f_same_constrs_with_args =
   let r1 = Obj.repr s1 in
   let r2 = Obj.repr s2 in
   match Obj.is_int r1, Obj.is_int r2 with
@@ -104,7 +104,7 @@ let [@inline always] compare_algebraic s1 s2 f_same_constrs_with_args =
     let cmp_tags = Obj.tag r1 - Obj.tag r2 in
     if cmp_tags <> 0 then cmp_tags else f_same_constrs_with_args (s1, s2)
 
-let [@inline always] cmp_lists l1 l2 cmp_elts =
+let[@inline always] cmp_lists l1 l2 cmp_elts =
   try
     List.iter2
       (fun a b ->

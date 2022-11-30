@@ -108,15 +108,15 @@ type expr = t
 type subst = expr SMap.t * Ty.subst
 
 type lit_view =
-  | Eq of t * t
+  | Eq of {lhs: t; rhs: t}
   | Eql of t list
   | Distinct of t list
   | Builtin of bool * Sy.builtin * t list
   | Pred of t * bool
 
 type form_view =
-  | Unit of t*t  (* unit clauses *)
-  | Clause of t*t*bool      (* a clause (t1 or t2) bool <-> is implication *)
+  | Unit of t * t  (* unit clauses *)
+  | Clause of t * t * bool (* a clause (t1 or t2) bool <-> is implication *)
   | Iff of t * t
   | Xor of t * t
   | Literal of t   (* an atom *)
@@ -707,15 +707,15 @@ let lit_view t =
     | Sy.Lit lit ->
       begin match lit, xs with
         | (Sy.L_eq | Sy.L_neg_eq), ([] | [_]) -> assert false
-        | Sy.L_eq, [a;b] -> Eq (a, b)
-        | Sy.L_eq, l     -> Eql l
+        | Sy.L_eq, [lhs; rhs] -> Eq {lhs; rhs}
+        | Sy.L_eq, l -> Eql l
         | Sy.L_neg_eq, l -> Distinct l
         | Sy.L_built x, l -> Builtin(true, x, l)
         | Sy.L_neg_built x, l -> Builtin(false, x, l)
         | Sy.L_neg_pred, [a] -> Pred(a, true)
         | Sy.L_neg_pred, _ -> assert false
       end
-    | _ -> Pred(t, false)
+    | _ -> Pred(t, false) (* FIXME: This wildcase is dangereous! *)
 
 let form_view t =
   let { f; xs; bind; _ } = t in
@@ -2585,10 +2585,10 @@ module Purification = struct
   and purify_literal e =
     if List.for_all is_pure e.xs then e (* this is OK for lits and terms *)
     else match lit_view e with
-      | Eq (a, b)  ->
-        assert (a.ty != Ty.Tbool);
+      | Eq {lhs; rhs} ->
+        assert (lhs.ty != Ty.Tbool);
         (* TODO: translate to iff *)
-        purify_eq [a; b]
+        purify_eq [lhs; rhs]
       | Eql l      -> purify_eq l
       | Distinct l -> purify_distinct l
       | Builtin (neg,prd,l) -> purify_builtin neg prd l

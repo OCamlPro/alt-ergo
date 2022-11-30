@@ -291,9 +291,9 @@ module Main : S = struct
       let r1, ex1 = find t1 in
       let ex = Ex.union ex1 ex_a in
       LR.mkv_pred r1 b, ex
-    | E.Eq (t1, t2) ->
-      let r1, ex1 = find t1 in
-      let r2, ex2 = find t2 in
+    | E.Eq {lhs; rhs} ->
+      let r1, ex1 = find lhs in
+      let r2, ex2 = find rhs in
       let ex = Ex.union (Ex.union ex1 ex2) ex_a in
       LR.mkv_eq r1 r2, ex
     | E.Eql lt ->
@@ -502,9 +502,9 @@ module Main : S = struct
     match E.lit_view a with
     | E.Pred (t1, _) ->
       add_term env facts t1 ex
-    | E.Eq (t1, t2) ->
-      let env = add_term env facts t1 ex in
-      add_term env facts t2 ex
+    | E.Eq {lhs; rhs} ->
+      let env = add_term env facts lhs ex in
+      add_term env facts rhs ex
     | E.Eql lt ->
       List.fold_left
         (fun env t-> add_term env facts t ex) env  lt

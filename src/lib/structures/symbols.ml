@@ -27,8 +27,8 @@
 (******************************************************************************)
 
 type builtin =
-    LE | LT (* arithmetic *)
-  | IsConstr of Hstring.t (* ADT tester *)
+    LE | LT
+  | IsConstr of Hstring.t
 
 type operator =
     Plus | Minus | Mult | Div | Modulo
@@ -38,12 +38,11 @@ type operator =
   | Sqrt_real_default | Sqrt_real_excess
   | Min_real | Min_int | Max_real | Max_int | Integer_log2
   | Pow | Integer_round
-  | Constr of Hstring.t (* enums, adts *)
+  | Constr of Hstring.t
   | Destruct of Hstring.t * bool
   | Tite
 
 type lit =
-  (* literals *)
   | L_eq
   | L_built of builtin
   | L_neg_eq
@@ -51,7 +50,6 @@ type lit =
   | L_neg_pred
 
 type form =
-  (* formulas *)
   | F_Unit of bool
   | F_Clause of bool
   | F_Iff
@@ -63,9 +61,8 @@ type name_kind = Ac | Other
 
 type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
 
-type bound = (* private *)
+type bound =
   { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
-
 
 type t =
   | True
@@ -104,7 +101,7 @@ let mk_maps_to x = MapsTo x
 
 let is_ac x = match x with
   | Name(_, Ac) -> true
-  | _           -> false
+  | _ -> false
 
 let underscore =
   Random.self_init ();

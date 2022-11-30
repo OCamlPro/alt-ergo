@@ -26,9 +26,13 @@
 (*                                                                            *)
 (******************************************************************************)
 
+(** {1 Types} *)
+
 type builtin =
-    LE | LT (* arithmetic *)
-  | IsConstr of Hstring.t (* ADT tester *)
+  | LE                    (** {b L}ess or {b e}qual symbol. *)
+  | LT (* arithmetic *)   (** {b L}ess {b t}han symbol. *)
+  | IsConstr of Hstring.t (** ADT tester symbol. *)
+(** Built-in symbols. *)
 
 type operator =
   | Plus | Minus | Mult | Div | Modulo
@@ -54,8 +58,8 @@ type form =
   (* formulas *)
   | F_Unit of bool
   | F_Clause of bool
-  | F_Iff
-  | F_Xor
+  | F_Iff             (** Symbol of equivalence. *)
+  | F_Xor             (** Symbol of exclusive disjunction. *)
   | F_Lemma
   | F_Skolem
 
@@ -67,70 +71,23 @@ type bound = private
   { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
 
 type t =
-  | True
+  | True                           (** Top *)
   | False
-  | Void
+  | Void                           (** Unit symbol. *)
   | Name of Hstring.t * name_kind
   | Int of Hstring.t
   | Real of Hstring.t
   | Bitv of string
-  | Op of operator
-  | Lit of lit
-  | Form of form
-  | Var of Var.t
+  | Op of operator                 (** Operator symbol. *)
+  | Lit of lit                     (** Literal symbol. *)
+  | Form of form                   (** Formula symbol. *)
+  | Var of Var.t                   (** Variable symbol. *)
   | In of bound * bound
   | MapsTo of Var.t
   | Let
+  (** Type of symbols. *)
 
-val name : ?kind:name_kind -> string -> t
-val var : Var.t -> t
-val underscore : t
-val int : string -> t
-val real : string -> t
-val constr : string -> t
-val destruct : guarded:bool -> string -> t
-val mk_bound : bound_kind -> Ty.t -> is_open:bool -> is_lower:bool -> bound
-val mk_in : bound -> bound -> t
-val mk_maps_to : Var.t -> t
-
-val is_ac : t -> bool
-
-val equal : t -> t -> bool
-val compare : t -> t -> int
-val compare_bounds : bound -> bound -> int
-val hash : t -> int
-
-val to_string : t -> string
-val print : Format.formatter -> t -> unit
-
-val to_string_clean : t -> string
-val print_clean : Format.formatter -> t -> unit
-
-(*val dummy : t*)
-
-val fresh : ?is_var:bool -> string -> t
-
-val reinit_fresh_sy_cpt : unit -> unit
-(** Resets to 0 the fresh symbol counter *)
-
-val is_get : t -> bool
-val is_set : t -> bool
-
-val fake_eq  : t
-val fake_neq : t
-val fake_lt  : t
-val fake_le  : t
-
-
-val add_label : Hstring.t -> t -> unit
-val label : t -> Hstring.t
-
-val print_bound : Format.formatter -> bound -> unit
-val string_of_bound : bound -> string
-
-val clear_labels : unit -> unit
-(** Empties the labels Hashtable *)
-
+(** {1 Data structures} *)
 module Set : Set.S with type elt = t
 
 module Map : sig
@@ -138,3 +95,59 @@ module Map : sig
   val print :
     (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 end
+
+(** {1 Constructor} *)
+
+val name: ?kind:name_kind -> string -> t
+val var: Var.t -> t
+val underscore : t
+val int: string -> t
+val real: string -> t
+val constr: string -> t
+val destruct: guarded:bool -> string -> t
+val mk_bound: bound_kind -> Ty.t -> is_open:bool -> is_lower:bool -> bound
+val mk_in: bound -> bound -> t
+val mk_maps_to: Var.t -> t
+
+(** {1 Comparaison and test functions} *)
+
+val equal: t -> t -> bool
+(** [equal sy_1 sy_2] is [true] if and only if the symbols [sy_1] and [sy_2]
+    . This call is equivalent to [compare sy_1 sy_2 = 0]. *)
+val compare: t -> t -> int
+val compare_bounds: bound -> bound -> int
+val hash: t -> int
+
+val is_ac: t -> bool
+val is_get: t -> bool
+val is_set: t -> bool
+
+(** {1 Printing} *)
+
+val to_string: t -> string
+(** [to_string sy] produces a string representing the symbol [sy]. *)
+
+val print: Format.formatter -> t -> unit
+val to_string_clean: t -> string
+val print_clean: Format.formatter -> t -> unit
+val print_bound: Format.formatter -> bound -> unit
+val string_of_bound: bound -> string
+
+(*val dummy : t*)
+
+val fresh: ?is_var:bool -> string -> t
+
+val reinit_fresh_sy_cpt: unit -> unit
+(** Resets to 0 the fresh symbol counter *)
+
+val fake_eq: t
+val fake_neq: t
+val fake_lt: t
+val fake_le: t
+
+
+val add_label: Hstring.t -> t -> unit
+val label: t -> Hstring.t
+
+val clear_labels: unit -> unit
+(** Empties the labels Hashtable *)

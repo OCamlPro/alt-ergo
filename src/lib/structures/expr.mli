@@ -117,26 +117,36 @@ and trigger = (*private*) {
 type subst = t Symbols.Map.t * Ty.subst
 
 type lit_view = private
-  | Eq of t * t
-  (** Equality of two expression. *)
+  | Eq of {lhs: t; rhs: t}
+  (** Equality of two expression.
+
+      The literal [Eq exp_1 exp_2] means {m exp\_1 = exp\_2.} *)
 
   | Eql of t list
-  (** Equality of an arbitrary number of expressions. *)
+  (** Equality of an arbitrary number of expressions.
+
+      The literal [Eql [exp_1; exp_2; ...; exp_k]] means
+      {m exp\_1 = exp\_2 = \cdots = exp\_k.} *)
 
   | Distinct of t list
+  (** Disequality of an arbitrary number of expressions.
+
+      The literal [Distinct [exp_1; exp_2; ...; exp_k]] means
+      {m exp\_1 \not= exp\_2 \not= \cdots \not= exp\_k.}*)
   | Builtin of bool * Symbols.builtin * t list
   | Pred of t * bool
-  (** View of literal. *)
+  (** Predicate *)
+(** View of literal. *)
 
 type form_view = private
-  | Unit of t*t          (** Unit clauses. *)
-  | Clause of t*t*bool   (** a clause (t1 or t2) bool <-> is implication *)
+  | Unit of t * t          (** Unit clauses. *)
+  | Clause of t * t * bool (** a clause (t1 or t2) bool <-> is implication *)
   | Iff of t * t
   | Xor of t * t
-  | Literal of t         (** Literal formula. *)
-  | Lemma of quantified  (* a lemma *)
-  | Skolem of quantified (* lazy skolemization *)
-  | Let of letin         (* a binding of an expr *)
+  | Literal of t           (** Literal formula. *)
+  | Lemma of quantified    (** a lemma *)
+  | Skolem of quantified   (** lazy skolemization *)
+  | Let of letin           (** a binding of an expr *)
 (** View of form. *)
 
 (** {1 Data structures} *)
@@ -267,7 +277,7 @@ val max_ground_terms_rec_of_form: t -> Set.t
 (** {1 Comparison and test functions} *)
 
 val compare: t -> t -> int
-(** [compare exp1 exp2] compares two expresisons [exp1] and [exp2]. More
+(** [compare exp1 exp2] compares two expressions [exp1] and [exp2]. More
     precisely, if {m <} denotes the total order defined by [compare], we have
     {math exp1 < exp2 \iff (depth exp1, hash exp1)
     \prec (depth exp2, hash exp2)}
