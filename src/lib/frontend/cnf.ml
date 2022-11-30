@@ -229,7 +229,7 @@ and make_trigger ~in_theory name up_qv quant_basename hyp (e, from_user) =
 
 and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
   let name_tag = ref 0 in
-  let rec mk_form up_qv ~toplevel (c : _ Typed.tform) id =
+  let rec mk_form up_qv ~toplevel (c : _ Typed.tform) _id =
     match c with
     | TFatom a ->
       begin match a.c with

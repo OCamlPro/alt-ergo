@@ -114,10 +114,6 @@ and trigger = (*private*) {
   guard : t option
 }
 
-module Set : Set.S with type elt = t
-
-module Map : Map.S with type key = t
-
 type subst = t Symbols.Map.t * Ty.subst
 
 type lit_view = private
@@ -141,21 +137,21 @@ type form_view = private
   | Lemma of quantified  (* a lemma *)
   | Skolem of quantified (* lazy skolemization *)
   | Let of letin         (* a binding of an expr *)
-  (** View of form. *)
+(** View of form. *)
 
 (** {1 Data structures} *)
+module Set : Set.S with type elt = t
 
+module Map : Map.S with type key = t
+
+(** {1 Views} *)
 val term_view : t -> term_view
 val lit_view  : t -> lit_view
 val form_view : t -> form_view
 
-
 (** {1 Smart constructors} *)
 
-val print : Format.formatter -> t -> unit
-val print_list : Format.formatter -> t list -> unit
-val print_list_sep : string -> Format.formatter -> t list -> unit
-val print_triggers : Format.formatter -> trigger list -> unit
+val mk_binders : Set.t -> binders
 
 val mk_ite : t -> t -> t -> t
 (** [mk_ite cond th el] produces the expression
@@ -239,12 +235,6 @@ val mk_xor : t -> t -> t
 (** [mk_xor f1 f2] produces a formula equivalent to the {e exclusive
     disjunction} of the formula [f1] and [f2], that is {m f1 \oplus f2}. *)
 
-(** different views of an expression *)
-
-val term_view : t -> term_view
-val lit_view  : t -> lit_view
-val form_view : t -> form_view
-
 (** {1 Iterators on subterms} *)
 
 val sub_terms : Set.t -> t -> Set.t
@@ -313,7 +303,6 @@ val is_real : t -> bool
     is of type [Ty.Treal]. *)
 
 val is_positive : t -> bool
-val is_in_model : t -> bool
 
 val is_pure : t -> bool
 
@@ -419,7 +408,6 @@ val type_info : t -> Ty.t
 (** [type_info t] returns the type of the expression [t]. *)
 
 val symbol_info : t -> Symbols.t
-val get_infos : t -> view
 
 val print : Format.formatter -> t -> unit
 (** [print fmt exp] pretty prints the expression [exp] with
@@ -432,7 +420,6 @@ val print_triggers : Format.formatter -> trigger list -> unit
 (* TODO: Move these functions. *)
 val print_list : Format.formatter -> t list -> unit
 val print_list_sep : string -> Format.formatter -> t list -> unit
-
 
 val free_vars : t -> (Ty.t * int) Symbols.Map.t -> (Ty.t * int) Symbols.Map.t
 val free_type_vars : t -> Ty.Svty.t

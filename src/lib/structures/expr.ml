@@ -306,52 +306,6 @@ module F_Htbl : Hashtbl.S with type key = t =
     let hash = hash
     let equal = equal
   end)
-(** different views of an expression *)
-
-let lit_view t =
-  let { f; xs; ty; _ } = t in
-  if ty != Ty.Tbool then Not_a_lit {is_form = false}
-  else
-    match f with
-    | Sy.Form _  -> Not_a_lit {is_form = true}
-    | Sy.Lit lit ->
-      begin match lit, xs with
-        | (Sy.L_eq | Sy.L_neg_eq), ([] | [_]) -> assert false
-        | Sy.L_eq, [a;b] -> Eq (a, b)
-        | Sy.L_eq, l     -> Eql l
-        | Sy.L_neg_eq, l -> Distinct l
-        | Sy.L_built x, l -> Builtin(true, x, l)
-        | Sy.L_neg_built x, l -> Builtin(false, x, l)
-        | Sy.L_neg_pred, [a] -> Pred(a, true)
-        | Sy.L_neg_pred, _ -> assert false
-      end
-    | _ -> Pred(t, false)
-
-let form_view t =
-  let { f; xs; bind; _ } = t in
-  if t.ty != Ty.Tbool then Not_a_form
-  else
-    match f, xs, bind with
-    | Sy.Form (Sy.F_Unit _), [a;b], _ -> Unit (a, b)
-    | Sy.Form (Sy.F_Clause i), [a;b], _ -> Clause (a, b, i)
-    | Sy.Form Sy.F_Iff, [a;b], _ -> Iff(a, b)
-    | Sy.Form Sy.F_Xor, [a;b], _ -> Xor(a, b)
-    | Sy.Form Sy.F_Lemma, [], B_lemma lem -> Lemma lem
-    | Sy.Form Sy.F_Skolem, [], B_skolem sko -> Skolem sko
-    | Sy.Lit (Sy.L_eq | Sy.L_neg_eq | Sy.L_neg_pred |
-              Sy.L_built _ | Sy.L_neg_built _), _, _ ->
-      Literal t
-    | Sy.Let, [], B_let ({ is_bool = true; _ } as x) -> Let x
-
-    | _ -> Literal t
-
-let term_view t =
-  let { f; ty; _ } = t in
-  if ty != Ty.Tbool then Term t
-  else match f with
-    | Sy.Form _ -> Not_a_term {is_lit = false}
-    | Sy.Lit _  -> Not_a_term {is_lit = true}
-    | _ -> Term t (* bool term *)
 
 (** pretty printing *)
 
@@ -2467,7 +2421,7 @@ let mk_exists ~name ~loc binders trs f ~toplevel ~decl_kind =
        type variables). 2 - we keep the triggers of 'exists' to try
        to instantiate these type variables *)
     let tmp =
-      let name = sprintf "#%s#sub-%d" name 0 in
+      let name = Format.sprintf "#%s#sub-%d" name 0 in
       neg (mk_forall ~name ~loc binders trs (neg f) ~toplevel:false ~decl_kind)
     in
     mk_forall ~name ~loc SMap.empty trs tmp ~toplevel ~decl_kind
