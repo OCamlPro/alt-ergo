@@ -130,7 +130,7 @@ module Container : Container_SIG = struct
         let c = if P.type_info p == Ty.Treal then c else (Q.ceiling c) in
         let p = P.add_const c p in
         let dep = match a with
-          | Some a -> Util.MI.singleton (Expr.uid a) (Q.one, p, is_le)
+          | Some a -> Util.MI.singleton (Expr.hash a) (Q.one, p, is_le)
           | None -> Util.MI.empty
         in
         { ple0 = p; is_le = is_le;

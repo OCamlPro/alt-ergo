@@ -142,10 +142,6 @@ let equal t1 t2 = t1 == t2
 
 let[@inline] hash t = t.tag
 
-(** TODO: Remove this function since it is a duplicate of the hash function
-    above. *)
-let uid t = t.tag
-
 let compare_subst (s_t1, s_ty1) (s_t2, s_ty2) =
   let c = Ty.compare_subst s_ty1 s_ty2 in
   if c<>0 then c else SMap.compare compare s_t1 s_t2

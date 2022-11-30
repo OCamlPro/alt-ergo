@@ -281,7 +281,6 @@ val hash: t -> int
 (** [hash exp] returns the hash of the expression [exp] used by the hconsing
     module. *)
 
-val uid: t -> int
 val compare_subst: subst -> subst -> int
 (** [compare_subst sub1 sub2] compares two substitutions [sub1] and [sub2]
     using the lexicographic order on . *)
