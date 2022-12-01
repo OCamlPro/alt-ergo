@@ -25,6 +25,7 @@ depends: [
   "zarith"
   "seq"
   "stdlib-shims"
+  "ppx_compare"
   "odoc" {with-doc}
 ]
 dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"

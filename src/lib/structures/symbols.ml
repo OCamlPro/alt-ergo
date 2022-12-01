@@ -29,6 +29,7 @@
 type builtin =
     LE | LT (* arithmetic *)
   | IsConstr of Hstring.t (* ADT tester *)
+[@@deriving compare]
 
 type operator =
     Plus | Minus | Mult | Div | Modulo
@@ -39,8 +40,9 @@ type operator =
   | Min_real | Min_int | Max_real | Max_int | Integer_log2
   | Pow | Integer_round
   | Constr of Hstring.t (* enums, adts *)
-  | Destruct of Hstring.t * bool
+  | Destruct of Hstring.t * Bool.t
   | Tite
+[@@deriving compare]
 
 type lit =
   (* literals *)
@@ -49,23 +51,32 @@ type lit =
   | L_neg_eq
   | L_neg_built of builtin
   | L_neg_pred
+[@@deriving compare]
 
 type form =
   (* formulas *)
-  | F_Unit of bool
-  | F_Clause of bool
+  | F_Unit of Bool.t
+  | F_Clause of Bool.t
   | F_Iff
   | F_Xor
   | F_Lemma
   | F_Skolem
+[@@deriving compare]
 
-type name_kind = Ac | Other
+type name_kind =
+  | Ac
+  | Other
+[@@deriving compare]
 
 type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
+[@@deriving equal, compare]
 
-type bound = (* private *)
-  { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
-
+type bound = {
+  kind: bound_kind;
+  sort: Ty.t;
+  is_open: Bool.t;
+  is_lower: Bool.t
+} [@@deriving equal, compare]
 
 type t =
   | True
@@ -74,7 +85,7 @@ type t =
   | Name of Hstring.t * name_kind
   | Int of Hstring.t
   | Real of Hstring.t
-  | Bitv of string
+  | Bitv of String.t
   | Op of operator
   | Lit of lit
   | Form of form
@@ -82,6 +93,7 @@ type t =
   | In of bound * bound
   | MapsTo of Var.t
   | Let
+[@@deriving compare]
 
 type s = t
 
@@ -110,13 +122,13 @@ let underscore =
   Random.self_init ();
   var @@ Var.of_string @@ Format.sprintf "_%d" (Random.int 1_000_000)
 
-let compare_kinds k1 k2 =
+(*let compare_kinds k1 k2 =
   Util.compare_algebraic k1 k2
     (function
       | _, (Ac | Other) -> assert false
     )
 
-let compare_operators op1 op2 =
+  let compare_operators op1 op2 =
   Util.compare_algebraic op1 op2
     (function
       | Access h1, Access h2 | Constr h1, Constr h2 -> Hstring.compare h1 h2
@@ -132,14 +144,14 @@ let compare_operators op1 op2 =
             | Constr _ | Destruct _ | Tite) -> assert false
     )
 
-let compare_builtin b1 b2 =
+  let compare_builtin b1 b2 =
   Util.compare_algebraic b1 b2
     (function
       | IsConstr h1, IsConstr h2 -> Hstring.compare h1 h2
       | _, (LT | LE | IsConstr _) -> assert false
     )
 
-let compare_lits lit1 lit2 =
+  let compare_lits lit1 lit2 =
   Util.compare_algebraic lit1 lit2
     (function
       | L_built b1, L_built b2 -> compare_builtin b1 b2
@@ -148,7 +160,7 @@ let compare_lits lit1 lit2 =
         assert false
     )
 
-let compare_forms f1 f2 =
+  let compare_forms f1 f2 =
   Util.compare_algebraic f1 f2
     (function
       | F_Unit b1, F_Unit b2
@@ -157,16 +169,17 @@ let compare_forms f1 f2 =
            | F_Iff | F_Xor) ->
         assert false
     )
-
-let compare_bounds_kind a b =
+*)
+(*let compare_bounds_kind a b =
   Util.compare_algebraic a b
     (function
       | VarBnd h1, VarBnd h2 -> Var.compare h1 h2
       | ValBnd q1, ValBnd q2 -> Numbers.Q.compare q1 q2
       | _, (VarBnd _ | ValBnd _) -> assert false
-    )
+    )*)
 
-let compare_bounds a b =
+
+(*let compare_bounds a b =
   let c = Ty.compare a.sort b.sort in
   if c <> 0 then c
   else
@@ -175,9 +188,9 @@ let compare_bounds a b =
     else
       let c = Stdlib.compare a.is_lower b.is_lower in
       if c <> 0 then c
-      else compare_bounds_kind a.kind b.kind
+      else compare_bound_kind a.kind b.kind*)
 
-let compare s1 s2 =
+(*let compare s1 s2 =
   Util.compare_algebraic s1 s2
     (function
       | Int h1, Int h2
@@ -197,7 +210,7 @@ let compare s1 s2 =
         (True | False | Void | Name _ | Int _ | Real _ | Bitv _
         | Op _ | Lit _ | Form _ | Var _ | In _ | MapsTo _ | Let) ->
         assert false
-    )
+    )*)
 
 let equal s1 s2 = compare s1 s2 = 0
 

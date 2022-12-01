@@ -32,6 +32,13 @@ module SSet = Sy.Set
 
 (** Data structures *)
 
+let compare_list = List.compare
+let compare_bool = Bool.compare
+let compare_int = Int.compare
+let equal_list = List.equal
+let equal_bool = Bool.equal
+let equal_int = Int.equal
+
 type binders = (Ty.t * int) SMap.t (*int tag in globally unique *)
 
 type t = term_view
@@ -47,7 +54,7 @@ and term_view = {
   depth: int;
   nb_nodes : int;
   pure : bool;
-  mutable neg : t option
+  mutable neg : t option [@ignore]
 }
 
 and decl_kind =
@@ -62,18 +69,20 @@ and bind_kind =
   | B_lemma of quantified
   | B_skolem of quantified
   | B_let of letin
+[@@deriving equal, compare]
 
 and quantified = {
-  name : string;
+  name : string; [@ignore]
   main : t;
   toplevel : bool;
   user_trs : trigger list;
-  binders : binders;
+  binders : binders; [@ignore]
   (* These fields should be (ordered) lists ! important for skolemization *)
   sko_v : t list;
   sko_vty : Ty.t list;
-  loc : Loc.t; (* location of the "GLOBAL" axiom containing this quantified
-                  formula. It forms with name a unique id *)
+  loc : Loc.t; [@ignore] (* location of the "GLOBAL" axiom
+                            containing this quantified formula.
+                            It forms with name a unique id *)
   kind : decl_kind;
 }
 
@@ -91,6 +100,7 @@ and semantic_trigger =
   | NotTheoryConst of t
   | IsTheoryConst of t
   | LinearDependency of t * t
+[@@deriving compare]
 
 and trigger = {
   content : t list;
@@ -100,7 +110,7 @@ and trigger = {
   hyp : t list;
   t_depth : int;
   from_user : bool;
-  guard : t option
+  guard : t option [@ignore]
 }
 
 type expr = t
@@ -190,33 +200,33 @@ let compare_triggers _f1 _f2 trs1 trs2 =
       (fun tr1 tr2 ->
          compare_lists tr1.content tr2.content compare;
          compare_lists tr1.hyp tr2.hyp compare;
-         compare_lists tr1.semantic tr2.semantic
-           (fun a b ->
-              Util.compare_algebraic a b
-                (function
-                  | Interval (s, b1, b2), Interval (t, c1, c2) ->
-                    let c = compare s t in
-                    if c <> 0 then c
-                    else
-                      let c = Sy.compare_bounds b1 c1 in
-                      if c <> 0 then c else Sy.compare_bounds b2 c2
+         compare_lists tr1.semantic tr2.semantic compare_semantic_trigger
+         (*(fun a b ->
+            Util.compare_algebraic a b
+              (function
+                | Interval (s, b1, b2), Interval (t, c1, c2) ->
+                  let c = compare s t in
+                  if c <> 0 then c
+                  else
+                    let c = Sy.compare_bounds b1 c1 in
+                    if c <> 0 then c else Sy.compare_bounds b2 c2
 
-                  | MapsTo (h1, t1), MapsTo (h2, t2) ->
-                    let c = compare t1 t2 in
-                    if c <> 0 then c else Var.compare h1 h2
+                | MapsTo (h1, t1), MapsTo (h2, t2) ->
+                  let c = compare t1 t2 in
+                  if c <> 0 then c else Var.compare h1 h2
 
-                  | NotTheoryConst a, NotTheoryConst b
-                  | IsTheoryConst a , IsTheoryConst b  -> compare a b
+                | NotTheoryConst a, NotTheoryConst b
+                | IsTheoryConst a , IsTheoryConst b  -> compare a b
 
-                  | LinearDependency (s1, t1), LinearDependency (s2, t2) ->
-                    let c = compare s1 s2 in
-                    if c <> 0 then c else compare t1 t2
+                | LinearDependency (s1, t1), LinearDependency (s2, t2) ->
+                  let c = compare s1 s2 in
+                  if c <> 0 then c else compare t1 t2
 
-                  | _, (Interval _ | MapsTo _ | NotTheoryConst _
-                       | IsTheoryConst _ | LinearDependency _) ->
-                    assert false
-                )
-           )
+                | _, (Interval _ | MapsTo _ | NotTheoryConst _
+                     | IsTheoryConst _ | LinearDependency _) ->
+                  assert false
+              )
+           )*)
       ) trs1 trs2;
     0
   with
@@ -268,14 +278,14 @@ module H = struct
       Sy.equal t1.f t2.f
       && List.for_all2 (==) t1.xs t2.xs
       && Ty.equal t1.ty t2.ty
-      &&
-      Util.compare_algebraic t1.bind t2.bind
-        (function
-          | B_lemma q1, B_lemma q2
-          | B_skolem q1, B_skolem q2 -> compare_quant q1 q2
-          | B_let a, B_let b -> compare_let a b
-          | _, (B_none | B_lemma _ | B_skolem _ | B_let _) -> assert false
-        ) = 0
+      && equal_bind_kind t1.bind t2.bind
+    (*Util.compare_algebraic t1.bind t2.bind
+      (function
+        | B_lemma q1, B_lemma q2
+        | B_skolem q1, B_skolem q2 -> compare_quant q1 q2
+        | B_let a, B_let b -> compare_let a b
+        | _, (B_none | B_lemma _ | B_skolem _ | B_let _) -> assert false
+      ) = 0*)
     with Invalid_argument _ -> false
 
   let equal = eq
