@@ -32,12 +32,12 @@ module SSet = Sy.Set
 
 (** Data structures *)
 
-let compare_list = Stdlib.List.compare
-let compare_bool = Stdlib.Bool.compare
-let compare_int = Stdlib.Int.compare
-let equal_list = Stdlib.List.equal
-let equal_bool = Stdlib.Bool.equal
-let equal_int = Stdlib.Int.equal
+let compare_list = List.compare
+let compare_bool = Bool.compare
+let compare_int = Int.compare
+let equal_list = List.equal
+let equal_bool = Bool.equal
+let equal_int = Int.equal
 
 type binders = (Ty.t * int) SMap.t (*int tag in globally unique *)
 
