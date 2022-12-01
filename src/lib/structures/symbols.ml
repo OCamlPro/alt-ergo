@@ -40,7 +40,7 @@ type operator =
   | Min_real | Min_int | Max_real | Max_int | Integer_log2
   | Pow | Integer_round
   | Constr of Hstring.t (* enums, adts *)
-  | Destruct of Hstring.t * Bool.t
+  | Destruct of Bool.t * Hstring.t
   | Tite
 [@@deriving compare]
 
@@ -72,24 +72,24 @@ type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
 [@@deriving equal, compare]
 
 type bound = {
-  kind: bound_kind;
   sort: Ty.t;
   is_open: Bool.t;
-  is_lower: Bool.t
+  is_lower: Bool.t;
+  kind: bound_kind;
 } [@@deriving equal, compare]
 
 type t =
   | True
   | False
   | Void
-  | Name of Hstring.t * name_kind
   | Int of Hstring.t
   | Real of Hstring.t
+  | Var of Var.t
+  | Name of Hstring.t * name_kind
   | Bitv of String.t
   | Op of operator
   | Lit of lit
   | Form of form
-  | Var of Var.t
   | In of bound * bound
   | MapsTo of Var.t
   | Let
@@ -102,7 +102,7 @@ let var s = Var s
 let int i = Int (Hstring.make i)
 let real r = Real (Hstring.make r)
 let constr s = Op (Constr (Hstring.make s))
-let destruct ~guarded s = Op (Destruct (Hstring.make s, guarded))
+let destruct ~guarded s = Op (Destruct (guarded, Hstring.make s))
 
 let mk_bound kind sort ~is_open ~is_lower =
   {kind; sort; is_open; is_lower}
@@ -272,20 +272,20 @@ let to_string ?(show_vars=true) x = match x with
   | Var v -> Var.to_string v
   | Int n -> Hstring.view n
   | Real n -> Hstring.view n
-  | Bitv s -> "[|"^s^"|]"
+  | Bitv hs -> "[|"^hs^"|]"
   | Op Plus -> "+"
   | Op Minus -> "-"
   | Op Mult -> "*"
   | Op Div -> "/"
   | Op Modulo -> "%"
-  | Op (Access s) ->
+  | Op (Access hs) ->
     if Options.get_output_smtlib () then
-      (Hstring.view s)
+      (Hstring.view hs)
     else
-      "@Access_"^(Hstring.view s)
-  | Op (Constr s) -> (Hstring.view s)
-  | Op (Destruct (s,g)) ->
-    Format.sprintf "%s%s" (if g then "" else "!") (Hstring.view s)
+      "@Access_"^(Hstring.view hs)
+  | Op (Constr hs) -> (Hstring.view hs)
+  | Op (Destruct (guarded, hs)) ->
+    Format.sprintf "%s%s" (if guarded then "" else "!") (Hstring.view hs)
 
   | Op Record -> "@Record"
   | Op Get -> "get"

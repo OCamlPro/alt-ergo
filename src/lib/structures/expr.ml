@@ -72,7 +72,7 @@ and bind_kind =
 [@@deriving equal, compare]
 
 and quantified = {
-  name : string; [@ignore]
+  name : String.t;
   main : t;
   toplevel : bool;
   user_trs : trigger list;
@@ -483,9 +483,9 @@ module SmtPrinter = struct
     | Sy.Op _, [e1; e2] ->
       fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
 
-    | Sy.Op Sy.Destruct (hs, grded), [e] ->
+    | Sy.Op Sy.Destruct (guarded, hs), [e] ->
       fprintf fmt "%a#%s%a"
-        print e (if grded then "" else "!") Hstring.print hs
+        print e (if guarded then "" else "!") Hstring.print hs
 
 
     | Sy.In(lb, rb), [t] ->
@@ -664,9 +664,9 @@ module AEPrinter = struct
       else
         fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
 
-    | Sy.Op Sy.Destruct (hs, grded), [e] ->
+    | Sy.Op Sy.Destruct (guarded, hs), [e] ->
       fprintf fmt "%a#%s%a"
-        print e (if grded then "" else "!") Hstring.print hs
+        print e (if guarded then "" else "!") Hstring.print hs
 
 
     | Sy.In(lb, rb), [t] ->

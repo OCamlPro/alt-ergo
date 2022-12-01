@@ -40,7 +40,7 @@ type operator =
   | Min_real | Min_int | Max_real | Max_int | Integer_log2
   | Pow | Integer_round
   | Constr of Hstring.t (* enums, adts *)
-  | Destruct of Hstring.t * bool
+  | Destruct of bool * Hstring.t
   | Tite
 [@@deriving compare]
 
@@ -73,22 +73,25 @@ type bound_kind =
   | ValBnd of Numbers.Q.t
 [@@deriving compare]
 
-type bound = private
-  { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
-[@@deriving compare]
+type bound = private {
+  sort: Ty.t;
+  is_open: Bool.t;
+  is_lower: Bool.t;
+  kind: bound_kind;
+} [@@deriving equal, compare]
 
 type t =
   | True
   | False
   | Void
-  | Name of Hstring.t * name_kind
   | Int of Hstring.t
   | Real of Hstring.t
+  | Var of Var.t
+  | Name of Hstring.t * name_kind
   | Bitv of string
   | Op of operator
   | Lit of lit
   | Form of form
-  | Var of Var.t
   | In of bound * bound
   | MapsTo of Var.t
   | Let
@@ -109,8 +112,6 @@ val is_ac : t -> bool
 
 val equal : t -> t -> bool
 val compare : t -> t -> int
-val equal_bound : bound -> bound -> bool
-val compare_bound : bound -> bound -> int
 val hash : t -> int
 
 val to_string : t -> string
