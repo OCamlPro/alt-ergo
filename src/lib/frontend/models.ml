@@ -30,8 +30,7 @@ module Pp_smtlib_term = struct
   let to_string_type t =
     asprintf "%a" Ty.print t
 
-  let rec print fmt t =
-    let {E.f;xs;ty; _} = E.term_view t in
+  let rec print fmt ({E.f;xs;ty; _} as t) =
     match f, xs with
 
     | Sy.Lit lit, xs ->

@@ -176,7 +176,7 @@ let deduce_is_constr uf r h eqs env ex =
             (Sig_rel.LTerm is_c, ex, Th_util.Other) :: eqs
         in
         begin
-          match E.term_view t with
+          match t with
           | { E.ty = Ty.Tadt (name,params) as ty; _ } ->
             (* Only do this deduction for finite types ??
                  may not terminate in some cases otherwise.
@@ -326,10 +326,9 @@ let add_guarded_destr env uf t hs e t_ty =
 
 
 [@@ocaml.ppwarning "working with X.term_extract r would be sufficient ?"]
-let add_aux env (uf:uf) (r:r) t =
+let add_aux env (uf: uf) (r: r) ({ E.f = sy; xs; ty; _ } as t) =
   if Options.get_disable_adts () then env
   else
-    let { E.f = sy; xs; ty; _ } = E.term_view t in
     let env = add_adt env uf t r sy ty in
     match sy, xs with
     | Sy.Op Sy.Destruct (hs, true), [e] -> (* guarded *)

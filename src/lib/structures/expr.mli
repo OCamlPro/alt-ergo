@@ -31,39 +31,36 @@
 type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
 
 (** Type of expression. *)
-type t
-
-(** Type of declaration kind. *)
-type decl_kind =
-  | Dtheory         (** Declaration of theory. *)
-  | Daxiom          (** Declaration of axiom. *)
-  | Dgoal           (** Declaration of goal. *)
-  | Dpredicate of t (** Declaration of predicate. *)
-  | Dfunction of t  (** Declaration of function. *)
-
-(** View of expression. *)
-type term_view = private {
+type t = private {
   (* TODO: Rename this field to top_sy. *)
   f: Symbols.t;                      (** Top symbol. *)
   (* TODO: Rename this field to args. *)
   xs: t list;                        (** List of the arguments. *)
   ty: Ty.t;                          (** Type witness. *)
-  bind : bind_kind;                  (** Kind of binding. *)
+  bind: bind_kind;                  (** Kind of binding. *)
   (* TODO: Rename this field to id. *)
   tag: int;                          (** Unique identifiant used by the
                                          {!module:Hconsing} module. *)
-  vars : (Ty.t * int) Symbols.Map.t; (** Correspondance between variables and
+  vars: (Ty.t * int) Symbols.Map.t; (** Correspondance between variables and
                                          their type witness and number of
                                          occurences in the expression. *)
-  vty : Ty.Svty.t;
+  vty: Ty.Svty.t;
   depth: int;                        (** Depth of the expression. *)
-  nb_nodes : int;                    (** Number of nodes. *)
-  pure : bool;                       (** Flag of pureness. *)
-  mutable neg : t option             (** The negative form of an expression
+  nb_nodes: int;                    (** Number of nodes. *)
+  pure: bool;                       (** Flag of pureness. *)
+  mutable neg: t option             (** The negative form of an expression
                                          whose the type witness is
                                          {!constructor:Ty.Tbool}. Otherwise,
                                          this field is equal to [None]. *)
 }
+
+(** Type of declaration kind. *)
+and decl_kind =
+  | Dtheory         (** Declaration of theory. *)
+  | Daxiom          (** Declaration of axiom. *)
+  | Dgoal           (** Declaration of goal. *)
+  | Dpredicate of t (** Declaration of predicate. *)
+  | Dfunction of t  (** Declaration of function. *)
 
 (** Type of binding. *)
 and bind_kind =
@@ -72,27 +69,27 @@ and bind_kind =
   | B_skolem of quantified
   | B_let of letin          (** Let binding. *)
 
-and quantified = private {
-  name : string;
-  main : t;
-  toplevel : bool;
-  user_trs : trigger list;
-  binders : binders;
+and quantified = (*private*) {
+  name: string;
+  main: t;
+  toplevel: bool;
+  user_trs: trigger list;
+  binders: binders;
   (* These fields should be (ordered) lists ! important for skolemization *)
-  sko_v : t list;
-  sko_vty : Ty.t list;
-  loc : Loc.t; (* location of the "GLOBAL" axiom containing this quantified
+  sko_v: t list;
+  sko_vty: Ty.t list;
+  loc: Loc.t; (* location of the "GLOBAL" axiom containing this quantified
                   formula. It forms with name a unique id *)
-  kind : decl_kind;
+  kind: decl_kind;
 }
 
 (** Type of a let expression [let let_v = let_e in in_e]. *)
 and letin = private {
   let_v: Symbols.t; (** Symbol of the substitution. *)
-  let_e : t;        (** Expression of substitution. *)
-  in_e : t;         (** Expression in which we apply the substitution. *)
-  let_sko : t;      (* fresh symb. with free vars *)
-  is_bool : bool;
+  let_e: t;        (** Expression of substitution. *)
+  in_e: t;         (** Expression in which we apply the substitution. *)
+  let_sko: t;      (* fresh symb. with free vars *)
+  is_bool: bool;
 }
 
 and semantic_trigger =
@@ -159,7 +156,6 @@ module Map : Map.S with type key = t
 
 (** {1 Views} *)
 
-val term_view: t -> term_view
 val lit_view: t -> lit_view
 val form_view: t -> form_view
 
@@ -211,7 +207,7 @@ val fresh_name: Ty.t -> t
 (** [mk_eq iff tm1 tm2] produces an equivalent formula to
     the formula [tm1 = tm2]. *)
 val mk_eq: iff:bool -> t -> t -> t
-
+val mk_nary_eq: t list -> t
 val mk_distinct: iff:bool -> t list -> t
 val mk_builtin: is_pos:bool -> Symbols.builtin -> t list -> t
 
@@ -345,10 +341,6 @@ val apply_subst_trigger: subst -> trigger -> trigger
 val make_triggers:
   t -> binders -> decl_kind -> Util.matching_env -> trigger list
 
-(** clean trigger:
-    remove useless terms in multi-triggers after inlining of lets*)
-val clean_trigger: in_theory:bool -> string -> trigger -> trigger
-
 val resolution_triggers: is_back:bool -> quantified -> trigger list
 
 val mk_forall:
@@ -360,6 +352,9 @@ val mk_forall:
   toplevel:bool -> (* for future triggers computation in presence of vty *)
   decl_kind:decl_kind ->
   t
+
+(** FIXME: this shouldn't be exposed outside this module. *)
+val mk_forall_ter: quantified -> t
 
 val mk_exists:
   name:string ->
@@ -382,11 +377,6 @@ val elim_let: recursive:bool -> letin -> t
     and conjuctions instead of the built-in symbol {!constructor:Sy.F_Iff}.
     If [with_conj] is [false], the construction doesn't use conjuction. *)
 val elim_iff: t -> t -> with_conj:bool -> t
-
-val concat_chainable: Symbols.t -> Ty.t -> t -> t list -> t list
-
-(*val purify_literal : t -> t*)
-val purify_form: t -> t
 
 type gformula = {
   ff: t;

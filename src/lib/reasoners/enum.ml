@@ -133,7 +133,7 @@ module Shostak (X : ALIEN) = struct
       | Cons _ -> cr
       | Alien r    -> X.subst p v r
 
-  let make t = match E.term_view t with
+  let make t = match t with
     | { E.f = Sy.Op (Sy.Constr hs); xs = []; ty; _ } ->
       is_mine (Cons(hs,ty)), []
     | _ ->

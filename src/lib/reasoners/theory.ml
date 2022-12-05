@@ -102,7 +102,7 @@ module Main_Default : S = struct
     let logics_of_assumed st =
       SE.fold
         (fun t mp ->
-           match E.term_view t with
+           match t with
            | { E.f = Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac));
                xs; ty; _ } ->
              let xs = List.map E.type_info xs in

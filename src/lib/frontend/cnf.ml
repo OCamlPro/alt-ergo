@@ -326,7 +326,7 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
 
          TODO : on-the-fly purification
       *)
-      let ff = E.purify_form ff in
+      let ff = Purification.purify_form ff in
 
       let hyp =
         List.map (fun (f : _ Typed.annoted) ->
@@ -384,7 +384,7 @@ let make_form name f loc ~decl_kind =
     make_form Sy.Map.empty name f loc ~decl_kind ~toplevel:true
   in
   assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
-  let ff = E.purify_form ff in
+  let ff = Purification.purify_form ff in
   if Ty.Svty.is_empty (E.free_type_vars ff) then ff
   else
     E.mk_forall ~name ~loc Symbols.Map.empty [] ff ~toplevel:true ~decl_kind
