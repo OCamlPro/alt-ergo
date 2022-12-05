@@ -28,23 +28,17 @@
 
 (** Types
 
-    This module defines the representation of types. *)
+    This module defines the witness of types. *)
 
 (** {2 Definition} *)
 
 type t =
-  | Tint
-  (** Integer numbers *)
-  | Treal
-  (** Real numbers *)
-  | Tbool
-  (** Booleans *)
-  | Tunit
-  (** The unit type *)
-  | Tvar of tvar
-  (** Type variables *)
-  | Tbitv of int
-  (** Bitvectors of a given length *)
+  | Tint                (** Integer numbers. *)
+  | Treal               (** Real numbers. *)
+  | Tbool               (** Booleans. *)
+  | Tunit               (** The unit type. *)
+  | Tvar of tvar        (** Type variables. *)
+  | Tbitv of int        (** Bitvectors of a given length. *)
   | Text of t list * Hstring.t
   (** Abstract types applied to arguments. [Text (args, s)] is
       the application of the abstract type constructor [s] to
@@ -60,8 +54,7 @@ type t =
       the application of the datatype constructor [s] to
       arguments [args]. *)
 
-  | Trecord of trecord
-  (** Record type. *)
+  | Trecord of trecord  (** Record type. *)
 
 and tvar = {
   v : int;

@@ -28,12 +28,15 @@
 
 (** {1 Types} *)
 
-type builtin =
-  | LE                    (** {b L}ess or {b e}qual symbol. *)
-  | LT (* arithmetic *)   (** {b L}ess {b t}han symbol. *)
-  | IsConstr of Hstring.t (** ADT tester symbol. *)
 (** Built-in symbols. *)
+type builtin =
+  (* Arithmetic *)
+  | LE                    (** {b L}ess or {b e}qual symbol. *)
+  | LT                    (** {b L}ess {b t}han symbol. *)
+  (* ADT *)
+  | IsConstr of Hstring.t (** ADT tester symbol. *)
 
+(** Type of symbol of operator. *)
 type operator =
   | Plus | Minus | Mult | Div | Modulo
   | Concat | Extract | Get | Set | Fixed | Float
@@ -46,16 +49,16 @@ type operator =
   | Destruct of Hstring.t * bool
   | Tite
 
+(** Type of symbol of literal. *)
 type lit =
-  (* literals *)
   | L_eq
   | L_built of builtin
   | L_neg_eq
   | L_neg_built of builtin
   | L_neg_pred
 
+(** Type of symbol of formula. *)
 type form =
-  (* formulas *)
   | F_Unit of bool
   | F_Clause of bool
   | F_Iff             (** Symbol of equivalence. *)
@@ -65,14 +68,23 @@ type form =
 
 type name_kind = Ac | Other
 
+(** Specify if a bound is a variable or a literal number. *)
 type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
 
-type bound = private
-  { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
+type bound = private {
+  kind: bound_kind; (** Kind of the bound. *)
+  sort: Ty.t;       (** Type of the bound.
+                        It can be {!constructor:Ty.Tint} or
+                        {!constructor:Ty.Treal}. *)
+  is_open: bool;
+  is_lower: bool
+}
+(** Type of symbol of bound. *)
 
+(** Type of symbols. *)
 type t =
-  | True                           (** Top *)
-  | False
+  | True                           (** Top symbol. *)
+  | False                          (** Bottom symbol. *)
   | Void                           (** Unit symbol. *)
   | Name of Hstring.t * name_kind
   | Int of Hstring.t
@@ -85,9 +97,9 @@ type t =
   | In of bound * bound
   | MapsTo of Var.t
   | Let
-  (** Type of symbols. *)
 
 (** {1 Data structures} *)
+
 module Set : Set.S with type elt = t
 
 module Map : sig
@@ -112,10 +124,9 @@ val mk_maps_to: Var.t -> t
 (** {1 Comparaison and test functions} *)
 
 val equal: t -> t -> bool
-(** [equal sy_1 sy_2] is [true] if and only if the symbols [sy_1] and [sy_2]
-    . This call is equivalent to [compare sy_1 sy_2 = 0]. *)
 val compare: t -> t -> int
 val compare_bounds: bound -> bound -> int
+
 val hash: t -> int
 
 val is_ac: t -> bool
@@ -128,6 +139,8 @@ val to_string: t -> string
 (** [to_string sy] produces a string representing the symbol [sy]. *)
 
 val print: Format.formatter -> t -> unit
+(** [print fmt sy] pretty prints the symbol [sy] on the formatter [fmt]. *)
+
 val to_string_clean: t -> string
 val print_clean: Format.formatter -> t -> unit
 val print_bound: Format.formatter -> bound -> unit
@@ -136,9 +149,10 @@ val string_of_bound: bound -> string
 (*val dummy : t*)
 
 val fresh: ?is_var:bool -> string -> t
+(** [fresh str] produces a fresh name of the form [!?__str] where . *)
 
 val reinit_fresh_sy_cpt: unit -> unit
-(** Resets to 0 the fresh symbol counter *)
+(** Reset to zero the fresh symbol counter. *)
 
 val fake_eq: t
 val fake_neq: t
