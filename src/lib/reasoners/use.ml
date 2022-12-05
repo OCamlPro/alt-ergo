@@ -62,7 +62,7 @@ let add_term k t mp =
 
 let up_add g t rt lvs =
   let g = if MX.mem rt g then g else MX.add rt (SE.empty, SA.empty) g in
-  match t with
+  match E.term_view t with
   | { E.xs = []; _ } -> g
   | _ -> List.fold_left (fun g x -> add_term x t g) g lvs
 

@@ -29,7 +29,7 @@
 module E = Expr
 module Sy = Symbols
 module SE = E.Set
-
+  
 let varset_of_list =
   List.fold_left
     (fun acc (s,ty) ->
@@ -44,6 +44,7 @@ module ME =
         if c <> 0 then c
         else E.compare a b
     end)
+
 
 let rec make_term up_qv quant_basename t =
   let rec mk_term ({ c = { tt_ty = ty; tt_desc = tt; _ }; _ }
