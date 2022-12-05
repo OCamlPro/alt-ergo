@@ -18,7 +18,7 @@ module Z = Numbers.Z
 
 let is_rounding_mode t =
   Options.get_use_fpa() &&
-  match E.term_view t with
+  match t with
   | { E.ty = Ty.Tsum (hs, _); _ } ->
     String.compare (Hs.view hs) "fpa_rounding_mode" = 0
   | _ -> false
@@ -212,8 +212,7 @@ let mode_of_term t =
       assert false
     end
 
-let int_of_term t =
-  match E.term_view t with
+let int_of_term = function
   | { E.f = Sy.Int n; _ } ->
     let n = Hstring.view n in
     let n =
@@ -224,7 +223,7 @@ let int_of_term t =
         assert false
     in
     n (* ! may be negative or null *)
-  | _ ->
+  | _ as t ->
     Printer.print_err
       "The given term %a is not an integer" E.print t;
     assert false
