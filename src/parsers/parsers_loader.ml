@@ -9,10 +9,8 @@
 (******************************************************************************)
 
 open AltErgoLib
-open Options
 
 let load () =
-  List.iter
-    (fun p ->
-       My_dynlink.load (get_verbose ()) p "parser"
-    )(Options.get_parsers())
+  List.iter (fun p ->
+      My_dynlink.load (Options.get_verbose ()) p "parser"
+    ) (Options.get_parsers())
