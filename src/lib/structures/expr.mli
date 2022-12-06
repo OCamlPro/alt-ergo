@@ -31,10 +31,10 @@
 type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
 
 (** Type of expression. *)
-type t
+type t = term_view
 
 (** Type of declaration kind. *)
-type decl_kind =
+and decl_kind =
   | Dtheory         (** Declaration of theory. *)
   | Daxiom          (** Declaration of axiom. *)
   | Dgoal           (** Declaration of goal. *)
@@ -42,7 +42,7 @@ type decl_kind =
   | Dfunction of t  (** Declaration of function. *)
 
 (** View of expression. *)
-type term_view = private {
+and term_view = private {
   (* TODO: Rename this field to top_sy. *)
   f: Symbols.t;                      (** Top symbol. *)
   (* TODO: Rename this field to args. *)
@@ -72,7 +72,7 @@ and bind_kind =
   | B_skolem of quantified
   | B_let of letin          (** Let binding. *)
 
-and quantified = private {
+and quantified = (*private*) {
   name : string;
   main : t;
   toplevel : bool;
@@ -87,7 +87,7 @@ and quantified = private {
 }
 
 (** Type of a let expression [let let_v = let_e in in_e]. *)
-and letin = private {
+and letin = (*private*) {
   let_v: Symbols.t; (** Symbol of the substitution. *)
   let_e : t;        (** Expression of substitution. *)
   in_e : t;         (** Expression in which we apply the substitution. *)
@@ -379,9 +379,6 @@ val elim_let: recursive:bool -> letin -> t
     If [with_conj] is [false], the construction doesn't use conjuction. *)
 val elim_iff: t -> t -> with_conj:bool -> t
 
-(*val purify_literal : t -> t*)
-val purify_form: t -> t
-
 type gformula = {
   ff: t;
   nb_reductions : int;
@@ -448,3 +445,7 @@ val save_cache: unit -> unit
 
 val reinit_cache: unit -> unit
 (** Reinitializes the module's cache *)
+
+val mk_nary_eq: t list -> t
+val mk_let_aux: letin -> t
+val mk_forall_ter: quantified -> int -> t

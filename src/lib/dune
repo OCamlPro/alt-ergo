@@ -54,7 +54,7 @@
     ; structures
     Commands Errors Explanation Fpa_rounding
     Parsed Profiling Satml_types Symbols
-    Expr Var Ty Typed Xliteral ModelMap
+    Expr Var Ty Typed Xliteral ModelMap Purification
     ; util
     Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
     MyDynlink MyUnix Numbers NumsNumbers NumbersInterface

@@ -132,6 +132,7 @@ val hash: t -> int
 val is_ac: t -> bool
 val is_get: t -> bool
 val is_set: t -> bool
+val is_ite: t -> bool
 
 (** {1 Printing} *)
 

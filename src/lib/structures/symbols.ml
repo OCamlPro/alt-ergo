@@ -330,6 +330,9 @@ let fresh, reinit_fresh_sy_cpt =
 let is_get f = equal f (Op Get)
 let is_set f = equal f (Op Set)
 
+let is_ite = function
+  | Op Tite -> true
+  | _ -> false
 
 let fake_eq  =  name "@eq"
 let fake_neq =  name "@neq"
