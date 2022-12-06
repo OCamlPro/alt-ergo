@@ -27,7 +27,7 @@
 (******************************************************************************)
 
 type gsubst = {
-  sbs : Expr.t Symbols.Map.t;
+  sbs : Expr.t Sy.Map.t;
   sty : Ty.subst;
   gen : int ;     (* l'age d'une substitution est l'age du plus vieux
                      		     terme qu'elle contient *)

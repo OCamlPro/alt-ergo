@@ -38,7 +38,7 @@ module type S = sig
   val make : Expr.t -> r * Expr.t list
 
   (* tells whether the given term is AC*)
-  val is_mine_symb : Symbols.t -> Ty.t -> bool
+  val is_mine_symb : Sy.t -> Ty.t -> bool
 
   (* compares two AC semantic values *)
   val compare : t -> t -> int
@@ -63,9 +63,9 @@ module type S = sig
 
   (* add flatten the 2nd arg w.r.t HS.t, add it to the given list
      and compact the result *)
-  val add : Symbols.t -> r * int -> (r * int) list -> (r * int) list
+  val add : Sy.t -> r * int -> (r * int) list -> (r * int) list
 
-  val fully_interpreted : Symbols.t -> bool
+  val fully_interpreted : Sy.t -> bool
 
   val abstract_selectors : t -> (r * r) list -> r * (r * r) list
 

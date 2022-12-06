@@ -90,18 +90,18 @@ and 'a atterm = ('a tterm, 'a) annoted
 and 'a tt_desc =
   | TTconst of tconstant
   (** Term constant *)
-  | TTvar of Symbols.t
+  | TTvar of Sy.t
   (** Term variables *)
-  | TTinfix of 'a atterm * Symbols.t * 'a atterm
+  | TTinfix of 'a atterm * Sy.t * 'a atterm
   (** Infix symbol application *)
-  | TTprefix of Symbols.t * 'a atterm
+  | TTprefix of Sy.t * 'a atterm
   (** Prefix symbol application *)
-  | TTapp of Symbols.t * 'a atterm list
+  | TTapp of Sy.t * 'a atterm list
   (** Arbitrary symbol application *)
   | TTmapsTo of Var.t * 'a atterm
   (** Used in semantic triggers for floating point arithmetic.
       See sources/preludes/fpa-theory-2017-01-04-16h00.ae *)
-  | TTinInterval of 'a atterm * Symbols.bound * Symbols.bound
+  | TTinInterval of 'a atterm * Sy.bound * Sy.bound
   (** Represent floating point intervals (used for triggers in Floating
       point arithmetic theory).
       [TTinInterval (lower, l_strict, t, upper, u_strict)] is a constraint
@@ -120,7 +120,7 @@ and 'a tt_desc =
   (** Field access on structs/records *)
   | TTrecord of (Hstring.t * 'a atterm) list
   (** Record creation. *)
-  | TTlet of (Symbols.t * 'a atterm) list * 'a atterm
+  | TTlet of (Sy.t * 'a atterm) list * 'a atterm
   (** Let-bindings. Accept a list of mutually recursive le-bindings. *)
   (* TODO: check that mutually recursive let-bindings are allowed ? *)
   | TTnamed of Hstring.t * 'a atterm
@@ -176,9 +176,9 @@ and 'a tatom =
 (** Typed atoms. *)
 
 and 'a quant_form = {
-  qf_bvars : (Symbols.t * Ty.t) list;
+  qf_bvars : (Sy.t * Ty.t) list;
   (** Variables that are quantified by this formula. *)
-  qf_upvars : (Symbols.t * Ty.t) list;
+  qf_upvars : (Sy.t * Ty.t) list;
   (** Free variables that occur in the formula. *)
   qf_triggers : ('a atterm list * bool) list;
   (** Triggers associated wiht the formula.
@@ -204,8 +204,8 @@ and 'a tform =
   (** Universal quantification. *)
   | TFexists of 'a quant_form
   (** Existencial quantification. *)
-  | TFlet of (Symbols.t * Ty.t) list *
-             (Symbols.t * 'a tlet_kind) list *
+  | TFlet of (Sy.t * Ty.t) list *
+             (Sy.t * 'a tlet_kind) list *
              'a atform
   (** Let binding.
       TODO: what is in the first list ? *)
@@ -228,7 +228,7 @@ and 'a tlet_kind =
 
 
 type 'a rwt_rule = {
-  rwt_vars : (Symbols.t * Ty.t) list; (** Variables of the rewrite rule *)
+  rwt_vars : (Sy.t * Ty.t) list; (** Variables of the rewrite rule *)
   rwt_left : 'a;          (** Left side of the rewrite rule (aka pattern). *)
   rwt_right : 'a;         (** Right side of the rewrite rule. *)
 }
@@ -292,7 +292,7 @@ val print_term : Format.formatter -> _ atterm -> unit
 val print_formula : Format.formatter -> _ atform -> unit
 (**Print annoted typed formulas; Ignores the annotations. *)
 
-val print_binders : Format.formatter -> (Symbols.t * Ty.t) list -> unit
+val print_binders : Format.formatter -> (Sy.t * Ty.t) list -> unit
 (** Print a list of bound typed variables. *)
 
 val print_triggers : Format.formatter -> ('a atterm list * bool) list -> unit

@@ -26,7 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module Sy = Symbols
 module E  = Expr
 module A  = Xliteral
 module L  = List

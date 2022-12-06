@@ -907,7 +907,7 @@ module Flat_Formula : FLAT_FORMULA = struct
 
   let mk_new_proxy n =
     let hs = Hs.make ("PROXY__" ^ (string_of_int n)) in
-    let sy = Symbols.Name(hs, Symbols.Other) in
+    let sy = Sy.Name(hs, Sy.Other) in
     E.mk_term sy [] Ty.Tbool
 
   let get_proxy_of f proxies_mp =
@@ -975,7 +975,7 @@ module Proxy_formula = struct
     if is_neg then a.Atom.neg,l else a,l
 
   let mk_new_proxy n =
-    let sy = Symbols.name @@ "PROXY__" ^ (string_of_int n) in
+    let sy = Sy.name @@ "PROXY__" ^ (string_of_int n) in
     E.mk_term sy [] Ty.Tbool
 
   let rec mk_cnf hcons f ((proxies, inv_proxies, new_vars, cnf) as accu) =

@@ -36,7 +36,6 @@ module Q = Numbers.Q
 
 module L = Xliteral
 
-module Sy = Symbols
 module I = Intervals
 
 module OracleContainer =
@@ -752,7 +751,7 @@ and update_monome are_eq expl use_x env x =
   let ty = X.type_info x in
   let ui, env = match  X.ac_extract x with
     | Some { h; l; _ }
-      when Symbols.equal h (Symbols.Op Symbols.Mult) ->
+      when Sy.equal h (Sy.Op Sy.Mult) ->
       let use_x = SX.singleton x in
       let env =
         List.fold_left
@@ -829,7 +828,7 @@ let rec tighten_ac are_eq x env expl =
   try
     match X.ac_extract x with
     | Some { h; l = [x,n]; _ }
-      when Symbols.equal h (Symbols.Op Symbols.Mult) && n mod 2 = 0  ->
+      when Sy.equal h (Sy.Op Sy.Mult) && n mod 2 = 0  ->
       let env =
         if is_alien x then
           (* identity *)
@@ -847,7 +846,7 @@ let rec tighten_ac are_eq x env expl =
       in
       env
     | Some { h; l = [x,n]; _ } when
-        Symbols.equal h (Symbols.Op Symbols.Mult) && n > 2 ->
+        Sy.equal h (Sy.Op Sy.Mult) && n > 2 ->
       let env =
         if is_alien x then
           let u = I.root n u in
@@ -936,7 +935,7 @@ let find_eq eqs x u env =
     begin
       match X.ac_extract x with
       | Some { h; l = [y,_]; _ }
-        when Symbols.equal h (Symbols.Op Symbols.Mult) ->
+        when Sy.equal h (Sy.Op Sy.Mult) ->
         let neweqs = try
             let u, _, _ = generic_find y env in
             match find_one_eq y u with
@@ -992,7 +991,7 @@ let update_intervals are_eq env eqs expl (a, x, v) is_le =
   let (u0, use_x0) as ixx = MX.n_find x env.monomes in
   let uints, use_x =
     match X.ac_extract x with
-    | Some { h; l; _ } when Symbols.equal h (Symbols.Op Symbols.Mult) ->
+    | Some { h; l; _ } when Sy.equal h (Sy.Op Sy.Mult) ->
       let m = mult_bornes_vars l env (X.type_info x) in
       I.intersect m u0, use_x0
     | _ -> ixx
@@ -2115,7 +2114,7 @@ let integrate_mapsTo_bindings sbs maps_to =
       List.fold_left
         (fun ((sbt, sty) as sbs) (x, tx) ->
            let x = Sy.Var x in
-           assert (not (Symbols.Map.mem x sbt));
+           assert (not (Sy.Map.mem x sbt));
            let t = E.apply_subst sbs tx in
            let mk, _ = X.make t in
            match P.is_const (poly_of mk) with
@@ -2130,7 +2129,7 @@ let integrate_mapsTo_bindings sbs maps_to =
              raise Exit
            | Some c ->
              let tc = mk_const_term (E.type_info t) c in
-             Symbols.Map.add x tc sbt, sty
+             Sy.Map.add x tc sbt, sty
         )sbs maps_to
     in
     Some sbs
@@ -2303,7 +2302,7 @@ let new_facts_for_axiom
               ~module_name:"IntervalCalculus"
               ~function_name:"new_facts_for_axiom"
               "try to extend synt sbt %a of ax %a@ "
-              (Symbols.Map.print E.print) sbs E.print orig;
+              (Sy.Map.print E.print) sbs E.print orig;
           match tr.E.guard with
           | Some _ -> assert false (*guards not supported for TH axioms*)
 
@@ -2331,7 +2330,7 @@ let new_facts_for_axiom
                 Printer.print_dbg
                   ~header:false
                   "semantic matching succeeded:@ %a"
-                  (Symbols.Map.print E.print) (fst sbs);
+                  (Sy.Map.print E.print) (fst sbs);
               let nf = E.apply_subst sbs f in
               (* incrementality/push. Although it's not supported for
                  theories *)
@@ -2451,10 +2450,10 @@ let separate_semantic_triggers =
              List.fold_left
                (fun (syn, sem) t ->
                   match E.term_view t with
-                  | { E.f = Symbols.In (lb, ub); xs = [x]; _ } ->
+                  | { E.f = Sy.In (lb, ub); xs = [x]; _ } ->
                     syn, (E.Interval (x, lb, ub)) :: sem
 
-                  | { E.f = Symbols.MapsTo x; xs = [t]; _ } ->
+                  | { E.f = Sy.MapsTo x; xs = [t]; _ } ->
                     syn, (E.MapsTo (x, t)) :: sem
 
                   | { E.f = Sy.Name (hs,_); xs = [x]; _ }

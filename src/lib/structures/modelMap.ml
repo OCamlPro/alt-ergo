@@ -12,10 +12,7 @@
 open Options
 
 module X = Shostak.Combine
-
-module Sy = Symbols
 module E = Expr
-
 
 module P = Map.Make
     (struct

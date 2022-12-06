@@ -26,7 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module Sy = Symbols
 module SMap = Sy.Map
 module SSet = Sy.Set
 
@@ -1820,7 +1819,7 @@ let elim_iff f1 f2 id ~with_conj =
 
 let concat_chainable p_op p_ty t acc =
   let {f; xs; ty; _} = term_view t in
-  if Symbols.equal p_op f && Ty.equal p_ty ty then
+  if Sy.equal p_op f && Ty.equal p_ty ty then
     List.rev_append (List.rev xs) acc
   else
     t :: acc
@@ -2473,7 +2472,7 @@ let rec compile_match mk_destr mker e cases accu =
   | [] -> accu
 
   | (Typed.Var x, p) :: _ ->
-    apply_subst ((SMap.singleton (Symbols.var x) e), Ty.esubst) p
+    apply_subst ((SMap.singleton (Sy.var x) e), Ty.esubst) p
 
   | (Typed.Constr {name; args}, p) :: l ->
     let _then =

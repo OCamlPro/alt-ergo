@@ -51,7 +51,7 @@ let union_tpl (x1,y1) (x2,y2) =
   Options.exec_thread_yield ();
   SE.union x1 x2, SA.union y1 y2
 
-let one, _ = X.make (E.mk_term (Symbols.name "@bottom") [] Ty.Tint)
+let one, _ = X.make (E.mk_term (Sy.name "@bottom") [] Ty.Tint)
 let leaves r =
   match X.leaves r with [] -> [one] | l -> l
 

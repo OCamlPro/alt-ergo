@@ -213,9 +213,9 @@ module Env = struct
     | Other
 
   type t = {
-    var_map : (Symbols.t * Ty.t) MString.t ; (* variables' map*)
+    var_map : (Sy.t * Ty.t) MString.t ; (* variables' map*)
     types : Types.t ;
-    logics : (Symbols.t * profile * logic_kind) MString.t;
+    logics : (Sy.t * profile * logic_kind) MString.t;
     (* logic symbols' map *)
   }
 
@@ -233,17 +233,17 @@ module Env = struct
 
   let add_var env lv pp_ty loc  =
     let ty = Types.ty_of_pp loc env.types None pp_ty in
-    let fvar s = Symbols.var @@ Var.of_string s in
+    let fvar s = Sy.var @@ Var.of_string s in
     add env lv fvar ty
 
   let add_ty_var env lv ty  =
-    let fvar s = Symbols.var @@ Var.of_string s in
+    let fvar s = Sy.var @@ Var.of_string s in
     add env lv fvar ty
 
   let add_names env lv pp_ty loc =
     Types.monomorphized pp_ty;
     let ty = Types.ty_of_pp loc env.types None pp_ty in
-    add env lv Symbols.name ty
+    add env lv Sy.name ty
 
   let add_names_lbl env lv pp_ty loc =
     Types.monomorphized pp_ty;
@@ -252,11 +252,11 @@ module Env = struct
       List.fold_left (fun acc (x, lbl) ->
           let lbl = Hstring.make lbl in
           if not (Hstring.equal lbl Hstring.empty) then
-            Symbols.add_label lbl (Symbols.name x);
+            Sy.add_label lbl (Sy.name x);
           x::acc
         ) [] lv in
     let lv = List.rev rlv in
-    add env lv Symbols.name ty
+    add env lv Sy.name ty
 
   let add_logics ?(kind=Other) env mk_symb names pp_profile loc =
     let decl, profile =
@@ -281,7 +281,7 @@ module Env = struct
              Errors.typing_error (SymbAlreadyDefined n) loc;
            let lbl = Hstring.make lbl in
            if not (Hstring.equal lbl Hstring.empty) then
-             Symbols.add_label lbl sy;
+             Sy.add_label lbl sy;
 
            MString.add n (sy, profile, kind) logics)
         env.logics names
@@ -291,13 +291,13 @@ module Env = struct
   let add_constr ~record env constr args_ty ty loc =
     let pp_profile = PFunction (args_ty, ty) in
     let kind = if record then RecordConstr else AdtConstr in
-    add_logics ~kind env Symbols.constr [constr, ""] pp_profile loc
+    add_logics ~kind env Sy.constr [constr, ""] pp_profile loc
 
   let add_destr ~record env destr pur_ty lbl_ty loc =
     let pp_profile = PFunction ([pur_ty], lbl_ty) in
     let mk_sy s =
-      if record then (Symbols.Op (Access (Hstring.make s)))
-      else Symbols.destruct ~guarded:true s
+      if record then (Sy.Op (Access (Hstring.make s)))
+      else Sy.destruct ~guarded:true s
     in
     let kind = if record then RecordDestr else AdtDestr in
     add_logics ~kind env mk_sy [destr, ""] pp_profile loc
@@ -322,13 +322,13 @@ module Env = struct
 end
 
 let symbol_of = function
-    PPadd -> Symbols.Op Symbols.Plus
-  | PPsub -> Symbols.Op Symbols.Minus
-  | PPmul -> Symbols.Op Symbols.Mult
-  | PPdiv -> Symbols.Op Symbols.Div
-  | PPmod ->  Symbols.Op Symbols.Modulo
-  | PPpow_int ->  Symbols.Op Symbols.Pow
-  | PPpow_real ->  Symbols.Op Symbols.Pow
+    PPadd -> Sy.Op Sy.Plus
+  | PPsub -> Sy.Op Sy.Minus
+  | PPmul -> Sy.Op Sy.Mult
+  | PPdiv -> Sy.Op Sy.Div
+  | PPmod ->  Sy.Op Sy.Modulo
+  | PPpow_int ->  Sy.Op Sy.Pow
+  | PPpow_real ->  Sy.Op Sy.Pow
   | _ -> assert false
 
 let append_type msg ty =
@@ -532,7 +532,7 @@ let rec type_term ?(call_from_type_form=false) env f =
       if ty!=Ty.Tint && ty!=Ty.Treal then
         Errors.typing_error (ShouldHaveTypeIntorReal ty) e.pp_loc;
       Options.tool_req 1 (append_type "TR-Typing-OpUnarith type" ty);
-      TTprefix(Symbols.Op Symbols.Minus, te), ty
+      TTprefix(Sy.Op Sy.Minus, te), ty
     | PPconcat(t1, t2) ->
       begin
         let te1 = type_term env t1 in
@@ -708,7 +708,7 @@ let rec type_term ?(call_from_type_form=false) env f =
         List.fold_left
           (fun env (sy, te1) ->
              let ty1 = Ty.shorten te1.c.tt_ty in
-             let fvar s = Symbols.var @@ Var.of_string s in
+             let fvar s = Sy.var @@ Var.of_string s in
              Env.add env [sy] fvar ty1
           )env rev_l
       in
@@ -828,13 +828,13 @@ and type_bound env bnd ty ~is_open ~is_lower =
     | PPvar s ->
       assert (String.length s > 0);
       begin match s.[0] with
-        | '?' -> Symbols.VarBnd (Var.of_string s), ty
+        | '?' -> Sy.VarBnd (Var.of_string s), ty
         | _ ->
           let vx, ty_x = type_var_desc env s bnd.pp_loc in
           let var_x =
-            match vx with TTvar Symbols.Var vx -> vx | _ -> assert false
+            match vx with TTvar Sy.Var vx -> vx | _ -> assert false
           in
-          Symbols.VarBnd var_x, ty_x
+          Sy.VarBnd var_x, ty_x
       end
     | PPconst num ->
       let ty_x, q =
@@ -846,12 +846,12 @@ and type_bound env bnd ty ~is_open ~is_lower =
           | _ -> assert false
         with _ -> assert false (*numbers well constructed with regular exprs*)
       in
-      Symbols.ValBnd q, ty_x
+      Sy.ValBnd q, ty_x
     | _ -> assert false
   in
   if not (Ty.equal ty ty_x) then
     Errors.typing_error (ShouldHaveType(ty, ty_x)) bnd.pp_loc;
-  Symbols.mk_bound bk ty ~is_open ~is_lower
+  Sy.mk_bound bk ty ~is_open ~is_lower
 
 and mk_ta_eq t1 t2 =
   let c =
@@ -1121,7 +1121,7 @@ and type_form ?(in_theory=false) env f =
                  let fzz = type_form env e in
                  TletForm fzz, Ty.Tbool
              in
-             (sy, Symbols.var @@ Var.of_string sy, xx, tty):: binders
+             (sy, Sy.var @@ Var.of_string sy, xx, tty):: binders
           )[] binders
       in
       let up = Env.list_of env in
@@ -1212,7 +1212,7 @@ and type_pattern p env ty ty_body =
         (fun v (destr, _) ->
            let tv, ty = type_var_desc env v pat_loc in
            let var_v =
-             match tv with TTvar Symbols.Var vx -> vx | _ -> assert false
+             match tv with TTvar Sy.Var vx -> vx | _ -> assert false
            in
            var_v, destr, ty
         )args prof
@@ -1223,7 +1223,7 @@ and type_pattern p env ty ty_body =
     let env = Env.add_ty_var env [f] ty in
     let tv, _ = type_var_desc env f pat_loc in
     let var_f =
-      match tv with TTvar Symbols.Var vx -> vx | _ -> assert false
+      match tv with TTvar Sy.Var vx -> vx | _ -> assert false
     in
     Var var_f, env
 
@@ -1246,7 +1246,7 @@ and type_trigger in_theory env l =
        | true, PPmapsTo (x, e) ->
          let vx, ty_x = type_var_desc env x t.pp_loc in
          let hs_x =
-           match vx with TTvar Symbols.Var hs -> hs | _ -> assert false
+           match vx with TTvar Sy.Var hs -> hs | _ -> assert false
          in
          let te = type_term env e in
          let tt_ty = te.c.tt_ty in
@@ -2105,7 +2105,7 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     let ty = PFunction([], pur_ty) in
     let tlogic, env =
       (* can also use List.fold Env.add_constr *)
-      Env.add_logics ~kind:Env.AdtConstr env Symbols.constr lcl ty loc
+      Env.add_logics ~kind:Env.AdtConstr env Sy.constr lcl ty loc
     in
     let td2_a = { c = TLogic(loc, lc, tlogic); annot=new_id () } in
     (td2_a,env)::acc, env
@@ -2166,7 +2166,7 @@ let declare_fun env loc n ?ret_ty l  =
     | Some ty ->
       PPeq, PFunction(l,ty)
   in
-  let mk_symb hs = Symbols.name hs ~kind:Symbols.Other in
+  let mk_symb hs = Sy.name hs ~kind:Sy.Other in
   let tlogic, env = Env.add_logics env mk_symb [n] ty loc in (* TODO *)
   env, infix, tlogic
 
@@ -2238,7 +2238,7 @@ let rec type_decl (acc, env) d assertion_stack =
 
   | Logic (loc, ac, lp, pp_ty) ->
     Options.tool_req 1 "TR-Typing-LogicFun$_F$";
-    let mk_symb hs = Symbols.name hs ~kind:ac in
+    let mk_symb hs = Sy.name hs ~kind:ac in
     let tlogic, env' = Env.add_logics env mk_symb lp pp_ty loc in
     let lp = List.map fst lp in
     let td = {c = TLogic(loc,lp,tlogic); annot = new_id () } in
@@ -2392,7 +2392,7 @@ let type_expr env vars t =
   let vmap =
     List.fold_left
       (fun m (s,ty)->
-         let str = Symbols.to_string_clean s in
+         let str = Sy.to_string_clean s in
          MString.add str (s,ty) m
       ) env.Env.var_map vars in
   let env = { env with Env.var_map = vmap } in

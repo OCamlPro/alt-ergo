@@ -270,7 +270,7 @@ let rec filter_used_vars_term vars at =
   match at.at_desc with
   | ATconst _ -> []
   | ATvar s ->
-    (try [List.find (fun (s',_) -> Symbols.equal s s') vars]
+    (try [List.find (fun (s',_) -> Sy.equal s s') vars]
      with Not_found ->  [])
   | ATapp (_, atl) ->
     List.fold_left (fun l at -> filter_used_vars_term vars at @ l) [] atl
@@ -292,7 +292,7 @@ let rec filter_used_vars_term vars at =
     let nvars =
       List.fold_left
         (fun vars (s', _) ->
-           List.filter (fun (s'',_) -> not (Symbols.equal s' s'')) vars
+           List.filter (fun (s'',_) -> not (Sy.equal s' s'')) vars
         )vars l
     in
     List.fold_left (fun acc (_, at1) ->
@@ -322,7 +322,7 @@ and filter_used_vars_aform vars = function
     let vars =
       List.fold_left
         (fun vars (s', _) ->
-           List.filter (fun (s'',_) -> not (Symbols.equal s' s'')) vars
+           List.filter (fun (s'',_) -> not (Sy.equal s' s'')) vars
         ) vars qf.c.aqf_bvars
     in
     filter_used_vars_aform vars qf.c.aqf_form.c
@@ -330,7 +330,7 @@ and filter_used_vars_aform vars = function
     let nvars =
       List.fold_left
         (fun vars (s', _) ->
-           List.filter (fun (s'',_) -> not (Symbols.equal s' s'')) vars
+           List.filter (fun (s'',_) -> not (Sy.equal s' s'')) vars
         ) vars l
     in
     List.fold_left (fun acc (_, at1) ->
@@ -484,7 +484,7 @@ let make_instance (buffer:sbuffer) vars entries afc goal_form tyenv =
   if get_debug () then begin
     List.iter (fun (v,e) ->
         Printer.print_dbg ~flushed:false ~header:false
-          "%a -> %s@ " Symbols.print_clean (fst v) e)
+          "%a -> %s@ " Sy.print_clean (fst v) e)
       (List.combine vars (List.rev entries));
     Printer.print_dbg ""
   end;
@@ -497,7 +497,7 @@ let make_instance (buffer:sbuffer) vars entries afc goal_form tyenv =
 
 
 
-exception UncoveredVar of (Symbols.t * Ty.t)
+exception UncoveredVar of (Sy.t * Ty.t)
 
 type nestedq = Forall of aform annoted | Exists of aform annoted
 
@@ -638,7 +638,7 @@ and popup_axiom t env _offset () =
           let entries,_ = List.fold_left
               (fun (entries,i) (s,ty) ->
                  let text = asprintf "%a : %a = "
-                     Symbols.print_clean s Ty.print ty in
+                     Sy.print_clean s Ty.print ty in
                  ignore(
                    GMisc.label ~text ~xalign:1.0
                      ~packing:(table#attach ~left:0 ~top:i) ());

@@ -20,7 +20,6 @@ module E = Expr
 module SE = E.Set
 module Hs = Hstring
 module HSS = Hs.Set
-module Sy = Symbols
 
 module MX = Shostak.MXH
 module LR = Uf.LX

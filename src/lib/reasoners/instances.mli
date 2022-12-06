@@ -68,7 +68,7 @@ module type S = sig
   val register_max_term_depth : t -> int -> t
 
   val matching_terms_info :
-    t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
+    t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Sy.Map.t
 
   val reinit_em_cache : unit -> unit
   (** Reinitializes the E-matching functor instance's inner cache *)

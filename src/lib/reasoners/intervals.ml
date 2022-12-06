@@ -1060,7 +1060,6 @@ type interval_matching =
   ((Q.t * bool) option * (Q.t * bool) option * Ty.t) Var.Map.t
 
 module MV = Var.Map
-module Sy = Symbols
 
 let is_question_mark =
   let qm = Hstring.make "?" in

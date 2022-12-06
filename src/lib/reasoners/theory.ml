@@ -32,10 +32,6 @@ module E = Expr
 module A = Xliteral
 module LR = Uf.LX
 module SE = Expr.Set
-
-module Sy = Symbols
-
-
 module CC_X = Ccx.Main
 
 module type S = sig
@@ -63,7 +59,7 @@ module type S = sig
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
-    Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
+    Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Sy.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) ->
     int -> int -> t * Sig_rel.instances
 

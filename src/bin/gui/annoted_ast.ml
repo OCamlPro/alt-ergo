@@ -117,20 +117,20 @@ type aterm =
 
 and at_desc =
   | ATconst of tconstant
-  | ATvar of Symbols.t
-  | ATapp of Symbols.t * aterm list
-  | ATinfix of aterm * Symbols.t * aterm
-  | ATprefix of Symbols.t * aterm
+  | ATvar of Sy.t
+  | ATapp of Sy.t * aterm list
+  | ATinfix of aterm * Sy.t * aterm
+  | ATprefix of Sy.t * aterm
   | ATget of aterm * aterm
   | ATset of aterm * aterm * aterm
   | ATextract of aterm * aterm * aterm
   | ATconcat of aterm * aterm
-  | ATlet of (Symbols.t * aterm) list * aterm
+  | ATlet of (Sy.t * aterm) list * aterm
   | ATdot of aterm * Hstring.t
   | ATrecord of (Hstring.t * aterm) list
   | ATnamed of Hstring.t * aterm
   | ATmapsTo of Var.t * aterm
-  | ATinInterval of aterm * Symbols.bound * Symbols.bound
+  | ATinInterval of aterm * Sy.bound * Sy.bound
   (* bool = true <-> interval is_open *)
   | ATite of aform annoted * aterm * aterm
 
@@ -145,8 +145,8 @@ and aatom =
   | AApred of aterm * bool (* true <-> negated *)
 
 and aquant_form = {
-  aqf_bvars : (Symbols.t * Ty.t) list ;
-  aqf_upvars : (Symbols.t * Ty.t) list ;
+  aqf_bvars : (Sy.t * Ty.t) list ;
+  aqf_upvars : (Sy.t * Ty.t) list ;
   mutable aqf_triggers : (aterm annoted list * bool) list ;
   aqf_hyp : aform annoted list;
   aqf_form : aform annoted;
@@ -158,7 +158,7 @@ and aform =
   | AFforall of aquant_form annoted
   | AFexists of aquant_form annoted
   | AFlet of
-      (Symbols.t * Ty.t) list * (Symbols.t * atlet_kind) list * aform annoted
+      (Sy.t * Ty.t) list * (Sy.t * atlet_kind) list * aform annoted
   | AFnamed of Hstring.t * aform annoted
 
 and atlet_kind =
@@ -622,9 +622,9 @@ let tconstant_to_string = function
 
 let rec print_var_list fmt = function
   | [] -> ()
-  | [s,ty] -> fprintf fmt "%a:%a" Symbols.print_clean s Ty.print ty
+  | [s,ty] -> fprintf fmt "%a:%a" Sy.print_clean s Ty.print ty
   | (s,ty)::l ->
-    fprintf fmt "%a:%a, %a" Symbols.print_clean s Ty.print ty print_var_list l
+    fprintf fmt "%a:%a, %a" Sy.print_clean s Ty.print ty print_var_list l
 
 
 let rec print_string_sep sep fmt = function
@@ -694,13 +694,13 @@ and print_record se fmt = function
 
 and print_tt_desc fmt = function
   | TTconst c -> print_tconstant fmt c
-  | TTvar s -> Symbols.print_clean fmt s
+  | TTvar s -> Sy.print_clean fmt s
   | TTapp (f, ts) ->
-    fprintf fmt "%a(%a)" Symbols.print_clean f (print_tterm_list ", ") ts
+    fprintf fmt "%a(%a)" Sy.print_clean f (print_tterm_list ", ") ts
   | TTinfix (t1, s, t2) ->
-    fprintf fmt "%a %a %a" print_tterm t1 Symbols.print_clean s print_tterm t2
+    fprintf fmt "%a %a %a" print_tterm t1 Sy.print_clean s print_tterm t2
   | TTprefix (s, t) ->
-    fprintf fmt "%a %a" Symbols.print_clean s print_tterm t
+    fprintf fmt "%a %a" Sy.print_clean s print_tterm t
   | TTlet (binders , t2) ->
     fprintf fmt "let %a in %a" print_term_binders binders print_tterm t2
   | TTconcat (t1, t2) ->
@@ -718,8 +718,8 @@ and print_tt_desc fmt = function
   | TTinInterval(e, lb, ub) ->
     fprintf fmt "%a in %a, %a"
       print_term e
-      Symbols.print_bound lb
-      Symbols.print_bound ub
+      Sy.print_bound lb
+      Sy.print_bound ub
 
   | TTmapsTo(x,e) -> fprintf fmt "%a |-> %a" Var.print x print_term e
 
@@ -737,9 +737,9 @@ and print_term_binders fmt l =
   match l with
   | [] -> assert false
   | (sy, t) :: l ->
-    fprintf fmt "%a = %a" Symbols.print_clean sy print_term t;
+    fprintf fmt "%a = %a" Sy.print_clean sy print_term t;
     List.iter (fun (sy, t) ->
-        fprintf fmt ",\n%a = %a" Symbols.print_clean sy print_term t) l
+        fprintf fmt ",\n%a = %a" Sy.print_clean sy print_term t) l
 
 and print_tatom fmt a = match a.Typed.c with
   | TAtrue -> fprintf fmt "true"
@@ -798,9 +798,9 @@ and print_mixed_binders =
     match binders with
     | [] -> assert false
     | (sy, e) :: l ->
-      fprintf fmt "%a = %a" Symbols.print_clean sy aux e;
+      fprintf fmt "%a = %a" Sy.print_clean sy aux e;
       List.iter (fun (sy, e) ->
-          fprintf fmt ",\n%a = %a" Symbols.print_clean sy aux e) l
+          fprintf fmt ",\n%a = %a" Sy.print_clean sy aux e) l
 
 
 and print_tform fmt f = fprintf fmt " (id:%d)%a" f.Typed.annot print_tform2 f
@@ -909,16 +909,16 @@ and make_dep_aaterm d ex dep aat = make_dep_aterm d ex dep aat.c
 
 and make_dep_at_desc d ex dep = function
   | ATconst _ -> dep
-  | ATvar s  -> make_dep_string d ex dep (Symbols.to_string_clean s)
+  | ATvar s  -> make_dep_string d ex dep (Sy.to_string_clean s)
   | ATapp (s, atl)  ->
-    let dep = make_dep_string d ex dep (Symbols.to_string_clean s) in
+    let dep = make_dep_string d ex dep (Sy.to_string_clean s) in
     List.fold_left (make_dep_aterm d ex) dep atl
   | ATinfix (t1, s, t2)  ->
     let dep = make_dep_aterm d ex dep t1 in
-    let dep = make_dep_string d ex dep (Symbols.to_string_clean s) in
+    let dep = make_dep_string d ex dep (Sy.to_string_clean s) in
     make_dep_aterm d ex dep t2
   | ATprefix (s, t) ->
-    let dep = make_dep_string d ex dep (Symbols.to_string_clean s) in
+    let dep = make_dep_string d ex dep (Sy.to_string_clean s) in
     make_dep_aterm d ex dep t
   | ATget (t1, t2) | ATconcat (t1, t2) ->
     let dep = make_dep_aterm d ex dep t1 in
@@ -931,7 +931,7 @@ and make_dep_at_desc d ex dep = function
     let dep =
       List.fold_left
         (fun dep (s, t1) ->
-           let dep = make_dep_string d ex dep (Symbols.to_string_clean s) in
+           let dep = make_dep_string d ex dep (Sy.to_string_clean s) in
            make_dep_aterm d ex dep t1
         )dep l
     in
@@ -960,7 +960,7 @@ and make_dep_aatom d ex dep = function
   | AApred (at, _) -> make_dep_aterm d ex dep at
 
 and make_dep_quant_form d ex dep { aqf_bvars = bv; aqf_form = aaf; _ } =
-  let vars = List.map (fun (s,_) -> (Symbols.to_string_clean s)) bv in
+  let vars = List.map (fun (s,_) -> (Sy.to_string_clean s)) bv in
   make_dep_aform d (vars@ex) dep aaf.c
 
 and make_dep_aform d ex dep = function
@@ -993,7 +993,7 @@ let rec make_dep_atyped_decl dep d =
     List.fold_left
       (fun dep r ->
          let vars = List.map
-             (fun (s,_) -> (Symbols.to_string_clean s)) r.c.rwt_vars in
+             (fun (s,_) -> (Sy.to_string_clean s)) r.c.rwt_vars in
          let dep = make_dep_aterm d vars dep r.c.rwt_left in
          make_dep_aterm d vars dep r.c.rwt_right
       ) dep arwtl
@@ -1477,20 +1477,20 @@ and add_at_desc_at errors indent (buffer:sbuffer) tags iter at =
     append_buf buffer ~iter ~tags
       (sprintf "%s" (tconstant_to_string c))
   | ATvar s  ->
-    append_buf buffer ~iter ~tags (sprintf "%s" (Symbols.to_string_clean s))
+    append_buf buffer ~iter ~tags (sprintf "%s" (Sy.to_string_clean s))
   | ATapp (s, atl)  ->
     append_buf buffer ~iter ~tags
-      (sprintf "%s(" (Symbols.to_string_clean s));
+      (sprintf "%s(" (Sy.to_string_clean s));
     add_aterm_list_at errors indent buffer tags iter ", " atl;
     append_buf buffer ~iter ~tags ")"
   | ATinfix (t1, s, t2)  ->
     add_aterm_at errors indent buffer tags iter t1;
     append_buf buffer ~iter ~tags
-      (sprintf " %s " (Symbols.to_string_clean s));
+      (sprintf " %s " (Sy.to_string_clean s));
     add_aterm_at errors indent buffer tags iter t2
   | ATprefix (s, t) ->
     append_buf buffer ~iter ~tags
-      (sprintf "%s " (Symbols.to_string_clean s));
+      (sprintf "%s " (Sy.to_string_clean s));
     add_aterm_at errors indent buffer tags iter t
   | ATget (t1, t2) ->
     add_aterm_at errors indent buffer tags iter t1;
@@ -1538,8 +1538,8 @@ and add_at_desc_at errors indent (buffer:sbuffer) tags iter at =
   | ATinInterval(t1, lb, ub) ->
     add_aterm_at errors indent buffer tags iter t1;
     append_buf buffer ~iter ~tags " in ";
-    let lb = Symbols.string_of_bound lb in
-    let ub = Symbols.string_of_bound ub in
+    let lb = Sy.string_of_bound lb in
+    let ub = Sy.string_of_bound ub in
     append_buf buffer ~iter ~tags lb;
     append_buf buffer ~iter ~tags " , ";
     append_buf buffer ~iter ~tags ub
@@ -1556,13 +1556,13 @@ and add_term_binders_to_buf errors indent buffer tags iter l =
   match l with
   | [] -> assert false
   | (sy, t) :: l ->
-    append_buf buffer ~tags (sprintf "%s = " (Symbols.to_string_clean sy));
+    append_buf buffer ~tags (sprintf "%s = " (Sy.to_string_clean sy));
 
     add_aterm_at errors indent buffer tags iter t;
     List.iter
       (fun (sy, t) ->
          append_buf buffer ~tags
-           (sprintf ", %s = " (Symbols.to_string_clean sy));
+           (sprintf ", %s = " (Sy.to_string_clean sy));
          add_aterm_at errors indent buffer tags iter t;
       )l
 
@@ -1728,12 +1728,12 @@ and add_mixed_binders_to_buf buffer errors indent tags l =
   match l with
   | [] -> assert false
   | (sy, t) :: l ->
-    append_buf buffer ~tags (sprintf "%s = " (Symbols.to_string_clean sy));
+    append_buf buffer ~tags (sprintf "%s = " (Sy.to_string_clean sy));
     aux t;
     List.iter
       (fun (sy, t) ->
          append_buf buffer ~tags
-           (sprintf ", %s = " (Symbols.to_string_clean sy));
+           (sprintf ", %s = " (Sy.to_string_clean sy));
          aux t;
       )l
 
@@ -1931,9 +1931,9 @@ let rec isin_aterm sl { at_desc; _ } =
   match at_desc with
   | ATconst _ -> false
   | ATvar sy ->
-    List.mem (Symbols.to_string_clean sy) sl
+    List.mem (Sy.to_string_clean sy) sl
   | ATapp (sy, atl) ->
-    List.mem (Symbols.to_string_clean sy) sl || isin_aterm_list sl atl
+    List.mem (Sy.to_string_clean sy) sl || isin_aterm_list sl atl
   | ATinfix (t1, _, t2) | ATget (t1,t2) | ATconcat (t1, t2) ->
     isin_aterm sl t1 || isin_aterm sl t2
   | ATlet (l, t2) ->
@@ -1959,9 +1959,9 @@ and findtags_aaterm sl aat acc =
   match aat.c.at_desc with
   | ATconst _ -> acc
   | ATvar sy ->
-    if List.mem (Symbols.to_string_clean sy) sl then aat.tag::acc else acc
+    if List.mem (Sy.to_string_clean sy) sl then aat.tag::acc else acc
   | ATapp (sy, atl) ->
-    if List.mem (Symbols.to_string_clean sy) sl || isin_aterm_list sl atl
+    if List.mem (Sy.to_string_clean sy) sl || isin_aterm_list sl atl
     then aat.tag::acc else acc
   | ATinfix (t1, _, t2) | ATget (t1,t2) | ATconcat (t1, t2) ->
     if isin_aterm sl t1 || isin_aterm sl t2 then aat.tag::acc else acc
@@ -2030,7 +2030,7 @@ and findtags_aform sl aform acc =
     let sl =
       List.fold_left
         (fun sl (sy, _) ->
-           let s = Symbols.to_string_clean sy in
+           let s = Sy.to_string_clean sy in
            List.fold_left
              (fun l s' -> if Stdlib.(=) s' s then l else s'::l) [] sl
         )sl l
@@ -2096,10 +2096,10 @@ let findtags_using r l =
 let rec listsymbols at acc =
   match at.at_desc with
   | ATconst _ -> acc
-  | ATvar sy -> (Symbols.to_string_clean sy)::acc
+  | ATvar sy -> (Sy.to_string_clean sy)::acc
   | ATapp (sy, atl) ->
     List.fold_left (fun acc at -> listsymbols at acc)
-      ((Symbols.to_string_clean sy)::acc) atl
+      ((Sy.to_string_clean sy)::acc) atl
   | ATinfix (t1, _, t2) | ATget (t1,t2) | ATconcat (t1, t2) ->
     listsymbols t1 (listsymbols t2 acc)
   | ATlet (l, t2) ->
