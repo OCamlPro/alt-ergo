@@ -141,12 +141,13 @@ module Shostak (X : ALIEN) = struct
 
     | _ -> false
 
-  let make ({ E.f; xs; ty; _ } as t) =
+  let make t =
     assert (not @@ Options.get_disable_adts ());
     if Options.get_debug_adt () then
       Printer.print_dbg
         ~module_name:"Adt" ~function_name:"make"
         "make %a" E.print t;
+    let { E.f; xs; ty; _ } = E.term_view t in
     let sx, ctx =
       List.fold_left
         (fun (args, ctx) s ->

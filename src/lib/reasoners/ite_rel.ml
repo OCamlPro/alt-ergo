@@ -54,7 +54,7 @@ let empty _ =
 let is_ite =
   let ite = Symbols.Op Symbols.Tite in
   fun t ->
-    match t with
+    match E.term_view t with
     | { E.f ; xs = [p;t1;t2]; _ } when Symbols.equal f ite -> Some (p, t1, t2)
     | _ -> None
 

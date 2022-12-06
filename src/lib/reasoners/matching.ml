@@ -187,12 +187,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
       op_gen i.age g , op_but i.but b
     with Not_found -> g , b
 
-  let add_term info ({ E.f = f; xs = xs; _ } as t) env =
+  let add_term info t env =
     let open Matching_types in
     Debug.add_term t;
     let rec add_rec env t =
       if ME.mem t env.info then env
       else
+        let { E.f = f; xs = xs; _ } = E.term_view t in
         let env =
           let map_f =
             try SubstE.find f env.fils with Not_found -> ME.empty in
@@ -372,9 +373,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   let rec match_term mconf env tbox
       ({ sty = s_ty; gen = g; goal = b; _ } as sg : Matching_types.gsubst)
-      pat ({ E.f = f_pat; xs = pats; ty = ty_pat; _ } as t) =
+      pat t =
     Options.exec_thread_yield ();
     Debug.match_term sg t pat;
+    let { E.f = f_pat; xs = pats; ty = ty_pat; _ } = E.term_view pat in
     match f_pat with
     |  Symbols.Var _ when Symbols.equal f_pat Symbols.underscore ->
       begin
@@ -406,7 +408,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
           Debug.match_class_of t cl;
           let cl =
             List.fold_left
-              (fun l ({ E.f = f; xs = xs; ty = ty; _ } as t) ->
+              (fun l t ->
+                 let { E.f = f; xs = xs; ty = ty; _ } = E.term_view t in
                  if Symbols.compare f_pat f = 0 then xs::l
                  else
                    begin
@@ -446,9 +449,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let match_one_pat mconf env tbox pat0 lsbt_acc sg =
     Steps.incr (Steps.Matching);
     Debug.match_one_pat sg pat0;
-    let { E.f = f; xs = pats; ty = ty; _ } =
-      E.apply_subst (sg.sbs, sg.sty) pat0
-    in
+    let pat = E.apply_subst (sg.sbs, sg.sty) pat0 in
+    let { E.f = f; xs = pats; ty = ty; _ } = E.term_view pat in
     match f with
     | Symbols.Var _ -> all_terms f ty env tbox sg lsbt_acc
     | _ ->
@@ -479,8 +481,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
     List.fold_left (match_one_pat mconf env tbox pat) [] lsubsts
 
   let trig_weight s t =
-    let sf = s.E.f in
-    let tf = t.E.f in
+    let sf = E.(term_view s).f in
+    let tf = E.(term_view t).f in
     match sf, tf with
     | Symbols.Name _, Symbols.Op _ -> -1
     | Symbols.Op _, Symbols.Name _ -> -1

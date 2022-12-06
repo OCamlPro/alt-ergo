@@ -270,7 +270,8 @@ struct
       | Ac t   -> if equal p r then v else AC.subst p v t
       | Term _ -> if equal p r then v else r
 
-  let make ({ Expr.f = sb; ty; _ } as t) =
+  let make t =
+    let { Expr.f = sb; ty; _ } = Expr.term_view t in
     let not_restricted = not @@ Options.get_restricted () in
     match
       X1.is_mine_symb sb ty,

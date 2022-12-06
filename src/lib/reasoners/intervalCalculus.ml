@@ -770,7 +770,7 @@ and update_monome are_eq expl use_x env x =
       | Some t, _ ->
         let use_x = SX.singleton x in
         begin
-          match t with
+          match E.term_view t with
           | { E.f = (Sy.Op Sy.Div); xs = [a; b]; _ } ->
             let ra, ea =
               let (ra, _) as e = Uf.find env.new_uf a in
@@ -1572,7 +1572,7 @@ let update_used_by_pow env r1 p2 orig  eqs =
     if P.is_const p2 == None then raise Exit;
     let s = (MX0.find r1 env.used_by).pow in
     SE.fold (fun t eqs ->
-        match t with
+        match E.term_view t with
         | { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
           begin
             match calc_pow a b ty env.new_uf with
@@ -1826,7 +1826,7 @@ let default_case_split env uf ~for_model =
     if x is computable when its subterms values are known.
     This is currently only done for power *)
 let add_used_by t r env =
-  match t with
+  match E.term_view t with
   | { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
     begin
       match calc_pow a b ty env.new_uf with
@@ -2450,7 +2450,7 @@ let separate_semantic_triggers =
            let syn, sem =
              List.fold_left
                (fun (syn, sem) t ->
-                  match t with
+                  match E.term_view t with
                   | { E.f = Symbols.In (lb, ub); xs = [x]; _ } ->
                     syn, (E.Interval (x, lb, ub)) :: sem
 
