@@ -1913,7 +1913,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Var.reinit_cnt ();
     Satml_types.Flat_Formula.reinit_cpt ();
     Ty.reinit_decls ();
-    IntervalCalculus.reinit_cache ();
+    Arith_rel.reinit_cache ();
     Inst.reinit_em_cache ();
     Expr.reinit_cache ();
     Hstring.reinit_cache ();
