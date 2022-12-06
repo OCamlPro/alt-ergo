@@ -18,7 +18,7 @@ exception Last_UIP_reason of Atom.Set.t
 type conflict_origin =
   | C_none
   | C_bool of Atom.clause
-  | C_theory of Explanation.t
+  | C_theory of Ex.t
 
 module type SAT_ML = sig
 
@@ -56,7 +56,7 @@ module type SAT_ML = sig
   val set_current_tbox : t -> th -> unit
   val empty : unit -> t
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
+  val assume_th_elt : t -> Expr.th_elt -> Ex.t -> unit
   val decision_level : t -> int
   val cancel_until : t -> int -> unit
 

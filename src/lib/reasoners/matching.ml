@@ -46,7 +46,7 @@ module type S = sig
   val add_term : Matching_types.term_info -> E.t -> t -> t
   val max_term_depth : t -> int -> t
   val add_triggers :
-    Util.matching_env -> t -> (Expr.t * int * Explanation.t) ME.t -> t
+    Util.matching_env -> t -> (Expr.t * int * Ex.t) ME.t -> t
   val terms_info : t -> Matching_types.info ME.t * E.t list ME.t SubstE.t
   val query :
     Util.matching_env -> t -> theory ->

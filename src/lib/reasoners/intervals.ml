@@ -28,8 +28,6 @@
 
 module Q = Numbers.Q
 
-module Ex = Explanation
-
 type borne =
   | Strict of (Q.t * Ex.t)
   | Large of (Q.t * Ex.t)
@@ -259,7 +257,7 @@ let neg_borne b = match b with
 (* TODO: generalize the use of this type and the function joint below
    to other operations on intervals *)
 type kind =
-  | Empty of Explanation.t
+  | Empty of Ex.t
   | Int of (borne * borne)
 
 let join l glob_ex = (* l should not be empty *)
@@ -538,7 +536,7 @@ let sub i1 i2 = add i1 (scale Q.m_one i2)
 let merge i1 i2 =
   union_intervals
     {ints = List.rev_append i1.ints i2.ints; is_int = i1.is_int;
-     expl = Explanation.union i1.expl i2.expl}
+     expl = Ex.union i1.expl i2.expl}
 
 let contains i q =
   List.exists
@@ -1007,7 +1005,7 @@ let mk_closed l u llarge ularge lexp uexp ty =
   let ub = if ularge then Large(u, uexp) else Strict (u, uexp) in
   { ints = [lb, ub]; is_int = ty == Ty.Tint; expl = Ex.union lexp uexp }
 
-type bnd = (Numbers.Q.t * Numbers.Q.t) option * Explanation.t
+type bnd = (Numbers.Q.t * Numbers.Q.t) option * Ex.t
 
 let bnd_of_borne b ex0 low =
   match b with

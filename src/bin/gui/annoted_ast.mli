@@ -297,7 +297,7 @@ val findtags_dep_adecl :
   atyped_decl -> (atyped_decl annoted * Typechecker.env) list -> GText.tag list
 
 val findtags_proof :
-  Explanation.t -> (atyped_decl annoted * Typechecker.env) list ->
+  Ex.t -> (atyped_decl annoted * Typechecker.env) list ->
   GText.tag list * int MTag.t
 
 val find_line :

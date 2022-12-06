@@ -999,7 +999,7 @@ let show_used_lemmas env expl =
 
 (* More efficient but invariant broken when using user instanciated axioms
    let prune_unused env expl =
-   let ids = match Explanation.ids_of expl with
+   let ids = match Ex.ids_of expl with
    | None -> []
    | Some ids -> List.sort Stdlib.compare ids
    in

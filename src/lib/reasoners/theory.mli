@@ -36,7 +36,7 @@ module type S = sig
      decreasing order with respect to (dlvl, plvl) *)
   val assume :
     ?ordered:bool ->
-    (Expr.t * Explanation.t * int * int) list -> t ->
+    (Expr.t * Ex.t * int * int) list -> t ->
     t * Expr.Set.t * int
 
   val query : Expr.t -> t -> Th_util.answer
@@ -49,7 +49,7 @@ module type S = sig
 
   val compute_concrete_model : t -> t
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Expr.th_elt -> Ex.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Sy.Map.t ->

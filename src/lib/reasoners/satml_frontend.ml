@@ -12,7 +12,6 @@
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module SAT = Satml.Make(Th)
   module Inst = Instances.Make(Th)
-  module Ex = Explanation
   module E = Expr
   module ME = E.Map
   module SE = E.Set
@@ -74,10 +73,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     { (empty ()) with add_inst = add_inst }
 
   exception Sat of t
-  exception Unsat of Explanation.t
+  exception Unsat of Ex.t
   exception I_dont_know of t
 
-  exception IUnsat of t * Explanation.t
+  exception IUnsat of t * Ex.t
 
   let mk_gf f =
     { E.ff = f;
@@ -394,7 +393,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     let l1 = List.rev_append (List.rev gd1) ngd1 in
     if Options.get_profiling() then Profiling.instances l1;
-    let l = ((List.rev_append l2 l1) : (E.gformula * Explanation.t) list) in
+    let l = ((List.rev_append l2 l1) : (E.gformula * Ex.t) list) in
 
     let th_insts = mk_theories_inst_rec env 10 in
     let l = List.rev_append th_insts l in

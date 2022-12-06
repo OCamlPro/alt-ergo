@@ -31,7 +31,6 @@ open Format
 open Options
 
 module E = Expr
-module Ex = Explanation
 module type S = sig
 
   type sat_env

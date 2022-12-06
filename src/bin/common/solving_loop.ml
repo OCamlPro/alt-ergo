@@ -71,7 +71,7 @@ let main () =
       let _ =
         List.fold_left
           (FE.process_decl FE.print_status used_context consistent_dep_stack)
-          (SAT.empty (), true, Explanation.empty) cnf
+          (SAT.empty (), true, Ex.empty) cnf
       in
       if Options.get_timelimit_per_goal() then
         Options.Time.unset_timeout ~is_gui:false;

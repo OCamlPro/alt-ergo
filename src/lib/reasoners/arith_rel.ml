@@ -56,7 +56,7 @@ module Oracle = OracleContainer.Make(P)
 
 module SE = Expr.Set
 module ME = Expr.Map
-module Ex = Explanation
+module Ex = Ex
 module E = Expr
 module EM = Matching.Make
     (struct
@@ -98,7 +98,7 @@ module SimVar = struct
 end
 
 
-module Sim = OcplibSimplex.Basic.Make(SimVar)(Numbers.Q)(Explanation)
+module Sim = OcplibSimplex.Basic.Make(SimVar)(Numbers.Q)(Ex)
 
 type used_by = {
   pow : SE.t;
@@ -117,7 +117,7 @@ type t = {
   int_sim : Sim.Core.t;
   rat_sim : Sim.Core.t;
   new_uf : Uf.t;
-  th_axioms : (Expr.th_elt * Explanation.t) ME.t;
+  th_axioms : (Expr.th_elt * Ex.t) ME.t;
   linear_dep : SE.t ME.t;
   syntactic_matching :
     (Matching_types.trigger_info * Matching_types.gsubst list) list list;
@@ -136,7 +136,7 @@ module Sim_Wrap = struct
       if get_debug_fm () then
         Printer.print_dbg
           ~module_name:"IntervalCalculus" ~function_name:"check_unsat_result"
-          "simplex derived unsat: %a" Explanation.print ex;
+          "simplex derived unsat: %a" Ex.print ex;
       raise (Ex.Inconsistent (ex, env.classes))
 
   let solve env _i =
@@ -499,7 +499,7 @@ let generic_add x j use is_mon env =
     let p, c = P.separate_constant p0 in
     let p, c0, d = P.normal_form_pos p in
     assert (Q.sign d <> 0 && Q.sign c0 = 0);
-    let j = I.add j (I.point (Q.minus c) ty Explanation.empty) in
+    let j = I.add j (I.point (Q.minus c) ty Ex.empty) in
     let j = I.scale (Q.inv d) j in
     try MP.n_add p j (MP.n_find p env.polynomes) env
     with Not_found -> MP.n_add p j (I.undefined ty) env
@@ -522,7 +522,7 @@ module Debug = struct
         "@[<v 2>%s We assume: %a@,explanations: %a@]"
         (if query then "[query]" else "")
         LR.print (LR.make a)
-        Explanation.print expl
+        Ex.print expl
 
   let print_use fmt use =
     SX.iter (fprintf fmt "%a, " X.print) use
@@ -561,7 +561,7 @@ module Debug = struct
       let print fmt (ra, _, ex, _) =
         fprintf fmt "@,%a %a"
           LR.print (LR.make ra)
-          Explanation.print ex
+          Ex.print ex
       in
       print_dbg
         ~module_name:"IntervalCalculus" ~function_name:"implied_equalities"
@@ -586,7 +586,7 @@ module Debug = struct
       print_dbg
         ~module_name:"IntervalCalculus"
         ~function_name:"inconsistent_interval"
-        "interval inconsistent %a" Explanation.print expl
+        "interval inconsistent %a" Ex.print expl
 
   let added_inequation kind ineq =
     if get_debug_fm () then begin
@@ -690,7 +690,7 @@ let mult_bornes_vars vars env ty =
     in
     List.fold_left
       (fun ui (yi,n) -> I.mult ui (I.power n yi))
-      (I.point Q.one ty Explanation.empty) l
+      (I.point Q.one ty Ex.empty) l
   with Not_found -> I.undefined ty
 
 (** computes the interval of a polynome from those of its monomes.
@@ -709,7 +709,7 @@ let intervals_from_monomes ?(monomes_inited=true) env p =
              I.undefined (X.type_info x), SX.empty
          in
          I.add (I.scale a (I.coerce Ty.Treal i_x)) i
-      ) (I.point v Ty.Treal Explanation.empty) pl
+      ) (I.point v Ty.Treal Ex.empty) pl
   in
   I.coerce (P.type_info p) rational_interval
 
@@ -721,7 +721,7 @@ let cannot_be_equal_to_zero env p ip =
     match X.solve (alien_of p) z with
     | [] -> None (* p is equal to zero *)
     | _ -> I.doesnt_contain_0 ip
-  with Util.Unsolvable -> Some (Explanation.empty, env.classes)
+  with Util.Unsolvable -> Some (Ex.empty, env.classes)
 
 
 let rec init_monomes_of_poly are_eq env p use_p expl =
@@ -741,7 +741,7 @@ and init_alien are_eq expl p (normal_p, c, d) ty use_x env =
     try
       let old_i = MP.n_find normal_p env.polynomes in
       let old_i = I.scale d
-          (I.add old_i (I.point c ty Explanation.empty)) in
+          (I.add old_i (I.point c ty Ex.empty)) in
       I.intersect i old_i
     with Not_found -> i
   in
@@ -774,14 +774,14 @@ and update_monome are_eq expl use_x env x =
             let ra, ea =
               let (ra, _) as e = Uf.find env.new_uf a in
               if List.filter (X.equal x) (X.leaves ra) == [] then e
-              else fst (X.make a), Explanation.empty (*otherwise, we loop*)
+              else fst (X.make a), Ex.empty (*otherwise, we loop*)
             in
             let rb, eb =
               let (rb, _) as e = Uf.find env.new_uf b in
               if List.filter (X.equal x) (X.leaves rb) == [] then e
-              else fst (X.make b), Explanation.empty (*otherwise, we loop*)
+              else fst (X.make b), Ex.empty (*otherwise, we loop*)
             in
-            let expl = Explanation.union expl (Explanation.union ea eb) in
+            let expl = Ex.union expl (Ex.union ea eb) in
             let pa = poly_of ra in
             let pb = poly_of rb in
             let (pa', ca, da) as npa = P.normal_form_pos pa in
@@ -795,14 +795,14 @@ and update_monome are_eq expl use_x env x =
             let ia, ib = match cannot_be_equal_to_zero env pb ib with
               | Some (ex, _) when Q.equal ca cb
                                && P.compare pa' pb' = 0 ->
-                let expl = Explanation.union ex expl in
+                let expl = Ex.union ex expl in
                 I.point da ty expl, I.point db ty expl
               | Some (ex, _) ->
                 begin
                   match are_eq a b with
                   | Some (ex_eq, _) ->
-                    let expl = Explanation.union ex expl in
-                    let expl = Explanation.union ex_eq expl in
+                    let expl = Ex.union ex expl in
+                    let expl = Ex.union ex_eq expl in
                     I.point Q.one ty expl,
                     I.point Q.one ty expl
                   | None -> ia, ib
@@ -897,7 +897,7 @@ let update_monomes_from_poly p i env =
             (I.add i
                (I.scale (Q.minus d)
                   (I.add inp
-                     (I.point c ty Explanation.empty)))) in
+                     (I.point c ty Ex.empty)))) in
         let old_ix, ux = MX.n_find x env.monomes in
         let ix = I.intersect old_ix new_ix in
         MX.n_add x (ix, ux) old_ix env
@@ -917,7 +917,7 @@ let update_polynomes_intervals env =
 let update_non_lin_monomes_intervals are_eq env =
   MX.fold
     (fun x (_, use_x) env ->
-       tighten_non_lin are_eq x use_x env Explanation.empty
+       tighten_non_lin are_eq x use_x env Ex.empty
     ) env.monomes env
 
 let find_one_eq x u =
@@ -1253,7 +1253,7 @@ let refine_x_bounds ix env rels is_low =
          let b, ex_b, is_le = I.borne_inf ip in (* invariant, see above *)
          let b = Q.div b m_cx in
          let func = if is_low then I.new_borne_inf else I.new_borne_sup in
-         func (Explanation.union ineq_ex ex_b) b ~is_le ix
+         func (Ex.union ineq_ex ex_b) b ~is_le ix
        with I.No_finite_bound -> ix
     )rels ix
 
@@ -1286,7 +1286,7 @@ let refine_p_bounds ip _p env rels is_low =
          let b = Q.mult cx bx in
          let b = Q.add (Q.div b md0) mc0 in (* final bnd of p0 *)
          let func = if is_low then I.new_borne_inf else I.new_borne_sup in
-         func (Explanation.union ineq_ex ex_b) b ~is_le ip
+         func (Ex.union ineq_ex ex_b) b ~is_le ip
        with Exit | I.No_finite_bound -> ip
     )rels ip
 
@@ -1626,7 +1626,7 @@ let assume ~query env uf la =
                  let env =
                    init_monomes_of_poly
                      are_eq env ineq.Oracle.ple0 SX.empty
-                     Explanation.empty
+                     Ex.empty
                  in
                  let env =
                    update_ple0
@@ -1649,7 +1649,7 @@ let assume ~query env uf la =
                    env, eqs, new_ineqs, rm
                | None ->
                  let env = init_monomes_of_poly are_eq env p SX.empty
-                     Explanation.empty
+                     Ex.empty
                  in
                  let env, eqs = add_disequality are_eq env eqs p expl in
                  env, eqs, new_ineqs, rm
@@ -1661,7 +1661,7 @@ let assume ~query env uf la =
              let p2 = poly_of r2 in
              let p = P.sub p1 p2 in
              let env = init_monomes_of_poly are_eq env p SX.empty
-                 Explanation.empty
+                 Ex.empty
              in
              let env, eqs = add_equality are_eq env eqs p expl in
              let env = tighten_eq_bounds env r1 r2 p1 p2 orig expl in
@@ -1853,7 +1853,7 @@ let add_used_by t r env =
 
 let add =
   let are_eq t1 t2 =
-    if E.equal t1 t2 then Some (Explanation.empty, []) else None
+    if E.equal t1 t2 then Some (Ex.empty, []) else None
   in
   fun env new_uf r t ->
     Debug.env env;
@@ -1863,7 +1863,7 @@ let add =
       Debug.add p;
       if is_num r then
         let env =
-          init_monomes_of_poly are_eq env p SX.empty Explanation.empty
+          init_monomes_of_poly are_eq env p SX.empty Ex.empty
         in
         add_used_by t r env
       else env, []
@@ -2036,7 +2036,7 @@ let model_from_simplex sim is_int env uf =
                "[%s simplex] %a = %a"
                (if is_int then "integer" else "rational")
                X.print v X.print r;
-           (v, r, Explanation.empty) :: acc
+           (v, r, Ex.empty) :: acc
       )[] (List.rev main_vars)
 
 
@@ -2077,7 +2077,7 @@ let case_split env uf ~for_model =
 let best_interval_of optimized env p =
   (* p is supposed to be in normal_form_pos *)
   match P.is_const p with
-  | Some c -> env, I.point c (P.type_info p) Explanation.empty
+  | Some c -> env, I.point c (P.type_info p) Ex.empty
   | None ->
     let i =
       try let i, _, _ = generic_find (alien_of p) env in i
@@ -2207,7 +2207,7 @@ let domain_matching _lem_name tr sbt env uf optimized =
              let p = poly_of rr in
              let p', c', d = P.normal_form_pos p in
              let env, i' = best_interval_of optimized env p' in
-             let ic = I.point c' (P.type_info p') Explanation.empty in
+             let ic = I.point c' (P.type_info p') Ex.empty in
              let i = I.scale d (I.add i' ic) in
              begin match I.match_interval lb ub i idoms with
                | None -> raise (Sem_match_fails env)

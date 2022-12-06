@@ -17,32 +17,32 @@ module Make (Th : Theory.S) = struct
   module E = Expr
   module ME = E.Map
   module SE = E.Set
-  module Ex = Explanation
   module Atom = Satml_types.Atom
   module MA = Atom.Map
   module SAT = Satml.Make(Th)
   module PF = Satml_types.Proxy_formula
 
-  type t =
-    {sat : SAT.t;
-     assumed : SE.t;
-     proxies : Atom.atom ME.t;
-     inv_proxies : E.t MA.t;
-     hcons_env : Atom.hcons_env;
-     decisions : (int * E.t) list;
-     pending : (E.gformula * Ex.t) list list;
-    }
+  type t = {
+    sat: SAT.t;
+    assumed: SE.t;
+    proxies: Atom.atom ME.t;
+    inv_proxies: E.t MA.t;
+    hcons_env: Atom.hcons_env;
+    decisions: (int * E.t) list;
+    pending: (E.gformula * Ex.t) list list;
+  }
 
-  exception Bottom of Explanation.t * E.Set.t list * t
+  exception Bottom of Ex.t * E.Set.t list * t
 
-  let empty () =
-    {sat = SAT.empty ();
-     assumed = SE.empty;
-     proxies = ME.empty;
-     inv_proxies = MA.empty;
-     hcons_env = Atom.empty_hcons_env ();
-     decisions=[];
-     pending=[]}
+  let empty () = {
+    sat = SAT.empty ();
+    assumed = SE.empty;
+    proxies = ME.empty;
+    inv_proxies = MA.empty;
+    hcons_env = Atom.empty_hcons_env ();
+    decisions = [];
+    pending = []
+  }
 
   let formula_of_atom env a =
     try let p = MA.find a env.inv_proxies in p

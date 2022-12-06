@@ -27,7 +27,6 @@
 (******************************************************************************)
 
 module X = Shostak.Combine
-module Ex = Explanation
 module E = Expr
 module A = Xliteral
 module SE = Expr.Set
@@ -47,20 +46,20 @@ module type S = sig
     t ->
     r Sig_rel.facts -> (* acc *)
     Expr.t ->
-    Explanation.t ->
+    Ex.t ->
     t * r Sig_rel.facts
 
   val add :
     t ->
     r Sig_rel.facts -> (* acc *)
     E.t ->
-    Explanation.t -> t * r Sig_rel.facts
+    Ex.t -> t * r Sig_rel.facts
 
   val assume_literals :
     t ->
-    (r Sig_rel.literal * Explanation.t * Th_util.lit_origin) list ->
+    (r Sig_rel.literal * Ex.t * Th_util.lit_origin) list ->
     r Sig_rel.facts ->
-    t * (r Sig_rel.literal * Explanation.t * Th_util.lit_origin) list
+    t * (r Sig_rel.literal * Ex.t * Th_util.lit_origin) list
 
   val case_split :
     t -> for_model:bool ->
@@ -75,7 +74,7 @@ module type S = sig
 
   val get_union_find : t -> Uf.t
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Expr.th_elt -> Ex.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Sy.Map.t ->

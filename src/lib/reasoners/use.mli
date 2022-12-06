@@ -26,7 +26,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module SA : Set.S with type elt = Expr.t * Explanation.t
+module SA : Set.S with type elt = Expr.t * Ex.t
 
 type t
 type r = Shostak.Combine.r

@@ -31,7 +31,6 @@ open Options
 module E = Expr
 module ME = Expr.Map
 module SE = Expr.Set
-module Ex = Explanation
 
 module type S = sig
   type t
@@ -50,7 +49,7 @@ module type S = sig
     t
 
   val ground_pred_defn:
-    Expr.t -> t -> (Expr.t * Expr.t * Explanation.t) option
+    Expr.t -> t -> (Expr.t * Expr.t * Ex.t) option
 
   val pop : t -> guard:Expr.t -> t
 
@@ -106,7 +105,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
        bool = true <-> pred is ground *)
     lemmas : (guard * int * Ex.t) ME.t;
     predicates : (guard * int * Ex.t) ME.t;
-    ground_preds : (guard * E.t * Explanation.t) ME.t; (* key <-> f *)
+    ground_preds : (guard * E.t * Ex.t) ME.t; (* key <-> f *)
     matching : EM.t;
   }
 

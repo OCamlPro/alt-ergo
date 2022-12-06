@@ -26,8 +26,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type answer = (Explanation.t * Expr.Set.t list) option
-
+type answer = (Ex.t * Expr.Set.t list) option
 
 type theory =
   | Th_arith

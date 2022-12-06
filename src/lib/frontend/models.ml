@@ -15,7 +15,6 @@ open Options
 module X = Shostak.Combine
 
 module Ac = Shostak.Ac
-module Ex = Explanation
 
 module E = Expr
 module ME = Expr.Map

@@ -40,7 +40,7 @@ module type S = sig
     (* int instead of Term.t as a key to prevent us
        from using it in deductions *)
     dep : (Q.t * P.t * bool) Util.MI.t;
-    expl : Explanation.t;
+    expl : Ex.t;
     age : Z.t;
   }
 
@@ -60,7 +60,7 @@ module type S = sig
   val incr_age : unit -> unit
 
   val create_ineq :
-    P.t -> P.t -> bool -> Expr.t option -> Explanation.t -> t
+    P.t -> P.t -> bool -> Expr.t option -> Ex.t -> t
 
   val print_inequation : Format.formatter -> t -> unit
 
@@ -107,13 +107,13 @@ module Container : Container_SIG = struct
       ple0 : P.t;
       is_le : bool;
       dep : (Q.t * P.t * bool) Util.MI.t;
-      expl : Explanation.t;
+      expl : Ex.t;
       age : Z.t;
     }
 
     let print_inequation fmt ineq =
       Format.fprintf fmt "%a %s 0 %a" P.print ineq.ple0
-        (if ineq.is_le then "<=" else "<") Explanation.print ineq.expl
+        (if ineq.is_le then "<=" else "<") Ex.print ineq.expl
 
     let create_ineq p1 p2 is_le a expl =
       let ple0 = P.sub p1 p2 in
@@ -159,8 +159,8 @@ module Container : Container_SIG = struct
       let is_empty mp = MP.is_empty mp
 
       let younger ineq' ineq =
-        (* requires more work in Explanation
-           Explanation.younger ineq'.expl ineq.expl ||*)
+        (* requires more work in Ex
+           Ex.younger ineq'.expl ineq.expl ||*)
         Z.compare ineq'.age ineq.age <= 0
 
       let insert ineq mp =
@@ -270,7 +270,7 @@ module Container : Container_SIG = struct
                   { ple0 = p;  is_le = k1&&k2;
                     dep = merge_deps d1 d2;
                     age = Z.max a1 a2;
-                    expl = Explanation.union ex1 ex2 }
+                    expl = Ex.union ex1 ex2 }
                 in
                 incr nb_inqs;
                 MINEQS.insert ni acc

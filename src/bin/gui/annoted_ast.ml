@@ -2202,7 +2202,7 @@ let rec findproof_aform ids af acc depth found =
   | AFforall aaqf | AFexists aaqf ->
     let acc, found =
       try
-        let m = Explanation.MI.find aaqf.id ids in
+        let m = Ex.MI.find aaqf.id ids in
         MTag.add aaqf.ptag m acc, true
       with Not_found -> acc, found
     in
@@ -2217,7 +2217,7 @@ let rec findproof_aform ids af acc depth found =
 and findproof_aaform ids aaf acc depth found =
   let acc, found =
     try
-      let m = Explanation.MI.find aaf.id ids in
+      let m = Ex.MI.find aaf.id ids in
       MTag.add aaf.ptag m acc, true
     with Not_found -> acc, found
   in
@@ -2226,7 +2226,7 @@ and findproof_aaform ids aaf acc depth found =
 let rec findproof_atyped_decl ids td (ax,acc) =
   let acc =
     try
-      let m = Explanation.MI.find td.id ids in
+      let m = Ex.MI.find td.id ids in
       MTag.add td.ptag m acc
     with Not_found -> acc
   in
@@ -2250,7 +2250,7 @@ let rec findproof_atyped_decl ids td (ax,acc) =
     if found then td.ptag::ax, acc else ax,acc
 
 let findtags_proof expl l =
-  let ids = Explanation.literals_ids_of expl in
+  let ids = Ex.literals_ids_of expl in
   List.fold_left (fun acc (td, _) ->
       findproof_atyped_decl ids td acc) ([], MTag.empty) l
 

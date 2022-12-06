@@ -28,14 +28,14 @@
 
 type t
 
-exception NotConsistent of Explanation.t
+exception NotConsistent of Ex.t
 exception No_finite_bound
 
 val undefined : Ty.t -> t
 
 val is_undefined : t -> bool
 
-val point : Numbers.Q.t -> Ty.t -> Explanation.t -> t
+val point : Numbers.Q.t -> Ty.t -> Ex.t -> t
 
 val doesnt_contain_0 : t -> Th_util.answer
 
@@ -43,9 +43,9 @@ val is_positive : t -> Th_util.answer
 
 val is_strict_smaller : t -> t -> bool
 
-val new_borne_sup : Explanation.t -> Numbers.Q.t -> is_le : bool -> t -> t
+val new_borne_sup : Ex.t -> Numbers.Q.t -> is_le : bool -> t -> t
 
-val new_borne_inf : Explanation.t -> Numbers.Q.t -> is_le : bool -> t -> t
+val new_borne_inf : Ex.t -> Numbers.Q.t -> is_le : bool -> t -> t
 
 val only_borne_sup : t -> t
 (** Keep only the upper bound of the interval,
@@ -55,7 +55,7 @@ val only_borne_inf : t -> t
 (** Keep only the lower bound of the interval,
     setting the upper bound to plus infty. *)
 
-val is_point : t -> (Numbers.Q.t * Explanation.t) option
+val is_point : t -> (Numbers.Q.t * Ex.t) option
 
 val intersect : t -> t -> t
 
@@ -92,11 +92,11 @@ val print : Format.formatter -> t -> unit
 
 val finite_size : t -> Numbers.Q.t option
 
-val borne_inf : t -> Numbers.Q.t * Explanation.t * bool
+val borne_inf : t -> Numbers.Q.t * Ex.t * bool
 (** bool is true when bound is large. Raise: No_finite_bound if no
     finite lower bound *)
 
-val borne_sup : t -> Numbers.Q.t * Explanation.t * bool
+val borne_sup : t -> Numbers.Q.t * Ex.t * bool
 (** bool is true when bound is large. Raise: No_finite_bound if no
     finite upper bound*)
 
@@ -112,7 +112,7 @@ val coerce : Ty.t -> t -> t
 
 val mk_closed :
   Numbers.Q.t -> Numbers.Q.t -> bool -> bool ->
-  Explanation.t -> Explanation.t -> Ty.t -> t
+  Ex.t -> Ex.t -> Ty.t -> t
 (**
    takes as argument in this order:
    - a lower bound
@@ -123,7 +123,7 @@ val mk_closed :
    - an explanation of the upper bound
    - a type Ty.t (Tint or Treal *)
 
-type bnd = (Numbers.Q.t * Numbers.Q.t) option * Explanation.t
+type bnd = (Numbers.Q.t * Numbers.Q.t) option * Ex.t
 (* - None <-> Infinity
    - the first number is the real bound
    - the second number if +1 (resp. -1) for strict lower (resp. upper) bound,
@@ -134,7 +134,7 @@ val bounds_of : t -> (bnd * bnd) list
 
 val contains : t -> Numbers.Q.t -> bool
 
-val add_explanation : t -> Explanation.t -> t
+val add_explanation : t -> Ex.t -> t
 
 val equal : t -> t -> bool
 

@@ -35,7 +35,7 @@ module type S = sig
     ple0 : P.t;
     is_le : bool;
     dep : (Numbers.Q.t * P.t * bool) Util.MI.t;
-    expl : Explanation.t;
+    expl : Ex.t;
     age : Numbers.Z.t;
   }
 
@@ -55,7 +55,7 @@ module type S = sig
   val incr_age : unit -> unit
 
   val create_ineq :
-    P.t -> P.t -> bool -> Expr.t option -> Explanation.t -> t
+    P.t -> P.t -> bool -> Expr.t option -> Ex.t -> t
 
   val print_inequation : Format.formatter -> t -> unit
 

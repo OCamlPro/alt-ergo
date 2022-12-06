@@ -12,7 +12,6 @@
 open Options
 
 module E = Expr
-module Ex = Explanation
 
 module EX2 = struct
   type t = E.t * E.t

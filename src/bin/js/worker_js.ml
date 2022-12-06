@@ -108,10 +108,10 @@ let main worker_id content =
         List.fold_left
           (FE.process_decl
              get_status_and_print used_context consistent_dep_stack)
-          (SAT.empty_with_inst add_inst, true, Explanation.empty) cnf in
+          (SAT.empty_with_inst add_inst, true, Ex.empty) cnf in
 
       if Options.get_unsat_core () then begin
-        unsat_core := Explanation.get_unsat_core dep;
+        unsat_core := Ex.get_unsat_core dep;
       end;
     in
 
@@ -187,7 +187,7 @@ let main worker_id content =
 
     let compute_statistics () =
       let used =
-        List.fold_left (fun acc ({Explanation.f;_} as r) ->
+        List.fold_left (fun acc ({Ex.f;_} as r) ->
             Util.MI.add (Expr.uid f) r acc
           ) Util.MI.empty (!unsat_core) in
       Hashtbl.fold (fun id (f,nb) acc ->
