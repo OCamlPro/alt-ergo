@@ -39,7 +39,7 @@
   )
 
   ; .mli only modules *also* need to be in this field
-  (modules_without_implementation matching_types numbersInterface sig sig_rel)
+  (modules_without_implementation matching_types numbers_interface sig sig_rel)
 
   ; modules that make up the lib
   (modules
@@ -57,10 +57,8 @@
     Expr Var Ty Typed Xliteral Model_map
     ; util
     Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
-    MyDynlink MyUnix Numbers NumsNumbers NumbersInterface
-    Options Timers Util Vec Version ZarithNumbers Steps Printer Format_shims
-    My_zip
-  )
+    My_dynlink My_unix My_zip Numbers Nums_numbers Numbers_interface
+    Options Timers Util Vec Version Zarith_numbers Steps Printer Format_shims)
 
  (js_of_ocaml
   (javascript_files missing_primitives.js)

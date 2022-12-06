@@ -375,7 +375,7 @@ let load_current_inequalities_reasoner () =
         "[Dynlink] Using the 'FM module' for arithmetic inequalities"
 
   | path ->
-    MyDynlink.load (Options.get_debug_fm ()) path
+    My_dynlink.load (Options.get_debug_fm ()) path
       "'inequalities' reasoner (FM module)"
 
 let get_current () =

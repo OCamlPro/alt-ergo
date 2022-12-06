@@ -26,8 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(** Integers implementation. Based on big_int **)
-module Z : NumbersInterface.ZSig with type t = Big_int.big_int
+(** Integers implementation. Based on Zarith's integers **)
+module Z : Numbers_interface.ZSig with type t = Z.t
 
-(** Rationals implementation. Based on nums **)
-module Q : NumbersInterface.QSig with module Z = Z
+(** Rationals implementation. Based on Zarith's rationals **)
+module Q : Numbers_interface.QSig with module Z = Z

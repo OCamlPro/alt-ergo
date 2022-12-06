@@ -14,5 +14,5 @@ open Options
 let load () =
   List.iter
     (fun p ->
-       MyDynlink.load (get_verbose ()) p "parser"
+       My_dynlink.load (get_verbose ()) p "parser"
     )(Options.get_parsers())

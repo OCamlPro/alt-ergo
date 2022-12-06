@@ -537,16 +537,16 @@ module Time = struct
   let u = ref 0.0
 
   let start () =
-    u := MyUnix.cur_time()
+    u := My_unix.cur_time()
 
   let value () =
-    MyUnix.cur_time() -. !u
+    My_unix.cur_time() -. !u
 
-  let set_timeout ~is_gui tm = MyUnix.set_timeout ~is_gui tm
+  let set_timeout ~is_gui tm = My_unix.set_timeout ~is_gui tm
 
   let unset_timeout ~is_gui =
     if get_timelimit() <> 0. then
-      MyUnix.unset_timeout ~is_gui
+      My_unix.unset_timeout ~is_gui
 
 end
 

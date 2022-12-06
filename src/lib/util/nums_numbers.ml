@@ -27,7 +27,7 @@
 (******************************************************************************)
 
 (** Integers implementation. Based on Zarith's integers **)
-module Z : NumbersInterface.ZSig with type t = Big_int.big_int = struct
+module Z : Numbers_interface.ZSig with type t = Big_int.big_int = struct
 
   open Big_int
 
@@ -131,7 +131,7 @@ end
 
 
 (** Rationals implementation. Based on Zarith's rationals **)
-module Q : NumbersInterface.QSig with module Z = Z = struct
+module Q : Numbers_interface.QSig with module Z = Z = struct
 
   module Z = Z
   exception Not_a_float
