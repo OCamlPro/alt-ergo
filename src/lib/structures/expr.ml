@@ -30,22 +30,20 @@ module Sy = Symbols
 module SMap = Sy.Map
 module SSet = Sy.Set
 
-(** Data structures *)
-
-type binders = (Ty.t * int) SMap.t (*int tag in globally unique *)
+type binders = (Ty.t * int) SMap.t
 
 type t = {
   f: Sy.t;
   xs: t list;
   ty: Ty.t;
-  bind : bind_kind;
+  bind: bind_kind;
   tag: int;
-  vars : (Ty.t * int) SMap.t; (* vars to types and nb of occurences *)
-  vty : Ty.Svty.t;
+  vars: (Ty.t * int) SMap.t;
+  vty: Ty.Svty.t;
   depth: int;
-  nb_nodes : int;
-  pure : bool;
-  mutable neg : t option
+  nb_nodes: int;
+  pure: bool;
+  mutable neg: t option
 }
 
 and decl_kind =
@@ -62,24 +60,24 @@ and bind_kind =
   | B_let of letin
 
 and quantified = {
-  name : string;
-  main : t;
-  toplevel : bool;
-  user_trs : trigger list;
-  binders : binders;
+  name: string;
+  main: t;
+  toplevel: bool;
+  user_trs: trigger list;
+  binders: binders;
   (* These fields should be (ordered) lists ! important for skolemization *)
-  sko_v : t list;
-  sko_vty : Ty.t list;
-  loc : Loc.t; (* location of the "GLOBAL" axiom containing this quantified
+  sko_v: t list;
+  sko_vty: Ty.t list;
+  loc: Loc.t; (* location of the "GLOBAL" axiom containing this quantified
                   formula. It forms with name a unique id *)
-  kind : decl_kind;
+  kind: decl_kind;
 }
 
 and letin = {
   let_v: Sy.t;
   let_e: t;
   in_e: t;
-  let_sko: t; (* fresh symb. with free vars *)
+  let_sko: t;
   is_bool: bool;
 }
 
@@ -101,9 +99,7 @@ and trigger = {
   guard: t option
 }
 
-type expr = t
-
-type subst = expr SMap.t * Ty.subst
+type subst = t SMap.t * Ty.subst
 
 type lit_view =
   | Eq of {lhs: t; rhs: t}
@@ -236,10 +232,10 @@ let compare_quant
         if c <> 0 then c
         else compare_triggers f1 f2 trs1 trs2
 
-module Msbt : Map.S with type key = expr SMap.t =
+module Msbt : Map.S with type key = t SMap.t =
   Map.Make
     (struct
-      type t = expr SMap.t
+      type nonrec t = t SMap.t
       let compare a b = SMap.compare compare a b
     end)
 
@@ -250,11 +246,11 @@ module Msbty : Map.S with type key = Ty.t Ty.M.t =
       let compare a b = Ty.M.compare Ty.compare a b
     end)
 
-module TSet : Set.S with type elt = expr =
-  Set.Make (struct type t = expr let compare = compare end)
+module TSet : Set.S with type elt = t =
+  Set.Make (struct type nonrec t = t let compare = compare end)
 
-module TMap : Map.S with type key = expr =
-  Map.Make (struct type t = expr let compare = compare end)
+module TMap : Map.S with type key = t =
+  Map.Make (struct type nonrec t = t let compare = compare end)
 
 module H = struct
   type elt = t
@@ -954,8 +950,8 @@ let bitv bt ty = mk_term (Sy.Bitv bt) [] ty
 let pred t = mk_term (Sy.Op Sy.Minus) [t;int "1"] Ty.Tint
 
 
-(** simple smart constructors for formulas *)
-
+(* simple smart constructors for formulas *)
+(* TODO: use labeled argument *)
 let mk_or f1 f2 is_impl =
   if equal f1 (neg f2) then vrai
   else
@@ -1017,17 +1013,14 @@ let mk_iff f1 f2 =
       neg.neg <- Some pos;
       pos
 
-let mk_and f1 f2 is_impl =
-  neg @@ mk_or (neg f1) (neg f2) is_impl
+let mk_and f1 f2 is_impl = neg @@ mk_or (neg f1) (neg f2) is_impl
 
 let mk_imp f1 f2 = mk_or (neg f1) f2 true
 
-let mk_xor f1 f2 =
-  neg (mk_iff f1 f2)
+let mk_xor f1 f2 = neg @@ mk_iff f1 f2
 
 let mk_if cond f2 f3 =
-  mk_or
-    (mk_and cond f2 true) (mk_and (neg cond) f3 true) false
+  mk_or (mk_and cond f2 true) (mk_and (neg cond) f3 true) false
 
 (** BUG: we should check that cond is of type bool and exp1 and exp2
     have the same type also. *)
@@ -1036,7 +1029,7 @@ let mk_ite cond exp1 exp2 =
   if ty == Ty.Tbool then mk_if cond exp1 exp2
   else mk_term (Sy.Op Sy.Tite) [cond; exp1; exp2] ty
 
-let [@inline always] const_term e =
+let[@inline always] const_term e =
   (* we use this function because depth is currently not correct to
      detect constants (not incremented in some situations due to
      some regression) *)
@@ -1151,6 +1144,7 @@ let mk_positive_lit s neg_s l =
     neg.neg <- Some pos;
     pos
 
+(* TODO: rename iff by is_iff *)
 let mk_eq ~iff t1 t2 =
   let c = compare t1 t2 in
   if c = 0 then vrai
@@ -1259,7 +1253,6 @@ let rec apply_subst_aux (s_t, s_ty) t =
           with Not_found ->
             mk_term f [] ty'
         end
-
       | Sy.Form (Sy.F_Lemma | Sy.F_Skolem), (B_lemma q | B_skolem q) ->
         assert (xs == []);
         let { main; user_trs = trs; binders; sko_v; sko_vty; _ } = q
@@ -1296,7 +1289,6 @@ let rec apply_subst_aux (s_t, s_ty) t =
             neg @@ mk_forall_bis {q with main = neg main}
           | _ -> assert false
         end
-
       | Sy.Let, B_let {let_v; let_e; in_e ; let_sko; is_bool} ->
         assert (xs == []);
         (* TODO: implement case where variables capture happens *)
@@ -1309,52 +1301,38 @@ let rec apply_subst_aux (s_t, s_ty) t =
         let in_e2 = apply_subst_aux (SMap.remove let_v s_t, s_ty) in_e in
         assert (let_e != let_e2 || in_e != in_e2);
         mk_let_aux {let_v; let_e=let_e2; in_e=in_e2; let_sko=let_sko2; is_bool}
-
       | Sy.Lit Sy.L_eq, _ ->
         begin match xs' with
           | [] | [_] -> assert false
           | [a; b] ->  mk_eq ~iff:true a b
           | _ -> mk_nary_eq xs'
         end
-
-      | Sy.Lit Sy.L_neg_eq, _ ->
-        mk_distinct ~iff:true xs'
-
+      | Sy.Lit Sy.L_neg_eq, _ -> mk_distinct ~iff:true xs'
       | Sy.Lit Sy.L_neg_pred, _ ->
         neg (match xs' with [e] -> e | _ -> assert false)
-
-      | Sy.Lit (Sy.L_built n), _ ->
-        mk_builtin ~is_pos:true n xs'
-
-      | Sy.Lit (Sy.L_neg_built n), _ ->
-        mk_builtin ~is_pos:false n xs'
-
+      | Sy.Lit (Sy.L_built n), _ -> mk_builtin ~is_pos:true n xs'
+      | Sy.Lit (Sy.L_neg_built n), _ -> mk_builtin ~is_pos:false n xs'
       | Sy.Form (Sy.F_Unit _), _ ->
         begin match xs' with
           | [u; v] -> mk_and u v false (*b*)
           | _ -> assert false
         end
-
       | Sy.Form (Sy.F_Clause b), _ ->
         begin match xs' with
           | [u; v] -> mk_or u v b
           | _ -> assert false
         end
-
       | Sy.Form Sy.F_Iff, _ ->
         begin match xs' with
           | [u; v] -> mk_iff u v
           | _ -> assert false
         end
-
       | Sy.Form Sy.F_Xor, _ ->
         begin match xs' with
           | [u; v] -> mk_xor u v
           | _ -> assert false
         end
-
-      | _ ->
-        mk_term f xs' ty'
+      | _ -> mk_term f xs' ty'
 
 and apply_subst_trigger subst ({ content; guard; _ } as tr) =
   {tr with
@@ -1820,7 +1798,7 @@ module Triggers = struct
   module STRS =
     Set.Make(
     struct
-      type t = expr * SSet.t * Svty.t
+      type nonrec t = t * SSet.t * Svty.t
 
       let compare (t1,_,_) (t2,_,_) = compare t1 t2
     end)
@@ -1835,7 +1813,7 @@ module Triggers = struct
     | Op (Plus | Minus | Mult | Div | Modulo) -> true
     | _ -> false
 
-  let rec score_term (t : expr) =
+  let rec score_term (t : t) =
     let open Sy in
     match t with
     | { f = (True | False | Void | Int _ | Real _ | Bitv _ | Var _); _ } -> 0
@@ -1853,7 +1831,7 @@ module Triggers = struct
     | { f = Op(Set | Extract) ; xs = [t1; t2; t3]; _ } ->
       max (score_term t1) (max (score_term t2) (score_term t3))
 
-    | { f= (Op _ | Name _) ; xs = tl; _ } ->
+    | { f = (Op _ | Name _) ; xs = tl; _ } ->
       1 + (List.fold_left
              (fun acc t -> max (score_term t) acc) 0 tl)
 
@@ -1862,21 +1840,21 @@ module Triggers = struct
       assert false
 
 
-  let rec cmp_trig_term (t1 : expr) (t2 : expr) =
+  let rec cmp_trig_term (t1: t) (t2: t) =
     let compare_expr = compare in
     let open Sy in
     match t1, t2 with
-    | { f = (True | False | Void | Int _ | Real _ | Bitv _); _ },
-      { f = (True | False | Void | Int _ | Real _ | Bitv _); _ } ->
+    | {f = (True | False | Void | Int _ | Real _ | Bitv _); _},
+      {f = (True | False | Void | Int _ | Real _ | Bitv _); _} ->
       compare_expr t1 t2
 
-    | { f = (True | False | Void | Int _ | Real _ | Bitv _); _ }, _ -> -1
-    | _, { f = (True | False | Void | Int _ | Real _ | Bitv _); _ } ->  1
+    | {f = (True | False | Void | Int _ | Real _ | Bitv _); _}, _ -> -1
+    | _, {f = (True | False | Void | Int _ | Real _ | Bitv _); _} ->  1
 
-    | { f = (Var _) as v1; _ }, { f = (Var _) as v2; _ } -> Sy.compare v1 v2
-    | { f = Var _; _ }, _ -> -1
-    | _, { f = Var _; _ } ->  1
-    | { f = s; xs = l1; _ }, { f = s'; xs = l2; _ }
+    | {f = (Var _) as v1; _}, { f = (Var _) as v2; _ } -> Sy.compare v1 v2
+    | {f = Var _; _}, _ -> -1
+    | _, {f = Var _; _} ->  1
+    | {f = s; xs = l1; _}, {f = s'; xs = l2; _}
       when is_infix s && is_infix s' ->
       let c = (score_term t1) - (score_term t2) in
       if c <> 0 then c
@@ -1884,19 +1862,19 @@ module Triggers = struct
         let c = Sy.compare s s' in
         if c <> 0 then c else Util.cmp_lists l1 l2 cmp_trig_term
 
-    | { f = s; _ }, _ when is_infix s -> -1
-    | _ , { f = s'; _ } when is_infix s' -> 1
+    | {f = s; _}, _ when is_infix s -> -1
+    | _ , {f = s'; _} when is_infix s' -> 1
 
-    | { f = s1; xs =[t1]; _ }, { f = s2; xs = [t2]; _ }
+    | {f = s1; xs =[t1]; _}, {f = s2; xs = [t2]; _}
       when is_prefix s1 && is_prefix s2 ->
       let c = Sy.compare s1 s2 in
       if c<>0 then c else cmp_trig_term t1 t2
 
-    | { f = s1; _ }, _ when is_prefix s1 -> -1
+    | {f = s1; _}, _ when is_prefix s1 -> -1
 
-    | _, { f = s2; _ } when is_prefix s2 ->  1
+    | _, {f = s2; _} when is_prefix s2 ->  1
 
-    | { f = (Name _) as s1; xs=tl1; _ }, { f = (Name _) as s2; xs=tl2; _ } ->
+    | {f = (Name _) as s1; xs=tl1; _}, {f = (Name _) as s2; xs=tl2; _} ->
       let l1 = List.map score_term tl1 in
       let l2 = List.map score_term tl2 in
       let l1 = List.fast_sort Stdlib.compare l1 in
@@ -1907,51 +1885,51 @@ module Triggers = struct
         let c = Sy.compare s1 s2 in
         if c <> 0 then c else Util.cmp_lists tl1 tl2 cmp_trig_term
 
-    | { f = Name _; _ }, _ -> -1
-    | _, { f = Name _; _ } -> 1
+    | {f = Name _; _}, _ -> -1
+    | _, {f = Name _; _} -> 1
 
-    | { f = Op Get; xs = l1; _ }, { f = Op Get; xs = l2; _ } ->
+    | {f = Op Get; xs = l1; _}, {f = Op Get; xs = l2; _} ->
       Util.cmp_lists l1 l2 cmp_trig_term
-    | { f = Op Get; _ }, _ -> -1
-    | _, { f = Op Get; _ } -> 1
+    | {f = Op Get; _}, _ -> -1
+    | _, {f = Op Get; _} -> 1
 
-    | { f = Op Set; xs = l1; _ }, { f = Op Set; xs = l2; _ } ->
+    | {f = Op Set; xs = l1; _}, {f = Op Set; xs = l2; _} ->
       Util.cmp_lists l1 l2 cmp_trig_term
-    | { f = Op Set; _ }, _ -> -1
-    | _, { f = Op Set; _ } -> 1
+    | {f = Op Set; _}, _ -> -1
+    | _, {f = Op Set; _} -> 1
 
-    | { f= Op Extract; xs = l1; _ }, { f = Op Extract; xs = l2; _ } ->
+    | {f = Op Extract; xs = l1; _ }, {f = Op Extract; xs = l2; _} ->
       Util.cmp_lists l1 l2 cmp_trig_term
-    | { f = Op Extract; _ }, _ -> -1
-    | _, { f = Op Extract; _ } -> 1
+    | {f = Op Extract; _}, _ -> -1
+    | _, {f = Op Extract; _} -> 1
 
-    | { f = Op Concat; xs = l1; _ }, { f = Op Concat; xs = l2; _} ->
+    | {f = Op Concat; xs = l1; _}, {f = Op Concat; xs = l2; _} ->
       Util.cmp_lists l1 l2 cmp_trig_term
-    | { f = Op Concat; _ }, _ -> -1
-    | _, { f = Op Concat; _ } -> 1
+    | {f = Op Concat; _}, _ -> -1
+    | _, {f = Op Concat; _} -> 1
 
-    | { f = Op (Access a1) ; xs=[t1]; _ },
-      { f = Op (Access a2) ; xs=[t2]; _ } ->
+    | {f = Op (Access a1) ; xs=[t1]; _},
+      {f = Op (Access a2) ; xs=[t2]; _} ->
       let c = Stdlib.compare a1 a2 in (* should be Hstring.compare *)
       if c<>0 then c else cmp_trig_term t1 t2
 
-    | { f = Op (Access _); _ }, _ -> -1
-    | _, { f = Op (Access _); _ } -> 1
+    | {f = Op (Access _); _}, _ -> -1
+    | _, {f = Op (Access _); _} -> 1
 
-    | { f = Op (Destruct (_,a1)) ; xs = [t1]; _ },
-      { f = Op (Destruct (_,a2)) ; xs = [t2]; _ } ->
+    | {f = Op (Destruct (_, a1)) ; xs = [t1]; _},
+      {f = Op (Destruct (_, a2)) ; xs = [t2]; _} ->
       let c = Stdlib.compare a1 a2 in (* should be Hstring.compare *)
       if c<>0 then c else cmp_trig_term t1 t2
 
-    | { f = Op (Destruct _); _ }, _ -> -1
-    | _, { f =Op (Destruct _); _ } -> 1
+    | {f = Op (Destruct _); _}, _ -> -1
+    | _, {f =Op (Destruct _); _} -> 1
 
-    | { f = Op Record ; xs= lbs1; _ }, { f = Op Record ; xs = lbs2; _ } ->
+    | {f = Op Record ; xs = lbs1; _}, {f = Op Record ; xs = lbs2; _} ->
       Util.cmp_lists lbs1 lbs2 cmp_trig_term
-    | { f = Op Record; _ }, _ -> -1
-    | _, { f = Op Record; _ } -> 1
+    | {f = Op Record; _}, _ -> -1
+    | _, {f = Op Record; _} -> 1
 
-    | { f = (Op _) as s1; xs=tl1; _ }, { f = (Op _) as s2; xs=tl2; _ } ->
+    | {f = (Op _) as s1; xs = tl1; _}, {f = (Op _) as s2; xs = tl2; _} ->
       (* ops that are not infix or prefix *)
       let l1 = List.map score_term tl1 in
       let l2 = List.map score_term tl2 in
@@ -1963,10 +1941,10 @@ module Triggers = struct
         let c = Sy.compare s1 s2 in
         if c <> 0 then c else Util.cmp_lists tl1 tl2 cmp_trig_term
 
-    | { f = Op _; _ }, _ -> -1
-    | _, { f = Op _; _ } -> 1
-    | { f = (Lit _ | Form _ | In _ | MapsTo _ | Let); _ },
-      { f = (Lit _ | Form _ | In _ | MapsTo _ | Let); _ } -> assert false
+    | {f = Op _; _}, _ -> -1
+    | _, {f = Op _; _} -> 1
+    | {f = (Lit _ | Form _ | In _ | MapsTo _ | Let); _},
+      {f = (Lit _ | Form _ | In _ | MapsTo _ | Let); _} -> assert false
 
   let cmp_trig_term_list tl2 tl1 =
     let l1 = List.map score_term tl1 in
@@ -2045,7 +2023,7 @@ module Triggers = struct
   module SLLT =
     Set.Make(
     struct
-      type t = expr list * SSet.t * Svty.t
+      type nonrec t = t list * SSet.t * Svty.t
       let compare (a, y1, _) (b, y2, _)  =
         let c = try compare_lists a b compare; 0 with Util.Cmp c -> c in
         if c <> 0 then c else SSet.compare y1 y2
@@ -2509,28 +2487,27 @@ module Map = TMap
 
 
 type gformula = {
-  ff: expr;
-  nb_reductions : int;
-  trigger_depth : int;
+  ff: t;
+  nb_reductions: int;
+  trigger_depth: int;
   age: int;
-  lem: expr option;
-  origin_name : string;
-  from_terms : expr list;
+  lem: t option;
+  origin_name: string;
+  from_terms: t list;
   mf: bool;
   gf: bool;
-  gdist : int; (* dist to goal *)
-  hdist : int; (* dist to hypotheses *)
-  theory_elim : bool;
+  gdist: int; (* dist to goal *)
+  hdist: int; (* dist to hypotheses *)
+  theory_elim: bool;
 }
 
-type th_elt =
-  {
-    th_name : string;
-    ax_name : string;
-    ax_form : t;
-    extends : Util.theories_extensions;
-    axiom_kind : Util.axiom_kind;
-  }
+type th_elt = {
+  th_name: string;
+  ax_name: string;
+  ax_form: t;
+  extends: Util.theories_extensions;
+  axiom_kind: Util.axiom_kind;
+}
 
 let print_th_elt fmt t =
   Format.fprintf fmt "%s/%s: @[<hov>%a@]" t.th_name t.ax_name print t.ax_form

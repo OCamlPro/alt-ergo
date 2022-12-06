@@ -86,12 +86,10 @@ and purify_form (e: E.t) =
   if E.is_pure e then e (* non negated predicates *)
   else
     match e.f with
-    | Sy.True | Sy.False | Sy.Var _ | Sy.In _ ->
-      e
+    | Sy.True | Sy.False | Sy.Var _ | Sy.In _ -> e
     | Sy.Name _ -> (* non negated predicates with impure parts *)
       let e, lets = purify_term e Sy.Map.empty in
       mk_lifted e lets
-
     | Sy.Let -> (* let on forms *)
       begin match e.xs, e.bind with
         | [], B_let ({let_v; let_e; in_e; _}) ->
@@ -140,32 +138,31 @@ and purify_form (e: E.t) =
           let a' = purify_form a in
           let b' = purify_form b in
           if a == a' && b == b' then e else E.mk_and a' b' imp
-
         | Sy.F_Clause imp, [a;b], _ ->
           let a' = purify_form a in
           let b' = purify_form b in
           if a == a' && b == b' then e else E.mk_or a' b' imp
-
         | Sy.F_Iff, [a;b], _ ->
           let a' = purify_form a in
           let b' = purify_form b in
           if a == a' && b == b' then e else E.mk_iff a' b'
-
         | Sy.F_Xor, [a;b], _ ->
           let a' = purify_form a in
           let b' = purify_form b in
           if a == a' && b == b' then e else E.mk_xor a' b'
-
-        | Sy.F_Lemma, [], B_lemma q ->
-          let m = purify_form q.main in
-          if m == q.main then e
-          else E.mk_forall_ter {q with main = m} 0
-
-        | Sy.F_Skolem, [], B_skolem q ->
-          let m = purify_form q.main in
-          if m == q.main then e
-          else E.neg (E.mk_forall_ter {q with main = (E.neg m)} 0)
-
+        | Sy.F_Lemma, [],
+          B_lemma {name; main; toplevel; user_trs; binders; loc; kind; _} ->
+          let m = purify_form main in
+          if m == main then e
+          else E.mk_forall ~name ~loc binders user_trs main ~toplevel
+              ~decl_kind:kind
+        | Sy.F_Skolem, [],
+          B_skolem {name; main; toplevel; user_trs; binders; loc; kind; _} ->
+          let m = purify_form main in
+          if m == main then e
+          else
+            E.neg @@ E.mk_forall ~name ~loc binders user_trs (E.neg m) ~toplevel
+              ~decl_kind:kind
         | (Sy.F_Unit _ | Sy.F_Clause _ | Sy.F_Iff
           | Sy.F_Xor | Sy.F_Skolem | Sy.F_Lemma),
           _, _ ->

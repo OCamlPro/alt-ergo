@@ -69,18 +69,18 @@ and bind_kind =
   | B_skolem of quantified
   | B_let of letin          (** Let binding. *)
 
-and quantified = (*private*) {
-  name : string;
-  main : t;
-  toplevel : bool;
-  user_trs : trigger list;
-  binders : binders;
+and quantified = private {
+  name: string;
+  main: t;
+  toplevel: bool;
+  user_trs: trigger list;
+  binders: binders;
   (* These fields should be (ordered) lists ! important for skolemization *)
-  sko_v : t list;
-  sko_vty : Ty.t list;
-  loc : Loc.t; (* location of the "GLOBAL" axiom containing this quantified
+  sko_v: t list;
+  sko_vty: Ty.t list;
+  loc: Loc.t; (* location of the "GLOBAL" axiom containing this quantified
                   formula. It forms with name a unique id *)
-  kind : decl_kind;
+  kind: decl_kind;
 }
 
 (** Type of a let expression [let let_v = let_e in in_e]. *)
@@ -445,5 +445,3 @@ val save_cache: unit -> unit
 
 val reinit_cache: unit -> unit
 (** Reinitializes the module's cache *)
-
-val mk_forall_ter: quantified -> int -> t
