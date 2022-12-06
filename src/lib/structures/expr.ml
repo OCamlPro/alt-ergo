@@ -77,10 +77,10 @@ and quantified = {
 
 and letin = {
   let_v: Sy.t;
-  let_e : t;
-  in_e : t;
-  let_sko : t; (* fresh symb. with free vars *)
-  is_bool : bool;
+  let_e: t;
+  in_e: t;
+  let_sko: t; (* fresh symb. with free vars *)
+  is_bool: bool;
 }
 
 and semantic_trigger =
@@ -91,14 +91,14 @@ and semantic_trigger =
   | LinearDependency of t * t
 
 and trigger = {
-  content : t list;
+  content: t list;
   (* this field is filled (with a part of 'content' field) by theories
      when assume_th_elt is called *)
-  semantic : semantic_trigger list;
-  hyp : t list;
-  t_depth : int;
-  from_user : bool;
-  guard : t option
+  semantic: semantic_trigger list;
+  hyp: t list;
+  t_depth: int;
+  from_user: bool;
+  guard: t option
 }
 
 type expr = t

@@ -84,12 +84,12 @@ and quantified = (*private*) {
 }
 
 (** Type of a let expression [let let_v = let_e in in_e]. *)
-and letin = (*private*) {
+and letin = private {
   let_v: Symbols.t; (** Symbol of the substitution. *)
-  let_e : t;        (** Expression of substitution. *)
-  in_e : t;         (** Expression in which we apply the substitution. *)
-  let_sko : t;      (* fresh symb. with free vars *)
-  is_bool : bool;
+  let_e: t;         (** Expression of substitution. *)
+  in_e: t;          (** Expression in which we apply the substitution. *)
+  let_sko: t;       (* fresh symb. with free vars *)
+  is_bool: bool;
 }
 
 and semantic_trigger =
@@ -100,14 +100,14 @@ and semantic_trigger =
   | LinearDependency of t * t
 
 and trigger = (*private*) {
-  content : t list;
+  content: t list;
   (* this field is filled (with a part of 'content' field) by theories
      when assume_th_elt is called *)
-  semantic : semantic_trigger list;
-  hyp : t list;
-  t_depth : int;
-  from_user : bool;
-  guard : t option
+  semantic: semantic_trigger list;
+  hyp: t list;
+  t_depth: int;
+  from_user: bool;
+  guard: t option
 }
 
 type subst = t Symbols.Map.t * Ty.subst
@@ -207,6 +207,10 @@ val fresh_name: Ty.t -> t
 (** [mk_eq iff tm1 tm2] produces an equivalent formula to
     the formula [tm1 = tm2]. *)
 val mk_eq: iff:bool -> t -> t -> t
+
+(** [mk_nary_eq lst] produces an equivalent formula to
+    the formula [tm1 = tm2 = ... = tmk] where [lst = [tm1; tm2; ...; tmk]]. *)
+val mk_nary_eq: t list -> t
 
 val mk_distinct: iff:bool -> t list -> t
 val mk_builtin: is_pos:bool -> Symbols.builtin -> t list -> t
@@ -442,6 +446,4 @@ val save_cache: unit -> unit
 val reinit_cache: unit -> unit
 (** Reinitializes the module's cache *)
 
-val mk_nary_eq: t list -> t
-val mk_let_aux: letin -> t
 val mk_forall_ter: quantified -> int -> t

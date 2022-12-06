@@ -1012,7 +1012,7 @@ let model_repr_of_term t env mrepr =
   try ME.find t mrepr, mrepr
   with Not_found ->
     let mk = try ME.find t env.make with Not_found -> assert false in
-    let rep,_ = try MapX.find mk env.repr with Not_found -> assert false in
+    let rep, _ = try MapX.find mk env.repr with Not_found -> assert false in
     let cls =
       try SE.elements (MapX.find rep env.classes)
       with Not_found -> assert false

@@ -94,7 +94,7 @@ and purify_form (e: E.t) =
 
     | Sy.Let -> (* let on forms *)
       begin match e.xs, e.bind with
-        | [], B_let ({ let_e; in_e; _ } as letin) ->
+        | [], B_let ({let_v; let_e; in_e; _}) ->
           if let_e.pure && in_e.pure then e
           else
             let let_e', lets = purify_non_toplevel_ite let_e Sy.Map.empty in
@@ -102,7 +102,7 @@ and purify_form (e: E.t) =
             if let_e == let_e' && in_e == in_e' then e
             else
               mk_lifted
-                (E.mk_let_aux {letin with let_e = let_e'; in_e = in_e'})
+                (E.mk_let let_v let_e in_e)
                 lets
         | _, (B_lemma _ | B_skolem _ | B_none | B_let _) ->
           failwith "unexpected expression in purify_form"
