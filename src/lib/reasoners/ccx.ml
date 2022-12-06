@@ -261,10 +261,10 @@ module Main : S = struct
       | Some (dep, _) -> Ex.union ex dep
       | None -> raise Exit
 
-  let equal_only_by_congruence env (facts: r Sig_rel.facts) t1 t2 =
+  let equal_only_by_congruence env (facts: r Sig_rel.facts)
+      ({E.f = f1; xs = xs1; ty = ty1; _} as t1)
+      ({E.f = f2; xs = xs2; ty = ty2; _} as t2) =
     if not (E.equal t1 t2) then
-      let { E.f = f1; xs = xs1; ty = ty1; _ } = E.term_view t1 in
-      let { E.f = f2; xs = xs2; ty = ty2; _ } = E.term_view t2 in
       if Symbols.equal f1 f2 && Ty.equal ty1 ty2 then
         try
           let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
@@ -274,7 +274,7 @@ module Main : S = struct
         with Exit -> ()
 
   let congruents env (facts: r Sig_rel.facts) t1 s =
-    match E.term_view t1 with
+    match t1 with
     | { E.xs = []; _ } -> ()
     | { E.f; ty; _ } when X.fully_interpreted f ty -> ()
     |  _ -> SE.iter (equal_only_by_congruence env facts t1) s
@@ -336,12 +336,12 @@ module Main : S = struct
     | None, _ -> ()
     | Some _, false -> () (* not an original term *)
     | Some t1, true ->  (* original term *)
-      match E.term_view t1 with
+      match t1 with
       | { E.f = f1; xs = [x]; _ } ->
         let ty_x = Expr.type_info x in
         List.iter
           (fun t2 ->
-             match E.term_view t2 with
+             match t2 with
              | { E.f = f2 ; xs = [y]; _ } when Sy.equal f1 f2 ->
                let ty_y = Expr.type_info y in
                if Ty.equal ty_x ty_y then
@@ -468,7 +468,7 @@ module Main : S = struct
       Debug.add_to_use t;
 
       (* we add t's arguments in env *)
-      let { E.xs; _ } = E.term_view t in
+      let {E.xs; _} = t in
       let env = List.fold_left (fun env t -> add_term env facts t ex) env xs in
       (* we update uf and use *)
       let nuf, ctx  = Uf.add env.uf t in

@@ -10,7 +10,7 @@ let add_let sy e (lets: (E.t * int) Sy.Map.t) =
   incr lets_counter;
   Sy.Map.add sy (e, !lets_counter) lets
 
-let rec purify_term (t: E.term_view) lets =
+let rec purify_term (t: E.t) lets =
   if t.pure then t, lets
   else
     match t.f, t.bind with

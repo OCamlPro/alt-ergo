@@ -133,10 +133,10 @@ module Shostak (X : ALIEN) = struct
       | Cons _ -> cr
       | Alien r    -> X.subst p v r
 
-  let make t = match E.term_view t with
+  let make = function
     | { E.f = Sy.Op (Sy.Constr hs); xs = []; ty; _ } ->
       is_mine (Cons(hs,ty)), []
-    | _ ->
+    | _ as t ->
       Printer.print_err
         "Enum theory only expect constructors with no arguments; got %a."
         E.print t;

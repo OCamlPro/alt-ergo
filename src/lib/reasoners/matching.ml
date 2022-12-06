@@ -193,7 +193,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let rec add_rec env t =
       if ME.mem t env.info then env
       else
-        let { E.f = f; xs = xs; _ } = E.term_view t in
+        let { E.f = f; xs = xs; _ } = t in
         let env =
           let map_f =
             try SubstE.find f env.fils with Not_found -> ME.empty in
@@ -376,7 +376,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       pat t =
     Options.exec_thread_yield ();
     Debug.match_term sg t pat;
-    let { E.f = f_pat; xs = pats; ty = ty_pat; _ } = E.term_view pat in
+    let { E.f = f_pat; xs = pats; ty = ty_pat; _ } = pat in
     match f_pat with
     |  Symbols.Var _ when Symbols.equal f_pat Symbols.underscore ->
       begin
@@ -409,7 +409,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           let cl =
             List.fold_left
               (fun l t ->
-                 let { E.f = f; xs = xs; ty = ty; _ } = E.term_view t in
+                 let { E.f = f; xs = xs; ty = ty; _ } = t in
                  if Symbols.compare f_pat f = 0 then xs::l
                  else
                    begin
@@ -450,7 +450,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     Steps.incr (Steps.Matching);
     Debug.match_one_pat sg pat0;
     let pat = E.apply_subst (sg.sbs, sg.sty) pat0 in
-    let { E.f = f; xs = pats; ty = ty; _ } = E.term_view pat in
+    let { E.f = f; xs = pats; ty = ty; _ } = pat in
     match f with
     | Symbols.Var _ -> all_terms f ty env tbox sg lsbt_acc
     | _ ->
@@ -481,8 +481,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
     List.fold_left (match_one_pat mconf env tbox pat) [] lsubsts
 
   let trig_weight s t =
-    let sf = E.(term_view s).f in
-    let tf = E.(term_view t).f in
+    let sf = s.E.f in
+    let tf = t.E.f in
     match sf, tf with
     | Symbols.Name _, Symbols.Op _ -> -1
     | Symbols.Op _, Symbols.Name _ -> -1

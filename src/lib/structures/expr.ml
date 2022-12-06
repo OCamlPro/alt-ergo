@@ -34,9 +34,7 @@ module SSet = Sy.Set
 
 type binders = (Ty.t * int) SMap.t (*int tag in globally unique *)
 
-type t = term_view
-
-and term_view = {
+type t = {
   f: Sy.t;
   xs: t list;
   ty: Ty.t;
@@ -735,8 +733,6 @@ let form_view t =
     | Sy.Let, [], B_let ({ is_bool = true; _ } as x) -> Let x
 
     | _ -> Literal t
-
-let[@inline always] term_view t = t
 
 (** Some auxiliary functions *)
 

@@ -31,18 +31,7 @@
 type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
 
 (** Type of expression. *)
-type t = term_view
-
-(** Type of declaration kind. *)
-and decl_kind =
-  | Dtheory         (** Declaration of theory. *)
-  | Daxiom          (** Declaration of axiom. *)
-  | Dgoal           (** Declaration of goal. *)
-  | Dpredicate of t (** Declaration of predicate. *)
-  | Dfunction of t  (** Declaration of function. *)
-
-(** View of expression. *)
-and term_view = private {
+type t = private {
   (* TODO: Rename this field to top_sy. *)
   f: Symbols.t;                      (** Top symbol. *)
   (* TODO: Rename this field to args. *)
@@ -64,6 +53,14 @@ and term_view = private {
                                          {!constructor:Ty.Tbool}. Otherwise,
                                          this field is equal to [None]. *)
 }
+
+(** Type of declaration kind. *)
+and decl_kind =
+  | Dtheory         (** Declaration of theory. *)
+  | Daxiom          (** Declaration of axiom. *)
+  | Dgoal           (** Declaration of goal. *)
+  | Dpredicate of t (** Declaration of predicate. *)
+  | Dfunction of t  (** Declaration of function. *)
 
 (** Type of binding. *)
 and bind_kind =
@@ -159,7 +156,6 @@ module Map : Map.S with type key = t
 
 (** {1 Views} *)
 
-val term_view: t -> term_view
 val lit_view: t -> lit_view
 val form_view: t -> form_view
 
