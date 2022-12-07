@@ -9,42 +9,44 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module ME = Expr.Map
 module E = Expr
 module Hs = Hstring
 
 module type ATOM = sig
 
-  type var =
-    {  vid : int;
-       pa : atom;
-       na : atom;
-       mutable weight : float;
-       mutable sweight : int;
-       mutable seen : bool;
-       mutable level : int;
-       mutable index : int;
-       mutable reason: reason;
-       mutable vpremise : premise}
+  type var = {
+    vid: int;
+    pa: atom;
+    na: atom;
+    mutable weight: float;
+    mutable sweight: int;
+    mutable seen: bool;
+    mutable level: int;
+    mutable index: int;
+    mutable reason: reason;
+    mutable vpremise: premise
+  }
 
-  and atom =
-    { var : var;
-      lit : E.t;
-      neg : atom;
-      mutable watched : clause Vec.t;
-      mutable is_true : bool;
-      mutable timp : int;
-      mutable is_guard : bool;
-      aid : int }
+  and atom = {
+    var: var;
+    lit: Expr.t;
+    neg: atom;
+    mutable watched: clause Vec.t;
+    mutable is_true: bool;
+    mutable timp: int;
+    mutable is_guard: bool;
+    aid: int
+  }
 
-  and clause =
-    { name : string;
-      mutable atoms : atom Vec.t ;
-      mutable activity : float;
-      mutable removed : bool;
-      learnt : bool;
-      cpremise : premise;
-      form : E.t}
+  and clause = {
+    name: string;
+    mutable atoms: atom Vec.t ;
+    mutable activity: float;
+    mutable removed: bool;
+    learnt: bool;
+    cpremise: premise;
+    form: E.t
+  }
 
   and reason = clause option
 
@@ -52,52 +54,52 @@ module type ATOM = sig
 
   type hcons_env
 
-  val empty_hcons_env : unit -> hcons_env
-  val copy_hcons_env : hcons_env -> hcons_env
-  val nb_made_vars : hcons_env -> int
+  val empty_hcons_env: unit -> hcons_env
+  val copy_hcons_env: hcons_env -> hcons_env
+  val nb_made_vars: hcons_env -> int
 
-  val pr_atom : Format.formatter -> atom -> unit
-  val pr_clause : Format.formatter -> clause -> unit
-  val get_atom : hcons_env -> E.t ->  atom
+  val pr_atom: Format.formatter -> atom -> unit
+  val pr_clause: Format.formatter -> clause -> unit
+  val get_atom: hcons_env -> E.t ->  atom
 
-  val literal : atom -> E.t
-  val weight : atom -> float
-  val is_true : atom -> bool
-  val neg : atom -> atom
-  val vrai_atom  : atom
-  val faux_atom  : atom
-  val level : atom -> int
-  val index : atom -> int
-  val reason : atom -> reason
-  val reason_atoms : atom -> atom list
+  val literal: atom -> E.t
+  val weight: atom -> float
+  val is_true: atom -> bool
+  val neg: atom -> atom
+  val vrai_atom: atom
+  val faux_atom: atom
+  val level: atom -> int
+  val index: atom -> int
+  val reason: atom -> reason
+  val reason_atoms: atom -> atom list
 
-  val dummy_var : var
-  val dummy_atom : atom
-  val dummy_clause : clause
+  val dummy_var: var
+  val dummy_atom: atom
+  val dummy_clause: clause
 
-  val to_float : int -> float
-  val to_int : float -> int
+  val to_float: int -> float
+  val to_int: float -> int
 
-  val fresh_name : unit -> string
+  val fresh_name: unit -> string
 
-  val fresh_lname : unit -> string
+  val fresh_lname: unit -> string
 
-  val fresh_dname : unit -> string
+  val fresh_dname: unit -> string
 
-  val make_clause : string -> atom list -> E.t -> int -> bool ->
+  val make_clause: string -> atom list -> E.t -> int -> bool ->
     premise-> clause
 
   (*val made_vars_info : unit -> int * var list*)
 
-  val cmp_atom : atom -> atom -> int
-  val eq_atom   : atom -> atom -> bool
-  val hash_atom  : atom -> int
-  val tag_atom   : atom -> int
+  val cmp_atom: atom -> atom -> int
+  val eq_atom: atom -> atom -> bool
+  val hash_atom: atom -> int
+  val tag_atom: atom -> int
 
-  val add_atom : hcons_env -> E.t -> var list -> atom * var list
+  val add_atom: hcons_env -> E.t -> var list -> atom * var list
 
-  module Set : Set.S with type elt = atom
-  module Map : Map.S with type key = atom
+  module Set: Set.S with type elt = atom
+  module Map: Map.S with type key = atom
 end
 
 (*
@@ -152,36 +154,39 @@ end
 
 module Atom : ATOM = struct
 
-  type var =
-    {  vid : int;
-       pa : atom;
-       na : atom;
-       mutable weight : float;
-       mutable sweight : int;
-       mutable seen : bool;
-       mutable level : int;
-       mutable index : int;
-       mutable reason: reason;
-       mutable vpremise : premise}
+  type var = {
+    vid: int;
+    pa: atom;
+    na: atom;
+    mutable weight: float;
+    mutable sweight: int;
+    mutable seen: bool;
+    mutable level: int;
+    mutable index: int;
+    mutable reason: reason;
+    mutable vpremise: premise
+  }
 
-  and atom =
-    { var : var;
-      lit : E.t;
-      neg : atom;
-      mutable watched : clause Vec.t;
-      mutable is_true : bool;
-      mutable timp : int;
-      mutable is_guard : bool;
-      aid : int }
+  and atom = {
+    var: var;
+    lit: E.t;
+    neg: atom;
+    mutable watched: clause Vec.t;
+    mutable is_true: bool;
+    mutable timp: int;
+    mutable is_guard: bool;
+    aid: int
+  }
 
-  and clause =
-    { name : string;
-      mutable atoms : atom Vec.t ;
-      mutable activity : float;
-      mutable removed : bool;
-      learnt : bool;
-      cpremise : premise;
-      form : E.t}
+  and clause = {
+    name: string;
+    mutable atoms: atom Vec.t ;
+    mutable activity: float;
+    mutable removed: bool;
+    learnt: bool;
+    cpremise: premise;
+    form: E.t
+  }
 
   and reason = clause option
 
@@ -191,39 +196,41 @@ module Atom : ATOM = struct
 
   let vraie_form = E.vrai
 
-  let rec dummy_var =
-    { vid = -101;
-      pa = dummy_atom;
-      na = dummy_atom;
-      level = -1;
-      index = -1;
-      reason = None;
-      weight = -1.;
-      sweight = 0;
-      seen = false;
-      vpremise = [] }
-  and dummy_atom =
-    { var = dummy_var;
-      timp = 0;
-      lit = dummy_lit;
-      watched = {Vec.dummy=dummy_clause; data=[||]; sz=0};
-      neg = dummy_atom;
-      is_true = false;
-      is_guard = false;
-      aid = -102 }
-  and dummy_clause =
-    { name = "";
-      atoms = {Vec.dummy=dummy_atom; data=[||]; sz=0};
-      activity = -1.;
-      removed = false;
-      learnt = false;
-      cpremise = [];
-      form = vraie_form }
-
+  let rec dummy_var = {
+    vid = -101;
+    pa = dummy_atom;
+    na = dummy_atom;
+    level = -1;
+    index = -1;
+    reason = None;
+    weight = -1.;
+    sweight = 0;
+    seen = false;
+    vpremise = []
+  }
+  and dummy_atom = {
+    var = dummy_var;
+    timp = 0;
+    lit = dummy_lit;
+    watched = {Vec.dummy = dummy_clause; data = [||]; sz = 0};
+    neg = dummy_atom;
+    is_true = false;
+    is_guard = false;
+    aid = -102
+  }
+  and dummy_clause = {
+    name = "";
+    atoms = {Vec.dummy = dummy_atom; data = [||]; sz = 0};
+    activity = -1.;
+    removed = false;
+    learnt = false;
+    cpremise = [];
+    form = vraie_form
+  }
 
   module Debug = struct
 
-    let sign a = if a==a.var.pa then "" else "-"
+    let sign a = if a == a.var.pa then "" else "-"
 
     let level a =
       match a.var.level, a.var.reason with
@@ -276,7 +283,7 @@ module Atom : ATOM = struct
 
   module HT = Hashtbl.Make(E)
 
-  type hcons_env = { tbl : var HT.t ; cpt : int ref }
+  type hcons_env = {tbl: var HT.t; cpt: int ref}
 
   let make_var =
     fun hcons lit acc ->
@@ -285,36 +292,38 @@ module Atom : ATOM = struct
     with Not_found ->
       let cpt = !(hcons.cpt) in
       let cpt_fois_2 = cpt * 2 in
-      let rec var  =
-        { vid = cpt;
-          pa = pa;
-          na = na;
-          level = -1;
-          index = -1;
-          reason = None;
-          weight = 0.;
-          sweight = max_depth lit;
-          seen = false;
-          vpremise = [];
-        }
-      and pa =
-        { var = var;
-          lit = lit;
-          watched = Vec.make 10 dummy_clause;
-          neg = na;
-          is_true = false;
-          is_guard = false;
-          timp = 0;
-          aid = cpt_fois_2 (* aid = vid*2 *) }
-      and na =
-        { var = var;
-          lit = E.neg lit;
-          watched = Vec.make 10 dummy_clause;
-          neg = pa;
-          is_true = false;
-          is_guard = false;
-          timp = 0;
-          aid = cpt_fois_2 + 1 (* aid = vid*2+1 *) } in
+      let rec var  = {
+        vid = cpt;
+        pa = pa;
+        na = na;
+        level = -1;
+        index = -1;
+        reason = None;
+        weight = 0.;
+        sweight = max_depth lit;
+        seen = false;
+        vpremise = [];
+      }
+      and pa = {
+        var = var;
+        lit = lit;
+        watched = Vec.make 10 dummy_clause;
+        neg = na;
+        is_true = false;
+        is_guard = false;
+        timp = 0;
+        aid = cpt_fois_2 (* aid = vid*2 *)
+      }
+      and na = {
+        var = var;
+        lit = E.neg lit;
+        watched = Vec.make 10 dummy_clause;
+        neg = pa;
+        is_true = false;
+        is_guard = false;
+        timp = 0;
+        aid = cpt_fois_2 + 1 (* aid = vid*2+1 *)
+      } in
       HT.add hcons.tbl lit var;
       incr hcons.cpt;
       var, negated, var :: acc
@@ -420,23 +429,23 @@ module type FLAT_FORMULA = sig
   type view = private UNIT of Atom.atom | AND of t list | OR of t list
   type hcons_env
 
-  val equal   : t -> t -> bool
-  val compare : t -> t -> int
-  val print   : Format.formatter -> t -> unit
-  val print_stats : Format.formatter -> unit
-  val vrai    : t
-  val faux    : t
-  val view    : t -> view
-  val mk_lit  : hcons_env -> E.t -> Atom.var list -> t * Atom.var list
-  val mk_and  : hcons_env -> t list -> t
-  val mk_or   : hcons_env -> t list -> t
-  val mk_not  : t -> t
+  val equal: t -> t -> bool
+  val compare: t -> t -> int
+  val print: Format.formatter -> t -> unit
+  val print_stats: Format.formatter -> unit
+  val vrai: t
+  val faux: t
+  val view: t -> view
+  val mk_lit: hcons_env -> E.t -> Atom.var list -> t * Atom.var list
+  val mk_and: hcons_env -> t list -> t
+  val mk_or: hcons_env -> t list -> t
+  val mk_not: t -> t
 
-  val empty_hcons_env : unit -> hcons_env
-  val nb_made_vars : hcons_env -> int
-  val get_atom : hcons_env -> E.t -> Atom.atom
+  val empty_hcons_env: unit -> hcons_env
+  val nb_made_vars: hcons_env -> int
+  val get_atom: hcons_env -> E.t -> Atom.atom
 
-  val simplify :
+  val simplify:
     hcons_env ->
     E.t ->
     (E.t -> t * 'a) ->
@@ -444,10 +453,10 @@ module type FLAT_FORMULA = sig
     t * (E.t * (t * Atom.atom)) list
     * Atom.var list
 
-  val get_proxy_of : t ->
+  val get_proxy_of: t ->
     (Atom.atom * Atom.atom list * bool) Util.MI.t -> Atom.atom option
 
-  val cnf_abstr :
+  val cnf_abstr:
     hcons_env ->
     t ->
     (Atom.atom * Atom.atom list * bool) Util.MI.t ->
@@ -457,24 +466,24 @@ module type FLAT_FORMULA = sig
     * (Atom.atom * Atom.atom list * bool) Util.MI.t
     * Atom.var list
 
-  val expand_proxy_defn :
+  val expand_proxy_defn:
     Atom.atom list list ->
     Atom.atom * Atom.atom list * bool -> Atom.atom list list
 
-  val reinit_cpt : unit -> unit
+  val reinit_cpt: unit -> unit
 
-  module Set : Set.S with type elt = t
-  module Map : Map.S with type key = t
+  module Set: Set.S with type elt = t
+  module Map: Map.S with type key = t
 end
 
-module Flat_Formula : FLAT_FORMULA = struct
+module Flat_Formula: FLAT_FORMULA = struct
 
   type view = UNIT of Atom.atom | AND  of t list | OR of t list
-  and t =
-    {view : view;
-     tag : int;
-     neg : t
-    }
+  and t = {
+    view: view;
+    tag: int;
+    neg: t
+  }
 
   let mk_not f = f.neg
 
@@ -555,25 +564,25 @@ module Flat_Formula : FLAT_FORMULA = struct
           eq_aux f1.view f2.view
       end)
 
-  type hcons_env = { tbl : t HT.t ; cpt : int ref ;
-                     atoms : Atom.hcons_env}
+  type hcons_env = {
+    tbl: t HT.t;
+    cpt: int ref;
+    atoms: Atom.hcons_env
+  }
 
   let make hcons pos neg =
     let is_pos = is_positive pos in
     let pos, neg = if is_pos then pos, neg else neg, pos in
-    let rec p =
-      {
-        view = pos;
-        tag  = 2 * !(hcons.cpt);
-        neg  = n;
-      }
-    and n =
-      {
-        view = neg;
-        tag  = 2 * !(hcons.cpt) + 1;
-        neg  = p;
-      }
-    in
+    let rec p = {
+      view = pos;
+      tag  = 2 * !(hcons.cpt);
+      neg  = n;
+    }
+    and n = {
+      view = neg;
+      tag  = 2 * !(hcons.cpt) + 1;
+      neg  = p;
+    } in
     let res =
       try HT.find hcons.tbl p
       with Not_found ->
@@ -865,7 +874,7 @@ module Flat_Formula : FLAT_FORMULA = struct
       | E.Skolem _ ->
         mk_not (simp false ~parent_disj:false (E.neg f))
 
-      | E.Unit(f1, f2) ->
+      | E.Unit (f1, f2) ->
         let x1 = simp topl ~parent_disj:false f1 in
         let x2 = simp topl ~parent_disj:false f2 in
         begin match x1.view , x2.view with
@@ -875,7 +884,7 @@ module Flat_Formula : FLAT_FORMULA = struct
           | _              -> mk_and hcons [x1; x2]
         end
 
-      | E.Clause(f1, f2, _) ->
+      | E.Clause (f1, f2, _) ->
         let x1 = simp false ~parent_disj:true f1 in
         let x2 = simp false ~parent_disj:true f2 in
         begin match x1.view, x2.view with
@@ -885,11 +894,11 @@ module Flat_Formula : FLAT_FORMULA = struct
           | _            -> mk_or hcons [x1; x2]
         end
 
-      | E.Iff(f1, f2) ->
+      | E.Iff (f1, f2) ->
         simp topl ~parent_disj @@
         E.elim_iff f1 f2 (E.id f) ~with_conj:(not parent_disj)
 
-      | E.Xor(f1, f2) ->
+      | E.Xor (f1, f2) ->
         let g = E.neg @@ E.elim_iff f1 f2 (E.id f) ~with_conj:parent_disj in
         simp topl ~parent_disj g
 

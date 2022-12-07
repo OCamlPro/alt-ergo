@@ -9,48 +9,49 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module SE = Expr.Set
+module E = Expr
 module MS = Map.Make(String)
 
 type inst_info = {
-  loc : Loc.t;
-  kept : int;
-  ignored : int;
-  all_insts : SE.t;
-  confl : int;
-  decided : int;
-  consumed : SE.t;
-  all : SE.t;
-  produced : SE.t;
-  _new : SE.t;
+  loc: Loc.t;
+  kept: int;
+  ignored: int;
+  all_insts: Expr.Set.t;
+  confl: int;
+  decided: int;
+  consumed: Expr.Set.t;
+  all: Expr.Set.t;
+  produced: Expr.Set.t;
+  _new: Expr.Set.t;
 }
 
 type t = {
-  decisions : int ref;
-  assumes : int ref;
-  assumes_current_lvl : int ref;
-  queries : int ref;
-  instantiation_rounds : int ref;
-  instances : int ref;
-  decision_lvl : int ref;
-  instantiation_lvl : int ref;
+  decisions: int ref;
+  assumes: int ref;
+  assumes_current_lvl: int ref;
+  queries: int ref;
+  instantiation_rounds: int ref;
+  instances: int ref;
+  decision_lvl: int ref;
+  instantiation_lvl: int ref;
 
   (* 4 kinds of conflicts *)
-  th_conflicts : int ref;
-  b_conflicts : int ref;
-  bcp_th_conflicts : int ref;
-  bcp_b_conflicts : int ref;
-  bcp_mix_conflicts : int ref;
+  th_conflicts: int ref;
+  b_conflicts: int ref;
+  bcp_th_conflicts: int ref;
+  bcp_b_conflicts: int ref;
+  bcp_mix_conflicts: int ref;
 
   (* 4 kinds of red/elim *)
-  t_red : int ref;
-  b_red : int ref;
-  t_elim : int ref;
-  b_elim : int ref;
+  t_red: int ref;
+  b_red: int ref;
+  t_elim: int ref;
+  b_elim: int ref;
+
   (* first int: counter ok kept instances,
      second int: counter of removed instances*)
   instances_map : inst_info MS.t ref;
-  instances_map_printed : bool ref
+  instances_map_printed: bool ref
 }
 
 let state = {
@@ -157,11 +158,11 @@ let empty_inst_info loc =
     ignored = 0;
     confl = 0;
     decided = 0;
-    all_insts = SE.empty;
-    consumed = SE.empty;
-    all  = SE.empty;
-    produced  = SE.empty;
-    _new  = SE.empty;
+    all_insts = E.Set.empty;
+    consumed = E.Set.empty;
+    all  = E.Set.empty;
+    produced  = E.Set.empty;
+    _new  = E.Set.empty;
   }
 
 let new_instance_of axiom inst loc kept =
@@ -173,7 +174,7 @@ let new_instance_of axiom inst loc kept =
   assert (ii.loc == loc);
   let ii =
     if kept then
-      {ii with kept = ii.kept + 1; all_insts = SE.add inst ii.all_insts}
+      {ii with kept = ii.kept + 1; all_insts = E.Set.add inst ii.all_insts}
     else
       {ii with ignored = ii.ignored + 1}
   in
@@ -220,10 +221,10 @@ let register_produced_terms axiom loc consumed all produced _new =
   assert (ii.loc == loc);
   let ii =
     {ii with
-     consumed = SE.union ii.consumed consumed;
-     all      = SE.union ii.all all;
-     produced = SE.union ii.produced produced;
-     _new     = SE.union ii._new _new }
+     consumed = E.Set.union ii.consumed consumed;
+     all      = E.Set.union ii.all all;
+     produced = E.Set.union ii.produced produced;
+     _new     = E.Set.union ii._new _new }
   in
   state.instances_map := MS.add axiom ii !(state.instances_map)
 
@@ -517,7 +518,7 @@ let print_instances_generation forced _steps fmt _timers =
            let f1 = float_of_int ii.kept in
            let f2 = float_of_int ii.ignored in
            let ratio = f1 /. (f1 +. f2) in
-           let all_card = SE.cardinal ii.all_insts in
+           let all_card = E.Set.cardinal ii.all_insts in
            (name, ii, all_card, ratio) :: acc)
         !(state.instances_map) []
     in
@@ -528,7 +529,7 @@ let print_instances_generation forced _steps fmt _timers =
           (i1.kept - i2.kept) @@
           (i1.confl - i2.confl) @@
           (i1.ignored - i2.ignored) @@
-          (SE.cardinal i1._new - SE.cardinal i2._new)
+          (E.Set.cardinal i1._new - E.Set.cardinal i2._new)
         ) insts
     in
     List.iter
@@ -541,11 +542,11 @@ let print_instances_generation forced _steps fmt _timers =
          fprintf fmt "decided: %s| " (int_resize i.decided 4);
          fprintf fmt "conflicted: %s| " (int_resize i.confl 4);
          fprintf fmt "consumed: %s| "
-           (int_resize (SE.cardinal i.consumed) 5);
+           (int_resize (E.Set.cardinal i.consumed) 5);
          fprintf fmt "produced: %s| "
-           (int_resize (SE.cardinal i.produced) 5);
+           (int_resize (E.Set.cardinal i.produced) 5);
          fprintf fmt "new: %s|| "
-           (int_resize (SE.cardinal i._new) 5);
+           (int_resize (E.Set.cardinal i._new) 5);
          fprintf fmt "%s" (string_resize name 30);
          (*fprintf fmt "%s | " (string_resize name 30);
            fprintf fmt "%a@." report3 i.loc (* too long *) *)
@@ -558,22 +559,22 @@ let print_instances_generation forced _steps fmt _timers =
       fprintf fmt "rotate=90@.";
       fprintf fmt "fontsize=\"12pt\"@.";
       fprintf fmt "rankdir = TB@." ;
-      let terms = ref SE.empty in
+      let terms = ref E.Set.empty in
       List.iter
       (fun (name, i, _) ->
-      SE.iter
+      E.Set.iter
       (fun t ->
       fprintf fmt "\"%d\" -> \"%s\";@." (T.hash t) name
       )i.consumed;
-      terms := SE.union !terms i.consumed;
-      SE.iter
+      terms := E.Set.union !terms i.consumed;
+      E.Set.iter
       (fun t ->
       fprintf fmt "\"%s\" -> \"%d\";@." name (T.hash t)
       )i._new;
-      terms := SE.union !terms i._new;
+      terms := E.Set.union !terms i._new;
       fprintf fmt "\"%s\" [fillcolor=yellow];@." name;
       )insts;
-      SE.iter
+      E.Set.iter
       (fun t ->
       fprintf fmt "\"%d\" [fillcolor=green];@." (T.hash t);
       )!terms;
@@ -590,7 +591,7 @@ let print_instances_generation forced _steps fmt _timers =
       (fun (s1, i1, _) ->
       List.iter
       (fun (s2, i2, _) ->
-      if SE.is_empty (SE.inter i1.produced i2.consumed) then ()
+      if E.Set.is_empty (E.Set.inter i1.produced i2.consumed) then ()
       else fprintf fmt "\"%s\" -> \"%s\";@." s1 s2
       )insts
       )insts;

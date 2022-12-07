@@ -44,51 +44,51 @@ type 'a atom_view =
 
 module type OrderedType = sig
   type t
-  val compare : t -> t -> int
-  val hash :  t -> int
-  val print : Format.formatter -> t -> unit
-  val top : unit -> t
-  val bot : unit -> t
-  val type_info : t -> Ty.t
+  val compare: t -> t -> int
+  val hash:  t -> int
+  val print: Format.formatter -> t -> unit
+  val top: unit -> t
+  val bot: unit -> t
+  val type_info: t -> Ty.t
 end
 
 module type S = sig
   type elt
   type t
 
-  val make : elt view -> t
-  val view : t -> elt view
-  val atom_view : t -> elt atom_view * bool (* is_negated ? *)
+  val make: elt view -> t
+  val view: t -> elt view
+  val atom_view: t -> elt atom_view * bool (* is_negated ? *)
 
-  val mk_eq : elt -> elt -> t
-  val mk_distinct : bool -> elt list -> t
-  val mk_builtin : bool -> builtin -> elt list -> t
-  val mk_pred : elt -> bool -> t
+  val mk_eq: elt -> elt -> t
+  val mk_distinct: bool -> elt list -> t
+  val mk_builtin: bool -> builtin -> elt list -> t
+  val mk_pred: elt -> bool -> t
 
-  val mkv_eq : elt -> elt -> elt view
-  val mkv_distinct : bool -> elt list -> elt view
-  val mkv_builtin : bool -> builtin -> elt list -> elt view
-  val mkv_pred : elt -> bool -> elt view
+  val mkv_eq: elt -> elt -> elt view
+  val mkv_distinct: bool -> elt list -> elt view
+  val mkv_builtin: bool -> builtin -> elt list -> elt view
+  val mkv_pred: elt -> bool -> elt view
 
-  val neg : t -> t
+  val neg: t -> t
 
-  val add_label : Hstring.t -> t -> unit
-  val label : t -> Hstring.t
+  val add_label: Hstring.t -> t -> unit
+  val label: t -> Hstring.t
 
-  val print : Format.formatter -> t -> unit
+  val print: Format.formatter -> t -> unit
 
-  val compare : t -> t -> int
-  val equal : t -> t -> bool
-  val hash : t -> int
-  val uid : t -> int
-  val elements : t -> elt list
+  val compare: t -> t -> int
+  val equal: t -> t -> bool
+  val hash: t -> int
+  val uid: t -> int
+  val elements: t -> elt list
 
-  val save_cache : unit -> unit
+  val save_cache: unit -> unit
 
-  val reinit_cache : unit -> unit
+  val reinit_cache: unit -> unit
 
-  module Map : Map.S with type key = t
-  module Set : Set.S with type elt = t
+  module Map: Map.S with type key = t
+  module Set: Set.S with type elt = t
 
 end
 
@@ -96,38 +96,28 @@ let print_view ?(lbl="") pr_elt fmt vw =
   match vw with
   | Eq (z1, z2) ->
     Format.fprintf fmt "%s %a = %a" lbl pr_elt z1 pr_elt z2
-
-  | Distinct (b,(z::l)) ->
+  | Distinct (b, z :: l) ->
     let b = if b then "~ " else "" in
     Format.fprintf fmt "%s %s%a" lbl b pr_elt z;
     List.iter (fun x -> Format.fprintf fmt " <> %a" pr_elt x) l
-
   | Builtin (true, LE, [v1;v2]) ->
     Format.fprintf fmt "%s %a <= %a" lbl pr_elt v1 pr_elt v2
-
   | Builtin (true, LT, [v1;v2]) ->
     Format.fprintf fmt "%s %a < %a" lbl pr_elt v1 pr_elt v2
-
   | Builtin (false, LE, [v1;v2]) ->
     Format.fprintf fmt "%s %a > %a" lbl pr_elt v1 pr_elt v2
-
   | Builtin (false, LT, [v1;v2]) ->
     Format.fprintf fmt "%s %a >= %a" lbl pr_elt v1 pr_elt v2
-
   | Builtin (_, (LE | LT), _) ->
     assert false (* not reachable *)
-
   | Builtin (pos, IsConstr hs, [e]) ->
     Format.fprintf fmt "%s(%a ? %a)"
       (if pos then "" else "not ") pr_elt e Hstring.print hs
-
   | Builtin (_, IsConstr _, _) ->
     assert false (* not reachable *)
-
-  | Pred (p,b) ->
+  | Pred (p, b) ->
     Format.fprintf fmt "%s %a = %s" lbl pr_elt p
       (if b then "false" else "true")
-
   | Distinct (_, _) -> assert false
 
 
@@ -135,11 +125,17 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
 
   type elt = X.t
 
-  type atom =
-    {value : elt atom_view;
-     uid : int }
+  type atom = {
+    value: elt atom_view;
+    uid: int
+  }
 
-  type t = { at : atom; neg : bool; tpos : int; tneg : int }
+  type t = {
+    at: atom;
+    neg: bool;
+    tpos: int;
+    tneg: int
+  }
 
   let compare a1 a2 = Stdlib.compare a1.tpos a2.tpos
   let equal a1 a2 = a1.tpos = a2.tpos (* XXX == *)
@@ -150,12 +146,12 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
   let atom_view t = t.at.value, t.neg
 
   let view t = match t.neg, t.at.value with
-    | false, EQ(s,t) -> Eq(s,t)
-    | true , EQ(s,t) -> Distinct(false, [s;t]) (* b false <-> not negated *)
-    | false, EQ_LIST l -> Distinct (true,l)
-    | true,  EQ_LIST l -> Distinct (false,l)
-    | b    , PR p    -> Pred(p,b)
-    | b    , BT(n,l) -> Builtin(not b, n, l) (* b true <-> not negated *)
+    | false, EQ (s, t) -> Eq (s, t)
+    | true , EQ (s, t) -> Distinct (false, [s;t]) (* b false <-> not negated *)
+    | false, EQ_LIST l -> Distinct (true, l)
+    | true,  EQ_LIST l -> Distinct (false, l)
+    | b    , PR p    -> Pred (p, b)
+    | b    , BT (n, l) -> Builtin (not b, n, l) (* b true <-> not negated *)
 
   module T = struct
     type t' = t
@@ -246,8 +242,8 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
       else Eq(t1,t2) (* should be translated into iff *)
 
   let normalize_view t = match t with
-    | Eq(t1,t2) -> normalize_eq t1 t2 false
-    | Distinct (b, [t1;t2]) -> normalize_eq t1 t2 (not b)
+    | Eq (t1, t2) -> normalize_eq t1 t2 false
+    | Distinct (b, [t1; t2]) -> normalize_eq t1 t2 (not b)
     | Distinct (b, l) ->
       Distinct (b, List.fast_sort X.compare l)
     | Builtin (_, _, _) | Pred (_, _) -> t
@@ -261,11 +257,11 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
       {at = at; neg = is_neg; tneg = 2*at.uid+1; tpos = 2*at.uid}
 
   let make t = match normalize_view t with
-    | Eq(t1,t2)       -> make_aux (EQ(t1,t2)) false
-    | Builtin (b,n,l) -> make_aux (BT (n,l)) (not b)
-    | Pred (x,y)      -> make_aux (PR x) y
-    | Distinct(false, [t1;t2]) -> make_aux (EQ(t1,t2)) true
-    | Distinct (b,l)  -> make_aux (EQ_LIST l) (not b)
+    | Eq (t1, t2) -> make_aux (EQ (t1, t2)) false
+    | Builtin (b, n, l) -> make_aux (BT (n, l)) (not b)
+    | Pred (x, y) -> make_aux (PR x) y
+    | Distinct (false, [t1; t2]) -> make_aux (EQ (t1, t2)) true
+    | Distinct (b, l)  -> make_aux (EQ_LIST l) (not b)
 
   (************)
 
@@ -297,28 +293,28 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
     | Pred (x,y) -> make_aux (PR x) y
   *)
 
-  let mk_eq t1 t2 = make (Eq(t1,t2))
+  let mk_eq t1 t2 = make (Eq (t1, t2))
 
-  let mk_distinct is_neg tl = make (Distinct(is_neg, tl))
+  let mk_distinct is_neg tl = make (Distinct (is_neg, tl))
 
-  let mk_builtin is_pos n l = make (Builtin(is_pos, n, l))
+  let mk_builtin is_pos n l = make (Builtin (is_pos, n, l))
 
-  let mk_pred t is_neg = make (Pred(t, is_neg))
+  let mk_pred t is_neg = make (Pred (t, is_neg))
 
 
-  let mkv_eq t1 t2 = normalize_view (Eq(t1,t2))
+  let mkv_eq t1 t2 = normalize_view (Eq (t1, t2))
 
-  let mkv_distinct is_neg tl = normalize_view (Distinct(is_neg, tl))
+  let mkv_distinct is_neg tl = normalize_view (Distinct (is_neg, tl))
 
-  let mkv_builtin is_pos n l = normalize_view (Builtin(is_pos, n, l))
+  let mkv_builtin is_pos n l = normalize_view (Builtin (is_pos, n, l))
 
-  let mkv_pred t is_neg = normalize_view (Pred(t, is_neg))
+  let mkv_pred t is_neg = normalize_view (Pred (t, is_neg))
 
   let elements a =
     match atom_view a with
-    | EQ(a,b), _ -> [a;b]
+    | EQ (a, b), _ -> [a; b]
     | PR a, _    -> [a]
-    | BT (_,l), _ | EQ_LIST l, _ -> l
+    | BT (_, l), _ | EQ_LIST l, _ -> l
 
   let save_cache () =
     HC.save_cache ()

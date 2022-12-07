@@ -61,8 +61,10 @@ type pattern =
   | Var of Var.t
   (** a pattern that is a variable (or underscore) *)
 
-type 'a tterm =
-  { tt_ty : Ty.t; tt_desc : 'a tt_desc }
+type 'a tterm = {
+  tt_ty: Ty.t;
+  tt_desc: 'a tt_desc
+}
 
 and 'a atterm = ('a tterm, 'a) annoted
 
@@ -107,11 +109,11 @@ and 'a tatom =
 
 and 'a quant_form = {
   (* quantified variables that appear in the formula *)
-  qf_bvars : (Sy.t * Ty.t) list ;
-  qf_upvars : (Sy.t * Ty.t) list ;
-  qf_triggers : ('a atterm list * bool) list ;
-  qf_hyp : 'a atform list;
-  qf_form : 'a atform
+  qf_bvars: (Sy.t * Ty.t) list ;
+  qf_upvars: (Sy.t * Ty.t) list ;
+  qf_triggers: ('a atterm list * bool) list ;
+  qf_hyp: 'a atform list;
+  qf_form: 'a atform
 }
 
 and 'a atform = ('a tform, 'a) annoted
@@ -134,9 +136,9 @@ and 'a tlet_kind =
 (** Rewrite rules *)
 
 type 'a rwt_rule = {
-  rwt_vars : (Sy.t * Ty.t) list;
-  rwt_left : 'a;
-  rwt_right : 'a
+  rwt_vars: (Sy.t * Ty.t) list;
+  rwt_left: 'a;
+  rwt_right: 'a
 }
 
 let print_rwt pp fmt r =
@@ -204,9 +206,9 @@ let rec print_term =
       fprintf fmt "%s" s
     | TTvar s ->
       fprintf fmt "%a" Sy.print s
-    | TTapp(s,l) ->
+    | TTapp (s, l) ->
       fprintf fmt "%a(%a)" Sy.print s print_term_list l
-    | TTinfix(t1,s,t2) ->
+    | TTinfix (t1, s, t2) ->
       fprintf fmt "%a %a %a" print_term t1 Sy.print s print_term t2
     | TTprefix (s, t') ->
       fprintf fmt "%a %a" Sy.print s print_term t'
@@ -229,26 +231,21 @@ let rec print_term =
       fprintf fmt "let %a in %a" print_term_binders binders print_term t2
     | TTnamed (_, t) ->
       fprintf fmt "%a" print_term t
-
-    | TTinInterval(e, i, j) ->
+    | TTinInterval (e, i, j) ->
       fprintf fmt "%a in %a, %a"
         print_term e
         Sy.print_bound i
         Sy.print_bound j
-
-    | TTmapsTo(x,e) ->
+    | TTmapsTo (x, e) ->
       fprintf fmt "%a |-> %a" Var.print x print_term e
-
-    | TTite(cond, t1, t2) ->
+    | TTite (cond, t1, t2) ->
       fprintf fmt "(if %a then %a else %a)"
         print_formula cond print_term t1 print_term t2
     | TTproject (grded, t1, s) ->
       fprintf fmt "%a#%s%s"
         print_term t1 (if grded then "" else "!") (Hstring.view s)
-
     | TTform f ->
       fprintf fmt "%a" print_formula f
-
     | TTmatch (e, cases) ->
       let pp_vars fmt l =
         match l with
@@ -313,18 +310,17 @@ and print_formula =
   fun fmt f -> match f.c with
     | TFatom a ->
       print_atom fmt a
-    | TFop(OPnot, [f]) ->
+    | TFop (OPnot, [f]) ->
       fprintf fmt "not %a" print_formula f
-    | TFop(OPif, [cond; f1;f2]) ->
+    | TFop (OPif, [cond; f1;f2]) ->
       fprintf fmt "if %a then %a else %a"
         print_formula cond print_formula f1 print_formula f2
-    | TFop(op, [f1; f2]) ->
+    | TFop (op, [f1; f2]) ->
       fprintf fmt "(%a %s %a)" print_formula f1 (string_of_op op)
         print_formula f2
     | TFforall { qf_bvars = l; qf_triggers = t; qf_form = f; _ } ->
       fprintf fmt "forall %a [%a]. %a"
         print_binders l print_triggers t print_formula f
-
     | TFlet (_, binders, f) ->
       List.iter
         (fun (sy, let_e) ->
