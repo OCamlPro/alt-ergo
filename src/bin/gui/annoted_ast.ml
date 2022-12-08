@@ -1149,8 +1149,8 @@ let rec downgrade_ty = function
   | Ty.Text {constr; args} ->
     PPTexternal (List.map downgrade_ty args,
                  Hstring.view constr, Loc.dummy)
-  | Ty.Tfarray {key; value} ->
-    PPTexternal ([downgrade_ty key; downgrade_ty value],
+  | Ty.Tfarray {key_ty; val_ty} ->
+    PPTexternal ([downgrade_ty key_ty; downgrade_ty val_ty],
                  "farray", Loc.dummy)
   | Ty.Tsum {name; _} ->
     PPTexternal ([], Hstring.view name, Loc.dummy)

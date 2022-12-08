@@ -39,8 +39,8 @@ type t =
       args: t list
     }
   | Tfarray of {
-      key: t;
-      value: t;
+      key_ty: t;
+      val_ty: t;
     }
   | Tsum of {
       name: Hstring.t;
@@ -123,11 +123,13 @@ let print_generic body_of =
         if Options.get_output_smtlib () then
           fprintf fmt "(%s %a)" (Hstring.view constr) print_list args
         else fprintf fmt "%a <ext>%s" print_list args (Hstring.view constr)
-      | Tfarray {key; value} ->
+      | Tfarray {key_ty; val_ty} ->
         if Options.get_output_smtlib () then
-          fprintf fmt "(Array %a %a)"  (print body_of) key (print body_of) value
+          fprintf fmt "(Array %a %a)"  (print body_of) key_ty
+            (print body_of) val_ty
         else
-          fprintf fmt "(%a,%a) farray" (print body_of) key (print body_of) value
+          fprintf fmt "(%a,%a) farray" (print body_of) key_ty
+            (print body_of) val_ty
       | Tsum {name; _} ->
         if Options.get_output_smtlib () then
           fprintf fmt "%s" (Hstring.view name)
@@ -209,11 +211,11 @@ let rec shorten ty =
   | Text {constr; args} ->
     let args, same = Lists.apply shorten args in
     if same then ty else Text {constr; args}
-  | Tfarray {key; value} ->
-    let key' = shorten key in
-    let value' = shorten value in
-    if key == key' && value == value' then ty
-    else Tfarray {key=key'; value=value'}
+  | Tfarray {key_ty; val_ty} ->
+    let key_ty' = shorten key_ty in
+    let val_ty' = shorten val_ty in
+    if key_ty == key_ty' && val_ty == val_ty' then ty
+    else Tfarray {key_ty = key_ty'; val_ty = val_ty'}
   | Trecord r ->
     r.args <- List.map shorten r.args;
     r.lbs <- List.map (fun (lb, ty) -> lb, shorten ty) r.lbs;
@@ -238,11 +240,11 @@ let rec compare t1 t2 =
     if c <> 0 then c
     else compare_list a1 a2
   | Text _, _ -> -1 | _ , Text _ -> 1
-  | Tfarray {key = key1; value = value1},
-    Tfarray {key = key2; value = value2} ->
-    let c = compare key1 key2 in
+  | Tfarray {key_ty = key_ty1; val_ty = val_ty1},
+    Tfarray {key_ty = key_ty2; val_ty = val_ty2} ->
+    let c = compare key_ty1 key_ty2 in
     if c <> 0 then c
-    else compare value1 value2
+    else compare val_ty1 val_ty2
   | Tfarray _, _ -> -1 | _ , Tfarray _ -> 1
   | Tsum {name = s1; _}, Tsum {name = s2; _} ->
     Hstring.compare s1 s2
@@ -279,8 +281,9 @@ let rec equal t1 t2 =
   | Text {constr = s1; args = l1}, Text {constr = s2; args = l2} ->
     (try Hstring.equal s1 s2 && List.for_all2 equal l1 l2
      with Invalid_argument _ -> false)
-  | Tfarray {key = ta1; value = ta2}, Tfarray {key = tb1; value = tb2} ->
-    equal ta1 tb1 && equal ta2 tb2
+  | Tfarray {key_ty = key_ty1; val_ty = val_ty1},
+    Tfarray {key_ty = key_ty2; val_ty = val_ty2} ->
+    equal key_ty1 key_ty2 && equal val_ty1 val_ty2
   | Tsum {name = s1; _}, Tsum {name = s2; _} -> Hstring.equal s1 s2
   | Trecord {args = a1; name = s1; lbs = l1; _},
     Trecord {args = a2; name = s2; lbs = l2; _} ->
@@ -317,8 +320,9 @@ let rec matching s pat t =
   | Text {constr = s1; args = l1},
     Text {constr = s2; args = l2} when Hstring.equal s1 s2 ->
     List.fold_left2 matching s l1 l2
-  | Tfarray {key = ta1; value = ta2}, Tfarray {key = tb1; value = tb2} ->
-    matching (matching s ta1 tb1) ta2 tb2
+  | Tfarray {key_ty = key_ty1; val_ty = val_ty1},
+    Tfarray {key_ty = key_ty2; val_ty = val_ty2} ->
+    matching (matching s key_ty1 key_ty2) val_ty1 val_ty2
   | Trecord r1, Trecord r2 when Hstring.equal r1.name r2.name ->
     let s = List.fold_left2 matching s r1.args r2.args in
     List.fold_left2
@@ -342,12 +346,12 @@ let apply_subst =
     | Text {constr; args} ->
       let args, same = Lists.apply (apply_subst s) args in
       if same then ty else Text {constr; args}
-    | Tfarray {key; value} ->
+    | Tfarray {key_ty; val_ty} ->
       begin
-        let key' = apply_subst s key in
-        let value' = apply_subst s value in
-        if key == key' && value == value' then ty
-        else Tfarray {key = key'; value = value'}
+        let key_ty' = apply_subst s key_ty in
+        let val_ty' = apply_subst s val_ty in
+        if key_ty == key_ty' && val_ty == val_ty' then ty
+        else Tfarray {key_ty = key_ty'; val_ty = val_ty'}
       end
     | Trecord r ->
       let lbs,  same1 = Lists.apply_right (apply_subst s) r.lbs in
@@ -376,10 +380,10 @@ let rec fresh ty subst =
   | Text {constr; args} ->
     let args, subst = fresh_list args subst in
     Text {constr; args}, subst
-  | Tfarray {key; value} ->
-    let key, subst = fresh key subst in
-    let value, subst = fresh value subst in
-    Tfarray {key; value}, subst
+  | Tfarray {key_ty; val_ty} ->
+    let key_ty, subst = fresh key_ty subst in
+    let val_ty, subst = fresh val_ty subst in
+    Tfarray {key_ty; val_ty}, subst
   | Trecord ({args; name; lbs; _} as r) ->
     let args, subst = fresh_list args subst in
     let lbs, subst =
@@ -499,7 +503,7 @@ end
 let type_body name args = Decls.body name args
 
 (* smart constructors *)
-let[@inline always] tunit = Text {constr = Hstring.make "unit"; args = []}
+let tunit = Text {constr = Hstring.make "unit"; args = []}
 
 let[@inline always] text s args = Text {constr = Hstring.make s; args}
 
@@ -561,7 +565,7 @@ let rec hash t =
   | Tvar {v; _} -> v
   | Text {constr = s; args = l} ->
     abs (List.fold_left (fun acc x-> acc*19 + hash x) (Hstring.hash s) l)
-  | Tfarray {key = t1; value = t2} -> 19 * (hash t1) + 23 * (hash t2)
+  | Tfarray {key_ty; val_ty} -> 19 * (hash key_ty) + 23 * (hash val_ty)
   | Trecord {args; name; lbs; _} ->
     let h =
       List.fold_left (fun h ty -> 27 * h + hash ty) (Hstring.hash name) args
@@ -586,7 +590,7 @@ let occurs {v = n; _} t =
   let rec occursrec = function
     | Tvar {v = m; _} -> n=m
     | Text {args; _} -> List.exists occursrec args
-    | Tfarray {key; value} -> occursrec key || occursrec value
+    | Tfarray {key_ty; val_ty} -> occursrec key_ty || occursrec val_ty
     | Trecord {args; _} | Tadt {args; _} -> List.exists occursrec args
     | Tsum _ | Tint | Treal | Tbool | Tunit | Tbitv _ -> false
   in occursrec t
@@ -606,8 +610,9 @@ let rec unify t1 t2 =
     tv.value <- Some t2
   | Text {constr = s1; args = l1}, Text {constr = s2; args = l2}
     when Hstring.equal s1 s2 -> List.iter2 unify l1 l2
-  | Tfarray {key = ta1; value = ta2}, Tfarray {key = tb1; value = tb2} ->
-    unify ta1 tb1;unify ta2 tb2
+  | Tfarray {key_ty = key_ty1; val_ty = val_ty1},
+    Tfarray {key_ty = key_ty2; val_ty = val_ty2} ->
+    unify key_ty1 key_ty2; unify val_ty1 val_ty2
   | Trecord r1, Trecord r2 when Hstring.equal r1.name r2.name ->
     List.iter2 unify r1.args r2.args
   | Tsum {name = s1; _}, Tsum {name = s2; _} when Hstring.equal s1 s2 -> ()
@@ -651,15 +656,13 @@ let vty_of t =
     match t with
     | Tvar {v = i; value = None} -> Svty.add i acc
     | Text {args; _} -> List.fold_left vty_of_rec acc args
-    | Tfarray {key; value} -> vty_of_rec (vty_of_rec acc key) value
+    | Tfarray {key_ty; val_ty} -> vty_of_rec (vty_of_rec acc key_ty) val_ty
     | Trecord {args; lbs; _} ->
       let acc = List.fold_left vty_of_rec acc args in
       List.fold_left (fun acc (_, ty) -> vty_of_rec acc ty) acc lbs
-    | Tadt {args; _} ->
-      List.fold_left vty_of_rec acc args
-    | Tvar { value = Some _ ; _ }
-    | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum _ ->
-      acc
+    | Tadt {args; _} -> List.fold_left vty_of_rec acc args
+    | Tvar {value = Some _ ; _}
+    | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum _ -> acc
   in
   vty_of_rec Svty.empty t
 
@@ -675,8 +678,8 @@ let rec monomorphize ty =
       List.map (fun (lb, ty_lb) -> lb, monomorphize ty_lb) tylb
     in
     Trecord {r with args = m_tylv; name; lbs = m_tylb}
-  | Tfarray {key; value} ->
-    Tfarray {key = monomorphize key; value = monomorphize value}
+  | Tfarray {key_ty; val_ty} ->
+    Tfarray {key_ty = monomorphize key_ty; val_ty = monomorphize val_ty}
   | Tvar {v; value=None} -> text ("'_c"^(string_of_int v)) []
   | Tvar ({value = Some ty1; _} as r) ->
     Tvar {r with value = Some (monomorphize ty1)}

@@ -103,13 +103,13 @@ module Types = struct
           nty
       end
     | PPTexternal (l, s, loc) when String.equal s "farray" ->
-      let t1,t2 = match l with
-        | [t2] -> PPTint,t2
-        | [t1;t2] -> t1,t2
-        | _ -> Errors.typing_error (WrongArity(s,2)) loc in
-      let key = ty_of_pp loc env rectype t1 in
-      let value = ty_of_pp loc env rectype t2 in
-      Ty.Tfarray {key; value}
+      let t1, t2 = match l with
+        | [t2] -> PPTint, t2
+        | [t1; t2] -> t1, t2
+        | _ -> Errors.typing_error (WrongArity (s, 2)) loc in
+      let key_ty = ty_of_pp loc env rectype t1 in
+      let val_ty = ty_of_pp loc env rectype t2 in
+      Ty.Tfarray {key_ty; val_ty}
     | PPTexternal (l, s, loc) ->
       begin
         match rectype with
@@ -575,17 +575,17 @@ let rec type_term ?(call_from_type_form=false) env f =
         let te1 = type_term env t1 in
         let te2 = type_term env t2 in
         let tyarray = Ty.shorten te1.c.tt_ty in
-        let tykey2 = Ty.shorten te2.c.tt_ty in
+        let key_ty2 = Ty.shorten te2.c.tt_ty in
         match tyarray with
-        | Ty.Tfarray {key = tykey; value = tyval} ->
+        | Ty.Tfarray {key_ty; val_ty} ->
           begin
             try
-              Ty.unify tykey tykey2;
-              Options.tool_req 1 (append_type "TR-Typing-OpGet type" tyval);
-              TTget(te1, te2), tyval
+              Ty.unify key_ty key_ty2;
+              Options.tool_req 1 (append_type "TR-Typing-OpGet type" val_ty);
+              TTget(te1, te2), val_ty
             with
-            | Ty.TypeClash(t1,t2) ->
-              Errors.typing_error (Unification(t1,t2)) loc
+            | Ty.TypeClash (t1, t2) ->
+              Errors.typing_error (Unification (t1, t2)) loc
           end
         | _ -> Errors.typing_error ShouldHaveTypeArray t1.pp_loc
       end
@@ -595,12 +595,12 @@ let rec type_term ?(call_from_type_form=false) env f =
         let te2 = type_term env t2 in
         let te3 = type_term env t3 in
         let ty1 = Ty.shorten te1.c.tt_ty in
-        let tykey2 = Ty.shorten te2.c.tt_ty in
-        let tyval2 = Ty.shorten te3.c.tt_ty in
+        let key_ty2 = Ty.shorten te2.c.tt_ty in
+        let val_ty2 = Ty.shorten te3.c.tt_ty in
         try
           match ty1 with
-          | Ty.Tfarray {key = tykey; value = tyval} ->
-            Ty.unify tykey tykey2;Ty.unify tyval tyval2;
+          | Ty.Tfarray {key_ty; val_ty} ->
+            Ty.unify key_ty key_ty2; Ty.unify val_ty val_ty2;
             Options.tool_req 1 (append_type "TR-Typing-OpSet type" ty1);
             TTset(te1, te2, te3), ty1
           | _ -> Errors.typing_error ShouldHaveTypeArray t1.pp_loc

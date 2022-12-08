@@ -46,15 +46,16 @@ type t =
       constr: Hstring.t;
       args: t list
     }
-  (** Abstract types applied to arguments. [Text (args, s)] is the application
-      of the abstract type constructor [s] to arguments [args]. *)
+  (** Abstract types applied to arguments. [Text (constr, args)] is the
+      application of the abstract type constructor [constr] to arguments
+      [args]. *)
 
   | Tfarray of {
-      key: t;
-      value: t;
+      key_ty: t;
+      val_ty: t;
     }
-  (** Functional arrays. [TFarray (src,dst)] maps values of type [src] to
-      values of type [dst]. *)
+  (** Functional arrays. [TFarray (key_ty, val_ty)] maps values of type
+      [key_ty] to values of type [val_ty]. *)
 
   | Tsum of {
       name: Hstring.t;
