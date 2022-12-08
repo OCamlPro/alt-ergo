@@ -16,6 +16,8 @@ exception Cmp of int
 
 exception Not_implemented of string
 
+type 'a printer = Format.formatter -> 'a -> unit
+
 let () =
   Printexc.register_printer
     (function

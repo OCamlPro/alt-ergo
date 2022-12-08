@@ -83,6 +83,8 @@ val loop:
   init: 'b ->
   'b
 
+type 'a printer = Format.formatter -> 'a -> unit
+
 val print_list:
   sep:string ->
   pp:(Format.formatter -> 'a -> unit) ->

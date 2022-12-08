@@ -232,7 +232,7 @@ and shorten_body _ _ =
   [@ocaml.ppwarning "TODO: should be implemented ?"]
 
 let rec compare t1 t2 =
-  match shorten t1 , shorten t2 with
+  match shorten t1, shorten t2 with
   | Tvar {v = v1; _}, Tvar {v = v2; _} -> Stdlib.compare v1 v2
   | Tvar _, _ -> -1 | _, Tvar _ -> 1
   | Text {constr = c1; args = a1}, Text {constr = c2; args = a2} ->
@@ -505,21 +505,22 @@ let type_body name args = Decls.body name args
 (* smart constructors *)
 let tunit = Text {constr = Hstring.make "unit"; args = []}
 
-let[@inline always] text s args = Text {constr = Hstring.make s; args}
+let[@inline always] text ~args constr =
+  Text {constr = Hstring.make constr; args}
 
 let fresh_empty_text =
   let cpt = ref (-1) in
-  fun () -> incr cpt; text ("'_c"^(string_of_int !cpt)) []
+  fun () -> incr cpt; text ~args:[] ("'_c"^(string_of_int !cpt))
 
-let[@inline always] tsum s lc =
+let[@inline always] tsum ~constrs name =
   Tsum {
-    name = Hstring.make s;
-    constrs = List.map Hstring.make lc
+    name = Hstring.make name;
+    constrs = List.map Hstring.make constrs
   }
 
-let t_adt ?(body=None) s ty_vars =
-  let hs = Hstring.make s in
-  let ty = Tadt {constr = hs; args = ty_vars} in
+let t_adt ?(body=None) ~args constr =
+  let constr = Hstring.make constr in
+  let ty = Tadt {constr; args} in
   begin match body with
     | None -> ()
     | Some [] -> assert false
@@ -535,7 +536,7 @@ let t_adt ?(body=None) s ty_vars =
             {constr = Hstring.make s ; destrs = l}
           ) cases
       in
-      Decls.add hs ty_vars (Adt cases)
+      Decls.add constr args (Adt cases)
     | Some cases ->
       let cases =
         List.map (fun (s, l) ->
@@ -545,20 +546,20 @@ let t_adt ?(body=None) s ty_vars =
             {constr = Hstring.make s; destrs = l}
           ) cases
       in
-      Decls.add hs ty_vars (Adt cases)
+      Decls.add constr args (Adt cases)
   end;
   ty
 
-let trecord ?(record_constr="{") lv n lbs =
-  let lbs = List.map (fun (l,ty) -> Hstring.make l, ty) lbs in
-  let lbs, record_constr =
+let trecord ?(record_constr="{") ~args ~fields name =
+  let fields = List.map (fun (l, ty) -> Hstring.make l, ty) fields in
+  let fields, record_constr =
     if String.equal record_constr "{" then
-      List.sort (fun (l1, _) (l2, _) -> Hstring.compare l1 l2) lbs,
-      Format.sprintf "%s___%s" record_constr n
-    else lbs, record_constr
+      List.sort (fun (l1, _) (l2, _) -> Hstring.compare l1 l2) fields,
+      Format.sprintf "%s___%s" record_constr name
+    else fields, record_constr
   in
   let record_constr = Hstring.make record_constr in
-  Trecord { record_constr; args = lv; name = Hstring.make n; lbs = lbs}
+  Trecord {record_constr; args; name = Hstring.make name; lbs = fields}
 
 let rec hash t =
   match t with
@@ -680,7 +681,7 @@ let rec monomorphize ty =
     Trecord {r with args = m_tylv; name; lbs = m_tylb}
   | Tfarray {key_ty; val_ty} ->
     Tfarray {key_ty = monomorphize key_ty; val_ty = monomorphize val_ty}
-  | Tvar {v; value=None} -> text ("'_c"^(string_of_int v)) []
+  | Tvar {v; value=None} -> text ~args:[] ("'_c"^(string_of_int v))
   | Tvar ({value = Some ty1; _} as r) ->
     Tvar {r with value = Some (monomorphize ty1)}
   | Tadt {constr; args} -> Tadt {constr; args = List.map monomorphize args}

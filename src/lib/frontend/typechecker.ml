@@ -130,15 +130,15 @@ module Types = struct
     let ty_vars = fresh_vars ~recursive vars loc in
     match body with
     | Abstract ->
-      let ty = Ty.text id ty_vars in
+      let ty = Ty.text ~args:ty_vars id in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Enum lc ->
-      let ty = Ty.tsum id lc in
+      let ty = Ty.tsum ~constrs:lc id in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Record (record_constr, lbs) ->
       let lbs =
         List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs in
-      let ty = Ty.trecord ~record_constr ty_vars id lbs in
+      let ty = Ty.trecord ~record_constr ~args:ty_vars ~fields:lbs id in
       ty, { to_ty = MString.add id ty env.to_ty;
             from_labels =
               List.fold_left
@@ -154,7 +154,7 @@ module Types = struct
         if l == [] then None (* in initialization step, no body *)
         else Some l
       in
-      let ty = Ty.t_adt ~body id ty_vars in
+      let ty = Ty.t_adt ~body ~args:ty_vars id in
       ty, { env with to_ty = MString.add id ty env.to_ty }
 
   module SH = Set.Make(Hstring)
