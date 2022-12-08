@@ -66,15 +66,15 @@ module Types = struct
 
   let check_number_args loc lty ty =
     match ty with
-    | Ty.Text (lty', s)
-    | Ty.Trecord { Ty.args = lty'; name = s; _ }
-    | Ty.Tadt (s,lty') ->
-      if List.length lty <> List.length lty' then
-        Errors.typing_error (WrongNumberofArgs (Hstring.view s)) loc;
-      lty'
-    | Ty.Tsum (s, _) ->
+    | Ty.Text {constr = hs; args}
+    | Ty.Trecord {name = hs; args; _ }
+    | Ty.Tadt {constr = hs; args} ->
+      if List.length lty <> List.length args then
+        Errors.typing_error (WrongNumberofArgs (Hstring.view hs)) loc;
+      args
+    | Ty.Tsum {name; _} ->
       if List.length lty <> 0 then
-        Errors.typing_error (WrongNumberofArgs (Hstring.view s)) loc;
+        Errors.typing_error (WrongNumberofArgs (Hstring.view name)) loc;
       []
     | _ -> assert false
 
@@ -107,9 +107,9 @@ module Types = struct
         | [t2] -> PPTint,t2
         | [t1;t2] -> t1,t2
         | _ -> Errors.typing_error (WrongArity(s,2)) loc in
-      let ty1 = ty_of_pp loc env rectype t1 in
-      let ty2 = ty_of_pp loc env rectype t2 in
-      Ty.Tfarray (ty1, ty2)
+      let key = ty_of_pp loc env rectype t1 in
+      let value = ty_of_pp loc env rectype t2 in
+      Ty.Tfarray {key; value}
     | PPTexternal (l, s, loc) ->
       begin
         match rectype with
@@ -130,7 +130,7 @@ module Types = struct
     let ty_vars = fresh_vars ~recursive vars loc in
     match body with
     | Abstract ->
-      let ty = Ty.text ty_vars id in
+      let ty = Ty.text id ty_vars in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Enum lc ->
       let ty = Ty.tsum id lc in
@@ -577,7 +577,7 @@ let rec type_term ?(call_from_type_form=false) env f =
         let tyarray = Ty.shorten te1.c.tt_ty in
         let tykey2 = Ty.shorten te2.c.tt_ty in
         match tyarray with
-        | Ty.Tfarray (tykey,tyval) ->
+        | Ty.Tfarray {key = tykey; value = tyval} ->
           begin
             try
               Ty.unify tykey tykey2;
@@ -599,7 +599,7 @@ let rec type_term ?(call_from_type_form=false) env f =
         let tyval2 = Ty.shorten te3.c.tt_ty in
         try
           match ty1 with
-          | Ty.Tfarray (tykey,tyval) ->
+          | Ty.Tfarray {key = tykey; value = tyval} ->
             Ty.unify tykey tykey2;Ty.unify tyval tyval2;
             Options.tool_req 1 (append_type "TR-Typing-OpSet type" ty1);
             TTset(te1, te2, te3), ty1
@@ -760,14 +760,14 @@ let rec type_term ?(call_from_type_form=false) env f =
       let e = type_term env e in
       let ty = Ty.shorten e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt (name, params) ->
+        | Ty.Tadt {constr = name; args = params} ->
           begin match Ty.type_body name params with
             | Ty.Adt cases -> cases
           end
         | Ty.Trecord { Ty.record_constr; lbs; _ } ->
           [{Ty.constr = record_constr; destrs = lbs}]
-        | Ty.Tsum (_,l) ->
-          List.map (fun e -> {Ty.constr = e; destrs = []}) l
+        | Ty.Tsum {constrs; _} ->
+          List.map (fun e -> {Ty.constr = e; destrs = []}) constrs
         | _ -> Errors.typing_error (ShouldBeADT ty) loc
       in
       let pats =
@@ -1153,15 +1153,15 @@ and type_form ?(in_theory=false) env f =
       let e = type_term env e in
       let ty = e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt (name, params) ->
-          begin match Ty.type_body name params with
+        | Ty.Tadt {constr; args = params} ->
+          begin match Ty.type_body constr params with
             | Ty.Adt cases -> cases
           end
         | Ty.Trecord { Ty.record_constr; lbs; _ } ->
           [{Ty.constr = record_constr ; destrs = lbs}]
 
-        | Ty.Tsum (_,l) ->
-          List.map (fun e -> {Ty.constr = e ; destrs = []}) l
+        | Ty.Tsum {constrs; _} ->
+          List.map (fun e -> {Ty.constr = e ; destrs = []}) constrs
         | _ ->
           Errors.typing_error (ShouldBeADT ty) f.pp_loc
       in

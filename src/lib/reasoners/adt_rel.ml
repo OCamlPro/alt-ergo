@@ -177,14 +177,14 @@ let deduce_is_constr uf r h eqs env ex =
         in
         begin
           match t with
-          | { E.ty = Ty.Tadt (name,params) as ty; _ } ->
+          | { E.ty = Ty.Tadt {constr; args} as ty; _ } ->
             (* Only do this deduction for finite types ??
                  may not terminate in some cases otherwise.
                  eg. type t = A of t
                  goal g: forall e,e' :t. e = C(e') -> false
                  + should not be guareded by "seen_tester"
             *)
-            let cases = match Ty.type_body name params with
+            let cases = match Ty.type_body constr args with
               | Ty.Adt cases -> cases
             in
             let {Ty.destrs; _} =
@@ -214,8 +214,8 @@ let deduce_is_constr uf r h eqs env ex =
 
 let values_of ty =
   match ty with
-  | Ty.Tadt (name,params) ->
-    let l = match Ty.type_body name params with
+  | Ty.Tadt {constr; args} ->
+    let l = match Ty.type_body constr args with
       | Ty.Adt cases -> cases
     in
     Some
@@ -271,9 +271,9 @@ let constr_of_destr ty dest =
       ~module_name:"Adt_rel" ~function_name:"constr_of_destr"
       "ty = %a" Ty.print ty;
   match ty with
-  | Ty.Tadt (name, params) ->
+  | Ty.Tadt {constr; args} ->
     let cases =
-      match Ty.type_body name params with
+      match Ty.type_body constr args with
       | Ty.Adt cases -> cases
     in
     begin

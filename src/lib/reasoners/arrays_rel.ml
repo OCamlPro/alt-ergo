@@ -338,11 +338,11 @@ let extensionality accu la _class_of =
        | A.Distinct(false, [r;s]) ->
          begin
            match X.type_info r, X.term_extract r, X.term_extract s with
-           | Ty.Tfarray (ty_k, ty_v), (Some t1, _), (Some t2, _)  ->
-             let i  = E.fresh_name ty_k in
-             let g1 = E.mk_term (Sy.Op Sy.Get) [t1;i] ty_v in
-             let g2 = E.mk_term (Sy.Op Sy.Get) [t2;i] ty_v in
-             let d  = E.mk_distinct ~iff:false [g1;g2] in
+           | Ty.Tfarray {key; value}, (Some t1, _), (Some t2, _)  ->
+             let i  = E.fresh_name key in
+             let g1 = E.mk_term (Sy.Op Sy.Get) [t1; i] value in
+             let g2 = E.mk_term (Sy.Op Sy.Get) [t2; i] value in
+             let d  = E.mk_distinct ~iff:false [g1; g2] in
              let acc = Conseq.add (d, dep) acc in
              let env =
                {env with new_terms =

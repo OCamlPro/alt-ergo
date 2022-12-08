@@ -148,11 +148,11 @@ type form_view = private
 
 (** Module of sets of expressions using {!val:compare} as
     comparison function. *)
-module Set : Set.S with type elt = t
+module Set: Set.S with type elt = t
 
 (** Module of maps of expression keys using {!val:compare} as
     comparion function. *)
-module Map : Map.S with type key = t
+module Map: Map.S with type key = t
 
 (** {1 Views} *)
 

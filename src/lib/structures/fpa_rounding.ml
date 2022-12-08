@@ -19,13 +19,13 @@ module Z = Numbers.Z
 let is_rounding_mode t =
   Options.get_use_fpa() &&
   match t with
-  | { E.ty = Ty.Tsum (hs, _); _ } ->
-    String.compare (Hs.view hs) "fpa_rounding_mode" = 0
+  | { E.ty = Ty.Tsum {name; _}; _ } ->
+    String.compare (Hs.view name) "fpa_rounding_mode" = 0
   | _ -> false
 
 let fpa_rounding_mode =
-  let mode_ty = Hs.make "fpa_rounding_mode" in
-  let mode_constrs =
+  let name = Hs.make "fpa_rounding_mode" in
+  let constrs =
     [ (* standards *)
       Hs.make "NearestTiesToEven";
       Hs.make "NearestTiesToAway";
@@ -40,7 +40,7 @@ let fpa_rounding_mode =
       Hs.make "Nd";
       Hs.make "Nu" ]
   in
-  Ty.Tsum(mode_ty, mode_constrs)
+  Ty.Tsum {name; constrs}
 
 (*  why3/standard rounding modes*)
 

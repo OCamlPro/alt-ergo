@@ -33,15 +33,15 @@ let constr_of_destr ty dest =
       ~module_name:"Adt" ~function_name:"constr_of_destr"
       "ty = %a" Ty.print ty;
   match ty with
-  | Ty.Tadt (s, params) ->
-    let bdy = Ty.type_body s params in
+  | Ty.Tadt {constr; args} ->
+    let bdy = Ty.type_body constr args in
     begin match bdy with
       | Ty.Adt cases ->
         try
           List.find
             (fun { Ty.destrs; _ } ->
                List.exists (fun (d, _) -> Hstring.equal dest d) destrs
-            )cases
+            ) cases
         with Not_found -> assert false (* invariant *)
     end
   | _ -> assert false
@@ -156,9 +156,9 @@ module Shostak (X : ALIEN) = struct
     in
     let xs = List.rev sx in
     match f, xs, ty with
-    | Sy.Op Sy.Constr hs, _, Ty.Tadt (name, params) ->
+    | Sy.Op Sy.Constr hs, _, Ty.Tadt {constr; args} ->
       let cases =
-        match Ty.type_body name params with
+        match Ty.type_body constr args with
         | Ty.Adt cases -> cases
       in
       let case_hs =

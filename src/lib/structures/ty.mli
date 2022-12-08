@@ -32,41 +32,56 @@
 
 (** {2 Definition} *)
 
+(** Type of witness. *)
 type t =
-  | Tint                (** Integer numbers. *)
-  | Treal               (** Real numbers. *)
-  | Tbool               (** Booleans. *)
-  | Tunit               (** The unit type. *)
-  | Tvar of tvar        (** Type variables. *)
-  | Tbitv of int        (** Bitvectors of a given length. *)
-  | Text of t list * Hstring.t
-  (** Abstract types applied to arguments. [Text (args, s)] is
-      the application of the abstract type constructor [s] to
-      arguments [args]. *)
-  | Tfarray of t * t
-  (** Functional arrays. [TFarray (src,dst)] maps values of type [src]
-      to values of type [dst]. *)
-  | Tsum of Hstring.t * Hstring.t list
+  | Tint                        (** Integer numbers. *)
+  | Treal                       (** Real numbers. *)
+  | Tbool                       (** Booleans. *)
+  | Tunit                       (** The unit type. *)
+  | Tvar of tvar                (** Type variables. *)
+  | Tbitv of int                (** Bitvectors of a given length. *)
+  | Trecord of trecord          (** Record type. *)
+
+  | Text of {
+      constr: Hstring.t;
+      args: t list
+    }
+  (** Abstract types applied to arguments. [Text (args, s)] is the application
+      of the abstract type constructor [s] to arguments [args]. *)
+
+  | Tfarray of {
+      key: t;
+      value: t;
+    }
+  (** Functional arrays. [TFarray (src,dst)] maps values of type [src] to
+      values of type [dst]. *)
+
+  | Tsum of {
+      name: Hstring.t;
+      constrs: Hstring.t list
+    }
   (** Enumeration, with its name, and the list of its constructors. *)
 
-  | Tadt of Hstring.t * t list
-  (** Algebraic types applied to arguments. [Tadt (s, args)] is
-      the application of the datatype constructor [s] to
-      arguments [args]. *)
+  | Tadt of {
+      constr: Hstring.t;
+      args: t list
+    }
+  (** Algebraic types applied to arguments. [Tadt (s, args)] is the
+      application of the datatype constructor [s] to arguments [args]. *)
 
   | Trecord of trecord  (** Record type. *)
 
-and tvar = {
-  v : int;
-  (** Unique identifier *)
-  mutable value : t option;
-  (** Pointer to the current value of the type variable. *)
-}
 (** Type variables.
     The [value] field is mutated during unification,
     hence distinct types should have disjoints sets of
     type variables (see function {!val:fresh}). *)
+and tvar = {
+  v: int;                    (** Unique identifier *)
+  mutable value: t option;   (** Pointer to the current value of the type
+                                 variable. *)
+}
 
+(** Record types. *)
 and trecord = {
   mutable args : t list;
   (** Arguments passed to the record constructor *)
@@ -79,16 +94,12 @@ and trecord = {
   (** record constructor. Useful is case it's a specialization of an
       algeberaic datatype. Default value is "\{__[name]" *)
 }
-(** Record types. *)
 
-type adt_constr =
-  { constr : Hstring.t ;
-    (** constructor of an ADT type *)
-
-    destrs : (Hstring.t * t) list
-    (** the list of destructors associated with the constructor and
-        their respective types *)
-  }
+type adt_constr = {
+  constr: Hstring.t;            (** Constructor of an ADT type. *)
+  destrs: (Hstring.t * t) list  (** the list of destructors associated with the
+                                    constructor and their respective types *)
+}
 
 (** bodies of types definitions. Currently, bodies are inlined in the
     type [t] for records and enumerations. But, this is not possible
@@ -97,12 +108,16 @@ type type_body =
   | Adt of adt_constr list
   (** body of an algebraic datatype *)
 
-module Svty : Set.S with type elt = int
+(** {1 Data structures} *)
+
 (** Sets of type variables, indexed by their identifier. *)
+module Svty : Set.S with type elt = int
 
-module Set : Set.S with type elt = t
 (** Sets of types *)
+module Set : Set.S with type elt = t
 
+(** Maps from type variables identifiers. *)
+module M : Map.S with type key = int
 
 val assoc_destrs : Hstring.t -> adt_constr list -> (Hstring.t * t) list
 (** returns the list of destructors associated with the given consturctor.
@@ -136,10 +151,10 @@ val vty_of : t -> Svty.t
 (** Returns the set of type variables that occur in a given type. *)
 
 
-(** {2 Building types} *)
+(** {2 Constructors} *)
 
-val tunit : t
 (** The unit type. *)
+val tunit: t
 
 val fresh_var : unit -> tvar
 (** Generate a fresh type variable, guaranteed to be distinct
@@ -259,31 +274,5 @@ val monomorphize: t -> t
 (** Return a monomorphized variant of the given type, where
     type variable without values have been replaced by abstract types. *)
 
-type goal_sort =
-  | Cut
-  (** Introduce a cut in a goal. Once the cut proved,
-      it's added as a hypothesis. *)
-  | Check
-  (** Check if some intermediate assertion is prouvable *)
-  | Thm
-  (** The goal to be proved valid *)
-  | Sat
-  (** The goal to be proved satisfiable *)
-(** Goal sort. Used in typed declarations. *)
-
-val fresh_hypothesis_name : goal_sort -> string
-(** create a fresh hypothesis name given a goal sort. *)
-
-val is_local_hyp : string -> bool
-(** Assuming a name generated by {!fresh_hypothesis_name},
-    answers whether the name design a local hypothesis ? *)
-
-val is_global_hyp : string -> bool
-(** Assuming a name generated by {!fresh_hypothesis_name},
-    does the name design a global hypothesis ? *)
-
-val print_goal_sort : Format.formatter -> goal_sort -> unit
-(** Print a goal sort *)
-
-val reinit_decls : unit -> unit
 (** Empties the decls cache *)
+val reinit_decls : unit -> unit
