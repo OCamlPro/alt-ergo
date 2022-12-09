@@ -1339,10 +1339,7 @@ and apply_subst_trigger subst ({ content; guard; _ } as tr) =
    content = List.map (apply_subst_aux subst) content;
    (* semantic_trigger = done on theory side *)
    (* hyp = done on theory side *)
-   guard =
-     match guard with
-     | None -> guard
-     | Some g -> Some (apply_subst_aux subst g)
+   guard = Option.map (apply_subst_aux subst) guard
   }
 
 (* *1* We should never subst formulas inside termes. We could allow to

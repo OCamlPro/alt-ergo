@@ -43,12 +43,12 @@ type t =
       val_ty: t;
     }
   | Tsum of {
-      name: Hstring.t;
-      constrs: Hstring.t list
+      name : Hstring.t;
+      constrs : Hstring.t list
     }
   | Tadt of {
-      constr: Hstring.t;
-      args: t list
+      constr : Hstring.t;
+      args : t list
     }
 
 and tvar = { v : int ; mutable value : t option }
@@ -56,15 +56,16 @@ and trecord = {
   mutable args : t list;
   name : Hstring.t;
   mutable lbs :  (Hstring.t * t) list;
-  record_constr : Hstring.t; (* for ADTs that become records. default is "{" *)
+  record_constr : Hstring.t;
 }
 
 exception TypeClash of t*t
 exception Shorten of t
 
-type adt_constr =
-  { constr : Hstring.t ;
-    destrs : (Hstring.t * t) list }
+type adt_constr = {
+  constr : Hstring.t ;
+  destrs : (Hstring.t * t) list
+}
 
 type type_body =
   | Adt of adt_constr list
@@ -431,9 +432,10 @@ module Decls = struct
       let compare = compare_list
     end)
 
-  type decl =
-    { decl : t list * type_body;
-      instances : type_body MTY.t }
+  type decl = {
+    decl : t list * type_body;
+    instances : type_body MTY.t
+  }
 
   type decls = decl MH.t
 
@@ -446,7 +448,7 @@ module Decls = struct
     | Adt cases ->
       let _subst, cases =
         List.fold_left
-          (fun (subst, cases) {constr; destrs} ->
+          (fun (subst, cases) { constr; destrs } ->
              let subst, destrs =
                List.fold_left
                  (fun (subst, destrs) (d, ty) ->
@@ -454,7 +456,7 @@ module Decls = struct
                     subst, (d, ty) :: destrs
                  )(subst, []) (List.rev destrs)
              in
-             subst, {constr; destrs} :: cases
+             subst, { constr; destrs } :: cases
           )(subst, []) (List.rev cases)
       in
       params, Adt cases
@@ -468,11 +470,11 @@ module Decls = struct
     with Not_found ->
       let params, body = fresh_type params body in
       decls :=
-        MH.add name {decl = (params, body); instances = MTY.empty} !decls
+        MH.add name { decl = (params, body); instances = MTY.empty } !decls
 
   let body name args =
     try
-      let {decl = (params, body); instances} = MH.find name !decls in
+      let { decl = (params, body); instances } = MH.find name !decls in
       try
         if compare_list params args = 0 then body
         else MTY.find args instances
@@ -486,8 +488,8 @@ module Decls = struct
               (fun sbt vty ty ->
                  let vty = shorten vty in
                  match vty with
-                 | Tvar {value = Some _; _} -> assert false
-                 | Tvar {v; value = None}   ->
+                 | Tvar { value = Some _; _ } -> assert false
+                 | Tvar { v; value = None }   ->
                    if equal vty ty then sbt else Util.MI.add v ty sbt
                  | _ ->
                    Printer.print_err "vty = %a and ty = %a"
@@ -500,11 +502,11 @@ module Decls = struct
           | Adt cases ->
             Adt(
               List.map
-                (fun {constr; destrs} ->
-                   {constr;
-                    destrs =
-                      List.map (fun (d, ty) -> d, Subst.apply sbt ty) destrs}
-                ) cases
+                (fun { constr; destrs } -> {
+                     constr;
+                     destrs =
+                       List.map (fun (d, ty) -> d, Subst.apply sbt ty) destrs
+                   }) cases
             )
         in
         let params = List.map (fun ty -> Subst.apply sbt ty) params in
@@ -521,10 +523,10 @@ end
 let type_body name args = Decls.body name args
 
 (* smart constructors *)
-let tunit = Text {constr = Hstring.make "unit"; args = []}
+let tunit = Text { constr = Hstring.make "unit"; args = [] }
 
 let[@inline always] text ~args constr =
-  Text {constr = Hstring.make constr; args}
+  Text { constr = Hstring.make constr; args }
 
 let fresh_empty_text =
   let cpt = ref (-1) in
@@ -538,7 +540,7 @@ let[@inline always] tsum ~constrs name =
 
 let t_adt ?(body=None) ~args constr =
   let constr = Hstring.make constr in
-  let ty = Tadt {constr; args} in
+  let ty = Tadt { constr; args } in
   begin match body with
     | None -> ()
     | Some [] -> assert false
@@ -551,7 +553,7 @@ let t_adt ?(body=None) ~args constr =
             let l =
               List.map (fun (d, e) -> Hstring.make d, e) l
             in
-            {constr = Hstring.make s ; destrs = l}
+            { constr = Hstring.make s; destrs = l }
           ) cases
       in
       Decls.add constr args (Adt cases)
@@ -561,7 +563,7 @@ let t_adt ?(body=None) ~args constr =
             let l =
               List.map (fun (d, e) -> Hstring.make d, e) l
             in
-            {constr = Hstring.make s; destrs = l}
+            { constr = Hstring.make s; destrs = l }
           ) cases
       in
       Decls.add constr args (Adt cases)
@@ -577,15 +579,15 @@ let trecord ?(record_constr="{") ~args ~fields name =
     else fields, record_constr
   in
   let record_constr = Hstring.make record_constr in
-  Trecord {record_constr; args; name = Hstring.make name; lbs = fields}
+  Trecord { record_constr; args; name = Hstring.make name; lbs = fields }
 
 let rec hash t =
   match t with
-  | Tvar {v; _} -> v
-  | Text {constr = s; args = l} ->
+  | Tvar { v; _ } -> v
+  | Text { constr = s; args = l } ->
     abs (List.fold_left (fun acc x-> acc*19 + hash x) (Hstring.hash s) l)
-  | Tfarray {key_ty; val_ty} -> 19 * (hash key_ty) + 23 * (hash val_ty)
-  | Trecord {args; name; lbs; _} ->
+  | Tfarray { key_ty; val_ty } -> 19 * (hash key_ty) + 23 * (hash val_ty)
+  | Trecord { args; name; lbs; _ } ->
     let h =
       List.fold_left (fun h ty -> 27 * h + hash ty) (Hstring.hash name) args
     in
@@ -595,9 +597,9 @@ let rec hash t =
         (abs h) lbs
     in
     abs h
-  | Tsum {name; _} -> abs (Hstring.hash name) (*we do not hash constructors*)
+  | Tsum { name; _ } -> abs (Hstring.hash name) (*we do not hash constructors*)
 
-  | Tadt {constr; args} ->
+  | Tadt { constr; args } ->
     let h =
       List.fold_left (fun h ty -> 31 * h + hash ty) (Hstring.hash constr) args
     in
@@ -605,12 +607,12 @@ let rec hash t =
 
   | _ -> Hashtbl.hash t
 
-let occurs {v = n; _} t =
+let occurs { v = n; _ } t =
   let rec occursrec = function
-    | Tvar {v = m; _} -> n=m
-    | Text {args; _} -> List.exists occursrec args
-    | Tfarray {key_ty; val_ty} -> occursrec key_ty || occursrec val_ty
-    | Trecord {args; _} | Tadt {args; _} -> List.exists occursrec args
+    | Tvar { v = m; _ } -> n=m
+    | Text { args; _ } -> List.exists occursrec args
+    | Tfarray { key_ty; val_ty } -> occursrec key_ty || occursrec val_ty
+    | Trecord { args; _ } | Tadt { args; _ } -> List.exists occursrec args
     | Tsum _ | Tint | Treal | Tbool | Tunit | Tbitv _ -> false
   in occursrec t
 
@@ -619,7 +621,7 @@ let rec unify t1 t2 =
   let t1 = shorten t1 in
   let t2 = shorten t2 in
   match t1 , t2 with
-    Tvar ({v=n;value=None} as tv1), Tvar {v=m;value=None} ->
+    Tvar ({ v = n; value = None } as tv1), Tvar { v = m; value = None } ->
     if n<>m then tv1.value <- Some t2
   | _ ,  Tvar ({ value = None; _ } as tv) ->
     if (occurs tv t1) then raise (TypeClash(t1,t2));
@@ -627,17 +629,17 @@ let rec unify t1 t2 =
   | Tvar ({ value = None; _ } as tv) , _ ->
     if (occurs tv t2) then raise (TypeClash(t1,t2));
     tv.value <- Some t2
-  | Text {constr = s1; args = l1}, Text {constr = s2; args = l2}
+  | Text { constr = s1; args = l1 }, Text { constr = s2; args = l2 }
     when Hstring.equal s1 s2 -> List.iter2 unify l1 l2
-  | Tfarray {key_ty = key_ty1; val_ty = val_ty1},
-    Tfarray {key_ty = key_ty2; val_ty = val_ty2} ->
+  | Tfarray { key_ty = key_ty1; val_ty = val_ty1 },
+    Tfarray { key_ty = key_ty2; val_ty = val_ty2 } ->
     unify key_ty1 key_ty2; unify val_ty1 val_ty2
   | Trecord r1, Trecord r2 when Hstring.equal r1.name r2.name ->
     List.iter2 unify r1.args r2.args
-  | Tsum {name = s1; _}, Tsum {name = s2; _} when Hstring.equal s1 s2 -> ()
+  | Tsum { name = s1; _ }, Tsum { name = s2; _ } when Hstring.equal s1 s2 -> ()
   | Tint, Tint | Tbool, Tbool | Treal, Treal | Tunit, Tunit -> ()
   | Tbitv n , Tbitv m when m=n -> ()
-  | Tadt {constr = n1; args = p1}, Tadt {constr = n2; args = p2}
+  | Tadt { constr = n1; args = p1 }, Tadt { constr = n2; args = p2 }
     when Hstring.equal n1 n2 -> List.iter2 unify p1 p2
   | _ , _ [@ocaml.ppwarning "TODO: remove fragile pattern"] ->
     raise (TypeClash(t1,t2))
@@ -657,8 +659,7 @@ module Svty = Util.SI
 
 module Set =
   Set.Make(struct
-    type t' = t
-    type t = t'
+    type nonrec t = t
     let compare = compare
   end)
 
@@ -666,14 +667,14 @@ let vty_of t =
   let rec vty_of_rec acc t =
     let t = shorten t in
     match t with
-    | Tvar {v = i; value = None} -> Svty.add i acc
-    | Text {args; _} -> List.fold_left vty_of_rec acc args
-    | Tfarray {key_ty; val_ty} -> vty_of_rec (vty_of_rec acc key_ty) val_ty
-    | Trecord {args; lbs; _} ->
+    | Tvar { v = i; value = None } -> Svty.add i acc
+    | Text { args; _ } -> List.fold_left vty_of_rec acc args
+    | Tfarray { key_ty; val_ty } -> vty_of_rec (vty_of_rec acc key_ty) val_ty
+    | Trecord { args; lbs; _ } ->
       let acc = List.fold_left vty_of_rec acc args in
       List.fold_left (fun acc (_, ty) -> vty_of_rec acc ty) acc lbs
-    | Tadt {args; _} -> List.fold_left vty_of_rec acc args
-    | Tvar {value = Some _ ; _}
+    | Tadt { args; _ } -> List.fold_left vty_of_rec acc args
+    | Tvar { value = Some _ ; _}
     | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum _ -> acc
   in
   vty_of_rec Svty.empty t
@@ -683,19 +684,19 @@ let vty_of t =
 let rec monomorphize ty =
   match ty with
   | Tint | Treal | Tbool | Tunit   | Tbitv _  | Tsum _ -> ty
-  | Text {constr; args} -> Text {constr; args = List.map monomorphize args}
-  | Trecord ({args = tylv; name; lbs = tylb; _} as r) ->
+  | Text { constr; args } -> Text { constr; args = List.map monomorphize args }
+  | Trecord ({ args = tylv; name; lbs = tylb; _ } as r) ->
     let m_tylv = List.map monomorphize tylv in
     let m_tylb =
       List.map (fun (lb, ty_lb) -> lb, monomorphize ty_lb) tylb
     in
-    Trecord {r with args = m_tylv; name; lbs = m_tylb}
-  | Tfarray {key_ty; val_ty} ->
-    Tfarray {key_ty = monomorphize key_ty; val_ty = monomorphize val_ty}
-  | Tvar {v; value=None} -> text ~args:[] ("'_c"^(string_of_int v))
-  | Tvar ({value = Some ty1; _} as r) ->
-    Tvar {r with value = Some (monomorphize ty1)}
-  | Tadt {constr; args} -> Tadt {constr; args = List.map monomorphize args}
+    Trecord { r with args = m_tylv; name; lbs = m_tylb }
+  | Tfarray { key_ty; val_ty } ->
+    Tfarray { key_ty = monomorphize key_ty; val_ty = monomorphize val_ty }
+  | Tvar { v; value = None } -> text ~args:[] ("'_c"^(string_of_int v))
+  | Tvar ({ value = Some ty1; _ } as r) ->
+    Tvar { r with value = Some (monomorphize ty1) }
+  | Tadt { constr; args } -> Tadt { constr; args = List.map monomorphize args }
 
 let print_full =
   fst (print_generic (Some type_body)) (Some type_body)
