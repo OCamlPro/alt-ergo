@@ -314,7 +314,7 @@ module Env = struct
   let fresh_type env n loc =
     try
       let s, { args = args; result = r}, kind = MString.find n env.logics in
-      let args, subst = Ty.fresh_list args Ty.esubst in
+      let args, subst = Ty.fresh_list args Ty.Subst.empty in
       let res, _ = Ty.fresh r subst in
       s, { args = args; result = res }, kind
     with Not_found -> Errors.typing_error (SymbUndefined n) loc
@@ -646,7 +646,7 @@ let rec type_term ?(call_from_type_form=false) env f =
         let lbs = List.sort
             (fun (l1, _) (l2, _) -> Hstring.compare l1 l2) lbs in
         let ty = Types.from_labels env.Env.types lbs loc in
-        let ty, _ = Ty.fresh (Ty.shorten ty) Ty.esubst in
+        let ty, _ = Ty.fresh (Ty.shorten ty) Ty.Subst.empty in
         match ty with
         | Ty.Trecord { Ty.lbs=ty_lbs; _ } ->
           begin

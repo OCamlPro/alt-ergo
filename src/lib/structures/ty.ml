@@ -306,16 +306,66 @@ let rec equal t1 t2 =
   | _ -> false
 
 (*** matching with a substitution mechanism ***)
-module M = Util.MI
-type subst = t M.t
+module Subst = struct
+  type ty = t
+  type nonrec t = t Util.MI.t
 
-let esubst = M.empty
+  let empty = Util.MI.empty
+  let is_empty = Util.MI.is_empty
+  let add = Util.MI.add
+  let remove = Util.MI.remove
+  let mem = Util.MI.mem
+  let filter = Util.MI.filter
+
+  let compare = Util.MI.compare Stdlib.compare
+  let equal = Util.MI.equal Stdlib.(=)
+
+  let apply =
+    let rec apply s ty =
+      match ty with
+      | Tvar {v = n; _} ->
+        begin
+          try Util.MI.find n s with Not_found -> ty
+        end
+      | Text {constr; args} ->
+        let args, same = Lists.apply (apply s) args in
+        if same then ty else Text {constr; args}
+      | Tfarray {key_ty; val_ty} ->
+        begin
+          let key_ty' = apply s key_ty in
+          let val_ty' = apply s val_ty in
+          if key_ty == key_ty' && val_ty == val_ty' then ty
+          else Tfarray {key_ty = key_ty'; val_ty = val_ty'}
+        end
+      | Trecord r ->
+        let lbs,  same1 = Lists.apply_right (apply s) r.lbs in
+        let args, same2 = Lists.apply (apply s) r.args in
+        if same1 && same2 then ty
+        else
+          Trecord {r with args; name = r.name; lbs}
+      | Tadt {constr; args}
+        [@ocaml.ppwarning "TODO: detect when there are no changes "]
+        ->
+        Tadt {constr; args = List.map (apply s) args}
+      | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum _ -> ty
+    in
+    fun s ty -> if Util.MI.is_empty s then ty else apply s ty
+
+  let union s1 s2 =
+    Util.MI.fold (fun k x s2 ->
+        Util.MI.add k x s2
+      ) (Util.MI.map (apply s2) s1) s2
+
+  let print fmt sbt =
+    Util.MI.iter (fun n ty -> Format.fprintf fmt "%d -> %a" n print ty) sbt;
+    Format.fprintf fmt "@?"
+end
 
 let rec matching s pat t =
   match pat , t with
   | Tvar {v = n; value = None} , _ ->
-    (try if not (equal (M.find n s) t) then raise (TypeClash(pat,t)); s
-     with Not_found -> M.add n t s)
+    (try if not (equal (Util.MI.find n s) t) then raise (TypeClash(pat,t)); s
+     with Not_found -> Util.MI.add n t s)
   | Tvar {value = _; _}, _ -> raise (Shorten pat)
   | Text {constr = s1; args = l1},
     Text {constr = s2; args = l2} when Hstring.equal s1 s2 ->
@@ -336,46 +386,14 @@ let rec matching s pat t =
   | _ , _ ->
     raise (TypeClash(pat,t))
 
-let apply_subst =
-  let rec apply_subst s ty =
-    match ty with
-    | Tvar {v = n; _} ->
-      begin
-        try M.find n s with Not_found -> ty
-      end
-    | Text {constr; args} ->
-      let args, same = Lists.apply (apply_subst s) args in
-      if same then ty else Text {constr; args}
-    | Tfarray {key_ty; val_ty} ->
-      begin
-        let key_ty' = apply_subst s key_ty in
-        let val_ty' = apply_subst s val_ty in
-        if key_ty == key_ty' && val_ty == val_ty' then ty
-        else Tfarray {key_ty = key_ty'; val_ty = val_ty'}
-      end
-    | Trecord r ->
-      let lbs,  same1 = Lists.apply_right (apply_subst s) r.lbs in
-      let args, same2 = Lists.apply (apply_subst s) r.args in
-      if same1 && same2 then ty
-      else
-        Trecord {r with args; name = r.name; lbs}
-    | Tadt {constr; args}
-      [@ocaml.ppwarning "TODO: detect when there are no changes "]
-      ->
-      Tadt {constr; args = List.map (apply_subst s) args}
-
-    | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum _ -> ty
-  in
-  fun s ty -> if M.is_empty s then ty else apply_subst s ty
-
 let rec fresh ty subst =
   match ty with
   | Tvar { v= x; _ } ->
     begin
-      try M.find x subst, subst
+      try Util.MI.find x subst, subst
       with Not_found ->
         let nv = Tvar (fresh_var()) in
-        nv, M.add x nv subst
+        nv, Util.MI.add x nv subst
     end
   | Text {constr; args} ->
     let args, subst = fresh_list args subst in
@@ -423,7 +441,7 @@ module Decls = struct
 
 
   let fresh_type params body =
-    let params, subst = fresh_list params esubst in
+    let params, subst = fresh_list params Subst.empty in
     match body with
     | Adt cases ->
       let _subst, cases =
@@ -470,12 +488,12 @@ module Decls = struct
                  match vty with
                  | Tvar {value = Some _; _} -> assert false
                  | Tvar {v; value = None}   ->
-                   if equal vty ty then sbt else M.add v ty sbt
+                   if equal vty ty then sbt else Util.MI.add v ty sbt
                  | _ ->
                    Printer.print_err "vty = %a and ty = %a"
                      print vty print ty;
                    assert false
-              ) M.empty params args
+              ) Util.MI.empty params args
           with Invalid_argument _ -> assert false
         in
         let body = match body with
@@ -485,11 +503,11 @@ module Decls = struct
                 (fun {constr; destrs} ->
                    {constr;
                     destrs =
-                      List.map (fun (d, ty) -> d, apply_subst sbt ty) destrs}
+                      List.map (fun (d, ty) -> d, Subst.apply sbt ty) destrs}
                 ) cases
             )
         in
-        let params = List.map (fun ty -> apply_subst sbt ty) params in
+        let params = List.map (fun ty -> Subst.apply sbt ty) params in
         add name params body;
         body
     with Not_found ->
@@ -630,17 +648,10 @@ let instantiate lvar lty ty =
       (fun s x t ->
          match x with
          | Tvar { v = n; _ } ->
-           M.add n t s
-         | _ -> assert false) M.empty lvar lty
+           Util.MI.add n t s
+         | _ -> assert false) Util.MI.empty lvar lty
   in
-  apply_subst s ty
-
-let union_subst s1 s2 =
-  M.fold (fun k x s2 -> M.add k x s2) (M.map (apply_subst s2)  s1) s2
-
-let compare_subst = M.compare Stdlib.compare
-
-let equal_subst = M.equal Stdlib.(=)
+  Subst.apply s ty
 
 module Svty = Util.SI
 
@@ -685,10 +696,6 @@ let rec monomorphize ty =
   | Tvar ({value = Some ty1; _} as r) ->
     Tvar {r with value = Some (monomorphize ty1)}
   | Tadt {constr; args} -> Tadt {constr; args = List.map monomorphize args}
-
-let print_subst fmt sbt =
-  M.iter (fun n ty -> Format.fprintf fmt "%d -> %a" n print ty) sbt;
-  Format.fprintf fmt "@?"
 
 let print_full =
   fst (print_generic (Some type_body)) (Some type_body)

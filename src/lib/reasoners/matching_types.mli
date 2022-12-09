@@ -28,7 +28,7 @@
 
 type gsubst = {
   sbs : Expr.t Symbols.Map.t;
-  sty : Ty.subst;
+  sty : Ty.Subst.t;
   gen : int ;     (* l'age d'une substitution est l'age du plus vieux
                      		     terme qu'elle contient *)
   goal : bool;    (* vrai si la substitution contient un terme ayant un lien

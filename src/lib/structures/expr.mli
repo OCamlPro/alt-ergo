@@ -110,7 +110,7 @@ and trigger = (*private*) {
   guard: t option
 }
 
-type subst = t Symbols.Map.t * Ty.subst
+type subst = t Symbols.Map.t * Ty.Subst.t
 
 (** View of literal. *)
 type lit_view = private
