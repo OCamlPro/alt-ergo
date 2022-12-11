@@ -212,8 +212,9 @@ let mode_of_term t =
       assert false
     end
 
-let int_of_term = function
-  | { E.f = Sy.Int n; _ } ->
+let int_of_term (t : E.t) =
+  match t with
+  | { top_sy = Sy.Int n; _ } ->
     let n = Hstring.view n in
     let n =
       try int_of_string n

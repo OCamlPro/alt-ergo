@@ -157,38 +157,39 @@ module Make (X : Sig.X) = struct
   let fold_flatten sy f =
     List.fold_left (fun z (rt,n) -> flatten sy ((f rt),n) z) []
 
-  let abstract2 sy t r acc =
+  let abstract2 sy (t : Expr.t) r acc =
     match X.ac_extract r with
     | Some ac when Sy.equal sy ac.h -> r, acc
     | None -> r, acc
     | Some _ -> begin
         match t with
-        | { Expr.f = Sy.Name (hs, Sy.Ac); xs; ty; _ } ->
+        | { top_sy = Sy.Name (hs, Sy.Ac); xs; ty; _ } ->
           let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
           let aro_t = Expr.mk_term aro_sy xs ty in
           let eq = Expr.mk_eq ~iff:false aro_t t in
           X.term_embed aro_t, eq::acc
-        | { Expr.f = Sy.Op Sy.Mult; xs; ty; _ } ->
+        | { top_sy = Sy.Op Sy.Mult; xs; ty; _ } ->
           let aro_sy = Sy.name "@*" in
           let aro_t = Expr.mk_term aro_sy xs ty in
           let eq = Expr.mk_eq ~iff:false aro_t t in
           X.term_embed aro_t, eq::acc
-        | { Expr.ty; _ } ->
+        | { ty; _ } ->
           let k = Expr.fresh_name ty in
           let eq = Expr.mk_eq ~iff:false k t in
           X.term_embed k, eq::acc
       end
 
-  let make t =
+  let make (t : Expr.t) =
     Timers.exec_timer_start Timers.M_AC Timers.F_make;
     let x = match t with
-      | { Expr.f = sy; xs = [a;b]; ty; _ } when Sy.is_ac sy ->
+      | { top_sy; xs = [a;b]; ty; _ } when Sy.is_ac top_sy ->
         let ra, ctx1 = X.make a in
         let rb, ctx2 = X.make b in
-        let ra, ctx = abstract2 sy a ra (ctx1 @ ctx2) in
-        let rb, ctx = abstract2 sy b rb ctx in
+        let ra, ctx = abstract2 top_sy a ra (ctx1 @ ctx2) in
+        let rb, ctx = abstract2 top_sy b rb ctx in
         let rxs = [ ra,1 ; rb,1 ] in
-        X.ac_embed {h=sy; l=compact (fold_flatten sy (fun x -> x) rxs); t=ty;
+        X.ac_embed {h=top_sy;
+                    l=compact (fold_flatten top_sy (fun x -> x) rxs); t=ty;
                     distribute = true},
         ctx
       | {xs; _} ->

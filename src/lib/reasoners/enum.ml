@@ -133,8 +133,9 @@ module Shostak (X : ALIEN) = struct
       | Cons _ -> cr
       | Alien r    -> X.subst p v r
 
-  let make = function
-    | { E.f = Sy.Op (Sy.Constr hs); xs = []; ty; _ } ->
+  let make (t : E.t) =
+    match t with
+    | { top_sy = Sy.Op (Sy.Constr hs); xs = []; ty; _ } ->
       is_mine (Cons(hs,ty)), []
     | _ as t ->
       Printer.print_err

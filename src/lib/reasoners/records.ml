@@ -159,8 +159,8 @@ module Shostak (X : ALIEN) = struct
     | Record (_, ty) | Access (_, _, ty) | Other (_, ty) -> ty
 
   let make t =
-    let rec make_rec ({E.f; xs; ty; _} as t) ctx =
-      match f, ty with
+    let rec make_rec ({ top_sy; xs; ty; _ } as t : E.t) ctx =
+      match top_sy, ty with
       | Symbols.Op (Symbols.Record), Ty.Trecord { Ty.lbs; _ } ->
         assert (List.length xs = List.length lbs);
         let l, ctx =

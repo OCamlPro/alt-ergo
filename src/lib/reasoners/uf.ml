@@ -1026,9 +1026,9 @@ let model_repr_of_term t env mrepr =
 
 let compute_concrete_model ({ make; _ } as env) =
   ME.fold
-    (fun ({E.f; xs; ty; _} as t) _mk
+    (fun ({ top_sy; xs; ty; _ } as t : E.t) _mk
       ((fprofs, cprofs, carrays, mrepr) as acc) ->
-      if X.is_solvable_theory_symbol f ty
+      if X.is_solvable_theory_symbol top_sy ty
       || E.is_fresh t || E.is_fresh_skolem t
       || E.equal t E.vrai || E.equal t E.faux
       then
@@ -1046,13 +1046,13 @@ let compute_concrete_model ({ make; _ } as env) =
         in
         let rep, mrepr = model_repr_of_term t env mrepr in
         assert (is_a_good_model_value rep);
-        match f, xs, ty with
+        match top_sy, xs, ty with
         | Sy.Op Sy.Set, _, _ -> acc
 
         | Sy.Op Sy.Get, [(_,(a,_));((_,(i,_)) as e)], _ ->
           begin
             match X.term_extract a with
-            | Some {E.f = f_ta; xs=xs_ta; _}, true ->
+            | Some { top_sy = f_ta; xs=xs_ta; _ }, true ->
               assert (xs_ta == []);
               fprofs,
               cprofs,
@@ -1064,10 +1064,10 @@ let compute_concrete_model ({ make; _ } as env) =
 
         | _ ->
           if tys == [] then
-            fprofs, ModelMap.add (f, tys, ty) (xs, rep) cprofs, carrays,
+            fprofs, ModelMap.add (top_sy, tys, ty) (xs, rep) cprofs, carrays,
             mrepr
           else
-            ModelMap.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
+            ModelMap.add (top_sy, tys, ty) (xs, rep) fprofs, cprofs, carrays,
             mrepr
 
     ) make

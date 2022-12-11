@@ -221,8 +221,8 @@ module Shostak
     with Exit ->
       P.add (P.create [coef, (X.term_embed t)] Q.zero ty) p_acc
 
-  let rec mke coef p ({E.f = sb; xs; ty; _} as t) ctx =
-    match sb, xs with
+  let rec mke coef p ({ top_sy; xs; ty; _ } as t : E.t) ctx =
+    match top_sy, xs with
     | (Sy.Int n | Sy.Real n) , _  ->
       let c = Q.mult coef (Q.from_string (Hstring.view n)) in
       P.add_const c p, ctx
@@ -737,8 +737,8 @@ module Shostak
       if P.is_const (embed r) != None then None
       else
       if List.exists
-          (fun (E.{f; ty; _}, x) ->
-             is_mine_symb f ty && X.leaves x == []
+          (fun (({ top_sy; ty; _ } : E.t), x) ->
+             is_mine_symb top_sy ty && X.leaves x == []
           ) eq
       then None
       else

@@ -262,8 +262,8 @@ module Main : S = struct
       | None -> raise Exit
 
   let equal_only_by_congruence env (facts: r Sig_rel.facts)
-      ({E.f = f1; xs = xs1; ty = ty1; _} as t1)
-      ({E.f = f2; xs = xs2; ty = ty2; _} as t2) =
+      ({ top_sy = f1; xs = xs1; ty = ty1; _ } as t1 : E.t)
+      ({ top_sy = f2; xs = xs2; ty = ty2; _ } as t2 : E.t) =
     if not (E.equal t1 t2) then
       if Symbols.equal f1 f2 && Ty.equal ty1 ty2 then
         try
@@ -273,10 +273,10 @@ module Main : S = struct
           Q.push (Sig_rel.LTerm a, ex, Th_util.Other) facts.equas
         with Exit -> ()
 
-  let congruents env (facts: r Sig_rel.facts) t1 s =
+  let congruents env (facts: r Sig_rel.facts) (t1 : E.t) s =
     match t1 with
-    | { E.xs = []; _ } -> ()
-    | { E.f; ty; _ } when X.fully_interpreted f ty -> ()
+    | { xs = []; _ } -> ()
+    | { top_sy; ty; _ } when X.fully_interpreted top_sy ty -> ()
     |  _ -> SE.iter (equal_only_by_congruence env facts t1) s
 
   let fold_find_with_explanation find ex l =
@@ -335,14 +335,14 @@ module Main : S = struct
     match X.term_extract r with
     | None, _ -> ()
     | Some _, false -> () (* not an original term *)
-    | Some t1, true ->  (* original term *)
+    | Some (t1 : E.t), true ->  (* original term *)
       match t1 with
-      | { E.f = f1; xs = [x]; _ } ->
+      | { top_sy = f1; xs = [x]; _ } ->
         let ty_x = Expr.type_info x in
         List.iter
-          (fun t2 ->
+          (fun (t2 : E.t) ->
              match t2 with
-             | { E.f = f2 ; xs = [y]; _ } when Sy.equal f1 f2 ->
+             | { top_sy = f2 ; xs = [y]; _ } when Sy.equal f1 f2 ->
                let ty_y = Expr.type_info y in
                if Ty.equal ty_x ty_y then
                  begin match Uf.are_distinct env.uf t1 t2 with

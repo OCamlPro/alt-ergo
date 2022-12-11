@@ -33,7 +33,7 @@ module SSet = Sy.Set
 type binders = (Ty.t * int) SMap.t
 
 type t = {
-  f: Sy.t;
+  top_sy: Sy.t;
   xs: t list;
   ty: Ty.t;
   bind: bind_kind;
@@ -257,7 +257,7 @@ module H = struct
   type t = elt
 
   let eq t1 t2 = try
-      Sy.equal t1.f t2.f
+      Sy.equal t1.top_sy t2.top_sy
       && List.for_all2 (==) t1.xs t2.xs
       && Ty.equal t1.ty t2.ty
       &&
@@ -276,7 +276,7 @@ module H = struct
     abs @@
     List.fold_left
       (fun acc x-> acc * 23 + x.tag)
-      (7 * Hashtbl.hash t.bind + 5 * Sy.hash t.f + Ty.hash t.ty)
+      (7 * Hashtbl.hash t.bind + 5 * Sy.hash t.top_sy + Ty.hash t.ty)
       t.xs
 
   let set_id tag x = {x with tag = tag}
@@ -391,8 +391,8 @@ module SmtPrinter = struct
 
   and print_silent fmt t =
     let open Format in
-    let { f ; xs ; ty; bind; _ } = t in
-    match f, xs with
+    let { top_sy ; xs ; ty; bind; _ } = t in
+    match top_sy, xs with
     (* Formulas *)
     | Sy.Form form, xs -> print_formula fmt form xs bind
 
@@ -453,7 +453,7 @@ module SmtPrinter = struct
     | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||
                               op == Sy.Max_real || op == Sy.Max_int ||
                               op == Sy.Min_real || op == Sy.Min_int ->
-      fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
+      fprintf fmt "%a(%a,%a)" Sy.print top_sy print e1 print e2
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
     | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
@@ -461,7 +461,7 @@ module SmtPrinter = struct
         "%a(%a)" Hstring.print hs (Util.print_list ~sep:"," ~pp:print) l
 
     | Sy.Op _, [e1; e2] ->
-      fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
+      fprintf fmt "(%a %a %a)" Sy.print top_sy print e1 print e2
 
     | Sy.Op Sy.Destruct (hs, grded), [e] ->
       fprintf fmt "%a#%s%a"
@@ -472,10 +472,10 @@ module SmtPrinter = struct
       fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
 
     | _, [] ->
-      fprintf fmt "%a" Sy.print f
+      fprintf fmt "%a" Sy.print top_sy
 
     | _, _ ->
-      Format.fprintf fmt "(%a %a)" Sy.print f
+      Format.fprintf fmt "(%a %a)" Sy.print top_sy
         (Util.print_list ~sep:"," ~pp:print) xs
 
   and print_triggers fmt trs =
@@ -483,7 +483,7 @@ module SmtPrinter = struct
         Format.fprintf fmt "| %a@,"  (Util.print_list ~sep:"," ~pp:print) l;
       ) trs
 
-  and print_verbose fmt t = print_silent fmt t
+  and print_verbose fmt t = print fmt t
   (* Not displaying types when int SMT format *)
 
   and print fmt t =
@@ -569,8 +569,9 @@ module AEPrinter = struct
 
   and print_silent fmt t =
     let open Format in
-    let { f ; xs ; ty; bind; _ } = t in
-    match f, xs with
+    (* FIXME: is necessary? *)
+    let { top_sy ; xs ; ty; bind; _ } = t in
+    match top_sy, xs with
     (* Formulas *)
     | Sy.Form form, xs -> print_formula fmt form xs bind
 
@@ -631,7 +632,7 @@ module AEPrinter = struct
     | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||
                               op == Sy.Max_real || op == Sy.Max_int ||
                               op == Sy.Min_real || op == Sy.Min_int ->
-      fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
+      fprintf fmt "%a(%a,%a)" Sy.print top_sy print e1 print e2
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
     | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
@@ -640,9 +641,9 @@ module AEPrinter = struct
 
     | Sy.Op _, [e1; e2] ->
       if Options.get_output_smtlib () then
-        fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
+        fprintf fmt "(%a %a %a)" Sy.print top_sy print e1 print e2
       else
-        fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
+        fprintf fmt "(%a %a %a)" print e1 Sy.print top_sy print e2
 
     | Sy.Op Sy.Destruct (hs, grded), [e] ->
       fprintf fmt "%a#%s%a"
@@ -654,10 +655,11 @@ module AEPrinter = struct
 
 
     | _, [] ->
-      fprintf fmt "%a" Sy.print f
+      fprintf fmt "%a" Sy.print top_sy
 
     | _, _ ->
-      fprintf fmt "%a(%a)" Sy.print f (Util.print_list ~sep:"," ~pp:print) xs
+      fprintf fmt "%a(%a)" Sy.print top_sy
+        (Util.print_list ~sep:"," ~pp:print) xs
 
   and print_triggers fmt trs =
     List.iter (fun { content = l; _ } ->
@@ -690,12 +692,12 @@ let print_list fmt = print_list_sep "," fmt
 (** different views of an expression *)
 
 let lit_view t =
-  let { f; xs; ty; _ } = t in
+  let { top_sy; xs; ty; _ } = t in
   if ty != Ty.Tbool then
     Util.failwith "Calling lit_view on a non boolean expression %a"
       print t
   else
-    match f with
+    match top_sy with
     | Sy.Form _  ->
       Util.failwith "Calling lit_view on a formula %a" print t
     | Sy.Lit lit ->
@@ -712,15 +714,15 @@ let lit_view t =
     | _ -> Pred(t, false) (* FIXME: This wildcase is dangereous! *)
 
 let form_view t =
-  let { f; xs; bind; _ } = t in
+  let { top_sy; xs; bind; _ } = t in
   if t.ty != Ty.Tbool then
     Util.failwith "Term %a is not a formula" print t
   else
-    match f, xs, bind with
-    | Sy.Form (Sy.F_Unit _), [a;b], _ -> Unit (a, b)
-    | Sy.Form (Sy.F_Clause i), [a;b], _ -> Clause (a, b, i)
-    | Sy.Form Sy.F_Iff, [a;b], _ -> Iff(a, b)
-    | Sy.Form Sy.F_Xor, [a;b], _ -> Xor(a, b)
+    match top_sy, xs, bind with
+    | Sy.Form (Sy.F_Unit _), [a; b], _ -> Unit (a, b)
+    | Sy.Form (Sy.F_Clause i), [a; b], _ -> Clause (a, b, i)
+    | Sy.Form Sy.F_Iff, [a; b], _ -> Iff(a, b)
+    | Sy.Form Sy.F_Xor, [a; b], _ -> Xor(a, b)
     | Sy.Form Sy.F_Lemma, [], B_lemma lem -> Lemma lem
     | Sy.Form Sy.F_Skolem, [], B_skolem sko -> Skolem sko
     | Sy.Lit (Sy.L_eq | Sy.L_neg_eq | Sy.L_neg_pred |
@@ -732,8 +734,8 @@ let form_view t =
 
 (** Some auxiliary functions *)
 
-let [@inline always] type_info t = t.ty
-let [@inline always] symbol_info t = t.f
+let[@inline always] type_info t = t.ty
+let[@inline always] symbol_info t = t.top_sy
 
 (* unused
    let is_term e = match e.f with
@@ -748,7 +750,7 @@ let mk_binders, reset_binders_cpt =
       (fun t sym ->
          incr cpt;
          match t with
-         | { f = (Sy.Var _) as v; ty; _ } -> SMap.add v (ty, !cpt) sym
+         | { top_sy = (Sy.Var _) as v; ty; _ } -> SMap.add v (ty, !cpt) sym
          | _ -> assert false
       )st SMap.empty
   in
@@ -781,8 +783,8 @@ let size t = t.nb_nodes
 let depth t = t.depth
 
 let rec is_positive e =
-  let { f; bind; _ } = e in
-  match f, bind with
+  let { top_sy; bind; _ } = e in
+  match top_sy, bind with
   | Sy.Lit (Sy.L_neg_pred | Sy.L_neg_eq | Sy.L_neg_built _), _ -> false
   | Sy.Form (Sy.F_Clause _ | Sy.F_Skolem | Sy.F_Xor), _ -> false
   | Sy.Let, B_let { in_e; is_bool = true; _ } -> is_positive in_e
@@ -791,20 +793,20 @@ let rec is_positive e =
 let neg t =
   match t with
   | { ty = Ty.Tbool; neg = Some n; _ } -> n
-  | { f = _; _ } -> assert false
+  | { top_sy = _; _ } -> assert false
 
 let is_int t = t.ty == Ty.Tint
 let is_real t = t.ty == Ty.Treal
 
 let is_fresh t =
   match t with
-  | { f = Sy.Name (hs,_); xs = []; _ } ->
+  | { top_sy = Sy.Name (hs,_); xs = []; _ } ->
     Hstring.is_fresh_string (Hstring.view hs)
   | _ -> false
 
 let is_fresh_skolem t =
   match t with
-  | { f = Sy.Name (hs,_); _ } -> Hstring.is_fresh_skolem (Hstring.view hs)
+  | { top_sy = Sy.Name (hs,_); _ } -> Hstring.is_fresh_skolem (Hstring.view hs)
   | _ -> false
 
 let name_of_lemma f =
@@ -836,7 +838,7 @@ let add_label =
 let label t =
   try Labels.find labels t
   with Not_found ->
-    let { f = f; _ } = t in
+    let { top_sy = f; _ } = t in
     Sy.label f
 
 let print_tagged_classes =
@@ -875,16 +877,16 @@ let mk_term s l ty =
   let vty = free_type_vars_non_form l ty in
   let pure = List.for_all (fun e -> e.pure) l && not (Sy.is_ite s) in
   let pos =
-    HC.make {f=s; xs=l; ty=ty; depth=d; tag= -42; vars; vty;
-             nb_nodes; neg = None; bind = B_none; pure}
+    HC.make { top_sy=s; xs=l; ty=ty; depth=d; tag= -42; vars; vty;
+              nb_nodes; neg = None; bind = B_none; pure}
   in
   if ty != Ty.Tbool then pos
   else if pos.neg != None then pos
   else
     let neg_s = Sy.Lit Sy.L_neg_pred in
     let neg =
-      HC.make {f=neg_s; xs=[pos]; ty=ty; depth=d; tag= -42;
-               vars; vty; nb_nodes; neg = None; bind = B_none; pure = false}
+      HC.make { top_sy=neg_s; xs=[pos]; ty=ty; depth=d; tag= -42;
+                vars; vty; nb_nodes; neg = None; bind = B_none; pure = false}
     in
     assert (neg.neg == None);
     pos.neg <- Some neg;
@@ -896,17 +898,32 @@ let vrai =
     let nb_nodes = 0 in
     let vars = SMap.empty in
     let vty = Ty.Svty.empty in
-    let faux =
-      HC.make
-        {f = Sy.False; xs = []; ty = Ty.Tbool; depth = -2; (*smallest depth*)
-         tag = -42; vars; vty; nb_nodes; neg = None; bind = B_none;
-         pure = true}
+    let faux = HC.make {
+        top_sy = Sy.False;
+        xs = [];
+        ty = Ty.Tbool;
+        depth = -2; (*smallest depth*)
+        tag = -42;
+        vars; vty;
+        nb_nodes;
+        neg = None;
+        bind = B_none;
+        pure = true
+      }
     in
-    let vrai =
-      HC.make
-        {f = Sy.True;  xs = []; ty = Ty.Tbool; depth = -1; (*2nd smallest d*)
-         tag= -42; vars; vty; nb_nodes; neg = None; bind = B_none;
-         pure = true}
+    let vrai = HC.make {
+        top_sy = Sy.True;
+        xs = [];
+        ty = Ty.Tbool;
+        depth = -1; (*2nd smallest d*)
+        tag= -42;
+        vars;
+        vty;
+        nb_nodes;
+        neg = None;
+        bind = B_none;
+        pure = true
+      }
     in
     assert (vrai.neg == None);
     assert (faux.neg == None);
@@ -965,18 +982,34 @@ let mk_or f1 f2 is_impl =
     let nb_nodes = f1.nb_nodes + f2.nb_nodes + 1 in
     let vars = merge_vars f1.vars f2.vars in
     let vty = Ty.Svty.union f1.vty f2.vty in
-    let pos =
-      HC.make {f=Sy.Form (Sy.F_Clause is_impl); xs=[f1; f2]; ty=Ty.Tbool;
-               depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-               bind = B_none; pure = false}
+    let pos = HC.make {
+        top_sy = Sy.Form (Sy.F_Clause is_impl);
+        xs = [f1; f2];
+        ty = Ty.Tbool;
+        depth = d;
+        tag = -42;
+        vars; vty;
+        nb_nodes;
+        neg = None;
+        bind = B_none;
+        pure = false
+      }
     in
     if pos.neg != None then pos
     else
-      let neg =
-        HC.make
-          {f=Sy.Form (Sy.F_Unit is_impl); xs=[neg f1; neg f2]; ty=Ty.Tbool;
-           depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-           bind = B_none; pure = false}
+      let neg = HC.make {
+          top_sy = Sy.Form (Sy.F_Unit is_impl);
+          xs = [neg f1; neg f2];
+          ty = Ty.Tbool;
+          depth = d;
+          tag = -42;
+          vars;
+          vty;
+          nb_nodes;
+          neg = None;
+          bind = B_none;
+          pure = false
+        }
       in
       assert (neg.neg == None);
       pos.neg <- Some neg;
@@ -996,17 +1029,17 @@ let mk_iff f1 f2 =
     let vars = merge_vars f1.vars f2.vars in
     let vty = Ty.Svty.union f1.vty f2.vty in
     let pos =
-      HC.make {f=Sy.Form Sy.F_Iff; xs=[f1; f2]; ty=Ty.Tbool;
-               depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-               bind = B_none; pure = false}
+      HC.make { top_sy=Sy.Form Sy.F_Iff; xs=[f1; f2]; ty=Ty.Tbool;
+                depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
+                bind = B_none; pure = false}
     in
     if pos.neg != None then pos
     else
       let neg =
         HC.make
-          {f=Sy.Form Sy.F_Xor; xs=[f1; f2]; ty=Ty.Tbool;
-           depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-           bind = B_none; pure = false}
+          { top_sy=Sy.Form Sy.F_Xor; xs=[f1; f2]; ty=Ty.Tbool;
+            depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
+            bind = B_none; pure = false}
       in
       assert (neg.neg == None);
       pos.neg <- Some neg;
@@ -1033,7 +1066,7 @@ let[@inline always] const_term e =
   (* we use this function because depth is currently not correct to
      detect constants (not incremented in some situations due to
      some regression) *)
-  match e.f with
+  match e.top_sy with
   | Sy.Form _ | Sy.Lit _ | Sy.Let  -> false
   | True | False | Void | Name _ | Int _ | Real _ | Bitv _
   | Op _ | Var _ | In _ | MapsTo _ ->
@@ -1078,14 +1111,14 @@ let mk_forall_ter =
         in
         let sko = { new_q with main = neg f} in
         let pos =
-          HC.make {f=Sy.Form Sy.F_Lemma; xs=[]; ty=Ty.Tbool;
-                   depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-                   bind = B_lemma new_q; pure = false}
+          HC.make { top_sy=Sy.Form Sy.F_Lemma; xs=[]; ty=Ty.Tbool;
+                    depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
+                    bind = B_lemma new_q; pure = false}
         in
         let neg =
-          HC.make {f=Sy.Form Sy.F_Skolem; xs=[]; ty=Ty.Tbool;
-                   depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-                   bind = B_skolem sko; pure = false}
+          HC.make { top_sy=Sy.Form Sy.F_Skolem; xs=[]; ty=Ty.Tbool;
+                    depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
+                    bind = B_skolem sko; pure = false}
         in
         pos.neg <- Some neg;
         neg.neg <- Some pos;
@@ -1128,16 +1161,16 @@ let mk_positive_lit s neg_s l =
   let vars = free_vars_non_form s l ty in
   let vty = free_type_vars_non_form l ty in
   let pos =
-    HC.make {f=s; xs=l; ty=ty; depth=d; tag= -42; vars; vty;
-             nb_nodes; neg = None;
-             bind = B_none; pure = false}
+    HC.make { top_sy=s; xs=l; ty=ty; depth=d; tag= -42; vars; vty;
+              nb_nodes; neg = None;
+              bind = B_none; pure = false}
   in
   if pos.neg != None then pos
   else
     let neg =
-      HC.make {f=neg_s; xs=l; ty=ty; depth=d; tag= -42;
-               vars; vty; nb_nodes; neg = None;
-               bind = B_none; pure = false}
+      HC.make { top_sy=neg_s; xs=l; ty=ty; depth=d; tag= -42;
+                vars; vty; nb_nodes; neg = None;
+                bind = B_none; pure = false}
     in
     assert (neg.neg == None);
     pos.neg <- Some neg;
@@ -1155,7 +1188,7 @@ let mk_eq ~iff t1 t2 =
       else
         (* translate to iff, eventual simplification made in mk_or *)
         let res = mk_iff t1 t2 in
-        match res.f with
+        match res.top_sy with
         | Sy.Form _ when not iff ->
           (* in some situation (eg. theories deductions, mk_iff may
              be disabled due to invariants *)
@@ -1202,7 +1235,7 @@ let mk_builtin ~is_pos n l =
 (** Substitutions *)
 
 let is_skolem_cst v =
-  try String.equal (String.sub (Sy.to_string v.f) 0 4) "_sko"
+  try String.equal (String.sub (Sy.to_string v.top_sy) 0 4) "_sko"
   with Invalid_argument _ -> false
 
 let get_skolem =
@@ -1232,7 +1265,7 @@ let no_capture_issue s_t binders =
 let rec apply_subst_aux (s_t, (s_ty: Ty.Subst.t)) t =
   if is_ground t || (SMap.is_empty s_t && Ty.Subst.is_empty s_ty) then t
   else
-    let { f; xs; ty; vars; vty; bind; _ } = t in
+    let { top_sy; xs; ty; vars; vty; bind; _ } = t in
     let s_t = SMap.filter (fun sy _ -> SMap.mem sy vars) s_t in
     let s_ty = Ty.Subst.filter (fun tvar _ -> Ty.Svty.mem tvar vty) s_ty in
     if SMap.is_empty s_t && Ty.Subst.is_empty s_ty then t
@@ -1243,15 +1276,15 @@ let rec apply_subst_aux (s_t, (s_ty: Ty.Subst.t)) t =
       (*invariant: we are sure that the subst will impact xs or ty
          (or inside a lemma/skolem or let) *)
       assert (xs == [] || not same || not (Ty.equal ty ty'));
-      match f, bind with
+      match top_sy, bind with
       | Sy.Var _, _ ->
         assert (xs == []);
         begin
           try
-            let v = SMap.find f s_t in
+            let v = SMap.find top_sy s_t in
             if is_skolem_cst v then get_skolem v ty else v
           with Not_found ->
-            mk_term f [] ty'
+            mk_term top_sy [] ty'
         end
       | Sy.Form (Sy.F_Lemma | Sy.F_Skolem), (B_lemma q | B_skolem q) ->
         assert (xs == []);
@@ -1281,7 +1314,7 @@ let rec apply_subst_aux (s_t, (s_ty: Ty.Subst.t)) t =
                  main; user_trs = trs; binders = binders; sko_v;
                  sko_vty}
         in
-        begin match f with
+        begin match top_sy with
           | Sy.Form Sy.F_Lemma  ->
             mk_forall_bis q
 
@@ -1332,7 +1365,7 @@ let rec apply_subst_aux (s_t, (s_ty: Ty.Subst.t)) t =
           | [u; v] -> mk_xor u v
           | _ -> assert false
         end
-      | _ -> mk_term f xs' ty'
+      | _ -> mk_term top_sy xs' ty'
 
 and apply_subst_trigger subst ({ content; guard; _ } as tr) =
   {tr with
@@ -1350,7 +1383,7 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
   try
     let _, nb_occ = SMap.find let_v in_e.vars in
     (* Inline in these situations. *)
-    if nb_occ = 1 && (let_e.pure (*1*) || Sy.equal let_v in_e.f) ||
+    if nb_occ = 1 && (let_e.pure (*1*) || Sy.equal let_v in_e.top_sy) ||
        const_term let_e then
       apply_subst_aux (SMap.singleton let_v let_e, Ty.Subst.empty) in_e
     else
@@ -1361,17 +1394,17 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
       let vars = merge_vars let_e.vars (SMap.remove let_v in_e.vars) in
       let vty = Ty.Svty.union let_e.vty in_e.vty in
       let pos =
-        HC.make {f=Sy.Let; xs=[]; ty;
-                 depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-                 bind = B_let x; pure = false}
+        HC.make { top_sy=Sy.Let; xs=[]; ty;
+                  depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
+                  bind = B_let x; pure = false}
       in
       if pos.neg != None || not x.is_bool then pos
       else
         let y = {x with in_e = neg in_e} in
         let neg =
-          HC.make {f=Sy.Let; xs=[]; ty;
-                   depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-                   bind = B_let y; pure = false}
+          HC.make { top_sy=Sy.Let; xs=[]; ty;
+                    depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
+                    bind = B_let y; pure = false}
         in
         pos.neg <- Some neg;
         neg.neg <- Some pos;
@@ -1496,14 +1529,14 @@ let max_pure_subterms =
   fun e -> aux TSet.empty e
 
 let rec sub_terms acc exp =
-  match exp.f with
+  match exp.top_sy with
   | Sy.Form _ | Sy.Lit _ -> acc
   | _ -> List.fold_left sub_terms (TSet.add exp acc) exp.xs
 
 (* TODO: We should replace the assertion failure with
    a better error. *)
 (* Produce the list of maximal subterms of a literal. *)
-let args_of_lit e = match e.f with
+let args_of_lit e = match e.top_sy with
   | Sy.Form _ -> assert false
   | Sy.Lit _ -> e.xs
   | _ when e.ty == Ty.Tbool -> [e]
@@ -1514,7 +1547,7 @@ let max_terms_of_lit e =
 
 let max_ground_terms_of_lit =
   let rec max_sub_ground acc e =
-    match e.f with
+    match e.top_sy with
     | Sy.Form _ | Sy.Lit _ -> assert false
     | _ ->
       if is_ground e then TSet.add e acc
@@ -1599,9 +1632,9 @@ let sub_terms_of_formula f =
 let cand_is_more_general cand other =
   let rec matches cand other =
     match cand, other with
-    | { f = Sy.Var _; _ }, _ -> ()
-    | { f = f1; xs=xs1; _}, { f = f2; xs = xs2; _ } when Sy.equal f1 f2 ->
-      List.iter2 matches xs1 xs2
+    | { top_sy = Sy.Var _; _ }, _ -> ()
+    | { top_sy = f1; xs=xs1; _}, { top_sy = f2; xs = xs2; _ }
+      when Sy.equal f1 f2 -> List.iter2 matches xs1 xs2
     | _ -> raise Exit
   in
   try matches cand other; true
@@ -1718,12 +1751,12 @@ let rec mk_ite_eq x c th el =
 
 and mk_eq_aux x e =
   match e.xs with
-  | [c;th;el] when Sy.is_ite e.f -> mk_ite_eq x c th el
+  | [c;th;el] when Sy.is_ite e.top_sy -> mk_ite_eq x c th el
   | _ -> mk_eq ~iff:true  x e
 
 let mk_let_equiv let_sko let_e =
   match let_e.xs with
-  | [_;_;_] when Sy.is_ite let_e.f -> mk_eq_aux let_sko let_e
+  | [_;_;_] when Sy.is_ite let_e.top_sy -> mk_eq_aux let_sko let_e
   | _ ->
     if type_info let_e == Ty.Tbool then mk_iff let_sko let_e
     else mk_eq ~iff:true let_sko let_e
@@ -1813,27 +1846,28 @@ module Triggers = struct
   let rec score_term (t : t) =
     let open Sy in
     match t with
-    | { f = (True | False | Void | Int _ | Real _ | Bitv _ | Var _); _ } -> 0
+    | { top_sy = (True | False | Void | Int _ | Real _ | Bitv _ | Var _); _ }
+      -> 0
 
-    | { f; _ } when is_infix f || is_prefix f ->
-      0 (* arithmetic triggers are not suitable *)
+    (* arithmetic triggers are not suitable *)
+    | { top_sy; _ } when is_infix top_sy || is_prefix top_sy -> 0
 
-    | { f = Op (Get | Set) ; xs = [t1 ; t2]; _ } ->
+    | { top_sy = Op (Get | Set) ; xs = [t1 ; t2]; _ } ->
       max (score_term t1) (score_term t2)
 
-    | { f = Op (Access _ | Destruct _) ; xs = [t]; _ } -> 1 + score_term t
-    | { f = Op Record; xs; _ } ->
+    | { top_sy = Op (Access _ | Destruct _) ; xs = [t]; _ } -> 1 + score_term t
+    | { top_sy = Op Record; xs; _ } ->
       1 + (List.fold_left
              (fun acc t -> max (score_term t) acc) 0 xs)
-    | { f = Op(Set | Extract) ; xs = [t1; t2; t3]; _ } ->
+    | { top_sy = Op(Set | Extract) ; xs = [t1; t2; t3]; _ } ->
       max (score_term t1) (max (score_term t2) (score_term t3))
 
-    | { f = (Op _ | Name _) ; xs = tl; _ } ->
+    | { top_sy = (Op _ | Name _) ; xs = tl; _ } ->
       1 + (List.fold_left
              (fun acc t -> max (score_term t) acc) 0 tl)
 
-    | { f = (Sy.MapsTo _ | Sy.In _); xs = [e]; _ } -> score_term e
-    | { f = (Lit _ | Form _ | Sy.MapsTo _ | Sy.In _ | Sy.Let); _ } ->
+    | { top_sy = (Sy.MapsTo _ | Sy.In _); xs = [e]; _ } -> score_term e
+    | { top_sy = (Lit _ | Form _ | Sy.MapsTo _ | Sy.In _ | Sy.Let); _ } ->
       assert false
 
 
@@ -1841,17 +1875,18 @@ module Triggers = struct
     let compare_expr = compare in
     let open Sy in
     match t1, t2 with
-    | {f = (True | False | Void | Int _ | Real _ | Bitv _); _},
-      {f = (True | False | Void | Int _ | Real _ | Bitv _); _} ->
+    | { top_sy = (True | False | Void | Int _ | Real _ | Bitv _); _},
+      { top_sy = (True | False | Void | Int _ | Real _ | Bitv _); _} ->
       compare_expr t1 t2
 
-    | {f = (True | False | Void | Int _ | Real _ | Bitv _); _}, _ -> -1
-    | _, {f = (True | False | Void | Int _ | Real _ | Bitv _); _} ->  1
+    | { top_sy = (True | False | Void | Int _ | Real _ | Bitv _); _}, _ -> -1
+    | _, { top_sy = (True | False | Void | Int _ | Real _ | Bitv _); _} ->  1
 
-    | {f = (Var _) as v1; _}, { f = (Var _) as v2; _ } -> Sy.compare v1 v2
-    | {f = Var _; _}, _ -> -1
-    | _, {f = Var _; _} ->  1
-    | {f = s; xs = l1; _}, {f = s'; xs = l2; _}
+    | { top_sy = (Var _) as v1; _}, { top_sy = (Var _) as v2; _ } ->
+      Sy.compare v1 v2
+    | { top_sy = Var _; _}, _ -> -1
+    | _, { top_sy = Var _; _} ->  1
+    | { top_sy = s; xs = l1; _}, { top_sy = s'; xs = l2; _}
       when is_infix s && is_infix s' ->
       let c = (score_term t1) - (score_term t2) in
       if c <> 0 then c
@@ -1859,19 +1894,20 @@ module Triggers = struct
         let c = Sy.compare s s' in
         if c <> 0 then c else Util.cmp_lists l1 l2 cmp_trig_term
 
-    | {f = s; _}, _ when is_infix s -> -1
-    | _ , {f = s'; _} when is_infix s' -> 1
+    | { top_sy = s; _}, _ when is_infix s -> -1
+    | _ , { top_sy = s'; _} when is_infix s' -> 1
 
-    | {f = s1; xs =[t1]; _}, {f = s2; xs = [t2]; _}
+    | { top_sy = s1; xs =[t1]; _}, { top_sy = s2; xs = [t2]; _}
       when is_prefix s1 && is_prefix s2 ->
       let c = Sy.compare s1 s2 in
       if c<>0 then c else cmp_trig_term t1 t2
 
-    | {f = s1; _}, _ when is_prefix s1 -> -1
+    | { top_sy = s1; _}, _ when is_prefix s1 -> -1
 
-    | _, {f = s2; _} when is_prefix s2 ->  1
+    | _, { top_sy = s2; _} when is_prefix s2 ->  1
 
-    | {f = (Name _) as s1; xs=tl1; _}, {f = (Name _) as s2; xs=tl2; _} ->
+    | { top_sy = (Name _) as s1; xs=tl1; _},
+      { top_sy = (Name _) as s2; xs=tl2; _} ->
       let l1 = List.map score_term tl1 in
       let l2 = List.map score_term tl2 in
       let l1 = List.fast_sort Stdlib.compare l1 in
@@ -1882,51 +1918,54 @@ module Triggers = struct
         let c = Sy.compare s1 s2 in
         if c <> 0 then c else Util.cmp_lists tl1 tl2 cmp_trig_term
 
-    | {f = Name _; _}, _ -> -1
-    | _, {f = Name _; _} -> 1
+    | { top_sy = Name _; _}, _ -> -1
+    | _, { top_sy = Name _; _} -> 1
 
-    | {f = Op Get; xs = l1; _}, {f = Op Get; xs = l2; _} ->
+    | { top_sy = Op Get; xs = l1; _}, { top_sy = Op Get; xs = l2; _} ->
       Util.cmp_lists l1 l2 cmp_trig_term
-    | {f = Op Get; _}, _ -> -1
-    | _, {f = Op Get; _} -> 1
+    | { top_sy = Op Get; _}, _ -> -1
+    | _, { top_sy = Op Get; _} -> 1
 
-    | {f = Op Set; xs = l1; _}, {f = Op Set; xs = l2; _} ->
+    | { top_sy = Op Set; xs = l1; _}, { top_sy = Op Set; xs = l2; _} ->
       Util.cmp_lists l1 l2 cmp_trig_term
-    | {f = Op Set; _}, _ -> -1
-    | _, {f = Op Set; _} -> 1
+    | { top_sy = Op Set; _}, _ -> -1
+    | _, { top_sy = Op Set; _} -> 1
 
-    | {f = Op Extract; xs = l1; _ }, {f = Op Extract; xs = l2; _} ->
+    | { top_sy = Op Extract; xs = l1; _ },
+      { top_sy = Op Extract; xs = l2; _} ->
       Util.cmp_lists l1 l2 cmp_trig_term
-    | {f = Op Extract; _}, _ -> -1
-    | _, {f = Op Extract; _} -> 1
+    | { top_sy = Op Extract; _}, _ -> -1
+    | _, { top_sy = Op Extract; _} -> 1
 
-    | {f = Op Concat; xs = l1; _}, {f = Op Concat; xs = l2; _} ->
+    | { top_sy = Op Concat; xs = l1; _}, { top_sy = Op Concat; xs = l2; _} ->
       Util.cmp_lists l1 l2 cmp_trig_term
-    | {f = Op Concat; _}, _ -> -1
-    | _, {f = Op Concat; _} -> 1
+    | { top_sy = Op Concat; _}, _ -> -1
+    | _, { top_sy = Op Concat; _} -> 1
 
-    | {f = Op (Access a1) ; xs=[t1]; _},
-      {f = Op (Access a2) ; xs=[t2]; _} ->
+    | { top_sy = Op (Access a1) ; xs=[t1]; _},
+      { top_sy = Op (Access a2) ; xs=[t2]; _} ->
       let c = Stdlib.compare a1 a2 in (* should be Hstring.compare *)
       if c<>0 then c else cmp_trig_term t1 t2
 
-    | {f = Op (Access _); _}, _ -> -1
-    | _, {f = Op (Access _); _} -> 1
+    | { top_sy = Op (Access _); _}, _ -> -1
+    | _, { top_sy = Op (Access _); _} -> 1
 
-    | {f = Op (Destruct (_, a1)) ; xs = [t1]; _},
-      {f = Op (Destruct (_, a2)) ; xs = [t2]; _} ->
+    | { top_sy = Op (Destruct (_, a1)) ; xs = [t1]; _},
+      { top_sy = Op (Destruct (_, a2)) ; xs = [t2]; _} ->
       let c = Stdlib.compare a1 a2 in (* should be Hstring.compare *)
       if c<>0 then c else cmp_trig_term t1 t2
 
-    | {f = Op (Destruct _); _}, _ -> -1
-    | _, {f =Op (Destruct _); _} -> 1
+    | { top_sy = Op (Destruct _); _}, _ -> -1
+    | _, { top_sy =Op (Destruct _); _} -> 1
 
-    | {f = Op Record ; xs = lbs1; _}, {f = Op Record ; xs = lbs2; _} ->
+    | { top_sy = Op Record ; xs = lbs1; _},
+      { top_sy = Op Record ; xs = lbs2; _} ->
       Util.cmp_lists lbs1 lbs2 cmp_trig_term
-    | {f = Op Record; _}, _ -> -1
-    | _, {f = Op Record; _} -> 1
+    | { top_sy = Op Record; _}, _ -> -1
+    | _, { top_sy = Op Record; _} -> 1
 
-    | {f = (Op _) as s1; xs = tl1; _}, {f = (Op _) as s2; xs = tl2; _} ->
+    | { top_sy = (Op _) as s1; xs = tl1; _},
+      { top_sy = (Op _) as s2; xs = tl2; _} ->
       (* ops that are not infix or prefix *)
       let l1 = List.map score_term tl1 in
       let l2 = List.map score_term tl2 in
@@ -1938,10 +1977,10 @@ module Triggers = struct
         let c = Sy.compare s1 s2 in
         if c <> 0 then c else Util.cmp_lists tl1 tl2 cmp_trig_term
 
-    | {f = Op _; _}, _ -> -1
-    | _, {f = Op _; _} -> 1
-    | {f = (Lit _ | Form _ | In _ | MapsTo _ | Let); _},
-      {f = (Lit _ | Form _ | In _ | MapsTo _ | Let); _} -> assert false
+    | { top_sy = Op _; _}, _ -> -1
+    | _, { top_sy = Op _; _} -> 1
+    | { top_sy = (Lit _ | Form _ | In _ | MapsTo _ | Let); _},
+      { top_sy = (Lit _ | Form _ | In _ | MapsTo _ | Let); _} -> assert false
 
   let cmp_trig_term_list tl2 tl1 =
     let l1 = List.map score_term tl1 in
@@ -1999,7 +2038,7 @@ module Triggers = struct
      trs
   *)
 
-  let is_var t = match t.f with
+  let is_var t = match t.top_sy with
     | Sy.Var _ -> true
     | _ -> false (* constant terms such as "logic nil : 'a list" are
                     allowed in triggers *)
@@ -2126,8 +2165,8 @@ module Triggers = struct
       List.filter
         (fun t ->
            match t with
-           | [{ f = Sy.Op Sy.Plus; _ }] -> false
-           | [{ f = Sy.Op Sy.Minus; _ }] -> false
+           | [{ top_sy = Sy.Op Sy.Plus; _ }] -> false
+           | [{ top_sy = Sy.Op Sy.Minus; _ }] -> false
            | _ -> true
         )mono
     in
@@ -2171,7 +2210,7 @@ module Triggers = struct
     let rec aux ((vterm, vtype) as vars) ((strs, lets) as acc) e =
       let strs, lets =
         if e.pure && (has_bvar e.vars vterm || has_tyvar e.vty vtype) &&
-           not (is_prefix e.f)
+           not (is_prefix e.top_sy)
         then
           let vrs = free_vars_as_set e in
           STRS.add (e, vrs, e.vty) strs, lets
@@ -2200,7 +2239,7 @@ module Triggers = struct
      does not build the literal view. *)
   let is_literal e =
     e.ty == Ty.Tbool &&
-    match e.f with Sy.Form _ -> false | _ -> true
+    match e.top_sy with Sy.Form _ -> false | _ -> true
 
   let trs_in_scope full_trs f =
     STRS.filter
@@ -2219,24 +2258,26 @@ module Triggers = struct
     let rec max_terms acc (e : t) =
       let open Sy in
       match e with
-      | { f = Sy.Form (
+      | { top_sy = Sy.Form (
           Sy.F_Unit _ | Sy.F_Clause _ | Sy.F_Xor | Sy.F_Iff); _ } ->
         List.fold_left max_terms acc e.xs
 
-      | { f = Sy.Form (Sy.F_Lemma | Sy.F_Skolem) | Sy.Let; _ } -> raise Exit
-      | { f; _ } when is_infix f -> raise Exit
-      (*| {f = Op _} -> raise Exit*)
-      | { f = Op _; _ } ->
+      | { top_sy = Sy.Form (Sy.F_Lemma | Sy.F_Skolem) | Sy.Let; _ } ->
+        raise Exit
+      | { top_sy; _ } when is_infix top_sy -> raise Exit
+      (*| { top_sy = Op _} -> raise Exit*)
+      | { top_sy = Op _; _ } ->
         if eq exclude e then acc else e :: acc
 
-      | { f = Name (_, _); _ } ->
+      | { top_sy = Name (_, _); _ } ->
         if eq exclude e then acc else e :: acc
 
-      | { f = ( True | False | Void | Int _ | Real _
-              | Bitv _ | In (_, _) | MapsTo _ ); _ } -> acc
-      | { f = Var _; _ } -> raise Exit
-      | { f = Lit L_neg_pred; _ } -> List.fold_left max_terms acc e.xs
-      | { f = Lit _; _ } -> (*List.fold_left max_terms acc e.xs*)raise Exit
+      | { top_sy = ( True | False | Void | Int _ | Real _
+                   | Bitv _ | In (_, _) | MapsTo _ ); _ } -> acc
+      | { top_sy = Var _; _ } -> raise Exit
+      | { top_sy = Lit L_neg_pred; _ } -> List.fold_left max_terms acc e.xs
+      | { top_sy = Lit _; _ } ->
+        (*List.fold_left max_terms acc e.xs*)raise Exit
     in
     try max_terms [] f with Exit -> []
 
@@ -2286,7 +2327,8 @@ module Triggers = struct
       | Dtheory, _ -> assert false
       | (Dpredicate e | Dfunction e), _ ->
         let defn = match f with
-          | { f = (Sy.Form Sy.F_Iff | Sy.Lit Sy.L_eq) ; xs = [e1; e2]; _ } ->
+          | { top_sy = (Sy.Form Sy.F_Iff | Sy.Lit Sy.L_eq);
+              xs = [e1; e2]; _ } ->
             if equal e e1 then e2 else if equal e e2 then e1 else f
           | _ -> f
         in
@@ -2294,7 +2336,8 @@ module Triggers = struct
         let tt = List.fast_sort (fun a b -> depth b - depth a) tt in
         filter_good_triggers (vterm, vtype) @@ triggers_of_list [[e]; tt]
 
-      | _, { f = (Sy.Form Sy.F_Iff) ; xs = [e1; e2]; _ } when is_literal e1 ->
+      | _, { top_sy = (Sy.Form Sy.F_Iff) ; xs = [e1; e2]; _ }
+        when is_literal e1 ->
         let f_trs1, lets = potential_triggers (vterm, vtype) e1 in
         let f_trs1 = expand_lets f_trs1 lets in
         let trs1 = trs_in_scope f_trs1 e1 in

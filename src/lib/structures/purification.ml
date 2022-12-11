@@ -10,10 +10,10 @@ let add_let sy e (lets: (E.t * int) Sy.Map.t) =
   incr lets_counter;
   Sy.Map.add sy (e, !lets_counter) lets
 
-let rec purify_term (t: E.t) lets =
+let rec purify_term ({ top_sy; _ } as t : E.t) lets =
   if t.pure then t, lets
   else
-    match t.f, t.bind with
+    match top_sy, t.bind with
     | Sy.Let, B_let { let_v; let_e; in_e; _ } ->
       (* let_e is purified when processing the lets map *)
       let in_e , lets = purify_term in_e  lets in
@@ -25,7 +25,7 @@ let rec purify_term (t: E.t) lets =
 
     | _ -> (* detect ITEs *)
       match t.xs with
-      | [_;_;_] when Sy.is_ite t.f ->
+      | [_;_;_] when Sy.is_ite top_sy ->
         let fresh_sy = Sy.fresh ~is_var:true "Pur-Ite" in
         E.mk_term fresh_sy [] t.ty , add_let fresh_sy t lets
 
@@ -36,7 +36,7 @@ let rec purify_term (t: E.t) lets =
               t' :: acc, lets'
             ) ([], lets) (List.rev t.xs)
         in
-        E.mk_term t.f xs t.ty, lets
+        E.mk_term top_sy xs t.ty, lets
 
 and purify_generic mk l =
   let l, lets =
@@ -81,11 +81,11 @@ and purify_literal (e: E.t) =
     | Builtin (neg,prd,l) -> purify_builtin neg prd l
     | Pred (p, is_neg) -> purify_predicate p is_neg
 
-and purify_form (e: E.t) =
+and purify_form ({ top_sy; _ } as e : E.t) =
   assert (e.ty == Ty.Tbool);
   if E.is_pure e then e (* non negated predicates *)
   else
-    match e.f with
+    match top_sy with
     | Sy.True | Sy.False | Sy.Var _ | Sy.In _ -> e
     | Sy.Name _ -> (* non negated predicates with impure parts *)
       let e, lets = purify_term e Sy.Map.empty in
@@ -124,7 +124,7 @@ and purify_form (e: E.t) =
               | _ -> purify_term i lets
           in
           if i == i' && fa == fa' then e
-          else mk_lifted (E.mk_term e.f [fa'; i'] e.ty) lets
+          else mk_lifted (E.mk_term top_sy [fa'; i'] e.ty) lets
         | _ -> failwith "unexpected expression in purify_form"
       end
 
@@ -181,13 +181,13 @@ and mk_lifted e lets =
        mk_lifted (E.mk_let let_v let_e acc) lets
     )e ord_lets
 
-and purify_non_toplevel_ite e lets =
-  match e.f, e.xs with
-  | _, [c; th; el] when Sy.is_ite e.f ->
+and purify_non_toplevel_ite ({ top_sy; _ } as e : E.t) lets =
+  match top_sy, e.xs with
+  | _, [c; th; el] when Sy.is_ite top_sy ->
     let c = purify_form c in
     let th, lets = purify_non_toplevel_ite th lets in
     let el, lets = purify_non_toplevel_ite el lets in
-    E.mk_term e.f [c; th; el] e.ty, lets
+    E.mk_term top_sy [c; th; el] e.ty, lets
 
   | (Sy.Form _ | Sy.Lit _), _ -> purify_form e, lets
   | _ -> purify_term e lets

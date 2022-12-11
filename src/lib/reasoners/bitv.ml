@@ -218,18 +218,18 @@ module Shostak(X : ALIEN) = struct
       bitv_to_icomp (List.hd res) (List.tl res)
 
     let make t =
-      let rec make_rec t' ctx = match t' with
-        | { E.f = Sy.Bitv s; _ } -> string_to_bitv s, ctx
-        | { E.f = Sy.Op Sy.Concat ;
-            xs = [t1;t2] ; ty = Ty.Tbitv n; _ } ->
+      let rec make_rec (t' : E.t) ctx = match t' with
+        | { top_sy = Sy.Bitv s; _ } -> string_to_bitv s, ctx
+        | { top_sy = Sy.Op Sy.Concat ;
+            xs = [t1; t2] ; ty = Ty.Tbitv n; _ } ->
           let r1, ctx = make_rec t1 ctx in
           let r2, ctx = make_rec t2 ctx in
           { bv = I_Comp (r1, r2) ; sz = n }, ctx
-        | { E.f = Sy.Op Sy.Extract;
-            xs = [t1;ti;tj] ; ty = Ty.Tbitv _; _ } ->
+        | { top_sy = Sy.Op Sy.Extract;
+            xs = [t1; ti; tj] ; ty = Ty.Tbitv _; _ } ->
           begin
             match ti, tj with
-            | { E.f = Sy.Int i; _ } , { E.f = Sy.Int j; _ } ->
+            | { top_sy = Sy.Int i; _ } , { top_sy = Sy.Int j; _ } ->
               let i = int_of_string (Hstring.view i) in
               let j = int_of_string (Hstring.view j) in
               let r1, ctx = make_rec t1 ctx in

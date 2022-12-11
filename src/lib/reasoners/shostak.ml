@@ -270,17 +270,17 @@ struct
       | Ac t   -> if equal p r then v else AC.subst p v t
       | Term _ -> if equal p r then v else r
 
-  let make ({Expr.f = sb; ty; _} as t) =
+  let make ({ top_sy; ty; _ } as t : Expr.t) =
     let not_restricted = not @@ Options.get_restricted () in
     match
-      X1.is_mine_symb sb ty,
-      not_restricted && X2.is_mine_symb sb ty,
-      not_restricted && X3.is_mine_symb sb ty,
-      not_restricted && X4.is_mine_symb sb ty,
-      not_restricted && X5.is_mine_symb sb ty,
-      not_restricted && X6.is_mine_symb sb ty,
-      not_restricted && X7.is_mine_symb sb ty,
-      AC.is_mine_symb sb ty
+      X1.is_mine_symb top_sy ty,
+      not_restricted && X2.is_mine_symb top_sy ty,
+      not_restricted && X3.is_mine_symb top_sy ty,
+      not_restricted && X4.is_mine_symb top_sy ty,
+      not_restricted && X5.is_mine_symb top_sy ty,
+      not_restricted && X6.is_mine_symb top_sy ty,
+      not_restricted && X7.is_mine_symb top_sy ty,
+      AC.is_mine_symb top_sy ty
     with
     | true  , false , false , false, false, false, false, false -> X1.make t
     | false , true  , false , false, false, false, false, false -> X2.make t

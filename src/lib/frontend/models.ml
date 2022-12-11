@@ -30,8 +30,8 @@ module Pp_smtlib_term = struct
   let to_string_type t =
     asprintf "%a" Ty.print t
 
-  let rec print fmt ({E.f;xs;ty; _} as t) =
-    match f, xs with
+  let rec print fmt ({ top_sy; xs; ty; _ } as t : E.t) =
+    match top_sy, xs with
     | Sy.Lit lit, xs ->
       begin
         match lit, xs with
@@ -149,7 +149,7 @@ module Pp_smtlib_term = struct
     | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||
                               op == Sy.Max_real || op == Sy.Max_int ||
                               op == Sy.Min_real || op == Sy.Min_int ->
-      fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
+      fprintf fmt "%a(%a,%a)" Sy.print top_sy print e1 print e2
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
     | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
@@ -157,9 +157,9 @@ module Pp_smtlib_term = struct
 
     | Sy.Op _, [e1; e2] ->
       if get_output_smtlib () then
-        fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
+        fprintf fmt "(%a %a %a)" Sy.print top_sy print e1 print e2
       else
-        fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
+        fprintf fmt "(%a %a %a)" print e1 Sy.print top_sy print e2
 
     | Sy.Op Sy.Destruct (hs, grded), [e] ->
       fprintf fmt "%a#%s%a"
@@ -190,13 +190,13 @@ module Pp_smtlib_term = struct
       end
 
     | _, [] ->
-      fprintf fmt "%a" Sy.print f
+      fprintf fmt "%a" Sy.print top_sy
 
     | _, _ ->
       if get_output_smtlib () then
-        fprintf fmt "(%a %a)" Sy.print f print_list xs
+        fprintf fmt "(%a %a)" Sy.print top_sy print_list xs
       else
-        fprintf fmt "%a(%a)" Sy.print f print_list xs
+        fprintf fmt "%a(%a)" Sy.print top_sy print_list xs
 
   and print_list_sep sep fmt = function
     | [] -> ()

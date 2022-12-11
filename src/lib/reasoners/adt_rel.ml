@@ -326,11 +326,11 @@ let add_guarded_destr env uf t hs e t_ty =
 
 
 [@@ocaml.ppwarning "working with X.term_extract r would be sufficient ?"]
-let add_aux env (uf: uf) (r: r) ({E.f = sy; xs; ty; _} as t) =
+let add_aux env (uf : uf) (r : r) ({ top_sy; xs; ty; _ } as t : E.t) =
   if Options.get_disable_adts () then env
   else
-    let env = add_adt env uf t r sy ty in
-    match sy, xs with
+    let env = add_adt env uf t r top_sy ty in
+    match top_sy, xs with
     | Sy.Op Sy.Destruct (hs, true), [e] -> (* guarded *)
       if Options.get_debug_adt () then
         Printer.print_dbg

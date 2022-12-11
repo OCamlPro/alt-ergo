@@ -141,7 +141,7 @@ module Shostak (X : ALIEN) = struct
 
     | _ -> false
 
-  let make ({E.f; xs; ty; _} as t) =
+  let make ({ top_sy; xs; ty; _ } as t : E.t) =
     assert (not @@ Options.get_disable_adts ());
     if Options.get_debug_adt () then
       Printer.print_dbg
@@ -155,7 +155,7 @@ module Shostak (X : ALIEN) = struct
         )([], []) xs
     in
     let xs = List.rev sx in
-    match f, xs, ty with
+    match top_sy, xs, ty with
     | Sy.Op Sy.Constr hs, _, Ty.Tadt {constr; args} ->
       let cases =
         match Ty.type_body constr args with
