@@ -167,7 +167,9 @@ let deduce_is_constr uf r h eqs env ex =
         let eqs =
           if seen_tester r h env then eqs
           else
-            let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr h) [t] in
+            let is_c =
+              E.mk_builtin ~is_pos:true ~builtin:(Sy.IsConstr h) ~args:[t]
+            in
             if Options.get_debug_adt () then
               Printer.print_dbg
                 ~module_name:"Adt_rel"
@@ -193,10 +195,10 @@ let deduce_is_constr uf r h eqs env ex =
                 ) cases
               with Not_found -> assert false
             in
-            let args = List.map (fun (_, ty) -> E.fresh_name ty) destrs in
-            let cons = E.mk_term (Sy.constr (Hs.view h)) args ty in
+            let args = List.map (fun (_, ty) -> E.fresh_name ~ty) destrs in
+            let cons = E.mk_term ~sy:(Sy.constr (Hs.view h)) ~args ~ty in
             let env = {env with new_terms = SE.add cons env.new_terms} in
-            let eq = E.mk_eq t cons ~iff:false in
+            let eq = E.mk_eq t cons ~use_equiv:false in
             if Options.get_debug_adt () then
               Printer.print_dbg
                 ~module_name:"Adt_rel"
@@ -296,13 +298,15 @@ let add_guarded_destr env uf t hs e t_ty =
       "new (guarded) Destr: %a@ " E.print t;
   let env = { env with seen_destr = SE.add t env.seen_destr } in
   let {Ty.constr = c; _} = constr_of_destr (E.type_info e) hs in
-  let access = E.mk_term (Sy.destruct (Hs.view hs) ~guarded:false) [e] t_ty in
+  let access =
+    E.mk_term ~sy:(Sy.destruct (Hs.view hs) ~guarded:false) ~args:[e] ~ty:t_ty
+  in
   (* XXX : Never add non-guarded access to list of new terms !
      This may/will introduce bugs when instantiating
      let env = {env with new_terms = SE.add access env.new_terms} in
   *)
-  let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr c) [e] in
-  let eq = E.mk_eq access t ~iff:false in
+  let is_c = E.mk_builtin ~is_pos:true ~builtin:(Sy.IsConstr c) ~args:[e] in
+  let eq = E.mk_eq access t ~use_equiv:false in
   if Options.get_debug_adt () then
     Printer.print_dbg ~header:false
       "associated with constr %a@,%a => %a"

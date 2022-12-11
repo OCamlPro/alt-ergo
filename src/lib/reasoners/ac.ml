@@ -165,17 +165,17 @@ module Make (X : Sig.X) = struct
         match t with
         | { top_sy = Sy.Name (hs, Sy.Ac); args; ty; _ } ->
           let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
-          let aro_t = Expr.mk_term aro_sy args ty in
-          let eq = Expr.mk_eq ~iff:false aro_t t in
+          let aro_t = Expr.mk_term ~sy:aro_sy ~args ~ty in
+          let eq = Expr.mk_eq ~use_equiv:false aro_t t in
           X.term_embed aro_t, eq::acc
         | { top_sy = Sy.Op Sy.Mult; args; ty; _ } ->
           let aro_sy = Sy.name "@*" in
-          let aro_t = Expr.mk_term aro_sy args ty in
-          let eq = Expr.mk_eq ~iff:false aro_t t in
+          let aro_t = Expr.mk_term ~sy:aro_sy ~args ~ty in
+          let eq = Expr.mk_eq ~use_equiv:false aro_t t in
           X.term_embed aro_t, eq::acc
         | { ty; _ } ->
-          let k = Expr.fresh_name ty in
-          let eq = Expr.mk_eq ~iff:false k t in
+          let k = Expr.fresh_name ~ty in
+          let eq = Expr.mk_eq ~use_equiv:false k t in
           X.term_embed k, eq::acc
       end
 

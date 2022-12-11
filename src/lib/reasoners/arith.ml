@@ -138,27 +138,27 @@ module Shostak
      c4. t2 <> 0 (already checked) *)
   let mk_modulo md t1 t2 p2 ctx =
     let zero = E.int "0" in
-    let c1 = E.mk_builtin ~is_pos:true Symbols.LE [zero; md] in
+    let c1 = E.mk_builtin ~is_pos:true ~builtin:Symbols.LE ~args:[zero; md] in
     let c2 =
       match P.is_const p2 with
       | Some n2 ->
         let an2 = Q.abs n2 in
         assert (Q.is_int an2);
         let t2 = E.int (Q.to_string an2) in
-        E.mk_builtin ~is_pos:true Symbols.LT [md; t2]
+        E.mk_builtin ~is_pos:true ~builtin:Symbols.LT ~args:[md; t2]
       | None ->
-        E.mk_builtin ~is_pos:true Symbols.LT [md; t2]
+        E.mk_builtin ~is_pos:true ~builtin:Symbols.LT ~args:[md; t2]
     in
-    let k  = E.fresh_name Ty.Tint in
-    let t3 = E.mk_term (Sy.Op Sy.Mult) [t2;k] Ty.Tint in
-    let t3 = E.mk_term (Sy.Op Sy.Plus) [t3;md] Ty.Tint in
-    let c3 = E.mk_eq ~iff:false t1 t3 in
+    let k  = E.fresh_name ~ty:Ty.Tint in
+    let t3 = E.mk_term ~sy:(Sy.Op Sy.Mult) ~args:[t2; k] ~ty:Ty.Tint in
+    let t3 = E.mk_term ~sy:(Sy.Op Sy.Plus) ~args:[t3; md] ~ty:Ty.Tint in
+    let c3 = E.mk_eq ~use_equiv:false t1 t3 in
     c3 :: c2 :: c1 :: ctx
 
   let mk_euc_division p p2 t1 t2 ctx =
     match P.to_list p2 with
     | [], coef_p2 ->
-      let md = E.mk_term (Sy.Op Sy.Modulo) [t1;t2] Ty.Tint in
+      let md = E.mk_term ~sy:(Sy.Op Sy.Modulo) ~args:[t1; t2] ~ty:Ty.Tint in
       let r, ctx' = X.make md in
       let rp =
         P.mult_const (Q.div Q.one coef_p2) (embed r) in
@@ -233,7 +233,9 @@ module Shostak
       if Options.get_no_nla() && P.is_const p1 == None && P.is_const p2 == None
       then
         (* becomes uninterpreted *)
-        let tau = E.mk_term (Sy.name ~kind:Sy.Ac "@*") [t1; t2] ty in
+        let tau =
+          E.mk_term ~sy:(Sy.name ~kind:Sy.Ac "@*") ~args:[t1; t2] ~ty
+        in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
@@ -246,7 +248,7 @@ module Shostak
          (P.is_const p2 == None ||
           (ty == Ty.Tint && P.is_const p1 == None)) then
         (* becomes uninterpreted *)
-        let tau = E.mk_term (Sy.name "@/") [t1; t2] ty in
+        let tau = E.mk_term ~sy:(Sy.name "@/") ~args:[t1; t2] ~ty in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
@@ -274,14 +276,14 @@ module Shostak
          (P.is_const p1 == None || P.is_const p2 == None)
       then
         (* becomes uninterpreted *)
-        let tau = E.mk_term (Sy.name "@%") [t1; t2] ty in
+        let tau = E.mk_term ~sy:(Sy.name "@%") ~args:[t1; t2] ~ty in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
         let p3, ctx =
           try P.modulo p1 p2, ctx
           with e ->
-            let t = E.mk_term mod_symb [t1; t2] Ty.Tint in
+            let t = E.mk_term ~sy:mod_symb ~args:[t1; t2] ~ty:Ty.Tint in
             let ctx = match e with
               | Division_by_zero | Polynome.Maybe_zero -> ctx
               | Polynome.Not_a_num -> mk_modulo t t1 t2 p2 ctx
@@ -481,7 +483,7 @@ module Shostak
     List.fold_left
       (fun (l, sb) (b, y) ->
          if X.ac_extract y != None && X.str_cmp y x > 0 then
-           let k = X.term_embed (E.fresh_name Ty.Tint) in
+           let k = X.term_embed (E.fresh_name ~ty:Ty.Tint) in
            (b, k) :: l, (y, embed k)::sb
          else (b, y) :: l, sb)
       ([], []) l
@@ -535,7 +537,7 @@ module Shostak
     let m = Q.add a Q.one in
 
     (* 2. on introduit une variable fraiche *)
-    let sigma = X.term_embed (E.fresh_name Ty.Tint) in
+    let sigma = X.term_embed (E.fresh_name ~ty:Ty.Tint) in
 
     (* 3. l'application de la formule (5.63) nous donne la valeur du pivot x*)
     let mm_sigma = (Q.minus m, sigma) in

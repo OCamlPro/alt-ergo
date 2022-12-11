@@ -113,7 +113,7 @@ let extract_pending_deductions env =
   let l =
     ME2.fold
       (fun (s, t) ex acc ->
-         let a = E.mk_eq ~iff:false s t
+         let a = E.mk_eq ~use_equiv:false s t
                  [@ocaml.ppwarning "TODO: build IFF instead ?"]
          in
          if get_debug_ite () then

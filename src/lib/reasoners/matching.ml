@@ -316,7 +316,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     List.rev
       (List.rev_map
          (fun (hs, ty) ->
-            E.mk_term (Symbols.Op (Symbols.Access hs)) [t] ty) lbs)
+            E.mk_term ~sy:(Symbols.Op (Symbols.Access hs)) ~args:[t] ~ty) lbs)
 
   module SLE = (* sets of lists of terms *)
     Set.Make(struct
@@ -351,10 +351,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
       SLE.elements mtl
 
   let plus_of_minus t d ty =
-    [E.mk_term (Symbols.Op Symbols.Minus) [t; d] ty ; d]
+    [E.mk_term ~sy:(Symbols.Op Symbols.Minus) ~args:[t; d] ~ty; d]
 
   let minus_of_plus t d ty =
-    [E.mk_term (Symbols.Op Symbols.Plus)  [t; d] ty ; d]
+    [E.mk_term ~sy:(Symbols.Op Symbols.Plus) ~args:[t; d] ~ty; d]
 
   let linear_arithmetic_matching f_pat pats _ty_pat t =
     let ty = E.type_info t in

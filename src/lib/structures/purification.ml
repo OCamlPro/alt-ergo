@@ -20,14 +20,14 @@ let rec purify_term ({ top_sy; _ } as t : E.t) lets =
       in_e, add_let let_v let_e lets
 
     | (Sy.Lit _ | Sy.Form _), _ ->
-      let fresh_sy = Sy.fresh ~is_var:true "Pur-F" in
-      E.mk_term fresh_sy [] t.ty , add_let fresh_sy t lets
+      let sy = Sy.fresh ~is_var:true "Pur-F" in
+      E.mk_term ~sy ~args:[] ~ty:t.ty , add_let sy t lets
 
     | _ -> (* detect ITEs *)
       match t.args with
       | [_;_;_] when Sy.is_ite top_sy ->
-        let fresh_sy = Sy.fresh ~is_var:true "Pur-Ite" in
-        E.mk_term fresh_sy [] t.ty , add_let fresh_sy t lets
+        let sy = Sy.fresh ~is_var:true "Pur-Ite" in
+        E.mk_term ~sy ~args:[] ~ty:t.ty , add_let sy t lets
 
       | _ ->
         let xs, lets =
@@ -36,7 +36,7 @@ let rec purify_term ({ top_sy; _ } as t : E.t) lets =
               t' :: acc, lets'
             ) ([], lets) (List.rev t.args)
         in
-        E.mk_term top_sy xs t.ty, lets
+        E.mk_term ~sy:top_sy ~args:xs ~ty:t.ty, lets
 
 and purify_generic mk l =
   let l, lets =
@@ -52,15 +52,15 @@ and purify_eq l =
       match l with
       | [] | [_] ->
         failwith "unexpected expression in purify_eq"
-      | [a; b] -> E.mk_eq ~iff:true a b
+      | [a; b] -> E.mk_eq ~use_equiv:true a b
       | l -> E.mk_nary_eq l
     ) l
 
 and purify_distinct l =
-  purify_generic (fun l -> E.mk_distinct ~iff:true l) l
+  purify_generic (fun l -> E.mk_distinct ~use_equiv:true l) l
 
 and purify_builtin neg pred l =
-  purify_generic (fun l -> E.mk_builtin ~is_pos:neg pred l) l
+  purify_generic (fun l -> E.mk_builtin ~is_pos:neg ~builtin:pred ~args:l) l
 
 and purify_predicate p is_neg =
   purify_generic (fun l ->
@@ -92,7 +92,7 @@ and purify_form ({ top_sy; _ } as e : E.t) =
       mk_lifted e lets
     | Sy.Let -> (* let on forms *)
       begin match e.args, e.bind with
-        | [], B_let ({let_v; let_e; in_e; _}) ->
+        | [], B_let ({ let_v = var; let_e; in_e; _ }) ->
           if let_e.pure && in_e.pure then e
           else
             let let_e', lets = purify_non_toplevel_ite let_e Sy.Map.empty in
@@ -100,7 +100,7 @@ and purify_form ({ top_sy; _ } as e : E.t) =
             if let_e == let_e' && in_e == in_e' then e
             else
               mk_lifted
-                (E.mk_let let_v let_e in_e)
+                (E.mk_let ~var ~let_e ~in_e)
                 lets
         | _, (B_lemma _ | B_skolem _ | B_none | B_let _) ->
           failwith "unexpected expression in purify_form"
@@ -124,7 +124,7 @@ and purify_form ({ top_sy; _ } as e : E.t) =
               | _ -> purify_term i lets
           in
           if i == i' && fa == fa' then e
-          else mk_lifted (E.mk_term top_sy [fa'; i'] e.ty) lets
+          else mk_lifted (E.mk_term ~sy:top_sy ~args:[fa'; i'] ~ty:e.ty) lets
         | _ -> failwith "unexpected expression in purify_form"
       end
 
@@ -154,15 +154,15 @@ and purify_form ({ top_sy; _ } as e : E.t) =
           B_lemma {name; main; toplevel; user_trs; binders; loc; kind; _} ->
           let m = purify_form main in
           if m == main then e
-          else E.mk_forall ~name ~loc binders user_trs main ~toplevel
-              ~decl_kind:kind
+          else E.mk_forall ~name ~loc binders ~triggers:user_trs ~toplevel
+              ~decl_kind:kind main
         | Sy.F_Skolem, [],
           B_skolem {name; main; toplevel; user_trs; binders; loc; kind; _} ->
           let m = purify_form main in
           if m == main then e
           else
-            E.neg @@ E.mk_forall ~name ~loc binders user_trs (E.neg m) ~toplevel
-              ~decl_kind:kind
+            E.neg @@ E.mk_forall ~name ~loc binders ~triggers:user_trs
+              ~toplevel ~decl_kind:kind (E.neg m)
         | (Sy.F_Unit _ | Sy.F_Clause _ | Sy.F_Iff
           | Sy.F_Xor | Sy.F_Skolem | Sy.F_Lemma),
           _, _ ->
@@ -175,10 +175,10 @@ and mk_lifted e lets =
       (fun (_, (_,cpt1)) (_,(_,cpt2)) -> cpt1 - cpt2) (Sy.Map.bindings lets)
   in
   List.fold_left
-    (fun acc (let_v, (let_e, _cpt)) ->
+    (fun acc (var, (let_e, _cpt)) ->
        let let_e, lets = purify_non_toplevel_ite let_e Sy.Map.empty in
        assert (let_e.ty != Ty.Tbool || Sy.Map.is_empty lets);
-       mk_lifted (E.mk_let let_v let_e acc) lets
+       mk_lifted (E.mk_let ~var ~let_e ~in_e:acc) lets
     )e ord_lets
 
 and purify_non_toplevel_ite ({ top_sy; _ } as e : E.t) lets =
@@ -187,7 +187,7 @@ and purify_non_toplevel_ite ({ top_sy; _ } as e : E.t) lets =
     let c = purify_form c in
     let th, lets = purify_non_toplevel_ite th lets in
     let el, lets = purify_non_toplevel_ite el lets in
-    E.mk_term top_sy [c; th; el] e.ty, lets
+    E.mk_term ~sy:top_sy ~args:[c; th; el] ~ty:e.ty, lets
 
   | (Sy.Form _ | Sy.Lit _), _ -> purify_form e, lets
   | _ -> purify_term e lets

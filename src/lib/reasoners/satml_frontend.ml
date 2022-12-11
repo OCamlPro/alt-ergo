@@ -1021,7 +1021,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if get_unsat_core () then fails "unsat_core"
 
   let create_guard env =
-    let expr_guard = E.fresh_name Ty.Tbool in
+    let expr_guard = E.fresh_name ~ty:Ty.Tbool in
     let ff, axs, new_vars =
       FF.simplify env.ff_hcons_env expr_guard
         (fun f -> ME.find f env.abstr_of_axs) []

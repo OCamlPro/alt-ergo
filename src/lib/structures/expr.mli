@@ -84,13 +84,15 @@ and decl_kind =
   (** Declaration of function. *)
 (** Type of declaration kind. *)
 
-(** Type of binding. *)
 and bind_kind =
-  | B_none                  (** No binding. *)
+  | B_none
+  (** No binding. *)
+
   | B_lemma of quantified
   | B_skolem of quantified
   | B_let of letin
   (** Let binding. *)
+(** Type of binding. *)
 
 and quantified = private {
   name : string;
@@ -207,12 +209,12 @@ val form_view : t -> form_view
 
 val mk_binders : Set.t -> binders
 
-val mk_ite : t -> t -> t -> t
+val mk_ite : cond:t -> then_:t -> else_:t -> t
 (** [mk_ite cond th el] produces the expression [if cond then th else el].
     If the expression [th] and [el] are of type {!constructor:Ty.Tbool},
     the function produces the formula [mk_if cond th el] instead. *)
 
-val mk_let: Symbols.t -> t -> t -> t
+val mk_let: var:Symbols.t -> let_e:t -> in_e:t -> t
 (** [mk_let sy exp1 exp2] constructs the expression [let sy = exp1 in exp2].
     Obvious substitutions are inlined during the construction. *)
 
@@ -220,7 +222,7 @@ val mk_match: t -> (Typed.pattern * t) list -> t
 
 (** {2 For terms} *)
 
-val mk_term: Symbols.t -> t list -> Ty.t -> t
+val mk_term: sy:Symbols.t -> args:t list -> ty:Ty.t -> t
 (** [mk_term sy args ty] creates a term whose the top symbol is
     [sy], the arguments are [args] and its type witness is [ty]. *)
 
@@ -244,11 +246,11 @@ val bitv : string -> Ty.t -> t
 (** [bitv str] produces the bitvector literal corresponding to
     the string representaiton [str]. *)
 
-val fresh_name : Ty.t -> t
+val fresh_name : ty:Ty.t -> t
 
 (** {2 For literals} *)
 
-val mk_eq : iff:bool -> t -> t -> t
+val mk_eq : use_equiv:bool -> t -> t -> t
 (** [mk_eq iff tm1 tm2] produces an equivalent formula to
     the formula [tm1 = tm2]. *)
 
@@ -256,8 +258,8 @@ val mk_nary_eq : t list -> t
 (** [mk_nary_eq lst] produces an equivalent formula to
     the formula [tm1 = tm2 = ... = tmk] where [lst = [tm1; tm2; ...; tmk]]. *)
 
-val mk_distinct : iff:bool -> t list -> t
-val mk_builtin : is_pos:bool -> Symbols.builtin -> t list -> t
+val mk_distinct : use_equiv:bool -> t list -> t
+val mk_builtin : is_pos:bool -> builtin:Symbols.builtin -> args:t list -> t
 
 (** {2 For formulas} *)
 
@@ -402,22 +404,22 @@ val mk_forall:
   name:string ->
   loc:Loc.t ->
   binders -> (* quantified variables *)
-  trigger list -> (* triggers *)
-  t -> (* quantified formula *)
+  triggers:trigger list -> (* triggers *)
   toplevel:bool -> (* for future triggers computation in presence of vty *)
   decl_kind:decl_kind ->
+  t -> (* quantified formula *)
   t
 
 val mk_exists:
   name:string ->
   loc:Loc.t ->
   binders -> (* quantified variables *)
-  trigger list -> (* triggers *)
-  t -> (* quantified formula *)
+  triggers:trigger list -> (* triggers *)
   toplevel:bool -> (* for future triggers computation in presence of
                       vty, and to construct a toplevel forall that
                       cover vtys *)
   decl_kind:decl_kind ->
+  t -> (* quantified formula *)
   t
 
 val skolemize : quantified -> t

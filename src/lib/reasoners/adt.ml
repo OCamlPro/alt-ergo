@@ -325,9 +325,10 @@ module Shostak (X : ALIEN) = struct
           let {Ty.constr ; destrs} =
             constr_of_destr (X.type_info d_arg) d_name
           in
-          let args = List.map (fun (_, ty) -> E.fresh_name ty) destrs in
+          let args = List.map (fun (_, ty) -> E.fresh_name ~ty) destrs in
           let cons =
-            E.mk_term (Sy.constr (Hs.view constr)) args (X.type_info d_arg)
+            E.mk_term ~sy:(Sy.constr (Hs.view constr)) ~args
+              ~ty:(X.type_info d_arg)
           in
           if Options.get_debug_adt () then
             Printer.print_dbg ~flushed:false

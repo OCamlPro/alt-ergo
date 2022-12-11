@@ -702,7 +702,7 @@ module Main_Default : S = struct
         cs_pending_facts = [];
         terms = Expr.Set.empty }
     in
-    let a = E.mk_distinct ~iff:false [E.vrai; E.faux] in
+    let a = E.mk_distinct ~use_equiv:false [E.vrai; E.faux] in
     let t, _, _ = assume true [a, Ex.empty, 0, -1] t in
     t
 

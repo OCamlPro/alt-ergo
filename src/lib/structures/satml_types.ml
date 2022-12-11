@@ -841,7 +841,7 @@ module Flat_Formula : FLAT_FORMULA = struct
         vrai
       end
       else
-        let lit = E.fresh_name Ty.Tbool in
+        let lit = E.fresh_name ~ty:Ty.Tbool in
         let xlit, new_v = mk_lit hcons lit !new_vars in
         let at_lit, new_v = Atom.add_atom hcons.atoms lit new_v in
         new_vars := new_v;
@@ -908,7 +908,7 @@ module Flat_Formula : FLAT_FORMULA = struct
   let mk_new_proxy n =
     let hs = Hs.make ("PROXY__" ^ (string_of_int n)) in
     let sy = Symbols.Name(hs, Symbols.Other) in
-    E.mk_term sy [] Ty.Tbool
+    E.mk_term ~sy ~args:[] ~ty:Ty.Tbool
 
   let get_proxy_of f proxies_mp =
     try let p, _, _ = Util.MI.find f.tag proxies_mp in Some p
@@ -976,7 +976,7 @@ module Proxy_formula = struct
 
   let mk_new_proxy n =
     let sy = Symbols.name @@ "PROXY__" ^ (string_of_int n) in
-    E.mk_term sy [] Ty.Tbool
+    E.mk_term ~sy ~args:[] ~ty:Ty.Tbool
 
   let rec mk_cnf hcons f ((proxies, inv_proxies, new_vars, cnf) as accu) =
     match get_proxy_of f proxies with

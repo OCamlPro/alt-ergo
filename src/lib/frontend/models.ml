@@ -222,7 +222,7 @@ module SmtlibCounterExample = struct
       Ty.Tint -> "0"
     | Ty.Treal -> "0.0"
     | Ty.Tbool -> "false"
-    | _ -> asprintf "%a" pp_term (Expr.fresh_name ty)
+    | _ -> asprintf "%a" pp_term (Expr.fresh_name ~ty)
 
   let pp_dummy_value_of_type fmt ty =
     if not (Options.get_interpretation_use_underscore ()) then

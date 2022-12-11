@@ -607,7 +607,7 @@ struct
       | Term t, ty      -> (* case disable_adts() handled here *)
         if Expr.const_term t ||
            List.exists (fun (t,_) -> Expr.const_term t) eq then None
-        else Some (Expr.fresh_name ty, false) (* false <-> not a case-split *)
+        else Some (Expr.fresh_name ~ty, false) (* false <-> not a case-split *)
       | _               -> assert false
     in
     if Options.get_debug_interpretation () then

@@ -1678,7 +1678,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         );
     Util.loop
       ~f:(fun _n () acc ->
-          let new_guard = E.fresh_name Ty.Tbool in
+          let new_guard = E.fresh_name ~ty:Ty.Tbool in
           save_guard_and_refs acc new_guard;
           let guards = ME.add new_guard
               (mk_gf new_guard "" true true,Ex.empty)

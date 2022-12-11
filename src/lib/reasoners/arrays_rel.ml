@@ -235,11 +235,13 @@ let get_of_set are_eq are_dist gtype (env, acc) class_of =
          | true , [stab; si; sv] ->
            let xi, _ = X.make gi in
            let xj, _ = X.make si in
-           let get_stab  = E.mk_term (Sy.Op Sy.Get) [stab;gi] gty in
-           let p       = LR.mk_eq xi xj in
-           let p_ded   = E.mk_eq ~iff:false get sv in
-           let n     = LR.mk_distinct false [xi;xj] in
-           let n_ded = E.mk_eq ~iff:false get get_stab in
+           let get_stab =
+             E.mk_term ~sy:(Sy.Op Sy.Get) ~args:[stab; gi] ~ty:gty
+           in
+           let p = LR.mk_eq xi xj in
+           let p_ded = E.mk_eq ~use_equiv:false get sv in
+           let n = LR.mk_distinct false [xi;xj] in
+           let n_ded = E.mk_eq ~use_equiv:false get get_stab in
            let dep = match are_eq gtab set with
                Some (dep, _) -> dep | None -> assert false
            in
@@ -263,14 +265,14 @@ let get_from_set _are_eq _are_dist stype (env,acc) class_of =
 
   S.fold (fun { s = set; si = si; sv = sv; _ } (env,acc) ->
       let ty_si = E.type_info sv in
-      let get = E.mk_term (Sy.Op Sy.Get) [set; si] ty_si in
+      let get = E.mk_term ~sy:(Sy.Op Sy.Get) ~args:[set; si] ~ty:ty_si in
       if Tmap.splited get set env.seen then (env,acc)
       else
         let env = {env with
                    seen = Tmap.update get set env.seen;
                    new_terms = E.Set.add get env.new_terms }
         in
-        let p_ded = E.mk_eq ~iff:false get sv in
+        let p_ded = E.mk_eq ~use_equiv:false get sv in
         env, Conseq.add (p_ded, Ex.empty) acc
     ) sets (env,acc)
 
@@ -293,12 +295,16 @@ let get_and_set are_eq are_dist gtype (env,acc) class_of =
            let env = {env with seen = Tmap.update get set env.seen} in
            let xi, _ = X.make gi in
            let xj, _ = X.make si in
-           let get_stab  = E.mk_term (Sy.Op Sy.Get) [stab;gi] gty in
-           let gt_of_st  = E.mk_term (Sy.Op Sy.Get) [set;gi] gty in
-           let p       = LR.mk_eq xi xj in
-           let p_ded   = E.mk_eq ~iff:false gt_of_st sv in
-           let n     = LR.mk_distinct false [xi;xj] in
-           let n_ded = E.mk_eq ~iff:false gt_of_st get_stab in
+           let get_stab =
+             E.mk_term ~sy:(Sy.Op Sy.Get) ~args:[stab; gi] ~ty:gty
+           in
+           let gt_of_st =
+             E.mk_term ~sy:(Sy.Op Sy.Get) ~args:[set; gi] ~ty:gty
+           in
+           let p = LR.mk_eq xi xj in
+           let p_ded = E.mk_eq ~use_equiv:false gt_of_st sv in
+           let n = LR.mk_distinct false [xi; xj] in
+           let n_ded = E.mk_eq ~use_equiv:false gt_of_st get_stab in
            let dep = match are_eq gtab stab with
                Some (dep, _) -> dep | None -> assert false
            in
@@ -339,10 +345,10 @@ let extensionality accu la _class_of =
          begin
            match X.type_info r, X.term_extract r, X.term_extract s with
            | Ty.Tfarray {key_ty; val_ty}, (Some t1, _), (Some t2, _)  ->
-             let i = E.fresh_name key_ty in
-             let g1 = E.mk_term (Sy.Op Sy.Get) [t1; i] val_ty in
-             let g2 = E.mk_term (Sy.Op Sy.Get) [t2; i] val_ty in
-             let d = E.mk_distinct ~iff:false [g1; g2] in
+             let i = E.fresh_name ~ty:key_ty in
+             let g1 = E.mk_term ~sy:(Sy.Op Sy.Get) ~args:[t1; i] ~ty:val_ty in
+             let g2 = E.mk_term ~sy:(Sy.Op Sy.Get) ~args:[t2; i] ~ty:val_ty in
+             let d = E.mk_distinct ~use_equiv:false [g1; g2] in
              let acc = Conseq.add (d, dep) acc in
              let env =
                {env with new_terms =

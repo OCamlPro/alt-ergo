@@ -242,7 +242,8 @@ module Main : S = struct
   end
   (*BISECT-IGNORE-END*)
 
-  let one, _ = X.make (Expr.mk_term (Sy.name "@bottom") [] Ty.Tint)
+  let one, _ =
+    Expr.mk_term ~sy:(Sy.name "@bottom") ~args:[] ~ty:Ty.Tint |> X.make
 
   let concat_leaves uf l =
     let concat_rec acc t =
@@ -270,7 +271,7 @@ module Main : S = struct
           let ex =
             List.fold_left2 (explain_equality env) Ex.empty args1 args2
           in
-          let a = E.mk_eq ~iff:false t1 t2 in
+          let a = E.mk_eq ~use_equiv:false t1 t2 in
           Debug.congruent a ex;
           Q.push (Sig_rel.LTerm a, ex, Th_util.Other) facts.equas
         with Exit -> ()
@@ -349,7 +350,7 @@ module Main : S = struct
                if Ty.equal ty_x ty_y then
                  begin match Uf.are_distinct env.uf t1 t2 with
                    | Some (ex_r, _) ->
-                     let a = E.mk_distinct ~iff:false [x; y] in
+                     let a = E.mk_distinct ~use_equiv:false [x; y] in
                      Debug.contra_congruence a ex_r;
                      Q.push (Sig_rel.LTerm a, ex_r, Th_util.Other) facts.diseqs
                    | None -> assert false
