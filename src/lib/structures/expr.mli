@@ -43,8 +43,7 @@ type t = private {
   bind : bind_kind;
   (** Kind of binding. *)
 
-  (* TODO: Rename this field to id. *)
-  tag: int;
+  id : int;
   (** Unique identifiant used by the {!module:Hconsing} module. *)
 
   vars : (Ty.t * int) Symbols.Map.t;

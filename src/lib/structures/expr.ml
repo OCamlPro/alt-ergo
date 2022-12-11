@@ -37,7 +37,7 @@ type t = {
   args : t list;
   ty : Ty.t;
   bind : bind_kind;
-  tag : int;
+  id : int;
   vars : (Ty.t * int) SMap.t;
   vty : Ty.Svty.t;
   depth : int;
@@ -118,7 +118,7 @@ type form_view =
 (** Comparison and hashing functions *)
 
 (* We keep true and false as repr * ordering is influenced by
-   depth. Constants are smaller. Otherwise, we compare tag1 - tag2 so
+   depth. Constants are smaller. Otherwise, we compare id1 - id2 so
    that fresh vars will be smaller *)
 (* XXX Uf.term_repr sensitive to the way this function is coded *)
 let compare t1 t2 =
@@ -126,11 +126,11 @@ let compare t1 t2 =
   else
     let c = t1.depth - t2.depth in
     if c <> 0 then c
-    else t1.tag - t2.tag
+    else t1.id - t2.id
 
 let equal t1 t2 = t1 == t2
 
-let[@inline] hash t = t.tag
+let[@inline] hash t = t.id
 
 let compare_subst (s_t1, s_ty1) (s_t2, s_ty2) =
   let c = Ty.Subst.compare s_ty1 s_ty2 in
@@ -271,11 +271,11 @@ module H = struct
   let hash { top_sy; args; ty; bind; _ } =
     abs @@
     List.fold_left
-      (fun acc x-> acc * 23 + x.tag)
+      (fun acc x-> acc * 23 + x.id)
       (7 * Hashtbl.hash bind + 5 * Sy.hash top_sy + Ty.hash ty)
       args
 
-  let set_id tag x = {x with tag = tag}
+  let set_id id x = {x with id = id}
 
   let initial_size = 9001
 
@@ -869,7 +869,7 @@ let mk_term top_sy args ty =
       args;
       ty;
       depth;
-      tag= -42;
+      id= -42;
       vars;
       vty;
       nb_nodes;
@@ -887,7 +887,7 @@ let mk_term top_sy args ty =
         args = [pos];
         ty;
         depth;
-        tag= -42;
+        id= -42;
         vars;
         vty;
         nb_nodes;
@@ -911,7 +911,7 @@ let vrai =
         args = [];
         ty = Ty.Tbool;
         depth = -2; (*smallest depth*)
-        tag = -42;
+        id = -42;
         vars; vty;
         nb_nodes;
         neg = None;
@@ -924,7 +924,7 @@ let vrai =
         args = [];
         ty = Ty.Tbool;
         depth = -1; (*2nd smallest d*)
-        tag= -42;
+        id= -42;
         vars;
         vty;
         nb_nodes;
@@ -995,7 +995,7 @@ let mk_or f1 f2 is_impl =
         args = [f1; f2];
         ty = Ty.Tbool;
         depth;
-        tag = -42;
+        id = -42;
         vars; vty;
         nb_nodes;
         neg = None;
@@ -1010,7 +1010,7 @@ let mk_or f1 f2 is_impl =
           args = [neg f1; neg f2];
           ty = Ty.Tbool;
           depth;
-          tag = -42;
+          id = -42;
           vars;
           vty;
           nb_nodes;
@@ -1041,7 +1041,7 @@ let mk_iff f1 f2 =
         args = [f1; f2];
         ty = Ty.Tbool;
         depth;
-        tag= -42;
+        id= -42;
         vars;
         vty;
         nb_nodes;
@@ -1057,7 +1057,7 @@ let mk_iff f1 f2 =
           args = [f1; f2];
           ty = Ty.Tbool;
           depth;
-          tag = -42;
+          id = -42;
           vars;
           vty;
           nb_nodes;
@@ -1140,7 +1140,7 @@ let mk_forall_ter =
             args = [];
             ty =Ty.Tbool;
             depth;
-            tag = -42;
+            id = -42;
             vars;
             vty;
             nb_nodes;
@@ -1154,7 +1154,7 @@ let mk_forall_ter =
             args = [];
             ty = Ty.Tbool;
             depth;
-            tag = -42;
+            id = -42;
             vars;
             vty;
             nb_nodes;
@@ -1208,7 +1208,7 @@ let mk_positive_lit top_sy neg_s args =
       args;
       ty;
       depth;
-      tag = -42;
+      id = -42;
       vars;
       vty;
       nb_nodes;
@@ -1224,7 +1224,7 @@ let mk_positive_lit top_sy neg_s args =
         args;
         ty;
         depth;
-        tag = -42;
+        id = -42;
         vars;
         vty;
         nb_nodes;
@@ -1449,23 +1449,40 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
       apply_subst_aux (SMap.singleton let_v let_e, Ty.Subst.empty) in_e
     else
       let ty = type_info in_e in
-      let d = max let_e.depth in_e.depth in (* no + 1 ? *)
+      let depth = max let_e.depth in_e.depth in (* no + 1 ? *)
       let nb_nodes = let_e.nb_nodes + in_e.nb_nodes + 1 (* approx *) in
       (* do not include free vars in let_sko that have been simplified *)
       let vars = merge_vars let_e.vars (SMap.remove let_v in_e.vars) in
       let vty = Ty.Svty.union let_e.vty in_e.vty in
-      let pos =
-        HC.make { top_sy=Sy.Let; args=[]; ty;
-                  depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-                  bind = B_let x; pure = false}
+      let pos = HC.make {
+          top_sy = Sy.Let;
+          args = [];
+          ty;
+          depth;
+          id = -42;
+          vars;
+          vty;
+          nb_nodes;
+          neg = None;
+          bind = B_let x;
+          pure = false
+        }
       in
       if pos.neg != None || not x.is_bool then pos
       else
         let y = {x with in_e = neg in_e} in
-        let neg =
-          HC.make { top_sy=Sy.Let; args=[]; ty;
-                    depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
-                    bind = B_let y; pure = false}
+        let neg = HC.make {
+            top_sy = Sy.Let;
+            args = [];
+            ty;
+            depth;
+            id = -42;
+            vars;
+            vty;
+            nb_nodes;
+            neg = None;
+            bind = B_let y; pure = false
+          }
         in
         pos.neg <- Some neg;
         neg.neg <- Some pos;
@@ -1754,7 +1771,7 @@ let mk_let let_v let_e in_e =
   let let_e_ty = type_info let_e in
   let free_vars = let_e.vars in (* dep vars are only those appearing in let_e*)
   let free_v_as_terms =
-    SMap.fold (fun sy (ty ,_) acc -> (mk_term sy [] ty)::acc) free_vars []
+    SMap.fold (fun sy (ty ,_) acc -> (mk_term sy [] ty) :: acc) free_vars []
   in
   let let_sko = mk_term (Sy.fresh "_let") free_v_as_terms let_e_ty in
   let is_bool = type_info in_e == Ty.Tbool in
@@ -1904,9 +1921,7 @@ module Triggers = struct
     | Op (Plus | Minus | Mult | Div | Modulo) -> true
     | _ -> false
 
-  let rec score_term (t : t) =
-    let open Sy in
-    match t with
+  let rec score_term = function
     | { top_sy = (True | False | Void | Int _ | Real _ | Bitv _ | Var _); _ }
       -> 0
 
@@ -2232,7 +2247,7 @@ module Triggers = struct
            | [{ top_sy = Sy.Op Sy.Plus; _ }] -> false
            | [{ top_sy = Sy.Op Sy.Minus; _ }] -> false
            | _ -> true
-        )mono
+        ) mono
     in
     (* no triggers whose head is '+' or '-' if alternative triggers
        are computed *)
