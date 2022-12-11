@@ -28,15 +28,14 @@
 
 (** {1 Types} *)
 
-(** Built-in symbols. *)
 type builtin =
   (* Arithmetic *)
   | LE                    (** {b L}ess or {b e}qual symbol. *)
   | LT                    (** {b L}ess {b t}han symbol. *)
   (* ADT *)
   | IsConstr of Hstring.t (** ADT tester symbol. *)
+(** Built-in symbols. *)
 
-(** Type of symbol of operator. *)
 type operator =
   | Plus | Minus | Mult | Div | Modulo
   | Concat | Extract | Get | Set | Fixed | Float
@@ -48,16 +47,16 @@ type operator =
   | Constr of Hstring.t (* enums, adts *)
   | Destruct of Hstring.t * bool
   | Tite
+  (** Type of symbol of operator. *)
 
-(** Type of symbol of literal. *)
 type lit =
   | L_eq
   | L_built of builtin
   | L_neg_eq
   | L_neg_built of builtin
   | L_neg_pred
+  (** Type of symbol of literal. *)
 
-(** Type of symbol of formula. *)
 type form =
   | F_Unit of bool
   | F_Clause of bool
@@ -65,6 +64,7 @@ type form =
   | F_Xor             (** Symbol of exclusive disjunction. *)
   | F_Lemma
   | F_Skolem
+  (** Type of symbol of formula. *)
 
 type name_kind = Ac | Other
 

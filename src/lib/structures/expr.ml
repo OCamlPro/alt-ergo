@@ -838,15 +838,16 @@ let print_tagged_classes =
           Format.fprintf fmt "\n{ %a }" (print_list_sep " , ") cl) l
 
 
-(** smart constructors for terms *)
+(* smart constructors for terms *)
 
-let free_vars_non_form s l ty =
-  match s, l with
-  | Sy.Var _, [] -> SMap.singleton s (ty, 1)
+(*  *)
+let free_vars_non_form sy args ty =
+  match sy, args with
+  | Sy.Var _, [] -> SMap.singleton sy (ty, 1)
   | Sy.Var _, _ -> assert false
   | Sy.Form _, _ -> assert false (* not correct for quantified and Lets *)
   | _, [] -> SMap.empty
-  | _, e::r -> List.fold_left (fun s t -> merge_vars s t.vars) e.vars r
+  | _, e :: r -> List.fold_left (fun s t -> merge_vars s t.vars) e.vars r
 
 let free_type_vars_non_form l ty =
   List.fold_left (fun acc t -> Ty.Svty.union acc t.vty) (Ty.vty_of ty) l
@@ -855,7 +856,7 @@ let mk_term ~sy ~args ~ty =
   assert (match sy with Sy.Lit _ | Sy.Form _ -> false | _ -> true);
   let depth = match args with
     | [] ->
-      1 (*no args ? depth = 1 (ie. current app s, ie constant)*)
+      1 (*no args ? depth = 1 (ie. current app sy, ie constant)*)
     | _ ->
       (* if args, d is 1 + max_depth of args (equals at least to 1 *)
       1 + List.fold_left (fun z t -> max z t.depth) 1 args
@@ -980,7 +981,7 @@ let pred t = mk_term ~sy:(Sy.Op Sy.Minus) ~args:[t; int "1"] ~ty:Ty.Tint
 
 (* simple smart constructors for formulas *)
 (* TODO: use labeled argument *)
-let mk_or f1 f2 is_impl =
+let mk_or ?(is_imply = false) f1 f2 =
   if equal f1 (neg f2) then vrai
   else
   if equal f1 f2 then f1
@@ -988,13 +989,13 @@ let mk_or f1 f2 is_impl =
   else if equal f2 (faux) then f1
   else if (equal f1 (vrai)) || (equal f2 (vrai)) then vrai
   else
-    let f1, f2 = if is_impl || compare f1 f2 < 0 then f1, f2 else f2, f1 in
+    let f1, f2 = if is_imply || compare f1 f2 < 0 then f1, f2 else f2, f1 in
     let depth = (max f1.depth f2.depth) in (* the +1 causes regression *)
     let nb_nodes = f1.nb_nodes + f2.nb_nodes + 1 in
     let vars = merge_vars f1.vars f2.vars in
     let vty = Ty.Svty.union f1.vty f2.vty in
     let pos = HC.make {
-        top_sy = Sy.Form (Sy.F_Clause is_impl);
+        top_sy = Sy.Form (Sy.F_Clause is_imply);
         args = [f1; f2];
         ty = Ty.Tbool;
         depth;
@@ -1009,7 +1010,7 @@ let mk_or f1 f2 is_impl =
     if pos.neg != None then pos
     else
       let neg = HC.make {
-          top_sy = Sy.Form (Sy.F_Unit is_impl);
+          top_sy = Sy.Form (Sy.F_Unit is_imply);
           args = [neg f1; neg f2];
           ty = Ty.Tbool;
           depth;
@@ -1074,14 +1075,15 @@ let mk_iff f1 f2 =
       neg.neg <- Some pos;
       pos
 
-let mk_and f1 f2 is_impl = neg @@ mk_or (neg f1) (neg f2) is_impl
+let mk_and ?(is_imply = false) f1 f2 = neg @@ mk_or ~is_imply (neg f1) (neg f2)
 
-let mk_imp f1 f2 = mk_or (neg f1) f2 true
+let mk_imp f1 f2 = mk_or ~is_imply:true (neg f1) f2
 
 let mk_xor f1 f2 = neg @@ mk_iff f1 f2
 
 let mk_if cond f2 f3 =
-  mk_or (mk_and cond f2 true) (mk_and (neg cond) f3 true) false
+  mk_or (mk_and ~is_imply:true cond f2)
+    (mk_and ~is_imply:true (neg cond) f3)
 
 (** BUG: we should check that cond is of type bool and exp1 and exp2
     have the same type also. *)
@@ -1414,12 +1416,12 @@ let rec apply_subst_aux (s_t, (s_ty: Ty.Subst.t)) t =
         mk_builtin ~is_pos:false ~builtin ~args:args'
       | Sy.Form (Sy.F_Unit _), _ ->
         begin match args' with
-          | [u; v] -> mk_and u v false (*b*)
+          | [u; v] -> mk_and u v (*b*)
           | _ -> assert false
         end
       | Sy.Form (Sy.F_Clause b), _ ->
         begin match args' with
-          | [u; v] -> mk_or u v b
+          | [u; v] -> mk_or ~is_imply:b u v
           | _ -> assert false
         end
       | Sy.Form Sy.F_Iff, _ ->
@@ -1834,7 +1836,7 @@ let rec mk_ite_eq x c th el =
   else
     let e1 = mk_eq_aux x th in
     let e2 = mk_eq_aux x el in
-    mk_and (mk_imp c e1) (mk_imp (neg c) e2) false
+    mk_and (mk_imp c e1) (mk_imp (neg c) e2)
 
 and mk_eq_aux x e =
   match e.args with
@@ -1877,7 +1879,7 @@ let rec elim_let =
     else
       let subst = SMap.add let_v let_sko subst in
       let equiv = mk_let_equiv let_sko let_e in
-      let conjs = (fun f' -> mk_and equiv f' false) :: conjs in
+      let conjs = (fun f' -> mk_and equiv f') :: conjs in
       elim_let_rec subst in_e ~recursive ~conjs
 
 and elim_let_rec subst in_e ~recursive ~conjs =
@@ -1899,13 +1901,9 @@ let elim_let ~recursive letin =
 
 let elim_iff f1 f2 ~with_conj =
   if with_conj then
-    mk_and
-      (mk_imp f1 f2)
-      (mk_imp f2 f1) false
+    mk_and (mk_imp f1 f2) (mk_imp f2 f1)
   else
-    mk_or
-      (mk_and f1 f2 false)
-      (mk_and (neg f1) (neg f2) false) false
+    mk_or (mk_and f1 f2) (mk_and (neg f1) (neg f2))
 
 (* TODO: Move this module in a new file. *)
 module Triggers = struct

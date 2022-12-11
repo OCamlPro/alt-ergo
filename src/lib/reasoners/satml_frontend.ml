@@ -337,10 +337,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       List.fold_left
         (fun tmp f ->
            (* we cannot reduce like in DfsSAT *)
-           E.mk_or (E.neg f) tmp false
-        )gf.E.ff hyp
+           E.mk_or ~is_imply:false (E.neg f) tmp
+        ) gf.E.ff hyp
     in
-    ({gf with E.ff=clause}, dep) :: acc
+    ({ gf with E.ff = clause }, dep) :: acc
 
   let mk_theories_instances do_syntactic_matching _remove_clauses env acc =
     let t_match = Inst.matching_terms_info env.inst in
@@ -406,7 +406,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          | [{ Atom.lit; _ }] ->
            {gf with
             E.ff =
-              E.mk_or gf.E.ff (E.neg lit) false} :: acc
+              E.mk_or ~is_imply:false gf.E.ff (E.neg lit)} :: acc
          | _   -> assert false
       )acc l
 
@@ -464,7 +464,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         | E.Let _ | E.Iff _ | E.Xor _ -> assert false
       in
       (*XXX TODO: internal skolems*)
-      let f = E.mk_or lat ded false in
+      let f = E.mk_or ~is_imply:false lat ded in
       let nlat = E.neg lat in
       (* semantics: nlat ==> f *)
       {env with skolems = ME.add nlat (mk_gf f) env.skolems},

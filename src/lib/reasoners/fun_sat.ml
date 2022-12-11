@@ -676,7 +676,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let fl = List.fast_sort (fun (_, d1) (_,d2) -> d1 - d2) fl in
       let f =
         List.fold_left
-          (fun acc (f, _) -> E.mk_or f acc false)
+          (fun acc (f, _) -> E.mk_or ~is_imply:false f acc)
           ff0.E.ff fl
       in
       update_unit_facts env {ff0 with E.ff=f} dep

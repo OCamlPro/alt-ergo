@@ -134,14 +134,14 @@ and purify_form ({ top_sy; _ } as e : E.t) =
     | Sy.Lit _ -> purify_literal e
     | Sy.Form x ->
       begin match x, e.args, e.bind with
-        | Sy.F_Unit imp, [a;b], _ ->
+        | Sy.F_Unit is_imply, [a;b], _ ->
           let a' = purify_form a in
           let b' = purify_form b in
-          if a == a' && b == b' then e else E.mk_and a' b' imp
-        | Sy.F_Clause imp, [a;b], _ ->
+          if a == a' && b == b' then e else E.mk_and ~is_imply a' b'
+        | Sy.F_Clause is_imply, [a;b], _ ->
           let a' = purify_form a in
           let b' = purify_form b in
-          if a == a' && b == b' then e else E.mk_or a' b' imp
+          if a == a' && b == b' then e else E.mk_or ~is_imply a' b'
         | Sy.F_Iff, [a;b], _ ->
           let a' = purify_form a in
           let b' = purify_form b in

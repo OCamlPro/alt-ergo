@@ -35,10 +35,10 @@ type t = private {
   (** Top symbol. *)
 
   args: t list;
-  (** List of the arguments. *)
+  (** List of arguments. *)
 
   ty: Ty.t;
-  (** Type witness. *)
+  (** Type of the expression. *)
 
   bind : bind_kind;
   (** Kind of binding. *)
@@ -47,10 +47,10 @@ type t = private {
   (** Unique identifiant used by the {!module:Hconsing} module. *)
 
   vars : (Ty.t * int) Symbols.Map.t;
-  (** Correspondance between variables and their type witness and number of
-      occurences in the expression. *)
+  (** Multiset of the variables occured in the expression. *)
 
   vty : Ty.Svty.t;
+  (** Multiset of the type variables occured in the expression. *)
 
   depth: int;
   (** Depth of the expression. *)
@@ -62,7 +62,7 @@ type t = private {
   (** Flag of pureness. *)
 
   mutable neg : t option
-  (** The negative form of an expression whose the type witness is
+  (** The negative form of an expression whose the type is
       {!constructor:Ty.Tbool}. Otherwise, this field is equal to [None]. *)
 }
 (** Type of expression. *)
@@ -181,13 +181,13 @@ type form_view = private
   (** Literal formula. *)
 
   | Lemma of quantified
-  (** a lemma *)
+  (** A lemma. *)
 
   | Skolem of quantified
-  (** lazy skolemization *)
+  (** Lazy skolemization. *)
 
   | Let of letin
-  (** a binding of an expr *)
+  (** A let binding of an expr. *)
 (** View of form. *)
 
 (** {1 Data structures} *)
@@ -271,11 +271,11 @@ val vrai : t
 val faux : t
 (** The formula bottom. *)
 
-val mk_or : t -> t -> bool -> t
+val mk_or : ?is_imply:bool -> t -> t -> t
 (** [mk_or f1 f2] produces a formula equivalent to the {e disjunction}
     {m f1 \lor f2} of the formula [f1] and [f2]. *)
 
-val mk_and : t -> t -> bool -> t
+val mk_and : ?is_imply:bool -> t -> t -> t
 (** [mk_and f1 f2] produces a formula equivalent to the {e conjunction}
     {m f1 \land f2} of the formula [f1] and [f2]. *)
 

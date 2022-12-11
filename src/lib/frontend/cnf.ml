@@ -278,8 +278,8 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
       let ff1 = mk_form up_qv ~toplevel:false f1.c f1.annot in
       let ff2 = mk_form up_qv ~toplevel:false f2.c f2.annot in
       begin match op with
-        | OPand -> E.mk_and ff1 ff2 false
-        | OPor -> E.mk_or ff1 ff2 false
+        | OPand -> E.mk_and ~is_imply:false ff1 ff2
+        | OPor -> E.mk_or ~is_imply:false ff1 ff2
         | OPxor -> E.mk_xor ff1 ff2
         | _ -> assert false
       end
