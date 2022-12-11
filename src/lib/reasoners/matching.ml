@@ -193,7 +193,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let rec add_rec env t =
       if ME.mem t env.info then env
       else
-        let { top_sy; xs = xs; _ } : E.t = t in
+        let { top_sy; args; _ } : E.t = t in
         let env =
           let map_f =
             try SubstE.find top_sy env.fils with Not_found -> ME.empty in
@@ -215,7 +215,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
               info.term_from_terms
           in
           { env with
-            fils = SubstE.add top_sy (ME.add t xs map_f) env.fils;
+            fils = SubstE.add top_sy (ME.add t args map_f) env.fils;
             info =
               ME.add t
                 { age=g; lem_orig = from_lems; but=b;
@@ -223,7 +223,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
                 env.info
           }
         in
-        List.fold_left add_rec env xs
+        List.fold_left add_rec env args
     in
     if info.term_age > age_limite () then env else add_rec env t
 
@@ -376,7 +376,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       pat t =
     Options.exec_thread_yield ();
     Debug.match_term sg t pat;
-    let { top_sy = f_pat; xs = pats; ty = ty_pat; _ } : E.t = pat in
+    let { top_sy = f_pat; args = pats; ty = ty_pat; _ } : E.t = pat in
     match f_pat with
     |  Symbols.Var _ when Symbols.equal f_pat Symbols.underscore ->
       begin
@@ -409,8 +409,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
           let cl =
             List.fold_left
               (fun l t ->
-                 let { top_sy = f; xs = xs; ty = ty; _ } : E.t = t in
-                 if Symbols.compare f_pat f = 0 then xs::l
+                 let { top_sy = f; args; ty = ty; _ } : E.t = t in
+                 if Symbols.compare f_pat f = 0 then args::l
                  else
                    begin
                      match f_pat, ty with
@@ -450,7 +450,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     Steps.incr (Steps.Matching);
     Debug.match_one_pat sg pat0;
     let pat = E.apply_subst (sg.sbs, sg.sty) pat0 in
-    let { top_sy; xs = pats; ty; _ } : E.t = pat in
+    let { top_sy; args = pats; ty; _ } : E.t = pat in
     match top_sy with
     | Symbols.Var _ -> all_terms top_sy ty env tbox sg lsbt_acc
     | _ ->

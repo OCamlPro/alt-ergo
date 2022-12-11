@@ -159,10 +159,10 @@ module Shostak (X : ALIEN) = struct
     | Record (_, ty) | Access (_, _, ty) | Other (_, ty) -> ty
 
   let make t =
-    let rec make_rec ({ top_sy; xs; ty; _ } as t : E.t) ctx =
+    let rec make_rec ({ top_sy; args; ty; _ } as t : E.t) ctx =
       match top_sy, ty with
       | Symbols.Op (Symbols.Record), Ty.Trecord { Ty.lbs; _ } ->
-        assert (List.length xs = List.length lbs);
+        assert (List.length args = List.length lbs);
         let l, ctx =
           List.fold_right2
             (fun x (lb, _) (l, ctx) ->
@@ -172,12 +172,12 @@ module Shostak (X : ALIEN) = struct
                let c = E.mk_eq ~iff:false dlb x in
                (lb, r)::l, c::ctx
             )
-            xs lbs ([], ctx)
+            args lbs ([], ctx)
         in
         Record (l, ty), ctx
       | Symbols.Op (Symbols.Access a), _ ->
         begin
-          match xs with
+          match args with
           | [x] ->
             let r, ctx = make_rec x ctx in
             Access (a, r, ty), ctx

@@ -221,12 +221,12 @@ module Shostak(X : ALIEN) = struct
       let rec make_rec (t' : E.t) ctx = match t' with
         | { top_sy = Sy.Bitv s; _ } -> string_to_bitv s, ctx
         | { top_sy = Sy.Op Sy.Concat ;
-            xs = [t1; t2] ; ty = Ty.Tbitv n; _ } ->
+            args = [t1; t2] ; ty = Ty.Tbitv n; _ } ->
           let r1, ctx = make_rec t1 ctx in
           let r2, ctx = make_rec t2 ctx in
           { bv = I_Comp (r1, r2) ; sz = n }, ctx
         | { top_sy = Sy.Op Sy.Extract;
-            xs = [t1; ti; tj] ; ty = Ty.Tbitv _; _ } ->
+            args = [t1; ti; tj] ; ty = Ty.Tbitv _; _ } ->
           begin
             match ti, tj with
             | { top_sy = Sy.Int i; _ } , { top_sy = Sy.Int j; _ } ->

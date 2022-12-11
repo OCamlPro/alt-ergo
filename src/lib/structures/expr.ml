@@ -34,7 +34,7 @@ type binders = (Ty.t * int) SMap.t
 
 type t = {
   top_sy: Sy.t;
-  xs: t list;
+  args: t list;
   ty: Ty.t;
   bind: bind_kind;
   tag: int;
@@ -258,7 +258,7 @@ module H = struct
 
   let eq t1 t2 = try
       Sy.equal t1.top_sy t2.top_sy
-      && List.for_all2 (==) t1.xs t2.xs
+      && List.for_all2 (==) t1.args t2.args
       && Ty.equal t1.ty t2.ty
       &&
       Util.compare_algebraic t1.bind t2.bind
@@ -277,7 +277,7 @@ module H = struct
     List.fold_left
       (fun acc x-> acc * 23 + x.tag)
       (7 * Hashtbl.hash t.bind + 5 * Sy.hash t.top_sy + Ty.hash t.ty)
-      t.xs
+      t.args
 
   let set_id tag x = {x with tag = tag}
 
@@ -318,9 +318,9 @@ let print_binders =
 
 module SmtPrinter = struct
 
-  let rec print_formula fmt form xs bind =
+  let rec print_formula fmt form args bind =
     let open Format in
-    match form, xs, bind with
+    match form, args, bind with
     | Sy.F_Unit _, [f1; f2], _ ->
       fprintf fmt "@[(and %a %a)@]" print_silent f1 print_silent f2
 
@@ -349,9 +349,9 @@ module SmtPrinter = struct
 
     | _ -> assert false
 
-  and print_lit fmt lit xs =
+  and print_lit fmt lit args =
     let open Format in
-    match lit, xs with
+    match lit, args with
     | Sy.L_eq, a::l ->
       fprintf fmt "(= %a%a)"
         print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
@@ -391,10 +391,10 @@ module SmtPrinter = struct
 
   and print_silent fmt t =
     let open Format in
-    let { top_sy ; xs ; ty; bind; _ } = t in
-    match top_sy, xs with
+    let { top_sy ; args ; ty; bind; _ } = t in
+    match top_sy, args with
     (* Formulas *)
-    | Sy.Form form, xs -> print_formula fmt form xs bind
+    | Sy.Form form, args -> print_formula fmt form args bind
 
     | Sy.Let, [] ->
       let x = match bind with B_let x -> x | _ -> assert false in
@@ -406,7 +406,7 @@ module SmtPrinter = struct
         Sy.print x.let_v print x.let_e print_silent x.in_e
 
     (* Literals *)
-    | Sy.Lit lit, xs -> print_lit fmt lit xs
+    | Sy.Lit lit, args -> print_lit fmt lit args
 
     | Sy.Op Sy.Get, [e1; e2] ->
       if Options.get_output_smtlib () then
@@ -438,13 +438,13 @@ module SmtPrinter = struct
     | Sy.Op (Sy.Record), _ ->
       begin match ty with
         | Ty.Trecord { Ty.lbs = lbs; _ } ->
-          assert (List.length xs = List.length lbs);
+          assert (List.length args = List.length lbs);
           fprintf fmt "{";
           ignore (List.fold_left2 (fun first (field,_) e ->
               fprintf fmt "%s%s = %a"  (if first then "" else "; ")
                 (Hstring.view field) print e;
               false
-            ) true lbs xs);
+            ) true lbs args);
           fprintf fmt "}";
         | _ -> assert false
       end
@@ -476,7 +476,7 @@ module SmtPrinter = struct
 
     | _, _ ->
       Format.fprintf fmt "(%a %a)" Sy.print top_sy
-        (Util.print_list ~sep:"," ~pp:print) xs
+        (Util.print_list ~sep:"," ~pp:print) args
 
   and print_triggers fmt trs =
     List.iter (fun { content = l; _ } ->
@@ -495,9 +495,9 @@ end
 module AEPrinter = struct
 
   (* Same as SmtPrinter.print_formula *)
-  let rec print_formula fmt form xs bind =
+  let rec print_formula fmt form args bind =
     let open Format in
-    match form, xs, bind with
+    match form, args, bind with
     | Sy.F_Unit _, [f1; f2], _ ->
       fprintf fmt "@[(%a /\\@ %a)@]" print_silent f1 print_silent f2
 
@@ -526,9 +526,9 @@ module AEPrinter = struct
 
     | _ -> assert false
 
-  and print_lit fmt lit xs =
+  and print_lit fmt lit args =
     let open Format in
-    match lit, xs with
+    match lit, args with
     | Sy.L_eq, a::l ->
       fprintf fmt "(%a%a)"
         print a (fun fmt -> List.iter (fprintf fmt " = %a" print)) l
@@ -570,10 +570,10 @@ module AEPrinter = struct
   and print_silent fmt t =
     let open Format in
     (* FIXME: is necessary? *)
-    let { top_sy ; xs ; ty; bind; _ } = t in
-    match top_sy, xs with
+    let { top_sy ; args ; ty; bind; _ } = t in
+    match top_sy, args with
     (* Formulas *)
-    | Sy.Form form, xs -> print_formula fmt form xs bind
+    | Sy.Form form, args -> print_formula fmt form args bind
 
     | Sy.Let, [] ->
       let x = match bind with B_let x -> x | _ -> assert false in
@@ -585,7 +585,7 @@ module AEPrinter = struct
         Sy.print x.let_v print x.let_e print_silent x.in_e
 
     (* Literals *)
-    | Sy.Lit lit, xs -> print_lit fmt lit xs
+    | Sy.Lit lit, args -> print_lit fmt lit args
 
     | Sy.Op Sy.Get, [e1; e2] ->
       if Options.get_output_smtlib () then
@@ -617,13 +617,13 @@ module AEPrinter = struct
     | Sy.Op (Sy.Record), _ ->
       begin match ty with
         | Ty.Trecord { Ty.lbs = lbs; _ } ->
-          assert (List.length xs = List.length lbs);
+          assert (List.length args = List.length lbs);
           fprintf fmt "{";
           ignore (List.fold_left2 (fun first (field,_) e ->
               fprintf fmt "%s%s = %a"  (if first then "" else "; ")
                 (Hstring.view field) print e;
               false
-            ) true lbs xs);
+            ) true lbs args);
           fprintf fmt "}";
         | _ -> assert false
       end
@@ -659,7 +659,7 @@ module AEPrinter = struct
 
     | _, _ ->
       fprintf fmt "%a(%a)" Sy.print top_sy
-        (Util.print_list ~sep:"," ~pp:print) xs
+        (Util.print_list ~sep:"," ~pp:print) args
 
   and print_triggers fmt trs =
     List.iter (fun { content = l; _ } ->
@@ -692,7 +692,7 @@ let print_list fmt = print_list_sep "," fmt
 (** different views of an expression *)
 
 let lit_view t =
-  let { top_sy; xs; ty; _ } = t in
+  let { top_sy; args; ty; _ } = t in
   if ty != Ty.Tbool then
     Util.failwith "Calling lit_view on a non boolean expression %a"
       print t
@@ -701,7 +701,7 @@ let lit_view t =
     | Sy.Form _  ->
       Util.failwith "Calling lit_view on a formula %a" print t
     | Sy.Lit lit ->
-      begin match lit, xs with
+      begin match lit, args with
         | (Sy.L_eq | Sy.L_neg_eq), ([] | [_]) -> assert false
         | Sy.L_eq, [lhs; rhs] -> Eq {lhs; rhs}
         | Sy.L_eq, l -> Eql l
@@ -714,11 +714,11 @@ let lit_view t =
     | _ -> Pred(t, false) (* FIXME: This wildcase is dangereous! *)
 
 let form_view t =
-  let { top_sy; xs; bind; _ } = t in
+  let { top_sy; args; bind; _ } = t in
   if t.ty != Ty.Tbool then
     Util.failwith "Term %a is not a formula" print t
   else
-    match top_sy, xs, bind with
+    match top_sy, args, bind with
     | Sy.Form (Sy.F_Unit _), [a; b], _ -> Unit (a, b)
     | Sy.Form (Sy.F_Clause i), [a; b], _ -> Clause (a, b, i)
     | Sy.Form Sy.F_Iff, [a; b], _ -> Iff(a, b)
@@ -800,7 +800,7 @@ let is_real t = t.ty == Ty.Treal
 
 let is_fresh t =
   match t with
-  | { top_sy = Sy.Name (hs,_); xs = []; _ } ->
+  | { top_sy = Sy.Name (hs,_); args = []; _ } ->
     Hstring.is_fresh_string (Hstring.view hs)
   | _ -> false
 
@@ -877,7 +877,7 @@ let mk_term s l ty =
   let vty = free_type_vars_non_form l ty in
   let pure = List.for_all (fun e -> e.pure) l && not (Sy.is_ite s) in
   let pos =
-    HC.make { top_sy=s; xs=l; ty=ty; depth=d; tag= -42; vars; vty;
+    HC.make { top_sy=s; args=l; ty=ty; depth=d; tag= -42; vars; vty;
               nb_nodes; neg = None; bind = B_none; pure}
   in
   if ty != Ty.Tbool then pos
@@ -885,7 +885,7 @@ let mk_term s l ty =
   else
     let neg_s = Sy.Lit Sy.L_neg_pred in
     let neg =
-      HC.make { top_sy=neg_s; xs=[pos]; ty=ty; depth=d; tag= -42;
+      HC.make { top_sy=neg_s; args=[pos]; ty=ty; depth=d; tag= -42;
                 vars; vty; nb_nodes; neg = None; bind = B_none; pure = false}
     in
     assert (neg.neg == None);
@@ -900,7 +900,7 @@ let vrai =
     let vty = Ty.Svty.empty in
     let faux = HC.make {
         top_sy = Sy.False;
-        xs = [];
+        args = [];
         ty = Ty.Tbool;
         depth = -2; (*smallest depth*)
         tag = -42;
@@ -913,7 +913,7 @@ let vrai =
     in
     let vrai = HC.make {
         top_sy = Sy.True;
-        xs = [];
+        args = [];
         ty = Ty.Tbool;
         depth = -1; (*2nd smallest d*)
         tag= -42;
@@ -984,7 +984,7 @@ let mk_or f1 f2 is_impl =
     let vty = Ty.Svty.union f1.vty f2.vty in
     let pos = HC.make {
         top_sy = Sy.Form (Sy.F_Clause is_impl);
-        xs = [f1; f2];
+        args = [f1; f2];
         ty = Ty.Tbool;
         depth = d;
         tag = -42;
@@ -999,7 +999,7 @@ let mk_or f1 f2 is_impl =
     else
       let neg = HC.make {
           top_sy = Sy.Form (Sy.F_Unit is_impl);
-          xs = [neg f1; neg f2];
+          args = [neg f1; neg f2];
           ty = Ty.Tbool;
           depth = d;
           tag = -42;
@@ -1029,7 +1029,7 @@ let mk_iff f1 f2 =
     let vars = merge_vars f1.vars f2.vars in
     let vty = Ty.Svty.union f1.vty f2.vty in
     let pos =
-      HC.make { top_sy=Sy.Form Sy.F_Iff; xs=[f1; f2]; ty=Ty.Tbool;
+      HC.make { top_sy=Sy.Form Sy.F_Iff; args=[f1; f2]; ty=Ty.Tbool;
                 depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
                 bind = B_none; pure = false}
     in
@@ -1037,7 +1037,7 @@ let mk_iff f1 f2 =
     else
       let neg =
         HC.make
-          { top_sy=Sy.Form Sy.F_Xor; xs=[f1; f2]; ty=Ty.Tbool;
+          { top_sy=Sy.Form Sy.F_Xor; args=[f1; f2]; ty=Ty.Tbool;
             depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
             bind = B_none; pure = false}
       in
@@ -1070,7 +1070,7 @@ let[@inline always] const_term e =
   | Sy.Form _ | Sy.Lit _ | Sy.Let  -> false
   | True | False | Void | Name _ | Int _ | Real _ | Bitv _
   | Op _ | Var _ | In _ | MapsTo _ ->
-    let res = (e.xs == []) in
+    let res = (e.args == []) in
     assert (res == (depth e <= 1));
     res
 
@@ -1111,12 +1111,12 @@ let mk_forall_ter =
         in
         let sko = { new_q with main = neg f} in
         let pos =
-          HC.make { top_sy=Sy.Form Sy.F_Lemma; xs=[]; ty=Ty.Tbool;
+          HC.make { top_sy=Sy.Form Sy.F_Lemma; args=[]; ty=Ty.Tbool;
                     depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
                     bind = B_lemma new_q; pure = false}
         in
         let neg =
-          HC.make { top_sy=Sy.Form Sy.F_Skolem; xs=[]; ty=Ty.Tbool;
+          HC.make { top_sy=Sy.Form Sy.F_Skolem; args=[]; ty=Ty.Tbool;
                     depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
                     bind = B_skolem sko; pure = false}
         in
@@ -1161,14 +1161,14 @@ let mk_positive_lit s neg_s l =
   let vars = free_vars_non_form s l ty in
   let vty = free_type_vars_non_form l ty in
   let pos =
-    HC.make { top_sy=s; xs=l; ty=ty; depth=d; tag= -42; vars; vty;
+    HC.make { top_sy=s; args=l; ty=ty; depth=d; tag= -42; vars; vty;
               nb_nodes; neg = None;
               bind = B_none; pure = false}
   in
   if pos.neg != None then pos
   else
     let neg =
-      HC.make { top_sy=neg_s; xs=l; ty=ty; depth=d; tag= -42;
+      HC.make { top_sy=neg_s; args=l; ty=ty; depth=d; tag= -42;
                 vars; vty; nb_nodes; neg = None;
                 bind = B_none; pure = false}
     in
@@ -1265,20 +1265,20 @@ let no_capture_issue s_t binders =
 let rec apply_subst_aux (s_t, (s_ty: Ty.Subst.t)) t =
   if is_ground t || (SMap.is_empty s_t && Ty.Subst.is_empty s_ty) then t
   else
-    let { top_sy; xs; ty; vars; vty; bind; _ } = t in
+    let { top_sy; args; ty; vars; vty; bind; _ } = t in
     let s_t = SMap.filter (fun sy _ -> SMap.mem sy vars) s_t in
     let s_ty = Ty.Subst.filter (fun tvar _ -> Ty.Svty.mem tvar vty) s_ty in
     if SMap.is_empty s_t && Ty.Subst.is_empty s_ty then t
     else
       let s = s_t, s_ty in
-      let xs', same = Lists.apply (apply_subst_aux s) xs in
+      let args', same = Lists.apply (apply_subst_aux s) args in
       let ty' = Ty.Subst.apply s_ty ty in
-      (*invariant: we are sure that the subst will impact xs or ty
+      (*invariant: we are sure that the subst will impact args or ty
          (or inside a lemma/skolem or let) *)
-      assert (xs == [] || not same || not (Ty.equal ty ty'));
+      assert (args == [] || not same || not (Ty.equal ty ty'));
       match top_sy, bind with
       | Sy.Var _, _ ->
-        assert (xs == []);
+        assert (args == []);
         begin
           try
             let v = SMap.find top_sy s_t in
@@ -1287,7 +1287,7 @@ let rec apply_subst_aux (s_t, (s_ty: Ty.Subst.t)) t =
             mk_term top_sy [] ty'
         end
       | Sy.Form (Sy.F_Lemma | Sy.F_Skolem), (B_lemma q | B_skolem q) ->
-        assert (xs == []);
+        assert (args == []);
         let { main; user_trs = trs; binders; sko_v; sko_vty; _ } = q
         in
         (* TODO: implement case where variables capture happens *)
@@ -1323,7 +1323,7 @@ let rec apply_subst_aux (s_t, (s_ty: Ty.Subst.t)) t =
           | _ -> assert false
         end
       | Sy.Let, B_let {let_v; let_e; in_e ; let_sko; is_bool} ->
-        assert (xs == []);
+        assert (args == []);
         (* TODO: implement case where variables capture happens *)
         assert (no_capture_issue s_t (SMap.singleton let_v (let_e.ty, 0)));
         let let_e2 = apply_subst_aux s let_e in
@@ -1335,37 +1335,37 @@ let rec apply_subst_aux (s_t, (s_ty: Ty.Subst.t)) t =
         assert (let_e != let_e2 || in_e != in_e2);
         mk_let_aux {let_v; let_e=let_e2; in_e=in_e2; let_sko=let_sko2; is_bool}
       | Sy.Lit Sy.L_eq, _ ->
-        begin match xs' with
+        begin match args' with
           | [] | [_] -> assert false
           | [a; b] ->  mk_eq ~iff:true a b
-          | _ -> mk_nary_eq xs'
+          | _ -> mk_nary_eq args'
         end
-      | Sy.Lit Sy.L_neg_eq, _ -> mk_distinct ~iff:true xs'
+      | Sy.Lit Sy.L_neg_eq, _ -> mk_distinct ~iff:true args'
       | Sy.Lit Sy.L_neg_pred, _ ->
-        neg (match xs' with [e] -> e | _ -> assert false)
-      | Sy.Lit (Sy.L_built n), _ -> mk_builtin ~is_pos:true n xs'
-      | Sy.Lit (Sy.L_neg_built n), _ -> mk_builtin ~is_pos:false n xs'
+        neg (match args' with [e] -> e | _ -> assert false)
+      | Sy.Lit (Sy.L_built n), _ -> mk_builtin ~is_pos:true n args'
+      | Sy.Lit (Sy.L_neg_built n), _ -> mk_builtin ~is_pos:false n args'
       | Sy.Form (Sy.F_Unit _), _ ->
-        begin match xs' with
+        begin match args' with
           | [u; v] -> mk_and u v false (*b*)
           | _ -> assert false
         end
       | Sy.Form (Sy.F_Clause b), _ ->
-        begin match xs' with
+        begin match args' with
           | [u; v] -> mk_or u v b
           | _ -> assert false
         end
       | Sy.Form Sy.F_Iff, _ ->
-        begin match xs' with
+        begin match args' with
           | [u; v] -> mk_iff u v
           | _ -> assert false
         end
       | Sy.Form Sy.F_Xor, _ ->
-        begin match xs' with
+        begin match args' with
           | [u; v] -> mk_xor u v
           | _ -> assert false
         end
-      | _ -> mk_term top_sy xs' ty'
+      | _ -> mk_term top_sy args' ty'
 
 and apply_subst_trigger subst ({ content; guard; _ } as tr) =
   {tr with
@@ -1394,7 +1394,7 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
       let vars = merge_vars let_e.vars (SMap.remove let_v in_e.vars) in
       let vty = Ty.Svty.union let_e.vty in_e.vty in
       let pos =
-        HC.make { top_sy=Sy.Let; xs=[]; ty;
+        HC.make { top_sy=Sy.Let; args=[]; ty;
                   depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
                   bind = B_let x; pure = false}
       in
@@ -1402,7 +1402,7 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
       else
         let y = {x with in_e = neg in_e} in
         let neg =
-          HC.make { top_sy=Sy.Let; xs=[]; ty;
+          HC.make { top_sy=Sy.Let; args=[]; ty;
                     depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
                     bind = B_let y; pure = false}
         in
@@ -1520,7 +1520,7 @@ let max_pure_subterms =
     match e.bind with
     | B_lemma q | B_skolem q -> [q.main]
     | B_let { let_e; in_e; _ } -> [let_e; in_e]
-    | _ -> e.xs
+    | _ -> e.args
   in
   let rec aux acc e =
     if e.pure then TSet.add e acc
@@ -1531,14 +1531,14 @@ let max_pure_subterms =
 let rec sub_terms acc exp =
   match exp.top_sy with
   | Sy.Form _ | Sy.Lit _ -> acc
-  | _ -> List.fold_left sub_terms (TSet.add exp acc) exp.xs
+  | _ -> List.fold_left sub_terms (TSet.add exp acc) exp.args
 
 (* TODO: We should replace the assertion failure with
    a better error. *)
 (* Produce the list of maximal subterms of a literal. *)
 let args_of_lit e = match e.top_sy with
   | Sy.Form _ -> assert false
-  | Sy.Lit _ -> e.xs
+  | Sy.Lit _ -> e.args
   | _ when e.ty == Ty.Tbool -> [e]
   | _ -> assert false
 
@@ -1551,7 +1551,7 @@ let max_ground_terms_of_lit =
     | Sy.Form _ | Sy.Lit _ -> assert false
     | _ ->
       if is_ground e then TSet.add e acc
-      else List.fold_left max_sub_ground acc e.xs
+      else List.fold_left max_sub_ground acc e.args
   in
   fun e -> List.fold_left max_sub_ground TSet.empty (args_of_lit e)
 
@@ -1633,8 +1633,8 @@ let cand_is_more_general cand other =
   let rec matches cand other =
     match cand, other with
     | { top_sy = Sy.Var _; _ }, _ -> ()
-    | { top_sy = f1; xs=xs1; _}, { top_sy = f2; xs = xs2; _ }
-      when Sy.equal f1 f2 -> List.iter2 matches xs1 xs2
+    | { top_sy = f1; args=args1; _}, { top_sy = f2; args = args2; _ }
+      when Sy.equal f1 f2 -> List.iter2 matches args1 args2
     | _ -> raise Exit
   in
   try matches cand other; true
@@ -1750,12 +1750,12 @@ let rec mk_ite_eq x c th el =
     mk_and (mk_imp c e1) (mk_imp (neg c) e2) false
 
 and mk_eq_aux x e =
-  match e.xs with
+  match e.args with
   | [c;th;el] when Sy.is_ite e.top_sy -> mk_ite_eq x c th el
   | _ -> mk_eq ~iff:true  x e
 
 let mk_let_equiv let_sko let_e =
-  match let_e.xs with
+  match let_e.args with
   | [_;_;_] when Sy.is_ite let_e.top_sy -> mk_eq_aux let_sko let_e
   | _ ->
     if type_info let_e == Ty.Tbool then mk_iff let_sko let_e
@@ -1852,21 +1852,23 @@ module Triggers = struct
     (* arithmetic triggers are not suitable *)
     | { top_sy; _ } when is_infix top_sy || is_prefix top_sy -> 0
 
-    | { top_sy = Op (Get | Set) ; xs = [t1 ; t2]; _ } ->
+    | { top_sy = Op (Get | Set) ; args = [t1 ; t2]; _ } ->
       max (score_term t1) (score_term t2)
 
-    | { top_sy = Op (Access _ | Destruct _) ; xs = [t]; _ } -> 1 + score_term t
-    | { top_sy = Op Record; xs; _ } ->
+    | { top_sy = Op (Access _ | Destruct _) ; args = [t]; _ } ->
+      1 + score_term t
+
+    | { top_sy = Op Record; args; _ } ->
       1 + (List.fold_left
-             (fun acc t -> max (score_term t) acc) 0 xs)
-    | { top_sy = Op(Set | Extract) ; xs = [t1; t2; t3]; _ } ->
+             (fun acc t -> max (score_term t) acc) 0 args)
+    | { top_sy = Op(Set | Extract) ; args = [t1; t2; t3]; _ } ->
       max (score_term t1) (max (score_term t2) (score_term t3))
 
-    | { top_sy = (Op _ | Name _) ; xs = tl; _ } ->
+    | { top_sy = (Op _ | Name _) ; args = tl; _ } ->
       1 + (List.fold_left
              (fun acc t -> max (score_term t) acc) 0 tl)
 
-    | { top_sy = (Sy.MapsTo _ | Sy.In _); xs = [e]; _ } -> score_term e
+    | { top_sy = (Sy.MapsTo _ | Sy.In _); args = [e]; _ } -> score_term e
     | { top_sy = (Lit _ | Form _ | Sy.MapsTo _ | Sy.In _ | Sy.Let); _ } ->
       assert false
 
@@ -1886,7 +1888,7 @@ module Triggers = struct
       Sy.compare v1 v2
     | { top_sy = Var _; _}, _ -> -1
     | _, { top_sy = Var _; _} ->  1
-    | { top_sy = s; xs = l1; _}, { top_sy = s'; xs = l2; _}
+    | { top_sy = s; args = l1; _}, { top_sy = s'; args = l2; _}
       when is_infix s && is_infix s' ->
       let c = (score_term t1) - (score_term t2) in
       if c <> 0 then c
@@ -1897,7 +1899,7 @@ module Triggers = struct
     | { top_sy = s; _}, _ when is_infix s -> -1
     | _ , { top_sy = s'; _} when is_infix s' -> 1
 
-    | { top_sy = s1; xs =[t1]; _}, { top_sy = s2; xs = [t2]; _}
+    | { top_sy = s1; args =[t1]; _}, { top_sy = s2; args = [t2]; _}
       when is_prefix s1 && is_prefix s2 ->
       let c = Sy.compare s1 s2 in
       if c<>0 then c else cmp_trig_term t1 t2
@@ -1906,8 +1908,8 @@ module Triggers = struct
 
     | _, { top_sy = s2; _} when is_prefix s2 ->  1
 
-    | { top_sy = (Name _) as s1; xs=tl1; _},
-      { top_sy = (Name _) as s2; xs=tl2; _} ->
+    | { top_sy = (Name _) as s1; args=tl1; _},
+      { top_sy = (Name _) as s2; args=tl2; _} ->
       let l1 = List.map score_term tl1 in
       let l2 = List.map score_term tl2 in
       let l1 = List.fast_sort Stdlib.compare l1 in
@@ -1921,51 +1923,52 @@ module Triggers = struct
     | { top_sy = Name _; _}, _ -> -1
     | _, { top_sy = Name _; _} -> 1
 
-    | { top_sy = Op Get; xs = l1; _}, { top_sy = Op Get; xs = l2; _} ->
+    | { top_sy = Op Get; args = l1; _}, { top_sy = Op Get; args = l2; _} ->
       Util.cmp_lists l1 l2 cmp_trig_term
     | { top_sy = Op Get; _}, _ -> -1
     | _, { top_sy = Op Get; _} -> 1
 
-    | { top_sy = Op Set; xs = l1; _}, { top_sy = Op Set; xs = l2; _} ->
+    | { top_sy = Op Set; args = l1; _}, { top_sy = Op Set; args = l2; _} ->
       Util.cmp_lists l1 l2 cmp_trig_term
     | { top_sy = Op Set; _}, _ -> -1
     | _, { top_sy = Op Set; _} -> 1
 
-    | { top_sy = Op Extract; xs = l1; _ },
-      { top_sy = Op Extract; xs = l2; _} ->
+    | { top_sy = Op Extract; args = l1; _ },
+      { top_sy = Op Extract; args = l2; _} ->
       Util.cmp_lists l1 l2 cmp_trig_term
     | { top_sy = Op Extract; _}, _ -> -1
     | _, { top_sy = Op Extract; _} -> 1
 
-    | { top_sy = Op Concat; xs = l1; _}, { top_sy = Op Concat; xs = l2; _} ->
+    | { top_sy = Op Concat; args = l1; _},
+      { top_sy = Op Concat; args = l2; _} ->
       Util.cmp_lists l1 l2 cmp_trig_term
     | { top_sy = Op Concat; _}, _ -> -1
     | _, { top_sy = Op Concat; _} -> 1
 
-    | { top_sy = Op (Access a1) ; xs=[t1]; _},
-      { top_sy = Op (Access a2) ; xs=[t2]; _} ->
+    | { top_sy = Op (Access a1) ; args=[t1]; _},
+      { top_sy = Op (Access a2) ; args=[t2]; _} ->
       let c = Stdlib.compare a1 a2 in (* should be Hstring.compare *)
       if c<>0 then c else cmp_trig_term t1 t2
 
     | { top_sy = Op (Access _); _}, _ -> -1
     | _, { top_sy = Op (Access _); _} -> 1
 
-    | { top_sy = Op (Destruct (_, a1)) ; xs = [t1]; _},
-      { top_sy = Op (Destruct (_, a2)) ; xs = [t2]; _} ->
+    | { top_sy = Op (Destruct (_, a1)) ; args = [t1]; _},
+      { top_sy = Op (Destruct (_, a2)) ; args = [t2]; _} ->
       let c = Stdlib.compare a1 a2 in (* should be Hstring.compare *)
       if c<>0 then c else cmp_trig_term t1 t2
 
     | { top_sy = Op (Destruct _); _}, _ -> -1
     | _, { top_sy =Op (Destruct _); _} -> 1
 
-    | { top_sy = Op Record ; xs = lbs1; _},
-      { top_sy = Op Record ; xs = lbs2; _} ->
+    | { top_sy = Op Record ; args = lbs1; _},
+      { top_sy = Op Record ; args = lbs2; _} ->
       Util.cmp_lists lbs1 lbs2 cmp_trig_term
     | { top_sy = Op Record; _}, _ -> -1
     | _, { top_sy = Op Record; _} -> 1
 
-    | { top_sy = (Op _) as s1; xs = tl1; _},
-      { top_sy = (Op _) as s2; xs = tl2; _} ->
+    | { top_sy = (Op _) as s1; args = tl1; _},
+      { top_sy = (Op _) as s2; args = tl2; _} ->
       (* ops that are not infix or prefix *)
       let l1 = List.map score_term tl1 in
       let l2 = List.map score_term tl2 in
@@ -2205,7 +2208,7 @@ module Triggers = struct
       | B_lemma q | B_skolem q -> lets, [q.main]
       | B_let ({ let_v; let_e; in_e; _ } as x) ->
         SMap.add let_v x lets, [let_e; in_e]
-      | _ -> lets, e.xs
+      | _ -> lets, e.args
     in
     let rec aux ((vterm, vtype) as vars) ((strs, lets) as acc) e =
       let strs, lets =
@@ -2260,7 +2263,7 @@ module Triggers = struct
       match e with
       | { top_sy = Sy.Form (
           Sy.F_Unit _ | Sy.F_Clause _ | Sy.F_Xor | Sy.F_Iff); _ } ->
-        List.fold_left max_terms acc e.xs
+        List.fold_left max_terms acc e.args
 
       | { top_sy = Sy.Form (Sy.F_Lemma | Sy.F_Skolem) | Sy.Let; _ } ->
         raise Exit
@@ -2275,9 +2278,9 @@ module Triggers = struct
       | { top_sy = ( True | False | Void | Int _ | Real _
                    | Bitv _ | In (_, _) | MapsTo _ ); _ } -> acc
       | { top_sy = Var _; _ } -> raise Exit
-      | { top_sy = Lit L_neg_pred; _ } -> List.fold_left max_terms acc e.xs
+      | { top_sy = Lit L_neg_pred; _ } -> List.fold_left max_terms acc e.args
       | { top_sy = Lit _; _ } ->
-        (*List.fold_left max_terms acc e.xs*)raise Exit
+        (*List.fold_left max_terms acc e.args*)raise Exit
     in
     try max_terms [] f with Exit -> []
 
@@ -2328,7 +2331,7 @@ module Triggers = struct
       | (Dpredicate e | Dfunction e), _ ->
         let defn = match f with
           | { top_sy = (Sy.Form Sy.F_Iff | Sy.Lit Sy.L_eq);
-              xs = [e1; e2]; _ } ->
+              args = [e1; e2]; _ } ->
             if equal e e1 then e2 else if equal e e2 then e1 else f
           | _ -> f
         in
@@ -2336,7 +2339,7 @@ module Triggers = struct
         let tt = List.fast_sort (fun a b -> depth b - depth a) tt in
         filter_good_triggers (vterm, vtype) @@ triggers_of_list [[e]; tt]
 
-      | _, { top_sy = (Sy.Form Sy.F_Iff) ; xs = [e1; e2]; _ }
+      | _, { top_sy = (Sy.Form Sy.F_Iff); args = [e1; e2]; _ }
         when is_literal e1 ->
         let f_trs1, lets = potential_triggers (vterm, vtype) e1 in
         let f_trs1 = expand_lets f_trs1 lets in

@@ -55,7 +55,7 @@ let is_ite =
   let ite = Symbols.Op Symbols.Tite in
   fun (t : E.t) ->
     match t with
-    | { top_sy; xs = [p; t1; t2]; _ } when Symbols.equal top_sy ite ->
+    | { top_sy; args = [p; t1; t2]; _ } when Symbols.equal top_sy ite ->
       Some (p, t1, t2)
     | _ -> None
 

@@ -141,7 +141,7 @@ module Shostak (X : ALIEN) = struct
 
     | _ -> false
 
-  let make ({ top_sy; xs; ty; _ } as t : E.t) =
+  let make ({ top_sy; args; ty; _ } as t : E.t) =
     assert (not @@ Options.get_disable_adts ());
     if Options.get_debug_adt () then
       Printer.print_dbg
@@ -152,13 +152,13 @@ module Shostak (X : ALIEN) = struct
         (fun (args, ctx) s ->
            let rs, ctx' = X.make s in
            rs :: args, List.rev_append ctx' ctx
-        )([], []) xs
+        )([], []) args
     in
-    let xs = List.rev sx in
-    match top_sy, xs, ty with
-    | Sy.Op Sy.Constr hs, _, Ty.Tadt {constr; args} ->
+    let args = List.rev sx in
+    match top_sy, args, ty with
+    | Sy.Op Sy.Constr hs, _, Ty.Tadt { constr; args = args2 } ->
       let cases =
-        match Ty.type_body constr args with
+        match Ty.type_body constr args2 with
         | Ty.Adt cases -> cases
       in
       let case_hs =
@@ -169,7 +169,7 @@ module Shostak (X : ALIEN) = struct
           List.rev @@
           List.fold_left2
             (fun c_args v (lbl, _) -> (lbl, v) :: c_args)
-            [] xs case_hs
+            [] args case_hs
         with Invalid_argument _ -> assert false
       in
       is_mine @@ Constr {c_name = hs; c_ty = ty; c_args}, ctx
@@ -325,9 +325,9 @@ module Shostak (X : ALIEN) = struct
           let {Ty.constr ; destrs} =
             constr_of_destr (X.type_info d_arg) d_name
           in
-          let xs = List.map (fun (_, ty) -> E.fresh_name ty) destrs in
+          let args = List.map (fun (_, ty) -> E.fresh_name ty) destrs in
           let cons =
-            E.mk_term (Sy.constr (Hs.view constr)) xs (X.type_info d_arg)
+            E.mk_term (Sy.constr (Hs.view constr)) args (X.type_info d_arg)
           in
           if Options.get_debug_adt () then
             Printer.print_dbg ~flushed:false

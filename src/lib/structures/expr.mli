@@ -32,9 +32,8 @@ type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
 
 (** Type of expression. *)
 type t = private {
-  top_sy: Symbols.t;                      (** Top symbol. *)
-  (* TODO: Rename this field to args. *)
-  xs: t list;                        (** List of the arguments. *)
+  top_sy: Symbols.t;                 (** Top symbol. *)
+  args: t list;                      (** List of the arguments. *)
   ty: Ty.t;                          (** Type witness. *)
   bind : bind_kind;                  (** Kind of binding. *)
   (* TODO: Rename this field to id. *)

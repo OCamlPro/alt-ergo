@@ -104,20 +104,21 @@ module Main_Default : S = struct
         (fun (t : E.t) mp ->
            match t with
            | { top_sy = Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac));
-               xs; ty; _ } ->
-             let xs = List.map E.type_info xs in
-             let xs, ty =
+               args; ty; _ } ->
+             let args = List.map E.type_info args in
+             let args, ty =
                try
-                 let xs', ty', is_ac' = Hstring.Map.find hs mp in
+                 let args', ty', is_ac' = Hstring.Map.find hs mp in
                  assert (is_ac == is_ac');
                  let ty = generalize_types ty ty' in
-                 let xs =
-                   try List.map2 generalize_types xs xs' with _ -> assert false
+                 let args =
+                   try List.map2 generalize_types args args'
+                   with _ -> assert false
                  in
-                 xs, ty
-               with Not_found -> xs, ty
+                 args, ty
+               with Not_found -> args, ty
              in
-             Hstring.Map.add hs (xs, ty, is_ac) mp
+             Hstring.Map.add hs (args, ty, is_ac) mp
 
            | _ -> mp
         ) st Hstring.Map.empty

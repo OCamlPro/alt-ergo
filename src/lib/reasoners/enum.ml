@@ -135,8 +135,8 @@ module Shostak (X : ALIEN) = struct
 
   let make (t : E.t) =
     match t with
-    | { top_sy = Sy.Op (Sy.Constr hs); xs = []; ty; _ } ->
-      is_mine (Cons(hs,ty)), []
+    | { top_sy = Sy.Op (Sy.Constr hs); args = []; ty; _ } ->
+      is_mine (Cons(hs, ty)), []
     | _ as t ->
       Printer.print_err
         "Enum theory only expect constructors with no arguments; got %a."

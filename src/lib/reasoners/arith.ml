@@ -221,8 +221,8 @@ module Shostak
     with Exit ->
       P.add (P.create [coef, (X.term_embed t)] Q.zero ty) p_acc
 
-  let rec mke coef p ({ top_sy; xs; ty; _ } as t : E.t) ctx =
-    match top_sy, xs with
+  let rec mke coef p ({ top_sy; args; ty; _ } as t : E.t) ctx =
+    match top_sy, args with
     | (Sy.Int n | Sy.Real n) , _  ->
       let c = Q.mult coef (Q.from_string (Hstring.view n)) in
       P.add_const c p, ctx

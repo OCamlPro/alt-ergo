@@ -771,7 +771,7 @@ and update_monome are_eq expl use_x env x =
         let use_x = SX.singleton x in
         begin
           match t with
-          | { top_sy = (Sy.Op Sy.Div); xs = [a; b]; _ } ->
+          | { top_sy = (Sy.Op Sy.Div); args = [a; b]; _ } ->
             let ra, ea =
               let (ra, _) as e = Uf.find env.new_uf a in
               if List.filter (X.equal x) (X.leaves ra) == [] then e
@@ -1573,7 +1573,7 @@ let update_used_by_pow env r1 p2 orig  eqs =
     let s = (MX0.find r1 env.used_by).pow in
     SE.fold (fun (t : E.t) eqs ->
         match t with
-        | { top_sy = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
+        | { top_sy = (Sy.Op Sy.Pow); args = [a; b]; ty; _ } ->
           begin
             match calc_pow a b ty env.new_uf with
               None -> eqs
@@ -1827,7 +1827,7 @@ let default_case_split env uf ~for_model =
     This is currently only done for power *)
 let add_used_by (t : E.t) r env =
   match t with
-  | { top_sy = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
+  | { top_sy = (Sy.Op Sy.Pow); args = [a; b]; ty; _ } ->
     begin
       match calc_pow a b ty env.new_uf with
       | Some (res,ex) ->
@@ -2451,21 +2451,21 @@ let separate_semantic_triggers =
              List.fold_left
                (fun (syn, sem) (t : E.t) ->
                   match t with
-                  | { top_sy = Symbols.In (lb, ub); xs = [x]; _ } ->
+                  | { top_sy = Symbols.In (lb, ub); args = [x]; _ } ->
                     syn, (E.Interval (x, lb, ub)) :: sem
 
-                  | { top_sy = Symbols.MapsTo x; xs = [t]; _ } ->
+                  | { top_sy = Symbols.MapsTo x; args = [t]; _ } ->
                     syn, (E.MapsTo (x, t)) :: sem
 
-                  | { top_sy = Sy.Name (hs,_); xs = [x]; _ }
+                  | { top_sy = Sy.Name (hs,_); args = [x]; _ }
                     when Hstring.equal hs not_theory_const ->
                     syn, (E.NotTheoryConst x) :: sem
 
-                  | { top_sy = Sy.Name (hs,_); xs = [x]; _ }
+                  | { top_sy = Sy.Name (hs,_); args = [x]; _ }
                     when Hstring.equal hs is_theory_const ->
                     syn, (E.IsTheoryConst x) :: sem
 
-                  | { top_sy = Sy.Name (hs,_); xs = [x;y]; _ }
+                  | { top_sy = Sy.Name (hs,_); args = [x;y]; _ }
                     when Hstring.equal hs linear_dep ->
                     syn, (E.LinearDependency(x,y)) :: sem
 

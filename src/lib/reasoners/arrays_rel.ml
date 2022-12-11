@@ -166,9 +166,9 @@ end
 (*BISECT-IGNORE-END*)
 
 (* met a jour gets et tbset en utilisant l'ensemble des termes donne*)
-let rec update_gets_sets acc ({ top_sy; xs; ty; _ } as t : E.t) =
-  let gets, tbset = List.fold_left update_gets_sets acc xs in
-  match Sy.is_get top_sy, Sy.is_set top_sy, xs with
+let rec update_gets_sets acc ({ top_sy; args; ty; _ } as t : E.t) =
+  let gets, tbset = List.fold_left update_gets_sets acc args in
+  match Sy.is_get top_sy, Sy.is_set top_sy, args with
   | true , false, [a; i] -> G.add {g=t; gt=a; gi=i; gty=ty} gets, tbset
   | false, true, [a; i; v] ->
     gets, TBS.add a {s=t; st=a; si=i; sv=v; sty=ty} tbset
@@ -227,11 +227,11 @@ let update_env are_eq are_dist dep env acc gi si p p_ded n n_ded =
 let get_of_set are_eq are_dist gtype (env, acc) class_of =
   let {g=get; gt=gtab; gi=gi; gty=gty} = gtype in
   L.fold_left
-    (fun (env, acc) ({ top_sy; xs; _ } as set : E.t) ->
+    (fun (env, acc) ({ top_sy; args; _ } as set : E.t) ->
        if Tmap.splited get set env.seen then (env,acc)
        else
          let env = {env with seen = Tmap.update get set env.seen} in
-         match Sy.is_set top_sy, xs with
+         match Sy.is_set top_sy, args with
          | true , [stab; si; sv] ->
            let xi, _ = X.make gi in
            let xj, _ = X.make si in

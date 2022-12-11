@@ -24,7 +24,7 @@ let rec purify_term ({ top_sy; _ } as t : E.t) lets =
       E.mk_term fresh_sy [] t.ty , add_let fresh_sy t lets
 
     | _ -> (* detect ITEs *)
-      match t.xs with
+      match t.args with
       | [_;_;_] when Sy.is_ite top_sy ->
         let fresh_sy = Sy.fresh ~is_var:true "Pur-Ite" in
         E.mk_term fresh_sy [] t.ty , add_let fresh_sy t lets
@@ -34,7 +34,7 @@ let rec purify_term ({ top_sy; _ } as t : E.t) lets =
           List.fold_left (fun (acc, lets) t ->
               let t', lets' = purify_term t lets in
               t' :: acc, lets'
-            ) ([], lets) (List.rev t.xs)
+            ) ([], lets) (List.rev t.args)
         in
         E.mk_term top_sy xs t.ty, lets
 
@@ -70,7 +70,7 @@ and purify_predicate p is_neg =
     ) [p]
 
 and purify_literal (e: E.t) =
-  if List.for_all E.is_pure e.xs then e (* this is OK for lits and terms *)
+  if List.for_all E.is_pure e.args then e (* this is OK for lits and terms *)
   else match E.lit_view e with
     | Eq {lhs; rhs} ->
       assert (lhs.ty != Ty.Tbool);
@@ -91,7 +91,7 @@ and purify_form ({ top_sy; _ } as e : E.t) =
       let e, lets = purify_term e Sy.Map.empty in
       mk_lifted e lets
     | Sy.Let -> (* let on forms *)
-      begin match e.xs, e.bind with
+      begin match e.args, e.bind with
         | [], B_let ({let_v; let_e; in_e; _}) ->
           if let_e.pure && in_e.pure then e
           else
@@ -109,7 +109,7 @@ and purify_form ({ top_sy; _ } as e : E.t) =
     (* When e is an access to a functional array
        in which the stored values are booleans *)
     | Sy.Op Get ->
-      begin match e.xs with
+      begin match e.args with
         | [fa; i] ->
           let fa', lets =
             if E.is_pure fa then fa, Sy.Map.empty
@@ -133,7 +133,7 @@ and purify_form ({ top_sy; _ } as e : E.t) =
 
     | Sy.Lit _ -> purify_literal e
     | Sy.Form x ->
-      begin match x, e.xs, e.bind with
+      begin match x, e.args, e.bind with
         | Sy.F_Unit imp, [a;b], _ ->
           let a' = purify_form a in
           let b' = purify_form b in
@@ -182,7 +182,7 @@ and mk_lifted e lets =
     )e ord_lets
 
 and purify_non_toplevel_ite ({ top_sy; _ } as e : E.t) lets =
-  match top_sy, e.xs with
+  match top_sy, e.args with
   | _, [c; th; el] when Sy.is_ite top_sy ->
     let c = purify_form c in
     let th, lets = purify_non_toplevel_ite th lets in

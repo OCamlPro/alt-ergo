@@ -30,11 +30,11 @@ module Pp_smtlib_term = struct
   let to_string_type t =
     asprintf "%a" Ty.print t
 
-  let rec print fmt ({ top_sy; xs; ty; _ } as t : E.t) =
-    match top_sy, xs with
-    | Sy.Lit lit, xs ->
+  let rec print fmt ({ top_sy; args; ty; _ } as t : E.t) =
+    match top_sy, args with
+    | Sy.Lit lit, args ->
       begin
-        match lit, xs with
+        match lit, args with
         | Sy.L_eq, a::l ->
           if get_output_smtlib () then
             fprintf fmt "(= %a%a)"
@@ -134,13 +134,13 @@ module Pp_smtlib_term = struct
     | Sy.Op (Sy.Record), _ ->
       begin match ty with
         | Ty.Trecord { Ty.lbs = lbs; _ } ->
-          assert (List.length xs = List.length lbs);
+          assert (List.length args = List.length lbs);
           fprintf fmt "{";
           ignore (List.fold_left2 (fun first (field,_) e ->
               fprintf fmt "%s%s = %a"  (if first then "" else "; ")
                 (Hstring.view field) print e;
               false
-            ) true lbs xs);
+            ) true lbs args);
           fprintf fmt "}";
         | _ -> assert false
       end
@@ -194,9 +194,9 @@ module Pp_smtlib_term = struct
 
     | _, _ ->
       if get_output_smtlib () then
-        fprintf fmt "(%a %a)" Sy.print top_sy print_list xs
+        fprintf fmt "(%a %a)" Sy.print top_sy print_list args
       else
-        fprintf fmt "%a(%a)" Sy.print top_sy print_list xs
+        fprintf fmt "%a(%a)" Sy.print top_sy print_list args
 
   and print_list_sep sep fmt = function
     | [] -> ()

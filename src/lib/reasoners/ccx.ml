@@ -262,12 +262,14 @@ module Main : S = struct
       | None -> raise Exit
 
   let equal_only_by_congruence env (facts: r Sig_rel.facts)
-      ({ top_sy = f1; xs = xs1; ty = ty1; _ } as t1 : E.t)
-      ({ top_sy = f2; xs = xs2; ty = ty2; _ } as t2 : E.t) =
+      ({ top_sy = f1; args = args1; ty = ty1; _ } as t1 : E.t)
+      ({ top_sy = f2; args = args2; ty = ty2; _ } as t2 : E.t) =
     if not (E.equal t1 t2) then
       if Symbols.equal f1 f2 && Ty.equal ty1 ty2 then
         try
-          let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
+          let ex =
+            List.fold_left2 (explain_equality env) Ex.empty args1 args2
+          in
           let a = E.mk_eq ~iff:false t1 t2 in
           Debug.congruent a ex;
           Q.push (Sig_rel.LTerm a, ex, Th_util.Other) facts.equas
@@ -275,7 +277,7 @@ module Main : S = struct
 
   let congruents env (facts: r Sig_rel.facts) (t1 : E.t) s =
     match t1 with
-    | { xs = []; _ } -> ()
+    | { args = []; _ } -> ()
     | { top_sy; ty; _ } when X.fully_interpreted top_sy ty -> ()
     |  _ -> SE.iter (equal_only_by_congruence env facts t1) s
 
@@ -337,12 +339,12 @@ module Main : S = struct
     | Some _, false -> () (* not an original term *)
     | Some (t1 : E.t), true ->  (* original term *)
       match t1 with
-      | { top_sy = f1; xs = [x]; _ } ->
+      | { top_sy = f1; args = [x]; _ } ->
         let ty_x = Expr.type_info x in
         List.iter
           (fun (t2 : E.t) ->
              match t2 with
-             | { top_sy = f2 ; xs = [y]; _ } when Sy.equal f1 f2 ->
+             | { top_sy = f2 ; args = [y]; _ } when Sy.equal f1 f2 ->
                let ty_y = Expr.type_info y in
                if Ty.equal ty_x ty_y then
                  begin match Uf.are_distinct env.uf t1 t2 with
@@ -468,8 +470,10 @@ module Main : S = struct
       Debug.add_to_use t;
 
       (* we add t's arguments in env *)
-      let {E.xs; _} = t in
-      let env = List.fold_left (fun env t -> add_term env facts t ex) env xs in
+      let {E.args; _} = t in
+      let env =
+        List.fold_left (fun env t -> add_term env facts t ex) env args
+      in
       (* we update uf and use *)
       let nuf, ctx  = Uf.add env.uf t in
       Debug.make_cst t ctx;
@@ -477,7 +481,7 @@ module Main : S = struct
       (*or Ex.empty ?*)
 
       let rt, _ = Uf.find nuf t in
-      let lvs = concat_leaves nuf xs in
+      let lvs = concat_leaves nuf args in
       let nuse = Use.up_add env.use t rt lvs in
 
       (* If finitetest is used we add the term to the relation *)

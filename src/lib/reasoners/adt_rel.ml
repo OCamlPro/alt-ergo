@@ -193,8 +193,8 @@ let deduce_is_constr uf r h eqs env ex =
                 ) cases
               with Not_found -> assert false
             in
-            let xs = List.map (fun (_, ty) -> E.fresh_name ty) destrs in
-            let cons = E.mk_term (Sy.constr (Hs.view h)) xs ty in
+            let args = List.map (fun (_, ty) -> E.fresh_name ty) destrs in
+            let cons = E.mk_term (Sy.constr (Hs.view h)) args ty in
             let env = {env with new_terms = SE.add cons env.new_terms} in
             let eq = E.mk_eq t cons ~iff:false in
             if Options.get_debug_adt () then
@@ -326,11 +326,11 @@ let add_guarded_destr env uf t hs e t_ty =
 
 
 [@@ocaml.ppwarning "working with X.term_extract r would be sufficient ?"]
-let add_aux env (uf : uf) (r : r) ({ top_sy; xs; ty; _ } as t : E.t) =
+let add_aux env (uf : uf) (r : r) ({ top_sy; args; ty; _ } as t : E.t) =
   if Options.get_disable_adts () then env
   else
     let env = add_adt env uf t r top_sy ty in
-    match top_sy, xs with
+    match top_sy, args with
     | Sy.Op Sy.Destruct (hs, true), [e] -> (* guarded *)
       if Options.get_debug_adt () then
         Printer.print_dbg
