@@ -66,9 +66,9 @@ module Types = struct
 
   let check_number_args loc lty ty =
     match ty with
-    | Ty.Text {constr = hs; args}
-    | Ty.Trecord {name = hs; args; _ }
-    | Ty.Tadt {constr = hs; args} ->
+    | Ty.Text { cstr = hs; params = args }
+    | Ty.Trecord { name = hs; args; _ }
+    | Ty.Tadt { cstr = hs; payload = args } ->
       if List.length lty <> List.length args then
         Errors.typing_error (WrongNumberofArgs (Hstring.view hs)) loc;
       args
@@ -130,15 +130,16 @@ module Types = struct
     let ty_vars = fresh_vars ~recursive vars loc in
     match body with
     | Abstract ->
-      let ty = Ty.text ~args:ty_vars id in
+      let ty = Ty.text ~params:ty_vars id in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Enum lc ->
-      let ty = Ty.tsum ~constrs:lc id in
+      let ty = Ty.tsum ~cstrs:lc id in
       ty, { env with to_ty = MString.add id ty env.to_ty }
-    | Record (record_constr, lbs) ->
+    | Record (record_cstr, lbs) ->
       let lbs =
-        List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs in
-      let ty = Ty.trecord ~record_constr ~args:ty_vars ~fields:lbs id in
+        List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs
+      in
+      let ty = Ty.trecord ~record_cstr ~args:ty_vars ~fields:lbs id in
       ty, { to_ty = MString.add id ty env.to_ty;
             from_labels =
               List.fold_left
@@ -154,7 +155,7 @@ module Types = struct
         if l == [] then None (* in initialization step, no body *)
         else Some l
       in
-      let ty = Ty.t_adt ~body ~args:ty_vars id in
+      let ty = Ty.t_adt ~body ~payload:ty_vars id in
       ty, { env with to_ty = MString.add id ty env.to_ty }
 
   module SH = Set.Make(Hstring)
@@ -291,13 +292,13 @@ module Env = struct
   let add_constr ~record env constr args_ty ty loc =
     let pp_profile = PFunction (args_ty, ty) in
     let kind = if record then RecordConstr else AdtConstr in
-    add_logics ~kind env Symbols.constr [constr, ""] pp_profile loc
+    add_logics ~kind env Symbols.cstr [constr, ""] pp_profile loc
 
   let add_destr ~record env destr pur_ty lbl_ty loc =
     let pp_profile = PFunction ([pur_ty], lbl_ty) in
     let mk_sy s =
       if record then (Symbols.Op (Access (Hstring.make s)))
-      else Symbols.destruct ~guarded:true s
+      else Symbols.dstr ~guarded:true s
     in
     let kind = if record then RecordDestr else AdtDestr in
     add_logics ~kind env mk_sy [destr, ""] pp_profile loc
@@ -359,7 +360,7 @@ let check_no_duplicates =
 
 let filter_patterns pats ty_body _loc =
   let cases =
-    List.fold_left (fun s {Ty.constr=c; _} -> HSS.add c s) HSS.empty ty_body
+    List.fold_left (fun s { Ty.cstr = c; _ } -> HSS.add c s) HSS.empty ty_body
   in
   let missing, filtered_pats, dead =
     List.fold_left
@@ -760,14 +761,14 @@ let rec type_term ?(call_from_type_form=false) env f =
       let e = type_term env e in
       let ty = Ty.shorten e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt {constr = name; args = params} ->
-          begin match Ty.type_body name params with
+        | Ty.Tadt { cstr = name; payload } ->
+          begin match Ty.type_body name payload with
             | Ty.Adt cases -> cases
           end
-        | Ty.Trecord { Ty.record_constr; lbs; _ } ->
-          [{Ty.constr = record_constr; destrs = lbs}]
-        | Ty.Tsum {constrs; _} ->
-          List.map (fun e -> {Ty.constr = e; destrs = []}) constrs
+        | Ty.Trecord { Ty.record_cstr; lbs; _ } ->
+          [{Ty.cstr = record_cstr; dstrs = lbs}]
+        | Ty.Tsum { cstrs; _ } ->
+          List.map (fun e -> { Ty.cstr = e; dstrs = [] }) cstrs
         | _ -> Errors.typing_error (ShouldBeADT ty) loc
       in
       let pats =
@@ -1153,15 +1154,15 @@ and type_form ?(in_theory=false) env f =
       let e = type_term env e in
       let ty = e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt {constr; args = params} ->
-          begin match Ty.type_body constr params with
+        | Ty.Tadt { cstr; payload } ->
+          begin match Ty.type_body cstr payload with
             | Ty.Adt cases -> cases
           end
-        | Ty.Trecord { Ty.record_constr; lbs; _ } ->
-          [{Ty.constr = record_constr ; destrs = lbs}]
+        | Ty.Trecord { Ty.record_cstr; lbs; _ } ->
+          [{ Ty.cstr = record_cstr ; dstrs = lbs }]
 
-        | Ty.Tsum {constrs; _} ->
-          List.map (fun e -> {Ty.constr = e ; destrs = []}) constrs
+        | Ty.Tsum { cstrs; _ } ->
+          List.map (fun e -> { Ty.cstr = e ; dstrs = [] }) cstrs
         | _ ->
           Errors.typing_error (ShouldBeADT ty) f.pp_loc
       in
@@ -2105,7 +2106,7 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     let ty = PFunction([], pur_ty) in
     let tlogic, env =
       (* can also use List.fold Env.add_constr *)
-      Env.add_logics ~kind:Env.AdtConstr env Symbols.constr lcl ty loc
+      Env.add_logics ~kind:Env.AdtConstr env Symbols.cstr lcl ty loc
     in
     let td2_a = { c = TLogic(loc, lc, tlogic); annot=new_id () } in
     (td2_a,env)::acc, env

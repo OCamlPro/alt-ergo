@@ -25,7 +25,7 @@ let is_rounding_mode t =
 
 let fpa_rounding_mode =
   let name = Hs.make "fpa_rounding_mode" in
-  let constrs =
+  let cstrs =
     [ (* standards *)
       Hs.make "NearestTiesToEven";
       Hs.make "NearestTiesToAway";
@@ -40,56 +40,56 @@ let fpa_rounding_mode =
       Hs.make "Nd";
       Hs.make "Nu" ]
   in
-  Ty.Tsum {name; constrs}
+  Ty.Tsum { name; cstrs }
 
 (*  why3/standard rounding modes*)
 
 let _NearestTiesToEven__rounding_mode =
-  E.mk_term ~sy:(Sy.constr "NearestTiesToEven") ~args:[]
+  E.mk_term ~sy:(Sy.cstr "NearestTiesToEven") ~args:[]
     ~ty:fpa_rounding_mode
 (** ne in Gappa: to nearest, tie breaking to even mantissas*)
 
 let _ToZero__rounding_mode =
-  E.mk_term ~sy:(Sy.constr "ToZero") ~args:[] ~ty:fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "ToZero") ~args:[] ~ty:fpa_rounding_mode
 (** zr in Gappa: toward zero *)
 
 let _Up__rounding_mode =
-  E.mk_term ~sy:(Sy.constr "Up") ~args:[] ~ty:fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Up") ~args:[] ~ty:fpa_rounding_mode
 (** up in Gappa: toward plus infinity *)
 
 let _Down__rounding_mode =
-  E.mk_term ~sy:(Sy.constr "Down") ~args:[] ~ty:fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Down") ~args:[] ~ty:fpa_rounding_mode
 (** dn in Gappa: toward minus infinity *)
 
 let _NearestTiesToAway__rounding_mode =
-  E.mk_term ~sy:(Sy.constr "NearestTiesToAway") ~args:[]
+  E.mk_term ~sy:(Sy.cstr "NearestTiesToAway") ~args:[]
     ~ty:fpa_rounding_mode
 (** na : to nearest, tie breaking away from zero *)
 
 (* additional Gappa rounding modes *)
 
 let _Aw__rounding_mode =
-  E.mk_term ~sy:(Sy.constr "Aw") ~args:[] ~ty:fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Aw") ~args:[] ~ty:fpa_rounding_mode
 (** aw in Gappa: away from zero **)
 
 let _Od__rounding_mode =
-  E.mk_term ~sy:(Sy.constr "Od") ~args:[] ~ty:fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Od") ~args:[] ~ty:fpa_rounding_mode
 (** od in Gappa: to odd mantissas *)
 
 let _No__rounding_mode =
-  E.mk_term ~sy:(Sy.constr "No") ~args:[] ~ty:fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "No") ~args:[] ~ty:fpa_rounding_mode
 (** no in Gappa: to nearest, tie breaking to odd mantissas *)
 
 let _Nz__rounding_mode =
-  E.mk_term ~sy:(Sy.constr "Nz") ~args:[] ~ty:fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Nz") ~args:[] ~ty:fpa_rounding_mode
 (** nz in Gappa: to nearest, tie breaking toward zero *)
 
 let _Nd__rounding_mode =
-  E.mk_term ~sy:(Sy.constr "Nd") ~args:[] ~ty:fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Nd") ~args:[] ~ty:fpa_rounding_mode
 (** nd in Gappa: to nearest, tie breaking toward minus infinity *)
 
 let _Nu__rounding_mode =
-  E.mk_term ~sy:(Sy.constr "Nu") ~args:[] ~ty:fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Nu") ~args:[] ~ty:fpa_rounding_mode
 (** nu in Gappa: to nearest, tie breaking toward plus infinity *)
 
 

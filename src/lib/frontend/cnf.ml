@@ -145,7 +145,7 @@ let rec make_term up_qv quant_basename t =
       E.mk_ite ~cond ~then_ ~else_
 
     | TTproject (b, t, s) ->
-      E.mk_term ~sy:(Sy.destruct ~guarded:b (Hstring.view s))
+      E.mk_term ~sy:(Sy.dstr ~guarded:b (Hstring.view s))
         ~args:[mk_term t] ~ty
 
     | TTmatch (e, pats) ->

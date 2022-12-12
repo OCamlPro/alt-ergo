@@ -38,8 +38,8 @@ type operator =
   | Sqrt_real_default | Sqrt_real_excess
   | Min_real | Min_int | Max_real | Max_int | Integer_log2
   | Pow | Integer_round
-  | Constr of Hstring.t
-  | Destruct of Hstring.t * bool
+  | Cstr of Hstring.t
+  | Dstr of Hstring.t * bool
   | Tite
 
 type lit =
@@ -86,8 +86,8 @@ let name ?(kind=Other) s = Name (Hstring.make s, kind)
 let var s = Var s
 let int i = Int (Hstring.make i)
 let real r = Real (Hstring.make r)
-let constr s = Op (Constr (Hstring.make s))
-let destruct ~guarded s = Op (Destruct (Hstring.make s, guarded))
+let cstr s = Op (Cstr (Hstring.make s))
+let dstr ~guarded s = Op (Dstr (Hstring.make s, guarded))
 
 let mk_bound kind sort ~is_open ~is_lower =
   {kind; sort; is_open; is_lower}
@@ -116,8 +116,8 @@ let compare_kinds k1 k2 =
 let compare_operators op1 op2 =
   Util.compare_algebraic op1 op2
     (function
-      | Access h1, Access h2 | Constr h1, Constr h2 -> Hstring.compare h1 h2
-      | Destruct (h1, b1), Destruct(h2, b2) ->
+      | Access h1, Access h2 | Cstr h1, Cstr h2 -> Hstring.compare h1 h2
+      | Dstr (h1, b1), Dstr (h2, b2) ->
         let c = Stdlib.compare b1 b2 in
         if c <> 0 then c else Hstring.compare h1 h2
       | _ , (Plus | Minus | Mult | Div | Modulo
@@ -126,7 +126,7 @@ let compare_operators op1 op2 =
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
             | Integer_log2 | Pow | Integer_round
-            | Constr _ | Destruct _ | Tite) -> assert false
+            | Cstr _ | Dstr _ | Tite) -> assert false
     )
 
 let compare_builtin b1 b2 =
@@ -267,8 +267,8 @@ let to_string ?(show_vars=true) x = match x with
       (Hstring.view s)
     else
       "@Access_"^(Hstring.view s)
-  | Op (Constr s) -> (Hstring.view s)
-  | Op (Destruct (s,g)) ->
+  | Op (Cstr s) -> (Hstring.view s)
+  | Op (Dstr (s,g)) ->
     Format.sprintf "%s%s" (if g then "" else "!") (Hstring.view s)
 
   | Op Record -> "@Record"
@@ -367,4 +367,13 @@ end = struct
   let print pr_elt fmt sbt =
     iter (fun k v -> Format.fprintf fmt "%a -> %a  " print k pr_elt v) sbt
 end
+
+let is_prefix = function
+  | Op Minus -> true
+  | _ -> false
+
+let is_infix = function
+  | Op (Plus | Minus | Mult | Div | Modulo) -> true
+  | _ -> false
+
 

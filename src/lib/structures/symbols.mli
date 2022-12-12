@@ -44,8 +44,8 @@ type operator =
   | Sqrt_real_default | Sqrt_real_excess
   | Min_real | Min_int | Max_real | Max_int | Integer_log2
   | Pow | Integer_round
-  | Constr of Hstring.t (* enums, adts *)
-  | Destruct of Hstring.t * bool
+  | Cstr of Hstring.t (* enums, adts *)
+  | Dstr of Hstring.t * bool
   | Tite
   (** Type of symbol of operator. *)
 
@@ -111,35 +111,51 @@ end
 (** {1 Constructor} *)
 
 val name: ?kind:name_kind -> string -> t
+
 val var: Var.t -> t
+(** [var v] converts a variable to symbol. *)
+
 val underscore : t
+
 val int: string -> t
+(** [int str] produces the symbol of an integer literal. *)
+
 val real: string -> t
-val constr: string -> t
-val destruct: guarded:bool -> string -> t
+(** [real str] produces the symbol of a real literal. *)
+
+val cstr: string -> t
+val dstr: guarded:bool -> string -> t
 val mk_bound: bound_kind -> Ty.t -> is_open:bool -> is_lower:bool -> bound
 val mk_in: bound -> bound -> t
 val mk_maps_to: Var.t -> t
 
 (** {1 Comparaison and test functions} *)
 
-val equal: t -> t -> bool
-val compare: t -> t -> int
-val compare_bounds: bound -> bound -> int
+val equal : t -> t -> bool
+val compare : t -> t -> int
+val compare_bounds : bound -> bound -> int
 
 val hash: t -> int
 
-val is_ac: t -> bool
-val is_get: t -> bool
-val is_set: t -> bool
-val is_ite: t -> bool
+val is_ac : t -> bool
+val is_get : t -> bool
+val is_set : t -> bool
+val is_ite : t -> bool
+
+val is_infix : t -> bool
+(** [is_infix sy] is [true] if and only if the symbol [sy] is an operator
+    in infix position. *)
+
+val is_prefix : t -> bool
+(** [is_prefix sy] is [true] if and only if the symbol [sy] is an operator
+    in prefix position. *)
 
 (** {1 Printing} *)
 
-val to_string: t -> string
+val to_string : t -> string
 (** [to_string sy] produces a string representing the symbol [sy]. *)
 
-val print: Format.formatter -> t -> unit
+val print : Format.formatter -> t -> unit
 (** [print fmt sy] pretty prints the symbol [sy] on the formatter [fmt]. *)
 
 val to_string_clean: t -> string

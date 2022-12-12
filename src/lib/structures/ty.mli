@@ -55,8 +55,8 @@ type t =
   (** Record type. *)
 
   | Text of {
-      constr : Hstring.t;
-      args : t list
+      cstr : Hstring.t;
+      params : t list
     }
   (** Abstract types applied to arguments. [Text {constr; args}] is the
       application of the abstract type constructor [constr] to arguments
@@ -71,13 +71,13 @@ type t =
 
   | Tsum of {
       name : Hstring.t;
-      constrs : Hstring.t list
+      cstrs : Hstring.t list
     }
   (** Enumeration, with its name, and the list of its constructors. *)
 
   | Tadt of {
-      constr : Hstring.t;
-      args : t list
+      cstr : Hstring.t;
+      payload : t list
     }
   (** Algebraic types applied to arguments. [Tadt {constr; args}] is the
       application of the datatype constructor [constr] to arguments [args]. *)
@@ -106,17 +106,17 @@ and trecord = {
   (** List of fields of the record. Each field has a name,
       and an associated type. *)
 
-  record_constr : Hstring.t;
+  record_cstr : Hstring.t;
   (** record constructor. Useful is case it's a specialization of an
       algeberaic datatype. Default value is "\{__[name]" *)
 }
 (** Record types. *)
 
-type adt_constr = {
-  constr : Hstring.t;
+type adt_cstr = {
+  cstr : Hstring.t;
   (** Constructor of an ADT type. *)
 
-  destrs : (Hstring.t * t) list
+  dstrs : (Hstring.t * t) list
   (** the list of destructors associated with the constructor and their
       respective types *)
 }
@@ -125,7 +125,7 @@ type adt_constr = {
     type [t] for records and enumerations. But, this is not possible
     for recursive ADTs *)
 type type_body =
-  | Adt of adt_constr list
+  | Adt of adt_cstr list
   (** body of an algebraic datatype *)
 
 (** {1 Data structures} *)
@@ -136,7 +136,7 @@ module Svty : Set.S with type elt = int
 (** Sets of types *)
 module Set : Set.S with type elt = t
 
-val assoc_destrs : Hstring.t -> adt_constr list -> (Hstring.t * t) list
+val assoc_destrs : Hstring.t -> adt_cstr list -> (Hstring.t * t) list
 (** returns the list of destructors associated with the given consturctor.
     raises Not_found if the constructor is not in the given list *)
 
@@ -182,16 +182,16 @@ val fresh_tvar : unit -> t
 val fresh_empty_text : unit -> t
 (** Return a fesh abstract type. *)
 
-val text : args:t list -> string -> t
+val text : params:t list -> string -> t
 (** Apply the abstract type constructor to the list of type arguments given. *)
 
-val tsum : constrs:string list -> string -> t
+val tsum : cstrs:string list -> string -> t
 (** [tsum ~constrs name] creates an enumeration type named [name] with
     constructors [constrs]. *)
 
 val t_adt :
   ?body:((string * (string * t) list) list) option ->
-  args:t list ->
+  payload:t list ->
   string ->
   t
 (** Create an algebraic datatype. The body is a list of constructors, where
@@ -201,7 +201,7 @@ val t_adt :
     provides its list of arguments. *)
 
 val trecord :
-  ?record_constr:string ->
+  ?record_cstr:string ->
   args:t list ->
   fields:(string * t) list ->
   string ->

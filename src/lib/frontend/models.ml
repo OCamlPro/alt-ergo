@@ -152,7 +152,7 @@ module Pp_smtlib_term = struct
       fprintf fmt "%a(%a,%a)" Sy.print top_sy print e1 print e2
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
+    | Sy.Op (Sy.Cstr hs), ((_::_) as l) ->
       fprintf fmt "%a(%a)" Hstring.print hs print_list l
 
     | Sy.Op _, [e1; e2] ->
@@ -161,7 +161,7 @@ module Pp_smtlib_term = struct
       else
         fprintf fmt "(%a %a %a)" print e1 Sy.print top_sy print e2
 
-    | Sy.Op Sy.Destruct (hs, grded), [e] ->
+    | Sy.Op Sy.Dstr (hs, grded), [e] ->
       fprintf fmt "%a#%s%a"
         print e (if grded then "" else "!") Hstring.print hs
 
@@ -241,7 +241,7 @@ module SmtlibCounterExample = struct
     MS.add record_name destrs records
 
   let mk_records_constr records record_name
-      { Ty.name = _n; record_constr = cstr; lbs = lbs; _} =
+      { Ty.name = _n; record_cstr = cstr; lbs = lbs; _} =
     let find_destrs destr destrs =
       try let rep = MS.find destr destrs in
         Some rep
@@ -266,7 +266,7 @@ module SmtlibCounterExample = struct
       print_destr (destrs,lbs)
 
   let add_record_constr records record_name
-      { Ty.name = _n; record_constr = _cstr; lbs = lbs; _} xs_values =
+      { Ty.name = _n; record_cstr = _cstr; lbs = lbs; _} xs_values =
     List.fold_left2(fun records (destr,_) (rep,_) ->
         add_records_destr
           records

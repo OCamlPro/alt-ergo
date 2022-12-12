@@ -33,14 +33,14 @@ let constr_of_destr ty dest =
       ~module_name:"Adt" ~function_name:"constr_of_destr"
       "ty = %a" Ty.print ty;
   match ty with
-  | Ty.Tadt {constr; args} ->
-    let bdy = Ty.type_body constr args in
+  | Ty.Tadt { cstr; payload } ->
+    let bdy = Ty.type_body cstr payload in
     begin match bdy with
       | Ty.Adt cases ->
         try
           List.find
-            (fun { Ty.destrs; _ } ->
-               List.exists (fun (d, _) -> Hstring.equal dest d) destrs
+            (fun { Ty.dstrs; _ } ->
+               List.exists (fun (d, _) -> Hstring.equal dest d) dstrs
             ) cases
         with Not_found -> assert false (* invariant *)
     end
@@ -61,8 +61,8 @@ module Shostak (X : ALIEN) = struct
   let is_mine_symb sy ty =
     not (Options.get_disable_adts ()) &&
     match sy, ty with
-    | Sy.Op (Sy.Constr _), Ty.Tadt _ -> true
-    | Sy.Op Sy.Destruct (_,guarded), _ -> not guarded
+    | Sy.Op (Sy.Cstr _), Ty.Tadt _ -> true
+    | Sy.Op Sy.Dstr (_,guarded), _ -> not guarded
     | _ -> false
 
   let embed r =
@@ -156,9 +156,9 @@ module Shostak (X : ALIEN) = struct
     in
     let args = List.rev sx in
     match top_sy, args, ty with
-    | Sy.Op Sy.Constr hs, _, Ty.Tadt { constr; args = args2 } ->
+    | Sy.Op Sy.Cstr hs, _, Ty.Tadt { cstr; payload = args2 } ->
       let cases =
-        match Ty.type_body constr args2 with
+        match Ty.type_body cstr args2 with
         | Ty.Adt cases -> cases
       in
       let case_hs =
@@ -174,7 +174,7 @@ module Shostak (X : ALIEN) = struct
       in
       is_mine @@ Constr {c_name = hs; c_ty = ty; c_args}, ctx
 
-    | Sy.Op Sy.Destruct (hs, guarded), [e], _ ->
+    | Sy.Op Sy.Dstr (hs, guarded), [e], _ ->
       if not guarded then
         let sel = Select {d_name = hs ; d_arg = e ; d_ty = ty} in
         is_mine sel, ctx
@@ -322,12 +322,12 @@ module Shostak (X : ALIEN) = struct
       let x = is_mine @@ Select {s with d_arg=s_arg} in
       begin match embed x  with
         | Select ({ d_name; d_arg; _ } as s) ->
-          let {Ty.constr ; destrs} =
+          let { Ty.cstr ; dstrs } =
             constr_of_destr (X.type_info d_arg) d_name
           in
-          let args = List.map (fun (_, ty) -> E.fresh_name ~ty) destrs in
+          let args = List.map (fun (_, ty) -> E.fresh_name ~ty) dstrs in
           let cons =
-            E.mk_term ~sy:(Sy.constr (Hs.view constr)) ~args
+            E.mk_term ~sy:(Sy.cstr (Hs.view cstr)) ~args
               ~ty:(X.type_info d_arg)
           in
           if Options.get_debug_adt () then

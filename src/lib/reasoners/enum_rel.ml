@@ -107,8 +107,8 @@ end
 (*BISECT-IGNORE-END*)
 
 let values_of r = match X.type_info r with
-  | Ty.Tsum {constrs; _} ->
-    Some (List.fold_left (fun st hs -> HSS.add hs st) HSS.empty constrs)
+  | Ty.Tsum { cstrs; _ } ->
+    Some (List.fold_left (fun st hs -> HSS.add hs st) HSS.empty cstrs)
   | _ -> None
 
 let add_diseq hss sm1 sm2 dep env eqs =

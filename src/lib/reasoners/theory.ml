@@ -130,19 +130,19 @@ module Main_Default : S = struct
            match ty with
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> mp
            | Tvar _ -> assert false
-           | Text {constr = hs; _} | Tsum {name = hs; _}
+           | Text { cstr = hs; _ } | Tsum { name = hs; _ }
            | Trecord {name = hs; _} when Hstring.Map.mem hs mp -> mp
-           | Text {constr; args} ->
-             let args = List.map (fun _ -> Ty.fresh_tvar ()) args in
-             Hstring.Map.add constr (Text {constr; args}) mp
-           | Tsum {name; _} ->
+           | Text { cstr; params } ->
+             let params = List.map (fun _ -> Ty.fresh_tvar ()) params in
+             Hstring.Map.add cstr (Text { cstr; params }) mp
+           | Tsum { name; _ } ->
              Hstring.Map.add name ty mp
-           | Trecord {name; _} ->
+           | Trecord { name; _ } ->
              (* cannot do better for records ? *)
              Hstring.Map.add name ty mp
-           | Tadt {constr; _} ->
+           | Tadt { cstr; _ } ->
              (* cannot do better for ADT ? *)
-             Hstring.Map.add constr ty mp
+             Hstring.Map.add cstr ty mp
         )sty Hstring.Map.empty
 
     let print_types_decls ?(header=true) types =
@@ -154,9 +154,9 @@ module Main_Default : S = struct
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> ()
            | Tvar _ -> assert false
            | Text _ -> print_dbg ~flushed:false "type %a@ " Ty.print ty
-           | Tsum {constrs; _} ->
+           | Tsum { cstrs; _ } ->
              print_dbg ~flushed:false ~header:false "type %a = " Ty.print ty;
-             begin match constrs with
+             begin match cstrs with
                | [] -> assert false
                | e::l ->
                  let print fmt e =

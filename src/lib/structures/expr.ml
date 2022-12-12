@@ -450,14 +450,14 @@ module SmtPrinter = struct
       fprintf fmt "%a(%a,%a)" Sy.print top_sy print e1 print e2
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op (Sy.Constr hs), ((_ :: _) as l) ->
+    | Sy.Op (Sy.Cstr hs), ((_ :: _) as l) ->
       fprintf fmt
         "%a(%a)" Hstring.print hs (Util.print_list ~sep:"," ~pp:print) l
 
     | Sy.Op _, [e1; e2] ->
       fprintf fmt "(%a %a %a)" Sy.print top_sy print e1 print e2
 
-    | Sy.Op Sy.Destruct (hs, grded), [e] ->
+    | Sy.Op Sy.Dstr (hs, grded), [e] ->
       fprintf fmt "%a#%s%a"
         print e (if grded then "" else "!") Hstring.print hs
 
@@ -626,7 +626,7 @@ module AEPrinter = struct
       fprintf fmt "%a(%a,%a)" Sy.print top_sy print e1 print e2
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op (Sy.Constr hs), ((_ :: _) as l) ->
+    | Sy.Op (Sy.Cstr hs), ((_ :: _) as l) ->
       fprintf fmt "%a(%a)"
         Hstring.print hs (Util.print_list ~sep:"," ~pp:print) l
 
@@ -636,7 +636,7 @@ module AEPrinter = struct
       else
         fprintf fmt "(%a %a %a)" print e1 Sy.print top_sy print e2
 
-    | Sy.Op Sy.Destruct (hs, grded), [e] ->
+    | Sy.Op Sy.Dstr (hs, grded), [e] ->
       fprintf fmt "%a#%s%a"
         print e (if grded then "" else "!") Hstring.print hs
 
@@ -1910,6 +1910,7 @@ module Triggers = struct
 
   module Svty = Ty.Svty
 
+  (* Set of triggers. *)
   module STRS =
     Set.Make(
     struct
@@ -1918,27 +1919,17 @@ module Triggers = struct
       let compare (t1,_,_) (t2,_,_) = compare t1 t2
     end)
 
-  let is_prefix v = match v with
-    | Sy.Op Sy.Minus -> true
-    | _ -> false
-
-  let is_infix v =
-    let open Sy in
-    match v with
-    | Op (Plus | Minus | Mult | Div | Modulo) -> true
-    | _ -> false
-
   let rec score_term = function
     | { top_sy = (True | False | Void | Int _ | Real _ | Bitv _ | Var _); _ }
       -> 0
 
     (* arithmetic triggers are not suitable *)
-    | { top_sy; _ } when is_infix top_sy || is_prefix top_sy -> 0
+    | { top_sy; _ } when Sy.is_infix top_sy || Sy.is_prefix top_sy -> 0
 
     | { top_sy = Op (Get | Set) ; args = [t1 ; t2]; _ } ->
       max (score_term t1) (score_term t2)
 
-    | { top_sy = Op (Access _ | Destruct _) ; args = [t]; _ } ->
+    | { top_sy = Op (Access _ | Dstr _) ; args = [t]; _ } ->
       1 + score_term t
 
     | { top_sy = Op Record; args; _ } ->
@@ -1956,7 +1947,7 @@ module Triggers = struct
       assert false
 
 
-  let rec cmp_trig_term (t1: t) (t2: t) =
+  let rec cmp_trig_term (t1 : t) (t2 : t) =
     let compare_expr = compare in
     let open Sy in
     match t1, t2 with
@@ -2036,13 +2027,13 @@ module Triggers = struct
     | { top_sy = Op (Access _); _}, _ -> -1
     | _, { top_sy = Op (Access _); _} -> 1
 
-    | { top_sy = Op (Destruct (_, a1)) ; args = [t1]; _},
-      { top_sy = Op (Destruct (_, a2)) ; args = [t2]; _} ->
+    | { top_sy = Op (Dstr (_, a1)) ; args = [t1]; _},
+      { top_sy = Op (Dstr (_, a2)) ; args = [t2]; _} ->
       let c = Stdlib.compare a1 a2 in (* should be Hstring.compare *)
       if c <> 0 then c else cmp_trig_term t1 t2
 
-    | { top_sy = Op (Destruct _); _}, _ -> -1
-    | _, { top_sy =Op (Destruct _); _} -> 1
+    | { top_sy = Op (Dstr _); _}, _ -> -1
+    | _, { top_sy =Op (Dstr _); _} -> 1
 
     | { top_sy = Op Record ; args = lbs1; _},
       { top_sy = Op Record ; args = lbs2; _} ->
@@ -2296,7 +2287,7 @@ module Triggers = struct
     let rec aux ((vterm, vtype) as vars) ((strs, lets) as acc) e =
       let strs, lets =
         if e.pure && (has_bvar e.vars vterm || has_tyvar e.vty vtype) &&
-           not (is_prefix e.top_sy)
+           not @@ Sy.is_prefix e.top_sy
         then
           let vrs = free_vars_as_set e in
           STRS.add (e, vrs, e.vty) strs, lets
@@ -2580,7 +2571,7 @@ let mk_match e cases =
   let ty = type_info e in
   let mk_destr =
     match ty with
-    | Ty.Tadt _ -> (fun hs -> Sy.destruct ~guarded:true (Hstring.view hs))
+    | Ty.Tadt _ -> (fun hs -> Sy.dstr ~guarded:true (Hstring.view hs))
     | Ty.Trecord _ -> (fun hs -> Sy.Op (Sy.Access hs))
     | Ty.Tsum _ -> (fun _hs -> assert false) (* no destructors for Tsum *)
     | _ -> assert false
@@ -2598,7 +2589,7 @@ let mk_match e cases =
     | Ty.Tsum _ ->
       (fun e n -> (* testers are equalities for Tsum *)
          let constr =
-           mk_term ~sy:(Sy.constr (Hstring.view n)) ~args:[] ~ty:(type_info e)
+           mk_term ~sy:(Sy.cstr (Hstring.view n)) ~args:[] ~ty:(type_info e)
          in
          mk_eq ~use_equiv:false e constr)
 
