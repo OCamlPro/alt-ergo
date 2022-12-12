@@ -196,11 +196,9 @@ let print_generic body_of =
 let print_list = snd (print_generic None)
 let print = fst (print_generic None) None
 
-let fresh_var =
+let fresh_tvar =
   let cpt = ref (-1) in
-  fun () -> incr cpt; {v= !cpt ; value = None }
-
-let fresh_tvar () = Tvar (fresh_var ())
+  fun () -> incr cpt; Tvar ({ v = !cpt ; value = None })
 
 let rec shorten ty =
   match ty with
@@ -393,7 +391,7 @@ let rec fresh ty subst =
     begin
       try Util.MI.find x subst, subst
       with Not_found ->
-        let nv = Tvar (fresh_var()) in
+        let nv = fresh_tvar () in
         nv, Util.MI.add x nv subst
     end
   | Text {cstr; params} ->

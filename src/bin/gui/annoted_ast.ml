@@ -1146,9 +1146,9 @@ let rec downgrade_ty = function
   | Ty.Tbitv i -> PPTbitv i
   | Ty.Tvar { Ty.v = v; _ }  ->
     PPTvarid (string_of_int v, Loc.dummy)
-  | Ty.Text {constr; args} ->
-    PPTexternal (List.map downgrade_ty args,
-                 Hstring.view constr, Loc.dummy)
+  | Ty.Text { cstr; params } ->
+    PPTexternal (List.map downgrade_ty params,
+                 Hstring.view cstr, Loc.dummy)
   | Ty.Tfarray {key_ty; val_ty} ->
     PPTexternal ([downgrade_ty key_ty; downgrade_ty val_ty],
                  "farray", Loc.dummy)
@@ -1174,14 +1174,14 @@ let downgrade_type_decl = function
   | Ty.Tbitv _
   | Ty.Tvar _
   | Ty.Tfarray _ -> assert false
-  | Ty.Text {constr; args} ->
+  | Ty.Text { cstr; params } ->
     let vars = List.map (function
         | Ty.Tvar { Ty.v = v; _ } -> string_of_int v
         | _ -> assert false
-      ) args in
-    vars, Hstring.view constr, Parsed.Abstract
-  | Ty.Tsum {name; constrs} ->
-    [], Hstring.view name, Parsed.Enum (List.map Hstring.view constrs)
+      ) params in
+    vars, Hstring.view cstr, Parsed.Abstract
+  | Ty.Tsum { name; cstrs } ->
+    [], Hstring.view name, Parsed.Enum (List.map Hstring.view cstrs)
   | Ty.Trecord r ->
     let vars = List.map (function
         | Ty.Tvar { Ty.v = v; _ } -> string_of_int v
@@ -1191,7 +1191,7 @@ let downgrade_type_decl = function
         Hstring.view s, downgrade_ty ty
       ) r.Ty.lbs
     in
-    let constr = Hstring.view r.Ty.record_constr in
+    let constr = Hstring.view r.Ty.record_cstr in
     vars, Hstring.view r.Ty.name, Parsed.Record (constr, fields)
 
   | Ty.Tadt _ ->

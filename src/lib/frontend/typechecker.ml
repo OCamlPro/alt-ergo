@@ -58,7 +58,7 @@ module Types = struct
            begin
              if MString.mem x !to_tyvars then
                Errors.typing_error (TypeDuplicateVar x) loc;
-             let nv = Ty.Tvar (Ty.fresh_var ()) in
+             let nv = Ty.fresh_tvar () in
              to_tyvars := MString.add x nv !to_tyvars;
              nv
            end
@@ -98,7 +98,7 @@ module Types = struct
       begin
         try MString.find s !to_tyvars
         with Not_found ->
-          let nty = Ty.Tvar (Ty.fresh_var ()) in
+          let nty = Ty.fresh_tvar () in
           to_tyvars := MString.add s nty !to_tyvars;
           nty
       end
