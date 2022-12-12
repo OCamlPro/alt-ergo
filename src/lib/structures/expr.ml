@@ -30,31 +30,54 @@ module Sy = Symbols
 module SMap = Sy.Map
 module SSet = Sy.Set
 
+open Ppx_compare_lib.Builtin
+
 (** Data structures *)
 
-let compare_list = List.compare
-let compare_bool = Bool.compare
-let compare_int = Int.compare
-let equal_list = List.equal
-let equal_bool = Bool.equal
-let equal_int = Int.equal
-
 type binders = (Ty.t * int) SMap.t (*int tag in globally unique *)
+[@@deriving_inline compare, equal]
+let _ = fun (_ : binders) -> ()
+let compare_binders =
+  (fun a__001_ ->
+     fun b__002_ ->
+       SMap.compare
+         (fun a__003_ ->
+            fun b__004_ ->
+              let (t__005_, t__006_) = a__003_ in
+              let (t__007_, t__008_) = b__004_ in
+              match Ty.compare t__005_ t__007_ with
+              | 0 -> compare_int t__006_ t__008_
+              | n -> n) a__001_ b__002_ : binders -> binders -> int)
+let _ = compare_binders
+let equal_binders =
+  (fun a__009_ ->
+     fun b__010_ ->
+       SMap.equal
+         (fun a__011_ ->
+            fun b__012_ ->
+              let (t__013_, t__014_) = a__011_ in
+              let (t__015_, t__016_) = b__012_ in
+              Ppx_compare_lib.(&&) (Ty.equal t__013_ t__015_)
+                (equal_int t__014_ t__016_)) a__009_ b__010_ : binders ->
+       binders ->
+       bool)
+let _ = equal_binders
+[@@@end]
 
 type t = term_view
 
 and term_view = {
-  f: Sy.t;
-  xs: t list;
-  ty: Ty.t;
-  bind : bind_kind;
-  tag: int;
-  vars : (Ty.t * int) SMap.t; (* vars to types and nb of occurences *)
-  vty : Ty.Svty.t;
+  f: Sy.t; [@ignore]
+  xs: t list; [@ignore]
+  ty: Ty.t; [@ignore]
+  bind : bind_kind; [@ignore]
+  vars : (Ty.t * int) SMap.t; [@ignore]
+  vty : Ty.Svty.t; [@ignore]
   depth: int;
-  nb_nodes : int;
-  pure : bool;
-  mutable neg : t option [@ignore]
+  nb_nodes : int; [@ignore]
+  pure : bool; [@ignore]
+  mutable neg : t option; [@ignore]
+  tag: int;
 }
 
 and decl_kind =
@@ -69,29 +92,28 @@ and bind_kind =
   | B_lemma of quantified
   | B_skolem of quantified
   | B_let of letin
-[@@deriving equal, compare]
 
 and quantified = {
-  name : String.t;
+  name : string; [@ignore]
   main : t;
-  toplevel : bool;
-  user_trs : trigger list;
-  binders : binders; [@ignore]
+  toplevel : bool; [@ignore]
+  binders : binders;
   (* These fields should be (ordered) lists ! important for skolemization *)
   sko_v : t list;
   sko_vty : Ty.t list;
+  user_trs : trigger list;
   loc : Loc.t; [@ignore] (* location of the "GLOBAL" axiom
                             containing this quantified formula.
                             It forms with name a unique id *)
-  kind : decl_kind;
+  kind : decl_kind; [@ignore]
 }
 
 and letin = {
   let_v: Sy.t;
   let_e : t;
   in_e : t;
-  let_sko : t; (* fresh symb. with free vars *)
-  is_bool : bool;
+  let_sko : t; [@ignore]
+  is_bool : bool; [@ignore]
 }
 
 and semantic_trigger =
@@ -100,22 +122,348 @@ and semantic_trigger =
   | NotTheoryConst of t
   | IsTheoryConst of t
   | LinearDependency of t * t
-[@@deriving compare]
 
 and trigger = {
   content : t list;
-  (* this field is filled (with a part of 'content' field) by theories
-     when assume_th_elt is called *)
-  semantic : semantic_trigger list;
   hyp : t list;
+  semantic : semantic_trigger list;
   t_depth : int;
   from_user : bool;
-  guard : t option [@ignore]
+  guard : t option
 }
+[@@deriving_inline compare, equal]
+let _ = fun (_ : t) -> ()
+let _ = fun (_ : term_view) -> ()
+let _ = fun (_ : decl_kind) -> ()
+let _ = fun (_ : bind_kind) -> ()
+let _ = fun (_ : quantified) -> ()
+let _ = fun (_ : letin) -> ()
+let _ = fun (_ : semantic_trigger) -> ()
+let _ = fun (_ : trigger) -> ()
+let rec compare =
+  (fun a__017_ -> fun b__018_ -> compare_term_view a__017_ b__018_ :
+                                   t -> t -> int)
+and compare_term_view =
+  (fun a__019_ ->
+     fun b__020_ ->
+       if Ppx_compare_lib.phys_equal a__019_ b__020_
+       then 0
+       else
+         (match compare_int a__019_.depth b__020_.depth with
+          | 0 -> compare_int a__019_.tag b__020_.tag
+          | n -> n) : term_view -> term_view -> int)
+and compare_decl_kind =
+  (fun a__021_ ->
+     fun b__022_ ->
+       if Ppx_compare_lib.phys_equal a__021_ b__022_
+       then 0
+       else
+         (match (a__021_, b__022_) with
+          | (Dtheory, Dtheory) -> 0
+          | (Dtheory, _) -> (-1)
+          | (_, Dtheory) -> 1
+          | (Daxiom, Daxiom) -> 0
+          | (Daxiom, _) -> (-1)
+          | (_, Daxiom) -> 1
+          | (Dgoal, Dgoal) -> 0
+          | (Dgoal, _) -> (-1)
+          | (_, Dgoal) -> 1
+          | (Dpredicate _a__023_, Dpredicate _b__024_) ->
+            compare _a__023_ _b__024_
+          | (Dpredicate _, _) -> (-1)
+          | (_, Dpredicate _) -> 1
+          | (Dfunction _a__025_, Dfunction _b__026_) ->
+            compare _a__025_ _b__026_) : decl_kind -> decl_kind -> int)
+and compare_bind_kind =
+  (fun a__027_ ->
+     fun b__028_ ->
+       if Ppx_compare_lib.phys_equal a__027_ b__028_
+       then 0
+       else
+         (match (a__027_, b__028_) with
+          | (B_none, B_none) -> 0
+          | (B_none, _) -> (-1)
+          | (_, B_none) -> 1
+          | (B_lemma _a__029_, B_lemma _b__030_) ->
+            compare_quantified _a__029_ _b__030_
+          | (B_lemma _, _) -> (-1)
+          | (_, B_lemma _) -> 1
+          | (B_skolem _a__031_, B_skolem _b__032_) ->
+            compare_quantified _a__031_ _b__032_
+          | (B_skolem _, _) -> (-1)
+          | (_, B_skolem _) -> 1
+          | (B_let _a__033_, B_let _b__034_) ->
+            compare_letin _a__033_ _b__034_) : bind_kind ->
+       bind_kind -> int)
+and compare_quantified =
+  (fun a__035_ ->
+     fun b__036_ ->
+       if Ppx_compare_lib.phys_equal a__035_ b__036_
+       then 0
+       else
+         (match compare a__035_.main b__036_.main with
+          | 0 ->
+            (match compare_binders a__035_.binders b__036_.binders with
+             | 0 ->
+               (match compare_list compare a__035_.sko_v b__036_.sko_v
+                with
+                | 0 ->
+                  (match compare_list Ty.compare a__035_.sko_vty
+                           b__036_.sko_vty
+                   with
+                   | 0 ->
+                     compare_list compare_trigger a__035_.user_trs
+                       b__036_.user_trs
+                   | n -> n)
+                | n -> n)
+             | n -> n)
+          | n -> n) : quantified -> quantified -> int)
+and compare_letin =
+  (fun a__043_ ->
+     fun b__044_ ->
+       if Ppx_compare_lib.phys_equal a__043_ b__044_
+       then 0
+       else
+         (match Sy.compare a__043_.let_v b__044_.let_v with
+          | 0 ->
+            (match compare a__043_.let_e b__044_.let_e with
+             | 0 -> compare a__043_.in_e b__044_.in_e
+             | n -> n)
+          | n -> n) : letin -> letin -> int)
+and compare_semantic_trigger =
+  (fun a__045_ ->
+     fun b__046_ ->
+       if Ppx_compare_lib.phys_equal a__045_ b__046_
+       then 0
+       else
+         (match (a__045_, b__046_) with
+          | (Interval (_a__047_, _a__049_, _a__051_), Interval
+               (_b__048_, _b__050_, _b__052_)) ->
+            (match compare _a__047_ _b__048_ with
+             | 0 ->
+               (match Sy.compare_bound _a__049_ _b__050_ with
+                | 0 -> Sy.compare_bound _a__051_ _b__052_
+                | n -> n)
+             | n -> n)
+          | (Interval _, _) -> (-1)
+          | (_, Interval _) -> 1
+          | (MapsTo (_a__053_, _a__055_), MapsTo (_b__054_, _b__056_)) ->
+            (match Var.compare _a__053_ _b__054_ with
+             | 0 -> compare _a__055_ _b__056_
+             | n -> n)
+          | (MapsTo _, _) -> (-1)
+          | (_, MapsTo _) -> 1
+          | (NotTheoryConst _a__057_, NotTheoryConst _b__058_) ->
+            compare _a__057_ _b__058_
+          | (NotTheoryConst _, _) -> (-1)
+          | (_, NotTheoryConst _) -> 1
+          | (IsTheoryConst _a__059_, IsTheoryConst _b__060_) ->
+            compare _a__059_ _b__060_
+          | (IsTheoryConst _, _) -> (-1)
+          | (_, IsTheoryConst _) -> 1
+          | (LinearDependency (_a__061_, _a__063_), LinearDependency
+               (_b__062_, _b__064_)) ->
+            (match compare _a__061_ _b__062_ with
+             | 0 -> compare _a__063_ _b__064_
+             | n -> n)) : semantic_trigger -> semantic_trigger -> int)
+and compare_trigger =
+  (fun a__065_ ->
+     fun b__066_ ->
+       if Ppx_compare_lib.phys_equal a__065_ b__066_
+       then 0
+       else
+         (match compare_list compare a__065_.content b__066_.content with
+          | 0 ->
+            (match compare_list compare a__065_.hyp b__066_.hyp with
+             | 0 ->
+               (match compare_list compare_semantic_trigger
+                        a__065_.semantic b__066_.semantic
+                with
+                | 0 ->
+                  (match compare_int a__065_.t_depth b__066_.t_depth
+                   with
+                   | 0 ->
+                     (match compare_bool a__065_.from_user
+                              b__066_.from_user
+                      with
+                      | 0 ->
+                        compare_option compare a__065_.guard
+                          b__066_.guard
+                      | n -> n)
+                   | n -> n)
+                | n -> n)
+             | n -> n)
+          | n -> n) : trigger -> trigger -> int)
+let _ = compare
+and _ = compare_term_view
+and _ = compare_decl_kind
+and _ = compare_bind_kind
+and _ = compare_quantified
+and _ = compare_letin
+and _ = compare_semantic_trigger
+and _ = compare_trigger
+let rec equal =
+  (fun a__075_ -> fun b__076_ -> equal_term_view a__075_ b__076_ : t ->
+     t -> bool)
+and equal_term_view =
+  (fun a__077_ ->
+     fun b__078_ ->
+       if Ppx_compare_lib.phys_equal a__077_ b__078_
+       then true
+       else
+         Ppx_compare_lib.(&&) (equal_int a__077_.depth b__078_.depth)
+           (equal_int a__077_.tag b__078_.tag) : term_view ->
+       term_view -> bool)
+and equal_decl_kind =
+  (fun a__079_ ->
+     fun b__080_ ->
+       if Ppx_compare_lib.phys_equal a__079_ b__080_
+       then true
+       else
+         (match (a__079_, b__080_) with
+          | (Dtheory, Dtheory) -> true
+          | (Dtheory, _) -> false
+          | (_, Dtheory) -> false
+          | (Daxiom, Daxiom) -> true
+          | (Daxiom, _) -> false
+          | (_, Daxiom) -> false
+          | (Dgoal, Dgoal) -> true
+          | (Dgoal, _) -> false
+          | (_, Dgoal) -> false
+          | (Dpredicate _a__081_, Dpredicate _b__082_) ->
+            equal _a__081_ _b__082_
+          | (Dpredicate _, _) -> false
+          | (_, Dpredicate _) -> false
+          | (Dfunction _a__083_, Dfunction _b__084_) ->
+            equal _a__083_ _b__084_) : decl_kind -> decl_kind -> bool)
+and equal_bind_kind =
+  (fun a__085_ ->
+     fun b__086_ ->
+       if Ppx_compare_lib.phys_equal a__085_ b__086_
+       then true
+       else
+         (match (a__085_, b__086_) with
+          | (B_none, B_none) -> true
+          | (B_none, _) -> false
+          | (_, B_none) -> false
+          | (B_lemma _a__087_, B_lemma _b__088_) ->
+            equal_quantified _a__087_ _b__088_
+          | (B_lemma _, _) -> false
+          | (_, B_lemma _) -> false
+          | (B_skolem _a__089_, B_skolem _b__090_) ->
+            equal_quantified _a__089_ _b__090_
+          | (B_skolem _, _) -> false
+          | (_, B_skolem _) -> false
+          | (B_let _a__091_, B_let _b__092_) -> equal_letin _a__091_ _b__092_) :
+           bind_kind -> bind_kind -> bool)
+and equal_quantified =
+  (fun a__093_ ->
+     fun b__094_ ->
+       if Ppx_compare_lib.phys_equal a__093_ b__094_
+       then true
+       else
+         Ppx_compare_lib.(&&) (equal a__093_.main b__094_.main)
+           (Ppx_compare_lib.(&&)
+              (equal_binders a__093_.binders b__094_.binders)
+              (Ppx_compare_lib.(&&)
+                 (equal_list equal a__093_.sko_v b__094_.sko_v)
+                 (Ppx_compare_lib.(&&)
+                    (equal_list Ty.equal a__093_.sko_vty b__094_.sko_vty)
+                    (equal_list equal_trigger a__093_.user_trs
+                       b__094_.user_trs)))) : quantified ->
+       quantified -> bool)
+and equal_letin =
+  (fun a__101_ ->
+     fun b__102_ ->
+       if Ppx_compare_lib.phys_equal a__101_ b__102_
+       then true
+       else
+         Ppx_compare_lib.(&&) (Sy.equal a__101_.let_v b__102_.let_v)
+           (Ppx_compare_lib.(&&) (equal a__101_.let_e b__102_.let_e)
+              (equal a__101_.in_e b__102_.in_e)) : letin -> letin -> bool)
+and equal_semantic_trigger =
+  (fun a__103_ ->
+     fun b__104_ ->
+       if Ppx_compare_lib.phys_equal a__103_ b__104_
+       then true
+       else
+         (match (a__103_, b__104_) with
+          | (Interval (_a__105_, _a__107_, _a__109_), Interval
+               (_b__106_, _b__108_, _b__110_)) ->
+            Ppx_compare_lib.(&&) (equal _a__105_ _b__106_)
+              (Ppx_compare_lib.(&&) (Sy.equal_bound _a__107_ _b__108_)
+                 (Sy.equal_bound _a__109_ _b__110_))
+          | (Interval _, _) -> false
+          | (_, Interval _) -> false
+          | (MapsTo (_a__111_, _a__113_), MapsTo (_b__112_, _b__114_)) ->
+            Ppx_compare_lib.(&&) (Var.equal _a__111_ _b__112_)
+              (equal _a__113_ _b__114_)
+          | (MapsTo _, _) -> false
+          | (_, MapsTo _) -> false
+          | (NotTheoryConst _a__115_, NotTheoryConst _b__116_) ->
+            equal _a__115_ _b__116_
+          | (NotTheoryConst _, _) -> false
+          | (_, NotTheoryConst _) -> false
+          | (IsTheoryConst _a__117_, IsTheoryConst _b__118_) ->
+            equal _a__117_ _b__118_
+          | (IsTheoryConst _, _) -> false
+          | (_, IsTheoryConst _) -> false
+          | (LinearDependency (_a__119_, _a__121_), LinearDependency
+               (_b__120_, _b__122_)) ->
+            Ppx_compare_lib.(&&) (equal _a__119_ _b__120_)
+              (equal _a__121_ _b__122_)) : semantic_trigger ->
+       semantic_trigger -> bool)
+and equal_trigger =
+  (fun a__123_ ->
+     fun b__124_ ->
+       if Ppx_compare_lib.phys_equal a__123_ b__124_
+       then true
+       else
+         Ppx_compare_lib.(&&)
+           (equal_list equal a__123_.content b__124_.content)
+           (Ppx_compare_lib.(&&) (equal_list equal a__123_.hyp b__124_.hyp)
+              (Ppx_compare_lib.(&&)
+                 (equal_list equal_semantic_trigger a__123_.semantic
+                    b__124_.semantic)
+                 (Ppx_compare_lib.(&&)
+                    (equal_int a__123_.t_depth b__124_.t_depth)
+                    (Ppx_compare_lib.(&&)
+                       (equal_bool a__123_.from_user b__124_.from_user)
+                       (equal_option equal a__123_.guard b__124_.guard))))) :
+           trigger -> trigger -> bool)
+let _ = equal
+and _ = equal_term_view
+and _ = equal_decl_kind
+and _ = equal_bind_kind
+and _ = equal_quantified
+and _ = equal_letin
+and _ = equal_semantic_trigger
+and _ = equal_trigger
+[@@@end]
 
 type expr = t
 
-type subst = expr SMap.t * Ty.subst
+type subst = t SMap.t * Ty.subst
+[@@deriving_inline compare, equal]
+let _ = fun (_ : subst) -> ()
+let compare_subst =
+  (fun a__133_ ->
+     fun b__134_ ->
+       let (t__135_, t__136_) = a__133_ in
+       let (t__137_, t__138_) = b__134_ in
+       match SMap.compare compare t__135_ t__137_ with
+       | 0 -> Ty.compare_subst t__136_ t__138_
+       | n -> n : subst -> subst -> int)
+let _ = compare_subst
+let equal_subst =
+  (fun a__141_ ->
+     fun b__142_ ->
+       let (t__143_, t__144_) = a__141_ in
+       let (t__145_, t__146_) = b__142_ in
+       Ppx_compare_lib.(&&) (SMap.equal equal t__143_ t__145_)
+         (Ty.equal_subst t__144_ t__146_) : subst -> subst -> bool)
+let _ = equal_subst
+[@@@end]
 
 type lit_view =
   | Eq of t * t
@@ -141,27 +489,27 @@ type form_view =
    depth. Constants are smaller. Otherwise, we compare tag1 - tag2 so
    that fresh vars will be smaller *)
 (* XXX Uf.term_repr sensitive to the way this function is coded *)
-let compare t1 t2 =
+(*let compare t1 t2 =
   if t1 == t2 then 0
   else
     let c = t1.depth - t2.depth in
     if c <> 0 then c
-    else t1.tag - t2.tag
+    else t1.tag - t2.tag*)
 
-let equal t1 t2 =  t1 == t2
+(*let equal t1 t2 =  t1 == t2*)
 
 let hash t = t.tag
 
 let uid t = t.tag
 
-let compare_subst (s_t1, s_ty1) (s_t2, s_ty2) =
+(*let compare_subst (s_t1, s_ty1) (s_t2, s_ty2) =
   let c = Ty.compare_subst s_ty1 s_ty2 in
   if c<>0 then c else SMap.compare compare s_t1 s_t2
 
-let equal_subst (s_t1, s_ty1) (s_t2, s_ty2) =
+  let equal_subst (s_t1, s_ty1) (s_t2, s_ty2) =
   Ty.equal_subst s_ty1 s_ty2 || SMap.equal equal s_t1 s_t2
 
-let compare_let let1 let2 =
+  let compare_let let1 let2 =
   let c = Sy.compare let1.let_v let2.let_v in
   if c <> 0 then c
   else
@@ -169,12 +517,13 @@ let compare_let let1 let2 =
     if c <> 0 then c
     else compare let1.in_e let2.in_e
 
-let compare_binders b1 b2 =
+  let compare_binders b1 b2 =
   SMap.compare (fun (ty1,i) (ty2,j) ->
       let c = i - j in if c <> 0 then c else Ty.compare ty1 ty2)
     b1 b2
+*)
 
-let [@inline always] compare_sko_xxx sk1 sk2 cmp_xxx =
+(*let [@inline always] compare_sko_xxx sk1 sk2 cmp_xxx =
   try
     List.iter2
       (fun s t ->
@@ -186,15 +535,15 @@ let [@inline always] compare_sko_xxx sk1 sk2 cmp_xxx =
   | Util.Cmp c -> c
   | Invalid_argument _ -> List.length sk1 - List.length sk2
 
-let compare_sko_vars sk1 sk2 = compare_sko_xxx sk1 sk2 compare
+  let compare_sko_vars sk1 sk2 = compare_sko_xxx sk1 sk2 compare
 
-let compare_sko_vty sk1 sk2 = compare_sko_xxx sk1 sk2 Ty.compare
+  let compare_sko_vty sk1 sk2 = compare_sko_xxx sk1 sk2 Ty.compare*)
 
 let compare_lists l1 l2 cmp_elts =
   let res = Util.cmp_lists l1 l2 cmp_elts in
   if res <> 0 then raise (Util.Cmp res)
 
-let compare_triggers _f1 _f2 trs1 trs2 =
+(*let compare_triggers _f1 _f2 trs1 trs2 =
   try
     List.iter2
       (fun tr1 tr2 ->
@@ -231,9 +580,9 @@ let compare_triggers _f1 _f2 trs1 trs2 =
     0
   with
   | Util.Cmp c -> c
-  | Invalid_argument _ -> List.length trs1 - List.length trs2
+  | Invalid_argument _ -> List.length trs1 - List.length trs2*)
 
-let compare_quant
+(*let compare_quant
     {main=f1; binders=b1; sko_v=sko_v1; sko_vty=free_vty1; user_trs=trs1; _}
     {main=f2; binders=b2; sko_v=sko_v2; sko_vty=free_vty2; user_trs=trs2; _}
   =
@@ -248,7 +597,7 @@ let compare_quant
       else
         let c = compare_sko_vty free_vty1 free_vty2 in
         if c <> 0 then c
-        else compare_triggers f1 f2 trs1 trs2
+        else compare_triggers f1 f2 trs1 trs2*)
 
 module Msbt : Map.S with type key = expr SMap.t =
   Map.Make
@@ -1085,7 +1434,7 @@ let mk_forall_ter =
         let lem = F_Htbl.find env f in
         let q = match form_view lem with Lemma q -> q | _ -> assert false in
         assert (equal q.main f (* should be true *));
-        if compare_quant q new_q <> 0 then raise Exit;
+        if compare_quantified q new_q <> 0 then raise Exit;
         Printer.print_wrn ~warning:(Options.get_debug_warnings ())
           "(sub) axiom %s replaced with %s" name q.name;
         lem

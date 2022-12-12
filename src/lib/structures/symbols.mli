@@ -75,10 +75,10 @@ type bound_kind =
 
 type bound = private {
   sort: Ty.t;
-  is_open: Bool.t;
-  is_lower: Bool.t;
+  is_open: bool;
+  is_lower: bool;
   kind: bound_kind;
-} [@@deriving equal, compare]
+} [@@deriving compare, equal]
 
 type t =
   | True
@@ -95,7 +95,7 @@ type t =
   | In of bound * bound
   | MapsTo of Var.t
   | Let
-[@@deriving compare]
+[@@deriving compare, equal]
 
 val name : ?kind:name_kind -> string -> t
 val var : Var.t -> t
@@ -110,8 +110,6 @@ val mk_maps_to : Var.t -> t
 
 val is_ac : t -> bool
 
-val equal : t -> t -> bool
-val compare : t -> t -> int
 val hash : t -> int
 
 val to_string : t -> string

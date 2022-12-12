@@ -44,13 +44,13 @@ type term_view = private {
   xs: t list;
   ty: Ty.t;
   bind : bind_kind;
-  tag: int;
   vars : (Ty.t * int) Symbols.Map.t; (* vars to types and nb of occurences *)
   vty : Ty.Svty.t;
   depth: int;
   nb_nodes : int;
   pure : bool;
-  mutable neg : t option
+  mutable neg : t option;
+  tag: int
 }
 
 and bind_kind =
@@ -63,11 +63,11 @@ and quantified = private {
   name : string;
   main : t;
   toplevel : bool;
-  user_trs : trigger list;
   binders : binders;
   (* These fields should be (ordered) lists ! important for skolemization *)
   sko_v : t list;
   sko_vty : Ty.t list;
+  user_trs : trigger list;
   loc : Loc.t; (* location of the "GLOBAL" axiom containing this quantified
                   formula. It forms with name a unique id *)
   kind : decl_kind;
@@ -90,10 +90,10 @@ and semantic_trigger =
 
 and trigger = (*private*) {
   content : t list;
+  hyp : t list;
   (* this field is filled (with a part of 'content' field) by theories
      when assume_th_elt is called *)
   semantic : semantic_trigger list;
-  hyp : t list;
   t_depth : int;
   from_user : bool;
   guard : t option
@@ -144,8 +144,8 @@ val hash  : t -> int
 val uid   : t -> int
 val compare_subst : subst -> subst -> int
 val equal_subst : subst -> subst -> bool
-val compare_quant : quantified -> quantified -> int
-val compare_let : letin -> letin -> int
+val compare_quantified : quantified -> quantified -> int
+val compare_letin : letin -> letin -> int
 
 (** Some auxiliary functions *)
 
