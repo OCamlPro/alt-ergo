@@ -162,7 +162,7 @@ module Shostak (X : ALIEN) = struct
         | Ty.Adt cases -> cases
       in
       let case_hs =
-        try Ty.assoc_destrs hs cases with Not_found -> assert false
+        try Ty.assoc_dstrs hs cases with Not_found -> assert false
       in
       let c_args =
         try

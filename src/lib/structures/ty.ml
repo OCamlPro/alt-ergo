@@ -51,7 +51,11 @@ type t =
       payload : t list
     }
 
-and tvar = { v : int ; mutable value : t option }
+and tvar = {
+  v : int;
+  mutable value : t option
+}
+
 and trecord = {
   mutable args : t list;
   name : Hstring.t;
@@ -71,16 +75,16 @@ type type_body =
   | Adt of adt_cstr list
 
 
-let assoc_destrs hs cases =
+let assoc_dstrs hs cases =
   let res = ref None in
   try
     List.iter
-      (fun {cstr = s ; dstrs = t} ->
-         if Hstring.equal hs s then begin
-           res := Some t;
+      (fun { cstr ; dstrs } ->
+         if Hstring.equal hs cstr then begin
+           res := Some dstrs;
            raise Exit
          end
-      )cases;
+      ) cases;
     raise Not_found
   with Exit ->
   match !res with

@@ -31,13 +31,13 @@
 type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
 
 type t = private {
-  top_sy: Symbols.t;
+  top_sy : Symbols.t;
   (** Top symbol. *)
 
-  args: t list;
+  args : t list;
   (** List of arguments. *)
 
-  ty: Ty.t;
+  ty : Ty.t;
   (** Type of the expression. *)
 
   bind : bind_kind;
@@ -47,12 +47,12 @@ type t = private {
   (** Unique identifiant used by the {!module:Hconsing} module. *)
 
   vars : (Ty.t * int) Symbols.Map.t;
-  (** Multiset of the variables occured in the expression. *)
+  (** Multiset of the free variables occured in the expression. *)
 
   vty : Ty.Svty.t;
-  (** Multiset of the type variables occured in the expression. *)
+  (** Multiset of the free type variables occured in the expression. *)
 
-  depth: int;
+  depth : int;
   (** Depth of the expression. *)
 
   nb_nodes : int;

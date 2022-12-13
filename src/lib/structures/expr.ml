@@ -840,15 +840,22 @@ let print_tagged_classes =
 
 (* smart constructors for terms *)
 
-(*  *)
+(* Produce the set of free variables occuring in a term that is not a formula.
+   The function assumes that the vars field of the elements of args
+   contain the free variables of these elements. *)
 let free_vars_non_form sy args ty =
   match sy, args with
   | Sy.Var _, [] -> SMap.singleton sy (ty, 1)
-  | Sy.Var _, _ -> assert false
-  | Sy.Form _, _ -> assert false (* not correct for quantified and Lets *)
+  | Sy.Var _, _ -> failwith "A variable has no argument"
+  | Sy.Form _, _ ->
+    (* It is not correct for quantified expression or let-in expressions. *)
+    failwith "The function free_vars_non_form cannot be called with a\
+              formula"
   | _, [] -> SMap.empty
   | _, e :: r -> List.fold_left (fun s t -> merge_vars s t.vars) e.vars r
 
+(* Produce the set of free type variables occuring in a term that is not a
+   formula. *)
 let free_type_vars_non_form l ty =
   List.fold_left (fun acc t -> Ty.Svty.union acc t.vty) (Ty.vty_of ty) l
 
@@ -1766,7 +1773,7 @@ let resolution_triggers ~is_back { kind; main = f; binders; _ } =
 
 let free_type_vars_as_types e =
   Ty.Svty.fold
-    (fun i z -> Ty.Set.add (Ty.Tvar {Ty.v=i; value = None}) z)
+    (fun i z -> Ty.Set.add (Ty.Tvar { v = i; value = None }) z)
     (free_type_vars e) Ty.Set.empty
 
 
@@ -1778,7 +1785,7 @@ let mk_let ~var ~let_e ~in_e =
   let let_e_ty = type_info let_e in
   let free_vars = let_e.vars in (* dep vars are only those appearing in let_e*)
   let free_v_as_terms =
-    SMap.fold (fun sy (ty ,_) acc ->
+    SMap.fold (fun sy (ty, _) acc ->
         (mk_term ~sy ~args:[] ~ty) :: acc
       ) free_vars []
   in
@@ -1786,7 +1793,7 @@ let mk_let ~var ~let_e ~in_e =
     mk_term ~sy:(Sy.fresh "_let") ~args:free_v_as_terms ~ty:let_e_ty
   in
   let is_bool = type_info in_e == Ty.Tbool in
-  mk_let_aux {let_v = var; let_e; in_e; let_sko; is_bool}
+  mk_let_aux { let_v = var; let_e; in_e; let_sko; is_bool }
 
 let skolemize { main = f; binders; sko_v; sko_vty; _ } =
   let print fmt ty =
@@ -2475,7 +2482,7 @@ let mk_forall ~name ~loc binders ~triggers ~toplevel ~decl_kind f =
   let decl_kind =
     if toplevel then decl_kind
     else match decl_kind with
-      | Dpredicate  _ | Dfunction _ -> Daxiom (* pred and func only toplevel*)
+      | Dpredicate _ | Dfunction _ -> Daxiom (* pred and func only toplevel*)
       | _ -> decl_kind
   in
   let binders =

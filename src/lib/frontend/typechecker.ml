@@ -1199,7 +1199,7 @@ and type_pattern p env ty ty_body =
   check_no_duplicates pat_loc args;
   let hf = Hstring.make f in
   try
-    let prof = Ty.assoc_destrs hf ty_body in
+    let prof = Ty.assoc_dstrs hf ty_body in
     let env =
       try
         List.fold_left2

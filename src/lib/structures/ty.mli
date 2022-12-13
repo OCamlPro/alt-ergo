@@ -127,7 +127,7 @@ type adt_cstr = {
     for recursive ADTs *)
 type type_body =
   | Adt of adt_cstr list
-  (** body of an algebraic datatype *)
+  (** Body of an algebraic datatype. *)
 
 (** {1 Data structures} *)
 
@@ -137,9 +137,10 @@ module Svty : Set.S with type elt = int
 (** Sets of types *)
 module Set : Set.S with type elt = t
 
-val assoc_destrs : Hstring.t -> adt_cstr list -> (Hstring.t * t) list
-(** returns the list of destructors associated with the given consturctor.
-    raises Not_found if the constructor is not in the given list *)
+val assoc_dstrs : Hstring.t -> adt_cstr list -> (Hstring.t * t) list
+(** [assoc_dstrs] returns the list of destructors associated with the
+    given constructor.
+    @raises Not_found if the constructor is not in the given list. *)
 
 val type_body : Hstring.t -> t list -> type_body
 
@@ -166,7 +167,8 @@ val print_full : t Util.printer
 (** Print function including the record fields. *)
 
 val vty_of : t -> Svty.t
-(** Returns the set of type variables that occur in a given type. *)
+(** [vty_of ty] returns the set of type variables that occur in the type
+    [ty]. *)
 
 (** {2 Constructors} *)
 
@@ -222,8 +224,15 @@ module Subst: sig
       substitution. *)
 
   val add : int -> ty -> t -> t
+  (** [add i ty sbt] adds the substitution [i -> ty] where [i] is the id of
+      some type to the substitution [sbt]. *)
+
   val remove : int -> t -> t
+
   val mem : int -> t -> bool
+  (** [mem i ty sbt] checks if the substitution [i -> ty] is a part of
+      [sbt]. *)
+
   val filter : (int -> ty -> bool) -> t -> t
 
   val apply : t -> ty -> ty
