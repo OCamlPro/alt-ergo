@@ -29,7 +29,6 @@
 open AltErgoLib
 open Alt_ergo_common
 open AltErgoParsers
-open Typed
 open Commands
 open Gui_config
 open Annoted_ast

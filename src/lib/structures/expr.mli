@@ -243,6 +243,10 @@ val max_ground_terms_rec_of_form : t -> Set.t
 val make_triggers:
   t -> binders -> decl_kind -> Util.matching_env -> trigger list
 
+(** clean trigger:
+    remove useless terms in multi-triggers after inlining of lets*)
+val clean_trigger: in_theory:bool -> string -> trigger -> trigger
+
 val resolution_triggers: is_back:bool -> quantified -> trigger list
 
 val mk_forall :
@@ -278,6 +282,8 @@ val skolemize : quantified -> t
 val elim_let : recursive:bool -> letin -> t
 
 val elim_iff : t -> t -> int -> with_conj:bool -> t
+
+val concat_chainable: Symbols.t -> Ty.t -> t -> t list -> t list
 
 (*val purify_literal : t -> t*)
 val purify_form : t -> t

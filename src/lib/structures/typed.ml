@@ -142,18 +142,6 @@ type 'a rwt_rule = {
 let print_rwt pp fmt r =
   Format.fprintf fmt "@<hv>%a@ --> %a@]" pp r.rwt_left pp r.rwt_right
 
-
-(** Goal sort *)
-
-type goal_sort = Cut | Check | Thm | Sat
-
-let print_goal_sort fmt = function
-  | Cut -> Format.fprintf fmt "cut"
-  | Check -> Format.fprintf fmt "check"
-  | Thm -> Format.fprintf fmt "thm"
-  | Sat -> Format.fprintf fmt "sat"
-
-
 (** Logic type *)
 
 type tlogic_type =
@@ -172,7 +160,7 @@ and 'a tdecl =
       Loc.t * string * Util.theories_extensions * ('a tdecl, 'a) annoted list
   | TAxiom of Loc.t * string * Util.axiom_kind * 'a atform
   | TRewriting of Loc.t * string * ('a atterm rwt_rule) list
-  | TGoal of Loc.t * goal_sort * string * 'a atform
+  | TGoal of Loc.t * Ty.goal_sort * string * 'a atform
   | TLogic of Loc.t * string list * tlogic_type
   | TPredicate_def of
       Loc.t * string *
@@ -368,17 +356,3 @@ let rec print_tdecl fmt = function
 
 and print_atdecl fmt a = print_tdecl fmt a.c
 *)
-
-let fresh_hypothesis_name =
-  let cpt = ref 0 in
-  fun sort ->
-    incr cpt;
-    match sort with
-    | Thm -> "@H"^(string_of_int !cpt)
-    | _ -> "@L"^(string_of_int !cpt)
-
-let is_local_hyp s =
-  try String.equal (String.sub s 0 2) "@L" with Invalid_argument _ -> false
-
-let is_global_hyp s =
-  try String.equal (String.sub s 0 2) "@H" with Invalid_argument _ -> false

@@ -30,73 +30,6 @@ module E = Expr
 module Sy = Symbols
 module SE = E.Set
 
-[@@ocaml.ppwarning "TODO: Change Symbols.Float to store FP numeral \
-                    constants (eg, <24, -149> for single) instead of \
-                    having terms"]
-let make_adequate_app s l ty =
-  let open Fpa_rounding in
-  match s with
-  | Sy.Name (hs, Sy.Other) when Options.get_use_fpa() ->
-    let s, l  =
-      match Hstring.view hs, l with
-      | "float", [_;_;_;_] -> Sy.Op Sy.Float, l
-      | "float32", [_;_;] -> Sy.Op Sy.Float,(E.int "24")::(E.int "149")::l
-      | "float32d", [_] ->
-        Sy.Op Sy.Float,
-        (E.int "24")::
-        (E.int "149")::
-        _NearestTiesToEven__rounding_mode :: l
-
-      | "float64", [_;_;] -> Sy.Op Sy.Float,(E.int "53")::(E.int "1074")::l
-      | "float64d", [_] ->
-        Sy.Op Sy.Float,
-        (E.int "53")::
-        (E.int "1074")::
-        _NearestTiesToEven__rounding_mode :: l
-
-      | "integer_round", [_;_] -> Sy.Op Sy.Integer_round, l
-
-      | "fixed", [_;_;_;_] -> Sy.Op Sy.Fixed, l
-      | "sqrt_real", [_] -> Sy.Op Sy.Sqrt_real, l
-      | "sqrt_real_default", [_] -> Sy.Op Sy.Sqrt_real_default, l
-      | "sqrt_real_excess", [_] -> Sy.Op Sy.Sqrt_real_excess, l
-      | "abs_int", [_] ->  Sy.Op Sy.Abs_int, l
-      | "abs_real", [_] ->  Sy.Op Sy.Abs_real, l
-      | "real_of_int", [_] -> Sy.Op Sy.Real_of_int, l
-      | "int_floor", [_] -> Sy.Op Sy.Int_floor, l
-      | "int_ceil", [_] -> Sy.Op Sy.Int_ceil, l
-      | "max_real", [_;_] -> Sy.Op Sy.Max_real, l
-      | "max_int", [_;_] -> Sy.Op Sy.Max_int, l
-      | "min_real", [_;_] -> Sy.Op Sy.Min_real, l
-      | "min_int", [_;_] -> Sy.Op Sy.Min_int, l
-      | "integer_log2", [_] -> Sy.Op Sy.Integer_log2, l
-
-      (* should not happend thanks to well typedness *)
-      | ("float"
-        | "float32"
-        | "float32d"
-        | "float64"
-        | "float64d"
-        | "integer_round"
-        | "fixed"
-        | "sqrt_real"
-        | "abs_int"
-        | "abs_real"
-        | "real_of_int"
-        | "int_floor"
-        | "int_ceil"
-        | "max_real"
-        | "max_int"
-        | "min_real"
-        | "min_int"
-        | "integer_log2"
-        | "power_of"), _ ->
-        assert false
-      | _ -> s, l
-    in
-    E.mk_term s l ty
-  | _ -> E.mk_term s l ty
-
 let varset_of_list =
   List.fold_left
     (fun acc (s,ty) ->
@@ -111,52 +44,6 @@ module ME =
         if c <> 0 then c
         else E.compare a b
     end)
-
-(* clean trigger:
-   remove useless terms in multi-triggers after inlining of lets*)
-let clean_trigger ~in_theory name trig =
-  if in_theory then trig
-  else
-    match trig with
-    | [] | [_] -> trig
-    | _ ->
-      let s =
-        List.fold_left
-          (fun s t ->
-             if ME.mem t s then s
-             else
-               ME.add t (E.sub_terms SE.empty t) s
-          )ME.empty trig
-      in
-      let res =
-        ME.fold
-          (fun t _ acc ->
-             let rm = ME.remove t acc in
-             if ME.exists (fun _ sub -> SE.mem t sub) rm then rm
-             else acc
-          ) s s
-      in
-      let sz_l = List.length trig in
-      let sz_s = ME.cardinal res in
-      if sz_l = sz_s then trig
-      else
-        let trig' = ME.fold (fun t _ acc -> t :: acc) res [] in
-        if Options.get_verbose () then
-          Printer.print_dbg ~module_name:"Cnf"
-            ~function_name:"clean_trigger"
-            "AXIOM: %s@ \
-             from multi-trig of sz %d : %a@ \
-             to   multi-trig of sz %d : %a"
-            name
-            sz_l E.print_list trig sz_s E.print_list trig';
-        trig'
-
-let concat_chainable p_op p_ty t acc =
-  let {E.f; xs; ty; _} = E.term_view t in
-  if Symbols.equal p_op f && Ty.equal p_ty ty then
-    List.rev_append (List.rev xs) acc
-  else
-    t :: acc
 
 let rec make_term up_qv quant_basename t =
   let rec mk_term ({ c = { tt_ty = ty; tt_desc = tt; _ }; _ }
@@ -177,7 +64,7 @@ let rec make_term up_qv quant_basename t =
       E.bitv bt ty
     | TTvar s -> E.mk_term s [] ty
     | TTapp (s, l) ->
-      make_adequate_app s (List.map mk_term l) ty
+      Fpa_rounding.make_adequate_app s (List.map mk_term l) ty
 
     | TTinInterval (e, lb, ub) ->
       assert (ty == Ty.Tbool);
@@ -193,8 +80,8 @@ let rec make_term up_qv quant_basename t =
         let t1 = mk_term t1 in
         match s, ty with
         | Sy.Op Sy.Plus, (Ty.Tint | Ty.Treal) ->
-          let args = concat_chainable s ty t2 [] in
-          let args = concat_chainable s ty t1 args in
+          let args = E.concat_chainable s ty t2 [] in
+          let args = E.concat_chainable s ty t1 args in
           let args = List.fast_sort E.compare args in
           E.mk_term s args ty
         | _ -> E.mk_term s [t1; t2] ty
@@ -333,10 +220,12 @@ and make_trigger ~in_theory name up_qv quant_basename hyp (e, from_user) =
     List.fold_left (fun z t -> max z (E.depth t)) 0 content in
   (* clean trigger:
      remove useless terms in multi-triggers after inlining of lets*)
-  let content = clean_trigger ~in_theory name content in
-  { E.content ; guard ; t_depth; semantic = []; (* will be set by theories *)
-    hyp; from_user;
-  }
+  let trigger =
+    { E.content ; guard ; t_depth; semantic = []; (* will be set by theories *)
+      hyp; from_user;
+    }
+  in
+  E.clean_trigger ~in_theory name trigger
 
 and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
   let name_tag = ref 0 in

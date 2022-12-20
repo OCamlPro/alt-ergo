@@ -29,12 +29,19 @@
 open AltErgoLib
 open Options
 
+
+type solver_ctx = {
+  ctx    : Commands.sat_tdecl list;
+  local  : Commands.sat_tdecl list;
+  global : Commands.sat_tdecl list;
+}
+
+let empty_solver_ctx = { ctx = []; local = []; global = []; }
+
 (* Internal state while iterating over input statements *)
 type 'a state = {
   env : 'a;
-  ctx   : Commands.sat_tdecl list;
-  local : Commands.sat_tdecl list;
-  global : Commands.sat_tdecl list;
+  solver_ctx: solver_ctx;
 }
 
 let main () =
@@ -81,23 +88,31 @@ let main () =
     if get_type_only () then state else begin
       match td.Typed.c with
       | Typed.TGoal (_, kind, name, _) ->
-        let l = state.local @ state.global @ state.ctx in
+        let l =
+          state.solver_ctx.local @
+          state.solver_ctx.global @
+          state.solver_ctx.ctx
+        in
         let cnf = List.rev @@ Cnf.make l td in
         let () = solve all_context (cnf, name) in
         begin match kind with
-          | Typed.Check
-          | Typed.Cut -> { state with local = []; }
-          | Typed.Thm | Typed.Sat -> { state with global = []; local = []; }
+          | Ty.Check
+          | Ty.Cut ->
+            { state with solver_ctx = { state.solver_ctx with local = []; }}
+          | Ty.Thm | Ty.Sat ->
+            { state with solver_ctx = {
+                  state.solver_ctx with global = []; local = [];
+                }}
         end
-      | Typed.TAxiom (_, s, _, _) when Typed.is_global_hyp s ->
-        let cnf = Cnf.make state.global td in
-        { state with global = cnf; }
-      | Typed.TAxiom (_, s, _, _) when Typed.is_local_hyp s ->
-        let cnf = Cnf.make state.local td in
-        { state with local = cnf; }
+      | Typed.TAxiom (_, s, _, _) when Ty.is_global_hyp s ->
+        let cnf = Cnf.make state.solver_ctx.global td in
+        { state with solver_ctx = { state.solver_ctx with global = cnf; }}
+      | Typed.TAxiom (_, s, _, _) when Ty.is_local_hyp s ->
+        let cnf = Cnf.make state.solver_ctx.local td in
+        { state with solver_ctx = { state.solver_ctx with local = cnf; }}
       | _ ->
-        let cnf = Cnf.make state.ctx td in
-        { state with ctx = cnf; }
+        let cnf = Cnf.make state.solver_ctx.ctx td in
+        { state with solver_ctx = { state.solver_ctx with ctx = cnf; }}
     end
   in
 
@@ -146,9 +161,7 @@ let main () =
 
   let state = {
     env = I.empty_env;
-    ctx = [];
-    local = [];
-    global = [];
+    solver_ctx = empty_solver_ctx
   } in
   try
     let _ : _ state = Seq.fold_left typing_loop state (parsed ()) in

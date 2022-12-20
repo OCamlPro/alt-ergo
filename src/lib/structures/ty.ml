@@ -687,4 +687,29 @@ let print_subst fmt sbt =
 let print_full =
   fst (print_generic (Some type_body)) (Some type_body)
 
+(** Goal sort *)
+
+type goal_sort = Cut | Check | Thm | Sat
+
+let print_goal_sort fmt = function
+  | Cut -> Format.fprintf fmt "cut"
+  | Check -> Format.fprintf fmt "check"
+  | Thm -> Format.fprintf fmt "thm"
+  | Sat -> Format.fprintf fmt "sat"
+
+let fresh_hypothesis_name =
+  let cpt = ref 0 in
+  fun sort ->
+    incr cpt;
+    match sort with
+    | Thm -> "@H"^(string_of_int !cpt)
+    | _ -> "@L"^(string_of_int !cpt)
+
+let is_local_hyp s =
+  try String.equal (String.sub s 0 2) "@L" with Invalid_argument _ -> false
+
+let is_global_hyp s =
+  try String.equal (String.sub s 0 2) "@H" with Invalid_argument _ -> false
+
+(* Context reinitialization *)
 let reinit_decls () = Decls.reinit ()
