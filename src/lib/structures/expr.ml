@@ -493,7 +493,7 @@ module SmtPrinter = struct
         Format.fprintf fmt "| %a@,"  (Util.print_list ~sep:"," ~pp:print) l;
       ) trs
 
-  and print_verbose fmt t = print fmt t
+  and print_verbose fmt t = print_silent fmt t
   (* Not displaying types when int SMT format *)
 
   and print fmt t =
