@@ -24,7 +24,8 @@
 
   ; external dependencies
   (libraries
-     seq unix num str zarith dynlink ocplib-simplex stdlib-shims)
+     seq unix num str zarith dynlink ocplib-simplex stdlib-shims
+     dolmen dolmen_type dolmen_loop)
 
   ; .mli only modules *also* need to be in this field
   (modules_without_implementation matching_types numbersInterface sig sig_rel)
@@ -32,7 +33,7 @@
   ; modules that make up the lib
   (modules
     ; frontend
-    Cnf Input Frontend Parsed_interface Typechecker Models
+    Cnf D_cnf D_loop Input Frontend Parsed_interface Typechecker Models
     ; reasoners
     Ac Arith Arrays Arrays_rel Bitv Ccx Shostak Relation Enum Enum_rel
     Fun_sat Inequalities Bitv_rel Th_util Adt Adt_rel

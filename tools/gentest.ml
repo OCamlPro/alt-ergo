@@ -283,7 +283,13 @@ let () =
     ; "--sat-solver Tableaux-CDCL"
     ; "--no-minimal-bj" ])]
   in
+  let solvers_with_dolmen =
+    List.map (
+      fun (cmd, name, opts) ->
+        cmd, name^"_dolmen", "--frontend=dolmen":: opts
+    ) solvers
+  in
   let cmds = List.map (fun (group, name, args) ->
-    Cmd.make ~name ~group ~bin ~args) solvers
+      Cmd.make ~name ~group ~bin ~args) (solvers  @ solvers_with_dolmen)
   in
   generate path cmds
