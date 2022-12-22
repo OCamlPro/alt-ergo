@@ -206,9 +206,9 @@ let main () =
       ?(reports =
         Dolmen_loop.Report.Conf.mk
           ~default:Dolmen_loop.Report.Warning.Status.Enabled)
-      ?(max_warn = max_int) ?(time_limit = 300.) ?(size_limit = 1_000_000_000.)
-      ?input_mode ?(header_check = false) ?(header_licenses = [])
-      ?header_lang_version ?(type_check = true)
+      ?(max_warn = max_int) ?(time_limit = Float.infinity)
+      ?(size_limit = Float.infinity) ?input_mode ?(header_check = false)
+      ?(header_licenses = []) ?header_lang_version ?(type_check = true)
       ?(solver_ctx = empty_solver_ctx) path =
     let dir = Filename.dirname path in
     let logic_file =
