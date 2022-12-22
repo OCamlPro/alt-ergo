@@ -126,6 +126,9 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (ocaml (>= 4.05.0))
   dune
   dune-configurator
+  (dolmen (>= 0.8))
+  (dolmen_type (>= 0.8))
+  (dolmen_loop (>= 0.8))
   num
   (ocplib-simplex (>= 0.5))
   zarith

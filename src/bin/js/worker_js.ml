@@ -122,14 +122,14 @@ let main worker_id content =
         let cnf = List.rev @@ Cnf.make l td in
         let () = solve all_context (cnf, name) in
         begin match kind with
-          | Typed.Check
-          | Typed.Cut -> { state with local = []; }
-          | Typed.Thm | Typed.Sat -> { state with global = []; local = []; }
+          | Ty.Check
+          | Ty.Cut -> { state with local = []; }
+          | Ty.Thm | Ty.Sat -> { state with global = []; local = []; }
         end
-      | Typed.TAxiom (_, s, _, _) when Typed.is_global_hyp s ->
+      | Typed.TAxiom (_, s, _, _) when Ty.is_global_hyp s ->
         let cnf = Cnf.make state.global td in
         { state with global = cnf; }
-      | Typed.TAxiom (_, s, _, _) when Typed.is_local_hyp s ->
+      | Typed.TAxiom (_, s, _, _) when Ty.is_local_hyp s ->
         let cnf = Cnf.make state.local td in
         { state with local = cnf; }
       | _ ->

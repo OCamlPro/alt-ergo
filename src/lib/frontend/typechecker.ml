@@ -1954,7 +1954,7 @@ let type_hypothesis acc env_f loc sort f =
   let f = type_form env_f f in
   let f = monomorphize_form f in
   let td =
-    {c = TAxiom(loc, fresh_hypothesis_name sort,Util.Default, f);
+    {c = TAxiom(loc, Ty.fresh_hypothesis_name sort,Util.Default, f);
      annot = new_id () } in
   (td, env_f)::acc
 
@@ -1968,14 +1968,14 @@ let type_goal acc env_g loc sort n goal =
 
 let rec type_and_intro_goal acc env sort n f =
   let axioms, (goal, env_g) =
-    intro_hypothesis env (match sort with Sat -> false | _ -> true) f in
+    intro_hypothesis env (match sort with Ty.Sat -> false | _ -> true) f in
   let loc = f.pp_loc in
   let acc =
     List.fold_left
       (fun acc (f, env_f) -> match f.pp_desc with
          | PPcut f ->
            let acc = type_and_intro_goal
-               acc env_f Cut (fresh_cut_name ()) f in
+               acc env_f Ty.Cut (fresh_cut_name ()) f in
            type_hypothesis acc env_f loc sort f
 
          | PPcheck f ->
@@ -2344,11 +2344,11 @@ let split_goals_aux f l =
            ctx, [], [],
            (f td env (local_hyp@global_hyp@ctx), name) :: ret
 
-         | TAxiom (_, s, _, _) when is_global_hyp s ->
+         | TAxiom (_, s, _, _) when Ty.is_global_hyp s ->
            ctx, (f td env global_hyp), local_hyp,
            ret
 
-         | TAxiom (_, s, _, _) when is_local_hyp s ->
+         | TAxiom (_, s, _, _) when Ty.is_local_hyp s ->
            ctx, global_hyp, (f td env local_hyp),
            ret
 
