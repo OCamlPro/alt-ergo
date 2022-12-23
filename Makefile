@@ -95,7 +95,7 @@ parsers: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(PARSERS_DIR)/all
 
 js: gen
-	$(DUNE) build $(DUNE_FLAGS) -p alt-ergo-js
+	$(DUNE) build $(DUNE_FLAGS) @$(BJS_DIR)/all
 
 fm-simplex: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(PLUGINS_DIR)/fm-simplex/all
