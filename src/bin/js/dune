@@ -33,10 +33,6 @@
  )
  (modules worker_js options_interface)
  (modes byte js)
- (js_of_ocaml
-  (flags --no-source-map)
-  (build_runtime_flags --no-source-map)
- )
 )
 
 ; Rule to build a small js example running the Alt-Ergo web worker
