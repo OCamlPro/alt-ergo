@@ -155,7 +155,7 @@ and purify_form ({ top_sy; _ } as e : E.t) =
           let m = purify_form main in
           if m == main then e
           else E.mk_forall ~name ~loc binders ~triggers:user_trs ~toplevel
-              ~decl_kind:kind main
+              ~decl_kind:kind m
         | Sy.F_Skolem, [],
           B_skolem {name; main; toplevel; user_trs; binders; loc; kind; _} ->
           let m = purify_form main in

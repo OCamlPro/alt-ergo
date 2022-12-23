@@ -319,6 +319,7 @@ module Subst = struct
   let remove = Util.MI.remove
   let mem = Util.MI.mem
   let filter = Util.MI.filter
+  let find = Util.MI.find
 
   let compare = Util.MI.compare Stdlib.compare
   let equal = Util.MI.equal Stdlib.(=)

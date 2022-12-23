@@ -216,12 +216,12 @@ and make_trigger ~in_theory name up_qv quant_basename hyp (e, from_user) =
   in
   let t_depth =
     List.fold_left (fun z t -> max z (E.depth t)) 0 content in
-  (* clean trigger:
-     remove useless terms in multi-triggers after inlining of lets*)
-  let content = clean_trigger ~in_theory name content in
-  { E.content ; guard ; t_depth; semantic = []; (* will be set by theories *)
-    hyp; from_user;
-  }
+  let trigger =
+    { E.content ; guard ; t_depth; semantic = []; (* will be set by theories *)
+      hyp; from_user;
+    }
+  in
+  E.clean_trigger ~in_theory name trigger
 
 and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
   let name_tag = ref 0 in

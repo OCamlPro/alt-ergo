@@ -816,8 +816,8 @@ let add_label =
   let add_aux lbl t = Labels.replace labels t lbl in
   fun lbl e ->
     match e with
-    | { f = Sy.Form _; _ } -> ()
-    | { f = Sy.Lit _; _ } | { ty = Ty.Tbool; _ } ->
+    | { top_sy = Sy.Form _; _ } -> ()
+    | { top_sy = Sy.Lit _; _ } | { ty = Ty.Tbool; _ } ->
       add_aux lbl e;
       add_aux lbl (neg e)
     | _ ->
@@ -1912,6 +1912,12 @@ let elim_iff f1 f2 ~with_conj =
   else
     mk_or (mk_and f1 f2) (mk_and (neg f1) (neg f2))
 
+let concat_chainable p_op p_ty ({ top_sy; args; ty; _ } as t) acc =
+  if Symbols.equal p_op top_sy && Ty.equal p_ty ty then
+    List.rev_append (List.rev args) acc
+  else
+    t :: acc
+
 (* TODO: Move this module in a new file. *)
 module Triggers = struct
 
@@ -2272,6 +2278,46 @@ module Triggers = struct
       if mono != [] then []
       else multi_triggers menv vterm vtype trs escaped_vars
 
+
+  let clean_trigger ~in_theory name trig =
+    if in_theory then trig
+    else
+      match trig.content with
+      | [] | [_] -> trig
+      | _ ->
+        let s =
+          List.fold_left (
+            fun s t ->
+              if TMap.mem t s then s
+              else
+                TMap.add t (sub_terms TSet.empty t) s
+          ) TMap.empty trig.content
+        in
+        let res =
+          TMap.fold (
+            fun t _ acc ->
+              let rm = TMap.remove t acc in
+              if TMap.exists (fun _ sub -> TSet.mem t sub) rm then rm
+              else acc
+          ) s s
+        in
+        let sz_l = List.length trig.content in
+        let sz_s = TMap.cardinal res in
+        if sz_l = sz_s then trig
+        else
+          let content = TMap.fold (fun t _ acc -> t :: acc) res [] in
+          if Options.get_verbose () then
+            Printer.print_dbg ~module_name:"Cnf"
+              ~function_name:"clean_trigger"
+              "AXIOM: %s@ \
+               from multi-trig of sz %d : %a@ \
+               to   multi-trig of sz %d : %a"
+              name
+              sz_l print_list trig.content sz_s print_list content;
+          { trig with content; }
+
+  (***)
+
   (***)
 
   let free_vars_as_set e =
@@ -2477,6 +2523,7 @@ end
 (*****)
 
 let make_triggers = Triggers.make
+let clean_trigger = Triggers.clean_trigger
 
 let mk_forall ~name ~loc binders ~triggers ~toplevel ~decl_kind f =
   let decl_kind =

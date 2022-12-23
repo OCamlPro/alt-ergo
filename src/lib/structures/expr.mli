@@ -395,6 +395,9 @@ val make_triggers :
   Util.matching_env ->
   trigger list
 
+val clean_trigger: in_theory:bool -> string -> trigger -> trigger
+(** Remove useless terms in multi-triggers after inlining of lets. *)
+
 val resolution_triggers :
   is_back:bool ->
   quantified ->
@@ -431,6 +434,8 @@ val elim_let : recursive:bool -> letin -> t
     and conjuctions instead of the built-in symbol {!constructor:Sy.F_Iff}.
     If [with_conj] is [false], the construction doesn't use conjuction. *)
 val elim_iff : t -> t -> with_conj:bool -> t
+
+val concat_chainable: Symbols.t -> Ty.t -> t -> t list -> t list
 
 type gformula = {
   ff : t;
