@@ -9,12 +9,10 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type view = {
+type t = {
   hs : Hstring.t ;
   id : int ;
 }
-
-type t = view
 
 let cpt = ref 0
 
@@ -22,11 +20,11 @@ let of_hstring hs =
   incr cpt;
   { hs ; id = !cpt }
 
+let hstring { hs; _ } = hs
+
 let of_string s =
   incr cpt;
   { hs = Hstring.make s; id = !cpt }
-
-let view v = v
 
 let compare a b =
   let c = a.id - b.id in

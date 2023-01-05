@@ -389,7 +389,7 @@ let check_pattern_matching missing dead loc =
       List.rev_map
         (function
           | Constr { name; _ } -> name
-          | Var v -> (Var.view v).Var.hs
+          | Var v -> Var.hstring v
         ) dead
     in
     Printer.print_wrn "%a"

@@ -14,9 +14,6 @@
 type t
 (** Type of variable. *)
 
-(** TODO: make this type private *)
-type view = private { hs : Hstring.t ; id : int }
-
 (** {1 Data structures} *)
 
 module Map : Map.S with type key = t
@@ -36,7 +33,9 @@ val of_string  : string -> t
 (** [of_string str] constructs a new variable whose the name is given by [str].
     The name is hconsed. *)
 
-val view : t -> view
+val hstring : t -> Hstring.t
+
+(** {1 Comparison functions} *)
 
 val compare : t -> t -> int
 (** [compare v1 v2] compares the two variables [v1] and [v2]. *)
