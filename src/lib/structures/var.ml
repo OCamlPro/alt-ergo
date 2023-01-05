@@ -20,11 +20,11 @@ let cpt = ref 0
 
 let of_hstring hs =
   incr cpt;
-  {hs ; id = !cpt}
+  { hs ; id = !cpt }
 
 let of_string s =
   incr cpt;
-  {hs = Hstring.make s; id = !cpt}
+  { hs = Hstring.make s; id = !cpt }
 
 let view v = v
 
@@ -56,5 +56,5 @@ let save_cnt, reinit_cnt =
   in
   save_cnt, reinit_cnt
 
-module Set = Set.Make(struct type t = view let compare = compare end)
-module Map = Map.Make(struct type t = view let compare = compare end)
+module Set = Set.Make(struct type nonrec t = t let compare = compare end)
+module Map = Map.Make(struct type nonrec t = t let compare = compare end)
