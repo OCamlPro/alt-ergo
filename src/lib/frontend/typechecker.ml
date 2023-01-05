@@ -852,7 +852,7 @@ and type_bound env bnd ty ~is_open ~is_lower =
   in
   if not (Ty.equal ty ty_x) then
     Errors.typing_error (ShouldHaveType(ty, ty_x)) bnd.pp_loc;
-  Symbols.mk_bound bk ty ~is_open ~is_lower
+  Symbols.mk_bound ~kind:bk ~ty ~is_open ~is_lower
 
 and mk_ta_eq t1 t2 =
   let c =

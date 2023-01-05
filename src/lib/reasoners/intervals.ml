@@ -1119,14 +1119,14 @@ let new_var idoms s ty =
   if MV.mem s idoms then idoms
   else MV.add s (None, None, ty) idoms
 
-let match_interval_upper {Sy.sort; is_open; kind; is_lower} i imatch =
+let match_interval_upper Sy.{kind; ty; is_open; is_lower} i imatch =
   assert (not is_lower);
   match kind, max_bound i with
   | Sy.VarBnd s, _ when is_question_mark s -> imatch (* ? var *)
   | Sy.VarBnd _, Minfty -> assert false
-  | Sy.VarBnd s, Pinfty -> new_var imatch s sort
-  | Sy.VarBnd s, Strict (v, _) -> new_low_bound imatch s sort v false
-  | Sy.VarBnd s, Large  (v, _) -> new_low_bound imatch s sort v is_open
+  | Sy.VarBnd s, Pinfty -> new_var imatch s ty
+  | Sy.VarBnd s, Strict (v, _) -> new_low_bound imatch s ty v false
+  | Sy.VarBnd s, Large  (v, _) -> new_low_bound imatch s ty v is_open
 
   | Sy.ValBnd _, Minfty -> assert false
   | Sy.ValBnd _, Pinfty -> raise Exit
@@ -1141,14 +1141,14 @@ let match_interval_upper {Sy.sort; is_open; kind; is_lower} i imatch =
     imatch
 
 
-let match_interval_lower {Sy.sort; is_open; kind; is_lower} i imatch =
+let match_interval_lower Sy.{kind; ty; is_open; is_lower} i imatch =
   assert (is_lower);
   match kind, min_bound i with
   | Sy.VarBnd s, _ when is_question_mark s -> imatch (* ? var *)
   | Sy.VarBnd _, Pinfty -> assert false
-  | Sy.VarBnd s,  Minfty -> new_var imatch s sort
-  | Sy.VarBnd s, Strict (v, _) -> new_up_bound imatch s sort v false
-  | Sy.VarBnd s, Large  (v, _) -> new_up_bound imatch s sort v is_open
+  | Sy.VarBnd s,  Minfty -> new_var imatch s ty
+  | Sy.VarBnd s, Strict (v, _) -> new_up_bound imatch s ty v false
+  | Sy.VarBnd s, Large  (v, _) -> new_up_bound imatch s ty v is_open
 
   | Sy.ValBnd _, Minfty -> raise Exit
   | Sy.ValBnd _, Pinfty -> assert false

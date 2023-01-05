@@ -1,4 +1,3 @@
-
 open Options
 open D_loop
 
@@ -532,7 +531,7 @@ let mk_bound (DE.{ term_descr; term_ty; _ } as term) is_open is_lower =
       )
   in
   let sort = dty_to_ty term_ty in
-  Sy.mk_bound kind sort ~is_open ~is_lower
+  Sy.mk_bound ~kind ~ty:sort ~is_open ~is_lower
 
 (* Helper functions *)
 

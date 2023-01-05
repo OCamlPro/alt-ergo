@@ -75,7 +75,7 @@ type bound = private {
   kind: bound_kind;
   (** Kind of the bound. *)
 
-  sort: Ty.t;
+  ty: Ty.t;
   (** Type of the bound. It can be {!constructor:Ty.Tint} or
       {!constructor:Ty.Treal}. *)
 
@@ -145,8 +145,17 @@ val real: string -> t
 (** [real str] produces the symbol of a real literal. *)
 
 val cstr: string -> t
+(** [cstr str] produces the symbol of a constructor. *)
+
 val dstr: guarded:bool -> string -> t
-val mk_bound: bound_kind -> Ty.t -> is_open:bool -> is_lower:bool -> bound
+(** [dstr ~guarded str] produces the symbol of a destructor. *)
+
+val mk_bound:
+  kind:bound_kind ->
+  ty:Ty.t ->
+  is_open:bool ->
+  is_lower:bool
+  -> bound
 val mk_in: bound -> bound -> t
 val mk_maps_to: Var.t -> t
 
@@ -181,27 +190,25 @@ val to_string : t -> string
 val print : Format.formatter -> t -> unit
 (** [print fmt sy] pretty prints the symbol [sy] on the formatter [fmt]. *)
 
-val to_string_clean: t -> string
-val print_clean: Format.formatter -> t -> unit
-val print_bound: Format.formatter -> bound -> unit
-val string_of_bound: bound -> string
+val to_string_clean : t -> string
+val print_clean : Format.formatter -> t -> unit
+val print_bound : Format.formatter -> bound -> unit
+val string_of_bound : bound -> string
 
-(*val dummy : t*)
-
-val fresh: ?is_var:bool -> string -> t
+val fresh : ?is_var:bool -> string -> t
 (** [fresh str] produces a fresh name of the form [!?__str] where . *)
 
-val reinit_fresh_sy_cpt: unit -> unit
+val reinit_fresh_sy_cpt : unit -> unit
 (** Reset to zero the fresh symbol counter. *)
 
-val fake_eq: t
-val fake_neq: t
-val fake_lt: t
-val fake_le: t
+val fake_eq : t
+val fake_neq : t
+val fake_lt : t
+val fake_le : t
 
 
-val add_label: Hstring.t -> t -> unit
-val label: t -> Hstring.t
+val add_label : Hstring.t -> t -> unit
+val label : t -> Hstring.t
 
-val clear_labels: unit -> unit
-(** Empties the labels Hashtable *)
+val clear_labels : unit -> unit
+(** Empties the labels Hashtable. *)

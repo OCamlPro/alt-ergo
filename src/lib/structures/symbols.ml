@@ -61,8 +61,7 @@ type name_kind = Ac | Other
 
 type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
 
-type bound =
-  { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
+type bound = { kind : bound_kind; ty : Ty.t; is_open : bool; is_lower : bool }
 
 type t =
   | True
@@ -89,8 +88,8 @@ let real r = Real (Hstring.make r)
 let cstr s = Op (Cstr (Hstring.make s))
 let dstr ~guarded s = Op (Dstr (Hstring.make s, guarded))
 
-let mk_bound kind sort ~is_open ~is_lower =
-  {kind; sort; is_open; is_lower}
+let mk_bound ~kind ~ty ~is_open ~is_lower =
+  {kind; ty; is_open; is_lower}
 
 let mk_in b1 b2 =
   assert (b1.is_lower);
@@ -164,7 +163,7 @@ let compare_bounds_kind a b =
     )
 
 let compare_bounds a b =
-  let c = Ty.compare a.sort b.sort in
+  let c = Ty.compare a.ty b.ty in
   if c <> 0 then c
   else
     let c = Stdlib.compare a.is_open b.is_open in
@@ -375,5 +374,3 @@ let is_prefix = function
 let is_infix = function
   | Op (Plus | Minus | Mult | Div | Modulo) -> true
   | _ -> false
-
-
