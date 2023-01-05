@@ -133,7 +133,7 @@ type t =
   | In of Bound.t * Bound.t
   | MapsTo of Var.t
   | Let
-(** Type of symbols. *)
+  (** Type of symbols. *)
 
 (** {1 Data structures} *)
 
