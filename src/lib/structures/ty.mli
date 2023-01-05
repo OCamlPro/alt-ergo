@@ -155,7 +155,7 @@ val equal : t -> t -> bool
 val compare : t -> t -> int
 (** Comparison function *)
 
-val print : t Util.printer
+val pp : t Util.printer
 (** Printing function for types (does not print
     the type of each fields for records). *)
 
@@ -163,7 +163,7 @@ val print_list : t list Util.printer
 (** Print function for lists of types (does not print
     the type of each fields for records). *)
 
-val print_full : t Util.printer
+val pp_full : t Util.printer
 (** Print function including the record fields. *)
 
 val vty_of : t -> Svty.t
@@ -251,7 +251,7 @@ module Subst: sig
   val equal : t -> t -> bool
   (** Equality of substitutions. *)
 
-  val print : t Util.printer
+  val pp : t Util.printer
   (** Print function for substitutions. *)
 end
 

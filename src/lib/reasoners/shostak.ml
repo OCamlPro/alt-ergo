@@ -445,7 +445,7 @@ struct
         not (Options.get_enable_assertions()) ||
         if not (Ty.compare tya tyb = 0) then (
           print_err "@[<v 0>@ Tya = %a  and @ Tyb = %a@]"
-            Ty.print tya Ty.print tyb;
+            Ty.pp tya Ty.pp tyb;
           false)
         else true)
 

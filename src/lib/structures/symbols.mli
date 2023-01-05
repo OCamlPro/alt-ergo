@@ -73,9 +73,6 @@ module Bound : sig
   (** Specify if a bound is a variable or a literal number. *)
 
   type t = private {
-    kind : kind;
-    (** Kind of the bound. *)
-
     ty : Ty.t;
     (** Type of the bound. It can be {!constructor:Ty.Tint} or
         {!constructor:Ty.Treal}. *)
@@ -83,8 +80,11 @@ module Bound : sig
     is_open : bool;
     (** Determine if the bound is strict or not. *)
 
-    is_lower : bool
+    is_lower : bool;
     (** Determine if the bound is a lower bound or not. *)
+
+    kind : kind;
+    (** Kind of the bound. *)
   }
   (** Type of symbol of bound. *)
 
@@ -96,10 +96,12 @@ module Bound : sig
     -> t
 
   val compare : t -> t -> int
+  (** [compare b1 b2] compares the bounds [b1] and [b2] using the
+      lexicogrical order on the fields of the type {!type:t}. *)
 
   val show : t -> string
 
-  val print : Format.formatter -> t -> unit
+  val pp : Format.formatter -> t -> unit
 end
 
 type t =
@@ -192,14 +194,18 @@ val is_prefix : t -> bool
 
 (** {1 Printing} *)
 
-val to_string : t -> string
-(** [to_string sy] produces a string representing the symbol [sy]. *)
-
 val print : Format.formatter -> t -> unit
 (** [print fmt sy] pretty prints the symbol [sy] on the formatter [fmt]. *)
 
-val to_string_clean : t -> string
+val show : t -> string
+(** [show sy] produces a string representing the symbol [sy]. *)
+
 val print_clean : Format.formatter -> t -> unit
+(** [print_clean sy] behaves like {!val:print} but the variable names are not
+    surrounded by simple quotes. *)
+
+val show_clean : t -> string
+(** [show_clean sy] produces the string printed by {!print_clean}. *)
 
 val fresh : ?is_var:bool -> string -> t
 (** [fresh str] produces a fresh name of the form [!?__str] where . *)

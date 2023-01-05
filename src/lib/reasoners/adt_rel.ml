@@ -271,7 +271,7 @@ let constr_of_destr ty dest =
   if Options.get_debug_adt () then
     Printer.print_dbg
       ~module_name:"Adt_rel" ~function_name:"constr_of_destr"
-      "ty = %a" Ty.print ty;
+      "ty = %a" Ty.pp ty;
   match ty with
   | Ty.Tadt { cstr; payload = args } ->
     let cases =

@@ -28,7 +28,7 @@ let constraints = ref MS.empty
 module Pp_smtlib_term = struct
 
   let to_string_type t =
-    asprintf "%a" Ty.print t
+    asprintf "%a" Ty.pp t
 
   let rec print fmt ({ top_sy; args; ty; _ } as t : E.t) =
     match top_sy, args with
@@ -167,7 +167,7 @@ module Pp_smtlib_term = struct
 
 
     | Sy.In(lb, rb), [t] ->
-      fprintf fmt "(%a in %a, %a)" print t Sy.Bound.print lb Sy.Bound.print rb
+      fprintf fmt "(%a in %a, %a)" print t Sy.Bound.pp lb Sy.Bound.pp rb
 
     | Sy.Name (n,_), l -> begin
         let constraint_name =
@@ -258,7 +258,7 @@ module SmtlibCounterExample = struct
         ) lbs
     in
     let destrs =
-      try MS.find (Sy.to_string record_name) records
+      try MS.find (Sy.show record_name) records
       with Not_found -> MS.empty
     in
     asprintf "%s %a"
@@ -283,7 +283,7 @@ module SmtlibCounterExample = struct
           add_records_destr
             records
             (asprintf "%a" Expr.print record_name)
-            (Sy.to_string f)
+            (Sy.show f)
             rep
         | [] | _ -> records
       end
@@ -295,10 +295,10 @@ module SmtlibCounterExample = struct
 
   let print_fun_def fmt name args ty t =
     let print_args fmt (ty,name) =
-      Format.fprintf fmt "(%s %a)" name Ty.print ty in
+      Format.fprintf fmt "(%s %a)" name Ty.pp ty in
     let defined_value =
       try
-        let res,_,_ = (MS.find (Sy.to_string name) !constraints) in res
+        let res,_,_ = (MS.find (Sy.show name) !constraints) in res
       with _ -> t
     in
 
@@ -306,7 +306,7 @@ module SmtlibCounterExample = struct
       "(define-fun %a (%a) %a %s)@ "
       Sy.print name
       (Printer.pp_list_space (print_args)) args
-      Ty.print ty
+      Ty.pp ty
       defined_value
 
   let output_constants_counterexample fmt records cprofs =

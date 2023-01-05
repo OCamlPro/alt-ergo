@@ -297,7 +297,7 @@ module F_Htbl : Hashtbl.S with type key = t =
 
 let print_binders =
   let print_one fmt (sy, (ty, _)) =
-    Format.fprintf fmt "%a:%a" Sy.print sy Ty.print ty
+    Format.fprintf fmt "%a:%a" Sy.print sy Ty.pp ty
   in fun fmt b ->
     match SMap.bindings b with
     | [] ->
@@ -463,7 +463,7 @@ module SmtPrinter = struct
 
 
     | Sy.In(lb, rb), [t] ->
-      fprintf fmt "(%a in %a, %a)" print t Sy.Bound.print lb Sy.Bound.print rb
+      fprintf fmt "(%a in %a, %a)" print t Sy.Bound.pp lb Sy.Bound.pp rb
 
     | _, [] ->
       fprintf fmt "%a" Sy.print top_sy
@@ -642,7 +642,7 @@ module AEPrinter = struct
 
 
     | Sy.In(lb, rb), [t] ->
-      fprintf fmt "(%a in %a, %a)" print t Sy.Bound.print lb Sy.Bound.print rb
+      fprintf fmt "(%a in %a, %a)" print t Sy.Bound.pp lb Sy.Bound.pp rb
 
 
     | _, [] ->
@@ -658,7 +658,7 @@ module AEPrinter = struct
       ) trs
 
   and print_verbose fmt t =
-    Format.fprintf fmt "(%a : %a)" print_silent t Ty.print t.ty
+    Format.fprintf fmt "(%a : %a)" print_silent t Ty.pp t.ty
 
   and print fmt t =
     if Options.get_debug () then print_verbose fmt t
@@ -1309,7 +1309,7 @@ let mk_builtin ~is_pos ~builtin ~args =
 (** Substitutions *)
 
 let is_skolem_cst v =
-  try String.equal (String.sub (Sy.to_string v.top_sy) 0 4) "_sko"
+  try String.equal (String.sub (Sy.show v.top_sy) 0 4) "_sko"
   with Invalid_argument _ -> false
 
 let get_skolem =
@@ -1798,7 +1798,7 @@ let mk_let ~var ~let_e ~in_e =
 let skolemize { main = f; binders; sko_v; sko_vty; _ } =
   let print fmt ty =
     assert (Ty.Svty.is_empty (Ty.vty_of ty));
-    Format.fprintf fmt "<%a>" Ty.print ty
+    Format.fprintf fmt "<%a>" Ty.pp ty
   in
   let pp_sep_nospace fmt () = Format.fprintf fmt "" in
   let pp_list fmt l =
@@ -2598,10 +2598,10 @@ let debug_compile_match e cases res =
     let p_list_vars fmt l =
       match l with
         [] -> ()
-      | [e,_,_] -> Var.print fmt e
+      | [e,_,_] -> Var.pp fmt e
       | (e,_,_) :: l ->
-        Format.fprintf fmt "(%a" Var.print e;
-        List.iter (fun (e,_,_) -> Format.fprintf fmt ", %a" Var.print e) l;
+        Format.fprintf fmt "(%a" Var.pp e;
+        List.iter (fun (e,_,_) -> Format.fprintf fmt ", %a" Var.pp e) l;
         Format.fprintf fmt ")"
     in
     List.iter
@@ -2615,7 +2615,7 @@ let debug_compile_match e cases res =
              print v;
          | Typed.Var x ->
            Printer.print_dbg  ~flushed:false ~header:false
-             "| %a -> %a@ " Var.print x print v;
+             "| %a -> %a@ " Var.pp x print v;
       )cases;
     Printer.print_dbg ~header:false
       "end@ result is: %a" print res;

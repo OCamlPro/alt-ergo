@@ -11,7 +11,7 @@
 
 type t
 
-type view = {hs : Hstring.t ; id : int}
+type view = { hs : Hstring.t ; id : int }
 
 val of_hstring : Hstring.t -> t
 val of_string  : string -> t
@@ -24,9 +24,9 @@ val equal : t -> t -> bool
 
 val hash : t -> int
 
-val print : Format.formatter -> t -> unit
+val pp : Format.formatter -> t -> unit
 
-val to_string : t -> string
+val show : t -> string
 
 val save_cnt: unit -> unit
 (** Saves the values of the counter  *)
@@ -39,4 +39,3 @@ val reinit_cnt: unit -> unit
 module Map : Map.S with type key = t
 
 module Set : Set.S with type elt = t
-

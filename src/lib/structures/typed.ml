@@ -74,8 +74,6 @@ and 'a tt_desc =
   | TTapp of Symbols.t * 'a atterm list
   | TTmapsTo of Var.t * 'a atterm
   | TTinInterval of 'a atterm * Symbols.Bound.t * Symbols.Bound.t
-  (* bool = true <-> interval is_open *)
-
   | TTget of 'a atterm * 'a atterm
   | TTset of
       'a atterm * 'a atterm * 'a atterm
@@ -182,7 +180,7 @@ let string_of_op = function
   | _ -> assert false
 
 let print_binder fmt (s, t) =
-  Format.fprintf fmt "%a :%a" Symbols.print s Ty.print t
+  Format.fprintf fmt "%a :%a" Symbols.print s Ty.pp t
 
 let print_binders fmt l =
   List.iter (fun c -> Format.fprintf fmt "%a, " print_binder c) l
@@ -233,11 +231,11 @@ let rec print_term =
     | TTinInterval(e, i, j) ->
       fprintf fmt "%a in %a, %a"
         print_term e
-        Symbols.Bound.print i
-        Symbols.Bound.print j
+        Symbols.Bound.pp i
+        Symbols.Bound.pp j
 
     | TTmapsTo(x,e) ->
-      fprintf fmt "%a |-> %a" Var.print x print_term e
+      fprintf fmt "%a |-> %a" Var.pp x print_term e
 
     | TTite(cond, t1, t2) ->
       fprintf fmt "(if %a then %a else %a)"
@@ -253,10 +251,10 @@ let rec print_term =
       let pp_vars fmt l =
         match l with
           [] -> ()
-        | [e,_,_] -> Var.print fmt e
+        | [e,_,_] -> Var.pp fmt e
         | (e,_,_) :: l ->
-          fprintf fmt "(%a" Var.print e;
-          List.iter (fun (e,_,_) -> fprintf fmt ", %a" Var.print e) l;
+          fprintf fmt "(%a" Var.pp e;
+          List.iter (fun (e,_,_) -> fprintf fmt ", %a" Var.pp e) l;
           fprintf fmt ")"
       in
       fprintf fmt "match %a with\n" print_term e;
@@ -267,7 +265,7 @@ let rec print_term =
              fprintf fmt "| %a %a -> %a\n" Hstring.print n pp_vars l
                print_term v
            | Var x ->
-             fprintf fmt "| %a -> %a\n" Var.print x print_term v;
+             fprintf fmt "| %a -> %a\n" Var.pp x print_term v;
         )cases;
       fprintf fmt "end@."
 

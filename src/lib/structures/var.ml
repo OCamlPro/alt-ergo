@@ -40,11 +40,11 @@ let equal a b = compare a b = 0
 
 let hash { id; _ } = id
 
-let to_string {hs ; id} =
+let show { hs ; id } =
   Format.sprintf "%s~%d" (Hstring.view hs) id
 
-let print fmt v =
-  Format.fprintf fmt "%s" (to_string v)
+let pp fmt v =
+  Format.fprintf fmt "%s" (show v)
 
 let save_cnt, reinit_cnt =
   let saved_cnt = ref 0 in
@@ -55,7 +55,6 @@ let save_cnt, reinit_cnt =
     cpt := !saved_cnt
   in
   save_cnt, reinit_cnt
-
 
 module Set = Set.Make(struct type t = view let compare = compare end)
 module Map = Map.Make(struct type t = view let compare = compare end)

@@ -63,10 +63,10 @@ module Bound = struct
   type kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
 
   type t = {
-    kind : kind;
     ty : Ty.t;
     is_open : bool;
-    is_lower : bool
+    is_lower : bool;
+    kind : kind;
   }
 
   let mk ~kind ~ty ~is_open ~is_lower = { kind; ty; is_open; is_lower }
@@ -91,7 +91,7 @@ module Bound = struct
         else compare_bounds_kind a.kind b.kind
 
   let show_bound_kind = function
-    | VarBnd v -> Var.to_string v
+    | VarBnd v -> Var.show v
     | ValBnd v -> Numbers.Q.to_string v
 
   let show b =
@@ -101,7 +101,7 @@ module Bound = struct
     else
       Format.sprintf "%s %s" kd (if b.is_open then "[" else "]")
 
-  let print fmt b = Format.fprintf fmt "%s" (show b)
+  let pp fmt b = Format.fprintf fmt "%s" (show b)
 end
 
 type t =
@@ -234,7 +234,7 @@ let hash x =
   | Lit lit -> 19 * Hashtbl.hash lit + 11
   | Form x -> 19 * Hashtbl.hash x + 12
 
-let string_of_lit lit = match lit with
+let string_of_lit = function
   | L_eq -> "="
   | L_neg_eq -> "<>"
   | L_neg_pred -> "not "
@@ -247,7 +247,7 @@ let string_of_lit lit = match lit with
   | L_neg_built (IsConstr h) ->
     Format.sprintf "?not? %s" (Hstring.view h)
 
-let string_of_form f = match f with
+let string_of_form = function
   | F_Unit _ -> "/\\"
   | F_Clause _ -> "\\/"
   | F_Lemma -> "Lemma"
@@ -255,10 +255,11 @@ let string_of_form f = match f with
   | F_Iff -> "<->"
   | F_Xor -> "xor"
 
-let to_string ?(show_vars=true) x = match x with
+(* When show_vars is true, the variable name are surrounded by simple quotes. *)
+let show ?(show_vars=true) = function
   | Name (n,_) -> Hstring.view n
-  | Var v when show_vars -> Format.sprintf "'%s'" (Var.to_string v)
-  | Var v -> Var.to_string v
+  | Var v when show_vars -> Format.sprintf "'%s'" (Var.show v)
+  | Var v -> Var.show v
   | Int n -> Hstring.view n
   | Real n -> Hstring.view n
   | Bitv s -> "[|"^s^"|]"
@@ -306,18 +307,17 @@ let to_string ?(show_vars=true) x = match x with
   | In (lb, rb) ->
     Format.sprintf "%s , %s" (Bound.show lb) (Bound.show rb)
 
-  | MapsTo x ->  Format.sprintf "%s |->" (Var.to_string x)
+  | MapsTo x ->  Format.sprintf "%s |->" (Var.show x)
 
   | Lit lit -> string_of_lit lit
   | Form form -> string_of_form form
   | Let -> "let"
 
-let to_string_clean s = to_string ~show_vars:false s
-let to_string s = to_string ~show_vars:true s
+let show_clean s = show ~show_vars:false s
+let show s = show ~show_vars:true s
 
-let print_clean fmt s = Format.fprintf fmt "%s" (to_string_clean s)
-let print fmt s = Format.fprintf fmt "%s" (to_string s)
-
+let print_clean fmt s = Format.fprintf fmt "%s" (show_clean s)
+let print fmt s = Format.fprintf fmt "%s" (show s)
 
 let fresh, reinit_fresh_sy_cpt =
   let cpt = ref 0 in

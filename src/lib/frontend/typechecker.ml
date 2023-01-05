@@ -333,7 +333,7 @@ let symbol_of = function
   | _ -> assert false
 
 let append_type msg ty =
-  Format.asprintf "%s %a" msg Ty.print ty
+  Format.asprintf "%s %a" msg Ty.pp ty
 
 let type_var_desc env p loc =
   try
@@ -2393,7 +2393,7 @@ let type_expr env vars t =
   let vmap =
     List.fold_left
       (fun m (s,ty)->
-         let str = Symbols.to_string_clean s in
+         let str = Symbols.show_clean s in
          MString.add str (s,ty) m
       ) env.Env.var_map vars in
   let env = { env with Env.var_map = vmap } in

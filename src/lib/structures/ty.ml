@@ -198,7 +198,7 @@ let print_generic body_of =
   print, print_list
 
 let print_list = snd (print_generic None)
-let print = fst (print_generic None) None
+let pp = fst (print_generic None) None
 
 let fresh_tvar =
   let cpt = ref (-1) in
@@ -360,8 +360,8 @@ module Subst = struct
         Util.MI.add k x s2
       ) (Util.MI.map (apply s2) s1) s2
 
-  let print fmt sbt =
-    Util.MI.iter (fun n ty -> Format.fprintf fmt "%d -> %a" n print ty) sbt;
+  let pp fmt sbt =
+    Util.MI.iter (fun n ty -> Format.fprintf fmt "%d -> %a" n pp ty) sbt;
     Format.fprintf fmt "@?"
 end
 
@@ -496,7 +496,7 @@ module Decls = struct
                    if equal vty ty then sbt else Util.MI.add v ty sbt
                  | _ ->
                    Printer.print_err "vty = %a and ty = %a"
-                     print vty print ty;
+                     pp vty pp ty;
                    assert false
               ) Util.MI.empty params args
           with Invalid_argument _ -> assert false
@@ -704,7 +704,7 @@ let rec monomorphize ty =
   | Tadt { cstr; payload } ->
     Tadt { cstr; payload = List.map monomorphize payload }
 
-let print_full =
+let pp_full =
   fst (print_generic (Some type_body)) (Some type_body)
 
 (** Goal sort *)

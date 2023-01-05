@@ -182,7 +182,7 @@ let tag_callback t env sbuf ~origin:_y z i =
           begin
             let tyt = match find t sbuf env.ast with
               | Some (AT at) ->
-                asprintf ": %a" Ty.print_full at.c.at_ty
+                asprintf ": %a" Ty.pp_full at.c.at_ty
               | Some (AF _) -> ": formula"
               | Some (QF _) -> ": quantified formula"
               | Some (AD ({ c = ATheory _ ; _ }, _)) -> ": Theory"
@@ -225,7 +225,7 @@ let tag_callback t env sbuf ~origin:_y z i =
         begin
           let tyt = match find t sbuf env.ast with
             | Some (AT at) ->
-              asprintf ": %a@." Ty.print at.c.at_ty
+              asprintf ": %a@." Ty.pp at.c.at_ty
             | _ -> "" in
           env.st_ctx#pop ();
           ignore(env.st_ctx#push tyt);
@@ -638,7 +638,7 @@ and popup_axiom t env _offset () =
           let entries,_ = List.fold_left
               (fun (entries,i) (s,ty) ->
                  let text = asprintf "%a : %a = "
-                     Symbols.print_clean s Ty.print ty in
+                     Symbols.print_clean s Ty.pp ty in
                  ignore(
                    GMisc.label ~text ~xalign:1.0
                      ~packing:(table#attach ~left:0 ~top:i) ());

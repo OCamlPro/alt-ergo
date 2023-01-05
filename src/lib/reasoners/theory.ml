@@ -153,9 +153,9 @@ module Main_Default : S = struct
            match ty with
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> ()
            | Tvar _ -> assert false
-           | Text _ -> print_dbg ~flushed:false "type %a@ " Ty.print ty
+           | Text _ -> print_dbg ~flushed:false "type %a@ " Ty.pp ty
            | Tsum { cstrs; _ } ->
-             print_dbg ~flushed:false ~header:false "type %a = " Ty.print ty;
+             print_dbg ~flushed:false ~header:false "type %a = " Ty.pp ty;
              begin match cstrs with
                | [] -> assert false
                | e::l ->
@@ -168,21 +168,21 @@ module Main_Default : S = struct
              end
 
            | Trecord { Ty.lbs; _ } ->
-             print_dbg ~flushed:false ~header:false "type %a = " Ty.print ty;
+             print_dbg ~flushed:false ~header:false "type %a = " Ty.pp ty;
              begin match lbs with
                | [] -> assert false
                | (lbl, ty)::l ->
                  let print fmt (lbl,ty) =
                    Format.fprintf fmt " ; %s :%a"
-                     (Hstring.view lbl) Ty.print ty in
+                     (Hstring.view lbl) Ty.pp ty in
                  print_dbg ~flushed:false ~header:false
                    "{ %s : %a%a"
-                   (Hstring.view lbl) Ty.print ty
+                   (Hstring.view lbl) Ty.pp ty
                    (pp_list_no_space print) l;
                  print_dbg ~flushed:false ~header:false " }@ "
              end
            | Tadt _ ->
-             print_dbg ~flushed:false ~header:false "%a@ " Ty.print_full ty
+             print_dbg ~flushed:false ~header:false "%a@ " Ty.pp_full ty
         )types;
       print_dbg ~header:false "@]"
 
@@ -190,8 +190,8 @@ module Main_Default : S = struct
       match xs with
       | [] -> ()
       | e :: l ->
-        Format.fprintf fmt "%a" Ty.print e;
-        List.iter (Format.fprintf fmt ", %a" Ty.print) l;
+        Format.fprintf fmt "%a" Ty.pp e;
+        List.iter (Format.fprintf fmt ", %a" Ty.pp) l;
         Format.fprintf fmt " -> "
 
     let print_logics ?(header=true) logics =
@@ -203,7 +203,7 @@ module Main_Default : S = struct
              (if is_ac == Sy.Ac then "ac " else "")
              (Hstring.view hs)
              print_arrow_type xs
-             Ty.print ty
+             Ty.pp ty
         )logics;
       print_dbg ~header:false "@]"
 

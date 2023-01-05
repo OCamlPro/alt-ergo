@@ -169,7 +169,7 @@ module Make (X : S) = struct
         Format.fprintf fmt "%s%s"
           (if Q.compare_to_0 p.c >= 0 then "+ " else "")
           (Q.to_string p.c);
-        Format.fprintf fmt " [%a]" Ty.print p.ty
+        Format.fprintf fmt " [%a]" Ty.pp p.ty
       end
   end
   (*BISECT-IGNORE-END*)
