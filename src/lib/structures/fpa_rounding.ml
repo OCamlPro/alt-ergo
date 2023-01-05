@@ -326,8 +326,8 @@ let make_adequate_app s l ty =
         assert false
       | _ -> s, l
     in
-    E.mk_term s l ty
-  | _ -> E.mk_term s l ty
+    E.mk_term ~sy:s ~args:l ~ty
+  | _ -> E.mk_term ~sy:s ~args:l ~ty
 
 let empty_cache () =
   cache := MQ.empty
