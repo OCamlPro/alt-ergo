@@ -47,10 +47,10 @@ type t = private {
   (** Unique identifiant used by the {!module:Hconsing} module. *)
 
   vars : (Ty.t * int) Symbols.Map.t;
-  (** Multiset of the free variables occured in the expression. *)
+  (** Multiset of the free variables occurred in the expression. *)
 
   vty : Ty.Svty.t;
-  (** Multiset of the free type variables occured in the expression. *)
+  (** Multiset of the free type variables occurred in the expression. *)
 
   depth : int;
   (** Depth of the expression. *)
@@ -82,7 +82,7 @@ and decl_kind =
 
   | Dfunction of t
   (** Declaration of function. *)
-(** Type of declaration kind. *)
+(** Kind of declaration. *)
 
 and bind_kind =
   | B_none
@@ -173,12 +173,18 @@ type form_view = private
   (** Unit clauses. *)
 
   | Clause of t * t * bool
-  (** a clause (t1 or t2) bool <-> is implication *)
+  (** [Clause (f1, f2, is_imply)] is the clause {m f1 |lor f2}
+      when [is_imply] is [false] and the implication {m f1 \Longrightarrow f2}
+      otherwise. *)
 
   | Iff of t * t
+  (** [Iff (f1, f2)] is the equivalence {m f1 \Longleftrightarrow f2}. *)
+
   | Xor of t * t
+  (** [Xor (f1, f2)] is the exclusive or {m f1 \oplus f2}. *)
+
   | Literal of t
-  (** Literal formula. *)
+  (** A literal formula. *)
 
   | Lemma of quantified
   (** A lemma. *)
@@ -247,6 +253,7 @@ val bitv : string -> Ty.t -> t
     the string representaiton [str]. *)
 
 val fresh_name : ty:Ty.t -> t
+(** [fresh_name ~ty] produces a fresh variable of type [ty]. *)
 
 (** {2 For literals} *)
 

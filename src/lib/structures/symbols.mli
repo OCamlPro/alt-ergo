@@ -68,28 +68,47 @@ type form =
 
 type name_kind = Ac | Other
 
-(** Specify if a bound is a variable or a literal number. *)
 type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
+(** Specify if a bound is a variable or a literal number. *)
 
 type bound = private {
-  kind: bound_kind; (** Kind of the bound. *)
-  sort: Ty.t;       (** Type of the bound.
-                        It can be {!constructor:Ty.Tint} or
-                        {!constructor:Ty.Treal}. *)
+  kind: bound_kind;
+  (** Kind of the bound. *)
+
+  sort: Ty.t;
+  (** Type of the bound. It can be {!constructor:Ty.Tint} or
+      {!constructor:Ty.Treal}. *)
+
   is_open: bool;
+  (** Determine if the symbol is the bound is open or close. *)
+
   is_lower: bool
+  (**  *)
 }
 (** Type of symbol of bound. *)
 
-(** Type of symbols. *)
 type t =
-  | True                           (** Top symbol. *)
-  | False                          (** Bottom symbol. *)
-  | Void                           (** Unit symbol. *)
+  | True
+  (** Top symbol. *)
+
+  | False
+  (** Bottom symbol. *)
+
+  | Void
+  (** Unit symbol. *)
+
   | Name of Hstring.t * name_kind
+  (**  *)
+
   | Int of Hstring.t
+  (** Integer literal symbol. *)
+
   | Real of Hstring.t
+  (** Real literal symbol. *)
+
   | Bitv of string
+  (** Bitvector literal symbol. *)
+
   | Op of operator                 (** Operator symbol. *)
   | Lit of lit                     (** Literal symbol. *)
   | Form of form                   (** Formula symbol. *)
@@ -97,6 +116,7 @@ type t =
   | In of bound * bound
   | MapsTo of Var.t
   | Let
+(** Type of symbols. *)
 
 (** {1 Data structures} *)
 
@@ -116,6 +136,7 @@ val var: Var.t -> t
 (** [var v] converts a variable to symbol. *)
 
 val underscore : t
+(** Symbol of the wildcase. *)
 
 val int: string -> t
 (** [int str] produces the symbol of an integer literal. *)
@@ -132,6 +153,8 @@ val mk_maps_to: Var.t -> t
 (** {1 Comparaison and test functions} *)
 
 val equal : t -> t -> bool
+(** [equal sy1 sy2] tests the equality of the symbols [sy1] and [sy2]. *)
+
 val compare : t -> t -> int
 val compare_bounds : bound -> bound -> int
 
