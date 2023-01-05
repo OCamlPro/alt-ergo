@@ -59,9 +59,50 @@ type form =
 
 type name_kind = Ac | Other
 
-type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
+module Bound = struct
+  type kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
 
-type bound = { kind : bound_kind; ty : Ty.t; is_open : bool; is_lower : bool }
+  type t = {
+    kind : kind;
+    ty : Ty.t;
+    is_open : bool;
+    is_lower : bool
+  }
+
+  let mk ~kind ~ty ~is_open ~is_lower = { kind; ty; is_open; is_lower }
+
+  let compare_bounds_kind a b =
+    Util.compare_algebraic a b
+      (function
+        | VarBnd h1, VarBnd h2 -> Var.compare h1 h2
+        | ValBnd q1, ValBnd q2 -> Numbers.Q.compare q1 q2
+        | _, (VarBnd _ | ValBnd _) -> assert false
+      )
+
+  let compare a b =
+    let c = Ty.compare a.ty b.ty in
+    if c <> 0 then c
+    else
+      let c = Stdlib.compare a.is_open b.is_open in
+      if c <> 0 then c
+      else
+        let c = Stdlib.compare a.is_lower b.is_lower in
+        if c <> 0 then c
+        else compare_bounds_kind a.kind b.kind
+
+  let show_bound_kind = function
+    | VarBnd v -> Var.to_string v
+    | ValBnd v -> Numbers.Q.to_string v
+
+  let show b =
+    let kd = show_bound_kind b.kind in
+    if b.is_lower then
+      Format.sprintf "%s %s" (if b.is_open then "]" else "[") kd
+    else
+      Format.sprintf "%s %s" kd (if b.is_open then "[" else "]")
+
+  let print fmt b = Format.fprintf fmt "%s" (show b)
+end
 
 type t =
   | True
@@ -75,7 +116,7 @@ type t =
   | Lit of lit
   | Form of form
   | Var of Var.t
-  | In of bound * bound
+  | In of Bound.t * Bound.t
   | MapsTo of Var.t
   | Let
 
@@ -88,10 +129,7 @@ let real r = Real (Hstring.make r)
 let cstr s = Op (Cstr (Hstring.make s))
 let dstr ~guarded s = Op (Dstr (Hstring.make s, guarded))
 
-let mk_bound ~kind ~ty ~is_open ~is_lower =
-  {kind; ty; is_open; is_lower}
-
-let mk_in b1 b2 =
+let mk_in (b1 : Bound.t) (b2 : Bound.t) =
   assert (b1.is_lower);
   assert (not b2.is_lower);
   In (b1, b2)
@@ -154,25 +192,6 @@ let compare_forms f1 f2 =
         assert false
     )
 
-let compare_bounds_kind a b =
-  Util.compare_algebraic a b
-    (function
-      | VarBnd h1, VarBnd h2 -> Var.compare h1 h2
-      | ValBnd q1, ValBnd q2 -> Numbers.Q.compare q1 q2
-      | _, (VarBnd _ | ValBnd _) -> assert false
-    )
-
-let compare_bounds a b =
-  let c = Ty.compare a.ty b.ty in
-  if c <> 0 then c
-  else
-    let c = Stdlib.compare a.is_open b.is_open in
-    if c <> 0 then c
-    else
-      let c = Stdlib.compare a.is_lower b.is_lower in
-      if c <> 0 then c
-      else compare_bounds_kind a.kind b.kind
-
 let compare s1 s2 =
   Util.compare_algebraic s1 s2
     (function
@@ -187,8 +206,8 @@ let compare s1 s2 =
       | Lit lit1, Lit lit2 -> compare_lits lit1 lit2
       | Form f1, Form f2 -> compare_forms f1 f2
       | In (b1, b2), In (b1', b2') ->
-        let c = compare_bounds b1 b1' in
-        if c <> 0 then c else compare_bounds b2 b2'
+        let c = Bound.compare b1 b1' in
+        if c <> 0 then c else Bound.compare b2 b2'
       | _ ,
         (True | False | Void | Name _ | Int _ | Real _ | Bitv _
         | Op _ | Lit _ | Form _ | Var _ | In _ | MapsTo _ | Let) ->
@@ -214,19 +233,6 @@ let hash x =
   | Op op -> 19 * Hashtbl.hash op + 10
   | Lit lit -> 19 * Hashtbl.hash lit + 11
   | Form x -> 19 * Hashtbl.hash x + 12
-
-let string_of_bound_kind x = match x with
-  | VarBnd v -> Var.to_string v
-  | ValBnd v -> Numbers.Q.to_string v
-
-let string_of_bound b =
-  let kd = string_of_bound_kind b.kind in
-  if b.is_lower then
-    Format.sprintf "%s %s" (if b.is_open then "]" else "[") kd
-  else
-    Format.sprintf "%s %s" kd (if b.is_open then "[" else "]")
-
-let print_bound fmt b = Format.fprintf fmt "%s" (string_of_bound b)
 
 let string_of_lit lit = match lit with
   | L_eq -> "="
@@ -298,7 +304,7 @@ let to_string ?(show_vars=true) x = match x with
   | False -> "false"
   | Void -> "void"
   | In (lb, rb) ->
-    Format.sprintf "%s , %s" (string_of_bound lb) (string_of_bound rb)
+    Format.sprintf "%s , %s" (Bound.show lb) (Bound.show rb)
 
   | MapsTo x ->  Format.sprintf "%s |->" (Var.to_string x)
 

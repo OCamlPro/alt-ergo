@@ -126,7 +126,7 @@ and letin = private {
 (** Type of a let expression [let let_v = let_e in in_e]. *)
 
 and semantic_trigger =
-  | Interval of t * Symbols.bound * Symbols.bound
+  | Interval of t * Symbols.Bound.t * Symbols.Bound.t
   | MapsTo of Var.t * t
   | NotTheoryConst of t
   | IsTheoryConst of t

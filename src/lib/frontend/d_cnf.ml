@@ -519,10 +519,10 @@ let mk_bound (DE.{ term_descr; term_ty; _ } as term) is_open is_lower =
   let kind =
     match term_descr with
     | Cst { builtin = B.Integer s; _ } ->
-      Sy.ValBnd (Numbers.Q.from_string s)
+      Sy.Bound.ValBnd (Numbers.Q.from_string s)
     | Cst { builtin = B.Base; path; _ }
     | Var { path;  _ } ->
-      Sy.VarBnd (Var.of_string (get_basename path))
+      Sy.Bound.VarBnd (Var.of_string (get_basename path))
     | _ -> failwith (
         Format.asprintf
           "Expected bound to be either an integer constant or variable but\
@@ -531,7 +531,7 @@ let mk_bound (DE.{ term_descr; term_ty; _ } as term) is_open is_lower =
       )
   in
   let sort = dty_to_ty term_ty in
-  Sy.mk_bound ~kind ~ty:sort ~is_open ~is_lower
+  Sy.Bound.mk ~kind ~ty:sort ~is_open ~is_lower
 
 (* Helper functions *)
 

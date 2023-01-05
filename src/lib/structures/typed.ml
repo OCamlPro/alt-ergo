@@ -73,7 +73,7 @@ and 'a tt_desc =
   | TTprefix of Symbols.t * 'a atterm
   | TTapp of Symbols.t * 'a atterm list
   | TTmapsTo of Var.t * 'a atterm
-  | TTinInterval of 'a atterm * Symbols.bound * Symbols.bound
+  | TTinInterval of 'a atterm * Symbols.Bound.t * Symbols.Bound.t
   (* bool = true <-> interval is_open *)
 
   | TTget of 'a atterm * 'a atterm
@@ -233,8 +233,8 @@ let rec print_term =
     | TTinInterval(e, i, j) ->
       fprintf fmt "%a in %a, %a"
         print_term e
-        Symbols.print_bound i
-        Symbols.print_bound j
+        Symbols.Bound.print i
+        Symbols.Bound.print j
 
     | TTmapsTo(x,e) ->
       fprintf fmt "%a |-> %a" Var.print x print_term e

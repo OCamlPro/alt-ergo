@@ -829,13 +829,13 @@ and type_bound env bnd ty ~is_open ~is_lower =
     | PPvar s ->
       assert (String.length s > 0);
       begin match s.[0] with
-        | '?' -> Symbols.VarBnd (Var.of_string s), ty
+        | '?' -> Symbols.Bound.VarBnd (Var.of_string s), ty
         | _ ->
           let vx, ty_x = type_var_desc env s bnd.pp_loc in
           let var_x =
             match vx with TTvar Symbols.Var vx -> vx | _ -> assert false
           in
-          Symbols.VarBnd var_x, ty_x
+          Symbols.Bound.VarBnd var_x, ty_x
       end
     | PPconst num ->
       let ty_x, q =
@@ -847,12 +847,12 @@ and type_bound env bnd ty ~is_open ~is_lower =
           | _ -> assert false
         with _ -> assert false (*numbers well constructed with regular exprs*)
       in
-      Symbols.ValBnd q, ty_x
+      Symbols.Bound.ValBnd q, ty_x
     | _ -> assert false
   in
   if not (Ty.equal ty ty_x) then
     Errors.typing_error (ShouldHaveType(ty, ty_x)) bnd.pp_loc;
-  Symbols.mk_bound ~kind:bk ~ty ~is_open ~is_lower
+  Symbols.Bound.mk ~kind:bk ~ty ~is_open ~is_lower
 
 and mk_ta_eq t1 t2 =
   let c =

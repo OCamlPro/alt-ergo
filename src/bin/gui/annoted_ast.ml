@@ -130,7 +130,7 @@ and at_desc =
   | ATrecord of (Hstring.t * aterm) list
   | ATnamed of Hstring.t * aterm
   | ATmapsTo of Var.t * aterm
-  | ATinInterval of aterm * Symbols.bound * Symbols.bound
+  | ATinInterval of aterm * Symbols.Bound.t * Symbols.Bound.t
   (* bool = true <-> interval is_open *)
   | ATite of aform annoted * aterm * aterm
 
@@ -718,8 +718,8 @@ and print_tt_desc fmt = function
   | TTinInterval(e, lb, ub) ->
     fprintf fmt "%a in %a, %a"
       print_term e
-      Symbols.print_bound lb
-      Symbols.print_bound ub
+      Symbols.Bound.print lb
+      Symbols.Bound.print ub
 
   | TTmapsTo(x,e) -> fprintf fmt "%a |-> %a" Var.print x print_term e
 
@@ -1538,8 +1538,8 @@ and add_at_desc_at errors indent (buffer:sbuffer) tags iter at =
   | ATinInterval(t1, lb, ub) ->
     add_aterm_at errors indent buffer tags iter t1;
     append_buf buffer ~iter ~tags " in ";
-    let lb = Symbols.string_of_bound lb in
-    let ub = Symbols.string_of_bound ub in
+    let lb = Symbols.Bound.show lb in
+    let ub = Symbols.Bound.show ub in
     append_buf buffer ~iter ~tags lb;
     append_buf buffer ~iter ~tags " , ";
     append_buf buffer ~iter ~tags ub

@@ -80,7 +80,7 @@ and letin = {
 }
 
 and semantic_trigger =
-  | Interval of t * Sy.bound * Sy.bound
+  | Interval of t * Sy.Bound.t * Sy.Bound.t
   | MapsTo of Var.t * t
   | NotTheoryConst of t
   | IsTheoryConst of t
@@ -186,8 +186,8 @@ let compare_triggers _f1 _f2 trs1 trs2 =
                     let c = compare s t in
                     if c <> 0 then c
                     else
-                      let c = Sy.compare_bounds b1 c1 in
-                      if c <> 0 then c else Sy.compare_bounds b2 c2
+                      let c = Sy.Bound.compare b1 c1 in
+                      if c <> 0 then c else Sy.Bound.compare b2 c2
 
                   | MapsTo (h1, t1), MapsTo (h2, t2) ->
                     let c = compare t1 t2 in
@@ -463,7 +463,7 @@ module SmtPrinter = struct
 
 
     | Sy.In(lb, rb), [t] ->
-      fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
+      fprintf fmt "(%a in %a, %a)" print t Sy.Bound.print lb Sy.Bound.print rb
 
     | _, [] ->
       fprintf fmt "%a" Sy.print top_sy
@@ -642,7 +642,7 @@ module AEPrinter = struct
 
 
     | Sy.In(lb, rb), [t] ->
-      fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
+      fprintf fmt "(%a in %a, %a)" print t Sy.Bound.print lb Sy.Bound.print rb
 
 
     | _, [] ->

@@ -68,24 +68,39 @@ type form =
 
 type name_kind = Ac | Other
 
-type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
-(** Specify if a bound is a variable or a literal number. *)
+module Bound : sig
+  type kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
+  (** Specify if a bound is a variable or a literal number. *)
 
-type bound = private {
-  kind: bound_kind;
-  (** Kind of the bound. *)
+  type t = private {
+    kind : kind;
+    (** Kind of the bound. *)
 
-  ty: Ty.t;
-  (** Type of the bound. It can be {!constructor:Ty.Tint} or
-      {!constructor:Ty.Treal}. *)
+    ty : Ty.t;
+    (** Type of the bound. It can be {!constructor:Ty.Tint} or
+        {!constructor:Ty.Treal}. *)
 
-  is_open: bool;
-  (** Determine if the symbol is the bound is open or close. *)
+    is_open : bool;
+    (** Determine if the bound is strict or not. *)
 
-  is_lower: bool
-  (**  *)
-}
-(** Type of symbol of bound. *)
+    is_lower : bool
+    (** Determine if the bound is a lower bound or not. *)
+  }
+  (** Type of symbol of bound. *)
+
+  val mk :
+    kind:kind ->
+    ty:Ty.t ->
+    is_open:bool ->
+    is_lower:bool
+    -> t
+
+  val compare : t -> t -> int
+
+  val show : t -> string
+
+  val print : Format.formatter -> t -> unit
+end
 
 type t =
   | True
@@ -113,7 +128,7 @@ type t =
   | Lit of lit                     (** Literal symbol. *)
   | Form of form                   (** Formula symbol. *)
   | Var of Var.t                   (** Variable symbol. *)
-  | In of bound * bound
+  | In of Bound.t * Bound.t
   | MapsTo of Var.t
   | Let
 (** Type of symbols. *)
@@ -150,13 +165,7 @@ val cstr: string -> t
 val dstr: guarded:bool -> string -> t
 (** [dstr ~guarded str] produces the symbol of a destructor. *)
 
-val mk_bound:
-  kind:bound_kind ->
-  ty:Ty.t ->
-  is_open:bool ->
-  is_lower:bool
-  -> bound
-val mk_in: bound -> bound -> t
+val mk_in : Bound.t -> Bound.t -> t
 val mk_maps_to: Var.t -> t
 
 (** {1 Comparaison and test functions} *)
@@ -165,7 +174,6 @@ val equal : t -> t -> bool
 (** [equal sy1 sy2] tests the equality of the symbols [sy1] and [sy2]. *)
 
 val compare : t -> t -> int
-val compare_bounds : bound -> bound -> int
 
 val hash: t -> int
 
@@ -192,8 +200,6 @@ val print : Format.formatter -> t -> unit
 
 val to_string_clean : t -> string
 val print_clean : Format.formatter -> t -> unit
-val print_bound : Format.formatter -> bound -> unit
-val string_of_bound : bound -> string
 
 val fresh : ?is_var:bool -> string -> t
 (** [fresh str] produces a fresh name of the form [!?__str] where . *)
