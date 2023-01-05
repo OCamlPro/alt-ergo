@@ -15,7 +15,7 @@ type t
 (** Type of variable. *)
 
 (** TODO: make this type private *)
-type view = { hs : Hstring.t ; id : int }
+type view = private { hs : Hstring.t ; id : int }
 
 (** {1 Data structures} *)
 
