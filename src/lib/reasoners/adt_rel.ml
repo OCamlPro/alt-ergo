@@ -87,7 +87,7 @@ module Debug = struct
                    print_dbg ~flushed:false ~header:false
                      " | %s" (Hs.view hs)) l
            end;
-           print_dbg ~flushed:false ~header:false " } %a@ " Ex.print ex;
+           print_dbg ~flushed:false ~header:false " } %a@ " Ex.pp ex;
 
         ) env.domains;
       print_dbg ~flushed:false ~header:false

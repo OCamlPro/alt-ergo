@@ -144,7 +144,7 @@ module Debug = struct
         (Conseq.cardinal st);
       Conseq.iter (fun (a,ex) ->
           Printer.print_dbg ~header:false
-            "%a : %a" E.print a Ex.print ex
+            "%a : %a" E.print a Ex.pp ex
         ) st
     end
 

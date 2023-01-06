@@ -105,7 +105,7 @@ let remove_fresh fe s =
 
 let add_fresh fe s = S.add fe s
 
-let print fmt ex =
+let pp fmt ex =
   let open Format in
   if Options.get_debug_explanations () then begin
     fprintf fmt "{";
@@ -118,6 +118,8 @@ let print fmt ex =
       ) ex;
     fprintf fmt "}"
   end
+
+let print = pp
 
 let get_unsat_core dep =
   fold_atoms
@@ -193,9 +195,7 @@ let literals_ids_of ex =
 let make_deps sf =
   E.Set.fold (fun l acc -> S.add (Bj l) acc) sf S.empty
 
-let has_no_bj s =
-  try S.iter (function Bj _ -> raise Exit | _ -> ())s; true
-  with Exit -> false
+let has_no_bj = S.for_all (function Bj _ -> false | _ -> true)
 
 let compare = S.compare
 

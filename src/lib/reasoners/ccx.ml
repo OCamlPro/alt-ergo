@@ -213,7 +213,7 @@ module Main : S = struct
         print_dbg
           ~module_name:"Ccx" ~function_name:"contra_congruence"
           "find that %a %a by contra-congruence"
-          E.print a Ex.print ex
+          E.print a Ex.pp ex
 
     let assume_literal sa =
       if Options.get_debug_cc () then
@@ -226,7 +226,7 @@ module Main : S = struct
         print_dbg
           ~module_name:"Ccx" ~function_name:"congruent"
           "new fact by congruence : %a ex[%a]"
-          E.print a Ex.print ex
+          E.print a Ex.pp ex
 
     let cc_result p v touched =
       let print fmt (x,y,_) =

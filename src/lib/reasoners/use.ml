@@ -98,7 +98,7 @@ let print g =
       let satoms fmt =
         SA.iter
           (fun (a,e) ->
-             Format.fprintf fmt "%a %a" E.print a Explanation.print e)
+             Format.fprintf fmt "%a %a" E.print a Explanation.pp e)
       in
       let print_sterms_and_atoms fmt (st,sa) =
         match SE.is_empty st,SA.is_empty sa with

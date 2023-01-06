@@ -268,10 +268,10 @@ module Main_Default : S = struct
              match lit_orig with
              | Th_util.CS(k, _) ->
                Format.fprintf fmt "  > %s  cs: %a (because %a)@ "
-                 (theory_of k) LR.print (LR.make rx) Ex.print ex
+                 (theory_of k) LR.print (LR.make rx) Ex.pp ex
              | Th_util.NCS(k, _) ->
                Format.fprintf fmt "  > %s ncs: %a (because %a)@ "
-                 (theory_of k) LR.print (LR.make rx) Ex.print ex
+                 (theory_of k) LR.print (LR.make rx) Ex.pp ex
              | _ -> assert false
           )choices;
         Format.fprintf fmt "==============================================@."
@@ -304,21 +304,21 @@ module Main_Default : S = struct
         print_dbg
           ~module_name:"Theory" ~function_name:"split_backtrack"
           "I backtrack on %a : %a"
-          print_lr_view neg_c Ex.print ex_c
+          print_lr_view neg_c Ex.pp ex_c
 
     let split_assume c ex_c =
       if Options.get_debug_split () then
         print_dbg
           ~module_name:"Theory" ~function_name:"split assume"
           "I assume %a : %a"
-          print_lr_view c Ex.print ex_c
+          print_lr_view c Ex.pp ex_c
 
     let split_backjump c dep =
       if Options.get_debug_split () then
         print_dbg
           ~module_name:"Theory" ~function_name:"split_backjump"
           "I backjump on %a : %a"
-          print_lr_view c Ex.print dep
+          print_lr_view c Ex.pp dep
 
     let query a =
       if Options.get_debug_cc () then

@@ -53,7 +53,7 @@ module Debug = struct
     | Strict (v, e) | Large (v, e) ->
       Format.fprintf fmt "%s" (Q.to_string v);
       if Options.(get_verbose () || get_unsat_core ()) then
-        Format.fprintf fmt " %a" Ex.print e
+        Format.fprintf fmt " %a" Ex.pp e
 
   let print_interval fmt (b1,b2) =
     let c1, c2 = match b1, b2 with
@@ -73,7 +73,7 @@ module Debug = struct
   let print fmt { ints; expl = e; _ } =
     print_list fmt ints;
     if Options.(get_verbose () || get_unsat_core ()) then
-      Format.fprintf fmt " %a" Ex.print e
+      Format.fprintf fmt " %a" Ex.pp e
 
 end
 (*BISECT-IGNORE-END*)

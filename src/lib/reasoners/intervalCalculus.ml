@@ -137,7 +137,7 @@ module Sim_Wrap = struct
       if get_debug_fm () then
         Printer.print_dbg
           ~module_name:"IntervalCalculus" ~function_name:"check_unsat_result"
-          "simplex derived unsat: %a" Explanation.print ex;
+          "simplex derived unsat: %a" Explanation.pp ex;
       raise (Ex.Inconsistent (ex, env.classes))
 
   let solve env _i =
@@ -523,7 +523,7 @@ module Debug = struct
         "@[<v 2>%s We assume: %a@,explanations: %a@]"
         (if query then "[query]" else "")
         LR.print (LR.make a)
-        Explanation.print expl
+        Explanation.pp expl
 
   let print_use fmt use =
     SX.iter (fprintf fmt "%a, " X.print) use
@@ -562,7 +562,7 @@ module Debug = struct
       let print fmt (ra, _, ex, _) =
         fprintf fmt "@,%a %a"
           LR.print (LR.make ra)
-          Explanation.print ex
+          Explanation.pp ex
       in
       print_dbg
         ~module_name:"IntervalCalculus" ~function_name:"implied_equalities"
@@ -587,7 +587,7 @@ module Debug = struct
       print_dbg
         ~module_name:"IntervalCalculus"
         ~function_name:"inconsistent_interval"
-        "interval inconsistent %a" Explanation.print expl
+        "interval inconsistent %a" Explanation.pp expl
 
   let added_inequation kind ineq =
     if get_debug_fm () then begin

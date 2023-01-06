@@ -54,7 +54,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         (* valeur de l'increment pour l'activite des variables *)
         var_inc : float;
 
-        (* inverse du facteur d'acitivte des vars, vaut 1/0.999 par defaut *)
+        (* inverse du facteur d'activité des variables.
+           Vaut 1/0.999 par defaut *)
         var_decay : float;
       }
 
@@ -255,7 +256,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"unsat_rec"
-          "unsat_rec : %a" Ex.print dep
+          "unsat_rec : %a" Ex.pp dep
 
     let assume gf dep env =
       if Options.get_debug_sat () then
@@ -294,7 +295,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         end;
         if Options.get_verbose () then
           print_dbg ~header:false
-            "with explanations : %a" Explanation.print dep
+            "with explanations : %a" Explanation.pp dep
 
     let unsat () =
       if Options.get_debug_sat () then
@@ -359,7 +360,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         ME.iter (fun f (_, ex, dlvl, plvl) ->
             print_dbg ~header:false
               "(%d, %d) %a \t->\t%a@ "
-              dlvl plvl E.print f Ex.print ex) g;
+              dlvl plvl E.print f Ex.pp ex) g;
         print_dbg ~header:false
           " - / GAMMA ---------------------@]";
       end
@@ -373,7 +374,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"inconsistent"
           "inconsistent at level (%d, %d), reason : %a"
-          env.dlevel env.plevel Ex.print expl
+          env.dlevel env.plevel Ex.pp expl
 
     let in_mk_theories_instances () =
       if Options.(get_debug_fpa() > 0 || get_debug_sat ()) then
@@ -435,6 +436,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       env.heuristics := Heuristics.bump_activity !(env.heuristics) expl;
       raise (IUnsat (expl, classes))
 
+  (* TODO: Move this function in Expr *)
   let is_literal f =
     match E.form_view f with
     | E.Literal _ -> true

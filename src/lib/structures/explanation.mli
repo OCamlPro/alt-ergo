@@ -26,25 +26,37 @@
 (*                                                                            *)
 (******************************************************************************)
 
+(** {1 Types} *)
+
 type t
+(** Type of a set of explanations. *)
 
 type rootdep = { name : string; f : Expr.t; loc : Loc.t}
+
 type exp =
   | Literal of Satml_types.Atom.atom
   | Fresh of int
   | Bj of Expr.t
+  (** Backjump explanation. *)
+
   | Dep of Expr.t
   | RootDep of rootdep
+  (** Type of element of an explanation. *)
 
 exception Inconsistent of t * Expr.Set.t list
 
+(** {1 Constructors} *)
+
 val empty : t
-
-val is_empty : t -> bool
-
-val mem : exp -> t -> bool
+(** Trivial explanation. *)
 
 val singleton : exp -> t
+(** [singleton ex] produces an explanation whose the only element is [ex]. *)
+
+val is_empty : t -> bool
+(** [is_empty ex] is [true] if and only if [ex] is the trivial explanation. *)
+
+val mem : exp -> t -> bool
 
 val union : t -> t -> t
 
@@ -62,10 +74,15 @@ val exists_fresh : t -> bool
 val remove_fresh : exp -> t -> t option
 
 val remove : exp -> t -> t
+(** [remove exp ex] removes the element [exp] of the explanation [ex]. *)
 
 val add_fresh : exp -> t -> t
 
+val pp : Format.formatter -> t -> unit
+(** [pp fmt ex] pretty prints the explanation [ex] on the formatter [fmt]. *)
+
 val print : Format.formatter -> t -> unit
+(** Alias of pp used by OcplibSimplex. *)
 
 val get_unsat_core : t -> rootdep list
 
@@ -84,5 +101,6 @@ val make_deps : Expr.Set.t -> t
 val has_no_bj : t -> bool
 
 val compare : t -> t -> int
+(** [compare ex1 ex2] compares two explanation [ex1] and [ex2]. *)
 
 val subset : t -> t -> bool

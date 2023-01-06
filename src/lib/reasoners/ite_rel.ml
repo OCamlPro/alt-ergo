@@ -120,7 +120,7 @@ let extract_pending_deductions env =
            Printer.print_dbg
              ~module_name:"Ite_rel" ~function_name:"assume"
              "deduce that %a with expl %a"
-             E.print a Ex.print ex;
+             E.print a Ex.pp ex;
          (Sig_rel.LTerm a, ex, Th_util.Other) :: acc)
       env.pending_deds []
   in

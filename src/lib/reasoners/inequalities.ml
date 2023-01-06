@@ -113,7 +113,7 @@ module Container : Container_SIG = struct
 
     let print_inequation fmt ineq =
       Format.fprintf fmt "%a %s 0 %a" P.print ineq.ple0
-        (if ineq.is_le then "<=" else "<") Explanation.print ineq.expl
+        (if ineq.is_le then "<=" else "<") Explanation.pp ineq.expl
 
     let create_ineq p1 p2 is_le a expl =
       let ple0 = P.sub p1 p2 in

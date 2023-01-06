@@ -79,7 +79,7 @@ module Debug = struct
                      " | %s" (Hs.view hs)) l
            end;
            Printer.print_dbg ~flushed:false ~header:false
-             " : %a@ " Ex.print ex;
+             " : %a@ " Ex.pp ex;
         ) env.mx;
       Printer.print_dbg ~header:false
         "@ -------------------------------------------";
