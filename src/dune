@@ -11,4 +11,5 @@
   (flags
    (:standard -bin-annot))
   (ocamlopt_flags -O3 -unbox-closures))
+  (js_of_ocaml (flags --no-source-map))
 )

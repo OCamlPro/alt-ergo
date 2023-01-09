@@ -46,7 +46,7 @@ See more details on https://alt-ergo.ocamlpro.com/")
   dune
   (alt-ergo-lib (= :version))
   (alt-ergo-parsers (= :version))
-  (js_of_ocaml (<= 4.0.0))
+  (js_of_ocaml (>= 4.0.1))
   js_of_ocaml-lwt
   js_of_ocaml-ppx
   data-encoding
