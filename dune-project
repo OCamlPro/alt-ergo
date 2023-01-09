@@ -1,5 +1,4 @@
-(lang dune 2.0)
-(allow_approximate_merlin)
+(lang dune 2.8)
 
 ; Since we want to generate opam files we need to provide informations ;
 (generate_opam_files true)
@@ -26,13 +25,32 @@ Alt-Ergo is an automatic theorem prover of mathematical formulas. It was develop
 See more details on https://alt-ergo.ocamlpro.com/")
  (depends
   (ocaml (>= 4.05.0))
-  (dune (and (>= 2.0)))
   (alt-ergo-lib (= :version))
   (alt-ergo-parsers (= :version))
    menhir
   (cmdliner (>= 1.1.0))
   (odoc :with-doc)
-  )
+ )
+)
+
+(package
+  (name alt-ergo-js)
+  (synopsis "The Alt-Ergo SMT prover")
+  (description "\
+Alt-Ergo is an automatic theorem prover of mathematical formulas. It was developed at LRI, and is now maintained at OCamlPro.
+
+See more details on https://alt-ergo.ocamlpro.com/")
+ (depends
+  (ocaml (>= 4.05.0))
+  (alt-ergo-lib (= :version))
+  (alt-ergo-parsers (= :version))
+  (js_of_ocaml (>= 4.0.1))
+  js_of_ocaml-lwt
+  js_of_ocaml-ppx
+  data-encoding
+  zarith_stubs_js
+  lwt_ppx
+ )
 )
 
 ; Second package, the alt-ergo gui binary
@@ -51,7 +69,6 @@ See more details on https://alt-ergo.ocamlpro.com/"
 
  (depends
   (ocaml (>= 4.05.0))
-  (dune (and (>= 2.0)))
   (alt-ergo-lib (= :version))
   (alt-ergo-parsers (= :version))
   lablgtk3
@@ -59,7 +76,7 @@ See more details on https://alt-ergo.ocamlpro.com/"
   lablgtk3-sourceview3
   (cmdliner (>= 1.1.0))
   (odoc :with-doc)
-)
+ )
 )
 
 ; Third package, the alt-ergo parsers library
@@ -78,7 +95,6 @@ See more details on http://alt-ergo.ocamlpro.com/"
 
  (depends
   (ocaml (>= 4.05.0))
-  (dune (and (>= 2.0)))
   (alt-ergo-lib (= :version))
   (psmt2-frontend (>= 0.3))
   (camlzip (>= 1.07))
@@ -104,7 +120,6 @@ See more details on http://alt-ergo.ocamlpro.com/"
 
  (depends
   (ocaml (>= 4.05.0))
-  (dune (and (>= 2.0)))
   dune-configurator
   dune-build-info
   num
