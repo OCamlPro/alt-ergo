@@ -1,0 +1,11 @@
+type 'a t = Cons of {elt : 'a; tail : 'a t} | Nil
+
+function length (list : 'a t) : int =
+  match list with
+  | Nil -> 0
+  | Cons(_, l') -> length(l') + 1
+end
+
+logic l : int t
+
+goal g: length(l) <= 4
