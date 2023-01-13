@@ -540,12 +540,13 @@ struct
         let tyb = CX.type_info rb in
         Debug.assert_have_mem_types tya tyb;
         let pb = match tya with
-          | Ty.Tint | Ty.Treal -> X1.solve ra rb pb
-          | Ty.Trecord _       -> X2.solve ra rb pb
-          | Ty.Tbitv _         -> X3.solve ra rb pb
-          | Ty.Tsum _          -> X5.solve ra rb pb
+          | Ty.Tint | Ty.Treal -> X1.solve ra rb ~pb
+          | Ty.Trecord _       -> X2.solve ra rb ~pb
+          | Ty.Tbitv _         -> X3.solve ra rb ~pb
+          | Ty.Tsum _          -> X5.solve ra rb ~pb
           (*| Ty.Tunit           -> pb *)
-          | Ty.Tadt _ when not (Options.get_disable_adts()) -> X6.solve ra rb pb
+          | Ty.Tadt _ when not (Options.get_disable_adts()) ->
+            X6.solve ra rb ~pb
           | _                  -> solve_uninterpreted ra rb pb
         in
         solve_list pb

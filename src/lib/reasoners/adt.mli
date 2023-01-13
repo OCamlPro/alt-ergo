@@ -17,6 +17,8 @@ type 'a abstract =
   (* tester is currently not used to build values *)
 
   | Alien of 'a
+  (** Type of the ADT semantic values.
+      The type parameter 'a denotes the type of alien semantic values. *)
 
 module type ALIEN = sig
   include Sig.X

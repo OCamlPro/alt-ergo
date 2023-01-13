@@ -658,13 +658,13 @@ module Shostak
       )sbs;
     sbs
 
-  let solve_one pb r1 r2 lvs unsafe_mode =
+  let solve_one ~pb r1 r2 lvs unsafe_mode =
     let sbt = solve_aux r1 r2 unsafe_mode in
     let sbt = make_idemp r1 r2 sbt lvs unsafe_mode in (*may raise Unsafe*)
     Debug.solve_one r1 r2 sbt;
     Sig.{pb with sbt = List.rev_append sbt pb.sbt}
 
-  let solve r1 r2 pb =
+  let solve r1 r2 ~pb =
     let lvs = List.fold_right SX.add (X.leaves r1) SX.empty in
     let lvs = List.fold_right SX.add (X.leaves r2) lvs in
     try
@@ -672,14 +672,14 @@ module Shostak
         Printer.print_dbg
           ~module_name:"Arith" ~function_name:"solve"
           "Try solving with unsafe mode.";
-      solve_one pb r1 r2 lvs true (* true == unsafe mode *)
+      solve_one ~pb r1 r2 lvs true (* true == unsafe mode *)
     with Unsafe ->
     try
       if Options.get_debug_arith () then
         Printer.print_dbg
           ~module_name:"Arith" ~function_name:"solve"
           "Cancel unsafe solving mode. Try safe mode";
-      solve_one pb r1 r2 lvs false (* false == safe mode *)
+      solve_one ~pb r1 r2 lvs false (* false == safe mode *)
     with Unsafe ->
       assert false
 
@@ -695,17 +695,17 @@ module Shostak
         raise e
     else make t
 
-  let solve r1 r2 pb =
+  let solve r1 r2 ~pb =
     if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Arith Timers.F_solve;
-        let res = solve r1 r2 pb in
+        let res = solve r1 r2 ~pb in
         Timers.exec_timer_pause Timers.M_Arith Timers.F_solve;
         res
       with e ->
         Timers.exec_timer_pause Timers.M_Arith Timers.F_solve;
         raise e
-    else solve r1 r2 pb
+    else solve r1 r2 ~pb
 
   let print = P.print
 

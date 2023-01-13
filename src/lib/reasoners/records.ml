@@ -347,11 +347,11 @@ module Shostak (X : ALIEN) = struct
     | None -> X.term_extract r
 
 
-  let orient_solved p v pb =
+  let orient_solved p v ~pb =
     if List.mem p (X.leaves v) then raise Util.Unsolvable;
     Sig.{ pb with sbt = (p,v) :: pb.sbt }
 
-  let solve r1 r2 (pb : _ Sig.solve_pb) =
+  let solve r1 r2 ~(pb : _ Sig.solve_pb) =
     match embed r1, embed r2 with
     | Record (l1, _), Record (l2, _) ->
       let eqs =
@@ -359,16 +359,16 @@ module Shostak (X : ALIEN) = struct
           (fun eqs (a,b) (x,y) ->
              assert (Hs.compare a x = 0);
              (is_mine y, is_mine b) :: eqs
-          )pb.eqs l1 l2
+          ) pb.eqs l1 l2
       in
-      {pb with eqs=eqs}
+      { pb with eqs=eqs}
 
     | Other _, Other _    ->
       if X.str_cmp r1 r2 > 0 then { pb with sbt = (r1,r2)::pb.sbt }
       else { pb with sbt = (r2,r1)::pb.sbt }
 
-    | Other _, Record _  -> orient_solved r1 r2 pb
-    | Record _, Other _  -> orient_solved r2 r1 pb
+    | Other _, Record _  -> orient_solved r1 r2 ~pb
+    | Record _, Other _  -> orient_solved r2 r1 ~pb
     | Access _ , _ -> assert false
     | _ , Access _ -> assert false
 
@@ -384,17 +384,17 @@ module Shostak (X : ALIEN) = struct
         raise e
     else make t
 
-  let solve r1 r2 pb =
+  let solve r1 r2 ~pb =
     if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Records Timers.F_solve;
-        let res = solve r1 r2 pb in
+        let res = solve r1 r2 ~pb in
         Timers.exec_timer_pause Timers.M_Records Timers.F_solve;
         res
       with e ->
         Timers.exec_timer_pause Timers.M_Records Timers.F_solve;
         raise e
-    else solve r1 r2 pb
+    else solve r1 r2 ~pb
 
   let assign_value t _ eq =
     match embed t with

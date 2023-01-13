@@ -797,7 +797,7 @@ module Shostak(X : ALIEN) = struct
 
   let abstract_selectors v acc = is_mine v, acc
 
-  let solve r1 r2 pb =
+  let solve r1 r2 ~pb =
     Sig.{pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}
 
   let assign_value _ _ _ =

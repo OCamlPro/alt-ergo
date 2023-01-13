@@ -33,20 +33,23 @@ type 'a solve_pb = { sbt : ('a * 'a) list; eqs : ('a * 'a) list }
 
 module type SHOSTAK = sig
 
-  (**Type of terms of the theory*)
+  (** {1 Types} *)
+
   type t
+  (** Type of semantic values of the theory. *)
 
-  (**Type of representants of terms of the theory*)
   type r
+  (** Type of alien semantic values. *)
 
-  (** Name of the theory*)
   val name : string
+  (** Name of the theory. *)
 
-  (** return true if the symbol and the type are owned by the theory*)
   val is_mine_symb : Symbols.t -> Ty.t -> bool
+  (** [is_mine_symb sy ty] returns [true] if the symbol [sy] and the type [ty]
+      are owned by the theory. *)
 
-  (** Give a representant of a term of the theory*)
   val make : Expr.t -> r * Expr.t list
+  (** [make e] produces a semantic value of a term [e] of the theory. *)
 
   val term_extract : r -> Expr.t option * bool (* original term ? *)
 
@@ -63,13 +66,15 @@ module type SHOSTAK = sig
 
   val compare : r -> r -> int
 
-  (* tests if two values are equal (using tags) *)
   val equal : t -> t -> bool
+  (** [equal t1 t2] tests if two terms of the theory are equal using
+      their hashes. *)
 
   val hash : t -> int
-  (** solve r1 r2, solve the equality r1=r2 and return the substitution *)
 
-  val solve : r -> r ->  r solve_pb -> r solve_pb
+  val solve : r -> r -> pb:r solve_pb -> r solve_pb
+  (** [solve r1 r2 acc] solves the equation [r1 = r2] and returns
+      the substitution. The accumulator [acc] is used in the function {!v}. *)
 
   val print : Format.formatter -> t -> unit
 
@@ -93,6 +98,7 @@ end
 
 module type X = sig
   type r
+  (** Type of semantic values of the theory. *)
 
   val save_cache : unit -> unit
   (** saves the module's current cache *)
@@ -101,8 +107,10 @@ module type X = sig
   (** restores the module's cache *)
 
   val make : Expr.t -> r * Expr.t list
+  (** [make e] produces a semantic value from the term [e]. *)
 
   val type_info : r -> Ty.t
+  (** [type_info r] gives the type of the semantic value [r]. *)
 
   val str_cmp : r -> r -> int
 

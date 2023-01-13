@@ -351,7 +351,7 @@ module Shostak (X : ALIEN) = struct
   let is_alien_of e x =
     List.exists (fun y -> X.equal x y) (X.leaves e)
 
-  let solve r1 r2 pb =
+  let solve r1 r2 ~pb =
     if Options.get_debug_adt () then
       Printer.print_dbg
         ~module_name:"Adt" ~function_name:"solve"
@@ -381,7 +381,7 @@ module Shostak (X : ALIEN) = struct
                  (fun eqs (hs1, v1) (hs2, v2) ->
                     assert (Hstring.equal hs1 hs2);
                     (v1, v2) :: eqs
-                 )pb.eqs c1.c_args c2.c_args
+                 ) pb.eqs c1.c_args c2.c_args
             }
       with Invalid_argument _ -> assert false
 
