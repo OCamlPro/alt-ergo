@@ -51,7 +51,7 @@ module type SHOSTAK = sig
   val make : Expr.t -> r * Expr.t list
   (** [make e] produces a semantic value of a term [e] of the theory. *)
 
-  val term_extract : r -> Expr.t option * bool (* original term ? *)
+  val term_extract : t -> Expr.t option * bool (* original term ? *)
 
   val color : (r ac) -> r
 

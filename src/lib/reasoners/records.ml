@@ -316,33 +316,29 @@ module Shostak (X : ALIEN) = struct
 
   let fully_interpreted = is_mine_symb_aux
 
-  let rec term_extract r =
-    match X.extract r with
-    | Some v -> begin match v with
-        | Record (lbs, ty) ->
-          begin
-            try
-              let lbs =
-                List.map
-                  (fun (_, r) ->
-                     match term_extract (is_mine r) with
-                     | None, _ -> raise Not_found
-                     | Some t, _ -> t)
-                  lbs
-              in
-              Some (E.mk_term (Symbols.Op Symbols.Record) lbs ty), false
-            with Not_found -> None, false
-          end
-        | Access (a, r, ty) ->
-          begin
-            match X.term_extract (is_mine r) with
-            | None, _ -> None, false
-            | Some t, _ ->
-              Some (E.mk_term (Symbols.Op (Symbols.Access a)) [t] ty), false
-          end
-        | Other (r, _) -> X.term_extract r
+  let rec term_extract = function
+    | Record (lbs, ty) ->
+      begin
+        try
+          let lbs =
+            List.map
+              (fun (_, r) ->
+                 match term_extract r with
+                 | None, _ -> raise Not_found
+                 | Some t, _ -> t)
+              lbs
+          in
+          Some (E.mk_term (Symbols.Op Symbols.Record) lbs ty), false
+        with Not_found -> None, false
       end
-    | None -> X.term_extract r
+    | Access (a, r, ty) ->
+      begin
+        match X.term_extract (is_mine r) with
+        | None, _ -> None, false
+        | Some t, _ ->
+          Some (E.mk_term (Symbols.Op (Symbols.Access a)) [t] ty), false
+      end
+    | Other (r, _) -> X.term_extract r
 
 
   let orient_solved p v ~pb =

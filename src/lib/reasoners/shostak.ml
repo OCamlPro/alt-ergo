@@ -158,13 +158,13 @@ struct
 
   let term_extract r =
     match r.v with
-    | X1 _ -> X1.term_extract r
-    | X2 _ -> X2.term_extract r
-    | X3 _ -> X3.term_extract r
-    | X4 _ -> X4.term_extract r
-    | X5 _ -> X5.term_extract r
-    | X6 _ -> X6.term_extract r
-    | X7 _ -> X7.term_extract r
+    | X1 x -> X1.term_extract x
+    | X2 x -> X2.term_extract x
+    | X3 x -> X3.term_extract x
+    | X4 x -> X4.term_extract x
+    | X5 x -> X5.term_extract x
+    | X6 x -> X6.term_extract x
+    | X7 x -> X7.term_extract x
     | Ac _ -> None, false (* SYLVAIN : TODO *)
     | Term t -> Some t, true
 
