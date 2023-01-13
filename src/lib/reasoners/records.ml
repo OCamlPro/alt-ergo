@@ -89,16 +89,7 @@ module Shostak (X : ALIEN) = struct
     | _, Access _ -> 1
     | Record (lbs1, ty1), Record (lbs2, ty2) ->
       let c = Ty.compare ty1 ty2 in
-      if c <> 0 then c else raw_compare_list lbs1 lbs2
-
-  and raw_compare_list l1 l2 =
-    match l1, l2 with
-    | [], [] -> 0
-    | [], _ -> 1
-    | _, [] -> -1
-    | (_, x1)::l1, (_, x2)::l2 ->
-      let c = raw_compare x1 x2 in
-      if c<>0 then c else raw_compare_list l1 l2
+      if c <> 0 then c else Support.compare_list raw_compare lbs1 lbs2
 
   let rec normalize v =
     match v with

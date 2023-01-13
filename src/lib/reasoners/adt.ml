@@ -100,16 +100,16 @@ module Shostak (X : ALIEN) = struct
       X.embed u
       [@ocaml.ppwarning "TODO: canonize Constr(list of selects)"]
 
-    | Select { d_arg; d_name; _ } ->
-      match embed d_arg with
-      | Constr c ->
-        begin
-          try snd @@ List.find (fun (lbl, _) -> Hs.equal d_name lbl) c.c_args
-          with Not_found ->
-            Printer.print_err "is_mine %a failed" print u;
-            assert false
-        end
-      | _ -> X.embed u
+    | Select { d_arg; d_name; _ } -> (
+        match embed d_arg with
+        | Constr c ->
+          begin
+            try snd @@ List.find (fun (lbl, _) -> Hs.equal d_name lbl) c.c_args
+            with Not_found ->
+              Printer.print_err "is_mine %a failed" print u;
+              assert false
+          end
+        | _ -> X.embed u)
 
   let equal s1 s2 =
     match s1, s2 with

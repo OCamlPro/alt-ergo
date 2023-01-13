@@ -59,7 +59,9 @@ module type SHOSTAK = sig
   (** [type_info t] gives the type of the semantic value [t]. *)
 
   val embed : r -> t
+
   val is_mine : t -> r
+  (** [is_mine t] embed the semantic value [t] as an alien semantic value. *)
 
   val leaves : t -> r list
   (** [leaves t] gives the list of leaves of the semantic value [t].
@@ -78,10 +80,13 @@ module type SHOSTAK = sig
   (** [hash t] computes the hash of the semantic value [t]. *)
 
   val solve : r -> r -> pb:r solve_pb -> r solve_pb
-  (** [solve r1 r2 acc] solves the equation [r1 = r2] and returns
-      the substitution. The accumulator [acc] is used in the function {!v}. *)
+  (** [solve r1 r2 pb] solves the equation [r1 = r2] and returns
+      the substitution. The accumulator [pb] is used in the
+      function {!val:X.solve}. *)
 
   val print : Format.formatter -> t -> unit
+  (** [print fmt t] pretty prints the semantic value [t] on the formatter
+      [fmt]. *)
 
   val fully_interpreted : Symbols.t -> bool
 
