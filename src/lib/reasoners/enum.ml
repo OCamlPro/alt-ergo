@@ -112,7 +112,7 @@ module Shostak (X : ALIEN) = struct
     | Alien _ , Cons _   -> 1
     | Cons _  , Alien _  -> -1
 
-  let compare x y = compare_mine (embed x) (embed y)
+  let compare x y = compare_mine x y
 
   let equal s1 s2 = match s1, s2 with
     | Cons (h1,ty1) , Cons (h2,ty2)  -> Hs.equal h1 h2 && Ty.equal ty1 ty2

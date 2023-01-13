@@ -450,7 +450,7 @@ module Shostak
     is_mine p
 
 
-  let compare x y = P.compare (embed x) (embed y)
+  let compare x y = P.compare x y
 
   let equal p1 p2 = P.equal p1 p2
 

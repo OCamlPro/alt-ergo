@@ -646,7 +646,8 @@ module Shostak(X : ALIEN) = struct
         if c<>0 then c else comp l1 l2
     in comp b1 b2
 
-  let compare x y = compare (embed x) (embed y)
+  (* TODO: replace the polymorphic compare function by monomorphic version. *)
+  let compare x y = compare x y
 
   (* should use hashed compare to be faster, not structural comparison *)
   let equal bv1 bv2 = compare_mine bv1 bv2 = 0

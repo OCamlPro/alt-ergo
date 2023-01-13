@@ -235,7 +235,7 @@ module Shostak (X : ALIEN) = struct
     | Tester _ -> Ty.Tbool
 
   let compare s1 s2 =
-    match embed s1, embed s2 with
+    match s1, s2 with
     | Alien r1, Alien r2 -> X.str_cmp r1 r2
     | Alien _, _ -> 1
     | _, Alien _ -> -1

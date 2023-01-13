@@ -200,13 +200,13 @@ struct
     if CX.equal a b then 0
     else
       match a.v, b.v with
-      | X1 _, X1 _ -> X1.compare a b
-      | X2 _, X2 _ -> X2.compare a b
-      | X3 _, X3 _ -> X3.compare a b
-      | X4 _, X4 _ -> X4.compare a b
-      | X5 _, X5 _ -> X5.compare a b
-      | X6 _, X6 _ -> X6.compare a b
-      | X7 _, X7 _ -> X7.compare a b
+      | X1 x, X1 y -> X1.compare x y
+      | X2 x, X2 y -> X2.compare x y
+      | X3 x, X3 y -> X3.compare x y
+      | X4 x, X4 y -> X4.compare x y
+      | X5 x, X5 y -> X5.compare x y
+      | X6 x, X6 y -> X6.compare x y
+      | X7 x, X7 y -> X7.compare x y
       | Term x  , Term y  -> Expr.compare x y
       | Ac x    , Ac y    -> AC.compare x y
       | va, vb            -> compare_tag va vb

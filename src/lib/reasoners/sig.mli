@@ -56,21 +56,26 @@ module type SHOSTAK = sig
   val color : (r ac) -> r
 
   val type_info : t -> Ty.t
+  (** [type_info t] gives the type of the semantic value [t]. *)
 
   val embed : r -> t
   val is_mine : t -> r
 
-  (** Give the leaves of a term of the theory *)
   val leaves : t -> r list
+  (** [leaves t] gives the list of leaves of the semantic value [t].
+      These leaves are alien semantic values. *)
+
   val subst : r -> r -> t -> r
 
-  val compare : r -> r -> int
+  val compare : t -> t -> int
+  (** [compare t1 t2] compares the two semantic values [t1] and [t2]. *)
 
   val equal : t -> t -> bool
   (** [equal t1 t2] tests if two terms of the theory are equal using
       their hashes. *)
 
   val hash : t -> int
+  (** [hash t] computes the hash of the semantic value [t]. *)
 
   val solve : r -> r -> pb:r solve_pb -> r solve_pb
   (** [solve r1 r2 acc] solves the equation [r1 = r2] and returns
@@ -119,6 +124,7 @@ module type X = sig
   val equal : r -> r -> bool
 
   val hash : r -> int
+  (** [hash r] computes the hash of the semantic value [r]. *)
 
   val leaves : r -> r list
 
