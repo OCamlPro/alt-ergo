@@ -530,7 +530,7 @@ struct
       Debug.print_sbt "Should be triangular and cleaned" pb.sbt;
       pb.sbt
     | (a,b) :: eqs ->
-      let pb = {pb with eqs=eqs} in
+      let pb = {pb with eqs} in
       Debug.solve_one a b;
       let ra = apply_subst_right a pb.sbt in
       let rb = apply_subst_right b pb.sbt in
@@ -563,7 +563,7 @@ struct
     | [], _::_ -> [] (* the original equality was trivial *)
     | _ -> make_idemp oa ob (List.rev_append sbt sbt')
 
-  let solve  a b =
+  let solve a b =
     if CX.equal a b then []
     else
       let a', b', acc = abstract_equality a b in
