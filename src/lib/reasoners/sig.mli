@@ -92,18 +92,16 @@ module type SHOSTAK = sig
 
   val abstract_selectors : t -> (r * r) list -> r * (r * r) list
 
-  (* the returned bool is true when the returned term in a constant of the
-     theory. Otherwise, the term contains aliens that should be assigned
-     (eg. records). In this case, it's a unit fact, not a decision
-  *)
   val assign_value :
     r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
+  (** The returned boolean is true when the returned term is a constant of the
+      theory. Otherwise, the term contains aliens that should be assigned
+      (eg. records). In this case, it's a unit fact, not a decision. *)
 
-  (* choose the value to print and how to print it for the given term.
-     The second term is its representative. The list is its equivalence class
-  *)
   val choose_adequate_model : Expr.t -> r -> (Expr.t * r) list -> r * string
-
+  (** [choose_adequate_model e r lst] chooses the semantic value to print for
+      the term [e] from the equivalent class [lst]. The argument [r] is the
+      representant of [e] in the union-find structure. *)
 end
 
 module type X = sig

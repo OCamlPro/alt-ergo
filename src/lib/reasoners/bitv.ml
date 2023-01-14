@@ -792,6 +792,9 @@ module Shostak(X : ALIEN) = struct
       let compare = compare_mine
     end)
 *)
+
+  (* WHY: this function returns always true for any symbols? Even if the
+     symbol is not owned by the bitv theory? *)
   let fully_interpreted _ = true
 
   let term_extract _ = None, false
