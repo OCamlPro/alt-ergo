@@ -261,14 +261,14 @@ module Shostak
         in
         P.add p (P.mult_const coef p3), ctx
 
-    | Sy.Op Sy.Plus , l ->
+    | Sy.Op Sy.Plus, l ->
       List.fold_left (fun (p, ctx) u -> mke coef p u ctx )(p, ctx) l
 
-    | Sy.Op Sy.Minus , [t1;t2] ->
+    | Sy.Op Sy.Minus, [t1;t2] ->
       let p2, ctx = mke (Q.minus coef) p t2 ctx in
       mke coef p2 t1 ctx
 
-    | Sy.Op Sy.Modulo , [t1;t2] ->
+    | Sy.Op Sy.Modulo, [t1;t2] ->
       let p1, ctx = mke Q.one (empty_polynome ty) t1 ctx in
       let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
       if Options.get_no_nla() &&

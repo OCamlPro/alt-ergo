@@ -26,16 +26,21 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(** {1 Uf module} *)
+(** {1 Types} *)
 
 type t
+(** Type of the context used by the union-find structure. *)
 
 type r = Shostak.Combine.r
+(** Type of the semantic values. *)
 
 module LX : Xliteral.S with type elt = r
 
 val empty : unit -> t
+(** [empty ()] creates an empty context for the union-find. This *)
+
 val add : t -> Expr.t -> t * Expr.t list
+(** [add ctx e] add the term [e] to the context [ctx]. *)
 
 val mem : t -> Expr.t -> bool
 
@@ -50,7 +55,9 @@ val union :
 val distinct : t -> r list -> Explanation.t -> t
 
 val are_equal : t -> Expr.t -> Expr.t -> added_terms:bool -> Th_util.answer
+
 val are_distinct : t -> Expr.t -> Expr.t -> Th_util.answer
+
 val already_distinct : t -> r list -> bool
 
 val class_of : t -> Expr.t -> Expr.t list

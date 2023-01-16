@@ -31,8 +31,15 @@ module E = Expr
 
 type 'a abstract =
   | Record of (Hs.t * 'a abstract) list * Ty.t
+  (* Record ([(lb, r); ...], ty) corresponds to a record definition
+     { lb = x; _ } where [r] is the alien semantic value associated with [x]. *)
+
   | Access of Hs.t * 'a abstract * Ty.t
+  (* Access (lb, r, ty) corresponds to a record access x.lb where [r] is the
+     alien semantic value associated with [x]. *)
+
   | Other of 'a * Ty.t
+  (* Other (r, ty) corresponds to an uninterpreted term of type record. *)
 
 module type ALIEN = sig
   include Sig.X
@@ -156,6 +163,8 @@ module Shostak (X : ALIEN) = struct
         let l, ctx =
           List.fold_right2
             (fun x (lb, _) (l, ctx) ->
+               (* If the term t is of the form { lb = x; _ }, we add the
+                  equality t.lb = x in the context ctx. *)
                let r, ctx = make_rec x ctx in
                let tyr = type_info r in
                let dlb = E.mk_term (Symbols.Op (Symbols.Access lb)) [t] tyr in

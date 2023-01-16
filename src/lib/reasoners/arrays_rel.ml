@@ -79,26 +79,37 @@ module TBS = struct
   let add k v mp = add k (S.add v (find k mp)) mp
 end
 
-type t =
-  {gets  : G.t;               (* l'ensemble des "get" croises*)
-   tbset : S.t TBS.t ;        (* map t |-> set(t,-,-) *)
-   split : LRset.t;           (* l'ensemble des case-split possibles *)
-   conseq   : Conseq.t LRmap.t; (* consequences des splits *)
-   seen  : E.Set.t Tmap.t;    (* combinaisons (get,set) deja splitees *)
-   new_terms : E.Set.t;
-   size_splits : Numbers.Q.t;
-  }
+type t = {
+  gets : G.t;
+  (* l'ensemble des "get" croises*)
 
+  tbset : S.t TBS.t;
+  (* map t |-> set(t,-,-) *)
 
-let empty _ =
-  {gets  = G.empty;
-   tbset = TBS.empty;
-   split = LRset.empty;
-   conseq   = LRmap.empty;
-   seen  = Tmap.empty;
-   new_terms = E.Set.empty;
-   size_splits = Numbers.Q.one;
-  }
+  split : LRset.t;
+  (* l'ensemble des case-split possibles *)
+
+  conseq : Conseq.t LRmap.t;
+  (* consequences des splits *)
+
+  seen : E.Set.t Tmap.t;
+  (* combinaisons (get,set) deja splitees *)
+
+  new_terms : E.Set.t;
+
+  size_splits : Numbers.Q.t;
+}
+
+(* WHY: the input classes are pointless? *)
+let empty _ = {
+  gets = G.empty;
+  tbset = TBS.empty;
+  split = LRset.empty;
+  conseq = LRmap.empty;
+  seen  = Tmap.empty;
+  new_terms = E.Set.empty;
+  size_splits = Numbers.Q.one;
+}
 
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
@@ -237,10 +248,10 @@ let get_of_set are_eq are_dist gtype (env,acc) class_of =
          | true , [stab;si;sv] ->
            let xi, _ = X.make gi in
            let xj, _ = X.make si in
-           let get_stab  = E.mk_term (Sy.Op Sy.Get) [stab;gi] gty in
-           let p       = LR.mk_eq xi xj in
-           let p_ded   = E.mk_eq ~iff:false get sv in
-           let n     = LR.mk_distinct false [xi;xj] in
+           let get_stab = E.mk_term (Sy.Op Sy.Get) [stab;gi] gty in
+           let p = LR.mk_eq xi xj in
+           let p_ded = E.mk_eq ~iff:false get sv in
+           let n = LR.mk_distinct false [xi;xj] in
            let n_ded = E.mk_eq ~iff:false get get_stab in
            let dep = match are_eq gtab set with
                Some (dep, _) -> dep | None -> assert false

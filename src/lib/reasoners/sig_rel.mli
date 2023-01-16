@@ -36,9 +36,9 @@ type 'a input =
 type 'a fact = 'a literal * Explanation.t * Th_util.lit_origin
 
 type 'a facts = {
-  equas     : 'a fact Queue.t;
-  diseqs  : 'a fact Queue.t;
-  ineqs   : 'a fact Queue.t;
+  equas : 'a fact Queue.t;
+  diseqs : 'a fact Queue.t;
+  ineqs : 'a fact Queue.t;
   mutable touched : 'a Util.MI.t;
 }
 
@@ -49,12 +49,25 @@ type 'a result = {
 
 module type RELATION = sig
   type t
+  (** Type of the context used by the reasoner. *)
 
+  (* TODO: Rename this function. Since the context is not empty but generated
+     from some relation encoded in the input classes. *)
   val empty : Expr.Set.t list -> t
+  (** [empty classes] creates a new context from the classes of
+      expressions [classes]. *)
 
-  val assume : t ->
-    Uf.t -> (Shostak.Combine.r input) list -> t * Shostak.Combine.r result
-  val query  : t -> Uf.t -> Shostak.Combine.r input -> Th_util.answer
+  val assume :
+    t ->
+    Uf.t ->
+    (Shostak.Combine.r input) list ->
+    t * Shostak.Combine.r result
+
+  val query :
+    t ->
+    Uf.t ->
+    Shostak.Combine.r input ->
+    Th_util.answer
 
   val case_split :
     t -> Uf.t ->

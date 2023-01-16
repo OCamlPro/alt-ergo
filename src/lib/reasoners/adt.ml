@@ -13,10 +13,12 @@ module Sy = Symbols
 module E  = Expr
 module Hs = Hstring
 
+type 'a record_def = (Hstring.t * 'a) list
+
 type 'a abstract =
-  | Constr of { c_name : Hs.t ; c_ty : Ty.t ; c_args : (Hs.t * 'a) list }
+  | Constr of { c_name : Hs.t ; c_ty : Ty.t ; c_args : 'a record_def }
   | Select of { d_name : Hs.t ; d_ty : Ty.t ; d_arg : 'a }
-  | Tester of { t_name : Hs.t ; t_arg : 'a } (* tester is currently not used *)
+  | Tester of { t_name : Hs.t ; t_arg : 'a }
   | Alien of 'a
 
 module type ALIEN = sig
@@ -27,24 +29,28 @@ end
 
 
 (* TODO: can this function be replace with Ty.assoc_destrs ?? *)
+(* Return the constructor associed with the destructor dest in the
+   adt type ty. *)
 let constr_of_destr ty dest =
   if Options.get_debug_adt () then
     Printer.print_dbg
       ~module_name:"Adt" ~function_name:"constr_of_destr"
       "ty = %a" Ty.print ty;
   match ty with
-  | Ty.Tadt (s, params) ->
-    let bdy = Ty.type_body s params in
-    begin match bdy with
+  | Ty.Tadt (s, params) -> (
+      match Ty.type_body s params with
       | Ty.Adt cases ->
         try
           List.find
             (fun { Ty.destrs; _ } ->
                List.exists (fun (d, _) -> Hstring.equal dest d) destrs
             )cases
-        with Not_found -> assert false (* invariant *)
-    end
-  | _ -> assert false
+        with Not_found ->
+          Util.failwith "Invariant: all destructors of an adt type has an \
+                         associated constructor. The destructor %a has no \
+                         constructor in the type %a."
+            Hstring.print dest Ty.print ty)
+  | _ -> Util.failwith "Expected an adt type. Got %a" Ty.print ty
 
 
 module Shostak (X : ALIEN) = struct
@@ -62,7 +68,7 @@ module Shostak (X : ALIEN) = struct
     not (Options.get_disable_adts ()) &&
     match sy, ty with
     | Sy.Op (Sy.Constr _), Ty.Tadt _ -> true
-    | Sy.Op Sy.Destruct (_,guarded), _ -> not guarded
+    | Sy.Op Sy.Destruct (_, guarded), _ -> not guarded
     | _ -> false
 
   let embed r =
@@ -106,8 +112,7 @@ module Shostak (X : ALIEN) = struct
           begin
             try snd @@ List.find (fun (lbl, _) -> Hs.equal d_name lbl) c.c_args
             with Not_found ->
-              Printer.print_err "is_mine %a failed" print u;
-              assert false
+              Util.failwith "is_mine %a failed" print u
           end
         | _ -> X.embed u)
 
@@ -167,10 +172,10 @@ module Shostak (X : ALIEN) = struct
       in
       let c_args =
         try
-          List.rev @@
           List.fold_left2
             (fun c_args v (lbl, _) -> (lbl, v) :: c_args)
             [] xs case_hs
+          |> List.rev
         with Invalid_argument _ -> assert false
       in
       is_mine @@ Constr {c_name = hs; c_ty = ty; c_args}, ctx

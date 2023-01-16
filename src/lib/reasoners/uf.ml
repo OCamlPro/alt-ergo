@@ -79,27 +79,27 @@ end
 type r = X.r
 
 type t = {
-
-  (* term -> [t] *)
+  (* TODO: rename this field. *)
   make : r ME.t;
+  (* Map of terms to their semantic values returned by {!val:X.make}. *)
 
-  (* representative table *)
   repr : (r * Ex.t) MapX.t;
+  (* Map of semantic values to their representative semantic value
+     (with an explanation.) *)
 
-  (* r -> class (of terms) *)
   classes : SE.t MapX.t;
+  (* Map of semantic values to their classes of terms. *)
 
-  (*associates each value r with the set of semantical values whose
-    representatives contains r *)
   gamma : SetX.t MapX.t;
+  (* Map of semantic values to the set of semantic values whose the
+     representative contains them. *)
 
-  (* the disequations map *)
   neqs: Ex.t MapL.t MapX.t;
+  (* the disequations map. *)
 
-  (*AC rewrite system *)
   ac_rs : SetRL.t RS.t;
+  (* AC rewrite system. *)
 }
-
 
 exception Found_term of E.t
 
@@ -127,7 +127,6 @@ let terms_of_distinct env l = match LX.view l with
 
   | _ -> assert false
 
-
 let cl_extract env =
   if Options.get_bottom_classes () then
     let classes = MapX.fold (fun _ cl acc -> cl :: acc) env.classes [] in
@@ -135,7 +134,6 @@ let cl_extract env =
         MapL.fold (fun l _ acc -> (terms_of_distinct env l) @ acc) ml acc
       ) env.neqs classes
   else []
-
 
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
@@ -1083,4 +1081,3 @@ let save_cache () =
 
 let reinit_cache () =
   LX.reinit_cache ()
-
