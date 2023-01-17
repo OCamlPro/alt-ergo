@@ -131,12 +131,13 @@ module Shostak
     | Some p -> p
     | _ -> P.create [Q.one, r] Q.zero (X.type_info r)
 
-  (* t1 % t2 = md  <->
-     c1. 0 <= md ;
-     c2. md < t2 ;
-     c3. exists k. t1 = t2 * k + t ;
-     c4. t2 <> 0 (already checked) *)
-  let mk_modulo md t1 t2 p2 ctx =
+  (* The congruence relation t1 % t2 = md is equivalent to the conjunction of
+     of formulas:
+     1. 0 <= md
+     2. md < t2
+     3. there exists an integer k such that t1 = md + k * t2.
+     This function produces the above clauses. *)
+  let mk_modulo md t1 t2 p2 =
     let zero = E.int "0" in
     let c1 = E.mk_builtin ~is_pos:true Symbols.LE [zero; md] in
     let c2 =
@@ -150,21 +151,20 @@ module Shostak
         E.mk_builtin ~is_pos:true Symbols.LT [md; t2]
     in
     let k  = E.fresh_name Ty.Tint in
-    let t3 = E.mk_term (Sy.Op Sy.Mult) [t2;k] Ty.Tint in
-    let t3 = E.mk_term (Sy.Op Sy.Plus) [t3;md] Ty.Tint in
+    let t3 = E.mk_term (Sy.Op Sy.Mult) [t2; k] Ty.Tint in
+    let t3 = E.mk_term (Sy.Op Sy.Plus) [t3; md] Ty.Tint in
     let c3 = E.mk_eq ~iff:false t1 t3 in
-    c3 :: c2 :: c1 :: ctx
+    [c1; c2; c3]
 
-  let mk_euc_division p p2 t1 t2 ctx =
+  let mk_euc_division p p2 t1 t2 =
     match P.to_list p2 with
     | [], coef_p2 ->
       let md = E.mk_term (Sy.Op Sy.Modulo) [t1;t2] Ty.Tint in
       let r, ctx' = X.make md in
       let rp =
         P.mult_const (Q.div Q.one coef_p2) (embed r) in
-      P.sub p rp, ctx' @ ctx
+      P.sub p rp, ctx'
     | _ -> assert false
-
 
   let exact_sqrt_or_Exit q =
     (* this function is probably not accurate because it
@@ -254,7 +254,9 @@ module Shostak
         let p3, ctx =
           try
             let p, approx = P.div p1 p2 in
-            if approx then mk_euc_division p p2 t1 t2 ctx
+            if approx then
+              let p, ctx' = mk_euc_division p p2 t1 t2 in
+              p, ctx' @ ctx
             else p, ctx
           with Division_by_zero | Polynome.Maybe_zero ->
             P.create [Q.one, X.term_embed t] Q.zero ty, ctx
@@ -285,7 +287,7 @@ module Shostak
             let t = E.mk_term mod_symb [t1; t2] Ty.Tint in
             let ctx = match e with
               | Division_by_zero | Polynome.Maybe_zero -> ctx
-              | Polynome.Not_a_num -> mk_modulo t t1 t2 p2 ctx
+              | Polynome.Not_a_num -> List.rev_append (mk_modulo t t1 t2 p2) ctx
               | _ -> assert false
             in
             P.create [Q.one, X.term_embed t] Q.zero ty, ctx
