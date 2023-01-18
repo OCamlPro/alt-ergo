@@ -190,8 +190,10 @@ let main () =
         Typer_Pipe.print stmt;
     st, stmt
   in
-  let handle_exn _ bt e =
-    Printexc.raise_with_backtrace e bt
+  let handle_exn _ bt = function
+    | Dolmen.Std.Loc.Syntax_error (_, `Regular msg) ->
+      Printer.print_err "%t" msg;
+    | _ as exn -> Printexc.raise_with_backtrace exn bt
   in
   let finally ~handle_exn st e =
     match e with
@@ -211,10 +213,18 @@ let main () =
       ?(header_licenses = []) ?header_lang_version ?(type_check = true)
       ?(solver_ctx = empty_solver_ctx) path =
     let dir = Filename.dirname path in
+    let filename = Filename.basename path in
+    let source =
+      if Filename.check_suffix path ".zip" then
+        let content = AltErgoLib.My_zip.extract_zip_file path in
+        `Raw (Filename.chop_extension filename, content)
+      else
+        `File (filename)
+    in
     let logic_file =
       mk_file
         ?mode:input_mode
-        ~source:(`File (Filename.basename path))
+        ~source
         ~loc:(Dolmen.Std.Loc.mk_file path)
         dir
     in

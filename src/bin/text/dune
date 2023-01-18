@@ -5,6 +5,7 @@
   (name Main_text)
   (public_name alt-ergo)
   (package alt-ergo)
+  (modes byte)
   (libraries alt_ergo_common)
   (link_flags (:include flags.dune))
   (modules Main_text))

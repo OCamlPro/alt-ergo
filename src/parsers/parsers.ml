@@ -29,7 +29,6 @@
 open AltErgoLib
 open Options
 open Errors
-open Format
 
 module type PARSER_INTERFACE = sig
   val file : Lexing.lexbuf -> Parsed.file
@@ -103,30 +102,6 @@ let parse_trigger ?lang lexbuf =
   let module Parser = (val get_parser lang : PARSER_INTERFACE) in
   Parser.trigger lexbuf
 
-(* pre-condition: f is of the form f'.zip *)
-let extract_zip_file f =
-  let cin = MyZip.open_in f in
-  try
-    match MyZip.entries cin with
-    | [e] when not (MyZip.is_directory e) ->
-      if get_verbose () then
-        Printer.print_dbg
-          ~module_name:"Parsers" ~function_name:"extract_zip_file"
-          "I'll read the content of '%s' in the given zip"
-          (MyZip.filename e);
-      let content = MyZip.read_entry cin e in
-      MyZip.close_in cin;
-      content
-    | _ ->
-      MyZip.close_in cin;
-      raise (Arg.Bad
-               (sprintf "%s '%s' %s@?"
-                  "The zipped file" f
-                  "should contain exactly one file."))
-  with e ->
-    MyZip.close_in cin;
-    raise e
-
 let parse_input_file file =
   if get_verbose () then
     Printer.print_dbg
@@ -135,7 +110,7 @@ let parse_input_file file =
   let cin, lb, opened_cin, ext =
     if Filename.check_suffix file ".zip" then
       let ext = Filename.extension (Filename.chop_extension file) in
-      let file_content = extract_zip_file file in
+      let file_content = My_zip.extract_zip_file file in
       stdin, Lexing.from_string file_content, false, ext
     else
       let ext = Filename.extension file in

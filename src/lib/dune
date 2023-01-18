@@ -24,8 +24,19 @@
 
   ; external dependencies
   (libraries
-     seq unix num str zarith dynlink ocplib-simplex stdlib-shims
-     dolmen dolmen_type dolmen_loop)
+    seq
+    unix
+    num
+    str
+    zarith
+    dynlink
+    ocplib-simplex
+    stdlib-shims
+    camlzip
+    dolmen
+    dolmen_type
+    dolmen_loop
+  )
 
   ; .mli only modules *also* need to be in this field
   (modules_without_implementation matching_types numbersInterface sig sig_rel)
@@ -47,7 +58,9 @@
     ; util
     Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
     MyDynlink MyUnix Numbers NumsNumbers NumbersInterface
-    Options Timers Util Vec Version ZarithNumbers Steps Printer Format_shims)
+    Options Timers Util Vec Version ZarithNumbers Steps Printer Format_shims
+    My_zip
+  )
 
  (js_of_ocaml
   (javascript_files missing_primitives.js)
