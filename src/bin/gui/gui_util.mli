@@ -26,8 +26,9 @@
 (*     License version 2.0                                                    *)
 (*                                                                            *)
 (******************************************************************************)
- 
+
 (** Convert RGB color given in the decimal format (red, green, blue) where
     red, green and blue are integers between 0 and 65535
-    to RGB color in hexadecimal format #rrrrggggbbbb where r, g, b are hexadecimal digits. *)
+    to RGB color in hexadecimal format #rrrrggggbbbb where r, g, b are
+    hexadecimal digits. *)
 val dec_to_hex_color : int -> int -> int -> string
