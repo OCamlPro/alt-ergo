@@ -204,6 +204,15 @@ let main () =
       ?(loc = Dolmen.Std.Loc.mk_file "") dir: _ State.file =
     { lang; mode; dir; source; loc; }
   in
+  let set_output_format fmt =
+    if Options.get_infer_output_format () then
+      match fmt with
+      | ".ae" -> Options.set_output_format Native
+      | ".smt2" | ".psmt2" -> Options.set_output_format Smtlib2
+      | s ->
+        Printer.print_wrn
+          "The output format %s is not supported by the Dolmen frontend." s
+  in
   let mk_state ?(debug = false) ?(report_style = State.Contextual)
       ?(reports =
         Dolmen_loop.Report.Conf.mk
@@ -215,15 +224,22 @@ let main () =
     let dir = Filename.dirname path in
     let filename = Filename.basename path in
     let source =
-      if Filename.check_suffix path ".zip" then
+      if Filename.check_suffix path ".zip" then (
+        Filename.(chop_extension path |> extension) |> set_output_format;
         let content = AltErgoLib.My_zip.extract_zip_file path in
-        `Raw (Filename.chop_extension filename, content)
-      else
-        `File (filename)
+        `Raw (Filename.chop_extension filename, content))
+      else (
+        Filename.extension path |> set_output_format;
+        let cin = open_in path in
+        let content = In_channel.input_all cin in
+        In_channel.close cin;
+        `Raw (filename, content))
     in
+    (* We use the full mode since the incremental mode is not supported by
+       the native input language. *)
     let logic_file =
       mk_file
-        ?mode:input_mode
+        ~mode:`Full
         ~source
         ~loc:(Dolmen.Std.Loc.mk_file path)
         dir
