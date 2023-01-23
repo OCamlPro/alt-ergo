@@ -107,7 +107,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (dune (and (>= 2.0)))
   dune-configurator
   num
-  (ocplib-simplex (>= 0.4))
+  (ocplib-simplex (and (>= 0.4) (< 0.5)))
   zarith
   seq
   stdlib-shims
