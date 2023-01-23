@@ -218,7 +218,7 @@ let main () =
         Dolmen_loop.Report.Conf.mk
           ~default:Dolmen_loop.Report.Warning.Status.Enabled)
       ?(max_warn = max_int) ?(time_limit = Float.infinity)
-      ?(size_limit = Float.infinity) ?input_mode ?(header_check = false)
+      ?(size_limit = Float.infinity) ?(header_check = false)
       ?(header_licenses = []) ?header_lang_version ?(type_check = true)
       ?(solver_ctx = empty_solver_ctx) path =
     let dir = Filename.dirname path in
