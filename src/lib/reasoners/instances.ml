@@ -59,7 +59,7 @@ module type S = sig
     t ->
     tbox ->
     (E.t -> E.t -> bool) ->
-    int ->
+    ilvl:int ->
     instances * instances (* goal_directed, others *)
 
   val m_predicates :
@@ -67,7 +67,7 @@ module type S = sig
     t ->
     tbox ->
     (E.t -> E.t -> bool) ->
-    int ->
+    ilvl:int ->
     instances * instances (* goal_directed, others *)
 
   val register_max_term_depth : t -> int -> t
@@ -79,6 +79,7 @@ end
 
 module Make(X : Theory.S) : S with type tbox = X.t = struct
 
+  (* The e-matching module. *)
   module EM = Matching.Make(struct
 
       include Ccx.Main
@@ -106,6 +107,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     predicates : (guard * int * Ex.t) ME.t;
     ground_preds : (guard * E.t * Explanation.t) ME.t; (* key <-> f *)
     matching : EM.t;
+    (* The environment of the e-matching. *)
   }
 
   let empty = {
@@ -375,7 +377,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         raise e
     else new_facts env tbox selector substs
 
-  let mround env axs tbox selector ilvl kind mconf =
+  let mround env axs tbox selector ~ilvl kind mconf =
     Debug.new_mround ilvl kind;
     Options.tool_req 2 "TR-Sat-Mround";
     let env =
@@ -389,11 +391,11 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     let gd, ngd = split_and_filter_insts env insts in
     sort_facts gd, sort_facts ngd
 
-  let m_lemmas env tbox selector ilvl mconf =
-    mround env env.lemmas tbox selector ilvl "axioms" mconf
+  let m_lemmas env tbox selector ~ilvl mconf =
+    mround env env.lemmas tbox selector ~ilvl "axioms" mconf
 
-  let m_predicates env tbox selector ilvl mconf =
-    mround env env.predicates tbox selector ilvl "predicates" mconf
+  let m_predicates env tbox selector ~ilvl mconf =
+    mround env env.predicates tbox selector ~ilvl "predicates" mconf
 
   let add_lemma env gf dep =
     let guard = E.vrai in
@@ -445,29 +447,29 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         raise e
     else add_predicate env ~guard ~name gf
 
-  let m_lemmas mconf env tbox selector ilvl =
+  let m_lemmas mconf env tbox selector ~ilvl =
     if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Match Timers.F_m_lemmas;
-        let res = m_lemmas env tbox selector ilvl mconf in
+        let res = m_lemmas env tbox selector ~ilvl mconf in
         Timers.exec_timer_pause Timers.M_Match Timers.F_m_lemmas;
         res
       with e ->
         Timers.exec_timer_pause Timers.M_Match Timers.F_m_lemmas;
         raise e
-    else m_lemmas env tbox selector ilvl mconf
+    else m_lemmas env tbox selector ~ilvl mconf
 
-  let m_predicates mconf env tbox selector ilvl =
+  let m_predicates mconf env tbox selector ~ilvl =
     if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Match Timers.F_m_predicates;
-        let res = m_predicates env tbox selector ilvl mconf in
+        let res = m_predicates env tbox selector ~ilvl mconf in
         Timers.exec_timer_pause Timers.M_Match Timers.F_m_predicates;
         res
       with e ->
         Timers.exec_timer_pause Timers.M_Match Timers.F_m_predicates;
         raise e
-    else m_predicates env tbox selector ilvl mconf
+    else m_predicates env tbox selector ~ilvl mconf
 
   let matching_terms_info env = EM.terms_info env.matching
 

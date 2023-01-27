@@ -407,13 +407,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let mround menv env acc =
     let tbox = SAT.current_tbox env.satml in
     let gd2, ngd2 =
-      Inst.m_predicates menv env.inst tbox (selector env) env.nb_mrounds
+      Inst.m_predicates menv env.inst tbox (selector env) ~ilvl:env.nb_mrounds
     in
     let l2 = List.rev_append (List.rev gd2) ngd2 in
     if Options.get_profiling() then Profiling.instances l2;
     (*let env = assume env l2 in*)
     let gd1, ngd1 =
-      Inst.m_lemmas menv env.inst tbox (selector env) env.nb_mrounds
+      Inst.m_lemmas menv env.inst tbox (selector env) ~ilvl:env.nb_mrounds
     in
     let l1 = List.rev_append (List.rev gd1) ngd1 in
     if Options.get_profiling() then Profiling.instances l1;

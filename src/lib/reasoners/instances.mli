@@ -26,12 +26,17 @@
 (*                                                                            *)
 (******************************************************************************)
 
+(** type module of the module of instanciation. *)
 module type S = sig
   type t
+  (** Type of the environment of the instanciation. *)
+
   type tbox
   type instances = (Expr.gformula * Explanation.t) list
 
   val empty : t
+  (** The initial environment. *)
+
   val add_terms : t -> Expr.Set.t -> Expr.gformula -> t
   val add_lemma : t -> Expr.gformula -> Explanation.t -> t
   val add_predicate :
@@ -54,7 +59,7 @@ module type S = sig
     t ->
     tbox ->
     (Expr.t -> Expr.t -> bool) ->
-    int ->
+    ilvl:int ->
     instances * instances (* goal_directed, others *)
 
   val m_predicates :
@@ -62,10 +67,13 @@ module type S = sig
     t ->
     tbox ->
     (Expr.t -> Expr.t -> bool) ->
-    int ->
+    ilvl:int ->
     instances * instances (* goal_directed, others *)
 
   val register_max_term_depth : t -> int -> t
+  (** [register_max_term_depth env i] increases the size of the environment
+      used in the e-matching procedure. See {!val Matching.max_term_depth} for
+      more details. *)
 
   val matching_terms_info :
     t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
