@@ -890,7 +890,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
      no_ematching = get_no_ematching();
      triggers_var = get_triggers_var ();
      use_cs = false;
-     backward = Util.Normal;
+     inst_mode = Util.Normal;
      greedy = false;
     }
 
@@ -899,7 +899,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
      no_ematching = get_no_ematching();
      triggers_var = get_triggers_var ();
      use_cs = false;
-     backward = Util.Normal;
+     inst_mode = Util.Normal;
      greedy = false;
     }
 
@@ -908,7 +908,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
      no_ematching = false;
      triggers_var = get_triggers_var ();
      use_cs = true;
-     backward = Util.Normal;
+     inst_mode = Util.Normal;
      greedy = true;
     }
 
@@ -917,7 +917,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
      no_ematching = false;
      triggers_var = true;
      use_cs = true;
-     backward = Util.Normal;
+     inst_mode = Util.Normal;
      greedy = true;
     }
 

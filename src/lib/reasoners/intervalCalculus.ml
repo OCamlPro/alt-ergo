@@ -2372,7 +2372,7 @@ let syntactic_matching menv env uf _selector =
      no_ematching = get_no_ematching();
      triggers_var = get_triggers_var ();
      use_cs = false;
-     backward = Util.Normal;
+     inst_mode = Util.Normal;
      greedy = get_greedy ();
     }
   in

@@ -34,7 +34,7 @@ type case_split_policy =
   | AfterMatching
 
 
-type inst_kind = Normal | Forward | Backward
+type inst_mode = Normal | Forward | Backward
 
 type sat_solver =
   | Tableaux
@@ -113,7 +113,7 @@ type matching_env =
     no_ematching: bool;
     greedy : bool;
     use_cs : bool;
-    backward : inst_kind
+    inst_mode : inst_mode
   }
 
 let loop

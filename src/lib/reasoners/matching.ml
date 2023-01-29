@@ -55,7 +55,6 @@ module type S = sig
   val terms_info : t -> info ME.t * E.t list ME.t SubstE.t
   val query :
     Util.matching_env -> t -> theory -> (trigger_info * gsubst list) list
-
 end
 
 module type Arg = sig
@@ -70,26 +69,26 @@ module Make (X : Arg) : S with type theory = X.t = struct
   type theory = X.t
 
   type t = {
-    fils : E.t list ME.t SubstE.t ;
-    info : info ME.t ;
+    fils : E.t list ME.t SubstE.t;
+    info : info ME.t;
+    (* A map of the terms to their information. *)
+
     max_t_depth : int;
-    pats : trigger_info list
+    (* The current maximal depth. *)
+
+    pats : trigger_info list;
   }
 
   exception Echec
 
   let empty = {
-    fils = SubstE.empty ;
-    info = ME.empty ;
+    fils = SubstE.empty;
+    info = ME.empty;
     pats = [ ];
     max_t_depth = 0;
   }
 
   let make ~max_t_depth info fils pats = { fils; info; pats; max_t_depth }
-
-  let age_limite = Options.get_age_bound
-  (* l'age limite des termes, au dela ils ne sont pas consideres par le
-     matching *)
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
@@ -226,11 +225,14 @@ module Make (X : Arg) : S with type theory = X.t = struct
           in
           List.fold_left add_rec env xs
         | E.Not_a_term {is_lit} ->
+          (* TODO: Replace it by Util.failwith. *)
           Printer.print_err
             "%a is not a term, is_lit = %b" E.print t is_lit;
           assert false
     in
-    if info.term_age > age_limite () then env else add_rec env t
+    (* l'age limite des termes, au dela ils ne sont pas consideres par le
+       matching *)
+    if info.term_age > Options.get_age_bound () then env else add_rec env t
 
   let add_trigger p env = { env with pats = p :: env.pats }
 
@@ -476,18 +478,18 @@ module Make (X : Arg) : S with type theory = X.t = struct
         if too_big then
           lsbt
         else
-        try
-          Debug.match_one_pat_against sg pat0 t;
-          let s_ty = Ty.matching sty ty (E.type_info t) in
-          let gen, but = infos max (||) t g b env in
-          let sg =
-            { sg with
-              sty = s_ty; gen = gen; goal = but;
-              s_term_orig = t::sg.s_term_orig }
-          in
-          let aux = match_list mconf env tbox sg pats xs in
-          List.rev_append aux lsbt
-        with Echec | Ty.TypeClash _ -> lsbt
+          try
+            Debug.match_one_pat_against sg pat0 t;
+            let s_ty = Ty.matching sty ty (E.type_info t) in
+            let gen, but = infos max (||) t g b env in
+            let sg =
+              { sg with
+                sty = s_ty; gen = gen; goal = but;
+                s_term_orig = t::sg.s_term_orig }
+            in
+            let aux = match_list mconf env tbox sg pats xs in
+            List.rev_append aux lsbt
+          with Echec | Ty.TypeClash _ -> lsbt
       in
       try ME.fold f_aux (SubstE.find f env.fils) lsbt_acc
       with Not_found -> lsbt_acc
@@ -632,7 +634,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   module HE = Hashtbl.Make (E)
 
-  let triggers_of =
+  let normal_triggers =
     let trs_tbl = HEI.create 101 in
     fun q mconf ->
       match q.E.user_trs with
@@ -662,14 +664,18 @@ module Make (X : Arg) : S with type theory = X.t = struct
         HE.add trs_tbl q.E.main trs;
         trs
 
+  (** [add_triggers mconf env formulas] add to the environment [env] the
+      triggers contained in the [formulas]. More precisely, [formulas] is a map
+      of lemmas to triplets (guard, age, dep) where [age] is the initial [age]
+      of the new trigger. *)
   let add_triggers mconf env formulas =
     ME.fold
       (fun lem (guard, age, dep) env ->
          match E.form_view lem with
          | E.Lemma ({ E.main = f; name; _ } as q) ->
            let tgs, kind =
-             match mconf.Util.backward with
-             | Util.Normal   -> triggers_of q mconf, "Normal"
+             match mconf.Util.inst_mode with
+             | Util.Normal   -> normal_triggers q mconf, "Normal"
              | Util.Backward -> backward_triggers q, "Backward"
              | Util.Forward  -> forward_triggers q, "Forward"
            in

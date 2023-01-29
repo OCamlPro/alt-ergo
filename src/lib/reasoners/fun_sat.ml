@@ -1409,7 +1409,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          no_ematching = false;
          triggers_var = true;
          use_cs = true;
-         backward = Util.Normal;
+         inst_mode = Util.Normal;
          greedy = true;
         }
       in
@@ -1434,7 +1434,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        no_ematching = get_no_ematching();
        triggers_var = get_triggers_var ();
        use_cs = false;
-       backward = Util.Normal;
+       inst_mode = Util.Normal;
        greedy = get_greedy ();
       }
     in
@@ -1637,7 +1637,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          triggers_var = get_triggers_var ();
          use_cs = false;
          greedy = get_greedy ();
-         backward = Util.Backward;
+         inst_mode = Util.Backward;
         }
       in
       let env, new_i1 = inst_and_assume mconf env inst_predicates env.inst in
@@ -1817,7 +1817,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          no_ematching = get_no_ematching();
          triggers_var = get_triggers_var ();
          use_cs = false;
-         backward = Util.Normal;
+         inst_mode = Util.Normal;
          greedy = get_greedy ();
         }
       in
