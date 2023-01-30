@@ -763,18 +763,14 @@ let merge_vars acc b =
 
 let free_vars t = merge_vars SMap.empty t.vars
 
-(* TODO: inline this function. *)
-let free_type_vars t = t.vty
+let[@inline always] free_type_vars t = t.vty
 
 let is_ground t =
   SMap.is_empty (free_vars t) &&
   Ty.Svty.is_empty (free_type_vars t)
 
-(* TODO: inline this function. *)
-let size t = t.nb_nodes
-
-(* TODO: inline this function. *)
-let depth t = t.depth
+let[@inline always] size t = t.nb_nodes
+let[@inline always] depth t = t.depth
 
 let rec is_positive e =
   let { top_sy; bind; _ } = e in
@@ -789,8 +785,8 @@ let neg t =
   | { ty = Ty.Tbool; neg = Some n; _ } -> n
   | { top_sy = _; _ } -> assert false
 
-let is_int t = t.ty == Ty.Tint
-let is_real t = t.ty == Ty.Treal
+let[@inline always] is_int t = t.ty == Ty.Tint
+let[@inline always] is_real t = t.ty == Ty.Treal
 
 let is_fresh = function
   | { top_sy = Sy.Name (hs, _); args = []; _ } ->
@@ -2666,8 +2662,7 @@ let mk_match e cases =
   [@ocaml.ppwarning "TODO: add other elim schemes"]
   [@ocaml.ppwarning "TODO: add a match construct in expr"]
 
-(* TODO: inline this function. *)
-let is_pure e = e.pure
+let[@inline always] is_pure e = e.pure
 
 module Set = TSet
 module Map = TMap
