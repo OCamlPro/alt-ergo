@@ -761,13 +761,13 @@ let merge_vars acc b =
         Some (ty, x + y)
     ) acc b
 
-let free_vars t acc = merge_vars acc t.vars
+let free_vars t = merge_vars SMap.empty t.vars
 
 (* TODO: inline this function. *)
 let free_type_vars t = t.vty
 
 let is_ground t =
-  SMap.is_empty (free_vars t SMap.empty) &&
+  SMap.is_empty (free_vars t) &&
   Ty.Svty.is_empty (free_type_vars t)
 
 (* TODO: inline this function. *)
@@ -1148,8 +1148,7 @@ let mk_forall_ter =
            This assumes that eventual variables in hypotheses are binded
            here. *)
         let vars =
-          SMap.filter (fun v _ -> not (SMap.mem v new_q.binders))
-            (free_vars f SMap.empty)
+          SMap.filter (fun v _ -> not (SMap.mem v new_q.binders)) (free_vars f)
         in
         let sko = { new_q with main = neg f } in
         let pos = HC.make {
@@ -1689,7 +1688,7 @@ let resolution_of_literal a binders free_vty acc =
   | Pred(t, _) ->
     let cond =
       Ty.Svty.subset free_vty (free_type_vars t) &&
-      let vars = free_vars t SMap.empty in
+      let vars = free_vars t in
       SMap.for_all (fun sy _ -> SMap.mem sy vars) binders
     in
     if cond then TSet.add t acc else acc
@@ -1826,7 +1825,7 @@ let skolemize { main = f; binders; sko_v; sko_vty; _ } =
            (fun sy (ty, _) g_sbt ->
               if SMap.mem sy g_sbt then g_sbt
               else SMap.add sy (fresh_name ~ty) g_sbt
-           ) (free_vars sk_t SMap.empty) g_sbt
+           ) (free_vars sk_t) g_sbt
       ) SMap.empty sko_v
   in
   let sbt =
@@ -1875,12 +1874,12 @@ let rec elim_let =
       let sbt =
         SMap.fold
           (fun sy (ty, _) sbt -> SMap.add sy (fresh_name ~ty) sbt)
-          (free_vars sko SMap.empty) SMap.empty
+          (free_vars sko) SMap.empty
       in
       apply_subst (sbt, Ty.Subst.empty) sko
   in
   fun ~recursive ~conjs subst { let_v; let_e; in_e; let_sko; _ } ->
-    assert (SMap.mem let_v (free_vars in_e SMap.empty));
+    assert (SMap.mem let_v (free_vars in_e));
     (* usefull when let_sko still contains variables that are not in
        ie_e due to simplification *)
     let let_sko = apply_subst (subst, Ty.Subst.empty) let_sko in
@@ -2551,7 +2550,7 @@ let mk_forall ~name ~loc binders ~triggers ~toplevel ~decl_kind f =
   let sko_v =
     SMap.fold (fun sy (ty, _) acc ->
         if SMap.mem sy binders then acc else (mk_term ~sy ~args:[] ~ty) :: acc)
-      (free_vars f SMap.empty) []
+      (free_vars f) []
   in
   let free_vty = free_type_vars_as_types f in
   let sko_vty = if toplevel then [] else Ty.Set.elements free_vty in

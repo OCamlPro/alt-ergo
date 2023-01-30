@@ -510,8 +510,7 @@ val print_triggers : Format.formatter -> trigger list -> unit
 val print_list : Format.formatter -> t list -> unit
 val print_list_sep : string -> Format.formatter -> t list -> unit
 
-(* TODO: Remove the accumulator argument. *)
-val free_vars : t -> (Ty.t * int) Symbols.Map.t -> (Ty.t * int) Symbols.Map.t
+val free_vars : t -> (Ty.t * int) Symbols.Map.t
 (** [free_vars e] return the multiset of free variables in the expression
     [e]. *)
 

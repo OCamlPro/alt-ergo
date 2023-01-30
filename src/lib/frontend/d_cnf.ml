@@ -1213,7 +1213,7 @@ let make_form name_base f loc ~decl_kind =
   let ff =
     mk_expr ~loc ~name_base ~toplevel:true ~decl_kind f
   in
-  assert (SM.is_empty (E.free_vars ff SM.empty));
+  assert (SM.is_empty (E.free_vars ff));
   let ff = Purification.purify_form ff in
   if Ty.Svty.is_empty (E.free_type_vars ff) then ff
   else
@@ -1314,7 +1314,7 @@ let make dloc_file acc stmt =
                   E.mk_forall ~name:name_base ~loc:Loc.dummy binders
                     ~triggers:[] ~toplevel:true ~decl_kind qb
                 in
-                assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
+                assert (Sy.Map.is_empty (E.free_vars ff));
                 let ff = Purification.purify_form ff in
                 let e =
                   if Ty.Svty.is_empty (E.free_type_vars ff) then ff
@@ -1335,7 +1335,7 @@ let make dloc_file acc stmt =
                   E.mk_forall ~name:name_base ~loc:Loc.dummy binders ~triggers:[]
                     ~toplevel:true ~decl_kind qb
                 in
-                assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
+                assert (Sy.Map.is_empty (E.free_vars ff));
                 let ff = Purification.purify_form ff in
                 let e =
                   if Ty.Svty.is_empty (E.free_type_vars ff) then ff

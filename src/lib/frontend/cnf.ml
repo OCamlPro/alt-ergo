@@ -379,7 +379,7 @@ let make_form name f loc ~decl_kind =
   let ff =
     make_form Sy.Map.empty name f loc ~decl_kind ~toplevel:true
   in
-  assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
+  assert (Sy.Map.is_empty (E.free_vars ff));
   let ff = Purification.purify_form ff in
   if Ty.Svty.is_empty (E.free_type_vars ff) then ff
   else
