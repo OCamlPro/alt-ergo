@@ -301,7 +301,7 @@ let print_binders =
   in fun fmt b ->
     match SMap.bindings b with
     | [] ->
-      (* can happen when quantifying only on type variables *)
+      (* This situation can happen when quantifying only on type variables. *)
       Format.fprintf fmt "(no term variables)"
     | e :: l ->
       print_one fmt e;
@@ -694,12 +694,12 @@ let lit_view t =
     | Sy.Lit lit ->
       begin match lit, args with
         | (Sy.L_eq | Sy.L_neg_eq), ([] | [_]) -> assert false
-        | Sy.L_eq, [lhs; rhs] -> Eq {lhs; rhs}
+        | Sy.L_eq, [lhs; rhs] -> Eq { lhs; rhs }
         | Sy.L_eq, args -> Eql args
         | Sy.L_neg_eq, args -> Distinct args
-        | Sy.L_built x, args -> Builtin(true, x, args)
-        | Sy.L_neg_built x, args -> Builtin(false, x, args)
-        | Sy.L_neg_pred, [a] -> Pred(a, true)
+        | Sy.L_built x, args -> Builtin (true, x, args)
+        | Sy.L_neg_built x, args -> Builtin (false, x, args)
+        | Sy.L_neg_pred, [a] -> Pred (a, true)
         | Sy.L_neg_pred, _ -> assert false
       end
     | _ -> Pred(t, false) (* FIXME: This wildcase is dangereous! *)
@@ -763,14 +763,17 @@ let merge_vars acc b =
 
 let free_vars t acc = merge_vars acc t.vars
 
+(* TODO: inline this function. *)
 let free_type_vars t = t.vty
 
 let is_ground t =
   SMap.is_empty (free_vars t SMap.empty) &&
   Ty.Svty.is_empty (free_type_vars t)
 
+(* TODO: inline this function. *)
 let size t = t.nb_nodes
 
+(* TODO: inline this function. *)
 let depth t = t.depth
 
 let rec is_positive e =
@@ -1092,7 +1095,7 @@ let mk_if cond f2 f3 =
   mk_or (mk_and ~is_imply:true cond f2)
     (mk_and ~is_imply:true (neg cond) f3)
 
-(** BUG: we should check that cond is of type bool and exp1 and exp2
+(** BUG: we should check that cond is of type bool and then_ and else_
     have the same type also. *)
 let mk_ite ~cond ~then_ ~else_ =
   let ty = type_info then_ in
@@ -1113,18 +1116,18 @@ let[@inline always] const_term { top_sy; args; depth; _ } =
 
 let mk_forall_ter =
   let env = F_Htbl.create 101 in
-  fun new_q _id ->
+  fun new_q ->
     let { name; main = f; _ } = new_q in
-    (* when calling mk_forall_ter, binders should not contains
+    (* When calling mk_forall_ter, binders should not contains
        ununsed binders. Eventual simplification is done in
-       mk_forall_bis, which calls mk_forall_ter *)
+       mk_forall_bis, which calls the function mk_forall_ter. *)
     assert (SMap.for_all (fun sy _ -> SMap.mem sy f.vars) new_q.binders);
     if is_ground f then f
     else
       try
         let lem = F_Htbl.find env f in
         let q = match form_view lem with Lemma q -> q | _ -> assert false in
-        assert (equal q.main f (* should be true *));
+        assert (equal q.main f);
         if compare_quant q new_q <> 0 then raise Exit;
         Printer.print_wrn ~warning:(Options.get_debug_warnings ())
           "(sub) axiom %s replaced with %s" name q.name;
@@ -1135,16 +1138,18 @@ let mk_forall_ter =
         (* prenex polymorphism. If sko_vty is not empty, then we are at
            toplevel and all free_vtys of lem.main are quantified in this
            lemma. Otherwise (if not toplevel), the free vtys of the lemma
-           are those of lem.main *)
+           are those of lem.main. *)
         let vty =
           if new_q.toplevel then Ty.Svty.empty
-          else free_type_vars new_q.main
+          else free_type_vars f
         in
+        (* The free variables of the quantified formula are exactly the
+           the free variables of f that are not in new_q.binders.
+           This assumes that eventual variables in hypotheses are binded
+           here. *)
         let vars =
           SMap.filter (fun v _ -> not (SMap.mem v new_q.binders))
             (free_vars f SMap.empty)
-            (* this assumes that eventual variables in hypotheses are
-               binded here *)
         in
         let sko = { new_q with main = neg f } in
         let pos = HC.make {
@@ -1308,10 +1313,13 @@ let mk_builtin ~is_pos ~builtin ~args =
 
 (** Substitutions *)
 
+(* Check if the string v is the name of a Skolem's constant. *)
 let is_skolem_cst v =
   try String.equal (String.sub (Sy.show v.top_sy) 0 4) "_sko"
   with Invalid_argument _ -> false
 
+(* WHY: we replace skolem constants by these terms when we apply a
+   substitution. *)
 let get_skolem =
   let hsko = Hsko.create 17 in
   let gen_sko ty = mk_term ~sy:(Sy.fresh "@sko") ~args:[] ~ty in
@@ -1320,6 +1328,8 @@ let get_skolem =
     with Not_found ->
       let c = gen_sko ty in Hsko.add hsko v c; c
 
+(* Helper function checking if any variable in the binders is captured by
+   the substitution s_t. *)
 let no_capture_issue s_t binders =
   let new_v =
     SMap.fold (fun _ t acc -> merge_vars acc t.vars) s_t SMap.empty
@@ -1347,8 +1357,8 @@ let rec apply_subst_aux (s_t, (s_ty: Ty.Subst.t)) t =
       let s = s_t, s_ty in
       let args', same = Lists.apply (apply_subst_aux s) args in
       let ty' = Ty.Subst.apply s_ty ty in
-      (*invariant: we are sure that the subst will impact args or ty
-         (or inside a lemma/skolem or let) *)
+      (* Invariant: we are sure that the subst will impact args or ty
+         (or inside a lemma/skolem or let). *)
       assert (args == [] || not same || not (Ty.equal ty ty'));
       match top_sy, bind with
       | Sy.Var _, _ ->
@@ -1367,8 +1377,8 @@ let rec apply_subst_aux (s_t, (s_ty: Ty.Subst.t)) t =
         (* TODO: implement case where variables capture happens *)
         assert (no_capture_issue s_t binders);
         assert (
-          (* invariant: s_t does not contain other free vars than
-             those of t, and binders cannot be free vars of t *)
+          (* Invariant: s_t does not contain other free variables than
+             those of t, and binders cannot be free variables of t. *)
           not (Options.get_enable_assertions ()) ||
           SMap.for_all (fun sy _ -> not (SMap.mem sy s_t)) binders
         );
@@ -1380,7 +1390,7 @@ let rec apply_subst_aux (s_t, (s_ty: Ty.Subst.t)) t =
                let ty' = Ty.Subst.apply s_ty ty in
                if Ty.equal ty ty' then bders
                else SMap.add sy (ty', i) bders
-            )binders binders
+            ) binders binders
         in
         let sko_v = List.map (apply_subst_aux s) sko_v in
         let sko_vty = List.map (Ty.Subst.apply s_ty) sko_vty in
@@ -1402,8 +1412,8 @@ let rec apply_subst_aux (s_t, (s_ty: Ty.Subst.t)) t =
         assert (no_capture_issue s_t (SMap.singleton let_v (let_e.ty, 0)));
         let let_e2 = apply_subst_aux s let_e in
         let let_sko2 = apply_subst_aux s let_sko in
-        (* invariant: s_t only contains vars that are in free in t,
-           and let_v cannot be free in t*)
+        (* Invariant: s_t only contains vars that are in free in t,
+           and let_v cannot be free in t. *)
         assert (not (SMap.mem let_v s_t));
         let in_e2 = apply_subst_aux (SMap.remove let_v s_t, s_ty) in_e in
         assert (let_e != let_e2 || in_e != in_e2);
@@ -1451,10 +1461,10 @@ and apply_subst_trigger subst ({ content; guard; _ } as tr) =
    guard = Option.map (apply_subst_aux subst) guard
   }
 
-(* *1* We should never subst formulas inside termes. We could allow to
+(* We should never subst formulas inside terms. We could allow to
    substitute "let x = form" inside non-pure expressions as long as
    they are not inside terms. But currently, we cannot detect this
-   efficiently *)
+   efficiently. *)
 and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
   try
     let _, nb_occ = SMap.find let_v in_e.vars in
@@ -1505,14 +1515,15 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
   with Not_found -> in_e (* let_v does not appear in in_e *)
 
 and mk_forall_bis (q : quantified) =
-  let binders =  (* ignore binders that are not used in f *)
+  let binders =
+    (* Ignore binders that are not used in q.main. *)
     SMap.filter (fun sy _ -> SMap.mem sy q.main.vars) q.binders
   in
   if SMap.is_empty binders && Ty.Svty.is_empty q.main.vty then q.main
   else
-    let q = {q with binders} in
+    let q = { q with binders } in
     match find_particular_subst binders q.user_trs q.main with
-    | None -> mk_forall_ter q 0
+    | None -> mk_forall_ter q
 
     | Some sbs ->
       let subst = sbs, Ty.Subst.empty in
@@ -1520,7 +1531,7 @@ and mk_forall_bis (q : quantified) =
       if is_ground f then f
       else
         let trs = List.map (apply_subst_trigger subst) q.user_trs in
-        let sko_v   = List.map (apply_subst_aux subst) q.sko_v in
+        let sko_v = List.map (apply_subst_aux subst) q.sko_v in
         let binders = SMap.filter (fun x _ -> not (SMap.mem x sbs)) binders in
         let q = {q with binders; user_trs = trs; sko_v; main = f } in
         mk_forall_bis q
@@ -1532,15 +1543,15 @@ and find_particular_subst =
   let rec find_subst v tv f =
     match form_view f with
     | Unit _ | Lemma _ | Skolem _ | Let _ | Iff _ | Xor _ -> ()
-    | Clause(f1, f2,_) -> find_subst v tv f1; find_subst v tv f2
+    | Clause (f1, f2, _) -> find_subst v tv f1; find_subst v tv f2
     | Literal a ->
       match lit_view a with
-      | Distinct [a;b] when
+      | Distinct [a; b] when
           equal tv a && no_occur_check v b && no_vtys [tv;a] ->
         (* TODO: should unify when type variables are present *)
         raise (Found (v, b))
 
-      | Distinct [a;b] when
+      | Distinct [a; b] when
           equal tv b && no_occur_check v a && no_vtys [tv; b] ->
         (* TODO: should unify when type variables are present *)
         raise (Found (v, a))
@@ -1570,7 +1581,7 @@ and find_particular_subst =
                  let one_sbt = SMap.singleton x t, Ty.Subst.empty in
                  let sbt = SMap.map (apply_subst_aux one_sbt) sbt in
                  SMap.add x t sbt
-            )binders SMap.empty
+            ) binders SMap.empty
         in
         if SMap.is_empty sbt then None else Some sbt
       end
@@ -1608,6 +1619,7 @@ let apply_subst s t =
 (** Subterms, and related stuff *)
 
 (* new: first written for term_definition *)
+(* Produce the set of maximal pure subterms of an expression. *)
 let max_pure_subterms =
   let args_of e =
     match e.bind with
@@ -1626,8 +1638,7 @@ let rec sub_terms acc exp =
   | Sy.Form _ | Sy.Lit _ -> acc
   | _ -> List.fold_left sub_terms (TSet.add exp acc) exp.args
 
-(* TODO: We should replace the assertion failure with
-   a better error. *)
+(* TODO: We should replace the assertion failure with a better error. *)
 (* Produce the list of maximal subterms of a literal. *)
 let args_of_lit e = match e.top_sy with
   | Sy.Form _ -> assert false
@@ -1635,9 +1646,11 @@ let args_of_lit e = match e.top_sy with
   | _ when e.ty == Ty.Tbool -> [e]
   | _ -> assert false
 
+(* Produce the set of maximal subterms of a literal. *)
 let max_terms_of_lit e =
   TSet.of_list @@ args_of_lit e
 
+(* Produce the set of maximal ground subterms of a literal. *)
 let max_ground_terms_of_lit =
   let rec max_sub_ground acc e =
     match e.top_sy with
@@ -1648,23 +1661,20 @@ let max_ground_terms_of_lit =
   in
   fun e -> List.fold_left max_sub_ground TSet.empty (args_of_lit e)
 
-let atoms_rec_of_form =
-  let rec atoms only_ground acc f =
-    match form_view f with
-    | Literal a ->
-      if not only_ground || is_ground a then TSet.add a acc else acc
+let rec atoms_rec_of_form ~only_ground f acc =
+  match form_view f with
+  | Literal a ->
+    if not only_ground || is_ground a then TSet.add a acc else acc
 
-    | Lemma { main = f; _ } | Skolem { main = f; _ } ->
-      atoms only_ground acc f
-    | Unit(f1,f2) | Clause(f1,f2,_) | Iff (f1, f2) | Xor (f1, f2) ->
-      atoms only_ground (atoms only_ground acc f1) f2
-    | Let { let_e; in_e; _ } ->
-      let acc = atoms only_ground acc in_e in
-      if let_e.ty == Ty.Tbool then atoms only_ground acc let_e
-      else acc [@ocaml.ppwarning "TODO: add some stuff from let_e"]
-  in
-  fun ~only_ground f acc ->
-    atoms only_ground acc f
+  | Lemma { main = f; _ } | Skolem { main = f; _ } ->
+    atoms_rec_of_form ~only_ground f acc
+  | Unit(f1,f2) | Clause(f1,f2,_) | Iff (f1, f2) | Xor (f1, f2) ->
+    atoms_rec_of_form ~only_ground f2
+      (atoms_rec_of_form ~only_ground f1 acc)
+  | Let { let_e; in_e; _ } ->
+    let acc = atoms_rec_of_form ~only_ground in_e acc in
+    if let_e.ty == Ty.Tbool then atoms_rec_of_form ~only_ground let_e acc
+    else acc [@ocaml.ppwarning "TODO: add some stuff from let_e"]
 
 let max_ground_terms_rec_of_form f =
   TSet.fold
@@ -1817,7 +1827,7 @@ let skolemize { main = f; binders; sko_v; sko_vty; _ } =
               if SMap.mem sy g_sbt then g_sbt
               else SMap.add sy (fresh_name ~ty) g_sbt
            ) (free_vars sk_t SMap.empty) g_sbt
-      )SMap.empty sko_v
+      ) SMap.empty sko_v
   in
   let sbt =
     SMap.fold
@@ -2533,6 +2543,7 @@ let mk_forall ~name ~loc binders ~triggers ~toplevel ~decl_kind f =
       | _ -> decl_kind
   in
   let binders =
+    (* TODO: Check if this test is still usefull. *)
     (* ignore binders that are not used in f ! already done in mk_forall_bis
        but maybe usefull for triggers inference *)
     SMap.filter (fun sy _ -> SMap.mem sy f.vars) binders
@@ -2656,6 +2667,7 @@ let mk_match e cases =
   [@ocaml.ppwarning "TODO: add other elim schemes"]
   [@ocaml.ppwarning "TODO: add a match construct in expr"]
 
+(* TODO: inline this function. *)
 let is_pure e = e.pure
 
 module Set = TSet

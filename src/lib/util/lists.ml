@@ -9,6 +9,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+(* Apply the function [f] on the list [lst]. Return a boolean that is [true]
+   if and only if the list has changed. *)
 let apply f l =
   let res, same =
     List.fold_left

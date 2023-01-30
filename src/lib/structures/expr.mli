@@ -28,7 +28,9 @@
 
 (** {1 Types} *)
 
-type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
+type binders = (Ty.t * int) Symbols.Map.t
+(** Type of multisets of bound variables in expressions. *)
+(*int tag in globally unique *)
 
 type t = private {
   top_sy : Symbols.t;
@@ -59,7 +61,7 @@ type t = private {
   (** Number of nodes. *)
 
   pure : bool;
-  (** Flag of pureness. *)
+  (** Flag of pureness. This flag prevents multiple purification. *)
 
   mutable neg : t option
   (** The negative form of an expression whose the type is
@@ -96,17 +98,34 @@ and bind_kind =
 
 and quantified = private {
   name : string;
+  (** Name of the quantified formula. *)
+
   main : t;
+  (** The formula itself. *)
+
   toplevel : bool;
+
   user_trs : trigger list;
+  (** Triggers defined by the user. *)
+
   binders : binders;
-  (* These fields should be (ordered) lists ! important for skolemization *)
+  (** Multiset of the bound variables of the formula. *)
+
   sko_v : t list;
+  (* These fields should be (ordered) lists ! important for skolemization *)
+
   sko_vty : Ty.t list;
-  loc : Loc.t; (* location of the "GLOBAL" axiom containing this quantified
-                  formula. It forms with name a unique id *)
+
+  loc : Loc.t;
+  (** Location of the "GLOBAL" axiom containing this quantified formula.
+      It forms with name a unique id. *)
+
   kind : decl_kind;
 }
+(** Type of quantified formulas. More precisely, a quantified formula is
+    represented in Skolem normal form, that is a prenex normal form whose
+    the existantial quantifiers have been eliminated by introducing Skolem
+    functions. *)
 
 and letin = private {
   let_v : Symbols.t;
@@ -149,23 +168,26 @@ type lit_view = private
   | Eq of { lhs: t; rhs: t }
   (** Equality of two expression.
 
-      The literal [Eq exp_1 exp_2] means {m exp\_1 = exp\_2.} *)
+      The literal [Eq e_1 e_2] means {m e\_1 = e\_2.} *)
 
   | Eql of t list
   (** Equality of an arbitrary number of expressions.
 
-      The literal [Eql [exp_1; exp_2; ...; exp_k]] means
-      {m exp\_1 = exp\_2 = \cdots = exp\_k.} *)
+      The literal [Eql [e_1; e_2; ...; e_k]] means
+      {m e\_1 = e\_2 = \cdots = e\_k.} *)
 
   | Distinct of t list
   (** Disequality of an arbitrary number of expressions.
 
-      The literal [Distinct [exp_1; exp_2; ...; exp_k]] means
-      {m exp\_1 \not= exp\_2 \not= \cdots \not= exp\_k.}*)
+      The literal [Distinct [e_1; e_2; ...; e_k]] means
+      {m e\_1 \not= e\_2 \not= \cdots \not= e\_k.}*)
 
   | Builtin of bool * Symbols.builtin * t list
   | Pred of t * bool
-  (** Predicate *)
+  (** Predicate.
+
+      The literal [Pred (t, true)] denotes the predicate [t] and
+      [Pred (t, false)] denotes its negative form. *)
 (** View of literal. *)
 
 type form_view = private
@@ -221,7 +243,7 @@ val mk_ite : cond:t -> then_:t -> else_:t -> t
     the function produces the formula [mk_if cond th el] instead. *)
 
 val mk_let: var:Symbols.t -> let_e:t -> in_e:t -> t
-(** [mk_let sy exp1 exp2] constructs the expression [let sy = exp1 in exp2].
+(** [mk_let sy e1 e2] constructs the expression [let sy = e1 in e2].
     Obvious substitutions are inlined during the construction. *)
 
 val mk_match: t -> (Typed.pattern * t) list -> t
@@ -323,9 +345,9 @@ val max_ground_terms_of_lit: t -> Set.t
     given literal [lit]. Raise an assertion if [lit] is not a literal. *)
 
 val atoms_rec_of_form: only_ground:bool -> t -> Set.t -> Set.t
-(** [atoms_rec_of_form only_ground f acc] traverses a formula recursively
+(** [atoms_rec_of_form ~only_ground f acc] traverses a formula recursively
     and collects its atoms. Only ground atoms are kept
-    if ~only_ground is true. *)
+    if ~only_ground is [true]. *)
 
 val max_ground_terms_rec_of_form: t -> Set.t
 (** [max_ground_terms_rec_of_form f] traverses a formula recursively
@@ -334,18 +356,18 @@ val max_ground_terms_rec_of_form: t -> Set.t
 (** {1 Comparison and test functions} *)
 
 val compare: t -> t -> int
-(** [compare exp1 exp2] compares two expressions [exp1] and [exp2]. More
+(** [compare e1 e2] compares two expressions [e1] and [e2]. More
     precisely, if {m <} denotes the total order defined by [compare], we have
-    {math exp1 < exp2 \iff (depth exp1, hash exp1)
-    \prec (depth exp2, hash exp2)}
+    {math e1 < e2 \iff (depth e1, hash e1)
+    \prec (depth e2, hash e2)}
     where {m \prec} is the lexicographic order. *)
 
 val equal : t -> t -> bool
-(** [equal exp1 exp2] is [true] if and only if the expressions
-    [exp1] and [exp2] are physically equal. *)
+(** [equal e1 e2] is [true] if and only if the expressions
+    [e1] and [e2] are physically equal. *)
 
 val hash : t -> int
-(** [hash exp] returns the hash of the expression [exp] used by the hconsing
+(** [hash e] returns the hash of the expression [e] used by the hconsing
     module. *)
 
 val compare_subst : subst -> subst -> int
@@ -360,11 +382,11 @@ val is_fresh : t -> bool
 val is_fresh_skolem : t -> bool
 
 val is_int : t -> bool
-(** [is_int exp] is true if and only if the expression [exp]
+(** [is_int e] is true if and only if the expression [e]
     is of type [Ty.Tint]. *)
 
 val is_real : t -> bool
-(** [is_real exp] is true if and only if the expression [exp]
+(** [is_real e] is true if and only if the expression [e]
     is of type [Ty.Treal]. *)
 
 val is_positive : t -> bool
@@ -372,8 +394,8 @@ val is_positive : t -> bool
 val is_pure : t -> bool
 
 val is_ground : t -> bool
-(** [is_ground exp] is [true] if and only if the expression [exp] is ground,
-    that is if [exp] does not contain free variable or free type variable. *)
+(** [is_ground e] is [true] if and only if the expression [e] is ground,
+    that is if [e] does not contain free variable or free type variable. *)
 
 (* TODO: Rename this function to is_const_term *)
 (** [const_term tm] returns true if and only if the expression
@@ -472,35 +494,39 @@ val print_th_elt : Format.formatter -> th_elt -> unit
 (** {1 Misc} *)
 
 val type_info : t -> Ty.t
-(** [type_info t] returns the type of the expression [t]. *)
+(** [type_info t] return the type of the expression [t]. *)
 
 val symbol_info : t -> Symbols.t
 
 val print : Format.formatter -> t -> unit
-(** [print fmt exp] pretty prints the expression [exp] with
+(** [print fmt exp] pretty print the expression [exp] with
     the printer [fmt]. *)
 
 val print_triggers : Format.formatter -> trigger list -> unit
-(** [print_triggers fmt lst] pretty prints the list of triggers [lst] with
+(** [print_triggers fmt lst] pretty print the list of triggers [lst] with
     the printer [fmt]. *)
 
 (* TODO: Move these functions. *)
 val print_list : Format.formatter -> t list -> unit
 val print_list_sep : string -> Format.formatter -> t list -> unit
 
+(* TODO: Remove the accumulator argument. *)
 val free_vars : t -> (Ty.t * int) Symbols.Map.t -> (Ty.t * int) Symbols.Map.t
+(** [free_vars e] return the multiset of free variables in the expression
+    [e]. *)
+
 val free_type_vars : t -> Ty.Svty.t
-(** [free_type_vars exp] returns the set of the free type variables
-    occuring in the expression [exp]. *)
+(** [free_type_vars e] return the set of the free type variables
+    occuring in the expression [e]. *)
 
 val size : t -> int
-(** [size exp] returns the size of the expression [exp]. *)
+(** [size exp] return the size of the expression [exp]. *)
 
 val depth : t -> int
-(** [depth exp] returns the depth of the expression [exp]. *)
+(** [depth exp] return the depth of the expression [exp]. *)
 
 val neg : t -> t
-(** [neg exp] returns the negative form of an expression [exp] of type
+(** [neg exp] return the negative form of an expression [exp] of type
     {!constructor:Ty.Tbool}.
     Raise an assertion if [exp] is not of type {!constructor:Ty.Tbool}. *)
 

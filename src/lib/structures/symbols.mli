@@ -64,9 +64,11 @@ type form =
   | F_Xor             (** Symbol of exclusive disjunction. *)
   | F_Lemma
   | F_Skolem
-  (** Type of symbol of formula. *)
+  (** Type of symbol of non-literal formula. *)
 
 type name_kind = Ac | Other
+(** Type of a flag that discrimitates between ac name symbols and
+    classical ones. *)
 
 module Bound : sig
   type kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
@@ -74,7 +76,7 @@ module Bound : sig
 
   type t = private {
     ty : Ty.t;
-    (** Type of the bound. It can be {!constructor:Ty.Tint} or
+    (** Type of the bound. It can be equal to {!constructor:Ty.Tint} or
         {!constructor:Ty.Treal}. *)
 
     is_open : bool;
@@ -86,7 +88,7 @@ module Bound : sig
     kind : kind;
     (** Kind of the bound. *)
   }
-  (** Type of symbol of bound. *)
+  (** Type of bound's symbol. *)
 
   val mk :
     kind:kind ->
@@ -115,7 +117,7 @@ type t =
   (** Unit symbol. *)
 
   | Name of Hstring.t * name_kind
-  (**  *)
+  (** Name of a predicate or a function. *)
 
   | Int of Hstring.t
   (** Integer literal symbol. *)
@@ -126,11 +128,22 @@ type t =
   | Bitv of string
   (** Bitvector literal symbol. *)
 
-  | Op of operator                 (** Operator symbol. *)
-  | Lit of lit                     (** Literal symbol. *)
-  | Form of form                   (** Formula symbol. *)
-  | Var of Var.t                   (** Variable symbol. *)
+  | Op of operator
+  (** Operator symbol. *)
+
+  | Lit of lit
+  (** Literal symbol. *)
+
+  | Form of form
+  (** Non-literal formula symbol. *)
+
+  | Var of Var.t
+  (** Variable symbol. *)
+
   | In of Bound.t * Bound.t
+  (** Interval symbol. More precisely, [In (b1, b2)] represents the interval
+      |b1, b2|. *)
+
   | MapsTo of Var.t
   | Let
   (** Type of symbols. *)
