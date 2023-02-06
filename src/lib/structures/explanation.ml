@@ -30,7 +30,7 @@ module E = Expr
 
 type rootdep = { name : string; f : Expr.t; loc : Loc.t}
 
-type exp =
+type reason =
   | Literal of Satml_types.Atom.atom
   | Fresh of int
   | Bj of E.t
@@ -40,7 +40,7 @@ type exp =
 module S =
   Set.Make
     (struct
-      type t = exp
+      type t = reason
       let compare a b = match a,b with
         | Fresh i1, Fresh i2 -> i1 - i2
         | Literal a  , Literal b   -> Satml_types.Atom.cmp_atom a b
@@ -87,7 +87,7 @@ let fold_atoms f s acc = S.fold f s acc
 (* TODO : XXX : We have to choose the smallest ??? *)
 let merge s1 _s2 = s1
 
-let fresh_exp =
+let fresh_reason =
   let r = ref (-1) in
   fun () ->
     incr r;

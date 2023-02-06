@@ -511,8 +511,7 @@ val print_list : Format.formatter -> t list -> unit
 val print_list_sep : string -> Format.formatter -> t list -> unit
 
 val free_vars : t -> (Ty.t * int) Symbols.Map.t
-(** [free_vars e] return the multiset of free variables in the expression
-    [e]. *)
+(** [free_vars e] return the multiset of free variables in the term [e]. *)
 
 val free_type_vars : t -> Ty.Svty.t
 (** [free_type_vars e] return the set of the free type variables
@@ -530,7 +529,7 @@ val neg : t -> t
     Raise an assertion if [exp] is not of type {!constructor:Ty.Tbool}. *)
 
 val save_cache : unit -> unit
-(** Saves the modules cache *)
+(** Saves the modules cache. *)
 
 val reinit_cache : unit -> unit
-(** Reinitializes the module's cache *)
+(** Reinitializes the module's cache. *)

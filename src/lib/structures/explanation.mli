@@ -29,19 +29,20 @@
 (** {1 Types} *)
 
 type t
-(** Type of a set of explanations. *)
+(** Type of a explanation. More precisely, an explanation is a set of reason
+    of type {!type:reason}. *)
 
 type rootdep = { name : string; f : Expr.t; loc : Loc.t}
 
-type exp =
+type reason =
   | Literal of Satml_types.Atom.atom
   | Fresh of int
   | Bj of Expr.t
-  (** Backjump explanation. *)
+  (** Backjump reason produced by the SAT solvers. *)
 
   | Dep of Expr.t
   | RootDep of rootdep
-  (** Type of element of an explanation. *)
+  (** Type of reason of an explanation. *)
 
 exception Inconsistent of t * Expr.Set.t list
 
@@ -50,33 +51,39 @@ exception Inconsistent of t * Expr.Set.t list
 val empty : t
 (** Trivial explanation. *)
 
-val singleton : exp -> t
-(** [singleton ex] produces an explanation whose the only element is [ex]. *)
+val singleton : reason -> t
+(** [singleton rn] produces an explanations whose the only reason is
+    [rn]. *)
 
 val is_empty : t -> bool
 (** [is_empty ex] is [true] if and only if [ex] is the trivial explanation. *)
 
-val mem : exp -> t -> bool
+val mem : reason -> t -> bool
+(** [mem rn ex] check if the reason [rn] is in the explanation [ex]. *)
 
 val union : t -> t -> t
+(** [union ex1 ex2] produce the union of the set of explanations [ex1] and
+    [ex2]. *)
 
+(* TODO: check the implementation of this function. *)
 val merge : t -> t -> t
 
-val iter_atoms : (exp -> unit)  -> t -> unit
+val iter_atoms : (reason -> unit)  -> t -> unit
 
-val fold_atoms : (exp -> 'a -> 'a )  -> t -> 'a -> 'a
+val fold_atoms : (reason -> 'a -> 'a )  -> t -> 'a -> 'a
 
-val fresh_exp : unit -> exp
+val fresh_reason : unit -> reason
+(** [fresh_reason ()] produces a fresh reason. *)
 
 val exists_fresh : t -> bool
-(** Does there exists a [Fresh _] exp in an explanation set. *)
+(** Does there exists a [Fresh _] reason in the explanation. *)
 
-val remove_fresh : exp -> t -> t option
+val remove_fresh : reason -> t -> t option
 
-val remove : exp -> t -> t
-(** [remove exp ex] removes the element [exp] of the explanation [ex]. *)
+val remove : reason -> t -> t
+(** [remove rn ex] removes the reason [rn] of the explanation [ex]. *)
 
-val add_fresh : exp -> t -> t
+val add_fresh : reason -> t -> t
 
 val pp : Format.formatter -> t -> unit
 (** [pp fmt ex] pretty prints the explanation [ex] on the formatter [fmt]. *)
@@ -92,15 +99,22 @@ val formulas_of : t -> Expr.Set.t
 
 val bj_formulas_of : t -> Expr.Set.t
 
+(* TODO: move this module in Util. *)
 module MI : Map.S with type key = int
 
 val literals_ids_of : t -> int MI.t
 
 val make_deps : Expr.Set.t -> t
+(** [make_deps lst] produce an explanation whose the reasons are
+    backjump kind. *)
 
 val has_no_bj : t -> bool
+(** [has_no_bj ex] is [true] if and only if [ex] contains no reason of
+    backjump kind. *)
 
 val compare : t -> t -> int
-(** [compare ex1 ex2] compares two explanation [ex1] and [ex2]. *)
+(** [compare ex1 ex2] compare two explanation [ex1] and [ex2]. *)
 
 val subset : t -> t -> bool
+(** [subset ex1 ex2] return [true] if and only if the explanation [ex1]
+    is weaker than the explanation [ex2]. *)

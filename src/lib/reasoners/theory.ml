@@ -337,7 +337,7 @@ module Main_Default : S = struct
   (*BISECT-IGNORE-END*)
 
   type choice_sign =
-    | CPos of Ex.exp (* The explication of this choice *)
+    | CPos of Ex.reason (* The explication of this choice *)
     | CNeg (* The choice has been already negated *)
 
 
@@ -372,12 +372,12 @@ module Main_Default : S = struct
               List.map
                 (fun (c, is_cs, size) ->
                    Steps.incr_cs_steps();
-                   let exp = Ex.fresh_exp () in
-                   let ex_c_exp =
-                     if is_cs then Ex.add_fresh exp Ex.empty else Ex.empty
+                   let reason = Ex.fresh_reason () in
+                   let ex_c_reason =
+                     if is_cs then Ex.add_fresh reason Ex.empty else Ex.empty
                    in
                    (* A new explanation in order to track the choice *)
-                   (c, size, CPos exp, ex_c_exp)) l in
+                   (c, size, CPos reason, ex_c_reason)) l in
             aux ch None dl base_env l
         end
       | ((c, lit_orig, CNeg, ex_c) as a)::l, _ ->

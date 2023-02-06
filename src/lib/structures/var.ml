@@ -10,8 +10,9 @@
 (******************************************************************************)
 
 type t = {
-  hs : Hstring.t ;
-  id : int ;
+  hs : Hstring.t;
+  id : int;
+  (* Unique identifiant of the variable. *)
 }
 
 let cpt = ref 0
@@ -34,6 +35,7 @@ let compare a b =
     c
   end
 
+(* TODO: replace this polymorphic comparison. *)
 let equal a b = compare a b = 0
 
 let hash { id; _ } = id

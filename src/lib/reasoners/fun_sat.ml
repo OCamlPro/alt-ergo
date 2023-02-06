@@ -528,6 +528,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     end
     else true
 
+  (* Check if all the backjump reason of [ex] are known by the environment
+     [env]. *)
   let cdcl_known_decisions ex env =
     Ex.fold_atoms
       (fun e b ->

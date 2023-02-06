@@ -34,6 +34,7 @@ val of_string  : string -> t
     The name is hconsed. *)
 
 val hstring : t -> Hstring.t
+(** [hstring v] return the name of the variable [v]. *)
 
 (** {1 Comparison functions} *)
 
@@ -41,14 +42,14 @@ val compare : t -> t -> int
 (** [compare v1 v2] compares the two variables [v1] and [v2]. *)
 
 val equal : t -> t -> bool
-(** [equal v1 v2] tests the equality of [v1] and [v2]. The function is
+(** [equal v1 v2] test the equality of [v1] and [v2]. The function is
     equivalent to [compare v1 v2 = 0]. *)
 
 val hash : t -> int
-(** [hash v] computes the hash of the variable [v]. *)
+(** [hash v] compute the hash of the variable [v]. *)
 
 val pp : Format.formatter -> t -> unit
-(** [pp fmt v] pretty prints the variable [v] on the formatter [fmt]. *)
+(** [pp fmt v] pretty print the variable [v] on the formatter [fmt]. *)
 
 val show : t -> string
 (** [show v] produces the string displayed by {!val pp}. *)
