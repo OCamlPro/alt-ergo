@@ -28,6 +28,7 @@ rsc/extra/index.html
 public-release
 
 # Generated tmp files
+*.orig
 *.make.revision
 *~
 archi.*
