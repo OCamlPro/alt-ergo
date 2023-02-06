@@ -55,6 +55,7 @@ module type S = sig
   val terms_info : t -> info ME.t * E.t list ME.t SubstE.t
   val query :
     Util.matching_env -> t -> theory -> (trigger_info * gsubst list) list
+
 end
 
 module type Arg = sig
