@@ -358,8 +358,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let plus_of_minus t d ty =
     [E.mk_term (Symbols.Op Symbols.Minus) [t; d] ty ; d]
 
-  let minus_of_plus t d ty =
-    [E.mk_plus t d ty; d]
+  let minus_of_plus t d ty = [E.mk_plus t d ty; d]
 
   let linear_arithmetic_matching f_pat pats _ty_pat t =
     match E.term_view t with
@@ -474,8 +473,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
     | _ ->
       let { sty; gen = g; goal = b; _ } = sg in
       let f_aux t xs lsbt =
-        (* maybe put 5 as a rational parameter in the future *)
-        let too_big = (E.depth t) > 5 * env.max_t_depth in
+        (* maybe put 3 as a rational parameter in the future *)
+        let too_big = (E.depth t) > 4 * env.max_t_depth in
         if too_big then
           lsbt
         else
@@ -509,12 +508,14 @@ module Make (X : Arg) : S with type theory = X.t = struct
     | _ -> (E.depth t) - (E.depth s)
 
 
+  (* Produce a list of candidate substitutions for the annoted trigger
+     [pat_info]. *)
   let matching mconf env tbox pat_info =
-    let pats = pat_info.trigger in
-    let pats_list = List.stable_sort trig_weight pats.E.content in
-    Debug.matching pats;
+    let trigger = pat_info.trigger in
+    let pats_list = List.stable_sort trig_weight trigger.E.content in
+    Debug.matching trigger;
     if List.length pats_list > Options.get_max_multi_triggers_size () then
-      pat_info, []
+      []
     else
       let egs =
         { sbs = SubstE.empty;
@@ -526,12 +527,12 @@ module Make (X : Arg) : S with type theory = X.t = struct
         }
       in
       match pats_list with
-      | []  -> pat_info, []
+      | []  -> []
       | [_] ->
         let res =
           List.fold_left (match_pats_modulo mconf env tbox) [egs] pats_list in
         Debug.candidate_substitutions pat_info res;
-        pat_info, res
+        res
       | _ ->
         let cpt = ref 1 in
         try
@@ -546,14 +547,15 @@ module Make (X : Arg) : S with type theory = X.t = struct
             List.fold_left (match_pats_modulo mconf env tbox) [egs] pats_list
           in
           Debug.candidate_substitutions pat_info res;
-          pat_info, res
+          res
         with Exit ->
-          if get_debug_matching() >= 1 && get_verbose() then
+          if get_debug_matching() >= 1 && get_verbose() then begin
             Printer.print_dbg
               ~module_name:"Matching" ~function_name:"matching"
               "skip matching for %a : cpt = %d"
-              E.print pat_info.trigger_orig !cpt;
-          pat_info, []
+              E.print pat_info.trigger_orig !cpt
+          end;
+          []
 
   let reset_cache_refs () =
     cache_are_equal_light := MT2.empty;
@@ -562,7 +564,12 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let query mconf env tbox =
     reset_cache_refs ();
     try
-      let res = List.rev_map (matching mconf env tbox) env.pats in
+      let res =
+        List.rev_map
+          (fun pat_info ->
+             pat_info, matching mconf env tbox pat_info
+          ) env.pats
+      in
       reset_cache_refs ();
       res
     with e ->
