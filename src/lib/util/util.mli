@@ -51,37 +51,31 @@ type theories_extensions =
 
 type axiom_kind = Default | Propagator
 
+val show_axiom_kind : axiom_kind -> string
 val th_ext_of_string : string -> theories_extensions option
-val string_of_th_ext : theories_extensions -> string
+val show_th_ext : theories_extensions -> string
 
-(**
-   generic function for comparing algebraic data types.
-   [compare_algebraic a b f]
-   - Stdlib.compare a b is used if
+(** Generic function for comparing algebraic data values. *)
+val compare_algebraic : 'a -> 'a -> (('a * 'a) -> int) -> int
 
-*)
-val [@inline always] compare_algebraic : 'a -> 'a -> (('a * 'a) -> int) -> int
+val cmp_lists: 'a list -> 'a list -> ('a -> 'a -> int) -> int
 
-val [@inline always] cmp_lists: 'a list -> 'a list -> ('a -> 'a -> int) -> int
+type matching_env = {
+  nb_triggers : int;
+  triggers_var : bool;
+  no_ematching: bool;
+  (** Flag to disable the e-matching. *)
 
-type matching_env =
-  {
-    nb_triggers : int;
-    triggers_var : bool;
-    no_ematching: bool;
-    (** Flag to disable the e-matching. *)
+  greedy : bool;
+  use_cs : bool;
 
-    greedy : bool;
-    use_cs : bool;
-
-    inst_mode : inst_mode
-    (** Mode of instantiation. *)
-  }
+  inst_mode : inst_mode
+  (** Mode of instantiation. *)
+}
 
 (** Loops from 0 to [max] and returns
     [(f max elt ... (f 1 elt (f 0 elt init)))...)].
-    Returns [init] if [max] < 0
-*)
+    Returns [init] if [max] < 0. *)
 val loop:
   f : (int -> 'a -> 'b -> 'b) ->
   max : int ->

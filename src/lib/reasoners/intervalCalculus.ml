@@ -2436,9 +2436,9 @@ let separate_semantic_triggers =
     in
     let r_triggers =
       List.rev_map
-        (fun tr ->
+        (fun user_tr ->
            (* because sem-triggers will be set by theories *)
-           assert (tr.E.semantic == []);
+           assert (user_tr.E.semantic == []);
            let syn, sem =
              List.fold_left
                (fun (syn, sem) t ->
@@ -2462,11 +2462,11 @@ let separate_semantic_triggers =
                     when Hstring.equal hs linear_dep ->
                     syn, (E.LinearDependency(x,y)) :: sem
 
-                  | _ -> t::syn, sem
-               )([], []) (List.rev tr.E.content)
+                  | _ -> t :: syn, sem
+               ) ([], []) (List.rev user_tr.E.content)
            in
-           {tr with E.content = syn; semantic = sem}
-        )user_trs
+           {user_tr with E.content = syn; semantic = sem}
+        ) user_trs
     in
     E.mk_forall
       q.E.name q.E.loc q.E.binders (List.rev r_triggers) q.E.main
@@ -2474,18 +2474,17 @@ let separate_semantic_triggers =
 
 let assume_th_elt t th_elt dep =
   let { Expr.axiom_kind; ax_form; th_name; extends; _ } = th_elt in
-  let kd_str =
-    if axiom_kind == Util.Propagator then "Th propagator" else "Th CS"
-  in
   match extends with
   | Util.NIA | Util.NRA | Util.FPA ->
     let th_form = separate_semantic_triggers ax_form in
     let th_elt = {th_elt with Expr.ax_form} in
-    if get_debug_fpa () >= 2 then
+    if get_debug_fpa () >= 2 then (
+      let kd_str = Util.show_axiom_kind axiom_kind in
       Printer.print_dbg
         ~module_name:"IntervalCalculus" ~function_name:"assume_th_elt"
         "[Theory %s][%s] %a"
-        th_name kd_str E.print th_form;
+        th_name kd_str E.print th_form
+    );
     assert (not (ME.mem th_form t.th_axioms));
     {t with th_axioms = ME.add th_form (th_elt, dep) t.th_axioms}
 

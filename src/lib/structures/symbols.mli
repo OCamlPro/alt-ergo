@@ -95,6 +95,14 @@ val mk_maps_to : Var.t -> t
 
 val is_ac : t -> bool
 
+val is_infix_operator : t -> bool
+(** [is_infix_operator sy] return [true] if and only if [sy] is an infix
+    operator. *)
+
+val is_prefix_operator : t -> bool
+(** [is_prefix_operator sy] return [true] if and only if [sy] is a prefix
+    operator. *)
+
 val equal : t -> t -> bool
 val compare : t -> t -> int
 val compare_bounds : bound -> bound -> int

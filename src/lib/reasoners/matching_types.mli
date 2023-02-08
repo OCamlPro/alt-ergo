@@ -31,10 +31,10 @@
 
 type gsubst = {
   sbs : Expr.t Symbols.Map.t;
-  (** The annotated substitution. *)
+  (** The annotated term substitution. *)
 
   sty : Ty.subst;
-  (** The type of the substitution. *)
+  (** The annotated type substitution. *)
 
   gen : int;
   (** The age of the substition which is the age of the oldest term in it. *)

@@ -272,7 +272,7 @@ module Main : S = struct
         | E.Term tt -> tt
       in
       if Symbols.equal f1 f2 && Ty.equal ty1 ty2
-         && List.length xs1 = List.length xs2 then
+         && List.compare_lengths xs1 xs2 = 0 then
         try
           let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
           let a = E.mk_eq ~iff:false t1 t2 in

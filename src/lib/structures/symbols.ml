@@ -315,6 +315,13 @@ let to_string s = to_string ~show_vars:true s
 let print_clean fmt s = Format.fprintf fmt "%s" (to_string_clean s)
 let print fmt s = Format.fprintf fmt "%s" (to_string s)
 
+let is_prefix_operator = function
+  | Op Minus -> true
+  | _ -> false
+
+let is_infix_operator = function
+  | Op (Plus | Minus | Mult | Div | Modulo) -> true
+  | _ -> false
 
 let fresh =
   let cpt = ref 0 in

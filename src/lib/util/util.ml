@@ -56,6 +56,10 @@ type theories_extensions =
 
 type axiom_kind = Default | Propagator
 
+let show_axiom_kind = function
+  | Propagator -> "Th propagator"
+  | Default -> "Th CS"
+
 let th_ext_of_string ext =
   match ext with
   | "Sum" -> Some Sum
@@ -70,7 +74,7 @@ let th_ext_of_string ext =
   | "FPA" -> Some FPA
   |  _ -> None
 
-let string_of_th_ext ext =
+let show_th_ext ext =
   match ext with
   | Sum -> "Sum"
   | Adt -> "Adt"

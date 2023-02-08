@@ -75,9 +75,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
     (* A map of the terms to their information. *)
 
     max_t_depth : int;
-    (* The current maximal depth. *)
+    (* The current maximal depth. This field is used to limit the size of
+       the environment. *)
 
     pats : trigger_info list;
+    (* The list of the known annotated triggers. *)
   }
 
   exception Echec
@@ -494,6 +496,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       try ME.fold f_aux (SubstE.find f env.fils) lsbt_acc
       with Not_found -> lsbt_acc
 
+  (*  *)
   let match_pats_modulo mconf env tbox lsubsts pat =
     Debug.match_pats_modulo pat lsubsts;
     List.fold_left (match_one_pat mconf env tbox pat) [] lsubsts
@@ -507,9 +510,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
       E.Term { E.f = Symbols.Name _; _ } -> 1
     | _ -> (E.depth t) - (E.depth s)
 
-
   (* Produce a list of candidate substitutions for the annoted trigger
-     [pat_info]. *)
+     [pat_info]. The trigger is ignored if its number of terms exceed the option
+     [get_max_multi_triggers_size]. *)
   let matching mconf env tbox pat_info =
     let trigger = pat_info.trigger in
     let pats_list = List.stable_sort trig_weight trigger.E.content in
