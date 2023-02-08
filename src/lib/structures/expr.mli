@@ -280,8 +280,10 @@ val fresh_name : ty:Ty.t -> t
 (** {2 For literals} *)
 
 val mk_eq : use_equiv:bool -> t -> t -> t
-(** [mk_eq iff tm1 tm2] produces an equivalent formula to
-    the formula [tm1 = tm2]. *)
+(** [mk_eq ~use_equiv tm1 tm2] produces an equivalent formula to
+    the formula [tm1 = tm2]. If [use_equiv] is [true] and [t1] and [t1] are
+    of type {!constructor:Ty.Tbool} then the function produces a formula
+    equivalent to {m tm1 \iff tm2}. *)
 
 val mk_nary_eq : t list -> t
 (** [mk_nary_eq lst] produces an equivalent formula to
@@ -292,13 +294,13 @@ val mk_builtin : is_pos:bool -> builtin:Symbols.builtin -> args:t list -> t
 
 (** {2 For formulas} *)
 
-(* TODO: Rename the function top. *)
+(* TODO: Rename the function true_. *)
 val vrai : t
-(** The formula top. *)
+(** The formula true. *)
 
-(* TODO: Rename the function bottom. *)
+(* TODO: Rename the function false_. *)
 val faux : t
-(** The formula bottom. *)
+(** The formula false. *)
 
 val mk_or : ?is_imply:bool -> t -> t -> t
 (** [mk_or f1 f2] produces a formula equivalent to the {e disjunction}
@@ -458,11 +460,11 @@ val skolemize : quantified -> t
 
 val elim_let : recursive:bool -> letin -> t
 
-(** [elim_iff f1 f2 with_conj] constructs an equivalent formula
+val elim_iff : t -> t -> with_conj:bool -> t
+(** [elim_iff f1 f2 with_conj] construct an equivalent formula
     to {m f1 \iff f2} using a combinaison of negations, disjunctions
     and conjuctions instead of the built-in symbol {!constructor:Sy.F_Iff}.
     If [with_conj] is [false], the construction doesn't use conjuction. *)
-val elim_iff : t -> t -> with_conj:bool -> t
 
 val concat_chainable: Symbols.t -> Ty.t -> t -> t list -> t list
 

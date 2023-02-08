@@ -1250,21 +1250,24 @@ let mk_positive_lit top_sy neg_s args =
     neg.neg <- Some pos;
     pos
 
-(* TODO: rename iff by is_iff *)
 let mk_eq ~use_equiv t1 t2 =
   let c = compare t1 t2 in
   if c = 0 then vrai
   else
     let t1, t2 = if c < 0 then t1, t2 else t2, t1 in
     if type_info t1 == Ty.Tbool then
+      (* This test raises an exception if t2 is not a boolean term. *)
       if t1 == neg t2 then faux
       else
-        (* translate to iff, eventual simplification made in mk_or *)
+        (* Translate to iff, eventual simplification made in mk_or. *)
+        (* TODO: it seems the only purpose of this code is to apply specific
+           simplifications in the boolean case. We should separate the
+           simplification process from mk_iff. *)
         let res = mk_iff t1 t2 in
         match res.top_sy with
         | Sy.Form _ when not use_equiv ->
-          (* in some situation (eg. theories deductions, mk_iff may
-             be disabled due to invariants *)
+          (* In some situation (eg. theories deductions, mk_iff may
+             be disabled due to invariants. *)
           (* TODO: be able to build IFF even in theories ? *)
           mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) [t1; t2]
         | _ ->
@@ -1836,11 +1839,6 @@ let skolemize { main = f; binders; sko_v; sko_vty; _ } =
   assert (is_ground res);
   res
 
-(* Helper function to replace an ite term:
-    if cond then th else el
-   by the formula
-    (cond => (x = th)) /\ (neg cond => (x = el))
-   where x is a symbol given as argument. *)
 let rec mk_ite_eq x c th el =
   if equal th el then mk_eq_aux x th
   else if equal c vrai then mk_eq_aux x th
@@ -1850,9 +1848,15 @@ let rec mk_ite_eq x c th el =
     let e2 = mk_eq_aux x el in
     mk_and (mk_imp c e1) (mk_imp (neg c) e2)
 
-and mk_eq_aux x e =
-  match e.args with
-  | [c;th;el] when Sy.is_ite e.top_sy -> mk_ite_eq x c th el
+(* Helper function to replace an ite term:
+    if cond then th else el
+   by the formula
+    (cond => (x = th)) /\ (neg cond => (x = el))
+   where x is a symbol given as argument. This transformation is applied
+   recursively on ite subterms. *)
+and mk_eq_aux x ({ top_sy; args; _ } as e) =
+  match top_sy, args with
+  | Sy.Op Tite, [c;th;el] -> mk_ite_eq x c th el
   | _ -> mk_eq ~use_equiv:true  x e
 
 let mk_let_equiv let_sko let_e =
@@ -1864,6 +1868,8 @@ let mk_let_equiv let_sko let_e =
 
 (* TODO: Rename this function because its shadowing below is misleading. *)
 let rec elim_let =
+  (* If the term [sko] is not ground, substitute each free variable in [sko] by
+     a fresh name. *)
   let ground_sko sko =
     if is_ground sko then sko
     else
@@ -1876,8 +1882,8 @@ let rec elim_let =
   in
   fun ~recursive ~conjs subst { let_v; let_e; in_e; let_sko; _ } ->
     assert (SMap.mem let_v (free_vars in_e));
-    (* usefull when let_sko still contains variables that are not in
-       ie_e due to simplification *)
+    (* Usefull when let_sko still contains variables that are not in
+       in_e due to simplification. *)
     let let_sko = apply_subst (subst, Ty.Subst.empty) let_sko in
     let let_sko = ground_sko let_sko in
     assert (is_ground let_sko);
