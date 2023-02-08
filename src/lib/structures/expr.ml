@@ -98,8 +98,9 @@ and semantic_trigger =
 
 and trigger = {
   content : t list;
-  (* this field is filled (with a part of 'content' field) by theories
-     when assume_th_elt is called *)
+  (* This field is filled (with a part of 'content' field) by theories
+     when assume_th_elt is called. *)
+
   semantic : semantic_trigger list;
   hyp : t list;
   t_depth : int;
@@ -336,6 +337,11 @@ let lit_view t =
         | Sy.L_neg_pred, _ -> assert false
       end
     | _ -> Pred(t, false)
+
+let is_literal e =
+  match lit_view e with
+  | Not_a_lit _ -> false
+  | _ -> true
 
 let form_view t =
   let { f; xs; bind; _ } = t in
@@ -1633,12 +1639,16 @@ let elim_iff f1 f2 id ~with_conj =
       (mk_and f1 f2 false id)
       (mk_and (neg f1) (neg f2) false id) false id
 
-
 let concat_chainable p_op p_ty t acc =
   match term_view t with
   | Term {f; xs; ty; _} ->
-    if Symbols.equal p_op f && Ty.equal p_ty ty then
-      List.rev_append (List.rev xs) acc
+    if Symbols.equal p_op f && Ty.equal p_ty ty then begin
+      Format.printf "Flattening %a into %a@."
+        print_list xs print_list acc;
+      let res = List.rev_append (List.rev xs) acc in
+      Format.printf "Result: %a@." print_list res;
+      res
+    end
     else
       t :: acc
   | _ -> t :: acc
@@ -1651,12 +1661,13 @@ let mk_chained s t1 t2 ty =
      It actually fails to prove some goals if not reversed (see issue 505,
      'facto' examples) *)
   let args = List.rev @@ List.fast_sort compare args in
-
   mk_term s args ty
 
 let mk_plus = mk_chained (Sy.Op Sy.Plus)
 
 let mk_mult = mk_chained (Sy.Op Sy.Mult)
+
+let[@inline always] is_pure e = e.pure
 
 module Triggers = struct
 
@@ -1670,22 +1681,12 @@ module Triggers = struct
       let compare (t1,_,_) (t2,_,_) = compare t1 t2
     end)
 
-  let is_prefix v = match v with
-    | Sy.Op Sy.Minus -> true
-    | _ -> false
-
-  let is_infix v =
-    let open Sy in
-    match v with
-    | Op (Plus | Minus | Mult | Div | Modulo) -> true
-    | _ -> false
-
   let rec score_term (t : expr) =
     let open Sy in
     match t with
     | { f = (True | False | Void | Int _ | Real _ | Bitv _ | Var _); _ } -> 0
 
-    | { f; _ } when is_infix f || is_prefix f ->
+    | { f; _ } when Sy.(is_infix_operator f || is_prefix_operator f) ->
       0 (* arithmetic triggers are not suitable *)
 
     | { f = Op (Get | Set) ; xs = [t1 ; t2]; _ } ->
@@ -1697,10 +1698,11 @@ module Triggers = struct
              (fun acc t -> max (score_term t) acc) 0 xs)
     | { f = Op(Set | Extract) ; xs = [t1; t2; t3]; _ } ->
       max (score_term t1) (max (score_term t2) (score_term t3))
+    (* WHY: there is no +1 there? *)
 
-    | { f= (Op _ | Name _) ; xs = tl; _ } ->
+    | { f= (Op _ | Name _) ; xs; _ } ->
       1 + (List.fold_left
-             (fun acc t -> max (score_term t) acc) 0 tl)
+             (fun acc t -> max (score_term t) acc) 0 xs)
 
     | { f = (Sy.MapsTo _ | Sy.In _); xs = [e]; _ } -> score_term e
     | { f = (Lit _ | Form _ | Sy.MapsTo _ | Sy.In _ | Sy.Let); _ } ->
@@ -1722,24 +1724,24 @@ module Triggers = struct
     | { f = Var _; _ }, _ -> -1
     | _, { f = Var _; _ } ->  1
     | { f = s; xs = l1; _ }, { f = s'; xs = l2; _ }
-      when is_infix s && is_infix s' ->
+      when Sy.(is_infix_operator s && is_infix_operator s') ->
       let c = (score_term t1) - (score_term t2) in
       if c <> 0 then c
       else
         let c = Sy.compare s s' in
         if c <> 0 then c else Util.cmp_lists l1 l2 cmp_trig_term
 
-    | { f = s; _ }, _ when is_infix s -> -1
-    | _ , { f = s'; _ } when is_infix s' -> 1
+    | { f = s; _ }, _ when Sy.is_infix_operator s -> -1
+    | _ , { f = s'; _ } when Sy.is_infix_operator s' -> 1
 
     | { f = s1; xs =[t1]; _ }, { f = s2; xs = [t2]; _ }
-      when is_prefix s1 && is_prefix s2 ->
+      when Sy.(is_prefix_operator s1 && is_prefix_operator s2) ->
       let c = Sy.compare s1 s2 in
       if c<>0 then c else cmp_trig_term t1 t2
 
-    | { f = s1; _ }, _ when is_prefix s1 -> -1
+    | { f = s1; _ }, _ when Sy.is_prefix_operator s1 -> -1
 
-    | _, { f = s2; _ } when is_prefix s2 ->  1
+    | _, { f = s2; _ } when Sy.is_prefix_operator s2 ->  1
 
     | { f = (Name _) as s1; xs=tl1; _ }, { f = (Name _) as s2; xs=tl2; _ } ->
       let l1 = List.map score_term tl1 in
@@ -1797,7 +1799,7 @@ module Triggers = struct
     | _, { f = Op Record; _ } -> 1
 
     | { f = (Op _) as s1; xs=tl1; _ }, { f = (Op _) as s2; xs=tl2; _ } ->
-      (* ops that are not infix or prefix *)
+      (* Operators that are not infix or prefix. *)
       let l1 = List.map score_term tl1 in
       let l2 = List.map score_term tl2 in
       let l1 = List.fast_sort Stdlib.compare l1 in
@@ -1835,8 +1837,6 @@ module Triggers = struct
 
   let vty_of_term acc t = Svty.union acc t.vty
 
-  let not_pure t = not t.pure
-
   let vars_of_term bv acc t =
     SMap.fold
       (fun v _ acc ->
@@ -1846,7 +1846,7 @@ module Triggers = struct
   let filter_good_triggers (bv, vty) trs =
     List.filter
       (fun { content = l; _ } ->
-         not (List.exists not_pure l) &&
+         List.for_all is_pure l &&
          let s1 = List.fold_left (vars_of_term bv) SSet.empty l in
          let s2 = List.fold_left vty_of_term Svty.empty l in
          SSet.subset bv s1 && Svty.subset vty s2 )
@@ -1858,7 +1858,7 @@ module Triggers = struct
       failwith "There should be a trigger for every quantified formula \
                 in a theory.";
      List.iter (fun { content = l; _ } ->
-        if List.exists not_pure l then
+        if not @@ List.for_all is_pure l then
           failwith "If-Then-Else are not allowed in (theory triggers)";
         let s1 = List.fold_left (vars_of_term bv) SSet.empty l in
         let s2 = List.fold_left vty_of_term Svty.empty l in
@@ -2021,9 +2021,16 @@ module Triggers = struct
 
   (***)
 
+  (* Produce the set of the free variables of the expression [e]. It forgets
+     the multiplicity of the variables in the expression [e]. *)
   let free_vars_as_set e =
     SMap.fold (fun sy _ s -> SSet.add sy s) e.vars SSet.empty
 
+  (* Produce a set of potential triggers from the subterms of [e].
+     More precisely, a potential trigger of [e] is a pure subterm of [e] that
+     have a term variable or type variable appearing in [vars] and its top
+     symbol is not a prefix operator. The function also returns all the
+     let-expressions that gave a potential trigger. *)
   let potential_triggers =
     let has_bvar bv_lf bv =
       SMap.exists (fun e _ -> SSet.mem e bv) bv_lf
@@ -2041,7 +2048,7 @@ module Triggers = struct
     let rec aux ((vterm, vtype) as vars) ((strs, lets) as acc) e =
       let strs, lets =
         if e.pure && (has_bvar e.vars vterm || has_tyvar e.vty vtype) &&
-           not (is_prefix e.f)
+           not (Sy.is_prefix_operator e.f)
         then
           let vrs = free_vars_as_set e in
           STRS.add (e, vrs, e.vty) strs, lets
@@ -2054,6 +2061,7 @@ module Triggers = struct
     fun vars e ->
       aux vars (STRS.empty, SMap.empty) e
 
+  (* Create a list of multi-triggers from a list of patterns. *)
   let triggers_of_list l =
     List.map
       (fun content ->
@@ -2065,11 +2073,6 @@ module Triggers = struct
            t_depth = List.fold_left (fun z t -> max z (depth t)) 0 content
          }
       ) l
-
-  let is_literal e =
-    match lit_view e with
-    | Not_a_lit _ -> false
-    | _ -> true
 
   let trs_in_scope full_trs f =
     STRS.filter
@@ -2083,23 +2086,24 @@ module Triggers = struct
            )e.vars
       )full_trs
 
+  (* TODO: this function seems to be very rarely used on non-regression tests.
+     We should try to understand its purpose by running it on a larger set of
+     tests. *)
   let max_terms f ~exclude =
-    let eq = equal in
-    let rec max_terms acc (e : t) =
-      let open Sy in
+    let rec max_terms acc e =
       match e with
       | { f = Sy.Form (
           Sy.F_Unit _ | Sy.F_Clause _ | Sy.F_Xor | Sy.F_Iff); _ } ->
         List.fold_left max_terms acc e.xs
 
       | { f = Sy.Form (Sy.F_Lemma | Sy.F_Skolem) | Sy.Let; _ } -> raise Exit
-      | { f; _ } when is_infix f -> raise Exit
+      | { f; _ } when Sy.is_infix_operator f -> raise Exit
       (*| {f = Op _} -> raise Exit*)
       | { f = Op _; _ } ->
-        if eq exclude e then acc else e :: acc
+        if equal exclude e then acc else e :: acc
 
       | { f = Name (_, _); _ } ->
-        if eq exclude e then acc else e :: acc
+        if equal exclude e then acc else e :: acc
 
       | { f = ( True | False | Void | Int _ | Real _
               | Bitv _ | In (_, _) | MapsTo _ ); _ } -> acc
@@ -2109,7 +2113,18 @@ module Triggers = struct
     in
     try max_terms [] f with Exit -> []
 
+  (* Assume that
+     lets = {
+       v1 -> let v1 = e1 in t1;
+       v2 -> let v2 = e2 in t2;
+       v3 -> let v3 = e3 in t3; ...
+     }
+     This function applies the associated substitution in this order on each
+     term of the list [terms].
+  *)
   let expand_lets terms lets =
+    (* Create the term substitution:
+       { v1 <- e1; v2 <- e2[v1 <- e1]; v3 <- e3[v1 <- e1][v2 <- e2]; ... } *)
     let sbt =
       SMap.fold
         (fun sy { let_e; _ } sbt ->
@@ -2117,17 +2132,19 @@ module Triggers = struct
            if let_e.pure then SMap.add sy let_e sbt
            else sbt
                 [@ocaml.ppwarning "TODO: once 'let x = term in term' \
-                                   added, check that the resulting sbt \
-                                   is well normalized (may be not true \
-                                   depending on the ordering of vars in lets"]
-        )lets SMap.empty
+                                   added, check that the resulting \
+                                   substitution is well normalized (may be not \
+                                   true depending on the ordering of vars in \
+                                   lets"]
+        ) lets SMap.empty
     in
     let sbs = sbt, Ty.esubst in
+    (* Apply the above substitution on each term of the list. *)
     STRS.fold
       (fun (e, _, _) strs ->
          let e = apply_subst sbs e in
          STRS.add (e, free_vars_as_set e, e.vty) strs
-      )terms terms
+      ) terms terms
 
   let check_user_triggers f toplevel binders trs0 ~decl_kind =
     if SMap.is_empty binders && Ty.Svty.is_empty f.vty then trs0
@@ -2155,6 +2172,8 @@ module Triggers = struct
       | Dtheory, _ -> assert false
       | (Dpredicate e | Dfunction e), _ ->
         let defn = match f with
+          (* TODO: check if this simplification is necessary. Should be done
+             in the smart constructors. *)
           | { f = (Sy.Form Sy.F_Iff | Sy.Lit Sy.L_eq) ; xs = [e1; e2]; _ } ->
             if equal e e1 then e2 else if equal e e2 then e1 else f
           | _ -> f
@@ -2343,9 +2362,6 @@ let mk_match e cases =
   [@ocaml.ppwarning "TODO: introduce a let if e is a big expr"]
   [@ocaml.ppwarning "TODO: add other elim schemes"]
   [@ocaml.ppwarning "TODO: add a match construct in expr"]
-
-
-let is_pure e = e.pure
 
 module Purification = struct
 

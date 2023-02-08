@@ -90,14 +90,19 @@ and semantic_trigger =
 
 and trigger = (*private*) {
   content : t list;
-  (* this field is filled (with a part of 'content' field) by theories
-     when assume_th_elt is called *)
+  (** List of the syntactic triggers. *)
+
   semantic : semantic_trigger list;
+  (** List of semantic triggers. *)
+
   hyp : t list;
   t_depth : int;
   from_user : bool;
+  (** [true] if and only if the multi-trigger has been defined by the user. *)
+
   guard : t option
 }
+(** Type of multi-triggers. *)
 
 module Set : Set.S with type elt = t
 
@@ -307,14 +312,13 @@ type gformula = {
   theory_elim : bool;
 }
 
-type th_elt =
-  {
-    th_name : string;
-    ax_name : string;
-    ax_form : t;
-    extends : Util.theories_extensions;
-    axiom_kind : Util.axiom_kind;
-  }
+type th_elt = {
+  th_name : string;
+  ax_name : string;
+  ax_form : t;
+  extends : Util.theories_extensions;
+  axiom_kind : Util.axiom_kind;
+}
 
 val print_th_elt : Format.formatter -> th_elt -> unit
 
