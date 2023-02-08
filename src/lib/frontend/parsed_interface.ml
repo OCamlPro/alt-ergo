@@ -58,6 +58,9 @@ let mk_logic loc is_ac named_idents ty =
 let mk_function_def loc named_ident args ty expr =
   Function_def (loc, named_ident, args, ty, expr)
 
+let mk_mut_rec_def l =
+  MutRecDefs l
+
 let mk_ground_predicate_def loc named_ident expr =
   Predicate_def (loc, named_ident, [], expr)
 

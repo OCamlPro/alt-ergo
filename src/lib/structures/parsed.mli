@@ -129,6 +129,9 @@ type decl =
   | Function_def of
       Loc.t * (string * string) *
       (Loc.t * string * ppure_type) list * ppure_type * lexpr
+  | MutRecDefs of
+      (Loc.t * (string * string) *
+       (Loc.t * string * ppure_type) list * ppure_type * lexpr) list
   | TypeDecl of type_decl list
   | Push of Loc.t * int
   | Pop of Loc.t * int

@@ -105,7 +105,7 @@ decl:
     { mk_abstract_type_decl ($startpos, $endpos) ty_vars ty }
 
 | TYPE ty_vars = type_vars ty = ident EQUAL enum = list1_constructors_sep_bar
-   others = and_recursive_opt
+   others = and_recursive_ty_opt
     {
       match others with
         | [] ->
@@ -132,14 +132,23 @@ decl:
 
 | FUNC app=named_ident LEFTPAR args=list0_logic_binder_sep_comma RIGHTPAR
    COLON ret_ty = primitive_type EQUAL body = lexpr
-   { mk_function_def ($startpos, $endpos) app args ret_ty body }
+   others = with_recursive_def_opt
+   { match others with
+     | [] -> mk_function_def ($startpos, $endpos) app args ret_ty body
+     | _ ->
+       mk_mut_rec_def
+         ((($startpos, $endpos), app, args, ret_ty, body) :: others)}
 
 | PRED app = named_ident EQUAL body = lexpr
    { mk_ground_predicate_def ($startpos, $endpos) app body }
 
 | PRED app = named_ident LEFTPAR args = list0_logic_binder_sep_comma RIGHTPAR
-   EQUAL body = lexpr
-   { mk_non_ground_predicate_def ($startpos, $endpos) app args body }
+   EQUAL body = lexpr others = with_recursive_def_opt
+   { match others with
+     | [] -> mk_non_ground_predicate_def ($startpos, $endpos) app args body
+     | _ ->
+       mk_mut_rec_def
+         ((($startpos, $endpos), app, args, bool_type, body) :: others)}
 
 | AXIOM name = ident COLON body = lexpr
    { mk_generic_axiom ($startpos, $endpos) name body }
@@ -229,11 +238,21 @@ algebraic_args:
 | { [] }
 | OF record_type { $2 }
 
-and_recursive_opt:
+and_recursive_ty_opt:
   | { [] }
   | AND ty_vars = type_vars ty = ident EQUAL enum = list1_constructors_sep_bar
-others = and_recursive_opt
-    { (($startpos, $endpos), ty_vars, ty, enum) :: others}
+      others = and_recursive_ty_opt
+      { (($startpos, $endpos), ty_vars, ty, enum) :: others}
+
+with_recursive_def_opt:
+  | { [] }
+  | WITH app=named_ident LEFTPAR args=list0_logic_binder_sep_comma RIGHTPAR
+      EQUAL body = lexpr others = with_recursive_def_opt
+      { (($startpos, $endpos), app, args, bool_type, body) :: others }
+  | WITH app=named_ident LEFTPAR args=list0_logic_binder_sep_comma RIGHTPAR
+      COLON ret_ty = primitive_type EQUAL body = lexpr
+      others = with_recursive_def_opt
+      { (($startpos, $endpos), app, args, ret_ty, body) :: others }
 
 lexpr:
 
