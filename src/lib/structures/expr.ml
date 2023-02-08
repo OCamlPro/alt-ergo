@@ -1790,14 +1790,14 @@ let mk_let ~var ~let_e ~in_e =
      exists, not those bound with a let is buggy:
      let up = SMap.filter (fun x _ -> Sy.Set.mem x quant_vars) up in *)
   (* eventual simplification are done in mk_let_aux *)
-  let let_e_ty = type_info let_e in
-  let free_vars = let_e.vars in (* dep vars are only those appearing in let_e*)
-  let free_v_as_terms =
-    SMap.fold (fun sy (ty, _) acc ->
-        (mk_term ~sy ~args:[] ~ty) :: acc
-      ) free_vars []
-  in
   let let_sko =
+    let let_e_ty = type_info let_e in
+    let free_vars = let_e.vars in (* dep vars are only those appearing in let_e*)
+    let free_v_as_terms =
+      SMap.fold (fun sy (ty, _) acc ->
+          (mk_term ~sy ~args:[] ~ty) :: acc
+        ) free_vars []
+    in
     mk_term ~sy:(Sy.fresh "_let") ~args:free_v_as_terms ~ty:let_e_ty
   in
   let is_bool = type_info in_e == Ty.Tbool in

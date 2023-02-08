@@ -138,9 +138,14 @@ and letin = private {
   (** Expression in which we apply the substitution. *)
 
   let_sko : t;
-  (** Fresh symbol with free variables. *)
+  (** Fresh Skolem function associated with the let-binding. More precisely,
+      if the free variables of [let_e] are [x1, ..., xk], the term
+      [let_sko] is of the form [f(x1, ..., xk)] where the name [f] is
+      guaranteed to be unique. *)
 
   is_bool : bool;
+  (** This flag is [true] if and only if the term [in_e] is of type
+      {!const:Ty.Tbool}. *)
 }
 (** Type of a let expression [let let_v = let_e in in_e]. *)
 
@@ -238,9 +243,10 @@ val form_view : t -> form_view
 val mk_binders : Set.t -> binders
 
 val mk_ite : cond:t -> then_:t -> else_:t -> t
-(** [mk_ite cond th el] produces the expression [if cond then th else el].
-    If the expression [th] and [el] are of type {!constructor:Ty.Tbool},
-    the function produces the formula [mk_if cond th el] instead. *)
+(** [mk_ite cond then_ else_] produces the expression
+    [if cond then then_ else else_].
+    If the expressions [then_] and [else_] are of type {!constructor:Ty.Tbool},
+    the function produces the formula [mk_if cond then_ else_] instead. *)
 
 val mk_let: var:Symbols.t -> let_e:t -> in_e:t -> t
 (** [mk_let sy e1 e2] constructs the expression [let sy = e1 in e2].
@@ -296,11 +302,11 @@ val mk_builtin : is_pos:bool -> builtin:Symbols.builtin -> args:t list -> t
 
 (* TODO: Rename the function true_. *)
 val vrai : t
-(** The formula true. *)
+(** The true formula. *)
 
 (* TODO: Rename the function false_. *)
 val faux : t
-(** The formula false. *)
+(** The false formula. *)
 
 val mk_or : ?is_imply:bool -> t -> t -> t
 (** [mk_or f1 f2] produces a formula equivalent to the {e disjunction}
