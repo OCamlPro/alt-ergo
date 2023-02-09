@@ -2004,9 +2004,11 @@ let type_one_th_decl env e =
   | Check_sat(loc, _, _)
   | Predicate_def(loc,_,_,_)
   | Function_def(loc,_,_,_,_)
+  | MutRecDefs ((loc,_,_,_,_) :: _)
   | TypeDecl ((loc, _, _, _)::_)
   | Push (loc,_) | Pop (loc,_) ->
     Errors.typing_error WrongDeclInTheory loc
+  | MutRecDefs []
   | TypeDecl [] -> assert false
 
 let is_recursive_type =
@@ -2154,6 +2156,51 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     assert (not is_recursive); (* Abstract types are not recursive *)
     acc, env
 
+let declare_fun env loc n ?ret_ty l  =
+  check_duplicate_params l;
+  let infix, ty  =
+    let l = List.map (fun (_,_,x) -> x) l in
+    match ret_ty with
+    | None | Some PPTbool ->
+      PPiff, PPredicate l
+    | Some ty ->
+      PPeq, PFunction(l,ty)
+  in
+  let mk_symb hs = Symbols.name hs ~kind:Symbols.Other in
+  let tlogic, env = Env.add_logics env mk_symb [n] ty loc in (* TODO *)
+  env, infix, tlogic
+
+let define_fun (acc, env) loc n l tlogic ?ret_ty infix e =
+  let l = List.map (fun (_,x,t) -> (x,t)) l in
+  let n = fst n in
+  let lvar = List.map (fun (x,_) -> {pp_desc=PPvar x;pp_loc=loc}) l in
+  let p = { pp_desc=PPapp(n,lvar) ; pp_loc=loc } in
+  let f = { pp_desc = PPinfix(p,infix,e) ; pp_loc = loc } in
+  let f = make_pred loc [] f l in
+  let f = type_form env f in
+  let t_typed, l_typed =
+    match tlogic with
+    | TPredicate args ->
+      Ty.Tbool, List.map2 (fun (x, _) ty -> x, Ty.shorten ty) l args
+    | TFunction (args, ret) ->
+      Ty.shorten ret, List.map2 (fun (x, _) ty -> x, Ty.shorten ty) l args
+  in
+  let td =
+    match ret_ty with
+    | None ->
+      Options.tool_req 1 "TR-Typing-LogicPred$_F$";
+      TPredicate_def(loc,n,l_typed,f)
+    | Some _ ->
+      Options.tool_req 1 "TR-Typing-LogicFun$_F$";
+      TFunction_def(loc,n,l_typed,t_typed,f)
+  in
+  let td_a = { c = td; annot=new_id () } in
+  (td_a, env)::acc, env
+
+let type_fun (acc, env) loc n l ?ret_ty e =
+  let env, infix, tlogic = declare_fun env loc n ?ret_ty l in
+  define_fun (acc, env) loc n l tlogic ?ret_ty infix e
+
 let rec type_decl (acc, env) d assertion_stack =
   Types.to_tyvars := MString.empty;
   match d with
@@ -2225,49 +2272,24 @@ let rec type_decl (acc, env) d assertion_stack =
     let f = alpha_renaming_env env f in
     type_and_intro_goal acc env Sat n f, env
 
-  | Predicate_def(loc,n,l,e)
-  | Function_def(loc,n,l,_,e) ->
-    check_duplicate_params l;
-    let infix, ty  =
-      let l = List.map (fun (_,_,x) -> x) l in
-      match d with
-      | Function_def(_,_,_,PPTbool,_) ->
-        (* cast functions that returns bools into predicates *)
-        PPiff, PPredicate l
-      | Function_def(_,_,_,t,_) ->
-        PPeq, PFunction(l,t)
-      | Predicate_def _ ->
-        PPiff, PPredicate l
-      | _ -> assert false
+  | MutRecDefs l ->
+    let rev_l, env =
+      List.fold_left (
+        fun (acc, env) (loc,n,l,ret_ty,e) ->
+          let env, infix, tlogic = declare_fun env loc n ?ret_ty l in
+          (loc, n, l, tlogic, ret_ty, infix, e) :: acc, env
+      ) ([], env) l
     in
-    let l = List.map (fun (_,x,t) -> (x,t)) l in
-    let mk_symb hs = Symbols.name hs ~kind:Symbols.Other in
-    let tlogic, env = Env.add_logics env mk_symb [n] ty loc in (* TODO *)
-    let n = fst n in
+    List.fold_left (
+      fun (acc, env) (loc, n, l, tlogic, ret_ty, infix, e) ->
+        define_fun (acc, env) loc n l tlogic ?ret_ty infix e
+    ) (acc, env) (List.rev rev_l)
 
-    let lvar = List.map (fun (x,_) -> {pp_desc=PPvar x;pp_loc=loc}) l in
-    let p = {pp_desc=PPapp(n,lvar) ; pp_loc=loc } in
-    let f = { pp_desc = PPinfix(p,infix,e) ; pp_loc = loc } in
-    let f = make_pred loc [] f l in
-    let f = type_form env f in
-    let t_typed, l_typed =
-      match tlogic with
-      | TPredicate args ->
-        Ty.Tbool, List.map2 (fun (x, _) ty -> x, Ty.shorten ty) l args
-      | TFunction (args, ret) ->
-        Ty.shorten ret, List.map2 (fun (x, _) ty -> x, Ty.shorten ty) l args
-    in
-    let td =
-      match d with
-      | Function_def _ ->
-        Options.tool_req 1 "TR-Typing-LogicFun$_F$";
-        TFunction_def(loc,n,l_typed,t_typed,f)
-      | _ ->
-        Options.tool_req 1 "TR-Typing-LogicPred$_F$";
-        TPredicate_def(loc,n,l_typed,f)
-    in
-    let td_a = { c = td; annot=new_id () } in
-    (td_a, env)::acc, env
+  | Predicate_def(loc,n,l,e) ->
+    type_fun (acc, env) loc n l e
+
+  | Function_def(loc,n,l,ret_ty,e) ->
+    type_fun (acc, env) loc n l ~ret_ty e
 
   | TypeDecl [] ->
     assert false

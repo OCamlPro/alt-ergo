@@ -48,6 +48,14 @@ val mk_non_ground_predicate_def :
   string * string ->
   (Loc.t * string * ppure_type) list -> lexpr -> decl
 
+val mk_mut_rec_def :
+  (Loc.t
+   * (string * string)
+   * (Loc.t * string * ppure_type) list
+   * ppure_type option
+   * lexpr
+  ) list -> decl
+
 val mk_goal : Loc.t -> string -> lexpr -> decl
 
 val mk_check_sat : Loc.t -> string -> lexpr -> decl
