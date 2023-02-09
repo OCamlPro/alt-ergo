@@ -2156,21 +2156,21 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     assert (not is_recursive); (* Abstract types are not recursive *)
     acc, env
 
-let type_fun_aux_1 env loc n ret_ty l  =
+let type_fun_aux_1 env loc n ?ret_ty l  =
   check_duplicate_params l;
   let infix, ty  =
     let l = List.map (fun (_,_,x) -> x) l in
     match ret_ty with
-    | PPTbool ->
+    | None | Some PPTbool ->
       PPiff, PPredicate l
-    | _ ->
-      PPeq, PFunction(l,ret_ty)
+    | Some ty ->
+      PPeq, PFunction(l,ty)
   in
   let mk_symb hs = Symbols.name hs ~kind:Symbols.Other in
   let tlogic, env = Env.add_logics env mk_symb [n] ty loc in (* TODO *)
   env, infix, tlogic
 
-let type_fun_aux_2 (acc, env) loc n l tlogic ret_ty infix e =
+let type_fun_aux_2 (acc, env) loc n l tlogic ?ret_ty infix e =
   let l = List.map (fun (_,x,t) -> (x,t)) l in
   let n = fst n in
   let lvar = List.map (fun (x,_) -> {pp_desc=PPvar x;pp_loc=loc}) l in
@@ -2187,19 +2187,19 @@ let type_fun_aux_2 (acc, env) loc n l tlogic ret_ty infix e =
   in
   let td =
     match ret_ty with
-    | PPTbool ->
+    | None ->
       Options.tool_req 1 "TR-Typing-LogicPred$_F$";
       TPredicate_def(loc,n,l_typed,f)
-    | _ ->
+    | Some _ ->
       Options.tool_req 1 "TR-Typing-LogicFun$_F$";
       TFunction_def(loc,n,l_typed,t_typed,f)
   in
   let td_a = { c = td; annot=new_id () } in
   (td_a, env)::acc, env
 
-let type_fun (acc, env) loc n l ret_ty e =
-  let env, infix, tlogic = type_fun_aux_1 env loc n ret_ty l in
-  type_fun_aux_2 (acc, env) loc n l tlogic ret_ty infix e
+let type_fun (acc, env) loc n l ?ret_ty e =
+  let env, infix, tlogic = type_fun_aux_1 env loc n ?ret_ty l in
+  type_fun_aux_2 (acc, env) loc n l tlogic ?ret_ty infix e
 
 let rec type_decl (acc, env) d assertion_stack =
   Types.to_tyvars := MString.empty;
@@ -2276,20 +2276,20 @@ let rec type_decl (acc, env) d assertion_stack =
     let rev_l, env =
       List.fold_left (
         fun (acc, env) (loc,n,l,ret_ty,e) ->
-          let env, infix, tlogic = type_fun_aux_1 env loc n ret_ty l in
+          let env, infix, tlogic = type_fun_aux_1 env loc n ?ret_ty l in
           (loc, n, l, tlogic, ret_ty, infix, e) :: acc, env
       ) ([], env) l
     in
     List.fold_left (
       fun (acc, env) (loc, n, l, tlogic, ret_ty, infix, e) ->
-        type_fun_aux_2 (acc, env) loc n l tlogic ret_ty infix e
+        type_fun_aux_2 (acc, env) loc n l tlogic ?ret_ty infix e
     ) (acc, env) (List.rev rev_l)
 
   | Predicate_def(loc,n,l,e) ->
-    type_fun (acc, env) loc n l PPTbool e
+    type_fun (acc, env) loc n l e
 
   | Function_def(loc,n,l,ret_ty,e) ->
-    type_fun (acc, env) loc n l ret_ty e
+    type_fun (acc, env) loc n l ~ret_ty e
 
   | TypeDecl [] ->
     assert false

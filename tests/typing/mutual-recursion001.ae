@@ -11,7 +11,7 @@ function f(x: t) : int = match x with
                          | B(y) -> (1 + g(y))
                          end
 
-with g(y1: u) : int = match y1 with
+and function g(y1: u) : int = match y1 with
                      | C -> 1
                      | D(x) -> (1 + f(x))
                      end

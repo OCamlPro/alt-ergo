@@ -137,7 +137,7 @@ decl:
      | [] -> mk_function_def ($startpos, $endpos) app args ret_ty body
      | _ ->
        mk_mut_rec_def
-         ((($startpos, $endpos), app, args, ret_ty, body) :: others)}
+         ((($startpos, $endpos), app, args, Some ret_ty, body) :: others)}
 
 | PRED app = named_ident EQUAL body = lexpr
    { mk_ground_predicate_def ($startpos, $endpos) app body }
@@ -148,7 +148,7 @@ decl:
      | [] -> mk_non_ground_predicate_def ($startpos, $endpos) app args body
      | _ ->
        mk_mut_rec_def
-         ((($startpos, $endpos), app, args, bool_type, body) :: others)}
+         ((($startpos, $endpos), app, args, None, body) :: others)}
 
 | AXIOM name = ident COLON body = lexpr
    { mk_generic_axiom ($startpos, $endpos) name body }
@@ -246,13 +246,13 @@ and_recursive_ty_opt:
 
 with_recursive_def_opt:
   | { [] }
-  | WITH app=named_ident LEFTPAR args=list0_logic_binder_sep_comma RIGHTPAR
+  | AND PRED app=named_ident LEFTPAR args=list0_logic_binder_sep_comma RIGHTPAR
       EQUAL body = lexpr others = with_recursive_def_opt
-      { (($startpos, $endpos), app, args, bool_type, body) :: others }
-  | WITH app=named_ident LEFTPAR args=list0_logic_binder_sep_comma RIGHTPAR
+      { (($startpos, $endpos), app, args, None, body) :: others }
+  | AND FUNC app=named_ident LEFTPAR args=list0_logic_binder_sep_comma RIGHTPAR
       COLON ret_ty = primitive_type EQUAL body = lexpr
       others = with_recursive_def_opt
-      { (($startpos, $endpos), app, args, ret_ty, body) :: others }
+      { (($startpos, $endpos), app, args, Some ret_ty, body) :: others }
 
 lexpr:
 

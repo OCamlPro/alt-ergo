@@ -40,7 +40,6 @@
       [
         "ac"         , AC;
         "and"        , AND;
-        "with"       , WITH;
         "axiom"      , AXIOM;
         "bitv"       , BITV;
         "bool"       , BOOL;
