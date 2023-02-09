@@ -1117,15 +1117,7 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
     | lt -> List.map mk_expr lt, None
 
   in
-  let t_depth =
-    List.fold_left (fun z t -> max z (E.depth t)) 0 content in
-  (* clean trigger:
-     remove useless terms in multi-triggers after inlining of lets*)
-  let trigger =
-    { E.content; guard; t_depth; semantic = []; (* will be set by theories *)
-      hyp; from_user; }
-  in
-  E.clean_trigger ~in_theory name trigger
+  E.mk_trigger ~name ~content ~guard ~hyp ~in_theory ~from_user
 
 
 (** Preprocesses the body of a goal by:

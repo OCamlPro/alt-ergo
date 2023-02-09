@@ -1792,7 +1792,8 @@ let mk_let ~var ~let_e ~in_e =
   (* eventual simplification are done in mk_let_aux *)
   let let_sko =
     let let_e_ty = type_info let_e in
-    let free_vars = let_e.vars in (* dep vars are only those appearing in let_e*)
+    (* dep vars are only those appearing in let_e *)
+    let free_vars = let_e.vars in
     let free_v_as_terms =
       SMap.fold (fun sy (ty, _) acc ->
           (mk_term ~sy ~args:[] ~ty) :: acc
@@ -2289,7 +2290,7 @@ module Triggers = struct
       if mono != [] then []
       else multi_triggers menv vterm vtype trs escaped_vars
 
-
+  (* Remove useless terms in multi-triggers after inlining of lets. *)
   let clean_trigger ~in_theory name trig =
     if in_theory then trig
     else
@@ -2529,12 +2530,36 @@ module Triggers = struct
           else if multi != [] then multi
           else multi'
 
+  let partition_patterns ({ content; _ } as tr) ~f =
+    let syn, sem = List.partition_map
+        (fun t ->
+           match f t with
+           | `Syn s -> Left s
+           | `Sem s -> Right s
+        ) content
+    in
+    { tr with content = syn; semantic = sem }
+
 end
 
 (*****)
 
+let mk_trigger ~name ~content ~guard ~hyp ~in_theory ~from_user =
+  let t_depth = List.fold_left (fun z t -> max z (depth t)) 0 content in
+  let trigger = {
+    content;
+    guard;
+    t_depth;
+    semantic = []; (* will be set by theories *)
+    hyp;
+    from_user;
+  }
+  in
+  Triggers.clean_trigger ~in_theory name trigger
+
+let partition_patterns = Triggers.partition_patterns
+
 let make_triggers = Triggers.make
-let clean_trigger = Triggers.clean_trigger
 
 let mk_forall ~name ~loc binders ~triggers ~toplevel ~decl_kind f =
   let decl_kind =

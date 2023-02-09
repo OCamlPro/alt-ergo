@@ -2430,7 +2430,8 @@ let instantiate ~do_syntactic_matching match_terms env uf selector =
       "IC.instantiate: %d insts generated" (List.length insts);
   env, insts
 
-
+(* Partition the patterns of the multi-triggers of a lemma into two categories:
+   semantic trigger and syntactic trigger. *)
 let separate_semantic_triggers =
   let not_theory_const = Hstring.make "not_theory_constant" in
   let is_theory_const = Hstring.make "is_theory_constant" in
@@ -2447,33 +2448,28 @@ let separate_semantic_triggers =
         (fun tr ->
            (* because sem-triggers will be set by theories *)
            assert (tr.E.semantic == []);
-           let syn, sem =
-             List.fold_left
-               (fun (syn, sem) (t : E.t) ->
-                  match t with
-                  | { top_sy = Symbols.In (lb, ub); args = [x]; _ } ->
-                    syn, (E.Interval (x, lb, ub)) :: sem
+           Expr.partition_patterns tr ~f:(function
+               | { top_sy = Symbols.In (lb, ub); args = [x]; _ } ->
+                 `Sem (E.Interval (x, lb, ub))
 
-                  | { top_sy = Symbols.MapsTo x; args = [t]; _ } ->
-                    syn, (E.MapsTo (x, t)) :: sem
+               | { top_sy = Symbols.MapsTo x; args = [t]; _ } ->
+                 `Sem (E.MapsTo (x, t))
 
-                  | { top_sy = Sy.Name (hs,_); args = [x]; _ }
-                    when Hstring.equal hs not_theory_const ->
-                    syn, (E.NotTheoryConst x) :: sem
+               | { top_sy = Sy.Name (hs,_); args = [x]; _ }
+                 when Hstring.equal hs not_theory_const ->
+                 `Sem (E.NotTheoryConst x)
 
-                  | { top_sy = Sy.Name (hs,_); args = [x]; _ }
-                    when Hstring.equal hs is_theory_const ->
-                    syn, (E.IsTheoryConst x) :: sem
+               | { top_sy = Sy.Name (hs,_); args = [x]; _ }
+                 when Hstring.equal hs is_theory_const ->
+                 `Sem (E.IsTheoryConst x)
 
-                  | { top_sy = Sy.Name (hs,_); args = [x;y]; _ }
-                    when Hstring.equal hs linear_dep ->
-                    syn, (E.LinearDependency(x,y)) :: sem
+               | { top_sy = Sy.Name (hs,_); args = [x;y]; _ }
+                 when Hstring.equal hs linear_dep ->
+                 `Sem (E.LinearDependency (x, y))
 
-                  | _ -> t::syn, sem
-               )([], []) (List.rev tr.E.content)
-           in
-           {tr with E.content = syn; semantic = sem}
-        )user_trs
+               | _ as t -> `Syn t
+             )
+        ) user_trs
     in
     E.mk_forall
       ~name:q.E.name ~loc:q.E.loc q.E.binders ~triggers:(List.rev r_triggers)

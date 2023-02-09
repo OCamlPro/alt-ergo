@@ -156,7 +156,7 @@ and semantic_trigger =
   | IsTheoryConst of t
   | LinearDependency of t * t
 
-and trigger = (*private*) {
+and trigger = private {
   content : t list;
   (* this field is filled (with a part of 'content' field) by theories
      when assume_th_elt is called *)
@@ -424,6 +424,14 @@ val apply_subst : subst -> t -> t
 val apply_subst_trigger : subst -> trigger -> trigger
 
 (** skolemization and other smart constructors for formulas **)
+val mk_trigger :
+  name: string ->
+  content: t list ->
+  guard: t option ->
+  hyp: t list ->
+  in_theory: bool ->
+  from_user: bool ->
+  trigger
 
 val make_triggers :
   t ->
@@ -432,13 +440,18 @@ val make_triggers :
   Util.matching_env ->
   trigger list
 
-val clean_trigger: in_theory:bool -> string -> trigger -> trigger
-(** Remove useless terms in multi-triggers after inlining of lets. *)
+
 
 val resolution_triggers :
   is_back:bool ->
   quantified ->
   trigger list
+
+val partition_patterns :
+  trigger ->
+  f:(t -> [`Syn of t | `Sem of semantic_trigger]) ->
+  trigger
+
 
 val mk_forall:
   name:string ->
