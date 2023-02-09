@@ -132,7 +132,7 @@ decl:
 
 | FUNC app=named_ident LEFTPAR args=list0_logic_binder_sep_comma RIGHTPAR
    COLON ret_ty = primitive_type EQUAL body = lexpr
-   others = with_recursive_def_opt
+   others = and_recursive_def_opt
    { match others with
      | [] -> mk_function_def ($startpos, $endpos) app args ret_ty body
      | _ ->
@@ -143,7 +143,7 @@ decl:
    { mk_ground_predicate_def ($startpos, $endpos) app body }
 
 | PRED app = named_ident LEFTPAR args = list0_logic_binder_sep_comma RIGHTPAR
-   EQUAL body = lexpr others = with_recursive_def_opt
+   EQUAL body = lexpr others = and_recursive_def_opt
    { match others with
      | [] -> mk_non_ground_predicate_def ($startpos, $endpos) app args body
      | _ ->
@@ -244,14 +244,14 @@ and_recursive_ty_opt:
       others = and_recursive_ty_opt
       { (($startpos, $endpos), ty_vars, ty, enum) :: others}
 
-with_recursive_def_opt:
+and_recursive_def_opt:
   | { [] }
   | AND PRED app=named_ident LEFTPAR args=list0_logic_binder_sep_comma RIGHTPAR
-      EQUAL body = lexpr others = with_recursive_def_opt
+      EQUAL body = lexpr others = and_recursive_def_opt
       { (($startpos, $endpos), app, args, None, body) :: others }
   | AND FUNC app=named_ident LEFTPAR args=list0_logic_binder_sep_comma RIGHTPAR
       COLON ret_ty = primitive_type EQUAL body = lexpr
-      others = with_recursive_def_opt
+      others = and_recursive_def_opt
       { (($startpos, $endpos), app, args, Some ret_ty, body) :: others }
 
 lexpr:

@@ -2156,7 +2156,7 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     assert (not is_recursive); (* Abstract types are not recursive *)
     acc, env
 
-let type_fun_aux_1 env loc n ?ret_ty l  =
+let declare_fun env loc n ?ret_ty l  =
   check_duplicate_params l;
   let infix, ty  =
     let l = List.map (fun (_,_,x) -> x) l in
@@ -2170,7 +2170,7 @@ let type_fun_aux_1 env loc n ?ret_ty l  =
   let tlogic, env = Env.add_logics env mk_symb [n] ty loc in (* TODO *)
   env, infix, tlogic
 
-let type_fun_aux_2 (acc, env) loc n l tlogic ?ret_ty infix e =
+let define_fun (acc, env) loc n l tlogic ?ret_ty infix e =
   let l = List.map (fun (_,x,t) -> (x,t)) l in
   let n = fst n in
   let lvar = List.map (fun (x,_) -> {pp_desc=PPvar x;pp_loc=loc}) l in
@@ -2198,8 +2198,8 @@ let type_fun_aux_2 (acc, env) loc n l tlogic ?ret_ty infix e =
   (td_a, env)::acc, env
 
 let type_fun (acc, env) loc n l ?ret_ty e =
-  let env, infix, tlogic = type_fun_aux_1 env loc n ?ret_ty l in
-  type_fun_aux_2 (acc, env) loc n l tlogic ?ret_ty infix e
+  let env, infix, tlogic = declare_fun env loc n ?ret_ty l in
+  define_fun (acc, env) loc n l tlogic ?ret_ty infix e
 
 let rec type_decl (acc, env) d assertion_stack =
   Types.to_tyvars := MString.empty;
@@ -2276,13 +2276,13 @@ let rec type_decl (acc, env) d assertion_stack =
     let rev_l, env =
       List.fold_left (
         fun (acc, env) (loc,n,l,ret_ty,e) ->
-          let env, infix, tlogic = type_fun_aux_1 env loc n ?ret_ty l in
+          let env, infix, tlogic = declare_fun env loc n ?ret_ty l in
           (loc, n, l, tlogic, ret_ty, infix, e) :: acc, env
       ) ([], env) l
     in
     List.fold_left (
       fun (acc, env) (loc, n, l, tlogic, ret_ty, infix, e) ->
-        type_fun_aux_2 (acc, env) loc n l tlogic ?ret_ty infix e
+        define_fun (acc, env) loc n l tlogic ?ret_ty infix e
     ) (acc, env) (List.rev rev_l)
 
   | Predicate_def(loc,n,l,e) ->
