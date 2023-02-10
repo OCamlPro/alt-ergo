@@ -1263,6 +1263,8 @@ let make dloc_file acc stmt =
 
     (* Function and premdicate definitions *)
     | { contents = `Defs defs; loc; _ } ->
+      (* For a mutually recursive definition, we have to add all the function
+         names in a row. *)
       List.iter (fun (def : Typer_Pipe.def) ->
           match def with
           | `Term_def (_, ({ path; _ } as tcst), _, _, _) ->
