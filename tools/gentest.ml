@@ -12,20 +12,19 @@
 type 'a printer = Format.formatter -> 'a -> unit
 
 module File : sig
-  val exists: string -> bool
-  (** [exists fl] is true if and only if the file [fl] exists. *)
+  val touch: string -> unit
+  (** [create fl] create an empty file of name [fl]. *)
 
   val scan_folder: string -> (string list * string list)
-  (** [scan_folder fd] scans recursively the folder [fd]. *)
+  (** [scan_folder fd] scan recursively the folder [fd]. *)
 
   val has_extension_in : string -> string list -> bool
-  (** [has_extension_in fl exts] checks if the [fl] has an extension
+  (** [has_extension_in fl exts] check if the [fl] has an extension
       in the list [exts]. *)
 end = struct
-  let exists fl =
-    match open_in fl with
-    | _ -> true
-    | exception Sys_error _ -> false
+  let touch fl =
+    let ch = open_out fl in
+    close_out ch
 
   let scan_folder path =
     let handle = Unix.opendir path in
@@ -89,7 +88,10 @@ end = struct
 end
 
 module Test : sig
-  type t
+  type t = private {
+    cmd: Cmd.t;
+    pb_file: string
+  }
   (** Type of a test. *)
 
   val make: cmd: Cmd.t -> pb_file: string -> t
@@ -147,6 +149,9 @@ module Batch : sig
     -> pb_files: string list -> t
   (** Set up a batch of tests. *)
 
+  val generate_expected_file : t -> unit
+  (** Generate empty expected files for new tests. *)
+
   val generate_dune_file : t -> unit
   (** Produce a dune file containing tests of the batch. *)
 end = struct
@@ -174,10 +179,16 @@ end = struct
       pp_print_list ~pp_sep Test.pp_stanza fmt batch.tests;
       fprintf fmt "; Auto-generated part end@."
 
+  let generate_expected_file batch =
+    List.iter (fun (test : Test.t) ->
+      let pb_file = Filename.concat batch.path test.pb_file in
+      if not @@ Sys.file_exists pb_file then File.touch pb_file
+    ) batch.tests
+
   let generate_dune_file batch =
     let dune_filename = Filename.concat batch.path "dune" in
     let digest =
-      if File.exists dune_filename then
+      if Sys.file_exists dune_filename then
         Some (Digest.file dune_filename)
       else None
     in
@@ -206,6 +217,7 @@ let rec generate path cmds =
   | [] -> ()
   | pb_files -> (
     let batch = Batch.make ~path ~cmds ~pb_files in
+    Batch.generate_expected_file batch;
     Batch.generate_dune_file batch
   ) in
   List.iter (fun path ->
@@ -219,67 +231,68 @@ let () =
     else "."
   in
   let bin = "alt-ergo" in
+  let timelimit = "--timelimit=2" in
   let solvers = [
     ("runtest", "tableaux", [
       "--output=smtlib2"
-    ; "--timelimit=1"
+    ; timelimit
     ; "--sat-solver Tableaux" ])
   ; ("runtest", "tableaux_cdcl", [
       "--output=smtlib2"
-    ; "--timelimit=1"
+    ; timelimit
     ; "--sat-solver Tableaux-CDCL" ])
   ; ("runtest", "cdcl", [
       "--output=smtlib2"
-    ; "--timelimit=1"
+    ; timelimit
     ; "--sat-solver CDCL" ])
   ; ("runtest", "cdcl_tableaux", [
       "--output=smtlib2"
-    ; "--timelimit=1"
+    ; timelimit
     ; "--sat-solver CDCL-Tableaux" ])
   ; ("runtest-ci", "ci_tableaux_cdcl_no_minimal_bj", [
       "--output=smtlib2"
-    ; "--timelimit=1"
+    ; timelimit
     ; "--sat-solver CDCL-Tableaux"
     ; "--no-minimal-bj" ])
   ; ("runtest-ci", "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories", [
       "--output=smtlib2"
-    ; "--timelimit=1"
+    ; timelimit
     ; "--sat-solver CDCL-Tableaux"
     ; "--no-tableaux-cdcl-in-theories" ])
   ; ("runtest-ci", "ci_no_tableaux_cdcl_in_instantiation", [
       "--output=smtlib2"
-    ; "--timelimit=1"
+    ; timelimit
     ; "--sat-solver CDCL-Tableaux"
     ; "--no-tableaux-cdcl-in-instantiation" ])
   ; ("runtest-ci", "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation", [
       "--output=smtlib2"
-    ; "--timelimit=1"
+    ; timelimit
     ; "--sat-solver CDCL-Tableaux"
     ; "--no-tableaux-cdcl-in-theories"
     ; "--no-tableaux-cdcl-in-instantiation" ])
   ; ("runtest-ci", "ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories\
     _and_instantiation", [
       "--output=smtlib2"
-    ; "--timelimit=1"
+    ; timelimit
     ; "--sat-solver CDCL-Tableaux"
     ; "--no-minimal-bj"
     ; "--no-tableaux-cdcl-in-theories"
     ; "--no-tableaux-cdcl-in-instantiation" ])
   ; ("runtest-ci", "ci_tableaux", [
       "--output=smtlib2"
-    ; "--timelimit=1"
+    ; timelimit
     ; "--sat-solver Tableaux" ])
   ; ("runtest-ci", "ci_tableaux_cdcl", [
       "--output=smtlib2"
-    ; "--timelimit=1"
+    ; timelimit
     ; "--sat-solver Tableaux-CDCL" ])
   ; ("runtest-ci", "ci_cdcl", [
       "--output=smtlib2"
-    ; "--timelimit=1"
+    ; timelimit
     ; "--sat-solver CDCL" ])
   ; ("runtest-ci", "ci_cdcl_no_minimal_bj", [
       "--output=smtlib2"
-    ; "--timelimit=1"
+    ; timelimit
     ; "--sat-solver Tableaux-CDCL"
     ; "--no-minimal-bj" ])]
   in
