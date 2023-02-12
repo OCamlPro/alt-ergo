@@ -332,7 +332,7 @@ let add_aux env (uf:uf) (r:r) t =
     let { E.f = sy; xs; ty; _ } = E.term_view t in
     let env = add_adt env uf t r sy ty in
     match sy, xs with
-    | Sy.Op Sy.Destruct (hs, true), [e] -> (* guarded *)
+    | Sy.Op Sy.Destruct (true, hs), [e] -> (* guarded *)
       if Options.get_debug_adt () then
         Printer.print_dbg
           ~module_name:"Adt_rel" ~function_name:"add_aux"
@@ -340,7 +340,7 @@ let add_aux env (uf:uf) (r:r) t =
       if (SE.mem t env.seen_destr) then env
       else add_guarded_destr env uf t hs e ty
 
-    | Sy.Op Sy.Destruct (_, false), [_] ->
+    | Sy.Op Sy.Destruct (false, _), [_] ->
       (* not guarded *)
       if Options.get_debug_adt () then
         Printer.print_dbg

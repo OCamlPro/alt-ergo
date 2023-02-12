@@ -134,6 +134,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   zarith
   seq
   stdlib-shims
+  ppx_compare
   (odoc :with-doc)
  )
 )

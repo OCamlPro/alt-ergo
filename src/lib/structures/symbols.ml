@@ -26,9 +26,12 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Ppx_compare_lib.Builtin
+
 type builtin =
     LE | LT (* arithmetic *)
   | IsConstr of Hstring.t (* ADT tester *)
+[@@deriving compare, equal]
 
 type operator =
     Plus | Minus | Mult | Div | Modulo
@@ -39,8 +42,9 @@ type operator =
   | Min_real | Min_int | Max_real | Max_int | Integer_log2
   | Pow | Integer_round
   | Constr of Hstring.t (* enums, adts *)
-  | Destruct of Hstring.t * bool
+  | Destruct of bool * Hstring.t
   | Tite
+[@@deriving compare, equal]
 
 type lit =
   (* literals *)
@@ -49,6 +53,7 @@ type lit =
   | L_neg_eq
   | L_neg_built of builtin
   | L_neg_pred
+[@@deriving compare, equal]
 
 type form =
   (* formulas *)
@@ -58,39 +63,157 @@ type form =
   | F_Xor
   | F_Lemma
   | F_Skolem
+[@@deriving compare, equal]
 
-type name_kind = Ac | Other
+type name_kind =
+  | Ac
+  | Other
+[@@deriving compare, equal]
 
 type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
+[@@deriving compare, equal]
 
-type bound = (* private *)
-  { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
-
+type bound = {
+  sort: Ty.t;
+  is_open: Bool.t;
+  is_lower: Bool.t;
+  kind: bound_kind;
+} [@@deriving compare, equal]
 
 type t =
   | True
   | False
   | Void
-  | Name of Hstring.t * name_kind
   | Int of Hstring.t
   | Real of Hstring.t
+  | Var of Var.t
+  | Name of Hstring.t * name_kind
   | Bitv of string
   | Op of operator
   | Lit of lit
   | Form of form
-  | Var of Var.t
   | In of bound * bound
   | MapsTo of Var.t
   | Let
-
-type s = t
+[@@deriving_inline compare, equal]
+let _ = fun (_ : t) -> ()
+let compare =
+  (fun a__073_ ->
+     fun b__074_ ->
+       if Ppx_compare_lib.phys_equal a__073_ b__074_
+       then 0
+       else
+         (match (a__073_, b__074_) with
+          | (True, True) -> 0
+          | (True, _) -> (-1)
+          | (_, True) -> 1
+          | (False, False) -> 0
+          | (False, _) -> (-1)
+          | (_, False) -> 1
+          | (Void, Void) -> 0
+          | (Void, _) -> (-1)
+          | (_, Void) -> 1
+          | (Int _a__075_, Int _b__076_) -> Hstring.compare _a__075_ _b__076_
+          | (Int _, _) -> (-1)
+          | (_, Int _) -> 1
+          | (Real _a__077_, Real _b__078_) ->
+            Hstring.compare _a__077_ _b__078_
+          | (Real _, _) -> (-1)
+          | (_, Real _) -> 1
+          | (Var _a__079_, Var _b__080_) -> Var.compare _a__079_ _b__080_
+          | (Var _, _) -> (-1)
+          | (_, Var _) -> 1
+          | (Name (_a__081_, _a__083_), Name (_b__082_, _b__084_)) ->
+            (match Hstring.compare _a__081_ _b__082_ with
+             | 0 -> compare_name_kind _a__083_ _b__084_
+             | n -> n)
+          | (Name _, _) -> (-1)
+          | (_, Name _) -> 1
+          | (Bitv _a__085_, Bitv _b__086_) ->
+            compare_string _a__085_ _b__086_
+          | (Bitv _, _) -> (-1)
+          | (_, Bitv _) -> 1
+          | (Op _a__087_, Op _b__088_) -> compare_operator _a__087_ _b__088_
+          | (Op _, _) -> (-1)
+          | (_, Op _) -> 1
+          | (Lit _a__089_, Lit _b__090_) -> compare_lit _a__089_ _b__090_
+          | (Lit _, _) -> (-1)
+          | (_, Lit _) -> 1
+          | (Form _a__091_, Form _b__092_) -> compare_form _a__091_ _b__092_
+          | (Form _, _) -> (-1)
+          | (_, Form _) -> 1
+          | (In (_a__093_, _a__095_), In (_b__094_, _b__096_)) ->
+            (match compare_bound _a__093_ _b__094_ with
+             | 0 -> compare_bound _a__095_ _b__096_
+             | n -> n)
+          | (In _, _) -> (-1)
+          | (_, In _) -> 1
+          | (MapsTo _a__097_, MapsTo _b__098_) ->
+            Var.compare _a__097_ _b__098_
+          | (MapsTo _, _) -> (-1)
+          | (_, MapsTo _) -> 1
+          | (Let, Let) -> 0) : t -> t -> int)
+let _ = compare
+let equal =
+  (fun a__099_ ->
+     fun b__100_ ->
+       if Ppx_compare_lib.phys_equal a__099_ b__100_
+       then true
+       else
+         (match (a__099_, b__100_) with
+          | (True, True) -> true
+          | (True, _) -> false
+          | (_, True) -> false
+          | (False, False) -> true
+          | (False, _) -> false
+          | (_, False) -> false
+          | (Void, Void) -> true
+          | (Void, _) -> false
+          | (_, Void) -> false
+          | (Int _a__101_, Int _b__102_) -> Hstring.equal _a__101_ _b__102_
+          | (Int _, _) -> false
+          | (_, Int _) -> false
+          | (Real _a__103_, Real _b__104_) -> Hstring.equal _a__103_ _b__104_
+          | (Real _, _) -> false
+          | (_, Real _) -> false
+          | (Var _a__105_, Var _b__106_) -> Var.equal _a__105_ _b__106_
+          | (Var _, _) -> false
+          | (_, Var _) -> false
+          | (Name (_a__107_, _a__109_), Name (_b__108_, _b__110_)) ->
+            Ppx_compare_lib.(&&) (Hstring.equal _a__107_ _b__108_)
+              (equal_name_kind _a__109_ _b__110_)
+          | (Name _, _) -> false
+          | (_, Name _) -> false
+          | (Bitv _a__111_, Bitv _b__112_) -> equal_string _a__111_ _b__112_
+          | (Bitv _, _) -> false
+          | (_, Bitv _) -> false
+          | (Op _a__113_, Op _b__114_) -> equal_operator _a__113_ _b__114_
+          | (Op _, _) -> false
+          | (_, Op _) -> false
+          | (Lit _a__115_, Lit _b__116_) -> equal_lit _a__115_ _b__116_
+          | (Lit _, _) -> false
+          | (_, Lit _) -> false
+          | (Form _a__117_, Form _b__118_) -> equal_form _a__117_ _b__118_
+          | (Form _, _) -> false
+          | (_, Form _) -> false
+          | (In (_a__119_, _a__121_), In (_b__120_, _b__122_)) ->
+            Ppx_compare_lib.(&&) (equal_bound _a__119_ _b__120_)
+              (equal_bound _a__121_ _b__122_)
+          | (In _, _) -> false
+          | (_, In _) -> false
+          | (MapsTo _a__123_, MapsTo _b__124_) -> Var.equal _a__123_ _b__124_
+          | (MapsTo _, _) -> false
+          | (_, MapsTo _) -> false
+          | (Let, Let) -> true) : t -> t -> bool)
+let _ = equal
+[@@@end]
 
 let name ?(kind=Other) s = Name (Hstring.make s, kind)
 let var s = Var s
 let int i = Int (Hstring.make i)
 let real r = Real (Hstring.make r)
 let constr s = Op (Constr (Hstring.make s))
-let destruct ~guarded s = Op (Destruct (Hstring.make s, guarded))
+let destruct ~guarded s = Op (Destruct (guarded, Hstring.make s))
 
 let mk_bound kind sort ~is_open ~is_lower =
   {kind; sort; is_open; is_lower}
@@ -110,13 +233,13 @@ let underscore =
   Random.self_init ();
   var @@ Var.of_string @@ Format.sprintf "_%d" (Random.int 1_000_000)
 
-let compare_kinds k1 k2 =
+(*let compare_kinds k1 k2 =
   Util.compare_algebraic k1 k2
     (function
       | _, (Ac | Other) -> assert false
     )
 
-let compare_operators op1 op2 =
+  let compare_operators op1 op2 =
   Util.compare_algebraic op1 op2
     (function
       | Access h1, Access h2 | Constr h1, Constr h2 -> Hstring.compare h1 h2
@@ -132,14 +255,14 @@ let compare_operators op1 op2 =
             | Constr _ | Destruct _ | Tite) -> assert false
     )
 
-let compare_builtin b1 b2 =
+  let compare_builtin b1 b2 =
   Util.compare_algebraic b1 b2
     (function
       | IsConstr h1, IsConstr h2 -> Hstring.compare h1 h2
       | _, (LT | LE | IsConstr _) -> assert false
     )
 
-let compare_lits lit1 lit2 =
+  let compare_lits lit1 lit2 =
   Util.compare_algebraic lit1 lit2
     (function
       | L_built b1, L_built b2 -> compare_builtin b1 b2
@@ -148,7 +271,7 @@ let compare_lits lit1 lit2 =
         assert false
     )
 
-let compare_forms f1 f2 =
+  let compare_forms f1 f2 =
   Util.compare_algebraic f1 f2
     (function
       | F_Unit b1, F_Unit b2
@@ -157,16 +280,17 @@ let compare_forms f1 f2 =
            | F_Iff | F_Xor) ->
         assert false
     )
-
-let compare_bounds_kind a b =
+*)
+(*let compare_bounds_kind a b =
   Util.compare_algebraic a b
     (function
       | VarBnd h1, VarBnd h2 -> Var.compare h1 h2
       | ValBnd q1, ValBnd q2 -> Numbers.Q.compare q1 q2
       | _, (VarBnd _ | ValBnd _) -> assert false
-    )
+    )*)
 
-let compare_bounds a b =
+
+(*let compare_bounds a b =
   let c = Ty.compare a.sort b.sort in
   if c <> 0 then c
   else
@@ -175,9 +299,9 @@ let compare_bounds a b =
     else
       let c = Stdlib.compare a.is_lower b.is_lower in
       if c <> 0 then c
-      else compare_bounds_kind a.kind b.kind
+      else compare_bound_kind a.kind b.kind*)
 
-let compare s1 s2 =
+(*let compare s1 s2 =
   Util.compare_algebraic s1 s2
     (function
       | Int h1, Int h2
@@ -199,7 +323,7 @@ let compare s1 s2 =
         assert false
     )
 
-let equal s1 s2 = compare s1 s2 = 0
+  let equal s1 s2 = compare s1 s2 = 0*)
 
 let hash x =
   abs @@
@@ -259,20 +383,20 @@ let to_string ?(show_vars=true) x = match x with
   | Var v -> Var.to_string v
   | Int n -> Hstring.view n
   | Real n -> Hstring.view n
-  | Bitv s -> "[|"^s^"|]"
+  | Bitv hs -> "[|"^hs^"|]"
   | Op Plus -> "+"
   | Op Minus -> "-"
   | Op Mult -> "*"
   | Op Div -> "/"
   | Op Modulo -> "%"
-  | Op (Access s) ->
+  | Op (Access hs) ->
     if Options.get_output_smtlib () then
-      (Hstring.view s)
+      (Hstring.view hs)
     else
-      "@Access_"^(Hstring.view s)
-  | Op (Constr s) -> (Hstring.view s)
-  | Op (Destruct (s,g)) ->
-    Format.sprintf "%s%s" (if g then "" else "!") (Hstring.view s)
+      "@Access_"^(Hstring.view hs)
+  | Op (Constr hs) -> (Hstring.view hs)
+  | Op (Destruct (guarded, hs)) ->
+    Format.sprintf "%s%s" (if guarded then "" else "!") (Hstring.view hs)
 
   | Op Record -> "@Record"
   | Op Get -> "get"
@@ -339,10 +463,8 @@ let fake_neq =  name "@neq"
 let fake_lt  =  name "@lt"
 let fake_le  =  name "@le"
 
-
-
 module Labels = Hashtbl.Make(struct
-    type t = s
+    type nonrec t = t
     let equal = equal
     let hash = hash
   end)
@@ -356,14 +478,14 @@ let label t = try Labels.find labels t with Not_found -> Hstring.empty
 let clear_labels () = Labels.clear labels
 
 module Set : Set.S with type elt = t =
-  Set.Make (struct type t=s let compare=compare end)
+  Set.Make (struct type nonrec t = t let compare=compare end)
 
 module Map : sig
   include Map.S with type key = t
   val print :
     (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 end = struct
-  include Map.Make (struct type t = s let compare = compare end)
+  include Map.Make (struct type nonrec t = t let compare = compare end)
   let print pr_elt fmt sbt =
     iter (fun k v -> Format.fprintf fmt "%a -> %a  " print k pr_elt v) sbt
 end

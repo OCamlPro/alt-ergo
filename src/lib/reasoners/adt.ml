@@ -62,7 +62,7 @@ module Shostak (X : ALIEN) = struct
     not (Options.get_disable_adts ()) &&
     match sy, ty with
     | Sy.Op (Sy.Constr _), Ty.Tadt _ -> true
-    | Sy.Op Sy.Destruct (_,guarded), _ -> not guarded
+    | Sy.Op Sy.Destruct (guarded, _), _ -> not guarded
     | _ -> false
 
   let embed r =
@@ -175,7 +175,7 @@ module Shostak (X : ALIEN) = struct
       in
       is_mine @@ Constr {c_name = hs; c_ty = ty; c_args}, ctx
 
-    | Sy.Op Sy.Destruct (hs, guarded), [e], _ ->
+    | Sy.Op Sy.Destruct (guarded, hs), [e], _ ->
       if not guarded then
         let sel = Select {d_name = hs ; d_arg = e ; d_ty = ty} in
         is_mine sel, ctx

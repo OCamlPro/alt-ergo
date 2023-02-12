@@ -29,6 +29,7 @@
 type builtin =
     LE | LT (* arithmetic *)
   | IsConstr of Hstring.t (* ADT tester *)
+[@@deriving compare]
 
 type operator =
   | Plus | Minus | Mult | Div | Modulo
@@ -39,8 +40,9 @@ type operator =
   | Min_real | Min_int | Max_real | Max_int | Integer_log2
   | Pow | Integer_round
   | Constr of Hstring.t (* enums, adts *)
-  | Destruct of Hstring.t * bool
+  | Destruct of bool * Hstring.t
   | Tite
+[@@deriving compare]
 
 type lit =
   (* literals *)
@@ -49,6 +51,7 @@ type lit =
   | L_neg_eq
   | L_neg_built of builtin
   | L_neg_pred
+[@@deriving compare]
 
 type form =
   (* formulas *)
@@ -58,29 +61,41 @@ type form =
   | F_Xor
   | F_Lemma
   | F_Skolem
+[@@deriving compare]
 
-type name_kind = Ac | Other
+type name_kind =
+  | Ac
+  | Other
+[@@deriving compare]
 
-type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
+type bound_kind =
+  | VarBnd of Var.t
+  | ValBnd of Numbers.Q.t
+[@@deriving compare]
 
-type bound = private
-  { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
+type bound = private {
+  sort: Ty.t;
+  is_open: bool;
+  is_lower: bool;
+  kind: bound_kind;
+} [@@deriving compare, equal]
 
 type t =
   | True
   | False
   | Void
-  | Name of Hstring.t * name_kind
   | Int of Hstring.t
   | Real of Hstring.t
+  | Var of Var.t
+  | Name of Hstring.t * name_kind
   | Bitv of string
   | Op of operator
   | Lit of lit
   | Form of form
-  | Var of Var.t
   | In of bound * bound
   | MapsTo of Var.t
   | Let
+[@@deriving compare, equal]
 
 val name : ?kind:name_kind -> string -> t
 val var : Var.t -> t
@@ -95,9 +110,6 @@ val mk_maps_to : Var.t -> t
 
 val is_ac : t -> bool
 
-val equal : t -> t -> bool
-val compare : t -> t -> int
-val compare_bounds : bound -> bound -> int
 val hash : t -> int
 
 val to_string : t -> string
