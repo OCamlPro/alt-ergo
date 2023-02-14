@@ -1261,7 +1261,7 @@ let make dloc_file acc stmt =
       let st_decl = C.Assume (name, e, true) in
       C.{ st_decl; st_loc } :: acc
 
-    (* Function and premdicate definitions *)
+    (* Function and predicate definitions *)
     | { contents = `Defs defs; loc; _ } ->
       (* For a mutually recursive definition, we have to add all the function
          names in a row. *)
