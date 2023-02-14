@@ -52,6 +52,9 @@ jobs:
       - name: Install deps
         run: opam install ./alt-ergo-js.opam --deps-only --with-test
 
+      - name: Temporary fix
+        run: opam pin https://github.com/Gbury/dolmen.git
+
       # compile Alt-Ergo with Js_of_ocaml
       - name: Make alt-ergo.js
         run: opam exec -- make js-node

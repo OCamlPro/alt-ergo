@@ -57,6 +57,9 @@ jobs:
       - name: Install deps
         run: opam install . --deps-only --with-test
 
+      - name: Temporary fix
+        run: opam pin https://github.com/Gbury/dolmen.git
+
       # Build and install with opam
       - name: Install
         run: opam reinstall .
@@ -147,6 +150,9 @@ jobs:
       # Install dependencies
       - name: Install deps
         run: opam install . --deps-only --with-test
+
+      - name: Temporary fix
+        run: opam pin https://github.com/Gbury/dolmen.git
 
       # Build and install with opam
       - name: Install
