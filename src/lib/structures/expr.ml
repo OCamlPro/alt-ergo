@@ -539,7 +539,7 @@ and print_triggers fmt trs =
       fprintf fmt "| %a@," print_list l;
     ) trs
 
-module Subst = struct
+module TSubst = struct
   type expr = t
   type t = expr Sy.Map.t * Ty.subst
 
@@ -551,6 +551,9 @@ module Subst = struct
     else Some t1
 
   let id = (Sy.Map.empty, Ty.M.empty)
+
+  let is_identical (sbs_t, sbs_ty) =
+    Sy.Map.is_empty sbs_t && Ty.M.is_empty sbs_ty
 
   let apply_to_var (sbs_t, _) sy = Sy.Map.find_opt sy sbs_t
 
@@ -1107,17 +1110,17 @@ let no_capture_issue s_t binders =
       false
     end
 
-let rec apply_subst_aux (s_t, s_ty) t =
-  if is_ground t || (SMap.is_empty s_t && Ty.M.is_empty s_ty) then t
+let rec apply_subst_aux ((sbs_t, sbs_ty) as sbs) t =
+  if is_ground t || TSubst.is_identical sbs then t
   else
     let { f; xs; ty; vars; vty; bind; _ } = t in
-    let s_t = SMap.filter (fun sy _ -> SMap.mem sy vars) s_t in
-    let s_ty = Ty.M.filter (fun tvar _ -> Ty.Svty.mem tvar vty) s_ty in
-    if SMap.is_empty s_t && Ty.M.is_empty s_ty then t
+    let sbs_t = SMap.filter (fun sy _ -> SMap.mem sy vars) sbs_t in
+    let sbs_ty = Ty.M.filter (fun tvar _ -> Ty.Svty.mem tvar vty) sbs_ty in
+    let sbs = (sbs_t, sbs_ty) in
+    if TSubst.is_identical sbs then t
     else
-      let s = s_t, s_ty in
-      let xs', same = Lists.apply (apply_subst_aux s) xs in
-      let ty' = Ty.apply_subst s_ty ty in
+      let xs', same = Lists.apply (apply_subst_aux sbs) xs in
+      let ty' = Ty.apply_subst sbs_ty ty in
       (*invariant: we are sure that the subst will impact xs or ty
          (or inside a lemma/skolem or let) *)
       assert (xs == [] || not same || not (Ty.equal ty ty'));
@@ -1126,7 +1129,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
         assert (xs == []);
         begin
           try
-            let v = SMap.find f s_t in
+            let v = SMap.find f sbs_t in
             if is_skolem_cst v then get_skolem v ty else v
           with Not_found ->
             mk_term f [] ty'
@@ -1137,25 +1140,25 @@ let rec apply_subst_aux (s_t, s_ty) t =
         let { main; user_trs = trs; binders; sko_v; sko_vty; _ } = q
         in
         (* TODO: implement case where variables capture happens *)
-        assert (no_capture_issue s_t binders);
+        assert (no_capture_issue sbs_t binders);
         assert (
           (* invariant: s_t does not contain other free vars than
              those of t, and binders cannot be free vars of t *)
           not (Options.get_enable_assertions ()) ||
-          SMap.for_all (fun sy _ -> not (SMap.mem sy s_t)) binders
+          SMap.for_all (fun sy _ -> not (SMap.mem sy sbs_t)) binders
         );
-        let main = apply_subst_aux s main in
-        let trs = List.map (apply_subst_trigger s) trs in
+        let main = apply_subst_aux sbs main in
+        let trs = List.map (apply_subst_trigger sbs) trs in
         let binders =
           SMap.fold
             (fun sy (ty,i) bders ->
-               let ty' = Ty.apply_subst s_ty ty in
+               let ty' = Ty.apply_subst sbs_ty ty in
                if Ty.equal ty ty' then bders
                else SMap.add sy (ty', i) bders
-            )binders binders
+            ) binders binders
         in
-        let sko_v = List.map (apply_subst_aux s) sko_v in
-        let sko_vty = List.map (Ty.apply_subst s_ty) sko_vty in
+        let sko_v = List.map (apply_subst_aux sbs) sko_v in
+        let sko_vty = List.map (Ty.apply_subst sbs_ty) sko_vty in
         let q = {q with
                  main; user_trs = trs; binders = binders; sko_v;
                  sko_vty}
@@ -1172,13 +1175,13 @@ let rec apply_subst_aux (s_t, s_ty) t =
       | Sy.Let, B_let {let_v; let_e; in_e ; let_sko; is_bool} ->
         assert (xs == []);
         (* TODO: implement case where variables capture happens *)
-        assert (no_capture_issue s_t (SMap.singleton let_v (let_e.ty, 0)));
-        let let_e2 = apply_subst_aux s let_e in
-        let let_sko2 = apply_subst_aux s let_sko in
+        assert (no_capture_issue sbs_t (SMap.singleton let_v (let_e.ty, 0)));
+        let let_e2 = apply_subst_aux sbs let_e in
+        let let_sko2 = apply_subst_aux sbs let_sko in
         (* invariant: s_t only contains vars that are in free in t,
            and let_v cannot be free in t*)
-        assert (not (SMap.mem let_v s_t));
-        let in_e2 = apply_subst_aux (SMap.remove let_v s_t, s_ty) in_e in
+        assert (not (SMap.mem let_v sbs_t));
+        let in_e2 = apply_subst_aux (SMap.remove let_v sbs_t, sbs_ty) in_e in
         assert (let_e != let_e2 || in_e != in_e2);
         mk_let_aux {let_v; let_e=let_e2; in_e=in_e2; let_sko=let_sko2; is_bool}
 
@@ -1349,28 +1352,35 @@ and find_particular_subst =
 
 let apply_subst =
   let (cache : t Msbty.t Msbt.t TMap.t ref) = ref TMap.empty in
-  fun ((sbt, sbty) as s) f ->
+  fun ((sbs_t, sbs_ty) as sbs) f ->
     let ch = !cache in
-    try TMap.find f ch |> Msbt.find sbt |> Msbty.find sbty
+    try TMap.find f ch |> Msbt.find sbs_t |> Msbty.find sbs_ty
     with Not_found ->
-      let nf = apply_subst_aux s f in
+      let nf = apply_subst_aux sbs f in
       let c_sbt = try TMap.find f ch with Not_found -> Msbt.empty in
-      let c_sbty = try Msbt.find sbt c_sbt with Not_found -> Msbty.empty in
-      cache := TMap.add f (Msbt.add sbt (Msbty.add sbty nf c_sbty) c_sbt) ch;
+      let c_sbty = try Msbt.find sbs_t c_sbt with Not_found -> Msbty.empty in
+      cache := TMap.add f (Msbt.add sbs_t
+                             (Msbty.add sbs_ty nf c_sbty) c_sbt) ch;
       nf
 
-let apply_subst s t =
+let apply_subst sbs t =
   if Options.get_timers() then
     try
       Timers.exec_timer_start Timers.M_Expr Timers.F_apply_subst;
-      let res = apply_subst s t in
+      let res = apply_subst sbs t in
       Timers.exec_timer_pause Timers.M_Expr Timers.F_apply_subst;
       res
     with e ->
       Timers.exec_timer_pause Timers.M_Expr Timers.F_apply_subst;
       raise e
-  else apply_subst s t
+  else apply_subst sbs t
 
+module Subst = struct
+  include TSubst
+
+  let apply_to_trigger = apply_subst_trigger
+  let apply = apply_subst
+end
 
 (** Subterms, and related stuff *)
 

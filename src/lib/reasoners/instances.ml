@@ -232,7 +232,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 
   let profile_produced_terms env lorig nf s trs =
     let st0 =
-      List.fold_left (fun st t -> E.sub_terms st (E.apply_subst s t))
+      List.fold_left (fun st t -> E.sub_terms st (E.Subst.apply s t))
         SE.empty trs
     in
     let name, loc, _ = match Expr.form_view lorig with
@@ -287,9 +287,9 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
             incr cpt;
             let s = sbs, sty in
             match tr.E.guard with
-            | Some a when X.query (Expr.apply_subst s a) tbox==None -> acc
+            | Some a when X.query (Expr.Subst.apply s a) tbox==None -> acc
             | _ ->
-              let nf = E.apply_subst s f in
+              let nf = Expr.Subst.apply s f in
               (* add the incrementaly guard to nf, if any *)
               let nf = E.mk_imp trigger_increm_guard nf 0 in
               if inst_is_seen_during_this_round orig nf acc then acc
