@@ -25,6 +25,7 @@ depends: [
   "zarith"
   "seq"
   "stdlib-shims"
+  "camlzip" {>= "1.07"}
   "odoc" {with-doc}
 ]
 dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"
