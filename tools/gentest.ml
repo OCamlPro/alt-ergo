@@ -97,6 +97,9 @@ module Test : sig
   val make: cmd: Cmd.t -> pb_file: string -> t
   (** Set up the test. *)
 
+  val pp_expected_output: t printer
+  (** Print the expect filename of the test. *)
+
   val pp_stanza: t printer
   (** Pretty print the dune test. *)
 end = struct
@@ -181,7 +184,10 @@ end = struct
 
   let generate_expected_file batch =
     List.iter (fun (test : Test.t) ->
-      let pb_file = Filename.concat batch.path test.pb_file in
+      let pb_file =
+        Format.asprintf "%a" Test.pp_expected_output test
+        |> Filename.concat batch.path
+      in
       if not @@ Sys.file_exists pb_file then File.touch pb_file
     ) batch.tests
 
@@ -200,15 +206,14 @@ end = struct
         if not @@ Digest.equal d (Digest.file dune_filename) then (
           Format.printf "Updating %s\n" dune_filename
         )
-    | None ->
-        Format.printf "Creating %s\n" dune_filename
+    | None -> Format.printf "Creating %s\n" dune_filename
     in
     close_out ch
 end
 
 (* Test if a file is actually a problem for Alt-Ergo. *)
 let is_a_problem file =
-  File.has_extension_in file [".ae"; ".smt2"; ".pstm2"]
+  File.has_extension_in file [".ae"; ".smt2"; ".pstm2"; ".zip"]
 
 (* Generate a dune file for each subfolder of the path given as argument. *)
 let rec generate path cmds =
