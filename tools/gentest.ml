@@ -217,6 +217,7 @@ let rec generate path cmds =
   | [] -> ()
   | pb_files -> (
     let batch = Batch.make ~path ~cmds ~pb_files in
+    Batch.generate_expected_file batch;
     Batch.generate_dune_file batch
   ) in
   List.iter (fun path ->
