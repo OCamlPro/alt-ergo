@@ -243,7 +243,7 @@ let main () =
         Filename.extension path |> set_output_format;
         let cin = open_in path in
         let content = read_all cin in
-        In_channel.close cin;
+        close_in cin;
         `Raw (filename, content))
     in
     (* We use the full mode since the incremental mode is not supported by
