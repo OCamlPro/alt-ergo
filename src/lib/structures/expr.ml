@@ -242,20 +242,6 @@ let compare_quant
         if c <> 0 then c
         else compare_triggers f1 f2 trs1 trs2
 
-module Msbt : Map.S with type key = expr SMap.t =
-  Map.Make
-    (struct
-      type t = expr SMap.t
-      let compare a b = SMap.compare compare a b
-    end)
-
-module Msbty : Map.S with type key = Ty.t Ty.M.t =
-  Map.Make
-    (struct
-      type t = Ty.t Ty.M.t
-      let compare a b = Ty.M.compare Ty.compare a b
-    end)
-
 module TSet : Set.S with type elt = expr =
   Set.Make (struct type t = expr let compare = compare end)
 
@@ -583,6 +569,11 @@ module TSubst = struct
   let show sbs = Format.asprintf "%a" pp sbs
 
   module Set = Set.Make(struct
+      type nonrec t = t
+      let compare = compare
+    end)
+
+  module Map = Map.Make(struct
       type nonrec t = t
       let compare = compare
     end)
@@ -1110,6 +1101,8 @@ let no_capture_issue s_t binders =
       false
     end
 
+(* TODO: Trying to separate the functions apply_subs_aux and
+   apply_subst_trigger from mk_forall_bis. *)
 let rec apply_subst_aux ((sbs_t, sbs_ty) as sbs) t =
   if is_ground t || TSubst.is_identical sbs then t
   else
@@ -1349,18 +1342,15 @@ and find_particular_subst =
         if SMap.is_empty sbt then None else Some sbt
       end
 
-
 let apply_subst =
-  let (cache : t Msbty.t Msbt.t TMap.t ref) = ref TMap.empty in
-  fun ((sbs_t, sbs_ty) as sbs) f ->
+  let (cache : t TSubst.Map.t TMap.t ref) = ref TMap.empty in
+  fun sbs f ->
     let ch = !cache in
-    try TMap.find f ch |> Msbt.find sbs_t |> Msbty.find sbs_ty
+    try TMap.find f ch |> TSubst.Map.find sbs
     with Not_found ->
       let nf = apply_subst_aux sbs f in
-      let c_sbt = try TMap.find f ch with Not_found -> Msbt.empty in
-      let c_sbty = try Msbt.find sbs_t c_sbt with Not_found -> Msbty.empty in
-      cache := TMap.add f (Msbt.add sbs_t
-                             (Msbty.add sbs_ty nf c_sbty) c_sbt) ch;
+      let c_sbs = try TMap.find f ch with Not_found -> TSubst.Map.empty in
+      cache := TMap.add f (TSubst.Map.add sbs nf c_sbs) !cache;
       nf
 
 let apply_subst sbs t =

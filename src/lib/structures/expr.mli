@@ -148,6 +148,10 @@ module Subst : sig
   module Set : Set.S with type elt = t
   (** Module of sets of substitutions using the comparison function
       {!val:compare}. *)
+
+  module Map : Map.S with type key = t
+  (** Module of maps of substitutions using the comparison function
+      {!val:compare}. *)
 end
 
 module Set : Set.S with type elt = t
