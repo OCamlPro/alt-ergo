@@ -50,6 +50,9 @@ jobs:
       - name: opam install deps
         run: opam install . --deps-only
 
+      - name: Temporary fix
+        run: opam pin https://github.com/Gbury/dolmen.git
+
       # make use `dune build` which update .opam file if the dune-project is updated
       - name: Make
         run: opam exec -- make
@@ -112,6 +115,9 @@ jobs:
       # Install dependencies
       - name: opam install deps
         run: opam install ./${{ matrix.package }}.opam --deps-only --with-test
+
+      - name: Temporary fix
+        run: opam pin https://github.com/Gbury/dolmen.git
 
       # Run configure script for the package
       - name: Configure ${{ matrix.package }}

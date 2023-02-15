@@ -1,0 +1,21 @@
+type t =
+    A
+  | B of { us : u }
+
+and u =
+    C
+  | D of { us1 : t }
+
+predicate f(x: t) =
+  match x with
+  | A -> true
+  | B(y) -> g(y)
+end
+
+and predicate g(y1: u) =
+  match y1 with
+  | C -> false
+  | D(x) -> not f(x)
+end
+
+goal size : (f(B(D(A))) = false)

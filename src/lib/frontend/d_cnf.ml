@@ -176,7 +176,7 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
 
 and handle_ty_app ?(update = false) ty_c l =
   (* Applies the substitutions in [tysubsts] to each encountered type
-     variable *)
+     variable. *)
   let rec apply_ty_substs tysubsts ty =
     match ty with
     | Ty.Tvar { v; _ } ->
@@ -233,9 +233,8 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
   | Some (
       Adt { cases = [| { cstr = { id_ty; _ }; dstrs; _ } |]; _ }
     ) ->
-    (* records and adts that only have one case are treated in the same way,
-       and considered as records.
-    *)
+    (* Records and adts that only have one case are treated in the same way,
+       and considered as records. *)
     let tyvl = Cache.store_ty_vars_ret id_ty in
     let rev_lbs =
       Array.fold_left (
@@ -321,13 +320,12 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
     end
   in
   Cache.store_sy (DE.Term.Const.hash tcst) sy;
-  (* adding polymorphic types to the cache *)
+  (* Adding polymorphic types to the cache. *)
   Cache.store_ty_vars id_ty
 
 (** Handles the definitions of a list of mutually recursive types.
     - If one of the types is an ADT, the ADTs that have only one case are
-      considered as ADTs as well and not as records.
-*)
+      considered as ADTs as well and not as records. *)
 let mk_mr_ty_decls (tdl: DE.ty_cst list) =
   let handle_ty_decl (ty: Ty.t) (tdef: DE.Ty.def option) =
     match ty, tdef with
@@ -386,10 +384,9 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
 
     | _ -> assert false
   in
-  (* if there are adts in the list of type declarations then records are
+  (* If there are adts in the list of type declarations then records are
      converted to adts, because that's how it's done in the legacy typechecker.
-     But it might be more efficient not to do that.
-  *)
+     But it might be more efficient not to do that. *)
   let rev_tdefs, contains_adts =
     List.fold_left (
       fun (acc, ca) ty_c ->
@@ -421,7 +418,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
           then (
             let ty = Ty.tsum name cns in
             Cache.store_ty (DE.Ty.Const.hash ty_c) ty;
-            (* if it's an enum we don't need the second iteration *)
+            (* If it's an enum we don't need the second iteration. *)
             acc
           )
           else (
@@ -1265,83 +1262,91 @@ let make dloc_file acc stmt =
       C.{ st_decl; st_loc } :: acc
 
     (* Function and predicate definitions *)
-    | { contents =
-          `Defs [
-            `Term_def (
-              _, ({ path; tags; _ } as tcst), tyvars, terml, body
-            )];
-        loc; _
-      } ->
-      Cache.store_tyvl tyvars;
-      let st_loc = dl_to_ael dloc_file loc in
-      let name_base = get_basename path in
+    | { contents = `Defs defs; loc; _ } ->
+      (* For a mutually recursive definition, we have to add all the function
+         names in a row. *)
+      List.iter (fun (def : Typer_Pipe.def) ->
+          match def with
+          | `Term_def (_, ({ path; _ } as tcst), _, _, _) ->
+            let name_base = get_basename path in
+            let sy = Sy.name name_base in
+            Cache.store_sy (DE.Term.Const.hash tcst) sy
+          | _ -> ()
+        ) defs;
+      List.map (fun (def : Typer_Pipe.def) ->
+          match def with
+          | `Term_def ( _, ({ path; tags; _ } as tcst), tyvars, terml, body) ->
+            Cache.store_tyvl tyvars;
+            let st_loc = dl_to_ael dloc_file loc in
+            let name_base = get_basename path in
 
-      let binders_set, defn =
-        let sy = Sy.name name_base in
-        Cache.store_sy (DE.Term.Const.hash tcst) sy;
-        let rty = dty_to_ty body.term_ty in
-        let binders_set, rev_args =
-          List.fold_left (
-            fun (binders_set, acc) (DE.{ path; id_ty; _ } as tv) ->
-              let ty = dty_to_ty id_ty in
-              let sy = Sy.var (Var.of_string (get_basename path)) in
-              Cache.store_sy (DE.Term.Var.hash tv) sy;
-              let e = E.mk_term sy [] ty in
-              SE.add e binders_set, e :: acc
-          ) (SE.empty, []) terml
-        in
-        let e = E.mk_term sy (List.rev rev_args) rty in
-        binders_set, e
-      in
+            let binders_set, defn =
+              let rty = dty_to_ty body.term_ty in
+              let binders_set, rev_args =
+                List.fold_left (
+                  fun (binders_set, acc) (DE.{ path; id_ty; _ } as tv) ->
+                    let ty = dty_to_ty id_ty in
+                    let sy = Sy.var (Var.of_string (get_basename path)) in
+                    Cache.store_sy (DE.Term.Var.hash tv) sy;
+                    let e = E.mk_term sy [] ty in
+                    SE.add e binders_set, e :: acc
+                ) (SE.empty, []) terml
+              in
+              let sy = Cache.find_sy (DE.Term.Const.hash tcst) in
+              let e = E.mk_term sy (List.rev rev_args) rty in
+              binders_set, e
+            in
 
-      let loc = st_loc in
+            let loc = st_loc in
 
-      begin match DStd.Tag.get tags DE.Tags.predicate with
-        | Some () ->
-          let decl_kind = E.Dpredicate defn in
-          let ff =
-            mk_expr ~loc ~name_base
-              ~toplevel:false ~decl_kind body
-          in
-          let qb = E.mk_eq ~iff:true defn ff in
-          let binders = E.mk_binders binders_set in
-          let ff =
-            E.mk_forall name_base Loc.dummy binders [] qb (-42)
-              ~toplevel:true ~decl_kind
-          in
-          assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
-          let ff = E.purify_form ff in
-          let e =
-            if Ty.Svty.is_empty (E.free_type_vars ff) then ff
-            else
-              let id = E.id ff in
-              E.mk_forall name_base loc
-                Symbols.Map.empty [] ff id ~toplevel:true ~decl_kind
-          in
-          C.{ st_decl = C.PredDef (e, name_base); st_loc } :: acc
-        | None ->
-          let decl_kind = E.Dfunction defn in
-          let ff =
-            mk_expr ~loc ~name_base
-              ~toplevel:false ~decl_kind body
-          in
-          let qb = E.mk_eq ~iff:false defn ff in
-          let binders = E.mk_binders binders_set in
-          let ff =
-            E.mk_forall name_base Loc.dummy binders [] qb (-42)
-              ~toplevel:true ~decl_kind
-          in
-          assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
-          let ff = E.purify_form ff in
-          let e =
-            if Ty.Svty.is_empty (E.free_type_vars ff) then ff
-            else
-              let id = E.id ff in
-              E.mk_forall name_base loc
-                Symbols.Map.empty [] ff id ~toplevel:true ~decl_kind
-          in
-          C.{ st_decl = C.Assume (name_base, e, true); st_loc } :: acc
-      end
+            begin match DStd.Tag.get tags DE.Tags.predicate with
+              | Some () ->
+                let decl_kind = E.Dpredicate defn in
+                let ff =
+                  mk_expr ~loc ~name_base
+                    ~toplevel:false ~decl_kind body
+                in
+                let qb = E.mk_eq ~iff:true defn ff in
+                let binders = E.mk_binders binders_set in
+                let ff =
+                  E.mk_forall name_base Loc.dummy binders [] qb (-42)
+                    ~toplevel:true ~decl_kind
+                in
+                assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
+                let ff = E.purify_form ff in
+                let e =
+                  if Ty.Svty.is_empty (E.free_type_vars ff) then ff
+                  else
+                    let id = E.id ff in
+                    E.mk_forall name_base loc
+                      Symbols.Map.empty [] ff id ~toplevel:true ~decl_kind
+                in
+                C.{ st_decl = C.PredDef (e, name_base); st_loc }
+              | None ->
+                let decl_kind = E.Dfunction defn in
+                let ff =
+                  mk_expr ~loc ~name_base
+                    ~toplevel:false ~decl_kind body
+                in
+                let qb = E.mk_eq ~iff:false defn ff in
+                let binders = E.mk_binders binders_set in
+                let ff =
+                  E.mk_forall name_base Loc.dummy binders [] qb (-42)
+                    ~toplevel:true ~decl_kind
+                in
+                assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
+                let ff = E.purify_form ff in
+                let e =
+                  if Ty.Svty.is_empty (E.free_type_vars ff) then ff
+                  else
+                    let id = E.id ff in
+                    E.mk_forall name_base loc
+                      Symbols.Map.empty [] ff id ~toplevel:true ~decl_kind
+                in
+                C.{ st_decl = C.Assume (name_base, e, true); st_loc }
+            end
+          | _ -> assert false
+        ) defs |> List.rev_append acc
 
     | {contents = `Decls [td]; _ } ->
       begin match td with

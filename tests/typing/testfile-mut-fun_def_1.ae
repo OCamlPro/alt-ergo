@@ -1,0 +1,21 @@
+type t =
+    A
+  | B of { us : u }
+
+and u =
+    C
+  | D of { us1 : t }
+
+function f(x: t) : int =
+  match x with
+  | A -> 1
+  | B(y) -> (1 + g(y))
+end
+
+and function g(y1: u) : int =
+  match y1 with
+  | C -> 1
+  | D(x) -> (1 + f(x))
+end
+
+goal size : (f(B(D(A))) = 3)

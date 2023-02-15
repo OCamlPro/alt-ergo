@@ -147,11 +147,11 @@ gentest: $(wildcard tests/**/*)
 	dune exec -- tools/gentest.exe tests/
 
 # Run non-regression tests.
-runtest: bin
+runtest: gentest bin
 	dune build @runtest
 
 # Run non-regression tests for the CI.
-runtest-ci: bin
+runtest-ci: gentest bin
 	dune build @runtest-ci
 
 # Promote new outputs of the tests.
