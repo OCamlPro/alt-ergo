@@ -104,11 +104,39 @@ and trigger = (*private*) {
 }
 (** Type of multi-triggers. *)
 
+module Subst : sig
+  type nonrec t = t Symbols.Map.t * Ty.subst
+
+  exception Collision
+  (** This exception is raised while trying to compose two incompatible
+      substitutions. *)
+
+  val id : t
+  (** [id] is the identical substitution. *)
+
+  val compose : t -> t -> t
+  (** [compose sbs1 sbs2] compose the substitutions [sbs1] and [sbs2]. If
+      [sbs1] and [sbs2] does not agree on some variables, the exception
+      {!exception:Collision} is raised. *)
+
+  val compare : t -> t -> int
+  val equal : t -> t -> bool
+
+  val pp : Format.formatter -> t -> unit
+  (** [pp fmt sbs] pretty print the substitution [sbs] on the formatter
+      [fmt]. *)
+
+  val show : t -> string
+  (** [show sbs] produce the string displaying by [pp]. *)
+
+  module Set : Set.S with type elt = t
+  (** Module of sets of substitutions using the comparison function
+      {!val:compare}. *)
+end
+
 module Set : Set.S with type elt = t
 
 module Map : Map.S with type key = t
-
-type subst = t Symbols.Map.t * Ty.subst
 
 type term_view = private
   | Term of view
@@ -153,8 +181,6 @@ val compare : t -> t -> int
 val equal : t -> t -> bool
 val hash  : t -> int
 val uid   : t -> int
-val compare_subst : subst -> subst -> int
-val equal_subst : subst -> subst -> bool
 val compare_quant : quantified -> quantified -> int
 val compare_let : letin -> letin -> int
 
@@ -216,8 +242,8 @@ val mk_ite : t -> t -> t -> int -> t
 
 (** Substitutions *)
 
-val apply_subst : subst -> t -> t
-val apply_subst_trigger : subst -> trigger -> trigger
+val apply_subst : Subst.t -> t -> t
+val apply_subst_trigger : Subst.t -> trigger -> trigger
 
 (** Subterms, and related stuff *)
 

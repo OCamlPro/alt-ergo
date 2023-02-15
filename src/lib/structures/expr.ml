@@ -110,8 +110,6 @@ and trigger = {
 
 type expr = t
 
-type subst = expr SMap.t * Ty.subst
-
 type term_view =
   | Term of view
   | Not_a_term of {is_lit : bool}
@@ -154,13 +152,6 @@ let equal t1 t2 =  t1 == t2
 let hash t = t.tag
 
 let uid t = t.tag
-
-let compare_subst (s_t1, s_ty1) (s_t2, s_ty2) =
-  let c = Ty.compare_subst s_ty1 s_ty2 in
-  if c<>0 then c else SMap.compare compare s_t1 s_t2
-
-let equal_subst (s_t1, s_ty1) (s_t2, s_ty2) =
-  Ty.equal_subst s_ty1 s_ty2 || SMap.equal equal s_t1 s_t2
 
 let compare_let let1 let2 =
   let c = Sy.compare let1.let_v let2.let_v in
@@ -548,6 +539,40 @@ and print_triggers fmt trs =
       fprintf fmt "| %a@," print_list l;
     ) trs
 
+module Subst = struct
+  type t = expr Sy.Map.t * Ty.subst
+
+  exception Collision
+
+  let id = (Sy.Map.empty, Ty.M.empty)
+
+  let compose (sbs_t1, sbs_ty1) (sbs_t2, sbs_ty2) =
+    let sbs_ty = Ty.union_subst sbs_ty1 sbs_ty2 in
+    let sbs_t = Sy.Map.union (fun _ t1 t2 ->
+        if not @@ equal t1 t2 then
+          raise Collision
+        else Some t1) sbs_t1 sbs_t2
+    in
+    (sbs_t, sbs_ty)
+
+  let compare (sbs_t1, sbs_ty1) (sbs_t2, sbs_ty2) =
+    let c = Ty.compare_subst sbs_ty1 sbs_ty2 in
+    if c <> 0 then c else Sy.Map.compare compare sbs_t1 sbs_t2
+
+  let equal (sbs_t1, sbs_ty1) (sbs_t2, sbs_ty2) =
+    Ty.equal_subst sbs_ty1 sbs_ty2 || Sy.Map.equal equal sbs_t1 sbs_t2
+
+  let pp fmt (sbs_t, sbs_ty) =
+    Format.fprintf fmt "sbs= %a | sty= %a" (Sy.Map.print print) sbs_t
+      Ty.print_subst sbs_ty
+
+  let show sbs = Format.asprintf "%a" pp sbs
+
+  module Set = Set.Make(struct
+      type nonrec t = t
+      let compare = compare
+    end)
+end
 
 (** Some auxiliary functions *)
 
