@@ -70,7 +70,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   type theory = X.t
 
   type t = {
-    fils : E.t list ME.t SubstE.t;
+    fils : E.t list ME.t Symbols.Map.t;
     info : info ME.t;
     (* A map of the terms to their information. *)
 
@@ -85,7 +85,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   exception Echec
 
   let empty = {
-    fils = SubstE.empty;
+    fils = Symbols.Map.empty;
     info = ME.empty;
     pats = [ ];
     max_t_depth = 0;
@@ -190,16 +190,28 @@ module Make (X : Arg) : S with type theory = X.t = struct
       op_gen i.age g , op_but i.but b
     with Not_found -> g , b
 
+  let rm x lst = List.filter (fun y -> E.compare x y <> 0) lst
+
+  let rec permutations = function
+    | [] -> []
+    | x :: [] -> [[x]]
+    | lst ->
+      List.fold_left (fun acc x ->
+          acc @ List.map (fun p -> x :: p) (permutations (rm x lst))
+        ) [] lst
+
   let add_term info t env =
     Debug.add_term t;
     let rec add_rec env t =
       if ME.mem t env.info then env
-      else
+      else begin
         match E.term_view t with
         | E.Term { E.f = f; xs = xs; _ } ->
           let env =
+            (* Retrieve all the known terms whose the top symbol is f. *)
             let map_f =
-              try SubstE.find f env.fils with Not_found -> ME.empty in
+              try Symbols.Map.find f env.fils with Not_found -> ME.empty
+            in
 
             (* - l'age d'un terme est le min entre l'age passe en argument
                et l'age dans la map
@@ -218,7 +230,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
                 info.term_from_terms
             in
             { env with
-              fils = SubstE.add f (ME.add t xs map_f) env.fils;
+              fils = Symbols.Map.add f (ME.add t xs map_f) env.fils;
               info =
                 ME.add t
                   { age=g; lem_orig = from_lems; but=b;
@@ -232,6 +244,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           Printer.print_err
             "%a is not a term, is_lit = %b" E.print t is_lit;
           assert false
+      end
     in
     (* l'age limite des termes, au dela ils ne sont pas consideres par le
        matching *)
@@ -244,7 +257,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       {sbs=s_t; sty=s_ty; gen=g; goal=b;
        s_term_orig=s_torig;
        s_lem_orig = s_lorig} lsbt_acc =
-    SubstE.fold
+    Symbols.Map.fold
       (fun _ s l ->
          ME.fold
            (fun t _ l ->
@@ -476,7 +489,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       let { sty; gen = g; goal = b; _ } = sg in
       let f_aux t xs lsbt =
         (* maybe put 3 as a rational parameter in the future *)
-        let too_big = (E.depth t) > 4 * env.max_t_depth in
+        let too_big = (E.depth t) > 10000 * env.max_t_depth in
         if too_big then
           lsbt
         else
@@ -493,7 +506,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
             List.rev_append aux lsbt
           with Echec | Ty.TypeClash _ -> lsbt
       in
-      try ME.fold f_aux (SubstE.find f env.fils) lsbt_acc
+      try ME.fold f_aux (Symbols.Map.find f env.fils) lsbt_acc
       with Not_found -> lsbt_acc
 
   (*  *)

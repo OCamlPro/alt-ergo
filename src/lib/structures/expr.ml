@@ -1619,7 +1619,6 @@ and elim_let_rec subst in_e ~recursive ~conjs =
     let f = apply_subst (subst, Ty.esubst) in_e in
     List.fold_left (fun acc func -> func acc) f conjs
 
-
 let elim_let ~recursive letin =
   (* use a list of conjunctions for non inlined lets
      (ie. Let-sko = let-in branche /\ ...)
@@ -1627,7 +1626,6 @@ let elim_let ~recursive letin =
   let res = elim_let ~recursive ~conjs:[] SMap.empty letin in
   assert (is_ground res);
   res
-
 
 let elim_iff f1 f2 id ~with_conj =
   if with_conj then
@@ -1999,7 +1997,7 @@ module Triggers = struct
            | [{ f = Sy.Op Sy.Plus; _ }] -> false
            | [{ f = Sy.Op Sy.Minus; _ }] -> false
            | _ -> true
-        )mono
+        ) mono
     in
     (* no triggers whose head is '+' or '-' if alternative triggers
        are computed *)

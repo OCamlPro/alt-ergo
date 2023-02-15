@@ -229,7 +229,7 @@ val unify : t -> t -> unit
       are left modified, which may prevent future unifications. *)
 
 val matching : subst -> t -> t -> subst
-(** Matching of types (non-destructive). [matching pat t] returns a
+(** Matching of types (non-destructive). [matching pat t] return a
     substitution [subst] such that [apply_subst subst pat] is
     equal to [t]. *)
 

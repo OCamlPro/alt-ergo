@@ -191,7 +191,8 @@ let rec make_term up_qv quant_basename t =
         match s, ty with
         | Sy.Op Sy.Plus, (Ty.Tint | Ty.Treal) -> E.mk_plus t1 t2 ty
         | Sy.Op Sy.Mult, (Ty.Tint | Ty.Treal) -> E.mk_mult t1 t2 ty
-        | _ -> E.mk_term s [t1; t2] ty
+        | _ ->
+          E.mk_term s [t1; t2] ty
       end
 
     | TTprefix ((Sy.Op Sy.Minus) as s, n) ->

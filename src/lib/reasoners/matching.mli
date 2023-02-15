@@ -50,7 +50,8 @@ module type S = sig
   (** [make ~max_t_depth e trs]. *)
 
   val add_term : term_info -> Expr.t -> t -> t
-  (** [add_term info e env] add the term [e] to the environment [env]. *)
+  (** [add_term info e env] add the term [e] and its subterms to
+      the environment [env]. *)
 
   val max_term_depth : t -> int -> t
   (** [max_term_depth env i] change the maximum of depth visiting if
