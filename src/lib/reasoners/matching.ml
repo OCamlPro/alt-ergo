@@ -30,10 +30,9 @@ open Format
 open Options
 open Matching_types
 
+module Sy = Symbols
 module E = Expr
 module ME = E.Map
-module SubstE = Symbols.Map
-
 
 module type S = sig
   type t
@@ -43,8 +42,8 @@ module type S = sig
 
   val make:
     max_t_depth:int ->
-    Matching_types.info ME.t ->
-    E.t list ME.t SubstE.t ->
+    Matching_types.info Expr.Map.t ->
+    Expr.t list Expr.Map.t Symbols.Map.t ->
     Matching_types.trigger_info list ->
     t
 
@@ -52,7 +51,7 @@ module type S = sig
   val max_term_depth : t -> int -> t
   val add_triggers :
     Util.matching_env -> t -> (Expr.t * int * Explanation.t) ME.t -> t
-  val terms_info : t -> info ME.t * E.t list ME.t SubstE.t
+  val terms_info : t -> info ME.t * E.t list ME.t Symbols.Map.t
   val query :
     Util.matching_env -> t -> theory -> (trigger_info * gsubst list) list
 
@@ -70,7 +69,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   type theory = X.t
 
   type t = {
-    fils : E.t list ME.t Symbols.Map.t;
+    fils : E.t list ME.t Sy.Map.t;
     info : info ME.t;
     (* A map of the terms to their information. *)
 
@@ -112,50 +111,47 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
     let match_pats_modulo pat lsubsts =
       if get_debug_matching() >= 3 then
-        let print fmt { sbs; sty; _ } =
-          fprintf fmt ">>> sbs= %a | sty= %a@ "
-            (SubstE.print E.print) sbs Ty.print_subst sty
+        let print fmt { sbs; _ } =
+          fprintf fmt ">>> sbs= %a@ " Expr.Subst.pp sbs
         in
         print_dbg
           ~module_name:"Matching" ~function_name:"match_pats_modulo"
           "@[<v 2>match_pat_modulo: %a  with accumulated substs@ %a@]"
           E.print pat (pp_list_no_space print) lsubsts
 
-    let match_one_pat { sbs; sty; _ } pat0 =
+    let match_one_pat { sbs; _ } pat0 =
       if get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_one_pat"
-          "match_pat: %a with subst: sbs= %a | sty= %a"
-          E.print pat0 (SubstE.print E.print) sbs Ty.print_subst sty
+          "match_pat: %a with subst: %a"
+          E.print pat0 Expr.Subst.pp sbs
 
 
-    let match_one_pat_against { sbs; sty; _ } pat0 t =
+    let match_one_pat_against { sbs; _ } pat0 t =
       if get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_one_pat_against"
           "@[<v 0>match_pat: %a against term %a@ \
-           with subst:  sbs= %a | sty= %a@]"
+           with subst: %a@]"
           E.print pat0
           E.print t
-          (SubstE.print E.print) sbs
-          Ty.print_subst sty
+          Expr.Subst.pp sbs
 
-    let match_term { sbs; sty; _ } t pat =
+    let match_term { sbs; _ } t pat =
       if get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_term"
-          "I match %a against %a with subst: sbs=%a | sty= %a"
-          E.print pat E.print t (SubstE.print E.print) sbs Ty.print_subst sty
+          "I match %a against %a with subst: %a"
+          E.print pat E.print t Expr.Subst.pp sbs
 
-    let match_list { sbs; sty; _ } pats xs =
+    let match_list { sbs; _ } pats xs =
       if get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_list"
-          "I match %a against %a with subst: sbs=%a | sty= %a"
+          "I match %a against %a with subst: %a"
           E.print_list pats
           E.print_list xs
-          (SubstE.print E.print) sbs
-          Ty.print_subst sty
+          Expr.Subst.pp sbs
 
     let match_class_of t cl =
       if get_debug_matching() >= 3 then
@@ -177,8 +173,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
         List.iter
           (fun gsbt ->
              print_dbg ~header:false
-               ">>> sbs = %a  and  sbty = %a@ "
-               (SubstE.print E.print) gsbt.sbs Ty.print_subst gsbt.sty
+               ">>> %a@ "
+               Expr.Subst.pp gsbt.sbs
           )res
 
   end
@@ -254,27 +250,29 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   let all_terms
       f ty env tbox
-      {sbs=s_t; sty=s_ty; gen=g; goal=b;
-       s_term_orig=s_torig;
-       s_lem_orig = s_lorig} lsbt_acc =
+      { sbs = (sbs_t, sbs_ty); gen = g; goal = b;
+        s_term_orig = s_torig; s_lem_orig = s_lorig } lsbt_acc =
     Symbols.Map.fold
       (fun _ s l ->
          ME.fold
            (fun t _ l ->
               try
-                let s_ty = Ty.matching s_ty ty (E.type_info t) in
-                let ng , but =
+                let sbs =
+                  (sbs_t, Ty.matching sbs_ty ty (E.type_info t))
+                in
+                let ng, but =
                   try
                     let { age = ng; but = bt; _ } =
                       ME.find t env.info
                     in
-                    max ng g , bt || b
-                  with Not_found -> g , b
+                    max ng g, bt || b
+                  with Not_found -> g, b
                 in
-                (* with triggers that are variables, always normalize substs *)
+                (* With triggers that are variables, always normalize
+                   substitutions. *)
                 let t = X.term_repr tbox t ~init_term:true in
-                { sbs = SubstE.add f t s_t;
-                  sty = s_ty;
+                let sbs = Expr.Subst.add_term f t sbs in
+                { sbs;
                   gen = ng;
                   goal = but;
                   s_term_orig = t :: s_torig;
@@ -313,18 +311,18 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let are_equal_full tbox t s =
     wrap_are_equal_generic tbox t s true cache_are_equal_full
 
-  let add_msymb tbox f t ({ sbs = s_t; _ } as sg) max_t_depth =
-    if SubstE.mem f s_t then
-      let s = SubstE.find f s_t in
-      if are_equal_full tbox t s == None then raise Echec;
-      sg
-    else
-      let t =
-        if (E.depth t) > max_t_depth || get_normalize_instances () then
-          X.term_repr tbox t ~init_term:true
-        else t
-      in
-      {sg with sbs=SubstE.add f t s_t}
+  let add_msymb tbox f t ({ sbs; _ } as sg) max_t_depth =
+    match Expr.Subst.apply_to_var sbs f with
+    | Some s when are_equal_full tbox t s == None -> raise Echec
+    | Some _ -> sg
+    | None -> begin
+        let t =
+          if (E.depth t) > max_t_depth || get_normalize_instances () then
+            X.term_repr tbox t ~init_term:true
+          else t
+        in
+        { sg with sbs = Expr.Subst.add_term f t sbs }
+      end
 
   let (-@) l1 l2 =
     match l1, l2 with
@@ -393,7 +391,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         | _ -> []
 
   let rec match_term mconf env tbox
-      ({ sty = s_ty; gen = g; goal = b; _ } as sg) pat t =
+      ({ sbs = (sbs_t, sbs_ty); gen = g; goal = b; _ } as sg) pat t =
     Options.exec_thread_yield ();
     Debug.match_term sg t pat;
     let { E.f = f_pat; xs = pats; ty = ty_pat; _ } =
@@ -401,27 +399,25 @@ module Make (X : Arg) : S with type theory = X.t = struct
       | E.Not_a_term _ -> assert false
       | E.Term tt -> tt
     in
+    let sbs_ty = Ty.matching sbs_ty ty_pat (E.type_info t) in
     match f_pat with
     |  Symbols.Var _ when Symbols.equal f_pat Symbols.underscore ->
       begin
-        try [ { sg with sty = Ty.matching s_ty ty_pat (E.type_info t) } ]
+        try [ { sg with sbs = (sbs_t, sbs_ty) } ]
         with Ty.TypeClash _ -> raise Echec
       end
     | Symbols.Var _ ->
       let sb =
         (try
-           let s_ty = Ty.matching s_ty ty_pat (E.type_info t) in
-           let g',b' = infos max (||) t g b env in
-           add_msymb tbox f_pat t
-             { sg with sty=s_ty; gen=g'; goal=b' }
+           let gen, goal = infos max (||) t g b env in
+           add_msymb tbox f_pat t { sg with sbs = (sbs_t, sbs_ty); gen; goal }
              env.max_t_depth
          with Ty.TypeClash _ -> raise Echec)
       in
       [sb]
     | _ ->
       try
-        let s_ty = Ty.matching s_ty ty_pat (E.type_info t) in
-        let gsb = { sg with sty = s_ty } in
+        let gsb = { sg with sbs = (sbs_t, sbs_ty) } in
         if E.is_ground pat &&
            are_equal_light tbox pat t != None then
           [gsb]
@@ -477,7 +473,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let match_one_pat mconf env tbox pat0 lsbt_acc sg =
     Steps.incr (Steps.Matching);
     Debug.match_one_pat sg pat0;
-    let pat = E.apply_subst (sg.sbs, sg.sty) pat0 in
+    let pat = E.apply_subst sg.sbs pat0 in
     let { E.f = f; xs = pats; ty = ty; _ } =
       match E.term_view pat with
       | E.Not_a_term _ -> assert false
@@ -486,7 +482,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     match f with
     | Symbols.Var _ -> all_terms f ty env tbox sg lsbt_acc
     | _ ->
-      let { sty; gen = g; goal = b; _ } = sg in
+      let { sbs = (sbs_t, sbs_ty); gen = g; goal = b; _ } = sg in
       let f_aux t xs lsbt =
         (* maybe put 3 as a rational parameter in the future *)
         let too_big = (E.depth t) > 10000 * env.max_t_depth in
@@ -495,11 +491,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
         else
           try
             Debug.match_one_pat_against sg pat0 t;
-            let s_ty = Ty.matching sty ty (E.type_info t) in
+            let s_ty = Ty.matching sbs_ty ty (E.type_info t) in
             let gen, but = infos max (||) t g b env in
             let sg =
               { sg with
-                sty = s_ty; gen = gen; goal = but;
+                sbs = (sbs_t, s_ty); gen = gen; goal = but;
                 s_term_orig = t::sg.s_term_orig }
             in
             let aux = match_list mconf env tbox sg pats xs in
@@ -533,14 +529,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
     if List.length pats_list > Options.get_max_multi_triggers_size () then
       []
     else
-      let egs =
-        { sbs = SubstE.empty;
-          sty = Ty.esubst;
-          gen = 0;
-          goal = false;
-          s_term_orig = [];
-          s_lem_orig = pat_info.trigger_orig;
-        }
+      let egs = {
+        sbs = Expr.Subst.id;
+        gen = 0;
+        goal = false;
+        s_term_orig = [];
+        s_lem_orig = pat_info.trigger_orig;
+      }
       in
       match pats_list with
       | []  -> []

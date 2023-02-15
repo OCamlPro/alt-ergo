@@ -30,11 +30,8 @@
     e-matching module. *)
 
 type gsubst = {
-  sbs : Expr.t Symbols.Map.t;
-  (** The annotated term substitution. *)
-
-  sty : Ty.subst;
-  (** The annotated type substitution. *)
+  sbs : Expr.Subst.t;
+  (** The annotated term and type substitution. *)
 
   gen : int;
   (** The age of the substition which is the age of the oldest term in it. *)

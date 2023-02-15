@@ -105,7 +105,8 @@ and trigger = (*private*) {
 (** Type of multi-triggers. *)
 
 module Subst : sig
-  type nonrec t = t Symbols.Map.t * Ty.subst
+  type expr = t
+  type t = expr Symbols.Map.t * Ty.subst
 
   exception Collision
   (** This exception is raised while trying to compose two incompatible
@@ -114,10 +115,17 @@ module Subst : sig
   val id : t
   (** [id] is the identical substitution. *)
 
+  val apply_to_var : t -> Symbols.t -> expr option
+
+  val apply_to_ty : t -> int -> Ty.t option
+
   val compose : t -> t -> t
   (** [compose sbs1 sbs2] compose the substitutions [sbs1] and [sbs2]. If
       [sbs1] and [sbs2] does not agree on some variables, the exception
       {!exception:Collision} is raised. *)
+
+  val add_term : Symbols.t -> expr -> t -> t
+  val add_terms : t -> expr Symbols.Map.t -> t
 
   val compare : t -> t -> int
   val equal : t -> t -> bool

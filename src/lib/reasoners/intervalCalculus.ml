@@ -2278,8 +2278,7 @@ let new_facts_for_axiom
               subst_list) ->
       List.fold_left
         (fun (env, acc)
-          {sbs = sbs;
-           sty = sty;
+          {sbs;
            gen = g;
            goal = b;
            s_term_orig = torig;
@@ -2289,13 +2288,12 @@ let new_facts_for_axiom
                   appearing in semantic triggers
                 *)
           let lem_name = E.name_of_lemma orig in
-          let s = sbs, sty in
           if get_debug_fpa () >= 2 then
             Printer.print_dbg ~flushed:false
               ~module_name:"IntervalCalculus"
               ~function_name:"new_facts_for_axiom"
               "try to extend synt sbt %a of ax %a@ "
-              (Symbols.Map.print E.print) sbs E.print orig;
+              Expr.Subst.pp sbs E.print orig;
           match tr.E.guard with
           | Some _ -> assert false (*guards not supported for TH axioms*)
 
@@ -2311,7 +2309,7 @@ let new_facts_for_axiom
             env, acc
 
           | None ->
-            match semantic_matching lem_name tr s env uf optimized with
+            match semantic_matching lem_name tr sbs env uf optimized with
             | env, None ->
               if get_debug_fpa () >= 2 then
                 Printer.print_dbg
@@ -2351,7 +2349,7 @@ let new_facts_for_axiom
                     theory_elim = false;
                   }
                 in
-                profile_produced_terms menv lorig nf s tr.E.content;
+                profile_produced_terms menv lorig nf sbs tr.E.content;
                 let dep =
                   if not (Options.get_unsat_core() || Options.get_profiling())
                   then

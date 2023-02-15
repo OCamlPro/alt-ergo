@@ -540,20 +540,31 @@ and print_triggers fmt trs =
     ) trs
 
 module Subst = struct
+  type expr = t
   type t = expr Sy.Map.t * Ty.subst
 
   exception Collision
 
+  let fail _ t1 t2 =
+    if not @@ equal t1 t2 then
+      raise Collision
+    else Some t1
+
   let id = (Sy.Map.empty, Ty.M.empty)
+
+  let apply_to_var (sbs_t, _) sy = Sy.Map.find_opt sy sbs_t
+
+  let apply_to_ty (_, sbs_ty) id = Ty.M.find_opt id sbs_ty
 
   let compose (sbs_t1, sbs_ty1) (sbs_t2, sbs_ty2) =
     let sbs_ty = Ty.union_subst sbs_ty1 sbs_ty2 in
-    let sbs_t = Sy.Map.union (fun _ t1 t2 ->
-        if not @@ equal t1 t2 then
-          raise Collision
-        else Some t1) sbs_t1 sbs_t2
+    let sbs_t = Sy.Map.union fail sbs_t1 sbs_t2
     in
     (sbs_t, sbs_ty)
+
+  let add_term sy t (sbs_t, sbs_ty) = (Sy.Map.add sy t sbs_t, sbs_ty)
+
+  let add_terms (sbs_t, sbs_ty) s = (Sy.Map.union fail s sbs_t, sbs_ty)
 
   let compare (sbs_t1, sbs_ty1) (sbs_t2, sbs_ty2) =
     let c = Ty.compare_subst sbs_ty1 sbs_ty2 in

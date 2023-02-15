@@ -279,8 +279,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         let kept = ref 0 in
         List.fold_left
           (fun acc
-            {Matching_types.sbs = sbs;
-             sty = sty;
+            {Matching_types.sbs = (sbs, sty);
              gen = g;
              goal = b;
              s_term_orig = torig;

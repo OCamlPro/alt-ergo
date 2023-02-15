@@ -47,7 +47,7 @@ module type S = sig
     Expr.t list Expr.Map.t Symbols.Map.t ->
     Matching_types.trigger_info list ->
     t
-  (** [make ~max_t_depth e trs]. *)
+  (** [make ~max_t_depth e trs] create a new environment. *)
 
   val add_term : term_info -> Expr.t -> t -> t
   (** [add_term info e env] add the term [e] and its subterms to
