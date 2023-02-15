@@ -213,6 +213,17 @@ let main () =
         Printer.print_wrn
           "The output format %s is not supported by the Dolmen frontend." s
   in
+  (* The function In_channel.input_all is not available before OCaml 4.14. *)
+  let read_all ch =
+    let b = Buffer.create 113 in
+    try
+      while true do
+        Buffer.add_channel b ch 30
+      done;
+      assert false
+    with End_of_file ->
+      Buffer.contents b
+  in
   let mk_state ?(debug = false) ?(report_style = State.Contextual)
       ?(reports =
         Dolmen_loop.Report.Conf.mk
@@ -231,7 +242,7 @@ let main () =
       else (
         Filename.extension path |> set_output_format;
         let cin = open_in path in
-        let content = In_channel.input_all cin in
+        let content = read_all cin in
         In_channel.close cin;
         `Raw (filename, content))
     in
