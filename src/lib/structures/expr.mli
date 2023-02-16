@@ -123,10 +123,6 @@ module Subst : sig
 
   val apply_to_ty : t -> int -> Ty.t option
 
-  val apply_to_trigger : t -> trigger -> trigger
-
-  val apply : t -> expr -> expr
-
   val compose : t -> t -> t
   (** [compose sbs1 sbs2] compose the substitutions [sbs1] and [sbs2]. If
       [sbs1] and [sbs2] does not agree on some variables, the exception
@@ -290,6 +286,9 @@ val atoms_rec_of_form :
     terms *)
 val max_ground_terms_rec_of_form : t -> Set.t
 
+val apply_subst_to_trigger : Subst.t -> trigger -> trigger
+
+val apply_subst : Subst.t -> t -> t
 
 (** skolemization and other smart constructors for formulas **)
 

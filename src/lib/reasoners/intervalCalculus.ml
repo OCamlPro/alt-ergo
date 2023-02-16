@@ -2108,7 +2108,7 @@ let integrate_mapsTo_bindings sbs maps_to =
         (fun ((sbt, sty) as sbs) (x, tx) ->
            let x = Sy.Var x in
            assert (not (Symbols.Map.mem x sbt));
-           let t = E.Subst.apply sbs tx in
+           let t = E.apply_subst sbs tx in
            let mk, _ = X.make t in
            match P.is_const (poly_of mk) with
            | None ->
@@ -2193,7 +2193,7 @@ let domain_matching _lem_name tr sbt env uf optimized =
              idoms, (x, t) :: maps_to, env, uf
 
            | E.Interval (t, lb, ub) ->
-             let tt = Expr.Subst.apply sbt t in
+             let tt = Expr.apply_subst sbt t in
              assert (E.is_ground tt);
              let uf, _ = Uf.add uf tt in
              let rr, _ex = Uf.find uf tt in
@@ -2208,7 +2208,7 @@ let domain_matching _lem_name tr sbt env uf optimized =
              end
 
            | E.NotTheoryConst t ->
-             let tt = Expr.Subst.apply sbt t in
+             let tt = Expr.apply_subst sbt t in
              let uf, _ = Uf.add uf tt in
              if X.leaves (fst (Uf.find uf tt)) == [] ||
                 X.leaves (fst (X.make tt)) == [] then
@@ -2216,15 +2216,15 @@ let domain_matching _lem_name tr sbt env uf optimized =
              idoms, maps_to, env, uf
 
            | E.IsTheoryConst t ->
-             let tt = Expr.Subst.apply sbt t in
+             let tt = Expr.apply_subst sbt t in
              let uf, _ = Uf.add uf tt in
              let r, _ = X.make tt in
              if X.leaves r != [] then raise (Sem_match_fails env);
              idoms, maps_to, env, uf
 
            | E.LinearDependency (x, y) ->
-             let x = Expr.Subst.apply sbt x in
-             let y = Expr.Subst.apply sbt y in
+             let x = Expr.apply_subst sbt x in
+             let y = Expr.apply_subst sbt y in
              if not (terms_linear_dep env [x;y]) then
                raise (Sem_match_fails env);
              let uf, _ = Uf.add uf x in
@@ -2256,7 +2256,7 @@ let record_this_instance f accepted lorig =
 let profile_produced_terms menv lorig nf s trs =
   if Options.get_profiling() then
     let st0 =
-      List.fold_left (fun st t -> E.sub_terms st (Expr.Subst.apply s t))
+      List.fold_left (fun st t -> E.sub_terms st (Expr.apply_subst s t))
         SE.empty trs
     in
     let name, loc, _ = match E.form_view lorig with
@@ -2322,7 +2322,7 @@ let new_facts_for_axiom
                   ~header:false
                   "semantic matching succeeded:@ %a"
                   (Symbols.Map.print E.print) (fst sbs);
-              let nf = Expr.Subst.apply sbs f in
+              let nf = Expr.apply_subst sbs f in
               (* incrementality/push. Although it's not supported for
                  theories *)
               let nf = E.mk_imp trigger_increm_guard nf 0 in
@@ -2330,7 +2330,7 @@ let new_facts_for_axiom
               record_this_instance nf accepted lorig;
               if accepted then begin
                 let hyp =
-                  List.map (fun f -> Expr.Subst.apply sbs f) tr.E.hyp
+                  List.map (fun f -> Expr.apply_subst sbs f) tr.E.hyp
                 in
                 let p =
                   { E.ff = nf;

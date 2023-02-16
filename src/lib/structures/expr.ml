@@ -525,7 +525,7 @@ and print_triggers fmt trs =
       fprintf fmt "| %a@," print_list l;
     ) trs
 
-module TSubst = struct
+module Subst = struct
   type expr = t
   type t = expr Sy.Map.t * Ty.subst
 
@@ -1104,13 +1104,13 @@ let no_capture_issue s_t binders =
 (* TODO: Trying to separate the functions apply_subs_aux and
    apply_subst_trigger from mk_forall_bis. *)
 let rec apply_subst_aux ((sbs_t, sbs_ty) as sbs) t =
-  if is_ground t || TSubst.is_identical sbs then t
+  if is_ground t || Subst.is_identical sbs then t
   else
     let { f; xs; ty; vars; vty; bind; _ } = t in
     let sbs_t = SMap.filter (fun sy _ -> SMap.mem sy vars) sbs_t in
     let sbs_ty = Ty.M.filter (fun tvar _ -> Ty.Svty.mem tvar vty) sbs_ty in
     let sbs = (sbs_t, sbs_ty) in
-    if TSubst.is_identical sbs then t
+    if Subst.is_identical sbs then t
     else
       let xs', same = Lists.apply (apply_subst_aux sbs) xs in
       let ty' = Ty.apply_subst sbs_ty ty in
@@ -1141,7 +1141,7 @@ let rec apply_subst_aux ((sbs_t, sbs_ty) as sbs) t =
           SMap.for_all (fun sy _ -> not (SMap.mem sy sbs_t)) binders
         );
         let main = apply_subst_aux sbs main in
-        let trs = List.map (apply_subst_trigger sbs) trs in
+        let trs = List.map (apply_subst_to_trigger sbs) trs in
         let binders =
           SMap.fold
             (fun sy (ty,i) bders ->
@@ -1224,7 +1224,7 @@ let rec apply_subst_aux ((sbs_t, sbs_ty) as sbs) t =
       | _ ->
         mk_term f xs' ty'
 
-and apply_subst_trigger subst ({ content; guard; _ } as tr) =
+and apply_subst_to_trigger subst ({ content; guard; _ } as tr) =
   {tr with
    content = List.map (apply_subst_aux subst) content;
    (* semantic_trigger = done on theory side *)
@@ -1285,7 +1285,7 @@ and mk_forall_bis (q : quantified) id =
       let f = apply_subst_aux subst q.main in
       if is_ground f then f
       else
-        let trs = List.map (apply_subst_trigger subst) q.user_trs in
+        let trs = List.map (apply_subst_to_trigger subst) q.user_trs in
         let sko_v   = List.map (apply_subst_aux subst) q.sko_v in
         let binders = SMap.filter (fun x _ -> not (SMap.mem x sbs)) binders in
         let q = {q with binders; user_trs = trs; sko_v; main = f } in
@@ -1343,14 +1343,14 @@ and find_particular_subst =
       end
 
 let apply_subst =
-  let (cache : t TSubst.Map.t TMap.t ref) = ref TMap.empty in
+  let (cache : t Subst.Map.t TMap.t ref) = ref TMap.empty in
   fun sbs f ->
     let ch = !cache in
-    try TMap.find f ch |> TSubst.Map.find sbs
+    try TMap.find f ch |> Subst.Map.find sbs
     with Not_found ->
       let nf = apply_subst_aux sbs f in
-      let c_sbs = try TMap.find f ch with Not_found -> TSubst.Map.empty in
-      cache := TMap.add f (TSubst.Map.add sbs nf c_sbs) !cache;
+      let c_sbs = try TMap.find f ch with Not_found -> Subst.Map.empty in
+      cache := TMap.add f (Subst.Map.add sbs nf c_sbs) !cache;
       nf
 
 let apply_subst sbs t =
@@ -1364,13 +1364,6 @@ let apply_subst sbs t =
       Timers.exec_timer_pause Timers.M_Expr Timers.F_apply_subst;
       raise e
   else apply_subst sbs t
-
-module Subst = struct
-  include TSubst
-
-  let apply_to_trigger = apply_subst_trigger
-  let apply = apply_subst
-end
 
 (** Subterms, and related stuff *)
 

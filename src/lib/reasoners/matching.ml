@@ -473,7 +473,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let match_one_pat mconf env tbox pat0 lsbt_acc sg =
     Steps.incr (Steps.Matching);
     Debug.match_one_pat sg pat0;
-    let pat = E.Subst.apply sg.sbs pat0 in
+    let pat = Expr.apply_subst sg.sbs pat0 in
     let { E.f = f; xs = pats; ty = ty; _ } =
       match E.term_view pat with
       | E.Not_a_term _ -> assert false
