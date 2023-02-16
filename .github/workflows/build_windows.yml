@@ -43,9 +43,9 @@ jobs:
         uses: ocaml/setup-ocaml@v2
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
-          opam-repositories: |
-            windows: https://github.com/fdopen/opam-repository-mingw.git
-            default: https://github.com/ocaml/opam-repository.git
+            #opam-repositories: |
+            #windows: https://github.com/fdopen/opam-repository-mingw.git
+            #default: https://github.com/ocaml/opam-repository.git
 
       # Install dependencies
       - name: Install deps
