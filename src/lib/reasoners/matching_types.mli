@@ -31,7 +31,7 @@
 
 type gsubst = {
   sbs : Expr.Subst.t;
-  (** The annotated term and type substitution. *)
+  (** The annotated substitution. *)
 
   gen : int;
   (** The age of the substition which is the age of the oldest term in it. *)

@@ -25,9 +25,13 @@ module type S = sig
   val id : t
   (** [id] is the identical substitution. *)
 
+  val of_list : (var * val_) list -> t
+
   val is_identical : t -> bool
   (** [is_identical sbs] check if the substitution [sbs] is the trivial
       substitution. *)
+
+  val is_in_domain : var -> t -> bool
 
   val apply : t -> var -> val_
   (** [apply sbs k] apply the substitution [sbs] to the variable [k].
@@ -42,6 +46,8 @@ module type S = sig
       [v] and [w] are not equal for {!val:X.equal_val}.
       Otherwise, the old binding is replaced by the new one. *)
 
+  val unassign : var -> t -> t
+
   val compose : ?force:bool -> t -> t -> t
   (** [compose sbs1 sbs2] compose the substitutions [sbs1] and [sbs2]. If
       [force = false] and [sbs1] and [sbs2] does not agree on some variables,
@@ -49,6 +55,12 @@ module type S = sig
       old bindings are replaced by the new ones. *)
 
   val filter_domain : t -> f:(var -> bool) -> t
+  (** [filter_domain sbs ~f] remove the variables of the domain of [sbs] that
+      does not satisfy the predicate [f]. *)
+
+  val fold : init:'a -> t -> f:(var -> val_ -> 'a -> 'a) -> 'a
+
+  val map : t -> f:(val_ -> val_) -> t
 
   val equal : t -> t -> bool
   (** [equal sbs1 sbs2] check if the substitutions [sbs1] and [sbs2] are equal
@@ -90,6 +102,8 @@ module Make (X : X) : S with type var = X.var and type val_ = X.val_ = struct
 
   let is_identical = M.is_empty
 
+  let is_in_domain = M.mem
+
   let compare = M.compare X.compare_val
 
   let equal = M.equal X.equal_val
@@ -105,6 +119,10 @@ module Make (X : X) : S with type var = X.var and type val_ = X.val_ = struct
     in
     M.update k collision_handler
 
+  let unassign = M.remove
+
+  let of_list = List.fold_left (fun acc (k, v) -> assign k v acc) id
+
   let compose ?(force = false) =
     let collision_handler =
       if force then fun _ _ v2 -> Some v2
@@ -116,6 +134,10 @@ module Make (X : X) : S with type var = X.var and type val_ = X.val_ = struct
     M.union collision_handler
 
   let filter_domain sbs ~f = M.filter (fun v _ -> f v) sbs
+
+  let map sbs ~f = M.map f sbs
+
+  let fold ~init sbs ~f = M.fold f sbs init
 
   let pp fmt sbs = M.iter (fun k v ->
       Format.fprintf fmt "%a -> %a" X.pp_var k X.pp_val v) sbs

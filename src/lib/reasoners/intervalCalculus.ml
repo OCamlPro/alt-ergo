@@ -2105,9 +2105,9 @@ let integrate_mapsTo_bindings sbs maps_to =
   try
     let sbs =
       List.fold_left
-        (fun ((sbt, sty) as sbs) (x, tx) ->
+        (fun ((sbs_t, sbs_ty) as sbs) (x, tx) ->
            let x = Sy.Var x in
-           assert (not (Symbols.Map.mem x sbt));
+           assert (not @@ Expr.TSubst.is_in_domain x sbs_t);
            let t = E.apply_subst sbs tx in
            let mk, _ = X.make t in
            match P.is_const (poly_of mk) with
@@ -2122,7 +2122,7 @@ let integrate_mapsTo_bindings sbs maps_to =
              raise Exit
            | Some c ->
              let tc = mk_const_term (E.type_info t) c in
-             Symbols.Map.add x tc sbt, sty
+             Expr.TSubst.assign x tc sbs_t, sbs_ty
         )sbs maps_to
     in
     Some sbs
@@ -2160,7 +2160,7 @@ let extend_with_domain_substitution =
              | None, Some (q, is_strict) -> (* hs < q or hs <= q *)
                mk_const_term ty (if is_strict then Q.sub q eps else q)
            in
-           Sy.Map.add lb_var lb_val sbt
+           Expr.TSubst.assign lb_var lb_val sbt
       ) idoms sbt
   in
   fun (sbt, sbty) idoms ->
@@ -2236,11 +2236,11 @@ let domain_matching _lem_name tr sbt env uf optimized =
   with Sem_match_fails env -> env, None
 
 
-let semantic_matching lem_name tr sbt env uf optimized =
-  match domain_matching lem_name tr sbt env uf optimized with
+let semantic_matching lem_name tr sbs env uf optimized =
+  match domain_matching lem_name tr sbs env uf optimized with
   | env, None -> env, None
-  | env, Some(idom, mapsTo) ->
-    begin match extend_with_domain_substitution sbt idom with
+  | env, Some (idom, mapsTo) ->
+    begin match extend_with_domain_substitution sbs idom with
       | None -> env, None
       | Some sbs -> env, integrate_mapsTo_bindings sbs mapsTo
     end
@@ -2321,7 +2321,7 @@ let new_facts_for_axiom
                 Printer.print_dbg
                   ~header:false
                   "semantic matching succeeded:@ %a"
-                  (Symbols.Map.print E.print) (fst sbs);
+                  Expr.TSubst.pp (fst sbs);
               let nf = Expr.apply_subst sbs f in
               (* incrementality/push. Although it's not supported for
                  theories *)

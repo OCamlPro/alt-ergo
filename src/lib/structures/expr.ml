@@ -525,46 +525,43 @@ and print_triggers fmt trs =
       fprintf fmt "| %a@," print_list l;
     ) trs
 
+module TSubst = Subst.Make(struct
+    type var = Sy.t
+    type val_ = t
+
+    let compare_var = Sy.compare
+    let compare_val = compare
+    let equal_val = equal
+
+    let pp_var = Sy.print
+    let pp_val = print
+  end)
+
 module Subst = struct
   type expr = t
-  type t = expr Sy.Map.t * Ty.Subst.t
+  type t = TSubst.t * Ty.Subst.t
 
-  exception Collision
-
-  let fail _ t1 t2 =
-    if not @@ equal t1 t2 then
-      raise Collision
-    else Some t1
-
-  let id = (Sy.Map.empty, Ty.Subst.id)
+  let id = (TSubst.id, Ty.Subst.id)
 
   let is_identical (sbs_t, sbs_ty) =
-    Sy.Map.is_empty sbs_t && Ty.Subst.is_identical sbs_ty
-
-  let apply_to_var (sbs_t, _) sy = Sy.Map.find_opt sy sbs_t
-
-  let apply_to_ty (_, sbs_ty) id = Some (Ty.Subst.apply sbs_ty id)
+    TSubst.is_identical sbs_t && Ty.Subst.is_identical sbs_ty
 
   let compose (sbs_t1, sbs_ty1) (sbs_t2, sbs_ty2) =
     let sbs_ty = Ty.Subst.compose sbs_ty1 sbs_ty2 in
-    let sbs_t = Sy.Map.union fail sbs_t1 sbs_t2
-    in
+    let sbs_t = TSubst.compose sbs_t1 sbs_t2 in
     (sbs_t, sbs_ty)
 
-  let add_term sy t (sbs_t, sbs_ty) = (Sy.Map.add sy t sbs_t, sbs_ty)
-
-  let add_terms (sbs_t, sbs_ty) s = (Sy.Map.union fail s sbs_t, sbs_ty)
+  let assign_term sy t (sbs_t, sbs_ty) = (TSubst.assign sy t sbs_t, sbs_ty)
 
   let compare (sbs_t1, sbs_ty1) (sbs_t2, sbs_ty2) =
     let c = Ty.Subst.compare sbs_ty1 sbs_ty2 in
-    if c <> 0 then c else Sy.Map.compare compare sbs_t1 sbs_t2
+    if c <> 0 then c else TSubst.compare sbs_t1 sbs_t2
 
   let equal (sbs_t1, sbs_ty1) (sbs_t2, sbs_ty2) =
-    Ty.Subst.equal sbs_ty1 sbs_ty2 || Sy.Map.equal equal sbs_t1 sbs_t2
+    Ty.Subst.equal sbs_ty1 sbs_ty2 || TSubst.equal sbs_t1 sbs_t2
 
   let pp fmt (sbs_t, sbs_ty) =
-    Format.fprintf fmt "sbs= %a | sty= %a" (Sy.Map.print print) sbs_t
-      Ty.Subst.pp sbs_ty
+    Format.fprintf fmt "sbs= %a | sty= %a" TSubst.pp sbs_t Ty.Subst.pp sbs_ty
 
   let show sbs = Format.asprintf "%a" pp sbs
 
@@ -1085,29 +1082,28 @@ let get_skolem =
     with Not_found ->
       let c = gen_sko ty in Hsko.add hsko v c; c
 
-let no_capture_issue s_t binders =
+let no_capture_issue sbs_t binders =
   let new_v =
-    SMap.fold (fun _ t acc -> merge_vars acc t.vars) s_t SMap.empty
+    TSubst.fold ~init:Sy.Map.empty sbs_t
+      ~f:(fun _ t acc -> merge_vars acc t.vars)
   in
-  let capt_bind = SMap.filter (fun sy _ -> SMap.mem sy new_v) binders in
-  if SMap.is_empty capt_bind then true
+  let capt_bind = Sy.Map.filter (fun sy _ -> SMap.mem sy new_v) binders in
+  if Sy.Map.is_empty capt_bind then true
   else
     begin
       Printer.print_wrn
         "captures between@,%aand%a!@,(captured = %a)"
-        (SMap.print print) s_t
+        TSubst.pp sbs_t
         print_binders binders
         print_binders capt_bind;
       false
     end
 
-(* TODO: Trying to separate the functions apply_subs_aux and
-   apply_subst_trigger from mk_forall_bis. *)
 let rec apply_subst_aux ((sbs_t, sbs_ty) as sbs) t =
   if is_ground t || Subst.is_identical sbs then t
   else
     let { f; xs; ty; vars; vty; bind; _ } = t in
-    let sbs_t = SMap.filter (fun sy _ -> SMap.mem sy vars) sbs_t in
+    let sbs_t = TSubst.filter_domain sbs_t ~f:(fun sy -> Sy.Map.mem sy vars) in
     let sbs_ty =
       Ty.Subst.filter_domain sbs_ty
         ~f:(fun tvar -> Ty.Svty.mem tvar vty)
@@ -1125,7 +1121,7 @@ let rec apply_subst_aux ((sbs_t, sbs_ty) as sbs) t =
         assert (xs == []);
         begin
           try
-            let v = SMap.find f sbs_t in
+            let v = TSubst.apply sbs_t f in
             if is_skolem_cst v then get_skolem v ty else v
           with Not_found ->
             mk_term f [] ty'
@@ -1141,7 +1137,7 @@ let rec apply_subst_aux ((sbs_t, sbs_ty) as sbs) t =
           (* invariant: s_t does not contain other free vars than
              those of t, and binders cannot be free vars of t *)
           not (Options.get_enable_assertions ()) ||
-          SMap.for_all (fun sy _ -> not (SMap.mem sy sbs_t)) binders
+          SMap.for_all (fun sy _ -> not (TSubst.is_in_domain sy sbs_t)) binders
         );
         let main = apply_subst_aux sbs main in
         let trs = List.map (apply_subst_to_trigger sbs) trs in
@@ -1176,8 +1172,10 @@ let rec apply_subst_aux ((sbs_t, sbs_ty) as sbs) t =
         let let_sko2 = apply_subst_aux sbs let_sko in
         (* invariant: s_t only contains vars that are in free in t,
            and let_v cannot be free in t*)
-        assert (not (SMap.mem let_v sbs_t));
-        let in_e2 = apply_subst_aux (SMap.remove let_v sbs_t, sbs_ty) in_e in
+        assert (not @@ TSubst.is_in_domain let_v sbs_t);
+        let in_e2 =
+          apply_subst_aux (TSubst.unassign let_v sbs_t, sbs_ty) in_e
+        in
         assert (let_e != let_e2 || in_e != in_e2);
         mk_let_aux {let_v; let_e=let_e2; in_e=in_e2; let_sko=let_sko2; is_bool}
 
@@ -1247,7 +1245,7 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
     let _, nb_occ = SMap.find let_v in_e.vars in
     if nb_occ = 1 && (let_e.pure (*1*) || Sy.equal let_v in_e.f) ||
        const_term let_e then (* inline in these situations *)
-      apply_subst_aux (SMap.singleton let_v let_e, Ty.Subst.id) in_e
+      apply_subst_aux (TSubst.of_list [(let_v, let_e)], Ty.Subst.id) in_e
     else
       let ty = type_info in_e in
       let d = max let_e.depth in_e.depth in (* no + 1 ? *)
@@ -1283,14 +1281,16 @@ and mk_forall_bis (q : quantified) id =
     match find_particular_subst binders q.user_trs q.main with
     | None -> mk_forall_ter q 0
 
-    | Some sbs ->
-      let subst = sbs, Ty.Subst.id in
-      let f = apply_subst_aux subst q.main in
+    | Some sbs_t ->
+      let sbs = sbs_t, Ty.Subst.id in
+      let f = apply_subst_aux sbs q.main in
       if is_ground f then f
       else
-        let trs = List.map (apply_subst_to_trigger subst) q.user_trs in
-        let sko_v   = List.map (apply_subst_aux subst) q.sko_v in
-        let binders = SMap.filter (fun x _ -> not (SMap.mem x sbs)) binders in
+        let trs = List.map (apply_subst_to_trigger sbs) q.user_trs in
+        let sko_v   = List.map (apply_subst_aux sbs) q.sko_v in
+        let binders =
+          SMap.filter (fun x _ -> not (TSubst.is_in_domain x sbs_t)) binders
+        in
         let q = {q with binders; user_trs = trs; sko_v; main = f } in
         mk_forall_bis q id
 
@@ -1328,21 +1328,21 @@ and find_particular_subst =
     else
       begin
         assert (not (SMap.is_empty binders));
-        let sbt =
+        let sbs_t =
           SMap.fold
-            (fun v (ty, _) sbt ->
+            (fun v (ty, _) sbs_t ->
                try
-                 let f = apply_subst_aux (sbt, Ty.Subst.id) f in
+                 let f = apply_subst_aux (sbs_t, Ty.Subst.id) f in
                  find_subst v (mk_term v [] ty) f;
-                 sbt
+                 sbs_t
                with Found (x, t) ->
-                 assert (not (SMap.mem x sbt));
-                 let one_sbt = SMap.singleton x t, Ty.Subst.id in
-                 let sbt = SMap.map (apply_subst_aux one_sbt) sbt in
-                 SMap.add x t sbt
-            )binders SMap.empty
+                 assert (not @@ TSubst.is_in_domain x sbs_t);
+                 let one_sbs = TSubst.of_list [(x, t)], Ty.Subst.id in
+                 let sbs_t = TSubst.map sbs_t ~f:(apply_subst_aux one_sbs) in
+                 TSubst.assign x t sbs_t
+            ) binders TSubst.id
         in
-        if SMap.is_empty sbt then None else Some sbt
+        if TSubst.is_identical sbs_t then None else Some sbs_t
       end
 
 let apply_subst =
@@ -1571,22 +1571,22 @@ let skolemize { main = f; binders; sko_v; sko_vty; _ } =
   let grounding_sbt =
     List.fold_left
       (fun g_sbt sk_t ->
-         SMap.fold
+         Sy.Map.fold
            (fun sy (ty, _) g_sbt ->
-              if SMap.mem sy g_sbt then g_sbt
-              else SMap.add sy (fresh_name ty) g_sbt
+              if TSubst.is_in_domain sy g_sbt then g_sbt
+              else TSubst.assign sy (fresh_name ty) g_sbt
            ) (free_vars sk_t SMap.empty) g_sbt
-      )SMap.empty sko_v
+      ) TSubst.id sko_v
   in
-  let sbt =
-    SMap.fold
-      (fun x (ty,i) m ->
+  let sbs_t =
+    Sy.Map.fold
+      (fun x (ty, i) m ->
          let t = mk_term (mk_sym i "_sko") sko_v ty in
          let t = apply_subst (grounding_sbt, Ty.Subst.id) t in
-         SMap.add x t m
-      ) binders SMap.empty
+         TSubst.assign x t m
+      ) binders TSubst.id
   in
-  let res = apply_subst_aux (sbt, Ty.Subst.id) f in
+  let res = apply_subst_aux (sbs_t, Ty.Subst.id) f in
   assert (is_ground res);
   res
 
@@ -1616,33 +1616,33 @@ let rec elim_let =
   let ground_sko sko =
     if is_ground sko then sko
     else
-      let sbt =
-        SMap.fold
-          (fun sy (ty, _) sbt -> SMap.add sy (fresh_name ty) sbt)
-          (free_vars sko SMap.empty) SMap.empty
+      let sbs_t =
+        Sy.Map.fold
+          (fun sy (ty, _) sbs_t -> TSubst.assign sy (fresh_name ty) sbs_t)
+          (free_vars sko SMap.empty) TSubst.id
       in
-      apply_subst (sbt, Ty.Subst.id) sko
+      apply_subst (sbs_t, Ty.Subst.id) sko
   in
-  fun ~recursive ~conjs subst { let_v; let_e; in_e; let_sko; _ } ->
+  fun ~recursive ~conjs sbs_t { let_v; let_e; in_e; let_sko; _ } ->
     assert (SMap.mem let_v (free_vars in_e SMap.empty));
     (* usefull when let_sko still contains variables that are not in
        ie_e due to simplification *)
-    let let_sko = apply_subst (subst, Ty.Subst.id) let_sko in
+    let let_sko = apply_subst (sbs_t, Ty.Subst.id) let_sko in
     let let_sko = ground_sko let_sko in
     assert (is_ground let_sko);
-    let let_e = apply_subst (subst, Ty.Subst.id) let_e in
+    let let_e = apply_subst (sbs_t, Ty.Subst.id) let_e in
     if let_sko.nb_nodes >= let_e.nb_nodes && let_e.pure then
-      let subst = SMap.add let_v let_e subst in
+      let subst = TSubst.assign let_v let_e sbs_t in
       elim_let_rec subst in_e ~recursive ~conjs
       [@ocaml.ppwarning "TODO: should also inline form in form. But \
                          not possible to detect if we are not \
                          inlining a form inside a term"]
     else
-      let subst = SMap.add let_v let_sko subst in
+      let sbs_t = TSubst.assign let_v let_sko sbs_t in
       let id = id in_e in
       let equiv = mk_let_equiv let_sko let_e id in
       let conjs = (fun f' -> mk_and equiv f' false id) :: conjs in
-      elim_let_rec subst in_e ~recursive ~conjs
+      elim_let_rec sbs_t in_e ~recursive ~conjs
 
 and elim_let_rec subst in_e ~recursive ~conjs =
   match form_view in_e with
@@ -1655,7 +1655,7 @@ let elim_let ~recursive letin =
   (* use a list of conjunctions for non inlined lets
      (ie. Let-sko = let-in branche /\ ...)
      to have tail-calls in the mutually recursive functions above *)
-  let res = elim_let ~recursive ~conjs:[] SMap.empty letin in
+  let res = elim_let ~recursive ~conjs:[] TSubst.id letin in
   assert (is_ground res);
   res
 
@@ -1928,16 +1928,16 @@ module Triggers = struct
 
   let underscore =
     let aux t s =
-      let sbt =
+      let sbs_t =
         SMap.fold
           (fun v (ty, _occ) sbt ->
              if not (SSet.mem v s) then sbt
-             else SMap.add v (mk_term Sy.underscore [] ty) sbt
-          )t.vars SMap.empty
+             else TSubst.assign v (mk_term Sy.underscore [] ty) sbt
+          ) t.vars TSubst.id
       in
-      if SMap.is_empty sbt then t, true
+      if TSubst.is_identical sbs_t then t, true
       else
-        apply_subst (sbt, Ty.Subst.id) t, false
+        apply_subst (sbs_t, Ty.Subst.id) t, false
     in
     fun bv ((t,vt,vty) as e) ->
       let s = SSet.diff vt bv in
@@ -2155,20 +2155,20 @@ module Triggers = struct
   let expand_lets terms lets =
     (* Create the term substitution:
        { v1 <- e1; v2 <- e2[v1 <- e1]; v3 <- e3[v1 <- e1][v2 <- e2]; ... } *)
-    let sbt =
-      SMap.fold
-        (fun sy { let_e; _ } sbt ->
-           let let_e = apply_subst (sbt, Ty.Subst.id) let_e in
-           if let_e.pure then SMap.add sy let_e sbt
-           else sbt
+    let sbs_t =
+      Sy.Map.fold
+        (fun sy { let_e; _ } sbs_t ->
+           let let_e = apply_subst (sbs_t, Ty.Subst.id) let_e in
+           if let_e.pure then TSubst.assign sy let_e sbs_t
+           else sbs_t
                 [@ocaml.ppwarning "TODO: once 'let x = term in term' \
                                    added, check that the resulting \
                                    substitution is well normalized (may be not \
                                    true depending on the ordering of vars in \
                                    lets"]
-        ) lets SMap.empty
+        ) lets TSubst.id
     in
-    let sbs = sbt, Ty.Subst.id in
+    let sbs = sbs_t, Ty.Subst.id in
     (* Apply the above substitution on each term of the list. *)
     STRS.fold
       (fun (e, _, _) strs ->
@@ -2313,7 +2313,8 @@ let rec compile_match mk_destr mker e cases accu =
   | [] -> accu
 
   | (Typed.Var x, p) :: _ ->
-    apply_subst ((SMap.singleton (Symbols.var x) e), Ty.Subst.id) p
+    let singleton = TSubst.assign (Sy.var x) e TSubst.id in
+    apply_subst (singleton, Ty.Subst.id) p
 
   | (Typed.Constr {name; args}, p) :: l ->
     let _then =

@@ -104,42 +104,20 @@ and trigger = (*private*) {
 }
 (** Type of multi-triggers. *)
 
+module TSubst : Subst.S with type var = Symbols.t and type val_ = t
+
 module Subst : sig
   type expr = t
-  type t = expr Symbols.Map.t * Ty.Subst.t
-
-  exception Collision
-  (** This exception is raised while trying to compose two incompatible
-      substitutions. *)
+  type t = TSubst.t * Ty.Subst.t
 
   val id : t
-  (** [id] is the identical substitution. *)
-
   val is_identical : t -> bool
-  (** [is_identical sbs] check if the substitution [sbs] is the identical
-      substitution. *)
-
-  val apply_to_var : t -> Symbols.t -> expr option
-
-  val apply_to_ty : t -> int -> Ty.t option
-
   val compose : t -> t -> t
-  (** [compose sbs1 sbs2] compose the substitutions [sbs1] and [sbs2]. If
-      [sbs1] and [sbs2] does not agree on some variables, the exception
-      {!exception:Collision} is raised. *)
-
-  val add_term : Symbols.t -> expr -> t -> t
-  val add_terms : t -> expr Symbols.Map.t -> t
-
+  val assign_term : Symbols.t -> expr -> t -> t
   val compare : t -> t -> int
   val equal : t -> t -> bool
-
   val pp : Format.formatter -> t -> unit
-  (** [pp fmt sbs] pretty print the substitution [sbs] on the formatter
-      [fmt]. *)
-
   val show : t -> string
-  (** [show sbs] produce the string displaying by [pp]. *)
 
   module Set : Set.S with type elt = t
   (** Module of sets of substitutions using the comparison function

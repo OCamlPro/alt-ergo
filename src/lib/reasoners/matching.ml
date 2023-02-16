@@ -257,9 +257,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
          ME.fold
            (fun t _ l ->
               try
-                let sbs =
-                  (sbs_t, Ty.matching sbs_ty ty (E.type_info t))
-                in
+                let sbs_ty = Ty.matching sbs_ty ty (E.type_info t) in
                 let ng, but =
                   try
                     let { age = ng; but = bt; _ } =
@@ -271,13 +269,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
                 (* With triggers that are variables, always normalize
                    substitutions. *)
                 let t = X.term_repr tbox t ~init_term:true in
-                let sbs = Expr.Subst.add_term f t sbs in
-                { sbs;
+                let sbs_t = Expr.TSubst.assign f t sbs_t in
+                { sbs = (sbs_t, sbs_ty);
                   gen = ng;
                   goal = but;
                   s_term_orig = t :: s_torig;
                   s_lem_orig = s_lorig;
-                }::l
+                } :: l
               with Ty.TypeClash _ -> l
            ) s l
       ) env.fils lsbt_acc
@@ -311,17 +309,18 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let are_equal_full tbox t s =
     wrap_are_equal_generic tbox t s true cache_are_equal_full
 
-  let add_msymb tbox f t ({ sbs; _ } as sg) max_t_depth =
-    match Expr.Subst.apply_to_var sbs f with
-    | Some s when are_equal_full tbox t s == None -> raise Echec
-    | Some _ -> sg
-    | None -> begin
+  let add_msymb tbox f t ({ sbs = (sbs_t, sbs_ty); _ } as sg) max_t_depth =
+    try
+      match Expr.TSubst.apply sbs_t f with
+      | s when are_equal_full tbox t s == None -> raise Echec
+      | _ -> sg
+    with Not_found -> begin
         let t =
           if (E.depth t) > max_t_depth || get_normalize_instances () then
             X.term_repr tbox t ~init_term:true
           else t
         in
-        { sg with sbs = Expr.Subst.add_term f t sbs }
+        { sg with sbs = (Expr.TSubst.assign f t sbs_t, sbs_ty) }
       end
 
   let (-@) l1 l2 =
@@ -442,7 +441,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
                        (xs_modulo_records t record) :: l
                      | _ -> l
                    end
-              )[] cl
+              ) [] cl
           in
           let cl = filter_classes mconf cl tbox in
           let cl =
