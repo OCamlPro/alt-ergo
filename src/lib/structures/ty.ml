@@ -278,51 +278,60 @@ let rec equal t1 t2 =
   | _ -> false
 
 (*** matching with a substitution mechanism ***)
+module Subst = Subst.Make(struct
+    type var = int
+    type val_ = t
+
+    let pp_var fmt = Format.fprintf fmt "%i"
+    let pp_val = print
+
+    let compare_var = Int.compare
+    let compare_val = compare
+    let equal_val = equal
+  end)
+
 module M = Util.MI
-type subst = t M.t
 
-let esubst = M.empty
-
-let rec matching s pat t =
+let rec matching sbs pat t =
   match pat , t with
   | Tvar {v=n;value=None} , _ ->
-    (try if not (equal (M.find n s) t) then raise (TypeClash(pat,t)); s
-     with Not_found -> M.add n t s)
+    (try if not (equal (Subst.apply sbs n) t) then raise (TypeClash(pat,t)); sbs
+     with Not_found -> Subst.assign n t sbs)
   | Tvar { value = _; _ }, _ -> raise (Shorten pat)
   | Text (l1,s1) , Text (l2,s2) when Hstring.equal s1 s2 ->
-    List.fold_left2 matching s l1 l2
+    List.fold_left2 matching sbs l1 l2
   | Tfarray (ta1,ta2), Tfarray (tb1,tb2) ->
-    matching (matching s ta1 tb1) ta2 tb2
+    matching (matching sbs ta1 tb1) ta2 tb2
   | Trecord r1, Trecord r2 when Hstring.equal r1.name r2.name ->
-    let s = List.fold_left2 matching s r1.args r2.args in
+    let sbs = List.fold_left2 matching sbs r1.args r2.args in
     List.fold_left2
-      (fun s (_, p) (_, ty) -> matching s p ty) s r1.lbs r2.lbs
-  | Tsum (s1, _), Tsum (s2, _) when Hstring.equal s1 s2 -> s
-  | Tint , Tint | Tbool , Tbool | Treal , Treal | Tunit, Tunit -> s
-  | Tbitv n , Tbitv m when n=m -> s
+      (fun sbs (_, p) (_, ty) -> matching sbs p ty) sbs r1.lbs r2.lbs
+  | Tsum (s1, _), Tsum (s2, _) when Hstring.equal s1 s2 -> sbs
+  | Tint , Tint | Tbool , Tbool | Treal , Treal | Tunit, Tunit -> sbs
+  | Tbitv n , Tbitv m when n=m -> sbs
   | Tadt(n1, args1), Tadt(n2, args2) when Hstring.equal n1 n2 ->
-    List.fold_left2 matching s args1 args2
+    List.fold_left2 matching sbs args1 args2
   | _ , _ ->
     raise (TypeClash(pat,t))
 
 let apply_subst =
-  let rec apply_subst s ty =
+  let rec apply_subst sbs ty =
     match ty with
-    | Tvar { v= n; _ } ->
-      (try M.find n s with Not_found -> ty)
+    | Tvar { v = n; _ } ->
+      (try Subst.apply sbs n with Not_found -> ty)
 
-    | Text (l,e) ->
-      let l, same = Lists.apply (apply_subst s) l in
+    | Text (l, e) ->
+      let l, same = Lists.apply (apply_subst sbs) l in
       if same then ty else Text(l, e)
 
-    | Tfarray (t1,t2) ->
-      let t1' = apply_subst s t1 in
-      let t2' = apply_subst s t2 in
+    | Tfarray (t1, t2) ->
+      let t1' = apply_subst sbs t1 in
+      let t2' = apply_subst sbs t2 in
       if t1 == t1' && t2 == t2' then ty else Tfarray (t1', t2')
 
     | Trecord r ->
-      let lbs,  same1 = Lists.apply_right (apply_subst s) r.lbs in
-      let args, same2 = Lists.apply (apply_subst s) r.args in
+      let lbs,  same1 = Lists.apply_right (apply_subst sbs) r.lbs in
+      let args, same2 = Lists.apply (apply_subst sbs) r.args in
       if same1 && same2 then ty
       else
         Trecord
@@ -333,41 +342,41 @@ let apply_subst =
     | Tadt(name, params)
       [@ocaml.ppwarning "TODO: detect when there are no changes "]
       ->
-      Tadt (name, List.map (apply_subst s) params)
+      Tadt (name, List.map (apply_subst sbs) params)
 
     | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum (_, _) -> ty
   in
-  fun s ty -> if M.is_empty s then ty else apply_subst s ty
+  fun sbs ty -> if Subst.is_identical sbs then ty else apply_subst sbs ty
 
-let rec fresh ty subst =
+let rec fresh ty sbs =
   match ty with
-  | Tvar { v= x; _ } ->
+  | Tvar { v = x; _ } ->
     begin
-      try M.find x subst, subst
+      try Subst.apply sbs x, sbs
       with Not_found ->
         let nv = Tvar (fresh_var()) in
-        nv, M.add x nv subst
+        nv, Subst.assign x nv sbs
     end
   | Text (args, n) ->
-    let args, subst = fresh_list args subst in
-    Text (args, n), subst
+    let args, sbs = fresh_list args sbs in
+    Text (args, n), sbs
   | Tfarray (ty1, ty2) ->
-    let ty1, subst = fresh ty1 subst in
-    let ty2, subst = fresh ty2 subst in
-    Tfarray (ty1, ty2), subst
+    let ty1, sbs = fresh ty1 sbs in
+    let ty2, sbs = fresh ty2 sbs in
+    Tfarray (ty1, ty2), sbs
   | Trecord ({ args; name = n; lbs; _ } as r) ->
-    let args, subst = fresh_list args subst in
-    let lbs, subst =
+    let args, sbs = fresh_list args sbs in
+    let lbs, sbs =
       List.fold_right
-        (fun (x,ty) (lbs, subst) ->
-           let ty, subst = fresh ty subst in
-           (x, ty)::lbs, subst) lbs ([], subst)
+        (fun (x, ty) (lbs, sbs) ->
+           let ty, sbs = fresh ty sbs in
+           (x, ty) :: lbs, sbs) lbs ([], sbs)
     in
-    Trecord {r with  args = args; name = n; lbs = lbs}, subst
+    Trecord {r with  args = args; name = n; lbs = lbs}, sbs
   | Tadt(s,args) ->
-    let args, subst = fresh_list args subst in
-    Tadt (s,args), subst
-  | t -> t, subst
+    let args, sbs = fresh_list args sbs in
+    Tadt (s, args), sbs
+  | t -> t, sbs
 
 and fresh_list lty subst =
   List.fold_right
@@ -395,7 +404,7 @@ module Decls = struct
 
 
   let fresh_type params body =
-    let params, subst = fresh_list params esubst in
+    let params, subst = fresh_list params Subst.id in
     match body with
     | Adt cases ->
       let _subst, cases =
@@ -434,20 +443,20 @@ module Decls = struct
       with Not_found ->
         let params, body = fresh_type params body in
         (*if true || get_debug_adt () then*)
-        let sbt =
+        let sbs =
           try
             List.fold_left2
-              (fun sbt vty ty ->
+              (fun sbs vty ty ->
                  let vty = shorten vty in
                  match vty with
                  | Tvar { value = Some _ ; _ } -> assert false
                  | Tvar {v ; value = None}   ->
-                   if equal vty ty then sbt else M.add v ty sbt
+                   if equal vty ty then sbs else Subst.assign v ty sbs
                  | _ ->
                    Printer.print_err "vty = %a and ty = %a"
                      print vty print ty;
                    assert false
-              )M.empty params args
+              ) Subst.id params args
           with Invalid_argument _ -> assert false
         in
         let body = match body with
@@ -457,11 +466,11 @@ module Decls = struct
                 (fun {constr; destrs} ->
                    {constr;
                     destrs =
-                      List.map (fun (d, ty) -> d, apply_subst sbt ty) destrs }
+                      List.map (fun (d, ty) -> d, apply_subst sbs ty) destrs }
                 ) cases
             )
         in
-        let params = List.map (fun ty -> apply_subst sbt ty) params in
+        let params = List.map (fun ty -> apply_subst sbs ty) params in
         add name params body;
         body
     with Not_found ->
@@ -595,17 +604,15 @@ let instantiate lvar lty ty =
       (fun s x t ->
          match x with
          | Tvar { v = n; _ } ->
-           M.add n t s
-         | _ -> assert false) M.empty lvar lty
+           Subst.assign n t s
+         | _ -> assert false) Subst.id lvar lty
   in
   apply_subst s ty
 
-let union_subst s1 s2 =
-  M.fold (fun k x s2 -> M.add k x s2) (M.map (apply_subst s2)  s1) s2
-
-let compare_subst = M.compare Stdlib.compare
-
-let equal_subst = M.equal Stdlib.(=)
+(* -- unused --
+   let union_subst s1 s2 =
+   M.fold (fun k x s2 -> Subst.assign k x s2) (M.map (apply_subst s2)  s1) s2
+*)
 
 module Svty = Util.SI
 

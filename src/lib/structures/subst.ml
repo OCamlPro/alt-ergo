@@ -48,6 +48,8 @@ module type S = sig
       the exception {!exception:Collision} is raised. Otherwise, the
       old bindings are replaced by the new ones. *)
 
+  val filter_domain : t -> f:(var -> bool) -> t
+
   val equal : t -> t -> bool
   (** [equal sbs1 sbs2] check if the substitutions [sbs1] and [sbs2] are equal
       using {!val:X.equal_val} to compare the values. *)
@@ -72,7 +74,7 @@ module type S = sig
       {!val:compare}. *)
 end
 
-module Make (X : X) : S = struct
+module Make (X : X) : S with type var = X.var and type val_ = X.val_ = struct
   module M = Map.Make (struct
       type t = X.var
       let compare = X.compare_var
@@ -108,10 +110,12 @@ module Make (X : X) : S = struct
       if force then fun _ _ v2 -> Some v2
       else fun k v1 v2 -> begin
           if X.equal_val v1 v2 then raise (Collision (k, v1, v2))
-          else Some v2
+          else Some v1
         end
     in
     M.union collision_handler
+
+  let filter_domain sbs ~f = M.filter (fun v _ -> f v) sbs
 
   let pp fmt sbs = M.iter (fun k v ->
       Format.fprintf fmt "%a -> %a" X.pp_var k X.pp_val v) sbs

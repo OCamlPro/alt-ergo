@@ -182,36 +182,11 @@ val trecord :
 (** Create a record type. [trecord args name lbs] creates a record
     type with name [name], arguments [args] and fields [lbs]. *)
 
-
 (** {2 Substitutions} *)
+module Subst : Subst.S with type var = int and type val_ = t
 
-module M : Map.S with type key = int
-(** Maps from type variables identifiers. *)
-
-type subst = t M.t
-(** The type of substitution, i.e. maps
-    from type variables identifiers to types.*)
-
-val compare_subst : subst -> subst -> int
-(** Comparison of substitutions. *)
-
-val equal_subst : subst -> subst -> bool
-(** Equality of substitutions. *)
-
-val print_subst: Format.formatter -> subst -> unit
-(** Print function for substitutions. *)
-
-val esubst : subst
-(** The empty substitution, a.k.a. the identity. *)
-
-val apply_subst : subst -> t -> t
+val apply_subst : Subst.t -> t -> t
 (** Substitution application. *)
-
-val union_subst : subst -> subst -> subst
-(** [union_subst u v] applies [v] to [u], resulting in [u'].
-    It then computes the union of [u'] and [v], prioritizing
-    bindings from [u'] in case of conflict. *)
-
 
 (** {2 Unification/Matching} *)
 
@@ -228,7 +203,7 @@ val unify : t -> t -> unit
       case, the [value] fields of already mutated type variables
       are left modified, which may prevent future unifications. *)
 
-val matching : subst -> t -> t -> subst
+val matching : Subst.t -> t -> t -> Subst.t
 (** Matching of types (non-destructive). [matching pat t] return a
     substitution [subst] such that [apply_subst subst pat] is
     equal to [t]. *)
@@ -240,16 +215,15 @@ val shorten : t -> t
     This function short-circuits such chains so that the value
     of a type variable can be accessed directly. *)
 
-
 (** {2 Manipulations on types} *)
 
-val fresh : t -> subst -> t * subst
+val fresh : t -> Subst.t -> t * Subst.t
 (** Apply the given substitution, all while generating fresh variables
     for the variables not already bound in the substitution. Returns
     a substitution containing bindings from old variable to their
     fresh counterpart. *)
 
-val fresh_list : t list -> subst -> t list * subst
+val fresh_list : t list -> Subst.t -> t list * Subst.t
 (** Same as {!val:fresh} but on lists of types. *)
 
 val instantiate : t list -> t list -> t -> t

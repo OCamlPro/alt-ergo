@@ -106,7 +106,7 @@ and trigger = (*private*) {
 
 module Subst : sig
   type expr = t
-  type t = expr Symbols.Map.t * Ty.subst
+  type t = expr Symbols.Map.t * Ty.Subst.t
 
   exception Collision
   (** This exception is raised while trying to compose two incompatible

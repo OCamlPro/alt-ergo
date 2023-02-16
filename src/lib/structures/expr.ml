@@ -527,7 +527,7 @@ and print_triggers fmt trs =
 
 module Subst = struct
   type expr = t
-  type t = expr Sy.Map.t * Ty.subst
+  type t = expr Sy.Map.t * Ty.Subst.t
 
   exception Collision
 
@@ -536,17 +536,17 @@ module Subst = struct
       raise Collision
     else Some t1
 
-  let id = (Sy.Map.empty, Ty.M.empty)
+  let id = (Sy.Map.empty, Ty.Subst.id)
 
   let is_identical (sbs_t, sbs_ty) =
-    Sy.Map.is_empty sbs_t && Ty.M.is_empty sbs_ty
+    Sy.Map.is_empty sbs_t && Ty.Subst.is_identical sbs_ty
 
   let apply_to_var (sbs_t, _) sy = Sy.Map.find_opt sy sbs_t
 
-  let apply_to_ty (_, sbs_ty) id = Ty.M.find_opt id sbs_ty
+  let apply_to_ty (_, sbs_ty) id = Some (Ty.Subst.apply sbs_ty id)
 
   let compose (sbs_t1, sbs_ty1) (sbs_t2, sbs_ty2) =
-    let sbs_ty = Ty.union_subst sbs_ty1 sbs_ty2 in
+    let sbs_ty = Ty.Subst.compose sbs_ty1 sbs_ty2 in
     let sbs_t = Sy.Map.union fail sbs_t1 sbs_t2
     in
     (sbs_t, sbs_ty)
@@ -556,15 +556,15 @@ module Subst = struct
   let add_terms (sbs_t, sbs_ty) s = (Sy.Map.union fail s sbs_t, sbs_ty)
 
   let compare (sbs_t1, sbs_ty1) (sbs_t2, sbs_ty2) =
-    let c = Ty.compare_subst sbs_ty1 sbs_ty2 in
+    let c = Ty.Subst.compare sbs_ty1 sbs_ty2 in
     if c <> 0 then c else Sy.Map.compare compare sbs_t1 sbs_t2
 
   let equal (sbs_t1, sbs_ty1) (sbs_t2, sbs_ty2) =
-    Ty.equal_subst sbs_ty1 sbs_ty2 || Sy.Map.equal equal sbs_t1 sbs_t2
+    Ty.Subst.equal sbs_ty1 sbs_ty2 || Sy.Map.equal equal sbs_t1 sbs_t2
 
   let pp fmt (sbs_t, sbs_ty) =
     Format.fprintf fmt "sbs= %a | sty= %a" (Sy.Map.print print) sbs_t
-      Ty.print_subst sbs_ty
+      Ty.Subst.pp sbs_ty
 
   let show sbs = Format.asprintf "%a" pp sbs
 
@@ -1108,7 +1108,10 @@ let rec apply_subst_aux ((sbs_t, sbs_ty) as sbs) t =
   else
     let { f; xs; ty; vars; vty; bind; _ } = t in
     let sbs_t = SMap.filter (fun sy _ -> SMap.mem sy vars) sbs_t in
-    let sbs_ty = Ty.M.filter (fun tvar _ -> Ty.Svty.mem tvar vty) sbs_ty in
+    let sbs_ty =
+      Ty.Subst.filter_domain sbs_ty
+        ~f:(fun tvar -> Ty.Svty.mem tvar vty)
+    in
     let sbs = (sbs_t, sbs_ty) in
     if Subst.is_identical sbs then t
     else
@@ -1244,7 +1247,7 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
     let _, nb_occ = SMap.find let_v in_e.vars in
     if nb_occ = 1 && (let_e.pure (*1*) || Sy.equal let_v in_e.f) ||
        const_term let_e then (* inline in these situations *)
-      apply_subst_aux (SMap.singleton let_v let_e, Ty.esubst) in_e
+      apply_subst_aux (SMap.singleton let_v let_e, Ty.Subst.id) in_e
     else
       let ty = type_info in_e in
       let d = max let_e.depth in_e.depth in (* no + 1 ? *)
@@ -1281,7 +1284,7 @@ and mk_forall_bis (q : quantified) id =
     | None -> mk_forall_ter q 0
 
     | Some sbs ->
-      let subst = sbs, Ty.esubst in
+      let subst = sbs, Ty.Subst.id in
       let f = apply_subst_aux subst q.main in
       if is_ground f then f
       else
@@ -1329,12 +1332,12 @@ and find_particular_subst =
           SMap.fold
             (fun v (ty, _) sbt ->
                try
-                 let f = apply_subst_aux (sbt, Ty.esubst) f in
+                 let f = apply_subst_aux (sbt, Ty.Subst.id) f in
                  find_subst v (mk_term v [] ty) f;
                  sbt
                with Found (x, t) ->
                  assert (not (SMap.mem x sbt));
-                 let one_sbt = SMap.singleton x t, Ty.esubst in
+                 let one_sbt = SMap.singleton x t, Ty.Subst.id in
                  let sbt = SMap.map (apply_subst_aux one_sbt) sbt in
                  SMap.add x t sbt
             )binders SMap.empty
@@ -1579,11 +1582,11 @@ let skolemize { main = f; binders; sko_v; sko_vty; _ } =
     SMap.fold
       (fun x (ty,i) m ->
          let t = mk_term (mk_sym i "_sko") sko_v ty in
-         let t = apply_subst (grounding_sbt, Ty.esubst) t in
+         let t = apply_subst (grounding_sbt, Ty.Subst.id) t in
          SMap.add x t m
       ) binders SMap.empty
   in
-  let res = apply_subst_aux (sbt, Ty.esubst) f in
+  let res = apply_subst_aux (sbt, Ty.Subst.id) f in
   assert (is_ground res);
   res
 
@@ -1618,16 +1621,16 @@ let rec elim_let =
           (fun sy (ty, _) sbt -> SMap.add sy (fresh_name ty) sbt)
           (free_vars sko SMap.empty) SMap.empty
       in
-      apply_subst (sbt, Ty.esubst) sko
+      apply_subst (sbt, Ty.Subst.id) sko
   in
   fun ~recursive ~conjs subst { let_v; let_e; in_e; let_sko; _ } ->
     assert (SMap.mem let_v (free_vars in_e SMap.empty));
     (* usefull when let_sko still contains variables that are not in
        ie_e due to simplification *)
-    let let_sko = apply_subst (subst, Ty.esubst) let_sko in
+    let let_sko = apply_subst (subst, Ty.Subst.id) let_sko in
     let let_sko = ground_sko let_sko in
     assert (is_ground let_sko);
-    let let_e = apply_subst (subst, Ty.esubst) let_e in
+    let let_e = apply_subst (subst, Ty.Subst.id) let_e in
     if let_sko.nb_nodes >= let_e.nb_nodes && let_e.pure then
       let subst = SMap.add let_v let_e subst in
       elim_let_rec subst in_e ~recursive ~conjs
@@ -1645,7 +1648,7 @@ and elim_let_rec subst in_e ~recursive ~conjs =
   match form_view in_e with
   | Let letin when recursive -> elim_let ~recursive ~conjs subst letin
   | _ ->
-    let f = apply_subst (subst, Ty.esubst) in_e in
+    let f = apply_subst (subst, Ty.Subst.id) in_e in
     List.fold_left (fun acc func -> func acc) f conjs
 
 let elim_let ~recursive letin =
@@ -1934,7 +1937,7 @@ module Triggers = struct
       in
       if SMap.is_empty sbt then t, true
       else
-        apply_subst (sbt, Ty.esubst) t, false
+        apply_subst (sbt, Ty.Subst.id) t, false
     in
     fun bv ((t,vt,vty) as e) ->
       let s = SSet.diff vt bv in
@@ -2155,7 +2158,7 @@ module Triggers = struct
     let sbt =
       SMap.fold
         (fun sy { let_e; _ } sbt ->
-           let let_e = apply_subst (sbt, Ty.esubst) let_e in
+           let let_e = apply_subst (sbt, Ty.Subst.id) let_e in
            if let_e.pure then SMap.add sy let_e sbt
            else sbt
                 [@ocaml.ppwarning "TODO: once 'let x = term in term' \
@@ -2165,7 +2168,7 @@ module Triggers = struct
                                    lets"]
         ) lets SMap.empty
     in
-    let sbs = sbt, Ty.esubst in
+    let sbs = sbt, Ty.Subst.id in
     (* Apply the above substitution on each term of the list. *)
     STRS.fold
       (fun (e, _, _) strs ->
@@ -2310,7 +2313,7 @@ let rec compile_match mk_destr mker e cases accu =
   | [] -> accu
 
   | (Typed.Var x, p) :: _ ->
-    apply_subst ((SMap.singleton (Symbols.var x) e), Ty.esubst) p
+    apply_subst ((SMap.singleton (Symbols.var x) e), Ty.Subst.id) p
 
   | (Typed.Constr {name; args}, p) :: l ->
     let _then =
