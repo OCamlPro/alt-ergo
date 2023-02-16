@@ -190,8 +190,10 @@ let main () =
         Typer_Pipe.print stmt;
     st, stmt
   in
-  let handle_exn _ bt e =
-    Printexc.raise_with_backtrace e bt
+  let handle_exn _ bt = function
+    | Dolmen.Std.Loc.Syntax_error (_, `Regular msg) ->
+      Printer.print_err "%t" msg;
+    | _ as exn -> Printexc.raise_with_backtrace exn bt
   in
   let finally ~handle_exn st e =
     match e with
@@ -202,19 +204,54 @@ let main () =
       ?(loc = Dolmen.Std.Loc.mk_file "") dir: _ State.file =
     { lang; mode; dir; source; loc; }
   in
+  let set_output_format fmt =
+    if Options.get_infer_output_format () then
+      match fmt with
+      | ".ae" -> Options.set_output_format Native
+      | ".smt2" | ".psmt2" -> Options.set_output_format Smtlib2
+      | s ->
+        Printer.print_wrn
+          "The output format %s is not supported by the Dolmen frontend." s
+  in
+  (* The function In_channel.input_all is not available before OCaml 4.14. *)
+  let read_all ch =
+    let b = Buffer.create 113 in
+    try
+      while true do
+        Buffer.add_channel b ch 30
+      done;
+      assert false
+    with End_of_file ->
+      Buffer.contents b
+  in
   let mk_state ?(debug = false) ?(report_style = State.Contextual)
       ?(reports =
         Dolmen_loop.Report.Conf.mk
           ~default:Dolmen_loop.Report.Warning.Status.Enabled)
       ?(max_warn = max_int) ?(time_limit = Float.infinity)
-      ?(size_limit = Float.infinity) ?input_mode ?(header_check = false)
+      ?(size_limit = Float.infinity) ?(header_check = false)
       ?(header_licenses = []) ?header_lang_version ?(type_check = true)
       ?(solver_ctx = empty_solver_ctx) path =
     let dir = Filename.dirname path in
+    let filename = Filename.basename path in
+    let source =
+      if Filename.check_suffix path ".zip" then (
+        Filename.(chop_extension path |> extension) |> set_output_format;
+        let content = AltErgoLib.My_zip.extract_zip_file path in
+        `Raw (Filename.chop_extension filename, content))
+      else (
+        Filename.extension path |> set_output_format;
+        let cin = open_in path in
+        let content = read_all cin in
+        close_in cin;
+        `Raw (filename, content))
+    in
+    (* We use the full mode since the incremental mode is not supported by
+       the native input language. *)
     let logic_file =
       mk_file
-        ?mode:input_mode
-        ~source:(`File (Filename.basename path))
+        ~mode:`Full
+        ~source
         ~loc:(Dolmen.Std.Loc.mk_file path)
         dir
     in

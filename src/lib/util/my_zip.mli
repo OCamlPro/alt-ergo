@@ -12,28 +12,21 @@
 (** A wrapper of the Zip module of CamlZip: we use Zip except when we want to
     generate the.js file for try-Alt-Ergo **)
 
-module ZipWrapper = struct
-  include Zip
-  let filename e = e.Zip.filename
-  let is_directory e = e.Zip.is_directory
-end
+type in_file
+type entry
 
-include ZipWrapper
+val open_in : string -> in_file
 
-(* !! This commented code is used when compiling to javascript !!
-   module DummyZip = struct
-   type entry = unit
-   type in_file = unit
+val close_in : in_file -> unit
 
-   let s = "Zip module not available for your setting or has been disabled !"
+val entries : in_file -> entry list
 
-   let open_in  _  =  failwith s
-   let close_in _ = failwith s
-   let entries  _  =  failwith s
-   let read_entry  _ _  =  failwith s
-   let filename  _  =  failwith s
-   let is_directory  _  =  failwith s
-   end
+val read_entry : in_file -> entry -> string
 
-   include DummyZip
-*)
+val filename : entry -> string
+
+val is_directory : entry -> bool
+
+val extract_zip_file : string -> string
+(** [extract_zip_file filename] extract the unique file of the zip archive
+    [filename] and its content. *)

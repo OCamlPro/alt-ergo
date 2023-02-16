@@ -13,19 +13,15 @@
  (name AltErgoParsers)
  (public_name alt-ergo-parsers)
  (libraries
-   camlzip
    dynlink
    psmt2-frontend
    alt-ergo-lib
    stdlib-shims)
  (modules
    ; common
-   Parsers Parsers_loader MyZip
+   Parsers Parsers_loader
    ; psmt2
    Psmt2_to_alt_ergo
    ; AE format
    Native_lexer Native_parser)
- (js_of_ocaml
-  (javascript_files missing_primitives.js)
- )
 )
