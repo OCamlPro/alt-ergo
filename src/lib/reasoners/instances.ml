@@ -73,7 +73,7 @@ module type S = sig
   val register_max_term_depth : t -> int -> t
 
   val matching_terms_info :
-    t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
+    t -> Matching_types.info Expr.Map.t * Expr.Set.t Symbols.Map.t
 
 end
 

@@ -43,7 +43,7 @@ module type S = sig
   val make:
     max_t_depth:int ->
     Matching_types.info Expr.Map.t ->
-    Expr.t list Expr.Map.t Symbols.Map.t ->
+    Expr.Set.t Symbols.Map.t ->
     Matching_types.trigger_info list ->
     t
 
@@ -51,7 +51,7 @@ module type S = sig
   val max_term_depth : t -> int -> t
   val add_triggers :
     Util.matching_env -> t -> (Expr.t * int * Explanation.t) ME.t -> t
-  val terms_info : t -> info ME.t * E.t list ME.t Symbols.Map.t
+  val terms_info : t -> info ME.t * Expr.Set.t Symbols.Map.t
   val query :
     Util.matching_env -> t -> theory -> (trigger_info * gsubst list) list
 
@@ -69,7 +69,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
   type theory = X.t
 
   type t = {
-    fils : E.t list ME.t Sy.Map.t;
+    fils : Expr.Set.t Symbols.Map.t;
+    (* A map of symbols to the known terms having this symbol as top symbol. *)
+
     info : info ME.t;
     (* A map of the terms to their information. *)
 
@@ -144,7 +146,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           "I match %a against %a with subst: %a"
           E.print pat E.print t Expr.Subst.pp sbs
 
-    let match_list { sbs; _ } pats xs =
+    let match_args { sbs; _ } pats xs =
       if get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_list"
@@ -206,7 +208,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           let env =
             (* Retrieve all the known terms whose the top symbol is f. *)
             let map_f =
-              try Symbols.Map.find f env.fils with Not_found -> ME.empty
+              try Symbols.Map.find f env.fils with Not_found -> Expr.Set.empty
             in
 
             (* - l'age d'un terme est le min entre l'age passe en argument
@@ -226,7 +228,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
                 info.term_from_terms
             in
             { env with
-              fils = Symbols.Map.add f (ME.add t xs map_f) env.fils;
+              fils = Symbols.Map.add f (Expr.Set.add t map_f) env.fils;
               info =
                 ME.add t
                   { age=g; lem_orig = from_lems; but=b;
@@ -253,9 +255,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
       { sbs = (sbs_t, sbs_ty); gen = g; goal = b;
         s_term_orig = s_torig; s_lem_orig = s_lorig } lsbt_acc =
     Symbols.Map.fold
-      (fun _ s l ->
-         ME.fold
-           (fun t _ l ->
+      (fun _ map_s l ->
+         Expr.Set.fold
+           (fun t l ->
               try
                 let sbs_ty = Ty.matching sbs_ty ty (E.type_info t) in
                 let ng, but =
@@ -277,7 +279,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
                   s_lem_orig = s_lorig;
                 } :: l
               with Ty.TypeClash _ -> l
-           ) s l
+           ) map_s l
       ) env.fils lsbt_acc
 
 
@@ -450,13 +452,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
           in
           List.fold_left
             (fun acc xs ->
-               try (match_list mconf env tbox gsb pats xs) -@ acc
+               try (match_args mconf env tbox gsb pats xs) -@ acc
                with Echec -> acc
             ) [] cl
       with Ty.TypeClash _ -> raise Echec
 
-  and match_list mconf env tbox sg pats xs =
-    Debug.match_list sg pats xs;
+  and match_args mconf env tbox sg pats xs =
+    Debug.match_args sg pats xs;
     try
       List.fold_left2
         (fun sb_l pat arg ->
@@ -482,7 +484,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     | Symbols.Var _ -> all_terms f ty env tbox sg lsbt_acc
     | _ ->
       let { sbs = (sbs_t, sbs_ty); gen = g; goal = b; _ } = sg in
-      let f_aux t xs lsbt =
+      let f_aux ({ xs; _ } as t : Expr.t) lsbt =
         (* maybe put 3 as a rational parameter in the future *)
         let too_big = (E.depth t) > 10000 * env.max_t_depth in
         if too_big then
@@ -495,13 +497,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
             let sg =
               { sg with
                 sbs = (sbs_t, s_ty); gen = gen; goal = but;
-                s_term_orig = t::sg.s_term_orig }
+                s_term_orig = t :: sg.s_term_orig }
             in
-            let aux = match_list mconf env tbox sg pats xs in
+            let aux = match_args mconf env tbox sg pats xs in
             List.rev_append aux lsbt
           with Echec | Ty.TypeClash _ -> lsbt
       in
-      try ME.fold f_aux (Symbols.Map.find f env.fils) lsbt_acc
+      try Expr.Set.fold f_aux (Symbols.Map.find f env.fils) lsbt_acc
       with Not_found -> lsbt_acc
 
   (*  *)
@@ -519,8 +521,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
     | _ -> (E.depth t) - (E.depth s)
 
   (* Produce a list of candidate substitutions for the annoted trigger
-     [pat_info]. The trigger is ignored if its number of terms exceed the option
-     [get_max_multi_triggers_size]. *)
+     [pat_info]. The trigger is ignored if its number of terms exceed the value
+     of the option [get_max_multi_triggers_size]. *)
   let matching mconf env tbox pat_info =
     let trigger = pat_info.trigger in
     let pats_list = List.stable_sort trig_weight trigger.E.content in
@@ -682,7 +684,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         HE.add trs_tbl q.E.main trs;
         trs
 
-  (** [add_triggers mconf env formulas] add to the environment [env] the
+  (*  [add_triggers mconf env formulas] add to the environment [env] the
       triggers contained in the [formulas]. More precisely, [formulas] is a map
       of lemmas to triplets (guard, age, dep) where [age] is the initial [age]
       of the new trigger. *)

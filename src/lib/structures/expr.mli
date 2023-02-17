@@ -30,16 +30,16 @@
 
 type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
 
-type t
+type t = view
 
-type decl_kind =
+and decl_kind =
   | Dtheory
   | Daxiom
   | Dgoal
   | Dpredicate of t
   | Dfunction of t
 
-type view = private {
+and view = private {
   f: Symbols.t;
   xs: t list;
   ty: Ty.t;

@@ -68,7 +68,7 @@ module type RELATION = sig
 
   val instantiate :
     do_syntactic_matching:bool ->
-    Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
+    Matching_types.info Expr.Map.t * Expr.Set.t Symbols.Map.t ->
     t -> Uf.t -> (Expr.t -> Expr.t -> bool) ->
     t * instances
 
