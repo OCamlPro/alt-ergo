@@ -185,7 +185,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let infos op_gen op_but t g b env =
     try
       let i = ME.find t env.info in
-      op_gen i.age g , op_but i.but b
+      op_gen i.age g , op_but i.from_goal b
     with Not_found -> g , b
 
   let rm x lst = List.filter (fun y -> E.compare x y <> 0) lst
@@ -198,7 +198,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           acc @ List.map (fun p -> x :: p) (permutations (rm x lst))
         ) [] lst
 
-  let add_term info t env =
+  let add_term term_info t env =
     Debug.add_term t;
     let rec add_rec env t =
       if ME.mem t env.info then env
@@ -206,36 +206,34 @@ module Make (X : Arg) : S with type theory = X.t = struct
         match E.term_view t with
         | E.Term { E.f = f; xs = xs; _ } ->
           let env =
-            (* Retrieve all the known terms whose the top symbol is f. *)
-            let map_f =
-              try Symbols.Map.find f env.fils with Not_found -> Expr.Set.empty
-            in
-
-            (* - l'age d'un terme est le min entre l'age passe en argument
-               et l'age dans la map
-               - un terme est en lien avec le but de la PO seulement s'il
-                 ne peut etre produit autrement (d'ou le &&)
-               - le lemme de provenance est le dernier lemme
-            *)
-            let g, b =
-              infos min (&&) t info.term_age info.term_from_goal env in
+            (* Le lemme de provenance est le dernier lemme. *)
             let from_lems =
               List.fold_left
                 (fun acc t ->
                    try (ME.find t env.info).lem_orig @ acc
-                   with Not_found -> acc)
-                (match info.term_from_formula with None -> [] | Some a -> [a])
-                info.term_from_terms
+                   with Not_found -> acc
+                )
+                (match term_info.term_from_formula with
+                   None -> []
+                 | Some a -> [a]
+                )
+                term_info.term_from_terms
             in
-            { env with
-              fils = Symbols.Map.add f (Expr.Set.add t map_f) env.fils;
-              info =
-                ME.add t
-                  { age=g; lem_orig = from_lems; but=b;
-                    t_orig = info.term_from_terms }
-                  env.info
-            }
+            (* Retrieve all the known terms whose the top symbol is f. *)
+            let map_f =
+              try Symbols.Map.find f env.fils with Not_found -> Expr.Set.empty
+            in
+            let fils = Symbols.Map.add f (Expr.Set.add t map_f) env.fils in
+            let info = ME.add t {
+                age = term_info.term_age;
+                lem_orig = from_lems;
+                from_goal = term_info.term_from_goal;
+                t_orig = term_info.term_from_terms
+              } env.info
+            in
+            { env with fils; info }
           in
+          (* Recursively adding the subterms of the term t. *)
           List.fold_left add_rec env xs
         | E.Not_a_term {is_lit} ->
           (* TODO: Replace it by Util.failwith. *)
@@ -246,37 +244,32 @@ module Make (X : Arg) : S with type theory = X.t = struct
     in
     (* l'age limite des termes, au dela ils ne sont pas consideres par le
        matching *)
-    if info.term_age > Options.get_age_bound () then env else add_rec env t
+    if term_info.term_age > Options.get_age_bound () then env else add_rec env t
 
   let add_trigger p env = { env with pats = p :: env.pats }
 
-  let all_terms
-      f ty env tbox
-      { sbs = (sbs_t, sbs_ty); gen = g; goal = b;
-        s_term_orig = s_torig; s_lem_orig = s_lorig } lsbt_acc =
+  let all_terms f ty env tbox annoted_sbs lsbt_acc =
+    let sbs_t, sbs_ty = annoted_sbs.sbs in
     Symbols.Map.fold
       (fun _ map_s l ->
          Expr.Set.fold
            (fun t l ->
               try
                 let sbs_ty = Ty.matching sbs_ty ty (E.type_info t) in
-                let ng, but =
+                let age, from_goal =
                   try
-                    let { age = ng; but = bt; _ } =
-                      ME.find t env.info
-                    in
-                    max ng g, bt || b
-                  with Not_found -> g, b
+                    let { age; from_goal; _ } = ME.find t env.info in
+                    max age annoted_sbs.age, from_goal || annoted_sbs.from_goal
+                  with Not_found -> annoted_sbs.age, annoted_sbs.from_goal
                 in
                 (* With triggers that are variables, always normalize
                    substitutions. *)
                 let t = X.term_repr tbox t ~init_term:true in
                 let sbs_t = Expr.TSubst.assign f t sbs_t in
-                { sbs = (sbs_t, sbs_ty);
-                  gen = ng;
-                  goal = but;
-                  s_term_orig = t :: s_torig;
-                  s_lem_orig = s_lorig;
+                { annoted_sbs with sbs = (sbs_t, sbs_ty);
+                                   age;
+                                   from_goal;
+                                   s_term_orig = t :: annoted_sbs.s_term_orig;
                 } :: l
               with Ty.TypeClash _ -> l
            ) map_s l
@@ -353,6 +346,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
            | Util.Cmp n -> n
     end)
 
+  (* Update the classes according to the equality modulo theory. *)
   let filter_classes mconf cl tbox =
     if mconf.Util.no_ematching then cl
     else
@@ -392,7 +386,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         | _ -> []
 
   let rec match_term mconf env tbox
-      ({ sbs = (sbs_t, sbs_ty); gen = g; goal = b; _ } as sg) pat t =
+      ({ sbs = (sbs_t, sbs_ty); _ } as sg) pat t =
     Options.exec_thread_yield ();
     Debug.match_term sg t pat;
     let { E.f = f_pat; xs = pats; ty = ty_pat; _ } =
@@ -410,8 +404,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
     | Symbols.Var _ ->
       let sb =
         (try
-           let gen, goal = infos max (||) t g b env in
-           add_msymb tbox f_pat t { sg with sbs = (sbs_t, sbs_ty); gen; goal }
+           let age, from_goal = infos max (||) t sg.age sg.from_goal env in
+           add_msymb tbox f_pat t
+             { sg with sbs = (sbs_t, sbs_ty); age; from_goal }
              env.max_t_depth
          with Ty.TypeClash _ -> raise Echec)
       in
@@ -483,7 +478,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     match f with
     | Symbols.Var _ -> all_terms f ty env tbox sg lsbt_acc
     | _ ->
-      let { sbs = (sbs_t, sbs_ty); gen = g; goal = b; _ } = sg in
+      let { sbs = (sbs_t, sbs_ty); age; from_goal; _ } = sg in
       let f_aux ({ xs; _ } as t : Expr.t) lsbt =
         (* maybe put 3 as a rational parameter in the future *)
         let too_big = (E.depth t) > 10000 * env.max_t_depth in
@@ -492,11 +487,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
         else
           try
             Debug.match_one_pat_against sg pat0 t;
-            let s_ty = Ty.matching sbs_ty ty (E.type_info t) in
-            let gen, but = infos max (||) t g b env in
+            let sbs_ty = Ty.matching sbs_ty ty (E.type_info t) in
+            let age, from_goal = infos max (||) t age from_goal env in
             let sg =
               { sg with
-                sbs = (sbs_t, s_ty); gen = gen; goal = but;
+                sbs = (sbs_t, sbs_ty); age; from_goal;
                 s_term_orig = t :: sg.s_term_orig }
             in
             let aux = match_args mconf env tbox sg pats xs in
@@ -532,8 +527,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
     else
       let egs = {
         sbs = Expr.Subst.id;
-        gen = 0;
-        goal = false;
+        age = 0;
+        from_goal = false;
         s_term_orig = [];
         s_lem_orig = pat_info.trigger_orig;
       }

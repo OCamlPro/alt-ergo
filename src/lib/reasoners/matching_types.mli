@@ -33,10 +33,10 @@ type gsubst = {
   sbs : Expr.Subst.t;
   (** The annotated substitution. *)
 
-  gen : int;
+  age : int;
   (** The age of the substition which is the age of the oldest term in it. *)
 
-  goal : bool;
+  from_goal : bool;
   (* vrai si la substitution contient un terme ayant un lien
                      		     avec le but de la PO *)
 
@@ -90,7 +90,6 @@ type info = {
 
   t_orig : Expr.t list;
 
-  (* TODO: Rename this field *)
-  but : bool;
+  from_goal : bool;
   (* le terme a-t-il un lien avec le but final de la PO *)
 }

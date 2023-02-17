@@ -2278,11 +2278,8 @@ let new_facts_for_axiom
               subst_list) ->
       List.fold_left
         (fun (env, acc)
-          {sbs;
-           gen = g;
-           goal = b;
-           s_term_orig = torig;
-           s_lem_orig = lorig} ->
+          { sbs; age = g; from_goal = b; s_term_orig = torig;
+            s_lem_orig = lorig} ->
                 (*
                   Here, we'll try to extends subst 's' to conver variables
                   appearing in semantic triggers

@@ -280,8 +280,8 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         List.fold_left
           (fun acc
             {Matching_types.sbs = (sbs, sty);
-             gen = g;
-             goal = b;
+             age = g;
+             from_goal = b;
              s_term_orig = torig;
              s_lem_orig = lorig} ->
             incr cpt;
