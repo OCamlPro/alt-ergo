@@ -661,11 +661,5 @@ let rec monomorphize ty =
   | Tadt(name, params) ->
     Tadt(name, List.map monomorphize params)
 
-
-
-let print_subst fmt sbt =
-  M.iter (fun n ty -> fprintf fmt "%d -> %a" n print ty) sbt;
-  fprintf fmt "@?"
-
 let print_full =
   fst (print_generic (Some type_body)) (Some type_body)
