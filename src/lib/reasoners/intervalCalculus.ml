@@ -119,8 +119,7 @@ type t = {
   new_uf : Uf.t;
   th_axioms : (Expr.th_elt * Explanation.t) ME.t;
   linear_dep : SE.t ME.t;
-  syntactic_matching :
-    (Matching_types.trigger_info * Matching_types.gsubst list) list list;
+  syntactic_matching : Expr.Subst.t list list list;
 }
 
 module Sim_Wrap = struct
@@ -2266,12 +2265,13 @@ let profile_produced_terms menv lorig nf s trs =
     in
     let st1 = E.max_ground_terms_rec_of_form nf in
     let diff = SE.diff st1 st0 in
-    let info, _ = EM.terms_info menv in
-    let _new = SE.filter (fun t -> not (ME.mem t info)) diff in
-    Profiling.register_produced_terms name loc st0 st1 diff _new
+    (* let info, _ = EM.terms_info menv in
+       let _new = SE.filter (fun t -> not (ME.mem t info)) diff in
+       Profiling.register_produced_terms name loc st0 st1 diff _new *)
+    ()
 
 let new_facts_for_axiom
-    ~do_syntactic_matching menv uf selector optimized substs accu =
+    ~do_syntactic_matching menv uf selector optimized sbts accu =
   List.fold_left
     (fun acc ({trigger_formula=f; trigger_age=age; trigger_dep=dep;
                trigger_orig=orig; trigger = tr; trigger_increm_guard},
@@ -2373,14 +2373,14 @@ let syntactic_matching menv env uf _selector =
   in
   let synt_match =
     ME.fold
-      (fun f (_th_ax, dep) accu ->
+      (fun f (_th_ax, _dep) accu ->
          (* currently, No diff between propagators and case-split axs *)
-         let forms = ME.singleton f (E.vrai, 0 (*0 = age *), dep) in
-         let menv = EM.add_triggers mconf menv forms in
+         (* let forms = ME.singleton f (E.vrai, 0 (*0 = age *), dep) in *)
+         let menv = EM.add_triggers mconf menv [E.vrai] in
          let res = EM.query mconf menv uf in
          if get_debug_fpa () >= 2 then begin
            let cpt = ref 0 in
-           List.iter (fun (_, l) -> List.iter (fun _ -> incr cpt) l) res;
+           List.iter (List.iter (fun _ -> incr cpt)) res;
            Printer.print_dbg
              ~module_name:"IntervalCalculus"
              ~function_name:"syntactic_matching"
@@ -2399,7 +2399,9 @@ let instantiate ~do_syntactic_matching match_terms env uf selector =
       "entering IC.instantiate";
   let optimized = ref (SP.empty) in
   let t_infos, t_subterms = match_terms in
-  let menv = EM.make ~max_t_depth:100 t_infos t_subterms [] in
+  let menv =
+    EM.make ~max_t_depth:100 ~known_terms:t_infos t_subterms ~known_pats:[]
+  in
   let env =
     if not do_syntactic_matching then env
     else syntactic_matching menv env uf selector
@@ -2409,7 +2411,7 @@ let instantiate ~do_syntactic_matching match_terms env uf selector =
       (fun accu substs ->
          new_facts_for_axiom
            ~do_syntactic_matching menv uf selector optimized substs accu
-      )(env, []) env.syntactic_matching
+      ) (env, []) env.syntactic_matching
   in
   if get_debug_fpa () >= 2 then
     Printer.print_dbg

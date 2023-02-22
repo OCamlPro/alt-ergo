@@ -41,15 +41,15 @@ module type S = sig
   val empty : t
   (** An initial environment. *)
 
-  val make:
-    max_t_depth:int ->
-    Matching_types.info Expr.Map.t ->
+  val make :
+    max_t_depth: int ->
+    known_terms: Expr.Set.t ->
+    known_pats: Expr.trigger list ->
     Expr.Set.t Symbols.Map.t ->
-    Matching_types.trigger_info list ->
     t
   (** [make ~max_t_depth e trs] create a new environment. *)
 
-  val add_term : term_info -> Expr.t -> t -> t
+  val add_term : t -> Expr.t -> t
   (** [add_term info e env] add the term [e] and its subterms to
       the environment [env]. *)
 
@@ -58,12 +58,10 @@ module type S = sig
       the value [i] is larger than the previous value. *)
 
   val add_triggers :
-    Util.matching_env -> t -> (Expr.t * int * Explanation.t) Expr.Map.t -> t
-
-  val terms_info : t -> info Expr.Map.t * Expr.Set.t Symbols.Map.t
+    Util.matching_env -> t -> Expr.t list -> t
 
   val query :
-    Util.matching_env -> t -> theory -> (trigger_info * gsubst list) list
+    Util.matching_env -> t -> theory -> Expr.Subst.t list list
 
 end
 
