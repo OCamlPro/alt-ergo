@@ -12,8 +12,6 @@
 exception Timeout
 exception Unsolvable
 
-exception Cmp of int
-
 module MI = Map.Make(struct type t = int
     let compare (x: int) y = Stdlib.compare x y end)
 
@@ -87,7 +85,7 @@ let show_th_ext ext =
   | NIA -> "NIA"
   | FPA -> "FPA"
 
-let [@inline always] compare_algebraic s1 s2 f_same_constrs_with_args =
+let[@inline always] compare_algebraic s1 s2 f_same_constrs_with_args =
   let r1 = Obj.repr s1 in
   let r2 = Obj.repr s2 in
   match Obj.is_int r1, Obj.is_int r2 with
@@ -98,17 +96,18 @@ let [@inline always] compare_algebraic s1 s2 f_same_constrs_with_args =
     let cmp_tags = Obj.tag r1 - Obj.tag r2 in
     if cmp_tags <> 0 then cmp_tags else f_same_constrs_with_args (s1, s2)
 
-let [@inline always] cmp_lists l1 l2 cmp_elts =
+let[@inline always] compare_lists ~cmp l1 l2 =
+  let exception Done of int in
   try
     List.iter2
       (fun a b ->
-         let c = cmp_elts a b in
-         if c <> 0 then raise (Cmp c)
-      )l1 l2;
+         let res = cmp a b in
+         if res <> 0 then raise (Done res)
+      ) l1 l2;
     0
   with
-  | Cmp n -> n
-  | Invalid_argument _ -> List.length l1 - List.length l2
+  | Done n -> n
+  | Invalid_argument _ -> List.compare_lengths l1 l2
 
 type matching_env =
   {

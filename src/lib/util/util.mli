@@ -58,7 +58,9 @@ val show_th_ext : theories_extensions -> string
 (** Generic function for comparing algebraic data values. *)
 val compare_algebraic : 'a -> 'a -> (('a * 'a) -> int) -> int
 
-val cmp_lists: 'a list -> 'a list -> ('a -> 'a -> int) -> int
+val compare_lists: cmp:('a -> 'a -> int) -> 'a list -> 'a list -> int
+(** [compare_lists ~cmp lst1 lst2] compare the lists [lst1] and [lst2]
+    using the comparison function [cmp] for the elements. *)
 
 type matching_env = {
   nb_triggers : int;

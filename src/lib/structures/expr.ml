@@ -166,64 +166,46 @@ let compare_binders b1 b2 =
       let c = i - j in if c <> 0 then c else Ty.compare ty1 ty2)
     b1 b2
 
-let [@inline always] compare_sko_xxx sk1 sk2 cmp_xxx =
-  try
-    List.iter2
-      (fun s t ->
-         let c = cmp_xxx s t in
-         if c <> 0 then raise (Util.Cmp c)
-      )sk1 sk2;
-    0
-  with
-  | Util.Cmp c -> c
-  | Invalid_argument _ -> List.length sk1 - List.length sk2
+let compare_sko_vars = Util.compare_lists ~cmp:compare
 
-let compare_sko_vars sk1 sk2 = compare_sko_xxx sk1 sk2 compare
+let compare_sko_vty = Util.compare_lists ~cmp:Ty.compare
 
-let compare_sko_vty sk1 sk2 = compare_sko_xxx sk1 sk2 Ty.compare
+let compare_trigger tr1 tr2 =
+  let res = Util.compare_lists ~cmp:compare tr1.content tr2.content in
+  if res <> 0 then res
+  else
+    let res = Util.compare_lists ~cmp:compare tr1.hyp tr2.hyp in
+    if res <> 0 then res
+    else
+      Util.compare_lists tr1.semantic tr2.semantic
+        ~cmp:(fun a b ->
+            Util.compare_algebraic a b
+              (function
+                | Interval (s, b1, b2), Interval (t, c1, c2) ->
+                  let c = compare s t in
+                  if c <> 0 then c
+                  else
+                    let c = Sy.compare_bounds b1 c1 in
+                    if c <> 0 then c else Sy.compare_bounds b2 c2
 
-let compare_lists l1 l2 cmp_elts =
-  let res = Util.cmp_lists l1 l2 cmp_elts in
-  if res <> 0 then raise (Util.Cmp res)
+                | MapsTo (h1, t1), MapsTo (h2, t2) ->
+                  let c = compare t1 t2 in
+                  if c <> 0 then c else Var.compare h1 h2
 
-let compare_triggers _f1 _f2 trs1 trs2 =
-  try
-    List.iter2
-      (fun tr1 tr2 ->
-         compare_lists tr1.content tr2.content compare;
-         compare_lists tr1.hyp tr2.hyp compare;
-         compare_lists tr1.semantic tr2.semantic
-           (fun a b ->
-              Util.compare_algebraic a b
-                (function
-                  | Interval (s, b1, b2), Interval (t, c1, c2) ->
-                    let c = compare s t in
-                    if c <> 0 then c
-                    else
-                      let c = Sy.compare_bounds b1 c1 in
-                      if c <> 0 then c else Sy.compare_bounds b2 c2
+                | NotTheoryConst a, NotTheoryConst b
+                | IsTheoryConst a , IsTheoryConst b  -> compare a b
 
-                  | MapsTo (h1, t1), MapsTo (h2, t2) ->
-                    let c = compare t1 t2 in
-                    if c <> 0 then c else Var.compare h1 h2
+                | LinearDependency (s1, t1), LinearDependency (s2, t2) ->
+                  let c = compare s1 s2 in
+                  if c <> 0 then c else compare t1 t2
 
-                  | NotTheoryConst a, NotTheoryConst b
-                  | IsTheoryConst a , IsTheoryConst b  -> compare a b
+                | _, (Interval _ | MapsTo _ | NotTheoryConst _
+                     | IsTheoryConst _ | LinearDependency _) ->
+                  assert false
+              )
+          )
 
-                  | LinearDependency (s1, t1), LinearDependency (s2, t2) ->
-                    let c = compare s1 s2 in
-                    if c <> 0 then c else compare t1 t2
-
-                  | _, (Interval _ | MapsTo _ | NotTheoryConst _
-                       | IsTheoryConst _ | LinearDependency _) ->
-                    assert false
-                )
-           )
-      ) trs1 trs2;
-    0
-  with
-  | Util.Cmp c -> c
-  | Invalid_argument _ -> List.length trs1 - List.length trs2
+let compare_triggers = Util.compare_lists ~cmp:compare_trigger
 
 let compare_quant
     {main=f1; binders=b1; sko_v=sko_v1; sko_vty=free_vty1; user_trs=trs1; _}
@@ -240,7 +222,7 @@ let compare_quant
       else
         let c = compare_sko_vty free_vty1 free_vty2 in
         if c <> 0 then c
-        else compare_triggers f1 f2 trs1 trs2
+        else compare_triggers trs1 trs2
 
 module TSet : Set.S with type elt = expr =
   Set.Make (struct type t = expr let compare = compare end)
@@ -520,9 +502,11 @@ and print_list_sep sep fmt = function
 
 and print_list fmt = print_list_sep "," fmt
 
+and print_trigger fmt { content; _ } = fprintf fmt "%a" print_list content
+
 and print_triggers fmt trs =
-  List.iter (fun { content = l; _ } ->
-      fprintf fmt "| %a@," print_list l;
+  List.iter (fun tr ->
+      fprintf fmt "| %a@," print_trigger tr;
     ) trs
 
 module TSubst = Subst.Make(struct
@@ -1699,7 +1683,9 @@ let mk_mult = mk_chained (Sy.Op Sy.Mult)
 
 let[@inline always] is_pure e = e.pure
 
-module Triggers = struct
+module Trigger = struct
+  type expr = t
+  type t = trigger
 
   module Svty = Ty.Svty
 
@@ -1759,7 +1745,7 @@ module Triggers = struct
       if c <> 0 then c
       else
         let c = Sy.compare s s' in
-        if c <> 0 then c else Util.cmp_lists l1 l2 cmp_trig_term
+        if c <> 0 then c else Util.compare_lists ~cmp:cmp_trig_term l1 l2
 
     | { f = s; _ }, _ when Sy.is_infix_operator s -> -1
     | _ , { f = s'; _ } when Sy.is_infix_operator s' -> 1
@@ -1778,32 +1764,32 @@ module Triggers = struct
       let l2 = List.map score_term tl2 in
       let l1 = List.fast_sort Stdlib.compare l1 in
       let l2 = List.fast_sort Stdlib.compare l2 in
-      let c  = Util.cmp_lists l1 l2 Stdlib.compare in
+      let c  = Util.compare_lists ~cmp:Stdlib.compare l1 l2 in
       if c <> 0 then c
       else
         let c = Sy.compare s1 s2 in
-        if c <> 0 then c else Util.cmp_lists tl1 tl2 cmp_trig_term
+        if c <> 0 then c else Util.compare_lists ~cmp:cmp_trig_term tl1 tl2
 
     | { f = Name _; _ }, _ -> -1
     | _, { f = Name _; _ } -> 1
 
     | { f = Op Get; xs = l1; _ }, { f = Op Get; xs = l2; _ } ->
-      Util.cmp_lists l1 l2 cmp_trig_term
+      Util.compare_lists ~cmp:cmp_trig_term l1 l2
     | { f = Op Get; _ }, _ -> -1
     | _, { f = Op Get; _ } -> 1
 
     | { f = Op Set; xs = l1; _ }, { f = Op Set; xs = l2; _ } ->
-      Util.cmp_lists l1 l2 cmp_trig_term
+      Util.compare_lists ~cmp:cmp_trig_term l1 l2
     | { f = Op Set; _ }, _ -> -1
     | _, { f = Op Set; _ } -> 1
 
     | { f= Op Extract; xs = l1; _ }, { f = Op Extract; xs = l2; _ } ->
-      Util.cmp_lists l1 l2 cmp_trig_term
+      Util.compare_lists ~cmp:cmp_trig_term l1 l2
     | { f = Op Extract; _ }, _ -> -1
     | _, { f = Op Extract; _ } -> 1
 
     | { f = Op Concat; xs = l1; _ }, { f = Op Concat; xs = l2; _} ->
-      Util.cmp_lists l1 l2 cmp_trig_term
+      Util.compare_lists ~cmp:cmp_trig_term l1 l2
     | { f = Op Concat; _ }, _ -> -1
     | _, { f = Op Concat; _ } -> 1
 
@@ -1824,7 +1810,7 @@ module Triggers = struct
     | _, { f =Op (Destruct _); _ } -> 1
 
     | { f = Op Record ; xs= lbs1; _ }, { f = Op Record ; xs = lbs2; _ } ->
-      Util.cmp_lists lbs1 lbs2 cmp_trig_term
+      Util.compare_lists ~cmp:cmp_trig_term lbs1 lbs2
     | { f = Op Record; _ }, _ -> -1
     | _, { f = Op Record; _ } -> 1
 
@@ -1834,24 +1820,25 @@ module Triggers = struct
       let l2 = List.map score_term tl2 in
       let l1 = List.fast_sort Stdlib.compare l1 in
       let l2 = List.fast_sort Stdlib.compare l2 in
-      let c = Util.cmp_lists l1 l2 Stdlib.compare in
+      let c = Util.compare_lists ~cmp:Stdlib.compare l1 l2 in
       if c <> 0 then c
       else
         let c = Sy.compare s1 s2 in
-        if c <> 0 then c else Util.cmp_lists tl1 tl2 cmp_trig_term
+        if c <> 0 then c else Util.compare_lists ~cmp:cmp_trig_term tl1 tl2
 
     | { f = Op _; _ }, _ -> -1
     | _, { f = Op _; _ } -> 1
     | { f = (Lit _ | Form _ | In _ | MapsTo _ | Let); _ },
       { f = (Lit _ | Form _ | In _ | MapsTo _ | Let); _ } -> assert false
 
+  (* TODO: remove the polymorphic comparisons. *)
   let cmp_trig_term_list tl2 tl1 =
     let l1 = List.map score_term tl1 in
     let l2 = List.map score_term tl2 in
     let l1 = List.rev (List.fast_sort Stdlib.compare l1) in
     let l2 = List.rev (List.fast_sort Stdlib.compare l2) in
-    let c = Util.cmp_lists l1 l2 Stdlib.compare in
-    if c <> 0 then c else Util.cmp_lists tl1 tl2 cmp_trig_term
+    let c = Util.compare_lists ~cmp:Stdlib.compare l1 l2 in
+    if c <> 0 then c else Util.compare_lists ~cmp:cmp_trig_term tl1 tl2
 
   let unique_stable_sort =
     let rec unique l acc =
@@ -1922,7 +1909,7 @@ module Triggers = struct
     struct
       type t = expr list * SSet.t * Svty.t
       let compare (a, y1, _) (b, y2, _)  =
-        let c = try compare_lists a b compare; 0 with Util.Cmp c -> c in
+        let c = Util.compare_lists ~cmp:compare a b in
         if c <> 0 then c else SSet.compare y1 y2
     end)
 
@@ -2263,11 +2250,20 @@ module Triggers = struct
           else if multi != [] then multi
           else multi'
 
+  let compare = compare_trigger
+  let equal tr1 tr2 = compare tr1 tr2 = 0
+
+  let pp = print_trigger
+  let show = Format.asprintf "%a" pp
+
+  module Map = Map.Make (struct
+      type t = trigger
+
+      let compare = compare
+    end)
 end
 
 (*****)
-
-let make_triggers = Triggers.make
 
 let mk_forall name loc binders trs f id ~toplevel ~decl_kind =
   let decl_kind =
@@ -2288,7 +2284,7 @@ let mk_forall name loc binders trs f id ~toplevel ~decl_kind =
   in
   let free_vty = free_type_vars_as_types f in
   let sko_vty = if toplevel then [] else Ty.Set.elements free_vty in
-  let trs = Triggers.check_user_triggers f toplevel binders trs ~decl_kind in
+  let trs = Trigger.check_user_triggers f toplevel binders trs ~decl_kind in
   mk_forall_bis
     {name; loc; binders; toplevel;
      user_trs = trs; main = f; sko_v; sko_vty; kind = decl_kind} id

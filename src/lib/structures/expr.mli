@@ -128,6 +128,22 @@ module Subst : sig
       {!val:compare}. *)
 end
 
+module Trigger : sig
+  type expr = t
+  type t = trigger
+
+  val make : expr -> binders -> decl_kind -> Util.matching_env -> trigger list
+
+  val compare : t -> t -> int
+  val equal : t -> t -> bool
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+
+  module Map : Map.S with type key = t
+  (** Module of maps of trigger using the comparison function
+      {!val:compare}. *)
+end
+
 module Set : Set.S with type elt = t
 
 module Map : Map.S with type key = t
@@ -269,9 +285,6 @@ val apply_subst_to_trigger : Subst.t -> trigger -> trigger
 val apply_subst : Subst.t -> t -> t
 
 (** skolemization and other smart constructors for formulas **)
-
-val make_triggers:
-  t -> binders -> decl_kind -> Util.matching_env -> trigger list
 
 val resolution_triggers: is_back:bool -> quantified -> trigger list
 
