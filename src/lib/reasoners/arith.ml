@@ -818,4 +818,26 @@ module Shostak
     in
     r, pprint_const_for_model r
 
+  let to_semantic_trigger =
+    let not_theory_const = Hstring.make "not_theory_constant" in
+    let is_theory_const = Hstring.make "is_theory_constant" in
+    let linear_dep = Hstring.make "linear_dependency" in
+    fun t ->
+      match E.term_view t with
+      | E.Not_a_term _ -> assert false
+      | E.Term { f = Symbols.In (lb, ub); xs = [x]; _ } ->
+        `Sem (E.Interval (x, lb, ub))
+      | E.Term { f = Symbols.MapsTo x; xs = [t]; _ } ->
+        `Sem (E.MapsTo (x, t))
+      | E.Term { f = Sy.Name (hs, _); xs = [x]; _ }
+        when Hstring.equal hs not_theory_const ->
+        `Sem (E.NotTheoryConst x)
+      | E.Term { E.f = Sy.Name (hs, _); xs = [x]; _ }
+        when Hstring.equal hs is_theory_const ->
+        `Sem (E.IsTheoryConst x)
+      | E.Term { E.f = Sy.Name (hs, _); xs = [x;y]; _ }
+        when Hstring.equal hs linear_dep ->
+        `Sem (E.LinearDependency(x,y))
+      | _ -> `Syn t
+
 end

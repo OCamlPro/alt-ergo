@@ -33,32 +33,79 @@ module Sy = Symbols
 module E = Expr
 module ME = E.Map
 
-module type S = sig
-  type t
+type subst = {
+  content : Expr.Subst.t;
+  age : int;
+  lemma_orig : Expr.t;
+  terms_orig : Expr.t list;
+  from_goal : bool;
+}
 
+type term_info = {
+  age : int;
+  lemmas_orig : Expr.t list;
+  terms_orig : Expr.t list;
+  from_goal : bool;
+}
+
+type trigger_info = {
+  age : int;
+  lemma_orig : Expr.t;
+  formula_orig : Expr.t;
+  dep : Explanation.t;
+  increm_guard : Expr.t;
+}
+
+type env = {
+  fils : Expr.Set.t Symbols.Map.t;
+  (* Map of symbols to the known terms having this symbol as top symbol. *)
+
+  known_terms : term_info Expr.Map.t;
+  (* Map of the known terms to their information. *)
+
+  known_triggers : trigger_info Expr.Trigger.Map.t;
+  (* Map of the known triggers to their information. *)
+
+  max_t_depth : int;
+  (* The current maximal depth. This field is used to limit the size of
+     the environment. *)
+}
+
+module type S = sig
+  type t = env
   type theory
 
-  val empty : t
+  val make : int -> t
 
-  val make :
-    max_t_depth: int ->
-    known_terms: Expr.Set.t ->
-    known_pats: Expr.trigger list ->
-    Expr.Set.t Symbols.Map.t ->
+  val clean_triggers : t -> t
+
+  val add_term :
+    t ->
+    age:int ->
+    from_goal:bool ->
+    ?lemma_orig:Expr.t ->
+    terms_orig:Expr.t list ->
+    Expr.t ->
     t
 
-  val add_term : t -> Expr.t -> t
   val max_term_depth : t -> int -> t
 
   val add_triggers :
-    Util.matching_env -> t -> Expr.t list -> t
+    Util.matching_env ->
+    (int * Expr.t * Explanation.t) Expr.Map.t ->
+    t ->
+    t
 
   val query :
-    Util.matching_env -> t -> theory -> Expr.Subst.t list list
+    Util.matching_env ->
+    t ->
+    theory ->
+    (Expr.trigger * trigger_info * subst list) list
 end
 
 module type Arg = sig
   type t
+
   val term_repr : t -> E.t -> init_term:bool -> E.t
   val are_equal : t -> E.t -> E.t -> init_terms:bool -> Th_util.answer
   val class_of : t -> E.t -> E.t list
@@ -68,32 +115,28 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   type theory = X.t
 
-  type t = {
-    fils : Expr.Set.t Symbols.Map.t;
-    (* Map of symbols to the known terms having this symbol as top symbol. *)
+  module Subst = struct
+    let id = {
+      content = Expr.Subst.id;
+      age = 0;
+      lemma_orig = Expr.vrai;
+      terms_orig = [];
+      from_goal = false;
+    }
+  end
 
-    known_terms : Expr.Set.t;
-    (* Set of the known terms. *)
-
-    known_pats : Expr.trigger list;
-    (* List of the known triggers. *)
-
-    max_t_depth : int;
-    (* The current maximal depth. This field is used to limit the size of
-       the environment. *)
-  }
+  type t = env
 
   exception Echec
 
-  let empty = {
+  let[@inline always] make max_t_depth = {
     fils = Symbols.Map.empty;
-    known_terms = Expr.Set.empty;
-    known_pats = [];
-    max_t_depth = 0;
+    known_terms = Expr.Map.empty;
+    known_triggers = Expr.Trigger.Map.empty;
+    max_t_depth;
   }
 
-  let make ~max_t_depth ~known_terms ~known_pats fils =
-    { fils; known_terms; known_pats; max_t_depth }
+  let clean_triggers env = { env with known_triggers = Expr.Trigger.Map.empty }
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
@@ -112,13 +155,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
            ========================================================@]"
           E.print_list tr.E.content
 
-    let match_pats_modulo pat sbts =
+    let match_pat_modulo pat sbts =
       if get_debug_matching() >= 3 then
         let print fmt sbt =
-          fprintf fmt ">>> sbs= %a@ " Expr.Subst.pp sbt
+          fprintf fmt ">>> sbs= %a@ " Expr.Subst.pp sbt.content
         in
         print_dbg
-          ~module_name:"Matching" ~function_name:"match_pats_modulo"
+          ~module_name:"Matching" ~function_name:"match_pat_modulo"
           "@[<v 2>match_pat_modulo: %a  with accumulated substs@ %a@]"
           E.print pat (pp_list_no_space print) sbts
 
@@ -127,7 +170,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         print_dbg
           ~module_name:"Matching" ~function_name:"match_one_pat"
           "match_pat: %a with subst: %a"
-          E.print pat0 Expr.Subst.pp sbt
+          E.print pat0 Expr.Subst.pp sbt.content
 
 
     let match_one_pat_against sbt pat0 t =
@@ -138,14 +181,14 @@ module Make (X : Arg) : S with type theory = X.t = struct
            with subst: %a@]"
           E.print pat0
           E.print t
-          Expr.Subst.pp sbt
+          Expr.Subst.pp sbt.content
 
     let match_term sbt t pat =
       if get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_term"
           "I match %a against %a with subst: %a"
-          E.print pat E.print t Expr.Subst.pp sbt
+          E.print pat E.print t Expr.Subst.pp sbt.content
 
     let match_list sbt pats terms =
       if get_debug_matching() >= 3 then
@@ -154,7 +197,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           "I match %a against %a with subst: %a"
           E.print_list pats
           E.print_list terms
-          Expr.Subst.pp sbt
+          Expr.Subst.pp sbt.content
 
     let match_class_of t cl =
       if get_debug_matching() >= 3 then
@@ -173,68 +216,54 @@ module Make (X : Arg) : S with type theory = X.t = struct
           (*E.print pat_info.trigger_orig*)
           E.print_list trigger.E.content;
       if get_debug_matching() >= 2 then
-        List.iter (print_dbg ~header:false ">>> %a@ " Expr.Subst.pp) res
+        List.iter
+          (fun { content; _ } ->
+             print_dbg ~header:false ">>> %a@ " Expr.Subst.pp content
+          ) res
 
   end
   (*BISECT-IGNORE-END*)
 
-  let rm x lst = List.filter (fun y -> E.compare x y <> 0) lst
+  (* let rm x lst = List.filter (fun y -> E.compare x y <> 0) lst
 
-  let rec permutations = function
-    | [] -> []
-    | x :: [] -> [[x]]
-    | lst ->
+     let rec permutations = function
+     | [] -> []
+     | x :: [] -> [[x]]
+     | lst ->
       List.fold_left (fun acc x ->
           acc @ List.map (fun p -> x :: p) (permutations (rm x lst))
-        ) [] lst
+        ) [] lst *)
 
-  let add_term env t =
+  let add_term env ~age ~from_goal ?lemma_orig ~terms_orig t =
     Debug.add_term t;
     let rec add_rec env t =
-      if Expr.Set.mem t env.known_terms then env
+      if Expr.Map.mem t env.known_terms then env
       else begin
-        match E.term_view t with
-        | E.Term { E.f = f; xs = xs; _ } ->
-          let env =
-            (* Retrieve all the known terms whose the top symbol is f. *)
-            let map_f =
-              try Symbols.Map.find f env.fils with Not_found -> Expr.Set.empty
-            in
-            let fils = Symbols.Map.add f (Expr.Set.add t map_f) env.fils in
-            let known_terms = Expr.Set.add t env.known_terms in
-            { env with fils; known_terms }
+        let env =
+          (* Retrieve all the known terms whose the top symbol is f. *)
+          let map_f =
+            try Symbols.Map.find t.f env.fils with Not_found -> Expr.Set.empty
           in
-          (* Recursively adding the subterms of the term t. *)
-          List.fold_left add_rec env xs
-        | E.Not_a_term {is_lit} ->
-          (* TODO: Replace it by Util.failwith. *)
-          Printer.print_err
-            "%a is not a term, is_lit = %b" E.print t is_lit;
-          assert false
+          let fils = Symbols.Map.add t.f (Expr.Set.add t map_f) env.fils in
+          let lemmas_orig =
+            match lemma_orig with
+            | Some lem -> [lem]
+            | None -> []
+          in
+          let info =
+            { age; from_goal; lemmas_orig; terms_orig }
+          in
+          let known_terms = Expr.Map.add t info env.known_terms in
+          { env with fils; known_terms }
+        in
+        (* Recursively adding the subterms of the term t. *)
+        List.fold_left add_rec env t.xs
       end
     in
-    add_rec env t
-  (* l'age limite des termes, au dela ils ne sont pas consideres par le
-     matching *)
-  (*if term_info.term_age > Options.get_age_bound () then env
-    else add_rec env t*)
+    (* Too old terms are ignored by the matching. *)
+    if age > Options.get_age_bound () then env else add_rec env t
 
-  let all_terms f ty env tbox (sbt_t, sbt_ty) lsbt_acc =
-    Symbols.Map.fold
-      (fun _ map_s l ->
-         Expr.Set.fold
-           (fun t l ->
-              try
-                let sbt_ty = Ty.matching sbt_ty ty (E.type_info t) in
-                (* With triggers that are variables, always normalize
-                   substitutions. *)
-                let t = X.term_repr tbox t ~init_term:true in
-                let sbt_t = Expr.TSubst.assign f t sbt_t in
-                (sbt_t, sbt_ty) :: l
-              with Ty.TypeClash _ -> l
-           ) map_s l
-      ) env.fils lsbt_acc
-
+  (* Map of equalities between terms used as a cache. *)
   module MT2 = Map.Make(struct
       type t = E.t * E.t
       let compare (a, b) (x, y) =
@@ -264,178 +293,197 @@ module Make (X : Arg) : S with type theory = X.t = struct
        cache_full  := MT2.empty
     )
 
-  let add_msymb tbox f t (sbt_t, sbt_ty) max_t_depth =
-    try
-      match Expr.TSubst.apply sbt_t f with
-      | s when are_equal ~mode:`Full tbox t s -> raise Echec
-      | _ -> (sbt_t, sbt_ty)
-    with Not_found -> begin
-        let t =
-          if (E.depth t) > max_t_depth || get_normalize_instances () then
-            X.term_repr tbox t ~init_term:true
-          else t
-        in
-        (Expr.TSubst.assign f t sbt_t, sbt_ty)
-      end
-
   let xs_modulo_records t { Ty.lbs; _  } =
     List.rev
       (List.rev_map
          (fun (hs, ty) ->
             E.mk_term (Symbols.Op (Symbols.Access hs)) [t] ty) lbs)
 
-  module SLE = (* sets of lists of terms *)
+  (* Set of lists of terms. *)
+  module SLE =
     Set.Make(struct
       type t = E.t list
-      let compare l1 l2 =
-        try
-          List.iter2
-            (fun t1 t2 ->
-               let c = E.compare t1 t2 in
-               if c <> 0 then raise (Util.Cmp c)
-            ) l1 l2;
-          0
-        with Invalid_argument _ ->
-          List.length l1 - List.length l2
-           | Util.Cmp n -> n
+
+      let compare = Util.compare_lists ~cmp:E.compare
     end)
 
   (* Update the classes according to the equality modulo theory. *)
-  let filter_classes mconf cl tbox =
+  let filter_classes mconf tbox cl =
     if mconf.Util.no_ematching then cl
     else
       let mtl =
         List.fold_left
           (fun acc xs ->
              let xs =
-               List.rev
-                 (List.rev_map
-                    (fun t -> X.term_repr tbox t ~init_term:false) xs)
+               List.rev_map
+                 (fun t -> X.term_repr tbox t ~init_term:false) xs
+               |> List.rev
              in
              SLE.add xs acc
           ) SLE.empty cl
       in
       SLE.elements mtl
 
-  let plus_of_minus t d ty =
-    [E.mk_term (Symbols.Op Symbols.Minus) [t; d] ty ; d]
-
-  let minus_of_plus t d ty = [E.mk_plus t d ty; d]
-
-  let linear_arithmetic_matching f_pat pats _ty_pat t =
-    match E.term_view t with
-    | E.Not_a_term _ -> assert false
-    | E.Term { E.ty; _ } ->
-      if not (Options.get_arith_matching ()) ||
-         ty != Ty.Tint && ty != Ty.Treal then []
-      else
-        match f_pat, pats with
-        | Symbols.Op Symbols.Plus, [p1; p2] ->
-          if E.is_ground p2 then [plus_of_minus t p2 ty]
-          else if E.is_ground p1 then [plus_of_minus t p1 ty] else []
-
-        | Symbols.Op Symbols.Minus, [p1; p2] ->
-          if E.is_ground p2 then [minus_of_plus t p2 ty]
-          else if E.is_ground p1 then [minus_of_plus t p1 ty] else []
-        | _ -> []
-
-  let rec match_term mconf env tbox ((sbt_t, sbt_ty) as sbt) pat t =
-    Options.exec_thread_yield ();
-    Debug.match_term sbt t pat;
-    let { E.xs = pat_args; _ } =
-      match E.term_view pat with
-      | E.Not_a_term _ -> assert false
-      | E.Term tt -> tt
+  let linear_arithmetic_matching (pat : E.t) (t : E.t) =
+    let plus_of_minus d =
+      [E.mk_term (Symbols.Op Symbols.Minus) [t; d] t.ty ; d]
     in
-    let sbt_ty = Ty.matching sbt_ty pat.ty (E.type_info t) in
-    let sbt = (sbt_t, sbt_ty) in
-    match pat.f with
-    | Symbols.Var _ when Symbols.equal pat.f Symbols.underscore -> [sbt]
-    | Symbols.Var _ ->
-      [add_msymb tbox pat.f t sbt env.max_t_depth]
-    | _ ->
-      try
-        if E.is_ground pat && are_equal ~mode:`Light tbox pat t then [sbt]
-        else
-          let cl = if mconf.Util.no_ematching then [t]
-            else X.class_of tbox t
-          in
-          Debug.match_class_of t cl;
-          let cl =
-            List.fold_left
-              (fun l t ->
-                 let { E.f = f; xs = xs; ty = ty; _ } =
-                   match E.term_view t with
-                   | E.Not_a_term _ -> assert false
-                   | E.Term tt -> tt
-                 in
-                 if Symbols.compare pat.f f = 0 then xs :: l
-                 else
-                   begin
-                     match pat.f, ty with
-                     | Symbols.Op (Symbols.Record), Ty.Trecord record ->
-                       (xs_modulo_records t record) :: l
-                     | _ -> l
-                   end
-              ) [] cl
-          in
-          let cl = filter_classes mconf cl tbox in
-          let cl =
-            if cl != [] then cl
-            else linear_arithmetic_matching pat.f pat_args pat.ty t
-          in
-          List.fold_left
-            (fun acc xs ->
-               try (match_list mconf env tbox sbt pat_args xs) @ acc
-               with Echec -> acc
-            ) [] cl
-      with Ty.TypeClash _ -> raise Echec
+    let minus_of_plus d = [E.mk_plus t d t.ty; d] in
+    if not (Options.get_arith_matching ()) ||
+       t.ty != Ty.Tint && t.ty != Ty.Treal then []
+    else
+      match pat.f, pat.xs with
+      | Symbols.Op Symbols.Plus, [p1; p2] ->
+        if E.is_ground p2 then [plus_of_minus p2]
+        else if E.is_ground p1 then [plus_of_minus p1] else []
 
-  and match_list mconf env tbox sbt pats terms =
+      | Symbols.Op Symbols.Minus, [p1; p2] ->
+        if E.is_ground p2 then [minus_of_plus p2]
+        else if E.is_ground p1 then [minus_of_plus p1] else []
+      | _ -> []
+
+  (* Extend the substitution [sbt] by the binding [f -> t].
+     The function raises an Echec exception if we cannot extend the
+     substitution according the union-find UF(X). *)
+  let add_msymb tbox f t ({ content = (sbt_t, sbt_ty); _ } as sbt)
+      ~max_t_depth =
+    try
+      match Expr.TSubst.apply sbt_t f with
+      | s when not @@ are_equal ~mode:`Full tbox t s -> raise Echec
+      | _ -> sbt
+    with Not_found -> begin
+        let t =
+          if (E.depth t) > max_t_depth || get_normalize_instances () then
+            X.term_repr tbox t ~init_term:true
+          else t
+        in
+        { sbt with content = (Expr.TSubst.assign f t sbt_t, sbt_ty) }
+      end
+
+  (* Produce candidate substitutions to match the pattern [pat] with the
+     term [term]. *)
+  let rec match_term mconf env tbox =
+    let match_classes (pat : E.t) term =
+      let cl =
+        if mconf.Util.no_ematching then [term]
+        else X.class_of tbox term
+      in
+      Debug.match_class_of term cl;
+      let cl =
+        List.fold_left
+          (fun l (term : E.t) ->
+             if Symbols.compare pat.f term.f = 0 then term.xs :: l
+             else
+               begin
+                 match pat.f, term.ty with
+                 | Symbols.Op (Symbols.Record), Ty.Trecord record ->
+                   (xs_modulo_records term record) :: l
+                 | _ -> l
+               end
+          ) [] cl
+        |> filter_classes mconf tbox
+      in
+      if cl != [] then cl
+      else linear_arithmetic_matching pat term
+    in
+    fun sbt pat term ->
+      Options.exec_thread_yield ();
+      Debug.match_term sbt term pat;
+      let sbt =
+        let (sbt_t, sbt_ty) = sbt.content in
+        let sbt_ty = Ty.matching sbt_ty pat.ty (E.type_info term) in
+        { sbt  with content = (sbt_t, sbt_ty) }
+      in
+      match pat.f with
+      | Symbols.Var _ when Symbols.equal pat.f Symbols.underscore -> [sbt]
+      | Symbols.Var _ ->
+        [add_msymb tbox pat.f term sbt ~max_t_depth:env.max_t_depth]
+      | _ ->
+        try
+          if E.is_ground pat && are_equal ~mode:`Light tbox pat term then [sbt]
+          else
+            let cl = match_classes pat term in
+            List.fold_left
+              (fun acc xs ->
+                 try match_list mconf env tbox sbt pat.xs xs @ acc
+                 with Echec -> acc
+              ) [] cl
+        with Ty.TypeClash _ -> raise Echec
+
+  and match_list mconf env tbox (sbt : subst) pats terms =
     Debug.match_list sbt pats terms;
     try
       List.fold_left2
-        (fun sb_l pat arg ->
+        (fun sbts pat term ->
            List.fold_left
-             (fun acc sg ->
-                let aux = match_term mconf env tbox sg pat arg in
-                (*match aux with [] -> raise Echec | _  -> BUG !! *)
-                List.rev_append aux acc
-             ) [] sb_l
+             (fun acc sbt ->
+                match_term mconf env tbox sbt pat term
+                |> List.rev_append acc
+             ) [] sbts
         ) [sbt] pats terms
     with Invalid_argument _ -> raise Echec
 
-  let match_one_pat mconf env tbox pat lsbt_acc ((sbt_t, sbt_ty) as sbt) =
+  (* Trying to match the pattern [pat] with any known term by
+     extending the annotated substitution [sbt]. *)
+  let match_one_pat mconf env tbox pat acc sbt =
     Steps.incr (Steps.Matching);
     Debug.match_one_pat sbt pat;
-    let pat = Expr.apply_subst sbt pat in
-    let { E.f = f; xs = pat_args; ty = ty; _ } =
-      match E.term_view pat with
-      | E.Not_a_term _ -> assert false
-      | E.Term tt -> tt
+    let pat = Expr.apply_subst sbt.content pat in
+    let sbt_t, sbt_ty = sbt.content in
+    (* Collect all the extensions of the substitution sbt by
+       bindings of the form [f -> t] where t is a known term whose the
+       type matches ty. *)
+    let match_var acc =
+      Expr.Map.fold
+        (fun t (info : term_info) sbts ->
+           try
+             let sbt_ty = Ty.matching sbt_ty pat.ty (E.type_info t) in
+             (* With triggers that are variables, always normalize
+                substitutions. *)
+             let t = X.term_repr tbox t ~init_term:true in
+             let sbt_t = Expr.TSubst.assign pat.f t sbt_t in
+             let sbt = { sbt with
+                         content = (sbt_t, sbt_ty);
+                         age = Int.max sbt.age info.age;
+                         from_goal = sbt.from_goal || info.from_goal;
+                         terms_orig = t :: sbt.terms_orig
+                       }
+             in
+             sbt :: sbts
+           with Ty.TypeClash _ -> sbts
+        ) env.known_terms acc
     in
-    match f with
-    | Symbols.Var _ -> all_terms f ty env tbox sbt lsbt_acc
+    (* Try to match the arguments of the pattern [pat] with the argument of the
+       term [t]. *)
+    let match_map t acc =
+      Debug.match_one_pat_against sbt pat t;
+      if E.depth t > 5 * env.max_t_depth then acc
+      else
+        try
+          let sbt =
+            let sbt_ty = Ty.matching sbt_ty pat.ty (E.type_info t) in
+            { sbt with content = (sbt_t, sbt_ty) }
+          in
+          match_list mconf env tbox sbt pat.xs t.xs
+          |> List.rev_append acc
+        with Echec | Ty.TypeClash _ -> acc
+    in
+    match pat.f with
+    | Symbols.Var _ -> match_var acc
     | _ ->
-      let f_aux ({ xs = args; _ } as t : Expr.t) lsbt =
-        (* maybe put 3 as a rational parameter in the future *)
-        let too_big = (E.depth t) > 10000 * env.max_t_depth in
-        if too_big then
-          lsbt
-        else
-          try
-            Debug.match_one_pat_against sbt pat t;
-            let sbt_ty = Ty.matching sbt_ty ty (E.type_info t) in
-            let aux = match_list mconf env tbox (sbt_t, sbt_ty) pat_args args in
-            List.rev_append aux lsbt
-          with Echec | Ty.TypeClash _ -> lsbt
-      in
-      try Expr.Set.fold f_aux (Symbols.Map.find f env.fils) lsbt_acc
-      with Not_found -> lsbt_acc
+      let map_f = Symbols.Map.find pat.f env.fils in
+      try Expr.Set.fold match_map map_f acc
+      with Not_found ->
+        (* There is no known term whose the top symbol is pat.f. *)
+        acc
 
-  let match_pats_modulo mconf env tbox lsubsts pat =
-    Debug.match_pats_modulo pat lsubsts;
-    List.fold_left (match_one_pat mconf env tbox pat) [] lsubsts
+  (* Trying to match the pattern [pat] with any known term by applying
+     some extensions of the substitutions [sbts].
+     Return a list of substitutions that match the pattern [pat] with
+     some known terms. *)
+  let match_pat_modulo mconf env tbox sbts pat =
+    Debug.match_pat_modulo pat sbts;
+    List.fold_left (match_one_pat mconf env tbox pat) [] sbts
 
   let trig_weight s t =
     match E.term_view s, E.term_view t with
@@ -446,52 +494,45 @@ module Make (X : Arg) : S with type theory = X.t = struct
       E.Term { E.f = Symbols.Name _; _ } -> 1
     | _ -> (E.depth t) - (E.depth s)
 
-  (* Produce a list of candidate substitutions for the annoted trigger
-     [pat_info]. The trigger is ignored if its number of terms exceed the value
+  (* Produce a list of candidate substitutions for the annoted trigger [tr].
+     The trigger is ignored if its number of terms exceed the value
      of the option [get_max_multi_triggers_size]. *)
-  let matching mconf env tbox trigger =
-    let pats = List.stable_sort trig_weight trigger.E.content in
-    Debug.matching trigger;
+  let matching mconf env tbox tr =
+    let pats = List.stable_sort trig_weight tr.E.content in
+    Debug.matching tr;
     if List.length pats > Options.get_max_multi_triggers_size () then []
     else
-      match pats with
-      | []  -> []
-      | [_] ->
+      let cpt = ref 1 in
+      try
         let res =
-          List.fold_left (match_pats_modulo mconf env tbox) [Expr.Subst.id]
-            pats
+          List.fold_left
+            (fun acc pat ->
+               let acc = match_pat_modulo mconf env tbox acc pat in
+               let len = List.length acc in
+               cpt := !cpt * len;
+               if !cpt = 0 || !cpt > 10_000 then raise Exit;
+               acc
+            ) [Subst.id] pats
         in
-        Debug.candidate_substitutions trigger res;
+        Debug.candidate_substitutions tr res;
         res
-      | _ ->
-        let cpt = ref 1 in
-        try
-          List.iter
-            (fun pat ->
-               cpt := !cpt * List.length
-                        (match_pats_modulo mconf env tbox [Expr.Subst.id] pat);
-               (* TODO: put an adaptive limit *)
-               if !cpt = 0 || !cpt > 10_000 then raise Exit
-            ) (List.rev pats);
-          let res =
-            List.fold_left (match_pats_modulo mconf env tbox)
-              [Expr.Subst.id] pats
-          in
-          Debug.candidate_substitutions trigger res;
-          res
-        with Exit ->
-          if get_debug_matching() >= 1 && get_verbose() then begin
-            Printer.print_dbg
-              ~module_name:"Matching" ~function_name:"matching"
-              "skip matching for %%a : cpt = %d"
-              !cpt
-          end;
-          []
+      with Exit ->
+        if get_debug_matching() >= 1 && get_verbose() then begin
+          Printer.print_dbg
+            ~module_name:"Matching" ~function_name:"matching"
+            "skip matching for %%a : cpt = %d"
+            !cpt
+        end;
+        []
 
   let query mconf env tbox =
     reset_cache_refs ();
     try
-      let res = List.rev_map (matching mconf env tbox) env.known_pats in
+      let res =
+        Expr.Trigger.Map.fold
+          (fun tr info acc -> (tr, info, matching mconf env tbox tr) :: acc)
+          env.known_triggers []
+      in
       reset_cache_refs ();
       res
     with e ->
@@ -572,7 +613,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       | [] ->
         try HEI.find trs_tbl (q.E.main, mconf)
         with Not_found ->
-          let trs = E.make_triggers q.E.main q.E.binders q.E.kind mconf in
+          let trs = E.Trigger.make q.E.main q.E.binders q.E.kind mconf in
           HEI.add trs_tbl (q.E.main, mconf) trs;
           trs
 
@@ -594,19 +635,12 @@ module Make (X : Arg) : S with type theory = X.t = struct
         HE.add trs_tbl q.E.main trs;
         trs
 
-  let add_trigger env trigger =
-    { env with known_pats = trigger :: env.known_pats }
-
-  (*  [add_triggers mconf env formulas] add to the environment [env] the
-      triggers contained in the [formulas]. More precisely, [formulas] is a map
-      of lemmas to triplets (guard, age, dep) where [age] is the initial [age]
-      of the new trigger. *)
   let add_triggers mconf =
-    List.fold_left
-      (fun env lem ->
+    Expr.Map.fold
+      (fun lem (age, increm_guard, dep) env ->
          match E.form_view lem with
-         | E.Lemma ({ name; _ } as q) ->
-           let trs, kind =
+         | E.Lemma ({ main; name; _ } as q) ->
+           let triggers, kind =
              match mconf.Util.inst_mode with
              | Util.Normal   -> normal_triggers q mconf, "Normal"
              | Util.Backward -> backward_triggers q, "Backward"
@@ -616,8 +650,22 @@ module Make (X : Arg) : S with type theory = X.t = struct
              Printer.print_dbg
                ~module_name:"Matching" ~function_name:"add_triggers"
                "@[<v 2>%s triggers of %s are:@ %a@]"
-               kind name E.print_triggers trs;
-           List.fold_left add_trigger env trs
+               kind name E.print_triggers triggers;
+           List.fold_left
+             (fun env trigger ->
+                let info = {
+                  age;
+                  lemma_orig = lem;
+                  formula_orig = main;
+                  dep;
+                  increm_guard;
+                }
+                in
+                let known_triggers =
+                  Expr.Trigger.Map.add trigger info env.known_triggers
+                in
+                { env with known_triggers }
+             ) env triggers
 
          | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
          | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false

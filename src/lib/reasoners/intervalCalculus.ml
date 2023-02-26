@@ -59,6 +59,7 @@ module SE = Expr.Set
 module ME = Expr.Map
 module Ex = Explanation
 module E = Expr
+
 module EM = Matching.Make
     (struct
       include Uf
@@ -119,7 +120,8 @@ type t = {
   new_uf : Uf.t;
   th_axioms : (Expr.th_elt * Explanation.t) ME.t;
   linear_dep : SE.t ME.t;
-  syntactic_matching : Expr.Subst.t list list list;
+  syntactic_matching :
+    (Expr.trigger * Matching.trigger_info * Matching.subst list) list list;
 }
 
 module Sim_Wrap = struct
@@ -2100,14 +2102,14 @@ let mk_const_term ty s =
   | Ty.Treal -> E.real (Q.to_string s)
   | _ -> assert false
 
-let integrate_mapsTo_bindings sbs maps_to =
+let integrate_mapsTo_bindings (sbt : Matching.subst) maps_to =
   try
-    let sbs =
+    let content =
       List.fold_left
-        (fun ((sbs_t, sbs_ty) as sbs) (x, tx) ->
+        (fun ((sbt_t, sbt_ty) as sbt) (x, tx) ->
            let x = Sy.Var x in
-           assert (not @@ Expr.TSubst.is_in_domain x sbs_t);
-           let t = E.apply_subst sbs tx in
+           assert (not @@ Expr.TSubst.is_in_domain x sbt_t);
+           let t = E.apply_subst sbt tx in
            let mk, _ = X.make t in
            match P.is_const (poly_of mk) with
            | None ->
@@ -2121,21 +2123,21 @@ let integrate_mapsTo_bindings sbs maps_to =
              raise Exit
            | Some c ->
              let tc = mk_const_term (E.type_info t) c in
-             Expr.TSubst.assign x tc sbs_t, sbs_ty
-        )sbs maps_to
+             Expr.TSubst.assign x tc sbt_t, sbt_ty
+        ) sbt.content maps_to
     in
-    Some sbs
+    Some { sbt with content }
   with Exit -> None
 
 let extend_with_domain_substitution =
   (* TODO : add the ability to modify the value of epsilon ? *)
   let eps = Q.div_2exp Q.one 1076 in
-  let aux idoms sbt =
+  let aux idoms sbt_t =
     Var.Map.fold
-      (fun v_hs (lv, uv, ty) sbt ->
+      (fun v_hs (lv, uv, ty) sbt_t ->
          let s = Hstring.view (Var.view v_hs).Var.hs in
          match s.[0] with
-         | '?' -> sbt
+         | '?' -> sbt_t
          | _ ->
            let lb_var = Sy.var v_hs in
            let lb_val = match lv, uv with
@@ -2159,11 +2161,11 @@ let extend_with_domain_substitution =
              | None, Some (q, is_strict) -> (* hs < q or hs <= q *)
                mk_const_term ty (if is_strict then Q.sub q eps else q)
            in
-           Expr.TSubst.assign lb_var lb_val sbt
-      ) idoms sbt
+           Expr.TSubst.assign lb_var lb_val sbt_t
+      ) idoms sbt_t
   in
-  fun (sbt, sbty) idoms ->
-    try Some (aux idoms sbt, sbty)
+  fun ({ content = (sbt_t, sbt_ty); _ } as sbt : Matching.subst) idoms ->
+    try Some { sbt with content = (aux idoms sbt_t, sbt_ty) }
     with Exit ->
       if get_debug_fpa() >=2 then
         Printer.print_dbg
@@ -2181,7 +2183,7 @@ let terms_linear_dep { linear_dep ; _ } lt =
 
 exception Sem_match_fails of t
 
-let domain_matching _lem_name tr sbt env uf optimized =
+let domain_matching _lem_name tr (sbt : Matching.subst) env uf optimized =
   try
     let idoms, maps_to, env, _uf =
       List.fold_left
@@ -2192,7 +2194,7 @@ let domain_matching _lem_name tr sbt env uf optimized =
              idoms, (x, t) :: maps_to, env, uf
 
            | E.Interval (t, lb, ub) ->
-             let tt = Expr.apply_subst sbt t in
+             let tt = Expr.apply_subst sbt.content t in
              assert (E.is_ground tt);
              let uf, _ = Uf.add uf tt in
              let rr, _ex = Uf.find uf tt in
@@ -2207,7 +2209,7 @@ let domain_matching _lem_name tr sbt env uf optimized =
              end
 
            | E.NotTheoryConst t ->
-             let tt = Expr.apply_subst sbt t in
+             let tt = Expr.apply_subst sbt.content t in
              let uf, _ = Uf.add uf tt in
              if X.leaves (fst (Uf.find uf tt)) == [] ||
                 X.leaves (fst (X.make tt)) == [] then
@@ -2215,33 +2217,33 @@ let domain_matching _lem_name tr sbt env uf optimized =
              idoms, maps_to, env, uf
 
            | E.IsTheoryConst t ->
-             let tt = Expr.apply_subst sbt t in
+             let tt = Expr.apply_subst sbt.content t in
              let uf, _ = Uf.add uf tt in
              let r, _ = X.make tt in
              if X.leaves r != [] then raise (Sem_match_fails env);
              idoms, maps_to, env, uf
 
            | E.LinearDependency (x, y) ->
-             let x = Expr.apply_subst sbt x in
-             let y = Expr.apply_subst sbt y in
+             let x = Expr.apply_subst sbt.content x in
+             let y = Expr.apply_subst sbt.content y in
              if not (terms_linear_dep env [x;y]) then
                raise (Sem_match_fails env);
              let uf, _ = Uf.add uf x in
              let uf, _ = Uf.add uf y in
              idoms, maps_to, env, uf
-        )(Var.Map.empty, [], env, uf) tr.E.semantic
+        ) (Var.Map.empty, [], env, uf) tr.E.semantic
     in
     env, Some (idoms, maps_to)
   with Sem_match_fails env -> env, None
 
 
-let semantic_matching lem_name tr sbs env uf optimized =
-  match domain_matching lem_name tr sbs env uf optimized with
+let semantic_matching lem_name tr sbt env uf optimized =
+  match domain_matching lem_name tr sbt env uf optimized with
   | env, None -> env, None
   | env, Some (idom, mapsTo) ->
-    begin match extend_with_domain_substitution sbs idom with
+    begin match extend_with_domain_substitution sbt idom with
       | None -> env, None
-      | Some sbs -> env, integrate_mapsTo_bindings sbs mapsTo
+      | Some sbt -> env, integrate_mapsTo_bindings sbt mapsTo
     end
 
 let record_this_instance f accepted lorig =
@@ -2252,13 +2254,14 @@ let record_this_instance f accepted lorig =
     | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
     | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
 
-let profile_produced_terms menv lorig nf s trs =
+let profile_produced_terms menv nf (sbt : Matching.subst) trs =
   if Options.get_profiling() then
     let st0 =
-      List.fold_left (fun st t -> E.sub_terms st (Expr.apply_subst s t))
+      List.fold_left
+        (fun st t -> E.sub_terms st (Expr.apply_subst sbt.content t))
         SE.empty trs
     in
-    let name, loc, _ = match E.form_view lorig with
+    let name, loc, _ = match E.form_view sbt.lemma_orig with
       | E.Lemma { E.name; main; loc; _ } -> name, loc, main
       | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
       | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
@@ -2270,95 +2273,94 @@ let profile_produced_terms menv lorig nf s trs =
        Profiling.register_produced_terms name loc st0 st1 diff _new *)
     ()
 
+(* TODO: This function should be in the instantiate module. *)
 let new_facts_for_axiom
-    ~do_syntactic_matching menv uf selector optimized sbts accu =
+    ~do_syntactic_matching menv uf ~selector optimized sbts accu =
   List.fold_left
-    (fun acc ({trigger_formula=f; trigger_age=age; trigger_dep=dep;
-               trigger_orig=orig; trigger = tr; trigger_increm_guard},
-              subst_list) ->
-      List.fold_left
-        (fun (env, acc)
-          { sbs; age = g; from_goal = b; s_term_orig = torig;
-            s_lem_orig = lorig} ->
+    (fun acc (tr, (tr_info : Matching.trigger_info), sbts) ->
+       List.fold_left
+         (fun (env, acc) (sbt : Matching.subst) ->
                 (*
                   Here, we'll try to extends subst 's' to conver variables
                   appearing in semantic triggers
                 *)
-          let lem_name = E.name_of_lemma orig in
-          if get_debug_fpa () >= 2 then
-            Printer.print_dbg ~flushed:false
-              ~module_name:"IntervalCalculus"
-              ~function_name:"new_facts_for_axiom"
-              "try to extend synt sbt %a of ax %a@ "
-              Expr.Subst.pp sbs E.print orig;
-          match tr.E.guard with
-          | Some _ -> assert false (*guards not supported for TH axioms*)
-
-          | None when tr.E.semantic == [] && not do_syntactic_matching ->
-            (* pure syntactic insts already generated *)
-            env, acc
-
-          | None when not (terms_linear_dep env torig) ->
+            let lem_name = E.name_of_lemma tr_info.lemma_orig in
             if get_debug_fpa () >= 2 then
-              Printer.print_dbg
-                ~header:false
-                "semantic matching failed(1)";
-            env, acc
+              Printer.print_dbg ~flushed:false
+                ~module_name:"IntervalCalculus"
+                ~function_name:"new_facts_for_axiom"
+                "try to extend synt sbt %a of ax %a@ "
+                Expr.Subst.pp sbt.content E.print tr_info.lemma_orig;
+            match tr.E.guard with
+            | Some _ -> assert false (*guards not supported for TH axioms*)
 
-          | None ->
-            match semantic_matching lem_name tr sbs env uf optimized with
-            | env, None ->
-              if get_debug_fpa () >= 2 then
-                Printer.print_dbg
-                  ~header:false
-                  "semantic matching failed(2)";
+            | None when tr.E.semantic == [] && not do_syntactic_matching ->
+              (* pure syntactic insts already generated *)
               env, acc
-            | env, Some sbs ->
+
+            | None when not (terms_linear_dep env sbt.terms_orig) ->
               if get_debug_fpa () >= 2 then
                 Printer.print_dbg
                   ~header:false
-                  "semantic matching succeeded:@ %a"
-                  Expr.TSubst.pp (fst sbs);
-              let nf = Expr.apply_subst sbs f in
-              (* incrementality/push. Although it's not supported for
-                 theories *)
-              let nf = E.mk_imp trigger_increm_guard nf 0 in
-              let accepted = selector nf orig in
-              record_this_instance nf accepted lorig;
-              if accepted then begin
-                let hyp =
-                  List.map (fun f -> Expr.apply_subst sbs f) tr.E.hyp
-                in
-                let p =
-                  { E.ff = nf;
-                    origin_name = E.name_of_lemma lorig;
-                    trigger_depth = tr.E.t_depth;
-                    gdist = -1;
-                    hdist = -1;
-                    nb_reductions = 0;
-                    age = 1+(max g age);
-                    mf = true;
-                    gf = b;
-                    lem = Some lorig;
-                    from_terms = torig;
-                    (* does'nt work if a 'gf' with theory_elim = true
-                       was already assumed in the SAT !!! *)
-                    theory_elim = false;
-                  }
-                in
-                profile_produced_terms menv lorig nf sbs tr.E.content;
-                let dep =
-                  if not (Options.get_unsat_core() || Options.get_profiling())
-                  then
-                    dep
-                  else Ex.union dep (Ex.singleton (Ex.Dep lorig))
-                in
-                env, (hyp, p, dep) :: acc
-              end
-              else (* instance not 'accepted' *)
+                  "semantic matching failed(1)";
+              env, acc
+
+            | None ->
+              match semantic_matching lem_name tr sbt env uf optimized with
+              | env, None ->
+                if get_debug_fpa () >= 2 then
+                  Printer.print_dbg
+                    ~header:false
+                    "semantic matching failed(2)";
                 env, acc
-        ) acc subst_list
-    ) accu substs
+              | env, Some sbt ->
+                if get_debug_fpa () >= 2 then
+                  Printer.print_dbg
+                    ~header:false
+                    "semantic matching succeeded:@ %a"
+                    Expr.TSubst.pp (fst sbt.content);
+                let nf = Expr.apply_subst sbt.content tr_info.formula_orig in
+                (* incrementality/push. Although it's not supported for
+                   theories *)
+                let nf = E.mk_imp tr_info.increm_guard nf 0 in
+                let accepted = selector nf tr_info.lemma_orig in
+                record_this_instance nf accepted sbt.lemma_orig;
+                if accepted then begin
+                  let hyp =
+                    List.map (fun f -> Expr.apply_subst sbt.content f) tr.E.hyp
+                  in
+                  let p =
+                    { E.ff = nf;
+                      origin_name = E.name_of_lemma sbt.lemma_orig;
+                      trigger_depth = tr.E.t_depth;
+                      gdist = -1;
+                      hdist = -1;
+                      nb_reductions = 0;
+                      age = 1 + (max sbt.age tr_info.age);
+                      mf = true;
+                      gf = sbt.from_goal;
+                      lem = Some sbt.lemma_orig;
+                      from_terms = sbt.terms_orig;
+                      (* does'nt work if a 'gf' with theory_elim = true
+                         was already assumed in the SAT !!! *)
+                      theory_elim = false;
+                    }
+                  in
+                  profile_produced_terms menv nf sbt tr.E.content;
+                  let dep =
+                    if not (Options.get_unsat_core() || Options.get_profiling())
+                    then
+                      tr_info.dep
+                    else
+                      Ex.union tr_info.dep
+                        (Ex.singleton (Ex.Dep sbt.lemma_orig))
+                  in
+                  env, (hyp, p, dep) :: acc
+                end
+                else (* instance not 'accepted' *)
+                  env, acc
+         ) acc sbts
+    ) accu sbts
 
 
 let syntactic_matching menv env uf _selector =
@@ -2373,14 +2375,13 @@ let syntactic_matching menv env uf _selector =
   in
   let synt_match =
     ME.fold
-      (fun f (_th_ax, _dep) accu ->
-         (* currently, No diff between propagators and case-split axs *)
-         (* let forms = ME.singleton f (E.vrai, 0 (*0 = age *), dep) in *)
-         let menv = EM.add_triggers mconf menv [E.vrai] in
+      (fun f (_th_ax, dep) accu ->
+         let forms = ME.singleton f (0(*0 = age *), E.vrai, dep) in
+         let menv = EM.add_triggers mconf forms menv in
          let res = EM.query mconf menv uf in
          if get_debug_fpa () >= 2 then begin
            let cpt = ref 0 in
-           List.iter (List.iter (fun _ -> incr cpt)) res;
+           List.iter (fun (_, _, l) -> List.iter (fun _ -> incr cpt) l) res;
            Printer.print_dbg
              ~module_name:"IntervalCalculus"
              ~function_name:"syntactic_matching"
@@ -2390,18 +2391,15 @@ let syntactic_matching menv env uf _selector =
          res:: accu
       )env.th_axioms []
   in
-  {env with syntactic_matching = synt_match}
+  { env with syntactic_matching = synt_match }
 
-let instantiate ~do_syntactic_matching match_terms env uf selector =
+let instantiate env menv ~do_syntactic_matching uf ~selector =
   if get_debug_fpa () >= 2 then
     Printer.print_dbg
-      ~module_name:"IntervalCalculus" ~function_name:"instanciate"
+      ~module_name:"IntervalCalculus" ~function_name:"instantiate"
       "entering IC.instantiate";
   let optimized = ref (SP.empty) in
-  let t_infos, t_subterms = match_terms in
-  let menv =
-    EM.make ~max_t_depth:100 ~known_terms:t_infos t_subterms ~known_pats:[]
-  in
+  let menv = EM.clean_triggers menv in
   let env =
     if not do_syntactic_matching then env
     else syntactic_matching menv env uf selector
@@ -2410,70 +2408,23 @@ let instantiate ~do_syntactic_matching match_terms env uf selector =
     List.fold_left
       (fun accu substs ->
          new_facts_for_axiom
-           ~do_syntactic_matching menv uf selector optimized substs accu
+           ~do_syntactic_matching menv uf ~selector optimized substs accu
       ) (env, []) env.syntactic_matching
   in
   if get_debug_fpa () >= 2 then
     Printer.print_dbg
-      ~module_name:"IntervalCalculus" ~function_name:"instanciate"
+      ~module_name:"IntervalCalculus" ~function_name:"instantiate"
       "IC.instantiate: %d insts generated" (List.length insts);
   env, insts
-
-
-let separate_semantic_triggers =
-  let not_theory_const = Hstring.make "not_theory_constant" in
-  let is_theory_const = Hstring.make "is_theory_constant" in
-  let linear_dep = Hstring.make "linear_dependency" in
-  fun th_form ->
-    let { E.user_trs; _ } as q =
-      match E.form_view th_form with
-      | E.Lemma q -> q
-      | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-      | E.Let _ | E.Iff _ | E.Xor _ | E.Not_a_form -> assert false
-    in
-    let r_triggers =
-      List.rev_map
-        (fun user_tr ->
-           (* because sem-triggers will be set by theories *)
-           assert (user_tr.E.semantic == []);
-           let syn, sem =
-             List.fold_left
-               (fun (syn, sem) t ->
-                  match E.term_view t with
-                  | E.Not_a_term _ -> assert false
-                  | E.Term { E.f = Symbols.In (lb, ub); xs = [x]; _ } ->
-                    syn, (E.Interval (x, lb, ub)) :: sem
-
-                  | E.Term { E.f = Symbols.MapsTo x; xs = [t]; _ } ->
-                    syn, (E.MapsTo (x, t)) :: sem
-
-                  | E.Term { E.f = Sy.Name (hs,_); xs = [x]; _ }
-                    when Hstring.equal hs not_theory_const ->
-                    syn, (E.NotTheoryConst x) :: sem
-
-                  | E.Term { E.f = Sy.Name (hs,_); xs = [x]; _ }
-                    when Hstring.equal hs is_theory_const ->
-                    syn, (E.IsTheoryConst x) :: sem
-
-                  | E.Term { E.f = Sy.Name (hs,_); xs = [x;y]; _ }
-                    when Hstring.equal hs linear_dep ->
-                    syn, (E.LinearDependency(x,y)) :: sem
-
-                  | _ -> t :: syn, sem
-               ) ([], []) (List.rev user_tr.E.content)
-           in
-           {user_tr with E.content = syn; semantic = sem}
-        ) user_trs
-    in
-    E.mk_forall
-      q.E.name q.E.loc q.E.binders (List.rev r_triggers) q.E.main
-      (E.id th_form) ~toplevel:true ~decl_kind:E.Dtheory
 
 let assume_th_elt t th_elt dep =
   let { Expr.axiom_kind; ax_form; th_name; extends; _ } = th_elt in
   match extends with
   | Util.NIA | Util.NRA | Util.FPA ->
-    let th_form = separate_semantic_triggers ax_form in
+    let th_form =
+      E.separate_semantic_triggers ax_form
+        ~f:Shostak.Arith.to_semantic_trigger
+    in
     let th_elt = {th_elt with Expr.ax_form} in
     if get_debug_fpa () >= 2 then (
       let kd_str = Util.show_axiom_kind axiom_kind in
@@ -2487,14 +2438,14 @@ let assume_th_elt t th_elt dep =
 
   | _ -> t
 
-let instantiate ~do_syntactic_matching env uf selector =
+let instantiate env menv ~do_syntactic_matching uf ~selector =
   if Options.get_timers() then
     try
       Timers.exec_timer_start Timers.M_Arith Timers.F_instantiate;
-      let res = instantiate ~do_syntactic_matching env uf selector in
+      let res = instantiate env menv ~do_syntactic_matching uf ~selector in
       Timers.exec_timer_pause Timers.M_Arith Timers.F_instantiate;
       res
     with e ->
       Timers.exec_timer_pause Timers.M_Arith Timers.F_instantiate;
       raise e
-  else instantiate ~do_syntactic_matching env uf selector
+  else instantiate env menv ~do_syntactic_matching uf ~selector

@@ -26,30 +26,56 @@
 (*                                                                            *)
 (******************************************************************************)
 
+type subst = {
+  content : Expr.Subst.t;
+  age : int;
+  lemma_orig : Expr.t;
+  terms_orig : Expr.t list;
+  from_goal : bool;
+}
+
+type term_info = {
+  age : int;
+  lemmas_orig : Expr.t list;
+  terms_orig : Expr.t list;
+  from_goal : bool;
+}
+
+type trigger_info = {
+  age : int;
+  lemma_orig : Expr.t;
+  formula_orig : Expr.t;
+  dep : Explanation.t;
+  increm_guard : Expr.t;
+}
+
+type env
+
 (** Module type returned by the functor {!module:Make}. *)
 module type S = sig
   (** {1 Types} *)
 
-  type t
+  type t = env
   (** Type of the environment of the e-matching. *)
 
   type theory
-  open Matching_types
 
   (** {1 Constructors} *)
 
-  val empty : t
+  val make : int -> t
   (** An initial environment. *)
 
-  val make :
-    max_t_depth: int ->
-    known_terms: Expr.Set.t ->
-    known_pats: Expr.trigger list ->
-    Expr.Set.t Symbols.Map.t ->
-    t
+  val clean_triggers : t -> t
   (** [make ~max_t_depth e trs] create a new environment. *)
 
-  val add_term : t -> Expr.t -> t
+  val add_term :
+    t ->
+    age:int ->
+    from_goal:bool ->
+    ?lemma_orig:Expr.t ->
+    terms_orig:Expr.t list ->
+    Expr.t ->
+    t
   (** [add_term info e env] add the term [e] and its subterms to
       the environment [env]. *)
 
@@ -58,10 +84,21 @@ module type S = sig
       the value [i] is larger than the previous value. *)
 
   val add_triggers :
-    Util.matching_env -> t -> Expr.t list -> t
+    Util.matching_env ->
+    (int * Expr.t * Explanation.t) Expr.Map.t ->
+    t ->
+    t
+  (** [add_triggers mconf env lemmas] add to the environment [env] the
+      triggers contained in the formulas [lemmas].
+      More precisely, [formulas] is a map of lemmas to triplets
+      (age, increm_guard, dep) where [age] is the initial [age]
+      of the new trigger. *)
 
   val query :
-    Util.matching_env -> t -> theory -> Expr.Subst.t list list
+    Util.matching_env ->
+    t ->
+    theory ->
+    (Expr.trigger * trigger_info * subst list) list
 
 end
 

@@ -29,19 +29,6 @@
 (** This module defined annotated substitutions, triggers and terms used by the
     e-matching module. *)
 
-type ('a, 'b) annotated = {
-  content : 'a;
-  (** The annotated content. *)
-
-  age : int;
-  (** The age of the content. *)
-
-  from_goal : bool;
-  (** True if the content is related with the proof obligation. *)
-
-  dep : 'b
-}
-
 type gsubst = {
   sbs : Expr.Subst.t;
   (** The annotated substitution. *)

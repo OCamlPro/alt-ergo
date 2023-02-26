@@ -84,4 +84,6 @@ module Shostak (X : ALIEN) = struct
 
     | _ -> assert false
 
+  let to_semantic_trigger tr = `Syn tr
+
 end

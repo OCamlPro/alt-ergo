@@ -2303,6 +2303,30 @@ let mk_exists name loc binders trs f id ~toplevel ~decl_kind =
     in
     mk_forall name loc SMap.empty trs tmp id ~toplevel ~decl_kind
 
+let separate_semantic_triggers ~f form =
+  let { user_trs; _ } as q =
+    match form_view form with
+    | Lemma q -> q
+    | Unit _ | Clause _ | Literal _ | Skolem _
+    | Let _ | Iff _ | Xor _ | Not_a_form -> assert false
+  in
+  let user_trs =
+    List.rev_map
+      (fun user_tr ->
+         let content, semantic =
+           List.partition_map
+             (fun pat ->
+                match f pat with
+                | `Syn syn_pat -> Left syn_pat
+                | `Sem sem_pat -> Right sem_pat
+             ) user_tr.content
+         in
+         { user_tr with content; semantic }
+      ) user_trs
+    |> List.rev
+  in
+  mk_forall q.name q.loc q.binders user_trs q.main
+    (id form) ~toplevel:true ~decl_kind:Dtheory
 
 let rec compile_match mk_destr mker e cases accu =
   match cases with

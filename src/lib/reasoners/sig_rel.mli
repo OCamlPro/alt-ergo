@@ -36,15 +36,15 @@ type 'a input =
 type 'a fact = 'a literal * Explanation.t * Th_util.lit_origin
 
 type 'a facts = {
-  equas     : 'a fact Queue.t;
-  diseqs  : 'a fact Queue.t;
-  ineqs   : 'a fact Queue.t;
+  equas : 'a fact Queue.t;
+  diseqs : 'a fact Queue.t;
+  ineqs : 'a fact Queue.t;
   mutable touched : 'a Util.MI.t;
 }
 
 type 'a result = {
   assume : 'a fact list;
-  remove: Expr.t list;
+  remove : Expr.t list;
 }
 
 module type RELATION = sig
@@ -67,9 +67,11 @@ module type RELATION = sig
   (** add a representant to take into account *)
 
   val instantiate :
+    t ->
+    Matching.env ->
     do_syntactic_matching:bool ->
-    Matching_types.info Expr.Map.t * Expr.Set.t Symbols.Map.t ->
-    t -> Uf.t -> (Expr.t -> Expr.t -> bool) ->
+    Uf.t ->
+    selector:(Expr.t -> Expr.t -> bool) ->
     t * instances
 
   val print_model :

@@ -51,11 +51,15 @@ module type S = sig
   val compute_concrete_model : t -> t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+
   val theories_instances :
+    t ->
+    Matching.env ->
     do_syntactic_matching:bool ->
-    Matching_types.info Expr.Map.t * Expr.Set.t Symbols.Map.t ->
-    t -> (Expr.t -> Expr.t -> bool) ->
-    int -> int -> t * Sig_rel.instances
+    selector:(Expr.t -> Expr.t -> bool) ->
+    dlvl:int ->
+    ilvl:int ->
+    t * Sig_rel.instances
 
   val get_assumed : t -> Expr.Set.t
 end

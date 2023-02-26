@@ -805,4 +805,6 @@ module Shostak(X : ALIEN) = struct
   let choose_adequate_model _ _ =
     assert false
 
+  let to_semantic_trigger tr = `Syn tr
+
 end

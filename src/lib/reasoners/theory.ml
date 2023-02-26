@@ -39,7 +39,6 @@ module SE = Expr.Set
 
 module Sy = Symbols
 
-
 module CC_X = Ccx.Main
 
 module type S = sig
@@ -67,11 +66,15 @@ module type S = sig
 
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+
   val theories_instances :
+    t ->
+    Matching.env ->
     do_syntactic_matching:bool ->
-    Matching_types.info Expr.Map.t * Expr.Set.t Symbols.Map.t ->
-    t -> (Expr.t -> Expr.t -> bool) ->
-    int -> int -> t * Sig_rel.instances
+    selector:(Expr.t -> Expr.t -> bool) ->
+    dlvl:int ->
+    ilvl:int ->
+    t * Sig_rel.instances
 
   val get_assumed : t -> E.Set.t
 
@@ -584,7 +587,7 @@ module Main_Default : S = struct
       {t with gamma = gamma; terms = Expr.Set.union t.terms new_terms},
       new_terms, cpt
 
-  let get_debug_theories_instances th_instances ilvl dlvl =
+  let get_debug_theories_instances th_instances ~ilvl ~dlvl =
     let module MF = Expr.Map in
     Printer.print_dbg ~flushed:false
       ~module_name:"Theory" ~function_name:"theories_instances"
@@ -628,12 +631,12 @@ module Main_Default : S = struct
       ) l;
     Printer.print_dbg ~header:false "@]"
 
-  let theories_instances ~do_syntactic_matching t_match t selector dlvl ilvl =
+  let theories_instances env menv ~do_syntactic_matching ~selector ~dlvl ~ilvl =
     let gamma, instances =
-      CC_X.theories_instances ~do_syntactic_matching t_match t.gamma selector in
+      CC_X.theories_instances env.gamma menv ~do_syntactic_matching ~selector in
     if get_debug_fpa() > 0 then
-      get_debug_theories_instances instances dlvl ilvl;
-    {t with gamma = gamma}, instances
+      get_debug_theories_instances instances ~dlvl ~ilvl;
+    { env with gamma = gamma }, instances
 
   let query =
     let add_and_process_conseqs a t =
@@ -777,7 +780,10 @@ module Main_Empty : S = struct
   let add_term env _ ~add_in_cs:_ = env
   let compute_concrete_model e = e
 
-  let assume_th_elt e _ _ = e
-  let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []
+  let assume_th_elt env _ _ = env
+
+  let theories_instances env _ ~do_syntactic_matching:_ ~selector:_ ~dlvl:_
+      ~ilvl:_ = env, []
+
   let get_assumed env = env.assumed_set
 end

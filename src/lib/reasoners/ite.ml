@@ -41,5 +41,8 @@ module Shostak (X : ALIEN) = struct
   let solve _ _ = assert false
   let assign_value _ _ _ = assert false
   let choose_adequate_model _ _ _ = assert false
+
+  let to_semantic_trigger tr = `Syn tr
+
 end
 

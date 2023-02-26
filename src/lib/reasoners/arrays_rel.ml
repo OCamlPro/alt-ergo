@@ -453,7 +453,7 @@ let add env _ _ _ = env, []
 let print_model _ _ _ = ()
 
 let new_terms env = env.new_terms
-let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
+let instantiate env _ ~do_syntactic_matching:_ _ ~selector:_ = env, []
 
 let assume_th_elt t th_elt _ =
   match th_elt.Expr.extends with

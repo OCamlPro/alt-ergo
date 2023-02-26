@@ -83,9 +83,10 @@ module type S = sig
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :
+    t ->
+    Matching.env ->
     do_syntactic_matching:bool ->
-    Matching_types.info Expr.Map.t * Expr.Set.t Symbols.Map.t ->
-    t -> (Expr.t -> Expr.t -> bool) -> t * instances
+    selector:(Expr.t -> Expr.t -> bool) -> t * instances
 
 end
 
@@ -98,23 +99,24 @@ module Main : S = struct
 
   type t = {
     use : Use.t;
-    uf : Uf.t ;
-    relation : Rel.t
+    uf : Uf.t;
+    relation : Rel.t;
   }
 
   type r = Shostak.Combine.r
 
   let empty () = {
-    use = Use.empty ;
-    uf = Uf.empty () ;
+    use = Use.empty;
+    uf = Uf.empty ();
     relation = Rel.empty [];
   }
 
-  let empty_facts () =
-    { equas   = Queue.create ();
-      ineqs   = Queue.create ();
-      diseqs  = Queue.create ();
-      touched = Util.MI.empty }
+  let empty_facts () = {
+    equas   = Queue.create ();
+    ineqs   = Queue.create ();
+    diseqs  = Queue.create ();
+    touched = Util.MI.empty;
+  }
 
   let add_fact facts ((lit, _, _) as e) =
     match lit with
@@ -688,12 +690,11 @@ module Main : S = struct
           assume_literals env choices facts
         | true -> env, choices
 
-
-  let theories_instances ~do_syntactic_matching t_match env selector =
-    let rel, th_instances =
-      Rel.instantiate
-        ~do_syntactic_matching t_match env.relation env.uf selector in
-    {env with relation=rel}, th_instances
+  let theories_instances env menv ~do_syntactic_matching ~selector =
+    let relation, th_instances =
+      Rel.instantiate env.relation menv ~do_syntactic_matching env.uf ~selector
+    in
+    { env with relation }, th_instances
 
   let add_term env facts t ex =
     let env = add_term env facts t ex in

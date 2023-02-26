@@ -45,6 +45,9 @@ module type SHOSTAK = sig
   (** return true if the symbol and the type are owned by the theory*)
   val is_mine_symb : Symbols.t -> Ty.t -> bool
 
+  val to_semantic_trigger :
+    Expr.t -> [`Syn of Expr.t | `Sem of Expr.semantic_trigger]
+
   (** Give a representant of a term of the theory*)
   val make : Expr.t -> r * Expr.t list
 

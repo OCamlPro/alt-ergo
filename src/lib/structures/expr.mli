@@ -286,6 +286,14 @@ val apply_subst : Subst.t -> t -> t
 
 (** skolemization and other smart constructors for formulas **)
 
+val separate_semantic_triggers :
+  f:(t -> [`Syn of t | `Sem of semantic_trigger ]) ->
+  t ->
+  t
+(** [separate_semantic_triggers ~f t] separate the user
+    triggers of the formula [t] in two categories:
+    semantic triggers and syntactic triggers. *)
+
 val resolution_triggers: is_back:bool -> quantified -> trigger list
 
 val mk_forall :

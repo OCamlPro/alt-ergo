@@ -366,11 +366,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     ({gf with E.ff=clause}, dep) :: acc
 
   let mk_theories_instances do_syntactic_matching _remove_clauses env acc =
-    let t_match = Inst.matching_terms_info env.inst in
     let tbox = SAT.current_tbox env.satml in
     let _tbox, l =
-      Th.theories_instances
-        ~do_syntactic_matching t_match tbox (selector env) env.nb_mrounds 0
+      Th.theories_instances tbox (Inst.get_maching_env env.inst)
+        ~do_syntactic_matching ~selector:(selector env)
+        ~dlvl:env.nb_mrounds ~ilvl:0
       [@ocaml.ppwarning "TODO: modifications made in tbox are lost! improve?"]
     in
     List.fold_left reduce_filters acc l, (match l with [] -> false | _ -> true)
@@ -407,13 +407,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let mround menv env acc =
     let tbox = SAT.current_tbox env.satml in
     let gd2, ngd2 =
-      Inst.m_predicates menv env.inst tbox (selector env) ~ilvl:env.nb_mrounds
+      Inst.m_predicates menv env.inst tbox ~selector:(selector env)
+        ~ilvl:env.nb_mrounds
     in
     let l2 = List.rev_append (List.rev gd2) ngd2 in
     if Options.get_profiling() then Profiling.instances l2;
     (*let env = assume env l2 in*)
     let gd1, ngd1 =
-      Inst.m_lemmas menv env.inst tbox (selector env) ~ilvl:env.nb_mrounds
+      Inst.m_lemmas menv env.inst tbox ~selector:(selector env)
+        ~ilvl:env.nb_mrounds
     in
     let l1 = List.rev_append (List.rev gd1) ngd1 in
     if Options.get_profiling() then Profiling.instances l1;

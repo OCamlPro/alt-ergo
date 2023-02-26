@@ -428,16 +428,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | E.Not_a_form -> assert false
     end
 
-  let inst_predicates mconf env inst tbox selector ~ilvl =
-    try Inst.m_predicates mconf inst tbox selector ~ilvl
+  let inst_predicates mconf env inst tbox ~selector ~ilvl =
+    try Inst.m_predicates mconf inst tbox ~selector ~ilvl
     with Ex.Inconsistent (expl, classes) ->
       Debug.inconsistent expl env;
       Options.tool_req 2 "TR-Sat-Conflict-2";
       env.heuristics := Heuristics.bump_activity !(env.heuristics) expl;
       raise (IUnsat (expl, classes))
 
-  let inst_lemmas mconf env inst tbox selector ~ilvl =
-    try Inst.m_lemmas mconf inst tbox selector ~ilvl
+  let inst_lemmas mconf env inst tbox ~selector ~ilvl =
+    try Inst.m_lemmas mconf inst tbox ~selector ~ilvl
     with Ex.Inconsistent (expl, classes) ->
       Debug.inconsistent expl env;
       Options.tool_req 2 "TR-Sat-Conflict-2";
@@ -1149,7 +1149,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   (* returns the (new) env and true if some new instances are made *)
   let inst_and_assume mconf env inst_function inst_env =
     let gd, ngd =
-      inst_function mconf env inst_env env.tbox (selector env) ~ilvl:env.ilevel
+      inst_function mconf env inst_env env.tbox ~selector:(selector env)
+        ~ilvl:env.ilevel
     in
     let l = List.rev_append (List.rev gd) ngd in
 
@@ -1338,12 +1339,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let mk_theories_instances ~do_syntactic_matching ~rm_clauses env inst =
     let { tbox; _ } = env in
     Debug.in_mk_theories_instances ();
-    let t_match = Inst.matching_terms_info inst in
     try
       let tbox, l =
-        Th.theories_instances
-          ~do_syntactic_matching
-          t_match tbox (selector env) env.ilevel env.dlevel
+        Th.theories_instances tbox (Inst.get_maching_env inst)
+          ~do_syntactic_matching ~selector:(selector env)
+          ~ilvl:env.ilevel ~dlvl:env.dlevel
       in
       let env = {env with tbox} in
       match l with
@@ -1828,7 +1828,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
       (* goal directed for lemmas *)
       let gd, _ =
-        inst_lemmas mconf  env env.inst env.tbox (selector env) ~ilvl:env.ilevel
+        inst_lemmas mconf  env env.inst env.tbox ~selector:(selector env)
+          ~ilvl:env.ilevel
       in
       if Options.get_tableaux_cdcl () then
         cdcl_assume false env gd;

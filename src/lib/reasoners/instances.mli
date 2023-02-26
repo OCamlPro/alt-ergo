@@ -58,7 +58,7 @@ module type S = sig
     Util.matching_env ->
     t ->
     tbox ->
-    (Expr.t -> Expr.t -> bool) ->
+    selector:(Expr.t -> Expr.t -> bool) ->
     ilvl:int ->
     instances * instances (* goal_directed, others *)
 
@@ -66,7 +66,7 @@ module type S = sig
     Util.matching_env ->
     t ->
     tbox ->
-    (Expr.t -> Expr.t -> bool) ->
+    selector:(Expr.t -> Expr.t -> bool) ->
     ilvl:int ->
     instances * instances (* goal_directed, others *)
 
@@ -75,8 +75,7 @@ module type S = sig
       used in the e-matching procedure. See {!val Matching.max_term_depth} for
       more details. *)
 
-  val matching_terms_info :
-    t -> Matching_types.info Expr.Map.t * Expr.Set.t Symbols.Map.t
+  val get_maching_env : t -> Matching.env
 
 end
 

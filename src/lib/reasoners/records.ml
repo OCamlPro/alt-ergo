@@ -437,4 +437,6 @@ module Shostak (X : ALIEN) = struct
       r, asprintf "%a" X.print r  (* it's a EUF constant *)
     | _ -> assert false
 
+  let to_semantic_trigger tr = `Syn tr
+
 end

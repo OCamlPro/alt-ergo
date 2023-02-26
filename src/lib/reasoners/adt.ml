@@ -254,19 +254,11 @@ module Shostak (X : ALIEN) = struct
         let c = Ty.compare c1.c_ty c2.c_ty in
         if c <> 0 then c
         else
-          begin
-            try
-              List.iter2
-                (fun (hs1, v1) (hs2, v2) ->
-                   assert (Hs.equal hs1 hs2);
-                   let c = X.str_cmp v1 v2 in
-                   if c <> 0 then raise (Util.Cmp c);
-                )c1.c_args c2.c_args;
-              0
-            with
-            | Util.Cmp c -> c
-            | _ -> assert false
-          end
+          Util.compare_lists c1.c_args c2.c_args ~cmp:
+            (fun (hs1, v1) (hs2, v2) ->
+               assert (Hs.equal hs1 hs2);
+               X.str_cmp v1 v2
+            )
     | Constr _, _ -> 1
     | _, Constr _ -> -1
 
@@ -424,5 +416,7 @@ module Shostak (X : ALIEN) = struct
     Printer.print_err
       "[ADTs.models] choose_adequate_model currently not implemented";
     assert false
+
+  let to_semantic_trigger tr = `Syn tr
 
 end

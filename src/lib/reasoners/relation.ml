@@ -155,22 +155,22 @@ let add env uf r t =
   {r1;r2;r3;r4;r5;r6;r7;},eqs1|@|eqs2|@|eqs3|@|eqs4|@|eqs5|@|eqs6|@|eqs7
 
 
-let instantiate ~do_syntactic_matching t_match env uf selector =
+let instantiate env menv ~do_syntactic_matching uf ~selector =
   Options.exec_thread_yield ();
   let r1, l1 =
-    Rel1.instantiate ~do_syntactic_matching t_match env.r1 uf selector in
+    Rel1.instantiate env.r1 menv ~do_syntactic_matching uf ~selector in
   let r2, l2 =
-    Rel2.instantiate ~do_syntactic_matching t_match env.r2 uf selector in
+    Rel2.instantiate env.r2 menv ~do_syntactic_matching uf ~selector in
   let r3, l3 =
-    Rel3.instantiate ~do_syntactic_matching t_match env.r3 uf selector in
+    Rel3.instantiate env.r3 menv ~do_syntactic_matching uf ~selector in
   let r4, l4 =
-    Rel4.instantiate ~do_syntactic_matching t_match env.r4 uf selector in
+    Rel4.instantiate env.r4 menv ~do_syntactic_matching uf ~selector in
   let r5, l5 =
-    Rel5.instantiate ~do_syntactic_matching t_match env.r5 uf selector in
+    Rel5.instantiate env.r5 menv ~do_syntactic_matching uf ~selector in
   let r6, l6 =
-    Rel6.instantiate ~do_syntactic_matching t_match env.r6 uf selector in
+    Rel6.instantiate env.r6 menv ~do_syntactic_matching uf ~selector in
   let r7, l7 =
-    Rel7.instantiate ~do_syntactic_matching t_match env.r7 uf selector in
+    Rel7.instantiate env.r7 menv ~do_syntactic_matching uf ~selector in
   {r1=r1; r2=r2; r3=r3; r4=r4; r5=r5; r6=r6; r7=r7},
   l7 |@| l6 |@| l5 |@| l4 |@| l3 |@| l2 |@| l1
 
