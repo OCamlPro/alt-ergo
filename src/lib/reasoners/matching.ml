@@ -115,16 +115,6 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   type theory = X.t
 
-  module Subst = struct
-    let id = {
-      content = Expr.Subst.id;
-      age = 0;
-      lemma_orig = Expr.vrai;
-      terms_orig = [];
-      from_goal = false;
-    }
-  end
-
   type t = env
 
   exception Echec
@@ -503,7 +493,16 @@ module Make (X : Arg) : S with type theory = X.t = struct
     if List.length pats > Options.get_max_multi_triggers_size () then []
     else
       let cpt = ref 1 in
+      let tr_info = Expr.Trigger.Map.find tr env.known_triggers in
       try
+        let id = {
+          content = Expr.Subst.id;
+          age = 0;
+          lemma_orig = tr_info.lemma_orig;
+          terms_orig = [];
+          from_goal = false;
+        }
+        in
         let res =
           List.fold_left
             (fun acc pat ->
@@ -512,7 +511,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
                cpt := !cpt * len;
                if !cpt = 0 || !cpt > 10_000 then raise Exit;
                acc
-            ) [Subst.id] pats
+            ) [id] pats
         in
         Debug.candidate_substitutions tr res;
         res
@@ -637,8 +636,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   let add_triggers mconf =
     Expr.Map.fold
-      (fun lem (age, increm_guard, dep) env ->
-         match E.form_view lem with
+      (fun lemma (age, increm_guard, dep) env ->
+         match E.form_view lemma with
          | E.Lemma ({ main; name; _ } as q) ->
            let triggers, kind =
              match mconf.Util.inst_mode with
@@ -655,7 +654,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
              (fun env trigger ->
                 let info = {
                   age;
-                  lemma_orig = lem;
+                  lemma_orig = lemma;
                   formula_orig = main;
                   dep;
                   increm_guard;
