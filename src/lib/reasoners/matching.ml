@@ -376,8 +376,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   (* Produce candidate substitutions to match the pattern [pat] with the
      term [term]. *)
-  let rec match_term mconf env tbox =
-    fun sbt pat term ->
+  let rec match_term mconf env tbox sbt pat term =
     Options.exec_thread_yield ();
     Debug.match_term sbt term pat;
     let sbt =
@@ -431,6 +430,30 @@ module Make (X : Arg) : S with type theory = X.t = struct
         ) [sbt] pats terms
     with Invalid_argument _ -> raise Echec
 
+  (* Collect all the extensions of the substitution [sbt] by
+     bindings of the form [f -> term] where [term] is a known term whose the
+     type matches the type [ty]. *)
+  let match_var env tbox acc (pat : Expr.t)
+      ({ content = (sbt_t, sbt_ty); _ } as sbt) =
+    Expr.Map.fold
+      (fun term (info : term_info) sbts ->
+         try
+           let sbt_ty = Ty.matching sbt_ty pat.ty (E.type_info term) in
+           (* With triggers that are variables, always normalize
+              substitutions. *)
+           let term = X.term_repr tbox term ~init_term:true in
+           let sbt_t = Expr.TSubst.assign pat.f term sbt_t in
+           let sbt = { sbt with
+                       content = (sbt_t, sbt_ty);
+                       age = Int.max sbt.age info.age;
+                       from_goal = sbt.from_goal || info.from_goal;
+                       terms_orig = term :: sbt.terms_orig
+                     }
+           in
+           sbt :: sbts
+         with Ty.TypeClash _ -> sbts
+      ) env.known_terms acc
+
   (* Trying to match the pattern [pat] with any known term by
      extending the annotated substitution [sbt]. *)
   let match_one_pat mconf env tbox pat acc sbt =
@@ -438,50 +461,27 @@ module Make (X : Arg) : S with type theory = X.t = struct
     Debug.match_one_pat sbt pat;
     let pat = Expr.apply_subst sbt.content pat in
     let sbt_t, sbt_ty = sbt.content in
-    (* Collect all the extensions of the substitution [sbt] by
-       bindings of the form [f -> term] where [term] is a known term whose the
-       type matches the type [ty]. *)
-    let match_var acc =
-      Expr.Map.fold
-        (fun term (info : term_info) sbts ->
-           try
-             let sbt_ty = Ty.matching sbt_ty pat.ty (E.type_info term) in
-             (* With triggers that are variables, always normalize
-                substitutions. *)
-             let term = X.term_repr tbox term ~init_term:true in
-             let sbt_t = Expr.TSubst.assign pat.f term sbt_t in
-             let sbt = { sbt with
-                         content = (sbt_t, sbt_ty);
-                         age = Int.max sbt.age info.age;
-                         from_goal = sbt.from_goal || info.from_goal;
-                         terms_orig = term :: sbt.terms_orig
-                       }
-             in
-             sbt :: sbts
-           with Ty.TypeClash _ -> sbts
-        ) env.known_terms acc
-    in
-    (* Try to match the arguments of the pattern [pat] with the argument of the
-       term [t]. *)
-    let match_map term acc =
-      Debug.match_one_pat_against sbt pat term;
-      if E.depth term > 5 * env.max_t_depth then acc
-      else
-        try
-          let sbt =
-            let sbt_ty = Ty.matching sbt_ty pat.ty (E.type_info term) in
-            { sbt with content = (sbt_t, sbt_ty) }
-          in
-          match_list mconf env tbox sbt pat.xs term.xs
-          |> List.rev_append acc
-        with Echec | Ty.TypeClash _ -> acc
-    in
     match pat.f with
-    | Symbols.Var _ -> match_var acc
+    | Symbols.Var _ -> match_var env tbox acc pat sbt
     | _ ->
       try
         let map_f = Symbols.Map.find pat.f env.fils in
-        Expr.Set.fold match_map map_f acc
+        (* Try to match the arguments of the pattern [pat] with the argument of
+           the term [t]. *)
+        Expr.Set.fold
+          (fun term acc ->
+             Debug.match_one_pat_against sbt pat term;
+             if E.depth term > 5 * env.max_t_depth then acc
+             else
+               try
+                 let sbt =
+                   let sbt_ty = Ty.matching sbt_ty pat.ty (E.type_info term) in
+                   { sbt with content = (sbt_t, sbt_ty) }
+                 in
+                 match_list mconf env tbox sbt pat.xs term.xs
+                 |> List.rev_append acc
+               with Echec | Ty.TypeClash _ -> acc
+          ) map_f acc
       with Not_found ->
         (* Aborting if there is no known term whose the top symbol is pat.f. *)
         acc
