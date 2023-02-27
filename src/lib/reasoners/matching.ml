@@ -422,7 +422,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let sbt_t, sbt_ty = sbt.content in
     (* Collect all the extensions of the substitution sbt by
        bindings of the form [f -> t] where t is a known term whose the
-       type matches ty. *)
+       type matches the type ty. *)
     let match_var acc =
       Expr.Map.fold
         (fun t (info : term_info) sbts ->
@@ -461,8 +461,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
     match pat.f with
     | Symbols.Var _ -> match_var acc
     | _ ->
-      let map_f = Symbols.Map.find pat.f env.fils in
-      try Expr.Set.fold match_map map_f acc
+      try
+        let map_f = Symbols.Map.find pat.f env.fils in
+        Expr.Set.fold match_map map_f acc
       with Not_found ->
         (* There is no known term whose the top symbol is pat.f. *)
         acc
