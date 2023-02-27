@@ -29,7 +29,6 @@
 open Format
 open Options
 open Sig
-open Matching_types
 
 module Z = Numbers.Z
 module Q = Numbers.Q
