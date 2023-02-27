@@ -197,14 +197,14 @@ module Make (X : Arg) : S with type theory = X.t = struct
           E.print t
           (fun fmt -> List.iter (fprintf fmt "%a , " E.print)) cl
 
-    let candidate_substitutions trigger res =
+    let candidate_substitutions tr tr_info res =
       if get_debug_matching () >= 1 then
         print_dbg
           ~module_name:"Matching" ~function_name:"candidate_substitutions"
-          "@[<v 2>%3d candidate substitutions for Axiom %%a with trigger %a@ "
+          "@[<v 2>%3d candidate substitutions for Axiom %a with trigger %a@ "
           (List.length res)
-          (*E.print pat_info.trigger_orig*)
-          E.print_list trigger.E.content;
+          E.print tr_info.lemma_orig
+          E.print_list tr.E.content;
       if get_debug_matching() >= 2 then
         List.iter
           (fun { content; _ } ->
@@ -213,16 +213,6 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   end
   (*BISECT-IGNORE-END*)
-
-  (* let rm x lst = List.filter (fun y -> E.compare x y <> 0) lst
-
-     let rec permutations = function
-     | [] -> []
-     | x :: [] -> [[x]]
-     | lst ->
-      List.fold_left (fun acc x ->
-          acc @ List.map (fun p -> x :: p) (permutations (rm x lst))
-        ) [] lst *)
 
   let add_term env ~age ~from_goal ?lemma_orig ~terms_orig t =
     Debug.add_term t;
@@ -392,25 +382,51 @@ module Make (X : Arg) : S with type theory = X.t = struct
         try
           if E.is_ground pat && are_equal ~mode:`Light tbox pat term then [sbt]
           else
+            let is_infix = Sy.is_infix_operator pat.f in
             let cl = match_classes pat term in
             List.fold_left
               (fun acc xs ->
-                 try match_list mconf env tbox sbt pat.xs xs @ acc
+                 try match_list mconf env tbox ~is_infix sbt pat.xs xs @ acc
                  with Echec -> acc
               ) [] cl
         with Ty.TypeClash _ -> raise Echec
 
-  and match_list mconf env tbox (sbt : subst) pats terms =
+  and match_list mconf env tbox ~is_infix (sbt : subst) pats terms =
+    let rm x lst = List.filter (fun y -> E.compare x y <> 0) lst in
+    let rec permutations = function
+      | [] -> []
+      | x :: [] -> [[x]]
+      | lst ->
+        List.fold_left (fun acc x ->
+            acc @ List.map (fun p -> x :: p) (permutations (rm x lst))
+          ) [] lst
+    in
     Debug.match_list sbt pats terms;
     try
-      List.fold_left2
-        (fun sbts pat term ->
-           List.fold_left
-             (fun acc sbt ->
-                match_term mconf env tbox sbt pat term
-                |> List.rev_append acc
-             ) [] sbts
-        ) [sbt] pats terms
+      let termss =
+        if is_infix then permutations terms
+        else [terms]
+      in
+      let exception Success of subst list in
+      try
+        List.iter
+          (fun terms ->
+             try
+               let res =
+                 List.fold_left2
+                   (fun sbts pat term ->
+                      List.fold_left
+                        (fun acc sbt ->
+                           match_term mconf env tbox sbt pat term
+                           |> List.rev_append acc
+                        ) [] sbts
+                   ) [sbt] pats terms
+               in
+               raise (Success res)
+             with Echec -> ()
+          ) termss;
+        raise Echec
+      with Success res -> res
     with Invalid_argument _ -> raise Echec
 
   (* Trying to match the pattern [pat] with any known term by
@@ -454,7 +470,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
             let sbt_ty = Ty.matching sbt_ty pat.ty (E.type_info t) in
             { sbt with content = (sbt_t, sbt_ty) }
           in
-          match_list mconf env tbox sbt pat.xs t.xs
+          let is_infix = Sy.is_infix_operator pat.f in
+          match_list mconf env tbox ~is_infix sbt pat.xs t.xs
           |> List.rev_append acc
         with Echec | Ty.TypeClash _ -> acc
     in
@@ -465,7 +482,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         let map_f = Symbols.Map.find pat.f env.fils in
         Expr.Set.fold match_map map_f acc
       with Not_found ->
-        (* There is no known term whose the top symbol is pat.f. *)
+        (* Aborting if there is no known term whose the top symbol is pat.f. *)
         acc
 
   (* Trying to match the pattern [pat] with any known term by applying
@@ -486,13 +503,14 @@ module Make (X : Arg) : S with type theory = X.t = struct
     | _ -> (E.depth t) - (E.depth s)
 
   (* Produce a list of candidate substitutions for the annoted trigger [tr].
-     The trigger is ignored if its number of terms exceed the value
+     The trigger is ignored if its number of patterns exceed the value
      of the option [get_max_multi_triggers_size]. *)
   let matching mconf env tbox tr =
     let pats = List.stable_sort trig_weight tr.E.content in
     Debug.matching tr;
     if List.length pats > Options.get_max_multi_triggers_size () then []
     else
+      (* This counter prevents to producing too much substitutions. *)
       let cpt = ref 1 in
       let tr_info = Expr.Trigger.Map.find tr env.known_triggers in
       try
@@ -514,7 +532,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
                acc
             ) [id] pats
         in
-        Debug.candidate_substitutions tr res;
+        Debug.candidate_substitutions tr tr_info res;
         res
       with Exit ->
         if get_debug_matching() >= 1 && get_verbose() then begin

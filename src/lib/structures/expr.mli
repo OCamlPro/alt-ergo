@@ -90,7 +90,7 @@ and semantic_trigger =
 
 and trigger = (*private*) {
   content : t list;
-  (** List of the syntactic triggers. *)
+  (** List of syntactic triggers. *)
 
   semantic : semantic_trigger list;
   (** List of semantic triggers. *)

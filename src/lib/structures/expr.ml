@@ -1657,10 +1657,10 @@ let concat_chainable p_op p_ty t acc =
   match term_view t with
   | Term {f; xs; ty; _} ->
     if Symbols.equal p_op f && Ty.equal p_ty ty then begin
-      Format.printf "Flattening %a into %a@."
-        print_list xs print_list acc;
+      (* Format.printf "Flattening %a into %a@."
+         print_list xs print_list acc; *)
       let res = List.rev_append (List.rev xs) acc in
-      Format.printf "Result: %a@." print_list res;
+      (*       Format.printf "Result: %a@." print_list res; *)
       res
     end
     else
