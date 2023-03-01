@@ -323,6 +323,10 @@ let is_infix_operator = function
   | Op (Plus | Minus | Mult | Div | Modulo) -> true
   | _ -> false
 
+let is_chainable_operator = function
+  | Op (Plus | Mult) -> true
+  | _ -> false
+
 let fresh =
   let cpt = ref 0 in
   fun ?(is_var=false) s ->

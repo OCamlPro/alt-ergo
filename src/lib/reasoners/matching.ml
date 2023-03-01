@@ -180,10 +180,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
           "I match %a against %a with subst: %a"
           E.print pat E.print t Expr.Subst.pp sbt.content
 
-    let match_list sbt pats terms =
+    let match_args sbt pats terms =
       if get_debug_matching() >= 3 then
         print_dbg
-          ~module_name:"Matching" ~function_name:"match_list"
+          ~module_name:"Matching" ~function_name:"match_args"
           "I match %a against %a with subst: %a"
           E.print_list pats
           E.print_list terms
@@ -302,21 +302,22 @@ module Make (X : Arg) : S with type theory = X.t = struct
       SLE.elements mtl
 
   let linear_arithmetic_matching (pat : E.t) (t : E.t) =
-    let plus_of_minus d =
-      [E.mk_term (Symbols.Op Symbols.Minus) [t; d] t.ty ; d]
-    in
-    let minus_of_plus d = [E.mk_plus t d t.ty; d] in
     if not (Options.get_arith_matching ()) ||
        t.ty != Ty.Tint && t.ty != Ty.Treal then []
     else
+      let plus_of_minus t d =
+        [[E.mk_term (Symbols.Op Symbols.Minus) [t; d] t.ty ; d]] @
+        [[d; E.mk_term (Symbols.Op Symbols.Minus) [t; d] t.ty]]
+      in
+      let minus_of_plus t d = [[E.mk_plus t d t.ty;  d]] in
       match pat.f, pat.xs with
       | Symbols.Op Symbols.Plus, [p1; p2] ->
-        if E.is_ground p2 then [plus_of_minus p2]
-        else if E.is_ground p1 then [plus_of_minus p1] else []
+        if E.is_ground p2 then plus_of_minus t p2
+        else if E.is_ground p1 then plus_of_minus t p1 else []
 
       | Symbols.Op Symbols.Minus, [p1; p2] ->
-        if E.is_ground p2 then [minus_of_plus p2]
-        else if E.is_ground p1 then [minus_of_plus p1] else []
+        if E.is_ground p2 then minus_of_plus t p2
+        else if E.is_ground p1 then minus_of_plus t p1 else []
       | _ -> []
 
   (* Extend the substitution [sbt] by the binding [f -> t].
@@ -337,15 +338,19 @@ module Make (X : Arg) : S with type theory = X.t = struct
         { sbt with content = (Expr.TSubst.assign f t sbt_t, sbt_ty) }
       end
 
-  let rm x lst = List.filter (fun y -> E.compare x y <> 0) lst
+  let ins_all_positions x l =
+    let rec aux prev acc = function
+      | [] -> (prev @ [x]) :: acc |> List.rev
+      | hd::tl as l -> aux (prev @ [hd]) ((prev @ [x] @ l) :: acc) tl
+    in
+    aux [] [] l
 
   let rec permutations = function
     | [] -> []
-    | x :: [] -> [[x]]
-    | lst ->
-      List.fold_left (fun acc x ->
-          acc @ List.map (fun p -> x :: p) (permutations (rm x lst))
-        ) [] lst
+    | x::[] -> [[x]]
+    | x::xs ->
+      List.fold_left
+        (fun acc p -> acc @ ins_all_positions x p) [] (permutations xs)
 
   let match_classes mconf tbox (pat : E.t) term =
     let cl =
@@ -353,11 +358,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
       else X.class_of tbox term
     in
     Debug.match_class_of term cl;
-    let cl =
+    let cls =
       List.fold_left
         (fun cls (term : E.t) ->
            if Symbols.compare pat.f term.f = 0 then
-             if Sy.is_infix_operator pat.f then
+             if Sy.is_chainable_operator pat.f then
                List.rev_append (permutations term.xs) cls
              else
                term.xs :: cls
@@ -371,11 +376,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
         ) [] cl
       |> filter_classes mconf tbox
     in
-    if cl != [] then cl
+    if cls != [] then cls
     else linear_arithmetic_matching pat term
 
-  (* Produce candidate substitutions to match the pattern [pat] with the
-     term [term]. *)
+  (* Produce candidate substitutions by extending the substitution [sbt]
+     to match the pattern [pat] with the term [term]. *)
   let rec match_term mconf env tbox sbt pat term =
     Options.exec_thread_yield ();
     Debug.match_term sbt term pat;
@@ -406,28 +411,32 @@ module Make (X : Arg) : S with type theory = X.t = struct
       in
       [add_msymb tbox pat.f term sbt ~max_t_depth:env.max_t_depth]
     | _ ->
-      try
-        if E.is_ground pat && are_equal ~mode:`Light tbox pat term then [sbt]
-        else
-          let cl = match_classes mconf tbox pat term in
-          List.fold_left
-            (fun acc xs ->
-               try match_list mconf env tbox sbt pat.xs xs @ acc
-               with Echec -> acc
-            ) [] cl
-      with Ty.TypeClash _ -> raise Echec
+      if E.is_ground pat && are_equal ~mode:`Light tbox pat term then [sbt]
+      else match_args mconf env tbox sbt pat term
 
-  and match_list mconf env tbox (sbt : subst) pats terms =
+  and match_args mconf env tbox (sbt : subst) (pat : E.t) term =
+    let cls = match_classes mconf tbox pat term in
+    (* List.iter
+       (fun cl -> Format.printf "args: %a@." E.print_list cl
+       ) cls; *)
     try
-      Debug.match_list sbt pats terms;
-      List.fold_left2
-        (fun sbts pat term ->
-           List.fold_left
-             (fun acc2 sbt ->
-                match_term mconf env tbox sbt pat term
-                |> List.rev_append acc2
-             ) [] sbts
-        ) [sbt] pats terms
+      List.fold_left
+        (fun acc xs ->
+           Debug.match_args sbt pat.xs xs;
+           try
+             let xs =
+               List.fold_left2
+                 (fun sbts pat term ->
+                    List.fold_left
+                      (fun acc2 sbt ->
+                         match_term mconf env tbox sbt pat term
+                         |> List.rev_append acc2
+                      ) [] sbts
+                 ) [sbt] pat.xs xs
+             in
+             xs @ acc
+           with Echec -> acc
+        ) [] cls
     with Invalid_argument _ -> raise Echec
 
   (* Collect all the extensions of the substitution [sbt] by
@@ -478,7 +487,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
                    let sbt_ty = Ty.matching sbt_ty pat.ty (E.type_info term) in
                    { sbt with content = (sbt_t, sbt_ty) }
                  in
-                 match_list mconf env tbox sbt pat.xs term.xs
+                 match_args mconf env tbox sbt pat term
                  |> List.rev_append acc
                with Echec | Ty.TypeClash _ -> acc
           ) map_f acc
@@ -523,23 +532,35 @@ module Make (X : Arg) : S with type theory = X.t = struct
           from_goal = false;
         }
         in
+        List.iter
+          (fun pat ->
+             cpt := !cpt *
+                    List.length (match_pat_modulo mconf env tbox [id] pat);
+             (* TODO: put an adaptive limit *)
+             if !cpt = 0 || !cpt > 10_000 then raise Exit
+          ) (List.rev pats);
         let res =
-          List.fold_left
+          List.fold_left (match_pat_modulo mconf env tbox) [id] pats
+        in
+        (* let res =
+           List.fold_left
             (fun acc pat ->
                let acc = match_pat_modulo mconf env tbox acc pat in
                let len = List.length acc in
+               Format.printf "@.XXXXXXXXX len: %i XXXXXXXXX@." len;
                cpt := !cpt * len;
                if !cpt = 0 || !cpt > 1_000_000 then raise Exit;
                acc
             ) [id] pats
-        in
+           in *)
         Debug.candidate_substitutions tr tr_info res;
         res
       with Exit ->
         if get_debug_matching() >= 1 && get_verbose() then begin
           Printer.print_dbg
             ~module_name:"Matching" ~function_name:"matching"
-            "skip matching for %%a : cpt = %d"
+            "skip matching for %a : cpt = %d"
+            Expr.print tr_info.lemma_orig
             !cpt
         end;
         []

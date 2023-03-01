@@ -451,11 +451,12 @@ let rec print_silent fmt t =
       | Ty.Trecord { Ty.lbs = lbs; _ } ->
         assert (List.length xs = List.length lbs);
         fprintf fmt "{";
-        ignore (List.fold_left2 (fun first (field,_) e ->
+        ignore (try List.fold_left2 (fun first (field,_) e ->
             fprintf fmt "%s%s = %a"  (if first then "" else "; ")
               (Hstring.view field) print e;
             false
-          ) true lbs xs);
+          ) true lbs xs with | _ -> assert false
+          );
         fprintf fmt "}";
       | _ -> assert false
     end
@@ -714,6 +715,14 @@ let is_ite s = match s with
   | Sy.Op Sy.Tite -> true
   | _ -> false
 
+let normalize_chainable sy args =
+  if Sy.is_chainable_operator sy then
+    (* S: Applying List.rev helps alt-ergo matching more efficiently.
+       It actually fails to prove some goals if not reversed (see issue 505,
+       'facto' examples) *)
+    List.rev @@ List.fast_sort compare args
+  else args
+
 let mk_term s l ty =
   assert (match s with Sy.Lit _ | Sy.Form _ -> false | _ -> true);
   let d = match l with
@@ -727,6 +736,7 @@ let mk_term s l ty =
   let vars = free_vars_non_form s l ty in
   let vty = free_type_vars_non_form l ty in
   let pure = List.for_all (fun e -> e.pure) l && not (is_ite s) in
+  let l = normalize_chainable s l in
   let pos =
     HC.make {f=s; xs=l; ty=ty; depth=d; tag= -42; vars; vty;
              nb_nodes; neg = None; bind = B_none; pure}
@@ -1206,8 +1216,7 @@ let rec apply_subst_aux ((sbs_t, sbs_ty) as sbs) t =
           | _ -> assert false
         end
 
-      | _ ->
-        mk_term f xs' ty'
+      | _ -> mk_term f xs' ty'
 
 and apply_subst_to_trigger subst ({ content; guard; _ } as tr) =
   {tr with
@@ -1656,13 +1665,8 @@ let elim_iff f1 f2 id ~with_conj =
 let concat_chainable p_op p_ty t acc =
   match term_view t with
   | Term {f; xs; ty; _} ->
-    if Symbols.equal p_op f && Ty.equal p_ty ty then begin
-      (* Format.printf "Flattening %a into %a@."
-         print_list xs print_list acc; *)
-      let res = List.rev_append (List.rev xs) acc in
-      (*       Format.printf "Result: %a@." print_list res; *)
-      res
-    end
+    if Symbols.equal p_op f && Ty.equal p_ty ty then
+      List.rev_append (List.rev xs) acc
     else
       t :: acc
   | _ -> t :: acc
@@ -1670,11 +1674,6 @@ let concat_chainable p_op p_ty t acc =
 let mk_chained s t1 t2 ty =
   let args = concat_chainable s ty t2 [] in
   let args = concat_chainable s ty t1 args in
-
-  (* S: Applying List.rev helps alt-ergo matching more efficiently.
-     It actually fails to prove some goals if not reversed (see issue 505,
-     'facto' examples) *)
-  let args = List.rev @@ List.fast_sort compare args in
   mk_term s args ty
 
 let mk_plus = mk_chained (Sy.Op Sy.Plus)

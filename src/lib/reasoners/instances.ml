@@ -126,6 +126,13 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   module Debug = struct
     open Printer
 
+    let pp_inst =
+      Expr.Map.iter
+        (fun orig (gf, _, _, _) ->
+           Format.printf "@.orig: %a@." E.print orig;
+           Format.printf "@.gf: %a@." E.print gf.Expr.ff
+        )
+
     let new_facts_of_axiom ax insts_ok =
       if get_debug_matching () >= 1 && insts_ok != ME.empty then
         let name = match Expr.form_view ax with
@@ -272,8 +279,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     assert (not (SE.mem f mp_orig_ko));
     ME.add orig (mp_orig_ok, SE.add f mp_orig_ko) insts
 
-  (* Produce new facts from axioms instantiated by the substitutions
-     [sbts]. *)
+  (* Produce new facts from axioms instantiated by the substitutions [sbts]. *)
   let new_facts _env tbox ~selector sbts =
     List.fold_left
       (fun acc (tr, (tr_info : Matching.trigger_info), sbts) ->

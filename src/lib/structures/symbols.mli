@@ -103,6 +103,10 @@ val is_prefix_operator : t -> bool
 (** [is_prefix_operator sy] return [true] if and only if [sy] is a prefix
     operator. *)
 
+val is_chainable_operator : t -> bool
+(** [is_chainable_operator sy] return [true] if and only if [sy] is a
+    chainable operator. *)
+
 val equal : t -> t -> bool
 val compare : t -> t -> int
 val compare_bounds : bound -> bound -> int

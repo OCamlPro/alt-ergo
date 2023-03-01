@@ -320,7 +320,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let instantiate env =
       if get_debug_sat () then
         print_dbg
-          ~module_name:"Fun_sat" ~function_name:"instanciate"
+          ~module_name:"Fun_sat" ~function_name:"instantiate"
           "I instantiate at level (%d, %d). Inst level = %d"
           env.dlevel env.plevel env.ilevel
 
@@ -344,11 +344,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           ~module_name:"Fun_sat" ~function_name:"elim"
           "elim"
 
-    let red _ _ =
+    let red gf =
       if get_debug_sat () && get_verbose () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"red"
-          "red"
+          "red with gf %a" E.print gf.E.ff
 
     (* let delta d =
        print_dbg ~debug:(get_verbose () || get_debug_sat ())
@@ -777,6 +777,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         | E.Not_a_form -> assert false
 
   let red tcp_cache tmp_cache ff env tcp =
+    Debug.red ff;
     match red tcp_cache tmp_cache ff env tcp with
     | (Some _, _)  as ans -> ans
     | None, b ->
@@ -862,7 +863,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             cl, u
           with Exit ->
             begin
-              Debug.red gf1 gf2;
               match
                 red tcp_cache tmp_cache gf1 env tcp,
                 red tcp_cache tmp_cache gf2 env tcp
@@ -887,7 +887,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                 let gf1 = update_distances env gf1 f2 in
                 cl, (gf1,Ex.union d d2) :: u
 
-              | (None, _) , (None, _) -> fd::cl , u
+              | (None, _) , (None, _) ->
+                fd::cl , u
             end
       ) acc delta
 
@@ -1065,7 +1066,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             let lits = (a, ff, dep, env.dlevel, env.plevel)::lits in
             let acc = env, true, true, ap_delta, lits in
             begin
-              (* ground preds bahave like proxies of lazy CNF *)
+              (* ground preds behave like proxies of lazy CNF *)
               match Inst.ground_pred_defn a env.inst with
               | Some (guard, af, adep) ->
                 (* in fun-SAT, guards are either forced to TRUE, or
@@ -1155,7 +1156,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let l = List.rev_append (List.rev gd) ngd in
 
     (* do this to avoid loosing instances when a conflict is detected
-       directly with some of these instances only, ie before assumign
+       directly with some of these instances only, ie before assuming
        the others *)
     if get_sat_learning () then
       List.iter
