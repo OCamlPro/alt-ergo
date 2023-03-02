@@ -96,16 +96,6 @@ let[@inline always] compare_algebraic s1 s2 f_same_constrs_with_args =
     let cmp_tags = Obj.tag r1 - Obj.tag r2 in
     if cmp_tags <> 0 then cmp_tags else f_same_constrs_with_args (s1, s2)
 
-let[@inline always] rec compare_lists ~cmp l1 l2 =
-  match l1, l2 with
-  | [], []     -> 0
-  | [], _ :: _ -> -1
-  | _ :: _, [] -> 1
-  | hd1 :: tl1, hd2 :: tl2 ->
-    let res = cmp hd1 hd2 in
-    if res <> 0 then res
-    else compare_lists ~cmp tl1 tl2
-
 type matching_env =
   {
     nb_triggers : int;

@@ -131,14 +131,22 @@ module Make (X : Arg) : S with type theory = X.t = struct
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
     open Printer
+
+    let generate_permutations t n =
+      if get_debug_matching () >= 3 then
+        print_dbg
+          ~module_name:"Matching" ~function_name:"match_classes"
+          "The number of permutations generated for the term %a is %i"
+          Expr.print t n
+
     let add_term t =
-      if get_debug_matching() >= 3 then
+      if get_debug_matching () >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"add_term"
           "add_term:  %a" E.print t
 
     let matching tr =
-      if get_debug_matching() >= 3 then
+      if get_debug_matching () >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"matching"
           "@[<v 0>(multi-)trigger: %a@ \
@@ -146,7 +154,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           E.print_list tr.E.content
 
     let match_pat_modulo pat sbts =
-      if get_debug_matching() >= 3 then
+      if get_debug_matching () >= 3 then
         let print fmt sbt =
           fprintf fmt ">>> sbs= %a@ " Expr.Subst.pp sbt.content
         in
@@ -156,7 +164,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           E.print pat (pp_list_no_space print) sbts
 
     let match_one_pat sbt pat0 =
-      if get_debug_matching() >= 3 then
+      if get_debug_matching () >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_one_pat"
           "match_pat: %a with subst: %a"
@@ -174,14 +182,14 @@ module Make (X : Arg) : S with type theory = X.t = struct
           Expr.Subst.pp sbt.content
 
     let match_term sbt t pat =
-      if get_debug_matching() >= 3 then
+      if get_debug_matching () >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_term"
           "I match %a against %a with subst: %a"
           E.print pat E.print t Expr.Subst.pp sbt.content
 
     let match_args sbt pats terms =
-      if get_debug_matching() >= 3 then
+      if get_debug_matching () >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_args"
           "I match %a against %a with subst: %a"
@@ -190,7 +198,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           Expr.Subst.pp sbt.content
 
     let match_class_of t cl =
-      if get_debug_matching() >= 3 then
+      if get_debug_matching () >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_class_of"
           "class_of (%a) = { %a }"
@@ -282,7 +290,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     Set.Make(struct
       type t = E.t list
 
-      let compare = Util.compare_lists ~cmp:E.compare
+      let compare = Lists.compare ~cmp:E.compare
     end)
 
   (* Update the classes according to the equality modulo theory. *)
@@ -363,7 +371,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
         (fun cls (term : E.t) ->
            if Symbols.compare pat.f term.f = 0 then
              if Sy.is_chainable_operator pat.f then
-               List.rev_append (permutations term.xs) cls
+               let p = permutations term.xs in
+               Debug.generate_permutations term (List.length p);
+               List.rev_append p cls
              else
                term.xs :: cls
            else
@@ -416,9 +426,6 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   and match_args mconf env tbox (sbt : subst) (pat : E.t) term =
     let cls = match_classes mconf tbox pat term in
-    (* List.iter
-       (fun cl -> Format.printf "args: %a@." E.print_list cl
-       ) cls; *)
     try
       List.fold_left
         (fun acc xs ->

@@ -185,15 +185,9 @@ let rec make_term up_qv quant_basename t =
       E.mk_term (Sy.mk_maps_to x) [mk_term e] ty
 
     | TTinfix (t1, s, t2) ->
-      begin
-        let t2 = mk_term t2 in
-        let t1 = mk_term t1 in
-        match s, ty with
-        | Sy.Op Sy.Plus, (Ty.Tint | Ty.Treal) -> E.mk_plus t1 t2 ty
-        | Sy.Op Sy.Mult, (Ty.Tint | Ty.Treal) -> E.mk_mult t1 t2 ty
-        | _ ->
-          E.mk_term s [t1; t2] ty
-      end
+      let t2 = mk_term t2 in
+      let t1 = mk_term t1 in
+      E.mk_term s [t1; t2] ty
 
     | TTprefix ((Sy.Op Sy.Minus) as s, n) ->
       let t1 = if ty == Ty.Tint then E.int "0" else E.real "0"  in

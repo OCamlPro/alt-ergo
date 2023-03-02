@@ -254,7 +254,7 @@ module Shostak (X : ALIEN) = struct
         let c = Ty.compare c1.c_ty c2.c_ty in
         if c <> 0 then c
         else
-          Util.compare_lists c1.c_args c2.c_args ~cmp:
+          Lists.compare c1.c_args c2.c_args ~cmp:
             (fun (hs1, v1) (hs2, v2) ->
                assert (Hs.equal hs1 hs2);
                X.str_cmp v1 v2

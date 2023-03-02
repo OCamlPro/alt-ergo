@@ -561,7 +561,7 @@ struct
     | [], _::_ -> [] (* the original equality was trivial *)
     | _ -> make_idemp oa ob (List.rev_append sbt sbt')
 
-  let solve  a b =
+  let solve a b =
     if CX.equal a b then []
     else
       let a', b', acc = abstract_equality a b in

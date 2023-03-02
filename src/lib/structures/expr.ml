@@ -166,18 +166,18 @@ let compare_binders b1 b2 =
       let c = i - j in if c <> 0 then c else Ty.compare ty1 ty2)
     b1 b2
 
-let compare_sko_vars = Util.compare_lists ~cmp:compare
+let compare_sko_vars = Lists.compare ~cmp:compare
 
-let compare_sko_vty = Util.compare_lists ~cmp:Ty.compare
+let compare_sko_vty = Lists.compare ~cmp:Ty.compare
 
 let compare_trigger tr1 tr2 =
-  let res = Util.compare_lists ~cmp:compare tr1.content tr2.content in
+  let res = Lists.compare ~cmp:compare tr1.content tr2.content in
   if res <> 0 then res
   else
-    let res = Util.compare_lists ~cmp:compare tr1.hyp tr2.hyp in
+    let res = Lists.compare ~cmp:compare tr1.hyp tr2.hyp in
     if res <> 0 then res
     else
-      Util.compare_lists tr1.semantic tr2.semantic
+      Lists.compare tr1.semantic tr2.semantic
         ~cmp:(fun a b ->
             Util.compare_algebraic a b
               (function
@@ -205,7 +205,7 @@ let compare_trigger tr1 tr2 =
               )
           )
 
-let compare_triggers = Util.compare_lists ~cmp:compare_trigger
+let compare_triggers = Lists.compare ~cmp:compare_trigger
 
 let compare_quant
     {main=f1; binders=b1; sko_v=sko_v1; sko_vty=free_vty1; user_trs=trs1; _}
@@ -234,19 +234,18 @@ module H = struct
   type elt = t
   type t = elt
 
-  let eq t1 t2 = try
-      Sy.equal t1.f t2.f
-      && List.for_all2 (==) t1.xs t2.xs
-      && Ty.equal t1.ty t2.ty
-      &&
-      Util.compare_algebraic t1.bind t2.bind
-        (function
-          | B_lemma q1, B_lemma q2
-          | B_skolem q1, B_skolem q2 -> compare_quant q1 q2
-          | B_let a, B_let b -> compare_let a b
-          | _, (B_none | B_lemma _ | B_skolem _ | B_let _) -> assert false
-        ) = 0
-    with Invalid_argument _ -> false
+  let eq t1 t2 =
+    Sy.equal t1.f t2.f
+    && Lists.equal ~eq:(==) t1.xs t2.xs
+    && Ty.equal t1.ty t2.ty
+    &&
+    Util.compare_algebraic t1.bind t2.bind
+      (function
+        | B_lemma q1, B_lemma q2
+        | B_skolem q1, B_skolem q2 -> compare_quant q1 q2
+        | B_let a, B_let b -> compare_let a b
+        | _, (B_none | B_lemma _ | B_skolem _ | B_let _) -> assert false
+      ) = 0
 
   let equal = eq
 
@@ -715,13 +714,25 @@ let is_ite s = match s with
   | Sy.Op Sy.Tite -> true
   | _ -> false
 
-let normalize_chainable sy args =
-  if Sy.is_chainable_operator sy then
+let concat_chainable p_op p_ty t acc =
+  match term_view t with
+  | Term {f; xs; ty; _} ->
+    if Symbols.equal p_op f && Ty.equal p_ty ty then
+      List.rev_append (List.rev xs) acc
+    else
+      t :: acc
+  | _ -> t :: acc
+
+let simplify_chainable sy args ty =
+  match args with
+  | [t1; t2] when Sy.is_chainable_operator sy ->
     (* S: Applying List.rev helps alt-ergo matching more efficiently.
        It actually fails to prove some goals if not reversed (see issue 505,
        'facto' examples) *)
-    List.rev @@ List.fast_sort compare args
-  else args
+    concat_chainable sy ty t2 []
+    |> concat_chainable sy ty t1
+    |> List.fast_sort (fun x y -> - compare x y)
+  | _ -> args
 
 let mk_term s l ty =
   assert (match s with Sy.Lit _ | Sy.Form _ -> false | _ -> true);
@@ -736,7 +747,7 @@ let mk_term s l ty =
   let vars = free_vars_non_form s l ty in
   let vty = free_type_vars_non_form l ty in
   let pure = List.for_all (fun e -> e.pure) l && not (is_ite s) in
-  let l = normalize_chainable s l in
+  let l = simplify_chainable s l ty in
   let pos =
     HC.make {f=s; xs=l; ty=ty; depth=d; tag= -42; vars; vty;
              nb_nodes; neg = None; bind = B_none; pure}
@@ -753,6 +764,14 @@ let mk_term s l ty =
     pos.neg <- Some neg;
     neg.neg <- Some pos;
     pos
+
+let mk_plus t1 t2 ty =
+  assert (ty == Ty.Tint || ty == Ty.Treal);
+  mk_term (Sy.Op Sy.Plus) [t1; t2] ty
+
+let mk_mult t1 t2 ty =
+  assert (ty == Ty.Tint || ty == Ty.Treal);
+  mk_term (Sy.Op Sy.Mult) [t1; t2] ty
 
 let vrai =
   let res =
@@ -1662,24 +1681,6 @@ let elim_iff f1 f2 id ~with_conj =
       (mk_and f1 f2 false id)
       (mk_and (neg f1) (neg f2) false id) false id
 
-let concat_chainable p_op p_ty t acc =
-  match term_view t with
-  | Term {f; xs; ty; _} ->
-    if Symbols.equal p_op f && Ty.equal p_ty ty then
-      List.rev_append (List.rev xs) acc
-    else
-      t :: acc
-  | _ -> t :: acc
-
-let mk_chained s t1 t2 ty =
-  let args = concat_chainable s ty t2 [] in
-  let args = concat_chainable s ty t1 args in
-  mk_term s args ty
-
-let mk_plus = mk_chained (Sy.Op Sy.Plus)
-
-let mk_mult = mk_chained (Sy.Op Sy.Mult)
-
 let[@inline always] is_pure e = e.pure
 
 module Trigger = struct
@@ -1744,7 +1745,7 @@ module Trigger = struct
       if c <> 0 then c
       else
         let c = Sy.compare s s' in
-        if c <> 0 then c else Util.compare_lists ~cmp:cmp_trig_term l1 l2
+        if c <> 0 then c else Lists.compare ~cmp:cmp_trig_term l1 l2
 
     | { f = s; _ }, _ when Sy.is_infix_operator s -> -1
     | _ , { f = s'; _ } when Sy.is_infix_operator s' -> 1
@@ -1763,32 +1764,32 @@ module Trigger = struct
       let l2 = List.map score_term tl2 in
       let l1 = List.fast_sort Stdlib.compare l1 in
       let l2 = List.fast_sort Stdlib.compare l2 in
-      let c  = Util.compare_lists ~cmp:Stdlib.compare l1 l2 in
+      let c  = Lists.compare ~cmp:Stdlib.compare l1 l2 in
       if c <> 0 then c
       else
         let c = Sy.compare s1 s2 in
-        if c <> 0 then c else Util.compare_lists ~cmp:cmp_trig_term tl1 tl2
+        if c <> 0 then c else Lists.compare ~cmp:cmp_trig_term tl1 tl2
 
     | { f = Name _; _ }, _ -> -1
     | _, { f = Name _; _ } -> 1
 
     | { f = Op Get; xs = l1; _ }, { f = Op Get; xs = l2; _ } ->
-      Util.compare_lists ~cmp:cmp_trig_term l1 l2
+      Lists.compare ~cmp:cmp_trig_term l1 l2
     | { f = Op Get; _ }, _ -> -1
     | _, { f = Op Get; _ } -> 1
 
     | { f = Op Set; xs = l1; _ }, { f = Op Set; xs = l2; _ } ->
-      Util.compare_lists ~cmp:cmp_trig_term l1 l2
+      Lists.compare ~cmp:cmp_trig_term l1 l2
     | { f = Op Set; _ }, _ -> -1
     | _, { f = Op Set; _ } -> 1
 
     | { f= Op Extract; xs = l1; _ }, { f = Op Extract; xs = l2; _ } ->
-      Util.compare_lists ~cmp:cmp_trig_term l1 l2
+      Lists.compare ~cmp:cmp_trig_term l1 l2
     | { f = Op Extract; _ }, _ -> -1
     | _, { f = Op Extract; _ } -> 1
 
     | { f = Op Concat; xs = l1; _ }, { f = Op Concat; xs = l2; _} ->
-      Util.compare_lists ~cmp:cmp_trig_term l1 l2
+      Lists.compare ~cmp:cmp_trig_term l1 l2
     | { f = Op Concat; _ }, _ -> -1
     | _, { f = Op Concat; _ } -> 1
 
@@ -1809,7 +1810,7 @@ module Trigger = struct
     | _, { f =Op (Destruct _); _ } -> 1
 
     | { f = Op Record ; xs= lbs1; _ }, { f = Op Record ; xs = lbs2; _ } ->
-      Util.compare_lists ~cmp:cmp_trig_term lbs1 lbs2
+      Lists.compare ~cmp:cmp_trig_term lbs1 lbs2
     | { f = Op Record; _ }, _ -> -1
     | _, { f = Op Record; _ } -> 1
 
@@ -1819,11 +1820,11 @@ module Trigger = struct
       let l2 = List.map score_term tl2 in
       let l1 = List.fast_sort Stdlib.compare l1 in
       let l2 = List.fast_sort Stdlib.compare l2 in
-      let c = Util.compare_lists ~cmp:Stdlib.compare l1 l2 in
+      let c = Lists.compare ~cmp:Stdlib.compare l1 l2 in
       if c <> 0 then c
       else
         let c = Sy.compare s1 s2 in
-        if c <> 0 then c else Util.compare_lists ~cmp:cmp_trig_term tl1 tl2
+        if c <> 0 then c else Lists.compare ~cmp:cmp_trig_term tl1 tl2
 
     | { f = Op _; _ }, _ -> -1
     | _, { f = Op _; _ } -> 1
@@ -1836,8 +1837,8 @@ module Trigger = struct
     let l2 = List.map score_term tl2 in
     let l1 = List.rev (List.fast_sort Stdlib.compare l1) in
     let l2 = List.rev (List.fast_sort Stdlib.compare l2) in
-    let c = Util.compare_lists ~cmp:Stdlib.compare l1 l2 in
-    if c <> 0 then c else Util.compare_lists ~cmp:cmp_trig_term tl1 tl2
+    let c = Lists.compare ~cmp:Stdlib.compare l1 l2 in
+    if c <> 0 then c else Lists.compare ~cmp:cmp_trig_term tl1 tl2
 
   let unique_stable_sort =
     let rec unique l acc =
@@ -1908,7 +1909,7 @@ module Trigger = struct
     struct
       type t = expr list * SSet.t * Svty.t
       let compare (a, y1, _) (b, y2, _)  =
-        let c = Util.compare_lists ~cmp:compare a b in
+        let c = Lists.compare ~cmp:compare a b in
         if c <> 0 then c else SSet.compare y1 y2
     end)
 

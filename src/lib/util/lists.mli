@@ -31,3 +31,11 @@ val apply_right : ('a -> 'a) -> ('b * 'a) list -> ('b * 'a) list * bool
 
 val find_opt : ('a -> bool) -> 'a list -> 'a option
 (** Tries and find the first element of the list satisfying the predicate. *)
+
+val compare: cmp:('a -> 'a -> int) -> 'a list -> 'a list -> int
+(** [compare ~cmp lst1 lst2] compare the lists [lst1] and [lst2]
+    using the comparison function [cmp] for their elements. *)
+
+val equal: eq:('a -> 'a -> bool) -> 'a list -> 'a list -> bool
+(** [equal ~eq lst1 lst2] check if the lists [lst1] and [lst2] are equal
+    using the equality function [eq] for their elements. *)

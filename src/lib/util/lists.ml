@@ -43,3 +43,21 @@ let to_seq l =
   in
   aux l
 
+let[@inline always] rec compare ~cmp l1 l2 =
+  match l1, l2 with
+  | [], []     -> 0
+  | [], _ :: _ -> -1
+  | _ :: _, [] -> 1
+  | hd1 :: tl1, hd2 :: tl2 ->
+    let res = cmp hd1 hd2 in
+    if res <> 0 then res
+    else compare ~cmp tl1 tl2
+
+let[@inline always] rec equal ~eq l1 l2 =
+  match l1, l2 with
+  | [], [] -> true
+  | [], _ :: _ | _ :: _, [] -> false
+  | hd1 :: tl1, hd2 :: tl2 ->
+    eq hd1 hd2 && equal ~eq tl1 tl2
+
+
