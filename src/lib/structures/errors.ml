@@ -205,7 +205,8 @@ let report_typing_error fmt = function
 
   | NotAdtConstr (lbl, ty) ->
     fprintf fmt
-      "The symbol %s is not a constructor of the type %a" lbl Ty.print ty
+      "The identifiant %s is not a constructor of an algebraic data type. \
+       Its type is %a" lbl Ty.print ty
   | BadPopCommand {pushed; to_pop} ->
     fprintf fmt
       "Cannot pop %d assertion contexts. Only %d have been pushed"

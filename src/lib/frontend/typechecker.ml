@@ -209,6 +209,7 @@ module Env = struct
     | RecordConstr
     | RecordDestr
     | AdtConstr
+    | EnumConstr
     | AdtDestr
     | Other
 
@@ -343,7 +344,7 @@ let type_var_desc env p loc =
   match Env.fresh_type env p loc with
   | s,
     { Env.args = []; result = ty},
-    (Env.Other | Env.AdtConstr (*more exactly, Enum constr*) ) ->
+    (Env.Other | Env.AdtConstr | Env.EnumConstr) ->
     TTapp (s, []) , ty
   | _ -> Errors.typing_error (ShouldBeApply p) loc
 
@@ -416,6 +417,7 @@ let mk_adequate_app p s te_args ty logic_kind =
   | Env.RecordDestr, _, _ -> assert false
   | Env.RecordConstr, _, _ -> assert false
   | Env.AdtDestr, _, _ -> assert false
+  | Env.EnumConstr, _, _ -> assert false
 
 let rec type_term ?(call_from_type_form=false) env f =
   let {pp_loc = loc; pp_desc} = f in
@@ -2105,7 +2107,7 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     let ty = PFunction([], pur_ty) in
     let tlogic, env =
       (* can also use List.fold Env.add_constr *)
-      Env.add_logics ~kind:Env.AdtConstr env Symbols.constr lcl ty loc
+      Env.add_logics ~kind:Env.EnumConstr env Symbols.constr lcl ty loc
     in
     let td2_a = { c = TLogic(loc, lc, tlogic); annot=new_id () } in
     (td2_a,env)::acc, env
