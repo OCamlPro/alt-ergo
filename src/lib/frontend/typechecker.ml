@@ -209,6 +209,7 @@ module Env = struct
     | RecordConstr
     | RecordDestr
     | AdtConstr
+    | EnumConstr
     | AdtDestr
     | Other
 
@@ -286,7 +287,7 @@ module Env = struct
            MString.add n (sy, profile, kind) logics)
         env.logics names
     in
-    decl, { env with logics = logics }
+    decl, { env with logics }
 
   let add_constr ~record env constr args_ty ty loc =
     let pp_profile = PFunction (args_ty, ty) in
@@ -343,7 +344,7 @@ let type_var_desc env p loc =
   match Env.fresh_type env p loc with
   | s,
     { Env.args = []; result = ty},
-    (Env.Other | Env.AdtConstr) ->
+    (Env.Other | Env.AdtConstr | Env.EnumConstr) ->
     TTapp (s, []) , ty
   | _ -> Errors.typing_error (ShouldBeApply p) loc
 
@@ -398,7 +399,7 @@ let check_pattern_matching missing dead loc =
 let mk_adequate_app p s te_args ty logic_kind =
   let hp = Hstring.make p in
   match logic_kind, te_args, ty with
-  | (Env.AdtConstr | Env.Other), _, _ ->
+  | (Env.AdtConstr | Env.EnumConstr | Env.Other), _, _ ->
     (* symbol 's' alreadt contains the information *)
     TTapp(s, te_args)
 
@@ -1023,8 +1024,12 @@ and type_form ?(in_theory=false) env f =
           match kind with
           | Env.AdtConstr ->
             let top = TTisConstr (tt, Hstring.make lbl) in
-            let r = TFatom {c = top; annot=new_id ()} in
+            let r = TFatom { c = top; annot = new_id () } in
             r
+          | Env.EnumConstr ->
+            let tt_desc, tt_ty = type_var_desc env lbl f.pp_loc in
+            let rhs = { c = { tt_desc; tt_ty }; annot = new_id () } in
+            TFatom (mk_ta_eq tt rhs)
           | _ -> Errors.typing_error (NotAdtConstr (lbl, result)) f.pp_loc
         with Ty.TypeClash(t1,t2) ->
           Errors.typing_error (Unification(t1,t2)) f.pp_loc
@@ -2105,7 +2110,7 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     let ty = PFunction([], pur_ty) in
     let tlogic, env =
       (* can also use List.fold Env.add_constr *)
-      Env.add_logics ~kind:Env.AdtConstr env Symbols.constr lcl ty loc
+      Env.add_logics ~kind:Env.EnumConstr env Symbols.constr lcl ty loc
     in
     let td2_a = { c = TLogic(loc, lc, tlogic); annot=new_id () } in
     (td2_a,env)::acc, env
