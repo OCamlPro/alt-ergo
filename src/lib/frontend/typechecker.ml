@@ -1030,7 +1030,16 @@ and type_form ?(in_theory=false) env f =
             let tt_desc, tt_ty = type_var_desc env lbl f.pp_loc in
             let rhs = { c = { tt_desc; tt_ty }; annot = new_id () } in
             TFatom (mk_ta_eq tt rhs)
-          | _ -> Errors.typing_error (NotAdtConstr (lbl, result)) f.pp_loc
+          | _ ->
+            begin match result with
+              | Ty.Trecord _ ->
+                (* The typechecker allows only testers whose the
+                   two arguments have the same types. Thus, we can always
+                   replace the tester of a record by true literal. *)
+                TFatom { c = TAtrue; annot = new_id () }
+              | _ ->
+                Errors.typing_error (NotAdtConstr (lbl, result)) f.pp_loc
+            end
         with Ty.TypeClash(t1,t2) ->
           Errors.typing_error (Unification(t1,t2)) f.pp_loc
       end
