@@ -28,17 +28,15 @@ let get_basename = function
   | DStd.Path.Local { name; }
   | Absolute { name; path = []; } -> name
   | Absolute { name; path; } ->
-    failwith (
-      Format.asprintf
-        "Expected an empty path to the basename: \"%s\" but got: [%a]."
-        name (fun fmt l ->
-            match l with
-            | h :: t ->
-              Format.fprintf fmt "%s" h;
-              List.iter (Format.fprintf fmt "; %s") t
-            | _ -> ()
-          ) path
-    )
+    Util.failwith
+      "Expected an empty path to the basename: \"%s\" but got: [%a]."
+      name (fun fmt l ->
+          match l with
+          | h :: t ->
+            Format.fprintf fmt "%s" h;
+            List.iter (Format.fprintf fmt "; %s") t
+          | _ -> ()
+        ) path
 
 module Cache = struct
 
@@ -170,9 +168,7 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
     if update then
       Cache.store_tyvl ~is_var tyvl;
     aux ty
-  | _ -> failwith (
-      Format.asprintf "Unsupported Type %a" DE.Ty.print dty
-    )
+  | _ -> Util.failwith "Unsupported Type %a" DE.Ty.print dty
 
 and handle_ty_app ?(update = false) ty_c l =
   (* Applies the substitutions in [tysubsts] to each encountered type
@@ -244,12 +240,11 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
             let pn = get_basename path in
             let pty = dty_to_ty id_ty in
             (pn, pty) :: acc
-          | _ -> failwith (
-              Format.asprintf
-                "Unexpected null label for some field of the record type \
-                 %a"
-                DE.Ty.Const.print ty_c
-            )
+          | _ ->
+            Util.failwith
+              "Unexpected null label for some field of the record type %a"
+              DE.Ty.Const.print ty_c
+
       ) [] dstrs
     in
     let lbs = List.rev rev_lbs in
@@ -257,7 +252,7 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
     Cache.store_ty (DE.Ty.Const.hash ty_c) ty
 
   | Some (
-      ( Adt { cases; _ } as _adt)
+      (Adt { cases; _ } as _adt)
     ) ->
     let name = get_basename ty_c.path in
     let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
@@ -341,12 +336,10 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
               let pn = get_basename path in
               let pty = dty_to_ty id_ty in
               (pn, pty) :: acc
-            | _ -> failwith (
-                Format.asprintf
-                  "Unexpected null label for some field of the record type \
-                   %a"
-                  DE.Ty.Const.print ty_c
-              )
+            | _ ->
+              Util.failwith
+                "Unexpected null label for some field of the record type %a"
+                DE.Ty.Const.print ty_c
         ) [] dstrs
       in
       let lbs = List.rev rev_lbs in
@@ -458,11 +451,10 @@ let handle_patt_var name (DE.{ term_descr; _ } as term)  =
     Cache.store_sy (DE.Term.Var.hash ty_v) sy;
     v, n, ty
 
-  | _ -> failwith (
-      Format.asprintf
-        "Expected a variable in a case match but got %a"
-        DE.Term.print term
-    )
+  | _ ->
+    Util.failwith
+      "Expected a variable in a case match but got %a"
+      DE.Term.print term
 
 (** Helper function to translate patterns in a pattern-matching from a Dolmen
     Term.t to an Alt-Ergo Expr.t *)
@@ -484,12 +476,11 @@ let mk_pattern DE.{ term_descr; _ } =
               | Some DE.{ path; _ } -> get_basename path :: acc
               | _ -> assert false
           ) [] dstrs
-        | _ -> failwith (
-            Format.asprintf
-              "Expected a constructor for an algebraic data type but got\
-               something else for the definition of: %a"
-              DE.Ty.Const.print adt
-          )
+        | _ ->
+          Util.failwith
+            "Expected a constructor for an algebraic data type but got\
+             something else for the definition of: %a"
+            DE.Ty.Const.print adt
       end
     in
     let rev_args =
@@ -527,12 +518,11 @@ let mk_bound (DE.{ term_descr; term_ty; _ } as term) is_open is_lower =
     | Cst { builtin = B.Base; path; _ }
     | Var { path;  _ } ->
       Sy.VarBnd (Var.of_string (get_basename path))
-    | _ -> failwith (
-        Format.asprintf
-          "Expected bound to be either an integer constant or variable but\
-           got: %a"
-          DE.Term.print term
-      )
+    | _ ->
+      Util.failwith
+        "Expected bound to be either an integer constant or variable but\
+         got: %a"
+        DE.Term.print term
   in
   let sort = dty_to_ty term_ty in
   Sy.mk_bound kind sort ~is_open ~is_lower
@@ -603,9 +593,8 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             let sy = Sy.Op (Sy.Constr (Hstring.make name)) in
             E.mk_term sy [] ty
 
-          | _ -> failwith (
-              Format.asprintf "Unsupported constant term %a" DE.Term.print term
-            )
+          | _ ->
+            Util.failwith "Unsupported constant term %a" DE.Term.print term
         end
 
       | Var ({ id_ty; _ } as ty_v) ->
@@ -653,26 +642,47 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
                         Sy.destruct ~guarded:true name
                     in
                     E.mk_term sy [e] ty
-                  | _ -> failwith (
-                      Format.asprintf
-                        "Adt Destructor error: Can't find %dth field of %dth \
-                         case of the type %a."
-                        field case DE.Ty.Const.print adt
-                    )
+                  | _ ->
+                    Util.failwith
+                      "Adt Destructor error: Can't find %dth field of %dth \
+                       case of the type %a."
+                      field case DE.Ty.Const.print adt
                 end
-              | None | Some Abstract -> failwith (
-                  Format.asprintf
-                    "Can't find the adt %a to which the destructor %a belongs"
-                    DE.Ty.Const.print adt DE.Term.print app_term
-                )
+              | None | Some Abstract ->
+                Util.failwith
+                  "Can't find the adt %a to which the destructor %a belongs"
+                  DE.Ty.Const.print adt DE.Term.print app_term
             end
 
           | B.Tester {
-              cstr = { builtin = B.Constructor _; path; _ }; _
+              cstr = { builtin = B.Constructor { adt; _ }; path; _ }; _
             }, [x] ->
-            let name = get_basename path in
-            let builtin = Sy.IsConstr (Hstring.make name) in
-            E.mk_builtin ~is_pos:true builtin [aux_mk_expr x]
+            begin
+              let name = get_basename path in
+              let builtin = Sy.IsConstr (Hstring.make name) in
+              let ty_c =
+                match DT.definition adt with
+                | Some (
+                    Adt { ty = ty_c; _ }
+                  ) -> ty_c
+                | _ -> assert false
+              in
+              match Cache.find_ty (DE.Ty.Const.hash ty_c) with
+              | Ty.Tadt _ ->
+                E.mk_builtin ~is_pos:true builtin [aux_mk_expr x]
+              | Ty.Tsum _ as ty ->
+                let cstr =
+                  let sy = Sy.Op (Sy.Constr (Hstring.make name)) in
+                  E.mk_term sy [] ty
+                in
+                E.mk_eq ~iff:false (aux_mk_expr x) cstr
+              | Ty.Trecord _ ->
+                (* The typechecker allows only testers whose the
+                   two arguments have the same types. Thus, we can always
+                   replace the tester of a record by true literal. *)
+                E.vrai
+              | _ -> assert false
+            end
 
           (* Binary applications *)
 
@@ -694,18 +704,16 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
                     let e2 = aux_mk_expr y in
                     assert (rty == Ty.Tbool);
                     E.mk_term sy [e2] rty
-                  | sym -> failwith (
-                      Format.asprintf
-                        "Cache error: Expected to find a variable symbol\
-                         associated to (%a), instead found (%a)"
-                        DE.Term.print x Sy.print sym
-                    )
+                  | sym ->
+                    Util.failwith
+                      "Cache error: Expected to find a variable symbol\
+                       associated to (%a), instead found (%a)"
+                      DE.Term.print x Sy.print sym
                 end
-              | _ -> failwith (
-                  Format.asprintf
-                    "Maps_to: expected a variable but got: %a"
-                    DE.Term.print x
-                )
+              | _ ->
+                Util.failwith
+                  "Maps_to: expected a variable but got: %a"
+                  DE.Term.print x
             end
 
           (* Ternary applications *)
@@ -920,18 +928,15 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
               | Ty.Trecord _ ->
                 let l = List.map (fun t -> aux_mk_expr t) args in
                 E.mk_term (Sy.Op Sy.Record) l ty
-              | _ -> failwith (
-                  Format.asprintf
-                    "Constructor error: %a does not belong to a record nor an\
-                     algebraic data type"
-                    DE.Term.print app_term
-                )
+              | _ ->
+                Util.failwith
+                  "Constructor error: %a does not belong to a record nor an\
+                   algebraic data type"
+                  DE.Term.print app_term
             end
 
-          | _, _ -> failwith (
-              Format.asprintf "Unsupported Application Term %a"
-                DE.Term.print term
-            )
+          | _, _ ->
+            Util.failwith "Unsupported Application Term %a" DE.Term.print term
         end
 
       | Match (t, pats) ->
@@ -1046,9 +1051,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
           in
           mk name loc binders triggers qbody (-42) ~toplevel ~decl_kind
 
-      | _ -> failwith (
-          Format.asprintf "Unsupported Term %a" DE.Term.print term
-        )
+      | _ -> Util.failwith "Unsupported Term %a" DE.Term.print term
     in
     match DStd.Tag.get root_tags DE.Tags.named with
     | Some s ->
