@@ -1034,8 +1034,8 @@ and type_form ?(in_theory=false) env f =
             begin match result with
               | Ty.Trecord _ ->
                 (* The typechecker allows only testers whose the
-                   two arguments have the same types. Thus, we can always
-                   replace the tester of a record by true literal. *)
+                   two arguments have the same type. Thus, we can always
+                   replace the tester of a record by the true literal. *)
                 TFatom { c = TAtrue; annot = new_id () }
               | _ ->
                 Errors.typing_error (NotAdtConstr (lbl, result)) f.pp_loc

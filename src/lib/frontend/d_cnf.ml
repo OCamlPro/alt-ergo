@@ -678,8 +678,8 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
                 E.mk_eq ~iff:false (aux_mk_expr x) cstr
               | Ty.Trecord _ ->
                 (* The typechecker allows only testers whose the
-                   two arguments have the same types. Thus, we can always
-                   replace the tester of a record by true literal. *)
+                   two arguments have the same type. Thus, we can always
+                   replace the tester of a record by the true literal. *)
                 E.vrai
               | _ -> assert false
             end
