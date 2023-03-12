@@ -170,7 +170,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
                 matching = EM.max_term_depth env.matching (E.depth f) } in
     match E.form_view f with
     | E.Iff(f1, f2) ->
-      let p = E.mk_term (Symbols.name name) [] Ty.Tbool in
+      let p = E.mk_term ~sy:(Symbols.name name) ~args:[] ~ty:Ty.Tbool in
       let np = E.neg p in
       let defn =
         if E.equal f1 p then f2
@@ -180,7 +180,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
       add_ground_pred env ~guard p np defn ex
 
     | E.Literal _ ->
-      let p = E.mk_term (Symbols.name name) [] Ty.Tbool in
+      let p = E.mk_term ~sy:(Symbols.name name) ~args:[] ~ty:Ty.Tbool in
       let np = E.neg p in
       let defn =
         if E.equal p f then E.vrai
@@ -291,7 +291,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
             | _ ->
               let nf = E.apply_subst s f in
               (* add the incrementaly guard to nf, if any *)
-              let nf = E.mk_imp trigger_increm_guard nf 0 in
+              let nf = E.mk_imp trigger_increm_guard nf in
               if inst_is_seen_during_this_round orig nf acc then acc
               else
                 let accepted = selector nf orig in

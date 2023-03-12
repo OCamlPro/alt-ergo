@@ -58,7 +58,7 @@ module Types = struct
            begin
              if MString.mem x !to_tyvars then
                Errors.typing_error (TypeDuplicateVar x) loc;
-             let nv = Ty.Tvar (Ty.fresh_var ()) in
+             let nv = Ty.fresh_tvar () in
              to_tyvars := MString.add x nv !to_tyvars;
              nv
            end
@@ -66,15 +66,15 @@ module Types = struct
 
   let check_number_args loc lty ty =
     match ty with
-    | Ty.Text (lty', s)
-    | Ty.Trecord { Ty.args = lty'; name = s; _ }
-    | Ty.Tadt (s,lty') ->
-      if List.length lty <> List.length lty' then
-        Errors.typing_error (WrongNumberofArgs (Hstring.view s)) loc;
-      lty'
-    | Ty.Tsum (s, _) ->
+    | Ty.Text { cstr = hs; params = args }
+    | Ty.Trecord { name = hs; args; _ }
+    | Ty.Tadt { cstr = hs; payload = args } ->
+      if List.length lty <> List.length args then
+        Errors.typing_error (WrongNumberofArgs (Hstring.view hs)) loc;
+      args
+    | Ty.Tsum {name; _} ->
       if List.length lty <> 0 then
-        Errors.typing_error (WrongNumberofArgs (Hstring.view s)) loc;
+        Errors.typing_error (WrongNumberofArgs (Hstring.view name)) loc;
       []
     | _ -> assert false
 
@@ -98,18 +98,18 @@ module Types = struct
       begin
         try MString.find s !to_tyvars
         with Not_found ->
-          let nty = Ty.Tvar (Ty.fresh_var ()) in
+          let nty = Ty.fresh_tvar () in
           to_tyvars := MString.add s nty !to_tyvars;
           nty
       end
     | PPTexternal (l, s, loc) when String.equal s "farray" ->
-      let t1,t2 = match l with
-        | [t2] -> PPTint,t2
-        | [t1;t2] -> t1,t2
-        | _ -> Errors.typing_error (WrongArity(s,2)) loc in
-      let ty1 = ty_of_pp loc env rectype t1 in
-      let ty2 = ty_of_pp loc env rectype t2 in
-      Ty.Tfarray (ty1, ty2)
+      let t1, t2 = match l with
+        | [t2] -> PPTint, t2
+        | [t1; t2] -> t1, t2
+        | _ -> Errors.typing_error (WrongArity (s, 2)) loc in
+      let key_ty = ty_of_pp loc env rectype t1 in
+      let val_ty = ty_of_pp loc env rectype t2 in
+      Ty.Tfarray {key_ty; val_ty}
     | PPTexternal (l, s, loc) ->
       begin
         match rectype with
@@ -130,15 +130,16 @@ module Types = struct
     let ty_vars = fresh_vars ~recursive vars loc in
     match body with
     | Abstract ->
-      let ty = Ty.text ty_vars id in
+      let ty = Ty.text ~params:ty_vars id in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Enum lc ->
-      let ty = Ty.tsum id lc in
+      let ty = Ty.tsum ~cstrs:lc id in
       ty, { env with to_ty = MString.add id ty env.to_ty }
-    | Record (record_constr, lbs) ->
+    | Record (record_cstr, lbs) ->
       let lbs =
-        List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs in
-      let ty = Ty.trecord ~record_constr ty_vars id lbs in
+        List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs
+      in
+      let ty = Ty.trecord ~record_cstr ~args:ty_vars ~fields:lbs id in
       ty, { to_ty = MString.add id ty env.to_ty;
             from_labels =
               List.fold_left
@@ -154,7 +155,7 @@ module Types = struct
         if l == [] then None (* in initialization step, no body *)
         else Some l
       in
-      let ty = Ty.t_adt ~body id ty_vars in
+      let ty = Ty.t_adt ~body ~payload:ty_vars id in
       ty, { env with to_ty = MString.add id ty env.to_ty }
 
   module SH = Set.Make(Hstring)
@@ -291,13 +292,13 @@ module Env = struct
   let add_constr ~record env constr args_ty ty loc =
     let pp_profile = PFunction (args_ty, ty) in
     let kind = if record then RecordConstr else AdtConstr in
-    add_logics ~kind env Symbols.constr [constr, ""] pp_profile loc
+    add_logics ~kind env Symbols.cstr [constr, ""] pp_profile loc
 
   let add_destr ~record env destr pur_ty lbl_ty loc =
     let pp_profile = PFunction ([pur_ty], lbl_ty) in
     let mk_sy s =
       if record then (Symbols.Op (Access (Hstring.make s)))
-      else Symbols.destruct ~guarded:true s
+      else Symbols.dstr ~guarded:true s
     in
     let kind = if record then RecordDestr else AdtDestr in
     add_logics ~kind env mk_sy [destr, ""] pp_profile loc
@@ -314,7 +315,7 @@ module Env = struct
   let fresh_type env n loc =
     try
       let s, { args = args; result = r}, kind = MString.find n env.logics in
-      let args, subst = Ty.fresh_list args Ty.esubst in
+      let args, subst = Ty.fresh_list args Ty.Subst.empty in
       let res, _ = Ty.fresh r subst in
       s, { args = args; result = res }, kind
     with Not_found -> Errors.typing_error (SymbUndefined n) loc
@@ -332,7 +333,7 @@ let symbol_of = function
   | _ -> assert false
 
 let append_type msg ty =
-  Format.asprintf "%s %a" msg Ty.print ty
+  Format.asprintf "%s %a" msg Ty.pp ty
 
 let type_var_desc env p loc =
   try
@@ -359,7 +360,7 @@ let check_no_duplicates =
 
 let filter_patterns pats ty_body _loc =
   let cases =
-    List.fold_left (fun s {Ty.constr=c; _} -> HSS.add c s) HSS.empty ty_body
+    List.fold_left (fun s { Ty.cstr = c; _ } -> HSS.add c s) HSS.empty ty_body
   in
   let missing, filtered_pats, dead =
     List.fold_left
@@ -388,7 +389,7 @@ let check_pattern_matching missing dead loc =
       List.rev_map
         (function
           | Constr { name; _ } -> name
-          | Var v -> (Var.view v).Var.hs
+          | Var v -> Var.hstring v
         ) dead
     in
     Printer.print_wrn "%a"
@@ -575,17 +576,17 @@ let rec type_term ?(call_from_type_form=false) env f =
         let te1 = type_term env t1 in
         let te2 = type_term env t2 in
         let tyarray = Ty.shorten te1.c.tt_ty in
-        let tykey2 = Ty.shorten te2.c.tt_ty in
+        let key_ty2 = Ty.shorten te2.c.tt_ty in
         match tyarray with
-        | Ty.Tfarray (tykey,tyval) ->
+        | Ty.Tfarray {key_ty; val_ty} ->
           begin
             try
-              Ty.unify tykey tykey2;
-              Options.tool_req 1 (append_type "TR-Typing-OpGet type" tyval);
-              TTget(te1, te2), tyval
+              Ty.unify key_ty key_ty2;
+              Options.tool_req 1 (append_type "TR-Typing-OpGet type" val_ty);
+              TTget(te1, te2), val_ty
             with
-            | Ty.TypeClash(t1,t2) ->
-              Errors.typing_error (Unification(t1,t2)) loc
+            | Ty.TypeClash (t1, t2) ->
+              Errors.typing_error (Unification (t1, t2)) loc
           end
         | _ -> Errors.typing_error ShouldHaveTypeArray t1.pp_loc
       end
@@ -595,12 +596,12 @@ let rec type_term ?(call_from_type_form=false) env f =
         let te2 = type_term env t2 in
         let te3 = type_term env t3 in
         let ty1 = Ty.shorten te1.c.tt_ty in
-        let tykey2 = Ty.shorten te2.c.tt_ty in
-        let tyval2 = Ty.shorten te3.c.tt_ty in
+        let key_ty2 = Ty.shorten te2.c.tt_ty in
+        let val_ty2 = Ty.shorten te3.c.tt_ty in
         try
           match ty1 with
-          | Ty.Tfarray (tykey,tyval) ->
-            Ty.unify tykey tykey2;Ty.unify tyval tyval2;
+          | Ty.Tfarray {key_ty; val_ty} ->
+            Ty.unify key_ty key_ty2; Ty.unify val_ty val_ty2;
             Options.tool_req 1 (append_type "TR-Typing-OpSet type" ty1);
             TTset(te1, te2, te3), ty1
           | _ -> Errors.typing_error ShouldHaveTypeArray t1.pp_loc
@@ -646,7 +647,7 @@ let rec type_term ?(call_from_type_form=false) env f =
         let lbs = List.sort
             (fun (l1, _) (l2, _) -> Hstring.compare l1 l2) lbs in
         let ty = Types.from_labels env.Env.types lbs loc in
-        let ty, _ = Ty.fresh (Ty.shorten ty) Ty.esubst in
+        let ty, _ = Ty.fresh (Ty.shorten ty) Ty.Subst.empty in
         match ty with
         | Ty.Trecord { Ty.lbs=ty_lbs; _ } ->
           begin
@@ -760,14 +761,14 @@ let rec type_term ?(call_from_type_form=false) env f =
       let e = type_term env e in
       let ty = Ty.shorten e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt (name, params) ->
-          begin match Ty.type_body name params with
+        | Ty.Tadt { cstr = name; payload } ->
+          begin match Ty.type_body name payload with
             | Ty.Adt cases -> cases
           end
-        | Ty.Trecord { Ty.record_constr; lbs; _ } ->
-          [{Ty.constr = record_constr; destrs = lbs}]
-        | Ty.Tsum (_,l) ->
-          List.map (fun e -> {Ty.constr = e; destrs = []}) l
+        | Ty.Trecord { Ty.record_cstr; lbs; _ } ->
+          [{Ty.cstr = record_cstr; dstrs = lbs}]
+        | Ty.Tsum { cstrs; _ } ->
+          List.map (fun e -> { Ty.cstr = e; dstrs = [] }) cstrs
         | _ -> Errors.typing_error (ShouldBeADT ty) loc
       in
       let pats =
@@ -828,13 +829,13 @@ and type_bound env bnd ty ~is_open ~is_lower =
     | PPvar s ->
       assert (String.length s > 0);
       begin match s.[0] with
-        | '?' -> Symbols.VarBnd (Var.of_string s), ty
+        | '?' -> Symbols.Bound.VarBnd (Var.of_string s), ty
         | _ ->
           let vx, ty_x = type_var_desc env s bnd.pp_loc in
           let var_x =
             match vx with TTvar Symbols.Var vx -> vx | _ -> assert false
           in
-          Symbols.VarBnd var_x, ty_x
+          Symbols.Bound.VarBnd var_x, ty_x
       end
     | PPconst num ->
       let ty_x, q =
@@ -846,12 +847,12 @@ and type_bound env bnd ty ~is_open ~is_lower =
           | _ -> assert false
         with _ -> assert false (*numbers well constructed with regular exprs*)
       in
-      Symbols.ValBnd q, ty_x
+      Symbols.Bound.ValBnd q, ty_x
     | _ -> assert false
   in
   if not (Ty.equal ty ty_x) then
     Errors.typing_error (ShouldHaveType(ty, ty_x)) bnd.pp_loc;
-  Symbols.mk_bound bk ty ~is_open ~is_lower
+  Symbols.Bound.mk ~kind:bk ~ty ~is_open ~is_lower
 
 and mk_ta_eq t1 t2 =
   let c =
@@ -1153,15 +1154,15 @@ and type_form ?(in_theory=false) env f =
       let e = type_term env e in
       let ty = e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt (name, params) ->
-          begin match Ty.type_body name params with
+        | Ty.Tadt { cstr; payload } ->
+          begin match Ty.type_body cstr payload with
             | Ty.Adt cases -> cases
           end
-        | Ty.Trecord { Ty.record_constr; lbs; _ } ->
-          [{Ty.constr = record_constr ; destrs = lbs}]
+        | Ty.Trecord { Ty.record_cstr; lbs; _ } ->
+          [{ Ty.cstr = record_cstr ; dstrs = lbs }]
 
-        | Ty.Tsum (_,l) ->
-          List.map (fun e -> {Ty.constr = e ; destrs = []}) l
+        | Ty.Tsum { cstrs; _ } ->
+          List.map (fun e -> { Ty.cstr = e ; dstrs = [] }) cstrs
         | _ ->
           Errors.typing_error (ShouldBeADT ty) f.pp_loc
       in
@@ -1198,7 +1199,7 @@ and type_pattern p env ty ty_body =
   check_no_duplicates pat_loc args;
   let hf = Hstring.make f in
   try
-    let prof = Ty.assoc_destrs hf ty_body in
+    let prof = Ty.assoc_dstrs hf ty_body in
     let env =
       try
         List.fold_left2
@@ -2105,7 +2106,7 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     let ty = PFunction([], pur_ty) in
     let tlogic, env =
       (* can also use List.fold Env.add_constr *)
-      Env.add_logics ~kind:Env.AdtConstr env Symbols.constr lcl ty loc
+      Env.add_logics ~kind:Env.AdtConstr env Symbols.cstr lcl ty loc
     in
     let td2_a = { c = TLogic(loc, lc, tlogic); annot=new_id () } in
     (td2_a,env)::acc, env
@@ -2392,7 +2393,7 @@ let type_expr env vars t =
   let vmap =
     List.fold_left
       (fun m (s,ty)->
-         let str = Symbols.to_string_clean s in
+         let str = Symbols.show_clean s in
          MString.add str (s,ty) m
       ) env.Env.var_map vars in
   let env = { env with Env.var_map = vmap } in

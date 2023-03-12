@@ -61,7 +61,7 @@ module Shostak (X : ALIEN) = struct
     else
       match X.term_extract r with
       | Some _, true ->
-        Some (Expr.fresh_name (X.type_info r), false)
+        Some (Expr.fresh_name ~ty:(X.type_info r), false)
       | _ -> assert false
 
   let choose_adequate_model _ _ l =

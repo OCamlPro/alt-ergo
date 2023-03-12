@@ -572,6 +572,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     !max_lvl
 
   let enqueue env (a : Atom.atom) lvl reason =
+    (* Check if the atom a is not assigned. *)
     assert (not a.is_true && not a.neg.is_true &&
             a.var.level < 0 && a.var.reason == None && lvl >= 0);
     if a.neg.is_guard then begin

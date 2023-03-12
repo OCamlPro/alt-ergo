@@ -148,5 +148,5 @@ type interval_matching =
     the matching problem is inconsistent
 *)
 val match_interval:
-  Symbols.bound -> Symbols.bound -> t -> interval_matching ->
+  Symbols.Bound.t -> Symbols.Bound.t -> t -> interval_matching ->
   interval_matching option

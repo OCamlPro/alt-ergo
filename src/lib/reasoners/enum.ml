@@ -47,7 +47,7 @@ module Shostak (X : ALIEN) = struct
 
   let is_mine_symb sy ty =
     match sy, ty with
-    | Sy.Op (Sy.Constr _), Ty.Tsum _ -> true
+    | Sy.Op (Sy.Cstr _), Ty.Tsum _ -> true
     | _ -> false
 
   let fully_interpreted _ = true
@@ -133,10 +133,11 @@ module Shostak (X : ALIEN) = struct
       | Cons _ -> cr
       | Alien r    -> X.subst p v r
 
-  let make t = match E.term_view t with
-    | { E.f = Sy.Op (Sy.Constr hs); xs = []; ty; _ } ->
-      is_mine (Cons(hs,ty)), []
-    | _ ->
+  let make (t : E.t) =
+    match t with
+    | { top_sy = Sy.Op (Sy.Cstr hs); args = []; ty; _ } ->
+      is_mine (Cons(hs, ty)), []
+    | _ as t ->
       Printer.print_err
         "Enum theory only expect constructors with no arguments; got %a."
         E.print t;

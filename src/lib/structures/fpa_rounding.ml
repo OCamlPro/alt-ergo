@@ -18,14 +18,14 @@ module Z = Numbers.Z
 
 let is_rounding_mode t =
   Options.get_use_fpa() &&
-  match E.term_view t with
-  | { E.ty = Ty.Tsum (hs, _); _ } ->
-    String.compare (Hs.view hs) "fpa_rounding_mode" = 0
+  match t with
+  | { E.ty = Ty.Tsum {name; _}; _ } ->
+    String.compare (Hs.view name) "fpa_rounding_mode" = 0
   | _ -> false
 
 let fpa_rounding_mode =
-  let mode_ty = Hs.make "fpa_rounding_mode" in
-  let mode_constrs =
+  let name = Hs.make "fpa_rounding_mode" in
+  let cstrs =
     [ (* standards *)
       Hs.make "NearestTiesToEven";
       Hs.make "NearestTiesToAway";
@@ -40,56 +40,56 @@ let fpa_rounding_mode =
       Hs.make "Nd";
       Hs.make "Nu" ]
   in
-  Ty.Tsum(mode_ty, mode_constrs)
+  Ty.Tsum { name; cstrs }
 
 (*  why3/standard rounding modes*)
 
 let _NearestTiesToEven__rounding_mode =
-  E.mk_term (Sy.constr "NearestTiesToEven") []
-    fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "NearestTiesToEven") ~args:[]
+    ~ty:fpa_rounding_mode
 (** ne in Gappa: to nearest, tie breaking to even mantissas*)
 
 let _ToZero__rounding_mode =
-  E.mk_term (Sy.constr "ToZero") [] fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "ToZero") ~args:[] ~ty:fpa_rounding_mode
 (** zr in Gappa: toward zero *)
 
 let _Up__rounding_mode =
-  E.mk_term (Sy.constr "Up") [] fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Up") ~args:[] ~ty:fpa_rounding_mode
 (** up in Gappa: toward plus infinity *)
 
 let _Down__rounding_mode =
-  E.mk_term (Sy.constr "Down") [] fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Down") ~args:[] ~ty:fpa_rounding_mode
 (** dn in Gappa: toward minus infinity *)
 
 let _NearestTiesToAway__rounding_mode =
-  E.mk_term (Sy.constr "NearestTiesToAway") []
-    fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "NearestTiesToAway") ~args:[]
+    ~ty:fpa_rounding_mode
 (** na : to nearest, tie breaking away from zero *)
 
 (* additional Gappa rounding modes *)
 
 let _Aw__rounding_mode =
-  E.mk_term (Sy.constr "Aw") [] fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Aw") ~args:[] ~ty:fpa_rounding_mode
 (** aw in Gappa: away from zero **)
 
 let _Od__rounding_mode =
-  E.mk_term (Sy.constr "Od") [] fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Od") ~args:[] ~ty:fpa_rounding_mode
 (** od in Gappa: to odd mantissas *)
 
 let _No__rounding_mode =
-  E.mk_term (Sy.constr "No") [] fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "No") ~args:[] ~ty:fpa_rounding_mode
 (** no in Gappa: to nearest, tie breaking to odd mantissas *)
 
 let _Nz__rounding_mode =
-  E.mk_term (Sy.constr "Nz") [] fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Nz") ~args:[] ~ty:fpa_rounding_mode
 (** nz in Gappa: to nearest, tie breaking toward zero *)
 
 let _Nd__rounding_mode =
-  E.mk_term (Sy.constr "Nd") [] fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Nd") ~args:[] ~ty:fpa_rounding_mode
 (** nd in Gappa: to nearest, tie breaking toward minus infinity *)
 
 let _Nu__rounding_mode =
-  E.mk_term (Sy.constr "Nu") [] fpa_rounding_mode
+  E.mk_term ~sy:(Sy.cstr "Nu") ~args:[] ~ty:fpa_rounding_mode
 (** nu in Gappa: to nearest, tie breaking toward plus infinity *)
 
 
@@ -212,9 +212,9 @@ let mode_of_term t =
       assert false
     end
 
-let int_of_term t =
-  match E.term_view t with
-  | { E.f = Sy.Int n; _ } ->
+let int_of_term (t : E.t) =
+  match t with
+  | { top_sy = Sy.Int n; _ } ->
     let n = Hstring.view n in
     let n =
       try int_of_string n
@@ -224,7 +224,7 @@ let int_of_term t =
         assert false
     in
     n (* ! may be negative or null *)
-  | _ ->
+  | _ as t ->
     Printer.print_err
       "The given term %a is not an integer" E.print t;
     assert false
@@ -326,8 +326,8 @@ let make_adequate_app s l ty =
         assert false
       | _ -> s, l
     in
-    E.mk_term s l ty
-  | _ -> E.mk_term s l ty
+    E.mk_term ~sy:s ~args:l ~ty
+  | _ -> E.mk_term ~sy:s ~args:l ~ty
 
 let empty_cache () =
   cache := MQ.empty

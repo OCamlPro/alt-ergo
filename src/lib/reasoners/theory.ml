@@ -101,23 +101,24 @@ module Main_Default : S = struct
 
     let logics_of_assumed st =
       SE.fold
-        (fun t mp ->
-           match E.term_view t with
-           | { E.f = Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac));
-               xs; ty; _ } ->
-             let xs = List.map E.type_info xs in
-             let xs, ty =
+        (fun (t : E.t) mp ->
+           match t with
+           | { top_sy = Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac));
+               args; ty; _ } ->
+             let args = List.map E.type_info args in
+             let args, ty =
                try
-                 let xs', ty', is_ac' = Hstring.Map.find hs mp in
+                 let args', ty', is_ac' = Hstring.Map.find hs mp in
                  assert (is_ac == is_ac');
                  let ty = generalize_types ty ty' in
-                 let xs =
-                   try List.map2 generalize_types xs xs' with _ -> assert false
+                 let args =
+                   try List.map2 generalize_types args args'
+                   with _ -> assert false
                  in
-                 xs, ty
-               with Not_found -> xs, ty
+                 args, ty
+               with Not_found -> args, ty
              in
-             Hstring.Map.add hs (xs, ty, is_ac) mp
+             Hstring.Map.add hs (args, ty, is_ac) mp
 
            | _ -> mp
         ) st Hstring.Map.empty
@@ -129,24 +130,19 @@ module Main_Default : S = struct
            match ty with
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> mp
            | Tvar _ -> assert false
-
-           | Text (_, hs) | Tsum (hs, _) | Trecord { name = hs; _ } when
-               Hstring.Map.mem hs mp -> mp
-
-           | Text (l, hs) ->
-             let l = List.map (fun _ -> Ty.fresh_tvar()) l in
-             Hstring.Map.add hs (Text(l, hs)) mp
-
-           | Tsum (hs, _) ->
-             Hstring.Map.add hs ty mp
-
+           | Text { cstr = hs; _ } | Tsum { name = hs; _ }
+           | Trecord {name = hs; _} when Hstring.Map.mem hs mp -> mp
+           | Text { cstr; params } ->
+             let params = List.map (fun _ -> Ty.fresh_tvar ()) params in
+             Hstring.Map.add cstr (Text { cstr; params }) mp
+           | Tsum { name; _ } ->
+             Hstring.Map.add name ty mp
            | Trecord { name; _ } ->
              (* cannot do better for records ? *)
              Hstring.Map.add name ty mp
-
-           | Tadt (hs, _) ->
+           | Tadt { cstr; _ } ->
              (* cannot do better for ADT ? *)
-             Hstring.Map.add hs ty mp
+             Hstring.Map.add cstr ty mp
         )sty Hstring.Map.empty
 
     let print_types_decls ?(header=true) types =
@@ -157,10 +153,10 @@ module Main_Default : S = struct
            match ty with
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> ()
            | Tvar _ -> assert false
-           | Text _ -> print_dbg ~flushed:false "type %a@ " Ty.print ty
-           | Tsum (_, l) ->
-             print_dbg ~flushed:false ~header:false "type %a = " Ty.print ty;
-             begin match l with
+           | Text _ -> print_dbg ~flushed:false "type %a@ " Ty.pp ty
+           | Tsum { cstrs; _ } ->
+             print_dbg ~flushed:false ~header:false "type %a = " Ty.pp ty;
+             begin match cstrs with
                | [] -> assert false
                | e::l ->
                  let print fmt e =
@@ -172,21 +168,21 @@ module Main_Default : S = struct
              end
 
            | Trecord { Ty.lbs; _ } ->
-             print_dbg ~flushed:false ~header:false "type %a = " Ty.print ty;
+             print_dbg ~flushed:false ~header:false "type %a = " Ty.pp ty;
              begin match lbs with
                | [] -> assert false
                | (lbl, ty)::l ->
                  let print fmt (lbl,ty) =
                    Format.fprintf fmt " ; %s :%a"
-                     (Hstring.view lbl) Ty.print ty in
+                     (Hstring.view lbl) Ty.pp ty in
                  print_dbg ~flushed:false ~header:false
                    "{ %s : %a%a"
-                   (Hstring.view lbl) Ty.print ty
+                   (Hstring.view lbl) Ty.pp ty
                    (pp_list_no_space print) l;
                  print_dbg ~flushed:false ~header:false " }@ "
              end
            | Tadt _ ->
-             print_dbg ~flushed:false ~header:false "%a@ " Ty.print_full ty
+             print_dbg ~flushed:false ~header:false "%a@ " Ty.pp_full ty
         )types;
       print_dbg ~header:false "@]"
 
@@ -194,8 +190,8 @@ module Main_Default : S = struct
       match xs with
       | [] -> ()
       | e :: l ->
-        Format.fprintf fmt "%a" Ty.print e;
-        List.iter (Format.fprintf fmt ", %a" Ty.print) l;
+        Format.fprintf fmt "%a" Ty.pp e;
+        List.iter (Format.fprintf fmt ", %a" Ty.pp) l;
         Format.fprintf fmt " -> "
 
     let print_logics ?(header=true) logics =
@@ -207,7 +203,7 @@ module Main_Default : S = struct
              (if is_ac == Sy.Ac then "ac " else "")
              (Hstring.view hs)
              print_arrow_type xs
-             Ty.print ty
+             Ty.pp ty
         )logics;
       print_dbg ~header:false "@]"
 
@@ -272,10 +268,10 @@ module Main_Default : S = struct
              match lit_orig with
              | Th_util.CS(k, _) ->
                Format.fprintf fmt "  > %s  cs: %a (because %a)@ "
-                 (theory_of k) LR.print (LR.make rx) Ex.print ex
+                 (theory_of k) LR.print (LR.make rx) Ex.pp ex
              | Th_util.NCS(k, _) ->
                Format.fprintf fmt "  > %s ncs: %a (because %a)@ "
-                 (theory_of k) LR.print (LR.make rx) Ex.print ex
+                 (theory_of k) LR.print (LR.make rx) Ex.pp ex
              | _ -> assert false
           )choices;
         Format.fprintf fmt "==============================================@."
@@ -308,21 +304,21 @@ module Main_Default : S = struct
         print_dbg
           ~module_name:"Theory" ~function_name:"split_backtrack"
           "I backtrack on %a : %a"
-          print_lr_view neg_c Ex.print ex_c
+          print_lr_view neg_c Ex.pp ex_c
 
     let split_assume c ex_c =
       if Options.get_debug_split () then
         print_dbg
           ~module_name:"Theory" ~function_name:"split assume"
           "I assume %a : %a"
-          print_lr_view c Ex.print ex_c
+          print_lr_view c Ex.pp ex_c
 
     let split_backjump c dep =
       if Options.get_debug_split () then
         print_dbg
           ~module_name:"Theory" ~function_name:"split_backjump"
           "I backjump on %a : %a"
-          print_lr_view c Ex.print dep
+          print_lr_view c Ex.pp dep
 
     let query a =
       if Options.get_debug_cc () then
@@ -341,7 +337,7 @@ module Main_Default : S = struct
   (*BISECT-IGNORE-END*)
 
   type choice_sign =
-    | CPos of Ex.exp (* The explication of this choice *)
+    | CPos of Ex.reason (* The explication of this choice *)
     | CNeg (* The choice has been already negated *)
 
 
@@ -376,12 +372,12 @@ module Main_Default : S = struct
               List.map
                 (fun (c, is_cs, size) ->
                    Steps.incr_cs_steps();
-                   let exp = Ex.fresh_exp () in
-                   let ex_c_exp =
-                     if is_cs then Ex.add_fresh exp Ex.empty else Ex.empty
+                   let reason = Ex.fresh_reason () in
+                   let ex_c_reason =
+                     if is_cs then Ex.add_fresh reason Ex.empty else Ex.empty
                    in
                    (* A new explanation in order to track the choice *)
-                   (c, size, CPos exp, ex_c_exp)) l in
+                   (c, size, CPos reason, ex_c_reason)) l in
             aux ch None dl base_env l
         end
       | ((c, lit_orig, CNeg, ex_c) as a)::l, _ ->
@@ -526,12 +522,12 @@ module Main_Default : S = struct
          match a with
          | LTerm r -> begin
              match E.lit_view r with
-             | E.Eq (t1, t2) ->
-               SE.add t1 (SE.add t2 acc)
+             | E.Eq {lhs; rhs} ->
+               SE.add lhs (SE.add rhs acc)
              | E.Eql l | E.Distinct l | E.Builtin (_, _, l) ->
                List.fold_right SE.add l acc
-             | E.Pred (t1, _) ->
-               SE.add t1 acc
+             | E.Pred (lhs, _) ->
+               SE.add lhs acc
 
            end
          | _ -> acc)
@@ -656,14 +652,14 @@ module Main_Default : S = struct
       Debug.query a;
       try
         match E.lit_view a with
-        | E.Eq (t1, t2)  ->
+        | E.Eq {lhs; rhs}  ->
           let t = add_and_process_conseqs a t in
-          CC_X.are_equal t.gamma t1 t2 ~init_terms:false
+          CC_X.are_equal t.gamma lhs rhs ~init_terms:false
 
-        | E.Distinct [t1; t2] ->
+        | E.Distinct [lhs; rhs] ->
           let na = E.neg a in
           let t = add_and_process_conseqs na t in (* na ? *)
-          CC_X.are_distinct t.gamma t1 t2
+          CC_X.are_distinct t.gamma lhs rhs
 
         | E.Distinct _ | E.Eql _ ->
           (* we only assume toplevel distinct with more that one arg.
@@ -706,7 +702,7 @@ module Main_Default : S = struct
         cs_pending_facts = [];
         terms = Expr.Set.empty }
     in
-    let a = E.mk_distinct ~iff:false [E.vrai; E.faux] in
+    let a = E.mk_distinct ~use_equiv:false [E.vrai; E.faux] in
     let t, _, _ = assume true [a, Ex.empty, 0, -1] t in
     t
 

@@ -28,15 +28,13 @@ let constraints = ref MS.empty
 module Pp_smtlib_term = struct
 
   let to_string_type t =
-    asprintf "%a" Ty.print t
+    asprintf "%a" Ty.pp t
 
-  let rec print fmt t =
-    let {E.f;xs;ty; _} = E.term_view t in
-    match f, xs with
-
-    | Sy.Lit lit, xs ->
+  let rec print fmt ({ top_sy; args; ty; _ } as t : E.t) =
+    match top_sy, args with
+    | Sy.Lit lit, args ->
       begin
-        match lit, xs with
+        match lit, args with
         | Sy.L_eq, a::l ->
           if get_output_smtlib () then
             fprintf fmt "(= %a%a)"
@@ -136,13 +134,13 @@ module Pp_smtlib_term = struct
     | Sy.Op (Sy.Record), _ ->
       begin match ty with
         | Ty.Trecord { Ty.lbs = lbs; _ } ->
-          assert (List.length xs = List.length lbs);
+          assert (List.length args = List.length lbs);
           fprintf fmt "{";
           ignore (List.fold_left2 (fun first (field,_) e ->
               fprintf fmt "%s%s = %a"  (if first then "" else "; ")
                 (Hstring.view field) print e;
               false
-            ) true lbs xs);
+            ) true lbs args);
           fprintf fmt "}";
         | _ -> assert false
       end
@@ -151,25 +149,25 @@ module Pp_smtlib_term = struct
     | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||
                               op == Sy.Max_real || op == Sy.Max_int ||
                               op == Sy.Min_real || op == Sy.Min_int ->
-      fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
+      fprintf fmt "%a(%a,%a)" Sy.print top_sy print e1 print e2
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
+    | Sy.Op (Sy.Cstr hs), ((_::_) as l) ->
       fprintf fmt "%a(%a)" Hstring.print hs print_list l
 
     | Sy.Op _, [e1; e2] ->
       if get_output_smtlib () then
-        fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
+        fprintf fmt "(%a %a %a)" Sy.print top_sy print e1 print e2
       else
-        fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
+        fprintf fmt "(%a %a %a)" print e1 Sy.print top_sy print e2
 
-    | Sy.Op Sy.Destruct (hs, grded), [e] ->
+    | Sy.Op Sy.Dstr (hs, grded), [e] ->
       fprintf fmt "%a#%s%a"
         print e (if grded then "" else "!") Hstring.print hs
 
 
     | Sy.In(lb, rb), [t] ->
-      fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
+      fprintf fmt "(%a in %a, %a)" print t Sy.Bound.pp lb Sy.Bound.pp rb
 
     | Sy.Name (n,_), l -> begin
         let constraint_name =
@@ -192,13 +190,13 @@ module Pp_smtlib_term = struct
       end
 
     | _, [] ->
-      fprintf fmt "%a" Sy.print f
+      fprintf fmt "%a" Sy.print top_sy
 
     | _, _ ->
       if get_output_smtlib () then
-        fprintf fmt "(%a %a)" Sy.print f print_list xs
+        fprintf fmt "(%a %a)" Sy.print top_sy print_list args
       else
-        fprintf fmt "%a(%a)" Sy.print f print_list xs
+        fprintf fmt "%a(%a)" Sy.print top_sy print_list args
 
   and print_list_sep sep fmt = function
     | [] -> ()
@@ -224,7 +222,7 @@ module SmtlibCounterExample = struct
       Ty.Tint -> "0"
     | Ty.Treal -> "0.0"
     | Ty.Tbool -> "false"
-    | _ -> asprintf "%a" pp_term (Expr.fresh_name ty)
+    | _ -> asprintf "%a" pp_term (Expr.fresh_name ~ty)
 
   let pp_dummy_value_of_type fmt ty =
     if not (Options.get_interpretation_use_underscore ()) then
@@ -243,7 +241,7 @@ module SmtlibCounterExample = struct
     MS.add record_name destrs records
 
   let mk_records_constr records record_name
-      { Ty.name = _n; record_constr = cstr; lbs = lbs; _} =
+      { Ty.name = _n; record_cstr = cstr; lbs = lbs; _} =
     let find_destrs destr destrs =
       try let rep = MS.find destr destrs in
         Some rep
@@ -260,7 +258,7 @@ module SmtlibCounterExample = struct
         ) lbs
     in
     let destrs =
-      try MS.find (Sy.to_string record_name) records
+      try MS.find (Sy.show record_name) records
       with Not_found -> MS.empty
     in
     asprintf "%s %a"
@@ -268,7 +266,7 @@ module SmtlibCounterExample = struct
       print_destr (destrs,lbs)
 
   let add_record_constr records record_name
-      { Ty.name = _n; record_constr = _cstr; lbs = lbs; _} xs_values =
+      { Ty.name = _n; record_cstr = _cstr; lbs = lbs; _} xs_values =
     List.fold_left2(fun records (destr,_) (rep,_) ->
         add_records_destr
           records
@@ -285,7 +283,7 @@ module SmtlibCounterExample = struct
           add_records_destr
             records
             (asprintf "%a" Expr.print record_name)
-            (Sy.to_string f)
+            (Sy.show f)
             rep
         | [] | _ -> records
       end
@@ -297,10 +295,10 @@ module SmtlibCounterExample = struct
 
   let print_fun_def fmt name args ty t =
     let print_args fmt (ty,name) =
-      Format.fprintf fmt "(%s %a)" name Ty.print ty in
+      Format.fprintf fmt "(%s %a)" name Ty.pp ty in
     let defined_value =
       try
-        let res,_,_ = (MS.find (Sy.to_string name) !constraints) in res
+        let res,_,_ = (MS.find (Sy.show name) !constraints) in res
       with _ -> t
     in
 
@@ -308,7 +306,7 @@ module SmtlibCounterExample = struct
       "(define-fun %a (%a) %a %s)@ "
       Sy.print name
       (Printer.pp_list_space (print_args)) args
-      Ty.print ty
+      Ty.pp ty
       defined_value
 
   let output_constants_counterexample fmt records cprofs =

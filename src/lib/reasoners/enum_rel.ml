@@ -79,7 +79,7 @@ module Debug = struct
                      " | %s" (Hs.view hs)) l
            end;
            Printer.print_dbg ~flushed:false ~header:false
-             " : %a@ " Ex.print ex;
+             " : %a@ " Ex.pp ex;
         ) env.mx;
       Printer.print_dbg ~header:false
         "@ -------------------------------------------";
@@ -107,8 +107,8 @@ end
 (*BISECT-IGNORE-END*)
 
 let values_of r = match X.type_info r with
-  | Ty.Tsum (_,l) ->
-    Some (List.fold_left (fun st hs -> HSS.add hs st) HSS.empty l)
+  | Ty.Tsum { cstrs; _ } ->
+    Some (List.fold_left (fun st hs -> HSS.add hs st) HSS.empty cstrs)
   | _ -> None
 
 let add_diseq hss sm1 sm2 dep env eqs =

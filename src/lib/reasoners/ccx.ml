@@ -213,7 +213,7 @@ module Main : S = struct
         print_dbg
           ~module_name:"Ccx" ~function_name:"contra_congruence"
           "find that %a %a by contra-congruence"
-          E.print a Ex.print ex
+          E.print a Ex.pp ex
 
     let assume_literal sa =
       if Options.get_debug_cc () then
@@ -226,7 +226,7 @@ module Main : S = struct
         print_dbg
           ~module_name:"Ccx" ~function_name:"congruent"
           "new fact by congruence : %a ex[%a]"
-          E.print a Ex.print ex
+          E.print a Ex.pp ex
 
     let cc_result p v touched =
       let print fmt (x,y,_) =
@@ -242,7 +242,8 @@ module Main : S = struct
   end
   (*BISECT-IGNORE-END*)
 
-  let one, _ = X.make (Expr.mk_term (Sy.name "@bottom") [] Ty.Tint)
+  let one, _ =
+    Expr.mk_term ~sy:(Sy.name "@bottom") ~args:[] ~ty:Ty.Tint |> X.make
 
   let concat_leaves uf l =
     let concat_rec acc t =
@@ -261,22 +262,24 @@ module Main : S = struct
       | Some (dep, _) -> Ex.union ex dep
       | None -> raise Exit
 
-  let equal_only_by_congruence env (facts: r Sig_rel.facts) t1 t2 =
+  let equal_only_by_congruence env (facts: r Sig_rel.facts)
+      ({ top_sy = f1; args = args1; ty = ty1; _ } as t1 : E.t)
+      ({ top_sy = f2; args = args2; ty = ty2; _ } as t2 : E.t) =
     if not (E.equal t1 t2) then
-      let { E.f = f1; xs = xs1; ty = ty1; _ } = E.term_view t1 in
-      let { E.f = f2; xs = xs2; ty = ty2; _ } = E.term_view t2 in
       if Symbols.equal f1 f2 && Ty.equal ty1 ty2 then
         try
-          let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
-          let a = E.mk_eq ~iff:false t1 t2 in
+          let ex =
+            List.fold_left2 (explain_equality env) Ex.empty args1 args2
+          in
+          let a = E.mk_eq ~use_equiv:false t1 t2 in
           Debug.congruent a ex;
           Q.push (Sig_rel.LTerm a, ex, Th_util.Other) facts.equas
         with Exit -> ()
 
-  let congruents env (facts: r Sig_rel.facts) t1 s =
-    match E.term_view t1 with
-    | { E.xs = []; _ } -> ()
-    | { E.f; ty; _ } when X.fully_interpreted f ty -> ()
+  let congruents env (facts: r Sig_rel.facts) (t1 : E.t) s =
+    match t1 with
+    | { args = []; _ } -> ()
+    | { top_sy; ty; _ } when X.fully_interpreted top_sy ty -> ()
     |  _ -> SE.iter (equal_only_by_congruence env facts t1) s
 
   let fold_find_with_explanation find ex l =
@@ -291,9 +294,9 @@ module Main : S = struct
       let r1, ex1 = find t1 in
       let ex = Ex.union ex1 ex_a in
       LR.mkv_pred r1 b, ex
-    | E.Eq (t1, t2) ->
-      let r1, ex1 = find t1 in
-      let r2, ex2 = find t2 in
+    | E.Eq {lhs; rhs} ->
+      let r1, ex1 = find lhs in
+      let r2, ex2 = find rhs in
       let ex = Ex.union (Ex.union ex1 ex2) ex_a in
       LR.mkv_eq r1 r2, ex
     | E.Eql lt ->
@@ -335,19 +338,19 @@ module Main : S = struct
     match X.term_extract r with
     | None, _ -> ()
     | Some _, false -> () (* not an original term *)
-    | Some t1, true ->  (* original term *)
-      match E.term_view t1 with
-      | { E.f = f1; xs = [x]; _ } ->
+    | Some (t1 : E.t), true ->  (* original term *)
+      match t1 with
+      | { top_sy = f1; args = [x]; _ } ->
         let ty_x = Expr.type_info x in
         List.iter
-          (fun t2 ->
-             match E.term_view t2 with
-             | { E.f = f2 ; xs = [y]; _ } when Sy.equal f1 f2 ->
+          (fun (t2 : E.t) ->
+             match t2 with
+             | { top_sy = f2 ; args = [y]; _ } when Sy.equal f1 f2 ->
                let ty_y = Expr.type_info y in
                if Ty.equal ty_x ty_y then
                  begin match Uf.are_distinct env.uf t1 t2 with
                    | Some (ex_r, _) ->
-                     let a = E.mk_distinct ~iff:false [x; y] in
+                     let a = E.mk_distinct ~use_equiv:false [x; y] in
                      Debug.contra_congruence a ex_r;
                      Q.push (Sig_rel.LTerm a, ex_r, Th_util.Other) facts.diseqs
                    | None -> assert false
@@ -468,8 +471,10 @@ module Main : S = struct
       Debug.add_to_use t;
 
       (* we add t's arguments in env *)
-      let { E.xs; _ } = E.term_view t in
-      let env = List.fold_left (fun env t -> add_term env facts t ex) env xs in
+      let {E.args; _} = t in
+      let env =
+        List.fold_left (fun env t -> add_term env facts t ex) env args
+      in
       (* we update uf and use *)
       let nuf, ctx  = Uf.add env.uf t in
       Debug.make_cst t ctx;
@@ -477,7 +482,7 @@ module Main : S = struct
       (*or Ex.empty ?*)
 
       let rt, _ = Uf.find nuf t in
-      let lvs = concat_leaves nuf xs in
+      let lvs = concat_leaves nuf args in
       let nuse = Use.up_add env.use t rt lvs in
 
       (* If finitetest is used we add the term to the relation *)
@@ -502,9 +507,9 @@ module Main : S = struct
     match E.lit_view a with
     | E.Pred (t1, _) ->
       add_term env facts t1 ex
-    | E.Eq (t1, t2) ->
-      let env = add_term env facts t1 ex in
-      add_term env facts t2 ex
+    | E.Eq {lhs; rhs} ->
+      let env = add_term env facts lhs ex in
+      add_term env facts rhs ex
     | E.Eql lt ->
       List.fold_left
         (fun env t-> add_term env facts t ex) env  lt

@@ -137,7 +137,7 @@ module Sim_Wrap = struct
       if get_debug_fm () then
         Printer.print_dbg
           ~module_name:"IntervalCalculus" ~function_name:"check_unsat_result"
-          "simplex derived unsat: %a" Explanation.print ex;
+          "simplex derived unsat: %a" Explanation.pp ex;
       raise (Ex.Inconsistent (ex, env.classes))
 
   let solve env _i =
@@ -523,7 +523,7 @@ module Debug = struct
         "@[<v 2>%s We assume: %a@,explanations: %a@]"
         (if query then "[query]" else "")
         LR.print (LR.make a)
-        Explanation.print expl
+        Explanation.pp expl
 
   let print_use fmt use =
     SX.iter (fprintf fmt "%a, " X.print) use
@@ -562,7 +562,7 @@ module Debug = struct
       let print fmt (ra, _, ex, _) =
         fprintf fmt "@,%a %a"
           LR.print (LR.make ra)
-          Explanation.print ex
+          Explanation.pp ex
       in
       print_dbg
         ~module_name:"IntervalCalculus" ~function_name:"implied_equalities"
@@ -587,7 +587,7 @@ module Debug = struct
       print_dbg
         ~module_name:"IntervalCalculus"
         ~function_name:"inconsistent_interval"
-        "interval inconsistent %a" Explanation.print expl
+        "interval inconsistent %a" Explanation.pp expl
 
   let added_inequation kind ineq =
     if get_debug_fm () then begin
@@ -767,11 +767,11 @@ and update_monome are_eq expl use_x env x =
       m, env
     | _ ->
       match X.term_extract x with
-      | Some t, _ ->
+      | Some (t : E.t), _ ->
         let use_x = SX.singleton x in
         begin
-          match E.term_view t with
-          | { E.f = (Sy.Op Sy.Div); xs = [a; b]; _ } ->
+          match t with
+          | { top_sy = (Sy.Op Sy.Div); args = [a; b]; _ } ->
             let ra, ea =
               let (ra, _) as e = Uf.find env.new_uf a in
               if List.filter (X.equal x) (X.leaves ra) == [] then e
@@ -1571,9 +1571,9 @@ let update_used_by_pow env r1 p2 orig  eqs =
     if orig != Th_util.Subst then raise Exit;
     if P.is_const p2 == None then raise Exit;
     let s = (MX0.find r1 env.used_by).pow in
-    SE.fold (fun t eqs ->
-        match E.term_view t with
-        | { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
+    SE.fold (fun (t : E.t) eqs ->
+        match t with
+        | { top_sy = (Sy.Op Sy.Pow); args = [a; b]; ty; _ } ->
           begin
             match calc_pow a b ty env.new_uf with
               None -> eqs
@@ -1825,9 +1825,9 @@ let default_case_split env uf ~for_model =
 (** Add relation between term x and the terms in it. This can allow use to track
     if x is computable when its subterms values are known.
     This is currently only done for power *)
-let add_used_by t r env =
-  match E.term_view t with
-  | { E.f = (Sy.Op Sy.Pow); xs = [a; b]; ty; _ } ->
+let add_used_by (t : E.t) r env =
+  match t with
+  | { top_sy = (Sy.Op Sy.Pow); args = [a; b]; ty; _ } ->
     begin
       match calc_pow a b ty env.new_uf with
       | Some (res,ex) ->
@@ -2142,7 +2142,7 @@ let extend_with_domain_substitution =
   let aux idoms sbt =
     Var.Map.fold
       (fun v_hs (lv, uv, ty) sbt ->
-         let s = Hstring.view (Var.view v_hs).Var.hs in
+         let s = Hstring.view (Var.hstring v_hs) in
          match s.[0] with
          | '?' -> sbt
          | _ ->
@@ -2335,7 +2335,7 @@ let new_facts_for_axiom
               let nf = E.apply_subst sbs f in
               (* incrementality/push. Although it's not supported for
                  theories *)
-              let nf = E.mk_imp trigger_increm_guard nf 0 in
+              let nf = E.mk_imp trigger_increm_guard nf in
               let accepted = selector nf orig in
               record_this_instance nf accepted lorig;
               if accepted then begin
@@ -2430,7 +2430,8 @@ let instantiate ~do_syntactic_matching match_terms env uf selector =
       "IC.instantiate: %d insts generated" (List.length insts);
   env, insts
 
-
+(* Partition the patterns of the multi-triggers of a lemma into two categories:
+   semantic trigger and syntactic trigger. *)
 let separate_semantic_triggers =
   let not_theory_const = Hstring.make "not_theory_constant" in
   let is_theory_const = Hstring.make "is_theory_constant" in
@@ -2447,37 +2448,32 @@ let separate_semantic_triggers =
         (fun tr ->
            (* because sem-triggers will be set by theories *)
            assert (tr.E.semantic == []);
-           let syn, sem =
-             List.fold_left
-               (fun (syn, sem) t ->
-                  match E.term_view t with
-                  | { E.f = Symbols.In (lb, ub); xs = [x]; _ } ->
-                    syn, (E.Interval (x, lb, ub)) :: sem
+           Expr.partition_patterns tr ~f:(function
+               | { top_sy = Symbols.In (lb, ub); args = [x]; _ } ->
+                 `Sem (E.Interval (x, lb, ub))
 
-                  | { E.f = Symbols.MapsTo x; xs = [t]; _ } ->
-                    syn, (E.MapsTo (x, t)) :: sem
+               | { top_sy = Symbols.MapsTo x; args = [t]; _ } ->
+                 `Sem (E.MapsTo (x, t))
 
-                  | { E.f = Sy.Name (hs,_); xs = [x]; _ }
-                    when Hstring.equal hs not_theory_const ->
-                    syn, (E.NotTheoryConst x) :: sem
+               | { top_sy = Sy.Name (hs,_); args = [x]; _ }
+                 when Hstring.equal hs not_theory_const ->
+                 `Sem (E.NotTheoryConst x)
 
-                  | { E.f = Sy.Name (hs,_); xs = [x]; _ }
-                    when Hstring.equal hs is_theory_const ->
-                    syn, (E.IsTheoryConst x) :: sem
+               | { top_sy = Sy.Name (hs,_); args = [x]; _ }
+                 when Hstring.equal hs is_theory_const ->
+                 `Sem (E.IsTheoryConst x)
 
-                  | { E.f = Sy.Name (hs,_); xs = [x;y]; _ }
-                    when Hstring.equal hs linear_dep ->
-                    syn, (E.LinearDependency(x,y)) :: sem
+               | { top_sy = Sy.Name (hs,_); args = [x;y]; _ }
+                 when Hstring.equal hs linear_dep ->
+                 `Sem (E.LinearDependency (x, y))
 
-                  | _ -> t::syn, sem
-               )([], []) (List.rev tr.E.content)
-           in
-           {tr with E.content = syn; semantic = sem}
-        )user_trs
+               | _ as t -> `Syn t
+             )
+        ) user_trs
     in
     E.mk_forall
-      q.E.name q.E.loc q.E.binders (List.rev r_triggers) q.E.main
-      (E.id th_form) ~toplevel:true ~decl_kind:E.Dtheory
+      ~name:q.E.name ~loc:q.E.loc q.E.binders ~triggers:(List.rev r_triggers)
+      ~toplevel:true ~decl_kind:E.Dtheory q.E.main
 
 let assume_th_elt t th_elt dep =
   let { Expr.axiom_kind; ax_form; th_name; extends; _ } = th_elt in

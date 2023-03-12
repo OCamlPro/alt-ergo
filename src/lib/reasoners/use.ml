@@ -51,7 +51,9 @@ let union_tpl (x1,y1) (x2,y2) =
   Options.exec_thread_yield ();
   SE.union x1 x2, SA.union y1 y2
 
-let one, _ = X.make (E.mk_term (Symbols.name "@bottom") [] Ty.Tint)
+let one, _ =
+  E.mk_term ~sy:(Symbols.name "@bottom") ~args:[] ~ty:Ty.Tint |> X.make
+
 let leaves r =
   match X.leaves r with [] -> [one] | l -> l
 
@@ -60,10 +62,10 @@ let find k m = try MX.find k m with Not_found -> (SE.empty,SA.empty)
 let add_term k t mp =
   let g_t,g_a = find k mp in MX.add k (SE.add t g_t,g_a) mp
 
-let up_add g t rt lvs =
+let up_add g (t : E.t) rt lvs =
   let g = if MX.mem rt g then g else MX.add rt (SE.empty, SA.empty) g in
-  match E.term_view t with
-  | { E.xs = []; _ } -> g
+  match t with
+  | { args = []; _ } -> g
   | _ -> List.fold_left (fun g x -> add_term x t g) g lvs
 
 let congr_add g lvs =
@@ -96,7 +98,7 @@ let print g =
       let satoms fmt =
         SA.iter
           (fun (a,e) ->
-             Format.fprintf fmt "%a %a" E.print a Explanation.print e)
+             Format.fprintf fmt "%a %a" E.print a Explanation.pp e)
       in
       let print_sterms_and_atoms fmt (st,sa) =
         match SE.is_empty st,SA.is_empty sa with

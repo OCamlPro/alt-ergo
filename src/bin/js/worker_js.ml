@@ -79,7 +79,7 @@ let main worker_id content =
 
     (* Aux function used to record axioms used in instantiations *)
     let add_inst orig =
-      let id = Expr.uid orig in
+      let id = Expr.hash orig in
       begin
         try incr (snd (Hashtbl.find tbl id))
         with Not_found -> Hashtbl.add tbl id (orig, ref 1)
@@ -188,7 +188,7 @@ let main worker_id content =
     let compute_statistics () =
       let used =
         List.fold_left (fun acc ({Explanation.f;_} as r) ->
-            Util.MI.add (Expr.uid f) r acc
+            Util.MI.add (Expr.hash f) r acc
           ) Util.MI.empty (!unsat_core) in
       Hashtbl.fold (fun id (f,nb) acc ->
           match Util.MI.find_opt id used with

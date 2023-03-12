@@ -157,42 +157,45 @@ module Make (X : Sig.X) = struct
   let fold_flatten sy f =
     List.fold_left (fun z (rt,n) -> flatten sy ((f rt),n) z) []
 
-  let abstract2 sy t r acc =
+  let abstract2 sy (t : Expr.t) r acc =
     match X.ac_extract r with
     | Some ac when Sy.equal sy ac.h -> r, acc
     | None -> r, acc
-    | Some _ -> match Expr.term_view t with
-      | { Expr.f = Sy.Name (hs, Sy.Ac); xs; ty; _ } ->
-        let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
-        let aro_t = Expr.mk_term aro_sy xs ty  in
-        let eq = Expr.mk_eq ~iff:false aro_t t in
-        X.term_embed aro_t, eq::acc
-      | { Expr.f = Sy.Op Sy.Mult; xs; ty; _ } ->
-        let aro_sy = Sy.name "@*" in
-        let aro_t = Expr.mk_term aro_sy xs ty  in
-        let eq = Expr.mk_eq ~iff:false aro_t t in
-        X.term_embed aro_t, eq::acc
-      | { Expr.ty; _ } ->
-        let k = Expr.fresh_name ty in
-        let eq = Expr.mk_eq ~iff:false k t in
-        X.term_embed k, eq::acc
+    | Some _ -> begin
+        match t with
+        | { top_sy = Sy.Name (hs, Sy.Ac); args; ty; _ } ->
+          let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
+          let aro_t = Expr.mk_term ~sy:aro_sy ~args ~ty in
+          let eq = Expr.mk_eq ~use_equiv:false aro_t t in
+          X.term_embed aro_t, eq::acc
+        | { top_sy = Sy.Op Sy.Mult; args; ty; _ } ->
+          let aro_sy = Sy.name "@*" in
+          let aro_t = Expr.mk_term ~sy:aro_sy ~args ~ty in
+          let eq = Expr.mk_eq ~use_equiv:false aro_t t in
+          X.term_embed aro_t, eq::acc
+        | { ty; _ } ->
+          let k = Expr.fresh_name ~ty in
+          let eq = Expr.mk_eq ~use_equiv:false k t in
+          X.term_embed k, eq::acc
+      end
 
-  let make t =
+  let make (t : Expr.t) =
     Timers.exec_timer_start Timers.M_AC Timers.F_make;
-    let x = match Expr.term_view t with
-      | { Expr.f = sy; xs = [a;b]; ty; _ } when Sy.is_ac sy ->
+    let x = match t with
+      | { top_sy; args = [a;b]; ty; _ } when Sy.is_ac top_sy ->
         let ra, ctx1 = X.make a in
         let rb, ctx2 = X.make b in
-        let ra, ctx = abstract2 sy a ra (ctx1 @ ctx2) in
-        let rb, ctx = abstract2 sy b rb ctx in
-        let rxs = [ ra,1 ; rb,1 ] in
-        X.ac_embed {h=sy; l=compact (fold_flatten sy (fun x -> x) rxs); t=ty;
+        let ra, ctx = abstract2 top_sy a ra (ctx1 @ ctx2) in
+        let rb, ctx = abstract2 top_sy b rb ctx in
+        let rargs = [ ra,1 ; rb,1 ] in
+        X.ac_embed {h=top_sy;
+                    l=compact (fold_flatten top_sy (fun x -> x) rargs); t=ty;
                     distribute = true},
         ctx
-      | {xs; _} ->
+      | {args; _} ->
         Printer.print_err
           "AC theory expects only terms with 2 arguments; \
-           got %i (%a)." (List.length xs) Expr.print_list xs;
+           got %i (%a)." (List.length args) Expr.print_list args;
         assert false
     in
     Timers.exec_timer_pause Timers.M_AC Timers.F_make;

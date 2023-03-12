@@ -110,7 +110,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       if Options.get_debug_matching() >= 3 then
         let print fmt Matching_types.{ sbs; sty; _ } =
           Format.fprintf fmt ">>> sbs= %a | sty= %a@ "
-            (SubstE.print E.print) sbs Ty.print_subst sty
+            (SubstE.print E.print) sbs Ty.Subst.pp sty
         in
         print_dbg
           ~module_name:"Matching" ~function_name:"match_pats_modulo"
@@ -122,7 +122,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         print_dbg
           ~module_name:"Matching" ~function_name:"match_one_pat"
           "match_pat: %a with subst: sbs= %a | sty= %a"
-          E.print pat0 (SubstE.print E.print) sbs Ty.print_subst sty
+          E.print pat0 (SubstE.print E.print) sbs Ty.Subst.pp sty
 
 
     let match_one_pat_against Matching_types.{ sbs; sty; _ } pat0 t =
@@ -134,14 +134,14 @@ module Make (X : Arg) : S with type theory = X.t = struct
           E.print pat0
           E.print t
           (SubstE.print E.print) sbs
-          Ty.print_subst sty
+          Ty.Subst.pp sty
 
     let match_term Matching_types.{ sbs; sty; _ } t pat =
       if Options.get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_term"
           "I match %a against %a with subst: sbs=%a | sty= %a"
-          E.print pat E.print t (SubstE.print E.print) sbs Ty.print_subst sty
+          E.print pat E.print t (SubstE.print E.print) sbs Ty.Subst.pp sty
 
     let match_list Matching_types.{ sbs; sty; _ } pats xs =
       if Options.get_debug_matching() >= 3 then
@@ -151,7 +151,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           E.print_list pats
           E.print_list xs
           (SubstE.print E.print) sbs
-          Ty.print_subst sty
+          Ty.Subst.pp sty
 
     let match_class_of t cl =
       if Options.get_debug_matching() >= 3 then
@@ -175,7 +175,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           (fun gsbt ->
              print_dbg ~header:false
                ">>> sbs = %a  and  sbty = %a@ "
-               (SubstE.print E.print) gsbt.sbs Ty.print_subst gsbt.sty
+               (SubstE.print E.print) gsbt.sbs Ty.Subst.pp gsbt.sty
           )res
 
   end
@@ -193,10 +193,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let rec add_rec env t =
       if ME.mem t env.info then env
       else
-        let { E.f = f; xs = xs; _ } = E.term_view t in
+        let { top_sy; args; _ } : E.t = t in
         let env =
           let map_f =
-            try SubstE.find f env.fils with Not_found -> ME.empty in
+            try SubstE.find top_sy env.fils with Not_found -> ME.empty in
 
           (* - l'age d'un terme est le min entre l'age passe en argument
              et l'age dans la map
@@ -215,7 +215,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
               info.term_from_terms
           in
           { env with
-            fils = SubstE.add f (ME.add t xs map_f) env.fils;
+            fils = SubstE.add top_sy (ME.add t args map_f) env.fils;
             info =
               ME.add t
                 { age=g; lem_orig = from_lems; but=b;
@@ -223,7 +223,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
                 env.info
           }
         in
-        List.fold_left add_rec env xs
+        List.fold_left add_rec env args
     in
     if info.term_age > age_limite () then env else add_rec env t
 
@@ -316,7 +316,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     List.rev
       (List.rev_map
          (fun (hs, ty) ->
-            E.mk_term (Symbols.Op (Symbols.Access hs)) [t] ty) lbs)
+            E.mk_term ~sy:(Symbols.Op (Symbols.Access hs)) ~args:[t] ~ty) lbs)
 
   module SLE = (* sets of lists of terms *)
     Set.Make(struct
@@ -351,10 +351,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
       SLE.elements mtl
 
   let plus_of_minus t d ty =
-    [E.mk_term (Symbols.Op Symbols.Minus) [t; d] ty ; d]
+    [E.mk_term ~sy:(Symbols.Op Symbols.Minus) ~args:[t; d] ~ty; d]
 
   let minus_of_plus t d ty =
-    [E.mk_term (Symbols.Op Symbols.Plus)  [t; d] ty ; d]
+    [E.mk_term ~sy:(Symbols.Op Symbols.Plus) ~args:[t; d] ~ty; d]
 
   let linear_arithmetic_matching f_pat pats _ty_pat t =
     let ty = E.type_info t in
@@ -376,7 +376,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       pat t =
     Options.exec_thread_yield ();
     Debug.match_term sg t pat;
-    let { E.f = f_pat; xs = pats; ty = ty_pat; _ } = E.term_view pat in
+    let { top_sy = f_pat; args = pats; ty = ty_pat; _ } : E.t = pat in
     match f_pat with
     |  Symbols.Var _ when Symbols.equal f_pat Symbols.underscore ->
       begin
@@ -409,8 +409,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
           let cl =
             List.fold_left
               (fun l t ->
-                 let { E.f = f; xs = xs; ty = ty; _ } = E.term_view t in
-                 if Symbols.compare f_pat f = 0 then xs::l
+                 let { top_sy = f; args; ty = ty; _ } : E.t = t in
+                 if Symbols.compare f_pat f = 0 then args::l
                  else
                    begin
                      match f_pat, ty with
@@ -450,9 +450,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
     Steps.incr (Steps.Matching);
     Debug.match_one_pat sg pat0;
     let pat = E.apply_subst (sg.sbs, sg.sty) pat0 in
-    let { E.f = f; xs = pats; ty = ty; _ } = E.term_view pat in
-    match f with
-    | Symbols.Var _ -> all_terms f ty env tbox sg lsbt_acc
+    let { top_sy; args = pats; ty; _ } : E.t = pat in
+    match top_sy with
+    | Symbols.Var _ -> all_terms top_sy ty env tbox sg lsbt_acc
     | _ ->
       let Matching_types.{ sty; gen = g; goal = b; _ } = sg in
       let f_aux t xs lsbt =
@@ -473,16 +473,16 @@ module Make (X : Arg) : S with type theory = X.t = struct
             List.rev_append aux lsbt
           with Echec | Ty.TypeClash _ -> lsbt
       in
-      try ME.fold f_aux (SubstE.find f env.fils) lsbt_acc
+      try ME.fold f_aux (SubstE.find top_sy env.fils) lsbt_acc
       with Not_found -> lsbt_acc
 
   let match_pats_modulo mconf env tbox lsubsts pat =
     Debug.match_pats_modulo pat lsubsts;
     List.fold_left (match_one_pat mconf env tbox pat) [] lsubsts
 
-  let trig_weight s t =
-    let sf = E.(term_view s).f in
-    let tf = E.(term_view t).f in
+  let trig_weight (s : E.t) (t : E.t) =
+    let sf = s.top_sy in
+    let tf = t.top_sy in
     match sf, tf with
     | Symbols.Name _, Symbols.Op _ -> -1
     | Symbols.Op _, Symbols.Name _ -> -1
@@ -498,7 +498,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     else
       let egs =
         { sbs = SubstE.empty;
-          sty = Ty.esubst;
+          sty = Ty.Subst.empty;
           gen = 0;
           goal = false;
           s_term_orig = [];

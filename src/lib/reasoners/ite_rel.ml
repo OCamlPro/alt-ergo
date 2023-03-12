@@ -53,9 +53,10 @@ let empty _ =
 
 let is_ite =
   let ite = Symbols.Op Symbols.Tite in
-  fun t ->
-    match E.term_view t with
-    | { E.f ; xs = [p;t1;t2]; _ } when Symbols.equal f ite -> Some (p, t1, t2)
+  fun (t : E.t) ->
+    match t with
+    | { top_sy; args = [p; t1; t2]; _ } when Symbols.equal top_sy ite ->
+      Some (p, t1, t2)
     | _ -> None
 
 let add_to_guarded p s t mp =
@@ -112,14 +113,14 @@ let extract_pending_deductions env =
   let l =
     ME2.fold
       (fun (s, t) ex acc ->
-         let a = E.mk_eq ~iff:false s t
+         let a = E.mk_eq ~use_equiv:false s t
                  [@ocaml.ppwarning "TODO: build IFF instead ?"]
          in
          if get_debug_ite () then
            Printer.print_dbg
              ~module_name:"Ite_rel" ~function_name:"assume"
              "deduce that %a with expl %a"
-             E.print a Ex.print ex;
+             E.print a Ex.pp ex;
          (Sig_rel.LTerm a, ex, Th_util.Other) :: acc)
       env.pending_deds []
   in

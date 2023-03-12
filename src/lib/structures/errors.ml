@@ -133,36 +133,36 @@ let report_typing_error fmt = function
   | NotAPredicate s ->
     fprintf fmt "%s is not a predicate" s
   | Unification(t1,t2) ->
-    fprintf fmt "%a and %a cannot be unified" Ty.print t1 Ty.print t2
+    fprintf fmt "%a and %a cannot be unified" Ty.pp t1 Ty.pp t2
   | ShouldBeApply s ->
     fprintf fmt "%s is a function symbol, it should be apply" s
   | WrongNumberofArgs s ->
     fprintf fmt "Wrong number of arguments when applying %s" s
   | ShouldHaveType(ty1,ty2) ->
     fprintf fmt "this expression has type %a but is here used with type %a"
-      Ty.print ty1 Ty.print ty2
+      Ty.pp ty1 Ty.pp ty2
   | ShouldHaveTypeBitv t ->
     fprintf fmt "this expression has type %a but it should be a bitvector"
-      Ty.print t
+      Ty.pp t
   | ShouldHaveTypeIntorReal t ->
     fprintf fmt
       "this expression has type %a but it should have type int or real"
-      Ty.print t
+      Ty.pp t
   | ShouldHaveTypeInt t ->
     fprintf fmt
       "this expression has type %a but it should have type int"
-      Ty.print t
+      Ty.pp t
   | ShouldHaveTypeArray ->
     fprintf fmt "this expression should have type farray"
   | ShouldHaveTypeRecord t ->
     fprintf fmt "this expression has type %a but it should have a record type"
-      Ty.print t
+      Ty.pp t
   | ShouldBeARecord ->
     fprintf fmt "this expression should have a record type"
   | ShouldHaveLabel (s, a) ->
     fprintf fmt "this expression has type %s which has no label %s" s a
   | NoLabelInType (lb, ty) ->
-    fprintf fmt "no label %s in type %a" (Hstring.view lb) Ty.print ty
+    fprintf fmt "no label %s in type %a" (Hstring.view lb) Ty.pp ty
   | ShouldHaveTypeProp ->
     fprintf fmt "this expression should have type prop"
   | NoRecordType s ->
@@ -172,7 +172,7 @@ let report_typing_error fmt = function
   | DuplicatePattern s ->
     fprintf fmt "pattern %s is bound several times" s
   | WrongLabel (s, ty) ->
-    fprintf fmt "wrong label %s in type %a" (Hstring.view s) Ty.print ty
+    fprintf fmt "wrong label %s in type %a" (Hstring.view s) Ty.pp ty
   | WrongNumberOfLabels ->
     fprintf fmt "wrong number of labels"
   | ArrayIndexShouldHaveTypeInt ->
@@ -190,7 +190,7 @@ let report_typing_error fmt = function
       "Currently, this kind of declarations are not allowed inside theories"
   | ShouldBeADT ty ->
     fprintf fmt "%a is not an algebraic, a record or an enumeration datatype"
-      Ty.print ty
+      Ty.pp ty
 
   | MatchNotExhaustive missing ->
     fprintf fmt
@@ -205,7 +205,7 @@ let report_typing_error fmt = function
 
   | NotAdtConstr (lbl, ty) ->
     fprintf fmt
-      "The symbol %s is not a constructor of the type %a" lbl Ty.print ty
+      "The symbol %s is not a constructor of the type %a" lbl Ty.pp ty
   | BadPopCommand {pushed; to_pop} ->
     fprintf fmt
       "Cannot pop %d assertion contexts. Only %d have been pushed"

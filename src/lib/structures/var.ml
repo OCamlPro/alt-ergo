@@ -9,24 +9,23 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type view = {
-  hs : Hstring.t ;
-  id : int ;
+type t = {
+  hs : Hstring.t;
+  id : int;
+  (* Unique identifiant of the variable. *)
 }
-
-type t = view
 
 let cpt = ref 0
 
 let of_hstring hs =
   incr cpt;
-  {hs ; id = !cpt}
+  { hs ; id = !cpt }
+
+let hstring { hs; _ } = hs
 
 let of_string s =
   incr cpt;
-  {hs = Hstring.make s; id = !cpt}
-
-let view v = v
+  { hs = Hstring.make s; id = !cpt }
 
 let compare a b =
   let c = a.id - b.id in
@@ -36,15 +35,16 @@ let compare a b =
     c
   end
 
+(* TODO: replace this polymorphic comparison. *)
 let equal a b = compare a b = 0
 
 let hash { id; _ } = id
 
-let to_string {hs ; id} =
+let show { hs ; id } =
   Format.sprintf "%s~%d" (Hstring.view hs) id
 
-let print fmt v =
-  Format.fprintf fmt "%s" (to_string v)
+let pp fmt v =
+  Format.fprintf fmt "%s" (show v)
 
 let save_cnt, reinit_cnt =
   let saved_cnt = ref 0 in
@@ -56,6 +56,5 @@ let save_cnt, reinit_cnt =
   in
   save_cnt, reinit_cnt
 
-
-module Set = Set.Make(struct type t = view let compare = compare end)
-module Map = Map.Make(struct type t = view let compare = compare end)
+module Set = Set.Make(struct type nonrec t = t let compare = compare end)
+module Map = Map.Make(struct type nonrec t = t let compare = compare end)

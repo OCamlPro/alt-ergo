@@ -327,6 +327,8 @@ module Env = struct
       Debug.lookup_not_found t env;
       assert false (*X.make t, Ex.empty*) (* XXXX *)
 
+  (* TODO: it would be cleaner to have a unique function look_by_t
+     that return an option. *)
   let lookup_by_t___without_failure t env =
     try MapX.find (ME.find t env.make) env.repr
     with Not_found -> fst (X.make t), Ex.empty
@@ -1010,7 +1012,7 @@ let model_repr_of_term t env mrepr =
   try ME.find t mrepr, mrepr
   with Not_found ->
     let mk = try ME.find t env.make with Not_found -> assert false in
-    let rep,_ = try MapX.find mk env.repr with Not_found -> assert false in
+    let rep, _ = try MapX.find mk env.repr with Not_found -> assert false in
     let cls =
       try SE.elements (MapX.find rep env.classes)
       with Not_found -> assert false
@@ -1024,50 +1026,49 @@ let model_repr_of_term t env mrepr =
 
 let compute_concrete_model ({ make; _ } as env) =
   ME.fold
-    (fun t _mk ((fprofs, cprofs, carrays, mrepr) as acc) ->
-       let { E.f; xs; ty; _ } = E.term_view t in
-       if X.is_solvable_theory_symbol f ty
-       || E.is_fresh t || E.is_fresh_skolem t
-       || E.equal t E.vrai || E.equal t E.faux
-       then
-         acc
-       else
-         let xs, tys, mrepr =
-           List.fold_left
-             (fun (xs, tys, mrepr) x ->
-                let rep_x, mrepr = model_repr_of_term x env mrepr in
-                assert (is_a_good_model_value rep_x);
-                (x, rep_x)::xs,
-                (E.type_info x)::tys,
-                mrepr
-             ) ([],[], mrepr) (List.rev xs)
-         in
-         let rep, mrepr = model_repr_of_term t env mrepr in
-         assert (is_a_good_model_value rep);
-         match f, xs, ty with
-         | Sy.Op Sy.Set, _, _ -> acc
-
-         | Sy.Op Sy.Get, [(_,(a,_));((_,(i,_)) as e)], _ ->
-           begin
-             match X.term_extract a with
-             | Some ta, true ->
-               let { E.f = f_ta; xs=xs_ta; _ } = E.term_view ta in
-               assert (xs_ta == []);
-               fprofs,
-               cprofs,
-               ModelMap.add (f_ta,[X.type_info i], ty) ([e], rep) carrays,
+    (fun ({ top_sy; args; ty; _ } as t : E.t) _mk
+      ((fprofs, cprofs, carrays, mrepr) as acc) ->
+      if X.is_solvable_theory_symbol top_sy ty
+      || E.is_fresh t || E.is_fresh_skolem t
+      || E.equal t E.vrai || E.equal t E.faux
+      then
+        acc
+      else
+        let args, tys, mrepr =
+          List.fold_left
+            (fun (args, tys, mrepr) x ->
+               let rep_x, mrepr = model_repr_of_term x env mrepr in
+               assert (is_a_good_model_value rep_x);
+               (x, rep_x)::args,
+               (E.type_info x)::tys,
                mrepr
+            ) ([],[], mrepr) (List.rev args)
+        in
+        let rep, mrepr = model_repr_of_term t env mrepr in
+        assert (is_a_good_model_value rep);
+        match top_sy, args, ty with
+        | Sy.Op Sy.Set, _, _ -> acc
 
-             | _ -> assert false
-           end
+        | Sy.Op Sy.Get, [(_,(a,_));((_,(i,_)) as e)], _ ->
+          begin
+            match X.term_extract a with
+            | Some { top_sy = f_ta; args=args_ta; _ }, true ->
+              assert (args_ta == []);
+              fprofs,
+              cprofs,
+              ModelMap.add (f_ta,[X.type_info i], ty) ([e], rep) carrays,
+              mrepr
 
-         | _ ->
-           if tys == [] then
-             fprofs, ModelMap.add (f, tys, ty) (xs, rep) cprofs, carrays,
-             mrepr
-           else
-             ModelMap.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
-             mrepr
+            | _ -> assert false
+          end
+
+        | _ ->
+          if tys == [] then
+            fprofs, ModelMap.add (top_sy, tys, ty) (args, rep) cprofs, carrays,
+            mrepr
+          else
+            ModelMap.add (top_sy, tys, ty) (args, rep) fprofs, cprofs, carrays,
+            mrepr
 
     ) make
     (ModelMap.empty, ModelMap.empty, ModelMap.empty, ME.empty)

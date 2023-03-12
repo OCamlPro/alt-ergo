@@ -54,7 +54,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         (* valeur de l'increment pour l'activite des variables *)
         var_inc : float;
 
-        (* inverse du facteur d'acitivte des vars, vaut 1/0.999 par defaut *)
+        (* inverse du facteur d'activité des variables.
+           Vaut 1/0.999 par defaut *)
         var_decay : float;
       }
 
@@ -255,7 +256,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"unsat_rec"
-          "unsat_rec : %a" Ex.print dep
+          "unsat_rec : %a" Ex.pp dep
 
     let assume gf dep env =
       if Options.get_debug_sat () then
@@ -294,7 +295,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         end;
         if Options.get_verbose () then
           print_dbg ~header:false
-            "with explanations : %a" Explanation.print dep
+            "with explanations : %a" Explanation.pp dep
 
     let unsat () =
       if Options.get_debug_sat () then
@@ -359,7 +360,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         ME.iter (fun f (_, ex, dlvl, plvl) ->
             print_dbg ~header:false
               "(%d, %d) %a \t->\t%a@ "
-              dlvl plvl E.print f Ex.print ex) g;
+              dlvl plvl E.print f Ex.pp ex) g;
         print_dbg ~header:false
           " - / GAMMA ---------------------@]";
       end
@@ -373,7 +374,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"inconsistent"
           "inconsistent at level (%d, %d), reason : %a"
-          env.dlevel env.plevel Ex.print expl
+          env.dlevel env.plevel Ex.pp expl
 
     let in_mk_theories_instances () =
       if Options.(get_debug_fpa() > 0 || get_debug_sat ()) then
@@ -435,6 +436,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       env.heuristics := Heuristics.bump_activity !(env.heuristics) expl;
       raise (IUnsat (expl, classes))
 
+  (* TODO: Move this function in Expr *)
   let is_literal f =
     match E.form_view f with
     | E.Literal _ -> true
@@ -526,6 +528,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     end
     else true
 
+  (* Check if all the backjump reason of [ex] are known by the environment
+     [env]. *)
   let cdcl_known_decisions ex env =
     Ex.fold_atoms
       (fun e b ->
@@ -551,7 +555,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     (* try to keep the decision ordering *)
     let l = List.fast_sort (fun (_,i) (_,j) -> j - i) l in
-    List.fold_left (fun acc (f, _) -> E.mk_imp f acc (E.id f)) acc0 l
+    List.fold_left (fun acc (f, _) -> E.mk_imp f acc) acc0 l
 
 
   let cdcl_assume delay env l =
@@ -676,7 +680,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let fl = List.fast_sort (fun (_, d1) (_,d2) -> d1 - d2) fl in
       let f =
         List.fold_left
-          (fun acc (f, _) -> E.mk_or f acc false (E.id f))
+          (fun acc (f, _) -> E.mk_or ~is_imply:false f acc)
           ff0.E.ff fl
       in
       update_unit_facts env {ff0 with E.ff=f} dep
@@ -972,20 +976,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           let env = update_nb_related env ff in
           match E.form_view f with
           | E.Iff (f1, f2) ->
-            let id = E.id f in
-            let g = E.elim_iff f1 f2 id ~with_conj:true in
+            let g = E.elim_iff f1 f2 ~with_conj:true in
             if Options.get_tableaux_cdcl () then begin
-              let f_imp_g = E.mk_imp f g id in
+              let f_imp_g = E.mk_imp f g in
               (* correct to put <-> ?*)
               cdcl_assume false env [{ff with E.ff=f_imp_g}, Ex.empty]
             end;
             asm_aux (env, true, tcp, ap_delta, lits) [{ff with E.ff = g}, dep]
 
           | E.Xor (f1, f2) ->
-            let id = E.id f in
-            let g = E.elim_iff f1 f2 id ~with_conj:false |> E.neg in
+            let g = E.elim_iff f1 f2 ~with_conj:false |> E.neg in
             if Options.get_tableaux_cdcl () then begin
-              let f_imp_g = E.mk_imp f g id in
+              let f_imp_g = E.mk_imp f g in
               (* should do something similar for Let ? *)
               cdcl_assume false env [{ff with E.ff=f_imp_g}, Ex.empty]
             end;
@@ -1025,7 +1027,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                 assert (ME.mem guard env.gamma);
                 if Options.get_tableaux_cdcl () then
                   cdcl_assume false env
-                    [{ff with E.ff = E.mk_imp f af (E.id f)}, adep];
+                    [{ff with E.ff = E.mk_imp f af}, adep];
                 asm_aux acc [{ff with E.ff = af}, Ex.union dep adep]
               | None -> acc
             end
@@ -1034,7 +1036,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             Options.tool_req 2 "TR-Sat-Assume-Sko";
             let f' = E.skolemize quantif  in
             if Options.get_tableaux_cdcl () then begin
-              let f_imp_f' = E.mk_imp f f' (E.id f) in
+              let f_imp_f' = E.mk_imp f f' in
               (* correct to put <-> ?*)
               (* should do something similar for Let ? *)
               cdcl_assume false env [{ff with E.ff=f_imp_f'}, Ex.empty]
@@ -1046,7 +1048,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             let elim_let = E.elim_let ~recursive:true letin in
             let ff = {ff with E.ff = elim_let} in
             if Options.get_tableaux_cdcl () then begin
-              let f_imp_f' = E.mk_imp f elim_let (E.id f) in
+              let f_imp_f' = E.mk_imp f elim_let in
               (* correct to put <-> ?*)
               (* should do something similar for Let ? *)
               cdcl_assume false env [{ff with E.ff=f_imp_f'}, Ex.empty]
@@ -1680,7 +1682,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         );
     Util.loop
       ~f:(fun _n () acc ->
-          let new_guard = E.fresh_name Ty.Tbool in
+          let new_guard = E.fresh_name ~ty:Ty.Tbool in
           save_guard_and_refs acc new_guard;
           let guards = ME.add new_guard
               (mk_gf new_guard "" true true,Ex.empty)
@@ -1800,7 +1802,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let add_guard env gf =
     let current_guard = env.guards.current_guard in
-    {gf with E.ff = E.mk_imp current_guard gf.E.ff 1}
+    {gf with E.ff = E.mk_imp current_guard gf.E.ff}
 
   let assume env fg dep =
     try

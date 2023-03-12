@@ -27,8 +27,8 @@
 (******************************************************************************)
 
 type builtin =
-    LE | LT (* arithmetic *)
-  | IsConstr of Hstring.t (* ADT tester *)
+    LE | LT
+  | IsConstr of Hstring.t
 
 type operator =
     Plus | Minus | Mult | Div | Modulo
@@ -38,12 +38,11 @@ type operator =
   | Sqrt_real_default | Sqrt_real_excess
   | Min_real | Min_int | Max_real | Max_int | Integer_log2
   | Pow | Integer_round
-  | Constr of Hstring.t (* enums, adts *)
-  | Destruct of Hstring.t * bool
+  | Cstr of Hstring.t
+  | Dstr of Hstring.t * bool
   | Tite
 
 type lit =
-  (* literals *)
   | L_eq
   | L_built of builtin
   | L_neg_eq
@@ -51,7 +50,6 @@ type lit =
   | L_neg_pred
 
 type form =
-  (* formulas *)
   | F_Unit of bool
   | F_Clause of bool
   | F_Iff
@@ -61,11 +59,50 @@ type form =
 
 type name_kind = Ac | Other
 
-type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
+module Bound = struct
+  type kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
 
-type bound = (* private *)
-  { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
+  type t = {
+    ty : Ty.t;
+    is_open : bool;
+    is_lower : bool;
+    kind : kind;
+  }
 
+  let mk ~kind ~ty ~is_open ~is_lower = { kind; ty; is_open; is_lower }
+
+  let compare_bounds_kind a b =
+    Util.compare_algebraic a b
+      (function
+        | VarBnd h1, VarBnd h2 -> Var.compare h1 h2
+        | ValBnd q1, ValBnd q2 -> Numbers.Q.compare q1 q2
+        | _, (VarBnd _ | ValBnd _) -> assert false
+      )
+
+  let compare a b =
+    let c = Ty.compare a.ty b.ty in
+    if c <> 0 then c
+    else
+      let c = Stdlib.compare a.is_open b.is_open in
+      if c <> 0 then c
+      else
+        let c = Stdlib.compare a.is_lower b.is_lower in
+        if c <> 0 then c
+        else compare_bounds_kind a.kind b.kind
+
+  let show_bound_kind = function
+    | VarBnd v -> Var.show v
+    | ValBnd v -> Numbers.Q.to_string v
+
+  let show b =
+    let kd = show_bound_kind b.kind in
+    if b.is_lower then
+      Format.sprintf "%s %s" (if b.is_open then "]" else "[") kd
+    else
+      Format.sprintf "%s %s" kd (if b.is_open then "[" else "]")
+
+  let pp fmt b = Format.fprintf fmt "%s" (show b)
+end
 
 type t =
   | True
@@ -79,7 +116,7 @@ type t =
   | Lit of lit
   | Form of form
   | Var of Var.t
-  | In of bound * bound
+  | In of Bound.t * Bound.t
   | MapsTo of Var.t
   | Let
 
@@ -89,13 +126,10 @@ let name ?(kind=Other) s = Name (Hstring.make s, kind)
 let var s = Var s
 let int i = Int (Hstring.make i)
 let real r = Real (Hstring.make r)
-let constr s = Op (Constr (Hstring.make s))
-let destruct ~guarded s = Op (Destruct (Hstring.make s, guarded))
+let cstr s = Op (Cstr (Hstring.make s))
+let dstr ~guarded s = Op (Dstr (Hstring.make s, guarded))
 
-let mk_bound kind sort ~is_open ~is_lower =
-  {kind; sort; is_open; is_lower}
-
-let mk_in b1 b2 =
+let mk_in (b1 : Bound.t) (b2 : Bound.t) =
   assert (b1.is_lower);
   assert (not b2.is_lower);
   In (b1, b2)
@@ -104,7 +138,7 @@ let mk_maps_to x = MapsTo x
 
 let is_ac x = match x with
   | Name(_, Ac) -> true
-  | _           -> false
+  | _ -> false
 
 let underscore =
   Random.self_init ();
@@ -119,8 +153,8 @@ let compare_kinds k1 k2 =
 let compare_operators op1 op2 =
   Util.compare_algebraic op1 op2
     (function
-      | Access h1, Access h2 | Constr h1, Constr h2 -> Hstring.compare h1 h2
-      | Destruct (h1, b1), Destruct(h2, b2) ->
+      | Access h1, Access h2 | Cstr h1, Cstr h2 -> Hstring.compare h1 h2
+      | Dstr (h1, b1), Dstr (h2, b2) ->
         let c = Stdlib.compare b1 b2 in
         if c <> 0 then c else Hstring.compare h1 h2
       | _ , (Plus | Minus | Mult | Div | Modulo
@@ -129,7 +163,7 @@ let compare_operators op1 op2 =
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
             | Integer_log2 | Pow | Integer_round
-            | Constr _ | Destruct _ | Tite) -> assert false
+            | Cstr _ | Dstr _ | Tite) -> assert false
     )
 
 let compare_builtin b1 b2 =
@@ -158,25 +192,6 @@ let compare_forms f1 f2 =
         assert false
     )
 
-let compare_bounds_kind a b =
-  Util.compare_algebraic a b
-    (function
-      | VarBnd h1, VarBnd h2 -> Var.compare h1 h2
-      | ValBnd q1, ValBnd q2 -> Numbers.Q.compare q1 q2
-      | _, (VarBnd _ | ValBnd _) -> assert false
-    )
-
-let compare_bounds a b =
-  let c = Ty.compare a.sort b.sort in
-  if c <> 0 then c
-  else
-    let c = Stdlib.compare a.is_open b.is_open in
-    if c <> 0 then c
-    else
-      let c = Stdlib.compare a.is_lower b.is_lower in
-      if c <> 0 then c
-      else compare_bounds_kind a.kind b.kind
-
 let compare s1 s2 =
   Util.compare_algebraic s1 s2
     (function
@@ -191,8 +206,8 @@ let compare s1 s2 =
       | Lit lit1, Lit lit2 -> compare_lits lit1 lit2
       | Form f1, Form f2 -> compare_forms f1 f2
       | In (b1, b2), In (b1', b2') ->
-        let c = compare_bounds b1 b1' in
-        if c <> 0 then c else compare_bounds b2 b2'
+        let c = Bound.compare b1 b1' in
+        if c <> 0 then c else Bound.compare b2 b2'
       | _ ,
         (True | False | Void | Name _ | Int _ | Real _ | Bitv _
         | Op _ | Lit _ | Form _ | Var _ | In _ | MapsTo _ | Let) ->
@@ -219,20 +234,7 @@ let hash x =
   | Lit lit -> 19 * Hashtbl.hash lit + 11
   | Form x -> 19 * Hashtbl.hash x + 12
 
-let string_of_bound_kind x = match x with
-  | VarBnd v -> Var.to_string v
-  | ValBnd v -> Numbers.Q.to_string v
-
-let string_of_bound b =
-  let kd = string_of_bound_kind b.kind in
-  if b.is_lower then
-    Format.sprintf "%s %s" (if b.is_open then "]" else "[") kd
-  else
-    Format.sprintf "%s %s" kd (if b.is_open then "[" else "]")
-
-let print_bound fmt b = Format.fprintf fmt "%s" (string_of_bound b)
-
-let string_of_lit lit = match lit with
+let string_of_lit = function
   | L_eq -> "="
   | L_neg_eq -> "<>"
   | L_neg_pred -> "not "
@@ -245,7 +247,7 @@ let string_of_lit lit = match lit with
   | L_neg_built (IsConstr h) ->
     Format.sprintf "?not? %s" (Hstring.view h)
 
-let string_of_form f = match f with
+let string_of_form = function
   | F_Unit _ -> "/\\"
   | F_Clause _ -> "\\/"
   | F_Lemma -> "Lemma"
@@ -253,10 +255,11 @@ let string_of_form f = match f with
   | F_Iff -> "<->"
   | F_Xor -> "xor"
 
-let to_string ?(show_vars=true) x = match x with
+(* When show_vars is true, the variable name are surrounded by simple quotes. *)
+let show ?(show_vars=true) = function
   | Name (n,_) -> Hstring.view n
-  | Var v when show_vars -> Format.sprintf "'%s'" (Var.to_string v)
-  | Var v -> Var.to_string v
+  | Var v when show_vars -> Format.sprintf "'%s'" (Var.show v)
+  | Var v -> Var.show v
   | Int n -> Hstring.view n
   | Real n -> Hstring.view n
   | Bitv s -> "[|"^s^"|]"
@@ -270,8 +273,8 @@ let to_string ?(show_vars=true) x = match x with
       (Hstring.view s)
     else
       "@Access_"^(Hstring.view s)
-  | Op (Constr s) -> (Hstring.view s)
-  | Op (Destruct (s,g)) ->
+  | Op (Cstr s) -> (Hstring.view s)
+  | Op (Dstr (s,g)) ->
     Format.sprintf "%s%s" (if g then "" else "!") (Hstring.view s)
 
   | Op Record -> "@Record"
@@ -302,20 +305,19 @@ let to_string ?(show_vars=true) x = match x with
   | False -> "false"
   | Void -> "void"
   | In (lb, rb) ->
-    Format.sprintf "%s , %s" (string_of_bound lb) (string_of_bound rb)
+    Format.sprintf "%s , %s" (Bound.show lb) (Bound.show rb)
 
-  | MapsTo x ->  Format.sprintf "%s |->" (Var.to_string x)
+  | MapsTo x ->  Format.sprintf "%s |->" (Var.show x)
 
   | Lit lit -> string_of_lit lit
   | Form form -> string_of_form form
   | Let -> "let"
 
-let to_string_clean s = to_string ~show_vars:false s
-let to_string s = to_string ~show_vars:true s
+let show_clean s = show ~show_vars:false s
+let show s = show ~show_vars:true s
 
-let print_clean fmt s = Format.fprintf fmt "%s" (to_string_clean s)
-let print fmt s = Format.fprintf fmt "%s" (to_string s)
-
+let print_clean fmt s = Format.fprintf fmt "%s" (show_clean s)
+let print fmt s = Format.fprintf fmt "%s" (show s)
 
 let fresh, reinit_fresh_sy_cpt =
   let cpt = ref 0 in
@@ -333,6 +335,9 @@ let fresh, reinit_fresh_sy_cpt =
 let is_get f = equal f (Op Get)
 let is_set f = equal f (Op Set)
 
+let is_ite = function
+  | Op Tite -> true
+  | _ -> false
 
 let fake_eq  =  name "@eq"
 let fake_neq =  name "@neq"
@@ -368,3 +373,10 @@ end = struct
     iter (fun k v -> Format.fprintf fmt "%a -> %a  " print k pr_elt v) sbt
 end
 
+let is_prefix = function
+  | Op Minus -> true
+  | _ -> false
+
+let is_infix = function
+  | Op (Plus | Minus | Mult | Div | Modulo) -> true
+  | _ -> false

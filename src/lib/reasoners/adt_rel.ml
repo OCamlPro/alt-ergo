@@ -87,7 +87,7 @@ module Debug = struct
                    print_dbg ~flushed:false ~header:false
                      " | %s" (Hs.view hs)) l
            end;
-           print_dbg ~flushed:false ~header:false " } %a@ " Ex.print ex;
+           print_dbg ~flushed:false ~header:false " } %a@ " Ex.pp ex;
 
         ) env.domains;
       print_dbg ~flushed:false ~header:false
@@ -167,7 +167,9 @@ let deduce_is_constr uf r h eqs env ex =
         let eqs =
           if seen_tester r h env then eqs
           else
-            let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr h) [t] in
+            let is_c =
+              E.mk_builtin ~is_pos:true ~builtin:(Sy.IsConstr h) ~args:[t]
+            in
             if Options.get_debug_adt () then
               Printer.print_dbg
                 ~module_name:"Adt_rel"
@@ -176,27 +178,27 @@ let deduce_is_constr uf r h eqs env ex =
             (Sig_rel.LTerm is_c, ex, Th_util.Other) :: eqs
         in
         begin
-          match E.term_view t with
-          | { E.ty = Ty.Tadt (name,params) as ty; _ } ->
+          match t with
+          | { E.ty = Ty.Tadt { cstr; payload = args } as ty; _ } ->
             (* Only do this deduction for finite types ??
                  may not terminate in some cases otherwise.
                  eg. type t = A of t
                  goal g: forall e,e' :t. e = C(e') -> false
                  + should not be guareded by "seen_tester"
             *)
-            let cases = match Ty.type_body name params with
+            let cases = match Ty.type_body cstr args with
               | Ty.Adt cases -> cases
             in
-            let {Ty.destrs; _} =
+            let { Ty.dstrs; _ } =
               try List.find (
-                  fun { Ty.constr = c; _ } -> Hstring.equal h c
+                  fun { Ty.cstr = c; _ } -> Hstring.equal h c
                 ) cases
               with Not_found -> assert false
             in
-            let xs = List.map (fun (_, ty) -> E.fresh_name ty) destrs in
-            let cons = E.mk_term (Sy.constr (Hs.view h)) xs ty in
+            let args = List.map (fun (_, ty) -> E.fresh_name ~ty) dstrs in
+            let cons = E.mk_term ~sy:(Sy.cstr (Hs.view h)) ~args ~ty in
             let env = {env with new_terms = SE.add cons env.new_terms} in
-            let eq = E.mk_eq t cons ~iff:false in
+            let eq = E.mk_eq t cons ~use_equiv:false in
             if Options.get_debug_adt () then
               Printer.print_dbg
                 ~module_name:"Adt_rel"
@@ -214,19 +216,19 @@ let deduce_is_constr uf r h eqs env ex =
 
 let values_of ty =
   match ty with
-  | Ty.Tadt (name,params) ->
-    let l = match Ty.type_body name params with
+  | Ty.Tadt { cstr; payload = args } ->
+    let l = match Ty.type_body cstr args with
       | Ty.Adt cases -> cases
     in
     Some
-      (List.fold_left (fun st {Ty.constr; _} -> HSS.add constr st) HSS.empty l)
+      (List.fold_left (fun st { Ty.cstr; _ } -> HSS.add cstr st) HSS.empty l)
   | _ -> None
 
 let add_adt env uf t r sy ty =
   if MX.mem r env.domains then env
   else
     match sy, ty with
-    | Sy.Op Sy.Constr hs, Ty.Tadt _ ->
+    | Sy.Op Sy.Cstr hs, Ty.Tadt _ ->
       if Options.get_debug_adt () then
         Printer.print_dbg
           ~module_name:"Adt_rel" ~function_name:"add_adt"
@@ -269,19 +271,19 @@ let constr_of_destr ty dest =
   if Options.get_debug_adt () then
     Printer.print_dbg
       ~module_name:"Adt_rel" ~function_name:"constr_of_destr"
-      "ty = %a" Ty.print ty;
+      "ty = %a" Ty.pp ty;
   match ty with
-  | Ty.Tadt (name, params) ->
+  | Ty.Tadt { cstr; payload = args } ->
     let cases =
-      match Ty.type_body name params with
+      match Ty.type_body cstr args with
       | Ty.Adt cases -> cases
     in
     begin
       try
         List.find
-          (fun {Ty.destrs; _} ->
-             List.exists (fun (d, _) -> Hstring.equal dest d) destrs
-          )cases
+          (fun { Ty.dstrs; _ } ->
+             List.exists (fun (d, _) -> Hstring.equal dest d) dstrs
+          ) cases
       with Not_found -> assert false (* invariant *)
     end
   | _ -> assert false
@@ -295,14 +297,16 @@ let add_guarded_destr env uf t hs e t_ty =
       ~module_name:"Adt_rel" ~function_name:"add_guarded_destr"
       "new (guarded) Destr: %a@ " E.print t;
   let env = { env with seen_destr = SE.add t env.seen_destr } in
-  let {Ty.constr = c; _} = constr_of_destr (E.type_info e) hs in
-  let access = E.mk_term (Sy.destruct (Hs.view hs) ~guarded:false) [e] t_ty in
+  let { Ty.cstr = c; _ } = constr_of_destr (E.type_info e) hs in
+  let access =
+    E.mk_term ~sy:(Sy.dstr (Hs.view hs) ~guarded:false) ~args:[e] ~ty:t_ty
+  in
   (* XXX : Never add non-guarded access to list of new terms !
      This may/will introduce bugs when instantiating
      let env = {env with new_terms = SE.add access env.new_terms} in
   *)
-  let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr c) [e] in
-  let eq = E.mk_eq access t ~iff:false in
+  let is_c = E.mk_builtin ~is_pos:true ~builtin:(Sy.IsConstr c) ~args:[e] in
+  let eq = E.mk_eq access t ~use_equiv:false in
   if Options.get_debug_adt () then
     Printer.print_dbg ~header:false
       "associated with constr %a@,%a => %a"
@@ -326,13 +330,12 @@ let add_guarded_destr env uf t hs e t_ty =
 
 
 [@@ocaml.ppwarning "working with X.term_extract r would be sufficient ?"]
-let add_aux env (uf:uf) (r:r) t =
+let add_aux env (uf : uf) (r : r) ({ top_sy; args; ty; _ } as t : E.t) =
   if Options.get_disable_adts () then env
   else
-    let { E.f = sy; xs; ty; _ } = E.term_view t in
-    let env = add_adt env uf t r sy ty in
-    match sy, xs with
-    | Sy.Op Sy.Destruct (hs, true), [e] -> (* guarded *)
+    let env = add_adt env uf t r top_sy ty in
+    match top_sy, args with
+    | Sy.Op Sy.Dstr (hs, true), [e] -> (* guarded *)
       if Options.get_debug_adt () then
         Printer.print_dbg
           ~module_name:"Adt_rel" ~function_name:"add_aux"
@@ -340,7 +343,7 @@ let add_aux env (uf:uf) (r:r) t =
       if (SE.mem t env.seen_destr) then env
       else add_guarded_destr env uf t hs e ty
 
-    | Sy.Op Sy.Destruct (_, false), [_] ->
+    | Sy.Op Sy.Dstr (_, false), [_] ->
       (* not guarded *)
       if Options.get_debug_adt () then
         Printer.print_dbg
@@ -348,7 +351,7 @@ let add_aux env (uf:uf) (r:r) t =
           "[ADTs] add unguarded destruct: %a" E.print t;
       { env with seen_access = SE.add t env.seen_access }
 
-    | Sy.Op Sy.Destruct _, _ ->
+    | Sy.Op Sy.Dstr _, _ ->
       assert false (* not possible *)
 
     (*| Sy.Op Sy.IsConstr _, _ ->

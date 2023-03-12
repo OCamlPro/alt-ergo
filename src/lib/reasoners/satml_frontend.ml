@@ -337,10 +337,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       List.fold_left
         (fun tmp f ->
            (* we cannot reduce like in DfsSAT *)
-           E.mk_or (E.neg f) tmp false 0
-        )gf.E.ff hyp
+           E.mk_or ~is_imply:false (E.neg f) tmp
+        ) gf.E.ff hyp
     in
-    ({gf with E.ff=clause}, dep) :: acc
+    ({ gf with E.ff = clause }, dep) :: acc
 
   let mk_theories_instances do_syntactic_matching _remove_clauses env acc =
     let t_match = Inst.matching_terms_info env.inst in
@@ -406,7 +406,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          | [{ Atom.lit; _ }] ->
            {gf with
             E.ff =
-              E.mk_or gf.E.ff (E.neg lit) false 0} :: acc
+              E.mk_or ~is_imply:false gf.E.ff (E.neg lit)} :: acc
          | _   -> assert false
       )acc l
 
@@ -464,7 +464,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         | E.Let _ | E.Iff _ | E.Xor _ -> assert false
       in
       (*XXX TODO: internal skolems*)
-      let f = E.mk_or lat ded false 0 in
+      let f = E.mk_or ~is_imply:false lat ded in
       let nlat = E.neg lat in
       (* semantics: nlat ==> f *)
       {env with skolems = ME.add nlat (mk_gf f) env.skolems},
@@ -682,8 +682,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          | Some (guard, res, _dep) ->
            (* To be correct in incremental mode, we'll generate the
               formula "guard -> (a -> res)" *)
-           let tmp = E.mk_imp a res 0 in
-           let tmp = E.mk_imp guard tmp 0 in
+           let tmp = E.mk_imp a res in
+           let tmp = E.mk_imp guard tmp in
            (mk_gf tmp)  :: acc
          | None ->
            acc
@@ -1021,7 +1021,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if get_unsat_core () then fails "unsat_core"
 
   let create_guard env =
-    let expr_guard = E.fresh_name Ty.Tbool in
+    let expr_guard = E.fresh_name ~ty:Ty.Tbool in
     let ff, axs, new_vars =
       FF.simplify env.ff_hcons_env expr_guard
         (fun f -> ME.find f env.abstr_of_axs) []
@@ -1071,7 +1071,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let add_guard env gf =
     let current_guard = env.guards.current_guard in
-    {gf with E.ff = E.mk_imp current_guard gf.E.ff 1}
+    {gf with E.ff = E.mk_imp current_guard gf.E.ff}
 
   let unsat env gf =
     checks_implemented_features ();

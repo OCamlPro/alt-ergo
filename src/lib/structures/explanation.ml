@@ -30,7 +30,7 @@ module E = Expr
 
 type rootdep = { name : string; f : Expr.t; loc : Loc.t}
 
-type exp =
+type reason =
   | Literal of Satml_types.Atom.atom
   | Fresh of int
   | Bj of E.t
@@ -40,7 +40,7 @@ type exp =
 module S =
   Set.Make
     (struct
-      type t = exp
+      type t = reason
       let compare a b = match a,b with
         | Fresh i1, Fresh i2 -> i1 - i2
         | Literal a  , Literal b   -> Satml_types.Atom.cmp_atom a b
@@ -87,7 +87,7 @@ let fold_atoms f s acc = S.fold f s acc
 (* TODO : XXX : We have to choose the smallest ??? *)
 let merge s1 _s2 = s1
 
-let fresh_exp =
+let fresh_reason =
   let r = ref (-1) in
   fun () ->
     incr r;
@@ -105,7 +105,7 @@ let remove_fresh fe s =
 
 let add_fresh fe s = S.add fe s
 
-let print fmt ex =
+let pp fmt ex =
   let open Format in
   if Options.get_debug_explanations () then begin
     fprintf fmt "{";
@@ -118,6 +118,8 @@ let print fmt ex =
       ) ex;
     fprintf fmt "}"
   end
+
+let print = pp
 
 let get_unsat_core dep =
   fold_atoms
@@ -158,10 +160,10 @@ let rec literals_of_acc lit fs f acc = match E.form_view f with
   | E.Literal _ ->
     if lit then f :: acc else acc
   | E.Iff(f1, f2) ->
-    let g = E.elim_iff f1 f2 (E.id f) ~with_conj:true in
+    let g = E.elim_iff f1 f2 ~with_conj:true in
     literals_of_acc lit fs g acc
   | E.Xor(f1, f2) ->
-    let g = E.neg @@ E.elim_iff f1 f2 (E.id f) ~with_conj:false in
+    let g = E.neg @@ E.elim_iff f1 f2 ~with_conj:false in
     literals_of_acc lit fs g acc
   | E.Unit (f1,f2) ->
     let acc = literals_of_acc false fs f1 acc in
@@ -183,19 +185,17 @@ let literals_of ex =
 module MI = Util.MI
 
 let literals_ids_of ex =
-  List.fold_left (fun acc f ->
-      let i = E.id f in
-      let m = try MI.find i acc with Not_found -> 0 in
-      MI.add i (m + 1) acc
+  (* WHY: why the gui id was used there also? *)
+  List.fold_left (fun acc _ ->
+      let m = try MI.find 0 acc with Not_found -> 0 in
+      MI.add 0 (m + 1) acc
     ) MI.empty (literals_of ex)
 
 
 let make_deps sf =
   E.Set.fold (fun l acc -> S.add (Bj l) acc) sf S.empty
 
-let has_no_bj s =
-  try S.iter (function Bj _ -> raise Exit | _ -> ())s; true
-  with Exit -> false
+let has_no_bj = S.for_all (function Bj _ -> false | _ -> true)
 
 let compare = S.compare
 
