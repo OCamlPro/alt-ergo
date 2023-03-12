@@ -1324,8 +1324,8 @@ let make dloc_file acc stmt =
                 let qb = E.mk_eq ~use_equiv:false defn ff in
                 let binders = E.mk_binders binders_set in
                 let ff =
-                  E.mk_forall ~name:name_base ~loc:Loc.dummy binders ~triggers:[]
-                    ~toplevel:true ~decl_kind qb
+                  E.mk_forall ~name:name_base ~loc:Loc.dummy binders
+                    ~triggers:[] ~toplevel:true ~decl_kind qb
                 in
                 assert (Sy.Map.is_empty (E.free_vars ff));
                 let ff = Purification.purify_form ff in

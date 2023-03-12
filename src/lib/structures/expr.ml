@@ -2531,12 +2531,12 @@ module Triggers = struct
           else multi'
 
   let partition_patterns ({ content; _ } as tr) ~f =
-    let syn, sem = List.partition_map
-        (fun t ->
-           match f t with
-           | `Syn s -> Left s
-           | `Sem s -> Right s
-        ) content
+    let syn, sem = Lists.partition_map content
+        ~f:(fun t ->
+            match f t with
+            | `Syn s -> Left s
+            | `Sem s -> Right s
+          )
     in
     { tr with content = syn; semantic = sem }
 

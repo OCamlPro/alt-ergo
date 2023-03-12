@@ -14,6 +14,8 @@
     This modules defines some helper functions on lists
 *)
 
+type ('a, 'b) either = Left of 'a | Right of 'b
+
 (** {3 Misc functions} *)
 
 val to_seq : 'a list -> 'a Seq.t
@@ -31,3 +33,11 @@ val apply_right : ('a -> 'a) -> ('b * 'a) list -> ('b * 'a) list * bool
 
 val find_opt : ('a -> bool) -> 'a list -> 'a option
 (** Tries and find the first element of the list satisfying the predicate. *)
+
+val partition_map :
+  f:('c -> ('a, 'b) either) ->
+  'c list ->
+  'a list * 'b list
+(** [partition_map ~f lst] produce two lists. The first list contains the left
+    elements for [f] and the second list contains the right elements.
+    This function is tail-recursive. *)

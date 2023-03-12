@@ -9,6 +9,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+type ('a, 'b) either = Left of 'a | Right of 'b
+
 (* Apply the function [f] on the list [lst]. Return a boolean that is [true]
    if and only if the list has changed. *)
 let apply f l =
@@ -45,3 +47,12 @@ let to_seq l =
   in
   aux l
 
+let partition_map ~f =
+  let rec aux (lefts, rights) = function
+    | [] -> (lefts, rights)
+    | hd :: tl ->
+      match f hd with
+      | Left res -> aux (res :: lefts, rights) tl
+      | Right res -> aux (lefts, res :: rights) tl
+  in
+  aux ([], [])
