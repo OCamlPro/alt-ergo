@@ -61,7 +61,7 @@ module Make (Th : Theory.S) = struct
         Some (l_ex, Atom.level p)
       else None
     | None ->
-        Util.failwith "No proxy formula for the formula %a" E.print f
+      Util.failwith "No proxy formula for the formula %a" E.print f
 
   let forget_decision env f lvl =
     let l_ok, _ =

@@ -1753,14 +1753,14 @@ let fm_simplex_cube_integers_encoding env uf has_eqs =
            match rev_mx with
            | None -> simplex
            | Some _ ->
-               let max = bnd_to_simplex_bound (mx, ex_mx) in
-               fst @@
-               (* assert upper bound -> inverted as a lower bound *)
-               if exists_in_simplex simplex xple then
-                 Sim.Assert.var simplex xple ?max
-               else
-                 Sim.Assert.poly
-                   simplex (Sim.Core.P.from_list lple) xple ?max
+             let max = bnd_to_simplex_bound (mx, ex_mx) in
+             fst @@
+             (* assert upper bound -> inverted as a lower bound *)
+             if exists_in_simplex simplex xple then
+               Sim.Assert.var simplex xple ?max
+             else
+               Sim.Assert.poly
+                 simplex (Sim.Core.P.from_list lple) xple ?max
          in
          simplex
     ) simplex (int_constraints_from_map_intervals env uf)

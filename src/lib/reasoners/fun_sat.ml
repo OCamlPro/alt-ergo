@@ -1689,7 +1689,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Debug.is_it_unsat gf;
     try
       (* let env = assume env env.pending_assumes in
-      let env = { env with pending_assumes = [] } in *)
+         let env = { env with pending_assumes = [] } in *)
       let guards_to_assume =
         ME.fold (fun _g gf_guard_with_ex acc ->
             gf_guard_with_ex :: acc
@@ -1768,7 +1768,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     check_no_decision_in_env env;
     if true then
       (* TODO: fix regressions when we disable this option. *)
-(*     if Options.get_process_when_assuming() then *)
+      (*     if Options.get_process_when_assuming() then *)
       try
         if Options.get_tableaux_cdcl () then
           cdcl_assume false env [add_guard env fg,dep];

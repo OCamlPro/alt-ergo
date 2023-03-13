@@ -1835,7 +1835,7 @@ let rec add_atyped_decl errors (buffer:sbuffer) ?(indent=0) ?(tags=[]) d =
       | _ -> AFop (AOPnot, [aaform])
     in
     let goal_str =
-      match (gs : Typed.goal_sort) with
+      match (gs : Ty.goal_sort) with
       | Thm -> "check valid"
       | Sat -> "check sat"
       | AllSat l ->

@@ -694,8 +694,8 @@ module Main_Default : S = struct
     let res =
       List.fold_left
         (fun objectives (a, _, _) ->
-          match E.term_view a with
-          | {E.f = Sy.Op Sy.Optimize {order;is_max}; xs = [e]; _} ->
+           match E.term_view a with
+           | {E.f = Sy.Op Sy.Optimize {order;is_max}; xs = [e]; _} ->
              let r =
                try Uf.make uf e
                with Not_found ->

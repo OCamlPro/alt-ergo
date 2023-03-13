@@ -283,11 +283,11 @@ let main () =
   in
 
   (* let all_used_context = FE.init_all_used_context () in
-  if Options.get_timelimit_per_goal() then
-    FE.print_status FE.Preprocess 0;
-  let assertion_stack = Stack.create () in
-  let typing_loop state p =
-    if get_parse_only () then state else begin
+     if Options.get_timelimit_per_goal() then
+     FE.print_status FE.Preprocess 0;
+     let assertion_stack = Stack.create () in
+     let typing_loop state p =
+     if get_parse_only () then state else begin
       try
         let l, env = I.type_parsed state.env assertion_stack p in
         let used_names = I.get_env_logics state.env in
@@ -298,8 +298,8 @@ let main () =
         if e != Warning_as_error then
           Printer.print_err "%a" Errors.report e;
         exit 1
-    end
-  in *)
+     end
+     in *)
 
   let handle_stmt :
     FE.used_context -> State.t ->

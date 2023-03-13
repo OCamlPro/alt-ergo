@@ -263,8 +263,8 @@ let case_split env uf ~for_model ~to_optimize =
     | Some (n,r,hs) ->
       let n = Numbers.Q.from_int n in
       if for_model ||
-         Numbers.Q.compare
-           (Numbers.Q.mult n env.size_splits) (Options.get_max_split ()) <= 0  ||
+         Numbers.Q.compare (Numbers.Q.mult n env.size_splits)
+           (Options.get_max_split ()) <= 0  ||
          Numbers.Q.sign  (Options.get_max_split ()) < 0 then
         let r' = Sh.is_mine (Cons (hs, X.type_info r)) in
         Debug.case_split r r';
