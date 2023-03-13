@@ -27,11 +27,11 @@
 (******************************************************************************)
 
 (** Integers implementation. **)
-module Z : NumbersInterface.ZSig
+module Z : Numbers_interface.ZSig
 
 (** Rationals implementation. **)
 module Q : sig
-  include NumbersInterface.QSig with module Z = Z
+  include Numbers_interface.QSig with module Z = Z
 
   (* computing root and sqrt by default and "by excess". The given
      rational is supposed to be positive. The integer provided for

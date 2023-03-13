@@ -501,7 +501,7 @@ let update_status image label buttonclean env s steps =
       Printer.print_std "@{<C.F_Green>Valid@} (%2.4f) (%d)" time steps;
     if get_unsat_core () then begin
       Printer.print_fmt (Options.get_fmt_usc ()) "unsat-core:@ %a"
-        (Explanation.print_unsat_core ~tab:true) dep;
+        (Ex.print_unsat_core ~tab:true) dep;
       show_used_lemmas env dep
     end;
     image#set_stock `YES;
@@ -648,7 +648,7 @@ let run_replay env used_context =
        let cnf = Cnf.make_list dcl in
        ignore (List.fold_left
                  (FE.process_decl FE.print_status used_context consistent_dep)
-                 (empty_sat_inst env.insts, true, Explanation.empty)
+                 (empty_sat_inst env.insts, true, Ex.empty)
                  cnf)
     ) ast_pruned;
   Options.Time.unset_timeout ~is_gui:true
@@ -712,7 +712,7 @@ let run buttonrun buttonstop buttonclean inst_model timers_model
                          (FE.process_decl
                             (wrapper_update_status image label buttonclean env)
                             used_context consistent_dep)
-                         (empty_sat_inst inst_model, true, Explanation.empty)
+                         (empty_sat_inst inst_model, true, Ex.empty)
                          cnf)
                  ) ast_pruned;
 

@@ -9,7 +9,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module Sy = Symbols
 module Hs = Hstring
 module E = Expr
 
@@ -263,7 +262,7 @@ let float_of_rational prec exp mode x =
 let round_to_integer mode q =
   Q.from_z (round_big_int (mode_of_term mode) q)
 
-[@@ocaml.ppwarning "TODO: Change Symbols.Float to store FP numeral \
+[@@ocaml.ppwarning "TODO: Change Sy.Float to store FP numeral \
                     constants (eg, <24, -149> for single) instead of \
                     having terms"]
 let make_adequate_app s l ty =

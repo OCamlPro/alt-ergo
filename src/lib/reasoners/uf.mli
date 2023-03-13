@@ -39,15 +39,15 @@ val add : t -> Expr.t -> t * Expr.t list
 
 val mem : t -> Expr.t -> bool
 
-val find : t -> Expr.t -> r * Explanation.t
+val find : t -> Expr.t -> r * Ex.t
 
-val find_r : t -> r -> r * Explanation.t
+val find_r : t -> r -> r * Ex.t
 
 val union :
-  t -> r -> r -> Explanation.t ->
-  t * (r * (r * r * Explanation.t) list * r) list
+  t -> r -> r -> Ex.t ->
+  t * (r * (r * r * Ex.t) list * r) list
 
-val distinct : t -> r list -> Explanation.t -> t
+val distinct : t -> r list -> Ex.t -> t
 
 val are_equal : t -> Expr.t -> Expr.t -> added_terms:bool -> Th_util.answer
 val are_distinct : t -> Expr.t -> Expr.t -> Th_util.answer

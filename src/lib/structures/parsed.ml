@@ -261,7 +261,7 @@ type decl =
   | Rewriting of Loc.t * string * lexpr list
   | Goal of Loc.t * string * lexpr
   | Check_sat of Loc.t * string * lexpr
-  | Logic of Loc.t * Symbols.name_kind * (string * string) list * plogic_type
+  | Logic of Loc.t * Sy.name_kind * (string * string) list * plogic_type
   | Predicate_def of
       Loc.t * (string * string) *
       (Loc.t * string * ppure_type) list * lexpr

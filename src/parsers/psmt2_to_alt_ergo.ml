@@ -322,7 +322,7 @@ module Translate = struct
 
   let translate_decl_fun f params ret =
     let logic_type = mk_logic_type params (Some ret) in
-    mk_logic (pos f) Symbols.Other [(f.c,f.c)] logic_type
+    mk_logic (pos f) Sy.Other [(f.c,f.c)] logic_type
 
   let translate_fun_dec (_,sl,s) =
     List.map translate_sort sl, translate_sort s
@@ -453,13 +453,13 @@ module Translate = struct
       (* assert false; *)
       let logic_type = mk_logic_type [real_type] (Some int_type) in
       let to_int =
-        mk_logic dummy_pos Symbols.Other [("to_int","to_int")] logic_type in
+        mk_logic dummy_pos Sy.Other [("to_int","to_int")] logic_type in
       let logic_type = mk_logic_type [int_type] (Some real_type) in
       let to_real =
-        mk_logic dummy_pos Symbols.Other [("to_real","to_real")] logic_type in
+        mk_logic dummy_pos Sy.Other [("to_real","to_real")] logic_type in
       let logic_type = mk_logic_type [real_type] (Some bool_type) in
       let is_int =
-        mk_logic dummy_pos Symbols.Other [("is_int","is_int")] logic_type in
+        mk_logic dummy_pos Sy.Other [("is_int","is_int")] logic_type in
       [to_int;to_real;is_int]
     else []
 

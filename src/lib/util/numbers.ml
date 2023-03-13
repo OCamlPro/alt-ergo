@@ -28,17 +28,17 @@
 
 let select_QNumbers =
   match Config.numbers_lib with
-  | Zarith -> (module ZarithNumbers.Q : NumbersInterface.QSig)
-  | Nums -> (module NumsNumbers.Q : NumbersInterface.QSig)
+  | Zarith -> (module Zarith_numbers.Q : Numbers_interface.QSig)
+  | Nums -> (module Nums_numbers.Q : Numbers_interface.QSig)
 (* Choose the library that handle numbers set at configure with
    `./configure --numbers_lib="zarith"|"nums"` *)
 
-module MyQNumbers : NumbersInterface.QSig = (val select_QNumbers)
+module My_Q_numbers : Numbers_interface.QSig = (val select_QNumbers)
 
-module Z = MyQNumbers.Z
+module Z = My_Q_numbers.Z
 
 module Q = struct
-  include MyQNumbers
+  include My_Q_numbers
 
   let two = from_int 2
 
@@ -83,7 +83,7 @@ module Q = struct
     | None, _ | _ , None -> dd
     | Some d, Some e ->
       let cand = div (add d e) two in
-      if MyQNumbers.compare (power cand n) q <= 0 then Some cand else dd
+      if My_Q_numbers.compare (power cand n) q <= 0 then Some cand else dd
 
   let accurate_root_excess q n =
     let dd = unaccurate_root_default q n in
@@ -92,8 +92,7 @@ module Q = struct
     | None, _ | _ , None -> ee
     | Some d, Some e ->
       let cand = div (add d e) two in
-      if MyQNumbers.compare (power cand n) q >= 0 then Some cand else ee
-
+      if My_Q_numbers.compare (power cand n) q >= 0 then Some cand else ee
 
   let sqrt_excess q =
     match root_num q 2 with

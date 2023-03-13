@@ -14,8 +14,7 @@
     of expressions matching the P.key type (V).
 *)
 
-module P : Map.S with type key =
-                        Symbols.t * Ty.t list * Ty.t
+module P : Map.S with type key = Sy.t * Ty.t list * Ty.t
 
 module V : Set.S with type elt =
                         (Expr.t * (Shostak.Combine.r * string)) list *

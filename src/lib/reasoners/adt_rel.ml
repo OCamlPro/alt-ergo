@@ -15,12 +15,10 @@ module Th = Shostak.Adt
 type r = X.r
 type uf = Uf.t
 
-module Ex = Explanation
 module E = Expr
 module SE = E.Set
 module Hs = Hstring
 module HSS = Hs.Set
-module Sy = Symbols
 
 module MX = Shostak.MXH
 module LR = Uf.LX
@@ -30,7 +28,7 @@ module MHs = Hs.Map
 type t =
   {
     classes : E.Set.t list;
-    domains : (HSS.t * Explanation.t) MX.t;
+    domains : (HSS.t * Ex.t) MX.t;
     seen_destr : SE.t;
     seen_access : SE.t;
     seen_testers : HSS.t MX.t;

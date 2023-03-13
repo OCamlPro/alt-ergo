@@ -32,7 +32,7 @@ module SE = E.Set
 module SA =
   Set.Make
     (struct
-      type t = E.t * Explanation.t
+      type t = E.t * Ex.t
       let compare (s1,_) (s2,_) = E.compare s1 s2
     end)
 
@@ -51,7 +51,7 @@ let union_tpl (x1,y1) (x2,y2) =
   Options.exec_thread_yield ();
   SE.union x1 x2, SA.union y1 y2
 
-let one, _ = X.make (E.mk_term (Symbols.name "@bottom") [] Ty.Tint)
+let one, _ = X.make (E.mk_term (Sy.name "@bottom") [] Ty.Tint)
 let leaves r =
   match X.leaves r with [] -> [one] | l -> l
 
@@ -96,7 +96,7 @@ let print g =
       let satoms fmt =
         SA.iter
           (fun (a,e) ->
-             Format.fprintf fmt "%a %a" E.print a Explanation.print e)
+             Format.fprintf fmt "%a %a" E.print a Ex.print e)
       in
       let print_sterms_and_atoms fmt (st,sa) =
         match SE.is_empty st,SA.is_empty sa with

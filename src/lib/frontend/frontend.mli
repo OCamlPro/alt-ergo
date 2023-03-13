@@ -33,7 +33,7 @@ module type S = sig
   type used_context
 
   type status =
-    | Unsat of Commands.sat_tdecl * Explanation.t
+    | Unsat of Commands.sat_tdecl * Ex.t
     | Inconsistent of Commands.sat_tdecl
     | Sat of Commands.sat_tdecl * sat_env
     | Unknown of Commands.sat_tdecl * sat_env
@@ -43,10 +43,10 @@ module type S = sig
   val process_decl:
     (status -> int -> unit) ->
     used_context ->
-    (bool * Explanation.t) Stack.t ->
-    sat_env * bool * Explanation.t ->
+    (bool * Ex.t) Stack.t ->
+    sat_env * bool * Ex.t ->
     Commands.sat_tdecl ->
-    sat_env * bool * Explanation.t
+    sat_env * bool * Ex.t
 
   val print_status : status -> int -> unit
 

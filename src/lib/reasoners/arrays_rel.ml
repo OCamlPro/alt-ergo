@@ -26,13 +26,11 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module Sy = Symbols
 module E  = Expr
 module A  = Xliteral
 module L  = List
 
 module X = Shostak.Combine
-module Ex = Explanation
 
 module LR = Uf.LX
 

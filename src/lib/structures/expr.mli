@@ -28,7 +28,7 @@
 
 (** Data structures *)
 
-type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
+type binders = (Ty.t * int) Sy.Map.t (*int tag in globally unique *)
 
 type t
 
@@ -40,12 +40,12 @@ type decl_kind =
   | Dfunction of t
 
 type term_view = private {
-  f: Symbols.t;
+  f: Sy.t;
   xs: t list;
   ty: Ty.t;
   bind : bind_kind;
   tag: int;
-  vars : (Ty.t * int) Symbols.Map.t; (* vars to types and nb of occurences *)
+  vars : (Ty.t * int) Sy.Map.t; (* vars to types and nb of occurences *)
   vty : Ty.Svty.t;
   depth: int;
   nb_nodes : int;
@@ -74,7 +74,7 @@ and quantified = private {
 }
 
 and letin = private {
-  let_v: Symbols.t;
+  let_v: Sy.t;
   let_e : t;
   in_e : t;
   let_sko : t; (* fresh symb. with free vars *)
@@ -82,7 +82,7 @@ and letin = private {
 }
 
 and semantic_trigger =
-  | Interval of t * Symbols.bound * Symbols.bound
+  | Interval of t * Sy.bound * Sy.bound
   | MapsTo of Var.t * t
   | NotTheoryConst of t
   | IsTheoryConst of t
@@ -103,13 +103,13 @@ module Set : Set.S with type elt = t
 
 module Map : Map.S with type key = t
 
-type subst = t Symbols.Map.t * Ty.subst
+type subst = t Sy.Map.t * Ty.subst
 
 type lit_view = private
   | Eq of t * t
   | Eql of t list
   | Distinct of t list
-  | Builtin of bool * Symbols.builtin * t list
+  | Builtin of bool * Sy.builtin * t list
   | Pred of t * bool
 
 type form_view = private
@@ -150,7 +150,7 @@ val compare_let : letin -> letin -> int
 (** Some auxiliary functions *)
 
 val mk_binders : Set.t -> binders
-val free_vars : t -> (Ty.t * int) Symbols.Map.t -> (Ty.t * int) Symbols.Map.t
+val free_vars : t -> (Ty.t * int) Sy.Map.t -> (Ty.t * int) Sy.Map.t
 val free_type_vars : t -> Ty.Svty.t
 val is_ground : t -> bool
 val id : t -> int
@@ -163,7 +163,7 @@ val is_fresh_skolem : t -> bool
 val is_int : t -> bool
 val is_real : t -> bool
 val type_info : t -> Ty.t
-val symbol_info : t -> Symbols.t
+val symbol_info : t -> Sy.t
 
 (** Labeling and models *)
 
@@ -176,7 +176,7 @@ val print_tagged_classes : Format.formatter -> Set.t list -> unit
 
 (** smart constructors for terms *)
 
-val mk_term : Symbols.t -> t list -> Ty.t -> t
+val mk_term : Sy.t -> t list -> Ty.t -> t
 val vrai : t
 val faux : t
 val void : t
@@ -190,7 +190,7 @@ val pred : t -> t
 
 val mk_eq : iff:bool -> t -> t -> t
 val mk_distinct : iff:bool -> t list -> t
-val mk_builtin : is_pos:bool -> Symbols.builtin -> t list -> t
+val mk_builtin : is_pos:bool -> Sy.builtin -> t list -> t
 
 (** simple smart constructors for formulas *)
 
@@ -273,7 +273,7 @@ val mk_exists :
   decl_kind:decl_kind ->
   t
 
-val mk_let : Symbols.t -> t -> t -> int -> t
+val mk_let : Sy.t -> t -> t -> int -> t
 
 val mk_match : t -> (Typed.pattern * t) list -> t
 
@@ -283,7 +283,7 @@ val elim_let : recursive:bool -> letin -> t
 
 val elim_iff : t -> t -> int -> with_conj:bool -> t
 
-val concat_chainable: Symbols.t -> Ty.t -> t -> t list -> t list
+val concat_chainable: Sy.t -> Ty.t -> t -> t list -> t list
 
 (*val purify_literal : t -> t*)
 val purify_form : t -> t

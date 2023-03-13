@@ -29,23 +29,23 @@
 module type S = sig
   type t
   type tbox
-  type instances = (Expr.gformula * Explanation.t) list
+  type instances = (Expr.gformula * Ex.t) list
 
   val empty : t
   val add_terms : t -> Expr.Set.t -> Expr.gformula -> t
-  val add_lemma : t -> Expr.gformula -> Explanation.t -> t
+  val add_lemma : t -> Expr.gformula -> Ex.t -> t
   val add_predicate :
     t ->
     guard:Expr.t ->
     name:string ->
     Expr.gformula ->
-    Explanation.t ->
+    Ex.t ->
     t
 
   (* the first returned expr is the guard (incremental mode),
      the second one is the defn of the given predicate *)
   val ground_pred_defn:
-    Expr.t -> t -> (Expr.t * Expr.t * Explanation.t) option
+    Expr.t -> t -> (Expr.t * Expr.t * Ex.t) option
 
   val pop : t -> guard:Expr.t -> t
 
@@ -68,7 +68,7 @@ module type S = sig
   val register_max_term_depth : t -> int -> t
 
   val matching_terms_info :
-    t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
+    t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Sy.Map.t
 
   val reinit_em_cache : unit -> unit
   (** Reinitializes the E-matching functor instance's inner cache *)

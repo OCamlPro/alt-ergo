@@ -42,7 +42,7 @@ val connect : env -> unit
 
 val clear_used_lemmas_tags : env -> unit
 
-val show_used_lemmas : env -> Explanation.t -> unit
+val show_used_lemmas : env -> Ex.t -> unit
 
 val prune_unused : env -> unit
 

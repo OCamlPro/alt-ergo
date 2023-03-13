@@ -30,7 +30,7 @@ module type S = sig
   type t
 
   exception Sat of t
-  exception Unsat of Explanation.t
+  exception Unsat of Ex.t
   exception I_dont_know of t
 
   (** the empty sat-solver context *)
@@ -51,19 +51,19 @@ module type S = sig
 
   (** [assume env f] assume a new formula [f] in [env]. Raises Unsat if
       [f] is unsatisfiable in [env] *)
-  val assume : t -> Expr.gformula -> Explanation.t -> t
+  val assume : t -> Expr.gformula -> Ex.t -> t
 
   (** [assume env f exp] assume a new formula [f] with the explanation [exp]
       in the theories environment of [env]. *)
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Expr.th_elt -> Ex.t -> t
 
   (** [pred_def env f] assume a new predicate definition [f] in [env]. *)
-  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> t
+  val pred_def : t -> Expr.t -> string -> Ex.t -> Loc.t -> t
 
   (** [unsat env f size] checks the unsatisfiability of [f] in
       [env]. Raises I_dont_know when the proof tree's height reaches
       [size]. Raises Sat if [f] is satisfiable in [env] *)
-  val unsat : t -> Expr.gformula -> Explanation.t
+  val unsat : t -> Expr.gformula -> Ex.t
 
   (** [print_model header fmt env] print propositional model and theory model
       on the corresponding fmt. *)

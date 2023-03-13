@@ -40,8 +40,6 @@ module Container : Inequalities.Container_SIG = struct
 
     module MX = Shostak.MXH
 
-    module Ex = Explanation
-
     let print_couple fmt (re, eps) =
       fprintf fmt "(%s , %s)" (Q.to_string re) (Q.to_string eps)
 
@@ -119,8 +117,8 @@ module Container : Inequalities.Container_SIG = struct
               Q.compare eps Q.zero = 0 then expl (* XXX eps ? re ? *)
            else
              let { expl = ex ;  _ } = List.assoc ld constrs in
-             Explanation.union expl ex
-        )Explanation.empty vals
+             Ex.union expl ex
+        )Ex.empty vals
 
     let cpt = ref 0
 

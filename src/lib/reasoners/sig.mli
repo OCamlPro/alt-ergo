@@ -27,7 +27,7 @@
 (******************************************************************************)
 
 type 'a ac =
-  {h: Symbols.t ; t: Ty.t ; l: ('a * int) list; distribute: bool}
+  {h: Sy.t ; t: Ty.t ; l: ('a * int) list; distribute: bool}
 
 type 'a solve_pb = { sbt : ('a * 'a) list; eqs : ('a * 'a) list }
 
@@ -43,7 +43,7 @@ module type SHOSTAK = sig
   val name : string
 
   (** return true if the symbol and the type are owned by the theory*)
-  val is_mine_symb : Symbols.t -> Ty.t -> bool
+  val is_mine_symb : Sy.t -> Ty.t -> bool
 
   (** Give a representant of a term of the theory*)
   val make : Expr.t -> r * Expr.t list
@@ -73,7 +73,7 @@ module type SHOSTAK = sig
 
   val print : Format.formatter -> t -> unit
 
-  val fully_interpreted : Symbols.t -> bool
+  val fully_interpreted : Sy.t -> bool
 
   val abstract_selectors : t -> (r * r) list -> r * (r * r) list
 
@@ -128,7 +128,7 @@ module type X = sig
 
   val color : (r ac) -> r
 
-  val fully_interpreted : Symbols.t -> Ty.t -> bool
+  val fully_interpreted : Sy.t -> Ty.t -> bool
 
   val is_a_leaf : r -> bool
 
@@ -139,7 +139,7 @@ module type X = sig
   val top : unit -> r
   val bot : unit -> r
 
-  val is_solvable_theory_symbol : Symbols.t -> Ty.t -> bool
+  val is_solvable_theory_symbol : Sy.t -> Ty.t -> bool
 
   (* the returned bool is true when the returned term in a constant of the
      theory. Otherwise, the term contains aliens that should be assigned

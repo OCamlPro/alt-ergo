@@ -20,7 +20,7 @@
 val output_concrete_model :
   Format.formatter ->
   Expr.Set.t ->
-  functions:ModelMap.t ->
-  constants:ModelMap.t ->
-  arrays:ModelMap.t ->
+  functions:Model_map.t ->
+  constants:Model_map.t ->
+  arrays:Model_map.t ->
   unit

@@ -33,7 +33,7 @@ val empty_env : env
 (** The empty/initial environment *)
 
 val type_expr :
-  env -> (Symbols.t * Ty.t) list -> Parsed.lexpr -> int Typed.atterm
+  env -> (Sy.t * Ty.t) list -> Parsed.lexpr -> int Typed.atterm
 (** Typecheck an input expression (i.e. term (or formula ?)), given
     a local environment and a list of local types used to extend the
     initial environment.

@@ -28,7 +28,7 @@
 
 (*** Combination module of Relations ***)
 
-module Rel1 : Sig_rel.RELATION = IntervalCalculus
+module Rel1 : Sig_rel.RELATION = Arith_rel
 
 module Rel2 : Sig_rel.RELATION = Records_rel
 

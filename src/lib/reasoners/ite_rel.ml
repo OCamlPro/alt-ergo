@@ -13,8 +13,6 @@ open Options
 
 module E = Expr
 
-module Ex = Explanation
-
 module EX2 = struct
   type t = E.t * E.t
   let compare (s1, s2) (t1, t2) =
@@ -52,10 +50,10 @@ let empty _ =
   }
 
 let is_ite =
-  let ite = Symbols.Op Symbols.Tite in
+  let ite = Sy.Op Sy.Tite in
   fun t ->
     match E.term_view t with
-    | { E.f ; xs = [p;t1;t2]; _ } when Symbols.equal f ite -> Some (p, t1, t2)
+    | { E.f ; xs = [p;t1;t2]; _ } when Sy.equal f ite -> Some (p, t1, t2)
     | _ -> None
 
 let add_to_guarded p s t mp =

@@ -13,13 +13,13 @@ module Make (Th : Theory.S) : sig
 
   type t
 
-  exception Bottom of Explanation.t * Expr.Set.t list * t
+  exception Bottom of Ex.t * Expr.Set.t list * t
 
   val empty : unit -> t
 
-  val is_true : t -> Expr.t -> (Explanation.t Lazy.t * int) option
+  val is_true : t -> Expr.t -> (Ex.t Lazy.t * int) option
 
-  val assume : bool -> t -> (Expr.gformula * Explanation.t) list -> t
+  val assume : bool -> t -> (Expr.gformula * Ex.t) list -> t
 
   val decide : t -> Expr.t -> int -> t
 

@@ -162,21 +162,21 @@ module Shostak (X : ALIEN) = struct
     let rec make_rec t ctx =
       let { E.f; xs; ty; _ } = E.term_view t in
       match f, ty with
-      | Symbols.Op (Symbols.Record), Ty.Trecord { Ty.lbs; _ } ->
+      | Sy.Op (Sy.Record), Ty.Trecord { Ty.lbs; _ } ->
         assert (List.length xs = List.length lbs);
         let l, ctx =
           List.fold_right2
             (fun x (lb, _) (l, ctx) ->
                let r, ctx = make_rec x ctx in
                let tyr = type_info r in
-               let dlb = E.mk_term (Symbols.Op (Symbols.Access lb)) [t] tyr in
+               let dlb = E.mk_term (Sy.Op (Sy.Access lb)) [t] tyr in
                let c = E.mk_eq ~iff:false dlb x in
                (lb, r)::l, c::ctx
             )
             xs lbs ([], ctx)
         in
         Record (l, ty), ctx
-      | Symbols.Op (Symbols.Access a), _ ->
+      | Sy.Op (Sy.Access a), _ ->
         begin
           match xs with
           | [x] ->
@@ -235,7 +235,7 @@ module Shostak (X : ALIEN) = struct
   let subst p v r = is_mine (subst_rec p v r)
 
   let is_mine_symb_aux sy = match sy with
-    | Symbols.Op (Symbols.Record | Symbols.Access _) -> true
+    | Sy.Op (Sy.Record | Sy.Access _) -> true
     | _ -> false
 
   let is_mine_symb sy _ty = is_mine_symb_aux sy
@@ -332,7 +332,7 @@ module Shostak (X : ALIEN) = struct
                      | Some t, _ -> t)
                   lbs
               in
-              Some (E.mk_term (Symbols.Op Symbols.Record) lbs ty), false
+              Some (E.mk_term (Sy.Op Sy.Record) lbs ty), false
             with Not_found -> None, false
           end
         | Access (a, r, ty) ->
@@ -340,7 +340,7 @@ module Shostak (X : ALIEN) = struct
             match X.term_extract (is_mine r) with
             | None, _ -> None, false
             | Some t, _ ->
-              Some (E.mk_term (Symbols.Op (Symbols.Access a)) [t] ty), false
+              Some (E.mk_term (Sy.Op (Sy.Access a)) [t] ty), false
           end
         | Other (r, _) -> X.term_extract r
       end
@@ -409,7 +409,7 @@ module Shostak (X : ALIEN) = struct
       match ty with
       | Ty.Trecord { Ty.lbs; _ } ->
         let rev_lbs = List.rev_map (fun (_, ty) -> Expr.fresh_name ty) lbs in
-        let s = E.mk_term (Symbols.Op Symbols.Record) (List.rev rev_lbs) ty in
+        let s = E.mk_term (Sy.Op Sy.Record) (List.rev rev_lbs) ty in
         Some (s, false) (* false <-> not a case-split *)
       | _ -> assert false
 

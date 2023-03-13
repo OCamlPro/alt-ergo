@@ -31,7 +31,6 @@ open Options
 module E = Expr
 module ME = Expr.Map
 module SE = Expr.Set
-module Ex = Explanation
 
 module type S = sig
   type t
@@ -50,7 +49,7 @@ module type S = sig
     t
 
   val ground_pred_defn:
-    Expr.t -> t -> (Expr.t * Expr.t * Explanation.t) option
+    Expr.t -> t -> (Expr.t * Expr.t * Ex.t) option
 
   val pop : t -> guard:Expr.t -> t
 
@@ -73,7 +72,7 @@ module type S = sig
   val register_max_term_depth : t -> int -> t
 
   val matching_terms_info :
-    t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
+    t -> Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Sy.Map.t
 
   val reinit_em_cache : unit -> unit
 
@@ -106,7 +105,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
        bool = true <-> pred is ground *)
     lemmas : (guard * int * Ex.t) ME.t;
     predicates : (guard * int * Ex.t) ME.t;
-    ground_preds : (guard * E.t * Explanation.t) ME.t; (* key <-> f *)
+    ground_preds : (guard * E.t * Ex.t) ME.t; (* key <-> f *)
     matching : EM.t;
   }
 
@@ -170,7 +169,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
                 matching = EM.max_term_depth env.matching (E.depth f) } in
     match E.form_view f with
     | E.Iff(f1, f2) ->
-      let p = E.mk_term (Symbols.name name) [] Ty.Tbool in
+      let p = E.mk_term (Sy.name name) [] Ty.Tbool in
       let np = E.neg p in
       let defn =
         if E.equal f1 p then f2
@@ -180,7 +179,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
       add_ground_pred env ~guard p np defn ex
 
     | E.Literal _ ->
-      let p = E.mk_term (Symbols.name name) [] Ty.Tbool in
+      let p = E.mk_term (Sy.name name) [] Ty.Tbool in
       let np = E.neg p in
       let defn =
         if E.equal p f then E.vrai

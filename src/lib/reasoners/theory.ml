@@ -27,15 +27,10 @@
 (******************************************************************************)
 
 module X = Shostak.Combine
-module Ex = Explanation
 module E = Expr
 module A = Xliteral
 module LR = Uf.LX
 module SE = Expr.Set
-
-module Sy = Symbols
-
-
 module CC_X = Ccx.Main
 
 module type S = sig
@@ -48,7 +43,7 @@ module type S = sig
      decreasing order with respect to (dlvl, plvl) *)
   val assume :
     ?ordered:bool ->
-    (E.t * Explanation.t * int * int) list -> t ->
+    (E.t * Ex.t * int * int) list -> t ->
     t * Expr.Set.t * int
 
   val query : E.t -> t -> Th_util.answer
@@ -60,10 +55,10 @@ module type S = sig
   val add_term : t -> Expr.t -> add_in_cs:bool -> t
   val compute_concrete_model : t -> t
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Expr.th_elt -> Ex.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
-    Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
+    Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Sy.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) ->
     int -> int -> t * Sig_rel.instances
 

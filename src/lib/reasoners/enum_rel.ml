@@ -35,8 +35,6 @@ type 'a abstract = 'a Enum.abstract = Cons of Hs.t * Ty.t |  Alien of 'a
 module X = Shostak.Combine
 module Sh = Shostak.Enum
 
-module Ex = Explanation
-
 module MX = Shostak.MXH
 module HSS = Set.Make (struct type t=Hs.t let compare = Hs.compare end)
 

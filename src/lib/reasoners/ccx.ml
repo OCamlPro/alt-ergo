@@ -27,12 +27,9 @@
 (******************************************************************************)
 
 module X = Shostak.Combine
-module Ex = Explanation
 module E = Expr
 module A = Xliteral
 module SE = Expr.Set
-
-module Sy = Symbols
 
 module type S = sig
 
@@ -49,20 +46,20 @@ module type S = sig
     t ->
     r Sig_rel.facts -> (* acc *)
     Expr.t ->
-    Explanation.t ->
+    Ex.t ->
     t * r Sig_rel.facts
 
   val add :
     t ->
     r Sig_rel.facts -> (* acc *)
     E.t ->
-    Explanation.t -> t * r Sig_rel.facts
+    Ex.t -> t * r Sig_rel.facts
 
   val assume_literals :
     t ->
-    (r Sig_rel.literal * Explanation.t * Th_util.lit_origin) list ->
+    (r Sig_rel.literal * Ex.t * Th_util.lit_origin) list ->
     r Sig_rel.facts ->
-    t * (r Sig_rel.literal * Explanation.t * Th_util.lit_origin) list
+    t * (r Sig_rel.literal * Ex.t * Th_util.lit_origin) list
 
   val case_split :
     t -> for_model:bool ->
@@ -77,10 +74,10 @@ module type S = sig
 
   val get_union_find : t -> Uf.t
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Expr.th_elt -> Ex.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
-    Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
+    Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Sy.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) -> t * Sig_rel.instances
 
   val output_concrete_model :
@@ -265,7 +262,7 @@ module Main : S = struct
     if not (E.equal t1 t2) then
       let { E.f = f1; xs = xs1; ty = ty1; _ } = E.term_view t1 in
       let { E.f = f2; xs = xs2; ty = ty2; _ } = E.term_view t2 in
-      if Symbols.equal f1 f2 && Ty.equal ty1 ty2 then
+      if Sy.equal f1 f2 && Ty.equal ty1 ty2 then
         try
           let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
           let a = E.mk_eq ~iff:false t1 t2 in

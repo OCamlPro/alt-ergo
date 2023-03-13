@@ -27,7 +27,6 @@
 (******************************************************************************)
 
 module HS = Hstring
-module Sy = Symbols
 
 module type S = sig
 

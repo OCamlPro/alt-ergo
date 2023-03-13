@@ -29,14 +29,13 @@
 module E = Expr
 module SE = E.Set
 module ME = E.Map
-module Ex = Explanation
 
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module Inst = Instances.Make(Th)
   module CDCL = Satml_frontend_hybrid.Make(Th)
 
   exception No_suitable_decision
-  exception Propagate of E.gformula * Explanation.t
+  exception Propagate of E.gformula * Ex.t
 
   let is_fact_in_CDCL cdcl f =
     match CDCL.is_true cdcl f with
@@ -294,7 +293,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         end;
         if Options.get_verbose () then
           print_dbg ~header:false
-            "with explanations : %a" Explanation.print dep
+            "with explanations : %a" Ex.print dep
 
     let unsat () =
       if Options.get_debug_sat () then
@@ -1908,12 +1907,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Steps.reinit_steps ();
     clear_instances_cache ();
     Th.reinit_cpt ();
-    Symbols.reinit_fresh_sy_cpt ();
-    Symbols.clear_labels ();
+    Sy.reinit_fresh_sy_cpt ();
+    Sy.clear_labels ();
     Var.reinit_cnt ();
     Satml_types.Flat_Formula.reinit_cpt ();
     Ty.reinit_decls ();
-    IntervalCalculus.reinit_cache ();
+    Arith_rel.reinit_cache ();
     Inst.reinit_em_cache ();
     Expr.reinit_cache ();
     Hstring.reinit_cache ();
