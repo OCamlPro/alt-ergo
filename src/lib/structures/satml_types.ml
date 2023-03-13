@@ -976,7 +976,7 @@ end
 
 module Proxy_formula = struct
   let get_proxy_of f proxies =
-    try Some (ME.find f proxies)
+    try Some (Expr.Map.find f proxies)
     with Not_found -> None
 
   let atom_of_lit hcons lit is_neg new_vars =
@@ -998,8 +998,8 @@ module Proxy_formula = struct
         let a, new_vars =
           atom_of_lit hcons (mk_new_proxy (E.hash f)) false new_vars in
         let na = Atom.neg a in
-        let proxies = ME.add f a proxies in
-        let proxies = ME.add nf na proxies in
+        let proxies = Expr.Map.add f a proxies in
+        let proxies = Expr.Map.add nf na proxies in
         let inv_proxies =  Atom.Map.add a f inv_proxies in
         let inv_proxies =  Atom.Map.add na nf inv_proxies in
         match E.form_view f with
