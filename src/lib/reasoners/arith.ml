@@ -113,12 +113,12 @@ module Shostak
     match sy with
     | Int _ | Real _ -> true
     | Op (Plus | Minus | Mult | Div | Modulo
-         | Float | Fixed | Abs_int | Abs_real | Sqrt_real
+         | Float _ | Fixed | Abs_int | Abs_real | Sqrt_real
          | Sqrt_real_default | Sqrt_real_excess
          | Real_of_int | Int_floor | Int_ceil
          | Max_int | Max_real | Min_int | Min_real
-         | Pow | Integer_log2
-         | Integer_round) -> true
+         | Pow | Integer_log2 | Integer_round
+         | Sy.BV2Nat) -> true
     | _ -> false
 
   let empty_polynome ty = P.create [] Q.zero ty
@@ -293,7 +293,7 @@ module Shostak
         P.add p (P.mult_const coef p3), ctx
 
     (*** <begin>: partial handling of some arith/FPA operators **)
-    | Sy.Op Sy.Float, [prec; exp; mode; x] ->
+    | Sy.Op Sy.Float (prec, exp), [mode; x] ->
       let aux_func e =
         let res, _, _ = Fpa_rounding.float_of_rational prec exp mode e in
         res
@@ -349,6 +349,34 @@ module Shostak
       assert false
 
     (*** <end>: partial handling of some arith/FPA operators **)
+
+    | Sy.Op Sy.BV2Nat, [x] ->
+      begin match E.term_view x with
+        | { ty = Ty.Tbitv m; _ } ->
+          let two = E.int "2" in
+          let rec aux acc ctx cnt =
+            if cnt = m
+            then acc, ctx
+            else
+              let tg =
+                E.mk_term (Sy.Op (Sy.BVGet cnt)) [x] Ty.Tint
+              in
+              let eq =
+                E.mk_term (Sy.Op Sy.Mult) [
+                  tg;
+                  E.mk_term
+                    (Sy.Op Sy.Pow) [two; E.int (Int.to_string cnt)] Ty.Tint
+                ] Ty.Tint
+              in
+              aux (eq :: acc) (ctx) (cnt + 1)
+          in
+          let lt, ctx' = aux [] [] 0 in
+          let t' = E.mk_term (Sy.Op Sy.Plus) lt Ty.Tint in
+          let t, tl = mke coef p t' (ctx' @ ctx) in
+          t, tl
+
+        | _ -> assert false
+      end
 
     | _ ->
       let a, ctx' = X.make t in

@@ -440,6 +440,9 @@ val set_tighten_vars : bool -> unit
 (** Set [use_fpa] accessible with {!val:get_use_fpa} *)
 val set_use_fpa : bool -> unit
 
+(** Set [use_bv] accessible with {!val:get_use_bv} *)
+val set_use_bv : bool -> unit
+
 (** Set [session_file] accessible with {!val:get_session_file} *)
 val set_session_file : string -> unit
 
@@ -978,6 +981,10 @@ val get_tighten_vars : unit -> bool
 
 (** [true] if support for floating-point arithmetic is enabled. *)
 val get_use_fpa : unit -> bool
+(** Default to [false] *)
+
+(** [true] if support for floating-point arithmetic is enabled. *)
+val get_use_bv : unit -> bool
 (** Default to [false] *)
 
 (** Possible values are

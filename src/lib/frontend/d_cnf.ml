@@ -1,3 +1,13 @@
+(******************************************************************************)
+(*                                                                            *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                     *)
+(*     Copyright (C) 2018-2018 --- OCamlPro SAS                               *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the license indicated      *)
+(*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
+(*     present, please contact us to clarify licensing.                       *)
+(*                                                                            *)
+(******************************************************************************)
 
 open Options
 open D_loop
@@ -747,7 +757,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             let ty = dty_to_ty term_ty in
             let sy = Cache.find_sy (DE.Term.Const.hash tcst) in
             let l = List.map (fun t -> aux_mk_expr t) args in
-            Fpa_rounding.make_adequate_app sy l ty
+            Cnf_utils.make_adequate_app sy l ty
 
           | B.And, h :: (_ :: _ as t) ->
             List.fold_left (

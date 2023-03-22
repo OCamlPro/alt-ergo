@@ -212,34 +212,17 @@ let mode_of_term t =
       assert false
     end
 
-let int_of_term t =
-  match E.term_view t with
-  | { E.f = Sy.Int n; _ } ->
-    let n = Hstring.view n in
-    let n =
-      try int_of_string n
-      with _ ->
-        Printer.print_err
-          "error when trying to convert %s to an int" n;
-        assert false
-    in
-    n (* ! may be negative or null *)
-  | _ ->
-    Printer.print_err
-      "The given term %a is not an integer" E.print t;
-    assert false
-
 module MQ =
   Map.Make (struct
-    type t = E.t * E.t * E.t * Q.t
+    type t = int * int * E.t * Q.t
     let compare (prec1, exp1, mode1, x1) (prec2, exp2, mode2, x2) =
       let c = Q.compare x1 x2 in
       if c <> 0 then c
       else
-        let c = E.compare prec1 prec2 in
+        let c = prec1 - prec2 in
         if c <> 0 then c
         else
-          let c = E.compare exp1 exp2 in
+          let c = exp1 - exp2 in
           if c <> 0 then c
           else E.compare mode1 mode2
   end)
@@ -253,8 +236,6 @@ let float_of_rational prec exp mode x =
   try MQ.find input !cache
   with Not_found ->
     let mode = mode_of_term mode in
-    let prec = int_of_term prec in
-    let exp  = int_of_term exp in
     let m, e = to_mantissa_exp prec exp mode x in
     let res = mult_x_by_2_pow_n (Q.from_z m) e in
     cache := MQ.add input (res, m, e) !cache;
@@ -262,72 +243,6 @@ let float_of_rational prec exp mode x =
 
 let round_to_integer mode q =
   Q.from_z (round_big_int (mode_of_term mode) q)
-
-[@@ocaml.ppwarning "TODO: Change Symbols.Float to store FP numeral \
-                    constants (eg, <24, -149> for single) instead of \
-                    having terms"]
-let make_adequate_app s l ty =
-  match s with
-  | Sy.Name (hs, Sy.Other) when Options.get_use_fpa() ->
-    let s, l  =
-      match Hstring.view hs, l with
-      | "float", [_;_;_;_] -> Sy.Op Sy.Float, l
-      | "float32", [_;_;] -> Sy.Op Sy.Float,(E.int "24")::(E.int "149")::l
-      | "float32d", [_] ->
-        Sy.Op Sy.Float,
-        (E.int "24")::
-        (E.int "149")::
-        _NearestTiesToEven__rounding_mode :: l
-
-      | "float64", [_;_;] -> Sy.Op Sy.Float,(E.int "53")::(E.int "1074")::l
-      | "float64d", [_] ->
-        Sy.Op Sy.Float,
-        (E.int "53")::
-        (E.int "1074")::
-        _NearestTiesToEven__rounding_mode :: l
-
-      | "integer_round", [_;_] -> Sy.Op Sy.Integer_round, l
-
-      | "fixed", [_;_;_;_] -> Sy.Op Sy.Fixed, l
-      | "sqrt_real", [_] -> Sy.Op Sy.Sqrt_real, l
-      | "sqrt_real_default", [_] -> Sy.Op Sy.Sqrt_real_default, l
-      | "sqrt_real_excess", [_] -> Sy.Op Sy.Sqrt_real_excess, l
-      | "abs_int", [_] ->  Sy.Op Sy.Abs_int, l
-      | "abs_real", [_] ->  Sy.Op Sy.Abs_real, l
-      | "real_of_int", [_] -> Sy.Op Sy.Real_of_int, l
-      | "int_floor", [_] -> Sy.Op Sy.Int_floor, l
-      | "int_ceil", [_] -> Sy.Op Sy.Int_ceil, l
-      | "max_real", [_;_] -> Sy.Op Sy.Max_real, l
-      | "max_int", [_;_] -> Sy.Op Sy.Max_int, l
-      | "min_real", [_;_] -> Sy.Op Sy.Min_real, l
-      | "min_int", [_;_] -> Sy.Op Sy.Min_int, l
-      | "integer_log2", [_] -> Sy.Op Sy.Integer_log2, l
-
-      (* should not happend thanks to well typedness *)
-      | ("float"
-        | "float32"
-        | "float32d"
-        | "float64"
-        | "float64d"
-        | "integer_round"
-        | "fixed"
-        | "sqrt_real"
-        | "abs_int"
-        | "abs_real"
-        | "real_of_int"
-        | "int_floor"
-        | "int_ceil"
-        | "max_real"
-        | "max_int"
-        | "min_real"
-        | "min_int"
-        | "integer_log2"
-        | "power_of"), _ ->
-        assert false
-      | _ -> s, l
-    in
-    E.mk_term s l ty
-  | _ -> E.mk_term s l ty
 
 let empty_cache () =
   cache := MQ.empty

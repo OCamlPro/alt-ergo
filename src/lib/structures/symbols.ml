@@ -27,20 +27,30 @@
 (******************************************************************************)
 
 type builtin =
-    LE | LT (* arithmetic *)
+  | LE | LT (* arithmetic *)
   | IsConstr of Hstring.t (* ADT tester *)
 
 type operator =
-    Plus | Minus | Mult | Div | Modulo
-  | Concat | Extract | Get | Set | Fixed | Float
-  | Reach | Access of Hstring.t | Record
-  | Sqrt_real | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
-  | Sqrt_real_default | Sqrt_real_excess
-  | Min_real | Min_int | Max_real | Max_int | Integer_log2
-  | Pow | Integer_round
+  | Tite
+  (* Arith *)
+  | Plus | Minus | Mult | Div | Modulo | Pow
+  | Reach
+  (* ADTs *)
+  | Access of Hstring.t | Record
   | Constr of Hstring.t (* enums, adts *)
   | Destruct of Hstring.t * bool
-  | Tite
+  (* Arrays *)
+  | Get | Set
+  (* BV *)
+  | Concat | Extract | BVGet of int
+  | BV2Nat | Nat2BV of int
+  (* FP *)
+  | Float of int * int (* precision|significant * exponential *)
+  | Integer_round | Fixed
+  | Sqrt_real | Sqrt_real_default | Sqrt_real_excess
+  | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
+  | Max_real | Max_int | Min_real | Min_int | Integer_log2
+
 
 type lit =
   (* literals *)
@@ -123,13 +133,17 @@ let compare_operators op1 op2 =
       | Destruct (h1, b1), Destruct(h2, b2) ->
         let c = Stdlib.compare b1 b2 in
         if c <> 0 then c else Hstring.compare h1 h2
+      | BVGet i1, BVGet i2 ->
+        Int.compare i1 i2
       | _ , (Plus | Minus | Mult | Div | Modulo
-            | Concat | Extract | Get | Set | Fixed | Float | Reach
+            | Concat | Extract | BVGet _
+            | Get | Set | Fixed | Float _ | Reach
             | Access _ | Record | Sqrt_real | Abs_int | Abs_real
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
             | Integer_log2 | Pow | Integer_round
-            | Constr _ | Destruct _ | Tite) -> assert false
+            | Constr _ | Destruct _ | Tite
+            | BV2Nat | Nat2BV _) -> assert false
     )
 
 let compare_builtin b1 b2 =
@@ -277,7 +291,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op Record -> "@Record"
   | Op Get -> "get"
   | Op Set -> "set"
-  | Op Float -> "float"
+  | Op Float (prec, exp)-> Format.sprintf "float %d %d" prec exp
   | Op Fixed -> "fixed"
   | Op Abs_int -> "abs_int"
   | Op Abs_real -> "abs_real"
@@ -298,6 +312,9 @@ let to_string ?(show_vars=true) x = match x with
   | Op Extract -> "^"
   | Op Tite -> "ite"
   | Op Reach -> assert false
+  | Op (BVGet n)-> Format.sprintf "bvget[%d]" n
+  | Op BV2Nat -> "bv2nat"
+  | Op (Nat2BV m) -> Format.sprintf "nat2bv[%d]" m
   | True -> "true"
   | False -> "false"
   | Void -> "void"

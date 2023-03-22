@@ -466,6 +466,7 @@ let no_theory = ref false
 let restricted = ref false
 let tighten_vars = ref false
 let use_fpa = ref false
+let use_bv = ref false
 
 let set_disable_adts b = disable_adts := b
 let set_inequalities_plugin b = inequalities_plugin := b
@@ -478,6 +479,7 @@ let set_no_theory b = no_theory := b
 let set_restricted b = restricted := b
 let set_tighten_vars b = tighten_vars := b
 let set_use_fpa b = use_fpa := b
+let set_use_bv b = use_bv := b
 
 let get_disable_adts () = !disable_adts
 let get_inequalities_plugin () = !inequalities_plugin
@@ -490,6 +492,7 @@ let get_no_theory () = !no_theory
 let get_restricted () = !restricted
 let get_tighten_vars () = !tighten_vars
 let get_use_fpa () = !use_fpa
+let get_use_bv () = !use_bv
 
 (** Other options *)
 

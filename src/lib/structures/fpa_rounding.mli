@@ -60,13 +60,11 @@ val integer_log_2 : Numbers.Q.t -> int
     exponent. i.e. if [res, m, e = float_of_rational prec exp mode x],
     then [res = m * 2^e] **)
 val float_of_rational :
-  Expr.t -> Expr.t -> Expr.t -> Numbers.Q.t -> Numbers.Q.t * Numbers.Z.t * int
+  int -> int -> Expr.t -> Numbers.Q.t -> Numbers.Q.t * Numbers.Z.t * int
 
 (** [round_to_integer mode x] rounds the rational [x] to an integer
     depending on the rounding mode [mode] *)
 val round_to_integer:  Expr.t -> Numbers.Q.t -> Numbers.Q.t
-
-val make_adequate_app: Symbols.t -> Expr.t list -> Ty.t -> Expr.t
 
 (** Empties the module's inner cache *)
 val empty_cache : unit -> unit

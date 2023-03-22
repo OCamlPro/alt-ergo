@@ -259,6 +259,7 @@ type options = {
   restricted : bool option;
   tighten_vars : bool option;
   use_fpa : bool option;
+  use_bv : bool option;
   timers : bool option;
 
   file : string option;
@@ -365,6 +366,7 @@ let init_options () = {
   restricted = None;
   tighten_vars = None;
   use_fpa = None;
+  use_bv = None;
   timers = None;
 
   file = None;
@@ -467,7 +469,7 @@ let opt4_encoding =
   conv
     (fun opt4 -> opt4)
     (fun opt4 -> opt4)
-    (obj9
+    (obj10
        (opt "verbose" bool)
        (opt "instantiation_heuristic" instantiation_heuristic_encoding)
        (opt "instanciate_after_backjump" bool)
@@ -477,6 +479,7 @@ let opt4_encoding =
        (opt "no_user_triggers" bool)
        (opt "normalize_instances" bool)
        (opt "triggers_var" bool)
+       (opt "arith_matchin" bool)
     )
 
 let opt5_encoding =
@@ -484,7 +487,6 @@ let opt5_encoding =
     (fun opt5 -> opt5)
     (fun opt5 -> opt5)
     (obj10
-       (opt "arith_matchin" bool)
        (opt "bottom_classes" bool)
        (opt "cdcl_tableaux_inst" bool)
        (opt "cdcl_tableaux_th" bool)
@@ -494,6 +496,7 @@ let opt5_encoding =
        (opt "no_backjumping" bool)
        (opt "no_backward" bool)
        (opt "no_decisions" bool)
+       (opt "no_decisions_on" (list string))
     )
 
 let opt6_encoding =
@@ -501,7 +504,6 @@ let opt6_encoding =
     (fun opt6 -> opt6)
     (fun opt6 -> opt6)
     (obj10
-       (opt "no_decisions_on" (list string))
        (opt "no_sat_learning" bool)
        (opt "sat_solver" sat_solver_encoding)
        (opt "tableaux_cdcl" bool)
@@ -511,6 +513,7 @@ let opt6_encoding =
        (opt "term_like_pp" bool)
        (opt "disable_adts" bool)
        (opt "no_ac" bool)
+       (opt "no_contracongru" bool)
     )
 
 let opt7_encoding =
@@ -518,7 +521,6 @@ let opt7_encoding =
     (fun opt7 -> opt7)
     (fun opt7 -> opt7)
     (obj10
-       (opt "no_contracongru" bool)
        (opt "no_fm" bool)
        (opt "no_nla" bool)
        (opt "no_tcp" bool)
@@ -526,6 +528,7 @@ let opt7_encoding =
        (opt "restricted" bool)
        (opt "tighten_vars" bool)
        (opt "use_fpa" bool)
+       (opt "use_bv" bool)
        (opt "timers" bool)
        (opt "file" string)
     )
@@ -614,11 +617,11 @@ let options_to_json opt =
      opt.no_ematching,
      opt.no_user_triggers,
      opt.normalize_instances,
-     opt.triggers_var)
+     opt.triggers_var,
+     opt.arith_matching)
   in
   let all_opt5 =
-    (opt.arith_matching,
-     opt.bottom_classes,
+    (opt.bottom_classes,
      opt.cdcl_tableaux_inst,
      opt.cdcl_tableaux_th,
      opt.disable_flat_formulas_simplification,
@@ -626,11 +629,11 @@ let options_to_json opt =
      opt.minimal_bj,
      opt.no_backjumping,
      opt.no_backward,
-     opt.no_decisions)
+     opt.no_decisions,
+     opt.no_decisions_on)
   in
   let all_opt6 =
-    (opt.no_decisions_on,
-     opt.no_sat_learning,
+    (opt.no_sat_learning,
      opt.sat_solver,
      opt.tableaux_cdcl,
      opt. disable_ites,
@@ -638,10 +641,11 @@ let options_to_json opt =
      opt.rewriting,
      opt.term_like_pp,
      opt.disable_adts,
-     opt.no_ac)
+     opt.no_ac,
+     opt.no_contracongru)
   in
   let all_opt7 =
-    (opt.no_contracongru,
+    (
      opt.no_fm,
      opt.no_nla,
      opt.no_tcp,
@@ -649,6 +653,7 @@ let options_to_json opt =
      opt.restricted,
      opt.tighten_vars,
      opt.use_fpa,
+     opt.use_bv,
      opt.timers,
      opt.file)
   in
@@ -738,9 +743,9 @@ let options_from_json options =
          no_ematching,
          no_user_triggers,
          normalize_instances,
-         triggers_var) = all_opt4 in
-    let (arith_matching,
-         bottom_classes,
+         triggers_var,
+         arith_matching) = all_opt4 in
+    let (bottom_classes,
          cdcl_tableaux_inst,
          cdcl_tableaux_th,
          disable_flat_formulas_simplification,
@@ -748,9 +753,9 @@ let options_from_json options =
          minimal_bj,
          no_backjumping,
          no_backward,
-         no_decisions) = all_opt5 in
-    let (no_decisions_on,
-         no_sat_learning,
+         no_decisions,
+         no_decisions_on) = all_opt5 in
+    let (no_sat_learning,
          sat_solver,
          tableaux_cdcl,
          disable_ites,
@@ -758,15 +763,16 @@ let options_from_json options =
          rewriting,
          term_like_pp,
          disable_adts,
-         no_ac) = all_opt6 in
-    let (no_contracongru,
-         no_fm,
+         no_ac,
+         no_contracongru) = all_opt6 in
+    let (no_fm,
          no_nla,
          no_tcp,
          no_theory,
          restricted,
          tighten_vars,
          use_fpa,
+         use_bv,
          timers,
          file) = all_opt7 in
     {
@@ -856,6 +862,7 @@ let options_from_json options =
       restricted;
       tighten_vars;
       use_fpa;
+      use_bv;
       timers;
       file
     }

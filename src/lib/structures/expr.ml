@@ -747,6 +747,23 @@ let[@inline always] term_view t = t
 let [@inline always] type_info t = t.ty
 let [@inline always] symbol_info t = t.f
 
+let int_of_term t =
+  match term_view t with
+  | { f = Sy.Int n; _ } ->
+    let n = Hstring.view n in
+    let n =
+      try int_of_string n
+      with _ ->
+        Printer.print_err
+          "error when trying to convert %s to an int" n;
+        assert false
+    in
+    n (* ! may be negative or null *)
+  | _ ->
+    Printer.print_err
+      "The given term %a is not an integer" print t;
+    assert false
+
 (* unused
    let is_term e = match e.f with
    | Sy.Form _ | Sy.Lit _  -> false

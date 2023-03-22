@@ -421,7 +421,7 @@ let mk_term_opt disable_ites inline_lets rewriting no_term_like_pp
   `Ok()
 
 let mk_theory_opt disable_adts inequalities_plugin no_ac no_contracongru
-    no_fm no_nla no_tcp no_theory restricted tighten_vars use_fpa
+    no_fm no_nla no_tcp no_theory restricted tighten_vars use_fpa use_bv
   =
   set_no_ac no_ac;
   set_no_fm no_fm;
@@ -429,6 +429,7 @@ let mk_theory_opt disable_adts inequalities_plugin no_ac no_contracongru
   set_no_tcp no_tcp;
   set_no_theory no_theory;
   set_use_fpa use_fpa;
+  set_use_bv use_bv;
   set_inequalities_plugin inequalities_plugin;
   set_restricted restricted;
   set_disable_adts disable_adts;
@@ -1276,10 +1277,14 @@ let parse_theory_opt =
     let doc = "Enable support for floating-point arithmetic." in
     Arg.(value & flag & info ["use-fpa"] ~docs ~doc) in
 
+  let use_bv =
+    let doc = "Enable support for Bitvector primitives." in
+    Arg.(value & flag & info ["use-bv"] ~docs ~doc) in
+
   Term.(ret (const mk_theory_opt $
              disable_adts $ inequalities_plugin $ no_ac $ no_contracongru $
              no_fm $ no_nla $ no_tcp $ no_theory $ restricted $
-             tighten_vars $ use_fpa
+             tighten_vars $ use_fpa $ use_bv
             )
        )
 

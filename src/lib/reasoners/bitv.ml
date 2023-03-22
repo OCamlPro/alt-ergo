@@ -47,8 +47,9 @@ type 'a simple_term_aux =
 
 type 'a simple_term = ('a simple_term_aux) alpha_term
 
-type 'a abstract =  ('a simple_term) list
-
+type 'a abstract =
+  | BV of ('a simple_term) list
+  | BVAccess of (('a simple_term) list * int)
 
 (* for the solver *)
 
@@ -74,7 +75,9 @@ module Shostak(X : ALIEN) = struct
 
   let is_mine_symb sy _ =
     match sy with
-    | Sy.Bitv _ | Sy.Op (Sy.Concat | Sy.Extract)  -> true
+    | Sy.Bitv _ | Sy.Op (
+        Sy.Concat | Sy.Extract | Sy.BVGet _ | Sy.Nat2BV _
+      ) -> true
     | _ -> false
 
   let embed r =
@@ -82,7 +85,7 @@ module Shostak(X : ALIEN) = struct
     | None ->
       begin
         match X.type_info r with
-        | Ty.Tbitv n -> [{bv = Other (Alien r) ; sz = n}]
+        | Ty.Tbitv n -> BV [{bv = Other (Alien r) ; sz = n}]
         | _  -> assert false
       end
     | Some b -> b
@@ -204,6 +207,22 @@ module Shostak(X : ALIEN) = struct
     let bitv_to_icomp =
       List.fold_left (fun ac bt ->{ bv = I_Comp (ac,bt) ; sz = bt.sz + ac.sz })
 
+    let nth_bit r i =
+      let rec aux r n =
+        if i < n || i >= n + r.sz then None else
+          match r.bv with
+          | I_Cte b -> Some b
+          | I_Other _ -> None
+          | I_Ext (t, ei, ej) ->
+            let n' = n + ei in
+            if i > n' + ej - 1 then None else aux t n'
+          | I_Comp (t1, t2) ->
+            match aux t1 n with
+            | Some b -> Some b
+            | None -> aux t2 (n+t1.sz)
+      in
+      aux r 0
+
     let string_to_bitv s =
       let tmp = ref[] in
       String.iter(fun car -> tmp := (car<>'0',1)::(!tmp)) s;
@@ -218,12 +237,34 @@ module Shostak(X : ALIEN) = struct
       bitv_to_icomp (List.hd res) (List.tl res)
 
     let make t =
-      let rec make_rec t' ctx = match E.term_view t' with
-        | { E.f = Sy.Bitv s; _ } -> string_to_bitv s, ctx
+      let rec make_rec cnt ?(is_access = false) t' ctx =
+        match E.term_view t' with
+        | { E.f = Sy.Bitv s; _ } ->
+          let ctx =
+            if not is_access && Options.get_use_bv () then
+              snd @@
+              String.fold_left (
+                fun (n, acc) c ->
+                  let ct =
+                    match c with
+                    | '0' -> E.int "0"
+                    | '1' -> E.int "1"
+                    | _ -> assert false
+                  in
+                  let bvgi =
+                    E.mk_term (Symbols.Op (Symbols.BVGet n)) [t] Ty.Tint
+                  in
+                  let eq = E.mk_eq ~iff:false bvgi ct in
+                  n + 1, eq :: acc
+              ) (cnt, ctx) s
+            else ctx
+          in
+          (string_to_bitv s), ctx
+
         | { E.f = Sy.Op Sy.Concat ;
             xs = [t1;t2] ; ty = Ty.Tbitv n; _ } ->
-          let r1, ctx = make_rec t1 ctx in
-          let r2, ctx = make_rec t2 ctx in
+          let r1, ctx = make_rec cnt ~is_access t1 ctx in
+          let r2, ctx = make_rec (cnt + r1.sz) ~is_access t2 ctx in
           { bv = I_Comp (r1, r2) ; sz = n }, ctx
         | { E.f = Sy.Op Sy.Extract;
             xs = [t1;ti;tj] ; ty = Ty.Tbitv _; _ } ->
@@ -232,7 +273,7 @@ module Shostak(X : ALIEN) = struct
             | { E.f = Sy.Int i; _ } , { E.f = Sy.Int j; _ } ->
               let i = int_of_string (Hstring.view i) in
               let j = int_of_string (Hstring.view j) in
-              let r1, ctx = make_rec t1 ctx in
+              let r1, ctx = make_rec cnt ~is_access t1 ctx in
               { sz = j - i + 1 ; bv = I_Ext (r1,i,j)}, ctx
             | _ ->
               Printer.print_err "Expected two integer, got %a and %a"
@@ -245,8 +286,53 @@ module Shostak(X : ALIEN) = struct
           {bv = I_Other (Alien r') ; sz = n}, ctx
         | _ -> assert false
       in
-      let r, ctx = make_rec t [] in
-      sigma r, ctx
+      let r, ctx =
+        match E.term_view t with
+        | { E.f = Sy.Op (Sy.BVGet i); xs = [x] ; ty = Ty.Tint; _ } ->
+          let r, ctx = make_rec 0 ~is_access:true x [] in
+          let ctx =
+            if Options.get_use_bv ()
+            then begin match nth_bit r i with
+              | None -> ctx
+              | Some b ->
+                let t' = if b then E.int "1" else E.int "0" in
+                let eq =
+                  E.mk_eq ~iff:false t t'
+                in
+                eq :: ctx
+            end
+            else ctx
+          in
+          BVAccess ((sigma r), i), ctx
+
+        | { E.f = Sy.Op (Sy.Nat2BV m); xs = [x] ; ty = Ty.Tbitv n; _ } ->
+          assert (m = n);
+          let two = E.int "2" in
+          let rec aux cnt acc =
+            if cnt >= n
+            then acc
+            else
+              let pow =
+                E.mk_term
+                  (Sy.Op Sy.Pow) [two; E.int (Int.to_string cnt)] Ty.Tint
+              in
+              let v =
+                E.mk_term (Sy.Op Sy.Modulo)
+                  [E.mk_term (Sy.Op Sy.Div) [x; pow] Ty.Tint; two] Ty.Tint
+              in
+              let bvg = E.mk_term (Sy.Op (Sy.BVGet cnt)) [t] Ty.Tint in
+              let eq = E.mk_eq ~iff:false v bvg in
+              aux (cnt + 1) (eq :: acc)
+          in
+          let r, ctx = make_rec 0 ~is_access:true t [] in
+          let ctx = aux 0 ctx in
+          BV (sigma r), ctx
+
+        | _ ->
+          let r, ctx = make_rec 0 t [] in
+          BV (sigma r), ctx
+      in
+      r, ctx
   end
 
   (*BISECT-IGNORE-BEGIN*)
@@ -649,7 +735,31 @@ module Shostak(X : ALIEN) = struct
   let compare x y = compare (embed x) (embed y)
 
   (* should use hashed compare to be faster, not structural comparison *)
-  let equal bv1 bv2 = compare_mine bv1 bv2 = 0
+  let equal r1 r2 =
+    let rec aux l n i =
+      match l with
+      | [] -> None
+      | {bv = _; sz} as h :: t ->
+        if n < i
+        then aux t (n+sz) i
+        else
+        if n = i
+        then Some h
+        else None
+    in
+    match r1, r2 with
+    | BV bv1, BV bv2 -> compare_mine bv1 bv2 = 0
+    | BV _, BVAccess _
+    | BVAccess _, BV _ -> false
+    | BVAccess (ra1, i1), BVAccess (ra2, i2) ->
+      begin match aux ra1 0 i1, aux ra2 0 i2 with
+        | Some f1, Some f2 ->
+          if f1.sz = 1 && f2.sz = 1 then
+            compare_simple_term f1 f2 = 0
+          else
+            compare_simple_term f1 f2 = 0 && i1 = i2 (* ? *)
+        | _ -> false
+      end
 
   let hash_xterm = function
     | Var {var = i; sorte = A} -> 11 * i
@@ -663,24 +773,39 @@ module Shostak(X : ALIEN) = struct
     | Ext (x, a, b, c) ->
       hash_xterm x + 19 * (a + b + c)
 
-  let hash l =
-    List.fold_left
-      (fun acc {bv=r; sz=sz} -> acc + 19 * (sz + hash_simple_term_aux r) ) 19 l
+  let hash r =
+    let hash_l l =
+      List.fold_left
+        (fun acc {bv=r; sz=sz} -> acc + 19 * (sz + hash_simple_term_aux r) ) 19 l
+    in
+    match r with
+    | BV l -> hash_l l
+    | BVAccess (l, _i) -> hash_l l (* TODO: fix *)
 
   let leaves bitv =
-    List.fold_left
-      (fun acc x ->
-         match x.bv with
-         | Cte _  -> acc
-         | Ext( Var v,sz,_,_) ->
-           (X.embed [{bv=Other (Var v) ; sz = sz }])::acc
-         | Other (Var _)  -> (X.embed [x])::acc
-         | Other (Alien t) | Ext(Alien t,_,_,_) -> (X.leaves t)@acc
-      ) [] bitv
+    match bitv with
+    | BV bv
+    | BVAccess (bv, _) ->
+      List.fold_left
+        (fun acc x ->
+           match x.bv with
+           | Cte _  -> acc
+           | Ext( Var v,sz,_,_) ->
+             (X.embed (BV [{bv=Other (Var v) ; sz = sz }]))::acc
+           | Other (Var _)  -> (X.embed (BV [x]))::acc
+           | Other (Alien t) | Ext(Alien t,_,_,_) -> (X.leaves t)@acc
+        ) [] bv
 
-  let is_mine = function [{ bv = Other (Alien r); _ }] -> r | bv -> X.embed bv
+  let is_mine r =
+    match r with
+    | BV [{ bv = Other (Alien r); _ }] -> r
+    | _ -> X.embed r
 
-  let print = Debug.print_C_ast
+  let print fmt r =
+    match r with
+    | BV bv -> Debug.print_C_ast fmt bv
+    | BVAccess (r, i) ->
+      Format.fprintf fmt "(%a)^{%d}" Debug.print_C_ast r i
 
   let make t =
     let r, ctx = Canonizer.make t in
@@ -689,8 +814,11 @@ module Shostak(X : ALIEN) = struct
   let color _ = assert false
 
   let type_info bv =
-    let sz = List.fold_left (fun acc bv -> bv.sz + acc) 0 bv in
-    Ty.Tbitv sz
+    match bv with
+    | BV bv ->
+      let sz = List.fold_left (fun acc bv -> bv.sz + acc) 0 bv in
+      Ty.Tbitv sz
+    | BVAccess _ -> Ty.Tint
 
   let to_i_ast biv =
     let f_aux st =
@@ -710,19 +838,19 @@ module Shostak(X : ALIEN) = struct
 
   let extract r ty =
     match X.extract r with
-      Some (_::_ as bv) -> to_i_ast bv
+      Some (BV (_::_ as bv)) -> to_i_ast bv
     | None -> {bv =  Canonizer.I_Other (Alien r); sz = ty}
-    | Some [] -> assert false
+    | Some _ -> assert false
 
   let extract_xterm r =
     match X.extract r with
-      Some ([{ bv = Other (Var _ as x); _ }]) -> x
+      Some (BV [{ bv = Other (Var _ as x); _ }]) -> x
     | None -> Alien r
     | _ -> assert false
 
   let var_or_term x =
     match x.bv with
-      Other (Var _) -> X.embed [x]
+      Other (Var _) -> X.embed (BV [x])
     | Other (Alien r) -> r
     | _ -> assert false
 
@@ -738,13 +866,16 @@ module Shostak(X : ALIEN) = struct
     | None   , None   -> if X.str_cmp u t > 0 then [u,t] else [t,u]
     | None   , Some _ -> [u , t]
     | Some _ , None   -> [t , u]
-    | Some u , Some t ->
-      try
-        List.map
-          (fun (p,v) -> var_or_term p,is_mine v)
-          (Solver.solve u t)
-      with Solver.Valid -> []
-
+    | Some (BV u) , Some (BV t) ->
+      begin
+        try
+          let l = Solver.solve u t in
+          List.map
+            (fun (p,v) -> var_or_term p,is_mine (BV v))
+            l
+        with Solver.Valid -> []
+      end
+    | _ -> assert false
 
 
   let rec subst_rec x subs biv =
@@ -767,10 +898,19 @@ module Shostak(X : ALIEN) = struct
       Printer.print_dbg
         ~module_name:"Bitv" ~function_name:"subst"
         "subst %a |-> %a in %a" X.print x X.print subs print biv;
-    if biv = [] then is_mine biv
-    else
-      let r = Canonizer.sigma (subst_rec x subs (to_i_ast biv)) in
-      is_mine r
+    match biv with
+    | BV bv ->
+      if bv = []
+      then is_mine (BV bv)
+      else
+        let r = Canonizer.sigma (subst_rec x subs (to_i_ast bv)) in
+        is_mine (BV r)
+    | BVAccess (bv, i) ->
+      if bv = []
+      then is_mine (BVAccess (bv, i)) (* ? *)
+      else
+        let r = Canonizer.sigma (subst_rec x subs (to_i_ast bv)) in
+        is_mine (BVAccess (r, i))
 (*
   module M =  Map.Make
     (struct
@@ -793,9 +933,68 @@ module Shostak(X : ALIEN) = struct
 *)
   let fully_interpreted _ = true
 
-  let term_extract _ = None, false
+  let term_extract r =
+    let res =
+      match X.extract r with
+      | None -> X.term_extract r
+      | Some v ->
+        begin match v with
+          | BV l ->
+            begin try
+                let mk_bv b sz =
+                  let c = if b then '1' else '0' in
+                  E.bitv (String.init sz (fun _ -> c)) (Ty.Tbitv sz)
+                in
+                match l with
+                | { bv = Cte b; sz; } :: tl ->
+                  let _, t =
+                    List.fold_left (
+                      fun (n, acc) r ->
+                        match r with
+                        | { bv = Cte b; sz; } ->
+                          let nsz =  n + sz in
+                          nsz,
+                          E.mk_term
+                            (Sy.Op Sy.Concat) [acc; mk_bv b sz] (Ty.Tbitv nsz)
+                        | _ -> raise Exit
+                    ) (sz ,mk_bv b sz) tl
+                  in
+                  Some t, false
+                | _ ->
+                  None, false
+              with Exit ->
+                None, false
+            end
+          | BVAccess (l, i) ->
+            begin match X.term_extract (is_mine (BV l)) with
+              | None, _ -> None, false
+              | Some t, _ ->
+                let E.{ ty; _ } = E.term_view t in
+                let rt = E.mk_term (Symbols.Op (Symbols.BVGet i)) [t] ty in
+                Some (rt), false
+            end
+        end
+    in
+    res
 
-  let abstract_selectors v acc = is_mine v, acc
+  let abstract_selectors v acc =
+    (* match v with
+       | BVAccess (e, _) ->
+       let xe = is_mine (BV e) in
+       begin try List.assoc xe acc, acc
+        with Not_found ->
+          let left_abs_xe2, acc = X.abstract_selectors xe acc in
+          begin match X.type_info left_abs_xe2 with
+            | (Ty.Tbitv _) as ty ->
+              let r_abs =
+                embed (X.term_embed (E.fresh_name ty))
+              in
+              let r = is_mine r_abs in
+              r, (left_abs_xe2, r) :: acc
+            | _ -> assert false
+          end
+       end
+       | _ -> *) is_mine v, acc
 
   let solve r1 r2 pb =
     Sig.{pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}

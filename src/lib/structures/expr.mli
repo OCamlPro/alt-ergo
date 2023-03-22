@@ -164,6 +164,7 @@ val is_int : t -> bool
 val is_real : t -> bool
 val type_info : t -> Ty.t
 val symbol_info : t -> Symbols.t
+val int_of_term : t -> int
 
 (** Labeling and models *)
 

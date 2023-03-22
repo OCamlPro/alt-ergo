@@ -235,7 +235,7 @@ let () =
       Sys.argv.(1)
     else "."
   in
-  let bin = "alt-ergo" in
+  let bin = "alt-ergo --use-bv" in
   let timelimit = "--timelimit=2" in
   let solvers = [
     ("runtest", "tableaux", [

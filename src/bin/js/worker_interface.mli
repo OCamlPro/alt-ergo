@@ -143,6 +143,7 @@ type options = {
   restricted : bool option;
   tighten_vars : bool option;
   use_fpa : bool option;
+  use_bv : bool option;
   timers : bool option;
 
   file : string option;
