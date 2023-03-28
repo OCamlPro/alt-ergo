@@ -50,6 +50,7 @@ type 'a simple_term = ('a simple_term_aux) alpha_term
 type 'a abstract =
   | BV of ('a simple_term) list
   | BVAccess of (('a simple_term) list * int)
+  | Bit of 'a
 
 (* for the solver *)
 
@@ -290,20 +291,13 @@ module Shostak(X : ALIEN) = struct
         match E.term_view t with
         | { E.f = Sy.Op (Sy.BVGet i); xs = [x] ; ty = Ty.Tint; _ } ->
           let r, ctx = make_rec 0 ~is_access:true x [] in
-          let ctx =
-            if Options.get_use_bv ()
-            then begin match nth_bit r i with
-              | None -> ctx
-              | Some b ->
-                let t' = if b then E.int "1" else E.int "0" in
-                let eq =
-                  E.mk_eq ~iff:false t t'
-                in
-                eq :: ctx
-            end
-            else ctx
-          in
-          BVAccess ((sigma r), i), ctx
+          begin match nth_bit r i with
+            | None -> BVAccess ((sigma r), i), ctx
+            | Some b ->
+              let t' = if b then E.int "1" else E.int "0" in
+              let r', ctx' = X.make t' in
+              Bit r', ctx' @ ctx
+          end
 
         | { E.f = Sy.Op (Sy.Nat2BV m); xs = [x] ; ty = Ty.Tbitv n; _ } ->
           assert (m = n);
@@ -327,6 +321,8 @@ module Shostak(X : ALIEN) = struct
           let r, ctx = make_rec 0 ~is_access:true t [] in
           let ctx = aux 0 ctx in
           BV (sigma r), ctx
+
+        (* Add BV2Nat? *)
 
         | _ ->
           let r, ctx = make_rec 0 t [] in
@@ -749,8 +745,6 @@ module Shostak(X : ALIEN) = struct
     in
     match r1, r2 with
     | BV bv1, BV bv2 -> compare_mine bv1 bv2 = 0
-    | BV _, BVAccess _
-    | BVAccess _, BV _ -> false
     | BVAccess (ra1, i1), BVAccess (ra2, i2) ->
       begin match aux ra1 0 i1, aux ra2 0 i2 with
         | Some f1, Some f2 ->
@@ -760,6 +754,8 @@ module Shostak(X : ALIEN) = struct
             compare_simple_term f1 f2 = 0 && i1 = i2 (* ? *)
         | _ -> false
       end
+    | Bit r1, Bit r2 -> X.equal r1 r2
+    | _ -> false
 
   let hash_xterm = function
     | Var {var = i; sorte = A} -> 11 * i
@@ -781,6 +777,7 @@ module Shostak(X : ALIEN) = struct
     match r with
     | BV l -> hash_l l
     | BVAccess (l, _i) -> hash_l l (* TODO: fix *)
+    | Bit r -> X.hash r
 
   let leaves bitv =
     match bitv with
@@ -795,10 +792,12 @@ module Shostak(X : ALIEN) = struct
            | Other (Var _)  -> (X.embed (BV [x]))::acc
            | Other (Alien t) | Ext(Alien t,_,_,_) -> (X.leaves t)@acc
         ) [] bv
+    | Bit r -> X.leaves r
 
   let is_mine r =
     match r with
     | BV [{ bv = Other (Alien r); _ }] -> r
+    | Bit r -> r
     | _ -> X.embed r
 
   let print fmt r =
@@ -806,6 +805,7 @@ module Shostak(X : ALIEN) = struct
     | BV bv -> Debug.print_C_ast fmt bv
     | BVAccess (r, i) ->
       Format.fprintf fmt "(%a)^{%d}" Debug.print_C_ast r i
+    | Bit r -> X.print fmt r
 
   let make t =
     let r, ctx = Canonizer.make t in
@@ -818,7 +818,7 @@ module Shostak(X : ALIEN) = struct
     | BV bv ->
       let sz = List.fold_left (fun acc bv -> bv.sz + acc) 0 bv in
       Ty.Tbitv sz
-    | BVAccess _ -> Ty.Tint
+    | BVAccess _ | Bit _ -> Ty.Tint
 
   let to_i_ast biv =
     let f_aux st =
@@ -911,6 +911,7 @@ module Shostak(X : ALIEN) = struct
       else
         let r = Canonizer.sigma (subst_rec x subs (to_i_ast bv)) in
         is_mine (BVAccess (r, i))
+    | Bit r -> is_mine (Bit (X.subst x subs r))
 (*
   module M =  Map.Make
     (struct
@@ -973,28 +974,12 @@ module Shostak(X : ALIEN) = struct
                 let rt = E.mk_term (Symbols.Op (Symbols.BVGet i)) [t] ty in
                 Some (rt), false
             end
+          | Bit r -> X.term_extract r
         end
     in
     res
 
-  let abstract_selectors v acc =
-    (* match v with
-       | BVAccess (e, _) ->
-       let xe = is_mine (BV e) in
-       begin try List.assoc xe acc, acc
-        with Not_found ->
-          let left_abs_xe2, acc = X.abstract_selectors xe acc in
-          begin match X.type_info left_abs_xe2 with
-            | (Ty.Tbitv _) as ty ->
-              let r_abs =
-                embed (X.term_embed (E.fresh_name ty))
-              in
-              let r = is_mine r_abs in
-              r, (left_abs_xe2, r) :: acc
-            | _ -> assert false
-          end
-       end
-       | _ -> *) is_mine v, acc
+  let abstract_selectors v acc = is_mine v, acc
 
   let solve r1 r2 pb =
     Sig.{pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}

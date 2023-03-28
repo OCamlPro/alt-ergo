@@ -1,3 +1,3 @@
-logic bv2nat : int -> bitv[1]
+logic nat2bv : int -> bitv[1]
 
 goal g: nat2bv(0) = [|1|]
