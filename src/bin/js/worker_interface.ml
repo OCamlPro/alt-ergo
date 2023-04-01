@@ -646,16 +646,16 @@ let options_to_json opt =
   in
   let all_opt7 =
     (
-     opt.no_fm,
-     opt.no_nla,
-     opt.no_tcp,
-     opt.no_theory,
-     opt.restricted,
-     opt.tighten_vars,
-     opt.use_fpa,
-     opt.use_bv,
-     opt.timers,
-     opt.file)
+      opt.no_fm,
+      opt.no_nla,
+      opt.no_tcp,
+      opt.no_theory,
+      opt.restricted,
+      opt.tighten_vars,
+      opt.use_fpa,
+      opt.use_bv,
+      opt.timers,
+      opt.file)
   in
   let json_all_options = Json.construct options_encoding
       (dbg_opt1,

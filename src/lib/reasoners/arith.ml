@@ -354,25 +354,54 @@ module Shostak
       begin match E.term_view x with
         | { ty = Ty.Tbitv m; _ } ->
           let two = E.int "2" in
-          let rec aux acc ctx cnt =
+          let rec aux acc cnt =
             if cnt = m
-            then acc, ctx
+            then acc
             else
               let tg =
                 E.mk_term (Sy.Op (Sy.BVGet cnt)) [x] Ty.Tint
               in
-              let eq =
-                E.mk_term (Sy.Op Sy.Mult) [
-                  tg;
-                  E.mk_term
-                    (Sy.Op Sy.Pow) [two; E.int (Int.to_string cnt)] Ty.Tint
-                ] Ty.Tint
-              in
-              aux (eq :: acc) (ctx) (cnt + 1)
+              let r', _ = X.make tg in
+              (* this is possibly too costly because the "x" bitv will be
+                 remade after each call.
+                 Should it be memoized in bitv.ml?
+                 Can bitv.ml only make the sub-bitv on which the access is done?
+              *)
+              try match X.term_extract r' with
+                | None, _ -> raise Exit
+                | Some t, _ ->
+                  let { E.f; _ } = E.term_view t in
+                  match f with
+                  | Sy.Int hs ->
+                    begin match Hstring.view hs with
+                      | "1" ->
+                        let v =
+                          E.mk_term (Sy.Op Sy.Pow)
+                            [two; E.int (Int.to_string cnt)] Ty.Tint
+                        in
+                        aux (v :: acc) (cnt + 1)
+                      | "0" ->
+                        aux acc (cnt + 1)
+                      | str ->
+                        failwith (
+                          Format.sprintf
+                            "Expeceted \"1\" or \"0\", but got \"%s\"" str
+                        )
+                    end
+                  | _ -> raise Exit
+              with Exit ->
+                let v =
+                  E.mk_term (Sy.Op Sy.Mult) [
+                    tg;
+                    E.mk_term
+                      (Sy.Op Sy.Pow) [two; E.int (Int.to_string cnt)] Ty.Tint
+                  ] Ty.Tint
+                in
+                aux (v :: acc) (cnt + 1)
           in
-          let lt, ctx' = aux [] [] 0 in
+          let lt = aux [] 0 in
           let t' = E.mk_term (Sy.Op Sy.Plus) lt Ty.Tint in
-          let t, tl = mke coef p t' (ctx' @ ctx) in
+          let t, tl = mke coef p t' ctx in
           t, tl
 
         | _ -> assert false
@@ -742,7 +771,14 @@ module Shostak
     | Sy.Op (Sy.Plus | Sy.Minus) -> true
     | _ -> false
 
-  let term_extract _ = None, false
+  let term_extract r =
+    match P.extract r with
+    | None -> None, false
+    | Some pt ->
+      match P.is_const pt, P.type_info pt with
+      | Some q, Ty.Tint ->
+        Some (E.int (Q.to_string q)), false
+      | _ -> None, false (* TODO: extract for the other types? *)
 
   let abstract_selectors p acc =
     let p, acc = P.abstract_selectors p acc in
