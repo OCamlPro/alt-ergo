@@ -77,7 +77,7 @@ module Shostak(X : ALIEN) = struct
   let is_mine_symb sy _ =
     match sy with
     | Sy.Bitv _ | Sy.Op (
-        Sy.Concat | Sy.Extract | Sy.BVGet _ | Sy.Nat2BV _
+        Sy.Concat | Sy.Extract _ | Sy.BVGet _ | Sy.Nat2BV _
       ) -> true
     | _ -> false
 
@@ -255,8 +255,6 @@ module Shostak(X : ALIEN) = struct
       bitv_to_icomp (List.hd res) (List.tl res), List.rev_append !nctx ctx
 
     let bitv_of_nat bv_t nat_t size ctx =
-      (* Format.printf ">>> bitv_of_nat (%a) (%a)@."
-         E.print bv_t E.print nat_t; *)
       let two = E.int "2" in
       let pow n =
         E.mk_term (Sy.Op Sy.Pow) [two; E.int (Int.to_string n)] Ty.Tint
@@ -280,7 +278,6 @@ module Shostak(X : ALIEN) = struct
           let nacc =
             match prec with
             | Some b ->
-              (* Format.printf ">1 %b %d@." b sz; *)
               { bv = Cte b; sz } :: acc
             | None -> acc
           in
@@ -294,7 +291,6 @@ module Shostak(X : ALIEN) = struct
             let nctx = get_eq cnt v_t :: nctx in
             begin match prec with
               | Some b ->
-                (* Format.printf ">2 %b %d | %a 1@." b sz X.print r; *)
                 let nacc =
                   {bv = Cte b; sz } ::
                   {bv = Other (Alien r); sz = 1} ::
@@ -302,7 +298,6 @@ module Shostak(X : ALIEN) = struct
                 in
                 aux (cnt + 1) nacc 0 nctx
               | None ->
-                (* Format.printf ">3 %a 1@." X.print r; *)
                 let nacc = {bv =  Other (Alien r); sz = 1 } :: acc in
                 aux (cnt + 1) nacc 0 nctx
             end
@@ -315,7 +310,6 @@ module Shostak(X : ALIEN) = struct
                   begin match prec with
                     | Some true -> aux ?prec (cnt + 1) acc (sz + 1) nctx
                     | Some false ->
-                      (* Format.printf ">4 false %d@." sz; *)
                       let nacc = {bv = Cte false; sz } :: acc in
                       aux ~prec:true (cnt + 1) nacc 1 nctx
                     | None -> aux ~prec:true (cnt + 1) acc 1 nctx
@@ -324,7 +318,6 @@ module Shostak(X : ALIEN) = struct
                   let nctx = get_eq_b cnt false :: nctx in
                   begin match prec with
                     | Some true ->
-                      (* Format.printf ">5 true %d@." sz; *)
                       let nacc = {bv = Cte true; sz } :: acc in
                       aux ~prec:false (cnt + 1) nacc 1 nctx
                     | Some false -> aux ?prec (cnt + 1) acc (sz + 1) nctx
@@ -379,25 +372,14 @@ module Shostak(X : ALIEN) = struct
           in
           { bv = I_Comp (r2, r1) ; sz = n }, ctx
 
-        | { E.f = Sy.Op Sy.Extract;
-            xs = [t1;ti;tj] ; ty = Ty.Tbitv _; _ } ->
-          begin
-            match E.term_view ti, E.term_view tj with
-            | { E.f = Sy.Int i; _ } , { E.f = Sy.Int j; _ } ->
-              let i = int_of_string (Hstring.view i) in
-              let j = int_of_string (Hstring.view j) in
-              let bounds =
-                match bounds with
-                | None -> (i, j)
-                | Some (lb, ub) -> (lb + i, j - ub)
-              in
-              let r1, ctx = make_rec cnt ~update_ctx ~bounds t1 ctx in
-              { sz = j - i + 1 ; bv = I_Ext (r1,i,j)}, ctx
-            | _ ->
-              Printer.print_err "Expected two integers, got %a and %a"
-                E.print ti E.print tj;
-              assert false
-          end
+        | { E.f = Sy.Op Sy.Extract (i, j); xs = [t] ; ty = Ty.Tbitv sz; _ } ->
+          let bounds =
+            match bounds with
+            | None -> (i, j)
+            | Some (lb, ub) -> (lb + i, j - ub)
+          in
+          let r, ctx = make_rec cnt ~update_ctx ~bounds t ctx in
+          { sz ; bv = I_Ext (r, i, j)}, ctx
 
         | { E.ty = Ty.Tbitv n; _ } ->
           let r', ctx' = X.make t' in

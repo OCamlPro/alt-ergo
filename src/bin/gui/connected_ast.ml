@@ -280,9 +280,8 @@ let rec filter_used_vars_term vars at =
     filter_used_vars_term vars at1
     @ filter_used_vars_term vars at2
   | ATdot (at, _) | ATprefix (_, at) | ATnamed (_, at)
-  | ATmapsTo (_, at) ->
+  | ATmapsTo (_, at) | ATextract (at, _, _) ->
     filter_used_vars_term vars at
-  | ATextract (at1, at2, at3)
   | ATset (at1, at2, at3) ->
     filter_used_vars_term vars at1
     @ filter_used_vars_term vars at2
@@ -881,9 +880,9 @@ and connect_at_desc env sbuf = function
   | ATlet (l, _) ->
     List.iter (fun (_, t1) -> connect_aterm env sbuf t1) l;
   | ATdot (t, _) | ATprefix (_, t) | ATnamed (_, t)
-  | ATmapsTo (_, t) ->
+  | ATmapsTo (_, t) | ATextract (t,_,_) ->
     connect_aterm env sbuf t
-  | ATset (t1,t2,t3) | ATextract (t1,t2,t3) ->
+  | ATset (t1,t2,t3) ->
     connect_aterm env sbuf t1;
     connect_aterm env sbuf t2;
     connect_aterm env sbuf t3

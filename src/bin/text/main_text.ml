@@ -39,6 +39,7 @@ let parse_cmdline () =
   with Parse_command.Exit_parse_command i -> exit i
 
 let () =
+  Printexc.record_backtrace true;
   register_input ();
   parse_cmdline ();
   AltErgoLib.Printer.init_colors ();

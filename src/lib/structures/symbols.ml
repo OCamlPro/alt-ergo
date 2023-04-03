@@ -42,8 +42,9 @@ type operator =
   (* Arrays *)
   | Get | Set
   (* BV *)
-  | Concat | Extract | BVGet of int
-  | BV2Nat | Nat2BV of int
+  | Concat
+  | Extract of int * int (* lower bound * upper bound *)
+  | BVGet of int | BV2Nat | Nat2BV of int
   (* FP *)
   | Float of int * int (* precision|significant * exponential *)
   | Integer_round | Fixed
@@ -135,8 +136,11 @@ let compare_operators op1 op2 =
         if c <> 0 then c else Hstring.compare h1 h2
       | BVGet i1, BVGet i2 ->
         Int.compare i1 i2
+      | Extract (i1, j1), Extract (i2, j2) ->
+        let r = Int.compare i1 i2 in
+        if r = 0 then Int.compare j1 j2 else r
       | _ , (Plus | Minus | Mult | Div | Modulo
-            | Concat | Extract | BVGet _
+            | Concat | Extract _ | BVGet _
             | Get | Set | Fixed | Float _ | Reach
             | Access _ | Record | Sqrt_real | Abs_int | Abs_real
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
@@ -309,7 +313,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op Pow -> "**"
   | Op Integer_round -> "integer_round"
   | Op Concat -> "@"
-  | Op Extract -> "^"
+  | Op Extract (i, j) -> Format.sprintf "^{%d; %d}" i j
   | Op Tite -> "ite"
   | Op Reach -> assert false
   | Op (BVGet n)-> Format.sprintf "bvget[%d]" n

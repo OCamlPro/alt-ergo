@@ -207,8 +207,8 @@ let mk_bitv_const =
     mk_localized loc (PPconst (ConstBitv (check_binary_mode const)))
 
 let mk_bitv_extract loc e i j =
-  let i =  mk_int_const loc i in
-  let j =  mk_int_const loc j in
+  let i = int_of_string i in
+  let j = int_of_string j in
   mk_localized loc (PPextract (e, i, j))
 
 let mk_bitv_concat loc e1 e2 =

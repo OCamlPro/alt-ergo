@@ -42,8 +42,9 @@ type operator =
   (* Arrays *)
   | Get | Set
   (* BV *)
-  | Concat | Extract | BVGet of int
-  | BV2Nat | Nat2BV of int
+  | Concat
+  | Extract of int * int (* lower bound * upper bound *)
+  | BVGet of int | BV2Nat | Nat2BV of int
   (* FP *)
   | Float of int * int (* precision|significant * exponential *)
   | Integer_round | Fixed

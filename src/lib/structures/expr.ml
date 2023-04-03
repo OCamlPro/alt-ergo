@@ -436,8 +436,8 @@ module SmtPrinter = struct
     | Sy.Op Sy.Concat, [e1; e2] ->
       fprintf fmt "%a@@%a" print e1 print e2
 
-    | Sy.Op Sy.Extract, [e1; e2; e3] ->
-      fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
+    | Sy.Op Sy.Extract (i, j), [e] ->
+      fprintf fmt "%a^{%d, %d}" print e i j
 
     | Sy.Op (Sy.Access field), [e] ->
       if Options.get_output_smtlib () then
@@ -614,8 +614,8 @@ module AEPrinter = struct
     | Sy.Op Sy.Concat, [e1; e2] ->
       fprintf fmt "%a@@%a" print e1 print e2
 
-    | Sy.Op Sy.Extract, [e1; e2; e3] ->
-      fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
+    | Sy.Op Sy.Extract (i, j), [e] ->
+      fprintf fmt "%a^{%d, %d}" print e i j
 
     | Sy.Op (Sy.Access field), [e] ->
       if Options.get_output_smtlib () then
@@ -1875,11 +1875,12 @@ module Triggers = struct
     | { f = Op (Get | Set) ; xs = [t1 ; t2]; _ } ->
       max (score_term t1) (score_term t2)
 
-    | { f = Op (Access _ | Destruct _) ; xs = [t]; _ } -> 1 + score_term t
+    | { f = Op (Access _ | Destruct _ | Extract _) ; xs = [t]; _ } ->
+      1 + score_term t
     | { f = Op Record; xs; _ } ->
       1 + (List.fold_left
              (fun acc t -> max (score_term t) acc) 0 xs)
-    | { f = Op(Set | Extract) ; xs = [t1; t2; t3]; _ } ->
+    | { f = Op Set; xs = [t1; t2; t3]; _ } ->
       max (score_term t1) (max (score_term t2) (score_term t3))
 
     | { f= (Op _ | Name _) ; xs = tl; _ } ->
@@ -1949,10 +1950,13 @@ module Triggers = struct
     | { f = Op Set; _ }, _ -> -1
     | _, { f = Op Set; _ } -> 1
 
-    | { f= Op Extract; xs = l1; _ }, { f = Op Extract; xs = l2; _ } ->
-      Util.cmp_lists l1 l2 cmp_trig_term
-    | { f = Op Extract; _ }, _ -> -1
-    | _, { f = Op Extract; _ } -> 1
+    | { f = Op Extract (i1, j1); xs = [t1]; _ },
+      { f = Op Extract (i2, j2); xs = [t2]; _ } ->
+      let r = Util.cmp_lists [i1; j1] [i2; j2] Int.compare in
+      if r = 0 then cmp_trig_term t1 t2 else r
+
+    | { f = Op Extract _; _ }, _ -> -1
+    | _, { f = Op Extract _; _ } -> 1
 
     | { f = Op Concat; xs = l1; _ }, { f = Op Concat; xs = l2; _} ->
       Util.cmp_lists l1 l2 cmp_trig_term

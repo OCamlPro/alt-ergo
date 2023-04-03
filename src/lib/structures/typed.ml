@@ -80,7 +80,7 @@ and 'a tt_desc =
   | TTset of
       'a atterm * 'a atterm * 'a atterm
   | TTextract of
-      'a atterm * 'a atterm * 'a atterm
+      'a atterm * int * int
   | TTconcat of 'a atterm * 'a atterm
   | TTdot of 'a atterm * Hstring.t
   | TTrecord of (Hstring.t * 'a atterm) list
@@ -214,8 +214,8 @@ let rec print_term =
       fprintf fmt "%a[%a]" print_term t1 print_term t2
     | TTset (t1, t2, t3) ->
       fprintf fmt "%a[%a<-%a]" print_term t1 print_term t2 print_term t3
-    | TTextract (t1, t2, t3) ->
-      fprintf fmt "%a^{%a,%a}" print_term t1 print_term t2 print_term t3
+    | TTextract (t1, i, j) ->
+      fprintf fmt "%a^{%d, %d}" print_term t1 i j
     | TTconcat (t1, t2) ->
       fprintf fmt "%a @@ %a" print_term t1 print_term t2
     | TTdot (t1, s) ->

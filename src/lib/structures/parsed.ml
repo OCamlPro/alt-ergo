@@ -144,7 +144,7 @@ and pp_desc =
   | PPdot of lexpr * string
   | PPrecord of (string * lexpr) list
   | PPwith of lexpr * (string * lexpr) list
-  | PPextract of lexpr * lexpr * lexpr
+  | PPextract of lexpr * int * int
   | PPconcat of lexpr * lexpr
   | PPif of lexpr * lexpr * lexpr
   | PPforall of
@@ -203,8 +203,8 @@ let rec pp_lexpr fmt {pp_desc; _} =
   | PPwith (le, l) ->
     fprintf fmt "{%a with %a}" pp_lexpr le
       (pp_print_list (fun fmt (s, le) -> fprintf fmt "%s = %a" s pp_lexpr le)) l
-  | PPextract (le1, le2, le3) ->
-    fprintf fmt "Extract (%a, %a, %a)" pp_lexpr le1 pp_lexpr le2 pp_lexpr le3
+  | PPextract (le, i, j) ->
+    fprintf fmt "Extract (%a, %d, %d)" pp_lexpr le i j
   | PPconcat (le1, le2) ->
     fprintf fmt "%a^%a" pp_lexpr le1 pp_lexpr le2
   | PPif (cond, bthen, belse) ->

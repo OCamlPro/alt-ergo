@@ -632,10 +632,8 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             E.mk_term (Sy.Op Sy.Minus) [e1; aux_mk_expr x] ty
 
           | B.Bitv_extract { i; j; _ }, [x] ->
-            let q = E.int (Int.to_string i) in
-            let p = E.int (Int.to_string j) in
-            E.mk_term (Sy.Op Sy.Extract) [aux_mk_expr x; p; q]
-              (Ty.Tbitv (i-j+1))
+            E.mk_term
+              (Sy.Op (Sy.Extract (j, i))) [aux_mk_expr x] (Ty.Tbitv (i-j+1))
 
           | B.Destructor { case; field; adt; _ }, [x] ->
             begin match DT.definition adt with
