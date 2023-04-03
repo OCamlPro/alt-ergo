@@ -502,6 +502,7 @@ struct
           match p.v with
           | Ac _ -> true | Term _ -> SX.mem p original
           | _ -> false
+          (* TODO: This case shouldn't occur? *)
             (*
               Printer.print_err "%a" CX.print p;
               assert false
