@@ -120,22 +120,23 @@ end = struct
     Format.fprintf fmt "%s.expected" filename
 
   let pp_stanza fmt tst =
-    Format.fprintf fmt
-    "@[<v 1>\
-    (rule@ \
-      (target %a)@ \
-      (deps (:input %s))@ \
-      (package alt-ergo)@ \
-      @[<v 1>(action@ \
-        @[<v 1>(chdir %%{workspace_root}@ \
-          @[<v 1>(with-stdout-to %%{target}@ \
-            @[<v 1>(ignore-stderr@ \
-              @[<v 1>(with-accepted-exit-codes 0@ \
-                @[<v 1>(run %a)))))))@]@]@]@]@]@]@\n\
-    @[<v 1>(rule@ \
-      @[<v 1>(alias %s)@ \
-      @[<v 1>(package alt-ergo)@ \
-      @[<v 1>(action (diff %a @, %a)))@]@]@]@]@."
+    Format.fprintf fmt "\
+@[<v 1>\
+(rule@,\
+(target %a)@,\
+(deps (:input %s))@,\
+(package alt-ergo)@,\
+@[<v 1>(action@,\
+@[<v 1>(no-infer@,\
+@[<v 1>(chdir %%{workspace_root}@,\
+@[<v 1>(with-stdout-to %%{target}@,\
+@[<v 1>(ignore-stderr@,\
+@[<v 1>(with-accepted-exit-codes 0@,\
+@[<v 1>(run %a))))))))@]@]@]@]@]@]@\n\
+@[<v 1>(rule@,\
+@[<v 1>(alias %s)@,\
+@[<v 1>(package alt-ergo)@,\
+@[<v 1>(action (diff %a @, %a)))@]@]@]@]@]@."
     pp_output tst
     tst.pb_file
     Cmd.pp tst.cmd
@@ -238,19 +239,19 @@ let () =
   let bin = "alt-ergo" in
   let timelimit = "--timelimit=2" in
   let solvers = [
-    ("runtest", "tableaux", [
+    ("runtest-quick", "tableaux", [
       "--output=smtlib2"
     ; timelimit
     ; "--sat-solver Tableaux" ])
-  ; ("runtest", "tableaux_cdcl", [
+  ; ("runtest-quick", "tableaux_cdcl", [
       "--output=smtlib2"
     ; timelimit
     ; "--sat-solver Tableaux-CDCL" ])
-  ; ("runtest", "cdcl", [
+  ; ("runtest-quick", "cdcl", [
       "--output=smtlib2"
     ; timelimit
     ; "--sat-solver CDCL" ])
-  ; ("runtest", "cdcl_tableaux", [
+  ; ("runtest-quick", "cdcl_tableaux", [
       "--output=smtlib2"
     ; timelimit
     ; "--sat-solver CDCL-Tableaux" ])

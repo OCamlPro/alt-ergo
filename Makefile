@@ -149,7 +149,7 @@ gentest: $(wildcard tests/**/*)
 
 # Run non-regression tests.
 runtest: gentest bin
-	dune build @runtest
+	dune build @runtest-quick
 
 # Run non-regression tests for the CI.
 runtest-ci: gentest bin
