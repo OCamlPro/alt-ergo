@@ -217,7 +217,7 @@ let rec print_term =
     | TTextract (t1, t2, t3) ->
       fprintf fmt "%a^{%a,%a}" print_term t1 print_term t2 print_term t3
     | TTconcat (t1, t2) ->
-      fprintf fmt "%a @ %a" print_term t1 print_term t2
+      fprintf fmt "%a @@ %a" print_term t1 print_term t2
     | TTdot (t1, s) ->
       fprintf fmt "%a.%s" print_term t1 (Hstring.view s)
     | TTrecord l ->
@@ -279,7 +279,7 @@ and print_term_binders fmt l =
     List.iter (fun (sy, t) ->
         Format.fprintf fmt ", %a = %a" Symbols.print sy print_term t) l
 
-and print_term_list fmt = List.iter (Format.fprintf fmt "%a," print_term)
+and print_term_list fmt = Util.print_list ~sep:"," ~pp:print_term fmt
 
 and print_atom =
   let open Format in
