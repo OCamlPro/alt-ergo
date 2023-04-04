@@ -11,3 +11,13 @@ function unix_times () {
 function unix_setitimer () {
   return BLOCK(0, 0, 0, 0)
 }
+
+//Provides: unix_getpid
+function unix_getpid() {
+  return 0;
+}
+
+//Provides: unix_kill
+function unix_kill() {
+  return 0;
+}

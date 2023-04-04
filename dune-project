@@ -44,7 +44,7 @@ See more details on https://alt-ergo.ocamlpro.com/")
   (ocaml (>= 4.05.0))
   (alt-ergo-lib (= :version))
   (alt-ergo-parsers (= :version))
-  (js_of_ocaml (>= 4.0.1))
+  (js_of_ocaml (and (>= 4.0.1) (<= 5.0.1)))
   js_of_ocaml-lwt
   js_of_ocaml-ppx
   data-encoding
