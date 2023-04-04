@@ -1,0 +1,31 @@
+(* Constants of bitv[1] *)
+
+logic b0: bitv[1]
+axiom b0_def: b0 = [|0|]
+logic b1: bitv[1]
+axiom b1_def: b1 = [|1|]
+
+(* Conversion functions bool <-> bitv[|1|] *)
+
+function bit_of_bool(x: bool) : bitv[1] =
+    if x then b1 else b0
+
+function bool_of_bit(x: bitv[1]) : bool =
+    x = b1
+
+(* Boolean functions on bitv[|1|] *)
+
+function bnot(x: bitv[1]): bitv[1] =
+    bit_of_bool(not bool_of_bit(x))
+
+(* Boolean functions on bitv *)
+
+(* Not *)
+function b2not(x: bitv[2]): bitv[2] =
+    bnot(x^{1,1}) @ bnot(x^{0,0})
+function b4not(x: bitv[4]): bitv[4] =
+    b2not(x^{2,3}) @ b2not(x^{0,1})
+function b8not(x: bitv[8]): bitv[8] =
+    b4not(x^{4,7}) @ b4not(x^{0,3})
+
+goal g: b8not([|10001111|]) = [|01110000|]
