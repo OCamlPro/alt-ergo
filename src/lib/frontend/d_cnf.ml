@@ -621,10 +621,11 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             in
             E.mk_term (Sy.Op Sy.Minus) [e1; aux_mk_expr x] ty
 
-          | B.Bitv_extract { i; j; n }, [x] ->
+          | B.Bitv_extract { i; j; _ }, [x] ->
             let q = E.int (Int.to_string i) in
             let p = E.int (Int.to_string j) in
-            E.mk_term (Sy.Op Sy.Extract) [aux_mk_expr x; p; q] (Ty.Tbitv n)
+            E.mk_term (Sy.Op Sy.Extract) [aux_mk_expr x; p; q]
+              (Ty.Tbitv (i-j+1))
 
           | B.Destructor { case; field; adt; _ }, [x] ->
             begin match DT.definition adt with
@@ -1331,7 +1332,8 @@ let make dloc_file acc stmt =
                   mk_expr ~loc ~name_base
                     ~toplevel:false ~decl_kind body
                 in
-                let qb = E.mk_eq ~iff:false defn ff in
+                let iff = Ty.equal (Expr.type_info defn) (Ty.Tbool) in
+                let qb = E.mk_eq ~iff defn ff in
                 let binders = E.mk_binders binders_set in
                 let ff =
                   E.mk_forall name_base Loc.dummy binders [] qb (-42)
@@ -1346,6 +1348,8 @@ let make dloc_file acc stmt =
                     E.mk_forall name_base loc
                       Symbols.Map.empty [] ff id ~toplevel:true ~decl_kind
                 in
+                if Options.get_verbose () then
+                  Format.eprintf "defining term of %a@." DE.Term.print body;
                 C.{ st_decl = C.Assume (name_base, e, true); st_loc }
             end
           | _ -> assert false
