@@ -1517,7 +1517,25 @@ let tighten_eq_bounds env r1 r2 p1 p2 origin_eq expl =
       Debug.tighten_interval_modulo_eq_begin p1 p2;
       let i1, us1, is_mon_1 = generic_find r1 env in
       let i2, us2, is_mon_2 = generic_find r2 env in
-      let j = I.add_explanation (I.intersect i1 i2) expl in
+      (* We are assuming [origin_eq] with explanation [expl], where [origin_eq]
+       * is an equality between terms [r1] and [r2] with respective intervals
+       * [i1] and [i2].
+       *
+       * The shared interval for both [r1] and [r2] after the assumption
+       * becomes the intersection of [i1] and [i2], and must account for the
+       * additional explanation [expl] (since [origin_eq] is only valid under
+       * [expl]).
+       *
+       * [I.intersect] raises a "not consistent" exception if the two intervals
+       * are disjoint, but it does so *before* the additional explanation is
+       * added to the intervals' bounds, so we must add it explicitly in that
+       * case.
+      *)
+      let intersect i1 i2 =
+        try I.intersect i1 i2
+        with I.NotConsistent ex -> raise (I.NotConsistent (Ex.union ex expl))
+      in
+      let j = I.add_explanation (intersect i1 i2) expl in
       Debug.tighten_interval_modulo_eq_middle p1 p2 i1 i2 j;
       let impr_i1 = I.is_strict_smaller j i1 in
       let impr_i2 = I.is_strict_smaller j i2 in
