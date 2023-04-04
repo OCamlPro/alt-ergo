@@ -29,3 +29,13 @@ function camlzip_inflate_bytecode () {
 function camlzip_update_crc32 () {
   return BLOCK(0, 0, 0, 0)
 }
+
+//Provides: unix_getpid
+function unix_getpid() {
+  return 0;
+}
+
+//Provides: unix_kill
+function unix_kill() {
+  return 0;
+}
