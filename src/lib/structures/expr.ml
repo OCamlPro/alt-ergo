@@ -296,6 +296,7 @@ end
 
 module Labels = Hashtbl.Make(H)
 module HC = Hconsing.Make(H)
+let () = HC.enable_gc_control ()
 module Hsko = Hashtbl.Make(H)
 
 module F_Htbl : Hashtbl.S with type key = t =

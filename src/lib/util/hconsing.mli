@@ -82,6 +82,16 @@ module type S = sig
   val reinit_cache: unit -> unit
   (** Reinitializes the module's cache *)
 
+  val enable_gc_control : unit -> unit
+  (** Set whether the GC control should be activated.
+   *
+   *  GC control allows to ensure that hashconsed values are only collected at
+   *  specific points that is controlled by the Hconsing module rather than
+   *  depend on the behavior of the OCaml GC.
+   *
+   *  Must be set only once before the first call to `make`.
+   *)
+
   val make : t -> t
   (** Hashcons a value [t], either returning [t], or a value equal
       to [t] that was hashconsed previously. *)
