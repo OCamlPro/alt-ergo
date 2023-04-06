@@ -283,8 +283,6 @@ val elim_let : recursive:bool -> letin -> t
 
 val elim_iff : t -> t -> int -> with_conj:bool -> t
 
-val concat_chainable: Symbols.t -> Ty.t -> t -> t list -> t list
-
 (*val purify_literal : t -> t*)
 val purify_form : t -> t
 
