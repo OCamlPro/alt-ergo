@@ -1,0 +1,239 @@
+(* this is the prelude for Alt-Ergo, version >= 2.4.0 *)
+(* this is a prelude for Alt-Ergo integer arithmetic *)
+type string
+
+logic match_bool : bool, 'a, 'a -> 'a
+
+axiom match_bool_True :
+  (forall z:'a. forall z1:'a. (match_bool(true, z, z1) = z))
+
+axiom match_bool_False :
+  (forall z:'a. forall z1:'a. (match_bool(false, z, z1) = z1))
+
+axiom CompatOrderMult :
+  (forall x:int. forall y:int. forall z:int. ((x <= y) -> ((0 <= z) ->
+  ((x * z) <= (y * z)))))
+
+function abs(x: int) : int = (if (0 <= x) then x else (-x))
+
+axiom Abs_le : (forall x:int. forall y:int. ((abs(x) <= y) -> ((-y) <= x)))
+
+axiom Abs_le1 : (forall x:int. forall y:int. ((abs(x) <= y) -> (x <= y)))
+
+axiom Abs_le2 :
+  (forall x:int. forall y:int. ((((-y) <= x) and (x <= y)) -> (abs(x) <= y)))
+
+axiom Abs_pos : (forall x:int. (0 <= abs(x)))
+
+logic div : int, int -> int
+
+logic mod : int, int -> int
+
+axiom Div_mod :
+  (forall x:int. forall y:int. ((not (y = 0)) -> (x = ((y * div(x,
+  y)) + mod(x, y)))))
+
+axiom Div_bound :
+  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) -> (0 <= div(x, y))))
+
+axiom Div_bound1 :
+  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) -> (div(x, y) <= x)))
+
+axiom Mod_bound :
+  (forall x:int. forall y:int. ((not (y = 0)) -> ((-abs(y)) <  mod(x, y))))
+
+axiom Mod_bound1 :
+  (forall x:int. forall y:int. ((not (y = 0)) -> (mod(x, y) <  abs(y))))
+
+axiom Div_sign_pos :
+  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) -> (0 <= div(x, y))))
+
+axiom Div_sign_neg :
+  (forall x:int. forall y:int. (((x <= 0) and (0 <  y)) -> (div(x, y) <= 0)))
+
+axiom Mod_sign_pos :
+  (forall x:int. forall y:int. (((0 <= x) and (not (y = 0))) -> (0 <= mod(x,
+  y))))
+
+axiom Mod_sign_neg :
+  (forall x:int. forall y:int. (((x <= 0) and (not (y = 0))) -> (mod(x,
+  y) <= 0)))
+
+axiom Rounds_toward_zero :
+  (forall x:int. forall y:int. ((not (y = 0)) -> (abs((div(x,
+  y) * y)) <= abs(x))))
+
+axiom Div_1 : (forall x:int. (div(x, 1) = x))
+
+axiom Mod_1 : (forall x:int. (mod(x, 1) = 0))
+
+axiom Div_inf :
+  (forall x:int. forall y:int. (((0 <= x) and (x <  y)) -> (div(x, y) = 0)))
+
+axiom Mod_inf :
+  (forall x:int. forall y:int. (((0 <= x) and (x <  y)) -> (mod(x, y) = x)))
+
+axiom Div_mult :
+  (forall x:int. forall y:int. forall z:int [div(((x * y) + z), x)].
+  (((0 <  x) and ((0 <= y) and (0 <= z))) -> (div(((x * y) + z),
+  x) = (y + div(z, x)))))
+
+axiom Mod_mult :
+  (forall x:int. forall y:int. forall z:int [mod(((x * y) + z), x)].
+  (((0 <  x) and ((0 <= y) and (0 <= z))) -> (mod(((x * y) + z), x) = mod(z,
+  x))))
+
+predicate is_sint32(x: int) = (((-2147483648) <= x) and (x <  2147483648))
+
+axiom Div_mod1 :
+  (forall x:int. forall y:int. ((not (y = 0)) ->
+  (x = ((y * (x / y)) + (x % y)))))
+
+axiom Mod_bound2 :
+  (forall x:int. forall y:int. ((not (y = 0)) -> (0 <= (x % y))))
+
+axiom Mod_bound3 :
+  (forall x:int. forall y:int. ((not (y = 0)) -> ((x % y) <  abs(y))))
+
+axiom Div_unique :
+  (forall x:int. forall y:int. forall q:int. ((0 <  y) ->
+  ((((q * y) <= x) and (x <  ((q * y) + y))) -> ((x / y) = q))))
+
+axiom Div_bound2 :
+  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) -> (0 <= (x / y))))
+
+axiom Div_bound3 :
+  (forall x:int. forall y:int. (((0 <= x) and (0 <  y)) -> ((x / y) <= x)))
+
+axiom Mod_11 : (forall x:int. ((x % 1) = 0))
+
+axiom Div_11 : (forall x:int. ((x / 1) = x))
+
+axiom Div_inf1 :
+  (forall x:int. forall y:int. (((0 <= x) and (x <  y)) -> ((x / y) = 0)))
+
+axiom Div_inf_neg :
+  (forall x:int. forall y:int. (((0 <  x) and (x <= y)) ->
+  (((-x) / y) = (- 1))))
+
+axiom Mod_0 : (forall y:int. ((not (y = 0)) -> ((0 % y) = 0)))
+
+axiom Div_1_left : (forall y:int. ((1 <  y) -> ((1 / y) = 0)))
+
+axiom Div_minus1_left : (forall y:int. ((1 <  y) -> (((- 1) / y) = (- 1))))
+
+axiom Mod_1_left : (forall y:int. ((1 <  y) -> ((1 % y) = 1)))
+
+axiom Mod_minus1_left : (forall y:int. ((1 <  y) -> (((- 1) % y) = (y - 1))))
+
+axiom Div_mult1 :
+  (forall x:int. forall y:int. forall z:int [(((x * y) + z) / x)].
+  ((0 <  x) -> ((((x * y) + z) / x) = (y + (z / x)))))
+
+axiom Mod_mult1 :
+  (forall x:int. forall y:int. forall z:int [(((x * y) + z) % x)].
+  ((0 <  x) -> ((((x * y) + z) % x) = (z % x))))
+
+axiom cdiv_cases :
+  (forall n:int. forall d:int [div(n, d)]. ((0 <= n) -> ((0 <  d) -> (div(n,
+  d) = (n / d)))))
+
+axiom cdiv_cases1 :
+  (forall n:int. forall d:int [div(n, d)]. ((n <= 0) -> ((0 <  d) -> (div(n,
+  d) = (-((-n) / d))))))
+
+axiom cdiv_cases2 :
+  (forall n:int. forall d:int [div(n, d)]. ((0 <= n) -> ((d <  0) -> (div(n,
+  d) = (-(n / (-d)))))))
+
+axiom cdiv_cases3 :
+  (forall n:int. forall d:int [div(n, d)]. ((n <= 0) -> ((d <  0) -> (div(n,
+  d) = ((-n) / (-d))))))
+
+axiom cmod_cases :
+  (forall n:int. forall d:int [mod(n, d)]. ((0 <= n) -> ((0 <  d) -> (mod(n,
+  d) = (n % d)))))
+
+axiom cmod_cases1 :
+  (forall n:int. forall d:int [mod(n, d)]. ((n <= 0) -> ((0 <  d) -> (mod(n,
+  d) = (-((-n) % d))))))
+
+axiom cmod_cases2 :
+  (forall n:int. forall d:int [mod(n, d)]. ((0 <= n) -> ((d <  0) -> (mod(n,
+  d) = (n % (-d))))))
+
+axiom cmod_cases3 :
+  (forall n:int. forall d:int [mod(n, d)]. ((n <= 0) -> ((d <  0) -> (mod(n,
+  d) = (-((-n) % (-d)))))))
+
+goal p4 :
+  (forall i:int. forall i1:int.
+   (let x = div(i1, 500) : int in
+   (let x1 = (500 * x) : int in
+   (let x2 = ((- 500) * x) : int in
+   (let x3 = (i1 + x2) : int in
+   (let x4 = div(x3, 200) : int in
+   (let x5 = (200 * x4) : int in
+   (let x6 = ((- 200) * x4) : int in
+   (let x7 = ((i1 + x2) + x6) : int in
+   (let x8 = div(x7, 100) : int in
+   (let x9 = (100 * x8) : int in
+   (let x10 = ((- 100) * x8) : int in
+   (let x11 = (((i1 + x2) + x6) + x10) : int in
+   (let x12 = div(x11, 50) : int in
+   (let x13 = (50 * x12) : int in
+   (let x14 = ((- 50) * x12) : int in
+   (let x15 = ((((i1 + x2) + x6) + x10) + x14) : int in
+   (let x16 = div(x15, 20) : int in
+   (let x17 = (20 * x16) : int in
+   (let x18 = ((- 20) * x16) : int in
+   (let x19 = (((((i1 + x2) + x6) + x10) + x14) + x18) : int in
+   (let x20 = div(x19, 10) : int in
+   (let x21 = (10 * x20) : int in
+   (let x22 = ((- 10) * x20) : int in
+   (let x23 = ((((((i1 + x2) + x6) + x10) + x14) + x18) + x22) : int in
+   (let x24 = div(x23, 5) : int in
+   (let x25 = (5 * x24) : int in
+   (let x26 = ((- 5) * x24) : int in
+   (let x27 = (((((((i1 + x2) + x6) + x10) + x14) + x18) + x22) + x26) : int in
+   (let x28 = div(x27, 2) : int in
+   (let x29 = (2 * x28) : int in
+    ((0 <= i1) ->
+    ((0 <= i) ->
+    ((i1 <= i) ->
+    ((x1 <= i1) ->
+    (((x1 + x5) <= i1) ->
+    ((((x1 + x5) + x9) <= i1) ->
+    (((((x1 + x5) + x9) + x13) <= i1) ->
+    ((((((x1 + x5) + x9) + x13) + x17) <= i1) ->
+    (((((((x1 + x5) + x9) + x13) + x17) + x21) <= i1) ->
+    ((((((((x1 + x5) + x9) + x13) + x17) + x21) + x25) <= i1) ->
+    (((((((((x1 + x5) + x9) + x13) + x17) + x21) + x25) + x29) <= i1) ->
+    (((- 2147483648) <= i1) ->
+    ((i1 <= 2147483647) ->
+    (is_sint32(i1) ->
+    (is_sint32(i) ->
+    (is_sint32(x) ->
+    (is_sint32((i + ((- 1) * i1))) ->
+    (is_sint32(x3) ->
+    (is_sint32(x4) ->
+    (is_sint32(x7) ->
+    (is_sint32(x8) ->
+    (is_sint32(x11) ->
+    (is_sint32(x12) ->
+    (is_sint32(x15) ->
+    (is_sint32(x16) ->
+    (is_sint32(x19) ->
+    (is_sint32(x20) ->
+    (is_sint32(x23) ->
+    (is_sint32(x24) ->
+    (is_sint32(x27) ->
+    (is_sint32(x28) ->
+    (is_sint32(((((((((i1 + x2) + x6) + x10) + x14) + x18) + x22) + x26) + ((- 2) * x28))) ->
+    ((((((((i1 <= (599 + x1)) and (i1 <= ((199 + x1) + x5))) and
+    (i1 <= (((99 + x1) + x5) + x9))) and
+    (i1 <= ((((59 + x1) + x5) + x9) + x13))) and
+    (i1 <= (((((19 + x1) + x5) + x9) + x13) + x17))) and
+    (i1 <= ((((((9 + x1) + x5) + x9) + x13) + x17) + x21))) and
+    (i1 <= (((((((5 + x1) + x5) + x9) + x13) + x17) + x21) + x25))) and
+    (i1 <= ((((((((1 + x1) + x5) + x9) + x13) + x17) + x21) + x25) + x29))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
