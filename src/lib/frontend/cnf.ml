@@ -160,7 +160,8 @@ let clean_trigger ~in_theory name trig =
  *   match E.term_view t with
  *   | Term {E.f; xs; ty; _} ->
  *     if Symbols.equal p_op f && Ty.equal p_ty ty then begin
- *       Format.printf "Flattening %a into %a@." Expr.print_list xs Expr.print_list acc;
+ *       Format.printf "Flattening %a into %a@."
+          Expr.print_list xs Expr.print_list acc;
  *       let res = List.rev_append (List.rev xs) acc in
  *       Format.printf "Result: %a@." Expr.print_list res;
  *       (t :: acc)

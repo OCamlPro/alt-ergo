@@ -1,0 +1,57 @@
+(* this is the prelude for Alt-Ergo, version >= 2.4.0 *)
+(* this is a prelude for Alt-Ergo integer arithmetic *)
+type string
+
+logic match_bool : bool, 'a, 'a -> 'a
+
+axiom match_bool_True :
+  (forall z:'a. forall z1:'a. (match_bool(true, z, z1) = z))
+
+axiom match_bool_False :
+  (forall z:'a. forall z1:'a. (match_bool(false, z, z1) = z1))
+
+axiom CompatOrderMult :
+  (forall x:int. forall y:int. forall z:int. ((x <= y) -> ((0 <= z) ->
+  ((x * z) <= (y * z)))))
+
+type addr = { base : int; offset : int
+}
+
+function shift(p: addr, k: int) : addr = { base = (p).base; offset =
+  ((p).offset + k) }
+
+logic l_sum : (addr,int) farray, addr, int, int -> int
+
+axiom q_empty :
+  (forall mint:(addr,int) farray. forall a:addr. forall b:int. forall e:int.
+  ((e <= b) -> (l_sum(mint, a, b, e) = 0)))
+
+axiom q_range :
+  (forall mint:(addr,int) farray. forall a:addr. forall b:int. forall e:int.
+  (let x = ((- 1) + e) : int in ((b <  e) -> ((l_sum(mint, a, b,
+  x) + (mint[shift(a, x)])) = l_sum(mint, a, b, e)))))
+
+predicate p_unchanged(mint: (addr,int) farray, mint1: (addr,int) farray,
+  array1: addr, b: int, e: int) =
+  (forall i:int. (let a = shift(array1, i) : addr in (((b <= i) and
+  (i <  e)) -> ((mint1[a]) = (mint[a])))))
+
+axiom q_sum_separable :
+  (forall mint:(addr,int) farray. forall array1:addr. forall b:int.
+  forall s:int. forall e:int. (((b <= s) and (s <= e)) -> ((l_sum(mint,
+  array1, b, s) + l_sum(mint, array1, s, e)) = l_sum(mint, array1, b, e))))
+
+axiom q_unchanged_sum :
+  (forall mint:(addr,int) farray. forall mint1:(addr,int) farray.
+  forall array1:addr. forall b:int. forall e:int. (p_unchanged(mint, mint1,
+  array1, b, e) -> (l_sum(mint1, array1, b, e) = l_sum(mint, array1, b, e))))
+
+goal wp_goal :
+  (forall t1:(addr,int) farray. forall a:addr. forall i:int. forall i1:int.
+  (let x = (1 + i) : int in (let x1 = l_sum(t1, a, i, x) : int in (let x2 =
+  l_sum(t1, a, x, i1) : int in (let x3 = l_sum(t1, a, 0, i) : int in
+  (let a1 = shift(a, i) : addr in (let m = (t1[a1 <- (1 + (t1[a1]))])
+  : (addr,int) farray in (((x1 + x2) = l_sum(t1, a, i, i1)) ->
+  ((((x3 + x1) + x2) = l_sum(t1, a, 0, i1)) -> (((0 <= i) and (i <  i1)) ->
+  (p_unchanged(m, t1, a, 0, i) -> (p_unchanged(m, t1, a, x, i1) ->
+  ((((1 + x3) + x1) + x2) = l_sum(m, a, 0, i1))))))))))))))
