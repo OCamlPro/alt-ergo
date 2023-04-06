@@ -486,11 +486,36 @@ struct
     let b', acc = aux b acc in
     a', b', acc
 
+  (* Apply the ordered substitution l to the semantic value r. *)
   let apply_subst r l = List.fold_left (fun r (p,v) -> CX.subst p v r) r l
 
+  (* Transform the ordered substitution:
+      r1 -> R1
+      r2 -> R2
+      r3 -> R3
+     into the ordered substitution
+      r1 -> R1[r2 -> R2[r3 -> R3]][r3 -> R3]
+      r2 -> R2[r3 -> R3]
+      r3 -> R3
+  *)
   let triangular_down sbs =
     List.fold_right (fun (p,v) nsbs -> (p, apply_subst v nsbs) :: nsbs) sbs []
 
+  let pprint fmt {v; _} = match v with
+    | X1 _ -> Format.fprintf fmt "X1"
+    | X2 _ -> Format.fprintf fmt "X2"
+    | X3 _ -> Format.fprintf fmt "X3"
+    | X4 _ -> Format.fprintf fmt "X4"
+    | X5 _ -> Format.fprintf fmt "X5"
+    | X6 _ -> Format.fprintf fmt "X6"
+    | X7 _ -> Format.fprintf fmt "X7"
+    | Term _ -> Format.fprintf fmt "Term"
+    | Ac _ -> Format.fprintf fmt "Ac"
+
+  (* Transform the ordered substitution sbs into a simultaneous substitution,
+     that is the order of substitutions is not relevant anymore. Keep only in
+     the produced substitution the uninterpreted terms that are leaves of
+     a or b. *)
   let make_idemp a b sbs =
     Debug.print_sbt "Non triangular" sbs;
     let sbs = triangular_down sbs in
@@ -501,12 +526,13 @@ struct
       List.filter (fun (p,_) ->
           match p.v with
           | Ac _ -> true | Term _ -> SX.mem p original
-          | _ -> false
-          (* TODO: This case shouldn't occur? *)
-            (*
-              Printer.print_err "%a" CX.print p;
-              assert false
-            *)
+          | _ ->
+            (* The substitution produced by the function solve and used by the
+               function subst replaces always uninterpreted semantic
+               values by semantic values. *)
+            Printer.print_err "@.TERM: %a, TYPE: %a CONSTR: %a@." CX.print p
+              Ty.print (CX.type_info p) pprint p;
+            assert false
         )sbs
     in
     Debug.print_sbt "Triangular and cleaned" sbs;
@@ -517,6 +543,12 @@ struct
     *)
     sbs
 
+  (* Apply the ordered substitution sbt in reversed order to the semantic
+     value r. For example, if sbt is the substitution:
+      r1 -> R1
+      r2 -> R2
+      r3 -> R3
+     then the result is r[r3 -> R3][r2 -> R2][r1 -> R1]. *)
   let apply_subst_right r sbt =
     List.fold_right (fun (p,v)r  -> CX.subst p v r) sbt r
 

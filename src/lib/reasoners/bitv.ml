@@ -39,16 +39,9 @@ let compare_sort s1 s2 =
   | A, (B | C) | B, C -> -1
   | C, (A | B) | B, A -> 1
 
-type tvar = { var : int ; sorte : sort_var }
+type 'a tvar = { var : 'a ; sorte : sort_var }
 
-let compare_tvar v1 v2 =
-  if v1 == v2 then 0
-  else
-    let c = compare v1.var v2.var in
-    if c <> 0 then c
-    else compare_sort v1.sorte v2.sorte
-
-type 'a xterm = Var of tvar | Alien of 'a
+type 'a xterm = Var of 'a tvar | Alien of 'a
 
 type 'a alpha_term = {
   bv : 'a;
@@ -57,8 +50,12 @@ type 'a alpha_term = {
 
 type 'a simple_term_aux =
   | Cte of bool
+  (* A bit. *)
+
   | Other of 'a xterm
+
   | Ext of 'a xterm * int * int * int (*// id * size * i * j //*)
+  (* a slice of a bitvector. *)
 
 type 'a simple_term = ('a simple_term_aux) alpha_term
 
@@ -66,11 +63,11 @@ type 'a abstract =  ('a simple_term) list
 
 (* for the solver *)
 
-type solver_simple_term_aux =
+type 'a solver_simple_term_aux =
   | S_Cte of bool
-  | S_Var of tvar
+  | S_Var of 'a tvar
 
-type solver_simple_term = solver_simple_term_aux alpha_term
+type 'a solver_simple_term = 'a solver_simple_term_aux alpha_term
 
 module type ALIEN = sig
   include Sig.X
@@ -87,6 +84,13 @@ module Shostak(X : ALIEN) = struct
   type r = X.r
 
   let name = "bitv"
+
+  let compare_tvar v1 v2 =
+    if v1 == v2 then 0
+    else
+      let c = X.str_cmp v1.var v2.var in
+      if c <> 0 then c
+      else compare_sort v1.sorte v2.sorte
 
   let is_mine_symb sy _ =
     match sy with
@@ -107,7 +111,7 @@ module Shostak(X : ALIEN) = struct
     | Var v1, Var v2 ->
       let c1 = compare_sort v1.sorte v2.sorte in
       if c1 <> 0 then c1
-      else -(compare v1.var v2.var)
+      else -(X.str_cmp v1.var v2.var)
     (* on inverse le signe : les variables les plus fraiches sont
        les plus jeunes (petites)*)
 
@@ -141,22 +145,41 @@ module Shostak(X : ALIEN) = struct
       | _ , S_Cte false | S_Cte true,_ -> 1
       | S_Var v1, S_Var v2 ->
         let c1 = compare_sort v1.sorte v2.sorte
-        in if c1 <> 0 then c1 else compare v1.var v2.var
+        in if c1 <> 0 then c1 else X.str_cmp v1.var v2.var
     )
 
   module ST_Set = Set.Make (
     struct
-      type t = solver_simple_term
-      let compare = compare_solver_simple_term
+      type t = r solver_simple_term
+      let compare st1 st2 =
+        if st1.sz <> st2.sz then st1.sz - st2.sz
+        else
+          begin
+            match st1.bv,st2.bv with
+            | S_Cte b, S_Cte b' -> Bool.compare b b'
+            | S_Cte false, _ | _, S_Cte true -> -1
+            | _ , S_Cte false | S_Cte true,_ -> 1
+            | S_Var v1, S_Var v2 ->
+              let c1 = compare_sort v1.sorte v2.sorte
+              in if c1 <> 0 then c1 else X.str_cmp v1.var v2.var
+          end
     end)
 
+  (* This module contains the code to produce a canonical form
+     from a bitvector term of Expr. *)
   module Canonizer = struct
 
     type term_aux  =
       | I_Cte of bool
+      (* A bit. *)
+
       | I_Other of X.r xterm
+
       | I_Ext of term * int * int
+      (* A slice of a term. *)
+
       | I_Comp of term * term
+      (* A concatenation of two terms. *)
 
     and term = term_aux alpha_term
 
@@ -187,7 +210,18 @@ module Shostak(X : ALIEN) = struct
 
     and compare_term t1 t2 = compare_alpha_term compare_term_aux t1 t2
 
-    (** **)
+    (* This function simplifies some nested operations on terms.
+       1) Compute slice of constant bitvector:
+            [|1111|]^{1,2}  --> [|11|]
+       2) Simplify nested slices:
+            (t^{2,5})^{1,2} --> t^{3,4}
+       3) Simplify slices of concatenations:
+         ([|1010|] @ [|0011|])^{1,3} --> [|0011|]^{1,3}
+
+         ([|1010|] @ [|0011|])^{5,7} --> [|1010|]^{5,7}
+
+         ([|1010|] @ [|0011|])^{3,7} --> [|1010|]^{3,7}
+    *)
     let rec alpha t = match t.bv with
       |I_Cte _ -> [t]
       |I_Other _ -> [t]
@@ -211,7 +245,9 @@ module Shostak(X : ALIEN) = struct
             @(alpha{sz = v.sz-i ; bv = I_Ext(v,i,v.sz-1)})
         end
 
-    (** **)
+    (* Convert a term of this module into a bitvector semantic value.
+       Before performing this conversion, the function merges adjacent
+       constant bitvectors and adjacent slice of a same bitvectors. *)
     let rec beta lt =
       let simple_t st = match st.bv with
         |I_Cte b -> {bv = Cte b ; sz = st.sz}
@@ -241,12 +277,24 @@ module Shostak(X : ALIEN) = struct
           | _ -> (simple_t s)::(beta (t::tl'))
         end
 
-    (** **)
     let sigma term = beta (alpha term)
 
+    (* Concatenate a sequence of terms in reversed order. If the list is
+        [t1; t2; t3; ...; tn]
+       The function produces the term
+        tn @ ( ... @ (t3 @ (t2 @ 1)) ... )
+    *)
+    (* TODO: rename this function. *)
     let bitv_to_icomp =
       List.fold_left (fun ac bt ->{ bv = I_Comp (ac,bt) ; sz = bt.sz + ac.sz })
 
+    (* Convert a literal bitvector into a sequence of concatenation
+       of constant bitvectors. For instance if the entry is the bitvector:
+         [|01110011000|]
+       The function produces the sequence:
+         [|0|] @ ([|111|] @ ([|00|] @ ([|11|] @ ([|000|]))))
+    *)
+    (* TODO: rename this function. *)
     let string_to_bitv s =
       let tmp = ref[] in
       String.iter(fun car -> tmp := (not @@ Char.equal car '0', 1)::(!tmp)) s;
@@ -261,6 +309,8 @@ module Shostak(X : ALIEN) = struct
       let res = f_aux (!tmp) [] in
       bitv_to_icomp (List.hd res) (List.tl res)
 
+    (* Convert a bitvector expression of Expr into the terms of the module
+       Canonize, then canonize the result into a bitvector semantic value. *)
     let make t =
       let rec make_rec t' ctx = match E.term_view t' with
         | { E.f = Sy.Bitv s; _ } -> string_to_bitv s, ctx
@@ -287,10 +337,15 @@ module Shostak(X : ALIEN) = struct
   module Debug = struct
     open Printer
 
-    let print_tvar fmt ({var=v;sorte=s},sz) =
-      Format.fprintf fmt "%s_%d[%d]@?"
-        (match s with | A -> "a" | B -> "b" | C -> "c")
-        v sz
+    let print_sorte fmt = function
+      | A -> Format.fprintf fmt "a"
+      | B -> Format.fprintf fmt "b"
+      | C -> Format.fprintf fmt "c"
+
+    let print_tvar fmt ({var; _}, sz) =
+      Format.fprintf fmt "%a[%d]@?"
+        X.print var
+        sz
 
     (* unused
        open Canonizer
@@ -416,12 +471,17 @@ module Shostak(X : ALIEN) = struct
             end
       in f_rec [] (t,u)
 
-    let fresh_var =
-      let cpt = ref 0 in fun t -> incr cpt; { var = !cpt ; sorte = t}
+    (* Produce a fresh variable of bitvector of size sz. *)
+    let fresh_var sz t =
+      let name = Format.asprintf "%a" Debug.print_sorte t in
+      let sy = Sy.fresh ~is_var:true name in
+      let var, ctx = Expr.mk_term sy [] (Ty.Tbitv sz) |> X.make in
+      assert (Lists.is_empty ctx);
+      { var; sorte = t}
 
-    let fresh_bitv genre size =
-      if size <= 0 then []
-      else [ { bv = S_Var (fresh_var genre) ; sz = size } ]
+    let fresh_bitv genre sz =
+      if sz <= 0 then []
+      else [ { bv = S_Var (fresh_var sz genre) ; sz } ]
 
     let cte_vs_other bol st = st , [{bv = S_Cte bol ; sz = st.sz}]
 
@@ -528,9 +588,9 @@ module Shostak(X : ALIEN) = struct
       |S_Cte _ -> {var with sz = s1},{var with sz = s2},None
       |S_Var v ->
         let (fs,sn,tr) = match v.sorte with
-          |A -> (fresh_var A), (fresh_var A), A
-          |B -> (fresh_var B), (fresh_var B), B
-          |C -> (fresh_var C), (fresh_var C), C
+          |A -> (fresh_var s2 A), (fresh_var s2 A), A
+          |B -> (fresh_var s2 B), (fresh_var s2 B), B
+          |C -> (fresh_var s2 C), (fresh_var s2 C), C
         in {bv = S_Var fs; sz = s1},{bv = S_Var sn; sz = s2},Some tr
 
     let rec slice_composition eq pat (ac_eq,c_sub) = match (eq,pat) with
@@ -699,9 +759,9 @@ module Shostak(X : ALIEN) = struct
   let equal bv1 bv2 = compare_mine bv1 bv2 = 0
 
   let hash_xterm = function
-    | Var {var = i; sorte = A} -> 11 * i
-    | Var {var = i; sorte = B} -> 17 * i
-    | Var {var = i; sorte = C} -> 19 * i
+    | Var {var = i; sorte = A} -> 11 * (X.hash i)
+    | Var {var = i; sorte = B} -> 17 * (X.hash i)
+    | Var {var = i; sorte = C} -> 19 * (X.hash i)
     | Alien r -> 23 * X.hash r
 
   let hash_simple_term_aux = function
@@ -769,7 +829,7 @@ module Shostak(X : ALIEN) = struct
 
   let var_or_term x =
     match x.bv with
-      Other (Var _) -> X.embed [x]
+      Other (Var v) -> v.var
     | Other (Alien r) -> r
     | _ -> assert false
 
@@ -788,7 +848,7 @@ module Shostak(X : ALIEN) = struct
     | Some u , Some t ->
       try
         List.map
-          (fun (p,v) -> var_or_term p,is_mine v)
+          (fun (p,v) -> var_or_term p, is_mine v)
           (Solver.solve u t)
       with Solver.Valid -> []
 
@@ -846,7 +906,8 @@ module Shostak(X : ALIEN) = struct
   let abstract_selectors v acc = is_mine v, acc
 
   let solve r1 r2 pb =
-    Sig.{pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}
+    let sbt = solve_bis r1 r2 in
+    Sig.{pb with sbt = List.rev_append sbt pb.sbt}
 
   let assign_value _ _ _ =
     Printer.print_err
