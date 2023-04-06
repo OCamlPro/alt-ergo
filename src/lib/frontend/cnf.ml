@@ -78,13 +78,7 @@ let rec make_term up_qv quant_basename t =
       begin
         let t2 = mk_term t2 in (*keep old mk_term order -> avoid regression*)
         let t1 = mk_term t1 in
-        match s, ty with
-        | Sy.Op Sy.Plus, (Ty.Tint | Ty.Treal) ->
-          let args = E.concat_chainable s ty t2 [] in
-          let args = E.concat_chainable s ty t1 args in
-          let args = List.fast_sort E.compare args in
-          E.mk_term s args ty
-        | _ -> E.mk_term s [t1; t2] ty
+        E.mk_term s [t1; t2] ty
       end
 
     | TTprefix ((Sy.Op Sy.Minus) as s, n) ->

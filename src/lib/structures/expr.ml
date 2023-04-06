@@ -1818,12 +1818,6 @@ let elim_iff f1 f2 id ~with_conj =
       (mk_and f1 f2 false id)
       (mk_and (neg f1) (neg f2) false id) false id
 
-let concat_chainable p_op p_ty t acc =
-  let {f; xs; ty; _} = term_view t in
-  if Symbols.equal p_op f && Ty.equal p_ty ty then
-    List.rev_append (List.rev xs) acc
-  else
-    t :: acc
 
 module Triggers = struct
 

@@ -554,12 +554,11 @@ let mk_add translate sy ty l =
     match l with
     | h :: t ->
       let args = aux_mk_add t in
-      let e = translate h in
-      E.concat_chainable sy ty e args
+      translate h :: args
     | [] -> []
   in
   let args = aux_mk_add l in
-  E.mk_term sy (List.fast_sort E.compare args) ty
+  E.mk_term sy args ty
 
 (** [mk_expr ~loc ~name_base ~toplevel ~decl_kind term]
 
