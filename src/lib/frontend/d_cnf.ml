@@ -571,6 +571,38 @@ let mk_add translate sy ty l =
   let args = aux_mk_add l in
   E.mk_term sy (List.fast_sort E.compare args) ty
 
+let mk_bitv_concat t1 t2 sz =
+  E.mk_term (Sy.Op Sy.Concat) [t1; t2] (Ty.Tbitv sz)
+
+let mk_bitv_extract i j t sz =
+  E.mk_term (Sy.Op (Sy.Extract (i, j))) [t] (Ty.Tbitv sz)
+
+let mk_bitv_repeat n i t =
+  let rec aux i sz acc =
+    if i = 1 then acc else
+      let nsz = sz + n in
+      aux (i - 1) nsz (mk_bitv_concat acc t nsz)
+  in
+  aux i n t
+
+let rec mk_rotate_left n i t =
+  if i = 0 then t else
+    mk_rotate_left n (i - 1) (
+      mk_bitv_concat
+        (mk_bitv_extract 0 (n - 2) t (n - 1))
+        (mk_bitv_extract (n - 1) (n - 1) t 1)
+        n
+    )
+
+let rec mk_rotate_right n i t =
+  if i = 0 then t else
+    mk_rotate_right n (i - 1) (
+      mk_bitv_concat
+        (mk_bitv_extract 0 0 t 1)
+        (mk_bitv_extract 1 (n - 1) t (n - 1))
+        n
+    )
+
 (** [mk_expr ~loc ~name_base ~toplevel ~decl_kind term]
 
     Builds an Alt-Ergo hashconsed expression from a dolmen term
@@ -632,8 +664,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             E.mk_term (Sy.Op Sy.Minus) [e1; aux_mk_expr x] ty
 
           | B.Bitv_extract { i; j; _ }, [x] ->
-            E.mk_term
-              (Sy.Op (Sy.Extract (j, i))) [aux_mk_expr x] (Ty.Tbitv (i-j+1))
+            mk_bitv_extract j i (aux_mk_expr x) (i - j + 1)
 
           | B.Destructor { case; field; adt; _ }, [x] ->
             begin match DT.definition adt with
@@ -693,11 +724,33 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
               | _ -> assert false
             end
 
+          | B.Bitv_repeat { n; k }, [t] ->
+            mk_bitv_repeat n k (aux_mk_expr t)
+
+          | B.Bitv_zero_extend { n; k }, [t] ->
+            let t' = aux_mk_expr t in
+            if n = 0 then t' else
+              mk_bitv_concat
+                (E.bitv (String.init n (fun _ -> '0')) (Ty.Tbitv n)) t' (n + k)
+
+          | B.Bitv_sign_extend { n; k }, [t] ->
+            let t' = aux_mk_expr t in
+            if k = 0 then t' else
+              let sign = mk_bitv_extract (k-1) (k-1) t' 1 in
+              mk_bitv_concat (mk_bitv_repeat k k sign) t' (n + k)
+
+          | B.Bitv_rotate_left { n; i }, [t] ->
+            let t' = aux_mk_expr t in
+            if n < 2 then t' else mk_rotate_left n i t'
+
+          | B.Bitv_rotate_right { n; i }, [t] ->
+            let t' = aux_mk_expr t in
+            if n < 2 then t' else mk_rotate_right n i t'
+
           (* Binary applications *)
 
           | B.Bitv_concat { n; m; }, [ x; y ] ->
-            let rty = Ty.Tbitv (n+m) in
-            E.mk_term (Sy.Op Sy.Concat) [aux_mk_expr x; aux_mk_expr y] rty
+            mk_bitv_concat (aux_mk_expr x) (aux_mk_expr y) (n + m)
 
           | B.Select, [ x; y ] ->
             let rty = dty_to_ty term_ty in

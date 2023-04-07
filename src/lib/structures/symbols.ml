@@ -139,6 +139,7 @@ let compare_operators op1 op2 =
       | Extract (i1, j1), Extract (i2, j2) ->
         let r = Int.compare i1 i2 in
         if r = 0 then Int.compare j1 j2 else r
+      | Nat2BV n1, Nat2BV n2 -> Int.compare n1 n2
       | _ , (Plus | Minus | Mult | Div | Modulo
             | Concat | Extract _ | BVGet _
             | Get | Set | Fixed | Float _ | Reach

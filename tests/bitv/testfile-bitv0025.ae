@@ -1,3 +1,0 @@
-logic bv2nat : bitv[8] -> int
-
-goal g: bv2nat([|10101011|]) = 43

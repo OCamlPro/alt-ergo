@@ -1,4 +1,0 @@
-logic nat2bv : int, int -> bitv[8]
-logic bv2nat : bitv[8] -> int
-
-goal g: bv2nat(nat2bv(8,43)) = 43

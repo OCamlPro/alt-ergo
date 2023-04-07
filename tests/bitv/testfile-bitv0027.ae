@@ -1,3 +1,0 @@
-logic nat2bv : int, int -> bitv[8]
-
-goal g: nat2bv(8,43) = [|10101011|]

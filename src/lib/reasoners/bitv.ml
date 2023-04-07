@@ -231,14 +231,14 @@ module Shostak(X : ALIEN) = struct
       if update_ctx && Options.get_use_bv () then
         String.iteri (
           fun i car ->
-            let pos = cnt + size - i - 1 in
+            let pos = size - i - 1 in
             let b = car<>'0' in
             nctx :=
               begin match bounds with
-                | None ->  mk_eq b pos :: !nctx
+                | None -> mk_eq b (cnt + pos) :: !nctx
                 | Some (lb, ub) ->
                   if pos >= lb && pos <= ub
-                  then mk_eq b pos :: !nctx
+                  then mk_eq b (cnt + pos - lb) :: !nctx
                   else !nctx
               end;
             tmp := (b,1)::(!tmp)
@@ -252,7 +252,8 @@ module Shostak(X : ALIEN) = struct
           (f_aux ((b2,m)::r)) ({ sz = n ; bv = I_Cte b1 }::acc)
       in
       let res = f_aux (!tmp) [] in
-      bitv_to_icomp (List.hd res) (List.tl res), List.rev_append !nctx ctx
+      let ctx = List.rev_append !nctx ctx in
+      bitv_to_icomp (List.hd res) (List.tl res), ctx
 
     let bitv_of_nat bv_t nat_t size ctx =
       let two = E.int "2" in
@@ -344,19 +345,30 @@ module Shostak(X : ALIEN) = struct
 
         | { E.f = Sy.Op Sy.Concat ;
             xs = [t2;t1] ; ty = Ty.Tbitv n; _ } ->
-          let (bounds2, uc2), (bounds1, uc1) =
+          let sz', (bounds2, uc2), (bounds1, uc1) =
             let { E.ty = ty2; _ }, { E.ty = ty1; _ } =
               E.term_view t2, E.term_view t1
             in
             match ty2, ty1 with
             | Ty.Tbitv _, Ty.Tbitv sz ->
               begin match bounds with
-                | None -> (None, update_ctx), (None, update_ctx)
+                | None ->
+                  (if update_ctx then sz else 0),
+                  (None, update_ctx),
+                  (None, update_ctx)
                 | Some (lb, ub) ->
                   if lb >= sz then
-                    (Some (lb - sz, ub - sz), true), (None, false)
-                  else if ub < sz then (None, false), (Some (lb, ub), true)
-                  else (Some (0, ub - sz), true), (Some (lb, sz - 1), true)
+                    0,
+                    (Some (lb - sz, ub - sz), update_ctx),
+                    (None, false)
+                  else if ub < sz then
+                    (if update_ctx then sz - lb else 0),
+                    (None, false),
+                    (Some (lb, ub), update_ctx)
+                  else
+                    (if update_ctx then sz - lb else 0),
+                    (Some (0, ub - sz), update_ctx),
+                    (Some (lb, sz - 1), update_ctx)
               end
             | _ ->
               failwith (
@@ -364,11 +376,12 @@ module Shostak(X : ALIEN) = struct
                   "Concat: expected two bitvectors, got %a and %a"
                   Ty.print ty1 Ty.print ty2)
           in
+          let uc1, uc2 = uc1 && update_ctx, uc2 && update_ctx in
           let r1, ctx =
             make_rec cnt ~update_ctx:uc1 ?bounds:bounds1 t1 ctx
           in
           let r2, ctx =
-            make_rec (cnt + r1.sz) ~update_ctx:uc2 ?bounds:bounds2 t2 ctx
+            make_rec (cnt + sz') ~update_ctx:uc2 ?bounds:bounds2 t2 ctx
           in
           { bv = I_Comp (r2, r1) ; sz = n }, ctx
 
@@ -376,7 +389,10 @@ module Shostak(X : ALIEN) = struct
           let bounds =
             match bounds with
             | None -> (i, j)
-            | Some (lb, ub) -> (lb + i, j - ub)
+            | Some (lb, ub) ->
+              let nlb = i + lb in
+              let nub = i + ub in
+              (nlb, nub)
           in
           let r, ctx = make_rec cnt ~update_ctx ~bounds t ctx in
           { sz ; bv = I_Ext (r, i, j)}, ctx
