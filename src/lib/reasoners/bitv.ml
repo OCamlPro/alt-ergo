@@ -213,9 +213,9 @@ module Shostak(X : ALIEN) = struct
     (* This function simplifies some nested operations on terms.
        1) Compute slice of constant bitvector:
             [|1111|]^{1,2}  --> [|11|]
-       2) Simplify nested slices:
+       2) Simplify nested slice extractions:
             (t^{2,5})^{1,2} --> t^{3,4}
-       3) Simplify slices of concatenations:
+       3) Simplify slice extractions of concatenations:
          ([|1010|] @ [|0011|])^{1,3} --> [|0011|]^{1,3}
 
          ([|1010|] @ [|0011|])^{5,7} --> [|1010|]^{5,7}
@@ -245,9 +245,9 @@ module Shostak(X : ALIEN) = struct
             @(alpha{sz = v.sz-i ; bv = I_Ext(v,i,v.sz-1)})
         end
 
-    (* Convert a term of this module into a bitvector semantic value.
+    (* Convert a term of the Canonize module into a bitvector semantic value.
        Before performing this conversion, the function merges adjacent
-       constant bitvectors and adjacent slice of a same bitvectors. *)
+       constant bitvectors and adjacent slice extractions. *)
     let rec beta lt =
       let simple_t st = match st.bv with
         |I_Cte b -> {bv = Cte b ; sz = st.sz}

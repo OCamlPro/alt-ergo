@@ -486,8 +486,8 @@ struct
     let b', acc = aux b acc in
     a', b', acc
 
-  (* Apply the ordered substitution l to the semantic value r. *)
-  let apply_subst r l = List.fold_left (fun r (p,v) -> CX.subst p v r) r l
+  (* Apply the substitution sbs to the semantic value r. *)
+  let apply_subst r sbs = List.fold_left (fun r (p,v) -> CX.subst p v r) r sbs
 
   (* Transform the ordered substitution:
       r1 -> R1
@@ -512,10 +512,22 @@ struct
     | Term _ -> Format.fprintf fmt "Term"
     | Ac _ -> Format.fprintf fmt "Ac"
 
-  (* Transform the ordered substitution sbs into a simultaneous substitution,
-     that is the order of substitutions is not relevant anymore. Keep only in
-     the produced substitution the uninterpreted terms that are leaves of
-     a or b. *)
+  (* Transform the substitution sbs into an idempotent substitution.
+     If the input is the ordered substitution:
+      r1 -> R1
+      r2 -> R2
+      r3 -> R3
+     The function transforms it into:
+      r1 -> R1[r2 -> R2[r3 -> R3]][r3 -> R3]
+      r2 -> R2[r3 -> R3]
+      r3 -> R3
+     Let us define R1' =  R1[r2 -> R2[r3 -> R3]][r3 -> R3], R2' = R2[r3 -> R3]
+     and R3' = R3. Then the function returns the substitution
+      r3 -> R3'[r2 -> R2'[r1 -> R1']][r1 -> R1']
+      r2 -> R2'[r1 -> R1']
+      r1 -> R1'
+     The functions keeps only in the domain of the returned substitution the
+     uninterpreted terms that are leaves of a or b. *)
   let make_idemp a b sbs =
     Debug.print_sbt "Non triangular" sbs;
     let sbs = triangular_down sbs in
