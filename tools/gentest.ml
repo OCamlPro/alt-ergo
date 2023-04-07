@@ -235,7 +235,7 @@ let () =
       Sys.argv.(1)
     else "."
   in
-  let bin = "alt-ergo --use-bv" in
+  let bin = "alt-ergo --use-bv --frontend dolmen" in
   let timelimit = "--timelimit=2" in
   let solvers = [
     ("runtest", "tableaux", [
@@ -301,13 +301,7 @@ let () =
     ; "--sat-solver Tableaux-CDCL"
     ; "--no-minimal-bj" ])]
   in
-  let solvers_with_dolmen =
-    List.map (
-      fun (cmd, name, opts) ->
-        cmd, name^"_dolmen", "--frontend=dolmen":: opts
-    ) solvers
-  in
   let cmds = List.map (fun (group, name, args) ->
-      Cmd.make ~name ~group ~bin ~args) (solvers  @ solvers_with_dolmen)
+      Cmd.make ~name ~group ~bin ~args) (solvers)
   in
   generate path cmds
