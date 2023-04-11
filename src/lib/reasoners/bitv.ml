@@ -208,16 +208,14 @@ module Shostak(X : ALIEN) = struct
     let bitv_to_icomp =
       List.fold_left (fun ac bt ->{ bv = I_Comp (ac,bt) ; sz = bt.sz + ac.sz })
 
-    let rec nth_bit r i =
-      if i >= r.sz then None else
-        match r.bv with
-        | I_Cte b -> Some b
-        | I_Other _ -> None
-        | I_Ext (t, ei, ej) ->
-          let i' = ei + i in
-          if i' > ej then None else nth_bit t i'
-        | I_Comp (t2, t1) ->
-          if i < t1.sz then nth_bit t1 i else nth_bit t2 (i - t1.sz)
+    let rec nth_bit l i =
+      match l with
+      | [] -> None
+      | r :: t ->
+        if i >= r.sz then nth_bit t (i - r.sz) else
+          match r.bv with
+          | Cte b -> Some b
+          | _ -> None
 
     let string_to_bitv ?(update_ctx = false) ?bounds s t cnt ctx =
       let size = String.length s in
@@ -291,7 +289,6 @@ module Shostak(X : ALIEN) = struct
         let ncnt = cnt + 1 in
         match X.term_extract r with
         | None, _ ->
-          let nctx = get_nth_eq cnt v_t :: nctx in
           begin match prec with
             | Some b ->
               let t1 =
@@ -302,45 +299,50 @@ module Shostak(X : ALIEN) = struct
               in
               if ncnt > size then t1, nctx
               else
-                let t2, nctx = aux ncnt 0 nctx in
+                let t2, nctx = aux ncnt 0 (get_nth_eq cnt v_t :: nctx) in
                 let t = mk_i_comp t2 t1 (sz + t2.sz + 1) in
                 t, nctx
             | None ->
               let t1 = { bv = I_Other (Alien r); sz = 1} in
               if ncnt > size then t1, nctx
               else
-                let t2, nctx = aux ncnt 0 nctx in
+                let t2, nctx = aux ncnt 0 (get_nth_eq cnt v_t :: nctx) in
                 let t = mk_i_comp t2 t1 (t2.sz + 1) in
                 t, nctx
           end
         | Some t, _ ->
           match bit_of_expr t with
           | Some t_b ->
-            let nctx =
-              get_nth_eq cnt (if t_b then E.int "1" else E.int "0") :: nctx
-            in
             begin match prec with
               | Some p_b when t_b = p_b ->
-                if ncnt > size then { bv = I_Cte t_b; sz }, nctx
+                if ncnt > size then { bv = I_Cte t_b; sz = sz}, nctx
                 else
-                  aux ?prec ncnt (sz + 1) nctx
+                  let eq =
+                    get_nth_eq cnt (if t_b then E.int "1" else E.int "0")
+                  in
+                  aux ?prec ncnt (sz + 1) (eq :: nctx)
               | Some p_b ->
-                let t1 = { bv = I_Cte p_b; sz } in
+                let t1 = { bv = I_Cte p_b; sz = sz} in
                 if ncnt > size then t1, nctx
                 else
-                  let t2, nctx = aux ~prec:t_b ncnt 1 nctx in
+                  let eq =
+                    get_nth_eq cnt (if t_b then E.int "1" else E.int "0")
+                  in
+                  let t2, nctx = aux ~prec:t_b ncnt 1 (eq :: nctx) in
                   mk_i_comp t2 t1 (sz + t2.sz), nctx
               | None ->
                 assert (ncnt < size);
-                let t, ctx = aux ~prec:t_b ncnt 1 nctx in
+                let eq =
+                  get_nth_eq cnt (if t_b then E.int "1" else E.int "0")
+                in
+                let t, ctx = aux ~prec:t_b ncnt 1 (eq :: nctx) in
                 t, ctx
             end
           | None ->
-            let nctx = get_nth_eq cnt t :: nctx in
             let t1 = { bv = I_Other (Alien r); sz = 1 } in
             if ncnt > size then t1, nctx
             else
-              let t2, nctx = aux ncnt 0 nctx in
+              let t2, nctx = aux ncnt 0 (get_nth_eq cnt t :: nctx) in
               mk_i_comp t2 t1 (t2.sz + 1), nctx
       in
       aux 0 0 ctx
@@ -427,8 +429,11 @@ module Shostak(X : ALIEN) = struct
              Should it the "x" bitv be memoized? (what about all the others?)
              Can bitv.ml only make the sub-bitv on which the access is done? *)
           let r, ctx = make_rec 0 ~update_ctx:false x [] in
-          begin match nth_bit r i with
-            | None -> BVAccess ((sigma r), i), ctx
+          let nsz = r.sz - i - 1 in
+          let r = sigma r in
+          begin match nth_bit r nsz with
+            | None ->
+              BVAccess (r, i), ctx
             | Some b ->
               let t' = if b then E.int "1" else E.int "0" in
               let r', ctx' = X.make t' in

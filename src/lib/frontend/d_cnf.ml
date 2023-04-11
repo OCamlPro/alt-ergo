@@ -747,6 +747,16 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             let t' = aux_mk_expr t in
             if n < 2 then t' else mk_rotate_right n i t'
 
+          | B.Bitv_neg n, [t] ->
+            let t' = aux_mk_expr t in
+            E.mk_term (Sy.Op (Sy.Nat2BV n)) [
+              E.mk_term (Sy.Op Sy.Minus) [
+                E.mk_term (Sy.Op Sy.Pow)
+                  [ Expr.int "2"; Expr.int (string_of_int n) ] Ty.Tint;
+                E.mk_term (Sy.Op Sy.BV2Nat) [t'] Ty.Tint
+              ] Ty.Tint
+            ] (Ty.Tbitv n)
+
           (* Binary applications *)
 
           | B.Bitv_concat { n; m; }, [ x; y ] ->
