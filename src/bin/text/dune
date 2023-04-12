@@ -7,7 +7,8 @@
   (package alt-ergo)
   (libraries alt_ergo_common)
   (link_flags (:include flags.dune))
-  (modules Main_text))
+  (modules Main_text)
+  (promote (until-clean)))
 
 ; Rule to generate a man page for alt-ergo
 (rule

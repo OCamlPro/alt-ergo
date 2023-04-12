@@ -87,6 +87,7 @@ lib: gen
 
 bin: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(BTEXT_DIR)/all
+	ln -sf src/bin/text/Main_text.exe alt-ergo
 
 gui: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(BGUI_DIR)/all
@@ -356,12 +357,14 @@ deps:
 # ===============
 
 # Get the current commit hash and version number
-COMMIT_ID = $(shell git log -1 | grep commit | cut -d " " -f 2)
-VERSION=$(shell grep "=" $(UTIL_DIR)/version.ml | cut -d"=" -f2 | head -n 1)
+VCS_COMMIT_ID = $(shell git rev-parse HEAD)
+# Use the same command as dune subst
+VERSION=$(shell git describe --always --dirty --abbrev=7)
+# vX.Y.Z -> X.Y.Z
+VERSION_NUM=$(VERSION:v%=%)
 
 # Some convenient variables
-PUBLIC_VERSION=$(VERSION)
-PUBLIC_RELEASE=alt-ergo-$(PUBLIC_VERSION)
+PUBLIC_RELEASE=alt-ergo-$(VERSION_NUM)
 PUBLIC_TARGZ=$(PUBLIC_RELEASE).tar.gz
 FILES_DEST=public-release/$(PUBLIC_RELEASE)/$(PUBLIC_RELEASE)
 
@@ -376,9 +379,9 @@ public-release:
 	cp INSTALL.md alt-ergo.opam CHANGES $(FILES_DEST)/
 	cp -rf lib bin common parsers preludes examples doc $(FILES_DEST)/
 	cp -rf plugins $(FILES_DEST)/ 2> /dev/null || echo "cp: skip plugins dir (not found)"
-	#echo "let _version=\"$(PUBLIC_VERSION)\"" >> $(FILES_DEST)/$(UTIL_DIR)/version.ml
-	echo "let _release_commit = \"$(COMMIT_ID)\"" >> $(FILES_DEST)/$(UTIL_DIR)/version.ml
-	echo "let _release_date = \""`LANG=en_US; date`"\"" >> $(FILES_DEST)/$(UTIL_DIR)/version.ml
+	sed -i "s/%%VERSION_NUM%%/$(VERSION_NUM)/" $(FILES_DEST)/$(UTIL_DIR)/version.ml
+	sed -i "s/%%VCS_COMMIT_ID%%/$(VCS_COMMIT_ID)/" $(FILES_DEST)/$(UTIL_DIR)/version.ml
+	sed -i "s/%%BUILD_DATE%%/`LANG=en_US; date`/" $(FILES_DEST)/$(UTIL_DIR)/version.ml
 	cd $(FILES_DEST)/.. && tar cfz $(PUBLIC_TARGZ) $(PUBLIC_RELEASE)
 	rm -rf $(FILES_DEST)
 

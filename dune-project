@@ -4,7 +4,6 @@
 (generate_opam_files true)
 
 (name alt-ergo)
-(version dev)
 (authors "Alt-Ergo developers")
 (maintainers "Alt-Ergo developers")
 (source (github OCamlPro/alt-ergo))
@@ -125,6 +124,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (ocaml (>= 4.05.0))
   dune
   dune-configurator
+  dune-build-info
   (dolmen (>= 0.8.1))
   (dolmen_type (>= 0.8.1))
   (dolmen_loop (>= 0.8.1))

@@ -36,6 +36,7 @@
     dolmen
     dolmen_type
     dolmen_loop
+    dune-build-info
   )
 
   ; .mli only modules *also* need to be in this field
