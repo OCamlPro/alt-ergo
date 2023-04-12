@@ -17,6 +17,7 @@ depends: [
   "ocaml" {>= "4.05.0"}
   "dune" {>= "2.0"}
   "dune-configurator"
+  "dune-build-info"
   "num"
   "ocplib-simplex" {>= "0.4" & < "0.5"}
   "zarith"
