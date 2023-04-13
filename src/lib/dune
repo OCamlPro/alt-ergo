@@ -59,8 +59,7 @@
     Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
     MyDynlink MyUnix Numbers NumsNumbers NumbersInterface
     Options Timers Util Vec Version ZarithNumbers Steps Printer Format_shims
-    My_zip
-  )
+    Support My_zip)
 
  (js_of_ocaml
   (javascript_files missing_primitives.js)

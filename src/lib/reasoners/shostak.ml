@@ -59,60 +59,80 @@ end =
 struct
 
   type rview =
-    | Term  of Expr.t
-    | Ac    of AC.t
-    | X1    of X1.t
-    | X2    of X2.t
-    | X3    of X3.t
-    | X4    of X4.t
-    | X5    of X5.t
-    | X6    of X6.t
-    | X7    of X7.t
+    | Term of Expr.t
+    (* Semantic values of terms whose the top symbol is uninterpreted. *)
+
+    | Ac of AC.t
+
+    | X1 of X1.t
+    (* Semantic values of terms whose the top symbol is interpreted in
+       Arithmetic theory. *)
+
+    | X2 of X2.t
+    (* Semantic values of terms whose the top symbol is interpreted in
+       Record theory. *)
+
+    | X3 of X3.t
+    (* Semantic values of terms whose the top symbol is interpreted in
+       Bitvector theory. *)
+
+    | X4 of X4.t
+    (* Semantic values of terms whose the top symbol is interpreted in
+       Array theory. *)
+
+    | X5 of X5.t
+    (* Semantic values of terms whose the top symbol is interpreted in
+       Enum theory. *)
+
+    | X6 of X6.t
+    (* Semantic values of terms whose the top symbol is interpreted in
+       Adt theory. *)
+
+    | X7 of X7.t
+    (* Semantic values of terms whose the top symbol is interpreted in
+       If-then-else theory. *)
+  (* Type of semantic values before hconsing. *)
 
   type r = {v : rview ; id : int}
+  (* Type of hconsed semantic values. *)
 
   (* begin: Hashconsing modules and functions *)
+  module HC = Hconsing.Make(struct
+      type elt = r
 
-  module View = struct
+      let set_id tag r = { r with id=tag }
 
-    type elt = r
+      let hash r =
+        let res = match r.v with
+          | X1 x   -> 1 + 10 * X1.hash x
+          | X2 x   -> 2 + 10 * X2.hash x
+          | X3 x   -> 3 + 10 * X3.hash x
+          | X4 x   -> 4 + 10 * X4.hash x
+          | X5 x   -> 5 + 10 * X5.hash x
+          | X6 x   -> 6 + 10 * X6.hash x
+          | X7 x   -> 7 + 10 * X7.hash x
+          | Ac ac  -> 9 + 10 * AC.hash ac
+          | Term t -> 8 + 10 * Expr.hash t
+        in
+        abs res
 
-    let set_id tag r = { r with id=tag }
+      let eq r1 r2 =
+        match r1.v, r2.v with
+        | X1 x, X1 y -> X1.equal x y
+        | X2 x, X2 y -> X2.equal x y
+        | X3 x, X3 y -> X3.equal x y
+        | X4 x, X4 y -> X4.equal x y
+        | X5 x, X5 y -> X5.equal x y
+        | X6 x, X6 y -> X6.equal x y
+        | X7 x, X7 y -> X7.equal x y
+        | Term x  , Term y  -> Expr.equal x y
+        | Ac x    , Ac    y -> AC.equal x y
+        | _ -> false
 
-    let hash r =
-      let res = match r.v with
-        | X1 x   -> 1 + 10 * X1.hash x
-        | X2 x   -> 2 + 10 * X2.hash x
-        | X3 x   -> 3 + 10 * X3.hash x
-        | X4 x   -> 4 + 10 * X4.hash x
-        | X5 x   -> 5 + 10 * X5.hash x
-        | X6 x   -> 6 + 10 * X6.hash x
-        | X7 x   -> 7 + 10 * X7.hash x
-        | Ac ac  -> 9 + 10 * AC.hash ac
-        | Term t -> 8 + 10 * Expr.hash t
-      in
-      abs res
+      let initial_size = 9001
 
-    let eq  r1 r2 =
-      match r1.v, r2.v with
-      | X1 x, X1 y -> X1.equal x y
-      | X2 x, X2 y -> X2.equal x y
-      | X3 x, X3 y -> X3.equal x y
-      | X4 x, X4 y -> X4.equal x y
-      | X5 x, X5 y -> X5.equal x y
-      | X6 x, X6 y -> X6.equal x y
-      | X7 x, X7 y -> X7.equal x y
-      | Term x  , Term y  -> Expr.equal x y
-      | Ac x    , Ac    y -> AC.equal x y
-      | _ -> false
-
-    let initial_size = 9001
-
-    let disable_weaks () = Options.get_disable_weaks ()
-
-  end
-
-  module HC = Hconsing.Make(View)
+      let disable_weaks () = Options.get_disable_weaks ()
+    end)
 
   let save_cache () =
     HC.save_cache ()
@@ -158,13 +178,13 @@ struct
 
   let term_extract r =
     match r.v with
-    | X1 _ -> X1.term_extract r
-    | X2 _ -> X2.term_extract r
-    | X3 _ -> X3.term_extract r
-    | X4 _ -> X4.term_extract r
-    | X5 _ -> X5.term_extract r
-    | X6 _ -> X6.term_extract r
-    | X7 _ -> X7.term_extract r
+    | X1 x -> X1.term_extract x
+    | X2 x -> X2.term_extract x
+    | X3 x -> X3.term_extract x
+    | X4 x -> X4.term_extract x
+    | X5 x -> X5.term_extract x
+    | X6 x -> X6.term_extract x
+    | X7 x -> X7.term_extract x
     | Ac _ -> None, false (* SYLVAIN : TODO *)
     | Term t -> Some t, true
 
@@ -200,13 +220,13 @@ struct
     if CX.equal a b then 0
     else
       match a.v, b.v with
-      | X1 _, X1 _ -> X1.compare a b
-      | X2 _, X2 _ -> X2.compare a b
-      | X3 _, X3 _ -> X3.compare a b
-      | X4 _, X4 _ -> X4.compare a b
-      | X5 _, X5 _ -> X5.compare a b
-      | X6 _, X6 _ -> X6.compare a b
-      | X7 _, X7 _ -> X7.compare a b
+      | X1 x, X1 y -> X1.compare x y
+      | X2 x, X2 y -> X2.compare x y
+      | X3 x, X3 y -> X3.compare x y
+      | X4 x, X4 y -> X4.compare x y
+      | X5 x, X5 y -> X5.compare x y
+      | X6 x, X6 y -> X6.compare x y
+      | X7 x, X7 y -> X7.compare x y
       | Term x  , Term y  -> Expr.compare x y
       | Ac x    , Ac y    -> AC.compare x y
       | va, vb            -> compare_tag va vb
@@ -530,7 +550,7 @@ struct
       Debug.print_sbt "Should be triangular and cleaned" pb.sbt;
       pb.sbt
     | (a,b) :: eqs ->
-      let pb = {pb with eqs=eqs} in
+      let pb = {pb with eqs} in
       Debug.solve_one a b;
       let ra = apply_subst_right a pb.sbt in
       let rb = apply_subst_right b pb.sbt in
@@ -540,12 +560,13 @@ struct
         let tyb = CX.type_info rb in
         Debug.assert_have_mem_types tya tyb;
         let pb = match tya with
-          | Ty.Tint | Ty.Treal -> X1.solve ra rb pb
-          | Ty.Trecord _       -> X2.solve ra rb pb
-          | Ty.Tbitv _         -> X3.solve ra rb pb
-          | Ty.Tsum _          -> X5.solve ra rb pb
+          | Ty.Tint | Ty.Treal -> X1.solve ra rb ~pb
+          | Ty.Trecord _       -> X2.solve ra rb ~pb
+          | Ty.Tbitv _         -> X3.solve ra rb ~pb
+          | Ty.Tsum _          -> X5.solve ra rb ~pb
           (*| Ty.Tunit           -> pb *)
-          | Ty.Tadt _ when not (Options.get_disable_adts()) -> X6.solve ra rb pb
+          | Ty.Tadt _ when not (Options.get_disable_adts()) ->
+            X6.solve ra rb ~pb
           | _                  -> solve_uninterpreted ra rb pb
         in
         solve_list pb
@@ -562,7 +583,7 @@ struct
     | [], _::_ -> [] (* the original equality was trivial *)
     | _ -> make_idemp oa ob (List.rev_append sbt sbt')
 
-  let solve  a b =
+  let solve a b =
     if CX.equal a b then []
     else
       let a', b', acc = abstract_equality a b in

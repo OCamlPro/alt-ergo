@@ -30,7 +30,7 @@ module A  = Xliteral
 module L  = List
 module Hs = Hstring
 
-type 'a abstract = 'a Enum.abstract = Cons of Hs.t * Ty.t |  Alien of 'a
+type 'a abstract = 'a Enum.abstract = Cons of Hs.t * Ty.t | Alien of 'a
 
 module X = Shostak.Combine
 module Sh = Shostak.Enum

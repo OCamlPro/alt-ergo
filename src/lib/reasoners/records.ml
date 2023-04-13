@@ -31,8 +31,15 @@ module E = Expr
 
 type 'a abstract =
   | Record of (Hs.t * 'a abstract) list * Ty.t
+  (* Record ([(lb, r); ...], ty) corresponds to a record definition
+     { lb = x; _ } where [r] is the alien semantic value associated with [x]. *)
+
   | Access of Hs.t * 'a abstract * Ty.t
+  (* Access (lb, r, ty) corresponds to a record access x.lb where [r] is the
+     alien semantic value associated with [x]. *)
+
   | Other of 'a * Ty.t
+  (* Other (r, ty) corresponds to an uninterpreted term of type record. *)
 
 module type ALIEN = sig
   include Sig.X
@@ -89,16 +96,7 @@ module Shostak (X : ALIEN) = struct
     | _, Access _ -> 1
     | Record (lbs1, ty1), Record (lbs2, ty2) ->
       let c = Ty.compare ty1 ty2 in
-      if c <> 0 then c else raw_compare_list lbs1 lbs2
-
-  and raw_compare_list l1 l2 =
-    match l1, l2 with
-    | [], [] -> 0
-    | [], _ -> 1
-    | _, [] -> -1
-    | (_, x1)::l1, (_, x2)::l2 ->
-      let c = raw_compare x1 x2 in
-      if c<>0 then c else raw_compare_list l1 l2
+      if c <> 0 then c else Support.compare_list raw_compare lbs1 lbs2
 
   let rec normalize v =
     match v with
@@ -124,14 +122,12 @@ module Shostak (X : ALIEN) = struct
       end
     | Other _ -> v
 
-  let embed r =
+  (*let embed r =
     match X.extract r with
     | Some p -> p
-    | None -> Other(r, X.type_info r)
+    | None -> Other(r, X.type_info r)*)
 
-  let compare_mine t u = raw_compare (normalize t) (normalize u)
-
-  let compare x y = compare_mine (embed x) (embed y)
+  let compare x y = raw_compare (normalize x) (normalize y)
 
   let rec equal r1 r2 =
     match r1, r2 with
@@ -167,6 +163,8 @@ module Shostak (X : ALIEN) = struct
         let l, ctx =
           List.fold_right2
             (fun x (lb, _) (l, ctx) ->
+               (* If the term t is of the form { lb = x; _ }, we add the
+                  equality t.lb = x in the context ctx. *)
                let r, ctx = make_rec x ctx in
                let tyr = type_info r in
                let dlb = E.mk_term (Symbols.Op (Symbols.Access lb)) [t] tyr in
@@ -318,40 +316,36 @@ module Shostak (X : ALIEN) = struct
 
   let fully_interpreted = is_mine_symb_aux
 
-  let rec term_extract r =
-    match X.extract r with
-    | Some v -> begin match v with
-        | Record (lbs, ty) ->
-          begin
-            try
-              let lbs =
-                List.map
-                  (fun (_, r) ->
-                     match term_extract (is_mine r) with
-                     | None, _ -> raise Not_found
-                     | Some t, _ -> t)
-                  lbs
-              in
-              Some (E.mk_term (Symbols.Op Symbols.Record) lbs ty), false
-            with Not_found -> None, false
-          end
-        | Access (a, r, ty) ->
-          begin
-            match X.term_extract (is_mine r) with
-            | None, _ -> None, false
-            | Some t, _ ->
-              Some (E.mk_term (Symbols.Op (Symbols.Access a)) [t] ty), false
-          end
-        | Other (r, _) -> X.term_extract r
+  let rec term_extract = function
+    | Record (lbs, ty) ->
+      begin
+        try
+          let lbs =
+            List.map
+              (fun (_, r) ->
+                 match term_extract r with
+                 | None, _ -> raise Not_found
+                 | Some t, _ -> t)
+              lbs
+          in
+          Some (E.mk_term (Symbols.Op Symbols.Record) lbs ty), false
+        with Not_found -> None, false
       end
-    | None -> X.term_extract r
+    | Access (a, r, ty) ->
+      begin
+        match X.term_extract (is_mine r) with
+        | None, _ -> None, false
+        | Some t, _ ->
+          Some (E.mk_term (Symbols.Op (Symbols.Access a)) [t] ty), false
+      end
+    | Other (r, _) -> X.term_extract r
 
 
-  let orient_solved p v pb =
+  let orient_solved p v ~pb =
     if List.mem p (X.leaves v) then raise Util.Unsolvable;
     Sig.{ pb with sbt = (p,v) :: pb.sbt }
 
-  let solve r1 r2 (pb : _ Sig.solve_pb) =
+  let solve r1 r2 ~(pb : _ Sig.solve_pb) =
     match embed r1, embed r2 with
     | Record (l1, _), Record (l2, _) ->
       let eqs =
@@ -359,16 +353,16 @@ module Shostak (X : ALIEN) = struct
           (fun eqs (a,b) (x,y) ->
              assert (Hs.compare a x = 0);
              (is_mine y, is_mine b) :: eqs
-          )pb.eqs l1 l2
+          ) pb.eqs l1 l2
       in
-      {pb with eqs=eqs}
+      { pb with eqs=eqs}
 
     | Other _, Other _    ->
       if X.str_cmp r1 r2 > 0 then { pb with sbt = (r1,r2)::pb.sbt }
       else { pb with sbt = (r2,r1)::pb.sbt }
 
-    | Other _, Record _  -> orient_solved r1 r2 pb
-    | Record _, Other _  -> orient_solved r2 r1 pb
+    | Other _, Record _  -> orient_solved r1 r2 ~pb
+    | Record _, Other _  -> orient_solved r2 r1 ~pb
     | Access _ , _ -> assert false
     | _ , Access _ -> assert false
 
@@ -384,17 +378,17 @@ module Shostak (X : ALIEN) = struct
         raise e
     else make t
 
-  let solve r1 r2 pb =
+  let solve r1 r2 ~pb =
     if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Records Timers.F_solve;
-        let res = solve r1 r2 pb in
+        let res = solve r1 r2 ~pb in
         Timers.exec_timer_pause Timers.M_Records Timers.F_solve;
         res
       with e ->
         Timers.exec_timer_pause Timers.M_Records Timers.F_solve;
         raise e
-    else solve r1 r2 pb
+    else solve r1 r2 ~pb
 
   let assign_value t _ eq =
     match embed t with

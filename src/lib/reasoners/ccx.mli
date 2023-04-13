@@ -29,9 +29,13 @@
 module type S = sig
 
   type t
+  (** Type of the context. *)
+
   type r = Shostak.Combine.r
+  (** Type of the semantic values. *)
 
   val empty : unit -> t
+  (** [empty ()] creates an empty context. *)
 
   val empty_facts : unit -> r Sig_rel.facts
 

@@ -473,6 +473,8 @@ module Main : S = struct
       (* we update uf and use *)
       let nuf, ctx  = Uf.add env.uf t in
       Debug.make_cst t ctx;
+      (* It seems to be the only use of the context produced by the
+         function X.make. *)
       List.iter (fun a -> add_fact facts (LTerm a, ex, Th_util.Other)) ctx;
       (*or Ex.empty ?*)
 

@@ -646,7 +646,8 @@ module Shostak(X : ALIEN) = struct
         if c<>0 then c else comp l1 l2
     in comp b1 b2
 
-  let compare x y = compare (embed x) (embed y)
+  (* TODO: replace the polymorphic compare function by monomorphic version. *)
+  let compare x y = compare x y
 
   (* should use hashed compare to be faster, not structural comparison *)
   let equal bv1 bv2 = compare_mine bv1 bv2 = 0
@@ -791,13 +792,16 @@ module Shostak(X : ALIEN) = struct
       let compare = compare_mine
     end)
 *)
+
+  (* WHY: this function returns always true for any symbols? Even if the
+     symbol is not owned by the bitv theory? *)
   let fully_interpreted _ = true
 
   let term_extract _ = None, false
 
   let abstract_selectors v acc = is_mine v, acc
 
-  let solve r1 r2 pb =
+  let solve r1 r2 ~pb =
     Sig.{pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}
 
   let assign_value _ _ _ =

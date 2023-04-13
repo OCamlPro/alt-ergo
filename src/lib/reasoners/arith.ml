@@ -131,12 +131,13 @@ module Shostak
     | Some p -> p
     | _ -> P.create [Q.one, r] Q.zero (X.type_info r)
 
-  (* t1 % t2 = md  <->
-     c1. 0 <= md ;
-     c2. md < t2 ;
-     c3. exists k. t1 = t2 * k + t ;
-     c4. t2 <> 0 (already checked) *)
-  let mk_modulo md t1 t2 p2 ctx =
+  (* The congruence relation t1 % t2 = md is equivalent to the conjunction of
+     of formulas:
+     1. 0 <= md
+     2. md < t2
+     3. there exists an integer k such that t1 = md + k * t2.
+     This function produces the above clauses. *)
+  let mk_modulo md t1 t2 p2 =
     let zero = E.int "0" in
     let c1 = E.mk_builtin ~is_pos:true Symbols.LE [zero; md] in
     let c2 =
@@ -150,21 +151,20 @@ module Shostak
         E.mk_builtin ~is_pos:true Symbols.LT [md; t2]
     in
     let k  = E.fresh_name Ty.Tint in
-    let t3 = E.mk_term (Sy.Op Sy.Mult) [t2;k] Ty.Tint in
-    let t3 = E.mk_term (Sy.Op Sy.Plus) [t3;md] Ty.Tint in
+    let t3 = E.mk_term (Sy.Op Sy.Mult) [t2; k] Ty.Tint in
+    let t3 = E.mk_term (Sy.Op Sy.Plus) [t3; md] Ty.Tint in
     let c3 = E.mk_eq ~iff:false t1 t3 in
-    c3 :: c2 :: c1 :: ctx
+    [c1; c2; c3]
 
-  let mk_euc_division p p2 t1 t2 ctx =
+  let mk_euc_division p p2 t1 t2 =
     match P.to_list p2 with
     | [], coef_p2 ->
       let md = E.mk_term (Sy.Op Sy.Modulo) [t1;t2] Ty.Tint in
       let r, ctx' = X.make md in
       let rp =
         P.mult_const (Q.div Q.one coef_p2) (embed r) in
-      P.sub p rp, ctx' @ ctx
+      P.sub p rp, ctx'
     | _ -> assert false
-
 
   let exact_sqrt_or_Exit q =
     (* this function is probably not accurate because it
@@ -254,21 +254,23 @@ module Shostak
         let p3, ctx =
           try
             let p, approx = P.div p1 p2 in
-            if approx then mk_euc_division p p2 t1 t2 ctx
+            if approx then
+              let p, ctx' = mk_euc_division p p2 t1 t2 in
+              p, ctx' @ ctx
             else p, ctx
           with Division_by_zero | Polynome.Maybe_zero ->
             P.create [Q.one, X.term_embed t] Q.zero ty, ctx
         in
         P.add p (P.mult_const coef p3), ctx
 
-    | Sy.Op Sy.Plus , l ->
+    | Sy.Op Sy.Plus, l ->
       List.fold_left (fun (p, ctx) u -> mke coef p u ctx )(p, ctx) l
 
-    | Sy.Op Sy.Minus , [t1;t2] ->
+    | Sy.Op Sy.Minus, [t1;t2] ->
       let p2, ctx = mke (Q.minus coef) p t2 ctx in
       mke coef p2 t1 ctx
 
-    | Sy.Op Sy.Modulo , [t1;t2] ->
+    | Sy.Op Sy.Modulo, [t1;t2] ->
       let p1, ctx = mke Q.one (empty_polynome ty) t1 ctx in
       let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
       if Options.get_no_nla() &&
@@ -285,7 +287,7 @@ module Shostak
             let t = E.mk_term mod_symb [t1; t2] Ty.Tint in
             let ctx = match e with
               | Division_by_zero | Polynome.Maybe_zero -> ctx
-              | Polynome.Not_a_num -> mk_modulo t t1 t2 p2 ctx
+              | Polynome.Not_a_num -> List.rev_append (mk_modulo t t1 t2 p2) ctx
               | _ -> assert false
             in
             P.create [Q.one, X.term_embed t] Q.zero ty, ctx
@@ -450,7 +452,7 @@ module Shostak
     is_mine p
 
 
-  let compare x y = P.compare (embed x) (embed y)
+  let compare x y = P.compare x y
 
   let equal p1 p2 = P.equal p1 p2
 
@@ -658,13 +660,13 @@ module Shostak
       )sbs;
     sbs
 
-  let solve_one pb r1 r2 lvs unsafe_mode =
+  let solve_one ~pb r1 r2 lvs unsafe_mode =
     let sbt = solve_aux r1 r2 unsafe_mode in
     let sbt = make_idemp r1 r2 sbt lvs unsafe_mode in (*may raise Unsafe*)
     Debug.solve_one r1 r2 sbt;
     Sig.{pb with sbt = List.rev_append sbt pb.sbt}
 
-  let solve r1 r2 pb =
+  let solve r1 r2 ~pb =
     let lvs = List.fold_right SX.add (X.leaves r1) SX.empty in
     let lvs = List.fold_right SX.add (X.leaves r2) lvs in
     try
@@ -672,14 +674,14 @@ module Shostak
         Printer.print_dbg
           ~module_name:"Arith" ~function_name:"solve"
           "Try solving with unsafe mode.";
-      solve_one pb r1 r2 lvs true (* true == unsafe mode *)
+      solve_one ~pb r1 r2 lvs true (* true == unsafe mode *)
     with Unsafe ->
     try
       if Options.get_debug_arith () then
         Printer.print_dbg
           ~module_name:"Arith" ~function_name:"solve"
           "Cancel unsafe solving mode. Try safe mode";
-      solve_one pb r1 r2 lvs false (* false == safe mode *)
+      solve_one ~pb r1 r2 lvs false (* false == safe mode *)
     with Unsafe ->
       assert false
 
@@ -695,17 +697,17 @@ module Shostak
         raise e
     else make t
 
-  let solve r1 r2 pb =
+  let solve r1 r2 ~pb =
     if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Arith Timers.F_solve;
-        let res = solve r1 r2 pb in
+        let res = solve r1 r2 ~pb in
         Timers.exec_timer_pause Timers.M_Arith Timers.F_solve;
         res
       with e ->
         Timers.exec_timer_pause Timers.M_Arith Timers.F_solve;
         raise e
-    else solve r1 r2 pb
+    else solve r1 r2 ~pb
 
   let print = P.print
 

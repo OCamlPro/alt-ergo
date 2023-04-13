@@ -33,66 +33,80 @@ type 'a solve_pb = { sbt : ('a * 'a) list; eqs : ('a * 'a) list }
 
 module type SHOSTAK = sig
 
-  (**Type of terms of the theory*)
+  (** {1 Types} *)
+
   type t
+  (** Type of semantic values of the theory. *)
 
-  (**Type of representants of terms of the theory*)
   type r
+  (** Type of alien semantic values. *)
 
-  (** Name of the theory*)
   val name : string
+  (** Name of the theory. *)
 
-  (** return true if the symbol and the type are owned by the theory*)
   val is_mine_symb : Symbols.t -> Ty.t -> bool
+  (** [is_mine_symb sy ty] returns [true] if the symbol [sy] and the type [ty]
+      are owned by the theory. *)
 
-  (** Give a representant of a term of the theory*)
   val make : Expr.t -> r * Expr.t list
+  (** [make e] produces a semantic value of a term [e] of the theory. *)
 
-  val term_extract : r -> Expr.t option * bool (* original term ? *)
+  val term_extract : t -> Expr.t option * bool (* original term ? *)
 
   val color : (r ac) -> r
 
   val type_info : t -> Ty.t
+  (** [type_info t] gives the type of the semantic value [t]. *)
 
   val embed : r -> t
-  val is_mine : t -> r
 
-  (** Give the leaves of a term of the theory *)
+  val is_mine : t -> r
+  (** [is_mine t] embed the semantic value [t] as an alien semantic value. *)
+
   val leaves : t -> r list
+  (** [leaves t] gives the list of leaves of the semantic value [t].
+      These leaves are alien semantic values. *)
+
   val subst : r -> r -> t -> r
 
-  val compare : r -> r -> int
+  val compare : t -> t -> int
+  (** [compare t1 t2] compares the two semantic values [t1] and [t2]. *)
 
-  (* tests if two values are equal (using tags) *)
   val equal : t -> t -> bool
+  (** [equal t1 t2] tests if two terms of the theory are equal using
+      their hashes. *)
 
   val hash : t -> int
-  (** solve r1 r2, solve the equality r1=r2 and return the substitution *)
+  (** [hash t] computes the hash of the semantic value [t]. *)
 
-  val solve : r -> r ->  r solve_pb -> r solve_pb
+  val solve : r -> r -> pb:r solve_pb -> r solve_pb
+  (** [solve r1 r2 pb] solves the equation [r1 = r2] and returns
+      the substitution. The accumulator [pb] is used in the
+      function {!val:X.solve}. *)
 
   val print : Format.formatter -> t -> unit
+  (** [print fmt t] pretty prints the semantic value [t] on the formatter
+      [fmt]. *)
 
   val fully_interpreted : Symbols.t -> bool
 
   val abstract_selectors : t -> (r * r) list -> r * (r * r) list
 
-  (* the returned bool is true when the returned term in a constant of the
-     theory. Otherwise, the term contains aliens that should be assigned
-     (eg. records). In this case, it's a unit fact, not a decision
-  *)
   val assign_value :
     r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
+  (** The returned boolean is true when the returned term is a constant of the
+      theory. Otherwise, the term contains aliens that should be assigned
+      (eg. records). In this case, it's a unit fact, not a decision. *)
 
-  (* choose the value to print and how to print it for the given term.
-     The second term is its representative. The list is its equivalence class
-  *)
   val choose_adequate_model : Expr.t -> r -> (Expr.t * r) list -> r * string
-
+  (** [choose_adequate_model e r lst] chooses the semantic value to print for
+      the term [e] from the equivalent class [lst]. The argument [r] is the
+      representant of [e] in the union-find structure. *)
 end
 
 module type X = sig
   type r
+  (** Type of semantic values of the theory. *)
 
   val save_cache : unit -> unit
   (** saves the module's current cache *)
@@ -101,8 +115,10 @@ module type X = sig
   (** restores the module's cache *)
 
   val make : Expr.t -> r * Expr.t list
+  (** [make e] produces a semantic value from the term [e]. *)
 
   val type_info : r -> Ty.t
+  (** [type_info r] gives the type of the semantic value [r]. *)
 
   val str_cmp : r -> r -> int
 
@@ -111,6 +127,7 @@ module type X = sig
   val equal : r -> r -> bool
 
   val hash : r -> int
+  (** [hash r] computes the hash of the semantic value [r]. *)
 
   val leaves : r -> r list
 
