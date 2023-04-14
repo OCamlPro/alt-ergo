@@ -26,13 +26,11 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(* WARNING: a "cut" is performed on the following file in the Makefile.
-   DO NOT CHANGE its format *)
+let _version =
+  match Build_info.V1.version () with
+  | None -> "%%VERSION_NUM%%"
+  | Some v -> Build_info.V1.Version.to_string v
 
-let _version="dev"
+let _release_commit = "%%VCS_COMMIT_ID%%"
 
-let _release_commit = "(not released)"
-
-let _release_date   = "(not released)"
-
-
+let _release_date   = "%%BUILD_DATE%%"

@@ -21,6 +21,7 @@ AB-Why3-plugin.cmxs
 fm-simplex-plugin.cma
 fm-simplex-plugin.cmxs
 rsc/extra/ocpchecker/ocp-checker
+*.exe
 
 # Generated documentation files
 rsc/extra/index.html
