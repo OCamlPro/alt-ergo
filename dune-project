@@ -106,6 +106,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (ocaml (>= 4.05.0))
   (dune (and (>= 2.0)))
   dune-configurator
+  dune-build-info
   num
   (ocplib-simplex (and (>= 0.4) (< 0.5)))
   zarith

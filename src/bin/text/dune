@@ -4,13 +4,13 @@
 )
 
 (executable
-  (name         Main_text)
-  (public_name  alt-ergo)
-  (package      alt-ergo)
-  (libraries    alt_ergo_common)
-  (link_flags   (:include flags.dune))
-  (modules      Main_text)
-)
+  (name Main_text)
+  (public_name alt-ergo)
+  (package alt-ergo)
+  (libraries alt_ergo_common)
+  (link_flags (:include flags.dune))
+  (modules Main_text)
+  (promote (until-clean)))
 
 ; Rule to generate a man page for alt-ergo
 (rule
