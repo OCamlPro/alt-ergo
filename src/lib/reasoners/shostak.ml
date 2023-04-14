@@ -34,26 +34,26 @@ module H = Hashtbl.Make(Expr)
 module rec CX : sig
   include Sig.X
 
-  val extract1 : r -> X1.t option
-  val embed1 : X1.t -> r
+  val extract1 : r -> ARITH.t option
+  val embed1 : ARITH.t -> r
 
-  val extract2 : r -> X2.t option
-  val embed2 : X2.t -> r
+  val extract2 : r -> RECORDS.t option
+  val embed2 : RECORDS.t -> r
 
-  val extract3 : r -> X3.t option
-  val embed3 : X3.t -> r
+  val extract3 : r -> BITV.t option
+  val embed3 : BITV.t -> r
 
-  val extract4 : r -> X4.t option
-  val embed4 : X4.t -> r
+  val extract4 : r -> ARRAYS.t option
+  val embed4 : ARRAYS.t -> r
 
-  val extract5 : r -> X5.t option
-  val embed5 : X5.t -> r
+  val extract5 : r -> ENUM.t option
+  val embed5 : ENUM.t -> r
 
-  val extract6 : r -> X6.t option
-  val embed6 : X6.t -> r
+  val extract6 : r -> ADT.t option
+  val embed6 : ADT.t -> r
 
-  val extract7 : r -> X7.t option
-  val embed7 : X7.t -> r
+  val extract7 : r -> ITE.t option
+  val embed7 : ITE.t -> r
 
 end =
 struct
@@ -61,13 +61,13 @@ struct
   type rview =
     | Term  of Expr.t
     | Ac    of AC.t
-    | X1    of X1.t
-    | X2    of X2.t
-    | X3    of X3.t
-    | X4    of X4.t
-    | X5    of X5.t
-    | X6    of X6.t
-    | X7    of X7.t
+    | ARITH    of ARITH.t
+    | RECORDS    of RECORDS.t
+    | BITV    of BITV.t
+    | ARRAYS    of ARRAYS.t
+    | ENUM    of ENUM.t
+    | ADT    of ADT.t
+    | ITE    of ITE.t
 
   type r = {v : rview ; id : int}
 
@@ -81,13 +81,13 @@ struct
 
     let hash r =
       let res = match r.v with
-        | X1 x   -> 1 + 10 * X1.hash x
-        | X2 x   -> 2 + 10 * X2.hash x
-        | X3 x   -> 3 + 10 * X3.hash x
-        | X4 x   -> 4 + 10 * X4.hash x
-        | X5 x   -> 5 + 10 * X5.hash x
-        | X6 x   -> 6 + 10 * X6.hash x
-        | X7 x   -> 7 + 10 * X7.hash x
+        | ARITH x   -> 1 + 10 * ARITH.hash x
+        | RECORDS x   -> 2 + 10 * RECORDS.hash x
+        | BITV x   -> 3 + 10 * BITV.hash x
+        | ARRAYS x   -> 4 + 10 * ARRAYS.hash x
+        | ENUM x   -> 5 + 10 * ENUM.hash x
+        | ADT x   -> 6 + 10 * ADT.hash x
+        | ITE x   -> 7 + 10 * ITE.hash x
         | Ac ac  -> 9 + 10 * AC.hash ac
         | Term t -> 8 + 10 * Expr.hash t
       in
@@ -95,13 +95,13 @@ struct
 
     let eq  r1 r2 =
       match r1.v, r2.v with
-      | X1 x, X1 y -> X1.equal x y
-      | X2 x, X2 y -> X2.equal x y
-      | X3 x, X3 y -> X3.equal x y
-      | X4 x, X4 y -> X4.equal x y
-      | X5 x, X5 y -> X5.equal x y
-      | X6 x, X6 y -> X6.equal x y
-      | X7 x, X7 y -> X7.equal x y
+      | ARITH x, ARITH y -> ARITH.equal x y
+      | RECORDS x, RECORDS y -> RECORDS.equal x y
+      | BITV x, BITV y -> BITV.equal x y
+      | ARRAYS x, ARRAYS y -> ARRAYS.equal x y
+      | ENUM x, ENUM y -> ENUM.equal x y
+      | ADT x, ADT y -> ADT.equal x y
+      | ITE x, ITE y -> ITE.equal x y
       | Term x  , Term y  -> Expr.equal x y
       | Ac x    , Ac    y -> AC.equal x y
       | _ -> false
@@ -124,13 +124,13 @@ struct
 
   (* end: Hconsing modules and functions *)
 
-  let embed1 x = hcons {v = X1 x; id = -1000 (* dummy *)}
-  let embed2 x = hcons {v = X2 x; id = -1000 (* dummy *)}
-  let embed3 x = hcons {v = X3 x; id = -1000 (* dummy *)}
-  let embed4 x = hcons {v = X4 x; id = -1000 (* dummy *)}
-  let embed5 x = hcons {v = X5 x; id = -1000 (* dummy *)}
-  let embed6 x = hcons {v = X6 x; id = -1000 (* dummy *)}
-  let embed7 x = hcons {v = X7 x; id = -1000 (* dummy *)}
+  let embed1 x = hcons {v = ARITH x; id = -1000 (* dummy *)}
+  let embed2 x = hcons {v = RECORDS x; id = -1000 (* dummy *)}
+  let embed3 x = hcons {v = BITV x; id = -1000 (* dummy *)}
+  let embed4 x = hcons {v = ARRAYS x; id = -1000 (* dummy *)}
+  let embed5 x = hcons {v = ENUM x; id = -1000 (* dummy *)}
+  let embed6 x = hcons {v = ADT x; id = -1000 (* dummy *)}
+  let embed7 x = hcons {v = ITE x; id = -1000 (* dummy *)}
 
   let ac_embed ({ Sig.l; _ } as t) =
     match l with
@@ -144,13 +144,13 @@ struct
 
   let term_embed t = hcons {v = Term t; id = -1000 (* dummy *)}
 
-  let extract1 = function { v=X1 r; _ } -> Some r | _ -> None
-  let extract2 = function { v=X2 r; _ } -> Some r | _ -> None
-  let extract3 = function { v=X3 r; _ } -> Some r | _ -> None
-  let extract4 = function { v=X4 r; _ } -> Some r | _ -> None
-  let extract5 = function { v=X5 r; _ } -> Some r | _ -> None
-  let extract6 = function { v=X6 r; _ } -> Some r | _ -> None
-  let extract7 = function { v=X7 r; _ } -> Some r | _ -> None
+  let extract1 = function { v=ARITH r; _ } -> Some r | _ -> None
+  let extract2 = function { v=RECORDS r; _ } -> Some r | _ -> None
+  let extract3 = function { v=BITV r; _ } -> Some r | _ -> None
+  let extract4 = function { v=ARRAYS r; _ } -> Some r | _ -> None
+  let extract5 = function { v=ENUM r; _ } -> Some r | _ -> None
+  let extract6 = function { v=ADT r; _ } -> Some r | _ -> None
+  let extract7 = function { v=ITE r; _ } -> Some r | _ -> None
 
   let ac_extract = function
     | { v = Ac t; _ }   -> Some t
@@ -158,13 +158,13 @@ struct
 
   let term_extract r =
     match r.v with
-    | X1 _ -> X1.term_extract r
-    | X2 _ -> X2.term_extract r
-    | X3 _ -> X3.term_extract r
-    | X4 _ -> X4.term_extract r
-    | X5 _ -> X5.term_extract r
-    | X6 _ -> X6.term_extract r
-    | X7 _ -> X7.term_extract r
+    | ARITH _ -> ARITH.term_extract r
+    | RECORDS _ -> RECORDS.term_extract r
+    | BITV _ -> BITV.term_extract r
+    | ARRAYS _ -> ARRAYS.term_extract r
+    | ENUM _ -> ENUM.term_extract r
+    | ADT _ -> ADT.term_extract r
+    | ITE _ -> ITE.term_extract r
     | Ac _ -> None, false (* SYLVAIN : TODO *)
     | Term t -> Some t, true
 
@@ -172,27 +172,27 @@ struct
   let bot () = term_embed Expr.faux
 
   let type_info = function
-    | { v = X1 t; _ }   -> X1.type_info t
-    | { v = X2 t; _ }   -> X2.type_info t
-    | { v = X3 t; _ }   -> X3.type_info t
-    | { v = X4 t; _ }   -> X4.type_info t
-    | { v = X5 t; _ }   -> X5.type_info t
-    | { v = X6 t; _ }   -> X6.type_info t
-    | { v = X7 t; _ }   -> X7.type_info t
+    | { v = ARITH t; _ }   -> ARITH.type_info t
+    | { v = RECORDS t; _ }   -> RECORDS.type_info t
+    | { v = BITV t; _ }   -> BITV.type_info t
+    | { v = ARRAYS t; _ }   -> ARRAYS.type_info t
+    | { v = ENUM t; _ }   -> ENUM.type_info t
+    | { v = ADT t; _ }   -> ADT.type_info t
+    | { v = ITE t; _ }   -> ITE.type_info t
     | { v = Ac x; _ }   -> AC.type_info x
     | { v = Term t; _ } -> Expr.type_info t
 
-  (* Xi < Term < Ac *)
+  (* Constraint that must be maintained: all theories should have Xi < Term < Ac *)
   let theory_num x = match x with
     | Ac _    -> -1
     | Term  _ -> -2
-    | X1 _    -> -3
-    | X2 _    -> -4
-    | X3 _    -> -5
-    | X4 _    -> -6
-    | X5 _    -> -7
-    | X6 _    -> -8
-    | X7 _    -> -9
+    | ARITH _    -> -3
+    | RECORDS _    -> -4
+    | BITV _    -> -5
+    | ARRAYS _    -> -6
+    | ENUM _    -> -7
+    | ADT _    -> -8
+    | ITE _    -> -9
 
   let compare_tag a b = theory_num a - theory_num b
 
@@ -200,13 +200,13 @@ struct
     if CX.equal a b then 0
     else
       match a.v, b.v with
-      | X1 _, X1 _ -> X1.compare a b
-      | X2 _, X2 _ -> X2.compare a b
-      | X3 _, X3 _ -> X3.compare a b
-      | X4 _, X4 _ -> X4.compare a b
-      | X5 _, X5 _ -> X5.compare a b
-      | X6 _, X6 _ -> X6.compare a b
-      | X7 _, X7 _ -> X7.compare a b
+      | ARITH _, ARITH _ -> ARITH.compare a b
+      | RECORDS _, RECORDS _ -> RECORDS.compare a b
+      | BITV _, BITV _ -> BITV.compare a b
+      | ARRAYS _, ARRAYS _ -> ARRAYS.compare a b
+      | ENUM _, ENUM _ -> ENUM.compare a b
+      | ADT _, ADT _ -> ADT.compare a b
+      | ITE _, ITE _ -> ITE.compare a b
       | Term x  , Term y  -> Expr.compare x y
       | Ac x    , Ac y    -> AC.compare x y
       | va, vb            -> compare_tag va vb
@@ -218,11 +218,11 @@ struct
        let hash r = match r.v with
        | Term  t -> Expr.hash t
        | Ac x -> AC.hash x
-       | X1 x -> X1.hash x
-       | X2 x -> X2.hash x
-       | X3 x -> X3.hash x
-       | X4 x -> X4.hash x
-       | X5 x -> X5.hash x
+       | ARITH x -> ARITH.hash x
+       | RECORDS x -> RECORDS.hash x
+       | BITV x -> BITV.hash x
+       | ARRAYS x -> ARRAYS.hash x
+       | ENUM x -> ENUM.hash x
 
    ***)
 
@@ -247,26 +247,26 @@ struct
 
   let leaves r =
     match r.v with
-    | X1 t -> X1.leaves t
-    | X2 t -> X2.leaves t
-    | X3 t -> X3.leaves t
-    | X4 t -> X4.leaves t
-    | X5 t -> X5.leaves t
-    | X6 t -> X6.leaves t
-    | X7 t -> X7.leaves t
+    | ARITH t -> ARITH.leaves t
+    | RECORDS t -> RECORDS.leaves t
+    | BITV t -> BITV.leaves t
+    | ARRAYS t -> ARRAYS.leaves t
+    | ENUM t -> ENUM.leaves t
+    | ADT t -> ADT.leaves t
+    | ITE t -> ITE.leaves t
     | Ac t -> r :: (AC.leaves t)
     | Term _ -> [r]
 
   let subst p v r =
     if equal p v then r
     else match r.v with
-      | X1 t   -> X1.subst p v t
-      | X2 t   -> X2.subst p v t
-      | X3 t   -> X3.subst p v t
-      | X4 t   -> X4.subst p v t
-      | X5 t   -> X5.subst p v t
-      | X6 t   -> X6.subst p v t
-      | X7 t   -> X7.subst p v t
+      | ARITH t   -> ARITH.subst p v t
+      | RECORDS t   -> RECORDS.subst p v t
+      | BITV t   -> BITV.subst p v t
+      | ARRAYS t   -> ARRAYS.subst p v t
+      | ENUM t   -> ENUM.subst p v t
+      | ADT t   -> ADT.subst p v t
+      | ITE t   -> ITE.subst p v t
       | Ac t   -> if equal p r then v else AC.subst p v t
       | Term _ -> if equal p r then v else r
 
@@ -274,22 +274,22 @@ struct
     let { Expr.f = sb; ty; _ } = Expr.term_view t in
     let not_restricted = not @@ Options.get_restricted () in
     match
-      X1.is_mine_symb sb ty,
-      not_restricted && X2.is_mine_symb sb ty,
-      not_restricted && X3.is_mine_symb sb ty,
-      not_restricted && X4.is_mine_symb sb ty,
-      not_restricted && X5.is_mine_symb sb ty,
-      not_restricted && X6.is_mine_symb sb ty,
-      not_restricted && X7.is_mine_symb sb ty,
+      ARITH.is_mine_symb sb ty,
+      not_restricted && RECORDS.is_mine_symb sb ty,
+      not_restricted && BITV.is_mine_symb sb ty,
+      not_restricted && ARRAYS.is_mine_symb sb ty,
+      not_restricted && ENUM.is_mine_symb sb ty,
+      not_restricted && ADT.is_mine_symb sb ty,
+      not_restricted && ITE.is_mine_symb sb ty,
       AC.is_mine_symb sb ty
     with
-    | true  , false , false , false, false, false, false, false -> X1.make t
-    | false , true  , false , false, false, false, false, false -> X2.make t
-    | false , false , true  , false, false, false, false, false -> X3.make t
-    | false , false , false , true , false, false, false, false -> X4.make t
-    | false , false , false , false, true , false, false, false -> X5.make t
-    | false , false , false , false, false, true , false, false -> X6.make t
-    | false , false , false , false, false, false, true , false -> X7.make t
+    | true  , false , false , false, false, false, false, false -> ARITH.make t
+    | false , true  , false , false, false, false, false, false -> RECORDS.make t
+    | false , false , true  , false, false, false, false, false -> BITV.make t
+    | false , false , false , true , false, false, false, false -> ARRAYS.make t
+    | false , false , false , false, true , false, false, false -> ENUM.make t
+    | false , false , false , false, false, true , false, false -> ADT.make t
+    | false , false , false , false, false, false, true , false -> ITE.make t
     | false , false , false , false, false, false, false, true  -> AC.make t
     | false , false , false , false, false, false, false, false ->
       term_embed t, []
@@ -298,29 +298,29 @@ struct
   let fully_interpreted sb ty =
     let not_restricted = not @@ Options.get_restricted () in
     match
-      X1.is_mine_symb sb ty,
-      not_restricted && X2.is_mine_symb sb ty,
-      not_restricted && X3.is_mine_symb sb ty,
-      not_restricted && X4.is_mine_symb sb ty,
-      not_restricted && X5.is_mine_symb sb ty,
-      not_restricted && X6.is_mine_symb sb ty,
-      not_restricted && X7.is_mine_symb sb ty,
+      ARITH.is_mine_symb sb ty,
+      not_restricted && RECORDS.is_mine_symb sb ty,
+      not_restricted && BITV.is_mine_symb sb ty,
+      not_restricted && ARRAYS.is_mine_symb sb ty,
+      not_restricted && ENUM.is_mine_symb sb ty,
+      not_restricted && ADT.is_mine_symb sb ty,
+      not_restricted && ITE.is_mine_symb sb ty,
       AC.is_mine_symb sb ty
     with
     | true  , false , false , false, false, false, false, false ->
-      X1.fully_interpreted sb
+      ARITH.fully_interpreted sb
     | false , true  , false , false, false, false, false, false ->
-      X2.fully_interpreted sb
+      RECORDS.fully_interpreted sb
     | false , false , true  , false, false, false, false, false ->
-      X3.fully_interpreted sb
+      BITV.fully_interpreted sb
     | false , false , false , true , false, false, false, false ->
-      X4.fully_interpreted sb
+      ARRAYS.fully_interpreted sb
     | false , false , false , false, true , false, false, false ->
-      X5.fully_interpreted sb
+      ENUM.fully_interpreted sb
     | false , false , false , false, false, true , false, false ->
-      X6.fully_interpreted sb
+      ADT.fully_interpreted sb
     | false , false , false , false, false, false, true , false ->
-      X7.fully_interpreted sb
+      ITE.fully_interpreted sb
     | false , false , false , false, false, false, false, true  ->
       AC.fully_interpreted sb
     | false , false , false , false, false, false, false, false ->
@@ -328,12 +328,12 @@ struct
     | _ -> assert false
 
   let is_solvable_theory_symbol sb ty =
-    X1.is_mine_symb sb ty ||
+    ARITH.is_mine_symb sb ty ||
     not (Options.get_restricted ()) &&
-    (X2.is_mine_symb sb ty ||
-     X3.is_mine_symb sb ty ||
-     X4.is_mine_symb sb ty ||
-     X5.is_mine_symb sb ty)
+    (RECORDS.is_mine_symb sb ty ||
+     BITV.is_mine_symb sb ty ||
+     ARRAYS.is_mine_symb sb ty ||
+     ENUM.is_mine_symb sb ty)
 
 
   let is_a_leaf r = match r.v with
@@ -347,22 +347,22 @@ struct
     | _ ->
       let ty = ac.Sig.t in
       match
-        X1.is_mine_symb ac.Sig.h ty,
-        X2.is_mine_symb ac.Sig.h ty,
-        X3.is_mine_symb ac.Sig.h ty,
-        X4.is_mine_symb ac.Sig.h ty,
-        X5.is_mine_symb ac.Sig.h ty,
-        X6.is_mine_symb ac.Sig.h ty,
-        X7.is_mine_symb ac.Sig.h ty,
+        ARITH.is_mine_symb ac.Sig.h ty,
+        RECORDS.is_mine_symb ac.Sig.h ty,
+        BITV.is_mine_symb ac.Sig.h ty,
+        ARRAYS.is_mine_symb ac.Sig.h ty,
+        ENUM.is_mine_symb ac.Sig.h ty,
+        ADT.is_mine_symb ac.Sig.h ty,
+        ITE.is_mine_symb ac.Sig.h ty,
         AC.is_mine_symb ac.Sig.h ty with
       (*AC.is_mine may say F if Options.get_no_ac is set to F dynamically *)
-      | true  , false , false , false, false, false, false, false -> X1.color ac
-      | false , true  , false , false, false, false, false, false -> X2.color ac
-      | false , false , true  , false, false, false, false, false -> X3.color ac
-      | false , false , false , true , false, false, false, false -> X4.color ac
-      | false , false , false , false, true , false, false, false -> X5.color ac
-      | false , false , false , false, false, true , false, false -> X6.color ac
-      | false , false , false , false, false, false, true , false -> X7.color ac
+      | true  , false , false , false, false, false, false, false -> ARITH.color ac
+      | false , true  , false , false, false, false, false, false -> RECORDS.color ac
+      | false , false , true  , false, false, false, false, false -> BITV.color ac
+      | false , false , false , true , false, false, false, false -> ARRAYS.color ac
+      | false , false , false , false, true , false, false, false -> ENUM.color ac
+      | false , false , false , false, false, true , false, false -> ADT.color ac
+      | false , false , false , false, false, false, true , false -> ITE.color ac
       | _  -> ac_embed ac
 
 
@@ -374,25 +374,25 @@ struct
       let open Format in
       if Options.get_term_like_pp () then begin
         match r.v with
-        | X1 t    -> fprintf fmt "%a" X1.print t
-        | X2 t    -> fprintf fmt "%a" X2.print t
-        | X3 t    -> fprintf fmt "%a" X3.print t
-        | X4 t    -> fprintf fmt "%a" X4.print t
-        | X5 t    -> fprintf fmt "%a" X5.print t
-        | X6 t    -> fprintf fmt "%a" X6.print t
-        | X7 t    -> fprintf fmt "%a" X7.print t
+        | ARITH t    -> fprintf fmt "%a" ARITH.print t
+        | RECORDS t    -> fprintf fmt "%a" RECORDS.print t
+        | BITV t    -> fprintf fmt "%a" BITV.print t
+        | ARRAYS t    -> fprintf fmt "%a" ARRAYS.print t
+        | ENUM t    -> fprintf fmt "%a" ENUM.print t
+        | ADT t    -> fprintf fmt "%a" ADT.print t
+        | ITE t    -> fprintf fmt "%a" ITE.print t
         | Term t  -> fprintf fmt "%a" Expr.print t
         | Ac t    -> fprintf fmt "%a" AC.print t
       end
       else begin
         match r.v with
-        | X1 t    -> fprintf fmt "X1(%s):[%a]" X1.name X1.print t
-        | X2 t    -> fprintf fmt "X2(%s):[%a]" X2.name X2.print t
-        | X3 t    -> fprintf fmt "X3(%s):[%a]" X3.name X3.print t
-        | X4 t    -> fprintf fmt "X4(%s):[%a]" X4.name X4.print t
-        | X5 t    -> fprintf fmt "X5(%s):[%a]" X5.name X5.print t
-        | X6 t    -> fprintf fmt "X6(%s):[%a]" X6.name X6.print t
-        | X7 t    -> fprintf fmt "X7(%s):[%a]" X7.name X7.print t
+        | ARITH t    -> fprintf fmt "ARITH(%s):[%a]" ARITH.name ARITH.print t
+        | RECORDS t    -> fprintf fmt "RECORDS(%s):[%a]" RECORDS.name RECORDS.print t
+        | BITV t    -> fprintf fmt "BITV(%s):[%a]" BITV.name BITV.print t
+        | ARRAYS t    -> fprintf fmt "ARRAYS(%s):[%a]" ARRAYS.name ARRAYS.print t
+        | ENUM t    -> fprintf fmt "ENUM(%s):[%a]" ENUM.name ENUM.print t
+        | ADT t    -> fprintf fmt "ADT(%s):[%a]" ADT.name ADT.print t
+        | ITE t    -> fprintf fmt "ITE(%s):[%a]" ITE.name ITE.print t
         | Term t  -> fprintf fmt "FT:[%a]" Expr.print t
         | Ac t    -> fprintf fmt "Ac:[%a]" AC.print t
       end
@@ -458,13 +458,13 @@ struct
   let abstract_selectors a acc =
     Debug.debug_abstract_selectors a;
     match a.v with
-    | X1 a   -> X1.abstract_selectors a acc
-    | X2 a   -> X2.abstract_selectors a acc
-    | X3 a   -> X3.abstract_selectors a acc
-    | X4 a   -> X4.abstract_selectors a acc
-    | X5 a   -> X5.abstract_selectors a acc
-    | X6 a   -> X6.abstract_selectors a acc
-    | X7 a   -> X7.abstract_selectors a acc
+    | ARITH a   -> ARITH.abstract_selectors a acc
+    | RECORDS a   -> RECORDS.abstract_selectors a acc
+    | BITV a   -> BITV.abstract_selectors a acc
+    | ARRAYS a   -> ARRAYS.abstract_selectors a acc
+    | ENUM a   -> ENUM.abstract_selectors a acc
+    | ADT a   -> ADT.abstract_selectors a acc
+    | ITE a   -> ITE.abstract_selectors a acc
     | Term _ -> a, acc
     | Ac a   -> AC.abstract_selectors a acc
 
@@ -540,12 +540,12 @@ struct
         let tyb = CX.type_info rb in
         Debug.assert_have_mem_types tya tyb;
         let pb = match tya with
-          | Ty.Tint | Ty.Treal -> X1.solve ra rb pb
-          | Ty.Trecord _       -> X2.solve ra rb pb
-          | Ty.Tbitv _         -> X3.solve ra rb pb
-          | Ty.Tsum _          -> X5.solve ra rb pb
+          | Ty.Tint | Ty.Treal -> ARITH.solve ra rb pb
+          | Ty.Trecord _       -> RECORDS.solve ra rb pb
+          | Ty.Tbitv _         -> BITV.solve ra rb pb
+          | Ty.Tsum _          -> ENUM.solve ra rb pb
           (*| Ty.Tunit           -> pb *)
-          | Ty.Tadt _ when not (Options.get_disable_adts()) -> X6.solve ra rb pb
+          | Ty.Tadt _ when not (Options.get_disable_adts()) -> ADT.solve ra rb pb
           | _                  -> solve_uninterpreted ra rb pb
         in
         solve_list pb
@@ -579,13 +579,13 @@ struct
   let assign_value r distincts eq =
     let opt = match r.v, type_info r with
       | _, Ty.Tint
-      | _, Ty.Treal     -> X1.assign_value r distincts eq
-      | _, Ty.Trecord _ -> X2.assign_value r distincts eq
-      | _, Ty.Tbitv _   -> X3.assign_value r distincts eq
-      | _, Ty.Tfarray _ -> X4.assign_value r distincts eq
-      | _, Ty.Tsum _    -> X5.assign_value r distincts eq
+      | _, Ty.Treal     -> ARITH.assign_value r distincts eq
+      | _, Ty.Trecord _ -> RECORDS.assign_value r distincts eq
+      | _, Ty.Tbitv _   -> BITV.assign_value r distincts eq
+      | _, Ty.Tfarray _ -> ARRAYS.assign_value r distincts eq
+      | _, Ty.Tsum _    -> ENUM.assign_value r distincts eq
       | _, Ty.Tadt _    when not (Options.get_disable_adts()) ->
-        X6.assign_value r distincts eq
+        ADT.assign_value r distincts eq
 
       | Term _t, Ty.Tbool ->
         if is_bool_const r then None
@@ -625,13 +625,13 @@ struct
     let r, pprint =
       match Expr.type_info t with
       | Ty.Tint
-      | Ty.Treal     -> X1.choose_adequate_model t rep l
-      | Ty.Tbitv _   -> X3.choose_adequate_model t rep l
-      | Ty.Tsum _    -> X5.choose_adequate_model t rep l
+      | Ty.Treal     -> ARITH.choose_adequate_model t rep l
+      | Ty.Tbitv _   -> BITV.choose_adequate_model t rep l
+      | Ty.Tsum _    -> ENUM.choose_adequate_model t rep l
       | Ty.Tadt _    when not (Options.get_disable_adts()) ->
-        X6.choose_adequate_model t rep l
-      | Ty.Trecord _ -> X2.choose_adequate_model t rep l
-      | Ty.Tfarray _ -> X4.choose_adequate_model t rep l
+        ADT.choose_adequate_model t rep l
+      | Ty.Trecord _ -> RECORDS.choose_adequate_model t rep l
+      | Ty.Tfarray _ -> ARRAYS.choose_adequate_model t rep l
       | Ty.Tbool ->
         (* case split is now supposed to be done for internal bools if
            needed as well *)
@@ -682,22 +682,22 @@ struct
 
 end
 
-and TX1 : Polynome.T
+and TARITH : Polynome.T
   with type r = CX.r =
   Arith.Type(CX)
 
-and X1 : Sig.SHOSTAK
-  with type t = TX1.t
+and ARITH : Sig.SHOSTAK
+  with type t = TARITH.t
    and type r = CX.r =
   Arith.Shostak
     (CX)
     (struct
-      include TX1
+      include TARITH
       let extract = CX.extract1
       let embed =  CX.embed1
     end)
 
-and X2 : Sig.SHOSTAK
+and RECORDS : Sig.SHOSTAK
   with type r = CX.r
    and type t = CX.r Records.abstract =
   Records.Shostak
@@ -707,7 +707,7 @@ and X2 : Sig.SHOSTAK
       let embed = embed2
     end)
 
-and X3 : Sig.SHOSTAK
+and BITV : Sig.SHOSTAK
   with type r = CX.r
    and type t = CX.r Bitv.abstract =
   Bitv.Shostak
@@ -717,7 +717,7 @@ and X3 : Sig.SHOSTAK
       let embed = embed3
     end)
 
-and X4 : Sig.SHOSTAK
+and ARRAYS : Sig.SHOSTAK
   with type r = CX.r
    and type t = CX.r Arrays.abstract =
   Arrays.Shostak
@@ -727,7 +727,7 @@ and X4 : Sig.SHOSTAK
       let embed = embed4
     end)
 
-and X5 : Sig.SHOSTAK
+and ENUM : Sig.SHOSTAK
   with type r = CX.r
    and type t = CX.r Enum.abstract =
   Enum.Shostak
@@ -737,7 +737,7 @@ and X5 : Sig.SHOSTAK
       let embed = embed5
     end)
 
-and X6 : Sig.SHOSTAK
+and ADT : Sig.SHOSTAK
   with type r = CX.r
    and type t = CX.r Adt.abstract =
   Adt.Shostak
@@ -747,7 +747,7 @@ and X6 : Sig.SHOSTAK
       let embed = embed6
     end)
 
-and X7 : Sig.SHOSTAK
+and ITE : Sig.SHOSTAK
   with type r = CX.r
    and type t = CX.r Ite.abstract =
   Ite.Shostak
@@ -786,14 +786,14 @@ module Combine = struct
 
 end
 
-module Arith = X1
-module Records = X2
-module Bitv = X3
-module Arrays = X4
-module Enum = X5
-module Adt = X6
-module Ite = X7
-module Polynome = TX1
+module Arith = ARITH
+module Records = RECORDS
+module Bitv = BITV
+module Arrays = ARRAYS
+module Enum = ENUM
+module Adt = ADT
+module Ite = ITE
+module Polynome = TARITH
 module Ac = AC
 
 (** map of semantic values using Combine.hash_cmp *)
