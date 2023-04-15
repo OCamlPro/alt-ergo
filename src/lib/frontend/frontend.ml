@@ -96,7 +96,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         List.fold_left
           (fun env f ->
              SAT.assume env
-               {E.ff=f;
+               {ff=f;
                 origin_name = "";
                 gdist = -1;
                 hdist = -1;
@@ -113,7 +113,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       in
       ignore (SAT.unsat
                 env
-                {E.ff=E.vrai;
+                {ff=E.vrai;
                  origin_name = "";
                  gdist = -1;
                  hdist = -1;
@@ -163,7 +163,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           let dep = if is_hyp then Ex.empty else mk_root_dep n f d.st_loc in
           if consistent then
             SAT.assume env
-              {E.ff=f;
+              {ff=f;
                origin_name = n;
                gdist = -1;
                hdist = (if is_hyp then 0 else -1);
@@ -190,7 +190,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         let dep =
           if consistent then
             let dep' = SAT.unsat env
-                {E.ff=f;
+                {ff=f;
                  origin_name = n;
                  hdist = -1;
                  gdist = 0;
@@ -211,7 +211,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         print_status (Unsat (d, dep)) (Steps.get_steps ());
         env, false, dep
 
-      | ThAssume ({ Expr.ax_name; Expr.ax_form ; _ } as th_elt) ->
+      | ThAssume ({ ax_name; ax_form ; _ } as th_elt) ->
         if unused_context ax_name used_context then
           acc
         else

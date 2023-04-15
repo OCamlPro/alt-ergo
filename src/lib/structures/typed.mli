@@ -101,7 +101,7 @@ and 'a tt_desc =
   | TTmapsTo of Var.t * 'a atterm
   (** Used in semantic triggers for floating point arithmetic.
       See sources/preludes/fpa-theory-2017-01-04-16h00.ae *)
-  | TTinInterval of 'a atterm * Symbols.bound * Symbols.bound
+  | TTinInterval of 'a atterm * Types.bound * Types.bound
   (** Represent floating point intervals (used for triggers in Floating
       point arithmetic theory).
       [TTinInterval (lower, l_strict, t, upper, u_strict)] is a constraint

@@ -9,10 +9,12 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
 module X = Shostak.Combine
 module Th = Shostak.Adt
 
-type r = X.r
+type r = Types.r
 type uf = Uf.t
 
 module Ex = Explanation
@@ -147,7 +149,7 @@ let new_terms env = env.new_terms
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
 let assume_th_elt t th_elt _ =
-  match th_elt.Expr.extends with
+  match th_elt.extends with
   | Util.Adt ->
     failwith "This Theory does not support theories extension"
   | _ -> t
@@ -161,13 +163,13 @@ let deduce_is_constr uf r h eqs env ex =
   let r, ex' = try Uf.find_r uf r with Not_found -> assert false in
   let ex = Ex.union ex ex' in
   match Th.embed r with
-  | Adt.Alien r ->
+  | Types.Alien r ->
     begin match X.term_extract r with
       | Some t, _ ->
         let eqs =
           if seen_tester r h env then eqs
           else
-            let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr h) [t] in
+            let is_c = E.mk_builtin ~is_pos:true (Types.IsConstr h) [t] in
             if Options.get_debug_adt () then
               Printer.print_dbg
                 ~module_name:"Adt_rel"
@@ -177,7 +179,7 @@ let deduce_is_constr uf r h eqs env ex =
         in
         begin
           match E.term_view t with
-          | { E.ty = Ty.Tadt (name,params) as ty; _ } ->
+          | { ty = Ty.Tadt (name,params) as ty; _ } ->
             (* Only do this deduction for finite types ??
                  may not terminate in some cases otherwise.
                  eg. type t = A of t
@@ -226,7 +228,7 @@ let add_adt env uf t r sy ty =
   if MX.mem r env.domains then env
   else
     match sy, ty with
-    | Sy.Op Sy.Constr hs, Ty.Tadt _ ->
+    | Types.Op Types.Constr hs, Ty.Tadt _ ->
       if Options.get_debug_adt () then
         Printer.print_dbg
           ~module_name:"Adt_rel" ~function_name:"add_adt"
@@ -262,7 +264,7 @@ let update_tester r hs env =
 
 let trivial_tester r hs =
   match Th.embed r with (* can filter further/better *)
-  | Adt.Constr { c_name; _ } -> Hstring.equal c_name hs
+  | Constr { c_name; _ } -> Hstring.equal c_name hs
   | _ -> false
 
 let constr_of_destr ty dest =
@@ -301,7 +303,7 @@ let add_guarded_destr env uf t hs e t_ty =
      This may/will introduce bugs when instantiating
      let env = {env with new_terms = SE.add access env.new_terms} in
   *)
-  let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr c) [e] in
+  let is_c = E.mk_builtin ~is_pos:true (Types.IsConstr c) [e] in
   let eq = E.mk_eq access t ~iff:false in
   if Options.get_debug_adt () then
     Printer.print_dbg ~header:false
@@ -329,10 +331,10 @@ let add_guarded_destr env uf t hs e t_ty =
 let add_aux env (uf:uf) (r:r) t =
   if Options.get_disable_adts () then env
   else
-    let { E.f = sy; xs; ty; _ } = E.term_view t in
+    let { f = sy; xs; ty; _ } = E.term_view t in
     let env = add_adt env uf t r sy ty in
     match sy, xs with
-    | Sy.Op Sy.Destruct (hs, true), [e] -> (* guarded *)
+    | Types.Op Types.Destruct (hs, true), [e] -> (* guarded *)
       if Options.get_debug_adt () then
         Printer.print_dbg
           ~module_name:"Adt_rel" ~function_name:"add_aux"
@@ -340,7 +342,7 @@ let add_aux env (uf:uf) (r:r) t =
       if (SE.mem t env.seen_destr) then env
       else add_guarded_destr env uf t hs e ty
 
-    | Sy.Op Sy.Destruct (_, false), [_] ->
+    | Types.Op Types.Destruct (_, false), [_] ->
       (* not guarded *)
       if Options.get_debug_adt () then
         Printer.print_dbg
@@ -348,10 +350,10 @@ let add_aux env (uf:uf) (r:r) t =
           "[ADTs] add unguarded destruct: %a" E.print t;
       { env with seen_access = SE.add t env.seen_access }
 
-    | Sy.Op Sy.Destruct _, _ ->
+    | Types.Op Types.Destruct _, _ ->
       assert false (* not possible *)
 
-    (*| Sy.Op Sy.IsConstr _, _ ->
+    (*| Types.Op Types.IsConstr _, _ ->
       if get_debug_adt () then
       Printer.print_dbg
       "new Tester: %a" E.print t;
@@ -376,8 +378,8 @@ let count_splits env la =
 
 let add_diseq uf hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
-  | Adt.Alien r , Adt.Constr { c_name = h; c_args = []; _ }
-  | Adt.Constr { c_name = h; c_args = []; _ }, Adt.Alien r  ->
+  | Alien r , Constr { c_name = h; c_args = []; _ }
+  | Constr { c_name = h; c_args = []; _ }, Alien r  ->
     (* not correct with args *)
     let enum, ex =
       try MX.find r env.domains with Not_found -> hss, Ex.empty
@@ -393,10 +395,10 @@ let add_diseq uf hss sm1 sm2 dep env eqs =
         env, eqs
       else env, eqs
 
-  | Adt.Alien _ , Adt.Constr _ | Adt.Constr _, Adt.Alien _  ->
+  | Alien _ , Constr _ | Constr _, Alien _  ->
     env, eqs
 
-  | Adt.Alien r1, Adt.Alien r2 ->
+  | Alien r1, Alien r2 ->
     let enum1,ex1=
       try MX.find r1 env.domains with Not_found -> hss,Ex.empty in
     let enum2,ex2=
@@ -434,7 +436,7 @@ let assoc_and_remove_selector hs r env =
 
 let assume_is_constr uf hs r dep env eqs =
   match Th.embed r with
-  | Adt.Constr{ c_name; _ } when not (Hs.equal c_name hs) ->
+  | Constr{ c_name; _ } when not (Hs.equal c_name hs) ->
     raise (Ex.Inconsistent (dep, env.classes));
   | _ ->
     if Options.get_debug_adt () then
@@ -469,7 +471,7 @@ let assume_is_constr uf hs r dep env eqs =
 
 let assume_not_is_constr uf hs r dep env eqs =
   match Th.embed r with
-  | Adt.Constr{ c_name; _ } when Hs.equal c_name hs ->
+  | Constr{ c_name; _ } when Hs.equal c_name hs ->
     raise (Ex.Inconsistent (dep, env.classes));
   | _ ->
 
@@ -500,8 +502,8 @@ let assume_not_is_constr uf hs r dep env eqs =
 (* dot it modulo equivalence class ? or is it sufficient ? *)
 let add_eq uf hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
-  | Adt.Alien r, Adt.Constr { c_name = h; _ }
-  | Adt.Constr { c_name = h; _ }, Adt.Alien r  ->
+  | Alien r, Constr { c_name = h; _ }
+  | Constr { c_name = h; _ }, Alien r  ->
     let enum, ex =
       try MX.find r env.domains with Not_found -> hss, Ex.empty
     in
@@ -510,7 +512,7 @@ let add_eq uf hss sm1 sm2 dep env eqs =
     let env, eqs = deduce_is_constr uf r h eqs env ex in
     {env with domains = MX.add r (HSS.singleton h, ex) env.domains} , eqs
 
-  | Adt.Alien r1, Adt.Alien r2   ->
+  | Alien r1, Alien r2   ->
     let enum1,ex1 =
       try MX.find r1 env.domains with Not_found -> hss, Ex.empty in
     let enum2,ex2 =
@@ -534,7 +536,7 @@ let add_eq uf hss sm1 sm2 dep env eqs =
 let add_aux env r =
   Debug.add r;
   match Th.embed r with
-  | Adt.Alien r when not (MX.mem r env.domains) ->
+  | Alien r when not (MX.mem r env.domains) ->
     begin match values_of (X.type_info r) with
       | Some s -> { env with domains = MX.add r (s, Ex.empty) env.domains }
       | None ->
@@ -632,10 +634,10 @@ let assume env uf la =
              let env = add_rec (add_rec env r1) r2 in
              aux false r1 r2 ex env eqs (values_of (X.type_info r1))
 
-           | Xliteral.Builtin(true, Sy.IsConstr hs, [e]), _, ex, _ ->
+           | Xliteral.Builtin(true, Types.IsConstr hs, [e]), _, ex, _ ->
              assume_is_constr uf hs e ex env eqs
 
-           | Xliteral.Builtin(false, Sy.IsConstr hs, [e]), _, ex, _
+           | Xliteral.Builtin(false, Types.IsConstr hs, [e]), _, ex, _
              [@ocaml.ppwarning "XXX: assume not (. ? .): reasoning missing ?"]
              ->
              assume_not_is_constr uf hs e ex env eqs
@@ -680,7 +682,7 @@ let case_split env _ ~for_model =
           Printer.print_dbg ~header:false
             "found hs = %a" Hs.print hs;
         (* cs on negative version would be better in general *)
-        let cs =  LR.mkv_builtin false (Sy.IsConstr hs) [r] in
+        let cs =  LR.mkv_builtin false (Types.IsConstr hs) [r] in
         [ cs, true, Th_util.CS(Th_util.Th_adt, two) ]
       with Not_found ->
         Debug.no_case_split ();
@@ -692,11 +694,11 @@ let query env uf (ra, _, ex, _) =
   else
     try
       match ra with
-      | Xliteral.Builtin(true, Sy.IsConstr hs, [e]) ->
+      | Xliteral.Builtin(true, Types.IsConstr hs, [e]) ->
         ignore (assume_is_constr uf hs e ex env []);
         None
 
-      | Xliteral.Builtin(false, Sy.IsConstr hs, [e])
+      | Xliteral.Builtin(false, Types.IsConstr hs, [e])
         [@ocaml.ppwarning "XXX: assume not (. ? .): reasoning missing ?"]
         ->
         ignore (assume_not_is_constr uf hs e ex env []);

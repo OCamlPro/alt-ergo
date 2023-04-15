@@ -19,7 +19,7 @@ module Z = Numbers.Z
 let is_rounding_mode t =
   Options.get_use_fpa() &&
   match E.term_view t with
-  | { E.ty = Ty.Tsum (hs, _); _ } ->
+  | { ty = Ty.Tsum (hs, _); _ } ->
     String.compare (Hs.view hs) "fpa_rounding_mode" = 0
   | _ -> false
 
@@ -214,7 +214,7 @@ let mode_of_term t =
 
 let int_of_term t =
   match E.term_view t with
-  | { E.f = Sy.Int n; _ } ->
+  | { f = Types.Int n; _ } ->
     let n = Hstring.view n in
     let n =
       try int_of_string n
@@ -268,40 +268,40 @@ let round_to_integer mode q =
                     having terms"]
 let make_adequate_app s l ty =
   match s with
-  | Sy.Name (hs, Sy.Other) when Options.get_use_fpa() ->
+  | Types.Name (hs, Types.Other) when Options.get_use_fpa() ->
     let s, l  =
       match Hstring.view hs, l with
-      | "float", [_;_;_;_] -> Sy.Op Sy.Float, l
-      | "float32", [_;_;] -> Sy.Op Sy.Float,(E.int "24")::(E.int "149")::l
+      | "float", [_;_;_;_] -> Types.Op Types.Float, l
+      | "float32", [_;_;] -> Types.Op Types.Float,(E.int "24")::(E.int "149")::l
       | "float32d", [_] ->
-        Sy.Op Sy.Float,
+        Types.Op Types.Float,
         (E.int "24")::
         (E.int "149")::
         _NearestTiesToEven__rounding_mode :: l
 
-      | "float64", [_;_;] -> Sy.Op Sy.Float,(E.int "53")::(E.int "1074")::l
+      | "float64", [_;_;] -> Types.Op Types.Float,(E.int "53")::(E.int "1074")::l
       | "float64d", [_] ->
-        Sy.Op Sy.Float,
+        Types.Op Types.Float,
         (E.int "53")::
         (E.int "1074")::
         _NearestTiesToEven__rounding_mode :: l
 
-      | "integer_round", [_;_] -> Sy.Op Sy.Integer_round, l
+      | "integer_round", [_;_] -> Types.Op Types.Integer_round, l
 
-      | "fixed", [_;_;_;_] -> Sy.Op Sy.Fixed, l
-      | "sqrt_real", [_] -> Sy.Op Sy.Sqrt_real, l
-      | "sqrt_real_default", [_] -> Sy.Op Sy.Sqrt_real_default, l
-      | "sqrt_real_excess", [_] -> Sy.Op Sy.Sqrt_real_excess, l
-      | "abs_int", [_] ->  Sy.Op Sy.Abs_int, l
-      | "abs_real", [_] ->  Sy.Op Sy.Abs_real, l
-      | "real_of_int", [_] -> Sy.Op Sy.Real_of_int, l
-      | "int_floor", [_] -> Sy.Op Sy.Int_floor, l
-      | "int_ceil", [_] -> Sy.Op Sy.Int_ceil, l
-      | "max_real", [_;_] -> Sy.Op Sy.Max_real, l
-      | "max_int", [_;_] -> Sy.Op Sy.Max_int, l
-      | "min_real", [_;_] -> Sy.Op Sy.Min_real, l
-      | "min_int", [_;_] -> Sy.Op Sy.Min_int, l
-      | "integer_log2", [_] -> Sy.Op Sy.Integer_log2, l
+      | "fixed", [_;_;_;_] -> Types.Op Types.Fixed, l
+      | "sqrt_real", [_] -> Types.Op Types.Sqrt_real, l
+      | "sqrt_real_default", [_] -> Types.Op Types.Sqrt_real_default, l
+      | "sqrt_real_excess", [_] -> Types.Op Types.Sqrt_real_excess, l
+      | "abs_int", [_] ->  Types.Op Types.Abs_int, l
+      | "abs_real", [_] ->  Types.Op Types.Abs_real, l
+      | "real_of_int", [_] -> Types.Op Types.Real_of_int, l
+      | "int_floor", [_] -> Types.Op Types.Int_floor, l
+      | "int_ceil", [_] -> Types.Op Types.Int_ceil, l
+      | "max_real", [_;_] -> Types.Op Types.Max_real, l
+      | "max_int", [_;_] -> Types.Op Types.Max_int, l
+      | "min_real", [_;_] -> Types.Op Types.Min_real, l
+      | "min_int", [_;_] -> Types.Op Types.Min_int, l
+      | "integer_log2", [_] -> Types.Op Types.Integer_log2, l
 
       (* should not happend thanks to well typedness *)
       | ("float"

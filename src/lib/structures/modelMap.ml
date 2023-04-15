@@ -43,7 +43,7 @@ module P = Map.Make
 
 module V = Set.Make
     (struct
-      type t = (E.t * (X.r * string)) list * (X.r * string)
+      type t = (E.t * (Types.r * string)) list * (Types.r * string)
       let compare (l1, (v1,_)) (l2, (v2,_)) =
         let c = X.hash_cmp v1 v2 in
         if c <> 0 then c

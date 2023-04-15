@@ -175,8 +175,8 @@ theory_elt:
 
 
 ac_modifier:
-| /* */ { Symbols.Other }
-| AC    { Symbols.Ac }
+| /* */ { Types.Other }
+| AC    { Types.Ac }
 
 primitive_type:
 | INT  { int_type }

@@ -26,61 +26,9 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type builtin =
-    LE | LT (* arithmetic *)
-  | IsConstr of Hstring.t (* ADT tester *)
+open Types
 
-type operator =
-  | Plus | Minus | Mult | Div | Modulo
-  | Concat | Extract | Get | Set | Fixed | Float
-  | Reach | Access of Hstring.t | Record
-  | Sqrt_real | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
-  | Sqrt_real_default | Sqrt_real_excess
-  | Min_real | Min_int | Max_real | Max_int | Integer_log2
-  | Pow | Integer_round
-  | Constr of Hstring.t (* enums, adts *)
-  | Destruct of Hstring.t * bool
-  | Tite
-
-type lit =
-  (* literals *)
-  | L_eq
-  | L_built of builtin
-  | L_neg_eq
-  | L_neg_built of builtin
-  | L_neg_pred
-
-type form =
-  (* formulas *)
-  | F_Unit of bool
-  | F_Clause of bool
-  | F_Iff
-  | F_Xor
-  | F_Lemma
-  | F_Skolem
-
-type name_kind = Ac | Other
-
-type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
-
-type bound = private
-  { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
-
-type t =
-  | True
-  | False
-  | Void
-  | Name of Hstring.t * name_kind
-  | Int of Hstring.t
-  | Real of Hstring.t
-  | Bitv of string
-  | Op of operator
-  | Lit of lit
-  | Form of form
-  | Var of Var.t
-  | In of bound * bound
-  | MapsTo of Var.t
-  | Let
+type t = Types.symbol
 
 val name : ?kind:name_kind -> string -> t
 val var : Var.t -> t
@@ -131,10 +79,9 @@ val string_of_bound : bound -> string
 val clear_labels : unit -> unit
 (** Empties the labels Hashtable *)
 
-module Set : Set.S with type elt = t
+module Set = Types.SYMBOL.Set
 
-module Map : sig
-  include Map.S with type key = t
-  val print :
-    (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-end
+module Map = Types.SYMBOL.Map
+
+val print_map :
+  (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a Map.t -> unit

@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
 module Sy = Symbols
 module E  = Expr
 module A  = Xliteral
@@ -167,7 +169,7 @@ end
 
 (* met a jour gets et tbset en utilisant l'ensemble des termes donne*)
 let rec update_gets_sets acc t =
-  let { E.f; xs; ty; _ } = E.term_view t in
+  let { f; xs; ty; _ } = E.term_view t in
   let gets, tbset = List.fold_left update_gets_sets acc xs in
   match Sy.is_get f, Sy.is_set f, xs with
   | true , false, [a;i]   -> G.add {g=t; gt=a; gi=i; gty=ty} gets, tbset
@@ -232,12 +234,12 @@ let get_of_set are_eq are_dist gtype (env,acc) class_of =
        if Tmap.splited get set env.seen then (env,acc)
        else
          let env = {env with seen = Tmap.update get set env.seen} in
-         let { E.f; xs; _ } = E.term_view set in
+         let { f; xs; _ } = E.term_view set in
          match Sy.is_set f, xs with
          | true , [stab;si;sv] ->
            let xi, _ = X.make gi in
            let xj, _ = X.make si in
-           let get_stab  = E.mk_term (Sy.Op Sy.Get) [stab;gi] gty in
+           let get_stab  = E.mk_term (Types.Op Types.Get) [stab;gi] gty in
            let p       = LR.mk_eq xi xj in
            let p_ded   = E.mk_eq ~iff:false get sv in
            let n     = LR.mk_distinct false [xi;xj] in
@@ -265,7 +267,7 @@ let get_from_set _are_eq _are_dist stype (env,acc) class_of =
 
   S.fold (fun { s = set; si = si; sv = sv; _ } (env,acc) ->
       let ty_si = E.type_info sv in
-      let get = E.mk_term (Sy.Op Sy.Get) [set; si] ty_si in
+      let get = E.mk_term (Types.Op Types.Get) [set; si] ty_si in
       if Tmap.splited get set env.seen then (env,acc)
       else
         let env = {env with
@@ -295,8 +297,8 @@ let get_and_set are_eq are_dist gtype (env,acc) class_of =
            let env = {env with seen = Tmap.update get set env.seen} in
            let xi, _ = X.make gi in
            let xj, _ = X.make si in
-           let get_stab  = E.mk_term (Sy.Op Sy.Get) [stab;gi] gty in
-           let gt_of_st  = E.mk_term (Sy.Op Sy.Get) [set;gi] gty in
+           let get_stab  = E.mk_term (Types.Op Types.Get) [stab;gi] gty in
+           let gt_of_st  = E.mk_term (Types.Op Types.Get) [set;gi] gty in
            let p       = LR.mk_eq xi xj in
            let p_ded   = E.mk_eq ~iff:false gt_of_st sv in
            let n     = LR.mk_distinct false [xi;xj] in
@@ -342,8 +344,8 @@ let extensionality accu la _class_of =
            match X.type_info r, X.term_extract r, X.term_extract s with
            | Ty.Tfarray (ty_k, ty_v), (Some t1, _), (Some t2, _)  ->
              let i  = E.fresh_name ty_k in
-             let g1 = E.mk_term (Sy.Op Sy.Get) [t1;i] ty_v in
-             let g2 = E.mk_term (Sy.Op Sy.Get) [t2;i] ty_v in
+             let g1 = E.mk_term (Types.Op Types.Get) [t1;i] ty_v in
+             let g2 = E.mk_term (Types.Op Types.Get) [t2;i] ty_v in
              let d  = E.mk_distinct ~iff:false [g1;g2] in
              let acc = Conseq.add (d, dep) acc in
              let env =
@@ -444,7 +446,7 @@ let new_terms env = env.new_terms
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
 let assume_th_elt t th_elt _ =
-  match th_elt.Expr.extends with
+  match th_elt.extends with
   | Util.Arrays ->
     failwith "This Theory does not support theories extension"
   | _ -> t

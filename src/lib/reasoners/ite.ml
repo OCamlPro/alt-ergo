@@ -9,6 +9,10 @@
 (*                                                                            *)
 (******************************************************************************)
 
+
+module X = Shostak_pre
+
+(*
 type 'a abstract = unit
 
 module type ALIEN = sig
@@ -21,6 +25,9 @@ module Shostak (X : ALIEN) = struct
 
   type t = X.r abstract
   type r = X.r
+*)
+
+type t = Types.ite
 
   let name           = "Ite"
   let is_mine_symb _ _ = false
@@ -41,5 +48,3 @@ module Shostak (X : ALIEN) = struct
   let solve _ _ = assert false
   let assign_value _ _ _ = assert false
   let choose_adequate_model _ _ _ = assert false
-end
-

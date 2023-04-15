@@ -9,6 +9,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module SAT = Satml.Make(Th)
   module Inst = Instances.Make(Th)
@@ -38,7 +40,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     axs_of_abstr : (E.t * Atom.atom) ME.t;
     proxies : (Atom.atom * Atom.atom list * bool) Util.MI.t;
     inst : Inst.t;
-    skolems : E.gformula ME.t; (* key <-> f *)
+    skolems : gformula ME.t; (* key <-> f *)
     add_inst : E.t -> bool;
     guards : guards;
   }
@@ -80,7 +82,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   exception IUnsat of t * Explanation.t
 
   let mk_gf f =
-    { E.ff = f;
+    { ff = f;
       trigger_depth = max_int;
       nb_reductions = 0;
       origin_name = "<none>";
@@ -109,31 +111,31 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if Options.get_debug_sat () then
         print_dbg
           ~module_name:"Satml_frontend" ~function_name:"unsat"
-          "unsat of %a ?" E.print gf.E.ff
+          "unsat of %a ?" E.print gf.ff
 
     let assume gf =
-      let { E.ff = f; lem; from_terms = terms; _ } = gf in
+      let { ff = f; lem; from_terms = terms; _ } = gf in
       if Options.get_debug_sat () then begin
         match E.form_view f with
-        | E.Unit _ -> ()
+        | Unit _ -> ()
 
-        | E.Clause _ ->
+        | Clause _ ->
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
             "I assume a clause %a" E.print f
 
-        | E.Lemma _ ->
+        | Lemma _ ->
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
             "I assume a [%d-atom] lemma: %a"
             (E.size f) E.print f
 
-        | E.Literal a ->
+        | Literal a ->
           let n = match lem with
             | None -> ""
             | Some ff -> begin
                 match E.form_view ff with
-                | E.Lemma xx -> xx.E.name
-                | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-                | E.Let _ | E.Iff _ | E.Xor _ -> ""
+                | Lemma xx -> xx.name
+                | Unit _ | Clause _ | Literal _ | Skolem _
+                | Let _ | Iff _ | Xor _ -> ""
               end
           in
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
@@ -141,19 +143,19 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              ================================================@]"
             n E.print_list terms E.print a;
 
-        | E.Skolem _ ->
+        | Skolem _ ->
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
             "I assume a skolem %a" E.print f
 
-        | E.Let _ ->
+        | Let _ ->
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
             "I assume a let-In %a" E.print f
 
-        | E.Iff _ ->
+        | Iff _ ->
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
             "I assume an equivalence %a" E.print f
 
-        | E.Xor _ ->
+        | Xor _ ->
           print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
             "I assume a neg-equivalence/Xor %a" E.print f
 
@@ -235,7 +237,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        let generated_skolems l =
        if get_verbose () && get_debug_sat () then begin
         print_dbg "[new_skolems] %d generated" (List.length l);
-        List.iter (fun { E.ff = f; _ } ->
+        List.iter (fun { ff = f; _ } ->
         print_dbg " skolem: %a" E.print f) l
        end
     *)
@@ -303,9 +305,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           "@[<v 2>%s >@,\
            hypotheses: %a@,\
            conclusion: %a@]"
-          (E.name_of_lemma_opt gf.E.lem)
+          (E.name_of_lemma_opt gf.lem)
           print_f_conj hyp
-          E.print gf.E.ff;
+          E.print gf.ff;
 
   end
   (*BISECT-IGNORE-END*)
@@ -324,9 +326,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let selector env f orig =
     (Options.get_cdcl_tableaux () || not (ME.mem f env.gamma))
     && begin match E.form_view orig with
-      | E.Lemma _ -> env.add_inst orig
-      | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-      | E.Let _ | E.Iff _ | E.Xor _ -> true
+      | Lemma _ -> env.add_inst orig
+      | Unit _ | Clause _ | Literal _ | Skolem _
+      | Let _ | Iff _ | Xor _ -> true
     end
 
   (* <begin> copied from sat_solvers.ml *)
@@ -338,9 +340,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         (fun tmp f ->
            (* we cannot reduce like in DfsSAT *)
            E.mk_or (E.neg f) tmp false 0
-        )gf.E.ff hyp
+        )gf.ff hyp
     in
-    ({gf with E.ff=clause}, dep) :: acc
+    ({gf with ff=clause}, dep) :: acc
 
   let mk_theories_instances do_syntactic_matching _remove_clauses env acc =
     let t_match = Inst.matching_terms_info env.inst in
@@ -394,7 +396,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     let l1 = List.rev_append (List.rev gd1) ngd1 in
     if Options.get_profiling() then Profiling.instances l1;
-    let l = ((List.rev_append l2 l1) : (E.gformula * Explanation.t) list) in
+    let l = ((List.rev_append l2 l1) : (gformula * Explanation.t) list) in
 
     let th_insts = mk_theories_inst_rec env 10 in
     let l = List.rev_append th_insts l in
@@ -405,8 +407,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            gf :: acc
          | [{ Atom.lit; _ }] ->
            {gf with
-            E.ff =
-              E.mk_or gf.E.ff (E.neg lit) false 0} :: acc
+            ff =
+              E.mk_or gf.ff (E.neg lit) false 0} :: acc
          | _   -> assert false
       )acc l
 
@@ -459,9 +461,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       (* FF.simplify invariant: should not happen *)
       assert (Atom.level at < 0);
       let ded = match E.neg f |> E.form_view with
-        | E.Skolem q -> E.skolemize q
-        | E.Unit _ | E.Clause _ | E.Literal _ | E.Lemma _
-        | E.Let _ | E.Iff _ | E.Xor _ -> assert false
+        | Skolem q -> E.skolemize q
+        | Unit _ | Clause _ | Literal _ | Lemma _
+        | Let _ | Iff _ | Xor _ -> assert false
       in
       (*XXX TODO: internal skolems*)
       let f = E.mk_or lat ded false 0 in
@@ -480,7 +482,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              "expand skolem of %a" E.print a;
          try
            if inst_quantif a then
-             let { E.ff = f; _ } as gf = ME.find a env.skolems in
+             let { ff = f; _ } as gf = ME.find a env.skolems in
              if not (Options.get_cdcl_tableaux ()) && ME.mem f env.gamma then
                acc
              else
@@ -709,7 +711,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   }
 
   let pre_assume (env, acc) gf =
-    let { E.ff = f; _ } = gf in
+    let { ff = f; _ } = gf in
     if Options.(get_debug_sat () && get_verbose ()) then
       Printer.print_dbg
         ~module_name:"Satml_frontend" ~function_name:"pre_assume"
@@ -734,7 +736,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       with Not_found ->
         Debug.assume gf;
         match E.form_view f with
-        | E.Lemma _ ->
+        | Lemma _ ->
           let ff = FF.vrai in
           let _, old_sf =
             try FF.Map.find ff env.conj with Not_found -> 0, SE.empty
@@ -747,8 +749,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           (* This assert is not true assert (dec_lvl = 0); *)
           axiom_def env gf Ex.empty, {acc with updated = true}
 
-        | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-        | E.Let _ | E.Iff _ | E.Xor _ ->
+        | Unit _ | Clause _ | Literal _ | Skolem _
+        | Let _ | Iff _ | Xor _ ->
           let ff, axs, new_vars =
             FF.simplify env.ff_hcons_env f
               (fun f -> ME.find f env.abstr_of_axs) acc.new_vars
@@ -1071,7 +1073,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let add_guard env gf =
     let current_guard = env.guards.current_guard in
-    {gf with E.ff = E.mk_imp current_guard gf.E.ff 1}
+    {gf with ff = E.mk_imp current_guard gf.ff 1}
 
   let unsat env gf =
     checks_implemented_features ();
@@ -1082,7 +1084,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let env =
       {env with inst =
                   Inst.add_terms env.inst
-                    (E.max_ground_terms_rec_of_form gf.E.ff) gf}
+                    (E.max_ground_terms_rec_of_form gf.ff) gf}
     in
     try
       assert (SAT.decision_level env.satml == 0);

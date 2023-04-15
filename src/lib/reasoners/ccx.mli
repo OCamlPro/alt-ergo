@@ -29,7 +29,7 @@
 module type S = sig
 
   type t
-  type r = Shostak.Combine.r
+  type r = Types.r
 
   val empty : unit -> t
 
@@ -68,7 +68,7 @@ module type S = sig
   val term_repr : t -> Expr.t -> init_term:bool -> Expr.t
   val get_union_find : t -> Uf.t
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Types.th_elt -> Explanation.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->

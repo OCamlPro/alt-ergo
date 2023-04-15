@@ -28,7 +28,7 @@
 
 type 'a literal = LTerm of Expr.t | LSem of 'a Xliteral.view
 
-type instances = (Expr.t list * Expr.gformula * Explanation.t) list
+type instances = (Expr.t list * Types.gformula * Explanation.t) list
 
 type 'a input =
   'a Xliteral.view * Expr.t option * Explanation.t * Th_util.lit_origin
@@ -53,17 +53,17 @@ module type RELATION = sig
   val empty : Expr.Set.t list -> t
 
   val assume : t ->
-    Uf.t -> (Shostak.Combine.r input) list -> t * Shostak.Combine.r result
-  val query  : t -> Uf.t -> Shostak.Combine.r input -> Th_util.answer
+    Uf.t -> (Types.r input) list -> t * Types.r result
+  val query  : t -> Uf.t -> Types.r input -> Th_util.answer
 
   val case_split :
     t -> Uf.t ->
     for_model:bool ->
-    (Shostak.Combine.r Xliteral.view * bool * Th_util.lit_origin) list
+    (Types.r Xliteral.view * bool * Th_util.lit_origin) list
   (** case_split env returns a list of equalities *)
 
-  val add : t -> Uf.t -> Shostak.Combine.r -> Expr.t ->
-    t * (Shostak.Combine.r Xliteral.view * Explanation.t) list
+  val add : t -> Uf.t -> Types.r -> Expr.t ->
+    t * (Types.r Xliteral.view * Explanation.t) list
   (** add a representant to take into account *)
 
   val instantiate :
@@ -74,6 +74,6 @@ module type RELATION = sig
 
   val new_terms : t -> Expr.Set.t
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Types.th_elt -> Explanation.t -> t
 
 end

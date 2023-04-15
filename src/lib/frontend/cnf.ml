@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
 module E = Expr
 module Sy = Symbols
 module SE = E.Set
@@ -79,7 +81,7 @@ let rec make_term up_qv quant_basename t =
         let t2 = mk_term t2 in (*keep old mk_term order -> avoid regression*)
         let t1 = mk_term t1 in
         match s, ty with
-        | Sy.Op Sy.Plus, (Ty.Tint | Ty.Treal) ->
+        | Types.Op Types.Plus, (Ty.Tint | Ty.Treal) ->
           let args = E.concat_chainable s ty t2 [] in
           let args = E.concat_chainable s ty t1 args in
           let args = List.fast_sort E.compare args in
@@ -87,38 +89,38 @@ let rec make_term up_qv quant_basename t =
         | _ -> E.mk_term s [t1; t2] ty
       end
 
-    | TTprefix ((Sy.Op Sy.Minus) as s, n) ->
+    | TTprefix ((Types.Op Types.Minus) as s, n) ->
       let t1 = if ty == Ty.Tint then E.int "0" else E.real "0"  in
       E.mk_term s [t1; mk_term n] ty
     | TTprefix _ ->
       assert false
 
     | TTget (t1, t2) ->
-      E.mk_term (Sy.Op Sy.Get)
+      E.mk_term (Types.Op Types.Get)
         [mk_term t1; mk_term t2] ty
 
     | TTset (t1, t2, t3) ->
       let t1 = mk_term t1 in
       let t2 = mk_term t2 in
       let t3 = mk_term t3 in
-      E.mk_term (Sy.Op Sy.Set) [t1; t2; t3] ty
+      E.mk_term (Types.Op Types.Set) [t1; t2; t3] ty
 
     | TTextract (t1, t2, t3) ->
       let t1 = mk_term t1 in
       let t2 = mk_term t2 in
       let t3 = mk_term t3 in
-      E.mk_term (Sy.Op Sy.Extract) [t1; t2; t3] ty
+      E.mk_term (Types.Op Types.Extract) [t1; t2; t3] ty
 
     | TTconcat (t1, t2) ->
-      E.mk_term (Sy.Op Sy.Concat)
+      E.mk_term (Types.Op Types.Concat)
         [mk_term t1; mk_term t2] ty
 
     | TTdot (t, s) ->
-      E.mk_term (Sy.Op (Sy.Access s)) [mk_term t] ty
+      E.mk_term (Types.Op (Types.Access s)) [mk_term t] ty
 
     | TTrecord lbs ->
       let lbs = List.map (fun (_, t) -> mk_term t) lbs in
-      E.mk_term (Sy.Op Sy.Record) lbs ty
+      E.mk_term (Types.Op Types.Record) lbs ty
 
     | TTlet (binders, t2) ->
       let binders =
@@ -140,7 +142,7 @@ let rec make_term up_qv quant_basename t =
       let cond =
         make_form
           up_qv quant_basename cond Loc.dummy
-          ~decl_kind:E.Daxiom (* not correct, but not a problem *)
+          ~decl_kind:Daxiom (* not correct, but not a problem *)
           ~toplevel:false
       in
       let t1 = mk_term t1 in
@@ -161,7 +163,7 @@ let rec make_term up_qv quant_basename t =
     | TTform e ->
       make_form
         up_qv quant_basename e Loc.dummy
-        ~decl_kind:E.Daxiom (* not correct, but not a problem *)
+        ~decl_kind:Daxiom (* not correct, but not a problem *)
         ~toplevel:false
   in
   mk_term t
@@ -197,7 +199,7 @@ and make_trigger ~in_theory name up_qv quant_basename hyp (e, from_user) =
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv quant_basename) trs in
       let lit =
-        E.mk_builtin ~is_pos:true Sy.LE
+        E.mk_builtin ~is_pos:true Types.LE
           [make_term up_qv quant_basename t1;
            make_term up_qv quant_basename t2]
       in
@@ -208,7 +210,7 @@ and make_trigger ~in_theory name up_qv quant_basename hyp (e, from_user) =
       let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
       let trs = List.map (make_term up_qv quant_basename) trs in
       let lit =
-        E.mk_builtin ~is_pos:true Sy.LT
+        E.mk_builtin ~is_pos:true Types.LT
           [make_term up_qv quant_basename t1;
            make_term up_qv quant_basename t2]
       in
@@ -221,7 +223,7 @@ and make_trigger ~in_theory name up_qv quant_basename hyp (e, from_user) =
   (* clean trigger:
      remove useless terms in multi-triggers after inlining of lets*)
   let trigger =
-    { E.content ; guard ; t_depth; semantic = []; (* will be set by theories *)
+    { content ; guard ; t_depth; semantic = []; (* will be set by theories *)
       hyp; from_user;
     }
   in
@@ -249,7 +251,7 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
           let lt = List.map (make_term up_qv name_base) lt in
           E.mk_distinct ~iff:true lt
         | TAle [t1;t2] ->
-          E.mk_builtin ~is_pos:true Sy.LE
+          E.mk_builtin ~is_pos:true Types.LE
             [make_term up_qv name_base t1;
              make_term up_qv name_base t2]
         | TAlt [t1;t2] ->
@@ -259,20 +261,20 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
                 {c = {tt_ty = Ty.Tint;
                       tt_desc = TTconst(Tint "1")}; annot = t1.annot} in
               let tt2 =
-                E.mk_term (Sy.Op Sy.Minus)
+                E.mk_term (Types.Op Types.Minus)
                   [make_term up_qv name_base t2;
                    make_term up_qv name_base one]
                   Ty.Tint
               in
-              E.mk_builtin ~is_pos:true Sy.LE
+              E.mk_builtin ~is_pos:true Types.LE
                 [make_term up_qv name_base t1; tt2]
             | _ ->
-              E.mk_builtin ~is_pos:true Sy.LT
+              E.mk_builtin ~is_pos:true Types.LT
                 [make_term up_qv name_base t1;
                  make_term up_qv name_base t2]
           end
         | TTisConstr (t, lbl) ->
-          E.mk_builtin ~is_pos:true (Sy.IsConstr lbl)
+          E.mk_builtin ~is_pos:true (Types.IsConstr lbl)
             [make_term up_qv name_base t]
 
         | _ -> assert false
@@ -309,7 +311,7 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
       in
       incr name_tag;
       let up_qv =
-        List.fold_left (fun z (sy,ty) -> Sy.Map.add sy ty z) up_qv qf.qf_bvars
+        List.fold_left (fun z (sy,ty) -> Types.SYMBOL.Map.add sy ty z) up_qv qf.qf_bvars
       in
       let qvars = varset_of_list qf.qf_bvars in
       let binders = E.mk_binders qvars in
@@ -332,7 +334,7 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
         List.map (fun (f : _ Typed.annoted) ->
             mk_form up_qv ~toplevel:false f.c f.annot) qf.qf_hyp
       in
-      let in_theory = decl_kind == E.Dtheory in
+      let in_theory = decl_kind == Dtheory in
       let trs =
         List.map
           (make_trigger ~in_theory name up_qv name_base hyp) qf.qf_triggers in
@@ -381,9 +383,9 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
 (* wrapper of function make_form *)
 let make_form name f loc ~decl_kind =
   let ff =
-    make_form Sy.Map.empty name f loc ~decl_kind ~toplevel:true
+    make_form Symbols.Map.empty name f loc ~decl_kind ~toplevel:true
   in
-  assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
+  assert (Symbols.Map.is_empty (E.free_vars ff Symbols.Map.empty));
   let ff = E.purify_form ff in
   if Ty.Svty.is_empty (E.free_type_vars ff) then ff
   else
@@ -391,7 +393,7 @@ let make_form name f loc ~decl_kind =
     E.mk_forall name loc Symbols.Map.empty [] ff id ~toplevel:true ~decl_kind
 
 let mk_assume acc f name loc =
-  let ff = make_form name f loc ~decl_kind:E.Daxiom in
+  let ff = make_form name f loc ~decl_kind:Daxiom in
   Commands.{st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
 
@@ -418,24 +420,24 @@ let defining_term f =
 
 let mk_function acc f name loc =
   let defn = defining_term f in
-  let defn = make_term Sy.Map.empty "" defn in
-  let ff = make_form name f loc ~decl_kind:(E.Dfunction defn) in
+  let defn = make_term Types.SYMBOL.Map.empty "" defn in
+  let ff = make_form name f loc ~decl_kind:(Dfunction defn) in
   Commands.{st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
 let mk_preddef acc f name loc =
   let defn = defining_term f in
-  let defn = make_term Sy.Map.empty "" defn in
-  let ff = make_form name f loc ~decl_kind: (E.Dpredicate defn) in
+  let defn = make_term Types.SYMBOL.Map.empty "" defn in
+  let ff = make_form name f loc ~decl_kind: (Dpredicate defn) in
   Commands.{st_decl=PredDef (ff, name) ; st_loc=loc} :: acc
 
 let mk_query acc n f loc sort =
-  let ff = make_form "" f loc ~decl_kind:E.Dgoal in
+  let ff = make_form "" f loc ~decl_kind:Dgoal in
   Commands.{st_decl=Query(n, ff, sort) ; st_loc=loc} :: acc
 
 let make_rule (({rwt_left = t1; rwt_right = t2; rwt_vars} as r)
                : _ Typed.rwt_rule) =
   let up_qv =
-    List.fold_left (fun z (sy, ty) -> Sy.Map.add sy ty z) Sy.Map.empty rwt_vars
+    List.fold_left (fun z (sy, ty) -> Types.SYMBOL.Map.add sy ty z) Types.SYMBOL.Map.empty rwt_vars
   in
   let s1 = make_term up_qv "" t1 in
   let s2 = make_term up_qv "" t2 in
@@ -451,8 +453,8 @@ let mk_theory acc l th_name extends _loc =
          | TAxiom (loc, name, ax_kd, f) -> loc, name, f, ax_kd
          | _ -> assert false
        in
-       let ax_form = make_form ax_name f loc ~decl_kind:E.Dtheory in
-       let th_elt = {Expr.th_name; axiom_kind; extends; ax_form; ax_name} in
+       let ax_form = make_form ax_name f loc ~decl_kind:Dtheory in
+       let th_elt = {th_name; axiom_kind; extends; ax_form; ax_name} in
        Commands.{st_decl=ThAssume th_elt ; st_loc=loc} :: acc
     )acc l
 

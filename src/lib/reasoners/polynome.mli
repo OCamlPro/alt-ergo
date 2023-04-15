@@ -29,6 +29,7 @@
 exception Not_a_num
 exception Maybe_zero
 
+(*
 module type S = sig
   include Sig.X
   val mult : r -> r -> r
@@ -38,6 +39,11 @@ module type T = sig
 
   type r
   type t
+*)
+open Types
+
+module type T = sig
+  type t = Types.polynome
 
   val compare : t -> t -> int
   val equal : t -> t -> bool
@@ -81,6 +87,11 @@ module type T = sig
   val separate_constant : t -> t * Numbers.Q.t
 end
 
+include T
+
+(*
+end
+
 module type EXTENDED_Polynome = sig
   include T
   val extract : r -> t option
@@ -89,3 +100,4 @@ end
 
 module Make (X : S) : T with type r = X.r
 
+*)

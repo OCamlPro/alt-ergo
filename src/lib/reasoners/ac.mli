@@ -26,13 +26,9 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module type S = sig
+open Types
 
-  (* the type of amalgamated AC semantic values *)
-  type r
-
-  (* the type of AC semantic values used by the theory *)
-  type t = r Sig.ac
+type t = r ac
 
   (* builds an embeded semantic value from an AC term *)
   val make : Expr.t -> r * Expr.t list
@@ -70,7 +66,3 @@ module type S = sig
   val abstract_selectors : t -> (r * r) list -> r * (r * r) list
 
   val compact : (r * int) list -> (r * int) list
-
-end
-
-module Make (X : Sig.X) : S with type r = X.r

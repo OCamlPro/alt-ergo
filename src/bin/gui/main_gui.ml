@@ -451,9 +451,9 @@ let add_inst ({ h; _ } as inst_model) orig =
   let id = Expr.id orig in
   let name =
     match Expr.form_view orig with
-    | Expr.Lemma { Expr.name = n ; _ } when Stdlib.(<>) n "" -> n
-    | Expr.Lemma _ | Expr.Unit _ | Expr.Clause _ | Expr.Literal _
-    | Expr.Skolem _ | Expr.Let _ | Expr.Iff _ | Expr.Xor _ ->
+    | Lemma { name = n ; _ } when Stdlib.(<>) n "" -> n
+    | Lemma _ | Types.Unit _ | Types.Clause _ | Types.Literal _
+    | Types.Skolem _ | Types.Let _ | Types.Iff _ | Types.Xor _ ->
       string_of_int id
   in
   let r, n, limit, to_add =

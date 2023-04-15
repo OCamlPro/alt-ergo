@@ -34,18 +34,4 @@ val calc_power : Numbers.Q.t -> Numbers.Q.t -> Ty.t -> Numbers.Q.t
     Return None if the exception Exit is raised by calc_power *)
 val calc_power_opt : Numbers.Q.t -> Numbers.Q.t -> Ty.t -> Numbers.Q.t option
 
-module Type (X : Sig.X ): Polynome.T with type r = X.r
-
-module Shostak
-    (X : Sig.X)
-    (P : Polynome.EXTENDED_Polynome with type r = X.r) : Sig.SHOSTAK
-  with type r = X.r and type t = P.t
-
-(*
-module Relation
-    (X : Sig.X)
-    (Uf : Uf.S with type r = X.r)
-    (P : Polynome.EXTENDED_Polynome with type r = X.r)
-  : Sig.RELATION
-    with type r = X.r and type uf = Uf.t
-*)
+include ( Sig.SHOSTAK with type t = Types.polynome )

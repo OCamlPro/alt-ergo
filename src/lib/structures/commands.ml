@@ -33,7 +33,7 @@ type sat_decl_aux =
   | PredDef of Expr.t * string (*name of the predicate*)
   | RwtDef of (Expr.t Typed.rwt_rule) list
   | Query of string *  Expr.t * Ty.goal_sort
-  | ThAssume of Expr.th_elt
+  | ThAssume of Types.th_elt
   | Push of int
   | Pop of int
 
@@ -62,4 +62,3 @@ let print_aux fmt = function
   | Pop n ->  Format.fprintf fmt "Pop %d" n
 
 let print fmt decl = print_aux fmt decl.st_decl
-

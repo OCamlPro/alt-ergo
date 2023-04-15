@@ -38,7 +38,7 @@ type gsubst = {
 }
 
 type trigger_info = {
-  trigger : Expr.trigger;
+  trigger : Types.trigger;
   trigger_age : int ;  (* age d'un trigger *)
   trigger_orig : Expr.t ; (* lemme d'origine *)
   trigger_formula : Expr.t ; (* formule associee au trigger *)

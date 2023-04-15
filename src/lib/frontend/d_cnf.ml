@@ -1,4 +1,5 @@
 
+open Types
 open Options
 open D_loop
 
@@ -310,7 +311,7 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
   let name = get_basename path in
   let sy =
     begin match DStd.Tag.get tags DE.Tags.ac with
-      | Some () -> Sy.name ~kind:Sy.Ac name
+      | Some () -> Sy.name ~kind:Types.Ac name
       | _ -> Sy.name name
     end
   in
@@ -439,7 +440,7 @@ let handle_patt_var name (DE.{ term_descr; _ } as term)  =
     let ty = dty_to_ty id_ty in
     let n = Hstring.make name in
     let v = Var.of_hstring n in
-    let sy = Sy.Var v in
+    let sy = Types.Var v in
     Cache.store_sy (DE.Term.Var.hash ty_c) sy;
     v, n, ty
 
@@ -447,7 +448,7 @@ let handle_patt_var name (DE.{ term_descr; _ } as term)  =
     let ty = dty_to_ty id_ty in
     let n = Hstring.make name in
     let v = Var.of_hstring n in
-    let sy = Sy.Var v in
+    let sy = Types.Var v in
     Cache.store_sy (DE.Term.Var.hash ty_v) sy;
     v, n, ty
 
@@ -514,10 +515,10 @@ let mk_bound (DE.{ term_descr; term_ty; _ } as term) is_open is_lower =
   let kind =
     match term_descr with
     | Cst { builtin = B.Integer s; _ } ->
-      Sy.ValBnd (Numbers.Q.from_string s)
+      Types.ValBnd (Numbers.Q.from_string s)
     | Cst { builtin = B.Base; path; _ }
     | Var { path;  _ } ->
-      Sy.VarBnd (Var.of_string (get_basename path))
+      Types.VarBnd (Var.of_string (get_basename path))
     | _ ->
       Util.failwith
         "Expected bound to be either an integer constant or variable but\
@@ -532,22 +533,22 @@ let mk_bound (DE.{ term_descr; term_ty; _ } as term) is_open is_lower =
 let mk_lt translate ty x y =
   if ty == `Int then
     let e3 =
-      E.mk_term (Sy.Op Sy.Minus) [translate y; E.int "1"] Ty.Tint
+      E.mk_term (Types.Op Types.Minus) [translate y; E.int "1"] Ty.Tint
     in
     let e1 = translate x in
-    E.mk_builtin ~is_pos:true Sy.LE [e1; e3]
+    E.mk_builtin ~is_pos:true Types.LE [e1; e3]
   else
-    E.mk_builtin ~is_pos:true Sy.LT [translate x; translate y]
+    E.mk_builtin ~is_pos:true Types.LT [translate x; translate y]
 
 let mk_gt translate ty x y =
   if ty == `Int then
     let e3 =
-      E.mk_term (Sy.Op Sy.Minus) [translate x; E.int "1"] Ty.Tint
+      E.mk_term (Types.Op Types.Minus) [translate x; E.int "1"] Ty.Tint
     in
     let e2 = translate y in
-    E.mk_builtin ~is_pos:true Sy.LE [e2; e3]
+    E.mk_builtin ~is_pos:true Types.LE [e2; e3]
   else
-    E.mk_builtin ~is_pos:true Sy.LT [translate y; translate x]
+    E.mk_builtin ~is_pos:true Types.LT [translate y; translate x]
 
 let mk_add translate sy ty l =
   let rec aux_mk_add l =
@@ -590,7 +591,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
           | B.Constructor _ ->
             let name = get_basename path in
             let ty = dty_to_ty term_ty in
-            let sy = Sy.Op (Sy.Constr (Hstring.make name)) in
+            let sy = Types.Op (Types.Constr (Hstring.make name)) in
             E.mk_term sy [] ty
 
           | _ ->
@@ -619,12 +620,12 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             let e1, ty =
               if mty == `Int then E.int "0", Ty.Tint else E.real "0",Ty.Treal
             in
-            E.mk_term (Sy.Op Sy.Minus) [e1; aux_mk_expr x] ty
+            E.mk_term (Types.Op Types.Minus) [e1; aux_mk_expr x] ty
 
           | B.Bitv_extract { i; j; _ }, [x] ->
             let q = E.int (Int.to_string i) in
             let p = E.int (Int.to_string j) in
-            E.mk_term (Sy.Op Sy.Extract) [aux_mk_expr x; p; q]
+            E.mk_term (Types.Op Types.Extract) [aux_mk_expr x; p; q]
               (Ty.Tbitv (i-j+1))
 
           | B.Destructor { case; field; adt; _ }, [x] ->
@@ -638,7 +639,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
                     let sy =
                       if record || Array.length cases = 1
                       then
-                        Sy.Op (Sy.Access (Hstring.make name))
+                        Types.Op (Types.Access (Hstring.make name))
                       else
                         Sy.destruct ~guarded:true name
                     in
@@ -660,7 +661,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             }, [x] ->
             begin
               let name = get_basename path in
-              let builtin = Sy.IsConstr (Hstring.make name) in
+              let builtin = Types.IsConstr (Hstring.make name) in
               let ty_c =
                 match DT.definition adt with
                 | Some (
@@ -673,7 +674,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
                 E.mk_builtin ~is_pos:true builtin [aux_mk_expr x]
               | Ty.Tsum _ as ty ->
                 let cstr =
-                  let sy = Sy.Op (Sy.Constr (Hstring.make name)) in
+                  let sy = Types.Op (Types.Constr (Hstring.make name)) in
                   E.mk_term sy [] ty
                 in
                 E.mk_eq ~iff:false (aux_mk_expr x) cstr
@@ -689,17 +690,17 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
 
           | B.Bitv_concat { n; m; }, [ x; y ] ->
             let rty = Ty.Tbitv (n+m) in
-            E.mk_term (Sy.Op Sy.Concat) [aux_mk_expr x; aux_mk_expr y] rty
+            E.mk_term (Types.Op Types.Concat) [aux_mk_expr x; aux_mk_expr y] rty
 
           | B.Select, [ x; y ] ->
             let rty = dty_to_ty term_ty in
-            E.mk_term (Sy.Op Sy.Get) [aux_mk_expr x; aux_mk_expr y] rty
+            E.mk_term (Types.Op Types.Get) [aux_mk_expr x; aux_mk_expr y] rty
 
           | B.Maps_to, [ x; y ] ->
             begin match x.term_descr with
               | Var t_v ->
                 begin match Cache.find_sy (DE.Term.Var.hash t_v) with
-                  | Sy.Var v ->
+                  | Types.Var v ->
                     let rty = dty_to_ty term_ty in
                     let sy = Sy.mk_maps_to v in
                     let e2 = aux_mk_expr y in
@@ -730,7 +731,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             let e1 = aux_mk_expr x in
             let e2 = aux_mk_expr y in
             let e3 = aux_mk_expr z in
-            E.mk_term (Sy.Op Sy.Set) [e1; e2; e3] ty
+            E.mk_term (Types.Op Types.Set) [e1; e2; e3] ty
 
           | B.In_interval (b1, b2), [ x; y; z ] ->
             let ty = dty_to_ty term_ty in
@@ -808,12 +809,12 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
               List.fold_left (
                 fun (acc, curr) next ->
                   E.mk_and acc (
-                    E.mk_builtin ~is_pos:true Sy.LE
+                    E.mk_builtin ~is_pos:true Types.LE
                       [aux_mk_expr curr; aux_mk_expr next]
                   ) false 0,
                   next
               ) (
-                E.mk_builtin ~is_pos:true Sy.LE
+                E.mk_builtin ~is_pos:true Types.LE
                   [aux_mk_expr h1; aux_mk_expr h2],
                 h2
               ) t
@@ -824,12 +825,12 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
               List.fold_left (
                 fun (acc, curr) next ->
                   E.mk_and acc (
-                    E.mk_builtin ~is_pos:true Sy.LE
+                    E.mk_builtin ~is_pos:true Types.LE
                       [aux_mk_expr next; aux_mk_expr curr]
                   ) false 0,
                   next
               ) (
-                E.mk_builtin ~is_pos:true Sy.LE
+                E.mk_builtin ~is_pos:true Types.LE
                   [aux_mk_expr h2; aux_mk_expr h1],
                 h2
               ) t
@@ -837,45 +838,45 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
 
           | B.Add ty, _ ->
             let rty = if ty == `Int then Ty.Tint else Treal in
-            let sy = Sy.Op Sy.Plus in
+            let sy = Types.Op Types.Plus in
             mk_add aux_mk_expr sy rty args
 
           | B.Sub ty, h :: t ->
             let rty = if ty == `Int then Ty.Tint else Treal in
-            let sy = Sy.Op Sy.Minus in
+            let sy = Types.Op Types.Minus in
             let args = List.rev_map aux_mk_expr (List.rev t) in
             List.fold_left
               (fun x y -> E.mk_term sy [x; y] rty) (aux_mk_expr h) args
 
           | B.Mul ty, h :: t ->
             let rty = if ty == `Int then Ty.Tint else Treal in
-            let sy = Sy.Op Sy.Mult in
+            let sy = Types.Op Types.Mult in
             let args = List.rev_map aux_mk_expr (List.rev t) in
             List.fold_left
               (fun x y -> E.mk_term sy [x; y] rty) (aux_mk_expr h) args
 
           | (B.Div _ | B.Div_e (`Real | `Rat)), h :: t ->
-            let sy = Sy.Op Sy.Div in
+            let sy = Types.Op Types.Div in
             let args = List.rev_map aux_mk_expr (List.rev t) in
             List.fold_left
               (fun x y -> E.mk_term sy [x; y] Ty.Treal) (aux_mk_expr h) args
 
           | B.Div_e `Int, h :: t ->
-            let sy = Sy.Op Sy.Div in
+            let sy = Types.Op Types.Div in
             let args = List.rev_map aux_mk_expr (List.rev t) in
             List.fold_left
               (fun x y -> E.mk_term sy [x; y] Ty.Tint) (aux_mk_expr h) args
 
           | B.Modulo_e ty, h :: t ->
             let rty = if ty == `Int then Ty.Tint else Treal in
-            let sy = Sy.Op Sy.Modulo in
+            let sy = Types.Op Types.Modulo in
             let args = List.rev_map aux_mk_expr (List.rev t) in
             List.fold_left
               (fun x y -> E.mk_term sy [x; y] rty) (aux_mk_expr h) args
 
           | B.Pow ty, h :: t ->
             let rty = if ty == `Int then Ty.Tint else Treal in
-            let sy = Sy.Op Sy.Pow in
+            let sy = Types.Op Types.Pow in
             let args = List.rev_map aux_mk_expr (List.rev t) in
             List.fold_left
               (fun x y -> E.mk_term sy [x; y] rty) (aux_mk_expr h) args
@@ -923,12 +924,12 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             let ty = dty_to_ty term_ty in
             begin match ty with
               | Ty.Tadt (_, _) ->
-                let sy = Sy.Op (Sy.Constr (Hstring.make name)) in
+                let sy = Types.Op (Types.Constr (Hstring.make name)) in
                 let l = List.map (fun t -> aux_mk_expr t) args in
                 E.mk_term sy l ty
               | Ty.Trecord _ ->
                 let l = List.map (fun t -> aux_mk_expr t) args in
-                E.mk_term (Sy.Op Sy.Record) l ty
+                E.mk_term (Types.Op Types.Record) l ty
               | _ ->
                 Util.failwith
                   "Constructor error: %a does not belong to a record nor an\
@@ -1029,7 +1030,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
               | _ -> []
             end
           in
-          let in_theory = decl_kind == E.Dtheory in
+          let in_theory = decl_kind == Dtheory in
           let f = aux_mk_expr ~toplevel body in
           let qbody = E.purify_form f in
           (*  All the triggers that are encoutered at this level are assumed
@@ -1101,7 +1102,7 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
       let trs = List.map mk_expr trs in
       let t1' = mk_expr t1 in
       let t2' = mk_expr t2 in
-      let lit = E.mk_builtin ~is_pos:true Sy.LE [t1'; t2'] in
+      let lit = E.mk_builtin ~is_pos:true Types.LE [t1'; t2'] in
       trs, Some lit
 
     | [{
@@ -1113,7 +1114,7 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
       let trs = List.map mk_expr trs in
       let t1' = mk_expr t1 in
       let t2' = mk_expr t2 in
-      let lit = E.mk_builtin ~is_pos:true Sy.LT [t1'; t2'] in
+      let lit = E.mk_builtin ~is_pos:true Types.LT [t1'; t2'] in
       trs, Some lit
 
     | lt -> List.map mk_expr lt, None
@@ -1124,7 +1125,7 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
   (* clean trigger:
      remove useless terms in multi-triggers after inlining of lets*)
   let trigger =
-    { E.content; guard; t_depth; semantic = []; (* will be set by theories *)
+    { content; guard; t_depth; semantic = []; (* will be set by theories *)
       hyp; from_user; }
   in
   E.clean_trigger ~in_theory name trigger
@@ -1254,14 +1255,14 @@ let make dloc_file acc stmt =
             aux acc decl
         ) [] _hyps
       in
-      let e = make_form "" t st_loc ~decl_kind:E.Dgoal in
+      let e = make_form "" t st_loc ~decl_kind:Dgoal in
       let st_decl = C.Query (name, e, Thm) in
       C.{st_decl; st_loc} :: List.rev_append (List.rev rev_hyps_c) acc
 
     (* Axiom definitions *)
     | { id = Id.{name = Simple name; _}; contents = `Hyp t; loc; } ->
       let st_loc = dl_to_ael dloc_file loc in
-      let e = make_form name t st_loc ~decl_kind:E.Daxiom in
+      let e = make_form name t st_loc ~decl_kind:Daxiom in
       let st_decl = C.Assume (name, e, true) in
       C.{ st_decl; st_loc } :: acc
 
@@ -1305,7 +1306,7 @@ let make dloc_file acc stmt =
 
             begin match DStd.Tag.get tags DE.Tags.predicate with
               | Some () ->
-                let decl_kind = E.Dpredicate defn in
+                let decl_kind = Dpredicate defn in
                 let ff =
                   mk_expr ~loc ~name_base
                     ~toplevel:false ~decl_kind body
@@ -1327,7 +1328,7 @@ let make dloc_file acc stmt =
                 in
                 C.{ st_decl = C.PredDef (e, name_base); st_loc }
               | None ->
-                let decl_kind = E.Dfunction defn in
+                let decl_kind = Dfunction defn in
                 let ff =
                   mk_expr ~loc ~name_base
                     ~toplevel:false ~decl_kind body

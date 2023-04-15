@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
 module X = Shostak.Combine
 
 module Ac = Shostak.Ac
@@ -37,7 +39,7 @@ module ME = Expr.Map
 module SE = Expr.Set
 
 module LX =
-  Xliteral.Make(struct type t = X.r let compare = X.hash_cmp include X end)
+  Xliteral.Make(struct type t = Types.r let compare = X.hash_cmp include X end)
 module MapL = Emap.Make(LX)
 
 module MapX = struct
@@ -47,7 +49,7 @@ end
 module SetX = Shostak.SXH
 
 module SetXX = Set.Make(struct
-    type t = X.r * X.r
+    type t = Types.r * Types.r
     let compare (r1, r1') (r2, r2') =
       let c = X.hash_cmp r1 r2 in
       if c <> 0 then c
@@ -58,7 +60,7 @@ module SetAc = Set.Make(struct type t = Ac.t let compare = Ac.compare end)
 
 module SetRL = Set.Make
     (struct
-      type t = Ac.t * X.r * Ex.t
+      type t = Ac.t * Types.r * Ex.t
       let compare (ac1,_,_) (ac2,_,_)= Ac.compare ac1 ac2
     end)
 
@@ -76,7 +78,7 @@ module RS = struct
 
 end
 
-type r = X.r
+type r = Types.r
 
 type t = {
 
@@ -1025,7 +1027,7 @@ let model_repr_of_term t env mrepr =
 let compute_concrete_model ({ make; _ } as env) =
   ME.fold
     (fun t _mk ((fprofs, cprofs, carrays, mrepr) as acc) ->
-       let { E.f; xs; ty; _ } = E.term_view t in
+       let { f; xs; ty; _ } = E.term_view t in
        if X.is_solvable_theory_symbol f ty
        || E.is_fresh t || E.is_fresh_skolem t
        || E.equal t E.vrai || E.equal t E.faux
@@ -1045,13 +1047,13 @@ let compute_concrete_model ({ make; _ } as env) =
          let rep, mrepr = model_repr_of_term t env mrepr in
          assert (is_a_good_model_value rep);
          match f, xs, ty with
-         | Sy.Op Sy.Set, _, _ -> acc
+         | Types.Op Types.Set, _, _ -> acc
 
-         | Sy.Op Sy.Get, [(_,(a,_));((_,(i,_)) as e)], _ ->
+         | Types.Op Types.Get, [(_,(a,_));((_,(i,_)) as e)], _ ->
            begin
              match X.term_extract a with
              | Some ta, true ->
-               let { E.f = f_ta; xs=xs_ta; _ } = E.term_view ta in
+               let { f = f_ta; xs=xs_ta; _ } = E.term_view ta in
                assert (xs_ta == []);
                fprofs,
                cprofs,
@@ -1083,4 +1085,3 @@ let save_cache () =
 
 let reinit_cache () =
   LX.reinit_cache ()
-

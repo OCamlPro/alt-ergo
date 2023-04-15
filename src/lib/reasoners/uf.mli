@@ -30,7 +30,7 @@
 
 type t
 
-type r = Shostak.Combine.r
+type r = Types.r
 
 module LX : Xliteral.S with type elt = r
 

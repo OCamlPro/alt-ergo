@@ -56,11 +56,12 @@
     Commands Errors Explanation Fpa_rounding
     Parsed Profiling Satml_types Symbols
     Expr Var Ty Typed Xliteral ModelMap
+    Types
     ; util
     Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
     MyDynlink MyUnix Numbers NumsNumbers NumbersInterface
     Options Timers Util Vec Version ZarithNumbers Steps Printer Format_shims
-    My_zip
+    My_zip CMap CSet Shostak_pre
   )
 
  (js_of_ocaml

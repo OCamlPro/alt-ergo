@@ -26,8 +26,10 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type 'a ac =
-  {h: Symbols.t ; t: Ty.t ; l: ('a * int) list; distribute: bool}
+open Types
+
+type 'a ac = 'a Types.ac =
+  {h: symbol ; t: Ty.t ; l: ('a * int) list; distribute: bool}
 
 type 'a solve_pb = { sbt : ('a * 'a) list; eqs : ('a * 'a) list }
 
@@ -35,9 +37,6 @@ module type SHOSTAK = sig
 
   (**Type of terms of the theory*)
   type t
-
-  (**Type of representants of terms of the theory*)
-  type r
 
   (** Name of the theory*)
   val name : string
@@ -92,8 +91,6 @@ module type SHOSTAK = sig
 end
 
 module type X = sig
-  type r
-
   val save_cache : unit -> unit
   (** saves the module's current cache *)
 

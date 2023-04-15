@@ -26,42 +26,37 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
 module Combine : Sig.X
 
-module Polynome : Polynome.T
-  with type r = Combine.r
+module Polynome : (module type of Polynome)
+module Arith : Sig.SHOSTAK with type t = polynome
 
-module Arith : Sig.SHOSTAK
-  with type r = Combine.r and type t = Polynome.t
+module Records : Sig.SHOSTAK with type t = Types.records
 
-module Records : Sig.SHOSTAK
-  with type r = Combine.r and type t = Combine.r Records.abstract
+module Bitv : Sig.SHOSTAK with type t = Types.bitv
 
-module Bitv : Sig.SHOSTAK
-  with type r = Combine.r and type t = Combine.r Bitv.abstract
+module Arrays : Sig.SHOSTAK with type t = Types.arrays
 
-module Arrays : Sig.SHOSTAK
-  with type r = Combine.r and type t = Combine.r Arrays.abstract
+module Enum : Sig.SHOSTAK with type t = Types.enum
 
-module Enum : Sig.SHOSTAK
-  with type r = Combine.r and type t = Combine.r Enum.abstract
+module Adt : Sig.SHOSTAK with type t = Types.adt
 
-module Adt : Sig.SHOSTAK
-  with type r = Combine.r and type t = Combine.r Adt.abstract
+module Ite : Sig.SHOSTAK with type t = Types.ite
 
-module Ite : Sig.SHOSTAK
-  with type r = Combine.r and type t = Combine.r Ite.abstract
-
-module Ac : Ac.S with type r = Combine.r and type t = Combine.r Sig.ac
+module Ac : (module type of Ac)
 
 (** map of semantic values using Combine.hash_cmp *)
-module MXH : Map.S with type key = Combine.r
+module MXH : Map.S with type key = Types.r
 
 (** set of semantic values using Combine.hash_cmp *)
-module SXH : Set.S with type elt = Combine.r
+module SXH : Set.S with type elt = Types.r
 
 (** map of semantic values using structural compare Combine.str_cmp *)
-module MXS : Map.S with type key = Combine.r
+module MXS : Map.S with type key = Types.r
 
 (** set of semantic values using structural compare Combine.str_cmp *)
-module SXS : Set.S with type elt = Combine.r
+module SXS : Set.S with type elt = Types.r
+
+val init : unit -> unit

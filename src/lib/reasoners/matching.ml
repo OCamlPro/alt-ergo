@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
 module E = Expr
 module ME = E.Map
 module SubstE = Symbols.Map
@@ -104,13 +106,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
           ~module_name:"Matching" ~function_name:"matching"
           "@[<v 0>(multi-)trigger: %a@ \
            ========================================================@]"
-          E.print_list tr.E.content
+          E.print_list tr.content
 
     let match_pats_modulo pat lsubsts =
       if Options.get_debug_matching() >= 3 then
         let print fmt Matching_types.{ sbs; sty; _ } =
           Format.fprintf fmt ">>> sbs= %a | sty= %a@ "
-            (SubstE.print E.print) sbs Ty.print_subst sty
+            (Symbols.print_map E.print) sbs Ty.print_subst sty
         in
         print_dbg
           ~module_name:"Matching" ~function_name:"match_pats_modulo"
@@ -122,7 +124,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         print_dbg
           ~module_name:"Matching" ~function_name:"match_one_pat"
           "match_pat: %a with subst: sbs= %a | sty= %a"
-          E.print pat0 (SubstE.print E.print) sbs Ty.print_subst sty
+          E.print pat0 (Symbols.print_map E.print) sbs Ty.print_subst sty
 
 
     let match_one_pat_against Matching_types.{ sbs; sty; _ } pat0 t =
@@ -133,7 +135,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
            with subst:  sbs= %a | sty= %a@]"
           E.print pat0
           E.print t
-          (SubstE.print E.print) sbs
+          (Symbols.print_map E.print) sbs
           Ty.print_subst sty
 
     let match_term Matching_types.{ sbs; sty; _ } t pat =
@@ -141,7 +143,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         print_dbg
           ~module_name:"Matching" ~function_name:"match_term"
           "I match %a against %a with subst: sbs=%a | sty= %a"
-          E.print pat E.print t (SubstE.print E.print) sbs Ty.print_subst sty
+          E.print pat E.print t (Symbols.print_map E.print) sbs Ty.print_subst sty
 
     let match_list Matching_types.{ sbs; sty; _ } pats xs =
       if Options.get_debug_matching() >= 3 then
@@ -150,7 +152,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           "I match %a against %a with subst: sbs=%a | sty= %a"
           E.print_list pats
           E.print_list xs
-          (SubstE.print E.print) sbs
+          (Symbols.print_map E.print) sbs
           Ty.print_subst sty
 
     let match_class_of t cl =
@@ -169,13 +171,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
           "@[<v 2>%3d candidate substitutions for Axiom %a with trigger %a@ "
           (List.length res)
           E.print pat_info.trigger_orig
-          E.print_list pat_info.trigger.E.content;
+          E.print_list pat_info.trigger.content;
       if Options.get_debug_matching() >= 2 then
         List.iter
           (fun gsbt ->
              print_dbg ~header:false
                ">>> sbs = %a  and  sbty = %a@ "
-               (SubstE.print E.print) gsbt.sbs Ty.print_subst gsbt.sty
+               (Symbols.print_map E.print) gsbt.sbs Ty.print_subst gsbt.sty
           )res
 
   end
@@ -193,7 +195,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let rec add_rec env t =
       if ME.mem t env.info then env
       else
-        let { E.f = f; xs = xs; _ } = E.term_view t in
+        let { f = f; xs = xs; _ } = E.term_view t in
         let env =
           let map_f =
             try SubstE.find f env.fils with Not_found -> ME.empty in
@@ -316,7 +318,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     List.rev
       (List.rev_map
          (fun (hs, ty) ->
-            E.mk_term (Symbols.Op (Symbols.Access hs)) [t] ty) lbs)
+            E.mk_term (Types.Op (Types.Access hs)) [t] ty) lbs)
 
   module SLE = (* sets of lists of terms *)
     Set.Make(struct
@@ -351,10 +353,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
       SLE.elements mtl
 
   let plus_of_minus t d ty =
-    [E.mk_term (Symbols.Op Symbols.Minus) [t; d] ty ; d]
+    [E.mk_term (Types.Op Types.Minus) [t; d] ty ; d]
 
   let minus_of_plus t d ty =
-    [E.mk_term (Symbols.Op Symbols.Plus)  [t; d] ty ; d]
+    [E.mk_term (Types.Op Types.Plus)  [t; d] ty ; d]
 
   let linear_arithmetic_matching f_pat pats _ty_pat t =
     let ty = E.type_info t in
@@ -362,11 +364,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
        ty != Ty.Tint && ty != Ty.Treal then []
     else
       match f_pat, pats with
-      | Symbols.Op Symbols.Plus, [p1; p2] ->
+      | Types.Op Types.Plus, [p1; p2] ->
         if E.is_ground p2 then [plus_of_minus t p2 ty]
         else if E.is_ground p1 then [plus_of_minus t p1 ty] else []
 
-      | Symbols.Op Symbols.Minus, [p1; p2] ->
+      | Types.Op Types.Minus, [p1; p2] ->
         if E.is_ground p2 then [minus_of_plus t p2 ty]
         else if E.is_ground p1 then [minus_of_plus t p1 ty] else []
       | _ -> []
@@ -376,14 +378,14 @@ module Make (X : Arg) : S with type theory = X.t = struct
       pat t =
     Options.exec_thread_yield ();
     Debug.match_term sg t pat;
-    let { E.f = f_pat; xs = pats; ty = ty_pat; _ } = E.term_view pat in
+    let { f = f_pat; xs = pats; ty = ty_pat; _ } = E.term_view pat in
     match f_pat with
-    |  Symbols.Var _ when Symbols.equal f_pat Symbols.underscore ->
+    |  Types.Var _ when Symbols.equal f_pat Symbols.underscore ->
       begin
         try [ { sg with sty = Ty.matching s_ty ty_pat (E.type_info t) } ]
         with Ty.TypeClash _ -> raise Echec
       end
-    | Symbols.Var _ ->
+    | Types.Var _ ->
       let sb =
         (try
            let s_ty = Ty.matching s_ty ty_pat (E.type_info t) in
@@ -409,12 +411,12 @@ module Make (X : Arg) : S with type theory = X.t = struct
           let cl =
             List.fold_left
               (fun l t ->
-                 let { E.f = f; xs = xs; ty = ty; _ } = E.term_view t in
+                 let { f = f; xs = xs; ty = ty; _ } = E.term_view t in
                  if Symbols.compare f_pat f = 0 then xs::l
                  else
                    begin
                      match f_pat, ty with
-                     | Symbols.Op (Symbols.Record), Ty.Trecord record ->
+                     | Types.Op (Types.Record), Ty.Trecord record ->
                        (xs_modulo_records t record) :: l
                      | _ -> l
                    end
@@ -450,9 +452,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
     Steps.incr (Steps.Matching);
     Debug.match_one_pat sg pat0;
     let pat = E.apply_subst (sg.sbs, sg.sty) pat0 in
-    let { E.f = f; xs = pats; ty = ty; _ } = E.term_view pat in
+    let { f = f; xs = pats; ty = ty; _ } = E.term_view pat in
     match f with
-    | Symbols.Var _ -> all_terms f ty env tbox sg lsbt_acc
+    | Types.Var _ -> all_terms f ty env tbox sg lsbt_acc
     | _ ->
       let Matching_types.{ sty; gen = g; goal = b; _ } = sg in
       let f_aux t xs lsbt =
@@ -484,14 +486,14 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let sf = E.(term_view s).f in
     let tf = E.(term_view t).f in
     match sf, tf with
-    | Symbols.Name _, Symbols.Op _ -> -1
-    | Symbols.Op _, Symbols.Name _ -> -1
+    | Types.Name _, Types.Op _ -> -1
+    | Types.Op _, Types.Name _ -> -1
     | _ -> (E.depth t) - (E.depth s)
 
   let matching mconf env tbox pat_info =
     let open Matching_types in
     let pats = pat_info.trigger in
-    let pats_list = List.stable_sort trig_weight pats.E.content in
+    let pats_list = List.stable_sort trig_weight pats.content in
     Debug.matching pats;
     if List.length pats_list > Options.get_max_multi_triggers_size () then
       pat_info, []
@@ -566,8 +568,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
   (* unused --
      let fully_uninterpreted_head s =
      match E.term_view s with
-     | E.Not_a_term _ -> assert false
-     | E.Term { E.f = Symbols.Op _; _ } -> false
+     | Not_a_term _ -> assert false
+     | Term { f = Types.Op _; _ } -> false
      | _ -> true
 
      (* this function removes "big triggers"
@@ -575,13 +577,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
      let filter_subsumed_triggers triggers =
      List.fold_left
       (fun acc tr ->
-         match tr.E.content with
+         match tr.content with
          | [t] ->
            let subterms = E.sub_terms E.Set.empty t in
            if List.exists (fun tr ->
-               match tr.E.content with
+               match tr.content with
                | [s] ->
-                 not (E.equal s t) && E.Set.mem s subterms &&
+                 not (E.equal s t) && Set.mem s subterms &&
                  fully_uninterpreted_head s
                | _ -> false
              )triggers
@@ -618,13 +620,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let triggers_of, clear_triggers_of_trs_tbl =
     let trs_tbl = HEI.create 101 in
     let triggers_of q mconf =
-      match q.E.user_trs with
+      match q.user_trs with
       | _::_ as l -> l
       | [] ->
-        try HEI.find trs_tbl (q.E.main, mconf)
+        try HEI.find trs_tbl (q.main, mconf)
         with Not_found ->
-          let trs = E.make_triggers q.E.main q.E.binders q.E.kind mconf in
-          HEI.add trs_tbl (q.E.main, mconf) trs;
+          let trs = E.make_triggers q.main q.binders q.kind mconf in
+          HEI.add trs_tbl (q.main, mconf) trs;
           trs
     in
     let clear_triggers_of_trs_tbl () =
@@ -635,10 +637,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let backward_triggers, clear_backward_triggers_trs_tbl =
     let trs_tbl = HE.create 101 in
     let backward_triggers q =
-      try HE.find trs_tbl q.E.main
+      try HE.find trs_tbl q.main
       with Not_found ->
         let trs = E.resolution_triggers ~is_back:true q in
-        HE.add trs_tbl q.E.main trs;
+        HE.add trs_tbl q.main trs;
         trs
     in
     let clear_backward_triggers_trs_tbl () =
@@ -649,10 +651,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let forward_triggers, clear_forward_triggers_trs_tbl =
     let trs_tbl = HE.create 101 in
     let forward_triggers q =
-      try HE.find trs_tbl q.E.main
+      try HE.find trs_tbl q.main
       with Not_found ->
         let trs = E.resolution_triggers ~is_back:false q in
-        HE.add trs_tbl q.E.main trs;
+        HE.add trs_tbl q.main trs;
         trs
     in
     let clear_forward_triggers_trs_tbl () =
@@ -664,7 +666,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     ME.fold
       (fun lem (guard, age, dep) env ->
          match E.form_view lem with
-         | E.Lemma ({ E.main = f; name; _ } as q) ->
+         | Lemma ({ main = f; name; _ } as q) ->
            let tgs, kind =
              match mconf.Util.backward with
              | Util.Normal   -> triggers_of q mconf, "Normal"
@@ -690,8 +692,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
                 add_trigger info env
              ) env tgs
 
-         | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-         | E.Let _ | E.Iff _ | E.Xor _ -> assert false
+         | Unit _ | Clause _ | Literal _ | Skolem _
+         | Let _ | Iff _ | Xor _ -> assert false
       ) formulas env
 
   let terms_info env = env.info, env.fils

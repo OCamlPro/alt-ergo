@@ -9,6 +9,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
 open Format
 open Options
 
@@ -31,13 +32,13 @@ module Pp_smtlib_term = struct
     asprintf "%a" Ty.print t
 
   let rec print fmt t =
-    let {E.f;xs;ty; _} = E.term_view t in
+    let {f;xs;ty; _} = E.term_view t in
     match f, xs with
 
-    | Sy.Lit lit, xs ->
+    | Types.Lit lit, xs ->
       begin
         match lit, xs with
-        | Sy.L_eq, a::l ->
+        | Types.L_eq, a::l ->
           if get_output_smtlib () then
             fprintf fmt "(= %a%a)"
               print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
@@ -45,13 +46,13 @@ module Pp_smtlib_term = struct
             fprintf fmt "(%a%a)"
               print a (fun fmt -> List.iter (fprintf fmt " = %a" print)) l
 
-        | Sy.L_neg_eq, [a; b] ->
+        | Types.L_neg_eq, [a; b] ->
           if get_output_smtlib () then
             fprintf fmt "(not (= %a %a))" print a print b
           else
             fprintf fmt "(%a <> %a)" print a print b
 
-        | Sy.L_neg_eq, a::l ->
+        | Types.L_neg_eq, a::l ->
           if get_output_smtlib () then
             fprintf fmt "(distinct %a%a)"
               print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
@@ -59,60 +60,60 @@ module Pp_smtlib_term = struct
             fprintf fmt "distinct(%a%a)"
               print a (fun fmt -> List.iter (fprintf fmt ", %a" print)) l
 
-        | Sy.L_built Sy.LE, [a;b] ->
+        | Types.L_built Types.LE, [a;b] ->
           if get_output_smtlib () then
             fprintf fmt "(<= %a %a)" print a print b
           else
             fprintf fmt "(%a <= %a)" print a print b
 
-        | Sy.L_built Sy.LT, [a;b] ->
+        | Types.L_built Types.LT, [a;b] ->
           if get_output_smtlib () then
             fprintf fmt "(< %a %a)" print a print b
           else
             fprintf fmt "(%a < %a)" print a print b
 
-        | Sy.L_neg_built Sy.LE, [a; b] ->
+        | Types.L_neg_built Types.LE, [a; b] ->
           if get_output_smtlib () then
             fprintf fmt "(> %a %a)" print a print b
           else
             fprintf fmt "(%a > %a)" print a print b
 
-        | Sy.L_neg_built Sy.LT, [a; b] ->
+        | Types.L_neg_built Types.LT, [a; b] ->
           if get_output_smtlib () then
             fprintf fmt "(>= %a %a)" print a print b
           else
             fprintf fmt "(%a >= %a)" print a print b
 
-        | Sy.L_neg_pred, [a] ->
+        | Types.L_neg_pred, [a] ->
           fprintf fmt "(not %a)" print a
 
-        | Sy.L_built (Sy.IsConstr hs), [e] ->
+        | Types.L_built (Types.IsConstr hs), [e] ->
           if get_output_smtlib () then
             fprintf fmt "((_ is %a) %a)" Hstring.print hs print e
           else
             fprintf fmt "(%a ? %a)" print e Hstring.print hs
 
-        | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
+        | Types.L_neg_built (Types.IsConstr hs), [e] ->
           if get_output_smtlib () then
             fprintf fmt "(not ((_ is %a) %a))" Hstring.print hs print e
           else
             fprintf fmt "not (%a ? %a)" print e Hstring.print hs
 
-        | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
-          | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
-          | Sy.L_built (Sy.IsConstr _)
-          | Sy.L_neg_built (Sy.IsConstr _)) , _ ->
+        | (Types.L_built (Types.LT | Types.LE) | Types.L_neg_built (Types.LT | Types.LE)
+          | Types.L_neg_pred | Types.L_eq | Types.L_neg_eq
+          | Types.L_built (Types.IsConstr _)
+          | Types.L_neg_built (Types.IsConstr _)) , _ ->
           assert false
 
       end
 
-    | Sy.Op Sy.Get, [e1; e2] ->
+    | Types.Op Types.Get, [e1; e2] ->
       if get_output_smtlib () then
         fprintf fmt "(select %a %a)" print e1 print e2
       else
         fprintf fmt "%a[%a]" print e1 print e2
 
-    | Sy.Op Sy.Set, [e1; e2; e3] ->
+    | Types.Op Types.Set, [e1; e2; e3] ->
       if get_output_smtlib () then
         fprintf fmt "(store %a %a %a)"
           print e1
@@ -121,19 +122,19 @@ module Pp_smtlib_term = struct
       else
         fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3
 
-    | Sy.Op Sy.Concat, [e1; e2] ->
+    | Types.Op Types.Concat, [e1; e2] ->
       fprintf fmt "%a@@%a" print e1 print e2
 
-    | Sy.Op Sy.Extract, [e1; e2; e3] ->
+    | Types.Op Types.Extract, [e1; e2; e3] ->
       fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
 
-    | Sy.Op (Sy.Access field), [e] ->
+    | Types.Op (Types.Access field), [e] ->
       if get_output_smtlib () then
         fprintf fmt "(%s %a)" (Hstring.view field) print e
       else
         fprintf fmt "%a.%s" print e (Hstring.view field)
 
-    | Sy.Op (Sy.Record), _ ->
+    | Types.Op (Types.Record), _ ->
       begin match ty with
         | Ty.Trecord { Ty.lbs = lbs; _ } ->
           assert (List.length xs = List.length lbs);
@@ -148,30 +149,30 @@ module Pp_smtlib_term = struct
       end
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||
-                              op == Sy.Max_real || op == Sy.Max_int ||
-                              op == Sy.Min_real || op == Sy.Min_int ->
+    | Types.Op op, [e1; e2] when op == Types.Pow || op == Types.Integer_round ||
+                              op == Types.Max_real || op == Types.Max_int ||
+                              op == Types.Min_real || op == Types.Min_int ->
       fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
+    | Types.Op (Types.Constr hs), ((_::_) as l) ->
       fprintf fmt "%a(%a)" Hstring.print hs print_list l
 
-    | Sy.Op _, [e1; e2] ->
+    | Types.Op _, [e1; e2] ->
       if get_output_smtlib () then
         fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
       else
         fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
 
-    | Sy.Op Sy.Destruct (hs, grded), [e] ->
+    | Types.Op Types.Destruct (hs, grded), [e] ->
       fprintf fmt "%a#%s%a"
         print e (if grded then "" else "!") Hstring.print hs
 
 
-    | Sy.In(lb, rb), [t] ->
+    | Types.In(lb, rb), [t] ->
       fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
 
-    | Sy.Name (n,_), l -> begin
+    | Types.Name (n,_), l -> begin
         let constraint_name =
           try let constraint_name,_,_ =
                 (MS.find (Hstring.view n) !constraints) in

@@ -26,9 +26,17 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+module X = struct
+  include Shostak_pre
+  let extract = function { v=RECORDS r; _ } -> Some r | _ -> None
+  let embed x = hcons {v = RECORDS x; id = -1000 (* dummy *)}
+end
+
 module Hs = Hstring
 module E = Expr
 
+(*
 type 'a abstract =
   | Record of (Hs.t * 'a abstract) list * Ty.t
   | Access of Hs.t * 'a abstract * Ty.t
@@ -41,13 +49,13 @@ module type ALIEN = sig
 end
 
 module Shostak (X : ALIEN) = struct
+*)
 
-  module XS = Set.Make(struct type t = X.r let compare = X.hash_cmp end)
+type t = Types.records
+
+  module XS = Set.Make(struct type t = Types.r let compare = X.hash_cmp end)
 
   let name = "records"
-
-  type t = X.r abstract
-  type r = X.r
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
@@ -64,7 +72,7 @@ module Shostak (X : ALIEN) = struct
         Format.fprintf fmt "}"
       | Access(a, e, _) ->
         Format.fprintf fmt "%a.%s" print e (Hs.view a)
-      | Other(t, _) -> X.print fmt t
+      | ROther(t, _) -> X.print fmt t
 
   end
   (*BISECT-IGNORE-END*)
@@ -73,11 +81,11 @@ module Shostak (X : ALIEN) = struct
 
   let rec raw_compare r1 r2 =
     match r1, r2 with
-    | Other (u1, ty1), Other (u2, ty2) ->
+    | ROther (u1, ty1), ROther (u2, ty2) ->
       let c = Ty.compare ty1 ty2 in
       if c <> 0 then c else X.str_cmp u1 u2
-    | Other _, _ -> -1
-    | _, Other _ -> 1
+    | ROther _, _ -> -1
+    | _, ROther _ -> 1
     | Access (s1, u1, ty1), Access (s2, u2, ty2) ->
       let c = Ty.compare ty1 ty2 in
       if c <> 0 then c
@@ -122,12 +130,12 @@ module Shostak (X : ALIEN) = struct
         | Record (lbs, _) -> Hs.list_assoc a lbs
         | x_n -> Access (a, x_n, ty)
       end
-    | Other _ -> v
+    | ROther _ -> v
 
   let embed r =
     match X.extract r with
     | Some p -> p
-    | None -> Other(r, X.type_info r)
+    | None -> ROther(r, X.type_info r)
 
   let compare_mine t u = raw_compare (normalize t) (normalize u)
 
@@ -135,7 +143,7 @@ module Shostak (X : ALIEN) = struct
 
   let rec equal r1 r2 =
     match r1, r2 with
-    | Other (u1, ty1), Other (u2, ty2) ->
+    | ROther (u1, ty1), ROther (u2, ty2) ->
       Ty.equal ty1 ty2 && X.equal u1 u2
 
     | Access (s1, u1, ty1), Access (s2, u2, ty2) ->
@@ -144,7 +152,7 @@ module Shostak (X : ALIEN) = struct
     | Record (lbs1, ty1), Record (lbs2, ty2) ->
       Ty.equal ty1 ty2 && equal_list lbs1 lbs2
 
-    | Other _, _ | _, Other _  | Access _, _ | _, Access _ -> false
+    | ROther _, _ | _, ROther _  | Access _, _ | _, Access _ -> false
 
   and equal_list l1 l2 =
     try List.for_all2 (fun (_,r1) (_,r2) -> equal r1 r2) l1 l2
@@ -152,31 +160,31 @@ module Shostak (X : ALIEN) = struct
 
   let is_mine t =
     match normalize t with
-    | Other(r, _) -> r
+    | ROther(r, _) -> r
     | x -> X.embed x
 
   let type_info = function
-    | Record (_, ty) | Access (_, _, ty) | Other (_, ty) -> ty
+    | Record (_, ty) | Access (_, _, ty) | ROther (_, ty) -> ty
 
   let make t =
     let rec make_rec t ctx =
-      let { E.f; xs; ty; _ } = E.term_view t in
+      let { f; xs; ty; _ } = E.term_view t in
       match f, ty with
-      | Symbols.Op (Symbols.Record), Ty.Trecord { Ty.lbs; _ } ->
+      | Types.Op (Types.Record), Ty.Trecord { Ty.lbs; _ } ->
         assert (List.length xs = List.length lbs);
         let l, ctx =
           List.fold_right2
             (fun x (lb, _) (l, ctx) ->
                let r, ctx = make_rec x ctx in
                let tyr = type_info r in
-               let dlb = E.mk_term (Symbols.Op (Symbols.Access lb)) [t] tyr in
+               let dlb = E.mk_term (Types.Op (Types.Access lb)) [t] tyr in
                let c = E.mk_eq ~iff:false dlb x in
                (lb, r)::l, c::ctx
             )
             xs lbs ([], ctx)
         in
         Record (l, ty), ctx
-      | Symbols.Op (Symbols.Access a), _ ->
+      | Types.Op (Types.Access a), _ ->
         begin
           match xs with
           | [x] ->
@@ -187,7 +195,7 @@ module Shostak (X : ALIEN) = struct
 
       | _, _ ->
         let r, ctx' = X.make t in
-        Other (r, ty), ctx'@ctx
+        ROther (r, ty), ctx'@ctx
     in
     let r, ctx = make_rec t [] in
     let is_m = is_mine r in
@@ -198,7 +206,7 @@ module Shostak (X : ALIEN) = struct
   let embed r =
     match X.extract r with
     | Some p -> p
-    | None -> Other(r, X.type_info r)
+    | None -> ROther(r, X.type_info r)
 
   let xs_of_list = List.fold_left (fun s x -> XS.add x s) XS.empty
 
@@ -208,7 +216,7 @@ module Shostak (X : ALIEN) = struct
       | Record (lbs, _) ->
         List.fold_left (fun s (_, x) -> XS.union (leaves x) s) XS.empty lbs
       | Access (_, x, _) -> leaves x
-      | Other (x, _) -> xs_of_list (X.leaves x)
+      | ROther (x, _) -> xs_of_list (X.leaves x)
     in
     XS.elements (leaves t)
 
@@ -219,12 +227,12 @@ module Shostak (X : ALIEN) = struct
         (Ty.hash ty) lbs
     | Access (a, x, ty) ->
       19 * hash x + 17 * Hs.hash a + Ty.hash ty
-    | Other (x, ty) ->
+    | ROther (x, ty) ->
       Ty.hash ty + 23 * X.hash x
 
   let rec subst_rec p v r =
     match r with
-    | Other (t, _) ->
+    | ROther (t, _) ->
       embed (if X.equal p t then v else X.subst p v t)
     | Access (a, t, ty) ->
       Access (a, subst_rec p v t, ty)
@@ -235,7 +243,7 @@ module Shostak (X : ALIEN) = struct
   let subst p v r = is_mine (subst_rec p v r)
 
   let is_mine_symb_aux sy = match sy with
-    | Symbols.Op (Symbols.Record | Symbols.Access _) -> true
+    | Types.Op (Types.Record | Types.Access _) -> true
     | _ -> false
 
   let is_mine_symb sy _ty = is_mine_symb_aux sy
@@ -262,7 +270,7 @@ module Shostak (X : ALIEN) = struct
   let abstract_selectors v acc =
     match v with
     (* Handled by combine. Should not happen! *)
-    | Other _ -> assert false
+    | ROther _ -> assert false
 
     (* This is not a selector *)
     | Record (fields,ty) ->
@@ -302,7 +310,7 @@ module Shostak (X : ALIEN) = struct
      | Record (lbs, _) ->
       List.exists (fun (_, v) -> occurs x v) lbs
      | Access (_, v, _) -> occurs x v
-     | Other _ as v -> compare_mine x v = 0 (* XXX *)
+     | ROther _ as v -> compare_mine x v = 0 (* XXX *)
   *)
 
   (* unused --
@@ -313,7 +321,7 @@ module Shostak (X : ALIEN) = struct
      | Access (lb, e', _) when compare_mine x e' = 0 ->
       Hs.list_assoc lb s
      | Access (lb', e', ty) -> Access (lb', subst_access x s e', ty)
-     | Other _ -> e
+     | ROther _ -> e
   *)
 
   let fully_interpreted = is_mine_symb_aux
@@ -332,7 +340,7 @@ module Shostak (X : ALIEN) = struct
                      | Some t, _ -> t)
                   lbs
               in
-              Some (E.mk_term (Symbols.Op Symbols.Record) lbs ty), false
+              Some (E.mk_term (Types.Op Types.Record) lbs ty), false
             with Not_found -> None, false
           end
         | Access (a, r, ty) ->
@@ -340,9 +348,9 @@ module Shostak (X : ALIEN) = struct
             match X.term_extract (is_mine r) with
             | None, _ -> None, false
             | Some t, _ ->
-              Some (E.mk_term (Symbols.Op (Symbols.Access a)) [t] ty), false
+              Some (E.mk_term (Types.Op (Types.Access a)) [t] ty), false
           end
-        | Other (r, _) -> X.term_extract r
+        | ROther (r, _) -> X.term_extract r
       end
     | None -> X.term_extract r
 
@@ -363,12 +371,12 @@ module Shostak (X : ALIEN) = struct
       in
       {pb with eqs=eqs}
 
-    | Other _, Other _    ->
+    | ROther _, ROther _    ->
       if X.str_cmp r1 r2 > 0 then { pb with sbt = (r1,r2)::pb.sbt }
       else { pb with sbt = (r2,r1)::pb.sbt }
 
-    | Other _, Record _  -> orient_solved r1 r2 pb
-    | Record _, Other _  -> orient_solved r2 r1 pb
+    | ROther _, Record _  -> orient_solved r1 r2 pb
+    | Record _, ROther _  -> orient_solved r2 r1 pb
     | Access _ , _ -> assert false
     | _ , Access _ -> assert false
 
@@ -405,11 +413,11 @@ module Shostak (X : ALIEN) = struct
       then None
       else Some (Expr.fresh_name ty, false)
 
-    | Other (_,ty) ->
+    | ROther (_,ty) ->
       match ty with
       | Ty.Trecord { Ty.lbs; _ } ->
         let rev_lbs = List.rev_map (fun (_, ty) -> Expr.fresh_name ty) lbs in
-        let s = E.mk_term (Symbols.Op Symbols.Record) (List.rev rev_lbs) ty in
+        let s = E.mk_term (Types.Op Types.Record) (List.rev rev_lbs) ty in
         Some (s, false) (* false <-> not a case-split *)
       | _ -> assert false
 
@@ -428,5 +436,3 @@ module Shostak (X : ALIEN) = struct
     | Some (_,r) ->
       r, Format.asprintf "%a" X.print r  (* it's a EUF constant *)
     | _ -> assert false
-
-end
