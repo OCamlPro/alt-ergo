@@ -41,7 +41,7 @@ module X = Shostak.Combine
 module MX = Shostak.MXH
 
 type t = (SE.t * SA.t) MX.t
-type r = X.r
+type r = Types.r
 
 let inter_tpl (x1,y1) (x2,y2) =
   Options.exec_thread_yield ();
@@ -63,7 +63,7 @@ let add_term k t mp =
 let up_add g t rt lvs =
   let g = if MX.mem rt g then g else MX.add rt (SE.empty, SA.empty) g in
   match E.term_view t with
-  | { E.xs = []; _ } -> g
+  | { xs = []; _ } -> g
   | _ -> List.fold_left (fun g x -> add_term x t g) g lvs
 
 let congr_add g lvs =

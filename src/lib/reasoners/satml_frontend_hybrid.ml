@@ -9,6 +9,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
 
 module Make (Th : Theory.S) = struct
 
@@ -30,7 +31,7 @@ module Make (Th : Theory.S) = struct
      inv_proxies : E.t MA.t;
      hcons_env : Atom.hcons_env;
      decisions : (int * E.t) list;
-     pending : (E.gformula * Ex.t) list list;
+     pending : (gformula * Ex.t) list list;
     }
 
   exception Bottom of Explanation.t * E.Set.t list * t
@@ -119,7 +120,7 @@ module Make (Th : Theory.S) = struct
       let env, pfl, cnf, new_vars =
         List.fold_left (fun acc l ->
             List.fold_left
-              (fun ((env, pfl, cnf, vars) as acc) ({ E.ff = f; _ }, ex) ->
+              (fun ((env, pfl, cnf, vars) as acc) ({ ff = f; _ }, ex) ->
                  if SE.mem f env.assumed then acc
                  else
                  if Ex.has_no_bj ex then begin

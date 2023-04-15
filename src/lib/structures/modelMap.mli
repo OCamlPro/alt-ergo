@@ -18,8 +18,8 @@ module P : Map.S with type key =
                         Symbols.t * Ty.t list * Ty.t
 
 module V : Set.S with type elt =
-                        (Expr.t * (Shostak.Combine.r * string)) list *
-                        (Shostak.Combine.r * string)
+                        (Expr.t * (Types.r * string)) list *
+                        (Types.r * string)
 
 type key = P.key
 type elt = V.t

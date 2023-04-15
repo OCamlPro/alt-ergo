@@ -26,90 +26,21 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(** Data structures *)
+open Types
 
-type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
-
-type t
-
-type decl_kind =
-  | Dtheory
-  | Daxiom
-  | Dgoal
-  | Dpredicate of t
-  | Dfunction of t
-
-type term_view = private {
-  f: Symbols.t;
-  xs: t list;
-  ty: Ty.t;
-  bind : bind_kind;
-  tag: int;
-  vars : (Ty.t * int) Symbols.Map.t; (* vars to types and nb of occurences *)
-  vty : Ty.Svty.t;
-  depth: int;
-  nb_nodes : int;
-  pure : bool;
-  mutable neg : t option
-}
-
-and bind_kind =
-  | B_none
-  | B_lemma of quantified
-  | B_skolem of quantified
-  | B_let of letin
-
-and quantified = private {
-  name : string;
-  main : t;
-  toplevel : bool;
-  user_trs : trigger list;
-  binders : binders;
-  (* These fields should be (ordered) lists ! important for skolemization *)
-  sko_v : t list;
-  sko_vty : Ty.t list;
-  loc : Loc.t; (* location of the "GLOBAL" axiom containing this quantified
-                  formula. It forms with name a unique id *)
-  kind : decl_kind;
-}
-
-and letin = private {
-  let_v: Symbols.t;
-  let_e : t;
-  in_e : t;
-  let_sko : t; (* fresh symb. with free vars *)
-  is_bool : bool;
-}
-
-and semantic_trigger =
-  | Interval of t * Symbols.bound * Symbols.bound
-  | MapsTo of Var.t * t
-  | NotTheoryConst of t
-  | IsTheoryConst of t
-  | LinearDependency of t * t
-
-and trigger = (*private*) {
-  content : t list;
-  (* this field is filled (with a part of 'content' field) by theories
-     when assume_th_elt is called *)
-  semantic : semantic_trigger list;
-  hyp : t list;
-  t_depth : int;
-  from_user : bool;
-  guard : t option
-}
+type t = Types.expr
 
 module Set : Set.S with type elt = t
 
 module Map : Map.S with type key = t
 
-type subst = t Symbols.Map.t * Ty.subst
+(* type subst = t Symbols.Map.t * Ty.subst
 
 type lit_view = private
   | Eq of t * t
   | Eql of t list
   | Distinct of t list
-  | Builtin of bool * Symbols.builtin * t list
+  | Builtin of bool * Types.builtin * t list
   | Pred of t * bool
 
 type form_view = private
@@ -121,10 +52,11 @@ type form_view = private
   | Lemma of quantified   (* a lemma *)
   | Skolem of quantified  (* lazy skolemization *)
   | Let of letin (* a binding of an expr *)
+*)
 
 (** different views of an expression *)
 
-val term_view : t -> term_view
+val term_view : t -> expr (* was term_view *)
 val lit_view  : t -> lit_view
 val form_view : t -> form_view
 
@@ -190,7 +122,7 @@ val pred : t -> t
 
 val mk_eq : iff:bool -> t -> t -> t
 val mk_distinct : iff:bool -> t list -> t
-val mk_builtin : is_pos:bool -> Symbols.builtin -> t list -> t
+val mk_builtin : is_pos:bool -> Types.builtin -> t list -> t
 
 (** simple smart constructors for formulas *)
 
@@ -287,30 +219,6 @@ val concat_chainable: Symbols.t -> Ty.t -> t -> t list -> t list
 
 (*val purify_literal : t -> t*)
 val purify_form : t -> t
-
-type gformula = {
-  ff: t;
-  nb_reductions : int;
-  trigger_depth : int;
-  age: int;
-  lem: t option;
-  origin_name : string;
-  from_terms : t list;
-  mf: bool;
-  gf: bool;
-  gdist : int; (* dist to goal *)
-  hdist : int; (* dist to hypotheses *)
-  theory_elim : bool;
-}
-
-type th_elt =
-  {
-    th_name : string;
-    ax_name : string;
-    ax_form : t;
-    extends : Util.theories_extensions;
-    axiom_kind : Util.axiom_kind;
-  }
 
 val print_th_elt : Format.formatter -> th_elt -> unit
 

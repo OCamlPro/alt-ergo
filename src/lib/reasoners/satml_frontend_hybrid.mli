@@ -19,7 +19,7 @@ module Make (Th : Theory.S) : sig
 
   val is_true : t -> Expr.t -> (Explanation.t Lazy.t * int) option
 
-  val assume : bool -> t -> (Expr.gformula * Explanation.t) list -> t
+  val assume : bool -> t -> (Types.gformula * Explanation.t) list -> t
 
   val decide : t -> Expr.t -> int -> t
 

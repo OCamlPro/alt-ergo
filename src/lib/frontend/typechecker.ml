@@ -26,6 +26,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
 open Parsed
 open Typed
 
@@ -35,7 +36,7 @@ module HSS = Hstring.Set
 module MString =
   Map.Make(struct type t = string let compare = String.compare end)
 
-module Types = struct
+module TTypes = struct
 
   (* environment for user-defined types *)
   type t = {
@@ -215,14 +216,14 @@ module Env = struct
 
   type t = {
     var_map : (Symbols.t * Ty.t) MString.t ; (* variables' map*)
-    types : Types.t ;
+    types : TTypes.t ;
     logics : (Symbols.t * profile * logic_kind) MString.t;
     (* logic symbols' map *)
   }
 
   let empty = {
     var_map = MString.empty;
-    types = Types.empty;
+    types = TTypes.empty;
     logics = MString.empty
   }
 
@@ -233,7 +234,7 @@ module Env = struct
     { env with var_map = vmap }
 
   let add_var env lv pp_ty loc  =
-    let ty = Types.ty_of_pp loc env.types None pp_ty in
+    let ty = TTypes.ty_of_pp loc env.types None pp_ty in
     let fvar s = Symbols.var @@ Var.of_string s in
     add env lv fvar ty
 
@@ -242,13 +243,13 @@ module Env = struct
     add env lv fvar ty
 
   let add_names env lv pp_ty loc =
-    Types.monomorphized pp_ty;
-    let ty = Types.ty_of_pp loc env.types None pp_ty in
+    TTypes.monomorphized pp_ty;
+    let ty = TTypes.ty_of_pp loc env.types None pp_ty in
     add env lv Symbols.name ty
 
   let add_names_lbl env lv pp_ty loc =
-    Types.monomorphized pp_ty;
-    let ty = Types.ty_of_pp loc env.types None pp_ty in
+    TTypes.monomorphized pp_ty;
+    let ty = TTypes.ty_of_pp loc env.types None pp_ty in
     let rlv =
       List.fold_left (fun acc (x, lbl) ->
           let lbl = Hstring.make lbl in
@@ -263,14 +264,14 @@ module Env = struct
     let decl, profile =
       match pp_profile with
       | PPredicate args ->
-        let args = List.map (Types.ty_of_pp loc env.types None) args in
+        let args = List.map (TTypes.ty_of_pp loc env.types None) args in
         TPredicate args,
         { args = args; result = Ty.Tbool }
       (*| PFunction ([], PPTvarid (_, loc)) ->
           typing_error CannotGeneralize loc*)
       | PFunction(args, res) ->
-        let args = List.map (Types.ty_of_pp loc env.types None) args in
-        let res = Types.ty_of_pp loc env.types None res in
+        let args = List.map (TTypes.ty_of_pp loc env.types None) args in
+        let res = TTypes.ty_of_pp loc env.types None res in
         TFunction (args, res),
         { args = args; result = res }
     in
@@ -297,7 +298,7 @@ module Env = struct
   let add_destr ~record env destr pur_ty lbl_ty loc =
     let pp_profile = PFunction ([pur_ty], lbl_ty) in
     let mk_sy s =
-      if record then (Symbols.Op (Access (Hstring.make s)))
+      if record then (Op (Access (Hstring.make s)))
       else Symbols.destruct ~guarded:true s
     in
     let kind = if record then RecordDestr else AdtDestr in
@@ -308,7 +309,7 @@ module Env = struct
   let list_of { var_map = m; _ } = MString.fold (fun _ c acc -> c::acc) m []
 
   let add_type_decl ?(recursive=false) env vars id body loc =
-    let ty, types = Types.add_decl ~recursive env.types vars id body loc in
+    let ty, types = TTypes.add_decl ~recursive env.types vars id body loc in
     ty, { env with types = types; }
 
   (* returns a type with fresh variables *)
@@ -323,13 +324,13 @@ module Env = struct
 end
 
 let symbol_of = function
-    PPadd -> Symbols.Op Symbols.Plus
-  | PPsub -> Symbols.Op Symbols.Minus
-  | PPmul -> Symbols.Op Symbols.Mult
-  | PPdiv -> Symbols.Op Symbols.Div
-  | PPmod ->  Symbols.Op Symbols.Modulo
-  | PPpow_int ->  Symbols.Op Symbols.Pow
-  | PPpow_real ->  Symbols.Op Symbols.Pow
+    PPadd -> Types.Op Types.Plus
+  | PPsub -> Types.Op Types.Minus
+  | PPmul -> Types.Op Types.Mult
+  | PPdiv -> Types.Op Types.Div
+  | PPmod ->  Types.Op Types.Modulo
+  | PPpow_int ->  Types.Op Types.Pow
+  | PPpow_real ->  Types.Op Types.Pow
   | _ -> assert false
 
 let append_type msg ty =
@@ -533,7 +534,7 @@ let rec type_term ?(call_from_type_form=false) env f =
       if ty!=Ty.Tint && ty!=Ty.Treal then
         Errors.typing_error (ShouldHaveTypeIntorReal ty) e.pp_loc;
       Options.tool_req 1 (append_type "TR-Typing-OpUnarith type" ty);
-      TTprefix(Symbols.Op Symbols.Minus, te), ty
+      TTprefix(Types.Op Types.Minus, te), ty
     | PPconcat(t1, t2) ->
       begin
         let te1 = type_term env t1 in
@@ -646,7 +647,7 @@ let rec type_term ?(call_from_type_form=false) env f =
           List.map (fun (lb, t) -> Hstring.make lb, type_term env t) lbs in
         let lbs = List.sort
             (fun (l1, _) (l2, _) -> Hstring.compare l1 l2) lbs in
-        let ty = Types.from_labels env.Env.types lbs loc in
+        let ty = TTypes.from_labels env.Env.types lbs loc in
         let ty, _ = Ty.fresh (Ty.shorten ty) Ty.esubst in
         match ty with
         | Ty.Trecord { Ty.lbs=ty_lbs; _ } ->
@@ -730,7 +731,7 @@ let rec type_term ?(call_from_type_form=false) env f =
       TTnamed (lbl, te), ty
 
     | PPcast (t,ty) ->
-      let ty = Types.ty_of_pp loc env.Env.types None ty in
+      let ty = TTypes.ty_of_pp loc env.Env.types None ty in
       let te = type_term env t in
       begin try
           Ty.unify te.c.tt_ty ty;
@@ -829,13 +830,13 @@ and type_bound env bnd ty ~is_open ~is_lower =
     | PPvar s ->
       assert (String.length s > 0);
       begin match s.[0] with
-        | '?' -> Symbols.VarBnd (Var.of_string s), ty
+        | '?' -> Types.VarBnd (Var.of_string s), ty
         | _ ->
           let vx, ty_x = type_var_desc env s bnd.pp_loc in
           let var_x =
-            match vx with TTvar Symbols.Var vx -> vx | _ -> assert false
+            match vx with TTvar Types.Var vx -> vx | _ -> assert false
           in
-          Symbols.VarBnd var_x, ty_x
+          Types.VarBnd var_x, ty_x
       end
     | PPconst num ->
       let ty_x, q =
@@ -847,7 +848,7 @@ and type_bound env bnd ty ~is_open ~is_lower =
           | _ -> assert false
         with _ -> assert false (*numbers well constructed with regular exprs*)
       in
-      Symbols.ValBnd q, ty_x
+      Types.ValBnd q, ty_x
     | _ -> assert false
   in
   if not (Ty.equal ty ty_x) then
@@ -1226,7 +1227,7 @@ and type_pattern p env ty ty_body =
         (fun v (destr, _) ->
            let tv, ty = type_var_desc env v pat_loc in
            let var_v =
-             match tv with TTvar Symbols.Var vx -> vx | _ -> assert false
+             match tv with TTvar Types.Var vx -> vx | _ -> assert false
            in
            var_v, destr, ty
         )args prof
@@ -1237,7 +1238,7 @@ and type_pattern p env ty ty_body =
     let env = Env.add_ty_var env [f] ty in
     let tv, _ = type_var_desc env f pat_loc in
     let var_f =
-      match tv with TTvar Symbols.Var vx -> vx | _ -> assert false
+      match tv with TTvar Types.Var vx -> vx | _ -> assert false
     in
     Var var_f, env
 
@@ -1260,7 +1261,7 @@ and type_trigger in_theory env l =
        | true, PPmapsTo (x, e) ->
          let vx, ty_x = type_var_desc env x t.pp_loc in
          let hs_x =
-           match vx with TTvar Symbols.Var hs -> hs | _ -> assert false
+           match vx with TTvar Types.Var hs -> hs | _ -> assert false
          in
          let te = type_term env e in
          let tt_ty = te.c.tt_ty in
@@ -2180,7 +2181,7 @@ let declare_fun env loc n ?ret_ty l  =
     | Some ty ->
       PPeq, PFunction(l,ty)
   in
-  let mk_symb hs = Symbols.name hs ~kind:Symbols.Other in
+  let mk_symb hs = Symbols.name hs ~kind:Types.Other in
   let tlogic, env = Env.add_logics env mk_symb [n] ty loc in (* TODO *)
   env, infix, tlogic
 
@@ -2216,7 +2217,7 @@ let type_fun (acc, env) loc n l ?ret_ty e =
   define_fun (acc, env) loc n l tlogic ?ret_ty infix e
 
 let rec type_decl (acc, env) d assertion_stack =
-  Types.to_tyvars := MString.empty;
+  TTypes.to_tyvars := MString.empty;
   match d with
   | Push (loc,n) ->
     if n < 0 then
@@ -2331,9 +2332,9 @@ let rec type_decl (acc, env) d assertion_stack =
     let env, tyvars_of_ty =
       List.fold_left
         (fun (env, tyvars_of_ty) (loc, ls, s, _) ->
-           Types.to_tyvars := MString.empty;
+           TTypes.to_tyvars := MString.empty;
            let _, env = Env.add_type_decl env ls s (Parsed.Algebraic []) loc in
-           env, MString.add s !(Types.to_tyvars) tyvars_of_ty
+           env, MString.add s !(TTypes.to_tyvars) tyvars_of_ty
         )(env, MString.empty) are_rec
     in
 
@@ -2341,7 +2342,7 @@ let rec type_decl (acc, env) d assertion_stack =
     let acc, env =
       List.fold_left
         (fun (acc, env) (loc, ls, s, body) ->
-           Types.to_tyvars :=
+           TTypes.to_tyvars :=
              (try MString.find s tyvars_of_ty with Not_found -> assert false);
            let tty, env =
              Env.add_type_decl ~recursive:true env ls s body loc in

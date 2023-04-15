@@ -26,13 +26,26 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+module X = struct
+  include Shostak_pre
+  let extract = function { v=ARITH r; _ } -> Some r | _ -> None
+  let embed x = hcons {v = ARITH x; id = -1000 (* dummy *)}
+end
+
 module Sy = Symbols
 module E = Expr
 
 module Z = Numbers.Z
 module Q = Numbers.Q
 
-let is_mult h = Sy.equal (Sy.Op Sy.Mult) h
+module P = struct
+  include Polynome
+  let extract = X.extract
+  let embed = X.embed
+end
+
+let is_mult h = Sy.equal (Types.Op Types.Mult) h
 let mod_symb = Sy.name "@mod"
 
 let calc_power (c : Q.t) (d : Q.t) (ty : Ty.t) =
@@ -55,22 +68,12 @@ let calc_power_opt (c : Q.t) (d : Q.t) (ty : Ty.t) =
   try Some (calc_power c d ty)
   with Exit -> None
 
+(*
 module Type (X:Sig.X) : Polynome.T with type r = X.r = struct
   include
     Polynome.Make(struct
       include X
       module Ac = Ac.Make(X)
-      let mult v1 v2 =
-        X.ac_embed
-          {
-            distribute = true;
-            h = Sy.Op Sy.Mult;
-            t = X.type_info v1;
-            l = let l2 = match X.ac_extract v1 with
-                | Some { h; l; _ } when Sy.equal h (Sy.Op Sy.Mult) -> l
-                | _ -> [v1, 1]
-              in Ac.add (Sy.Op Sy.Mult) (v2,1) l2
-          }
     end)
 end
 
@@ -81,6 +84,10 @@ module Shostak
   type t = P.t
 
   type r = P.r
+
+*)
+
+type t = Types.polynome
 
   let name = "arith"
 
@@ -109,7 +116,6 @@ module Shostak
   (*BISECT-IGNORE-END*)
 
   let is_mine_symb sy _ty =
-    let open Sy in
     match sy with
     | Int _ | Real _ -> true
     | Op (Plus | Minus | Mult | Div | Modulo
@@ -138,27 +144,27 @@ module Shostak
      c4. t2 <> 0 (already checked) *)
   let mk_modulo md t1 t2 p2 ctx =
     let zero = E.int "0" in
-    let c1 = E.mk_builtin ~is_pos:true Symbols.LE [zero; md] in
+    let c1 = E.mk_builtin ~is_pos:true Types.LE [zero; md] in
     let c2 =
       match P.is_const p2 with
       | Some n2 ->
         let an2 = Q.abs n2 in
         assert (Q.is_int an2);
         let t2 = E.int (Q.to_string an2) in
-        E.mk_builtin ~is_pos:true Symbols.LT [md; t2]
+        E.mk_builtin ~is_pos:true Types.LT [md; t2]
       | None ->
-        E.mk_builtin ~is_pos:true Symbols.LT [md; t2]
+        E.mk_builtin ~is_pos:true Types.LT [md; t2]
     in
     let k  = E.fresh_name Ty.Tint in
-    let t3 = E.mk_term (Sy.Op Sy.Mult) [t2;k] Ty.Tint in
-    let t3 = E.mk_term (Sy.Op Sy.Plus) [t3;md] Ty.Tint in
+    let t3 = E.mk_term (Types.Op Types.Mult) [t2;k] Ty.Tint in
+    let t3 = E.mk_term (Types.Op Types.Plus) [t3;md] Ty.Tint in
     let c3 = E.mk_eq ~iff:false t1 t3 in
     c3 :: c2 :: c1 :: ctx
 
   let mk_euc_division p p2 t1 t2 ctx =
     match P.to_list p2 with
     | [], coef_p2 ->
-      let md = E.mk_term (Sy.Op Sy.Modulo) [t1;t2] Ty.Tint in
+      let md = E.mk_term (Types.Op Types.Modulo) [t1;t2] Ty.Tint in
       let r, ctx' = X.make md in
       let rp =
         P.mult_const (Q.div Q.one coef_p2) (embed r) in
@@ -222,25 +228,25 @@ module Shostak
       P.add (P.create [coef, (X.term_embed t)] Q.zero ty) p_acc
 
   let rec mke coef p t ctx =
-    let { E.f = sb ; xs; ty; _ } = E.term_view t in
+    let { f = sb ; xs; ty; _ } = E.term_view t in
     match sb, xs with
-    | (Sy.Int n | Sy.Real n) , _  ->
+    | (Types.Int n | Types.Real n) , _  ->
       let c = Q.mult coef (Q.from_string (Hstring.view n)) in
       P.add_const c p, ctx
 
-    | Sy.Op Sy.Mult, [t1;t2] ->
+    | Types.Op Types.Mult, [t1;t2] ->
       let p1, ctx = mke coef (empty_polynome ty) t1 ctx in
       let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
       if Options.get_no_nla() && P.is_const p1 == None && P.is_const p2 == None
       then
         (* becomes uninterpreted *)
-        let tau = E.mk_term (Sy.name ~kind:Sy.Ac "@*") [t1; t2] ty in
+        let tau = E.mk_term (Sy.name ~kind:Types.Ac "@*") [t1; t2] ty in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
         P.add p (P.mult p1 p2), ctx
 
-    | Sy.Op Sy.Div, [t1;t2] ->
+    | Types.Op Types.Div, [t1;t2] ->
       let p1, ctx = mke Q.one (empty_polynome ty) t1 ctx in
       let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
       if Options.get_no_nla() &&
@@ -261,14 +267,14 @@ module Shostak
         in
         P.add p (P.mult_const coef p3), ctx
 
-    | Sy.Op Sy.Plus , l ->
+    | Types.Op Types.Plus , l ->
       List.fold_left (fun (p, ctx) u -> mke coef p u ctx )(p, ctx) l
 
-    | Sy.Op Sy.Minus , [t1;t2] ->
+    | Types.Op Types.Minus , [t1;t2] ->
       let p2, ctx = mke (Q.minus coef) p t2 ctx in
       mke coef p2 t1 ctx
 
-    | Sy.Op Sy.Modulo , [t1;t2] ->
+    | Types.Op Types.Modulo , [t1;t2] ->
       let p1, ctx = mke Q.one (empty_polynome ty) t1 ctx in
       let p2, ctx = mke Q.one (empty_polynome ty) t2 ctx in
       if Options.get_no_nla() &&
@@ -293,58 +299,58 @@ module Shostak
         P.add p (P.mult_const coef p3), ctx
 
     (*** <begin>: partial handling of some arith/FPA operators **)
-    | Sy.Op Sy.Float, [prec; exp; mode; x] ->
+    | Types.Op Types.Float, [prec; exp; mode; x] ->
       let aux_func e =
         let res, _, _ = Fpa_rounding.float_of_rational prec exp mode e in
         res
       in
       mk_partial_interpretation_1 aux_func coef p ty t x, ctx
 
-    | Sy.Op Sy.Integer_round, [mode; x] ->
+    | Types.Op Types.Integer_round, [mode; x] ->
       let aux_func = Fpa_rounding.round_to_integer mode in
       mk_partial_interpretation_1 aux_func coef p ty t x, ctx
 
-    | Sy.Op (Sy.Abs_int | Sy.Abs_real) , [x] ->
+    | Types.Op (Types.Abs_int | Types.Abs_real) , [x] ->
       mk_partial_interpretation_1 Q.abs coef p ty t x, ctx
 
-    | Sy.Op Sy.Sqrt_real, [x] ->
+    | Types.Op Types.Sqrt_real, [x] ->
       mk_partial_interpretation_1 exact_sqrt_or_Exit coef p ty t x, ctx
 
-    | Sy.Op Sy.Sqrt_real_default, [x] ->
+    | Types.Op Types.Sqrt_real_default, [x] ->
       mk_partial_interpretation_1 default_sqrt_or_Exit coef p ty t x, ctx
 
-    | Sy.Op Sy.Sqrt_real_excess, [x] ->
+    | Types.Op Types.Sqrt_real_excess, [x] ->
       mk_partial_interpretation_1 excess_sqrt_or_Exit coef p ty t x, ctx
 
-    | Sy.Op Sy.Real_of_int, [x] ->
+    | Types.Op Types.Real_of_int, [x] ->
       mk_partial_interpretation_1 (fun d -> d) coef p ty t x, ctx
 
-    | Sy.Op Sy.Int_floor, [x] ->
+    | Types.Op Types.Int_floor, [x] ->
       mk_partial_interpretation_1 Q.floor coef p ty t x, ctx
 
-    | Sy.Op Sy.Int_ceil, [x] ->
+    | Types.Op Types.Int_ceil, [x] ->
       mk_partial_interpretation_1 Q.ceiling coef p ty t x, ctx
 
-    | Sy.Op (Sy.Max_int | Sy.Max_real), [x;y] ->
+    | Types.Op (Types.Max_int | Types.Max_real), [x;y] ->
       let aux_func c d = if Q.compare c d >= 0 then c else d in
       mk_partial_interpretation_2 aux_func coef p ty t x y, ctx
 
-    | Sy.Op (Sy.Min_int | Sy.Min_real), [x;y] ->
+    | Types.Op (Types.Min_int | Types.Min_real), [x;y] ->
       let aux_func c d = if Q.compare c d <= 0 then c else d in
       mk_partial_interpretation_2 aux_func coef p ty t x y, ctx
 
-    | Sy.Op Sy.Integer_log2, [x] ->
+    | Types.Op Types.Integer_log2, [x] ->
       let aux_func q =
         if Q.compare_to_0 q <= 0 then raise Exit;
         Q.from_int (Fpa_rounding.integer_log_2 q)
       in
       mk_partial_interpretation_1 aux_func coef p ty t x, ctx
 
-    | Sy.Op Sy.Pow, [x; y] ->
+    | Types.Op Types.Pow, [x; y] ->
       mk_partial_interpretation_2
         (fun x y -> calc_power x y ty) coef p ty t x y, ctx
 
-    | Sy.Op Sy.Fixed, _ ->
+    | Types.Op Types.Fixed, _ ->
       (* Fixed-Point arithmetic currently not implemented *)
       assert false
 
@@ -711,7 +717,7 @@ module Shostak
 
   let fully_interpreted sb =
     match sb with
-    | Sy.Op (Sy.Plus | Sy.Minus) -> true
+    | Types.Op (Types.Plus | Types.Minus) -> true
     | _ -> false
 
   let term_extract _ = None, false
@@ -739,7 +745,7 @@ module Shostak
       else
       if List.exists
           (fun (t,x) ->
-             let E.{f; ty; _} = E.term_view t in
+             let {f; ty; _} = E.term_view t in
              is_mine_symb f ty && X.leaves x == []
           ) eq
       then None
@@ -789,5 +795,3 @@ module Shostak
         r
     in
     r, pprint_const_for_model r
-
-end

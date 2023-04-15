@@ -32,7 +32,7 @@ val mk_rec_type_decl : Parsed.type_decl list -> decl
 (** Declaration of symbols, functions, predicates, and goals *)
 
 val mk_logic :
-  Loc.t -> Symbols.name_kind -> (string * string) list -> plogic_type -> decl
+  Loc.t -> Types.name_kind -> (string * string) list -> plogic_type -> decl
 
 val mk_function_def :
   Loc.t ->

@@ -26,6 +26,10 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
+let () = Shostak.init ()
+
 module X = Shostak.Combine
 module Ex = Explanation
 module E = Expr
@@ -37,7 +41,7 @@ module Sy = Symbols
 module type S = sig
 
   type t
-  type r = Shostak.Combine.r
+  type r = Types.r
 
   val empty : unit -> t
 
@@ -77,7 +81,7 @@ module type S = sig
 
   val get_union_find : t -> Uf.t
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Types.th_elt -> Explanation.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
@@ -103,7 +107,7 @@ module Main : S = struct
     relation : Rel.t
   }
 
-  type r = Shostak.Combine.r
+  type r = Types.r
 
   let empty () = {
     use = Use.empty ;
@@ -125,9 +129,9 @@ module Main : S = struct
     | LSem Xliteral.Builtin _  -> Queue.push e facts.ineqs
     | LTerm a ->
       match E.lit_view a with
-      | E.Pred _ | E.Eq _ | E.Eql _ -> Queue.push e facts.equas
-      | E.Distinct _ -> Queue.push e facts.diseqs
-      | E.Builtin _  -> Queue.push e facts.ineqs
+      | Pred _ | Eq _ | Eql _ -> Queue.push e facts.equas
+      | Distinct _ -> Queue.push e facts.diseqs
+      | Builtin _  -> Queue.push e facts.ineqs
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
@@ -263,8 +267,8 @@ module Main : S = struct
 
   let equal_only_by_congruence env (facts: r Sig_rel.facts) t1 t2 =
     if not (E.equal t1 t2) then
-      let { E.f = f1; xs = xs1; ty = ty1; _ } = E.term_view t1 in
-      let { E.f = f2; xs = xs2; ty = ty2; _ } = E.term_view t2 in
+      let { f = f1; xs = xs1; ty = ty1; _ } = E.term_view t1 in
+      let { f = f2; xs = xs2; ty = ty2; _ } = E.term_view t2 in
       if Symbols.equal f1 f2 && Ty.equal ty1 ty2 then
         try
           let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
@@ -275,8 +279,8 @@ module Main : S = struct
 
   let congruents env (facts: r Sig_rel.facts) t1 s =
     match E.term_view t1 with
-    | { E.xs = []; _ } -> ()
-    | { E.f; ty; _ } when X.fully_interpreted f ty -> ()
+    | { xs = []; _ } -> ()
+    | { f; ty; _ } when X.fully_interpreted f ty -> ()
     |  _ -> SE.iter (equal_only_by_congruence env facts t1) s
 
   let fold_find_with_explanation find ex l =
@@ -287,22 +291,22 @@ module Main : S = struct
 
   let view find va ex_a =
     match va with
-    | E.Pred (t1, b) ->
+    | Pred (t1, b) ->
       let r1, ex1 = find t1 in
       let ex = Ex.union ex1 ex_a in
       LR.mkv_pred r1 b, ex
-    | E.Eq (t1, t2) ->
+    | Eq (t1, t2) ->
       let r1, ex1 = find t1 in
       let r2, ex2 = find t2 in
       let ex = Ex.union (Ex.union ex1 ex2) ex_a in
       LR.mkv_eq r1 r2, ex
-    | E.Eql lt ->
+    | Eql lt ->
       let lr, ex = fold_find_with_explanation find ex_a lt in
       LR.mkv_distinct true (* not distinct*) (List.rev lr), ex
-    | E.Distinct lt ->
+    | Distinct lt ->
       let lr, ex = fold_find_with_explanation find ex_a lt in
       LR.mkv_distinct false (*not neg*) (List.rev lr), ex
-    | E.Builtin(b, s, l) ->
+    | Builtin(b, s, l) ->
       let lr, ex  = fold_find_with_explanation find ex_a l in
       LR.mkv_builtin b s (List.rev lr), ex
 
@@ -337,12 +341,12 @@ module Main : S = struct
     | Some _, false -> () (* not an original term *)
     | Some t1, true ->  (* original term *)
       match E.term_view t1 with
-      | { E.f = f1; xs = [x]; _ } ->
+      | { f = f1; xs = [x]; _ } ->
         let ty_x = Expr.type_info x in
         List.iter
           (fun t2 ->
              match E.term_view t2 with
-             | { E.f = f2 ; xs = [y]; _ } when Sy.equal f1 f2 ->
+             | { f = f2 ; xs = [y]; _ } when Sy.equal f1 f2 ->
                let ty_y = Expr.type_info y in
                if Ty.equal ty_x ty_y then
                  begin match Uf.are_distinct env.uf t1 t2 with
@@ -360,8 +364,8 @@ module Main : S = struct
     List.fold_left
       (fun env a ->
          match E.lit_view a with
-         | E.Distinct lt
-         | E.Builtin (_, _, lt) ->
+         | Distinct lt
+         | Builtin (_, _, lt) ->
            let lvs = concat_leaves env.uf lt in
            List.fold_left
              (fun env rx ->
@@ -468,7 +472,7 @@ module Main : S = struct
       Debug.add_to_use t;
 
       (* we add t's arguments in env *)
-      let { E.xs; _ } = E.term_view t in
+      let { xs; _ } = E.term_view t in
       let env = List.fold_left (fun env t -> add_term env facts t ex) env xs in
       (* we update uf and use *)
       let nuf, ctx  = Uf.add env.uf t in
@@ -500,16 +504,16 @@ module Main : S = struct
 
   let add env facts a ex =
     match E.lit_view a with
-    | E.Pred (t1, _) ->
+    | Pred (t1, _) ->
       add_term env facts t1 ex
-    | E.Eq (t1, t2) ->
+    | Eq (t1, t2) ->
       let env = add_term env facts t1 ex in
       add_term env facts t2 ex
-    | E.Eql lt ->
+    | Eql lt ->
       List.fold_left
         (fun env t-> add_term env facts t ex) env  lt
-    | E.Distinct lt
-    | E.Builtin (_, _, lt) ->
+    | Distinct lt
+    | Builtin (_, _, lt) ->
       let env =
         List.fold_left
           (fun env t-> add_term env facts t ex)

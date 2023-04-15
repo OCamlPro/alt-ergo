@@ -52,10 +52,10 @@ let empty _ =
   }
 
 let is_ite =
-  let ite = Symbols.Op Symbols.Tite in
+  let ite = Types.Op Types.Tite in
   fun t ->
     match E.term_view t with
-    | { E.f ; xs = [p;t1;t2]; _ } when Symbols.equal f ite -> Some (p, t1, t2)
+    | { f ; xs = [p;t1;t2]; _ } when Symbols.equal f ite -> Some (p, t1, t2)
     | _ -> None
 
 let add_to_guarded p s t mp =
@@ -96,7 +96,7 @@ let extract_preds env la =
        | None -> acc
        | Some a ->
          match E.lit_view a with
-         | E.Pred (t, is_neg)
+         | Pred (t, is_neg)
            when not (ME.mem t env.assumed_pos_preds) &&
                 not (ME.mem t env.assumed_neg_preds) ->
            if get_debug_ite () then

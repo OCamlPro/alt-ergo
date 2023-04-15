@@ -54,9 +54,9 @@ module type S = sig
 
   (* [assume env f] assume a new formula [f] in [env]. Raises Unsat if
      [f] is unsatisfiable in [env] *)
-  val assume : t -> Expr.gformula -> Explanation.t -> t
+  val assume : t -> Types.gformula -> Explanation.t -> t
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Types.th_elt -> Explanation.t -> t
 
   (* [pred_def env f] assume a new predicate definition [f] in [env]. *)
   val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> t
@@ -64,7 +64,7 @@ module type S = sig
   (* [unsat env f size] checks the unsatisfiability of [f] in
      [env]. Raises I_dont_know when the proof tree's height reaches
      [size]. Raises Sat if [f] is satisfiable in [env] *)
-  val unsat : t -> Expr.gformula -> Explanation.t
+  val unsat : t -> Types.gformula -> Explanation.t
 
   val reset_refs : unit -> unit
 

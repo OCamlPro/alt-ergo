@@ -26,64 +26,9 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type builtin =
-    LE | LT (* arithmetic *)
-  | IsConstr of Hstring.t (* ADT tester *)
+open Types
 
-type operator =
-    Plus | Minus | Mult | Div | Modulo
-  | Concat | Extract | Get | Set | Fixed | Float
-  | Reach | Access of Hstring.t | Record
-  | Sqrt_real | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
-  | Sqrt_real_default | Sqrt_real_excess
-  | Min_real | Min_int | Max_real | Max_int | Integer_log2
-  | Pow | Integer_round
-  | Constr of Hstring.t (* enums, adts *)
-  | Destruct of Hstring.t * bool
-  | Tite
-
-type lit =
-  (* literals *)
-  | L_eq
-  | L_built of builtin
-  | L_neg_eq
-  | L_neg_built of builtin
-  | L_neg_pred
-
-type form =
-  (* formulas *)
-  | F_Unit of bool
-  | F_Clause of bool
-  | F_Iff
-  | F_Xor
-  | F_Lemma
-  | F_Skolem
-
-type name_kind = Ac | Other
-
-type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
-
-type bound = (* private *)
-  { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
-
-
-type t =
-  | True
-  | False
-  | Void
-  | Name of Hstring.t * name_kind
-  | Int of Hstring.t
-  | Real of Hstring.t
-  | Bitv of string
-  | Op of operator
-  | Lit of lit
-  | Form of form
-  | Var of Var.t
-  | In of bound * bound
-  | MapsTo of Var.t
-  | Let
-
-type s = t
+type t = Types.symbol
 
 let name ?(kind=Other) s = Name (Hstring.make s, kind)
 let var s = Var s
@@ -92,8 +37,8 @@ let real r = Real (Hstring.make r)
 let constr s = Op (Constr (Hstring.make s))
 let destruct ~guarded s = Op (Destruct (Hstring.make s, guarded))
 
-let mk_bound kind sort ~is_open ~is_lower =
-  {kind; sort; is_open; is_lower}
+let mk_bound bkind sort ~is_open ~is_lower =
+  {bkind; sort; is_open; is_lower}
 
 let mk_in b1 b2 =
   assert (b1.is_lower);
@@ -110,96 +55,7 @@ let underscore =
   Random.self_init ();
   var @@ Var.of_string @@ Format.sprintf "_%d" (Random.int 1_000_000)
 
-let compare_kinds k1 k2 =
-  Util.compare_algebraic k1 k2
-    (function
-      | _, (Ac | Other) -> assert false
-    )
-
-let compare_operators op1 op2 =
-  Util.compare_algebraic op1 op2
-    (function
-      | Access h1, Access h2 | Constr h1, Constr h2 -> Hstring.compare h1 h2
-      | Destruct (h1, b1), Destruct(h2, b2) ->
-        let c = Stdlib.compare b1 b2 in
-        if c <> 0 then c else Hstring.compare h1 h2
-      | _ , (Plus | Minus | Mult | Div | Modulo
-            | Concat | Extract | Get | Set | Fixed | Float | Reach
-            | Access _ | Record | Sqrt_real | Abs_int | Abs_real
-            | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
-            | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
-            | Integer_log2 | Pow | Integer_round
-            | Constr _ | Destruct _ | Tite) -> assert false
-    )
-
-let compare_builtin b1 b2 =
-  Util.compare_algebraic b1 b2
-    (function
-      | IsConstr h1, IsConstr h2 -> Hstring.compare h1 h2
-      | _, (LT | LE | IsConstr _) -> assert false
-    )
-
-let compare_lits lit1 lit2 =
-  Util.compare_algebraic lit1 lit2
-    (function
-      | L_built b1, L_built b2 -> compare_builtin b1 b2
-      | L_neg_built b1, L_neg_built b2 -> compare_builtin b1 b2
-      | _, (L_eq | L_built _ | L_neg_eq | L_neg_built _ | L_neg_pred) ->
-        assert false
-    )
-
-let compare_forms f1 f2 =
-  Util.compare_algebraic f1 f2
-    (function
-      | F_Unit b1, F_Unit b2
-      | F_Clause b1, F_Clause b2 -> Stdlib.compare b1 b2
-      | _, (F_Unit _ | F_Clause _ | F_Lemma | F_Skolem
-           | F_Iff | F_Xor) ->
-        assert false
-    )
-
-let compare_bounds_kind a b =
-  Util.compare_algebraic a b
-    (function
-      | VarBnd h1, VarBnd h2 -> Var.compare h1 h2
-      | ValBnd q1, ValBnd q2 -> Numbers.Q.compare q1 q2
-      | _, (VarBnd _ | ValBnd _) -> assert false
-    )
-
-let compare_bounds a b =
-  let c = Ty.compare a.sort b.sort in
-  if c <> 0 then c
-  else
-    let c = Stdlib.compare a.is_open b.is_open in
-    if c <> 0 then c
-    else
-      let c = Stdlib.compare a.is_lower b.is_lower in
-      if c <> 0 then c
-      else compare_bounds_kind a.kind b.kind
-
-let compare s1 s2 =
-  Util.compare_algebraic s1 s2
-    (function
-      | Int h1, Int h2
-      | Real h1, Real h2 -> Hstring.compare h1 h2
-      | Var v1, Var v2 | MapsTo v1, MapsTo v2 -> Var.compare v1 v2
-      | Name (h1, k1), Name (h2, k2) ->
-        let c = Hstring.compare h1 h2 in
-        if c <> 0 then c else compare_kinds k1 k2
-      | Bitv s1, Bitv s2 -> String.compare s1 s2
-      | Op op1, Op op2 -> compare_operators op1 op2
-      | Lit lit1, Lit lit2 -> compare_lits lit1 lit2
-      | Form f1, Form f2 -> compare_forms f1 f2
-      | In (b1, b2), In (b1', b2') ->
-        let c = compare_bounds b1 b1' in
-        if c <> 0 then c else compare_bounds b2 b2'
-      | _ ,
-        (True | False | Void | Name _ | Int _ | Real _ | Bitv _
-        | Op _ | Lit _ | Form _ | Var _ | In _ | MapsTo _ | Let) ->
-        assert false
-    )
-
-let equal s1 s2 = compare s1 s2 = 0
+let equal s1 s2 = Types.SYMBOL.compare s1 s2 = 0
 
 let hash x =
   abs @@
@@ -224,7 +80,7 @@ let string_of_bound_kind x = match x with
   | ValBnd v -> Numbers.Q.to_string v
 
 let string_of_bound b =
-  let kd = string_of_bound_kind b.kind in
+  let kd = string_of_bound_kind b.bkind in
   if b.is_lower then
     Format.sprintf "%s %s" (if b.is_open then "]" else "[") kd
   else
@@ -342,7 +198,7 @@ let fake_le  =  name "@le"
 
 
 module Labels = Hashtbl.Make(struct
-    type t = s
+    type t = Types.symbol
     let equal = equal
     let hash = hash
   end)
@@ -355,16 +211,12 @@ let label t = try Labels.find labels t with Not_found -> Hstring.empty
 
 let clear_labels () = Labels.clear labels
 
-module Set : Set.S with type elt = t =
-  Set.Make (struct type t=s let compare=compare end)
+module Set = Types.SYMBOL.Set
 
-module Map : sig
-  include Map.S with type key = t
-  val print :
-    (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-end = struct
-  include Map.Make (struct type t = s let compare = compare end)
-  let print pr_elt fmt sbt =
-    iter (fun k v -> Format.fprintf fmt "%a -> %a  " print k pr_elt v) sbt
-end
+module Map = Types.SYMBOL.Map
 
+let print_map pr_elt fmt sbt =
+  Map.iter (fun k v -> Format.fprintf fmt "%a -> %a  " print k pr_elt v) sbt
+
+let compare = Types.SYMBOL.compare
+let compare_bounds = Types.SYMBOL.compare_bounds

@@ -13,6 +13,15 @@ module Sy = Symbols
 module E  = Expr
 module Hs = Hstring
 
+open Types
+module X = struct
+  include Shostak_pre
+  let extract = function { v=ADT r; _ } -> Some r | _ -> None
+  let embed x = hcons {v = ADT x; id = -1000 (* dummy *)}
+end
+
+
+(*
 type 'a abstract =
   | Constr of { c_name : Hs.t ; c_ty : Ty.t ; c_args : (Hs.t * 'a) list }
   | Select of { d_name : Hs.t ; d_ty : Ty.t ; d_arg : 'a }
@@ -25,6 +34,9 @@ module type ALIEN = sig
   val extract : r -> (r abstract) option
 end
 
+*)
+
+type t = Types.adt
 
 (* TODO: can this function be replace with Ty.assoc_destrs ?? *)
 let constr_of_destr ty dest =
@@ -47,11 +59,6 @@ let constr_of_destr ty dest =
   | _ -> assert false
 
 
-module Shostak (X : ALIEN) = struct
-
-  type t = X.r abstract
-  type r = X.r
-
   module SX = Set.Make(struct type t = r let compare = X.hash_cmp end)
 
   let name = "Adt"
@@ -61,8 +68,8 @@ module Shostak (X : ALIEN) = struct
   let is_mine_symb sy ty =
     not (Options.get_disable_adts ()) &&
     match sy, ty with
-    | Sy.Op (Sy.Constr _), Ty.Tadt _ -> true
-    | Sy.Op Sy.Destruct (_,guarded), _ -> not guarded
+    | Types.Op (Types.Constr _), Ty.Tadt _ -> true
+    | Types.Op Types.Destruct (_,guarded), _ -> not guarded
     | _ -> false
 
   let embed r =
@@ -147,7 +154,7 @@ module Shostak (X : ALIEN) = struct
       Printer.print_dbg
         ~module_name:"Adt" ~function_name:"make"
         "make %a" E.print t;
-    let { E.f; xs; ty; _ } = E.term_view t in
+    let { f; xs; ty; _ } = E.term_view t in
     let sx, ctx =
       List.fold_left
         (fun (args, ctx) s ->
@@ -157,7 +164,7 @@ module Shostak (X : ALIEN) = struct
     in
     let xs = List.rev sx in
     match f, xs, ty with
-    | Sy.Op Sy.Constr hs, _, Ty.Tadt (name, params) ->
+    | Types.Op Types.Constr hs, _, Ty.Tadt (name, params) ->
       let cases =
         match Ty.type_body name params with
         | Ty.Adt cases -> cases
@@ -175,7 +182,7 @@ module Shostak (X : ALIEN) = struct
       in
       is_mine @@ Constr {c_name = hs; c_ty = ty; c_args}, ctx
 
-    | Sy.Op Sy.Destruct (hs, guarded), [e], _ ->
+    | Types.Op Types.Destruct (hs, guarded), [e], _ ->
       if not guarded then
         let sel = Select {d_name = hs ; d_arg = e ; d_ty = ty} in
         is_mine sel, ctx
@@ -223,8 +230,8 @@ module Shostak (X : ALIEN) = struct
 (*
     not (get_disable_adts ()) &&
     match sb with
-    | Sy.Op (Sy.Constr _) -> true
-    | Sy.Op Sy.Destruct (_, guarded) -> not guarded
+    | Types.Op (Types.constr _) -> true
+    | Types.Op Types.Destruct (_, guarded) -> not guarded
     | _ -> false
 *)
 
@@ -417,5 +424,3 @@ module Shostak (X : ALIEN) = struct
     Printer.print_err
       "[ADTs.models] choose_adequate_model currently not implemented";
     raise (Util.Not_implemented "Models for ADTs")
-
-end

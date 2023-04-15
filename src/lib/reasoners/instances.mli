@@ -29,16 +29,16 @@
 module type S = sig
   type t
   type tbox
-  type instances = (Expr.gformula * Explanation.t) list
+  type instances = (Types.gformula * Explanation.t) list
 
   val empty : t
-  val add_terms : t -> Expr.Set.t -> Expr.gformula -> t
-  val add_lemma : t -> Expr.gformula -> Explanation.t -> t
+  val add_terms : t -> Expr.Set.t -> Types.gformula -> t
+  val add_lemma : t -> Types.gformula -> Explanation.t -> t
   val add_predicate :
     t ->
     guard:Expr.t ->
     name:string ->
-    Expr.gformula ->
+    Types.gformula ->
     Explanation.t ->
     t
 

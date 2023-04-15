@@ -9,20 +9,4 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type 'a abstract =
-  | Constr of
-      { c_name : Hstring.t ; c_ty : Ty.t ; c_args : (Hstring.t * 'a) list }
-  | Select of { d_name : Hstring.t ; d_ty : Ty.t ; d_arg : 'a }
-  | Tester of { t_name : Hstring.t ; t_arg : 'a }
-  (* tester is currently not used to build values *)
-
-  | Alien of 'a
-
-module type ALIEN = sig
-  include Sig.X
-  val embed : r abstract -> r
-  val extract : r -> (r abstract) option
-end
-
-module Shostak
-    (X : ALIEN) : Sig.SHOSTAK with type r = X.r and type t = X.r abstract
+include ( Sig.SHOSTAK with type t = Types.adt )

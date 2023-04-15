@@ -26,6 +26,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
 open Options
 
 module E = Expr
@@ -36,16 +37,16 @@ module Ex = Explanation
 module type S = sig
   type t
   type tbox
-  type instances = (Expr.gformula * Ex.t) list
+  type instances = (Types.gformula * Ex.t) list
 
   val empty : t
-  val add_terms : t -> SE.t -> Expr.gformula -> t
-  val add_lemma : t -> Expr.gformula -> Ex.t -> t
+  val add_terms : t -> SE.t -> Types.gformula -> t
+  val add_lemma : t -> Types.gformula -> Ex.t -> t
   val add_predicate :
     t ->
     guard:Expr.t ->
     name:string ->
-    Expr.gformula ->
+    Types.gformula ->
     Ex.t ->
     t
 
@@ -96,7 +97,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     end)
 
   type tbox = X.t
-  type instances = (Expr.gformula * Ex.t) list
+  type instances = (Types.gformula * Ex.t) list
 
   type guard = E.t
 
@@ -124,9 +125,9 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     let new_facts_of_axiom ax insts_ok =
       if get_debug_matching () >= 1 && insts_ok != ME.empty then
         let name = match Expr.form_view ax with
-          | E.Lemma { E.name = s; _ } -> s
-          | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-          | E.Let _ | E.Iff _ | E.Xor _ -> "!(no-name)"
+          | Lemma { name = s; _ } -> s
+          | Unit _ | Clause _ | Literal _ | Skolem _
+          | Let _ | Iff _ | Xor _ -> "!(no-name)"
         in
         print_dbg
           ~module_name:"Instances" ~function_name:"new_facts_of_axiom"
@@ -145,10 +146,10 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 
   let add_terms env s gf =
     let infos = {
-      Matching_types.term_age = gf.Expr.age ;
-      term_from_goal    = gf.Expr.gf ;
-      term_from_formula = gf.Expr.lem ;
-      term_from_terms   = gf.Expr.from_terms
+      Matching_types.term_age = gf.age ;
+      term_from_goal    = gf.gf ;
+      term_from_formula = gf.lem ;
+      term_from_terms   = gf.from_terms
     }
     in
     { env with
@@ -165,11 +166,11 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 
 
   let add_predicate env ~guard ~name gf ex =
-    let { Expr.ff = f; age = age; _ } = gf in
+    let { ff = f; age = age; _ } = gf in
     let env = { env with
                 matching = EM.max_term_depth env.matching (E.depth f) } in
     match E.form_view f with
-    | E.Iff(f1, f2) ->
+    | Iff(f1, f2) ->
       let p = E.mk_term (Symbols.name name) [] Ty.Tbool in
       let np = E.neg p in
       let defn =
@@ -179,7 +180,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
       in
       add_ground_pred env ~guard p np defn ex
 
-    | E.Literal _ ->
+    | Literal _ ->
       let p = E.mk_term (Symbols.name name) [] Ty.Tbool in
       let np = E.neg p in
       let defn =
@@ -189,14 +190,14 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
       in
       add_ground_pred env ~guard p np defn ex
 
-    | E.Lemma _ ->
+    | Lemma _ ->
       let guarded = try ME.find guard env.guards with Not_found -> [] in
       { env with
         predicates = ME.add f (guard, age, ex) env.predicates;
         guards = ME.add guard ((f, false) :: guarded) env.guards
       }
-    | E.Unit _ | E.Clause _ | E.Xor _
-    | E.Skolem _ | E.Let _ ->
+    | Unit _ | Clause _ | Xor _
+    | Skolem _ | Let _ ->
       assert false
 
   let pop env ~guard =
@@ -224,10 +225,10 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 
   let record_this_instance f accepted lorig =
     match Expr.form_view lorig with
-    | E.Lemma { E.name; loc; _ } ->
+    | Lemma { name; loc; _ } ->
       Profiling.new_instance_of name f loc accepted
-    | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-    | E.Let _ | E.Iff _ | E.Xor _ -> assert false
+    | Unit _ | Clause _ | Literal _ | Skolem _
+    | Let _ | Iff _ | Xor _ -> assert false
 
   let profile_produced_terms env lorig nf s trs =
     let st0 =
@@ -235,9 +236,9 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         SE.empty trs
     in
     let name, loc, _ = match Expr.form_view lorig with
-      | E.Lemma { E.name; main; loc; _ } -> name, loc, main
-      | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-      | E.Let _ | E.Iff _ | E.Xor _ -> assert false
+      | Lemma { name; main; loc; _ } -> name, loc, main
+      | Unit _ | Clause _ | Literal _ | Skolem _
+      | Let _ | Iff _ | Xor _ -> assert false
     in
     let st1 = E.max_ground_terms_rec_of_form nf in
     let diff = Expr.Set.diff st1 st0 in
@@ -286,7 +287,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
              s_lem_orig = lorig} ->
             incr cpt;
             let s = sbs, sty in
-            match tr.E.guard with
+            match tr.guard with
             | Some a when X.query (Expr.apply_subst s a) tbox==None -> acc
             | _ ->
               let nf = E.apply_subst s f in
@@ -298,11 +299,11 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
                 if not accepted then add_rejected_to_acc orig nf acc
                 else
                   let p =
-                    { Expr.ff = nf;
+                    { ff = nf;
                       origin_name = E.name_of_lemma lorig;
                       gdist = -1;
                       hdist = -1;
-                      trigger_depth = tr.Expr.t_depth;
+                      trigger_depth = tr.t_depth;
                       nb_reductions = 0;
                       age = 1+(max g age);
                       mf = true;
@@ -322,7 +323,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
                       Ex.union dep (Ex.singleton (Ex.Dep lorig))
                   in
                   incr kept;
-                  add_accepted_to_acc orig nf (p, dep, s, tr.E.content) acc
+                  add_accepted_to_acc orig nf (p, dep, s, tr.content) acc
           ) acc subst_list
       ) ME.empty substs
 
@@ -334,7 +335,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
          let acc =
            ME.fold
              (fun _ (p, dep, _, _) (gd, ngd) ->
-                if p.Expr.gf then (p, dep) :: gd, ngd else gd, (p, dep) :: ngd
+                if p.gf then (p, dep) :: gd, ngd else gd, (p, dep) :: ngd
              )mp_orig_ok acc
          in
          if Options.get_profiling() then
@@ -351,16 +352,16 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
 
   let sort_facts =
     let rec size f = match Expr.form_view f with
-      | E.Unit(f1,f2) -> max (size f1) (size f2)
-      | E.Lemma _ | E.Clause _ | E.Literal _ | E.Skolem _
-      | E.Let _ | E.Iff _ | E.Xor _ -> E.size f
+      | Unit(f1,f2) -> max (size f1) (size f2)
+      | Lemma _ | Clause _ | Literal _ | Skolem _
+      | Let _ | Iff _ | Xor _ -> E.size f
     in
     fun lf ->
       List.fast_sort
         (fun (p1,_) (p2,_) ->
-           let c = size p1.Expr.ff - size p2.Expr.ff in
+           let c = size p1.ff - size p2.ff in
            if c <> 0 then c
-           else E.compare p2.Expr.ff p1.Expr.ff
+           else E.compare p2.ff p1.ff
         ) lf
 
   let new_facts env tbox selector substs =
@@ -398,7 +399,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   let add_lemma env gf dep =
     let guard = E.vrai in
     (* lemmas are already guarded outside instances.ml *)
-    let { Expr.ff = orig; age = age; _ } = gf in
+    let {ff = orig; age = age; _ } = gf in
     let age, dep =
       try
         let _, age' , dep' = ME.find orig env.lemmas in

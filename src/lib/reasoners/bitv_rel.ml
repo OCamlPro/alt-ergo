@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
 type t = unit
 
 let empty _ = ()
@@ -38,7 +40,7 @@ let new_terms _ = Expr.Set.empty
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
 let assume_th_elt t th_elt _ =
-  match th_elt.Expr.extends with
+  match th_elt.extends with
   | Util.Bitv ->
     failwith "This Theory does not support theories extension"
   | _ -> t

@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
 module X = Shostak.Combine
 module Ex = Explanation
 module E = Expr
@@ -60,7 +62,7 @@ module type S = sig
   val add_term : t -> Expr.t -> add_in_cs:bool -> t
   val compute_concrete_model : t -> t
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Types.th_elt -> Explanation.t -> t
   val theories_instances :
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
@@ -103,7 +105,7 @@ module Main_Default : S = struct
       SE.fold
         (fun t mp ->
            match E.term_view t with
-           | { E.f = Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac));
+           | { f = Types.Name (hs, ((Types.Ac | Types.Other) as is_ac));
                xs; ty; _ } ->
              let xs = List.map E.type_info xs in
              let xs, ty =
@@ -204,7 +206,7 @@ module Main_Default : S = struct
         (fun hs (xs, ty, is_ac) ->
            print_dbg ~flushed:false ~header:false
              "logic %s%s : %a%a@ "
-             (if is_ac == Sy.Ac then "ac " else "")
+             (if is_ac == Types.Ac then "ac " else "")
              (Hstring.view hs)
              print_arrow_type xs
              Ty.print ty
@@ -346,7 +348,7 @@ module Main_Default : S = struct
 
 
   type choice =
-    X.r Xliteral.view * Th_util.lit_origin * choice_sign * Ex.t
+    Types.r Xliteral.view * Th_util.lit_origin * choice_sign * Ex.t
   (** the choice, the size, choice_sign,  the explication set,
         the explication for this choice. *)
 
@@ -526,11 +528,11 @@ module Main_Default : S = struct
          match a with
          | LTerm r -> begin
              match E.lit_view r with
-             | E.Eq (t1, t2) ->
+             | Eq (t1, t2) ->
                SE.add t1 (SE.add t2 acc)
-             | E.Eql l | E.Distinct l | E.Builtin (_, _, l) ->
+             | Eql l | Distinct l | Builtin (_, _, l) ->
                List.fold_right SE.add l acc
-             | E.Pred (t1, _) ->
+             | Pred (t1, _) ->
                SE.add t1 acc
 
            end
@@ -601,13 +603,13 @@ module Main_Default : S = struct
     let mp =
       List.fold_left
         (fun acc ((hyps:Expr.t list),gf, _) ->
-           match gf.Expr.lem with
+           match gf.lem with
            | None -> assert false
            | Some lem ->
              let inst =
                try MF.find lem acc with Not_found -> MF.empty
              in
-             MF.add lem (MF.add gf.Expr.ff hyps inst) acc
+             MF.add lem (MF.add gf.ff hyps inst) acc
         )MF.empty th_instances
     in
     let l =
@@ -656,21 +658,21 @@ module Main_Default : S = struct
       Debug.query a;
       try
         match E.lit_view a with
-        | E.Eq (t1, t2)  ->
+        | Eq (t1, t2)  ->
           let t = add_and_process_conseqs a t in
           CC_X.are_equal t.gamma t1 t2 ~init_terms:false
 
-        | E.Distinct [t1; t2] ->
+        | Distinct [t1; t2] ->
           let na = E.neg a in
           let t = add_and_process_conseqs na t in (* na ? *)
           CC_X.are_distinct t.gamma t1 t2
 
-        | E.Distinct _ | E.Eql _ ->
+        | Distinct _ | Eql _ ->
           (* we only assume toplevel distinct with more that one arg.
              not interesting to do a query in this case ?? or query ? *)
           None
 
-        | E.Pred (t1,b) ->
+        | Pred (t1,b) ->
           let t = add_and_process_conseqs a t in
           if b
           then CC_X.are_distinct t.gamma t1 Expr.vrai

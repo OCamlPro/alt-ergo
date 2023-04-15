@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
 module Q = Numbers.Q
 
 module Ex = Explanation
@@ -1119,45 +1121,45 @@ let new_var idoms s ty =
   if MV.mem s idoms then idoms
   else MV.add s (None, None, ty) idoms
 
-let match_interval_upper {Sy.sort; is_open; kind; is_lower} i imatch =
+let match_interval_upper {sort; is_open; bkind; is_lower} i imatch =
   assert (not is_lower);
-  match kind, max_bound i with
-  | Sy.VarBnd s, _ when is_question_mark s -> imatch (* ? var *)
-  | Sy.VarBnd _, Minfty -> assert false
-  | Sy.VarBnd s, Pinfty -> new_var imatch s sort
-  | Sy.VarBnd s, Strict (v, _) -> new_low_bound imatch s sort v false
-  | Sy.VarBnd s, Large  (v, _) -> new_low_bound imatch s sort v is_open
+  match bkind, max_bound i with
+  | Types.VarBnd s, _ when is_question_mark s -> imatch (* ? var *)
+  | Types.VarBnd _, Minfty -> assert false
+  | Types.VarBnd s, Pinfty -> new_var imatch s sort
+  | Types.VarBnd s, Strict (v, _) -> new_low_bound imatch s sort v false
+  | Types.VarBnd s, Large  (v, _) -> new_low_bound imatch s sort v is_open
 
-  | Sy.ValBnd _, Minfty -> assert false
-  | Sy.ValBnd _, Pinfty -> raise Exit
-  | Sy.ValBnd vl, Strict (v, _) ->
+  | Types.ValBnd _, Minfty -> assert false
+  | Types.ValBnd _, Pinfty -> raise Exit
+  | Types.ValBnd vl, Strict (v, _) ->
     let c = Q.compare v vl in
     if c > 0 then raise Exit;
     imatch
 
-  | Sy.ValBnd vl, Large  (v, _) ->
+  | Types.ValBnd vl, Large  (v, _) ->
     let c = Q.compare v vl in
     if c > 0 || c = 0 && is_open then raise Exit;
     imatch
 
 
-let match_interval_lower {Sy.sort; is_open; kind; is_lower} i imatch =
+let match_interval_lower {Types.sort; is_open; bkind; is_lower} i imatch =
   assert (is_lower);
-  match kind, min_bound i with
-  | Sy.VarBnd s, _ when is_question_mark s -> imatch (* ? var *)
-  | Sy.VarBnd _, Pinfty -> assert false
-  | Sy.VarBnd s,  Minfty -> new_var imatch s sort
-  | Sy.VarBnd s, Strict (v, _) -> new_up_bound imatch s sort v false
-  | Sy.VarBnd s, Large  (v, _) -> new_up_bound imatch s sort v is_open
+  match bkind, min_bound i with
+  | Types.VarBnd s, _ when is_question_mark s -> imatch (* ? var *)
+  | Types.VarBnd _, Pinfty -> assert false
+  | Types.VarBnd s,  Minfty -> new_var imatch s sort
+  | Types.VarBnd s, Strict (v, _) -> new_up_bound imatch s sort v false
+  | Types.VarBnd s, Large  (v, _) -> new_up_bound imatch s sort v is_open
 
-  | Sy.ValBnd _, Minfty -> raise Exit
-  | Sy.ValBnd _, Pinfty -> assert false
-  | Sy.ValBnd vl, Strict (v, _) ->
+  | Types.ValBnd _, Minfty -> raise Exit
+  | Types.ValBnd _, Pinfty -> assert false
+  | Types.ValBnd vl, Strict (v, _) ->
     let c = Q.compare v vl in
     if c < 0 then raise Exit;
     imatch
 
-  | Sy.ValBnd vl, Large  (v, _) ->
+  | Types.ValBnd vl, Large  (v, _) ->
     let c = Q.compare v vl in
     if c < 0 || c = 0 && is_open then raise Exit;
     imatch

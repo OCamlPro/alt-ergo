@@ -29,59 +29,10 @@
 module HS = Hstring
 module Sy = Symbols
 
-module type S = sig
+open Types
+module X = Shostak_pre
 
-  (* embeded AC semantic values *)
-  type r
-
-  (* extracted AC semantic values *)
-  type t = r Sig.ac
-
-  (* builds an embeded semantic value from an AC term *)
-  val make : Expr.t -> r * Expr.t list
-
-  (* tells whether the given term is AC*)
-  val is_mine_symb : Sy.t -> Ty.t -> bool
-
-  (* compares two AC semantic values *)
-  val compare : t -> t -> int
-
-  (* tests if two values are equal (using tags) *)
-  val equal : t -> t -> bool
-
-  (* hash function for ac values *)
-  val hash : t -> int
-
-  (* returns the type infos of the given term *)
-  val type_info : t -> Ty.t
-
-  (* prints the AC semantic value *)
-  val print : Format.formatter -> t -> unit
-
-  (* returns the leaves of the given AC semantic value *)
-  val leaves : t -> r list
-
-  (* replaces the first argument by the second one in the given AC value *)
-  val subst : r -> r -> t -> r
-
-  (* add flatten the 2nd arg w.r.t HS.t, add it to the given list
-     and compact the result *)
-  val add : Sy.t -> r * int -> (r * int) list -> (r * int) list
-
-  val fully_interpreted : Sy.t -> bool
-
-  val abstract_selectors : t -> (r * r) list -> r * (r * r) list
-
-  val compact : (r * int) list -> (r * int) list
-end
-
-module Make (X : Sig.X) = struct
-
-  open Sig
-
-  type r = X.r
-
-  type t = X.r Sig.ac
+type t = r ac
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
@@ -105,7 +56,7 @@ module Make (X : Sig.X) = struct
         List.iter (Format.fprintf fmt "%a" (pr_elt sep))((p,n-1)::l)
 
     let print fmt { h; l; _ } =
-      if Sy.equal h (Sy.Op Sy.Mult) then
+      if Sy.equal h (Types.Op Types.Mult) then
         Format.fprintf fmt "%a" (pr_xs "'*'") l
       else
         Format.fprintf fmt "%a(%a)" Sy.print h (pr_xs ",") l
@@ -162,17 +113,17 @@ module Make (X : Sig.X) = struct
     | Some ac when Sy.equal sy ac.h -> r, acc
     | None -> r, acc
     | Some _ -> match Expr.term_view t with
-      | { Expr.f = Sy.Name (hs, Sy.Ac); xs; ty; _ } ->
+      | { f = Types.Name (hs, Types.Ac); xs; ty; _ } ->
         let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
-      | { Expr.f = Sy.Op Sy.Mult; xs; ty; _ } ->
+      | { f = Types.Op Types.Mult; xs; ty; _ } ->
         let aro_sy = Sy.name "@*" in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
-      | { Expr.ty; _ } ->
+      | { ty; _ } ->
         let k = Expr.fresh_name ty in
         let eq = Expr.mk_eq ~iff:false k t in
         X.term_embed k, eq::acc
@@ -180,7 +131,7 @@ module Make (X : Sig.X) = struct
   let make t =
     Timers.exec_timer_start Timers.M_AC Timers.F_make;
     let x = match Expr.term_view t with
-      | { Expr.f = sy; xs = [a;b]; ty; _ } when Sy.is_ac sy ->
+      | { f = sy; xs = [a;b]; ty; _ } when Sy.is_ac sy ->
         let ra, ctx1 = X.make a in
         let rb, ctx2 = X.make b in
         let ra, ctx = abstract2 sy a ra (ctx1 @ ctx2) in
@@ -303,5 +254,3 @@ module Make (X : Sig.X) = struct
     with Not_found ->
     let v = X.term_embed (Expr.fresh_name ac.t) in
     v, (xac, v) :: acc*)
-
-end

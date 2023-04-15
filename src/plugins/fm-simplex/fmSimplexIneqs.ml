@@ -17,7 +17,7 @@ module Q = Numbers.Q
 
 module Container : Inequalities.Container_SIG = struct
   module Make
-      (P : Polynome.T with type r = Shostak.Combine.r)
+      (P : Polynome.T)
     : Inequalities.S with module P = P = struct
 
     module X = Shostak.Combine
@@ -33,7 +33,7 @@ module Container : Inequalities.Container_SIG = struct
     module SCache =
       Simplex_cache.MAKE(
       struct
-        type t = X.r
+        type t = Types.r
         let compare = X.hash_cmp
         include X
       end)

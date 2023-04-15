@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
 module E = Expr
 module SE = E.Set
 module ME = E.Map
@@ -36,7 +38,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module CDCL = Satml_frontend_hybrid.Make(Th)
 
   exception No_suitable_decision
-  exception Propagate of E.gformula * Explanation.t
+  exception Propagate of gformula * Explanation.t
 
   let is_fact_in_CDCL cdcl f =
     match CDCL.is_true cdcl f with
@@ -86,16 +88,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         if Options.get_no_decisions_on_is_empty () then delta, []
         else
           List.partition
-            (fun (a, _,_,_) -> Options.get_can_decide_on a.E.origin_name) delta
+            (fun (a, _,_,_) -> Options.get_can_decide_on a.origin_name) delta
       in
       let dec =
         List.rev_map
           (fun ((a,b,_,_) as e) ->
-             if Options.get_tableaux_cdcl () && is_fact_in_CDCL cdcl a.E.ff then
+             if Options.get_tableaux_cdcl () && is_fact_in_CDCL cdcl a.ff then
                raise (Propagate (a, Ex.empty));
-             if Options.get_tableaux_cdcl () && is_fact_in_CDCL cdcl b.E.ff then
+             if Options.get_tableaux_cdcl () && is_fact_in_CDCL cdcl b.ff then
                raise (Propagate (b, Ex.empty));
-             e, (try (ME.find a.E.ff env.mp) with Not_found -> 0.), a.E.gf
+             e, (try (ME.find a.ff env.mp) with Not_found -> 0.), a.gf
           ) dec
       in
 
@@ -103,10 +105,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         (* force propagate modulo satML *)
         List.iter
           (fun (a, b, _, _) ->
-             match CDCL.is_true cdcl a.E.ff with
+             match CDCL.is_true cdcl a.ff with
              | Some (ex, _lvl) -> raise (Propagate (a, Lazy.force ex))
              | None ->
-               match CDCL.is_true cdcl b.E.ff with
+               match CDCL.is_true cdcl b.ff with
                | Some (ex, _lvl) -> raise (Propagate (b, Lazy.force ex))
                | None -> ()
           )no_dec;
@@ -134,13 +136,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   end
 
   type refs = {
-    unit_facts : (E.gformula * Ex.t) ME.t
+    unit_facts : (gformula * Ex.t) ME.t
   }
 
   type guards = {
     current_guard: E.t;
     stack_elt: (E.t *  refs) Stack.t;
-    guards: (E.gformula * Ex.t) ME.t;
+    guards: (gformula * Ex.t) ME.t;
   }
 
   type t = {
@@ -153,14 +155,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        - plvl is the propagation level (w.r.t. dlvl) of the formula.
          It forms with dlvl a total ordering on the formulas in gamma.
     *)
-    gamma : (E.gformula * Ex.t * int * int) ME.t;
+    gamma : (gformula * Ex.t * int * int) ME.t;
     nb_related_to_goal : int;
     nb_related_to_hypo : int;
     nb_related_to_both : int;
     nb_unrelated : int;
     cdcl : CDCL.t ref;
     tcp_cache : Th_util.answer ME.t;
-    delta : (E.gformula * E.gformula * Ex.t * bool) list;
+    delta : (gformula * gformula * Ex.t * bool) list;
     decisions : int ME.t;
     dlevel : int;
     plevel : int;
@@ -172,7 +174,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     model_gen_mode : bool ref;
     guards : guards;
     add_inst: E.t -> bool;
-    unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
+    unit_facts_cache : (gformula * Ex.t) ME.t ref;
   }
 
   let latest_saved_env = ref None
@@ -229,21 +231,21 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
     let is_it_unsat gf =
       let s =
-        match E.form_view gf.E.ff with
-        | E.Lemma _   -> "lemma"
-        | E.Clause _  -> "clause"
-        | E.Unit _    -> "conjunction"
-        | E.Skolem _  -> "skolem"
-        | E.Literal _ -> "literal"
-        | E.Iff _ -> "iff"
-        | E.Xor _ -> "xor"
-        | E.Let _ -> "let"
+        match E.form_view gf.ff with
+        | Lemma _   -> "lemma"
+        | Clause _  -> "clause"
+        | Unit _    -> "conjunction"
+        | Skolem _  -> "skolem"
+        | Literal _ -> "literal"
+        | Iff _ -> "iff"
+        | Xor _ -> "xor"
+        | Let _ -> "let"
       in
       if Options.get_verbose () && Options.get_debug_sat () then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"is_it_unsat"
           "the following %s is unsat ? :@ %a"
-          s E.print gf.E.ff
+          s E.print gf.ff
 
     let pred_def f =
       if Options.get_debug_sat () then
@@ -259,37 +261,37 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
     let assume gf dep env =
       if Options.get_debug_sat () then
-        let { E.ff = f; lem; from_terms = terms; _ } = gf in
+        let { ff = f; lem; from_terms = terms; _ } = gf in
         print_dbg ~flushed:false
           ~module_name:"Fun_sat" ~function_name:"assume"
           "at level (%d, %d) I assume a @ " env.dlevel env.plevel;
         begin match E.form_view f with
-          | E.Literal a ->
+          | Literal a ->
             let n = match lem with
               | None -> ""
               | Some ff -> begin
                   match E.form_view ff with
-                  | E.Lemma xx -> xx.E.name
-                  | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-                  | E.Let _ | E.Iff _ | E.Xor _ -> ""
+                  | Lemma xx -> xx.name
+                  | Unit _ | Clause _ | Literal _ | Skolem _
+                  | Let _ | Iff _ | Xor _ -> ""
                 end
             in
             print_dbg ~header:false
               "LITERAL (%s : %a) %a@ "
               n E.print_list terms E.print a
-          | E.Unit _   ->
+          | Unit _   ->
             print_dbg ~header:false "conjunction"
-          | E.Clause _ ->
+          | Clause _ ->
             print_dbg ~header:false "clause %a" E.print f
-          | E.Lemma _  ->
+          | Lemma _  ->
             print_dbg ~header:false "%d-atom lemma \"%a\"" (E.size f) E.print f
-          | E.Skolem _ ->
+          | Skolem _ ->
             print_dbg ~header:false "skolem %a" E.print f
-          | E.Let _ ->
+          | Let _ ->
             print_dbg ~header:false "let-in %a" E.print f
-          | E.Iff _ ->
+          | Iff _ ->
             print_dbg ~header:false "equivalence %a" E.print f
-          | E.Xor _ ->
+          | Xor _ ->
             print_dbg ~header:false "neg-equivalence/xor %a" E.print f
         end;
         if Options.get_verbose () then
@@ -404,9 +406,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           "@[<v 2>@ %s >@ \
            hypotheses: %a@ \
            conclusion: %a@]"
-          (E.name_of_lemma_opt gf.E.lem)
+          (E.name_of_lemma_opt gf.lem)
           print_f_conj hyp
-          E.print gf.E.ff
+          E.print gf.ff
 
   end
   (*BISECT-IGNORE-END*)
@@ -414,9 +416,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let selector env f orig =
     not (ME.mem f env.gamma)
     && begin match E.form_view orig with
-      | E.Lemma _ -> env.add_inst orig
-      | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-      | E.Let _ | E.Iff _ | E.Xor _ -> true
+      | Lemma _ -> env.add_inst orig
+      | Unit _ | Clause _ | Literal _ | Skolem _
+      | Let _ | Iff _ | Xor _ -> true
     end
 
   let inst_predicates mconf env inst tbox selector ilvl =
@@ -437,9 +439,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let is_literal f =
     match E.form_view f with
-    | E.Literal _ -> true
-    | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
-    | E.Let _ | E.Iff _ | E.Xor _ -> false
+    | Literal _ -> true
+    | Unit _ | Clause _ | Lemma _ | Skolem _
+    | Let _ | Iff _ | Xor _ -> false
 
   let extract_prop_model ~complete_model t =
     let s = ref SE.empty in
@@ -454,7 +456,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   (* sat-solver *)
 
   let mk_gf f name mf gf =
-    { E.ff = f;
+    { ff = f;
       origin_name = name;
       gdist = -1;
       hdist = -1;
@@ -564,7 +566,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         List.rev_map
           (fun ((gf, ex) as e) ->
              if Ex.has_no_bj ex then e
-             else {gf with E.ff = shift gamma ex gf.E.ff}, Ex.empty
+             else {gf with ff = shift gamma ex gf.ff}, Ex.empty
           )(List.rev l)
       in
       env.cdcl := CDCL.assume delay !(env.cdcl) l
@@ -617,10 +619,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       SE.iter
         (fun f ->
            match E.form_view f with
-           | E.Lemma { E.name; loc; _ } ->
+           | Lemma { name; loc; _ } ->
              Profiling.conflicting_instance name loc
-           | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-           | E.Let _ | E.Iff _ | E.Xor _ -> ()
+           | Unit _ | Clause _ | Literal _ | Skolem _
+           | Let _ | Iff _ | Xor _ -> ()
         )(Ex.formulas_of exp)
 
   let do_case_split env origin =
@@ -650,7 +652,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     with Not_found -> false
 
   let update_unit_facts env ff dep =
-    let f = ff.E.ff in
+    let f = ff.ff in
     if Options.get_sat_learning ()
     && not (ME.mem f !(env.unit_facts_cache)) then
       begin
@@ -677,9 +679,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let f =
         List.fold_left
           (fun acc (f, _) -> E.mk_or f acc false (E.id f))
-          ff0.E.ff fl
+          ff0.ff fl
       in
-      update_unit_facts env {ff0 with E.ff=f} dep
+      update_unit_facts env {ff0 with ff=f} dep
 
 
   let query_of tcp_cache tmp_cache ff a env =
@@ -692,13 +694,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       | None -> tmp_cache := ME.add a None !tmp_cache; None
       | Some (ex,_) as y ->
         if Options.get_tableaux_cdcl () then
-          cdcl_learn_clause true env ex (ff.E.ff);
+          cdcl_learn_clause true env ex (ff.ff);
         learn_clause env ff ex;
         tcp_cache := ME.add a y !tcp_cache; y
 
   let th_elim tcp_cache tmp_cache ff env =
-    match E.form_view ff.E.ff with
-    | E.Literal a ->
+    match E.form_view ff.ff with
+    | Literal a ->
       let ans = query_of tcp_cache tmp_cache ff a env in
       if ans != None then
         begin
@@ -706,12 +708,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           if Options.get_profiling() then Profiling.elim false;
         end;
       ans
-    | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
-    | E.Let _ | E.Iff _ | E.Xor _ -> None
+    | Unit _ | Clause _ | Lemma _ | Skolem _
+    | Let _ | Iff _ | Xor _ -> None
 
   let red tcp_cache tmp_cache ff env tcp =
-    let nf = E.neg ff.E.ff in
-    let nff = {ff with E.ff = nf} in
+    let nf = E.neg ff.ff in
+    let nff = {ff with ff = nf} in
     try
       let _, ex = ME.find nf !(env.unit_facts_cache) in
       Some(ex, []), true
@@ -724,12 +726,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     with Not_found ->
       if not tcp then None, false
       else match E.form_view nf with
-        | E.Literal a ->
+        | Literal a ->
           let ans = query_of tcp_cache tmp_cache nff a env in
           if ans != None then Options.tool_req 2 "TR-Sat-Bcp-Red-2";
           ans, false
-        | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
-        | E.Let _ | E.Iff _ | E.Xor _ -> None, false
+        | Unit _ | Clause _ | Lemma _ | Skolem _
+        | Let _ | Iff _ | Xor _ -> None, false
 
   let red tcp_cache tmp_cache ff env tcp =
     match red tcp_cache tmp_cache ff env tcp with
@@ -738,7 +740,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if not (Options.get_tableaux_cdcl ()) then
         None, b
       else
-        match CDCL.is_true !(env.cdcl) (E.neg ff.E.ff) with
+        match CDCL.is_true !(env.cdcl) (E.neg ff.ff) with
         | Some (ex, _lvl) ->
           let ex = Lazy.force ex in
           if Options.(get_debug_sat () && get_verbose ()) then
@@ -750,33 +752,33 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let add_dep f dep =
     match E.form_view f with
-    | E.Literal _ ->
+    | Literal _ ->
       if not (Options.get_unsat_core ()) || Ex.mem (Ex.Bj f) dep then dep
       else Ex.union (Ex.singleton (Ex.Dep f)) dep
-    | E.Clause _ ->
+    | Clause _ ->
       if Options.get_unsat_core () then Ex.union (Ex.singleton (Ex.Dep f)) dep
       else dep
-    | E.Unit _ | E.Lemma _ | E.Skolem _ | E.Let _ | E.Iff _ | E.Xor _ -> dep
+    | Unit _ | Lemma _ | Skolem _ | Let _ | Iff _ | Xor _ -> dep
 
   let rec add_dep_of_formula f dep =
     let dep = add_dep f dep in
     match E.form_view f with
-    | E.Unit (f1, f2) ->
+    | Unit (f1, f2) ->
       if not (Options.get_unsat_core ()) then dep
       else add_dep_of_formula f2 (add_dep_of_formula f1 dep)
-    | E.Lemma _ | E.Clause _ | E.Literal _ | E.Skolem _
-    | E.Let _ | E.Iff _ | E.Xor _ -> dep
+    | Lemma _ | Clause _ | Literal _ | Skolem _
+    | Let _ | Iff _ | Xor _ -> dep
 
   (* currently:
      => this is not done modulo theories
      => unit_facts_cache not taken into account *)
   let update_distances =
     let aux gf ff =
-      let gdist = max ff.E.gdist gf.E.gdist in
-      let hdist = max ff.E.hdist gf.E.hdist in
+      let gdist = max ff.gdist gf.gdist in
+      let hdist = max ff.hdist gf.hdist in
       let gdist = if gdist < 0 then gdist else gdist + 1 in
       let hdist = if hdist < 0 then hdist else hdist + 1 in
-      {gf with E.gdist; hdist}
+      {gf with gdist; hdist}
     in
     fun env gf red ->
       let nf = E.neg red in
@@ -791,18 +793,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let tcp = tcp && not (Options.get_no_tcp ()) in
     List.fold_left
       (fun (cl,u)
-        ((({ E.ff = f1; _ } as gf1), ({ E.ff = f2; _ } as gf2), d, _) as fd) ->
+        ((({ ff = f1; _ } as gf1), ({ ff = f2; _ } as gf2), d, _) as fd) ->
         Debug.elim gf1 gf2;
         if b_elim f1 env || b_elim f2 env then (cl,u)
         else
           try
             if not tcp then raise Exit;
-            assert (gf1.E.theory_elim == gf2.E.theory_elim);
+            assert (gf1.theory_elim == gf2.theory_elim);
             let u =
               match th_elim tcp_cache tmp_cache gf1 env,
                     th_elim tcp_cache tmp_cache gf2 env with
               | None, None -> raise Exit
-              | Some _, _ | _, Some _ when gf1.E.theory_elim -> u
+              | Some _, _ | _, Some _ when gf1.theory_elim -> u
 
               | Some _, Some _ ->
                 u (* eliminate if both are true ? why ? *)
@@ -829,14 +831,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
               | (Some(d1, _), b) , (None, _) ->
                 if Options.get_profiling() then Profiling.red b;
                 let gf2 =
-                  {gf2 with E.nb_reductions = gf2.E.nb_reductions + 1} in
+                  {gf2 with nb_reductions = gf2.nb_reductions + 1} in
                 let gf2 = update_distances env gf2 f1 in
                 cl, (gf2,Ex.union d d1) :: u
 
               | (None, _) , (Some(d2, _),b) ->
                 if Options.get_profiling() then Profiling.red b;
                 let gf1 =
-                  {gf1 with E.nb_reductions = gf1.E.nb_reductions + 1} in
+                  {gf1 with nb_reductions = gf1.nb_reductions + 1} in
                 let gf1 = update_distances env gf1 f2 in
                 cl, (gf1,Ex.union d d2) :: u
 
@@ -862,16 +864,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                if Ex.has_no_bj ex then (a, ex, dlvl, plvl) :: ufacts
                else ufacts
              in
-             if not ff.E.mf then begin
+             if not ff.mf then begin
                Printer.print_err
-                 "%a" E.print ff.E.ff;
+                 "%a" E.print ff.ff;
                assert false
              end;
              let inst =
-               if ff.E.mf then Inst.add_terms inst (E.max_terms_of_lit a) ff
+               if ff.mf then Inst.add_terms inst (E.max_terms_of_lit a) ff
                else inst
              in
-             facts, ufacts, inst, mf || ff.E.mf, gf || ff.E.gf
+             facts, ufacts, inst, mf || ff.mf, gf || ff.gf
           )([], [], env.inst, false, false) facts
       in
       let utbox, _, _ = (* assume unit facts in the theory *)
@@ -913,8 +915,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     {env with delta = delta; tcp_cache = !tcp_cache}, unit
 
   let update_nb_related t ff =
-    let gdist = ff.E.gdist in
-    let hdist = ff.E.hdist in
+    let gdist = ff.gdist in
+    let hdist = ff.hdist in
     match gdist >= 0, hdist >= 0 with
     | true , false -> {t with nb_related_to_goal = t.nb_related_to_goal + 1}
     | false, true  -> {t with nb_related_to_hypo = t.nb_related_to_hypo + 1}
@@ -932,7 +934,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     List.fold_left
       (fun
         ((env, _bcp, tcp, ap_delta, lits) as acc)
-        ({ E.ff = f; _ } as ff, dep) ->
+        ({ ff = f; _ } as ff, dep) ->
         Options.exec_thread_yield ();
         let dep = add_dep f dep in
         let dep_gamma = add_dep_of_formula f dep in
@@ -956,7 +958,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         end
         else
           let env =
-            if ff.E.mf && Options.get_greedy () then
+            if ff.mf && Options.get_greedy () then
               { env with inst=
                            Inst.add_terms
                              env.inst (E.max_ground_terms_rec_of_form f) ff }
@@ -971,48 +973,48 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           in
           let env = update_nb_related env ff in
           match E.form_view f with
-          | E.Iff (f1, f2) ->
+          | Iff (f1, f2) ->
             let id = E.id f in
             let g = E.elim_iff f1 f2 id ~with_conj:true in
             if Options.get_tableaux_cdcl () then begin
               let f_imp_g = E.mk_imp f g id in
               (* correct to put <-> ?*)
-              cdcl_assume false env [{ff with E.ff=f_imp_g}, Ex.empty]
+              cdcl_assume false env [{ff with ff=f_imp_g}, Ex.empty]
             end;
-            asm_aux (env, true, tcp, ap_delta, lits) [{ff with E.ff = g}, dep]
+            asm_aux (env, true, tcp, ap_delta, lits) [{ff with ff = g}, dep]
 
-          | E.Xor (f1, f2) ->
+          | Xor (f1, f2) ->
             let id = E.id f in
             let g = E.elim_iff f1 f2 id ~with_conj:false |> E.neg in
             if Options.get_tableaux_cdcl () then begin
               let f_imp_g = E.mk_imp f g id in
               (* should do something similar for Let ? *)
-              cdcl_assume false env [{ff with E.ff=f_imp_g}, Ex.empty]
+              cdcl_assume false env [{ff with ff=f_imp_g}, Ex.empty]
             end;
-            asm_aux (env, true, tcp, ap_delta, lits) [{ff with E.ff = g}, dep]
+            asm_aux (env, true, tcp, ap_delta, lits) [{ff with ff = g}, dep]
 
-          | E.Unit (f1, f2) ->
+          | Unit (f1, f2) ->
             Options.tool_req 2 "TR-Sat-Assume-U";
-            let lst = [{ff with E.ff=f1},dep ; {ff with E.ff=f2},dep] in
+            let lst = [{ff with ff=f1},dep ; {ff with ff=f2},dep] in
             asm_aux (env, true, tcp, ap_delta, lits) lst
 
-          | E.Clause(f1,f2,is_impl) ->
+          | Clause(f1,f2,is_impl) ->
             Options.tool_req 2 "TR-Sat-Assume-C";
-            let p1 = {ff with E.ff=f1} in
-            let p2 = {ff with E.ff=f2} in
+            let p1 = {ff with ff=f1} in
+            let p2 = {ff with ff=f2} in
             let p1, p2 =
               if is_impl || E.size f1 <= E.size f2 then p1, p2 else p2, p1
             in
             env, true, tcp, (p1,p2,dep,is_impl)::ap_delta, lits
 
-          | E.Lemma _ ->
+          | Lemma _ ->
             Options.tool_req 2 "TR-Sat-Assume-Ax";
             let inst_env = Inst.add_lemma env.inst ff dep in
             if Options.get_tableaux_cdcl () then
               cdcl_assume false env [ff,dep];
             {env with inst = inst_env}, true, tcp, ap_delta, lits
 
-          | E.Literal a ->
+          | Literal a ->
             let lits = (a, ff, dep, env.dlevel, env.plevel)::lits in
             let acc = env, true, true, ap_delta, lits in
             begin
@@ -1025,31 +1027,31 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                 assert (ME.mem guard env.gamma);
                 if Options.get_tableaux_cdcl () then
                   cdcl_assume false env
-                    [{ff with E.ff = E.mk_imp f af (E.id f)}, adep];
-                asm_aux acc [{ff with E.ff = af}, Ex.union dep adep]
+                    [{ff with ff = E.mk_imp f af (E.id f)}, adep];
+                asm_aux acc [{ff with ff = af}, Ex.union dep adep]
               | None -> acc
             end
 
-          | E.Skolem quantif ->
+          | Skolem quantif ->
             Options.tool_req 2 "TR-Sat-Assume-Sko";
             let f' = E.skolemize quantif  in
             if Options.get_tableaux_cdcl () then begin
               let f_imp_f' = E.mk_imp f f' (E.id f) in
               (* correct to put <-> ?*)
               (* should do something similar for Let ? *)
-              cdcl_assume false env [{ff with E.ff=f_imp_f'}, Ex.empty]
+              cdcl_assume false env [{ff with ff=f_imp_f'}, Ex.empty]
             end;
-            asm_aux (env, true, tcp, ap_delta, lits) [{ff with E.ff=f'},dep]
+            asm_aux (env, true, tcp, ap_delta, lits) [{ff with ff=f'},dep]
 
-          | E.Let letin ->
+          | Let letin ->
             Options.tool_req 2 "TR-Sat-Assume-Let";
             let elim_let = E.elim_let ~recursive:true letin in
-            let ff = {ff with E.ff = elim_let} in
+            let ff = {ff with ff = elim_let} in
             if Options.get_tableaux_cdcl () then begin
               let f_imp_f' = E.mk_imp f elim_let (E.id f) in
               (* correct to put <-> ?*)
               (* should do something similar for Let ? *)
-              cdcl_assume false env [{ff with E.ff=f_imp_f'}, Ex.empty]
+              cdcl_assume false env [{ff with ff=f_imp_f'}, Ex.empty]
             end;
             asm_aux (env, true, tcp, ap_delta, lits) [ff, dep]
 
@@ -1231,21 +1233,21 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            try
              (*if no_sat_learning() then raise Not_found;*)
              let _, ex = ME.find f !(env.unit_facts_cache) in
-             Ex.union dep ex, ({gf with E.ff=f}, ex) :: acc
+             Ex.union dep ex, ({gf with ff=f}, ex) :: acc
            with Not_found ->
            match E.form_view f with
-           | E.Literal a ->
+           | Literal a ->
              begin
-               match query_of tcp_cache tmp_cache {gf with E.ff=f} a env with
+               match query_of tcp_cache tmp_cache {gf with ff=f} a env with
                | Some (ex, _) ->
-                 Ex.union dep ex, ({gf with E.ff=f}, ex) :: acc
+                 Ex.union dep ex, ({gf with ff=f}, ex) :: acc
                | None ->
                  Printer.print_err
                    "Bad inst! Hyp %a is not true!" E.print f;
                  assert false
              end
-           | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
-           | E.Let _ | E.Iff _ | E.Xor _ ->
+           | Unit _ | Clause _ | Lemma _ | Skolem _
+           | Let _ | Iff _ | Xor _ ->
              Printer.print_err "Currently, arbitrary formulas in Hyps \
                                 are not Th-reduced";
              assert false
@@ -1256,14 +1258,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let does_not_contain_a_disjunction =
     let rec aux f =
       match E.form_view f with
-      | E.Literal _ -> true
-      | E.Unit(f1, f2) -> aux f1 && aux f2
-      | E.Clause _ | E.Iff _ | E.Xor _ -> false
-      | E.Lemma _ | E.Skolem _ | E.Let _ ->
+      | Literal _ -> true
+      | Unit(f1, f2) -> aux f1 && aux f2
+      | Clause _ | Iff _ | Xor _ -> false
+      | Lemma _ | Skolem _ | Let _ ->
         (*failwith "Not in current theory axioms"*)
         false
     in
-    fun (gf, _) -> aux gf.E.ff
+    fun (gf, _) -> aux gf.ff
 
 
   let mk_theories_instances ~do_syntactic_matching ~rm_clauses env inst =
@@ -1401,8 +1403,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let prop, delt =
         List.fold_left
           (fun (prop, new_delta) ((gf1, gf2, d, _) as e) ->
-             let { E.ff = f1; _ } = gf1 in
-             let { E.ff = f2; _ } = gf2 in
+             let { ff = f1; _ } = gf1 in
+             let { ff = f2; _ } = gf2 in
              let nf1 = E.neg f1 in
              let nf2 = E.neg f2 in
              match in_cache nf1, in_cache nf2 with
@@ -1414,17 +1416,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              | Some d1, _ ->
                (* a is false, so b should be true *)
                if Options.get_profiling() then Profiling.red true;
-               let not_gf1 = {gf1 with E.ff = nf1} in
+               let not_gf1 = {gf1 with ff = nf1} in
                let gf2 =
-                 {gf2 with E.nb_reductions = gf2.E.nb_reductions + 1} in
+                 {gf2 with nb_reductions = gf2.nb_reductions + 1} in
                let gf2 = update_distances env gf2 f1 in
                (gf2, Ex.union d d1) :: (not_gf1, d1) :: prop, new_delta
 
              | _, Some d2 ->
                (* b is false, so a should be true *)
-               let not_gf2 = {gf2 with E.ff = nf2} in
+               let not_gf2 = {gf2 with ff = nf2} in
                let gf1 =
-                 {gf1 with E.nb_reductions = gf1.E.nb_reductions + 1} in
+                 {gf1 with nb_reductions = gf1.nb_reductions + 1} in
                let gf1 = update_distances env gf1 f2 in
                (gf1, Ex.union d d2) :: (not_gf2, d2) :: prop, new_delta
 
@@ -1441,7 +1443,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     try
       if is_decision then
         begin
-          let f = (fst fg).E.ff in
+          let f = (fst fg).ff in
           if Options.get_tableaux_cdcl () then
             try cdcl_decide env f (ME.find f env.decisions)
             with Not_found -> assert false
@@ -1478,12 +1480,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   and make_one_decision env =
     try
-      let ({ E.ff = f; _ } as a,b,d,_is_impl), l =
+      let ({ ff = f; _ } as a,b,d,_is_impl), l =
         Heuristics.choose env.delta !(env.heuristics) !(env.cdcl)
       in
       let new_level = env.dlevel + 1 in
       if Options.get_profiling() then
-        Profiling.decision new_level a.E.origin_name;
+        Profiling.decision new_level a.origin_name;
       (*fprintf fmt "@.BEFORE DECIDING %a@." E.print f;*)
       assert (cdcl_same_decisions env);
       let env_a =
@@ -1513,7 +1515,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           Profiling.reset_dlevel env.dlevel;
           Profiling.reset_ilevel env.ilevel;
         end;
-        let not_a = {a with E.ff = E.neg f} in
+        let not_a = {a with ff = E.neg f} in
         if Options.get_sat_learning () then learn_clause env not_a dep';
         let env = {env with delta=l} in
         (* in the section below, we try to backjump further with latest
@@ -1536,7 +1538,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         if not (Options.get_tableaux_cdcl ()) then
           unsat_rec (assume env [b, Ex.union d dep']) (not_a,dep') false
         else
-          match CDCL.is_true !(env.cdcl) a.E.ff with
+          match CDCL.is_true !(env.cdcl) a.ff with
           | Some (ex, _lvl) -> (* it is a propagation in satML *)
             if Options.get_verbose () then
               Printer.print_dbg
@@ -1631,18 +1633,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let l =
         ME.fold
           (fun _ (ff, ex, _dlvl, plvl) acc ->
-             if ff.E.gdist >= 0 then (ff, ex, plvl) :: acc else acc
+             if ff.gdist >= 0 then (ff, ex, plvl) :: acc else acc
           )modified_env.gamma []
       in
       let l =
         List.fast_sort (fun (ff1, _, plvl1) (ff2, _, plvl2) ->
-            let c = ff2.E.gdist - ff1.E.gdist in
+            let c = ff2.gdist - ff1.gdist in
             if c <> 0 then c else plvl2 - plvl1
           )l
       in
       let l = List.rev_map (fun (ff, ex, _) -> ff, ex) l in
       let print fmt (ff, _ex) =
-        Format.fprintf fmt "%2d : %a@," ff.E.gdist E.print ff.E.ff
+        Format.fprintf fmt "%2d : %a@," ff.gdist E.print ff.ff
       in
       if Options.(get_verbose () || get_debug_sat ()) then
         Printer.print_dbg
@@ -1743,7 +1745,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env =
         {env with inst = (* add all the terms of the goal to matching env *)
                     Inst.add_terms env.inst
-                      (E.max_ground_terms_rec_of_form gf.E.ff) gf}
+                      (E.max_ground_terms_rec_of_form gf.ff) gf}
       in
       (* this includes axioms and ground preds but not general predicates *)
       let max_t = max_term_depth_in_sat env in
@@ -1800,7 +1802,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let add_guard env gf =
     let current_guard = env.guards.current_guard in
-    {gf with E.ff = E.mk_imp current_guard gf.E.ff 1}
+    {gf with ff = E.mk_imp current_guard gf.ff 1}
 
   let assume env fg dep =
     try

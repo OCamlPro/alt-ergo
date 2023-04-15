@@ -26,106 +26,14 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module Sy = Symbols
-module SMap = Sy.Map
-module SSet = Sy.Set
-
-(** Data structures *)
-
-type binders = (Ty.t * int) SMap.t (*int tag in globally unique *)
-
-type t = term_view
-
-and term_view = {
-  f: Sy.t;
-  xs: t list;
-  ty: Ty.t;
-  bind : bind_kind;
-  tag: int;
-  vars : (Ty.t * int) SMap.t; (* vars to types and nb of occurences *)
-  vty : Ty.Svty.t;
-  depth: int;
-  nb_nodes : int;
-  pure : bool;
-  mutable neg : t option
-}
-
-and decl_kind =
-  | Dtheory
-  | Daxiom
-  | Dgoal
-  | Dpredicate of t
-  | Dfunction of t
-
-and bind_kind =
-  | B_none
-  | B_lemma of quantified
-  | B_skolem of quantified
-  | B_let of letin
-
-and quantified = {
-  name : string;
-  main : t;
-  toplevel : bool;
-  user_trs : trigger list;
-  binders : binders;
-  (* These fields should be (ordered) lists ! important for skolemization *)
-  sko_v : t list;
-  sko_vty : Ty.t list;
-  loc : Loc.t; (* location of the "GLOBAL" axiom containing this quantified
-                  formula. It forms with name a unique id *)
-  kind : decl_kind;
-}
-
-and letin = {
-  let_v: Sy.t;
-  let_e : t;
-  in_e : t;
-  let_sko : t; (* fresh symb. with free vars *)
-  is_bool : bool;
-}
-
-and semantic_trigger =
-  | Interval of t * Sy.bound * Sy.bound
-  | MapsTo of Var.t * t
-  | NotTheoryConst of t
-  | IsTheoryConst of t
-  | LinearDependency of t * t
-
-and trigger = {
-  content : t list;
-  (* this field is filled (with a part of 'content' field) by theories
-     when assume_th_elt is called *)
-  semantic : semantic_trigger list;
-  hyp : t list;
-  t_depth : int;
-  from_user : bool;
-  guard : t option
-}
-
-type expr = t
-
-type subst = expr SMap.t * Ty.subst
-
-type lit_view =
-  | Eq of t * t
-  | Eql of t list
-  | Distinct of t list
-  | Builtin of bool * Sy.builtin * t list
-  | Pred of t * bool
-
-type form_view =
-  | Unit of t*t  (* unit clauses *)
-  | Clause of t*t*bool      (* a clause (t1 or t2) bool <-> is implication *)
-  | Iff of t * t
-  | Xor of t * t
-  | Literal of t   (* an atom *)
-  | Lemma of quantified   (* a lemma *)
-  | Skolem of quantified  (* lazy skolemization *)
-  | Let of letin (* a binding of an expr *)
-
+open Types
 
 (** Comparison and hashing functions *)
+
+module Sy = Symbols
+module SMap = Types.SYMBOL.Map
+
+type t = Types.expr
 
 (* We keep true and false as repr * ordering is influenced by
    depth. Constants are smaller. Otherwise, we compare tag1 - tag2 so
@@ -201,7 +109,7 @@ let compare_triggers _f1 _f2 trs1 trs2 =
                       let c = Sy.compare_bounds b1 c1 in
                       if c <> 0 then c else Sy.compare_bounds b2 c2
 
-                  | MapsTo (h1, t1), MapsTo (h2, t2) ->
+                  | SemMapsTo (h1, t1), SemMapsTo (h2, t2) ->
                     let c = compare t1 t2 in
                     if c <> 0 then c else Var.compare h1 h2
 
@@ -212,7 +120,7 @@ let compare_triggers _f1 _f2 trs1 trs2 =
                     let c = compare s1 s2 in
                     if c <> 0 then c else compare t1 t2
 
-                  | _, (Interval _ | MapsTo _ | NotTheoryConst _
+                  | _, (Interval _ | SemMapsTo _ | NotTheoryConst _
                        | IsTheoryConst _ | LinearDependency _) ->
                     assert false
                 )
@@ -331,19 +239,19 @@ module SmtPrinter = struct
   let rec print_formula fmt form xs bind =
     let open Format in
     match form, xs, bind with
-    | Sy.F_Unit _, [f1; f2], _ ->
+    | Types.F_Unit _, [f1; f2], _ ->
       Format.fprintf fmt "@[(and %a %a)@]" print_silent f1 print_silent f2
 
-    | Sy.F_Iff, [f1; f2], _ ->
+    | Types.F_Iff, [f1; f2], _ ->
       fprintf fmt "@[(= %a %a)@]" print_silent f1 print_silent f2
 
-    | Sy.F_Xor, [f1; f2], _ ->
+    | Types.F_Xor, [f1; f2], _ ->
       fprintf fmt "@[(not (= %a %a))@]" print_silent f1 print_silent f2
 
-    | Sy.F_Clause _, [f1; f2], _ ->
+    | Types.F_Clause _, [f1; f2], _ ->
       fprintf fmt "@[(or %a %a)@]" print_silent f1 print_silent f2
 
-    | Sy.F_Lemma, [], B_lemma { user_trs ; main ; name ; binders; _ } ->
+    | Types.F_Lemma, [], B_lemma { user_trs ; main ; name ; binders; _ } ->
       if Options.get_verbose () then
         fprintf fmt "(lemma: %s forall %a[%a].@  %a)"
           name
@@ -353,7 +261,7 @@ module SmtPrinter = struct
       else
         fprintf fmt "(lem %s)" name
 
-    | Sy.F_Skolem, [], B_skolem { main; binders; _ } ->
+    | Types.F_Skolem, [], B_skolem { main; binders; _ } ->
       fprintf fmt "(<sko exists %a.> %a)"
         print_binders binders print_silent main
 
@@ -362,41 +270,41 @@ module SmtPrinter = struct
   and print_lit fmt lit xs =
     let open Format in
     match lit, xs with
-    | Sy.L_eq, a::l ->
+    | Types.L_eq, a::l ->
       fprintf fmt "(= %a%a)"
         print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
-    | Sy.L_neg_eq, [a; b] ->
+    | Types.L_neg_eq, [a; b] ->
       fprintf fmt "(not (= %a %a))" print a print b
 
-    | Sy.L_neg_eq, a::l ->
+    | Types.L_neg_eq, a::l ->
       fprintf fmt "(distinct %a%a)"
         print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
 
-    | Sy.L_built Sy.LE, [a;b] ->
+    | Types.L_built Types.LE, [a;b] ->
       fprintf fmt "(<= %a %a)" print a print b
 
-    | Sy.L_built Sy.LT, [a;b] ->
+    | Types.L_built Types.LT, [a;b] ->
       fprintf fmt "(< %a %a)" print a print b
 
-    | Sy.L_neg_built Sy.LE, [a; b] ->
+    | Types.L_neg_built Types.LE, [a; b] ->
       fprintf fmt "(> %a %a)" print a print b
 
-    | Sy.L_neg_built Sy.LT, [a; b] ->
+    | Types.L_neg_built Types.LT, [a; b] ->
       fprintf fmt "(>= %a %a)" print a print b
 
-    | Sy.L_neg_pred, [a] ->
+    | Types.L_neg_pred, [a] ->
       fprintf fmt "(not %a)" print a
 
-    | Sy.L_built (Sy.IsConstr hs), [e] ->
+    | Types.L_built (Types.IsConstr hs), [e] ->
       fprintf fmt "((_ is %a) %a)" Hstring.print hs print e
 
-    | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
+    | Types.L_neg_built (Types.IsConstr hs), [e] ->
       fprintf fmt "(not ((_ is %a) %a))" Hstring.print hs print e
 
-    | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
-      | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
-      | Sy.L_built (Sy.IsConstr _)
-      | Sy.L_neg_built (Sy.IsConstr _)) , _ ->
+    | (Types.L_built (Types.LT | Types.LE) | Types.L_neg_built (Types.LT | Types.LE)
+      | Types.L_neg_pred | Types.L_eq | Types.L_neg_eq
+      | Types.L_built (Types.IsConstr _)
+      | Types.L_neg_built (Types.IsConstr _)) , _ ->
       assert false
 
   and print_silent fmt t =
@@ -404,9 +312,9 @@ module SmtPrinter = struct
     let { f ; xs ; ty; bind; _ } = t in
     match f, xs with
     (* Formulas *)
-    | Sy.Form form, xs -> print_formula fmt form xs bind
+    | Types.Form form, xs -> print_formula fmt form xs bind
 
-    | Sy.Let, [] ->
+    | Types.Let, [] ->
       let x = match bind with B_let x -> x | _ -> assert false in
       fprintf fmt
         "(let%a %a =@ %a in@ %a)"
@@ -416,15 +324,15 @@ module SmtPrinter = struct
         Sy.print x.let_v print x.let_e print_silent x.in_e
 
     (* Literals *)
-    | Sy.Lit lit, xs -> print_lit fmt lit xs
+    | Types.Lit lit, xs -> print_lit fmt lit xs
 
-    | Sy.Op Sy.Get, [e1; e2] ->
+    | Types.Op Types.Get, [e1; e2] ->
       if Options.get_output_smtlib () then
         fprintf fmt "(select %a %a)" print e1 print e2
       else
         fprintf fmt "%a[%a]" print e1 print e2
 
-    | Sy.Op Sy.Set, [e1; e2; e3] ->
+    | Types.Op Types.Set, [e1; e2; e3] ->
       if Options.get_output_smtlib () then
         fprintf fmt "(store %a %a %a)"
           print e1
@@ -433,19 +341,19 @@ module SmtPrinter = struct
       else
         fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3
 
-    | Sy.Op Sy.Concat, [e1; e2] ->
+    | Types.Op Types.Concat, [e1; e2] ->
       fprintf fmt "%a@@%a" print e1 print e2
 
-    | Sy.Op Sy.Extract, [e1; e2; e3] ->
+    | Types.Op Types.Extract, [e1; e2; e3] ->
       fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
 
-    | Sy.Op (Sy.Access field), [e] ->
+    | Types.Op (Types.Access field), [e] ->
       if Options.get_output_smtlib () then
         fprintf fmt "(%s %a)" (Hstring.view field) print e
       else
         fprintf fmt "%a.%s" print e (Hstring.view field)
 
-    | Sy.Op (Sy.Record), _ ->
+    | Types.Op (Types.Record), _ ->
       begin match ty with
         | Ty.Trecord { Ty.lbs = lbs; _ } ->
           assert (List.length xs = List.length lbs);
@@ -460,25 +368,25 @@ module SmtPrinter = struct
       end
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||
-                              op == Sy.Max_real || op == Sy.Max_int ||
-                              op == Sy.Min_real || op == Sy.Min_int ->
+    | Types.Op op, [e1; e2] when op == Types.Pow || op == Types.Integer_round ||
+                              op == Types.Max_real || op == Types.Max_int ||
+                              op == Types.Min_real || op == Types.Min_int ->
       fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
+    | Types.Op (Types.Constr hs), ((_::_) as l) ->
       fprintf fmt
         "%a(%a)" Hstring.print hs (Util.print_list ~sep:"," ~pp:print) l
 
-    | Sy.Op _, [e1; e2] ->
+    | Types.Op _, [e1; e2] ->
       fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
 
-    | Sy.Op Sy.Destruct (hs, grded), [e] ->
+    | Types.Op Types.Destruct (hs, grded), [e] ->
       fprintf fmt "%a#%s%a"
         print e (if grded then "" else "!") Hstring.print hs
 
 
-    | Sy.In(lb, rb), [t] ->
+    | Types.In(lb, rb), [t] ->
       fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
 
     | _, [] ->
@@ -508,19 +416,19 @@ module AEPrinter = struct
   let rec print_formula fmt form xs bind =
     let open Format in
     match form, xs, bind with
-    | Sy.F_Unit _, [f1; f2], _ ->
+    | Types.F_Unit _, [f1; f2], _ ->
       fprintf fmt "@[(%a /\\@ %a)@]" print_silent f1 print_silent f2
 
-    | Sy.F_Iff, [f1; f2], _ ->
+    | Types.F_Iff, [f1; f2], _ ->
       fprintf fmt "@[(%a <->@ %a)@]" print_silent f1 print_silent f2
 
-    | Sy.F_Xor, [f1; f2], _ ->
+    | Types.F_Xor, [f1; f2], _ ->
       fprintf fmt "@[(%a xor@ %a)@]" print_silent f1 print_silent f2
 
-    | Sy.F_Clause _, [f1; f2], _ ->
+    | Types.F_Clause _, [f1; f2], _ ->
       fprintf fmt "@[(%a \\/@ %a)@]" print_silent f1 print_silent f2
 
-    | Sy.F_Lemma, [], B_lemma { user_trs ; main ; name ; binders; _ } ->
+    | Types.F_Lemma, [], B_lemma { user_trs ; main ; name ; binders; _ } ->
       if Options.get_verbose () then
         fprintf fmt "(lemma: %s forall %a[%a].@  %a)"
           name
@@ -530,7 +438,7 @@ module AEPrinter = struct
       else
         fprintf fmt "(lem %s)" name
 
-    | Sy.F_Skolem, [], B_skolem { main; binders; _ } ->
+    | Types.F_Skolem, [], B_skolem { main; binders; _ } ->
       fprintf fmt "(<sko exists %a.> %a)"
         print_binders binders print_silent main
 
@@ -539,42 +447,42 @@ module AEPrinter = struct
   and print_lit fmt lit xs =
     let open Format in
     match lit, xs with
-    | Sy.L_eq, a::l ->
+    | Types.L_eq, a::l ->
       fprintf fmt "(%a%a)"
         print a (fun fmt -> List.iter (fprintf fmt " = %a" print)) l
 
-    | Sy.L_neg_eq, [a; b] ->
+    | Types.L_neg_eq, [a; b] ->
       fprintf fmt "(%a <> %a)" print a print b
 
-    | Sy.L_neg_eq, a::l ->
+    | Types.L_neg_eq, a::l ->
       fprintf fmt "distinct(%a%a)"
         print a (fun fmt -> List.iter (fprintf fmt ", %a" print)) l
 
-    | Sy.L_built Sy.LE, [a;b] ->
+    | Types.L_built Types.LE, [a;b] ->
       fprintf fmt "(%a <= %a)" print a print b
 
-    | Sy.L_built Sy.LT, [a;b] ->
+    | Types.L_built Types.LT, [a;b] ->
       fprintf fmt "(%a < %a)" print a print b
 
-    | Sy.L_neg_built Sy.LE, [a; b] ->
+    | Types.L_neg_built Types.LE, [a; b] ->
       fprintf fmt "(%a > %a)" print a print b
 
-    | Sy.L_neg_built Sy.LT, [a; b] ->
+    | Types.L_neg_built Types.LT, [a; b] ->
       fprintf fmt "(%a >= %a)" print a print b
 
-    | Sy.L_neg_pred, [a] ->
+    | Types.L_neg_pred, [a] ->
       fprintf fmt "(not %a)" print a
 
-    | Sy.L_built (Sy.IsConstr hs), [e] ->
+    | Types.L_built (Types.IsConstr hs), [e] ->
       fprintf fmt "(%a ? %a)" print e Hstring.print hs
 
-    | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
+    | Types.L_neg_built (Types.IsConstr hs), [e] ->
       fprintf fmt "not (%a ? %a)" print e Hstring.print hs
 
-    | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
-      | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
-      | Sy.L_built (Sy.IsConstr _)
-      | Sy.L_neg_built (Sy.IsConstr _)) , _ ->
+    | (Types.L_built (Types.LT | Types.LE) | Types.L_neg_built (Types.LT | Types.LE)
+      | Types.L_neg_pred | Types.L_eq | Types.L_neg_eq
+      | Types.L_built (Types.IsConstr _)
+      | Types.L_neg_built (Types.IsConstr _)) , _ ->
       assert false
 
   and print_silent fmt t =
@@ -582,9 +490,9 @@ module AEPrinter = struct
     let { f ; xs ; ty; bind; _ } = t in
     match f, xs with
     (* Formulas *)
-    | Sy.Form form, xs -> print_formula fmt form xs bind
+    | Types.Form form, xs -> print_formula fmt form xs bind
 
-    | Sy.Let, [] ->
+    | Types.Let, [] ->
       let x = match bind with B_let x -> x | _ -> assert false in
       fprintf fmt
         "(let%a %a =@ %a in@ %a)"
@@ -594,15 +502,15 @@ module AEPrinter = struct
         Sy.print x.let_v print x.let_e print_silent x.in_e
 
     (* Literals *)
-    | Sy.Lit lit, xs -> print_lit fmt lit xs
+    | Types.Lit lit, xs -> print_lit fmt lit xs
 
-    | Sy.Op Sy.Get, [e1; e2] ->
+    | Types.Op Types.Get, [e1; e2] ->
       if Options.get_output_smtlib () then
         fprintf fmt "(select %a %a)" print e1 print e2
       else
         fprintf fmt "%a[%a]" print e1 print e2
 
-    | Sy.Op Sy.Set, [e1; e2; e3] ->
+    | Types.Op Types.Set, [e1; e2; e3] ->
       if Options.get_output_smtlib () then
         fprintf fmt "(store %a %a %a)"
           print e1
@@ -611,19 +519,19 @@ module AEPrinter = struct
       else
         fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3
 
-    | Sy.Op Sy.Concat, [e1; e2] ->
+    | Types.Op Types.Concat, [e1; e2] ->
       fprintf fmt "%a@@%a" print e1 print e2
 
-    | Sy.Op Sy.Extract, [e1; e2; e3] ->
+    | Types.Op Types.Extract, [e1; e2; e3] ->
       fprintf fmt "%a^{%a,%a}" print e1 print e2 print e3
 
-    | Sy.Op (Sy.Access field), [e] ->
+    | Types.Op (Types.Access field), [e] ->
       if Options.get_output_smtlib () then
         fprintf fmt "(%s %a)" (Hstring.view field) print e
       else
         fprintf fmt "%a.%s" print e (Hstring.view field)
 
-    | Sy.Op (Sy.Record), _ ->
+    | Types.Op (Types.Record), _ ->
       begin match ty with
         | Ty.Trecord { Ty.lbs = lbs; _ } ->
           assert (List.length xs = List.length lbs);
@@ -638,28 +546,28 @@ module AEPrinter = struct
       end
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||
-                              op == Sy.Max_real || op == Sy.Max_int ||
-                              op == Sy.Min_real || op == Sy.Min_int ->
+    | Types.Op op, [e1; e2] when op == Types.Pow || op == Types.Integer_round ||
+                              op == Types.Max_real || op == Types.Max_int ||
+                              op == Types.Min_real || op == Types.Min_int ->
       fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
+    | Types.Op (Types.Constr hs), ((_::_) as l) ->
       fprintf fmt "%a(%a)"
         Hstring.print hs (Util.print_list ~sep:"," ~pp:print) l
 
-    | Sy.Op _, [e1; e2] ->
+    | Types.Op _, [e1; e2] ->
       if Options.get_output_smtlib () then
         fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
       else
         fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
 
-    | Sy.Op Sy.Destruct (hs, grded), [e] ->
+    | Types.Op Types.Destruct (hs, grded), [e] ->
       fprintf fmt "%a#%s%a"
         print e (if grded then "" else "!") Hstring.print hs
 
 
-    | Sy.In(lb, rb), [t] ->
+    | Types.In(lb, rb), [t] ->
       fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
 
 
@@ -706,18 +614,18 @@ let lit_view t =
       print t
   else
     match f with
-    | Sy.Form _  ->
+    | Types.Form _  ->
       Util.failwith "Calling lit_view on a formula %a" print t
-    | Sy.Lit lit ->
+    | Types.Lit lit ->
       begin match lit, xs with
-        | (Sy.L_eq | Sy.L_neg_eq), ([] | [_]) -> assert false
-        | Sy.L_eq, [a;b] -> Eq (a, b)
-        | Sy.L_eq, l     -> Eql l
-        | Sy.L_neg_eq, l -> Distinct l
-        | Sy.L_built x, l -> Builtin(true, x, l)
-        | Sy.L_neg_built x, l -> Builtin(false, x, l)
-        | Sy.L_neg_pred, [a] -> Pred(a, true)
-        | Sy.L_neg_pred, _ -> assert false
+        | (Types.L_eq | Types.L_neg_eq), ([] | [_]) -> assert false
+        | Types.L_eq, [a;b] -> Eq (a, b)
+        | Types.L_eq, l     -> Eql l
+        | Types.L_neg_eq, l -> Distinct l
+        | Types.L_built x, l -> Builtin(true, x, l)
+        | Types.L_neg_built x, l -> Builtin(false, x, l)
+        | Types.L_neg_pred, [a] -> Pred(a, true)
+        | Types.L_neg_pred, _ -> assert false
       end
     | _ -> Pred(t, false)
 
@@ -727,16 +635,16 @@ let form_view t =
     Util.failwith "Term %a is not a formula" print t
   else
     match f, xs, bind with
-    | Sy.Form (Sy.F_Unit _), [a;b], _ -> Unit (a, b)
-    | Sy.Form (Sy.F_Clause i), [a;b], _ -> Clause (a, b, i)
-    | Sy.Form Sy.F_Iff, [a;b], _ -> Iff(a, b)
-    | Sy.Form Sy.F_Xor, [a;b], _ -> Xor(a, b)
-    | Sy.Form Sy.F_Lemma, [], B_lemma lem -> Lemma lem
-    | Sy.Form Sy.F_Skolem, [], B_skolem sko -> Skolem sko
-    | Sy.Lit (Sy.L_eq | Sy.L_neg_eq | Sy.L_neg_pred |
-              Sy.L_built _ | Sy.L_neg_built _), _, _ ->
+    | Types.Form (Types.F_Unit _), [a;b], _ -> Unit (a, b)
+    | Types.Form (Types.F_Clause i), [a;b], _ -> Clause (a, b, i)
+    | Types.Form Types.F_Iff, [a;b], _ -> Iff(a, b)
+    | Types.Form Types.F_Xor, [a;b], _ -> Xor(a, b)
+    | Types.Form Types.F_Lemma, [], B_lemma lem -> Lemma lem
+    | Types.Form Types.F_Skolem, [], B_skolem sko -> Skolem sko
+    | Types.Lit (Types.L_eq | Types.L_neg_eq | Types.L_neg_pred |
+              Types.L_built _ | Types.L_neg_built _), _, _ ->
       Literal t
-    | Sy.Let, [], B_let ({ is_bool = true; _ } as x) -> Let x
+    | Types.Let, [], B_let ({ is_bool = true; _ } as x) -> Let x
 
     | _ -> Literal t
 
@@ -749,7 +657,7 @@ let [@inline always] symbol_info t = t.f
 
 (* unused
    let is_term e = match e.f with
-   | Sy.Form _ | Sy.Lit _  -> false
+   | Types.Form _ | Types.Lit _  -> false
    | _ -> true (* bool vars are terms *)
 *)
 
@@ -760,7 +668,7 @@ let mk_binders, reset_binders_cpt =
       (fun t sym ->
          incr cpt;
          match t with
-         | { f = (Sy.Var _) as v; ty; _ } -> SMap.add v (ty, !cpt) sym
+         | { f = (Types.Var _) as v; ty; _ } -> SMap.add v (ty, !cpt) sym
          | _ -> assert false
       )st SMap.empty
   in
@@ -798,9 +706,9 @@ let depth t = t.depth
 let rec is_positive e =
   let { f; bind; _ } = e in
   match f, bind with
-  | Sy.Lit (Sy.L_neg_pred | Sy.L_neg_eq | Sy.L_neg_built _), _ -> false
-  | Sy.Form (Sy.F_Clause _ | Sy.F_Skolem | Sy.F_Xor), _ -> false
-  | Sy.Let, B_let { in_e; is_bool = true; _ } -> is_positive in_e
+  | Types.Lit (Types.L_neg_pred | Types.L_neg_eq | Types.L_neg_built _), _ -> false
+  | Types.Form (Types.F_Clause _ | Types.F_Skolem | Types.F_Xor), _ -> false
+  | Types.Let, B_let { in_e; is_bool = true; _ } -> is_positive in_e
   | _ -> true
 
 let neg t =
@@ -813,13 +721,13 @@ let is_real t = t.ty == Ty.Treal
 
 let is_fresh t =
   match t with
-  | { f = Sy.Name (hs,_); xs = []; _ } ->
+  | { f = Types.Name (hs,_); xs = []; _ } ->
     Hstring.is_fresh_string (Hstring.view hs)
   | _ -> false
 
 let is_fresh_skolem t =
   match t with
-  | { f = Sy.Name (hs,_); _ } -> Hstring.is_fresh_skolem (Hstring.view hs)
+  | { f = Types.Name (hs,_); _ } -> Hstring.is_fresh_skolem (Hstring.view hs)
   | _ -> false
 
 let name_of_lemma f =
@@ -841,8 +749,8 @@ let add_label =
   let add_aux lbl t = Labels.replace labels t lbl in
   fun lbl e ->
     match e with
-    | { f = Sy.Form _; _ } -> ()
-    | { f = Sy.Lit _; _ } | { ty = Ty.Tbool; _ } ->
+    | { f = Types.Form _; _ } -> ()
+    | { f = Types.Lit _; _ } | { ty = Ty.Tbool; _ } ->
       add_aux lbl e;
       add_aux lbl (neg e)
     | _ ->
@@ -867,9 +775,9 @@ let print_tagged_classes =
 
 let free_vars_non_form s l ty =
   match s, l with
-  | Sy.Var _, [] -> SMap.singleton s (ty, 1)
-  | Sy.Var _, _ -> assert false
-  | Sy.Form _, _ -> assert false (* not correct for quantified and Lets *)
+  | Types.Var _, [] -> SMap.singleton s (ty, 1)
+  | Types.Var _, _ -> assert false
+  | Types.Form _, _ -> assert false (* not correct for quantified and Lets *)
   | _, [] -> SMap.empty
   | _, e::r -> List.fold_left (fun s t -> merge_vars s t.vars) e.vars r
 
@@ -877,11 +785,11 @@ let free_type_vars_non_form l ty =
   List.fold_left (fun acc t -> Ty.Svty.union acc t.vty) (Ty.vty_of ty) l
 
 let is_ite s = match s with
-  | Sy.Op Sy.Tite -> true
+  | Types.Op Types.Tite -> true
   | _ -> false
 
 let mk_term s l ty =
-  assert (match s with Sy.Lit _ | Sy.Form _ -> false | _ -> true);
+  assert (match s with Types.Lit _ | Types.Form _ -> false | _ -> true);
   let d = match l with
     | [] ->
       1 (*no args ? depth = 1 (ie. current app s, ie constant)*)
@@ -900,7 +808,7 @@ let mk_term s l ty =
   if ty != Ty.Tbool then pos
   else if pos.neg != None then pos
   else
-    let neg_s = Sy.Lit Sy.L_neg_pred in
+    let neg_s = Types.Lit Types.L_neg_pred in
     let neg =
       HC.make {f=neg_s; xs=[pos]; ty=ty; depth=d; tag= -42;
                vars; vty; nb_nodes; neg = None; bind = B_none; pure = false}
@@ -917,13 +825,13 @@ let vrai =
     let vty = Ty.Svty.empty in
     let faux =
       HC.make
-        {f = Sy.False; xs = []; ty = Ty.Tbool; depth = -2; (*smallest depth*)
+        {f = Types.False; xs = []; ty = Ty.Tbool; depth = -2; (*smallest depth*)
          tag = -42; vars; vty; nb_nodes; neg = None; bind = B_none;
          pure = true}
     in
     let vrai =
       HC.make
-        {f = Sy.True;  xs = []; ty = Ty.Tbool; depth = -1; (*2nd smallest d*)
+        {f = Types.True;  xs = []; ty = Ty.Tbool; depth = -1; (*2nd smallest d*)
          tag= -42; vars; vty; nb_nodes; neg = None; bind = B_none;
          pure = true}
     in
@@ -936,7 +844,7 @@ let vrai =
   res
 
 let faux = neg (vrai)
-let void = mk_term (Sy.Void) [] Ty.Tunit
+let void = mk_term (Types.Void) [] Ty.Tunit
 
 let fresh_name ty = mk_term (Sy.name (Hstring.fresh_string())) [] ty
 
@@ -949,7 +857,7 @@ let int i =
   | '-' ->
     assert (len >= 2);
     let pi = String.sub i 1 (len - 1) in
-    mk_term (Sy.Op Sy.Minus) [ positive_int "0"; positive_int pi ] Ty.Tint
+    mk_term (Types.Op Types.Minus) [ positive_int "0"; positive_int pi ] Ty.Tint
   | _ -> positive_int i
 
 let positive_real i = mk_term (Sy.real i) [] Ty.Treal
@@ -961,12 +869,12 @@ let real r =
   | '-' ->
     assert (len >= 2);
     let pi = String.sub r 1 (len - 1) in
-    mk_term (Sy.Op Sy.Minus) [ positive_real "0"; positive_real pi ] Ty.Treal
+    mk_term (Types.Op Types.Minus) [ positive_real "0"; positive_real pi ] Ty.Treal
   | _ -> positive_real r
 
-let bitv bt ty = mk_term (Sy.Bitv bt) [] ty
+let bitv bt ty = mk_term (Types.Bitv bt) [] ty
 
-let pred t = mk_term (Sy.Op Sy.Minus) [t;int "1"] Ty.Tint
+let pred t = mk_term (Types.Op Types.Minus) [t;int "1"] Ty.Tint
 
 
 (** simple smart constructors for formulas *)
@@ -985,7 +893,7 @@ let mk_or f1 f2 is_impl _id =
     let vars = merge_vars f1.vars f2.vars in
     let vty = Ty.Svty.union f1.vty f2.vty in
     let pos =
-      HC.make {f=Sy.Form (Sy.F_Clause is_impl); xs=[f1; f2]; ty=Ty.Tbool;
+      HC.make {f=Types.Form (Types.F_Clause is_impl); xs=[f1; f2]; ty=Ty.Tbool;
                depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
                bind = B_none; pure = false}
     in
@@ -993,7 +901,7 @@ let mk_or f1 f2 is_impl _id =
     else
       let neg =
         HC.make
-          {f=Sy.Form (Sy.F_Unit is_impl); xs=[neg f1; neg f2]; ty=Ty.Tbool;
+          {f=Types.Form (Types.F_Unit is_impl); xs=[neg f1; neg f2]; ty=Ty.Tbool;
            depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
            bind = B_none; pure = false}
       in
@@ -1015,7 +923,7 @@ let mk_iff f1 f2 _id =
     let vars = merge_vars f1.vars f2.vars in
     let vty = Ty.Svty.union f1.vty f2.vty in
     let pos =
-      HC.make {f=Sy.Form Sy.F_Iff; xs=[f1; f2]; ty=Ty.Tbool;
+      HC.make {f=Types.Form Types.F_Iff; xs=[f1; f2]; ty=Ty.Tbool;
                depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
                bind = B_none; pure = false}
     in
@@ -1023,7 +931,7 @@ let mk_iff f1 f2 _id =
     else
       let neg =
         HC.make
-          {f=Sy.Form Sy.F_Xor; xs=[f1; f2]; ty=Ty.Tbool;
+          {f=Types.Form Types.F_Xor; xs=[f1; f2]; ty=Ty.Tbool;
            depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
            bind = B_none; pure = false}
       in
@@ -1044,17 +952,17 @@ let mk_if cond f2 f3 id =
   mk_or
     (mk_and cond f2 true id) (mk_and (neg cond) f3 true id) false id
 
-let mk_ite cond th el id =
+let mk_ite cond (th:expr) el id =
   let ty = type_info th in
   if ty == Ty.Tbool then mk_if cond th el id
-  else mk_term (Sy.Op Sy.Tite) [cond; th; el] ty
+  else mk_term (Types.Op Types.Tite) [cond; th; el] ty
 
 let [@inline always] const_term e =
   (* we use this function because depth is currently not correct to
      detect constants (not incremented in some situations due to
      some regression) *)
   match e.f with
-  | Sy.Form _ | Sy.Lit _ | Sy.Let  -> false
+  | Types.Form _ | Types.Lit _ | Types.Let  -> false
   | True | False | Void | Name _ | Int _ | Real _ | Bitv _
   | Op _ | Var _ | In _ | MapsTo _ ->
     let res = (e.xs == []) in
@@ -1098,12 +1006,12 @@ let mk_forall_ter =
         in
         let sko = { new_q with main = neg f} in
         let pos =
-          HC.make {f=Sy.Form Sy.F_Lemma; xs=[]; ty=Ty.Tbool;
+          HC.make {f=Types.Form Types.F_Lemma; xs=[]; ty=Ty.Tbool;
                    depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
                    bind = B_lemma new_q; pure = false}
         in
         let neg =
-          HC.make {f=Sy.Form Sy.F_Skolem; xs=[]; ty=Ty.Tbool;
+          HC.make {f=Types.Form Types.F_Skolem; xs=[]; ty=Ty.Tbool;
                    depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
                    bind = B_skolem sko; pure = false}
         in
@@ -1128,7 +1036,7 @@ let no_vtys l =
 
 (* unused
    let is_non_atomic_form e = match e.f with
-   | Sy.Form _ -> true
+   | Types.Form _ -> true
    | _ -> false
 *)
 
@@ -1175,16 +1083,16 @@ let mk_eq ~iff t1 t2 =
         (* translate to iff, eventual simplification made in mk_or *)
         let res = mk_iff t1 t2 0 in
         match res.f with
-        | Sy.Form _ when not iff ->
+        | Types.Form _ when not iff ->
           (* in some situation (eg. theories deductions, mk_iff may
              be disabled due to invariants *)
           (* TODO: be able to build IFF even in theories ? *)
-          mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) [t1; t2]
+          mk_positive_lit (Types.Lit Types.L_eq) (Types.Lit Types.L_neg_eq) [t1; t2]
         | _ ->
           (*iff has been simplified *)
           res
     else
-      mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) [t1; t2]
+      mk_positive_lit (Types.Lit Types.L_eq) (Types.Lit Types.L_neg_eq) [t1; t2]
 
 let mk_nary_eq l =
   try
@@ -1202,7 +1110,7 @@ let mk_nary_eq l =
       if type_info e == Ty.Tbool then
         List.fold_left (fun x y -> mk_iff x y 0) e  r
       else
-        mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) l
+        mk_positive_lit (Types.Lit Types.L_eq) (Types.Lit Types.L_neg_eq) l
   with Exit ->
     vrai
 
@@ -1213,7 +1121,7 @@ let mk_distinct ~iff tl =
 
 let mk_builtin ~is_pos n l =
   let pos =
-    mk_positive_lit (Sy.Lit (Sy.L_built n)) (Sy.Lit (Sy.L_neg_built n)) l
+    mk_positive_lit (Types.Lit (Types.L_built n)) (Types.Lit (Types.L_neg_built n)) l
   in
   if is_pos then pos else neg pos
 
@@ -1242,7 +1150,7 @@ let no_capture_issue s_t binders =
     begin
       Printer.print_wrn
         "captures between@,%aand%a!@,(captured = %a)"
-        (SMap.print print) s_t
+        (Symbols.print_map print) s_t
         print_binders binders
         print_binders capt_bind;
       false
@@ -1263,7 +1171,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
          (or inside a lemma/skolem or let) *)
       assert (xs == [] || not same || not (Ty.equal ty ty'));
       match f, bind with
-      | Sy.Var _, _ ->
+      | Types.Var _, _ ->
         assert (xs == []);
         begin
           try
@@ -1273,7 +1181,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
             mk_term f [] ty'
         end
 
-      | Sy.Form (Sy.F_Lemma | Sy.F_Skolem), (B_lemma q | B_skolem q) ->
+      | Types.Form (Types.F_Lemma | Types.F_Skolem), (B_lemma q | B_skolem q) ->
         assert (xs == []);
         let { main; user_trs = trs; binders; sko_v; sko_vty; _ } = q
         in
@@ -1302,15 +1210,15 @@ let rec apply_subst_aux (s_t, s_ty) t =
                  sko_vty}
         in
         begin match f with
-          | Sy.Form Sy.F_Lemma  ->
+          | Types.Form Types.F_Lemma  ->
             mk_forall_bis q 0
 
-          | Sy.Form Sy.F_Skolem ->
+          | Types.Form Types.F_Skolem ->
             neg @@ mk_forall_bis {q with main = neg main} 0
           | _ -> assert false
         end
 
-      | Sy.Let, B_let {let_v; let_e; in_e ; let_sko; is_bool} ->
+      | Types.Let, B_let {let_v; let_e; in_e ; let_sko; is_bool} ->
         assert (xs == []);
         (* TODO: implement case where variables capture happens *)
         assert (no_capture_issue s_t (SMap.singleton let_v (let_e.ty, 0)));
@@ -1323,44 +1231,44 @@ let rec apply_subst_aux (s_t, s_ty) t =
         assert (let_e != let_e2 || in_e != in_e2);
         mk_let_aux {let_v; let_e=let_e2; in_e=in_e2; let_sko=let_sko2; is_bool}
 
-      | Sy.Lit Sy.L_eq, _ ->
+      | Types.Lit Types.L_eq, _ ->
         begin match xs' with
           | [] | [_] -> assert false
           | [a; b] ->  mk_eq ~iff:true a b
           | _ -> mk_nary_eq xs'
         end
 
-      | Sy.Lit Sy.L_neg_eq, _ ->
+      | Types.Lit Types.L_neg_eq, _ ->
         mk_distinct ~iff:true xs'
 
-      | Sy.Lit Sy.L_neg_pred, _ ->
+      | Types.Lit Types.L_neg_pred, _ ->
         neg (match xs' with [e] -> e | _ -> assert false)
 
-      | Sy.Lit (Sy.L_built n), _ ->
+      | Types.Lit (Types.L_built n), _ ->
         mk_builtin ~is_pos:true n xs'
 
-      | Sy.Lit (Sy.L_neg_built n), _ ->
+      | Types.Lit (Types.L_neg_built n), _ ->
         mk_builtin ~is_pos:false n xs'
 
-      | Sy.Form (Sy.F_Unit _), _ ->
+      | Types.Form (Types.F_Unit _), _ ->
         begin match xs' with
           | [u; v] -> mk_and u v false (*b*) 0
           | _ -> assert false
         end
 
-      | Sy.Form (Sy.F_Clause b), _ ->
+      | Types.Form (Types.F_Clause b), _ ->
         begin match xs' with
           | [u; v] -> mk_or u v b 0
           | _ -> assert false
         end
 
-      | Sy.Form Sy.F_Iff, _ ->
+      | Types.Form Types.F_Iff, _ ->
         begin match xs' with
           | [u; v] -> mk_iff u v 0
           | _ -> assert false
         end
 
-      | Sy.Form Sy.F_Xor, _ ->
+      | Types.Form Types.F_Xor, _ ->
         begin match xs' with
           | [u; v] -> mk_xor u v 0
           | _ -> assert false
@@ -1398,7 +1306,7 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
       let vars = merge_vars let_e.vars (SMap.remove let_v in_e.vars) in
       let vty = Ty.Svty.union let_e.vty in_e.vty in
       let pos =
-        HC.make {f=Sy.Let; xs=[]; ty;
+        HC.make {f=Types.Let; xs=[]; ty;
                  depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
                  bind = B_let x; pure = false}
       in
@@ -1406,7 +1314,7 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
       else
         let y = {x with in_e = neg in_e} in
         let neg =
-          HC.make {f=Sy.Let; xs=[]; ty;
+          HC.make {f=Types.Let; xs=[]; ty;
                    depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
                    bind = B_let y; pure = false}
         in
@@ -1535,12 +1443,12 @@ let max_pure_subterms =
 
 let rec sub_terms acc e =
   match e.f with
-  | Sy.Form _ | Sy.Lit _ -> acc
+  | Types.Form _ | Types.Lit _ -> acc
   | _ -> List.fold_left sub_terms (TSet.add e acc) e.xs
 
 let args_of_lit e = match e.f with
-  | Sy.Form _ -> assert false
-  | Sy.Lit _ -> e.xs
+  | Types.Form _ -> assert false
+  | Types.Lit _ -> e.xs
   | _ when e.ty == Ty.Tbool -> [e]
   | _ -> assert false
 
@@ -1550,7 +1458,7 @@ let max_terms_of_lit e =
 let max_ground_terms_of_lit =
   let rec max_sub_ground acc e =
     match e.f with
-    | Sy.Form _ | Sy.Lit _ -> assert false
+    | Types.Form _ | Types.Lit _ -> assert false
     | _ ->
       if is_ground e then TSet.add e acc
       else List.fold_left max_sub_ground acc e.xs
@@ -1634,7 +1542,7 @@ let sub_terms_of_formula f =
 let cand_is_more_general cand other =
   let rec matches cand other =
     match cand, other with
-    | { f = Sy.Var _; _ }, _ -> ()
+    | { f = Types.Var _; _ }, _ -> ()
     | { f = f1; xs=xs1; _}, { f = f2; xs = xs2; _ } when Sy.equal f1 f2 ->
       List.iter2 matches xs1 xs2
     | _ -> raise Exit
@@ -1832,13 +1740,13 @@ module Triggers = struct
   module STRS =
     Set.Make(
     struct
-      type t = expr * SSet.t * Svty.t
+      type t = expr * Symbols.Set.t * Svty.t
 
       let compare (t1,_,_) (t2,_,_) = compare t1 t2
     end)
 
   let is_prefix v = match v with
-    | Sy.Op Sy.Minus -> true
+    | Types.Op Types.Minus -> true
     | _ -> false
 
   let is_infix v =
@@ -1869,8 +1777,8 @@ module Triggers = struct
       1 + (List.fold_left
              (fun acc t -> max (score_term t) acc) 0 tl)
 
-    | { f = (Sy.MapsTo _ | Sy.In _); xs = [e]; _ } -> score_term e
-    | { f = (Lit _ | Form _ | Sy.MapsTo _ | Sy.In _ | Sy.Let); _ } ->
+    | { f = (Types.MapsTo _ | Types.In _); xs = [e]; _ } -> score_term e
+    | { f = (Lit _ | Form _ | Types.MapsTo _ | Types.In _ | Types.Let); _ } ->
       assert false
 
 
@@ -2007,16 +1915,16 @@ module Triggers = struct
   let vars_of_term bv acc t =
     SMap.fold
       (fun v _ acc ->
-         if SSet.mem v bv then SSet.add v acc else acc
+         if Symbols.Set.mem v bv then Symbols.Set.add v acc else acc
       )t.vars acc
 
   let filter_good_triggers (bv, vty) trs =
     List.filter
       (fun { content = l; _ } ->
          not (List.exists not_pure l) &&
-         let s1 = List.fold_left (vars_of_term bv) SSet.empty l in
+         let s1 = List.fold_left (vars_of_term bv) Symbols.Set.empty l in
          let s2 = List.fold_left vty_of_term Svty.empty l in
-         SSet.subset bv s1 && Svty.subset vty s2 )
+         Symbols.Set.subset bv s1 && Svty.subset vty s2 )
       trs
 
   (* unused
@@ -2027,9 +1935,9 @@ module Triggers = struct
      List.iter (fun { content = l; _ } ->
         if List.exists not_pure l then
           failwith "If-Then-Else are not allowed in (theory triggers)";
-        let s1 = List.fold_left (vars_of_term bv) SSet.empty l in
+        let s1 = List.fold_left (vars_of_term bv) Symbols.Set.empty l in
         let s2 = List.fold_left vty_of_term Svty.empty l in
-        if not (Svty.subset vty s2) || not (SSet.subset bv s1) then
+        if not (Svty.subset vty s2) || not (Symbols.Set.subset bv s1) then
           failwith "Triggers of a theory should contain every quantified \
                     types and variables.")
       trs;
@@ -2037,7 +1945,7 @@ module Triggers = struct
   *)
 
   let is_var t = match t.f with
-    | Sy.Var _ -> true
+    | Types.Var _ -> true
     | _ -> false (* constant terms such as "logic nil : 'a list" are
                     allowed in triggers *)
 
@@ -2057,10 +1965,10 @@ module Triggers = struct
   module SLLT =
     Set.Make(
     struct
-      type t = expr list * SSet.t * Svty.t
+      type t = expr list * Symbols.Set.t * Svty.t
       let compare (a, y1, _) (b, y2, _)  =
         let c = try compare_lists a b compare; 0 with Util.Cmp c -> c in
-        if c <> 0 then c else SSet.compare y1 y2
+        if c <> 0 then c else Symbols.Set.compare y1 y2
     end)
 
   let underscore =
@@ -2068,7 +1976,7 @@ module Triggers = struct
       let sbt =
         SMap.fold
           (fun v (ty, _occ) sbt ->
-             if not (SSet.mem v s) then sbt
+             if not (Symbols.Set.mem v s) then sbt
              else SMap.add v (mk_term Sy.underscore [] ty) sbt
           )t.vars SMap.empty
       in
@@ -2077,11 +1985,11 @@ module Triggers = struct
         apply_subst (sbt, Ty.esubst) t, false
     in
     fun bv ((t,vt,vty) as e) ->
-      let s = SSet.diff vt bv in
-      if SSet.is_empty s then e
+      let s = Symbols.Set.diff vt bv in
+      if Symbols.Set.is_empty s then e
       else
         let t,_ = aux t s in
-        let vt = SSet.add Sy.underscore (SSet.inter vt bv) in
+        let vt = Symbols.Set.add Sy.underscore (Symbols.Set.inter vt bv) in
         t,vt,vty
 
   let parties mconf bv vty l escaped_vars =
@@ -2096,14 +2004,14 @@ module Triggers = struct
         let llt, llt_ok =
           SLLT.fold
             (fun (l, bv2, vty2) (llt, llt_ok) ->
-               if SSet.subset bv1 bv2 && Svty.subset vty1 vty2 then
+               if Symbols.Set.subset bv1 bv2 && Svty.subset vty1 vty2 then
                  (* t doesn't bring new vars *)
                  llt, llt_ok
                else
-                 let bv3 = SSet.union bv2 bv1 in
+                 let bv3 = Symbols.Set.union bv2 bv1 in
                  let vty3 = Svty.union vty2 vty1 in
                  let e = t::l, bv3, vty3 in
-                 if SSet.subset bv bv3 && Svty.subset vty vty3 then
+                 if Symbols.Set.subset bv bv3 && Svty.subset vty vty3 then
                    llt, SLLT.add e llt_ok
                  else
                    SLLT.add e llt, llt_ok
@@ -2121,17 +2029,17 @@ module Triggers = struct
     let strict_subset bv vty =
       List.exists
         (fun (_, bv',vty') ->
-           (SSet.subset bv bv' && not(SSet.equal bv bv')
+           (Symbols.Set.subset bv bv' && not(Symbols.Set.equal bv bv')
             && Svty.subset vty vty')
            || (Svty.subset vty vty' && not(Svty.equal vty vty')
-               && SSet.subset bv bv') )
+               && Symbols.Set.subset bv bv') )
     in
     let rec simpl_rec bv_a vty_a acc = function
       | [] -> acc
       | ((_, bv, vty) as e)::l ->
         if strict_subset bv vty l || strict_subset bv vty acc ||
-           (SSet.subset bv_a bv && Svty.subset vty_a vty) ||
-           (SSet.equal (SSet.inter bv_a bv) SSet.empty &&
+           (Symbols.Set.subset bv_a bv && Svty.subset vty_a vty) ||
+           (Symbols.Set.equal (Symbols.Set.inter bv_a bv) Symbols.Set.empty &&
             Svty.equal (Svty.inter vty_a vty) Svty.empty)
         then simpl_rec bv_a vty_a acc l
         else  simpl_rec bv_a vty_a (e::acc) l
@@ -2152,7 +2060,7 @@ module Triggers = struct
   let mono_triggers menv vterm vtype trs =
     let mono = List.filter
         (fun (_, bv_t, vty_t) ->
-           SSet.subset vterm bv_t && Svty.subset vtype vty_t) trs
+           Symbols.Set.subset vterm bv_t && Svty.subset vtype vty_t) trs
     in
     let trs_v, trs_nv = List.partition (fun (t, _, _) -> is_var t) mono in
     let base = if menv.Util.triggers_var then trs_nv @ trs_v else trs_nv in
@@ -2163,8 +2071,8 @@ module Triggers = struct
       List.filter
         (fun t ->
            match t with
-           | [{ f = Sy.Op Sy.Plus; _ }] -> false
-           | [{ f = Sy.Op Sy.Minus; _ }] -> false
+           | [{ f = Types.Op Types.Plus; _ }] -> false
+           | [{ f = Types.Op Types.Minus; _ }] -> false
            | _ -> true
         )mono
     in
@@ -2228,11 +2136,11 @@ module Triggers = struct
   (***)
 
   let free_vars_as_set e =
-    SMap.fold (fun sy _ s -> SSet.add sy s) e.vars SSet.empty
+    SMap.fold (fun sy _ s -> Symbols.Set.add sy s) e.vars Symbols.Set.empty
 
   let potential_triggers =
     let has_bvar bv_lf bv =
-      SMap.exists (fun e _ -> SSet.mem e bv) bv_lf
+      SMap.exists (fun e _ -> Symbols.Set.mem e bv) bv_lf
     in
     let has_tyvar vty vty_lf =
       Svty.exists (fun e -> Svty.mem e vty) vty_lf
@@ -2276,7 +2184,7 @@ module Triggers = struct
      does not build the literal view. *)
   let is_literal e =
     e.ty == Ty.Tbool &&
-    match e.f with Sy.Form _ -> false | _ -> true
+    match e.f with Types.Form _ -> false | _ -> true
 
   let trs_in_scope full_trs f =
     STRS.filter
@@ -2295,11 +2203,11 @@ module Triggers = struct
     let rec max_terms acc (e : t) =
       let open Sy in
       match e with
-      | { f = Sy.Form (
-          Sy.F_Unit _ | Sy.F_Clause _ | Sy.F_Xor | Sy.F_Iff); _ } ->
+      | { f = Types.Form (
+          Types.F_Unit _ | Types.F_Clause _ | Types.F_Xor | Types.F_Iff); _ } ->
         List.fold_left max_terms acc e.xs
 
-      | { f = Sy.Form (Sy.F_Lemma | Sy.F_Skolem) | Sy.Let; _ } -> raise Exit
+      | { f = Types.Form (Types.F_Lemma | Types.F_Skolem) | Types.Let; _ } -> raise Exit
       | { f; _ } when is_infix f -> raise Exit
       (*| {f = Op _} -> raise Exit*)
       | { f = Op _; _ } ->
@@ -2340,7 +2248,7 @@ module Triggers = struct
     if SMap.is_empty binders && Ty.Svty.is_empty f.vty then trs0
     else
       let vtype = if toplevel then f.vty else Ty.Svty.empty in
-      let vterm = SMap.fold (fun sy _ s -> SSet.add sy s) binders SSet.empty in
+      let vterm = SMap.fold (fun sy _ s -> Symbols.Set.add sy s) binders Symbols.Set.empty in
       if decl_kind == Dtheory then
         trs0
         [@ocaml.ppwarning "TODO: filter_good_triggers for this \
@@ -2357,12 +2265,12 @@ module Triggers = struct
     if SMap.is_empty binders && Ty.Svty.is_empty f.vty then []
     else
       let vtype = f.vty in
-      let vterm = SMap.fold (fun sy _ s -> SSet.add sy s) binders SSet.empty in
+      let vterm = SMap.fold (fun sy _ s -> Symbols.Set.add sy s) binders Symbols.Set.empty in
       match decl_kind, f with
       | Dtheory, _ -> assert false
       | (Dpredicate e | Dfunction e), _ ->
         let defn = match f with
-          | { f = (Sy.Form Sy.F_Iff | Sy.Lit Sy.L_eq) ; xs = [e1; e2]; _ } ->
+          | { f = (Types.Form Types.F_Iff | Types.Lit Types.L_eq) ; xs = [e1; e2]; _ } ->
             if equal e e1 then e2 else if equal e e2 then e1 else f
           | _ -> f
         in
@@ -2370,7 +2278,7 @@ module Triggers = struct
         let tt = List.fast_sort (fun a b -> depth b - depth a) tt in
         filter_good_triggers (vterm, vtype) @@ triggers_of_list [[e]; tt]
 
-      | _, { f = (Sy.Form Sy.F_Iff) ; xs = [e1; e2]; _ } when is_literal e1 ->
+      | _, { f = (Types.Form Types.F_Iff) ; xs = [e1; e2]; _ } when is_literal e1 ->
         let f_trs1, lets = potential_triggers (vterm, vtype) e1 in
         let f_trs1 = expand_lets f_trs1 lets in
         let trs1 = trs_in_scope f_trs1 e1 in
@@ -2527,14 +2435,14 @@ let mk_match e cases =
   let mk_destr =
     match ty with
     | Ty.Tadt _ -> (fun hs -> Sy.destruct ~guarded:true (Hstring.view hs))
-    | Ty.Trecord _ -> (fun hs -> Sy.Op (Sy.Access hs))
+    | Ty.Trecord _ -> (fun hs -> Types.Op (Types.Access hs))
     | Ty.Tsum _ -> (fun _hs -> assert false) (* no destructors for Tsum *)
     | _ -> assert false
   in
   let mker =
     match ty with
     | Ty.Tadt _ ->
-      (fun e name -> mk_builtin ~is_pos:true (Sy.IsConstr name) [e])
+      (fun e name -> mk_builtin ~is_pos:true (Types.IsConstr name) [e])
 
     | Ty.Trecord _ ->
       (fun _e _name -> assert false) (* no need to test for records *)
@@ -2571,12 +2479,12 @@ module Purification = struct
     if t.pure then t, lets
     else
       match t.f, t.bind with
-      | Sy.Let, B_let { let_v; let_e; in_e; _ } ->
+      | Types.Let, B_let { let_v; let_e; in_e; _ } ->
         (* let_e is purified when processing the lets map *)
         let in_e , lets = purify_term in_e  lets in
         in_e, add_let let_v let_e lets
 
-      | (Sy.Lit _ | Sy.Form _), _ ->
+      | (Types.Lit _ | Types.Form _), _ ->
         let fresh_sy = Sy.fresh ~is_var:true "Pur-F" in
         mk_term fresh_sy [] t.ty , add_let fresh_sy t lets
 
@@ -2643,13 +2551,13 @@ module Purification = struct
     if is_pure e then e (* non negated predicates *)
     else
       match e.f with
-      | Sy.True | Sy.False | Sy.Var _ | Sy.In _ ->
+      | Types.True | Types.False | Types.Var _ | Types.In _ ->
         e
-      | Sy.Name _ -> (* non negated predicates with impure parts *)
+      | Types.Name _ -> (* non negated predicates with impure parts *)
         let e, lets = purify_term e SMap.empty in
         mk_lifted e lets
 
-      | Sy.Let -> (* let on forms *)
+      | Types.Let -> (* let on forms *)
         begin match e.xs, e.bind with
           | [], B_let ({ let_e; in_e; _ } as letin) ->
             if let_e.pure && in_e.pure then e
@@ -2667,7 +2575,7 @@ module Purification = struct
 
       (* When e is an access to a functional array
          in which the stored values are booleans *)
-      | Sy.Op Get ->
+      | Types.Op Get ->
         begin match e.xs with
           | [fa; i] ->
             let fa', lets =
@@ -2687,44 +2595,44 @@ module Purification = struct
           | _ -> failwith "unexpected expression in purify_form"
         end
 
-      | Sy.Void | Sy.Int _ | Sy.Real _ | Sy.Bitv _ | Sy.Op _ | Sy.MapsTo _ ->
+      | Types.Void | Types.Int _ | Types.Real _ | Types.Bitv _ | Types.Op _ | Types.MapsTo _ ->
         failwith "unexpected expression in purify_form: not a formula"
 
-      | Sy.Lit _ -> purify_literal e
-      | Sy.Form x ->
+      | Types.Lit _ -> purify_literal e
+      | Types.Form x ->
         begin match x, e.xs, e.bind with
-          | Sy.F_Unit imp, [a;b], _ ->
+          | Types.F_Unit imp, [a;b], _ ->
             let a' = purify_form a in
             let b' = purify_form b in
             if a == a' && b == b' then e else mk_and a' b' imp 0
 
-          | Sy.F_Clause imp, [a;b], _ ->
+          | Types.F_Clause imp, [a;b], _ ->
             let a' = purify_form a in
             let b' = purify_form b in
             if a == a' && b == b' then e else mk_or a' b' imp 0
 
-          | Sy.F_Iff, [a;b], _ ->
+          | Types.F_Iff, [a;b], _ ->
             let a' = purify_form a in
             let b' = purify_form b in
             if a == a' && b == b' then e else mk_iff a' b' 0
 
-          | Sy.F_Xor, [a;b], _ ->
+          | Types.F_Xor, [a;b], _ ->
             let a' = purify_form a in
             let b' = purify_form b in
             if a == a' && b == b' then e else mk_xor a' b' 0
 
-          | Sy.F_Lemma, [], B_lemma q ->
+          | Types.F_Lemma, [], B_lemma q ->
             let m = purify_form q.main in
             if m == q.main then e
             else mk_forall_ter {q with main = m} 0
 
-          | Sy.F_Skolem, [], B_skolem q ->
+          | Types.F_Skolem, [], B_skolem q ->
             let m = purify_form q.main in
             if m == q.main then e
             else neg (mk_forall_ter {q with main = (neg m)} 0)
 
-          | (Sy.F_Unit _ | Sy.F_Clause _ | Sy.F_Iff
-            | Sy.F_Xor | Sy.F_Skolem | Sy.F_Lemma),
+          | (Types.F_Unit _ | Types.F_Clause _ | Types.F_Iff
+            | Types.F_Xor | Types.F_Skolem | Types.F_Lemma),
             _, _ ->
             failwith "unexpected expression in purify_form"
         end
@@ -2749,7 +2657,7 @@ module Purification = struct
       let el, lets = purify_non_toplevel_ite el lets in
       mk_term e.f [c; th; el] e.ty, lets
 
-    | (Sy.Form _ | Sy.Lit _), _ -> purify_form e, lets
+    | (Types.Form _ | Types.Lit _), _ -> purify_form e, lets
     | _ -> purify_term e lets
 
 end
@@ -2768,31 +2676,6 @@ module Set = TSet
 module Map = TMap
 
 (******)
-
-
-type gformula = {
-  ff: expr;
-  nb_reductions : int;
-  trigger_depth : int;
-  age: int;
-  lem: expr option;
-  origin_name : string;
-  from_terms : expr list;
-  mf: bool;
-  gf: bool;
-  gdist : int; (* dist to goal *)
-  hdist : int; (* dist to hypotheses *)
-  theory_elim : bool;
-}
-
-type th_elt =
-  {
-    th_name : string;
-    ax_name : string;
-    ax_form : t;
-    extends : Util.theories_extensions;
-    axiom_kind : Util.axiom_kind;
-  }
 
 let print_th_elt fmt t =
   Format.fprintf fmt "%s/%s: @[<hov>%a@]" t.th_name t.ax_name print t.ax_form

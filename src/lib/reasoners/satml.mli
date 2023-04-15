@@ -56,7 +56,7 @@ module type SAT_ML = sig
   val set_current_tbox : t -> th -> unit
   val empty : unit -> t
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
+  val assume_th_elt : t -> Types.th_elt -> Explanation.t -> unit
   val decision_level : t -> int
   val cancel_until : t -> int -> unit
 
@@ -80,4 +80,3 @@ module type SAT_ML = sig
 end
 
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t
-

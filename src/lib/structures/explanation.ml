@@ -155,25 +155,25 @@ let bj_formulas_of s =
     ) s E.Set.empty
 
 let rec literals_of_acc lit fs f acc = match E.form_view f with
-  | E.Literal _ ->
+  | Literal _ ->
     if lit then f :: acc else acc
-  | E.Iff(f1, f2) ->
+  | Iff(f1, f2) ->
     let g = E.elim_iff f1 f2 (E.id f) ~with_conj:true in
     literals_of_acc lit fs g acc
-  | E.Xor(f1, f2) ->
+  | Xor(f1, f2) ->
     let g = E.neg @@ E.elim_iff f1 f2 (E.id f) ~with_conj:false in
     literals_of_acc lit fs g acc
-  | E.Unit (f1,f2) ->
+  | Unit (f1,f2) ->
     let acc = literals_of_acc false fs f1 acc in
     literals_of_acc false fs f2 acc
-  | E.Clause (f1, f2, _) ->
+  | Clause (f1, f2, _) ->
     let acc = literals_of_acc true fs f1 acc in
     literals_of_acc true fs f2 acc
-  | E.Lemma _ ->
+  | Lemma _ ->
     acc
-  | E.Skolem { E.main = f; _ } ->
+  | Skolem { main = f; _ } ->
     literals_of_acc true fs f acc
-  | E.Let { E.in_e; let_e; _ } ->
+  | Let { in_e; let_e; _ } ->
     literals_of_acc true fs in_e @@ literals_of_acc true fs let_e acc
 
 let literals_of ex =

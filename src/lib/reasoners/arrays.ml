@@ -26,6 +26,9 @@
 (*                                                                            *)
 (******************************************************************************)
 
+module X = Shostak_pre
+
+(*
 type 'a abstract = unit
 
 module type ALIEN = sig
@@ -38,6 +41,9 @@ module Shostak (X : ALIEN) = struct
 
   type t = X.r abstract
   type r = X.r
+*)
+
+type t = Types.arrays
 
   let name           = "Farrays"
   let is_mine_symb _ _ = false
@@ -80,5 +86,3 @@ module Shostak (X : ALIEN) = struct
       r, Format.asprintf "%a" X.print r (* it's a EUF constant *)
 
     | _ -> assert false
-
-end

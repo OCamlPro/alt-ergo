@@ -30,8 +30,15 @@ module Sy = Symbols
 module E  = Expr
 module Hs = Hstring
 
-type 'a abstract = Cons of Hs.t * Ty.t |  Alien of 'a
+open Types
+module X = struct
+  include Shostak_pre
+  let extract = function { v=ENUM r; _ } -> Some r | _ -> None
+  let embed x = hcons {v = ENUM x; id = -1000 (* dummy *)}
+end
 
+(*
+type 'a abstract = Cons of Hs.t * Ty.t |  Alien of 'a
 module type ALIEN = sig
   include Sig.X
   val embed : r abstract -> r
@@ -42,19 +49,22 @@ module Shostak (X : ALIEN) = struct
 
   type t = X.r abstract
   type r = X.r
+*)
+
+type t = Types.enum
 
   let name = "Sum"
 
   let is_mine_symb sy ty =
     match sy, ty with
-    | Sy.Op (Sy.Constr _), Ty.Tsum _ -> true
+    | Types.Op (Types.Constr _), Ty.Tsum _ -> true
     | _ -> false
 
   let fully_interpreted _ = true
 
   let type_info = function
     | Cons (_, ty) -> ty
-    | Alien x -> X.type_info x
+    | EAlien x -> X.type_info x
 
   let color _ = assert false
 
@@ -65,7 +75,7 @@ module Shostak (X : ALIEN) = struct
 
     let print fmt = function
       | Cons (hs,_) -> Format.fprintf fmt "%s" (Hs.view hs)
-      | Alien x -> Format.fprintf fmt "%a" X.print x
+      | EAlien x -> Format.fprintf fmt "%a" X.print x
 
     let solve_bis a b =
       if Options.get_debug_sum () then
@@ -97,10 +107,10 @@ module Shostak (X : ALIEN) = struct
   let embed r =
     match X.extract r with
     | Some c -> c
-    | None -> Alien r
+    | None -> EAlien r
 
   let is_mine = function
-    | Alien r -> r
+    | EAlien r -> r
     | Cons _ as c -> X.embed c
 
   let compare_mine c1 c2 =
@@ -108,20 +118,20 @@ module Shostak (X : ALIEN) = struct
     | Cons (h1,ty1) , Cons (h2,ty2)  ->
       let n = Hs.compare h1 h2 in
       if n <> 0 then n else Ty.compare ty1 ty2
-    | Alien r1, Alien r2 -> X.str_cmp r1 r2
-    | Alien _ , Cons _   -> 1
-    | Cons _  , Alien _  -> -1
+    | EAlien r1, EAlien r2 -> X.str_cmp r1 r2
+    | EAlien _ , Cons _   -> 1
+    | Cons _  , EAlien _  -> -1
 
   let compare x y = compare_mine (embed x) (embed y)
 
   let equal s1 s2 = match s1, s2 with
     | Cons (h1,ty1) , Cons (h2,ty2)  -> Hs.equal h1 h2 && Ty.equal ty1 ty2
-    | Alien r1, Alien r2 -> X.equal r1 r2
-    | Alien _ , Cons _  | Cons _  , Alien _  -> false
+    | EAlien r1, EAlien r2 -> X.equal r1 r2
+    | EAlien _ , Cons _  | Cons _  , EAlien _  -> false
 
   let hash = function
     | Cons (h, ty) -> Hstring.hash h + 19 * Ty.hash ty
-    | Alien r -> X.hash r
+    | EAlien r -> X.hash r
 
   let leaves _ = []
 
@@ -131,10 +141,10 @@ module Shostak (X : ALIEN) = struct
     else
       match c with
       | Cons _ -> cr
-      | Alien r    -> X.subst p v r
+      | EAlien r    -> X.subst p v r
 
   let make t = match E.term_view t with
-    | { E.f = Sy.Op (Sy.Constr hs); xs = []; ty; _ } ->
+    | { f = Types.Op (Types.Constr hs); xs = []; ty; _ } ->
       is_mine (Cons(hs,ty)), []
     | _ ->
       Printer.print_err
@@ -146,9 +156,9 @@ module Shostak (X : ALIEN) = struct
     match embed a, embed b with
     | Cons(c1,_) , Cons(c2,_) when Hs.equal c1 c2 -> []
     | Cons(_,_) , Cons(_,_) -> raise Util.Unsolvable
-    | Cons _     , Alien r2   -> [r2,a]
-    | Alien r1   , Cons _     -> [r1,b]
-    | Alien _    , Alien _    ->
+    | Cons _     , EAlien r2   -> [r2,a]
+    | EAlien r1   , Cons _     -> [r1,b]
+    | EAlien _    , EAlien _    ->
       if X.str_cmp a b > 0 then [a,b] else [b,a]
 
   let solve_bis a b =
@@ -200,5 +210,3 @@ module Shostak (X : ALIEN) = struct
         match embed r with Cons _ -> r | _ -> assert false
     in
     r, Format.asprintf "%a" X.print r  (* it's a EUF constant *)
-
-end

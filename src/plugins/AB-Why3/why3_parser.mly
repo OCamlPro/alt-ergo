@@ -68,7 +68,7 @@ open Parsed
       List.map (fun (_, _, pty) -> pty ) params in
     let logic_type =
       mk_logic_type ppure_type_list pptyop in
-    mk_logic loc Symbols.Other ssl logic_type
+    mk_logic loc Types.Other ssl logic_type
 
   let mk_tuple pl loc =
     let length =  string_of_int (List.length pl) in

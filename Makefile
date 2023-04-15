@@ -348,6 +348,9 @@ archi: $(EXTRA_DIR)/ocamldot/ocamldot
 	dot -Tpdf archi.dot > archi.pdf
 
 deps:
+	opam install --deps-only .
+
+dune-deps:
 	dune-deps . | dot -Tpng -o docs/deps.png
 
 .PHONY: archi deps

@@ -26,11 +26,15 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
 module A  = Xliteral
 module L  = List
 module Hs = Hstring
 
+(*
 type 'a abstract = 'a Enum.abstract = Cons of Hs.t * Ty.t |  Alien of 'a
+*)
 
 module X = Shostak.Combine
 module Sh = Shostak.Enum
@@ -113,8 +117,8 @@ let values_of r = match X.type_info r with
 
 let add_diseq hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
-  | Alien r , Cons(h,ty)
-  | Cons (h,ty), Alien r  ->
+  | EAlien r , Cons(h,ty)
+  | Cons (h,ty), EAlien r  ->
     let enum, ex = try MX.find r env.mx with Not_found -> hss, Ex.empty in
     let enum = HSS.remove h enum in
     let ex = Ex.union ex dep in
@@ -128,7 +132,7 @@ let add_diseq hss sm1 sm2 dep env eqs =
          ex, Th_util.Other)::eqs
       else env, eqs
 
-  | Alien r1, Alien r2 ->
+  | EAlien r1, EAlien r2 ->
     let enum1,ex1= try MX.find r1 env.mx with Not_found -> hss,Ex.empty in
     let enum2,ex2= try MX.find r2 env.mx with Not_found -> hss,Ex.empty in
 
@@ -156,14 +160,14 @@ let add_diseq hss sm1 sm2 dep env eqs =
 
 let add_eq hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
-  | Alien r, Cons(h,_)
-  | Cons (h,_), Alien r  ->
+  | EAlien r, Cons(h,_)
+  | Cons (h,_), EAlien r  ->
     let enum, ex = try MX.find r env.mx with Not_found -> hss, Ex.empty in
     let ex = Ex.union ex dep in
     if not (HSS.mem h enum) then raise (Ex.Inconsistent (ex, env.classes));
     {env with mx = MX.add r (HSS.singleton h, ex) env.mx} , eqs
 
-  | Alien r1, Alien r2   ->
+  | EAlien r1, EAlien r2   ->
     let enum1,ex1 =
       try MX.find r1 env.mx with Not_found -> hss, Ex.empty in
     let enum2,ex2 =
@@ -196,7 +200,7 @@ let count_splits env la =
 let add_aux env r =
   Debug.add r;
   match Sh.embed r, values_of r with
-  | Alien r, Some hss ->
+  | EAlien r, Some hss ->
     if MX.mem r env.mx then env else
       { env with mx = MX.add r (hss, Ex.empty) env.mx }
   | _ -> env
@@ -303,7 +307,7 @@ let new_terms _ = Expr.Set.empty
 
 let instantiate ~do_syntactic_matching:_ _ env _ _  = env, []
 let assume_th_elt t th_elt _ =
-  match th_elt.Expr.extends with
+  match th_elt.extends with
   | Util.Sum ->
     failwith "This Theory does not support theories extension"
   | _ -> t

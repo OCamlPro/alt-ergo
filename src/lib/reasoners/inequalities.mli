@@ -26,15 +26,17 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Types
+
 module type S = sig
 
-  module P : Polynome.T with type r = Shostak.Combine.r
-  module MP : Map.S with type key = P.t
+  module P : Polynome.T
+  module MP : Map.S with type key = polynome
 
   type t = {
-    ple0 : P.t;
+    ple0 : polynome;
     is_le : bool;
-    dep : (Numbers.Q.t * P.t * bool) Util.MI.t;
+    dep : (Numbers.Q.t * polynome * bool) Util.MI.t;
     expl : Explanation.t;
     age : Numbers.Z.t;
   }
@@ -47,28 +49,28 @@ module type S = sig
     val insert : t -> mp -> mp
     val ineqs_of : mp -> t list
     val add_to_map : mp -> t list -> mp
-    val iter : (P.t -> (t * Numbers.Q.t) -> unit) -> mp -> unit
-    val fold : (P.t -> (t * Numbers.Q.t) -> 'a -> 'a) -> mp -> 'a -> 'a
+    val iter : (polynome -> (t * Numbers.Q.t) -> unit) -> mp -> unit
+    val fold : (polynome -> (t * Numbers.Q.t) -> 'a -> 'a) -> mp -> 'a -> 'a
   end
 
   val current_age : unit -> Numbers.Z.t
   val incr_age : unit -> unit
 
   val create_ineq :
-    P.t -> P.t -> bool -> Expr.t option -> Explanation.t -> t
+    polynome -> polynome -> bool -> Expr.t option -> Explanation.t -> t
 
   val print_inequation : Format.formatter -> t -> unit
 
   val fourierMotzkin :
-    ('are_eq -> 'acc -> P.r option -> t list -> 'acc) -> 'are_eq -> 'acc ->
+    ('are_eq -> 'acc -> r option -> t list -> 'acc) -> 'are_eq -> 'acc ->
     MINEQS.mp -> 'acc
 
   val fmSimplex :
-    ('are_eq -> 'acc -> P.r option -> t list -> 'acc) -> 'are_eq -> 'acc ->
+    ('are_eq -> 'acc -> r option -> t list -> 'acc) -> 'are_eq -> 'acc ->
     MINEQS.mp -> 'acc
 
   val available :
-    ('are_eq -> 'acc -> P.r option -> t list -> 'acc) -> 'are_eq -> 'acc ->
+    ('are_eq -> 'acc -> r option -> t list -> 'acc) -> 'are_eq -> 'acc ->
     MINEQS.mp -> 'acc
 
   val reset_age_cpt : unit -> unit
@@ -78,12 +80,12 @@ end
 
 
 module FM
-    (P : Polynome.T with type r = Shostak.Combine.r)
+    (P : Polynome.T)
   : S with module P = P
 
 module type Container_SIG = sig
   module Make
-      (P : Polynome.T with type r = Shostak.Combine.r)
+      (P : Polynome.T)
     : S with module P = P
 end
 

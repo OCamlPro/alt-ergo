@@ -73,7 +73,7 @@ and 'a tt_desc =
   | TTprefix of Symbols.t * 'a atterm
   | TTapp of Symbols.t * 'a atterm list
   | TTmapsTo of Var.t * 'a atterm
-  | TTinInterval of 'a atterm * Symbols.bound * Symbols.bound
+  | TTinInterval of 'a atterm * Types.bound * Types.bound
   (* bool = true <-> interval is_open *)
 
   | TTget of 'a atterm * 'a atterm
