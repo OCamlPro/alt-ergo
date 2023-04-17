@@ -347,10 +347,16 @@ archi: $(EXTRA_DIR)/ocamldot/ocamldot
 	echo "}" >> archi.dot
 	dot -Tpdf archi.dot > archi.pdf
 
+dev-switch:
+	opam switch create -y . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
+
 deps:
+	opam install -y . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
+
+dune-deps:
 	dune-deps . | dot -Tpng -o docs/deps.png
 
-.PHONY: archi deps
+.PHONY: archi deps dune-deps dev-switch
 
 # ===============
 # PUBLIC RELEASES
