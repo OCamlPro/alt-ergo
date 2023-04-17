@@ -22,13 +22,20 @@ jobs:
       image: ocamlpro/ocaml:4.10
 
     steps:
+      # Checkout the code of the current branch
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Switch to ocaml user
+      - run: su ocaml
+
       # This line is needed to acces and use opam. We are unable to set the user
       # to `ocaml` with the container parameters
       - run: sudo chmod a+wx .
 
-      # Checkout the code of the current branch
-      - name: Checkout code
-        uses: actions/checkout@v2
+      # This line is needed to allow the working directory to be used even
+      # the ocaml user do not have rights on it.
+      - run: CURRENTDIR=$(basename $(pwd)); git config --global --add safe.directory /__w/$CURRENTDIR/$CURRENTDIR
 
       # Create a switch with the system compiler (no compilation needed).
       # And then, install external (no need for depext with opam 2.1) and libs deps.

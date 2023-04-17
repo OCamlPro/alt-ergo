@@ -116,6 +116,9 @@ AB-Why3:
 	ln -sf $(INSTALL_DIR)/default/share/alt-ergo/plugins/AB-Why3-plugin.cma AB-Why3-plugin.cma
 	ln -sf $(INSTALL_DIR)/default/share/alt-ergo/plugins/AB-Why3-plugin.cmxs AB-Why3-plugin.cmxs
 
+js: gen
+	$(DUNE) build $(DUNE_FLAGS) @$(BJS_DIR)/all
+
 # Build all plugins
 plugins:
 	$(DUNE) build $(DUNE_FLAGS) \
