@@ -32,11 +32,11 @@ External dependencies graph generated with `dune-deps` (use `make archi` for sou
 To compile the sources, you will need the following libraries :
 ```
   ocaml >= 4.05.0
-  dune >= 2.0
+  dune >= 2.8
   zarith
   camlzip
   menhir
-  ocplib-simplex >= 0.4
+  ocplib-simplex >= 0.5
   seq
   cmdliner
   stdlib-shims
@@ -45,7 +45,7 @@ To compile the sources, you will need the following libraries :
 
 To compile the GUI you will also need
 ```
-  lablgtk # includes lablgtk2 and gtksourceview2
+  lablgtk # includes lablgtk3 and gtksourceview3
   conf-gtksourceview
 ```
 You may need superuser permissions to perform the installation.
@@ -107,7 +107,7 @@ depending on whether ocamlopt is installed or only ocamlc is detected.
 
 For this build rule you will need the following aditional libraries :
 ```
-Js_of_ocaml-compiler
+js_of_ocaml-compiler with a version between 4.0.1 and 5.0.1
 zarith_stubs_js
 ```
 
