@@ -384,23 +384,35 @@ VERSION_NUM=$(VERSION:v%=%)
 # Some convenient variables
 PUBLIC_RELEASE=alt-ergo-$(VERSION_NUM)
 PUBLIC_TARGZ=$(PUBLIC_RELEASE).tar.gz
-FILES_DEST=public-release/$(PUBLIC_RELEASE)/$(PUBLIC_RELEASE)
+FILES_DEST=public-release/$(PUBLIC_RELEASE)
 
 public-release:
-	rm -rf public-release
+	git clean -dfxi
 	mkdir -p $(FILES_DEST)
-	cp configure configure.ml *.opam dune-project dune $(FILES_DEST)
-	git clean -dfx
-	cp licenses/License.OCamlPro licences/OCamlPro-Non-Commercial-License.txt licenses/OCamlPro-Non-Commercial-License.pdf licenses/LGPL-License.txt licenses/Apache-License-2.0.txt $(FILES_DEST)/
-	cp README.md LICENSE.md COPYING.md $(FILES_DEST)/
-	cp Makefile $(FILES_DEST)/
-	cp INSTALL.md alt-ergo.opam CHANGES $(FILES_DEST)/
-	cp -rf lib bin common parsers preludes examples doc $(FILES_DEST)/
-	cp -rf plugins $(FILES_DEST)/ 2> /dev/null || echo "cp: skip plugins dir (not found)"
+	cp -r \
+	docs \
+	examples \
+	licenses \
+	non-regression \
+	rsc \
+	src \
+	tests \
+	configure \
+	configure.ml \
+	alt-ergo.opam \
+	alt-ergo-lib.opam \
+	alt-ergo-parsers.opam \
+	altgr-ergo.opam \
+	dune-project \
+	Makefile \
+	README.md \
+	LICENSE.md \
+	CHANGES.md \
+	$(FILES_DEST)
 	sed -i "s/%%VERSION_NUM%%/$(VERSION_NUM)/" $(FILES_DEST)/$(UTIL_DIR)/version.ml
 	sed -i "s/%%VCS_COMMIT_ID%%/$(VCS_COMMIT_ID)/" $(FILES_DEST)/$(UTIL_DIR)/version.ml
 	sed -i "s/%%BUILD_DATE%%/`LANG=en_US; date`/" $(FILES_DEST)/$(UTIL_DIR)/version.ml
-	cd $(FILES_DEST)/.. && tar cfz $(PUBLIC_TARGZ) $(PUBLIC_RELEASE)
+	cd public-release && tar cfz $(PUBLIC_TARGZ) $(PUBLIC_RELEASE)
 	rm -rf $(FILES_DEST)
 
 # ==============
