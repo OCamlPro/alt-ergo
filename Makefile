@@ -386,7 +386,7 @@ PUBLIC_RELEASE=alt-ergo-$(VERSION_NUM)
 PUBLIC_TARGZ=$(PUBLIC_RELEASE).tar.gz
 FILES_DEST=public-release/$(PUBLIC_RELEASE)
 
-public-release:
+--prepare-release:
 	git clean -dfxi
 	mkdir -p $(FILES_DEST)
 	cp -r \
@@ -415,10 +415,17 @@ public-release:
 	sed -i "s/%%VERSION_NUM%%/$(VERSION_NUM)/" $(FILES_DEST)/$(UTIL_DIR)/version.ml
 	sed -i "s/%%VCS_COMMIT_ID%%/$(VCS_COMMIT_ID)/" $(FILES_DEST)/$(UTIL_DIR)/version.ml
 	sed -i "s/%%BUILD_DATE%%/`LANG=en_US; date`/" $(FILES_DEST)/$(UTIL_DIR)/version.ml
+
+public-release: --prepare-release
 	cd public-release && tar cfz $(PUBLIC_TARGZ) $(PUBLIC_RELEASE)
 	rm -rf $(FILES_DEST)
 
-free-public-release: public-release
+free-public-release: --prepare-release
+	cp licenses/CeCILL-C-License-v1.txt $(FILES_DEST)
+	find src/lib src/bin src/parsers -iname "*.ml*" -exec headache -h licenses/free-header.txt {} \;
+	cd public-release && tar cfz $(PUBLIC_TARGZ) $(PUBLIC_RELEASE)
+	git restore $(SRC_DIR)
+	rm -rf $(FILES_DEST)
 
 # ==============
 # Cleaning rules
