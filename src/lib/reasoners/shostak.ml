@@ -26,8 +26,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module H = Hashtbl.Make(Expr)
-
 (*** Combination module of Shostak theories ***)
 
 [@@@ocaml.warning "-60"]
@@ -765,17 +763,29 @@ and AC : Ac.S
 module Combine = struct
   include CX
 
+  type weak_t = { t : Expr.t ; mutable r : (r * Expr.t list) option }
+
+  module H = Weak.Make(struct
+      type t = weak_t
+
+      let equal { t = t1; _ } { t = t2; _ } = Expr.equal t1 t2
+
+      let hash { t; _ } = Expr.hash t
+    end)
+
   let make, save_cache, reinit_cache =
     let cache = H.create 1024 in
     let cache_copy = ref None in
     let make t =
-      match H.find_opt cache t with
-      | None -> let res = make t in H.add cache t res; res
-      | Some res -> res
+      match H.merge cache { t; r = None } with
+      | { r = Some res; _ } -> res
+      | weak -> let res = make t in weak.r <- Some res; res
     in
     let save_cache_aux () =
       save_cache ();
-      cache_copy := (Some (H.copy cache));
+      let copy = H.create (H.count cache) in
+      H.iter (H.add copy) cache;
+      cache_copy := (Some copy);
     in
     let reinit_cache_aux () =
       reinit_cache ();
