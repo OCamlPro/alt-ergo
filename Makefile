@@ -392,7 +392,10 @@ public-release:
 	cp -r \
 	docs \
 	examples \
-	licenses \
+	licenses/Apache-License-2.0.txt \
+	licenses/OCamlPro-Non-Commercial-License.pdf \
+	licenses/OCamlPro-Non-Commercial-License.txt \
+	licenses/LGPL-License.txt \
 	non-regression \
 	rsc \
 	src \
@@ -414,6 +417,8 @@ public-release:
 	sed -i "s/%%BUILD_DATE%%/`LANG=en_US; date`/" $(FILES_DEST)/$(UTIL_DIR)/version.ml
 	cd public-release && tar cfz $(PUBLIC_TARGZ) $(PUBLIC_RELEASE)
 	rm -rf $(FILES_DEST)
+
+free-public-release: public-release
 
 # ==============
 # Cleaning rules

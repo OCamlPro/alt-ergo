@@ -1,14 +1,27 @@
 
-Alt-Ergo: The SMT Solver For Software Verification
-Copyright (C) 2013-2023 --- OCamlPro SAS
+   Alt-Ergo: The SMT Solver For Software Verification
+   Copyright (C) 2013-2023 --- OCamlPro SAS
 
-This file is distributed under the terms of OCamlPro Non-Commercial
-Purpose License, version 1. More details about the license can be
-found in licenses/OCamlPro-Non-Commercial-License.pdf
+   This file is distributed under the terms of OCamlPro
+   Non-Commercial Purpose License, version 1.
 
-For Alt-Ergo Club users, in compliance with their membership level
-on the authorized branches and releases, this file is distributed
-under the terms of the Apache Software License version 2.0. More
-details about the license can be found in
-licenses/Apache-License-2.0.txt
+   As an exception, Alt-Ergo Club members at the Gold level can
+   use this file under the terms of the Apache Software License
+   version 2.0.
+
+   ---------------------------------------------------------------
+
+   The Alt-Ergo theorem prover
+
+   Sylvain Conchon, Evelyne Contejean, Francois Bobot
+   Mohamed Iguernelala, Stephane Lescuyer, Alain Mebsout
+
+   CNRS - INRIA - Universite Paris Sud
+
+   Until 2013, some parts of this code were released under
+   the Apache Software License version 2.0.
+
+   ---------------------------------------------------------------
+
+   More details can be found in the directory licenses/
 

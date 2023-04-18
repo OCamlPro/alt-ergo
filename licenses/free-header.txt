@@ -1,25 +1,32 @@
 
-The Alt-Ergo theorem prover
-Copyright (C) 2006-2013
+   Alt-Ergo: The SMT Solver For Software Verification
+   Copyright (C) 2013-2023 --- OCamlPro SAS
 
-Sylvain Conchon
-Evelyne Contejean
+   This is an exceptional free release of Alt-Ergo dual-licensed
+   under the OCamlPro-Non-Commercial-License and
+   the CeCILL-C License. More details below.
 
-Francois Bobot
-Mohamed Iguernelala
-Stephane Lescuyer
-Alain Mebsout
+   This file is distributed under the terms of OCamlPro
+   Non-Commercial Purpose License, version 1 or under the terms
+   of the CeCILL-C License v1.
 
-CNRS - INRIA - Universite Paris Sud
+   As an exception, Alt-Ergo Club members at the Gold level can
+   use this file under the terms of the Apache Software License
+   version 2.0.
 
-This file is distributed under the terms of the Apache Software
-License version 2.0
+   ---------------------------------------------------------------
 
----------------------------------------------------------------
+   The Alt-Ergo theorem prover
 
-Alt-Ergo: The SMT Solver For Software Verification
-Copyright (C) 2013-2023 --- OCamlPro SAS
+   Sylvain Conchon, Evelyne Contejean, Francois Bobot
+   Mohamed Iguernelala, Stephane Lescuyer, Alain Mebsout
 
-This file is distributed under the terms of the Apache Software
-License version 2.0
+   CNRS - INRIA - Universite Paris Sud
+
+   Until 2013, some parts of this code were released under
+   the Apache Software License version 2.0.
+
+   ---------------------------------------------------------------
+
+   More details can be found in the directory licenses/
 
