@@ -485,7 +485,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let tf = E.(term_view t).f in
     match sf, tf with
     | Symbols.Name _, Symbols.Op _ -> -1
-    | Symbols.Op _, Symbols.Name _ -> -1
+    | Symbols.Op _, Symbols.Name _ -> 1
     | _ -> (E.depth t) - (E.depth s)
 
   let matching mconf env tbox pat_info =
