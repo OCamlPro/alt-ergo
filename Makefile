@@ -389,7 +389,7 @@ FILES_DEST=public-release/$(PUBLIC_RELEASE)
 --prepare-release:
 	git clean -dfxi
 	mkdir -p $(FILES_DEST)
-	cp -r \
+	cp --parents -r \
 	docs \
 	examples \
 	licenses/Apache-License-2.0.txt \
