@@ -50,6 +50,18 @@ To compile the GUI you will also need
 ```
 You may need superuser permissions to perform the installation.
 
+You can install dependencies using:
+
+```
+$ make deps
+```
+
+and create a development switch with:
+
+```
+$ make dev-switch
+```
+
 ### Configuration
 
   1. Configure with `./configure` to generate Makefile.config,
