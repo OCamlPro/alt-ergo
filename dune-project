@@ -1,4 +1,4 @@
-(lang dune 2.8)
+(lang dune 3.0)
 
 ; Since we want to generate opam files we need to provide informations ;
 (generate_opam_files true)

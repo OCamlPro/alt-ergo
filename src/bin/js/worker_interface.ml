@@ -30,6 +30,9 @@
 
 (** Types extract from AltErgoLib Utils.util and Utils.options *)
 
+open Js_of_ocaml
+open Data_encoding
+
 type input_format = Native | Smtlib2 | Why3 (* | SZS *) | Unknown of string
 type output_format = input_format
 
