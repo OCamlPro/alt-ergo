@@ -69,7 +69,7 @@ jobs:
       # Install dependencies if the cache is not retrieved
       # odoc is installed as deps with { with-doc } in opam files
       - name: opam install deps
-        run: opam install ./*.opam --deps-only
+        run: opam exec -- make deps
       # if: steps.cache-opam.outputs.cache-hit != 'true'
 
       # Try to upgrade installed packages and fix dependencies if needed,

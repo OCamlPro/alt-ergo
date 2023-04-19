@@ -48,7 +48,7 @@ jobs:
 
       # Install dependencies
       - name: Install deps
-        run: opam install  . --deps-only --with-test
+        run: opam exec -- make test-deps
 
       - name: Temporary fix
         run: opam pin https://github.com/Gbury/dolmen.git

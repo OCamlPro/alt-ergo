@@ -43,7 +43,7 @@ jobs:
 
       # Create a switch with the system compiler (no compilation needed).
       # And then, install external (no need for depext with opam 2.1) and libs deps.
-      - run: opam switch create . ocaml-system --deps-only
+      - run: opam switch create . ocaml-system --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
 
       - name: Temporary fix
         run: opam pin https://github.com/Gbury/dolmen.git

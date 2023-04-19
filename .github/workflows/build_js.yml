@@ -50,7 +50,7 @@ jobs:
 
       # Install dependencies
       - name: Install deps
-        run: opam install ./alt-ergo-js.opam --deps-only --with-test
+        run: opam exec -- make test-deps
 
       - name: Temporary fix
         run: opam pin https://github.com/Gbury/dolmen.git

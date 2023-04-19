@@ -354,10 +354,13 @@ dev-switch:
 deps:
 	opam install -y . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
 
+test-deps:
+	opam install -y . --deps-only --with-test --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
+
 dune-deps:
 	dune-deps . | dot -Tpng -o docs/deps.png
 
-.PHONY: archi deps dune-deps dev-switch
+.PHONY: archi deps test-deps dune-deps dev-switch
 
 # ===============
 # PUBLIC RELEASES
