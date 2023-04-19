@@ -75,16 +75,6 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        # Setup package name to test
-        package:
-          - alt-ergo-lib
-          - alt-ergo-parsers
-          - alt-ergo
-          - altgr-ergo
-          - alt-ergo-js
-
     steps:
       # Checkout the code of the current branch
       - name: Checkout code
@@ -112,99 +102,17 @@ jobs:
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
 
-      # Install dependencies
       - name: opam install deps
         run: opam exec -- make test-deps
 
-      - name: Temporary fix
-        run: opam pin https://github.com/Gbury/dolmen.git
-
-      # Run configure script for the package
       - name: Configure ${{ matrix.package }}
-        run: opam exec -- ./configure ${{ matrix.package }}
+        run: opam exec -- ./configure
 
-      # Make the package
-      - name: Make ${{ matrix.package }}
-        run: opam exec -- make ${{ matrix.package }}
+      - name: Make packages
+        run: opam exec -- make packages
 
-      # Clean repo
+      - name: Make install
+        run: opam exec -- make install
+
       - name: Unpin the repo
         run: opam pin remove .
-
-  make_install:
-    # Test every install/uninstall rules
-    name: Make install
-
-    # Only if in pull request or a push on main or next
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
-
-    needs: make_all
-
-    strategy:
-      matrix:
-        # Setup package to install
-        package:
-          - lib
-          - parsers
-          - bin
-          - gui
-          - all
-
-    runs-on: ubuntu-latest
-
-    steps:
-      # Checkout the code of the current branch
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Update apt-get database
-      - name: Update apt-get database
-        run: sudo apt-get update
-
-      # Retrieve the opam cache with unique key
-      # A new cache is created/used if the `.opam` files changes or
-      # if we use another ocaml version
-      # This action only retrieve de .opam/ directory
-      - name: Retrieve opam cache
-        uses: actions/cache@v2
-        id: cache-opam
-        with:
-          path: ~/.opam
-          key: v1-${{ runner.os }}-alt-ergo-make-${{ matrix.package }}-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
-
-      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-        uses: ocaml/setup-ocaml@v2
-        with:
-          ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
-
-      # Get an OCaml environment with opam installed and the proper ocaml version
-      # opam will used opam cache environment if retrieved
-      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-        uses: ocaml/setup-ocaml@v2
-        with:
-          ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
-
-      # Install all depext and deps and then build the project
-      # This step is needed since the install rule does not build the project
-      - name: Build
-        run: |
-          opam exec -- make deps
-          opam exec -- make
-
-      # Install the package in opam files
-      - name: Install ${{ matrix.package }}
-        run: opam exec -- make install-${{ matrix.package }}
-
-      # Try to look for lib or bin files in opam root
-      # This test fails if the libs or bins can't be found
-      - name: Look for lib/bin in opam root
-        run: ./rsc/extra/check_installed_package.sh ${{ matrix.package }} false
-
-      # Uninstall the package
-      - name: Uninstall ${{ matrix.package }}
-        run: opam exec -- make uninstall-${{ matrix.package }}
-
-      # Try to look for lib or bin files in opam root
-      # This test fails if the libs or bins can be found
-      - name: Look for lib/bin in opam root
-        run: ./rsc/extra/check_installed_package.sh ${{ matrix.package }} true
