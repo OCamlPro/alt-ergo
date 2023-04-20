@@ -239,7 +239,11 @@ let () =
   let bin = "alt-ergo" in
   let timelimit = "--timelimit=2" in
   let solvers = [
-    ("runtest-quick", "tableaux", [
+    ("runtest-quick", "dolmen", [
+      "--output=smtlib2"
+    ; timelimit
+    ; "--frontend dolmen" ])
+  ; ("runtest-quick", "tableaux", [
       "--output=smtlib2"
     ; timelimit
     ; "--sat-solver Tableaux" ])
@@ -255,6 +259,10 @@ let () =
       "--output=smtlib2"
     ; timelimit
     ; "--sat-solver CDCL-Tableaux" ])
+  ; ("runtest-ci", "dolmen_ci", [
+      "--output=smtlib2"
+    ; timelimit
+    ; "--frontend dolmen" ])
   ; ("runtest-ci", "ci_tableaux_cdcl_no_minimal_bj", [
       "--output=smtlib2"
     ; timelimit
@@ -302,13 +310,7 @@ let () =
     ; "--sat-solver Tableaux-CDCL"
     ; "--no-minimal-bj" ])]
   in
-  let solvers_with_dolmen =
-    List.map (
-      fun (cmd, name, opts) ->
-        cmd, name^"_dolmen", "--frontend=dolmen":: opts
-    ) solvers
-  in
   let cmds = List.map (fun (group, name, args) ->
-      Cmd.make ~name ~group ~bin ~args) (solvers  @ solvers_with_dolmen)
+      Cmd.make ~name ~group ~bin ~args) solvers
   in
   generate path cmds
