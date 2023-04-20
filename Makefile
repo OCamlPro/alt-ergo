@@ -209,20 +209,20 @@ Makefile.config $(UTIL_DIR)/config.ml $(BTEXT_DIR)/flags.dune: configure configu
 # zarith_stubs_js package is needed for this rule
 # note that --timeout option is ignored due to the lack of js primitives
 # and the use of input zip file is also unavailable
-js-node: gen js-deps
+js-node: gen
 	$(DUNE) build $(DUNE_FLAGS) --profile=release $(BJS_DIR)/main_text_js.bc.js
 	ln -sf $(DEFAULT_DIR)/$(BJS_DIR)/main_text_js.bc.js alt-ergo.js
 
 # Build a web worker for alt-ergo
 # zarith_stubs_js, data-encoding, js_of_ocaml and js_of_ocaml-lwt packages are needed for this rule
-js-worker: gen js-deps
+js-worker: gen
 	$(DUNE) build $(DUNE_FLAGS) --profile=release $(BJS_DIR)/worker_js.bc.js
 	ln -sf $(DEFAULT_DIR)/$(BJS_DIR)/worker_js.bc.js alt-ergo-worker.js \
 
 # Build a small web example using the alt-ergo web worker
 # This example is available in the www/ directory
 # zarith_stubs_js, data-encoding, js_of_ocaml and js_of_ocaml-lwt js_of_ocaml-ppx lwt_ppx packages are needed for this rule
-js-example: js-worker js-deps
+js-example: js-worker
 	$(DUNE) build $(DUNE_FLAGS) --profile=release $(BJS_DIR)/worker_example.bc.js
 	mkdir -p www
 	cp $(EXTRA_DIR)/worker_example.html www/index.html
