@@ -33,10 +33,10 @@ To compile the sources, you will need the following libraries :
 ```
   ocaml >= 4.05.0
   dune >= 2.8
-  zarith
+  zarith >= 1.4
   camlzip
   menhir
-  ocplib-simplex >= 0.5
+  ocplib-simplex <= 0.4
   seq
   cmdliner
   stdlib-shims
