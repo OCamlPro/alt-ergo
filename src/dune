@@ -9,7 +9,7 @@
   (ocamlopt_flags -g))
  (release ;; The release profile has optimizations enabled.
   (flags
-   (:standard -bin-annot))
+   (:standard -bin-annot -w -22))
   (ocamlopt_flags -O3 -unbox-closures))
   (js_of_ocaml (flags --no-source-map))
 )
