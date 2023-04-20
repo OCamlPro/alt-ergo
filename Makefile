@@ -112,7 +112,8 @@ plugins: gen
 # on "lib", "bin" and "gui", since dune can
 # parralelize more
 all: gen
-	$(DUNE) build $(DUNE_FLAGS)
+	$(DUNE) build $(DUNE_FLAGS) @$(LIB_DIR)/all @$(BTEXT_DIR)/all \
+		@$(BGUI_DIR)/all @$(PARSERS_DIR)/all @$(BJS_DIR)/all @$(PLUGINS_DIR)/all
 
 # declare these targets as phony to avoid name clashes with existing directories,
 # particularly the "plugins" target
@@ -149,7 +150,7 @@ gentest: $(wildcard tests/**/*)
 
 # Run non-regression tests.
 runtest: gentest bin
-	dune build @runtest
+	dune build @runtest-quick
 
 # Run non-regression tests for the CI.
 runtest-ci: gentest bin
