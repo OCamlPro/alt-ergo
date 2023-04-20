@@ -109,7 +109,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (dolmen_loop (>= 0.8.1))
   num
   (ocplib-simplex (>= 0.5))
-  zarith
+  (zarith (>= 1.4))
   seq
   stdlib-shims
   (camlzip (>= 1.07))
