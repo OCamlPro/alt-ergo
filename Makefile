@@ -95,9 +95,6 @@ gui: gen
 parsers: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(PARSERS_DIR)/all
 
-js: gen
-	$(DUNE) build $(DUNE_FLAGS) @$(BJS_DIR)/all
-
 fm-simplex: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(PLUGINS_DIR)/fm-simplex/all
 
@@ -207,24 +204,25 @@ Makefile.config $(UTIL_DIR)/config.ml $(BTEXT_DIR)/flags.dune: configure configu
 # ======================
 # Javascript generation
 # ======================
+
 # Build the text alt-ergo bin in Js with js_of_ocaml-compiler
 # zarith_stubs_js package is needed for this rule
 # note that --timeout option is ignored due to the lack of js primitives
 # and the use of input zip file is also unavailable
-js-node: gen
+js-node: gen js-deps
 	$(DUNE) build $(DUNE_FLAGS) --profile=release $(BJS_DIR)/main_text_js.bc.js
 	ln -sf $(DEFAULT_DIR)/$(BJS_DIR)/main_text_js.bc.js alt-ergo.js
 
 # Build a web worker for alt-ergo
 # zarith_stubs_js, data-encoding, js_of_ocaml and js_of_ocaml-lwt packages are needed for this rule
-js-worker: gen
+js-worker: gen js-deps
 	$(DUNE) build $(DUNE_FLAGS) --profile=release $(BJS_DIR)/worker_js.bc.js
 	ln -sf $(DEFAULT_DIR)/$(BJS_DIR)/worker_js.bc.js alt-ergo-worker.js \
 
 # Build a small web example using the alt-ergo web worker
 # This example is available in the www/ directory
 # zarith_stubs_js, data-encoding, js_of_ocaml and js_of_ocaml-lwt js_of_ocaml-ppx lwt_ppx packages are needed for this rule
-js-example: js-worker
+js-example: js-worker js-deps
 	$(DUNE) build $(DUNE_FLAGS) --profile=release $(BJS_DIR)/worker_example.bc.js
 	mkdir -p www
 	cp $(EXTRA_DIR)/worker_example.html www/index.html
@@ -263,6 +261,10 @@ archi: $(EXTRA_DIR)/ocamldot/ocamldot
 
 dev-switch:
 	opam switch create -y . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
+
+js-deps:
+	opam pin add js_of_ocaml 5.0.1
+	opam install js_of_ocaml-lwt js_of_ocaml-ppx data-encoding zarith_stubs_js lwt_ppx -y
 
 deps:
 	opam install -y . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
