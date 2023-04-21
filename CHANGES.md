@@ -5,6 +5,7 @@
 * Dune 3.0 or above required, see https://github.com/ocaml/dune/issues/5563 (PR #575)
 * Zarith 1.4 or above required
 * Cairo2 0.6.4 or above required
+* psmt2-frontend 0.4 or above required
 * Using js_of_ocaml with a version between 4.0.1 and 5.0.1 required (PR #575)
 
 # Bug fixes
