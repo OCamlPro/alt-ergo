@@ -124,7 +124,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   dune-configurator
   dune-build-info
   num
-  (ocplib-simplex (and (>= 0.4) (< 0.5)))
+  (ocplib-simplex (and (>= 0.4.1) (< 0.5)))
   (zarith (>= 1.4))
   seq
   stdlib-shims
