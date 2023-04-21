@@ -53,6 +53,7 @@ See more details on https://alt-ergo.ocamlpro.com/"
   (alt-ergo-lib (= :version))
   (alt-ergo-parsers (= :version))
   lablgtk3
+  (cairo2 (>= 0.6.4))
   conf-gtksourceview3
   lablgtk3-sourceview3
   (cmdliner (>= 1.1.0))

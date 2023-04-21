@@ -2,10 +2,10 @@
 
 # Build
 * Restrict the requirement version of Ocplib-simplex (PR #573)
-* Dune 3.0 or above is required, see https://github.com/ocaml/dune/issues/5563 (PR #575)
-* Zarith 1.4 or above is required
-* Using js_of_ocaml with a version between 4.0.1 and 5.0.1 is required for
-  the new package alt-ergo-js (PR #575)
+* Dune 3.0 or above required, see https://github.com/ocaml/dune/issues/5563 (PR #575)
+* Zarith 1.4 or above required
+* Cairo2 0.6.4 or above required
+* Using js_of_ocaml with a version between 4.0.1 and 5.0.1 required (PR #575)
 
 # Bug fixes
 * Fix soundness issues in the arithmetic reasoner #476, #477, #479 (PR #573)
