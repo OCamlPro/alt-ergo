@@ -97,7 +97,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
  (depends
   (ocaml (>= 4.05.0))
   (alt-ergo-lib (= :version))
-  (psmt2-frontend (>= 0.3))
+  (psmt2-frontend (>= 0.4))
   (camlzip (>= 1.07))
   menhir
   stdlib-shims
