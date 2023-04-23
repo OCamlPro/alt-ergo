@@ -377,7 +377,14 @@ let main () =
       match td with
       (* When the next statement is a goal, the solver is called and provided
          the goal and the current context *)
-      | { id = {name = Simple name; _}; contents = `Goal _; _ } ->
+      | { id = {name = Simple name; _}; contents = `Goal _; _ }
+      | { id = {name = Simple name; _}; contents = `Solve [_]; _ } when
+        match (State.get State.logic_file st).lang with
+        | Some Alt_ergo -> true
+        | Some _ -> false
+        | None -> assert false
+          (* unreachable because the file's language is set after parsing *)
+      ->
         let l =
           solver_ctx.local @
           solver_ctx.global @
@@ -430,14 +437,13 @@ let main () =
               { solver_ctx with ctx = cnf @ solver_ctx.ctx }
             ) st
         end
-      | {id = _; contents = `Solve _; loc }
-        when (
-          match (State.get State.logic_file st).lang with
-          | Some (Smtlib2 _) -> true
-          | Some _ -> false
-          | None -> assert false
+      | { id = _; contents = `Solve _; loc } when
+        match (State.get State.logic_file st).lang with
+        | Some (Smtlib2 _) -> true
+        | Some _ -> false
+        | None -> assert false
           (* unreachable because the file's language is set after parsing *)
-        ) ->
+      ->
         let l =
           solver_ctx.local @
           solver_ctx.global @
