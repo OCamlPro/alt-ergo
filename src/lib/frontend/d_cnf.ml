@@ -1168,7 +1168,7 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
 
     Returns a list of hypotheses and the new goal body
 *)
-let pp_query t =
+let pp_query ~valid_mode t =
   (*  Removes top-level universal quantifiers of a goal's body, and binds
       the quantified variables to uninterpreted symbols.
   *)
@@ -1219,25 +1219,25 @@ let pp_query t =
     | App (
         { term_descr = Cst { builtin = B.Imply; _ }; _ }, _, [x; y]
       ) when valid_mode ->
-      let nx = elim_toplevel_forall false x in
-      let axioms, goal = intro_hypothesis true y in
+      let nx = elim_toplevel_forall (not valid_mode) x in
+      let axioms, goal = intro_hypothesis valid_mode y in
       nx::axioms, goal
 
     | Binder (Forall (tyvl, tvl), body) when valid_mode ->
       Cache.store_tyvl ~is_var:false tyvl;
       Cache.store_sy_vl_names tvl;
-      intro_hypothesis true body
+      intro_hypothesis valid_mode body
 
     | Binder (Exists (tyvl, tvl), body) when not valid_mode ->
       Cache.store_tyvl ~is_var:false tyvl;
       Cache.store_sy_vl_names tvl;
-      intro_hypothesis false body
+      intro_hypothesis valid_mode body
 
     | _ ->
       [], elim_toplevel_forall valid_mode t
   in
 
-  intro_hypothesis true t
+  intro_hypothesis valid_mode t
 
 let make_form name_base f loc ~decl_kind =
   let ff =
@@ -1267,7 +1267,7 @@ let make dloc_file acc stmt =
     (* Goal definitions *)
     | { id = Id.{name = Simple name; _}; contents = `Goal t; loc; } ->
       let st_loc = dl_to_ael dloc_file loc in
-      let _hyps, t = pp_query t in
+      let _hyps, t = pp_query ~valid_mode:true t in
       let rev_hyps_c =
         List.fold_left (
           fun acc t ->
@@ -1283,6 +1283,27 @@ let make dloc_file acc stmt =
       in
       let e = make_form "" t st_loc ~decl_kind:E.Dgoal in
       let st_decl = C.Query (name, e, Thm) in
+      C.{st_decl; st_loc} :: List.rev_append (List.rev rev_hyps_c) acc
+
+    (* Check_sat definitions in the native language *)
+    | { id = Id.{name = Simple name; _}; contents = `Solve [t]; loc; } ->
+      let st_loc = dl_to_ael dloc_file loc in
+      let _hyps, t = pp_query ~valid_mode:false t in
+      let rev_hyps_c =
+        List.fold_left (
+          fun acc t ->
+            let ns = DStd.Namespace.Decl in
+            let name = Ty.fresh_hypothesis_name Ty.Thm in
+            let decl: Typer_Pipe.typechecked Typer_Pipe.stmt = {
+              id = Id.mk ns name;
+              contents = `Hyp t; loc;
+            }
+            in
+            aux acc decl
+        ) [] _hyps
+      in
+      let e = make_form "" t st_loc ~decl_kind:E.Dgoal in
+      let st_decl = C.Query (name, e, Sat) in
       C.{st_decl; st_loc} :: List.rev_append (List.rev rev_hyps_c) acc
 
     (* Axiom definitions *)
