@@ -46,7 +46,7 @@
 %token AND LEFTARROW RIGHTARROW AC AT AXIOM CASESPLIT REWRITING
 %token BAR HAT
 %token BOOL COLON COMMA PV DISTINCT DOT SHARP ELSE OF EOF EQUAL
-%token EXISTS FALSE VOID FORALL FUNC GE CHECK_VALID CHECK_SAT GT CHECK CUT
+%token EXISTS FALSE VOID FORALL FUNC GE GOAL CHECK_SAT GT CHECK CUT
 %token IF IN INT BITV MAPS_TO
 %token LE LET LEFTPAR LEFTSQ LEFTBR LOGIC LRARROW XOR LT MINUS
 %token NOT NOTEQ OR PERCENT PLUS PRED PROP
@@ -158,7 +158,7 @@ decl:
 | REWRITING name = ident COLON body = list1_lexpr_sep_pv
    { mk_rewriting ($startpos, $endpos) name body }
 
-| CHECK_VALID name = ident COLON body = lexpr
+| GOAL name = ident COLON body = lexpr
    { mk_goal ($startpos, $endpos) name body }
 
 | CHECK_SAT name = ident COLON body = lexpr
