@@ -379,12 +379,12 @@ let main () =
          the goal and the current context *)
       | { id = {name = Simple name; _}; contents = `Goal _; _ }
       | { id = {name = Simple name; _}; contents = `Solve [_]; _ } when
-        match (State.get State.logic_file st).lang with
-        | Some Alt_ergo -> true
-        | Some _ -> false
-        | None -> assert false
-          (* unreachable because the file's language is set after parsing *)
-      ->
+          match (State.get State.logic_file st).lang with
+          | Some Alt_ergo -> true
+          | Some _ -> false
+          | None -> assert false
+        (* unreachable because the file's language is set after parsing. *)
+        ->
         let l =
           solver_ctx.local @
           solver_ctx.global @
@@ -438,12 +438,12 @@ let main () =
             ) st
         end
       | { id = _; contents = `Solve _; loc } when
-        match (State.get State.logic_file st).lang with
-        | Some (Smtlib2 _) -> true
-        | Some _ -> false
-        | None -> assert false
-          (* unreachable because the file's language is set after parsing *)
-      ->
+          match (State.get State.logic_file st).lang with
+          | Some (Smtlib2 _) -> true
+          | Some _ -> false
+          | None -> assert false
+        (* unreachable because the file's language is set after parsing *)
+        ->
         let l =
           solver_ctx.local @
           solver_ctx.global @
