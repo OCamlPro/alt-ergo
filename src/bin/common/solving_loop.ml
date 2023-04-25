@@ -377,20 +377,36 @@ let main () =
       match td with
       (* When the next statement is a goal, the solver is called and provided
          the goal and the current context *)
-      | { id = {name = Simple name; _}; contents = `Goal _; _ }
-      | { id = {name = Simple name; _}; contents = `Solve [_]; _ } when
-          match (State.get State.logic_file st).lang with
-          | Some Alt_ergo -> true
-          | Some _ -> false
-          | None -> assert false
-        (* unreachable because the file's language is set after parsing. *)
-        ->
+      | { id; contents = (`Solve _ as contents); loc } ->
         let l =
           solver_ctx.local @
           solver_ctx.global @
           solver_ctx.ctx
         in
-        let rev_cnf = D_cnf.make (State.get State.logic_file st).loc l td in
+        let name, stmt =
+          match id.name, (State.get State.logic_file st).lang with
+          | Simple _, Some (Smtlib2 _) ->
+            let name = "g_" ^ string_of_int (incr goal_cnt; !goal_cnt) in
+            let stmt =
+              match contents with
+              | `Solve ([], []) ->
+                let contents =
+                  `Solve ([], [DStd.Expr.Term.(of_cst Const._false)])
+                in
+                Typer_Pipe.{
+                  id = DStd.Id.mk DStd.Namespace.term name;
+                  contents;
+                  loc;
+                }
+              | `Solve _ -> failwith "not yet supported"
+              | _ -> assert false
+            in
+            name, stmt
+          | Simple name, Some _ -> name, td
+          | _ -> assert false
+          (* unreachable because the file's language is set after parsing *)
+        in
+        let rev_cnf = D_cnf.make (State.get State.logic_file st).loc l stmt in
         let cnf = List.rev rev_cnf in
         let partial_model = solve all_context (cnf, name) in
         let rec ng_is_thm rcnf =
@@ -437,50 +453,6 @@ let main () =
               { solver_ctx with ctx = cnf @ solver_ctx.ctx }
             ) st
         end
-      | { id = _; contents = `Solve _; loc } when
-          match (State.get State.logic_file st).lang with
-          | Some (Smtlib2 _) -> true
-          | Some _ -> false
-          | None -> assert false
-        (* unreachable because the file's language is set after parsing *)
-        ->
-        let l =
-          solver_ctx.local @
-          solver_ctx.global @
-          solver_ctx.ctx
-        in
-        let goal_name = "g_"^ string_of_int (incr goal_cnt; !goal_cnt) in
-        let rev_cnf = D_cnf.make (State.get State.logic_file st).loc l
-            Typer_Pipe.{
-              id = DStd.Id.mk DStd.Namespace.term goal_name;
-              contents = `Goal DStd.Expr.Term.(of_cst Const._false);
-              loc;
-            }
-        in
-        let cnf = List.rev rev_cnf in
-        let partial_model = solve all_context (cnf, goal_name) in
-        let rec ng_is_thm rcnf =
-          begin match rcnf with
-            | Commands.{ st_decl = Query (_, _, (Ty.Thm | Ty.Sat)); _ } :: _ ->
-              true
-            | Commands.{ st_decl = Query _; _ } :: _ -> false
-            | _ :: tl -> ng_is_thm tl
-            | _ -> assert false (* unreachable *)
-          end
-        in
-        if ng_is_thm rev_cnf
-        then
-          State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
-            { solver_ctx with global = []; local = [] }
-          ) st
-          |> State.set partial_model_key partial_model
-        else
-          State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
-            { solver_ctx with local = [] }
-          ) st
-          |> State.set partial_model_key partial_model
 
       | {contents = `Set_option
              { term =

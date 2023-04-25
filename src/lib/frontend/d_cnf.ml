@@ -287,7 +287,7 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
     let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
     let rev_cs, is_enum =
       Array.fold_left (
-        fun (accl, is_enum) DT.{ cstr = { path; _ }; dstrs; _ } ->
+        fun (accl, is_enum) DE.{ cstr = { path; _ }; dstrs; _ } ->
           let is_enum =
             if is_enum
             then
@@ -385,7 +385,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
       ) ->
       let rev_cs =
         Array.fold_left (
-          fun (accl) DT.{ cstr = { path; _ }; dstrs; _ } ->
+          fun (accl) DE.{ cstr = { path; _ }; dstrs; _ } ->
             let rev_fields =
               Array.fold_left (
                 fun acc tc_o ->
@@ -424,14 +424,14 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
       fun acc tdef ->
         match tdef with
         | Some (
-            (DT.Adt { cases; record; ty = ty_c; }) as adt
+            (DE.Adt { cases; record; ty = ty_c; }) as adt
           ) ->
           let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
           let name = get_basename ty_c.path in
 
           let cns, is_enum =
             Array.fold_right (
-              fun DE.Ty.{ dstrs; cstr = { path; _ }; _ } (nacc, is_enum) ->
+              fun DE.{ dstrs; cstr = { path; _ }; _ } (nacc, is_enum) ->
                 get_basename path :: nacc,
                 Array.length dstrs = 0 && is_enum
             ) cases ([], true)
@@ -502,7 +502,7 @@ let mk_pattern DE.{ term_descr; _ } =
     let rev_vnames =
       begin match DT.definition adt with
         | Some (Adt { cases; _ }) ->
-          let { DT.dstrs; _ } = cases.(case) in
+          let { DE.dstrs; _ } = cases.(case) in
           Array.fold_left (
             fun acc v ->
               match v with
@@ -1265,7 +1265,10 @@ let make dloc_file acc stmt =
       C.{ st_decl; st_loc } :: acc
 
     (* Goal definitions *)
-    | { id = Id.{name = Simple name; _}; contents = `Goal t; loc; } ->
+    | {
+      id = Id.{name = Simple name; _};
+      contents = `Solve ([], [t]); loc;
+    } ->
       let st_loc = dl_to_ael dloc_file loc in
       let _hyps, t = pp_query ~valid_mode:true t in
       let rev_hyps_c =
@@ -1286,7 +1289,7 @@ let make dloc_file acc stmt =
       C.{st_decl; st_loc} :: List.rev_append (List.rev rev_hyps_c) acc
 
     (* Check_sat definitions in the native language *)
-    | { id = Id.{name = Simple name; _}; contents = `Solve [t]; loc; } ->
+    | { id = Id.{name = Simple name; _}; contents = `Solve ([t], []); loc; } ->
       let st_loc = dl_to_ael dloc_file loc in
       let _hyps, t = pp_query ~valid_mode:false t in
       let rev_hyps_c =
@@ -1323,7 +1326,11 @@ let make dloc_file acc stmt =
             let name_base = get_basename path in
             let sy = Sy.name name_base in
             Cache.store_sy (DE.Term.Const.hash tcst) sy
-          | `Type_def _ -> ()
+          | `Type_alias _ -> ()
+          | `Instanceof _ ->
+              (* The constructor `Instanceof is only used for Smtlib
+                 response. *)
+              assert false
         ) defs;
       List.filter_map (fun (def : Typer_Pipe.def) ->
           match def with
@@ -1398,12 +1405,16 @@ let make dloc_file acc stmt =
                   Format.eprintf "defining term of %a@." DE.Term.print body;
                 Some C.{ st_decl = C.Assume (name_base, e, true); st_loc }
             end
-          | `Type_def _ -> None
+          | `Type_alias _ -> None
+          | `Instanceof _ ->
+              (* The constructor `Instanceof is only used for Smtlib
+                 response. *)
+              assert false
         ) defs |> List.rev_append acc
 
     | {contents = `Decls [td]; _ } ->
       begin match td with
-        | `Type_decl td -> mk_ty_decl td
+        | `Type_decl (td, _) -> mk_ty_decl td
         | `Term_decl td -> mk_term_decl td
       end;
       acc
@@ -1424,7 +1435,7 @@ let make dloc_file acc stmt =
           mk_term_decl td;
           aux [] tl
 
-        | `Type_decl td :: tl ->
+        | `Type_decl (td, _) :: tl ->
           aux (td :: acc) tl
 
         | [] ->
