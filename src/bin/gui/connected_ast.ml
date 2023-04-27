@@ -790,7 +790,7 @@ and popup_trigger t qid env (sbuf:sbuffer) offset () =
       ~packing:pop_w#vbox#add ()
   in
   let tv1 = GSourceView3.source_view ~source_buffer:buf1 ~packing:(sw1#add)
-       ~show_line_numbers:true ~wrap_mode:`CHAR()
+      ~show_line_numbers:true ~wrap_mode:`CHAR()
   in
   let _ = tv1#misc#modify_font font in
   let _ = tv1#set_editable true in
@@ -989,7 +989,7 @@ let show_used_lemmas env expl =
       let perc = ((max_mul - m) * 65535) / max_mul in
       let green_n = Gdk.Color.color_parse
           (Gui_util.dec_to_hex_color (perc*1/2)
-            ((perc + 2*65535) /3) (perc*1/2))
+             ((perc + 2*65535) /3) (perc*1/2))
       in
       t#set_property (`BACKGROUND_GDK green_n)) ftags;
   env.proof_tags <- ftags;
