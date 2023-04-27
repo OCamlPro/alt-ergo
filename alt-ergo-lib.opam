@@ -22,7 +22,6 @@ depends: [
   "dolmen_loop" {>= "0.8.1"}
   "num"
   "ocplib-simplex" {>= "0.5"}
-  "ocplib-simplex" {>= "0.4" & < "0.5"}
   "zarith" {>= "1.4"}
   "seq"
   "stdlib-shims"

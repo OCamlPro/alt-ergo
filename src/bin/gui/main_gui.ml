@@ -215,7 +215,6 @@ let pop_error ?(error=false) ~message () =
   ignore(button_ok#connect#clicked ~callback: pop_w#destroy);
   pop_w#show ()
 
-
 (* unused function
    let pop_model _sat_env () =
    let pop_w = GWindow.dialog
@@ -235,11 +234,9 @@ let pop_error ?(error=false) ~message () =
       ~wrap_mode:`CHAR () in
    let _ = tv1#misc#modify_font font in
    let _ = tv1#set_editable false in
-   (* let model_text =
-     asprintf "%a@." (SAT.print_model ~header:false) sat_env
-   in
-   * buf1#set_text model_text; *)
-   pop_w#show ()*)
+   let model_text = asprintf "%a@." (SAT.print_model ~header:false) sat_env in
+   buf1#set_text model_text;
+   pop_w#show () *)
 
 
 
@@ -1174,9 +1171,8 @@ let start_gui all_used_context =
            GButton.toggle_tool_button ~label:" Remove context"
              ~stock:`CUT ~packing:toolbar#insert ()
          in
-         ignore (
-           remove_ctx_button#connect#clicked ~callback:(remove_context env)
-         );
+         ignore(remove_ctx_button#connect#clicked
+                  ~callback:(remove_context env));
 
          let run_button = GButton.tool_button ~label:" Run Alt-Ergo"
              ~stock:`EXECUTE () in
@@ -1206,10 +1202,8 @@ let start_gui all_used_context =
          clean_button#misc#hide ();
 
          let toolsearch =
-           GButton.toolbar
-             (*~tooltips:true*)
-             ~packing:(toolbox#pack ~fill:true)
-             ()
+           GButton.toolbar (*~tooltips:true*)
+             ~packing:(toolbox#pack ~fill:true) ()
          in
          toolsearch#set_icon_size `DIALOG;
 

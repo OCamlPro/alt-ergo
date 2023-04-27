@@ -768,8 +768,7 @@ module Combine = struct
   module H = Weak.Make(struct
       type t = weak_t
 
-      let equal { t = t1; _ } { t = t2; _ } = Expr.equal t1 t2
-
+      let equal { t = t1; _ } { t = t2 ; _ } = Expr.equal t1 t2
       let hash { t; _ } = Expr.hash t
     end)
 
@@ -777,8 +776,8 @@ module Combine = struct
     let cache = H.create 1024 in
     let cache_copy = ref None in
     let make t =
-      match H.merge cache { t; r = None } with
-      | { r = Some res; _ } -> res
+      match H.merge cache { t ; r = None } with
+      | { r = Some res ; _ } -> res
       | weak -> let res = make t in weak.r <- Some res; res
     in
     let save_cache_aux () =

@@ -16,29 +16,28 @@ The resources are licensed as follows:
 OCaml source files and Alt-Ergo preludes
 -----------------------------------------
 
-Some of these files are Copyright (C) 2006-2013 --- CNRS - INRIA -
-Universite Paris Sud, and Copyright (C) 2013-2017 --- OCamlPro SAS.
-They are distributed under the terms of the :download:`Apache Software License version 2.0 <Apache-License-2.0.txt>`.
+All the files of this project, with the exception of the preludes and plugins, are distributed under the terms of
+:download:`OCamlPro-Non-Commercial-License <OCamlPro-Non-Commercial-License.pdf>`.
 
-The other files that refer to a file 'License.OCamlPro' are Copyright
-(C) --- OCamlPro SAS. They are distributed under the terms of the
-license indicated in :download:`License.OCamlPro <License.OCamlPro>` (with :download:`OCamlPro-Non-Commercial-License <OCamlPro-Non-Commercial-License.pdf>`).
+As an exception, Alt-Ergo Club members at the Gold level can use these same files
+under the terms of :download:`Apache Software License version 2.0 <Apache-License-2.0.txt>`.
 
-Note that some plugins may have different licenses. For instance the
-sources of the AB-Why3 plugin are governed by the
-:download:`GNU Lesser General Public License version 2.1 <LGPL-License.txt>`,
-and are Copyright (C) 2010-2017 INRIA - CNRS - Paris-Sud University and
-Copyright (C) 2018 OCamlPro SAS (see the AB-Why3 README).
+Note that plugins or preludes may have different licenses. Please referer to
+their directory.
 
-You may want to refer to the header of each file to know under which
+Until 2013, some parts of this code were released under the terms of the
+:download:`Apache Software License version 2.0 <Apache-License-2.0.txt>`.
+
+In case of doubt, please refer to the header of each file to know under which
 license it is distributed.
 
-
-Binaries generated from the source files
+Releases
 -----------------------------------------
 
-The binaries (tools, plugins, ...) that are generated from the OCaml
-source files are Copyright (C) --- OCamlPro SAS. They are distributed
-under the terms of the license indicated in the file
-:download:`License.OCamlPro <License.OCamlPro>` (with :download:`OCamlPro-Non-Commercial-License <OCamlPro-Non-Commercial-License.pdf>`), except for the AB-Why3 plugin, which is
-distributed under the terms of the :download:`GNU Lesser General Public License version 2.1 <LGPL-License.txt>`.
+We publish our releases on GitHub and opam repository under the license
+:download:`OCamlPro-Non-Commercial-License <OCamlPro-Non-Commercial-License.pdf>`.
+The same exceptions as above apply to the plugins and preludes.
+
+We also publish a free release of Alt-Ergo under the terms of
+:download:`CeCILL-C License v1 <CeCILL-C-License-v1.txt>`.
+The packages of the free releases are suffixed with `-free` on the opam repository.

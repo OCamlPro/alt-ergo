@@ -986,10 +986,8 @@ let show_used_lemmas env expl =
   MTag.iter (fun t m ->
       let perc = ((max_mul - m) * 65535) / max_mul in
       let green_n = Gdk.Color.color_parse
-          (Gui_util.dec_to_hex_color
-             (perc*1/2)
-             ((perc + 2*65535) /3) (perc*1/2)
-          )
+          (Gui_util.dec_to_hex_color (perc*1/2)
+             ((perc + 2*65535) /3) (perc*1/2))
       in
       t#set_property (`BACKGROUND_GDK green_n)) ftags;
   env.proof_tags <- ftags;
