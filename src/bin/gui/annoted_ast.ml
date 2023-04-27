@@ -123,7 +123,7 @@ and at_desc =
   | ATprefix of Symbols.t * aterm
   | ATget of aterm * aterm
   | ATset of aterm * aterm * aterm
-  | ATextract of aterm * aterm * aterm
+  | ATextract of aterm * int * int
   | ATconcat of aterm * aterm
   | ATlet of (Symbols.t * aterm) list * aterm
   | ATdot of aterm * Hstring.t
@@ -412,8 +412,9 @@ and findin_at_desc tag buffer parent = function
     in
     if r == None then findin_aterm tag buffer parent t2
     else r
-  | ATdot (t, _) | ATprefix (_,t) -> findin_aterm tag buffer parent t
-  | ATset (t1, t2, t3) | ATextract (t1, t2, t3)  ->
+  | ATdot (t, _) | ATprefix (_,t) | ATextract (t, _, _) ->
+    findin_aterm tag buffer parent t
+  | ATset (t1, t2, t3) ->
     let r = findin_aterm tag buffer parent t1 in
     if r == None then
       let r = findin_aterm tag buffer parent t2 in
@@ -705,8 +706,8 @@ and print_tt_desc fmt = function
     fprintf fmt "let %a in %a" print_term_binders binders print_tterm t2
   | TTconcat (t1, t2) ->
     fprintf fmt "%a@%a" print_tterm t1 print_tterm t2
-  | TTextract (t, t1, t2) ->
-    fprintf fmt "%a^{%a;%a}" print_tterm t print_tterm t1 print_tterm t2
+  | TTextract (t, i, j) ->
+    fprintf fmt "%a^{%d, %d}" print_tterm t i j
   | TTset (t, t1, t2) ->
     fprintf fmt "%a[%a<-%a]" print_tterm t print_tterm t1 print_tterm t2
   | TTget (t, t1) ->
@@ -923,7 +924,7 @@ and make_dep_at_desc d ex dep = function
   | ATget (t1, t2) | ATconcat (t1, t2) ->
     let dep = make_dep_aterm d ex dep t1 in
     make_dep_aterm d ex dep t2
-  | ATset (t1, t2, t3) | ATextract (t1, t2, t3)  ->
+  | ATset (t1, t2, t3)  ->
     let dep = make_dep_aterm d ex dep t1 in
     let dep = make_dep_aterm d ex dep t2 in
     make_dep_aterm d ex dep t3
@@ -945,8 +946,7 @@ and make_dep_at_desc d ex dep = function
          let dep = make_dep_string d ex dep (Hstring.view c) in
          make_dep_aterm d ex dep t)
       dep r
-  | ATnamed (_, t) -> make_dep_aterm d ex dep t
-  | ATmapsTo (_, t) -> make_dep_aterm d ex dep t
+  | ATnamed (_, e) | ATmapsTo (_, e) | ATextract (e, _, _)
   | ATinInterval(e, _, _) -> make_dep_aterm d ex dep e
   | ATite (f, t1, t2) ->
     let dep = make_dep_aterm d ex dep t1 in
@@ -1044,8 +1044,7 @@ and of_tt_desc (buffer:sbuffer) = function
   | TTget (t1, t2) -> ATget (of_tterm buffer t1, of_tterm buffer t2)
   | TTset (t, t1, t2) ->
     ATset (of_tterm buffer t, of_tterm buffer t1, of_tterm buffer t2)
-  | TTextract (t, t1, t2) ->
-    ATextract (of_tterm buffer t, of_tterm buffer t1, of_tterm buffer t2)
+  | TTextract (t, i, j) -> ATextract (of_tterm buffer t, i, j)
   | TTconcat (t1, t2) -> ATconcat (of_tterm buffer t1, of_tterm buffer t2)
   | TTlet (l, t2) -> ATlet (of_term_binders buffer l, of_tterm buffer t2)
   | TTdot (t, c) -> ATdot (of_tterm buffer t, c)
@@ -1269,8 +1268,7 @@ and to_tt_desc = function
   | ATprefix (s, t) -> TTprefix (s, to_tterm 0 t)
   | ATget (t1, t2) -> TTget (to_tterm 0 t1, to_tterm 0 t2)
   | ATset (t1, t2, t3) -> TTset (to_tterm 0 t1, to_tterm 0 t2, to_tterm 0 t3)
-  | ATextract (t1, t2, t3) ->
-    TTextract (to_tterm 0 t1, to_tterm 0 t2, to_tterm 0 t3)
+  | ATextract (t1, i, j) -> TTextract (to_tterm 0 t1, i, j)
   | ATconcat (t1, t2) -> TTconcat (to_tterm 0 t1, to_tterm 0 t2)
   | ATlet (l, t2) -> TTlet (to_tterm_binders l, to_tterm 0 t2)
   | ATdot (t, c) -> TTdot (to_tterm 0 t, c)
@@ -1504,13 +1502,9 @@ and add_at_desc_at errors indent (buffer:sbuffer) tags iter at =
     append_buf buffer ~iter ~tags "<-";
     add_aterm_at errors indent buffer tags iter t3;
     append_buf buffer ~iter ~tags "]"
-  | ATextract (t1, t2, t3) ->
+  | ATextract (t1, i, j) ->
     add_aterm_at errors indent buffer tags iter t1;
-    append_buf buffer ~iter ~tags "^{";
-    add_aterm_at errors indent buffer tags iter t2;
-    append_buf buffer ~iter ~tags ", ";
-    add_aterm_at errors indent buffer tags iter t3;
-    append_buf buffer ~iter ~tags "}"
+    append_buf buffer ~iter ~tags (Format.sprintf "^{%d, %d}" i j)
   | ATconcat (t1, t2) ->
     add_aterm_at errors indent buffer tags iter t1;
     append_buf buffer ~iter ~tags "@";
@@ -1939,8 +1933,8 @@ let rec isin_aterm sl { at_desc; _ } =
   | ATlet (l, t2) ->
     isin_aterm sl t2 || List.exists (fun (_,t1) -> isin_aterm sl t1) l
   | ATdot (t, _ ) | ATprefix (_,t) | ATnamed (_, t)
-  | ATmapsTo (_, t) -> isin_aterm sl t
-  | ATset (t1, t2, t3) | ATextract (t1, t2, t3) ->
+  | ATmapsTo (_, t) | ATextract (t, _, _) -> isin_aterm sl t
+  | ATset (t1, t2, t3) ->
     isin_aterm sl t1 || isin_aterm sl t2 || isin_aterm sl t3
   | ATinInterval(t1, _, _) ->
     isin_aterm sl t1
@@ -1970,9 +1964,9 @@ and findtags_aaterm sl aat acc =
     then aat.tag::acc
     else acc
   | ATdot (t, _) | ATprefix (_,t) | ATnamed (_, t)
-  | ATmapsTo (_, t) ->
+  | ATmapsTo (_, t) | ATextract (t, _, _) ->
     if isin_aterm sl t then aat.tag::acc else acc
-  | ATset (t1, t2, t3) | ATextract (t1, t2, t3) ->
+  | ATset (t1, t2, t3) ->
     if isin_aterm sl t1 || isin_aterm sl t2 || isin_aterm sl t3
     then aat.tag::acc else acc
   | ATinInterval(t1, _, _)->
@@ -2105,8 +2099,9 @@ let rec listsymbols at acc =
   | ATlet (l, t2) ->
     List.fold_left (fun acc (_,t1) -> listsymbols t1 acc)
       (listsymbols t2 acc) l
-  | ATdot (t, _) | ATprefix (_,t) | ATnamed (_, t) -> listsymbols t acc
-  | ATset (t1, t2, t3) | ATextract (t1, t2, t3)  ->
+  | ATdot (t, _) | ATprefix (_,t) | ATnamed (_, t)
+  | ATextract (t, _, _) -> listsymbols t acc
+  | ATset (t1, t2, t3) ->
     listsymbols t1 (listsymbols t2 (listsymbols t3 acc))
   | ATrecord r ->
     List.fold_left (fun acc (_, at) -> listsymbols at acc) acc r

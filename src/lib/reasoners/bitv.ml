@@ -74,7 +74,7 @@ module Shostak(X : ALIEN) = struct
 
   let is_mine_symb sy _ =
     match sy with
-    | Sy.Bitv _ | Sy.Op (Sy.Concat | Sy.Extract)  -> true
+    | Sy.Bitv _ | Sy.Op (Sy.Concat | Sy.Extract _)  -> true
     | _ -> false
 
   let embed r =
@@ -225,20 +225,10 @@ module Shostak(X : ALIEN) = struct
           let r1, ctx = make_rec t1 ctx in
           let r2, ctx = make_rec t2 ctx in
           { bv = I_Comp (r1, r2) ; sz = n }, ctx
-        | { E.f = Sy.Op Sy.Extract;
-            xs = [t1;ti;tj] ; ty = Ty.Tbitv _; _ } ->
-          begin
-            match E.term_view ti, E.term_view tj with
-            | { E.f = Sy.Int i; _ } , { E.f = Sy.Int j; _ } ->
-              let i = int_of_string (Hstring.view i) in
-              let j = int_of_string (Hstring.view j) in
-              let r1, ctx = make_rec t1 ctx in
-              { sz = j - i + 1 ; bv = I_Ext (r1,i,j)}, ctx
-            | _ ->
-              Printer.print_err "Expected two integer, got %a and %a"
-                E.print ti E.print tj;
-              assert false
-          end
+        | { E.f = Sy.Op Sy.Extract (i, j); xs = [t1] ; ty = Ty.Tbitv _; _ } ->
+          let r1, ctx = make_rec t1 ctx in
+          { sz = j - i + 1 ; bv = I_Ext (r1,i,j)}, ctx
+
         | { E.ty = Ty.Tbitv n; _ } ->
           let r', ctx' = X.make t' in
           let ctx = ctx' @ ctx in
