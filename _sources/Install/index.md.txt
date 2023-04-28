@@ -115,11 +115,17 @@ depending on whether ocamlopt is installed or only ocamlc is detected.
 
 #### Alt-Ergo with Nodejs
 
+You can install dependencies using:
+
+```
+$ make js-deps
+```
+
   1. Compile with `make js-node`
 
 For this build rule you will need the following aditional libraries :
 ```
-Js_of_ocaml-compiler
+js_of_ocaml between 4.0.1 and 5.0.1
 zarith_stubs_js
 ```
 
@@ -129,7 +135,7 @@ zarith_stubs_js
 
 For this build rule you will need the following aditional libraries :
 ```
-js_of_ocaml
+js_of_ocaml between 4.0.1 and 5.0.1
 js_of_ocaml-lwt
 zarith_stubs_js
 data-encoding
@@ -143,7 +149,7 @@ This command create a `www/` directory in which you can find a small js example 
 
 For this build rule you will need the following aditional libraries :
 ```
-js_of_ocaml
+js_of_ocaml between 4.0.1 and 5.0.1
 js_of_ocaml-lwt
 js_of_ocaml-ppx
 lwt_ppx
