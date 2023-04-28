@@ -33,27 +33,6 @@ See more details on https://alt-ergo.ocamlpro.com/")
  )
 )
 
-(package
-  (name alt-ergo-js)
-  (synopsis "The Alt-Ergo SMT prover")
-  (description "\
-Alt-Ergo is an automatic theorem prover of mathematical formulas. It was developed at LRI, and is now maintained at OCamlPro.
-
-See more details on https://alt-ergo.ocamlpro.com/")
- (depends
-  (ocaml (>= 4.05.0))
-  dune
-  (alt-ergo-lib (= :version))
-  (alt-ergo-parsers (= :version))
-  (js_of_ocaml (and (>= 4.0.1) (<= 5.0.1)))
-  js_of_ocaml-lwt
-  js_of_ocaml-ppx
-  data-encoding
-  zarith_stubs_js
-  lwt_ppx
- )
-)
-
 ; Second package, the alt-ergo gui binary
 
 (package

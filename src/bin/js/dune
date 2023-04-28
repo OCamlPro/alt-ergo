@@ -1,8 +1,6 @@
 ; Rule to build a js version runnable with node-js of Alt-Ergo
 (executable
  (name main_text_js)
- (public_name alt-ergo-js)
- (package alt-ergo-js)
  (libraries
    alt_ergo_common
    zarith_stubs_js
@@ -14,7 +12,6 @@
 
 (library
  (name worker_interface)
- (package alt-ergo-js)
  (libraries
    js_of_ocaml
    data-encoding

@@ -95,9 +95,6 @@ gui: gen
 parsers: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(PARSERS_DIR)/all
 
-js: gen
-	$(DUNE) build $(DUNE_FLAGS) @$(BJS_DIR)/all
-
 fm-simplex: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(PLUGINS_DIR)/fm-simplex/all
 
@@ -207,6 +204,7 @@ Makefile.config $(UTIL_DIR)/config.ml $(BTEXT_DIR)/flags.dune: configure configu
 # ======================
 # Javascript generation
 # ======================
+
 # Build the text alt-ergo bin in Js with js_of_ocaml-compiler
 # zarith_stubs_js package is needed for this rule
 # note that --timeout option is ignored due to the lack of js primitives
@@ -263,6 +261,10 @@ archi: $(EXTRA_DIR)/ocamldot/ocamldot
 
 dev-switch:
 	opam switch create -y . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
+
+js-deps:
+	opam pin add js_of_ocaml 5.0.1
+	opam install js_of_ocaml-lwt js_of_ocaml-ppx data-encoding zarith_stubs_js lwt_ppx -y
 
 deps:
 	opam install -y . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
