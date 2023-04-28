@@ -77,7 +77,7 @@ and pp_desc =
   | PPdot of lexpr * string
   | PPrecord of (string * lexpr) list
   | PPwith of lexpr * (string * lexpr) list
-  | PPextract of lexpr * lexpr * lexpr
+  | PPextract of lexpr * int * int
   | PPconcat of lexpr * lexpr
   | PPif of lexpr * lexpr * lexpr
   | PPforall of

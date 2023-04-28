@@ -112,7 +112,7 @@ and at_desc =
   | ATprefix of Symbols.t * aterm
   | ATget of aterm * aterm
   | ATset of aterm * aterm * aterm
-  | ATextract of aterm * aterm * aterm
+  | ATextract of aterm * int * int
   | ATconcat of aterm * aterm
   | ATlet of (Symbols.t * aterm) list * aterm
   | ATdot of aterm * Hstring.t

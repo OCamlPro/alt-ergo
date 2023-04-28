@@ -112,7 +112,7 @@ and 'a tt_desc =
   (** Get operation on arrays *)
   | TTset of 'a atterm * 'a atterm * 'a atterm
   (** Set operation on arrays *)
-  | TTextract of 'a atterm * 'a atterm * 'a atterm
+  | TTextract of 'a atterm * int * int
   (** Extract a sub-bitvector *)
   | TTconcat of 'a atterm * 'a atterm
   (* Concatenation of bitvectors *)

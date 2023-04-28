@@ -97,11 +97,9 @@ let rec make_term up_qv quant_basename t =
       let t3 = mk_term t3 in
       E.mk_term (Sy.Op Sy.Set) [t1; t2; t3] ty
 
-    | TTextract (t1, t2, t3) ->
+    | TTextract (t1, i, j) ->
       let t1 = mk_term t1 in
-      let t2 = mk_term t2 in
-      let t3 = mk_term t3 in
-      E.mk_term (Sy.Op Sy.Extract) [t1; t2; t3] ty
+      E.mk_term (Sy.Op (Sy.Extract (i, j))) [t1] ty
 
     | TTconcat (t1, t2) ->
       E.mk_term (Sy.Op Sy.Concat)

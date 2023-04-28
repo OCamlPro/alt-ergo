@@ -31,16 +31,25 @@ type builtin =
   | IsConstr of Hstring.t (* ADT tester *)
 
 type operator =
-    Plus | Minus | Mult | Div | Modulo
-  | Concat | Extract | Get | Set | Fixed | Float
-  | Reach | Access of Hstring.t | Record
-  | Sqrt_real | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
-  | Sqrt_real_default | Sqrt_real_excess
-  | Min_real | Min_int | Max_real | Max_int | Integer_log2
-  | Pow | Integer_round
+  | Tite
+  (* Arithmetic *)
+  | Plus | Minus | Mult | Div | Modulo | Pow
+  | Reach
+  (* ADTs *)
+  | Access of Hstring.t | Record
   | Constr of Hstring.t (* enums, adts *)
   | Destruct of Hstring.t * bool
-  | Tite
+  (* Arrays *)
+  | Get | Set
+  (* BV *)
+  | Concat
+  | Extract of int * int (* lower bound * upper bound *)
+  (* FP *)
+  | Float of int * int (* precision|significant * exponential *)
+  | Integer_round | Fixed
+  | Sqrt_real | Sqrt_real_default | Sqrt_real_excess
+  | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
+  | Max_real | Max_int | Min_real | Min_int | Integer_log2
 
 type lit =
   (* literals *)
@@ -123,8 +132,11 @@ let compare_operators op1 op2 =
       | Destruct (h1, b1), Destruct(h2, b2) ->
         let c = Stdlib.compare b1 b2 in
         if c <> 0 then c else Hstring.compare h1 h2
+      | Extract (i1, j1), Extract (i2, j2) ->
+        let r = Int.compare i1 i2 in
+        if r = 0 then Int.compare j1 j2 else r
       | _ , (Plus | Minus | Mult | Div | Modulo
-            | Concat | Extract | Get | Set | Fixed | Float | Reach
+            | Concat | Extract _ | Get | Set | Fixed | Float _ | Reach
             | Access _ | Record | Sqrt_real | Abs_int | Abs_real
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
@@ -277,7 +289,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op Record -> "@Record"
   | Op Get -> "get"
   | Op Set -> "set"
-  | Op Float -> "float"
+  | Op Float (prec, exp) -> Format.sprintf "float %d %d" prec exp
   | Op Fixed -> "fixed"
   | Op Abs_int -> "abs_int"
   | Op Abs_real -> "abs_real"
@@ -295,7 +307,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op Pow -> "**"
   | Op Integer_round -> "integer_round"
   | Op Concat -> "@"
-  | Op Extract -> "^"
+  | Op Extract (i, j) -> Format.sprintf "^{%d; %d}" i j
   | Op Tite -> "ite"
   | Op Reach -> assert false
   | True -> "true"

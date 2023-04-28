@@ -231,15 +231,15 @@ let int_of_term t =
 
 module MQ =
   Map.Make (struct
-    type t = E.t * E.t * E.t * Q.t
+    type t = int * int * E.t * Q.t
     let compare (prec1, exp1, mode1, x1) (prec2, exp2, mode2, x2) =
       let c = Q.compare x1 x2 in
       if c <> 0 then c
       else
-        let c = E.compare prec1 prec2 in
+        let c = prec1 - prec2 in
         if c <> 0 then c
         else
-          let c = E.compare exp1 exp2 in
+          let c = exp1 - exp2 in
           if c <> 0 then c
           else E.compare mode1 mode2
   end)
@@ -253,8 +253,6 @@ let float_of_rational prec exp mode x =
   try MQ.find input !cache
   with Not_found ->
     let mode = mode_of_term mode in
-    let prec = int_of_term prec in
-    let exp  = int_of_term exp in
     let m, e = to_mantissa_exp prec exp mode x in
     let res = mult_x_by_2_pow_n (Q.from_z m) e in
     cache := MQ.add input (res, m, e) !cache;
@@ -271,19 +269,17 @@ let make_adequate_app s l ty =
   | Sy.Name (hs, Sy.Other) when Options.get_use_fpa() ->
     let s, l  =
       match Hstring.view hs, l with
-      | "float", [_;_;_;_] -> Sy.Op Sy.Float, l
-      | "float32", [_;_;] -> Sy.Op Sy.Float,(E.int "24")::(E.int "149")::l
+      | "float", [prec; exp; mode; x] ->
+        Sy.Op (Sy.Float (int_of_term prec, int_of_term exp)), [mode; x]
+
+      | "float32", [_;_;] -> Sy.Op (Sy.Float (24, 149)), l
       | "float32d", [_] ->
-        Sy.Op Sy.Float,
-        (E.int "24")::
-        (E.int "149")::
+        Sy.Op (Sy.Float (24, 149)),
         _NearestTiesToEven__rounding_mode :: l
 
-      | "float64", [_;_;] -> Sy.Op Sy.Float,(E.int "53")::(E.int "1074")::l
+      | "float64", [_;_;] -> Sy.Op (Sy.Float (53, 1074)), l
       | "float64d", [_] ->
-        Sy.Op Sy.Float,
-        (E.int "53")::
-        (E.int "1074")::
+        Sy.Op (Sy.Float (53, 1074)),
         _NearestTiesToEven__rounding_mode :: l
 
       | "integer_round", [_;_] -> Sy.Op Sy.Integer_round, l

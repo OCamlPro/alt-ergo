@@ -552,22 +552,17 @@ let rec type_term ?(call_from_type_form=false) env f =
         | _ ->
           Errors.typing_error (ShouldHaveTypeBitv ty1) t1.pp_loc
       end
-    | PPextract(e, ({ pp_desc=PPconst(ConstInt i); _ } as ei),
-                ({ pp_desc = PPconst(ConstInt j); _ } as ej)) ->
+    | PPextract(e, i, j) ->
       begin
         let te = type_term env e in
         let tye = Ty.shorten te.c.tt_ty in
-        let i = int_of_string i in
-        let j = int_of_string j in
         match tye with
         | Ty.Tbitv n ->
           if i>j then Errors.typing_error (BitvExtract(i,j)) loc;
           if j>=n then Errors.typing_error (BitvExtractRange(n,j) ) loc;
-          let tei = type_term env ei in
-          let tej = type_term env ej in
           Options.tool_req 1
             (append_type "TR-Typing-OpExtract type" (Ty.Tbitv (j-i+1)));
-          TTextract(te, tei, tej), Ty.Tbitv (j-i+1)
+          TTextract(te, i, j), Ty.Tbitv (j-i+1)
         | _ ->
           Errors.typing_error (ShouldHaveType(tye,Ty.Tbitv (j+1))) loc
       end
@@ -1339,10 +1334,8 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
     no_alpha_renaming_b s f3
 
 
-  | PPextract(f1, f2, f3) ->
-    no_alpha_renaming_b s f1;
-    no_alpha_renaming_b s f2;
-    no_alpha_renaming_b s f3
+  | PPextract(f1, _, _) ->
+    no_alpha_renaming_b s f1
 
   | PPconcat(f1, f2) ->
     no_alpha_renaming_b s f1; no_alpha_renaming_b s f2
@@ -1526,12 +1519,10 @@ let rec alpha_renaming_b ((up, m) as s) f =
     if f1 == ff1 && f2 == ff2 && f3 == ff3 then f
     else {f with pp_desc = PPset(ff1, ff2, ff3)}
 
-  | PPextract(f1, f2, f3) ->
+  | PPextract(f1, i, j) ->
     let ff1 = alpha_renaming_b s f1 in
-    let ff2 = alpha_renaming_b s f2 in
-    let ff3 = alpha_renaming_b s f3 in
-    if f1 == ff1 && f2 == ff2 && f3 == ff3 then f
-    else {f with pp_desc = PPextract(ff1, ff2, ff3)}
+    if f1 == ff1 then f
+    else {f with pp_desc = PPextract(ff1, i, j)}
 
   | PPconcat(f1, f2) ->
     let ff1 = alpha_renaming_b s f1 in
@@ -1862,8 +1853,8 @@ let rec mono_term {c = {tt_ty=tt_ty; tt_desc=tt_desc}; annot = id} =
       TTget (mono_term t1, mono_term t2)
     | TTset (t1,t2,t3) ->
       TTset(mono_term t1, mono_term t2, mono_term t3)
-    | TTextract (t1,t2,t3) ->
-      TTextract(mono_term t1, mono_term t2, mono_term t3)
+    | TTextract (t1,i,j) ->
+      TTextract(mono_term t1, i, j)
     | TTconcat (t1,t2)->
       TTconcat (mono_term t1, mono_term t2)
     | TTdot (t1, a) ->
