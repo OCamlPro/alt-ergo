@@ -234,6 +234,13 @@ let main () =
       ?(solver_ctx = empty_solver_ctx) path =
     let dir = Filename.dirname path in
     let filename = Filename.basename path in
+    let language =
+      if Options.get_infer_input_format() then None else
+        match Options.get_input_format () with
+        | Options.Native -> Some Dl.Logic.Alt_ergo
+        | Options.Smtlib2 -> Some (Dl.Logic.Smtlib2 `Latest)
+        | Options.Why3 | Options.Unknown _ -> None
+    in
     let source =
       if Filename.check_suffix path ".zip" then (
         Filename.(chop_extension path |> extension) |> set_output_format;
@@ -241,15 +248,21 @@ let main () =
         `Raw (Filename.chop_extension filename, content))
       else (
         Filename.extension path |> set_output_format;
-        let cin = open_in path in
-        let content = read_all cin in
-        close_in cin;
+        let content =
+          if not (String.equal path "") then
+            let cin = open_in path in
+            let content = read_all cin in
+            close_in cin;
+            content
+          else read_all stdin
+        in
         `Raw (filename, content))
     in
     (* We use the full mode since the incremental mode is not supported by
        the native input language. *)
     let logic_file =
       mk_file
+        ?lang:language
         ~mode:`Full
         ~source
         ~loc:(Dolmen.Std.Loc.mk_file path)
