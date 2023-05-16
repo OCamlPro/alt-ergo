@@ -53,6 +53,7 @@ See more details on https://alt-ergo.ocamlpro.com/"
   (alt-ergo-lib (= :version))
   (alt-ergo-parsers (= :version))
   lablgtk3
+  (cairo2 (>= 0.6.4))
   conf-gtksourceview3
   lablgtk3-sourceview3
   (cmdliner (>= 1.1.0))
@@ -78,7 +79,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (ocaml (>= 4.05.0))
   dune
   (alt-ergo-lib (= :version))
-  (psmt2-frontend (>= 0.3))
+  (psmt2-frontend (>= 0.4))
   menhir
   stdlib-shims
   (odoc :with-doc)
@@ -109,7 +110,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (dolmen_loop (>= 0.8.1))
   num
   (ocplib-simplex (>= 0.5))
-  zarith
+  (zarith (>= 1.4))
   seq
   stdlib-shims
   (camlzip (>= 1.07))
