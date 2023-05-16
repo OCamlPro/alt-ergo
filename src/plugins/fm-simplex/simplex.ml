@@ -393,8 +393,8 @@ module Simplex (C : Coef_Type) = struct
       !l2, !l1
 
 
-    let sbt = Vec.make 107 ((0,0),{a=[||]; c=Q.zero, Q.zero})
-    let zsbt = Vec.make 107 (-2)
+    let sbt = Vec.make 107 ~dummy:((0,0),{a=[||]; c=Q.zero, Q.zero})
+    let zsbt = Vec.make 107 ~dummy:(-2)
 
     let solve_zero_arr zsbt zsbt_inv a =
       Array.iter

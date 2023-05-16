@@ -103,7 +103,7 @@ module type ATOM = sig
 
   val fresh_dname : unit -> string
 
-  val make_clause : string -> atom list -> E.t -> int -> bool ->
+  val make_clause : string -> atom list -> E.t -> bool ->
     premise-> clause
 
   (*val made_vars_info : unit -> int * var list*)
@@ -319,7 +319,7 @@ module Atom : ATOM = struct
       and pa =
         { var = var;
           lit = lit;
-          watched = Vec.make 10 dummy_clause;
+          watched = Vec.make 10 ~dummy:dummy_clause;
           neg = na;
           is_true = false;
           is_guard = false;
@@ -328,7 +328,7 @@ module Atom : ATOM = struct
       and na =
         { var = var;
           lit = E.neg lit;
-          watched = Vec.make 10 dummy_clause;
+          watched = Vec.make 10 ~dummy:dummy_clause;
           neg = pa;
           is_true = false;
           is_guard = false;
@@ -366,8 +366,8 @@ module Atom : ATOM = struct
     try (HT.find hcons.tbl (E.neg lit)).na
     with Not_found -> assert false
 
-  let make_clause name ali f sz_ali is_learnt premise =
-    let atoms = Vec.from_list ali sz_ali dummy_atom in
+  let make_clause name ali f is_learnt premise =
+    let atoms = Vec.of_list ali ~dummy:dummy_atom in
     { name  = name;
       atoms = atoms;
       removed = false;
