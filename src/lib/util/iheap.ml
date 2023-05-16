@@ -79,15 +79,15 @@ let increase cmp s n =
 
 let filter s filt cmp =
   let j = ref 0 in
+  Vec.iter (fun elt ->
+      if filt elt then begin
+        Vec.set s.heap !j elt;
+        Vec.set s.indices elt !j;
+        incr j
+      end
+      else Vec.set s.indices elt (-1)
+    ) s.heap;
   let lim = Vec.size s.heap in
-  for i = 0 to lim - 1 do
-    if filt (Vec.get s.heap i) then begin
-      Vec.set s.heap !j (Vec.get s.heap i);
-      Vec.set s.indices (Vec.get s.heap i) !j;
-      incr j;
-    end
-    else Vec.set s.indices (Vec.get s.heap i) (-1);
-  done;
   Vec.shrink s.heap (lim - !j);
   for i = (lim / 2) - 1 downto 0 do
     percolate_down cmp s i
