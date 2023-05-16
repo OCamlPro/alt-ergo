@@ -9,144 +9,144 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type 'a t = { mutable dummy: 'a; mutable data : 'a array; mutable sz : int }
+type 'a t = {
+  mutable data : 'a array;
+  mutable sz : int;
+  dummy: 'a;
+}
 
-let make capa d = {data = Array.make capa d; sz = 0; dummy = d}
+let make n ~dummy = {data = Array.make n dummy; sz = 0; dummy}
 
-let init capa f d =
-  {data = Array.init capa (fun i -> f i); sz = capa; dummy = d}
+let[@inline] create ~dummy = {data = [||]; sz = 0; dummy}
 
-let from_array data sz d = {data = data; sz = sz; dummy = d}
+let[@inline] clear vec = vec.sz <- 0
 
-let from_list l sz d =
-  let l = ref l in
-  let f_init _ = match !l with [] -> assert false | e::r -> l := r; e in
-  {data = Array.init sz f_init; sz = sz; dummy = d}
+let[@inline] shrink vec i =
+  assert (i >= 0);
+  assert (i <= vec.sz);
+  for j = vec.sz - i to vec.sz - 1 do
+    Array.unsafe_set vec.data j vec.dummy
+  done;
+  vec.sz <- vec.sz - i
 
-let clear s = s.sz <- 0
+let[@inline] pop vec =
+  assert (vec.sz > 0);
+  let x = Array.unsafe_get vec.data (vec.sz - 1) in
+  Array.unsafe_set vec.data (vec.sz - 1) vec.dummy;
+  vec.sz <- vec.sz - 1;
+  x
 
-let shrink t i fill_with_dummy =
-  assert (i >= 0 && i<=t.sz);
-  if fill_with_dummy then
-    for i = t.sz - i to t.sz - 1 do
-      t.data.(i) <- t.dummy
-    done;
-  t.sz <- t.sz - i
+let[@inline] last vec =
+  assert (vec.sz > 0);
+  Array.unsafe_get vec.data (vec.sz - 1)
 
-let pop t = assert (t.sz >=1); t.sz <- t.sz - 1
+let[@inline] size vec = vec.sz
 
-let size t = t.sz
+let[@inline] is_empty vec = vec.sz = 0
 
-let is_empty t = t.sz = 0
+let[@inline] is_full vec = Array.length vec.data = vec.sz
 
-let grow_to t new_capa =
-  let data = t.data in
-  let capa = Array.length data in
-  if new_capa > capa then
-    t.data <-
-      Array.init new_capa
-        (fun i -> if i < capa then data.(i) else t.dummy)
+let[@inline] copy vec : _ t =
+  let data = Array.copy vec.data in
+  {vec with data}
 
-let grow_to_double_size t =
-  let n = max 1 (Array.length t.data) in grow_to t (2 * n)
+(* grow the array *)
 
-let grow_to_by_double t new_capa =
-  let new_capa = max 1 new_capa in
-  let data = t.data in
-  let capa = ref (max 1 (Array.length data)) in
-  while !capa < new_capa do capa := 2 * !capa done;
-  grow_to t !capa
+let[@inline never] grow_to vec cap : unit =
+  assert (Array.length vec.data < Sys.max_array_length);
+  let cap =
+    min Sys.max_array_length (max 4 cap)
+  in
+  let arr' = Array.make cap vec.dummy in
+  Array.blit vec.data 0 arr' 0 (Array.length vec.data);
+  vec.data <- arr';
+  assert (Array.length vec.data > vec.sz);
+  ()
 
+let[@inline never] grow_to_double_size vec : unit =
+  grow_to vec (2 * Array.length vec.data)
 
-let is_full t = Array.length t.data = t.sz
+let[@inline never] grow_to_by_double vec cap =
+  let cap = max 1 cap in
+  let c = ref (max 1 (Array.length vec.data)) in
+  while !c < cap do c := 2 * !c done;
+  grow_to vec !c
 
-let push t e =
-  (* Printer.print_dbg
-     "push; sz = %d et capa=%d@." t.sz (Array.length t.data);*)
-  if is_full t then grow_to_double_size t;
-  t.data.(t.sz) <- e;
-  t.sz <- t.sz + 1
+let[@inline] push vec x : unit =
+  if is_full vec then grow_to_double_size vec;
+  Array.unsafe_set vec.data vec.sz x;
+  vec.sz <- vec.sz + 1
 
-let push_none t =
-  if is_full t then grow_to_double_size t;
-  t.data.(t.sz) <- t.dummy;
-  t.sz <- t.sz + 1
+let[@inline] get vec i =
+  assert (0 <= i && i < vec.sz);
+  let res = Array.unsafe_get vec.data i  in
+  if res == vec.dummy then raise Not_found;
+  res
 
-let last t =
-  let e = t.data.(t.sz - 1) in
-  assert (not (e == t.dummy));
-  e
+let[@inline] set vec i elt =
+  assert (not (elt == vec.dummy));
+  vec.data.(i) <- elt;
+  vec.sz <- max vec.sz (i+1)
 
-let get t i =
-  assert (i < t.sz);
-  let e = t.data.(i) in
-  if e == t.dummy then raise Not_found
-  else e
+let[@inline] fast_remove vec i =
+  assert (i>= 0 && i < vec.sz);
+  Array.unsafe_set vec.data i @@ Array.unsafe_get vec.data (vec.sz - 1);
+  vec.sz <- vec.sz - 1
 
-let set t i v =
-  t.data.(i) <- v;
-  t.sz <- max t.sz (i + 1)
-
-let set_size t sz = t.sz <- sz
-
-let copy t =
-  let data = t.data in
-  let len = Array.length data in
-  let data = Array.init len (fun i -> data.(i)) in
-  { data=data; sz=t.sz; dummy = t.dummy }
-
-let move_to t t' =
-  let data = t.data in
-  let len = Array.length data in
-  let data = Array.init len (fun i -> data.(i)) in
-  t'.data <- data;
-  t'.sz <- t.sz
-
-
-let remove t e =
-  let j = ref 0 in
-  while (!j < t.sz && not (t.data.(!j) == e)) do incr j done;
-  assert (!j < t.sz);
-  for i = !j to t.sz - 2 do t.data.(i) <- t.data.(i+1) done;
-  pop t
-
-
-let fast_remove t e =
-  let j = ref 0 in
-  while (!j < t.sz && not (t.data.(!j) == e)) do incr j done;
-  assert (!j < t.sz);
-  t.data.(!j) <- last t;
-  pop t
-
-
-let sort t f =
-  let sub_arr = Array.sub t.data 0 t.sz in
-  Array.fast_sort f sub_arr;
-  t.data <- sub_arr
-
-let iter vec f =
-  for i = 0 to size vec - 1 do
-    f (get vec i)
+let filter_in_place f vec =
+  let i = ref 0 in
+  while !i < size vec do
+    if f (Array.unsafe_get vec.data !i) then incr i else fast_remove vec !i
   done
-(*
-template<class V, class T>
-static inline void remove(V& ts, const T& t)
-{
-    int j = 0;
-    for (; j < ts.size() && ts[j] != t; j++);
-    assert(j < ts.size());
-    ts[j] = ts.last();
-    ts.pop();
-}
-#endif
 
-template<class V, class T>
-static inline bool find(V& ts, const T& t)
-{
-    int j = 0;
-    for (; j < ts.size() && ts[j] != t; j++);
-    return j < ts.size();
-}
+let sort vec f : unit =
+  let sub_arr =
+    if is_full vec then vec.data else Array.sub vec.data 0 vec.sz
+  in
+  Array.fast_sort f sub_arr;
+  vec.data <- sub_arr
 
-#endif
-*)
+let[@inline] iteri f vec =
+  for i = 0 to size vec - 1 do
+    let elt = Array.unsafe_get vec.data i in
+    if not (elt == vec.dummy) then
+      f i elt
+  done
+
+let[@inline] iter f = iteri (fun _ elt -> f elt)
+
+let exists p vec =
+  let exception Terminate in
+  try
+    for i = 0 to size vec - 1 do
+      let elt = Array.unsafe_get vec.data i in
+      if p elt && not (elt == vec.dummy) then raise Terminate
+    done;
+    false
+  with Terminate -> true
+
+let for_all p vec = not @@ exists (fun x -> not @@ p x) vec
+
+let fold f acc vec =
+  let acc = ref acc in
+  for i = 0 to size vec - 1 do
+    let elt = Array.unsafe_get vec.data i in
+    if not (elt == vec.dummy) then
+      acc := f !acc elt
+  done;
+  !acc
+
+let to_list a = Array.to_seq a.data |> List.of_seq
+let to_array a = Array.sub a.data 0 a.sz
+
+let of_list l ~dummy : _ t =
+  match l with
+  | [] -> create ~dummy
+  | _ :: tl ->
+    let v = make (List.length tl+1) ~dummy in
+    List.iter (push v) l;
+    v
+
+let pp ?(sep=", ") pp fmt a =
+  let pp_sep fmt () = Format.fprintf fmt "%s@," sep in
+  Format.pp_print_list ~pp_sep pp fmt (to_list a)

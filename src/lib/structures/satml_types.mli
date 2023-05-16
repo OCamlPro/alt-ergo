@@ -81,7 +81,7 @@ module type ATOM = sig
 
   val fresh_dname : unit -> string
 
-  val make_clause : string -> atom list -> Expr.t -> int -> bool ->
+  val make_clause : string -> atom list -> Expr.t -> bool ->
     premise-> clause
 
   (*val made_vars_info : unit -> int * var list*)
