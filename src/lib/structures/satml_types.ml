@@ -265,11 +265,7 @@ module Atom : ATOM = struct
         (sign a) (a.var.vid+1) (value a) a.var.index E.print a.lit
         premise a.var.vpremise
 
-
-    let atoms_vec fmt vec =
-      for i = 0 to Vec.size vec - 1 do
-        Format.fprintf fmt "%a ; " atom (Vec.get vec i)
-      done
+    let atoms_vec = Vec.pp ~sep:";" atom
 
     let clause fmt { name; atoms=arr; cpremise=cp; _ } =
       Format.fprintf fmt "%s:{ %a} cpremise={{%a}}" name atoms_vec
@@ -414,11 +410,12 @@ module Atom : ATOM = struct
     | Some c ->
       let cpt = ref 0 in
       let l = ref [] in
-      for i = 0 to Vec.size c.atoms - 1 do
-        let b = Vec.get c.atoms i in
-        if eq_atom a b then incr cpt
-        else l := b :: !l
-      done;
+      Vec.iter (fun (atom : atom) ->
+          if eq_atom a atom then
+            incr cpt
+          else
+            l := atom :: !l
+        ) c.atoms;
       if !cpt <> 1 then begin
         Printer.print_err
           "cpt = %d@ a = %a@ c = %a"
