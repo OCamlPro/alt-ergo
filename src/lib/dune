@@ -21,7 +21,7 @@
 (library
   (name AltErgoLib)
   (public_name alt-ergo-lib)
-
+  (ocamlopt_flags (:standard -open Prelude))
   ; external dependencies
   (libraries
     seq
@@ -36,6 +36,7 @@
     dolmen_type
     dolmen_loop
     dune-build-info
+    alt_ergo_prelude
   )
 
   ; .mli only modules *also* need to be in this field
