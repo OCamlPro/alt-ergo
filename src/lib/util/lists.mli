@@ -35,6 +35,9 @@
 
 (** {3 Misc functions} *)
 
+val is_empty : 'a list -> bool
+(** Is the list is empty? *)
+
 val to_seq : 'a list -> 'a Seq.t
 (** Iterate on the list *)
 
