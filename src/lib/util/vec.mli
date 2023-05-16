@@ -14,7 +14,7 @@ type 'a t = {
   mutable sz : int;
   dummy: 'a;
 }
-(** Type of sparse vectors of 'a elements. *)
+(** Type of vectors of 'a elements. *)
 
 val make : int -> dummy:'a -> 'a t
 (** [make cap dummy] creates a new vector filled with [dummy]. The vector
@@ -63,11 +63,12 @@ val push : 'a t -> 'a -> unit
 (** Push element into the vector. *)
 
 val get : 'a t -> int -> 'a
-(** get the element at the given index, or
-    @raise Invalid_argument if the index is not valid. *)
+(** Get the element at the given index, or
+    @raise Invalid_argument if the index is not valid.
+    @raise Not_found if the retrieved value is dummy. *)
 
 val set : 'a t -> int -> 'a -> unit
-(** set the element at the given index, either already set or the first
+(** Set the element at the given index, either already set or the first
     free slot if [not (is_full vec)], or
     @raise Invalid_argument if the index is not valid. *)
 
@@ -79,8 +80,8 @@ val fast_remove : 'a t -> int -> unit
     (swap with last element). *)
 
 val filter_in_place : ('a -> bool) -> 'a t -> unit
-(** [filter_in_place f v] removes from [v] the elements that do
-    not satisfy [f] *)
+(** [filter_in_place p vec] removes from [vec] the elements that do
+    not satisfy [p]. *)
 
 val sort : 'a t -> ('a -> 'a -> int) -> unit
 (** Sort in place the vector. *)
