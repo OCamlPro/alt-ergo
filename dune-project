@@ -108,7 +108,6 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (dolmen (>= 0.8.1))
   (dolmen_type (>= 0.8.1))
   (dolmen_loop (>= 0.8.1))
-  num
   (ocplib-simplex (>= 0.5))
   (zarith (>= 1.4))
   seq

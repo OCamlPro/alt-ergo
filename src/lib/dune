@@ -26,7 +26,6 @@
   (libraries
     seq
     unix
-    num
     str
     zarith
     dynlink
@@ -40,7 +39,7 @@
   )
 
   ; .mli only modules *also* need to be in this field
-  (modules_without_implementation matching_types numbersInterface sig sig_rel)
+  (modules_without_implementation matching_types sig sig_rel)
 
   ; modules that make up the lib
   (modules
@@ -58,8 +57,8 @@
     Expr Var Ty Typed Xliteral ModelMap
     ; util
     Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
-    MyDynlink MyUnix Numbers NumsNumbers NumbersInterface
-    Options Timers Util Vec Version ZarithNumbers Steps Printer Format_shims
+    MyDynlink MyUnix Numbers
+    Options Timers Util Vec Version Steps Printer Format_shims
     My_zip
   )
 
