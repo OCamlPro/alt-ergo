@@ -132,8 +132,7 @@ module Shostak(X : ALIEN) = struct
           if c2 <> 0 then c2 else compare_xterm t1 t2
     )
 
-  let compare_abstract =
-    List.compare compare_simple_term
+  let compare_abstract = Lists.compare compare_simple_term
 
   let compare_solver_simple_term = compare_alpha_term (fun st1 st2 ->
       match st1, st2 with
@@ -649,7 +648,7 @@ module Shostak(X : ALIEN) = struct
         )unif_slic
 
     let solve u v =
-      if List.compare compare_simple_term u v = 0 then raise Valid
+      if Lists.compare compare_simple_term u v = 0 then raise Valid
       else begin
         let varsU = get_vars u in
         let varsV = get_vars v in

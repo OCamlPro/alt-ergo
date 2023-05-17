@@ -66,3 +66,13 @@ let to_seq l =
   in
   aux l
 
+let rec compare cmp l1 l2 =
+  match l1, l2 with
+  | [], [] -> 0
+  | [], _ -> -1
+  | _, [] -> 1
+  | hd1::tl1, hd2::tl2 ->
+    let c = cmp hd1 hd2 in
+    if c <> 0 then c
+    else
+      compare cmp tl1 tl2

@@ -36,7 +36,7 @@
 (** {3 Misc functions} *)
 
 val is_empty : 'a list -> bool
-(** Is the list is empty? *)
+(** Is the list empty? *)
 
 val to_seq : 'a list -> 'a Seq.t
 (** Iterate on the list *)
@@ -53,3 +53,7 @@ val apply_right : ('a -> 'a) -> ('b * 'a) list -> ('b * 'a) list * bool
 
 val find_opt : ('a -> bool) -> 'a list -> 'a option
 (** Tries and find the first element of the list satisfying the predicate. *)
+
+val compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
+(** [compare cmp l1 l2] compares the lists [l1] and [l2] using the comparison
+    function [cmp] on elements. *)
