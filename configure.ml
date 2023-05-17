@@ -20,25 +20,6 @@ let static = ref false
 
 let pkg = ref ""
 
-(* this option add the possibility to choose the library that handle numbers in Alt-Ergo between zarith and nums *)
-type numbers_lib =
-  | Nums
-  | Zarith
-
-let print_numbers_lib = function
-  | Nums -> "Nums"
-  | Zarith -> "Zarith"
-
-let numbers_lib = ref Zarith
-
-let set_numbers_lib s =
-  match s with
-  | "nums" | "Nums" -> numbers_lib := Nums
-  | "zarith" | "Zarith" -> numbers_lib := Zarith
-  | _ ->
-    Format.eprintf "Unknown library name %s, use Nums or Zarith@." s;
-    exit 1
-
 (* Parse command line arguments *)
 let () =
   let args =
@@ -48,7 +29,6 @@ let () =
         ("--libdir", Arg.Set_string libdir, "<path> lib directory");
         ("--mandir", Arg.Set_string mandir, "<path> man directory");
         ("--static", Arg.Set static, " Enable statically compilation");
-        ("--numbers-lib", Arg.String set_numbers_lib, " Choose numbers library between Zarith and Nums");
       ]
   in
   let anon_fun s =
@@ -137,10 +117,6 @@ let () =
   in
   let () = Format.fprintf fmt {|let libdir = "%s"@.|} !libdir in
   let () = Format.fprintf fmt {|let mandir = "%s"@.|} !mandir in
-
-  let () = Format.fprintf fmt {|type numbers_lib = | Nums | Zarith@.|} in
-  let () = Format.fprintf fmt {|let numbers_lib = %s@.|}
-      (print_numbers_lib !numbers_lib) in
 
   let () = Format.fprintf fmt {|
 (* Dynamic configuration, relative to the executable path *)

@@ -157,9 +157,6 @@ AltErgoLib.Vec
 AltErgoLib.Loc
 AltErgoLib.MyUnix
 AltErgoLib.Numbers
-AltErgoLib.ZarithNumbers
-AltErgoLib.NumsNumbers
-AltErgoLib.NumbersInterface
 }
 
 
