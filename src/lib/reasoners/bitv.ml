@@ -581,7 +581,14 @@ module Shostak(X : ALIEN) = struct
             begin
               let _bw = apply_subs subs bw in
               let _fw = apply_subs subs r in
-              if _bw == bw then slice_rec ((t,vls')::bw) _fw
+              let cmp (a, l1) (b, l2) =
+                let c = compare_simple_term a b in
+                if c <> 0 then c
+                else
+                  Lists.compare (Lists.compare compare_solver_simple_term) l1 l2
+              in
+              if Lists.compare cmp _bw bw = 0
+              then slice_rec ((t,vls')::bw) _fw
               else slice_rec [] (bw@((t,vls'):: _fw))
             end
       in slice_rec [] parts
