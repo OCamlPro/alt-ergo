@@ -32,7 +32,6 @@ open AltErgoLib
 open Parsed
 open Typed
 open Format
-open Options
 
 open Gui_config
 open Gui_session
