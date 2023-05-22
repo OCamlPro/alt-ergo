@@ -608,7 +608,7 @@ let print_tconstant fmt = function
   | Ttrue -> fprintf fmt "true"
   | Tfalse -> fprintf fmt "false"
   | Tint s -> fprintf fmt "%s" s
-  | Treal n -> fprintf fmt "%s" (Num.string_of_num n)
+  | Treal n -> fprintf fmt "%s" (Numbers.Q.to_string n)
   | Tbitv s -> fprintf fmt "%s" s
 
 let tconstant_to_string = function
@@ -616,11 +616,7 @@ let tconstant_to_string = function
   | Ttrue -> "true"
   | Tfalse -> "false"
   | Tint s -> s
-  | Treal (Num.Int i) -> string_of_int i ^ "."
-  | Treal (Num.Big_int i) -> Big_int.string_of_big_int i ^ "."
-  | Treal (Num.Ratio r) ->
-    Big_int.string_of_big_int (Ratio.numerator_ratio r) ^ "./" ^
-    Big_int.string_of_big_int (Ratio.denominator_ratio r) ^ "."
+  | Treal n -> Numbers.Q.to_string n
   | Tbitv s -> s
 
 let rec print_var_list fmt = function

@@ -123,7 +123,7 @@ val mk_logic_type : ppure_type list -> ppure_type option -> plogic_type
 
 val mk_int_const  : Loc.t -> string -> lexpr
 
-val mk_real_const : Loc.t -> Num.num -> lexpr
+val mk_real_const : Loc.t -> Numbers.Q.t -> lexpr
 
 val mk_add : Loc.t -> lexpr -> lexpr -> lexpr
 

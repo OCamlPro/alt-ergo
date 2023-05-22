@@ -56,12 +56,12 @@ val mk : ?annot:int -> 'a -> ('a, int) annoted
 
 type tconstant =
   (* TODO: make Tint hold an arbitrary precision integer ? *)
-  | Tint of string      (** An integer constant. *)
-  | Treal of Num.num    (** Real constant. *)
-  | Tbitv of string     (** Bitvector constant. *)
-  | Ttrue               (** The true boolean (or proposition ?) *)
-  | Tfalse              (** The false boolean *)
-  | Tvoid               (** The only value of type unit *)
+  | Tint of string        (** An integer constant. *)
+  | Treal of Numbers.Q.t  (** Real constant. *)
+  | Tbitv of string       (** Bitvector constant. *)
+  | Ttrue                 (** The true boolean (or proposition ?) *)
+  | Tfalse                (** The false boolean *)
+  | Tvoid                 (** The only value of type unit *)
 (** Typed constants. *)
 
 type oplogic =

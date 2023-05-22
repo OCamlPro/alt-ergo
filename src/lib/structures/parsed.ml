@@ -31,7 +31,7 @@
 type constant =
   | ConstBitv of string
   | ConstInt of string
-  | ConstReal of Num.num
+  | ConstReal of Numbers.Q.t
   | ConstTrue
   | ConstFalse
   | ConstVoid
@@ -41,7 +41,7 @@ let pp_const fmt =
   function
   | ConstBitv s -> fprintf fmt "%s" s
   | ConstInt s -> fprintf fmt "%s" s
-  | ConstReal v -> fprintf fmt "%s" (Num.string_of_num v)
+  | ConstReal v -> fprintf fmt "%s" (Numbers.Q.to_string v)
   | ConstTrue -> fprintf fmt "true"
   | ConstFalse -> fprintf fmt "false"
   | ConstVoid -> fprintf fmt "void"

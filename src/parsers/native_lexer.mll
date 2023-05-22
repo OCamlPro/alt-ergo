@@ -96,15 +96,13 @@
     | 't' -> '\t'
     | c -> c
 
-  let n_zero = Num.Int 0
-  let n_ten = Num.Int 10
-  let n_16 = Num.Int 16
+  let n_zero, n_ten, n_16 = Numbers.Q.(from_int 0, from_int 10, from_int 16)
 
   let decimal_number s =
     let r = ref n_zero in
     for i=0 to String.length s - 1 do
-      r := Num.add_num (Num.mult_num n_ten !r)
-          (Num.num_of_int (Char.code s.[i] - Char.code '0'))
+      r := Numbers.Q.(add (mult n_ten !r)
+          (from_int (Char.code s.[i] - Char.code '0')))
     done;
     !r
 
@@ -119,7 +117,7 @@
         | 'A'..'F' -> Char.code c - Char.code 'A' + 10
         | _ -> assert false
       in
-      r := Num.add_num (Num.mult_num n_16 !r) (Num.num_of_int v)
+      r := Numbers.Q.(add (mult n_16 !r) (from_int v))
     done;
     !r
 
@@ -148,16 +146,16 @@ rule parse_token = parse
         let v =
           match exp,sign with
           | Some exp,Some "-" ->
-            Num.div_num (decimal_number (i^f))
-              (Num.power_num (Num.Int 10) (decimal_number exp))
+            Numbers.(Q.div (decimal_number (i^f))
+              (Q.from_z (Z.power (Z.from_int 10) (int_of_string exp))))
           | Some exp,_ ->
-            Num.mult_num (decimal_number (i^f))
-              (Num.power_num (Num.Int 10) (decimal_number exp))
+            Numbers.(Q.mult (decimal_number (i^f))
+              (Q.from_z (Z.power (Z.from_int 10) (int_of_string exp))))
           | None,_ -> decimal_number (i^f)
         in
         let v =
-          Num.div_num v
-            (Num.power_num (Num.Int 10) (Num.num_of_int (String.length f)))
+          Numbers.(Q.div v (Q.from_z (Z.power (Z.from_int 10)
+            (String.length f))))
         in
         NUM v
       }
@@ -170,15 +168,15 @@ rule parse_token = parse
         let v =
           match sign with
           | "-" ->
-            Num.div_num (hexa_number (e^f))
-              (Num.power_num (Num.Int 2) (decimal_number exp))
+            Numbers.(Q.div (hexa_number (e^f))
+              (Q.from_z (Z.power (Z.from_int 2) (int_of_string exp))))
           | _ ->
-            Num.mult_num (hexa_number (e^f))
-              (Num.power_num (Num.Int 2) (decimal_number exp))
+            Numbers.(Q.mult (hexa_number (e^f))
+              (Q.from_z (Z.power (Z.from_int 2) (int_of_string exp))))
         in
         let v =
-          Num.div_num v
-            (Num.power_num (Num.Int 16) (Num.num_of_int (String.length f)))
+          Numbers.(Q.div v (Q.from_z (Z.power (Z.from_int 16)
+            (String.length f))))
         in
         NUM v
       }
