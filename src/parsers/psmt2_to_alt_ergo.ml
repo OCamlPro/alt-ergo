@@ -398,6 +398,10 @@ module Translate = struct
     in
     mk_goal loc gname e
 
+  let translate_get_model command =
+    let loc = pos command in
+    mk_get_model loc
+
   let translate_command acc command =
     match command.c with
     | Cmd_Assert(assert_term) ->
@@ -429,6 +433,8 @@ module Translate = struct
     | Cmd_DefineFunsRec(fun_def_list,term_list) ->
       let l = List.map2 translate_fun_def fun_def_list term_list in
       l @ acc
+    | Cmd_GetModel ->
+      (translate_get_model command) :: acc
     | Cmd_DefineSort _ -> acc
     | Cmd_Echo _ -> not_supported "echo"; acc
     | Cmd_GetAssert -> not_supported "get-assertions"; acc
@@ -438,7 +444,6 @@ module Translate = struct
     | Cmd_GetAssign -> not_supported "get-assign"; acc
     | Cmd_GetOption _ -> not_supported "get-option"; acc
     | Cmd_GetInfo _ -> not_supported "get-info"; acc
-    | Cmd_GetModel -> not_supported "get-model"; acc
     | Cmd_GetUnsatAssumptions -> not_supported "get-unsat-assumptions"; acc
     | Cmd_Reset -> not_supported "reset"; assert false
     | Cmd_ResetAssert -> not_supported "reset-asserts"; assert false

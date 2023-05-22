@@ -100,6 +100,10 @@ val mk_push : Loc.t -> int -> decl
 
 val mk_pop : Loc.t -> int -> decl
 
+(** Making get-model statement *)
+
+val mk_get_model : Loc.t -> decl
+
 (** Making pure and logic types *)
 
 val int_type : ppure_type

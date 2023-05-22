@@ -137,5 +137,6 @@ type decl =
   | TypeDecl of type_decl list
   | Push of Loc.t * int
   | Pop of Loc.t * int
+  | Get_model of Loc.t
 
 type file = decl list
