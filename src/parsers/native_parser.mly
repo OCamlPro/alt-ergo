@@ -40,7 +40,7 @@
 %token <string> ID
 %token <string> QM_ID
 %token <string> INTEGER
-%token <Num.num> NUM
+%token <AltErgoLib.Numbers.Q.t> NUM
 %token <string> STRING
 %token MATCH WITH THEORY EXTENDS END QM
 %token AND LEFTARROW RIGHTARROW AC AT AXIOM CASESPLIT REWRITING

@@ -528,7 +528,7 @@ let rec type_term ?(call_from_type_form=false) env f =
       TTconst(Tint ("-"^n)), Ty.Tint
     | PPprefix(PPneg, { pp_desc=PPconst (ConstReal n); _ }) ->
       Options.tool_req 1 (append_type "TR-Typing-OpUnarith type" Ty.Treal);
-      TTconst(Treal (Num.minus_num n)), Ty.Treal
+      TTconst(Treal (Numbers.Q.minus n)), Ty.Treal
     | PPprefix(PPneg, e) ->
       let te = type_term env e in
       let ty = Ty.shorten te.c.tt_ty in
@@ -838,9 +838,9 @@ and type_bound env bnd ty ~is_open ~is_lower =
       let ty_x, q =
         try match num with
           | ConstInt s  ->
-            Ty.Tint,  Numbers.Q.from_string s
+            Ty.Tint, Numbers.Q.from_string s
           | ConstReal s ->
-            Ty.Treal, Numbers.Q.from_string (Num.string_of_num s)
+            Ty.Treal, s
           | _ -> assert false
         with _ -> assert false (*numbers well constructed with regular exprs*)
       in

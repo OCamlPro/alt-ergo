@@ -31,7 +31,7 @@
 type constant =
   | ConstBitv of string
   | ConstInt of string
-  | ConstReal of Num.num
+  | ConstReal of Numbers.Q.t
   | ConstTrue
   | ConstFalse
   | ConstVoid

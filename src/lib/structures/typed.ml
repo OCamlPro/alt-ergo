@@ -43,7 +43,7 @@ let mk ?(annot=new_id ()) c = { c; annot; }
 
 type tconstant =
   | Tint of string
-  | Treal of Num.num
+  | Treal of Numbers.Q.t
   | Tbitv of string
   | Ttrue
   | Tfalse
@@ -201,7 +201,7 @@ let rec print_term =
     | TTconst (Tint n) ->
       fprintf fmt "%s" n
     | TTconst (Treal n) ->
-      fprintf fmt "%s" (Num.string_of_num n)
+      fprintf fmt "%s" (Numbers.Q.to_string n)
     | TTconst Tbitv s ->
       fprintf fmt "%s" s
     | TTvar s ->

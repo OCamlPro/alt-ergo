@@ -61,7 +61,7 @@ let rec make_term up_qv quant_basename t =
     | TTconst (Tint i) ->
       E.int i
     | TTconst (Treal n) ->
-      E.real (Num.string_of_num n)
+      E.real (Numbers.Q.to_string n)
     | TTconst (Tbitv bt) ->
       E.bitv bt ty
     | TTvar s -> E.mk_term s [] ty

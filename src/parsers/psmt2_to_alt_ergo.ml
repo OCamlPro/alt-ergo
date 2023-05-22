@@ -115,29 +115,16 @@ module Translate = struct
     in
     aux sort.ty
 
-  let better_num_of_string s =
-    begin match String.split_on_char '.' s with
-      | [n] | [n;""] -> Num.num_of_string n
-      | [n; d] ->
-        let l = String.length d in
-        let n = if (String.length n) = 0 then Num.Int 0
-          else Num.num_of_string n in
-        let d = Num.num_of_string d in
-        let e = Num.power_num (Num.Int 10) (Num.Int l) in
-        Num.add_num n (Num.div_num d e)
-      | _ -> assert false
-    end
-
   let translate_constant cst t =
     let loc = pos t in
     match cst with
-    | Const_Dec(s) -> mk_real_const loc (better_num_of_string s)
+    | Const_Dec(s) -> mk_real_const loc (Numbers.Q.from_string s)
     | Const_Num(s) ->
       let open Smtlib_ty in
       let ty = shorten t.ty in
       begin match ty.desc with (*TODO: do shorten earlier and better*)
         | TInt  -> mk_int_const loc s
-        | TReal -> mk_real_const loc (better_num_of_string s)
+        | TReal -> mk_real_const loc (Numbers.Q.from_string s)
         | _ ->
           Printer.print_err "%s" (to_string ty);
           assert false
