@@ -117,7 +117,10 @@ val set_debug_explanations : bool -> unit
 (** Set [debug_fm] accessible with {!val:get_debug_fm} *)
 val set_debug_fm : bool -> unit
 
-(** Set [debug_fpa] accessible with {!val:get_debug_fpa} *)
+(** Set [debug_fpa] accessible with {!val:get_debug_fpa}
+
+    Possible values are
+    {ol {- Disabled} {- Light} {- Full}} *)
 val set_debug_fpa : int -> unit
 
 (** Set [debug_gc] accessible with {!val:get_debug_gc} *)
