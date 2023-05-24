@@ -266,10 +266,10 @@ module Debug = struct
         | Constr -> Options.set_debug_constr true
         | Explanation -> Options.set_debug_explanations true
         | Fm -> Options.set_debug_fm true
-        | Fpa -> Options.set_debug_fpa (max verbosity 1)
+        | Fpa -> Options.set_debug_fpa verbosity
         | Gc -> Options.set_debug_gc true
         | Interpretation -> Options.set_debug_interpretation true
-        | Matching -> Options.set_debug_matching (max verbosity 1)
+        | Matching -> Options.set_debug_matching verbosity
         | Sat -> Options.set_debug_sat true
         | Split -> Options.set_debug_split true
         | Triggers -> Options.set_debug_triggers true
@@ -281,25 +281,34 @@ module Debug = struct
         | Warnings -> Options.set_debug_warnings true
       )
 
-  let flag_term =
+  let light_flag_term, medium_flag_term, full_flag_term =
     let enum_conv =
       List.map (fun v -> (show v, v)) all
       |> Arg.enum
       |> Arg.list
     in
-    let doc =
-      Format.sprintf "Set the debugging flags, $(docv) must be %s."
+    let light_doc =
+      Format.sprintf
+        "Set the debugging flags with light verbosity, $(docv) must be %s."
+        (Arg.doc_alts (List.map show all))
+    in
+    let medium_doc =
+      Format.sprintf
+        "Set the debugging flags with medium verbosity, $(docv) must be %s."
+        (Arg.doc_alts (List.map show all))
+    in
+    let full_doc =
+      Format.sprintf
+        "Set the debugging flags with full verbosity, $(docv) must be %s."
         (Arg.doc_alts (List.map show all))
     in
     let docv = "DEBUG" in
-    Arg.(value & opt_all enum_conv [] & info ["d"; "debug"] ~docv ~doc)
-
-  let verbosity_term =
-    let doc =
-      Format.sprintf "Set the level of verbosity of debugging messages."
-    in
-    let docv = "LEVEL" in
-    Arg.(value & opt int 0 & info ["debug-verbosity"] ~docv ~doc)
+    Arg.(value & opt_all enum_conv [] & info ["d"; "debug"] ~docv
+           ~doc:light_doc),
+    Arg.(value & opt_all enum_conv [] & info ["dd"; "ddebug"] ~docv
+           ~doc:medium_doc),
+    Arg.(value & opt_all enum_conv [] & info ["ddd"; "dddebug"] ~docv
+           ~doc:full_doc)
 end
 
 let mk_case_split_opt case_split_policy enable_adts_cs max_split
@@ -567,9 +576,11 @@ let halt_opt version_info where =
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
 
-let mk_opts file () () debug_verbosity debug_flags rule () halt_opt (gc) () ()
-    () () () () () () =
-  Debug.mk ~verbosity:debug_verbosity debug_flags;
+let mk_opts file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
+    (gc) () () () () () () () () =
+  Debug.mk ~verbosity:1 debug_flags;
+  Debug.mk ~verbosity:2 ddebug_flags;
+  Debug.mk ~verbosity:3 dddebug_flags;
   Rule.mk rule;
   if halt_opt then `Ok false
   (* If save_used_context was invoked as an option it should
@@ -1311,10 +1322,10 @@ let main =
     Term.(ret (const mk_opts $
                file $
                parse_case_split_opt $ parse_context_opt $
-               Debug.verbosity_term $ Debug.flag_term $ Rule.flag_term $
-               parse_execution_opt $ parse_halt_opt $ parse_internal_opt $
-               parse_limit_opt $ parse_profiling_opt $
-               parse_quantifiers_opt $ parse_sat_opt $
+               Debug.light_flag_term $ Debug.medium_flag_term $
+               Debug.full_flag_term $ Rule.flag_term $ parse_execution_opt $
+               parse_halt_opt $ parse_internal_opt $ parse_limit_opt $
+               parse_profiling_opt $ parse_quantifiers_opt $ parse_sat_opt $
                parse_term_opt $ parse_output_opt $
                parse_theory_opt $ parse_fmt_opt
               ))
