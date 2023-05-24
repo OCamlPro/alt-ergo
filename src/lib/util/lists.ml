@@ -66,6 +66,7 @@ let to_seq l =
   in
   aux l
 
+(* TODO: This function is supported by the Stdlib from OCaml 4.12. *)
 let rec compare cmp l1 l2 =
   match l1, l2 with
   | [], [] -> 0
