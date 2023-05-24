@@ -150,80 +150,166 @@ let formatter_printer fmt formatter =
 
 let formatter_conv = Arg.conv ~docv:"FMT" (formatter_parser, formatter_printer)
 
-type rule = RParsing | RTyping | RSat | RCC | RArith | RNone
+module Rule = struct
+  type t = RParsing | RTyping | RSat | RCC | RArith | RNone
 
-let value_of_rule = function
-  | RParsing -> 0
-  | RTyping -> 1
-  | RSat -> 2
-  | RCC -> 3
-  | RArith -> 4
-  | RNone -> -1
+  let all = [RParsing; RTyping; RSat; RCC; RArith; RNone]
 
-let rule_parser = function
-  | "parsing" -> Ok RParsing
-  | "typing" -> Ok RTyping
-  | "sat" -> Ok RSat
-  | "cc" -> Ok RCC
-  | "arith" -> Ok RArith
-  | "none" -> Ok RNone
-  | s ->
-    Error (`Msg ("Option --rule does not accept the argument \"" ^ s))
+  let value_of_rule = function
+    | RParsing -> 0
+    | RTyping -> 1
+    | RSat -> 2
+    | RCC -> 3
+    | RArith -> 4
+    | RNone -> -1
 
-let rule_to_string = function
-  | RParsing -> "parsing"
-  | RTyping -> "typing"
-  | RSat -> "sat"
-  | RCC -> "cc"
-  | RArith -> "arith"
-  | RNone -> "none"
+  let show = function
+    | RParsing -> "parsing"
+    | RTyping -> "typing"
+    | RSat -> "sat"
+    | RCC -> "cc"
+    | RArith -> "arith"
+    | RNone -> "none"
 
-let rule_printer fmt rule = Format.fprintf fmt "%s" (rule_to_string rule)
+  let mk flag = Options.set_rule (value_of_rule flag)
 
-let rule_conv = Arg.conv ~docv:"MDL" (rule_parser, rule_printer)
+  let flag_term =
+    let enum_conv =
+      List.map (fun v -> (show v, v)) all
+      |> Arg.enum
+    in
+    let doc =
+      Format.sprintf "Output rule used on stderr, $(docv) must be %s."
+        (Arg.doc_alts (List.map show all))
+    in
+    let docv = "TR" in
+    Arg.(value & opt enum_conv RNone & info ["rule"] ~docv ~doc)
+end
 
-let mk_dbg_opt_spl1 debug debug_ac debug_adt debug_arith debug_arrays
-    debug_bitv debug_cc debug_combine debug_constr
-  =
-  set_debug debug;
-  set_debug_ac debug_ac;
-  set_debug_adt debug_adt;
-  set_debug_arith debug_arith;
-  set_debug_arrays debug_arrays;
-  set_debug_bitv debug_bitv;
-  set_debug_cc debug_cc;
-  set_debug_combine debug_combine;
-  set_debug_constr debug_constr;
-  `Ok()
+module Debug = struct
+  type t =
+    | Debug
+    | Ac
+    | Adt
+    | Arith
+    | Arrays
+    | Bitv
+    | Sum
+    | Ite
+    | Cc
+    | Combine
+    | Constr
+    | Explanation
+    | Fm
+    | Fpa
+    | Gc
+    | Interpretation
+    | Matching
+    | Sat
+    | Split
+    | Triggers
+    | Types
+    | Typing
+    | Uf
+    | Unsat_core
+    | Use
+    | Warnings
 
-let mk_dbg_opt_spl2 debug_explanations debug_fm debug_fpa debug_gc
-    debug_interpretation debug_ite debug_matching debug_sat
-  =
-  set_debug_explanations debug_explanations;
-  set_debug_fm debug_fm;
-  set_debug_fpa debug_fpa;
-  set_debug_gc debug_gc;
-  set_debug_interpretation debug_interpretation;
-  set_debug_ite debug_ite;
-  set_debug_matching debug_matching;
-  set_debug_sat debug_sat;
-  `Ok()
+  let all = [
+    Debug; Ac; Adt; Arith; Arrays; Bitv; Sum; Ite;
+    Cc; Combine; Constr; Explanation; Fm; Fpa; Gc;
+    Interpretation; Matching; Sat; Split; Triggers;
+    Types; Typing; Uf; Unsat_core; Use; Warnings
+  ]
 
-let mk_dbg_opt_spl3 debug_split debug_sum debug_triggers debug_types
-    debug_typing debug_uf debug_unsat_core debug_use debug_warnings rule
-  =
-  let rule = value_of_rule rule in
-  set_debug_split debug_split;
-  set_debug_sum debug_sum;
-  set_debug_triggers debug_triggers;
-  set_debug_types debug_types;
-  set_debug_typing debug_typing;
-  set_debug_uf debug_uf;
-  set_debug_unsat_core debug_unsat_core;
-  set_debug_use debug_use;
-  set_debug_warnings debug_warnings;
-  set_rule rule;
-  `Ok()
+  let show = function
+    | Debug -> "debug"
+    | Ac -> "ac"
+    | Adt -> "adt"
+    | Arith -> "arith"
+    | Arrays -> "arrays"
+    | Bitv -> "bitv"
+    | Sum -> "sum"
+    | Ite -> "ite"
+    | Cc -> "cc"
+    | Combine -> "Combine"
+    | Constr -> "constr"
+    | Explanation -> "explanation"
+    | Fm -> "fm"
+    | Fpa -> "fpa"
+    | Gc -> "gc"
+    | Interpretation -> "interpretation"
+    | Matching -> "matching"
+    | Sat -> "sat"
+    | Split -> "split"
+    | Triggers -> "triggers"
+    | Types -> "types"
+    | Typing -> "typing"
+    | Uf -> "uf"
+    | Unsat_core -> "unsat-core"
+    | Use -> "use"
+    | Warnings -> "warnings"
+
+  let mk ~verbosity flags =
+    List.concat flags
+    |> List.iter (function
+        | Debug -> Options.set_debug true
+        | Ac -> Options.set_debug_ac true
+        | Adt -> Options.set_debug_adt true
+        | Arith -> Options.set_debug_arith true
+        | Arrays -> Options.set_debug_arrays true
+        | Bitv -> Options.set_debug_bitv true
+        | Sum -> Options.set_debug_sum true
+        | Ite -> Options.set_debug_ite true
+        | Cc -> Options.set_debug_cc true
+        | Combine -> Options.set_debug_combine true
+        | Constr -> Options.set_debug_constr true
+        | Explanation -> Options.set_debug_explanations true
+        | Fm -> Options.set_debug_fm true
+        | Fpa -> Options.set_debug_fpa verbosity
+        | Gc -> Options.set_debug_gc true
+        | Interpretation -> Options.set_debug_interpretation true
+        | Matching -> Options.set_debug_matching verbosity
+        | Sat -> Options.set_debug_sat true
+        | Split -> Options.set_debug_split true
+        | Triggers -> Options.set_debug_triggers true
+        | Types -> Options.set_debug_types true
+        | Typing -> Options.set_debug_typing true
+        | Uf -> Options.set_debug_uf true
+        | Unsat_core -> Options.set_debug_unsat_core true
+        | Use -> Options.set_debug_use true
+        | Warnings -> Options.set_debug_warnings true
+      )
+
+  let light_flag_term, medium_flag_term, full_flag_term =
+    let enum_conv =
+      List.map (fun v -> (show v, v)) all
+      |> Arg.enum
+      |> Arg.list
+    in
+    let light_doc =
+      Format.sprintf
+        "Set the debugging flags with light verbosity, $(docv) must be %s."
+        (Arg.doc_alts (List.map show all))
+    in
+    let medium_doc =
+      Format.sprintf
+        "Set the debugging flags with medium verbosity, $(docv) must be %s."
+        (Arg.doc_alts (List.map show all))
+    in
+    let full_doc =
+      Format.sprintf
+        "Set the debugging flags with full verbosity, $(docv) must be %s."
+        (Arg.doc_alts (List.map show all))
+    in
+    let docv = "DEBUG" in
+    Arg.(value & opt_all enum_conv [] & info ["d"; "debug"] ~docv
+           ~doc:light_doc),
+    Arg.(value & opt_all enum_conv [] & info ["dd"; "ddebug"] ~docv
+           ~doc:medium_doc),
+    Arg.(value & opt_all enum_conv [] & info ["ddd"; "dddebug"] ~docv
+           ~doc:full_doc)
+end
 
 let mk_case_split_opt case_split_policy enable_adts_cs max_split
   =
@@ -490,9 +576,12 @@ let halt_opt version_info where =
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
 
-let mk_opts file () () () () () () halt_opt (gc) () () () () () () () ()
-  =
-
+let mk_opts file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
+    (gc) () () () () () () () () =
+  Debug.mk ~verbosity:1 debug_flags;
+  Debug.mk ~verbosity:2 ddebug_flags;
+  Debug.mk ~verbosity:3 dddebug_flags;
+  Rule.mk rule;
   if halt_opt then `Ok false
   (* If save_used_context was invoked as an option it should
        automatically set unsat_core to true *)
@@ -541,170 +630,6 @@ let s_models = "MODEL OPTIONS"
 
 
 (* Parsers *)
-
-let parse_dbg_opt_spl1 =
-
-  let docs = s_debug in
-
-  let debug =
-    let doc = "Set the debugging flag." in
-    Arg.(value & flag & info ["d"; "debug"] ~doc) in
-
-  let debug_ac =
-    let doc = "Set the debugging flag of ac." in
-    Arg.(value & flag & info ["dac"] ~docs ~doc) in
-
-  let debug_adt =
-    let doc = "Set the debugging flag of ADTs." in
-    Arg.(value & flag & info ["dadt"] ~docs ~doc) in
-
-  let debug_arith =
-    let doc = "Set the debugging flag of Arith (without fm)." in
-    Arg.(value & flag & info ["darith"] ~docs ~doc) in
-
-  let debug_arrays =
-    let doc = "Set the debugging flag of arrays." in
-    Arg.(value & flag & info ["darrays"] ~docs ~doc) in
-
-  let debug_bitv =
-    let doc = "Set the debugging flag of bitv." in
-    Arg.(value & flag & info ["dbitv"] ~docs ~doc) in
-
-  let debug_cc =
-    let doc = "Set the debugging flag of cc." in
-    Arg.(value & flag & info ["dcc"] ~docs ~doc) in
-
-  let debug_combine =
-    let doc = "Set the debugging flag of combine." in
-    Arg.(value & flag & info ["dcombine"] ~docs ~doc) in
-
-  let debug_constr =
-    let doc = "Set the debugging flag of constructors." in
-    Arg.(value & flag & info ["dconstr"] ~docs ~doc) in
-
-  Term.(ret (const mk_dbg_opt_spl1 $
-             debug $
-             debug_ac $
-             debug_adt $
-             debug_arith $
-             debug_arrays $
-             debug_bitv $
-             debug_cc $
-             debug_combine $
-             debug_constr
-            ))
-
-let parse_dbg_opt_spl2 =
-
-  let docs = s_debug in
-
-  let debug_explanations =
-    let doc = "Set the debugging flag of explanations." in
-    Arg.(value & flag & info ["dexplanations"] ~docs ~doc) in
-
-  let debug_fm =
-    let doc = "Set the debugging flag of inequalities." in
-    Arg.(value & flag & info ["dfm"] ~docs ~doc) in
-
-  let debug_fpa =
-    let doc = "Set the debugging flag of floating-point." in
-    Arg.(value & opt int (get_debug_fpa ()) & info ["dfpa"] ~docs ~doc) in
-
-  let debug_gc =
-    let doc = "Prints some debug info about the GC's activity." in
-    Arg.(value & flag & info ["dgc"] ~docs ~doc) in
-
-  let debug_interpretation =
-    let doc = "Set debug flag for interpretation generatation." in
-    Arg.(value & flag & info ["debug-interpretation"] ~docs ~doc) in
-
-  let debug_ite =
-    let doc = "Set the debugging flag of ite." in
-    Arg.(value & flag & info ["dite"] ~docs ~doc) in
-
-  let debug_matching =
-    let doc = "Set the debugging flag \
-               of E-matching (0=disabled, 1=light, 2=full)." in
-    let docv = "FLAG" in
-    Arg.(value & opt int (get_debug_matching ()) &
-         info ["dmatching"] ~docv ~docs ~doc) in
-
-  let debug_sat =
-    let doc = "Set the debugging flag of sat." in
-    Arg.(value & flag & info ["dsat"] ~docs ~doc) in
-
-  Term.(ret (const mk_dbg_opt_spl2 $
-
-             debug_explanations $
-             debug_fm $
-             debug_fpa $
-             debug_gc $
-             debug_interpretation $
-             debug_ite $
-             debug_matching $
-             debug_sat
-            ))
-
-let parse_dbg_opt_spl3 =
-
-  let docs = s_debug in
-
-  let debug_split =
-    let doc = "Set the debugging flag of case-split analysis." in
-    Arg.(value & flag & info ["dsplit"] ~docs ~doc) in
-
-  let debug_sum =
-    let doc = "Set the debugging flag of Sum." in
-    Arg.(value & flag & info ["dsum"] ~docs ~doc) in
-
-  let debug_triggers =
-    let doc = "Set the debugging flag of triggers." in
-    Arg.(value & flag & info ["dtriggers"] ~docs ~doc) in
-
-  let debug_types =
-    let doc = "Set the debugging flag of types." in
-    Arg.(value & flag & info ["dtypes"] ~docs ~doc) in
-
-  let debug_typing =
-    let doc = "Set the debugging flag of typing." in
-    Arg.(value & flag & info ["dtyping"] ~docs ~doc) in
-
-  let debug_uf =
-    let doc = "Set the debugging flag of uf." in
-    Arg.(value & flag & info ["duf"] ~docs ~doc) in
-
-  let debug_unsat_core =
-    let doc = "Replay unsat-cores produced by $(b,--unsat-core). \
-               The option implies $(b,--unsat-core)." in
-    Arg.(value & flag & info ["debug-unsat-core"] ~docs ~doc) in
-
-  let debug_use =
-    let doc = "Set the debugging flag of use." in
-    Arg.(value & flag & info ["duse"] ~docs ~doc) in
-
-  let debug_warnings =
-    let doc = "Set the debugging flag of warnings." in
-    Arg.(value & flag & info ["dwarnings"] ~docs ~doc) in
-
-  let rule =
-    let doc =
-      "$(docv) = parsing|typing|sat|cc|arith, output rule used on stderr." in
-    let docv = "TR" in
-    Arg.(value & opt rule_conv RNone & info ["rule"] ~docv ~docs ~doc) in
-
-  Term.(ret (const mk_dbg_opt_spl3 $
-
-             debug_split $
-             debug_sum $
-             debug_triggers $
-             debug_types $
-             debug_typing $
-             debug_uf $
-             debug_unsat_core $
-             debug_use $
-             debug_warnings $
-             rule
-            ))
 
 let parse_case_split_opt =
 
@@ -1397,10 +1322,10 @@ let main =
     Term.(ret (const mk_opts $
                file $
                parse_case_split_opt $ parse_context_opt $
-               parse_dbg_opt_spl1 $ parse_dbg_opt_spl2 $ parse_dbg_opt_spl3 $
-               parse_execution_opt $ parse_halt_opt $ parse_internal_opt $
-               parse_limit_opt $ parse_profiling_opt $
-               parse_quantifiers_opt $ parse_sat_opt $
+               Debug.light_flag_term $ Debug.medium_flag_term $
+               Debug.full_flag_term $ Rule.flag_term $ parse_execution_opt $
+               parse_halt_opt $ parse_internal_opt $ parse_limit_opt $
+               parse_profiling_opt $ parse_quantifiers_opt $ parse_sat_opt $
                parse_term_opt $ parse_output_opt $
                parse_theory_opt $ parse_fmt_opt
               ))
