@@ -117,7 +117,7 @@ module Shostak(X : ALIEN) = struct
 
   let compare_simple_term = compare_alpha_term (fun st1 st2 ->
       match st1, st2 with
-      | Cte true, Cte true | Cte false, Cte false -> 0
+      | Cte b1, Cte b2 -> Bool.compare b1 b2
       | Cte false , _ | _ , Cte true -> -1
       | _ , Cte false | Cte true,_ -> 1
 
@@ -136,7 +136,7 @@ module Shostak(X : ALIEN) = struct
 
   let compare_solver_simple_term = compare_alpha_term (fun st1 st2 ->
       match st1, st2 with
-      | S_Cte true, S_Cte true | S_Cte false, S_Cte false -> 0
+      | S_Cte b1, S_Cte b2 -> Bool.compare b1 b2
       | S_Cte false, _ | _, S_Cte true -> -1
       | _ , S_Cte false | S_Cte true,_ -> 1
       | S_Var v1, S_Var v2 ->
@@ -249,7 +249,7 @@ module Shostak(X : ALIEN) = struct
 
     let string_to_bitv s =
       let tmp = ref[] in
-      String.iter(fun car -> tmp := (Char.compare car '0' <> 0, 1)::(!tmp)) s;
+      String.iter(fun car -> tmp := (Stdlib.(car <> '0'), 1)::(!tmp)) s;
       let rec f_aux l acc = match l with
         | [] -> assert false
         | [(b,n)] -> { sz = n ; bv = I_Cte b }::acc
@@ -644,7 +644,7 @@ module Shostak(X : ALIEN) = struct
         |a::b::r ->
           begin
             match a.bv,b.bv with
-            | Cte true, Cte true | Cte false, Cte false ->
+            | Cte b1, Cte b2 when Stdlib.(b1 = b2) ->
               cnf_max ({ b with sz = a.sz + b.sz }::r)
             | _, Cte _ -> a::(cnf_max (b::r))
             | _ -> a::b::(cnf_max r)
