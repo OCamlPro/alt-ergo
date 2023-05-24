@@ -138,7 +138,7 @@ module Q = struct
   let from_zz z1 z2 = Q.make z1 z2
   let from_string s = Q.of_string s
   let from_float f  =
-    if f = infinity || f = neg_infinity then raise Not_a_float;
+    if Float.(equal f infinity || equal f neg_infinity) then raise Not_a_float;
     Q.of_float f
 
   let to_string t = Q.to_string t
