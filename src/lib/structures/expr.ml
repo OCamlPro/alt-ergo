@@ -166,34 +166,19 @@ let compare_binders b1 b2 =
       let c = i - j in if c <> 0 then c else Ty.compare ty1 ty2)
     b1 b2
 
-let [@inline always] compare_sko_xxx sk1 sk2 cmp_xxx =
-  try
-    List.iter2
-      (fun s t ->
-         let c = cmp_xxx s t in
-         if c <> 0 then raise (Util.Cmp c)
-      )sk1 sk2;
-    0
-  with
-  | Util.Cmp c -> c
-  | Invalid_argument _ -> List.length sk1 - List.length sk2
+let compare_sko_vars = Lists.compare compare
 
-let compare_sko_vars sk1 sk2 = compare_sko_xxx sk1 sk2 compare
+let compare_sko_vty = Lists.compare Ty.compare
 
-let compare_sko_vty sk1 sk2 = compare_sko_xxx sk1 sk2 Ty.compare
-
-let compare_lists l1 l2 cmp_elts =
-  let res = Util.cmp_lists l1 l2 cmp_elts in
-  if res <> 0 then raise (Util.Cmp res)
-
-let compare_triggers _f1 _f2 trs1 trs2 =
-  try
-    List.iter2
-      (fun tr1 tr2 ->
-         compare_lists tr1.content tr2.content compare;
-         compare_lists tr1.hyp tr2.hyp compare;
-         compare_lists tr1.semantic tr2.semantic
-           (fun a b ->
+let compare_triggers _f1 _f2 =
+  Lists.compare (fun tr1 tr2 ->
+      let c = Lists.compare compare tr1.content tr2.content in
+      if c <> 0 then c
+      else
+        let c = Lists.compare compare tr1.hyp tr2.hyp in
+        if c <> 0 then c
+        else
+          Lists.compare (fun a b ->
               Util.compare_algebraic a b
                 (function
                   | Interval (s, b1, b2), Interval (t, c1, c2) ->
@@ -218,12 +203,8 @@ let compare_triggers _f1 _f2 trs1 trs2 =
                        | IsTheoryConst _ | LinearDependency _) ->
                     assert false
                 )
-           )
-      ) trs1 trs2;
-    0
-  with
-  | Util.Cmp c -> c
-  | Invalid_argument _ -> List.length trs1 - List.length trs2
+            ) tr1.semantic tr2.semantic
+    )
 
 let compare_quant
     {main=f1; binders=b1; sko_v=sko_v1; sko_vty=free_vty1; user_trs=trs1; _}
@@ -1891,7 +1872,7 @@ module Triggers = struct
       if c <> 0 then c
       else
         let c = Sy.compare s s' in
-        if c <> 0 then c else Util.cmp_lists l1 l2 cmp_trig_term
+        if c <> 0 then c else Lists.compare cmp_trig_term l1 l2
 
     | { f = s; _ }, _ when is_infix s -> -1
     | _ , { f = s'; _ } when is_infix s' -> 1
@@ -1910,34 +1891,34 @@ module Triggers = struct
       let l2 = List.map score_term tl2 in
       let l1 = List.fast_sort Stdlib.compare l1 in
       let l2 = List.fast_sort Stdlib.compare l2 in
-      let c  = Util.cmp_lists l1 l2 Stdlib.compare in
+      let c  = Lists.compare Stdlib.compare l1 l2 in
       if c <> 0 then c
       else
         let c = Sy.compare s1 s2 in
-        if c <> 0 then c else Util.cmp_lists tl1 tl2 cmp_trig_term
+        if c <> 0 then c else Lists.compare cmp_trig_term tl1 tl2
 
     | { f = Name _; _ }, _ -> -1
     | _, { f = Name _; _ } -> 1
 
     | { f = Op Get; xs = l1; _ }, { f = Op Get; xs = l2; _ } ->
-      Util.cmp_lists l1 l2 cmp_trig_term
+      Lists.compare cmp_trig_term l1 l2
     | { f = Op Get; _ }, _ -> -1
     | _, { f = Op Get; _ } -> 1
 
     | { f = Op Set; xs = l1; _ }, { f = Op Set; xs = l2; _ } ->
-      Util.cmp_lists l1 l2 cmp_trig_term
+      Lists.compare cmp_trig_term l1 l2
     | { f = Op Set; _ }, _ -> -1
     | _, { f = Op Set; _ } -> 1
 
     | { f = Op Extract (i1, j1); xs = [t1]; _ },
       { f = Op Extract (i2, j2); xs = [t2]; _ } ->
-      let r = Util.cmp_lists [i1; j1] [i2; j2] Int.compare in
+      let r = Lists.compare Int.compare [i1; j1] [i2; j2] in
       if r = 0 then cmp_trig_term t1 t2 else r
 
     | { f = Op Extract _; _ }, _ -> -1
 
     | { f = Op Concat; xs = l1; _ }, { f = Op Concat; xs = l2; _} ->
-      Util.cmp_lists l1 l2 cmp_trig_term
+      Lists.compare cmp_trig_term l1 l2
     | { f = Op Concat; _ }, _ -> -1
     | _, { f = Op Concat; _ } -> 1
 
@@ -1958,7 +1939,7 @@ module Triggers = struct
     | _, { f =Op (Destruct _); _ } -> 1
 
     | { f = Op Record ; xs= lbs1; _ }, { f = Op Record ; xs = lbs2; _ } ->
-      Util.cmp_lists lbs1 lbs2 cmp_trig_term
+      Lists.compare cmp_trig_term lbs1 lbs2
     | { f = Op Record; _ }, _ -> -1
     | _, { f = Op Record; _ } -> 1
 
@@ -1968,11 +1949,11 @@ module Triggers = struct
       let l2 = List.map score_term tl2 in
       let l1 = List.fast_sort Stdlib.compare l1 in
       let l2 = List.fast_sort Stdlib.compare l2 in
-      let c = Util.cmp_lists l1 l2 Stdlib.compare in
+      let c = Lists.compare Stdlib.compare l1 l2 in
       if c <> 0 then c
       else
         let c = Sy.compare s1 s2 in
-        if c <> 0 then c else Util.cmp_lists tl1 tl2 cmp_trig_term
+        if c <> 0 then c else Lists.compare cmp_trig_term tl1 tl2
 
     | { f = Op _; _ }, _ -> -1
     | _, { f = Op _; _ } -> 1
@@ -1984,8 +1965,8 @@ module Triggers = struct
     let l2 = List.map score_term tl2 in
     let l1 = List.rev (List.fast_sort Stdlib.compare l1) in
     let l2 = List.rev (List.fast_sort Stdlib.compare l2) in
-    let c = Util.cmp_lists l1 l2 Stdlib.compare in
-    if c <> 0 then c else Util.cmp_lists tl1 tl2 cmp_trig_term
+    let c = Lists.compare Stdlib.compare l1 l2 in
+    if c <> 0 then c else Lists.compare cmp_trig_term tl1 tl2
 
   let unique_stable_sort =
     let rec unique l acc =
@@ -2058,7 +2039,7 @@ module Triggers = struct
     struct
       type t = expr list * SSet.t * Svty.t
       let compare (a, y1, _) (b, y2, _)  =
-        let c = try compare_lists a b compare; 0 with Util.Cmp c -> c in
+        let c = Lists.compare compare a b in
         if c <> 0 then c else SSet.compare y1 y2
     end)
 

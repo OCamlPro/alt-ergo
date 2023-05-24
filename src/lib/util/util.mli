@@ -82,8 +82,6 @@ val string_of_th_ext : theories_extensions -> string
 *)
 val [@inline always] compare_algebraic : 'a -> 'a -> (('a * 'a) -> int) -> int
 
-val [@inline always] cmp_lists: 'a list -> 'a list -> ('a -> 'a -> int) -> int
-
 type matching_env =
   {
     nb_triggers : int;

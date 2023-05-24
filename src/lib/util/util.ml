@@ -123,18 +123,6 @@ let [@inline always] compare_algebraic s1 s2 f_same_constrs_with_args =
     let cmp_tags = Obj.tag r1 - Obj.tag r2 in
     if cmp_tags <> 0 then cmp_tags else f_same_constrs_with_args (s1, s2)
 
-let [@inline always] cmp_lists l1 l2 cmp_elts =
-  try
-    List.iter2
-      (fun a b ->
-         let c = cmp_elts a b in
-         if c <> 0 then raise (Cmp c)
-      )l1 l2;
-    0
-  with
-  | Cmp n -> n
-  | Invalid_argument _ -> List.length l1 - List.length l2
-
 type matching_env =
   {
     nb_triggers : int;
