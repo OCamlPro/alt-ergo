@@ -50,8 +50,7 @@ jobs:
 
       # Install dependencies
       - name: Install deps
-        run: opam exec -- make test-deps
-        run: opam exec -- make js-deps
+        run: opam exec -- make test-deps js-deps
 
       - name: Temporary fix
         run: opam pin https://github.com/Gbury/dolmen.git
