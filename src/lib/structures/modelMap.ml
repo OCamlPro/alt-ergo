@@ -28,8 +28,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Options
-
 module X = Shostak.Combine
 
 module Sy = Symbols

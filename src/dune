@@ -13,3 +13,10 @@
   (ocamlopt_flags -O3 -unbox-closures))
   (js_of_ocaml (flags --no-source-map))
 )
+
+(library
+ (name alt_ergo_prelude)
+ (package alt-ergo-lib)
+ (wrapped false)
+ (modules prelude)
+)

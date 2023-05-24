@@ -29,7 +29,6 @@
 (**************************************************************************)
 
 open AltErgoLib
-open Options
 
 type action =
   | Prune of int

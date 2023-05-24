@@ -33,7 +33,20 @@ module E = Expr
 
 type sort_var = A | B | C
 
+let compare_sort s1 s2 =
+  match s1, s2 with
+  | A, A | B, B | C, C -> 0
+  | A, (B | C) | B, C -> -1
+  | C, (A | B) | B, A -> 1
+
 type tvar = { var : int ; sorte : sort_var }
+
+let compare_tvar v1 v2 =
+  if v1 == v2 then 0
+  else
+    let c = compare v1.var v2.var in
+    if c <> 0 then c
+    else compare_sort v1.sorte v2.sorte
 
 type 'a xterm = Var of tvar | Alien of 'a
 
@@ -92,7 +105,7 @@ module Shostak(X : ALIEN) = struct
 
   let compare_xterm xt1 xt2 = match xt1,xt2 with
     | Var v1, Var v2 ->
-      let c1 = compare v1.sorte v2.sorte in
+      let c1 = compare_sort v1.sorte v2.sorte in
       if c1 <> 0 then c1
       else -(compare v1.var v2.var)
     (* on inverse le signe : les variables les plus fraiches sont
@@ -104,7 +117,7 @@ module Shostak(X : ALIEN) = struct
 
   let compare_simple_term = compare_alpha_term (fun st1 st2 ->
       match st1, st2 with
-      | Cte b,Cte b' -> compare b b'
+      | Cte b1, Cte b2 -> Bool.compare b1 b2
       | Cte false , _ | _ , Cte true -> -1
       | _ , Cte false | Cte true,_ -> 1
 
@@ -119,13 +132,15 @@ module Shostak(X : ALIEN) = struct
           if c2 <> 0 then c2 else compare_xterm t1 t2
     )
 
+  let compare_abstract = Lists.compare compare_simple_term
+
   let compare_solver_simple_term = compare_alpha_term (fun st1 st2 ->
       match st1, st2 with
-      | S_Cte b, S_Cte b' -> compare b b'
+      | S_Cte b1, S_Cte b2 -> Bool.compare b1 b2
       | S_Cte false, _ | _, S_Cte true -> -1
       | _ , S_Cte false | S_Cte true,_ -> 1
       | S_Var v1, S_Var v2 ->
-        let c1 = compare v1.sorte v2.sorte
+        let c1 = compare_sort v1.sorte v2.sorte
         in if c1 <> 0 then c1 else compare v1.var v2.var
     )
 
@@ -160,7 +175,7 @@ module Shostak(X : ALIEN) = struct
 
       | I_Comp (t1, t2), I_Comp (t1', t2') ->
         let cmp = compare_term t1 t1' in
-        if cmp = 0 then compare t2 t2' else cmp
+        if cmp = 0 then compare_term t2 t2' else cmp
 
       | I_Cte _, (I_Other _ | I_Ext _ | I_Comp _ ) -> 1
       | I_Other _, (I_Ext _ | I_Comp _ ) -> 1
@@ -217,12 +232,13 @@ module Shostak(X : ALIEN) = struct
       |[s] -> [simple_t s]
       |s::t::tl' ->
         begin
-          match s.bv , t.bv with
-          |I_Cte b1,I_Cte b2 when b1=b2 ->beta({s with sz=s.sz+t.sz}::tl')
-          |I_Ext(d1,i,j),I_Ext(d2,k,l) when compare_term d1 d2 = 0 && l=i-1 ->
+          match s.bv, t.bv with
+          | I_Cte true, I_Cte true | I_Cte false, I_Cte false ->
+            beta({s with sz=s.sz+t.sz}::tl')
+          | I_Ext(d1,i,j), I_Ext(d2,k,l) when compare_term d1 d2 = 0 && l=i-1 ->
             let tmp = {sz = s.sz + t.sz ; bv = I_Ext(d1,k,j)}
             in if k=0 then (simple_t tmp)::(beta tl') else beta (tmp::tl')
-          |_ -> (simple_t s)::(beta (t::tl'))
+          | _ -> (simple_t s)::(beta (t::tl'))
         end
 
     (** **)
@@ -233,11 +249,12 @@ module Shostak(X : ALIEN) = struct
 
     let string_to_bitv s =
       let tmp = ref[] in
-      String.iter(fun car -> tmp := (car<>'0',1)::(!tmp)) s;
+      String.iter(fun car -> tmp := (not @@ Char.equal car '0', 1)::(!tmp)) s;
       let rec f_aux l acc = match l with
         | [] -> assert false
         | [(b,n)] -> { sz = n ; bv = I_Cte b }::acc
-        | (b1,n)::(b2,m)::r when b1 = b2 -> f_aux ((b1,n+m)::r) acc
+        | (true as b1, n)::(true, m)::r | (false as b1, n)::(false, m)::r ->
+          f_aux ((b1,n+m)::r) acc
         | (b1,n)::(b2,m)::r ->
           (f_aux ((b2,m)::r)) ({ sz = n ; bv = I_Cte b1 }::acc)
       in
@@ -379,8 +396,11 @@ module Shostak(X : ALIEN) = struct
 
     let slice t u  =
       let f_add (s1,s2) acc =
-        if (s1 = s2 || List.mem (s1,s2) acc || List.mem (s2,s1) acc) then acc
-        else (s1,s2)::acc
+        let b =
+          compare_simple_term s1 s2 = 0
+          || List.mem (s1,s2) acc || List.mem (s2,s1) acc
+        in
+        if b then acc else (s1,s2)::acc
       in let rec f_rec acc = function
           |[],[] | _,[] | [],_ -> assert false
           |[s1],[s2] ->if s1.sz<>s2.sz then assert false else f_add (s1,s2) acc
@@ -556,12 +576,19 @@ module Shostak(X : ALIEN) = struct
         |[] -> bw
         |(t,vls)::r ->
           let (vls',subs) = uniforme_slice vls
-          in if subs =[] then slice_rec ((t,vls')::bw) r
+          in if Lists.is_empty subs then slice_rec ((t,vls')::bw) r
           else
             begin
               let _bw = apply_subs subs bw in
               let _fw = apply_subs subs r in
-              if _bw = bw then slice_rec ((t,vls')::bw) _fw
+              let cmp (a, l1) (b, l2) =
+                let c = compare_simple_term a b in
+                if c <> 0 then c
+                else
+                  Lists.compare (Lists.compare compare_solver_simple_term) l1 l2
+              in
+              if Lists.compare cmp _bw bw = 0
+              then slice_rec ((t,vls')::bw) _fw
               else slice_rec [] (bw@((t,vls'):: _fw))
             end
       in slice_rec [] parts
@@ -576,7 +603,7 @@ module Shostak(X : ALIEN) = struct
       |[] -> []
       |st::tl ->
         let (ok,ko) = List.partition (included st) tl in
-        if ok = [] then st::union_sets tl
+        if Lists.is_empty ok then st::union_sets tl
         else union_sets ((List.fold_left ST_Set.union st ok)::ko)
 
     let init_sets vals =
@@ -617,9 +644,9 @@ module Shostak(X : ALIEN) = struct
         |a::b::r ->
           begin
             match a.bv,b.bv with
-            |Cte bol,Cte bol' when bol = bol' ->
+            | Cte b1, Cte b2 when Bool.equal b1 b2 ->
               cnf_max ({ b with sz = a.sz + b.sz }::r)
-            | _,Cte _ -> a::(cnf_max (b::r))
+            | _, Cte _ -> a::(cnf_max (b::r))
             | _ -> a::b::(cnf_max r)
           end
       in List.map
@@ -628,11 +655,12 @@ module Shostak(X : ALIEN) = struct
         )unif_slic
 
     let solve u v =
-      if u = v then raise Valid
+      if Lists.compare compare_simple_term u v = 0 then raise Valid
       else begin
         let varsU = get_vars u in
         let varsV = get_vars v in
-        if varsU = [] && varsV = [] then raise Util.Unsolvable
+        if Lists.is_empty varsU && Lists.is_empty varsV
+        then raise Util.Unsolvable
         else
           begin
             let st_sys = slice u v in
@@ -665,7 +693,7 @@ module Shostak(X : ALIEN) = struct
         if c<>0 then c else comp l1 l2
     in comp b1 b2
 
-  let compare x y = compare (embed x) (embed y)
+  let compare x y = compare_abstract (embed x) (embed y)
 
   (* should use hashed compare to be faster, not structural comparison *)
   let equal bv1 bv2 = compare_mine bv1 bv2 = 0
@@ -769,7 +797,8 @@ module Shostak(X : ALIEN) = struct
   let rec subst_rec x subs biv =
     match biv.bv , extract_xterm x with
     | Canonizer.I_Cte _ , _ -> biv
-    | Canonizer.I_Other (Var y) , Var z when y=z -> extract subs biv.sz
+    | Canonizer.I_Other (Var y), Var z when compare_tvar y z = 0 ->
+      extract subs biv.sz
     | Canonizer.I_Other (Var _) , _ -> biv
     | Canonizer.I_Other (Alien tt) , _ ->
       if X.equal x tt then
@@ -786,7 +815,7 @@ module Shostak(X : ALIEN) = struct
       Printer.print_dbg
         ~module_name:"Bitv" ~function_name:"subst"
         "subst %a |-> %a in %a" X.print x X.print subs print biv;
-    if biv = [] then is_mine biv
+    if Lists.is_empty biv then is_mine biv
     else
       let r = Canonizer.sigma (subst_rec x subs (to_i_ast biv)) in
       is_mine r

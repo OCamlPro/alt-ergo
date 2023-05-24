@@ -28,32 +28,13 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Lists utilies
+(** Open this module in every module to hide polymorphic versions of
+    the Stdlib. **)
+let (<>) (a: int) (b: int) = a <> b
+let (=)  (a: int) (b: int) = a = b
+let (<)  (a: int) (b: int) = a < b
+let (>)  (a: int) (b: int) = a > b
+let (<=) (a: int) (b: int) = a <= b
+let (>=) (a: int) (b: int) = a >= b
 
-    This modules defines some helper functions on lists
-*)
-
-(** {3 Misc functions} *)
-
-val is_empty : 'a list -> bool
-(** Is the list empty? *)
-
-val to_seq : 'a list -> 'a Seq.t
-(** Iterate on the list *)
-
-val apply : ('a -> 'a) -> 'a list -> 'a list * bool
-(** [apply f [a_1; ...; a_n]] returns a couple [[f a_1; ...; f a_n], same]
-    same such that: (1) "same" is true if and only if a_i == a_i for
-    each i; and (2) if same is true, then the resulting list is
-    physically equal to the argument **)
-
-val apply_right : ('a -> 'a) -> ('b * 'a) list -> ('b * 'a) list * bool
-(** similar to function apply, but the elements of the list are
-    couples **)
-
-val find_opt : ('a -> bool) -> 'a list -> 'a option
-(** Tries and find the first element of the list satisfying the predicate. *)
-
-val compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
-(** [compare cmp l1 l2] compares the lists [l1] and [l2] using the comparison
-    function [cmp] on elements. *)
+let compare  (a: int) (b: int) = Stdlib.compare a b

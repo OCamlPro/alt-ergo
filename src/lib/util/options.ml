@@ -239,7 +239,7 @@ let set_output_with_formatting b = output_with_formatting := b
 let set_output_with_forced_flush b = output_with_forced_flush := b
 let set_frontend f = frontend := f
 let set_input_format f = input_format := f
-let set_infer_input_format f = infer_input_format := (f = None)
+let set_infer_input_format f = infer_input_format := (Option.is_none f)
 let set_parse_only b = parse_only := b
 let set_parsers p = parsers := p
 let set_preludes p = preludes := p
@@ -311,18 +311,37 @@ let set_interpretation b = interpretation := b
 let set_interpretation_use_underscore b = interpretation_use_underscore := b
 let set_output_format b = output_format := b
 let set_model_type t = model_type := t
-let set_infer_output_format f = infer_output_format := f = None
+let set_infer_output_format f = infer_output_format := Option.is_none f
 let set_unsat_core b = unsat_core := b
 
-let get_interpretation () = !interpretation <> INone
-let get_first_interpretation () = !interpretation = IFirst
-let get_every_interpretation () = !interpretation = IEvery
-let get_last_interpretation () = !interpretation = ILast
+let equal_mode a b =
+  match a, b with
+  | INone, INone | IFirst, IFirst | IEvery, IEvery -> true
+  | _ -> false
+
+let equal_output_format a b =
+  match a, b with
+  | Smtlib2, Smtlib2 | Native, Native | Why3, Why3 -> true
+  | Unknown n1, Unknown n2 -> String.equal n1 n2
+  | Smtlib2, (Native | Why3 | Unknown _)
+  | Native, (Smtlib2 | Why3 | Unknown _)
+  | Why3, (Smtlib2 | Native | Unknown _)
+  | Unknown _, (Smtlib2 | Native | Why3) -> false
+
+let equal_mode_type a b =
+  match a, b with
+  | Constraints, Constraints | Value, Value -> true
+  | Constraints, Value | Value, Constraints -> false
+
+let get_interpretation () = not @@ equal_mode !interpretation INone
+let get_first_interpretation () = equal_mode !interpretation IFirst
+let get_every_interpretation () = equal_mode !interpretation IEvery
+let get_last_interpretation () = equal_mode !interpretation ILast
 let get_interpretation_use_underscore () = !interpretation_use_underscore
 let get_output_format () = !output_format
-let get_output_smtlib () = !output_format = Smtlib2
+let get_output_smtlib () = equal_output_format !output_format Smtlib2
 let get_model_type () = !model_type
-let get_model_type_constraints () = !model_type = Constraints
+let get_model_type_constraints () = equal_mode_type !model_type Constraints
 let get_infer_output_format () = !infer_output_format
 let get_unsat_core () = !unsat_core || !save_used_context || !debug_unsat_core
 
@@ -370,8 +389,15 @@ let set_no_user_triggers b = no_user_triggers := b
 let set_normalize_instances b = normalize_instances := b
 let set_triggers_var b = triggers_var := b
 
+let equal_heuristic a b =
+  match a, b with
+  | IGreedy, IGreedy | INormal, INormal | IAuto, IAuto -> true
+  | IGreedy, (INormal | IAuto)
+  | INormal, (IGreedy | IAuto)
+  | IAuto, (IGreedy | INormal) -> false
+
 let get_instantiation_heuristic () = !instantiation_heuristic
-let get_greedy () = !instantiation_heuristic = IGreedy
+let get_greedy () = equal_heuristic !instantiation_heuristic IGreedy
 let get_instantiate_after_backjump () = !instantiate_after_backjump
 let get_max_multi_triggers_size () = !max_multi_triggers_size
 let get_nb_triggers () = !nb_triggers
@@ -547,23 +573,12 @@ module Time = struct
   let set_timeout ~is_gui tm = MyUnix.set_timeout ~is_gui tm
 
   let unset_timeout ~is_gui =
-    if get_timelimit() <> 0. then
+    if Float.compare (get_timelimit ()) 0. <> 0 then
       MyUnix.unset_timeout ~is_gui
 
 end
 
 (** globals **)
-
-(** open Options in every module to hide polymorphic versions of Stdlib **)
-let (<>) (a: int) (b: int) = a <> b
-let (=)  (a: int) (b: int) = a = b
-let (<)  (a: int) (b: int) = a < b
-let (>)  (a: int) (b: int) = a > b
-let (<=) (a: int) (b: int) = a <= b
-let (>=) (a: int) (b: int) = a >= b
-
-let compare  (a: int) (b: int) = Stdlib.compare a b
-
 
 (* extra **)
 

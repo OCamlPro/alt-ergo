@@ -28,6 +28,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
+let is_empty = function
+  | [] -> true
+  | _ -> false
+
 let apply f l =
   let res, same =
     List.fold_left
@@ -62,3 +66,14 @@ let to_seq l =
   in
   aux l
 
+(* TODO: This function is supported by the Stdlib from OCaml 4.12. *)
+let rec compare cmp l1 l2 =
+  match l1, l2 with
+  | [], [] -> 0
+  | [], _ -> -1
+  | _, [] -> 1
+  | hd1::tl1, hd2::tl2 ->
+    let c = cmp hd1 hd2 in
+    if c <> 0 then c
+    else
+      compare cmp tl1 tl2

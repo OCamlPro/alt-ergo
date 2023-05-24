@@ -1040,21 +1040,6 @@ end
 (** Displays the used rule *)
 val tool_req : int -> string -> unit
 
-(** {3 Monomorphisations}  *)
-(** Since {!module:Options} is opened in every module,
-    definition of binary operators to hide their polymorphic
-    versions {{:https://caml.inria.fr/pub/docs/manual-ocaml/libref/Stdlib.html}
-    [Stdlib]} *)
-
-val (<>) : int -> int -> bool
-val (=) : int -> int -> bool
-val (<) : int -> int -> bool
-val (>) : int -> int -> bool
-val (<=) : int -> int -> bool
-val (>=) : int -> int -> bool
-
-val compare : int -> int -> int
-
 val get_can_decide_on : string -> bool
 val get_no_decisions_on_is_empty : unit -> bool
 

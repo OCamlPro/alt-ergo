@@ -10,7 +10,6 @@
 (******************************************************************************)
 
 open AltErgoLib
-open Options
 open Format
 open Numbers
 module H = Hashtbl
