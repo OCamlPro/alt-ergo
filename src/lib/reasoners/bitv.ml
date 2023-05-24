@@ -249,7 +249,7 @@ module Shostak(X : ALIEN) = struct
 
     let string_to_bitv s =
       let tmp = ref[] in
-      String.iter(fun car -> tmp := (Stdlib.(car <> '0'), 1)::(!tmp)) s;
+      String.iter(fun car -> tmp := (not @@ Char.equal car '0', 1)::(!tmp)) s;
       let rec f_aux l acc = match l with
         | [] -> assert false
         | [(b,n)] -> { sz = n ; bv = I_Cte b }::acc
@@ -644,7 +644,7 @@ module Shostak(X : ALIEN) = struct
         |a::b::r ->
           begin
             match a.bv,b.bv with
-            | Cte b1, Cte b2 when Stdlib.(b1 = b2) ->
+            | Cte b1, Cte b2 when Bool.equal b1 b2 ->
               cnf_max ({ b with sz = a.sz + b.sz }::r)
             | _, Cte _ -> a::(cnf_max (b::r))
             | _ -> a::b::(cnf_max r)
