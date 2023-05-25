@@ -52,7 +52,10 @@ let shrink t i fill_with_dummy =
     done;
   t.sz <- t.sz - i
 
-let pop t = assert (t.sz >=1); t.sz <- t.sz - 1
+let pop t =
+  assert (t.sz >=1);
+  Array.unsafe_set t.data (t.sz-1) t.dummy;
+  t.sz <- t.sz - 1
 
 let size t = t.sz
 
