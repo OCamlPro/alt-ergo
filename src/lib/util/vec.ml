@@ -139,7 +139,7 @@ let exists p vec =
   try
     for i = 0 to size vec - 1 do
       let elt = Array.unsafe_get vec.data i in
-      if p elt && not (elt == vec.dummy) then raise Terminate
+      if not (elt == vec.dummy) && p elt then raise Terminate
     done;
     false
   with Terminate -> true
@@ -155,8 +155,8 @@ let fold f acc vec =
   done;
   !acc
 
-let to_list a = Array.to_seq a.data |> List.of_seq
 let to_array a = Array.sub a.data 0 a.sz
+let to_list a = Array.to_seq (to_array a) |> List.of_seq
 
 let of_list l ~dummy : _ t =
   match l with
