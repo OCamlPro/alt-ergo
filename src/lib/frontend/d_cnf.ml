@@ -1419,12 +1419,20 @@ let make dloc_file acc stmt =
     | {contents = `Set_option
            { term =
                App ({ term = Symbol { name = Simple name; _ }; _ }, [value]); _
-           }; _ }
+           }; loc; _ }
       ->
       let handle_option name (value : DStd.Term.t) =
+        let st_loc = dl_to_ael dloc_file loc in
         match name, value.term with
-        | (":diagnostic-output-channel"
-          | ":global-declarations"
+        | ":regular-output-channel", Symbol { name = Simple name; _ } ->
+          let cout = C.cout_of_string name in
+          let st_decl = C.SetOption (OutputChannel (`Regular, cout)) in
+          C.{st_decl; st_loc} :: acc
+        | ":diagnostic-output-channel", Symbol { name = Simple name; _ } ->
+          let cout = C.cout_of_string name in
+          let st_decl = C.SetOption (OutputChannel (`Diagnostic, cout)) in
+          C.{st_decl; st_loc} :: acc
+        | (":global-declarations"
           | ":interactive-mode"
           | ":produce-assertions"
           | ":produce-assignments"
@@ -1434,14 +1442,12 @@ let make dloc_file acc stmt =
           | ":produce-unsat-cores"
           | ":print-success"
           | ":random-seed"
-          | ":regular-output-channel"
           | ":reproducible-resource-limit"
           | ":verbosity"), _
-          -> Printer.print_wrn "Unsupported option %s" name
-        | _ -> Printer.print_wrn "Unsupported option %s" name
+          -> Printer.print_wrn "unsupported option %s" name; acc
+        | _ -> Printer.print_wrn "unsupported option %s" name; acc
       in
-      handle_option name value;
-      acc
+      handle_option name value
 
     | _ -> acc
     (* TODO:
