@@ -1424,12 +1424,12 @@ let make dloc_file acc stmt =
         let st_loc = dl_to_ael dloc_file loc in
         match name, value.term with
         | ":regular-output-channel", Symbol { name = Simple name; _ } ->
-          let cout = C.cout_of_string name in
-          let st_decl = C.SetOption (OutputChannel (`Regular, cout)) in
+          let st_decl = Commands.SetOption (OutputChannel (`Regular, name)) in
           C.{st_decl; st_loc} :: acc
         | ":diagnostic-output-channel", Symbol { name = Simple name; _ } ->
-          let cout = C.cout_of_string name in
-          let st_decl = C.SetOption (OutputChannel (`Diagnostic, cout)) in
+          let st_decl =
+            Commands.SetOption (OutputChannel (`Diagnostic, name))
+          in
           C.{st_decl; st_loc} :: acc
         | (":global-declarations"
           | ":interactive-mode"

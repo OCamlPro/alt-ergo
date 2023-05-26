@@ -143,17 +143,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep {name;f;loc})
     else Ex.empty
 
-  let set_output_fmt typ cout =
-    let fmt =
-      match cout with
-      | `Stdout -> Format.std_formatter
-      | `Stderr -> Format.err_formatter
-      | `Channel cout ->
-        open_out cout |> Format.formatter_of_out_channel
-    in
+  let set_output typ name =
+    let output = Options.Output.create_channel name in
     match typ with
-    | `Regular -> Options.set_std_fmt fmt
-    | `Diagnostic -> Options.set_err_fmt fmt
+    | `Regular -> Options.Output.set_regular output
+    | `Diagnostic -> Options.Output.set_diagnostic output
 
   let process_decl print_status used_context consistent_dep_stack
       ((env, consistent, dep) as acc) d =
@@ -175,7 +169,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
             match opt with
             | Verbosity _ | PrintSuccess _ | ReproducibleResourceLimit _ ->
               Printer.print_wrn "unsupported option %a" Commands.print_opt opt
-            | OutputChannel (typ, cout) -> set_output_fmt typ cout
+            | OutputChannel (typ, name) -> set_output typ name
           in
           env, consistent, dep
         end
