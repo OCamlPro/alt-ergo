@@ -316,8 +316,11 @@ let set_unsat_core b = unsat_core := b
 
 let equal_mode a b =
   match a, b with
-  | INone, INone | IFirst, IFirst | IEvery, IEvery -> true
-  | _ -> false
+  | INone, INone | IFirst, IFirst | IEvery, IEvery | ILast, ILast -> true
+  | INone, (IFirst | IEvery | ILast)
+  | IFirst, (INone | IEvery | ILast)
+  | IEvery, (INone | IFirst | ILast)
+  | ILast, (INone | IFirst | IEvery) -> false
 
 let equal_output_format a b =
   match a, b with
