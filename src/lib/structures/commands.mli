@@ -30,15 +30,11 @@
 
 (* Sat entry *)
 
-type cout = [`Stdout | `Stderr | `Channel of string]
-
-val cout_of_string : string -> cout
-
 type opt =
   | Verbosity of int
   | PrintSuccess of bool
   | ReproducibleResourceLimit of int
-  | OutputChannel of [`Regular | `Diagnostic] * cout
+  | OutputChannel of [`Regular | `Diagnostic] * string
 
 type sat_decl_aux =
   | Assume of string * Expr.t * bool

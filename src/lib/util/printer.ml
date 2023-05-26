@@ -134,10 +134,10 @@ let add_colors formatter =
 
 let init_colors () =
   if Options.get_output_with_colors () then begin
-    add_colors (Options.get_fmt_std ());
-    add_colors (Options.get_fmt_wrn ());
-    add_colors (Options.get_fmt_err ());
-    add_colors (Options.get_fmt_dbg ())
+    add_colors (Options.Output.get_fmt_std ());
+    add_colors (Options.Output.get_fmt_wrn ());
+    add_colors (Options.Output.get_fmt_err ());
+    add_colors (Options.Output.get_fmt_dbg ())
   end
 
 (************** Output Format *************)
@@ -158,14 +158,14 @@ let pp_std_smt () =
   | true, true -> ()
   | false, true ->
     clean_dbg_print := true;
-    Format.fprintf (Options.get_fmt_std ()) "@,"
+    Format.fprintf (Options.Output.get_fmt_std ()) "@,"
   | true, false ->
     clean_wrn_print := true;
-    Format.fprintf (Options.get_fmt_std ()) "@,"
+    Format.fprintf (Options.Output.get_fmt_std ()) "@,"
   | false, false ->
     clean_dbg_print := true;
     clean_wrn_print := true;
-    Format.fprintf (Options.get_fmt_std ()) "@,"
+    Format.fprintf (Options.Output.get_fmt_std ()) "@,"
 
 let add_smt formatter =
   let old_fs = Format_shims.pp_get_formatter_out_functions formatter () in
@@ -194,8 +194,8 @@ let force_new_line formatter =
 let init_output_format () =
   match Options.get_output_format () with
   | Smtlib2 ->
-    add_smt (Options.get_fmt_wrn ());
-    add_smt (Options.get_fmt_dbg ())
+    add_smt (Options.Output.get_fmt_wrn ());
+    add_smt (Options.Output.get_fmt_dbg ())
   | Native | Why3 | Unknown _ -> ()
 
 
@@ -204,14 +204,14 @@ let flush fmt = Format.fprintf fmt "@."
 
 let print_std ?(flushed=true) s =
   pp_std_smt ();
-  let fmt = Options.get_fmt_std () in
+  let fmt = Options.Output.get_fmt_std () in
   if flushed || Options.get_output_with_forced_flush ()
   then Format.kfprintf flush fmt s else Format.fprintf fmt s
 
 let print_err ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     ?(error=true) s =
   if error then begin
-    let fmt = Options.get_fmt_err () in
+    let fmt = Options.Output.get_fmt_err () in
     Format.fprintf fmt "@[<v 0>";
     if header then
       if Options.get_output_with_colors () then
@@ -229,7 +229,7 @@ let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     print_err ~flushed ~header ~error:warning s
   else
   if warning then begin
-    let fmt = Options.get_fmt_wrn () in
+    let fmt = Options.Output.get_fmt_wrn () in
     Format.fprintf fmt "@[<v 0>%s" (pp_smt clean_wrn_print);
     if header then
       if Options.get_output_with_colors () then
@@ -243,7 +243,7 @@ let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
 
 let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     ?(module_name="") ?(function_name="") s =
-  let fmt = Options.get_fmt_dbg () in
+  let fmt = Options.Output.get_fmt_dbg () in
   Format.fprintf fmt "@[<v 0>%s" (pp_smt clean_dbg_print);
   if header then begin
     let fname =
@@ -317,12 +317,12 @@ let print_status_value fmt (v,color) =
     Format.fprintf fmt "%s" v
 
 let print_status ?(validity_mode=true)
-    ?(formatter=Options.get_fmt_std ())
+    ?(formatter=Options.Output.get_fmt_std ())
     (validity_status,unsat_status,color) loc time steps goal =
   pp_std_smt ();
   let native_output_fmt, comment_if_smt2 =
     if validity_mode then formatter, ""
-    else (Options.get_fmt_dbg ()), (pp_smt clean_dbg_print)
+    else (Options.Output.get_fmt_dbg ()), (pp_smt clean_dbg_print)
   in
   (* print validity status. Commented and in debug fmt if in unsat mode *)
   Format.fprintf native_output_fmt
@@ -352,7 +352,7 @@ let print_status_sat ?(validity_mode=true) loc
 let print_status_inconsistent ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode
-    ~formatter:(Options.get_fmt_dbg ())
+    ~formatter:(Options.Output.get_fmt_dbg ())
     ("Inconsistent assumption","","fg_red") loc
     time steps goal
 
@@ -371,6 +371,6 @@ let print_status_timeout ?(validity_mode=true) loc
 let print_status_preprocess ?(validity_mode=true)
     time steps =
   print_status ~validity_mode
-    ~formatter:(Options.get_fmt_dbg ())
+    ~formatter:(Options.Output.get_fmt_dbg ())
     ("Preprocessing","","fg_magenta") None
     time steps None

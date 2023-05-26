@@ -30,18 +30,11 @@
 
 (* Sat entry *)
 
-type cout = [`Stdout | `Stderr | `Channel of string]
-
-let cout_of_string = function
-  | "stdout" -> `Stdout
-  | "stderr" -> `Stderr
-  | str -> `Channel str
-
 type opt =
   | Verbosity of int
   | PrintSuccess of bool
   | ReproducibleResourceLimit of int
-  | OutputChannel of [`Regular | `Diagnostic] * cout
+  | OutputChannel of [`Regular | `Diagnostic] * string
 
 type sat_decl_aux =
   | Assume of string * Expr.t * bool
@@ -58,23 +51,16 @@ type sat_tdecl = {
   st_decl : sat_decl_aux
 }
 
-let print_cout fmt =
-  let open Format in
-  function
-  | `Stdout -> fprintf fmt "<stdout>"
-  | `Stderr -> fprintf fmt "<stderr>"
-  | `Channel cout -> fprintf fmt "%s" cout
-
 let print_opt fmt =
   let open Format in
   function
   | Verbosity i -> fprintf fmt "verbosity: %i" i
   | PrintSuccess b -> fprintf fmt "print-success: %B" b
   | ReproducibleResourceLimit i -> fprintf fmt "reproduce-resource-limit: %i" i
-  | OutputChannel (`Regular, cout) ->
-    fprintf fmt "regular-output-channel: %a" print_cout cout
-  | OutputChannel (`Diagnostic, cout) ->
-    fprintf fmt "diagnostic-output-channel: %a" print_cout cout
+  | OutputChannel (`Regular, name) ->
+    fprintf fmt "regular-output-channel: %s" name
+  | OutputChannel (`Diagnostic, name) ->
+    fprintf fmt "diagnostic-output-channel: %s" name
 
 let print_aux fmt = function
   | Assume (name, e, b) ->
