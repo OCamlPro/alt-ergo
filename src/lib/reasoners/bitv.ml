@@ -28,58 +28,59 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Ppx_compare_lib.Builtin
+
 module Sy = Symbols
 module E = Expr
 
-type sort_var = A | B | C
+type sort_var = A | B | C [@@deriving compare]
 
-let compare_sort s1 s2 =
-  match s1, s2 with
-  | A, A | B, B | C, C -> 0
-  | A, (B | C) | B, C -> -1
-  | C, (A | B) | B, A -> 1
-
-type tvar = { var : int ; sorte : sort_var }
-
-let compare_tvar v1 v2 =
-  if v1 == v2 then 0
-  else
-    let c = compare v1.var v2.var in
-    if c <> 0 then c
-    else compare_sort v1.sorte v2.sorte
+type tvar = { var : int ; sorte : sort_var } [@@deriving compare]
 
 type 'a xterm = Var of tvar | Alien of 'a
 
+let compare_xterm cmp xt1 xt2 = match xt1,xt2 with
+  | Var v1, Var v2 ->
+    let c = compare_sort_var v1.sorte v2.sorte in
+    if c <> 0 then c
+    else
+      (* Freshest variables are the smallest ones. *)
+      -(Int.compare v1.var v2.var)
+
+  | Alien t1, Alien t2 -> cmp t1 t2
+  | Var _, Alien _ -> 1
+  | Alien _, Var _ -> -1
+
 type 'a alpha_term = {
-  bv : 'a;
   sz : int;
-}
+  bv : 'a;
+} [@@deriving compare]
 
 type 'a simple_term_aux =
   | Cte of bool
   | Other of 'a xterm
-  | Ext of 'a xterm * int * int * int (*// id * size * i * j //*)
+  | Ext of int * int * (int [@compare ignore]) * 'a xterm
+  (*// size * i * j * id //*)
+[@@deriving compare]
 
-type 'a simple_term = ('a simple_term_aux) alpha_term
+type 'a simple_term = ('a simple_term_aux) alpha_term [@@deriving compare]
 
-type 'a abstract =  ('a simple_term) list
+type 'a abstract =  ('a simple_term) list [@@deriving compare]
 
 (* for the solver *)
 
 type solver_simple_term_aux =
   | S_Cte of bool
   | S_Var of tvar
+[@@deriving compare]
 
-type solver_simple_term = solver_simple_term_aux alpha_term
+type solver_simple_term = solver_simple_term_aux alpha_term [@@deriving compare]
 
 module type ALIEN = sig
   include Sig.X
   val embed : r abstract -> r
   val extract : r -> (r abstract) option
 end
-
-let compare_alpha_term cmp a1 a2 =
-  if a1.sz <> a2.sz then a1.sz - a2.sz else cmp a1.bv a2.bv
 
 module Shostak(X : ALIEN) = struct
 
@@ -103,47 +104,6 @@ module Shostak(X : ALIEN) = struct
       end
     | Some b -> b
 
-  let compare_xterm xt1 xt2 = match xt1,xt2 with
-    | Var v1, Var v2 ->
-      let c1 = compare_sort v1.sorte v2.sorte in
-      if c1 <> 0 then c1
-      else -(compare v1.var v2.var)
-    (* on inverse le signe : les variables les plus fraiches sont
-       les plus jeunes (petites)*)
-
-    | Alien t1, Alien t2 -> X.str_cmp t1 t2
-    | Var _, Alien _ -> 1
-    | Alien _, Var _ -> -1
-
-  let compare_simple_term = compare_alpha_term (fun st1 st2 ->
-      match st1, st2 with
-      | Cte b1, Cte b2 -> Bool.compare b1 b2
-      | Cte false , _ | _ , Cte true -> -1
-      | _ , Cte false | Cte true,_ -> 1
-
-      | Other t1 , Other t2 -> compare_xterm t1 t2
-      | _ , Other _ -> -1
-      | Other _ , _ -> 1
-
-      | Ext(t1,s1,i1,_) , Ext(t2,s2,i2,_) ->
-        let c1 = compare s1 s2 in
-        if c1<>0 then c1
-        else let c2 = compare i1 i2 in
-          if c2 <> 0 then c2 else compare_xterm t1 t2
-    )
-
-  let compare_abstract = Lists.compare compare_simple_term
-
-  let compare_solver_simple_term = compare_alpha_term (fun st1 st2 ->
-      match st1, st2 with
-      | S_Cte b1, S_Cte b2 -> Bool.compare b1 b2
-      | S_Cte false, _ | _, S_Cte true -> -1
-      | _ , S_Cte false | S_Cte true,_ -> 1
-      | S_Var v1, S_Var v2 ->
-        let c1 = compare_sort v1.sorte v2.sorte
-        in if c1 <> 0 then c1 else compare v1.var v2.var
-    )
-
   module ST_Set = Set.Make (
     struct
       type t = solver_simple_term
@@ -151,64 +111,40 @@ module Shostak(X : ALIEN) = struct
     end)
 
   module Canonizer = struct
+    type xterm_ = X.r xterm
+    let compare_xterm_ = compare_xterm X.str_cmp
 
     type term_aux  =
       | I_Cte of bool
-      | I_Other of X.r xterm
-      | I_Ext of term * int * int
+      | I_Other of xterm_
+      | I_Ext of int * int * term
       | I_Comp of term * term
+    [@@deriving compare]
 
-    and term = term_aux alpha_term
-
-    let rec compare_term_aux t1 t2 = match t1, t2 with
-      | I_Cte true, I_Cte true
-      | I_Cte false, I_Cte false -> 0
-      | I_Cte true, I_Cte _ -> 1
-      | I_Cte _, I_Cte _ -> -1
-
-      | I_Other xterm1, I_Other xterm2 -> compare_xterm xterm1 xterm2
-
-      | I_Ext (t, i, j), I_Ext (t', i', j') ->
-        if i <> i' then i - i'
-        else if j <> j' then j - j'
-        else compare_term t t'
-
-      | I_Comp (t1, t2), I_Comp (t1', t2') ->
-        let cmp = compare_term t1 t1' in
-        if cmp = 0 then compare_term t2 t2' else cmp
-
-      | I_Cte _, (I_Other _ | I_Ext _ | I_Comp _ ) -> 1
-      | I_Other _, (I_Ext _ | I_Comp _ ) -> 1
-      | I_Ext _, I_Comp _ -> 1
-
-      | I_Comp _, (I_Cte _ | I_Other _ | I_Ext _) -> -1
-      | I_Ext _, (I_Cte _ | I_Other _) -> -1
-      | I_Other _, I_Cte _ -> -1
-
-    and compare_term t1 t2 = compare_alpha_term compare_term_aux t1 t2
+    and term = term_aux alpha_term [@@deriving compare]
 
     (** **)
     let rec alpha t = match t.bv with
       |I_Cte _ -> [t]
       |I_Other _ -> [t]
       |I_Comp (t1,t2) -> (alpha t1)@(alpha t2)
-      |I_Ext(t',i,j) ->
+      |I_Ext(i,j,t') ->
         begin
           match t'.bv with
           |I_Cte _ -> [{t' with sz = j-i+1}]
           |I_Other _ -> [t]
-          |I_Ext(t'',k,_) ->
-            alpha {t with bv = I_Ext(t'',i+k,j+k)}
+          |I_Ext(k,_,t'') ->
+            alpha {t with bv = I_Ext(i+k,j+k,t'')}
 
           |I_Comp(_,v) when j < v.sz ->
-            alpha{t with bv =I_Ext(v,i,j)}
+            alpha{t with bv =I_Ext(i,j,v)}
 
           |I_Comp(u,v) when i >= v.sz ->
-            alpha{t with bv=I_Ext(u,i-v.sz,j-v.sz)}
+            alpha{t with bv=I_Ext(i-v.sz,j-v.sz,u)}
 
           |I_Comp(u,v) ->
-            (alpha {sz = j-v.sz+1 ; bv = I_Ext(u,0,j-v.sz)})
-            @(alpha{sz = v.sz-i ; bv = I_Ext(v,i,v.sz-1)})
+            (alpha {sz = j-v.sz+1 ; bv = I_Ext(0,j-v.sz,u)})
+            @(alpha{sz = v.sz-i ; bv = I_Ext(i,v.sz-1,v)})
         end
 
     (** **)
@@ -216,13 +152,13 @@ module Shostak(X : ALIEN) = struct
       let simple_t st = match st.bv with
         |I_Cte b -> {bv = Cte b ; sz = st.sz}
         |I_Other x -> {bv = Other x ; sz = st.sz}
-        |I_Ext(t',i,j) ->
+        |I_Ext(i,j,t') ->
           begin
             match t'.bv with
             |I_Other v ->
               let siz = j-i+1
               in {sz=siz ;
-                  bv =if siz=t'.sz then Other v else Ext(v,t'.sz,i,j)}
+                  bv =if siz=t'.sz then Other v else Ext(t'.sz,i,j,v)}
             |I_Comp _ |I_Ext _ |I_Cte _ -> assert false
           end
         |I_Comp(_,_) -> assert false
@@ -235,8 +171,8 @@ module Shostak(X : ALIEN) = struct
           match s.bv, t.bv with
           | I_Cte true, I_Cte true | I_Cte false, I_Cte false ->
             beta({s with sz=s.sz+t.sz}::tl')
-          | I_Ext(d1,i,j), I_Ext(d2,k,l) when compare_term d1 d2 = 0 && l=i-1 ->
-            let tmp = {sz = s.sz + t.sz ; bv = I_Ext(d1,k,j)}
+          | I_Ext(i,j,d1), I_Ext(k,l,d2) when compare_term d1 d2 = 0 && l=i-1 ->
+            let tmp = {sz = s.sz + t.sz ; bv = I_Ext(k,j,d1)}
             in if k=0 then (simple_t tmp)::(beta tl') else beta (tmp::tl')
           | _ -> (simple_t s)::(beta (t::tl'))
         end
@@ -271,7 +207,7 @@ module Shostak(X : ALIEN) = struct
           { bv = I_Comp (r1, r2) ; sz = n }, ctx
         | { E.f = Sy.Op Sy.Extract (i, j); xs = [t1] ; ty = Ty.Tbitv _; _ } ->
           let r1, ctx = make_rec t1 ctx in
-          { sz = j - i + 1 ; bv = I_Ext (r1,i,j)}, ctx
+          { sz = j - i + 1 ; bv = I_Ext (i,j,r1)}, ctx
 
         | { E.ty = Ty.Tbitv n; _ } ->
           let r', ctx' = X.make t' in
@@ -308,10 +244,10 @@ module Shostak(X : ALIEN) = struct
       | Cte b -> fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
       | Other (Alien t) -> fprintf fmt "%a@?" X.print t
       | Other (Var tv) -> fprintf fmt "%a@?" print_tvar (tv,ast.sz)
-      | Ext (Alien t,_,i,j) ->
+      | Ext (_,i,j, Alien t) ->
         fprintf fmt "%a@?" X.print t;
         fprintf fmt "<%d,%d>@?" i j
-      | Ext (Var tv,_,i,j) ->
+      | Ext (_,i,j, Var tv) ->
         fprintf fmt "%a@?" print_tvar (tv,ast.sz);
         fprintf fmt "<%d,%d>@?" i j
 
@@ -380,24 +316,24 @@ module Shostak(X : ALIEN) = struct
 
     let get_vars = List.fold_left
         (fun ac st -> match st.bv with
-           |Other v |Ext(v,_,_,_) -> add v ac  |_ -> ac )[]
+           |Other v |Ext(_,_,_,v) -> add v ac  |_ -> ac )[]
 
     let st_slice st siz =
       let siz_bis = st.sz - siz in match st.bv with
       |Cte _ -> {st with sz = siz},{st with sz = siz_bis}
       |Other x ->
-        let s1 = Ext(x,st.sz, siz_bis, st.sz - 1) in
-        let s2 = Ext(x,st.sz, 0, siz_bis - 1) in
+        let s1 = Ext(st.sz, siz_bis, st.sz - 1,x) in
+        let s2 = Ext(st.sz, 0, siz_bis - 1,x) in
         {bv = s1 ; sz = siz},{bv = s2 ; sz = siz_bis}
-      |Ext(x,s,p,q) ->
-        let s1 = Ext(x,s,p+siz_bis,q) in
-        let s2 = Ext(x,s,p,p+siz_bis-1) in
+      |Ext(s,p,q,x) ->
+        let s1 = Ext(s,p+siz_bis,q,x) in
+        let s2 = Ext(s,p,p+siz_bis-1,x) in
         {bv = s1 ; sz = siz},{bv = s2 ; sz = siz_bis}
 
     let slice t u  =
       let f_add (s1,s2) acc =
         let b =
-          compare_simple_term s1 s2 = 0
+          compare_simple_term X.str_cmp s1 s2 = 0
           || List.mem (s1,s2) acc || List.mem (s2,s1) acc
         in
         if b then acc else (s1,s2)::acc
@@ -488,16 +424,16 @@ module Shostak(X : ALIEN) = struct
         |Cte b, Other (Alien _) -> [cte_vs_other b st2]
         |Other (Alien _), Cte b -> [cte_vs_other b st1]
 
-        |Cte b, Ext(xt,s_xt,i,j) -> [cte_vs_ext b xt s_xt i j]
-        |Ext(xt,s_xt,i,j), Cte b -> [cte_vs_ext b xt s_xt i j]
+        |Cte b, Ext(s_xt,i,j,xt) -> [cte_vs_ext b xt s_xt i j]
+        |Ext(s_xt,i,j,xt), Cte b -> [cte_vs_ext b xt s_xt i j]
         |Other _, Other _ -> other_vs_other st1 st2
 
-        |Other _, Ext(xt,s_xt,i,j) ->
+        |Other _, Ext(s_xt,i,j,xt) ->
           other_vs_ext st1 xt s_xt i j
 
-        |Ext(xt,s_xt,i,j), Other _ -> other_vs_ext st2 xt s_xt i j
-        |Ext(id,s,i,j), Ext(id',s',i',j') ->
-          if compare_xterm id id' <> 0
+        |Ext(s_xt,i,j,xt), Other _ -> other_vs_ext st2 xt s_xt i j
+        |Ext(s,i,j,id), Ext(s',i',j',id') ->
+          if compare_xterm X.str_cmp id id' <> 0
           then ext1_vs_ext2 (id,s,i,j) (id',s',i',j')
           else [ext_vs_ext id s (if i<i' then (i,i') else (i',i)) (j - i + 1)]
 
@@ -582,7 +518,7 @@ module Shostak(X : ALIEN) = struct
               let _bw = apply_subs subs bw in
               let _fw = apply_subs subs r in
               let cmp (a, l1) (b, l2) =
-                let c = compare_simple_term a b in
+                let c = compare_simple_term X.str_cmp a b in
                 if c <> 0 then c
                 else
                   Lists.compare (Lists.compare compare_solver_simple_term) l1 l2
@@ -655,7 +591,8 @@ module Shostak(X : ALIEN) = struct
         )unif_slic
 
     let solve u v =
-      if Lists.compare compare_simple_term u v = 0 then raise Valid
+      if Lists.compare (compare_simple_term X.str_cmp) u v = 0
+      then raise Valid
       else begin
         let varsU = get_vars u in
         let varsV = get_vars v in
@@ -665,7 +602,7 @@ module Shostak(X : ALIEN) = struct
           begin
             let st_sys = slice u v in
             let sys_sols = sys_solve st_sys in
-            let parts = partition compare_simple_term sys_sols in
+            let parts = partition (compare_simple_term X.str_cmp) sys_sols in
             let unif_slic = equations_slice parts in
             let eq_pr = equalities_propagation unif_slic in
             let sol = build_solution unif_slic eq_pr in
@@ -689,11 +626,11 @@ module Shostak(X : ALIEN) = struct
       | [] , _ -> -1
       | _ , [] -> 1
       | st1::l1 , st2::l2 ->
-        let c = compare_simple_term st1 st2 in
-        if c<>0 then c else comp l1 l2
+        let c = compare_simple_term X.str_cmp st1 st2 in
+        if c <> 0 then c else comp l1 l2
     in comp b1 b2
 
-  let compare x y = compare_abstract (embed x) (embed y)
+  let compare x y = compare_abstract X.str_cmp (embed x) (embed y)
 
   (* should use hashed compare to be faster, not structural comparison *)
   let equal bv1 bv2 = compare_mine bv1 bv2 = 0
@@ -707,7 +644,7 @@ module Shostak(X : ALIEN) = struct
   let hash_simple_term_aux = function
     | Cte b -> 11 * Hashtbl.hash b
     | Other x -> 17 * hash_xterm x
-    | Ext (x, a, b, c) ->
+    | Ext (a, b, c, x) ->
       hash_xterm x + 19 * (a + b + c)
 
   let hash l =
@@ -719,10 +656,10 @@ module Shostak(X : ALIEN) = struct
       (fun acc x ->
          match x.bv with
          | Cte _  -> acc
-         | Ext( Var v,sz,_,_) ->
+         | Ext(sz,_,_,Var v) ->
            (X.embed [{bv=Other (Var v) ; sz = sz }])::acc
          | Other (Var _)  -> (X.embed [x])::acc
-         | Other (Alien t) | Ext(Alien t,_,_,_) -> (X.leaves t)@acc
+         | Other (Alien t) | Ext(_,_,_,Alien t) -> (X.leaves t)@acc
       ) [] bitv
 
   let is_mine = function [{ bv = Other (Alien r); _ }] -> r | bv -> X.embed bv
@@ -745,9 +682,9 @@ module Shostak(X : ALIEN) = struct
        bv = match st.bv with
          | Cte b -> Canonizer.I_Cte b
          | Other tt -> Canonizer.I_Other tt
-         | Ext(tt,siz,i,j)  ->
+         | Ext(siz,i,j,tt)  ->
            let tt' = { sz = siz ; bv = Canonizer.I_Other tt }
-           in Canonizer.I_Ext(tt',i,j)
+           in Canonizer.I_Ext(i,j,tt')
       } in
     List.fold_left
       (fun acc st ->
@@ -804,8 +741,8 @@ module Shostak(X : ALIEN) = struct
       if X.equal x tt then
         extract subs biv.sz
       else extract (X.subst x subs tt) biv.sz
-    | Canonizer.I_Ext (t,i,j) , _ ->
-      { biv with bv = Canonizer.I_Ext(subst_rec x subs t,i,j) }
+    | Canonizer.I_Ext (i,j,t) , _ ->
+      { biv with bv = Canonizer.I_Ext(i,j,subst_rec x subs t) }
     | Canonizer.I_Comp (u,v) , _ ->
       { biv with
         bv = Canonizer.I_Comp(subst_rec x subs u ,subst_rec x subs v)}
