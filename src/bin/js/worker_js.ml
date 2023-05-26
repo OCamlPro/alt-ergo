@@ -43,7 +43,7 @@ type 'a state = {
 
 (* If the buffer is not empty split the string in strings at each newline *)
 let check_buffer_content b =
-  let buf_cont = Buffer.contents b in
+  let buf_cont = Options.Output.contents b in
   if String.equal buf_cont "" then
     None
   else
@@ -59,18 +59,18 @@ let main worker_id content =
   try
     (* Create buffer for each formatter
        The content of this buffers are then retrieved and send as results *)
-    let buf_std = Buffer.create 10 in
-    Options.set_fmt_std (Format.formatter_of_buffer buf_std);
-    let buf_err = Buffer.create 10 in
-    Options.set_fmt_err (Format.formatter_of_buffer buf_err);
-    let buf_wrn = Buffer.create 10 in
-    Options.set_fmt_wrn (Format.formatter_of_buffer buf_wrn);
-    let buf_dbg = Buffer.create 10 in
-    Options.set_fmt_dbg (Format.formatter_of_buffer buf_dbg);
-    let buf_mdl = Buffer.create 10 in
-    Options.set_fmt_mdl (Format.formatter_of_buffer buf_mdl);
-    let buf_usc = Buffer.create 10 in
-    Options.set_fmt_usc (Format.formatter_of_buffer buf_usc);
+    let buf_std = Options.Output.create_buffer () in
+    Options.Output.set_std buf_std;
+    let buf_err = Options.Output.create_buffer () in
+    Options.Output.set_err buf_err;
+    let buf_wrn = Options.Output.create_buffer () in
+    Options.Output.set_wrn buf_wrn;
+    let buf_dbg = Options.Output.create_buffer () in
+    Options.Output.set_dbg buf_dbg;
+    let buf_mdl = Options.Output.create_buffer () in
+    Options.Output.set_dbg buf_mdl;
+    let buf_usc = Options.Output.create_buffer () in
+    Options.Output.set_dbg buf_usc;
 
     (* Status updated regarding if AE succed or failed
        (error or steplimit reached) *)

@@ -81,7 +81,7 @@ let main () =
         Profiling.print true
           (Steps.get_steps ())
           (Signals_profiling.get_timers ())
-          (get_fmt_err ())
+          (Options.Output.get_fmt_err ())
     with Util.Timeout ->
       if not (Options.get_timelimit_per_goal()) then exit 142
   in
@@ -384,6 +384,16 @@ let main () =
             let solver_ctx = State.get solver_ctx_key st in
             { solver_ctx with local = [] }
           ) st
+
+      | {contents = `Set_option _; _ } ->
+        let cnf =
+          D_cnf.make (State.get State.logic_file st).loc [] td
+        in
+        State.set solver_ctx_key (
+          let solver_ctx = State.get solver_ctx_key st in
+          { solver_ctx with local = cnf @ solver_ctx.local }
+        ) st
+
       | _ ->
         (* TODO:
            - Separate statements that should be ignored from unsupported

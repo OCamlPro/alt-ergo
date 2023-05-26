@@ -125,31 +125,6 @@ let model_type_printer fmt format =
 let model_type_conv =
   Arg.conv ~docv:"MTYP" (model_type_parser, model_type_printer)
 
-type formatter = Stdout | Stderr | Other of string
-
-let value_of_fmt = function
-  | Stdout -> Format.std_formatter
-  | Stderr -> Format.err_formatter
-  | Other s ->
-    let oc = open_out s in
-    at_exit (fun () -> close_out oc);
-    Format.formatter_of_out_channel oc
-
-let formatter_parser = function
-  | "stdout" -> Ok Stdout
-  | "stderr" -> Ok Stderr
-  | s -> Ok (Other s)
-
-let formatter_to_string = function
-  | Stdout -> "stdout"
-  | Stderr -> "stderr"
-  | Other s -> s
-
-let formatter_printer fmt formatter =
-  Format.fprintf fmt "%s" (formatter_to_string formatter)
-
-let formatter_conv = Arg.conv ~docv:"FMT" (formatter_parser, formatter_printer)
-
 module Rule = struct
   type t = RParsing | RTyping | RSat | RCC | RArith | RNone
 
@@ -603,11 +578,10 @@ let mk_opts file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
     `Ok true
   end
 
-let mk_fmt_opt std_fmt err_fmt mdl_fmt
-  =
-  set_std_fmt (value_of_fmt std_fmt);
-  set_err_fmt (value_of_fmt err_fmt);
-  set_fmt_mdl (value_of_fmt mdl_fmt);
+let mk_output_channel_opt std_output err_output mdl_output =
+  Options.Output.(create_channel std_output |> set_std);
+  Options.Output.(create_channel err_output |> set_err);
+  Options.Output.(create_channel mdl_output |> set_mdl);
   `Ok()
 
 (* Custom sections *)
@@ -1231,32 +1205,40 @@ let parse_fmt_opt =
 
   let docs = s_fmt in
 
-  let std_formatter =
-    let doc = Format.sprintf
-        "Set the standard formatter used by default to output the results,
+  let std_output =
+    let doc =
+      Format.sprintf
+        "Set the standard output used by default to print the results,
     models and unsat cores. Possible values are %s."
-        (Arg.doc_alts ["stdout"; "stderr"; "<filename>"]) in
-    Arg.(value & opt formatter_conv Stdout & info ["std-formatter"] ~docs ~doc)
+        (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
+    in
+    Arg.(value & opt string "stdout" & info ["std-output"] ~docv:"CHANNEL"
+           ~docs ~doc)
   in
 
-  let err_formatter =
-    let doc = Format.sprintf
-        "Set the error formatter used by default to output error, debug and
+  let err_output =
+    let doc =
+      Format.sprintf
+        "Set the error output used by default to print error, debug and
          warning informations. Possible values are %s."
-        (Arg.doc_alts ["stdout"; "stderr"; "<filename>"]) in
-    Arg.(value & opt formatter_conv Stderr & info ["err-formatter"] ~docs ~doc)
+        (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
+    in
+    Arg.(value & opt string "stderr" & info ["err-output"] ~docv:"CHANNEL"
+           ~docs ~doc)
   in
 
   let model_output =
-    let doc = Format.sprintf
+    let doc =
+      Format.sprintf
         "Set the output used for the model generation. Possible values are %s."
-        (Arg.doc_alts ["stdout"; "stderr"; "<filename>"]) in
-    Arg.(value & opt formatter_conv Stdout & info ["model-output"] ~docs ~doc)
+        (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
+    in
+    Arg.(value & opt string "stdout" & info ["model-output"] ~docv:"CHANNEL"
+           ~docs ~doc)
   in
 
-  Term.(ret (const mk_fmt_opt $
-             std_formatter $ err_formatter $ model_output
-            ))
+  Term.(ret (const mk_output_channel_opt $ std_output $ err_output
+             $ model_output))
 
 let main =
 
@@ -1336,6 +1318,7 @@ let main =
   Cmd.v info term
 
 let parse_cmdline_arguments () =
+  at_exit Options.Output.at_exit;
   let r = Cmd.eval_value main in
   match r with
   | Ok `Ok true -> ()
