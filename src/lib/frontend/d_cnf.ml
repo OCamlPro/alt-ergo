@@ -1415,39 +1415,6 @@ let make dloc_file acc stmt =
       aux [] dcl;
       acc
 
-    | {contents = `Set_option
-           { term =
-               App ({ term = Symbol { name = Simple name; _ }; _ }, [value]); _
-           }; loc; _ }
-      ->
-      let handle_option name (value : DStd.Term.t) =
-        let st_loc = dl_to_ael dloc_file loc in
-        match name, value.term with
-        | ":regular-output-channel", Symbol { name = Simple name; _ } ->
-          let st_decl = Commands.SetOption (OutputChannel (`Regular, name)) in
-          C.{st_decl; st_loc} :: acc
-        | ":diagnostic-output-channel", Symbol { name = Simple name; _ } ->
-          let st_decl =
-            Commands.SetOption (OutputChannel (`Diagnostic, name))
-          in
-          C.{st_decl; st_loc} :: acc
-        | (":global-declarations"
-          | ":interactive-mode"
-          | ":produce-assertions"
-          | ":produce-assignments"
-          | ":produce-models"
-          | ":produce-proofs"
-          | ":produce-unsat-assumptions"
-          | ":produce-unsat-cores"
-          | ":print-success"
-          | ":random-seed"
-          | ":reproducible-resource-limit"
-          | ":verbosity"), _
-          -> Printer.print_wrn "unsupported option %s" name; acc
-        | _ -> Printer.print_wrn "unsupported option %s" name; acc
-      in
-      handle_option name value
-
     | _ -> acc
     (* TODO:
        - Separate statements that should be ignored from unsupported
