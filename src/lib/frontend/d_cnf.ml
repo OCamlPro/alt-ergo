@@ -1154,6 +1154,73 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
   in
   E.clean_trigger ~in_theory name trigger
 
+let print_wrn_opt ~name loc ty value =
+  Printer.print_wrn "%a The option %s expects a %s, got %a"
+    Loc.report loc name ty DStd.Term.print value
+
+let handle_option acc st_loc name (value : DStd.Term.t) =
+  match name, value.term with
+  | ":regular-output-channel", Symbol { name = Simple name; _ } ->
+    let st_decl = Commands.SetOption (OutputChannel (`Regular, name)) in
+    C.{st_decl; st_loc} :: acc
+  | ":diagnostic-output-channel", Symbol { name = Simple name; _ } ->
+    let st_decl =
+      Commands.SetOption (OutputChannel (`Diagnostic, name))
+    in
+    C.{st_decl; st_loc} :: acc
+  | ":produce-models", Symbol { name = Simple "true"; _ } ->
+    if Stdlib.(Options.get_sat_solver () = Tableaux) then
+      begin
+        Options.set_interpretation ILast;
+        (* TODO: The generation of models is supported only with the SAT
+           solver Tableaux. Remove this line after merging the OptimAE
+           PR. *)
+        Options.set_sat_solver Tableaux
+      end
+    else Printer.print_wrn "%a The generation of models is not supported yet \
+                            for the current SAT solver. Please choose the SAT solver Tableaux."
+        Loc.report st_loc;
+    acc
+  | ":produce-models", Symbol { name = Simple "false"; _ } ->
+    Options.set_interpretation INone; acc
+  | ":produce-unsat-cores", Symbol { name = Simple "true"; _ } ->
+    Options.set_unsat_core true; acc
+  | ":produce-unsat-cores", Symbol { name = Simple "false"; _ } ->
+    Options.set_unsat_core false; acc
+  | (":produce-models" | ":produce-unsat-cores" as name), _ ->
+    print_wrn_opt ~name st_loc "bool" value; acc
+  | ":verbosity", Symbol { name = Simple level; _ } ->
+    begin
+      match int_of_string_opt level with
+      | Some i ->
+        let st_decl = Commands.SetOption (Verbosity i) in
+        C.{st_decl; st_loc} :: acc
+      | None ->
+        print_wrn_opt ~name:":verbosity" st_loc "int" value;
+        acc
+    end
+  | ":reproducible-resource-limit", Symbol { name = Simple level; _ } ->
+    begin
+      match int_of_string_opt level with
+      | Some i ->
+        let st_decl = Commands.SetOption (ReproducibleResourceLimit i) in
+        C.{st_decl; st_loc} :: acc
+      | None ->
+        print_wrn_opt ~name:":reproducible-resource-limit" st_loc "int" value;
+        acc
+    end
+  | (":global-declarations"
+    | ":interactive-mode"
+    | ":produce-assertions"
+    | ":produce-assignments"
+    | ":produce-proofs"
+    | ":produce-unsat-assumptions"
+    | ":print-success"
+    | ":random-seed"
+    | ":reproducible-resource-limit"
+    | ":verbosity"), _
+    -> Printer.print_wrn "unsupported option %s" name; acc
+  | _ -> Printer.print_wrn "unsupported option %s" name; acc
 
 (** Preprocesses the body of a goal by:
     - removing the top-level universal quantifiers and considering their
@@ -1421,33 +1488,8 @@ let make dloc_file acc stmt =
                App ({ term = Symbol { name = Simple name; _ }; _ }, [value]); _
            }; loc; _ }
       ->
-      let handle_option name (value : DStd.Term.t) =
-        let st_loc = dl_to_ael dloc_file loc in
-        match name, value.term with
-        | ":regular-output-channel", Symbol { name = Simple name; _ } ->
-          let st_decl = Commands.SetOption (OutputChannel (`Regular, name)) in
-          C.{st_decl; st_loc} :: acc
-        | ":diagnostic-output-channel", Symbol { name = Simple name; _ } ->
-          let st_decl =
-            Commands.SetOption (OutputChannel (`Diagnostic, name))
-          in
-          C.{st_decl; st_loc} :: acc
-        | (":global-declarations"
-          | ":interactive-mode"
-          | ":produce-assertions"
-          | ":produce-assignments"
-          | ":produce-models"
-          | ":produce-proofs"
-          | ":produce-unsat-assumptions"
-          | ":produce-unsat-cores"
-          | ":print-success"
-          | ":random-seed"
-          | ":reproducible-resource-limit"
-          | ":verbosity"), _
-          -> Printer.print_wrn "unsupported option %s" name; acc
-        | _ -> Printer.print_wrn "unsupported option %s" name; acc
-      in
-      handle_option name value
+      let st_loc = dl_to_ael dloc_file loc in
+      handle_option acc st_loc name value
 
     | _ -> acc
     (* TODO:

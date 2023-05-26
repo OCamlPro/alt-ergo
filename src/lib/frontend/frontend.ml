@@ -167,7 +167,13 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         begin
           let _ =
             match opt with
-            | Verbosity _ | PrintSuccess _ | ReproducibleResourceLimit _ ->
+            | Verbosity i ->
+              if i > 0 then Options.set_verbose true
+              else Options.set_verbose false
+            | ReproducibleResourceLimit i ->
+              if i > 0 then Options.set_timelimit_per_goal true
+              else Options.set_timelimit_per_goal false
+            | PrintSuccess _ ->
               Printer.print_wrn "unsupported option %a" Commands.print_opt opt
             | OutputChannel (typ, name) -> set_output typ name
           in

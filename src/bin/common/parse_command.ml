@@ -388,6 +388,8 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
 let mk_models_opt b =
   if b then begin
     set_interpretation ILast;
+    (* TODO: The generation of models is supported only with the SAT solver
+       Tableaux. Remove this line after merging the OptimAE PR. *)
     set_sat_solver Tableaux
   end;
   `Ok ()
