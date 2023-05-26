@@ -1080,37 +1080,45 @@ module Output : sig
 
   val set_regular : t -> unit
   (** Set the regular output channel used by default to output results,
-      models and unsat cores. *)
-  (** Default to [Format.std_formatter] *)
+      models and unsat cores.
+
+      Default to [Format.std_formatter]. *)
 
   val set_diagnostic : t -> unit
   (** Set the diagnostic output channel used by default to output errors,
-      debug and warning informations. *)
-  (** Default to [Format.err_formatter] *)
+      debug and warning informations.
+
+      Default to [Format.err_formatter]. *)
 
   val get_fmt_std : unit -> Format.formatter
-  (** Value specifying the formatter used to output results. *)
-  (** Default to [Format.std_formatter] *)
+  (** Value specifying the formatter used to output results.
+
+      Default to [Format.std_formatter]. *)
 
   val get_fmt_err : unit -> Format.formatter
-  (** Value specifying the formatter used to output errors. *)
-  (** Default to [Format.err_formatter] *)
+  (** Value specifying the formatter used to output errors.
+
+      Default to [Format.err_formatter]. *)
 
   val get_fmt_wrn : unit -> Format.formatter
-  (** Value specifying the formatter used to output warnings. *)
-  (** Default to [Format.err_formatter] *)
+  (** Value specifying the formatter used to output warnings.
+
+      Default to [Format.err_formatter]. *)
 
   val get_fmt_dbg : unit -> Format.formatter
-  (** Value specifying the formatter used to output debug informations. *)
-  (** Default to [Format.err_formatter] *)
+  (** Value specifying the formatter used to output debug informations.
+
+      Default to [Format.err_formatter]. *)
 
   val get_fmt_mdl : unit -> Format.formatter
-  (** Value specifying the formatter used to output models. *)
-  (** Default to [Format.std_formatter] *)
+  (** Value specifying the formatter used to output models.
+
+      Default to [Format.std_formatter]. *)
 
   val get_fmt_usc : unit -> Format.formatter
-  (** Value specifying the formatter used to output unsat cores. *)
-  (** Default to [Format.std_formatter] *)
+  (** Value specifying the formatter used to output unsat cores.
+
+      Default to [Format.std_formatter]. *)
 
   val set_std : t -> unit
   (** Set [fmt_std] accessible with {!val:get_fmt_std} *)

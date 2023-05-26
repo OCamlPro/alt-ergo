@@ -68,10 +68,13 @@ module Output = struct
     | Invalid -> assert false
 
   let close o =
-    Format.pp_print_flush (get_fmt o) ();
     match o with
-    | Stdout | Stderr | Buffer _ | Invalid -> ()
-    | Channel (cout, _) -> close_out cout
+    | Stdout | Stderr | Buffer _ ->
+      Format.pp_print_flush (get_fmt o) ();
+    | Channel (cout, _) ->
+      Format.pp_print_flush (get_fmt o) ();
+      close_out cout
+    | Invalid -> ()
 
   let set_output output o =
     close !output;
