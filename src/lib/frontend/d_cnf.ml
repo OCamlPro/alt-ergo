@@ -1178,7 +1178,8 @@ let handle_option acc st_loc name (value : DStd.Term.t) =
         Options.set_sat_solver Tableaux
       end
     else Printer.print_wrn "%a The generation of models is not supported yet \
-                            for the current SAT solver. Please choose the SAT solver Tableaux."
+                            for the current SAT solver. Please choose the SAT \
+                            solver Tableaux."
         Loc.report st_loc;
     acc
   | ":produce-models", Symbol { name = Simple "false"; _ } ->
