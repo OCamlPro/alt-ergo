@@ -169,7 +169,6 @@ let main worker_id content =
     let parsed () =
       try
         Options.Time.start ();
-        Options.set_is_gui false;
         I.parse_file ~content ~format:None
       with
       | Parsing.Parse_error ->

@@ -67,7 +67,7 @@ let main () =
       if Options.get_timelimit_per_goal() then
         begin
           Options.Time.start ();
-          Options.Time.set_timeout ~is_gui:false (Options.get_timelimit ());
+          Options.Time.set_timeout (Options.get_timelimit ());
         end;
       SAT.reset_refs ();
       let _ =
@@ -76,7 +76,7 @@ let main () =
           (SAT.empty (), true, Explanation.empty) cnf
       in
       if Options.get_timelimit_per_goal() then
-        Options.Time.unset_timeout ~is_gui:false;
+        Options.Time.unset_timeout ();
       if Options.get_profiling() then
         Profiling.print true
           (Steps.get_steps ())
@@ -125,9 +125,8 @@ let main () =
       try
         Options.Time.start ();
         if not (Options.get_timelimit_per_goal()) then
-          Options.Time.set_timeout ~is_gui:false (Options.get_timelimit ());
+          Options.Time.set_timeout (Options.get_timelimit ());
 
-        Options.set_is_gui false;
         Signals_profiling.init_profiling ();
 
         let preludes = Options.get_preludes () in
@@ -169,7 +168,7 @@ let main () =
     try
       let parsed_seq = parsed () in
       let _ : _ state = Seq.fold_left typing_loop state parsed_seq in
-      Options.Time.unset_timeout ~is_gui:false;
+      Options.Time.unset_timeout ();
     with Util.Timeout ->
       FE.print_status (FE.Timeout None) 0;
       exit 142

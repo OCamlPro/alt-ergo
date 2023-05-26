@@ -1029,8 +1029,8 @@ module Time : sig
   val start : unit -> unit
   val value : unit -> float
 
-  val set_timeout : is_gui:bool -> float -> unit
-  val unset_timeout : is_gui:bool -> unit
+  val set_timeout : float -> unit
+  val unset_timeout : unit -> unit
 
   (** [with_timeout ~is_gui tm f] calls [f ()] with a timeout of [tm], and
       unsets the timeout once the call to [f ()] completes or raises an
@@ -1062,10 +1062,6 @@ val get_no_decisions_on_is_empty : unit -> bool
 
 (** Extra *)
 val match_extension : string -> input_format
-
-val set_is_gui : bool -> unit
-val get_is_gui : unit -> bool
-
 
 (** {3 Printer and formatter } *)
 (** This functions are use to print or set the output used to print debug or

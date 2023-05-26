@@ -38,12 +38,10 @@
 val cur_time : unit -> float
 (** Returns the current time. **)
 
-val set_timeout : is_gui:bool -> float -> unit
+val set_timeout : float -> unit
 (** Set a timeout, using Unix timers.
-    If [is_gui] then the timer raises {!Unix.ITIMER_REAL},
-    else raises {!Unix.ITIMER_VIRTUAL}.
     No-op on javascript. *)
 
-val unset_timeout : is_gui:bool -> unit
+val unset_timeout : unit -> unit
 (** Unset the previously set timer. *)
 
