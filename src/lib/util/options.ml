@@ -52,6 +52,14 @@ module Output = struct
       let cout = open_out str in
       let fmt = Format.formatter_of_out_channel cout in
       Channel (cout, fmt)
+
+  let std_output = ref Stdout
+  let err_output = ref Stderr
+  let wrn_output = ref Stderr
+  let dbg_output = ref Stderr
+  let mdl_output = ref Stdout
+  let usc_output = ref Stdout
+
   let close o =
     match o with
     | Stdout | Stderr | Fmt _ ->

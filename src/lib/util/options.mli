@@ -1156,3 +1156,6 @@ module Output : sig
   val set_usc : t -> unit
   (** Set [fmt_usc] accessible with {!val:get_fmt_usc} *)
 end
+
+(** Print message as comment in the corresponding output format *)
+val pp_comment: Format.formatter -> string -> unit
