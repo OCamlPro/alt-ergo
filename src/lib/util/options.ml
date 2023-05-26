@@ -316,25 +316,29 @@ let set_unsat_core b = unsat_core := b
 
 let equal_mode a b =
   match a, b with
-  | INone, INone | IFirst, IFirst | IEvery, IEvery | ILast, ILast -> true
-  | INone, (IFirst | IEvery | ILast)
-  | IFirst, (INone | IEvery | ILast)
-  | IEvery, (INone | IFirst | ILast)
-  | ILast, (INone | IFirst | IEvery) -> false
+  | INone, INone -> true
+  | INone, _ | _, INone -> false
+  | IFirst, IFirst -> true
+  | IFirst, _ | _, IFirst -> false
+  | IEvery, IEvery -> true
+  | IEvery, _ | _, IEvery -> false
+  | ILast, ILast -> true
 
 let equal_output_format a b =
   match a, b with
-  | Smtlib2, Smtlib2 | Native, Native | Why3, Why3 -> true
+  | Smtlib2, Smtlib2 -> true
+  | Smtlib2, _ | _, Smtlib2 -> false
   | Unknown n1, Unknown n2 -> String.equal n1 n2
-  | Smtlib2, (Native | Why3 | Unknown _)
-  | Native, (Smtlib2 | Why3 | Unknown _)
-  | Why3, (Smtlib2 | Native | Unknown _)
-  | Unknown _, (Smtlib2 | Native | Why3) -> false
+  | Unknown _, _ | _, Unknown _ -> false
+  | Native, Native -> true
+  | Native, _ | _, Native -> false
+  | Why3, Why3 -> true
 
 let equal_mode_type a b =
   match a, b with
-  | Constraints, Constraints | Value, Value -> true
-  | Constraints, Value | Value, Constraints -> false
+  | Constraints, Constraints -> true
+  | Constraints, _ | _, Constraints -> false
+  | Value, Value -> true
 
 let get_interpretation () = not @@ equal_mode !interpretation INone
 let get_first_interpretation () = equal_mode !interpretation IFirst
