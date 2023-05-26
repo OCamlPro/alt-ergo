@@ -78,6 +78,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (zarith (>= 1.4))
   seq
   stdlib-shims
+  ppx_compare
   (camlzip (>= 1.07))
   (odoc :with-doc)
  )

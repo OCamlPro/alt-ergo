@@ -36,6 +36,7 @@
     dolmen_type
     dolmen_loop
     dune-build-info
+    ppx_compare
     alt_ergo_prelude
   )
 
@@ -61,6 +62,10 @@
     MyDynlink MyUnix Numbers
     Options Timers Util Vec Version Steps Printer Format_shims
     My_zip
+  )
+
+  (preprocess
+    (pps ppx_compare)
   )
 
  (js_of_ocaml
