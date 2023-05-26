@@ -40,7 +40,6 @@ module Smtlib_parser = Psmt2Frontend.Smtlib_parser
 module Smtlib_lexer = Psmt2Frontend.Smtlib_lexer
 
 open Smtlib_syntax
-open Options
 open Parsed_interface
 
 

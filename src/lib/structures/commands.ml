@@ -30,12 +30,6 @@
 
 (* Sat entry *)
 
-type opt =
-  | Verbosity of int
-  | PrintSuccess of bool
-  | ReproducibleResourceLimit of int
-  | OutputChannel of [`Regular | `Diagnostic] * string
-
 type sat_decl_aux =
   | Assume of string * Expr.t * bool
   | PredDef of Expr.t * string (*name of the predicate*)
@@ -44,23 +38,11 @@ type sat_decl_aux =
   | ThAssume of Expr.th_elt
   | Push of int
   | Pop of int
-  | SetOption of opt
 
 type sat_tdecl = {
   st_loc : Loc.t;
   st_decl : sat_decl_aux
 }
-
-let print_opt fmt =
-  let open Format in
-  function
-  | Verbosity i -> fprintf fmt "verbosity: %i" i
-  | PrintSuccess b -> fprintf fmt "print-success: %B" b
-  | ReproducibleResourceLimit i -> fprintf fmt "reproduce-resource-limit: %i" i
-  | OutputChannel (`Regular, name) ->
-    fprintf fmt "regular-output-channel: %s" name
-  | OutputChannel (`Diagnostic, name) ->
-    fprintf fmt "diagnostic-output-channel: %s" name
 
 let print_aux fmt = function
   | Assume (name, e, b) ->
@@ -80,7 +62,6 @@ let print_aux fmt = function
     Format.fprintf fmt "th assume %a" Expr.print_th_elt t
   | Push n -> Format.fprintf fmt "Push %d" n
   | Pop n ->  Format.fprintf fmt "Pop %d" n
-  | SetOption opt -> Format.fprintf fmt "set-option %a" print_opt opt
 
 let print fmt decl = print_aux fmt decl.st_decl
 
