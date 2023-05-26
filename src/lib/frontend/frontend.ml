@@ -143,12 +143,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep {name;f;loc})
     else Ex.empty
 
-  let set_output typ name =
-    let output = Options.Output.create_channel name in
-    match typ with
-    | `Regular -> Options.Output.set_regular output
-    | `Diagnostic -> Options.Output.set_diagnostic output
-
   let process_decl print_status used_context consistent_dep_stack
       ((env, consistent, dep) as acc) d =
     try
@@ -163,22 +157,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
             ~max:n ~elt:() ~init:(consistent,dep)
         in
         SAT.pop env n, consistent, dep
-      | SetOption opt ->
-        begin
-          let _ =
-            match opt with
-            | Verbosity i ->
-              if i > 0 then Options.set_verbose true
-              else Options.set_verbose false
-            | ReproducibleResourceLimit i ->
-              if i > 0 then Options.set_timelimit_per_goal true
-              else Options.set_timelimit_per_goal false
-            | PrintSuccess _ ->
-              Printer.print_wrn "unsupported option %a" Commands.print_opt opt
-            | OutputChannel (typ, name) -> set_output typ name
-          in
-          env, consistent, dep
-        end
       | Assume(n, f, mf) ->
         let is_hyp = try (Char.equal '@' n.[0]) with _ -> false in
         if not is_hyp && unused_context n used_context then

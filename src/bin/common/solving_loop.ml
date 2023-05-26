@@ -356,6 +356,76 @@ let main () =
     | _ -> Printer.print_wrn "unsupported option %s" name
   in
 
+  let print_wrn_opt ~name loc ty value =
+    Printer.print_wrn "%a The option %s expects a %s, got %a"
+      Loc.report loc name ty DStd.Term.print value
+  in
+
+  let handle_option st_loc name (value : DStd.Term.t) =
+    match name, value.term with
+    | ":regular-output-channel", Symbol { name = Simple name; _ } ->
+      Options.Output.create_channel name
+      |> Options.Output.set_regular
+    | ":diagnostic-output-channel", Symbol { name = Simple name; _ } ->
+      Options.Output.create_channel name
+      |> Options.Output.set_diagnostic
+    | ":produce-models", Symbol { name = Simple "true"; _ } ->
+      (* TODO: The generation of models is supported only with the SAT
+         solver Tableaux. Remove this line after merging the OptimAE
+         PR. *)
+      if Stdlib.(Options.get_sat_solver () = Tableaux) then
+        Options.set_interpretation ILast
+      else Printer.print_wrn "%a The generation of models is not supported \
+                              for the current SAT solver. Please choose the \
+                              SAT solver Tableaux."
+          Loc.report st_loc
+    | ":produce-models", Symbol { name = Simple "false"; _ } ->
+      Options.set_interpretation INone
+    | ":produce-unsat-cores", Symbol { name = Simple "true"; _ } ->
+      (* TODO: The generation of models is supported only with the SAT
+         solver Tableaux. Remove this line after merging the OptimAE
+         PR. *)
+      if Stdlib.(Options.get_sat_solver () = Tableaux) then
+        Options.set_unsat_core true
+      else Printer.print_wrn "%a The generation of unsat cores is not \
+                              supported for the current SAT solver. Please \
+                              choose the SAT solver Tableaux."
+          Loc.report st_loc
+    | ":produce-unsat-cores", Symbol { name = Simple "false"; _ } ->
+      Options.set_unsat_core false
+    | (":produce-models" | ":produce-unsat-cores" as name), _ ->
+      print_wrn_opt ~name st_loc "boolean" value
+    | ":verbosity", Symbol { name = Simple level; _ } ->
+      begin
+        match int_of_string_opt level with
+        | Some i when i > 0 -> Options.set_verbose true
+        | Some 0 -> Options.set_verbose false
+        | None | Some _ ->
+          print_wrn_opt ~name:":verbosity" st_loc "integer" value
+      end
+    | ":reproducible-resource-limit", Symbol { name = Simple level; _ } ->
+      begin
+        match int_of_string_opt level with
+        | Some i when i > 0 -> Options.set_timelimit_per_goal true
+        | Some 0 -> Options.set_timelimit_per_goal false
+        | None | Some _ ->
+          print_wrn_opt ~name:":reproducible-resource-limit" st_loc
+            "nonnegative integer" value
+      end
+    | (":global-declarations"
+      | ":interactive-mode"
+      | ":produce-assertions"
+      | ":produce-assignments"
+      | ":produce-proofs"
+      | ":produce-unsat-assumptions"
+      | ":print-success"
+      | ":random-seed"
+      | ":reproducible-resource-limit"
+      | ":verbosity"), _
+      -> Printer.print_wrn "unsupported option %s" name
+    | _ -> Printer.print_wrn "unsupported option %s" name
+  in
+
   let handle_stmt :
     FE.used_context -> State.t ->
     Typer_Pipe.typechecked Typer_Pipe.stmt -> State.t =

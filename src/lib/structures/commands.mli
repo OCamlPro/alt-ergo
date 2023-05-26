@@ -30,12 +30,6 @@
 
 (* Sat entry *)
 
-type opt =
-  | Verbosity of int
-  | PrintSuccess of bool
-  | ReproducibleResourceLimit of int
-  | OutputChannel of [`Regular | `Diagnostic] * string
-
 type sat_decl_aux =
   | Assume of string * Expr.t * bool
   | PredDef of Expr.t * string (*name of the predicate*)
@@ -44,7 +38,6 @@ type sat_decl_aux =
   | ThAssume of Expr.th_elt
   | Push of int
   | Pop of int
-  | SetOption of opt
 
 type sat_tdecl = {
   st_loc : Loc.t;
@@ -52,4 +45,3 @@ type sat_tdecl = {
 }
 
 val print : Format.formatter -> sat_tdecl -> unit
-val print_opt : Format.formatter -> opt -> unit
