@@ -382,9 +382,8 @@ let main () =
     | ":produce-models", Symbol { name = Simple "false"; _ } ->
       Options.set_interpretation INone
     | ":produce-unsat-cores", Symbol { name = Simple "true"; _ } ->
-      (* TODO: The generation of models is supported only with the SAT
-         solver Tableaux. Remove this line after merging the OptimAE
-         PR. *)
+      (* The generation of unsat core is supported only with the SAT
+         solver Tableaux. *)
       if Stdlib.(Options.get_sat_solver () = Tableaux) then
         Options.set_unsat_core true
       else Printer.print_wrn "%a The generation of unsat cores is not \
@@ -419,9 +418,7 @@ let main () =
       | ":produce-proofs"
       | ":produce-unsat-assumptions"
       | ":print-success"
-      | ":random-seed"
-      | ":reproducible-resource-limit"
-      | ":verbosity"), _
+      | ":random-seed"), _
       -> Printer.print_wrn "unsupported option %s" name
     | _ -> Printer.print_wrn "unsupported option %s" name
   in
