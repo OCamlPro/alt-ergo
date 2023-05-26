@@ -386,6 +386,9 @@ let main () =
           ) st
 
       | {contents = `Set_option _; _ } ->
+        (* These statements shouldn't be run again during the processing
+           of check-sat statements. Thus, we put them in the local stack
+           which is flushed after each check-sat statement. *)
         let cnf =
           D_cnf.make (State.get State.logic_file st).loc [] td
         in

@@ -1054,6 +1054,7 @@ val get_is_gui : unit -> bool
 (** This functions are use to print or set the output used to print debug or
     error informations *)
 
+(** Output channels manager. *)
 module Output : sig
   type t = private
     | Stdout
@@ -1063,62 +1064,71 @@ module Output : sig
     | Invalid
 
   val create_buffer : unit -> t
+  (** Create a new buffer. *)
+
   val create_channel : string -> t
+  (** [create_channel filename] create an out channel on the file [filename].
+      If the file does not exist, the procedure creates it. An existant file
+      is truncated to zero length. *)
+
   val contents : t -> string
+  (** Retrieve the content of the underlying buffer if any. *)
 
   val at_exit : unit -> unit
+  (** This function is run at exit in order to flush and close of the
+      remaining output channels. *)
 
+  val set_regular : t -> unit
   (** Set the regular output channel used by default to output results,
       models and unsat cores. *)
-  val set_regular : t -> unit
   (** Default to [Format.std_formatter] *)
 
+  val set_diagnostic : t -> unit
   (** Set the diagnostic output channel used by default to output errors,
       debug and warning informations. *)
-  val set_diagnostic : t -> unit
   (** Default to [Format.err_formatter] *)
 
-  (** Value specifying the formatter used to output results. *)
   val get_fmt_std : unit -> Format.formatter
+  (** Value specifying the formatter used to output results. *)
   (** Default to [Format.std_formatter] *)
 
-  (** Value specifying the formatter used to output errors. *)
   val get_fmt_err : unit -> Format.formatter
+  (** Value specifying the formatter used to output errors. *)
   (** Default to [Format.err_formatter] *)
 
-  (** Value specifying the formatter used to output warnings. *)
   val get_fmt_wrn : unit -> Format.formatter
+  (** Value specifying the formatter used to output warnings. *)
   (** Default to [Format.err_formatter] *)
 
-  (** Value specifying the formatter used to output debug informations. *)
   val get_fmt_dbg : unit -> Format.formatter
+  (** Value specifying the formatter used to output debug informations. *)
   (** Default to [Format.err_formatter] *)
 
-  (** Value specifying the formatter used to output models. *)
   val get_fmt_mdl : unit -> Format.formatter
+  (** Value specifying the formatter used to output models. *)
   (** Default to [Format.std_formatter] *)
 
-  (** Value specifying the formatter used to output unsat cores. *)
   val get_fmt_usc : unit -> Format.formatter
+  (** Value specifying the formatter used to output unsat cores. *)
   (** Default to [Format.std_formatter] *)
 
-  (** Set [fmt_std] accessible with {!val:get_fmt_std} *)
   val set_std : t -> unit
+  (** Set [fmt_std] accessible with {!val:get_fmt_std} *)
 
-  (** Set [fmt_err] accessible with {!val:get_fmt_err} *)
   val set_err : t -> unit
+  (** Set [fmt_err] accessible with {!val:get_fmt_err} *)
 
-  (** Set [fmt_wrn] accessible with {!val:get_fmt_wrn} *)
   val set_wrn : t -> unit
+  (** Set [fmt_wrn] accessible with {!val:get_fmt_wrn} *)
 
-  (** Set [fmt_dbg] accessible with {!val:get_fmt_dbg} *)
   val set_dbg : t -> unit
+  (** Set [fmt_dbg] accessible with {!val:get_fmt_dbg} *)
 
-  (** Set [fmt_mdl] accessible with {!val:get_fmt_mdl} *)
   val set_mdl : t -> unit
+  (** Set [fmt_mdl] accessible with {!val:get_fmt_mdl} *)
 
-  (** Set [fmt_usc] accessible with {!val:get_fmt_usc} *)
   val set_usc : t -> unit
+  (** Set [fmt_usc] accessible with {!val:get_fmt_usc} *)
 end
 
 (** Print message as comment in the corresponding output format *)
