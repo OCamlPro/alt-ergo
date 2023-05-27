@@ -266,9 +266,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
 
   module T2 = struct
-    type t = E.t * E.t
-    let compare (a, b) (x, y) =
-      let c = E.compare a x in if c <> 0 then c else E.compare b y
+    type t = E.t * E.t [@@deriving compare]
   end
 
   module MT2 = Map.Make(T2)
@@ -323,6 +321,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
   module SLE = (* sets of lists of terms *)
     Set.Make(struct
       type t = E.t list
+      (* TODO: Replace this comparaison by a generated one as soon as
+         we have a proper comparison function for lists. *)
       let compare l1 l2 =
         try
           List.iter2
