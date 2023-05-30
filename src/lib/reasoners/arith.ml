@@ -118,7 +118,7 @@ module Shostak
          | Real_of_int | Int_floor | Int_ceil
          | Max_int | Max_real | Min_int | Min_real
          | Pow | Integer_log2 | Integer_round
-         | Sy.BV2Nat) -> true
+         | BV2Nat) -> true
     | _ -> false
 
   let empty_polynome ty = P.create [] Q.zero ty
@@ -362,11 +362,6 @@ module Shostak
                 E.mk_term (Sy.Op (Sy.BVGet cnt)) [x] Ty.Tint
               in
               let r', _ = X.make tg in
-              (* this is possibly too costly because the "x" bitv will be
-                 remade after each call.
-                 Should it be memoized in bitv.ml?
-                 Can bitv.ml only make the sub-bitv on which the access is done?
-              *)
               try match X.term_extract r' with
                 | None, _ -> raise Exit
                 | Some t, _ ->

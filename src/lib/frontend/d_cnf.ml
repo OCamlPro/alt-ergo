@@ -757,6 +757,19 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
               ] Ty.Tint
             ] (Ty.Tbitv n)
 
+          | B.Bitv_not _, [{
+              term_descr = App
+                  ({ term_descr = Cst {builtin = B.Bitv_not _; _ }; _ }, _, [t])
+            ; _ }] ->
+            (* TODO: do the simplification in a smarter smarter way
+               should (bvnot (bvconcat(t1, bvnot t2)))
+               be translated to (bvconcat(bvnot t1, t2))? *)
+            aux_mk_expr t
+
+          | B.Bitv_not n, [t] ->
+            let t' = aux_mk_expr t in
+            E.mk_term (Sy.Op Sy.BVNot) [t'] (Ty.Tbitv n)
+
           (* Binary applications *)
 
           | B.Bitv_concat { n; m; }, [ x; y ] ->

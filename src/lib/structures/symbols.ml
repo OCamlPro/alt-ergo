@@ -45,6 +45,7 @@ type operator =
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
   | BVGet of int | BV2Nat | Nat2BV of int
+  | BVNot
   (* FP *)
   | Float of int * int (* precision|significant * exponential *)
   | Integer_round | Fixed
@@ -148,7 +149,7 @@ let compare_operators op1 op2 =
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
             | Integer_log2 | Pow | Integer_round
             | Constr _ | Destruct _ | Tite
-            | BV2Nat | Nat2BV _) -> assert false
+            | BV2Nat | Nat2BV _ | BVNot) -> assert false
     )
 
 let compare_builtin b1 b2 =
@@ -320,6 +321,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op (BVGet n)-> Format.sprintf "bvget[%d]" n
   | Op BV2Nat -> "bv2nat"
   | Op (Nat2BV m) -> Format.sprintf "nat2bv[%d]" m
+  | Op BVNot -> "bvnot"
   | True -> "true"
   | False -> "false"
   | Void -> "void"

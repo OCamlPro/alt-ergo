@@ -45,6 +45,7 @@ type operator =
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
   | BVGet of int | BV2Nat | Nat2BV of int
+  | BVNot
   (* FP *)
   | Float of int * int (* precision|significant * exponential *)
   | Integer_round | Fixed

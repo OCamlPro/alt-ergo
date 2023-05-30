@@ -33,7 +33,14 @@ type sort_var = A | B | C
 
 type tvar = { var : int ; sorte : sort_var }
 
-type 'a xterm = Var of tvar | Alien of 'a
+type 'a xterm_aux = Var of tvar | Alien of 'a
+
+type 'a nterm = {
+  t : 'a;
+  neg : bool;
+}
+
+type 'a xterm = 'a xterm_aux nterm
 
 type 'a alpha_term = {
   bv : 'a;
@@ -60,6 +67,7 @@ type solver_simple_term_aux =
 
 type solver_simple_term = solver_simple_term_aux alpha_term
 
+let mk_xterm ?(neg = false) t: 'a xterm = { t; neg; }
 
 module type ALIEN = sig
   include Sig.X
@@ -77,7 +85,7 @@ module Shostak(X : ALIEN) = struct
   let is_mine_symb sy _ =
     match sy with
     | Sy.Bitv _ | Sy.Op (
-        Sy.Concat | Sy.Extract _ | Sy.BVGet _ | Sy.Nat2BV _
+        Concat | Extract _ | BVGet _ | Nat2BV _ | BVNot
       ) -> true
     | _ -> false
 
@@ -86,12 +94,12 @@ module Shostak(X : ALIEN) = struct
     | None ->
       begin
         match X.type_info r with
-        | Ty.Tbitv n -> BV [{bv = Other (Alien r) ; sz = n}]
+        | Ty.Tbitv n -> BV [{bv = Other (mk_xterm (Alien r)); sz = n}]
         | _  -> assert false
       end
     | Some b -> b
 
-  let compare_xterm xt1 xt2 = match xt1,xt2 with
+  let compare_xterm xt1 xt2 = match xt1.t,xt2.t with
     | Var v1, Var v2 ->
       let c1 = compare v1.sorte v2.sorte in
       if c1 <> 0 then c1
@@ -217,13 +225,21 @@ module Shostak(X : ALIEN) = struct
           | Cte b -> Some b
           | _ -> None
 
-    let string_to_bitv ?(update_ctx = false) ?bounds s t cnt ctx =
+    let mk_bit_to_int neg =
+      if neg then (fun b -> if not b then E.int "1" else E.int "0")
+      else (fun b -> if b then E.int "1" else E.int "0")
+
+    let mk_bvget bv_t n =
+      E.mk_term (Symbols.Op (Symbols.BVGet n)) [bv_t] Ty.Tint
+
+    let bvget_eq bv_t n e =
+      E.mk_eq ~iff:false (mk_bvget bv_t n) e
+
+    let string_to_bitv
+        ?(neg = false) ?(update_ctx = false) ?bounds s t cnt ctx =
+      let bitf = if neg then (fun b -> not b) else (fun b -> b) in
+      let bit_to_int = mk_bit_to_int neg in
       let size = String.length s in
-      let mk_eq b pos =
-        E.mk_eq ~iff:false
-          (E.mk_term (Symbols.Op (Symbols.BVGet pos)) [t] Ty.Tint)
-          (if b then E.int "1" else E.int "0")
-      in
       let tmp = ref[] in
       let nctx = ref[] in
       if update_ctx && Options.get_use_bv () then
@@ -233,10 +249,10 @@ module Shostak(X : ALIEN) = struct
             let b = car<>'0' in
             nctx :=
               begin match bounds with
-                | None -> mk_eq b (cnt + pos) :: !nctx
+                | None -> bvget_eq t (cnt + pos) (bit_to_int b) :: !nctx
                 | Some (lb, ub) ->
                   if pos >= lb && pos <= ub
-                  then mk_eq b (cnt + pos - lb) :: !nctx
+                  then bvget_eq t (cnt + pos - lb) (bit_to_int b) :: !nctx
                   else !nctx
               end;
             tmp := (b,1)::(!tmp)
@@ -244,10 +260,10 @@ module Shostak(X : ALIEN) = struct
       else String.iter(fun car -> tmp := (car<>'0',1)::(!tmp)) s;
       let rec f_aux l acc = match l with
         | [] -> assert false
-        | [(b,n)] -> { sz = n ; bv = I_Cte b }::acc
+        | [(b,n)] -> { sz = n ; bv = I_Cte (bitf b) }::acc
         | (b1,n)::(b2,m)::r when b1 = b2 -> f_aux ((b1,n+m)::r) acc
         | (b1,n)::(b2,m)::r ->
-          (f_aux ((b2,m)::r)) ({ sz = n ; bv = I_Cte b1 }::acc)
+          (f_aux ((b2,m)::r)) ({ sz = n ; bv = I_Cte (bitf b1) }::acc)
       in
       let res = f_aux (!tmp) [] in
       let ctx = List.rev_append !nctx ctx in
@@ -267,168 +283,201 @@ module Shostak(X : ALIEN) = struct
         end
       | _ -> None
 
-    let bitv_of_nat bv_t nat_t size ctx =
-      assert (size > 0);
+    let bit_e_neg =
+      let zero = E.int "0" in
+      let one = E.int "1" in
+      fun neg t ->
+        if neg then
+          let eq = E.mk_eq ~iff:false t one in
+          E.mk_term (Sy.Op Tite) [eq; zero; one] Ty.Tint
+        else t
+
+    let bitv_of_nat ?(neg = false) bv_t nat_t size ctx =
+      let bitf = if neg then (fun b -> not b) else (fun b -> b) in
+      let bit_to_int = mk_bit_to_int neg in
       let two = E.int "2" in
       let pow n =
         E.mk_term (Sy.Op Sy.Pow) [two; E.int (Int.to_string n)] Ty.Tint
       in
-      let mdiv n =
+      let mdiv nat_t n =
         E.mk_term (Sy.Op Sy.Modulo)
           [E.mk_term (Sy.Op Sy.Div) [nat_t; pow n] Ty.Tint; two] Ty.Tint
       in
-      let get_nth_eq n e =
-        E.mk_eq ~iff:false
-          (E.mk_term (Symbols.Op (Symbols.BVGet n)) [bv_t] Ty.Tint) e
-      in
+      let get_nth_eq_b bv_t cnt t_b = bvget_eq bv_t cnt (bit_to_int t_b) in
       let mk_i_comp t1 t2 sz = { bv = I_Comp (t1, t2); sz } in
+      assert (size > 0);
       let rec aux ?prec cnt sz ctx =
-        let v_t = mdiv cnt in
-        let r, ctx' = X.make v_t in
-        let nctx = ctx' @ ctx in
         let ncnt = cnt + 1 in
+        let v_t = mdiv nat_t cnt in
+        let r, ctx' = X.make v_t in
         match X.term_extract r with
+        | Some t, _ ->
+          begin match bit_of_expr t with
+            | Some t_b ->
+              let nctx = ctx' @ ctx in
+              begin match prec with
+                | Some p_b when t_b = p_b ->
+                  if ncnt > size then { bv = I_Cte (bitf t_b); sz = sz}, nctx
+                  else
+                    aux
+                      ?prec ncnt (sz + 1) (get_nth_eq_b bv_t cnt t_b :: nctx)
+                | Some p_b ->
+                  let t1 = { bv = I_Cte (bitf p_b); sz = sz} in
+                  if ncnt > size then t1, nctx
+                  else
+                    let t2, nctx =
+                      aux ~prec:t_b ncnt 1 (get_nth_eq_b bv_t cnt t_b :: nctx)
+                    in
+                    mk_i_comp t2 t1 (sz + t2.sz), nctx
+                | None ->
+                  assert (ncnt < size);
+                  let t, ctx =
+                    aux ~prec:t_b ncnt 1 (get_nth_eq_b bv_t cnt t_b :: nctx)
+                  in
+                  t, ctx
+              end
+            | None ->
+              (* TODO: check if this is really reachable *)
+              let rv_t = bit_e_neg neg v_t in
+              let r, ctx' = X.make rv_t in
+              let nctx = ctx' @ ctx in
+              let t1 = { bv = I_Other (mk_xterm ~neg (Alien r)); sz = 1 } in
+              if ncnt > size then t1, nctx
+              else
+                let t2, nctx = aux ncnt 0 (bvget_eq bv_t cnt rv_t :: nctx) in
+                mk_i_comp t2 t1 (t2.sz + 1), nctx
+          end
         | None, _ ->
+          let rv_t = bit_e_neg neg v_t in
+          let r, ctx' = X.make rv_t in
+          let nctx = ctx' @ ctx in
           begin match prec with
             | Some b ->
               let t1 =
                 mk_i_comp
-                  { bv = I_Other (Alien r); sz = 1}
-                  { bv = I_Cte b; sz }
+                  { bv = I_Other (mk_xterm ~neg (Alien r)); sz = 1}
+                  { bv = I_Cte (bitf b); sz }
                   (sz + 1)
               in
               if ncnt > size then t1, nctx
               else
-                let t2, nctx = aux ncnt 0 (get_nth_eq cnt v_t :: nctx) in
+                let t2, nctx = aux ncnt 0 (bvget_eq bv_t cnt rv_t :: nctx) in
                 let t = mk_i_comp t2 t1 (sz + t2.sz + 1) in
                 t, nctx
             | None ->
-              let t1 = { bv = I_Other (Alien r); sz = 1} in
+              let t1 = { bv = I_Other (mk_xterm ~neg (Alien r)); sz = 1} in
               if ncnt > size then t1, nctx
               else
-                let t2, nctx = aux ncnt 0 (get_nth_eq cnt v_t :: nctx) in
+                let t2, nctx = aux ncnt 0 (bvget_eq bv_t cnt rv_t :: nctx) in
                 let t = mk_i_comp t2 t1 (t2.sz + 1) in
                 t, nctx
           end
-        | Some t, _ ->
-          match bit_of_expr t with
-          | Some t_b ->
-            begin match prec with
-              | Some p_b when t_b = p_b ->
-                if ncnt > size then { bv = I_Cte t_b; sz = sz}, nctx
-                else
-                  let eq =
-                    get_nth_eq cnt (if t_b then E.int "1" else E.int "0")
-                  in
-                  aux ?prec ncnt (sz + 1) (eq :: nctx)
-              | Some p_b ->
-                let t1 = { bv = I_Cte p_b; sz = sz} in
-                if ncnt > size then t1, nctx
-                else
-                  let eq =
-                    get_nth_eq cnt (if t_b then E.int "1" else E.int "0")
-                  in
-                  let t2, nctx = aux ~prec:t_b ncnt 1 (eq :: nctx) in
-                  mk_i_comp t2 t1 (sz + t2.sz), nctx
-              | None ->
-                assert (ncnt < size);
-                let eq =
-                  get_nth_eq cnt (if t_b then E.int "1" else E.int "0")
-                in
-                let t, ctx = aux ~prec:t_b ncnt 1 (eq :: nctx) in
-                t, ctx
-            end
-          | None ->
-            let t1 = { bv = I_Other (Alien r); sz = 1 } in
-            if ncnt > size then t1, nctx
-            else
-              let t2, nctx = aux ncnt 0 (get_nth_eq cnt t :: nctx) in
-              mk_i_comp t2 t1 (t2.sz + 1), nctx
       in
       aux 0 0 ctx
 
+    let rec make_aux t cnt ?(neg = false) ?(update_ctx = false) ?bounds t' ctx =
+      match E.term_view t' with
+      | { E.f = Sy.Bitv s; _ } ->
+        string_to_bitv ~neg ~update_ctx ?bounds s t cnt ctx
+
+      | { E.f = Sy.Op Concat ;
+          xs = [t2;t1] ; ty = Ty.Tbitv n; _ } ->
+        let sz', (bounds2, uc2), (bounds1, uc1) =
+          let { E.ty = ty2; _ }, { E.ty = ty1; _ } =
+            E.term_view t2, E.term_view t1
+          in
+          match ty2, ty1 with
+          | Ty.Tbitv _, Ty.Tbitv sz ->
+            begin match bounds with
+              | None ->
+                (if update_ctx then sz else 0),
+                (None, update_ctx),
+                (None, update_ctx)
+              | Some (lb, ub) ->
+                if lb >= sz then
+                  0,
+                  (Some (lb - sz, ub - sz), update_ctx),
+                  (None, false)
+                else if ub < sz then
+                  (if update_ctx then sz - lb else 0),
+                  (None, false),
+                  (Some (lb, ub), update_ctx)
+                else
+                  (if update_ctx then sz - lb else 0),
+                  (Some (0, ub - sz), update_ctx),
+                  (Some (lb, sz - 1), update_ctx)
+            end
+          | _ ->
+            failwith (
+              Format.asprintf
+                "Concat: expected two bitvectors, got %a and %a"
+                Ty.print ty1 Ty.print ty2)
+        in
+        let uc1, uc2 = uc1 && update_ctx, uc2 && update_ctx in
+        let r1, ctx =
+          make_aux t cnt ~neg ~update_ctx:uc1 ?bounds:bounds1 t1 ctx
+        in
+        let r2, ctx =
+          make_aux t (cnt + sz') ~neg ~update_ctx:uc2 ?bounds:bounds2 t2 ctx
+        in
+        { bv = I_Comp (r2, r1) ; sz = n }, ctx
+
+      | { E.f = Sy.Op Extract (i, j); xs = [x] ; ty = Ty.Tbitv sz; _ } ->
+        let bounds =
+          match bounds with
+          | None -> (i, j)
+          | Some (lb, ub) ->
+            let nlb = i + lb in
+            let nub = i + ub in
+            (nlb, nub)
+        in
+        let r, ctx = make_aux t cnt ~neg ~update_ctx ~bounds x ctx in
+        { sz ; bv = I_Ext (r, i, j)}, ctx
+
+      | { E.f = Sy.Op Nat2BV m; xs = [x] ; ty = Ty.Tbitv n; _ } ->
+        assert (m = n);
+        bitv_of_nat t' x n ctx
+
+      | { E.f = Sy.Op BVNot; xs = [x] ; ty = Ty.Tbitv _n; _ } ->
+        make_aux t 0 ~neg:(not neg) ~update_ctx x []
+
+      | { E.ty = Ty.Tbitv n; _ } ->
+        let ctx' =
+          if neg then
+            if update_ctx then
+              List.init n (fun i ->
+                  let e1 = mk_bvget t (cnt + i) in
+                  let e2 = bit_e_neg true (mk_bvget t' i) in
+                  E.mk_eq ~iff:false e1 e2)
+            else (
+              match E.term_view t with
+              | E.{ f = Sy.Op (BVGet j); _ } ->
+                if j >= cnt && j < cnt + n then
+                  let e = bit_e_neg true (mk_bvget t' (j - cnt)) in
+                  [E.mk_eq ~iff:false t e]
+                else []
+              | _ -> assert false
+            )
+          else []
+        in
+        let r', ctx'' = X.make t' in
+        let ctx = ctx'' @ ctx' @ ctx in
+        {bv = I_Other (mk_xterm ~neg (Alien r')); sz = n}, ctx
+
+      | _ ->
+        failwith (
+          Format.asprintf "[Bitv] make: Unexpected term %a subterm of %a@."
+            E.print t' E.print t
+        )
+
     let make t =
-      let rec make_rec cnt ?(update_ctx = false) ?bounds t' ctx =
-        match E.term_view t' with
-        | { E.f = Sy.Bitv s; _ } ->
-          string_to_bitv ~update_ctx ?bounds s t cnt ctx
-
-        | { E.f = Sy.Op Sy.Concat ;
-            xs = [t2;t1] ; ty = Ty.Tbitv n; _ } ->
-          let sz', (bounds2, uc2), (bounds1, uc1) =
-            let { E.ty = ty2; _ }, { E.ty = ty1; _ } =
-              E.term_view t2, E.term_view t1
-            in
-            match ty2, ty1 with
-            | Ty.Tbitv _, Ty.Tbitv sz ->
-              begin match bounds with
-                | None ->
-                  (if update_ctx then sz else 0),
-                  (None, update_ctx),
-                  (None, update_ctx)
-                | Some (lb, ub) ->
-                  if lb >= sz then
-                    0,
-                    (Some (lb - sz, ub - sz), update_ctx),
-                    (None, false)
-                  else if ub < sz then
-                    (if update_ctx then sz - lb else 0),
-                    (None, false),
-                    (Some (lb, ub), update_ctx)
-                  else
-                    (if update_ctx then sz - lb else 0),
-                    (Some (0, ub - sz), update_ctx),
-                    (Some (lb, sz - 1), update_ctx)
-              end
-            | _ ->
-              failwith (
-                Format.asprintf
-                  "Concat: expected two bitvectors, got %a and %a"
-                  Ty.print ty1 Ty.print ty2)
-          in
-          let uc1, uc2 = uc1 && update_ctx, uc2 && update_ctx in
-          let r1, ctx =
-            make_rec cnt ~update_ctx:uc1 ?bounds:bounds1 t1 ctx
-          in
-          let r2, ctx =
-            make_rec (cnt + sz') ~update_ctx:uc2 ?bounds:bounds2 t2 ctx
-          in
-          { bv = I_Comp (r2, r1) ; sz = n }, ctx
-
-        | { E.f = Sy.Op Sy.Extract (i, j); xs = [t] ; ty = Ty.Tbitv sz; _ } ->
-          let bounds =
-            match bounds with
-            | None -> (i, j)
-            | Some (lb, ub) ->
-              let nlb = i + lb in
-              let nub = i + ub in
-              (nlb, nub)
-          in
-          let r, ctx = make_rec cnt ~update_ctx ~bounds t ctx in
-          { sz ; bv = I_Ext (r, i, j)}, ctx
-
-        | { E.f = Sy.Op (Sy.Nat2BV m); xs = [x] ; ty = Ty.Tbitv n; _ } ->
-          assert (m = n);
-          bitv_of_nat t' x n ctx
-
-        | { E.ty = Ty.Tbitv n; _ } ->
-          let r', ctx' = X.make t' in
-          let ctx = ctx' @ ctx in
-          {bv = I_Other (Alien r') ; sz = n}, ctx
-
-        | _ ->
-          failwith (
-            Format.asprintf "[Bitv] make: Unexpected term %a subterm of %a@."
-              E.print t' E.print t
-          )
-      in
       let r, ctx =
         match E.term_view t with
-        | { E.f = Sy.Op (Sy.BVGet i); xs = [x] ; ty = Ty.Tint; _ } ->
+        | { E.f = Sy.Op BVGet i; xs = [x] ; ty = Ty.Tint; _ } ->
           (* TODO:
              Should it the "x" bitv be memoized? (what about all the others?)
              Can bitv.ml only make the sub-bitv on which the access is done? *)
-          let r, ctx = make_rec 0 ~update_ctx:false x [] in
+          let r, ctx = make_aux t 0 ~update_ctx:false x [] in
           let nsz = r.sz - i - 1 in
           let r = sigma r in
           begin match nth_bit r nsz with
@@ -441,7 +490,7 @@ module Shostak(X : ALIEN) = struct
           end
 
         | _ ->
-          let r, ctx = make_rec ~update_ctx:true 0 t [] in
+          let r, ctx = make_aux t 0 ~update_ctx:true t [] in
           BV (sigma r), ctx
       in
       r, ctx
@@ -470,12 +519,17 @@ module Shostak(X : ALIEN) = struct
       let open Format in
       match ast.bv with
       | Cte b -> fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
-      | Other (Alien t) -> fprintf fmt "%a@?" X.print t
-      | Other (Var tv) -> fprintf fmt "%a@?" print_tvar (tv,ast.sz)
-      | Ext (Alien t,_,i,j) ->
+      | Other {t = Alien t; neg; _} when neg ->
+        fprintf fmt "(not %a)@?" X.print t
+      | Other {t = Alien t; _} ->
+        fprintf fmt "%a@?" X.print t
+      | Other {t = Var tv; neg; _ } when neg ->
+        fprintf fmt "(not %a)@?" print_tvar (tv,ast.sz)
+      | Other {t = Var tv; _} -> fprintf fmt "%a@?" print_tvar (tv,ast.sz)
+      | Ext ({t = Alien t; _ },_,i,j) ->
         fprintf fmt "%a@?" X.print t;
         fprintf fmt "<%d,%d>@?" i j
-      | Ext (Var tv,_,i,j) ->
+      | Ext ({t = Var tv; _ },_,i,j) ->
         fprintf fmt "%a@?" print_tvar (tv,ast.sz);
         fprintf fmt "<%d,%d>@?" i j
 
@@ -643,11 +697,11 @@ module Shostak(X : ALIEN) = struct
       let c_solve (st1,st2) = match st1.bv,st2.bv with
         |Cte _, Cte _ -> raise Util.Unsolvable (* forcement un 1 et un 0 *)
 
-        |Cte b, Other (Var _) -> [cte_vs_other b st2]
-        |Other (Var _), Cte b -> [cte_vs_other b st1]
+        |Cte b, Other {t = Var _; _} -> [cte_vs_other b st2]
+        |Other {t = Var _; _ }, Cte b -> [cte_vs_other b st1]
 
-        |Cte b, Other (Alien _) -> [cte_vs_other b st2]
-        |Other (Alien _), Cte b -> [cte_vs_other b st1]
+        |Cte b, Other { t = Alien _; _ } -> [cte_vs_other b st2]
+        |Other { t = Alien _; _ }, Cte b -> [cte_vs_other b st1]
 
         |Cte b, Ext(xt,s_xt,i,j) -> [cte_vs_ext b xt s_xt i j]
         |Ext(xt,s_xt,i,j), Cte b -> [cte_vs_ext b xt s_xt i j]
@@ -786,7 +840,7 @@ module Shostak(X : ALIEN) = struct
              begin
                match (get_rep v).bv with
                |S_Cte b -> Cte b
-               |S_Var tv -> Other (Var tv)
+               |S_Var tv -> Other (mk_xterm (Var tv))
              end
         }in
       let rec cnf_max l = match l with
@@ -881,9 +935,9 @@ module Shostak(X : ALIEN) = struct
 
   let hash_simple_term_aux = function
     | Cte b -> 11 * Hashtbl.hash b
-    | Other x -> 17 * hash_xterm x
+    | Other x -> 17 * hash_xterm x.t
     | Ext (x, a, b, c) ->
-      hash_xterm x + 19 * (a + b + c)
+      hash_xterm x.t + 19 * (a + b + c)
 
   let hash r =
     let hash_l l =
@@ -903,16 +957,17 @@ module Shostak(X : ALIEN) = struct
         (fun acc x ->
            match x.bv with
            | Cte _  -> acc
-           | Ext( Var v,sz,_,_) ->
-             (X.embed (BV [{bv=Other (Var v) ; sz = sz }]))::acc
-           | Other (Var _)  -> (X.embed (BV [x]))::acc
-           | Other (Alien t) | Ext(Alien t,_,_,_) -> (X.leaves t)@acc
+           | Ext({t=Var v; neg},sz,_,_) ->
+             (X.embed (BV [{bv=Other {t=Var v;neg}; sz = sz }]))::acc
+           | Other {t=Var _; _}  -> (X.embed (BV [x]))::acc
+           | Other {t=Alien t; _} | Ext({t=Alien t; _},_,_,_) ->
+             (X.leaves t)@acc
         ) [] bv
     | Bit r -> X.leaves r
 
   let is_mine r =
     match r with
-    | BV [{ bv = Other (Alien r); _ }] -> r
+    | BV [{ bv = Other { t = Alien r; neg = false; _ }; _ }] -> r
     | Bit r -> r
     | _ -> X.embed r
 
@@ -955,21 +1010,21 @@ module Shostak(X : ALIEN) = struct
   let extract r ty =
     match X.extract r with
       Some (BV (_::_ as bv)) -> to_i_ast bv
-    | None -> {bv =  Canonizer.I_Other (Alien r); sz = ty}
+    | None -> {bv =  Canonizer.I_Other (mk_xterm (Alien r)); sz = ty}
     | Some _ -> assert false
 
   let extract_xterm r =
     match X.extract r with
-      Some (BV [{ bv = Other (Var _ as x); _ }]) -> x
-    | None -> Alien r
+    | Some (BV [{ bv = Other ({t=Var _; _} as x); _ }]) -> x
+    | None -> (mk_xterm (Alien r))
     | _ -> assert false
 
   let var_or_term x =
     match x.bv with
-      Other (Var _) -> X.embed (BV [x])
-    | Other (Alien r) -> r
+    | Other {t=(Alien r); neg = false} -> r
+    | Other {t=(Var _| Alien _); _} as xt ->
+      X.embed (BV [{bv = xt; sz = x.sz}])
     | _ -> assert false
-
 
   (* ne resout pas quand c'est deja resolu *)
   let solve_bis u t =
@@ -997,9 +1052,10 @@ module Shostak(X : ALIEN) = struct
   let rec subst_rec x subs biv =
     match biv.bv , extract_xterm x with
     | Canonizer.I_Cte _ , _ -> biv
-    | Canonizer.I_Other (Var y) , Var z when y=z -> extract subs biv.sz
-    | Canonizer.I_Other (Var _) , _ -> biv
-    | Canonizer.I_Other (Alien tt) , _ ->
+    | Canonizer.I_Other {t=Var y; _}, {t=Var z; _} when y=z ->
+      extract subs biv.sz
+    | Canonizer.I_Other {t=Var _; _} , _ -> biv
+    | Canonizer.I_Other {t=Alien tt; _} , _ ->
       if X.equal x tt then
         extract subs biv.sz
       else extract (X.subst x subs tt) biv.sz
@@ -1051,49 +1107,44 @@ module Shostak(X : ALIEN) = struct
   let fully_interpreted _ = true
 
   let term_extract r =
-    let res =
-      match X.extract r with
-      | None -> X.term_extract r
-      | Some v ->
-        begin match v with
-          | BV l ->
-            begin try
-                let mk_bv b sz =
-                  let c = if b then '1' else '0' in
-                  E.bitv (String.init sz (fun _ -> c)) (Ty.Tbitv sz)
-                in
-                match l with
-                | { bv = Cte b; sz; } :: tl ->
-                  let _, t =
-                    List.fold_left (
-                      fun (n, acc) r ->
-                        match r with
-                        | { bv = Cte b; sz; } ->
-                          let nsz =  n + sz in
-                          nsz,
-                          E.mk_term
-                            (Sy.Op Sy.Concat) [acc; mk_bv b sz] (Ty.Tbitv nsz)
-                        | _ -> raise Exit
-                    ) (sz, mk_bv b sz) tl
-                  in
-                  Some t, false
-                | _ ->
-                  None, false
-              with Exit ->
-                None, false
-            end
-          | BVAccess (l, i) ->
-            begin match X.term_extract (is_mine (BV l)) with
-              | None, _ -> None, false
-              | Some t, _ ->
-                let E.{ ty; _ } = E.term_view t in
-                let rt = E.mk_term (Symbols.Op (Symbols.BVGet i)) [t] ty in
-                Some rt, false
-            end
-          | Bit r -> X.term_extract r
+    match X.extract r with
+    | None -> X.term_extract r
+    | Some v ->
+      match v with
+      | Bit r -> X.term_extract r
+      | BV l ->
+        begin try
+            let mk_bv b sz =
+              let c = if b then '1' else '0' in
+              E.bitv (String.init sz (fun _ -> c)) (Ty.Tbitv sz)
+            in
+            match l with
+            | { bv = Cte b; sz; } :: tl ->
+              let _, t =
+                List.fold_left (
+                  fun (n, acc) r ->
+                    match r with
+                    | { bv = Cte b; sz; } ->
+                      let nsz =  n + sz in
+                      nsz,
+                      E.mk_term
+                        (Sy.Op Sy.Concat) [acc; mk_bv b sz] (Ty.Tbitv nsz)
+                    | _ -> raise Exit
+                ) (sz, mk_bv b sz) tl
+              in
+              Some t, false
+            | _ ->
+              None, false
+          with Exit ->
+            None, false
         end
-    in
-    res
+      | BVAccess (l, i) ->
+        match X.term_extract (is_mine (BV l)) with
+        | None, _ -> None, false
+        | Some t, _ ->
+          let E.{ ty; _ } = E.term_view t in
+          let rt = E.mk_term (Symbols.Op (Symbols.BVGet i)) [t] ty in
+          Some rt, false
 
   let abstract_selectors v acc = is_mine v, acc
 
