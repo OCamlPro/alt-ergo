@@ -1263,7 +1263,7 @@ let parse_fmt_opt =
   in
 
   Term.(ret (const mk_output_channel_opt $ std_output $ err_output
-             $ model_output))
+    $ model_output))
 
 let main =
 
