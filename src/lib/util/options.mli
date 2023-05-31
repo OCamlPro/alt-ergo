@@ -1060,19 +1060,16 @@ module Output : sig
     | Stdout
     | Stderr
     | Channel of out_channel * Format.formatter
-    | Buffer of Buffer.t * Format.formatter
+    | Fmt of Format.formatter
     | Invalid
 
-  val create_buffer : unit -> t
-  (** Create a new buffer. *)
+  val of_formatter : Format.formatter -> t
+  (** [of_formatter fmt] create an out channel of the formatter [fmt]. *)
 
   val of_filename : string -> t
   (** [of_filename filename] create an out channel to the file [filename].
       If the file does not exist, the procedure creates it. An existant file
       is truncated to zero length. *)
-
-  val contents : t -> string
-  (** Retrieve the content of the underlying buffer if any. *)
 
   val close_all : unit -> unit
   (** Flushing and closing all the remaining output channels. *)

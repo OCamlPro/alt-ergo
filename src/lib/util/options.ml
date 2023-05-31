@@ -33,13 +33,10 @@ module Output = struct
     | Stdout
     | Stderr
     | Channel of out_channel * Format.formatter
-    | Buffer of Buffer.t * Format.formatter
+    | Fmt of Format.formatter
     | Invalid
 
-  let create_buffer () =
-    let buf = Buffer.create 10 in
-    let fmt = Format.formatter_of_buffer buf in
-    Buffer (buf, fmt)
+  let of_formatter fmt = Fmt fmt
 
   let of_filename = function
     | "stdout" -> Stdout
@@ -56,20 +53,16 @@ module Output = struct
   let mdl_output = ref Stdout
   let usc_output = ref Stdout
 
-  let contents = function
-    | Stdout | Stderr | Channel _ | Invalid -> ""
-    | Buffer (buf, _) -> Buffer.contents buf
-
   let get_fmt = function
     | Stdout -> Format.std_formatter
     | Stderr -> Format.err_formatter
     | Channel (_, fmt) -> fmt
-    | Buffer (_, fmt) -> fmt
+    | Fmt fmt -> fmt
     | Invalid -> assert false
 
   let close o =
     match o with
-    | Stdout | Stderr | Buffer _ ->
+    | Stdout | Stderr | Fmt _ ->
       Format.pp_print_flush (get_fmt o) ();
     | Channel (cout, _) ->
       Format.pp_print_flush (get_fmt o) ();
