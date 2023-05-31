@@ -281,6 +281,7 @@ let main worker_id content =
     and the corresponding set of options
     Return a couple of list for status (one per goal) and errors *)
 let () =
+  at_exit Options.Output.close_all;
   Worker.set_onmessage (fun (json_file,json_options) ->
       Lwt_js_events.async (fun () ->
           let filename,worker_id,filecontent =
