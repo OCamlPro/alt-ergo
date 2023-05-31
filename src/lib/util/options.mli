@@ -1066,8 +1066,8 @@ module Output : sig
   val create_buffer : unit -> t
   (** Create a new buffer. *)
 
-  val create_channel : string -> t
-  (** [create_channel filename] create an out channel on the file [filename].
+  val of_filename : string -> t
+  (** [of_filename filename] create an out channel to the file [filename].
       If the file does not exist, the procedure creates it. An existant file
       is truncated to zero length. *)
 
@@ -1139,4 +1139,4 @@ module Output : sig
 end
 
 (** Print message as comment in the corresponding output format *)
-val print_output_format: Format.formatter -> string -> unit
+val pp_comment: Format.formatter -> string -> unit

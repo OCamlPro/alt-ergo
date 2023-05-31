@@ -582,9 +582,9 @@ let mk_opts file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
   end
 
 let mk_output_channel_opt std_output err_output mdl_output =
-  Options.Output.(create_channel std_output |> set_std);
-  Options.Output.(create_channel err_output |> set_err);
-  Options.Output.(create_channel mdl_output |> set_mdl);
+  Options.Output.(of_filename std_output |> set_std);
+  Options.Output.(of_filename err_output |> set_err);
+  Options.Output.(of_filename mdl_output |> set_mdl);
   `Ok()
 
 (* Custom sections *)

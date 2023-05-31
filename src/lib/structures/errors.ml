@@ -231,21 +231,21 @@ let report_run_error fmt = function
 
 let report fmt = function
   | Parser_error s ->
-    Options.print_output_format fmt
+    Options.pp_comment fmt
       (Format.sprintf "Parser Error: %s" s);
   | Lexical_error (l,s) ->
     Loc.report fmt l;
-    Options.print_output_format fmt
+    Options.pp_comment fmt
       (Format.sprintf "Lexical Error: %s" s);
   | Syntax_error (l,s) ->
     Loc.report fmt l;
-    Options.print_output_format fmt
+    Options.pp_comment fmt
       (Format.sprintf "Syntax Error: %s" s);
   | Typing_error (l,e) ->
     Loc.report fmt l;
-    Options.print_output_format fmt "Typing Error: ";
+    Options.pp_comment fmt "Typing Error: ";
     report_typing_error fmt e
   | Run_error e ->
-    Options.print_output_format fmt "Fatal Error: ";
+    Options.pp_comment fmt "Fatal Error: ";
     report_run_error fmt e
   | Warning_as_error -> ()

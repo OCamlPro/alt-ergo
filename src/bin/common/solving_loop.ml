@@ -289,10 +289,10 @@ let main () =
   let handle_option st_loc name (value : DStd.Term.t) =
     match name, value.term with
     | ":regular-output-channel", Symbol { name = Simple name; _ } ->
-      Options.Output.create_channel name
+      Options.Output.of_filename name
       |> Options.Output.set_regular
     | ":diagnostic-output-channel", Symbol { name = Simple name; _ } ->
-      Options.Output.create_channel name
+      Options.Output.of_filename name
       |> Options.Output.set_diagnostic
     | ":produce-models", Symbol { name = Simple "true"; _ } ->
       (* TODO: The generation of models is supported only with the SAT

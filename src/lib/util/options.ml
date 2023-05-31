@@ -41,7 +41,7 @@ module Output = struct
     let fmt = Format.formatter_of_buffer buf in
     Buffer (buf, fmt)
 
-  let create_channel = function
+  let of_filename = function
     | "stdout" -> Stdout
     | "stderr" -> Stderr
     | str ->
@@ -652,7 +652,7 @@ let set_file_for_js filename =
   set_js_mode true
 
 (* Printer **)
-let print_output_format fmt msg =
+let pp_comment fmt msg =
   match get_output_format () with
   | Smtlib2 -> Format.fprintf fmt "; %s" msg;
   | Native | Why3 | Unknown _ -> Format.fprintf fmt "%s" msg
