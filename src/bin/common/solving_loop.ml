@@ -183,14 +183,20 @@ let main () =
       Format.eprintf "[logic][parsed][%a] @[<hov>%a@]@."
         Dolmen.Std.Loc.print_compact c.Dolmen.Std.Statement.loc
         Dolmen.Std.Statement.print c;
-    st, c
+    if get_parse_only () then
+      st, `Done ()
+    else
+      st, `Continue c
   in
   let debug_typed_pipe st stmt =
     if State.get State.debug st then
       Format.eprintf "[logic][typed][%a] @[<hov>%a@]@\n@."
         Dolmen.Std.Loc.print_compact stmt.Typer_Pipe.loc
         Typer_Pipe.print stmt;
-    st, stmt
+    if get_type_only () then
+      st, `Done ()
+    else
+      st, `Continue stmt
   in
   let handle_exn _ bt = function
     | Dolmen.Std.Loc.Syntax_error (_, `Regular msg) ->
@@ -231,8 +237,7 @@ let main () =
         Dolmen_loop.Report.Conf.mk
           ~default:Dolmen_loop.Report.Warning.Status.Enabled)
       ?(max_warn = max_int) ?(time_limit = Float.infinity)
-      ?(size_limit = Float.infinity) ?(header_check = false)
-      ?(header_licenses = []) ?header_lang_version ?(type_check = true)
+      ?(size_limit = Float.infinity) ?(type_check = true)
       ?(solver_ctx = empty_solver_ctx) path =
     let dir = Filename.dirname path in
     let filename = Filename.basename path in
@@ -278,7 +283,6 @@ let main () =
     |> Parser.init
     |> Typer.init
     |> Typer_Pipe.init ~type_check
-    |> Header.init ~header_check ~header_licenses ~header_lang_version
   in
 
   let handle_stmt :
@@ -406,19 +410,18 @@ let main () =
       let st, g = Parser.parse_logic [] st (State.get State.logic_file st) in
       let all_used_context = FE.init_all_used_context () in
       let finally = finally ~handle_exn in
-      let _st =
+      let st =
         let open Pipeline in
         run ~finally g st
           (fix
              (op ~name:"expand" Parser.expand)
              (op ~name:"debug_pre" debug_parsed_pipe
-              @>>> op ~name:"typecheck" Typer_Pipe.typecheck
+              @>|> op ~name:"typecheck" Typer_Pipe.typecheck
               @>|> op ~name:"debug_post" debug_typed_pipe
-              @>>> op (fun st stmt -> handle_stmt all_used_context st stmt, ())
+              @>|> op (fun st stmt -> handle_stmt all_used_context st stmt, ())
               @>>> _end))
       in
-      let st = Header.check st in
-      ignore (State.flush st ())
+      State.flush st () |> ignore
     with exn ->
       let bt = Printexc.get_raw_backtrace () in
       handle_exn st bt exn
