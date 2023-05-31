@@ -1066,8 +1066,10 @@ module Output : sig
   val of_formatter : Format.formatter -> t
   (** [of_formatter fmt] create an out channel of the formatter [fmt]. *)
 
-  val of_filename : string -> t
-  (** [of_filename filename] create an out channel to the file [filename].
+  val create_channel : string -> t
+  (** [create_filename filename] create an out channel to the file [filename].
+      If the argument is "stdout", respectively "stderr", the channel is the
+      standard output, respectively the standard error.
       If the file does not exist, the procedure creates it. An existant file
       is truncated to zero length. *)
 

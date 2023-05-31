@@ -38,7 +38,7 @@ module Output = struct
 
   let of_formatter fmt = Fmt fmt
 
-  let of_filename = function
+  let create_channel = function
     | "stdout" -> Stdout
     | "stderr" -> Stderr
     | str ->

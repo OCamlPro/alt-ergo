@@ -583,11 +583,11 @@ let mk_opts file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
 
 let mk_output_channel_opt std_output deprecated_std_output err_output
     deprecated_err_output mdl_output =
-  Options.Output.(of_filename std_output |> set_std);
-  Options.Output.(of_filename deprecated_std_output |> set_std);
-  Options.Output.(of_filename err_output |> set_err);
-  Options.Output.(of_filename deprecated_err_output |> set_err);
-  Options.Output.(of_filename mdl_output |> set_mdl);
+  Options.Output.(create_channel std_output |> set_std);
+  Options.Output.(create_channel deprecated_std_output |> set_std);
+  Options.Output.(create_channel err_output |> set_err);
+  Options.Output.(create_channel deprecated_err_output |> set_err);
+  Options.Output.(create_channel mdl_output |> set_mdl);
   `Ok()
 
 (* Custom sections *)
