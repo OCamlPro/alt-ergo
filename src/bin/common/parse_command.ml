@@ -581,12 +581,9 @@ let mk_opts file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
     `Ok true
   end
 
-let mk_output_channel_opt std_output deprecated_std_output err_output
-    deprecated_err_output mdl_output =
+let mk_output_channel_opt std_output err_output mdl_output =
   Options.Output.(create_channel std_output |> set_std);
-  Options.Output.(create_channel deprecated_std_output |> set_std);
   Options.Output.(create_channel err_output |> set_err);
-  Options.Output.(create_channel deprecated_err_output |> set_err);
   Options.Output.(create_channel mdl_output |> set_mdl);
   `Ok()
 
@@ -1208,24 +1205,36 @@ let parse_theory_opt =
        )
 
 let parse_fmt_opt =
-
   let docs = s_fmt in
   let docv = "CHANNEL" in
 
-  let std_output, deprecated_std_output =
+  let merge_formatters default preferred deprecated =
+    match preferred, deprecated with
+    | Some fmt, _ -> fmt
+    | None, Some fmt -> fmt
+    | None, None -> default
+  in
+
+  let std_output =
     let doc =
       Format.sprintf
         "Set the standard output used by default to print the results,
-    models and unsat cores. Possible values are %s."
+          models and unsat cores. Possible values are %s."
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
     in
     let deprecated = "this option is depreciated. Please use --std-output." in
-    Arg.(value & opt string "stdout" & info ["std-output"] ~docv ~docs ~doc),
-    Arg.(value & opt string "stdout" & info ~deprecated ["std-formatter"]
-           ~docv ~docs ~doc)
+    let std_output =
+      Arg.(value & opt (some' string) None & info ["std-output"] ~docs
+             ~doc ~docv)
+    in
+    let std_formatter =
+      Arg.(value & opt (some' string) None  & info ["std-formatter"]
+             ~deprecated ~docs ~docv)
+    in
+    Term.(const (merge_formatters "stdout") $ std_output $ std_formatter)
   in
 
-  let err_output, deprecate_err_output =
+  let err_output =
     let doc =
       Format.sprintf
         "Set the error output used by default to print error, debug and
@@ -1233,9 +1242,15 @@ let parse_fmt_opt =
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
     in
     let deprecated = "this option is depreciated. Please use --err-output." in
-    Arg.(value & opt string "stderr" & info ["err-output"] ~docv ~docs ~doc),
-    Arg.(value & opt string "stderr" & info ~deprecated ["err-formatter"]
-           ~docv ~docs ~doc)
+    let err_output =
+      Arg.(value & opt (some' string) None & info ["err-output"] ~docs
+             ~doc ~docv)
+    in
+    let err_formatter =
+      Arg.(value & opt (some' string) None & info ["err-formatter"]
+             ~deprecated ~docs ~docv)
+    in
+    Term.(const (merge_formatters "stderr") $ err_output $ err_formatter)
   in
 
   let model_output =
@@ -1247,8 +1262,8 @@ let parse_fmt_opt =
     Arg.(value & opt string "stdout" & info ["model-output"] ~docv ~docs ~doc)
   in
 
-  Term.(ret (const mk_output_channel_opt $ std_output $ deprecated_std_output
-             $ err_output $ deprecate_err_output $ model_output))
+  Term.(ret (const mk_output_channel_opt $ std_output $ err_output
+             $ model_output))
 
 let main =
 
