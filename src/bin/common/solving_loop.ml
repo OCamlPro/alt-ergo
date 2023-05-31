@@ -297,7 +297,7 @@ let main () =
     | ":produce-models", Symbol { name = Simple "true"; _ } ->
       (* TODO: The generation of models is supported only with the SAT
          solver Tableaux. Remove this line after merging the OptimAE
-         PR. *)
+         PR. See https://github.com/OCamlPro/alt-ergo/pull/553 *)
       if Stdlib.(Options.get_sat_solver () = Tableaux) then
         Options.set_interpretation ILast
       else Printer.print_wrn "%a The generation of models is not supported \

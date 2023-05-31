@@ -389,7 +389,8 @@ let mk_models_opt b =
   if b then begin
     set_interpretation ILast;
     (* TODO: The generation of models is supported only with the SAT solver
-       Tableaux. Remove this line after merging the OptimAE PR. *)
+       Tableaux. Remove this line after merging the OptimAE PR.
+       See https://github.com/OCamlPro/alt-ergo/pull/553 *)
     set_sat_solver Tableaux
   end;
   `Ok ()
