@@ -1321,7 +1321,7 @@ let main =
   Cmd.v info term
 
 let parse_cmdline_arguments () =
-  at_exit Options.Output.at_exit;
+  at_exit Options.Output.close_all;
   let r = Cmd.eval_value main in
   match r with
   | Ok `Ok true -> ()

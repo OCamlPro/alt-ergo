@@ -80,7 +80,7 @@ module Output = struct
     close !output;
     output := o
 
-  let at_exit () =
+  let close_all () =
     set_output std_output Invalid;
     set_output err_output Invalid;
     set_output wrn_output Invalid;

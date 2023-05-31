@@ -1074,9 +1074,8 @@ module Output : sig
   val contents : t -> string
   (** Retrieve the content of the underlying buffer if any. *)
 
-  val at_exit : unit -> unit
-  (** This function is run at exit in order to flush and close of the
-      remaining output channels. *)
+  val close_all : unit -> unit
+  (** Flushing and closing all the remaining output channels. *)
 
   val set_regular : t -> unit
   (** Set the regular output channel used by default to output results,
