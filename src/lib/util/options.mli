@@ -1066,6 +1066,9 @@ module Output : sig
   val of_formatter : Format.formatter -> t
   (** [of_formatter fmt] create an out channel of the formatter [fmt]. *)
 
+  val to_formatter : t -> Format.formatter
+  (** [to_formatter fmt] return the underlying formatter. *)
+
   val create_channel : string -> t
   (** [create_filename filename] create an out channel to the file [filename].
       If the argument is "stdout", respectively "stderr", the channel is the

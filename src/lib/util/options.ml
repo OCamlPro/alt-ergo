@@ -38,6 +38,13 @@ module Output = struct
 
   let of_formatter fmt = Fmt fmt
 
+  let to_formatter = function
+    | Stdout -> Format.std_formatter
+    | Stderr -> Format.err_formatter
+    | Channel (_, fmt) -> fmt
+    | Fmt fmt -> fmt
+    | Invalid -> assert false
+
   let create_channel = function
     | "stdout" -> Stdout
     | "stderr" -> Stderr
@@ -53,19 +60,12 @@ module Output = struct
   let mdl_output = ref Stdout
   let usc_output = ref Stdout
 
-  let get_fmt = function
-    | Stdout -> Format.std_formatter
-    | Stderr -> Format.err_formatter
-    | Channel (_, fmt) -> fmt
-    | Fmt fmt -> fmt
-    | Invalid -> assert false
-
   let close o =
     match o with
     | Stdout | Stderr | Fmt _ ->
-      Format.pp_print_flush (get_fmt o) ();
+      Format.pp_print_flush (to_formatter o) ();
     | Channel (cout, _) ->
-      Format.pp_print_flush (get_fmt o) ();
+      Format.pp_print_flush (to_formatter o) ();
       close_out cout
     | Invalid -> ()
 
@@ -91,12 +91,12 @@ module Output = struct
     set_output wrn_output o;
     set_output dbg_output o
 
-  let get_fmt_std () = get_fmt !std_output
-  let get_fmt_err () = get_fmt !err_output
-  let get_fmt_wrn () = get_fmt !wrn_output
-  let get_fmt_dbg () = get_fmt !dbg_output
-  let get_fmt_mdl () = get_fmt !mdl_output
-  let get_fmt_usc () = get_fmt !usc_output
+  let get_fmt_std () = to_formatter !std_output
+  let get_fmt_err () = to_formatter !err_output
+  let get_fmt_wrn () = to_formatter !wrn_output
+  let get_fmt_dbg () = to_formatter !dbg_output
+  let get_fmt_mdl () = to_formatter !mdl_output
+  let get_fmt_usc () = to_formatter !usc_output
 
   let set_std = set_output std_output
   let set_err = set_output err_output
