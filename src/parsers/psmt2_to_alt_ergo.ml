@@ -40,7 +40,6 @@ module Smtlib_parser = Psmt2Frontend.Smtlib_parser
 module Smtlib_lexer = Psmt2Frontend.Smtlib_lexer
 
 open Smtlib_syntax
-open Options
 open Parsed_interface
 
 
@@ -504,7 +503,7 @@ let aux aux_fun token lexbuf =
     let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
     let lex = Lexing.lexeme lexbuf in
     Parsing.clear_parser ();
-    Smtlib_error.print (Options.get_fmt_err ()) (Options.get_file ())
+    Smtlib_error.print (Options.Output.get_fmt_err ()) (Options.get_file ())
       (Syntax_error (lex)) loc;
     Errors.error (Errors.Syntax_error (loc,""))
   | Smtlib_error.Error (e , p) ->
@@ -514,7 +513,8 @@ let aux aux_fun token lexbuf =
         Some loc -> loc
       | None -> Lexing.dummy_pos,Lexing.dummy_pos
     in
-    Smtlib_error.print (get_fmt_err ()) (Options.get_file ()) e loc;
+    Smtlib_error.print (Options.Output.get_fmt_err ())
+      (Options.get_file ()) e loc;
     Errors.error (Errors.Syntax_error (loc,""))
 
 let file_parser token lexbuf =

@@ -42,8 +42,9 @@ type 'a state = {
 }
 
 (* If the buffer is not empty split the string in strings at each newline *)
-let check_buffer_content b =
-  let buf_cont = Buffer.contents b in
+let check_buffer_content (buf, output) =
+  Format.pp_print_flush (Options.Output.to_formatter output) ();
+  let buf_cont = Buffer.contents buf in
   if String.equal buf_cont "" then
     None
   else
@@ -55,22 +56,30 @@ let check_context_content c =
   | [] -> None
   | _ -> Some c
 
+let create_buffer () =
+  let buf = Buffer.create 10 in
+  let output =
+    Format.formatter_of_buffer buf
+    |> Options.Output.of_formatter
+  in
+  buf, output
+
 let main worker_id content =
   try
     (* Create buffer for each formatter
        The content of this buffers are then retrieved and send as results *)
-    let buf_std = Buffer.create 10 in
-    Options.set_fmt_std (Format.formatter_of_buffer buf_std);
-    let buf_err = Buffer.create 10 in
-    Options.set_fmt_err (Format.formatter_of_buffer buf_err);
-    let buf_wrn = Buffer.create 10 in
-    Options.set_fmt_wrn (Format.formatter_of_buffer buf_wrn);
-    let buf_dbg = Buffer.create 10 in
-    Options.set_fmt_dbg (Format.formatter_of_buffer buf_dbg);
-    let buf_mdl = Buffer.create 10 in
-    Options.set_fmt_mdl (Format.formatter_of_buffer buf_mdl);
-    let buf_usc = Buffer.create 10 in
-    Options.set_fmt_usc (Format.formatter_of_buffer buf_usc);
+    let buf_std = create_buffer () in
+    Options.Output.set_std (snd buf_std);
+    let buf_err = create_buffer () in
+    Options.Output.set_err (snd buf_err);
+    let buf_wrn = create_buffer () in
+    Options.Output.set_wrn (snd buf_wrn);
+    let buf_dbg = create_buffer () in
+    Options.Output.set_dbg (snd buf_dbg);
+    let buf_mdl = create_buffer () in
+    Options.Output.set_mdl (snd buf_mdl);
+    let buf_usc = create_buffer () in
+    Options.Output.set_usc (snd buf_usc);
 
     (* Status updated regarding if AE succed or failed
        (error or steplimit reached) *)
@@ -273,6 +282,7 @@ let main worker_id content =
     and the corresponding set of options
     Return a couple of list for status (one per goal) and errors *)
 let () =
+  at_exit Options.Output.close_all;
   Worker.set_onmessage (fun (json_file,json_options) ->
       Lwt_js_events.async (fun () ->
           let filename,worker_id,filecontent =

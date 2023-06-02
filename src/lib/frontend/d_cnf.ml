@@ -1154,7 +1154,6 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
   in
   E.clean_trigger ~in_theory name trigger
 
-
 (** Preprocesses the body of a goal by:
     - removing the top-level universal quantifiers and considering their
       quantified variables as uninsterpreted symbols.

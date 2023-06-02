@@ -291,7 +291,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          not (get_debug_unsat_core()) &&
          not (get_save_used_context())
       then
-        Printer.print_fmt (Options.get_fmt_usc ())
+        Printer.print_fmt (Options.Output.get_fmt_usc ())
           "unsat-core:@,%a@."
           (Ex.print_unsat_core ~tab:true) dep;
       check_status_consistency status;

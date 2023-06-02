@@ -29,7 +29,6 @@
 (**************************************************************************)
 
 open AltErgoLib
-open Options
 
 let timers = Timers.empty ()
 
@@ -39,7 +38,8 @@ let init_sigterm_6 () =
   (* what to do with Ctrl+C ? *)
   Sys.set_signal Sys.sigint(*-6*)
     (Sys.Signal_handle (fun _ ->
-         if Options.get_profiling() then Profiling.switch (get_fmt_err ())
+         if Options.get_profiling() then
+           Profiling.switch (Options.Output.get_fmt_err ())
          else begin
            Printer.print_wrn "User wants me to stop.";
            Printer.print_std "unknown";
@@ -58,7 +58,7 @@ let init_sigterm_11_9 () =
            (Sys.Signal_handle
               (fun _ ->
                  Profiling.print true (Steps.get_steps ())
-                   timers (get_fmt_err ());
+                   timers (Options.Output.get_fmt_err ());
                  exit 1
               )
            )
@@ -71,7 +71,8 @@ let init_sigterm_21 () =
     Sys.set_signal Sys.sigprof (*-21*)
       (Sys.Signal_handle
          (fun _ ->
-            Profiling.print false (Steps.get_steps ()) timers (get_fmt_err ());
+            Profiling.print false (Steps.get_steps ()) timers
+              (Options.Output.get_fmt_err ());
          )
       )
 

@@ -1166,18 +1166,19 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     begin
       match !latest_saved_env with
       | None ->
-        Printer.print_fmt (Options.get_fmt_mdl ())
+        Printer.print_fmt (Options.Output.get_fmt_mdl ())
           "@[<v 0>[FunSat]@, \
            It seems that no model has been computed so far.@,\
            You may need to change your model generation strategy@,\
            or to increase your timeout.@]"
       | Some env ->
-        Printer.print_fmt (Options.get_fmt_mdl ())
+        Printer.print_fmt (Options.Output.get_fmt_mdl ())
           "@[<v 0>[FunSat]@, \
            A model has been computed. However, I failed \
            while computing it so may be incorrect.@]";
         let prop_model = extract_prop_model ~complete_model:true env in
-        Th.output_concrete_model (Options.get_fmt_mdl ()) ~prop_model env.tbox;
+        Th.output_concrete_model (Options.Output.get_fmt_mdl ()) ~prop_model
+          env.tbox;
     end;
     return_function ()
 
@@ -1193,7 +1194,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
 
     let prop_model = extract_prop_model ~complete_model:true env in
-    Th.output_concrete_model (Options.get_fmt_mdl ()) ~prop_model env.tbox;
+    Th.output_concrete_model (Options.Output.get_fmt_mdl ()) ~prop_model
+      env.tbox;
 
     terminated_normally := true;
     return_function env

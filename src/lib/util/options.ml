@@ -28,38 +28,83 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* Formatter declarations, getters and setters *)
-let fmt_std = ref Format.std_formatter
-let fmt_err = ref Format.err_formatter
-let fmt_wrn = ref Format.err_formatter
-let fmt_dbg = ref Format.err_formatter
-let fmt_mdl = ref Format.std_formatter
-let fmt_usc = ref Format.std_formatter
+module Output = struct
+  type t =
+    | Stdout
+    | Stderr
+    | Channel of out_channel * Format.formatter
+    | Fmt of Format.formatter
+    | Invalid
 
-let set_std_fmt f =
-  fmt_std := f;
-  fmt_mdl := f;
-  fmt_usc := f
+  let of_formatter fmt = Fmt fmt
 
-let set_err_fmt f =
-  fmt_err := f;
-  fmt_wrn := f;
-  fmt_dbg := f
+  let to_formatter = function
+    | Stdout -> Format.std_formatter
+    | Stderr -> Format.err_formatter
+    | Channel (_, fmt) -> fmt
+    | Fmt fmt -> fmt
+    | Invalid -> assert false
 
-let get_fmt_std () = !fmt_std
-let get_fmt_err () = !fmt_err
-let get_fmt_wrn () = !fmt_wrn
-let get_fmt_dbg () = !fmt_dbg
-let get_fmt_mdl () = !fmt_mdl
-let get_fmt_usc () = !fmt_usc
+  let create_channel = function
+    | "stdout" -> Stdout
+    | "stderr" -> Stderr
+    | str ->
+      let cout = open_out str in
+      let fmt = Format.formatter_of_out_channel cout in
+      Channel (cout, fmt)
 
-let set_fmt_std f = fmt_std := f
-let set_fmt_err f = fmt_err := f
-let set_fmt_wrn f = fmt_wrn := f
-let set_fmt_dbg f = fmt_dbg := f
-let set_fmt_mdl f = fmt_mdl := f
-let set_fmt_usc f = fmt_usc := f
+  let std_output = ref Stdout
+  let err_output = ref Stderr
+  let wrn_output = ref Stderr
+  let dbg_output = ref Stderr
+  let mdl_output = ref Stdout
+  let usc_output = ref Stdout
 
+  let close o =
+    match o with
+    | Stdout | Stderr | Fmt _ ->
+      Format.pp_print_flush (to_formatter o) ();
+    | Channel (cout, _) ->
+      Format.pp_print_flush (to_formatter o) ();
+      close_out cout
+    | Invalid -> ()
+
+  let set_output output o =
+    close !output;
+    output := o
+
+  let close_all () =
+    set_output std_output Invalid;
+    set_output err_output Invalid;
+    set_output wrn_output Invalid;
+    set_output dbg_output Invalid;
+    set_output mdl_output Invalid;
+    set_output usc_output Invalid
+
+  let set_regular o =
+    set_output std_output o;
+    set_output mdl_output o;
+    set_output usc_output o
+
+  let set_diagnostic o =
+    set_output err_output o;
+    set_output wrn_output o;
+    set_output dbg_output o
+
+  let get_fmt_std () = to_formatter !std_output
+  let get_fmt_err () = to_formatter !err_output
+  let get_fmt_wrn () = to_formatter !wrn_output
+  let get_fmt_dbg () = to_formatter !dbg_output
+  let get_fmt_mdl () = to_formatter !mdl_output
+  let get_fmt_usc () = to_formatter !usc_output
+
+  let set_std = set_output std_output
+  let set_err = set_output err_output
+  let set_wrn = set_output wrn_output
+  let set_dbg = set_output dbg_output
+  let set_mdl = set_output mdl_output
+  let set_usc = set_output usc_output
+end
 
 (* Declaration of all the options as refs with default values *)
 
@@ -564,7 +609,8 @@ let exec_thread_yield () = !thread_yield ()
 let exec_timeout () = !timeout ()
 
 let tool_req n msg =
-  if get_rule () = n then Format.fprintf (get_fmt_dbg ()) "[rule] %s@." msg
+  if get_rule () = n then
+    Format.fprintf (Output.get_fmt_dbg ()) "[rule] %s@." msg
 
 (** Simple Timer module **)
 module Time = struct
@@ -599,7 +645,7 @@ let set_file_for_js filename =
   set_js_mode true
 
 (* Printer **)
-let print_output_format fmt msg =
+let pp_comment fmt msg =
   match get_output_format () with
   | Smtlib2 -> Format.fprintf fmt "; %s" msg;
   | Native | Why3 | Unknown _ -> Format.fprintf fmt "%s" msg

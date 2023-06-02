@@ -499,7 +499,7 @@ let update_status image label buttonclean env s steps =
     else
       Printer.print_std "@{<C.F_Green>Valid@} (%2.4f) (%d)" time steps;
     if get_unsat_core () then begin
-      Printer.print_fmt (Options.get_fmt_usc ()) "unsat-core:@ %a"
+      Printer.print_fmt (Options.Output.get_fmt_usc ()) "unsat-core:@ %a"
         (Explanation.print_unsat_core ~tab:true) dep;
       show_used_lemmas env dep
     end;
