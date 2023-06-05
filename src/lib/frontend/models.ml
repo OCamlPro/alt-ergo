@@ -453,8 +453,7 @@ end
 (* of module Why3CounterExample *)
 
 let output_concrete_model fmt props ~functions ~constants ~arrays =
-  Printer.print_fmt ~flushed:false fmt "@[<v 0>unknown@ ";
-  Printer.print_fmt ~flushed:false fmt "@[<v 2>(model@,";
+  Printer.print_fmt ~flushed:false fmt "@[<v 2>(@,";
   if Options.get_model_type_constraints () then
     begin
       Why3CounterExample.output_constraints fmt props
