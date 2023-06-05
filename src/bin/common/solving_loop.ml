@@ -201,6 +201,10 @@ let main () =
   let handle_exn _ bt = function
     | Dolmen.Std.Loc.Syntax_error (_, `Regular msg) ->
       Printer.print_err "%t" msg;
+      exit 1
+    | Util.Timeout ->
+      Printer.print_status_timeout None None None None;
+      exit 142
     | _ as exn -> Printexc.raise_with_backtrace exn bt
   in
   let finally ~handle_exn st e =
@@ -485,6 +489,11 @@ let main () =
   let d_fe filename =
     let st = mk_state filename in
     try
+      Options.with_timelimit_if
+        ~is_gui:false
+        (not (Options.get_timelimit_per_goal ()))
+      @@ fun () ->
+
       let st, g = Parser.parse_logic [] st (State.get State.logic_file st) in
       let all_used_context = FE.init_all_used_context () in
       let finally = finally ~handle_exn in
