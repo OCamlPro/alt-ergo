@@ -2355,7 +2355,7 @@ let new_facts_for_axiom
               let nf = E.apply_subst sbs f in
               (* incrementality/push. Although it's not supported for
                  theories *)
-              let nf = E.mk_imp trigger_increm_guard nf 0 in
+              let nf = E.mk_imp trigger_increm_guard nf in
               let accepted = selector nf orig in
               record_this_instance nf accepted lorig;
               if accepted then begin

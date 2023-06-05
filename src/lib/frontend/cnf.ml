@@ -139,7 +139,7 @@ let rec make_term up_qv quant_basename t =
       in
       let t1 = mk_term t1 in
       let t2 = mk_term t2 in
-      E.mk_ite cond t1 t2 0
+      E.mk_ite cond t1 t2
 
     | TTproject (b, t, s) ->
       E.mk_term (Sy.destruct ~guarded:b (Hstring.view s)) [mk_term t] ty
@@ -276,26 +276,26 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
       let ff1 = mk_form up_qv ~toplevel:false f1.c f1.annot in
       let ff2 = mk_form up_qv ~toplevel:false f2.c f2.annot in
       begin match op with
-        | OPand -> E.mk_and ff1 ff2 false id
-        | OPor -> E.mk_or ff1 ff2 false id
-        | OPxor -> E.mk_xor ff1 ff2 id
+        | OPand -> E.mk_and ff1 ff2 false
+        | OPor -> E.mk_or ff1 ff2 false
+        | OPxor -> E.mk_xor ff1 ff2
         | _ -> assert false
       end
     | TFop(OPimp,[f1;f2]) ->
       let ff1 = mk_form up_qv ~toplevel:false f1.c f1.annot in
       let ff2 = mk_form up_qv ~toplevel:false f2.c f2.annot in
-      E.mk_imp ff1 ff2 id
+      E.mk_imp ff1 ff2
     | TFop(OPnot,[f]) ->
       E.neg @@ mk_form up_qv ~toplevel:false f.c f.annot
     | TFop(OPif, [cond; f2;f3]) ->
       let cond = mk_form up_qv ~toplevel:false cond.c cond.annot in
       let ff2  = mk_form up_qv ~toplevel:false f2.c f2.annot in
       let ff3  = mk_form up_qv ~toplevel:false f3.c f3.annot in
-      E.mk_if cond ff2 ff3 id
+      E.mk_if cond ff2 ff3
     | TFop(OPiff,[f1;f2]) ->
       let ff1 = mk_form up_qv ~toplevel:false f1.c f1.annot in
       let ff2 = mk_form up_qv ~toplevel:false f2.c f2.annot in
-      E.mk_iff ff1 ff2 id
+      E.mk_iff ff1 ff2
     | (TFforall qf | TFexists qf) as f ->
       let name =
         if !name_tag = 0 then name_base

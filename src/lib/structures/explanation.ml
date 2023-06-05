@@ -160,10 +160,10 @@ let rec literals_of_acc lit fs f acc = match E.form_view f with
   | E.Literal _ ->
     if lit then f :: acc else acc
   | E.Iff(f1, f2) ->
-    let g = E.elim_iff f1 f2 (E.id f) ~with_conj:true in
+    let g = E.elim_iff f1 f2 ~with_conj:true in
     literals_of_acc lit fs g acc
   | E.Xor(f1, f2) ->
-    let g = E.neg @@ E.elim_iff f1 f2 (E.id f) ~with_conj:false in
+    let g = E.neg @@ E.elim_iff f1 f2 ~with_conj:false in
     literals_of_acc lit fs g acc
   | E.Unit (f1,f2) ->
     let acc = literals_of_acc false fs f1 acc in

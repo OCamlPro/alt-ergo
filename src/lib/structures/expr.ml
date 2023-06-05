@@ -186,7 +186,7 @@ let compare_lists l1 l2 cmp_elts =
   let res = Util.cmp_lists l1 l2 cmp_elts in
   if res <> 0 then raise (Util.Cmp res)
 
-let compare_triggers _f1 _f2 trs1 trs2 =
+let compare_triggers trs1 trs2 =
   try
     List.iter2
       (fun tr1 tr2 ->
@@ -240,7 +240,7 @@ let compare_quant
       else
         let c = compare_sko_vty free_vty1 free_vty2 in
         if c <> 0 then c
-        else compare_triggers f1 f2 trs1 trs2
+        else compare_triggers trs1 trs2
 
 module Msbt : Map.S with type key = expr SMap.t =
   Map.Make
@@ -973,7 +973,7 @@ let pred t = mk_term (Sy.Op Sy.Minus) [t;int "1"] Ty.Tint
 
 (** simple smart constructors for formulas *)
 
-let mk_or f1 f2 is_impl _id =
+let mk_or f1 f2 is_impl =
   if equal f1 (neg f2) then vrai
   else
   if equal f1 f2 then f1
@@ -1004,7 +1004,7 @@ let mk_or f1 f2 is_impl _id =
       neg.neg <- Some pos;
       pos
 
-let mk_iff f1 f2 _id =
+let mk_iff f1 f2 =
   if equal f1 (neg f2) then faux
   else if equal f1 f2 then vrai
   else if equal f1 faux then neg f2
@@ -1034,21 +1034,21 @@ let mk_iff f1 f2 _id =
       neg.neg <- Some pos;
       pos
 
-let mk_and f1 f2 is_impl id =
-  neg @@ mk_or (neg f1) (neg f2) is_impl id
+let mk_and f1 f2 is_impl =
+  neg @@ mk_or (neg f1) (neg f2) is_impl
 
-let mk_imp f1 f2 id = mk_or (neg f1) f2 true id
+let mk_imp f1 f2 = mk_or (neg f1) f2 true
 
-let mk_xor f1 f2 id =
-  neg (mk_iff f1 f2 id)
+let mk_xor f1 f2 =
+  neg (mk_iff f1 f2)
 
-let mk_if cond f2 f3 id =
+let mk_if cond f2 f3 =
   mk_or
-    (mk_and cond f2 true id) (mk_and (neg cond) f3 true id) false id
+    (mk_and cond f2 true) (mk_and (neg cond) f3 true) false
 
-let mk_ite cond th el id =
+let mk_ite cond th el =
   let ty = type_info th in
-  if ty == Ty.Tbool then mk_if cond th el id
+  if ty == Ty.Tbool then mk_if cond th el
   else mk_term (Sy.Op Sy.Tite) [cond; th; el] ty
 
 let [@inline always] const_term e =
@@ -1175,7 +1175,7 @@ let mk_eq ~iff t1 t2 =
       if t1 == neg t2 then faux
       else
         (* translate to iff, eventual simplification made in mk_or *)
-        let res = mk_iff t1 t2 0 in
+        let res = mk_iff t1 t2 in
         match res.f with
         | Sy.Form _ when not iff ->
           (* in some situation (eg. theories deductions, mk_iff may
@@ -1202,7 +1202,7 @@ let mk_nary_eq l =
           ) e r
       in
       if type_info e == Ty.Tbool then
-        List.fold_left (fun x y -> mk_iff x y 0) e  r
+        List.fold_left (fun x y -> mk_iff x y) e  r
       else
         mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) l
   with Exit ->
@@ -1346,25 +1346,25 @@ let rec apply_subst_aux (s_t, s_ty) t =
 
       | Sy.Form (Sy.F_Unit _), _ ->
         begin match xs' with
-          | [u; v] -> mk_and u v false (*b*) 0
+          | [u; v] -> mk_and u v false (*b*)
           | _ -> assert false
         end
 
       | Sy.Form (Sy.F_Clause b), _ ->
         begin match xs' with
-          | [u; v] -> mk_or u v b 0
+          | [u; v] -> mk_or u v b
           | _ -> assert false
         end
 
       | Sy.Form Sy.F_Iff, _ ->
         begin match xs' with
-          | [u; v] -> mk_iff u v 0
+          | [u; v] -> mk_iff u v
           | _ -> assert false
         end
 
       | Sy.Form Sy.F_Xor, _ ->
         begin match xs' with
-          | [u; v] -> mk_xor u v 0
+          | [u; v] -> mk_xor u v
           | _ -> assert false
         end
 
@@ -1747,18 +1747,18 @@ let rec mk_ite_eq x c th el =
   else
     let e1 = mk_eq_aux x th in
     let e2 = mk_eq_aux x el in
-    mk_and (mk_imp c e1 0) (mk_imp (neg c) e2 0) false 0
+    mk_and (mk_imp c e1) (mk_imp (neg c) e2) false
 
 and mk_eq_aux x e =
   match e.xs with
   | [c;th;el] when is_ite e.f -> mk_ite_eq x c th el
   | _ -> mk_eq ~iff:true  x e
 
-let mk_let_equiv let_sko let_e id  =
+let mk_let_equiv let_sko let_e =
   match let_e.xs with
   | [_;_;_] when is_ite let_e.f -> mk_eq_aux let_sko let_e
   | _ ->
-    if type_info let_e == Ty.Tbool then mk_iff let_sko let_e id
+    if type_info let_e == Ty.Tbool then mk_iff let_sko let_e
     else mk_eq ~iff:true let_sko let_e
 
 let rec elim_let =
@@ -1788,9 +1788,8 @@ let rec elim_let =
                          inlining a form inside a term"]
     else
       let subst = SMap.add let_v let_sko subst in
-      let id = id in_e in
-      let equiv = mk_let_equiv let_sko let_e id in
-      let conjs = (fun f' -> mk_and equiv f' false id) :: conjs in
+      let equiv = mk_let_equiv let_sko let_e in
+      let conjs = (fun f' -> mk_and equiv f' false) :: conjs in
       elim_let_rec subst in_e ~recursive ~conjs
 
 and elim_let_rec subst in_e ~recursive ~conjs =
@@ -1810,15 +1809,15 @@ let elim_let ~recursive letin =
   res
 
 
-let elim_iff f1 f2 id ~with_conj =
+let elim_iff f1 f2 ~with_conj =
   if with_conj then
     mk_and
-      (mk_imp f1 f2 id)
-      (mk_imp f2 f1 id) false id
+      (mk_imp f1 f2)
+      (mk_imp f2 f1) false
   else
     mk_or
-      (mk_and f1 f2 false id)
-      (mk_and (neg f1) (neg f2) false id) false id
+      (mk_and f1 f2 false)
+      (mk_and (neg f1) (neg f2) false) false
 
 
 module Triggers = struct
@@ -2488,7 +2487,7 @@ let rec compile_match mk_destr mker e cases accu =
     | _ ->
       let _else = compile_match mk_destr mker e l accu in
       let cond = mker e name in
-      mk_ite cond _then _else 0
+      mk_ite cond _then _else
 
 (* TO BE REMOVED *)
 let debug_compile_match e cases res =
@@ -2695,22 +2694,22 @@ module Purification = struct
           | Sy.F_Unit imp, [a;b], _ ->
             let a' = purify_form a in
             let b' = purify_form b in
-            if a == a' && b == b' then e else mk_and a' b' imp 0
+            if a == a' && b == b' then e else mk_and a' b' imp
 
           | Sy.F_Clause imp, [a;b], _ ->
             let a' = purify_form a in
             let b' = purify_form b in
-            if a == a' && b == b' then e else mk_or a' b' imp 0
+            if a == a' && b == b' then e else mk_or a' b' imp
 
           | Sy.F_Iff, [a;b], _ ->
             let a' = purify_form a in
             let b' = purify_form b in
-            if a == a' && b == b' then e else mk_iff a' b' 0
+            if a == a' && b == b' then e else mk_iff a' b'
 
           | Sy.F_Xor, [a;b], _ ->
             let a' = purify_form a in
             let b' = purify_form b in
-            if a == a' && b == b' then e else mk_xor a' b' 0
+            if a == a' && b == b' then e else mk_xor a' b'
 
           | Sy.F_Lemma, [], B_lemma q ->
             let m = purify_form q.main in

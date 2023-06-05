@@ -196,13 +196,13 @@ val mk_builtin : is_pos:bool -> Symbols.builtin -> t list -> t
 
 (** simple smart constructors for formulas *)
 
-val mk_or  : t -> t -> bool -> int -> t
-val mk_and : t -> t -> bool -> int -> t
-val mk_imp : t -> t -> int -> t
-val mk_iff : t -> t -> int -> t
-val mk_if : t -> t -> t -> int -> t
-val mk_xor : t -> t -> int -> t
-val mk_ite : t -> t -> t -> int -> t
+val mk_or  : t -> t -> bool -> t
+val mk_and : t -> t -> bool -> t
+val mk_imp : t -> t -> t
+val mk_iff : t -> t -> t
+val mk_if : t -> t -> t -> t
+val mk_xor : t -> t -> t
+val mk_ite : t -> t -> t -> t
 
 (** Substitutions *)
 
@@ -283,7 +283,7 @@ val skolemize : quantified -> t
 
 val elim_let : recursive:bool -> letin -> t
 
-val elim_iff : t -> t -> int -> with_conj:bool -> t
+val elim_iff : t -> t -> with_conj:bool -> t
 
 (*val purify_literal : t -> t*)
 val purify_form : t -> t
