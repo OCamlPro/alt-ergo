@@ -2008,7 +2008,6 @@ let type_one_th_decl env e =
   | Logic (loc, _, _, _)
   | Rewriting(loc, _, _)
   | Goal(loc, _, _)
-  | Get_model loc
   | Check_sat(loc, _, _)
   | Predicate_def(loc,_,_,_)
   | Function_def(loc,_,_,_,_)
@@ -2278,11 +2277,6 @@ let rec type_decl (acc, env) d assertion_stack =
     (*let f = move_up f in*)
     let f = alpha_renaming_env env f in
     type_and_intro_goal acc env Sat n f, env
-
-  | Get_model loc ->
-    Options.tool_req 1 "TR-Typing-GetModel$_F$";
-    let td = {c = TGetModel loc; annot = new_id () } in
-    (td, env) :: acc, env
 
   | MutRecDefs l ->
     let rev_l, env =

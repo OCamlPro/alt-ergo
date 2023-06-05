@@ -147,7 +147,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       ((env, consistent, dep) as acc) d =
     try
       match d.st_decl with
-      | GetModel -> assert false
       | Push n ->
         Util.loop ~f:(fun _n env () -> Stack.push env consistent_dep_stack)
           ~max:n ~elt:(consistent,dep) ~init:();

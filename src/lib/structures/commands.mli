@@ -38,7 +38,6 @@ type sat_decl_aux =
   | ThAssume of Expr.th_elt
   | Push of int
   | Pop of int
-  | GetModel
 
 type sat_tdecl = {
   st_loc : Loc.t;

@@ -212,6 +212,9 @@ val set_input_format : input_format -> unit
 *)
 val set_interpretation : interpretation -> unit
 
+(** [all_interpretations] accessible with {!val:get_all_interpretations}. *)
+val set_print_all_interpretations : bool -> unit
+
 (** Set [interpretation_use_underscore] accessible with
     {!val:get_interpretation_use_underscore} *)
 val set_interpretation_use_underscore : bool -> unit
@@ -706,6 +709,11 @@ val get_timelimit_per_goal : unit -> bool
     generation phase. *)
 val get_interpretation : unit -> bool
 (** Default to [false] *)
+
+(** [true] if the interpretation for each goal or check-sat is
+    printed. *)
+val get_print_all_interpretations : unit -> bool
+(** Default to [false]. *)
 
 (** [true] if the interpretation is set to first interpretation *)
 val get_first_interpretation : unit -> bool

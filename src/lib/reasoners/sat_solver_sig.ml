@@ -73,6 +73,8 @@ module type S = sig
   (** [reinit_ctx ()] reinitializes the solving context. *)
   val reinit_ctx : unit -> unit
 
+  (** [get_model t] produces the current model. *)
+  val get_model : t -> unit
 end
 
 

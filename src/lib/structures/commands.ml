@@ -38,7 +38,6 @@ type sat_decl_aux =
   | ThAssume of Expr.th_elt
   | Push of int
   | Pop of int
-  | GetModel
 
 type sat_tdecl = {
   st_loc : Loc.t;
@@ -63,7 +62,6 @@ let print_aux fmt = function
     Format.fprintf fmt "th assume %a" Expr.print_th_elt t
   | Push n -> Format.fprintf fmt "Push %d" n
   | Pop n ->  Format.fprintf fmt "Pop %d" n
-  | GetModel -> Format.fprintf fmt "get-model"
 
 let print fmt decl = print_aux fmt decl.st_decl
 

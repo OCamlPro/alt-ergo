@@ -163,7 +163,6 @@ and 'a tdecl =
   | TAxiom of Loc.t * string * Util.axiom_kind * 'a atform
   | TRewriting of Loc.t * string * ('a atterm rwt_rule) list
   | TGoal of Loc.t * Ty.goal_sort * string * 'a atform
-  | TGetModel of Loc.t
   | TLogic of Loc.t * string list * tlogic_type
   | TPredicate_def of
       Loc.t * string *

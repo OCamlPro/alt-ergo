@@ -844,8 +844,6 @@ let rec print_typed_decl fmt td = match td.Typed.c with
     fprintf fmt "push %d" n
   | TPop (_loc,n) ->
     fprintf fmt "pop %d" n
-  | TGetModel _loc ->
-    fprintf fmt "get-model"
 
 let print_typed_decl_list fmt = List.iter (fprintf fmt "%a@." print_typed_decl)
 
@@ -1228,7 +1226,7 @@ let rec annot_of_typed_decl (buffer:sbuffer) td =
     | TTypeDecl (loc, ty) ->
       let ls, s, lc = downgrade_type_decl ty in
       ATypeDecl (loc, ls, s, lc, ty)
-    | TPush _ | TPop _ | TGetModel _ ->
+    | TPush _ | TPop _ ->
       Gui_config.not_supported "Incremental commands"
   in
   new_annot buffer c td.Typed.annot ptag

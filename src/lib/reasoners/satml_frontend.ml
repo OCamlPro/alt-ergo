@@ -1171,6 +1171,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Shostak.Combine.reinit_cache ();
     Uf.reinit_cache ()
 
+  let get_model _env = failwith "not yet supported"
+
   let () =
     Steps.save_steps ();
     Var.save_cnt ();

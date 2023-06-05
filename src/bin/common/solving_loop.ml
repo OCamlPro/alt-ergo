@@ -32,18 +32,17 @@ open AltErgoLib
 open Options
 open D_loop
 
-type solver_ctx = {
+type 'b solver_ctx = {
+  sat_env : 'b;
   ctx    : Commands.sat_tdecl list;
   local  : Commands.sat_tdecl list;
   global : Commands.sat_tdecl list;
 }
 
-let empty_solver_ctx = { ctx = []; local = []; global = []; }
-
 (* Internal state while iterating over input statements *)
-type 'a state = {
+type ('a, 'b) state = {
   env : 'a;
-  solver_ctx: solver_ctx;
+  solver_ctx: 'b solver_ctx;
 }
 
 let main () =
@@ -59,7 +58,15 @@ let main () =
 
   let module FE = Frontend.Make (SAT) in
 
-  let solve all_context (cnf, goal_name) =
+  let empty_solver_ctx = {
+    sat_env = SAT.empty ();
+    ctx = [];
+    local = [];
+    global = [];
+  }
+  in
+
+  let solve sat_env all_context (cnf, goal_name) =
     let used_context = FE.choose_used_context all_context ~goal_name in
     let consistent_dep_stack = Stack.create () in
     Signals_profiling.init_profiling ();
@@ -70,7 +77,7 @@ let main () =
           Options.Time.set_timeout ~is_gui:false (Options.get_timelimit ());
         end;
       SAT.reset_refs ();
-      let _ =
+      let sat_env, _, _ =
         List.fold_left
           (FE.process_decl FE.print_status used_context consistent_dep_stack)
           (SAT.empty (), true, Explanation.empty) cnf
@@ -81,9 +88,11 @@ let main () =
         Profiling.print true
           (Steps.get_steps ())
           (Signals_profiling.get_timers ())
-          (Options.Output.get_fmt_err ())
+          (Options.Output.get_fmt_err ());
+      sat_env
     with Util.Timeout ->
-      if not (Options.get_timelimit_per_goal()) then exit 142
+      if not (Options.get_timelimit_per_goal()) then exit 142;
+      sat_env
   in
 
   let typed_loop all_context state td =
@@ -96,14 +105,16 @@ let main () =
           state.solver_ctx.ctx
         in
         let cnf = List.rev @@ Cnf.make l td in
-        let () = solve all_context (cnf, name) in
+        let sat_env = solve state.solver_ctx.sat_env all_context (cnf, name) in
         begin match kind with
           | Ty.Check
           | Ty.Cut ->
-            { state with solver_ctx = { state.solver_ctx with local = []; }}
+            { state with solver_ctx =
+                           { state.solver_ctx with sat_env; local = []; }
+            }
           | Ty.Thm | Ty.Sat ->
             { state with solver_ctx = {
-                  state.solver_ctx with global = []; local = [];
+                  state.solver_ctx with sat_env; global = []; local = [];
                 }}
         end
       | Typed.TAxiom (_, s, _, _) when Ty.is_global_hyp s ->
@@ -175,7 +186,7 @@ let main () =
       exit 142
   in
 
-  let solver_ctx_key: solver_ctx State.key =
+  let solver_ctx_key: SAT.t solver_ctx State.key =
     State.create_key ~pipe:"" "solving_state"
   in
   let debug_parsed_pipe st c =
@@ -373,7 +384,8 @@ let main () =
         in
         let rev_cnf = D_cnf.make (State.get State.logic_file st).loc l td in
         let cnf = List.rev rev_cnf in
-        let () = solve all_context (cnf, name) in
+        let solver_ctx = State.get solver_ctx_key st in
+        let sat_env = solve solver_ctx.sat_env all_context (cnf, name) in
         let rec ng_is_thm rcnf =
           begin match rcnf with
             | Commands.{ st_decl = Query (_, _, (Ty.Thm | Ty.Sat)); _ } :: _ ->
@@ -386,13 +398,11 @@ let main () =
         if ng_is_thm rev_cnf
         then
           State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
-            { solver_ctx with global = []; local = [] }
+            { solver_ctx with sat_env; global = []; local = [] }
           ) st
         else
           State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
-            { solver_ctx with local = [] }
+            { solver_ctx with sat_env; local = [] }
           ) st
 
       | { id = _; contents = `Hyp _; _ } ->
@@ -438,7 +448,8 @@ let main () =
             }
         in
         let cnf = List.rev rev_cnf in
-        let () = solve all_context (cnf, goal_name) in
+        let solver_ctx = State.get solver_ctx_key st in
+        let sat_env = solve solver_ctx.sat_env all_context (cnf, goal_name) in
         let rec ng_is_thm rcnf =
           begin match rcnf with
             | Commands.{ st_decl = Query (_, _, (Ty.Thm | Ty.Sat)); _ } :: _ ->
@@ -451,13 +462,11 @@ let main () =
         if ng_is_thm rev_cnf
         then
           State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
-            { solver_ctx with global = []; local = [] }
+            { solver_ctx with sat_env; global = []; local = [] }
           ) st
         else
           State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
-            { solver_ctx with local = [] }
+            { solver_ctx with sat_env; local = [] }
           ) st
 
       | {contents = `Set_option
@@ -468,6 +477,11 @@ let main () =
         let dloc_file = (State.get State.logic_file st).loc in
         let loc = DStd.Loc.(lexing_positions (loc dloc_file l)) in
         handle_option loc name value;
+        st
+
+      | {contents = `Get_model; _ } ->
+        let solver_ctx = State.get solver_ctx_key st in
+        SAT.get_model solver_ctx.sat_env;
         st
 
       | _ ->

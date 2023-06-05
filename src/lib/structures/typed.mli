@@ -258,8 +258,6 @@ and 'a tdecl =
   (** New rewrite rule that can be used. *)
   | TGoal of Loc.t * Ty.goal_sort * string * 'a atform
   (** New goal to prove. *)
-  | TGetModel of Loc.t
-  (** Produce model. *)
   | TLogic of Loc.t * string list * tlogic_type
   (** Function (or predicate) type declaration. *)
   | TPredicate_def of

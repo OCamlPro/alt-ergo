@@ -454,7 +454,6 @@ let make acc (d : (_ Typed.tdecl, _) Typed.annoted) =
   match d.c with
   | TPush (loc,n) -> Commands.{st_decl=Push n; st_loc=loc} :: acc
   | TPop (loc,n) -> Commands.{st_decl=Pop n; st_loc=loc} :: acc
-  | TGetModel loc -> Commands.{st_decl=GetModel; st_loc=loc} :: acc
   | TTheory(loc, name, ext, l) -> mk_theory acc l name ext loc
   | TAxiom(loc, name, Util.Default, f) -> mk_assume acc f name loc
   | TAxiom(_, _, Util.Propagator, _) -> assert false
