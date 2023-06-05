@@ -140,7 +140,8 @@ module Types = struct
     | Record (record_constr, lbs) ->
       let lbs =
         List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs in
-      let ty = Ty.trecord ~record_constr ty_vars id lbs in
+      let sort_fields = String.equal record_constr "{" in
+      let ty = Ty.trecord ~sort_fields ~record_constr ty_vars id lbs in
       ty, { to_ty = MString.add id ty env.to_ty;
             from_labels =
               List.fold_left

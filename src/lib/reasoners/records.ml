@@ -256,7 +256,9 @@ module Shostak (X : ALIEN) = struct
           in
           let record = is_mine (Record (flds, tyr)) in
           record, (left_abs_xe2, record) :: acc
-        | _ -> assert false
+        | ty ->
+          Util.failwith
+            "Not a record type: `%a" Ty.print_full ty
     in
     let abs_access = normalize (Access (field, embed abs_right_xe, ty)) in
     is_mine abs_access, acc
