@@ -1032,7 +1032,24 @@ module Time : sig
   val set_timeout : is_gui:bool -> float -> unit
   val unset_timeout : is_gui:bool -> unit
 
+  (** [with_timeout ~is_gui tm f] calls [f ()] with a timeout of [tm], and
+      unsets the timeout once the call to [f ()] completes or raises an
+      exception.
+
+      @raises Util.Timeout if the timeout is reached before [f ()] completes.
+  *)
+  val with_timeout : is_gui:bool -> float -> (unit -> 'a) -> 'a
 end
+
+(** [with_timelimit_if ~is_gui cond f] is:
+
+    - [Time.with_timeout ~is_gui (get_timeout ()) f] when [cond] is [true]
+    - [f ()] otherwise
+
+    @raises Util.Timeout if the [cond] is [true] and the timeout is reached
+            before the calls to [f ()] completes.
+*)
+val with_timelimit_if : is_gui:bool -> bool -> (unit -> 'a) -> 'a
 
 (** {2 Globals} *)
 (** Global functions used throughout the whole program *)
