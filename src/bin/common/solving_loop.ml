@@ -480,9 +480,16 @@ let main () =
         st
 
       | {contents = `Get_model; _ } ->
-        let solver_ctx = State.get solver_ctx_key st in
-        SAT.get_model solver_ctx.sat_env;
-        st
+        if Options.get_interpretation () then
+          let solver_ctx = State.get solver_ctx_key st in
+          SAT.get_model solver_ctx.sat_env;
+          st
+        else
+          begin
+            Printer.print_wrn "You have to set the option :produce-models \
+                               before using the statement (get-model).";
+            st
+          end
 
       | _ ->
         (* TODO:
