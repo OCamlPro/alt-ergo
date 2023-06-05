@@ -496,7 +496,6 @@ let main () =
            - Separate statements that should be ignored from unsupported
              statements and throw exception or print a warning when an
              unsupported statement is encountered.
-           - Support "get-model" statements
         *)
         let cnf =
           D_cnf.make (State.get State.logic_file st).loc
