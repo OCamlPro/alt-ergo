@@ -235,7 +235,7 @@ let main () =
   let mk_state ?(debug = false) ?(report_style = State.Contextual)
       ?(reports =
         Dolmen_loop.Report.Conf.mk
-          ~default:Dolmen_loop.Report.Warning.Status.Enabled)
+          ~default:Dolmen_loop.Report.Warning.Status.Disabled)
       ?(max_warn = max_int) ?(time_limit = Float.infinity)
       ?(size_limit = Float.infinity) ?(type_check = true)
       ?(solver_ctx = empty_solver_ctx) path =
