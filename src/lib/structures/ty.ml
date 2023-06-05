@@ -543,10 +543,10 @@ let t_adt ?(body=None) s ty_vars =
   end;
   ty
 
-let trecord ?(record_constr="{") lv n lbs =
+let trecord ?(sort_fields = false) ~record_constr lv n lbs =
   let lbs = List.map (fun (l,ty) -> Hstring.make l, ty) lbs in
   let lbs, record_constr =
-    if String.equal record_constr "{" then
+    if sort_fields then
       List.sort (fun (l1, _) (l2, _) -> Hstring.compare l1 l2) lbs,
       Format.sprintf "%s___%s" record_constr n
     else lbs, record_constr

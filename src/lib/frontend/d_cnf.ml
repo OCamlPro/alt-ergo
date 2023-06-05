@@ -255,7 +255,7 @@ and handle_ty_app ?(update = false) ty_c l =
 let mk_ty_decl (ty_c: DE.ty_cst) =
   match DT.definition ty_c with
   | Some (
-      Adt { cases = [| { cstr = { id_ty; _ }; dstrs; _ } |]; _ }
+      Adt { cases = [| { cstr = { id_ty; path; _ }; dstrs; _ } |]; _ }
     ) ->
     (* Records and adts that only have one case are treated in the same way,
        and considered as records. *)
@@ -276,7 +276,8 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
       ) [] dstrs
     in
     let lbs = List.rev rev_lbs in
-    let ty = Ty.trecord tyvl (get_basename ty_c.path) lbs in
+    let record_constr = Format.asprintf "%a" DStd.Path.print path in
+    let ty = Ty.trecord ~record_constr tyvl (get_basename ty_c.path) lbs in
     Cache.store_ty (DE.Ty.Const.hash ty_c) ty
 
   | Some (
@@ -445,7 +446,11 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
           else (
             let ty =
               if (record || Array.length cases = 1) && not contains_adts
-              then Ty.trecord tyvl name []
+              then
+                let record_constr =
+                  Format.asprintf "%a" DStd.Path.print ty_c.path
+                in
+                Ty.trecord ~record_constr tyvl name []
               else Ty.t_adt name tyvl
             in
             Cache.store_ty (DE.Ty.Const.hash ty_c) ty;
