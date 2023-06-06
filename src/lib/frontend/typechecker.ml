@@ -2266,7 +2266,6 @@ let rec type_decl (acc, env) d assertion_stack =
     else
       axioms_of_rules loc name lf acc env
 
-
   | Goal(_loc, n, f) ->
     Options.tool_req 1 "TR-Typing-GoalDecl$_F$";
     (*let f = move_up f in*)

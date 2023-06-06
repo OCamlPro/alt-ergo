@@ -374,3 +374,14 @@ let print_status_preprocess ?(validity_mode=true)
     ~formatter:(Options.Output.get_fmt_dbg ())
     ("Preprocessing","","fg_magenta") None
     time steps None
+
+let print_smtlib_err ?(flushed=true) s =
+  let fmt = Options.Output.get_fmt_err () in
+  let k fmt =
+    if flushed || Options.get_output_with_forced_flush () then
+      Format.fprintf fmt "\")@."
+    else
+      Format.fprintf fmt "\")"
+  in
+  Format.fprintf fmt "(error \"";
+  Format.kfprintf k fmt s

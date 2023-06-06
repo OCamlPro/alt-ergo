@@ -38,12 +38,16 @@ type solver_ctx = {
   global : Commands.sat_tdecl list;
 }
 
-let empty_solver_ctx = { ctx = []; local = []; global = []; }
-
 (* Internal state while iterating over input statements *)
 type 'a state = {
   env : 'a;
   solver_ctx: solver_ctx;
+}
+
+let empty_solver_ctx = {
+  ctx = [];
+  local = [];
+  global = [];
 }
 
 let main () =
@@ -67,23 +71,25 @@ let main () =
       if Options.get_timelimit_per_goal() then
         begin
           Options.Time.start ();
-          Options.Time.set_timeout ~is_gui:false (Options.get_timelimit ());
+          Options.Time.set_timeout (Options.get_timelimit ());
         end;
       SAT.reset_refs ();
-      let _ =
+      let sat_env, _, _ =
         List.fold_left
           (FE.process_decl FE.print_status used_context consistent_dep_stack)
           (SAT.empty (), true, Explanation.empty) cnf
       in
       if Options.get_timelimit_per_goal() then
-        Options.Time.unset_timeout ~is_gui:false;
+        Options.Time.unset_timeout ();
       if Options.get_profiling() then
         Profiling.print true
           (Steps.get_steps ())
           (Signals_profiling.get_timers ())
-          (Options.Output.get_fmt_err ())
+          (Options.Output.get_fmt_err ());
+      Some sat_env
     with Util.Timeout ->
-      if not (Options.get_timelimit_per_goal()) then exit 142
+      if not (Options.get_timelimit_per_goal()) then exit 142;
+      None
   in
 
   let typed_loop all_context state td =
@@ -96,15 +102,15 @@ let main () =
           state.solver_ctx.ctx
         in
         let cnf = List.rev @@ Cnf.make l td in
-        let () = solve all_context (cnf, name) in
+        let _ = solve all_context (cnf, name) in
         begin match kind with
           | Ty.Check
           | Ty.Cut ->
-            { state with solver_ctx = { state.solver_ctx with local = []; }}
+            { state with solver_ctx =
+                           { state.solver_ctx with local = []}}
           | Ty.Thm | Ty.Sat ->
             { state with solver_ctx = {
-                  state.solver_ctx with global = []; local = [];
-                }}
+                  state.solver_ctx with global = []; local = []}}
         end
       | Typed.TAxiom (_, s, _, _) when Ty.is_global_hyp s ->
         let cnf = Cnf.make state.solver_ctx.global td in
@@ -125,9 +131,8 @@ let main () =
       try
         Options.Time.start ();
         if not (Options.get_timelimit_per_goal()) then
-          Options.Time.set_timeout ~is_gui:false (Options.get_timelimit ());
+          Options.Time.set_timeout (Options.get_timelimit ());
 
-        Options.set_is_gui false;
         Signals_profiling.init_profiling ();
 
         let preludes = Options.get_preludes () in
@@ -169,7 +174,7 @@ let main () =
     try
       let parsed_seq = parsed () in
       let _ : _ state = Seq.fold_left typing_loop state parsed_seq in
-      Options.Time.unset_timeout ~is_gui:false;
+      Options.Time.unset_timeout ();
     with Util.Timeout ->
       FE.print_status (FE.Timeout None) 0;
       exit 142
@@ -178,6 +183,11 @@ let main () =
   let solver_ctx_key: solver_ctx State.key =
     State.create_key ~pipe:"" "solving_state"
   in
+
+  let sat_env_key: SAT.t option State.key =
+    State.create_key ~pipe:"" "sat_state"
+  in
+
   let debug_parsed_pipe st c =
     if State.get State.debug st then
       Format.eprintf "[logic][parsed][%a] @[<hov>%a@]@."
@@ -242,7 +252,8 @@ let main () =
           ~default:Dolmen_loop.Report.Warning.Status.Disabled)
       ?(max_warn = max_int) ?(time_limit = Float.infinity)
       ?(size_limit = Float.infinity) ?(type_check = true)
-      ?(solver_ctx = empty_solver_ctx) path =
+      ?(solver_ctx = empty_solver_ctx)
+      ?(sat_env = None) path =
     let dir = Filename.dirname path in
     let filename = Filename.basename path in
     let language =
@@ -282,6 +293,7 @@ let main () =
     let response_file = mk_file dir in
     State.empty
     |> State.set solver_ctx_key solver_ctx
+    |> State.set sat_env_key sat_env
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~logic_file ~response_file
     |> Parser.init
@@ -373,7 +385,8 @@ let main () =
         in
         let rev_cnf = D_cnf.make (State.get State.logic_file st).loc l td in
         let cnf = List.rev rev_cnf in
-        let () = solve all_context (cnf, name) in
+        let solver_ctx = State.get solver_ctx_key st in
+        let sat_env = solve all_context (cnf, name) in
         let rec ng_is_thm rcnf =
           begin match rcnf with
             | Commands.{ st_decl = Query (_, _, (Ty.Thm | Ty.Sat)); _ } :: _ ->
@@ -386,14 +399,14 @@ let main () =
         if ng_is_thm rev_cnf
         then
           State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
             { solver_ctx with global = []; local = [] }
           ) st
+          |> State.set sat_env_key sat_env
         else
           State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
             { solver_ctx with local = [] }
           ) st
+          |> State.set sat_env_key sat_env
 
       | { id = _; contents = `Hyp _; _ } ->
         let cnf = D_cnf.make (State.get State.logic_file st).loc [] td in
@@ -438,7 +451,8 @@ let main () =
             }
         in
         let cnf = List.rev rev_cnf in
-        let () = solve all_context (cnf, goal_name) in
+        let solver_ctx = State.get solver_ctx_key st in
+        let sat_env = solve all_context (cnf, goal_name) in
         let rec ng_is_thm rcnf =
           begin match rcnf with
             | Commands.{ st_decl = Query (_, _, (Ty.Thm | Ty.Sat)); _ } :: _ ->
@@ -451,14 +465,14 @@ let main () =
         if ng_is_thm rev_cnf
         then
           State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
             { solver_ctx with global = []; local = [] }
           ) st
+          |> State.set sat_env_key sat_env
         else
           State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
             { solver_ctx with local = [] }
           ) st
+          |> State.set sat_env_key sat_env
 
       | {contents = `Set_option
              { term =
@@ -470,12 +484,29 @@ let main () =
         handle_option loc name value;
         st
 
+      | {contents = `Get_model; _ } ->
+        if Options.get_interpretation () then
+          match State.get sat_env_key st with
+          | Some sat_env -> SAT.get_model sat_env; st
+          | None ->
+            (* TODO: add the location of the statement. *)
+            Printer.print_smtlib_err "No model produced.";
+            st
+        else
+          begin
+            (* TODO: add the location of the statement. *)
+            Printer.print_smtlib_err
+              "You have to set the flag :produce-models with \
+               (set-option :produce-models true) \
+               before using the statement (get-model).";
+            st
+          end
+
       | _ ->
         (* TODO:
            - Separate statements that should be ignored from unsupported
              statements and throw exception or print a warning when an
              unsupported statement is encountered.
-           - Support "get-model" statements
         *)
         let cnf =
           D_cnf.make (State.get State.logic_file st).loc
@@ -489,9 +520,7 @@ let main () =
   let d_fe filename =
     let st = mk_state filename in
     try
-      Options.with_timelimit_if
-        ~is_gui:false
-        (not (Options.get_timelimit_per_goal ()))
+      Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
       @@ fun () ->
 
       let st, g = Parser.parse_logic [] st (State.get State.logic_file st) in

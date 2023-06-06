@@ -13,8 +13,6 @@
 
 (using menhir 2.0)
 
-; First package, the alt-ergo binary
-
 (package
  (name alt-ergo)
  (synopsis "The Alt-Ergo SMT prover")
@@ -32,36 +30,6 @@ See more details on https://alt-ergo.ocamlpro.com/")
   (odoc :with-doc)
  )
 )
-
-; Second package, the alt-ergo gui binary
-
-(package
- (name altgr-ergo)
- (synopsis "The GUI for the Alt-Ergo SMT prover")
- (description "\
-Altgr-Ergo is the graphical interface for the Alt-Ergo SMT prover.
-
-Alt-Ergo is an automatic theorem prover of mathematical formulas. It was developed at LRI, and is now maintained at OCamlPro.
-
-See more details on https://alt-ergo.ocamlpro.com/"
- )
- (license "OCamlPro Non-Commercial Purpose License, version 1")
-
- (depends
-  (ocaml (>= 4.05.0))
-  dune
-  (alt-ergo-lib (= :version))
-  (alt-ergo-parsers (= :version))
-  lablgtk3
-  (cairo2 (>= 0.6.4))
-  conf-gtksourceview3
-  lablgtk3-sourceview3
-  (cmdliner (>= 1.1.0))
-  (odoc :with-doc)
- )
-)
-
-; Third package, the alt-ergo parsers library
 
 (package
  (name alt-ergo-parsers)
@@ -85,8 +53,6 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (odoc :with-doc)
  )
 )
-
-; Fourth package, the alt-ergo library
 
 (package
  (name alt-ergo-lib)

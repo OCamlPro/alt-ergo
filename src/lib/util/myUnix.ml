@@ -36,21 +36,13 @@ module Default_Unix = struct
 
   let cur_time () = (times()).tms_utime
 
-  let set_timeout ~is_gui timelimit =
+  let set_timeout timelimit =
     if Stdlib.(<>) timelimit 0. then
-      let itimer =
-        if is_gui then Unix.ITIMER_REAL (* troubles with VIRTUAL *)
-        else Unix.ITIMER_VIRTUAL
-      in
-      ignore (Unix.setitimer itimer
+      ignore (Unix.setitimer Unix.ITIMER_VIRTUAL
                 { Unix.it_value = timelimit; Unix.it_interval = 0. })
 
-  let unset_timeout ~is_gui =
-    let itimer =
-      if is_gui then Unix.ITIMER_REAL (* troubles with VIRTUAL *)
-      else Unix.ITIMER_VIRTUAL
-    in
-    ignore (Unix.setitimer itimer
+  let unset_timeout () =
+    ignore (Unix.setitimer Unix.ITIMER_VIRTUAL
               { Unix.it_value = 0.; Unix.it_interval = 0. })
 
 end

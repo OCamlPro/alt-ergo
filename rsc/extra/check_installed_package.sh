@@ -19,9 +19,5 @@ test_install () {
 if [ "$package" = "lib" ] || [ "$package" = "parsers" ] ; then
    opam exec -- ocamlfind query alt-ergo-$package ; test_install ;
 else
-    if [ $package == gui ] ; then
-       opam exec -- altgr-ergo --version ; test_install ;
-    else
-       opam exec -- alt-ergo --version ; test_install ;
-    fi
+   opam exec -- alt-ergo --version ; test_install ;
 fi
