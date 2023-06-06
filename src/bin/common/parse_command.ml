@@ -392,9 +392,7 @@ let mk_models_opt b =
        Tableaux. Remove this line after merging the OptimAE PR.
        See https://github.com/OCamlPro/alt-ergo/pull/553 *)
     set_sat_solver Tableaux;
-    (* The command line option overrides the behavior of the get-model
-       commands. *)
-    set_dump_models true;
+    set_dump_models true
   end;
   `Ok ()
 

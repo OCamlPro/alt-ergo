@@ -212,7 +212,7 @@ val set_input_format : input_format -> unit
 *)
 val set_interpretation : interpretation -> unit
 
-(** [all_interpretations] accessible with {!val:get_all_interpretations}. *)
+(** [dump_models] accessible with {!val:get_dump_models}. *)
 val set_dump_models : bool -> unit
 
 (** Set [interpretation_use_underscore] accessible with
