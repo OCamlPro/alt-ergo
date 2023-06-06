@@ -207,7 +207,7 @@ module Debug = struct
     | Sum -> "sum"
     | Ite -> "ite"
     | Cc -> "cc"
-    | Combine -> "Combine"
+    | Combine -> "combine"
     | Constr -> "constr"
     | Explanation -> "explanation"
     | Fm -> "fm"
