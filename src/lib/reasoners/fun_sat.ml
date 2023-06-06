@@ -1927,16 +1927,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let get_model env =
     assert (Options.get_interpretation ());
-    if not @@ Options.get_dump_models () then
-      let env = compute_concrete_model env true in
-      Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
-      let prop_model = extract_prop_model ~complete_model:true env in
-      Th.output_concrete_model (Options.Output.get_fmt_mdl ()) ~prop_model
-        env.tbox;
-      terminated_normally := true
-    else
-      Printer.print_wrn "get-model commands are ignored in presence of \
-                         --model option."
+    let env = compute_concrete_model env true in
+    Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
+    let prop_model = extract_prop_model ~complete_model:true env in
+    Th.output_concrete_model (Options.Output.get_fmt_mdl ()) ~prop_model
+      env.tbox;
+    terminated_normally := true
+
   let () =
     Steps.save_steps ();
     Var.save_cnt ();
