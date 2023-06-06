@@ -6,10 +6,6 @@ Alt-ergo is available on [opam], the ocaml package manager with the following co
 ```
 opam install alt-ergo
 ```
-You can also install the GUI with
-```
-opam install altgr-ergo
-```
 
 This two command will install the Alt-ergo library `alt-ergo-lib` and the parsers `alt-ergo-parsers`, as well as other librairies detailled in [dependencies](#dependencies).
 
@@ -74,7 +70,7 @@ $ make dev-switch
 
   3. You can use `./configure <package>` to select which package you
   want to build. `<package>` may be one of: alt-ergo-lib, alt-ergo-parsers,
-  alt-ergo, altgr-ergo.
+  alt-ergo.
 
 ### Build and Install
 
@@ -106,12 +102,6 @@ depending on whether ocamlopt is installed or only ocamlc is detected.
   1. Compile with `make alt-ergo`
 
   2. Install with `make install-bin`
-
-#### AltGr-Ergo binary
-
-  1. Compile with `make altgr-ergo`
-
-  2. Install with `make install-gui`
 
 #### Alt-Ergo with Nodejs
 
