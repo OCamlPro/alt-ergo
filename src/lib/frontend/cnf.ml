@@ -121,7 +121,7 @@ let rec make_term up_qv quant_basename t =
       in
       List.fold_left
         (fun acc (sy, e) ->
-           E.mk_let sy e acc 0
+           E.mk_let sy e acc
            [@ocaml.ppwarning "TODO: should introduce fresh vars"]
         )(mk_term t2) binders
 
@@ -223,7 +223,7 @@ and make_trigger ~in_theory name up_qv quant_basename hyp (e, from_user) =
 
 and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
   let name_tag = ref 0 in
-  let rec mk_form up_qv ~toplevel (c : _ Typed.tform) id =
+  let rec mk_form up_qv ~toplevel (c : _ Typed.tform) =
     match c with
     | TFatom a ->
       begin match a.c with
@@ -273,8 +273,8 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
       end
 
     | TFop(((OPand | OPor | OPxor) as op),[f1;f2]) ->
-      let ff1 = mk_form up_qv ~toplevel:false f1.c f1.annot in
-      let ff2 = mk_form up_qv ~toplevel:false f2.c f2.annot in
+      let ff1 = mk_form up_qv ~toplevel:false f1.c in
+      let ff2 = mk_form up_qv ~toplevel:false f2.c in
       begin match op with
         | OPand -> E.mk_and ff1 ff2 false
         | OPor -> E.mk_or ff1 ff2 false
@@ -282,19 +282,19 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
         | _ -> assert false
       end
     | TFop(OPimp,[f1;f2]) ->
-      let ff1 = mk_form up_qv ~toplevel:false f1.c f1.annot in
-      let ff2 = mk_form up_qv ~toplevel:false f2.c f2.annot in
+      let ff1 = mk_form up_qv ~toplevel:false f1.c in
+      let ff2 = mk_form up_qv ~toplevel:false f2.c in
       E.mk_imp ff1 ff2
     | TFop(OPnot,[f]) ->
-      E.neg @@ mk_form up_qv ~toplevel:false f.c f.annot
+      E.neg @@ mk_form up_qv ~toplevel:false f.c
     | TFop(OPif, [cond; f2;f3]) ->
-      let cond = mk_form up_qv ~toplevel:false cond.c cond.annot in
-      let ff2  = mk_form up_qv ~toplevel:false f2.c f2.annot in
-      let ff3  = mk_form up_qv ~toplevel:false f3.c f3.annot in
+      let cond = mk_form up_qv ~toplevel:false cond.c in
+      let ff2  = mk_form up_qv ~toplevel:false f2.c in
+      let ff3  = mk_form up_qv ~toplevel:false f3.c in
       E.mk_if cond ff2 ff3
     | TFop(OPiff,[f1;f2]) ->
-      let ff1 = mk_form up_qv ~toplevel:false f1.c f1.annot in
-      let ff2 = mk_form up_qv ~toplevel:false f2.c f2.annot in
+      let ff1 = mk_form up_qv ~toplevel:false f1.c in
+      let ff2 = mk_form up_qv ~toplevel:false f2.c in
       E.mk_iff ff1 ff2
     | (TFforall qf | TFexists qf) as f ->
       let name =
@@ -308,8 +308,7 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
       let qvars = varset_of_list qf.qf_bvars in
       let binders = E.mk_binders qvars in
       (*let upvars = varset_of_list qf.qf_upvars in*)
-      let ff =
-        mk_form up_qv ~toplevel:false qf.qf_form.c qf.qf_form.annot in
+      let ff = mk_form up_qv ~toplevel:false qf.qf_form.c in
 
       (* S : Formulas are purified afterwards.
          Purification binds literals & formulas inside terms by
@@ -324,7 +323,7 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
 
       let hyp =
         List.map (fun (f : _ Typed.annoted) ->
-            mk_form up_qv ~toplevel:false f.c f.annot) qf.qf_hyp
+            mk_form up_qv ~toplevel:false f.c) qf.qf_hyp
       in
       let in_theory = decl_kind == E.Dtheory in
       let trs =
@@ -335,7 +334,7 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
         | TFexists _ -> E.mk_exists
         | _ -> assert false
       in
-      func name loc binders trs ff id ~toplevel ~decl_kind
+      func name loc binders trs ff ~toplevel ~decl_kind
 
     | TFlet(_,binders,lf) ->
       let binders =
@@ -344,18 +343,18 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
              sy,
              match e with
              | TletTerm t -> make_term up_qv name_base t
-             | TletForm g -> mk_form up_qv ~toplevel:false g.c g.annot
+             | TletForm g -> mk_form up_qv ~toplevel:false g.c
           )(List.rev binders)
       in
-      let res = mk_form up_qv ~toplevel:false lf.c lf.annot in
+      let res = mk_form up_qv ~toplevel:false lf.c in
       List.fold_left
         (fun acc (sy, e) ->
-           E.mk_let sy e acc id
+           E.mk_let sy e acc
            [@ocaml.ppwarning "TODO: should introduce fresh vars"]
         )res binders
 
     | TFnamed(lbl, f) ->
-      let ff = mk_form up_qv ~toplevel:false f.c f.annot in
+      let ff = mk_form up_qv ~toplevel:false f.c in
       E.add_label lbl ff;
       ff
 
@@ -363,14 +362,14 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
       let e = make_term up_qv name_base e in
       let pats =
         List.rev_map (fun (p, (f : _ Typed.annoted)) ->
-            p, mk_form up_qv ~toplevel:false f.c f.annot)
+            p, mk_form up_qv ~toplevel:false f.c)
           (List.rev pats)
       in
       E.mk_match e pats
 
     | _ -> assert false
   in
-  mk_form up_qv ~toplevel f.c f.annot
+  mk_form up_qv ~toplevel f.c
 
 (* wrapper of function make_form *)
 let make_form name f loc ~decl_kind =
@@ -381,8 +380,7 @@ let make_form name f loc ~decl_kind =
   let ff = E.purify_form ff in
   if Ty.Svty.is_empty (E.free_type_vars ff) then ff
   else
-    let id = E.id ff in
-    E.mk_forall name loc Symbols.Map.empty [] ff id ~toplevel:true ~decl_kind
+    E.mk_forall name loc Symbols.Map.empty [] ff ~toplevel:true ~decl_kind
 
 let mk_assume acc f name loc =
   let ff = make_form name f loc ~decl_kind:E.Daxiom in

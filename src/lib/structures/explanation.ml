@@ -179,18 +179,10 @@ let rec literals_of_acc lit fs f acc = match E.form_view f with
     literals_of_acc true fs in_e @@ literals_of_acc true fs let_e acc
 
 let literals_of ex =
-  let fs  = formulas_of ex in
+  let fs = formulas_of ex in
   E.Set.fold (literals_of_acc true fs) fs []
 
 module MI = Util.MI
-
-let literals_ids_of ex =
-  List.fold_left (fun acc f ->
-      let i = E.id f in
-      let m = try MI.find i acc with Not_found -> 0 in
-      MI.add i (m + 1) acc
-    ) MI.empty (literals_of ex)
-
 
 let make_deps sf =
   E.Set.fold (fun l acc -> S.add (Bj l) acc) sf S.empty

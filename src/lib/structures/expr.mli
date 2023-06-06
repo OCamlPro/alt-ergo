@@ -155,7 +155,6 @@ val mk_binders : Set.t -> binders
 val free_vars : t -> (Ty.t * int) Symbols.Map.t -> (Ty.t * int) Symbols.Map.t
 val free_type_vars : t -> Ty.Svty.t
 val is_ground : t -> bool
-val id : t -> int
 val size : t -> int
 val depth : t -> int
 val is_positive : t -> bool
@@ -257,7 +256,6 @@ val mk_forall :
   binders -> (* quantified variables *)
   trigger list -> (* triggers *)
   t -> (* quantified formula *)
-  int -> (* id, for the GUI *)
   toplevel:bool -> (* for future triggers computation in presence of vty *)
   decl_kind:decl_kind ->
   t
@@ -268,14 +266,13 @@ val mk_exists :
   binders -> (* quantified variables *)
   trigger list -> (* triggers *)
   t -> (* quantified formula *)
-  int -> (* id, for the GUI *)
   toplevel:bool -> (* for future triggers computation in presence of
                       vty, and to construct a toplevel forall that
                       cover vtys *)
   decl_kind:decl_kind ->
   t
 
-val mk_let : Symbols.t -> t -> t -> int -> t
+val mk_let : Symbols.t -> t -> t -> t
 
 val mk_match : t -> (Typed.pattern * t) list -> t
 
