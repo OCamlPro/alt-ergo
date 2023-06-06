@@ -464,5 +464,4 @@ let make acc (d : (_ Typed.tdecl, _) Typed.annoted) =
   | TFunction_def(loc, n, _args, _rety, f) -> mk_function acc f n loc
   | TTypeDecl _ | TLogic _  -> acc
 
-
 let make_list l = List.fold_left make [] (List.rev l)

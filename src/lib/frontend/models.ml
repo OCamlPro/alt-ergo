@@ -453,22 +453,20 @@ end
 (* of module Why3CounterExample *)
 
 let output_concrete_model fmt props ~functions ~constants ~arrays =
-  if get_interpretation () then begin
-    Printer.print_fmt ~flushed:false fmt "@[<v 0>unknown@ ";
-    Printer.print_fmt ~flushed:false fmt "@[<v 2>(model@,";
-    if Options.get_model_type_constraints () then begin
+  Printer.print_fmt ~flushed:false fmt "@[<v 2>(@,";
+  if Options.get_model_type_constraints () then
+    begin
       Why3CounterExample.output_constraints fmt props
     end;
 
-    Printer.print_fmt fmt "@ ; Functions@ ";
-    let records = SmtlibCounterExample.output_functions_counterexample
-        fmt  MS.empty functions in
+  Printer.print_fmt fmt "@ ; Functions@ ";
+  let records = SmtlibCounterExample.output_functions_counterexample
+      fmt  MS.empty functions in
 
-    Printer.print_fmt fmt "@ ; Constants@ ";
-    SmtlibCounterExample.output_constants_counterexample
-      fmt records constants;
+  Printer.print_fmt fmt "@ ; Constants@ ";
+  SmtlibCounterExample.output_constants_counterexample
+    fmt records constants;
 
-    SmtlibCounterExample.output_arrays_counterexample fmt arrays;
+  SmtlibCounterExample.output_arrays_counterexample fmt arrays;
 
-    Printer.print_fmt fmt "@]@ )";
-  end;
+  Printer.print_fmt fmt "@]@ )";

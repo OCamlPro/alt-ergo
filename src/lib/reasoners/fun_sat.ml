@@ -1194,8 +1194,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
 
     let prop_model = extract_prop_model ~complete_model:true env in
-    Th.output_concrete_model (Options.Output.get_fmt_mdl ()) ~prop_model
-      env.tbox;
+    if Options.(get_interpretation () && get_dump_models ()) then
+      Th.output_concrete_model (Options.Output.get_fmt_mdl ()) ~prop_model
+        env.tbox;
 
     terminated_normally := true;
     return_function env
@@ -1923,6 +1924,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Hstring.reinit_cache ();
     Shostak.Combine.reinit_cache ();
     Uf.reinit_cache ()
+
+  let get_model env =
+    assert (Options.get_interpretation ());
+    let env = compute_concrete_model env true in
+    Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
+    let prop_model = extract_prop_model ~complete_model:true env in
+    Th.output_concrete_model (Options.Output.get_fmt_mdl ()) ~prop_model
+      env.tbox;
+    terminated_normally := true
 
   let () =
     Steps.save_steps ();

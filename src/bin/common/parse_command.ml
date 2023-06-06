@@ -391,7 +391,10 @@ let mk_models_opt b =
     (* TODO: The generation of models is supported only with the SAT solver
        Tableaux. Remove this line after merging the OptimAE PR.
        See https://github.com/OCamlPro/alt-ergo/pull/553 *)
-    set_sat_solver Tableaux
+    set_sat_solver Tableaux;
+    (* The command line option overrides the behavior of the get-model
+       commands. *)
+    set_dump_models true;
   end;
   `Ok ()
 
