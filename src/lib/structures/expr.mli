@@ -155,7 +155,6 @@ val mk_binders : Set.t -> binders
 val free_vars : t -> (Ty.t * int) Symbols.Map.t -> (Ty.t * int) Symbols.Map.t
 val free_type_vars : t -> Ty.Svty.t
 val is_ground : t -> bool
-val id : t -> int
 val size : t -> int
 val depth : t -> int
 val is_positive : t -> bool
@@ -196,13 +195,13 @@ val mk_builtin : is_pos:bool -> Symbols.builtin -> t list -> t
 
 (** simple smart constructors for formulas *)
 
-val mk_or  : t -> t -> bool -> int -> t
-val mk_and : t -> t -> bool -> int -> t
-val mk_imp : t -> t -> int -> t
-val mk_iff : t -> t -> int -> t
-val mk_if : t -> t -> t -> int -> t
-val mk_xor : t -> t -> int -> t
-val mk_ite : t -> t -> t -> int -> t
+val mk_or  : t -> t -> bool -> t
+val mk_and : t -> t -> bool -> t
+val mk_imp : t -> t -> t
+val mk_iff : t -> t -> t
+val mk_if : t -> t -> t -> t
+val mk_xor : t -> t -> t
+val mk_ite : t -> t -> t -> t
 
 (** Substitutions *)
 
@@ -257,7 +256,6 @@ val mk_forall :
   binders -> (* quantified variables *)
   trigger list -> (* triggers *)
   t -> (* quantified formula *)
-  int -> (* id, for the GUI *)
   toplevel:bool -> (* for future triggers computation in presence of vty *)
   decl_kind:decl_kind ->
   t
@@ -268,14 +266,13 @@ val mk_exists :
   binders -> (* quantified variables *)
   trigger list -> (* triggers *)
   t -> (* quantified formula *)
-  int -> (* id, for the GUI *)
   toplevel:bool -> (* for future triggers computation in presence of
                       vty, and to construct a toplevel forall that
                       cover vtys *)
   decl_kind:decl_kind ->
   t
 
-val mk_let : Symbols.t -> t -> t -> int -> t
+val mk_let : Symbols.t -> t -> t -> t
 
 val mk_match : t -> (Typed.pattern * t) list -> t
 
@@ -283,7 +280,7 @@ val skolemize : quantified -> t
 
 val elim_let : recursive:bool -> letin -> t
 
-val elim_iff : t -> t -> int -> with_conj:bool -> t
+val elim_iff : t -> t -> with_conj:bool -> t
 
 (*val purify_literal : t -> t*)
 val purify_form : t -> t

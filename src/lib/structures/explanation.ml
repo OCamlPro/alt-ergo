@@ -156,41 +156,7 @@ let bj_formulas_of s =
       | Literal _ -> assert false (*TODO*)
     ) s E.Set.empty
 
-let rec literals_of_acc lit fs f acc = match E.form_view f with
-  | E.Literal _ ->
-    if lit then f :: acc else acc
-  | E.Iff(f1, f2) ->
-    let g = E.elim_iff f1 f2 (E.id f) ~with_conj:true in
-    literals_of_acc lit fs g acc
-  | E.Xor(f1, f2) ->
-    let g = E.neg @@ E.elim_iff f1 f2 (E.id f) ~with_conj:false in
-    literals_of_acc lit fs g acc
-  | E.Unit (f1,f2) ->
-    let acc = literals_of_acc false fs f1 acc in
-    literals_of_acc false fs f2 acc
-  | E.Clause (f1, f2, _) ->
-    let acc = literals_of_acc true fs f1 acc in
-    literals_of_acc true fs f2 acc
-  | E.Lemma _ ->
-    acc
-  | E.Skolem { E.main = f; _ } ->
-    literals_of_acc true fs f acc
-  | E.Let { E.in_e; let_e; _ } ->
-    literals_of_acc true fs in_e @@ literals_of_acc true fs let_e acc
-
-let literals_of ex =
-  let fs  = formulas_of ex in
-  E.Set.fold (literals_of_acc true fs) fs []
-
 module MI = Util.MI
-
-let literals_ids_of ex =
-  List.fold_left (fun acc f ->
-      let i = E.id f in
-      let m = try MI.find i acc with Not_found -> 0 in
-      MI.add i (m + 1) acc
-    ) MI.empty (literals_of ex)
-
 
 let make_deps sf =
   E.Set.fold (fun l acc -> S.add (Bj l) acc) sf S.empty
