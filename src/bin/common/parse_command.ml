@@ -1222,7 +1222,7 @@ let parse_fmt_opt =
           models and unsat cores. Possible values are %s."
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
     in
-    let deprecated = "this option is depreciated. Please use --std-output." in
+    let deprecated = "this option is deprecated. Please use --std-output." in
     let std_output =
       Arg.(value & opt (some' string) None & info ["std-output"] ~docs
              ~doc ~docv)
@@ -1241,7 +1241,7 @@ let parse_fmt_opt =
          warning informations. Possible values are %s."
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
     in
-    let deprecated = "this option is depreciated. Please use --err-output." in
+    let deprecated = "this option is deprecated. Please use --err-output." in
     let err_output =
       Arg.(value & opt (some' string) None & info ["err-output"] ~docs
              ~doc ~docv)
@@ -1270,7 +1270,7 @@ let main =
   let file =
     let doc =
       "Source file. Must be suffixed by $(i,.ae), \
-       ($(i,.mlw) and $(i,.why) are depreciated, \
+       ($(i,.mlw) and $(i,.why) are deprecated), \
        $(i,.smt2) or $(i,.psmt2)." in
     let i = Arg.(info [] ~docv:"FILE" ~doc) in
     Arg.(value & pos ~rev:true 0 (some string) None & i) in
