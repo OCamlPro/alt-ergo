@@ -32,8 +32,7 @@ open AltErgoLib
 open Options
 open D_loop
 
-type 'b solver_ctx = {
-  sat_env : 'b;
+type solver_ctx = {
   ctx    : Commands.sat_tdecl list;
   local  : Commands.sat_tdecl list;
   global : Commands.sat_tdecl list;
@@ -42,7 +41,8 @@ type 'b solver_ctx = {
 (* Internal state while iterating over input statements *)
 type ('a, 'b) state = {
   env : 'a;
-  solver_ctx: 'b solver_ctx;
+  sat_env : 'b;
+  solver_ctx: solver_ctx;
 }
 
 let main () =
@@ -59,14 +59,13 @@ let main () =
   let module FE = Frontend.Make (SAT) in
 
   let empty_solver_ctx = {
-    sat_env = SAT.empty ();
     ctx = [];
     local = [];
     global = [];
   }
   in
 
-  let solve sat_env all_context (cnf, goal_name) =
+  let solve all_context (cnf, goal_name) =
     let used_context = FE.choose_used_context all_context ~goal_name in
     let consistent_dep_stack = Stack.create () in
     Signals_profiling.init_profiling ();
@@ -89,10 +88,10 @@ let main () =
           (Steps.get_steps ())
           (Signals_profiling.get_timers ())
           (Options.Output.get_fmt_err ());
-      sat_env
+      Some sat_env
     with Util.Timeout ->
       if not (Options.get_timelimit_per_goal()) then exit 142;
-      sat_env
+      None
   in
 
   let typed_loop all_context state td =
@@ -105,17 +104,17 @@ let main () =
           state.solver_ctx.ctx
         in
         let cnf = List.rev @@ Cnf.make l td in
-        let sat_env = solve state.solver_ctx.sat_env all_context (cnf, name) in
+        let sat_env = solve all_context (cnf, name) in
         begin match kind with
           | Ty.Check
           | Ty.Cut ->
             { state with solver_ctx =
-                           { state.solver_ctx with sat_env; local = []; }
-            }
+                           { state.solver_ctx with local = []};
+                         sat_env }
           | Ty.Thm | Ty.Sat ->
             { state with solver_ctx = {
-                  state.solver_ctx with sat_env; global = []; local = [];
-                }}
+                  state.solver_ctx with global = []; local = [];
+                }; sat_env }
         end
       | Typed.TAxiom (_, s, _, _) when Ty.is_global_hyp s ->
         let cnf = Cnf.make state.solver_ctx.global td in
@@ -175,6 +174,7 @@ let main () =
 
     let state = {
       env = I.empty_env;
+      sat_env = None;
       solver_ctx = empty_solver_ctx
     } in
     try
@@ -186,9 +186,14 @@ let main () =
       exit 142
   in
 
-  let solver_ctx_key: SAT.t solver_ctx State.key =
+  let solver_ctx_key: solver_ctx State.key =
     State.create_key ~pipe:"" "solving_state"
   in
+
+  let sat_env_key: SAT.t option State.key =
+    State.create_key ~pipe:"" "sat_state"
+  in
+
   let debug_parsed_pipe st c =
     if State.get State.debug st then
       Format.eprintf "[logic][parsed][%a] @[<hov>%a@]@."
@@ -253,7 +258,8 @@ let main () =
           ~default:Dolmen_loop.Report.Warning.Status.Disabled)
       ?(max_warn = max_int) ?(time_limit = Float.infinity)
       ?(size_limit = Float.infinity) ?(type_check = true)
-      ?(solver_ctx = empty_solver_ctx) path =
+      ?(solver_ctx = empty_solver_ctx)
+      ?(sat_env = None) path =
     let dir = Filename.dirname path in
     let filename = Filename.basename path in
     let language =
@@ -293,6 +299,7 @@ let main () =
     let response_file = mk_file dir in
     State.empty
     |> State.set solver_ctx_key solver_ctx
+    |> State.set sat_env_key sat_env
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~logic_file ~response_file
     |> Parser.init
@@ -385,7 +392,7 @@ let main () =
         let rev_cnf = D_cnf.make (State.get State.logic_file st).loc l td in
         let cnf = List.rev rev_cnf in
         let solver_ctx = State.get solver_ctx_key st in
-        let sat_env = solve solver_ctx.sat_env all_context (cnf, name) in
+        let sat_env = solve all_context (cnf, name) in
         let rec ng_is_thm rcnf =
           begin match rcnf with
             | Commands.{ st_decl = Query (_, _, (Ty.Thm | Ty.Sat)); _ } :: _ ->
@@ -398,12 +405,14 @@ let main () =
         if ng_is_thm rev_cnf
         then
           State.set solver_ctx_key (
-            { solver_ctx with sat_env; global = []; local = [] }
+            { solver_ctx with global = []; local = [] }
           ) st
+          |> State.set sat_env_key sat_env
         else
           State.set solver_ctx_key (
-            { solver_ctx with sat_env; local = [] }
+            { solver_ctx with local = [] }
           ) st
+          |> State.set sat_env_key sat_env
 
       | { id = _; contents = `Hyp _; _ } ->
         let cnf = D_cnf.make (State.get State.logic_file st).loc [] td in
@@ -449,7 +458,7 @@ let main () =
         in
         let cnf = List.rev rev_cnf in
         let solver_ctx = State.get solver_ctx_key st in
-        let sat_env = solve solver_ctx.sat_env all_context (cnf, goal_name) in
+        let sat_env = solve all_context (cnf, goal_name) in
         let rec ng_is_thm rcnf =
           begin match rcnf with
             | Commands.{ st_decl = Query (_, _, (Ty.Thm | Ty.Sat)); _ } :: _ ->
@@ -462,12 +471,14 @@ let main () =
         if ng_is_thm rev_cnf
         then
           State.set solver_ctx_key (
-            { solver_ctx with sat_env; global = []; local = [] }
+            { solver_ctx with global = []; local = [] }
           ) st
+          |> State.set sat_env_key sat_env
         else
           State.set solver_ctx_key (
-            { solver_ctx with sat_env; local = [] }
+            { solver_ctx with local = [] }
           ) st
+          |> State.set sat_env_key sat_env
 
       | {contents = `Set_option
              { term =
@@ -481,11 +492,15 @@ let main () =
 
       | {contents = `Get_model; _ } ->
         if Options.get_interpretation () then
-          let solver_ctx = State.get solver_ctx_key st in
-          SAT.get_model solver_ctx.sat_env;
-          st
+          match State.get sat_env_key st with
+          | Some sat_env -> SAT.get_model sat_env; st
+          | None ->
+            (* TODO: add the location of the statement. *)
+            Printer.print_wrn "No model produced.";
+            st
         else
           begin
+            (* TODO: add the location of the statement. *)
             Printer.print_wrn "You have to set the option :produce-models \
                                before using the statement (get-model).";
             st
