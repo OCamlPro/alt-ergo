@@ -1037,27 +1037,27 @@ module Time : sig
   val start : unit -> unit
   val value : unit -> float
 
-  val set_timeout : is_gui:bool -> float -> unit
-  val unset_timeout : is_gui:bool -> unit
+  val set_timeout : float -> unit
+  val unset_timeout : unit -> unit
 
-  (** [with_timeout ~is_gui tm f] calls [f ()] with a timeout of [tm], and
+  (** [with_timeout tm f] calls [f ()] with a timeout of [tm], and
       unsets the timeout once the call to [f ()] completes or raises an
       exception.
 
       @raises Util.Timeout if the timeout is reached before [f ()] completes.
   *)
-  val with_timeout : is_gui:bool -> float -> (unit -> 'a) -> 'a
+  val with_timeout : float -> (unit -> 'a) -> 'a
 end
 
-(** [with_timelimit_if ~is_gui cond f] is:
+(** [with_timelimit_if cond f] is:
 
-    - [Time.with_timeout ~is_gui (get_timeout ()) f] when [cond] is [true]
+    - [Time.with_timeout (get_timeout ()) f] when [cond] is [true]
     - [f ()] otherwise
 
     @raises Util.Timeout if the [cond] is [true] and the timeout is reached
             before the calls to [f ()] completes.
 *)
-val with_timelimit_if : is_gui:bool -> bool -> (unit -> 'a) -> 'a
+val with_timelimit_if : bool -> (unit -> 'a) -> 'a
 
 (** {2 Globals} *)
 (** Global functions used throughout the whole program *)
@@ -1070,10 +1070,6 @@ val get_no_decisions_on_is_empty : unit -> bool
 
 (** Extra *)
 val match_extension : string -> input_format
-
-val set_is_gui : bool -> unit
-val get_is_gui : unit -> bool
-
 
 (** {3 Printer and formatter } *)
 (** This functions are use to print or set the output used to print debug or

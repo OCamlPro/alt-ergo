@@ -13,7 +13,7 @@ git_repo=`git rev-parse --show-toplevel`
 cd $git_repo
 
 # Install alt-ergo packages
-opam install alt-ergo-lib alt-ergo altgr-ergo
+opam install alt-ergo-lib alt-ergo
 
 # Run the non-regression tests
 $git_repo/rsc/extra/non_regression.sh

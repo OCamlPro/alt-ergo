@@ -1191,7 +1191,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let return_answer env compute return_function =
     let env = compute_concrete_model env compute in
-    Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
+    Options.Time.unset_timeout ();
 
     let prop_model = extract_prop_model ~complete_model:true env in
     if Options.(get_interpretation () && get_dump_models ()) then
@@ -1214,10 +1214,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if not !(env.model_gen_mode) &&
        Stdlib.(<>) (Options.get_timelimit_interpretation ()) 0. then
       begin
-        Options.Time.unset_timeout ~is_gui:(Options.get_is_gui());
-        Options.Time.set_timeout
-          ~is_gui:(Options.get_is_gui())
-          (Options.get_timelimit_interpretation ());
+        Options.Time.unset_timeout ();
+        Options.Time.set_timeout (Options.get_timelimit_interpretation ());
         env.model_gen_mode := true;
         return_answer env i (fun _ -> raise Util.Timeout)
       end

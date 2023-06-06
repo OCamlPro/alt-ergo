@@ -65,8 +65,6 @@ open AltErgoLib
 
 module PA = Parsed_interface
 
-let () = Options.set_is_gui false
-
 let x = PA.mk_var_type Loc.dummy "'a"
 
 let one = PA.mk_int_const Loc.dummy "1"

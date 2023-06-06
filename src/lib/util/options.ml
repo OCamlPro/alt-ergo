@@ -624,36 +624,31 @@ module Time = struct
     u := MyUnix.cur_time()
 
   let value () =
-    MyUnix.cur_time() -. !u
+    MyUnix.cur_time () -. !u
 
-  let set_timeout ~is_gui tm = MyUnix.set_timeout ~is_gui tm
+  let set_timeout tm = MyUnix.set_timeout tm
 
-  let unset_timeout ~is_gui =
+  let unset_timeout () =
     if Float.compare (get_timelimit ()) 0. <> 0 then
-      MyUnix.unset_timeout ~is_gui
+      MyUnix.unset_timeout ()
 
-  let with_timeout ~is_gui tm f =
+  let with_timeout tm f =
     Fun.protect
-      ~finally:(fun () -> unset_timeout ~is_gui)
+      ~finally:unset_timeout
       (fun () ->
-         set_timeout ~is_gui tm;
+         set_timeout tm;
          f())
 end
 
-let with_timelimit_if ~is_gui cond f =
+let with_timelimit_if cond f =
   if cond then
-    Time.with_timeout ~is_gui (get_timelimit ()) f
+    Time.with_timeout (get_timelimit ()) f
   else
     f ()
 
 (** globals **)
 
 (* extra **)
-
-let is_gui = ref false
-
-let set_is_gui b = is_gui := b
-let get_is_gui () = !is_gui
 
 let set_file_for_js filename =
   set_file filename;

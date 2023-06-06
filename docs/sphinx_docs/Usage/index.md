@@ -6,17 +6,14 @@ Since version 2.2.0, Alt-Ergo's library is also compiled and installed. See the 
 
 ## Run
 
-Alt-Ergo and AltGr-Ergo are executed with the following commands,
-  respectively:
+Alt-Ergo is executed with the following command:
 
         $ alt-ergo   [options] file.<ext>
-        $ altgr-ergo [options] file.<ext>
 
-The CDCL solver is now the default SAT engine. The commands below
-allow to enable the old Tableaux-like SAT-solver:
+The CDCL solver is now the default SAT engine. The command below
+allows to enable the old Tableaux-like SAT-solver:
 
         $ alt-ergo   [options] --sat-solver Tableaux file.<ext>
-        $ altgr-ergo [options] --sat-solver Tableaux file.<ext>
 
 ### Files extensions
 Alt-Ergo supports file extensions:
