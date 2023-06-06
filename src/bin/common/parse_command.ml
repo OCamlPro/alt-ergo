@@ -394,7 +394,7 @@ let mk_models_opt b =
     set_sat_solver Tableaux;
     (* The command line option overrides the behavior of the get-model
        commands. *)
-    set_print_all_interpretations true;
+    set_dump_models true;
   end;
   `Ok ()
 

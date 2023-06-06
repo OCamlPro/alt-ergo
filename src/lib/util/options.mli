@@ -213,7 +213,7 @@ val set_input_format : input_format -> unit
 val set_interpretation : interpretation -> unit
 
 (** [all_interpretations] accessible with {!val:get_all_interpretations}. *)
-val set_print_all_interpretations : bool -> unit
+val set_dump_models : bool -> unit
 
 (** Set [interpretation_use_underscore] accessible with
     {!val:get_interpretation_use_underscore} *)
@@ -712,7 +712,7 @@ val get_interpretation : unit -> bool
 
 (** [true] if the interpretation for each goal or check-sat is
     printed. *)
-val get_print_all_interpretations : unit -> bool
+val get_dump_models : unit -> bool
 (** Default to [false]. *)
 
 (** [true] if the interpretation is set to first interpretation *)
