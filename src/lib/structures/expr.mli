@@ -130,6 +130,14 @@ val term_view : t -> term_view
 val lit_view  : t -> lit_view
 val form_view : t -> form_view
 
+(** constant casts *)
+
+val int_view : t -> int
+(** Extracts the integer value of the expression, if there is one.
+
+    The returned value may be negative or null.
+
+    @raises Failure if the expression is not a constant integer. *)
 
 (** pretty printing *)
 

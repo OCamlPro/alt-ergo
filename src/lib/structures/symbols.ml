@@ -47,7 +47,7 @@ type operator =
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
   (* FP *)
-  | Float of int * int (* precision|significant * exponential *)
+  | Float
   | Integer_round | Fixed
   | Sqrt_real | Sqrt_real_default | Sqrt_real_excess
   | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
@@ -138,7 +138,7 @@ let compare_operators op1 op2 =
         let r = Int.compare i1 i2 in
         if r = 0 then Int.compare j1 j2 else r
       | _ , (Plus | Minus | Mult | Div | Modulo
-            | Concat | Extract _ | Get | Set | Fixed | Float _ | Reach
+            | Concat | Extract _ | Get | Set | Fixed | Float | Reach
             | Access _ | Record | Sqrt_real | Abs_int | Abs_real
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
@@ -291,7 +291,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op Record -> "@Record"
   | Op Get -> "get"
   | Op Set -> "set"
-  | Op Float (prec, exp) -> Format.sprintf "float %d %d" prec exp
+  | Op Float -> "float"
   | Op Fixed -> "fixed"
   | Op Abs_int -> "abs_int"
   | Op Abs_real -> "abs_real"

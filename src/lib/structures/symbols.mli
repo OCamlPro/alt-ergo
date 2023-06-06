@@ -47,7 +47,7 @@ type operator =
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
   (* FP *)
-  | Float of int * int (* precision|significant * exponential *)
+  | Float
   | Integer_round | Fixed
   | Sqrt_real | Sqrt_real_default | Sqrt_real_excess
   | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil

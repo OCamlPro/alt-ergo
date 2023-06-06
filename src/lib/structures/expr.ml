@@ -2801,3 +2801,15 @@ let reinit_cache () =
   clear_subst_cache ();
   Labels.clear labels;
   HC.reinit_cache ()
+
+let int_view t =
+  match term_view t with
+  | { f = Sy.Int n; _ } ->
+    let n = Hstring.view n in
+    begin match int_of_string n with
+      | n -> n
+      | exception Failure _ ->
+        Fmt.failwith "error when trying to convert %s to an int" n
+    end
+  | _ ->
+    Fmt.failwith "The given term %a is not an integer" print t

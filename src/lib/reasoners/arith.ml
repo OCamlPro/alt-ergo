@@ -115,7 +115,7 @@ module Shostak
     match sy with
     | Int _ | Real _ -> true
     | Op (Plus | Minus | Mult | Div | Modulo
-         | Float _ | Fixed | Abs_int | Abs_real | Sqrt_real
+         | Float | Fixed | Abs_int | Abs_real | Sqrt_real
          | Sqrt_real_default | Sqrt_real_excess
          | Real_of_int | Int_floor | Int_ceil
          | Max_int | Max_real | Min_int | Min_real
@@ -295,7 +295,15 @@ module Shostak
         P.add p (P.mult_const coef p3), ctx
 
     (*** <begin>: partial handling of some arith/FPA operators **)
-    | Sy.Op Sy.Float (prec, exp), [mode; x] ->
+    | Sy.Op Sy.Float, [prec; exp; mode; x] ->
+      let int_of_term t =
+        try
+          E.int_view t (* ! may be negative or null *)
+        with Failure e ->
+          Printer.print_err "%s" e;
+          assert false
+      in
+      let prec = int_of_term prec and exp = int_of_term exp in
       let aux_func e =
         let res, _, _ = Fpa_rounding.float_of_rational prec exp mode e in
         res

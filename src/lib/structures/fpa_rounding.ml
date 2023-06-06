@@ -231,23 +231,6 @@ let mode_of_term t =
       assert false
     end
 
-let int_of_term t =
-  match E.term_view t with
-  | { E.f = Sy.Int n; _ } ->
-    let n = Hstring.view n in
-    let n =
-      try int_of_string n
-      with _ ->
-        Printer.print_err
-          "error when trying to convert %s to an int" n;
-        assert false
-    in
-    n (* ! may be negative or null *)
-  | _ ->
-    Printer.print_err
-      "The given term %a is not an integer" E.print t;
-    assert false
-
 module MQ =
   Map.Make (struct
     type t = int * int * E.t * Q.t
@@ -286,20 +269,22 @@ let round_to_integer mode q =
 let make_adequate_app s l ty =
   match s with
   | Sy.Name (hs, Sy.Other) when Options.get_use_fpa() ->
+    let ei i = E.int (string_of_int i) in
+    let float prec exp ?(mode = _NearestTiesToEven__rounding_mode) x =
+      Sy.(Op Float), [ei prec; ei exp; mode; x]
+    in
+    let float32 = float 24 149 in
+    let float64 = float 53 1074 in
     let s, l  =
       match Hstring.view hs, l with
-      | "float", [prec; exp; mode; x] ->
-        Sy.Op (Sy.Float (int_of_term prec, int_of_term exp)), [mode; x]
-
-      | "float32", [_;_;] -> Sy.Op (Sy.Float (24, 149)), l
-      | "float32d", [_] ->
-        Sy.Op (Sy.Float (24, 149)),
-        _NearestTiesToEven__rounding_mode :: l
-
-      | "float64", [_;_;] -> Sy.Op (Sy.Float (53, 1074)), l
-      | "float64d", [_] ->
-        Sy.Op (Sy.Float (53, 1074)),
-        _NearestTiesToEven__rounding_mode :: l
+      (* Note: [prec], [exp], and [mode] are allowed to be quantified variables
+         here. The actual values are extracted later by the {!Arith} module,
+         after quantifier instantiation. *)
+      | "float", [_prec; _exp; _mode; _x] -> Sy.(Op Float), l
+      | "float32", [mode; x] -> float32 ~mode x
+      | "float32d", [x] -> float32 x
+      | "float64", [mode; x] -> float64 ~mode x
+      | "float64d", [x] -> float64 x
 
       | "integer_round", [_;_] -> Sy.Op Sy.Integer_round, l
 
