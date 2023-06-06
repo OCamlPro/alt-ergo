@@ -44,6 +44,12 @@ type 'a state = {
   solver_ctx: solver_ctx;
 }
 
+let empty_solver_ctx = {
+  ctx = [];
+  local = [];
+  global = [];
+}
+
 let main () =
   let module SatCont =
     (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer) in
@@ -56,13 +62,6 @@ let main () =
   let module SAT = SatCont.Make(TH) in
 
   let module FE = Frontend.Make (SAT) in
-
-  let empty_solver_ctx = {
-    ctx = [];
-    local = [];
-    global = [];
-  }
-  in
 
   let solve all_context (cnf, goal_name) =
     let used_context = FE.choose_used_context all_context ~goal_name in
