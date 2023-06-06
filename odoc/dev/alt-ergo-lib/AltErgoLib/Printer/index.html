@@ -64,4 +64,7 @@
   <span>?validity_mode:bool <span class="arrow">&#45;&gt;</span></span>
   <span><span>float option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>int option</span> <span class="arrow">&#45;&gt;</span></span>
-  unit</span></code></div><div class="spec-doc"><p>Print preprocess status message from the frontend on the standard output. If validity_mode is set, the status print : `Preprocess (&lt;time&gt;s) (&lt;steps&gt; steps)` else, we print nothing.</p></div></div></div></body></html>
+  unit</span></code></div><div class="spec-doc"><p>Print preprocess status message from the frontend on the standard output. If validity_mode is set, the status print : `Preprocess (&lt;time&gt;s) (&lt;steps&gt; steps)` else, we print nothing.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-print_smtlib_err"><a href="#val-print_smtlib_err" class="anchor"></a><code><span><span class="keyword">val</span> print_smtlib_err : 
+  <span>?flushed:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span><span>(<span class="type-var">'a</span>, <span class="xref-unresolved">Stdlib</span>.Format.formatter, unit)</span> <span class="xref-unresolved">Stdlib</span>.format</span> <span class="arrow">&#45;&gt;</span></span>
+  <span class="type-var">'a</span></span></code></div><div class="spec-doc"><p>Print smtlib error message on the error formatter accessible with <code>Options</code>.get_fmt_err and set by default to stderr. The err formatter is flushed after the print if flushed is set</p></div></div></div></body></html>
