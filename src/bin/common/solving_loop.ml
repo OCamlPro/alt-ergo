@@ -492,13 +492,15 @@ let main () =
           | Some sat_env -> SAT.get_model sat_env; st
           | None ->
             (* TODO: add the location of the statement. *)
-            Printer.print_wrn "No model produced.";
+            Printer.print_smtlib_err "No model produced.";
             st
         else
           begin
             (* TODO: add the location of the statement. *)
-            Printer.print_wrn "You have to set the option :produce-models \
-                               before using the statement (get-model).";
+            Printer.print_smtlib_err
+              "You have to set the flag :produce-models with \
+               (set-option :produce-models true) \
+               before using the statement (get-model).";
             st
           end
 
