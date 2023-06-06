@@ -74,7 +74,7 @@ let main () =
           Options.Time.set_timeout ~is_gui:false (Options.get_timelimit ());
         end;
       SAT.reset_refs ();
-      let sat_env, _, _ =
+      let partial_model, _, _ =
         List.fold_left
           (FE.process_decl FE.print_status used_context consistent_dep_stack)
           (SAT.empty (), true, Explanation.empty) cnf
@@ -86,7 +86,7 @@ let main () =
           (Steps.get_steps ())
           (Signals_profiling.get_timers ())
           (Options.Output.get_fmt_err ());
-      Some sat_env
+      Some partial_model
     with Util.Timeout ->
       if not (Options.get_timelimit_per_goal()) then exit 142;
       None
@@ -185,7 +185,7 @@ let main () =
     State.create_key ~pipe:"" "solving_state"
   in
 
-  let sat_env_key: SAT.t option State.key =
+  let partial_model_key: SAT.t option State.key =
     State.create_key ~pipe:"" "sat_state"
   in
 
@@ -254,7 +254,7 @@ let main () =
       ?(max_warn = max_int) ?(time_limit = Float.infinity)
       ?(size_limit = Float.infinity) ?(type_check = true)
       ?(solver_ctx = empty_solver_ctx)
-      ?(sat_env = None) path =
+      ?(partial_model = None) path =
     let dir = Filename.dirname path in
     let filename = Filename.basename path in
     let language =
@@ -294,7 +294,7 @@ let main () =
     let response_file = mk_file dir in
     State.empty
     |> State.set solver_ctx_key solver_ctx
-    |> State.set sat_env_key sat_env
+    |> State.set partial_model_key partial_model
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~logic_file ~response_file
     |> Parser.init
@@ -386,8 +386,7 @@ let main () =
         in
         let rev_cnf = D_cnf.make (State.get State.logic_file st).loc l td in
         let cnf = List.rev rev_cnf in
-        let solver_ctx = State.get solver_ctx_key st in
-        let sat_env = solve all_context (cnf, name) in
+        let partial_model = solve all_context (cnf, name) in
         let rec ng_is_thm rcnf =
           begin match rcnf with
             | Commands.{ st_decl = Query (_, _, (Ty.Thm | Ty.Sat)); _ } :: _ ->
@@ -400,14 +399,16 @@ let main () =
         if ng_is_thm rev_cnf
         then
           State.set solver_ctx_key (
+            let solver_ctx = State.get solver_ctx_key st in
             { solver_ctx with global = []; local = [] }
           ) st
-          |> State.set sat_env_key sat_env
+          |> State.set partial_model_key partial_model
         else
           State.set solver_ctx_key (
+            let solver_ctx = State.get solver_ctx_key st in
             { solver_ctx with local = [] }
           ) st
-          |> State.set sat_env_key sat_env
+          |> State.set partial_model_key partial_model
 
       | { id = _; contents = `Hyp _; _ } ->
         let cnf = D_cnf.make (State.get State.logic_file st).loc [] td in
@@ -452,8 +453,7 @@ let main () =
             }
         in
         let cnf = List.rev rev_cnf in
-        let solver_ctx = State.get solver_ctx_key st in
-        let sat_env = solve all_context (cnf, goal_name) in
+        let partial_model = solve all_context (cnf, goal_name) in
         let rec ng_is_thm rcnf =
           begin match rcnf with
             | Commands.{ st_decl = Query (_, _, (Ty.Thm | Ty.Sat)); _ } :: _ ->
@@ -466,14 +466,16 @@ let main () =
         if ng_is_thm rev_cnf
         then
           State.set solver_ctx_key (
+            let solver_ctx = State.get solver_ctx_key st in
             { solver_ctx with global = []; local = [] }
           ) st
-          |> State.set sat_env_key sat_env
+          |> State.set partial_model_key partial_model
         else
           State.set solver_ctx_key (
+            let solver_ctx = State.get solver_ctx_key st in
             { solver_ctx with local = [] }
           ) st
-          |> State.set sat_env_key sat_env
+          |> State.set partial_model_key partial_model
 
       | {contents = `Set_option
              { term =
@@ -487,8 +489,8 @@ let main () =
 
       | {contents = `Get_model; _ } ->
         if Options.get_interpretation () then
-          match State.get sat_env_key st with
-          | Some sat_env -> SAT.get_model sat_env; st
+          match State.get partial_model_key st with
+          | Some partial_model -> SAT.get_model partial_model; st
           | None ->
             (* TODO: add the location of the statement. *)
             Printer.print_smtlib_err "No model produced.";
