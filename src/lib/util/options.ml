@@ -629,17 +629,17 @@ module Time = struct
     if Float.compare (get_timelimit ()) 0. <> 0 then
       MyUnix.unset_timeout ()
 
-  let with_timeout ~is_gui tm f =
+  let with_timeout tm f =
     Fun.protect
-      ~finally:(fun () -> unset_timeout ~is_gui)
+      ~finally:unset_timeout
       (fun () ->
-         set_timeout ~is_gui tm;
+         set_timeout tm;
          f())
 end
 
-let with_timelimit_if ~is_gui cond f =
+let with_timelimit_if cond f =
   if cond then
-    Time.with_timeout ~is_gui (get_timelimit ()) f
+    Time.with_timeout (get_timelimit ()) f
   else
     f ()
 

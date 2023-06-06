@@ -488,9 +488,7 @@ let main () =
   let d_fe filename =
     let st = mk_state filename in
     try
-      Options.with_timelimit_if
-        ~is_gui:false
-        (not (Options.get_timelimit_per_goal ()))
+      Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
       @@ fun () ->
 
       let st, g = Parser.parse_logic [] st (State.get State.logic_file st) in
