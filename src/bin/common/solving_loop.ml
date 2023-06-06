@@ -39,9 +39,8 @@ type solver_ctx = {
 }
 
 (* Internal state while iterating over input statements *)
-type ('a, 'b) state = {
+type 'a state = {
   env : 'a;
-  sat_env : 'b;
   solver_ctx: solver_ctx;
 }
 
@@ -104,17 +103,15 @@ let main () =
           state.solver_ctx.ctx
         in
         let cnf = List.rev @@ Cnf.make l td in
-        let sat_env = solve all_context (cnf, name) in
+        let _ = solve all_context (cnf, name) in
         begin match kind with
           | Ty.Check
           | Ty.Cut ->
             { state with solver_ctx =
-                           { state.solver_ctx with local = []};
-                         sat_env }
+                           { state.solver_ctx with local = []}}
           | Ty.Thm | Ty.Sat ->
             { state with solver_ctx = {
-                  state.solver_ctx with global = []; local = [];
-                }; sat_env }
+                  state.solver_ctx with global = []; local = []}}
         end
       | Typed.TAxiom (_, s, _, _) when Ty.is_global_hyp s ->
         let cnf = Cnf.make state.solver_ctx.global td in
@@ -174,7 +171,6 @@ let main () =
 
     let state = {
       env = I.empty_env;
-      sat_env = None;
       solver_ctx = empty_solver_ctx
     } in
     try
