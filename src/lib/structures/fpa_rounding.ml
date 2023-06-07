@@ -269,12 +269,11 @@ let round_to_integer mode q =
 let make_adequate_app s l ty =
   match s with
   | Sy.Name (hs, Sy.Other) when Options.get_use_fpa() ->
-    let ei i = E.int (string_of_int i) in
     let float prec exp ?(mode = _NearestTiesToEven__rounding_mode) x =
-      Sy.(Op Float), [ei prec; ei exp; mode; x]
+      Sy.(Op Float), [E.int prec; E.int exp; mode; x]
     in
-    let float32 = float 24 149 in
-    let float64 = float 53 1074 in
+    let float32 = float "24" "149" in
+    let float64 = float "53" "1074" in
     let s, l  =
       match Hstring.view hs, l with
       (* Note: [prec], [exp], and [mode] are allowed to be quantified variables

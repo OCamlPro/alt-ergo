@@ -296,14 +296,7 @@ module Shostak
 
     (*** <begin>: partial handling of some arith/FPA operators **)
     | Sy.Op Sy.Float, [prec; exp; mode; x] ->
-      let int_of_term t =
-        try
-          E.int_view t (* ! may be negative or null *)
-        with Failure e ->
-          Printer.print_err "%s" e;
-          assert false
-      in
-      let prec = int_of_term prec and exp = int_of_term exp in
+      let prec = E.int_view prec and exp = E.int_view exp in
       let aux_func e =
         let res, _, _ = Fpa_rounding.float_of_rational prec exp mode e in
         res
