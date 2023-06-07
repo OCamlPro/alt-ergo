@@ -98,14 +98,15 @@ let increase cmp s n =
 
 let filter s filt cmp =
   let j = ref 0 in
-  Vec.iter (fun elt ->
-      if filt elt then begin
-        Vec.set s.heap !j elt;
-        Vec.set s.indices elt !j;
-        incr j
-      end
-      else Vec.set s.indices elt (-1)
-    ) s.heap;
+  for i = 0 to Vec.size s.heap - 1 do
+    let elt = Vec.get s.heap i in
+    if filt elt then begin
+      Vec.set s.heap !j elt;
+      Vec.set s.indices elt !j;
+      incr j
+    end
+    else Vec.set s.indices elt (-1)
+  done;
   let lim = Vec.size s.heap in
   Vec.shrink s.heap (lim - !j);
   for i = (lim / 2) - 1 downto 0 do

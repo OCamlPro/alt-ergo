@@ -76,11 +76,11 @@ let[@inline never] grow_to vec cap : unit =
   let cap =
     min Sys.max_array_length (max 4 cap)
   in
+  assert (cap > vec.sz);
   let arr' = Array.make cap vec.dummy in
-  Array.blit vec.data 0 arr' 0 (Array.length vec.data);
-  vec.data <- arr';
   assert (Array.length vec.data > vec.sz);
-  ()
+  Array.blit vec.data 0 arr' 0 (Array.length vec.data);
+  vec.data <- arr'
 
 let[@inline never] grow_to_double_size vec : unit =
   grow_to vec (2 * Array.length vec.data)
@@ -110,6 +110,7 @@ let[@inline] set vec i elt =
 let[@inline] fast_remove vec i =
   assert (i>= 0 && i < vec.sz);
   Array.unsafe_set vec.data i @@ Array.unsafe_get vec.data (vec.sz - 1);
+  Array.unsafe_set vec.data (vec.sz - 1) vec.dummy;
   vec.sz <- vec.sz - 1
 
 let filter_in_place f vec =
@@ -117,13 +118,6 @@ let filter_in_place f vec =
   while !i < size vec do
     if f (Array.unsafe_get vec.data !i) then incr i else fast_remove vec !i
   done
-
-let sort vec f : unit =
-  let sub_arr =
-    if is_full vec then vec.data else Array.sub vec.data 0 vec.sz
-  in
-  Array.fast_sort f sub_arr;
-  vec.data <- sub_arr
 
 let[@inline] iteri f vec =
   for i = 0 to size vec - 1 do
@@ -134,13 +128,11 @@ let[@inline] iteri f vec =
 
 let[@inline] iter f = iteri (fun _ elt -> f elt)
 
+exception Terminate
+
 let exists p vec =
-  let exception Terminate in
   try
-    for i = 0 to size vec - 1 do
-      let elt = Array.unsafe_get vec.data i in
-      if not (elt == vec.dummy) && p elt then raise Terminate
-    done;
+    iter (fun elt -> if p elt then raise Terminate) vec;
     false
   with Terminate -> true
 
@@ -148,11 +140,7 @@ let for_all p vec = not @@ exists (fun x -> not @@ p x) vec
 
 let fold f acc vec =
   let acc = ref acc in
-  for i = 0 to size vec - 1 do
-    let elt = Array.unsafe_get vec.data i in
-    if not (elt == vec.dummy) then
-      acc := f !acc elt
-  done;
+  iter (fun elt -> acc := f !acc elt) vec;
   !acc
 
 let to_array a = Array.sub a.data 0 a.sz
@@ -165,6 +153,11 @@ let of_list l ~dummy : _ t =
     let v = make (List.length tl+1) ~dummy in
     List.iter (push v) l;
     v
+
+let sort vec f : unit =
+  let arr = to_array vec in
+  Array.fast_sort f arr;
+  vec.data <- arr
 
 let pp ?(sep=", ") pp fmt a =
   let pp_sep fmt () = Format.fprintf fmt "%s@," sep in
