@@ -78,7 +78,7 @@ let[@inline never] grow_to vec cap : unit =
   in
   assert (cap > vec.sz);
   let arr' = Array.make cap vec.dummy in
-  assert (Array.length vec.data > vec.sz);
+  assert (Array.length arr' > vec.sz);
   Array.blit vec.data 0 arr' 0 (Array.length vec.data);
   vec.data <- arr'
 
