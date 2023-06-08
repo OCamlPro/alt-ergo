@@ -1,14 +1,32 @@
 #!/bin/sh
 
-git_repo=`git rev-parse --show-toplevel`
-cd $git_repo/rsc/extra
-
-res=`./check_style.sh`
-echo $res
-
-if [ "$res" = "All files have correct style" ] ; then
-	./check_indentation.sh
-	exit $?
+if git rev-parse --verify HEAD >/dev/null 2>&1
+then
+	against=HEAD
 else
-  exit 1
+	# Initial commit: diff against an empty tree object
+	against=$(git hash-object -t tree /dev/null)
 fi
+
+# Redirect output to stderr.
+exec 1>&2
+
+# Reindent files using ocp-indent
+errors=0
+files=$(git diff --cached --name-only --diff-filter=ACMR -z HEAD | grep -Ez '\.ml[ily]?$' | xargs -0)
+for f in $files; do
+	cmp -s <(git show ":$f") <(git show ":$f" | ocp-indent)
+	if [[ $? -ne 0 ]]; then
+		echo "$f: indentation errors."
+		ocp-indent -i "$f"
+		git diff -- "$f"
+		errors=$((errors+1))
+	fi
+done
+
+if [[ $errors -ne 0 ]]; then
+	exit 1
+fi
+
+# If there are whitespace errors, print the offending file names and fail.
+exec git diff-index --check --cached $against --
