@@ -57,7 +57,6 @@ module Output = struct
   let err_output = ref Stderr
   let wrn_output = ref Stderr
   let dbg_output = ref Stderr
-  let mdl_output = ref Stdout
   let usc_output = ref Stdout
 
   let close o =
@@ -78,12 +77,10 @@ module Output = struct
     set_output err_output Invalid;
     set_output wrn_output Invalid;
     set_output dbg_output Invalid;
-    set_output mdl_output Invalid;
     set_output usc_output Invalid
 
   let set_regular o =
     set_output std_output o;
-    set_output mdl_output o;
     set_output usc_output o
 
   let set_diagnostic o =
@@ -95,14 +92,12 @@ module Output = struct
   let get_fmt_err () = to_formatter !err_output
   let get_fmt_wrn () = to_formatter !wrn_output
   let get_fmt_dbg () = to_formatter !dbg_output
-  let get_fmt_mdl () = to_formatter !mdl_output
   let get_fmt_usc () = to_formatter !usc_output
 
   let set_std = set_output std_output
   let set_err = set_output err_output
   let set_wrn = set_output wrn_output
   let set_dbg = set_output dbg_output
-  let set_mdl = set_output mdl_output
   let set_usc = set_output usc_output
 end
 

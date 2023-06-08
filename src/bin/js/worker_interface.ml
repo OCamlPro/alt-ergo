@@ -961,7 +961,6 @@ type results = {
   warnings : string list option;
   debugs : string list option;
   statistics : statistics option;
-  model : string list option;
   unsat_core : string list option;
 }
 
@@ -973,21 +972,20 @@ let init_results () = {
   warnings = None;
   debugs = None;
   statistics = None;
-  model = None;
   unsat_core = None;
 }
 
 let results_encoding =
   conv
     (fun {worker_id; status; results; errors; warnings;
-          debugs; statistics; model; unsat_core } ->
+          debugs; statistics; unsat_core } ->
       (worker_id, status, results, errors, warnings,
-       debugs, statistics, model, unsat_core))
+       debugs, statistics, unsat_core))
     (fun (worker_id, status, results, errors, warnings,
-          debugs, statistics, model, unsat_core) ->
+          debugs, statistics, unsat_core) ->
       {worker_id; status; results; errors; warnings;
-       debugs; statistics; model; unsat_core })
-    (obj9
+       debugs; statistics; unsat_core })
+    (obj8
        (opt "worker_id" int31)
        (req "status" status_encoding)
        (opt "results" (list string))
@@ -995,7 +993,6 @@ let results_encoding =
        (opt "warnings" (list string))
        (opt "debugs" (list string))
        (opt "statistics" statistics_encoding)
-       (opt "model" (list string))
        (opt "unsat_core" (list string)))
 
 let results_to_json res =

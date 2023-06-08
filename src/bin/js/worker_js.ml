@@ -76,8 +76,6 @@ let main worker_id content =
     Options.Output.set_wrn (snd buf_wrn);
     let buf_dbg = create_buffer () in
     Options.Output.set_dbg (snd buf_dbg);
-    let buf_mdl = create_buffer () in
-    Options.Output.set_mdl (snd buf_mdl);
     let buf_usc = create_buffer () in
     Options.Output.set_usc (snd buf_usc);
 
@@ -248,7 +246,6 @@ let main worker_id content =
       Worker_interface.debugs = check_buffer_content buf_dbg;
       Worker_interface.statistics =
         check_context_content (compute_statistics ());
-      Worker_interface.model = check_buffer_content buf_mdl;
       Worker_interface.unsat_core = check_buffer_content buf_usc;
     }
 

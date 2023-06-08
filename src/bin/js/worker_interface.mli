@@ -200,7 +200,6 @@ type results = {
   warnings : string list option;
   debugs : string list option;
   statistics : statistics option;
-  model : string list option;
   unsat_core : string list option;
 }
 

@@ -233,7 +233,7 @@ let onload _ =
              (* Update debug area *)
              print_debug  (process_results res.debugs);
              (* Update model *)
-             print_model  (process_results res.model);
+             print_model  (process_results res.results);
              (* Update unsat core *)
              print_unsat_core  (process_results res.unsat_core);
              (* Update statistics *)
