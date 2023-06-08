@@ -70,12 +70,13 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (ocaml (>= 4.08.0))
   dune
   dune-build-info
-  (dolmen (>= 0.8.1))
-  (dolmen_type (>= 0.8.1))
-  (dolmen_loop (>= 0.8.1))
+  (dolmen (and (>= 0.9) (< 0.10)))
+  (dolmen_type (and (>= 0.9) (< 0.10)))
+  (dolmen_loop (and (>= 0.9) (< 0.10)))
   (ocplib-simplex (>= 0.5))
   (zarith (>= 1.4))
   seq
+  fmt
   stdlib-shims
   (camlzip (>= 1.07))
   (odoc :with-doc)
