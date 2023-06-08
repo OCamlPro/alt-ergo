@@ -23,6 +23,7 @@
     dolmen_loop
     dune-build-info
     alt_ergo_prelude
+    fmt
   )
 
   ; .mli only modules *also* need to be in this field

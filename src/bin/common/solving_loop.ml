@@ -51,6 +51,8 @@ let empty_solver_ctx = {
 }
 
 let main () =
+  let () = Dolmen_loop.Code.init [] in
+
   let module SatCont =
     (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer) in
 
@@ -377,12 +379,13 @@ let main () =
       match td with
       (* When the next statement is a goal, the solver is called and provided
          the goal and the current context *)
-      | { id = {name = Simple name; _}; contents = `Goal _; _ } ->
+      | { id = {name = Simple name; _}; contents = `Solve ([], [t]); _ } ->
         let l =
           solver_ctx.local @
           solver_ctx.global @
           solver_ctx.ctx
         in
+        let td = { td with contents = `Goal t } in
         let rev_cnf = D_cnf.make (State.get State.logic_file st).loc l td in
         let cnf = List.rev rev_cnf in
         let partial_model = solve all_context (cnf, name) in

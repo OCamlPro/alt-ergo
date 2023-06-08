@@ -287,7 +287,7 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
     let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
     let rev_cs, is_enum =
       Array.fold_left (
-        fun (accl, is_enum) DT.{ cstr = { path; _ }; dstrs; _ } ->
+        fun (accl, is_enum) DE.{ cstr = { path; _ }; dstrs; _ } ->
           let is_enum =
             if is_enum
             then
@@ -385,7 +385,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
       ) ->
       let rev_cs =
         Array.fold_left (
-          fun (accl) DT.{ cstr = { path; _ }; dstrs; _ } ->
+          fun accl DE.{ cstr = { path; _ }; dstrs; _ } ->
             let rev_fields =
               Array.fold_left (
                 fun acc tc_o ->
@@ -424,14 +424,14 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
       fun acc tdef ->
         match tdef with
         | Some (
-            (DT.Adt { cases; record; ty = ty_c; }) as adt
+            (DE.Adt { cases; record; ty = ty_c; }) as adt
           ) ->
           let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
           let name = get_basename ty_c.path in
 
           let cns, is_enum =
             Array.fold_right (
-              fun DE.Ty.{ dstrs; cstr = { path; _ }; _ } (nacc, is_enum) ->
+              fun DE.{ dstrs; cstr = { path; _ }; _ } (nacc, is_enum) ->
                 get_basename path :: nacc,
                 Array.length dstrs = 0 && is_enum
             ) cases ([], true)
@@ -502,7 +502,7 @@ let mk_pattern DE.{ term_descr; _ } =
     let rev_vnames =
       begin match DT.definition adt with
         | Some (Adt { cases; _ }) ->
-          let { DT.dstrs; _ } = cases.(case) in
+          let { DE.dstrs; _ } = cases.(case) in
           Array.fold_left (
             fun acc v ->
               match v with
@@ -1250,7 +1250,7 @@ let make_form name_base f loc ~decl_kind =
     E.mk_forall name_base loc SM.empty [] ff ~toplevel:true ~decl_kind
 
 let make dloc_file acc stmt =
-  let rec aux acc (stmt: Typer_Pipe.typechecked Typer_Pipe.stmt) =
+  let rec aux acc (stmt: _ Typer_Pipe.stmt) =
     match stmt with
 
     (* Push and Pop commands *)
@@ -1273,7 +1273,7 @@ let make dloc_file acc stmt =
           fun acc t ->
             let ns = DStd.Namespace.Decl in
             let name = Ty.fresh_hypothesis_name Ty.Thm in
-            let decl: Typer_Pipe.typechecked Typer_Pipe.stmt = {
+            let decl: _ Typer_Pipe.stmt = {
               id = Id.mk ns name;
               contents = `Hyp t; loc;
             }
@@ -1302,7 +1302,12 @@ let make dloc_file acc stmt =
             let name_base = get_basename path in
             let sy = Sy.name name_base in
             Cache.store_sy (DE.Term.Const.hash tcst) sy
-          | `Type_def _ -> ()
+          | `Type_alias _ -> ()
+          | `Instanceof _ ->
+            (* These statements are only used in models when completing a
+               polymorphic partially-defined bulitin and should not end up
+               here. *)
+            assert false
         ) defs;
       List.filter_map (fun (def : Typer_Pipe.def) ->
           match def with
@@ -1377,12 +1382,17 @@ let make dloc_file acc stmt =
                   Format.eprintf "defining term of %a@." DE.Term.print body;
                 Some C.{ st_decl = C.Assume (name_base, e, true); st_loc }
             end
-          | `Type_def _ -> None
+          | `Type_alias _ -> None
+          | `Instanceof _ ->
+            (* These statements are only used in models when completing a
+               polymorphic partially-defined bulitin and should not end up
+               here. *)
+            assert false
         ) defs |> List.rev_append acc
 
     | {contents = `Decls [td]; _ } ->
       begin match td with
-        | `Type_decl td -> mk_ty_decl td
+        | `Type_decl (td, _def) -> mk_ty_decl td
         | `Term_decl td -> mk_term_decl td
       end;
       acc
@@ -1403,7 +1413,7 @@ let make dloc_file acc stmt =
           mk_term_decl td;
           aux [] tl
 
-        | `Type_decl td :: tl ->
+        | `Type_decl (td, _def) :: tl ->
           aux (td :: acc) tl
 
         | [] ->
@@ -1416,13 +1426,14 @@ let make dloc_file acc stmt =
       aux [] dcl;
       acc
 
-    | _ -> acc
-    (* TODO:
-       - Separate statements that should be ignored from unsupported
-         statements and throw exception or print a warning when an unsupported
-         statement is encountered.
-    *)
+    | _ ->
+      (* TODO:
+         - Separate statements that should be ignored from unsupported
+           statements and throw exception or print a warning when an unsupported
+           statement is encountered.
+      *)
+      Printer.print_dbg ~header:true
+        "Ignoring statement: %a" Typer_Pipe.print stmt;
+      acc
   in
   aux acc stmt
-
-let make_list dloc_file l = List.fold_left (make dloc_file) [] l
