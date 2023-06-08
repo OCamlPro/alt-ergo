@@ -526,7 +526,7 @@ let main () =
       @@ fun () ->
 
       let preludes =
-        List.map (fun f -> Dolmen_std.Statement.include_ f [])
+        List.map Dolmen_std.Statement.import
           (Options.get_preludes ())
       in
       let st, g =
