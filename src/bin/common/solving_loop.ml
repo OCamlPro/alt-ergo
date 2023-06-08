@@ -525,7 +525,13 @@ let main () =
       Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
       @@ fun () ->
 
-      let st, g = Parser.parse_logic [] st (State.get State.logic_file st) in
+      let preludes =
+        List.map Dolmen_std.Statement.import
+          (Options.get_preludes ())
+      in
+      let st, g =
+        Parser.parse_logic preludes st (State.get State.logic_file st)
+      in
       let all_used_context = FE.init_all_used_context () in
       let finally = finally ~handle_exn in
       let st =
