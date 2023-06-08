@@ -64,7 +64,7 @@ let load verbose p msg =
       Printer.print_dbg ~header:false
         "@, Loading the %s in plugin %S failed!"
         msg p;
-      Printer.print_err
+      Printer.print_diagnostic
         ">> Failure message: %s" (error_message m1);
     end;
     let pp = Format.sprintf "%s/%s" Config.pluginsdir p in
@@ -80,7 +80,7 @@ let load verbose p msg =
     with
     | Error m2 ->
       if not (verbose) then begin
-        Printer.print_err
+        Printer.print_diagnostic
           "@, Loading the %s in plugin %S failed!@,\
            >> Failure message: %s"
           msg p

@@ -445,7 +445,7 @@ struct
       assert (
         not (Options.get_enable_assertions()) ||
         if not (Ty.compare tya tyb = 0) then (
-          print_err "@[<v 0>@ Tya = %a  and @ Tyb = %a@]"
+          print_diagnostic "@[<v 0>@ Tya = %a  and @ Tyb = %a@]"
             Ty.print tya Ty.print tyb;
           false)
         else true)
@@ -502,7 +502,7 @@ struct
           match p.v with
           | Ac _ -> true | Term _ -> SX.mem p original
           | _ ->
-            Printer.print_err "%a" CX.print p;
+            Printer.print_diagnostic "%a" CX.print p;
             assert false
         )sbs
     in

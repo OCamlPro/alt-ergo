@@ -68,16 +68,10 @@ let main worker_id content =
   try
     (* Create buffer for each formatter
        The content of this buffers are then retrieved and send as results *)
-    let buf_std = create_buffer () in
-    Options.Output.set_std (snd buf_std);
-    let buf_err = create_buffer () in
-    Options.Output.set_err (snd buf_err);
-    let buf_wrn = create_buffer () in
-    Options.Output.set_wrn (snd buf_wrn);
-    let buf_dbg = create_buffer () in
-    Options.Output.set_dbg (snd buf_dbg);
-    let buf_usc = create_buffer () in
-    Options.Output.set_usc (snd buf_usc);
+    let buf_regular = create_buffer () in
+    Options.Output.set_regular (snd buf_regular);
+    let buf_diagnostic = create_buffer () in
+    Options.Output.set_diagnostic (snd buf_diagnostic);
 
     (* Status updated regarding if AE succed or failed
        (error or steplimit reached) *)
@@ -170,7 +164,7 @@ let main worker_id content =
         I.parse_file ~content ~format:None
       with
       | Parsing.Parse_error ->
-        Printer.print_err "%a" Errors.report
+        Printer.print_diagnostic "%a" Errors.report
           (Syntax_error ((Lexing.dummy_pos,Lexing.dummy_pos),""));
         raise Exit
       | Errors.Error e ->
@@ -184,7 +178,7 @@ let main worker_id content =
             end
           | _ -> returned_status := Worker_interface.Error "Error"
         end;
-        Printer.print_err "%a" Errors.report e;
+        Printer.print_diagnostic "%a" Errors.report e;
         raise Exit
     in
     let all_used_context = FE.init_all_used_context () in
@@ -194,7 +188,7 @@ let main worker_id content =
         let l, env = I.type_parsed state.env assertion_stack p in
         List.fold_left (typed_loop all_used_context) { state with env; } l
       with Errors.Error e ->
-        Printer.print_err "%a" Errors.report e;
+        Printer.print_diagnostic "%a" Errors.report e;
         raise Exit
     in
 
@@ -240,13 +234,10 @@ let main worker_id content =
     {
       Worker_interface.worker_id = worker_id;
       Worker_interface.status = !returned_status;
-      Worker_interface.results = check_buffer_content buf_std;
-      Worker_interface.errors = check_buffer_content buf_err;
-      Worker_interface.warnings = check_buffer_content buf_wrn;
-      Worker_interface.debugs = check_buffer_content buf_dbg;
+      Worker_interface.regular = check_buffer_content buf_regular;
+      Worker_interface.diagnostic = check_buffer_content buf_diagnostic;
       Worker_interface.statistics =
         check_context_content (compute_statistics ());
-      Worker_interface.unsat_core = check_buffer_content buf_usc;
     }
 
   with
@@ -255,7 +246,7 @@ let main worker_id content =
     { res with
       Worker_interface.worker_id = worker_id;
       Worker_interface.status = Error "Assertion failure";
-      Worker_interface.errors =
+      Worker_interface.diagnostic =
         Some [Format.sprintf "assertion failed: %s line %d char %d" s l p];
     }
   | Errors.Error e ->
@@ -263,7 +254,7 @@ let main worker_id content =
     { res with
       Worker_interface.worker_id = worker_id;
       Worker_interface.status = Error "";
-      Worker_interface.errors =
+      Worker_interface.diagnostic =
         Some [Format.asprintf "%a" Errors.report e]
     }
   | _ ->

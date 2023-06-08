@@ -342,7 +342,7 @@ module MP = struct
     assert
       (let _p0, c0, d0 = P.normal_form_pos p in
        let b = Q.is_zero c0 && Q.is_one d0 in
-       Printer.print_err ~error:(not b)
+       Printer.print_diagnostic ~error:(not b)
          "[IC.assert_normalized_poly] %a is not normalized"
          P.print p;
        b)
@@ -386,7 +386,7 @@ module MX = struct
   let assert_is_alien x =
     assert (
       let b = is_alien x in
-      Printer.print_err ~error:(not b)
+      Printer.print_diagnostic ~error:(not b)
         "[IC.assert_is_alien] %a is not an alien" X.print x;
       b
     )
@@ -1180,7 +1180,7 @@ let is_normalized_poly uf p =
   let rp, _  = Uf.find_r uf p in
   if X.equal p rp then true
   else begin
-    Printer.print_err
+    Printer.print_diagnostic
       "%a <= 0 NOT normalized@,It is equal to %a"
       X.print p X.print rp;
     false
@@ -1602,7 +1602,7 @@ let update_used_by_pow env r1 p2 orig  eqs =
               (eq, None, ex, Th_util.Other) :: eqs
           end
         | _ ->
-          Printer.print_err
+          Printer.print_diagnostic
             "Expected a 'power' term with two arguments, but got %a" E.print t;
           assert false
       ) s eqs
@@ -1966,10 +1966,10 @@ let fm_simplex_unbounded_integers_encoding env uf =
     (fun simplex (p, uints) ->
        match uints with
        | [] ->
-         Printer.print_err "Intervals already empty !!!";
+         Printer.print_diagnostic "Intervals already empty !!!";
          assert false
        | _::_::_ ->
-         Printer.print_err
+         Printer.print_diagnostic
            "case-split over unions of intervals is needed !!!";
          assert false
 
@@ -2173,7 +2173,7 @@ let extend_with_domain_substitution =
                mk_const_term ty q1
 
              | Some (q1,_), Some (q2,_) ->
-               Printer.print_err
+               Printer.print_diagnostic
                  "[Error] %a <= %a <= %a@,\
                   Which value should we choose?"
                  Q.print q1

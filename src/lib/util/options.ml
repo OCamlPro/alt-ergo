@@ -53,11 +53,8 @@ module Output = struct
       let fmt = Format.formatter_of_out_channel cout in
       Channel (cout, fmt)
 
-  let std_output = ref Stdout
-  let err_output = ref Stderr
-  let wrn_output = ref Stderr
-  let dbg_output = ref Stderr
-  let usc_output = ref Stdout
+  let regular_output = ref Stdout
+  let diagnostic_output = ref Stderr
 
   let close o =
     match o with
@@ -73,32 +70,15 @@ module Output = struct
     output := o
 
   let close_all () =
-    set_output std_output Invalid;
-    set_output err_output Invalid;
-    set_output wrn_output Invalid;
-    set_output dbg_output Invalid;
-    set_output usc_output Invalid
+    set_output regular_output Invalid;
+    set_output diagnostic_output Invalid
 
-  let set_regular o =
-    set_output std_output o;
-    set_output usc_output o
+  let set_regular o = set_output regular_output o
 
-  let set_diagnostic o =
-    set_output err_output o;
-    set_output wrn_output o;
-    set_output dbg_output o
+  let set_diagnostic o = set_output diagnostic_output o
 
-  let get_fmt_std () = to_formatter !std_output
-  let get_fmt_err () = to_formatter !err_output
-  let get_fmt_wrn () = to_formatter !wrn_output
-  let get_fmt_dbg () = to_formatter !dbg_output
-  let get_fmt_usc () = to_formatter !usc_output
-
-  let set_std = set_output std_output
-  let set_err = set_output err_output
-  let set_wrn = set_output wrn_output
-  let set_dbg = set_output dbg_output
-  let set_usc = set_output usc_output
+  let get_fmt_regular () = to_formatter !regular_output
+  let get_fmt_diagnostic () = to_formatter !diagnostic_output
 end
 
 (* Declaration of all the options as refs with default values *)
@@ -608,7 +588,7 @@ let exec_timeout () = !timeout ()
 
 let tool_req n msg =
   if get_rule () = n then
-    Format.fprintf (Output.get_fmt_dbg ()) "[rule] %s@." msg
+    Format.fprintf (Output.get_fmt_diagnostic ()) "[rule] %s@." msg
 
 (** Simple Timer module **)
 module Time = struct

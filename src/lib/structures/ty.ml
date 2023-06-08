@@ -469,7 +469,7 @@ module Decls = struct
                  | Tvar {v ; value = None}   ->
                    if equal vty ty then sbt else M.add v ty sbt
                  | _ ->
-                   Printer.print_err "vty = %a and ty = %a"
+                   Printer.print_diagnostic "vty = %a and ty = %a"
                      print vty print ty;
                    assert false
               )M.empty params args
@@ -490,7 +490,7 @@ module Decls = struct
         add name params body;
         body
     with Not_found ->
-      Printer.print_err "%a not found" Hstring.print name;
+      Printer.print_diagnostic "%a not found" Hstring.print name;
       assert false
 
   let reinit () = decls := MH.empty

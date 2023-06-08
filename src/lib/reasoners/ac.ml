@@ -117,7 +117,7 @@ module Make (X : Sig.X) = struct
         if not (c1 = 0 && c2 = 0 ||
                 c1 < 0 && c2 > 0 ||
                 c1 > 0 && c2 < 0) then begin
-          print_err
+          print_diagnostic
             "Ac.compare:@ %a vs %a@  = %d@ \
              But@ \
              Ac.compare:@ %a vs %a@  = %d"
@@ -192,7 +192,7 @@ module Make (X : Sig.X) = struct
                     distribute = true},
         ctx
       | {xs; _} ->
-        Printer.print_err
+        Printer.print_diagnostic
           "AC theory expects only terms with 2 arguments; \
            got %i (%a)." (List.length xs) Expr.print_list xs;
         assert false

@@ -85,7 +85,7 @@ let main () =
         Profiling.print true
           (Steps.get_steps ())
           (Signals_profiling.get_timers ())
-          (Options.Output.get_fmt_err ());
+          (Options.Output.get_fmt_diagnostic ());
       Some partial_model
     with Util.Timeout ->
       if not (Options.get_timelimit_per_goal()) then exit 142;
@@ -142,11 +142,11 @@ let main () =
         FE.print_status (FE.Timeout None) 0;
         exit 142
       | Parsing.Parse_error ->
-        Printer.print_err "%a" Errors.report
+        Printer.print_diagnostic "%a" Errors.report
           (Syntax_error ((Lexing.dummy_pos,Lexing.dummy_pos),""));
         exit 1
       | Errors.Error e ->
-        Printer.print_err "%a" Errors.report e;
+        Printer.print_diagnostic "%a" Errors.report e;
         exit 1
     in
 
@@ -162,7 +162,7 @@ let main () =
         with
         | Errors.Error e ->
           if e != Warning_as_error then
-            Printer.print_err "%a" Errors.report e;
+            Printer.print_diagnostic "%a" Errors.report e;
           exit 1
       end
     in
@@ -210,7 +210,7 @@ let main () =
   in
   let handle_exn _ bt = function
     | Dolmen.Std.Loc.Syntax_error (_, `Regular msg) ->
-      Printer.print_err "%t" msg;
+      Printer.print_diagnostic "%t" msg;
       exit 1
     | Util.Timeout ->
       Printer.print_status_timeout None None None None;

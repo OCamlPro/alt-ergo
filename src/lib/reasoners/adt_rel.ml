@@ -226,7 +226,7 @@ let deduce_is_constr uf r h eqs env ex =
           | _ -> env, eqs
         end
       | _ ->
-        Printer.print_err "%a" X.print r;
+        Printer.print_diagnostic "%a" X.print r;
         assert false
     end
   | _ -> env,eqs

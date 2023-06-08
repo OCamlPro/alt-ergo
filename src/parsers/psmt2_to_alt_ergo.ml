@@ -125,7 +125,7 @@ module Translate = struct
         | TInt  -> mk_int_const loc s
         | TReal -> mk_real_const loc (Numbers.Q.from_string s)
         | _ ->
-          Printer.print_err "%s" (to_string ty);
+          Printer.print_diagnostic "%s" (to_string ty);
           assert false
       end
     | Const_Str _  -> assert false (* to do *)
@@ -222,7 +222,7 @@ module Translate = struct
     | "is", [constr], [e] ->
       mk_algebraic_test (pos name) e constr
     | _ ->
-      Printer.print_err "[TODO] handle other underscored IDs";
+      Printer.print_diagnostic "[TODO] handle other underscored IDs";
       assert false
 
   let translate_qual_identifier qid params raw_params=
@@ -503,8 +503,8 @@ let aux aux_fun token lexbuf =
     let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
     let lex = Lexing.lexeme lexbuf in
     Parsing.clear_parser ();
-    Smtlib_error.print (Options.Output.get_fmt_err ()) (Options.get_file ())
-      (Syntax_error (lex)) loc;
+    Smtlib_error.print (Options.Output.get_fmt_diagnostic ())
+      (Options.get_file ()) (Syntax_error (lex)) loc;
     Errors.error (Errors.Syntax_error (loc,""))
   | Smtlib_error.Error (e , p) ->
     Parsing.clear_parser ();
@@ -513,7 +513,7 @@ let aux aux_fun token lexbuf =
         Some loc -> loc
       | None -> Lexing.dummy_pos,Lexing.dummy_pos
     in
-    Smtlib_error.print (Options.Output.get_fmt_err ())
+    Smtlib_error.print (Options.Output.get_fmt_diagnostic ())
       (Options.get_file ()) e loc;
     Errors.error (Errors.Syntax_error (loc,""))
 

@@ -144,7 +144,7 @@ let instantiation ilvl =
   incr state.instantiation_rounds;
   incr state.instantiation_lvl;
   if not (!(state.instantiation_lvl) = ilvl) then begin
-    Printer.print_err
+    Printer.print_diagnostic
       "state.instantiation_lvl = %d et ilvl = %d"
       !(state.instantiation_lvl) ilvl;
     assert false
@@ -222,7 +222,7 @@ let decision d origin =
   incr state.decisions;
   incr state.decision_lvl;
   if not (!(state.decision_lvl) = d) then begin
-    Printer.print_err
+    Printer.print_diagnostic
       "state.decision_lvl = %d et d = %d"
       !(state.decision_lvl) d;
     assert false

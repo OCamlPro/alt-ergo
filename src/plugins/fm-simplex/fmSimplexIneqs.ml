@@ -89,7 +89,7 @@ module Container : Inequalities.Container_SIG = struct
            let l_m, c = P.to_list ineq.ple0 in
            assert (Q.is_int c);
            if l_m == [] then begin
-             Printer.print_err "%a <= 0" P.print ineq.ple0;
+             Printer.print_diagnostic "%a <= 0" P.print ineq.ple0;
              assert false
            end
            else

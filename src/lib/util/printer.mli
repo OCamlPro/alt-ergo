@@ -35,14 +35,14 @@
 (** Print message on the standard formatter accessible with
     {!val:Options.get_fmt_std} and set by default to stdout
     The std formatter is flushed after the print if flushed is set *)
-val print_std : ?flushed:bool -> ('a, Format.formatter, unit) format -> 'a
+val print_regular : ?flushed:bool -> ('a, Format.formatter, unit) format -> 'a
 
 (** Print error message on the error formatter accessible with
     {!val:Options.get_fmt_err} and set by default to stderr.
     Prints only if error (true by default) is true.
     If header is set, prints a header "[Error]".
     The err formatter is flushed after the print if flushed is set *)
-val print_err :
+val print_diagnostic :
   ?flushed:bool ->
   ?header:bool ->
   ?error:bool ->
@@ -84,10 +84,10 @@ val print_fmt :
 (** Initialisation function used to add colors to the formatters *)
 val init_colors : unit -> unit
 
-(** Initialisation function used to configure formatters corresponding
+(* (** Initialisation function used to configure formatters corresponding
     of the output format set.
     Add ";" at the beginning of the lines if output is set to smtlib2 *)
-val init_output_format : unit -> unit
+   val init_output_format : unit -> unit *)
 
 (** Print list without separator *)
 val pp_list_no_space :

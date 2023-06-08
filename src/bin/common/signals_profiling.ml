@@ -39,10 +39,10 @@ let init_sigterm_6 () =
   Sys.set_signal Sys.sigint(*-6*)
     (Sys.Signal_handle (fun _ ->
          if Options.get_profiling() then
-           Profiling.switch (Options.Output.get_fmt_err ())
+           Profiling.switch (Options.Output.get_fmt_diagnostic ())
          else begin
-           Printer.print_wrn "User wants me to stop.";
-           Printer.print_std "unknown";
+           Printer.print_diagnostic "User wants me to stop.";
+           Printer.print_regular "unknown";
            exit 1
          end
        )
@@ -58,7 +58,7 @@ let init_sigterm_11_9 () =
            (Sys.Signal_handle
               (fun _ ->
                  Profiling.print true (Steps.get_steps ())
-                   timers (Options.Output.get_fmt_err ());
+                   timers (Options.Output.get_fmt_diagnostic ());
                  exit 1
               )
            )
@@ -72,7 +72,7 @@ let init_sigterm_21 () =
       (Sys.Signal_handle
          (fun _ ->
             Profiling.print false (Steps.get_steps ()) timers
-              (Options.Output.get_fmt_err ());
+              (Options.Output.get_fmt_diagnostic ());
          )
       )
 

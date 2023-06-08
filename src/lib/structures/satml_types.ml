@@ -420,7 +420,7 @@ module Atom : ATOM = struct
         else l := b :: !l
       done;
       if !cpt <> 1 then begin
-        Printer.print_err
+        Printer.print_diagnostic
           "cpt = %d@ a = %a@ c = %a"
           !cpt pr_atom a pr_clause c;
         assert false

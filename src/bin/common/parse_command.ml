@@ -533,12 +533,12 @@ let halt_opt version_info where =
                 "\"\nAccepted options are lib, plugins, preludes, data or man")
     in
     match res with
-    | `Ok path -> Printer.print_std "%s@." path
+    | `Ok path -> Printer.print_regular "%s@." path
     | `Error m -> raise (Error (false, m))
   in
   let handle_version_info vi =
     if vi then (
-      Printer.print_std
+      Printer.print_regular
         "@[<v 0>Version          = %s@,\
          Release date     = %s@,\
          Release commit   = %s@]@."
@@ -582,9 +582,9 @@ let mk_opts file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
     `Ok true
   end
 
-let mk_output_channel_opt std_output err_output =
-  Options.Output.(create_channel std_output |> set_std);
-  Options.Output.(create_channel err_output |> set_err);
+let mk_output_channel_opt regular_output diagnostic_output =
+  Options.Output.(create_channel regular_output |> set_regular);
+  Options.Output.(create_channel diagnostic_output |> set_diagnostic);
   `Ok()
 
 (* Custom sections *)
@@ -1208,52 +1208,29 @@ let parse_fmt_opt =
   let docs = s_fmt in
   let docv = "CHANNEL" in
 
-  let merge_formatters default preferred deprecated =
-    match preferred, deprecated with
-    | Some fmt, _ -> fmt
-    | None, Some fmt -> fmt
-    | None, None -> default
-  in
-
-  let std_output =
+  let regular_output =
     let doc =
       Format.sprintf
-        "Set the standard output used by default to print the results,
+        "Set the regular output used by default to print the results,
           models and unsat cores. Possible values are %s."
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
     in
-    let deprecated = "this option is deprecated. Please use --std-output." in
-    let std_output =
-      Arg.(value & opt (some' string) None & info ["std-output"] ~docs
-             ~doc ~docv)
-    in
-    let std_formatter =
-      Arg.(value & opt (some' string) None  & info ["std-formatter"]
-             ~deprecated ~docs ~docv)
-    in
-    Term.(const (merge_formatters "stdout") $ std_output $ std_formatter)
+    Arg.(value & opt string "stdout" & info ["regular-output"] ~docs
+           ~doc ~docv)
   in
 
-  let err_output =
+  let diagnostic_output =
     let doc =
       Format.sprintf
-        "Set the error output used by default to print error, debug and
+        "Set the diagnostic output used by default to print error, debug and
          warning informations. Possible values are %s."
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
     in
-    let deprecated = "this option is deprecated. Please use --err-output." in
-    let err_output =
-      Arg.(value & opt (some' string) None & info ["err-output"] ~docs
-             ~doc ~docv)
-    in
-    let err_formatter =
-      Arg.(value & opt (some' string) None & info ["err-formatter"]
-             ~deprecated ~docs ~docv)
-    in
-    Term.(const (merge_formatters "stderr") $ err_output $ err_formatter)
+    Arg.(value & opt string "stderr" & info ["diagnostic-output"] ~docs
+           ~doc ~docv)
   in
 
-  Term.(ret (const mk_output_channel_opt $ std_output $ err_output))
+  Term.(ret (const mk_output_channel_opt $ regular_output $ diagnostic_output))
 
 let main =
 

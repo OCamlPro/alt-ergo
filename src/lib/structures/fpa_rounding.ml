@@ -157,7 +157,7 @@ let integer_log_2 =
   fun m ->
     if Q.compare_to_0 m <= 0 then
       begin
-        Printer.print_err
+        Printer.print_diagnostic
           "integer_log_2 not defined for input (%a)" Q.print m;
         assert false
       end;
@@ -227,7 +227,7 @@ let mode_of_term t =
   else if eq_t _Nu__rounding_mode then Nu
   else
     begin
-      Printer.print_err "bad rounding mode %a" E.print t;
+      Printer.print_diagnostic "bad rounding mode %a" E.print t;
       assert false
     end
 

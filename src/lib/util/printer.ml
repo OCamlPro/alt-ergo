@@ -134,15 +134,12 @@ let add_colors formatter =
 
 let init_colors () =
   if Options.get_output_with_colors () then begin
-    add_colors (Options.Output.get_fmt_std ());
-    add_colors (Options.Output.get_fmt_wrn ());
-    add_colors (Options.Output.get_fmt_err ());
-    add_colors (Options.Output.get_fmt_dbg ())
+    add_colors (Options.Output.get_fmt_regular ());
+    add_colors (Options.Output.get_fmt_diagnostic ())
   end
 
 (************** Output Format *************)
-let clean_dbg_print = ref true
-let clean_wrn_print = ref true
+let clean_diagnostic_print = ref true
 
 let pp_smt clean_print =
   let smt = match Options.get_output_format () with
@@ -154,24 +151,18 @@ let pp_smt clean_print =
      else "")
 
 let pp_std_smt () =
-  match !clean_dbg_print, !clean_wrn_print with
-  | true, true -> ()
-  | false, true ->
-    clean_dbg_print := true;
-    Format.fprintf (Options.Output.get_fmt_std ()) "@,"
-  | true, false ->
-    clean_wrn_print := true;
-    Format.fprintf (Options.Output.get_fmt_std ()) "@,"
-  | false, false ->
-    clean_dbg_print := true;
-    clean_wrn_print := true;
-    Format.fprintf (Options.Output.get_fmt_std ()) "@,"
+  if not !clean_diagnostic_print then
+    begin
+      clean_diagnostic_print := true;
+      Format.fprintf (Options.Output.get_fmt_diagnostic ()) "@,"
+    end
 
-let add_smt formatter =
-  let old_fs = Format_shims.pp_get_formatter_out_functions formatter () in
-  let out_newline () = old_fs.out_string "\n; " 0 3 in
-  Format_shims.pp_set_formatter_out_functions formatter
-    { old_fs with out_newline }
+(* TODO: remove this function. *)
+(* let add_smt formatter =
+   let old_fs = Format_shims.pp_get_formatter_out_functions formatter () in
+   let out_newline () = old_fs.out_string "\n; " 0 3 in
+   Format_shims.pp_set_formatter_out_functions formatter
+    { old_fs with out_newline } *)
 
 let remove_formatting formatter =
   let old_fs = Format_shims.pp_get_formatter_out_functions formatter () in
@@ -191,27 +182,28 @@ let force_new_line formatter =
     Format.fprintf formatter "@.";
     remove_formatting formatter
 
-let init_output_format () =
-  match Options.get_output_format () with
-  | Smtlib2 ->
+(* TODO: remove this function. *)
+(* let init_output_format () =
+   match Options.get_output_format () with
+   | Smtlib2 ->
     add_smt (Options.Output.get_fmt_wrn ());
     add_smt (Options.Output.get_fmt_dbg ())
-  | Native | Why3 | Unknown _ -> ()
+   | Native | Why3 | Unknown _ -> () *)
 
 
 (************** Printers *************)
 let flush fmt = Format.fprintf fmt "@."
 
-let print_std ?(flushed=true) s =
+let print_regular ?(flushed=true) s =
   pp_std_smt ();
-  let fmt = Options.Output.get_fmt_std () in
+  let fmt = Options.Output.get_fmt_regular () in
   if flushed || Options.get_output_with_forced_flush ()
   then Format.kfprintf flush fmt s else Format.fprintf fmt s
 
-let print_err ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
-    ?(error=true) s =
+let print_diagnostic ?(flushed=true)
+    ?(header=(Options.get_output_with_headers ())) ?(error=true) s =
   if error then begin
-    let fmt = Options.Output.get_fmt_err () in
+    let fmt = Options.Output.get_fmt_diagnostic () in
     Format.fprintf fmt "@[<v 0>";
     if header then
       if Options.get_output_with_colors () then
@@ -226,11 +218,11 @@ let print_err ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
 let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     ?(warning=true) s =
   if Options.get_warning_as_error () then
-    print_err ~flushed ~header ~error:warning s
+    print_diagnostic ~flushed ~header ~error:warning s
   else
   if warning then begin
-    let fmt = Options.Output.get_fmt_wrn () in
-    Format.fprintf fmt "@[<v 0>%s" (pp_smt clean_wrn_print);
+    let fmt = Options.Output.get_fmt_diagnostic () in
+    Format.fprintf fmt "@[<v 0>%s" (pp_smt clean_diagnostic_print);
     if header then
       if Options.get_output_with_colors () then
         Format.fprintf fmt "@[<v 9>@{<fg_orange>@{<bold>[Warning]@}@} "
@@ -243,8 +235,8 @@ let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
 
 let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     ?(module_name="") ?(function_name="") s =
-  let fmt = Options.Output.get_fmt_dbg () in
-  Format.fprintf fmt "@[<v 0>%s" (pp_smt clean_dbg_print);
+  let fmt = Options.Output.get_fmt_diagnostic () in
+  Format.fprintf fmt "@[<v 0>%s" (pp_smt clean_diagnostic_print);
   if header then begin
     let fname =
       if String.equal function_name ""
@@ -317,12 +309,13 @@ let print_status_value fmt (v,color) =
     Format.fprintf fmt "%s" v
 
 let print_status ?(validity_mode=true)
-    ?(formatter=Options.Output.get_fmt_std ())
+    ?(formatter=Options.Output.get_fmt_regular ())
     (validity_status,unsat_status,color) loc time steps goal =
   pp_std_smt ();
   let native_output_fmt, comment_if_smt2 =
     if validity_mode then formatter, ""
-    else (Options.Output.get_fmt_dbg ()), (pp_smt clean_dbg_print)
+    else (Options.Output.get_fmt_diagnostic ()),
+         (pp_smt clean_diagnostic_print)
   in
   (* print validity status. Commented and in debug fmt if in unsat mode *)
   Format.fprintf native_output_fmt
@@ -352,7 +345,7 @@ let print_status_sat ?(validity_mode=true) loc
 let print_status_inconsistent ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode
-    ~formatter:(Options.Output.get_fmt_dbg ())
+    ~formatter:(Options.Output.get_fmt_diagnostic ())
     ("Inconsistent assumption","","fg_red") loc
     time steps goal
 
@@ -371,13 +364,13 @@ let print_status_timeout ?(validity_mode=true) loc
 let print_status_preprocess ?(validity_mode=true)
     time steps =
   print_status ~validity_mode
-    ~formatter:(Options.Output.get_fmt_dbg ())
+    ~formatter:(Options.Output.get_fmt_diagnostic ())
     ("Preprocessing","","fg_magenta") None
     time steps None
 
 let print_smtlib_err ?(flushed=true) s =
   (* The smtlib error messages are printed on the regular output. *)
-  let fmt = Options.Output.get_fmt_std () in
+  let fmt = Options.Output.get_fmt_regular () in
   let k fmt =
     if flushed || Options.get_output_with_forced_flush () then
       Format.fprintf fmt "\")@."

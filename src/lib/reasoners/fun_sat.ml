@@ -510,7 +510,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                ME.remove d decs
              with Not_found ->
                ok := false;
-               Printer.print_err
+               Printer.print_diagnostic
                  "Ouch! Decision %a is only in satML!@,\
                   nb decisions in DfsSAT: %d\
                   nb decisions in satML:  %d"
@@ -521,7 +521,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           )env.decisions cdcl_decs
       in
       if decs != ME.empty then begin
-        Printer.print_err "Ouch! Some decisions are only in DfsSAT";
+        Printer.print_diagnostic "Ouch! Some decisions are only in DfsSAT";
         ok := false;
       end;
       !ok
@@ -596,7 +596,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       (* no need to save cdcl here *)
       raise (IUnsat(ex, l))
     | e ->
-      Printer.print_err "%s" (Printexc.to_string e);
+      Printer.print_diagnostic "%s" (Printexc.to_string e);
       assert false
 
   let cdcl_forget_decision env f lvl =
@@ -604,7 +604,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       env.cdcl := CDCL.forget_decision !(env.cdcl) f lvl
     with
     | _ ->
-      Printer.print_err
+      Printer.print_diagnostic
         "@[<v 2>cdcl_backjump error:@,%s@]"
         (Printexc.get_backtrace ());
       assert false
@@ -855,7 +855,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         List.fold_left
           (fun (facts, ufacts, inst, mf, gf) (a, ff, ex, dlvl, plvl) ->
              if not (E.is_ground a) then begin
-               Printer.print_err
+               Printer.print_diagnostic
                  "%a is not ground" E.print a;
                assert false
              end;
@@ -865,7 +865,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                else ufacts
              in
              if not ff.E.mf then begin
-               Printer.print_err
+               Printer.print_diagnostic
                  "%a" E.print ff.E.ff;
                assert false
              end;
@@ -1164,18 +1164,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     begin
       match !latest_saved_env with
       | None ->
-        Printer.print_fmt (Options.Output.get_fmt_std ())
+        Printer.print_regular
           "@[<v 0>[FunSat]@, \
            It seems that no model has been computed so far.@,\
            You may need to change your model generation strategy@,\
            or to increase your timeout.@]"
       | Some env ->
-        Printer.print_fmt (Options.Output.get_fmt_std ())
+        Printer.print_regular
           "@[<v 0>[FunSat]@, \
            A model has been computed. However, I failed \
            while computing it so may be incorrect.@]";
         let prop_model = extract_prop_model ~complete_model:true env in
-        Th.output_concrete_model (Options.Output.get_fmt_std ()) ~prop_model
+        Th.output_concrete_model (Options.Output.get_fmt_regular ()) ~prop_model
           env.tbox;
     end;
     return_function ()
@@ -1193,7 +1193,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
     let prop_model = extract_prop_model ~complete_model:true env in
     if Options.(get_interpretation () && get_dump_models ()) then
-      Th.output_concrete_model (Options.Output.get_fmt_std ()) ~prop_model
+      Th.output_concrete_model (Options.Output.get_fmt_regular ()) ~prop_model
         env.tbox;
 
     terminated_normally := true;
@@ -1241,14 +1241,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                | Some (ex, _) ->
                  Ex.union dep ex, ({gf with E.ff=f}, ex) :: acc
                | None ->
-                 Printer.print_err
+                 Printer.print_diagnostic
                    "Bad inst! Hyp %a is not true!" E.print f;
                  assert false
              end
            | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
            | E.Let _ | E.Iff _ | E.Xor _ ->
-             Printer.print_err "Currently, arbitrary formulas in Hyps \
-                                are not Th-reduced";
+             Printer.print_diagnostic "Currently, arbitrary formulas in Hyps \
+                                       are not Th-reduced";
              assert false
         )(dep, acc) hyp
     in
@@ -1385,8 +1385,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if ok1 || ok2 || ok3 || ok4 then env
       else if try_greedy then greedy_instantiation env else env
     with | Util.Not_implemented s ->
-      Printer.print_err "Feature %s is not implemented. \
-                         I can't conclude." s;
+      Printer.print_diagnostic "Feature %s is not implemented. \
+                                I can't conclude." s;
       raise (I_dont_know env)
 
   (* should be merged with do_bcp/red/elim ?
@@ -1926,7 +1926,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let env = compute_concrete_model env true in
     Options.Time.unset_timeout ();
     let prop_model = extract_prop_model ~complete_model:true env in
-    Th.output_concrete_model (Options.Output.get_fmt_std ()) ~prop_model
+    Th.output_concrete_model (Options.Output.get_fmt_regular ()) ~prop_model
       env.tbox;
     terminated_normally := true
 

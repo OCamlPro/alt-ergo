@@ -139,7 +139,7 @@ module Shostak (X : ALIEN) = struct
     | { E.f = Sy.Op (Sy.Constr hs); xs = []; ty; _ } ->
       is_mine (Cons(hs,ty)), []
     | _ ->
-      Printer.print_err
+      Printer.print_diagnostic
         "Enum theory only expect constructors with no arguments; got %a."
         E.print t;
       assert false

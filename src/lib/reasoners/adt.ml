@@ -125,7 +125,7 @@ module Shostak (X : ALIEN) = struct
         begin
           try snd @@ List.find (fun (lbl, _) -> Hs.equal d_name lbl) c.c_args
           with Not_found ->
-            Printer.print_err "is_mine %a failed" print u;
+            Printer.print_diagnostic "is_mine %a failed" print u;
             assert false
         end
       | _ -> X.embed u
@@ -428,12 +428,12 @@ module Shostak (X : ALIEN) = struct
 
 
   let assign_value _ _ _ =
-    Printer.print_err
+    Printer.print_diagnostic
       "[ADTs.models] assign_value currently not implemented";
     raise (Util.Not_implemented "Models for ADTs")
 
   let choose_adequate_model _ _ _ =
-    Printer.print_err
+    Printer.print_diagnostic
       "[ADTs.models] choose_adequate_model currently not implemented";
     raise (Util.Not_implemented "Models for ADTs")
 

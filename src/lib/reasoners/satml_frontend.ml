@@ -648,7 +648,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         with Not_found ->
           if FF.equal ff FF.vrai then SE.empty
           else begin
-            Printer.print_err
+            Printer.print_diagnostic
               "%a not found in env.conj" FF.print ff;
             assert false
           end

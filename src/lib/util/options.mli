@@ -1112,45 +1112,15 @@ module Output : sig
 
       Default to [Format.err_formatter]. *)
 
-  val get_fmt_std : unit -> Format.formatter
+  val get_fmt_regular : unit -> Format.formatter
   (** Value specifying the formatter used to output results.
 
       Default to [Format.std_formatter]. *)
 
-  val get_fmt_err : unit -> Format.formatter
+  val get_fmt_diagnostic : unit -> Format.formatter
   (** Value specifying the formatter used to output errors.
 
       Default to [Format.err_formatter]. *)
-
-  val get_fmt_wrn : unit -> Format.formatter
-  (** Value specifying the formatter used to output warnings.
-
-      Default to [Format.err_formatter]. *)
-
-  val get_fmt_dbg : unit -> Format.formatter
-  (** Value specifying the formatter used to output debug informations.
-
-      Default to [Format.err_formatter]. *)
-
-  val get_fmt_usc : unit -> Format.formatter
-  (** Value specifying the formatter used to output unsat cores.
-
-      Default to [Format.std_formatter]. *)
-
-  val set_std : t -> unit
-  (** Set [fmt_std] accessible with {!val:get_fmt_std} *)
-
-  val set_err : t -> unit
-  (** Set [fmt_err] accessible with {!val:get_fmt_err} *)
-
-  val set_wrn : t -> unit
-  (** Set [fmt_wrn] accessible with {!val:get_fmt_wrn} *)
-
-  val set_dbg : t -> unit
-  (** Set [fmt_dbg] accessible with {!val:get_fmt_dbg} *)
-
-  val set_usc : t -> unit
-  (** Set [fmt_usc] accessible with {!val:get_fmt_usc} *)
 end
 
 (** Print message as comment in the corresponding output format *)

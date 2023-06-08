@@ -44,6 +44,6 @@ let () =
   register_input ();
   parse_cmdline ();
   AltErgoLib.Printer.init_colors ();
-  AltErgoLib.Printer.init_output_format ();
+  (*   AltErgoLib.Printer.init_output_format (); *)
   Signals_profiling.init_signals ();
   Solving_loop.main ()

@@ -211,7 +211,7 @@ module Debug = struct
         pneqs env.neqs
 
   let lookup_not_found t env =
-    print_err
+    print_diagnostic
       "Uf: %a Not_found in env" E.print t;
     all env
 
@@ -290,7 +290,7 @@ module Debug = struct
 
   let check_inv_repr_normalized =
     let trace orig =
-      print_err
+      print_diagnostic
         "[uf.%s] invariant broken when calling check_inv_repr_normalized"
         orig
     in
