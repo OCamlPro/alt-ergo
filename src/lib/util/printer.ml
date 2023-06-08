@@ -376,7 +376,8 @@ let print_status_preprocess ?(validity_mode=true)
     time steps None
 
 let print_smtlib_err ?(flushed=true) s =
-  let fmt = Options.Output.get_fmt_err () in
+  (* The smtlib error messages are printed on the regular output. *)
+  let fmt = Options.Output.get_fmt_std () in
   let k fmt =
     if flushed || Options.get_output_with_forced_flush () then
       Format.fprintf fmt "\")@."
