@@ -582,10 +582,9 @@ let mk_opts file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
     `Ok true
   end
 
-let mk_output_channel_opt std_output err_output mdl_output =
+let mk_output_channel_opt std_output err_output =
   Options.Output.(create_channel std_output |> set_std);
   Options.Output.(create_channel err_output |> set_err);
-  Options.Output.(create_channel mdl_output |> set_mdl);
   `Ok()
 
 (* Custom sections *)
@@ -1254,17 +1253,7 @@ let parse_fmt_opt =
     Term.(const (merge_formatters "stderr") $ err_output $ err_formatter)
   in
 
-  let model_output =
-    let doc =
-      Format.sprintf
-        "Set the output used for the model generation. Possible values are %s."
-        (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
-    in
-    Arg.(value & opt string "stdout" & info ["model-output"] ~docv ~docs ~doc)
-  in
-
-  Term.(ret (const mk_output_channel_opt $ std_output $ err_output
-             $ model_output))
+  Term.(ret (const mk_output_channel_opt $ std_output $ err_output))
 
 let main =
 

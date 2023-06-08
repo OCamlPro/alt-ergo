@@ -1132,11 +1132,6 @@ module Output : sig
 
       Default to [Format.err_formatter]. *)
 
-  val get_fmt_mdl : unit -> Format.formatter
-  (** Value specifying the formatter used to output models.
-
-      Default to [Format.std_formatter]. *)
-
   val get_fmt_usc : unit -> Format.formatter
   (** Value specifying the formatter used to output unsat cores.
 
@@ -1153,9 +1148,6 @@ module Output : sig
 
   val set_dbg : t -> unit
   (** Set [fmt_dbg] accessible with {!val:get_fmt_dbg} *)
-
-  val set_mdl : t -> unit
-  (** Set [fmt_mdl] accessible with {!val:get_fmt_mdl} *)
 
   val set_usc : t -> unit
   (** Set [fmt_usc] accessible with {!val:get_fmt_usc} *)
