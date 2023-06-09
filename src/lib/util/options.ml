@@ -103,13 +103,15 @@ end
 
 (* Declaration of all the options as refs with default values *)
 
-type instantiation_heuristic = INormal | IAuto | IGreedy
-type interpretation = INone | IFirst | IEvery | ILast
+type instantiation_heuristic = INormal | IAuto | IGreedy [@@deriving eq]
+type interpretation = INone | IFirst | IEvery | ILast [@@deriving eq]
 
-type input_format = Native | Smtlib2 | Why3 (* | SZS *) | Unknown of string
-type output_format = input_format
+type input_format =
+  | Native | Smtlib2 | Why3 (* | SZS *) | Unknown of string [@@deriving eq]
 
-type model_type = Value | Constraints
+type output_format = input_format [@@deriving eq]
+
+type model_type = Value | Constraints [@@deriving eq]
 
 let match_extension e =
   match e with
@@ -356,42 +358,16 @@ let set_model_type t = model_type := t
 let set_infer_output_format f = infer_output_format := Option.is_none f
 let set_unsat_core b = unsat_core := b
 
-let equal_mode a b =
-  match a, b with
-  | INone, INone -> true
-  | INone, _ | _, INone -> false
-  | IFirst, IFirst -> true
-  | IFirst, _ | _, IFirst -> false
-  | IEvery, IEvery -> true
-  | IEvery, _ | _, IEvery -> false
-  | ILast, ILast -> true
-
-let equal_output_format a b =
-  match a, b with
-  | Smtlib2, Smtlib2 -> true
-  | Smtlib2, _ | _, Smtlib2 -> false
-  | Unknown n1, Unknown n2 -> String.equal n1 n2
-  | Unknown _, _ | _, Unknown _ -> false
-  | Native, Native -> true
-  | Native, _ | _, Native -> false
-  | Why3, Why3 -> true
-
-let equal_mode_type a b =
-  match a, b with
-  | Constraints, Constraints -> true
-  | Constraints, _ | _, Constraints -> false
-  | Value, Value -> true
-
-let get_interpretation () = not @@ equal_mode !interpretation INone
 let get_dump_models () = !dump_models
-let get_first_interpretation () = equal_mode !interpretation IFirst
-let get_every_interpretation () = equal_mode !interpretation IEvery
-let get_last_interpretation () = equal_mode !interpretation ILast
+let get_interpretation () = not @@ equal_interpretation !interpretation INone
+let get_first_interpretation () = equal_interpretation !interpretation IFirst
+let get_every_interpretation () = equal_interpretation !interpretation IEvery
+let get_last_interpretation () = equal_interpretation !interpretation ILast
 let get_interpretation_use_underscore () = !interpretation_use_underscore
 let get_output_format () = !output_format
 let get_output_smtlib () = equal_output_format !output_format Smtlib2
 let get_model_type () = !model_type
-let get_model_type_constraints () = equal_mode_type !model_type Constraints
+let get_model_type_constraints () = equal_model_type !model_type Constraints
 let get_infer_output_format () = !infer_output_format
 let get_unsat_core () = !unsat_core || !save_used_context || !debug_unsat_core
 
@@ -439,15 +415,11 @@ let set_no_user_triggers b = no_user_triggers := b
 let set_normalize_instances b = normalize_instances := b
 let set_triggers_var b = triggers_var := b
 
-let equal_heuristic a b =
-  match a, b with
-  | IGreedy, IGreedy | INormal, INormal | IAuto, IAuto -> true
-  | IGreedy, (INormal | IAuto)
-  | INormal, (IGreedy | IAuto)
-  | IAuto, (IGreedy | INormal) -> false
-
 let get_instantiation_heuristic () = !instantiation_heuristic
-let get_greedy () = equal_heuristic !instantiation_heuristic IGreedy
+
+let get_greedy () =
+  equal_instantiation_heuristic !instantiation_heuristic IGreedy
+
 let get_instantiate_after_backjump () = !instantiate_after_backjump
 let get_max_multi_triggers_size () = !max_multi_triggers_size
 let get_nb_triggers () = !nb_triggers
