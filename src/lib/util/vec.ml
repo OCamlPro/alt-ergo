@@ -34,11 +34,17 @@ type 'a t = {
   dummy: 'a;
 }
 
+let[@inline] size vec = vec.sz
+
 let make n ~dummy = {data = Array.make n dummy; sz = 0; dummy}
 
 let[@inline] create ~dummy = {data = [||]; sz = 0; dummy}
 
-let[@inline] clear vec = vec.sz <- 0
+let[@inline] clear vec =
+  for i = 0 to size vec - 1 do
+    Array.unsafe_set vec.data i vec.dummy
+  done;
+  vec.sz <- 0
 
 let[@inline] shrink vec i =
   assert (i >= 0);
@@ -58,8 +64,6 @@ let[@inline] pop vec =
 let[@inline] last vec =
   assert (vec.sz > 0);
   Array.unsafe_get vec.data (vec.sz - 1)
-
-let[@inline] size vec = vec.sz
 
 let[@inline] is_empty vec = vec.sz = 0
 
