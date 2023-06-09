@@ -266,7 +266,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
 
   module T2 = struct
-    type t = E.t * E.t [@@deriving compare]
+    type t = E.t * E.t [@@deriving ord]
   end
 
   module MT2 = Map.Make(T2)

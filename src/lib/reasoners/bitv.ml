@@ -28,14 +28,12 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Ppx_compare_lib.Builtin
-
 module Sy = Symbols
 module E = Expr
 
-type sort_var = A | B | C [@@deriving compare]
+type sort_var = A | B | C [@@deriving ord]
 
-type tvar = { var : int ; sorte : sort_var } [@@deriving compare]
+type tvar = { var : int ; sorte : sort_var } [@@deriving ord]
 
 type 'a xterm = Var of tvar | Alien of 'a
 
@@ -54,27 +52,27 @@ let compare_xterm cmp xt1 xt2 = match xt1,xt2 with
 type 'a alpha_term = {
   sz : int;
   bv : 'a;
-} [@@deriving compare]
+} [@@deriving ord]
 
 type 'a simple_term_aux =
   | Cte of bool
   | Other of 'a xterm
-  | Ext of int * int * (int [@compare ignore]) * 'a xterm
+  | Ext of int * int * (int [@skip]) * 'a xterm
   (*// size * i * j * id //*)
-[@@deriving compare]
+[@@deriving ord]
 
-type 'a simple_term = ('a simple_term_aux) alpha_term [@@deriving compare]
+type 'a simple_term = ('a simple_term_aux) alpha_term [@@deriving ord]
 
-type 'a abstract =  ('a simple_term) list [@@deriving compare]
+type 'a abstract =  ('a simple_term) list [@@deriving ord]
 
 (* for the solver *)
 
 type solver_simple_term_aux =
   | S_Cte of bool
   | S_Var of tvar
-[@@deriving compare]
+[@@deriving ord]
 
-type solver_simple_term = solver_simple_term_aux alpha_term [@@deriving compare]
+type solver_simple_term = solver_simple_term_aux alpha_term [@@deriving ord]
 
 module type ALIEN = sig
   include Sig.X
@@ -119,9 +117,9 @@ module Shostak(X : ALIEN) = struct
       | I_Other of xterm_
       | I_Ext of int * int * term
       | I_Comp of term * term
-    [@@deriving compare]
+    [@@deriving ord]
 
-    and term = term_aux alpha_term [@@deriving compare]
+    and term = term_aux alpha_term [@@deriving ord]
 
     (** **)
     let rec alpha t = match t.bv with
