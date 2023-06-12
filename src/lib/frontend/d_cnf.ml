@@ -1293,7 +1293,7 @@ let make dloc_file acc stmt =
       C.{ st_decl; st_loc } :: acc
 
     (* Function and predicate definitions *)
-    | { contents = `Defs defs; loc; _ } ->
+    | { contents = `Defs (`Term_def _ :: _ as defs); loc; _ } ->
       (* For a mutually recursive definition, we have to add all the function
          names in a row. *)
       List.iter (fun (def : Typer_Pipe.def) ->
