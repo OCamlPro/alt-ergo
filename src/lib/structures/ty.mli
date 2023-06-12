@@ -180,9 +180,14 @@ val t_adt :
     of arguments. *)
 
 val trecord :
-  ?record_constr:string -> t list -> string -> (string * t) list -> t
+  ?sort_fields:bool ->
+  record_constr:string -> t list -> string -> (string * t) list -> t
 (** Create a record type. [trecord args name lbs] creates a record
-    type with name [name], arguments [args] and fields [lbs]. *)
+    type with name [name], arguments [args] and fields [lbs].
+
+    If [sort_fields] is true, the record fields are sorted according to
+    [Hstring.compare]. This is to preserve compatibility with the old
+    typechecker behavior and should not be used in new code. *)
 
 
 (** {2 Substitutions} *)

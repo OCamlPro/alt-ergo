@@ -884,13 +884,13 @@ let parse_output_opt =
       Format.sprintf
         "Control the output format of the solver, $(docv) must be %s.\
          The alt-ergo native format outputs Valid/Invalid/I don't know.\
-         The smtlib format outputs unsat/sat/unknown.\
+         The smtlib2 format outputs unsat/sat/unknown.\
          If left unspecified, Alt-Ergo will use its heuristics to \
          determine the adequate output format according to the input format.\
          It must be noticed that not specifying an output \
          format will let Alt-Ergo set it according to the input file's \
          extension."
-        (Arg.doc_alts [ "native"; "smtlib" ])
+        (Arg.doc_alts [ "native"; "smtlib2" ])
     in
     let docv = "FMT" in
     Arg.(value & opt (some format_conv) None & info ["o"; "output"] ~docv ~doc)
