@@ -1293,7 +1293,7 @@ let make dloc_file acc stmt =
       C.{ st_decl; st_loc } :: acc
 
     (* Function and predicate definitions *)
-    | { contents = `Defs (`Term_def _ :: _ as defs); loc; _ } ->
+    | { contents = `Defs defs; loc; _ } ->
       (* For a mutually recursive definition, we have to add all the function
          names in a row. *)
       List.iter (fun (def : Typer_Pipe.def) ->
@@ -1302,9 +1302,9 @@ let make dloc_file acc stmt =
             let name_base = get_basename path in
             let sy = Sy.name name_base in
             Cache.store_sy (DE.Term.Const.hash tcst) sy
-          | _ -> ()
+          | `Type_def _ -> ()
         ) defs;
-      List.map (fun (def : Typer_Pipe.def) ->
+      List.filter_map (fun (def : Typer_Pipe.def) ->
           match def with
           | `Term_def ( _, ({ path; tags; _ } as tcst), tyvars, terml, body) ->
             Cache.store_tyvl tyvars;
@@ -1351,7 +1351,7 @@ let make dloc_file acc stmt =
                     E.mk_forall name_base loc
                       Symbols.Map.empty [] ff ~toplevel:true ~decl_kind
                 in
-                C.{ st_decl = C.PredDef (e, name_base); st_loc }
+                Some C.{ st_decl = C.PredDef (e, name_base); st_loc }
               | None ->
                 let decl_kind = E.Dfunction defn in
                 let ff =
@@ -1375,9 +1375,9 @@ let make dloc_file acc stmt =
                 in
                 if Options.get_verbose () then
                   Format.eprintf "defining term of %a@." DE.Term.print body;
-                C.{ st_decl = C.Assume (name_base, e, true); st_loc }
+                Some C.{ st_decl = C.Assume (name_base, e, true); st_loc }
             end
-          | _ -> assert false
+          | `Type_def _ -> None
         ) defs |> List.rev_append acc
 
     | {contents = `Decls [td]; _ } ->
