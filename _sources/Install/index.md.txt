@@ -27,8 +27,8 @@ External dependencies graph generated with `dune-deps` (use `make archi` for sou
 
 To compile the sources, you will need the following libraries :
 ```
-  ocaml >= 4.05.0
-  dune >= 2.8
+  ocaml >= 4.08.0
+  dune >= 3.0
   zarith >= 1.4
   camlzip
   menhir
@@ -38,13 +38,6 @@ To compile the sources, you will need the following libraries :
   stdlib-shims
   psmt2-frontend
 ```
-
-To compile the GUI you will also need
-```
-  lablgtk # includes lablgtk2 and gtksourceview2
-  conf-gtksourceview
-```
-You may need superuser permissions to perform the installation.
 
 You can install dependencies using:
 
