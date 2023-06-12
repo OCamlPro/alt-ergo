@@ -1,17 +1,3 @@
-(executable
- (name formatshims)
- (modules formatshims)
- (libraries dune.configurator)
-)
-
-(rule
- (targets format_shims.ml)
- (deps ./formatshims.exe)
- (action
-  (run ./formatshims.exe)
- )
-)
-
 (include_subdirs unqualified)
 
 (documentation
@@ -59,8 +45,7 @@
     ; util
     Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
     MyDynlink MyUnix Numbers
-    Options Timers Util Vec Version Steps Printer Format_shims
-    My_zip
+    Options Timers Util Vec Version Steps Printer My_zip
   )
 
  (js_of_ocaml

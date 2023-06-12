@@ -83,8 +83,12 @@ let to_value = function
   | BG_Cyan -> "46"
   | BG_Default -> "49"
 
+let get_stag = function
+  | Format.String_tag s -> s
+  | _ -> raise Not_found
+
 let style_of_tag t =
-  match Format_shims.get_stag t with
+  match get_stag t with
   | "n" -> Normal
   | "bold" -> Bold
   | "/bold" -> Bold_off
@@ -126,11 +130,17 @@ let stop_stag t =
   try Printf.sprintf "\x1B[%sm" (to_value (close_tag (style_of_tag t)))
   with Not_found -> ""
 
+let update_stag_functions funs start_stag stop_stag =
+  let open Format in
+  { funs with
+    mark_open_stag = start_stag;
+    mark_close_stag = stop_stag }
+
 let add_colors formatter =
   Format.pp_set_tags formatter true;
-  let old_fs = Format_shims.pp_get_formatter_stag_functions formatter () in
-  Format_shims.pp_set_formatter_stag_functions formatter
-    (Format_shims.update_stag_functions old_fs start_stag stop_stag)
+  let old_fs = Format.pp_get_formatter_stag_functions formatter () in
+  Format.pp_set_formatter_stag_functions formatter
+    (update_stag_functions old_fs start_stag stop_stag)
 
 let init_colors () =
   if Options.get_output_with_colors () then begin
@@ -168,13 +178,13 @@ let pp_std_smt () =
     Format.fprintf (Options.Output.get_fmt_std ()) "@,"
 
 let add_smt formatter =
-  let old_fs = Format_shims.pp_get_formatter_out_functions formatter () in
+  let old_fs = Format.pp_get_formatter_out_functions formatter () in
   let out_newline () = old_fs.out_string "\n; " 0 3 in
-  Format_shims.pp_set_formatter_out_functions formatter
+  Format.pp_set_formatter_out_functions formatter
     { old_fs with out_newline }
 
 let remove_formatting formatter =
-  let old_fs = Format_shims.pp_get_formatter_out_functions formatter () in
+  let old_fs = Format.pp_get_formatter_out_functions formatter () in
   let out_newline () = old_fs.out_string "" 0 0 in
   let out_spaces _n = old_fs.out_spaces 0 in
   Format.pp_set_formatter_out_functions formatter
@@ -184,9 +194,9 @@ let remove_formatting formatter =
    formatting is enable *)
 let force_new_line formatter =
   if not (Options.get_output_with_formatting ()) then
-    let old_fs = Format_shims.pp_get_formatter_out_functions formatter () in
+    let old_fs = Format.pp_get_formatter_out_functions formatter () in
     let out_newline () = old_fs.out_string "\n" 0 1 in
-    Format_shims.pp_set_formatter_out_functions formatter
+    Format.pp_set_formatter_out_functions formatter
       { old_fs with out_newline };
     Format.fprintf formatter "@.";
     remove_formatting formatter

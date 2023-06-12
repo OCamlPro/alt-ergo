@@ -13,7 +13,7 @@ homepage: "https://alt-ergo.ocamlpro.com/"
 doc: "https://ocamlpro.github.io/alt-ergo"
 bug-reports: "https://github.com/OCamlPro/alt-ergo/issues"
 depends: [
-  "ocaml" {>= "4.05.0"}
+  "ocaml" {>= "4.08.0"}
   "dune" {>= "3.0"}
   "alt-ergo-lib" {= version}
   "psmt2-frontend" {>= "0.4"}
