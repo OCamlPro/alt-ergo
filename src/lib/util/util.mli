@@ -68,6 +68,7 @@ type theories_extensions =
   | NRA
   | NIA
   | FPA
+  | RIA
 
 type axiom_kind = Default | Propagator
 

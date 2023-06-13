@@ -137,7 +137,7 @@ let report_typing_error fmt = function
   | Unification(t1,t2) ->
     fprintf fmt "%a and %a cannot be unified" Ty.print t1 Ty.print t2
   | ShouldBeApply s ->
-    fprintf fmt "%s is a function symbol, it should be apply" s
+    fprintf fmt "%s is a function symbol, it should be applied" s
   | WrongNumberofArgs s ->
     fprintf fmt "Wrong number of arguments when applying %s" s
   | ShouldHaveType(ty1,ty2) ->

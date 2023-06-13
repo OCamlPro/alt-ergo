@@ -465,7 +465,7 @@ module Translate = struct
         mk_logic dummy_pos Symbols.Other [("to_real","to_real")] logic_type in
       let logic_type = mk_logic_type [real_type] (Some bool_type) in
       let is_int =
-        mk_logic dummy_pos Symbols.Other [("is_int","is_int")] logic_type in
+        mk_logic dummy_pos Symbols.Other [("is_int", "is_int")] logic_type in
       [to_int;to_real;is_int]
     else []
 

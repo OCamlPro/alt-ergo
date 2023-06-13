@@ -32,6 +32,25 @@ type builtin =
     LE | LT (* arithmetic *)
   | IsConstr of Hstring.t (* ADT tester *)
 
+type rounding_mode =
+  (* five standard/why3 fpa rounding modes *)
+  | NearestTiesToEven
+  (*ne in Gappa: to nearest, tie breaking to even mantissas*)
+  | ToZero (* zr in Gappa: toward zero *)
+  | Up (* up in Gappa: toward plus infinity *)
+  | Down (* dn in Gappa: toward minus infinity *)
+  | NearestTiesToAway (* na : to nearest, tie breaking away from zero *)
+
+  (* additional Gappa rounding modes *)
+  | Aw (* aw in Gappa: away from zero **)
+  | Od (* od in Gappa: to odd mantissas *)
+  | No (* no in Gappa: to nearest, tie breaking to odd mantissas *)
+  | Nz (* nz in Gappa: to nearest, tie breaking toward zero *)
+  | Nd (* nd in Gappa: to nearest, tie breaking toward minus infinity *)
+  | Nu (* nu in Gappa: to nearest, tie breaking toward plus infinity *)
+
+val pp_rounding_mode : Format.formatter -> rounding_mode -> unit
+
 type operator =
   | Tite
   (* Arithmetic *)
@@ -48,10 +67,12 @@ type operator =
   | Extract of int * int (* lower bound * upper bound *)
   (* FP *)
   | Float
-  | Integer_round | Fixed
+  | RoundingMode of rounding_mode | Integer_round | Fixed
   | Sqrt_real | Sqrt_real_default | Sqrt_real_excess
-  | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
-  | Max_real | Max_int | Min_real | Min_int | Integer_log2
+  | Abs_int | Abs_real | Real_of_int | Real_is_int
+  | Int_floor | Int_ceil | Integer_log2
+  | Max_real | Max_int | Min_real | Min_int
+  | Not_theory_constant | Is_theory_constant | Linear_dependency
 
 type lit =
   (* literals *)

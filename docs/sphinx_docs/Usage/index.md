@@ -75,19 +75,24 @@ The Fm-Simplex plugin can be used as follows:
 
 Preludes can be passed to Alt-Ergo as follows:
 
-        $ alt-ergo --prelude p.ae --prelude some-path/q.ae [other-options] file.ae
+    $ alt-ergo --prelude p.ae --prelude some-path/q.ae [other-options] file.ae
 
-   Alt-Ergo will try to load a local prelude called "p.ae". If this
-   fails, Alt-Ergo tries to load it from the default preludes
-   directory (run `alt-ergo --where preludes` to see its absolute
-   path). You can also provide a relative or an absolute path as shown
-   by "some-path/q.ae".
+Alt-Ergo will try to load a local prelude called "p.ae".  You can also provide a
+relative or an absolute path as shown by "some-path/q.ae".
 
-   For instance, the following command-line enables floating-point
-   arithmetic reasoning in Alt-Ergo and indicates that the FPA prelude
-   should be loaded:
+```{versionchanged} 2.5.0
+Alt-Ergo ships with a default prelude directory that can be used with the `--prelude` option. Support for this default prelude directory is deprecated, and it will be removed in a later version. Starting with version 2.5.0, you should use builtin theory preludes instead, as described below.
+```
 
-        $ alt-ergo --use-fpa --prelude fpa-theory-2017-01-04-16h00.ae <file.ae>
+In addition to user-defined preludes, Alt-Ergo ships with a set of builtin preludes that enable or extend support for certain theories. These builtin theory preludes can be selectively enabled with `--enable-preludes`, and the default preludes can be disabled with `--disable-default-preludes`.
+
+The builtin theory preludes are:
+
+ - `ria`: extended support for mixed real-integer arithmetic (additional axioms about absolute values and conversions between reals and integers)
+ - `nra`: extended support for nonlinear real arithmetic (additional axoims and reasoning rules about the square root and nonlinear multiplication)
+ - `fpa`: support for floating-point arithmetic
+
+All builtin theory preludes are currently enabled by default.
 
 ### Plugins and Preludes directories
 

@@ -2452,52 +2452,46 @@ let instantiate ~do_syntactic_matching match_terms env uf selector =
 
 
 let separate_semantic_triggers =
-  let not_theory_const = Hstring.make "not_theory_constant" in
-  let is_theory_const = Hstring.make "is_theory_constant" in
-  let linear_dep = Hstring.make "linear_dependency" in
   fun th_form ->
-    let { E.user_trs; _ } as q =
-      match E.form_view th_form with
-      | E.Lemma q -> q
-      | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-      | E.Let _ | E.Iff _ | E.Xor _ -> assert false
-    in
-    let r_triggers =
-      List.rev_map
-        (fun tr ->
-           (* because sem-triggers will be set by theories *)
-           assert (tr.E.semantic == []);
-           let syn, sem =
-             List.fold_left
-               (fun (syn, sem) t ->
-                  match E.term_view t with
-                  | { E.f = Symbols.In (lb, ub); xs = [x]; _ } ->
-                    syn, (E.Interval (x, lb, ub)) :: sem
+  let { E.user_trs; _ } as q =
+    match E.form_view th_form with
+    | E.Lemma q -> q
+    | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+    | E.Let _ | E.Iff _ | E.Xor _ -> assert false
+  in
+  let r_triggers =
+    List.rev_map
+      (fun tr ->
+         (* because sem-triggers will be set by theories *)
+         assert (tr.E.semantic == []);
+         let syn, sem =
+           List.fold_left
+             (fun (syn, sem) t ->
+                match E.term_view t with
+                | { E.f = Symbols.In (lb, ub); xs = [x]; _ } ->
+                  syn, (E.Interval (x, lb, ub)) :: sem
 
-                  | { E.f = Symbols.MapsTo x; xs = [t]; _ } ->
-                    syn, (E.MapsTo (x, t)) :: sem
+                | { E.f = Symbols.MapsTo x; xs = [t]; _ } ->
+                  syn, (E.MapsTo (x, t)) :: sem
 
-                  | { E.f = Sy.Name (hs,_); xs = [x]; _ }
-                    when Hstring.equal hs not_theory_const ->
-                    syn, (E.NotTheoryConst x) :: sem
+                | { E.f = Sy.Op Not_theory_constant; xs = [x]; _ } ->
+                  syn, (E.NotTheoryConst x) :: sem
 
-                  | { E.f = Sy.Name (hs,_); xs = [x]; _ }
-                    when Hstring.equal hs is_theory_const ->
-                    syn, (E.IsTheoryConst x) :: sem
+                | { E.f = Sy.Op Is_theory_constant; xs = [x]; _ } ->
+                  syn, (E.IsTheoryConst x) :: sem
 
-                  | { E.f = Sy.Name (hs,_); xs = [x;y]; _ }
-                    when Hstring.equal hs linear_dep ->
-                    syn, (E.LinearDependency(x,y)) :: sem
+                | { E.f = Sy.Op Linear_dependency; xs = [x;y]; _ } ->
+                  syn, (E.LinearDependency(x,y)) :: sem
 
-                  | _ -> t::syn, sem
-               )([], []) (List.rev tr.E.content)
-           in
-           {tr with E.content = syn; semantic = sem}
-        )user_trs
-    in
-    E.mk_forall
-      q.E.name q.E.loc q.E.binders (List.rev r_triggers) q.E.main
-      ~toplevel:true ~decl_kind:E.Dtheory
+                | _ -> t::syn, sem
+             )([], []) (List.rev tr.E.content)
+         in
+         {tr with E.content = syn; semantic = sem}
+      )user_trs
+  in
+  E.mk_forall
+    q.E.name q.E.loc q.E.binders (List.rev r_triggers) q.E.main
+    ~toplevel:true ~decl_kind:E.Dtheory
 
 let assume_th_elt t th_elt dep =
   let { Expr.axiom_kind; ax_form; th_name; extends; _ } = th_elt in
@@ -2505,7 +2499,7 @@ let assume_th_elt t th_elt dep =
     if axiom_kind == Util.Propagator then "Th propagator" else "Th CS"
   in
   match extends with
-  | Util.NIA | Util.NRA | Util.FPA ->
+  | Util.NIA | Util.NRA | Util.FPA | Util.RIA ->
     let th_form = separate_semantic_triggers ax_form in
     let th_elt = {th_elt with Expr.ax_form} in
     if get_debug_fpa () >= 2 then

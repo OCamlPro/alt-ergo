@@ -64,4 +64,3 @@ val split_goals :
 val split_goals_and_cnf :
   (int Typed.atdecl * 'a) list ->
   (Commands.sat_tdecl list * string) list
-

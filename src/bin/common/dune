@@ -10,6 +10,8 @@
    alt-ergo-parsers
    stdlib-shims
    cmdliner
+   fmt.tty
+   fmt.cli
  )
  (modules
    Parse_command

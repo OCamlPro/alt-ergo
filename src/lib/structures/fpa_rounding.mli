@@ -28,48 +28,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val is_rounding_mode : Expr.t -> bool
-
 val fpa_rounding_mode : Ty.t
-
-(*  why3/standard rounding modes*)
-
-val _NearestTiesToEven__rounding_mode : Expr.t
-(** ne in Gappa: to nearest, tie breaking to even mantissas*)
-
-val _ToZero__rounding_mode : Expr.t
-(** zr in Gappa: toward zero *)
-
-val _Up__rounding_mode : Expr.t
-(** up in Gappa: toward plus infinity *)
-
-val _Down__rounding_mode : Expr.t
-(** dn in Gappa: toward minus infinity *)
-
-val _NearestTiesToAway__rounding_mode : Expr.t
-(** na : to nearest, tie breaking away from zero *)
-
-(* additional Gappa rounding modes *)
-
-val _Aw__rounding_mode : Expr.t
-(** aw in Gappa: away from zero **)
-
-val _Od__rounding_mode : Expr.t
-(** od in Gappa: to odd mantissas *)
-
-val _No__rounding_mode : Expr.t
-(** no in Gappa: to nearest, tie breaking to odd mantissas *)
-
-val _Nz__rounding_mode : Expr.t
-(** nz in Gappa: to nearest, tie breaking toward zero *)
-
-val _Nd__rounding_mode : Expr.t
-(** nd in Gappa: to nearest, tie breaking toward minus infinity *)
-
-val _Nu__rounding_mode : Expr.t
-(** nu in Gappa: to nearest, tie breaking toward plus infinity *)
-
-
 
 (** Integer part of binary logarithm for NON-ZERO POSITIVE number **)
 val integer_log_2 : Numbers.Q.t -> int
@@ -79,13 +38,11 @@ val integer_log_2 : Numbers.Q.t -> int
     exponent. i.e. if [res, m, e = float_of_rational prec exp mode x],
     then [res = m * 2^e] **)
 val float_of_rational :
-  int -> int -> Expr.t -> Numbers.Q.t -> Numbers.Q.t * Numbers.Z.t * int
+  int -> int -> Symbols.rounding_mode -> Numbers.Q.t -> Numbers.Q.t * Numbers.Z.t * int
 
 (** [round_to_integer mode x] rounds the rational [x] to an integer
     depending on the rounding mode [mode] *)
 val round_to_integer:  Expr.t -> Numbers.Q.t -> Numbers.Q.t
-
-val make_adequate_app: Symbols.t -> Expr.t list -> Ty.t -> Expr.t
 
 (** Empties the module's inner cache *)
 val empty_cache : unit -> unit

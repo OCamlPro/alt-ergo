@@ -325,7 +325,7 @@ let mk_execution_opt frontend input_format parse_only parsers
   let output_with_formatting = (not no_formatting_in_output) || pretty_output in
   let output_with_forced_flush =
     (not no_forced_flush_in_output) && (not pretty_output) in
-  set_infer_input_format input_format;
+  set_infer_input_format (Option.is_none input_format);
   let input_format = match input_format with
     | None -> Native
     | Some fmt -> fmt
@@ -400,7 +400,7 @@ let mk_output_opt
     interpretation use_underscore unsat_core output_format model_type models
   =
   let `Ok () = mk_models_opt models in
-  set_infer_output_format output_format;
+  set_infer_output_format (Option.is_none output_format);
   let output_format = match output_format with
     | None -> Native
     | Some fmt -> fmt
@@ -505,19 +505,19 @@ let mk_term_opt disable_ites inline_lets rewriting no_term_like_pp
   `Ok()
 
 let mk_theory_opt disable_adts inequalities_plugin no_ac no_contracongru
-    no_fm no_nla no_tcp no_theory restricted tighten_vars use_fpa
+    no_fm no_nla no_tcp no_theory restricted tighten_vars _use_fpa theory_preludes
   =
   set_no_ac no_ac;
   set_no_fm no_fm;
   set_no_nla no_nla;
   set_no_tcp no_tcp;
   set_no_theory no_theory;
-  set_use_fpa use_fpa;
   set_inequalities_plugin inequalities_plugin;
   set_restricted restricted;
   set_disable_adts disable_adts;
   set_tighten_vars tighten_vars;
   set_no_contracongru no_contracongru;
+  set_theory_preludes theory_preludes;
   `Ok()
 
 let halt_opt version_info where =
@@ -555,7 +555,7 @@ let halt_opt version_info where =
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
 
-let mk_opts file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
+let mk_opts () file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
     (gc) () () () () () () () () =
   Debug.mk ~verbosity:1 debug_flags;
   Debug.mk ~verbosity:2 ddebug_flags;
@@ -694,11 +694,51 @@ let parse_execution_opt =
          info ["add-parser"] ~docs ~doc) in
 
   let preludes =
+    let parse_prelude p =
+      if Sys.file_exists p then
+        if Sys.is_directory p then
+          Fmt.error "'%s' is a directory" p
+        else
+          Ok p
+      else
+        let p' = Filename.concat Config.preludesdir p in
+        if Sys.file_exists p' then begin
+          begin if String.starts_with ~prefix:"b-set-theory" p then
+              Printer.print_wrn ~header:true
+                "Support for the B set theory is deprecated since version 2.5.0@ \
+                 and may be removed in a future version. If you are actively using@ \
+                 it, please make yourself known to the Alt-Ergo developers by@ \
+                 writing to <alt-ergo@ocamlpro.com>."
+            else if String.starts_with ~prefix:"fpa-theory" p then
+              Printer.print_wrn ~header:true
+                "@[Support for the FPA theory has been integrated as a builtin @ \
+                 theory prelude in version 2.5.0 and is enabled by default. This @ \
+                 option is no longer needed, and the '%s'@ prelude will be removed@ \
+                 in a later version.@]" p
+          end;
+
+          if Sys.is_directory p' then
+            Fmt.error "'%s' is a directory" p
+          else
+            Ok p'
+        end else
+          Fmt.error "no '%s' file" p
+    in
+    let parse_preludes =
+      List.fold_left (fun r p ->
+          Result.bind r @@ fun ps ->
+          Result.map (fun p -> p :: ps) (parse_prelude p))
+        (Ok [])
+    in
     let doc =
       "Add a file that will be loaded as a prelude. The command is \
        cumulative, and the order of successive preludes is preserved." in
-    Arg.(value & opt_all string (get_preludes ()) &
-         info ["prelude"] ~docs ~doc) in
+    Term.(cli_parse_result' (
+        const parse_preludes $
+        Arg.(value & opt_all string (get_preludes ()) &
+             info ["prelude"] ~docs ~doc)
+      ))
+  in
 
   let no_locs_in_answers =
     let doc =
@@ -743,8 +783,7 @@ let parse_execution_opt =
              frontend $ input_format $ parse_only $ parsers $ preludes $
              no_locs_in_answers $ colors_in_output $ no_headers_in_output $
              no_formatting_in_output $ no_forced_flush_in_output $
-             pretty_output $ type_only $ type_smt2
-            ))
+             pretty_output $ type_only $ type_smt2))
 
 let parse_halt_opt =
 
@@ -1194,13 +1233,81 @@ let parse_theory_opt =
     Arg.(value & flag & info ["tighten-vars"] ~docs ~doc) in
 
   let use_fpa =
-    let doc = "Enable support for floating-point arithmetic." in
-    Arg.(value & flag & info ["use-fpa"] ~docs ~doc) in
+    let doc = "Floating-point builtins are always enabled and this option has
+    no effect anymore. It will be removed in a future version." in
+    let deprecated = "this option is always enabled" in
+    Arg.(value & flag & info ["use-fpa"] ~docs ~doc ~deprecated) in
+
+  let theories =
+    let theory_enum =
+      Preludes.all
+      |> List.map (fun t -> Format.asprintf "%a" Preludes.pp t, t)
+    in
+    let theory = Arg.enum theory_enum in
+    let enable_preludes =
+      let doc =
+        Format.asprintf "Enable theory preludes, multiple comma-separated values
+        are supported. $(docv) must be %s."
+          (Arg.doc_alts_enum theory_enum)
+      in
+      let docv = "THEORY" in
+      Arg.(
+        value & opt (list theory) [] & info ["enable-preludes"] ~docs ~doc ~docv
+      )
+    and disable_preludes =
+      let doc =
+        Format.asprintf "Disable theory preludes, multiple comma-separated
+        values are supported. THEORY must be %s."
+          (Arg.doc_alts_enum theory_enum)
+      in
+      let docv = "THEORY" in
+      Arg.(
+        value & opt (list theory) [] & info ["disable-preludes"] ~docs ~doc ~docv
+      )
+    and disable_builtin_preludes =
+      let doc = "Disable all default theory preludes. Prefer using
+      $(i,--disable-preludes) to explicitly disable problematic theory preludes.
+      Select theory preludes can be re-enabled with $(i,--enable-preludes)." in
+      Arg.(
+        value & flag & info ["disable-default-preludes"] ~doc ~docs
+      )
+    in
+    let preludes enable_preludes disable_preludes disable_builtin_preludes =
+      let preludes =
+        if disable_builtin_preludes then
+          []
+        else
+          Preludes.default
+      in
+      let rec aux th en dis =
+        match en, dis with
+        | _ :: _, [] -> aux (List.rev_append en th) [] []
+        | e :: _, d :: _ when e = d ->
+          Fmt.error_msg "theory prelude '%a' cannot be both enabled and
+          disabled" Preludes.pp e
+        | e :: en, d :: _ when e < d -> aux (e :: th) en dis
+        | _ , d :: dis -> aux (List.filter ((<>) d) th) en dis
+        | [], [] -> Ok th
+      in
+      aux
+        preludes
+        (List.fast_sort compare enable_preludes)
+        (List.fast_sort compare disable_preludes)
+    in
+    Term.(
+      cli_parse_result (
+        const preludes
+        $ enable_preludes
+        $ disable_preludes
+        $ disable_builtin_preludes
+      )
+    )
+  in
 
   Term.(ret (const mk_theory_opt $
              disable_adts $ inequalities_plugin $ no_ac $ no_contracongru $
              no_fm $ no_nla $ no_tcp $ no_theory $ restricted $
-             tighten_vars $ use_fpa
+             tighten_vars $ use_fpa $ theories
             )
        )
 
@@ -1263,7 +1370,7 @@ let main =
        ($(i,.mlw) and $(i,.why) are deprecated), \
        $(i,.smt2) or $(i,.psmt2)." in
     let i = Arg.(info [] ~docv:"FILE" ~doc) in
-    Arg.(value & pos ~rev:true 0 (some string) None & i) in
+    Arg.(value & pos ~rev:true 0 (some file) None & i) in
 
   let doc = "Execute Alt-Ergo on the given file." in
   let exits = Cmd.Exit.defaults in
@@ -1315,8 +1422,16 @@ let main =
     ]
   in
 
+  let setup_fmt style_renderer =
+    Fmt_tty.setup_std_outputs ?style_renderer ();
+    ()
+  in
+
+  let setup_fmt_t = Term.(const setup_fmt $ Fmt_cli.style_renderer ()) in
+
   let term =
     Term.(ret (const mk_opts $
+               setup_fmt_t $
                file $
                parse_case_split_opt $ parse_context_opt $
                Debug.light_flag_term $ Debug.medium_flag_term $
@@ -1342,4 +1457,3 @@ let parse_cmdline_arguments () =
   | Error `Parse -> exit Cmd.Exit.cli_error
   | Error `Term -> exit Cmd.Exit.internal_error
   | Error `Exn -> exit Cmd.Exit.internal_error
-

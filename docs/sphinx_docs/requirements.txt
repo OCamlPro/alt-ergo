@@ -3,7 +3,7 @@
 #
 ###### Requirements for sphinx doc ######
 sphinx
-recommonmark
+myst_parser
 sphinx_rtd_theme
 sphinx-markdown-tables
 #

@@ -28,24 +28,21 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val clear_cache : unit -> unit
-(** Empties the internal cache of the module. *)
+type t = Fpa | Ria | Nra
 
-val make :
-  D_loop.DStd.Loc.file ->
-  Commands.sat_tdecl list ->
-  D_loop.Typer_Pipe.typechecked D_loop.Typer_Pipe.stmt ->
-  Commands.sat_tdecl list
-(** [make acc stmt] Makes one or more [Commands.sat_tdecl] from the
-    type-checked statement [stmt] and appends them to [acc].
-*)
+let all = [ Fpa; Ria; Nra ]
 
-val make_list :
-  D_loop.DStd.Loc.file ->
-  D_loop.Typer_Pipe.typechecked D_loop.Typer_Pipe.stmt list ->
-  Commands.sat_tdecl list
-(** same as [make] but applied to a list, the results are accumulated in the
-    returned list.
-*)
+let default = [ Fpa; Ria; Nra ]
 
-val fpa_builtins : D_loop.State.t -> D_loop.Typer.lang -> Dolmen_loop.Typer.T.builtin_symbols
+let pp ppf = function
+  | Fpa -> Format.fprintf ppf "fpa"
+  | Ria -> Format.fprintf ppf "ria"
+  | Nra -> Format.fprintf ppf "nra"
+
+let filename =
+  Format.asprintf "<builtins>/%a.ae" pp
+
+let content = function
+  | Fpa -> [%blob "src/preludes/fpa.ae"]
+  | Ria -> [%blob "src/preludes/ria.ae"]
+  | Nra -> [%blob "src/preludes/nra.ae"]

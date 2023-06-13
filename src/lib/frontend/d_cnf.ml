@@ -152,6 +152,190 @@ module Cache = struct
 
 end
 
+(** Builtins *)
+type _ DStd.Builtin.t +=
+  | Float
+  | RoundingModeTy
+  | RoundingMode of Symbols.rounding_mode
+  | Integer_round
+  | Abs_real
+  | Sqrt_real
+  | Sqrt_real_default
+  | Sqrt_real_excess
+  | Ceiling_to_int of [ `Real ]
+  | Max_real
+  | Max_int
+  | Min_int
+  | Integer_log2
+  (* Internal use for semantic triggers -- do not expose outside of theories *)
+  | Not_theory_constant | Is_theory_constant | Linear_dependency
+
+let fpa_builtins : State.t -> D_loop.Typer.lang -> Dolmen_loop.Typer.T.builtin_symbols =
+  let (->.) args ret = (args, ret) in
+  let fpa_rounding_mode =
+    DStd.Expr.Id.mk ~builtin:RoundingModeTy (DStd.Path.global "fpa_rounding_mode")
+      DStd.Expr.{ arity = 0 ; alias = No_alias }
+  in
+  let fpa_rounding_mode = DT.apply fpa_rounding_mode [] in
+  let dterm name f =
+    Id.Map.add { name = DStd.Name.simple name; ns = Term } @@
+    fun env s ->
+    Dl.Typer.T.builtin_term @@
+    Dolmen_type.Base.term_app1 (module Dl.Typer.T) env s f
+  in
+  let ty name ty =
+    Id.Map.add { name = DStd.Name.simple name; ns = Sort } @@
+    fun env s ->
+    Dl.Typer.T.builtin_ty @@
+    Dolmen_type.Base.app0 (module Dl.Typer.T) env s ty
+  in
+  let float_cst =
+    let ty = DT.(arrow [int; int; fpa_rounding_mode; real] real) in
+    DE.Id.mk ~name:"float" ~builtin:Float (DStd.Path.global "float") ty
+  in
+  let float prec exp mode x =
+    DE.Term.apply_cst float_cst [] [prec; exp; mode; x]
+  in
+  let mode m =
+    let name = Format.asprintf "%a" Symbols.pp_rounding_mode m in
+    let builtin = RoundingMode m in
+    let cst = DE.Id.mk ~name ~builtin (DStd.Path.global name) fpa_rounding_mode in
+    DE.Term.apply_cst cst [] []
+  in
+  let float32 = float (DE.Term.int "24") (DE.Term.int "149") in
+  let float32d x = float32 (mode NearestTiesToEven) x in
+  let float64 = float (DE.Term.int "53") (DE.Term.int "1074") in
+  let float64d x = float64 (mode NearestTiesToEven) x in
+  let op ?(tyvars = []) name builtin (args, ret) =
+    let ty = DT.pi tyvars @@ DT.arrow args ret in
+    let cst = DE.Id.mk ~name ~builtin (DStd.Path.global name) ty in
+    Id.Map.add { name = DStd.Name.simple name; ns = Term } @@
+    fun env _ ->
+    Dl.Typer.T.builtin_term @@
+    Dolmen_type.Base.term_app_cst
+      (module Dl.Typer.T) env cst
+  in
+  let partial1 name f =
+    Id.Map.add { name = DStd.Name.simple name; ns = Term } @@
+    fun env s ->
+    Dl.Typer.T.builtin_term @@
+    Dolmen_type.Base.term_app1 (module Dl.Typer.T) env s f
+  in
+  let partial2 name f =
+    Id.Map.add { name = DStd.Name.simple name; ns = Term } @@
+    fun env s ->
+    Dl.Typer.T.builtin_term @@
+    Dolmen_type.Base.term_app2 (module Dl.Typer.T) env s f
+  in
+  let is_theory_constant =
+    let open DT in
+    let a = Var.mk "alpha" in
+    op ~tyvars:[a] "is_theory_constant" Is_theory_constant ([of_var a] ->. prop)
+  in
+  let rm m =
+    op (Format.asprintf "%a" Symbols.pp_rounding_mode m) (RoundingMode m) ([] ->. fpa_rounding_mode)
+  in
+  let fpa_builtins =
+    let open DT in
+    Id.Map.empty
+
+    |> ty "fpa_rounding_mode" fpa_rounding_mode
+
+    (* the first argument is mantissas' size (including the implicit bit),
+       the second one is the exp of the min representable normalized number,
+       the third one is the rounding mode, and the last one is the real to
+       be rounded *)
+    |> op "float" Float ([int; int; fpa_rounding_mode; real] ->. real)
+
+    |> partial2 "float32" float32
+    |> partial1 "float32d" float32d
+
+    |> partial2 "float64" float64
+    |> partial1 "float64d" float64d
+
+    (* Rounding modes *)
+    |> rm NearestTiesToEven
+    |> rm ToZero
+    |> rm Up
+    |> rm Down
+    |> rm NearestTiesToAway
+    |> rm Aw
+    |> rm Od
+    |> rm No
+    |> rm Nz
+    |> rm Nd
+    |> rm Nu
+
+    (* rounds to nearest integer *)
+    |> op "integer_round" Integer_round ([fpa_rounding_mode; real] ->. int)
+
+    (* type cast: from int to real *)
+    |> dterm "real_of_int" DE.Term.Int.to_real
+
+    (* type check: integers *)
+    |> dterm "real_is_int" DE.Term.Real.is_int
+
+    (* abs value of a real *)
+    |> op "abs_real" Abs_real ([real] ->. real)
+
+    (* sqrt value of a real *)
+    |> op "sqrt_real" Sqrt_real ([real] ->. real)
+
+    (* sqrt value of a real by default *)
+    |> op "sqrt_real_default" Sqrt_real_default ([real] ->. real)
+
+    (* sqrt value of a real by excess *)
+    |> op "sqrt_real_excess" Sqrt_real_excess ([real] ->. real)
+
+    (* abs value of an int *)
+    |> dterm "abs_int" DE.Term.Int.abs
+
+    (* (integer) floor of a rational *)
+    |> dterm "int_floor" DE.Term.Real.floor_to_int
+
+    (* (integer) ceiling of a ratoinal *)
+    |> op "int_ceil" (Ceiling_to_int `Real) ([real] ->. int)
+
+    (* The functions below are only interpreted when applied on constants.
+       Aximatization for the general case are not currently imlemented *)
+
+    (* maximum of two reals *)
+    |> op "max_real" Max_real ([real; real] ->. real)
+
+    (* maximum of two ints *)
+    |> op "max_int" Max_int ([int; int] ->. int)
+
+    (* minimum of two ints *)
+    |> op "min_int" Min_int ([int; int] ->. int)
+
+    (* computes an integer log2 of a real. The function is only
+       interpreted on (non-zero) positive real constants. When applied on a
+       real 'm', the result 'res' of the function is such that: 2^res <= m <
+       2^(res+1) *)
+    |> op "integer_log2" Integer_log2 ([real] ->. int)
+
+    (* only used for arithmetic. It should not be used for x in float(x)
+       to enable computations modulo equality *)
+
+    |> op "not_theory_constant" Not_theory_constant ([real] ->. prop)
+    |> is_theory_constant
+    |> op "linear_dependency" Linear_dependency ([real; real] ->. prop)
+
+  in fun _st lang ->
+    match lang with
+    | `Logic Alt_ergo ->
+      fun env s ->
+        begin match s with
+          | Dl.Typer.T.Id id ->
+            begin
+              try
+                Id.Map.find_exn id fpa_builtins env s
+              with Not_found -> `Not_found
+            end
+          | Builtin _ -> `Not_found
+        end
+    | _ -> fun _ _ -> `Not_found
+
 (** Translates dolmen locs to Alt-Ergo's locs *)
 let dl_to_ael dloc_file (compact_loc: DStd.Loc.t) =
   DStd.Loc.(lexing_positions (loc dloc_file compact_loc))
@@ -183,6 +367,7 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
   | `Bitv n -> Ty.Tbitv n
 
   | `App (`Builtin B.Unit, []) -> Ty.Tunit
+  | `App (`Builtin RoundingModeTy, []) -> Fpa_rounding.fpa_rounding_mode
   | `App (`Builtin _, [ty]) -> aux ty
   | `App (`Generic c, l) -> handle_ty_app ~update c l
 
@@ -625,6 +810,9 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             let sy = Sy.Op (Sy.Constr (Hstring.make name)) in
             E.mk_term sy [] ty
 
+          | RoundingMode rm ->
+            E.mk_term (Sy.Op (RoundingMode rm)) [] Fpa_rounding.fpa_rounding_mode
+
           | _ ->
             Util.failwith "Unsupported constant term %a" DE.Term.print term
         end
@@ -641,6 +829,10 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
               } as tcst); _
           } as app_term, _, args
         ) ->
+        let op op =
+          E.mk_term (Sy.Op op) (List.map (fun a -> aux_mk_expr a) args)
+            (dty_to_ty term_ty)
+        in
         begin match builtin, args with
           (* Unary applications *)
 
@@ -777,7 +969,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             let ty = dty_to_ty term_ty in
             let sy = Cache.find_sy (DE.Term.Const.hash tcst) in
             let l = List.map (fun t -> aux_mk_expr t) args in
-            Fpa_rounding.make_adequate_app sy l ty
+            E.mk_term sy l ty
 
           | B.And, h :: (_ :: _ as t) ->
             List.fold_left (
@@ -965,6 +1157,31 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
                    algebraic data type"
                   DE.Term.print app_term
             end
+
+          | B.Coercion, [ x ] ->
+            begin match DT.view (DE.Term.ty x), DT.view term_ty with
+              | `Int, `Real -> op Real_of_int
+              | _ ->
+                Util.failwith "Unsupported coercion: %a"
+                  DE.Term.print term
+            end
+          | Float, _ -> op Float
+          | Integer_round, _ -> op Integer_round
+          | Abs_real, _ -> op Abs_real
+          | Sqrt_real, _ -> op Sqrt_real
+          | Sqrt_real_default, _ -> op Sqrt_real_default
+          | Sqrt_real_excess, _ -> op Sqrt_real_excess
+          | B.Abs, _ -> op Abs_int
+          | B.Floor_to_int `Real, _ -> op Int_floor
+          | B.Is_int `Real, _ -> op Real_is_int
+          | Ceiling_to_int `Real, _ -> op Int_ceil
+          | Max_real, _ -> op Max_real
+          | Max_int, _ -> op Max_int
+          | Min_int, _ -> op Min_int
+          | Integer_log2, _ -> op Integer_log2
+          | Not_theory_constant, _ -> op Not_theory_constant
+          | Is_theory_constant, _ -> op Is_theory_constant
+          | Linear_dependency, _ -> op Linear_dependency
 
           | _, _ ->
             Util.failwith "Unsupported Application Term %a" DE.Term.print term
@@ -1302,7 +1519,14 @@ let make dloc_file acc stmt =
             let name_base = get_basename path in
             let sy = Sy.name name_base in
             Cache.store_sy (DE.Term.Const.hash tcst) sy
-          | `Type_def _ -> ()
+          | `Type_alias _ -> ()
+          | `Instanceof _ ->
+            (* if alt-ergo encounters one, that should raise an
+               error (these statements are only used in models when
+               completing a polymorphic partially-defined builtin (think e.g.
+               adt destructors/projections) by defining it on a instance
+               (e.g. defining the behaviour of List.tl on an int list)) *)
+            assert false
         ) defs;
       List.filter_map (fun (def : Typer_Pipe.def) ->
           match def with
@@ -1377,7 +1601,14 @@ let make dloc_file acc stmt =
                   Format.eprintf "defining term of %a@." DE.Term.print body;
                 Some C.{ st_decl = C.Assume (name_base, e, true); st_loc }
             end
-          | `Type_def _ -> None
+          | `Type_alias _ -> None
+          | `Instanceof _ ->
+            (* if alt-ergo encounters one, that should raise an
+               error (these statements are only used in models when
+               completing a polymorphic partially-defined builtin (think e.g.
+               adt destructors/projections) by defining it on a instance
+               (e.g. defining the behaviour of List.tl on an int list)) *)
+            assert false
         ) defs |> List.rev_append acc
 
     | {contents = `Decls [td]; _ } ->

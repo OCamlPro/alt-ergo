@@ -202,14 +202,12 @@ module Shostak
   let mk_partial_interpretation_1 aux_func coef p_acc ty t x =
     let r_x, _ = X.make x in
     try
-      match P.to_list (embed r_x) with
-      | [], d ->
-        let d = aux_func d in (* may raise Exit *)
-        P.add_const (Q.mult coef d) p_acc
+      match P.is_const (embed r_x) with
+      | Some d ->
+        P.add_const (Q.mult coef (aux_func d)) p_acc
       | _ -> raise Exit
     with Exit ->
-      let a = X.term_embed t in
-      P.add (P.create [coef, a] Q.zero ty) p_acc
+      P.add (P.create [coef, X.term_embed t] Q.zero ty) p_acc
 
   let mk_partial_interpretation_2 aux_func coef p_acc ty t x y =
     let px = embed (fst (X.make x)) in
@@ -219,9 +217,9 @@ module Shostak
       | Some c_x, Some c_y ->
         P.add_const (Q.mult coef (aux_func c_x c_y)) p_acc
       | _ ->
-        P.add (P.create [coef, (X.term_embed t)] Q.zero ty) p_acc
+        P.add (P.create [coef, X.term_embed t] Q.zero ty) p_acc
     with Exit ->
-      P.add (P.create [coef, (X.term_embed t)] Q.zero ty) p_acc
+      P.add (P.create [coef, X.term_embed t] Q.zero ty) p_acc
 
   let rec mke coef p t ctx =
     let { E.f = sb ; xs; ty; _ } = E.term_view t in
@@ -295,8 +293,9 @@ module Shostak
         P.add p (P.mult_const coef p3), ctx
 
     (*** <begin>: partial handling of some arith/FPA operators **)
-    | Sy.Op Sy.Float, [prec; exp; mode; x] ->
+    | Sy.Op Float, [prec; exp; mode; x] ->
       let prec = E.int_view prec and exp = E.int_view exp in
+      let mode = E.rounding_mode_view mode in
       let aux_func e =
         let res, _, _ = Fpa_rounding.float_of_rational prec exp mode e in
         res

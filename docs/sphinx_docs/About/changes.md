@@ -2,6 +2,39 @@
 
 ## dev version
 
+* Support for floating-point arithmetic is enabled by default
+
+  The interface for enabling floating-point arithmetic in Alt-Ergo has been a pain point for users for many years, needing two additional flags whose separate behavior is not always clear. Starting from this release, the `--use-fpa` option is always enabled, and the floating-point prelude is loaded by default.
+
+  The old FPA prelude has been split into three theory preludes: `ria` for the axioms about absolute values and real-to-int conversions, `nra` for the axioms about the square root function and nonlinear multiplications, and `fpa` for the theory surrounding the `float` function. These can be selectively disabled using the `--disable-preludes` option, but may become always enabled in later releases.
+
+* Dolmen frontend
+
+  This release of Alt-Ergo includes a new frontend using [Dolmen](https://github.com/Gbury/dolmen), written by Hichem Rami Ait El Hara with contributions by Pierre Villemot. This new frontend can be enabled with the option `--frontend dolmen`, and will become the default in a later release.
+
+  Thanks to the heavy-lifting done by Dolmen, this new frontend has better support for the smtlib2 format than the current frontend. The Dolmen frontend is required to benefit from most of the new features of this release when using the smtlib2 format, such as support for `(get-model)`, `to_real` and `to_int`.
+
+* Support for the `Reals_ints` smtlib2 theory (Dolmen frontend)
+
+  When using the Dolmen frontend, Alt-Ergo now supports the `Reals_ints` smtlib2 theory, and notably `to_real`, `to_int`, and `abs`.
+
+## version 2.4.3 (April 14, 2023)
+
+* Build
+  - Restrict the requirement version of Ocplib-simplex (PR #573)
+  - Dune 3.0 or above required, see https://github.com/ocaml/dune/issues/5563 (PR #575)
+  - Zarith 1.4 or above required
+  - Cairo2 0.6.4 or above required
+  - psmt2-frontend 0.4 or above required
+  - Using js_of_ocaml with a version between 4.0.1 and 5.0.1 required (PR #575)
+
+* Bug fixes
+  - Fix soundness issues in the arithmetic reasoner #476, #477, #479 (PR #573)
+
+* Regression fixes
+  - Remove flattening, see issues #505, #567 (PR #573)
+  - Using a weak table for the Shostak.combine cache to prevent some regressions (PR #573)
+
 ## version 2.4.2, August, 02, 2022
 
 * Minor release
@@ -570,17 +603,17 @@
 
     o -timelimit n option: set the time limit to n seconds (not supported on Windows)
 
-    o bug fixes 
+    o bug fixes
 
   + Main changes in the graphical interface:
   ------------------------------------------
 
     o the number of instances for each axiom are now shown on the right of the GUI
-    
+
     o the number of instances of each axiom can be limited by the user
-    
+
     o the modifications made in the GUI can now be saved in a session file <f>.agr
-    
+
     o session files can be replayed with -replay option
 
     o models can be displayed in the GUI
@@ -591,13 +624,13 @@
 ## version 0.94, December 2nd, 2011
 
   o the theory of records replaces the theory of pairs
-  o bug fixes 
-    (intervals, term data-structure, stack-overflows, matching, 
+  o bug fixes
+    (intervals, term data-structure, stack-overflows, matching,
      existentials, distincts, CC, GUI)
-  o improvements 
+  o improvements
      (SMT-Lib2 front-end, intervals, case-splits,
       triggers, lets)
-  o multiset ordering for AC(X) 
+  o multiset ordering for AC(X)
   o manual lemma instantiation in the GUI
 
 
@@ -631,7 +664,7 @@
 
 ## version 0.91, May 19th, 2010
 
-  o experimental support for the theory of functional polymorphic 
+  o experimental support for the theory of functional polymorphic
     arrays with the -arrays option
   o the -pairs option should now be used for the built-in support of
     polymorphic pairs
@@ -640,18 +673,18 @@
   o support case split on integer variables
   o new support for Euclidean division and modulo operators
   o new environment variable ERGOLIB to specify the library directory
-    
+
 ## version 0.9, July 17th, 2009
 
   o support AC symbols
   o support for C-like hexadecimal floating-point constants
-  o handle the division operator 
+  o handle the division operator
 
 ## version 0.8, July 21st, 2008
 
   o pretty output with the -color option
   o the SAT solver part is now equipped with a backjumping mechanism
-  o now handles the flet and let SMT-lib constructs 
+  o now handles the flet and let SMT-lib constructs
   o goal directed strategy
   o pruning strategy (-select option)
   o incremental strategy for instantiation of lemmas
@@ -659,7 +692,7 @@
   o treatment of existential formulas have been slightly improved
   o decision procedure for polymorphic pairs
   o decision procedure for bit-vectors
-  o combination scheme for several decision procedures  
+  o combination scheme for several decision procedures
 
 ## version 0.7.3, March 5th, 2008
 
@@ -676,7 +709,7 @@
 
 ## version 0.6, February 1st, 2007
 
-  o new CC(X) architecture (it can know directly handle relation symbols)  
+  o new CC(X) architecture (it can know directly handle relation symbols)
   o fully handles the polymorphism of the logic
 
 ## version 0.5, October 12th, 2006

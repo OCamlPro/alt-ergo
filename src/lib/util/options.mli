@@ -336,16 +336,19 @@ val set_output_with_formatting : bool -> unit
 val set_output_with_forced_flush : bool -> unit
 
 (** Set [infer_input_format] accessible with {!val:get_infer_input_format} *)
-val set_infer_input_format : 'a option -> unit
+val set_infer_input_format : bool -> unit
 
 (** Set [infer_output_format] accessible with {!val:get_infer_output_format} *)
-val set_infer_output_format : 'a option -> unit
+val set_infer_output_format : bool -> unit
 
 (** Set [parsers] accessible with {!val:get_parsers} *)
 val set_parsers : string list -> unit
 
 (** Set [preludes] accessible with {!val:get_preludes} *)
 val set_preludes : string list -> unit
+
+(** Set [theory_preludes] accessible with {!val:get_theory_preludes} *)
+val set_theory_preludes : Preludes.t list -> unit
 
 (** Set [disable_weaks] accessible with {!val:get_disable_weaks} *)
 val set_disable_weaks : bool -> unit
@@ -444,9 +447,6 @@ val set_no_theory : bool -> unit
 
 (** Set [tighten_vars] accessible with {!val:get_tighten_vars} *)
 val set_tighten_vars : bool -> unit
-
-(** Set [use_fpa] accessible with {!val:get_use_fpa} *)
-val set_use_fpa : bool -> unit
 
 (** Set [session_file] accessible with {!val:get_session_file} *)
 val set_session_file : string -> unit
@@ -634,6 +634,9 @@ val get_parsers : unit -> string list
 (** List of files that have be loaded as preludes. *)
 val get_preludes : unit -> string list
 (** Default to [\[\]] *)
+
+(** List of theory preludes to load. *)
+val get_theory_preludes : unit -> Preludes.t list
 
 (** [true] if the program shall stop after typing. *)
 val get_type_only : unit -> bool
@@ -987,10 +990,6 @@ val get_restricted : unit -> bool
 
 (** [true] if the best bounds for arithmetic variables is computed. *)
 val get_tighten_vars : unit -> bool
-(** Default to [false] *)
-
-(** [true] if support for floating-point arithmetic is enabled. *)
-val get_use_fpa : unit -> bool
 (** Default to [false] *)
 
 (** Possible values are

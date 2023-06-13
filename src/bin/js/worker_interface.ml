@@ -278,7 +278,6 @@ type options = {
   no_theory : bool option;
   restricted : bool option;
   tighten_vars : bool option;
-  use_fpa : bool option;
   timers : bool option;
 
   file : string option;
@@ -384,7 +383,6 @@ let init_options () = {
   no_theory = None;
   restricted = None;
   tighten_vars = None;
-  use_fpa = None;
   timers = None;
 
   file = None;
@@ -537,7 +535,7 @@ let opt7_encoding =
   conv
     (fun opt7 -> opt7)
     (fun opt7 -> opt7)
-    (obj10
+    (obj9
        (opt "no_contracongru" bool)
        (opt "no_fm" bool)
        (opt "no_nla" bool)
@@ -545,7 +543,6 @@ let opt7_encoding =
        (opt "no_theory" bool)
        (opt "restricted" bool)
        (opt "tighten_vars" bool)
-       (opt "use_fpa" bool)
        (opt "timers" bool)
        (opt "file" string)
     )
@@ -668,7 +665,6 @@ let options_to_json opt =
      opt.no_theory,
      opt.restricted,
      opt.tighten_vars,
-     opt.use_fpa,
      opt.timers,
      opt.file)
   in
@@ -786,7 +782,6 @@ let options_from_json options =
          no_theory,
          restricted,
          tighten_vars,
-         use_fpa,
          timers,
          file) = all_opt7 in
     {
@@ -875,7 +870,6 @@ let options_from_json options =
       no_theory;
       restricted;
       tighten_vars;
-      use_fpa;
       timers;
       file
     }

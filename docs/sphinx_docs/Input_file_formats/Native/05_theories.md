@@ -1,4 +1,4 @@
- 
+
 # Theories
 
 Alt-Ergo has built-in support for many different theories.
@@ -34,15 +34,14 @@ All theories are always considered *modulo equality*.
 * `LRA`: Linear arithmetic over rationals
 * `NIA`: Non-linear arithmetic over integers
 * `NRA`: Non-linear arithmetic over rationals
+* `RIA`: Mixer real-linear arithmetic
 * `FPA`: Floating-point arithmetic
 
 
 ### About floating-point arithmetic
 
-Floating-point arithmetic (FPA) is a recent addition to Alt-Ergo, and is not documented here.
-To use it, it is necessary to load the corresponding prelude. The strategy used to handle FPA is based on over-approximation by intervals of reals, and roundings.
+Floating-point arithmetic (FPA) is implemented using an over-approximation by intervals of reals, and roundings.
 More information on this strategy and the language extension can be found in [this article](https://hal.inria.fr/hal-01522770).
-
 
 ## User-defined extensions of theories
 
