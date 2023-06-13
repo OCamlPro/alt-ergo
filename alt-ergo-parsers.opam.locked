@@ -1,0 +1,56 @@
+opam-version: "2.0"
+name: "alt-ergo-parsers"
+version: "dev"
+synopsis: "The Alt-Ergo SMT prover parser library"
+description: """\
+This is the parser library used in the Alt-Ergo SMT solver.
+
+Alt-Ergo is an automatic theorem prover of mathematical formulas. It was developed at LRI, and is now maintained at OCamlPro.
+
+See more details on http://alt-ergo.ocamlpro.com/"""
+maintainer: "Alt-Ergo developers"
+authors: "Alt-Ergo developers"
+license: ["LicenseRef-OCamlpro-Non-Commercial" "Apache-2.0" "LGPL-2.1-only"]
+tags: "org:OCamlPro"
+homepage: "https://alt-ergo.ocamlpro.com/"
+doc: "https://ocamlpro.github.io/alt-ergo"
+bug-reports: "https://github.com/OCamlPro/alt-ergo/issues"
+depends: [
+  "alt-ergo-lib" {= "dev"}
+  "dune" {= "3.7.1"}
+  "menhir" {= "20230415"}
+  "ocaml" {= "4.14.1"}
+  "psmt2-frontend" {= "0.4.0"}
+  "stdlib-shims" {= "0.3.0"}
+]
+build: [
+  [
+    "ocaml"
+    "unix.cma"
+    "configure.ml"
+    name
+    "--prefix"
+    prefix
+    "--libdir"
+    lib
+    "--mandir"
+    man
+  ]
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
+]
+dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"
+pin-depends: [
+  [
+    "dolmen.dev"
+    "git+https://github.com/bclement-ocp/dolmen.git#bclement/prelude_files"
+  ]
+  [
+    "dolmen_loop.dev"
+    "git+https://github.com/bclement-ocp/dolmen.git#bclement/prelude_files"
+  ]
+  [
+    "dolmen_type.dev"
+    "git+https://github.com/bclement-ocp/dolmen.git#bclement/prelude_files"
+  ]
+]
