@@ -48,10 +48,12 @@ type operator =
   | Extract of int * int (* lower bound * upper bound *)
   (* FP *)
   | Float
-  | Integer_round | Fixed
+  | RoundingMode of Fpa_rounding.rounding_mode | Integer_round | Fixed
   | Sqrt_real | Sqrt_real_default | Sqrt_real_excess
-  | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
-  | Max_real | Max_int | Min_real | Min_int | Integer_log2
+  | Abs_int | Abs_real | Real_of_int | Real_is_int
+  | Int_floor | Int_ceil | Integer_log2
+  | Max_real | Max_int | Min_real | Min_int
+  | Not_theory_constant | Is_theory_constant | Linear_dependency
 
 type lit =
   (* literals *)

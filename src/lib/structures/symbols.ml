@@ -48,10 +48,12 @@ type operator =
   | Extract of int * int (* lower bound * upper bound *)
   (* FP *)
   | Float
-  | Integer_round | Fixed
+  | RoundingMode of Fpa_rounding.rounding_mode | Integer_round | Fixed
   | Sqrt_real | Sqrt_real_default | Sqrt_real_excess
-  | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
-  | Max_real | Max_int | Min_real | Min_int | Integer_log2
+  | Abs_int | Abs_real | Real_of_int | Real_is_int
+  | Int_floor | Int_ceil | Integer_log2
+  | Max_real | Max_int | Min_real | Min_int
+  | Not_theory_constant | Is_theory_constant | Linear_dependency
 
 type lit =
   (* literals *)
@@ -137,12 +139,15 @@ let compare_operators op1 op2 =
       | Extract (i1, j1), Extract (i2, j2) ->
         let r = Int.compare i1 i2 in
         if r = 0 then Int.compare j1 j2 else r
-      | _ , (Plus | Minus | Mult | Div | Modulo
+      | RoundingMode m1, RoundingMode m2 ->
+        Stdlib.compare m1 m2
+      | _ , (Plus | Minus | Mult | Div | Modulo | Real_is_int
             | Concat | Extract _ | Get | Set | Fixed | Float | Reach
             | Access _ | Record | Sqrt_real | Abs_int | Abs_real
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
-            | Integer_log2 | Pow | Integer_round
+            | Integer_log2 | Pow | Integer_round | RoundingMode _
+            | Not_theory_constant | Is_theory_constant | Linear_dependency
             | Constr _ | Destruct _ | Tite) -> assert false
     )
 
@@ -292,6 +297,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op Get -> "get"
   | Op Set -> "set"
   | Op Float -> "float"
+  | Op RoundingMode m -> Format.asprintf "%a" Fpa_rounding.pp_rounding_mode m
   | Op Fixed -> "fixed"
   | Op Abs_int -> "abs_int"
   | Op Abs_real -> "abs_real"
@@ -299,6 +305,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op Sqrt_real_default -> "sqrt_real_default"
   | Op Sqrt_real_excess -> "sqrt_real_excess"
   | Op Real_of_int -> "real_of_int"
+  | Op Real_is_int -> "real_is_int"
   | Op Int_floor -> "int_floor"
   | Op Int_ceil -> "int_ceil"
   | Op Max_real -> "max_real"
@@ -308,6 +315,9 @@ let to_string ?(show_vars=true) x = match x with
   | Op Integer_log2 -> "integer_log2"
   | Op Pow -> "**"
   | Op Integer_round -> "integer_round"
+  | Op Not_theory_constant -> "not_theory_constant"
+  | Op Is_theory_constant -> "is_theory_constant"
+  | Op Linear_dependency -> "linear_dependency"
   | Op Concat -> "@"
   | Op Extract (i, j) -> Format.sprintf "^{%d; %d}" i j
   | Op Tite -> "ite"
@@ -381,4 +391,3 @@ end = struct
   let print pr_elt fmt sbt =
     iter (fun k v -> Format.fprintf fmt "%a -> %a  " print k pr_elt v) sbt
 end
-

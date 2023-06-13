@@ -243,9 +243,9 @@ let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     Format.fprintf fmt "@[<v 0>%s" (pp_smt clean_wrn_print);
     if header then
       if Options.get_output_with_colors () then
-        Format.fprintf fmt "@[<v 9>@{<fg_orange>@{<bold>[Warning]@}@} "
+        Format.fprintf fmt "@[<v 10>@{<fg_orange>@{<bold>[Warning]@}@} "
       else
-        Format.fprintf fmt "@[<v 9>[Warning] " ;
+        Format.fprintf fmt "@[<v 10>[Warning] " ;
     if flushed || Options.get_output_with_forced_flush ()
     then Format.kfprintf flush fmt s else Format.fprintf fmt s
   end

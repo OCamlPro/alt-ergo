@@ -38,7 +38,7 @@
     "inline_lets": false, "rewriting": false, "term_like_pp": false,
     "disable_adts": false, "no_ac": false, "no_contracongru": false,
     "no_fm": false, "no_nla": false, "no_tcp": false, "no_theory": false,
-    "restricted": false, "tighten_vars": false, "use_fpa": false,
+    "restricted": false, "tighten_vars": false,
     "timers": false, "file": "try-alt-ergo"
 }
 

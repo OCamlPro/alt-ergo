@@ -442,9 +442,6 @@ val set_no_theory : bool -> unit
 (** Set [tighten_vars] accessible with {!val:get_tighten_vars} *)
 val set_tighten_vars : bool -> unit
 
-(** Set [use_fpa] accessible with {!val:get_use_fpa} *)
-val set_use_fpa : bool -> unit
-
 (** Set [session_file] accessible with {!val:get_session_file} *)
 val set_session_file : string -> unit
 
@@ -979,10 +976,6 @@ val get_restricted : unit -> bool
 
 (** [true] if the best bounds for arithmetic variables is computed. *)
 val get_tighten_vars : unit -> bool
-(** Default to [false] *)
-
-(** [true] if support for floating-point arithmetic is enabled. *)
-val get_use_fpa : unit -> bool
 (** Default to [false] *)
 
 (** Possible values are

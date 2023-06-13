@@ -161,7 +161,6 @@ type options = {
   no_theory : bool option;
   restricted : bool option;
   tighten_vars : bool option;
-  use_fpa : bool option;
   timers : bool option;
 
   file : string option;

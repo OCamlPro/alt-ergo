@@ -41,3 +41,8 @@ val make :
 (** [make acc stmt] Makes one or more [Commands.sat_tdecl] from the
     type-checked statement [stmt] and appends them to [acc].
 *)
+
+val fpa_builtins :
+  Dolmen_loop.State.t ->
+  D_loop.Typer.lang ->
+  Dolmen_loop.Typer.T.builtin_symbols
