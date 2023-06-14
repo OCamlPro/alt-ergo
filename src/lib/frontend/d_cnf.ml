@@ -546,14 +546,14 @@ let mk_pattern DE.{ term_descr; _ } =
 let mk_bound (DE.{ term_descr; term_ty; _ } as term) is_open is_lower =
   let kind =
     match term_descr with
-    | Cst { builtin = B.Integer s; _ } ->
+    | Cst { builtin = (B.Integer s | B.Rational s | B.Decimal s); _ } ->
       Sy.ValBnd (Numbers.Q.from_string s)
     | Cst { builtin = B.Base; path; _ }
     | Var { path;  _ } ->
       Sy.VarBnd (Var.of_string (get_basename path))
     | _ ->
       Util.failwith
-        "Expected bound to be either an integer constant or variable but\
+        "Expected bound to be either a numerical constant or variable but \
          got: %a"
         DE.Term.print term
   in
@@ -762,16 +762,68 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             let e3 = aux_mk_expr z in
             E.mk_term (Sy.Op Sy.Set) [e1; e2; e3] ty
 
-          | B.In_interval (b1, b2), [ x; y; z ] ->
-            let ty = dty_to_ty term_ty in
-            let e1 = aux_mk_expr x in
-            let lb_sy = mk_bound y b1 true in
-            let ub_sy = mk_bound z b2 false in
-            let sy = Sy.mk_in lb_sy ub_sy in
-            assert (ty == Ty.Tbool);
-            E.mk_term sy [e1] ty
-
           (* N-ary applications *)
+
+          | B.In_interval, l ->
+            let is_strict builtin =
+              match builtin with
+              | B.Lt _ | B.Gt _ -> true
+              | B.Leq _ | B.Geq _ -> false
+              | _ -> assert false
+            in
+            let ty = dty_to_ty term_ty in
+            assert (ty == Ty.Tbool);
+            begin match l with
+              | [ { term_descr = App (
+                  { term_descr = Cst {
+                        builtin = B.(Lt _ | Leq _) as builtin; _ }; _
+                  }, _, [lb;t]); _ }
+                ] ->
+                let e1 = aux_mk_expr t in
+                let lb_sy = mk_bound lb (is_strict builtin) true in
+                let ub_sy =
+                  let sort = dty_to_ty term_ty in
+                  let var = Sy.VarBnd (Var.of_string "?") in
+                  Sy.mk_bound var sort ~is_open:true ~is_lower:false
+                in
+                let sy = Sy.mk_in lb_sy ub_sy in
+                E.mk_term sy [e1] ty
+
+              | [ { term_descr = App (
+                  { term_descr = Cst {
+                        builtin = B.(Gt _ | Geq _) as builtin; _ }; _
+                  }, _, [ub;t]); _ }
+                ] ->
+                let e1 = aux_mk_expr t in
+                let ub_sy = mk_bound ub (is_strict builtin) false in
+                let lb_sy =
+                  let sort = dty_to_ty term_ty in
+                  let var = Sy.VarBnd (Var.of_string "?") in
+                  Sy.mk_bound var sort ~is_open:true ~is_lower:true
+                in
+                let sy = Sy.mk_in lb_sy ub_sy in
+                E.mk_term sy [e1] ty
+
+              | [ { term_descr = App (
+                  { term_descr = Cst {
+                        builtin = B.(Lt _ | Leq _) as builtin1; _ }; _
+                  }, _, [lb;t1]); _
+                }; { term_descr = App (
+                  { term_descr = Cst {
+                        builtin = B.(Gt _ | Geq _) as builtin2; _ }; _
+                  }, _, [ub;t2]); _
+                } ] when DE.Term.equal t1 t2 ->
+                let e1 = aux_mk_expr t1 in
+                let lb_sy = mk_bound lb (is_strict builtin1) true in
+                let ub_sy = mk_bound ub (is_strict builtin2) false in
+                let sy = Sy.mk_in lb_sy ub_sy in
+                E.mk_term sy [e1] ty
+
+              | _ ->
+                Util.failwith
+                  "Expect an interval represented by two inequalities, got %a"
+                  DE.Term.print term
+            end
 
           | B.Base, _ ->
             let ty = dty_to_ty term_ty in
@@ -1328,9 +1380,9 @@ let make dloc_file acc stmt =
             Cache.store_sy (DE.Term.Const.hash tcst) sy
           | `Type_alias _ -> ()
           | `Instanceof _ ->
-              (* The constructor `Instanceof is only used for Smtlib
-                 response. *)
-              assert false
+            (* The constructor `Instanceof is only used for Smtlib
+               response. *)
+            assert false
         ) defs;
       List.filter_map (fun (def : Typer_Pipe.def) ->
           match def with
@@ -1407,9 +1459,9 @@ let make dloc_file acc stmt =
             end
           | `Type_alias _ -> None
           | `Instanceof _ ->
-              (* The constructor `Instanceof is only used for Smtlib
-                 response. *)
-              assert false
+            (* The constructor `Instanceof is only used for Smtlib
+               response. *)
+            assert false
         ) defs |> List.rev_append acc
 
     | {contents = `Decls [td]; _ } ->
