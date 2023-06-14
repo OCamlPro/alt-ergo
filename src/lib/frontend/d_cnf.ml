@@ -764,7 +764,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
 
           (* N-ary applications *)
 
-          | B.In_interval, l ->
+          | B.In_interval (_, _), l ->
             let is_strict builtin =
               match builtin with
               | B.Lt _ | B.Gt _ -> true
