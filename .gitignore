@@ -45,4 +45,4 @@ alt-ergo-worker.js
 www/
 
 # Generated dune files by gentest
-tests/**/dune
+tests/*/**/dune

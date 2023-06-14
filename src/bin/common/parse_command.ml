@@ -504,7 +504,7 @@ let mk_term_opt disable_ites inline_lets rewriting no_term_like_pp
   set_inline_lets inline_lets;
   `Ok()
 
-let mk_theory_opt disable_adts inequalities_plugin no_ac no_contracongru
+let mk_theory_opt disable_adts () no_ac no_contracongru
     no_fm no_nla no_tcp no_theory restricted tighten_vars use_fpa
   =
   set_no_ac no_ac;
@@ -513,7 +513,6 @@ let mk_theory_opt disable_adts inequalities_plugin no_ac no_contracongru
   set_no_tcp no_tcp;
   set_no_theory no_theory;
   set_use_fpa use_fpa;
-  set_inequalities_plugin inequalities_plugin;
   set_restricted restricted;
   set_disable_adts disable_adts;
   set_tighten_vars tighten_vars;
@@ -1151,10 +1150,33 @@ let parse_theory_opt =
     Arg.(value & flag & info ["disable-adts"] ~docs ~doc) in
 
   let inequalities_plugin =
-    let doc =
-      "Use the given module to handle inequalities of linear arithmetic." in
-    Arg.(value & opt string (get_inequalities_plugin ()) &
-         info ["inequalities-plugin"] ~docs ~doc) in
+    let load_inequalities_plugin debug path =
+      let debug = List.exists (List.mem Debug.Fm) debug in
+      match path with
+      | "" ->
+        if debug then
+          Printer.print_dbg
+            "[Dynlink] Using the 'FM module' for arithmetic inequalities";
+        Ok ()
+      | path ->
+        try
+          MyDynlink.load debug path
+            "'inequalities' reasoner (FM module)";
+          Ok ()
+        with Errors.Error e ->
+          Error (Format.asprintf "%a" Errors.report e)
+    in
+    let arg =
+      let doc =
+        "Use the given module to handle inequalities of linear arithmetic." in
+      Arg.(value & opt string "" &
+           info ["inequalities-plugin"] ~docs ~doc)
+    in
+    let term =
+      Term.(const load_inequalities_plugin $ Debug.light_flag_term $ arg)
+    in
+    Term.term_result' term
+  in
 
   let no_ac =
     let doc = "Disable the AC theory of Associative and \
@@ -1342,4 +1364,3 @@ let parse_cmdline_arguments () =
   | Error `Parse -> exit Cmd.Exit.cli_error
   | Error `Term -> exit Cmd.Exit.internal_error
   | Error `Exn -> exit Cmd.Exit.internal_error
-

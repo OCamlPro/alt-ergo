@@ -53,7 +53,7 @@ end = struct
         Unix.closedir h;
         List.sort String.compare files,
         List.sort String.compare folders
-      | "." | ".." | "slow" ->
+      | "." | ".." | "slow" | "cram.t" ->
         aux files folders h
       | s ->
         let f = Filename.concat path s in

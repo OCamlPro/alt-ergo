@@ -31,20 +31,24 @@
 module Z = Numbers.Z
 module Q = Numbers.Q
 
+type 'a t = {
+  ple0 : 'a;
+  is_le : bool;
+  (* int instead of Term.t as a key to prevent us
+     from using it in deductions *)
+  dep : (Q.t * 'a * bool) Util.MI.t;
+  expl : Explanation.t;
+  age : Z.t;
+}
+
 module type S = sig
 
-  module P : Polynome.T with type r = Shostak.Combine.r
-  module MP : Map.S with type key = P.t
+  type p
 
-  type t = {
-    ple0 : P.t;
-    is_le : bool;
-    (* int instead of Term.t as a key to prevent us
-       from using it in deductions *)
-    dep : (Q.t * P.t * bool) Util.MI.t;
-    expl : Explanation.t;
-    age : Z.t;
-  }
+  module P : Polynome.T with type r = Shostak.Combine.r and type t = p
+  module MP : Map.S with type key = p
+
+  type nonrec t = p t
 
   module MINEQS : sig
     type mp = (t * Q.t) MP.t
@@ -85,14 +89,16 @@ end
 module type Container_SIG = sig
   module Make
       (P : Polynome.T with type r = Shostak.Combine.r)
-    : S with module P = P
+    : S with type p = P.t
 
 end
 
 module Container : Container_SIG = struct
   module Make
       (P : Polynome.T with type r = Shostak.Combine.r)
-    : S with module P = P = struct
+    : S with type p = P.t = struct
+
+    type p = P.t
 
     module X = Shostak.Combine
     module P = P
@@ -105,13 +111,7 @@ module Container : Container_SIG = struct
 
     let incr_age () =  age_cpt := Z.add !age_cpt Z.one;
 
-    type t = {
-      ple0 : P.t;
-      is_le : bool;
-      dep : (Q.t * P.t * bool) Util.MI.t;
-      expl : Explanation.t;
-      age : Z.t;
-    }
+    type nonrec t = P.t t
 
     let print_inequation fmt ineq =
       Format.fprintf fmt "%a %s 0 %a" P.print ineq.ple0
@@ -365,25 +365,16 @@ module FM = Container.Make
 
 let current = ref (module Container : Container_SIG)
 
-let initialized = ref false
+let accessed = ref false
 
-let set_current mdl = current := mdl
+let set_current mdl =
+  if !accessed then
+    Errors.run_error (Dynlink_error
+                        "Initializing the 'FM module' after it has been used; \
+                         this is an internal Alt-Ergo bug.");
 
-let load_current_inequalities_reasoner () =
-  match Options.get_inequalities_plugin () with
-  | "" ->
-    if Options.get_debug_fm () then
-      Printer.print_dbg
-        "[Dynlink] Using the 'FM module' for arithmetic inequalities"
-
-  | path ->
-    MyDynlink.load (Options.get_debug_fm ()) path
-      "'inequalities' reasoner (FM module)"
+  current := mdl
 
 let get_current () =
-  if not !initialized then
-    begin
-      load_current_inequalities_reasoner ();
-      initialized := true;
-    end;
+  accessed := true;
   !current
