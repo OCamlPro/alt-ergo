@@ -82,6 +82,7 @@ type theories_extensions =
   | NRA
   | NIA
   | FPA
+  | RIA
 
 type axiom_kind = Default | Propagator
 
@@ -97,6 +98,7 @@ let th_ext_of_string ext =
   | "NRA" -> Some NRA
   | "NIA" -> Some NIA
   | "FPA" -> Some FPA
+  | "RIA" -> Some RIA
   |  _ -> None
 
 let string_of_th_ext ext =
@@ -111,6 +113,7 @@ let string_of_th_ext ext =
   | NRA -> "NRA"
   | NIA -> "NIA"
   | FPA -> "FPA"
+  | RIA -> "RIA"
 
 let [@inline always] compare_algebraic s1 s2 f_same_constrs_with_args =
   let r1 = Obj.repr s1 in

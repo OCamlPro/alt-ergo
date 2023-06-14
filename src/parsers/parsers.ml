@@ -154,5 +154,7 @@ let parse_problem_as_string ~content ~format =
     let lb = Lexing.from_string content in
     parse_file ?lang:format lb
   with
-  | Errors.Error e -> raise (Error e)
+  | Errors.Error e ->
+    Format.printf "%a" Errors.report e;
+    raise (Error e)
   | Parsing.Parse_error as e -> raise e

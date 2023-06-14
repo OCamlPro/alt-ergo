@@ -137,8 +137,33 @@ let main () =
 
         Signals_profiling.init_profiling ();
 
+        let with_opt (get, set) v f =
+          let v' = get () in
+          set v;
+          Fun.protect
+            ~finally:(fun () -> set v')
+            f
+        in
+        let with_infer_output_format =
+          with_opt Options.(get_infer_output_format, set_infer_output_format)
+        in
+        let with_infer_input_format =
+          with_opt Options.(get_infer_input_format, set_infer_input_format)
+        in
+        let theory_preludes =
+          Options.get_theory_preludes ()
+          |> List.to_seq
+          |> Seq.flat_map (fun theory ->
+              let filename = Preludes.filename theory in
+              let content = Preludes.content theory in
+              with_infer_input_format true @@ fun () ->
+              with_infer_output_format false @@ fun () ->
+              I.parse_file
+                ~content
+                ~format:(Some (Filename.extension filename)))
+        in
         let preludes = Options.get_preludes () in
-        I.parse_files ~filename ~preludes
+        Seq.append theory_preludes @@ I.parse_files ~filename ~preludes
       with
       | Util.Timeout ->
         FE.print_status (FE.Timeout None) 0;
@@ -249,13 +274,23 @@ let main () =
       Buffer.contents b
   in
   let mk_state ?(debug = false) ?(report_style = State.Contextual)
-      ?(reports =
-        Dolmen_loop.Report.Conf.mk
-          ~default:Dolmen_loop.Report.Warning.Status.Disabled)
       ?(max_warn = max_int) ?(time_limit = Float.infinity)
       ?(size_limit = Float.infinity) ?(type_check = true)
       ?(solver_ctx = empty_solver_ctx)
       ?(partial_model = None) path =
+    let reports =
+      Dolmen_loop.Report.Conf.(
+        let disable m t =
+          match Dolmen_loop.Report.T.find_mnemonic m with
+          | Some (`Warning _ as w) -> disable t w
+          | _ -> assert false
+        in
+        mk ~default:Dolmen_loop.Report.Warning.Status.Enabled
+        |> disable "unused-type-var"
+        |> disable "unused-term-var"
+        |> disable "extra-dstr"
+      )
+    in
     let dir = Filename.dirname path in
     let filename = Filename.basename path in
     let language =
@@ -526,7 +561,16 @@ let main () =
       Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
       @@ fun () ->
 
+      let builtin_dir = "<builtin>" in
+      let theory_preludes =
+        Options.get_theory_preludes ()
+        |> List.map (fun theory ->
+            let filename = Preludes.filename theory in
+            let content = Preludes.content theory in
+            State.mk_file builtin_dir (`Raw (filename, content)))
+      in
       let preludes =
+        theory_preludes @
         List.map (fun path ->
             let dir, source = State.split_input (`File path) in
             State.mk_file dir source) (Options.get_preludes ())
