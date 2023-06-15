@@ -13,3 +13,18 @@ build: [
   ["dune" "subst"] {pinned}
   ["dune" "build" "-p" name "-j" jobs]
 ]
+
+pin-depends: [
+  [
+  "dolmen.dev"
+  "git+https://github.com/Gbury/dolmen.git#master"
+  ]
+  [
+  "dolmen_loop.dev"
+  "git+https://github.com/Gbury/dolmen.git#master"
+  ]
+  [
+  "dolmen_type.dev"
+  "git+https://github.com/Gbury/dolmen.git#master"
+  ]
+]

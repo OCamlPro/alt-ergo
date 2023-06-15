@@ -1,4 +1,5 @@
 (lang dune 3.0)
+(version dev)
 
 ; Since we want to generate opam files we need to provide informations ;
 (generate_opam_files true)
@@ -76,6 +77,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (ocplib-simplex (>= 0.5))
   (zarith (>= 1.4))
   seq
+  fmt
   stdlib-shims
   (camlzip (>= 1.07))
   (odoc :with-doc)

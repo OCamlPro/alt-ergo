@@ -8,6 +8,7 @@ on:
 permissions: {}
 
 env:
+  OCAML_DEFAULT_VERSION: 4.10.1
   # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
   # in any opam call
   OPAMYES: true
@@ -17,9 +18,6 @@ env:
   #   OPAMWITHTEST: true
 
 jobs:
-  # This job will do the initial build of alt-ergo (on linux).
-  # We then upload alt-ergo as a build artifact to enable re-use in subsequent
-  # jobs.
   build:
     strategy:
       fail-fast: false
@@ -28,7 +26,7 @@ jobs:
           - macos-latest
           - ubuntu-latest
         ocaml-compiler:
-          - 4.10.0
+          - 4.10.1
 
     runs-on: ${{ matrix.os }}
 
@@ -55,3 +53,54 @@ jobs:
 
       - name: Run tests
         run: opam exec -- make runtest-ci
+
+  make:
+    name: Make all
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
+          dune-cache: true
+
+      - name: Install dependencies
+        run: opam exec -- make deps js-deps
+
+      - name: Run make
+        run: opam exec -- make
+
+      - name: Monitor changes
+        uses: getsentry/action-git-diff-suggestions@main
+        with:
+          message: 'The following changes have been made after `make`:'
+
+  make_release:
+    name: Make package release
+    runs-on: ubuntu-latest
+
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
+          dune-cache: true
+
+      - name: Install dependencies
+        run: opam exec -- make deps
+
+      - name: Run make install
+        run: opam exec -- make install

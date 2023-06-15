@@ -263,10 +263,10 @@ js-deps:
 	opam install js_of_ocaml-lwt js_of_ocaml-ppx data-encoding zarith_stubs_js lwt_ppx -y
 
 deps:
-	opam install -y . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
+	opam install -y . --locked --deps-only
 
 test-deps:
-	opam install -y . --deps-only --with-test --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
+	opam install -y . --locked --deps-only --with-test
 
 dune-deps:
 	dune-deps . | dot -Tpng -o docs/deps.png
