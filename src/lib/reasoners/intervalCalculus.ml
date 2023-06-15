@@ -41,9 +41,7 @@ module L = Xliteral
 module Sy = Symbols
 module I = Intervals
 
-module OracleContainer =
-  (val (Inequalities.get_current ()) : Inequalities.Container_SIG)
-
+open Inequalities
 
 module X = Shostak.Combine
 
@@ -55,7 +53,13 @@ module SX = Shostak.SXH
 module MX0 = Shostak.MXH
 module MPL = Expr.Map
 
-module Oracle = OracleContainer.Make(P)
+let oracle =
+  lazy (
+    let module OracleContainer = (val Inequalities.get_current ()) in
+    let module Oracle = OracleContainer.Make(P) in
+    (module Oracle : Inequalities.S with type p = P.t))
+
+let get_oracle () = Lazy.force oracle
 
 module SE = Expr.Set
 module ME = Expr.Map
@@ -108,7 +112,7 @@ type used_by = {
 }
 
 type t = {
-  inequations : Oracle.t MPL.t;
+  inequations : P.t Inequalities.t MPL.t;
   monomes: (I.t * SX.t) MX0.t;
   polynomes : I.t MP0.t;
   used_by : used_by MX0.t;
@@ -536,7 +540,7 @@ module Debug = struct
         ~module_name:"IntervalCalculus" ~function_name:"env"
         "@ ------------ FM: inequations-------------------------@ ";
       MPL.iter
-        (fun a { Oracle.ple0 = p; is_le = is_le; _ } ->
+        (fun a { ple0 = p; is_le = is_le; _ } ->
            print_dbg ~flushed:false ~header:false "%a%s0  |  %a@ "
              P.print p (if is_le then "<=" else "<") E.print a
         )env.inequations;
@@ -596,8 +600,8 @@ module Debug = struct
       print_dbg
         ~module_name:"IntervalCalculus" ~function_name:"added_inequation"
         "I derived the (%s) inequality: %a %s 0@ "
-        kind P.print ineq.Oracle.ple0
-        (if ineq.Oracle.is_le then "<=" else "<");
+        kind P.print ineq.ple0
+        (if ineq.is_le then "<=" else "<");
       print_dbg ~flushed:false ~header:false
         "from the following combination:@ ";
       Util.MI.iter
@@ -605,7 +609,7 @@ module Debug = struct
            print_dbg ~flushed:false ~header:false
              "\t%a * (%a %s 0) +"
              Q.print coef P.print ple0 (if is_le then "<=" else "<")
-        )ineq.Oracle.dep;
+        )ineq.dep;
       print_dbg ~header:false "\t0"
     end
 
@@ -956,7 +960,7 @@ type ineq_status =
   | Monome of Q.t * P.r * Q.t
   | Other
 
-let ineq_status { Oracle.ple0 = p ; is_le; _ } =
+let ineq_status { ple0 = p ; is_le; _ } =
   match P.is_monomial p with
     Some (a, x, v) -> Monome (a, x, v)
   | None ->
@@ -983,7 +987,7 @@ let mk_equality p =
   let r2 = alien_of (P.create [] Q.zero (P.type_info p)) in
   LR.mkv_eq r1 r2
 
-let fm_equalities eqs { Oracle.dep; expl = ex; _ } =
+let fm_equalities eqs { dep; expl = ex; _ } =
   Util.MI.fold
     (fun _ (_, p, _) eqs ->
        (mk_equality p, None, ex, Th_util.Other) :: eqs
@@ -1081,7 +1085,7 @@ let register_relationship c x pi expl (x_rels, p_rels) =
 let add_inequations are_eq acc x_opt lin =
   List.fold_left
     (fun ((env, eqs, rels) as acc) ineq ->
-       let expl = ineq.Oracle.expl in
+       let expl = ineq.expl in
        match ineq_status ineq with
        | Bottom           ->
          Debug.added_inequation "Bottom" ineq;
@@ -1100,7 +1104,7 @@ let add_inequations are_eq acc x_opt lin =
                   match pp with
                   | Some _ -> n+1, None
                   | None when n=0 -> 1, Some p
-                  | _ -> n+1, None) ineq.Oracle.dep (0,None)
+                  | _ -> n+1, None) ineq.dep (0,None)
          in
          let env =
            Util.MI.fold
@@ -1112,7 +1116,7 @@ let add_inequations are_eq acc x_opt lin =
                 in
                 let p' = P.sub (P.create [] (Q.div c coef) ty) p in
                 update_ple0 are_eq env p' is_le expl
-             ) ineq.Oracle.dep env
+             ) ineq.dep env
          in
          env, eqs, rels
 
@@ -1120,7 +1124,7 @@ let add_inequations are_eq acc x_opt lin =
          Debug.added_inequation "Monome" ineq;
          let env, eqs =
            update_intervals
-             are_eq env eqs expl (a, x, v) ineq.Oracle.is_le
+             are_eq env eqs expl (a, x, v) ineq.is_le
          in
          env, eqs, rels
 
@@ -1128,23 +1132,22 @@ let add_inequations are_eq acc x_opt lin =
          match x_opt with
          | None -> acc
          | Some x ->
-           let ple0 = ineq.Oracle.ple0 in
+           let ple0 = ineq.ple0 in
            let c = try P.find x ple0 with Not_found -> assert false in
            let ple0 = P.remove x ple0 in
-           env, eqs, register_relationship c x ple0 ineq.Oracle.expl rels
+           env, eqs, register_relationship c x ple0 ineq.expl rels
     ) acc lin
 
-let split_problem env ineqs aliens =
-  let current_age = Oracle.current_age () in
+let split_problem current_age env ineqs aliens =
   let l, all_lvs =
     List.fold_left
-      (fun (acc, all_lvs) ({ Oracle.ple0 = p; _ } as ineq) ->
+      (fun (acc, all_lvs) ({ ple0 = p; _ } as ineq) ->
 
 
          match ineq_status ineq with
          | Trivial_eq | Trivial_ineq _ -> (acc, all_lvs)
          | Bottom ->
-           raise (Ex.Inconsistent (ineq.Oracle.expl, env.classes))
+           raise (Ex.Inconsistent (ineq.expl, env.classes))
          | _ ->
            let lvs =
              List.fold_left (fun acc e -> SX.add e acc) SX.empty (aliens p)
@@ -1170,7 +1173,7 @@ let split_problem env ineqs aliens =
     List.filter
       (fun (ineqs, _) ->
          List.exists
-           (fun ineq -> Z.equal current_age ineq.Oracle.age) ineqs
+           (fun ineq -> Z.equal current_age ineq.age) ineqs
       )ll
   in
   List.fast_sort (fun (a,_) (b,_) -> List.length a - List.length b) ll
@@ -1200,7 +1203,7 @@ let better_upper_bound_from_intervals env p =
   with I.No_finite_bound | Not_found ->
     assert false (*env.polynomes is up to date w.r.t. ineqs *)
 
-let better_bound_from_intervals env ({ Oracle.ple0; is_le; dep; _ } as v) =
+let better_bound_from_intervals env ({ ple0; is_le; dep; _ } as v) =
   let p, c = P.separate_constant ple0 in
   assert (not (P.is_empty p));
   let cur_up_bnd = Q.minus c in
@@ -1215,13 +1218,13 @@ let better_bound_from_intervals env ({ Oracle.ple0; is_le; dep; _ } as v) =
     | false, false | true, true -> v (* no change *)
     | true , false -> (* better bound, Large ineq becomes Strict *)
       {v with
-       Oracle.ple0 = new_p;
+       ple0 = new_p;
        expl = expl;
        is_le = false;
        dep = Util.MI.singleton a (Q.one, new_p, false)}
   else (* new bound is better. i.e. i_up_bnd < cur_up_bnd *)
     {v with
-     Oracle.ple0 = new_p;
+     ple0 = new_p;
      expl = expl;
      is_le = is_large;
      dep = Util.MI.singleton a (Q.one, new_p, is_large)}
@@ -1231,7 +1234,7 @@ let args_of p = List.rev_map snd (fst (P.to_list p))
 let update_linear_dep env rclass_of ineqs =
   let terms =
     List.fold_left
-      (fun st { Oracle.ple0; _ } ->
+      (fun st { ple0; _ } ->
          List.fold_left
            (fun st (_, x) -> SE.union st (rclass_of x))
            st (fst (P.to_list ple0))
@@ -1311,7 +1314,7 @@ let polynomes_relational_deductions env p_rels =
     )p_rels env
 
 
-let fm uf are_eq rclass_of env eqs =
+let fm (module Oracle : S with type p = P.t) uf are_eq rclass_of env eqs =
   if get_debug_fm () then
     Printer.print_dbg
       ~module_name:"IntervalCalculus"
@@ -1321,12 +1324,12 @@ let fm uf are_eq rclass_of env eqs =
   let ineqs =
     MPL.fold (fun _ v acc ->
         if Options.get_enable_assertions() then
-          assert (is_normalized_poly uf v.Oracle.ple0);
+          assert (is_normalized_poly uf v.ple0);
         (better_bound_from_intervals env v) :: acc
       ) env.inequations []
   in
-  (*let pbs = split_problem env ineqs (fun p -> P.leaves p) in*)
-  let pbs = split_problem env ineqs args_of in
+  let current_age = Oracle.current_age () in
+  let pbs = split_problem current_age env ineqs args_of in
   let res = List.fold_left
       (fun (env, eqs) (ineqs, _) ->
          let env = update_linear_dep env rclass_of ineqs in
@@ -1609,6 +1612,7 @@ let update_used_by_pow env r1 p2 orig  eqs =
   with Exit | Not_found -> eqs
 
 let assume ~query env uf la =
+  let module Oracle = (val get_oracle ()) in
   Oracle.incr_age ();
   let env = count_splits env la in
   let are_eq = Uf.are_equal uf ~added_terms:true in
@@ -1646,12 +1650,12 @@ let assume ~query env uf la =
                | Other ->
                  let env =
                    init_monomes_of_poly
-                     are_eq env ineq.Oracle.ple0 SX.empty
+                     are_eq env ineq.ple0 SX.empty
                      Explanation.empty
                  in
                  let env =
                    update_ple0
-                     are_eq env ineq.Oracle.ple0 (n == L.LE) expl
+                     are_eq env ineq.ple0 (n == L.LE) expl
                  in
                  {env with inequations=add_ineq root ineq env.inequations},
                  eqs, true, rm
@@ -1705,7 +1709,7 @@ let assume ~query env uf la =
       (* we only call fm when new ineqs are assumed *)
       let env, eqs =
         if new_ineqs && not (Options.get_no_fm ()) then
-          fm uf are_eq rclass_of env eqs
+          fm (module Oracle) uf are_eq rclass_of env eqs
         else env, eqs
       in
       let env = Sim_Wrap.solve env 1 in
@@ -2531,5 +2535,6 @@ let instantiate ~do_syntactic_matching env uf selector =
   else instantiate ~do_syntactic_matching env uf selector
 
 let reinit_cache () =
+  let module Oracle = (val get_oracle ()) in
   Oracle.reset_age_cpt ();
   EM.reinit_caches ()

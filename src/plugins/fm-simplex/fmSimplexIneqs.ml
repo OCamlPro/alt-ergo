@@ -15,10 +15,12 @@ open Options
 
 module Q = Numbers.Q
 
+open Inequalities
+
 module Container : Inequalities.Container_SIG = struct
   module Make
       (P : Polynome.T with type r = Shostak.Combine.r)
-    : Inequalities.S with module P = P = struct
+    : Inequalities.S with type p = P.t = struct
 
     module X = Shostak.Combine
     module FM = Inequalities.FM(P)

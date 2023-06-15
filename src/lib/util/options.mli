@@ -430,9 +430,6 @@ val set_disable_ites : bool -> unit
 (** Set [disable_adts] accessible with {!val:get_disable_adts} *)
 val set_disable_adts : bool -> unit
 
-(** Set [inequalities_plugin] accessible with {!val:get_inequalities_plugin} *)
-val set_inequalities_plugin : string -> unit
-
 (** Set [no_fm] accessible with {!val:get_no_fm} *)
 val set_no_fm : bool -> unit
 
@@ -937,11 +934,6 @@ val get_term_like_pp : unit -> bool
 
 (** [true] if Algebraic Datatypes theory is disabled *)
 val get_disable_adts : unit -> bool
-(** Default to [false] *)
-
-(** Value specifying which module is used to handle inequalities
-    of linear arithmetic. *)
-val get_inequalities_plugin : unit -> string
 (** Default to [false] *)
 
 (** [true] if the AC (Associative and Commutative) theory is disabled
