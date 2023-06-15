@@ -28,6 +28,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open AltErgoLib
+
 (** A wrapper of the Dynlink module: we use Dynlink except when we want to
     generate a static (native) binary **)
 

@@ -15,5 +15,6 @@
    Parse_command
    Input_frontend
    Signals_profiling
+   MyDynlink
    Solving_loop)
 )
