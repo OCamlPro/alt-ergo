@@ -317,7 +317,7 @@ let mk_context_opt replay replay_all_used_context replay_used_context
   set_replay_used_context replay_used_context;
   `Ok()
 
-let mk_execution_opt frontend input_format parse_only parsers
+let mk_execution_opt frontend input_format parse_only ()
     preludes no_locs_in_answers colors_in_output no_headers_in_output
     no_formatting_in_output no_forced_flush_in_output pretty_output
     type_only type_smt2
@@ -340,7 +340,6 @@ let mk_execution_opt frontend input_format parse_only parsers
   set_output_with_forced_flush output_with_forced_flush;
   set_input_format input_format;
   set_parse_only parse_only;
-  set_parsers parsers;
   set_frontend frontend;
   set_type_only type_only;
   set_type_smt2 type_smt2;
@@ -558,6 +557,10 @@ let halt_opt version_info where =
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
 
+let get_verbose_t =
+  let doc = "Set the verbose mode." in
+  Arg.(value & flag & info ["v"; "verbose"] ~doc)
+
 let mk_opts file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
     (gc) () () () () () () () () =
   Debug.mk ~verbosity:1 debug_flags;
@@ -692,9 +695,28 @@ let parse_execution_opt =
     Arg.(value & flag & info ["parse-only"] ~docs ~doc) in
 
   let parsers =
+    let load_parser verbose path =
+      try
+        MyDynlink.load verbose path "parser";
+        Ok ()
+      with
+        Errors.Error e ->
+        Error (Format.asprintf "%a" Errors.report e)
+    in
+    let load_parsers verbose paths =
+      List.fold_left
+        (fun res path ->
+           Result.bind res (fun () -> load_parser verbose path))
+        (Ok ()) paths
+    in
     let doc = "Register a new parser for Alt-Ergo." in
-    Arg.(value & opt_all string (get_parsers ()) &
-         info ["add-parser"] ~docs ~doc) in
+    let arg =
+      Arg.(value & opt_all string [] &
+           info ["add-parser"] ~docs ~doc)
+    in
+    let term = Term.(const load_parsers $ get_verbose_t $ arg) in
+    Term.term_result' term
+  in
 
   let preludes =
     let parse_prelude p =
@@ -990,13 +1012,9 @@ let parse_profiling_opt =
     Arg.(value & opt string (get_profiling_plugin ()) &
          info ["profiling-plugin"] ~docv ~docs ~doc) in
 
-  let get_verbose =
-    let doc = "Set the verbose mode." in
-    Arg.(value & flag & info ["v"; "verbose"] ~doc) in
-
   Term.(ret (const mk_profiling_opt $
              cumulative_time_profiling $ profiling $
-             profiling_plugin $ get_verbose
+             profiling_plugin $ get_verbose_t
             ))
 
 let parse_quantifiers_opt =

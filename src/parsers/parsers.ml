@@ -137,7 +137,6 @@ let parse_input_file file =
     raise e
 
 let parse_problem ~filename ~preludes =
-  Parsers_loader.load ();
   let acc = parse_input_file filename in
   List.fold_left
     (fun acc prelude ->
@@ -149,7 +148,6 @@ let parse_problem ~filename ~preludes =
     acc (List.rev preludes)
 
 let parse_problem_as_string ~content ~format =
-  Parsers_loader.load ();
   try
     let lb = Lexing.from_string content in
     parse_file ?lang:format lb

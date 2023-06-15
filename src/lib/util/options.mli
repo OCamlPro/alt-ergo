@@ -344,9 +344,6 @@ val set_infer_input_format : bool -> unit
 (** Set [infer_output_format] accessible with {!val:get_infer_output_format} *)
 val set_infer_output_format : bool -> unit
 
-(** Set [parsers] accessible with {!val:get_parsers} *)
-val set_parsers : string list -> unit
-
 (** Set [preludes] accessible with {!val:get_preludes} *)
 val set_preludes : string list -> unit
 
@@ -629,10 +626,6 @@ val get_infer_input_format : unit -> bool
 
 (** [true] if the program shall stop after parsing. *)
 val get_parse_only : unit -> bool
-(** Default to [false] *)
-
-(** List of registered parsers for Alt-Ergo. *)
-val get_parsers : unit -> string list
 (** Default to [false] *)
 
 (** List of files that have be loaded as preludes. *)

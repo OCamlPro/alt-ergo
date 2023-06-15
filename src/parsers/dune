@@ -19,7 +19,7 @@
    stdlib-shims)
  (modules
    ; common
-   Parsers Parsers_loader
+   Parsers
    ; psmt2
    Psmt2_to_alt_ergo
    ; AE format
