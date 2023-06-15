@@ -282,22 +282,20 @@ let main () =
         in
         `Raw (filename, content))
     in
-    (* We use the full mode since the incremental mode is not supported by
-       the native input language. *)
     let logic_file =
       mk_file
         ?lang:language
-        ~mode:`Full
         ~source
         ~loc:(Dolmen.Std.Loc.mk_file path)
         dir
     in
     let response_file = mk_file dir in
+    logic_file,
     State.empty
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key partial_model
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
-      ~size_limit ~logic_file ~response_file
+      ~size_limit ~response_file
     |> Parser.init
     |> Typer.init
     |> Typer_Pipe.init ~type_check
@@ -523,17 +521,18 @@ let main () =
         ) st
   in
   let d_fe filename =
-    let st = mk_state filename in
+    let logic_file, st = mk_state filename in
     try
       Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
       @@ fun () ->
 
       let preludes =
-        List.map Dolmen_std.Statement.import
-          (Options.get_preludes ())
+        List.map (fun path ->
+            let dir, source = State.split_input (`File path) in
+            State.mk_file dir source) (Options.get_preludes ())
       in
-      let st, g =
-        Parser.parse_logic preludes st (State.get State.logic_file st)
+      let g =
+        Parser.parse_logic ~preludes logic_file
       in
       let all_used_context = FE.init_all_used_context () in
       let finally = finally ~handle_exn in
