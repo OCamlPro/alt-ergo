@@ -17,8 +17,25 @@ depends: [
   "alt-ergo-lib" {= version}
   "alt-ergo-parsers" {= version}
   "menhir"
+  "dune-site"
   "cmdliner" {>= "1.1.0"}
   "odoc" {with-doc}
+]
+build: [
+  ["dune" "subst"] {dev}
+  [
+    "dune"
+    "build"
+    "-p"
+    name
+    "-j"
+    jobs
+    "--promote-install-files=false"
+    "@install"
+    "@runtest" {with-test}
+    "@doc" {with-doc}
+  ]
+  ["dune" "install" "-p" name "--create-install-files" name]
 ]
 dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"
 # This part comes from the template. Please edit alt-ergo.opam.template
@@ -29,10 +46,4 @@ license: [
   "LicenseRef-OCamlpro-Non-Commercial"
   "Apache-2.0"
   "LGPL-2.1-only"
-]
-
-build: [
-  ["ocaml" "unix.cma" "configure.ml" name "--prefix" prefix "--libdir" lib "--mandir" man]
-  ["dune" "subst"] {pinned}
-  ["dune" "build" "-p" name "-j" jobs]
 ]

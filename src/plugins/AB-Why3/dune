@@ -15,7 +15,7 @@
 
 (install
  (package alt-ergo)
- (section lib)
+ (section (site (alt-ergo plugins)))
  (files
-  (ABWhy3Plugin.cma as plugins/AB-Why3-plugin.cma)
-  (ABWhy3Plugin.cmxs as plugins/AB-Why3-plugin.cmxs)))
+  ABWhy3Plugin.cma
+  ABWhy3Plugin.cmxs))

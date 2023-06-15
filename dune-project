@@ -4,6 +4,9 @@
 ; Since we want to generate opam files we need to provide informations ;
 (generate_opam_files true)
 
+; For plugins and preludes
+(using dune_site 0.1)
+
 (name alt-ergo)
 (authors "Alt-Ergo developers")
 (maintainers "Alt-Ergo developers")
@@ -26,10 +29,13 @@ See more details on https://alt-ergo.ocamlpro.com/")
   dune
   (alt-ergo-lib (= :version))
   (alt-ergo-parsers (= :version))
-   menhir
+  menhir
+  dune-site
   (cmdliner (>= 1.1.0))
   (odoc :with-doc)
  )
+
+ (sites (share preludes) (lib plugins))
 )
 
 (package

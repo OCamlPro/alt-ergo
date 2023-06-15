@@ -10,11 +10,18 @@
    alt-ergo-parsers
    stdlib-shims
    cmdliner
+   dune-site
  )
  (modules
+   Config
+   MyDynlink
+   AltErgoSites
    Parse_command
    Input_frontend
    Signals_profiling
-   MyDynlink
    Solving_loop)
 )
+
+(generate_sites_module
+ (module AltErgoSites)
+ (sites alt-ergo))

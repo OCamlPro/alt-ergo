@@ -525,17 +525,17 @@ let mk_theory_opt disable_adts () no_ac no_contracongru
 let halt_opt version_info where =
   let handle_where w =
     let res = match w with
-      | "lib" -> `Ok Config.libdir
-      | "plugins" -> `Ok Config.pluginsdir
-      | "preludes" -> `Ok Config.preludesdir
-      | "data" -> `Ok Config.datadir
-      | "man" -> `Ok Config.mandir
+      | "plugins" -> `Ok Config.plugins_locations
+      | "preludes" -> `Ok Config.preludes_locations
       | _ -> `Error
                ("Option --where does not accept the argument \"" ^ w ^
-                "\"\nAccepted options are lib, plugins, preludes, data or man")
+                "\"\nAccepted options are plugins or preludes")
     in
     match res with
-    | `Ok path -> Printer.print_std "%s@." path
+    | `Ok paths ->
+      Printer.print_std "@[<v>%a@]@."
+        Format.(pp_print_list ~pp_sep:pp_print_cut pp_print_string)
+        paths
     | `Error m -> raise (Error (false, m))
   in
   let handle_version_info vi =
@@ -726,8 +726,8 @@ let parse_execution_opt =
         else
           Ok p
       else
-        let p' = Filename.concat Config.preludesdir p in
-        if Sys.file_exists p' then begin
+        match Config.lookup_prelude p with
+        | Some p' ->
           begin if Compat.String.starts_with ~prefix:"b-set-theory" p then
               Printer.print_wrn ~header:true
                 "Support for the B set theory is deprecated since version \
@@ -742,12 +742,12 @@ let parse_execution_opt =
                  be removed in a later version.@]" p
           end;
 
-          if Sys.is_directory p' then
-            Fmt.error "'%s' is a directory" p
-          else
-            Ok p'
-        end else
-          Fmt.error "no '%s' file" p
+          Ok p'
+        | None ->
+          Error (
+            Format.asprintf
+              "cannot load prelude '%s': no such file"
+              p)
     in
     let prelude =
       Arg.(conv' (parse_prelude, conv_printer string))
@@ -816,7 +816,7 @@ let parse_halt_opt =
   let where =
     let doc = Format.sprintf
         "Print the directory of $(docv). Possible arguments are \
-         %s." (Arg.doc_alts ["lib"; "plugins"; "preludes"; "data"; "man"]) in
+         %s." (Arg.doc_alts ["plugins"; "preludes"]) in
     let docv = "DIR" in
     Arg.(value & opt (some string) None & info ["where"] ~docv ~docs ~doc) in
 
