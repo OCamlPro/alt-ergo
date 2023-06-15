@@ -8,7 +8,7 @@
   <span>input:<a href="#type-input">input</a> <span class="arrow">&#45;&gt;</span></span>
   <span>?loc:<span class="xref-unresolved">Dolmen</span>.Std.Loc.t <span class="arrow">&#45;&gt;</span></span>
   <span>string <span class="arrow">&#45;&gt;</span></span>
-  <a href="#type-state">state</a></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-defs"><a href="#val-defs" class="anchor"></a><code><span><span class="keyword">val</span> defs : 
+  <a href="#type-state">state</a> * <span class="xref-unresolved">Dolmen_type</span>.Logic.t</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-defs"><a href="#val-defs" class="anchor"></a><code><span><span class="keyword">val</span> defs : 
   <span>mode:<span>[ `Create_id <span>| `Use_declared_id</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
   <span><a href="#type-state">state</a> <span class="arrow">&#45;&gt;</span></span>
   <span>input:<a href="#type-input">input</a> <span class="arrow">&#45;&gt;</span></span>
@@ -16,13 +16,20 @@
   <span>?attrs:<span><span class="xref-unresolved">Dolmen</span>.Std.Term.t list</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="xref-unresolved">Dolmen</span>.Std.Statement.defs <span class="arrow">&#45;&gt;</span></span>
   <a href="#type-state">state</a>
-  * <span><span>[ <span>`Term_def of
+  * <span><span>[ <span>`Instanceof of
         <span class="xref-unresolved">Dolmen</span>.Std.Id.t
         * <span class="xref-unresolved">Dolmen</span>.Std.Expr.term_cst
+        * <span><span class="xref-unresolved">Dolmen</span>.Std.Expr.ty list</span>
         * <span><span class="xref-unresolved">Dolmen</span>.Std.Expr.ty_var list</span>
         * <span><span class="xref-unresolved">Dolmen</span>.Std.Expr.term_var list</span>
         * <span class="xref-unresolved">Dolmen</span>.Std.Expr.term</span>
-    <span><span>| `Type_def</span> of
+    <span><span>| `Term_def</span> of
+      <span class="xref-unresolved">Dolmen</span>.Std.Id.t
+      * <span class="xref-unresolved">Dolmen</span>.Std.Expr.term_cst
+      * <span><span class="xref-unresolved">Dolmen</span>.Std.Expr.ty_var list</span>
+      * <span><span class="xref-unresolved">Dolmen</span>.Std.Expr.term_var list</span>
+      * <span class="xref-unresolved">Dolmen</span>.Std.Expr.term</span>
+    <span><span>| `Type_alias</span> of
       <span class="xref-unresolved">Dolmen</span>.Std.Id.t
       * <span class="xref-unresolved">Dolmen</span>.Std.Expr.ty_cst
       * <span><span class="xref-unresolved">Dolmen</span>.Std.Expr.ty_var list</span>
@@ -35,7 +42,7 @@
   <span><span class="xref-unresolved">Dolmen</span>.Std.Statement.decls <span class="arrow">&#45;&gt;</span></span>
   <a href="#type-state">state</a>
   * <span><span>[ <span>`Term_decl of <span class="xref-unresolved">Dolmen</span>.Std.Expr.term_cst</span>
-    <span><span>| `Type_decl</span> of <span class="xref-unresolved">Dolmen</span>.Std.Expr.ty_cst</span> ]</span>
+    <span><span>| `Type_decl</span> of <span class="xref-unresolved">Dolmen</span>.Std.Expr.ty_cst * <span><span class="xref-unresolved">Dolmen</span>.Std.Expr.ty_def option</span></span> ]</span>
       list</span></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-terms"><a href="#val-terms" class="anchor"></a><code><span><span class="keyword">val</span> terms : 
   <span><a href="#type-state">state</a> <span class="arrow">&#45;&gt;</span></span>
   <span>input:<a href="#type-input">input</a> <span class="arrow">&#45;&gt;</span></span>
@@ -55,4 +62,10 @@
   <span>?loc:<span class="xref-unresolved">Dolmen</span>.Std.Loc.t <span class="arrow">&#45;&gt;</span></span>
   <span>?attrs:<span><span class="xref-unresolved">Dolmen</span>.Std.Term.t list</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span><span class="xref-unresolved">Dolmen</span>.Std.Term.t list</span> <span class="arrow">&#45;&gt;</span></span>
-  <a href="#type-state">state</a> * <span><span class="xref-unresolved">Dolmen</span>.Std.Expr.formula list</span></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-report_error"><a href="#val-report_error" class="anchor"></a><code><span><span class="keyword">val</span> report_error : <span>input:<a href="#type-input">input</a> <span class="arrow">&#45;&gt;</span></span> <span><a href="#type-state">state</a> <span class="arrow">&#45;&gt;</span></span> <span><a href="#type-error">error</a> <span class="arrow">&#45;&gt;</span></span> <a href="#type-state">state</a></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-report_warning"><a href="#val-report_warning" class="anchor"></a><code><span><span class="keyword">val</span> report_warning : <span>input:<a href="#type-input">input</a> <span class="arrow">&#45;&gt;</span></span> <span><a href="#type-state">state</a> <span class="arrow">&#45;&gt;</span></span> <span><a href="#type-warning">warning</a> <span class="arrow">&#45;&gt;</span></span> <a href="#type-state">state</a></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-additional_builtins"><a href="#val-additional_builtins" class="anchor"></a><code><span><span class="keyword">val</span> additional_builtins : <span><a href="#type-builtin_symbols">builtin_symbols</a> <span class="xref-unresolved">Stdlib</span>.ref</span></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-pop_inferred_model_constants"><a href="#val-pop_inferred_model_constants" class="anchor"></a><code><span><span class="keyword">val</span> pop_inferred_model_constants : <span><a href="#type-state">state</a> <span class="arrow">&#45;&gt;</span></span> <span><span class="xref-unresolved">Dolmen</span>.Std.Expr.term_cst list</span></span></code></div></div></div></body></html>
+  <a href="#type-state">state</a> * <span><span class="xref-unresolved">Dolmen</span>.Std.Expr.formula list</span></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-typing_wrap"><a href="#val-typing_wrap" class="anchor"></a><code><span><span class="keyword">val</span> typing_wrap : 
+  <span>?attrs:<span><span class="xref-unresolved">Dolmen</span>.Std.Term.t list</span> <span class="arrow">&#45;&gt;</span></span>
+  <span>?loc:<span class="xref-unresolved">Dolmen</span>.Std.Loc.t <span class="arrow">&#45;&gt;</span></span>
+  <span>input:<a href="#type-input">input</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-state">state</a> <span class="arrow">&#45;&gt;</span></span>
+  <span>f:<span>(<span><a href="#type-env">env</a> <span class="arrow">&#45;&gt;</span></span> <span class="type-var">'a</span>)</span> <span class="arrow">&#45;&gt;</span></span>
+  <a href="#type-state">state</a> * <span class="type-var">'a</span></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-report_error"><a href="#val-report_error" class="anchor"></a><code><span><span class="keyword">val</span> report_error : <span>input:<a href="#type-input">input</a> <span class="arrow">&#45;&gt;</span></span> <span><a href="#type-state">state</a> <span class="arrow">&#45;&gt;</span></span> <span><a href="#type-error">error</a> <span class="arrow">&#45;&gt;</span></span> <a href="#type-state">state</a></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-report_warning"><a href="#val-report_warning" class="anchor"></a><code><span><span class="keyword">val</span> report_warning : <span>input:<a href="#type-input">input</a> <span class="arrow">&#45;&gt;</span></span> <span><a href="#type-state">state</a> <span class="arrow">&#45;&gt;</span></span> <span><a href="#type-warning">warning</a> <span class="arrow">&#45;&gt;</span></span> <a href="#type-state">state</a></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-additional_builtins"><a href="#val-additional_builtins" class="anchor"></a><code><span><span class="keyword">val</span> additional_builtins : <span><a href="#type-builtin_symbols">builtin_symbols</a> <span class="xref-unresolved">Stdlib</span>.ref</span></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-pop_inferred_model_constants"><a href="#val-pop_inferred_model_constants" class="anchor"></a><code><span><span class="keyword">val</span> pop_inferred_model_constants : <span><a href="#type-state">state</a> <span class="arrow">&#45;&gt;</span></span> <span><span class="xref-unresolved">Dolmen</span>.Std.Expr.term_cst list</span></span></code></div></div></div></body></html>
