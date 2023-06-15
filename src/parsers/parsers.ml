@@ -140,10 +140,6 @@ let parse_problem ~filename ~preludes =
   let acc = parse_input_file filename in
   List.fold_left
     (fun acc prelude ->
-       let prelude =
-         if Sys.file_exists prelude then prelude
-         else Config.preludesdir ^ "/" ^ prelude
-       in
        List.rev_append (List.rev (parse_input_file prelude)) acc)
     acc (List.rev preludes)
 

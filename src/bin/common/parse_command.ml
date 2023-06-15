@@ -749,21 +749,14 @@ let parse_execution_opt =
         end else
           Fmt.error "no '%s' file" p
     in
-    let parse_preludes =
-      List.fold_left (fun r p ->
-          Result.bind r @@ fun ps ->
-          Result.map (fun p -> p :: ps) (parse_prelude p))
-        (Ok [])
+    let prelude =
+      Arg.(conv' (parse_prelude, conv_printer string))
     in
     let doc =
       "Add a file that will be loaded as a prelude. The command is \
        cumulative, and the order of successive preludes is preserved." in
-    Term.(cli_parse_result' (
-        const parse_preludes $
-        Arg.(value & opt_all string (get_preludes ()) &
-             info ["prelude"] ~docs ~doc)
-      ))
-  in
+    Arg.(value & opt_all prelude (get_preludes ()) &
+         info ["prelude"] ~docs ~doc) in
 
   let no_locs_in_answers =
     let doc =
