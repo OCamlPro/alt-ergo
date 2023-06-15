@@ -5,7 +5,6 @@ tags: "org:OCamlPro"
 license: [
   "LicenseRef-OCamlpro-Non-Commercial"
   "Apache-2.0"
-  "LGPL-2.1-only"
 ]
 
 pin-depends: [

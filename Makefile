@@ -81,9 +81,11 @@ parsers:
 
 fm-simplex:
 	$(DUNE) build $(DUNE_FLAGS) @$(PLUGINS_DIR)/fm-simplex/all
+	$(DUNE) build $(DUNE_FLAGS) @install
 
 AB-Why3:
 	$(DUNE) build $(DUNE_FLAGS) @$(PLUGINS_DIR)/AB-Why3/all
+	$(DUNE) build $(DUNE_FLAGS) alt-ergo-plugin-ab-why3.install
 
 plugins:
 	$(DUNE) build $(DUNE_FLAGS) @$(PLUGINS_DIR)/all

@@ -1,5 +1,5 @@
 (documentation
- (package alt-ergo)
+ (package alt-ergo-plugin-ab-why3)
   (mld_files :standard))
 
 (ocamllex (modules why3_lexer))
@@ -14,7 +14,7 @@
  (modules Why3_lexer Why3_parser Why3_loc Why3_ptree))
 
 (install
- (package alt-ergo)
+ (package alt-ergo-plugin-ab-why3)
  (section (site (alt-ergo plugins)))
  (files
   ABWhy3Plugin.cma

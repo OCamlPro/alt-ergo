@@ -27,20 +27,20 @@ command:
 
 
 {v
- ./alt-ergo b-why3-POs.why --add-parser AB-Why3-plugin.cmxs --prelude preludes/b-set-theory-prelude-2020-02-28.ae
+ ./alt-ergo b-why3-POs.why --add-parser ABWhy3Plugin.cmxs --prelude b-set-theory-prelude-2020-02-28.ae
 v}
 
 
-where [--add-parser=AB-Why3-plugin.cmxs] allows to load this plugin and
+where [--add-parser=ABWhy3Plugin.cmxs] allows to load this plugin and
 register the parser it contains, and [--prelude
-preludes/b-set-theory-prelude-2020-02-28.ae] provides an axiomatization of the B Set
+b-set-theory-prelude-2020-02-28.ae] provides an axiomatization of the B Set
 theory for Alt-Ergo.
 
 For instance, using the following command to prove the goals in the
 file [examples/AB-Why3-plugin/p4_34.why.zip]:
 
 {v
-./alt-ergo examples/AB-Why3-plugin/p4_34.why.zip --add-parser AB-Why3-plugin.cmxs --prelude preludes/b-set-theory-prelude-2020-02-28.ae --timelimit-per-goal --timelimit 3 --no-locs-in-answers
+./alt-ergo examples/AB-Why3-plugin/p4_34.why.zip --add-parser ABWhy3Plugin.cmxs --prelude b-set-theory-prelude-2020-02-28.ae --timelimit-per-goal --timelimit 3 --no-locs-in-answers
 v}
 
 Alt-Ergo returns:
@@ -60,7 +60,7 @@ If you have already installed this version of Alt-Ergo and this plugin, you shou
 
 
 [
- alt-ergo b-why3-POs.why --parser AB-Why3-plugin.cmxs --prelude b-set-theory-prelude-2020-02-28.ae
+ alt-ergo b-why3-POs.why --parser ABWhy3Plugin.cmxs --prelude b-set-theory-prelude-2020-02-28.ae
 ]
 
 
@@ -70,6 +70,6 @@ The OCaml files in this directory come from Why3's source code
 (release 0.88.2 to be exact). We have quite modified them for our
 needs. They are licensed under the terms of the GNU Lesser General
 Public License version 2.1, as stated in
-[sources/plugins/AB-Why3/WHY3-LICENSE]. The plugin [AB-Why3-plugin.cmxs]
+[sources/plugins/AB-Why3/WHY3-LICENSE]. The plugin [ABWhy3Plugin.cmxs]
 resulting from their compilation is thus licensed under the same
 terms.
