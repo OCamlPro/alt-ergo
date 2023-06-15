@@ -15,13 +15,13 @@ Constraints on those symbols may be added via the `axiom` keyword.
 
 Please refer to section [Types](02_types/index) for more information on the types of symbols that can be created.
 
-#### Syntax
+### Syntax
 ```
 <logic_declaration> ::= "logic" <identifier_list> ":" <type>
 <identifier_list>   ::= <identifier> ( "," <identifier> )*
 ```
 
-#### Examples
+### Examples
 ```
 (* Introducing propositional variables *)
 logic p,q,r: prop
@@ -83,13 +83,13 @@ logic ac f: int, int -> int
 ```
 in order to specify that `f` is an AC-symbol. Once this is done, Alt-Ergo will use the built-in [AC(X) algorithm](https://www.lri.fr/~conchon/publis/conchon-lmcs2012.pdf) to handle this symbol much more efficiently than what would have been possible through axioms.
 
-#### Syntax
+### Syntax
 ```
 <logic_ac_declaration> ::= "logic" "ac" <identifier_list> ":" <type>
 <identifier_list>      ::= <identifier> ( "," <identifier> )*
 ```
 
-#### Examples
+### Examples
 ```
 type person
 (* Last common ancestor *)
@@ -109,7 +109,7 @@ goal g2: forall a,b,c,v,w:int. u(a,b) = w and u(a,c) = v -> u(b,v) = u(c,w)
 
 Using the `function` keyword, the user can add its own (interpreted) functions.
 
-#### Syntax
+### Syntax
 ```
 <function_declaration>    ::= "function" <function_id> "(" <function_parameter_list> ")" ":" <output_type> "=" <function_body>
 <function_parameter_list> ::= <function_parameter> ( "," <function_parameter> )*
@@ -117,7 +117,7 @@ Using the `function` keyword, the user can add its own (interpreted) functions.
 <function_body>           ::= <expression>
 ```
 
-#### Examples
+### Examples
 ```
 function abs(x:int):int =
     if x>=0 then (x) else (-x)
@@ -143,7 +143,7 @@ It is possible to create "ground predicates", i.e. predicates with no arguments.
 Since Alt-Ergo 2.3.0, `prop` and `bool` have the same behaviour: `predicate` can therefore be seen as a shorthand for as boolean-valued `function`.
 See section [Types](02_types/index) for more information on the `prop`/`bool` keywords.
 
-#### Syntax
+### Syntax
 ```
 <predicate_declaration>    ::= "predicate" <predicate_id> ( "(" <predicate_parameter_list> ")" )? "=" <predicate_body>
 <predicate_parameter_list> ::= <predicate_parameter> ( "," <predicate_parameter> )*
@@ -151,7 +151,7 @@ See section [Types](02_types/index) for more information on the `prop`/`bool` ke
 <predicate_body>           ::= <expression>
 ```
 
-#### Examples
+### Examples
 ```
 type person
 logic father_of: person, person -> prop

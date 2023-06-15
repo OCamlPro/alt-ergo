@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Changes &mdash; Doc-Alt-Ergo  documentation</title><link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <title>Changes &mdash; Doc-Alt-Ergo  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/dac_theme_modif.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+  
         <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/doctools.js"></script>
-        <script src="../_static/language_data.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -39,7 +42,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../Install/index.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Usage/index.html">Usage</a></li>
@@ -50,7 +53,13 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">About</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="licenses/index.html">Licenses</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Changes</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#dev-version">dev version</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#unreleased">unreleased</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#v2-4-3-2023-04-14">v2.4.3 (2023-04-14)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#build">Build</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#bug-fixes">Bug fixes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#regression-fixes">Regression fixes</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="#version-2-4-2-august-02-2022">version 2.4.2, August, 02, 2022</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#version-2-4-1-july-27-2021">version 2.4.1, July, 27, 2021</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#version-2-4-0-january-22-2021">version 2.4.0, January 22, 2021</a></li>
@@ -112,13 +121,40 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="changes">
-<h1>Changes<a class="headerlink" href="#changes" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="dev-version">
-<h2>dev version<a class="headerlink" href="#dev-version" title="Permalink to this headline">¶</a></h2>
-</div>
-<div class="section" id="version-2-4-2-august-02-2022">
-<h2>version 2.4.2, August, 02, 2022<a class="headerlink" href="#version-2-4-2-august-02-2022" title="Permalink to this headline">¶</a></h2>
+  <section id="changes">
+<h1>Changes<a class="headerlink" href="#changes" title="Permalink to this heading"></a></h1>
+<section id="unreleased">
+<h2>unreleased<a class="headerlink" href="#unreleased" title="Permalink to this heading"></a></h2>
+</section>
+<section id="v2-4-3-2023-04-14">
+<h2>v2.4.3 (2023-04-14)<a class="headerlink" href="#v2-4-3-2023-04-14" title="Permalink to this heading"></a></h2>
+<section id="build">
+<h3>Build<a class="headerlink" href="#build" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>Restrict the requirement version of Ocplib-simplex (PR #573)</p></li>
+<li><p>Dune 3.0 or above required, see https://github.com/ocaml/dune/issues/5563 (PR #575)</p></li>
+<li><p>Zarith 1.4 or above required</p></li>
+<li><p>Cairo2 0.6.4 or above required</p></li>
+<li><p>psmt2-frontend 0.4 or above required</p></li>
+<li><p>Using js_of_ocaml with a version between 4.0.1 and 5.0.1 required (PR #575)</p></li>
+</ul>
+</section>
+<section id="bug-fixes">
+<h3>Bug fixes<a class="headerlink" href="#bug-fixes" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>Fix soundness issues in the arithmetic reasoner #476, #477, #479 (PR #573)</p></li>
+</ul>
+</section>
+<section id="regression-fixes">
+<h3>Regression fixes<a class="headerlink" href="#regression-fixes" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>Remove flattening, see issues #505, #567 (PR #573)</p></li>
+<li><p>Using a weak table for the Shostak.combine cache to prevent some regressions (PR #573)</p></li>
+</ul>
+</section>
+</section>
+<section id="version-2-4-2-august-02-2022">
+<h2>version 2.4.2, August, 02, 2022<a class="headerlink" href="#version-2-4-2-august-02-2022" title="Permalink to this heading"></a></h2>
 <ul class="simple">
 <li><p>Minor release</p>
 <ul>
@@ -129,9 +165,9 @@
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="version-2-4-1-july-27-2021">
-<h2>version 2.4.1, July, 27, 2021<a class="headerlink" href="#version-2-4-1-july-27-2021" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-2-4-1-july-27-2021">
+<h2>version 2.4.1, July, 27, 2021<a class="headerlink" href="#version-2-4-1-july-27-2021" title="Permalink to this heading"></a></h2>
 <ul class="simple">
 <li><p>Minor release</p>
 <ul>
@@ -143,9 +179,9 @@
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="version-2-4-0-january-22-2021">
-<h2>version 2.4.0, January 22, 2021<a class="headerlink" href="#version-2-4-0-january-22-2021" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-2-4-0-january-22-2021">
+<h2>version 2.4.0, January 22, 2021<a class="headerlink" href="#version-2-4-0-january-22-2021" title="Permalink to this heading"></a></h2>
 <ul class="simple">
 <li><p>General improvements:</p>
 <ul>
@@ -191,9 +227,9 @@
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="version-2-3-2-march-23-2020">
-<h2>version 2.3.2, March 23, 2020<a class="headerlink" href="#version-2-3-2-march-23-2020" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-2-3-2-march-23-2020">
+<h2>version 2.3.2, March 23, 2020<a class="headerlink" href="#version-2-3-2-march-23-2020" title="Permalink to this heading"></a></h2>
 <ul class="simple">
 <li><p>Minor release:</p>
 <ul>
@@ -203,9 +239,9 @@
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="version-2-3-1-february-18-2020">
-<h2>version 2.3.1, February 18, 2020<a class="headerlink" href="#version-2-3-1-february-18-2020" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-2-3-1-february-18-2020">
+<h2>version 2.3.1, February 18, 2020<a class="headerlink" href="#version-2-3-1-february-18-2020" title="Permalink to this heading"></a></h2>
 <ul class="simple">
 <li><p>Minor release:</p>
 <ul>
@@ -213,9 +249,9 @@
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="version-2-3-0-february-11-2019">
-<h2>version 2.3.0, February 11, 2019<a class="headerlink" href="#version-2-3-0-february-11-2019" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-2-3-0-february-11-2019">
+<h2>version 2.3.0, February 11, 2019<a class="headerlink" href="#version-2-3-0-february-11-2019" title="Permalink to this heading"></a></h2>
 <ul class="simple">
 <li><p>General improvements:</p>
 <ul>
@@ -275,9 +311,9 @@ code reviewing and performances improvements …</p></li>
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="version-2-2-0-april-21-2018">
-<h2>version 2.2.0, April 21, 2018<a class="headerlink" href="#version-2-2-0-april-21-2018" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-2-2-0-april-21-2018">
+<h2>version 2.2.0, April 21, 2018<a class="headerlink" href="#version-2-2-0-april-21-2018" title="Permalink to this heading"></a></h2>
 <ul class="simple">
 <li><p>Frontend:</p>
 <ul>
@@ -307,9 +343,9 @@ multi-triggers containing “a lot” of terms. Default value for n = 4</p></li>
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="version-2-1-0-march-14-2018">
-<h2>version 2.1.0, March 14, 2018<a class="headerlink" href="#version-2-1-0-march-14-2018" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-2-1-0-march-14-2018">
+<h2>version 2.1.0, March 14, 2018<a class="headerlink" href="#version-2-1-0-march-14-2018" title="Permalink to this heading"></a></h2>
 <ul class="simple">
 <li><p>SAT-solving:</p>
 <ul>
@@ -339,9 +375,9 @@ set a timelimit per goal in this case with option
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="version-2-0-0-november-14-2017">
-<h2>version 2.0.0, November 14, 2017<a class="headerlink" href="#version-2-0-0-november-14-2017" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-2-0-0-november-14-2017">
+<h2>version 2.0.0, November 14, 2017<a class="headerlink" href="#version-2-0-0-november-14-2017" title="Permalink to this heading"></a></h2>
 <ul>
 <li><p>integration of floating-point arithmetic reasoning: this is done via
 the support of the rounding operator as done in the Gappa tool. FPA
@@ -380,9 +416,9 @@ congruence closure, profiler, …</p></li>
 Apache license v2. Some recent OCamlPro additions are licensed under
 the terms of the OCamlPro Non-Commercial Purpose License v1</p></li>
 </ul>
-</div>
-<div class="section" id="version-1-30-november-21-2016">
-<h2>version 1.30, November 21, 2016<a class="headerlink" href="#version-1-30-november-21-2016" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-1-30-november-21-2016">
+<h2>version 1.30, November 21, 2016<a class="headerlink" href="#version-1-30-november-21-2016" title="Permalink to this heading"></a></h2>
 <ul class="simple">
 <li><p>experimental support for models generation (for more details, see
 http://www.ocamlpro.com/2016/11/21/release-of-alt-ergo-1-30-with-experimental-support-for-models-generation/).</p></li>
@@ -414,9 +450,9 @@ value is 10,000.</p></li>
 <li><p>new option “-no-NLA” that disables non-linear arithmetic reasoning
 (*, /, %). Non-linear multiplication remains AC.</p></li>
 </ul>
-</div>
-<div class="section" id="version-1-20-february-09-2016">
-<h2>version 1.20, February 09, 2016<a class="headerlink" href="#version-1-20-february-09-2016" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-1-20-february-09-2016">
+<h2>version 1.20, February 09, 2016<a class="headerlink" href="#version-1-20-february-09-2016" title="Permalink to this heading"></a></h2>
 <ul class="simple">
 <li><p>default value of option -age-bound increased from 10 to 50</p></li>
 <li><p>bugfix when using option –all-models</p></li>
@@ -426,9 +462,9 @@ conflict. It’s better to detect the more precise one</p></li>
 <li><p>bugfix in the profiler plugin</p></li>
 <li><p>improvements in the default SAT solver</p></li>
 </ul>
-</div>
-<div class="section" id="version-1-10-october-19-2015">
-<h2>version 1.10, October 19, 2015<a class="headerlink" href="#version-1-10-october-19-2015" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-1-10-october-19-2015">
+<h2>version 1.10, October 19, 2015<a class="headerlink" href="#version-1-10-october-19-2015" title="Permalink to this heading"></a></h2>
 <ul class="simple">
 <li><p>Improvements and bug fixes in the satML plugin</p></li>
 <li><p>Improvement of the solver of linear arithmetic in presence of
@@ -445,9 +481,9 @@ for this option are: “after-theory-assume” (default),
 <li><p>Code reviewing/refactoring/rewriting/optimization in many parts of
 the solver</p></li>
 </ul>
-</div>
-<div class="section" id="version-1-00-january-29-2015">
-<h2>version 1.00, January 29, 2015<a class="headerlink" href="#version-1-00-january-29-2015" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-1-00-january-29-2015">
+<h2>version 1.00, January 29, 2015<a class="headerlink" href="#version-1-00-january-29-2015" title="Permalink to this heading"></a></h2>
 <ul>
 <li><p>General Improvements:</p>
 <p>** theories data structures: semantic values (internal theories
@@ -546,9 +582,9 @@ every <delay> seconds</p>
 new front-end for SMT2 in upcoming releases</p>
 </li>
 </ul>
-</div>
-<div class="section" id="version-0-99-1-december-30-2014">
-<h2>version 0.99.1, December 30, 2014<a class="headerlink" href="#version-0-99-1-december-30-2014" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-99-1-december-30-2014">
+<h2>version 0.99.1, December 30, 2014<a class="headerlink" href="#version-0-99-1-december-30-2014" title="Permalink to this heading"></a></h2>
 <p>o the “SAT solving” part can now be delegated to an external plugin;</p>
 <p>o new experimental SAT solver based on mini-SAT, provided as a
 plugin. This solver is, in general, more efficient on ground
@@ -570,9 +606,9 @@ in the corresponding “.used” file. Note that the replay may fail
 because of the absence of necessary ground terms generated by
 useless axioms (that are not included in .used file) during the
 initial run.</p>
-</div>
-<div class="section" id="version-0-95-2-september-20th-2013">
-<h2>version 0.95.2, September 20th, 2013<a class="headerlink" href="#version-0-95-2-september-20th-2013" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-95-2-september-20th-2013">
+<h2>version 0.95.2, September 20th, 2013<a class="headerlink" href="#version-0-95-2-september-20th-2013" title="Permalink to this heading"></a></h2>
 <p>o Alt-Ergo is now maintained and distributed by OCamlPro, while
 academic research is conducted in partnership with the VALS team
 (LRI),
@@ -580,60 +616,60 @@ o source code is reorganized into sub-directories,
 o quantifiers instantiation heuristics are simplified,
 o bug-fixes in matching, nums, records, sums,
 o improvement of the GUI when opening big files.</p>
-</div>
-<div class="section" id="version-0-95-1-march-05th-2013">
-<h2>version 0.95.1, March 05th, 2013<a class="headerlink" href="#version-0-95-1-march-05th-2013" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-95-1-march-05th-2013">
+<h2>version 0.95.1, March 05th, 2013<a class="headerlink" href="#version-0-95-1-march-05th-2013" title="Permalink to this heading"></a></h2>
 <p>o bug fixes (existantial elimination, Euclidean division)
 o minor enhancement (transformation of boolean equalities into equivalences)
 o minor enhancement (sort axioms/definitions instances according to their size)</p>
-</div>
-<div class="section" id="version-0-95-january-11th-2013">
-<h2>version 0.95, January 11th, 2013<a class="headerlink" href="#version-0-95-january-11th-2013" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-95-january-11th-2013">
+<h2>version 0.95, January 11th, 2013<a class="headerlink" href="#version-0-95-january-11th-2013" title="Permalink to this heading"></a></h2>
 <ul class="simple">
 <li><p>Main changes in the solver:</p></li>
 </ul>
 <hr class="docutils" />
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">o</span> <span class="n">new</span> <span class="n">combination</span> <span class="n">method</span> <span class="k">for</span> <span class="n">Shostak</span> <span class="n">solvers</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>o new combination method for Shostak solvers
 
-<span class="n">o</span> <span class="n">improvement</span> <span class="n">of</span> <span class="n">non</span><span class="o">-</span><span class="n">linear</span> <span class="n">multiplication</span> <span class="n">distribution</span> <span class="n">over</span> <span class="n">addition</span>
+o improvement of non-linear multiplication distribution over addition
 
-<span class="n">o</span> <span class="nb">input</span> <span class="n">language</span> <span class="n">extension</span><span class="p">:</span> <span class="n">polymorphic</span> <span class="n">declaration</span> <span class="n">are</span> <span class="n">now</span> <span class="n">allowed</span> <span class="p">(</span><span class="n">logic</span> <span class="n">x</span><span class="p">:</span> <span class="s1">&#39;a)</span>
+o input language extension: polymorphic declaration are now allowed (logic x: &#39;a)
 
-<span class="n">o</span> <span class="nb">input</span> <span class="n">language</span> <span class="n">extension</span><span class="p">:</span> <span class="n">the</span> <span class="n">types</span> <span class="n">of</span> <span class="n">terms</span> <span class="n">can</span> <span class="n">now</span> <span class="n">be</span> <span class="n">forced</span> <span class="ow">in</span> <span class="n">a</span> <span class="n">formula</span> <span class="n">using</span> <span class="n">the</span> <span class="n">construct</span> <span class="o">&lt;</span><span class="n">term</span><span class="o">&gt;</span> <span class="p">:</span> <span class="o">&lt;</span><span class="nb">type</span><span class="o">&gt;</span> <span class="p">(</span><span class="n">see</span> <span class="n">man</span> <span class="k">for</span> <span class="n">an</span> <span class="n">example</span><span class="p">)</span>
+o input language extension: the types of terms can now be forced in a formula using the construct &lt;term&gt; : &lt;type&gt; (see man for an example)
 
-<span class="n">o</span> <span class="nb">input</span> <span class="n">language</span> <span class="n">modification</span><span class="p">:</span> <span class="n">a</span> <span class="n">label</span> <span class="n">should</span> <span class="n">be</span> <span class="n">a</span> <span class="n">string</span><span class="o">.</span> <span class="n">The</span> <span class="n">construct</span> <span class="o">&lt;</span><span class="n">label</span><span class="o">&gt;</span> <span class="p">:</span> <span class="o">&lt;</span><span class="n">term</span><span class="o">&gt;</span> <span class="ow">is</span> <span class="n">replaced</span> <span class="n">by</span> <span class="s2">&quot;&lt;label&gt;&quot;</span> <span class="p">:</span> <span class="o">&lt;</span><span class="n">term</span><span class="o">&gt;</span>
+o input language modification: a label should be a string. The construct &lt;label&gt; : &lt;term&gt; is replaced by &quot;&lt;label&gt;&quot; : &lt;term&gt;
 
-<span class="n">o</span> <span class="n">new</span> <span class="n">keywords</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">syntax</span><span class="p">:</span> <span class="n">inversion</span><span class="p">,</span> <span class="n">check</span><span class="p">,</span> <span class="n">cut</span> <span class="ow">and</span> <span class="n">include</span>
+o new keywords in the syntax: inversion, check, cut and include
 
-<span class="n">o</span> <span class="n">experimental</span> <span class="n">options</span> <span class="k">for</span> <span class="n">theories</span> <span class="n">models</span> <span class="n">generation</span><span class="p">:</span>
-    <span class="o">-</span><span class="n">model</span> <span class="n">option</span><span class="p">:</span> <span class="n">model</span> <span class="n">on</span> <span class="n">labeled</span> <span class="n">terms</span>
-    <span class="o">-</span><span class="n">complete</span><span class="o">-</span><span class="n">model</span> <span class="n">option</span><span class="p">:</span> <span class="n">complete</span> <span class="n">model</span>
+o experimental options for theories models generation:
+    -model option: model on labeled terms
+    -complete-model option: complete model
 
-<span class="n">o</span> <span class="o">-</span><span class="n">timelimit</span> <span class="n">n</span> <span class="n">option</span><span class="p">:</span> <span class="nb">set</span> <span class="n">the</span> <span class="n">time</span> <span class="n">limit</span> <span class="n">to</span> <span class="n">n</span> <span class="n">seconds</span> <span class="p">(</span><span class="ow">not</span> <span class="n">supported</span> <span class="n">on</span> <span class="n">Windows</span><span class="p">)</span>
+o -timelimit n option: set the time limit to n seconds (not supported on Windows)
 
-<span class="n">o</span> <span class="n">bug</span> <span class="n">fixes</span> 
+o bug fixes
 </pre></div>
 </div>
 <ul class="simple">
 <li><p>Main changes in the graphical interface:</p></li>
 </ul>
 <hr class="docutils" />
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">o</span> <span class="n">the</span> <span class="n">number</span> <span class="n">of</span> <span class="n">instances</span> <span class="k">for</span> <span class="n">each</span> <span class="n">axiom</span> <span class="n">are</span> <span class="n">now</span> <span class="n">shown</span> <span class="n">on</span> <span class="n">the</span> <span class="n">right</span> <span class="n">of</span> <span class="n">the</span> <span class="n">GUI</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>o the number of instances for each axiom are now shown on the right of the GUI
 
-<span class="n">o</span> <span class="n">the</span> <span class="n">number</span> <span class="n">of</span> <span class="n">instances</span> <span class="n">of</span> <span class="n">each</span> <span class="n">axiom</span> <span class="n">can</span> <span class="n">be</span> <span class="n">limited</span> <span class="n">by</span> <span class="n">the</span> <span class="n">user</span>
+o the number of instances of each axiom can be limited by the user
 
-<span class="n">o</span> <span class="n">the</span> <span class="n">modifications</span> <span class="n">made</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">GUI</span> <span class="n">can</span> <span class="n">now</span> <span class="n">be</span> <span class="n">saved</span> <span class="ow">in</span> <span class="n">a</span> <span class="n">session</span> <span class="n">file</span> <span class="o">&lt;</span><span class="n">f</span><span class="o">&gt;.</span><span class="n">agr</span>
+o the modifications made in the GUI can now be saved in a session file &lt;f&gt;.agr
 
-<span class="n">o</span> <span class="n">session</span> <span class="n">files</span> <span class="n">can</span> <span class="n">be</span> <span class="n">replayed</span> <span class="k">with</span> <span class="o">-</span><span class="n">replay</span> <span class="n">option</span>
+o session files can be replayed with -replay option
 
-<span class="n">o</span> <span class="n">models</span> <span class="n">can</span> <span class="n">be</span> <span class="n">displayed</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">GUI</span>
+o models can be displayed in the GUI
 
-<span class="n">o</span> <span class="n">unsat</span><span class="o">-</span><span class="n">cores</span> <span class="p">(</span><span class="o">-</span><span class="n">proof</span> <span class="n">option</span><span class="p">)</span> <span class="n">can</span> <span class="n">be</span> <span class="n">used</span> <span class="n">to</span> <span class="n">simplify</span> <span class="n">the</span> <span class="n">context</span>
+o unsat-cores (-proof option) can be used to simplify the context
 </pre></div>
 </div>
-</div>
-<div class="section" id="version-0-94-december-2nd-2011">
-<h2>version 0.94, December 2nd, 2011<a class="headerlink" href="#version-0-94-december-2nd-2011" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-94-december-2nd-2011">
+<h2>version 0.94, December 2nd, 2011<a class="headerlink" href="#version-0-94-december-2nd-2011" title="Permalink to this heading"></a></h2>
 <p>o the theory of records replaces the theory of pairs
 o bug fixes
 (intervals, term data-structure, stack-overflows, matching,
@@ -643,13 +679,13 @@ o improvements
 triggers, lets)
 o multiset ordering for AC(X)
 o manual lemma instantiation in the GUI</p>
-</div>
-<div class="section" id="version-0-93-1-may-9th-2011">
-<h2>version 0.93.1, May 9th, 2011<a class="headerlink" href="#version-0-93-1-may-9th-2011" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-93-1-may-9th-2011">
+<h2>version 0.93.1, May 9th, 2011<a class="headerlink" href="#version-0-93-1-may-9th-2011" title="Permalink to this heading"></a></h2>
 <p>o bug fixes (distinct, let-in, explanations)</p>
-</div>
-<div class="section" id="version-0-93-april-12th-2011">
-<h2>version 0.93, April 12th, 2011<a class="headerlink" href="#version-0-93-april-12th-2011" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-93-april-12th-2011">
+<h2>version 0.93, April 12th, 2011<a class="headerlink" href="#version-0-93-april-12th-2011" title="Permalink to this heading"></a></h2>
 <p>o -steps <i> stops Alt-Ergo after a given number of steps
 o -max-split option to limit the number of case-splits
 o new polymorphic theory of arrays: (‘a, ‘b) farray
@@ -663,16 +699,16 @@ o new constructs: let x = <term> in <term>
 let x = <term> in <formula>
 o partial support for / (division) operator
 o bug fixes</p>
-</div>
-<div class="section" id="version-0-92-2-october-22nd-2">
-<h2>version 0.92.2, October 22nd, 2<a class="headerlink" href="#version-0-92-2-october-22nd-2" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-92-2-october-22nd-2">
+<h2>version 0.92.2, October 22nd, 2<a class="headerlink" href="#version-0-92-2-october-22nd-2" title="Permalink to this heading"></a></h2>
 <p>o New built-in syntax for the theory of arrays
 o Fixes a bug in the arithmetic module
 o Allows folding and unfolding of predicate definitions
 o Fixes other bugs</p>
-</div>
-<div class="section" id="version-0-91-may-19th-2010">
-<h2>version 0.91, May 19th, 2010<a class="headerlink" href="#version-0-91-may-19th-2010" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-91-may-19th-2010">
+<h2>version 0.91, May 19th, 2010<a class="headerlink" href="#version-0-91-may-19th-2010" title="Permalink to this heading"></a></h2>
 <p>o experimental support for the theory of functional polymorphic
 arrays with the -arrays option
 o the -pairs option should now be used for the built-in support of
@@ -682,15 +718,15 @@ o partial support for non-linear arithmetics
 o support case split on integer variables
 o new support for Euclidean division and modulo operators
 o new environment variable ERGOLIB to specify the library directory</p>
-</div>
-<div class="section" id="version-0-9-july-17th-2009">
-<h2>version 0.9, July 17th, 2009<a class="headerlink" href="#version-0-9-july-17th-2009" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-9-july-17th-2009">
+<h2>version 0.9, July 17th, 2009<a class="headerlink" href="#version-0-9-july-17th-2009" title="Permalink to this heading"></a></h2>
 <p>o support AC symbols
 o support for C-like hexadecimal floating-point constants
 o handle the division operator</p>
-</div>
-<div class="section" id="version-0-8-july-21st-2008">
-<h2>version 0.8, July 21st, 2008<a class="headerlink" href="#version-0-8-july-21st-2008" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-8-july-21st-2008">
+<h2>version 0.8, July 21st, 2008<a class="headerlink" href="#version-0-8-july-21st-2008" title="Permalink to this heading"></a></h2>
 <p>o pretty output with the -color option
 o the SAT solver part is now equipped with a backjumping mechanism
 o now handles the flet and let SMT-lib constructs
@@ -702,29 +738,30 @@ o treatment of existential formulas have been slightly improved
 o decision procedure for polymorphic pairs
 o decision procedure for bit-vectors
 o combination scheme for several decision procedures</p>
-</div>
-<div class="section" id="version-0-7-3-march-5th-2008">
-<h2>version 0.7.3, March 5th, 2008<a class="headerlink" href="#version-0-7-3-march-5th-2008" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-7-3-march-5th-2008">
+<h2>version 0.7.3, March 5th, 2008<a class="headerlink" href="#version-0-7-3-march-5th-2008" title="Permalink to this heading"></a></h2>
 <p>o renamings in the interfaces
 o provides an API for alt-ergo (make api or make api.byte)
 o handles the modulo operator (%) as an uninterpreted symbol
 o allow labels on any term, not only on predicates</p>
-</div>
-<div class="section" id="version-0-7-october-11th-2007">
-<h2>version 0.7, October 11th, 2007<a class="headerlink" href="#version-0-7-october-11th-2007" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-7-october-11th-2007">
+<h2>version 0.7, October 11th, 2007<a class="headerlink" href="#version-0-7-october-11th-2007" title="Permalink to this heading"></a></h2>
 <p>o trigger construction has been improved
 o preliminary implementation of combination scheme (Arithmetic+pairs)
 o the SAT loop has been improved</p>
-</div>
-<div class="section" id="version-0-6-february-1st-2007">
-<h2>version 0.6, February 1st, 2007<a class="headerlink" href="#version-0-6-february-1st-2007" title="Permalink to this headline">¶</a></h2>
-<p>o new CC(X) architecture (it can know directly handle relation symbols)<br />o fully handles the polymorphism of the logic</p>
-</div>
-<div class="section" id="version-0-5-october-12th-2006">
-<h2>version 0.5, October 12th, 2006<a class="headerlink" href="#version-0-5-october-12th-2006" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version-0-6-february-1st-2007">
+<h2>version 0.6, February 1st, 2007<a class="headerlink" href="#version-0-6-february-1st-2007" title="Permalink to this heading"></a></h2>
+<p>o new CC(X) architecture (it can know directly handle relation symbols)
+o fully handles the polymorphism of the logic</p>
+</section>
+<section id="version-0-5-october-12th-2006">
+<h2>version 0.5, October 12th, 2006<a class="headerlink" href="#version-0-5-october-12th-2006" title="Permalink to this heading"></a></h2>
 <p>o first (beta) release</p>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>
@@ -736,7 +773,7 @@ o the SAT loop has been improved</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2020, Alt-Ergo devs.</p>
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo devs.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

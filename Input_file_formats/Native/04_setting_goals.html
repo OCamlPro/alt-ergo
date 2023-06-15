@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Setting goals &mdash; Doc-Alt-Ergo  documentation</title><link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <title>Setting goals &mdash; Doc-Alt-Ergo  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/dac_theme_modif.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+  
         <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
         <script src="../../_static/doctools.js"></script>
-        <script src="../../_static/language_data.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -40,7 +43,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../Install/index.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../Usage/index.html">Usage</a></li>
@@ -107,23 +110,23 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="setting-goals">
-<h1>Setting goals<a class="headerlink" href="#setting-goals" title="Permalink to this headline">¶</a></h1>
+  <section id="setting-goals">
+<h1>Setting goals<a class="headerlink" href="#setting-goals" title="Permalink to this heading"></a></h1>
 <p>Declaring goals tells Alt-Ergo what it needs to prove.
 Alt-Ergo will answer <code class="docutils literal notranslate"><span class="pre">Valid</span></code> if it can prove that the formula of the goal is true in all cases, and <code class="docutils literal notranslate"><span class="pre">I</span> <span class="pre">don't</span> <span class="pre">know</span></code> otherwise.</p>
-<div class="section" id="goal">
-<h2><code class="docutils literal notranslate"><span class="pre">goal</span></code><a class="headerlink" href="#goal" title="Permalink to this headline">¶</a></h2>
+<section id="goal">
+<h2><code class="docutils literal notranslate"><span class="pre">goal</span></code><a class="headerlink" href="#goal" title="Permalink to this heading"></a></h2>
 <p>To declare goals, the user can use the following construct.
 Note that goals must always be named.</p>
-<div class="section" id="syntax">
-<h3>Syntax<a class="headerlink" href="#syntax" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">goal_declaration</span><span class="o">&gt;</span> <span class="p">::</span><span class="o">=</span> <span class="s1">&#39;goal&#39;</span> <span class="o">&lt;</span><span class="nb">id</span><span class="o">&gt;</span> <span class="s1">&#39;:&#39;</span> <span class="o">&lt;</span><span class="n">goal_body</span><span class="o">&gt;</span>
+<section id="syntax">
+<h3>Syntax<a class="headerlink" href="#syntax" title="Permalink to this heading"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">goal_declaration</span><span class="o">&gt;</span> <span class="p">:</span><span class="o">:=</span> <span class="s1">&#39;goal&#39;</span> <span class="o">&lt;</span><span class="nb">id</span><span class="o">&gt;</span> <span class="s1">&#39;:&#39;</span> <span class="o">&lt;</span><span class="n">goal_body</span><span class="o">&gt;</span>
 </pre></div>
 </div>
 <p>Here, <code class="docutils literal notranslate"><span class="pre">&lt;goal_body&gt;</span></code> is an expression which may contain quantifiers.</p>
-</div>
-<div class="section" id="examples">
-<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">logic</span> <span class="n">h</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">f</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 <span class="n">logic</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span><span class="nb">int</span>
 
@@ -141,33 +144,33 @@ Note that goals must always be named.</p>
   <span class="n">x</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">y</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">y</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="intermediate-goals-cut-and-check">
-<h2>Intermediate goals: <code class="docutils literal notranslate"><span class="pre">cut</span></code> and <code class="docutils literal notranslate"><span class="pre">check</span></code><a class="headerlink" href="#intermediate-goals-cut-and-check" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+<section id="intermediate-goals-cut-and-check">
+<h2>Intermediate goals: <code class="docutils literal notranslate"><span class="pre">cut</span></code> and <code class="docutils literal notranslate"><span class="pre">check</span></code><a class="headerlink" href="#intermediate-goals-cut-and-check" title="Permalink to this heading"></a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">cut</span></code> and <code class="docutils literal notranslate"><span class="pre">check</span></code> can be used to create intermediate goals, to check that they can be proven, without using the terms that they generate as known terms for other triggers.
 In other word, <code class="docutils literal notranslate"><span class="pre">cut</span></code> and <code class="docutils literal notranslate"><span class="pre">check</span></code> allow to test if intermediate goals can be proven, without having any influence whatsoever on the behaviour of Alt-Ergo on other goals.</p>
 <p><code class="docutils literal notranslate"><span class="pre">cut</span></code> and <code class="docutils literal notranslate"><span class="pre">check</span></code> seem to not be supported by Alt-Ergo 2.3.0 (but those keywords are still reserved).</p>
 <p>[WIP: complete]</p>
-<div class="section" id="id1">
-<h3>Syntax<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">check_declaration</span><span class="o">&gt;</span> <span class="p">::</span><span class="o">=</span> <span class="s1">&#39;check&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
-<span class="o">&lt;</span><span class="n">cut_declaration</span><span class="o">&gt;</span>   <span class="p">::</span><span class="o">=</span> <span class="s1">&#39;cut&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
+<section id="id1">
+<h3>Syntax<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">check_declaration</span><span class="o">&gt;</span> <span class="p">:</span><span class="o">:=</span> <span class="s1">&#39;check&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">cut_declaration</span><span class="o">&gt;</span>   <span class="p">:</span><span class="o">:=</span> <span class="s1">&#39;cut&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="check-valid">
-<h2><code class="docutils literal notranslate"><span class="pre">check_valid</span></code><a class="headerlink" href="#check-valid" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+<section id="check-valid">
+<h2><code class="docutils literal notranslate"><span class="pre">check_valid</span></code><a class="headerlink" href="#check-valid" title="Permalink to this heading"></a></h2>
 <p>This keyword is an alias for <code class="docutils literal notranslate"><span class="pre">goal</span></code>.</p>
-</div>
-<div class="section" id="check-sat">
-<h2><code class="docutils literal notranslate"><span class="pre">check_sat</span></code><a class="headerlink" href="#check-sat" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="check-sat">
+<h2><code class="docutils literal notranslate"><span class="pre">check_sat</span></code><a class="headerlink" href="#check-sat" title="Permalink to this heading"></a></h2>
 <p>This keyword is used just like <code class="docutils literal notranslate"><span class="pre">goal</span></code> and <code class="docutils literal notranslate"><span class="pre">check_valid</span></code>, but it describes a property that alt-ergo will
 try to prove invalid. This keywork has been introduced in the version 2.5.0 as a part of the model
 instanciation, and in this version <code class="docutils literal notranslate"><span class="pre">alt-ergo</span></code> never returns <code class="docutils literal notranslate"><span class="pre">SAT</span></code>, but <code class="docutils literal notranslate"><span class="pre">unknown</span></code> instead.</p>
-<div class="section" id="example">
-<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
+<section id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h3>
 <p>test.ae</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">logic</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="p">:</span> <span class="nb">int</span>
 
@@ -193,11 +196,12 @@ unknown
 
 )
 File &quot;test.ae&quot;, line 3, characters 14-19: I don&#39;t know (0.0030) (2 steps) (goal g)
+
 </pre></div>
 </div>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
            </div>
@@ -210,7 +214,7 @@ File &quot;test.ae&quot;, line 3, characters 14-19: I don&#39;t know (0.0030) (2
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2020, Alt-Ergo devs.</p>
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo devs.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

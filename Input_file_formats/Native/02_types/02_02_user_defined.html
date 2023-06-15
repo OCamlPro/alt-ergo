@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>User-defined types &mdash; Doc-Alt-Ergo  documentation</title><link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <title>User-defined types &mdash; Doc-Alt-Ergo  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/dac_theme_modif.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+  
         <script src="../../../_static/jquery.js"></script>
-        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
         <script src="../../../_static/doctools.js"></script>
-        <script src="../../../_static/language_data.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
@@ -40,7 +43,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../../Install/index.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../Usage/index.html">Usage</a></li>
@@ -101,22 +104,22 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="user-defined-types">
-<h1>User-defined types<a class="headerlink" href="#user-defined-types" title="Permalink to this headline">¶</a></h1>
+  <section id="user-defined-types">
+<h1>User-defined types<a class="headerlink" href="#user-defined-types" title="Permalink to this heading"></a></h1>
 <p>By using the command <code class="docutils literal notranslate"><span class="pre">type</span></code>, the user can declare its own types.</p>
-<div class="section" id="abstract-types">
-<h2>Abstract types<a class="headerlink" href="#abstract-types" title="Permalink to this headline">¶</a></h2>
+<section id="abstract-types">
+<h2>Abstract types<a class="headerlink" href="#abstract-types" title="Permalink to this heading"></a></h2>
 <p>It is possible to create new uninterpreted types.
 They may be parametrized by one or several type variables, or be left non-parametrized.</p>
-<div class="section" id="syntax">
-<h3>Syntax<a class="headerlink" href="#syntax" title="Permalink to this headline">¶</a></h3>
+<section id="syntax">
+<h3>Syntax<a class="headerlink" href="#syntax" title="Permalink to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&lt;abstract_type_declaration&gt;    ::= &#39;type&#39; ( &lt;type_variable&gt; | &lt;type_variable_list_sep_comma&gt; )? &lt;type_id&gt;
 &lt;type_variable_list_sep_comma&gt; ::= &#39;(&#39; &lt;type_variable&gt; ( &#39;,&#39; &lt;type_variable&gt; )* &#39;)&#39;
 </pre></div>
 </div>
-</div>
-<div class="section" id="examples">
-<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="o">*</span> <span class="n">New</span> <span class="n">non</span><span class="o">-</span><span class="n">parametrized</span> <span class="n">uninterpreted</span> <span class="nb">type</span> <span class="o">*</span><span class="p">)</span>
 <span class="nb">type</span> <span class="n">person</span>
 <span class="n">logic</span> <span class="n">Alice</span><span class="p">,</span> <span class="n">Bob</span><span class="p">:</span> <span class="n">person</span>
@@ -175,14 +178,14 @@ They may be parametrized by one or several type variables, or be left non-parame
     <span class="n">mem</span> <span class="p">(</span><span class="n">is1</span><span class="p">,</span> <span class="n">add</span> <span class="p">(</span><span class="n">is2</span><span class="p">,</span> <span class="n">iss</span><span class="p">))</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="records">
-<h2>Records<a class="headerlink" href="#records" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+<section id="records">
+<h2>Records<a class="headerlink" href="#records" title="Permalink to this heading"></a></h2>
 <p>One way to create new types with structure is to create records.
 They hold several fields, which be accessed.</p>
-<div class="section" id="id1">
-<h3>Syntax<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<section id="id1">
+<h3>Syntax<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>(* Declaration of records *)
 &lt;record_type_declaration&gt;      ::= &#39;type&#39; ( &lt;type_variable&gt; | &lt;type_variable_list_sep_comma&gt; )? &lt;type_id&gt; &#39;=&#39; &lt;record_type&gt;
 &lt;type_variable_list_sep_comma&gt; ::= &#39;(&#39; &lt;type_variable&gt; ( &#39;;&#39; &lt;type_variable&gt; )* &#39;)&#39;
@@ -197,9 +200,9 @@ They hold several fields, which be accessed.</p>
 &lt;field_value&gt;                    ::= &lt;field_id&gt; &#39;=&#39; &lt;value&gt;
 </pre></div>
 </div>
-</div>
-<div class="section" id="id2">
-<h3>Examples<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="id2">
+<h3>Examples<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">type</span> <span class="n">sa_family_t</span>
 
 <span class="nb">type</span> <span class="n">sockaddr</span> <span class="o">=</span> <span class="p">{</span>
@@ -220,14 +223,14 @@ They hold several fields, which be accessed.</p>
     <span class="n">fst</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">-&gt;</span> <span class="n">x</span><span class="o">=</span><span class="mi">1</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="enums-and-algebraic-datatypes">
-<h2>Enums and Algebraic datatypes<a class="headerlink" href="#enums-and-algebraic-datatypes" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+<section id="enums-and-algebraic-datatypes">
+<h2>Enums and Algebraic datatypes<a class="headerlink" href="#enums-and-algebraic-datatypes" title="Permalink to this heading"></a></h2>
 <p>Algebraic datatypes (ADT) are a very powerful tool which allows Alt-Ergo to reason about generic, recursive data structures.</p>
 <p>It is possible to create enumerations, and to use records in order to construct (mutually) recursive structures and to add additionnal structures.</p>
-<div class="section" id="id3">
-<h3>Examples<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<section id="id3">
+<h3>Examples<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
 <ul>
 <li><p>When no recursion is involved, we usually talk of <em>enumerations</em>, or simply <em>enums</em>, which are the simplest examples of ADT.</p>
 <p><em>Example:</em></p>
@@ -272,9 +275,9 @@ They hold several fields, which be accessed.</p>
 </div>
 </li>
 </ul>
-</div>
-<div class="section" id="id4">
-<h3>Syntax<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="id4">
+<h3>Syntax<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>(* Declaration of ADT *)
 &lt;algebraic_type_declaration&gt;   ::= &#39;type&#39; &lt;algebraic_type_definition&gt; ( &#39;and&#39; &lt;algebraic_type_definition&gt; )*
 &lt;algebraic_type_definition&gt;    ::= ( &lt;type_variable&gt; | &lt;type_variable_list_sep_comma&gt; )? &lt;type_id&gt; &#39;=&#39; &lt;abstract_type&gt;
@@ -289,9 +292,9 @@ They hold several fields, which be accessed.</p>
 </pre></div>
 </div>
 <p>Values of ADT can be created through the ADT’s constructors, with the same syntax as functions.</p>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
            </div>
@@ -304,7 +307,7 @@ They hold several fields, which be accessed.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2020, Alt-Ergo devs.</p>
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo devs.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

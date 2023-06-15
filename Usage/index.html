@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Usage &mdash; Doc-Alt-Ergo  documentation</title><link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <title>Usage &mdash; Doc-Alt-Ergo  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/dac_theme_modif.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+  
         <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/doctools.js"></script>
-        <script src="../_static/language_data.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -40,7 +43,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../Install/index.html">Install</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Usage</a><ul>
@@ -99,35 +102,35 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="usage">
-<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="library">
-<h2>Library<a class="headerlink" href="#library" title="Permalink to this headline">¶</a></h2>
-<p>Since version 2.2.0, Alt-Ergo’s library is also compiled and installed. See the <a class="reference internal" href="../API/index.html"><span class="doc">API documentation</span></a> for more information.</p>
-</div>
-<div class="section" id="run">
-<h2>Run<a class="headerlink" href="#run" title="Permalink to this headline">¶</a></h2>
+  <section id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this heading"></a></h1>
+<section id="library">
+<h2>Library<a class="headerlink" href="#library" title="Permalink to this heading"></a></h2>
+<p>Since version 2.2.0, Alt-Ergo’s library is also compiled and installed. See the <a class="reference internal" href="../API/index.html"><span class="std std-doc">API documentation</span></a> for more information.</p>
+</section>
+<section id="run">
+<h2>Run<a class="headerlink" href="#run" title="Permalink to this heading"></a></h2>
 <p>Alt-Ergo is executed with the following command:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    $ alt-ergo   [options] file.&lt;ext&gt;
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>    $ alt-ergo   [options] file.&lt;ext&gt;
 </pre></div>
 </div>
 <p>The CDCL solver is now the default SAT engine. The command below
 allows to enable the old Tableaux-like SAT-solver:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    $ alt-ergo   [options] --sat-solver Tableaux file.&lt;ext&gt;
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>    $ alt-ergo   [options] --sat-solver Tableaux file.&lt;ext&gt;
 </pre></div>
 </div>
-<div class="section" id="files-extensions">
-<h3>Files extensions<a class="headerlink" href="#files-extensions" title="Permalink to this headline">¶</a></h3>
+<section id="files-extensions">
+<h3>Files extensions<a class="headerlink" href="#files-extensions" title="Permalink to this heading"></a></h3>
 <p>Alt-Ergo supports file extensions:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">.ae</span></code>, for its native input language (<code class="docutils literal notranslate"><span class="pre">.why</span></code> and <code class="docutils literal notranslate"><span class="pre">.mlw</span></code> are now depreciated although still accepted)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">.psmt2</span></code>, <code class="docutils literal notranslate"><span class="pre">.smt2</span></code> for (our polymorphic extension of) the SMT-LIB 2
 standard</p></li>
 </ul>
-<p>See the <a class="reference internal" href="../Input_file_formats/index.html"><span class="doc">Input section</span></a> for more information about the format of the input files</p>
-</div>
-<div class="section" id="generating-models">
-<h3>Generating models<a class="headerlink" href="#generating-models" title="Permalink to this headline">¶</a></h3>
+<p>See the <a class="reference internal" href="../Input_file_formats/index.html"><span class="doc std std-doc">Input section</span></a> for more information about the format of the input files</p>
+</section>
+<section id="generating-models">
+<h3>Generating models<a class="headerlink" href="#generating-models" title="Permalink to this heading"></a></h3>
 <p>Since 2.5.0, Alt-Ergo also generates models in the case it concludes on the satisfiability of
 the formula.
 There is two ways to activate model generation:</p>
@@ -145,27 +148,27 @@ Note that this mode only works with the option <code class="docutils literal not
 </ul>
 <p>NB: the <code class="docutils literal notranslate"><span class="pre">--model</span></code> option is equivalent to <code class="docutils literal notranslate"><span class="pre">--interpretation</span> <span class="pre">every</span> <span class="pre">--sat-solver</span> <span class="pre">tableaux</span></code>.</p>
 <p>The default model format is the SMT format.</p>
-</div>
-<div class="section" id="output">
-<h3>Output<a class="headerlink" href="#output" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="output">
+<h3>Output<a class="headerlink" href="#output" title="Permalink to this heading"></a></h3>
 <p>The results of an Alt-ergo’s execution have the following form :</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">File</span> <span class="s2">&quot;&lt;path_to_file&gt;/&lt;filename&gt;&quot;</span><span class="p">,</span> <span class="n">line</span> <span class="o">&lt;</span><span class="n">l</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">characters</span> <span class="o">&lt;</span><span class="n">n</span><span class="o">-</span><span class="n">m</span><span class="o">&gt;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">status</span><span class="o">&gt;</span> <span class="p">(</span><span class="o">&lt;</span><span class="n">time</span> <span class="ow">in</span> <span class="n">seconde</span><span class="o">&gt;</span><span class="p">)</span> <span class="p">(</span><span class="o">&lt;</span><span class="n">number</span> <span class="n">of</span> <span class="n">steps</span><span class="o">&gt;</span> <span class="n">steps</span><span class="p">)</span> <span class="p">(</span><span class="n">goal</span> <span class="o">&lt;</span><span class="n">name</span> <span class="n">of</span> <span class="n">the</span> <span class="n">goal</span><span class="o">&gt;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>The status can be <code class="docutils literal notranslate"><span class="pre">Valid</span></code>, <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> or <code class="docutils literal notranslate"><span class="pre">I</span> <span class="pre">don't</span> <span class="pre">know</span></code>. If the input file is in the SMT-LIB 2 format the status will be either <code class="docutils literal notranslate"><span class="pre">unsat</span></code>, <code class="docutils literal notranslate"><span class="pre">sat</span></code>, <code class="docutils literal notranslate"><span class="pre">unknown</span></code>. You can force the status to be print in the SMT-LIB 2 form with the option <code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">smtlib2</span></code>.</p>
-<div class="section" id="about-alt-ergo-s-output">
-<h4>About alt-ergo’s output<a class="headerlink" href="#about-alt-ergo-s-output" title="Permalink to this headline">¶</a></h4>
+<section id="about-alt-ergo-s-output">
+<h4>About alt-ergo’s output<a class="headerlink" href="#about-alt-ergo-s-output" title="Permalink to this heading"></a></h4>
 <p>When alt-ergo tries to prove a property (with the native input language), it
 actually tries to prove the unsatisfiability of the property negation. That is
 why you get <code class="docutils literal notranslate"><span class="pre">unsat</span></code> as an SMT-LIB 2 format output while proving a <code class="docutils literal notranslate"><span class="pre">Valid</span></code>
 property. The same goes for <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> and <code class="docutils literal notranslate"><span class="pre">sat</span></code>.</p>
-</div>
-</div>
-<div class="section" id="plugins">
-<h3>Plugins<a class="headerlink" href="#plugins" title="Permalink to this headline">¶</a></h3>
-<p>See the <a class="reference internal" href="../Plugins/ab_why3.html"><span class="doc">AB-Why3 README</span></a> file for the documentation of the AB-Why3 plugin</p>
+</section>
+</section>
+<section id="plugins">
+<h3>Plugins<a class="headerlink" href="#plugins" title="Permalink to this heading"></a></h3>
+<p>See the <a class="reference internal" href="../Plugins/ab_why3.html"><span class="std std-doc">AB-Why3 README</span></a> file for the documentation of the AB-Why3 plugin</p>
 <p>The Fm-Simplex plugin can be used as follows:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    $ alt-ergo --inequalities-plugin fm-simplex-plugin.cmxs [other-options] file.&lt;ext&gt;
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>    $ alt-ergo --inequalities-plugin fm-simplex-plugin.cmxs [other-options] file.&lt;ext&gt;
     $ alt-ergo --inequalities-plugin some-path/fm-simplex-plugin.cmxs [other-options] file.&lt;ext&gt;
 </pre></div>
 </div>
@@ -176,11 +179,11 @@ to see its absolute path). You can also provide a relative or an
 absolute path as shown by the second command above. Also, you
 should replace “.cmxs” by “.cma” if you are working with bytcode
 binaries.</p>
-</div>
-<div class="section" id="preludes">
-<h3>Preludes<a class="headerlink" href="#preludes" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="preludes">
+<h3>Preludes<a class="headerlink" href="#preludes" title="Permalink to this heading"></a></h3>
 <p>Preludes can be passed to Alt-Ergo as follows:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    $ alt-ergo --prelude p.ae --prelude some-path/q.ae [other-options] file.ae
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>    $ alt-ergo --prelude p.ae --prelude some-path/q.ae [other-options] file.ae
 </pre></div>
 </div>
 <p>Alt-Ergo will try to load a local prelude called “p.ae”. If this
@@ -191,12 +194,12 @@ by “some-path/q.ae”.</p>
 <p>For instance, the following command-line enables floating-point
 arithmetic reasoning in Alt-Ergo and indicates that the FPA prelude
 should be loaded:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    $ alt-ergo --use-fpa --prelude fpa-theory-2017-01-04-16h00.ae &lt;file.ae&gt;
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>    $ alt-ergo --use-fpa --prelude fpa-theory-2017-01-04-16h00.ae &lt;file.ae&gt;
 </pre></div>
 </div>
-</div>
-<div class="section" id="plugins-and-preludes-directories">
-<h3>Plugins and Preludes directories<a class="headerlink" href="#plugins-and-preludes-directories" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="plugins-and-preludes-directories">
+<h3>Plugins and Preludes directories<a class="headerlink" href="#plugins-and-preludes-directories" title="Permalink to this heading"></a></h3>
 <p>As stated above, the <code class="docutils literal notranslate"><span class="pre">--where</span></code> option of <code class="docutils literal notranslate"><span class="pre">alt-ergo</span></code> can be used to get the absolute
 path that is searched by default when looking for plugins and preludes that were
 given with a relative path. It is useful to know that these two directories are
@@ -208,24 +211,24 @@ executable, as well as preludes and plugins, can be relocated.</p>
 On windows, a binary at path <code class="docutils literal notranslate"><span class="pre">Z:\some\path\bin\alt-ergo</span></code> will look for preludes and
 plugins in <code class="docutils literal notranslate"><span class="pre">Z:\some\path\lib\alt-ergo\preludes</span></code> and
 <code class="docutils literal notranslate"><span class="pre">Z:\some\path\lib\alt-ergo\plugins</span></code> respectively.</p>
-</div>
-</div>
-<div class="section" id="javascript">
-<h2>Javascript<a class="headerlink" href="#javascript" title="Permalink to this headline">¶</a></h2>
-<p>Alt-Ergo can be compiled in Javascript see the <a class="reference internal" href="../Install/index.html"><span class="doc">install section</span></a> for more informations.</p>
-<div class="section" id="js-node">
-<h3>Js-node<a class="headerlink" href="#js-node" title="Permalink to this headline">¶</a></h3>
+</section>
+</section>
+<section id="javascript">
+<h2>Javascript<a class="headerlink" href="#javascript" title="Permalink to this heading"></a></h2>
+<p>Alt-Ergo can be compiled in Javascript see the <a class="reference internal" href="../Install/index.html"><span class="std std-doc">install section</span></a> for more informations.</p>
+<section id="js-node">
+<h3>Js-node<a class="headerlink" href="#js-node" title="Permalink to this heading"></a></h3>
 <p>The Javascript version of Alt-Ergo compatible with node-js is executed with the following command:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    $ node alt-ergo.js  [options] file.&lt;ext&gt;
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>    $ node alt-ergo.js  [options] file.&lt;ext&gt;
 </pre></div>
 </div>
 <p>Note that timeout options and zip files are not supported with this version because of the lack of js primitives.</p>
-</div>
-<div class="section" id="js-worker">
-<h3>Js-worker<a class="headerlink" href="#js-worker" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="js-worker">
+<h3>Js-worker<a class="headerlink" href="#js-worker" title="Permalink to this heading"></a></h3>
 <p>A web worker of the alt-ergo solver is available with the command <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js-worker</span></code>. It uses Js_of_ocaml Worker’s and Lwt. The <code class="docutils literal notranslate"><span class="pre">data-encoding</span></code> library is used to encode and decode messages to/from the worker. Since the messages are in JSon format, the Alt-Ergo worker can be used from any javascript code.</p>
-<div class="section" id="inputs">
-<h4>Inputs<a class="headerlink" href="#inputs" title="Permalink to this headline">¶</a></h4>
+<section id="inputs">
+<h4>Inputs<a class="headerlink" href="#inputs" title="Permalink to this heading"></a></h4>
 <p>This web worker takes a json file composed of a list of string representing each line of an input file. This json file can also be composed of an optional worker identifier (integer) and an optional name for the file to solve. The following code shows an example of a such json file :</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="s2">&quot;testfile&quot;</span><span class="p">,</span>
  <span class="s2">&quot;worker_id&quot;</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span>
@@ -238,9 +241,9 @@ plugins in <code class="docutils literal notranslate"><span class="pre">Z:\some\
  <span class="s2">&quot;steps_bound&quot;</span><span class="p">:</span> <span class="mi">1000</span> <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="outpus">
-<h4>Outpus<a class="headerlink" href="#outpus" title="Permalink to this headline">¶</a></h4>
+</section>
+<section id="outpus">
+<h4>Outpus<a class="headerlink" href="#outpus" title="Permalink to this heading"></a></h4>
 <p>At the end of solving it returns a Json file corresponding to results, debug informations, etc:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;worker_id&quot;</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="s2">&quot;Unsat&quot;</span><span class="p">:</span> <span class="mi">0</span> <span class="p">},</span>
 <span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;Valid (0.1940) (0 steps) (goal g)&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span> <span class="p">],</span>
@@ -254,14 +257,14 @@ plugins in <code class="docutils literal notranslate"><span class="pre">Z:\some\
 </div>
 <p>Options and results formats are available in <code class="docutils literal notranslate"><span class="pre">worker_interface</span></code> module. In this module you can also find functions to easily encode inputs and decode outputs.
 Look at the <code class="docutils literal notranslate"><span class="pre">worker_json_example.json</span></code> in the ressources <code class="docutils literal notranslate"><span class="pre">rsc</span></code> of the project to learn more.</p>
-</div>
-</div>
-<div class="section" id="js-worker-example">
-<h3>Js-worker example<a class="headerlink" href="#js-worker-example" title="Permalink to this headline">¶</a></h3>
+</section>
+</section>
+<section id="js-worker-example">
+<h3>Js-worker example<a class="headerlink" href="#js-worker-example" title="Permalink to this heading"></a></h3>
 <p>A small example of how to use the Alt-Ergo web worker can be build with the command <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js-example</span></code>. This command also makes the web worker if it has not already been built. It produces a <code class="docutils literal notranslate"><span class="pre">www</span></code> directory with an html page where you can write a small example, run the worker, and see the results. You can also look at the console of your browser to look at the json file sent</p>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
            </div>
@@ -274,7 +277,7 @@ Look at the <code class="docutils literal notranslate"><span class="pre">worker_
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2020, Alt-Ergo devs.</p>
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo devs.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

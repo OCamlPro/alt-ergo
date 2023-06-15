@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Built-in &mdash; Doc-Alt-Ergo  documentation</title><link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <title>Built-in &mdash; Doc-Alt-Ergo  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/dac_theme_modif.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+  
         <script src="../../../_static/jquery.js"></script>
-        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
         <script src="../../../_static/doctools.js"></script>
-        <script src="../../../_static/language_data.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
@@ -40,7 +43,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../../Install/index.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../Usage/index.html">Usage</a></li>
@@ -100,54 +103,57 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="built-in">
-<h1>Built-in<a class="headerlink" href="#built-in" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="built-in-types">
-<h2>Built-in types<a class="headerlink" href="#built-in-types" title="Permalink to this headline">¶</a></h2>
+  <section id="built-in">
+<h1>Built-in<a class="headerlink" href="#built-in" title="Permalink to this heading"></a></h1>
+<section id="built-in-types">
+<h2>Built-in types<a class="headerlink" href="#built-in-types" title="Permalink to this heading"></a></h2>
 <p>Alt-Ergo’s native language includes the following built-in types.
-Creation and manipulation of values having those types are covered in <a class="reference external" href="#built-in-operators">built-in operators</a>.</p>
-<div class="section" id="boolean-types">
-<h3>Boolean types<a class="headerlink" href="#boolean-types" title="Permalink to this headline">¶</a></h3>
+Creation and manipulation of values having those types are covered in <a class="reference internal" href="#built-in-operators">built-in operators</a>.</p>
+<section id="boolean-types">
+<h3>Boolean types<a class="headerlink" href="#boolean-types" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">bool</span></code>, the preferred type to represent propositional variables. Boolean constants are <code class="docutils literal notranslate"><span class="pre">true</span></code> and <code class="docutils literal notranslate"><span class="pre">false</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">prop</span></code>, an historical type still supported in Alt-Ergo 2.3.0.<br />The historical separation comes from Alt-Ergo origins in the Coq ecosystem: in Coq, <code class="docutils literal notranslate"><span class="pre">prop</span></code> is much richer than <code class="docutils literal notranslate"><span class="pre">bool</span></code>.<br />In Alt-Ergo 2.3.0, <code class="docutils literal notranslate"><span class="pre">prop</span></code> and <code class="docutils literal notranslate"><span class="pre">bool</span></code> have been merged in order to simplify interactions with the <a class="reference external" href="http://smtlib.cs.uiowa.edu/">SMT-LIB </a> standard.<br />More information on the <code class="docutils literal notranslate"><span class="pre">bool</span></code>/<code class="docutils literal notranslate"><span class="pre">prop</span></code> conflict can be found in <a class="reference external" href="#the-bool-prop-conflict">this section</a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prop</span></code>, an historical type still supported in Alt-Ergo 2.3.0.<br />
+The historical separation comes from Alt-Ergo origins in the Coq ecosystem: in Coq, <code class="docutils literal notranslate"><span class="pre">prop</span></code> is much richer than <code class="docutils literal notranslate"><span class="pre">bool</span></code>.<br />
+In Alt-Ergo 2.3.0, <code class="docutils literal notranslate"><span class="pre">prop</span></code> and <code class="docutils literal notranslate"><span class="pre">bool</span></code> have been merged in order to simplify interactions with the <a class="reference external" href="http://smtlib.cs.uiowa.edu/">SMT-LIB </a> standard.<br />
+More information on the <code class="docutils literal notranslate"><span class="pre">bool</span></code>/<code class="docutils literal notranslate"><span class="pre">prop</span></code> conflict can be found in <a class="reference internal" href="#the-bool-prop-conflict"><span class="xref myst">this section</span></a>.</p></li>
 </ul>
-</div>
-<div class="section" id="numeric-types">
-<h3>Numeric types<a class="headerlink" href="#numeric-types" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="numeric-types">
+<h3>Numeric types<a class="headerlink" href="#numeric-types" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">int</span></code> for (arbitrary large) integers.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">real</span></code> for reals. This type actually represents the smallest extension of the rationals which is algebraically closed and closed by exponentiation. Rationals with arbitrary precision are used under the hood.</p></li>
 </ul>
-</div>
-<div class="section" id="unit-type">
-<h3>Unit type<a class="headerlink" href="#unit-type" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="unit-type">
+<h3>Unit type<a class="headerlink" href="#unit-type" title="Permalink to this heading"></a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">unit</span></code> is Alt-Ergo native language’s <a class="reference external" href="https://en.wikipedia.org/wiki/Unit_type">unit type</a>.</p>
-</div>
-<div class="section" id="bitvectors">
-<h3>Bitvectors<a class="headerlink" href="#bitvectors" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="bitvectors">
+<h3>Bitvectors<a class="headerlink" href="#bitvectors" title="Permalink to this heading"></a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">bitv</span></code> are fixed-size binary words of arbitrary length.
 There exists a bitvector type <code class="docutils literal notranslate"><span class="pre">bitv[n]</span></code> for each non-zero positive integer <code class="docutils literal notranslate"><span class="pre">n</span></code>. For example, <code class="docutils literal notranslate"><span class="pre">bitv[8]</span></code> is a bitvector of length <code class="docutils literal notranslate"><span class="pre">8</span></code>.</p>
-</div>
-<div class="section" id="type-variables">
-<h3>Type variables<a class="headerlink" href="#type-variables" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="type-variables">
+<h3>Type variables<a class="headerlink" href="#type-variables" title="Permalink to this heading"></a></h3>
 <p>Alt-Ergo’s native language’s type system supports prenex polymorphism. This allows efficient reasoning about generic data structure.
 Type variables can be created implicitly, and are implicitly universally quantified in all formulas. Any formula which requires a type can accept a type variable.
 Type variable may be used to parametrize datatypes, as we will see when we will create new types, or in the following example of <code class="docutils literal notranslate"><span class="pre">farray</span></code>.</p>
 <p>Type variables are indicated by an apostrophe <code class="docutils literal notranslate"><span class="pre">'</span></code>. For example, <code class="docutils literal notranslate"><span class="pre">'a</span></code> is a type variable.</p>
-</div>
-<div class="section" id="polymorphic-functional-arrays">
-<h3>Polymorphic functional arrays<a class="headerlink" href="#polymorphic-functional-arrays" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="polymorphic-functional-arrays">
+<h3>Polymorphic functional arrays<a class="headerlink" href="#polymorphic-functional-arrays" title="Permalink to this heading"></a></h3>
 <p>Alt-Ergo’s native language includes functional polymorphic arrays, represented by the <code class="docutils literal notranslate"><span class="pre">farray</span></code> type, and has a built-in theory to reason about them.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">farray</span></code> is parametrized by two types: the type of their indexes (default is <code class="docutils literal notranslate"><span class="pre">int</span></code>) and the type of their values (no default).
 Array can be accessed using any index of valid type.
 Functional polymorphic arrays are persistent structures: they may be updated, but only for the scope of an expression.</p>
-</div>
-</div>
-<div class="section" id="built-in-operators">
-<h2>Built-in operators<a class="headerlink" href="#built-in-operators" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="logical-operators">
-<h3>Logical operators<a class="headerlink" href="#logical-operators" title="Permalink to this headline">¶</a></h3>
+</section>
+</section>
+<section id="built-in-operators">
+<h2>Built-in operators<a class="headerlink" href="#built-in-operators" title="Permalink to this heading"></a></h2>
+<section id="logical-operators">
+<h3>Logical operators<a class="headerlink" href="#logical-operators" title="Permalink to this heading"></a></h3>
 <table border="1" class="docutils">
 <thead>
 <tr>
@@ -188,9 +194,10 @@ Functional polymorphic arrays are persistent structures: they may be updated, bu
 <td><code>bool, bool -&gt; bool</code></td>
 </tr>
 </tbody>
-</table><p>For all those operators, <code class="docutils literal notranslate"><span class="pre">bool</span></code> and <code class="docutils literal notranslate"><span class="pre">prop</span></code> are fully interchangeable.</p>
-<div class="section" id="the-bool-prop-conflict">
-<h4>The <code class="docutils literal notranslate"><span class="pre">bool</span></code>/<code class="docutils literal notranslate"><span class="pre">prop</span></code> conflict<a class="headerlink" href="#the-bool-prop-conflict" title="Permalink to this headline">¶</a></h4>
+</table>
+<p>For all those operators, <code class="docutils literal notranslate"><span class="pre">bool</span></code> and <code class="docutils literal notranslate"><span class="pre">prop</span></code> are fully interchangeable.</p>
+<section id="the-bool-prop-conflict">
+<h4>The <code class="docutils literal notranslate"><span class="pre">bool</span></code>/<code class="docutils literal notranslate"><span class="pre">prop</span></code> conflict<a class="headerlink" href="#the-bool-prop-conflict" title="Permalink to this heading"></a></h4>
 <p>Prior to Alt-Ergo 2.3.0, Alt-Ergo’s native language handled differently boolean variables <code class="docutils literal notranslate"><span class="pre">bool</span></code> and propositional variables <code class="docutils literal notranslate"><span class="pre">prop</span></code>.
 The two keywords still exist in Alt-Ergo 2.3.0, but those two types have been made fully compatible: any function or operator taking a <code class="docutils literal notranslate"><span class="pre">bool</span></code> or a <code class="docutils literal notranslate"><span class="pre">prop</span></code> as an argument accepts both.</p>
 <p>The historical separation comes from Alt-Ergo origins in the Coq ecosystem: in Coq, <code class="docutils literal notranslate"><span class="pre">prop</span></code> is much richer than <code class="docutils literal notranslate"><span class="pre">bool</span></code>.
@@ -206,9 +213,9 @@ In all other cases, it is advised the use <code class="docutils literal notransl
 <li><p><code class="docutils literal notranslate"><span class="pre">prop</span></code> and <code class="docutils literal notranslate"><span class="pre">bool</span></code> <strong>can</strong> be the type of an <em>uninterpreted variable</em> (<code class="docutils literal notranslate"><span class="pre">logic</span></code> keyword).
 Note that a <code class="docutils literal notranslate"><span class="pre">predicate</span></code> has <code class="docutils literal notranslate"><span class="pre">prop</span></code> output type.</p></li>
 </ul>
-</div>
-<div class="section" id="examples">
-<h4>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h4>
+</section>
+<section id="examples">
+<h4>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h4>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="o">*</span> <span class="n">Correct</span> <span class="n">example</span> <span class="o">*</span><span class="p">)</span>
 <span class="n">logic</span> <span class="n">A</span><span class="p">,</span><span class="n">B</span><span class="p">,</span><span class="n">C</span><span class="p">:</span> <span class="n">prop</span>
 <span class="n">axiom</span> <span class="n">a1</span><span class="p">:</span> <span class="n">A</span> <span class="o">-&gt;</span> <span class="n">B</span>
@@ -223,10 +230,10 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
 <span class="n">goal</span> <span class="n">g</span><span class="p">:</span> <span class="p">(</span><span class="n">B</span><span class="o">-&gt;</span><span class="n">A</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">C</span><span class="o">-&gt;</span><span class="n">B</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="n">A</span> <span class="o">&lt;-&gt;</span> <span class="n">C</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="numeric-operators">
-<h3>Numeric operators<a class="headerlink" href="#numeric-operators" title="Permalink to this headline">¶</a></h3>
+</section>
+</section>
+<section id="numeric-operators">
+<h3>Numeric operators<a class="headerlink" href="#numeric-operators" title="Permalink to this heading"></a></h3>
 <table border="1" class="docutils">
 <thead>
 <tr>
@@ -277,9 +284,10 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
 <td><code>real, real -&gt; real</code>, <br><code>real, int -&gt; real</code>, <br><code>int, real -&gt; real</code>, <br><code>int, int -&gt; real</code></td>
 </tr>
 </tbody>
-</table></div>
-<div class="section" id="comparisons">
-<h3>Comparisons<a class="headerlink" href="#comparisons" title="Permalink to this headline">¶</a></h3>
+</table>
+</section>
+<section id="comparisons">
+<h3>Comparisons<a class="headerlink" href="#comparisons" title="Permalink to this heading"></a></h3>
 <table border="1" class="docutils">
 <thead>
 <tr>
@@ -333,7 +341,8 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
 <td></td>
 </tr>
 </tbody>
-</table><p>Note that binary comparisons operators can be chained: if <code class="docutils literal notranslate"><span class="pre">op1</span></code>, <code class="docutils literal notranslate"><span class="pre">op2</span></code>, … are binary comparisons operators, than <code class="docutils literal notranslate"><span class="pre">x0</span> <span class="pre">op1</span> <span class="pre">x1</span> <span class="pre">op2</span> <span class="pre">x2</span> <span class="pre">...</span></code> has the same semantic as <code class="docutils literal notranslate"><span class="pre">(x0</span> <span class="pre">op1</span> <span class="pre">x1)</span> <span class="pre">and</span> <span class="pre">(x1</span> <span class="pre">op2</span> <span class="pre">x2)</span> <span class="pre">and</span> <span class="pre">...</span></code>.</p>
+</table>
+<p>Note that binary comparisons operators can be chained: if <code class="docutils literal notranslate"><span class="pre">op1</span></code>, <code class="docutils literal notranslate"><span class="pre">op2</span></code>, … are binary comparisons operators, than <code class="docutils literal notranslate"><span class="pre">x0</span> <span class="pre">op1</span> <span class="pre">x1</span> <span class="pre">op2</span> <span class="pre">x2</span> <span class="pre">...</span></code> has the same semantic as <code class="docutils literal notranslate"><span class="pre">(x0</span> <span class="pre">op1</span> <span class="pre">x1)</span> <span class="pre">and</span> <span class="pre">(x1</span> <span class="pre">op2</span> <span class="pre">x2)</span> <span class="pre">and</span> <span class="pre">...</span></code>.</p>
 <p>One use of this is the creation of intervals, as in the following example.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="o">*</span> <span class="n">Linear</span> <span class="n">arithmetic</span> <span class="n">over</span> <span class="n">integers</span> <span class="o">*</span><span class="p">)</span>
 <span class="n">goal</span> <span class="n">g</span><span class="p">:</span>
@@ -344,9 +353,9 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
     <span class="n">x</span> <span class="o">+</span> <span class="n">t</span> <span class="o">=</span> <span class="mi">0</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="id1">
-<h3>Bitvectors<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="id1">
+<h3>Bitvectors<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
 <p>Remember that bitvectors are fixed-size binary words: vectors of <code class="docutils literal notranslate"><span class="pre">0</span></code> and <code class="docutils literal notranslate"><span class="pre">1</span></code>.</p>
 <p>There exists a bitvector type <code class="docutils literal notranslate"><span class="pre">bitv[n]</span></code> for each fixed non-zero positive integer <code class="docutils literal notranslate"><span class="pre">n</span></code>. For example, <code class="docutils literal notranslate"><span class="pre">bitv[8]</span></code> is a bitvector.</p>
 <p>Note that bitvectors are indexed from right to left.</p>
@@ -375,8 +384,9 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
 <td><code>bitv[q-p+1]</code></td>
 </tr>
 </tbody>
-</table><div class="section" id="id2">
-<h4>Examples<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h4>
+</table>
+<section id="id2">
+<h4>Examples<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h4>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="o">**</span> <span class="n">Usage</span> <span class="n">of</span> <span class="n">bitv</span> <span class="n">types</span> <span class="o">*</span><span class="p">)</span>
 <span class="n">logic</span> <span class="n">register</span><span class="p">:</span> <span class="n">bitv</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span>
 
@@ -408,10 +418,10 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
     <span class="p">(</span><span class="n">s</span><span class="o">^</span><span class="p">{</span><span class="mi">16</span><span class="p">,</span><span class="mi">31</span><span class="p">}</span> <span class="o">=</span> <span class="n">y</span><span class="o">^</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">15</span><span class="p">}</span> <span class="ow">and</span> <span class="n">s</span><span class="o">^</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">15</span><span class="p">}</span> <span class="o">=</span> <span class="n">x</span><span class="o">^</span><span class="p">{</span><span class="mi">16</span><span class="p">,</span><span class="mi">31</span><span class="p">})</span> 
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="id3">
-<h3>Type variables<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+</section>
+</section>
+<section id="id3">
+<h3>Type variables<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
 <p>As type variables and polymorphism have already been described, let’s just look at the following example.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">logic</span> <span class="n">f</span><span class="p">:</span> <span class="s1">&#39;a-&gt;&#39;</span><span class="n">b</span>
 <span class="n">logic</span> <span class="n">g</span><span class="p">:</span> <span class="s1">&#39;b-&gt;&#39;</span><span class="n">b</span>
@@ -432,27 +442,27 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
    <span class="n">g</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="mf">0.01</span><span class="p">))</span> <span class="o">=</span> <span class="n">g</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="id4">
-<h3>Polymorphic functional arrays<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="id4">
+<h3>Polymorphic functional arrays<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h3>
 <p>[TODO: add table?]</p>
 <p>Remember that <code class="docutils literal notranslate"><span class="pre">farray</span></code> are parametrized by two types: the type of their indexes (default is <code class="docutils literal notranslate"><span class="pre">int</span></code>) and the type of their values (no default).</p>
-<div class="section" id="syntax">
-<h4>Syntax<a class="headerlink" href="#syntax" title="Permalink to this headline">¶</a></h4>
+<section id="syntax">
+<h4>Syntax<a class="headerlink" href="#syntax" title="Permalink to this heading"></a></h4>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="o">*</span> <span class="n">Instantiation</span> <span class="n">of</span> <span class="n">a</span> <span class="n">farray</span> <span class="nb">type</span> <span class="o">*</span><span class="p">)</span>
-<span class="o">&lt;</span><span class="n">farray_type</span><span class="o">&gt;</span>        <span class="p">::</span><span class="o">=</span> <span class="o">&lt;</span><span class="n">value_type</span><span class="o">&gt;</span> <span class="s1">&#39;farray&#39;</span>
+<span class="o">&lt;</span><span class="n">farray_type</span><span class="o">&gt;</span>        <span class="p">:</span><span class="o">:=</span> <span class="o">&lt;</span><span class="n">value_type</span><span class="o">&gt;</span> <span class="s1">&#39;farray&#39;</span>
                        <span class="o">|</span> <span class="s1">&#39;(&#39;</span> <span class="o">&lt;</span><span class="n">index_type</span><span class="o">&gt;</span> <span class="s1">&#39;,&#39;</span> <span class="o">&lt;</span><span class="n">value_type</span><span class="o">&gt;</span> <span class="s1">&#39;)&#39;</span> <span class="s1">&#39;farray&#39;</span>
 
 <span class="p">(</span><span class="o">*</span> <span class="n">Access</span> <span class="o">-</span> <span class="n">this</span> <span class="n">expression</span> <span class="ow">is</span> <span class="n">of</span> <span class="nb">type</span> <span class="p">(</span><span class="n">value_type</span><span class="p">)</span> <span class="o">*</span><span class="p">)</span>
-<span class="o">&lt;</span><span class="n">farray_access_expr</span><span class="o">&gt;</span> <span class="p">::</span><span class="o">=</span> <span class="o">&lt;</span><span class="n">array_id</span><span class="o">&gt;</span> <span class="s1">&#39;[&#39;</span> <span class="o">&lt;</span><span class="n">index</span><span class="o">&gt;</span> <span class="s1">&#39;]&#39;</span>
+<span class="o">&lt;</span><span class="n">farray_access_expr</span><span class="o">&gt;</span> <span class="p">:</span><span class="o">:=</span> <span class="o">&lt;</span><span class="n">array_id</span><span class="o">&gt;</span> <span class="s1">&#39;[&#39;</span> <span class="o">&lt;</span><span class="n">index</span><span class="o">&gt;</span> <span class="s1">&#39;]&#39;</span>
 
 <span class="p">(</span><span class="o">*</span> <span class="n">Update</span> <span class="o">-</span> <span class="n">this</span> <span class="n">expression</span> <span class="ow">is</span> <span class="n">of</span> <span class="nb">type</span> <span class="p">((</span><span class="n">index_type</span><span class="p">)</span> <span class="p">(</span><span class="n">value_type</span><span class="p">)</span> <span class="n">farray</span><span class="p">)</span> <span class="o">*</span><span class="p">)</span>
-<span class="o">&lt;</span><span class="n">farray_update_expr</span><span class="o">&gt;</span> <span class="p">::</span><span class="o">=</span> <span class="o">&lt;</span><span class="n">array_id</span><span class="o">&gt;</span> <span class="s1">&#39;[&#39;</span> <span class="o">&lt;</span><span class="n">index</span><span class="o">&gt;</span> <span class="s1">&#39;&lt;-&#39;</span> <span class="o">&lt;</span><span class="n">new_value</span><span class="o">&gt;</span> <span class="p">(</span> <span class="s1">&#39;,&#39;</span> <span class="o">&lt;</span><span class="n">index</span><span class="o">&gt;</span> <span class="s1">&#39;&lt;-&#39;</span> <span class="o">&lt;</span><span class="n">new_value</span><span class="o">&gt;</span> <span class="p">)</span><span class="o">*</span> <span class="s1">&#39;]&#39;</span>
+<span class="o">&lt;</span><span class="n">farray_update_expr</span><span class="o">&gt;</span> <span class="p">:</span><span class="o">:=</span> <span class="o">&lt;</span><span class="n">array_id</span><span class="o">&gt;</span> <span class="s1">&#39;[&#39;</span> <span class="o">&lt;</span><span class="n">index</span><span class="o">&gt;</span> <span class="s1">&#39;&lt;-&#39;</span> <span class="o">&lt;</span><span class="n">new_value</span><span class="o">&gt;</span> <span class="p">(</span> <span class="s1">&#39;,&#39;</span> <span class="o">&lt;</span><span class="n">index</span><span class="o">&gt;</span> <span class="s1">&#39;&lt;-&#39;</span> <span class="o">&lt;</span><span class="n">new_value</span><span class="o">&gt;</span> <span class="p">)</span><span class="o">*</span> <span class="s1">&#39;]&#39;</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="id5">
-<h4>Examples<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h4>
+</section>
+<section id="id5">
+<h4>Examples<a class="headerlink" href="#id5" title="Permalink to this heading"></a></h4>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="o">*</span> <span class="n">arr1</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">general</span> <span class="n">polymorphic</span> <span class="n">farray</span> <span class="o">*</span><span class="p">)</span>
 <span class="n">logic</span> <span class="n">arr1</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;a, &#39;</span><span class="n">b</span><span class="p">)</span> <span class="n">farray</span>
 <span class="p">(</span><span class="o">*</span> <span class="n">arr2</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">polymorphic</span> <span class="n">farray</span> <span class="n">whose</span> <span class="n">indexes</span> <span class="n">are</span> <span class="nb">int</span> <span class="o">*</span><span class="p">)</span>
@@ -487,10 +497,10 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
     <span class="n">a</span><span class="p">[</span><span class="n">A</span><span class="p">]</span> <span class="o">=</span> <span class="n">H</span>
 </pre></div>
 </div>
-</div>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
+</section>
 
 
            </div>
@@ -503,7 +513,7 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2020, Alt-Ergo devs.</p>
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo devs.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

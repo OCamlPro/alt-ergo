@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Theories &mdash; Doc-Alt-Ergo  documentation</title><link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <title>Theories &mdash; Doc-Alt-Ergo  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/dac_theme_modif.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+  
         <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
         <script src="../../_static/doctools.js"></script>
-        <script src="../../_static/language_data.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -40,7 +43,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../Install/index.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../Usage/index.html">Usage</a></li>
@@ -103,12 +106,12 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="theories">
-<h1>Theories<a class="headerlink" href="#theories" title="Permalink to this headline">¶</a></h1>
+  <section id="theories">
+<h1>Theories<a class="headerlink" href="#theories" title="Permalink to this heading"></a></h1>
 <p>Alt-Ergo has built-in support for many different theories.</p>
-<p>Those theories allow to reason about values of various types. To learn more about the syntax and semantic of those types, as well as operators defined on them, please refer to section <a class="reference internal" href="02_types/index.html"><span class="doc">Types</span></a>.</p>
-<div class="section" id="native-theories">
-<h2>Native theories<a class="headerlink" href="#native-theories" title="Permalink to this headline">¶</a></h2>
+<p>Those theories allow to reason about values of various types. To learn more about the syntax and semantic of those types, as well as operators defined on them, please refer to section <a class="reference internal" href="02_types/index.html"><span class="doc std std-doc">Types</span></a>.</p>
+<section id="native-theories">
+<h2>Native theories<a class="headerlink" href="#native-theories" title="Permalink to this heading"></a></h2>
 <p>Alt-Ergo works using a polymorphic first-order logic.
 A precise definition of what is meant here by ‘theory’ can be found in the second chapter of <a class="reference external" href="https://tel.archives-ouvertes.fr/file/index/docid/842555/filename/VD2_IGUERNELALA_MOHAMED_10062013.pdf">this thesis</a>.</p>
 <p>Alt-Ergo currently provides built-in support for the following theories.</p>
@@ -137,41 +140,41 @@ All theories are always considered <em>modulo equality</em>.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">NRA</span></code>: Non-linear arithmetic over rationals</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">FPA</span></code>: Floating-point arithmetic</p></li>
 </ul>
-<div class="section" id="about-floating-point-arithmetic">
-<h3>About floating-point arithmetic<a class="headerlink" href="#about-floating-point-arithmetic" title="Permalink to this headline">¶</a></h3>
+<section id="about-floating-point-arithmetic">
+<h3>About floating-point arithmetic<a class="headerlink" href="#about-floating-point-arithmetic" title="Permalink to this heading"></a></h3>
 <p>Floating-point arithmetic (FPA) is a recent addition to Alt-Ergo, and is not documented here.
 To use it, it is necessary to load the corresponding prelude. The strategy used to handle FPA is based on over-approximation by intervals of reals, and roundings.
 More information on this strategy and the language extension can be found in <a class="reference external" href="https://hal.inria.fr/hal-01522770">this article</a>.</p>
-</div>
-</div>
-<div class="section" id="user-defined-extensions-of-theories">
-<h2>User-defined extensions of theories<a class="headerlink" href="#user-defined-extensions-of-theories" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+<section id="user-defined-extensions-of-theories">
+<h2>User-defined extensions of theories<a class="headerlink" href="#user-defined-extensions-of-theories" title="Permalink to this heading"></a></h2>
 <p>[TODO: document]</p>
-<div class="section" id="theory-extends-end">
-<h3><code class="docutils literal notranslate"><span class="pre">theory</span> <span class="pre">[...]</span> <span class="pre">extends</span> <span class="pre">[...]</span> <span class="pre">=</span> <span class="pre">[...]</span> <span class="pre">end</span></code><a class="headerlink" href="#theory-extends-end" title="Permalink to this headline">¶</a></h3>
-</div>
-<div class="section" id="case-split">
-<h3><code class="docutils literal notranslate"><span class="pre">case_split</span></code><a class="headerlink" href="#case-split" title="Permalink to this headline">¶</a></h3>
-</div>
-<div class="section" id="semantic-triggers">
-<h3>Semantic triggers<a class="headerlink" href="#semantic-triggers" title="Permalink to this headline">¶</a></h3>
-<p>In addition to syntactic triggers (or triggers) and interval triggers (or filters) defined in <a class="reference internal" href="03_declaration_of_axioms.html"><span class="doc">section Axioms</span></a>, additional triggers are available inside theories.
+<section id="theory-extends-end">
+<h3><code class="docutils literal notranslate"><span class="pre">theory</span> <span class="pre">[...]</span> <span class="pre">extends</span> <span class="pre">[...]</span> <span class="pre">=</span> <span class="pre">[...]</span> <span class="pre">end</span></code><a class="headerlink" href="#theory-extends-end" title="Permalink to this heading"></a></h3>
+</section>
+<section id="case-split">
+<h3><code class="docutils literal notranslate"><span class="pre">case_split</span></code><a class="headerlink" href="#case-split" title="Permalink to this heading"></a></h3>
+</section>
+<section id="semantic-triggers">
+<h3>Semantic triggers<a class="headerlink" href="#semantic-triggers" title="Permalink to this heading"></a></h3>
+<p>In addition to syntactic triggers (or triggers) and interval triggers (or filters) defined in <a class="reference internal" href="03_declaration_of_axioms.html"><span class="std std-doc">section Axioms</span></a>, additional triggers are available inside theories.
 Those additional triggers are called semantic triggers.</p>
 <p>They correspond to the following constructs.</p>
-<div class="section" id="syntax">
-<h4>Syntax<a class="headerlink" href="#syntax" title="Permalink to this headline">¶</a></h4>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">semantic_trigger</span><span class="o">&gt;</span>    <span class="p">::</span><span class="o">=</span> <span class="o">&lt;</span><span class="n">in_interval_trigger</span><span class="o">&gt;</span> <span class="o">|</span> <span class="o">&lt;</span><span class="n">maps_to_trigger</span><span class="o">&gt;</span>
+<section id="syntax">
+<h4>Syntax<a class="headerlink" href="#syntax" title="Permalink to this heading"></a></h4>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">semantic_trigger</span><span class="o">&gt;</span>    <span class="p">:</span><span class="o">:=</span> <span class="o">&lt;</span><span class="n">in_interval_trigger</span><span class="o">&gt;</span> <span class="o">|</span> <span class="o">&lt;</span><span class="n">maps_to_trigger</span><span class="o">&gt;</span>
 <span class="p">(</span><span class="o">*</span> <span class="p">[</span><span class="n">COMMENT</span><span class="o">/</span><span class="n">TODO</span><span class="p">:</span> <span class="n">seems</span> <span class="n">to</span> <span class="n">always</span> <span class="n">be</span> <span class="n">paired</span> <span class="k">with</span> <span class="s1">&#39;interval triggers&#39;</span><span class="o">/</span><span class="n">filters</span> <span class="o">*</span><span class="p">)</span>
-<span class="o">&lt;</span><span class="n">in_interval_trigger</span><span class="o">&gt;</span> <span class="p">::</span><span class="o">=</span> <span class="o">&lt;</span><span class="nb">id</span><span class="o">&gt;</span> <span class="s1">&#39;in&#39;</span> <span class="o">&lt;</span><span class="n">square_bracket</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">bound</span><span class="o">&gt;</span> <span class="s1">&#39;,&#39;</span> <span class="o">&lt;</span><span class="n">bound</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">square_bracket</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">in_interval_trigger</span><span class="o">&gt;</span> <span class="p">:</span><span class="o">:=</span> <span class="o">&lt;</span><span class="nb">id</span><span class="o">&gt;</span> <span class="s1">&#39;in&#39;</span> <span class="o">&lt;</span><span class="n">square_bracket</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">bound</span><span class="o">&gt;</span> <span class="s1">&#39;,&#39;</span> <span class="o">&lt;</span><span class="n">bound</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">square_bracket</span><span class="o">&gt;</span>
 <span class="p">(</span><span class="o">*</span> <span class="p">[</span><span class="n">COMMENT</span><span class="o">/</span><span class="n">TODO</span><span class="p">:</span> <span class="n">probably</span> <span class="n">there</span> <span class="n">to</span> <span class="n">shorten</span> <span class="n">axioms</span><span class="p">]</span> <span class="o">*</span><span class="p">)</span>
-<span class="o">&lt;</span><span class="n">maps_to_trigger</span><span class="o">&gt;</span>     <span class="p">::</span><span class="o">=</span> <span class="o">&lt;</span><span class="n">alias_id</span><span class="o">&gt;</span> <span class="s1">&#39;|-&gt;&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">maps_to_trigger</span><span class="o">&gt;</span>     <span class="p">:</span><span class="o">:=</span> <span class="o">&lt;</span><span class="n">alias_id</span><span class="o">&gt;</span> <span class="s1">&#39;|-&gt;&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
 </pre></div>
 </div>
 <p>[TODO: complete this explanation]</p>
-</div>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
+</section>
 
 
            </div>
@@ -184,7 +187,7 @@ Those additional triggers are called semantic triggers.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2020, Alt-Ergo devs.</p>
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo devs.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

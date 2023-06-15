@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Control flow &mdash; Doc-Alt-Ergo  documentation</title><link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <title>Control flow &mdash; Doc-Alt-Ergo  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/dac_theme_modif.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+  
         <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
         <script src="../../_static/doctools.js"></script>
-        <script src="../../_static/language_data.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -40,7 +43,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../Install/index.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../Usage/index.html">Usage</a></li>
@@ -108,81 +111,81 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="control-flow">
-<h1>Control flow<a class="headerlink" href="#control-flow" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="let-in">
-<h2><code class="docutils literal notranslate"><span class="pre">let</span> <span class="pre">[...]</span> <span class="pre">in</span></code><a class="headerlink" href="#let-in" title="Permalink to this headline">¶</a></h2>
+  <section id="control-flow">
+<h1>Control flow<a class="headerlink" href="#control-flow" title="Permalink to this heading"></a></h1>
+<section id="let-in">
+<h2><code class="docutils literal notranslate"><span class="pre">let</span> <span class="pre">[...]</span> <span class="pre">in</span></code><a class="headerlink" href="#let-in" title="Permalink to this heading"></a></h2>
 <p>Like in OCaml, let expressions are available. They allow for named local expressions, which are written <code class="docutils literal notranslate"><span class="pre">let</span> <span class="pre">name</span> <span class="pre">=</span> <span class="pre">expression</span> <span class="pre">in</span> <span class="pre">[...]</span></code>.
 Name defined like this only have local scope.</p>
-<div class="section" id="syntax">
-<h3>Syntax<a class="headerlink" href="#syntax" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">let_expression</span><span class="o">&gt;</span>       <span class="p">::</span><span class="o">=</span> <span class="s1">&#39;let&#39;</span> <span class="o">&lt;</span><span class="n">let_binders</span><span class="o">&gt;</span> <span class="s1">&#39;in&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
-<span class="o">&lt;</span><span class="n">let_binders</span><span class="o">&gt;</span>          <span class="p">::</span><span class="o">=</span> <span class="o">&lt;</span><span class="nb">id</span><span class="o">&gt;</span> <span class="s1">&#39;=&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span> <span class="p">(</span> <span class="s1">&#39;,&#39;</span> <span class="o">&lt;</span><span class="nb">id</span><span class="o">&gt;</span> <span class="s1">&#39;=&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span> <span class="p">)</span><span class="o">*</span>
+<section id="syntax">
+<h3>Syntax<a class="headerlink" href="#syntax" title="Permalink to this heading"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">let_expression</span><span class="o">&gt;</span>       <span class="p">:</span><span class="o">:=</span> <span class="s1">&#39;let&#39;</span> <span class="o">&lt;</span><span class="n">let_binders</span><span class="o">&gt;</span> <span class="s1">&#39;in&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">let_binders</span><span class="o">&gt;</span>          <span class="p">:</span><span class="o">:=</span> <span class="o">&lt;</span><span class="nb">id</span><span class="o">&gt;</span> <span class="s1">&#39;=&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span> <span class="p">(</span> <span class="s1">&#39;,&#39;</span> <span class="o">&lt;</span><span class="nb">id</span><span class="o">&gt;</span> <span class="s1">&#39;=&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span> <span class="p">)</span><span class="o">*</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="example">
-<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">function</span> <span class="n">average</span><span class="p">(</span><span class="n">a</span><span class="p">:</span><span class="n">real</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span><span class="n">real</span><span class="p">):</span><span class="n">real</span> <span class="o">=</span>
     <span class="n">let</span> <span class="nb">sum</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="n">b</span> <span class="ow">in</span>
     <span class="nb">sum</span> <span class="o">/</span> <span class="mf">2.</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="match-with">
-<h2><code class="docutils literal notranslate"><span class="pre">match</span> <span class="pre">[...]</span> <span class="pre">with</span></code><a class="headerlink" href="#match-with" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+<section id="match-with">
+<h2><code class="docutils literal notranslate"><span class="pre">match</span> <span class="pre">[...]</span> <span class="pre">with</span></code><a class="headerlink" href="#match-with" title="Permalink to this heading"></a></h2>
 <p>Pattern matching, a <a class="reference external" href="https://ocaml.org/learn/tutorials/data_types_and_matching.html">Really Cool Feature</a> present in most functional languages, is available in Alt-Ergo’s native language as well.</p>
 <p>Warning: the only patterns that can be matched are constructors of algebraic datatypes.
 Moreover, constructors can’t be nested in a pattern.</p>
-<div class="section" id="id1">
-<h3>Syntax<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<section id="id1">
+<h3>Syntax<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&lt;match_expr&gt;     ::= &#39;match&#39; &lt;expr&gt; &#39;with&#39; &lt;match_cases&gt; &#39;end&#39;
 &lt;match_cases&gt;    ::= &#39;|&#39;? &lt;simple_pattern&gt; &#39;-&gt;&#39; &lt;expr&gt; ( &#39;|&#39; &lt;simple_pattern&gt; &#39;-&gt;&#39; &lt;expr&gt; )*
 &lt;simple_pattern&gt; ::= &lt;id&gt; | &lt;id_application&gt; &#39;(&#39; &lt;args&gt; &#39;)&#39;
 &lt;args&gt;           ::= &lt;id&gt; ( &quot;,&quot; &lt;id&gt; )*
 </pre></div>
 </div>
-</div>
-<div class="section" id="id2">
-<h3>Example<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="id2">
+<h3>Example<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">type</span> <span class="s1">&#39;a tree = NIL | Node of { left:&#39;</span><span class="n">a</span> <span class="n">tree</span><span class="p">;</span> <span class="n">val</span><span class="p">:</span><span class="s1">&#39;a; right:&#39;</span><span class="n">a</span> <span class="n">tree</span> <span class="p">}</span>
 
 <span class="n">function</span> <span class="nb">max</span><span class="p">(</span><span class="n">a</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span><span class="nb">int</span><span class="p">):</span><span class="nb">int</span> <span class="o">=</span>
     <span class="k">if</span> <span class="n">a</span><span class="o">&gt;</span><span class="n">b</span> <span class="n">then</span> <span class="n">a</span> <span class="k">else</span> <span class="n">b</span>
 
 <span class="n">function</span> <span class="n">height</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="s1">&#39;a tree):int =</span>
-    <span class="n">match</span> <span class="n">t</span> <span class="k">with</span>
+    <span class="k">match</span> <span class="n">t</span> <span class="k">with</span>
         <span class="o">|</span> <span class="n">NIL</span>         <span class="o">-&gt;</span> <span class="mi">0</span>
         <span class="o">|</span> <span class="n">Node</span><span class="p">(</span><span class="n">l</span><span class="p">,</span><span class="n">_</span><span class="p">,</span><span class="n">r</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="mi">1</span> <span class="o">+</span> <span class="nb">max</span><span class="p">(</span><span class="n">height</span><span class="p">(</span><span class="n">l</span><span class="p">),</span><span class="n">height</span><span class="p">(</span><span class="n">r</span><span class="p">))</span>
     <span class="n">end</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="if-then-else">
-<h2><code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">[...]</span> <span class="pre">then</span> <span class="pre">[...]</span> <span class="pre">else</span></code><a class="headerlink" href="#if-then-else" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+<section id="if-then-else">
+<h2><code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">[...]</span> <span class="pre">then</span> <span class="pre">[...]</span> <span class="pre">else</span></code><a class="headerlink" href="#if-then-else" title="Permalink to this heading"></a></h2>
 <p>The simple construct <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">then</span> <span class="pre">else</span></code> for conditional expressions is available in Alt-Ergo’s native language.</p>
-<div class="section" id="id3">
-<h3>Syntax<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">ite_expr</span><span class="o">&gt;</span>     <span class="p">::</span><span class="o">=</span> <span class="s1">&#39;if&#39;</span> <span class="o">&lt;</span><span class="n">cond_expr</span><span class="o">&gt;</span> <span class="s1">&#39;then&#39;</span> <span class="o">&lt;</span><span class="n">branch1_expr</span><span class="o">&gt;</span> <span class="s1">&#39;else&#39;</span> <span class="o">&lt;</span><span class="n">branch2_expr</span><span class="o">&gt;</span>
+<section id="id3">
+<h3>Syntax<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">ite_expr</span><span class="o">&gt;</span>     <span class="p">:</span><span class="o">:=</span> <span class="s1">&#39;if&#39;</span> <span class="o">&lt;</span><span class="n">cond_expr</span><span class="o">&gt;</span> <span class="s1">&#39;then&#39;</span> <span class="o">&lt;</span><span class="n">branch1_expr</span><span class="o">&gt;</span> <span class="s1">&#39;else&#39;</span> <span class="o">&lt;</span><span class="n">branch2_expr</span><span class="o">&gt;</span>
 <span class="p">(</span><span class="o">*</span> <span class="n">Note</span> <span class="n">that</span> <span class="o">&lt;</span><span class="n">cond_expr</span><span class="o">&gt;</span> <span class="n">must</span> <span class="n">have</span> <span class="nb">type</span> <span class="nb">bool</span> <span class="o">-</span> <span class="ow">or</span> <span class="n">prop</span> <span class="o">*</span><span class="p">)</span>
-<span class="o">&lt;</span><span class="n">cond_expr</span><span class="o">&gt;</span>    <span class="p">::</span><span class="o">=</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">cond_expr</span><span class="o">&gt;</span>    <span class="p">:</span><span class="o">:=</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
 <span class="p">(</span><span class="o">*</span> <span class="n">Note</span> <span class="n">that</span> <span class="o">&lt;</span><span class="n">branch1_expr</span><span class="o">&gt;</span> <span class="ow">and</span> <span class="o">&lt;</span><span class="n">branch2_expr</span><span class="o">&gt;</span> <span class="n">must</span> <span class="n">have</span> <span class="n">same</span> <span class="nb">type</span> <span class="o">*</span><span class="p">)</span>
-<span class="o">&lt;</span><span class="n">branch1_expr</span><span class="o">&gt;</span> <span class="p">::</span><span class="o">=</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
-<span class="o">&lt;</span><span class="n">branch2_expr</span><span class="o">&gt;</span> <span class="p">::</span><span class="o">=</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">branch1_expr</span><span class="o">&gt;</span> <span class="p">:</span><span class="o">:=</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">branch2_expr</span><span class="o">&gt;</span> <span class="p">:</span><span class="o">:=</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="id4">
-<h3>Example<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="id4">
+<h3>Example<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">function</span> <span class="nb">max</span><span class="p">(</span><span class="n">a</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span><span class="nb">int</span><span class="p">):</span><span class="nb">int</span> <span class="o">=</span>
     <span class="k">if</span> <span class="n">a</span><span class="o">&gt;</span><span class="n">b</span> <span class="n">then</span> <span class="n">a</span> <span class="k">else</span> <span class="n">b</span>
 </pre></div>
 </div>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
            </div>
@@ -195,7 +198,7 @@ Moreover, constructors can’t be nested in a pattern.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2020, Alt-Ergo devs.</p>
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo devs.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
