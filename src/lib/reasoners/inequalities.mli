@@ -28,18 +28,22 @@
 (*                                                                        *)
 (**************************************************************************)
 
+type 'a t = {
+  ple0 : 'a;
+  is_le : bool;
+  dep : (Numbers.Q.t * 'a * bool) Util.MI.t;
+  expl : Explanation.t;
+  age : Numbers.Z.t;
+}
+
 module type S = sig
 
-  module P : Polynome.T with type r = Shostak.Combine.r
-  module MP : Map.S with type key = P.t
+  type p
 
-  type t = {
-    ple0 : P.t;
-    is_le : bool;
-    dep : (Numbers.Q.t * P.t * bool) Util.MI.t;
-    expl : Explanation.t;
-    age : Numbers.Z.t;
-  }
+  module P : Polynome.T with type t = p and type r = Shostak.Combine.r
+  module MP : Map.S with type key = p
+
+  type nonrec t = p t
 
   module MINEQS : sig
     type mp = (t * Numbers.Q.t) MP.t
@@ -81,12 +85,12 @@ end
 
 module FM
     (P : Polynome.T with type r = Shostak.Combine.r)
-  : S with module P = P
+  : S with type p = P.t
 
 module type Container_SIG = sig
   module Make
       (P : Polynome.T with type r = Shostak.Combine.r)
-    : S with module P = P
+    : S with type p = P.t
 end
 
 
