@@ -34,5 +34,3 @@ let _version =
   | Some v -> Build_info.V1.Version.to_string v
 
 let _release_commit = "%%VCS_COMMIT_ID%%"
-
-let _release_date   = "%%BUILD_DATE%%"
