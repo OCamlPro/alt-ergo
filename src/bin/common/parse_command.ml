@@ -703,13 +703,13 @@ let parse_execution_opt =
       else
         let p' = Filename.concat Config.preludesdir p in
         if Sys.file_exists p' then begin
-          begin if String.starts_with ~prefix:"b-set-theory" p then
+          begin if Compat.String.starts_with ~prefix:"b-set-theory" p then
               Printer.print_wrn ~header:true
                 "Support for the B set theory is deprecated since version \
                  2.5.0 and may be removed in a future version. If you are \
                  actively using it, please make yourself known to the Alt-Ergo \
                  developers by writing to <alt-ergo@ocamlpro.com>."
-            else if String.starts_with ~prefix:"fpa-theory" p then
+            else if Compat.String.starts_with ~prefix:"fpa-theory" p then
               Printer.print_wrn ~header:true
                 "@[Support for the FPA theory has been integrated as a builtin \
                  theory prelude in version 2.5.0 and is enabled by default. \
