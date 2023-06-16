@@ -534,17 +534,19 @@ let main () =
       let g =
         Parser.parse_logic ~preludes logic_file
       in
+      let st = State.set Typer.additional_builtins D_cnf.fpa_builtins st in
       let all_used_context = FE.init_all_used_context () in
       let finally = finally ~handle_exn in
       let st =
         let open Pipeline in
+        let op_i ?name f = op ?name (fun st x -> f st x, ()) in
         run ~finally g st
           (fix
              (op ~name:"expand" Parser.expand)
              (op ~name:"debug_pre" debug_parsed_pipe
               @>|> op ~name:"typecheck" Typer_Pipe.typecheck
               @>|> op ~name:"debug_post" debug_typed_pipe
-              @>|> op (fun st stmt -> handle_stmt all_used_context st stmt, ())
+              @>|> op_i (handle_stmt all_used_context)
               @>>> _end))
       in
       State.flush st () |> ignore

@@ -9,112 +9,16 @@
 (*                                                                            *)
 (******************************************************************************)
 
-type fpa_rounding_mode =
-  (* five standard/why3 fpa rounding modes *)
-    NearestTiesToEven (*ne in Gappa: to nearest, tie breaking to even mantissas*)
-  | ToZero (* zr in Gappa: toward zero *)
-  | Up (* up in Gappa: toward plus infinity *)
-  | Down (* dn in Gappa: toward minus infinity *)
-  | NearestTiesToAway (* na : to nearest, tie breaking away from zero *)
-
-  (* additional Gappa rounding modes *)
-  | Aw (* aw in Gappa: away from zero **)
-  | Od (* od in Gappa: to odd mantissas *)
-  | No (* no in Gappa: to nearest, tie breaking to odd mantissas *)
-  | Nz (* nz in Gappa: to nearest, tie breaking toward zero *)
-  | Nd (* nd in Gappa: to nearest, tie breaking toward minus infinity *)
-  | Nu (* nu in Gappa: to nearest, tie breaking toward plus infinity *)
-
-
-(* the first argument is mantissas' size (including the implicit bit),
-   the second one is the exp of the min representable normalized number,
-   the third one is the rounding mode, and the last one is the real to
-   be rounded *)
-logic float: int, int, fpa_rounding_mode, real -> real
-
-(* syntactic sugar for simple precision floats:
-   mantissas size = 24, min exp = 149 *)
-logic float32: fpa_rounding_mode, real -> real
-
-(* syntactic sugar for simple precision floats with default rounding mode
-(i.e. NearestTiesToEven)*)
-logic float32d: real -> real
-
-(* syntactic sugar for double precision floats:
-   mantissas size = 53, min exp = 1074 *)
-logic float64: fpa_rounding_mode, real -> real
-
-(* syntactic sugar for double precision floats with default rounding mode
-(i.e. NearestTiesToEven) *)
-logic float64d: real -> real
-
-(* rounds to nearest integer depending on rounding mode *)
-logic integer_round: fpa_rounding_mode, real -> int
-
-(* type cast: from int to real *)
-logic real_of_int : int -> real
-
-(* abs value of a real *)
-logic abs_real : real -> real
-
-(* sqrt value of a real *)
-logic sqrt_real : real -> real
-
-(* sqrt value of a real by default *)
-logic sqrt_real_default : real -> real
-
-(* sqrt value of a real by excess *)
-logic sqrt_real_excess : real -> real
-
-(* abs value of an int *)
-logic abs_int : int -> int
-
-(* (integer) floor of a rational *)
-logic int_floor : real -> int
-
-(* (integer) ceiling of a rational *)
-logic int_ceil : real -> int
-
-(* The functions below are only interpreted when applied on constants.
-  Aximatization for the general case are not currently imlemented *)
-
-(* maximum of two reals *)
-logic max_real : real, real -> real
-
-(* maximum of two ints *)
-logic max_int  : int, int -> int
-
-(* minimum of two reals *)
-logic min_real : real, real -> real
-
-(* minimum of two ints *)
-logic min_int  : int, int -> int
-
 (* raise a real to a power of an integer. Fully interpreted on
 constants such that the exponent is a machine integer*)
 
-logic pow_real_int : real, int -> real
+function pow_real_int(x : real, y : int) : real = x **. y
 
 (* raise a real to a power of a real. Fully interpreted on constants
 such that the exponent is a machine integer*)
 
-logic pow_real_real : real, real -> real
+function pow_real_real(x : real, y : real) : real = x **. y
 
-(* computes an integer log2 of a real. The function is only
-interpreted on (non-zero) positive real constants. When applied on a
-real 'm', the result 'res' of the function is such that: 2^res <= m <
-2^(res+1) *)
-
-logic integer_log2 : real -> int
-
-(* only used for arithmetic. It should not be used for x in float(x)
-   to enable computations modulo equality *)
-
-logic not_theory_constant : real -> bool
-
-logic is_theory_constant : 'a -> bool
-
-logic linear_dependency : real, real -> bool
 
 theory Simple_FPA extends FPA =
 

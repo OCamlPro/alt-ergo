@@ -28,104 +28,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module Sy = Symbols
 module Hs = Hstring
-module E = Expr
 
 module Q = Numbers.Q
 module Z = Numbers.Z
-
-let is_rounding_mode t =
-  Options.get_use_fpa() &&
-  match E.term_view t with
-  | { E.ty = Ty.Tsum (hs, _); _ } ->
-    String.compare (Hs.view hs) "fpa_rounding_mode" = 0
-  | _ -> false
-
-let fpa_rounding_mode =
-  let mode_ty = Hs.make "fpa_rounding_mode" in
-  let mode_constrs =
-    [ (* standards *)
-      Hs.make "NearestTiesToEven";
-      Hs.make "NearestTiesToAway";
-      Hs.make "ToZero";
-      Hs.make "Up";
-      Hs.make "Down";
-      (* non standards *)
-      Hs.make "Aw";
-      Hs.make "Od";
-      Hs.make "Nodd";
-      Hs.make "Nz";
-      Hs.make "Nd";
-      Hs.make "Nu" ]
-  in
-  Ty.Tsum(mode_ty, mode_constrs)
-
-(*  why3/standard rounding modes*)
-
-let _NearestTiesToEven__rounding_mode =
-  E.mk_term (Sy.constr "NearestTiesToEven") []
-    fpa_rounding_mode
-(** ne in Gappa: to nearest, tie breaking to even mantissas*)
-
-let _ToZero__rounding_mode =
-  E.mk_term (Sy.constr "ToZero") [] fpa_rounding_mode
-(** zr in Gappa: toward zero *)
-
-let _Up__rounding_mode =
-  E.mk_term (Sy.constr "Up") [] fpa_rounding_mode
-(** up in Gappa: toward plus infinity *)
-
-let _Down__rounding_mode =
-  E.mk_term (Sy.constr "Down") [] fpa_rounding_mode
-(** dn in Gappa: toward minus infinity *)
-
-let _NearestTiesToAway__rounding_mode =
-  E.mk_term (Sy.constr "NearestTiesToAway") []
-    fpa_rounding_mode
-(** na : to nearest, tie breaking away from zero *)
-
-(* additional Gappa rounding modes *)
-
-let _Aw__rounding_mode =
-  E.mk_term (Sy.constr "Aw") [] fpa_rounding_mode
-(** aw in Gappa: away from zero **)
-
-let _Od__rounding_mode =
-  E.mk_term (Sy.constr "Od") [] fpa_rounding_mode
-(** od in Gappa: to odd mantissas *)
-
-let _No__rounding_mode =
-  E.mk_term (Sy.constr "No") [] fpa_rounding_mode
-(** no in Gappa: to nearest, tie breaking to odd mantissas *)
-
-let _Nz__rounding_mode =
-  E.mk_term (Sy.constr "Nz") [] fpa_rounding_mode
-(** nz in Gappa: to nearest, tie breaking toward zero *)
-
-let _Nd__rounding_mode =
-  E.mk_term (Sy.constr "Nd") [] fpa_rounding_mode
-(** nd in Gappa: to nearest, tie breaking toward minus infinity *)
-
-let _Nu__rounding_mode =
-  E.mk_term (Sy.constr "Nu") [] fpa_rounding_mode
-(** nu in Gappa: to nearest, tie breaking toward plus infinity *)
-
-
-(** Hepler functions **)
-
-let mult_x_by_2_pow_n x n =
-  (* Q.mul_2exp does not support negative i according to Cody ? *)
-  let res1 = if n >= 0 then Q.mult_2exp x n else Q.div_2exp x (-n) in
-  let res2 = Q.mult res1 Q.one in (* Bug in Zarith according to Cody ? *)
-  assert (Q.equal res1 res2);
-  res2
-
-let div_x_by_2_pow_n x n = mult_x_by_2_pow_n x (-n)
-
-let two = Q.from_int 2
-
-let half = Q.div Q.one two
 
 type rounding_mode =
   (* five standard/why3 fpa rounding modes *)
@@ -143,6 +49,38 @@ type rounding_mode =
   | Nz (* nz in Gappa: to nearest, tie breaking toward zero *)
   | Nd (* nd in Gappa: to nearest, tie breaking toward minus infinity *)
   | Nu (* nu in Gappa: to nearest, tie breaking toward plus infinity *)
+
+let pp_rounding_mode ppf m =
+  Format.pp_print_string ppf @@
+  match m with
+  | NearestTiesToEven -> "NearestTiesToEven"
+  | ToZero -> "ToZero"
+  | Up -> "Up"
+  | Down -> "Down"
+  | NearestTiesToAway -> "NearestTiesToAway"
+  | Aw -> "Aw"
+  | Od -> "Od"
+  | No -> "No"
+  | Nz -> "Nz"
+  | Nd -> "Nd"
+  | Nu -> "Nu"
+
+let fpa_rounding_mode = Ty.Text ([], Hs.make "fpa_rounding_mode")
+
+(** Helper functions **)
+
+let mult_x_by_2_pow_n x n =
+  (* Q.mul_2exp does not support negative i according to Cody ? *)
+  let res1 = if n >= 0 then Q.mult_2exp x n else Q.div_2exp x (-n) in
+  let res2 = Q.mult res1 Q.one in (* Bug in Zarith according to Cody ? *)
+  assert (Q.equal res1 res2);
+  res2
+
+let div_x_by_2_pow_n x n = mult_x_by_2_pow_n x (-n)
+
+let two = Q.from_int 2
+
+let half = Q.div Q.one two
 
 (* Integer part of binary logarithm for NON-ZERO POSITIVE number *)
 let integer_log_2 =
@@ -174,7 +112,7 @@ let signed_one y =
   if tmp > 0 then Z.one else Z.m_one
 
 
-let round_big_int mode y =
+let round_big_int (mode : rounding_mode) y =
   match mode with
   | Up     -> Q.num (Q.ceiling y)
   | Down   -> Q.num (Q.floor y)
@@ -212,28 +150,9 @@ let to_mantissa_exp prec exp mode x =
     let r_y = round_big_int mode y in
     r_y, e'
 
-let mode_of_term t =
-  let eq_t s = E.equal s t in
-  if eq_t _NearestTiesToEven__rounding_mode then NearestTiesToEven
-  else if eq_t _ToZero__rounding_mode then ToZero
-  else if eq_t _Up__rounding_mode then Up
-  else if eq_t _Down__rounding_mode then Down
-  else if eq_t _NearestTiesToAway__rounding_mode then NearestTiesToAway
-  else if eq_t _Aw__rounding_mode then Aw
-  else if eq_t _Od__rounding_mode then Od
-  else if eq_t _No__rounding_mode then No
-  else if eq_t _Nz__rounding_mode then Nz
-  else if eq_t _Nd__rounding_mode then Nd
-  else if eq_t _Nu__rounding_mode then Nu
-  else
-    begin
-      Printer.print_err "bad rounding mode %a" E.print t;
-      assert false
-    end
-
 module MQ =
   Map.Make (struct
-    type t = int * int * E.t * Q.t
+    type t = int * int * rounding_mode * Q.t
     let compare (prec1, exp1, mode1, x1) (prec2, exp2, mode2, x2) =
       let c = Q.compare x1 x2 in
       if c <> 0 then c
@@ -243,7 +162,7 @@ module MQ =
         else
           let c = exp1 - exp2 in
           if c <> 0 then c
-          else E.compare mode1 mode2
+          else Stdlib.compare mode1 mode2
   end)
 
 let cache = ref MQ.empty
@@ -254,79 +173,13 @@ let float_of_rational prec exp mode x =
   let input = (prec, exp, mode, x) in
   try MQ.find input !cache
   with Not_found ->
-    let mode = mode_of_term mode in
     let m, e = to_mantissa_exp prec exp mode x in
     let res = mult_x_by_2_pow_n (Q.from_z m) e in
     cache := MQ.add input (res, m, e) !cache;
     res, m, e
 
 let round_to_integer mode q =
-  Q.from_z (round_big_int (mode_of_term mode) q)
-
-[@@ocaml.ppwarning "TODO: Change Symbols.Float to store FP numeral \
-                    constants (eg, <24, -149> for single) instead of \
-                    having terms"]
-let make_adequate_app s l ty =
-  match s with
-  | Sy.Name (hs, Sy.Other) when Options.get_use_fpa() ->
-    let float prec exp ?(mode = _NearestTiesToEven__rounding_mode) x =
-      Sy.(Op Float), [E.int prec; E.int exp; mode; x]
-    in
-    let float32 = float "24" "149" in
-    let float64 = float "53" "1074" in
-    let s, l  =
-      match Hstring.view hs, l with
-      (* Note: [prec], [exp], and [mode] are allowed to be quantified variables
-         here. The actual values are extracted later by the {!Arith} module,
-         after quantifier instantiation. *)
-      | "float", [_prec; _exp; _mode; _x] -> Sy.(Op Float), l
-      | "float32", [mode; x] -> float32 ~mode x
-      | "float32d", [x] -> float32 x
-      | "float64", [mode; x] -> float64 ~mode x
-      | "float64d", [x] -> float64 x
-
-      | "integer_round", [_;_] -> Sy.Op Sy.Integer_round, l
-
-      | "fixed", [_;_;_;_] -> Sy.Op Sy.Fixed, l
-      | "sqrt_real", [_] -> Sy.Op Sy.Sqrt_real, l
-      | "sqrt_real_default", [_] -> Sy.Op Sy.Sqrt_real_default, l
-      | "sqrt_real_excess", [_] -> Sy.Op Sy.Sqrt_real_excess, l
-      | "abs_int", [_] ->  Sy.Op Sy.Abs_int, l
-      | "abs_real", [_] ->  Sy.Op Sy.Abs_real, l
-      | "real_of_int", [_] -> Sy.Op Sy.Real_of_int, l
-      | "int_floor", [_] -> Sy.Op Sy.Int_floor, l
-      | "int_ceil", [_] -> Sy.Op Sy.Int_ceil, l
-      | "max_real", [_;_] -> Sy.Op Sy.Max_real, l
-      | "max_int", [_;_] -> Sy.Op Sy.Max_int, l
-      | "min_real", [_;_] -> Sy.Op Sy.Min_real, l
-      | "min_int", [_;_] -> Sy.Op Sy.Min_int, l
-      | "integer_log2", [_] -> Sy.Op Sy.Integer_log2, l
-
-      (* should not happend thanks to well typedness *)
-      | ("float"
-        | "float32"
-        | "float32d"
-        | "float64"
-        | "float64d"
-        | "integer_round"
-        | "fixed"
-        | "sqrt_real"
-        | "abs_int"
-        | "abs_real"
-        | "real_of_int"
-        | "int_floor"
-        | "int_ceil"
-        | "max_real"
-        | "max_int"
-        | "min_real"
-        | "min_int"
-        | "integer_log2"
-        | "power_of"), _ ->
-        assert false
-      | _ -> s, l
-    in
-    E.mk_term s l ty
-  | _ -> E.mk_term s l ty
+  Q.from_z (round_big_int mode q)
 
 let empty_cache () =
   cache := MQ.empty

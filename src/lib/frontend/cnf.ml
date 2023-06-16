@@ -66,7 +66,7 @@ let rec make_term up_qv quant_basename t =
       E.bitv bt ty
     | TTvar s -> E.mk_term s [] ty
     | TTapp (s, l) ->
-      Fpa_rounding.make_adequate_app s (List.map mk_term l) ty
+      E.mk_term s (List.map mk_term l) ty
 
     | TTinInterval (e, lb, ub) ->
       assert (ty == Ty.Tbool);

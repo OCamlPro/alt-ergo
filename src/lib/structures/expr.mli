@@ -139,6 +139,11 @@ val int_view : t -> int
 
     @raises Failure if the expression is not a constant integer. *)
 
+val rounding_mode_view : t -> Fpa_rounding.rounding_mode
+(** Extracts the rounding mode value of the expression, if there is one.
+
+    @raises Failure if the expression is not a constant rounding mode.*)
+
 (** pretty printing *)
 
 val print : Format.formatter -> t -> unit

@@ -208,7 +208,6 @@ let set_options r =
   set_options_opt Options.set_no_theory r.no_theory;
   set_options_opt Options.set_restricted r.restricted;
   set_options_opt Options.set_tighten_vars r.tighten_vars;
-  set_options_opt Options.set_use_fpa r.use_fpa;
   set_options_opt Options.set_timers r.timers;
 
   set_options_opt Options.set_file r.file;

@@ -295,8 +295,9 @@ module Shostak
         P.add p (P.mult_const coef p3), ctx
 
     (*** <begin>: partial handling of some arith/FPA operators **)
-    | Sy.Op Sy.Float, [prec; exp; mode; x] ->
+    | Sy.Op Float, [prec; exp; mode; x] ->
       let prec = E.int_view prec and exp = E.int_view exp in
+      let mode = E.rounding_mode_view mode in
       let aux_func e =
         let res, _, _ = Fpa_rounding.float_of_rational prec exp mode e in
         res
@@ -304,7 +305,10 @@ module Shostak
       mk_partial_interpretation_1 aux_func coef p ty t x, ctx
 
     | Sy.Op Sy.Integer_round, [mode; x] ->
-      let aux_func = Fpa_rounding.round_to_integer mode in
+      let aux_func =
+        Fpa_rounding.round_to_integer
+          (E.rounding_mode_view mode)
+      in
       mk_partial_interpretation_1 aux_func coef p ty t x, ctx
 
     | Sy.Op (Sy.Abs_int | Sy.Abs_real) , [x] ->

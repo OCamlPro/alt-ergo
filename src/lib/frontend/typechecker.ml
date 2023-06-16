@@ -42,12 +42,14 @@ module Types = struct
   (* environment for user-defined types *)
   type t = {
     to_ty : Ty.t MString.t;
+    builtins : Ty.t MString.t;
     from_labels : string MString.t; }
 
   let to_tyvars = ref MString.empty
 
   let empty =
     { to_ty = MString.empty;
+      builtins = MString.empty;
       from_labels = MString.empty }
 
   let fresh_vars ~recursive vars loc =
@@ -123,10 +125,20 @@ module Types = struct
             let ty = MString.find s env.to_ty in
             let vars = check_number_args loc lty ty in
             Ty.instantiate vars lty ty
-          with Not_found -> Errors.typing_error (UnknownType s) loc
+          with Not_found ->
+          try
+            let lty = List.map (ty_of_pp loc env rectype) l in
+            let ty = MString.find s env.builtins in
+            let vars = check_number_args loc lty ty in
+            Ty.instantiate vars lty ty
+          with Not_found ->
+            Errors.typing_error (UnknownType s) loc
       end
 
   let add_decl ~recursive env vars id body loc =
+    if MString.mem id env.builtins then
+      Printer.print_wrn "%a type `%s` shadows a builtin type"
+        Loc.report loc id;
     if MString.mem id env.to_ty && not recursive then
       Errors.typing_error (ClashType id) loc;
     let ty_vars = fresh_vars ~recursive vars loc in
@@ -143,6 +155,7 @@ module Types = struct
       let sort_fields = String.equal record_constr "{" in
       let ty = Ty.trecord ~sort_fields ~record_constr ty_vars id lbs in
       ty, { to_ty = MString.add id ty env.to_ty;
+            builtins = env.builtins;
             from_labels =
               List.fold_left
                 (fun fl (l,_) -> MString.add l id fl) env.from_labels lbs }
@@ -159,6 +172,9 @@ module Types = struct
       in
       let ty = Ty.t_adt ~body id ty_vars in
       ty, { env with to_ty = MString.add id ty env.to_ty }
+
+  let add_builtin env id ty =
+    { env with builtins = MString.add id ty env.builtins }
 
   module SH = Set.Make(Hstring)
 
@@ -216,18 +232,183 @@ module Env = struct
     | AdtDestr
     | Other
 
+  type builtin =
+    [ `Term of (Symbols.t * profile * logic_kind)
+    | `Builtin of (profile * (int atterm list -> int tt_desc))
+    ]
+
   type t = {
     var_map : (Symbols.t * Ty.t) MString.t ; (* variables' map*)
     types : Types.t ;
     logics : (Symbols.t * profile * logic_kind) MString.t;
     (* logic symbols' map *)
+    builtins : builtin MString.t ;
   }
 
-  let empty = {
-    var_map = MString.empty;
-    types = Types.empty;
-    logics = MString.empty
-  }
+  let builtin1 f =
+    function
+    | [ e ] -> f e
+    | _ -> assert false
+
+  let builtin2 f =
+    function
+    | [ x; y ] -> f x y
+    | _ -> assert false
+
+  let builtin_enum ty pp mk ml =
+    let l = List.map (Format.asprintf "%a" pp) ml in
+    let enum m n s =
+      MString.add s (`Term (
+          mk n,
+          { args = []; result = ty },
+          Other
+        )) m
+    in
+    fun m -> List.fold_left2 enum m ml l
+
+  let add_fpa_rounding_mode =
+    builtin_enum
+      Fpa_rounding.fpa_rounding_mode
+      Fpa_rounding.pp_rounding_mode (fun m -> Symbols.Op (RoundingMode m))
+      [ (* standards *)
+        NearestTiesToEven;
+        ToZero;
+        Up;
+        Down;
+        NearestTiesToAway;
+        (* non standards *)
+        Aw;
+        Od;
+        No;
+        Nz;
+        Nd;
+        Nu ]
+
+  let add_fpa_builtins env =
+    let (->.) args result = { args; result } in
+    let int n = {
+      c = { tt_desc = TTconst (Tint n); tt_ty = Ty.Tint} ;
+      annot = new_id () ;
+    } in
+    let mode m =
+      {
+        c = {
+          tt_desc = TTapp (Symbols.(Op (RoundingMode m)), []);
+          tt_ty = Fpa_rounding.fpa_rounding_mode
+        };
+        annot = new_id ()
+      }
+    in
+    let float prec exp mode x =
+      TTapp (Symbols.Op Float, [prec; exp; mode; x])
+    in
+    let float32 = float (int "24") (int "149") in
+    let float32d = float32 (mode NearestTiesToEven) in
+    let float64 = float (int "53") (int "1074") in
+    let float64d = float64 (mode NearestTiesToEven) in
+    let op n op profile =
+      MString.add n @@ `Term (Symbols.Op op, profile, Other)
+    in
+    let partial n f profile =
+      MString.add n (`Builtin (profile, f))
+    in
+    let bool = Ty.Tbool and int = Ty.Tint and real = Ty.Treal in
+    let any = Ty.fresh_tvar in
+    let rm = Fpa_rounding.fpa_rounding_mode in
+    let env = {
+      env with
+      types = Types.add_builtin env.types "fpa_rounding_mode" rm ;
+      builtins = add_fpa_rounding_mode env.builtins ;
+    } in
+    let builtins =
+      env.builtins
+
+      (* the first argument is mantissas' size (including the implicit bit),
+         the second one is the exp of the min representable normalized number,
+         the third one is the rounding mode, and the last one is the real to
+         be rounded *)
+      |> op "float" Float ([int; int; rm; real] ->. real)
+
+      (* syntactic sugar for simple precision floats:
+         mantissas size = 24, min exp = 149 *)
+      |> partial "float32" (builtin2 float32) ([rm; real] ->. real)
+
+      (* syntactic sugar for simple precision floats with default rounding mode
+         (i.e. NearestTiesToEven)*)
+      |> partial "float32d" (builtin1 float32d) ([real] ->. real)
+
+      (* syntactic sugar for double precision floats:
+         mantissas size = 53, min exp = 1074 *)
+      |> partial "float64" (builtin2 float64) ([rm; real] ->. real)
+
+      (* syntactic sugar for double precision floats with default rounding mode
+         (i.e. NearestTiesToEven) *)
+      |> partial "float64d" (builtin1 float64d) ([real] ->. real)
+
+      (* rounds to nearest integer *)
+      |> op "integer_round" Integer_round ([rm; real] ->. int)
+
+      (* type cast: from int to real *)
+      |> op "real_of_int" Real_of_int ([int] ->. real)
+
+      (* type check: integers *)
+      |> op "real_is_int" Real_is_int ([real] ->. bool)
+
+      (* abs value of a real *)
+      |> op "abs_real" Abs_real ([real] ->. real)
+
+      (* sqrt value of a real *)
+      |> op "sqrt_real" Sqrt_real ([real] ->. real)
+
+      (* sqrt value of a real by default *)
+      |> op "sqrt_real_default" Sqrt_real_default ([real] ->. real)
+
+      (* sqrt value of a real by excess *)
+      |> op "sqrt_real_excess" Sqrt_real_excess ([real] ->. real)
+
+      (* abs value of an int *)
+      |> op "abs_int" Abs_int ([int] ->. int)
+
+      (* (integer) floor of a rational *)
+      |> op "int_floor" Int_floor ([real] ->. int)
+
+      (* (integer) ceiling of a ratoinal *)
+      |> op "int_ceil" Int_ceil ([real] ->. int)
+
+      (* The functions below are only interpreted when applied on constants.
+         Aximatization for the general case are not currently imlemented *)
+
+      (* maximum of two reals *)
+      |> op "max_real" Max_real ([real; real] ->. real)
+
+      (* maximum of two ints *)
+      |> op "max_int" Max_int ([int; int] ->. int)
+
+      (* minimum of two ints *)
+      |> op "min_int" Min_int ([int; int] ->. int)
+
+      (* computes an integer log2 of a real. The function is only
+         interpreted on (non-zero) positive real constants. When applied on a
+         real 'm', the result 'res' of the function is such that: 2^res <= m <
+         2^(res+1) *)
+      |> op "integer_log2" Integer_log2 ([real] ->. int)
+
+      (* only used for arithmetic. It should not be used for x in float(x)
+         to enable computations modulo equality *)
+
+      |> op "not_theory_constant" Not_theory_constant ([real] ->. bool)
+      |> op "is_theory_constant" Is_theory_constant ([any ()] ->. bool)
+      |> op "linear_dependency" Linear_dependency ([real; real] ->. bool)
+
+    in
+    { env with builtins }
+
+  let empty = add_fpa_builtins {
+      var_map = MString.empty;
+      types = Types.empty;
+      logics = MString.empty;
+      builtins = MString.empty
+    }
 
   let add env lv fvar ty =
     let vmap =
@@ -280,6 +461,10 @@ module Env = struct
     let logics =
       List.fold_left
         (fun logics (n, lbl) ->
+           if MString.mem n env.builtins then
+             Printer.print_wrn "%a symbol `%s` shadows a builtin symbol"
+               Loc.report loc n;
+
            let sy = mk_symb n in
            if MString.mem n logics then
              Errors.typing_error (SymbAlreadyDefined n) loc;
@@ -315,13 +500,28 @@ module Env = struct
     ty, { env with types = types; }
 
   (* returns a type with fresh variables *)
-  let fresh_type env n loc =
+  let fresh_type_or_builtin env n =
     try
       let s, { args = args; result = r}, kind = MString.find n env.logics in
       let args, subst = Ty.fresh_list args Ty.esubst in
       let res, _ = Ty.fresh r subst in
-      s, { args = args; result = res }, kind
-    with Not_found -> Errors.typing_error (SymbUndefined n) loc
+      `Term (s, { args = args; result = res }, kind)
+    with Not_found ->
+    match MString.find n env.builtins with
+    | `Term (s,  { args; result }, kind) ->
+      let args, subst = Ty.fresh_list args Ty.esubst in
+      let result, _ = Ty.fresh result subst in
+      `Term (s, { args ; result }, kind)
+    | `Builtin ({ args; result }, f) ->
+      let args, subst = Ty.fresh_list args Ty.esubst in
+      let result, _ = Ty.fresh result subst in
+      `Builtin ({ args; result }, f)
+    | exception Not_found -> `Undefined
+
+  let fresh_type env n loc =
+    match fresh_type_or_builtin env n with
+    | `Term t -> t
+    | `Builtin _ | `Undefined -> Errors.typing_error (SymbUndefined n) loc
 
 end
 
@@ -421,6 +621,14 @@ let mk_adequate_app p s te_args ty logic_kind =
   | Env.RecordConstr, _, _ -> assert false
   | Env.AdtDestr, _, _ -> assert false
 
+let fresh_type_app env p loc =
+  match Env.fresh_type_or_builtin env p with
+  | `Term (s, profile, kind) ->
+    profile, fun te_args -> mk_adequate_app p s te_args profile.result kind
+  | `Builtin (profile, f) ->
+    profile, f
+  | `Undefined -> Errors.typing_error (SymbUndefined p) loc
+
 let rec type_term ?(call_from_type_form=false) env f =
   let {pp_loc = loc; pp_desc} = f in
   let e, ty = match pp_desc with
@@ -452,11 +660,11 @@ let rec type_term ?(call_from_type_form=false) env f =
         let lt_args = List.map (
             fun { c = { tt_ty = t; _ }; _ } -> t
           ) te_args in
-        let s, {Env.args = lt; result = t}, kind = Env.fresh_type env p loc in
+        let Env.{args = lt; result = t}, mk_app = fresh_type_app env p loc in
         try
           List.iter2 Ty.unify lt lt_args;
           Options.tool_req 1 (append_type "TR-Typing-App type" t);
-          mk_adequate_app p s te_args t kind, t
+          mk_app te_args, t
         with
         | Ty.TypeClash(t1,t2) -> Errors.typing_error (Unification(t1,t2)) loc
         | Invalid_argument _ -> Errors.typing_error (WrongNumberofArgs p) loc
@@ -915,14 +1123,14 @@ and type_form ?(in_theory=false) env f =
       Options.tool_req 1 "TR-Typing-App$_F$";
       let te_args = List.map (type_term env) args in
       let lt_args =  List.map (fun { c = { tt_ty = t; _}; _ } -> t) te_args in
-      let s , { Env.args = lt; result }, kd = Env.fresh_type env p f.pp_loc in
+      let { Env.args = lt; result }, mk_app = fresh_type_app env p f.pp_loc in
       begin
         try
           if result != Ty.Tbool then (* consider polymorphic functions *)
             Ty.unify result Ty.Tbool;
           try
             List.iter2 Ty.unify lt lt_args;
-            let app = mk_adequate_app p s te_args result kd in
+            let app = mk_app te_args in
             let r =
               let t1 = {
                 c = {tt_desc=app; tt_ty=Ty.Tbool};

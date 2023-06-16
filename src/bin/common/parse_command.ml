@@ -505,14 +505,13 @@ let mk_term_opt disable_ites inline_lets rewriting no_term_like_pp
   `Ok()
 
 let mk_theory_opt disable_adts () no_ac no_contracongru
-    no_fm no_nla no_tcp no_theory restricted tighten_vars use_fpa
+    no_fm no_nla no_tcp no_theory restricted tighten_vars _use_fpa
   =
   set_no_ac no_ac;
   set_no_fm no_fm;
   set_no_nla no_nla;
   set_no_tcp no_tcp;
   set_no_theory no_theory;
-  set_use_fpa use_fpa;
   set_restricted restricted;
   set_disable_adts disable_adts;
   set_tighten_vars tighten_vars;
@@ -1216,8 +1215,10 @@ let parse_theory_opt =
     Arg.(value & flag & info ["tighten-vars"] ~docs ~doc) in
 
   let use_fpa =
-    let doc = "Enable support for floating-point arithmetic." in
-    Arg.(value & flag & info ["use-fpa"] ~docs ~doc) in
+    let doc = "Floating-point builtins are always enabled and this option has
+    no effect anymore. It will be removed in a future version." in
+    let deprecated = "this option is always enabled" in
+    Arg.(value & flag & info ["use-fpa"] ~docs ~doc ~deprecated) in
 
   Term.(ret (const mk_theory_opt $
              disable_adts $ inequalities_plugin $ no_ac $ no_contracongru $
@@ -1285,7 +1286,7 @@ let main =
        ($(i,.mlw) and $(i,.why) are deprecated), \
        $(i,.smt2) or $(i,.psmt2)." in
     let i = Arg.(info [] ~docv:"FILE" ~doc) in
-    Arg.(value & pos ~rev:true 0 (some string) None & i) in
+    Arg.(value & pos ~rev:true 0 (some file) None & i) in
 
   let doc = "Execute Alt-Ergo on the given file." in
   let exits = Cmd.Exit.defaults in
