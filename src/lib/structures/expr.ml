@@ -968,6 +968,17 @@ let bitv bt ty = mk_term (Sy.Bitv bt) [] ty
 
 let pred t = mk_term (Sy.Op Sy.Minus) [t;int "1"] Ty.Tint
 
+(** frequently used literals *)
+
+let izero = int "0"
+
+let ione = int "1"
+
+let itwo = int "2"
+
+let bvzero = bitv "0" (Ty.Tbitv 1)
+
+let bvone = bitv "1" (Ty.Tbitv 1)
 
 (** simple smart constructors for formulas *)
 

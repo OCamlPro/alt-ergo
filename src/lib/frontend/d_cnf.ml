@@ -777,7 +777,7 @@ let mk_gt translate ty x y =
   else
     E.mk_builtin ~is_pos:true Sy.LT [translate y; translate x]
 
-let mk_add translate sy ty l =
+let mk_add translate ty l =
   let rec aux_mk_add l =
     match l with
     | h :: t ->
@@ -786,7 +786,157 @@ let mk_add translate sy ty l =
     | [] -> []
   in
   let args = aux_mk_add l in
-  E.mk_term sy args ty
+  E.mk_term (Sy.Op Sy.Plus) (List.fast_sort E.compare args) ty
+
+let mk_bitv_concat t1 t2 sz =
+  E.mk_term (Sy.Op Sy.Concat) [t1; t2] (Ty.Tbitv sz)
+
+let mk_bitv_extract i j t sz =
+  E.mk_term (Sy.Op (Sy.Extract (i, j))) [t] (Ty.Tbitv sz)
+
+let mk_bitv_repeat n i t =
+  let rec aux i sz acc =
+    if i = 1 then acc else
+      let nsz = sz + n in
+      aux (i - 1) nsz (mk_bitv_concat acc t nsz)
+  in
+  aux i n t
+
+let mk_bitv_extend n sign k t =
+  if k = 0 then t else
+    E.mk_term (Sy.Op (BVExtend (sign, k))) [t] (Ty.Tbitv (n + k))
+
+let rec mk_rotate_left n i t =
+  if i = 0 then t else
+    mk_rotate_left n (i - 1) (
+      mk_bitv_concat
+        (mk_bitv_extract 0 (n - 2) t (n - 1))
+        (mk_bitv_extract (n - 1) (n - 1) t 1)
+        n
+    )
+
+let rec mk_rotate_right n i t =
+  if i = 0 then t else
+    mk_rotate_right n (i - 1) (
+      mk_bitv_concat
+        (mk_bitv_extract 0 0 t 1)
+        (mk_bitv_extract 1 (n - 1) t (n - 1))
+        n
+    )
+
+let mk_bvnot n t =
+  E.mk_term (Sy.Op Sy.BVNot) [t] (Ty.Tbitv n)
+
+let mk_bitv_or n t1 t2 =
+  E.mk_term (Sy.Op Sy.BVOr) [t1; t2] (Ty.Tbitv n)
+
+let mk_bitv_and n t1 t2 =
+  mk_bvnot n (mk_bitv_or n (mk_bvnot n t1) (mk_bvnot n t2))
+
+let mk_bitv_xor n t1 t2 =
+  mk_bitv_or n
+    (mk_bitv_and n t1 (mk_bvnot n t2))
+    (mk_bitv_and n (mk_bvnot n t1) t2)
+
+let mk_bitv_xnor n t1 t2 =
+  mk_bitv_or n
+    (mk_bitv_and n t1 t2)
+    (mk_bitv_and n (mk_bvnot n t1) (mk_bvnot n t2))
+
+let rec mk_bitv_comp n t1 t2 =
+  if n = 1
+  then mk_bitv_xnor 1 t1 t2
+  else
+    mk_bitv_and 1
+      (mk_bitv_xnor 1
+         (mk_bitv_extract (n-1) (n-1) t1 1)
+         (mk_bitv_extract (n-1) (n-1) t2 1))
+      (mk_bitv_comp (n-1)
+         (mk_bitv_extract 0 (n-2) t1 (n-1))
+         (mk_bitv_extract 0 (n-2) t2 (n-1)))
+
+let mk_bvneg n x =
+  E.mk_term (Sy.Op (Sy.Nat2BV n)) [
+    E.mk_term (Sy.Op Sy.Minus) [
+      E.mk_term (Sy.Op Sy.Pow)
+        [ E.itwo; E.int (string_of_int n) ] Ty.Tint;
+      E.mk_term (Sy.Op Sy.BV2Nat) [x] Ty.Tint
+    ] Ty.Tint
+  ] (Ty.Tbitv n)
+
+let mk_bvsign n t =
+  mk_bitv_extract (n-1) (n-1) t 1
+
+let bvsign_is_pos t =
+  E.mk_eq ~iff:false t (E.mk_term (Sy.Bitv "1") [] (Ty.Tbitv 1))
+
+let bvsign_is_neg t =
+  E.mk_eq ~iff:false t (E.mk_term (Sy.Bitv "0") [] (Ty.Tbitv 1))
+
+let mk_bv2nat t =
+  E.mk_term (Sy.Op Sy.BV2Nat) [t] Ty.Tint
+
+let _mk_nat2bv n t =
+  E.mk_term (Sy.Op (Sy.Nat2BV n)) [t] Ty.Tint
+
+let mk_bvadd n x y =
+  let x' = E.mk_term (Sy.Op Sy.BV2Nat) [x] Ty.Tint in
+  let y' = E.mk_term (Sy.Op Sy.BV2Nat) [y] Ty.Tint in
+  let natres = E.mk_term (Sy.Op Sy.Plus) [x'; y'] Ty.Tint in
+  E.mk_term (Sy.Op (Sy.Nat2BV n)) [natres] (Ty.Tbitv n)
+
+let mk_bvudiv n x y =
+  (* Assuming that if bv2nat(y) = 0 then bv2nat(x)/bv2nat(y) is
+     undefined and that it makes nat2bv[n](bv2nat(x)/bv2nat(y)) also
+     undefined. *)
+  let x' = E.mk_term (Sy.Op Sy.BV2Nat) [x] Ty.Tint in
+  let y' = E.mk_term (Sy.Op Sy.BV2Nat) [y] Ty.Tint in
+  let natres = E.mk_term (Sy.Op Sy.Div) [x'; y'] Ty.Tint in
+  E.mk_term (Sy.Op (Sy.Nat2BV n)) [natres] (Ty.Tbitv n)
+
+let mk_bvurem n x y =
+  (* Assuming that if bv2nat(y) = 0 then bv2nat(x)%bv2nat(y) is
+     undefined and that it makes nat2bv[n](bv2nat(x)%bv2nat(y)) also
+     undefined. *)
+  let x' = E.mk_term (Sy.Op Sy.BV2Nat) [x] Ty.Tint in
+  let y' = E.mk_term (Sy.Op Sy.BV2Nat) [y] Ty.Tint in
+  let natres = E.mk_term (Sy.Op Sy.Modulo) [x'; y'] Ty.Tint in
+  E.mk_term (Sy.Op (Sy.Nat2BV n)) [natres] (Ty.Tbitv n)
+
+let mk_bvlshr n x y =
+  let x' = E.mk_term (Sy.Op Sy.BV2Nat) [x] Ty.Tint in
+  let y' = E.mk_term (Sy.Op Sy.BV2Nat) [y] Ty.Tint in
+  let y'' =
+    E.mk_term (Sy.Op Sy.Pow) [E.itwo; y'] Ty.Tint
+  in
+  let natres = E.mk_term (Sy.Op Sy.Div) [x'; y''] Ty.Tint in
+  E.mk_term (Sy.Op (Sy.Nat2BV n)) [natres] (Ty.Tbitv n)
+
+let mk_bvult x y =
+  E.mk_builtin ~is_pos:true Sy.LT [ mk_bv2nat x; mk_bv2nat y ]
+
+let mk_bvule x y =
+  E.mk_builtin ~is_pos:true Sy.LE [ mk_bv2nat x; mk_bv2nat y ]
+
+let mk_bvslt n x y =
+  if n = 0 then E.faux else
+    let xsign = mk_bvsign n x in
+    let ysign = mk_bvsign n y in
+    let x_is_pos = bvsign_is_pos xsign in
+    let y_is_neg = bvsign_is_neg ysign in
+    let c1 = E.mk_and x_is_pos y_is_neg false in
+    let c2 = E.mk_and (E.mk_eq ~iff:false xsign ysign) (mk_bvult x y) false in
+    E.mk_or c1 c2 false
+
+let mk_bvsle n x y =
+  if n = 0 then E.faux else
+    let xsign = mk_bvsign n x in
+    let ysign = mk_bvsign n y in
+    let x_is_pos = bvsign_is_pos xsign in
+    let y_is_neg = bvsign_is_neg ysign in
+    let c1 = E.mk_and x_is_pos y_is_neg false in
+    let c2 = E.mk_and (E.mk_eq ~iff:false xsign ysign) (mk_bvule x y) false in
+    E.mk_or c1 c2 false
 
 (** [mk_expr ~loc ~name_base ~toplevel ~decl_kind term]
 
@@ -857,8 +1007,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             E.mk_term (Sy.Op Sy.Minus) [e1; aux_mk_expr x] ty
 
           | B.Bitv_extract { i; j; _ }, [x] ->
-            E.mk_term
-              (Sy.Op (Sy.Extract (j, i))) [aux_mk_expr x] (Ty.Tbitv (i - j + 1))
+            mk_bitv_extract j i (aux_mk_expr x) (i - j + 1)
 
           | B.Destructor { case; field; adt; _ }, [x] ->
             begin match DT.definition adt with
@@ -918,11 +1067,212 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
               | _ -> assert false
             end
 
+          | B.Bitv_repeat { n; k }, [t] ->
+            mk_bitv_repeat n k (aux_mk_expr t)
+
+          | B.Bitv_zero_extend { n; k }, [t] ->
+            mk_bitv_extend n false k (aux_mk_expr t)
+
+          | B.Bitv_sign_extend { n; k }, [t] ->
+            mk_bitv_extend n true k (aux_mk_expr t)
+
+          | B.Bitv_rotate_left { n; i }, [t] ->
+            let t' = aux_mk_expr t in
+            if n < 2 then t' else mk_rotate_left n i t'
+
+          | B.Bitv_rotate_right { n; i }, [t] ->
+            let t' = aux_mk_expr t in
+            if n < 2 then t' else mk_rotate_right n i t'
+
+          | B.Bitv_neg n, [t] ->
+            mk_bvneg n (aux_mk_expr t)
+
+          | B.Bitv_not _, [{
+              term_descr = App
+                  ({ term_descr = Cst {builtin = B.Bitv_not _; _ }; _ }, _, [t])
+            ; _ }] ->
+            (* TODO: do the simplification in a smarter smarter way
+               should (bvnot (bvconcat(t1, bvnot t2)))
+               be translated to (bvconcat(bvnot t1, t2))? *)
+            aux_mk_expr t
+
+          | B.Bitv_not n, [t] ->
+            mk_bvnot n (aux_mk_expr t)
+
           (* Binary applications *)
 
           | B.Bitv_concat { n; m; }, [ x; y ] ->
-            let rty = Ty.Tbitv (n+m) in
-            E.mk_term (Sy.Op Sy.Concat) [aux_mk_expr x; aux_mk_expr y] rty
+            mk_bitv_concat (aux_mk_expr x) (aux_mk_expr y) (n + m)
+
+          | B.Bitv_or n, [ x; y ] ->
+            mk_bitv_or n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_and n, [ x; y ] ->
+            mk_bitv_and n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_nor n, [ x; y ] ->
+            mk_bvnot n
+              (mk_bitv_or n (aux_mk_expr x) (aux_mk_expr y))
+
+          | B.Bitv_nand n, [ x; y ] ->
+            mk_bvnot n
+              (mk_bitv_and n (aux_mk_expr x) (aux_mk_expr y))
+
+          | B.Bitv_xor n, [ x; y ] ->
+            mk_bitv_xor n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_xnor n, [ x; y ] ->
+            mk_bitv_xnor n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_comp n, [ x; y ] ->
+            mk_bitv_comp n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_add n, [ x; y ] ->
+            mk_bvadd n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_sub n, [ x; y ] ->
+            let x' = E.mk_term (Sy.Op Sy.BV2Nat) [aux_mk_expr x] Ty.Tint in
+            let y' =
+              E.mk_term (Sy.Op Sy.BV2Nat) [mk_bvneg n (aux_mk_expr y)] Ty.Tint
+            in
+            let natres = E.mk_term (Sy.Op Sy.Plus) [x'; y'] Ty.Tint in
+            E.mk_term (Sy.Op (Sy.Nat2BV n)) [natres] (Ty.Tbitv n)
+
+          | B.Bitv_mul n, [ x; y ] ->
+            let x' = E.mk_term (Sy.Op Sy.BV2Nat) [aux_mk_expr x] Ty.Tint in
+            let y' = E.mk_term (Sy.Op Sy.BV2Nat) [aux_mk_expr y] Ty.Tint in
+            let natres = E.mk_term (Sy.Op Sy.Mult) [x'; y'] Ty.Tint in
+            E.mk_term (Sy.Op (Sy.Nat2BV n)) [natres] (Ty.Tbitv n)
+
+          | B.Bitv_udiv n, [ x; y ] ->
+            mk_bvudiv n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_urem n, [ x; y ] ->
+            mk_bvurem n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_sdiv n, [ x; y ] ->
+            let x' = aux_mk_expr x in
+            let y' = aux_mk_expr y in
+            let xsign = mk_bvsign n x' in
+            let ysign = mk_bvsign n y' in
+            let x_is_pos = bvsign_is_pos xsign in
+            let x_is_neg = bvsign_is_neg xsign in
+            let y_is_pos = bvsign_is_pos ysign in
+            let y_is_neg = bvsign_is_neg ysign in
+            let ite1 =
+              E.mk_ite
+                (E.mk_and x_is_neg y_is_pos false)
+                (mk_bvneg n (mk_bvudiv n x' (mk_bvneg n y')))
+                (mk_bvudiv n (mk_bvneg n x') (mk_bvneg n y'))
+            in
+            let ite2 =
+              E.mk_ite
+                (E.mk_and x_is_pos y_is_neg false)
+                (mk_bvneg n (mk_bvudiv n (mk_bvneg n x') y'))
+                ite1
+            in
+            E.mk_ite
+              (E.mk_and x_is_neg y_is_neg false)
+              (mk_bvudiv n x' y')
+              ite2
+
+          | B.Bitv_srem n, [ x; y ] ->
+            let x' = aux_mk_expr x in
+            let y' = aux_mk_expr y in
+            let xsign = mk_bvsign n x' in
+            let ysign = mk_bvsign n y' in
+            let x_is_pos = bvsign_is_pos xsign in
+            let x_is_neg = bvsign_is_neg xsign in
+            let y_is_pos = bvsign_is_pos ysign in
+            let y_is_neg = bvsign_is_neg ysign in
+            let ite1 =
+              E.mk_ite
+                (E.mk_and x_is_neg y_is_pos false)
+                (mk_bvurem n x' (mk_bvneg n y'))
+                (mk_bvneg n (mk_bvurem n (mk_bvneg n x') (mk_bvneg n y')))
+            in
+            let ite2 =
+              E.mk_ite
+                (E.mk_and x_is_pos y_is_neg false)
+                (mk_bvneg n (mk_bvurem n (mk_bvneg n x') y'))
+                ite1
+            in
+            E.mk_ite
+              (E.mk_and x_is_neg y_is_neg false)
+              (mk_bvurem n x' y')
+              ite2
+
+          | B.Bitv_smod n, [ x; y ] ->
+            let x' = aux_mk_expr x in
+            let y' = aux_mk_expr y in
+            let xsign = mk_bvsign n x' in
+            let ysign = mk_bvsign n y' in
+            let x_is_pos = bvsign_is_pos xsign in
+            let x_is_neg = bvsign_is_neg xsign in
+            let y_is_pos = bvsign_is_pos ysign in
+            let y_is_neg = bvsign_is_neg ysign in
+            let ite1 =
+              E.mk_ite
+                (E.mk_and x_is_neg y_is_pos false)
+                (mk_bvadd n (mk_bvurem n x' (mk_bvneg n y')) y')
+                (mk_bvneg n (mk_bvurem n (mk_bvneg n x') (mk_bvneg n y')))
+            in
+            let ite2 =
+              E.mk_ite
+                (E.mk_and x_is_pos y_is_neg false)
+                (mk_bvadd n (mk_bvneg n (mk_bvurem n (mk_bvneg n x') y')) y')
+                ite1
+            in
+            E.mk_ite
+              (E.mk_and x_is_neg y_is_neg false)
+              (mk_bvurem n x' y')
+              ite2
+
+          | B.Bitv_shl n, [ x; y ] ->
+            let x' = E.mk_term (Sy.Op Sy.BV2Nat) [aux_mk_expr x] Ty.Tint in
+            let y' = E.mk_term (Sy.Op Sy.BV2Nat) [aux_mk_expr y] Ty.Tint in
+            let y'' =
+              E.mk_term (Sy.Op Sy.Pow) [E.itwo; y'] Ty.Tint
+            in
+            let natres = E.mk_term (Sy.Op Sy.Mult) [x'; y''] Ty.Tint in
+            E.mk_term (Sy.Op (Sy.Nat2BV n)) [natres] (Ty.Tbitv n)
+
+          | B.Bitv_lshr n, [ x; y ] ->
+            mk_bvlshr n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_ashr n, [ x; y ] ->
+            let x' = aux_mk_expr x in
+            let y' = aux_mk_expr y in
+            let xsign = mk_bvsign n x' in
+            let x_is_neg = bvsign_is_neg xsign in
+            E.mk_ite
+              x_is_neg
+              (mk_bvlshr n x' y')
+              (mk_bvnot n (mk_bvlshr n (mk_bvnot n x') y'))
+
+          | B.Bitv_ult _, [ x; y ] ->
+            mk_bvult (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_ule _, [ x; y ] ->
+            mk_bvule (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_ugt _, [ x; y ] ->
+            mk_bvult (aux_mk_expr y) (aux_mk_expr x)
+
+          | B.Bitv_uge _, [ x; y ] ->
+            mk_bvule (aux_mk_expr y) (aux_mk_expr x)
+
+          | B.Bitv_slt n, [ x; y ] ->
+            mk_bvslt n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_sle n, [ x; y ] ->
+            mk_bvsle n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_sgt n, [ x; y ] ->
+            mk_bvslt n (aux_mk_expr y) (aux_mk_expr x)
+
+          | B.Bitv_sge n, [ x; y ] ->
+            mk_bvsle n (aux_mk_expr y) (aux_mk_expr x)
 
           | B.Select, [ x; y ] ->
             let rty = dty_to_ty term_ty in
@@ -1070,8 +1420,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
 
           | B.Add ty, _ ->
             let rty = if ty == `Int then Ty.Tint else Treal in
-            let sy = Sy.Op Sy.Plus in
-            mk_add aux_mk_expr sy rty args
+            mk_add aux_mk_expr rty args
 
           | B.Sub ty, h :: t ->
             let rty = if ty == `Int then Ty.Tint else Treal in

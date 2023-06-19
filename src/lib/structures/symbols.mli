@@ -46,6 +46,10 @@ type operator =
   (* BV *)
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
+  | BV2Nat | Nat2BV of int
+  | BVNot | BVOr
+  | BVExtend of bool * int
+  (* (sign, n) if sign = true then extend sign otherwise extend with zeros *)
   (* FP *)
   | Float
   | RoundingMode of Fpa_rounding.rounding_mode | Integer_round | Fixed

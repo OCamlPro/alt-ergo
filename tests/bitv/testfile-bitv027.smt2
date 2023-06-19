@@ -1,0 +1,6 @@
+(set-logic BV)
+(declare-const s (_ BitVec 1))
+(declare-const t (_ BitVec 4))
+(define-fun L ((x (_ BitVec 4))) Bool (= (concat ((_ zero_extend 3) s) x) (concat t ((_ zero_extend 3) (_ bv0 1)))))
+(assert (distinct (= t ((_ zero_extend 3) s)) (exists ((x (_ BitVec 4))) (and (L x) (= x (bvand x (_ bv0 4)))))))
+(check-sat)

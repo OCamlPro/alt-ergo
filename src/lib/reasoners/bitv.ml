@@ -90,7 +90,10 @@ module Shostak(X : ALIEN) = struct
 
   let is_mine_symb sy _ =
     match sy with
-    | Sy.Bitv _ | Sy.Op (Sy.Concat | Sy.Extract _)  -> true
+    | Sy.Bitv _
+    | Sy.Op (
+        Concat | Extract _ | BVNot | BVOr | BVExtend _ | BV2Nat | Nat2BV _
+      ) -> true
     | _ -> false
 
   let embed r =
@@ -159,6 +162,25 @@ module Shostak(X : ALIEN) = struct
       | I_Comp of term * term
 
     and term = term_aux alpha_term
+
+    let to_i_ast biv =
+      let f_aux st =
+        {sz = st.sz;
+         bv = match st.bv with
+           | Cte b -> I_Cte b
+           | Other tt -> I_Other tt
+           | Ext(tt,siz,i,j)  ->
+             let tt' = { sz = siz ; bv = I_Other tt }
+             in I_Ext(tt',i,j)
+        } in
+      List.fold_left
+        (fun acc st ->
+           let tmp = f_aux st
+           in { bv = I_Comp(acc,tmp) ; sz = acc.sz + tmp.sz }
+        ) (f_aux (List.hd biv)) (List.tl biv)
+
+    let mk_i_comp t1 t2 sz =
+      { bv = I_Comp (t1, t2); sz }
 
     let rec compare_term_aux t1 t2 = match t1, t2 with
       | I_Cte true, I_Cte true
@@ -247,40 +269,454 @@ module Shostak(X : ALIEN) = struct
     let bitv_to_icomp =
       List.fold_left (fun ac bt ->{ bv = I_Comp (ac,bt) ; sz = bt.sz + ac.sz })
 
-    let string_to_bitv s =
+    let string_to_bitv ?(neg = false) s ctx =
+      let bitf = if neg then (fun b -> not b) else (fun b -> b) in
       let tmp = ref[] in
-      String.iter(fun car -> tmp := (not @@ Char.equal car '0', 1)::(!tmp)) s;
+      let nctx = ref[] in
+      String.iter (
+        fun car ->
+          tmp := (not @@ Char.equal  car '0',1)::(!tmp)
+      ) s;
       let rec f_aux l acc = match l with
         | [] -> assert false
-        | [(b,n)] -> { sz = n ; bv = I_Cte b }::acc
-        | (true as b1, n)::(true, m)::r | (false as b1, n)::(false, m)::r ->
-          f_aux ((b1,n+m)::r) acc
+        | [(b,n)] -> { sz = n ; bv = I_Cte (bitf b) }::acc
+        | (b1,n)::(b2,m)::r when Bool.equal b1 b2 -> f_aux ((b1,n+m)::r) acc
         | (b1,n)::(b2,m)::r ->
-          (f_aux ((b2,m)::r)) ({ sz = n ; bv = I_Cte b1 }::acc)
+          (f_aux ((b2,m)::r)) ({ sz = n ; bv = I_Cte (bitf b1) }::acc)
       in
       let res = f_aux (!tmp) [] in
-      bitv_to_icomp (List.hd res) (List.tl res)
+      let ctx = List.rev_append !nctx ctx in
+      bitv_to_icomp (List.hd res) (List.tl res), ctx
 
-    let make t =
-      let rec make_rec t' ctx = match E.term_view t' with
-        | { E.f = Sy.Bitv s; _ } -> string_to_bitv s, ctx
-        | { E.f = Sy.Op Sy.Concat ;
-            xs = [t1;t2] ; ty = Ty.Tbitv n; _ } ->
-          let r1, ctx = make_rec t1 ctx in
-          let r2, ctx = make_rec t2 ctx in
-          { bv = I_Comp (r1, r2) ; sz = n }, ctx
-        | { E.f = Sy.Op Sy.Extract (i, j); xs = [t1] ; ty = Ty.Tbitv _; _ } ->
-          let r1, ctx = make_rec t1 ctx in
-          { sz = j - i + 1 ; bv = I_Ext (r1,i,j)}, ctx
+    let bit_of_expr t =
+      match E.term_view t with
+      | { f = Sy.Int s; _ } ->
+        begin match Hstring.view s with
+          | "1" -> Some true
+          | "0" -> Some false
+          | _ ->
+            failwith (
+              Format.asprintf "Expeceted \"1\" or \"0\", but got \"%a\""
+                E.print t
+            )
+        end
+      | _ -> None
 
-        | { E.ty = Ty.Tbitv n; _ } ->
-          let r', ctx' = X.make t' in
-          let ctx = ctx' @ ctx in
-          {bv = I_Other (Alien r') ; sz = n}, ctx
-        | _ -> assert false
+    let mk_extract f l bv =
+      E.mk_term (Sy.Op (Extract (f, l))) [bv] (Ty.Tbitv (l - f + 1))
+
+    let bit_e_neg =
+      let bv_zero = E.bitv "0" (Ty.Tbitv 1) in
+      let bv_one = E.bitv "1" (Ty.Tbitv 1) in
+      fun neg t ->
+        if neg then
+          let eq = E.mk_eq ~iff:false t E.izero in
+          E.mk_term (Sy.Op Tite) [eq; bv_one; bv_zero] (Ty.Tbitv 1)
+        else
+          let eq = E.mk_eq ~iff:false t E.izero in
+          E.mk_term (Sy.Op Tite) [eq; bv_zero; bv_one] (Ty.Tbitv 1)
+
+    let bv_of_bool ?(neg = false) b =
+      if (if neg then not b else b)
+      then (E.bitv "1" (Ty.Tbitv 1))
+      else (E.bitv "0" (Ty.Tbitv 1))
+
+    let mk_nthbv_eq bv_t n e =
+      E.mk_eq ~iff:false (mk_extract n n bv_t) e
+
+    let get_nth_eq_b bv_t cnt t_b =
+      mk_nthbv_eq bv_t cnt (bv_of_bool t_b)
+
+    let bitv_of_nat ?(neg = false) bv_t nat_t size ctx =
+      let bitf = if neg then (fun b -> not b) else (fun b -> b) in
+      let pow n =
+        E.mk_term (Sy.Op Sy.Pow) [E.itwo; E.int (Int.to_string n)] Ty.Tint
       in
-      let r, ctx = make_rec t [] in
-      sigma r, ctx
+      let mdiv nat_t n =
+        E.mk_term (Sy.Op Sy.Modulo)
+          [E.mk_term (Sy.Op Sy.Div) [nat_t; pow n] Ty.Tint; E.itwo] Ty.Tint
+      in
+      assert (size > 0);
+      let rec aux ?prec cnt sz ctx =
+        let ncnt = cnt + 1 in
+        let val_t = mdiv nat_t cnt in
+        let r, ctx' = X.make val_t in
+        match X.term_extract r with
+        | Some t, _ ->
+          begin match bit_of_expr t with
+            | Some t_b ->
+              let nctx = ctx' @ ctx in
+              begin match prec with
+                | Some p_b when Bool.equal t_b p_b ->
+                  if ncnt > size then { bv = I_Cte (bitf t_b); sz = sz}, nctx
+                  else
+                    aux
+                      ?prec ncnt (sz + 1) (get_nth_eq_b bv_t cnt t_b :: nctx)
+                | Some p_b ->
+                  let t1 = { bv = I_Cte (bitf p_b); sz = sz} in
+                  if ncnt > size then t1, nctx
+                  else
+                    let t2, nctx =
+                      aux ~prec:t_b ncnt 1 (get_nth_eq_b bv_t cnt t_b :: nctx)
+                    in
+                    mk_i_comp t2 t1 (sz + t2.sz), nctx
+                | None ->
+                  assert (ncnt <= size);
+                  let t, nctx =
+                    aux ~prec:t_b ncnt 1 (get_nth_eq_b bv_t cnt t_b :: nctx)
+                  in
+                  t, nctx
+              end
+            | None ->
+              let rv_t = bit_e_neg neg val_t in
+              let bvv = E.fresh_name (Ty.Tbitv 1) in
+              let eq = E.mk_eq ~iff:false bvv rv_t in
+              let r = X.term_embed bvv in
+              let nctx = eq :: ctx' @ ctx in
+              let t1 = { bv = I_Other (Alien r); sz = 1 } in
+              if ncnt >= size then t1, nctx
+              else
+                let t2, nctx = aux ncnt 0 nctx in
+                mk_i_comp t2 t1 (t2.sz + 1), nctx
+          end
+        | None, _ ->
+          let rv_t = bit_e_neg neg val_t in
+          let r, ctx' = X.make rv_t in
+          let nctx = ctx' @ ctx in
+          begin match prec with
+            | Some b ->
+              let t1 =
+                mk_i_comp
+                  { bv = I_Other (Alien r); sz = 1}
+                  { bv = I_Cte (bitf b); sz }
+                  (sz + 1)
+              in
+              if ncnt > size then t1, nctx
+              else
+                let t2, nctx =
+                  aux ncnt 0 (mk_nthbv_eq bv_t cnt rv_t :: nctx)
+                in
+                let t = mk_i_comp t2 t1 (sz + t2.sz + 1) in
+                t, nctx
+            | None ->
+              let t1 = { bv = I_Other (Alien r); sz = 1} in
+              if ncnt > size then t1, nctx
+              else
+                let t2, nctx =
+                  aux ncnt 0 (mk_nthbv_eq bv_t cnt rv_t :: nctx)
+                in
+                let t = mk_i_comp t2 t1 (t2.sz + 1) in
+                t, nctx
+          end
+      in
+      aux 0 0 ctx
+
+    let bvor_ctes ~is_and b1 sz1 b2 sz2 =
+      let bres = if is_and then b1 && b2 else b1 || b2 in
+      if sz1 > sz2 then
+        {bv = Cte bres; sz = sz2}, [{ bv = Cte b1; sz = sz1 - sz2 }], []
+      else if sz1 < sz2 then
+        {bv = Cte bres; sz = sz1}, [], [{ bv = Cte b1; sz = sz2 - sz1 }]
+      else {bv = Cte bres; sz = sz1}, [], []
+
+    let bvor_cte_other ~is_and b sz1 o sz2 =
+      let bres = if is_and then not b else b in
+      if sz1 > sz2 then
+        let l1 = [{ bv = Cte b; sz = sz1 - sz2 }] in
+        if bres then { bv = Cte b; sz = sz2 }, l1, []
+        else { bv = Other o; sz = sz2 }, l1, []
+      else if sz1 < sz2 then
+        let l2 = [{ bv = Ext (o, sz2, 0, sz2 - sz1 - 1); sz = sz2 - sz1 }] in
+        if bres then { bv = Cte b; sz = sz1 }, [], l2
+        else { bv = Ext (o, sz2, sz2 - sz1, sz2 - 1); sz = sz1 }, [], l2
+      else
+      if bres then { bv = Cte b; sz = sz1 }, [], []
+      else { bv = Other o; sz = sz1 }, [], []
+
+    let bvor_cte_ext ~is_and b sz1 o sz2' sz2 lb ub =
+      let bres = if is_and then not b else b in
+      if sz1 > sz2 then
+        let l1 = [{ bv = Cte b; sz = sz1 - sz2 }] in
+        if bres
+        then { bv = Cte b; sz = sz2 }, l1, []
+        else { bv = Ext (o, sz2', lb, ub); sz = sz2 }, l1, []
+      else if sz1 < sz2 then
+        let l2 =
+          [{ bv = Ext (o, sz2', lb, lb + sz2 - sz1 - 1); sz = sz2 - sz1 }]
+        in
+        if bres
+        then { bv = Cte b; sz = sz1 }, [], l2
+        else { bv = Ext (o, sz2', lb + sz2 - sz1, ub); sz = sz1 }, [], l2
+      else
+      if bres
+      then { bv = Cte b; sz = sz1 }, [], []
+      else { bv = Ext (o, sz2', lb, ub); sz = sz1 }, [], []
+
+    (** [mk_bvget_or_eq t cnt t1 cnt1 t2 cnt2]:
+        t[cnt] = if t1[cnt1] = 0 then t2[cnt2] else 1 *)
+    let mk_bvget_or_eq =
+      let zero_bv = E.bitv "0" (Ty.Tbitv 1) in
+      let one_bv = E.bitv "1" (Ty.Tbitv 1) in
+      fun nt cnt t1 cnt1 t2 cnt2 ->
+        E.mk_eq ~iff:false (mk_extract cnt cnt nt) (
+          E.mk_ite
+            (E.mk_eq ~iff:false (mk_extract cnt1 cnt1 t1) zero_bv)
+            (mk_extract cnt2 cnt2 t2)
+            one_bv)
+
+    (** [mk_bvget_and_eq t cnt t1 cnt1 t2 cnt2]:
+        t[cnt] = if t1[cnt1] = 1 then t2[cnt2] else 0 *)
+    let mk_bvget_and_eq =
+      let zero_bv = E.bitv "0" (Ty.Tbitv 1) in
+      let one_bv = E.bitv "1" (Ty.Tbitv 1) in
+      fun nt cnt t1 cnt1 t2 cnt2 ->
+        E.mk_eq ~iff:false (mk_extract cnt cnt nt) (
+          E.mk_ite
+            (E.mk_eq ~iff:false (mk_extract cnt1 cnt1 t1) one_bv)
+            (mk_extract cnt2 cnt2 t2)
+            zero_bv
+        )
+
+    (** turn into a dispatcher function  *)
+    let mk_o_eqs =
+      fun ctx t ~is_and nt t1 i1 t2 i2 n ->
+      let rec aux1 ctx cnt =
+        if cnt >= n then ctx else
+          let eq = mk_bvget_and_eq t cnt t1 (cnt + i1) t2 (cnt + i2) in
+          aux1 (eq :: ctx) (cnt + 1)
+      in
+      let rec aux2 ctx cnt =
+        if cnt >= n then ctx else
+          let eq = mk_bvget_or_eq t cnt t1 (cnt + i1) t2 (cnt + i2) in
+          aux2 (eq :: ctx) (cnt + 1)
+      in
+      E.mk_eq ~iff:false t nt :: if is_and then aux1 ctx 0 else aux2 ctx 0
+
+    let extend_term =
+      (* let rec aux t =
+         match t with
+         | { bv = I_Cte b'; sz; } when Bool.equal b' b ->
+         { bv = I_Cte b'; sz = sz + n; }
+         | { bv = I_Comp (t1, t2); sz; } ->
+         { bv = I_Comp (aux t1, t2); sz = sz + n; }
+         | _ ->
+         { bv = I_Comp ({ bv = I_Cte b; sz = n; }, t); sz = t.sz + n; }
+         in
+         aux t *)
+      (* will be done during the call to sigma anyway *)
+      fun b ?(neg = false) t k sz ->
+      if not b
+      then { bv = I_Comp ({ bv = I_Cte neg; sz = k}, t); sz }
+      else
+        let rtl = sigma t in
+        match rtl with
+        | [] -> assert false
+        | hd :: tl ->
+          match hd with
+          | { bv = Cte b; _ } when neg ->
+            to_i_ast ({ bv = Cte (not b); sz = k } :: rtl)
+
+          | { bv = Cte b; sz } ->
+            to_i_ast ({ bv = Cte b; sz = sz + k } :: tl)
+
+          | { bv = Other o; sz } ->
+            to_i_ast (
+              List.rev_append (
+                List.init k
+                  (fun _ -> { bv = Ext (o, sz, sz-1, sz-1); sz = 1 })
+              ) rtl)
+
+          | { bv = Ext (o, sz', _, ub); _ } ->
+            to_i_ast (
+              List.rev_append (
+                List.init k
+                  (fun _ -> { bv = Ext (o, sz', ub, ub); sz = 1 })
+              ) rtl)
+
+    let rec make_aux ?(neg = false) t' ctx =
+      match E.term_view t' with
+      | { E.f = Sy.Bitv s; _ } ->
+        string_to_bitv ~neg s ctx
+
+      | { E.f = Sy.Op Concat; xs = [t2;t1] ; ty = Ty.Tbitv n; _ } ->
+        let r1, ctx = make_aux ~neg t1 ctx in
+        let r2, ctx = make_aux ~neg t2 ctx in
+        { bv = I_Comp (r2, r1) ; sz = n }, ctx
+
+      | { E.f = Sy.Op Extract (i, j); xs = [x] ; ty = Ty.Tbitv sz; _ } ->
+        let r, ctx = make_aux ~neg x ctx in
+        { sz ; bv = I_Ext (r, i, j)}, ctx
+
+      | { E.f = Sy.Op Nat2BV m; xs = [x] ; ty = Ty.Tbitv n; _ } ->
+        assert (m = n);
+        bitv_of_nat ~neg t' x n ctx
+
+      | { E.f = Sy.Op BVNot; xs = [x] ; ty = Ty.Tbitv _n; _ } ->
+        make_aux ~neg:(not neg) x ctx
+
+      | { E.f = Sy.Op BVOr; xs = [x; y] ; ty = Ty.Tbitv _n; _ } ->
+        (* TODO: find a easy way to check if (x = y) or (x = not y) and
+           simplify accordingly *)
+        let r1, ctx' = make_aux ~neg x ctx in
+        let r2, ctx'' = make_aux ~neg y ctx' in
+        let r1' = sigma r1 in
+        let r2' = sigma r2 in
+        let bv, nctx =
+          mk_bvor ~is_and:neg r1' r2' t' x y ctx''
+        in
+        to_i_ast bv, nctx (* not great! *)
+
+      | { E.f = Sy.Op BVExtend (b, k);
+          xs = [ x ] ; ty = Ty.Tbitv n; _
+        } when k > 0 ->
+        let r1, ctx' = make_aux ~neg x ctx in
+        extend_term b ~neg r1 k n,
+        ctx'
+
+      | { E.ty = Ty.Tbitv n; _ } ->
+        if neg then
+          let tv = E.fresh_name (Ty.Tbitv n) in
+          let t'' = E.mk_term (Sy.Op BVNot) [t'] (Ty.Tbitv n) in
+          let rv = X.term_embed tv in
+          let eq = E.mk_eq ~iff:false tv t'' in
+          {bv = I_Other (Alien rv); sz = n}, eq :: ctx
+        else
+          let r', ctx' = X.make t' in
+          {bv = I_Other (Alien r'); sz = n}, ctx' @ ctx
+
+      | _ ->
+        failwith
+          (Format.asprintf "[Bitv] make: Unexpected term %a@." E.print t')
+
+    and mk_bvor ?(is_and = false) r1 r2 t t1 t2 ctx =
+      let rec aux r1 r2 ctx =
+        match r1, r2 with
+        | hd1 :: tl1, hd2 :: tl2 when compare_simple_term hd1 hd2 = 0 ->
+          let l, ctx' = aux tl1 tl2 ctx in
+          hd1 :: l, ctx'
+
+        | { bv = Cte b1; sz = sz1 } :: tl1, { bv = Cte b2; sz = sz2 } :: tl2 ->
+          let n, nl1, nl2 = bvor_ctes ~is_and b1 sz1 b2 sz2 in
+          let l, ctx' = aux (nl1 @ tl1) (nl2 @ tl2) ctx in
+          n :: l, ctx'
+
+        | { bv = Cte b; sz = sz1; } :: tl1,
+          { bv = Other o; sz = sz2; } :: tl2 ->
+          let n, nl1, nl2 = bvor_cte_other ~is_and b sz1 o sz2 in
+          let l, ctx' = aux (nl1 @ tl1) (nl2 @ tl2) ctx in
+          n :: l, ctx'
+
+        | { bv = Other o; sz = sz1; } :: tl2,
+          { bv = Cte b; sz = sz2; } :: tl1 ->
+          let n, nl1, nl2 = bvor_cte_other ~is_and b sz2 o sz1 in
+          let l, ctx' = aux (nl1 @ tl1) (nl2 @ tl2) ctx in
+          n :: l, ctx'
+
+        | { bv = Cte b; sz = sz1; } :: tl1,
+          { bv = Ext (o, sz2', lb, ub); sz = sz2; } :: tl2 ->
+          let n, nl1, nl2 = bvor_cte_ext ~is_and b sz1 o sz2' sz2 lb ub in
+          let l, ctx' = aux (nl1 @ tl1) (nl2 @ tl2) ctx in
+          n :: l, ctx'
+
+        | { bv = Ext (o, sz2', lb, ub); sz = sz2; } :: tl2,
+          { bv = Cte b; sz = sz1; } :: tl1 ->
+          let n, nl1, nl2 = bvor_cte_ext ~is_and b sz1 o sz2' sz2 lb ub in
+          let l, ctx' = aux (nl1 @ tl1) (nl2 @ tl2) ctx in
+          n :: l, ctx'
+
+        | { bv = Other o1; sz = sz1; } :: tl1,
+          { bv = Other o2; sz = sz2; } :: tl2 ->
+          if sz1 > sz2 then
+            let nsz = sz1 - sz2 in
+            let nr, nctx = bvor_os t ~is_and t1 0 t2 0 sz2 ctx in
+            let nl1 = {bv = Ext (o1, sz1, sz2, sz1 - 1); sz = nsz } :: tl1 in
+            let l, ctx' = aux nl1 tl2 nctx in
+            nr @ l, ctx'
+          else if sz2 > sz1 then
+            let nsz = sz2 - sz1 in
+            let nr, nctx = bvor_os t ~is_and t1 0 t2 0 sz1 ctx in
+            let nl2 = {bv = Ext (o2, sz2, sz1, sz2 - 1); sz = nsz } :: tl2 in
+            let l, ctx' = aux tl1 nl2 nctx in
+            nr @ l, ctx'
+          else
+            let nr, nctx = bvor_os t ~is_and t1 0 t2 0 sz1 ctx in
+            let l, ctx' = aux tl1 tl2 nctx in
+            nr @ l, ctx'
+
+        | { bv = Ext (o1, sz1', lb1, ub1); sz = sz1; } :: tl1,
+          { bv = Ext (o2, sz2', lb2, ub2); sz = sz2; } :: tl2 ->
+          if sz1 > sz2 then
+            let nsz = sz1 - sz2 in
+            let nr, nctx =
+              bvor_os t ~is_and t1 lb1 t2 lb2 sz2 ctx
+            in
+            let nl1 = {bv = Ext (o1, sz1', lb1 + sz2, ub1); sz = nsz } :: tl1 in
+            let l, ctx' = aux nl1 tl2 nctx in
+            nr @ l, ctx'
+          else if sz2 > sz1 then
+            let nsz = sz2 - sz1 in
+            let nr, nctx =
+              bvor_os t ~is_and t1 lb1 t2 lb2 sz1 ctx
+            in
+            let nl2 = {bv = Ext (o2, sz2', lb2 + sz1, ub2); sz = nsz } :: tl2 in
+            let l, ctx' = aux tl1 nl2 nctx in
+            nr @ l, ctx'
+          else
+            let nr, nctx =
+              bvor_os t ~is_and t1 lb1 t2 lb2 sz1 ctx
+            in
+            let l, ctx' = aux tl1 tl2 nctx in
+            nr @ l, ctx'
+
+        | { bv = Other o1; sz = sz1; } :: tl1,
+          { bv = Ext (o2, sz2', lb2, ub2); sz = sz2; } :: tl2 ->
+          if sz1 > sz2 then
+            let nsz = sz1 - sz2 in
+            let nr, nctx = bvor_os t ~is_and t1 0 t2 lb2 sz2 ctx in
+            let nl1 = {bv = Ext (o1, sz1, sz2, sz1 - 1); sz = nsz } :: tl1 in
+            let l, ctx' = aux nl1 tl2 nctx in
+            nr @ l, ctx'
+          else if sz2 > sz1 then
+            let nsz = sz2 - sz1 in
+            let nr, nctx = bvor_os t ~is_and t1 0 t2 lb2 sz1 ctx in
+            let nl2 = {bv = Ext (o2, sz2', lb2 + sz1, ub2); sz = nsz } :: tl2 in
+            let l, ctx' = aux tl1 nl2 nctx in
+            nr @ l, ctx'
+          else
+            let nr, nctx = bvor_os t ~is_and t1 0 t2 lb2 sz1 ctx in
+            let l, ctx' = aux tl1 tl2 nctx in
+            nr @ l, ctx'
+
+        | { bv = Ext (o1, sz1', lb1, ub1); sz = sz1; } :: tl1,
+          { bv = Other o2; sz = sz2; } :: tl2 ->
+          if sz1 > sz2 then
+            let nsz = sz1 - sz2 in
+            let nr, nctx = bvor_os t ~is_and t1 lb1 t2 0 sz2 ctx in
+            let nl1 = {bv = Ext (o1, sz1', lb1 + sz2, ub1); sz = nsz } :: tl1 in
+            let l, ctx' = aux nl1 tl2 nctx in
+            nr @ l, ctx'
+          else if sz2 > sz1 then
+            let nsz = sz2 - sz1 in
+            let nr, nctx = bvor_os t ~is_and t1 lb1 t2 0 sz1 ctx in
+            let nl2 = {bv = Ext (o2, sz2, sz1, sz2 - 1); sz = nsz } :: tl2 in
+            let l, ctx' = aux tl1 nl2 nctx in
+            nr @ l, ctx'
+          else
+            let nr, nctx = bvor_os t ~is_and t1 lb1 t2 0 sz1 ctx in
+            let l, ctx' = aux tl1 tl2 nctx in
+            nr @ l, ctx'
+
+        | [], [] -> [], ctx
+        | _ -> assert false (* should be unreachable *)
+      in
+      aux r1 r2 ctx
+
+    and bvor_os t ~is_and t1 cnt1 t2 cnt2 sz ctx =
+      let nt = E.fresh_name (Ty.Tbitv sz) in
+      let rterm, nctx = make_aux nt ctx in
+      let nctx = mk_o_eqs nctx t ~is_and nt t1 cnt1 t2 cnt2 sz in
+      let nr = sigma rterm in
+      nr, nctx
   end
 
   (*BISECT-IGNORE-BEGIN*)
@@ -683,20 +1119,10 @@ module Shostak(X : ALIEN) = struct
 
   end
 
-  let compare_mine b1 b2 =
-    let rec comp l1 l2 = match l1,l2 with
-        [] , [] -> 0
-      | [] , _ -> -1
-      | _ , [] -> 1
-      | st1::l1 , st2::l2 ->
-        let c = compare_simple_term st1 st2 in
-        if c<>0 then c else comp l1 l2
-    in comp b1 b2
-
   let compare x y = compare_abstract (embed x) (embed y)
 
   (* should use hashed compare to be faster, not structural comparison *)
-  let equal bv1 bv2 = compare_mine bv1 bv2 = 0
+  let equal bv1 bv2 = compare_abstract bv1 bv2 = 0
 
   let hash_xterm = function
     | Var {var = i; sorte = A} -> 11 * i
@@ -729,9 +1155,72 @@ module Shostak(X : ALIEN) = struct
 
   let print = Debug.print_C_ast
 
+  let mk_bv2nat term bv m =
+    let mk_2pow n =
+      if n > 1 then
+        E.mk_term (Sy.Op Sy.Pow) [E.itwo; E.int (Int.to_string n)] Ty.Tint
+      else if n = 1 then E.itwo else E.ione
+    in
+    let mk_ite =
+      let bvone = E.mk_term (Sy.Bitv "1") [] (Ty.Tbitv 1) in
+      fun term n pow ->
+        let nthbv = E.mk_term (Sy.Op (Extract (n, n))) [term] (Ty.Tbitv 1) in
+        let cond = E.mk_eq ~iff:false bvone nthbv in
+        E.mk_ite cond (mk_2pow pow) E.izero
+    in
+    let bvr, ctx = Canonizer.make_aux bv [] in
+    let r = Canonizer.sigma bvr in
+    let _, natl =
+      List.fold_left (
+        fun (cnt, acc) simple_t ->
+          try match simple_t with
+            | { bv = Cte false; sz } -> cnt - sz, acc
+            | { bv = Cte true; sz } ->
+              let l = List.init sz (fun i -> mk_2pow (cnt - i)) in
+              cnt - sz, l @ acc
+            | { bv = Other (Alien r); sz } ->
+              begin match X.term_extract r with
+                | Some t, _ ->
+                  let l =
+                    List.init sz (fun i -> mk_ite t (sz - i - 1) (cnt - i))
+                  in
+                  cnt - sz, l @ acc
+                | None, _ -> raise Exit
+              end
+            | { bv = Ext (Alien r, _, _, ub); sz } ->
+              begin match X.term_extract r with
+                | Some t, _ ->
+                  let l =
+                    List.init sz (fun i -> mk_ite t (ub - i) (cnt - i))
+                  in
+                  cnt - sz, l @ acc
+                | None, _ -> raise Exit
+              end
+            | _ -> raise Exit
+          with Exit ->
+            let l =
+              List.init simple_t.sz (fun i -> mk_ite term (cnt - i) (cnt - i))
+            in
+            cnt - simple_t.sz, l @ acc
+      ) (m - 1, []) r
+    in
+    E.mk_term (Sy.Op Sy.Plus) natl Ty.Tint, ctx
+
   let make t =
-    let r, ctx = Canonizer.make t in
-    is_mine r, ctx
+    match E.term_view t with
+    | { E.f = Sy.Op BV2Nat; xs = [x] ; ty = Ty.Tint; _ } ->
+      begin match (E.term_view x).ty with
+        | Ty.Tbitv m ->
+          let x', ctx' = mk_bv2nat t x m in
+          let r, ctx = X.make x' in
+          r, ctx' @ ctx
+        | ty ->
+          failwith (Format.asprintf "Expected a bit-vector got %a" Ty.print ty)
+      end
+
+    | _ ->
+      let r, ctx = Canonizer.make_aux t [] in
+      is_mine (Canonizer.sigma r), ctx
 
   let color _ = assert false
 
@@ -739,40 +1228,23 @@ module Shostak(X : ALIEN) = struct
     let sz = List.fold_left (fun acc bv -> bv.sz + acc) 0 bv in
     Ty.Tbitv sz
 
-  let to_i_ast biv =
-    let f_aux st =
-      {sz = st.sz;
-       bv = match st.bv with
-         | Cte b -> Canonizer.I_Cte b
-         | Other tt -> Canonizer.I_Other tt
-         | Ext(tt,siz,i,j)  ->
-           let tt' = { sz = siz ; bv = Canonizer.I_Other tt }
-           in Canonizer.I_Ext(tt',i,j)
-      } in
-    List.fold_left
-      (fun acc st ->
-         let tmp = f_aux st
-         in { bv = Canonizer.I_Comp(acc,tmp) ; sz = acc.sz + tmp.sz }
-      ) (f_aux (List.hd biv)) (List.tl biv)
-
   let extract r ty =
     match X.extract r with
-      Some (_::_ as bv) -> to_i_ast bv
+    | Some (_::_ as bv) -> Canonizer.to_i_ast bv
     | None -> {bv =  Canonizer.I_Other (Alien r); sz = ty}
-    | Some [] -> assert false
+    | Some _ -> assert false
 
   let extract_xterm r =
     match X.extract r with
-      Some ([{ bv = Other (Var _ as x); _ }]) -> x
+    | Some [{ bv = Other (Var _ as x); _ }] -> x
     | None -> Alien r
     | _ -> assert false
 
   let var_or_term x =
     match x.bv with
-      Other (Var _) -> X.embed [x]
-    | Other (Alien r) -> r
+    | Other Alien r -> r
+    | Other Var _ as xt -> X.embed [{bv = xt; sz = x.sz}]
     | _ -> assert false
-
 
   (* ne resout pas quand c'est deja resolu *)
   let solve_bis u t =
@@ -817,31 +1289,37 @@ module Shostak(X : ALIEN) = struct
         "subst %a |-> %a in %a" X.print x X.print subs print biv;
     if Lists.is_empty biv then is_mine biv
     else
-      let r = Canonizer.sigma (subst_rec x subs (to_i_ast biv)) in
+      let r = Canonizer.sigma (subst_rec x subs (Canonizer.to_i_ast biv)) in
       is_mine r
-(*
-  module M =  Map.Make
-    (struct
-      type t = X.r
-      let compare = X.compare
-     end)
 
-
-  module Map = Map.Make
-    (struct
-      type t = (X.r simple_term) list
-      let compare = compare_mine
-     end)
-
-  module Set = Set.Make (
-    struct
-      type t = (X.r simple_term) list
-      let compare = compare_mine
-    end)
-*)
   let fully_interpreted _ = true
 
-  let term_extract _ = None, false
+  let term_extract r =
+    match X.extract r with
+    | None -> X.term_extract r
+    | Some l ->
+      try
+        let mk_bv b sz =
+          let c = if b then '1' else '0' in
+          E.bitv (String.init sz (fun _ -> c)) (Ty.Tbitv sz)
+        in
+        match l with
+        | { bv = Cte b; sz; } :: tl ->
+          let _, t =
+            List.fold_left (
+              fun (n, acc) r ->
+                match r with
+                | { bv = Cte b; sz; } ->
+                  let nsz =  n + sz in
+                  nsz,
+                  E.mk_term
+                    (Sy.Op Sy.Concat) [acc; mk_bv b sz] (Ty.Tbitv nsz)
+                | _ -> raise Exit
+            ) (sz, mk_bv b sz) tl
+          in
+          Some t, false
+        | _ -> None, false
+      with Exit -> None, false
 
   let abstract_selectors v acc = is_mine v, acc
 

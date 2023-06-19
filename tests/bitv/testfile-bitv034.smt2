@@ -1,0 +1,5 @@
+(set-logic BV)
+(declare-const h (_ BitVec 4))
+(define-fun c ((v (_ BitVec 4))) (_ BitVec 4) (_ bv0 4))
+(assert (= (bvnot h) (bvlshr (_ bv0 4) (c (_ bv0 4)))))
+(check-sat)

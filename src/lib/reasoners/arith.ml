@@ -119,8 +119,7 @@ module Shostak
          | Sqrt_real_default | Sqrt_real_excess
          | Real_of_int | Int_floor | Int_ceil
          | Max_int | Max_real | Min_int | Min_real
-         | Pow | Integer_log2
-         | Integer_round) -> true
+         | Pow | Integer_log2 | Integer_round) -> true
     | _ -> false
 
   let empty_polynome ty = P.create [] Q.zero ty
@@ -721,7 +720,14 @@ module Shostak
     | Sy.Op (Sy.Plus | Sy.Minus) -> true
     | _ -> false
 
-  let term_extract _ = None, false
+  let term_extract r =
+    match P.extract r with
+    | None -> None, false
+    | Some pt ->
+      match P.is_const pt, P.type_info pt with
+      | Some q, Ty.Tint ->
+        Some (E.int (Q.to_string q)), false
+      | _ -> None, false (* TODO: extract for the other types? *)
 
   let abstract_selectors p acc =
     let p, acc = P.abstract_selectors p acc in

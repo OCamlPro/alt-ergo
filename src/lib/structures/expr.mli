@@ -200,6 +200,14 @@ val bitv : string -> Ty.t -> t
 val fresh_name : Ty.t -> t
 val pred : t -> t
 
+(** frequently used literals *)
+
+val izero : t
+val ione : t
+val itwo : t
+val bvzero : t
+val bvone : t
+
 (** smart constructors for literals *)
 
 val mk_eq : iff:bool -> t -> t -> t

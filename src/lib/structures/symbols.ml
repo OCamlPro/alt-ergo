@@ -46,6 +46,10 @@ type operator =
   (* BV *)
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
+  | BV2Nat | Nat2BV of int
+  | BVNot | BVOr
+  | BVExtend of bool * int
+  (* (sign, n) if sign = true then extend sign otherwise extend with zeros *)
   (* FP *)
   | Float
   | RoundingMode of Fpa_rounding.rounding_mode | Integer_round | Fixed
@@ -139,6 +143,10 @@ let compare_operators op1 op2 =
       | Extract (i1, j1), Extract (i2, j2) ->
         let r = Int.compare i1 i2 in
         if r = 0 then Int.compare j1 j2 else r
+      | Nat2BV n1, Nat2BV n2 -> Int.compare n1 n2
+      | BVExtend (b1, n1),  BVExtend (b2, n2) ->
+        let r = Bool.compare b1 b2 in
+        if r = 0 then Int.compare n1 n2 else r
       | RoundingMode m1, RoundingMode m2 ->
         Stdlib.compare m1 m2
       | _ , (Plus | Minus | Mult | Div | Modulo | Real_is_int
@@ -148,7 +156,8 @@ let compare_operators op1 op2 =
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
             | Integer_log2 | Pow | Integer_round | RoundingMode _
             | Not_theory_constant | Is_theory_constant | Linear_dependency
-            | Constr _ | Destruct _ | Tite) -> assert false
+            | Constr _ | Destruct _ | Tite
+            | BV2Nat | Nat2BV _ | BVNot | BVOr | BVExtend _) -> assert false
     )
 
 let compare_builtin b1 b2 =
@@ -322,6 +331,12 @@ let to_string ?(show_vars=true) x = match x with
   | Op Extract (i, j) -> Format.sprintf "^{%d; %d}" i j
   | Op Tite -> "ite"
   | Op Reach -> assert false
+  | Op BV2Nat -> "bv2nat"
+  | Op Nat2BV m -> Format.sprintf "nat2bv[%d]" m
+  | Op BVNot -> "bvnot"
+  | Op BVOr -> "bvor"
+  | Op BVExtend (true, n) -> Format.sprintf "bv_sign_extend[%d]" n
+  | Op BVExtend (false, n) -> Format.sprintf "bv_zero_extend[%d]" n
   | True -> "true"
   | False -> "false"
   | Void -> "void"

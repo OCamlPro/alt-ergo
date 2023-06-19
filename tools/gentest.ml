@@ -255,14 +255,15 @@ let () =
       Sys.argv.(1)
     else "."
   in
-  let bin = "alt-ergo" in
+  let bin = "alt-ergo --frontend dolmen " in
   let timelimit = "--timelimit=2" in
   let solvers = [
-    ("runtest-quick", "dolmen", [
+    (* ("runtest-quick", "dolmen", [
       "--output=smtlib2"
     ; timelimit
     ; "--frontend dolmen" ])
-  ; ("runtest-quick", "tableaux", [
+  ; *)
+  ("runtest-quick", "tableaux", [
       "--output=smtlib2"
     ; timelimit
     ; "--sat-solver Tableaux" ])
@@ -278,10 +279,10 @@ let () =
       "--output=smtlib2"
     ; timelimit
     ; "--sat-solver CDCL-Tableaux" ])
-  ; ("runtest-ci", "dolmen_ci", [
+  (* ; ("runtest-ci", "dolmen_ci", [
       "--output=smtlib2"
     ; timelimit
-    ; "--frontend dolmen" ])
+    ; "--frontend dolmen" ]) *)
   ; ("runtest-ci", "ci_tableaux_cdcl_no_minimal_bj", [
       "--output=smtlib2"
     ; timelimit
