@@ -224,6 +224,12 @@ val mk_if : t -> t -> t -> t
 val mk_xor : t -> t -> t
 val mk_ite : t -> t -> t -> t
 
+(** smart constructors for bit-vector terms *)
+
+val mk_bitv_concat : t -> t -> int -> t
+val mk_bitv_extract : int -> int -> t -> int -> t
+val mk_bvnot : int -> t -> t
+
 (** Substitutions *)
 
 val apply_subst : subst -> t -> t

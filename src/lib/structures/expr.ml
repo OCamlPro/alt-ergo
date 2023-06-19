@@ -1229,6 +1229,17 @@ let mk_builtin ~is_pos n l =
   if is_pos then pos else neg pos
 
 
+(** smart constructors for bit-vector terms *)
+
+let mk_bitv_concat t1 t2 sz =
+  mk_term (Sy.Op Sy.Concat) [t1; t2] (Ty.Tbitv sz)
+
+let mk_bitv_extract i j t sz =
+  mk_term (Sy.Op (Sy.Extract (i, j))) [t] (Ty.Tbitv sz)
+
+let mk_bvnot n t =
+  mk_term (Sy.Op Sy.BVNot) [t] (Ty.Tbitv n)
+
 (** Substitutions *)
 
 let is_skolem_cst v =

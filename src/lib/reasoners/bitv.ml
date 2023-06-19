@@ -302,27 +302,16 @@ module Shostak(X : ALIEN) = struct
         end
       | _ -> None
 
-    let mk_extract f l bv =
-      E.mk_term (Sy.Op (Extract (f, l))) [bv] (Ty.Tbitv (l - f + 1))
-
-    let bit_e_neg =
-      let bv_zero = E.bitv "0" (Ty.Tbitv 1) in
-      let bv_one = E.bitv "1" (Ty.Tbitv 1) in
-      fun neg t ->
-        if neg then
-          let eq = E.mk_eq ~iff:false t E.izero in
-          E.mk_term (Sy.Op Tite) [eq; bv_one; bv_zero] (Ty.Tbitv 1)
-        else
-          let eq = E.mk_eq ~iff:false t E.izero in
-          E.mk_term (Sy.Op Tite) [eq; bv_zero; bv_one] (Ty.Tbitv 1)
+    let bit_e_neg neg t =
+      if neg
+      then E.mk_ite (E.mk_eq ~iff:false t E.izero) E.bvone E.bvzero
+      else E.mk_ite (E.mk_eq ~iff:false t E.izero) E.bvzero E.bvone
 
     let bv_of_bool ?(neg = false) b =
-      if (if neg then not b else b)
-      then (E.bitv "1" (Ty.Tbitv 1))
-      else (E.bitv "0" (Ty.Tbitv 1))
+      if (if neg then not b else b) then E.bvone else E.bvzero
 
     let mk_nthbv_eq bv_t n e =
-      E.mk_eq ~iff:false (mk_extract n n bv_t) e
+      E.mk_eq ~iff:false (E.mk_bitv_extract n n bv_t 1) e
 
     let get_nth_eq_b bv_t cnt t_b =
       mk_nthbv_eq bv_t cnt (bv_of_bool t_b)
@@ -454,28 +443,22 @@ module Shostak(X : ALIEN) = struct
 
     (** [mk_bvget_or_eq t cnt t1 cnt1 t2 cnt2]:
         t[cnt] = if t1[cnt1] = 0 then t2[cnt2] else 1 *)
-    let mk_bvget_or_eq =
-      let zero_bv = E.bitv "0" (Ty.Tbitv 1) in
-      let one_bv = E.bitv "1" (Ty.Tbitv 1) in
-      fun nt cnt t1 cnt1 t2 cnt2 ->
-        E.mk_eq ~iff:false (mk_extract cnt cnt nt) (
-          E.mk_ite
-            (E.mk_eq ~iff:false (mk_extract cnt1 cnt1 t1) zero_bv)
-            (mk_extract cnt2 cnt2 t2)
-            one_bv)
+    let mk_bvget_or_eq nt cnt t1 cnt1 t2 cnt2 =
+      E.mk_eq ~iff:false (E.mk_bitv_extract cnt cnt nt 1) (
+        E.mk_ite
+          (E.mk_eq ~iff:false (E.mk_bitv_extract cnt1 cnt1 t1 1) E.bvzero)
+          (E.mk_bitv_extract cnt2 cnt2 t2 1)
+          E.bvone)
 
     (** [mk_bvget_and_eq t cnt t1 cnt1 t2 cnt2]:
         t[cnt] = if t1[cnt1] = 1 then t2[cnt2] else 0 *)
-    let mk_bvget_and_eq =
-      let zero_bv = E.bitv "0" (Ty.Tbitv 1) in
-      let one_bv = E.bitv "1" (Ty.Tbitv 1) in
-      fun nt cnt t1 cnt1 t2 cnt2 ->
-        E.mk_eq ~iff:false (mk_extract cnt cnt nt) (
-          E.mk_ite
-            (E.mk_eq ~iff:false (mk_extract cnt1 cnt1 t1) one_bv)
-            (mk_extract cnt2 cnt2 t2)
-            zero_bv
-        )
+    let mk_bvget_and_eq nt cnt t1 cnt1 t2 cnt2 =
+      E.mk_eq ~iff:false (E.mk_bitv_extract cnt cnt nt 1) (
+        E.mk_ite
+          (E.mk_eq ~iff:false (E.mk_bitv_extract cnt1 cnt1 t1 1) E.bvone)
+          (E.mk_bitv_extract cnt2 cnt2 t2 1)
+          E.bvzero
+      )
 
     (** turn into a dispatcher function  *)
     let mk_o_eqs =
@@ -576,7 +559,7 @@ module Shostak(X : ALIEN) = struct
       | { E.ty = Ty.Tbitv n; _ } ->
         if neg then
           let tv = E.fresh_name (Ty.Tbitv n) in
-          let t'' = E.mk_term (Sy.Op BVNot) [t'] (Ty.Tbitv n) in
+          let t'' = E.mk_bvnot n t' in
           let rv = X.term_embed tv in
           let eq = E.mk_eq ~iff:false tv t'' in
           {bv = I_Other (Alien rv); sz = n}, eq :: ctx
@@ -1155,18 +1138,16 @@ module Shostak(X : ALIEN) = struct
 
   let print = Debug.print_C_ast
 
-  let mk_bv2nat term bv m =
+  let nat_of_bv term bv m =
     let mk_2pow n =
       if n > 1 then
         E.mk_term (Sy.Op Sy.Pow) [E.itwo; E.int (Int.to_string n)] Ty.Tint
       else if n = 1 then E.itwo else E.ione
     in
-    let mk_ite =
-      let bvone = E.mk_term (Sy.Bitv "1") [] (Ty.Tbitv 1) in
-      fun term n pow ->
-        let nthbv = E.mk_term (Sy.Op (Extract (n, n))) [term] (Ty.Tbitv 1) in
-        let cond = E.mk_eq ~iff:false bvone nthbv in
-        E.mk_ite cond (mk_2pow pow) E.izero
+    let mk_ite term n pow =
+      let nthbv = E.mk_bitv_extract n n term 1 in
+      let cond = E.mk_eq ~iff:false E.bvone nthbv in
+      E.mk_ite cond (mk_2pow pow) E.izero
     in
     let bvr, ctx = Canonizer.make_aux bv [] in
     let r = Canonizer.sigma bvr in
@@ -1211,7 +1192,7 @@ module Shostak(X : ALIEN) = struct
     | { E.f = Sy.Op BV2Nat; xs = [x] ; ty = Ty.Tint; _ } ->
       begin match (E.term_view x).ty with
         | Ty.Tbitv m ->
-          let x', ctx' = mk_bv2nat t x m in
+          let x', ctx' = nat_of_bv t x m in
           let r, ctx = X.make x' in
           r, ctx' @ ctx
         | ty ->
@@ -1312,8 +1293,7 @@ module Shostak(X : ALIEN) = struct
                 | { bv = Cte b; sz; } ->
                   let nsz =  n + sz in
                   nsz,
-                  E.mk_term
-                    (Sy.Op Sy.Concat) [acc; mk_bv b sz] (Ty.Tbitv nsz)
+                  E.mk_bitv_concat acc (mk_bv b sz) nsz
                 | _ -> raise Exit
             ) (sz, mk_bv b sz) tl
           in
