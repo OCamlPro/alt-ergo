@@ -170,6 +170,9 @@ val set_debug_use : bool -> unit
 (** Set [debug_warnings] accessible with {!val:get_debug_warnings} *)
 val set_debug_warnings : bool -> unit
 
+(** Set [debug_commands] accessible with {!val:get_debug_commands} *)
+val set_debug_commands : bool -> unit
+
 (** Set [profiling] accessible with {!val:get_profiling} *)
 val set_profiling : bool -> float -> unit
 
@@ -458,6 +461,10 @@ val get_debug : unit -> bool
 
 (** Get the debugging flag of warnings. *)
 val get_debug_warnings : unit -> bool
+
+(** Get the debugging flag of commands. If enabled, Alt-Ergo will display all
+    the commands that are sent to the solver. *)
+val get_debug_commands : unit -> bool
 
 (** Get the debugging flag of cc. *)
 val get_debug_cc : unit -> bool

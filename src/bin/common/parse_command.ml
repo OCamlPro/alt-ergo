@@ -189,12 +189,13 @@ module Debug = struct
     | Unsat_core
     | Use
     | Warnings
+    | Commands
 
   let all = [
     Debug; Ac; Adt; Arith; Arrays; Bitv; Sum; Ite;
     Cc; Combine; Constr; Explanation; Fm; Fpa; Gc;
     Interpretation; Matching; Sat; Split; Triggers;
-    Types; Typing; Uf; Unsat_core; Use; Warnings
+    Types; Typing; Uf; Unsat_core; Use; Warnings; Commands
   ]
 
   let show = function
@@ -224,6 +225,7 @@ module Debug = struct
     | Unsat_core -> "unsat-core"
     | Use -> "use"
     | Warnings -> "warnings"
+    | Commands -> "commands"
 
   let mk ~verbosity flags =
     List.concat flags
@@ -254,6 +256,7 @@ module Debug = struct
         | Unsat_core -> Options.set_debug_unsat_core true
         | Use -> Options.set_debug_use true
         | Warnings -> Options.set_debug_warnings true
+        | Commands -> Options.set_debug_commands true
       )
 
   let light_flag_term, medium_flag_term, full_flag_term =

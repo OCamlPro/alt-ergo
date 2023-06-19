@@ -66,6 +66,11 @@ let main () =
   let module FE = Frontend.Make (SAT) in
 
   let solve all_context (cnf, goal_name) =
+    if Options.get_debug_commands () then
+      Printer.print_dbg "@[<v 2>goal %s:@ %a@]@."
+        ~module_name:"Solving_loop" ~function_name:"solve"
+        goal_name
+        Fmt.(list ~sep:sp Commands.print) cnf;
     let used_context = FE.choose_used_context all_context ~goal_name in
     let consistent_dep_stack = Stack.create () in
     Signals_profiling.init_profiling ();
