@@ -1303,7 +1303,7 @@ let parse_theory_opt =
     let preludes enable_preludes disable_preludes disable_builtin_preludes =
       let preludes =
         if disable_builtin_preludes then
-          []
+          (Options.set_preludes []; [])
         else
           Preludes.default
       in
