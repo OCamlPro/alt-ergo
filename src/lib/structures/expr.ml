@@ -1238,7 +1238,138 @@ let mk_bitv_extract i j t sz =
   mk_term (Sy.Op (Sy.Extract (i, j))) [t] (Ty.Tbitv sz)
 
 let mk_bvnot n t =
-  mk_term (Sy.Op Sy.BVNot) [t] (Ty.Tbitv n)
+  mk_term (Sy.Op Sy.BVnot) [t] (Ty.Tbitv n)
+
+let mk_bvsign n t =
+  let t1 = mk_bitv_extract (n-1) (n-1) t n in
+  mk_eq ~iff:false t1 (bitv "1" (Ty.Tbitv 1))
+
+let mk_bv2nat t =
+  mk_term (Sy.Op Sy.BV2Nat) [t] Ty.Tint
+
+let mk_nat2bv n t =
+  mk_term (Sy.Op (Sy.Nat2BV n)) [t] (Ty.Tbitv n)
+
+let mk_bvneg n x =
+  mk_nat2bv n (
+    mk_term (Sy.Op Sy.Minus) [
+      mk_term (Sy.Op Sy.Pow) [ itwo; int (string_of_int n) ] Ty.Tint;
+      mk_bv2nat x
+    ] Ty.Tint
+  )
+
+let mk_bvult x y =
+  mk_builtin ~is_pos:true Sy.LT [ mk_bv2nat x; mk_bv2nat y ]
+
+let mk_bvule x y =
+  mk_builtin ~is_pos:true Sy.LE [ mk_bv2nat x; mk_bv2nat y ]
+
+let mk_bvslt n x y =
+  let xsign = mk_bvsign n x in
+  let ysign = mk_bvsign n y in
+  let c1 = mk_and xsign (neg ysign) false in
+  let c2 = mk_and (mk_eq ~iff:false xsign ysign) (mk_bvult x y) false in
+  mk_or c1 c2 false
+
+let mk_bvsle n x y =
+  let xsign = mk_bvsign n x in
+  let ysign = mk_bvsign n y in
+  let c1 = mk_and xsign (neg ysign) false in
+  let c2 = mk_and (mk_eq ~iff:false xsign ysign) (mk_bvule x y) false in
+  mk_or c1 c2 false
+
+let mk_bvadd n x y =
+  mk_nat2bv
+    n (mk_term (Sy.Op Sy.Plus) [mk_bv2nat x; mk_bv2nat y] Ty.Tint)
+
+let mk_bvsub n x y =
+  let x' = mk_term (Sy.Op Sy.BV2Nat) [x] Ty.Tint in
+  let y' = mk_term (Sy.Op Sy.BV2Nat) [mk_bvneg n y] Ty.Tint in
+  let natres = mk_term (Sy.Op Sy.Plus) [x'; y'] Ty.Tint in
+  mk_term (Sy.Op (Sy.Nat2BV n)) [natres] (Ty.Tbitv n)
+
+let mk_bvmul n x y =
+  let x' = mk_term (Sy.Op Sy.BV2Nat) [x] Ty.Tint in
+  let y' = mk_term (Sy.Op Sy.BV2Nat) [y] Ty.Tint in
+  let natres = mk_term (Sy.Op Sy.Mult) [x'; y'] Ty.Tint in
+  mk_term (Sy.Op (Sy.Nat2BV n)) [natres] (Ty.Tbitv n)
+
+let mk_bvudiv n x y =
+  (* Assuming that if bv2nat(y) = 0 then bv2nat(x)/bv2nat(y) is
+     undefined and that it makes nat2bv[n](bv2nat(x)/bv2nat(y)) also
+     undefined. *)
+  mk_nat2bv
+    n (mk_term (Sy.Op Sy.Div) [mk_bv2nat x; mk_bv2nat y] Ty.Tint)
+
+let mk_bvurem n x y =
+  (* Assuming that if bv2nat(y) = 0 then bv2nat(x)%bv2nat(y) is
+     undefined and that it makes nat2bv[n](bv2nat(x)%bv2nat(y)) also
+     undefined. *)
+  mk_nat2bv
+    n (mk_term (Sy.Op Sy.Modulo) [mk_bv2nat x; mk_bv2nat y] Ty.Tint)
+
+let mk_bvsdiv n x y =
+  let xsign = mk_bvsign n  x in
+  let ysign = mk_bvsign n  y in
+  let ite1 =
+    mk_ite
+      (mk_and (neg xsign) ysign false)
+      (mk_bvneg n (mk_bvudiv n x (mk_bvneg n y)))
+      (mk_bvudiv n (mk_bvneg n x) (mk_bvneg n y))
+  in
+  let ite2 =
+    mk_ite
+      (mk_and xsign (neg ysign) false)
+      (mk_bvneg n (mk_bvudiv n (mk_bvneg n x) y))
+      ite1
+  in
+  mk_ite
+    (mk_and (neg xsign) (neg ysign) false) (mk_bvudiv n x y) ite2
+
+let mk_bvsrem n x y =
+  let xsign = mk_bvsign n  x in
+  let ysign = mk_bvsign n  y in
+  let ite1 =
+    mk_ite
+      (mk_and (neg xsign) ysign false)
+      (mk_bvurem n x (mk_bvneg n y))
+      (mk_bvneg n (mk_bvurem n (mk_bvneg n x) (mk_bvneg n y)))
+  in
+  let ite2 =
+    mk_ite
+      (mk_and xsign (neg ysign) false)
+      (mk_bvneg n (mk_bvurem n (mk_bvneg n x) y))
+      ite1
+  in
+  mk_ite
+    (mk_and (neg xsign) (neg ysign) false) (mk_bvurem n x y) ite2
+
+let mk_bvsmod n x y =
+  let xsign = mk_bvsign n  x in
+  let ysign = mk_bvsign n  y in
+  let ite1 =
+    mk_ite
+      (mk_and (neg xsign) ysign false)
+      (mk_bvadd n (mk_bvurem n x (mk_bvneg n y)) y)
+      (mk_bvneg n (mk_bvurem n (mk_bvneg n x) (mk_bvneg n y)))
+  in
+  let ite2 =
+    mk_ite
+      (mk_and xsign (neg ysign) false)
+      (mk_bvadd n (mk_bvneg n (mk_bvurem n (mk_bvneg n x) y)) y)
+      ite1
+  in
+  mk_ite
+    (mk_and (neg xsign) (neg ysign) false) (mk_bvurem n x y) ite2
+
+let mk_bvlshr n x y =
+  mk_term (Sy.Op BVlshr) [x; y] (Ty.Tbitv n)
+
+let mk_bvashr n x y =
+  mk_ite
+    (neg (mk_bvsign n x))
+    (mk_bvlshr n x y)
+    (mk_bvnot n (mk_bvlshr n (mk_bvnot n x) y))
 
 (** Substitutions *)
 

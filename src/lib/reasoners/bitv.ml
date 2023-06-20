@@ -92,7 +92,11 @@ module Shostak(X : ALIEN) = struct
     match sy with
     | Sy.Bitv _
     | Sy.Op (
-        Concat | Extract _ | BVNot | BVOr | BVExtend _ | BV2Nat | Nat2BV _
+        Concat | Extract _ | BVExtend _ | BV2Nat | Nat2BV _
+        | BV_repeat _ | BV_rotate _
+        | BVnot | BVand | BVor | BVxor | BVnand | BVnor | BVxnor | BVcomp
+        | BVneg | BVadd | BVsub | BVmul | BVudiv | BVurem | BVsdiv | BVsrem
+        | BVsmod | BVshl | BVlshr
       ) -> true
     | _ -> false
 
@@ -516,6 +520,66 @@ module Shostak(X : ALIEN) = struct
                   (fun _ -> { bv = Ext (o, sz', ub, ub); sz = 1 })
               ) rtl)
 
+    let repeat_term k t =
+      let rec aux cnt acc =
+        if cnt = 1 then acc else
+          aux (k - 1 ) { bv = I_Comp (acc, t);  sz = acc.sz + t.sz }
+      in
+      aux k t
+
+    let rec mk_rotate_left n i t =
+      if i = 0 then t else
+        mk_rotate_left n (i - 1) (
+          E.mk_bitv_concat
+            (E.mk_bitv_extract 0 (n - 2) t (n - 1))
+            (E.mk_bitv_extract (n - 1) (n - 1) t 1)
+            n
+        )
+
+    let rec mk_rotate_right n i t =
+      if i = 0 then t else
+        mk_rotate_right n (i - 1) (
+          E.mk_bitv_concat
+            (E.mk_bitv_extract 0 0 t 1)
+            (E.mk_bitv_extract 1 (n - 1) t (n - 1))
+            n
+        )
+
+    let mk_bitv_or n t1 t2 =
+      E.mk_term (Sy.Op Sy.BVor) [t1; t2] (Ty.Tbitv n)
+
+    let mk_bitv_and n t1 t2 =
+      E.mk_bvnot n (mk_bitv_or n (E.mk_bvnot n t1) (E.mk_bvnot n t2))
+
+    let mk_bitv_xor n t1 t2 =
+      mk_bitv_or n
+        (mk_bitv_and n t1 (E.mk_bvnot n t2))
+        (mk_bitv_and n (E.mk_bvnot n t1) t2)
+
+    let mk_bitv_xnor n t1 t2 =
+      mk_bitv_or n
+        (mk_bitv_and n t1 t2)
+        (mk_bitv_and n (E.mk_bvnot n t1) (E.mk_bvnot n t2))
+
+    let rec mk_bitv_comp n t1 t2 =
+      if n = 1
+      then mk_bitv_xnor 1 t1 t2
+      else
+        mk_bitv_and 1
+          (mk_bitv_xnor 1
+             (E.mk_bitv_extract (n-1) (n-1) t1 1)
+             (E.mk_bitv_extract (n-1) (n-1) t2 1))
+          (mk_bitv_comp (n-1)
+             (E.mk_bitv_extract 0 (n-2) t1 (n-1))
+             (E.mk_bitv_extract 0 (n-2) t2 (n-1)))
+
+    let mk_bvshl n x y =
+      let x' = E.mk_term (Sy.Op Sy.BV2Nat) [x] Ty.Tint in
+      let y' = E.mk_term (Sy.Op Sy.BV2Nat) [y] Ty.Tint in
+      let y'' = E.mk_term (Sy.Op Sy.Pow) [E.itwo; y'] Ty.Tint in
+      let natres = E.mk_term (Sy.Op Sy.Mult) [x'; y''] Ty.Tint in
+      E.mk_term (Sy.Op (Sy.Nat2BV n)) [natres] (Ty.Tbitv n)
+
     let rec make_aux ?(neg = false) t' ctx =
       match E.term_view t' with
       | { E.f = Sy.Bitv s; _ } ->
@@ -534,27 +598,87 @@ module Shostak(X : ALIEN) = struct
         assert (m = n);
         bitv_of_nat ~neg t' x n ctx
 
-      | { E.f = Sy.Op BVNot; xs = [x] ; ty = Ty.Tbitv _n; _ } ->
+      | { E.f = Sy.Op BVnot; xs = [x] ; ty = Ty.Tbitv _; _ } ->
         make_aux ~neg:(not neg) x ctx
 
-      | { E.f = Sy.Op BVOr; xs = [x; y] ; ty = Ty.Tbitv _n; _ } ->
+      | { E.f = Sy.Op BVor; xs = [x; y] ; ty = Ty.Tbitv _; _ } ->
         (* TODO: find a easy way to check if (x = y) or (x = not y) and
            simplify accordingly *)
         let r1, ctx' = make_aux ~neg x ctx in
         let r2, ctx'' = make_aux ~neg y ctx' in
         let r1' = sigma r1 in
         let r2' = sigma r2 in
-        let bv, nctx =
-          mk_bvor ~is_and:neg r1' r2' t' x y ctx''
-        in
+        let bv, nctx = mk_bvor ~is_and:neg r1' r2' t' x y ctx'' in
         to_i_ast bv, nctx (* not great! *)
 
-      | { E.f = Sy.Op BVExtend (b, k);
-          xs = [ x ] ; ty = Ty.Tbitv n; _
-        } when k > 0 ->
+      | { E.f = Sy.Op BVExtend (b, k); xs = [ x ]; ty = Ty.Tbitv n; _ } ->
         let r1, ctx' = make_aux ~neg x ctx in
         extend_term b ~neg r1 k n,
         ctx'
+
+      | { E.f = Sy.Op BV_repeat k; xs = [ x ]; ty = Ty.Tbitv _; _ } ->
+        let r1, ctx' = make_aux ~neg x ctx in
+        repeat_term k r1, ctx'
+
+      | { E.f = Sy.Op BV_rotate (k, true); xs = [ x ]; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (mk_rotate_right n k x) ctx
+
+      | { E.f = Sy.Op BV_rotate (k, false); xs = [ x ]; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (mk_rotate_left n k x) ctx
+
+      | { E.f = Sy.Op BVneg; xs = [ x ] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (E.mk_bvneg n x) ctx
+
+      | { E.f = Sy.Op BVand; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (mk_bitv_and n x y) ctx
+
+      | { E.f = Sy.Op BVxor; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (mk_bitv_xor n x y) ctx
+
+      | { E.f = Sy.Op BVnand; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg:(not neg) (mk_bitv_and n x y) ctx
+
+      | { E.f = Sy.Op BVnor; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg:(not neg) (mk_bitv_or n x y) ctx
+
+      | { E.f = Sy.Op BVxnor; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (mk_bitv_xnor n x y) ctx
+
+      | { E.f = Sy.Op BVcomp; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (mk_bitv_comp n x y) ctx
+
+      | { E.f = Sy.Op BVadd; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (E.mk_bvadd n x y) ctx
+
+      | { E.f = Sy.Op BVsub; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (E.mk_bvsub n x y) ctx
+
+      | { E.f = Sy.Op BVmul; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (E.mk_bvmul n x y) ctx
+
+      | { E.f = Sy.Op BVudiv; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (E.mk_bvudiv n x y) ctx
+
+      | { E.f = Sy.Op BVurem; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (E.mk_bvurem n x y) ctx
+
+      | { E.f = Sy.Op BVsdiv; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (E.mk_bvsdiv n x y) ctx
+
+      | { E.f = Sy.Op BVsrem; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (E.mk_bvsrem n x y) ctx
+
+      | { E.f = Sy.Op BVsmod; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (E.mk_bvsmod n x y) ctx
+
+      | { E.f = Sy.Op BVshl; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        make_aux ~neg (mk_bvshl n x y) ctx
+
+      | { E.f = Sy.Op BVlshr; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
+        let z = E.mk_term (Sy.Op Sy.Pow) [E.itwo; E.mk_bv2nat y] Ty.Tint in
+        make_aux ~neg (
+          E.mk_nat2bv n (E.mk_term (Sy.Op Sy.Div) [E.mk_bv2nat x; z] Ty.Tint)
+        ) ctx
 
       | { E.ty = Ty.Tbitv n; _ } ->
         if neg then
@@ -1187,17 +1311,20 @@ module Shostak(X : ALIEN) = struct
     in
     E.mk_term (Sy.Op Sy.Plus) natl Ty.Tint, ctx
 
+  let get_bv_ty_sz x =
+    match (E.term_view x).ty with
+    | Ty.Tbitv n -> n
+    | ty ->
+      failwith
+        (Format.asprintf "Expected a bit-vector type, got %a" Ty.print ty)
+
   let make t =
     match E.term_view t with
     | { E.f = Sy.Op BV2Nat; xs = [x] ; ty = Ty.Tint; _ } ->
-      begin match (E.term_view x).ty with
-        | Ty.Tbitv m ->
-          let x', ctx' = nat_of_bv t x m in
-          let r, ctx = X.make x' in
-          r, ctx' @ ctx
-        | ty ->
-          failwith (Format.asprintf "Expected a bit-vector got %a" Ty.print ty)
-      end
+      let n = get_bv_ty_sz x in
+      let x', ctx' = nat_of_bv t x n in
+      let r, ctx = X.make x' in
+      r, ctx' @ ctx
 
     | _ ->
       let r, ctx = Canonizer.make_aux t [] in

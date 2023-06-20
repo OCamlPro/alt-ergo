@@ -47,9 +47,13 @@ type operator =
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
   | BV2Nat | Nat2BV of int
-  | BVNot | BVOr
   | BVExtend of bool * int
   (* (sign, n) if sign = true then extend sign otherwise extend with zeros *)
+  | BV_repeat of int
+  | BV_rotate of int * bool (* true for right, false for left *)
+  | BVnot | BVand | BVor | BVxor | BVnand | BVnor | BVxnor | BVcomp
+  | BVneg | BVadd | BVsub | BVmul | BVudiv | BVurem | BVsdiv | BVsrem | BVsmod
+  | BVshl | BVlshr
   (* FP *)
   | Float
   | RoundingMode of Fpa_rounding.rounding_mode | Integer_round | Fixed

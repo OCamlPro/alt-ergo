@@ -229,6 +229,23 @@ val mk_ite : t -> t -> t -> t
 val mk_bitv_concat : t -> t -> int -> t
 val mk_bitv_extract : int -> int -> t -> int -> t
 val mk_bvnot : int -> t -> t
+val mk_bv2nat : t -> t
+val mk_nat2bv : int -> t -> t
+val mk_bvneg : int -> t -> t
+val mk_bvult : t -> t -> t
+val mk_bvule : t -> t -> t
+val mk_bvslt : int -> t -> t -> t
+val mk_bvsle : int -> t -> t -> t
+val mk_bvadd : int -> t -> t -> t
+val mk_bvsub : int -> t -> t -> t
+val mk_bvmul : int -> t -> t -> t
+val mk_bvudiv : int -> t -> t -> t
+val mk_bvurem : int -> t -> t -> t
+val mk_bvsdiv : int -> t -> t -> t
+val mk_bvsrem : int -> t -> t -> t
+val mk_bvsmod : int -> t -> t -> t
+val mk_bvlshr : int -> t -> t -> t
+val mk_bvashr : int -> t -> t -> t
 
 (** Substitutions *)
 

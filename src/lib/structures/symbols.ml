@@ -47,9 +47,13 @@ type operator =
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
   | BV2Nat | Nat2BV of int
-  | BVNot | BVOr
   | BVExtend of bool * int
   (* (sign, n) if sign = true then extend sign otherwise extend with zeros *)
+  | BV_repeat of int
+  | BV_rotate of int * bool (* true for right, false for left *)
+  | BVnot | BVand | BVor | BVxor | BVnand | BVnor | BVxnor | BVcomp
+  | BVneg | BVadd | BVsub | BVmul | BVudiv | BVurem | BVsdiv | BVsrem | BVsmod
+  | BVshl | BVlshr
   (* FP *)
   | Float
   | RoundingMode of Fpa_rounding.rounding_mode | Integer_round | Fixed
@@ -157,7 +161,11 @@ let compare_operators op1 op2 =
             | Integer_log2 | Pow | Integer_round | RoundingMode _
             | Not_theory_constant | Is_theory_constant | Linear_dependency
             | Constr _ | Destruct _ | Tite
-            | BV2Nat | Nat2BV _ | BVNot | BVOr | BVExtend _) -> assert false
+            | BV2Nat | Nat2BV _  | BVExtend _
+            | BV_repeat _ | BV_rotate _ | BVneg
+            | BVnot | BVand | BVor | BVxor | BVnand | BVnor | BVxnor | BVcomp
+            | BVadd | BVsub | BVmul | BVudiv | BVurem | BVsdiv | BVsrem
+            | BVsmod | BVshl| BVlshr) -> assert false
     )
 
 let compare_builtin b1 b2 =
@@ -333,10 +341,30 @@ let to_string ?(show_vars=true) x = match x with
   | Op Reach -> assert false
   | Op BV2Nat -> "bv2nat"
   | Op Nat2BV m -> Format.sprintf "nat2bv[%d]" m
-  | Op BVNot -> "bvnot"
-  | Op BVOr -> "bvor"
   | Op BVExtend (true, n) -> Format.sprintf "bv_sign_extend[%d]" n
   | Op BVExtend (false, n) -> Format.sprintf "bv_zero_extend[%d]" n
+  | Op BV_repeat n -> Format.sprintf "bv_repeat[%d]" n
+  | Op BV_rotate (n, true) -> Format.sprintf "bv_rotate_right[%d]" n
+  | Op BV_rotate (n, false) -> Format.sprintf "bv_rotate_false[%d]" n
+  | Op BVnot -> "bvnot"
+  | Op BVand -> "bvand"
+  | Op BVor -> "bvor"
+  | Op BVxor -> "bvxor"
+  | Op BVnand -> "bvnand"
+  | Op BVnor -> "bvnor"
+  | Op BVxnor -> "bvxnor"
+  | Op BVcomp -> "bvcomp"
+  | Op BVneg -> "bvneg"
+  | Op BVadd -> "bvadd"
+  | Op BVsub -> "bvsub"
+  | Op BVmul -> "bvmul"
+  | Op BVudiv -> "bvudiv"
+  | Op BVurem -> "bvurem"
+  | Op BVsdiv -> "bvsdiv"
+  | Op BVsrem -> "bvsrem"
+  | Op BVsmod -> "bvsmod"
+  | Op BVshl -> "bvshl"
+  | Op BVlshr -> "bvlshr"
   | True -> "true"
   | False -> "false"
   | Void -> "void"
