@@ -1,5 +1,5 @@
 (set-logic BV)
 (declare-const h (_ BitVec 2))
-(define-fun m ((x (_ BitVec 4)) (x (_ BitVec 4)) (v (_ BitVec 4))) Bool false)
+(define-fun m ((_x1 (_ BitVec 4)) (_x2 (_ BitVec 4)) (_v (_ BitVec 4))) Bool false)
 (assert (distinct false (exists ((x (_ BitVec 4))) (and (m (_ bv0 4) (_ bv0 4) (_ bv0 4)) (= ((_ sign_extend 1) x) (concat (_ bv0 1) ((_ zero_extend 2) h)))))))
 (check-sat)
