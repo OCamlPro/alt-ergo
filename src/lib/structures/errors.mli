@@ -81,6 +81,7 @@ type typing_error =
   | NotAdtConstr of string * Ty.t
   | BadPopCommand of {pushed : int; to_pop : int}
   | ShouldBePositive of int
+  | PolymorphicEnum of string
 
 (** Errors that can be raised at solving*)
 type run_error =
