@@ -147,6 +147,8 @@ module Types = struct
       let ty = Ty.text ty_vars id in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Enum lc ->
+      if not (Lists.is_empty ty_vars) then
+        Errors.typing_error (PolymorphicEnum id) loc;
       let ty = Ty.tsum id lc in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Record (record_constr, lbs) ->

@@ -170,6 +170,9 @@ val set_debug_use : bool -> unit
 (** Set [debug_warnings] accessible with {!val:get_debug_warnings} *)
 val set_debug_warnings : bool -> unit
 
+(** Set [debug_commands] accessible with {!val:get_debug_commands} *)
+val set_debug_commands : bool -> unit
+
 (** Set [profiling] accessible with {!val:get_profiling} *)
 val set_profiling : bool -> float -> unit
 
@@ -336,16 +339,19 @@ val set_output_with_formatting : bool -> unit
 val set_output_with_forced_flush : bool -> unit
 
 (** Set [infer_input_format] accessible with {!val:get_infer_input_format} *)
-val set_infer_input_format : 'a option -> unit
+val set_infer_input_format : bool -> unit
 
 (** Set [infer_output_format] accessible with {!val:get_infer_output_format} *)
-val set_infer_output_format : 'a option -> unit
+val set_infer_output_format : bool -> unit
 
 (** Set [parsers] accessible with {!val:get_parsers} *)
 val set_parsers : string list -> unit
 
 (** Set [preludes] accessible with {!val:get_preludes} *)
 val set_preludes : string list -> unit
+
+(** Set [theory_preludes] accessible with {!val:get_theory_preludes} *)
+val set_theory_preludes : Preludes.t list -> unit
 
 (** Set [disable_weaks] accessible with {!val:get_disable_weaks} *)
 val set_disable_weaks : bool -> unit
@@ -458,6 +464,10 @@ val get_debug : unit -> bool
 
 (** Get the debugging flag of warnings. *)
 val get_debug_warnings : unit -> bool
+
+(** Get the debugging flag of commands. If enabled, Alt-Ergo will display all
+    the commands that are sent to the solver. *)
+val get_debug_commands : unit -> bool
 
 (** Get the debugging flag of cc. *)
 val get_debug_cc : unit -> bool
@@ -628,6 +638,9 @@ val get_parsers : unit -> string list
 (** List of files that have be loaded as preludes. *)
 val get_preludes : unit -> string list
 (** Default to [\[\]] *)
+
+(** List of theory preludes to load. *)
+val get_theory_preludes : unit -> Preludes.t list
 
 (** [true] if the program shall stop after typing. *)
 val get_type_only : unit -> bool

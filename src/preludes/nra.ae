@@ -1,0 +1,410 @@
+(******************************************************************************)
+(*                                                                            *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                     *)
+(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the license indicated      *)
+(*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
+(*     present, please contact us to clarify licensing.                       *)
+(*                                                                            *)
+(******************************************************************************)
+
+theory Principal_Sqrt_real extends NRA = (* some axioms about sqrt: shoud add more *)
+
+axiom sqrt_bounds:
+      forall x, i, j : real
+      [sqrt_real(x), x in [i,j]]
+      (* x may be a constant. i.e. x = i = j and sqrt_real(x) is not exact *)
+      {i <= x, x <= j}.
+      sqrt_real_default(i) <= sqrt_real(x) <= sqrt_real_excess(j)
+
+axiom sqrt_real_is_positive:
+  forall x:real[sqrt_real(x)]. (* semantic triggers ? case-split ? *)
+     x >= 0. ->
+     sqrt_real(x) >= 0.
+
+axiom sqrt_real_is_positive_strict:
+  forall x:real[sqrt_real(x)]. (* semantic triggers ? case-split ? *)
+     x > 0. ->
+     sqrt_real(x) > 0.
+
+axiom square_of_sqrt_real:
+  forall x:real[sqrt_real(x)]. (* semantic triggers ? case-split ? *)
+    x >= 0. ->
+    sqrt_real(x) * sqrt_real(x) = x
+
+axiom sqrt_real_of_square:
+  forall x:real[sqrt_real(x * x)]. (* semantic triggers ? case-split ? *)
+    x >= 0. ->
+    sqrt_real(x * x) = x
+
+
+axiom sqrt_real_monotonicity:
+  forall x, y:real[sqrt_real(x), sqrt_real(y)].
+    (* semantic triggers ? case-split ? *)
+    x >= 0. ->
+    y >= 0. ->
+    x <= y ->
+    sqrt_real(x) <= sqrt_real(y)
+
+(* what about contrapositive of sqrt_real_monotonicity *)
+
+axiom sqrt_real_monotonicity_strict:
+  forall x, y:real[sqrt_real(x), sqrt_real(y)].
+    (* semantic triggers ? case-split ? *)
+    x >= 0. ->
+    y >= 0. ->
+    x < y ->
+    sqrt_real(x) < sqrt_real(y)
+
+(* what about contrapositive of sqrt_real_monotonicity_strict *)
+
+end
+
+theory Linearization extends NRA =
+
+   (* TODO: linearizations with strict inequalities are missing *)
+
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_mult_1:
+         forall x, y: real.
+         forall a: real
+         [
+            x*y,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [a,?]
+          |
+            y*x,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [a,?]
+         ]
+         {a <= y}.
+         x >= 0. ->
+         x*a <= x*y
+
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_mult_2:
+         forall x, y: real.
+         forall a: real
+         [
+            x*y,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [a,?]
+          |
+            y*x,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [a,?]
+         ]
+         {a <= y}.
+         x <= 0. ->
+         x*a >= x*y
+
+  (* needs more semantic triggers, case-split, and discarding of linear terms*)
+  axiom linearize_mult_3:
+         forall x, y: real.
+         forall b: real
+         [
+            x*y,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [?,b]
+          |
+            y*x,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [?,b]
+         ]
+         {y <= b}.
+         x >= 0. ->
+         x*y <= x*b
+
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_mult_4:
+         forall x, y: real.
+         forall b: real
+         [
+            x*y,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [?,b]
+          |
+            x*y,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [?,b]
+         ]
+         {y <= b}.
+         x <= 0. ->
+         x*y >= x*b
+
+
+   (* commutativity of four axiomes above *)
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_mult_5:
+         forall x, y: real.
+         forall a: real
+         [
+            y*x,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [a,?]
+          |
+            x*y,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [a,?]
+         ]
+         {a <= y}.
+         x >= 0. ->
+         a*x <= y*x
+
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_mult_6:
+         forall x, y: real.
+         forall a: real
+         [
+            y*x,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [a,?]
+          |
+            x*y,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [a,?]
+         ]
+         {a <= y}.
+         x <= 0. ->
+         a*x >= y*x
+
+  (* needs more semantic triggers, case-split, and discarding of linear terms*)
+  axiom linearize_mult_7:
+         forall x, y: real.
+         forall b: real
+         [
+            y*x,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [?,b]
+          |
+            x*y,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [?,b]
+         ]
+         {y <= b}.
+         x >= 0. ->
+         y*x <= b*x
+
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_mult_8:
+         forall x, y: real.
+         forall b: real
+         [
+            y*x,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [?,b]
+          |
+            x*y,
+            not_theory_constant(x),
+            not_theory_constant(y),
+            y in [?,b]
+         ]
+         {y <= b}.
+         x <= 0. ->
+         y*x >= b*x
+
+
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_div_1:
+    forall a, b, c : real
+    [
+       a/b,
+       not_theory_constant(b),
+       a/b in [c, ?]
+    ]
+    {a/b >= c}.
+    b > 0. ->
+    a >= b * c
+
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_div_2:
+    forall a, b, c : real
+    [
+       a/b,
+       not_theory_constant(b),
+       a/b in [c, ?]
+    ]
+    {a/b >= c}.
+    b < 0. ->
+    a <= b * c
+
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_div_3:
+    forall a, b, c : real
+    [
+       a/b,
+       not_theory_constant(b),
+       a/b in [?, c]
+    ]
+    {a/b <= c}.
+    b > 0. ->
+    a <= b * c
+
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_div_4:
+    forall a, b, c : real
+    [
+       a/b,
+       not_theory_constant(b),
+       a/b in [?, c]
+    ]
+    {a/b <= c}.
+    b < 0. ->
+    a >= b * c
+
+
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_div_strict_1:
+    forall a, b, c : real
+    [
+       a/b,
+       not_theory_constant(b),
+       a/b in ]c, ?]
+    ]
+    {a/b > c}.
+    b > 0. ->
+    a > b * c
+
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_div_strict_2:
+    forall a, b, c : real
+    [
+       a/b,
+       not_theory_constant(b),
+       a/b in ]c, ?]
+    ]
+    {a/b > c}.
+    b < 0. ->
+    a < b * c
+
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_div_strict_3:
+    forall a, b, c : real
+    [
+       a/b,
+       not_theory_constant(b),
+       a/b in [?, c[
+    ]
+    {a/b < c}.
+    b > 0. ->
+    a < b * c
+
+   (* needs more semantic triggers, case-split, and discarding of linear terms*)
+   axiom linearize_div_strict_4: (* add the same thing for equality ?? *)
+    forall a, b, c : real
+    [
+       a/b,
+       not_theory_constant(b),
+       a/b in [?, c[
+    ]
+    {a/b < c}.
+    b < 0. ->
+    a > b * c
+
+
+   axiom linearize_mult_zero_one_1:
+     forall x, y : real
+     [
+        x*y,
+        not_theory_constant(x),
+        not_theory_constant(y),
+        x in [0., 1.]
+     ]
+     {0. <= x, x <= 1.}. (* needs cs on y an sem trigger on y *)
+     y >= 0. ->
+     x*y <= y
+
+   axiom linearize_mult_zero_one_2:
+     forall x, y : real
+     [
+        y*x,
+        not_theory_constant(x),
+        not_theory_constant(y),
+        x in [0., 1.]
+     ]{0. <= x, x <= 1.}. (* needs cs on y an sem trigger on y *)
+     y >= 0. ->
+     y*x <= y
+
+   axiom linearize_mult_zero_one_3:
+     forall x, y : real
+     [
+        x*y,
+        not_theory_constant(x),
+        not_theory_constant(y),
+        x in [0., 1.]
+     ]{0. <= x, x <= 1.}. (* needs cs on y an sem trigger on y *)
+     y <= 0. ->
+     y <= x*y
+
+   axiom linearize_mult_zero_one_4:
+     forall x, y : real
+     [
+        y*x,
+        not_theory_constant(x),
+        not_theory_constant(y),
+        x in [0., 1.]
+     ]{0. <= x, x <= 1.}. (* needs cs on y an sem trigger on y *)
+     y <= 0. ->
+     y <= y*x
+
+   axiom linearize_mult_zero_one_5:
+     forall x, y : real
+     [
+        x*y,
+        not_theory_constant(x),
+        not_theory_constant(y),
+        -x in [0., 1.]
+     ]{-1. <= x, x <= 0.}. (* needs cs on y an sem trigger on y *)
+     y >= 0. ->
+     x*y <= y
+
+   axiom linearize_mult_zero_one_6:
+     forall x, y : real
+     [
+        y*x,
+        not_theory_constant(x),
+        not_theory_constant(y),
+        -x in [0., 1.]
+     ]{-1. <= x, x <= 0.}. (* needs cs on y an sem trigger on y *)
+     y >= 0. ->
+     y*x <= y
+
+   axiom linearize_mult_zero_one_7:
+     forall x, y : real
+     [
+        x*y,
+        not_theory_constant(x),
+        not_theory_constant(y),
+        -x in [0., 1.]
+     ]{-1. <= x, x <= 0.}. (* needs cs on y an sem trigger on y *)
+     y <= 0. ->
+     y <= x*y
+
+   axiom linearize_mult_zero_one_8:
+     forall x, y : real
+     [
+        y*x,
+        not_theory_constant(x),
+        not_theory_constant(y),
+        -x in [0., 1.]
+     ]{-1. <= x, x <= 0.}. (* needs cs on y an sem trigger on y *)
+     y <= 0. ->
+     y <= y*x
+
+end

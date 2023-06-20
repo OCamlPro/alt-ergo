@@ -75,6 +75,7 @@ type typing_error =
   | NotAdtConstr of string * Ty.t
   | BadPopCommand of {pushed : int; to_pop : int}
   | ShouldBePositive of int
+  | PolymorphicEnum of string
 
 type run_error =
   | Invalid_steps_count of int
@@ -216,6 +217,10 @@ let report_typing_error fmt = function
   | ShouldBePositive n ->
     fprintf fmt
       "This integer : %d should be positive" n
+
+  | PolymorphicEnum n ->
+    fprintf fmt
+      "Polymorphic enum definition for %s is not supported" n
 
 let report_run_error fmt = function
   | Invalid_steps_count i ->

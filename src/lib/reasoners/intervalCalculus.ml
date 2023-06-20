@@ -2503,7 +2503,7 @@ let assume_th_elt t th_elt dep =
     if axiom_kind == Util.Propagator then "Th propagator" else "Th CS"
   in
   match extends with
-  | Util.NIA | Util.NRA | Util.FPA ->
+  | Util.NIA | Util.NRA | Util.FPA | Util.RIA ->
     let th_form = separate_semantic_triggers ax_form in
     let th_elt = {th_elt with Expr.ax_form} in
     if get_debug_fpa () >= 2 then
