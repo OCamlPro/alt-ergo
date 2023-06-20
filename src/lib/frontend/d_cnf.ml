@@ -786,8 +786,7 @@ let mk_add translate ty l =
     | [] -> []
   in
   let args = aux_mk_add l in
-  E.mk_term (Sy.Op Sy.Plus) (List.fast_sort E.compare args) ty
-
+  E.mk_term (Sy.Op Sy.Plus)args ty
 
 let mk_bitv_repeat n i t =
   let rec aux i sz acc =
