@@ -535,7 +535,12 @@ module Shostak(X : ALIEN) = struct
 
     let rec slice_composition eq pat (ac_eq,c_sub) = match (eq,pat) with
       |[],[] -> (ac_eq,c_sub)
-      |st::_,n::_  when st.sz < n -> assert false
+      |st::_,n::pat_tl  when st.sz < n ->
+        (* happens when a variable x of size n is replaced by two variables
+           x1 and x2 of size n1 and n2.
+           in this case, the pattern needs to be updated with n1 :: n2 :: _
+           instead of n :: _ *)
+        slice_composition eq (st.sz :: n - st.sz :: pat_tl) (ac_eq,c_sub)
       |st::comp,n::pt ->
         if st.sz = n then slice_composition comp pt (st::ac_eq , c_sub)
         else let (st_n,res,flag) = slice_var st n
