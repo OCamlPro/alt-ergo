@@ -272,6 +272,7 @@ let infer_input_format = ref true
 let parse_only = ref false
 let parsers = ref []
 let preludes = ref []
+let theory_preludes = ref Preludes.default
 let type_only = ref false
 let type_smt2 = ref false
 
@@ -282,10 +283,11 @@ let set_output_with_formatting b = output_with_formatting := b
 let set_output_with_forced_flush b = output_with_forced_flush := b
 let set_frontend f = frontend := f
 let set_input_format f = input_format := f
-let set_infer_input_format f = infer_input_format := (Option.is_none f)
+let set_infer_input_format b = infer_input_format := b
 let set_parse_only b = parse_only := b
 let set_parsers p = parsers := p
 let set_preludes p = preludes := p
+let set_theory_preludes t = theory_preludes := t
 let set_type_only b = type_only := b
 let set_type_smt2 b = type_smt2 := b
 
@@ -300,6 +302,7 @@ let get_infer_input_format () = !infer_input_format
 let get_parse_only () = !parse_only
 let get_parsers () = !parsers
 let get_preludes () = !preludes
+let get_theory_preludes () = !theory_preludes
 let get_type_only () = !type_only
 let get_type_smt2 () = !type_smt2
 
@@ -356,7 +359,7 @@ let set_dump_models b = dump_models := b
 let set_interpretation_use_underscore b = interpretation_use_underscore := b
 let set_output_format b = output_format := b
 let set_model_type t = model_type := t
-let set_infer_output_format f = infer_output_format := Option.is_none f
+let set_infer_output_format b = infer_output_format := b
 let set_unsat_core b = unsat_core := b
 
 let equal_mode a b =

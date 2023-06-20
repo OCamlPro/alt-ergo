@@ -26,6 +26,9 @@
     fmt
   )
 
+  (preprocess (pps ppx_blob))
+  (preprocessor_deps (glob_files ../preludes/*.ae))
+
   ; .mli only modules *also* need to be in this field
   (modules_without_implementation matching_types sig sig_rel)
 
@@ -46,7 +49,8 @@
     ; util
     Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
     MyDynlink MyUnix Numbers
-    Options Timers Util Vec Version Steps Printer My_zip
+    Options Timers Util Vec Version Steps Printer My_zip Preludes
+    Compat
   )
 
  (js_of_ocaml

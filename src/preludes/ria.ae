@@ -1,0 +1,177 @@
+(******************************************************************************)
+(*                                                                            *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                     *)
+(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the license indicated      *)
+(*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
+(*     present, please contact us to clarify licensing.                       *)
+(*                                                                            *)
+(******************************************************************************)
+
+
+(*** Handling of real_of_int and real_is_int: ***)
+theory Real_of_Int extends RIA =
+   axiom rii : forall x : real [real_is_int(x)]. real_is_int(x) = (x = real_of_int(int_floor(x)))
+
+   axiom roi_add :
+     forall x, y : int [real_of_int(x+y)].
+       real_of_int(x + y) = real_of_int(x) + real_of_int(y)
+
+   axiom roi_sub :
+     forall x, y : int [real_of_int(x-y)].
+       real_of_int(x - y) = real_of_int(x) - real_of_int(y)
+
+   axiom roi_mult :
+     forall x, y : int [real_of_int(x*y)].
+       real_of_int(x * y) = real_of_int(x) * real_of_int(y)
+
+   axiom roi_monotonicity_1 :
+     forall x : int.
+     forall k : real.
+     forall i : int
+     [real_of_int(x), x in ]?, i], k |-> real_of_int(i)]
+     {x <= i}.
+     real_of_int(x) <= k
+
+   axiom roi_monotonicity_2 :
+     forall x : int.
+     forall k : real.
+     forall i : int
+     [real_of_int(x), x in [i, ?[, k |-> real_of_int(i)]
+     {i <= x}.
+     k <= real_of_int(x)
+
+   axiom real_of_int_to_int_1 :
+     forall x, k : int.
+     forall i : real
+     [real_of_int(x), real_of_int(x) in ]?, i], k |-> int_floor(i)]
+     {real_of_int(x) <= i}.
+     x <= k
+
+   axiom real_of_int_to_int_2 :
+     forall x, k : int.
+     forall i : real
+     [real_of_int(x), real_of_int(x) in [i, ?[, k |-> int_ceil(i)]
+     {i <= real_of_int(x)}.
+     k <= x
+
+   (* can add other axioms on strict ineqs on rationals ? *)
+
+end
+
+theory ABS extends RIA =
+
+   axiom abs_real_pos :
+     forall x : real
+     [
+        abs_real(x),
+        x in [0., ?[
+     ]
+     {x >= 0.}.
+     abs_real(x) = x
+
+  axiom abs_real_neg :
+     forall x : real
+     [
+        abs_real(x),
+        x in ]?, 0.]
+     ]
+     {x <= 0.}.
+     abs_real(x) = -x
+
+   case_split abs_real_cs:
+     forall x : real
+     [
+        abs_real(x),
+        x in [?i,?j],
+        0. in ]?i,?j[
+     ].
+     (* not of the form (a or not a) to avoid simplification of F.mk_or *)
+     x <= 0. or x >= 0.
+
+   axiom abs_real_interval_1 :
+     forall x : real
+     [
+        abs_real(x),
+        abs_real(x) in [?i, ?j],
+        0. in ]?i, ?j[
+     ].
+     0. <= abs_real(x)
+
+   axiom abs_real_interval_2 : (* should block this axiom once the deduction is made,
+         but this needs to have i and j on the left-hand-side of semantic triggers *)
+     forall i, j, k : real.
+     forall x : real
+     [
+        abs_real(x),
+        x in [i, j],
+        k |-> max_real (abs_real(i), abs_real(j))
+     ]
+     {i <= x, x <= j}.
+     abs_real(x) <= k
+
+   axiom abs_real_interval_3 : (* should block this axiom once the deduction is made,
+         but this needs to have i and j on the left-hand-side of semantic triggers *)
+     forall i : real.
+     forall x : real
+     [
+        abs_real(x),
+        abs_real(x) in [?, i]
+     ]
+     { abs_real(x) <= i }.
+     - i <= x <= i
+
+   axiom abs_real_from_square_large:
+     forall x, y : real[x*x,y*y]. (* semantic triggers mising *)
+       x*x <= y*y ->
+       abs_real(x) <= abs_real(y)
+
+   axiom abs_real_from_square_strict:
+     forall x, y : real[x*x,y*y]. (* semantic triggers mising *)
+       x*x < y*y ->
+       abs_real(x) < abs_real(y)
+
+
+   axiom abs_real_greater_than_real :
+     forall x : real
+     [
+        abs_real(x)
+     ].
+     x <= abs_real(x)
+
+
+  (* TODO: add semantic triggers not_theory_constant(x) on axioms of abs_int *)
+
+   axiom abs_int_pos :
+     forall x : int[abs_int(x) , x in [0, ?[ ]
+     {x >= 0}.
+     abs_int(x) = x
+
+  axiom abs_int_neg :
+     forall x : int[abs_int(x), x in ]?, 0]]
+     {x <= 0}.
+     abs_int(x) = -x
+
+   case_split abs_int_cs:
+     forall x : int [abs_int(x) , x in [?i,?j], 0 in ]?i,?j[].
+     (* not of the form (a or not a) to avoid simplification of F.mk_or *)
+     x <= 0 or x >= 0
+
+  axiom abs_int_interval_1 :
+     forall x : int [abs_int(x), abs_int(x) in [?i, ?j], 0 in ]?i, ?j[].
+     0 <= abs_int(x)
+
+  axiom abs_int_interval_2 :
+     forall i, j, k : int.
+     forall x : int [abs_int(x), x in [i, j], k |-> max_int (abs_int(i), abs_int(j))]
+     {i <= x , x <= j}.
+     abs_int(x) <= k
+
+  axiom abs_int_interval_3 :
+     forall i : int.
+     forall x : int [abs_int(x), abs_int(x) in [?, i]]
+     { abs_int(x) <= i }.
+     - i <= x <= i
+
+end

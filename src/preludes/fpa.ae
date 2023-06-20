@@ -1,0 +1,471 @@
+(******************************************************************************)
+(*                                                                            *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                     *)
+(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the license indicated      *)
+(*     in the file 'License.OCamlPro'. If 'License.OCamlPro' is not           *)
+(*     present, please contact us to clarify licensing.                       *)
+(*                                                                            *)
+(******************************************************************************)
+
+theory Simple_FPA extends FPA =
+
+   (* what happends if we add versions for partially bounded float(x) ?
+      whould this be better ? *)
+
+   axiom rounding_operator_1 :
+     forall x : real.
+     forall i, j : real.
+     forall i2, j2 : real.
+     forall mode : fpa_rounding_mode.
+     forall p, m : int
+     [
+        float(m, p, mode, x),
+        is_theory_constant(m),
+        is_theory_constant(p),
+        is_theory_constant(mode),
+        x in [i, j],
+        i2 |-> float(m, p, mode, i),
+        j2 |-> float(m, p, mode, j)
+     ]
+     {
+        i <= x,
+        x <= j
+     }.
+     i2 <= float(m, p, mode, x) <= j2
+
+
+   axiom integer_rounding_operator_1 :
+     forall x : real.
+     forall i, j : real.
+     forall i2, j2 : int.
+     forall mode : fpa_rounding_mode
+     [
+        integer_round(mode, x),
+        is_theory_constant(mode),
+        x in [i, j],
+        i2 |-> integer_round(mode, i),
+        j2 |-> integer_round(mode, j)
+     ]
+     {
+        i <= x,
+        x <= j
+     }.
+     i2 <= integer_round(mode, x) <= j2
+
+
+  (* add the version with x in ? -> o(x) - x in ? *)
+  axiom rounding_operator_absolute_error_1_NearestTiesToEven :
+     forall x : real.
+     forall i, j, k : real.
+     forall exp_min, prec : int
+     [
+        float(prec, exp_min, NearestTiesToEven, x),
+        is_theory_constant(prec),
+        is_theory_constant(exp_min),
+        x in [i, j],
+        k |->
+           2 **. (
+            integer_log2(
+              max_real(
+                abs_real(i),
+                max_real(
+                  abs_real(j),
+                  2 **. (- exp_min + prec-1)
+                )
+               )
+             ) - prec (* we can improve by -1 for some rounding modes *)
+           )
+     ]
+     {
+        i <= x,
+        x <= j
+     }.
+     - k <=  float(prec, exp_min, NearestTiesToEven, x) - x <= k
+
+
+  axiom rounding_operator_absolute_error_1_ALL :
+     forall x : real.
+     forall i, j, k : real.
+     forall mode : fpa_rounding_mode.
+     forall exp_min, prec : int
+     [
+        float(prec, exp_min, mode, x),
+        is_theory_constant(prec),
+        is_theory_constant(exp_min),
+        is_theory_constant(mode),
+        x in [i, j],
+        k |->
+           2 **. (
+            integer_log2(
+              max_real(
+                abs_real(i),
+                max_real(
+                  abs_real(j),
+                  2 **. (- exp_min + prec-1)
+                )
+               )
+             ) - prec + 1(* we can improve by -1 for some rounding modes *)
+           )
+     ]
+     {
+        i <= x,
+        x <= j
+     }.
+     - k <=  float(prec, exp_min, mode, x) - x <= k
+
+   axiom monotonicity_contrapositive_1 :
+      forall x, i, k : real.
+      forall mode : fpa_rounding_mode.
+      forall exp_min, prec : int
+      [
+         float(prec, exp_min, mode, x),
+         is_theory_constant(prec),
+         is_theory_constant(exp_min),
+         is_theory_constant(mode),
+         float(prec, exp_min, mode, x) in [?, i[,
+         k |-> float(prec, exp_min, Up, i)
+      ]
+      {
+         float(prec, exp_min, mode, x) < i
+      }.
+      (*float(prec, exp_min, mode, x) < i ->*)
+      x < k
+
+
+   axiom monotonicity_contrapositive_2 :
+      forall x, i, k : real.
+      forall mode : fpa_rounding_mode.
+      forall exp_min, prec : int
+      [
+         float(prec, exp_min, mode, x),
+         is_theory_constant(prec),
+         is_theory_constant(exp_min),
+         is_theory_constant(mode),
+         float(prec, exp_min, mode, x) in ]i, ?],
+         k |-> float(prec, exp_min, Down, i)
+      ]
+      {
+         float(prec, exp_min, mode, x) > i
+      }.
+      (*float(prec, exp_min, mode, x) > i ->*)
+      x > k
+
+   (* Remark: should add semantic trigger 'x <= y'
+      or maybe also 'float(m,p,md,x) > float(m,p,md,y)' in future
+      version *)
+   (* same as old monotonicity_contrapositive_3 *)
+   axiom float_is_monotonic:
+     forall m, p : int.
+     forall md : fpa_rounding_mode.
+     forall x, y : real
+     [
+         float(m,p,md,x), float(m,p,md,y),
+         is_theory_constant(m),
+         is_theory_constant(p),
+         is_theory_constant(md)
+     ].
+     x <= y -> float(m,p,md,x) <= float(m,p,md,y)
+
+
+   (* these two axioms are too expensive if put inside a theory *)
+   axiom monotonicity_contrapositive_4 :
+      forall x, y : real.
+      forall mode : fpa_rounding_mode.
+      forall exp_min, prec : int
+      [
+         float(prec, exp_min, mode, x),float(prec, exp_min, mode, y),
+         is_theory_constant(prec),
+         is_theory_constant(exp_min),
+         is_theory_constant(mode)
+      ].
+      float(prec, exp_min, mode, x) < float(prec, exp_min, mode, y) ->
+      x < float(prec, exp_min, mode, y)
+
+   axiom monotonicity_contrapositive_5 :
+      forall x, y : real.
+      forall mode : fpa_rounding_mode.
+      forall exp_min, prec : int
+      [
+         float(prec, exp_min, mode, x), float(prec, exp_min, mode, y),
+         is_theory_constant(prec),
+         is_theory_constant(exp_min),
+         is_theory_constant(mode)
+      ].
+      float(prec, exp_min, mode, x) < float(prec, exp_min, mode, y) ->
+      float(prec, exp_min, mode, x) < y
+
+
+   axiom contrapositive_enabeler_1 :
+      forall x, i : real.
+      forall mode : fpa_rounding_mode.
+      forall exp_min, prec : int
+      [
+         float(prec, exp_min, mode, x),
+         is_theory_constant(prec),
+         is_theory_constant(exp_min),
+         is_theory_constant(mode),
+         float(prec, exp_min, mode, x) in [?, i]
+      ]
+      { float(prec, exp_min, mode, x) <= i }.
+      float(prec, exp_min, mode, x) = i or float(prec, exp_min, mode, x) < i
+
+   axiom contrapositive_enabeler_2 :
+      forall x, i : real.
+      forall mode : fpa_rounding_mode.
+      forall exp_min, prec : int
+      [
+         float(prec, exp_min, mode, x),
+         is_theory_constant(prec),
+         is_theory_constant(exp_min),
+         is_theory_constant(mode),
+         float(prec, exp_min, mode, x) in [i, ?]
+      ]
+      { float(prec, exp_min, mode, x) >= i }.
+      float(prec, exp_min, mode, x) = i or float(prec, exp_min, mode, x) > i
+
+
+   axiom gradual_underflow_1:
+      forall x, y : real. (* semantic triggers are missing! can we do better ? i.e. >= cst *)
+      forall mode : fpa_rounding_mode.
+      forall exp_min, prec : int
+      [
+         float(prec, exp_min, mode, float(prec, exp_min, mode, x) - float(prec, exp_min, mode, y)),
+         is_theory_constant(prec),
+         is_theory_constant(exp_min),
+         is_theory_constant(mode)
+      ].
+      float(prec, exp_min, mode, x) > float(prec, exp_min, mode, y) ->
+      float(prec, exp_min, mode, float(prec, exp_min, mode, x) - float(prec, exp_min, mode, y)) > 0.
+
+   axiom gradual_underflow_2:
+      forall x, y : real. (* semantic triggers are missing! can we do better ? i.e. >= cst *)
+      forall mode : fpa_rounding_mode.
+      forall exp_min, prec : int
+      [
+         float(prec, exp_min, mode, float(prec, exp_min, mode, x) + float(prec, exp_min, mode, y)),
+         is_theory_constant(prec),
+         is_theory_constant(exp_min),
+         is_theory_constant(mode)
+      ].
+      float(prec, exp_min, mode, x) > - float(prec, exp_min, mode, y) ->
+      float(prec, exp_min, mode, float(prec, exp_min, mode, x) + float(prec, exp_min, mode, y)) > 0.
+
+
+   axiom gradual_underflow_3:
+      forall x, y : real. (* semantic triggers are missing! can we do better ? i.e. >= cst *)
+      forall mode : fpa_rounding_mode.
+      forall exp_min, prec : int
+      [
+         float(prec, exp_min, mode, float(prec, exp_min, mode, x) - float(prec, exp_min, mode, y)),
+         is_theory_constant(prec),
+         is_theory_constant(exp_min),
+         is_theory_constant(mode)
+      ].
+      float(prec, exp_min, mode, x) < float(prec, exp_min, mode, y) ->
+      float(prec, exp_min, mode, float(prec, exp_min, mode, x) - float(prec, exp_min, mode, y)) < 0.
+
+   axiom gradual_underflow_4:
+      forall x, y : real. (* semantic triggers are missing! can we do better ? i.e. >= cst *)
+      forall mode : fpa_rounding_mode.
+      forall exp_min, prec : int
+      [
+         float(prec, exp_min, mode, float(prec, exp_min, mode, x) + float(prec, exp_min, mode, y)),
+         is_theory_constant(prec),
+         is_theory_constant(exp_min),
+         is_theory_constant(mode)
+      ].
+      float(prec, exp_min, mode, x) < - float(prec, exp_min, mode, y) ->
+      float(prec, exp_min, mode, float(prec, exp_min, mode, x) + float(prec, exp_min, mode, y)) < 0.
+
+
+   axiom float_of_float_same_formats:
+      forall x : real.
+      forall mode1, mode2 : fpa_rounding_mode.
+      forall exp_min, prec : int
+      [
+         float(prec, exp_min, mode1, float(prec, exp_min, mode2, x)),
+         is_theory_constant(prec),
+         is_theory_constant(exp_min),
+         is_theory_constant(mode1),
+         is_theory_constant(mode2)
+      ].
+      float(prec, exp_min, mode1, float(prec, exp_min, mode2, x)) =
+      float(prec, exp_min, mode2, x)
+
+   axiom float_of_float_different_formats:
+      forall x : real.
+      forall mode1, mode2 : fpa_rounding_mode.
+      forall exp_min1, prec1, exp_min2, prec2 : int
+      [
+         float(prec1, exp_min1, mode1, float(prec2, exp_min2, mode2, x)),
+         is_theory_constant(prec1),
+         is_theory_constant(exp_min1),
+         is_theory_constant(prec2),
+         is_theory_constant(exp_min2),
+         is_theory_constant(mode1),
+         is_theory_constant(mode2)
+      ].
+      prec2 <= prec1 ->
+      exp_min2 <= exp_min1 ->
+      float(prec1, exp_min1, mode1, float(prec2, exp_min2, mode2, x)) =
+      float(prec2, exp_min2, mode2, x)
+
+
+   axiom tighten_float_intervals_1__min_large : (* add a semantic trigger on o(i) - i *)
+     forall x : real.
+     forall i, k : real.
+     forall mode : fpa_rounding_mode.
+     forall p, m : int
+     [
+        float(m, p, mode, x),
+        is_theory_constant(m),
+        is_theory_constant(p),
+        is_theory_constant(mode),
+        float(m, p, mode, x) in [i, ?],
+        k |-> float(m, p, Up, i)
+     ]
+     {
+        i <= float(m, p, mode, x)
+     }.
+     (*i < k -> not needed => subsumed *)
+     k <= float(m, p, mode, x)
+
+   axiom tighten_float_intervals__2__min_strict : (* add a semantic trigger on o(i) - i *)
+     forall x : real.
+     forall i, k : real.
+     forall mode : fpa_rounding_mode.
+     forall p, m : int
+     [
+        float(m, p, mode, x),
+        is_theory_constant(m),
+        is_theory_constant(p),
+        is_theory_constant(mode),
+        float(m, p, mode, x) in ]i, ?],
+        k |-> float(m, p, Up, i)
+     ]
+     {
+        i < float(m, p, mode, x)
+     }. (* we can improve even if this condition is not true, with epsilon *)
+     (*i < k -> not needed => subsumed*)
+     k <= float(m, p, mode, x)
+
+   axiom tighten_float_intervals_3__max_large : (* add a semantic trigger on o(i) - i *)
+     forall x : real.
+     forall i, k : real.
+     forall mode : fpa_rounding_mode.
+     forall p, m : int
+     [
+        float(m, p, mode, x),
+        is_theory_constant(m),
+        is_theory_constant(p),
+        is_theory_constant(mode),
+        float(m, p, mode, x) in [?, i],
+        k |-> float(m, p, Down, i)
+     ]
+     {
+        i >= float(m, p, mode, x)
+     }.
+     (*k < i -> not needed => subsumed*)
+     k >= float(m, p, mode, x)
+
+   axiom tighten_float_intervals__4__max_strict : (* add a semantic trigger on o(i) - i *)
+     forall x : real.
+     forall i, k : real.
+     forall mode : fpa_rounding_mode.
+     forall p, m : int
+     [
+        float(m, p, mode, x),
+        is_theory_constant(m),
+        is_theory_constant(p),
+        is_theory_constant(mode),
+        float(m, p, mode, x) in [?, i[,
+        k |-> float(m, p, Down, i)
+     ]
+     {
+        float(m, p, mode, x) < i
+     }. (* we can improve even if this condition is not true, with epsilon *)
+     (*k < i -> not needed => subsumed*)
+     float(m, p, mode, x) <= k
+
+
+   axiom float_of_minus_float:
+     forall x : real.
+     forall mode : fpa_rounding_mode.
+     forall p, m : int
+     [
+        float(m, p, mode, - float(m, p, mode, x)),
+        is_theory_constant(m),
+        is_theory_constant(p),
+        is_theory_constant(mode)
+     ].
+     float(m, p, mode, - float(m, p, mode, x)) = - float(m, p, mode, float(m, p, mode, x))
+     (* which can be directly simplified to - float(m, p, mode, x). Another axiom will do this *)
+     (* this axiom probably applies more generally to float(m, p, mode, - x) = - float(m, p, mode, x) *)
+
+
+   axiom float_of_int:
+     forall x : int.
+     forall k : real.
+     forall mode : fpa_rounding_mode.
+     forall exp_min, prec : int
+     [
+        float(prec, exp_min, mode, real_of_int(x)),
+        is_theory_constant(prec),
+        is_theory_constant(exp_min),
+        is_theory_constant(mode),
+        real_of_int(x) + (2 **. prec)  in [0., ?],
+        real_of_int(x) - (2 **. prec) in [?, 0.],
+        k |-> 2 **. prec
+     ]
+     {
+        -k <= real_of_int(x),
+        real_of_int(x) <= k
+     }.
+     float(prec, exp_min, mode, real_of_int(x)) = real_of_int(x)
+
+
+   axiom float_of_pos_pow_of_two:
+     forall x, y, i, k1, k2 : real.
+     forall mode : fpa_rounding_mode.
+     forall p, m : int
+     [
+        float(m, p, mode, x * float(m, p, mode, y)),
+        is_theory_constant(p),
+        is_theory_constant(m),
+        is_theory_constant(mode),
+        is_theory_constant(x),
+        x in [i , i],
+        k1 |-> abs_real(i),
+        k2 |-> 2 **. (integer_log2(abs_real(i)))
+     ].
+     k1 >= 1. ->
+     k1 = k2 -> (* is pow of 2 ?*)
+     float(m, p, mode, x * float(m, p, mode, y)) = x * float(m, p, mode, y)
+
+
+   axiom tighten_open_float_bounds :
+     forall x : real.
+     forall i, j, i2, j2 : real.
+     forall mode : fpa_rounding_mode.
+     forall p, m : int
+     [
+        float(m, p, mode, x),
+        is_theory_constant(m),
+        is_theory_constant(p),
+        is_theory_constant(mode),
+        float(m, p, mode, x) in ]i, j[,
+        i2 |-> float(m, p, Up, i + (2 **. (2 * (- p)))),
+        j2 |-> float(m, p, Down, j - (2 **. (2 * (- p))))
+        (* pow_real_int(2.,2 * (- p)) is smaller than any gap between two successive floats *)
+     ]
+     {
+        float(m, p, mode, x) > i,
+        float(m, p, mode, x) < j
+     }.
+     i = float(m, p, mode, i) ->
+     j = float(m, p, mode, j) ->
+     i2 <= float(m, p, mode, x) <= j2
+
+end
