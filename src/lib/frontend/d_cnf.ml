@@ -155,8 +155,6 @@ end
 (** Builtins *)
 type _ DStd.Builtin.t +=
   | Float
-  | RoundingModeTy
-  | RoundingMode of Fpa_rounding.rounding_mode
   | Integer_round
   | Abs_real
   | Sqrt_real
@@ -172,12 +170,6 @@ type _ DStd.Builtin.t +=
 
 let fpa_builtins : _ -> Typer.lang -> Dl.Typer.T.builtin_symbols =
   let (->.) args ret = (args, ret) in
-  let fpa_rounding_mode =
-    DStd.Expr.Id.mk ~builtin:RoundingModeTy
-      (DStd.Path.global "fpa_rounding_mode")
-      DStd.Expr.{ arity = 0 ; alias = No_alias }
-  in
-  let fpa_rounding_mode = DT.apply fpa_rounding_mode [] in
   let builtin_term t = Dl.Typer.T.builtin_term t in
   let builtin_ty t = Dl.Typer.T.builtin_ty t in
   let dterm name f =
@@ -192,6 +184,39 @@ let fpa_builtins : _ -> Typer.lang -> Dl.Typer.T.builtin_symbols =
     builtin_ty @@
     Dolmen_type.Base.app0 (module Dl.Typer.T) env s ty
   in
+  let builtin_enum = function
+    | Ty.Tsum (name, cstrs) as ty_ ->
+      let ty_cst =
+        DStd.Expr.Id.mk ~builtin:B.Base
+          (DStd.Path.global (Hstring.view name))
+          DStd.Expr.{ arity = 0; alias = No_alias }
+      in
+      let cstrs =
+        List.map (fun c -> DStd.Path.global (Hstring.view c), []) cstrs
+      in
+      let _, cstrs = DStd.Expr.Term.define_adt ty_cst [] cstrs in
+      let dty = DT.apply ty_cst [] in
+      let add_cstrs map =
+        List.fold_left (fun map ((c : DE.term_cst), _) ->
+            let name = get_basename c.path in
+            Id.Map.add { name = DStd.Name.simple name; ns = Term } (fun env _ ->
+                builtin_term @@
+                Dolmen_type.Base.term_app_cst
+                  (module Dl.Typer.T) env c) map)
+          map cstrs
+      in
+      Cache.store_ty (DE.Ty.Const.hash ty_cst) ty_;
+      dty,
+      cstrs,
+      fun map ->
+        map
+        |> ty (Hstring.view name) dty
+        |> add_cstrs
+    | _ -> assert false
+  in
+  let fpa_rounding_mode, rounding_modes, add_rounding_modes =
+    builtin_enum Fpa_rounding.fpa_rounding_mode
+  in
   let float_cst =
     let ty = DT.(arrow [int; int; fpa_rounding_mode; real] real) in
     DE.Id.mk ~name:"float" ~builtin:Float (DStd.Path.global "float") ty
@@ -200,18 +225,19 @@ let fpa_builtins : _ -> Typer.lang -> Dl.Typer.T.builtin_symbols =
     DE.Term.apply_cst float_cst [] [prec; exp; mode; x]
   in
   let mode m =
-    let name = Format.asprintf "%a" Fpa_rounding.pp_rounding_mode m in
-    let builtin = RoundingMode m in
-    let cst =
-      DE.Id.mk ~name ~builtin
-        (DStd.Path.global name) fpa_rounding_mode
+    let cst, _ =
+      List.find (fun (cst, _args) ->
+          match cst.DE.path with
+          | Absolute { name; _ } -> String.equal name m
+          | Local _ -> false)
+        rounding_modes
     in
     DE.Term.apply_cst cst [] []
   in
   let float32 = float (DE.Term.int "24") (DE.Term.int "149") in
-  let float32d x = float32 (mode NearestTiesToEven) x in
+  let float32d x = float32 (mode "NearestTiesToEven") x in
   let float64 = float (DE.Term.int "53") (DE.Term.int "1074") in
-  let float64d x = float64 (mode NearestTiesToEven) x in
+  let float64d x = float64 (mode "NearestTiesToEven") x in
   let op ?(tyvars = []) name builtin (args, ret) =
     let ty = DT.pi tyvars @@ DT.arrow args ret in
     let cst = DE.Id.mk ~name ~builtin (DStd.Path.global name) ty in
@@ -238,17 +264,11 @@ let fpa_builtins : _ -> Typer.lang -> Dl.Typer.T.builtin_symbols =
     let a = Var.mk "alpha" in
     op ~tyvars:[a] "is_theory_constant" Is_theory_constant ([of_var a] ->. prop)
   in
-  let rm m =
-    op
-      (Format.asprintf "%a" Fpa_rounding.pp_rounding_mode m)
-      (RoundingMode m)
-      ([] ->. fpa_rounding_mode)
-  in
   let fpa_builtins =
     let open DT in
     Id.Map.empty
 
-    |> ty "fpa_rounding_mode" fpa_rounding_mode
+    |> add_rounding_modes
 
     (* the first argument is mantissas' size (including the implicit bit),
        the second one is the exp of the min representable normalized number,
@@ -261,19 +281,6 @@ let fpa_builtins : _ -> Typer.lang -> Dl.Typer.T.builtin_symbols =
 
     |> partial2 "float64" float64
     |> partial1 "float64d" float64d
-
-    (* Rounding modes *)
-    |> rm NearestTiesToEven
-    |> rm ToZero
-    |> rm Up
-    |> rm Down
-    |> rm NearestTiesToAway
-    |> rm Aw
-    |> rm Od
-    |> rm No
-    |> rm Nz
-    |> rm Nd
-    |> rm Nu
 
     (* rounds to nearest integer *)
     |> op "integer_round" Integer_round ([fpa_rounding_mode; real] ->. int)
@@ -377,7 +384,6 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
   | `Bitv n -> Ty.Tbitv n
 
   | `App (`Builtin B.Unit, []) -> Ty.Tunit
-  | `App (`Builtin RoundingModeTy, []) -> Fpa_rounding.fpa_rounding_mode
   | `App (`Builtin _, [ty]) -> aux ty
   | `App (`Generic c, l) -> handle_ty_app ~update c l
 
@@ -823,10 +829,6 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             let ty = dty_to_ty term_ty in
             let sy = Sy.Op (Sy.Constr (Hstring.make name)) in
             E.mk_term sy [] ty
-
-          | RoundingMode rm ->
-            E.mk_term (Sy.Op (RoundingMode rm)) []
-              Fpa_rounding.fpa_rounding_mode
 
           | _ ->
             Util.failwith "Unsupported constant term %a" DE.Term.print term
