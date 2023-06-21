@@ -33,20 +33,18 @@ module E = Expr
 
 type sort_var = A | B | C
 
+let pp_sort ppf = function
+  | A -> Format.fprintf ppf "a"
+  | B -> Format.fprintf ppf "b"
+  | C -> Format.fprintf ppf "c"
+
 let compare_sort s1 s2 =
   match s1, s2 with
   | A, A | B, B | C, C -> 0
   | A, (B | C) | B, C -> -1
   | C, (A | B) | B, A -> 1
 
-type tvar = { var : int ; sorte : sort_var }
-
-let compare_tvar v1 v2 =
-  if v1 == v2 then 0
-  else
-    let c = compare v1.var v2.var in
-    if c <> 0 then c
-    else compare_sort v1.sorte v2.sorte
+type tvar = { var : E.t ; sorte : sort_var }
 
 type 'a xterm = Var of tvar | Alien of 'a
 
@@ -93,21 +91,11 @@ module Shostak(X : ALIEN) = struct
     | Sy.Bitv _ | Sy.Op (Sy.Concat | Sy.Extract _)  -> true
     | _ -> false
 
-  let embed r =
-    match X.extract r with
-    | None ->
-      begin
-        match X.type_info r with
-        | Ty.Tbitv n -> [{bv = Other (Alien r) ; sz = n}]
-        | _  -> assert false
-      end
-    | Some b -> b
-
   let compare_xterm xt1 xt2 = match xt1,xt2 with
     | Var v1, Var v2 ->
       let c1 = compare_sort v1.sorte v2.sorte in
       if c1 <> 0 then c1
-      else -(compare v1.var v2.var)
+      else -(compare (E.uid v1.var) (E.uid v2.var))
     (* on inverse le signe : les variables les plus fraiches sont
        les plus jeunes (petites)*)
 
@@ -132,7 +120,17 @@ module Shostak(X : ALIEN) = struct
           if c2 <> 0 then c2 else compare_xterm t1 t2
     )
 
-  let compare_abstract = Lists.compare compare_simple_term
+  let embed r =
+    match X.extract r with
+    | None ->
+      begin
+        match X.type_info r with
+        | Ty.Tbitv n -> [{bv = Other (Alien r) ; sz = n}]
+        | _  -> assert false
+      end
+    | Some b -> b
+
+  let compare x y = Lists.compare compare_simple_term (embed x) (embed y)
 
   let compare_solver_simple_term = compare_alpha_term (fun st1 st2 ->
       match st1, st2 with
@@ -141,7 +139,7 @@ module Shostak(X : ALIEN) = struct
       | _ , S_Cte false | S_Cte true,_ -> 1
       | S_Var v1, S_Var v2 ->
         let c1 = compare_sort v1.sorte v2.sorte
-        in if c1 <> 0 then c1 else compare v1.var v2.var
+        in if c1 <> 0 then c1 else Int.compare (E.uid v1.var) (E.uid v2.var)
     )
 
   module ST_Set = Set.Make (
@@ -287,10 +285,8 @@ module Shostak(X : ALIEN) = struct
   module Debug = struct
     open Printer
 
-    let print_tvar fmt ({var=v;sorte=s},sz) =
-      Format.fprintf fmt "%s_%d[%d]@?"
-        (match s with | A -> "a" | B -> "b" | C -> "c")
-        v sz
+    let print_tvar fmt ({var=t;_},sz) =
+      Format.fprintf fmt "%a[%d]@?" E.print t sz
 
     (* unused
        open Canonizer
@@ -417,11 +413,15 @@ module Shostak(X : ALIEN) = struct
       in f_rec [] (t,u)
 
     let fresh_var =
-      let cpt = ref 0 in fun t -> incr cpt; { var = !cpt ; sorte = t}
+      let cpt = ref 0 in fun t sz ->
+        incr cpt;
+        let sy = Sy.fresh (Format.asprintf "%a_%d" pp_sort t !cpt) in
+        let var = E.mk_term sy [] (Ty.Tbitv sz) in
+        { bv = S_Var { sorte = t; var }; sz }
 
     let fresh_bitv genre size =
       if size <= 0 then []
-      else [ { bv = S_Var (fresh_var genre) ; sz = size } ]
+      else [ fresh_var genre size ]
 
     let cte_vs_other bol st = st , [{bv = S_Cte bol ; sz = st.sz}]
 
@@ -531,7 +531,7 @@ module Shostak(X : ALIEN) = struct
           |A -> (fresh_var A), (fresh_var A), A
           |B -> (fresh_var B), (fresh_var B), B
           |C -> (fresh_var C), (fresh_var C), C
-        in {bv = S_Var fs; sz = s1},{bv = S_Var sn; sz = s2},Some tr
+        in fs s1,sn s2,Some tr
 
     let rec slice_composition eq pat (ac_eq,c_sub) = match (eq,pat) with
       |[],[] -> (ac_eq,c_sub)
@@ -693,15 +693,13 @@ module Shostak(X : ALIEN) = struct
         if c<>0 then c else comp l1 l2
     in comp b1 b2
 
-  let compare x y = compare_abstract (embed x) (embed y)
-
   (* should use hashed compare to be faster, not structural comparison *)
   let equal bv1 bv2 = compare_mine bv1 bv2 = 0
 
   let hash_xterm = function
-    | Var {var = i; sorte = A} -> 11 * i
-    | Var {var = i; sorte = B} -> 17 * i
-    | Var {var = i; sorte = C} -> 19 * i
+    | Var { sorte = A; var } -> 11 * E.hash var
+    | Var { sorte = B; var } -> 17 * E.hash var
+    | Var { sorte = C; var } -> 19 * E.hash var
     | Alien r -> 23 * X.hash r
 
   let hash_simple_term_aux = function
@@ -719,9 +717,8 @@ module Shostak(X : ALIEN) = struct
       (fun acc x ->
          match x.bv with
          | Cte _  -> acc
-         | Ext( Var v,sz,_,_) ->
-           (X.embed [{bv=Other (Var v) ; sz = sz }])::acc
-         | Other (Var _)  -> (X.embed [x])::acc
+         | Ext( Var v,_,_,_) -> X.term_embed v.var :: acc
+         | Other (Var v)  -> X.term_embed v.var :: acc
          | Other (Alien t) | Ext(Alien t,_,_,_) -> (X.leaves t)@acc
       ) [] bitv
 
@@ -763,13 +760,17 @@ module Shostak(X : ALIEN) = struct
 
   let extract_xterm r =
     match X.extract r with
-      Some ([{ bv = Other (Var _ as x); _ }]) -> x
-    | None -> Alien r
+      Some ([{ bv = Other (Var v); _ }]) -> Some v.var
+    | None ->
+      begin match X.term_extract r with
+        | Some t, _ -> Some t
+        | None, _ -> None
+      end
     | _ -> assert false
 
   let var_or_term x =
     match x.bv with
-      Other (Var _) -> X.embed [x]
+      Other (Var v) -> X.term_embed v.var
     | Other (Alien r) -> r
     | _ -> assert false
 
@@ -797,7 +798,7 @@ module Shostak(X : ALIEN) = struct
   let rec subst_rec x subs biv =
     match biv.bv , extract_xterm x with
     | Canonizer.I_Cte _ , _ -> biv
-    | Canonizer.I_Other (Var y), Var z when compare_tvar y z = 0 ->
+    | Canonizer.I_Other (Var y), Some z when E.equal y.var z ->
       extract subs biv.sz
     | Canonizer.I_Other (Var _) , _ -> biv
     | Canonizer.I_Other (Alien tt) , _ ->
