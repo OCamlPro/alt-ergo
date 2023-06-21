@@ -32,7 +32,8 @@ type t = Fpa | Ria | Nra
 
 let all = [ Fpa; Ria; Nra ]
 
-let default = [ Fpa; Ria; Nra ]
+let default = []
+(* TODO: Restore once Dolmen 0.9 is released [ Fpa; Ria; Nra ] *)
 
 let pp ppf = function
   | Fpa -> Format.fprintf ppf "fpa"
