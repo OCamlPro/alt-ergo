@@ -149,7 +149,7 @@ end = struct
 @[<v 1>\
 (rule@,\
 (target %a)@,\
-(deps (:input %s))@,\
+(deps (:input %s) %%{bin:alt-ergo})@,\
 (package alt-ergo)@,\
 @[<v 1>(action@,\
 @[<v 1>(no-infer@,\
