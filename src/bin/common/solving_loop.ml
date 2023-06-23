@@ -472,7 +472,7 @@ let main () =
               { solver_ctx with ctx = cnf @ solver_ctx.ctx }
             ) st
         end
-      | {id = _; contents = `Solve _; loc }
+      | {id = _; contents = `Solve _; loc ; attrs }
         when (
           match (State.get State.logic_file st).lang with
           | Some (Smtlib2 _) -> true
@@ -490,7 +490,7 @@ let main () =
             Typer_Pipe.{
               id = DStd.Id.mk DStd.Namespace.term goal_name;
               contents = `Goal DStd.Expr.Term.(of_cst Const._false);
-              loc;
+              loc; attrs;
             }
         in
         let cnf = List.rev rev_cnf in
