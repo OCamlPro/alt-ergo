@@ -671,7 +671,7 @@ module Shostak(X : ALIEN) = struct
     (* [partition eq l] returns a list of pairs [(a, bs)] where [bs] contains
        all the [b] such that [(a, b)] occurs in the original list.
 
-       When applied to oriented systems of equatoins returned by [sys_solve],
+       When applied to oriented systems of equations returned by [sys_solve],
        this merges together all the equalities involving the same [simple_term]
        on the left. *)
     let partition eq l =
