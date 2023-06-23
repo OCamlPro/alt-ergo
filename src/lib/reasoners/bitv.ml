@@ -752,7 +752,9 @@ module Shostak(X : ALIEN) = struct
           Splits involving A variables are not recorded, because A variables are
           guaranteed to have unique occurences.
 
-          Splits involving B and C variables are accumulated in [subs].
+          Splits involving B and C variables are accumulated in [subs], which
+          is a pair [(b_sub, c_sub)] of substitutions for the B and C
+          variables, respectively.
 
           Splits involving C variables can propagate to other compositions in
           the system, but not to the current composition, since C variables
