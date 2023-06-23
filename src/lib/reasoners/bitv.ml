@@ -88,9 +88,21 @@ type 'a simple_term_aux =
   | Other of 'a
   | Ext of 'a * int * int * int (*// id * size * i * j //*)
 
+let equal_simple_term_aux eq l r =
+  match l, r with
+  | Cte b1, Cte b2 -> Bool.equal b1 b2
+  | Other o1, Other o2 -> eq o1 o2
+  | Ext (o1, s1, i1, j1), Ext (o2, s2, i2, j2) ->
+    i1 = i2 && j1 = j2 && s1 = s2 && eq o1 o2
+  | _, _ -> false
+
 type 'a simple_term = ('a simple_term_aux) alpha_term
 
+let equal_simple_term eq = equal_alpha_term (equal_simple_term_aux eq)
+
 type 'a abstract =  ('a simple_term) list
+
+let equal_abstract eq = Lists.equal (equal_simple_term eq)
 
 (* for the solver *)
 
@@ -435,7 +447,7 @@ module Shostak(X : ALIEN) = struct
     let slice t u  =
       let f_add (s1,s2) acc =
         let b =
-          compare_simple_term s1 s2 = 0
+          equal_simple_term X.equal s1 s2
           || List.mem (s1,s2) acc || List.mem (s2,s1) acc
         in
         if b then acc else (s1,s2)::acc
@@ -656,16 +668,16 @@ module Shostak(X : ALIEN) = struct
       in List.flatten (List.map c_solve sys)
 
 
-    (* [partition cmp l] returns a list of pairs [(a, bs)] where [bs] contains
+    (* [partition eq l] returns a list of pairs [(a, bs)] where [bs] contains
        all the [b] such that [(a, b)] occurs in the original list.
 
        When applied to oriented systems of equatoins returned by [sys_solve],
        this merges together all the equalities involving the same [simple_term]
        on the left. *)
-    let partition cmp l =
+    let partition eq l =
       let rec add acc (t,cnf) = match acc with
         |[] -> [(t,[cnf])]
-        |(t',cnf')::r -> if cmp t t' = 0 then (t',cnf::cnf')::r
+        |(t',cnf')::r -> if eq t t' then (t',cnf::cnf')::r
           else (t',cnf')::(add r (t,cnf))
       in List.fold_left add [] l
 
@@ -904,13 +916,11 @@ module Shostak(X : ALIEN) = struct
             begin
               let _bw = apply_subs subs bw in
               let _fw = apply_subs subs r in
-              let cmp (a, l1) (b, l2) =
-                let c = compare_simple_term a b in
-                if c <> 0 then c
-                else
-                  Lists.compare (Lists.compare compare_solver_simple_term) l1 l2
+              let eq (_, l1) (_, l2) =
+                (* [apply_subs] does not change the left-hand sides *)
+                Lists.equal (Lists.equal equal_solver_simple_term) l1 l2
               in
-              if Lists.compare cmp _bw bw = 0
+              if Lists.equal eq _bw bw
               then slice_rec ((t,vls')::bw) _fw
               else slice_rec [] (_bw@((t,vls'):: _fw))
             end
@@ -1049,7 +1059,7 @@ module Shostak(X : ALIEN) = struct
 
        @raises Valid if the two terms are already equal. *)
     let solve u v =
-      if Lists.compare compare_simple_term u v = 0 then raise Valid
+      if equal_abstract X.equal u v then raise Valid
       else begin
         let varsU = get_vars u in
         let varsV = get_vars v in
@@ -1059,7 +1069,7 @@ module Shostak(X : ALIEN) = struct
           begin
             let st_sys = slice u v in
             let sys_sols = sys_solve st_sys in
-            let parts = partition compare_simple_term sys_sols in
+            let parts = partition (equal_simple_term X.equal) sys_sols in
             let unif_slic = equations_slice parts in
             let eq_pr = equalities_propagation unif_slic in
             let sol = build_solution unif_slic eq_pr in
@@ -1077,20 +1087,9 @@ module Shostak(X : ALIEN) = struct
 
   end
 
-  let compare_mine b1 b2 =
-    let rec comp l1 l2 = match l1,l2 with
-        [] , [] -> 0
-      | [] , _ -> -1
-      | _ , [] -> 1
-      | st1::l1 , st2::l2 ->
-        let c = compare_simple_term st1 st2 in
-        if c<>0 then c else comp l1 l2
-    in comp b1 b2
-
   let compare x y = compare_abstract (embed x) (embed y)
 
-  (* should use hashed compare to be faster, not structural comparison *)
-  let equal bv1 bv2 = compare_mine bv1 bv2 = 0
+  let equal bv1 bv2 = equal_abstract X.equal bv1 bv2
 
   let hash_simple_term_aux = function
     | Cte b -> 11 * Hashtbl.hash b

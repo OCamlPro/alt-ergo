@@ -57,3 +57,6 @@ val find_opt : ('a -> bool) -> 'a list -> 'a option
 val compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
 (** [compare cmp l1 l2] compares the lists [l1] and [l2] using the comparison
     function [cmp] on elements. *)
+
+val equal : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
+(** This is [List.equal] from the OCaml 4.12+ *)
