@@ -566,9 +566,11 @@ module Shostak(X : ALIEN) = struct
 
     let apply_subs subs sys =
       let rec f_aux = function
-        |[] -> assert false
-        |v::r -> try let (v1,v2) = List.assoc v subs in v1::v2::(f_aux r)
-          with _ -> v::(f_aux r)
+        |[] -> []
+        |v::r ->
+          match List.assoc v subs with
+          | (v1, v2) -> v1 :: v2 :: f_aux r
+          | exception Not_found -> v :: f_aux r
       in List.map (fun (t,vls) ->(t,List.map f_aux vls))sys
 
     let equations_slice parts =
