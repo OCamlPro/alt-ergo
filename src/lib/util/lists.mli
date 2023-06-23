@@ -57,3 +57,10 @@ val find_opt : ('a -> bool) -> 'a list -> 'a option
 val compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
 (** [compare cmp l1 l2] compares the lists [l1] and [l2] using the comparison
     function [cmp] on elements. *)
+
+val equal : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
+(** [equal eq l1 l2] holds when the two input lists have the same length and for
+    each pair of elements [ai], [bi] at the same position in [l1] and [l2]
+    respectively, we have [eq ai bi].
+
+    This is a backport of List.equal from OCaml 4.12.0 *)
