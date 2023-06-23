@@ -969,15 +969,6 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             let e3 = aux_mk_expr z in
             E.mk_term (Sy.Op Sy.Set) [e1; e2; e3] ty
 
-          | B.In_interval (b1, b2), [ x; y; z ] ->
-            let ty = dty_to_ty term_ty in
-            let e1 = aux_mk_expr x in
-            let lb_sy = mk_bound y b1 true in
-            let ub_sy = mk_bound z b2 false in
-            let sy = Sy.mk_in lb_sy ub_sy in
-            assert (ty == Ty.Tbool);
-            E.mk_term sy [e1] ty
-
           (* N-ary applications *)
 
           | B.Base, _ ->
@@ -1325,7 +1316,15 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
 
 and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
     ~(in_theory: bool) (name: string) (hyp: E.t list)
-    (e, from_user: DE.term list * bool) =
+    (e, from_user: DE.term * bool) =
+  (* Remove the [Multi_trigger] wrapper *)
+  let e =
+    match e with
+    | { DE.term_descr = App ({
+        term_descr = Cst { builtin = B.Multi_trigger; _ }; _
+      }, _, es) ; _ } -> es
+    | _ -> [e]
+  in
   let mk_expr =
     mk_expr ~loc ~name_base ~decl_kind
   in
@@ -1497,7 +1496,7 @@ let make dloc_file acc stmt =
       C.{ st_decl; st_loc } :: acc
 
     (* Goal definitions *)
-    | { id = Id.{name = Simple name; _}; contents = `Goal t; loc; } ->
+    | { id = Id.{name = Simple name; _}; contents = `Goal t; loc; attrs } ->
       let st_loc = dl_to_ael dloc_file loc in
       let _hyps, t = pp_query t in
       let rev_hyps_c =
@@ -1507,7 +1506,7 @@ let make dloc_file acc stmt =
             let name = Ty.fresh_hypothesis_name Ty.Thm in
             let decl: _ Typer_Pipe.stmt = {
               id = Id.mk ns name;
-              contents = `Hyp t; loc;
+              contents = `Hyp t; loc; attrs
             }
             in
             aux acc decl
@@ -1518,7 +1517,7 @@ let make dloc_file acc stmt =
       C.{st_decl; st_loc} :: List.rev_append (List.rev rev_hyps_c) acc
 
     (* Axiom definitions *)
-    | { id = Id.{name = Simple name; _}; contents = `Hyp t; loc; } ->
+    | { id = Id.{name = Simple name; _}; contents = `Hyp t; loc; _ } ->
       let st_loc = dl_to_ael dloc_file loc in
       let e = make_form name t st_loc ~decl_kind:E.Daxiom in
       let st_decl = C.Assume (name, e, true) in
