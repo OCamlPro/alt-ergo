@@ -81,6 +81,9 @@ type 'a alpha_term = {
   sz : int;
 }
 
+let equal_alpha_term eq { bv = bv1; sz = sz1 } {bv = bv2; sz = sz2 } =
+  Int.equal sz1 sz2 && eq bv1 bv2
+
 type 'a simple_term_aux =
   | Cte of bool
   | Other of 'a xterm
@@ -96,7 +99,16 @@ type solver_simple_term_aux =
   | S_Cte of bool
   | S_Var of tvar
 
+let equal_solver_simple_term_aux st1 st2 =
+  match st1, st2 with
+  | S_Cte b1, S_Cte b2 -> Bool.equal b1 b2
+  | S_Var t1, S_Var t2 -> t1.var = t2.var
+  | S_Cte _, S_Var _ | S_Var _, S_Cte _ -> false
+
 type solver_simple_term = solver_simple_term_aux alpha_term
+
+let equal_solver_simple_term =
+  equal_alpha_term equal_solver_simple_term_aux
 
 module type ALIEN = sig
   include Sig.X
@@ -699,28 +711,117 @@ module Shostak(X : ALIEN) = struct
           |C -> (fresh_var C), (fresh_var C), C
         in {bv = S_Var fs; sz = s1},{bv = S_Var sn; sz = s2},Some tr
 
-    let rec slice_composition eq pat (ac_eq,c_sub) = match (eq,pat) with
-      |[],[] -> (ac_eq,c_sub)
-      |st::_,n::_  when st.sz < n -> assert false
-      |st::comp,n::pt ->
-        if st.sz = n then slice_composition comp pt (st::ac_eq , c_sub)
-        else let (st_n,res,flag) = slice_var st n
-          in begin
-            match flag with
-            |Some B ->
-              let comp' = List.fold_right (fun s_t acc ->
-                  if compare_solver_simple_term s_t st <> 0
-                  then s_t::acc
-                  else st_n::res::acc
-                ) comp []
-              in slice_composition (res::comp') pt (st_n::ac_eq,c_sub)
+    (* This is a helper function for [slice_vars].
 
-            |Some C -> let ac' = (st_n::ac_eq,(st,(st_n,res))::c_sub)
-              in slice_composition (res::comp) pt ac'
+       [apply_sub_rev sub changed acc pat rcomp] applies the substitution [sub]
+       (which maps B-variable to pairs of B-variables) to the composition
+       [rcomp], which is stored in *reverse* order, and:
 
-            | _ -> slice_composition (res::comp) pt (st_n::ac_eq,c_sub)
-          end
-      | _ -> assert false
+       - Updates [changed] if the substitution effectively changes a variable
+       - Computes the resulting composition (in normal order) in [acc]
+       - Computes the resulting pattern in [pat]
+
+       If [changed', comp', pat' = apply_sub_rev sub false [] [] rcomp] then
+       the following holds:
+
+       - [pat' = List.map (fun bv -> bv.st) comp']
+       - If [changed'] is [false], [comp' = List.rev rcomp]
+
+       Note that the substitution can be recursive, so we must do a recursive
+       call on the result of applying the substitution (we can't add [v1 :: v2]
+       to [acc], we must add [v2 :: v1] to [r] instead). *)
+    let rec apply_sub_rev sub changed acc pat = function
+      | [] -> changed, acc, pat
+      | v :: r ->
+        match List.assoc v sub with
+        | v1, v2 ->
+          (* Note that this is [v2 :: v1 :: r] and not [v1 :: v2 :: r] because
+             the composition is given in reverse order. *)
+          apply_sub_rev sub true acc pat (v2 :: v1 :: r)
+        | exception Not_found ->
+          apply_sub_rev sub changed (v :: acc) (v.sz :: pat) r
+
+    (* [slice_vars eq pat (c, req, subs)] slices the variables in [eq] according
+       to the pattern [pat].  [eq] is a composition of simple terms.
+
+       If the composition [eq] does not match the pattern in [pat]:
+       - When variables in the composition are bigger than the expected pattern
+          size, the variables are split into two parts, the first of which has
+          the size expected by the pattern.
+
+          Splits involving A variables are not recorded, because A variables are
+          guaranteed to have unique occurences.
+
+          Splits involving B and C variables are accumulated in [subs].
+
+          Splits involving C variables can propagate to other compositions in
+          the system, but not to the current composition, since C variables
+          never occur twice in the same composition.
+
+          On the other hand, splits involving B variables must be applied to the
+          current composition. This may cause other B variable to be split and
+          become *smaller* than the corresponding pattern, even if the pattern
+          elements were all smaller than the corresponding variables initially.
+
+       - When variables in the composition are smaller than the expected
+          pattern size (see above), the pattern must be broken up. This is
+          recorded in [c], and it means that the pattern must be re-applied to
+          any composition it was already applied to, which can cause more
+          slicing.
+
+       Finally, the resulting (= sliced) composition is stored in [req], in
+       *reverse* order.  Once the slicing is done, [req] is reversed and
+       returned. We also apply the B-substitutions that were accumulated,
+       because it is possible to have two occurences [b_1] and [b_2] of a
+       B-variable where the second occurence [b_2] gets sliced, but the first
+       occurence [b_1] has already been dealt with. We perform this "late"
+       slicing for all B-variables at once at the end of the iteration.
+    *)
+    let rec slice_vars eq pat (c, req, subs)=
+      match eq, pat with
+      | [], [] ->
+        (* If the slicing changed the pattern, or if applying the B-variables
+           substitution changes the pattern, we must report it so that the whole
+           system is re-sliced. *)
+        let (bsub, csub) = subs in
+        begin match bsub with
+          | [] when not c -> List.rev req, csub, None
+          | _ ->
+            let c, eq, pat = apply_sub_rev bsub c [] [] req in
+            eq, csub, if c then Some pat else None
+        end
+      | st :: eq, n :: pt when st.sz < n ->
+        (* Since we start with a [slicing_pattern], this should only occur when
+           a B-variable has been split into parts below. *)
+        slice_vars eq (n - st.sz :: pt) (true, st :: req, subs)
+      | st :: eq, n :: pt when st.sz = n ->
+        slice_vars eq pt (c, st :: req, subs)
+      | st :: eq, n :: pt ->
+        let (st_n, rst, flag) = slice_var st n in
+        begin match flag with
+          | Some C ->
+            (* A C variable got split: we must record the information in the
+               C-substitution so that it gets to the instances of the variable
+               in other multi-equations. *)
+            let bsub, csub = subs in
+            let subs = bsub, (st, (st_n, rst)) :: csub in
+            slice_vars (rst :: eq) pt (c, st_n :: req, subs)
+          | Some B ->
+            (* A B variable got split: we must update the other occurences of
+               the variable in the current composition. If there are other
+               occurences before the current one, the information is recorded in
+               the B-substitution, and we will also update it at the end. *)
+            let eq = List.fold_right (fun st' acc ->
+                if equal_solver_simple_term st' st then
+                  st_n :: rst :: acc
+                else
+                  st' :: acc) eq [] in
+            let bsub, csub = subs in
+            let subs = (st, (st_n, rst)) :: bsub, csub in
+            slice_vars (rst :: eq) pt (c, st_n :: req, subs)
+          | None | Some A -> slice_vars (rst :: eq) pt (c, st_n :: req, subs)
+        end
+      | [], _ :: _ | _ :: _, [] -> assert false
 
     (* [uniforme_slice vls] takes as argument the list of right-hand side
        concatenations associated with a single left-hand-side term in an
@@ -757,13 +858,23 @@ module Shostak(X : ALIEN) = struct
           This mapping can be recursive: a C-variable [c] can be substituted
           with the concatenation [c1 @ c2] of two fresh C-variables, and then
           [c2] can be substituted with the concatenation [c3 @ c4]. *)
-    let uniforme_slice vls =
-      let pat = slicing_pattern(List.map (List.map(fun bv ->bv.sz))vls) in
-      let rec f_aux acc subs l_vs = match l_vs with
-        |[] -> acc,subs
-        |eq::eqs -> let (eq',c_subs) = slice_composition eq pat ([],[])
-          in f_aux (List.rev eq'::acc) (c_subs@subs) eqs
-      in f_aux [] [] vls
+    let uniforme_slice eqs =
+      let pat = slicing_pattern (List.map (List.map (fun bv -> bv.sz)) eqs) in
+      let rec slice_vars_fix pat acc csub = function
+        | [] -> acc, csub
+        | eq :: eqs ->
+          (* If the pattern changes, we must re-slice the whole system. This
+             happens when one occurence of a B-variable gets sliced in a way
+             that is not compatible with another occurence of the same
+             B-variable. *)
+          let eq, csub, pat' = slice_vars eq pat (false, [], ([], csub)) in
+          match pat' with
+          | None -> slice_vars_fix pat (eq :: acc) csub eqs
+          | Some pat ->
+            slice_vars_fix pat [] csub (List.rev_append acc (eq :: eqs))
+      in
+      slice_vars_fix pat [] [] eqs
+
 
     let apply_subs subs sys =
       let rec f_aux = function
