@@ -819,7 +819,7 @@ module Shostak(X : ALIEN) = struct
               in
               if Lists.compare cmp _bw bw = 0
               then slice_rec ((t,vls')::bw) _fw
-              else slice_rec [] (bw@((t,vls'):: _fw))
+              else slice_rec [] (_bw@((t,vls'):: _fw))
             end
       in slice_rec [] parts
 
