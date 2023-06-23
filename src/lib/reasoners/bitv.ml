@@ -32,6 +32,32 @@ module Sy = Symbols
 module E = Expr
 
 type sort_var = A | B | C
+(* The variables used by the bitvector solver can be split into three
+   categories that have associated invariants.
+
+   These invariants are recalled in the functions that make use of them, but the
+   outline is as follows. The solver works with *partitioned multi-equations*.
+   A partitioned multi-equation is an equality: X == e1 = e2 = ... = en
+   where X is a term (or an alien) and e1, e2, ..., en are terms in the
+   bitvector algebra, that may contain variables.
+
+   The solver maintains a system of partitioned multi-equations. In the system,
+   there is at most one multi-equation for each variable X (while building the
+   system, the multi-equations are initially split into binary equations [X = e]
+   where this restriction does not apply technically; in this representation,
+   all the right-hand side of equalities involving the same left-hand side
+   should be treated as part of the same multi-equation).
+
+   Then, we maintain the invariants that, within the system:
+
+   - Each A variable appears at most once (this is used to represent portions
+      of a term that are irrelevant to a particular constraint)
+
+   - Each B variable appears in at most one *equation* (i.e. a single term
+      [ei]), but appears *multiple times* in that equation (never only once)
+
+   - Each C variable appears at most once in each multi-equation, but appears
+      in several (more precisely, two) distinct multi-equations. *)
 
 let compare_sort s1 s2 =
   match s1, s2 with
@@ -134,6 +160,8 @@ module Shostak(X : ALIEN) = struct
 
   let compare_abstract = Lists.compare compare_simple_term
 
+  (* Compare two simple terms. The [equalities_propagation] function below
+     requires that : [false ≤ st ≤ true] for all simple terms [st]. *)
   let compare_solver_simple_term = compare_alpha_term (fun st1 st2 ->
       match st1, st2 with
       | S_Cte b1, S_Cte b2 -> Bool.compare b1 b2
@@ -382,6 +410,13 @@ module Shostak(X : ALIEN) = struct
         (fun ac st -> match st.bv with
            |Other v |Ext(v,_,_,_) -> add v ac  |_ -> ac )[]
 
+    (* [st_slice st siz] splits the simple term [st] in two parts, the first of
+       which has size |siz|.
+
+       If [st] is [[b0; ..; bn]] then [st_slice st size] is [(x, y)] where:
+
+       - [x] is [[b0; ..; b(siz-1)]]
+       - [y] is [[b(siz); ..; bn]] *)
     let st_slice st siz =
       let siz_bis = st.sz - siz in match st.bv with
       |Cte _ -> {st with sz = siz},{st with sz = siz_bis}
@@ -394,6 +429,14 @@ module Shostak(X : ALIEN) = struct
         let s2 = Ext(x,s,p,p+siz_bis-1) in
         {bv = s1 ; sz = siz},{bv = s2 ; sz = siz_bis}
 
+    (* [slice t u] transforms the equality [t = u] between abstract terms (i.e.
+       concatenations of simple terms) into an equivalent conjunction of
+       equalities between simple terms.
+
+       Requires: [t] and [u] must have the same total size.
+       Ensures: there are no duplicates in the result (in particular, [x = y]
+                and [y = x] cannot be both present)
+       Ensures: there are no trivial equalities [x = x] in the result. *)
     let slice t u  =
       let f_add (s1,s2) acc =
         let b =
@@ -423,8 +466,22 @@ module Shostak(X : ALIEN) = struct
       if size <= 0 then []
       else [ { bv = S_Var (fresh_var genre) ; sz = size } ]
 
+    (* Orient the equality [b = st] where [b] is a boolean constant and [st] is
+       uninterpreted ("Other") *)
     let cte_vs_other bol st = st , [{bv = S_Cte bol ; sz = st.sz}]
 
+    (* Orient the equality [b = xt[s_xt]^{i,j}] where [b] is a boolean constant
+       and [xt] is uninterpreted of size [s_xt].
+
+       We introduce two A-variables [a1[i]] and [a2[s_xt-1-j]] and orient:
+
+        [xt = a1 @ b[j - i + 1] @ a2]
+
+       The A-variables are unconstrained by this equation and represent the
+       remainder of the uninterpreted symbol before/after the extraction.
+
+       (Note: [fresh_bitv] ensures that if either [a1] or [a2] has size [0], no
+       variable is actually generated.) *)
     let cte_vs_ext bol xt s_xt i j =
       let a1  = fresh_bitv A i in
       let a2  = fresh_bitv A (s_xt - 1 - j) in
@@ -432,9 +489,31 @@ module Shostak(X : ALIEN) = struct
       let var = { bv = Other xt ; sz = s_xt }
       in var, a2@cte@a1
 
+    (* Orient the equality [st1 = st2] where both [st1] and [st2] are
+       uninterpreted ("Other").
+
+       We introduce a new C-variable [c] and orient:
+
+        [st1 = c] and [st2 = c]
+
+       Requires: [size st1 = size st2]
+       Requires: [st1] and [st2] are distinct (for the C variables invariant)
+    *)
     let other_vs_other st1 st2 =
       let c = fresh_bitv C st1.sz in [ (st1,c) ; (st2,c) ]
 
+    (* Orient the equality [st = xt[s_xt]^{i,j}] where [st] and [xt] are
+       uninterpreted ("Other") and [xt] is uninterpreted of size [s_xt].
+
+       We introduce a new C-variable [c] and two A-variables [a1[i]] and
+       [a2[s_xt - 1 - j]] and orient:
+
+        [st = c] and [xt = a1 @ c @ a2]
+
+       Requires: [size st = j - i + 1]
+       Requires: [st] and [xt] are distinct (for the C variables invariant ---
+         but this is actually impossible because the sizes wouldn't match)
+    *)
     let other_vs_ext st xt s_xt i j =
       let c  = fresh_bitv C st.sz in
       let a1 = fresh_bitv A i in
@@ -442,6 +521,19 @@ module Shostak(X : ALIEN) = struct
       let extr = { bv = Other xt ; sz = s_xt }
       in [ (st,c) ; (extr,a2 @ c @ a1) ]
 
+    (* Orient the equality [id[s]^{i,j} = id'[s']^{i',j'}].
+
+       We introduce a C variable [c] and A variables a1, a1', a2, a2' and
+       orient:
+
+        [id = a2 @ c @ a1] and [id' = a2' @ c @ a1']
+
+       The "shared" part is equal to the C variable.
+
+       Requires: [id] and [id'] are distinct variables. This requirement ensures
+         that we maintain the invariant of C variables that they never occur
+         twice in the same multi-equation.
+    *)
     let ext1_vs_ext2 (id,s,i,j) (id',s',i',j') = (* id != id' *)
       let c   = fresh_bitv (C) (j - i + 1) in
       let a1  = fresh_bitv A i  in
@@ -452,6 +544,50 @@ module Shostak(X : ALIEN) = struct
       let y_v = { sz = s' ; bv = Other id' } in
       [ (x_v , a2 @ c @ a1) ; (y_v , a2' @ c @ a1') ]
 
+    (* Orient the equality [xt[siz]^{i1, i1 + tai} = xt[siz]^{i2, i2 + tai}]
+
+       The [overl] variable contains the number of overlapping bits.
+
+       - If there are no overlapping bits, the two parts are independent.
+          We create a fresh B-variable [b] and A-variables [a1], [a2] and [a3]
+          and orient:
+
+            [xt = a3 @ b @ a2 @ b @ a1]
+
+          The B-variable is used for the common part that is repeated.
+
+       - If there are overlapping bits, we create only the A variables [a1] and
+          [a3] for the before/after parts, and we create two B variables.
+
+          [b_box] is the total constraint size (from [i1] to [i2 + tai]).
+          [nn_overl] is the number of *initial* non-overlapping bits (from [i1]
+          to [i2]).
+
+          The [b] vector is then split into two parts to properly align the
+          repetition. The computation is:
+
+            sz_b1 = b_box % nn_overl (size of b1)
+            sz_b2 = nn_overl - sz_b1 (size of b2)
+            a1[i] @ ((b1 @ b2) * (b_box/nn_overl)) @ b1 @ a2[siz - tai - i2]
+
+          It will be more clear with an example:
+
+             _ nn_overl = 3
+            / \
+            xxxxxxx???
+            ???yyyyyyy
+            \________/
+              b_box = 10
+
+          Which creates the following decomposition:
+
+            $$$xxxxxxx???###
+            $$$???yyyyyyy###
+            \\\uvvuvvuvvu///
+            where a1 = \\\, b1 = u, b2 = vv, a2 = ///
+
+       Requires: [i1 < i2]
+    *)
     let ext_vs_ext xt siz (i1,i2) tai =
       let overl = i1 + tai -i2 in
       if overl <= 0 then begin
@@ -478,6 +614,30 @@ module Shostak(X : ALIEN) = struct
         ({ bv = Other xt ; sz = siz } , a3 @ (!acc) @ a1)
       end
 
+    (* [sys_solve sys] orients a system of equations between simple terms.
+
+       The resulting system contains equations between a simple term on the
+       left, and a solver_simple_term on the right.  The solver_simple_term only
+       involves *fresh* A, B, and C variables.
+
+       Each uninterpreted symbol (variable or alien) appearing in the original
+       system appears in the oriented system, possibly multiple times.
+
+       In a single equation of the resulting system:
+
+       - The A variables only refer to parts of the variable that were
+          unconstrained in the original equation. Each A variable appears
+          *exactly once* in the oriented system.
+       - The B variables appear due to equalities involving multiple
+          extractions of the same uninterpreted term. They appear in a single
+          equation, but can appear *multiple times in a single equation*.
+       - The C variables appear due to equalities involving multiple
+          uninterpreted terms. They appear at most once in each equation, but
+          can appear *in multiple equations*. They only appear in equations that
+          have distinct left-hand-side.
+
+       Requires (R1): there are no trivial equalities in [sys]
+    *)
     let sys_solve sys =
       let c_solve (st1,st2) = match st1.bv,st2.bv with
         |Cte _, Cte _ -> raise Util.Unsolvable (* forcement un 1 et un 0 *)
@@ -504,6 +664,12 @@ module Shostak(X : ALIEN) = struct
       in List.flatten (List.map c_solve sys)
 
 
+    (* [partition cmp l] returns a list of pairs [(a, bs)] where [bs] contains
+       all the [b] such that [(a, b)] occurs in the original list.
+
+       When applied to oriented systems of equatoins returned by [sys_solve],
+       this merges together all the equalities involving the same [simple_term]
+       on the left. *)
     let partition cmp l =
       let rec add acc (t,cnf) = match acc with
         |[] -> [(t,[cnf])]
@@ -556,6 +722,41 @@ module Shostak(X : ALIEN) = struct
           end
       | _ -> assert false
 
+    (* [uniforme_slice vls] takes as argument the list of right-hand side
+       concatenations associated with a single left-hand-side term in an
+       equation system. We will call this a multi-equality.
+
+       vls is a list of lists: each term in the multi-equality is a
+       concatenation of solver_simple_terms.
+
+       In particular, it satisfies the hypotheses that:
+
+       - A and C variables occur *at most once* in the multi-equality (C
+          variables may occur in multi-equality involving different left-hand
+          sides).
+
+       - B variables only appear in a single concatenation, but may (in fact,
+          do) appear multiple times in that single concatenation.
+
+       [uniforme_slice] returns a pair [(eqs, c_subs)] where:
+
+       - [eqs] is a *uniform* multi-equality, that is, each concatenation in
+          [eqs] has the same shape (the bitvector at any given position has the
+          same size in all concatenations).  In particular, all concatenations
+          have the same length.
+
+          The concatenations in [eqs] satisfy the same requirements as above
+          regarding the A, B and C variables; but some of the variables may have
+          been replaced with a concatenation of smaller variables.
+
+       - [c_subs] is a mapping from C variables to pairs of C variables, where
+          the original C variable has been replaced by the concatenation of the
+          new C variables. The original C variable must not be used anymore, and
+          must be replaced with the concatenation instead.
+
+          This mapping can be recursive: a C-variable [c] can be substituted
+          with the concatenation [c1 @ c2] of two fresh C-variables, and then
+          [c2] can be substituted with the concatenation [c3 @ c4]. *)
     let uniforme_slice vls =
       let pat = slicing_pattern(List.map (List.map(fun bv ->bv.sz))vls) in
       let rec f_aux acc subs l_vs = match l_vs with
@@ -573,6 +774,33 @@ module Shostak(X : ALIEN) = struct
           | exception Not_found -> v :: f_aux r
       in List.map (fun (t,vls) ->(t,List.map f_aux vls))sys
 
+    (* [equations_slice parts] takes a partitioned system [parts], i.e. a list
+       of pairs [(a, bs)] where [a] are uninterpreted terms and [bs] are
+       multi-equations involving A, B and C variables.
+
+       The usual conditions apply:
+
+       - A variables occur at most once in the whole partitioned system
+       - B variables occur in at most one composition of at most one
+          multi-equation, but they appear multiple times within this
+          single composition
+       - C variables occur at most once in the multi-equation associated with a
+          given uninterpreted term, but may occur in multi-equations associated
+          with distinct uninterpreted terms.
+
+       [equations_slice parts] returns a new system that is equivalent to the
+       original system, but where each uninterpreted term is associated with a
+      *uniform* multi-equation (see the definition of [uniforme_slice]).
+
+       Note that [equations_slice] works recursively: trying to make an uniform
+       multi-equation for a specific uninterpreted term may cause some of its
+       C-variables to be split, which in turn can require re-slicing the other
+       equations involving the original C-variable, even if they have already
+       been sliced. Which can in turn cause re-slicing of the new C-variables,
+       etc.
+
+       (Note: there are currently multiple bugs that prevent the description
+       above of the systems being equivalent from being correct) *)
     let equations_slice parts =
       let rec slice_rec bw = function
         |[] -> bw
@@ -595,7 +823,15 @@ module Shostak(X : ALIEN) = struct
             end
       in slice_rec [] parts
 
+    (* [union_sets sets] performs (inefficiently) the union operation of an
+       union-find data structure. Given an union-find data structure [sets]
+       represented as a list of sets, it returns a new list [sets'] by merging
+       all the sets in the original list that are not disjoint. *)
     let rec union_sets sets =
+      (* [included e1 e2] returns [true] if the intersection of [e1] and [e2] is
+         nonempty, and [false] otherwise. Confusingly, this *does not* mean that
+         [e1] is included in [e2], but rather that [e1] and [e2] are not
+         disjoint. Go figure. *)
       let included e1 e2 =
         try
           ST_Set.iter (fun at -> if ST_Set.mem at e2 then raise Exit)e1;
@@ -608,12 +844,56 @@ module Shostak(X : ALIEN) = struct
         if Lists.is_empty ok then st::union_sets tl
         else union_sets ((List.fold_left ST_Set.union st ok)::ko)
 
+    (* [init_sets vals] takes as argument a uniform multi-equation [vals], and
+       converts it into a union-of-sets representation.
+
+       This is a sort of transposition. Given an *uniform* multi-equation:
+
+        x1 @ ... @ xn ==
+             ...      ==
+        z1 @ ... @ zn
+
+       we build a list where each position in the multi-equation is associated
+       with the set of values at that position in the multi-equation:
+
+        [[{x1, ..., z1}, ..., {xn, ..., zn}]]
+
+       All the values in the same set must be equal. *)
     let init_sets vals =
       let acc = List.map (fun at -> ST_Set.singleton at) (List.hd vals) in
       let tl = (List.tl vals) in
       let f_aux = List.map2 (fun ac_e e -> ST_Set.add e ac_e)
       in List.fold_left f_aux acc tl
 
+    (* [equalities_propagation eqs_slice] takes as argument a partitioned
+       uniform system of equations [eqs_slice].
+
+       This means that [eqs_slice] is a list of pairs [(t, eqs)] where [t] is
+       an uninterpreted term ("Other") and [eqs] are uniform multi-equations
+       associated with [t] (see [uniforme_slice] for the definition of uniform
+       multi-equations).
+
+       The usual restrictions on A, B and C variables apply:
+
+       - A variables occur at most once in the whole system
+       - B variables occur in at most one composition of at most one
+          multi-equation, but occur multiple times within that one composition
+       - C variables occur at most once in the multi-equation associated with a
+          given term, but occur in multi-equations associated with multiple
+          distinct terms
+
+       [equalities_propagation] propagates the equalities implied by the
+       [eqs_slic] system, and returns a list of pairs [(r, c)] where [c] is an
+       equivalence class (represented by a set of simple terms) and [r] is the
+       representative of that class.
+
+       If there is a constant in the set, it is used as a representative;
+       otherwise, the maximum variable according to [compare_solver_simple_term]
+       is returned (preference is given to C > B > A variables, and amongst
+       variables of the same sort, the youngest is preferred).
+
+       The equivalence classes contain exactly all the terms occuring in the
+       input system. *)
     let equalities_propagation eqs_slic =
       let init_sets = List.map (fun (_,vls) -> init_sets vls) eqs_slic in
       let init_sets = List.flatten init_sets
@@ -626,6 +906,10 @@ module Shostak(X : ALIEN) = struct
            |_ , _ -> st2,set
         ) (union_sets init_sets)
 
+    (* [build_solution unif_slic sets] takes as argument a uniform system of
+       multi-equations (see above) and a set of equivalence classes. It builds a
+       solution to the uniform system by replacing each term with the
+       concatenation of representatives for the corresponding multi-equation. *)
     let build_solution unif_slic sets =
       let get_rep var =
         fst(List.find ( fun(_,set)->ST_Set.mem var set ) sets) in
@@ -656,6 +940,15 @@ module Shostak(X : ALIEN) = struct
            t,cnf_max (List.map to_external_ast (List.hd vls))
         )unif_slic
 
+    (* [solve u v] takes as argument two abstract terms (i.e. concatenation of
+       simple terms) [u] and [v] and returns a substitution [subs].
+
+       The substitution [subs] maps all the uninterpreted terms ("other")
+       appearing in the abstract terms [u] and [v] to a definition, expressed as
+       an abstract term, involving only constants and *fresh* A, B and C
+       variables.
+
+       @raises Valid if the two terms are already equal. *)
     let solve u v =
       if Lists.compare compare_simple_term u v = 0 then raise Valid
       else begin
