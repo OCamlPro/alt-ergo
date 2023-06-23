@@ -128,6 +128,9 @@ module Shostak(X : ALIEN) = struct
       end
     | Some b -> b
 
+  (* Note: we must use [x.str_cmp] here because this is used in
+     [compare_abstract] which in turn is used by [compare], which is the
+     implementation called by [X.str_cmp] itself. *)
   let compare_simple_term = compare_alpha_term (fun st1 st2 ->
       match st1, st2 with
       | Cte b1, Cte b2 -> Bool.compare b1 b2
@@ -313,6 +316,15 @@ module Shostak(X : ALIEN) = struct
       | Ext (t,_,i,j) ->
         fprintf fmt "%a@?" X.print t;
         fprintf fmt "<%d,%d>@?" i j
+
+    let[@warning "-32"] rec print_I_ast fmt ast =
+      let open Canonizer in
+      let open Format in
+      match ast.bv with
+      | I_Cte b -> fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
+      | I_Other t -> fprintf fmt "%a[%d]@?" X.print t ast.sz
+      | I_Ext (u,i,j) -> fprintf fmt "%a<%d,%d>@?" print_I_ast u i j
+      | I_Comp(u,v) -> fprintf fmt "@[(%a * %a)@]" print_I_ast u print_I_ast v
 
     let print_C_ast fmt = function
         [] -> assert false
@@ -1048,15 +1060,15 @@ module Shostak(X : ALIEN) = struct
 
 
   let rec subst_rec x subs biv =
-    match biv.bv , x with
-    | Canonizer.I_Cte _ , _ -> biv
-    | Canonizer.I_Other tt , _ ->
+    match biv.bv with
+    | Canonizer.I_Cte _ -> biv
+    | Canonizer.I_Other tt ->
       if X.equal x tt then
         extract subs biv.sz
       else extract (X.subst x subs tt) biv.sz
-    | Canonizer.I_Ext (t,i,j) , _ ->
+    | Canonizer.I_Ext (t,i,j) ->
       { biv with bv = Canonizer.I_Ext(subst_rec x subs t,i,j) }
-    | Canonizer.I_Comp (u,v) , _ ->
+    | Canonizer.I_Comp (u,v) ->
       { biv with
         bv = Canonizer.I_Comp(subst_rec x subs u ,subst_rec x subs v)}
 
