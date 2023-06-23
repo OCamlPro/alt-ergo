@@ -32,6 +32,32 @@ module Sy = Symbols
 module E = Expr
 
 type sort_var = A | B | C
+(* The variables used by the bitvector solver can be split into three
+   categories that have associated invariants.
+
+   These invariants are recalled in the functions that make use of them, but the
+   outline is as follows. The solver works with *partitioned multi-equations*.
+   A partitioned multi-equation is an equality: X == e1 = e2 = ... = en
+   where X is a term (or an alien) and e1, e2, ..., en are terms in the
+   bitvector algebra, that may contain variables.
+
+   The solver maintains a system of partitioned multi-equations. In the system,
+   there is at most one multi-equation for each variable X (while building the
+   system, the multi-equations are initially split into binary equations [X = e]
+   where this restriction does not apply technically; in this representation,
+   all the right-hand side of equalities involving the same left-hand side
+   should be treated as part of the same multi-equation).
+
+   Then, we maintain the invariants that, within the system:
+
+   - Each A variable appears at most once (this is used to represent portions
+      of a term that are irrelevant to a particular constraint)
+
+   - Each B variable appears in at most one *equation* (i.e. a single term
+      [ei]), but appears *multiple times* in that equation (never only once)
+
+   - Each C variable appears at most once in each multi-equation, but appears
+      in several (more precisely, two) distinct multi-equations. *)
 
 let compare_sort s1 s2 =
   match s1, s2 with
@@ -470,13 +496,8 @@ module Shostak(X : ALIEN) = struct
 
         [st1 = c] and [st2 = c]
 
-       (Note: I am not sure if we could orient [st1 = st2] or [st2 = st1] when
-       one of them is already a variable, or maybe just when it is a
-       C-variable. I think we don't, because we must generate fresh
-       substitutions for all the original variables -- I think, see
-       [other_vs_other] below)
-
        Requires: [size st1 = size st2]
+       Requires: [st1] and [st2] are distinct (for the C variables invariant)
     *)
     let other_vs_other st1 st2 =
       let c = fresh_bitv C st1.sz in [ (st1,c) ; (st2,c) ]
@@ -489,11 +510,9 @@ module Shostak(X : ALIEN) = struct
 
         [st = c] and [xt = a1 @ c @ a2]
 
-       (Note: we don't do [xt = a1 @ st @ a2] which looks simpler, and so I
-       assume it is because we want substitutions for all the original problem
-       variables)
-
        Requires: [size st = j - i + 1]
+       Requires: [st] and [xt] are distinct (for the C variables invariant ---
+         but this is actually impossible because the sizes wouldn't match)
     *)
     let other_vs_ext st xt s_xt i j =
       let c  = fresh_bitv C st.sz in
@@ -511,10 +530,9 @@ module Shostak(X : ALIEN) = struct
 
        The "shared" part is equal to the C variable.
 
-       Requires: [id] and [id'] are distinct variables.
-
-       (Note: I think that this requirement is to ensure that we don't
-       substitute the same variable twice)
+       Requires: [id] and [id'] are distinct variables. This requirement ensures
+         that we maintain the invariant of C variables that they never occur
+         twice in the same multi-equation.
     *)
     let ext1_vs_ext2 (id,s,i,j) (id',s',i',j') = (* id != id' *)
       let c   = fresh_bitv (C) (j - i + 1) in
@@ -546,15 +564,27 @@ module Shostak(X : ALIEN) = struct
           to [i2]).
 
           The [b] vector is then split into two parts to properly align the
-          repetition. I won't go into the details of the modulo arithmetic, but
-          here is an example ([u] and [vv] are two [1] and [2] size B-variables)
+          repetition. The computation is:
+
+            sz_b1 = b_box % nn_overl (size of b1)
+            sz_b2 = nn_overl - sz_b1 (size of b2)
+            a1[i] @ ((b1 @ b2) * (b_box/nn_overl)) @ b1 @ a2[siz - tai - i2]
+
+          It will be more clear with an example:
 
              _ nn_overl = 3
             / \
-            xxxxxxx???     uvvuvvuvvu???
-            ???yyyyyyy  => ???uvvuvvuvvu
+            xxxxxxx???
+            ???yyyyyyy
             \________/
               b_box = 10
+
+          Which creates the following decomposition:
+
+            $$$xxxxxxx???###
+            $$$???yyyyyyy###
+            \\\uvvuvvuvvu///
+            where a1 = \\\, b1 = u, b2 = vv, a2 = ///
 
        Requires: [i1 < i2]
     *)
@@ -588,7 +618,7 @@ module Shostak(X : ALIEN) = struct
 
        The resulting system contains equations between a simple term on the
        left, and a solver_simple_term on the right.  The solver_simple_term only
-       involved *fresh* A, B, and C variables.
+       involves *fresh* A, B, and C variables.
 
        Each uninterpreted symbol (variable or alien) appearing in the original
        system appears in the oriented system, possibly multiple times.
@@ -601,7 +631,7 @@ module Shostak(X : ALIEN) = struct
        - The B variables appear due to equalities involving multiple
           extractions of the same uninterpreted term. They appear in a single
           equation, but can appear *multiple times in a single equation*.
-       - The C variables appear to due equalities involving multiple
+       - The C variables appear due to equalities involving multiple
           uninterpreted terms. They appear at most once in each equation, but
           can appear *in multiple equations*. They only appear in equations that
           have distinct left-hand-side.
