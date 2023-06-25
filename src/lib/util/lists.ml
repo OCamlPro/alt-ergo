@@ -77,3 +77,10 @@ let rec compare cmp l1 l2 =
     if c <> 0 then c
     else
       compare cmp tl1 tl2
+
+(* List.equal in OCaml 4.12+ *)
+let rec equal eq l1 l2 =
+  match l1, l2 with
+  | [], [] -> true
+  | hd1 :: tl1, hd2 :: tl2 when eq hd1 hd2 -> equal eq tl1 tl2
+  | _ -> false

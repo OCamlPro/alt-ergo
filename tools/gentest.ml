@@ -270,7 +270,7 @@ let () =
       Sys.argv.(1)
     else "."
   in
-  let bin = "alt-ergo --disable-default-preludes" in
+  let bin = "%{bin:alt-ergo}" in
   let timelimit = "--timelimit=2" in
   let solvers = [
     ("runtest-quick", "dolmen", [

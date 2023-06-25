@@ -1,0 +1,5 @@
+logic x: bitv[2]
+
+goal g:
+  forall y: bitv[4].
+    (y^{3,3} @ y^{3,3}) @ y = ([|00|] @ x) @ [|00|]
