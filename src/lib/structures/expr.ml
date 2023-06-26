@@ -1253,7 +1253,7 @@ let mk_nat2bv n t =
 let mk_bvneg n x =
   mk_nat2bv n (
     mk_term (Sy.Op Sy.Minus) [
-      mk_term (Sy.Op Sy.Pow) [ itwo; int (string_of_int n) ] Ty.Tint;
+      int Z.(pow ~$i n |> to_string) ;
       mk_bv2nat x
     ] Ty.Tint
   )
