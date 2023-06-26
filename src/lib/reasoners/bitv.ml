@@ -365,7 +365,7 @@ module Shostak(X : ALIEN) = struct
     let bitv_of_nat ?(neg = false) bv_t nat_t size ctx =
       let bitf = if neg then (fun b -> not b) else (fun b -> b) in
       let pow n =
-        E.mk_term (Sy.Op Sy.Pow) [E.itwo; E.int (Int.to_string n)] Ty.Tint
+        E.int Z.(pow ~$2 n |> to_string)
       in
       let mdiv nat_t n =
         E.mk_term (Sy.Op Sy.Modulo)
