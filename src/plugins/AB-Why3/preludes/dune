@@ -1,0 +1,12 @@
+(install
+  (package alt-ergo-plugin-ab-why3)
+  (section (site (alt-ergo preludes)))
+  (files
+    b-set-theory-prelude-2018-09-28.ae
+    b-set-theory-prelude-2020-02-28.ae
+  )
+)
+
+(cram
+ (alias runtest-ci)
+ (deps b-set-theory-prelude-2018-09-28.ae b-set-theory-prelude-2020-02-28.ae))

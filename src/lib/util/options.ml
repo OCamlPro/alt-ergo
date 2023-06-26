@@ -270,7 +270,6 @@ let frontend = ref "legacy"
 let input_format = ref Native
 let infer_input_format = ref true
 let parse_only = ref false
-let parsers = ref []
 let preludes = ref []
 let theory_preludes = ref Preludes.default
 let type_only = ref false
@@ -285,7 +284,6 @@ let set_frontend f = frontend := f
 let set_input_format f = input_format := f
 let set_infer_input_format b = infer_input_format := b
 let set_parse_only b = parse_only := b
-let set_parsers p = parsers := p
 let set_preludes p = preludes := p
 let set_theory_preludes t = theory_preludes := t
 let set_type_only b = type_only := b
@@ -300,7 +298,6 @@ let get_frontend () = !frontend
 let get_input_format () = !input_format
 let get_infer_input_format () = !infer_input_format
 let get_parse_only () = !parse_only
-let get_parsers () = !parsers
 let get_preludes () = !preludes
 let get_theory_preludes () = !theory_preludes
 let get_type_only () = !type_only

@@ -220,7 +220,6 @@ type options = {
   frontend : frontend option;
   input_format : input_format option;
   parse_only : bool option;
-  parsers : (string list) option;
   preludes : (string list) option;
   type_only : bool option;
   type_smt2 : bool option;
@@ -325,7 +324,6 @@ let init_options () = {
   frontend = None;
   input_format = None;
   parse_only = None;
-  parsers = None;
   preludes = None;
   type_only = None;
   type_smt2 = None;
@@ -455,12 +453,11 @@ let opt2_encoding =
   conv
     (fun opt2 -> opt2)
     (fun opt2 -> opt2)
-    (obj8
+    (obj7
        (opt "answers_with_loc" bool)
        (opt "frontend" frontend_encoding)
        (opt "input_format" format_encoding)
        (opt "parse_only" bool)
-       (opt "parsers" (list string))
        (opt "preludes" (list string))
        (opt "type_only" bool)
        (opt "type_smt2" bool)
@@ -607,7 +604,6 @@ let options_to_json opt =
      opt.frontend,
      opt.input_format,
      opt.parse_only,
-     opt.parsers,
      opt.preludes,
      opt.type_only,
      opt.type_smt2)
@@ -734,7 +730,6 @@ let options_from_json options =
          frontend,
          input_format,
          parse_only,
-         parsers,
          preludes,
          type_only,
          type_smt2) = all_opt2 in
@@ -823,7 +818,6 @@ let options_from_json options =
       frontend;
       input_format;
       parse_only;
-      parsers;
       preludes;
       type_only;
       type_smt2;

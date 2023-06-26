@@ -1,5 +1,3 @@
-# Change Log
-
 ## unreleased
 
 ## v2.4.3 (2023-04-14)

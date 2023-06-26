@@ -9,7 +9,7 @@
 
 (install
  (package alt-ergo)
- (section lib)
+ (section (site (alt-ergo plugins)))
  (files
-  (FmSimplexPlugin.cma as plugins/fm-simplex-plugin.cma)
-  (FmSimplexPlugin.cmxs as plugins/fm-simplex-plugin.cmxs)))
+  FmSimplexPlugin.cma
+  FmSimplexPlugin.cmxs))

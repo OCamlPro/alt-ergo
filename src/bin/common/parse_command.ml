@@ -317,7 +317,7 @@ let mk_context_opt replay replay_all_used_context replay_used_context
   set_replay_used_context replay_used_context;
   `Ok()
 
-let mk_execution_opt frontend input_format parse_only parsers
+let mk_execution_opt frontend input_format parse_only ()
     preludes no_locs_in_answers colors_in_output no_headers_in_output
     no_formatting_in_output no_forced_flush_in_output pretty_output
     type_only type_smt2
@@ -340,7 +340,6 @@ let mk_execution_opt frontend input_format parse_only parsers
   set_output_with_forced_flush output_with_forced_flush;
   set_input_format input_format;
   set_parse_only parse_only;
-  set_parsers parsers;
   set_frontend frontend;
   set_type_only type_only;
   set_type_smt2 type_smt2;
@@ -526,27 +525,25 @@ let mk_theory_opt disable_adts () no_ac no_contracongru
 let halt_opt version_info where =
   let handle_where w =
     let res = match w with
-      | "lib" -> `Ok Config.libdir
-      | "plugins" -> `Ok Config.pluginsdir
-      | "preludes" -> `Ok Config.preludesdir
-      | "data" -> `Ok Config.datadir
-      | "man" -> `Ok Config.mandir
+      | "plugins" -> `Ok Config.plugins_locations
+      | "preludes" -> `Ok Config.preludes_locations
       | _ -> `Error
                ("Option --where does not accept the argument \"" ^ w ^
-                "\"\nAccepted options are lib, plugins, preludes, data or man")
+                "\"\nAccepted options are plugins or preludes")
     in
     match res with
-    | `Ok path -> Printer.print_std "%s@." path
+    | `Ok paths ->
+      Printer.print_std "@[<v>%a@]@."
+        Format.(pp_print_list ~pp_sep:pp_print_cut pp_print_string)
+        paths
     | `Error m -> raise (Error (false, m))
   in
   let handle_version_info vi =
     if vi then (
       Printer.print_std
         "@[<v 0>Version          = %s@,\
-         Release date     = %s@,\
          Release commit   = %s@]@."
         Version._version
-        Version._release_date
         Version._release_commit;
     )
   in
@@ -557,6 +554,10 @@ let halt_opt version_info where =
       else `Ok false
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
+
+let get_verbose_t =
+  let doc = "Set the verbose mode." in
+  Arg.(value & flag & info ["v"; "verbose"] ~doc)
 
 let mk_opts file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
     (gc) () () () () () () () () =
@@ -692,9 +693,28 @@ let parse_execution_opt =
     Arg.(value & flag & info ["parse-only"] ~docs ~doc) in
 
   let parsers =
+    let load_parser verbose path =
+      try
+        MyDynlink.load verbose path "parser";
+        Ok ()
+      with
+        Errors.Error e ->
+        Error (Format.asprintf "%a" Errors.report e)
+    in
+    let load_parsers verbose paths =
+      List.fold_left
+        (fun res path ->
+           Result.bind res (fun () -> load_parser verbose path))
+        (Ok ()) paths
+    in
     let doc = "Register a new parser for Alt-Ergo." in
-    Arg.(value & opt_all string (get_parsers ()) &
-         info ["add-parser"] ~docs ~doc) in
+    let arg =
+      Arg.(value & opt_all string [] &
+           info ["add-parser"] ~docs ~doc)
+    in
+    let term = Term.(const load_parsers $ get_verbose_t $ arg) in
+    Term.term_result' term
+  in
 
   let preludes =
     let parse_prelude p =
@@ -704,8 +724,8 @@ let parse_execution_opt =
         else
           Ok p
       else
-        let p' = Filename.concat Config.preludesdir p in
-        if Sys.file_exists p' then begin
+        match Config.lookup_prelude p with
+        | Some p' ->
           begin if Compat.String.starts_with ~prefix:"b-set-theory" p then
               Printer.print_wrn ~header:true
                 "Support for the B set theory is deprecated since version \
@@ -720,28 +740,21 @@ let parse_execution_opt =
                  be removed in a later version.@]" p
           end;
 
-          if Sys.is_directory p' then
-            Fmt.error "'%s' is a directory" p
-          else
-            Ok p'
-        end else
-          Fmt.error "no '%s' file" p
+          Ok p'
+        | None ->
+          Error (
+            Format.asprintf
+              "cannot load prelude '%s': no such file"
+              p)
     in
-    let parse_preludes =
-      List.fold_left (fun r p ->
-          Result.bind r @@ fun ps ->
-          Result.map (fun p -> p :: ps) (parse_prelude p))
-        (Ok [])
+    let prelude =
+      Arg.(conv' (parse_prelude, conv_printer string))
     in
     let doc =
       "Add a file that will be loaded as a prelude. The command is \
        cumulative, and the order of successive preludes is preserved." in
-    Term.(cli_parse_result' (
-        const parse_preludes $
-        Arg.(value & opt_all string (get_preludes ()) &
-             info ["prelude"] ~docs ~doc)
-      ))
-  in
+    Arg.(value & opt_all prelude (get_preludes ()) &
+         info ["prelude"] ~docs ~doc) in
 
   let no_locs_in_answers =
     let doc =
@@ -801,7 +814,7 @@ let parse_halt_opt =
   let where =
     let doc = Format.sprintf
         "Print the directory of $(docv). Possible arguments are \
-         %s." (Arg.doc_alts ["lib"; "plugins"; "preludes"; "data"; "man"]) in
+         %s." (Arg.doc_alts ["plugins"; "preludes"]) in
     let docv = "DIR" in
     Arg.(value & opt (some string) None & info ["where"] ~docv ~docs ~doc) in
 
@@ -990,13 +1003,9 @@ let parse_profiling_opt =
     Arg.(value & opt string (get_profiling_plugin ()) &
          info ["profiling-plugin"] ~docv ~docs ~doc) in
 
-  let get_verbose =
-    let doc = "Set the verbose mode." in
-    Arg.(value & flag & info ["v"; "verbose"] ~doc) in
-
   Term.(ret (const mk_profiling_opt $
              cumulative_time_profiling $ profiling $
-             profiling_plugin $ get_verbose
+             profiling_plugin $ get_verbose_t
             ))
 
 let parse_quantifiers_opt =

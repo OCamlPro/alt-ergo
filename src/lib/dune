@@ -47,10 +47,10 @@
     Parsed Profiling Satml_types Symbols
     Expr Var Ty Typed Xliteral ModelMap
     ; util
-    Config Emap Gc_debug Hconsing Hstring Iheap Lists Loc
-    MyDynlink MyUnix Numbers
-    Options Timers Util Vec Version Steps Printer My_zip Preludes
-    Compat
+    Emap Gc_debug Hconsing Hstring Iheap Lists Loc
+    MyUnix Numbers
+    Options Timers Util Vec Version Steps Printer My_zip
+    Preludes Compat
   )
 
  (js_of_ocaml

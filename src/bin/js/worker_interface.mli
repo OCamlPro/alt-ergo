@@ -103,7 +103,6 @@ type options = {
   frontend : frontend option;
   input_format : input_format option;
   parse_only : bool option;
-  parsers : (string list) option;
   preludes : (string list) option;
   type_only : bool option;
   type_smt2 : bool option;
