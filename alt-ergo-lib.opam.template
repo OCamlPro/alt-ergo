@@ -5,13 +5,6 @@ tags: "org:OCamlPro"
 license: [
   "LicenseRef-OCamlpro-Non-Commercial"
   "Apache-2.0"
-  "LGPL-2.1-only"
-]
-
-build: [
-  ["ocaml" "unix.cma" "configure.ml" name "--prefix" prefix "--libdir" lib "--mandir" man]
-  ["dune" "subst"] {pinned}
-  ["dune" "build" "-p" name "-j" jobs]
 ]
 
 pin-depends: [

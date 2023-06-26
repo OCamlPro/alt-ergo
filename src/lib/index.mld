@@ -149,7 +149,6 @@ AltErgoLib.Iheap
 AltErgoLib.Emap
 AltErgoLib.Hstring
 AltErgoLib.Lists
-AltErgoLib.MyDynlink
 AltErgoLib.Gc_debug
 AltErgoLib.Timers
 AltErgoLib.Hconsing
