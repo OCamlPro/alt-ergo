@@ -11,7 +11,7 @@ The following terms apply to all such contributions:
 
 * We require all pull requests to pass :
 
-	* Our non regression suite, you can run `make non-regression` to check if your changes affect the performance and answers of Alt-Ergo.
+	* Our non regression suite, you can run `make runtest` to check if your changes affect the performance and answers of Alt-Ergo.
 
 	* Our style checking, every lines should length 80 columns maximum and should be indent with ocp-indent.
 	  We strongly recommand to use the following command line so the indent and style checking will be done automatically when commiting.
@@ -61,7 +61,7 @@ Once the release branch has been confirmed, the RM runs some benchmarks to compa
  - ae-format-fpa benchmarks (internal dataset in the native format, using the floating-point theories)
  - benchtop-tests benchmarks (smtcomp subset)
 
-If regressions are found, they must be first confirmed by checking that they are still present in a different environment, to ensure they are not spurious regressions due to the weak table. The simplest way to do it is to compile with a different version of OCaml (this is what the Zulip bot does).
+If regressions are found, they must be first confirmed by checking that they are still present in a different environment, to ensure they are not spurious regressions due to the weak table. The simplest way to do it is to compile with a different version of OCaml (this is what the Zulip bot does). See https://github.com/OCamlPro/alt-ergo/issues/563 for details on the weak table issue.
 
 Confirmed regressions must be investigated to understand their cause. For each cause of regressions, an issue (the granularity of the issues are at the discretion of the RM) must be created to document the cause of the regression. The RM then decides whether the regression must be fixed for the release or not (this is a case-by-case process, but as a general guideline, regressions should be fixed unless the source of the regression is also the source of at least a comparable amount of improvements).
 
