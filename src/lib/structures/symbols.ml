@@ -56,7 +56,7 @@ type operator =
   | BVshl | BVlshr
   (* FP *)
   | Float
-  | RoundingMode of Fpa_rounding.rounding_mode | Integer_round | Fixed
+  | Integer_round | Fixed
   | Sqrt_real | Sqrt_real_default | Sqrt_real_excess
   | Abs_int | Abs_real | Real_of_int | Real_is_int
   | Int_floor | Int_ceil | Integer_log2
@@ -154,8 +154,6 @@ let compare_operators op1 op2 =
       | BV_rotate (n1, b1),  BV_rotate (n2, b2) ->
         let r = Bool.compare b1 b2 in
         if r = 0 then Int.compare n1 n2 else r
-      | RoundingMode m1, RoundingMode m2 ->
-        Stdlib.compare m1 m2
       | BV_repeat n1, BV_repeat n2 ->
         Int.compare n1 n2
       | _, (Plus | Minus | Mult | Div | Modulo | Real_is_int
@@ -163,7 +161,7 @@ let compare_operators op1 op2 =
            | Access _ | Record | Sqrt_real | Abs_int | Abs_real
            | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
            | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
-           | Integer_log2 | Pow | Integer_round | RoundingMode _
+           | Integer_log2 | Pow | Integer_round
            | Not_theory_constant | Is_theory_constant | Linear_dependency
            | Constr _ | Destruct _ | Tite
            | BV2Nat | Nat2BV _ | BVExtend _
@@ -319,7 +317,6 @@ let to_string ?(show_vars=true) x = match x with
   | Op Get -> "get"
   | Op Set -> "set"
   | Op Float -> "float"
-  | Op RoundingMode m -> Format.asprintf "%a" Fpa_rounding.pp_rounding_mode m
   | Op Fixed -> "fixed"
   | Op Abs_int -> "abs_int"
   | Op Abs_real -> "abs_real"

@@ -45,9 +45,9 @@ type rounding_mode =
   | Nd (* nd in Gappa: to nearest, tie breaking toward minus infinity *)
   | Nu (* nu in Gappa: to nearest, tie breaking toward plus infinity *)
 
-val pp_rounding_mode : Format.formatter -> rounding_mode -> unit
-
 val fpa_rounding_mode : Ty.t
+
+val rounding_mode_of_hs : Hstring.t -> rounding_mode
 
 (** Integer part of binary logarithm for NON-ZERO POSITIVE number **)
 val integer_log_2 : Numbers.Q.t -> int
