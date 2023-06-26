@@ -71,6 +71,12 @@ type sat_solver =
   | CDCL
   | CDCL_Tableaux
 
+let pp_sat_solver ppf = function
+  | Tableaux -> Format.fprintf ppf "Tableaux"
+  | Tableaux_CDCL -> Format.fprintf ppf "Tableaux-CDCL"
+  | CDCL -> Format.fprintf ppf "CDCL"
+  | CDCL_Tableaux -> Format.fprintf ppf "CDCL-Tableaux"
+
 type theories_extensions =
   | Sum
   | Adt

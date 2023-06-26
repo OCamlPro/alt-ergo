@@ -57,6 +57,8 @@ type sat_solver =
   | CDCL
   | CDCL_Tableaux
 
+val pp_sat_solver : Format.formatter -> sat_solver -> unit
+
 type theories_extensions =
   | Sum
   | Adt
