@@ -1268,14 +1268,14 @@ let mk_bvslt n x y =
   let xsign = mk_bvsign n x in
   let ysign = mk_bvsign n y in
   let c1 = mk_and xsign (neg ysign) false in
-  let c2 = mk_and (mk_eq ~iff:false xsign ysign) (mk_bvult x y) false in
+  let c2 = mk_and (mk_eq ~iff:true xsign ysign) (mk_bvult x y) false in
   mk_or c1 c2 false
 
 let mk_bvsle n x y =
   let xsign = mk_bvsign n x in
   let ysign = mk_bvsign n y in
   let c1 = mk_and xsign (neg ysign) false in
-  let c2 = mk_and (mk_eq ~iff:false xsign ysign) (mk_bvule x y) false in
+  let c2 = mk_and (mk_eq ~iff:true xsign ysign) (mk_bvule x y) false in
   mk_or c1 c2 false
 
 let mk_bvadd n x y =

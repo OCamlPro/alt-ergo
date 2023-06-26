@@ -151,21 +151,26 @@ let compare_operators op1 op2 =
       | BVExtend (b1, n1),  BVExtend (b2, n2) ->
         let r = Bool.compare b1 b2 in
         if r = 0 then Int.compare n1 n2 else r
+      | BV_rotate (n1, b1),  BV_rotate (n2, b2) ->
+        let r = Bool.compare b1 b2 in
+        if r = 0 then Int.compare n1 n2 else r
       | RoundingMode m1, RoundingMode m2 ->
         Stdlib.compare m1 m2
-      | _ , (Plus | Minus | Mult | Div | Modulo | Real_is_int
-            | Concat | Extract _ | Get | Set | Fixed | Float | Reach
-            | Access _ | Record | Sqrt_real | Abs_int | Abs_real
-            | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
-            | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
-            | Integer_log2 | Pow | Integer_round | RoundingMode _
-            | Not_theory_constant | Is_theory_constant | Linear_dependency
-            | Constr _ | Destruct _ | Tite
-            | BV2Nat | Nat2BV _  | BVExtend _
-            | BV_repeat _ | BV_rotate _ | BVneg
-            | BVnot | BVand | BVor | BVxor | BVnand | BVnor | BVxnor | BVcomp
-            | BVadd | BVsub | BVmul | BVudiv | BVurem | BVsdiv | BVsrem
-            | BVsmod | BVshl| BVlshr) -> assert false
+      | BV_repeat n1, BV_repeat n2 ->
+        Int.compare n1 n2
+      | _, (Plus | Minus | Mult | Div | Modulo | Real_is_int
+           | Concat | Extract _ | Get | Set | Fixed | Float | Reach
+           | Access _ | Record | Sqrt_real | Abs_int | Abs_real
+           | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
+           | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
+           | Integer_log2 | Pow | Integer_round | RoundingMode _
+           | Not_theory_constant | Is_theory_constant | Linear_dependency
+           | Constr _ | Destruct _ | Tite
+           | BV2Nat | Nat2BV _ | BVExtend _
+           | BV_repeat _ | BV_rotate _ | BVneg
+           | BVnot | BVand | BVor | BVxor | BVnand | BVnor | BVxnor | BVcomp
+           | BVadd | BVsub | BVmul | BVudiv | BVurem | BVsdiv | BVsrem
+           | BVsmod | BVshl| BVlshr) -> assert false
     )
 
 let compare_builtin b1 b2 =

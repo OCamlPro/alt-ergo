@@ -1,0 +1,5 @@
+(set-logic QF_BV)
+(declare-const s (_ BitVec 1))
+(assert (= (_ bv0 63) ((_ rotate_right 1) ((_ zero_extend 62) s))))
+(assert (= (_ bv0 63) ((_ rotate_right 1) ((_ zero_extend 62) s))))
+(check-sat)
