@@ -1231,17 +1231,17 @@ let mk_builtin ~is_pos n l =
 
 (** smart constructors for bit-vector terms *)
 
-let mk_bitv_concat t1 t2 sz =
+let mk_bvconcat t1 t2 sz =
   mk_term (Sy.Op Sy.Concat) [t1; t2] (Ty.Tbitv sz)
 
-let mk_bitv_extract i j t sz =
+let mk_bvextract i j t sz =
   mk_term (Sy.Op (Sy.Extract (i, j))) [t] (Ty.Tbitv sz)
 
 let mk_bvnot n t =
   mk_term (Sy.Op Sy.BVnot) [t] (Ty.Tbitv n)
 
 let mk_bvsign n t =
-  let t1 = mk_bitv_extract (n-1) (n-1) t n in
+  let t1 = mk_bvextract (n-1) (n-1) t n in
   mk_eq ~iff:false t1 bvone
 
 let mk_bv2nat t =
@@ -1253,7 +1253,7 @@ let mk_nat2bv n t =
 let mk_bvneg n x =
   mk_nat2bv n (
     mk_term (Sy.Op Sy.Minus) [
-      int Z.(pow ~$i n |> to_string) ;
+      int Z.(pow ~$2 n |> to_string) ;
       mk_bv2nat x
     ] Ty.Tint
   )

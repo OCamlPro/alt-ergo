@@ -863,7 +863,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             E.mk_term (Sy.Op Sy.Minus) [e1; aux_mk_expr x] ty
 
           | B.Bitv_extract { i; j; _ }, [x] ->
-            E.mk_bitv_extract j i (aux_mk_expr x) (i - j + 1)
+            E.mk_bvextract j i (aux_mk_expr x) (i - j + 1)
 
           | B.Destructor { case; field; adt; _ }, [x] ->
             begin match DT.definition adt with
@@ -924,102 +924,104 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             end
 
           | B.Bitv_repeat { n; k }, [t] ->
-            E.mk_term (Sy.Op (BV_repeat k)) [aux_mk_expr t] (Ty.Tbitv (n*k))
+            E.mk_term (Op (BV_repeat k)) [aux_mk_expr t] (Tbitv (n*k))
 
           | B.Bitv_zero_extend { n; k }, [t] ->
             let t' = aux_mk_expr t in
             if k = 0 then t' else
-              E.mk_term (Sy.Op (BVExtend (false, k))) [t'] (Ty.Tbitv (n + k))
+              E.mk_term
+                (Op (BVExtend { sign = false; n = k })) [t'] (Tbitv (n + k))
 
           | B.Bitv_sign_extend { n; k }, [t] ->
             let t' = aux_mk_expr t in
             if k = 0 then t' else
-              E.mk_term (Sy.Op (BVExtend (true, k))) [t'] (Ty.Tbitv (n + k))
+              E.mk_term
+                (Op (BVExtend { sign = true; n = k })) [t'] (Tbitv (n + k))
 
           | B.Bitv_rotate_left { n; i }, [t] ->
             let t' = aux_mk_expr t in
             if n < 2 then t' else
-              E.mk_term (Sy.Op (BV_rotate (i, false))) [t'] (Ty.Tbitv n)
+              E.mk_term (Op (BV_rotate (-i))) [t'] (Tbitv n)
 
           | B.Bitv_rotate_right { n; i }, [t] ->
             let t' = aux_mk_expr t in
             if n < 2 then t' else
-              E.mk_term (Sy.Op (BV_rotate (i, true))) [t'] (Ty.Tbitv n)
+              E.mk_term (Op (BV_rotate i)) [t'] (Tbitv n)
 
           | B.Bitv_neg n, [t] ->
-            E.mk_term (Sy.Op BVneg) [aux_mk_expr t] (Ty.Tbitv n)
+            E.mk_term (Op BVneg) [aux_mk_expr t] (Tbitv n)
 
           | B.Bitv_not n, [t] ->
-            E.mk_term (Sy.Op BVnot) [aux_mk_expr t] (Ty.Tbitv n)
+            E.mk_term (Op BVnot) [aux_mk_expr t] (Tbitv n)
 
           (* Binary applications *)
 
           | B.Bitv_concat { n; m; }, [ x; y ] ->
-            E.mk_bitv_concat (aux_mk_expr x) (aux_mk_expr y) (n + m)
+            E.mk_bvconcat (aux_mk_expr x) (aux_mk_expr y) (n + m)
 
           | B.Bitv_or n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVor) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVor) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_and n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVand) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVand) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_nor n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVnor) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVnor) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_nand n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVnand) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVnand) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_xor n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVxor) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVxor) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_xnor n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVxnor) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVxnor) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_comp n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVcomp) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVcomp) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_add n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVadd) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVadd) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_sub n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVsub) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVsub) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_mul n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVmul) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVmul) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_udiv n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVudiv) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVudiv) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_urem n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVurem) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVurem) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_sdiv n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVsdiv) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVsdiv) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_srem n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVsrem) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVsrem) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_smod n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVsmod) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVsmod) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_shl n, [ x; y ] ->
             E.mk_term
-              (Sy.Op Sy.BVshl) [aux_mk_expr x; aux_mk_expr y] (Ty.Tbitv n)
+              (Op Sy.BVshl) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
           | B.Bitv_lshr n, [ x; y ] ->
             E.mk_bvlshr n (aux_mk_expr x) (aux_mk_expr y)

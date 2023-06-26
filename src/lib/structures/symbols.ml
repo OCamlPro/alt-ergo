@@ -47,10 +47,10 @@ type operator =
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
   | BV2Nat | Nat2BV of int
-  | BVExtend of bool * int
+  | BVExtend of {sign: bool; n: int}
   (* (sign, n) if sign = true then extend sign otherwise extend with zeros *)
   | BV_repeat of int
-  | BV_rotate of int * bool (* true for right, false for left *)
+  | BV_rotate of int (* positive for right, negative for left *)
   | BVnot | BVand | BVor | BVxor | BVnand | BVnor | BVxnor | BVcomp
   | BVneg | BVadd | BVsub | BVmul | BVudiv | BVurem | BVsdiv | BVsrem | BVsmod
   | BVshl | BVlshr
@@ -148,12 +148,11 @@ let compare_operators op1 op2 =
         let r = Int.compare i1 i2 in
         if r = 0 then Int.compare j1 j2 else r
       | Nat2BV n1, Nat2BV n2 -> Int.compare n1 n2
-      | BVExtend (b1, n1),  BVExtend (b2, n2) ->
+      | BVExtend { sign = b1; n = n1},  BVExtend { sign = b2; n = n2} ->
         let r = Bool.compare b1 b2 in
         if r = 0 then Int.compare n1 n2 else r
-      | BV_rotate (n1, b1),  BV_rotate (n2, b2) ->
-        let r = Bool.compare b1 b2 in
-        if r = 0 then Int.compare n1 n2 else r
+      | BV_rotate n1, BV_rotate n2 ->
+        Int.compare n1 n2
       | BV_repeat n1, BV_repeat n2 ->
         Int.compare n1 n2
       | _, (Plus | Minus | Mult | Div | Modulo | Real_is_int
@@ -343,11 +342,11 @@ let to_string ?(show_vars=true) x = match x with
   | Op Reach -> assert false
   | Op BV2Nat -> "bv2nat"
   | Op Nat2BV m -> Format.sprintf "nat2bv[%d]" m
-  | Op BVExtend (true, n) -> Format.sprintf "bv_sign_extend[%d]" n
-  | Op BVExtend (false, n) -> Format.sprintf "bv_zero_extend[%d]" n
+  | Op BVExtend { sign = true; n } -> Format.sprintf "bv_sign_extend[%d]" n
+  | Op BVExtend { sign = false; n } -> Format.sprintf "bv_zero_extend[%d]" n
   | Op BV_repeat n -> Format.sprintf "bv_repeat[%d]" n
-  | Op BV_rotate (n, true) -> Format.sprintf "bv_rotate_right[%d]" n
-  | Op BV_rotate (n, false) -> Format.sprintf "bv_rotate_left[%d]" n
+  | Op BV_rotate n when n > 0 -> Format.sprintf "bv_rotate_right[%d]" n
+  | Op BV_rotate n -> Format.sprintf "bv_rotate_left[%d]" n
   | Op BVnot -> "bvnot"
   | Op BVand -> "bvand"
   | Op BVor -> "bvor"

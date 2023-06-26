@@ -226,8 +226,8 @@ val mk_ite : t -> t -> t -> t
 
 (** smart constructors for bit-vector terms *)
 
-val mk_bitv_concat : t -> t -> int -> t
-val mk_bitv_extract : int -> int -> t -> int -> t
+val mk_bvconcat : t -> t -> int -> t
+val mk_bvextract : int -> int -> t -> int -> t
 val mk_bvnot : int -> t -> t
 val mk_bv2nat : t -> t
 val mk_nat2bv : int -> t -> t
