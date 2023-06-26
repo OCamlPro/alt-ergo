@@ -52,7 +52,6 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#from-sources">From sources</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#dependencies">Dependencies</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#build-and-install">Build and Install</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#everything-binaries-plugins-library">Everything (binaries, plugins, library, …)</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#alt-ergo-library">Alt-Ergo library</a></li>
@@ -150,23 +149,11 @@
 </pre></div>
 </div>
 </section>
-<section id="configuration">
-<h3>Configuration<a class="headerlink" href="#configuration" title="Permalink to this heading"></a></h3>
-<ol class="arabic simple">
-<li><p>Configure with <code class="docutils literal notranslate"><span class="pre">./configure</span></code> to generate Makefile.config,
-in order to build everything (lib, parsers, binaries, and GUI).</p></li>
-<li><p>Alternatively, you can configure with <code class="docutils literal notranslate"><span class="pre">./configure</span> <span class="pre">-prefix</span> <span class="pre">some-absolute-path-prefix</span></code> to add a prefix for installation
-directories. You may also want to use <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">gen</span> <span class="pre">&amp;&amp;</span> <span class="pre">cat</span> <span class="pre">lib/util/config.ml</span></code>
-to see directories where things will be installed.</p></li>
-<li><p>You can use <code class="docutils literal notranslate"><span class="pre">./configure</span> <span class="pre">&lt;package&gt;</span></code> to select which package you
-want to build. <code class="docutils literal notranslate"><span class="pre">&lt;package&gt;</span></code> may be one of: alt-ergo-lib, alt-ergo-parsers,
-alt-ergo.</p></li>
-</ol>
-</section>
 <section id="build-and-install">
 <h3>Build and Install<a class="headerlink" href="#build-and-install" title="Permalink to this heading"></a></h3>
 <p>The steps below will build and install native or bytecode binaries
 depending on whether ocamlopt is installed or only ocamlc is detected.</p>
+<p>Note: these are somewhat obsolete; nowadays you can just use <code class="docutils literal notranslate"><span class="pre">dune</span></code></p>
 <section id="everything-binaries-plugins-library">
 <h4>Everything (binaries, plugins, library, …)<a class="headerlink" href="#everything-binaries-plugins-library" title="Permalink to this heading"></a></h4>
 <ol class="arabic simple">
