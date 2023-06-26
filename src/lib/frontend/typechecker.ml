@@ -257,34 +257,24 @@ module Env = struct
     | [ x; y ] -> f x y
     | _ -> assert false
 
-  let builtin_enum ty pp mk ml =
-    let l = List.map (Format.asprintf "%a" pp) ml in
-    let enum m n s =
-      MString.add s (`Term (
-          mk n,
-          { args = []; result = ty },
-          Other
-        )) m
-    in
-    fun m -> List.fold_left2 enum m ml l
+  let add_builtin_enum = function
+    | Ty.Tsum (_, cstrs) as ty ->
+      let enum m h =
+        let s = Hstring.view h in
+        MString.add s (`Term (
+            Symbols.Op (Constr h),
+            { args = []; result = ty },
+            Other
+          )) m
+      in
+      fun m -> List.fold_left enum m cstrs
+    | _ -> assert false
 
-  let add_fpa_rounding_mode =
-    builtin_enum
-      Fpa_rounding.fpa_rounding_mode
-      Fpa_rounding.pp_rounding_mode (fun m -> Symbols.Op (RoundingMode m))
-      [ (* standards *)
-        NearestTiesToEven;
-        ToZero;
-        Up;
-        Down;
-        NearestTiesToAway;
-        (* non standards *)
-        Aw;
-        Od;
-        No;
-        Nz;
-        Nd;
-        Nu ]
+  let find_builtin_cstr ty n =
+    match ty with
+    | Ty.Tsum (_, cstrs) ->
+      List.find (fun c -> String.equal n @@ Hstring.view c) cstrs
+    | _ -> assert false
 
   let add_fpa_builtins env =
     let (->.) args result = { args; result } in
@@ -292,11 +282,13 @@ module Env = struct
       c = { tt_desc = TTconst (Tint n); tt_ty = Ty.Tint} ;
       annot = new_id () ;
     } in
+    let rm = Fpa_rounding.fpa_rounding_mode in
     let mode m =
+      let h = find_builtin_cstr rm m in
       {
         c = {
-          tt_desc = TTapp (Symbols.(Op (RoundingMode m)), []);
-          tt_ty = Fpa_rounding.fpa_rounding_mode
+          tt_desc = TTapp (Symbols.(Op (Constr h)), []);
+          tt_ty = rm
         };
         annot = new_id ()
       }
@@ -305,9 +297,9 @@ module Env = struct
       TTapp (Symbols.Op Float, [prec; exp; mode; x])
     in
     let float32 = float (int "24") (int "149") in
-    let float32d = float32 (mode NearestTiesToEven) in
+    let float32d = float32 (mode "NearestTiesToEven") in
     let float64 = float (int "53") (int "1074") in
-    let float64d = float64 (mode NearestTiesToEven) in
+    let float64d = float64 (mode "NearestTiesToEven") in
     let op n op profile =
       MString.add n @@ `Term (Symbols.Op op, profile, Other)
     in
@@ -316,11 +308,10 @@ module Env = struct
     in
     let bool = Ty.Tbool and int = Ty.Tint and real = Ty.Treal in
     let any = Ty.fresh_tvar in
-    let rm = Fpa_rounding.fpa_rounding_mode in
     let env = {
       env with
       types = Types.add_builtin env.types "fpa_rounding_mode" rm ;
-      builtins = add_fpa_rounding_mode env.builtins ;
+      builtins = add_builtin_enum Fpa_rounding.fpa_rounding_mode env.builtins;
     } in
     let builtins =
       env.builtins

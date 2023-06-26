@@ -48,7 +48,7 @@ type operator =
   | Extract of int * int (* lower bound * upper bound *)
   (* FP *)
   | Float
-  | RoundingMode of Fpa_rounding.rounding_mode | Integer_round | Fixed
+  | Integer_round | Fixed
   | Sqrt_real | Sqrt_real_default | Sqrt_real_excess
   | Abs_int | Abs_real | Real_of_int | Real_is_int
   | Int_floor | Int_ceil | Integer_log2

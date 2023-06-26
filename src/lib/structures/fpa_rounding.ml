@@ -65,7 +65,32 @@ let pp_rounding_mode ppf m =
   | Nd -> "Nd"
   | Nu -> "Nu"
 
-let fpa_rounding_mode = Ty.Text ([], Hs.make "fpa_rounding_mode")
+let fpa_rounding_mode, rounding_mode_of_hs =
+  let cstrs =
+    [ (* standards *)
+      NearestTiesToEven;
+      ToZero;
+      Up;
+      Down;
+      NearestTiesToAway;
+      (* non standards *)
+      Aw;
+      Od;
+      No;
+      Nz;
+      Nd;
+      Nu ]
+  in
+  let h_cstrs =
+    List.map (fun c -> Hs.make (Format.asprintf "%a" pp_rounding_mode c)) cstrs
+  in
+  let ty = Ty.Tsum (Hs.make "fpa_rounding_mode", h_cstrs) in
+  let table =
+    let table = Hashtbl.create 17 in
+    List.iter2 (Hashtbl.add table) h_cstrs cstrs;
+    table
+  in
+  ty, Hashtbl.find table
 
 (** Helper functions **)
 
