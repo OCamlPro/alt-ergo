@@ -1242,7 +1242,7 @@ let mk_bvnot n t =
 
 let mk_bvsign n t =
   let t1 = mk_bitv_extract (n-1) (n-1) t n in
-  mk_eq ~iff:false t1 (bitv "1" (Ty.Tbitv 1))
+  mk_eq ~iff:false t1 bvone
 
 let mk_bv2nat t =
   mk_term (Sy.Op Sy.BV2Nat) [t] Ty.Tint
