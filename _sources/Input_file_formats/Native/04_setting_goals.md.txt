@@ -25,7 +25,7 @@ goal g_1:
     a = b ->
     g(f(h(g(a,a),g(b,b)),b) - f(g(b,b),a),
       f(h(g(a,a),g(b,b)),a) - f(g(b,b),b)) = g(0,0)
-``` 
+```
 
 ```
 goal g:
@@ -49,10 +49,6 @@ In other word, `cut` and `check` allow to test if intermediate goals can be prov
 <check_declaration> ::= 'check' <expr>
 <cut_declaration>   ::= 'cut' <expr>
 ```
-
-## `check_valid`
-
-This keyword is an alias for `goal`.
 
 ## `check_sat`
 
