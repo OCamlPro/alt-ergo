@@ -347,7 +347,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op BVExtend (false, n) -> Format.sprintf "bv_zero_extend[%d]" n
   | Op BV_repeat n -> Format.sprintf "bv_repeat[%d]" n
   | Op BV_rotate (n, true) -> Format.sprintf "bv_rotate_right[%d]" n
-  | Op BV_rotate (n, false) -> Format.sprintf "bv_rotate_false[%d]" n
+  | Op BV_rotate (n, false) -> Format.sprintf "bv_rotate_left[%d]" n
   | Op BVnot -> "bvnot"
   | Op BVand -> "bvand"
   | Op BVor -> "bvor"
