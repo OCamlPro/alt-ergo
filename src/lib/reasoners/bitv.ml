@@ -1659,7 +1659,7 @@ module Shostak(X : ALIEN) = struct
   let nat_of_bv term bv m =
     let mk_2pow n =
       if n > 1 then
-        E.mk_term (Sy.Op Sy.Pow) [E.itwo; E.int (Int.to_string n)] Ty.Tint
+        E.int Z.(pow ~$2 n |> to_string)
       else if n = 1 then E.itwo else E.ione
     in
     let mk_ite term n pow =
