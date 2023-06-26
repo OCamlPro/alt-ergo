@@ -48,7 +48,6 @@
         "case_split" , CASESPLIT;
         "check"      , CHECK;
         "check_sat"  , CHECK_SAT;
-        "check_valid", CHECK_VALID;
         "cut"        , CUT;
         "distinct"   , DISTINCT;
         "else"       , ELSE;
@@ -58,7 +57,7 @@
         "false"      , FALSE;
         "forall"     , FORALL;
         "function"   , FUNC;
-        "goal"       , CHECK_VALID;
+        "goal"       , GOAL;
         "if"         , IF;
         "in"         , IN;
         "int"        , INT;
@@ -66,7 +65,7 @@
         "logic"      , LOGIC;
         "not"        , NOT;
         "or"         , OR;
-        "xor"         , XOR;
+        "xor"        , XOR;
         "predicate"  , PRED;
         "prop"       , PROP;
         "real"       , REAL;

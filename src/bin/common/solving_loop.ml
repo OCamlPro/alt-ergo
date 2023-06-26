@@ -411,21 +411,49 @@ let main () =
 
   let handle_stmt :
     FE.used_context -> State.t ->
-    Typer_Pipe.typechecked Typer_Pipe.stmt -> State.t =
+    _ D_loop.Typer_Pipe.stmt -> State.t =
     let goal_cnt = ref 0 in
     fun all_context st td ->
+      let file_loc = (State.get State.logic_file st).loc in
       let solver_ctx = State.get solver_ctx_key st in
       match td with
       (* When the next statement is a goal, the solver is called and provided
          the goal and the current context *)
-      | { id = {name = Simple name; _}; contents = `Solve ([], [t]); _ } ->
+      | { id; contents = (`Solve _ as contents); loc ; attrs } ->
         let l =
           solver_ctx.local @
           solver_ctx.global @
           solver_ctx.ctx
         in
-        let td = { td with contents = `Goal t } in
-        let rev_cnf = D_cnf.make (State.get State.logic_file st).loc l td in
+        let id =
+          match (State.get State.logic_file st).lang with
+          | Some (Smtlib2 _) ->
+            DStd.Id.mk DStd.Namespace.term @@
+            "g_" ^ string_of_int (incr goal_cnt; !goal_cnt)
+          | _ -> id
+        in
+        let name =
+          match id.name with
+          | Simple name -> name
+          | _ ->
+            let loc = DStd.Loc.loc file_loc loc in
+            Util.failwith "%a: internal error: goal name should be simple"
+              DStd.Loc.fmt loc
+        in
+        let contents =
+          match contents with
+          | `Solve ([], []) -> `Goal (DStd.Expr.Term.(of_cst Const._false))
+          | `Solve ([], [t]) -> `Goal t
+          | `Solve ([t], []) -> `Check t
+          | _ ->
+            let loc = DStd.Loc.loc file_loc loc in
+            Util.failwith "%a: internal error: unknown statement"
+              DStd.Loc.fmt loc
+        in
+        let stmt = { Typer_Pipe.id; contents; loc ; attrs } in
+        let rev_cnf =
+          D_cnf.make (State.get State.logic_file st).loc l stmt
+        in
         let cnf = List.rev rev_cnf in
         let partial_model = solve all_context (cnf, name) in
         let rec ng_is_thm rcnf =
@@ -472,54 +500,9 @@ let main () =
               { solver_ctx with ctx = cnf @ solver_ctx.ctx }
             ) st
         end
-      | {id = _; contents = `Solve _; loc ; attrs }
-        when (
-          match (State.get State.logic_file st).lang with
-          | Some (Smtlib2 _) -> true
-          | Some _ -> false
-          | None -> assert false
-          (* unreachable because the file's language is set after parsing *)
-        ) ->
-        let l =
-          solver_ctx.local @
-          solver_ctx.global @
-          solver_ctx.ctx
-        in
-        let goal_name = "g_"^ string_of_int (incr goal_cnt; !goal_cnt) in
-        let rev_cnf = D_cnf.make (State.get State.logic_file st).loc l
-            Typer_Pipe.{
-              id = DStd.Id.mk DStd.Namespace.term goal_name;
-              contents = `Goal DStd.Expr.Term.(of_cst Const._false);
-              loc; attrs;
-            }
-        in
-        let cnf = List.rev rev_cnf in
-        let partial_model = solve all_context (cnf, goal_name) in
-        let rec ng_is_thm rcnf =
-          begin match rcnf with
-            | Commands.{ st_decl = Query (_, _, (Ty.Thm | Ty.Sat)); _ } :: _ ->
-              true
-            | Commands.{ st_decl = Query _; _ } :: _ -> false
-            | _ :: tl -> ng_is_thm tl
-            | _ -> assert false (* unreachable *)
-          end
-        in
-        if ng_is_thm rev_cnf
-        then
-          State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
-            { solver_ctx with global = []; local = [] }
-          ) st
-          |> State.set partial_model_key partial_model
-        else
-          State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
-            { solver_ctx with local = [] }
-          ) st
-          |> State.set partial_model_key partial_model
 
       | {contents = `Set_option
-             { term =
+             { DStd.Term.term =
                  App ({ term = Symbol { name = Simple name; _ }; _ }, [value]);
                _
              }; loc = l; _ } ->
