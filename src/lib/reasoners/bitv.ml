@@ -697,15 +697,11 @@ module Shostak(X : ALIEN) = struct
        Returns the list of created fresh variables, the left over pattern and
        the sort of the variable (if it is not a constant). *)
     let slice_var var pat_hd pat_tl =
-      let mk, vsz, tr =
+      let mk, tr =
         match var.bv with
-        | S_Cte _ -> (fun sz -> { var with sz }), var.sz, None
-        | S_Var { sorte = A; _ } ->
-          (fun sz -> { bv = S_Var (fresh_var A); sz }), var.sz, Some A
-        | S_Var { sorte = B; _ } ->
-          (fun sz -> { bv = S_Var (fresh_var B); sz }), var.sz, Some B
-        | S_Var { sorte = C; _ } ->
-          (fun sz -> { bv = S_Var (fresh_var C); sz }), var.sz, Some C
+        | S_Cte _ -> (fun sz -> { var with sz }), None
+        | S_Var { sorte; _ } ->
+          (fun sz -> { bv = S_Var (fresh_var sorte); sz }), Some sorte
       in
       let rec aux cnt plist =
         match plist with
@@ -717,7 +713,7 @@ module Shostak(X : ALIEN) = struct
           mk h :: vl, ptail
       in
       let fst_v = mk pat_hd in
-      let cnt = vsz - pat_hd in
+      let cnt = var.sz - pat_hd in
       let vl, pat_tail = aux cnt pat_tl in
       fst_v :: vl, pat_tail, tr
 
@@ -810,7 +806,7 @@ module Shostak(X : ALIEN) = struct
       | st :: eq, n :: pt when st.sz = n ->
         slice_vars eq pt (c, st :: req, subs)
       | st :: eq, n :: pt ->
-        let (nvar_list, pat_tail, flag) = slice_var st n pt in
+        let (nvar_list, pt', flag) = slice_var st n pt in
         begin match flag with
           | Some C ->
             (* A C variable got split: we must record the information in the
@@ -818,7 +814,7 @@ module Shostak(X : ALIEN) = struct
                in other multi-equations. *)
             let bsub, csub = subs in
             let subs = (bsub, (st, nvar_list) :: csub) in
-            slice_vars eq pat_tail (c, List.rev_append nvar_list req, subs)
+            slice_vars eq pt' (c, List.rev_append nvar_list req, subs)
           | Some B ->
             (* A B variable got split: we must update the other occurences of
                the variable in the current composition. If there are other
@@ -831,9 +827,9 @@ module Shostak(X : ALIEN) = struct
                   st' :: acc) eq [] in
             let bsub, csub = subs in
             let subs = ((st, nvar_list) :: bsub, csub) in
-            slice_vars eq pat_tail (c, List.rev_append nvar_list req, subs)
+            slice_vars eq pt' (c, List.rev_append nvar_list req, subs)
           | None | Some A ->
-            slice_vars eq pat_tail (c, List.rev_append nvar_list req, subs)
+            slice_vars eq pt' (c, List.rev_append nvar_list req, subs)
         end
       | [], _ :: _ | _ :: _, [] -> assert false
 
