@@ -374,6 +374,11 @@ module Translate = struct
       ~warning:(Options.get_verbose () || Options.get_debug_warnings ())
       "%S : Not yet supported" s
 
+  let requires_dolmen s =
+    Printer.print_wrn
+      ~warning:(Options.get_verbose () || Options.get_debug_warnings ())
+      "%S : Requires --frontend dolmen" s
+
   let translate_prop_literal x =
     match x.c with
     | PropLit sy ->
@@ -430,7 +435,7 @@ module Translate = struct
       let l = List.map2 translate_fun_def fun_def_list term_list in
       l @ acc
     | Cmd_DefineSort _ -> acc
-    | Cmd_GetModel -> not_supported "get-model"; acc
+    | Cmd_GetModel -> requires_dolmen "get-model"; acc
     | Cmd_Echo _ -> not_supported "echo"; acc
     | Cmd_GetAssert -> not_supported "get-assertions"; acc
     | Cmd_GetProof -> not_supported "get-proof"; acc
