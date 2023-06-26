@@ -17,3 +17,7 @@ The legacy frontend is used to parse and typecheck file with the native Alt-Ergo
 {2:signals Signals and profiling }
 
 The {!module:Alt_ergo_common.signals_profiling} module initialise handlers for system signals and profiling informations and timers.
+
+{2:dynlink Stdlib wrapper}
+
+{!modules:Alt_ergo_common.MyDynlink}

@@ -58,27 +58,6 @@ let instantiation_heuristic_conv =
   Arg.conv ~docv:"VAL"
     (instantiation_heuristic_parser, instantiation_heuristic_printer)
 
-let interpretation_parser = function
-  | "none" -> Ok INone
-  | "first" -> Ok IFirst
-  | "every" -> Ok IEvery
-  | "last" -> Ok ILast
-  | s ->
-    Error
-      (`Msg ("Option --interpretation does not accept the argument \"" ^ s))
-
-let interpretation_to_string = function
-  | INone -> "none"
-  | IFirst -> "first"
-  | IEvery -> "every"
-  | ILast -> "last"
-
-let interpretation_printer fmt interpretation =
-  Format.fprintf fmt "%s" (interpretation_to_string interpretation)
-
-let interpretation_conv =
-  Arg.conv ~docv:"MDL" (interpretation_parser, interpretation_printer)
-
 (* When adding another parser, remember to change this list too as it
    is used in the documentation *)
 let formats_list =
@@ -317,7 +296,7 @@ let mk_context_opt replay replay_all_used_context replay_used_context
   set_replay_used_context replay_used_context;
   `Ok()
 
-let mk_execution_opt frontend input_format parse_only parsers
+let mk_execution_opt frontend input_format parse_only ()
     preludes no_locs_in_answers colors_in_output no_headers_in_output
     no_formatting_in_output no_forced_flush_in_output pretty_output
     type_only type_smt2
@@ -340,7 +319,6 @@ let mk_execution_opt frontend input_format parse_only parsers
   set_output_with_forced_flush output_with_forced_flush;
   set_input_format input_format;
   set_parse_only parse_only;
-  set_parsers parsers;
   set_frontend frontend;
   set_type_only type_only;
   set_type_smt2 type_smt2;
@@ -388,21 +366,10 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     set_timelimit_per_goal timelimit_per_goal;
     `Ok()
 
-let mk_models_opt b =
-  if b then begin
-    set_interpretation ILast;
-    (* TODO: The generation of models is supported only with the SAT solver
-       Tableaux. Remove this line after merging the OptimAE PR.
-       See https://github.com/OCamlPro/alt-ergo/pull/553 *)
-    set_sat_solver Tableaux;
-    set_dump_models true
-  end;
-  `Ok ()
-
 let mk_output_opt
-    interpretation use_underscore unsat_core output_format model_type models
+    interpretation use_underscore unsat_core output_format model_type
+    () ()
   =
-  let `Ok () = mk_models_opt models in
   set_infer_output_format (Option.is_none output_format);
   let output_format = match output_format with
     | None -> Native
@@ -412,8 +379,7 @@ let mk_output_opt
     | None -> Value
     | Some v -> v
   in
-  if not models && interpretation != INone
-  then set_interpretation interpretation;
+  set_interpretation interpretation;
   set_interpretation_use_underscore use_underscore;
   set_unsat_core unsat_core;
   set_output_format output_format;
@@ -450,8 +416,7 @@ let mk_quantifiers_opt instantiation_heuristic instantiate_after_backjump
 let mk_sat_opt get_bottom_classes disable_flat_formulas_simplification
     enable_restarts no_arith_matching no_backjumping
     no_backward no_decisions no_decisions_on
-    no_minimal_bj no_sat_learning no_tableaux_cdcl_in_instantiation
-    no_tableaux_cdcl_in_theories sat_plugin sat_solver
+    no_minimal_bj no_sat_learning
   =
   let arith_matching = not no_arith_matching in
   let mk_no_decisions_on ndo =
@@ -465,39 +430,18 @@ let mk_sat_opt get_bottom_classes disable_flat_formulas_simplification
   let no_decisions_on = mk_no_decisions_on no_decisions_on in
   let minimal_bj = not no_minimal_bj in
 
-  let cdcl_tableaux_inst = not no_tableaux_cdcl_in_instantiation in
-  let cdcl_tableaux_th = not no_tableaux_cdcl_in_theories in
-  let res = match sat_solver with
-    | "CDCL" | "satML" ->
-      `Ok(Util.CDCL, false, false, false)
-    | "CDCL-Tableaux" | "satML-Tableaux" | "CDCL-tableaux" | "satML-tableaux" ->
-      `Ok(Util.CDCL_Tableaux, cdcl_tableaux_inst, cdcl_tableaux_th, false)
-    | "tableaux" | "Tableaux" | "tableaux-like" | "Tableaux-like" ->
-      `Ok(Util.Tableaux, false, false, false)
-    | "tableaux-cdcl" | "Tableaux-CDCL" | "tableaux-CDCL" | "Tableaux-cdcl" ->
-      `Ok(Util.Tableaux_CDCL, false, false, true)
-    | _ -> `Error ("Args parsing error: unkown SAT solver " ^ sat_solver)
-  in
-  match res with
-  | `Ok(sat_solver, cdcl_tableaux_inst, cdcl_tableaux_th, tableaux_cdcl) ->
-    set_arith_matching arith_matching;
-    set_bottom_classes get_bottom_classes;
-    set_cdcl_tableaux_inst cdcl_tableaux_inst;
-    set_cdcl_tableaux_th cdcl_tableaux_th;
-    set_disable_flat_formulas_simplification
-      disable_flat_formulas_simplification;
-    set_enable_restarts enable_restarts;
-    set_minimal_bj minimal_bj;
-    set_no_backjumping no_backjumping;
-    set_no_backward no_backward;
-    set_no_decisions no_decisions;
-    set_no_decisions_on no_decisions_on;
-    set_no_sat_learning no_sat_learning;
-    set_sat_plugin sat_plugin;
-    set_sat_solver sat_solver;
-    set_tableaux_cdcl tableaux_cdcl;
-    `Ok()
-  | `Error m -> `Error (false, m)
+  set_arith_matching arith_matching;
+  set_bottom_classes get_bottom_classes;
+  set_disable_flat_formulas_simplification
+    disable_flat_formulas_simplification;
+  set_enable_restarts enable_restarts;
+  set_minimal_bj minimal_bj;
+  set_no_backjumping no_backjumping;
+  set_no_backward no_backward;
+  set_no_decisions no_decisions;
+  set_no_decisions_on no_decisions_on;
+  set_no_sat_learning no_sat_learning;
+  ()
 
 let mk_term_opt disable_ites inline_lets rewriting no_term_like_pp
   =
@@ -526,27 +470,25 @@ let mk_theory_opt disable_adts () no_ac no_contracongru
 let halt_opt version_info where =
   let handle_where w =
     let res = match w with
-      | "lib" -> `Ok Config.libdir
-      | "plugins" -> `Ok Config.pluginsdir
-      | "preludes" -> `Ok Config.preludesdir
-      | "data" -> `Ok Config.datadir
-      | "man" -> `Ok Config.mandir
+      | "plugins" -> `Ok Config.plugins_locations
+      | "preludes" -> `Ok Config.preludes_locations
       | _ -> `Error
                ("Option --where does not accept the argument \"" ^ w ^
-                "\"\nAccepted options are lib, plugins, preludes, data or man")
+                "\"\nAccepted options are plugins or preludes")
     in
     match res with
-    | `Ok path -> Printer.print_std "%s@." path
+    | `Ok paths ->
+      Printer.print_std "@[<v>%a@]@."
+        Format.(pp_print_list ~pp_sep:pp_print_cut pp_print_string)
+        paths
     | `Error m -> raise (Error (false, m))
   in
   let handle_version_info vi =
     if vi then (
       Printer.print_std
         "@[<v 0>Version          = %s@,\
-         Release date     = %s@,\
          Release commit   = %s@]@."
         Version._version
-        Version._release_date
         Version._release_commit;
     )
   in
@@ -557,6 +499,10 @@ let halt_opt version_info where =
       else `Ok false
   with Failure f -> `Error (false, f)
      | Error (b, m) -> `Error (b, m)
+
+let get_verbose_t =
+  let doc = "Set the verbose mode." in
+  Arg.(value & flag & info ["v"; "verbose"] ~doc)
 
 let mk_opts file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
     (gc) () () () () () () () () =
@@ -692,9 +638,28 @@ let parse_execution_opt =
     Arg.(value & flag & info ["parse-only"] ~docs ~doc) in
 
   let parsers =
+    let load_parser verbose path =
+      try
+        MyDynlink.load verbose path "parser";
+        Ok ()
+      with
+        Errors.Error e ->
+        Error (Format.asprintf "%a" Errors.report e)
+    in
+    let load_parsers verbose paths =
+      List.fold_left
+        (fun res path ->
+           Result.bind res (fun () -> load_parser verbose path))
+        (Ok ()) paths
+    in
     let doc = "Register a new parser for Alt-Ergo." in
-    Arg.(value & opt_all string (get_parsers ()) &
-         info ["add-parser"] ~docs ~doc) in
+    let arg =
+      Arg.(value & opt_all string [] &
+           info ["add-parser"] ~docs ~doc)
+    in
+    let term = Term.(const load_parsers $ get_verbose_t $ arg) in
+    Term.term_result' term
+  in
 
   let preludes =
     let parse_prelude p =
@@ -704,8 +669,8 @@ let parse_execution_opt =
         else
           Ok p
       else
-        let p' = Filename.concat Config.preludesdir p in
-        if Sys.file_exists p' then begin
+        match Config.lookup_prelude p with
+        | Some p' ->
           begin if Compat.String.starts_with ~prefix:"b-set-theory" p then
               Printer.print_wrn ~header:true
                 "Support for the B set theory is deprecated since version \
@@ -720,28 +685,21 @@ let parse_execution_opt =
                  be removed in a later version.@]" p
           end;
 
-          if Sys.is_directory p' then
-            Fmt.error "'%s' is a directory" p
-          else
-            Ok p'
-        end else
-          Fmt.error "no '%s' file" p
+          Ok p'
+        | None ->
+          Error (
+            Format.asprintf
+              "cannot load prelude '%s': no such file"
+              p)
     in
-    let parse_preludes =
-      List.fold_left (fun r p ->
-          Result.bind r @@ fun ps ->
-          Result.map (fun p -> p :: ps) (parse_prelude p))
-        (Ok [])
+    let prelude =
+      Arg.(conv' (parse_prelude, conv_printer string))
     in
     let doc =
       "Add a file that will be loaded as a prelude. The command is \
        cumulative, and the order of successive preludes is preserved." in
-    Term.(cli_parse_result' (
-        const parse_preludes $
-        Arg.(value & opt_all string (get_preludes ()) &
-             info ["prelude"] ~docs ~doc)
-      ))
-  in
+    Arg.(value & opt_all prelude (get_preludes ()) &
+         info ["prelude"] ~docs ~doc) in
 
   let no_locs_in_answers =
     let doc =
@@ -801,7 +759,7 @@ let parse_halt_opt =
   let where =
     let doc = Format.sprintf
         "Print the directory of $(docv). Possible arguments are \
-         %s." (Arg.doc_alts ["lib"; "plugins"; "preludes"; "data"; "man"]) in
+         %s." (Arg.doc_alts ["plugins"; "preludes"]) in
     let docv = "DIR" in
     Arg.(value & opt (some string) None & info ["where"] ~docv ~docs ~doc) in
 
@@ -895,32 +853,171 @@ let parse_output_opt =
 
   let docs = s_output in
 
-  let interpretation =
-    let doc = Format.sprintf
-        "Best effort support for counter-example generation. \
-         $(docv) must be %s. %s shows the first computed interpretation. \
-         %s compute an interpretation before every decision, \
-         and %s only before returning unknown. \
-         Note that $(b, --max-split) limitation will \
-         be ignored in model generation phase."
-        (Arg.doc_alts
-           ["none"; "first"; "every"; "last"])
-        (Arg.doc_quote "first") (Arg.doc_quote "every")
-        (Arg.doc_quote "last") in
-    let docv = "VAL" in
-    Arg.(value & opt interpretation_conv INone &
-         info ["interpretation"] ~docv ~docs ~doc) in
+  (* Use the --interpretation and --produce-models (which is equivalent to
+     --interpretation last) to determine the interpretation value. *)
+  let interpretation, dump_models =
+    let interpretation =
+      let doc = Format.sprintf
+          "Best effort support for counter-example generation. \
+           $(docv) must be %s. %s shows the first computed interpretation. \
+           %s compute an interpretation before every decision, \
+           and %s only before returning unknown. \
+           Note that $(b, --max-split) limitation will \
+           be ignored in model generation phase."
+          (Arg.doc_alts
+             ["none"; "first"; "every"; "last"])
+          (Arg.doc_quote "first") (Arg.doc_quote "every")
+          (Arg.doc_quote "last") in
+      let docv = "VAL" in
+      let interpretation =
+        Arg.enum
+          [ "none", INone
+          ; "first", IFirst
+          ; "every", IEvery
+          ; "last", ILast
+          ]
+      in
+      Arg.(value & opt interpretation INone &
+           info ["interpretation"] ~docv ~docs:s_models ~doc)
+    in
+
+    let produce_models =
+      let doc =
+        "Enable model generation (equivalent to --interpretation last)."
+      in
+      Arg.(value & flag & info ["produce-models"] ~doc ~docs:s_models)
+    in
+
+    let dump_models =
+      let doc =
+        "Display a model each time the result is unknown (implies \
+         --interpretation last)"
+      in
+      Arg.(value & flag & info ["dump-models"] ~doc ~docs:s_models)
+    in
+
+    let mk_interpretation interpretation produce_models dump_models =
+      match interpretation with
+      | INone when produce_models || dump_models -> ILast
+      | interpretation -> interpretation
+    in
+    Term.(
+      const mk_interpretation $ interpretation $
+      produce_models $ dump_models
+    ),
+    dump_models
+  in
+
+  (* Use the --sat-solver to determine the sat solver.
+
+     If an interpretation is provided, the solver is forced to be Tableaux,
+     because generation of models requires OptimAE for the other solvers.
+
+     See https://github.com/OCamlPro/alt-ergo/pull/553 *)
+  let sat_solver =
+    let sat_solver_arg =
+      let sat_solver : _ Arg.conv =
+        let parse = function
+          | "CDCL" | "satML" ->
+            Ok Util.CDCL
+          | "CDCL-Tableaux" | "satML-Tableaux"
+          | "CDCL-tableaux" | "satML-tableaux" ->
+            Ok Util.CDCL_Tableaux
+          | "tableaux" | "Tableaux"
+          | "tableaux-like" | "Tableaux-like" ->
+            Ok Util.Tableaux
+          | "tableaux-cdcl" | "Tableaux-CDCL"
+          | "tableaux-CDCL" | "Tableaux-cdcl" ->
+            Ok Util.Tableaux_CDCL
+          | sat_solver ->
+            Error ("Args parsing error: unkown SAT solver " ^ sat_solver)
+
+        in
+        Arg.(conv' (parse, Util.pp_sat_solver))
+      in
+      let default, sum_up = "CDCL-Tableaux", "satML" in
+      let doc = Format.sprintf
+          "Choose the SAT solver to use. Default value is %s (i.e. %s\
+           solver). Possible options are %s."
+          default sum_up
+          (Arg.doc_alts ["CDCL"; "satML"; "CDCL-Tableaux";
+                         "satML-Tableaux"; "Tableaux-CDCL"])
+      in
+      let docv = "SAT" in
+      Arg.(value & opt (some ~none:default sat_solver) None &
+           info ["sat-solver"] ~docv ~docs:s_sat ~doc)
+    in
+
+    let mk_sat_solver sat_solver interpretation =
+      match interpretation, sat_solver with
+      | INone, None -> Ok Util.CDCL_Tableaux
+      | INone, Some sat_solver -> Ok sat_solver
+      | _, (None | Some Util.Tableaux) -> Ok Tableaux
+      | _, Some sat_solver ->
+        Fmt.error
+          "solver '%a' does not suppot model generation"
+          Util.pp_sat_solver sat_solver
+    in
+    Term.term_result' @@
+    Term.(const mk_sat_solver $ sat_solver_arg $ interpretation)
+  in
+
+  let cdcl_tableaux_inst =
+    let no_tableaux_cdcl_in_instantiation =
+      let doc = "When satML is used, this disables the use of a tableaux-like \
+                 method for instantiations with the CDCL solver." in
+      Arg.(
+        value & flag &
+        info ["no-tableaux-cdcl-in-instantiation"]
+          ~docs:s_sat ~doc)
+    in
+    Term.(const not $ no_tableaux_cdcl_in_instantiation)
+  in
+
+  let cdcl_tableaux_th =
+    let no_tableaux_cdcl_in_theories =
+      let doc = "When satML is used, this disables the use of a tableaux-like \
+                 method for theories with the CDCL solver." in
+      Arg.(
+        value & flag &
+        info ["no-tableaux-cdcl-in-theories"] ~docs:s_sat ~doc
+      )
+    in
+    Term.(const not $ no_tableaux_cdcl_in_theories)
+  in
+
+  let set_sat_options =
+    let set_sat_options sat_solver cdcl_tableaux_inst cdcl_tableaux_th =
+      set_sat_solver sat_solver;
+      begin match sat_solver with
+        | CDCL_Tableaux ->
+          set_cdcl_tableaux_inst cdcl_tableaux_inst;
+          set_cdcl_tableaux_th cdcl_tableaux_th
+        | _ ->
+          set_cdcl_tableaux_inst false;
+          set_cdcl_tableaux_th false
+      end;
+      set_tableaux_cdcl (match sat_solver with
+          | Tableaux_CDCL -> true
+          | _ -> false);
+      ()
+    in
+    Term.(
+      const set_sat_options $ sat_solver $ cdcl_tableaux_inst
+      $ cdcl_tableaux_th
+    )
+  in
 
   let use_underscore =
     let doc = "Output \"_\" instead of fresh value in interpretation" in
     let docv = "VAL" in
     Arg.(value & flag & info
            ["interpretation-use-underscore";"use-underscore"]
-           ~docv ~docs ~doc) in
+           ~docv ~docs:s_models ~doc) in
 
   let unsat_core =
     let doc = "Experimental support for computing and printing unsat-cores." in
-    Arg.(value & flag & info ["u"; "unsat-core"] ~doc) in
+    Arg.(value & flag & info ["u"; "unsat-core"] ~doc ~docs) in
 
   let output_format =
     let doc =
@@ -949,22 +1046,18 @@ let parse_output_opt =
     Arg.(
       value &
       opt (some model_type_conv) None &
-      info ["mt"; "model-type"] ~docv ~doc
+      info ["mt"; "model-type"] ~docv ~doc ~docs:s_models
     )
   in
 
-  let mdls =
-    let doc =
-      "Simply activates the models in alt-ergo. This is achieved by setting \
-       some parameters by default: interpretation = last; instanciation \
-       heuristic = normal; \
-       sat-solver = tableaux"
-    in
-    Arg.(value & flag & info ~doc ~docs ["model"])
+  let set_dump_models =
+    Term.(const set_dump_models $ dump_models)
   in
+
   Term.(ret (const mk_output_opt $
              interpretation $ use_underscore $ unsat_core $
-             output_format $ model_type $ mdls
+             output_format $ model_type $
+             set_dump_models $ set_sat_options
             ))
 
 let parse_profiling_opt =
@@ -990,13 +1083,9 @@ let parse_profiling_opt =
     Arg.(value & opt string (get_profiling_plugin ()) &
          info ["profiling-plugin"] ~docv ~docs ~doc) in
 
-  let get_verbose =
-    let doc = "Set the verbose mode." in
-    Arg.(value & flag & info ["v"; "verbose"] ~doc) in
-
   Term.(ret (const mk_profiling_opt $
              cumulative_time_profiling $ profiling $
-             profiling_plugin $ get_verbose
+             profiling_plugin $ get_verbose_t
             ))
 
 let parse_quantifiers_opt =
@@ -1096,7 +1185,6 @@ let parse_sat_opt =
        the default SAT solver before deciding." in
     Arg.(value & flag & info ["no-backward"] ~docs ~doc) in
 
-
   let no_decisions =
     let doc = "Disable decisions at the SAT level." in
     Arg.(value & flag & info ["no-decisions"] ~docs ~doc) in
@@ -1119,44 +1207,11 @@ let parse_sat_opt =
        facts are used to improve bcp." in
     Arg.(value & flag & info ["no-sat-learning"] ~docs ~doc) in
 
-  let no_tableaux_cdcl_in_instantiation =
-    let doc = "When satML is used, this disables the use of a tableaux-like \
-               method for instantiations with the CDCL solver." in
-    Arg.(value & flag &
-         info ["no-tableaux-cdcl-in-instantiation"] ~docs ~doc) in
-
-  let no_tableaux_cdcl_in_theories =
-    let doc = "When satML is used, this disables the use of a tableaux-like \
-               method for theories with the CDCL solver." in
-    Arg.(value & flag & info ["no-tableaux-cdcl-in-theories"] ~docs ~doc) in
-
-  let sat_plugin =
-    let doc =
-      "Use the given SAT-solver instead of the default DFS-based SAT solver." in
-    Arg.(value & opt string (get_sat_plugin ()) &
-         info ["sat-plugin"] ~docs ~doc) in
-
-  let sat_solver =
-    let default, sum_up = "CDCL-Tableaux", "satML" in
-    let doc = Format.sprintf
-        "Choose the SAT solver to use. Default value is %s (i.e. %s\
-         solver). Possible options are %s."
-        default sum_up
-        (Arg.doc_alts ["CDCL"; "satML"; "CDCL-Tableaux";
-                       "satML-Tableaux"; "Tableaux-CDCL"])
-    in
-    let docv = "SAT" in
-    Arg.(value & opt string default &
-         info ["sat-solver"] ~docv ~docs ~doc) in
-
-  Term.(ret (const mk_sat_opt $
-             get_bottom_classes $ disable_flat_formulas_simplification $
-             enable_restarts $ no_arith_matching $
-             no_backjumping $ no_backward $ no_decisions $ no_decisions_on $
-             no_minimal_bj $ no_sat_learning $
-             no_tableaux_cdcl_in_instantiation $
-             no_tableaux_cdcl_in_theories $ sat_plugin $ sat_solver
-            ))
+  Term.(const mk_sat_opt $
+        get_bottom_classes $ disable_flat_formulas_simplification $
+        enable_restarts $ no_arith_matching $
+        no_backjumping $ no_backward $ no_decisions $ no_decisions_on $
+        no_minimal_bj $ no_sat_learning)
 
 let parse_term_opt =
 

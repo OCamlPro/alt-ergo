@@ -145,7 +145,6 @@ let set_options r =
   Options.set_infer_input_format
     (get_input_format r.input_format |> Option.is_none);
   set_options_opt Options.set_parse_only r.parse_only;
-  set_options_opt Options.set_parsers r.parsers;
   set_options_opt Options.set_preludes r.preludes;
   set_options_opt Options.set_type_only r.type_only;
   set_options_opt Options.set_type_smt2 r.type_smt2;

@@ -137,19 +137,13 @@ let parse_input_file file =
     raise e
 
 let parse_problem ~filename ~preludes =
-  Parsers_loader.load ();
   let acc = parse_input_file filename in
   List.fold_left
     (fun acc prelude ->
-       let prelude =
-         if Sys.file_exists prelude then prelude
-         else Config.preludesdir ^ "/" ^ prelude
-       in
        List.rev_append (List.rev (parse_input_file prelude)) acc)
     acc (List.rev preludes)
 
 let parse_problem_as_string ~content ~format =
-  Parsers_loader.load ();
   try
     let lb = Lexing.from_string content in
     parse_file ?lang:format lb
