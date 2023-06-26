@@ -1668,10 +1668,97 @@ let make dloc_file acc stmt =
       C.{st_decl; st_loc} :: List.rev_append (List.rev rev_hyps_c) acc
 
     (* Axiom definitions *)
-    | { id = Id.{name = Simple name; _}; contents = `Hyp t; loc; _ } ->
+    | { id = Id.{name = Simple name; _}; contents = `Hyp t; loc; attrs } ->
+      let dloc = DStd.Loc.(loc dloc_file stmt.loc) in
+      let aloc = DStd.Loc.lexing_positions dloc in
+      (* Dolmen adds information about theory extensions and case splits in the
+         [attrs] field of the parsed statements. [attrs] can be arbitrary terms,
+         where the information we care about is encoded as a [Colon]-list of
+         symbols.
+
+         The few helper functions below are used to extract the information from
+         the [attrs]. More specifically:
+
+         - "case split" statements have the [DStd.Id.case_split] symbol as an
+            attribute
+
+         - Theory elements have a 3-length list of symbols as an attribute, of
+            the form [theory_decl; name; extends], where [theory_decl] is the
+            symbol [DStd.Id.theory_decl] and [name] and [extends] are the theory
+            extension name and the base theory name, respectively.
+      *)
+      let rec symbols = function
+        | DStd.Term. { term = Colon ({ term = Symbol sy; _ }, xs); _ } ->
+          Option.bind (symbols xs) @@ fun sys ->
+          Some (sy :: sys)
+        | { term = Symbol sy; _ } -> Some [sy]
+        | _ -> None
+      in
+      let sy_attrs = List.filter_map symbols attrs in
+      let is_case_split =
+        let is_case_split = function
+          | [ sy ] when DStd.Id.(equal sy case_split) -> true
+          | _ -> false
+        in
+        List.exists is_case_split sy_attrs
+      in
+      let theory =
+        let theory =
+          let open DStd.Id in
+          function
+          | [ td; name; extends] when DStd.Id.(equal td theory_decl) ->
+            let name = match name.name with
+              | Simple name -> name
+              | _ ->
+                Util.failwith
+                  "Internal error: invalid theory extension: %a"
+                  print name
+            in
+            let extends = match extends.name with
+              | Simple name ->
+                begin match Util.th_ext_of_string name with
+                  | Some extends -> extends
+                  | None ->
+                    Errors.typing_error (ThExtError name) aloc
+                end
+              | _ ->
+                Util.failwith
+                  "Internal error: invalid base theory name: %a"
+                  print extends
+            in
+            Some (name, extends)
+          | _ -> None
+        in
+        match List.filter_map theory sy_attrs with
+        | [] -> None
+        | [name, extends] -> Some (name, extends)
+        | _ ->
+          Util.failwith
+            "%a: Internal error: multiple theories."
+            DStd.Loc.fmt dloc
+      in
+      let decl_kind, assume =
+        match theory with
+        | Some (th_name, extends) ->
+          let axiom_kind =
+            if is_case_split then Util.Default else Util.Propagator
+          in
+          let th_assume name e =
+            let th_elt = {
+              Expr.th_name;
+              axiom_kind;
+              extends;
+              ax_form = e;
+              ax_name = name;
+            } in
+            C.ThAssume th_elt
+          in
+          E.Dtheory, th_assume
+        | None -> E.Daxiom, fun name e -> C.Assume (name, e, true)
+      in
       let st_loc = dl_to_ael dloc_file loc in
-      let e = make_form name t st_loc ~decl_kind:E.Daxiom in
-      let st_decl = C.Assume (name, e, true) in
+      let e = make_form name t st_loc ~decl_kind in
+      let st_decl = assume name e in
       C.{ st_decl; st_loc } :: acc
 
     (* Function and predicate definitions *)
