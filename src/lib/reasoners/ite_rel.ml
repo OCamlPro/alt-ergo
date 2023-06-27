@@ -97,7 +97,7 @@ let add_to_guarded p s t mp =
   let st = try ME.find p mp with Not_found -> SE2.empty in
   ME.add p (SE2.add (s, t) st) mp
 
-(* Check if the condition of the ite t is an assumed predicate. If do so,
+(* Check if the condition of the ite t is an assumed predicate. If so,
    select the appropriate branch b of the ite and produce the deduction t = b.
    Otherwise save the if and else branches of t in order to retrieve them
    quickly in the assume function. *)
