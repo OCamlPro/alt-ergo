@@ -341,10 +341,7 @@ module Shostak(X : ALIEN) = struct
           | "1" -> Some true
           | "0" -> Some false
           | _ ->
-            failwith (
-              Format.asprintf "Expeceted \"1\" or \"0\", but got \"%a\""
-                E.print t
-            )
+            Util.failwith "Expeceted \"1\" or \"0\", but got \"%a\"" E.print t
         end
       | _ -> None
 
@@ -749,9 +746,7 @@ module Shostak(X : ALIEN) = struct
           let r', ctx' = X.make t' in
           {bv = I_Other r'; sz = n}, ctx' @ ctx
 
-      | _ ->
-        failwith
-          (Format.asprintf "[Bitv] make: Unexpected term %a@." E.print t')
+      | _ -> Util.failwith "[Bitv] make: Unexpected term %a@." E.print t'
 
     and mk_bvor ?(is_and = false) r1 r2 t t1 t2 ctx =
       let rec aux r1 r2 ctx =
@@ -1724,8 +1719,7 @@ module Shostak(X : ALIEN) = struct
     match (E.term_view x).ty with
     | Ty.Tbitv n -> n
     | ty ->
-      failwith
-        (Format.asprintf "Expected a bit-vector type, got %a" Ty.print ty)
+      Util.failwith "Expected a bit-vector type, got %a" Ty.print ty
 
   let make t =
     match E.term_view t with
