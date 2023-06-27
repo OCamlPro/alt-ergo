@@ -704,7 +704,7 @@ let fresh_hypothesis_name =
   fun sort ->
     incr cpt;
     match sort with
-    | Thm -> "@H"^(string_of_int !cpt)
+    | Thm | Sat -> "@H"^(string_of_int !cpt)
     | _ -> "@L"^(string_of_int !cpt)
 
 let is_local_hyp s =
