@@ -1237,6 +1237,10 @@ let mk_bvconcat t1 t2 sz =
 let mk_bvextract i j t sz =
   mk_term (Sy.Op (Sy.Extract (i, j))) [t] (Ty.Tbitv sz)
 
+let mk_bvextend sign n k t =
+  if k = 0 then t else
+    mk_term (Op (BVExtend { sign; k })) [t] (Tbitv (n + k))
+
 let mk_bvnot n t =
   mk_term (Sy.Op Sy.BVnot) [t] (Ty.Tbitv n)
 
@@ -1258,24 +1262,26 @@ let mk_bvneg n x =
     ] Ty.Tint
   )
 
-let mk_bvult x y =
-  mk_builtin ~is_pos:true Sy.LT [ mk_bv2nat x; mk_bv2nat y ]
+let mk_bvult n x y =
+  if n = 0 then faux else
+    mk_builtin ~is_pos:true Sy.LT [ mk_bv2nat x; mk_bv2nat y ]
 
-let mk_bvule x y =
-  mk_builtin ~is_pos:true Sy.LE [ mk_bv2nat x; mk_bv2nat y ]
+let mk_bvule n x y =
+  if n = 0 then faux else
+    mk_builtin ~is_pos:true Sy.LE [ mk_bv2nat x; mk_bv2nat y ]
 
 let mk_bvslt n x y =
   let xsign = mk_bvsign n x in
   let ysign = mk_bvsign n y in
   let c1 = mk_and xsign (neg ysign) false in
-  let c2 = mk_and (mk_eq ~iff:true xsign ysign) (mk_bvult x y) false in
+  let c2 = mk_and (mk_eq ~iff:true xsign ysign) (mk_bvult n x y) false in
   mk_or c1 c2 false
 
 let mk_bvsle n x y =
   let xsign = mk_bvsign n x in
   let ysign = mk_bvsign n y in
   let c1 = mk_and xsign (neg ysign) false in
-  let c2 = mk_and (mk_eq ~iff:true xsign ysign) (mk_bvule x y) false in
+  let c2 = mk_and (mk_eq ~iff:true xsign ysign) (mk_bvule n x y) false in
   mk_or c1 c2 false
 
 let mk_bvadd n x y =

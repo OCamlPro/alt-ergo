@@ -927,16 +927,10 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             E.mk_term (Op (BV_repeat k)) [aux_mk_expr t] (Tbitv (n*k))
 
           | B.Bitv_zero_extend { n; k }, [t] ->
-            let t' = aux_mk_expr t in
-            if k = 0 then t' else
-              E.mk_term
-                (Op (BVExtend { sign = false; n = k })) [t'] (Tbitv (n + k))
+            E.mk_bvextend false n k (aux_mk_expr t)
 
           | B.Bitv_sign_extend { n; k }, [t] ->
-            let t' = aux_mk_expr t in
-            if k = 0 then t' else
-              E.mk_term
-                (Op (BVExtend { sign = true; n = k })) [t'] (Tbitv (n + k))
+            E.mk_bvextend true n k (aux_mk_expr t)
 
           | B.Bitv_rotate_left { n; i }, [t] ->
             let t' = aux_mk_expr t in
@@ -1033,20 +1027,16 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             E.mk_bvashr n (aux_mk_expr x) (aux_mk_expr y)
 
           | B.Bitv_ult n, [ x; y ] ->
-            if n = 0 then E.faux else
-              E.mk_bvult (aux_mk_expr x) (aux_mk_expr y)
+            E.mk_bvult n (aux_mk_expr x) (aux_mk_expr y)
 
           | B.Bitv_ule n, [ x; y ] ->
-            if n = 0 then E.faux else
-              E.mk_bvule (aux_mk_expr x) (aux_mk_expr y)
+            E.mk_bvule n (aux_mk_expr x) (aux_mk_expr y)
 
           | B.Bitv_ugt n, [ x; y ] ->
-            if n = 0 then E.faux else
-              E.mk_bvult (aux_mk_expr y) (aux_mk_expr x)
+            E.mk_bvult n (aux_mk_expr y) (aux_mk_expr x)
 
           | B.Bitv_uge n, [ x; y ] ->
-            if n = 0 then E.faux else
-              E.mk_bvule (aux_mk_expr y) (aux_mk_expr x)
+            E.mk_bvule n (aux_mk_expr y) (aux_mk_expr x)
 
           | B.Bitv_slt n, [ x; y ] ->
             if n = 0 then E.faux else

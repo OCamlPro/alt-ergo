@@ -506,7 +506,20 @@ module Shostak(X : ALIEN) = struct
           E.bvzero
       )
 
-    (** turn into a dispatcher function  *)
+    (** given two variables, adds to the context the equalities that correspond
+        to the application of the semantics of the [bvor/bvand] operators.
+
+        For example: given [t = bvor t1 t2] with [t], [t1] and [t2] being
+        bit-vector varibles of size two, then what is added to the content is
+        the following:
+        [ t^{0,0} = ite (t1^{0,0} = [|0|], t2^{0,0}, [|1|]);
+          t^{1,1} = ite (t1^{1,1} = [|0|], t2^{1,1}, [|1|]) ]
+
+        On the other hand if [t = bvand t1 t2] then it is the following that is
+        added to the context:
+        [ t^{0,0} = ite (t1^{0,0} = [|1|], t2^{0,0}, [|0|]);
+          t^{1,1} = ite (t1^{1,1} = [|1|], t2^{1,1}, [|0|]) ]
+    *)
     let mk_o_eqs =
       fun ctx t ~is_and nt t1 i1 t2 i2 n ->
       let rec aux1 ctx cnt =
@@ -653,7 +666,7 @@ module Shostak(X : ALIEN) = struct
         let bv, nctx = mk_bvor ~is_and:neg r1' r2' t' x y ctx'' in
         to_i_ast bv, nctx (* not great! *)
 
-      | { E.f = Sy.Op BVExtend { sign = b; n = k }; xs = [ x ];
+      | { E.f = Sy.Op BVExtend { sign = b; k }; xs = [ x ];
           ty = Ty.Tbitv n; _
         } ->
         let r1, ctx' = make_aux ~neg x ctx in

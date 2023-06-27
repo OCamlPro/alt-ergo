@@ -228,12 +228,13 @@ val mk_ite : t -> t -> t -> t
 
 val mk_bvconcat : t -> t -> int -> t
 val mk_bvextract : int -> int -> t -> int -> t
+val mk_bvextend : bool -> int -> int -> t -> t
 val mk_bvnot : int -> t -> t
 val mk_bv2nat : t -> t
 val mk_nat2bv : int -> t -> t
 val mk_bvneg : int -> t -> t
-val mk_bvult : t -> t -> t
-val mk_bvule : t -> t -> t
+val mk_bvult : int -> t -> t -> t
+val mk_bvule : int -> t -> t -> t
 val mk_bvslt : int -> t -> t -> t
 val mk_bvsle : int -> t -> t -> t
 val mk_bvadd : int -> t -> t -> t

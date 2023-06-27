@@ -47,8 +47,9 @@ type operator =
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
   | BV2Nat | Nat2BV of int
-  | BVExtend of {sign: bool; n: int}
-  (* (sign, n) if sign = true then extend sign otherwise extend with zeros *)
+  | BVExtend of { sign: bool; k: int }
+  (* (sign, k) if sign = true then extend (by k bits) sign otherwise extend with
+     zeros *)
   | BV_repeat of int
   | BV_rotate of int (* positive for right, negative for left *)
   | BVnot | BVand | BVor | BVxor | BVnand | BVnor | BVxnor | BVcomp
@@ -148,9 +149,9 @@ let compare_operators op1 op2 =
         let r = Int.compare i1 i2 in
         if r = 0 then Int.compare j1 j2 else r
       | Nat2BV n1, Nat2BV n2 -> Int.compare n1 n2
-      | BVExtend { sign = b1; n = n1},  BVExtend { sign = b2; n = n2} ->
+      | BVExtend { sign = b1; k = k1},  BVExtend { sign = b2; k = k2} ->
         let r = Bool.compare b1 b2 in
-        if r = 0 then Int.compare n1 n2 else r
+        if r = 0 then Int.compare k1 k2 else r
       | BV_rotate n1, BV_rotate n2 ->
         Int.compare n1 n2
       | BV_repeat n1, BV_repeat n2 ->
@@ -342,8 +343,8 @@ let to_string ?(show_vars=true) x = match x with
   | Op Reach -> assert false
   | Op BV2Nat -> "bv2nat"
   | Op Nat2BV m -> Format.sprintf "nat2bv[%d]" m
-  | Op BVExtend { sign = true; n } -> Format.sprintf "bv_sign_extend[%d]" n
-  | Op BVExtend { sign = false; n } -> Format.sprintf "bv_zero_extend[%d]" n
+  | Op BVExtend { sign = true; k } -> Format.sprintf "bv_sign_extend[%d]" k
+  | Op BVExtend { sign = false; k } -> Format.sprintf "bv_zero_extend[%d]" k
   | Op BV_repeat n -> Format.sprintf "bv_repeat[%d]" n
   | Op BV_rotate n when n > 0 -> Format.sprintf "bv_rotate_right[%d]" n
   | Op BV_rotate n -> Format.sprintf "bv_rotate_left[%d]" n
