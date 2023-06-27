@@ -330,24 +330,24 @@ module Shostak(X : ALIEN) = struct
     open Printer
 
     let print_tvar fmt (tv,sz) =
-      Format.fprintf fmt "%a[%d]@?" pp_tvar tv sz
+      Format.fprintf fmt "%a[%d]" pp_tvar tv sz
 
     let print fmt ast =
       let open Format in
       match ast.bv with
-      | Cte b -> fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
-      | Other t -> fprintf fmt "%a@?" X.print t
+      | Cte b -> fprintf fmt "%d[%d]" (if b then 1 else 0) ast.sz
+      | Other t -> fprintf fmt "%a" X.print t
       | Ext (t,_,i,j) ->
-        fprintf fmt "%a@?" X.print t;
-        fprintf fmt "<%d,%d>@?" i j
+        fprintf fmt "%a" X.print t;
+        fprintf fmt "<%d,%d>" i j
 
     let[@warning "-32"] rec print_I_ast fmt ast =
       let open Canonizer in
       let open Format in
       match ast.bv with
-      | I_Cte b -> fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
-      | I_Other t -> fprintf fmt "%a[%d]@?" X.print t ast.sz
-      | I_Ext (u,i,j) -> fprintf fmt "%a<%d,%d>@?" print_I_ast u i j
+      | I_Cte b -> fprintf fmt "%d[%d]" (if b then 1 else 0) ast.sz
+      | I_Other t -> fprintf fmt "%a[%d]" X.print t ast.sz
+      | I_Ext (u,i,j) -> fprintf fmt "%a<%d,%d>" print_I_ast u i j
       | I_Comp(u,v) -> fprintf fmt "@[(%a * %a)@]" print_I_ast u print_I_ast v
 
     let print_C_ast fmt = function
@@ -355,8 +355,8 @@ module Shostak(X : ALIEN) = struct
       | x::l -> print fmt x; List.iter (Format.fprintf fmt " @@ %a" print) l
 
     let print_s fmt ast = match ast.bv with
-      | S_Cte b -> Format.fprintf fmt "%d[%d]@?" (if b then 1 else 0) ast.sz
-      | S_Var tv -> Format.fprintf fmt "%a@?" print_tvar (tv,ast.sz)
+      | S_Cte b -> Format.fprintf fmt "%d[%d]" (if b then 1 else 0) ast.sz
+      | S_Var tv -> Format.fprintf fmt "%a" print_tvar (tv,ast.sz)
 
     let print_S_ast fmt = function
         [] -> assert false
@@ -921,10 +921,7 @@ module Shostak(X : ALIEN) = struct
        C-variables to be split, which in turn can require re-slicing the other
        equations involving the original C-variable, even if they have already
        been sliced. Which can in turn cause re-slicing of the new C-variables,
-       etc.
-
-       (Note: there are currently multiple bugs that prevent the description
-       above of the systems being equivalent from being correct) *)
+       etc. *)
     let equations_slice parts =
       let rec slice_rec bw = function
         |[] -> bw

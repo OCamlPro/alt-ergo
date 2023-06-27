@@ -1,0 +1,16 @@
+
+unknown
+(
+  
+ ; Functions
+
+ ; Constants
+
+(define-fun x () Int 8)
+
+(define-fun y () Int 42)
+
+ ; Arrays not yet supported
+
+
+)

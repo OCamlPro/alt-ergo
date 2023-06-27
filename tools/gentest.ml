@@ -176,6 +176,7 @@ module Batch : sig
 
   val make:
     frontend:string option ->
+    filter:string list option ->
     path: string -> cmds: Cmd.t list
     -> pb_files: string list -> t
   (** Set up a batch of tests. *)
@@ -192,13 +193,23 @@ end = struct
     tests: Test.t list;
   }
 
-  let make ~frontend ~path ~cmds ~pb_files =
+  let make ~frontend ~filter ~path ~cmds ~pb_files =
+    let filter =
+      match filter with
+      | Some filter ->
+        fun cmd -> List.exists (String.equal (Cmd.name cmd)) filter
+      | None ->
+        fun _ -> true
+    in
     let arg = Option.map (Format.asprintf "--frontend %s") frontend in
     let tests = List.fold_left (fun acc1 pb_file ->
         List.fold_left (fun acc2 cmd ->
-            let cmd_opt = Option.map (fun arg -> Cmd.add_arg ~arg cmd) arg in
-            let cmd = Option.value ~default:cmd cmd_opt in
-            (Test.make ~cmd ~pb_file) :: acc2
+            if filter cmd then
+              let cmd_opt = Option.map (fun arg -> Cmd.add_arg ~arg cmd) arg in
+              let cmd = Option.value ~default:cmd cmd_opt in
+              (Test.make ~cmd ~pb_file) :: acc2
+            else
+              acc2
           ) acc1 cmds) [] pb_files
     in
     {path; cmds; tests}
@@ -247,12 +258,12 @@ let is_a_problem file =
   File.has_extension_in file [".ae"; ".smt2"; ".pstm2"; ".zip"]
 
 (* Generate a dune file for each subfolder of the path given as argument. *)
-let rec generate ?frontend path cmds =
+let rec generate ?frontend ?filter path cmds =
   let files, folders = File.scan_folder path in
   let () = match List.filter is_a_problem files with
     | [] -> ()
     | pb_files -> (
-        let batch = Batch.make ~frontend ~path ~cmds ~pb_files in
+        let batch = Batch.make ~frontend ~filter ~path ~cmds ~pb_files in
         Batch.generate_expected_file batch;
         Batch.generate_dune_file batch
       ) in
@@ -261,7 +272,12 @@ let rec generate ?frontend path cmds =
       let frontend =
         if folder = "dolmen" then Some "dolmen" else frontend
       in
-      generate ?frontend path cmds
+      let filter =
+        match folder with
+        | "models" -> Some ["models"; "models_ci"]
+        | _ -> filter
+      in
+      generate ?frontend ?filter path cmds
     ) folders
 
 let () =
@@ -293,6 +309,16 @@ let () =
       "--output=smtlib2"
     ; timelimit
     ; "--sat-solver CDCL-Tableaux" ])
+  ; ("runtest-quick", "models",
+     [ "--output=smtlib2"
+     ; "--frontend dolmen"
+     ; "--sat-solver=Tableaux"
+     ; timelimit ])
+  ; ("runtest-ci", "models_ci",
+     [ "--output=smtlib2"
+     ; "--frontend dolmen"
+     ; "--sat-solver=Tableaux"
+     ; timelimit ])
   ; ("runtest-ci", "dolmen_ci", [
       "--output=smtlib2"
     ; timelimit
