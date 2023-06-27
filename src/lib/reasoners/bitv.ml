@@ -318,7 +318,6 @@ module Shostak(X : ALIEN) = struct
     let string_to_bitv ?(neg = false) s ctx =
       let bitf = if neg then (fun b -> not b) else (fun b -> b) in
       let tmp = ref[] in
-      let nctx = ref[] in
       String.iter (
         fun car ->
           tmp := (not @@ Char.equal  car '0',1)::(!tmp)
@@ -331,7 +330,6 @@ module Shostak(X : ALIEN) = struct
           (f_aux ((b2,m)::r)) ({ sz = n ; bv = I_Cte (bitf b1) }::acc)
       in
       let res = f_aux (!tmp) [] in
-      let ctx = List.rev_append !nctx ctx in
       bitv_to_icomp (List.hd res) (List.tl res), ctx
 
     let bit_of_expr t =
