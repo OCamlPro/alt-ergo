@@ -798,10 +798,13 @@ module Shostak(X : ALIEN) = struct
             let c, eq, pat = apply_sub_rev bsub c [] [] req in
             eq, csub, if c then Some pat else None
         end
-      | { bv = S_Var { sorte = B; _ }; _ } as st :: eq,
-        n :: pt when st.sz < n ->
+      | st :: eq, n :: pt when st.sz < n ->
+        assert (not (Lists.is_empty (fst subs)));
+        assert (match st.bv with S_Var { sorte = B; _ } -> true | _ -> false);
         (* Since we start with a [slicing_pattern], this should only occur when
-           a B-variable has been split into parts below. *)
+           a B-variable has been split into parts below.
+           Therefore we assert that the variable is indeed a B variable and that
+           list of substitutions for B variables is not empty. *)
         slice_vars eq (n - st.sz :: pt) (true, st :: req, subs)
       | st :: eq, n :: pt when st.sz = n ->
         slice_vars eq pt (c, st :: req, subs)
