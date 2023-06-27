@@ -1,0 +1,15 @@
+logic x: bitv[4]
+logic y: bitv[4]
+
+logic a: bitv[1]
+logic b: bitv[1]
+logic c: bitv[1]
+logic d: bitv[1]
+
+axiom ax: x @ y = a @ b @ c @ d @ x
+
+goal g1: x = y
+goal g2: y^{0,0} = d
+goal g3: y^{1,1} = c
+goal g4: y^{2,2} = b
+goal g5: y^{3,3} = a
