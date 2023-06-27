@@ -894,7 +894,7 @@ module Shostak(X : ALIEN) = struct
         |[] -> []
         |v::r ->
           match List.assoc v subs with
-          | vl -> f_aux (vl @ r)
+          | vl -> vl @ f_aux r
           | exception Not_found -> v :: f_aux r
       in List.map (fun (t,vls) ->(t,List.map f_aux vls))sys
 
