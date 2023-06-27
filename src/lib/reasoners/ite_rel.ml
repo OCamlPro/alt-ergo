@@ -56,12 +56,12 @@ module TB =
 
 (* The present theory simplifies the ite t of the form
     ite(pred, t1, t2)
-   where pred is an assumed predicate by adding the equation
+   where pred is an assumed predicate by introducing the equation
    t = t1 or t = t2 according to the truth value of pred. *)
 
 type t = {
   pending_deds      : Ex.t ME2.t;
-  (* Map of pending deducations to their explanation. A deduction is just
+  (* Map of pending deductions to their explanation. A deduction is just
      an equation of the form t = b where t is an ite and b is one of its
      branches. *)
 
