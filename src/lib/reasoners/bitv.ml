@@ -692,21 +692,35 @@ module Shostak(X : ALIEN) = struct
         |_ -> assert false
       in List.fold_left f_aux (List.hd s_l)(List.tl s_l)
 
-    let slice_var var s1 =
-      let s2 = var.sz - s1 in
-      match var.bv with
-      |S_Cte _ -> {var with sz = s1},{var with sz = s2},None
-      |S_Var v ->
-        let (fs,sn,tr) = match v.sorte with
-          |A -> (fresh_var A), (fresh_var A), A
-          |B -> (fresh_var B), (fresh_var B), B
-          |C -> (fresh_var C), (fresh_var C), C
-        in {bv = S_Var fs; sz = s1},{bv = S_Var sn; sz = s2},Some tr
+    (* [slice_var var pat_hd pat_tl] slices a variable to make it fit the
+       pattern [pat_hd :: pat_tl].
+       Returns the list of created fresh variables, the left over pattern and
+       the sort of the variable (if it is not a constant). *)
+    let slice_var var pat_hd pat_tl =
+      let mk, tr =
+        match var.bv with
+        | S_Cte _ -> (fun sz -> { var with sz }), None
+        | S_Var { sorte; _ } ->
+          (fun sz -> { bv = S_Var (fresh_var sorte); sz }), Some sorte
+      in
+      let rec aux cnt plist =
+        match plist with
+        | [] -> [], []
+        | h :: t when cnt < h -> [ mk cnt ], (h - cnt) :: t
+        | h :: t when cnt = h -> [ mk cnt ], t
+        | h :: t ->
+          let vl, ptail = aux (cnt - h) t in
+          mk h :: vl, ptail
+      in
+      let fst_v = mk pat_hd in
+      let cnt = var.sz - pat_hd in
+      let vl, pat_tail = aux cnt pat_tl in
+      fst_v :: vl, pat_tail, tr
 
     (* This is a helper function for [slice_vars].
 
        [apply_sub_rev sub changed acc pat rcomp] applies the substitution [sub]
-       (which maps B-variable to pairs of B-variables) to the composition
+       (which maps B-variable to lists of B-variables) to the composition
        [rcomp], which is stored in *reverse* order, and:
 
        - Updates [changed] if the substitution effectively changes a variable
@@ -720,26 +734,26 @@ module Shostak(X : ALIEN) = struct
        - If [changed'] is [false], [comp' = List.rev rcomp]
 
        Note that the substitution can be recursive, so we must do a recursive
-       call on the result of applying the substitution (we can't add [v1 :: v2]
-       to [acc], we must add [v2 :: v1] to [r] instead). *)
+       call on the result of applying the substitution (we can't add [vl]
+       to [acc], we must add [(`rev` vl)] to [r] instead). *)
     let rec apply_sub_rev sub changed acc pat = function
       | [] -> changed, acc, pat
       | v :: r ->
         match List.assoc v sub with
-        | v1, v2 ->
-          (* Note that this is [v2 :: v1 :: r] and not [v1 :: v2 :: r] because
+        | vl ->
+          (* Note that this is [(`rev` vl) @ r] and not [vl @ r] because
              the composition is given in reverse order. *)
-          apply_sub_rev sub true acc pat (v2 :: v1 :: r)
+          apply_sub_rev sub true acc pat (List.rev_append vl r)
         | exception Not_found ->
           apply_sub_rev sub changed (v :: acc) (v.sz :: pat) r
 
     (* [slice_vars eq pat (c, req, subs)] slices the variables in [eq] according
-       to the pattern [pat].  [eq] is a composition of simple terms.
+       to the pattern [pat]. [eq] is a composition of simple terms.
 
        If the composition [eq] does not match the pattern in [pat]:
        - When variables in the composition are bigger than the expected pattern
-          size, the variables are split into two parts, the first of which has
-          the size expected by the pattern.
+          size, the variables are split into multiple parts, which fit the
+          pattern.
 
           Splits involving A variables are not recorded, because A variables are
           guaranteed to have unique occurences.
@@ -786,20 +800,24 @@ module Shostak(X : ALIEN) = struct
         end
       | st :: eq, n :: pt when st.sz < n ->
         (* Since we start with a [slicing_pattern], this should only occur when
-           a B-variable has been split into parts below. *)
+           a B-variable has been split into parts below.
+           Therefore we assert that the variable is indeed a B variable and that
+           list of substitutions for B variables is not empty. *)
+        assert (not (Lists.is_empty (fst subs)));
+        assert (match st.bv with S_Var { sorte = B; _ } -> true | _ -> false);
         slice_vars eq (n - st.sz :: pt) (true, st :: req, subs)
       | st :: eq, n :: pt when st.sz = n ->
         slice_vars eq pt (c, st :: req, subs)
       | st :: eq, n :: pt ->
-        let (st_n, rst, flag) = slice_var st n in
+        let (nvar_list, pt', flag) = slice_var st n pt in
         begin match flag with
           | Some C ->
             (* A C variable got split: we must record the information in the
                C-substitution so that it gets to the instances of the variable
                in other multi-equations. *)
             let bsub, csub = subs in
-            let subs = bsub, (st, (st_n, rst)) :: csub in
-            slice_vars (rst :: eq) pt (c, st_n :: req, subs)
+            let subs = (bsub, (st, nvar_list) :: csub) in
+            slice_vars eq pt' (c, List.rev_append nvar_list req, subs)
           | Some B ->
             (* A B variable got split: we must update the other occurences of
                the variable in the current composition. If there are other
@@ -807,13 +825,14 @@ module Shostak(X : ALIEN) = struct
                the B-substitution, and we will also update it at the end. *)
             let eq = List.fold_right (fun st' acc ->
                 if equal_solver_simple_term st' st then
-                  st_n :: rst :: acc
+                  nvar_list @ acc
                 else
                   st' :: acc) eq [] in
             let bsub, csub = subs in
-            let subs = (st, (st_n, rst)) :: bsub, csub in
-            slice_vars (rst :: eq) pt (c, st_n :: req, subs)
-          | None | Some A -> slice_vars (rst :: eq) pt (c, st_n :: req, subs)
+            let subs = ((st, nvar_list) :: bsub, csub) in
+            slice_vars eq pt' (c, List.rev_append nvar_list req, subs)
+          | None | Some A ->
+            slice_vars eq pt' (c, List.rev_append nvar_list req, subs)
         end
       | [], _ :: _ | _ :: _, [] -> assert false
 
@@ -875,7 +894,7 @@ module Shostak(X : ALIEN) = struct
         |[] -> []
         |v::r ->
           match List.assoc v subs with
-          | (v1, v2) -> f_aux (v1 :: v2 :: r)
+          | vl -> vl @ f_aux r
           | exception Not_found -> v :: f_aux r
       in List.map (fun (t,vls) ->(t,List.map f_aux vls))sys
 
