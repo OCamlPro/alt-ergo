@@ -1747,7 +1747,7 @@ let make dloc_file acc stmt =
       aux [] dcl;
       acc
 
-    | { contents = `Set_logic _; _ } -> acc
+    | { contents = `Set_logic _ | `Set_info _ | `Get_info _ ; _ } -> acc
 
     | { contents = #Typer_Pipe.typechecked; _ } as stmt ->
       (* TODO:
