@@ -783,7 +783,7 @@ let mk_gt translate ty x y =
   else
     E.mk_builtin ~is_pos:true Sy.LT [translate y; translate x]
 
-let mk_add translate ty l =
+let mk_add translate sy ty l =
   let rec aux_mk_add l =
     match l with
     | h :: t ->
@@ -792,7 +792,7 @@ let mk_add translate ty l =
     | [] -> []
   in
   let args = aux_mk_add l in
-  E.mk_term (Sy.Op Sy.Plus)args ty
+  E.mk_term sy args ty
 
 (** [mk_expr ~loc ~name_base ~toplevel ~decl_kind term]
 
@@ -1191,7 +1191,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
 
           | B.Add ty, _ ->
             let rty = if ty == `Int then Ty.Tint else Treal in
-            mk_add aux_mk_expr rty args
+            mk_add aux_mk_expr (Sy.Op Sy.Plus) rty args
 
           | B.Sub ty, h :: t ->
             let rty = if ty == `Int then Ty.Tint else Treal in
