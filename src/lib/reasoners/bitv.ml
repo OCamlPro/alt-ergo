@@ -1325,14 +1325,113 @@ module Shostak(X : ALIEN) = struct
   let solve r1 r2 pb =
     Sig.{pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}
 
-  let assign_value _ _ _ =
-    Printer.print_err
-      "[Bitv.models] assign_value currently not implemented";
-    raise (Util.Not_implemented "Models for bit-vectors")
+  (* Pop the first bit, raises [Not_found] if there is no first bit *)
+  let pop_bit = function
+    | [] -> raise Not_found
+    | { bv = Cte b; sz } as st :: rst ->
+      Some b, if sz > 1 then { st with sz = sz - 1 } :: rst else rst
+    | { bv = Other _ | Ext _ ; sz } as st :: rst ->
+      None, if sz > 1 then { st with sz = sz - 1 } :: rst else rst
 
-  let choose_adequate_model _ _ =
-    Printer.print_err
-      "[Bitv.models] choose_adequate_model currently not implemented";
-    raise (Util.Not_implemented "Models for bit-vectors")
+  (* Fills an initial segment of [buf] from [0] to [sz] with a bitvector that is
+     different from all those in [abstracts].
+
+     Uninterpreted ("Other" and "Ext") components in [abstracts] are ignored.
+
+     Currently a fairly naive backtracking search. *)
+  let rec search buf pos sz abstracts =
+    (* [t] are the values we must be distinct from that starts with a '1' *)
+    (* [f] are the values we must be distinct from that starts with a '0' *)
+    let t, nt, f, nf = List.fold_left (fun (t, nt, f, nf) ab ->
+        let b, bv = pop_bit ab in
+        match b with
+        | Some true -> (bv :: t, 1 + nt, f, nf)
+        | Some false -> (t, nt, bv :: f, 1 + nf)
+        | None -> (t, nt, f, nf)) ([], 0, [], 0) abstracts
+    in
+    match t, f with
+    | _, [] -> Bytes.fill buf pos sz '0'
+    | [], _ -> Bytes.fill buf pos sz '1'
+    | _, _ ->
+      (* Prefer searching where there are less candidates. *)
+      let x, cx, y, cy =
+        if nt < nf then t, '1', f, '0' else f, '0', t, '1'
+      in
+      match search buf (pos + 1) (sz - 1) x with
+      | () -> Bytes.set buf pos cx
+      | exception Not_found ->
+        search buf (pos + 1) (sz - 1) y;
+        Bytes.set buf pos cy
+
+  let is_cte = function | { bv = Cte _; _ } -> true | _ -> false
+  let is_cte_abstract = List.for_all is_cte
+
+  let assign_value r distincts eq =
+    (* If we are trying to assign a value to a constant, or a term that has a
+       constant in its equivalence class, bail out *)
+    let biv = embed r in
+    if is_cte_abstract biv || List.exists
+         (fun (t, x) ->
+            let { E.f; ty; _ } = E.term_view t in
+            is_mine_symb f ty && X.leaves x == [] ) eq
+    then None else
+      let sz = List.fold_left (fun tot { sz; _ } -> tot + sz) 0 biv in
+      (* Only try to be distinct from constants. *)
+      let distincts =
+        List.fold_left (fun acc x ->
+            let biv = embed x in
+            if is_cte_abstract biv then biv :: acc else acc) [] distincts
+      in
+      let buf = Bytes.create sz in
+      match search buf 0 sz distincts with
+      | () ->
+        (* If there are exactly [2^n - 1] constant values we must be distinct
+           from, this is not a case split: the choice is forced. *)
+        let nb =
+          List.fold_left (fun nb a ->
+              if is_cte_abstract a then nb + 1 else nb) 1 distincts
+        in
+        let is_cs = not (Z.equal (Z.of_int nb) (Z.pow (Z.of_int 2) sz)) in
+        let bv = Bytes.unsafe_to_string buf in
+        Some (E.bitv bv (Ty.Tbitv sz), is_cs)
+      | exception Not_found ->
+        (* This is not solvable: we are forced to be distinct from all possible
+           values. We signal that by returning an arbitrary bitvector and
+           setting the "case-split" flag to [false], which means that the
+           choice was "forced".
+
+           Since a forced choice is actually inconsistent, this will cause
+           backtracking (and possibly unsat-ness). *)
+        let bv = String.make sz '0' in
+        Some (E.bitv bv (Ty.Tbitv sz), false)
+
+  let choose_adequate_model t r l =
+    if Options.get_debug_interpretation () then
+      Printer.print_dbg
+        ~module_name:"Bitv" ~function_name:"choose_adequate_model"
+        "choose_adequate_model for %a" E.print t;
+    let l = List.map (fun (t, r) -> (t, r, embed r)) l in
+    let l = List.filter (fun (_, _, a) -> is_cte_abstract a) l in
+    let r, a =
+      match l with
+      | [] ->
+        let a = embed r in
+        assert (is_cte_abstract a);
+        r, a
+      | (_, r, a) :: l ->
+        List.iter (fun (_, x, _) -> assert (X.equal x r)) l;
+        r, a
+    in
+    let s =
+      List.map (function
+          | { bv = Cte b; sz } -> String.make sz (if b then '1' else '0')
+          | _ ->
+            (* Cannot happen because [a] must satisfy [is_cte_abstract] at this
+               point. *)
+            assert false
+        ) a
+      |> String.concat ""
+    in
+    r, "#b" ^ s
 
 end
