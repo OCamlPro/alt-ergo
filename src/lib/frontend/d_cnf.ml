@@ -743,24 +743,6 @@ let mk_pattern DE.{ term_descr; _ } =
 
   | _ -> assert false
 
-(** Makes an upper or lower interval bound of a given variable or constant *)
-let mk_bound (DE.{ term_descr; term_ty; _ } as term) is_open is_lower =
-  let kind =
-    match term_descr with
-    | Cst { builtin = B.Integer s; _ } ->
-      Sy.ValBnd (Numbers.Q.from_string s)
-    | Cst { builtin = B.Base; path; _ }
-    | Var { path;  _ } ->
-      Sy.VarBnd (Var.of_string (get_basename path))
-    | _ ->
-      Util.failwith
-        "Expected bound to be either an integer constant or variable but\
-         got: %a"
-        DE.Term.print term
-  in
-  let sort = dty_to_ty term_ty in
-  Sy.mk_bound kind sort ~is_open ~is_lower
-
 (* Helper functions *)
 
 let mk_lt translate ty x y =
