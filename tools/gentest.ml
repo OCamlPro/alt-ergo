@@ -315,7 +315,7 @@ let () =
      ; "--sat-solver=Tableaux"
      ; "--interpretation=last"
      ; timelimit ])
-  ; ("runtest-quick", "models_ci",
+  ; ("runtest-ci", "models_ci",
      [ "--output=smtlib2"
      ; "--frontend=dolmen"
      ; "--sat-solver=Tableaux"

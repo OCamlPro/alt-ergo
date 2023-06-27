@@ -1,0 +1,30 @@
+
+unknown
+(
+  
+ ; Functions
+
+ ; Constants
+
+ ; Arrays not yet supported
+
+
+)
+
+unknown
+(
+  
+ ; Functions
+
+ ; Constants
+
+(define-fun p () Bool true)
+
+(define-fun q () Bool true)
+
+(define-fun nq () Bool true)
+
+ ; Arrays not yet supported
+
+
+)
