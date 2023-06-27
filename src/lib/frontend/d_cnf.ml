@@ -1402,19 +1402,17 @@ let pp_query ~valid_mode t =
 
     | App (
         { term_descr = Cst { builtin = B.And; _ }; _ },
-        tyl, [x; y]
+        tyl, es
       ) when not bnot ->
-      let e1 = elim_toplevel_forall false x in
-      let e2 = elim_toplevel_forall false y in
-      DE.Term.apply_cst DE.Term.Const.and_ tyl [e1; e2]
+      let es = List.map (elim_toplevel_forall false) es in
+      DE.Term.apply_cst DE.Term.Const.and_ tyl es
 
     | App (
         { term_descr = Cst { builtin = B.Or;  _ }; _ },
-        tyl, [x; y]
+        tyl, es
       ) when bnot ->
-      let e1 = elim_toplevel_forall true x in
-      let e2 = elim_toplevel_forall true y in
-      DE.Term.apply_cst DE.Term.Const.and_ tyl [e1; e2]
+      let es = List.map (elim_toplevel_forall true) es in
+      DE.Term.apply_cst DE.Term.Const.and_ tyl es
 
     | App (
         { term_descr = Cst { builtin = B.Imply; _ }; _ },
