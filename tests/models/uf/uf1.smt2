@@ -1,4 +1,5 @@
 (set-logic ALL)
+(set-option :produce-models true)
 (declare-fun f (Int) Int)
 (declare-const a Int)
 (declare-const b Int)

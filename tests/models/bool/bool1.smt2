@@ -1,5 +1,5 @@
 (set-logic QF_UF)
-; (set-option :produce-models true) ; enable model generation
+(set-option :produce-models true) ; enable model generation
 (declare-const p Bool)
 (declare-const q Bool)
 ; (declare-const t Int)

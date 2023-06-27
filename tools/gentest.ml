@@ -311,15 +311,13 @@ let () =
     ; "--sat-solver CDCL-Tableaux" ])
   ; ("runtest-quick", "models",
      [ "--output=smtlib2"
-     ; "--frontend=dolmen"
+     ; "--frontend dolmen"
      ; "--sat-solver=Tableaux"
-     ; "--interpretation=last"
      ; timelimit ])
   ; ("runtest-ci", "models_ci",
      [ "--output=smtlib2"
-     ; "--frontend=dolmen"
+     ; "--frontend dolmen"
      ; "--sat-solver=Tableaux"
-     ; "--interpretation=last"
      ; timelimit ])
   ; ("runtest-ci", "dolmen_ci", [
       "--output=smtlib2"

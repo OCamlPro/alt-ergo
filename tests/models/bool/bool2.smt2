@@ -1,4 +1,5 @@
 (set-logic QF_UF)
+(set-option :produce-models true)
 (declare-const x Bool)
 (declare-const y Bool)
 (assert (or x (not x)))
