@@ -1,0 +1,6 @@
+(set-logic ALL)
+(define-fun b () Bool false)
+(define-fun c () Bool true)
+(check-sat-assuming (c b))
+(check-sat-assuming (b))
+(check-sat-assuming (c))
