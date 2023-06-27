@@ -902,10 +902,7 @@ module Shostak(X : ALIEN) = struct
        C-variables to be split, which in turn can require re-slicing the other
        equations involving the original C-variable, even if they have already
        been sliced. Which can in turn cause re-slicing of the new C-variables,
-       etc.
-
-       (Note: there are currently multiple bugs that prevent the description
-       above of the systems being equivalent from being correct) *)
+       etc. *)
     let equations_slice parts =
       let rec slice_rec bw = function
         |[] -> bw
