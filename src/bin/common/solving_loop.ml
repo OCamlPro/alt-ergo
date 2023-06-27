@@ -442,9 +442,8 @@ let main () =
         in
         let contents =
           match contents with
-          | `Solve ([], []) -> `Goal (DStd.Expr.Term.(of_cst Const._false))
+          | `Solve (hyps, []) -> `Check hyps
           | `Solve ([], [t]) -> `Goal t
-          | `Solve ([t], []) -> `Check t
           | _ ->
             let loc = DStd.Loc.loc file_loc loc in
             Util.failwith "%a: internal error: unknown statement"

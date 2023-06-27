@@ -1381,9 +1381,15 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
       hypotheses [{a[1]; ...; a[n-1]}], and a goal [a[n]] whose validity is
       verified by the solver.
 
+    If additional hypotheses are provided in [hyps], they are preprocessed and
+    added to the set of hypotheses in the same way as the left-hand side of
+    implications. In other words, [pp_query ~hyps:[h1; ...; hn] t] is the same
+    as [pp_query (h1 -> ... -> hn t)], but more convenient if the some
+    hypotheses are already separated from the goal.
+
     Returns a list of hypotheses and the new goal body
 *)
-let pp_query ~valid_mode t =
+let pp_query ?(hyps =[]) t =
   (*  Removes top-level universal quantifiers of a goal's body, and binds
       the quantified variables to uninterpreted symbols.
   *)
@@ -1427,30 +1433,26 @@ let pp_query ~valid_mode t =
   in
 
   (* Extracts hypotheses from toplevel sequences of implications *)
-  let rec intro_hypothesis valid_mode DE.({ term_descr; _ } as t) =
+  let rec intro_hypothesis DE.({ term_descr; _ } as t) =
     match term_descr with
     | App (
         { term_descr = Cst { builtin = B.Imply; _ }; _ }, _, [x; y]
-      ) when valid_mode ->
-      let nx = elim_toplevel_forall (not valid_mode) x in
-      let axioms, goal = intro_hypothesis valid_mode y in
+      ) ->
+      let nx = elim_toplevel_forall false x in
+      let axioms, goal = intro_hypothesis y in
       nx::axioms, goal
 
-    | Binder (Forall (tyvl, tvl), body) when valid_mode ->
+    | Binder (Forall (tyvl, tvl), body) ->
       Cache.store_tyvl ~is_var:false tyvl;
       Cache.store_sy_vl_names tvl;
-      intro_hypothesis valid_mode body
-
-    | Binder (Exists (tyvl, tvl), body) when not valid_mode ->
-      Cache.store_tyvl ~is_var:false tyvl;
-      Cache.store_sy_vl_names tvl;
-      intro_hypothesis valid_mode body
+      intro_hypothesis body
 
     | _ ->
-      [], elim_toplevel_forall valid_mode t
+      [], elim_toplevel_forall true t
   in
 
-  intro_hypothesis valid_mode t
+  let axioms, goal = intro_hypothesis t in
+  List.rev_append (List.rev_map (elim_toplevel_forall false) hyps) axioms, goal
 
 let make_form name_base f loc ~decl_kind =
   let ff =
@@ -1480,17 +1482,12 @@ let make dloc_file acc stmt =
     (* Goal and check-sat definitions *)
     | {
       id; loc; attrs;
-      contents = (`Goal t | `Check t) as contents;
+      contents = (`Goal _ | `Check _) as contents;
     } ->
       let name =
         match id.name with
         | Simple name -> name
         | Indexed _ | Qualified _ -> assert false
-      in
-      let valid_mode =
-        match contents with
-        | `Goal _ -> true
-        | `Check _ -> false
       in
       let goal_sort =
         match contents with
@@ -1498,7 +1495,13 @@ let make dloc_file acc stmt =
         | `Check _ -> Ty.Sat
       in
       let st_loc = dl_to_ael dloc_file loc in
-      let _hyps, t = pp_query ~valid_mode t in
+      let _hyps, t =
+        match contents with
+        | `Goal t ->
+          pp_query t
+        | `Check hyps ->
+          pp_query ~hyps (DStd.Expr.Term.(of_cst Const._false))
+      in
       let rev_hyps_c =
         List.fold_left (
           fun acc t ->
