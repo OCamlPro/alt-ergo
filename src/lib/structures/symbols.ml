@@ -53,7 +53,7 @@ type operator =
   | BV_repeat of int
   | BV_rotate of int (* positive for right, negative for left *)
   | BVnot | BVand | BVor | BVxor | BVnand | BVnor | BVxnor | BVcomp
-  | BVneg | BVadd | BVsub | BVmul | BVudiv | BVurem | BVsdiv | BVsrem | BVsmod
+  | BVneg | BVadd | BVsub | BVmul
   | BVshl | BVlshr
   (* FP *)
   | Float
@@ -167,8 +167,7 @@ let compare_operators op1 op2 =
            | BV2Nat | Nat2BV _ | BVExtend _
            | BV_repeat _ | BV_rotate _ | BVneg
            | BVnot | BVand | BVor | BVxor | BVnand | BVnor | BVxnor | BVcomp
-           | BVadd | BVsub | BVmul | BVudiv | BVurem | BVsdiv | BVsrem
-           | BVsmod | BVshl| BVlshr) -> assert false
+           | BVadd | BVsub | BVmul | BVshl| BVlshr) -> assert false
     )
 
 let compare_builtin b1 b2 =
@@ -360,11 +359,6 @@ let to_string ?(show_vars=true) x = match x with
   | Op BVadd -> "bvadd"
   | Op BVsub -> "bvsub"
   | Op BVmul -> "bvmul"
-  | Op BVudiv -> "bvudiv"
-  | Op BVurem -> "bvurem"
-  | Op BVsdiv -> "bvsdiv"
-  | Op BVsrem -> "bvsrem"
-  | Op BVsmod -> "bvsmod"
   | Op BVshl -> "bvshl"
   | Op BVlshr -> "bvlshr"
   | True -> "true"

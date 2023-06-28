@@ -53,7 +53,7 @@ type operator =
   | BV_repeat of int
   | BV_rotate of int (* positive for right, negative for left *)
   | BVnot | BVand | BVor | BVxor | BVnand | BVnor | BVxnor | BVcomp
-  | BVneg | BVadd | BVsub | BVmul | BVudiv | BVurem | BVsdiv | BVsrem | BVsmod
+  | BVneg | BVadd | BVsub | BVmul
   | BVshl | BVlshr
   (* FP *)
   | Float

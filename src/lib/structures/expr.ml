@@ -1301,22 +1301,23 @@ let mk_bvmul n x y =
   mk_term (Sy.Op (Sy.Nat2BV n)) [natres] (Ty.Tbitv n)
 
 let mk_bvudiv n x y =
-  (* Assuming that if bv2nat(y) = 0 then bv2nat(x)/bv2nat(y) is
-     undefined and that it makes nat2bv[n](bv2nat(x)/bv2nat(y)) also
-     undefined. *)
-  mk_nat2bv
-    n (mk_term (Sy.Op Sy.Div) [mk_bv2nat x; mk_bv2nat y] Ty.Tint)
+  let ynat = mk_bv2nat y in
+  (* TODO: use let-in? Or will hashconsing take care of it? *)
+  let cond = mk_eq ~iff:false ynat izero in
+  let cons = bitv (String.init n (fun _ -> '1')) (Tbitv n) in
+  let alt = mk_nat2bv n (mk_term (Op Div) [mk_bv2nat x; ynat] Tint) in
+  mk_ite cond cons alt
 
 let mk_bvurem n x y =
-  (* Assuming that if bv2nat(y) = 0 then bv2nat(x)%bv2nat(y) is
-     undefined and that it makes nat2bv[n](bv2nat(x)%bv2nat(y)) also
-     undefined. *)
-  mk_nat2bv
-    n (mk_term (Sy.Op Sy.Modulo) [mk_bv2nat x; mk_bv2nat y] Ty.Tint)
+  let ynat = mk_bv2nat y in
+  (* TODO: use let-in? Or will hashconsing take care of it? *)
+  let cond = mk_eq ~iff:false ynat izero in
+  let alt = mk_nat2bv n (mk_term (Op Modulo) [mk_bv2nat x; ynat] Tint) in
+  mk_ite cond x alt
 
 let mk_bvsdiv n x y =
-  let xsign = mk_bvsign n  x in
-  let ysign = mk_bvsign n  y in
+  let xsign = mk_bvsign n x in
+  let ysign = mk_bvsign n y in
   let ite1 =
     mk_ite
       (mk_and (neg xsign) ysign false)
@@ -1333,8 +1334,8 @@ let mk_bvsdiv n x y =
     (mk_and (neg xsign) (neg ysign) false) (mk_bvudiv n x y) ite2
 
 let mk_bvsrem n x y =
-  let xsign = mk_bvsign n  x in
-  let ysign = mk_bvsign n  y in
+  let xsign = mk_bvsign n x in
+  let ysign = mk_bvsign n y in
   let ite1 =
     mk_ite
       (mk_and (neg xsign) ysign false)
@@ -1351,8 +1352,8 @@ let mk_bvsrem n x y =
     (mk_and (neg xsign) (neg ysign) false) (mk_bvurem n x y) ite2
 
 let mk_bvsmod n x y =
-  let xsign = mk_bvsign n  x in
-  let ysign = mk_bvsign n  y in
+  let xsign = mk_bvsign n x in
+  let ysign = mk_bvsign n y in
   let ite1 =
     mk_ite
       (mk_and (neg xsign) ysign false)

@@ -144,8 +144,7 @@ module Shostak(X : ALIEN) = struct
         Concat | Extract _ | BVExtend _ | BV2Nat | Nat2BV _
         | BV_repeat _ | BV_rotate _
         | BVnot | BVand | BVor | BVxor | BVnand | BVnor | BVxnor | BVcomp
-        | BVneg | BVadd | BVsub | BVmul | BVudiv | BVurem | BVsdiv | BVsrem
-        | BVsmod | BVshl | BVlshr
+        | BVneg | BVadd | BVsub | BVmul | BVshl | BVlshr
       ) -> true
     | _ -> false
 
@@ -624,11 +623,11 @@ module Shostak(X : ALIEN) = struct
              (E.mk_bvextract 0 (n-2) t2 (n-1)))
 
     let mk_bvshl n x y =
-      let x' = E.mk_term (Sy.Op Sy.BV2Nat) [x] Ty.Tint in
-      let y' = E.mk_term (Sy.Op Sy.BV2Nat) [y] Ty.Tint in
+      let x' = E.mk_bv2nat x in
+      let y' = E.mk_bv2nat y in
       let y'' = E.mk_term (Sy.Op Sy.Pow) [E.itwo; y'] Ty.Tint in
       let natres = E.mk_term (Sy.Op Sy.Mult) [x'; y''] Ty.Tint in
-      E.mk_term (Sy.Op (Sy.Nat2BV n)) [natres] (Ty.Tbitv n)
+      E.mk_nat2bv n natres
 
     let rec make_aux ?(neg = false) t' ctx =
       match E.term_view t' with
@@ -708,21 +707,6 @@ module Shostak(X : ALIEN) = struct
 
       | { E.f = Sy.Op BVmul; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
         make_aux ~neg (E.mk_bvmul n x y) ctx
-
-      | { E.f = Sy.Op BVudiv; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
-        make_aux ~neg (E.mk_bvudiv n x y) ctx
-
-      | { E.f = Sy.Op BVurem; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
-        make_aux ~neg (E.mk_bvurem n x y) ctx
-
-      | { E.f = Sy.Op BVsdiv; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
-        make_aux ~neg (E.mk_bvsdiv n x y) ctx
-
-      | { E.f = Sy.Op BVsrem; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
-        make_aux ~neg (E.mk_bvsrem n x y) ctx
-
-      | { E.f = Sy.Op BVsmod; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
-        make_aux ~neg (E.mk_bvsmod n x y) ctx
 
       | { E.f = Sy.Op BVshl; xs = [x; y] ; ty = Ty.Tbitv n; _ } ->
         make_aux ~neg (mk_bvshl n x y) ctx

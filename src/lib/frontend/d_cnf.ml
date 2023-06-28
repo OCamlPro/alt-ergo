@@ -975,26 +975,6 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             E.mk_term
               (Op Sy.BVmul) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
 
-          | B.Bitv_udiv n, [ x; y ] ->
-            E.mk_term
-              (Op Sy.BVudiv) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
-
-          | B.Bitv_urem n, [ x; y ] ->
-            E.mk_term
-              (Op Sy.BVurem) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
-
-          | B.Bitv_sdiv n, [ x; y ] ->
-            E.mk_term
-              (Op Sy.BVsdiv) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
-
-          | B.Bitv_srem n, [ x; y ] ->
-            E.mk_term
-              (Op Sy.BVsrem) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
-
-          | B.Bitv_smod n, [ x; y ] ->
-            E.mk_term
-              (Op Sy.BVsmod) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
-
           | B.Bitv_shl n, [ x; y ] ->
             E.mk_term
               (Op Sy.BVshl) [aux_mk_expr x; aux_mk_expr y] (Tbitv n)
@@ -1003,7 +983,23 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             E.mk_bvlshr n (aux_mk_expr x) (aux_mk_expr y)
 
           (* BV operators that produce ITEs or booleans are partially expanded
-             here instead of in the theory. *)
+             here instead of in the theory. Currently it is not possible to
+             produce ITEs in the Bit-vector theory. *)
+
+          | B.Bitv_udiv n, [ x; y ] ->
+            E.mk_bvudiv n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_urem n, [ x; y ] ->
+            E.mk_bvurem n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_sdiv n, [ x; y ] ->
+            E.mk_bvsdiv n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_srem n, [ x; y ] ->
+            E.mk_bvsrem n (aux_mk_expr x) (aux_mk_expr y)
+
+          | B.Bitv_smod n, [ x; y ] ->
+            E.mk_bvsmod n (aux_mk_expr x) (aux_mk_expr y)
 
           | B.Bitv_ashr n, [ x; y ] ->
             E.mk_bvashr n (aux_mk_expr x) (aux_mk_expr y)
