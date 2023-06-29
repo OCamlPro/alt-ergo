@@ -49,6 +49,26 @@ and trecord = {
   record_constr : Hstring.t; (* for ADTs that become records. default is "{" *)
 }
 
+module Smtlib = struct
+  let rec pp ppf = function
+    | Tint -> Fmt.pf ppf "Int"
+    | Treal -> Fmt.pf ppf "Real"
+    | Tbool -> Fmt.pf ppf "Bool"
+    | Tunit -> Fmt.pf ppf "unit"
+    | Tbitv n -> Fmt.pf ppf "(_ BitVec %d)" n
+    | Tfarray (a_t, r_t) ->
+      Fmt.pf ppf "(Array %a %a)" pp a_t pp r_t
+    | Tsum (name, _) | Text ([], name)
+    | Trecord { args = []; name; _ } | Tadt (name, []) ->
+      Fmt.pf ppf "%a" Hstring.print name
+    | Text (args, name) | Trecord { args; name; _ } | Tadt (name, args) ->
+      Fmt.(pf ppf "(@[%a %a@])" Hstring.print name (list ~sep:sp pp) args)
+    | Tvar { v; value = None; _ } -> Fmt.pf ppf "A%d" v
+    | Tvar { value = Some t; _ } -> pp ppf t
+end
+
+let pp_smtlib = Smtlib.pp
+
 exception TypeClash of t*t
 exception Shorten of t
 
@@ -83,15 +103,9 @@ let print_generic body_of =
   let rec print =
     let open Format in
     fun body_of fmt -> function
-      | Tint ->
-        if Options.get_output_smtlib () then fprintf fmt "Int"
-        else fprintf fmt "int"
-      | Treal ->
-        if Options.get_output_smtlib () then fprintf fmt "Real"
-        else fprintf fmt "real"
-      | Tbool ->
-        if Options.get_output_smtlib () then fprintf fmt "Bool"
-        else fprintf fmt "bool"
+      | Tint -> fprintf fmt "int"
+      | Treal -> fprintf fmt "real"
+      | Tbool -> fprintf fmt "bool"
       | Tunit -> fprintf fmt "unit"
       | Tbitv n -> fprintf fmt "bitv[%d]" n
       | Tvar{v=v ; value = None} -> fprintf fmt "'a_%d" v
@@ -106,27 +120,15 @@ let print_generic body_of =
         (*fprintf fmt "('a_%d->%a)" v print t *)
         print body_of fmt t
       | Text(l, s) when l == [] ->
-        if Options.get_output_smtlib () then fprintf fmt "%s" (Hstring.view s)
-        else fprintf fmt "<ext>%s" (Hstring.view s)
+        fprintf fmt "<ext>%s" (Hstring.view s)
       | Text(l,s) ->
-        if Options.get_output_smtlib () then
-          fprintf fmt "(%s %a)" (Hstring.view s) print_list l
-        else fprintf fmt "%a <ext>%s" print_list l (Hstring.view s)
+        fprintf fmt "%a <ext>%s" print_list l (Hstring.view s)
       | Tfarray (t1, t2) ->
-        if Options.get_output_smtlib () then
-          fprintf fmt "(Array %a %a)"  (print body_of) t1 (print body_of) t2
-        else
-          fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
+        fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
       | Tsum(s, _) ->
-        if Options.get_output_smtlib () then
-          fprintf fmt "%s" (Hstring.view s)
-        else fprintf fmt "<sum>%s" (Hstring.view s)
+        fprintf fmt "<sum>%s" (Hstring.view s)
       | Trecord { args = lv; name = n; lbs = lbls; _ } ->
-        if Options.get_output_smtlib () then begin
-          if lv == [] then fprintf fmt "%s" (Hstring.view n)
-          else fprintf fmt "%a %s" print_list lv (Hstring.view n)
-        end
-        else begin
+        begin
           fprintf fmt "%a <record>%s" print_list lv (Hstring.view n);
           if body_of != None then begin
             fprintf fmt " = {";
@@ -176,6 +178,17 @@ let print_generic body_of =
       Format.fprintf fmt "(%a" (print body_of) t;
       List.iter (Format.fprintf fmt ", %a" (print body_of)) l;
       Format.fprintf fmt ")"
+  in
+  let print body_of ppf t =
+    if Options.get_output_smtlib () then
+      pp_smtlib ppf t
+    else
+      print body_of ppf t
+  and print_list ppf ts =
+    if Options.get_output_smtlib () then
+      Fmt.(list ~sep:sp pp_smtlib |> parens) ppf ts
+    else
+      print_list ppf ts
   in
   print, print_list
 
