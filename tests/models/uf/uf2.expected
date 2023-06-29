@@ -1,18 +1,7 @@
 
 unknown
 (
-  
- ; Functions
-
-(define-fun f ((arg_0 Int)) Int (ite (= arg_0 a) 2 0))
-
- ; Constants
-
-(define-fun a () Int 0)
-
-(define-fun b () Int (- 2))
-
- ; Arrays not yet supported
-
-
+  (define-fun f ((arg_0 Int)) Int (ite (= arg_0 a) 2 0))
+  (define-fun a () Int 0)
+  (define-fun b () Int (- 2))
 )

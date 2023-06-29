@@ -1,14 +1,5 @@
 
 unknown
 (
-  
- ; Functions
-
- ; Constants
-
-(define-fun x () Int 0)
-
- ; Arrays not yet supported
-
-
+  (define-fun x () Int 0)
 )
