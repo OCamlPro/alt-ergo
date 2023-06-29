@@ -54,21 +54,46 @@ module TB =
         if c <> 0 then c else Stdlib.compare b1 b2
     end)
 
-type t =
-  { pending_deds      : Ex.t ME2.t;
-    guarded_pos_deds  : SE2.t ME.t;
-    guarded_neg_deds  : SE2.t ME.t;
-    assumed_pos_preds : Ex.t ME.t;
-    assumed_neg_preds : Ex.t ME.t;
-  }
+(* The present theory simplifies the ite terms t of the form
+    ite(pred, t1, t2)
+   where pred is an assumed predicate by introducing the equation
+   t = t1 or t = t2 according to the truth value of pred. *)
 
-let empty _ =
-  { pending_deds  = ME2.empty;
-    guarded_pos_deds  = ME.empty;
-    guarded_neg_deds  = ME.empty;
-    assumed_pos_preds = ME.empty;
-    assumed_neg_preds = ME.empty;
-  }
+type t = {
+  pending_deds      : Ex.t ME2.t;
+  (* Map of pending deductions to their explanation. A deduction is an equation
+     of the form t = b where t is an ite term and b is one of its branches.
+     A deduction is added to pending_deds if the condition of the ite term
+     is entailed by the current state of the solver. If so, the appropriate
+     branch is selected according to the truth value of the condition. *)
+
+  guarded_pos_deds  : SE2.t ME.t;
+  (* Map of the condition of ite terms to its if branch.
+     This map contains only condition that was not entailed yet by the
+     current state of the solver during the registration of the ite term. *)
+
+  guarded_neg_deds  : SE2.t ME.t;
+  (* Map of the condition of ite terms to its else branch.
+     This map contains only condition whose the negation was not entailed yet
+     by the current state of the solver during the registration of the ite
+     term. *)
+
+  assumed_pos_preds : Ex.t ME.t;
+  (* Map of all the predicates entailed by the current state of the solver to
+     their explanation. *)
+
+  assumed_neg_preds : Ex.t ME.t;
+  (* Map of all the predicates whose the negation is entailed by the current
+     state of the solver to their explanation. *)
+}
+
+let empty _ = {
+  pending_deds      = ME2.empty;
+  guarded_pos_deds  = ME.empty;
+  guarded_neg_deds  = ME.empty;
+  assumed_pos_preds = ME.empty;
+  assumed_neg_preds = ME.empty;
+}
 
 let is_ite =
   let ite = Symbols.Op Symbols.Tite in
@@ -81,6 +106,10 @@ let add_to_guarded p s t mp =
   let st = try ME.find p mp with Not_found -> SE2.empty in
   ME.add p (SE2.add (s, t) st) mp
 
+(* Check if the condition of the ite t is a predicate entailed by the current
+   state of the solver. If so, select the appropriate branch b of the ite and
+   produce the deduction t = b. Otherwise save the if and else branches of t
+   in order to retrieve them quickly in the assume function. *)
 let add_aux env t =
   if Options.get_disable_ites () then env
   else
@@ -107,7 +136,8 @@ let add_aux env t =
 let add env _ _ t =
   add_aux env t, []
 
-
+(* Extract all the assumed predicates with their explanation from the input of
+   the function assume below. *)
 let extract_preds env la =
   List.fold_left
     (fun acc (_ra, root, expl, _orig) ->
@@ -126,7 +156,8 @@ let extract_preds env la =
          | _ -> acc
     )TB.empty la
 
-
+(* Transform the pending deductions into facts in order to return them in the
+   function assume below. *)
 let extract_pending_deductions env =
   let l =
     ME2.fold
@@ -144,6 +175,9 @@ let extract_pending_deductions env =
   in
   {env with pending_deds = ME2.empty}, l
 
+(* Save in the environment env all the assumed predicates of la. Produce new
+   deductions implied by these new assumed predicates.
+   Eventually, return all the pending deductions. *)
 let assume env _ la =
   if Options.get_disable_ites () then env, { Sig_rel.assume = []; remove = [] }
   else

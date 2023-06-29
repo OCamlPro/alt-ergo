@@ -255,10 +255,6 @@ let main () =
     | Some (bt, exn) -> handle_exn st bt exn; st
     | _ -> st
   in
-  let mk_file ?lang ?mode ?(source = `Raw ("", ""))
-      ?(loc = Dolmen.Std.Loc.mk_file "") dir: _ State.file =
-    { lang; mode; dir; source; loc; }
-  in
   let set_output_format fmt =
     if Options.get_infer_output_format () then
       match fmt with
@@ -300,7 +296,7 @@ let main () =
     in
     let dir = Filename.dirname path in
     let filename = Filename.basename path in
-    let language =
+    let lang =
       if Options.get_infer_input_format() then None else
         match Options.get_input_format () with
         | Options.Native -> Some Dl.Logic.Alt_ergo
@@ -325,13 +321,9 @@ let main () =
         `Raw (filename, content))
     in
     let logic_file =
-      mk_file
-        ?lang:language
-        ~source
-        ~loc:(Dolmen.Std.Loc.mk_file path)
-        dir
+      State.mk_file ?lang ~loc:(Dolmen.Std.Loc.mk_file path) dir source
     in
-    let response_file = mk_file dir in
+    let response_file = State.mk_file dir (`Raw ("", "")) in
     logic_file,
     State.empty
     |> State.set solver_ctx_key solver_ctx
