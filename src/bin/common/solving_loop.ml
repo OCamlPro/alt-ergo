@@ -291,6 +291,7 @@ let main () =
         |> disable "unused-type-var"
         |> disable "unused-term-var"
         |> disable "extra-dstr"
+        |> disable "shadowing"
       )
     in
     let dir = Filename.dirname path in
