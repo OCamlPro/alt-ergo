@@ -451,20 +451,20 @@ let mk_term_opt disable_ites inline_lets rewriting no_term_like_pp
   set_inline_lets inline_lets;
   `Ok()
 
-let mk_theory_opt disable_adts () no_ac no_contracongru
+let mk_theory_opt () no_contracongru
     no_fm no_nla no_tcp no_theory restricted tighten_vars
-    _use_fpa theory_preludes
+    _use_fpa (theories)
   =
-  set_no_ac no_ac;
+  set_no_ac (not (List.mem Theories.AC theories));
   set_no_fm no_fm;
   set_no_nla no_nla;
   set_no_tcp no_tcp;
   set_no_theory no_theory;
   set_restricted restricted;
-  set_disable_adts disable_adts;
+  set_disable_adts (not (List.mem Theories.ADT theories));
   set_tighten_vars tighten_vars;
   set_no_contracongru no_contracongru;
-  set_theory_preludes theory_preludes;
+  set_theory_preludes (Theories.preludes theories);
   `Ok()
 
 let halt_opt version_info where =
@@ -1244,10 +1244,6 @@ let parse_theory_opt =
 
   let docs = s_theory in
 
-  let disable_adts =
-    let doc = "Disable Algebraic Datatypes theory." in
-    Arg.(value & flag & info ["disable-adts"] ~docs ~doc) in
-
   let inequalities_plugin =
     let load_inequalities_plugin debug path =
       let debug = List.exists (List.mem Debug.Fm) debug in
@@ -1276,11 +1272,6 @@ let parse_theory_opt =
     in
     Term.term_result' term
   in
-
-  let no_ac =
-    let doc = "Disable the AC theory of Associative and \
-               Commutative function symbols." in
-    Arg.(value & flag & info ["no-ac"] ~docs ~doc) in
 
   let no_contracongru =
     let doc = "Disable contracongru." in
@@ -1322,73 +1313,87 @@ let parse_theory_opt =
 
   let theories =
     let theory_enum =
-      Preludes.all
-      |> List.map (fun t -> Format.asprintf "%a" Preludes.pp t, t)
+      Theories.all
+      |> List.map (fun t -> Format.asprintf "%a" Theories.pp t, t)
     in
     let theory = Arg.enum theory_enum in
-    let enable_preludes =
+    let enable_theories =
       let doc =
-        Format.asprintf "Enable theory preludes, multiple comma-separated values
+        Format.asprintf "Enable builtin theory, multiple comma-separated values
         are supported. $(docv) must be %s."
           (Arg.doc_alts_enum theory_enum)
       in
       let docv = "THEORY" in
-      Arg.(
-        value & opt (list theory) [] & info ["enable-preludes"] ~docs ~doc ~docv
-      )
-    and disable_preludes =
+      Term.(const List.concat $
+            Arg.(
+              value
+              & opt_all (list theory) []
+              & info ["enable-theory"; "enable-theories"] ~docs ~doc ~docv
+            ))
+    and disable_theories =
       let doc =
-        Format.asprintf "Disable theory preludes, multiple comma-separated
+        Format.asprintf "Disable builtin theory, multiple comma-separated
         values are supported. THEORY must be %s."
           (Arg.doc_alts_enum theory_enum)
       in
       let docv = "THEORY" in
-      Arg.(
-        value & opt (list theory) [] &
-        info ["disable-preludes"] ~docs ~doc ~docv
-      )
-    and disable_builtin_preludes =
-      let doc = "Disable all default theory preludes. Prefer using
-      $(i,--disable-preludes) to explicitly disable problematic theory preludes.
-      Select theory preludes can be re-enabled with $(i,--enable-preludes)." in
-      Arg.(
-        value & flag & info ["disable-default-preludes"] ~doc ~docs
-      )
-    in
-    let preludes enable_preludes disable_preludes disable_builtin_preludes =
-      let preludes =
-        if disable_builtin_preludes then
-          []
-        else
-          Preludes.default
+      let disable_theories =
+        Term.(const List.concat $
+              Arg.(
+                value
+                & opt_all (list theory) []
+                & info ["disable-theory"; "disable-theories"] ~docs ~doc ~docv
+              ))
       in
+      let disable_adts =
+        let doc = "Disable Algebraic Datatypes theory. Deprecated alias for
+        `--disable-theories adt`." in
+        let deprecated = "use `--disable-theories ac` instead." in
+        Arg.(value & flag & info ["disable-adts"] ~docs ~doc ~deprecated)
+      in
+      let no_ac =
+        let doc = "Disable the AC theory of Associative and \
+                   Commutative function symbols. Deprecated alias for
+                  `--disable-theories ac`." in
+        let deprecated = "use `--disable-theories ac` instead" in
+        Arg.(value & flag & info ["no-ac"] ~docs ~doc ~deprecated)
+      in
+      let mk_disable_theories disable_theories disable_adts no_ac =
+        let open Theories in
+        (if disable_adts then [ ADT ] else []) @
+        (if no_ac then [ AC ] else []) @
+        disable_theories
+      in
+      Term.(const mk_disable_theories $ disable_theories $ disable_adts $ no_ac)
+    in
+    let preludes enable_theories disable_theories =
+      let theories = Theories.default in
       let rec aux th en dis =
         match en, dis with
         | _ :: _, [] -> aux (List.rev_append en th) [] []
         | e :: _, d :: _ when e = d ->
           Fmt.error_msg "theory prelude '%a' cannot be both enabled and
-          disabled" Preludes.pp e
+          disabled" Theories.pp e
         | e :: en, d :: _ when e < d -> aux (e :: th) en dis
         | _ , d :: dis -> aux (List.filter ((<>) d) th) en dis
         | [], [] -> Ok th
       in
       aux
-        preludes
-        (List.fast_sort compare enable_preludes)
-        (List.fast_sort compare disable_preludes)
+        theories
+        (List.fast_sort compare enable_theories)
+        (List.fast_sort compare disable_theories)
     in
     Term.(
       cli_parse_result (
         const preludes
-        $ enable_preludes
-        $ disable_preludes
-        $ disable_builtin_preludes
+        $ enable_theories
+        $ disable_theories
       )
     )
   in
 
   Term.(ret (const mk_theory_opt $
-             disable_adts $ inequalities_plugin $ no_ac $ no_contracongru $
+             inequalities_plugin $ no_contracongru $
              no_fm $ no_nla $ no_tcp $ no_theory $ restricted $
              tighten_vars $ use_fpa $ theories
             )
