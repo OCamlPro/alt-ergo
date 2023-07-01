@@ -159,8 +159,8 @@ let main () =
           Options.get_theory_preludes ()
           |> List.to_seq
           |> Seq.flat_map (fun theory ->
-              let filename = Preludes.filename theory in
-              let content = Preludes.content theory in
+              let filename = Theories.filename theory in
+              let content = Theories.content theory in
               with_infer_input_format true @@ fun () ->
               with_infer_output_format false @@ fun () ->
               I.parse_file
@@ -546,8 +546,8 @@ let main () =
       let theory_preludes =
         Options.get_theory_preludes ()
         |> List.map (fun theory ->
-            let filename = Preludes.filename theory in
-            let content = Preludes.content theory in
+            let filename = Theories.filename theory in
+            let content = Theories.content theory in
             State.mk_file builtin_dir (`Raw (filename, content)))
       in
       let preludes =

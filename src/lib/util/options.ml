@@ -271,7 +271,7 @@ let input_format = ref Native
 let infer_input_format = ref true
 let parse_only = ref false
 let preludes = ref []
-let theory_preludes = ref Preludes.default
+let theory_preludes = ref Theories.default_preludes
 let type_only = ref false
 let type_smt2 = ref false
 
