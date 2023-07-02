@@ -323,31 +323,34 @@ module SmtlibCounterExample = struct
       with _ -> t
     in
 
-    Printer.print_fmt ~flushed:false fmt
-      "(define-fun %a (%a) %a %s)@ "
+    Format.fprintf fmt
+      "@ (define-fun %a (%a) %a %s)"
       Sy.print name
       (Printer.pp_list_space (print_args)) args
       Ty.print ty
       defined_value
 
-  let output_constants_counterexample fmt records cprofs =
+  let output_constants_counterexample ?(ignored = Sy.Set.empty) fmt records =
     ModelMap.iter
       (fun (f, xs_ty, ty) st ->
          assert (xs_ty == []);
-         match ModelMap.V.elements st with
-         | [[], rep] ->
-           let rep = Format.asprintf "%a" x_print rep in
-           let rep =
-             match ty with
-             | Ty.Trecord r ->
-               let constr = mk_records_constr records f r in
-               sprintf "(%s)" constr
-             | _ -> rep
-           in
+         begin match ty with
+           | Ty.Tfarray _ when Sy.Set.mem f ignored -> ()
+           | _ ->
+             match ModelMap.V.elements st with
+             | [[], rep] ->
+               let rep = Format.asprintf "%a" x_print rep in
+               let rep =
+                 match ty with
+                 | Ty.Trecord r ->
+                   let constr = mk_records_constr records f r in
+                   sprintf "(%s)" constr
+                 | _ -> rep
+               in
 
-           print_fun_def fmt f [] ty rep
-         | _ -> assert false
-      ) cprofs
+               print_fun_def fmt f [] ty rep
+             | _ -> assert false
+         end)
 
   let output_functions_counterexample fmt records fprofs =
     let  records = ref records in
@@ -422,8 +425,28 @@ module SmtlibCounterExample = struct
       ) fprofs;
     !records
 
-  let output_arrays_counterexample fmt _arrays =
-    Printer.print_fmt fmt "@ ; Arrays not yet supported@ "
+  let output_arrays_counterexample fmt arrays =
+    let pp_array ppf (symbol, dty, st) =
+      let abstract =
+        Format.dprintf "(as @@%a %t)" Sy.print symbol dty
+      in
+      ModelMap.V.fold (fun (keys, (_value_r, value_s)) rst ->
+          Format.dprintf "(@[<hv>store@ %t@ %a %s)@]"
+            rst
+            Fmt.(list ~sep:sp (using (fun (_, (_, s)) -> s) string)) keys
+            value_s
+        ) st abstract ppf
+    in
+    let pp_array_ty ppf (args_ty, ret_ty) =
+      Format.fprintf ppf "(@[Array@ %a@ %a)@]"
+        Fmt.(list ~sep:sp Ty.print) args_ty
+        Ty.print ret_ty
+    in
+    ModelMap.iter
+      (fun (f, xs_ty, ty) st ->
+         let dty = Format.dprintf "%a" pp_array_ty (xs_ty, ty) in
+         Format.fprintf fmt "@ (@[define-fun %a () %t@ %a)@]"
+           Sy.print f dty pp_array (f, dty, st)) arrays
 
 end
 (* of module SmtlibCounterExample *)
@@ -432,41 +455,48 @@ module Why3CounterExample = struct
 
   let output_constraints fmt prop_model =
     let assertions = SE.fold (fun e acc ->
-        (asprintf "%s(assert %a)@ " acc SmtlibCounterExample.pp_term e)
-      ) prop_model "" in
-    Printer.print_fmt ~flushed:false fmt "@ ; constants@ ";
+        (dprintf "%t(assert %a)@ " acc SmtlibCounterExample.pp_term e)
+      ) prop_model (dprintf "") in
+    Format.fprintf fmt "@ ; constraints@ ";
     MS.iter (fun _ (name,ty,args_ty) ->
         match args_ty with
         | [] ->
-          Printer.print_fmt ~flushed:false fmt "(declare-const %s %s)@ "
+          Format.fprintf fmt "(declare-const %s %s)@ "
             name ty
         | l ->
-          Printer.print_fmt ~flushed:false fmt "(declare-fun %s (%s) %s)@ "
+          Format.fprintf fmt "(declare-fun %s (%s) %s)@ "
             name
             (String.concat " " l)
             ty
       ) !constraints;
-    Printer.print_fmt ~flushed:false fmt "@ ; assertions@ ";
-    Printer.print_fmt fmt ~flushed:false "%s" assertions
+    Format.fprintf fmt "@ ; assertions@ ";
+    Format.fprintf fmt "%t" assertions
 
 end
 (* of module Why3CounterExample *)
 
 let output_concrete_model fmt props ~functions ~constants ~arrays =
-  Printer.print_fmt ~flushed:false fmt "@[<v 2>(@,";
+  Format.fprintf fmt "@[<v 2>(";
   if Options.get_model_type_constraints () then
     begin
-      Why3CounterExample.output_constraints fmt props
+      Why3CounterExample.output_constraints fmt props;
+      Format.fprintf fmt "@ ; values"
     end;
 
-  Printer.print_fmt fmt "@ ; Functions@ ";
+  (* Functions *)
   let records = SmtlibCounterExample.output_functions_counterexample
       fmt  MS.empty functions in
 
-  Printer.print_fmt fmt "@ ; Constants@ ";
-  SmtlibCounterExample.output_constants_counterexample
-    fmt records constants;
+  let array_symbols =
+    ModelMap.fold (fun (f, _, _) _ -> Sy.Set.add f) arrays Sy.Set.empty
+  in
 
+  (* Constants *)
+  (* If the constant is present in the arrays map, it will be printed there. *)
+  SmtlibCounterExample.output_constants_counterexample
+    ~ignored:array_symbols fmt records constants;
+
+  (* Arrays *)
   SmtlibCounterExample.output_arrays_counterexample fmt arrays;
 
-  Printer.print_fmt fmt "@]@ )";
+  Printer.print_fmt fmt "@]@,)";

@@ -348,7 +348,7 @@ val set_infer_output_format : bool -> unit
 val set_preludes : string list -> unit
 
 (** Set [theory_preludes] accessible with {!val:get_theory_preludes} *)
-val set_theory_preludes : Preludes.t list -> unit
+val set_theory_preludes : Theories.prelude list -> unit
 
 (** Set [disable_weaks] accessible with {!val:get_disable_weaks} *)
 val set_disable_weaks : bool -> unit
@@ -633,7 +633,7 @@ val get_preludes : unit -> string list
 (** Default to [\[\]] *)
 
 (** List of theory preludes to load. *)
-val get_theory_preludes : unit -> Preludes.t list
+val get_theory_preludes : unit -> Theories.prelude list
 
 (** [true] if the program shall stop after typing. *)
 val get_type_only : unit -> bool
