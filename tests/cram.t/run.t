@@ -16,3 +16,32 @@ appropriate here.
     (define-fun y () Int 0)
     (define-fun a1 () (Array Int Int) (store (as @a1 (Array Int Int)) 0 0))
   )
+
+Now we will test some semantic triggers.
+
+  $ alt-ergo --frontend legacy -o smtlib2 semantic_triggers.ae 2>/dev/null
+  
+  unknown
+  
+  unsat
+  
+  unsat
+  $ alt-ergo --frontend dolmen -o smtlib2 semantic_triggers.ae 2>/dev/null
+  
+  unknown
+  
+  unsat
+  
+  unsat
+
+And some SMT2 action.
+
+  $ alt-ergo --frontend dolmen -o smtlib2 --prelude prelude.ae postlude.smt2 2>/dev/null
+  
+  unknown
+  
+  unsat
+  
+  unknown
+  
+  unsat

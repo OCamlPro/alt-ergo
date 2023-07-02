@@ -1,0 +1,14 @@
+(* This is conceptually [<=] but we don't let Alt-Ergo know *)
+logic my_leq : real, real -> bool
+
+theory My_theory extends FPA =
+  axiom triggers :
+    forall x : real [ int_floor(x), x in ]0., ?] ]. my_leq(real_of_int(int_floor(x)), x)
+end
+
+logic f : real -> real
+
+theory F_theory extends FPA =
+  axiom f_triggers :
+    forall x : real [ int_floor(x), x in ]0., ?] ]. my_leq(f(x), x)
+end
