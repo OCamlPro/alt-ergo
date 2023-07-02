@@ -1248,6 +1248,12 @@ let mk_bvsign n t =
   let t1 = mk_bvextract (n-1) (n-1) t n in
   mk_eq ~iff:false t1 bvone
 
+let mk_bvsign_pos n t =
+  mk_eq ~iff:false (mk_bvsign n t) bvone
+
+let mk_bvsign_neg n t =
+  mk_eq ~iff:false (mk_bvsign n t) bvzero
+
 let mk_bv2nat t =
   mk_term (Sy.Op Sy.BV2Nat) [t] Ty.Tint
 
@@ -1271,17 +1277,23 @@ let mk_bvule n x y =
     mk_builtin ~is_pos:true Sy.LE [ mk_bv2nat x; mk_bv2nat y ]
 
 let mk_bvslt n x y =
-  let xsign = mk_bvsign n x in
-  let ysign = mk_bvsign n y in
-  let c1 = mk_and xsign (neg ysign) false in
-  let c2 = mk_and (mk_eq ~iff:true xsign ysign) (mk_bvult n x y) false in
+  let xsign_pos = mk_bvsign_pos n x in
+  let ysign_pos = mk_bvsign_pos n y in
+  let ysign_neg = mk_bvsign_neg n y in
+  let c1 = mk_and xsign_pos ysign_neg false in
+  let c2 =
+    mk_and (mk_eq ~iff:true xsign_pos ysign_pos) (mk_bvult n x y) false
+  in
   mk_or c1 c2 false
 
 let mk_bvsle n x y =
-  let xsign = mk_bvsign n x in
-  let ysign = mk_bvsign n y in
-  let c1 = mk_and xsign (neg ysign) false in
-  let c2 = mk_and (mk_eq ~iff:true xsign ysign) (mk_bvule n x y) false in
+  let xsign_pos = mk_bvsign_pos n x in
+  let ysign_pos = mk_bvsign_pos n y in
+  let ysign_neg = mk_bvsign_neg n y in
+  let c1 = mk_and xsign_pos ysign_neg false in
+  let c2 =
+    mk_and (mk_eq ~iff:true xsign_pos ysign_pos) (mk_bvule n x y) false
+  in
   mk_or c1 c2 false
 
 let mk_bvadd n x y =
@@ -1316,65 +1328,71 @@ let mk_bvurem n x y =
   mk_ite cond x alt
 
 let mk_bvsdiv n x y =
-  let xsign = mk_bvsign n x in
-  let ysign = mk_bvsign n y in
+  let xsign_pos = mk_bvsign_pos n x in
+  let ysign_pos = mk_bvsign_pos n y in
+  let xsign_neg = mk_bvsign_neg n x in
+  let ysign_neg = mk_bvsign_neg n y in
   let ite1 =
     mk_ite
-      (mk_and (neg xsign) ysign false)
+      (mk_and xsign_neg ysign_pos false)
       (mk_bvneg n (mk_bvudiv n x (mk_bvneg n y)))
       (mk_bvudiv n (mk_bvneg n x) (mk_bvneg n y))
   in
   let ite2 =
     mk_ite
-      (mk_and xsign (neg ysign) false)
+      (mk_and xsign_pos ysign_neg false)
       (mk_bvneg n (mk_bvudiv n (mk_bvneg n x) y))
       ite1
   in
   mk_ite
-    (mk_and (neg xsign) (neg ysign) false) (mk_bvudiv n x y) ite2
+    (mk_and xsign_neg ysign_neg false) (mk_bvudiv n x y) ite2
 
 let mk_bvsrem n x y =
-  let xsign = mk_bvsign n x in
-  let ysign = mk_bvsign n y in
+  let xsign_pos = mk_bvsign_pos n x in
+  let ysign_pos = mk_bvsign_pos n y in
+  let xsign_neg = mk_bvsign_neg n x in
+  let ysign_neg = mk_bvsign_neg n y in
   let ite1 =
     mk_ite
-      (mk_and (neg xsign) ysign false)
+      (mk_and xsign_neg ysign_pos false)
       (mk_bvurem n x (mk_bvneg n y))
       (mk_bvneg n (mk_bvurem n (mk_bvneg n x) (mk_bvneg n y)))
   in
   let ite2 =
     mk_ite
-      (mk_and xsign (neg ysign) false)
+      (mk_and xsign_pos ysign_neg false)
       (mk_bvneg n (mk_bvurem n (mk_bvneg n x) y))
       ite1
   in
   mk_ite
-    (mk_and (neg xsign) (neg ysign) false) (mk_bvurem n x y) ite2
+    (mk_and xsign_neg ysign_neg false) (mk_bvurem n x y) ite2
 
 let mk_bvsmod n x y =
-  let xsign = mk_bvsign n x in
-  let ysign = mk_bvsign n y in
+  let xsign_pos = mk_bvsign_pos n x in
+  let ysign_pos = mk_bvsign_pos n y in
+  let xsign_neg = mk_bvsign_neg n x in
+  let ysign_neg = mk_bvsign_neg n y in
   let ite1 =
     mk_ite
-      (mk_and (neg xsign) ysign false)
+      (mk_and xsign_neg ysign_pos false)
       (mk_bvadd n (mk_bvurem n x (mk_bvneg n y)) y)
       (mk_bvneg n (mk_bvurem n (mk_bvneg n x) (mk_bvneg n y)))
   in
   let ite2 =
     mk_ite
-      (mk_and xsign (neg ysign) false)
+      (mk_and xsign_pos ysign_neg false)
       (mk_bvadd n (mk_bvneg n (mk_bvurem n (mk_bvneg n x) y)) y)
       ite1
   in
   mk_ite
-    (mk_and (neg xsign) (neg ysign) false) (mk_bvurem n x y) ite2
+    (mk_and xsign_neg ysign_neg false) (mk_bvurem n x y) ite2
 
 let mk_bvlshr n x y =
   mk_term (Sy.Op BVlshr) [x; y] (Ty.Tbitv n)
 
 let mk_bvashr n x y =
   mk_ite
-    (neg (mk_bvsign n x))
+    (mk_bvsign_neg n x)
     (mk_bvlshr n x y)
     (mk_bvnot n (mk_bvlshr n (mk_bvnot n x) y))
 
