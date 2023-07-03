@@ -900,8 +900,6 @@ let term_repr uf t =
   try SE.min_elt st
   with Not_found -> t
 
-let class_of env t = SE.elements (class_of env t)
-
 let empty () =
   let env = {
     make  = ME.empty;

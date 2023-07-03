@@ -63,7 +63,7 @@ module type S = sig
     (r Xliteral.view * bool * Th_util.lit_origin) list * t
   val query :  t -> Expr.t -> Th_util.answer
   val new_terms : t -> Expr.Set.t
-  val class_of : t -> Expr.t -> Expr.t list
+  val class_of : t -> Expr.t -> Expr.Set.t
   val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> Th_util.answer
   val are_distinct : t -> Expr.t -> Expr.t -> Th_util.answer
   val cl_extract : t -> Expr.Set.t list
