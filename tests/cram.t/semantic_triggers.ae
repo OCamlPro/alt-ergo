@@ -1,0 +1,21 @@
+logic f : real -> real
+logic b : real, real -> bool
+
+theory Test_theory extends FPA =
+  axiom f_le :
+    forall x : real [ f(x), x in ]0., ?] ]. f(x) <= x
+
+  axiom extract_bounds :
+    forall x, y, i, j : real [ f(x), x in [i, j], y |-> i + j ]. b(x, y)
+end
+
+logic x : real
+
+(* This should fail: the semantic trigger will not match *)
+goal g : f(x) <= x
+
+(* This should succeed: the semantic trigger will match *)
+goal g : x > 10. -> f(x) <= x
+
+(* This should succeed *)
+goal g : f(x) = x -> 3. <= x -> x <= 7. -> b(x, 10.)

@@ -42,6 +42,12 @@ module DT = DE.Ty
 module Id = DStd.Id
 module B = DStd.Builtin
 
+module Shared = struct
+  (* Shared constants to avoid allocations*)
+
+  let qm = Sy.VarBnd (Var.of_string "?")
+end
+
 module HT = Hashtbl.Make(
   struct
     type t = int
@@ -73,13 +79,25 @@ module Cache = struct
   let ae_ty_ht: Ty.t HT.t = HT.create 100
 
   let store_sy ind sy =
-    HT.add ae_sy_ht ind sy
+    HT.add ae_sy_ht (DE.Id.hash ind) sy
 
   let store_ty ind ty =
     HT.add ae_ty_ht ind ty
 
   let find_sy ind =
-    HT.find ae_sy_ht ind
+    HT.find ae_sy_ht (DE.Id.hash ind)
+
+  let find_var ind =
+    match find_sy ind with
+    | Sy.Var v -> v
+    | sym ->
+      Util.failwith
+        "Internal error: Expected to find a variable symbol,\
+         instead found (%a)"
+        Sy.print sym
+
+  let store_var ind v =
+    store_sy ind (Sy.var v)
 
   let find_ty ind =
     HT.find ae_ty_ht ind
@@ -125,7 +143,7 @@ module Cache = struct
     List.iter (
       fun ({ DE.path; _ } as tv) ->
         let name = get_basename path in
-        store_sy (DE.Term.Var.hash tv) (Sy.name name)
+        store_sy tv (Sy.name name)
     ) tvl
 
   let store_ty_vars ?(is_var = true) ty =
@@ -544,7 +562,7 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
       | _ -> Sy.name name
     end
   in
-  Cache.store_sy (DE.Term.Const.hash tcst) sy;
+  Cache.store_sy tcst sy;
   (* Adding polymorphic types to the cache. *)
   Cache.store_ty_vars id_ty
 
@@ -674,7 +692,7 @@ let handle_patt_var name (DE.{ term_descr; _ } as term)  =
     let n = Hstring.make name in
     let v = Var.of_hstring n in
     let sy = Sy.Var v in
-    Cache.store_sy (DE.Term.Var.hash ty_c) sy;
+    Cache.store_sy ty_c sy;
     v, n, ty
 
   | Var ({ builtin = B.Base; id_ty; _ } as ty_v) ->
@@ -682,7 +700,7 @@ let handle_patt_var name (DE.{ term_descr; _ } as term)  =
     let n = Hstring.make name in
     let v = Var.of_hstring n in
     let sy = Sy.Var v in
-    Cache.store_sy (DE.Term.Var.hash ty_v) sy;
+    Cache.store_sy ty_v sy;
     v, n, ty
 
   | _ ->
@@ -737,11 +755,87 @@ let mk_pattern DE.{ term_descr; _ } =
        instead of re-evaluating it here? *)
     let v = Var.of_string (get_basename path) in
     let sy = Sy.var v in
-    Cache.store_sy (DE.Term.Var.hash t_v) sy;
+    Cache.store_sy t_v sy;
     (* Adding the matched variable to the store *)
     Typed.Var v
 
   | _ -> assert false
+
+let arith_ty = function
+  | `Int -> Ty.Tint
+  | `Real -> Ty.Treal
+  | `Rat ->
+    Util.failwith "rationals are not currently supported"
+
+(* Parse a semantic bound [x `b` y] and returns a tuple [(sort, lb, ub)] where:
+
+   - One of [x] or [y] *MUST* be the variable [var]
+   - [sort] is the sort of the bound ([Ty.Tint] or [Ty.Treal])
+   - [lb] is the (optional) lower bound for the variable [var]
+   - [ub] is the (optional) upper bound for the variable [var]
+*)
+let parse_semantic_bound ?(loc = Loc.dummy) ~var b x y =
+  let is_main_var { DE.term_descr; _ } =
+    match term_descr with
+    | DE.Var v -> DE.Id.equal v var
+    | _ -> false
+  in
+  assert (is_main_var x || is_main_var y);
+  let op, t =
+    match b with
+    | B.Lt t -> `Lt, t
+    | B.Leq t -> `Le, t
+    | B.Gt t -> `Gt, t
+    | B.Geq t -> `Ge, t
+    | _ ->
+      Util.failwith
+        "%aInternal error: invalid semantic bound"
+        Loc.report loc
+  in
+  let sort = arith_ty t in
+  let parse_bound_kind { DE.term_descr; _ } =
+    match term_descr with
+    | Cst { builtin = (B.Integer s | B.Rational s | B.Decimal s); _ } ->
+      Sy.ValBnd (Numbers.Q.from_string s)
+    | Var v -> Sy.VarBnd (Cache.find_var v)
+    | _ ->
+      Util.failwith
+        "%aInternal error: invalid semantic bound"
+        Loc.report loc
+  in
+  (* Parse [main_var `op` b] *)
+  let parse_bound ?(flip = false) b =
+    let b = parse_bound_kind b in
+    let is_open =
+      match op with
+      | `Lt | `Gt -> true
+      | `Le | `Ge -> false
+    and is_lower =
+      match op with
+      | `Lt | `Le -> flip
+      | `Gt | `Ge -> not flip
+    in
+    Sy.mk_bound b sort ~is_open ~is_lower
+  in
+  let bnd =
+    if is_main_var x then
+      parse_bound y
+    else
+      parse_bound ~flip:true x
+  in
+  if bnd.is_lower then sort, Some bnd, None else sort, None, Some bnd
+
+let destruct_let e =
+  match e.DE.term_descr with
+  | Binder (Let_seq ls, body) ->
+    Some (ls, body)
+  | _ -> None
+
+let destruct_app e =
+  match e.DE.term_descr with
+  | App ({ term_descr = Cst cst; _ }, _, args) ->
+    Some (cst.builtin, args)
+  | _ -> None
 
 (* Helper functions *)
 
@@ -780,8 +874,9 @@ let mk_add translate sy ty l =
 
     Builds an Alt-Ergo hashconsed expression from a dolmen term
 *)
-let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
-    ?(toplevel = false) ~decl_kind dt =
+let rec mk_expr
+    ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
+    ~decl_kind dt =
   let name_tag = ref 0 in
   let rec aux_mk_expr ?(toplevel = false)
       (DE.{ term_descr; term_ty; term_tags = root_tags; _ } as term) =
@@ -802,7 +897,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             E.bitv s ty
 
           | B.Base ->
-            let sy = Cache.find_sy (DE.Term.Const.hash tcst) in
+            let sy = Cache.find_sy tcst in
             let ty = dty_to_ty term_ty in
             E.mk_term sy [] ty
 
@@ -818,7 +913,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
 
       | Var ({ id_ty; _ } as ty_v) ->
         let ty = dty_to_ty id_ty in
-        let sy = Cache.find_sy (DE.Term.Var.hash ty_v) in
+        let sy = Cache.find_sy ty_v in
         E.mk_term sy [] ty
 
       | App (
@@ -904,6 +999,25 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
                 E.vrai
               | _ -> assert false
             end
+
+          | B.Semantic_trigger, [trigger] ->
+            (* Interval triggers contain a let-bound variable that represent the
+               "main" term of the interval. For instance, [e in [i, ?]]
+               becomes `semantic_trigger (let x = e in i ≤ x)`.
+            *)
+            let xs, trigger =
+              Option.value ~default:([], trigger) @@ destruct_let trigger
+            in
+            let var =
+              match xs with
+              | [] -> None
+              | [ var, value ] -> Some (var, value)
+              | _ ->
+                Util.failwith
+                  "%asemantic trigger should have at most one bound variable"
+                  Loc.report loc
+            in
+            semantic_trigger ~loc ?var trigger
 
           | B.Bitv_repeat { n; k }, [t] ->
             E.mk_term (Op (BV_repeat k)) [aux_mk_expr t] (Tbitv (n*k))
@@ -1036,28 +1150,6 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             let rty = dty_to_ty term_ty in
             E.mk_term (Sy.Op Sy.Get) [aux_mk_expr x; aux_mk_expr y] rty
 
-          | B.Maps_to, [ x; y ] ->
-            begin match x.term_descr with
-              | Var t_v ->
-                begin match Cache.find_sy (DE.Term.Var.hash t_v) with
-                  | Sy.Var v ->
-                    let rty = dty_to_ty term_ty in
-                    let sy = Sy.mk_maps_to v in
-                    let e2 = aux_mk_expr y in
-                    assert (rty == Ty.Tbool);
-                    E.mk_term sy [e2] rty
-                  | sym ->
-                    Util.failwith
-                      "Cache error: Expected to find a variable symbol\
-                       associated to (%a), instead found (%a)"
-                      DE.Term.print x Sy.print sym
-                end
-              | _ ->
-                Util.failwith
-                  "Maps_to: expected a variable but got: %a"
-                  DE.Term.print x
-            end
-
           (* Ternary applications *)
 
           | B.Ite, [ x; y; z ] ->
@@ -1077,7 +1169,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
 
           | B.Base, _ ->
             let ty = dty_to_ty term_ty in
-            let sy = Cache.find_sy (DE.Term.Const.hash tcst) in
+            let sy = Cache.find_sy tcst in
             let l = List.map (fun t -> aux_mk_expr t) args in
             E.mk_term sy l ty
 
@@ -1314,7 +1406,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
             fun ({ DE.path; _ } as tv, t) ->
               let name = get_basename path in
               let sy = Symbols.var @@ Var.of_string name in
-              Cache.store_sy (DE.Term.Var.hash tv) sy;
+              Cache.store_sy tv sy;
               sy,t
           ) ls
         in
@@ -1354,15 +1446,15 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
               fun (DE.{ path; id_ty; _ } as t_v) ->
                 dty_to_ty id_ty,
                 Var.of_string (get_basename path),
-                DE.Term.Var.hash t_v
+                t_v
             ) tvl
           in
           (* Set of binders *)
           let qvs =
             List.fold_left (
-              fun vl (ty, v, hash) ->
+              fun vl (ty, v, tv) ->
                 let sy = Sy.var v in
-                Cache.store_sy hash sy;
+                Cache.store_sy tv sy;
                 let e = E.mk_term sy [] ty in
                 SE.add e vl
             ) SE.empty ntvl
@@ -1415,18 +1507,111 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "")
       E.add_label lbl res;
       res
     | _ -> res
+
+  and semantic_trigger ?var ?(loc = Loc.dummy) t =
+    let cst, args =
+      match destruct_app t with
+      | Some (cst, args) -> cst, args
+      | None ->
+        Util.failwith
+          "invalid semantic trigger: %a"
+          DE.Term.print t
+    in
+    match cst, args with
+    (* x |-> y *)
+    | B.Maps_to, [ x; y ] ->
+      (* There should be no variable bound at the [semantic_trigger] level for
+         maps-to. *)
+      assert (Option.is_none var);
+      begin match x.term_descr with
+        | Var t_v ->
+          let v = Cache.find_var t_v in
+          let sy = Sy.mk_maps_to v in
+          let e2 = aux_mk_expr y in
+          E.mk_term sy [e2] Ty.Tbool
+        | _ ->
+          Util.failwith
+            "%aMaps_to: expected a variable but got: %a"
+            Loc.report loc DE.Term.print x
+      end
+
+    (* open-ended in interval *)
+    | (B.Lt _ | B.Leq _ | B.Gt _ | B.Geq _) as b, [x; y] ->
+      let main_var, main_expr = Option.get var in
+      let qm = Shared.qm in
+      let sort, lb, ub = parse_semantic_bound ~loc ~var:main_var b x y in
+      let lb =
+        match lb with
+        | Some lb -> lb
+        | None -> Sy.mk_bound qm sort ~is_open:true ~is_lower:true
+      and ub =
+        match ub with
+        | Some ub -> ub
+        | None -> Sy.mk_bound qm sort ~is_open:true ~is_lower:false
+      in
+      E.mk_term (Sy.mk_in lb ub) [aux_mk_expr main_expr] Ty.Tbool
+
+    (* conjunction *)
+    | B.And, [x; y] ->
+      let main_var, main_expr = Option.get var in
+      begin match destruct_app x, destruct_app y with
+        | Some (b, [l; r]), Some (b', [l'; r']) ->
+          let sort, lb, ub =
+            parse_semantic_bound ~loc ~var:main_var b l r
+          and sort', lb', ub' =
+            parse_semantic_bound ~loc ~var:main_var b' l' r'
+          in
+          assert Stdlib.(sort = sort');
+          let lb =
+            match lb, lb' with
+            | Some lb, None | None, Some lb -> lb
+            | _ -> assert false
+          in
+          let ub =
+            match ub, ub' with
+            | Some ub, None | None, Some ub -> ub
+            | _ -> assert false
+          in
+          E.mk_term (Sy.mk_in lb ub) [aux_mk_expr main_expr] Ty.Tbool
+        | _ ->
+          Util.failwith "%aInvalid semantic trigger: %a"
+            Loc.report loc DE.Term.print t
+      end
+
+    | _ ->
+      Util.failwith "%aInvalid semantic trigger: %a"
+        Loc.report loc DE.Term.print t
+
   in aux_mk_expr ~toplevel dt
 
 and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
     ~(in_theory: bool) (name: string) (hyp: E.t list)
     (e, from_user: DE.term * bool) =
-  (* Remove the [Multi_trigger] wrapper *)
+  (* Dolmen adds an existential quantifier to bind the '?xxx' variables *)
+  let e =
+    match e with
+    | { DE.term_descr = Binder (Exists (_, qm_vars), e); _ } ->
+      List.iter
+        (fun (v : DE.term_var) ->
+           let var =
+             match v.path with
+             | Local { name } -> Var.of_string name
+             | _ -> assert false
+           in
+           Cache.store_var v var)
+        qm_vars;
+      e
+    | e ->  e
+  in
+  (* And a [Multi_trigger] wrapper for multi-triggers *)
   let e =
     match e with
     | { DE.term_descr = App ({
-        term_descr = Cst { builtin = B.Multi_trigger; _ }; _
-      }, _, es) ; _ } -> es
-    | _ -> [e]
+        term_descr = Cst { builtin = B.Multi_trigger ; _ }; _
+      }, _, es)
+      ; _ }
+      -> es
+    | e -> [e]
   in
   let mk_expr =
     mk_expr ~loc ~name_base ~decl_kind
@@ -1638,6 +1823,11 @@ let make dloc_file acc stmt =
       let st_decl = C.Query (name, e, goal_sort) in
       C.{st_decl; st_loc} :: List.rev_append (List.rev rev_hyps_c) acc
 
+    | { contents = `Solve _; _ } ->
+      (* Filtered out by the solving_loop *)
+      (* TODO: Remove them from the types *)
+      assert false
+
     (* Axiom definitions *)
     | { id = Id.{name = Simple name; _}; contents = `Hyp t; loc; attrs } ->
       let dloc = DStd.Loc.(loc dloc_file stmt.loc) in
@@ -1741,7 +1931,7 @@ let make dloc_file acc stmt =
           | `Term_def (_, ({ path; _ } as tcst), _, _, _) ->
             let name_base = get_basename path in
             let sy = Sy.name name_base in
-            Cache.store_sy (DE.Term.Const.hash tcst) sy
+            Cache.store_sy tcst sy
           | `Type_alias _ -> ()
           | `Instanceof _ ->
             (* These statements are only used in models when completing a
@@ -1763,12 +1953,12 @@ let make dloc_file acc stmt =
                   fun (binders_set, acc) (DE.{ path; id_ty; _ } as tv) ->
                     let ty = dty_to_ty id_ty in
                     let sy = Sy.var (Var.of_string (get_basename path)) in
-                    Cache.store_sy (DE.Term.Var.hash tv) sy;
+                    Cache.store_sy tv sy;
                     let e = E.mk_term sy [] ty in
                     SE.add e binders_set, e :: acc
                 ) (SE.empty, []) terml
               in
-              let sy = Cache.find_sy (DE.Term.Const.hash tcst) in
+              let sy = Cache.find_sy tcst in
               let e = E.mk_term sy (List.rev rev_args) rty in
               binders_set, e
             in
