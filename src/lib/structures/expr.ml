@@ -1234,8 +1234,8 @@ let mk_builtin ~is_pos n l =
 let mk_bvconcat t1 t2 sz =
   mk_term (Sy.Op Sy.Concat) [t1; t2] (Ty.Tbitv sz)
 
-let mk_bvextract i j t sz =
-  mk_term (Sy.Op (Sy.Extract (i, j))) [t] (Ty.Tbitv sz)
+let mk_bvextract i j t =
+  mk_term (Sy.Op (Sy.Extract (i, j))) [t] (Ty.Tbitv (j - i + 1))
 
 let mk_bvextend sign n k t =
   if k = 0 then t else
@@ -1245,7 +1245,7 @@ let mk_bvnot n t =
   mk_term (Sy.Op Sy.BVnot) [t] (Ty.Tbitv n)
 
 let mk_bvsign n t =
-  let t1 = mk_bvextract (n-1) (n-1) t n in
+  let t1 = mk_bvextract (n-1) (n-1) t in
   mk_eq ~iff:false t1 bvone
 
 let mk_bvsign_pos n t =

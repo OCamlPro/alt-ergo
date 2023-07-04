@@ -940,7 +940,7 @@ let rec mk_expr
             E.mk_term (Sy.Op Sy.Minus) [e1; aux_mk_expr x] ty
 
           | B.Bitv_extract { i; j; _ }, [x] ->
-            E.mk_bvextract j i (aux_mk_expr x) (i - j + 1)
+            E.mk_bvextract j i (aux_mk_expr x)
 
           | B.Destructor { case; field; adt; _ }, [x] ->
             begin match DT.definition adt with

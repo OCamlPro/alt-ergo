@@ -353,7 +353,7 @@ module Shostak(X : ALIEN) = struct
       if (if neg then not b else b) then E.bvone else E.bvzero
 
     let mk_nthbv_eq bv_t n e =
-      E.mk_eq ~iff:false (E.mk_bvextract n n bv_t 1) e
+      E.mk_eq ~iff:false (E.mk_bvextract n n bv_t) e
 
     let get_nth_eq_b bv_t cnt t_b =
       mk_nthbv_eq bv_t cnt (bv_of_bool t_b)
@@ -445,19 +445,19 @@ module Shostak(X : ALIEN) = struct
     (** [mk_bvget_or_eq t cnt t1 cnt1 t2 cnt2]:
         t[cnt] = if t1[cnt1] = 0 then t2[cnt2] else 1 *)
     let mk_bvget_or_eq cnt nt t1 t2 =
-      E.mk_eq ~iff:false (E.mk_bvextract cnt cnt nt 1) (
+      E.mk_eq ~iff:false (E.mk_bvextract cnt cnt nt) (
         E.mk_ite
-          (E.mk_eq ~iff:false (E.mk_bvextract cnt cnt t1 1) E.bvzero)
-          (E.mk_bvextract cnt cnt t2 1)
+          (E.mk_eq ~iff:false (E.mk_bvextract cnt cnt t1) E.bvzero)
+          (E.mk_bvextract cnt cnt t2)
           E.bvone)
 
     (** [mk_bvget_and_eq t cnt t1 cnt1 t2 cnt2]:
         t[cnt] = if t1[cnt1] = 1 then t2[cnt2] else 0 *)
     let mk_bvget_and_eq cnt nt t1 t2 =
-      E.mk_eq ~iff:false (E.mk_bvextract cnt cnt nt 1) (
+      E.mk_eq ~iff:false (E.mk_bvextract cnt cnt nt) (
         E.mk_ite
-          (E.mk_eq ~iff:false (E.mk_bvextract cnt cnt t1 1) E.bvone)
-          (E.mk_bvextract cnt cnt t2 1)
+          (E.mk_eq ~iff:false (E.mk_bvextract cnt cnt t1) E.bvone)
+          (E.mk_bvextract cnt cnt t2)
           E.bvzero
       )
 
@@ -555,8 +555,8 @@ module Shostak(X : ALIEN) = struct
       if i = 0 then t else
         mk_rotate_left n (i - 1) (
           E.mk_bvconcat
-            (E.mk_bvextract 0 (n - 2) t (n - 1))
-            (E.mk_bvextract (n - 1) (n - 1) t 1)
+            (E.mk_bvextract 0 (n - 2) t)
+            (E.mk_bvextract (n - 1) (n - 1) t)
             n
         )
 
@@ -564,8 +564,8 @@ module Shostak(X : ALIEN) = struct
       if i = 0 then t else
         mk_rotate_right n (i - 1) (
           E.mk_bvconcat
-            (E.mk_bvextract 0 0 t 1)
-            (E.mk_bvextract 1 (n - 1) t (n - 1))
+            (E.mk_bvextract 0 0 t)
+            (E.mk_bvextract 1 (n - 1) t)
             n
         )
 
@@ -591,11 +591,11 @@ module Shostak(X : ALIEN) = struct
       else
         mk_bitv_and 1
           (mk_bitv_xnor 1
-             (E.mk_bvextract (n-1) (n-1) t1 1)
-             (E.mk_bvextract (n-1) (n-1) t2 1))
+             (E.mk_bvextract (n-1) (n-1) t1)
+             (E.mk_bvextract (n-1) (n-1) t2))
           (mk_bitv_comp (n-1)
-             (E.mk_bvextract 0 (n-2) t1 (n-1))
-             (E.mk_bvextract 0 (n-2) t2 (n-1)))
+             (E.mk_bvextract 0 (n-2) t1)
+             (E.mk_bvextract 0 (n-2) t2))
 
     let mk_bvshl n x y =
       let x' = E.mk_bv2nat x in
@@ -1565,7 +1565,7 @@ module Shostak(X : ALIEN) = struct
       else if n = 1 then E.itwo else E.ione
     in
     let mk_ite term n pow =
-      let nthbv = E.mk_bvextract n n term 1 in
+      let nthbv = E.mk_bvextract n n term in
       let cond = E.mk_eq ~iff:false E.bvone nthbv in
       E.mk_ite cond (mk_2pow pow) E.izero
     in
