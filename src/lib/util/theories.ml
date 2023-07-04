@@ -39,13 +39,13 @@ let content = function
   | Ria -> [%blob "src/preludes/ria.ae"]
   | Nra -> [%blob "src/preludes/nra.ae"]
 
-let all = ADT :: AC :: List.map (fun p -> Prelude p) [ Fpa; Ria; Nra ]
+let all_preludes = [ Fpa; Ria; Nra ]
 
-let default_preludes = []
+let all = ADT :: AC :: List.map (fun p -> Prelude p) all_preludes
 
-let default = [ ADT; AC ]
-(* TODO: Add the preludes once Dolmen 0.9 is released
-   https://github.com/OCamlPro/alt-ergo/issues/678 *)
+let default_preludes = all_preludes
+
+let default = all
 
 let preludes =
   List.filter_map (function | Prelude p -> Some p | _ -> None)
