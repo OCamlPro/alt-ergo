@@ -39,6 +39,7 @@
 type typing_error =
   | BitvExtract of int*int
   | BitvExtractRange of int*int
+  | NonPositiveBitvType of int
   | ClashType of string
   | ClashLabel of string * string
   | ClashParam of string
