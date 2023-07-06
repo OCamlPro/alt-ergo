@@ -1245,8 +1245,7 @@ let mk_bvnot n t =
   mk_term (Sy.Op Sy.BVnot) [t] (Ty.Tbitv n)
 
 let mk_bvsign n t =
-  let t1 = mk_bvextract (n-1) (n-1) t in
-  mk_eq ~iff:false t1 bvone
+  mk_bvextract (n-1) (n-1) t
 
 let mk_bvsign_pos n t =
   mk_eq ~iff:false (mk_bvsign n t) bvone
