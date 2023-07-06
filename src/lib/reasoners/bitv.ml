@@ -83,17 +83,40 @@ type 'a alpha_term = {
 let equal_alpha_term eq { bv = bv1; sz = sz1 } {bv = bv2; sz = sz2 } =
   Int.equal sz1 sz2 && eq bv1 bv2
 
+type 'a signed = { value : 'a ; negated : bool }
+
+let pp_signed pp ppf { value; negated } =
+  if negated then Format.fprintf ppf "(bvnot %a)" pp value else pp ppf value
+
+let hash_signed hash { value; negated } =
+  if negated then 3 * hash value else hash value
+
+let equal_signed eq { value = v1; negated = n1 } { value = v2 ; negated = n2 } =
+  Bool.equal n1 n2 && eq v1 v2
+
+let compare_signed cmp
+    { value = v1; negated = n1 } { value = v2; negated = n2 }
+  =
+  let c = Bool.compare n1 n2 in
+  if c <> 0 then c else cmp v1 v2
+
+let pos value = { value ; negated = false }
+
+let neg' value = { value; negated = true }
+
+let snot v = { v with negated = not v.negated }
+
 type 'a simple_term_aux =
   | Cte of bool
-  | Other of 'a
-  | Ext of 'a * int * int * int (*// id * size * i * j //*)
+  | Other of 'a signed
+  | Ext of 'a signed * int * int * int (*// id * size * i * j //*)
 
 let equal_simple_term_aux eq l r =
   match l, r with
   | Cte b1, Cte b2 -> Bool.equal b1 b2
-  | Other o1, Other o2 -> eq o1 o2
+  | Other o1, Other o2 -> equal_signed eq o1 o2
   | Ext (o1, s1, i1, j1), Ext (o2, s2, i2, j2) ->
-    i1 = i2 && j1 = j2 && s1 = s2 && eq o1 o2
+    i1 = i2 && j1 = j2 && s1 = s2 && equal_signed eq o1 o2
   | _, _ -> false
 
 type 'a simple_term = ('a simple_term_aux) alpha_term
@@ -108,15 +131,24 @@ let equal_abstract eq = Lists.equal (equal_simple_term eq)
 
 type solver_simple_term_aux =
   | S_Cte of bool
-  | S_Var of tvar
+  | S_Var of tvar * bool (* (var, negated) *)
+
+let negate_ssta = function
+  | S_Cte b -> S_Cte (not b)
+  | S_Var (tv, neg) -> S_Var (tv, not neg)
 
 let equal_solver_simple_term_aux st1 st2 =
   match st1, st2 with
   | S_Cte b1, S_Cte b2 -> Bool.equal b1 b2
-  | S_Var t1, S_Var t2 -> t1.var = t2.var
+  | S_Var (t1, neg1), S_Var (t2, neg2) ->
+    Bool.equal neg1 neg2 && t1.var = t2.var
   | S_Cte _, S_Var _ | S_Var _, S_Cte _ -> false
 
 type solver_simple_term = solver_simple_term_aux alpha_term
+
+let negate_sst sst = { sst with bv = negate_ssta sst.bv }
+
+let negate_sstl = List.map negate_sst
 
 let equal_solver_simple_term =
   equal_alpha_term equal_solver_simple_term_aux
@@ -155,7 +187,7 @@ module Shostak(X : ALIEN) = struct
     | None ->
       begin
         match X.type_info r with
-        | Ty.Tbitv n -> [{bv = Other r ; sz = n}]
+        | Ty.Tbitv n -> [{bv = Other (pos r) ; sz = n}]
         | _  -> assert false
       end
     | Some b -> b
@@ -169,7 +201,7 @@ module Shostak(X : ALIEN) = struct
       | Cte false , _ | _ , Cte true -> -1
       | _ , Cte false | Cte true,_ -> 1
 
-      | Other t1 , Other t2 -> X.str_cmp t1 t2
+      | Other t1 , Other t2 -> compare_signed X.str_cmp t1 t2
       | _ , Other _ -> -1
       | Other _ , _ -> 1
 
@@ -177,7 +209,7 @@ module Shostak(X : ALIEN) = struct
         let c1 = compare s1 s2 in
         if c1<>0 then c1
         else let c2 = compare i1 i2 in
-          if c2 <> 0 then c2 else X.str_cmp t1 t2
+          if c2 <> 0 then c2 else compare_signed X.str_cmp t1 t2
     )
 
   let compare_abstract = Lists.compare compare_simple_term
@@ -189,7 +221,9 @@ module Shostak(X : ALIEN) = struct
       | S_Cte b1, S_Cte b2 -> Bool.compare b1 b2
       | S_Cte false, _ | _, S_Cte true -> -1
       | _ , S_Cte false | S_Cte true,_ -> 1
-      | S_Var v1, S_Var v2 ->
+      | S_Var (_, true), S_Var (_, false) -> -1
+      | S_Var (_, false), S_Var (_, true) -> 1
+      | S_Var (v1, b1), S_Var (v2, b2) ->
         let c1 = compare_sort v1.sorte v2.sorte
         in if c1 <> 0 then c1 else compare v1.var v2.var
     )
@@ -204,11 +238,19 @@ module Shostak(X : ALIEN) = struct
 
     type term_aux  =
       | I_Cte of bool
-      | I_Other of X.r
+      | I_Other of X.r signed
       | I_Ext of term * int * int
       | I_Comp of term * term
 
     and term = term_aux alpha_term
+
+    let rec negate_aux = function
+      | I_Cte b -> I_Cte (not b)
+      | I_Other r -> I_Other { r with negated = not r.negated }
+      | I_Ext (t, i, j) -> I_Ext (negate t, i, j)
+      | I_Comp (t1, t2) -> I_Comp (negate t1, negate t2)
+
+    and negate { bv; sz } = { bv = negate_aux bv; sz }
 
     let to_i_ast biv =
       let f_aux st =
@@ -235,7 +277,8 @@ module Shostak(X : ALIEN) = struct
       | I_Cte true, I_Cte _ -> 1
       | I_Cte _, I_Cte _ -> -1
 
-      | I_Other xterm1, I_Other xterm2 -> X.str_cmp xterm1 xterm2
+      | I_Other xterm1, I_Other xterm2 ->
+        compare_signed X.str_cmp xterm1 xterm2
 
       | I_Ext (t, i, j), I_Ext (t', i', j') ->
         if i <> i' then i - i'
@@ -404,7 +447,7 @@ module Shostak(X : ALIEN) = struct
               let eq = E.mk_eq ~iff:false bvv rv_t in
               let r = X.term_embed bvv in
               let nctx = eq :: ctx' @ ctx in
-              let t1 = { bv = I_Other r; sz = 1 } in
+              let t1 = { bv = I_Other (pos r); sz = 1 } in
               if ncnt >= size then t1, nctx
               else
                 let t2, nctx = aux ncnt 0 nctx in
@@ -418,7 +461,7 @@ module Shostak(X : ALIEN) = struct
             | Some b ->
               let t1 =
                 mk_i_comp
-                  { bv = I_Other r; sz = 1}
+                  { bv = I_Other (pos r); sz = 1}
                   { bv = I_Cte (bitf b); sz }
                   (sz + 1)
               in
@@ -430,7 +473,7 @@ module Shostak(X : ALIEN) = struct
                 let t = mk_i_comp t2 t1 (sz + t2.sz + 1) in
                 t, nctx
             | None ->
-              let t1 = { bv = I_Other r; sz = 1} in
+              let t1 = { bv = I_Other (pos r); sz = 1} in
               if ncnt > size then t1, nctx
               else
                 let t2, nctx =
@@ -695,15 +738,9 @@ module Shostak(X : ALIEN) = struct
         ) ctx
 
       | { E.ty = Ty.Tbitv n; _ } ->
-        if neg then
-          let tv = E.fresh_name (Ty.Tbitv n) in
-          let t'' = E.mk_bvnot n t' in
-          let rv = X.term_embed tv in
-          let eq = E.mk_eq ~iff:false tv t'' in
-          {bv = I_Other rv; sz = n}, eq :: ctx
-        else
-          let r', ctx' = X.make t' in
-          {bv = I_Other r'; sz = n}, ctx' @ ctx
+        let mk = if neg then neg' else pos in
+        let r', ctx' = X.make t' in
+        {bv = I_Other (mk r'); sz = n}, ctx' @ ctx
 
       | _ -> Util.failwith "[Bitv] make: Unexpected term %a@." E.print t'
 
@@ -765,9 +802,9 @@ module Shostak(X : ALIEN) = struct
       let open Format in
       match ast.bv with
       | Cte b -> fprintf fmt "%d[%d]" (if b then 1 else 0) ast.sz
-      | Other t -> fprintf fmt "%a" X.print t
+      | Other t -> fprintf fmt "%a" (pp_signed X.print) t
       | Ext (t,_,i,j) ->
-        fprintf fmt "%a" X.print t;
+        fprintf fmt "%a" (pp_signed X.print) t;
         fprintf fmt "<%d,%d>" i j
 
     let[@warning "-32"] rec print_I_ast fmt ast =
@@ -775,7 +812,7 @@ module Shostak(X : ALIEN) = struct
       let open Format in
       match ast.bv with
       | I_Cte b -> fprintf fmt "%d[%d]" (if b then 1 else 0) ast.sz
-      | I_Other t -> fprintf fmt "%a[%d]" X.print t ast.sz
+      | I_Other t -> fprintf fmt "%a[%d]" (pp_signed X.print) t ast.sz
       | I_Ext (u,i,j) -> fprintf fmt "%a<%d,%d>" print_I_ast u i j
       | I_Comp(u,v) -> fprintf fmt "@[(%a * %a)@]" print_I_ast u print_I_ast v
 
@@ -785,7 +822,11 @@ module Shostak(X : ALIEN) = struct
 
     let print_s fmt ast = match ast.bv with
       | S_Cte b -> Format.fprintf fmt "%d[%d]" (if b then 1 else 0) ast.sz
-      | S_Var tv -> Format.fprintf fmt "%a" print_tvar (tv,ast.sz)
+      | S_Var (tv, n) ->
+        if n then
+          Format.fprintf fmt "(bvnot %a)" print_tvar (tv,ast.sz)
+        else
+          Format.fprintf fmt "%a" print_tvar (tv,ast.sz)
 
     let print_S_ast fmt = function
         [] -> assert false
@@ -900,7 +941,9 @@ module Shostak(X : ALIEN) = struct
 
     let fresh_bitv genre size =
       if size <= 0 then []
-      else [ { bv = S_Var (fresh_var genre) ; sz = size } ]
+      else [ { bv = S_Var (fresh_var genre, false) ; sz = size } ]
+
+    let negate_bitv = negate_sstl
 
     (* Orient the equality [b = st] where [b] is a boolean constant and [st] is
        uninterpreted ("Other") *)
@@ -932,11 +975,18 @@ module Shostak(X : ALIEN) = struct
 
         [st1 = c] and [st2 = c]
 
+       [same_pol] is [true] if both terms have the same polarity (either both
+       negated or both non-negated), and [false] if exactly one is negated, in
+       which case the C variable is negated in one of the branches
+       (arbitrarily).
+
        Requires: [size st1 = size st2]
        Requires: [st1] and [st2] are distinct (for the C variables invariant)
     *)
-    let other_vs_other st1 st2 =
-      let c = fresh_bitv C st1.sz in [ (st1,c) ; (st2,c) ]
+    let other_vs_other same_pol st1 st2 =
+      let c = fresh_bitv C st1.sz in
+      let c' = if same_pol then c else negate_bitv c in
+      [ (st1,c) ; (st2,c') ]
 
     (* Orient the equality [st = xt[s_xt]^{i,j}] where [st] and [xt] are
        uninterpreted ("Other") and [xt] is uninterpreted of size [s_xt].
@@ -950,12 +1000,13 @@ module Shostak(X : ALIEN) = struct
        Requires: [st] and [xt] are distinct (for the C variables invariant ---
          but this is actually impossible because the sizes wouldn't match)
     *)
-    let other_vs_ext st xt s_xt i j =
+    let other_vs_ext same_pol st xt s_xt i j =
       let c  = fresh_bitv C st.sz in
       let a1 = fresh_bitv A i in
       let a2 = fresh_bitv A (s_xt - 1 - j) in
+      let c' = if same_pol then c else negate_bitv c in
       let extr = { bv = Other xt ; sz = s_xt }
-      in [ (st,c) ; (extr,a2 @ c @ a1) ]
+      in [ (st,c) ; (extr,a2 @ c' @ a1) ]
 
     (* Orient the equality [id[s]^{i,j} = id'[s']^{i',j'}].
 
@@ -970,7 +1021,7 @@ module Shostak(X : ALIEN) = struct
          that we maintain the invariant of C variables that they never occur
          twice in the same multi-equation.
     *)
-    let ext1_vs_ext2 (id,s,i,j) (id',s',i',j') = (* id != id' *)
+    let ext1_vs_ext2 same_pol (id,s,i,j) (id',s',i',j') = (* id != id' *)
       let c   = fresh_bitv (C) (j - i + 1) in
       let a1  = fresh_bitv A i  in
       let a1' = fresh_bitv A i' in
@@ -978,7 +1029,8 @@ module Shostak(X : ALIEN) = struct
       let a2' = fresh_bitv A (s' - 1 - j') in
       let x_v = { sz = s  ; bv = Other id  } in
       let y_v = { sz = s' ; bv = Other id' } in
-      [ (x_v , a2 @ c @ a1) ; (y_v , a2' @ c @ a1') ]
+      let c' = if same_pol then c else negate_bitv c in
+      [ (x_v , a2 @ c @ a1) ; (y_v , a2' @ c' @ a1') ]
 
     (* Orient the equality [xt[siz]^{i1, i1 + tai} = xt[siz]^{i2, i2 + tai}]
 
@@ -1024,31 +1076,42 @@ module Shostak(X : ALIEN) = struct
 
        Requires: [i1 < i2]
     *)
-    let ext_vs_ext xt siz (i1,i2) tai =
-      let overl = i1 + tai -i2 in
-      if overl <= 0 then begin
-        let a1 = fresh_bitv A i1     in
-        let a2 = fresh_bitv A (-overl) in
-        let a3 = fresh_bitv A (siz - tai - i2) in
-        let b  = fresh_bitv  B tai
-        in ({ bv = Other xt ; sz = siz } , a3 @ b @ a2 @ b @ a1)
-      end
-      else begin
-        let b_box = i2 + tai - i1 in
-        let nn_overl = tai - overl in(* =i2-i1 >0 sinon egalite sytaxique*)
-        let sz_b1 = b_box mod nn_overl in
-        let a1 = fresh_bitv A i1                 in
-        let a3 = fresh_bitv A (siz - tai - i2) in
-        let b1 = fresh_bitv B sz_b1              in
-        let b2 = fresh_bitv B (nn_overl - sz_b1 )in
-        let acc = ref b1 in
-        let cpt = ref nn_overl in
-        while !cpt <= b_box do
-          acc := b1 @ b2 @(!acc);
-          cpt := !cpt + nn_overl
-        done;
-        ({ bv = Other xt ; sz = siz } , a3 @ (!acc) @ a1)
-      end
+    let ext_vs_ext same_pol xt siz (i1,i2) tai =
+      if i1 = i2 then begin
+        assert (not same_pol);
+        raise Util.Unsolvable
+      end else
+        let overl = i1 + tai -i2 in
+        if overl <= 0 then begin
+          let a1 = fresh_bitv A i1     in
+          let a2 = fresh_bitv A (-overl) in
+          let a3 = fresh_bitv A (siz - tai - i2) in
+          let b  = fresh_bitv B tai in
+          let b' = if same_pol then b else negate_bitv b in
+          ({ bv = Other xt ; sz = siz } , a3 @ b @ a2 @ b' @ a1)
+        end
+        else begin
+          let b_box = i2 + tai - i1 in
+          let nn_overl = tai - overl in(* =i2-i1 >0 sinon egalite sytaxique*)
+          let sz_b1 = b_box mod nn_overl in
+          let a1 = fresh_bitv A i1                 in
+          let a3 = fresh_bitv A (siz - tai - i2) in
+          let b1 = fresh_bitv B sz_b1              in
+          let b2 = fresh_bitv B (nn_overl - sz_b1 )in
+          let acc = ref b1 in
+          let cpt = ref nn_overl in
+          (* There is already [b1] in [acc], so we need to flip the first one
+             that is added by the loop. *)
+          let odd = ref true in
+          while !cpt <= b_box do
+            let b1' = if !odd && not same_pol then negate_bitv b1 else b1 in
+            let b2' = if not !odd && not same_pol then negate_bitv b2 else b2 in
+            acc := b1' @ b2' @(!acc);
+            cpt := !cpt + nn_overl;
+            odd := not !odd
+          done;
+          ({ bv = Other xt ; sz = siz } , a3 @ (!acc) @ a1)
+        end
 
     (* [sys_solve sys] orients a system of equations between simple terms.
 
@@ -1083,16 +1146,23 @@ module Shostak(X : ALIEN) = struct
 
         |Cte b, Ext(xt,s_xt,i,j) -> [cte_vs_ext b xt s_xt i j]
         |Ext(xt,s_xt,i,j), Cte b -> [cte_vs_ext b xt s_xt i j]
-        |Other _, Other _ -> other_vs_other st1 st2
+        |Other o1, Other o2 when X.equal o1.value o2.value ->
+          raise Util.Unsolvable
+        |Other o1, Other o2 ->
+          other_vs_other (Bool.equal o1.negated o2.negated) st1 st2
 
-        |Other _, Ext(xt,s_xt,i,j) ->
-          other_vs_ext st1 xt s_xt i j
+        |Other o, Ext(xt,s_xt,i,j) ->
+          let same_pol = Bool.equal o.negated xt.negated in
+          other_vs_ext same_pol st1 xt s_xt i j
 
-        |Ext(xt,s_xt,i,j), Other _ -> other_vs_ext st2 xt s_xt i j
+        |Ext(xt,s_xt,i,j), Other o ->
+          let same_pol = Bool.equal o.negated xt.negated in
+          other_vs_ext same_pol st2 xt s_xt i j
         |Ext(id,s,i,j), Ext(id',s',i',j') ->
-          if not (X.equal id id')
-          then ext1_vs_ext2 (id,s,i,j) (id',s',i',j')
-          else [ext_vs_ext id s (if i<i' then (i,i') else (i',i)) (j - i + 1)]
+          let same_pol = Bool.equal id.negated id'.negated in
+          if not (X.equal id.value id'.value)
+          then ext1_vs_ext2 same_pol (id,s,i,j) (id',s',i',j')
+          else [ext_vs_ext same_pol id s (if i<i' then (i,i') else (i',i)) (j - i + 1)]
 
       in List.flatten (List.map c_solve sys)
 
@@ -1129,8 +1199,8 @@ module Shostak(X : ALIEN) = struct
       let mk, tr =
         match var.bv with
         | S_Cte _ -> (fun sz -> { var with sz }), None
-        | S_Var { sorte; _ } ->
-          (fun sz -> { bv = S_Var (fresh_var sorte); sz }), Some sorte
+        | S_Var ({ sorte; _ }, ng) ->
+          (fun sz -> { bv = S_Var (fresh_var sorte, ng); sz }), Some sorte
       in
       let rec aux cnt plist =
         match plist with
@@ -1233,7 +1303,7 @@ module Shostak(X : ALIEN) = struct
            Therefore we assert that the variable is indeed a B variable and that
            list of substitutions for B variables is not empty. *)
         assert (not (Lists.is_empty (fst subs)));
-        assert (match st.bv with S_Var { sorte = B; _ } -> true | _ -> false);
+        assert (match st.bv with S_Var ({ sorte = B; _ }, _) -> true | _ -> false);
         slice_vars eq (n - st.sz :: pt) (true, st :: req, subs)
       | st :: eq, n :: pt when st.sz = n ->
         slice_vars eq pt (c, st :: req, subs)
@@ -1459,19 +1529,55 @@ module Shostak(X : ALIEN) = struct
        solution to the uniform system by replacing each term with the
        concatenation of representatives for the corresponding multi-equation. *)
     let build_solution unif_slic sets =
-      let tvars =
+      (* Check consistency: if a negated variable is in the same class as its
+         non-negated counterpart, it is unsolvable. *)
+      List.iter (fun (_, set) ->
+          ST_Set.iter (fun st ->
+              match st.bv with
+              | S_Var (tv, true) ->
+                if ST_Set.mem { st with bv = S_Var (tv, false) } set
+                then raise Util.Unsolvable
+              | _ -> ()) set) sets;
+      let pos_sets, neg_sets =
+        List.partition (fun (r, set) ->
+            match r.bv with
+            | S_Cte _ | S_Var (_, false) -> true
+            | S_Var (_, true) -> false) sets
+      in
+      let pos_tvars =
         List.map (fun (r, set) ->
             let r =
               match r.bv with
               | S_Cte b -> Cte b
-              | S_Var _ ->
+              | S_Var (_, false) ->
                 let t = E.fresh_name (Ty.Tbitv r.sz) in
-                Other (X.term_embed t)
+                Other (X.term_embed t |> pos)
+              | S_Var (tv, true) ->
+                assert false
             in
-            (r, set)) sets
+            (r, set)) pos_sets
       in
-      let get_rep var =
+      let get_rep var tvars =
         fst(List.find ( fun(_,set)->ST_Set.mem var set ) tvars) in
+      let neg_tvars =
+        List.map (fun (r, set) ->
+            match r.bv with
+            | S_Var (tv, true) ->
+              let r =
+                try
+                  match get_rep { r with bv = S_Var (tv, false) } pos_tvars with
+                  | Cte b -> Cte (not b)
+                  | Other x -> Other (snot x)
+                  | Ext _ -> assert false
+                with Not_found ->
+                  let t = E.fresh_name (Ty.Tbitv r.sz) in
+                  Other (X.term_embed t |> pos)
+              in
+              (r, set)
+            | _ -> assert false) neg_sets
+      in
+      let tvars = pos_tvars @ neg_tvars in
+      let get_rep var = get_rep var tvars in
       let to_external_ast v =
         {sz = v.sz;
          bv = match v.bv with
@@ -1538,9 +1644,9 @@ module Shostak(X : ALIEN) = struct
 
   let hash_simple_term_aux = function
     | Cte b -> 11 * Hashtbl.hash b
-    | Other x -> 17 * X.hash x
+    | Other x -> 17 * hash_signed X.hash x
     | Ext (x, a, b, c) ->
-      X.hash x + 19 * (a + b + c)
+      hash_signed X.hash x + 19 * (a + b + c)
 
   let hash l =
     List.fold_left
@@ -1551,10 +1657,21 @@ module Shostak(X : ALIEN) = struct
       (fun acc x ->
          match x.bv with
          | Cte _  -> acc
-         | Other t | Ext(t,_,_,_) -> (X.leaves t)@acc
+         | Other t | Ext(t,_,_,_) -> (X.leaves t.value)@acc
       ) [] bitv
 
-  let is_mine = function [{ bv = Other r; _ }] -> r | bv -> X.embed bv
+  let is_mine = function
+    | [{ bv = Other r; _ }] when not r.negated -> r.value
+    | bv -> X.embed bv
+
+  let negate = List.map (fun v ->
+      let bv =
+        match v.bv with
+        | Cte b -> Cte (not b)
+        | Other r -> Other { r with negated = not r.negated }
+        | Ext (r, sz, i, j) -> Ext ({ r with negated = not r.negated }, sz, i, j)
+      in
+      { v with bv })
 
   let print = Debug.print_C_ast
 
@@ -1579,7 +1696,10 @@ module Shostak(X : ALIEN) = struct
             | { bv = Cte true; sz } ->
               let l = List.init sz (fun i -> mk_2pow (cnt - i)) in
               cnt - sz, l @ acc
-            | { bv = Other r; sz } ->
+            | { bv = Other { value = r; negated }; sz } ->
+              let mk_ite =
+                if negated then fun c t e -> mk_ite c e t else mk_ite
+              in
               begin match X.term_extract r with
                 | Some t, _ ->
                   let l =
@@ -1588,7 +1708,10 @@ module Shostak(X : ALIEN) = struct
                   cnt - sz, l @ acc
                 | None, _ -> raise Exit
               end
-            | { bv = Ext (r, _, _, ub); sz } ->
+            | { bv = Ext ({ value = r; negated }, _, _, ub); sz } ->
+              let mk_ite =
+                if negated then fun c t e -> mk_ite c e t else mk_ite
+              in
               begin match X.term_extract r with
                 | Some t, _ ->
                   let l =
@@ -1633,13 +1756,21 @@ module Shostak(X : ALIEN) = struct
   let extract r ty =
     match X.extract r with
       Some (_::_ as bv) -> Canonizer.to_i_ast bv
-    | None -> {bv =  Canonizer.I_Other r; sz = ty}
+    | None -> {bv =  Canonizer.I_Other (pos r); sz = ty}
     | Some [] -> assert false
 
-  let var_or_term x =
+  let var_or_term x y =
     match x.bv with
-    | Other r -> r
+    | Other { value = r; negated = false } -> r, is_mine y
+    | Other { value = r; negated = true } -> r, is_mine (negate y)
     | _ -> assert false
+
+  let solve_ter u t =
+    try
+      List.map
+        (fun (p,v) -> var_or_term p v)
+        (Solver.solve u t)
+    with Solver.Valid -> []
 
   (* ne resout pas quand c'est deja resolu *)
   let solve_bis u t =
@@ -1650,24 +1781,19 @@ module Shostak(X : ALIEN) = struct
 
     match X.extract u , X.extract t with
     | None   , None   -> if X.str_cmp u t > 0 then [u,t] else [t,u]
-    | None   , Some _ -> [u , t]
-    | Some _ , None   -> [t , u]
-    | Some u , Some t ->
-      try
-        List.map
-          (fun (p,v) -> var_or_term p,is_mine v)
-          (Solver.solve u t)
-      with Solver.Valid -> []
-
-
+    | None   , Some t -> solve_ter (embed u) t
+    | Some u , None   -> solve_ter u (embed t)
+    | Some u , Some t -> solve_ter u t
 
   let rec subst_rec x subs biv =
     match biv.bv with
     | Canonizer.I_Cte _ -> biv
     | Canonizer.I_Other tt ->
-      if X.equal x tt then
-        extract subs biv.sz
-      else extract (X.subst x subs tt) biv.sz
+      let tt' =
+        if X.equal x tt.value then extract subs biv.sz
+        else extract (X.subst x subs tt.value) biv.sz
+      in
+      if tt.negated then Canonizer.negate tt' else tt'
     | Canonizer.I_Ext (t,i,j) ->
       { biv with bv = Canonizer.I_Ext(subst_rec x subs t,i,j) }
     | Canonizer.I_Comp (u,v) ->
