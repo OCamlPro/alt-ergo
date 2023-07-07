@@ -56,6 +56,34 @@ theory Real_of_Int extends RIA =
      {i <= real_of_int(x)}.
      k <= x
 
+  (* floor(x) ≤ i iff x < i + 1 *)
+  axiom int_floor_ub:
+    forall x, y : real, i : int
+    [ int_floor(x), not_theory_constant(x), int_floor(x) in ]?, i], y |-> real_of_int(i + 1) ]
+    { int_floor(x) <= i }.
+    x < y
+
+  (* i <= floor(x) iff i <= x *)
+  axiom int_floor_lb:
+    forall x, y : real, i : int
+    [ int_floor(x), not_theory_constant(x), int_floor(x) in [i, ?[, y |-> real_of_int(i) ]
+    { i <= int_floor(x) }.
+    y <= x
+
+  (* ceil(x) ≤ i iff x ≤ i *)
+  axiom int_ceil_ub:
+    forall x, y : real, i : int
+    [ int_ceil(x), not_theory_constant(x), int_ceil(x) in ]?, i], y |-> real_of_int(i) ]
+    { int_ceil(x) <= i }.
+    x <= y
+
+  (* i <= ceil(x) iff i - 1 < x *)
+  axiom int_ceil_lb:
+    forall x, y : real, i : int
+    [ int_ceil(x), not_theory_constant(x), int_ceil(x) in [i, ?[, y |-> real_of_int(i - 1) ]
+    { i <= int_ceil(x) }.
+    y < x
+
    (* can add other axioms on strict ineqs on rationals ? *)
 
 end
