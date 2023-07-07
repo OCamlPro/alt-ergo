@@ -46,6 +46,7 @@ type operator =
   (* BV *)
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
+  | BVnot
   (* FP *)
   | Float
   | Integer_round | Fixed

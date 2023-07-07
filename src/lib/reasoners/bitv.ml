@@ -64,17 +64,6 @@ let pp_sort ppf = function
   | B -> Format.fprintf ppf "b"
   | C -> Format.fprintf ppf "c"
 
-let compare_sort s1 s2 =
-  match s1, s2 with
-  | A, A | B, B | C, C -> 0
-  | A, (B | C) | B, C -> -1
-  | C, (A | B) | B, A -> 1
-
-type tvar = { var : int ; sorte : sort_var }
-
-let pp_tvar ppf { var; sorte } =
-  Format.fprintf ppf "%a_%d" pp_sort sorte var
-
 type 'a alpha_term = {
   bv : 'a;
   sz : int;
@@ -83,17 +72,41 @@ type 'a alpha_term = {
 let equal_alpha_term eq { bv = bv1; sz = sz1 } {bv = bv2; sz = sz2 } =
   Int.equal sz1 sz2 && eq bv1 bv2
 
+(** The [signed] type is used to represent potentially negated values. This is
+    helpful in the definition of [simple_term] where only non-constant values
+    can be negated. *)
+type 'a signed = { value : 'a ; negated : bool }
+
+let pp_signed pp ppf { value; negated } =
+  if negated then Format.fprintf ppf "(bvnot %a)" pp value else pp ppf value
+
+let equal_signed eq s1 s2 =
+  Bool.equal s1.negated s2.negated && eq s1.value s2.value
+
+let compare_signed cmp s1 s2 =
+  let c = Bool.compare s1.negated s2.negated in
+  if c <> 0 then c else cmp s1.value s2.value
+
+let hash_signed hash { value; negated } =
+  if negated then 3 * hash value else hash value
+
+let positive value = { value ; negated = false }
+
+let negative value = { value ; negated = true }
+
+let negate signed = { signed with negated = not signed.negated }
+
 type 'a simple_term_aux =
   | Cte of bool
-  | Other of 'a
-  | Ext of 'a * int * int * int (*// id * size * i * j //*)
+  | Other of 'a signed
+  | Ext of 'a signed * int * int * int (*// id * size * i * j //*)
 
 let equal_simple_term_aux eq l r =
   match l, r with
   | Cte b1, Cte b2 -> Bool.equal b1 b2
-  | Other o1, Other o2 -> eq o1 o2
+  | Other o1, Other o2 -> equal_signed eq o1 o2
   | Ext (o1, s1, i1, j1), Ext (o2, s2, i2, j2) ->
-    i1 = i2 && j1 = j2 && s1 = s2 && eq o1 o2
+    i1 = i2 && j1 = j2 && s1 = s2 && equal_signed eq o1 o2
   | _, _ -> false
 
 type 'a simple_term = ('a simple_term_aux) alpha_term
@@ -103,23 +116,6 @@ let equal_simple_term eq = equal_alpha_term (equal_simple_term_aux eq)
 type 'a abstract =  ('a simple_term) list
 
 let equal_abstract eq = Lists.equal (equal_simple_term eq)
-
-(* for the solver *)
-
-type solver_simple_term_aux =
-  | S_Cte of bool
-  | S_Var of tvar
-
-let equal_solver_simple_term_aux st1 st2 =
-  match st1, st2 with
-  | S_Cte b1, S_Cte b2 -> Bool.equal b1 b2
-  | S_Var t1, S_Var t2 -> t1.var = t2.var
-  | S_Cte _, S_Var _ | S_Var _, S_Cte _ -> false
-
-type solver_simple_term = solver_simple_term_aux alpha_term
-
-let equal_solver_simple_term =
-  equal_alpha_term equal_solver_simple_term_aux
 
 module type ALIEN = sig
   include Sig.X
@@ -135,11 +131,113 @@ module Shostak(X : ALIEN) = struct
   type t = X.r abstract
   type r = X.r
 
+  type var = {
+    mutable defn : defn ;
+  }
+
+  and root = {
+    id : int ;
+    (* Variable identifier. This is [-n] for the negation of variable [n]. *)
+    neg : var ;
+    (* Negated variable. If there is still a [var] that points to this root,
+       then the [neg] field is guaranteed to be a root with identifier [-id].
+       Once the root is merged, the [neg] field points to some member of the
+       negated class. *)
+    sorte : sort_var ;
+  }
+
+  and defn =
+      Droot of root
+    (** A [Droot] is an unconstrained variable. The variable argument is the
+        negated variable, and we maintain the invariant that if
+        [v.defn = Droot v'], then [v'.defn = Droot v]. This corresponds to the
+        fact that [bvnot] is involutive.
+
+        Note that once a variable that was a root is merged, the [root] no
+        longer has any meaning. *)
+    | Dlink of var
+    (** A [Dlink] is a defined variable. All the [Dlink]s should be followed to
+        arrive either at an unconstrained variable ([Droot]) or a constant
+        ([Dcte]). *)
+    | Dcte of bool
+    (** A [Dcte] is a forced variable equal to either [true] or [false]. *)
+
+  let equal_var v1 v2 =
+    match v1.defn, v2.defn with
+    | Dcte b1, Dcte b2 -> Bool.equal b1 b2
+    | Droot r1, Droot r2 -> r1.id = r2.id
+    | _, _ -> assert false
+
+  (** [fresh_var sorte] creates a new unconstrained variable with sort [sorte].
+      The negated version of the variable is also created eagerly. *)
+  let fresh_var =
+    let cnt = ref 0 in
+    fun sorte ->
+      let id = incr cnt; !cnt in
+      let rec x = {
+        defn = Droot { id; sorte; neg = { defn = Droot { id = -id; sorte; neg = x } } }
+      } in
+      x
+
+  let s_cte =
+    let s_true = { defn = Dcte true } in
+    let s_false = { defn = Dcte false } in
+    fun b -> if b then s_true else s_false
+
+  let negate_var = function
+    | { defn = Droot { neg; _ }; _ } -> neg
+    | { defn = Dcte b; _ } -> s_cte (not b)
+    | _ -> assert false
+
+  (** Follow the defined variables ([Dlink]) and return either a forced ([Dcte])
+      or unconstrained ([Droot]) variable. *)
+  let rec find v =
+    match v.defn with
+    | Dcte _ | Droot _ -> v
+    | Dlink v' ->
+      let v' = find v' in
+      v.defn <- Dlink v';
+      v'
+
+  (** Merge two variables, forcing them to be equal.
+
+      This will raise [Unsolvable] if:
+
+      - A variable is merged with its negation, or
+      - Distinct constants are merged *)
+  let union v1 v2 =
+    let v1 = find v1 and v2 = find v2 in
+    match v1.defn, v2.defn with
+    | Dcte b1, Dcte b2 ->
+      if not (Bool.equal b1 b2) then raise Util.Unsolvable
+    | Dlink _, _ | _, Dlink _ -> assert false
+    | Droot r1, Droot r2 ->
+      if r1.id = r2.id then ()
+      else if r1.id + r2.id = 0 then raise Util.Unsolvable
+      else begin
+        v1.defn <- Dlink v2;
+        r1.neg.defn <- Dlink r2.neg
+      end
+    | Droot r1, Dcte b ->
+      v1.defn <- Dcte b;
+      r1.neg.defn <- Dcte (not b)
+    | Dcte b, Droot r2 ->
+      v2.defn <- Dcte b;
+      r2.neg.defn <- Dcte (not b)
+
+  let rec pp_var ppf { defn } =
+    match defn with
+    | Dcte b -> Format.fprintf ppf "%d" (if b then 1 else 0)
+    | Droot { id; sorte; _ } -> Format.fprintf ppf "%a_%d" pp_sort sorte id
+    | Dlink v -> pp_var ppf v
+
+  let equal_solver_simple_term = equal_alpha_term equal_var
+
   let name = "bitv"
 
   let is_mine_symb sy _ =
     match sy with
-    | Sy.Bitv _ | Sy.Op (Sy.Concat | Sy.Extract _)  -> true
+    | Sy.Bitv _ | Sy.Op (Concat | Extract _ | BVnot)  -> true
     | _ -> false
 
   let embed r =
@@ -147,7 +245,7 @@ module Shostak(X : ALIEN) = struct
     | None ->
       begin
         match X.type_info r with
-        | Ty.Tbitv n -> [{bv = Other r ; sz = n}]
+        | Ty.Tbitv n -> [{bv = Other (positive r) ; sz = n}]
         | _  -> assert false
       end
     | Some b -> b
@@ -161,7 +259,7 @@ module Shostak(X : ALIEN) = struct
       | Cte false , _ | _ , Cte true -> -1
       | _ , Cte false | Cte true,_ -> 1
 
-      | Other t1 , Other t2 -> X.str_cmp t1 t2
+      | Other t1 , Other t2 -> compare_signed X.str_cmp t1 t2
       | _ , Other _ -> -1
       | Other _ , _ -> 1
 
@@ -169,38 +267,28 @@ module Shostak(X : ALIEN) = struct
         let c1 = compare s1 s2 in
         if c1<>0 then c1
         else let c2 = compare i1 i2 in
-          if c2 <> 0 then c2 else X.str_cmp t1 t2
+          if c2 <> 0 then c2 else compare_signed X.str_cmp t1 t2
     )
 
   let compare_abstract = Lists.compare compare_simple_term
-
-  (* Compare two simple terms. The [equalities_propagation] function below
-     requires that : [false ≤ st ≤ true] for all simple terms [st]. *)
-  let compare_solver_simple_term = compare_alpha_term (fun st1 st2 ->
-      match st1, st2 with
-      | S_Cte b1, S_Cte b2 -> Bool.compare b1 b2
-      | S_Cte false, _ | _, S_Cte true -> -1
-      | _ , S_Cte false | S_Cte true,_ -> 1
-      | S_Var v1, S_Var v2 ->
-        let c1 = compare_sort v1.sorte v2.sorte
-        in if c1 <> 0 then c1 else compare v1.var v2.var
-    )
-
-  module ST_Set = Set.Make (
-    struct
-      type t = solver_simple_term
-      let compare = compare_solver_simple_term
-    end)
 
   module Canonizer = struct
 
     type term_aux  =
       | I_Cte of bool
-      | I_Other of X.r
+      | I_Other of X.r signed
       | I_Ext of term * int * int
       | I_Comp of term * term
 
     and term = term_aux alpha_term
+
+    let rec i_negate_aux = function
+      | I_Cte b -> I_Cte (not b)
+      | I_Other r -> I_Other (negate r)
+      | I_Ext (t, i, j) -> I_Ext (i_negate t, i, j)
+      | I_Comp (t, u) -> I_Comp (i_negate t, i_negate u)
+
+    and i_negate t = { t with bv = i_negate_aux t.bv }
 
     let rec compare_term_aux t1 t2 = match t1, t2 with
       | I_Cte true, I_Cte true
@@ -208,7 +296,8 @@ module Shostak(X : ALIEN) = struct
       | I_Cte true, I_Cte _ -> 1
       | I_Cte _, I_Cte _ -> -1
 
-      | I_Other xterm1, I_Other xterm2 -> X.str_cmp xterm1 xterm2
+      | I_Other xterm1, I_Other xterm2 ->
+        compare_signed X.str_cmp xterm1 xterm2
 
       | I_Ext (t, i, j), I_Ext (t', i', j') ->
         if i <> i' then i - i'
@@ -314,11 +403,14 @@ module Shostak(X : ALIEN) = struct
         | { E.f = Sy.Op Sy.Extract (i, j); xs = [t1] ; ty = Ty.Tbitv _; _ } ->
           let r1, ctx = make_rec t1 ctx in
           { sz = j - i + 1 ; bv = I_Ext (r1,i,j)}, ctx
+        | { f = Op BVnot; xs = [t1]; ty = Tbitv _; _ } ->
+          let r1, ctx = make_rec t1 ctx in
+          i_negate r1, ctx
 
         | { E.ty = Ty.Tbitv n; _ } ->
           let r', ctx' = X.make t' in
           let ctx = ctx' @ ctx in
-          {bv = I_Other r' ; sz = n}, ctx
+          {bv = I_Other (positive r') ; sz = n}, ctx
         | _ -> assert false
       in
       let r, ctx = make_rec t [] in
@@ -330,15 +422,15 @@ module Shostak(X : ALIEN) = struct
     open Printer
 
     let print_tvar fmt (tv,sz) =
-      Format.fprintf fmt "%a[%d]" pp_tvar tv sz
+      Format.fprintf fmt "%a[%d]" pp_var tv sz
 
     let print fmt ast =
       let open Format in
       match ast.bv with
       | Cte b -> fprintf fmt "%d[%d]" (if b then 1 else 0) ast.sz
-      | Other t -> fprintf fmt "%a" X.print t
+      | Other t -> fprintf fmt "%a" (pp_signed X.print) t
       | Ext (t,_,i,j) ->
-        fprintf fmt "%a" X.print t;
+        fprintf fmt "%a" (pp_signed X.print) t;
         fprintf fmt "<%d,%d>" i j
 
     let[@warning "-32"] rec print_I_ast fmt ast =
@@ -346,7 +438,7 @@ module Shostak(X : ALIEN) = struct
       let open Format in
       match ast.bv with
       | I_Cte b -> fprintf fmt "%d[%d]" (if b then 1 else 0) ast.sz
-      | I_Other t -> fprintf fmt "%a[%d]" X.print t ast.sz
+      | I_Other t -> fprintf fmt "%a[%d]" (pp_signed X.print) t ast.sz
       | I_Ext (u,i,j) -> fprintf fmt "%a<%d,%d>" print_I_ast u i j
       | I_Comp(u,v) -> fprintf fmt "@[(%a * %a)@]" print_I_ast u print_I_ast v
 
@@ -354,9 +446,7 @@ module Shostak(X : ALIEN) = struct
         [] -> assert false
       | x::l -> print fmt x; List.iter (Format.fprintf fmt " @@ %a" print) l
 
-    let print_s fmt ast = match ast.bv with
-      | S_Cte b -> Format.fprintf fmt "%d[%d]" (if b then 1 else 0) ast.sz
-      | S_Var tv -> Format.fprintf fmt "%a" print_tvar (tv,ast.sz)
+    let print_s fmt ast = print_tvar fmt (ast.bv, ast.sz)
 
     let print_S_ast fmt = function
         [] -> assert false
@@ -466,16 +556,15 @@ module Shostak(X : ALIEN) = struct
             end
       in f_rec [] (t,u)
 
-    let fresh_var =
-      let cpt = ref 0 in fun t -> incr cpt; { var = !cpt ; sorte = t}
-
     let fresh_bitv genre size =
       if size <= 0 then []
-      else [ { bv = S_Var (fresh_var genre) ; sz = size } ]
+      else [ { bv = fresh_var genre ; sz = size } ]
+
+    let negate_bitv bv = List.map (fun v -> { v with bv = negate_var v.bv }) bv
 
     (* Orient the equality [b = st] where [b] is a boolean constant and [st] is
        uninterpreted ("Other") *)
-    let cte_vs_other bol st = st , [{bv = S_Cte bol ; sz = st.sz}]
+    let cte_vs_other bol st = st , [{bv = s_cte bol ; sz = st.sz}]
 
     (* Orient the equality [b = xt[s_xt]^{i,j}] where [b] is a boolean constant
        and [xt] is uninterpreted of size [s_xt].
@@ -492,7 +581,7 @@ module Shostak(X : ALIEN) = struct
     let cte_vs_ext bol xt s_xt i j =
       let a1  = fresh_bitv A i in
       let a2  = fresh_bitv A (s_xt - 1 - j) in
-      let cte = [ {bv = S_Cte bol ; sz =j - i + 1 } ] in
+      let cte = [ {bv = s_cte bol ; sz =j - i + 1 } ] in
       let var = { bv = Other xt ; sz = s_xt }
       in var, a2@cte@a1
 
@@ -553,7 +642,9 @@ module Shostak(X : ALIEN) = struct
 
     (* Orient the equality [xt[siz]^{i1, i1 + tai} = xt[siz]^{i2, i2 + tai}]
 
-       The [overl] variable contains the number of overlapping bits.
+       The [overl] variable contains the number of overlapping bits. If
+       [same_pol] is true, one of the sides of the equality is negated (it
+       doesn't matter which one, due to involutivity).
 
        - If there are no overlapping bits, the two parts are independent.
           We create a fresh B-variable [b] and A-variables [a1], [a2] and [a3]
@@ -595,14 +686,15 @@ module Shostak(X : ALIEN) = struct
 
        Requires: [i1 < i2]
     *)
-    let ext_vs_ext xt siz (i1,i2) tai =
+    let ext_vs_ext same_pol xt siz (i1,i2) tai =
       let overl = i1 + tai -i2 in
       if overl <= 0 then begin
         let a1 = fresh_bitv A i1     in
         let a2 = fresh_bitv A (-overl) in
         let a3 = fresh_bitv A (siz - tai - i2) in
-        let b  = fresh_bitv  B tai
-        in ({ bv = Other xt ; sz = siz } , a3 @ b @ a2 @ b @ a1)
+        let b  = fresh_bitv B tai in
+        let b' = if same_pol then b else negate_bitv b in
+        ({ bv = Other xt ; sz = siz } , a3 @ b @ a2 @ b' @ a1)
       end
       else begin
         let b_box = i2 + tai - i1 in
@@ -614,9 +706,15 @@ module Shostak(X : ALIEN) = struct
         let b2 = fresh_bitv B (nn_overl - sz_b1 )in
         let acc = ref b1 in
         let cpt = ref nn_overl in
+        let flip = ref true in
+        (* NB: first occurence of [b1] must be flipped because there is already
+           a non-flipped occurence in the initial [acc] value. *)
         while !cpt <= b_box do
+          let b1 = if !flip && not same_pol then negate_bitv b1 else b1 in
+          let b2 = if not !flip && not same_pol then negate_bitv b2 else b2 in
           acc := b1 @ b2 @(!acc);
-          cpt := !cpt + nn_overl
+          cpt := !cpt + nn_overl;
+          flip := not !flip;
         done;
         ({ bv = Other xt ; sz = siz } , a3 @ (!acc) @ a1)
       end
@@ -654,16 +752,22 @@ module Shostak(X : ALIEN) = struct
 
         |Cte b, Ext(xt,s_xt,i,j) -> [cte_vs_ext b xt s_xt i j]
         |Ext(xt,s_xt,i,j), Cte b -> [cte_vs_ext b xt s_xt i j]
-        |Other _, Other _ -> other_vs_other st1 st2
+        |Other o1, Other o2 ->
+          if X.equal o1.value o2.value
+          then raise Util.Unsolvable
+          else
+            other_vs_other st1 st2
 
         |Other _, Ext(xt,s_xt,i,j) ->
           other_vs_ext st1 xt s_xt i j
 
         |Ext(xt,s_xt,i,j), Other _ -> other_vs_ext st2 xt s_xt i j
         |Ext(id,s,i,j), Ext(id',s',i',j') ->
-          if not (X.equal id id')
+          if not (X.equal id.value id'.value)
           then ext1_vs_ext2 (id,s,i,j) (id',s',i',j')
-          else [ext_vs_ext id s (if i<i' then (i,i') else (i',i)) (j - i + 1)]
+          else if i = i' then raise Util.Unsolvable else
+            let sp = Bool.equal id.negated id'.negated in
+            [ext_vs_ext sp id s (if i<i' then (i,i') else (i',i)) (j - i + 1)]
 
       in List.flatten (List.map c_solve sys)
 
@@ -698,10 +802,11 @@ module Shostak(X : ALIEN) = struct
        the sort of the variable (if it is not a constant). *)
     let slice_var var pat_hd pat_tl =
       let mk, tr =
-        match var.bv with
-        | S_Cte _ -> (fun sz -> { var with sz }), None
-        | S_Var { sorte; _ } ->
-          (fun sz -> { bv = S_Var (fresh_var sorte); sz }), Some sorte
+        match var.bv.defn with
+        | Dcte _ -> (fun sz -> { var with sz }), None
+        | Droot { sorte; _ } ->
+          (fun sz -> { bv = fresh_var sorte; sz }), Some sorte
+        | Dlink _ -> assert false
       in
       let rec aux cnt plist =
         match plist with
@@ -716,6 +821,30 @@ module Shostak(X : ALIEN) = struct
       let cnt = var.sz - pat_hd in
       let vl, pat_tail = aux cnt pat_tl in
       fst_v :: vl, pat_tail, tr
+
+    (* [assoc_var vid sub] is a helper function to apply a substitution.
+
+       [sub] is a list of pairs [(var, vars)] where [var] is a var to be
+       substituted by the composition [vars]. If the variable with ID [vid] is
+       found in the list, the composition [vars] is returned. [assoc_var]
+       respects the negation: if the variable with ID [-vid] is found in the
+       list, the *negated* composition [(bvnot vars)] is returned. *)
+    let rec assoc_var vid sub =
+      match sub with
+      | [] -> raise Not_found
+      | ({ bv = { defn = Droot { id; _ } }; _ }, vs) :: _ when id = vid -> vs
+      | ({ bv = { defn = Droot { id; _ } }; _ }, vs) :: _ when id = -vid ->
+        negate_bitv vs
+      | ({ bv = { defn = Droot _; _ }; _ }, _) :: sub ->
+        assoc_var vid sub
+      | _ ->
+        (* Can't substitute non-root variables. *)
+        assert false
+
+    let assoc_var v sub =
+      match v.bv with
+      | { defn = Droot { id; _ }; _ } -> assoc_var id sub
+      | _ -> assert false
 
     (* This is a helper function for [slice_vars].
 
@@ -739,7 +868,7 @@ module Shostak(X : ALIEN) = struct
     let rec apply_sub_rev sub changed acc pat = function
       | [] -> changed, acc, pat
       | v :: r ->
-        match List.assoc v sub with
+        match assoc_var v sub with
         | vl ->
           (* Note that this is [(`rev` vl) @ r] and not [vl @ r] because
              the composition is given in reverse order. *)
@@ -804,7 +933,7 @@ module Shostak(X : ALIEN) = struct
            Therefore we assert that the variable is indeed a B variable and that
            list of substitutions for B variables is not empty. *)
         assert (not (Lists.is_empty (fst subs)));
-        assert (match st.bv with S_Var { sorte = B; _ } -> true | _ -> false);
+        (* TODO: assert (match st.bv.sorte with B -> true | _ -> false); *)
         slice_vars eq (n - st.sz :: pt) (true, st :: req, subs)
       | st :: eq, n :: pt when st.sz = n ->
         slice_vars eq pt (c, st :: req, subs)
@@ -893,7 +1022,7 @@ module Shostak(X : ALIEN) = struct
       let rec f_aux = function
         |[] -> []
         |v::r ->
-          match List.assoc v subs with
+          match assoc_var v subs with
           | vl -> vl @ f_aux r
           | exception Not_found -> v :: f_aux r
       in List.map (fun (t,vls) ->(t,List.map f_aux vls))sys
@@ -942,113 +1071,43 @@ module Shostak(X : ALIEN) = struct
             end
       in slice_rec [] parts
 
-    (* [union_sets sets] performs (inefficiently) the union operation of an
-       union-find data structure. Given an union-find data structure [sets]
-       represented as a list of sets, it returns a new list [sets'] by merging
-       all the sets in the original list that are not disjoint. *)
-    let rec union_sets sets =
-      (* [included e1 e2] returns [true] if the intersection of [e1] and [e2] is
-         nonempty, and [false] otherwise. Confusingly, this *does not* mean that
-         [e1] is included in [e2], but rather that [e1] and [e2] are not
-         disjoint. Go figure. *)
-      let included e1 e2 =
-        try
-          ST_Set.iter (fun at -> if ST_Set.mem at e2 then raise Exit)e1;
-          false
-        with Exit -> true
-      in match sets with
-      |[] -> []
-      |st::tl ->
-        let (ok,ko) = List.partition (included st) tl in
-        if Lists.is_empty ok then st::union_sets tl
-        else union_sets ((List.fold_left ST_Set.union st ok)::ko)
+    let union x1 x2 = union x1.bv x2.bv
 
-    (* [init_sets vals] takes as argument a uniform multi-equation [vals], and
-       converts it into a union-of-sets representation.
+    (* [build_solution unif_slic] takes as argument a uniform system of
+       multi-equations (see above). It builds a solution to the uniform system
+       by propagating equalities then replacing each term with the
+       concatenation of representatives for the corresponding multi-equation.
 
-       This is a sort of transposition. Given an *uniform* multi-equation:
-
-        x1 @ ... @ xn ==
-             ...      ==
-        z1 @ ... @ zn
-
-       we build a list where each position in the multi-equation is associated
-       with the set of values at that position in the multi-equation:
-
-        [[{x1, ..., z1}, ..., {xn, ..., zn}]]
-
-       All the values in the same set must be equal. *)
-    let init_sets vals =
-      let acc = List.map (fun at -> ST_Set.singleton at) (List.hd vals) in
-      let tl = (List.tl vals) in
-      let f_aux = List.map2 (fun ac_e e -> ST_Set.add e ac_e)
-      in List.fold_left f_aux acc tl
-
-    (* [equalities_propagation eqs_slice] takes as argument a partitioned
-       uniform system of equations [eqs_slice].
-
-       This means that [eqs_slice] is a list of pairs [(t, eqs)] where [t] is
-       an uninterpreted term ("Other") and [eqs] are uniform multi-equations
-       associated with [t] (see [uniforme_slice] for the definition of uniform
-       multi-equations).
-
-       The usual restrictions on A, B and C variables apply:
-
-       - A variables occur at most once in the whole system
-       - B variables occur in at most one composition of at most one
-          multi-equation, but occur multiple times within that one composition
-       - C variables occur at most once in the multi-equation associated with a
-          given term, but occur in multi-equations associated with multiple
-          distinct terms
-
-       [equalities_propagation] propagates the equalities implied by the
-       [eqs_slic] system, and returns a list of pairs [(r, c)] where [c] is an
-       equivalence class (represented by a set of simple terms) and [r] is the
-       representative of that class.
-
-       If there is a constant in the set, it is used as a representative;
-       otherwise, the maximum variable according to [compare_solver_simple_term]
-       is returned (preference is given to C > B > A variables, and amongst
-       variables of the same sort, the youngest is preferred).
-
-       The equivalence classes contain exactly all the terms occuring in the
-       input system. *)
-    let equalities_propagation eqs_slic =
-      let init_sets = List.map (fun (_,vls) -> init_sets vls) eqs_slic in
-      let init_sets = List.flatten init_sets
-      in List.map
-        (fun set ->
-           let st1 = ST_Set.min_elt set and st2 = ST_Set.max_elt set
-           in  match st1.bv , st2.bv with
-           |S_Cte false, S_Cte true -> raise Util.Unsolvable
-           |S_Cte false , _ -> st1,set
-           |_ , _ -> st2,set
-        ) (union_sets init_sets)
-
-    (* [build_solution unif_slic sets] takes as argument a uniform system of
-       multi-equations (see above) and a set of equivalence classes. It builds a
-       solution to the uniform system by replacing each term with the
-       concatenation of representatives for the corresponding multi-equation. *)
-    let build_solution unif_slic sets =
-      let tvars =
-        List.map (fun (r, set) ->
-            let r =
-              match r.bv with
-              | S_Cte b -> Cte b
-              | S_Var _ ->
-                let t = E.fresh_name (Ty.Tbitv r.sz) in
-                Other (X.term_embed t)
-            in
-            (r, set)) sets
-      in
+       This is a destructive operation on the variables occuring in the system:
+       the system must not be re-used. *)
+    let build_solution unif_slic =
+      (* Propagate equalities to ensure a single representative per class *)
+      List.iter (fun (_, vls) ->
+          let hd = List.hd vls in
+          List.iter (List.iter2 union hd) (List.tl vls)) unif_slic;
+      let vars = Hashtbl.create 17 in
       let get_rep var =
-        fst(List.find ( fun(_,set)->ST_Set.mem var set ) tvars) in
+        match (find var.bv) with
+        | { defn = Dcte b; _ } -> Cte b
+        | { defn = Droot { id; _ }; _ } ->
+          assert (id <> 0);
+          begin
+            match Hashtbl.find vars (abs id) with
+            | (p, n) -> if id > 0 then p else n
+            | exception Not_found ->
+              let t = E.fresh_name (Ty.Tbitv var.sz) in
+              let r = X.term_embed t in
+              let p = Other (positive r) in
+              let n = Other (negative r) in
+              Hashtbl.add vars (abs id) (p, n);
+              if id > 0 then p else n
+          end
+        | { defn = Dlink _; _ } -> assert false
+      in
       let to_external_ast v =
         {sz = v.sz;
-         bv = match v.bv with
-           |S_Cte b -> Cte b
-           |S_Var _ -> get_rep v
-        }in
+         bv = get_rep v}
+      in
       let rec cnf_max l = match l with
         |[] -> []
         |[elt]-> [elt]
@@ -1085,10 +1144,19 @@ module Shostak(X : ALIEN) = struct
           begin
             let st_sys = slice u v in
             let sys_sols = sys_solve st_sys in
+            (* Ensure we map x |-> (bvnot e) rather than (bvnot x) |-> e *)
+            let sys_sols =
+              List.map (fun (st, bv) ->
+                  match st.bv with
+                  | Other o when o.negated ->
+                    { st with bv = Other (negate o) }, negate_bitv bv
+                  | Ext (o, sz, i, j) when o.negated ->
+                    { st with bv = Ext (negate o, sz, i, j) }, negate_bitv bv
+                  | Other _ | Ext _ | Cte _ -> st, bv) sys_sols
+            in
             let parts = partition (equal_simple_term X.equal) sys_sols in
             let unif_slic = equations_slice parts in
-            let eq_pr = equalities_propagation unif_slic in
-            let sol = build_solution unif_slic eq_pr in
+            let sol = build_solution unif_slic in
             if Options.get_debug_bitv () then
               begin
                 Debug.print_sliced_sys st_sys;
@@ -1109,9 +1177,9 @@ module Shostak(X : ALIEN) = struct
 
   let hash_simple_term_aux = function
     | Cte b -> 11 * Hashtbl.hash b
-    | Other x -> 17 * X.hash x
+    | Other x -> 17 * hash_signed X.hash x
     | Ext (x, a, b, c) ->
-      X.hash x + 19 * (a + b + c)
+      hash_signed X.hash x + 19 * (a + b + c)
 
   let hash l =
     List.fold_left
@@ -1122,10 +1190,12 @@ module Shostak(X : ALIEN) = struct
       (fun acc x ->
          match x.bv with
          | Cte _  -> acc
-         | Other t | Ext(t,_,_,_) -> (X.leaves t)@acc
+         | Other t | Ext(t,_,_,_) -> (X.leaves t.value)@acc
       ) [] bitv
 
-  let is_mine = function [{ bv = Other r; _ }] -> r | bv -> X.embed bv
+  let is_mine = function
+      [{ bv = Other r; _ }] when not r.negated -> r.value
+    | bv -> X.embed bv
 
   let print = Debug.print_C_ast
 
@@ -1158,14 +1228,21 @@ module Shostak(X : ALIEN) = struct
   let extract r ty =
     match X.extract r with
       Some (_::_ as bv) -> to_i_ast bv
-    | None -> {bv =  Canonizer.I_Other r; sz = ty}
+    | None -> {bv =  Canonizer.I_Other (positive r); sz = ty}
     | Some [] -> assert false
 
-  let var_or_term x =
+  let var_or_term x v =
+    (* [solve] is responsible to ensure we don't substitute negated values *)
     match x.bv with
-    | Other r -> r
+    | Other { value = r; negated = false } -> r, is_mine v
     | _ -> assert false
 
+  let solve_ter u t =
+    try
+      List.map
+        (fun (p,v) -> var_or_term p v)
+        (Solver.solve u t)
+    with Solver.Valid -> []
 
   (* ne resout pas quand c'est deja resolu *)
   let solve_bis u t =
@@ -1176,24 +1253,21 @@ module Shostak(X : ALIEN) = struct
 
     match X.extract u , X.extract t with
     | None   , None   -> if X.str_cmp u t > 0 then [u,t] else [t,u]
-    | None   , Some _ -> [u , t]
-    | Some _ , None   -> [t , u]
-    | Some u , Some t ->
-      try
-        List.map
-          (fun (p,v) -> var_or_term p,is_mine v)
-          (Solver.solve u t)
-      with Solver.Valid -> []
-
+    | None   , Some t -> solve_ter (embed u) t
+    | Some u , None   -> solve_ter u (embed t)
+    | Some u , Some t -> solve_ter u t
 
 
   let rec subst_rec x subs biv =
     match biv.bv with
     | Canonizer.I_Cte _ -> biv
     | Canonizer.I_Other tt ->
-      if X.equal x tt then
-        extract subs biv.sz
-      else extract (X.subst x subs tt) biv.sz
+      let tt' =
+        if X.equal x tt.value then
+          extract subs biv.sz
+        else extract (X.subst x subs tt.value) biv.sz
+      in
+      if tt.negated then Canonizer.i_negate tt' else tt'
     | Canonizer.I_Ext (t,i,j) ->
       { biv with bv = Canonizer.I_Ext(subst_rec x subs t,i,j) }
     | Canonizer.I_Comp (u,v) ->

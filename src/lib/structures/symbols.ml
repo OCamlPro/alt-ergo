@@ -46,6 +46,7 @@ type operator =
   (* BV *)
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
+  | BVnot
   (* FP *)
   | Float
   | Integer_round | Fixed
@@ -145,6 +146,7 @@ let compare_operators op1 op2 =
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
             | Integer_log2 | Pow | Integer_round
+            | BVnot
             | Not_theory_constant | Is_theory_constant | Linear_dependency
             | Constr _ | Destruct _ | Tite) -> assert false
     )
@@ -317,6 +319,7 @@ let to_string ?(show_vars=true) x = match x with
   | Op Linear_dependency -> "linear_dependency"
   | Op Concat -> "@"
   | Op Extract (i, j) -> Format.sprintf "^{%d; %d}" i j
+  | Op BVnot -> "bvnot"
   | Op Tite -> "ite"
   | Op Reach -> assert false
   | True -> "true"

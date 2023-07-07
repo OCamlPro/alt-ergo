@@ -1022,6 +1022,9 @@ let rec mk_expr
             in
             semantic_trigger ~loc ?var trigger
 
+          | B.Bitv_not n, [t] ->
+            E.mk_term (Op BVnot) [aux_mk_expr t] (Tbitv n)
+
           (* Binary applications *)
 
           | B.Bitv_concat { n; m; }, [ x; y ] ->
