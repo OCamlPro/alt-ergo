@@ -251,12 +251,9 @@ let main () =
     | Errors.Error e ->
       Printer.print_err "%a" Errors.report e;
       exit 1
-    | _ as exn -> Printexc.raise_with_backtrace exn bt
-  in
-  let finally ~handle_exn st e =
-    match e with
-    | Some (bt, exn) -> handle_exn st bt exn; st
-    | _ -> st
+    | _ as exn ->
+      Printer.print_err " Dolmen exception:";
+      Printexc.raise_with_backtrace exn bt
   in
   let set_output_format fmt =
     if Options.get_infer_output_format () then
@@ -541,46 +538,52 @@ let main () =
   in
   let d_fe filename =
     let logic_file, st = mk_state filename in
-    try
-      Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
-      @@ fun () ->
+    Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
+    @@ fun () ->
 
-      let builtin_dir = "<builtin>" in
-      let theory_preludes =
-        Options.get_theory_preludes ()
-        |> List.map (fun theory ->
-            let filename = Theories.filename theory in
-            let content = Theories.content theory in
-            State.mk_file builtin_dir (`Raw (filename, content)))
-      in
-      let preludes =
-        theory_preludes @
-        List.map (fun path ->
-            let dir, source = State.split_input (`File path) in
-            State.mk_file dir source) (Options.get_preludes ())
-      in
-      let g =
+    let builtin_dir = "<builtin>" in
+    let theory_preludes =
+      Options.get_theory_preludes ()
+      |> List.map (fun theory ->
+          let filename = Theories.filename theory in
+          let content = Theories.content theory in
+          State.mk_file builtin_dir (`Raw (filename, content)))
+    in
+    let preludes =
+      theory_preludes @
+      List.map (fun path ->
+          let dir, source = State.split_input (`File path) in
+          State.mk_file dir source) (Options.get_preludes ())
+    in
+    let g =
+      try
         Parser.parse_logic ~preludes logic_file
-      in
-      let st = State.set Typer.additional_builtins D_cnf.fpa_builtins st in
-      let all_used_context = FE.init_all_used_context () in
-      let finally = finally ~handle_exn in
-      let st =
-        let open Pipeline in
-        let op_i ?name f = op ?name (fun st x -> f st x, ()) in
-        run ~finally g st
-          (fix
-             (op ~name:"expand" Parser.expand)
-             (op ~name:"debug_pre" debug_parsed_pipe
-              @>|> op ~name:"typecheck" Typer_Pipe.typecheck
-              @>|> op ~name:"debug_post" debug_typed_pipe
-              @>|> op_i (handle_stmt all_used_context)
-              @>>> _end))
-      in
-      State.flush st () |> ignore
-    with exn ->
-      let bt = Printexc.get_raw_backtrace () in
-      handle_exn st bt exn
+      with exn ->
+        let bt = Printexc.get_raw_backtrace () in
+        handle_exn st bt exn
+    in
+    let st = State.set Typer.additional_builtins D_cnf.fpa_builtins st in
+    let all_used_context = FE.init_all_used_context () in
+    let finally st e =
+      match e with
+      | Some (bt, exn) ->
+        let () = handle_exn st bt exn in
+        st
+      | _ -> st
+    in
+    let st =
+      let open Pipeline in
+      let op_i ?name f = op ?name (fun st x -> f st x, ()) in
+      run ~finally g st
+        (fix
+           (op ~name:"expand" Parser.expand)
+           (op ~name:"debug_pre" debug_parsed_pipe
+            @>|> op ~name:"typecheck" Typer_Pipe.typecheck
+            @>|> op ~name:"debug_post" debug_typed_pipe
+            @>|> op_i (handle_stmt all_used_context)
+            @>>> _end))
+    in
+    State.flush st () |> ignore
   in
 
   let filename = get_file () in
