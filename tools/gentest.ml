@@ -175,8 +175,6 @@ module Batch : sig
   (** Type of a batch. *)
 
   val make:
-    frontend:string option ->
-    filter:string list option ->
     path: string -> cmds: Cmd.t list
     -> pb_files: string list -> t
   (** Set up a batch of tests. *)
@@ -193,18 +191,27 @@ end = struct
     tests: Test.t list;
   }
 
-  let make ~frontend ~filter ~path ~cmds ~pb_files =
-    let filter =
-      match filter with
-      | Some filter ->
-        fun cmd -> List.exists (String.equal (Cmd.name cmd)) filter
-      | None ->
-        fun _ -> true
-    in
-    let arg = Option.map (Format.asprintf "--frontend %s") frontend in
+  let filter filters =
+    match filters with
+    | Some filters ->
+      fun cmd -> List.exists (String.equal (Cmd.name cmd)) filters
+    | None ->
+      fun _ -> true
+
+  let make ~path ~cmds ~pb_files =
     let tests = List.fold_left (fun acc1 pb_file ->
+        let frontend, filters =
+          List.fold_left (
+            fun (frontend_opt, filters_opt) ->
+              function
+              | "dolmen" -> Some "dolmen", filters_opt
+              | "models" -> frontend_opt, Some ["models"; "models_ci"]
+              | _ -> (frontend_opt, filters_opt)
+          ) (None, None) (String.split_on_char '.' pb_file)
+        in
+        let arg = Option.map (Format.asprintf "--frontend %s") frontend in
         List.fold_left (fun acc2 cmd ->
-            if filter cmd then
+            if filter filters cmd then
               let cmd_opt = Option.map (fun arg -> Cmd.add_arg ~arg cmd) arg in
               let cmd = Option.value ~default:cmd cmd_opt in
               (Test.make ~cmd ~pb_file) :: acc2
@@ -258,26 +265,18 @@ let is_a_problem file =
   File.has_extension_in file [".ae"; ".smt2"; ".pstm2"; ".zip"]
 
 (* Generate a dune file for each subfolder of the path given as argument. *)
-let rec generate ?frontend ?filter path cmds =
+let rec generate path cmds =
   let files, folders = File.scan_folder path in
   let () = match List.filter is_a_problem files with
     | [] -> ()
     | pb_files -> (
-        let batch = Batch.make ~frontend ~filter ~path ~cmds ~pb_files in
+        let batch = Batch.make ~path ~cmds ~pb_files in
         Batch.generate_expected_file batch;
         Batch.generate_dune_file batch
       ) in
   List.iter (fun folder ->
       let path = Filename.concat path folder in
-      let frontend =
-        if folder = "dolmen" then Some "dolmen" else frontend
-      in
-      let filter =
-        match folder with
-        | "models" -> Some ["models"; "models_ci"]
-        | _ -> filter
-      in
-      generate ?frontend ?filter path cmds
+      generate path cmds
     ) folders
 
 let () =
