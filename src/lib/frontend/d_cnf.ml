@@ -399,7 +399,9 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
     let ity = aux ity in
     let vty = aux vty in
     Ty.Tfarray (ity, vty)
-  | `Bitv n -> Ty.Tbitv n
+  | `Bitv n ->
+    if n <= 0 then Errors.typing_error (NonPositiveBitvType n) Loc.dummy;
+    Ty.Tbitv n
 
   | `App (`Builtin B.Unit, []) -> Ty.Tunit
   | `App (`Builtin _, [ty]) -> aux ty

@@ -92,12 +92,14 @@ module Types = struct
         ) lpp lvars
     with Invalid_argument _ -> false
 
-  let rec ty_of_pp _loc env rectype = function
+  let rec ty_of_pp loc env rectype = function
     | PPTint -> Ty.Tint
     | PPTbool -> Ty.Tbool
     | PPTunit -> Ty.Tunit
     | PPTreal -> Ty.Treal
-    | PPTbitv n -> Ty.Tbitv n
+    | PPTbitv n ->
+      if n <= 0 then Errors.typing_error (NonPositiveBitvType n) loc;
+      Ty.Tbitv n
     | PPTvarid (s, _) ->
       begin
         try MString.find s !to_tyvars

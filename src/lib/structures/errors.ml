@@ -33,6 +33,7 @@ open Format
 type typing_error =
   | BitvExtract of int*int
   | BitvExtractRange of int*int
+  | NonPositiveBitvType of int
   | ClashType of string
   | ClashLabel of string * string
   | ClashParam of string
@@ -111,6 +112,8 @@ let report_typing_error fmt = function
     fprintf fmt "bitvector extraction malformed (%d>%d)" i j
   | BitvExtractRange(n,j) ->
     fprintf fmt "extraction out of range (%d>%d)" j n
+  | NonPositiveBitvType(n) ->
+    fprintf fmt "non positive bitvector size (%d)" n
   | ClashType s ->
     fprintf fmt "the type %s is already defined" s
   | ClashParam s ->
