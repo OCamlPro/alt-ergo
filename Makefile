@@ -118,7 +118,7 @@ packages:
 # Generate new Dune tests from the problems in
 # the directory tests/.
 gentest: $(wildcard tests/**/*)
-	dune exec -- tools/gentest.exe tests/
+	dune build @tests/gentest --auto-promote
 
 # Run non-regression tests.
 runtest: gentest bin

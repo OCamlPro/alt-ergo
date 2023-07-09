@@ -48,9 +48,6 @@ jobs:
       - name: Build alt-ergo with opam
         run: opam exec -- opam reinstall .
 
-      - name: Generate tests
-        run: opam exec -- make gentest
-
       - name: Run tests
         run: opam exec -- make runtest-ci
 
