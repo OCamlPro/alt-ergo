@@ -212,12 +212,12 @@ let assume env _ la =
 let assume env uf la =
   if Options.get_timers() then
     try
-      Timers.exec_timer_start Timers.M_Arrays Timers.F_assume;
+      Timers.exec_timer_start Timers.M_Ite Timers.F_assume;
       let res =assume env uf la in
-      Timers.exec_timer_pause Timers.M_Arrays Timers.F_assume;
+      Timers.exec_timer_pause Timers.M_Ite Timers.F_assume;
       res
     with e ->
-      Timers.exec_timer_pause Timers.M_Arrays Timers.F_assume;
+      Timers.exec_timer_pause Timers.M_Ite Timers.F_assume;
       raise e
   else assume env uf la
 
