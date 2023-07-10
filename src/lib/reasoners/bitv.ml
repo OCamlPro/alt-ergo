@@ -336,9 +336,9 @@ module Shostak(X : ALIEN) = struct
       let open Format in
       match ast.bv with
       | Cte b -> fprintf fmt "%d[%d]" (if b then 1 else 0) ast.sz
-      | Other t -> fprintf fmt "%a" X.print t
-      | Ext (t,_,i,j) ->
-        fprintf fmt "%a" X.print t;
+      | Other t -> fprintf fmt "%a[%d]" X.print t ast.sz
+      | Ext (t,sz,i,j) ->
+        fprintf fmt "%a[%d]" X.print t sz;
         fprintf fmt "<%d,%d>" i j
 
     let[@warning "-32"] rec print_I_ast fmt ast =
@@ -347,7 +347,7 @@ module Shostak(X : ALIEN) = struct
       match ast.bv with
       | I_Cte b -> fprintf fmt "%d[%d]" (if b then 1 else 0) ast.sz
       | I_Other t -> fprintf fmt "%a[%d]" X.print t ast.sz
-      | I_Ext (u,i,j) -> fprintf fmt "%a<%d,%d>" print_I_ast u i j
+      | I_Ext (u,i,j) -> fprintf fmt "%a[%d]<%d,%d>" print_I_ast u u.sz i j
       | I_Comp(u,v) -> fprintf fmt "@[(%a * %a)@]" print_I_ast u print_I_ast v
 
     let print_C_ast fmt = function
