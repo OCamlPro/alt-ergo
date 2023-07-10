@@ -334,3 +334,111 @@ val save_cache: unit -> unit
 
 val reinit_cache: unit -> unit
 (** Reinitializes the module's cache *)
+
+(** Constructors from the smtlib core theory.
+    https://smtlib.cs.uiowa.edu/theories-Core.shtml *)
+module Core : sig
+  val not : t -> t
+
+  val eq : t -> t -> t
+
+  val xor : t -> t -> t
+
+  val and_ : t -> t -> t
+
+  val or_ : t -> t -> t
+
+  val ite : t -> t -> t -> t
+end
+
+(** Constructors from the smtlib theory of integers.
+    https://smtlib.cs.uiowa.edu/theories-Ints.shtml *)
+module Ints : sig
+  (* Conversion from ZArith *)
+  val of_Z : Z.t -> t
+  val ( ~$ ) : Z.t -> t
+
+  (* Conversion from int *)
+  val of_int : int -> t
+  val ( ~$$ ) : int -> t
+
+  (* Arithmetic operations *)
+  val ( + ) : t -> t -> t
+  val ( - ) : t -> t -> t
+  val ( ~- ) : t -> t
+  val ( * ) : t -> t -> t
+  val ( / ) : t -> t -> t
+  val ( mod ) : t -> t -> t
+
+  (* Absolute value *)
+  val abs : t -> t
+
+  (* Exponentiation *)
+  val ( ** ) : t -> t -> t
+
+  (* Comparisons *)
+  val ( <= ) : t -> t -> t
+  val ( >= ) : t -> t -> t
+  val ( < ) : t -> t -> t
+  val ( > ) : t -> t -> t
+end
+
+(** Constructors from the smtlib theory of fixed-size bit-vectors and the QF_BV
+    logic.
+
+    https://smtlib.cs.uiowa.edu/theories-FixedSizeBitVectors.shtml
+    https://smtlib.cs.uiowa.edu/logics-all.shtml#QF_BV *)
+module BV : sig
+  (* Conversion from and to integers *)
+  val int2bv : int -> t -> t
+  val bv2nat : t -> t
+
+  (* Constant symbols with all zeros and all ones *)
+  val bvzero: int -> t
+  val bvones : int -> t
+
+  (* Vector-level operations *)
+  val concat : t -> t -> t
+  val extract : int -> int -> t -> t
+  val repeat : int -> t -> t
+  val zero_extend : int -> t -> t
+  val sign_extend : int -> t -> t
+  val rotate_left : int -> t -> t
+  val rotate_right : int -> t -> t
+
+  (* Bit-wise operations *)
+  val bvnot : t -> t
+  val bvand : t -> t -> t
+  val bvor : t -> t -> t
+  val bvnand : t -> t -> t
+  val bvnor : t -> t -> t
+  val bvxor : t -> t -> t
+  val bvxnor : t -> t -> t
+  val bvcomp : t -> t -> t
+
+  (* Arithmetic operations *)
+  val bvneg : t -> t
+  val bvadd : t -> t -> t
+  val bvsub : t -> t -> t
+  val bvmul : t -> t -> t
+  val bvudiv : t -> t -> t
+  val bvurem : t -> t -> t
+  val bvsdiv : t -> t -> t
+  val bvsrem : t -> t -> t
+  val bvsmod : t -> t -> t
+
+  (* Comparison predicates *)
+  val bvult : t -> t -> t
+  val bvule : t -> t -> t
+  val bvugt : t -> t -> t
+  val bvuge : t -> t -> t
+  val bvslt : t -> t -> t
+  val bvsle : t -> t -> t
+  val bvsgt : t -> t -> t
+  val bvsge : t -> t -> t
+
+  (* Shift operations *)
+  val bvshl : t -> t -> t
+  val bvlshr : t -> t -> t
+  val bvashr : t -> t -> t
+end
