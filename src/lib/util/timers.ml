@@ -43,22 +43,24 @@ type ty_module =
   | M_Expr
   | M_Triggers
   | M_Simplex
+  | M_Ite
 
 let mtag k = match k with
-  | M_None   -> 0
-  | M_Typing -> 1
-  | M_Sat    -> 2
-  | M_Match  -> 3
-  | M_CC     -> 4
-  | M_UF     -> 5
-  | M_Arith  -> 6
-  | M_Arrays -> 7
-  | M_Sum    -> 8
-  | M_Records-> 9
-  | M_AC     -> 10
-  | M_Expr-> 11
-  | M_Triggers->12
-  | M_Simplex->13
+  | M_None     -> 0
+  | M_Typing   -> 1
+  | M_Sat      -> 2
+  | M_Match    -> 3
+  | M_CC       -> 4
+  | M_UF       -> 5
+  | M_Arith    -> 6
+  | M_Arrays   -> 7
+  | M_Sum      -> 8
+  | M_Records  -> 9
+  | M_AC       -> 10
+  | M_Expr     -> 11
+  | M_Triggers -> 12
+  | M_Simplex  -> 13
+  | M_Ite      -> 14
 
 let nb_mtag = 14
 
@@ -109,20 +111,21 @@ let ftag f = match f with
 let nb_ftag = 20
 
 let string_of_ty_module k = match k with
-  | M_None   -> "None"
-  | M_Typing -> "Typing"
-  | M_Sat    -> "Sat"
-  | M_Match  -> "Match"
-  | M_CC     -> "CC"
-  | M_UF     -> "UF"
-  | M_Arith  -> "Arith"
-  | M_Arrays -> "Arrays"
-  | M_Sum    -> "Sum"
-  | M_Records-> "Records"
-  | M_AC     -> "AC"
-  | M_Expr-> "Expr"
-  | M_Triggers->"Triggers"
-  | M_Simplex->"Simplex"
+  | M_None     -> "None"
+  | M_Typing   -> "Typing"
+  | M_Sat      -> "Sat"
+  | M_Match    -> "Match"
+  | M_CC       -> "CC"
+  | M_UF       -> "UF"
+  | M_Arith    -> "Arith"
+  | M_Arrays   -> "Arrays"
+  | M_Sum      -> "Sum"
+  | M_Records  -> "Records"
+  | M_AC       -> "AC"
+  | M_Expr     -> "Expr"
+  | M_Triggers -> "Triggers"
+  | M_Simplex  -> "Simplex"
+  | M_Ite      -> "Ite"
 
 let string_of_ty_function f = match f with
   | F_add           -> "add"
