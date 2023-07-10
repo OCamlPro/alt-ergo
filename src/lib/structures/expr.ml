@@ -1269,12 +1269,12 @@ let mk_bvneg n x =
   )
 
 let mk_bvult n x y =
-  if n = 0 then faux else
-    mk_builtin ~is_pos:true Sy.LT [ mk_bv2nat x; mk_bv2nat y ]
+  assert (n > 0);
+  mk_builtin ~is_pos:true Sy.LT [ mk_bv2nat x; mk_bv2nat y ]
 
 let mk_bvule n x y =
-  if n = 0 then faux else
-    mk_builtin ~is_pos:true Sy.LE [ mk_bv2nat x; mk_bv2nat y ]
+  assert (n > 0);
+  mk_builtin ~is_pos:true Sy.LE [ mk_bv2nat x; mk_bv2nat y ]
 
 let mk_bvslt n x y =
   let xsign_pos = mk_bvsign_pos n x in
