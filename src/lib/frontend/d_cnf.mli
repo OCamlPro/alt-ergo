@@ -43,7 +43,7 @@ val make :
     type-checked statement [stmt] and appends them to [acc].
 *)
 
-val fpa_builtins :
+val builtins :
   Dolmen_loop.State.t ->
   D_loop.Typer.lang ->
   Dolmen_loop.Typer.T.builtin_symbols

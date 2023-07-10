@@ -176,6 +176,8 @@ type _ DStd.Builtin.t +=
   | Integer_round
   | Abs_real
   | Sqrt_real
+  | Int2BV of int
+  | BV2Nat of int
   | Sqrt_real_default
   | Sqrt_real_excess
   | Ceiling_to_int of [ `Real ]
@@ -186,7 +188,62 @@ type _ DStd.Builtin.t +=
   (* Internal use for semantic triggers -- do not expose outside of theories *)
   | Not_theory_constant | Is_theory_constant | Linear_dependency
 
-let fpa_builtins : _ -> Typer.lang -> Dl.Typer.T.builtin_symbols =
+let with_cache ~cache f x =
+  try Hashtbl.find cache x
+  with Not_found ->
+    let res = f x in
+    Hashtbl.add cache x res;
+    res
+
+module Const = struct
+  open DE
+
+  let bv2nat =
+    with_cache ~cache:(Hashtbl.create 13) (fun n ->
+        let name = "bv2nat" in
+        Id.mk ~name ~builtin:(BV2Nat n)
+          (DStd.Path.global name) Ty.(arrow [bitv n] int))
+
+  let int2bv =
+    with_cache ~cache:(Hashtbl.create 13) (fun n ->
+        let name = "int2bv" in
+        Id.mk ~name ~builtin:(Int2BV n)
+          (DStd.Path.global name) Ty.(arrow [int] (bitv n)))
+end
+
+let bv2nat t =
+  let n =
+    match DT.view (DE.Term.ty t) with
+    | `Bitv n -> n
+    | _ -> raise (DE.Term.Wrong_type (t, DT.bitv 0))
+  in
+  DE.Term.apply_cst (Const.bv2nat n) [] [t]
+
+let int2bv n t =
+  DE.Term.apply_cst (Const.int2bv n) [] [t]
+
+let bv_builtins env s =
+  let term_app1 f =
+    Dl.Typer.T.builtin_term @@
+    Dolmen_type.Base.term_app1 (module Dl.Typer.T) env s f
+  in
+  match s with
+  | Dl.Typer.T.Id {
+      ns = Term  ;
+      name = Simple "bv2nat" } ->
+    term_app1 bv2nat
+  | Id {
+      ns = Term ;
+      name = Indexed {
+          basename = "int2bv" ;
+          indexes = [ n ] } } ->
+    begin match int_of_string n with
+      | n -> term_app1 (int2bv n)
+      | exception Failure _ -> `Not_found
+    end
+  | _ -> `Not_found
+
+let fpa_builtins =
   let (->.) args ret = (args, ret) in
   let builtin_term t = Dl.Typer.T.builtin_term t in
   let builtin_ty t = Dl.Typer.T.builtin_ty t in
@@ -356,20 +413,23 @@ let fpa_builtins : _ -> Typer.lang -> Dl.Typer.T.builtin_symbols =
     |> op "linear_dependency" Linear_dependency ([real; real] ->. prop)
 
   in
-  fun _st lang ->
-    match lang with
-    | `Logic Alt_ergo ->
-      fun env s ->
-        begin match s with
-          | Dl.Typer.T.Id id ->
-            begin
-              try
-                Id.Map.find_exn id fpa_builtins env s
-              with Not_found -> `Not_found
-            end
-          | Builtin _ -> `Not_found
+  fun env s ->
+    begin match s with
+      | Dl.Typer.T.Id id ->
+        begin
+          try
+            Id.Map.find_exn id fpa_builtins env s
+          with Not_found -> `Not_found
         end
-    | _ -> fun _ _ -> `Not_found
+      | Builtin _ -> `Not_found
+    end
+
+let builtins =
+  fun _st (lang : Typer.lang) ->
+  match lang with
+  | `Logic Alt_ergo -> fpa_builtins
+  | `Logic (Smtlib2 _) -> bv_builtins
+  | _ -> fun _ _ -> `Not_found
 
 (** Translates dolmen locs to Alt-Ergo's locs *)
 let dl_to_ael dloc_file (compact_loc: DStd.Loc.t) =
@@ -1290,6 +1350,8 @@ let rec mk_expr
           | Integer_round, _ -> op Integer_round
           | Abs_real, _ -> op Abs_real
           | Sqrt_real, _ -> op Sqrt_real
+          | Int2BV n, _ -> op (Int2BV n)
+          | BV2Nat _, _ -> op BV2Nat
           | Sqrt_real_default, _ -> op Sqrt_real_default
           | Sqrt_real_excess, _ -> op Sqrt_real_excess
           | B.Abs, _ -> op Abs_int
