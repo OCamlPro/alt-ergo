@@ -43,6 +43,7 @@ type ty_module =
   | M_Expr
   | M_Triggers
   | M_Simplex
+  | M_Ite
 
 type ty_function =
   | F_add

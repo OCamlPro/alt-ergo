@@ -1164,14 +1164,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     begin
       match !latest_saved_env with
       | None ->
-        Printer.print_fmt (Options.Output.get_fmt_std ())
-          "@[<v 0>[FunSat]@, \
+        Printer.print_wrn
+          "[FunSat]@, @[<v 0>\
            It seems that no model has been computed so far.@,\
            You may need to change your model generation strategy@,\
            or to increase your timeout.@]"
       | Some env ->
-        Printer.print_fmt (Options.Output.get_fmt_std ())
-          "@[<v 0>[FunSat]@, \
+        Printer.print_wrn
+          "[FunSat]@, @[<v 0>\
            A model has been computed. However, I failed \
            while computing it so may be incorrect.@]";
         let prop_model = extract_prop_model ~complete_model:true env in
