@@ -28,14 +28,70 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module E = Expr
+module X = Shostak.Combine
+
 type t = unit
 
+let as_int2bv r =
+  match X.term_extract r with
+  | Some t, _ ->
+    begin match E.term_view t with
+      | { f = Op Int2BV n ; xs = [ t ] ; _ } -> Some (t, n)
+      | _ -> None
+    end
+  | _ -> None
+
 let empty _ = ()
-let assume _ _ _ =
-  (), { Sig_rel.assume = []; remove = []}
+let assume env _uf inputs =
+  let assume =
+    List.fold_left (fun acc (xview, _, ex, origin) ->
+        match xview with
+        | Xliteral.Eq (t, u) ->
+          (* ((_ int2bv n) t) and ((_ int2bv n) u) are equal iff t and u are
+             congruent modulo [pow 2 n].
+
+             Note that we use [(t - u) mod 2^n = 0] because we introduce a
+             single auxiliary variable in that case, wherease using the
+             equality of [t mod 2^n] and [u mod 2^n] would introduce two and
+             make things harder for the arithmetic reasoner. *)
+          begin match as_int2bv t, as_int2bv u with
+            | Some (t, n), Some (u, m) ->
+              assert (n = m);
+              let eq =
+                E.Ints.(E.Core.eq ((t - u) mod ~$Z.(pow ~$2 n)) ~$$0)
+              in
+              (Sig_rel.LTerm eq, ex, origin) :: acc
+            | _ -> acc
+          end
+        | Xliteral.Distinct (neg, ts) ->
+          (* ((_ int2bv n) t) and ((_ int2bv n) u) are distinct iff t and u are
+             *not* congruent modulo [pow 2 n] *)
+          let mk =
+            if neg then E.Core.eq
+            else fun s t -> E.Core.(not (eq s t))
+          in
+          let ts = List.filter_map as_int2bv ts in
+          let rec aux acc = function
+            | [] -> acc
+            | (t, n) :: ts ->
+              let acc =
+                List.fold_left (fun acc (u, m) ->
+                    assert (n = m);
+                    let rel =
+                      E.Ints.(mk ((t - u) mod ~$Z.(pow ~$2 n)) ~$$0)
+                    in
+                    (Sig_rel.LTerm rel, ex, origin) :: acc) acc ts
+              in
+              aux acc ts
+          in aux acc ts
+        | _ -> acc)
+      [] inputs
+  in
+  env, { Sig_rel.assume; remove = []}
 let query _ _ _ = None
 let case_split _ _ ~for_model:_ = []
-let add env _ _ _ = env, []
+let add env _uf _r _t = env, []
 let new_terms _ = Expr.Set.empty
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
