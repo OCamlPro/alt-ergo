@@ -34,12 +34,15 @@ exception Unsolvable
 exception Cmp of int
 
 exception Not_implemented of string
+exception Internal_error of string
 
 let () =
   Printexc.register_printer
     (function
       | Not_implemented s ->
         Some (Format.sprintf "Feature not implemented (%s)" s)
+      | Internal_error s ->
+        Some (Format.sprintf "Internal error: %s" s)
       | _ -> None
     )
 
@@ -183,3 +186,6 @@ let rec print_list_pp ~sep ~pp fmt = function
     print_list_pp ~sep ~pp fmt l
 
 let failwith msg = Format.kasprintf failwith msg
+
+let internal_error msg =
+  Format.kasprintf (fun s -> raise (Internal_error s)) msg
