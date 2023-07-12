@@ -2958,7 +2958,8 @@ module BV = struct
     (* Note: arith.ml calls [int2bv] in [make]. If additional simplifications
        are added here, arith.ml must be updated as well. *)
     match term_view t with
-    | { f = Op BV2Nat; xs = [ t ]; ty = Tbitv m; _ } ->
+    | { f = Op BV2Nat; xs = [ t ]; _ } ->
+      let m = match type_info t with Tbitv m -> m | _ -> assert false in
       if m > n then
         extract (n - 1) 0 t
       else
