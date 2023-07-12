@@ -122,11 +122,11 @@ gentest: $(wildcard tests/**/*)
 
 # Run non-regression tests.
 runtest: gentest bin
-	dune build @runtest-quick
+	dune build @runtest @runtest-quick
 
 # Run non-regression tests for the CI.
 runtest-ci: gentest bin
-	dune build @runtest-ci
+	dune build @runtest @runtest-quick @runtest-ci
 
 # Promote new outputs of the tests.
 promote:
