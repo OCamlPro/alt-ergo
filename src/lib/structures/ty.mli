@@ -130,6 +130,9 @@ val equal : t -> t -> bool
 val compare : t -> t -> int
 (** Comparison function *)
 
+val pp_smtlib : Format.formatter -> t -> unit
+(** Printing function for types in smtlib2 format. *)
+
 val print : Format.formatter -> t -> unit
 (** Printing function for types (does not print
     the type of each fields for records). *)
