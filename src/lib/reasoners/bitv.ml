@@ -1150,17 +1150,17 @@ module Shostak(X : ALIEN) = struct
      expression. *)
   let simple_term_to_nat acc st =
     match st.bv with
-    | Cte false -> E.Ints.(acc * ~$Z.(pow ~$2 st.sz))
-    | Cte true -> E.Ints.((acc + ~$$1) * ~$Z.(pow ~$2 st.sz) - ~$$1)
+    | Cte false -> E.Ints.(acc * ~$Z.(~$1 lsl st.sz))
+    | Cte true -> E.Ints.((acc + ~$$1) * ~$Z.(~$1 lsl st.sz) - ~$$1)
     | Other r ->
       let t = term_extract r in
-      E.Ints.(acc * ~$Z.(pow ~$2 st.sz) + E.BV.bv2nat t)
+      E.Ints.(acc * ~$Z.(~$1 lsl st.sz) + E.BV.bv2nat t)
     | Ext (o, _, i, j) ->
       assert (st.sz = j - i + 1);
       let t = term_extract o in
       E.Ints.(
-        acc * ~$Z.(pow ~$2 st.sz) +
-        (E.BV.bv2nat t / ~$Z.(pow ~$2 i)) mod ~$Z.(pow ~$2 st.sz))
+        acc * ~$Z.(~$1 lsl st.sz) +
+        (E.BV.bv2nat t / ~$Z.(~$1 lsl i)) mod ~$Z.(~$1 lsl st.sz))
 
   let abstract_to_nat r =
     List.fold_left simple_term_to_nat (E.Ints.of_int 0) r
@@ -1181,7 +1181,7 @@ module Shostak(X : ALIEN) = struct
           (* bv2nat will *not* simplify: become uninterpreted with interval
              information *)
           let t = E.BV.bv2nat t in
-          X.term_embed t, [ E.Ints.(~$$0 <= t) ; E.Ints.(t < ~$Z.(pow ~$2 n)) ]
+          X.term_embed t, [ E.Ints.(~$$0 <= t) ; E.Ints.(t < ~$Z.(~$1 lsl n)) ]
         | { ty; _ } ->
           Util.internal_error "expected bitv, got %a" Ty.print ty
       end

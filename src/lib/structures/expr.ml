@@ -2970,7 +2970,7 @@ module BV = struct
        are added here, bitv.ml must be updated as well. *)
     match term_view t with
     | { f = Op Int2BV n; xs = [ t ]; _ } ->
-      Ints.(t mod ~$Z.(pow ~$2 n))
+      Ints.(t mod ~$Z.(~$1 lsl n))
     | _ -> mk_term (Op BV2Nat) [t] Tint
 
   (* Bit-wise operations *)
@@ -2996,7 +2996,7 @@ module BV = struct
   (* Arithmetic operations *)
   let bvneg s =
     let m = size s in
-    int2bv m Ints.(~$Z.(pow ~$2 m) - bv2nat s)
+    int2bv m Ints.(~$Z.(~$1 lsl m) - bv2nat s)
   let bvadd s t = int2bv (size s) Ints.(bv2nat s + bv2nat t)
   let bvsub s t = bvadd s (bvneg t)
   let bvmul s t = int2bv (size s) Ints.(bv2nat s * bv2nat t)

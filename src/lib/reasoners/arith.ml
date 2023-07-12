@@ -393,7 +393,7 @@ module Shostak
       begin match P.to_list p with
         | [], c ->
           let c = Q.to_z c in
-          let c = ZA.(erem c @@ pow ~$2 n) in
+          let c = ZA.(erem c @@ ~$1 lsl n) in
           let biv =
             String.init n (fun i ->
                 let i = n - i - 1 in
