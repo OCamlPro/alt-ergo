@@ -86,9 +86,6 @@ module Cmd : sig
 
   val pp: t printer
   (** Pretty print a command. *)
-
-  val add_arg : arg:string -> t -> t
-  (** Add an additional arg to the command. *)
 end = struct
   type t = {
     name: string;     (* Name of the command. *)
@@ -107,9 +104,6 @@ end = struct
     let pp_arg fmt = Format.fprintf fmt "%s" in
     let pp_args fmt = Format.pp_print_list ~pp_sep pp_arg fmt in
     Format.fprintf fmt "%s %a %%{input}" cmd.bin pp_args cmd.args
-
-  let add_arg ~arg ({ args; _ } as cmd) =
-    if List.mem arg args then cmd else { cmd with args = arg :: args }
 end
 
 module Test : sig
@@ -191,30 +185,30 @@ end = struct
     tests: Test.t list;
   }
 
-  let filter filters =
+  let filter ?(exclude = []) filters cmd =
+    not (List.exists (String.equal (Cmd.name cmd)) exclude) &&
     match filters with
-    | Some filters ->
-      fun cmd -> List.exists (String.equal (Cmd.name cmd)) filters
-    | None ->
-      fun _ -> true
+    | Some filters -> List.exists (String.equal (Cmd.name cmd)) filters
+    | None -> true
 
   let make ~path ~cmds ~pb_files =
     let tests = List.fold_left (fun acc1 pb_file ->
-        let frontend, filters =
+        let exclude, filters =
           List.fold_left (
-            fun (frontend_opt, filters_opt) ->
+            fun (exclude, filters_opt) ->
               function
-              | "dolmen" -> Some "dolmen", filters_opt
-              | "models" -> frontend_opt, Some ["models"; "models_ci"]
-              | _ -> (frontend_opt, filters_opt)
-          ) (None, None) (String.split_on_char '.' pb_file)
+              | "dolmen" ->
+                "legacy" :: exclude,
+                Some ["dolmen"]
+              | "models" ->
+                exclude,
+                Some ["tableaux"]
+              | _ -> (exclude, filters_opt)
+          ) ([], None) (String.split_on_char '.' pb_file)
         in
-        let arg = Option.map (Format.asprintf "--frontend %s") frontend in
         List.fold_left (fun acc2 cmd ->
-            if filter filters cmd then
-              let cmd_opt = Option.map (fun arg -> Cmd.add_arg ~arg cmd) arg in
-              let cmd = Option.value ~default:cmd cmd_opt in
-              (Test.make ~cmd ~pb_file) :: acc2
+            if filter ~exclude filters cmd then
+              Test.make ~cmd ~pb_file :: acc2
             else
               acc2
           ) acc1 cmds) [] pb_files
@@ -288,86 +282,69 @@ let () =
   let bin = "%{bin:alt-ergo}" in
   let timelimit = "--timelimit=2" in
   let solvers = [
-    ("runtest-quick", "dolmen", [
-        "--output=smtlib2"
-      ; timelimit
-      ; "--frontend dolmen" ])
-  ; ("runtest-quick", "tableaux", [
-        "--output=smtlib2"
-      ; timelimit
-      ; "--sat-solver Tableaux" ])
-  ; ("runtest-quick", "tableaux_cdcl", [
-      "--output=smtlib2"
-    ; timelimit
-    ; "--sat-solver Tableaux-CDCL" ])
-  ; ("runtest-quick", "cdcl", [
-      "--output=smtlib2"
-    ; timelimit
-    ; "--sat-solver CDCL" ])
-  ; ("runtest-quick", "cdcl_tableaux", [
-      "--output=smtlib2"
-    ; timelimit
-    ; "--sat-solver CDCL-Tableaux" ])
-  ; ("runtest-quick", "models",
+    ("runtest-quick", "dolmen",
+     [ "--output=smtlib2"
+     ; timelimit
+     ; "--frontend dolmen" ])
+  ; ("runtest-quick", "legacy",
+     [ "--output=smtlib2"
+     ; "--frontend legacy"
+     ; timelimit ])
+  ; ("runtest-quick", "tableaux",
      [ "--output=smtlib2"
      ; "--frontend dolmen"
-     ; "--sat-solver=Tableaux"
-     ; timelimit ])
-  ; ("runtest-ci", "models_ci",
+     ; timelimit
+     ; "--sat-solver Tableaux" ])
+  ; ("runtest-quick", "tableaux_cdcl",
      [ "--output=smtlib2"
      ; "--frontend dolmen"
-     ; "--sat-solver=Tableaux"
-     ; timelimit ])
-  ; ("runtest-ci", "dolmen_ci", [
-      "--output=smtlib2"
-    ; timelimit
-    ; "--frontend dolmen" ])
-  ; ("runtest-ci", "ci_tableaux_cdcl_no_minimal_bj", [
-      "--output=smtlib2"
-    ; timelimit
-    ; "--sat-solver CDCL-Tableaux"
-    ; "--no-minimal-bj" ])
-  ; ("runtest-ci", "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories", [
-      "--output=smtlib2"
-    ; timelimit
-    ; "--sat-solver CDCL-Tableaux"
-    ; "--no-tableaux-cdcl-in-theories" ])
-  ; ("runtest-ci", "ci_no_tableaux_cdcl_in_instantiation", [
-      "--output=smtlib2"
-    ; timelimit
-    ; "--sat-solver CDCL-Tableaux"
-    ; "--no-tableaux-cdcl-in-instantiation" ])
-  ; ("runtest-ci", "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation", [
-      "--output=smtlib2"
-    ; timelimit
-    ; "--sat-solver CDCL-Tableaux"
-    ; "--no-tableaux-cdcl-in-theories"
-    ; "--no-tableaux-cdcl-in-instantiation" ])
+     ; timelimit
+     ; "--sat-solver Tableaux-CDCL" ])
+  ; ("runtest-quick", "cdcl",
+     [ "--output=smtlib2"
+     ; "--frontend dolmen"
+     ; timelimit
+     ; "--sat-solver CDCL" ])
+  ; ("runtest-ci", "ci_tableaux_cdcl_no_minimal_bj",
+     [ "--output=smtlib2"
+     ; "--frontend dolmen"
+     ; timelimit
+     ; "--sat-solver CDCL-Tableaux"
+     ; "--no-minimal-bj" ])
+  ; ("runtest-ci", "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories",
+     [ "--output=smtlib2"
+     ; "--frontend dolmen"
+     ; timelimit
+     ; "--sat-solver CDCL-Tableaux"
+     ; "--no-tableaux-cdcl-in-theories" ])
+  ; ("runtest-ci", "ci_no_tableaux_cdcl_in_instantiation",
+     [ "--output=smtlib2"
+     ; "--frontend dolmen"
+     ; timelimit
+     ; "--sat-solver CDCL-Tableaux"
+     ; "--no-tableaux-cdcl-in-instantiation" ])
+  ; ("runtest-ci", "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation",
+     [ "--output=smtlib2"
+     ; "--frontend dolmen"
+     ; timelimit
+     ; "--sat-solver CDCL-Tableaux"
+     ; "--no-tableaux-cdcl-in-theories"
+     ; "--no-tableaux-cdcl-in-instantiation" ])
   ; ("runtest-ci", "ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories\
-                    _and_instantiation", [
-       "--output=smtlib2"
+                    _and_instantiation",
+     [ "--output=smtlib2"
+     ; "--frontend dolmen"
      ; timelimit
      ; "--sat-solver CDCL-Tableaux"
      ; "--no-minimal-bj"
      ; "--no-tableaux-cdcl-in-theories"
      ; "--no-tableaux-cdcl-in-instantiation" ])
-  ; ("runtest-ci", "ci_tableaux", [
-      "--output=smtlib2"
-    ; timelimit
-    ; "--sat-solver Tableaux" ])
-  ; ("runtest-ci", "ci_tableaux_cdcl", [
-      "--output=smtlib2"
-    ; timelimit
-    ; "--sat-solver Tableaux-CDCL" ])
-  ; ("runtest-ci", "ci_cdcl", [
-      "--output=smtlib2"
-    ; timelimit
-    ; "--sat-solver CDCL" ])
-  ; ("runtest-ci", "ci_cdcl_no_minimal_bj", [
-      "--output=smtlib2"
-    ; timelimit
-    ; "--sat-solver Tableaux-CDCL"
-    ; "--no-minimal-bj" ])]
+  ; ("runtest-ci", "ci_cdcl_no_minimal_bj",
+     [ "--output=smtlib2"
+     ; "--frontend dolmen"
+     ; timelimit
+     ; "--sat-solver CDCL"
+     ; "--no-minimal-bj" ])]
   in
   let cmds = List.map (fun (group, name, args) ->
       Cmd.make ~name ~group ~bin ~args) solvers
