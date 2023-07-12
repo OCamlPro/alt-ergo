@@ -1045,9 +1045,13 @@ let mk_if cond f2 f3 =
     (mk_and cond f2 true) (mk_and (neg cond) f3 true) false
 
 let mk_ite cond th el =
-  let ty = type_info th in
-  if ty == Ty.Tbool then mk_if cond th el
-  else mk_term (Sy.Op Sy.Tite) [cond; th; el] ty
+  if equal th el then th
+  else if equal cond vrai then th
+  else if equal cond faux then el
+  else
+    let ty = type_info th in
+    if ty == Ty.Tbool then mk_if cond th el
+    else mk_term (Sy.Op Sy.Tite) [cond; th; el] ty
 
 let [@inline always] const_term e =
   (* we use this function because depth is currently not correct to
