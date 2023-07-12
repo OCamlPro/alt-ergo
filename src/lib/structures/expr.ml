@@ -2835,3 +2835,235 @@ let rounding_mode_view t =
   match const_view t with
   | RoundingMode m -> m
   | _ -> Fmt.failwith "The given term %a is not a rounding mode" print t
+
+(****************************************************************************)
+(*                     Helpers to build typed terms                         *)
+(****************************************************************************)
+
+(** Constructors from the smtlib core theory.
+    https://smtlib.cs.uiowa.edu/theories-Core.shtml *)
+module Core = struct
+  let not = neg
+  let eq = mk_eq ~iff:false
+  let xor = mk_xor
+  let and_ s t = mk_and s t false
+  let or_ s t = mk_or s t false
+  let ite c t e = mk_ite c t e
+end
+
+(** Constructors from the smtlib theory of integers.
+    https://smtlib.cs.uiowa.edu/theories-Ints.shtml *)
+module Ints = struct
+  let of_Z n = int (Z.to_string n)
+
+  let ( ~$ ) = of_Z
+
+  let of_int n = int (string_of_int n)
+
+  let ( ~$$ ) = of_int
+
+  let ( + ) x y = mk_term (Op Plus) [ x; y ] Tint
+
+  let ( - ) x y = mk_term (Op Minus) [ x; y ] Tint
+
+  let ( ~- ) x = ~$$0 - x
+
+  let ( * ) x y = mk_term (Op Mult) [ x; y ] Tint
+
+  let ( / ) x y = mk_term (Op Div) [ x; y ] Tint
+
+  let ( mod ) x y = mk_term (Op Modulo) [ x; y ] Tint
+
+  let abs x = mk_term (Op Abs_int) [ x ] Tint
+
+  let ( ** ) x y = mk_term (Op Pow) [ x; y ] Tint
+
+  let ( <= ) x y = mk_builtin ~is_pos:true LE [x; y]
+
+  let ( >= ) x y = y <= x
+
+  let ( < ) x y = x <= y - ~$$1
+
+  let ( > ) x y = y < x
+end
+
+(** Constructors from the smtlib theory of fixed-size bit-vectors and the QF_BV
+    logic.
+
+    https://smtlib.cs.uiowa.edu/theories-FixedSizeBitVectors.shtml
+    https://smtlib.cs.uiowa.edu/logics-all.shtml#QF_BV *)
+module BV = struct
+  open Core
+
+  (* Constant symbols for all zeros and all ones *)
+  let bvzero m = bitv (String.make m '0') (Tbitv m)
+  let bvones m = bitv (String.make m '1') (Tbitv m)
+
+  (* Helpers *)
+  let b = function
+    | 0 -> bvzero 1
+    | 1 -> bvones 1
+    | _ -> assert false
+
+  let is x bit = eq x (b bit)
+  let size e = match type_info e with Tbitv m -> m | _ -> assert false
+  let size2 s t =
+    let m = size s in
+    assert (size t = m);
+    m
+
+  let int2bv n t = mk_term (Op (Int2BV n)) [t] (Tbitv n)
+  let bv2nat t = mk_term (Op BV2Nat) [t] Tint
+
+  (* Function symbols for concatenation *)
+  let concat s t =
+    let n = size s and m = size t in
+    mk_term (Op Concat) [s; t] (Tbitv (n + m))
+
+  (* Function symbols for extraction *)
+  let extract i j s =
+    mk_term
+      (Sy.Op (Sy.Extract (j, i))) [s] (Ty.Tbitv (i - j + 1))
+
+  (* Other operations *)
+  let rec repeat i t =
+    assert (i >= 1);
+    if i = 1 then t else concat t (repeat (i - 1) t)
+
+  let zero_extend i t =
+    if i = 0 then t else concat (bvzero i) t
+
+  let sign_extend i t =
+    if i = 0 then t else
+      let m = size t in
+      concat (repeat i (extract (m - 1) (m - 1) t)) t
+
+  let rotate_left i t =
+    let m = size t in
+    if m = 1 then t
+    else
+      let i = i mod m in
+      if i = 0 then t
+      else
+        concat (extract (m - i - 1) 0 t) (extract (m - 1) (m - i) t)
+
+  let rotate_right i t =
+    let m = size t in
+    if m = 1 then t
+    else
+      let i = i mod m in
+      if i = 0 then t
+      else
+        concat (extract (i - 1) 0 t) (extract (m - 1) i t)
+
+  (* Bit-wise operations *)
+  let bvnot s = mk_term (Op BVnot) [s] (type_info s)
+  let bvand s t = mk_term (Op BVand) [s; t] (type_info s)
+  let bvor s t = mk_term (Op BVor) [s; t] (type_info s)
+  let bvnand s t = bvnot (bvand s t)
+  let bvnor s t = bvnot (bvor s t)
+  let bvxor s t = bvor (bvand s (bvnot t)) (bvand (bvnot s) t)
+  let bvxnor s t = bvor (bvand s t) (bvand (bvnot s) (bvnot t))
+  let bvcomp s t =
+    let rec bvcomp m s t =
+      assert (m >= 1);
+      if m = 1 then
+        bvxnor s t
+      else
+        bvand
+          (bvxnor (extract (m - 1) (m - 1) s) (extract (m - 1) (m - 1) t))
+          (bvcomp (m - 1) (extract (m - 2) 0 s) (extract (m - 2) 0 t))
+    in
+    bvcomp (size2 s t) s t
+
+  (* Arithmetic operations *)
+  let bvneg s =
+    let m = size s in
+    int2bv m Ints.(~$Z.(pow ~$2 m) - bv2nat s)
+  let bvadd s t = int2bv (size s) Ints.(bv2nat s + bv2nat t)
+  let bvsub s t = bvadd s (bvneg t)
+  let bvmul s t = int2bv (size s) Ints.(bv2nat s * bv2nat t)
+  let bvudiv s t =
+    let m = size2 s t in
+    ite (eq (bv2nat t) Ints.(~$$0))
+      (bvones m)
+      (int2bv m Ints.(bv2nat s / bv2nat t))
+  let bvurem s t =
+    let m = size2 s t in
+    ite (eq (bv2nat t) Ints.(~$$0))
+      s
+      (int2bv m Ints.(bv2nat s mod bv2nat t))
+  let bvsdiv s t =
+    let m = size2 s t in
+    let msb_s = extract (m - 1) (m - 1) s in
+    let msb_t = extract (m - 1) (m - 1) t in
+    ite (and_ (is msb_s 0) (is msb_t 0))
+      (bvudiv s t)
+    @@ ite (and_ (is msb_s 1) (is msb_t 0))
+      (bvneg (bvudiv (bvneg s) t))
+    @@ ite (and_ (is msb_s 0) (is msb_t 1))
+      (bvneg (bvudiv s (bvneg t)))
+      (bvudiv (bvneg s) (bvneg t))
+  let bvsrem s t =
+    let m = size2 s t in
+    let msb_s = extract (m - 1) (m - 1) s in
+    let msb_t = extract (m - 1) (m - 1) t in
+    ite (and_ (is msb_s 0) (is msb_t 0))
+      (bvurem s t)
+    @@ ite (and_ (is msb_s 1) (is msb_t 0))
+      (bvneg (bvurem (bvneg s) t))
+    @@ ite (and_ (is msb_s 0) (is msb_t 1))
+      (bvurem s (bvneg t))
+      (bvneg (bvurem (bvneg s) (bvneg t)))
+  let bvsmod s t =
+    let m = size2 s t in
+    let msb_s = extract (m - 1) (m - 1) s in
+    let msb_t = extract (m - 1) (m - 1) t in
+    let abs_s = ite (is msb_s 0) s (bvneg s) in
+    let abs_t = ite (is msb_t 0) t (bvneg t) in
+    let u = bvurem abs_s abs_t in
+    ite (eq (bv2nat u) Ints.(~$$0))
+      u
+    @@ ite (and_ (is msb_s 0) (is msb_t 0))
+      u
+    @@ ite (and_ (is msb_s 1) (is msb_t 0))
+      (bvadd (bvneg u) t)
+    @@ ite (and_ (is msb_s 0) (is msb_t 1))
+      (bvadd u t)
+      (bvneg u)
+
+  (* Shift operations *)
+  let bvshl s t = int2bv (size2 s t) Ints.(bv2nat s * (~$$2 ** bv2nat t))
+  let bvlshr s t = int2bv (size2 s t) Ints.(bv2nat s / (~$$2 ** bv2nat t))
+  let bvashr s t =
+    let m = size2 s t in
+    ite (is (extract (m - 1) (m - 1) s) 0)
+      (bvlshr s t)
+      (bvnot (bvlshr (bvnot s) t))
+
+  (* Comparisons *)
+  let bvult s t = Ints.(bv2nat s < bv2nat t)
+  let bvule s t = Ints.(bv2nat s <= bv2nat t)
+  let bvugt s t = bvult t s
+  let bvuge s t = bvule t s
+  let bvslt s t =
+    let m = size2 s t in
+    or_
+      (and_
+         (is (extract (m - 1) (m - 1) s) 1)
+         (is (extract (m - 1) (m - 1) t) 0))
+      (and_
+         (eq (extract (m - 1) (m - 1) s) (extract (m - 1) (m - 1) t))
+         (bvult s t))
+  let bvsle s t =
+    let m = size2 s t in
+    or_
+      (and_
+         (is (extract (m - 1) (m - 1) s) 1)
+         (is (extract (m - 1) (m - 1) t) 0))
+      (and_
+         (eq (extract (m - 1) (m - 1) s) (extract (m - 1) (m - 1) t))
+         (bvule s t))
+  let bvsgt s t = bvslt t s
+  let bvsge s t = bvsle t s
+end

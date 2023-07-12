@@ -882,6 +882,7 @@ let rec mk_expr
   let name_tag = ref 0 in
   let rec aux_mk_expr ?(toplevel = false)
       (DE.{ term_descr; term_ty; term_tags = root_tags; _ } as term) =
+    let mk = aux_mk_expr in
     let res =
       match term_descr with
       | Cst ({ builtin; path; _ } as tcst) ->
@@ -940,10 +941,6 @@ let rec mk_expr
               if mty == `Int then E.int "0", Ty.Tint else E.real "0",Ty.Treal
             in
             E.mk_term (Sy.Op Sy.Minus) [e1; aux_mk_expr x] ty
-
-          | B.Bitv_extract { i; j; _ }, [x] ->
-            E.mk_term
-              (Sy.Op (Sy.Extract (j, i))) [aux_mk_expr x] (Ty.Tbitv (i - j + 1))
 
           | B.Destructor { case; field; adt; _ }, [x] ->
             begin match DT.definition adt with
@@ -1022,15 +1019,55 @@ let rec mk_expr
             in
             semantic_trigger ~loc ?var trigger
 
-          (* Binary applications *)
+          (* Unary functions from FixedSizeBitVectors theory *)
+          | B.Bitv_extract { i; j; _ }, [ x ] -> E.BV.extract i j (mk x)
+          | B.Bitv_not _, [ x ] -> E.BV.bvnot (mk x)
+          | B.Bitv_neg _, [ x ] -> E.BV.bvneg (mk x)
 
-          | B.Bitv_concat { n; m; }, [ x; y ] ->
-            let rty = Ty.Tbitv (n+m) in
-            E.mk_term (Sy.Op Sy.Concat) [aux_mk_expr x; aux_mk_expr y] rty
+          (* Unary functions from QF_BV logic *)
+          | B.Bitv_repeat { k; _ }, [ x ] -> E.BV.repeat k (mk x)
+          | B.Bitv_zero_extend { k; _ }, [ x ] -> E.BV.zero_extend k (mk x)
+          | B.Bitv_sign_extend { k; _ }, [ x ] -> E.BV.sign_extend k (mk x)
+          | B.Bitv_rotate_left { i; _ }, [ x ] -> E.BV.rotate_left i (mk x)
+          | B.Bitv_rotate_right { i; _ }, [ x ] -> E.BV.rotate_right i (mk x)
+
+          (* Binary applications *)
 
           | B.Select, [ x; y ] ->
             let rty = dty_to_ty term_ty in
             E.mk_term (Sy.Op Sy.Get) [aux_mk_expr x; aux_mk_expr y] rty
+
+          (* Binary functions from FixedSizeBitVectors theory *)
+          | B.Bitv_concat _, [ x; y ] -> E.BV.concat (mk x) (mk y)
+          | B.Bitv_and _, [ x; y ] -> E.BV.bvand (mk x) (mk y)
+          | B.Bitv_or _, [ x; y ] -> E.BV.bvor (mk x) (mk y)
+          | B.Bitv_add _, [ x; y ] -> E.BV.bvadd (mk x) (mk y)
+          | B.Bitv_mul _, [ x; y ] -> E.BV.bvmul (mk x) (mk y)
+          | B.Bitv_udiv _, [ x; y ] -> E.BV.bvudiv (mk x) (mk y)
+          | B.Bitv_urem _, [ x; y ] -> E.BV.bvurem (mk x) (mk y)
+          | B.Bitv_shl _, [ x; y ] -> E.BV.bvshl (mk x) (mk y)
+          | B.Bitv_lshr _, [ x; y ] -> E.BV.bvlshr (mk x) (mk y)
+          | B.Bitv_ult _, [ x; y ] -> E.BV.bvult (mk x) (mk y)
+
+          (* Binary functions from QF_BV logic *)
+          | B.Bitv_nand _, [ x; y ] -> E.BV.bvnand (mk x) (mk y)
+          | B.Bitv_nor _, [ x; y ] -> E.BV.bvnor (mk x) (mk y)
+          | B.Bitv_xor _, [ x; y ] -> E.BV.bvxor (mk x) (mk y)
+          | B.Bitv_xnor _, [ x; y ] -> E.BV.bvxnor (mk x) (mk y)
+          | B.Bitv_comp _, [ x; y ] -> E.BV.bvcomp (mk x) (mk y)
+          | B.Bitv_sub _, [ x; y ] -> E.BV.bvsub (mk x) (mk y)
+          | B.Bitv_sdiv _, [ x; y ] -> E.BV.bvsdiv (mk x) (mk y)
+          | B.Bitv_srem _, [ x; y ] -> E.BV.bvsrem (mk x) (mk y)
+          | B.Bitv_smod _, [ x; y ] -> E.BV.bvsmod (mk x) (mk y)
+          | B.Bitv_ashr _, [ x; y ] -> E.BV.bvashr (mk x) (mk y)
+
+          | B.Bitv_ule _, [ x; y ] -> E.BV.bvule (mk x) (mk y)
+          | B.Bitv_ugt _, [ x; y ] -> E.BV.bvugt (mk x) (mk y)
+          | B.Bitv_uge _, [ x; y ] -> E.BV.bvuge (mk x) (mk y)
+          | B.Bitv_slt _, [ x; y ] -> E.BV.bvslt (mk x) (mk y)
+          | B.Bitv_sle _, [ x; y ] -> E.BV.bvsle (mk x) (mk y)
+          | B.Bitv_sgt _, [ x; y ] -> E.BV.bvsgt (mk x) (mk y)
+          | B.Bitv_sge _, [ x; y ] -> E.BV.bvsge (mk x) (mk y)
 
           (* Ternary applications *)
 
