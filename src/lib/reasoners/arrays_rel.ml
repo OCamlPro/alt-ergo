@@ -229,8 +229,8 @@ let update_env are_eq are_dist dep env acc gi si p p_ded n n_ded =
   ---------------------------------------------------------------------*)
 let get_of_set are_eq are_dist gtype (env,acc) class_of =
   let {g=get; gt=gtab; gi=gi; gty=gty} = gtype in
-  L.fold_left
-    (fun (env,acc) set ->
+  E.Set.fold
+    (fun set (env,acc) ->
        if Tmap.splited get set env.seen then (env,acc)
        else
          let env = {env with seen = Tmap.update get set env.seen} in
@@ -253,16 +253,16 @@ let get_of_set are_eq are_dist gtype (env,acc) class_of =
            update_env
              are_eq are_dist dep env acc gi si p p_ded n n_ded
          | _ -> (env,acc)
-    ) (env,acc) (class_of gtab)
+    ) (class_of gtab) (env,acc)
 
 (*----------------------------------------------------------------------
   set(-,-,-) modulo egalite
   ---------------------------------------------------------------------*)
 let get_from_set _are_eq _are_dist stype (env,acc) class_of =
   let sets =
-    L.fold_left
-      (fun acc t -> S.union acc (TBS.find t env.tbset))
-      (S.singleton stype) (class_of stype.st)
+    E.Set.fold
+      (fun t acc -> S.union acc (TBS.find t env.tbset))
+      (class_of stype.st) (S.singleton stype)
   in
 
   S.fold (fun { s = set; si = si; sv = sv; _ } (env,acc) ->
@@ -285,9 +285,9 @@ let get_and_set are_eq are_dist gtype (env,acc) class_of =
   let {g=get; gt=gtab; gi=gi; gty=gty} = gtype in
 
   let suff_sets =
-    L.fold_left
-      (fun acc t -> S.union acc (TBS.find t env.tbset))
-      S.empty (class_of gtab)
+    E.Set.fold
+      (fun t acc -> S.union acc (TBS.find t env.tbset))
+      (class_of gtab) S.empty
   in
   S.fold
     (fun  {s=set; st=stab; si=si; sv=sv; _ } (env,acc) ->

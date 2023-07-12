@@ -71,7 +71,7 @@ module type S = sig
     (r Xliteral.view * bool * Th_util.lit_origin) list * t
   val query :  t -> E.t -> Th_util.answer
   val new_terms : t -> Expr.Set.t
-  val class_of : t -> Expr.t -> Expr.t list
+  val class_of : t -> Expr.t -> Expr.Set.t
   val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> Th_util.answer
   val are_distinct : t -> Expr.t -> Expr.t -> Th_util.answer
   val cl_extract : t -> Expr.Set.t list
@@ -341,7 +341,7 @@ module Main : S = struct
       match E.term_view t1 with
       | { E.f = f1; xs = [x]; _ } ->
         let ty_x = Expr.type_info x in
-        List.iter
+        E.Set.iter
           (fun t2 ->
              match E.term_view t2 with
              | { E.f = f2 ; xs = [y]; _ } when Sy.equal f1 f2 ->

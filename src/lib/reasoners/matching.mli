@@ -60,7 +60,7 @@ module type Arg = sig
   type t
   val term_repr : t -> Expr.t -> init_term:bool -> Expr.t
   val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> Th_util.answer
-  val class_of : t -> Expr.t -> Expr.t list
+  val class_of : t -> Expr.t -> Expr.Set.t
 end
 
 

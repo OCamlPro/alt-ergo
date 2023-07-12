@@ -62,7 +62,7 @@ module type Arg = sig
   type t
   val term_repr : t -> E.t -> init_term:bool -> E.t
   val are_equal : t -> E.t -> E.t -> init_terms:bool -> Th_util.answer
-  val class_of : t -> E.t -> E.t list
+  val class_of : t -> E.t -> E.Set.t
 end
 
 module Make (X : Arg) : S with type theory = X.t = struct
@@ -161,7 +161,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           ~module_name:"Matching" ~function_name:"match_class_of"
           "class_of (%a) = { %a }"
           E.print t
-          (fun fmt -> List.iter (Format.fprintf fmt "%a , " E.print)) cl
+          (fun fmt -> E.Set.iter (Format.fprintf fmt "%a , " E.print)) cl
 
     let candidate_substitutions pat_info res =
       let open Matching_types in
@@ -404,13 +404,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
            are_equal_light tbox pat t != None then
           [gsb]
         else
-          let cl = if mconf.Util.no_ematching then [t]
+          let cl = if mconf.Util.no_ematching then E.Set.singleton t
             else X.class_of tbox t
           in
           Debug.match_class_of t cl;
           let cl =
-            List.fold_left
-              (fun l t ->
+            E.Set.fold
+              (fun t l ->
                  let { E.f = f; xs = xs; ty = ty; _ } = E.term_view t in
                  if Symbols.compare f_pat f = 0 then xs::l
                  else
@@ -420,7 +420,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
                        (xs_modulo_records t record) :: l
                      | _ -> l
                    end
-              )[] cl
+              ) cl []
           in
           let cl = filter_classes mconf cl tbox in
           let cl =

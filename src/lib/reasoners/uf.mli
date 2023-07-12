@@ -55,7 +55,7 @@ val are_equal : t -> Expr.t -> Expr.t -> added_terms:bool -> Th_util.answer
 val are_distinct : t -> Expr.t -> Expr.t -> Th_util.answer
 val already_distinct : t -> r list -> bool
 
-val class_of : t -> Expr.t -> Expr.t list
+val class_of : t -> Expr.t -> Expr.Set.t
 val rclass_of : t -> r -> Expr.Set.t
 
 val cl_extract : t -> Expr.Set.t list
