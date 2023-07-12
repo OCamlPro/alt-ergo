@@ -192,137 +192,144 @@ module Shostak(X : ALIEN) = struct
       let compare = compare_solver_simple_term
     end)
 
-  module Canonizer = struct
+  module Canon = struct
+    type 'a view_descr =
+      | Vcte of string
+      | Vother of 'a
+      | Vextract of 'a * int * int
+      | Vconcat of 'a * 'a
 
-    type term_aux  =
-      | I_Cte of bool
-      | I_Other of X.r
-      | I_Ext of term * int * int
-      | I_Comp of term * term
+    and 'a view = { descr : 'a view_descr ; size : int }
 
-    and term = term_aux alpha_term
+    let view t =
+      match E.term_view t with
+      | { f = Bitv s; ty = Tbitv size; _ } -> { descr = Vcte s; size }
+      | { f = Op Concat; xs = [ t1; t2 ]; ty = Tbitv size; _ } ->
+        { descr = Vconcat (t1, t2); size }
+      | { f = Op Extract (i, j); xs = [ t' ]; ty = Tbitv size; _ } ->
+        assert (size = j - i + 1);
+        { descr = Vextract (t', i, j); size }
+      | { ty = Tbitv size; _ } ->
+        { descr = Vother t; size }
+      | _ -> assert false
 
-    let rec compare_term_aux t1 t2 = match t1, t2 with
-      | I_Cte true, I_Cte true
-      | I_Cte false, I_Cte false -> 0
-      | I_Cte true, I_Cte _ -> 1
-      | I_Cte _, I_Cte _ -> -1
+    let run ctx f = f ctx
+    let (let*) x f ctx =
+      let x, ctx = x ctx in
+      f x ctx
+    let ret x ctx = x, ctx
+    let (and*) x y =
+      let* x = x in
+      let* y = y in
+      ret (x, y)
+    let (let+) x f ctx =
+      let x, ctx = x ctx in
+      f x, ctx
+    let (and+) = (and*)
 
-      | I_Other xterm1, I_Other xterm2 -> X.str_cmp xterm1 xterm2
+    let other t sz ctx =
+      let r, ctx' = X.make t in
+      let ctx = List.rev_append ctx' ctx in
+      match X.extract r with
+      | Some bv -> bv, ctx
+      | None -> [ { bv = Other r; sz } ], ctx
 
-      | I_Ext (t, i, j), I_Ext (t', i', j') ->
-        if i <> i' then i - i'
-        else if j <> j' then j - j'
-        else compare_term t t'
+    let extract_st i j ({ bv; sz } as st) =
+      match bv with
+      | Cte _ -> [{ st with sz = j - i + 1 }]
+      | Other r -> [{ bv = Ext (r, sz, i, j) ; sz = j - i + 1 }]
+      | Ext (r, sz, k, _) ->
+        [{ bv = Ext (r, sz, i + k, j + k) ; sz = j - i + 1 }]
 
-      | I_Comp (t1, t2), I_Comp (t1', t2') ->
-        let cmp = compare_term t1 t1' in
-        if cmp = 0 then compare_term t2 t2' else cmp
+    (* extract i..j from a composition of size size
 
-      | I_Cte _, (I_Other _ | I_Ext _ | I_Comp _ ) -> 1
-      | I_Other _, (I_Ext _ | I_Comp _ ) -> 1
-      | I_Ext _, I_Comp _ -> 1
+       an element of size [sz] at the head of the composition contains the bits
+       [size - 1 .. size - sz] inclusive *)
+    let rec extract size i j = function
+      | [] ->
+        (* We can't extract a bv of length 0! *)
+        assert false
+      | [ st ] ->
+        assert (st.sz = size);
+        extract_st i j st
+      | { sz; _ } :: sts when j < size - sz ->
+        extract (size - sz) i j sts
+      | ({ sz; _ } as st) :: _ when i >= size - sz ->
+        extract_st (i - (size - sz)) (j - (size - sz)) st
+      | ({ sz; _ } as st) :: sts ->
+        extract_st 0 (j - (size - sz)) st @
+        extract (size - sz) i (size - sz - 1) sts
 
-      | I_Comp _, (I_Cte _ | I_Other _ | I_Ext _) -> -1
-      | I_Ext _, (I_Cte _ | I_Other _) -> -1
-      | I_Other _, I_Cte _ -> -1
+    let normalize_st st =
+      match st.bv with
+      | Ext (o, sz, i, j) when sz = j - i + 1 ->
+        assert (sz = st.sz && i = 0);
+        { st with bv = Other o }
+      | _ -> st
 
-    and compare_term t1 t2 = compare_alpha_term compare_term_aux t1 t2
-
-    (** **)
-    let rec alpha t = match t.bv with
-      |I_Cte _ -> [t]
-      |I_Other _ -> [t]
-      |I_Comp (t1,t2) -> (alpha t1)@(alpha t2)
-      |I_Ext(t',i,j) ->
-        begin
-          match t'.bv with
-          |I_Cte _ -> [{t' with sz = j-i+1}]
-          |I_Other _ -> [t]
-          |I_Ext(t'',k,_) ->
-            alpha {t with bv = I_Ext(t'',i+k,j+k)}
-
-          |I_Comp(_,v) when j < v.sz ->
-            alpha{t with bv =I_Ext(v,i,j)}
-
-          |I_Comp(u,v) when i >= v.sz ->
-            alpha{t with bv=I_Ext(u,i-v.sz,j-v.sz)}
-
-          |I_Comp(u,v) ->
-            (alpha {sz = j-v.sz+1 ; bv = I_Ext(u,0,j-v.sz)})
-            @(alpha{sz = v.sz-i ; bv = I_Ext(v,i,v.sz-1)})
+    let rec normalize = function
+      | [] -> []
+      | [s] -> [normalize_st s]
+      | s :: (t :: ts as tts) ->
+        begin match s.bv, t.bv with
+          | Cte bs, Cte bt when Bool.equal bs bt ->
+            normalize ({ bv = Cte bs; sz = s.sz + t.sz } :: ts)
+          | Ext (d1, ds, i, j), Ext (d2, _, k, l)
+            when X.equal d1 d2 && l = i - 1 ->
+            let d = { bv = Ext (d1, ds, k, j); sz = s.sz + t.sz } in
+            if k = 0 then normalize_st d :: normalize ts
+            else normalize (d :: ts)
+          | _ -> normalize_st s :: normalize tts
         end
 
-    (** **)
-    let rec beta lt =
-      let simple_t st = match st.bv with
-        |I_Cte b -> {bv = Cte b ; sz = st.sz}
-        |I_Other x -> {bv = Other x ; sz = st.sz}
-        |I_Ext(t',i,j) ->
-          begin
-            match t'.bv with
-            |I_Other v ->
-              let siz = j-i+1
-              in {sz=siz ;
-                  bv =if siz=t'.sz then Other v else Ext(v,t'.sz,i,j)}
-            |I_Comp _ |I_Ext _ |I_Cte _ -> assert false
-          end
-        |I_Comp(_,_) -> assert false
-
-      in match lt with
-      |[] -> [] (*on peut passer de 2 elts a 0 elts*)
-      |[s] -> [simple_t s]
-      |s::t::tl' ->
-        begin
-          match s.bv, t.bv with
-          | I_Cte true, I_Cte true | I_Cte false, I_Cte false ->
-            beta({s with sz=s.sz+t.sz}::tl')
-          | I_Ext(d1,i,j), I_Ext(d2,k,l) when compare_term d1 d2 = 0 && l=i-1 ->
-            let tmp = {sz = s.sz + t.sz ; bv = I_Ext(d1,k,j)}
-            in if k=0 then (simple_t tmp)::(beta tl') else beta (tmp::tl')
-          | _ -> (simple_t s)::(beta (t::tl'))
-        end
-
-    (** **)
-    let sigma term = beta (alpha term)
-
-    let bitv_to_icomp =
-      List.fold_left (fun ac bt ->{ bv = I_Comp (ac,bt) ; sz = bt.sz + ac.sz })
-
-    let string_to_bitv s =
-      let tmp = ref[] in
-      String.iter(fun car -> tmp := (not @@ Char.equal car '0', 1)::(!tmp)) s;
-      let rec f_aux l acc = match l with
-        | [] -> assert false
-        | [(b,n)] -> { sz = n ; bv = I_Cte b }::acc
-        | (true as b1, n)::(true, m)::r | (false as b1, n)::(false, m)::r ->
-          f_aux ((b1,n+m)::r) acc
-        | (b1,n)::(b2,m)::r ->
-          (f_aux ((b2,m)::r)) ({ sz = n ; bv = I_Cte b1 }::acc)
-      in
-      let res = f_aux (!tmp) [] in
-      bitv_to_icomp (List.hd res) (List.tl res)
+    let rec make t = vmake (view t)
+    and vextract i j tv =
+      let size = j - i + 1 in
+      match tv.descr with
+      | Vcte z ->
+        vmake { descr = Vcte (String.sub z (tv.size - j - 1) size); size }
+      | Vother t ->
+        let+ o = other t tv.size in
+        extract tv.size i j o
+      | Vextract (t'', k, _) ->
+        vmake { descr = Vextract (t'', i + k, j + k); size }
+      | Vconcat (u, v) ->
+        let vu = view u and vv = view v in
+        if j < vv.size then
+          vextract i j vv
+        else if i >= vv.size then
+          vextract (i - vv.size) (j - vv.size) vu
+        else
+          let+ u = vextract 0 (j - vv.size) vu
+          and+ v = vextract i (vv.size - 1) vv
+          in u @ v
+    and vmake tv ctx =
+      match tv.descr with
+      | Vcte z ->
+        let acc = ref [] in
+        for i = String.length z - 1 downto 0 do
+          let c = z.[i] in
+          match c, !acc with
+          | '0', { bv = Cte false; sz } :: rst ->
+            acc := { bv = Cte false; sz = sz + 1 } :: rst
+          | '0', rst ->
+            acc := { bv = Cte false; sz = 1 } :: rst
+          | _, { bv = Cte true; sz } :: rst ->
+            acc := { bv = Cte true; sz = sz + 1 } :: rst
+          | _, rst ->
+            acc := { bv = Cte true; sz = 1 } :: rst
+        done;
+        !acc, ctx
+      | Vother t -> other t tv.size ctx
+      | Vextract (t', i, j) ->
+        run ctx @@ vextract i j (view t')
+      | Vconcat (t1, t2) ->
+        run ctx @@
+        let+ t1 = make t1 and+ t2 = make t2 in t1 @ t2
 
     let make t =
-      let rec make_rec t' ctx = match E.term_view t' with
-        | { E.f = Sy.Bitv s; _ } -> string_to_bitv s, ctx
-        | { E.f = Sy.Op Sy.Concat ;
-            xs = [t1;t2] ; ty = Ty.Tbitv n; _ } ->
-          let r1, ctx = make_rec t1 ctx in
-          let r2, ctx = make_rec t2 ctx in
-          { bv = I_Comp (r1, r2) ; sz = n }, ctx
-        | { E.f = Sy.Op Sy.Extract (i, j); xs = [t1] ; ty = Ty.Tbitv _; _ } ->
-          let r1, ctx = make_rec t1 ctx in
-          { sz = j - i + 1 ; bv = I_Ext (r1,i,j)}, ctx
-
-        | { E.ty = Ty.Tbitv n; _ } ->
-          let r', ctx' = X.make t' in
-          let ctx = ctx' @ ctx in
-          {bv = I_Other r' ; sz = n}, ctx
-        | _ -> assert false
-      in
-      let r, ctx = make_rec t [] in
-      sigma r, ctx
+      let r, ctx = make t [] in
+      normalize r, ctx
   end
 
   (*BISECT-IGNORE-BEGIN*)
@@ -340,15 +347,6 @@ module Shostak(X : ALIEN) = struct
       | Ext (t,sz,i,j) ->
         fprintf fmt "%a[%d]" X.print t sz;
         fprintf fmt "<%d,%d>" i j
-
-    let[@warning "-32"] rec print_I_ast fmt ast =
-      let open Canonizer in
-      let open Format in
-      match ast.bv with
-      | I_Cte b -> fprintf fmt "%d[%d]" (if b then 1 else 0) ast.sz
-      | I_Other t -> fprintf fmt "%a[%d]" X.print t ast.sz
-      | I_Ext (u,i,j) -> fprintf fmt "%a[%d]<%d,%d>" print_I_ast u u.sz i j
-      | I_Comp(u,v) -> fprintf fmt "@[(%a * %a)@]" print_I_ast u print_I_ast v
 
     let print_C_ast fmt = function
         [] -> assert false
@@ -1130,7 +1128,7 @@ module Shostak(X : ALIEN) = struct
   let print = Debug.print_C_ast
 
   let make t =
-    let r, ctx = Canonizer.make t in
+    let r, ctx = Canon.make t in
     is_mine r, ctx
 
   let color _ = assert false
@@ -1138,28 +1136,6 @@ module Shostak(X : ALIEN) = struct
   let type_info bv =
     let sz = List.fold_left (fun acc bv -> bv.sz + acc) 0 bv in
     Ty.Tbitv sz
-
-  let to_i_ast biv =
-    let f_aux st =
-      {sz = st.sz;
-       bv = match st.bv with
-         | Cte b -> Canonizer.I_Cte b
-         | Other tt -> Canonizer.I_Other tt
-         | Ext(tt,siz,i,j)  ->
-           let tt' = { sz = siz ; bv = Canonizer.I_Other tt }
-           in Canonizer.I_Ext(tt',i,j)
-      } in
-    List.fold_left
-      (fun acc st ->
-         let tmp = f_aux st
-         in { bv = Canonizer.I_Comp(acc,tmp) ; sz = acc.sz + tmp.sz }
-      ) (f_aux (List.hd biv)) (List.tl biv)
-
-  let extract r ty =
-    match X.extract r with
-      Some (_::_ as bv) -> to_i_ast bv
-    | None -> {bv =  Canonizer.I_Other r; sz = ty}
-    | Some [] -> assert false
 
   let var_or_term x =
     match x.bv with
@@ -1185,20 +1161,27 @@ module Shostak(X : ALIEN) = struct
           (Solver.solve u t)
       with Solver.Valid -> []
 
-
-
-  let rec subst_rec x subs biv =
-    match biv.bv with
-    | Canonizer.I_Cte _ -> biv
-    | Canonizer.I_Other tt ->
-      if X.equal x tt then
-        extract subs biv.sz
-      else extract (X.subst x subs tt) biv.sz
-    | Canonizer.I_Ext (t,i,j) ->
-      { biv with bv = Canonizer.I_Ext(subst_rec x subs t,i,j) }
-    | Canonizer.I_Comp (u,v) ->
-      { biv with
-        bv = Canonizer.I_Comp(subst_rec x subs u ,subst_rec x subs v)}
+  let rec subst_rec (x : X.r) (subs : X.r) (biv : X.r abstract) : X.r abstract =
+    match biv with
+    | [] -> []
+    | { bv = Cte _; _ } as y :: biv ->
+      y :: subst_rec x subs biv
+    | { bv = Other y; _ } :: biv ->
+      let y' =
+        if X.equal x y then
+          embed subs
+        else
+          embed (X.subst x subs y)
+      in
+      y' @ subst_rec x subs biv
+    | { bv = Ext (y, y_sz, i, j); _ } :: biv ->
+      let y' =
+        if X.equal x y then
+          embed subs
+        else
+          embed (X.subst x subs y)
+      in
+      Canon.extract y_sz i j y' @ subst_rec x subs biv
 
   let subst x subs biv =
     if Options.get_debug_bitv () then
@@ -1207,7 +1190,7 @@ module Shostak(X : ALIEN) = struct
         "subst %a |-> %a in %a" X.print x X.print subs print biv;
     if Lists.is_empty biv then is_mine biv
     else
-      let r = Canonizer.sigma (subst_rec x subs (to_i_ast biv)) in
+      let r = Canon.normalize (subst_rec x subs biv) in
       is_mine r
 (*
   module M =  Map.Make
