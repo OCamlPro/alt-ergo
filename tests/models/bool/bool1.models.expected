@@ -7,5 +7,4 @@ unknown
 (
   (define-fun p () Bool true)
   (define-fun q () Bool true)
-  (define-fun nq () Bool true)
 )
