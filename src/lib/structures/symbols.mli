@@ -96,7 +96,7 @@ type t =
   | MapsTo of Var.t
   | Let
 
-val name : ?kind:name_kind -> ?user_defined:bool -> string -> t
+val name : ?kind:name_kind -> ?defined:bool -> string -> t
 val var : Var.t -> t
 val underscore : t
 val int : string -> t

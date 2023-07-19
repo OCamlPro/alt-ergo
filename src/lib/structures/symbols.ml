@@ -99,8 +99,8 @@ type t =
 
 type s = t
 
-let name ?(kind=Other) ?(user_defined=false) s =
-  Name (Hstring.make s, kind, user_defined)
+let name ?(kind=Other) ?(defined=false) s =
+  Name (Hstring.make s, kind, defined)
 
 let var s = Var s
 let int i = Int (Hstring.make i)

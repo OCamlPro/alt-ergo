@@ -1850,7 +1850,7 @@ let make dloc_file acc stmt =
           match def with
           | `Term_def (_, ({ path; _ } as tcst), _, _, _) ->
             let name_base = get_basename path in
-            let sy = Sy.name ~user_defined:true name_base in
+            let sy = Sy.name ~defined:true name_base in
             Cache.store_sy tcst sy
           | `Type_alias _ -> ()
           | `Instanceof _ ->
