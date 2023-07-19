@@ -18,7 +18,6 @@ appropriate here.
     (define-fun y () Int 0)
   )
 
-
 Now we will test some semantic triggers.
 
   $ alt-ergo --frontend legacy -o smtlib2 semantic_triggers.ae 2>/dev/null
@@ -49,4 +48,3 @@ And some SMT2 action.
   unknown
 
   unsat
-
