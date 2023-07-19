@@ -363,9 +363,9 @@ let main () =
       if Stdlib.(Options.get_sat_solver () = Tableaux) then
         Options.set_interpretation ILast
       else Printer.print_wrn "%a The generation of models is not supported \
-                              for the SAT solver %a. Please choose the \
+                              for the current SAT solver. Please choose the \
                               SAT solver Tableaux."
-          Loc.report st_loc Util.pp_sat_solver (Options.get_sat_solver ())
+          Loc.report st_loc
     | ":produce-models", Symbol { name = Simple "false"; _ } ->
       Options.set_interpretation INone
     | ":produce-unsat-cores", Symbol { name = Simple "true"; _ } ->
@@ -519,14 +519,6 @@ let main () =
             (* TODO: add the location of the statement. *)
             Printer.print_smtlib_err "No model produced.";
             st
-        else if Stdlib.(Options.get_sat_solver () <> Tableaux) then
-          begin
-            (* TODO: add the location of the statement. *)
-            Printer.print_smtlib_err
-              "get-model is not supported with the SAT solver %a."
-              Util.pp_sat_solver (Options.get_sat_solver ());
-            st
-          end
         else
           begin
             (* TODO: add the location of the statement. *)
