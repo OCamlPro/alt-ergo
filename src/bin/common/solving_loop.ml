@@ -362,9 +362,9 @@ let main () =
          PR. See https://github.com/OCamlPro/alt-ergo/pull/553 *)
       if Stdlib.(Options.get_sat_solver () = Tableaux) then
         Options.set_interpretation ILast
-      else Printer.print_wrn "%a The generation of models is not supported \
-                              for the SAT solver %a. Please choose the \
-                              SAT solver Tableaux."
+      else Printer.print_wrn "%a The generation of models is not supported yet \
+                              by the SAT solver %a. Please use the \
+                              meta-option `--produce-models`."
           Loc.report st_loc Util.pp_sat_solver (Options.get_sat_solver ())
     | ":produce-models", Symbol { name = Simple "false"; _ } ->
       Options.set_interpretation INone
@@ -374,9 +374,9 @@ let main () =
       if Stdlib.(Options.get_sat_solver () = Tableaux) then
         Options.set_unsat_core true
       else Printer.print_wrn "%a The generation of unsat cores is not \
-                              supported for the current SAT solver. Please \
+                              supported by the SAT solver %a. Please \
                               choose the SAT solver Tableaux."
-          Loc.report st_loc
+          Loc.report st_loc Util.pp_sat_solver (Options.get_sat_solver ())
     | ":produce-unsat-cores", Symbol { name = Simple "false"; _ } ->
       Options.set_unsat_core false
     | (":produce-models" | ":produce-unsat-cores" as name), _ ->
