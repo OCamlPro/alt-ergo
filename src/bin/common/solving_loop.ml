@@ -364,7 +364,7 @@ let main () =
         Options.set_interpretation ILast
       else Printer.print_wrn "%a The generation of models is not supported yet \
                               by the SAT solver %a. Please use the \
-                              meta-option `--produce-models`."
+                              option `--produce-models`."
           Loc.report st_loc Util.pp_sat_solver (Options.get_sat_solver ())
     | ":produce-models", Symbol { name = Simple "false"; _ } ->
       Options.set_interpretation INone
