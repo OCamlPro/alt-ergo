@@ -87,7 +87,14 @@ let add p v mp =
   if V.mem v prof_p then mp
   else P.add p (V.add v prof_p) mp
 
-let iter = P.iter
+let iter f =
+  P.iter (fun ((sy, _, _) as key) value ->
+      match sy with
+      | Sy.Name (_, _, true) ->
+        (* We don't print constants defined by the user. *)
+        ()
+      | _ -> f key value
+    )
 
 let fold = P.fold
 

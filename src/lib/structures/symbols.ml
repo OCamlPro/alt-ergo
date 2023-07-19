@@ -85,7 +85,7 @@ type t =
   | True
   | False
   | Void
-  | Name of Hstring.t * name_kind
+  | Name of Hstring.t * name_kind * bool
   | Int of Hstring.t
   | Real of Hstring.t
   | Bitv of string
@@ -99,7 +99,9 @@ type t =
 
 type s = t
 
-let name ?(kind=Other) s = Name (Hstring.make s, kind)
+let name ?(kind=Other) ?(defined=false) s =
+  Name (Hstring.make s, kind, defined)
+
 let var s = Var s
 let int i = Int (Hstring.make i)
 let real r = Real (Hstring.make r)
@@ -117,7 +119,7 @@ let mk_in b1 b2 =
 let mk_maps_to x = MapsTo x
 
 let is_ac x = match x with
-  | Name(_, Ac) -> true
+  | Name(_, Ac, _) -> true
   | _           -> false
 
 let underscore =
@@ -203,7 +205,7 @@ let compare s1 s2 =
       | Int h1, Int h2
       | Real h1, Real h2 -> Hstring.compare h1 h2
       | Var v1, Var v2 | MapsTo v1, MapsTo v2 -> Var.compare v1 v2
-      | Name (h1, k1), Name (h2, k2) ->
+      | Name (h1, k1, _), Name (h2, k2, _) ->
         let c = Hstring.compare h1 h2 in
         if c <> 0 then c else compare_kinds k1 k2
       | Bitv s1, Bitv s2 -> String.compare s1 s2
@@ -230,8 +232,8 @@ let hash x =
   | Let -> 3
   | Bitv s -> 19 * Hashtbl.hash s + 3
   | In (b1, b2) -> 19 * (Hashtbl.hash b1 + Hashtbl.hash b2) + 4
-  | Name (n,Ac) -> 19 * Hstring.hash n + 5
-  | Name (n,Other) -> 19 * Hstring.hash n + 6
+  | Name (n, Ac, _) -> 19 * Hstring.hash n + 5
+  | Name (n, Other, _) -> 19 * Hstring.hash n + 6
   | Int n | Real n -> 19 * Hstring.hash n + 7
   | Var v -> 19 * Var.hash v + 8
   | MapsTo v -> 19 * Var.hash v + 9
@@ -274,7 +276,7 @@ let string_of_form f = match f with
   | F_Xor -> "xor"
 
 let to_string ?(show_vars=true) x = match x with
-  | Name (n,_) -> Hstring.view n
+  | Name (n, _, _) -> Hstring.view n
   | Var v when show_vars -> Format.sprintf "'%s'" (Var.to_string v)
   | Var v -> Var.to_string v
   | Int n -> Hstring.view n

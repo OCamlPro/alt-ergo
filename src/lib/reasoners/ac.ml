@@ -164,7 +164,7 @@ module Make (X : Sig.X) = struct
     | Some ac when Sy.equal sy ac.h -> r, acc
     | None -> r, acc
     | Some _ -> match Expr.term_view t with
-      | { Expr.f = Sy.Name (hs, Sy.Ac); xs; ty; _ } ->
+      | { Expr.f = Sy.Name (hs, Sy.Ac, _); xs; ty; _ } ->
         let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in

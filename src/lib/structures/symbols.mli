@@ -84,7 +84,7 @@ type t =
   | True
   | False
   | Void
-  | Name of Hstring.t * name_kind
+  | Name of Hstring.t * name_kind * bool
   | Int of Hstring.t
   | Real of Hstring.t
   | Bitv of string
@@ -96,7 +96,7 @@ type t =
   | MapsTo of Var.t
   | Let
 
-val name : ?kind:name_kind -> string -> t
+val name : ?kind:name_kind -> ?defined:bool -> string -> t
 val var : Var.t -> t
 val underscore : t
 val int : string -> t

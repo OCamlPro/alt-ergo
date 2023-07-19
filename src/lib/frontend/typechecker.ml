@@ -2367,7 +2367,7 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     assert (not is_recursive); (* Abstract types are not recursive *)
     acc, env
 
-let declare_fun env loc n ?ret_ty l  =
+let declare_fun env loc n ?(defined=false) ?ret_ty l  =
   check_duplicate_params l;
   let infix, ty  =
     let l = List.map (fun (_,_,x) -> x) l in
@@ -2377,7 +2377,7 @@ let declare_fun env loc n ?ret_ty l  =
     | Some ty ->
       PPeq, PFunction(l,ty)
   in
-  let mk_symb hs = Symbols.name hs ~kind:Symbols.Other in
+  let mk_symb hs = Symbols.name hs ~defined ~kind:Symbols.Other in
   let tlogic, env = Env.add_logics env mk_symb [n] ty loc in (* TODO *)
   env, infix, tlogic
 
@@ -2409,7 +2409,9 @@ let define_fun (acc, env) loc n l tlogic ?ret_ty infix e =
   (td_a, env)::acc, env
 
 let type_fun (acc, env) loc n l ?ret_ty e =
-  let env, infix, tlogic = declare_fun env loc n ?ret_ty l in
+  let env, infix, tlogic =
+    declare_fun env loc n ~defined:true ?ret_ty l
+  in
   define_fun (acc, env) loc n l tlogic ?ret_ty infix e
 
 let rec type_decl (acc, env) d assertion_stack =
