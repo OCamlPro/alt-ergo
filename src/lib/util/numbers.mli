@@ -30,7 +30,7 @@
 
 (** Integers implementation. **)
 module Z : sig
-  type t
+  type t = Z.t
   val zero : t
   val one : t
   val m_one : t (* minus one *)

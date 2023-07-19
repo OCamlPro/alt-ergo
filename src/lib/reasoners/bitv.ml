@@ -139,7 +139,7 @@ module Shostak(X : ALIEN) = struct
 
   let is_mine_symb sy _ =
     match sy with
-    | Sy.Bitv _ | Sy.Op (Sy.Concat | Sy.Extract _)  -> true
+    | Sy.Bitv _ | Sy.Op (Concat | Extract _ | BV2Nat)  -> true
     | _ -> false
 
   let embed r =
@@ -1123,13 +1123,88 @@ module Shostak(X : ALIEN) = struct
          | Other t | Ext(t,_,_,_) -> (X.leaves t)@acc
       ) [] bitv
 
-  let is_mine = function [{ bv = Other r; _ }] -> r | bv -> X.embed bv
+  let is_mine_opt = function [{ bv = Other r; _ }] -> Some r | _ -> None
+
+  let is_mine bv =
+    match is_mine_opt bv with
+    | Some r -> r
+    | None -> X.embed bv
 
   let print = Debug.print_C_ast
 
+  (* This is used to extract terms from non-bitv semantic values.
+
+     We assume that non-bitv semantic values of a bitvector type are
+     necessarily uninterpreted terms, because that should be the case at the
+     time this code is written.
+
+     If this ever ceases to be the case, we should either preserve the original
+     term along with the semantic value, or fail more gracefully here. *)
+  let term_extract r =
+    match X.term_extract r with
+    | Some t, _ -> t
+    | None, _ ->
+      Util.internal_error "Non-BV semantic value: %a" X.print r
+
+  (* This is a helper function that converts a [simple_term] to an integer
+     expression. *)
+  let simple_term_to_nat acc st =
+    match st.bv with
+    | Cte false -> E.Ints.(acc * ~$Z.(~$1 lsl st.sz))
+    | Cte true -> E.Ints.((acc + ~$$1) * ~$Z.(~$1 lsl st.sz) - ~$$1)
+    | Other r ->
+      let t = term_extract r in
+      E.Ints.(acc * ~$Z.(~$1 lsl st.sz) + E.BV.bv2nat t)
+    | Ext (o, _, i, j) ->
+      assert (st.sz = j - i + 1);
+      let t = term_extract o in
+      E.Ints.(
+        acc * ~$Z.(~$1 lsl st.sz) +
+        (E.BV.bv2nat t / ~$Z.(~$1 lsl i)) mod ~$Z.(~$1 lsl st.sz))
+
+  let abstract_to_nat r =
+    List.fold_left simple_term_to_nat (E.Ints.of_int 0) r
+
+  (* Ideally, we would want to just call [abstract_to_nat r |> X.make]. But if
+     we do so, we may end up in a loop where we repeatedly call [X.make] on a
+     [BV2Nat] term -- so instead if we are a single [Other] term, we become
+     uninterpreted. *)
+  let bv2nat bv =
+    match is_mine_opt bv with
+    | Some r ->
+      let t = term_extract r in
+      begin match E.term_view t with
+        | { f = Op Int2BV _; _ } ->
+          (* bv2nat will simplify: we must call [X.make] again *)
+          E.BV.bv2nat t |> X.make
+        | { ty = Tbitv n; _ } ->
+          (* bv2nat will *not* simplify: become uninterpreted with interval
+             information *)
+          let t = E.BV.bv2nat t in
+          X.term_embed t, [ E.Ints.(~$$0 <= t) ; E.Ints.(t < ~$Z.(~$1 lsl n)) ]
+        | { ty; _ } ->
+          Util.internal_error "expected bitv, got %a" Ty.print ty
+      end
+    | None -> abstract_to_nat bv |> X.make
+
   let make t =
-    let r, ctx = Canon.make t in
-    is_mine r, ctx
+    let { E.f; xs; _ } = E.term_view t in
+    match f, xs with
+    | Op BV2Nat, [x] ->
+      (* When we have a BV2Nat expression, we try our best to convert it to
+         something that is usable by the arithmetic theory.
+
+         More precisely, after simplification of the argument, we get a
+         composition of constants and aliens or alien extractions, to which we
+         apply [bv2nat] recursively. If the alien or alien extraction are
+         [int2bv] terms, we convert the composition [(bv2nat ((_ int2bv n) x))]
+         into [(mod x (pow 2 n))]. *)
+      let r, ctx = Canon.make x in
+      let r, ctx' = bv2nat r in
+      r, List.rev_append ctx' ctx
+    | _ ->
+      let r, ctx = Canon.make t in
+      is_mine r, ctx
 
   let color _ = assert false
 

@@ -2912,9 +2912,6 @@ module BV = struct
     assert (size t = m);
     m
 
-  let int2bv n t = mk_term (Op (Int2BV n)) [t] (Tbitv n)
-  let bv2nat t = mk_term (Op BV2Nat) [t] Tint
-
   (* Function symbols for concatenation *)
   let concat s t =
     let n = size s and m = size t in
@@ -2956,6 +2953,27 @@ module BV = struct
       else
         concat (extract (i - 1) 0 t) (extract (m - 1) i t)
 
+  (* int2bv and bv2nat *)
+  let int2bv n t =
+    (* Note: arith.ml calls [int2bv] in [make]. If additional simplifications
+       are added here, arith.ml must be updated as well. *)
+    match term_view t with
+    | { f = Op BV2Nat; xs = [ t ]; _ } ->
+      let m = match type_info t with Tbitv m -> m | _ -> assert false in
+      if m > n then
+        extract (n - 1) 0 t
+      else
+        zero_extend (n - m) t
+    | _ -> mk_term (Op (Int2BV n)) [t] (Tbitv n)
+
+  let bv2nat t =
+    (* Note: bitv.ml calls [bv2nat] in [make]. If additional simplifications
+       are added here, bitv.ml must be updated as well. *)
+    match term_view t with
+    | { f = Op Int2BV n; xs = [ t ]; _ } ->
+      Ints.(t mod ~$Z.(~$1 lsl n))
+    | _ -> mk_term (Op BV2Nat) [t] Tint
+
   (* Bit-wise operations *)
   let bvnot s = mk_term (Op BVnot) [s] (type_info s)
   let bvand s t = mk_term (Op BVand) [s; t] (type_info s)
@@ -2979,7 +2997,7 @@ module BV = struct
   (* Arithmetic operations *)
   let bvneg s =
     let m = size s in
-    int2bv m Ints.(~$Z.(pow ~$2 m) - bv2nat s)
+    int2bv m Ints.(~$Z.(~$1 lsl m) - bv2nat s)
   let bvadd s t = int2bv (size s) Ints.(bv2nat s + bv2nat t)
   let bvsub s t = bvadd s (bvneg t)
   let bvmul s t = int2bv (size s) Ints.(bv2nat s * bv2nat t)

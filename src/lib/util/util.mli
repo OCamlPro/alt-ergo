@@ -119,3 +119,5 @@ val print_list_pp:
   Format.formatter -> 'a list -> unit
 
 val failwith: ('a, Format.formatter, unit, 'b) format4 -> 'a
+
+val internal_error : ('a, Format.formatter, unit, 'b) format4 -> 'a
