@@ -813,13 +813,13 @@ let is_real t = t.ty == Ty.Treal
 
 let is_fresh t =
   match t with
-  | { f = Sy.Name (hs,_); xs = []; _ } ->
+  | { f = Sy.Name (hs, _, _); xs = []; _ } ->
     Hstring.is_fresh_string (Hstring.view hs)
   | _ -> false
 
 let is_fresh_skolem t =
   match t with
-  | { f = Sy.Name (hs,_); _ } -> Hstring.is_fresh_skolem (Hstring.view hs)
+  | { f = Sy.Name (hs, _, _); _ } -> Hstring.is_fresh_skolem (Hstring.view hs)
   | _ -> false
 
 let name_of_lemma f =
@@ -2305,7 +2305,7 @@ module Triggers = struct
       | { f = Op _; _ } ->
         if eq exclude e then acc else e :: acc
 
-      | { f = Name (_, _); _ } ->
+      | { f = Name (_, _, _); _ } ->
         if eq exclude e then acc else e :: acc
 
       | { f = ( True | False | Void | Int _ | Real _

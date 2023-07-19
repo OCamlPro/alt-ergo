@@ -191,7 +191,7 @@ module Pp_smtlib_term = struct
     | Sy.In(lb, rb), [t] ->
       fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
 
-    | Sy.Name (n,_), l -> begin
+    | Sy.Name (n, _, _), l -> begin
         let constraint_name =
           try let constraint_name,_,_ =
                 (MS.find (Hstring.view n) !constraints) in
