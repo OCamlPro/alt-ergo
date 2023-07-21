@@ -567,7 +567,7 @@ let main () =
       let g =
         Parser.parse_logic ~preludes logic_file
       in
-      let st = State.set Typer.additional_builtins D_cnf.fpa_builtins st in
+      let st = State.set Typer.additional_builtins D_cnf.builtins st in
       let all_used_context = FE.init_all_used_context () in
       let finally = finally ~handle_exn in
       let st =
