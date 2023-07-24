@@ -236,32 +236,26 @@ module Shostak(X : ALIEN) = struct
           let st =
             match st with
             | Cte b -> Cte (not b)
-            | _ -> assert false
+            | Other _ | Ext _ ->
+              (* After normalization, the semantic value in
+                 the constructor Other and Ext cannot be a bitvector.
+                 Thus, these values are always uninterpreted for the
+                 Bitv theory. Supporting these cases requires important
+                 modifications of the solver function and will be supported
+                 later. *)
+              raise (Failure "Not supported")
           in
           { bv = st; sz }
         ) r
 
-    let no_variable r =
-      List.for_all (fun { bv = st; _ } ->
-          match st with
-          | Cte _ -> true
-          | Other _ | Ext _ ->
-            (* After normalization, the semantic value in
-               the constructor Other and Ext cannot be a bitvector.
-               Thus, these values are always uninterpreted for the
-               Bitv theory. *)
-            false
-        ) r
-
-    let other ~neg_mode t sz ctx =
+    let other ~neg t sz ctx =
       let r, ctx' = X.make t in
       let ctx = List.rev_append ctx' ctx in
       match X.extract r with
       | Some bv ->
-        if neg_mode then
-          if no_variable bv then
-            negate_abstract bv, ctx
-          else
+        if neg then
+          try negate_abstract bv, ctx with
+          | Failure _ ->
             [ { bv = Other (X.term_embed (E.BV.bvnot t)); sz } ], ctx
         else
           bv, ctx
@@ -315,58 +309,58 @@ module Shostak(X : ALIEN) = struct
           | _ -> normalize_st s :: normalize tts
         end
 
-    let rec make ~neg_mode t = vmake ~neg_mode (view t)
-    and vextract ~neg_mode i j tv =
+    let rec make ~neg t = vmake ~neg (view t)
+    and vextract ~neg i j tv =
       let size = j - i + 1 in
       match tv.descr with
       | Vcte z ->
-        vmake ~neg_mode { descr = Vcte (String.sub z (tv.size - j - 1) size); size }
+        vmake ~neg { descr = Vcte (String.sub z (tv.size - j - 1) size); size }
       | Vother t ->
-        let+ o = other ~neg_mode t tv.size in
+        let+ o = other ~neg t tv.size in
         extract tv.size i j o
       | Vextract (t'', k, _) ->
-        vmake ~neg_mode { descr = Vextract (t'', i + k, j + k); size }
+        vmake ~neg { descr = Vextract (t'', i + k, j + k); size }
       | Vconcat (u, v) ->
         let vu = view u and vv = view v in
         if j < vv.size then
-          vextract ~neg_mode i j vv
+          vextract ~neg i j vv
         else if i >= vv.size then
-          vextract ~neg_mode (i - vv.size) (j - vv.size) vu
+          vextract ~neg (i - vv.size) (j - vv.size) vu
         else
-          let+ u = vextract ~neg_mode 0 (j - vv.size) vu
-          and+ v = vextract ~neg_mode i (vv.size - 1) vv
+          let+ u = vextract ~neg 0 (j - vv.size) vu
+          and+ v = vextract ~neg i (vv.size - 1) vv
           in u @ v
       | Vnot t ->
-        vextract ~neg_mode:(not neg_mode) i j (view t)
-    and vmake ~neg_mode tv ctx =
+        vextract ~neg:(not neg) i j (view t)
+    and vmake ~neg tv ctx =
       match tv.descr with
       | Vcte z ->
         let acc = ref [] in
         for i = String.length z - 1 downto 0 do
           let c = z.[i] in
           match c, !acc with
-          | '0', { bv = Cte b; sz } :: rst when Bool.equal b neg_mode ->
+          | '0', { bv = Cte b; sz } :: rst when Bool.equal b neg ->
             acc := { bv = Cte b; sz = sz + 1 } :: rst
           | '0', rst ->
-            acc := { bv = Cte neg_mode; sz = 1 } :: rst
-          | _, { bv = Cte b; sz } :: rst when Bool.equal b (not neg_mode) ->
+            acc := { bv = Cte neg; sz = 1 } :: rst
+          | _, { bv = Cte b; sz } :: rst when Bool.equal b (not neg) ->
             acc := { bv = Cte b; sz = sz + 1 } :: rst
           | _, rst ->
-            acc := { bv = Cte (not neg_mode); sz = 1 } :: rst
+            acc := { bv = Cte (not neg); sz = 1 } :: rst
         done;
         !acc, ctx
-      | Vother t -> other ~neg_mode t tv.size ctx
+      | Vother t -> other ~neg t tv.size ctx
       | Vextract (t', i, j) ->
-        run ctx @@ vextract ~neg_mode i j (view t')
+        run ctx @@ vextract ~neg i j (view t')
       | Vconcat (t1, t2) ->
         run ctx @@
-        let+ t1 = make ~neg_mode t1 and+ t2 = make ~neg_mode t2 in
+        let+ t1 = make ~neg t1 and+ t2 = make ~neg t2 in
         t1 @ t2
       | Vnot t ->
-        run ctx @@ make ~neg_mode:(not neg_mode) t
+        run ctx @@ make ~neg:(not neg) t
 
     let make t =
-      let r, ctx = make ~neg_mode:false t [] in
+      let r, ctx = make ~neg:false t [] in
       normalize r, ctx
   end
 
