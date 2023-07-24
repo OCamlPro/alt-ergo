@@ -1080,7 +1080,24 @@ let rec mk_expr
             semantic_trigger ~loc ?var trigger
 
           (* Unary functions from FixedSizeBitVectors theory *)
-          | B.Bitv_extract { i; j; _ }, [ x ] -> E.BV.extract i j (mk x)
+          | B.Bitv_extract { i; j; _ }, [ x ] ->
+            let t = mk x in
+            let _ =
+              (* This temporary fix throws aways ill-typed expression produced
+                 by Dolmen 0.9. See issue
+                 https://github.com/Gbury/dolmen/issues/174.
+                 This code will be removed as soon as the next version of
+                 Dolmen has been released. *)
+              match E.type_info t with
+              | Tbitv m ->
+                if m <= i then
+                  Util.failwith
+                    "%alength of bitvector extraction exceeds the length\
+                     of its argument."
+                    Loc.report loc
+              | _ -> assert false
+            in
+            E.BV.extract i j t
           | B.Bitv_not _, [ x ] -> E.BV.bvnot (mk x)
           | B.Bitv_neg _, [ x ] -> E.BV.bvneg (mk x)
 
