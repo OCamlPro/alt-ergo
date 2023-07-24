@@ -27,7 +27,6 @@ Now we will test some semantic triggers.
   unsat
   
   unsat
-
   $ alt-ergo --frontend dolmen -o smtlib2 semantic_triggers.ae 2>/dev/null
   
   unknown
@@ -35,7 +34,6 @@ Now we will test some semantic triggers.
   unsat
   
   unsat
-
 
 And some SMT2 action.
 
