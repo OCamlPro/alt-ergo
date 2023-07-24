@@ -88,6 +88,13 @@ theory Real_of_Int extends RIA =
 
 end
 
+(* Outside of the theories because it is ignored otherwise. *)
+axiom abs_real_def :
+  forall x : real [ abs_real(x) ]. abs_real(x) = if 0.0 <= x then x else -x
+
+axiom abs_int_def :
+  forall x : int [ abs_int(x) ]. abs_int(x) = if 0 <= x then x else -x
+
 theory ABS extends RIA =
 
    axiom abs_real_pos :
