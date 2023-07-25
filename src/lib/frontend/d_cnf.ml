@@ -1087,7 +1087,8 @@ let rec mk_expr
                  by Dolmen 0.9. See issue
                  https://github.com/Gbury/dolmen/issues/174.
                  This code will be removed as soon as the next version of
-                 Dolmen has been released. *)
+                 Dolmen has been released. See issue
+                 https://github.com/OCamlPro/alt-ergo/issues/748. *)
               match E.type_info t with
               | Tbitv m ->
                 if m <= i then
