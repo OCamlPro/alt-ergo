@@ -203,3 +203,6 @@ theory ABS extends RIA =
      - i <= x <= i
 
 end
+
+function abs_real(x : real) : real = if 0.0 <= x then x else -x
+function abs_int(x : int) : int = if 0 <= x then x else -x
