@@ -25,7 +25,6 @@
     alt_ergo_prelude
     fmt
   )
-
   (preprocess (pps ppx_blob))
   (preprocessor_deps (glob_files ../preludes/*.ae))
 

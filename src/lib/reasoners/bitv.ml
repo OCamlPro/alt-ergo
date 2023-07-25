@@ -100,7 +100,7 @@ type 'a simple_term = ('a simple_term_aux) alpha_term
 
 let equal_simple_term eq = equal_alpha_term (equal_simple_term_aux eq)
 
-type 'a abstract =  ('a simple_term) list
+type 'a abstract =  'a simple_term list
 
 let equal_abstract eq = Lists.equal (equal_simple_term eq)
 
@@ -139,7 +139,7 @@ module Shostak(X : ALIEN) = struct
 
   let is_mine_symb sy _ =
     match sy with
-    | Sy.Bitv _ | Sy.Op (Concat | Extract _ | BV2Nat)  -> true
+    | Sy.Bitv _ | Sy.Op (Concat | Extract _ | BV2Nat | BVnot)  -> true
     | _ -> false
 
   let embed r =
@@ -198,8 +198,9 @@ module Shostak(X : ALIEN) = struct
       | Vother of 'a
       | Vextract of 'a * int * int
       | Vconcat of 'a * 'a
+      | Vnot of 'a
 
-    and 'a view = { descr : 'a view_descr ; size : int }
+    type 'a view = { descr : 'a view_descr ; size : int }
 
     let view t =
       match E.term_view t with
@@ -209,6 +210,8 @@ module Shostak(X : ALIEN) = struct
       | { f = Op Extract (i, j); xs = [ t' ]; ty = Tbitv size; _ } ->
         assert (size = j - i + 1);
         { descr = Vextract (t', i, j); size }
+      | { f = Op BVnot; xs = [ t ]; ty = Tbitv size; _ } ->
+        { descr = Vnot t; size }
       | { ty = Tbitv size; _ } ->
         { descr = Vother t; size }
       | _ -> assert false
@@ -227,11 +230,34 @@ module Shostak(X : ALIEN) = struct
       f x, ctx
     let (and+) = (and*)
 
-    let other t sz ctx =
+    let negate_abstract r =
+      List.map (fun { bv = st; sz } ->
+          let st =
+            match st with
+            | Cte b -> Cte (not b)
+            | Other _ | Ext _ ->
+              (* After normalization, the semantic value in
+                 the constructor Other and Ext cannot be a bitvector.
+                 Thus, these values are always uninterpreted for the
+                 Bitv theory. Supporting these cases requires important
+                 modifications of the solver function and will be supported
+                 later. *)
+              raise (Failure "Not supported")
+          in
+          { bv = st; sz }
+        ) r
+
+    let other ~neg t sz ctx =
       let r, ctx' = X.make t in
       let ctx = List.rev_append ctx' ctx in
       match X.extract r with
-      | Some bv -> bv, ctx
+      | Some bv ->
+        if neg then
+          try negate_abstract bv, ctx with
+          | Failure _ ->
+            [ { bv = Other (X.term_embed (E.BV.bvnot t)); sz } ], ctx
+        else
+          bv, ctx
       | None -> [ { bv = Other r; sz } ], ctx
 
     let extract_st i j ({ bv; sz } as st) =
@@ -282,53 +308,58 @@ module Shostak(X : ALIEN) = struct
           | _ -> normalize_st s :: normalize tts
         end
 
-    let rec make t = vmake (view t)
-    and vextract i j tv =
+    let rec make ~neg t = vmake ~neg (view t)
+    and vextract ~neg i j tv =
       let size = j - i + 1 in
       match tv.descr with
       | Vcte z ->
-        vmake { descr = Vcte (String.sub z (tv.size - j - 1) size); size }
+        vmake ~neg { descr = Vcte (String.sub z (tv.size - j - 1) size); size }
       | Vother t ->
-        let+ o = other t tv.size in
+        let+ o = other ~neg t tv.size in
         extract tv.size i j o
       | Vextract (t'', k, _) ->
-        vmake { descr = Vextract (t'', i + k, j + k); size }
+        vmake ~neg { descr = Vextract (t'', i + k, j + k); size }
       | Vconcat (u, v) ->
         let vu = view u and vv = view v in
         if j < vv.size then
-          vextract i j vv
+          vextract ~neg i j vv
         else if i >= vv.size then
-          vextract (i - vv.size) (j - vv.size) vu
+          vextract ~neg (i - vv.size) (j - vv.size) vu
         else
-          let+ u = vextract 0 (j - vv.size) vu
-          and+ v = vextract i (vv.size - 1) vv
+          let+ u = vextract ~neg 0 (j - vv.size) vu
+          and+ v = vextract ~neg i (vv.size - 1) vv
           in u @ v
-    and vmake tv ctx =
+      | Vnot t ->
+        vextract ~neg:(not neg) i j (view t)
+    and vmake ~neg tv ctx =
       match tv.descr with
       | Vcte z ->
         let acc = ref [] in
         for i = String.length z - 1 downto 0 do
           let c = z.[i] in
           match c, !acc with
-          | '0', { bv = Cte false; sz } :: rst ->
-            acc := { bv = Cte false; sz = sz + 1 } :: rst
+          | '0', { bv = Cte b; sz } :: rst when Bool.equal b neg ->
+            acc := { bv = Cte b; sz = sz + 1 } :: rst
           | '0', rst ->
-            acc := { bv = Cte false; sz = 1 } :: rst
-          | _, { bv = Cte true; sz } :: rst ->
-            acc := { bv = Cte true; sz = sz + 1 } :: rst
+            acc := { bv = Cte neg; sz = 1 } :: rst
+          | _, { bv = Cte b; sz } :: rst when Bool.equal b (not neg) ->
+            acc := { bv = Cte b; sz = sz + 1 } :: rst
           | _, rst ->
-            acc := { bv = Cte true; sz = 1 } :: rst
+            acc := { bv = Cte (not neg); sz = 1 } :: rst
         done;
         !acc, ctx
-      | Vother t -> other t tv.size ctx
+      | Vother t -> other ~neg t tv.size ctx
       | Vextract (t', i, j) ->
-        run ctx @@ vextract i j (view t')
+        run ctx @@ vextract ~neg i j (view t')
       | Vconcat (t1, t2) ->
         run ctx @@
-        let+ t1 = make t1 and+ t2 = make t2 in t1 @ t2
+        let+ t1 = make ~neg t1 and+ t2 = make ~neg t2 in
+        t1 @ t2
+      | Vnot t ->
+        run ctx @@ make ~neg:(not neg) t
 
     let make t =
-      let r, ctx = make t [] in
+      let r, ctx = make ~neg:false t [] in
       normalize r, ctx
   end
 
