@@ -362,10 +362,10 @@ let main () =
          PR. See https://github.com/OCamlPro/alt-ergo/pull/553 *)
       if Stdlib.(Options.get_sat_solver () = Tableaux) then
         Options.set_interpretation ILast
-      else Printer.print_wrn "%a The generation of models is not supported \
-                              for the current SAT solver. Please choose the \
-                              SAT solver Tableaux."
-          Loc.report st_loc
+      else
+        Printer.print_smtlib_err
+          "Model generation requires the Tableaux solver \
+           (try --produce-models)";
     | ":produce-models", Symbol { name = Simple "false"; _ } ->
       Options.set_interpretation INone
     | ":produce-unsat-cores", Symbol { name = Simple "true"; _ } ->
@@ -523,9 +523,7 @@ let main () =
           begin
             (* TODO: add the location of the statement. *)
             Printer.print_smtlib_err
-              "You have to set the flag :produce-models with \
-               (set-option :produce-models true) \
-               before using the statement (get-model).";
+              "Model generation disabled (try --produce-models)";
             st
           end
 
