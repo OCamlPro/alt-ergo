@@ -199,7 +199,6 @@ module Shostak(X : ALIEN) = struct
       | Vextract of 'a * int * int
       | Vconcat of 'a * 'a
       | Vnot of 'a
-      (*     [@@deriving show] *)
 
     type 'a view = { descr : 'a view_descr ; size : int }
 

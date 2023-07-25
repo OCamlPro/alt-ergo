@@ -25,7 +25,7 @@
     alt_ergo_prelude
     fmt
   )
-  (preprocess (pps ppx_blob ppx_deriving.show))
+  (preprocess (pps ppx_blob))
   (preprocessor_deps (glob_files ../preludes/*.ae))
 
   ; .mli only modules *also* need to be in this field

@@ -86,7 +86,6 @@ See more details on http://alt-ergo.ocamlpro.com/"
   fmt
   stdlib-shims
   ppx_blob
-  ppx_deriving
   (camlzip (>= 1.07))
   (odoc :with-doc)
  )
