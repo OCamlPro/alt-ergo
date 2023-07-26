@@ -4,6 +4,7 @@
 )
 
 (library
+ (package alt-ergo)
  (name alt_ergo_common)
  (libraries
    alt-ergo-lib
