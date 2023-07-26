@@ -55,6 +55,6 @@ val empty : t
 
 val is_empty : t -> bool
 
-val is_suspicious_model : t -> bool
+val is_suspicious : t -> bool
 (* Determine if the model is suspicious as it contains symbols
    of theories for which the model generation is not properly supported. *)

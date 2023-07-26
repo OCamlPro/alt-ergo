@@ -119,7 +119,7 @@ let iter f { values; _ } =
       | _ -> f key value
     ) values
 
-let[@inline always] is_suspicious_model { suspicious; _ } = suspicious
+let[@inline always] is_suspicious { suspicious; _ } = suspicious
 
 let fold f { values; _ } acc = P.fold f values acc
 
