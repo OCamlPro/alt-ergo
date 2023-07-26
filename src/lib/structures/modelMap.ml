@@ -80,24 +80,50 @@ module V = Set.Make
 
 type key = P.key
 type elt = V.t
-type t = V.t P.t
 
-let add p v mp =
-  let prof_p = try P.find p mp with Not_found -> V.empty in
-  if V.mem v prof_p then mp
-  else P.add p (V.add v prof_p) mp
+type t = {
+  values : V.t P.t;
+  suspicious : bool;
+}
 
-let iter f =
+let is_suspicious_name hs =
+  match Hstring.view hs with
+  | "@/" | "@%" | "@*" -> true
+  | _ -> false
+
+(* The model generation is known to be imcomplete for FPA and Bitvector
+   theories. *)
+let is_suspicious_symbol = function
+  | Sy.Op (Float | Fixed | Abs_int | Abs_real | Sqrt_real
+          | Sqrt_real_default | Sqrt_real_excess
+          | Real_of_int | Int_floor | Int_ceil
+          | Max_int | Max_real | Min_int | Min_real
+          | Pow | Integer_log2 | Int2BV _ | BV2Nat
+          | BVand | BVor | Integer_round) -> true
+  | Sy.Name (hs, _, _) when is_suspicious_name hs -> true
+  | _ -> false
+
+let add ((sy, _, _) as p) v { values; suspicious } =
+  let prof_p = try P.find p values with Not_found -> V.empty in
+  let values =
+    if V.mem v prof_p then values
+    else P.add p (V.add v prof_p) values
+  in
+  { values; suspicious = suspicious || is_suspicious_symbol sy }
+
+let iter f { values; _ } =
   P.iter (fun ((sy, _, _) as key) value ->
       match sy with
       | Sy.Name (_, _, true) ->
         (* We don't print constants defined by the user. *)
         ()
       | _ -> f key value
-    )
+    ) values
 
-let fold = P.fold
+let[@inline always] is_suspicious { suspicious; _ } = suspicious
 
-let empty = P.empty
+let fold f { values; _ } acc = P.fold f values acc
 
-let is_empty = P.is_empty
+let empty = { values = P.empty; suspicious = false }
+
+let is_empty { values; _ } = P.is_empty values

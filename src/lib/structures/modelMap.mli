@@ -42,7 +42,8 @@ module V : Set.S with type elt =
 
 type key = P.key
 type elt = V.t
-type t = V.t P.t
+
+type t
 
 val add : key -> V.elt -> t -> t
 
@@ -53,3 +54,7 @@ val fold : (key -> elt -> 'acc -> 'acc) -> t -> 'acc -> 'acc
 val empty : t
 
 val is_empty : t -> bool
+
+val is_suspicious : t -> bool
+(* Determine if the model is suspicious as it contains symbols
+   of theories for which the model generation is not properly supported. *)
