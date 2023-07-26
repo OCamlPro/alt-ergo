@@ -53,6 +53,7 @@ Creation and manipulation of values having those types are covered in [built-in 
 
 For all those operators, `bool` and `prop` are fully interchangeable.
 
+(the-bool-prop-conflict)=
 #### The `bool`/`prop` conflict
 
 Prior to Alt-Ergo 2.3.0, Alt-Ergo's native language handled differently boolean variables `bool` and propositional variables `prop`.
