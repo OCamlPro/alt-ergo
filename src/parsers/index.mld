@@ -25,10 +25,5 @@ Users can add new parsers to Alt-Ergo with the option [--add-parser].
 This parser should have the same interface as {!module-type:AltErgoParsers.Parsers.PARSER_INTERFACE} and should be registered using {!val:AltErgoParsers.Parsers.register_parser}
 
 {4 Why3 parser plugin}
-see {{:../alt-ergo/index_abwhy3.html}[ABWhy3]}
 
-
-{2 Utilities}
-{!modules:
-AltErgoParsers.MyZip
-}
+See {{:../alt-ergo-plugin-ab-why3/index.html}[the ABWhy3 plugin]}.
