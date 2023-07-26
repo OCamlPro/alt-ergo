@@ -10,7 +10,7 @@
 * support of some options of the SMT-LIB statement (set-option) (PR #608)
 * support for the (get-model) statement (required the Dolmen frontend) (PR #614)
 * support the QF_BV and BV smtlib2 logic (PR #730, #733, #745).
-* improve the ite reasoning (simplification of some ites) (PR #731)
+* improve the ite preprocessing (simplification of some ites) (PR #731)
 
 ### Build
 * update to the new version of ocplib-simplex (0.5)
