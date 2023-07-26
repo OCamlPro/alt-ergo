@@ -24,22 +24,101 @@ Alt-Ergo supports file extensions:
 See the [Input section] for more information about the format of the input files
 
 ### Generating models
-Since 2.5.0, Alt-Ergo also generates models in the case it concludes on the satisfiability of
-the formula.
-There is two ways to activate model generation:
+Alt-Ergo generates best-effort models in the case it cannot conclude the unsatisfiability of
+the context or the validity of a goal. By default, the model format is the SMT format.
 
-- with the `--model` option;
+By default the model generation is disable. There is three ways to activate it:
 
-- `with the --interpretation=VALUE`, where VALUE can be equal to:
-  * "none", and alt-ergo will not generate models (by default);
-  * "first", and alt-ergo will output the first model it finds;
-  * "every", alt alt-ergo will compute a model before each decision
-  * "last", and alt-ergo will output the last model it computes before returning 'unknown'.
-  Note that this mode only works with the option `--sat-solver tableaux`.
+- with the `--dump-models` option, Alt-Ergo will produce a model after each `goal` in the native language
+  or each `(check-sat)` in the SMT-LIB language. For instance the input file `INPUT.smt2`:
 
-NB: the `--model` option is equivalent to `--interpretation every --sat-solver tableaux`.
+  ```
+    (set-logic ALL)
+    (declare-fun a () Int)
+    (declare-fun b () Int)
+    (declare-fun c () Int)
 
-The default model format is the SMT format.
+    (assert (= a (+ b c)))
+    (check-sat)
+
+    (assert (distinct a b))
+    (check-sat)
+  ```
+  and the command `$ alt-ergo --dump-models INPUT.smt2` produces the output models
+
+  ```
+    (
+      (define-fun a () Int 0)
+      (define-fun b () Int 0)
+      (define-fun c () Int 0)
+    )
+
+    (
+      (define-fun a () Int (- 2))
+      (define-fun b () Int 0)
+      (define-fun c () Int (- 2))
+    )
+  ```
+
+- with the `--produce-models` option, you turn the model generation on. You can display
+  a model after a `(check-sat)` using the statement `(get-model)`. For instance the input file `INPUT.smt2`:
+
+  ```
+    (set-logic ALL)
+    (declare-fun a () Int)
+    (declare-fun b () Int)
+    (declare-fun c () Int)
+
+    (assert (= a (+ b c)))
+    (check-sat)
+    (get-model)
+
+    (assert (distinct a b))
+    (check-sat)
+
+  ```
+  and the command `$ alt-ergo --produce-models INPUT.smt2` produces the output model
+  ```
+    (
+      (define-fun a () Int 0)
+      (define-fun b () Int 0)
+      (define-fun c () Int 0)
+    )
+  ```
+
+- with the statement `(set-option :produce-models true)`, you turn the model generation on and
+  you can use the statement `(get-model)` as explained above. For instance the input file `INPUT.smt2`:
+  ```
+   (set-logic ALL)
+   (set-option :produce-models true)
+   (declare-fun a () Int)
+   (declare-fun b () Int)
+   (declare-fun c () Int)
+
+   (assert (= a (+ b c)))
+   (check-sat)
+   (get-model)
+
+  ```
+  and the command `$ alt-ergo --sat-solver tableaux INPUT.smt2` produces the output model
+  ```
+    (
+      (define-fun a () Int 0)
+      (define-fun b () Int 0)
+      (define-fun c () Int 0)
+    )
+  ```
+  Note: you need to select the SAT solver Tableaux as the model generation is not
+  supported yet by the other SAT solvers.
+
+You can fine-tune the moment Alt-Ergo computes its models by using the option `--interpretation=VALUE` where VALUE can be:
+  * "none", to disable model generation (by default);
+  * "first", to output the first model found;
+  * "every", to compute a model before each decision;
+  * "last", to output the last model computed before returning 'unknown'.
+
+  Note: this option only works with the option `--sat-solver tableaux`.
+
 
 ### Output
 The results of an Alt-ergo's execution have the following form :
