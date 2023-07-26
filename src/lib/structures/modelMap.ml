@@ -91,7 +91,8 @@ let is_suspicious_name hs =
   | "@/" | "@%" | "@*" -> true
   | _ -> false
 
-(* The model generation is not ready for FPA and Bitvector theories. *)
+(* The model generation is known to be imcomplete for FPA and Bitvector
+   theories. *)
 let is_suspicious_symbol = function
   | Sy.Op (Float | Fixed | Abs_int | Abs_real | Sqrt_real
           | Sqrt_real_default | Sqrt_real_excess
