@@ -1,5 +1,7 @@
 ## unreleased
 
+## v2.5.0
+
 ### New features
 * add context reinitialisation (PR #490)
 * add Dolmen frontend (PR #491,#541,#545)
@@ -16,11 +18,7 @@
 * remove the deprecated graphical interface (PR #601)
 
 ### Bug fixes
-* issue 475 (PR #478)
-* issue 504 (PR #524)
-* issue 509 (PR #524)
-* fix infinite loop in Expr.SMTPrinter (PR #540)
-* remove flattening of arithmetic expressions in order to fix some regressions (PR #566)
+* issue 475 -- Catch the exception I_dont_known in instantiation pass of SatML (PR #478)
 * fix a leak memory in the vector module (PR #606)
 * issue 737 (PR #738)
 
