@@ -54,7 +54,7 @@ More information on this strategy and the language extension can be found in [th
 
 ### Semantic triggers
 
-In addition to syntactic triggers (or triggers) and interval triggers (or filters) defined in [section Axioms](03_declaration_of_axioms.md), additional triggers are available inside theories.
+In addition to syntactic triggers (or triggers) and interval triggers (or filters) defined in [axioms](03_declaration_of_axioms.md), additional triggers are available inside theories.
 Those additional triggers are called semantic triggers.
 
 They correspond to the following constructs.

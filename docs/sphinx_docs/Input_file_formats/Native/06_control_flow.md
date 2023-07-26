@@ -7,13 +7,13 @@
 Like in OCaml, let expressions are available. They allow for named local expressions, which are written `let name = expression in [...]`.
 Name defined like this only have local scope.
 
-#### Syntax
+### Syntax
 ```
 <let_expression>       ::= 'let' <let_binders> 'in' <expr>
 <let_binders>          ::= <id> '=' <expr> ( ',' <id> '=' <expr> )*
 ```
 
-#### Example
+### Example
 ```
 function average(a:real, b:real):real =
     let sum = a+b in
@@ -27,7 +27,7 @@ Pattern matching, a [Really Cool Feature](https://ocaml.org/learn/tutorials/data
 Warning: the only patterns that can be matched are constructors of algebraic datatypes.
 Moreover, constructors can't be nested in a pattern.
 
-#### Syntax
+### Syntax
 ```
 <match_expr>     ::= 'match' <expr> 'with' <match_cases> 'end'
 <match_cases>    ::= '|'? <simple_pattern> '->' <expr> ( '|' <simple_pattern> '->' <expr> )*
@@ -35,7 +35,7 @@ Moreover, constructors can't be nested in a pattern.
 <args>           ::= <id> ( "," <id> )*
 ```
 
-#### Example
+### Example
 ```
 type 'a tree = NIL | Node of { left:'a tree; val:'a; right:'a tree }
 
@@ -53,7 +53,7 @@ function height(t: 'a tree):int =
 
 The simple construct `if then else` for conditional expressions is available in Alt-Ergo's native language.
 
-#### Syntax
+### Syntax
 ```
 <ite_expr>     ::= 'if' <cond_expr> 'then' <branch1_expr> 'else' <branch2_expr>
 (* Note that <cond_expr> must have type bool - or prop *)
@@ -63,7 +63,7 @@ The simple construct `if then else` for conditional expressions is available in 
 <branch2_expr> ::= <expr>
 ```
 
-#### Example
+### Example
 ```
 function max(a:int, b:int):int =
     if a>b then a else b
