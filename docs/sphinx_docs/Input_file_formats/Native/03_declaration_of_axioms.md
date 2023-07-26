@@ -11,13 +11,13 @@ The heuristic for choosing new instances is based on *triggers*. By default, tri
 In order to declare an axiom, the user can use the following construct.
 Note that axioms must always be named.
 
-#### Syntax
+### Syntax
 ```
 <axiom_declaration> ::= 'axiom' <id> ':' <axiom_body>
 ```
 Here, `<axiom_body>` is an expression which may contain quantifiers, and where user-specified triggers may be added to universal quantifiers.
 
-#### Example
+### Example
 
 ```
 (* Axioms can be used without quantifiers *)
@@ -56,7 +56,7 @@ Interval triggers further restrict instantiation of axioms, and check that varia
 
 Multiple patterns can be used in syntactic triggers. They are separated by `|` which means 'or' and by `,` which means 'and'. `|` has an higher precedence than `,`.
 
-#### Syntax
+### Syntax
 ```
 <quantified_formula>    ::= <quantifier> <var_id_list_sep_comma> ':' <var_type> <syntactic_triggers>? <interval_triggers>? '.' <expr>
 <quantifier>            ::= 'exists' | 'forall'
@@ -75,9 +75,9 @@ Interval triggers also exists. [TODO: add more explanations]
 <rel>                   ::= '<' | '<='
 ```
 
-[Semantic triggers](05_theories.html#semantic-triggers) are only available in theories
+[Semantic triggers](05_theories.md#semantic-triggers) are only available in theories
 
-#### Examples
+### Examples
 ```
 (* P(x) used as the only trigger *)
 logic P,Q,R: int -> prop
@@ -110,7 +110,7 @@ To add a new axiom directly in the form of a rewriting technique, the keyword `r
 
 [TODO: complete]
 
-#### Syntax
+### Syntax
 ```
 <rewriting_declaraction> ::= 'rewriting' <id> ':' <predicate_list_sep_pv>
 <predicate_list_sep_pv>  ::= <predicate> (';' <predicate_list_sep_pv>? )? 
@@ -118,5 +118,5 @@ To add a new axiom directly in the form of a rewriting technique, the keyword `r
 <predicate>              ::= <predicate_expr> | <predicate_id>
 ```
 
-#### Example
+### Example
 [TODO: find relevant examples]
