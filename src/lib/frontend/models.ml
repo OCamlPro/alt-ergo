@@ -483,7 +483,7 @@ let pp_constant ppf (_, t) =
 let output_concrete_model fmt props ~functions ~constants ~arrays =
   if ModelMap.(is_suspicious functions || is_suspicious constants
                || is_suspicious arrays) then
-    Format.fprintf fmt "This model is a best-effort. It includes symbols
+    Format.fprintf fmt "; This model is a best-effort. It includes symbols
         for which model generation is known to be incomplete. @.";
 
   Format.fprintf fmt "@[<v 2>(";
