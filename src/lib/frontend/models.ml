@@ -481,6 +481,11 @@ let pp_constant ppf (_, t) =
   Format.fprintf ppf "%a" SmtlibCounterExample.pp_dummy_value_of_type t
 
 let output_concrete_model fmt props ~functions ~constants ~arrays =
+  if ModelMap.(is_suspicious_model functions || is_suspicious_model constants
+               || is_suspicious_model arrays) then
+    Format.fprintf fmt "This model is a best-effort. Please note tht it \
+                        could be wrong. @.";
+
   Format.fprintf fmt "@[<v 2>(";
   if Options.get_model_type_constraints () then
     begin
