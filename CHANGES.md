@@ -5,11 +5,11 @@
 ### New features
 * add context reinitialisation (PR #490)
 * add Dolmen frontend (PR #491,#541,#545)
-* add model generation (PR #530)
+* modernize the support for model generation (PR #530, #614, #659, #703, #614, #609, #755)
 * support mutually recursive definitions in the native language (PR #549, #550)
 * support of some options of the SMT-LIB statement (set-option) (PR #608)
 * support for the (get-model) statement (required the Dolmen frontend) (PR #614)
-* support ground reasoning with some bitvector primitives (PR #730, #733, #745).
+* support the QF_BV and BV smtlib2 logic (PR #730, #733, #745).
 * improve the ite reasoning (simplification of some ites) (PR #731)
 
 ### Build
@@ -19,8 +19,7 @@
 
 ### Bug fixes
 * issue 475 -- Catch the exception I_dont_known in instantiation pass of SatML (PR #478)
-* fix a leak memory in the vector module (PR #606)
-* issue 737 (PR #738)
+* fix a memory leak in the vector module (PR #606)
 
 ## v2.4.3 (2023-04-14)
 
