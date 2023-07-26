@@ -1,30 +1,5 @@
 ## unreleased
 
-### New features
-* add context reinitialisation (PR #490)
-* add Dolmen frontend (PR #491,#541,#545)
-* add model generation (PR #530)
-* support mutually recursive definitions in the native language (PR #549, #550)
-* support of some options of the SMT-LIB statement (set-option) (PR #608)
-* support for the (get-model) statement (required the Dolmen frontend) (PR #614)
-* support ground reasoning with some bitvector primitives (PR #730, #733, #745).
-* improve the ite reasoning (simplification of some ites) (PR #731)
-
-### Build
-* update to the new version of ocplib-simplex (0.5)
-* remove the support of the deprecated library num. Alt-Ergo only uses Zarith (PR #600)
-* remove the deprecated graphical interface (PR #601)
-* use Dune >= 3.5.
-
-### Bug fixes
-* issue 475 (PR #478)
-* issue 504 (PR #524)
-* issue 509 (PR #524)
-* fix infinite loop in Expr.SMTPrinter (PR #540)
-* remove flattening of arithmetic expressions in order to fix some regressions (PR #566)
-* fix a leak memory in the vector module (PR #606)
-* issue 737 (PR #738)
-
 ## v2.4.3 (2023-04-14)
 
 ### Build
