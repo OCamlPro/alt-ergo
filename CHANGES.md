@@ -14,7 +14,6 @@
 * update to the new version of ocplib-simplex (0.5)
 * remove the support of the deprecated library num. Alt-Ergo only uses Zarith (PR #600)
 * remove the deprecated graphical interface (PR #601)
-* use Dune >= 3.5.
 
 ### Bug fixes
 * issue 475 (PR #478)
