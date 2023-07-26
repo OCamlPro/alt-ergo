@@ -116,7 +116,7 @@ Creation and manipulation of values having those types are covered in <a class="
 <li><p><code class="docutils literal notranslate"><span class="pre">prop</span></code>, an historical type still supported in Alt-Ergo 2.3.0.<br />
 The historical separation comes from Alt-Ergo origins in the Coq ecosystem: in Coq, <code class="docutils literal notranslate"><span class="pre">prop</span></code> is much richer than <code class="docutils literal notranslate"><span class="pre">bool</span></code>.<br />
 In Alt-Ergo 2.3.0, <code class="docutils literal notranslate"><span class="pre">prop</span></code> and <code class="docutils literal notranslate"><span class="pre">bool</span></code> have been merged in order to simplify interactions with the <a class="reference external" href="http://smtlib.cs.uiowa.edu/">SMT-LIB </a> standard.<br />
-More information on the <code class="docutils literal notranslate"><span class="pre">bool</span></code>/<code class="docutils literal notranslate"><span class="pre">prop</span></code> conflict can be found in <a class="reference internal" href="#the-bool-prop-conflict"><span class="xref myst">this section</span></a>.</p></li>
+More information on the <code class="docutils literal notranslate"><span class="pre">bool</span></code>/<code class="docutils literal notranslate"><span class="pre">prop</span></code> conflict can be found in <a class="reference internal" href="#the-bool-prop-conflict">this section</a>.</p></li>
 </ul>
 </section>
 <section id="numeric-types">
@@ -197,7 +197,7 @@ Functional polymorphic arrays are persistent structures: they may be updated, bu
 </table>
 <p>For all those operators, <code class="docutils literal notranslate"><span class="pre">bool</span></code> and <code class="docutils literal notranslate"><span class="pre">prop</span></code> are fully interchangeable.</p>
 <section id="the-bool-prop-conflict">
-<h4>The <code class="docutils literal notranslate"><span class="pre">bool</span></code>/<code class="docutils literal notranslate"><span class="pre">prop</span></code> conflict<a class="headerlink" href="#the-bool-prop-conflict" title="Permalink to this heading"></a></h4>
+<span id="id1"></span><h4>The <code class="docutils literal notranslate"><span class="pre">bool</span></code>/<code class="docutils literal notranslate"><span class="pre">prop</span></code> conflict<a class="headerlink" href="#the-bool-prop-conflict" title="Permalink to this heading"></a></h4>
 <p>Prior to Alt-Ergo 2.3.0, Alt-Ergo’s native language handled differently boolean variables <code class="docutils literal notranslate"><span class="pre">bool</span></code> and propositional variables <code class="docutils literal notranslate"><span class="pre">prop</span></code>.
 The two keywords still exist in Alt-Ergo 2.3.0, but those two types have been made fully compatible: any function or operator taking a <code class="docutils literal notranslate"><span class="pre">bool</span></code> or a <code class="docutils literal notranslate"><span class="pre">prop</span></code> as an argument accepts both.</p>
 <p>The historical separation comes from Alt-Ergo origins in the Coq ecosystem: in Coq, <code class="docutils literal notranslate"><span class="pre">prop</span></code> is much richer than <code class="docutils literal notranslate"><span class="pre">bool</span></code>.
@@ -354,8 +354,8 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
 </pre></div>
 </div>
 </section>
-<section id="id1">
-<h3>Bitvectors<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
+<section id="id2">
+<h3>Bitvectors<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
 <p>Remember that bitvectors are fixed-size binary words: vectors of <code class="docutils literal notranslate"><span class="pre">0</span></code> and <code class="docutils literal notranslate"><span class="pre">1</span></code>.</p>
 <p>There exists a bitvector type <code class="docutils literal notranslate"><span class="pre">bitv[n]</span></code> for each fixed non-zero positive integer <code class="docutils literal notranslate"><span class="pre">n</span></code>. For example, <code class="docutils literal notranslate"><span class="pre">bitv[8]</span></code> is a bitvector.</p>
 <p>Note that bitvectors are indexed from right to left.</p>
@@ -385,8 +385,8 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
 </tr>
 </tbody>
 </table>
-<section id="id2">
-<h4>Examples<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h4>
+<section id="id3">
+<h4>Examples<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h4>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="o">**</span> <span class="n">Usage</span> <span class="n">of</span> <span class="n">bitv</span> <span class="n">types</span> <span class="o">*</span><span class="p">)</span>
 <span class="n">logic</span> <span class="n">register</span><span class="p">:</span> <span class="n">bitv</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span>
 
@@ -420,8 +420,8 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
 </div>
 </section>
 </section>
-<section id="id3">
-<h3>Type variables<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
+<section id="id4">
+<h3>Type variables<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h3>
 <p>As type variables and polymorphism have already been described, let’s just look at the following example.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">logic</span> <span class="n">f</span><span class="p">:</span> <span class="s1">&#39;a-&gt;&#39;</span><span class="n">b</span>
 <span class="n">logic</span> <span class="n">g</span><span class="p">:</span> <span class="s1">&#39;b-&gt;&#39;</span><span class="n">b</span>
@@ -443,8 +443,8 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
 </pre></div>
 </div>
 </section>
-<section id="id4">
-<h3>Polymorphic functional arrays<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h3>
+<section id="id5">
+<h3>Polymorphic functional arrays<a class="headerlink" href="#id5" title="Permalink to this heading"></a></h3>
 <p>[TODO: add table?]</p>
 <p>Remember that <code class="docutils literal notranslate"><span class="pre">farray</span></code> are parametrized by two types: the type of their indexes (default is <code class="docutils literal notranslate"><span class="pre">int</span></code>) and the type of their values (no default).</p>
 <section id="syntax">
@@ -461,8 +461,8 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
 </pre></div>
 </div>
 </section>
-<section id="id5">
-<h4>Examples<a class="headerlink" href="#id5" title="Permalink to this heading"></a></h4>
+<section id="id6">
+<h4>Examples<a class="headerlink" href="#id6" title="Permalink to this heading"></a></h4>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="o">*</span> <span class="n">arr1</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">general</span> <span class="n">polymorphic</span> <span class="n">farray</span> <span class="o">*</span><span class="p">)</span>
 <span class="n">logic</span> <span class="n">arr1</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;a, &#39;</span><span class="n">b</span><span class="p">)</span> <span class="n">farray</span>
 <span class="p">(</span><span class="o">*</span> <span class="n">arr2</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">polymorphic</span> <span class="n">farray</span> <span class="n">whose</span> <span class="n">indexes</span> <span class="n">are</span> <span class="nb">int</span> <span class="o">*</span><span class="p">)</span>
