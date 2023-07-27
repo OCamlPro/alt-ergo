@@ -150,7 +150,7 @@ logic int_ceil : real -> int
 logic real_is_int : real -> bool
 ```
 
-`int_floor` and `int_ceil` implement the standard `floor` and `ceil` functions.
+`int_floor` and `int_ceil` implement the usual `floor` and `ceil` functions.
 They compute the greatest integer less than a real and the least integer
 greater than a real, respectively.
 
