@@ -49,6 +49,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#library">Library</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#run">Run</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#files-extensions">Files extensions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#frontend-option">Frontend option</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#generating-models">Generating models</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#output">Output</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#about-alt-ergo-s-output">About alt-ergo’s output</a></li>
@@ -126,7 +127,20 @@ allows to enable the old Tableaux-like SAT-solver:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">.psmt2</span></code>, <code class="docutils literal notranslate"><span class="pre">.smt2</span></code> for (our polymorphic extension of) the SMT-LIB 2
 standard</p></li>
 </ul>
-<p>See the <a class="reference internal" href="../Input_file_formats/index.html"><span class="doc std std-doc">Input section</span></a> for more information about the format of the input files</p>
+<p>See the <a class="reference internal" href="../Input_file_formats/index.html"><span class="doc std std-doc">Input section</span></a> for more information about the format of the input files.</p>
+</section>
+<section id="frontend-option">
+<h3>Frontend option<a class="headerlink" href="#frontend-option" title="Permalink to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">--frontend</span></code> option let’s you select the frontend used to parse and type the input file. Since version 2.5.0,
+Alt-Ergo integrates two frontends:</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">legacy</span></code> frontend is the historical frontend of Alt-Ergo supporting the native language
+and (partially) supporting the SMT-LIB language. The legacy frontend is currently the default.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">dolmen</span></code> frontend is a new frontend using the <a class="reference external" href="https://github.com/Gbury/dolmen">Dolmen library</a>.
+The native and SMT-LIB languages are both supported by this frontend.
+You can select it with the <code class="docutils literal notranslate"><span class="pre">--frontend</span> <span class="pre">dolmen</span></code> option, which is planned to become the
+default in a future release.</p></li>
+</ul>
 </section>
 <section id="generating-models">
 <h3>Generating models<a class="headerlink" href="#generating-models" title="Permalink to this heading"></a></h3>
