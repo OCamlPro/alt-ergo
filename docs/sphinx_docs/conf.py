@@ -17,9 +17,9 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'Doc-Alt-Ergo'
-copyright = '2020 - 2023, Alt-Ergo devs'
-author = 'Alt-Ergo devs'
+project = 'Alt-Ergo Documentation'
+copyright = '2020 - 2023, Alt-Ergo developers'
+author = 'Alt-Ergo developers'
 
 # -- Entry point -------------------------------------------------------------
 
@@ -55,8 +55,3 @@ html_theme_options = {
 myst_heading_anchors = 3
 
 html_show_sourcelink = False
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
