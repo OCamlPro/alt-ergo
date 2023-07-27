@@ -166,8 +166,7 @@ from the `Reals_Ints` theory respectively.
 logic sqrt_real : real -> real
 ```
 
-The `sqrt_real` function denotes the square root of a real number.  Alt-Ergo
-only computes rational under- and over-approximations.
+The `sqrt_real` function denotes the square root of a real number.
 
 ### Internal primitives
 
