@@ -296,7 +296,7 @@ let mk_context_opt replay replay_all_used_context replay_used_context
   set_replay_used_context replay_used_context;
   `Ok()
 
-let mk_execution_opt frontend input_format parse_only ()
+let mk_execution_opt input_format parse_only ()
     preludes no_locs_in_answers colors_in_output no_headers_in_output
     no_formatting_in_output no_forced_flush_in_output pretty_output
     type_only type_smt2
@@ -319,7 +319,6 @@ let mk_execution_opt frontend input_format parse_only ()
   set_output_with_forced_flush output_with_forced_flush;
   set_input_format input_format;
   set_parse_only parse_only;
-  set_frontend frontend;
   set_type_only type_only;
   set_type_smt2 type_smt2;
   set_preludes preludes;
@@ -368,7 +367,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
 
 let mk_output_opt
     interpretation use_underscore unsat_core output_format model_type
-    () ()
+    () () ()
   =
   set_infer_output_format (Option.is_none output_format);
   let output_format = match output_format with
@@ -617,12 +616,6 @@ let parse_execution_opt =
 
   let docs = s_execution in
 
-  let frontend =
-    let doc = "Select the parsing and typing frontend." in
-    let docv = "FTD" in
-    Arg.(value & opt string (get_frontend ()) &
-         info ["frontend"] ~docv ~docs ~doc) in
-
   let input_format =
     let doc = Format.sprintf
         "Set the default input format to $(docv) and must be %s. \
@@ -741,7 +734,7 @@ let parse_execution_opt =
 
 
   Term.(ret (const mk_execution_opt $
-             frontend $ input_format $ parse_only $ parsers $ preludes $
+             input_format $ parse_only $ parsers $ preludes $
              no_locs_in_answers $ colors_in_output $ no_headers_in_output $
              no_formatting_in_output $ no_forced_flush_in_output $
              pretty_output $ type_only $ type_smt2
@@ -855,7 +848,7 @@ let parse_output_opt =
 
   (* Use the --interpretation and --produce-models (which is equivalent to
      --interpretation last) to determine the interpretation value. *)
-  let interpretation, dump_models =
+  let interpretation, dump_models, frontend =
     let interpretation =
       let doc = Format.sprintf
           "Best effort support for counter-example generation. \
@@ -888,6 +881,26 @@ let parse_output_opt =
       Arg.(value & flag & info ["produce-models"] ~doc ~docs:s_models)
     in
 
+    let frontend =
+      let doc = "Select the parsing and typing frontend." in
+      let docv = "FTD" in
+      Arg.(value & opt (some string) None &
+           info ["frontend"] ~docv ~docs:s_execution ~doc)
+    in
+
+    (* Use the dolmen frontend by default with --produce-models *)
+    let mk_frontend frontend produce_models =
+      match frontend with
+      | None ->
+        if produce_models then
+          "dolmen"
+        else
+          get_frontend ()
+      | Some frontend -> frontend
+    in
+
+    let frontend = Term.(const mk_frontend $ frontend $ produce_models) in
+
     let dump_models =
       let doc =
         "Display a model each time the result is unknown (implies \
@@ -905,7 +918,8 @@ let parse_output_opt =
       const mk_interpretation $ interpretation $
       produce_models $ dump_models
     ),
-    dump_models
+    dump_models,
+    frontend
   in
 
   (* Use the --sat-solver to determine the sat solver.
@@ -1054,10 +1068,15 @@ let parse_output_opt =
     Term.(const set_dump_models $ dump_models)
   in
 
+  let set_frontend =
+    Term.(const set_frontend $ frontend)
+  in
+
   Term.(ret (const mk_output_opt $
              interpretation $ use_underscore $ unsat_core $
              output_format $ model_type $
-             set_dump_models $ set_sat_options
+             set_dump_models $ set_sat_options $
+             set_frontend
             ))
 
 let parse_profiling_opt =
