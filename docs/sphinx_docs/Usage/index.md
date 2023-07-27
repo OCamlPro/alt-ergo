@@ -31,7 +31,9 @@ the context. The model format is a SMT-LIB compatible format, even if you use th
 
 Model generation is disabled by default. There are two recommanded ways to enable it:
 - with the native language and the `--dump-models` option, Alt-Ergo tries to produce
-  a counter-example after each `goal` it cannot prove `valid`.
+  a model after each `check_sat` that returns `I don't known` or
+  a counter-example after each `goal` it cannot prove `valid`. Note that both
+  `goal` and `check_sat` statements are independent in the native language.
 
 - with the SMT-LIB language and the `--produce-models` option, Alt-Ergo tries to
   produce a model after each `(check-sat)` that returns `unknown`. Models are output
@@ -46,31 +48,32 @@ Model generation is disabled by default. There are two recommanded ways to enabl
 
   ```
     logic a, b, c : int
+    axiom A : a <> c
 
-    goal g1: a <> b + c
-
-    goal g2: a = b
+    check_sat c1: a = b + c
+    check_sat c2: a <> b
   ```
   and the command `$ alt-ergo --dump-models INPUT.ae`, Alt-Ergo produces the
   output models:
 
   ```
-    ; Model for g1
+    ; Model for c1
     (
-      (define-fun a () Int 0)
-      (define-fun b () Int 0)
+      (define-fun a () Int 2)
+      (define-fun b () Int 2)
       (define-fun c () Int 0)
     )
 
-    ; Model for g2
+    ; Model for c2
     (
       (define-fun a () Int 2)
       (define-fun b () Int 0)
+      (define-fun c () Int 0)
     )
   ```
-  *Note*: In this example the counter-example for the goal `g2` is not a
-  counter-example for the goal `g1` since goals are independent in the native
-  language.
+  *Note*: In this example the model for the statement `check_sat c2` is not a
+  model for the statement `check_sat c1` since `check_sat` are independent in
+  the native language. The same goes for `goals`.
 
   Using the SMT-LIB language in the input file `INPUT.ae`:
 
@@ -219,7 +222,7 @@ The worker also take a Json file that correspond to the options to set in Alt-Er
  "steps_bound": 1000 }
 ```
 
-#### Outpus
+#### Outputs
 
 At the end of solving it returns a Json file corresponding to results, debug informations, etc:
 
