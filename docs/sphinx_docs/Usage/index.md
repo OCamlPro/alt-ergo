@@ -24,44 +24,55 @@ Alt-Ergo supports file extensions:
 See the [Input section] for more information about the format of the input files
 
 ### Generating models
-Alt-Ergo generates best-effort models in the case it cannot conclude the unsatisfiability of
-the context or the validity of a goal. By default, the model format is the SMT format.
+Alt-Ergo can generates best-effort models in the case it cannot conclude the unsatisfiability of
+the context. The model format is a SMT-LIB compatible format, even if you use the native input language.
 
-By default the model generation is disable. There is three ways to activate it:
+#### Activation
 
-- with the `--dump-models` option, Alt-Ergo will produce a model after each `goal` in the native language
-  or each `(check-sat)` in the SMT-LIB language. For instance the input file `INPUT.smt2`:
+Model generation is disabled by default. There are two recommanded ways to enable it:
+- with the native language and the `--dump-models` option, Alt-Ergo tries to produce
+  a counter-example after each `goal` it cannot prove `valid`.
 
-  ```
-    (set-logic ALL)
-    (declare-fun a () Int)
-    (declare-fun b () Int)
-    (declare-fun c () Int)
+- with the SMT-LIB language and the `--produce-models` option, Alt-Ergo tries to
+  produce a model after each `(check-sat)` that returns `unknown`. Models are output
+  on demand using the statement `(get-model)`.
 
-    (assert (= a (+ b c)))
-    (check-sat)
+  Alternatively, you can enable model generation using the statement
+  `(set-option :produce-models true)`.
 
-    (assert (distinct a b))
-    (check-sat)
-  ```
-  and the command `$ alt-ergo --dump-models INPUT.smt2` produces the output models
+#### Examples
+
+  Using the native language in the input file `INPUT.ae`:
 
   ```
+    logic a, b, c : int
+
+    goal g1: a <> b + c
+
+    goal g2: a = b
+  ```
+  and the command `$ alt-ergo --dump-models INPUT.ae`, Alt-Ergo produces the
+  output models:
+
+  ```
+    ; Model for g1
     (
       (define-fun a () Int 0)
       (define-fun b () Int 0)
       (define-fun c () Int 0)
     )
 
+    ; Model for g2
     (
-      (define-fun a () Int (- 2))
+      (define-fun a () Int 2)
       (define-fun b () Int 0)
-      (define-fun c () Int (- 2))
     )
   ```
+  *Note*: In this example the counter-example for the goal `g2` is not a
+  counter-example for the goal `g1` since goals are independent in the native
+  language.
 
-- with the `--produce-models` option, you turn the model generation on. You can display
-  a model after a `(check-sat)` using the statement `(get-model)`. For instance the input file `INPUT.smt2`:
+  Using the SMT-LIB language in the input file `INPUT.ae`:
 
   ```
     (set-logic ALL)
@@ -86,8 +97,7 @@ By default the model generation is disable. There is three ways to activate it:
     )
   ```
 
-- with the statement `(set-option :produce-models true)`, you turn the model generation on and
-  you can use the statement `(get-model)` as explained above. For instance the input file `INPUT.smt2`:
+  Alternatively, using the statement `(set-option :produce-models true)`
   ```
    (set-logic ALL)
    (set-option :produce-models true)
@@ -108,17 +118,9 @@ By default the model generation is disable. There is three ways to activate it:
       (define-fun c () Int 0)
     )
   ```
-  Note: you need to select the SAT solver Tableaux as the model generation is not
-  supported yet by the other SAT solvers.
-
-You can fine-tune the moment Alt-Ergo computes its models by using the option `--interpretation=VALUE` where VALUE can be:
-  * "none", to disable model generation (by default);
-  * "first", to output the first model found;
-  * "every", to compute a model before each decision;
-  * "last", to output the last model computed before returning 'unknown'.
-
-  Note: this option only works with the option `--sat-solver tableaux`.
-
+  *Note*: you need to select the SAT solver Tableaux as the model generation is not
+  supported yet by the other SAT solvers. The options `--dump-models` and `--produce-models`
+  select the right SAT solver for you.
 
 ### Output
 The results of an Alt-ergo's execution have the following form :
