@@ -5,7 +5,7 @@ Input file formats
 
 Alt-ergo supports different input languages:
 
-- The original input language is his native language, based on the language of the Why3 plateform and
+- The original input language is its native language, based on the language of the Why3 platform and
   detailed below.
 - Since 2.5.0, Alt-ergo fully supports the SMT-LIB language v2.6 through
   `Dolmen <https://github.com/Gbury/dolmen>`_.
