@@ -29,7 +29,7 @@ the context. The model format is a SMT-LIB compatible format, even if you use th
 
 #### Activation
 
-Model generation is disabled by default. There are two recommanded ways to enable it:
+Model generation is disabled by default. There are two recommended ways to enable it:
 - with the native language and the `--dump-models` option, Alt-Ergo tries to produce
   a model after each `check_sat` that returns `I don't known` or
   a counter-example after each `goal` it cannot prove `valid`. Note that both
@@ -40,7 +40,8 @@ Model generation is disabled by default. There are two recommanded ways to enabl
   on demand using the statement `(get-model)`.
 
   Alternatively, you can enable model generation using the statement
-  `(set-option :produce-models true)`.
+  `(set-option :produce-models true)` and the options `--sat-solver tableaux`
+  and `--frontend dolmen`.
 
 #### Examples
 
@@ -53,7 +54,7 @@ Model generation is disabled by default. There are two recommanded ways to enabl
     check_sat c1: a = b + c
     check_sat c2: a <> b
   ```
-  and the command `$ alt-ergo --dump-models INPUT.ae`, Alt-Ergo produces the
+  and the command `alt-ergo --dump-models INPUT.ae`, Alt-Ergo produces the
   output models:
 
   ```
@@ -63,6 +64,7 @@ Model generation is disabled by default. There are two recommanded ways to enabl
       (define-fun b () Int 2)
       (define-fun c () Int 0)
     )
+    I don't known
 
     ; Model for c2
     (
@@ -70,12 +72,13 @@ Model generation is disabled by default. There are two recommanded ways to enabl
       (define-fun b () Int 0)
       (define-fun c () Int 0)
     )
+    I don't known
   ```
   *Note*: In this example the model for the statement `check_sat c2` is not a
   model for the statement `check_sat c1` since `check_sat` are independent in
   the native language. The same goes for `goals`.
 
-  Using the SMT-LIB language in the input file `INPUT.ae`:
+  Using the SMT-LIB language in the input file `INPUT.smt2`:
 
   ```
     (set-logic ALL)
@@ -91,14 +94,19 @@ Model generation is disabled by default. There are two recommanded ways to enabl
     (check-sat)
 
   ```
-  and the command `$ alt-ergo --produce-models INPUT.smt2` produces the output model
+  and the command `alt-ergo --produce-models INPUT.smt2` produces the output
   ```
+    unknown
     (
       (define-fun a () Int 0)
       (define-fun b () Int 0)
       (define-fun c () Int 0)
     )
+
+    unknown
   ```
+  *Note*: There is no model printed after the second `(check-sat)` since we
+  don't demand it with the statement `(get-model)`.
 
   Alternatively, using the statement `(set-option :produce-models true)`
   ```
@@ -113,13 +121,15 @@ Model generation is disabled by default. There are two recommanded ways to enabl
    (get-model)
 
   ```
-  and the command `$ alt-ergo --sat-solver tableaux INPUT.smt2` produces the output model
+  and the command `alt-ergo --frontend model --sat-solver tableaux INPUT.smt2` produces
+  the output model
   ```
-    (
-      (define-fun a () Int 0)
-      (define-fun b () Int 0)
-      (define-fun c () Int 0)
-    )
+  unknown
+  (
+    (define-fun a () Int 0)
+    (define-fun b () Int 0)
+    (define-fun c () Int 0)
+  )
   ```
   *Note*: you need to select the SAT solver Tableaux as the model generation is not
   supported yet by the other SAT solvers. The options `--dump-models` and `--produce-models`
