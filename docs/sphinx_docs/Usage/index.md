@@ -25,14 +25,14 @@ See the [Input section] for more information about the format of the input files
 
 ### Frontend option
 
-The `--frontend` option let's you select the frontend used to parse and type the input file. Since 2.5.0,
+The `--frontend` option let's you select the frontend used to parse and type the input file. Since version 2.5.0,
 Alt-Ergo integrates two frontends:
 - The `legacy` frontend is the historical frontend of Alt-Ergo supporting the native language
-  and (partially) supporting the SMT-LIB language. The legacy frontend is selected by default.
+  and (partially) supporting the SMT-LIB language. The legacy frontend is currently the default.
 - The `dolmen` frontend is a new frontend using the [Dolmen library](https://github.com/Gbury/dolmen).
   The native and SMT-LIB languages are both supported by this frontend.
-  You can select it with the `--frontend dolmen` option. In the future, this
-  frontend will be used by default.
+  You can select it with the `--frontend dolmen` option, which is planned to become the
+  default in a future release.
 
 ### Generating models
 Since 2.5.0, Alt-Ergo also generates models in the case it concludes on the satisfiability of
