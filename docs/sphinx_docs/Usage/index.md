@@ -30,7 +30,7 @@ Alt-Ergo integrates two frontends:
 - The `legacy` frontend is the historical frontend of Alt-Ergo supporting the native language
   and (partially) supporting the SMT-LIB language. The legacy frontend is selected by default.
 - The `dolmen` frontend is a new frontend using the [Dolmen library](https://github.com/Gbury/dolmen).
-  The native and SMT-LIB languages are both fully supported by this frontend.
+  The native and SMT-LIB languages are both supported by this frontend.
   You can select it with the `--frontend dolmen` option. In the future, this
   frontend will be used by default.
 
