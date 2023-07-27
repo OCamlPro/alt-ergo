@@ -109,6 +109,12 @@ using the aforementioned rounding modes:
 logic integer_round : fpa_rounding_mode, real -> int
 ```
 
+Here is an example:
+
+```alt-ergo
+goal g: integer_round(ToZero, 2.1) = 2
+```
+
 ## User-defined extensions of theories
 
 [TODO: document]
