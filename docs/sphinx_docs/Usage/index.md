@@ -25,7 +25,7 @@ See the [Input section] for more information about the format of the input files
 
 ### Frontend option
 
-The `--frontend` option let's you select the frontend used to parse and type the input file. Since version 2.5.0,
+The `--frontend` option lets you select the frontend used to parse and type the input file. Since version 2.5.0,
 Alt-Ergo integrates two frontends:
 - The `legacy` frontend is the historical frontend of Alt-Ergo supporting the native language
   and (partially) supporting the SMT-LIB language. The legacy frontend is currently the default.
