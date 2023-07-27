@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Syntax of declarations and expressions &mdash; Doc-Alt-Ergo  documentation</title>
+  <title>SMT-LIB Version 2 &mdash; Doc-Alt-Ergo  documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/dac_theme_modif.css" type="text/css" />
@@ -20,8 +20,8 @@
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="SMT-LIB Version 2" href="../SMT-LIB2/index.html" />
-    <link rel="prev" title="Control flow" href="06_control_flow.html" /> 
+    <link rel="next" title="API documentation" href="../../API/index.html" />
+    <link rel="prev" title="Syntax of declarations and expressions" href="../Native/07_syntax_of_declarations_and_expressions.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -48,18 +48,11 @@
 <li class="toctree-l1"><a class="reference internal" href="../../Install/index.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../Usage/index.html">Usage</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../index.html">Input file formats</a><ul class="current">
-<li class="toctree-l2 current"><a class="reference internal" href="index.html">Alt-Ergo's native language</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="00_summary.html"> Summary</a></li>
-<li class="toctree-l3"><a class="reference internal" href="01_declaration_of_symbols.html"> Declaration of symbols</a></li>
-<li class="toctree-l3"><a class="reference internal" href="02_types/index.html"> Types</a></li>
-<li class="toctree-l3"><a class="reference internal" href="03_declaration_of_axioms.html"> Declaration of axioms</a></li>
-<li class="toctree-l3"><a class="reference internal" href="04_setting_goals.html"> Setting goals</a></li>
-<li class="toctree-l3"><a class="reference internal" href="05_theories.html"> Theories</a></li>
-<li class="toctree-l3"><a class="reference internal" href="06_control_flow.html"> Control Flow</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#"> Syntax of declarations and expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../Native/index.html">Alt-Ergo's native language</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">SMT-LIB</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#bit-vectors">Bit-vectors</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../SMT-LIB2/index.html">SMT-LIB</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../API/index.html">API documentation</a></li>
@@ -83,8 +76,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../index.html">Input file formats</a></li>
-          <li class="breadcrumb-item"><a href="index.html">Alt-Ergo’s native language</a></li>
-      <li class="breadcrumb-item active">Syntax of declarations and expressions</li>
+      <li class="breadcrumb-item active">SMT-LIB Version 2</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -93,18 +85,32 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="syntax-of-declarations-and-expressions">
-<h1>Syntax of declarations and expressions<a class="headerlink" href="#syntax-of-declarations-and-expressions" title="Permalink to this heading"></a></h1>
-<p>[TODO: intro + all]
-[Full definition of the syntax in (restricted) BNF]</p>
+  <section id="smt-lib-version-2">
+<h1>SMT-LIB Version 2<a class="headerlink" href="#smt-lib-version-2" title="Permalink to this heading"></a></h1>
+<p>Alt-Ergo has partial support for the <a class="reference external" href="http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2017-07-18.pdf">SMT-LIB
+standard</a>
+language from the SMT community.</p>
+<p><em>Note</em>: As of version 2.5.0, enhanced support for the SMT-LIB language is
+provided by the new <a class="reference external" href="http://gbury.github.io/dolmen/">Dolmen</a> frontend. To use
+it, pass the option <code class="docutils literal notranslate"><span class="pre">--frontend</span> <span class="pre">dolmen</span></code> to Alt-Ergo. This will become the
+default in a future release.</p>
+<section id="bit-vectors">
+<h2>Bit-vectors<a class="headerlink" href="#bit-vectors" title="Permalink to this heading"></a></h2>
+<p>Since version 2.5.0, Alt-Ergo has partial support for the <code class="docutils literal notranslate"><span class="pre">FixedSizeBitVectors</span></code>
+theory and the <code class="docutils literal notranslate"><span class="pre">QF_BV</span></code> and <code class="docutils literal notranslate"><span class="pre">BV</span></code> logics when used with the Dolmen frontend. All
+the symbols from these logics are available, although reasoning using them is
+limited and incomplete for now.</p>
+<p>The non-standard symbols <code class="docutils literal notranslate"><span class="pre">bv2nat</span></code> and <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">int2bv</span> <span class="pre">n)</span></code> (where <code class="docutils literal notranslate"><span class="pre">n</span> <span class="pre">&gt;</span> <span class="pre">0</span></code> is a natural number representing the target bit-vector size) for conversion
+between integers and bit-vectors are supported.</p>
+</section>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="06_control_flow.html" class="btn btn-neutral float-left" title="Control flow" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../SMT-LIB2/index.html" class="btn btn-neutral float-right" title="SMT-LIB Version 2" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../Native/07_syntax_of_declarations_and_expressions.html" class="btn btn-neutral float-left" title="Syntax of declarations and expressions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../../API/index.html" class="btn btn-neutral float-right" title="API documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

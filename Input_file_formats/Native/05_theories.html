@@ -55,10 +55,8 @@
 <li class="toctree-l3"><a class="reference internal" href="03_declaration_of_axioms.html"> Declaration of axioms</a></li>
 <li class="toctree-l3"><a class="reference internal" href="04_setting_goals.html"> Setting goals</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#"> Theories</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#native-theories">Native theories</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="#about-floating-point-arithmetic">About floating-point arithmetic</a></li>
-</ul>
-</li>
+<li class="toctree-l4"><a class="reference internal" href="#native-theories">Native theories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#floating-point-arithmetic">Floating-point Arithmetic</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#user-defined-extensions-of-theories">User-defined extensions of theories</a><ul>
 <li class="toctree-l5"><a class="reference internal" href="#theory-extends-end"><code class="docutils literal notranslate"><span class="pre">theory</span> <span class="pre">[...]</span> <span class="pre">extends</span> <span class="pre">[...]</span> <span class="pre">=</span> <span class="pre">[...]</span> <span class="pre">end</span></code></a></li>
 <li class="toctree-l5"><a class="reference internal" href="#case-split"><code class="docutils literal notranslate"><span class="pre">case_split</span></code></a></li>
@@ -71,8 +69,7 @@
 <li class="toctree-l3"><a class="reference internal" href="07_syntax_of_declarations_and_expressions.html"> Syntax of declarations and expressions</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference external" href="http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2017-07-18.pdf">SMT-LIB</a></li>
-<li class="toctree-l2"><a class="reference external" href="http://why3.lri.fr/doc/syntaxref.html">WhyML (partial support)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../SMT-LIB2/index.html">SMT-LIB</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../API/index.html">API documentation</a></li>
@@ -140,12 +137,71 @@ All theories are always considered <em>modulo equality</em>.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">NRA</span></code>: Non-linear arithmetic over rationals</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">FPA</span></code>: Floating-point arithmetic</p></li>
 </ul>
-<section id="about-floating-point-arithmetic">
-<h3>About floating-point arithmetic<a class="headerlink" href="#about-floating-point-arithmetic" title="Permalink to this heading"></a></h3>
-<p>Floating-point arithmetic (FPA) is a recent addition to Alt-Ergo, and is not documented here.
-To use it, it is necessary to load the corresponding prelude. The strategy used to handle FPA is based on over-approximation by intervals of reals, and roundings.
-More information on this strategy and the language extension can be found in <a class="reference external" href="https://hal.inria.fr/hal-01522770">this article</a>.</p>
 </section>
+<section id="floating-point-arithmetic">
+<h2>Floating-point Arithmetic<a class="headerlink" href="#floating-point-arithmetic" title="Permalink to this heading"></a></h2>
+<p>Alt-Ergo implements partial support for floating-point arithmetic. More
+precisely, Alt-Ergo implements the second and third layers from the paper “<a class="reference external" href="https://inria.hal.science/hal-01522770">A
+Three-tier Strategy for Reasoning about Floating-Point Numbers in
+SMT</a>” by Conchon et al.</p>
+<p><em>Note</em>: Support for floating-point arithmetic is enabled by default in
+Alt-Ergo since version 2.5.0.  Previous versions required the use of command
+line flags <code class="docutils literal notranslate"><span class="pre">--use-fpa</span></code> and <code class="docutils literal notranslate"><span class="pre">--prelude</span> <span class="pre">fpa-theory-2019-10-08-19h00.ae</span></code> to enable
+it.</p>
+<p>This means that Alt-Ergo doesn’t actually support a floating-point type (that
+may come in a future release); instead, it supports a rounding function, as
+described in the paper.  The rounding function transforms a real into the
+nearest representable float, according to the standard floating-point rounding
+modes. Unlike actual floats, there are no NaNs or infinites, and there is no
+overflow (but there is underflow): one way to think about the underlying data
+type is as floats with a potentially infinite exponent.</p>
+<p>NaNs, infinites, and overflows must be handled outside of Alt-Ergo by an
+implementation of the three-tier strategy described in the paper (this is done
+automatically in Why3 when you use floats).</p>
+<p>The rounding function is available as a builtin function called <code class="docutils literal notranslate"><span class="pre">float</span></code>:</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span>type fpa_rounding_mode =
+  | NearestTiesToEven
+    (** To nearest, tie breaking to even mantissa *)
+  | ToZero
+    (** Round toward zero *)
+  | Up
+    (** Round toward plus infinity *)
+  | Down
+    (** Round toward minus infinity *)
+  | NearestTiesToAway
+    (** To nearest, tie breaking away from zero *)
+
+(** The first int is the mantissa&#39;s size, including the implicit bit.
+
+    The second int is the exponent of the minimal representable normalized
+    number. *)
+logic float: int, int, fpa_rounding_mode, real -&gt; real
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">float</span></code> function <em>must</em> be called with concrete values for its first 3
+arguments, using other symbolic expressions is not supported and will result in
+an error (defining functions that call <code class="docutils literal notranslate"><span class="pre">float</span></code> is also possible, as long as the
+corresponding arguments of the wrapping function are only called with concrete
+values).</p>
+<p>Alt-Ergo also exposes convenience functions specialized for standard
+floating-point types:</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span>function float32(m: fpa_rounding_mode, x: real): real = float(24, 149, m, x)
+function float32d(x: real): real = float32(NearestTiesToEven, x)
+function float64(m: fpa_rounding_mode, x: real): real = float(53, 1074, m, x)
+function float64d(x: real): real = float64(NearestTiesToEven, x)
+</pre></div>
+</div>
+<p>These functions are currently only available when using the native language;
+they are not available when using the smtlib2 input format.</p>
+<p>Finally, the <code class="docutils literal notranslate"><span class="pre">integer_round</span></code> function allows rounding a real to an integer
+using the aforementioned rounding modes:</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span>logic integer_round : fpa_rounding_mode, real -&gt; int
+</pre></div>
+</div>
+<p>Here is an example:</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span>goal g: integer_round(ToZero, 2.1) = 2
+</pre></div>
+</div>
 </section>
 <section id="user-defined-extensions-of-theories">
 <h2>User-defined extensions of theories<a class="headerlink" href="#user-defined-extensions-of-theories" title="Permalink to this heading"></a></h2>
