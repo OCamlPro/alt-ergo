@@ -127,17 +127,24 @@
 <h3>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this heading"></a></h3>
 <p>External dependencies graph generated with <code class="docutils literal notranslate"><span class="pre">dune-deps</span></code> (use <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">archi</span></code> for source files dependencies):</p>
 <p><img alt="" src="../_images/deps.png" /></p>
-<p>To compile the sources, you will need the following libraries :</p>
+<p>To compile the sources of the library <code class="docutils literal notranslate"><span class="pre">alt-ergo-lib</span></code> and the binary <code class="docutils literal notranslate"><span class="pre">alt-ergo</span></code>, you will need the
+following libraries :</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="n">ocaml</span> <span class="o">&gt;=</span> <span class="mf">4.08.0</span>
   <span class="n">dune</span> <span class="o">&gt;=</span> <span class="mf">3.0</span>
-  <span class="n">zarith</span> <span class="o">&gt;=</span> <span class="mf">1.4</span>
-  <span class="n">camlzip</span>
-  <span class="n">menhir</span>
+  <span class="n">dune</span><span class="o">-</span><span class="n">build</span><span class="o">-</span><span class="n">info</span>
+  <span class="n">dolmen</span> <span class="o">&gt;=</span> <span class="mf">0.9</span>
+  <span class="n">dolmen_loop</span> <span class="o">&gt;=</span> <span class="mf">0.9</span>
   <span class="n">ocplib</span><span class="o">-</span><span class="n">simplex</span> <span class="o">&gt;=</span> <span class="mf">0.5</span>
+  <span class="n">zarith</span> <span class="o">&gt;=</span> <span class="mf">1.4</span>
   <span class="n">seq</span>
+  <span class="n">fmt</span>
+  <span class="n">ppx_blob</span>
+  <span class="n">camlzip</span> <span class="o">&gt;=</span> <span class="mf">1.07</span>
+  <span class="n">menhir</span>
+  <span class="n">dune</span><span class="o">-</span><span class="n">site</span>
   <span class="n">cmdliner</span>
+  <span class="n">psmt2</span><span class="o">-</span><span class="n">frontend</span> <span class="o">&gt;=</span> <span class="mf">0.4</span>
   <span class="n">stdlib</span><span class="o">-</span><span class="n">shims</span>
-  <span class="n">psmt2</span><span class="o">-</span><span class="n">frontend</span>
 </pre></div>
 </div>
 <p>You can install dependencies using:</p>

@@ -25,18 +25,25 @@ External dependencies graph generated with `dune-deps` (use `make archi` for sou
 
 ![](deps.png)
 
-To compile the sources, you will need the following libraries :
+To compile the sources of the library `alt-ergo-lib` and the binary `alt-ergo`, you will need the
+following libraries :
 ```
   ocaml >= 4.08.0
   dune >= 3.0
-  zarith >= 1.4
-  camlzip
-  menhir
+  dune-build-info
+  dolmen >= 0.9
+  dolmen_loop >= 0.9
   ocplib-simplex >= 0.5
+  zarith >= 1.4
   seq
+  fmt
+  ppx_blob
+  camlzip >= 1.07
+  menhir
+  dune-site
   cmdliner
+  psmt2-frontend >= 0.4
   stdlib-shims
-  psmt2-frontend
 ```
 
 You can install dependencies using:
