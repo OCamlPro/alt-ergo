@@ -37,12 +37,77 @@ All theories are always considered *modulo equality*.
 * `FPA`: Floating-point arithmetic
 
 
-### About floating-point arithmetic
+## Floating-point Arithmetic
 
-Floating-point arithmetic (FPA) is a recent addition to Alt-Ergo, and is not documented here.
-To use it, it is necessary to load the corresponding prelude. The strategy used to handle FPA is based on over-approximation by intervals of reals, and roundings.
-More information on this strategy and the language extension can be found in [this article](https://hal.inria.fr/hal-01522770).
+Alt-Ergo implements partial support for floating-point arithmetic. More
+precisely, Alt-Ergo implements the second and third layers from the paper "[A
+Three-tier Strategy for Reasoning about Floating-Point Numbers in
+SMT](https://inria.hal.science/hal-01522770)" by Conchon et al.
 
+*Note*: Support for floating-point arithmetic is enabled by default in
+Alt-Ergo since version 2.5.0.  Previous versions required the use of command
+line flags `--use-fpa` and `--prelude fpa-theory-2019-10-08-19h00.ae` to enable
+it.
+
+This means that Alt-Ergo doesn't actually support a floating-point type (that
+may come in a future release); instead, it supports a rounding function, as
+described in the paper.  The rounding function transforms a real into the
+nearest representable float, according to the standard floating-point rounding
+modes. Unlike actual floats, there are no NaNs or infinites, and there is no
+overflow (but there is underflow): one way to think about the underlying data
+type is as floats with a potentially infinite exponent.
+
+NaNs, infinites, and overflows must be handled outside of Alt-Ergo by an
+implementation of the three-tier strategy described in the paper (this is done
+automatically in Why3 when you use floats).
+
+The rounding function is available as a builtin function called `float`:
+
+```alt-ergo
+type fpa_rounding_mode =
+  | NearestTiesToEven
+    (** To nearest, tie breaking to even mantissa *)
+  | ToZero
+    (** Round toward zero *)
+  | Up
+    (** Round toward plus infinity *)
+  | Down
+    (** Round toward minus infinity *)
+  | NearestTiesToAway
+    (** To nearest, tie breaking away from zero *)
+
+(** The first int is the mantissa's size, including the implicit bit.
+
+    The second int is the exponent of the minimal representable normalized
+    number. *)
+logic float: int, int, fpa_rounding_mode, real -> real
+```
+
+The `float` function *must* be called with concrete values for its first 3
+arguments, using other symbolic expressions is not supported and will result in
+an error (defining functions that call `float` is also possible, as long as the
+corresponding arguments of the wrapping function are only called with concrete
+values).
+
+Alt-Ergo also exposes convenience functions specialized for standard
+floating-point types:
+
+```alt-ergo
+function float32(m: fpa_rounding_mode, x: real): real = float(24, 149, m, x)
+function float32d(x: real): real = float32(NearestTiesToEven, x)
+function float64(m: fpa_rounding_mode, x: real): real = float(53, 1074, m, x)
+function float64d(x: real): real = float64(NearestTiesToEven, x)
+```
+
+These functions are currently only available when using the native language;
+they are not available when using the smtlib2 input format.
+
+Finally, the `integer_round` function allows rounding a real to an integer
+using the aforementioned rounding modes:
+
+```alt-ergo
+logic integer_round : fpa_rounding_mode, real -> int
+```
 
 ## User-defined extensions of theories
 

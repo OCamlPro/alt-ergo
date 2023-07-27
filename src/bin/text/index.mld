@@ -5,9 +5,11 @@
 The alt-ergo package installs the {e alt-ergo} binary, whose documentation
 is available through the {e --help} option.
 
+See also the {{:https://ocamlpro.github.io/alt-ergo/}language documentation}.
+
 {3 Alt_Ergo_common }
 
-This package uses the Alt-Ergo_common internal lib (see {{:index_common.html}[Alt_ergo_common]}) for parsing command line, input file, and main solving loop.
+This package uses the Alt-Ergo_common internal lib (see {{!page-index_common}[Alt_ergo_common]}) for parsing command line, input file, and main solving loop.
 
 See also the {{:Alt_ergo_common/index.html}list of modules}.
 

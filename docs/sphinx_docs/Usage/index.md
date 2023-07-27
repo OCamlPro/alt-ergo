@@ -83,12 +83,6 @@ Preludes can be passed to Alt-Ergo as follows:
    path). You can also provide a relative or an absolute path as shown
    by "some-path/q.ae".
 
-   For instance, the following command-line enables floating-point
-   arithmetic reasoning in Alt-Ergo and indicates that the FPA prelude
-   should be loaded:
-
-        $ alt-ergo --use-fpa --prelude fpa-theory-2017-01-04-16h00.ae <file.ae>
-
 ### Plugins and Preludes directories
 
 As stated above, the `--where` option of `alt-ergo` can be used to get the absolute
