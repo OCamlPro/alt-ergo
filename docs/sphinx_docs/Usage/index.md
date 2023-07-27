@@ -21,7 +21,18 @@ Alt-Ergo supports file extensions:
 - `.psmt2`, `.smt2` for (our polymorphic extension of) the SMT-LIB 2
   standard
 
-See the [Input section] for more information about the format of the input files
+See the [Input section] for more information about the format of the input files.
+
+### Frontend option
+
+The `--frontend` option let's you select the frontend used to parse and type the input file. Since 2.5.0,
+Alt-Ergo integrates two frontends:
+- The `legacy` frontend is the historical frontend of Alt-Ergo supporting the native language
+  and (partially) supporting the SMT-LIB language. The legacy frontend is selected by default.
+- The `dolmen` frontend is a new frontend using the [Dolmen library](https://github.com/Gbury/dolmen).
+  The native and SMT-LIB languages are both fully supported by this frontend.
+  You can select it with the `--frontend dolmen` option. In the future, this
+  frontend will be used by default.
 
 ### Generating models
 Since 2.5.0, Alt-Ergo also generates models in the case it concludes on the satisfiability of
