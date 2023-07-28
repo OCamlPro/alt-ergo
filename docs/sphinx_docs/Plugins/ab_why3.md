@@ -6,7 +6,7 @@ Atelier-B framework in Why3 format. It should be used with a prelude
 defining the B Set theory (currently provided in
 `src/plugins/AB-Why3/preludes/b-set-theory-prelude-2020-02-28.ae`).
 
-
+See also the [Why3 syntax reference](http://why3.lri.fr/doc/syntaxref.html).
 
 # What this plugin is not ?
 

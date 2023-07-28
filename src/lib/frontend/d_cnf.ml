@@ -1939,6 +1939,8 @@ let make dloc_file acc stmt =
                here. *)
             assert false
         ) defs;
+      let append xs = List.append xs acc in
+      append @@
       List.filter_map (fun (def : Typer_Pipe.def) ->
           match def with
           | `Term_def ( _, ({ path; tags; _ } as tcst), tyvars, terml, body) ->
@@ -2018,7 +2020,7 @@ let make dloc_file acc stmt =
                polymorphic partially-defined bulitin and should not end up
                here. *)
             assert false
-        ) defs |> List.rev_append acc
+        ) defs
 
     | {contents = `Decls [td]; _ } ->
       begin match td with

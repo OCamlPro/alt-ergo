@@ -21,25 +21,144 @@ Alt-Ergo supports file extensions:
 - `.psmt2`, `.smt2` for (our polymorphic extension of) the SMT-LIB 2
   standard
 
-See the [Input section] for more information about the format of the input files
+See the [Input section] for more information about the format of the input files.
+
+### Frontend option
+
+The `--frontend` option lets you select the frontend used to parse and type the input file. Since version 2.5.0,
+Alt-Ergo integrates two frontends:
+- The `legacy` frontend is the historical frontend of Alt-Ergo supporting the native language
+  and (partially) supporting the SMT-LIB language. The legacy frontend is currently the default.
+- The `dolmen` frontend is a new frontend using the [Dolmen library](https://github.com/Gbury/dolmen).
+  The native and SMT-LIB languages are both supported by this frontend.
+  You can select it with the `--frontend dolmen` option, which is planned to become the
+  default in a future release.
 
 ### Generating models
-Since 2.5.0, Alt-Ergo also generates models in the case it concludes on the satisfiability of
-the formula.
-There is two ways to activate model generation:
+Alt-Ergo can generates best-effort models in the case it cannot conclude the unsatisfiability of
+the context. The model format is a SMT-LIB compatible format, even if you use the native input language.
 
-- with the `--model` option;
+#### Activation
 
-- `with the --interpretation=VALUE`, where VALUE can be equal to:
-  * "none", and alt-ergo will not generate models (by default);
-  * "first", and alt-ergo will output the first model it finds;
-  * "every", alt alt-ergo will compute a model before each decision
-  * "last", and alt-ergo will output the last model it computes before returning 'unknown'.
-  Note that this mode only works with the option `--sat-solver tableaux`.
+Model generation is disabled by default. There are two recommended ways to enable it:
+- with the native language and the `--dump-models` option, Alt-Ergo tries to produce
+  a model after each `check_sat` that returns `I don't known` or
+  a counter-example after each `goal` it cannot prove `valid`. Note that both
+  `goal` and `check_sat` statements are independent in the native language.
 
-NB: the `--model` option is equivalent to `--interpretation every --sat-solver tableaux`.
+- with the SMT-LIB language and the `--produce-models` option, Alt-Ergo tries to
+  produce a model after each `(check-sat)` that returns `unknown`. Models are output
+  on demand using the statement `(get-model)`.
 
-The default model format is the SMT format.
+  Alternatively, you can enable model generation using the statement
+  `(set-option :produce-models true)`. This currently requires using the options
+  `--sat-solver tableaux` and `--frontend dolmen`.
+
+#### Examples
+
+  - Using the native language in the input file `INPUT.ae`:
+
+  ```
+    logic a, b, c : int
+    axiom A : a <> c
+
+    check_sat c1: a = b + c
+    check_sat c2: a <> b
+  ```
+  and the command `alt-ergo --dump-models INPUT.ae`, Alt-Ergo produces the
+  output models:
+
+  ```
+    ; Model for c1
+    (
+      (define-fun a () Int 2)
+      (define-fun b () Int 2)
+      (define-fun c () Int 0)
+    )
+    I don't known
+
+    ; Model for c2
+    (
+      (define-fun a () Int 2)
+      (define-fun b () Int 0)
+      (define-fun c () Int 0)
+    )
+    I don't known
+  ```
+
+  ```{admonition} Note
+
+  In this example the model for the statement `check_sat c2` is not a
+  model for the statement `check_sat c1` since `check_sat` are independent in
+  the native language. The same goes for `goals`.
+
+  ```
+
+  - Using the SMT-LIB language in the input file `INPUT.smt2`:
+
+  ```
+    (set-logic ALL)
+    (declare-fun a () Int)
+    (declare-fun b () Int)
+    (declare-fun c () Int)
+
+    (assert (= a (+ b c)))
+    (check-sat)
+    (get-model)
+
+    (assert (distinct a b))
+    (check-sat)
+
+  ```
+  and the command `alt-ergo --produce-models INPUT.smt2` produces the output
+  ```
+    unknown
+    (
+      (define-fun a () Int 0)
+      (define-fun b () Int 0)
+      (define-fun c () Int 0)
+    )
+
+    unknown
+  ```
+
+  ```{admonition} Note
+
+  There is no model printed after the second `(check-sat)` since we
+  don't demand it with the statement `(get-model)`.
+  ```
+
+
+  - Alternatively, using the statement `(set-option :produce-models true)`
+  ```
+   (set-logic ALL)
+   (set-option :produce-models true)
+   (declare-fun a () Int)
+   (declare-fun b () Int)
+   (declare-fun c () Int)
+
+   (assert (= a (+ b c)))
+   (check-sat)
+   (get-model)
+
+  ```
+  and the command `alt-ergo --frontend dolmen --sat-solver tableaux INPUT.smt2` produces
+  the output model
+  ```
+  unknown
+  (
+    (define-fun a () Int 0)
+    (define-fun b () Int 0)
+    (define-fun c () Int 0)
+  )
+  ```
+
+  ```{admonition} Note
+  You need to select the Dolmen frontend and the SAT solver Tableaux as the
+  model generation is not supported yet by the other SAT solvers. The options
+  `--dump-models` and `--produce-models` select the right frontend and SAT solver
+  for you.
+  ```
 
 ### Output
 The results of an Alt-ergo's execution have the following form :
@@ -48,11 +167,12 @@ File "<path_to_file>/<filename>", line <l>, characters <n-m>: <status> (<time in
 ```
 The status can be `Valid`, `Invalid` or `I don't know`. If the input file is in the SMT-LIB 2 format the status will be either `unsat`, `sat`, `unknown`. You can force the status to be print in the SMT-LIB 2 form with the option `--output smtlib2`.
 
-#### About alt-ergo's output
-When alt-ergo tries to prove a property (with the native input language), it
-actually tries to prove the unsatisfiability of the property negation. That is
-why you get `unsat` as an SMT-LIB 2 format output while proving a `Valid`
-property. The same goes for `Invalid` and `sat`.
+```{admonition} Note
+When Alt-Ergo tries to prove a `goal` (with the native input language), it
+actually tries to prove the unsatisfiability of its negation. That is
+why you get `unsat` answer as an SMT-LIB 2 format output while proving a `Valid`
+goal. The same goes for `Invalid` and `sat`.
+```
 
 ### Plugins
 
@@ -82,12 +202,6 @@ Preludes can be passed to Alt-Ergo as follows:
    directory (run `alt-ergo --where preludes` to see its absolute
    path). You can also provide a relative or an absolute path as shown
    by "some-path/q.ae".
-
-   For instance, the following command-line enables floating-point
-   arithmetic reasoning in Alt-Ergo and indicates that the FPA prelude
-   should be loaded:
-
-        $ alt-ergo --use-fpa --prelude fpa-theory-2017-01-04-16h00.ae <file.ae>
 
 ### Plugins and Preludes directories
 
@@ -138,7 +252,7 @@ The worker also take a Json file that correspond to the options to set in Alt-Er
  "steps_bound": 1000 }
 ```
 
-#### Outpus
+#### Outputs
 
 At the end of solving it returns a Json file corresponding to results, debug informations, etc:
 

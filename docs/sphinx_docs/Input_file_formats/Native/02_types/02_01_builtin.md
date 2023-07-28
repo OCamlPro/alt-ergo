@@ -1,36 +1,34 @@
-# Built-in
-
-## Built-in types
+# Built-in types
 
 Alt-Ergo's native language includes the following built-in types.
 Creation and manipulation of values having those types are covered in [built-in operators](#built-in-operators).
 
-### Boolean types
+## Boolean types
  * `bool`, the preferred type to represent propositional variables. Boolean constants are `true` and `false`.
  * `prop`, an historical type still supported in Alt-Ergo 2.3.0.  
     The historical separation comes from Alt-Ergo origins in the Coq ecosystem: in Coq, `prop` is much richer than `bool`.  
     In Alt-Ergo 2.3.0, `prop` and `bool` have been merged in order to simplify interactions with the [SMT-LIB ](http://smtlib.cs.uiowa.edu/) standard.  
     More information on the `bool`/`prop` conflict can be found in [this section](#the-bool-prop-conflict).
 
-### Numeric types
+## Numeric types
  * `int` for (arbitrary large) integers.
  * `real` for reals. This type actually represents the smallest extension of the rationals which is algebraically closed and closed by exponentiation. Rationals with arbitrary precision are used under the hood. 
 
-### Unit type
+## Unit type
  `unit` is Alt-Ergo native language's [unit type](https://en.wikipedia.org/wiki/Unit_type).
 
-### Bitvectors
+## Bitvectors
  `bitv` are fixed-size binary words of arbitrary length.
  There exists a bitvector type `bitv[n]` for each non-zero positive integer `n`. For example, `bitv[8]` is a bitvector of length `8`.
 
-### Type variables
+## Type variables
  Alt-Ergo's native language's type system supports prenex polymorphism. This allows efficient reasoning about generic data structure.
  Type variables can be created implicitly, and are implicitly universally quantified in all formulas. Any formula which requires a type can accept a type variable.
  Type variable may be used to parametrize datatypes, as we will see when we will create new types, or in the following example of `farray`.
  
  Type variables are indicated by an apostrophe `'`. For example, `'a` is a type variable.
 
-### Polymorphic functional arrays
+## Polymorphic functional arrays
  Alt-Ergo's native language includes functional polymorphic arrays, represented by the `farray` type, and has a built-in theory to reason about them.
 
  The `farray` is parametrized by two types: the type of their indexes (default is `int`) and the type of their values (no default).
@@ -38,9 +36,9 @@ Creation and manipulation of values having those types are covered in [built-in 
  Functional polymorphic arrays are persistent structures: they may be updated, but only for the scope of an expression.
  
 
-## Built-in operators
+# Built-in operators
 
-### Logical operators
+## Logical operators
 
 | Operation    | Notation  | Type(s)              |
 |--------------|-----------|----------------------|
@@ -53,7 +51,8 @@ Creation and manipulation of values having those types are covered in [built-in 
 
 For all those operators, `bool` and `prop` are fully interchangeable.
 
-#### The `bool`/`prop` conflict
+(the-bool-prop-conflict)=
+### The `bool`/`prop` conflict
 
 Prior to Alt-Ergo 2.3.0, Alt-Ergo's native language handled differently boolean variables `bool` and propositional variables `prop`.
 The two keywords still exist in Alt-Ergo 2.3.0, but those two types have been made fully compatible: any function or operator taking a `bool` or a `prop` as an argument accepts both.
@@ -71,7 +70,7 @@ In all other cases, it is advised the use `prop` rather than `bool`, because it 
 * `prop` and `bool` **can** be the type of an *uninterpreted variable* (`logic` keyword).
 Note that a `predicate` has `prop` output type.
 
-#### Examples
+### Examples
 
 ```
 (* Correct example *)
@@ -89,7 +88,7 @@ axiom a2: B -> C
 goal g: (B->A) and (C->B) -> (A <-> C)
 ```
 
-### Numeric operators
+## Numeric operators
 
 | Operation               | Notation  | Type(s)                                                                                        |
 |-------------------------|-----------|------------------------------------------------------------------------------------------------|
@@ -102,7 +101,7 @@ goal g: (B->A) and (C->B) -> (A <-> C)
 | Exponentiation (`int`)  | `x ** y`  | `int, int -> int`                                                                              |
 | Exponentiation (`real`) | `x **. y` | `real, real -> real`, <br>`real, int -> real`, <br>`int, real -> real`, <br>`int, int -> real` |
 
-### Comparisons
+## Comparisons
 
 | Operation                | Notation                      | Type(s)                                  | Notes                                                                                                            |
 |------------------------- |-------------------------------|------------------------------------------|------------------------------------------------------------------------------------------------------------------|
@@ -128,7 +127,72 @@ goal g:
     x + t = 0
 ```
 
-### Bitvectors
+## Additional numeric primitives
+
+Alt-Ergo provides built-in primitives for mixed integers and real problems,
+along with some limited reasoning support, typically restricted to constants.
+These primitives are only available in the native input format.
+
+### Conversion between integers and reals
+
+```alt-ergo
+logic real_of_int : int -> real
+```
+
+`real_of_int` converts an integer into its representation as a real number.
+
+*Note*: When using the `dolmen` frontend, `real_of_int` is also available in
+the smtlib2 format as the `to_real` function from the `Reals_Ints` theory.
+
+```alt-ergo
+logic int_floor : real -> int
+logic int_ceil : real -> int
+logic real_is_int : real -> bool
+```
+
+`int_floor` and `int_ceil` implement the usual `floor` and `ceil` functions.
+They compute the greatest integer less than a real and the least integer
+greater than a real, respectively.
+
+`real_is_int` is true for reals that are exact integers, and false otherwise.
+
+*Note*: When using the Dolmen frontend, `int_floor` and `real_is_int` are
+also available in the smtlib2 format as the `to_int` and `is_int` functions
+from the `Reals_Ints` theory respectively.
+
+### Square root
+
+```alt-ergo
+logic sqrt_real : real -> real
+```
+
+The `sqrt_real` function denotes the square root of a real number.
+
+### Internal primitives
+
+Alt-Ergo also implements additional primitives that are tuned for specific
+internal use cases. They are only listed here for completeness and adventurous
+users, but their use should be avoided. Support for these primitives may be
+removed without notice in future versions of Alt-Ergo.
+
+In particular, the `abs_real`, `abs_int`, `max_real`, `max_int` and `min_int`
+functions were introduced prior to `if .. then .. else ..` statements in
+Alt-Ergo. They are preserved due to being used internally for floating-point
+reasoning, but should not be used outside of the solver. Prefer defining these
+functions using `if .. then .. else ..` instead.
+
+```alt-ergo
+logic abs_real : real -> real
+logic abs_int : int -> int
+logic max_real : real, real -> real
+logic max_int : int, int -> int
+logic min_int : int, int -> int
+logic sqrt_real_default : real -> real
+logic sqrt_real_excess : real -> real
+logic integer_log2 : real -> int
+```
+
+## Bitvectors
 
 Remember that bitvectors are fixed-size binary words: vectors of `0` and `1`.
 
@@ -143,7 +207,7 @@ Note that bitvectors are indexed from right to left.
 | Extraction of contiguous bits | `x^{p,q}` <br> where 0<=p<=q<len(x)                                  | `bitv[q-p+1]`                 |
 
 
-#### Examples
+### Examples
 
 ```
 (** Usage of bitv types *)
@@ -177,7 +241,7 @@ goal g5 :
     (s^{16,31} = y^{0,15} and s^{0,15} = x^{16,31}) 
 ```
 
-### Type variables
+## Type variables
 
 As type variables and polymorphism have already been described, let's just look at the following example.
 
@@ -201,13 +265,13 @@ goal g3:
    g(f(0.01)) = g(0)
 ```
 
-### Polymorphic functional arrays
+## Polymorphic functional arrays
 
 [TODO: add table?]
 
 Remember that `farray` are parametrized by two types: the type of their indexes (default is `int`) and the type of their values (no default).
 
-#### Syntax
+### Syntax
 ```
 (* Instantiation of a farray type *)
 <farray_type>        ::= <value_type> 'farray'
@@ -220,7 +284,7 @@ Remember that `farray` are parametrized by two types: the type of their indexes 
 <farray_update_expr> ::= <array_id> '[' <index> '<-' <new_value> ( ',' <index> '<-' <new_value> )* ']'
 ```
 
-#### Examples
+### Examples
 ```
 (* arr1 is a general polymorphic farray *)
 logic arr1: ('a, 'b) farray
