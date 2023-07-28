@@ -50,7 +50,11 @@
 <li class="toctree-l2"><a class="reference internal" href="#run">Run</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#files-extensions">Files extensions</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#frontend-option">Frontend option</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#generating-models">Generating models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#generating-models">Generating models</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#activation">Activation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="#output">Output</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#about-alt-ergo-s-output">About alt-ergo’s output</a></li>
 </ul>
@@ -64,7 +68,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#js-node">Js-node</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#js-worker">Js-worker</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#inputs">Inputs</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#outpus">Outpus</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#outputs">Outputs</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#js-worker-example">Js-worker example</a></li>
@@ -144,23 +148,113 @@ default in a future release.</p></li>
 </section>
 <section id="generating-models">
 <h3>Generating models<a class="headerlink" href="#generating-models" title="Permalink to this heading"></a></h3>
-<p>Since 2.5.0, Alt-Ergo also generates models in the case it concludes on the satisfiability of
-the formula.
-There is two ways to activate model generation:</p>
-<ul class="simple">
-<li><p>with the <code class="docutils literal notranslate"><span class="pre">--model</span></code> option;</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">with</span> <span class="pre">the</span> <span class="pre">--interpretation=VALUE</span></code>, where VALUE can be equal to:</p>
+<p>Alt-Ergo can generates best-effort models in the case it cannot conclude the unsatisfiability of
+the context. The model format is a SMT-LIB compatible format, even if you use the native input language.</p>
+<section id="activation">
+<h4>Activation<a class="headerlink" href="#activation" title="Permalink to this heading"></a></h4>
+<p>Model generation is disabled by default. There are two recommended ways to enable it:</p>
 <ul>
-<li><p>“none”, and alt-ergo will not generate models (by default);</p></li>
-<li><p>“first”, and alt-ergo will output the first model it finds;</p></li>
-<li><p>“every”, alt alt-ergo will compute a model before each decision</p></li>
-<li><p>“last”, and alt-ergo will output the last model it computes before returning ‘unknown’.
-Note that this mode only works with the option <code class="docutils literal notranslate"><span class="pre">--sat-solver</span> <span class="pre">tableaux</span></code>.</p></li>
-</ul>
+<li><p>with the native language and the <code class="docutils literal notranslate"><span class="pre">--dump-models</span></code> option, Alt-Ergo tries to produce
+a model after each <code class="docutils literal notranslate"><span class="pre">check_sat</span></code> that returns <code class="docutils literal notranslate"><span class="pre">I</span> <span class="pre">don't</span> <span class="pre">known</span></code> or
+a counter-example after each <code class="docutils literal notranslate"><span class="pre">goal</span></code> it cannot prove <code class="docutils literal notranslate"><span class="pre">valid</span></code>. Note that both
+<code class="docutils literal notranslate"><span class="pre">goal</span></code> and <code class="docutils literal notranslate"><span class="pre">check_sat</span></code> statements are independent in the native language.</p></li>
+<li><p>with the SMT-LIB language and the <code class="docutils literal notranslate"><span class="pre">--produce-models</span></code> option, Alt-Ergo tries to
+produce a model after each <code class="docutils literal notranslate"><span class="pre">(check-sat)</span></code> that returns <code class="docutils literal notranslate"><span class="pre">unknown</span></code>. Models are output
+on demand using the statement <code class="docutils literal notranslate"><span class="pre">(get-model)</span></code>.</p>
+<p>Alternatively, you can enable model generation using the statement
+<code class="docutils literal notranslate"><span class="pre">(set-option</span> <span class="pre">:produce-models</span> <span class="pre">true)</span></code>. This currently requires using the options
+<code class="docutils literal notranslate"><span class="pre">--sat-solver</span> <span class="pre">tableaux</span></code> and <code class="docutils literal notranslate"><span class="pre">--frontend</span> <span class="pre">dolmen</span></code>.</p>
 </li>
 </ul>
-<p>NB: the <code class="docutils literal notranslate"><span class="pre">--model</span></code> option is equivalent to <code class="docutils literal notranslate"><span class="pre">--interpretation</span> <span class="pre">every</span> <span class="pre">--sat-solver</span> <span class="pre">tableaux</span></code>.</p>
-<p>The default model format is the SMT format.</p>
+</section>
+<section id="examples">
+<h4>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h4>
+<p>Using the native language in the input file <code class="docutils literal notranslate"><span class="pre">INPUT.ae</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="n">logic</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="p">:</span> <span class="nb">int</span>
+  <span class="n">axiom</span> <span class="n">A</span> <span class="p">:</span> <span class="n">a</span> <span class="o">&lt;&gt;</span> <span class="n">c</span>
+
+  <span class="n">check_sat</span> <span class="n">c1</span><span class="p">:</span> <span class="n">a</span> <span class="o">=</span> <span class="n">b</span> <span class="o">+</span> <span class="n">c</span>
+  <span class="n">check_sat</span> <span class="n">c2</span><span class="p">:</span> <span class="n">a</span> <span class="o">&lt;&gt;</span> <span class="n">b</span>
+</pre></div>
+</div>
+<p>and the command <code class="docutils literal notranslate"><span class="pre">alt-ergo</span> <span class="pre">--dump-models</span> <span class="pre">INPUT.ae</span></code>, Alt-Ergo produces the
+output models:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="p">;</span> <span class="n">Model</span> <span class="k">for</span> <span class="n">c1</span>
+  <span class="p">(</span>
+    <span class="p">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="p">()</span> <span class="n">Int</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">b</span> <span class="p">()</span> <span class="n">Int</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">c</span> <span class="p">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">)</span>
+  <span class="n">I</span> <span class="n">don</span><span class="s1">&#39;t known</span>
+
+  <span class="p">;</span> <span class="n">Model</span> <span class="k">for</span> <span class="n">c2</span>
+  <span class="p">(</span>
+    <span class="p">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="p">()</span> <span class="n">Int</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">b</span> <span class="p">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">c</span> <span class="p">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">)</span>
+  <span class="n">I</span> <span class="n">don</span><span class="s1">&#39;t known</span>
+</pre></div>
+</div>
+<p><em>Note</em>: In this example the model for the statement <code class="docutils literal notranslate"><span class="pre">check_sat</span> <span class="pre">c2</span></code> is not a
+model for the statement <code class="docutils literal notranslate"><span class="pre">check_sat</span> <span class="pre">c1</span></code> since <code class="docutils literal notranslate"><span class="pre">check_sat</span></code> are independent in
+the native language. The same goes for <code class="docutils literal notranslate"><span class="pre">goals</span></code>.</p>
+<p>Using the SMT-LIB language in the input file <code class="docutils literal notranslate"><span class="pre">INPUT.smt2</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="p">(</span><span class="nb">set</span><span class="o">-</span><span class="n">logic</span> <span class="n">ALL</span><span class="p">)</span>
+  <span class="p">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="p">()</span> <span class="n">Int</span><span class="p">)</span>
+  <span class="p">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">b</span> <span class="p">()</span> <span class="n">Int</span><span class="p">)</span>
+  <span class="p">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">c</span> <span class="p">()</span> <span class="n">Int</span><span class="p">)</span>
+
+  <span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="o">=</span> <span class="n">a</span> <span class="p">(</span><span class="o">+</span> <span class="n">b</span> <span class="n">c</span><span class="p">)))</span>
+  <span class="p">(</span><span class="n">check</span><span class="o">-</span><span class="n">sat</span><span class="p">)</span>
+  <span class="p">(</span><span class="n">get</span><span class="o">-</span><span class="n">model</span><span class="p">)</span>
+
+  <span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n">distinct</span> <span class="n">a</span> <span class="n">b</span><span class="p">))</span>
+  <span class="p">(</span><span class="n">check</span><span class="o">-</span><span class="n">sat</span><span class="p">)</span>
+
+</pre></div>
+</div>
+<p>and the command <code class="docutils literal notranslate"><span class="pre">alt-ergo</span> <span class="pre">--produce-models</span> <span class="pre">INPUT.smt2</span></code> produces the output</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="n">unknown</span>
+  <span class="p">(</span>
+    <span class="p">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="p">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">b</span> <span class="p">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">c</span> <span class="p">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">)</span>
+
+  <span class="n">unknown</span>
+</pre></div>
+</div>
+<p><em>Note</em>: There is no model printed after the second <code class="docutils literal notranslate"><span class="pre">(check-sat)</span></code> since we
+don’t demand it with the statement <code class="docutils literal notranslate"><span class="pre">(get-model)</span></code>.</p>
+<p>Alternatively, using the statement <code class="docutils literal notranslate"><span class="pre">(set-option</span> <span class="pre">:produce-models</span> <span class="pre">true)</span></code></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="p">(</span><span class="nb">set</span><span class="o">-</span><span class="n">logic</span> <span class="n">ALL</span><span class="p">)</span>
+ <span class="p">(</span><span class="nb">set</span><span class="o">-</span><span class="n">option</span> <span class="p">:</span><span class="n">produce</span><span class="o">-</span><span class="n">models</span> <span class="n">true</span><span class="p">)</span>
+ <span class="p">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="p">()</span> <span class="n">Int</span><span class="p">)</span>
+ <span class="p">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">b</span> <span class="p">()</span> <span class="n">Int</span><span class="p">)</span>
+ <span class="p">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">c</span> <span class="p">()</span> <span class="n">Int</span><span class="p">)</span>
+
+ <span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="o">=</span> <span class="n">a</span> <span class="p">(</span><span class="o">+</span> <span class="n">b</span> <span class="n">c</span><span class="p">)))</span>
+ <span class="p">(</span><span class="n">check</span><span class="o">-</span><span class="n">sat</span><span class="p">)</span>
+ <span class="p">(</span><span class="n">get</span><span class="o">-</span><span class="n">model</span><span class="p">)</span>
+
+</pre></div>
+</div>
+<p>and the command <code class="docutils literal notranslate"><span class="pre">alt-ergo</span> <span class="pre">--frontend</span> <span class="pre">dolmen</span> <span class="pre">--sat-solver</span> <span class="pre">tableaux</span> <span class="pre">INPUT.smt2</span></code> produces
+the output model</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">unknown</span>
+<span class="p">(</span>
+  <span class="p">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="p">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">b</span> <span class="p">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">c</span> <span class="p">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><em>Note</em>: you need to select the Dolmen frontend and the SAT solver Tableaux as the
+model generation is not supported yet by the other SAT solvers. The options
+<code class="docutils literal notranslate"><span class="pre">--dump-models</span></code> and <code class="docutils literal notranslate"><span class="pre">--produce-models</span></code> select the right frontend and SAT solver
+for you.</p>
+</section>
 </section>
 <section id="output">
 <h3>Output<a class="headerlink" href="#output" title="Permalink to this heading"></a></h3>
@@ -249,8 +343,8 @@ plugins in <code class="docutils literal notranslate"><span class="pre">Z:\some\
 </pre></div>
 </div>
 </section>
-<section id="outpus">
-<h4>Outpus<a class="headerlink" href="#outpus" title="Permalink to this heading"></a></h4>
+<section id="outputs">
+<h4>Outputs<a class="headerlink" href="#outputs" title="Permalink to this heading"></a></h4>
 <p>At the end of solving it returns a Json file corresponding to results, debug informations, etc:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;worker_id&quot;</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="s2">&quot;Unsat&quot;</span><span class="p">:</span> <span class="mi">0</span> <span class="p">},</span>
 <span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="s2">&quot;Valid (0.1940) (0 steps) (goal g)&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span> <span class="p">],</span>
