@@ -56,7 +56,7 @@ Model generation is disabled by default. There are two recommended ways to enabl
 
 #### Examples
 
-  Using the native language in the input file `INPUT.ae`:
+  - Using the native language in the input file `INPUT.ae`:
 
   ```
     logic a, b, c : int
@@ -85,11 +85,16 @@ Model generation is disabled by default. There are two recommended ways to enabl
     )
     I don't known
   ```
-  *Note*: In this example the model for the statement `check_sat c2` is not a
+
+  ```{admonition} Note
+
+  In this example the model for the statement `check_sat c2` is not a
   model for the statement `check_sat c1` since `check_sat` are independent in
   the native language. The same goes for `goals`.
 
-  Using the SMT-LIB language in the input file `INPUT.smt2`:
+  ```
+
+  - Using the SMT-LIB language in the input file `INPUT.smt2`:
 
   ```
     (set-logic ALL)
@@ -116,10 +121,15 @@ Model generation is disabled by default. There are two recommended ways to enabl
 
     unknown
   ```
-  *Note*: There is no model printed after the second `(check-sat)` since we
-  don't demand it with the statement `(get-model)`.
 
-  Alternatively, using the statement `(set-option :produce-models true)`
+  ```{admonition} Note
+
+  There is no model printed after the second `(check-sat)` since we
+  don't demand it with the statement `(get-model)`.
+  ```
+
+
+  - Alternatively, using the statement `(set-option :produce-models true)`
   ```
    (set-logic ALL)
    (set-option :produce-models true)
@@ -142,10 +152,13 @@ Model generation is disabled by default. There are two recommended ways to enabl
     (define-fun c () Int 0)
   )
   ```
-  *Note*: you need to select the Dolmen frontend and the SAT solver Tableaux as the
+
+  ```{admonition} Note
+  You need to select the Dolmen frontend and the SAT solver Tableaux as the
   model generation is not supported yet by the other SAT solvers. The options
   `--dump-models` and `--produce-models` select the right frontend and SAT solver
   for you.
+  ```
 
 ### Output
 The results of an Alt-ergo's execution have the following form :
@@ -154,11 +167,12 @@ File "<path_to_file>/<filename>", line <l>, characters <n-m>: <status> (<time in
 ```
 The status can be `Valid`, `Invalid` or `I don't know`. If the input file is in the SMT-LIB 2 format the status will be either `unsat`, `sat`, `unknown`. You can force the status to be print in the SMT-LIB 2 form with the option `--output smtlib2`.
 
-#### About alt-ergo's output
-When alt-ergo tries to prove a property (with the native input language), it
-actually tries to prove the unsatisfiability of the property negation. That is
-why you get `unsat` as an SMT-LIB 2 format output while proving a `Valid`
-property. The same goes for `Invalid` and `sat`.
+```{admonition} Note
+When Alt-Ergo tries to prove a `goal` (with the native input language), it
+actually tries to prove the unsatisfiability of its negation. That is
+why you get `unsat` answer as an SMT-LIB 2 format output while proving a `Valid`
+goal. The same goes for `Invalid` and `sat`.
+```
 
 ### Plugins
 

@@ -55,10 +55,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#examples">Examples</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#output">Output</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#about-alt-ergo-s-output">About alt-ergo’s output</a></li>
-</ul>
-</li>
+<li class="toctree-l3"><a class="reference internal" href="#output">Output</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#plugins">Plugins</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#preludes">Preludes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#plugins-and-preludes-directories">Plugins and Preludes directories</a></li>
@@ -169,7 +166,9 @@ on demand using the statement <code class="docutils literal notranslate"><span c
 </section>
 <section id="examples">
 <h4>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h4>
-<p>Using the native language in the input file <code class="docutils literal notranslate"><span class="pre">INPUT.ae</span></code>:</p>
+<ul class="simple">
+<li><p>Using the native language in the input file <code class="docutils literal notranslate"><span class="pre">INPUT.ae</span></code>:</p></li>
+</ul>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="n">logic</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="p">:</span> <span class="nb">int</span>
   <span class="n">axiom</span> <span class="n">A</span> <span class="p">:</span> <span class="n">a</span> <span class="o">&lt;&gt;</span> <span class="n">c</span>
 
@@ -196,10 +195,15 @@ output models:</p>
   <span class="n">I</span> <span class="n">don</span><span class="s1">&#39;t known</span>
 </pre></div>
 </div>
-<p><em>Note</em>: In this example the model for the statement <code class="docutils literal notranslate"><span class="pre">check_sat</span> <span class="pre">c2</span></code> is not a
+<div class="admonition-note admonition">
+<p class="admonition-title">Note</p>
+<p>In this example the model for the statement <code class="docutils literal notranslate"><span class="pre">check_sat</span> <span class="pre">c2</span></code> is not a
 model for the statement <code class="docutils literal notranslate"><span class="pre">check_sat</span> <span class="pre">c1</span></code> since <code class="docutils literal notranslate"><span class="pre">check_sat</span></code> are independent in
 the native language. The same goes for <code class="docutils literal notranslate"><span class="pre">goals</span></code>.</p>
-<p>Using the SMT-LIB language in the input file <code class="docutils literal notranslate"><span class="pre">INPUT.smt2</span></code>:</p>
+</div>
+<ul class="simple">
+<li><p>Using the SMT-LIB language in the input file <code class="docutils literal notranslate"><span class="pre">INPUT.smt2</span></code>:</p></li>
+</ul>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="p">(</span><span class="nb">set</span><span class="o">-</span><span class="n">logic</span> <span class="n">ALL</span><span class="p">)</span>
   <span class="p">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="p">()</span> <span class="n">Int</span><span class="p">)</span>
   <span class="p">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">b</span> <span class="p">()</span> <span class="n">Int</span><span class="p">)</span>
@@ -225,9 +229,14 @@ the native language. The same goes for <code class="docutils literal notranslate
   <span class="n">unknown</span>
 </pre></div>
 </div>
-<p><em>Note</em>: There is no model printed after the second <code class="docutils literal notranslate"><span class="pre">(check-sat)</span></code> since we
+<div class="admonition-note admonition">
+<p class="admonition-title">Note</p>
+<p>There is no model printed after the second <code class="docutils literal notranslate"><span class="pre">(check-sat)</span></code> since we
 don’t demand it with the statement <code class="docutils literal notranslate"><span class="pre">(get-model)</span></code>.</p>
-<p>Alternatively, using the statement <code class="docutils literal notranslate"><span class="pre">(set-option</span> <span class="pre">:produce-models</span> <span class="pre">true)</span></code></p>
+</div>
+<ul class="simple">
+<li><p>Alternatively, using the statement <code class="docutils literal notranslate"><span class="pre">(set-option</span> <span class="pre">:produce-models</span> <span class="pre">true)</span></code></p></li>
+</ul>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="p">(</span><span class="nb">set</span><span class="o">-</span><span class="n">logic</span> <span class="n">ALL</span><span class="p">)</span>
  <span class="p">(</span><span class="nb">set</span><span class="o">-</span><span class="n">option</span> <span class="p">:</span><span class="n">produce</span><span class="o">-</span><span class="n">models</span> <span class="n">true</span><span class="p">)</span>
  <span class="p">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="p">()</span> <span class="n">Int</span><span class="p">)</span>
@@ -250,10 +259,13 @@ the output model</p>
 <span class="p">)</span>
 </pre></div>
 </div>
-<p><em>Note</em>: you need to select the Dolmen frontend and the SAT solver Tableaux as the
+<div class="admonition-note admonition">
+<p class="admonition-title">Note</p>
+<p>You need to select the Dolmen frontend and the SAT solver Tableaux as the
 model generation is not supported yet by the other SAT solvers. The options
 <code class="docutils literal notranslate"><span class="pre">--dump-models</span></code> and <code class="docutils literal notranslate"><span class="pre">--produce-models</span></code> select the right frontend and SAT solver
 for you.</p>
+</div>
 </section>
 </section>
 <section id="output">
@@ -263,13 +275,13 @@ for you.</p>
 </pre></div>
 </div>
 <p>The status can be <code class="docutils literal notranslate"><span class="pre">Valid</span></code>, <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> or <code class="docutils literal notranslate"><span class="pre">I</span> <span class="pre">don't</span> <span class="pre">know</span></code>. If the input file is in the SMT-LIB 2 format the status will be either <code class="docutils literal notranslate"><span class="pre">unsat</span></code>, <code class="docutils literal notranslate"><span class="pre">sat</span></code>, <code class="docutils literal notranslate"><span class="pre">unknown</span></code>. You can force the status to be print in the SMT-LIB 2 form with the option <code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">smtlib2</span></code>.</p>
-<section id="about-alt-ergo-s-output">
-<h4>About alt-ergo’s output<a class="headerlink" href="#about-alt-ergo-s-output" title="Permalink to this heading"></a></h4>
-<p>When alt-ergo tries to prove a property (with the native input language), it
-actually tries to prove the unsatisfiability of the property negation. That is
-why you get <code class="docutils literal notranslate"><span class="pre">unsat</span></code> as an SMT-LIB 2 format output while proving a <code class="docutils literal notranslate"><span class="pre">Valid</span></code>
-property. The same goes for <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> and <code class="docutils literal notranslate"><span class="pre">sat</span></code>.</p>
-</section>
+<div class="admonition-note admonition">
+<p class="admonition-title">Note</p>
+<p>When Alt-Ergo tries to prove a <code class="docutils literal notranslate"><span class="pre">goal</span></code> (with the native input language), it
+actually tries to prove the unsatisfiability of its negation. That is
+why you get <code class="docutils literal notranslate"><span class="pre">unsat</span></code> answer as an SMT-LIB 2 format output while proving a <code class="docutils literal notranslate"><span class="pre">Valid</span></code>
+goal. The same goes for <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> and <code class="docutils literal notranslate"><span class="pre">sat</span></code>.</p>
+</div>
 </section>
 <section id="plugins">
 <h3>Plugins<a class="headerlink" href="#plugins" title="Permalink to this heading"></a></h3>
