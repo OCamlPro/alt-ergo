@@ -451,21 +451,17 @@ let main () =
               DStd.Loc.fmt loc
         in
         let stmt = { Typer_Pipe.id; contents; loc ; attrs } in
-        let rev_cnf =
-          D_cnf.make (State.get State.logic_file st).loc l stmt
+        let cnf, is_thm =
+          match D_cnf.make (State.get State.logic_file st).loc l stmt with
+          | { Commands.st_decl = Query (_, _, kind); _ } as cnf :: hyps ->
+            let is_thm =
+              match kind with Ty.Thm | Sat -> true | _ -> false
+            in
+            List.rev (cnf :: hyps), is_thm
+          | _ -> assert false
         in
-        let cnf = List.rev rev_cnf in
         let partial_model = solve all_context (cnf, name) in
-        let rec ng_is_thm rcnf =
-          begin match rcnf with
-            | Commands.{ st_decl = Query (_, _, (Ty.Thm | Ty.Sat)); _ } :: _ ->
-              true
-            | Commands.{ st_decl = Query _; _ } :: _ -> false
-            | _ :: tl -> ng_is_thm tl
-            | _ -> assert false (* unreachable *)
-          end
-        in
-        if ng_is_thm rev_cnf
+        if is_thm
         then
           State.set solver_ctx_key (
             let solver_ctx = State.get solver_ctx_key st in
@@ -478,28 +474,6 @@ let main () =
             { solver_ctx with local = [] }
           ) st
           |> State.set partial_model_key partial_model
-
-      | { id = _; contents = `Hyp _; _ } ->
-        let cnf = D_cnf.make (State.get State.logic_file st).loc [] td in
-        begin match cnf with
-          | [Commands.{ st_decl = Assume (name, _, _); _ } as c]
-            when Ty.is_global_hyp name ->
-            State.set solver_ctx_key (
-              let solver_ctx = State.get solver_ctx_key st in
-              { solver_ctx with global = c :: solver_ctx.global }
-            ) st
-          | [Commands.{ st_decl = Assume (name, _, _); _ } as c]
-            when Ty.is_local_hyp name ->
-            State.set solver_ctx_key (
-              let solver_ctx = State.get solver_ctx_key st in
-              { solver_ctx with local = c :: solver_ctx.local }
-            ) st
-          | _ ->
-            State.set solver_ctx_key (
-              let solver_ctx = State.get solver_ctx_key st in
-              { solver_ctx with ctx = cnf @ solver_ctx.ctx }
-            ) st
-        end
 
       | {contents = `Set_option
              { DStd.Term.term =
