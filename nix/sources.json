@@ -1,0 +1,53 @@
+{
+    "dolmen": {
+        "branch": "v0.9",
+        "description": "Dolmen provides a library and a binary to parse, typecheck, and evaluate languages used in automated deduction",
+        "homepage": "",
+        "owner": "Gbury",
+        "repo": "dolmen",
+        "rev": "d9f5abbaffe6e5daa4b06758db66134fe85c8c6a",
+        "sha256": "1lbygac7pmq8d5pps4idc36ga69vx2fwz9pdpv7j2xiqxgava46y",
+        "type": "tarball",
+        "url": "https://github.com/Gbury/dolmen/archive/d9f5abbaffe6e5daa4b06758db66134fe85c8c6a.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
+        "version": "0.9"
+    },
+    "nixpkgs": {
+        "branch": "release-23.05",
+        "description": "Nix Packages collection",
+        "homepage": null,
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "b4ddd645e94706759d443755dbec35901553f35d",
+        "sha256": "1bbg07zmjv5b60v3ar18jpx2fhla2575kcrami53gn2xzm7g9py6",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs/archive/b4ddd645e94706759d443755dbec35901553f35d.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "ocplib-simplex": {
+        "branch": "v0.5",
+        "description": "A library implementing a simplex algorithm, in a functional style, for solving systems of linear inequalities",
+        "homepage": "",
+        "owner": "OCamlPro",
+        "repo": "ocplib-simplex",
+        "rev": "9b0944c81088b9039775e48cdbc3499128ca3692",
+        "sha256": "1dxx68k2smnxrp9b8snpvi74d41yfxn2j6swbqnny6r1d1950bmk",
+        "type": "tarball",
+        "url": "https://github.com/OCamlPro/ocplib-simplex/archive/9b0944c81088b9039775e48cdbc3499128ca3692.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
+        "version": "0.5"
+    },
+    "pp_loc": {
+        "branch": "v2.1.0",
+        "description": "Pretty-printing for error source locations",
+        "homepage": "https://armael.github.io/pp_loc/pp_loc/",
+        "owner": "Armael",
+        "repo": "pp_loc",
+        "rev": "d8162fd289849ea2f4125054ab88540416bdaa25",
+        "sha256": "1wf5pqfxbfbjlwg24n3w99xm29qn1xjjjqn2z01vr5wgxcj9nfvd",
+        "type": "tarball",
+        "url": "https://github.com/Armael/pp_loc/archive/d8162fd289849ea2f4125054ab88540416bdaa25.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
+        "version": "2.1.0"
+    }
+}
