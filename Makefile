@@ -234,6 +234,9 @@ archi: $(EXTRA_DIR)/ocamldot/ocamldot
 	echo "}" >> archi.dot
 	dot -Tpdf archi.dot > archi.pdf
 
+lock:
+	opam lock ./alt-ergo-lib.opam -w
+
 dev-switch:
 	opam switch create -y . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
 
