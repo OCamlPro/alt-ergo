@@ -7,10 +7,13 @@ This is the core library used in the Alt-Ergo SMT solver.
 
 Alt-Ergo is an automatic theorem prover of mathematical formulas. It was developed at LRI, and is now maintained at OCamlPro.
 
+See more details on http://alt-ergo.ocamlpro.com/"""
 maintainer: "Alt-Ergo developers"
 authors: "Alt-Ergo developers"
 license: ["LicenseRef-OCamlpro-Non-Commercial" "Apache-2.0"]
 tags: "org:OCamlPro"
+homepage: "https://alt-ergo.ocamlpro.com/"
+doc: "https://ocamlpro.github.io/alt-ergo"
 bug-reports: "https://github.com/OCamlPro/alt-ergo/issues"
 depends: [
   "base-bigarray" {= "base"}
@@ -32,6 +35,8 @@ depends: [
   "dune-configurator" {= "3.10.0"}
   "fmt" {= "0.9.0"}
   "gen" {= "1.1"}
+  "js_of_ocaml" {= "5.4.0"}
+  "js_of_ocaml-compiler" {= "5.4.0"}
   "logs" {= "0.7.0"}
   "lwt" {= "5.6.1"}
   "menhir" {= "20230608"}
