@@ -236,7 +236,8 @@ archi: $(EXTRA_DIR)/ocamldot/ocamldot
 
 lock:
 	opam lock ./alt-ergo-lib.opam -w
-	sed -i '/ocaml/d' ./alt-ergo-lib.opam.locked
+	# Remove OCaml compiler constraints
+	sed -i '/\"ocaml/d' ./alt-ergo-lib.opam.locked
 
 dev-switch:
 	opam switch create -y . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
