@@ -55,6 +55,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#foreword">Foreword</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pull-request-guidelines">Pull Request Guidelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#legal-guidelines">Legal Guidelines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#develop-with-nix">Develop with Nix</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#release-process">Release Process</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#make-a-pr-for-the-release">Make a PR for the release</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#update-documentation">Update documentation</a></li>
@@ -120,6 +121,22 @@ We strongly recommand to use the following command line so the indent and style 
 <section id="legal-guidelines">
 <h2>Legal Guidelines<a class="headerlink" href="#legal-guidelines" title="Permalink to this heading"></a></h2>
 <p>In addition to agreeing to the terms of the Alt-Ergo’s <a class="reference internal" href="../About/licenses/index.html"><span class="doc std std-doc">License</span></a>, we ask our contributors to sign the <a class="reference external" href="https://www.ocamlpro.com/files/CLA-OCamlPro-corporate.txt">Contributor License Agreement (CLA)</a>.</p>
+</section>
+<section id="develop-with-nix">
+<h2>Develop with Nix<a class="headerlink" href="#develop-with-nix" title="Permalink to this heading"></a></h2>
+<p>If you are using nix, you can get a development shell for Alt-Ergo using:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>nix-shell
+</pre></div>
+</div>
+<p>To build and run a development version of alt-ergo you can use (this requires
+the <a class="reference external" href="https://nixos.wiki/wiki/Nix_command">experimental <code class="docutils literal notranslate"><span class="pre">nix</span></code> command</a>):</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>nix<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>.<span class="w"> </span>alt-ergo
+</pre></div>
+</div>
+<p>Or directly from GitHub:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>nix<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>https://github.com/OCamlPro/alt-ergo/archive/master.tar.gz#alt-ergo<span class="w"> </span>alt-ergo
+</pre></div>
+</div>
 </section>
 <section id="release-process">
 <h2>Release Process<a class="headerlink" href="#release-process" title="Permalink to this heading"></a></h2>
