@@ -80,6 +80,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (dolmen (>= 0.9))
   (dolmen_type (>= 0.9))
   (dolmen_loop (>= 0.9))
+  (dolmen_bin :with-test)
   (ocplib-simplex (>= 0.5))
   (zarith (>= 1.11))
   seq

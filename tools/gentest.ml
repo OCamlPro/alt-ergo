@@ -118,13 +118,15 @@ module Test : sig
   type t = private {
     cmd: Cmd.t;
     pb_file: string;
-    params: params
+    params: params;
+    check_model: bool;
   }
   (** Type of a test. *)
 
   val base_params : params
 
-  val make: cmd: Cmd.t -> pb_file: string -> params:params -> t
+  val make: cmd: Cmd.t -> pb_file: string -> check_model: bool ->
+    params: params -> t
   (** Set up the test. *)
 
   val pp_expected_output: t printer
@@ -145,6 +147,7 @@ end = struct
     cmd: Cmd.t;
     pb_file: string;
     params: params;
+    check_model: bool;
   }
 
   let base_params = {
@@ -154,7 +157,8 @@ end = struct
     accepted_exit_codes = [0];
   }
 
-  let make ~cmd ~pb_file ~params = {cmd; pb_file; params}
+  let make ~cmd ~pb_file ~check_model ~params =
+    {cmd; pb_file; check_model; params}
 
   let pp_output fmt tst =
     let filename = Filename.chop_extension tst.pb_file in
@@ -206,7 +210,23 @@ end = struct
       Cmd.pp tst.cmd
       pp_output tst
       (Cmd.group tst.cmd)
-      pp_diff_command tst
+      pp_diff_command tst;
+    let () =
+      if tst.check_model then
+        Format.fprintf fmt "\
+@[<v 1>\
+(rule@,\
+(alias check-models)@,\
+(deps (:input %a) (:test %s))@,\
+(package alt-ergo)@,\
+@[<v 1>(action@,\
+@[<v 1>(with-accepted-exit-codes 0@,\
+@[<v 1>(bash \"sed 's/^unknown/sat/' %%{input} | \
+opam exec -- dolmen --check-model true %%{test}\"))))@]@]@]@]\n@."
+          pp_output tst
+          tst.pb_file
+    in
+    ()
 end
 
 module Batch : sig
@@ -277,7 +297,11 @@ end = struct
         in
         List.fold_left (fun acc2 cmd ->
             if filter params cmd then
-              Test.make ~cmd ~pb_file ~params :: acc2
+              let check_model =
+                List.exists (String.equal "models")
+                  (String.split_on_char '.' pb_file)
+              in
+              Test.make ~cmd ~pb_file ~check_model ~params :: acc2
             else
               acc2
           ) acc1 cmds) [] pb_files

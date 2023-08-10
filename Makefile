@@ -128,7 +128,7 @@ runtest: gentest bin
 
 # Run non-regression tests for the CI.
 runtest-ci: gentest bin
-	dune build @runtest @runtest-quick @runtest-ci
+	dune build @runtest @runtest-quick @runtest-ci @check-models
 
 # Promote new outputs of the tests.
 promote:
