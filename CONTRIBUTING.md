@@ -29,6 +29,27 @@ In addition to agreeing to the terms of the Alt-Ergo's [License], we ask our con
 [License]: ../About/licenses/index
 [Contributor License Agreement (CLA)]: https://www.ocamlpro.com/files/CLA-OCamlPro-corporate.txt
 
+## Develop with Nix
+
+If you are using nix, you can get a development shell for Alt-Ergo using:
+
+```shell
+$ nix-shell
+```
+
+To build and run a development version of alt-ergo you can use (this requires
+the [experimental `nix` command](https://nixos.wiki/wiki/Nix_command)):
+
+```shell
+$ nix run -f . alt-ergo
+```
+
+Or directly from GitHub:
+
+```shell
+$ nix run -f https://github.com/OCamlPro/alt-ergo/archive/master.tar.gz#alt-ergo alt-ergo
+```
+
 ## Release Process
 
 Alt-Ergo releases do not have a fixed schedule and are made based on features. We try to maintain the main branch (`next`) of the repository as stable as possible, and cut a release from there when an important feature is complete. We also make point release to fix important bugs.
