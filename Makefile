@@ -255,7 +255,7 @@ test-deps:
 dune-deps:
 	dune-deps . | dot -Tpng -o docs/deps.png
 
-.PHONY: archi deps test-deps dune-deps dev-switch
+.PHONY: archi deps test-deps dune-deps dev-switch lock
 
 # ===============
 # PUBLIC RELEASES
