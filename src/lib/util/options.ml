@@ -284,14 +284,7 @@ let set_frontend f = frontend := f
 let set_input_format f = input_format := f
 let set_infer_input_format b = infer_input_format := b
 let set_parse_only b = parse_only := b
-let set_preludes p =
-  preludes := List.filter (fun prelude ->
-      match prelude with
-      | "fpa-theory-2017-01-04-16h00.ae"
-      | "fpa-theory-2019-06-14-11h00.ae"
-      | "fpa-theory-2019-10-08-19h00.ae" -> false
-      | _ -> true
-    ) p
+let set_preludes p = preludes := p
 
 let set_theory_preludes t = theory_preludes := t
 let set_type_only b = type_only := b
