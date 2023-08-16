@@ -203,6 +203,9 @@ end = struct
               | "models" ->
                 exclude,
                 Some ["tableaux"]
+              | "fpa" ->
+                exclude,
+                Some ["fpa"]
               | _ -> (exclude, filters_opt)
           ) ([], None) (String.split_on_char '.' pb_file)
         in
@@ -282,7 +285,12 @@ let () =
   let bin = "%{bin:alt-ergo}" in
   let timelimit = "--timelimit=2" in
   let solvers = [
-    ("runtest-quick", "dolmen",
+    ("runtest-quick", "fpa",
+     [ "--output=smtlib2"
+     ; timelimit
+     ; "--enable-theories fpa"
+     ])
+  ; ("runtest-quick", "dolmen",
      [ "--output=smtlib2"
      ; timelimit
      ; "--frontend dolmen" ])

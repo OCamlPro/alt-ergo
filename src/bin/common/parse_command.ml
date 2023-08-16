@@ -1325,9 +1325,11 @@ let parse_theory_opt =
     Arg.(value & flag & info ["tighten-vars"] ~docs ~doc) in
 
   let use_fpa =
-    let doc = "Floating-point builtins are always enabled and this option has
-    no effect anymore. It will be removed in a future version." in
-    let deprecated = "this option is always enabled" in
+    let doc =
+      "Enable Floating-point builtins. This option requires to load an fpa \
+       prelude with `--prelude`. It will be removed in a future version."
+    in
+    let deprecated = "Please use the new option `--enable-theories fpa" in
     Arg.(value & flag & info ["use-fpa"] ~docs ~doc ~deprecated) in
 
   let theories =
@@ -1388,14 +1390,27 @@ let parse_theory_opt =
     let preludes enable_theories disable_theories =
       let theories = Theories.default in
       let rec aux th en dis =
-        match en, dis with
-        | _ :: _, [] -> aux (List.rev_append en th) [] []
-        | e :: _, d :: _ when e = d ->
-          Fmt.error_msg "theory prelude '%a' cannot be both enabled and
-          disabled" Theories.pp e
-        | e :: en, d :: _ when e < d -> aux (e :: th) en dis
-        | _ , d :: dis -> aux (List.filter ((<>) d) th) en dis
-        | [], [] -> Ok th
+        let theories =
+          match en, dis with
+          | _ :: _, [] -> aux (List.rev_append en th) [] []
+          | e :: _, d :: _ when e = d ->
+            Fmt.error_msg "theory prelude '%a' cannot be both enabled and
+            disabled" Theories.pp e
+          | e :: en, d :: _ when e < d -> aux (e :: th) en dis
+          | _ , d :: dis -> aux (List.filter ((<>) d) th) en dis
+          | [], [] -> Ok th
+        in
+        Result.bind theories @@ fun theories ->
+        if List.mem Theories.(Prelude Fpa) en then
+          if List.for_all (fun th ->
+              match (th : Theories.t) with
+              | Prelude Nra | Prelude Ria -> false
+              | _ -> true
+            ) dis then
+            Ok Theories.(Prelude Nra :: Prelude Ria :: theories)
+          else
+            Fmt.error_msg "theory prelude fpa requires both ria and nra"
+        else Ok th
       in
       aux
         theories
