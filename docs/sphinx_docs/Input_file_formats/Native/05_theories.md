@@ -1,4 +1,4 @@
- 
+
 # Theories
 
 Alt-Ergo has built-in support for many different theories.
@@ -44,8 +44,9 @@ precisely, Alt-Ergo implements the second and third layers from the paper "[A
 Three-tier Strategy for Reasoning about Floating-Point Numbers in
 SMT](https://inria.hal.science/hal-01522770)" by Conchon et al.
 
-*Note*: Support for floating-point arithmetic is enabled by default in
-Alt-Ergo since version 2.5.0.  Previous versions required the use of command
+*Note*: Prelude for floating-point arithmetic is a built-in theory in
+Alt-Ergo since version 2.5.0. Use `--enable-theories fpa` to enable it.
+Previous versions required the use of command
 line flags `--use-fpa` and `--prelude fpa-theory-2019-10-08-19h00.ae` to enable
 it.
 
