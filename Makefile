@@ -234,6 +234,12 @@ archi: $(EXTRA_DIR)/ocamldot/ocamldot
 	echo "}" >> archi.dot
 	dot -Tpdf archi.dot > archi.pdf
 
+lock:
+	dune build ./alt-ergo-lib.opam
+	opam lock ./alt-ergo-lib.opam -w
+	# Remove OCaml compiler constraints
+	sed -i '/"ocaml"\|"ocaml-base-compiler"\|"ocaml-system"\|"ocaml-config"/d' ./alt-ergo-lib.opam.locked
+
 dev-switch:
 	opam switch create -y . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
 
@@ -250,7 +256,7 @@ test-deps:
 dune-deps:
 	dune-deps . | dot -Tpng -o docs/deps.png
 
-.PHONY: archi deps test-deps dune-deps dev-switch
+.PHONY: archi deps test-deps dune-deps dev-switch lock
 
 # ===============
 # PUBLIC RELEASES
