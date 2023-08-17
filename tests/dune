@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 (cram
  (package alt-ergo)
  (deps %{bin:alt-ergo}))
@@ -24,3 +25,9 @@
 (rule
  (alias runtest-ci)
  (action (diff dune.inc dune.inc.gen)))
+||||||| parent of e72d8091 (Review changes)
+=======
+(cram
+ (package alt-ergo)
+ (deps %{bin:alt-ergo}))
+>>>>>>> e72d8091 (Review changes)
