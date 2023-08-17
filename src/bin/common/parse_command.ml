@@ -1325,11 +1325,9 @@ let parse_theory_opt =
     Arg.(value & flag & info ["tighten-vars"] ~docs ~doc) in
 
   let use_fpa =
-    let doc =
-      "Enable Floating-point builtins. This option requires to load an fpa \
-       prelude with `--prelude`. It will be removed in a future version."
-    in
-    let deprecated = "Please use the new option `--enable-theories fpa" in
+    let doc = "Floating-point builtins are always enabled and this option has
+      no effect anymore. It will be removed in a future version." in
+    let deprecated = "this option is always enabled" in
     Arg.(value & flag & info ["use-fpa"] ~docs ~doc ~deprecated) in
 
   let theories =
