@@ -1438,7 +1438,7 @@ let parse_theory_opt =
 
 let parse_fmt_opt =
   let docs = s_fmt in
-  let docv = "CHANNEL" in
+  let docv = "OUTPUT" in
 
   let regular_output =
     let doc =
