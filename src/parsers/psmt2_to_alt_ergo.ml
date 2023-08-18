@@ -508,7 +508,7 @@ let aux aux_fun token lexbuf =
     let loc = (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf) in
     let lex = Lexing.lexeme lexbuf in
     Parsing.clear_parser ();
-    Smtlib_error.print (Options.Output.get_fmt_err ()) (Options.get_file ())
+    Smtlib_error.print (Options.Output.get_fmt_diagnostic ()) (Options.get_file ())
       (Syntax_error (lex)) loc;
     Errors.error (Errors.Syntax_error (loc,""))
   | Smtlib_error.Error (e , p) ->
@@ -518,7 +518,7 @@ let aux aux_fun token lexbuf =
         Some loc -> loc
       | None -> Lexing.dummy_pos,Lexing.dummy_pos
     in
-    Smtlib_error.print (Options.Output.get_fmt_err ())
+    Smtlib_error.print (Options.Output.get_fmt_diagnostic ())
       (Options.get_file ()) e loc;
     Errors.error (Errors.Syntax_error (loc,""))
 
