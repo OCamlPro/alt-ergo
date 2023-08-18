@@ -1417,16 +1417,16 @@ let parse_fmt_opt =
           models and unsat cores. Possible values are %s."
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
     in
-    let deprecated = "this option is deprecated. Please use --std-output." in
-    let std_output =
-      Arg.(value & opt (some' string) None & info ["std-output"] ~docs
+    let deprecated = "this option is deprecated. Please use --regular-output." in
+    let regular_output =
+      Arg.(value & opt (some' string) None & info ["regular-output"] ~docs
              ~doc ~docv)
     in
     let std_formatter =
       Arg.(value & opt (some' string) None  & info ["std-formatter"]
              ~deprecated ~docs ~docv)
     in
-    Term.(const (merge_formatters "stdout") $ std_output $ std_formatter)
+    Term.(const (merge_formatters "stdout") $ regular_output $ std_formatter)
   in
 
   let err_output =
@@ -1436,16 +1436,16 @@ let parse_fmt_opt =
          warning informations. Possible values are %s."
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
     in
-    let deprecated = "this option is deprecated. Please use --err-output." in
-    let err_output =
-      Arg.(value & opt (some' string) None & info ["err-output"] ~docs
+    let deprecated = "this option is deprecated. Please use --diagnostic-output." in
+    let diagnostic_output =
+      Arg.(value & opt (some' string) None & info ["diagnostic-output"] ~docs
              ~doc ~docv)
     in
     let err_formatter =
       Arg.(value & opt (some' string) None & info ["err-formatter"]
              ~deprecated ~docs ~docv)
     in
-    Term.(const (merge_formatters "stderr") $ err_output $ err_formatter)
+    Term.(const (merge_formatters "stderr") $ diagnostic_output $ err_formatter)
   in
 
   Term.(ret (const mk_output_channel_opt $ std_output $ err_output))
