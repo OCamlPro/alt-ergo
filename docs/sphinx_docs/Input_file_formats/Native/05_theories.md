@@ -45,7 +45,7 @@ Three-tier Strategy for Reasoning about Floating-Point Numbers in
 SMT](https://inria.hal.science/hal-01522770)" by Conchon et al.
 
 *Note*: Support for floating-point arithmetic is available as a built-in theory
-since version 2.5.0. It be enabled using flag `--enable-theory fpa`, which will
+since version 2.5.0. It is enabled using flag `--enable-theory fpa`, which will
 become the default in a future release. Previous versions used the external
 prelude mechanism and required command line flags `--use-fpa` and
 `--prelude fpa-theory-2019-10-08-19h00.ae`.
