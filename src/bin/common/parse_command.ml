@@ -1450,7 +1450,9 @@ let parse_fmt_opt =
           models and unsat cores. Possible values are %s."
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
     in
-    let deprecated = "this option is deprecated. Please use --regular-output." in
+    let deprecated =
+      "this option is deprecated. Please use --regular-output."
+    in
     let regular_output =
       Arg.(value & opt (some' string) None & info ["regular-output"] ~docs
              ~doc ~docv)
@@ -1469,7 +1471,9 @@ let parse_fmt_opt =
          warning informations. Possible values are %s."
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
     in
-    let deprecated = "this option is deprecated. Please use --diagnostic-output." in
+    let deprecated =
+      "this option is deprecated. Please use --diagnostic-output."
+    in
     let diagnostic_output =
       Arg.(value & opt (some' string) None & info ["diagnostic-output"] ~docs
              ~doc ~docv)
