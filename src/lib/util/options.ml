@@ -285,6 +285,7 @@ let set_input_format f = input_format := f
 let set_infer_input_format b = infer_input_format := b
 let set_parse_only b = parse_only := b
 let set_preludes p = preludes := p
+
 let set_theory_preludes t = theory_preludes := t
 let set_type_only b = type_only := b
 let set_type_smt2 b = type_smt2 := b

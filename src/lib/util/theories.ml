@@ -43,9 +43,11 @@ let all_preludes = [ Fpa; Ria; Nra ]
 
 let all = ADT :: AC :: List.map (fun p -> Prelude p) all_preludes
 
-let default_preludes = all_preludes
+(* By default we disable Fpa, Ria and Nra preludes to prevent
+   regressions. *)
+let default_preludes = []
 
-let default = all
+let default = [ ADT; AC ]
 
 let preludes =
   List.filter_map (function | Prelude p -> Some p | _ -> None)
