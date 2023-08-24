@@ -244,7 +244,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          and not a simple bool. *)
       print_status (Unknown (d, t)) (Steps.get_steps ());
       (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
-      env , consistent, dep
+      t, consistent, dep
     | Util.Timeout as e ->
       (* In this case, we obviously want to print the status,
          since we exit right after  *)
