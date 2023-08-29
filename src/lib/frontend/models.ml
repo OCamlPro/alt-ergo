@@ -449,20 +449,20 @@ module SmtlibCounterExample = struct
     if not (Options.get_objectives_in_interpretation()) &&
        not (Util.MI.is_empty objectives)
     then begin
-      Format.fprintf fmt "@[<v 3>(objectives";
+      Format.fprintf fmt "@[<v 3>; (objectives";
       Util.MI.iter
         (fun _i (e, x) ->
-           Format.fprintf fmt "@ (%a %a)"
+           Format.fprintf fmt "@ ; (%a %a)"
              E.print e
              (fun fmt () ->
                 match x with
                 | Obj_pinfty -> Format.fprintf fmt "+oo"
                 | Obj_minfty -> Format.fprintf fmt "-oo"
                 | Obj_val s -> Format.fprintf fmt "%s" s
-                | Obj_unk -> Format.fprintf fmt "(interval -oo +oo)"
+                | Obj_unk -> Format.fprintf fmt "; (interval -oo +oo)"
              ) ()
         )objectives;
-      Printer.print_fmt fmt "@]@ )"
+      Printer.print_fmt fmt "@]@ ; )"
     end
 
 end
@@ -471,9 +471,11 @@ end
 module Why3CounterExample = struct
 
   let output_constraints fmt prop_model =
-    let assertions = SE.fold (fun e acc ->
-        (dprintf "%t(assert %a)@ " acc SmtlibCounterExample.pp_term e)
-      ) prop_model (dprintf "") in
+    let assertions =
+      SE.fold (fun e acc ->
+          (dprintf "%t;(assert %a)@ " acc SmtlibCounterExample.pp_term e)
+        ) prop_model (dprintf "")
+    in
     Format.fprintf fmt "@ ; constraints@ ";
     MS.iter (fun _ (name,ty,args_ty) ->
         match args_ty with
