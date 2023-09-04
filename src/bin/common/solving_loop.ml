@@ -81,10 +81,10 @@ let main () =
           Options.Time.set_timeout (Options.get_timelimit ());
         end;
       SAT.reset_refs ();
-      let partial_model, consistent, _ =
+      let _, consistent, _ =
         List.fold_left
           (FE.process_decl FE.print_status used_context consistent_dep_stack)
-          (SAT.empty (), true, Explanation.empty) cnf
+          (SAT.empty (), `Unknown (SAT.empty ()), Explanation.empty) cnf
       in
       if Options.get_timelimit_per_goal() then
         Options.Time.unset_timeout ();
@@ -96,9 +96,10 @@ let main () =
       (* If the status of the SAT environment is inconsistent,
          we have to drop the partial model in order to prevent
          printing wrong model. *)
-      if consistent then
+      match consistent with
+      | `Sat partial_model | `Unknown partial_model ->
         Some partial_model
-      else None
+      | `Unsat -> None
     with Util.Timeout ->
       if not (Options.get_timelimit_per_goal()) then exit 142;
       None
