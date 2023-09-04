@@ -1,0 +1,16 @@
+(executable
+ (name Lib_usage)
+ (libraries AltErgoLib)
+ (modules Lib_usage)
+)
+
+(rule
+ (alias runtest)
+ (action
+  (ignore-stdout
+   (ignore-stderr
+    (run ./Lib_usage.exe)
+   )
+  )
+ )
+)
