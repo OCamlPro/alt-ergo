@@ -416,7 +416,13 @@ module SmtlibCounterExample = struct
            else
              reps_aux representants
          in
-         print_fun_def fmt f xs_ty_named ty rep;
+         (* Only print declared (but not defined!) function symbols -- note
+            that we still need to *handle* other symbols without printing them
+            because they could be record accessors that must be added to the
+            `records` reference *)
+         match f with
+         | Sy.Name (_, _, false) -> print_fun_def fmt f xs_ty_named ty rep
+         | _ -> ()
       ) fprofs;
     !records
 end
