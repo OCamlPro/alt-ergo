@@ -36,6 +36,7 @@ module Ex = Explanation
 module Sy = Symbols
 module E = Expr
 module ME = Expr.Map
+module MS = Models.MS
 module SE = Expr.Set
 
 module LX =
@@ -1024,7 +1025,7 @@ let model_repr_of_term t env mrepr =
 
 let compute_concrete_model ({ make; _ } as env) =
   ME.fold
-    (fun t _mk ((fprofs, cprofs, carrays, mrepr) as acc) ->
+    (fun t _mk ((fprofs, cprofs, carrays, crecords, mrepr) as acc) ->
        let { E.f; xs; ty; _ } = E.term_view t in
        if X.is_solvable_theory_symbol f ty
        || E.is_fresh t || E.is_fresh_skolem t
@@ -1045,6 +1046,22 @@ let compute_concrete_model ({ make; _ } as env) =
          let rep, mrepr = model_repr_of_term t env mrepr in
          assert (is_a_good_model_value rep);
          match f, xs, ty with
+         | Sy.Op Sy.Record, _, _ -> acc
+
+         | Sy.Op Sy.Access field, [(_, (_, srep))], _ ->
+           let fields =
+             let fields =
+               try MS.find srep crecords
+               with Not_found -> MS.empty
+             in
+             MS.add (Hstring.view field) (snd rep) fields
+           in
+           fprofs,
+           cprofs,
+           carrays,
+           MS.add srep fields crecords,
+           mrepr
+
          | Sy.Op Sy.Set, _, _ -> acc
 
          | Sy.Op Sy.Get, [(_,(a,_));((_,(i,_)) as e)], _ ->
@@ -1056,6 +1073,7 @@ let compute_concrete_model ({ make; _ } as env) =
                fprofs,
                cprofs,
                ModelMap.add (f_ta,[X.type_info i], ty) ([e], rep) carrays,
+               crecords,
                mrepr
 
              | _ -> assert false
@@ -1064,19 +1082,18 @@ let compute_concrete_model ({ make; _ } as env) =
          | _ ->
            if tys == [] then
              fprofs, ModelMap.add (f, tys, ty) (xs, rep) cprofs, carrays,
-             mrepr
+             crecords, mrepr
            else
              ModelMap.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
-             mrepr
+             crecords, mrepr
 
     ) make
-    (ModelMap.empty, ModelMap.empty, ModelMap.empty, ME.empty)
+    (ModelMap.empty, ModelMap.empty, ModelMap.empty, MS.empty, ME.empty)
 
 let output_concrete_model fmt ~prop_model env =
   if Options.get_interpretation () then
-    let functions, constants, arrays, _ =
-      compute_concrete_model env in
-    Models.output_concrete_model fmt prop_model ~functions ~constants ~arrays
+    let functions, constants, arrays, records, _ = compute_concrete_model env in
+    Models.output_concrete_model fmt prop_model ~functions ~constants ~arrays ~records
 
 let save_cache () =
   LX.save_cache ()

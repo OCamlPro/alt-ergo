@@ -28,6 +28,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module MS : Map.S with type key = string
+
 (** {1 Models module} *)
 
 (** Print the given counterexample on the given formatter with the
@@ -42,4 +44,5 @@ val output_concrete_model :
   functions:ModelMap.t ->
   constants:ModelMap.t ->
   arrays:ModelMap.t ->
+  records:string MS.t MS.t ->
   unit

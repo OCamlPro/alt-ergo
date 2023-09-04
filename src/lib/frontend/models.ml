@@ -261,29 +261,33 @@ module SmtlibCounterExample = struct
     MS.add record_name destrs records
 
   let mk_records_constr records record_name
-      { Ty.name = _n; record_constr = cstr; lbs = lbs; _} =
+      { Ty.record_constr = cstr; lbs; _ } =
     let find_destrs destr destrs =
       try let rep = MS.find destr destrs in
         Some rep
       with Not_found -> None
     in
 
-    let print_destr fmt (destrs,lbs) =
-      List.iter (fun (destr, ty_destr) ->
-          let destr = Hstring.view destr in
-          match find_destrs destr destrs with
-          | None ->
-            pp_dummy_value_of_type fmt ty_destr
-          | Some rep -> fprintf fmt "%s " rep
-        ) lbs
+    let pp_destr destrs ppf (destr, ty_destr) =
+      match find_destrs (Hstring.view destr) destrs with
+      | None ->
+        Fmt.pf ppf "%a"
+          pp_dummy_value_of_type ty_destr
+      | Some rep ->
+        Fmt.pf ppf "%s" rep
     in
+
+    let pp_destrs destrs =
+      Fmt.list ~sep:(fun ppf () -> Fmt.pf ppf " ") (pp_destr destrs)
+    in
+
     let destrs =
       try MS.find (Sy.to_string record_name) records
       with Not_found -> MS.empty
     in
     asprintf "%s %a"
       (Hstring.view cstr)
-      print_destr (destrs,lbs)
+      (pp_destrs destrs) lbs
 
   let add_record_constr records record_name
       { Ty.name = _n; record_constr = _cstr; lbs = lbs; _} xs_values =
@@ -480,7 +484,7 @@ let rec pp_value ppk ppf = function
 let pp_constant ppf (_, t) =
   Format.fprintf ppf "%a" SmtlibCounterExample.pp_dummy_value_of_type t
 
-let output_concrete_model fmt props ~functions ~constants ~arrays =
+let output_concrete_model fmt props ~functions ~constants ~arrays ~records =
   if ModelMap.(is_suspicious functions || is_suspicious constants
                || is_suspicious arrays) then
     Format.fprintf fmt "; This model is a best-effort. It includes symbols
@@ -524,7 +528,7 @@ let output_concrete_model fmt props ~functions ~constants ~arrays =
 
   (* Functions *)
   let records = SmtlibCounterExample.output_functions_counterexample
-      pp_x fmt  MS.empty functions
+      pp_x fmt records functions
   in
 
   (* Constants *)
