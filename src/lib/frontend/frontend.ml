@@ -39,6 +39,12 @@ module type S = sig
   type sat_env
   type used_context
 
+  type res = [
+    | `Sat of sat_env
+    | `Unknown of sat_env
+    | `Unsat
+  ]
+
   type status =
     | Unsat of Commands.sat_tdecl * Ex.t
     | Inconsistent of Commands.sat_tdecl
@@ -50,10 +56,10 @@ module type S = sig
   val process_decl:
     (status -> int -> unit) ->
     used_context ->
-    (bool * Ex.t) Stack.t ->
-    sat_env * bool * Ex.t ->
+    (res * Ex.t) Stack.t ->
+    sat_env * res * Ex.t ->
     Commands.sat_tdecl ->
-    sat_env * bool * Ex.t
+    sat_env * res * Ex.t
 
   val print_status : status -> int -> unit
 
@@ -65,8 +71,13 @@ end
 module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   type sat_env = SAT.t
-
   type used_context = Util.SS.t option
+
+  type res = [
+    | `Sat of sat_env
+    | `Unknown of sat_env
+    | `Unsat
+  ]
 
   type status =
     | Unsat of Commands.sat_tdecl * Ex.t
@@ -149,12 +160,12 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       match d.st_decl with
       | Push n ->
         Util.loop ~f:(fun _n env () -> Stack.push env consistent_dep_stack)
-          ~max:n ~elt:(consistent,dep) ~init:();
+          ~max:n ~elt:(consistent, dep) ~init:();
         SAT.push env n, consistent, dep
       | Pop n ->
-        let consistent,dep =
+        let consistent, dep =
           Util.loop ~f:(fun _n () _env -> Stack.pop consistent_dep_stack)
-            ~max:n ~elt:() ~init:(consistent,dep)
+            ~max:n ~elt:() ~init:(consistent, dep)
         in
         SAT.pop env n, consistent, dep
       | Assume(n, f, mf) ->
@@ -163,23 +174,27 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           acc
         else
           let dep = if is_hyp then Ex.empty else mk_root_dep n f d.st_loc in
-          if consistent then
-            SAT.assume env
-              {E.ff=f;
-               origin_name = n;
-               gdist = -1;
-               hdist = (if is_hyp then 0 else -1);
-               trigger_depth = max_int;
-               nb_reductions = 0;
-               age=0;
-               lem=None;
-               mf=mf;
-               gf=false;
-               from_terms = [];
-               theory_elim = true;
-              } dep,
-            consistent, dep
-          else env, consistent, dep
+          begin
+            match consistent with
+            | `Sat _ | `Unknown _ ->
+              SAT.assume env
+                {E.ff=f;
+                 origin_name = n;
+                 gdist = -1;
+                 hdist = (if is_hyp then 0 else -1);
+                 trigger_depth = max_int;
+                 nb_reductions = 0;
+                 age=0;
+                 lem=None;
+                 mf=mf;
+                 gf=false;
+                 from_terms = [];
+                 theory_elim = true;
+                } dep,
+              consistent, dep
+            | `Unsat ->
+              env, consistent, dep
+          end
       | PredDef (f, name) ->
         if unused_context name used_context then acc
         else
@@ -190,7 +205,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
       | Query(n, f, sort) ->
         let dep =
-          if consistent then
+          match consistent with
+          | `Sat _ | `Unknown _ ->
             let dep' = SAT.unsat env
                 {E.ff=f;
                  origin_name = n;
@@ -206,22 +222,24 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                  theory_elim = true;
                 } in
             Ex.union dep' dep
-          else dep
+          | `Unsat -> dep
         in
         if get_debug_unsat_core () then check_produced_unsat_core dep;
         if get_save_used_context () then output_used_context n dep;
         print_status (Unsat (d, dep)) (Steps.get_steps ());
-        env, false, dep
+        env, `Unsat, dep
 
       | ThAssume ({ Expr.ax_name; Expr.ax_form ; _ } as th_elt) ->
         if unused_context ax_name used_context then
           acc
         else
-        if consistent then
-          let dep = mk_root_dep ax_name ax_form d.st_loc in
-          let env = SAT.assume_th_elt env th_elt dep in
-          env, consistent, dep
-        else env, consistent, dep
+          match consistent with
+          | `Sat _ | `Unknown _ ->
+            let dep = mk_root_dep ax_name ax_form d.st_loc in
+            let env = SAT.assume_th_elt env th_elt dep in
+            env, consistent, dep
+          | `Unsat ->
+            env, consistent, dep
 
     with
     | SAT.Sat t ->
@@ -229,7 +247,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          so we want to print the status in this case. *)
       print_status (Sat (d,t)) (Steps.get_steps ());
       (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
-      env , consistent, dep
+      env, `Sat t, dep
     | SAT.Unsat dep' ->
       (* This case should mainly occur when a new assumption results in an unsat
          env, in which case we do not want to print status, since the correct
@@ -237,14 +255,14 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       let dep = Ex.union dep dep' in
       if get_debug_unsat_core () then check_produced_unsat_core dep;
       (* print_status (Inconsistent d) (Steps.get_steps ()); *)
-      env , false, dep
+      env, `Unsat, dep
     | SAT.I_dont_know t ->
       (* In this case, it's not clear whether we want to print the status.
          Instead, it'd be better to accumulate in `consistent` a 3-case adt
          and not a simple bool. *)
       print_status (Unknown (d, t)) (Steps.get_steps ());
       (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
-      env , consistent, dep
+      env, `Unknown t, dep
     | Util.Timeout as e ->
       (* In this case, we obviously want to print the status,
          since we exit right after  *)

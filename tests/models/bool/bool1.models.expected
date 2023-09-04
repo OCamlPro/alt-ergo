@@ -1,6 +1,7 @@
 
 unknown
 (
+  (define-fun q () Bool false)
 )
 
 unknown
