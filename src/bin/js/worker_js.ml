@@ -130,11 +130,12 @@ let main worker_id content =
       let used_context = FE.choose_used_context all_context ~goal_name in
       let consistent_dep_stack = Stack.create () in
       SAT.reset_refs ();
+      let env = SAT.empty_with_inst add_inst in
       let _,_,dep =
         List.fold_left
           (FE.process_decl
              get_status_and_print used_context consistent_dep_stack)
-          (SAT.empty_with_inst add_inst, true, Explanation.empty) cnf in
+          (env, `Unknown env, Explanation.empty) cnf in
 
       if Options.get_unsat_core () then begin
         unsat_core := Explanation.get_unsat_core dep;
