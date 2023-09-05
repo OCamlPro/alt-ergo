@@ -673,8 +673,9 @@ let parse_execution_opt =
             else if Compat.String.starts_with ~prefix:"fpa-theory" p then
               Printer.print_wrn ~header:true
                 "@[Support for the FPA theory has been integrated as a builtin \
-                 theory prelude in version 2.5.0 and is enabled by default. \
-                 This option is no longer needed, and the '%s'@ prelude will \
+                 theory prelude in version 2.5.0. Please use \
+                 `--enable-theories fpa` to enable it. \
+                 This option and the '%s'@ prelude will \
                  be removed in a later version.@]" p
           end;
 
@@ -1326,7 +1327,7 @@ let parse_theory_opt =
 
   let use_fpa =
     let doc = "Floating-point builtins are always enabled and this option has
-    no effect anymore. It will be removed in a future version." in
+      no effect anymore. It will be removed in a future version." in
     let deprecated = "this option is always enabled" in
     Arg.(value & flag & info ["use-fpa"] ~docs ~doc ~deprecated) in
 
@@ -1388,14 +1389,27 @@ let parse_theory_opt =
     let preludes enable_theories disable_theories =
       let theories = Theories.default in
       let rec aux th en dis =
-        match en, dis with
-        | _ :: _, [] -> aux (List.rev_append en th) [] []
-        | e :: _, d :: _ when e = d ->
-          Fmt.error_msg "theory prelude '%a' cannot be both enabled and
-          disabled" Theories.pp e
-        | e :: en, d :: _ when e < d -> aux (e :: th) en dis
-        | _ , d :: dis -> aux (List.filter ((<>) d) th) en dis
-        | [], [] -> Ok th
+        let theories =
+          match en, dis with
+          | _ :: _, [] -> aux (List.rev_append en th) [] []
+          | e :: _, d :: _ when e = d ->
+            Fmt.error_msg "theory prelude '%a' cannot be both enabled and
+            disabled" Theories.pp e
+          | e :: en, d :: _ when e < d -> aux (e :: th) en dis
+          | _ , d :: dis -> aux (List.filter ((<>) d) th) en dis
+          | [], [] -> Ok th
+        in
+        Result.bind theories @@ fun theories ->
+        if List.mem Theories.(Prelude Fpa) en then
+          if List.for_all (fun th ->
+              match (th : Theories.t) with
+              | Prelude Nra | Prelude Ria -> false
+              | _ -> true
+            ) dis then
+            Ok Theories.(Prelude Nra :: Prelude Ria :: theories)
+          else
+            Fmt.error_msg "theory prelude fpa requires both ria and nra"
+        else Ok th
       in
       aux
         theories
@@ -1436,16 +1450,18 @@ let parse_fmt_opt =
           models and unsat cores. Possible values are %s."
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
     in
-    let deprecated = "this option is deprecated. Please use --std-output." in
-    let std_output =
-      Arg.(value & opt (some' string) None & info ["std-output"] ~docs
+    let deprecated =
+      "this option is deprecated. Please use --regular-output."
+    in
+    let regular_output =
+      Arg.(value & opt (some' string) None & info ["regular-output"] ~docs
              ~doc ~docv)
     in
     let std_formatter =
       Arg.(value & opt (some' string) None  & info ["std-formatter"]
              ~deprecated ~docs ~docv)
     in
-    Term.(const (merge_formatters "stdout") $ std_output $ std_formatter)
+    Term.(const (merge_formatters "stdout") $ regular_output $ std_formatter)
   in
 
   let err_output =
@@ -1455,16 +1471,18 @@ let parse_fmt_opt =
          warning informations. Possible values are %s."
         (Arg.doc_alts ["stdout"; "stderr"; "<filename>"])
     in
-    let deprecated = "this option is deprecated. Please use --err-output." in
-    let err_output =
-      Arg.(value & opt (some' string) None & info ["err-output"] ~docs
+    let deprecated =
+      "this option is deprecated. Please use --diagnostic-output."
+    in
+    let diagnostic_output =
+      Arg.(value & opt (some' string) None & info ["diagnostic-output"] ~docs
              ~doc ~docv)
     in
     let err_formatter =
       Arg.(value & opt (some' string) None & info ["err-formatter"]
              ~deprecated ~docs ~docv)
     in
-    Term.(const (merge_formatters "stderr") $ err_output $ err_formatter)
+    Term.(const (merge_formatters "stderr") $ diagnostic_output $ err_formatter)
   in
 
   Term.(ret (const mk_output_channel_opt $ std_output $ err_output))

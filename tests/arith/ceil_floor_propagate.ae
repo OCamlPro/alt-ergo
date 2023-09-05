@@ -1,2 +1,0 @@
-logic x: real
-goal g: int_ceil(x) = 0 and int_floor(x) = 0 -> x = 0.

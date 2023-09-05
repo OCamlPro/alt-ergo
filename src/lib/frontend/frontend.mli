@@ -31,8 +31,13 @@
 module type S = sig
 
   type sat_env
-
   type used_context
+
+  type res = [
+    | `Sat of sat_env
+    | `Unknown of sat_env
+    | `Unsat
+  ]
 
   type status =
     | Unsat of Commands.sat_tdecl * Explanation.t
@@ -45,10 +50,10 @@ module type S = sig
   val process_decl:
     (status -> int -> unit) ->
     used_context ->
-    (bool * Explanation.t) Stack.t ->
-    sat_env * bool * Explanation.t ->
+    (res * Explanation.t) Stack.t ->
+    sat_env * res * Explanation.t ->
     Commands.sat_tdecl ->
-    sat_env * bool * Explanation.t
+    sat_env * res * Explanation.t
 
   val print_status : status -> int -> unit
 
