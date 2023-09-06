@@ -8,8 +8,8 @@
 (using dune_site 0.1)
 
 (name alt-ergo)
-(authors "Alt-Ergo developers")
-(maintainers "Alt-Ergo developers")
+(authors "Alt-Ergo developers <alt-ergo@ocamlpro.com>")
+(maintainers "Alt-Ergo developers <alt-ergo@ocamlpro.com>")
 (source (github OCamlPro/alt-ergo))
 ; Not specifying bug_reports since it defaults to the github issue page
 (homepage "https://alt-ergo.ocamlpro.com/")
