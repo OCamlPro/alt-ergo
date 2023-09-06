@@ -92,8 +92,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let empty_with_inst add_inst =
     { (empty ()) with add_inst = add_inst }
 
-  (* Leaving this exception in case we actually raise Sat one day.
-     Remember to update `safe_call` by catching this exception if you do. *)
   exception Sat of t [@@warning "-38"]
   exception Unsat of Explanation.t
   exception I_dont_know of t
