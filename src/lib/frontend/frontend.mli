@@ -39,6 +39,8 @@ module type S = sig
     | `Unsat
   ]
 
+  type t = sat_env * res * Explanation.t
+
   type status =
     | Unsat of Commands.sat_tdecl * Explanation.t
     | Inconsistent of Commands.sat_tdecl
@@ -47,13 +49,34 @@ module type S = sig
     | Timeout of Commands.sat_tdecl option
     | Preprocess
 
+  (** The signature of function manipulating the frontend environment. *)
+  type 'input process_decl_base =
+    used_context ->
+    (res * Explanation.t) Stack.t ->
+    Loc.t ->
+    t ->
+    'input ->
+    t
+
+  val push : int process_decl_base
+
+  val pop : int process_decl_base
+
+  val assume : (string * Expr.t * bool) process_decl_base
+
+  val pred_def : (Expr.t * string) process_decl_base
+
+  val query : (string * Expr.t * Ty.goal_sort) process_decl_base
+
+  val assume_th_elt : Expr.th_elt process_decl_base
+
   val process_decl:
     (status -> int -> unit) ->
     used_context ->
     (res * Explanation.t) Stack.t ->
-    sat_env * res * Explanation.t ->
+    t ->
     Commands.sat_tdecl ->
-    sat_env * res * Explanation.t
+    t
 
   val print_status : status -> int -> unit
 

@@ -201,20 +201,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   exception I_dont_know of t
   exception IUnsat of Ex.t * SE.t list
 
-  type res =
-    | Done of t
-    | Sat of t
-    | Unsat of Explanation.t
-    | I_dont_know of t
-
-  let safe_call f =
-    try
-      Done (f ())
-    with
-    | Sat t -> Sat t
-    | Unsat e -> Unsat e
-    | I_dont_know t -> I_dont_know t
-
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
     open Printer
@@ -1739,7 +1725,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       ~elt:()
       ~init:env
 
-  let unsat env gf =
+  let unsafe_unsat env gf =
     Debug.is_it_unsat gf;
     try
       let guards_to_assume =
@@ -1836,9 +1822,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       inst =
         Inst.add_predicate env.inst ~guard ~name gf dep }
 
-  let pred_def env f name dep _loc = safe_call (fun () -> pred_def env f name dep _loc)
-
-  let unsat env fg = safe_call (fun () -> raise (Unsat (unsat env fg)))
+  let unsat env fg =
+    try `Unsat (unsafe_unsat env fg) with
+    | Sat t -> `Sat t
+    | I_dont_know t -> `Unknown t
 
   let unsat env fg =
     if Options.get_timers() then
@@ -1852,7 +1839,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         raise e
     else unsat env fg
 
-  let safe_assume env fg ex = safe_call (fun () -> unsafe_assume env fg ex)
+  let safe_assume env fg ex =
+    try `Unknown (unsafe_assume env fg ex) with
+    | Unsat e -> `Unsat e
 
   let assume env fg ex =
     if Options.get_timers() then
@@ -1919,9 +1908,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let assume_th_elt env th_elt dep =
     {env with tbox = Th.assume_th_elt env.tbox th_elt dep}
-
-  let assume_th_elt env th_elt dep =
-    safe_call (fun () -> assume_th_elt env th_elt dep)
 
   let reinit_ctx () =
     (* all_models_sat_env := None; *)

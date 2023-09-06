@@ -37,6 +37,7 @@ module Ex = Explanation
 module type S = sig
 
   type sat_env
+
   type used_context
 
   type res = [
@@ -45,6 +46,8 @@ module type S = sig
     | `Unsat
   ]
 
+  type t = sat_env * res * Ex.t
+
   type status =
     | Unsat of Commands.sat_tdecl * Ex.t
     | Inconsistent of Commands.sat_tdecl
@@ -52,6 +55,26 @@ module type S = sig
     | Unknown of Commands.sat_tdecl * sat_env
     | Timeout of Commands.sat_tdecl option
     | Preprocess
+
+  type 'input process_decl_base =
+    used_context ->
+    (res * Ex.t) Stack.t ->
+    Loc.t ->
+    t ->
+    'input ->
+    t
+
+  val push : int process_decl_base
+
+  val pop : int process_decl_base
+
+  val assume : (string * E.t * bool) process_decl_base
+
+  val pred_def : (E.t * string) process_decl_base
+
+  val query : (string * E.t * Ty.goal_sort) process_decl_base
+
+  val assume_th_elt : E.th_elt process_decl_base
 
   val process_decl:
     (status -> int -> unit) ->
@@ -79,6 +102,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | `Unsat
   ]
 
+  type t = sat_env * res * Ex.t
+
   type status =
     | Unsat of Commands.sat_tdecl * Ex.t
     | Inconsistent of Commands.sat_tdecl
@@ -93,11 +118,10 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   (** Returns the environment if the API call was successful
       (i.e., returned 'Done'). Otherwise, raises an exceptio*)
-  let process_sat_res : SAT.res -> SAT.t = function
-    | Done t -> t
-    | Sat t -> raise (SAT t)
-    | Unsat e -> raise (UNSAT e)
-    | I_dont_know t -> raise (I_DONT_KNOW t)
+  let process_sat_res = function
+    | `Sat t -> raise (SAT t)
+    | `Unsat e -> raise (UNSAT e)
+    | `Unknown t -> raise (I_DONT_KNOW t)
 
   let output_used_context g_name dep =
     if not (Options.get_js_mode ()) then begin
@@ -115,51 +139,47 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         ~function_name:"check_produced_unsat_core"
         "@[<v 0>checking the unsat-core:@,-------------------@,@]%a"
         (Ex.print_unsat_core ~tab:false) dep;
-    try
-      let pb = E.Set.elements (Ex.formulas_of dep) in
-      let env =
-        List.fold_left
-          (fun env f ->
-             process_sat_res @@
-               SAT.assume env
-                 {E.ff=f;
-                  origin_name = "";
-                  gdist = -1;
-                  hdist = -1;
-                  trigger_depth = max_int;
-                  nb_reductions = 0;
-                  age=0;
-                  lem=None;
-                  mf=false;
-                  gf=false;
-                  from_terms = [];
-                  theory_elim = true;
-                 } Ex.empty
-          ) (SAT.empty ()) pb
-      in
-      ignore (SAT.unsat
-                env
-                {E.ff=E.vrai;
-                 origin_name = "";
-                 gdist = -1;
-                 hdist = -1;
-                 trigger_depth = max_int;
-                 nb_reductions = 0;
-                 age=0;
-                 lem=None;
-                 mf=false;
-                 gf=false;
-                 from_terms = [];
-                 theory_elim = true;
-                });
-      Errors.run_error Errors.Failed_check_unsat_core
+    let pb = E.Set.elements (Ex.formulas_of dep) in
+    let env =
+      List.fold_left
+        (fun env f ->
+           process_sat_res @@
+           SAT.assume env
+             {E.ff=f;
+              origin_name = "";
+              gdist = -1;
+              hdist = -1;
+              trigger_depth = max_int;
+              nb_reductions = 0;
+              age=0;
+              lem=None;
+              mf=false;
+              gf=false;
+              from_terms = [];
+              theory_elim = true;
+             } Ex.empty
+        ) (SAT.empty ()) pb
+    in
+    match
+      SAT.unsat
+        env
+        {E.ff=E.vrai;
+         origin_name = "";
+         gdist = -1;
+         hdist = -1;
+         trigger_depth = max_int;
+         nb_reductions = 0;
+         age=0;
+         lem=None;
+         mf=false;
+         gf=false;
+         from_terms = [];
+         theory_elim = true;
+        }
     with
-    | UNSAT _  -> ()
-    | SAT _ | I_DONT_KNOW _ as e ->
-      (* Useless line, but keeping it to ease the reading. These should be the
-         only exceptions raised. *)
-      raise e
-
+    | `Unsat _ -> Errors.run_error Errors.Failed_check_unsat_core
+    | `Sat t -> raise (SAT t)
+    | `Unknown t -> raise (I_DONT_KNOW t)
 
   let unused_context name context =
     match context with
@@ -170,125 +190,219 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep {name;f;loc})
     else Ex.empty
 
-  let process_decl print_status used_context consistent_dep_stack
-      ((env, consistent, dep) as acc) d =
-    try
-      match d.st_decl with
-      | Push n ->
-        Util.loop ~f:(fun _n env () -> Stack.push env consistent_dep_stack)
-          ~max:n ~elt:(consistent, dep) ~init:();
-        SAT.push env n, consistent, dep
-      | Pop n ->
-        let consistent, dep =
-          Util.loop ~f:(fun _n () _env -> Stack.pop consistent_dep_stack)
-            ~max:n ~elt:() ~init:(consistent, dep)
-        in
-        SAT.pop env n, consistent, dep
-      | Assume(n, f, mf) ->
-        let is_hyp = try (Char.equal '@' n.[0]) with _ -> false in
-        if not is_hyp && unused_context n used_context then
-          acc
-        else
-          let dep = if is_hyp then Ex.empty else mk_root_dep n f d.st_loc in
-          begin
-            match consistent with
-            | `Sat _ | `Unknown _ ->
-              process_sat_res @@
-              SAT.assume env
-                {E.ff=f;
-                 origin_name = n;
-                 gdist = -1;
-                 hdist = (if is_hyp then 0 else -1);
-                 trigger_depth = max_int;
-                 nb_reductions = 0;
-                 age=0;
-                 lem=None;
-                 mf=mf;
-                 gf=false;
-                 from_terms = [];
-                 theory_elim = true;
-                } dep,
-              consistent, dep
-            | `Unsat ->
-              env, consistent, dep
-          end
-      | PredDef (f, name) ->
-        if unused_context name used_context then acc
-        else
-          let dep = mk_root_dep name f d.st_loc in
-          process_sat_res @@ SAT.pred_def env f name dep d.st_loc,
-          consistent,
-          dep
+  type 'input process_decl_base =
+    used_context ->
+    (res * Explanation.t) Stack.t ->
+    Loc.t ->
+    t ->
+    'input ->
+    t
 
-      | RwtDef _ -> assert false
+  let[@inline] push : int process_decl_base =
+    fun
+      _used_context
+      consistent_dep_stack
+      _loc
+      (env, consistent, dep)
+      n ->
+      Util.loop ~f:(fun _n env () -> Stack.push env consistent_dep_stack)
+        ~max:n ~elt:(consistent, dep) ~init:();
+      SAT.push env n, consistent, dep
 
-      | Query(n, f, sort) ->
-        let dep =
+  let[@inline] pop : int process_decl_base =
+    fun
+      _used_context
+      consistent_dep_stack
+      _loc
+      (env, consistent, dep)
+      n ->
+      let consistent, dep =
+        Util.loop ~f:(fun _n () _env -> Stack.pop consistent_dep_stack)
+          ~max:n ~elt:() ~init:(consistent, dep)
+      in
+      SAT.pop env n, consistent, dep
+
+  let[@inline] assume : (string * E.t * bool) process_decl_base =
+    fun
+      used_context
+      _consistent_dep_stack
+      loc
+      ((env, consistent, _dep) as acc)
+      (n, f, mf) : (sat_env * res * Ex.t) ->
+      let is_hyp = try (Char.equal '@' n.[0]) with _ -> false in
+      if not is_hyp && unused_context n used_context then
+        acc
+      else
+        let dep = if is_hyp then Ex.empty else mk_root_dep n f loc in
+        begin
           match consistent with
           | `Sat _ | `Unknown _ ->
-            let dep' =
+            begin
               match
-                SAT.unsat env
+                SAT.assume env
                   {E.ff=f;
                    origin_name = n;
-                   hdist = -1;
-                   gdist = 0;
+                   gdist = -1;
+                   hdist = (if is_hyp then 0 else -1);
                    trigger_depth = max_int;
                    nb_reductions = 0;
                    age=0;
                    lem=None;
-                   mf=(sort != Check);
-                   gf=true;
+                   mf=mf;
+                   gf=false;
                    from_terms = [];
                    theory_elim = true;
-                  }
+                  } dep
               with
-              | Unsat d -> d
-              | Done t | I_dont_know t ->
-                raise (I_DONT_KNOW t)
-              | Sat t -> raise (SAT t)
-            in
-            Ex.union dep' dep
-          | `Unsat -> dep
-        in
-        if get_debug_unsat_core () then check_produced_unsat_core dep;
-        if get_save_used_context () then output_used_context n dep;
-        print_status (Unsat (d, dep)) (Steps.get_steps ());
-        env, `Unsat, dep
-
-      | ThAssume ({ Expr.ax_name; Expr.ax_form ; _ } as th_elt) ->
-        if unused_context ax_name used_context then
-          acc
-        else
-          match consistent with
-          | `Sat _ | `Unknown _ ->
-            let dep = mk_root_dep ax_name ax_form d.st_loc in
-            let env = process_sat_res @@ SAT.assume_th_elt env th_elt dep in
-            env, consistent, dep
+              | `Unknown new_env -> new_env, consistent, dep
+              | `Unsat dep' ->
+                let dep = Ex.union dep dep' in
+                if get_debug_unsat_core () then check_produced_unsat_core dep;
+                env, `Unsat, dep
+            end
           | `Unsat ->
             env, consistent, dep
+        end
+
+  let[@inline] pred_def : (Expr.t * string) process_decl_base =
+    fun
+      used_context
+      _consistent_dep_stack
+      loc
+      ((env, consistent, _dep) as acc)
+      (f, name) ->
+      if unused_context name used_context then acc
+      else
+        let dep = mk_root_dep name f loc in
+        SAT.pred_def env f name dep loc,
+        consistent,
+        dep
+
+  let[@inline] query : (string * Expr.t * Ty.goal_sort) process_decl_base =
+    fun
+      _used_context
+      _consistent_dep_stack
+      _loc
+      ((env, consistent, dep) as acc)
+      (n, f, sort) ->
+      let (_env, consistent, dep) as res =
+        match consistent with
+        | `Sat _ | `Unknown _ ->
+          begin
+            match
+              SAT.unsat env
+                {E.ff=f;
+                 origin_name = n;
+                 hdist = -1;
+                 gdist = 0;
+                 trigger_depth = max_int;
+                 nb_reductions = 0;
+                 age=0;
+                 lem=None;
+                 mf=(sort != Ty.Check);
+                 gf=true;
+                 from_terms = [];
+                 theory_elim = true;
+                }
+            with
+            | `Unsat dep' ->
+              let dep = Ex.union dep dep' in
+              if get_debug_unsat_core () then check_produced_unsat_core dep;
+              env, `Unsat, dep
+            | `Unknown t -> env, `Unknown t, dep
+            | `Sat t -> env, `Sat t, dep
+          end
+        | `Unsat -> acc
+      in
+      match consistent with
+      | `Unsat ->
+        if get_debug_unsat_core () then check_produced_unsat_core dep;
+        if get_save_used_context () then output_used_context n dep;
+        res
+      | (`Sat _ | `Unknown _) -> res
+
+  let[@inline] assume_th_elt : Expr.th_elt process_decl_base =
+    fun
+      used_context
+      _consistent_dep_stack
+      loc
+      ((env, consistent, dep) as acc)
+      ({ Expr.ax_name; Expr.ax_form ; _ } as th_elt) ->
+      if unused_context ax_name used_context then
+        acc
+      else
+        match consistent with
+        | `Sat _ | `Unknown _ ->
+          begin
+            let dep = mk_root_dep ax_name ax_form loc in
+            let env = SAT.assume_th_elt env th_elt dep in
+            env, consistent, dep
+          end
+        | `Unsat ->
+          env, consistent, dep
+
+  let process_decl
+      print_status
+      used_context
+      consistent_dep_stack
+      acc
+      d =
+    try
+      match d.st_decl with
+      | Push n ->
+        push used_context consistent_dep_stack d.st_loc acc n
+      | Pop n ->
+        pop used_context consistent_dep_stack d.st_loc acc n
+      | Assume(n, f, mf) ->
+        assume
+          used_context
+          consistent_dep_stack
+          d.st_loc
+          acc
+          (n, f, mf)
+      | PredDef (f, name) ->
+        pred_def
+          used_context
+          consistent_dep_stack
+          d.st_loc
+          acc
+          (f, name)
+      | RwtDef _ -> assert false
+      | Query(n, f, sort) ->
+        begin
+          let (env, consistent, dep) as res =
+            query
+              used_context
+              consistent_dep_stack
+              d.st_loc
+              acc
+              (n, f, sort)
+          in
+          match consistent with
+          | `Unsat ->
+            print_status (Unsat (d, dep)) (Steps.get_steps ());
+            (env, `Unsat, dep)
+          | `Sat t ->
+            (* This case should mainly occur when a query has a non-unsat result,
+               so we want to print the status in this case. *)
+            print_status (Sat (d,t)) (Steps.get_steps ());
+            res
+          | `Unknown t ->
+            (* In this case, it's not clear whether we want to print the status.
+               Instead, it'd be better to accumulate in `consistent` a 3-case adt
+               and not a simple bool. *)
+            print_status (Unknown (d, t)) (Steps.get_steps ());
+            (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
+            res
+        end
+      | ThAssume th_elt ->
+        assume_th_elt
+          used_context
+          consistent_dep_stack
+          d.st_loc
+          acc
+          th_elt
     with
-    | SAT t ->
-      (* This case should mainly occur when a query has a non-unsat result,
-         so we want to print the status in this case. *)
-      print_status (Sat (d,t)) (Steps.get_steps ());
-      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
-      env, `Sat t, dep
-    | UNSAT dep' ->
-      (* This case should mainly occur when a new assumption results in an unsat
-         env, in which case we do not want to print status, since the correct
-         status should be printed at the next query. *)
-      let dep = Ex.union dep dep' in
-      if get_debug_unsat_core () then check_produced_unsat_core dep;
-      (* print_status (Inconsistent d) (Steps.get_steps ()); *)
-      env, `Unsat, dep
-    | I_DONT_KNOW t ->
-      (* In this case, it's not clear whether we want to print the status.
-         Instead, it'd be better to accumulate in `consistent` a 3-case adt
-         and not a simple bool. *)
-      print_status (Unknown (d, t)) (Steps.get_steps ());
-      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
-      env, `Unknown t, dep
     | Util.Timeout as e ->
       (* In this case, we obviously want to print the status,
          since we exit right after  *)

@@ -98,20 +98,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   exception IUnsat of t * Explanation.t
 
-  type res =
-    | Done of t
-    | Sat of t
-    | Unsat of Explanation.t
-    | I_dont_know of t
-
-  let safe_call f =
-    try
-      Done (f ())
-    with
-    | Sat t -> Sat t
-    | Unsat e -> Unsat e
-    | I_dont_know t -> I_dont_know t
-
   let mk_gf f =
     { E.ff = f;
       trigger_depth = max_int;
@@ -444,16 +430,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       )acc l
 
 
-  let unsafe_pred_def env f name dep _loc =
+  let pred_def env f name dep _loc =
     (* dep currently not used. No unsat-cores in satML yet *)
     Debug.pred_def f;
     let guard = env.guards.current_guard in
     { env with
       inst =
         Inst.add_predicate env.inst ~guard ~name (mk_gf f) dep }
-
-  let pred_def env f name dep loc =
-    safe_call (fun () -> unsafe_pred_def env f name dep loc)
 
   let axiom_def env gf ex =
     {env with inst = Inst.add_lemma env.inst gf ex}
@@ -1142,8 +1125,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     try fst (assume_aux ~dec_lvl:0 env [add_guard env gf])
     with IUnsat (_env, dep) -> raise (Unsat dep)
 
-  let safe_unsat env gf = safe_call (fun () -> raise (Unsat (unsafe_unsat env gf)))
-  let safe_assume env gf dep = safe_call (fun () -> unsafe_assume env gf dep)
+  let safe_unsat env gf =
+    try `Unsat (unsafe_unsat env gf) with
+    | Sat t -> `Sat t
+    | I_dont_know t -> `Unknown t
+
+  let safe_assume env fg ex =
+    try `Unknown (unsafe_assume env fg ex) with
+    | Unsat e -> `Unsat e
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
@@ -1170,12 +1159,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         Timers.exec_timer_pause Timers.M_Sat Timers.F_unsat;
         raise exn
 
-  let unsafe_assume_th_elt env th_elt dep =
+  let assume_th_elt env th_elt dep =
     SAT.assume_th_elt env.satml th_elt dep;
     env
-
-  let assume_th_elt env th_elt dep =
-    safe_call (fun () -> unsafe_assume_th_elt env th_elt dep)
 
   let reinit_ctx () =
     Steps.reinit_steps ();

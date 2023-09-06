@@ -34,12 +34,6 @@
 module type S = sig
   type t
 
-  type res =
-    | Done of t
-    | Sat of t
-    | Unsat of Explanation.t
-    | I_dont_know of t
-
   (* the empty sat-solver context *)
   val empty : unit -> t
   val empty_with_inst : (Expr.t -> bool) -> t
@@ -56,19 +50,26 @@ module type S = sig
       will be propagated to false (at level 0) *)
   val pop : t -> int -> t
 
-  (* [assume env f] assume a new formula [f] in [env]. Raises Unsat if
-     [f] is unsatisfiable in [env] *)
-  val assume : t -> Expr.gformula -> Explanation.t -> res
+  (* [assume env f] assume a new formula [f] in [env]. Returns [Unsat] if
+      [f] is unsatisfiable in [env]. *)
+  val assume :
+    t ->
+    Expr.gformula ->
+    Explanation.t ->
+    [`Unknown of t | `Unsat of Explanation.t]
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> res
+  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
 
   (* [pred_def env f] assume a new predicate definition [f] in [env]. *)
-  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> res
+  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> t
 
   (* [unsat env f size] checks the unsatisfiability of [f] in
-     [env]. Raises I_dont_know when the proof tree's height reaches
-     [size]. Raises Sat if [f] is satisfiable in [env] *)
-  val unsat : t -> Expr.gformula -> res
+     [env]. Returns I_dont_know when the proof tree's height reaches
+     [size]. Returns Sat if [f] is satisfiable in [env] *)
+  val unsat :
+    t ->
+    Expr.gformula ->
+    [`Unknown of t | `Sat of t | `Unsat of Explanation.t]
 
   val reset_refs : unit -> unit
 
