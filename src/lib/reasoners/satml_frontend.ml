@@ -92,11 +92,27 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let empty_with_inst add_inst =
     { (empty ()) with add_inst = add_inst }
 
-  exception Sat of t
+  (* Leaving this exception in case we actually raise Sat one day.
+     Remember to update `safe_call` by catching this exception if you do. *)
+  exception Sat of t [@@warning "-38"]
   exception Unsat of Explanation.t
   exception I_dont_know of t
 
   exception IUnsat of t * Explanation.t
+
+  type res =
+    | Done of t
+    | Sat of t
+    | Unsat of Explanation.t
+    | I_dont_know of t
+
+  let safe_call f =
+    try
+      Done (f ())
+    with
+    | Sat t -> Sat t
+    | Unsat e -> Unsat e
+    | I_dont_know t -> I_dont_know t
 
   let mk_gf f =
     { E.ff = f;
@@ -430,13 +446,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       )acc l
 
 
-  let pred_def env f name dep _loc =
+  let unsafe_pred_def env f name dep _loc =
     (* dep currently not used. No unsat-cores in satML yet *)
     Debug.pred_def f;
     let guard = env.guards.current_guard in
     { env with
       inst =
         Inst.add_predicate env.inst ~guard ~name (mk_gf f) dep }
+
+  let pred_def env f name dep loc =
+    safe_call (fun () -> unsafe_pred_def env f name dep loc)
 
   let axiom_def env gf ex =
     {env with inst = Inst.add_lemma env.inst gf ex}
@@ -1090,7 +1109,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let current_guard = env.guards.current_guard in
     {gf with E.ff = E.mk_imp current_guard gf.E.ff}
 
-  let unsat env gf =
+  let unsafe_unsat env gf =
     checks_implemented_features ();
     let gf = add_guard env gf in
     Debug.unsat gf;
@@ -1119,19 +1138,22 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end;
       dep
 
-  let assume env gf _dep =
+  let unsafe_assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)
     assert (SAT.decision_level env.satml == 0);
     try fst (assume_aux ~dec_lvl:0 env [add_guard env gf])
     with IUnsat (_env, dep) -> raise (Unsat dep)
 
+  let safe_unsat env gf = safe_call (fun () -> raise (Unsat (unsafe_unsat env gf)))
+  let safe_assume env gf dep = safe_call (fun () -> unsafe_assume env gf dep)
+
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
-    if not (Options.get_timers ()) then assume t ff dep
+    if not (Options.get_timers ()) then safe_assume t ff dep
     else
       try
         Timers.exec_timer_start Timers.M_Sat Timers.F_assume;
-        let t = assume t ff dep in
+        let t = safe_assume t ff dep in
         Timers.exec_timer_pause Timers.M_Sat Timers.F_assume;
         t
       with exn ->
@@ -1139,20 +1161,23 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         raise exn
 
   let unsat t ff =
-    if not (Options.get_timers()) then unsat t ff
+    if not (Options.get_timers()) then safe_unsat t ff
     else
       try
         Timers.exec_timer_start Timers.M_Sat Timers.F_unsat;
-        let t = unsat t ff in
+        let t = safe_unsat t ff in
         Timers.exec_timer_pause Timers.M_Sat Timers.F_unsat;
         t
       with exn ->
         Timers.exec_timer_pause Timers.M_Sat Timers.F_unsat;
         raise exn
 
-  let assume_th_elt env th_elt dep =
+  let unsafe_assume_th_elt env th_elt dep =
     SAT.assume_th_elt env.satml th_elt dep;
     env
+
+  let assume_th_elt env th_elt dep =
+    safe_call (fun () -> unsafe_assume_th_elt env th_elt dep)
 
   let reinit_ctx () =
     Steps.reinit_steps ();

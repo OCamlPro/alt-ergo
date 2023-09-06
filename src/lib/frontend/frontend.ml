@@ -87,6 +87,18 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Timeout of Commands.sat_tdecl option
     | Preprocess
 
+  exception SAT of SAT.t
+  exception UNSAT of Explanation.t
+  exception I_DONT_KNOW of SAT.t
+
+  (** Returns the environment if the API call was successful
+      (i.e., returned 'Done'). Otherwise, raises an exceptio*)
+  let process_sat_res : SAT.res -> SAT.t = function
+    | Done t -> t
+    | Sat t -> raise (SAT t)
+    | Unsat e -> raise (UNSAT e)
+    | I_dont_know t -> raise (I_DONT_KNOW t)
+
   let output_used_context g_name dep =
     if not (Options.get_js_mode ()) then begin
       let f = Options.get_used_context_file () in
@@ -108,20 +120,26 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       let env =
         List.fold_left
           (fun env f ->
-             SAT.assume env
-               {E.ff=f;
-                origin_name = "";
-                gdist = -1;
-                hdist = -1;
-                trigger_depth = max_int;
-                nb_reductions = 0;
-                age=0;
-                lem=None;
-                mf=false;
-                gf=false;
-                from_terms = [];
-                theory_elim = true;
-               } Ex.empty
+             match
+               SAT.assume env
+                 {E.ff=f;
+                  origin_name = "";
+                  gdist = -1;
+                  hdist = -1;
+                  trigger_depth = max_int;
+                  nb_reductions = 0;
+                  age=0;
+                  lem=None;
+                  mf=false;
+                  gf=false;
+                  from_terms = [];
+                  theory_elim = true;
+                 } Ex.empty
+             with
+             | Done e -> e
+             | Sat t -> raise (SAT t)
+             | Unsat e -> raise (UNSAT e)
+             | I_dont_know t -> raise (I_DONT_KNOW t)
           ) (SAT.empty ()) pb
       in
       ignore (SAT.unsat
@@ -141,8 +159,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                 });
       Errors.run_error Errors.Failed_check_unsat_core
     with
-    | SAT.Unsat _  -> ()
-    | (SAT.Sat _ | SAT.I_dont_know _) as e -> raise e
+    | UNSAT _  -> ()
+    | SAT _ | I_DONT_KNOW _ as e ->
+      (* Useless line, but keeping it to ease the reading. These should be the
+         only exceptions raised. *)
+      raise e
 
 
   let unused_context name context =
@@ -177,6 +198,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           begin
             match consistent with
             | `Sat _ | `Unknown _ ->
+              process_sat_res @@
               SAT.assume env
                 {E.ff=f;
                  origin_name = n;
@@ -199,7 +221,9 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         if unused_context name used_context then acc
         else
           let dep = mk_root_dep name f d.st_loc in
-          SAT.pred_def env f name dep d.st_loc, consistent, dep
+          process_sat_res @@ SAT.pred_def env f name dep d.st_loc,
+          consistent,
+          dep
 
       | RwtDef _ -> assert false
 
@@ -207,20 +231,28 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         let dep =
           match consistent with
           | `Sat _ | `Unknown _ ->
-            let dep' = SAT.unsat env
-                {E.ff=f;
-                 origin_name = n;
-                 hdist = -1;
-                 gdist = 0;
-                 trigger_depth = max_int;
-                 nb_reductions = 0;
-                 age=0;
-                 lem=None;
-                 mf=(sort != Check);
-                 gf=true;
-                 from_terms = [];
-                 theory_elim = true;
-                } in
+            let dep' =
+              match
+                SAT.unsat env
+                  {E.ff=f;
+                   origin_name = n;
+                   hdist = -1;
+                   gdist = 0;
+                   trigger_depth = max_int;
+                   nb_reductions = 0;
+                   age=0;
+                   lem=None;
+                   mf=(sort != Check);
+                   gf=true;
+                   from_terms = [];
+                   theory_elim = true;
+                  }
+              with
+              | Unsat d -> d
+              | Done t | I_dont_know t ->
+                raise (I_DONT_KNOW t)
+              | Sat t -> raise (SAT t)
+            in
             Ex.union dep' dep
           | `Unsat -> dep
         in
@@ -236,19 +268,18 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           match consistent with
           | `Sat _ | `Unknown _ ->
             let dep = mk_root_dep ax_name ax_form d.st_loc in
-            let env = SAT.assume_th_elt env th_elt dep in
+            let env = process_sat_res @@ SAT.assume_th_elt env th_elt dep in
             env, consistent, dep
           | `Unsat ->
             env, consistent, dep
-
     with
-    | SAT.Sat t ->
+    | SAT t ->
       (* This case should mainly occur when a query has a non-unsat result,
          so we want to print the status in this case. *)
       print_status (Sat (d,t)) (Steps.get_steps ());
       (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
       env, `Sat t, dep
-    | SAT.Unsat dep' ->
+    | UNSAT dep' ->
       (* This case should mainly occur when a new assumption results in an unsat
          env, in which case we do not want to print status, since the correct
          status should be printed at the next query. *)
@@ -256,7 +287,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       if get_debug_unsat_core () then check_produced_unsat_core dep;
       (* print_status (Inconsistent d) (Steps.get_steps ()); *)
       env, `Unsat, dep
-    | SAT.I_dont_know t ->
+    | I_DONT_KNOW t ->
       (* In this case, it's not clear whether we want to print the status.
          Instead, it'd be better to accumulate in `consistent` a 3-case adt
          and not a simple bool. *)

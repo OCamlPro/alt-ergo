@@ -196,11 +196,24 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     { env with
       unit_facts_cache = ref refs.unit_facts}, guard
 
-  exception Sat of t
+  exception Sat of t [@@warning "-38"]
   exception Unsat of Ex.t
   exception I_dont_know of t
   exception IUnsat of Ex.t * SE.t list
 
+  type res =
+    | Done of t
+    | Sat of t
+    | Unsat of Explanation.t
+    | I_dont_know of t
+
+  let safe_call f =
+    try
+      Done (f ())
+    with
+    | Sat t -> Sat t
+    | Unsat e -> Unsat e
+    | I_dont_know t -> I_dont_know t
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
@@ -1803,7 +1816,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let current_guard = env.guards.current_guard in
     {gf with E.ff = E.mk_imp current_guard gf.E.ff}
 
-  let assume env fg dep =
+  let unsafe_assume env fg dep =
     try
       if Options.get_tableaux_cdcl () then
         cdcl_assume false env [add_guard env fg,dep];
@@ -1815,7 +1828,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       raise (Unsat d)
     | Util.Timeout when switch_to_model_gen env -> do_switch_to_model_gen env
 
-
   let pred_def env f name dep _loc =
     Debug.pred_def f;
     let gf = mk_gf f name true false in
@@ -1823,6 +1835,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     { env with
       inst =
         Inst.add_predicate env.inst ~guard ~name gf dep }
+
+  let pred_def env f name dep _loc = safe_call (fun () -> pred_def env f name dep _loc)
+
+  let unsat env fg = safe_call (fun () -> raise (Unsat (unsat env fg)))
 
   let unsat env fg =
     if Options.get_timers() then
@@ -1836,17 +1852,19 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         raise e
     else unsat env fg
 
-  let assume env fg =
+  let safe_assume env fg ex = safe_call (fun () -> unsafe_assume env fg ex)
+
+  let assume env fg ex =
     if Options.get_timers() then
       try
         Timers.exec_timer_start Timers.M_Sat Timers.F_assume;
-        let env = assume env fg in
+        let env = safe_assume env fg ex in
         Timers.exec_timer_pause Timers.M_Sat Timers.F_assume;
         env
       with e ->
         Timers.exec_timer_pause Timers.M_Sat Timers.F_assume;
         raise e
-    else assume env fg
+    else safe_assume env fg ex
 
   let empty_guards () = {
     current_guard = Expr.vrai;
@@ -1893,7 +1911,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       add_inst = fun _ -> true;
     }
     in
-    assume env gf_true Ex.empty
+    unsafe_assume env gf_true Ex.empty
   (*maybe usefull when -no-theory is on*)
 
   let empty_with_inst add_inst =
@@ -1901,6 +1919,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let assume_th_elt env th_elt dep =
     {env with tbox = Th.assume_th_elt env.tbox th_elt dep}
+
+  let assume_th_elt env th_elt dep =
+    safe_call (fun () -> assume_th_elt env th_elt dep)
 
   let reinit_ctx () =
     (* all_models_sat_env := None; *)
