@@ -85,7 +85,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   seq
   fmt
   stdlib-shims
-  ppx_blob
+  (ppx_blob (>= 0.3))
   (camlzip (>= 1.07))
   (odoc :with-doc)
  )
