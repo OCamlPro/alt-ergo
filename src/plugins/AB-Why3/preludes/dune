@@ -8,7 +8,7 @@
 )
 
 (cram
- (package alt-ergo)
+ (package alt-ergo-plugin-ab-why3)
  (alias runtest-ci)
  (deps
    %{bin:alt-ergo}
