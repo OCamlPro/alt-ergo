@@ -383,16 +383,17 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
             print_status (Unsat (d, dep)) (Steps.get_steps ());
             (env, `Unsat, dep)
           | `Sat t ->
-            (* This case should mainly occur when a query has a non-unsat result,
-               so we want to print the status in this case. *)
+            (* This case should mainly occur when a query has a non-unsat
+               result, so we want to print the status in this case. *)
             print_status (Sat (d,t)) (Steps.get_steps ());
             res
           | `Unknown t ->
             (* In this case, it's not clear whether we want to print the status.
-               Instead, it'd be better to accumulate in `consistent` a 3-case adt
-               and not a simple bool. *)
+               Instead, it'd be better to accumulate in `consistent` a 3-case
+               adt and not a simple bool. *)
             print_status (Unknown (d, t)) (Steps.get_steps ());
-            (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
+            (* if get_model () then
+                 SAT.print_model ~header:true (get_fmt_mdl ()) t; *)
             res
         end
       | ThAssume th_elt ->
