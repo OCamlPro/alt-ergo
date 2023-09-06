@@ -120,7 +120,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       let env =
         List.fold_left
           (fun env f ->
-             match
+             process_sat_res @@
                SAT.assume env
                  {E.ff=f;
                   origin_name = "";
@@ -135,11 +135,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                   from_terms = [];
                   theory_elim = true;
                  } Ex.empty
-             with
-             | Done e -> e
-             | Sat t -> raise (SAT t)
-             | Unsat e -> raise (UNSAT e)
-             | I_dont_know t -> raise (I_DONT_KNOW t)
           ) (SAT.empty ()) pb
       in
       ignore (SAT.unsat
