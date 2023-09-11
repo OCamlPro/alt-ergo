@@ -46,3 +46,7 @@ license: [
   "LicenseRef-OCamlpro-Non-Commercial"
   "Apache-2.0"
 ]
+
+conflicts: [
+  "result" {< "1.5"}
+]
