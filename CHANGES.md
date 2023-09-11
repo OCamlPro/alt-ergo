@@ -1,4 +1,6 @@
 ## unreleased
+### deprecated
+* printing underscore instead of fresh value in model
 
 ## v2.5.0
 
