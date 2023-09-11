@@ -1025,10 +1025,14 @@ let parse_output_opt =
 
   let use_underscore =
     let doc = "Output \"_\" instead of fresh value in interpretation" in
+    let deprecated =
+      "this option will be removed as it does not produce a \
+       SMTLIB-compliant output."
+    in
     let docv = "VAL" in
     Arg.(value & flag & info
            ["interpretation-use-underscore";"use-underscore"]
-           ~docv ~docs:s_models ~doc) in
+           ~docv ~docs:s_models ~doc ~deprecated) in
 
   let unsat_core =
     let doc = "Experimental support for computing and printing unsat-cores." in
