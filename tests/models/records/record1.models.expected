@@ -1,5 +1,5 @@
 
 unknown
 (
-  (define-fun a () Pair (pair 5 0))
+  (define-fun a () Pair (pair 5 (as @!k3 Int)))
 )

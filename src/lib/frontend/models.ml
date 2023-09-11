@@ -236,20 +236,11 @@ module SmtlibCounterExample = struct
     else
       E.print fmt t
 
-  let rec pp_dummy_value_of_type ppf ty =
-    match ty with
-      Ty.Tint -> Fmt.pf ppf "0"
-    | Ty.Treal -> Fmt.pf ppf "0.0"
-    | Ty.Tbool -> Fmt.pf ppf "false"
-    | Ty.Tfarray (_, rty) ->
-      Fmt.pf ppf "((as const %a) %a)" Ty.pp_smtlib ty pp_dummy_value_of_type rty
-    | _ -> Fmt.pf ppf "@@%a" pp_term (Expr.fresh_name ty)
-
-  let pp_dummy_value_of_type fmt ty =
-    if not (Options.get_interpretation_use_underscore ()) then
-      pp_dummy_value_of_type fmt ty
+  let pp_abstract_value_of_type ppf (name, ty) =
+    if not @@ Options.get_interpretation_use_underscore () then
+      Fmt.pf ppf "(as @@%s %a)" name Ty.pp_smtlib ty
     else
-      fprintf fmt "_ "
+      Fmt.pf ppf "_ "
 
   let add_records_destr records record_name destr_name rep =
     let destrs =
@@ -273,7 +264,8 @@ module SmtlibCounterExample = struct
           let destr = Hstring.view destr in
           match find_destrs destr destrs with
           | None ->
-            pp_dummy_value_of_type fmt ty_destr
+            let name = Hstring.fresh_string () in
+            pp_abstract_value_of_type fmt (name, ty_destr)
           | Some rep -> fprintf fmt "%s " rep
         ) lbs
     in
@@ -396,7 +388,8 @@ module SmtlibCounterExample = struct
 
            let rec reps_aux reps =
              match reps with
-             | [] -> dprintf "%a" pp_dummy_value_of_type ty
+             | [] -> dprintf "%a" pp_abstract_value_of_type
+                       (Symbols.to_string f, ty)
              | [srep,xs_values_list] ->
                if Options.get_interpretation_use_underscore () then
                  dprintf "(@[<hv>ite %t@ %a@ %t)@]"
@@ -483,8 +476,9 @@ let rec pp_value ppk ppf = function
   | Constant (sy, t) -> ppk ppf (sy, t)
   | Value (_, s) -> Format.pp_print_string ppf s
 
-let pp_constant ppf (_, t) =
-  Format.fprintf ppf "%a" SmtlibCounterExample.pp_dummy_value_of_type t
+let pp_constant ppf (sy, t) =
+  Fmt.pf ppf "%a" SmtlibCounterExample.pp_abstract_value_of_type
+    (Symbols.to_string sy, t)
 
 let output_concrete_model fmt props ~functions ~constants ~arrays =
   if ModelMap.(is_suspicious functions || is_suspicious constants
