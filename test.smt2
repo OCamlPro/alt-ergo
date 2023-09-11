@@ -1,5 +1,0 @@
-(set-logic ALL)
-(set-option :produce-models true)
-(declare-fun a (Int) Int)
-(check-sat)
-(get-model)
