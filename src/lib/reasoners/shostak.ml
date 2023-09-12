@@ -327,13 +327,24 @@ struct
       false
     | _ -> assert false
 
+  (* This is [true] if, and only if, the symbol is an internal symbol
+     introduced by AC(X) for nesting purposes. These symbols are syntactic
+     artifacts and are always equal to the original function, hence they are
+     treated as solvable and ignored in models. *)
+  let is_internal_ac_symbol = function
+    | Symbols.Name (name, _, _) ->
+      Compat.String.starts_with ~prefix:"@" (Hstring.view name)
+    | _ -> false
+
+
   let is_solvable_theory_symbol sb ty =
     X1.is_mine_symb sb ty ||
     not (Options.get_restricted ()) &&
     (X2.is_mine_symb sb ty ||
      X3.is_mine_symb sb ty ||
      X4.is_mine_symb sb ty ||
-     X5.is_mine_symb sb ty)
+     X5.is_mine_symb sb ty ||
+     is_internal_ac_symbol sb)
 
 
   let is_a_leaf r = match r.v with

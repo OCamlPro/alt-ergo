@@ -87,3 +87,13 @@ And now some cases where it should work (using either `--produce-models` or
   unknown
   (
   )
+
+Test that internal AC symbols (@g, ...) do not end up in models.
+
+  $ alt-ergo --dump-models -o smtlib2 ac-at-sy.ae 2>/dev/null
+  (
+    (define-fun f ((arg_0 Int) (arg_1 Int)) Int 0)
+    (define-fun g ((arg_0 Int) (arg_1 Int)) Int 0)
+  )
+  
+  unknown

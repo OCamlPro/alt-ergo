@@ -1,0 +1,4 @@
+logic ac f : int, int -> int
+logic ac g : int, int -> int
+axiom ax : f(g(0, 0), 0) = 0
+check_sat g : true
