@@ -389,7 +389,7 @@ module SmtlibCounterExample = struct
            let rec reps_aux reps =
              match reps with
              | [] -> dprintf "%a" pp_abstract_value_of_type
-                       (Symbols.to_string f, ty)
+                       (Hstring.fresh_string (), ty)
              | [srep,xs_values_list] ->
                if Options.get_interpretation_use_underscore () then
                  dprintf "(@[<hv>ite %t@ %a@ %t)@]"
@@ -476,9 +476,9 @@ let rec pp_value ppk ppf = function
   | Constant (sy, t) -> ppk ppf (sy, t)
   | Value (_, s) -> Format.pp_print_string ppf s
 
-let pp_constant ppf (sy, t) =
+let pp_constant ppf (_sy, t) =
   Fmt.pf ppf "%a" SmtlibCounterExample.pp_abstract_value_of_type
-    (Symbols.to_string sy, t)
+    (Hstring.fresh_string (), t)
 
 let output_concrete_model fmt props ~functions ~constants ~arrays =
   if ModelMap.(is_suspicious functions || is_suspicious constants
