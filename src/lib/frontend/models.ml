@@ -236,9 +236,9 @@ module SmtlibCounterExample = struct
     else
       E.print fmt t
 
-  let pp_abstract_value_of_type ppf (name, ty) =
+  let pp_abstract_value_of_type ppf ty =
     if not @@ Options.get_interpretation_use_underscore () then
-      Fmt.pf ppf "(as @@%s %a)" name Ty.pp_smtlib ty
+      Fmt.pf ppf "(as @@%s %a)" (Hstring.fresh_string ()) Ty.pp_smtlib ty
     else
       Fmt.pf ppf "_ "
 
@@ -264,8 +264,7 @@ module SmtlibCounterExample = struct
           let destr = Hstring.view destr in
           match find_destrs destr destrs with
           | None ->
-            let name = Hstring.fresh_string () in
-            pp_abstract_value_of_type fmt (name, ty_destr)
+            pp_abstract_value_of_type fmt ty_destr
           | Some rep -> fprintf fmt "%s " rep
         ) lbs
     in
@@ -388,8 +387,7 @@ module SmtlibCounterExample = struct
 
            let rec reps_aux reps =
              match reps with
-             | [] -> dprintf "%a" pp_abstract_value_of_type
-                       (Hstring.fresh_string (), ty)
+             | [] -> dprintf "%a" pp_abstract_value_of_type ty
              | [srep,xs_values_list] ->
                if Options.get_interpretation_use_underscore () then
                  dprintf "(@[<hv>ite %t@ %a@ %t)@]"
@@ -477,8 +475,7 @@ let rec pp_value ppk ppf = function
   | Value (_, s) -> Format.pp_print_string ppf s
 
 let pp_constant ppf (_sy, t) =
-  Fmt.pf ppf "%a" SmtlibCounterExample.pp_abstract_value_of_type
-    (Hstring.fresh_string (), t)
+  Fmt.pf ppf "%a" SmtlibCounterExample.pp_abstract_value_of_type t
 
 let output_concrete_model fmt props ~functions ~constants ~arrays =
   if ModelMap.(is_suspicious functions || is_suspicious constants
