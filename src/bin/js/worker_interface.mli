@@ -193,12 +193,9 @@ type status =
 type results = {
   worker_id : int option;
   status : status;
-  results : string list option;
-  errors : string list option;
-  warnings : string list option;
-  debugs : string list option;
+  regular : string list option;
+  diagnostic : string list option;
   statistics : statistics option;
-  unsat_core : string list option;
 }
 
 (** {2 Functions} *)

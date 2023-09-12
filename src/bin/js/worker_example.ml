@@ -82,7 +82,7 @@ let solve () =
   (Lwt.pick [
       (let%lwt () = Lwt_js.sleep !timeout in
        Lwt.return {(Worker_interface.init_results ()) with
-                   debugs =Some ["Timeout"]});
+                   diagnostic = Some ["Timeout"]});
       (
         let file = String.split_on_char '\n' !file in
         let json_file = Worker_interface.file_to_json None (Some 42) file in
@@ -225,17 +225,17 @@ let onload _ =
              print_error (Some "");
              let%lwt res = solve () in
              (* Update results area *)
-             print_res (process_results res.results);
+             print_res (process_results res.regular);
              (* Update errors area if errors occurs at solving *)
-             print_error  (process_results res.errors);
+             print_error  (process_results res.diagnostic);
              (* Update warning area if warning occurs at solving *)
-             print_warning  (process_results res.warnings);
+             print_warning  (process_results res.diagnostic);
              (* Update debug area *)
-             print_debug  (process_results res.debugs);
+             print_debug  (process_results res.diagnostic);
              (* Update model *)
-             print_model  (process_results res.results);
+             print_model  (process_results res.regular);
              (* Update unsat core *)
-             print_unsat_core  (process_results res.unsat_core);
+             print_unsat_core  (process_results res.regular);
              (* Update statistics *)
              print_statistics res.statistics;
              Lwt.return_unit);
