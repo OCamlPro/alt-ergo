@@ -25,7 +25,7 @@ Alt-Ergo is an automatic theorem prover of mathematical formulas. It was develop
 
 See more details on https://alt-ergo.ocamlpro.com/")
  (depends
-  (ocaml (>= 4.08.0))
+  (ocaml (>= 4.08.1))
   dune
   (alt-ergo-lib (= :version))
   (alt-ergo-parsers (= :version))
@@ -51,7 +51,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
  (license "LicenseRef-OcamlPro-Non-Commercial")
 
  (depends
-  (ocaml (>= 4.08.0))
+  (ocaml (>= 4.08.1))
   dune
   (alt-ergo-lib (= :version))
   (psmt2-frontend (>= 0.4))
@@ -74,7 +74,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
  (license "LicenseRef-OcamlPro-Non-Commercial")
 
  (depends
-  (ocaml (>= 4.08.0))
+  (ocaml (>= 4.08.1))
   dune
   dune-build-info
   (dolmen (>= 0.9))

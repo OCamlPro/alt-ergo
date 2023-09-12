@@ -1,6 +1,9 @@
 ## unreleased
-### deprecated
-* printing underscore instead of fresh value in model
+### Deprecated
+* printing underscore instead of fresh value in model (PR #805)
+
+### Build
+* use OCaml 4.08.1 as the minimal supported version (PR #803)
 
 ## v2.5.0
 
