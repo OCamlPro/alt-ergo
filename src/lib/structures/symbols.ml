@@ -480,14 +480,19 @@ module MakeId(S : sig val prefix : string end) : Id = struct
 end
 
 module InternalId = MakeId(struct let prefix = ".k" end)
-module SkolemId = MakeId(struct let prefix = ".?__" end)
+
 (* garder le suffixe "__" car cela influence l'ordre *)
+module SkolemId = MakeId(struct let prefix = ".?__" end)
+
+module AbstractId = MakeId(struct let prefix = "@a" end)
 
 let fresh_internal_string () = InternalId.fresh ()
 let fresh_internal_name () = name (fresh_internal_string ())
 
 let fresh_skolem_string base = SkolemId.fresh ~base ()
 let fresh_skolem_name base = name (fresh_skolem_string base)
+
+let fresh_abstract_string () = AbstractId.fresh ()
 
 let make_as_fresh_skolem str = name (SkolemId.make_as_fresh str)
 
@@ -518,7 +523,8 @@ let clear_labels () = Labels.clear labels
 
 let reset_id_builders () =
   InternalId.reset_fresh_cpt ();
-  SkolemId.reset_fresh_cpt ()
+  SkolemId.reset_fresh_cpt ();
+  AbstractId.reset_fresh_cpt ()
 
 module Set : Set.S with type elt = t =
   Set.Make (struct type t=s let compare=compare end)

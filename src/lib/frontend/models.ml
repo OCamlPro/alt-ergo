@@ -47,17 +47,13 @@ let constraints = ref MS.empty
 
 type t = {
   propositional : Expr.Set.t;
-  constants : ModelMap.t;
-  functions : ModelMap.t;
-  arrays : ModelMap.t;
+  model : ModelMap.t;
   terms_values : (Shostak.Combine.r * string) Expr.Map.t
 }
 
 let empty = {
   propositional = Expr.Set.empty;
-  constants = ModelMap.empty;
-  functions = ModelMap.empty;
-  arrays = ModelMap.empty;
+  model = ModelMap.create [];
   terms_values = Expr.Map.empty;
 }
 
@@ -245,215 +241,8 @@ module Pp_smtlib_term = struct
 
 end
 
-module SmtlibCounterExample = struct
-  let fresh_counter = ref 0
-
-  let reset_counter () = fresh_counter := 0
-
-  let pp_term fmt t =
-    if Options.get_output_format () == Why3 then
-      Pp_smtlib_term.print fmt t
-    else
-      E.print fmt t
-
-  let pp_abstract_value_of_type ppf ty =
-    if not @@ Options.get_interpretation_use_underscore () then begin
-      Fmt.pf ppf "(as @@a%i %a)" !fresh_counter Ty.pp_smtlib ty;
-      incr fresh_counter
-    end
-    else
-      Fmt.pf ppf "_ "
-
-  let add_records_destr records record_name destr_name rep =
-    let destrs =
-      try MS.find record_name records
-      with Not_found -> MS.empty
-    in
-    let destrs =
-      MS.add destr_name rep destrs in
-    MS.add record_name destrs records
-
-  let mk_records_constr records record_name
-      { Ty.name = _n; record_constr = cstr; lbs = lbs; _} =
-    let find_destrs destr destrs =
-      try let rep = MS.find destr destrs in
-        Some rep
-      with Not_found -> None
-    in
-
-    let print_destr fmt (destrs,lbs) =
-      List.iter (fun (destr, ty_destr) ->
-          let destr = Hstring.view destr in
-          match find_destrs destr destrs with
-          | None ->
-            pp_abstract_value_of_type fmt ty_destr
-          | Some rep -> fprintf fmt "%s " rep
-        ) lbs
-    in
-    let destrs =
-      try MS.find (Sy.to_string record_name) records
-      with Not_found -> MS.empty
-    in
-    asprintf "%s %a"
-      (Hstring.view cstr)
-      print_destr (destrs,lbs)
-
-  let add_record_constr records record_name
-      { Ty.name = _n; record_constr = _cstr; lbs = lbs; _} xs_values =
-    List.fold_left2(fun records (destr,_) (rep,_) ->
-        add_records_destr
-          records
-          record_name
-          (Hstring.view destr)
-          (asprintf "%a" pp_term rep)
-      ) records lbs xs_values
-
-  let check_records records xs_ty_named xs_values f ty rep =
-    match xs_ty_named with
-    | [Ty.Trecord _r, _arg] -> begin
-        match xs_values with
-        | [record_name,_] ->
-          (* HOTFIX: this fix is temporary. The current implementation of
-             model generation for records relies on string representants,
-             which means the printer for access symbols has to agree with
-             the name of the field in the type trecord. As the printer
-             [Symbols.print] will always output AE native format, this
-             doesn't agree when the output format is SMT-LIB. But the
-             printer of expression will output the right string if we don't
-             give the arguments of the field.
-
-             Issue: https://github.com/OCamlPro/alt-ergo/issues/958 *)
-          let access = Fmt.str "%a" Expr.print (Expr.mk_term f [] ty) in
-          add_records_destr
-            records
-            (asprintf "%a" Expr.print record_name)
-            access
-            rep
-        | [] | _ -> records
-      end
-    | _ ->
-      match ty with
-      | Ty.Trecord r ->
-        add_record_constr records rep r xs_values
-      | _ -> records
-
-  let print_fun_def fmt name args ty t =
-    let print_args fmt (ty,name) =
-      Format.fprintf fmt "(%s %a)" name Ty.pp_smtlib ty in
-    let defined_value =
-      try
-        let res,_,_ = (MS.find (Sy.to_string name) !constraints) in
-        dprintf "%s" res
-      with _ -> t
-    in
-
-    Format.fprintf fmt
-      "@ (@[define-fun %a (%a) %a@ %t)@]"
-      Sy.print name
-      (Printer.pp_list_space (print_args)) args
-      Ty.pp_smtlib ty
-      defined_value
-
-  let output_constants_counterexample pp fmt records =
-    ModelMap.iter
-      (fun (f, xs_ty, ty) st ->
-         assert (xs_ty == []);
-         match ModelMap.V.elements st with
-         | [[], rep] ->
-           let rep =
-             match ty with
-             | Ty.Trecord r ->
-               let constr = mk_records_constr records f r in
-               dprintf "(%s)" constr
-             | _ -> dprintf "%a" pp rep
-           in
-
-           print_fun_def fmt f [] ty rep
-         | _ -> assert false)
-
-  let output_functions_counterexample pp fmt records fprofs =
-    let  records = ref records in
-    ModelMap.iter
-      (fun (f, xs_ty, ty) st ->
-         let xs_ty_named = List.mapi (fun i ty ->
-             ty,(sprintf "arg_%d" i)
-           ) xs_ty in
-
-         let rep =
-           let representants =
-             ModelMap.V.fold (fun (xs_values,(rep,srep)) acc ->
-                 assert ((List.length xs_ty_named) = (List.length xs_values));
-                 records :=
-                   check_records !records xs_ty_named xs_values f ty srep;
-                 let reps = try MX.find rep acc |> snd with Not_found -> [] in
-                 MX.add rep (srep, xs_values :: reps) acc
-               ) st MX.empty in
-
-           let representants = MX.fold (fun rep (srep, xs_values_list) acc ->
-               ((rep, srep),xs_values_list) :: acc) representants [] in
-
-           let rec mk_ite_and xs tys =
-             match xs, tys with
-             | [],[] -> assert false
-             | [_,rs],[_ty,name] ->
-               dprintf "(= %s %a)" name pp rs
-             | (_,rs) :: l1, (_ty,name) :: l2 ->
-               dprintf "(and (= %s %a) %t)"
-                 name
-                 pp rs
-                 (mk_ite_and l1 l2)
-             | _, _ -> assert false
-           in
-
-           let mk_ite_or l =
-             let pp_or_list fmt xs_values =
-               fprintf fmt "%t" (mk_ite_and xs_values xs_ty_named)
-             in
-             match l with
-             | [] -> assert false
-             | [xs_values] -> mk_ite_and xs_values xs_ty_named
-             | xs_values :: l ->
-               dprintf "(or %t %a)"
-                 (mk_ite_and xs_values xs_ty_named)
-                 (Printer.pp_list_space pp_or_list) l
-           in
-
-           let rec reps_aux reps =
-             match reps with
-             | [] -> dprintf "%a" pp_abstract_value_of_type ty
-             | [srep,xs_values_list] ->
-               if Options.get_interpretation_use_underscore () then
-                 dprintf "(@[<hv>ite %t@ %a@ %t)@]"
-                   (mk_ite_or xs_values_list)
-                   pp srep
-                   (reps_aux [])
-               else
-                 dprintf "%a" pp srep
-             | (srep,xs_values_list) :: l ->
-               dprintf "(@[<hv>ite %t@ %a@ %t)@]"
-                 (mk_ite_or xs_values_list)
-                 pp srep
-                 (reps_aux l)
-           in
-           if List.length representants = 1 then
-             dprintf "%a" pp (fst (List.hd representants))
-           else
-             reps_aux representants
-         in
-         (* Only print declared (but not defined!) function symbols -- note
-            that we still need to *handle* other symbols without printing them
-            because they could be record accessors that must be added to the
-            `records` reference *)
-         match f with
-         | Sy.Name { defined = false; _ } ->
-           print_fun_def fmt f xs_ty_named ty rep
-         | _ -> ()
-      ) fprofs;
-    !records
-
-end
 (* of module SmtlibCounterExample *)
-
+(*
 module Why3CounterExample = struct
 
   let output_constraints fmt prop_model =
@@ -475,68 +264,35 @@ module Why3CounterExample = struct
     Format.fprintf fmt "@ ; assertions@ ";
     Format.fprintf fmt "%t" assertions
 
-end
+end *)
 (* of module Why3CounterExample *)
 
-(* The [value_defn] type is a mini-language of the expressions that can occur in
-   constant values. *)
-type value_defn =
-  | Store of value_defn * value_defn * value_defn
-  (* An array store: [(store array key value)] *)
-  | Constant of Symbols.t * Ty.t
-  (* A constant of a given type. If the constant is defined in a model, it
-     must be resolved before being printed. *)
-  | Value of X.r * string
-  (* A leaf semantic value. This must be an actual value, i.e. it must not
-     contain any uninterpreted terms. *)
-  | Abstract of string
-  (* An unique abstract value *)
+let pp ppf { model; _ } = ModelMap.pp ppf model
 
-let value (r, s) =
-  match X.term_extract r with
-  | Some t, _ ->
-    begin match E.term_view t with
-      | { f = Name _ as sy; _ } -> Constant (sy, X.type_info r)
-      | _ -> Value (r, s)
-    end
-  | _ ->
-    Value (r, s)
+(* let pp_constant ppf (_sy, t) =
+   Fmt.pf ppf "%a" SmtlibCounterExample.pp_abstract_value_of_type t *)
 
-let rec pp_value ppk ppf = function
-  | Store (a, k, v) ->
-    Format.fprintf ppf "(@[<hv>store@ %a@ %a %a)@]"
-      (pp_value ppk) a
-      (pp_value ppk) k
-      (pp_value ppk) v
-  | Constant (sy, t) -> ppk ppf (sy, t)
-  | Value (_, s) -> Format.pp_print_string ppf s
-  | Abstract s -> Format.pp_print_string ppf s
-
-let pp_constant ppf (_sy, t) =
-  Fmt.pf ppf "%a" SmtlibCounterExample.pp_abstract_value_of_type t
-
-let output_concrete_model fmt m =
-  SmtlibCounterExample.reset_counter ();
-  if ModelMap.(is_suspicious m.functions || is_suspicious m.constants
-               || is_suspicious m.arrays) then
+(* let output_concrete_model fmt props ~functions ~constants ~arrays =
+   if ModelMap.(is_suspicious functions || is_suspicious constants
+               || is_suspicious arrays) then
     Format.fprintf fmt "; This model is a best-effort. It includes symbols
         for which model generation is known to be incomplete. @.";
 
-  Format.fprintf fmt "@[<v 2>(";
-  if Options.get_model_type_constraints () then begin
+   Format.fprintf fmt "@[<v 2>(";
+   if Options.get_model_type_constraints () then begin
     Why3CounterExample.output_constraints fmt m.propositional
-  end;
+   end;
 
-  let values = Hashtbl.create 17 in
-  let find_or_add sy f =
+   let values = Hashtbl.create 17 in
+   let find_or_add sy f =
     try Hashtbl.find values sy
     with Not_found ->
       let value = f () in
       Hashtbl.replace values sy value;
       value
-  in
-  (* Add the constants *)
-  ModelMap.iter (fun (f, xs_ty, _) st ->
+   in
+   (* Add the constants *)
+   ModelMap.iter (fun (f, xs_ty, _) st ->
       assert (Lists.is_empty xs_ty);
       ModelMap.V.iter (fun (keys, (value_r, value_s)) ->
           assert (Lists.is_empty keys);
@@ -544,8 +300,8 @@ let output_concrete_model fmt m =
         ) st
     ) m.constants;
 
-  (* Add the arrays values, when applicable *)
-  ModelMap.iter (fun (f, xs_ty, ty) st ->
+   (* Add the arrays values, when applicable *)
+   ModelMap.iter (fun (f, xs_ty, ty) st ->
       let root =
         try Hashtbl.find values f
         with Not_found -> Constant (f, Tfarray (List.hd xs_ty, ty))
@@ -555,7 +311,7 @@ let output_concrete_model fmt m =
           Store (acc, value (snd (List.hd keys)), value rs)) st root
     ) m.arrays;
 
-  let pp_value =
+   let pp_value =
     pp_value (fun ppf (sy, ty) ->
         let v =
           find_or_add sy @@ fun () ->
@@ -566,21 +322,21 @@ let output_concrete_model fmt m =
             Fmt.to_to_string SmtlibCounterExample.pp_abstract_value_of_type ty)
         in
         pp_value pp_constant ppf v)
-  in
+   in
 
-  let pp_x ppf xs = pp_value ppf (value xs) in
+   let pp_x ppf xs = pp_value ppf (value xs) in
 
-  (* Functions *)
-  let records =
+   (* Functions *)
+   let records =
     SmtlibCounterExample.output_functions_counterexample
       pp_x fmt MS.empty m.functions
-  in
+   in
 
-  (* Constants *)
-  SmtlibCounterExample.output_constants_counterexample
+   (* Constants *)
+   SmtlibCounterExample.output_constants_counterexample
     pp_x fmt records m.constants;
 
-  (* Arrays *)
-  (*     SmtlibCounterExample.output_arrays_counterexample fmt m.arrays; *)
+   (* Arrays *)
+   (*     SmtlibCounterExample.output_arrays_counterexample fmt m.arrays; *)
 
-  Printer.print_fmt fmt "@]@,)"
+  Printer.print_fmt fmt "@]@,)" *)

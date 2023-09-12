@@ -145,6 +145,8 @@ val fresh_skolem_string : string -> string
 val fresh_skolem_name : string -> t
 val make_as_fresh_skolem : string -> t
 val is_fresh_skolem : t -> bool
+
+val fresh_abstract_string : unit -> string
 (** Resets to 0 the fresh symbol counter *)
 
 val is_get : t -> bool
@@ -160,7 +162,8 @@ val clear_labels : unit -> unit
 (** Empties the labels Hashtable *)
 
 val reset_id_builders : unit -> unit
-(** Resets the `fresh_internal_name` and `fresh_skolem` counters. *)
+(** Resets the [fresh_internal_name], [fresh_skolem] and [fresh_abstract]
+    counters. *)
 
 module Set : Set.S with type elt = t
 

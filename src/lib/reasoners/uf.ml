@@ -1030,24 +1030,172 @@ let model_repr_of_term t env mrepr =
     let e = X.choose_adequate_model t rep cls in
     e, ME.add t e mrepr
 
+module Cache = struct
+  type val_ = ModelMap.Value.abs_or_const
+  let arrays_cache : (string * Ty.t, (val_, val_) Hashtbl.t) Hashtbl.t = Hashtbl.create 17
+  let records_cache = Hashtbl.create 17
+
+  let store_array_val name ty i v =
+    match Hashtbl.find_opt arrays_cache (name, ty) with
+    | Some values ->
+      Hashtbl.replace values i v
+    | None ->
+      let values = Hashtbl.create 17 in
+      Hashtbl.add values i v;
+      Hashtbl.add arrays_cache (name, ty) values
+
+  let clear () =
+    Hashtbl.clear arrays_cache;
+    Hashtbl.clear records_cache
+end
+
+(* let compute_concrete_model ({ make; _ } as env) =
+   ME.fold
+    (fun t _mk ((fprofs, cprofs, carrays, mrepr) as acc) ->
+       let { E.f; xs; ty; _ } = E.term_view t in
+       (* Keep record constructors because models.ml expects them to be there *)
+       if (X.is_solvable_theory_symbol f ty
+           && not (Shostak.Records.is_mine_symb f ty))
+       || E.is_fresh t || E.is_fresh_skolem t
+       || E.equal t E.vrai || E.equal t E.faux
+       then
+         acc
+       else
+         let xs, tys, mrepr =
+           List.fold_left
+             (fun (xs, tys, mrepr) x ->
+                let rep_x, mrepr = model_repr_of_term x env mrepr in
+                assert (is_a_good_model_value rep_x);
+                (x, rep_x)::xs,
+                (E.type_info x)::tys,
+                mrepr
+             ) ([],[], mrepr) (List.rev xs)
+         in
+         let rep, mrepr = model_repr_of_term t env mrepr in
+         assert (is_a_good_model_value rep);
+         match f, xs, ty with
+         | Sy.Op Sy.Set, _, _ -> acc
+
+         | Sy.Op Sy.Get, [(_,(a,_));((_,(i,_)) as e)], _ ->
+           begin
+             match X.term_extract a with
+             | Some ta, true ->
+               let { E.f = f_ta; xs=xs_ta; _ } = E.term_view ta in
+               assert (xs_ta == []);
+               fprofs,
+               cprofs,
+               ModelMap.add (f_ta,[X.type_info i], ty) ([e], rep) carrays,
+               mrepr
+
+             | _ -> assert false
+           end
+
+         | _ ->
+           if tys == [] then
+             fprofs, ModelMap.add (f, tys, ty) (xs, rep) cprofs, carrays,
+             mrepr
+           else
+             ModelMap.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
+             mrepr
+
+    ) make
+    (ModelMap.empty, ModelMap.empty, ModelMap.empty, ME.empty)
+*)
+
 let save_cache () =
   LX.save_cache ()
 
 let reinit_cache () =
   LX.reinit_cache ()
 
-let compute_concrete_model_of_val
-    env t ((fprofs, cprofs, carrays, mrepr) as acc) =
+let is_forbidden_symbol f ty =
+  (X.is_solvable_theory_symbol f ty
+   && not (Shostak.Records.is_mine_symb f ty))
+  || Sy.is_internal f
+
+let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
   let { E.f; xs; ty; _ } = E.term_view t in
   (* Keep record constructors because models.ml expects them to be there *)
-  if (X.is_solvable_theory_symbol f ty
-      && not (Shostak.Records.is_mine_symb f ty))
+  if is_forbidden_symbol f ty
   || E.is_internal_name t || E.is_internal_skolem t
   || E.equal t E.vrai || E.equal t E.faux
-  || Sy.is_internal f
   then
     acc
   else
+    begin
+      Cache.clear ();
+      let arg_vals, arg_tys, mrepr =
+        List.fold_left
+          (fun (arg_vals, arg_tys, mrepr) arg ->
+             let rep_arg, mrepr = model_repr_of_term arg env mrepr in
+             assert (is_a_good_model_value rep_arg);
+             rep_arg :: arg_vals,
+             (Expr.type_info arg) :: arg_tys,
+             mrepr
+          )
+          ([], [], mrepr) (List.rev xs)
+      in
+      let ret_rep, mrepr = model_repr_of_term t env mrepr in
+      assert (is_a_good_model_value ret_rep);
+      match f, arg_vals, ty with
+      | Sy.Name { hs; _ }, [], Ty.Tfarray _ ->
+        let s = Hstring.view hs in
+        begin
+          match Hashtbl.find_opt Cache.arrays_cache (s, ty) with
+          | Some _ -> acc
+          | None ->
+            (* We have to add an abstract array in case there is no
+               constraint on its values. *)
+            Hashtbl.add Cache.arrays_cache (s, ty)
+              (Hashtbl.create 17);
+            acc
+        end
+      | Sy.Op Sy.Set, _, _ ->
+        (* As arrays are immutable, the result of the set operator is
+           never a user-defined array and has to be ignored. *)
+        acc
+      | Sy.Op Sy.Get, [(a, _); i], _ ->
+        begin
+          match X.term_extract a with
+          | Some ta, true ->
+            let Expr.{ f = f_ta; xs = xs_ta; ty = ty_ta; _ } =
+              Expr.term_view ta
+            in
+            assert (xs_ta == []);
+            let name =
+              match f_ta with
+              | Sy.Name { hs; _ } -> Hstring.view hs
+              | _ -> assert false
+            in
+            Cache.store_array_val name ty_ta (`Constant i) (`Constant ret_rep);
+            acc
+          | _ -> assert false
+        end
+      | Sy.Name { hs; _ }, _, _ ->
+        let s = Hstring.view hs in
+        let arg_vals =
+          List.map (fun arg_val -> `Constant arg_val) arg_vals
+        in
+        let mdl =
+          ModelMap.(add (s, arg_tys, ty) arg_vals (`Constant ret_rep) mdl)
+        in
+        mdl, mrepr
+      | _ -> assert false
+    end
+
+(* let compute_concrete_model_of_val
+    env t ((fprofs, cprofs, carrays, mrepr) as acc) unbounded =
+   let { E.f; xs; ty; _ } = E.term_view t in
+   (* Keep record constructors because models.ml expects them to be there *)
+   if (X.is_solvable_theory_symbol f ty
+      && not (Shostak.Records.is_mine_symb f ty))
+   || E.is_internal_name t || E.is_internal_skolem t
+   || E.equal t E.vrai || E.equal t E.faux
+   || is_optimization_op f
+   || Sy.is_internal f
+   then
+    acc
+   else
     let xs, tys, mrepr =
       List.fold_left
         (fun (xs, tys, mrepr) x ->
@@ -1085,6 +1233,7 @@ let compute_concrete_model_of_val
       else
         ModelMap.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
         mrepr
+*)
 
 (* A map of expressions / terms, ordered by depth first, and then by
    Expr.compare for expressions with same depth. This structure will
@@ -1099,15 +1248,20 @@ module MED = Map.Make
         else Expr.compare a b
     end)
 
-let terms env = ME.fold MED.add env.make MED.empty
+let terms env =
+  ME.fold
+    (fun t r acc ->
+       let Expr.{ f; _ } = Expr.term_view t in
+       match f with
+       | Name { defined = true; _ } -> acc
+       | _ -> MED.add t r acc
+    ) env.make MED.empty
 
 let compute_concrete_model env =
   MED.fold
     (fun t _mk acc -> compute_concrete_model_of_val env t acc
-    ) (terms env)
-    (ModelMap.empty, ModelMap.empty, ModelMap.empty, ME.empty)
+    ) (terms env) (ModelMap.create [], Expr.Map.empty)
 
 let extract_concrete_model ~prop_model env =
-  let functions, constants, arrays, mrepr = compute_concrete_model env in
-  { Models.propositional = prop_model; functions; constants; arrays;
-    terms_values = mrepr }
+  let model, mrepr = compute_concrete_model env in
+  { Models.propositional = prop_model; model; terms_values = mrepr }

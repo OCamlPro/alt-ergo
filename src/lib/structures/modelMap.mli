@@ -28,33 +28,37 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(* TODO: update the documentation. *)
 (** Maps of values for alt-ergo's models.
     Elements are sorted by symbols/types (P) and accumulated as sets
     of expressions matching the P.key type (V).
 *)
 
-module P : Map.S with type key =
-                        Symbols.t * Ty.t list * Ty.t
+type sig_ = string * Ty.t list * Ty.t
+(** Signature of a model value. *)
 
-module V : Set.S with type elt =
-                        (Expr.t * (Shostak.Combine.r * string)) list *
-                        (Shostak.Combine.r * string)
+module Value : sig
+  type abs_or_const = [
+    | `Abstract of sig_
+    | `Constant of Shostak.Combine.r * string
+  ]
 
-type key = P.key
-type elt = V.t
+  type array = [
+    | `Abstract of sig_
+    | `Store of array * abs_or_const * abs_or_const
+  ]
+
+  type t = [
+    | `Array of array
+    | `Constructor of string * (abs_or_const list)
+    | abs_or_const
+  ]
+
+  val pp : t Fmt.t
+end
 
 type t
 
-val add : key -> V.elt -> t -> t
-
-val iter : (key -> elt -> unit) -> t -> unit
-
-val fold : (key -> elt -> 'acc -> 'acc) -> t -> 'acc -> 'acc
-
-val empty : t
-
-val is_empty : t -> bool
-
-val is_suspicious : t -> bool
-(* Determine if the model is suspicious as it contains symbols
-   of theories for which the model generation is not properly supported. *)
+val add : sig_ -> Value.t list -> Value.t -> t -> t
+val create : sig_ list -> t
+val pp : t Fmt.t

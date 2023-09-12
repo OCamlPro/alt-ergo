@@ -29,60 +29,139 @@
 (**************************************************************************)
 
 module X = Shostak.Combine
-
 module Sy = Symbols
-module E = Expr
 
+type sig_ = string * Ty.t list * Ty.t [@@deriving ord]
+
+module Value = struct
+  type abs_or_const = [
+    | `Abstract of sig_
+    | `Constant of
+        (Shostak.Combine.r [@compare Shostak.Combine.hash_cmp]) * string
+  ]
+  [@@deriving ord]
+
+  type array = [
+    | `Abstract of sig_
+    | `Store of array * abs_or_const * abs_or_const
+  ]
+  [@@deriving ord]
+
+  type t = [
+    | `Array of array
+    | `Constructor of string * (abs_or_const list)
+    | abs_or_const
+  ]
+  [@@deriving ord]
+
+  let pp_abs_or_const ppf v =
+    match (v : abs_or_const) with
+    | `Abstract (s, _, ty) ->
+      Fmt.pf ppf "(as %s %a)" s Ty.pp_smtlib ty
+    | `Constant (_, s) ->
+      Fmt.pf ppf "%s" (Util.quoted_string s)
+
+  let rec pp_array ppf arr =
+    match arr with
+    | `Abstract (s, _, ty) ->
+      Fmt.pf ppf "(as %s %a)" s Ty.pp_smtlib ty
+    | `Store (arr, i, v) ->
+      Fmt.pf ppf "(@[<hv>store@ %a@ %a %a)@]"
+        pp_array arr
+        pp_abs_or_const i
+        pp_abs_or_const v
+
+  let pp ppf v =
+    match (v : t) with
+    | `Array arr -> pp_array ppf arr
+    | `Constructor (s, args) ->
+      Fmt.pf ppf "(@[<hv>%s %a)@]"
+        (Util.quoted_string s)
+        Fmt.(list ~sep:sp pp_abs_or_const) args
+    | #abs_or_const as w ->
+      pp_abs_or_const ppf w
+
+  module Map = Map.Make (struct
+      type nonrec t = t
+
+      let compare = compare
+    end)
+end
 
 module P = Map.Make
     (struct
-      type t = Sy.t * Ty.t list * Ty.t
-
-      let (|||) c1 c2 = if c1 <> 0 then c1 else c2
-
-      let compare (a1, b1, c1)  (a2, b2, c2) =
-        let l1_l2 = List.length b1 - List.length b2 in
-        let c = l1_l2 ||| (Ty.compare c1 c2) ||| (Sy.compare a1 a2) in
-        if c <> 0 then c
-        else
-          let c = ref 0 in
-          try
-            List.iter2
-              (fun ty1 ty2 ->
-                 let d = Ty.compare ty1 ty2 in
-                 if d <> 0 then begin c := d; raise Exit end
-              ) b1 b2;
-            0
-          with
-          | Exit -> assert (!c <> 0); !c
-          | Invalid_argument _ -> assert false
+      type t = sig_ [@@deriving ord]
     end)
 
-module V = Set.Make
-    (struct
-      type t = (E.t * (X.r * string)) list * (X.r * string)
-      let compare (l1, (v1,_)) (l2, (v2,_)) =
-        let c = X.hash_cmp v1 v2 in
-        if c <> 0 then c
-        else
-          let c = ref 0 in
-          try
-            List.iter2
-              (fun (_,(x,_)) (_,(y,_)) ->
-                 let d = X.hash_cmp x y in
-                 if d <> 0 then begin c := d; raise Exit end
-              ) l1 l2;
-            !c
-          with
-          | Exit -> !c
-          | Invalid_argument _ -> List.length l1 - List.length l2
-    end)
+module Graph = struct
+  module M = Map.Make
+      (struct
+        type t = Value.t list [@@deriving ord]
+      end)
 
-type key = P.key
-type elt = V.t
+  module Fiber = struct
+    include Set.Make (struct
+        type t = Value.t list [@@deriving ord]
+      end)
+
+    let rec pp_args ctr ppf = function
+      | [] -> ()
+      | [arg] ->
+        Fmt.pf ppf "(= arg_%i %a)" ctr Value.pp arg
+      | arg :: args ->
+        Fmt.pf ppf "(and (= arg_%i %a) %a)"
+          ctr
+          Value.pp arg
+          (pp_args (ctr + 1)) args
+
+    let pp ppf fiber =
+      let rec aux ppf seq =
+        match seq () with
+        | Seq.Nil -> ()
+        | Cons (args, seq) when Seq.is_empty seq ->
+          Fmt.pf ppf "%a" (pp_args 0) args
+        | Cons (args, seq) ->
+          Fmt.pf ppf "(or %a %a)"
+            (pp_args 0) args
+            aux seq
+      in
+      aux ppf (to_seq fiber)
+  end
+
+  type t = Value.t M.t
+
+  let empty = M.empty
+  let add = M.add
+
+  (* Compute the inverse relation of the graph. *)
+  let inverse graph =
+    M.fold (fun arg_vals ret_val acc ->
+        match Value.Map.find_opt ret_val acc with
+        | Some fib ->
+          Value.Map.add ret_val (Fiber.add arg_vals fib) acc
+        | None ->
+          Value.Map.add ret_val (Fiber.of_list [arg_vals]) acc
+      ) graph Value.Map.empty
+
+  let pp_inverse ppf rel =
+    let rec aux ppf seq =
+      match seq () with
+      | Seq.Nil -> ()
+      | Cons ((ret_val, _), seq) when Seq.is_empty seq ->
+        Fmt.pf ppf "%a" Value.pp ret_val
+      | Cons ((ret_val, fiber), seq) ->
+        Fmt.pf ppf "(@[<hv>ite %a@ %a@ %a)@]"
+          Fiber.pp fiber
+          Value.pp ret_val
+          aux seq
+    in
+    aux ppf (Value.Map.to_seq rel)
+
+  let pp ppf graph = pp_inverse ppf (inverse graph)
+end
 
 type t = {
-  values : V.t P.t;
+  values : Graph.t P.t;
   suspicious : bool;
 }
 
@@ -102,27 +181,40 @@ let is_suspicious_symbol = function
   | Sy.Name { hs; _ } when is_suspicious_name hs -> true
   | _ -> false
 
-let add ((sy, _, _) as p) v { values; suspicious } =
-  let prof_p = try P.find p values with Not_found -> V.empty in
-  let values =
-    if V.mem v prof_p then values
-    else P.add p (V.add v prof_p) values
-  in
-  { values; suspicious = suspicious || is_suspicious_symbol sy }
+let add ((sy, arg_tys, _) as sig_) arg_vals ret_val { values; suspicious } =
+  assert (List.compare_lengths arg_tys arg_vals = 0);
+  let graph = try P.find sig_ values with Not_found -> Graph.empty in
+  let values = P.add sig_ (Graph.add arg_vals ret_val graph) values in
+  { values; suspicious = suspicious (* || is_suspicious_symbol sy *) }
 
-let iter f { values; _ } =
-  P.iter (fun ((sy, _, _) as key) value ->
+(* let iter f { values; _ } =
+   P.iter (fun ((sy, _, _) as sig_) graph ->
       match sy with
       | Sy.Name { defined = true; _ } ->
         (* We don't print constants defined by the user. *)
         ()
-      | _ -> f key value
-    ) values
-
-let[@inline always] is_suspicious { suspicious; _ } = suspicious
+      | _ -> f sig_ graph
+    ) values *)
 
 let fold f { values; _ } acc = P.fold f values acc
 
-let empty = { values = P.empty; suspicious = false }
+let create _sigs = { values = P.empty; suspicious = false }
 
-let is_empty { values; _ } = P.is_empty values
+let pp_named_arg_ty ppf (arg_name, arg_ty) =
+  Fmt.pf ppf "(arg_%i %a)" arg_name Ty.pp_smtlib arg_ty
+
+let pp_define_fun ppf ((name, arg_tys, ret_ty), graph) =
+  let named_arg_tys = List.mapi (fun i arg_ty -> (i, arg_ty)) arg_tys in
+  Fmt.pf ppf "(@[define-fun %s (%a) %a@ %a)@]"
+    (Util.quoted_string name)
+    Fmt.(list ~sep:cut pp_named_arg_ty) named_arg_tys
+    Ty.pp_smtlib ret_ty
+    Graph.pp graph
+
+let pp ppf {values; suspicious} =
+  if suspicious then begin
+    Fmt.pf ppf "; This model is a best-effort. It includes symbols
+        for which model generation is known to be incomplete. @."
+  end;
+  Fmt.pf ppf "@[<v 2>(@,%a@]@,)"
+    Fmt.(seq ~sep:cut pp_define_fun) (P.to_seq values)
