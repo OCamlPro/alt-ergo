@@ -269,57 +269,53 @@ let () =
   in
   let bin = "%{bin:alt-ergo}" in
   let timelimit = "--timelimit=2" in
+  let shared =
+    [ timelimit
+    ; "--enable-assertions"
+    ]
+  in
   let solvers = [
     ("runtest-quick", "fpa",
      [ "--output=smtlib2"
-     ; timelimit
      ; "--enable-theories fpa"
      ])
   ; ("runtest-quick", "dolmen",
      [ "--output=smtlib2"
-     ; timelimit
      ; "--frontend dolmen" ])
   ; ("runtest-quick", "legacy",
      [ "--output=smtlib2"
      ; "--frontend legacy"
-     ; timelimit ])
+     ])
   ; ("runtest-quick", "tableaux",
      [ "--output=smtlib2"
      ; "--frontend dolmen"
-     ; timelimit
      ; "--sat-solver Tableaux" ])
   ; ("runtest-quick", "tableaux_cdcl",
      [ "--output=smtlib2"
      ; "--frontend dolmen"
-     ; timelimit
      ; "--sat-solver Tableaux-CDCL" ])
   ; ("runtest-quick", "cdcl",
      [ "--output=smtlib2"
      ; "--frontend dolmen"
-     ; timelimit
      ; "--sat-solver CDCL" ])
   ; ("runtest-ci", "ci_tableaux_cdcl_no_minimal_bj",
      [ "--output=smtlib2"
      ; "--frontend dolmen"
-     ; timelimit
      ; "--sat-solver CDCL-Tableaux"
      ; "--no-minimal-bj" ])
   ; ("runtest-ci", "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories",
      [ "--output=smtlib2"
      ; "--frontend dolmen"
-     ; timelimit
      ; "--sat-solver CDCL-Tableaux"
      ; "--no-tableaux-cdcl-in-theories" ])
   ; ("runtest-ci", "ci_no_tableaux_cdcl_in_instantiation",
      [ "--output=smtlib2"
      ; "--frontend dolmen"
-     ; timelimit
      ; "--sat-solver CDCL-Tableaux"
      ; "--no-tableaux-cdcl-in-instantiation" ])
   ; ("runtest-ci", "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation",
      [ "--output=smtlib2"
      ; "--frontend dolmen"
-     ; timelimit
      ; "--sat-solver CDCL-Tableaux"
      ; "--no-tableaux-cdcl-in-theories"
      ; "--no-tableaux-cdcl-in-instantiation" ])
@@ -327,7 +323,6 @@ let () =
                     _and_instantiation",
      [ "--output=smtlib2"
      ; "--frontend dolmen"
-     ; timelimit
      ; "--sat-solver CDCL-Tableaux"
      ; "--no-minimal-bj"
      ; "--no-tableaux-cdcl-in-theories"
@@ -335,11 +330,11 @@ let () =
   ; ("runtest-ci", "ci_cdcl_no_minimal_bj",
      [ "--output=smtlib2"
      ; "--frontend dolmen"
-     ; timelimit
      ; "--sat-solver CDCL"
      ; "--no-minimal-bj" ])]
   in
   let cmds = List.map (fun (group, name, args) ->
+      let args = shared @ args in
       Cmd.make ~name ~group ~bin ~args) solvers
   in
   Format.fprintf Format.std_formatter "@[<v 0>";
