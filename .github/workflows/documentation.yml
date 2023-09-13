@@ -19,7 +19,7 @@ env:
 jobs:
   # For any push and PR, build the documentation from the ocaml comments
   # If this build fails, the documentation workflow stops
-  # If it succed, an artifact is made with the generated documentation
+  # If it succeed, an artifact is made with the generated documentation
   # (html format only). This artifact is used in the deploying job
   ocaml_docs:
     name: OCaml documentation
@@ -95,7 +95,7 @@ jobs:
 
   # On PR, or push on next/main, build the sphinx general documentation
   # If this build fails, the documentation workflow stops
-  # If it succed, an artifact is made with the generated documentation
+  # If it succeed, an artifact is made with the generated documentation
   # This artifact is used in the deploying job
   sphinx_docs:
     name: Sphinx documentation
@@ -130,12 +130,12 @@ jobs:
           path: docs/sphinx_docs/_build
 
 
-  # For every push on next, retrieve ocaml and sphinx documentation
+  # For every push on main, retrieve ocaml and sphinx documentation
   # and publish them on gh-pages branch
   deploy_docs:
     name: Deploy documentation
 
-    if: github.ref == 'refs/heads/next'
+    if: github.ref == 'refs/heads/main'
 
     needs:
       - ocaml_docs
