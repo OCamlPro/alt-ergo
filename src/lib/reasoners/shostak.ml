@@ -762,34 +762,7 @@ and AC : Ac.S
   with type r = CX.r =
   Ac.Make(CX)
 
-module Combine = struct
-  include CX
-
-  module H = Ephemeron.K1.Make(Expr)
-
-  let make, save_cache, reinit_cache =
-    let cache = ref (H.create 1024) in
-    let cache_copy = ref None in
-    let make t =
-      match H.find !cache t with
-      | r -> r
-      | exception Not_found ->
-        let r = make t in
-        H.add !cache t r;
-        r
-    in
-    let save_cache_aux () =
-      save_cache ();
-      cache_copy := (Some (H.copy !cache));
-    in
-    let reinit_cache_aux () =
-      reinit_cache ();
-      cache := H.copy (Option.get !cache_copy);
-    in
-    make, save_cache_aux, reinit_cache_aux
-
-end
-
+module Combine = CX
 module Arith = X1
 module Records = X2
 module Bitv = X3
