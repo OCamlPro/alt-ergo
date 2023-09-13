@@ -250,15 +250,13 @@ module Shostak(X : ALIEN) = struct
     let other ~neg t sz ctx =
       let r, ctx' = X.make t in
       let ctx = List.rev_append ctx' ctx in
-      match X.extract r with
-      | Some bv ->
-        if neg then
-          try negate_abstract bv, ctx with
-          | Failure _ ->
-            [ { bv = Other (X.term_embed (E.BV.bvnot t)); sz } ], ctx
-        else
-          bv, ctx
-      | None -> [ { bv = Other r; sz } ], ctx
+      let bv = embed r in
+      if neg then
+        try negate_abstract bv, ctx with
+        | Failure _ ->
+          [ { bv = Other (X.term_embed (E.BV.bvnot t)); sz } ], ctx
+      else
+        bv, ctx
 
     let extract_st i j ({ bv; sz } as st) =
       match bv with
