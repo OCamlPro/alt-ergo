@@ -1,4 +1,3 @@
-  $ export BUILD_PATH_PREFIX_MAP="SRC=$(dirname $(dirname $(dirname $(dirname $(which alt-ergo))))):$BUILD_PATH_PREFIX_MAP"
   $ echo '(check-sat)' | alt-ergo --inequalities-plugin does-not-exist -i smtlib2 -o smtlib2 2>&1 >/dev/null | sed -E 's/\(\\".*\\"\)//'
   alt-ergo: ; Fatal Error: [Dynlink] Loading the 'inequalities' reasoner (FM module) plugin in "does-not-exist" failed!
             >> Failure message: error loading shared library: Dynlink.Error (Dynlink.Cannot_open_dll "Failure")
@@ -8,7 +7,7 @@ changes slightly, you should be concerned with ensuring the semantic is
 appropriate here.
 
   $ alt-ergo --frontend dolmen --produce-models model555.smt2 --no-forced-flush-in-output 2>/dev/null
-  
+
   unknown
   (
     (define-fun a1 () (Array Int Int) (store (as @!k1 (Array Int Int)) 0 0))
@@ -19,30 +18,30 @@ appropriate here.
 Now we will test some semantic triggers.
 
   $ alt-ergo --frontend legacy -o smtlib2 semantic_triggers.ae 2>/dev/null
-  
+
   unknown
-  
+
   unsat
-  
+
   unsat
   $ alt-ergo --frontend dolmen -o smtlib2 semantic_triggers.ae 2>/dev/null
-  
+
   unknown
-  
+
   unsat
-  
+
   unsat
 
 And some SMT2 action.
 
   $ alt-ergo --frontend dolmen -o smtlib2 --prelude prelude.ae postlude.smt2 2>/dev/null
-  
+
   unknown
-  
+
   unsat
-  
+
   unknown
-  
+
   unsat
 
 Here are some tests to check that we have sane behavior given the insane
@@ -76,13 +75,13 @@ And now some cases where it should work (using either `--produce-models` or
 `Tableaux` with `set-option`):
 
   $ echo '(check-sat)(get-model)' | alt-ergo --frontend dolmen --produce-models -i smtlib2 -o smtlib2 2>/dev/null
-  
+
   unknown
   (
   )
 
   $ echo '(set-option :produce-models true)(check-sat)(get-model)' | alt-ergo --frontend dolmen --sat-solver Tableaux -i smtlib2 -o smtlib2 2>/dev/null
-  
+
   unknown
   (
   )
