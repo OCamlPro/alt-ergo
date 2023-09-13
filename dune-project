@@ -81,16 +81,16 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (dolmen_type (>= 0.9))
   (dolmen_loop (>= 0.9))
   (ocplib-simplex (>= 0.5))
-  (zarith (>= 1.4))
+  (zarith (>= 1.11))
   seq
   (fmt (>= 0.9.0))
   stdlib-shims
   (ppx_blob (>= 0.7.2))
-  (ppxlib (>= 0.30.0))
   (camlzip (>= 1.07))
   (odoc :with-doc)
  )
  (conflicts
+  (ppxlib (< 0.30.0))
   (result (< 1.5))
  )
 )
