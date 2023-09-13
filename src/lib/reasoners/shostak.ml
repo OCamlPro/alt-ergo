@@ -91,15 +91,24 @@ struct
       end
       else begin
         match r.v with
-        | Arith t -> fprintf fmt "Arith(%s):[%a]" ARITH.name ARITH.print t
-        | Records t -> fprintf fmt "Records(%s):[%a]" RECORDS.name RECORDS.print t
-        | Bitv t -> fprintf fmt "Bitv(%s):[%a]" BITV.name BITV.print t
-        | Arrays t -> fprintf fmt "Arrays(%s):[%a]" ARRAYS.name ARRAYS.print t
-        | Enum t -> fprintf fmt "Enum(%s):[%a]" ENUM.name ENUM.print t
-        | Adt t -> fprintf fmt "Adt(%s):[%a]" ADT.name ADT.print t
-        | Ite t -> fprintf fmt "Ite(%s):[%a]" ITE.name ITE.print t
-        | Term t -> fprintf fmt "FT:[%a]" Expr.print t
-        | Ac t -> fprintf fmt "Ac:[%a]" AC.print t
+        | Arith t ->
+          fprintf fmt "Arith(%s):[%a]" ARITH.name ARITH.print t
+        | Records t ->
+          fprintf fmt "Records(%s):[%a]" RECORDS.name RECORDS.print t
+        | Bitv t ->
+          fprintf fmt "Bitv(%s):[%a]" BITV.name BITV.print t
+        | Arrays t ->
+          fprintf fmt "Arrays(%s):[%a]" ARRAYS.name ARRAYS.print t
+        | Enum t ->
+          fprintf fmt "Enum(%s):[%a]" ENUM.name ENUM.print t
+        | Adt t ->
+          fprintf fmt "Adt(%s):[%a]" ADT.name ADT.print t
+        | Ite t ->
+          fprintf fmt "Ite(%s):[%a]" ITE.name ITE.print t
+        | Term t ->
+          fprintf fmt "FT:[%a]" Expr.print t
+        | Ac t ->
+          fprintf fmt "Ac:[%a]" AC.print t
       end
 
     let print_sbt msg sbs =
@@ -272,7 +281,8 @@ struct
     | { v = Ac x; _ } -> AC.type_info x
     | { v = Term t; _ } -> Expr.type_info t
 
-  (* Constraint that must be maintained: all theories should have Xi < Term < Ac *)
+  (* Constraint that must be maintained:
+     all theories should have Xi < Term < Ac *)
   let theory_num x = match x with
     | Ac _ -> -1
     | Term  _ -> -2
@@ -373,14 +383,22 @@ struct
       not_restricted && ITE.is_mine_symb sb ty,
       AC.is_mine_symb sb ty
     with
-    | true  , false , false , false, false, false, false, false -> ARITH.make t
-    | false , true  , false , false, false, false, false, false -> RECORDS.make t
-    | false , false , true  , false, false, false, false, false -> BITV.make t
-    | false , false , false , true , false, false, false, false -> ARRAYS.make t
-    | false , false , false , false, true , false, false, false -> ENUM.make t
-    | false , false , false , false, false, true , false, false -> ADT.make t
-    | false , false , false , false, false, false, true , false -> ITE.make t
-    | false , false , false , false, false, false, false, true  -> AC.make t
+    | true  , false , false , false, false, false, false, false ->
+      ARITH.make t
+    | false , true  , false , false, false, false, false, false ->
+      RECORDS.make t
+    | false , false , true  , false, false, false, false, false ->
+      BITV.make t
+    | false , false , false , true , false, false, false, false ->
+      ARRAYS.make t
+    | false , false , false , false, true , false, false, false ->
+      ENUM.make t
+    | false , false , false , false, false, true , false, false ->
+      ADT.make t
+    | false , false , false , false, false, false, true , false ->
+      ITE.make t
+    | false , false , false , false, false, false, false, true  ->
+      AC.make t
     | false , false , false , false, false, false, false, false ->
       term_embed t, []
     | _ -> assert false
@@ -446,13 +464,20 @@ struct
         ITE.is_mine_symb ac.Sig.h ty,
         AC.is_mine_symb ac.Sig.h ty with
       (*AC.is_mine may say F if Options.get_no_ac is set to F dynamically *)
-      | true  , false , false , false, false, false, false, false -> ARITH.color ac
-      | false , true  , false , false, false, false, false, false -> RECORDS.color ac
-      | false , false , true  , false, false, false, false, false -> BITV.color ac
-      | false , false , false , true , false, false, false, false -> ARRAYS.color ac
-      | false , false , false , false, true , false, false, false -> ENUM.color ac
-      | false , false , false , false, false, true , false, false -> ADT.color ac
-      | false , false , false , false, false, false, true , false -> ITE.color ac
+      | true  , false , false , false, false, false, false, false ->
+        ARITH.color ac
+      | false , true  , false , false, false, false, false, false ->
+        RECORDS.color ac
+      | false , false , true  , false, false, false, false, false ->
+        BITV.color ac
+      | false , false , false , true , false, false, false, false ->
+        ARRAYS.color ac
+      | false , false , false , false, true , false, false, false ->
+        ENUM.color ac
+      | false , false , false , false, false, true , false, false ->
+        ADT.color ac
+      | false , false , false , false, false, false, true , false ->
+        ITE.color ac
       | _  -> ac_embed ac
 
   let abstract_selectors a acc =
@@ -545,7 +570,8 @@ struct
           | Ty.Tbitv _         -> BITV.solve ra rb pb
           | Ty.Tsum _          -> ENUM.solve ra rb pb
           (*| Ty.Tunit           -> pb *)
-          | Ty.Tadt _ when not (Options.get_disable_adts()) -> ADT.solve ra rb pb
+          | Ty.Tadt _ when not (Options.get_disable_adts()) ->
+            ADT.solve ra rb pb
           | _                  -> solve_uninterpreted ra rb pb
         in
         solve_list pb
