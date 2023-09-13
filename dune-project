@@ -86,8 +86,12 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (fmt (>= 0.9.0))
   stdlib-shims
   (ppx_blob (>= 0.7.2))
+  (ppxlib (>= 0.30.0))
   (camlzip (>= 1.07))
   (odoc :with-doc)
+ )
+ (conflicts
+  (result (< 1.5))
  )
 )
 
