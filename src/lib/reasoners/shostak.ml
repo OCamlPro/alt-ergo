@@ -59,15 +59,15 @@ end =
 struct
 
   type rview =
-    | Term  of Expr.t
-    | Ac    of AC.t
-    | ARITH    of ARITH.t
-    | RECORDS    of RECORDS.t
-    | BITV    of BITV.t
-    | ARRAYS    of ARRAYS.t
-    | ENUM    of ENUM.t
-    | ADT    of ADT.t
-    | ITE    of ITE.t
+    | Term of Expr.t
+    | Ac of AC.t
+    | Arith of ARITH.t
+    | Records of RECORDS.t
+    | Bitv of BITV.t
+    | Arrays of ARRAYS.t
+    | Enum of ENUM.t
+    | Adt of ADT.t
+    | Ite of ITE.t
 
   type r = {v : rview ; id : int}
 
@@ -79,27 +79,27 @@ struct
       let open Format in
       if Options.get_term_like_pp () then begin
         match r.v with
-        | ARITH t    -> fprintf fmt "%a" ARITH.print t
-        | RECORDS t    -> fprintf fmt "%a" RECORDS.print t
-        | BITV t    -> fprintf fmt "%a" BITV.print t
-        | ARRAYS t    -> fprintf fmt "%a" ARRAYS.print t
-        | ENUM t    -> fprintf fmt "%a" ENUM.print t
-        | ADT t    -> fprintf fmt "%a" ADT.print t
-        | ITE t    -> fprintf fmt "%a" ITE.print t
-        | Term t  -> fprintf fmt "%a" Expr.print t
-        | Ac t    -> fprintf fmt "%a" AC.print t
+        | Arith t -> fprintf fmt "%a" ARITH.print t
+        | Records t -> fprintf fmt "%a" RECORDS.print t
+        | Bitv t -> fprintf fmt "%a" BITV.print t
+        | Arrays t -> fprintf fmt "%a" ARRAYS.print t
+        | Enum t -> fprintf fmt "%a" ENUM.print t
+        | Adt t -> fprintf fmt "%a" ADT.print t
+        | Ite t -> fprintf fmt "%a" ITE.print t
+        | Term t -> fprintf fmt "%a" Expr.print t
+        | Ac t -> fprintf fmt "%a" AC.print t
       end
       else begin
         match r.v with
-        | ARITH t    -> fprintf fmt "ARITH(%s):[%a]" ARITH.name ARITH.print t
-        | RECORDS t    -> fprintf fmt "RECORDS(%s):[%a]" RECORDS.name RECORDS.print t
-        | BITV t    -> fprintf fmt "BITV(%s):[%a]" BITV.name BITV.print t
-        | ARRAYS t    -> fprintf fmt "ARRAYS(%s):[%a]" ARRAYS.name ARRAYS.print t
-        | ENUM t    -> fprintf fmt "ENUM(%s):[%a]" ENUM.name ENUM.print t
-        | ADT t    -> fprintf fmt "ADT(%s):[%a]" ADT.name ADT.print t
-        | ITE t    -> fprintf fmt "ITE(%s):[%a]" ITE.name ITE.print t
-        | Term t  -> fprintf fmt "FT:[%a]" Expr.print t
-        | Ac t    -> fprintf fmt "Ac:[%a]" AC.print t
+        | Arith t -> fprintf fmt "Arith(%s):[%a]" ARITH.name ARITH.print t
+        | Records t -> fprintf fmt "Records(%s):[%a]" RECORDS.name RECORDS.print t
+        | Bitv t -> fprintf fmt "Bitv(%s):[%a]" BITV.name BITV.print t
+        | Arrays t -> fprintf fmt "Arrays(%s):[%a]" ARRAYS.name ARRAYS.print t
+        | Enum t -> fprintf fmt "Enum(%s):[%a]" ENUM.name ENUM.print t
+        | Adt t -> fprintf fmt "Adt(%s):[%a]" ADT.name ADT.print t
+        | Ite t -> fprintf fmt "Ite(%s):[%a]" ITE.name ITE.print t
+        | Term t -> fprintf fmt "FT:[%a]" Expr.print t
+        | Ac t -> fprintf fmt "Ac:[%a]" AC.print t
       end
 
     let print_sbt msg sbs =
@@ -171,29 +171,29 @@ struct
 
     let hash r =
       let res = match r.v with
-        | ARITH x   -> 1 + 10 * ARITH.hash x
-        | RECORDS x   -> 2 + 10 * RECORDS.hash x
-        | BITV x   -> 3 + 10 * BITV.hash x
-        | ARRAYS x   -> 4 + 10 * ARRAYS.hash x
-        | ENUM x   -> 5 + 10 * ENUM.hash x
-        | ADT x   -> 6 + 10 * ADT.hash x
-        | ITE x   -> 7 + 10 * ITE.hash x
-        | Ac ac  -> 9 + 10 * AC.hash ac
+        | Arith x -> 1 + 10 * ARITH.hash x
+        | Records x -> 2 + 10 * RECORDS.hash x
+        | Bitv x -> 3 + 10 * BITV.hash x
+        | Arrays x -> 4 + 10 * ARRAYS.hash x
+        | Enum x -> 5 + 10 * ENUM.hash x
+        | Adt x -> 6 + 10 * ADT.hash x
+        | Ite x -> 7 + 10 * ITE.hash x
+        | Ac ac -> 9 + 10 * AC.hash ac
         | Term t -> 8 + 10 * Expr.hash t
       in
       abs res
 
     let eq  r1 r2 =
       match r1.v, r2.v with
-      | ARITH x, ARITH y -> ARITH.equal x y
-      | RECORDS x, RECORDS y -> RECORDS.equal x y
-      | BITV x, BITV y -> BITV.equal x y
-      | ARRAYS x, ARRAYS y -> ARRAYS.equal x y
-      | ENUM x, ENUM y -> ENUM.equal x y
-      | ADT x, ADT y -> ADT.equal x y
-      | ITE x, ITE y -> ITE.equal x y
-      | Term x  , Term y  -> Expr.equal x y
-      | Ac x    , Ac    y -> AC.equal x y
+      | Arith x, Arith y -> ARITH.equal x y
+      | Records x, Records y -> RECORDS.equal x y
+      | Bitv x, Bitv y -> BITV.equal x y
+      | Arrays x, Arrays y -> ARRAYS.equal x y
+      | Enum x, Enum y -> ENUM.equal x y
+      | Adt x, Adt y -> ADT.equal x y
+      | Ite x, Ite y -> ITE.equal x y
+      | Term x, Term y -> Expr.equal x y
+      | Ac x, Ac y -> AC.equal x y
       | _ -> false
 
     let initial_size = 9001
@@ -214,13 +214,13 @@ struct
 
   (* end: Hconsing modules and functions *)
 
-  let embed1 x = hcons {v = ARITH x; id = -1000 (* dummy *)}
-  let embed2 x = hcons {v = RECORDS x; id = -1000 (* dummy *)}
-  let embed3 x = hcons {v = BITV x; id = -1000 (* dummy *)}
-  let embed4 x = hcons {v = ARRAYS x; id = -1000 (* dummy *)}
-  let embed5 x = hcons {v = ENUM x; id = -1000 (* dummy *)}
-  let embed6 x = hcons {v = ADT x; id = -1000 (* dummy *)}
-  let embed7 x = hcons {v = ITE x; id = -1000 (* dummy *)}
+  let embed1 x = hcons {v = Arith x; id = -1000 (* dummy *)}
+  let embed2 x = hcons {v = Records x; id = -1000 (* dummy *)}
+  let embed3 x = hcons {v = Bitv x; id = -1000 (* dummy *)}
+  let embed4 x = hcons {v = Arrays x; id = -1000 (* dummy *)}
+  let embed5 x = hcons {v = Enum x; id = -1000 (* dummy *)}
+  let embed6 x = hcons {v = Adt x; id = -1000 (* dummy *)}
+  let embed7 x = hcons {v = Ite x; id = -1000 (* dummy *)}
 
   let ac_embed ({ Sig.l; _ } as t) =
     match l with
@@ -234,13 +234,13 @@ struct
 
   let term_embed t = hcons {v = Term t; id = -1000 (* dummy *)}
 
-  let extract1 = function { v=ARITH r; _ } -> Some r | _ -> None
-  let extract2 = function { v=RECORDS r; _ } -> Some r | _ -> None
-  let extract3 = function { v=BITV r; _ } -> Some r | _ -> None
-  let extract4 = function { v=ARRAYS r; _ } -> Some r | _ -> None
-  let extract5 = function { v=ENUM r; _ } -> Some r | _ -> None
-  let extract6 = function { v=ADT r; _ } -> Some r | _ -> None
-  let extract7 = function { v=ITE r; _ } -> Some r | _ -> None
+  let extract1 = function { v=Arith r; _ } -> Some r | _ -> None
+  let extract2 = function { v=Records r; _ } -> Some r | _ -> None
+  let extract3 = function { v=Bitv r; _ } -> Some r | _ -> None
+  let extract4 = function { v=Arrays r; _ } -> Some r | _ -> None
+  let extract5 = function { v=Enum r; _ } -> Some r | _ -> None
+  let extract6 = function { v=Adt r; _ } -> Some r | _ -> None
+  let extract7 = function { v=Ite r; _ } -> Some r | _ -> None
 
   let ac_extract = function
     | { v = Ac t; _ }   -> Some t
@@ -248,13 +248,13 @@ struct
 
   let term_extract r =
     match r.v with
-    | ARITH _ -> ARITH.term_extract r
-    | RECORDS _ -> RECORDS.term_extract r
-    | BITV _ -> BITV.term_extract r
-    | ARRAYS _ -> ARRAYS.term_extract r
-    | ENUM _ -> ENUM.term_extract r
-    | ADT _ -> ADT.term_extract r
-    | ITE _ -> ITE.term_extract r
+    | Arith _ -> ARITH.term_extract r
+    | Records _ -> RECORDS.term_extract r
+    | Bitv _ -> BITV.term_extract r
+    | Arrays _ -> ARRAYS.term_extract r
+    | Enum _ -> ENUM.term_extract r
+    | Adt _ -> ADT.term_extract r
+    | Ite _ -> ITE.term_extract r
     | Ac _ -> None, false (* SYLVAIN : TODO *)
     | Term t -> Some t, true
 
@@ -262,27 +262,27 @@ struct
   let bot () = term_embed Expr.faux
 
   let type_info = function
-    | { v = ARITH t; _ }   -> ARITH.type_info t
-    | { v = RECORDS t; _ }   -> RECORDS.type_info t
-    | { v = BITV t; _ }   -> BITV.type_info t
-    | { v = ARRAYS t; _ }   -> ARRAYS.type_info t
-    | { v = ENUM t; _ }   -> ENUM.type_info t
-    | { v = ADT t; _ }   -> ADT.type_info t
-    | { v = ITE t; _ }   -> ITE.type_info t
-    | { v = Ac x; _ }   -> AC.type_info x
+    | { v = Arith t; _ } -> ARITH.type_info t
+    | { v = Records t; _ } -> RECORDS.type_info t
+    | { v = Bitv t; _ } -> BITV.type_info t
+    | { v = Arrays t; _ } -> ARRAYS.type_info t
+    | { v = Enum t; _ } -> ENUM.type_info t
+    | { v = Adt t; _ } -> ADT.type_info t
+    | { v = Ite t; _ } -> ITE.type_info t
+    | { v = Ac x; _ } -> AC.type_info x
     | { v = Term t; _ } -> Expr.type_info t
 
   (* Constraint that must be maintained: all theories should have Xi < Term < Ac *)
   let theory_num x = match x with
-    | Ac _    -> -1
+    | Ac _ -> -1
     | Term  _ -> -2
-    | ARITH _    -> -3
-    | RECORDS _    -> -4
-    | BITV _    -> -5
-    | ARRAYS _    -> -6
-    | ENUM _    -> -7
-    | ADT _    -> -8
-    | ITE _    -> -9
+    | Arith _ -> -3
+    | Records _ -> -4
+    | Bitv _ -> -5
+    | Arrays _ -> -6
+    | Enum _ -> -7
+    | Adt _ -> -8
+    | Ite _ -> -9
 
   let compare_tag a b = theory_num a - theory_num b
 
@@ -290,16 +290,16 @@ struct
     if CX.equal a b then 0
     else
       match a.v, b.v with
-      | ARITH _, ARITH _ -> ARITH.compare a b
-      | RECORDS _, RECORDS _ -> RECORDS.compare a b
-      | BITV _, BITV _ -> BITV.compare a b
-      | ARRAYS _, ARRAYS _ -> ARRAYS.compare a b
-      | ENUM _, ENUM _ -> ENUM.compare a b
-      | ADT _, ADT _ -> ADT.compare a b
-      | ITE _, ITE _ -> ITE.compare a b
-      | Term x  , Term y  -> Expr.compare x y
-      | Ac x    , Ac y    -> AC.compare x y
-      | va, vb            -> compare_tag va vb
+      | Arith _, Arith _ -> ARITH.compare a b
+      | Records _, Records _ -> RECORDS.compare a b
+      | Bitv _, Bitv _ -> BITV.compare a b
+      | Arrays _, Arrays _ -> ARRAYS.compare a b
+      | Enum _, Enum _ -> ENUM.compare a b
+      | Adt _, Adt _ -> ADT.compare a b
+      | Ite _, Ite _ -> ITE.compare a b
+      | Term x, Term y -> Expr.compare x y
+      | Ac x, Ac y -> AC.compare x y
+      | va, vb -> compare_tag va vb
 
   (*** implementations before hash-consing semantic values
 
@@ -308,11 +308,11 @@ struct
        let hash r = match r.v with
        | Term  t -> Expr.hash t
        | Ac x -> AC.hash x
-       | ARITH x -> ARITH.hash x
-       | RECORDS x -> RECORDS.hash x
-       | BITV x -> BITV.hash x
-       | ARRAYS x -> ARRAYS.hash x
-       | ENUM x -> ENUM.hash x
+       | Arith x -> ARITH.hash x
+       | Records x -> RECORDS.hash x
+       | Bitv x -> BITV.hash x
+       | Arrays x -> ARRAYS.hash x
+       | Enum x -> ENUM.hash x
 
    ***)
 
@@ -337,27 +337,27 @@ struct
 
   let leaves r =
     match r.v with
-    | ARITH t -> ARITH.leaves t
-    | RECORDS t -> RECORDS.leaves t
-    | BITV t -> BITV.leaves t
-    | ARRAYS t -> ARRAYS.leaves t
-    | ENUM t -> ENUM.leaves t
-    | ADT t -> ADT.leaves t
-    | ITE t -> ITE.leaves t
+    | Arith t -> ARITH.leaves t
+    | Records t -> RECORDS.leaves t
+    | Bitv t -> BITV.leaves t
+    | Arrays t -> ARRAYS.leaves t
+    | Enum t -> ENUM.leaves t
+    | Adt t -> ADT.leaves t
+    | Ite t -> ITE.leaves t
     | Ac t -> r :: (AC.leaves t)
     | Term _ -> [r]
 
   let subst p v r =
     if equal p v then r
     else match r.v with
-      | ARITH t   -> ARITH.subst p v t
-      | RECORDS t   -> RECORDS.subst p v t
-      | BITV t   -> BITV.subst p v t
-      | ARRAYS t   -> ARRAYS.subst p v t
-      | ENUM t   -> ENUM.subst p v t
-      | ADT t   -> ADT.subst p v t
-      | ITE t   -> ITE.subst p v t
-      | Ac t   -> if equal p r then v else AC.subst p v t
+      | Arith t -> ARITH.subst p v t
+      | Records t -> RECORDS.subst p v t
+      | Bitv t -> BITV.subst p v t
+      | Arrays t -> ARRAYS.subst p v t
+      | Enum t -> ENUM.subst p v t
+      | Adt t -> ADT.subst p v t
+      | Ite t -> ITE.subst p v t
+      | Ac t -> if equal p r then v else AC.subst p v t
       | Term _ -> if equal p r then v else r
 
   let make t =
@@ -458,15 +458,15 @@ struct
   let abstract_selectors a acc =
     Debug.debug_abstract_selectors a;
     match a.v with
-    | ARITH a   -> ARITH.abstract_selectors a acc
-    | RECORDS a   -> RECORDS.abstract_selectors a acc
-    | BITV a   -> BITV.abstract_selectors a acc
-    | ARRAYS a   -> ARRAYS.abstract_selectors a acc
-    | ENUM a   -> ENUM.abstract_selectors a acc
-    | ADT a   -> ADT.abstract_selectors a acc
-    | ITE a   -> ITE.abstract_selectors a acc
+    | Arith a -> ARITH.abstract_selectors a acc
+    | Records a -> RECORDS.abstract_selectors a acc
+    | Bitv a -> BITV.abstract_selectors a acc
+    | Arrays a -> ARRAYS.abstract_selectors a acc
+    | Enum a -> ENUM.abstract_selectors a acc
+    | Adt a -> ADT.abstract_selectors a acc
+    | Ite a -> ITE.abstract_selectors a acc
     | Term _ -> a, acc
-    | Ac a   -> AC.abstract_selectors a acc
+    | Ac a -> AC.abstract_selectors a acc
 
   let abstract_equality a b =
     let aux r acc =
