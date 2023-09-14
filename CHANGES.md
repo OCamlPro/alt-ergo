@@ -5,6 +5,11 @@
 ### Build
 * use OCaml 4.08.1 as the minimal supported version (PR #803)
 
+## v2.5.1
+
+### Bug fixes
+* fix a critical soundness bug with bvnot primitive (#819)
+
 ## v2.5.0
 
 ### New features
