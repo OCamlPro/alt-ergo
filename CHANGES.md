@@ -1,5 +1,10 @@
 ## unreleased
 
+## v2.5.1
+
+### Bug fixes
+* fix a critical soundness bug with bvnot primitive (#819)
+
 ## v2.5.0
 
 ### New features
