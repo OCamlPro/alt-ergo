@@ -683,8 +683,8 @@ module Env = struct
   let up_uf_rs dep env tch =
     if RS.is_empty env.ac_rs then env, tch
     else
-      let env, tch, neqs_to_up = MapX.fold
-          (fun r (rr,ex) ((env, tch, neqs_to_up) as acc) ->
+      let env, tch, neqs_to_up, to_up = MapX.fold
+          (fun r (rr,ex) ((env, tch, neqs_to_up, to_up) as acc) ->
              Options.exec_thread_yield ();
              let nrr, ex_nrr = normal_form env rr in
              if X.equal nrr rr then acc
@@ -699,8 +699,27 @@ module Env = struct
                  if X.is_a_leaf r then (r,[r, nrr, ex],nrr) :: tch
                  else tch
                in
-               env, tch, SetXX.add (rr, nrr) neqs_to_up
-          ) env.repr (env, tch, SetXX.empty)
+               (* With AC symbols, we can have r --> rr with rr not appearing in
+                  repr (e.g. [rr = f(0, 0)] when the initial term was
+                  [f(zero, zero)] with [zero --> 0]).
+
+                  This means that the mapping [rr --> nrr] will not appear in
+                  [tch], which will confuse the relations.
+
+                  Hence, when a new mapping r --> nrr is introduced, we manually
+                  add rr --> nrr as a PIVOT in this case. *)
+               let to_up =
+                 match X.ac_extract rr with
+                 | Some _ when not (MapX.mem rr env.repr) ->
+                   MapX.add rr (nrr, ex_nrr) to_up
+                 | _ -> to_up
+               in
+               env, tch, SetXX.add (rr, nrr) neqs_to_up, to_up
+          ) env.repr (env, tch, SetXX.empty, MapX.empty)
+      in
+      let tch =
+        MapX.fold (fun rr (nrr, ex) tch ->
+            (rr, [rr, nrr, ex], nrr) :: tch) to_up tch
       in
       (* Correction : Do not update neqs twice for the same r *)
       update_aux dep neqs_to_up env, tch
