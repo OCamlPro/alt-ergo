@@ -145,7 +145,8 @@ let main worker_id content =
         begin match kind with
           | Ty.Check
           | Ty.Cut -> { state with local = []; }
-          | Ty.Thm | Ty.Sat -> { state with global = []; local = []; }
+          | Ty.Thm | Ty.Sat | Ty.AllSat _ ->
+            { state with global = []; local = []; }
         end
       | Typed.TAxiom (_, s, _, _) when Ty.is_global_hyp s ->
         let cnf = Cnf.make state.global td in
@@ -222,11 +223,12 @@ let main worker_id content =
       let used_context = FE.choose_used_context all_context ~goal_name in
       let consistent_dep_stack = Stack.create () in
       SAT.reset_refs ();
+      let env = SAT.empty_with_inst add_inst in
       let _,_,dep =
         List.fold_left
           (FE.process_decl
              get_status_and_print used_context consistent_dep_stack)
-          (SAT.empty_with_inst add_inst, true, Explanation.empty) cnf in
+          (env, `Unknown env, Explanation.empty) cnf in
 
       if Options.get_unsat_core () then begin
         unsat_core := Explanation.get_unsat_core dep;
@@ -240,15 +242,15 @@ let main worker_id content =
         let cnf = List.rev @@ Cnf.make l td in
         let () = solve all_context (cnf, name) in
         begin match kind with
-          | Typed.Check
-          | Typed.Cut -> { state with local = []; }
-          | Typed.Thm | Typed.Sat | Typed.AllSat _ ->
+          | Ty.Check
+          | Ty.Cut -> { state with local = []; }
+          | Ty.Thm | Ty.Sat | Ty.AllSat _ ->
             { state with global = []; local = []; }
         end
-      | Typed.TAxiom (_, s, _, _) when Typed.is_global_hyp s ->
+      | Typed.TAxiom (_, s, _, _) when Ty.is_global_hyp s ->
         let cnf = Cnf.make state.global td in
         { state with global = cnf; }
-      | Typed.TAxiom (_, s, _, _) when Typed.is_local_hyp s ->
+      | Typed.TAxiom (_, s, _, _) when Ty.is_local_hyp s ->
         let cnf = Cnf.make state.local td in
         { state with local = cnf; }
       | _ ->
@@ -260,7 +262,6 @@ let main worker_id content =
     let parsed () =
       try
         Options.Time.start ();
-        Options.set_is_gui false;
         I.parse_file ~content ~format:None
       with
       | Parsing.Parse_error ->
