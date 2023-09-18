@@ -99,6 +99,6 @@ The release is made using `dune-release`, and follows standard procedure for the
  - `dune-release check` (performs basic check)
  - `dune-release tag vX.Y.Z` (replace `X`, `Y` and `Z` as appropriate; this creates a git tag -- you may add alphas, betas, or rc)
  - `dune-release distrib` (this creates the distribution archive)
- - `dune-release publish` (this is irreversible: it publishes the release on GitHub)
+ - `dune-release publish distrib` (this is irreversible: it publishes the release on GitHub)
  - `dune-release opam pkg` (this an archive with the opam stuff)
  - `dune-release opam submit` (this opens a MR on the opam repository)
