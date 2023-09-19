@@ -19,7 +19,7 @@ env:
 jobs:
   # For any push and PR, build the documentation from the ocaml comments
   # If this build fails, the documentation workflow stops
-  # If it succeed, an artifact is made with the generated documentation
+  # If it succeeds, an artifact is made with the generated documentation
   # (html format only). This artifact is used in the deploying job
   ocaml_docs:
     name: OCaml documentation
@@ -95,7 +95,7 @@ jobs:
 
   # On PR, or push on next/main, build the sphinx general documentation
   # If this build fails, the documentation workflow stops
-  # If it succeed, an artifact is made with the generated documentation
+  # If it succeeds, an artifact is made with the generated documentation
   # This artifact is used in the deploying job
   sphinx_docs:
     name: Sphinx documentation
