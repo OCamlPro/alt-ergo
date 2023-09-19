@@ -266,6 +266,64 @@ model generation is not supported yet by the other SAT solvers. The options
 <code class="docutils literal notranslate"><span class="pre">--dump-models</span></code> and <code class="docutils literal notranslate"><span class="pre">--produce-models</span></code> select the right frontend and SAT solver
 for you.</p>
 </div>
+<ul class="simple">
+<li><p>As a more didactic example, let us imagine while checking the loop invariant
+in the pseudocode below:</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">5</span>
+  <span class="n">invariant</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">5</span>
+<span class="n">do</span>
+  <span class="n">i</span> <span class="o">:=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">done</span>
+</pre></div>
+</div>
+<p>we got the SMT-LIB file <code class="docutils literal notranslate"><span class="pre">INPUT.smt2</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="nb">set</span><span class="o">-</span><span class="n">logic</span> <span class="n">ALL</span><span class="p">)</span>
+<span class="p">(</span><span class="n">declare</span><span class="o">-</span><span class="n">const</span> <span class="n">i</span> <span class="n">Int</span><span class="p">)</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="ow">and</span> <span class="p">(</span><span class="o">&lt;</span> <span class="n">i</span> <span class="mi">5</span><span class="p">)</span> <span class="p">(</span><span class="ow">not</span> <span class="p">(</span><span class="o">&lt;</span> <span class="p">(</span><span class="o">+</span> <span class="n">i</span> <span class="mi">1</span><span class="p">)</span> <span class="mi">5</span><span class="p">))))</span>
+<span class="p">(</span><span class="n">check</span><span class="o">-</span><span class="n">sat</span><span class="p">)</span>
+<span class="p">(</span><span class="n">get</span><span class="o">-</span><span class="n">model</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Execute the command</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>alt-ergo<span class="w"> </span>--frontend<span class="w"> </span>dolmen<span class="w"> </span>--produce-models<span class="w"> </span>INPUT.smt2
+</pre></div>
+</div>
+<p>We got the output</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">;</span> <span class="n">File</span> <span class="s2">&quot;INPUT.smt2&quot;</span><span class="p">,</span> <span class="n">line</span> <span class="mi">4</span><span class="p">,</span> <span class="n">characters</span> <span class="mi">1</span><span class="o">-</span><span class="mi">12</span><span class="p">:</span> <span class="n">I</span> <span class="n">don</span><span class="s1">&#39;t know (0.6689) (2 steps) (goal g_1)</span>
+
+<span class="n">unknown</span>
+<span class="p">(</span>
+  <span class="p">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">i</span> <span class="p">()</span> <span class="n">Int</span> <span class="mi">4</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Alt-Ergo tells us that the <code class="docutils literal notranslate"><span class="pre">(check-sat)</span></code> could succeed with <code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">=</span> <span class="pre">4</span></code>. Indeed,
+the loop invariant isn’t preserved during the last iteration of the loop and
+the context is satisfiable. Let’s fix our specification as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">5</span>
+    <span class="n">invariant</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="mi">5</span>
+<span class="n">do</span>
+    <span class="n">i</span> <span class="o">:=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">end</span>
+</pre></div>
+</div>
+<p>and fix our SMT-LIB input accordingly:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="nb">set</span><span class="o">-</span><span class="n">logic</span> <span class="n">ALL</span><span class="p">)</span>
+<span class="p">(</span><span class="n">declare</span><span class="o">-</span><span class="n">const</span> <span class="n">i</span> <span class="n">Int</span><span class="p">)</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="ow">and</span> <span class="p">(</span><span class="o">&lt;</span> <span class="n">i</span> <span class="mi">5</span><span class="p">)</span> <span class="p">(</span><span class="ow">not</span> <span class="p">(</span><span class="o">&lt;=</span> <span class="p">(</span><span class="o">+</span> <span class="n">i</span> <span class="mi">1</span><span class="p">)</span> <span class="mi">5</span><span class="p">))))</span>
+<span class="p">(</span><span class="n">check</span><span class="o">-</span><span class="n">sat</span><span class="p">)</span>
+<span class="p">(</span><span class="n">get</span><span class="o">-</span><span class="n">model</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Running the very same command, we got the expected output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">;</span> <span class="n">File</span> <span class="s2">&quot;INPUT.smt2&quot;</span><span class="p">,</span> <span class="n">line</span> <span class="mi">4</span><span class="p">,</span> <span class="n">characters</span> <span class="mi">1</span><span class="o">-</span><span class="mi">12</span><span class="p">:</span> <span class="n">Valid</span> <span class="p">(</span><span class="mf">0.5347</span><span class="p">)</span> <span class="p">(</span><span class="mi">1</span> <span class="n">steps</span><span class="p">)</span> <span class="p">(</span><span class="n">goal</span> <span class="n">g_1</span><span class="p">)</span>
+
+<span class="n">unsat</span>
+<span class="p">(</span><span class="n">error</span> <span class="s2">&quot;No model produced.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Our invariant is valid!</p>
 </section>
 </section>
 <section id="output">
@@ -274,7 +332,9 @@ for you.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">File</span> <span class="s2">&quot;&lt;path_to_file&gt;/&lt;filename&gt;&quot;</span><span class="p">,</span> <span class="n">line</span> <span class="o">&lt;</span><span class="n">l</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">characters</span> <span class="o">&lt;</span><span class="n">n</span><span class="o">-</span><span class="n">m</span><span class="o">&gt;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">status</span><span class="o">&gt;</span> <span class="p">(</span><span class="o">&lt;</span><span class="n">time</span> <span class="ow">in</span> <span class="n">seconde</span><span class="o">&gt;</span><span class="p">)</span> <span class="p">(</span><span class="o">&lt;</span><span class="n">number</span> <span class="n">of</span> <span class="n">steps</span><span class="o">&gt;</span> <span class="n">steps</span><span class="p">)</span> <span class="p">(</span><span class="n">goal</span> <span class="o">&lt;</span><span class="n">name</span> <span class="n">of</span> <span class="n">the</span> <span class="n">goal</span><span class="o">&gt;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The status can be <code class="docutils literal notranslate"><span class="pre">Valid</span></code>, <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> or <code class="docutils literal notranslate"><span class="pre">I</span> <span class="pre">don't</span> <span class="pre">know</span></code>. If the input file is in the SMT-LIB 2 format the status will be either <code class="docutils literal notranslate"><span class="pre">unsat</span></code>, <code class="docutils literal notranslate"><span class="pre">sat</span></code>, <code class="docutils literal notranslate"><span class="pre">unknown</span></code>. You can force the status to be print in the SMT-LIB 2 form with the option <code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">smtlib2</span></code>.</p>
+<p>The status can be <code class="docutils literal notranslate"><span class="pre">Valid</span></code>, <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> or <code class="docutils literal notranslate"><span class="pre">I</span> <span class="pre">don't</span> <span class="pre">know</span></code>. If the input file is in
+the SMT-LIB 2 format the status will be either <code class="docutils literal notranslate"><span class="pre">unsat</span></code>, <code class="docutils literal notranslate"><span class="pre">sat</span></code>, <code class="docutils literal notranslate"><span class="pre">unknown</span></code>.
+You can force the status to be print in the SMT-LIB 2 form with the option <code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">smtlib2</span></code>.</p>
 <div class="admonition-note admonition">
 <p class="admonition-title">Note</p>
 <p>When Alt-Ergo tries to prove a <code class="docutils literal notranslate"><span class="pre">goal</span></code> (with the native input language), it

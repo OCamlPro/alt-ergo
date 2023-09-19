@@ -160,12 +160,71 @@ Model generation is disabled by default. There are two recommended ways to enabl
   for you.
   ```
 
+  - As a more didactic example, let us imagine while checking the loop invariant
+  in the pseudocode below:
+  ```
+  while i < 5
+    invariant i < 5
+  do
+    i := i + 1
+  done
+  ```
+  we got the SMT-LIB file `INPUT.smt2`:
+  ```
+  (set-logic ALL)
+  (declare-const i Int)
+  (assert (and (< i 5) (not (< (+ i 1) 5))))
+  (check-sat)
+  (get-model)
+  ```
+  Execute the command
+  ```sh
+  alt-ergo --frontend dolmen --produce-models INPUT.smt2
+  ```
+  We got the output
+  ```
+  ; File "INPUT.smt2", line 4, characters 1-12: I don't know (0.6689) (2 steps) (goal g_1)
+
+  unknown
+  (
+    (define-fun i () Int 4)
+  )
+  ```
+  Alt-Ergo tells us that the `(check-sat)` could succeed with `i = 4`. Indeed,
+  the loop invariant isn't preserved during the last iteration of the loop and
+  the context is satisfiable. Let's fix our specification as follows:
+  ```
+  while i < 5
+      invariant 0 <= i <= 5
+  do
+      i := i + 1
+  end
+  ```
+  and fix our SMT-LIB input accordingly:
+  ```
+  (set-logic ALL)
+  (declare-const i Int)
+  (assert (and (< i 5) (not (<= (+ i 1) 5))))
+  (check-sat)
+  (get-model)
+  ```
+  Running the very same command, we got the expected output:
+  ```
+  ; File "INPUT.smt2", line 4, characters 1-12: Valid (0.5347) (1 steps) (goal g_1)
+
+  unsat
+  (error "No model produced.")
+  ```
+  Our invariant is valid!
+
 ### Output
 The results of an Alt-ergo's execution have the following form :
 ```
 File "<path_to_file>/<filename>", line <l>, characters <n-m>: <status> (<time in seconde>) (<number of steps> steps) (goal <name of the goal>)
 ```
-The status can be `Valid`, `Invalid` or `I don't know`. If the input file is in the SMT-LIB 2 format the status will be either `unsat`, `sat`, `unknown`. You can force the status to be print in the SMT-LIB 2 form with the option `--output smtlib2`.
+The status can be `Valid`, `Invalid` or `I don't know`. If the input file is in
+the SMT-LIB 2 format the status will be either `unsat`, `sat`, `unknown`.
+You can force the status to be print in the SMT-LIB 2 form with the option `--output smtlib2`.
 
 ```{admonition} Note
 When Alt-Ergo tries to prove a `goal` (with the native input language), it
