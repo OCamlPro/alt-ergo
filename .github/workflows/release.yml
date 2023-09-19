@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    branches:
-      - 'v*.*.x'
+    #    branches:
+    #  - 'v*.*.x'
 
 env:
   OCAML_DEFAULT_VERSION: 5.0.0
