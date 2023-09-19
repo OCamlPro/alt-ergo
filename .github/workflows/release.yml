@@ -1,11 +1,12 @@
 name: Release
 
 on:
-  pull_request:
+  push:
     branches:
       - 'v*.*.x'
 
 env:
+  OCAML_DEFAULT_VERSION: 5.0.0
   OPAMYES: true
 
 jobs:
@@ -17,10 +18,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Use OCaml 5.0.0
+      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-compiler: 5.0.0
+          allow-prelease-opam: true
+          ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
           dune-cache: true
 
       - name: Install dependencies
