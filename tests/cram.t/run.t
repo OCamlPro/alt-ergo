@@ -59,7 +59,7 @@ This should be the case Tableaux solver as well:
   (error "Model generation disabled (try --produce-models)")
 
 The messages above mention `--produce-models`, but we can also use
-`set-option`. This requires the Tableaux solver, however:
+`set-option`.
 
   $ echo '(get-model)' | alt-ergo --frontend dolmen --produce-models -i smtlib2 -o smtlib2
   (error "No model produced.")
@@ -67,12 +67,7 @@ The messages above mention `--produce-models`, but we can also use
   $ echo '(set-option :produce-models true)(get-model)' | alt-ergo --frontend dolmen --sat-solver Tableaux -i smtlib2 -o smtlib2
   (error "No model produced.")
 
-  $ echo '(set-option :produce-models true)(get-model)' | alt-ergo --frontend dolmen -i smtlib2 -o smtlib2
-  (error "Model generation requires the Tableaux solver (try --produce-models)")
-  (error "Model generation disabled (try --produce-models)")
-
-And now some cases where it should work (using either `--produce-models` or
-`Tableaux` with `set-option`):
+And now some cases where it should work (using either `--produce-models` or `set-option`):
 
   $ echo '(check-sat)(get-model)' | alt-ergo --frontend dolmen --produce-models -i smtlib2 -o smtlib2 2>/dev/null
   
@@ -80,6 +75,11 @@ And now some cases where it should work (using either `--produce-models` or
   (
   )
 
+  $ echo '(set-option :produce-models true)(check-sat)(get-model)' | alt-ergo --frontend dolmen -i smtlib2 -o smtlib2 2>/dev/null
+  
+  unknown
+  (
+  )
   $ echo '(set-option :produce-models true)(check-sat)(get-model)' | alt-ergo --frontend dolmen --sat-solver Tableaux -i smtlib2 -o smtlib2 2>/dev/null
   
   unknown
