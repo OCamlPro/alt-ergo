@@ -498,11 +498,7 @@ let output_concrete_model fmt m =
         for which model generation is known to be incomplete. @.";
 
     Format.fprintf fmt "@[<v 2>(";
-    Why3CounterExample.output_constraints fmt m.propositional;
-
-    Printer.print_fmt ~flushed:false fmt "@[<v 0>unknown@ ";
-    Printer.print_fmt ~flushed:false fmt "@[<v 2>(model@,";
-    if Options.get_output_format () == Why3 then begin
+    if Options.get_model_type_constraints () then begin
       Why3CounterExample.output_constraints fmt m.propositional
     end;
 
