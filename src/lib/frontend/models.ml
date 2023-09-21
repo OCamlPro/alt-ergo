@@ -540,7 +540,7 @@ let output_concrete_model fmt m =
       pp_x fmt records m.constants;
 
     (* Arrays *)
-(*     SmtlibCounterExample.output_arrays_counterexample fmt m.arrays; *)
+    (*     SmtlibCounterExample.output_arrays_counterexample fmt m.arrays; *)
 
-  Printer.print_fmt fmt "@]@,)";
-end
+    Printer.print_fmt fmt "@]@,)";
+  end
