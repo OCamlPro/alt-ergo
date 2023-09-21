@@ -923,58 +923,38 @@ let parse_output_opt =
     frontend
   in
 
-  (* Use the --sat-solver to determine the sat solver.
-
-     If an interpretation is provided, the solver is forced to be Tableaux,
-     because generation of models requires OptimAE for the other solvers.
-
-     See https://github.com/OCamlPro/alt-ergo/pull/553 *)
+  (* Use the --sat-solver to determine the sat solver. *)
   let sat_solver =
-    let sat_solver_arg =
-      let sat_solver : _ Arg.conv =
-        let parse = function
-          | "CDCL" | "satML" ->
-            Ok Util.CDCL
-          | "CDCL-Tableaux" | "satML-Tableaux"
-          | "CDCL-tableaux" | "satML-tableaux" ->
-            Ok Util.CDCL_Tableaux
-          | "tableaux" | "Tableaux"
-          | "tableaux-like" | "Tableaux-like" ->
-            Ok Util.Tableaux
-          | "tableaux-cdcl" | "Tableaux-CDCL"
-          | "tableaux-CDCL" | "Tableaux-cdcl" ->
-            Ok Util.Tableaux_CDCL
-          | sat_solver ->
-            Error ("Args parsing error: unkown SAT solver " ^ sat_solver)
+    let sat_solver : _ Arg.conv =
+      let parse = function
+        | "CDCL" | "satML" ->
+          Ok Util.CDCL
+        | "CDCL-Tableaux" | "satML-Tableaux"
+        | "CDCL-tableaux" | "satML-tableaux" ->
+          Ok Util.CDCL_Tableaux
+        | "tableaux" | "Tableaux"
+        | "tableaux-like" | "Tableaux-like" ->
+          Ok Util.Tableaux
+        | "tableaux-cdcl" | "Tableaux-CDCL"
+        | "tableaux-CDCL" | "Tableaux-cdcl" ->
+          Ok Util.Tableaux_CDCL
+        | sat_solver ->
+          Error ("Args parsing error: unkown SAT solver " ^ sat_solver)
 
-        in
-        Arg.(conv' (parse, Util.pp_sat_solver))
       in
-      let default, sum_up = "CDCL-Tableaux", "satML" in
-      let doc = Format.sprintf
-          "Choose the SAT solver to use. Default value is %s (i.e. %s\
-           solver). Possible options are %s."
-          default sum_up
-          (Arg.doc_alts ["CDCL"; "satML"; "CDCL-Tableaux";
-                         "satML-Tableaux"; "Tableaux-CDCL"])
-      in
-      let docv = "SAT" in
-      Arg.(value & opt (some ~none:default sat_solver) None &
-           info ["sat-solver"] ~docv ~docs:s_sat ~doc)
+      Arg.(conv' (parse, Util.pp_sat_solver))
     in
-
-    let mk_sat_solver sat_solver interpretation =
-      match interpretation, sat_solver with
-      | INone, None -> Ok Util.CDCL_Tableaux
-      | INone, Some sat_solver -> Ok sat_solver
-      | _, (None | Some Util.Tableaux) -> Ok Tableaux
-      | _, Some sat_solver ->
-        Fmt.error
-          "solver '%a' does not suppot model generation"
-          Util.pp_sat_solver sat_solver
+    let default, sum_up = "CDCL-Tableaux", "satML" in
+    let doc = Format.sprintf
+        "Choose the SAT solver to use. Default value is %s (i.e. %s\
+         solver). Possible options are %s."
+        default sum_up
+        (Arg.doc_alts ["CDCL"; "satML"; "CDCL-Tableaux";
+                       "satML-Tableaux"; "Tableaux-CDCL"])
     in
-    Term.term_result' @@
-    Term.(const mk_sat_solver $ sat_solver_arg $ interpretation)
+    let docv = "SAT" in
+    Arg.(value & opt sat_solver Util.CDCL_Tableaux &
+         info ["sat-solver"] ~docv ~docs:s_sat ~doc)
   in
 
   let cdcl_tableaux_inst =

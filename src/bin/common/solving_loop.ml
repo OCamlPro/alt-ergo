@@ -358,15 +358,7 @@ let main () =
       Options.Output.create_channel name
       |> Options.Output.set_diagnostic
     | ":produce-models", Symbol { name = Simple "true"; _ } ->
-      (* TODO: The generation of models is supported only with the SAT
-         solver Tableaux. Remove this line after merging the OptimAE
-         PR. See https://github.com/OCamlPro/alt-ergo/pull/553 *)
-      if Stdlib.(Options.get_sat_solver () = Tableaux) then
-        Options.set_interpretation ILast
-      else
-        Printer.print_smtlib_err
-          "Model generation requires the Tableaux solver \
-           (try --produce-models)";
+      Options.set_interpretation ILast
     | ":produce-models", Symbol { name = Simple "false"; _ } ->
       Options.set_interpretation INone
     | ":produce-unsat-cores", Symbol { name = Simple "true"; _ } ->

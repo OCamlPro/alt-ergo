@@ -51,8 +51,8 @@ Model generation is disabled by default. There are two recommended ways to enabl
   on demand using the statement `(get-model)`.
 
   Alternatively, you can enable model generation using the statement
-  `(set-option :produce-models true)`. This currently requires using the options
-  `--sat-solver tableaux` and `--frontend dolmen`.
+  `(set-option :produce-models true)`. This currently requires using the option
+  `--frontend dolmen`.
 
 #### Examples
 
@@ -142,7 +142,7 @@ Model generation is disabled by default. There are two recommended ways to enabl
    (get-model)
 
   ```
-  and the command `alt-ergo --frontend dolmen --sat-solver tableaux INPUT.smt2` produces
+  and the command `alt-ergo --frontend dolmen INPUT.smt2` produces
   the output model
   ```
   unknown
@@ -154,10 +154,8 @@ Model generation is disabled by default. There are two recommended ways to enabl
   ```
 
   ```{admonition} Note
-  You need to select the Dolmen frontend and the SAT solver Tableaux as the
-  model generation is not supported yet by the other SAT solvers. The options
-  `--dump-models` and `--produce-models` select the right frontend and SAT solver
-  for you.
+  You need to select the Dolmen frontend. The options `--dump-models` and
+  `--produce-models` select the right frontend for you.
   ```
 
 ### Output
