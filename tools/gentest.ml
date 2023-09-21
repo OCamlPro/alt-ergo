@@ -219,8 +219,8 @@ end = struct
                 Some ["dolmen"],
                 should_succeed
               | "models" ->
-                exclude,
-                Some ["tableaux"],
+                "legacy" :: "fpa" :: exclude,
+                filters_opt,
                 should_succeed
               | "fpa" ->
                 exclude,
