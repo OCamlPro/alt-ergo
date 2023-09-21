@@ -1,2 +1,4 @@
-# Declare files that will always have LF line endings on checkout.
+# Declare files will always have LF line endings on checkout.
 configure eol=lf
+
+tests/dune.inc linguist-generated
