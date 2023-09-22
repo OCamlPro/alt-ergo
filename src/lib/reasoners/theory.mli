@@ -63,7 +63,7 @@ module type S = sig
   val get_assumed : t -> Expr.Set.t
 
   val reinit_cpt : unit -> unit
-
+  (** Reinitializes the internal counter. *)
 end
 
 module Main_Default : S
