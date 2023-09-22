@@ -290,7 +290,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       print_model env (Some timeout);
       (* TODO: Is it an appropriate behaviour? *)
       (*       if timeout != NoTimeout then raise Util.Timeout; *)
-      env, consistent, dep
+      env, `Unknown env, dep
 
     | Util.Timeout as e ->
       (* In this case, we obviously want to print the status,
