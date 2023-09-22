@@ -1026,7 +1026,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     else
       begin
         (* Beware: models generated on timeout of ProofSearch phase may
-           be incohrent wrt. the ground part of the pb (ie. if delta
+           be incoherent wrt. the ground part of the pb (ie. if delta
            is not empty ? *)
         env.model_gen_phase := true;
         Options.Time.unset_timeout ();
