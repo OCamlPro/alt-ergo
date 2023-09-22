@@ -370,7 +370,7 @@ let print_status_unknown ?(validity_mode=true) loc
     time steps goal
 
 (* TODO: The timeout answer doesn't exist in the SMT-LIB standard.
-   We should change this function. *)
+   See issue https://github.com/OCamlPro/alt-ergo/issues/834. *)
 let print_status_timeout ?(validity_mode=true) loc
     time steps goal =
   print_status ~validity_mode
