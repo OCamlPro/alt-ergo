@@ -192,11 +192,19 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     { env with
       unit_facts_cache = ref refs.unit_facts}, guard
 
+  (* Specify the pass in which Alt-Ergo runs out of time. This information
+     is used to decide if the last produced model is relevant. *)
   type timeout_reason =
     | NoTimeout
     | Assume
+    (* Timeout while assuming a ground formula. *)
+
     | ProofSearch
+    (* Timeout while doing instantiation or backtracking phases
+       during the proof search. *)
+
     | ModelGen
+    (* Timeout while generating a new model. *)
 
   exception Sat of t
   exception Unsat of Explanation.t
