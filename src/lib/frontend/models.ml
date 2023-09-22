@@ -497,50 +497,50 @@ let output_concrete_model fmt m =
     Format.fprintf fmt "; This model is a best-effort. It includes symbols
         for which model generation is known to be incomplete. @.";
 
-    Format.fprintf fmt "@[<v 2>(";
-    if Options.get_model_type_constraints () then begin
-      Why3CounterExample.output_constraints fmt m.propositional
-    end;
+  Format.fprintf fmt "@[<v 2>(";
+  if Options.get_model_type_constraints () then begin
+    Why3CounterExample.output_constraints fmt m.propositional
+  end;
 
-    let values = Hashtbl.create 17 in
-    (* Add the constants *)
-    ModelMap.iter (fun (f, xs_ty, _) st ->
-        assert (Lists.is_empty xs_ty);
-        ModelMap.V.iter (fun (keys, (value_r, value_s)) ->
-            assert (Lists.is_empty keys);
-            Hashtbl.add values f (value (value_r, value_s))
-          ) st
-      ) m.constants;
+  let values = Hashtbl.create 17 in
+  (* Add the constants *)
+  ModelMap.iter (fun (f, xs_ty, _) st ->
+      assert (Lists.is_empty xs_ty);
+      ModelMap.V.iter (fun (keys, (value_r, value_s)) ->
+          assert (Lists.is_empty keys);
+          Hashtbl.add values f (value (value_r, value_s))
+        ) st
+    ) m.constants;
 
-    (* Add the arrays values, when applicable *)
-    ModelMap.iter (fun (f, xs_ty, ty) st ->
-        let root =
-          try Hashtbl.find values f
-          with Not_found -> Constant (f, Tfarray (List.hd xs_ty, ty))
-        in
-        Hashtbl.replace values f @@
-        ModelMap.V.fold (fun (keys, rs) acc ->
-            Store (acc, value (snd (List.hd keys)), value rs)) st root
-      ) m.arrays;
+  (* Add the arrays values, when applicable *)
+  ModelMap.iter (fun (f, xs_ty, ty) st ->
+      let root =
+        try Hashtbl.find values f
+        with Not_found -> Constant (f, Tfarray (List.hd xs_ty, ty))
+      in
+      Hashtbl.replace values f @@
+      ModelMap.V.fold (fun (keys, rs) acc ->
+          Store (acc, value (snd (List.hd keys)), value rs)) st root
+    ) m.arrays;
 
-    let pp_value =
-      pp_value (fun ppf (sy, _) ->
-          pp_value pp_constant ppf (Hashtbl.find values sy))
-    in
+  let pp_value =
+    pp_value (fun ppf (sy, _) ->
+        pp_value pp_constant ppf (Hashtbl.find values sy))
+  in
 
-    let pp_x ppf xs = pp_value ppf (value xs) in
+  let pp_x ppf xs = pp_value ppf (value xs) in
 
-    (* Functions *)
-    let records =
-      SmtlibCounterExample.output_functions_counterexample
-        pp_x fmt MS.empty m.functions
-    in
+  (* Functions *)
+  let records =
+    SmtlibCounterExample.output_functions_counterexample
+      pp_x fmt MS.empty m.functions
+  in
 
-    (* Constants *)
-    SmtlibCounterExample.output_constants_counterexample
-      pp_x fmt records m.constants;
+  (* Constants *)
+  SmtlibCounterExample.output_constants_counterexample
+    pp_x fmt records m.constants;
 
-    (* Arrays *)
-    (*     SmtlibCounterExample.output_arrays_counterexample fmt m.arrays; *)
+  (* Arrays *)
+  (*     SmtlibCounterExample.output_arrays_counterexample fmt m.arrays; *)
 
   Printer.print_fmt fmt "@]@,)";

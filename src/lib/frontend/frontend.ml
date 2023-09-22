@@ -162,24 +162,21 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Some SAT.ModelGen -> "ModelGen"
 
   let print_model env timeout =
-    let get_m = Options.get_interpretation () in
-    let s = timeout_reason_to_string timeout in
-    match SAT.get_model env with
-    | None ->
-      if get_m then
+    if Options.(get_interpretation () && get_dump_models ()) then begin
+      let s = timeout_reason_to_string timeout in
+      match SAT.get_model env with
+      | None ->
         Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
           "@[<v 0>It seems that no model has been computed so \
            far. You may need to change your model generation strategy \
            or to increase your timeouts. Returned timeout reason = %s@]" s
 
-    | Some m ->
-      assert (get_m);
-      if get_m then
+      | Some (lazy model) ->
         Printer.print_fmt
           (Options.Output.get_fmt_diagnostic ())
           "@[<v 0>; Returned timeout reason = %s@]" s;
-      let m = Lazy.force m in
-      Models.output_concrete_model (Options.Output.get_fmt_regular ()) m
+        Models.output_concrete_model (Options.Output.get_fmt_regular ()) model
+    end
 
   let process_decl print_status used_context consistent_dep_stack
       ((env, consistent, dep) as acc) d =
