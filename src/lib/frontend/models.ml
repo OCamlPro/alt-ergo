@@ -241,8 +241,10 @@ module SmtlibCounterExample = struct
       E.print fmt t
 
   let pp_abstract_value_of_type ppf ty =
-    if not @@ Options.get_interpretation_use_underscore () then
-      Fmt.pf ppf "(as @@a%i %a)" !fresh_counter Ty.pp_smtlib ty
+    if not @@ Options.get_interpretation_use_underscore () then begin
+      Fmt.pf ppf "(as @@a%i %a)" !fresh_counter Ty.pp_smtlib ty;
+      incr fresh_counter
+    end
     else
       Fmt.pf ppf "_ "
 
