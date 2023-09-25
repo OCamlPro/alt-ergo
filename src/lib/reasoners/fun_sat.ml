@@ -176,6 +176,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     add_inst: E.t -> bool;
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
     last_saved_model : Models.t Lazy.t option ref;
+    unknown_reason : Sat_solver_sig.unknown_reason option;
   }
 
   let reset_refs () =
@@ -192,25 +193,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     { env with
       unit_facts_cache = ref refs.unit_facts}, guard
 
-  (* Specify the pass in which Alt-Ergo runs out of time. This information
-     is used to decide if the last produced model is relevant. *)
-  type timeout_reason =
-    | NoTimeout
-    | Assume
-    (* Timeout while assuming a ground formula. *)
-
-    | ProofSearch
-    (* Timeout while doing instantiation or backtracking phases
-       during the proof search. *)
-
-    | ModelGen
-    (* Timeout while generating a new model. *)
-
   exception Sat of t
   exception Unsat of Explanation.t
-  exception I_dont_know of { env : t; timeout : timeout_reason }
+  exception I_dont_know of t
   exception IUnsat of Ex.t * SE.t list
 
+  let i_dont_know env ur =
+    raise (I_dont_know {env with unknown_reason = Some ur})
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
@@ -1144,14 +1133,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         raise (IUnsat (expl, classes))
     end
 
-  let update_model_and_return_unknown env compute_model ~timeout =
+  let update_model_and_return_unknown env compute_model ~unknown_reason =
     try
       let env = may_update_last_saved_model env compute_model in
       Options.Time.unset_timeout ();
-      raise (I_dont_know {env; timeout })
+      i_dont_know env unknown_reason
     with Util.Timeout when !(env.model_gen_phase) ->
       (* In this case, timeout reason becomes 'ModelGen' *)
-      raise (I_dont_know {env; timeout = ModelGen })
+      i_dont_know env (Timeout ModelGen)
 
   let model_gen_on_timeout env =
     let i = Options.get_interpretation () in
@@ -1160,7 +1149,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        !(env.model_gen_phase) ||  (* we timeouted in model-gen-phase *)
        Stdlib.(=) ti 0. (* no time allocated for extra model search *)
     then
-      raise (I_dont_know {env; timeout = ProofSearch})
+      i_dont_know env (Timeout ProofSearch)
     else
       begin
         (* Beware: models generated on timeout of ProofSearch phase may
@@ -1170,7 +1159,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         Options.Time.unset_timeout ();
         Options.Time.set_timeout ti;
         update_model_and_return_unknown
-          env i ~timeout:ProofSearch (* may becomes ModelGen *)
+          env i ~unknown_reason:(Timeout ProofSearch) (* may becomes ModelGen *)
       end
 
   let reduce_hypotheses tcp_cache tmp_cache env acc (hyp, gf, dep) =
@@ -1286,7 +1275,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          this returns a wrong model. *)
       update_model_and_return_unknown
         env (Options.get_last_interpretation ())
-        ~timeout:NoTimeout (* may becomes ModelGen *)
+        ~unknown_reason:Incomplete (* may becomes ModelGen *)
     | IAuto | IGreedy ->
       let gre_inst =
         ME.fold
@@ -1314,7 +1303,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       else
         update_model_and_return_unknown
           env (Options.get_last_interpretation ())
-          ~timeout:NoTimeout (* may becomes ModelGen *)
+          ~unknown_reason:Incomplete (* may becomes ModelGen *)
 
   let normal_instantiation env try_greedy =
     Debug.print_nb_related env;
@@ -1763,8 +1752,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Util.Timeout ->
       (* don't attempt to compute a model if timeout before
          calling unsat function *)
-      raise (I_dont_know {env; timeout = Assume})
-
+      i_dont_know env (Timeout Assume)
 
   let pred_def env f name dep _loc =
     Debug.pred_def f;
@@ -1842,6 +1830,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       guards = init_guards ();
       add_inst = (fun _ -> true);
       last_saved_model = ref None;
+      unknown_reason = None;
     }
     in
     assume env gf_true Ex.empty
@@ -1855,6 +1844,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   (** returns the latest model stored in the env if any *)
   let get_model env = !(env.last_saved_model)
+
+  let get_unknown_reason env = env.unknown_reason
 
   let reinit_ctx () =
     (* all_models_sat_env := None; *)
