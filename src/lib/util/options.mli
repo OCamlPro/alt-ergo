@@ -1071,9 +1071,12 @@ module Output : sig
   type t = private
     | Stdout
     | Stderr
-    | Channel of out_channel * Format.formatter
+    | Channel of string * out_channel * Format.formatter
     | Fmt of Format.formatter
     | Invalid
+
+  val to_string : t -> string
+  (** [to_string] Returns a string representation of the output channel. *)
 
   val of_formatter : Format.formatter -> t
   (** [of_formatter fmt] create an out channel of the formatter [fmt]. *)
@@ -1103,6 +1106,11 @@ module Output : sig
 
       Default to [Format.err_formatter]. *)
 
+  val set_dump_models : t -> unit
+  (** Set the models output channel used by the option `--dump-models`.
+
+      Default to [Format.err_formatter]. *)
+
   val get_fmt_regular : unit -> Format.formatter
   (** Value specifying the formatter used to output results.
 
@@ -1110,6 +1118,12 @@ module Output : sig
 
   val get_fmt_diagnostic : unit -> Format.formatter
   (** Value specifying the formatter used to output errors.
+
+      Default to [Format.err_formatter]. *)
+
+  val get_fmt_models : unit -> Format.formatter
+  (** Value specifying the formatter used to output models printed by
+      the `--dump-models` option.
 
       Default to [Format.err_formatter]. *)
 end

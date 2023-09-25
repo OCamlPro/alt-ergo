@@ -32,16 +32,23 @@ module Output = struct
   type t =
     | Stdout
     | Stderr
-    | Channel of out_channel * Format.formatter
+    | Channel of string * out_channel * Format.formatter
     | Fmt of Format.formatter
     | Invalid
+
+  let to_string = function
+    | Stdout -> "stdout"
+    | Stderr -> "stderr"
+    | Channel (fname, _, _) -> fname
+    | Fmt _ -> "custom formatter"
+    | Invalid -> "invalid"
 
   let of_formatter fmt = Fmt fmt
 
   let to_formatter = function
     | Stdout -> Format.std_formatter
     | Stderr -> Format.err_formatter
-    | Channel (_, fmt) -> fmt
+    | Channel (_, _, fmt) -> fmt
     | Fmt fmt -> fmt
     | Invalid -> assert false
 
@@ -51,16 +58,17 @@ module Output = struct
     | str ->
       let cout = open_out str in
       let fmt = Format.formatter_of_out_channel cout in
-      Channel (cout, fmt)
+      Channel (str, cout, fmt)
 
   let regular_output = ref Stdout
   let diagnostic_output = ref Stderr
+  let dump_models_output = ref Stderr
 
   let close o =
     match o with
     | Stdout | Stderr | Fmt _ ->
       Format.pp_print_flush (to_formatter o) ();
-    | Channel (cout, _) ->
+    | Channel (_, cout, _) ->
       Format.pp_print_flush (to_formatter o) ();
       close_out cout
     | Invalid -> ()
@@ -75,9 +83,11 @@ module Output = struct
 
   let set_regular o = set_output regular_output o
   let set_diagnostic o = set_output diagnostic_output o
+  let set_dump_models o = set_output dump_models_output o
 
   let get_fmt_regular () = to_formatter !regular_output
   let get_fmt_diagnostic () = to_formatter !diagnostic_output
+  let get_fmt_models () = to_formatter !dump_models_output
 end
 
 (* Declaration of all the options as refs with default values *)
