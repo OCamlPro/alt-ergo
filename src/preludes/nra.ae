@@ -61,6 +61,7 @@ axiom sqrt_real_monotonicity_strict:
 
 end
 
+(*
 theory Linearization extends NRA =
 
    (* TODO: linearizations with strict inequalities are missing *)
@@ -408,3 +409,4 @@ theory Linearization extends NRA =
      y <= y*x
 
 end
+*)
