@@ -230,6 +230,10 @@ module Pp_smtlib_term = struct
 end
 
 module SmtlibCounterExample = struct
+  let fresh_counter = ref 0
+
+  let reset_counter () = fresh_counter := 0
+
   let pp_term fmt t =
     if Options.get_output_format () == Why3 then
       Pp_smtlib_term.print fmt t
@@ -237,8 +241,10 @@ module SmtlibCounterExample = struct
       E.print fmt t
 
   let pp_abstract_value_of_type ppf ty =
-    if not @@ Options.get_interpretation_use_underscore () then
-      Fmt.pf ppf "(as @@%s %a)" (Hstring.fresh_string ()) Ty.pp_smtlib ty
+    if not @@ Options.get_interpretation_use_underscore () then begin
+      Fmt.pf ppf "(as @@a%i %a)" !fresh_counter Ty.pp_smtlib ty;
+      incr fresh_counter
+    end
     else
       Fmt.pf ppf "_ "
 
@@ -478,6 +484,7 @@ let pp_constant ppf (_sy, t) =
   Fmt.pf ppf "%a" SmtlibCounterExample.pp_abstract_value_of_type t
 
 let output_concrete_model fmt props ~functions ~constants ~arrays =
+  SmtlibCounterExample.reset_counter ();
   if ModelMap.(is_suspicious functions || is_suspicious constants
                || is_suspicious arrays) then
     Format.fprintf fmt "; This model is a best-effort. It includes symbols
