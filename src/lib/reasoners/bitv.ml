@@ -213,6 +213,8 @@ module Shostak(X : ALIEN) = struct
         { descr = Vextract (t', i, j); size }
       | { f = Op BVnot; xs = [ t ]; ty = Tbitv size; _ } ->
         { descr = Vnot t; size }
+      | { f = Op BVZeroExtend n; xs = [ t ]; ty = Tbitv size; _ } when n = 0 ->
+        { descr = Vother t; size }
       | { f = Op BVZeroExtend n; xs = [ t ]; ty = Tbitv size; _ } when n > 0 ->
         { descr = Vconcat (E.BV.bvzero n, t); size = n + size }
       | { ty = Tbitv size; _ } ->
