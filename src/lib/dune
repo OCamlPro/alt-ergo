@@ -24,8 +24,9 @@
     dune-build-info
     alt_ergo_prelude
     fmt
+    landmarks
   )
-  (preprocess (pps ppx_blob))
+  (preprocess (pps ppx_blob landmarks-ppx --auto))
   (preprocessor_deps (glob_files ../preludes/*.ae))
 
   ; .mli only modules *also* need to be in this field
