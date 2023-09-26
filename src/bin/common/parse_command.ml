@@ -913,7 +913,8 @@ let parse_output_opt =
 
     let dump_models_on =
       let doc =
-        "Select a channel to output the models."
+        "Select a channel to output the models dumped by the option \
+         --dump-model."
       in
       let docv = "VAL" in
       let chan =
