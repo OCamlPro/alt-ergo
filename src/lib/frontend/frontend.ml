@@ -175,7 +175,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         Printer.print_fmt
           (Options.Output.get_fmt_diagnostic ())
           "@[<v 0>; Returned timeout reason = %s@]" s;
-        Models.output_concrete_model (Options.Output.get_fmt_regular ()) model
+        Models.output_concrete_model (Options.Output.get_fmt_models ()) model
     end
 
   let process_decl print_status used_context consistent_dep_stack
