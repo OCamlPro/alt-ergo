@@ -1193,7 +1193,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
     let prop_model = extract_prop_model ~complete_model:true env in
     if Options.(get_interpretation () && get_dump_models ()) then
-      Th.output_concrete_model (Options.Output.get_fmt_regular ()) ~prop_model
+      Th.output_concrete_model (Options.Output.get_fmt_models ()) ~prop_model
         env.tbox;
 
     terminated_normally := true;

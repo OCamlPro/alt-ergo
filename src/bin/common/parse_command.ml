@@ -367,7 +367,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
 
 let mk_output_opt
     interpretation use_underscore unsat_core output_format model_type
-    () () ()
+    () () () ()
   =
   set_infer_output_format (Option.is_none output_format);
   let output_format = match output_format with
@@ -849,7 +849,7 @@ let parse_output_opt =
 
   (* Use the --interpretation and --produce-models (which is equivalent to
      --interpretation last) to determine the interpretation value. *)
-  let interpretation, dump_models, frontend =
+  let interpretation, dump_models, dump_models_on, frontend =
     let interpretation =
       let doc = Format.sprintf
           "Best effort support for counter-example generation. \
@@ -882,6 +882,7 @@ let parse_output_opt =
       Arg.(value & flag & info ["produce-models"] ~doc ~docs:s_models)
     in
 
+
     let frontend =
       let doc = "Select the parsing and typing frontend." in
       let docv = "FTD" in
@@ -910,6 +911,24 @@ let parse_output_opt =
       Arg.(value & flag & info ["dump-models"] ~doc ~docs:s_models)
     in
 
+    let dump_models_on =
+      let doc =
+        "Select a channel to output the models dumped by the option \
+         --dump-model."
+      in
+      let docv = "VAL" in
+      let chan =
+        Arg.conv
+          ~docv
+          (
+            (fun s -> Ok (Output.create_channel s)),
+            (fun fmt f -> Format.pp_print_string fmt (Output.to_string f))
+          )
+      in
+      Arg.(value & opt chan (Output.create_channel "stderr") &
+           info ["dump-models-on"] ~docv ~docs:s_models ~doc)
+    in
+
     let mk_interpretation interpretation produce_models dump_models =
       match interpretation with
       | INone when produce_models || dump_models -> ILast
@@ -920,6 +939,7 @@ let parse_output_opt =
       produce_models $ dump_models
     ),
     dump_models,
+    dump_models_on,
     frontend
   in
 
@@ -1073,6 +1093,10 @@ let parse_output_opt =
     Term.(const set_dump_models $ dump_models)
   in
 
+  let set_dump_models_on =
+    Term.(const Output.set_dump_models $ dump_models_on)
+  in
+
   let set_frontend =
     Term.(const set_frontend $ frontend)
   in
@@ -1080,8 +1104,8 @@ let parse_output_opt =
   Term.(ret (const mk_output_opt $
              interpretation $ use_underscore $ unsat_core $
              output_format $ model_type $
-             set_dump_models $ set_sat_options $
-             set_frontend
+             set_dump_models $ set_dump_models_on $
+             set_sat_options $ set_frontend
             ))
 
 let parse_profiling_opt =
