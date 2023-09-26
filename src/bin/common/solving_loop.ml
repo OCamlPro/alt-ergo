@@ -223,7 +223,7 @@ let main () =
     State.create_key ~pipe:"" "solving_state"
   in
 
-  let partial_model_key: Models.t Lazy.t option State.key =
+  let partial_model_key: SAT.t option State.key =
     State.create_key ~pipe:"" "sat_state"
   in
 
@@ -453,20 +453,20 @@ let main () =
             List.rev (cnf :: hyps), is_thm
           | _ -> assert false
         in
-        let sat_env = solve all_context (cnf, name) in
+        let partial_model = solve all_context (cnf, name) in
         if is_thm
         then
           State.set solver_ctx_key (
             let solver_ctx = State.get solver_ctx_key st in
             { solver_ctx with global = []; local = [] }
           ) st
-          |> State.set partial_model_key (Option.bind sat_env SAT.get_model)
+          |> State.set partial_model_key partial_model
         else
           State.set solver_ctx_key (
             let solver_ctx = State.get solver_ctx_key st in
             { solver_ctx with local = [] }
           ) st
-          |> State.set partial_model_key (Option.bind sat_env SAT.get_model)
+          |> State.set partial_model_key partial_model
 
       | {contents = `Set_option
              { DStd.Term.term =
@@ -481,10 +481,17 @@ let main () =
       | {contents = `Get_model; _ } ->
         if Options.get_interpretation () then
           match State.get partial_model_key st with
-          | Some (lazy model) ->
-            Models.output_concrete_model
-              (Options.Output.get_fmt_regular ()) model;
-            st
+          | Some partial_model ->
+            begin
+              match SAT.get_model partial_model with
+              | Some (lazy model) ->
+                Models.output_concrete_model
+                  (Options.Output.get_fmt_regular ()) model;
+                st
+              | _ ->
+                (* TODO: is it reachable? *)
+                st
+            end
           | None ->
             (* TODO: add the location of the statement. *)
             Printer.print_smtlib_err "No model produced.";
