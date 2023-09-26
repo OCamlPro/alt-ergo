@@ -10,7 +10,7 @@
 (******************************************************************************)
 
 theory Principal_Sqrt_real extends NRA = (* some axioms about sqrt: shoud add more *)
-
+(*
 axiom sqrt_bounds:
       forall x, i, j : real
       [sqrt_real(x), x in [i,j]]
@@ -59,11 +59,12 @@ axiom sqrt_real_monotonicity_strict:
 
 (* what about contrapositive of sqrt_real_monotonicity_strict *)
 
+*)
 end
 
-(*
-theory Linearization extends NRA =
 
+theory Linearization extends NRA =
+(*
    (* TODO: linearizations with strict inequalities are missing *)
 
    (* needs more semantic triggers, case-split, and discarding of linear terms*)
@@ -407,6 +408,5 @@ theory Linearization extends NRA =
      ]{-1. <= x, x <= 0.}. (* needs cs on y an sem trigger on y *)
      y <= 0. ->
      y <= y*x
-
-end
 *)
+end
