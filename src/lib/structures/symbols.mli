@@ -109,6 +109,10 @@ val mk_maps_to : Var.t -> t
 
 val is_ac : t -> bool
 
+val is_internal : t -> bool
+(** Check if the symbol is internal name that should never be printed on the
+    regular output. *)
+
 val equal : t -> t -> bool
 val compare : t -> t -> int
 val compare_bounds : bound -> bound -> int

@@ -1031,6 +1031,7 @@ let compute_concrete_model ({ make; _ } as env) =
            && not (Shostak.Records.is_mine_symb f ty))
        || E.is_fresh t || E.is_fresh_skolem t
        || E.equal t E.vrai || E.equal t E.faux
+       || Sy.is_internal f
        then
          acc
        else
