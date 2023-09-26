@@ -139,7 +139,8 @@ module Shostak(X : ALIEN) = struct
 
   let is_mine_symb sy _ =
     match sy with
-    | Sy.Bitv _ | Sy.Op (Concat | Extract _ | BV2Nat | BVnot)  -> true
+    | Sy.Bitv _
+    | Sy.Op (Concat | Extract _ | BV2Nat | BVnot | BVZeroExtend _)  -> true
     | _ -> false
 
   let embed r =
@@ -212,6 +213,8 @@ module Shostak(X : ALIEN) = struct
         { descr = Vextract (t', i, j); size }
       | { f = Op BVnot; xs = [ t ]; ty = Tbitv size; _ } ->
         { descr = Vnot t; size }
+      | { f = Op BVZeroExtend n; xs = [ t ]; ty = Tbitv size; _ } when n > 0 ->
+        { descr = Vconcat (E.BV.bvzero n, t); size = n + size }
       | { ty = Tbitv size; _ } ->
         { descr = Vother t; size }
       | _ -> assert false
