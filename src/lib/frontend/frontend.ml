@@ -271,7 +271,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          so we want to print the status in this case. *)
       print_status (Sat (d,t)) (Steps.get_steps ());
       print_model env (Some SAT.NoTimeout);
-      env , consistent, dep
+      env, `Sat t, dep
     | SAT.Unsat dep' ->
       (* This case should mainly occur when a new assumption results in an unsat
          env, in which case we do not want to print status, since the correct
@@ -280,17 +280,17 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       if get_debug_unsat_core () then check_produced_unsat_core dep;
       (* print_status (Inconsistent d) (Steps.get_steps ()); *)
       env , `Unsat, dep
-    | SAT.I_dont_know {env; timeout} ->
+    | SAT.I_dont_know {env = t; timeout} ->
       (* TODO: always print Unknown for why3 ? *)
       let status =
         if timeout != NoTimeout then (Timeout (Some d))
-        else (Unknown (d, env))
+        else (Unknown (d, t))
       in
       print_status status (Steps.get_steps ());
-      print_model env (Some timeout);
+      print_model t (Some timeout);
       (* TODO: Is it an appropriate behaviour? *)
       (*       if timeout != NoTimeout then raise Util.Timeout; *)
-      env, `Unknown env, dep
+      env, `Unknown t, dep
 
     | Util.Timeout as e ->
       (* In this case, we obviously want to print the status,
