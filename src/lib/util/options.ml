@@ -64,6 +64,12 @@ module Output = struct
   let diagnostic_output = ref Stderr
   let dump_models_output = ref Stderr
 
+  let all_channels = [
+    regular_output;
+    diagnostic_output;
+    dump_models_output;
+  ]
+
   let close o =
     match o with
     | Stdout | Stderr | Fmt _ ->
@@ -77,9 +83,7 @@ module Output = struct
     close !output;
     output := o
 
-  let close_all () =
-    set_output regular_output Invalid;
-    set_output diagnostic_output Invalid
+  let close_all () = List.iter (fun o -> set_output o Invalid) all_channels
 
   let set_regular o = set_output regular_output o
   let set_diagnostic o = set_output diagnostic_output o
