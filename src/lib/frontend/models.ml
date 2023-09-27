@@ -45,6 +45,13 @@ module MX = Shostak.MXH
 
 let constraints = ref MS.empty
 
+type t = {
+  propositional : Expr.Set.t;
+  constants : ModelMap.t;
+  functions : ModelMap.t;
+  arrays : ModelMap.t;
+}
+
 module Pp_smtlib_term = struct
 
   let to_string_type t =
@@ -483,29 +490,27 @@ let rec pp_value ppk ppf = function
 let pp_constant ppf (_sy, t) =
   Fmt.pf ppf "%a" SmtlibCounterExample.pp_abstract_value_of_type t
 
-let output_concrete_model fmt props ~functions ~constants ~arrays =
+let output_concrete_model fmt m =
   SmtlibCounterExample.reset_counter ();
-  if ModelMap.(is_suspicious functions || is_suspicious constants
-               || is_suspicious arrays) then
+  if ModelMap.(is_suspicious m.functions || is_suspicious m.constants
+               || is_suspicious m.arrays) then
     Format.fprintf fmt "; This model is a best-effort. It includes symbols
         for which model generation is known to be incomplete. @.";
 
   Format.fprintf fmt "@[<v 2>(";
-  if Options.get_model_type_constraints () then
-    begin
-      Why3CounterExample.output_constraints fmt props;
-      Format.fprintf fmt "@ ; values"
-    end;
+  if Options.get_model_type_constraints () then begin
+    Why3CounterExample.output_constraints fmt m.propositional
+  end;
 
   let values = Hashtbl.create 17 in
   (* Add the constants *)
   ModelMap.iter (fun (f, xs_ty, _) st ->
       assert (Lists.is_empty xs_ty);
-
       ModelMap.V.iter (fun (keys, (value_r, value_s)) ->
           assert (Lists.is_empty keys);
-          Hashtbl.add values f (value (value_r, value_s)))
-        st) constants;
+          Hashtbl.add values f (value (value_r, value_s))
+        ) st
+    ) m.constants;
 
   (* Add the arrays values, when applicable *)
   ModelMap.iter (fun (f, xs_ty, ty) st ->
@@ -515,9 +520,8 @@ let output_concrete_model fmt props ~functions ~constants ~arrays =
       in
       Hashtbl.replace values f @@
       ModelMap.V.fold (fun (keys, rs) acc ->
-          Store (acc, value (snd (List.hd keys)), value rs))
-        st root)
-    arrays;
+          Store (acc, value (snd (List.hd keys)), value rs)) st root
+    ) m.arrays;
 
   let pp_value =
     pp_value (fun ppf (sy, _) ->
@@ -527,12 +531,16 @@ let output_concrete_model fmt props ~functions ~constants ~arrays =
   let pp_x ppf xs = pp_value ppf (value xs) in
 
   (* Functions *)
-  let records = SmtlibCounterExample.output_functions_counterexample
-      pp_x fmt  MS.empty functions
+  let records =
+    SmtlibCounterExample.output_functions_counterexample
+      pp_x fmt MS.empty m.functions
   in
 
   (* Constants *)
   SmtlibCounterExample.output_constants_counterexample
-    pp_x fmt records constants;
+    pp_x fmt records m.constants;
+
+  (* Arrays *)
+  (*     SmtlibCounterExample.output_arrays_counterexample fmt m.arrays; *)
 
   Printer.print_fmt fmt "@]@,)";

@@ -30,16 +30,13 @@
 
 (** {1 Models module} *)
 
-(** Print the given counterexample on the given formatter with the
-    corresponding format set with Options.get_output_format.
-    - functions: the functions of the model;
-    - constants: the variables of the model;
-    - arrays: (experimental) the arrays of the model.
-*)
-val output_concrete_model :
-  Format.formatter ->
-  Expr.Set.t ->
-  functions:ModelMap.t ->
-  constants:ModelMap.t ->
-  arrays:ModelMap.t ->
-  unit
+type t = {
+  propositional : Expr.Set.t;
+  constants : ModelMap.t;
+  functions : ModelMap.t;
+  arrays : ModelMap.t;
+}
+
+val output_concrete_model : t Fmt.t
+(** [output_concrete_model ppf mdl] prints the model [mdl] on
+    the formatter [ppf]. *)

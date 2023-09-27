@@ -109,11 +109,12 @@ end
 module Test : sig
   type t = private {
     cmd: Cmd.t;
-    pb_file: string
+    pb_file: string;
+    should_succeed: bool
   }
   (** Type of a test. *)
 
-  val make: cmd: Cmd.t -> pb_file: string -> t
+  val make: cmd: Cmd.t -> pb_file: string -> should_succeed: bool -> t
   (** Set up the test. *)
 
   val pp_expected_output: t printer
@@ -124,10 +125,11 @@ module Test : sig
 end = struct
   type t = {
     cmd: Cmd.t;
-    pb_file: string
+    pb_file: string;
+    should_succeed: bool
   }
 
-  let make ~cmd ~pb_file = {cmd; pb_file}
+  let make ~cmd ~pb_file ~should_succeed = {cmd; pb_file; should_succeed}
 
   let pp_output fmt tst =
     let filename = Filename.chop_extension tst.pb_file in
@@ -139,6 +141,17 @@ end = struct
     Format.fprintf fmt "%s.expected" filename
 
   let pp_stanza fmt tst =
+    let pp_diff_command fmt tst =
+      if tst.should_succeed then
+        Format.fprintf fmt "@[(diff %a %a)@]"
+          pp_expected_output tst
+          pp_output tst
+      else
+        Format.fprintf fmt
+          "@[(ignore-stdout (with-accepted-exit-codes (not 0) (run diff %a %a)))@]"
+          pp_expected_output tst
+          pp_output tst
+    in
     Format.fprintf fmt "\
 @[<v 1>\
 (rule@,\
@@ -152,15 +165,16 @@ end = struct
 @[<v 1>(with-accepted-exit-codes 0@,\
 @[<v 1>(run @[<hv>%a@])))))))@]@]@]@]@]@]@]@ \
 @[<v 1>(rule@,\
+@[<v 1>(deps %a)@,\
 @[<v 1>(alias %s)@,\
 @[<v 1>(package alt-ergo)@,\
-@[<v 1>(action@ @[<hv 2>(diff@ %a@ %a)@]))@]@]@]@]"
+@[<v 1>(action@ %a))@]@]@]@]@]"
       pp_output tst
       tst.pb_file
       Cmd.pp tst.cmd
-      (Cmd.group tst.cmd)
-      pp_expected_output tst
       pp_output tst
+      (Cmd.group tst.cmd)
+      pp_diff_command tst
 end
 
 module Batch : sig
@@ -192,25 +206,32 @@ end = struct
 
   let make ~root ~path ~cmds ~pb_files =
     let tests = List.fold_left (fun acc1 pb_file ->
-        let exclude, filters =
+        let exclude, filters, should_succeed =
           List.fold_left (
-            fun (exclude, filters_opt) ->
+            fun (exclude, filters_opt, should_succeed) ->
               function
+              | "fail" ->
+                exclude,
+                filters_opt,
+                false
               | "dolmen" ->
                 "legacy" :: exclude,
-                Some ["dolmen"]
+                Some ["dolmen"],
+                should_succeed
               | "models" ->
-                exclude,
-                Some ["tableaux"]
+                "legacy" :: "fpa" :: exclude,
+                Some ["tableaux"],
+                should_succeed
               | "fpa" ->
                 exclude,
-                Some ["fpa"]
-              | _ -> (exclude, filters_opt)
-          ) ([], None) (String.split_on_char '.' pb_file)
+                Some ["fpa"],
+                should_succeed
+              | _ -> (exclude, filters_opt, should_succeed)
+          ) ([], None, true) (String.split_on_char '.' pb_file)
         in
         List.fold_left (fun acc2 cmd ->
             if filter ~exclude filters cmd then
-              Test.make ~cmd ~pb_file :: acc2
+              Test.make ~cmd ~pb_file ~should_succeed :: acc2
             else
               acc2
           ) acc1 cmds) [] pb_files

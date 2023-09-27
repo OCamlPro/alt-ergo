@@ -122,6 +122,14 @@ let is_ac x = match x with
   | Name(_, Ac, _) -> true
   | _           -> false
 
+let is_internal sy =
+  match sy with
+  | Name (hs, _, _) ->
+    let s = Hstring.view hs in
+    Compat.String.starts_with ~prefix:"." s ||
+    Compat.String.starts_with ~prefix:"@" s
+  | _ -> false
+
 let underscore =
   Random.self_init ();
   var @@ Var.of_string @@ Format.sprintf "_%d" (Random.int 1_000_000)

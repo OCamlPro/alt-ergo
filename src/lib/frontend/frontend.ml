@@ -154,6 +154,30 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep {name;f;loc})
     else Ex.empty
 
+  let timeout_reason_to_string = function
+    | None -> "(?)"
+    | Some SAT.NoTimeout -> "NoTimeout"
+    | Some SAT.Assume -> "Assume"
+    | Some SAT.ProofSearch -> "ProofSearch"
+    | Some SAT.ModelGen -> "ModelGen"
+
+  let print_model env timeout =
+    if Options.(get_interpretation () && get_dump_models ()) then begin
+      let s = timeout_reason_to_string timeout in
+      match SAT.get_model env with
+      | None ->
+        Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
+          "@[<v 0>It seems that no model has been computed so \
+           far. You may need to change your model generation strategy \
+           or to increase your timeouts. Returned timeout reason = %s@]" s
+
+      | Some (lazy model) ->
+        Printer.print_fmt
+          (Options.Output.get_fmt_diagnostic ())
+          "@[<v 0>; Returned timeout reason = %s@]" s;
+        Models.output_concrete_model (Options.Output.get_fmt_models ()) model
+    end
+
   let process_decl print_status used_context consistent_dep_stack
       ((env, consistent, dep) as acc) d =
     try
@@ -246,7 +270,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       (* This case should mainly occur when a query has a non-unsat result,
          so we want to print the status in this case. *)
       print_status (Sat (d,t)) (Steps.get_steps ());
-      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
+      print_model env (Some SAT.NoTimeout);
       env, `Sat t, dep
     | SAT.Unsat dep' ->
       (* This case should mainly occur when a new assumption results in an unsat
@@ -255,18 +279,24 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       let dep = Ex.union dep dep' in
       if get_debug_unsat_core () then check_produced_unsat_core dep;
       (* print_status (Inconsistent d) (Steps.get_steps ()); *)
-      env, `Unsat, dep
-    | SAT.I_dont_know t ->
-      (* In this case, it's not clear whether we want to print the status.
-         Instead, it'd be better to accumulate in `consistent` a 3-case adt
-         and not a simple bool. *)
-      print_status (Unknown (d, t)) (Steps.get_steps ());
-      (*if get_model () then SAT.print_model ~header:true (get_fmt_mdl ()) t;*)
+      env , `Unsat, dep
+    | SAT.I_dont_know {env = t; timeout} ->
+      (* TODO: always print Unknown for why3 ? *)
+      let status =
+        if timeout != NoTimeout then (Timeout (Some d))
+        else (Unknown (d, t))
+      in
+      print_status status (Steps.get_steps ());
+      print_model t (Some timeout);
+      (* TODO: Is it an appropriate behaviour? *)
+      (*       if timeout != NoTimeout then raise Util.Timeout; *)
       env, `Unknown t, dep
+
     | Util.Timeout as e ->
       (* In this case, we obviously want to print the status,
          since we exit right after  *)
       print_status (Timeout (Some d)) (Steps.get_steps ());
+      print_model env None;
       raise e
 
   let print_status status steps =
