@@ -220,7 +220,7 @@ end = struct
                 should_succeed
               | "models" ->
                 "legacy" :: "fpa" :: exclude,
-                filters_opt,
+                Some ["tableaux"],
                 should_succeed
               | "fpa" ->
                 exclude,
