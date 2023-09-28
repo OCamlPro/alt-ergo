@@ -100,6 +100,8 @@ type error =
   | Typing_error of Loc.t * typing_error (** Error used at typing *)
   | Run_error of run_error (** Error used during solving *)
   | Warning_as_error
+  | Dolmen_error of (int * string)
+  (** Error code + description raised by dolmen. *)
 
 (** {2 Exceptions } *)
 

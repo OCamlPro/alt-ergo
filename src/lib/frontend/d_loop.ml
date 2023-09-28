@@ -28,10 +28,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-exception DolmenError of int * string
-(** An error raised by Dolmen; corresponds to the error code and a short
-    description of the error. *)
-
 module DStd = Dolmen.Std
 module Dl = Dolmen_loop
 
@@ -44,7 +40,7 @@ module State = struct
     let loc = Dolmen.Std.Misc.opt_map loc Dolmen.Std.Loc.full_loc in
     let aux _ =
       let code, descr = Dl.(Code.descr Dl.Report.Error.(code error)) in
-      raise (DolmenError (code, descr))
+      raise (Errors.(error (Dolmen_error (code, descr))))
     in
     match get report_style st with
     | Minimal ->

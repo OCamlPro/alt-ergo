@@ -92,6 +92,7 @@ type error =
   | Typing_error of Loc.t * typing_error
   | Run_error of run_error
   | Warning_as_error
+  | Dolmen_error of (int * string)
 
 exception Error of error
 
@@ -256,4 +257,7 @@ let report fmt = function
   | Run_error e ->
     Options.pp_comment fmt "Fatal Error: ";
     report_run_error fmt e
+  | Dolmen_error (code, descr) ->
+    Options.pp_comment fmt
+      (Format.sprintf "Error %s (code %i)" descr code);
   | Warning_as_error -> ()
