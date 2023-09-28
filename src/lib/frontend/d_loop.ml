@@ -28,10 +28,34 @@
 (*                                                                        *)
 (**************************************************************************)
 
+exception DolmenError of int * string
+
 module DStd = Dolmen.Std
 module Dl = Dolmen_loop
 
-module State = Dl.State
+module State = struct
+  include Dl.State
+
+  (* Overriding error function so that error does not savagely exit. *)
+  let error ?file ?loc st error payload =
+    let st = flush st () in
+    let loc = Dolmen.Std.Misc.opt_map loc Dolmen.Std.Loc.full_loc in
+    let aux _ =
+      let code, descr = Dl.(Code.descr Dl.Report.Error.(code error)) in
+      raise (DolmenError (code, descr))
+    in
+    match get report_style st with
+    | Minimal ->
+      Format.kfprintf aux Format.err_formatter
+        "E:%s@." (Dl.Report.Error.mnemonic error)
+    | Regular | Contextual ->
+      Format.kfprintf aux Format.err_formatter
+        ("@[<v>%a%a @[<hov>%a@]%a@]@.")
+        (pp_loc ?file st) loc
+        Fmt.(styled `Bold @@ styled (`Fg (`Hi `Red)) string) "Error"
+        Dl.Report.Error.print (error, payload)
+        Dl.Report.Error.print_hints (error, payload)
+end
 module Pipeline = Dl.Pipeline.Make(State)
 
 module Parser = Dolmen_loop.Parser.Make(State)
