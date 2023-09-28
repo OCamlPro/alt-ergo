@@ -258,7 +258,7 @@ let main () =
       Printer.print_err "%a" Errors.report e;
       exit 1
     | D_loop.DolmenError (i, descr) ->
-      Printer.print_err "Dolmen failed %s (code %i)" descr i;
+      Printer.print_err "Failure %s (code %i)" descr i;
       exit 1
     | _ as exn -> Printexc.raise_with_backtrace exn bt
   in
