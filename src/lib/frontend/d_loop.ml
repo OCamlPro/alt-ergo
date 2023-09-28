@@ -29,6 +29,8 @@
 (**************************************************************************)
 
 exception DolmenError of int * string
+(** An error raised by Dolmen; corresponds to the error code and a short
+    description of the error. *)
 
 module DStd = Dolmen.Std
 module Dl = Dolmen_loop
