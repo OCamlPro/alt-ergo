@@ -1,11 +1,13 @@
 (error "Invalid (get-info :reason-unknown)")
 
 unknown
-(:all-statistics unsupported)
-(:assertion-stack-levels unsupported)
+unsupported
+
+unsupported
+
 (:authors "Alt-Ergo developers")
 (:error-behavior immediate-exit)
 (:name "Alt-Ergo")
-(:reason-unknown incomplete)
+(:reason-unknown Incomplete)
 (:version dev)
-(error "unknown option ':foo'")
+unsupported
