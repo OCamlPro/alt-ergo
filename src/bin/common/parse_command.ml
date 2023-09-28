@@ -1043,7 +1043,7 @@ let parse_output_opt =
                each boolean model will also be displayed. Note that \
                timeouts are set per model/SAT branch in this case."
     in
-    Arg.(value & flag & info ["all-models"; "all-sat"] ~doc)
+    Arg.(value & flag & info ["all-models"; "all-sat"] ~docs:s_models ~doc)
   in
   let show_prop_model =
     let doc = " also show the propositional if a model is requested \
