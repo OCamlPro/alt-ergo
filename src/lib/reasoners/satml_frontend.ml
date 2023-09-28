@@ -104,7 +104,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   exception Unsat of Explanation.t
   exception I_dont_know of t
 
-  let i_dont_know env ur = 
+  let i_dont_know env ur =
     raise (I_dont_know {env with unknown_reason = Some ur})
 
   exception IUnsat of t * Explanation.t
