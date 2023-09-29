@@ -537,11 +537,13 @@ let main () =
             st
       )
     | ":produce-assignments",  Symbol { name = Simple b; _ } ->
-      begin
-        match bool_of_string_opt b with
-        | None -> print_wrn_opt ~name:":verbosity" st_loc "integer" value
-        | Some b -> Options.set_produce_assignments b
-      end
+       let () =
+         match bool_of_string_opt b with
+         | None ->
+            print_wrn_opt ~name:":verbosity" st_loc "integer" value
+         | Some b ->
+            Options.set_produce_assignments b
+       in st
     | (":global-declarations"
       | ":interactive-mode"
       | ":produce-assertions"
@@ -653,6 +655,10 @@ let main () =
       unsupported_opt name
     | _ ->
       unsupported_opt name
+  in
+
+  let handle_get_assignment _ =
+    failwith "TODO: handle_get_assignment"
   in
 
   let handle_stmt :
@@ -782,6 +788,16 @@ let main () =
       | {contents = `Get_info kind; _ } ->
         handle_get_info st kind;
         st
+
+      | {contents = `Get_assignment; _} ->
+        if Options.get_produce_assignments () then
+          handle_get_assignment ()
+        else
+          begin
+            Printer.print_smtlib_err
+              "Produce assignments disabled; add (set-option :produce-assignment)";
+            st
+          end
 
       | {contents = `Other (custom, args); _} ->
         handle_custom_statement custom args st
