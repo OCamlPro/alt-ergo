@@ -1371,9 +1371,10 @@ module Shostak(X : ALIEN) = struct
        constant in its equivalence class, bail out *)
     let biv = embed r in
     if is_cte_abstract biv || List.exists
-         (fun (t, x) ->
-            let { E.f; ty; _ } = E.term_view t in
-            is_mine_symb f ty && X.leaves x == [] ) eq
+         (fun (_, x) ->
+            match X.extract x with
+            | Some b -> is_cte_abstract b
+            | None -> false) eq
     then None else
       let sz = List.fold_left (fun tot { sz; _ } -> tot + sz) 0 biv in
       (* Only try to be distinct from constants. *)
