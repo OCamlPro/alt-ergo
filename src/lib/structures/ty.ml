@@ -107,9 +107,7 @@ let print_generic body_of =
       | Treal -> fprintf fmt "real"
       | Tbool -> fprintf fmt "bool"
       | Tunit -> fprintf fmt "unit"
-      | Tbitv n ->
-        if Options.get_output_smtlib () then fprintf fmt "(_ BitVec %d)" n
-        else fprintf fmt "bitv[%d]" n
+      | Tbitv n -> fprintf fmt "bitv[%d]" n
       | Tvar{v=v ; value = None} -> fprintf fmt "'a_%d" v
       | Tvar{v=v ; value = Some (Trecord { args = l; name = n; _ } as t) } ->
         if Hashtbl.mem h v then
