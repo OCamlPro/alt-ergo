@@ -950,11 +950,7 @@ let rec mk_expr
           | B.True -> E.vrai
           | B.False -> E.faux
           | B.Integer s -> E.int s
-          | B.Decimal s ->
-            (* We do a roundtrip through [Q.t] to ensure that multiple
-               representations of the same real (e.g. [2] and [0x1.0p1]) get
-               normalized to the same expression.  *)
-            E.real (s |> Q.of_string |> Q.to_string)
+          | B.Decimal s -> E.real s
           | B.Bitvec s ->
             let ty = dty_to_ty term_ty in
             E.bitv s ty

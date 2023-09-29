@@ -86,7 +86,7 @@ end
 
 (** Rationals implementation. **)
 module Q : sig
-  type t
+  type t = Q.t
 
   exception Not_a_float
 

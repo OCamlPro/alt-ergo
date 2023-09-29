@@ -194,7 +194,7 @@ module Shostak(X : ALIEN) = struct
 
   module Canon = struct
     type 'a view_descr =
-      | Vcte of string
+      | Vcte of Z.t
       | Vother of 'a
       | Vextract of 'a * int * int
       | Vconcat of 'a * 'a
@@ -204,7 +204,7 @@ module Shostak(X : ALIEN) = struct
 
     let view t =
       match E.term_view t with
-      | { f = Bitv s; ty = Tbitv size; _ } -> { descr = Vcte s; size }
+      | { f = Bitv (_, s); ty = Tbitv size; _ } -> { descr = Vcte s; size }
       | { f = Op Concat; xs = [ t1; t2 ]; ty = Tbitv size; _ } ->
         { descr = Vconcat (t1, t2); size }
       | { f = Op Extract (i, j); xs = [ t' ]; ty = Tbitv size; _ } ->
@@ -311,7 +311,7 @@ module Shostak(X : ALIEN) = struct
       let size = j - i + 1 in
       match tv.descr with
       | Vcte z ->
-        vmake ~neg { descr = Vcte (String.sub z (tv.size - j - 1) size); size }
+        vmake ~neg { descr = Vcte (Z.extract z i size); size }
       | Vother t ->
         let+ o = other ~neg t tv.size in
         extract tv.size i j o
@@ -333,12 +333,11 @@ module Shostak(X : ALIEN) = struct
       match tv.descr with
       | Vcte z ->
         let acc = ref [] in
-        for i = String.length z - 1 downto 0 do
-          let c = z.[i] in
-          match c, !acc with
-          | '0', { bv = Cte b; sz } :: rst when Bool.equal b neg ->
+        for i = 0 to tv.size - 1 do
+          match Z.testbit z i, !acc with
+          | false, { bv = Cte b; sz } :: rst when Bool.equal b neg ->
             acc := { bv = Cte b; sz = sz + 1 } :: rst
-          | '0', rst ->
+          | false, rst ->
             acc := { bv = Cte neg; sz = 1 } :: rst
           | _, { bv = Cte b; sz } :: rst when Bool.equal b (not neg) ->
             acc := { bv = Cte b; sz = sz + 1 } :: rst

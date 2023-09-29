@@ -227,8 +227,11 @@ module Shostak
   let rec mke coef p t ctx =
     let { E.f = sb ; xs; ty; _ } = E.term_view t in
     match sb, xs with
-    | (Sy.Int n | Sy.Real n) , _  ->
-      let c = Q.mult coef (Q.from_string (Hstring.view n)) in
+    | Sy.Int n, _ ->
+      let c = Q.mult coef (Q.from_z n) in
+      P.add_const c p, ctx
+    | Sy.Real q, _  ->
+      let c = Q.mult coef q in
       P.add_const c p, ctx
 
     | Sy.Op Sy.Mult, [t1;t2] ->
@@ -394,12 +397,7 @@ module Shostak
         | [], c ->
           let c = Q.to_z c in
           let c = ZA.(erem c @@ ~$1 lsl n) in
-          let biv =
-            String.init n (fun i ->
-                let i = n - i - 1 in
-                if ZA.(extract c i 1 |> to_int) = 0 then '0' else '1')
-          in
-          let r, ctx' = E.mk_term (Bitv biv) [] (Tbitv n) |> X.make in
+          let r, ctx' = E.mk_term (Sy.Bitv (n, c)) [] (Tbitv n) |> X.make in
           r, List.rev_append ctx' ctx
         | [ coef, x ], const when Q.is_zero const && Q.is_one coef ->
           begin match X.term_extract x with

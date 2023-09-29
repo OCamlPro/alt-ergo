@@ -86,9 +86,9 @@ type t =
   | False
   | Void
   | Name of Hstring.t * name_kind * bool
-  | Int of Hstring.t
-  | Real of Hstring.t
-  | Bitv of string
+  | Int of Z.t
+  | Real of Q.t
+  | Bitv of int * Z.t
   | Op of operator
   | Lit of lit
   | Form of form
@@ -103,8 +103,16 @@ let name ?(kind=Other) ?(defined=false) s =
   Name (Hstring.make s, kind, defined)
 
 let var s = Var s
-let int i = Int (Hstring.make i)
-let real r = Real (Hstring.make r)
+let int i = Int (Z.of_string i)
+let bitv s =
+  let biv =
+    Compat.String.fold_left (fun n c ->
+        match c with
+        | '0' -> Z.(n lsl 1)
+        | '1' -> Z.((n lsl 1) lor ~$1)
+        | _ -> assert false) Z.zero s
+  in Bitv (String.length s, biv)
+let real r = Real (Q.of_string r)
 let constr s = Op (Constr (Hstring.make s))
 let destruct ~guarded s = Op (Destruct (Hstring.make s, guarded))
 
@@ -210,13 +218,15 @@ let compare_bounds a b =
 let compare s1 s2 =
   Util.compare_algebraic s1 s2
     (function
-      | Int h1, Int h2
-      | Real h1, Real h2 -> Hstring.compare h1 h2
+      | Int z1, Int z2 -> Z.compare z1 z2
+      | Real h1, Real h2 -> Q.compare h1 h2
       | Var v1, Var v2 | MapsTo v1, MapsTo v2 -> Var.compare v1 v2
       | Name (h1, k1, _), Name (h2, k2, _) ->
         let c = Hstring.compare h1 h2 in
         if c <> 0 then c else compare_kinds k1 k2
-      | Bitv s1, Bitv s2 -> String.compare s1 s2
+      | Bitv (n1, s1), Bitv (n2, s2) ->
+        let c = Int.compare n1 n2 in
+        if c <> 0 then c else Z.compare s1 s2
       | Op op1, Op op2 -> compare_operators op1 op2
       | Lit lit1, Lit lit2 -> compare_lits lit1 lit2
       | Form f1, Form f2 -> compare_forms f1 f2
@@ -238,11 +248,12 @@ let hash x =
   | True -> 1
   | False -> 2
   | Let -> 3
-  | Bitv s -> 19 * Hashtbl.hash s + 3
+  | Bitv (n, s) -> 19 * (Hashtbl.hash n + Hashtbl.hash s) + 3
   | In (b1, b2) -> 19 * (Hashtbl.hash b1 + Hashtbl.hash b2) + 4
   | Name (n, Ac, _) -> 19 * Hstring.hash n + 5
   | Name (n, Other, _) -> 19 * Hstring.hash n + 6
-  | Int n | Real n -> 19 * Hstring.hash n + 7
+  | Int z -> 19 * Z.hash z + 7
+  | Real n -> 19 * Hashtbl.hash n + 7
   | Var v -> 19 * Var.hash v + 8
   | MapsTo v -> 19 * Var.hash v + 9
   | Op op -> 19 * Hashtbl.hash op + 10
@@ -287,9 +298,9 @@ let to_string ?(show_vars=true) x = match x with
   | Name (n, _, _) -> Hstring.view n
   | Var v when show_vars -> Format.sprintf "'%s'" (Var.to_string v)
   | Var v -> Var.to_string v
-  | Int n -> Hstring.view n
-  | Real n -> Hstring.view n
-  | Bitv s -> "[|"^s^"|]"
+  | Int n -> Z.to_string n
+  | Real n -> Q.to_string n
+  | Bitv (n, s) -> Fmt.str "[|%s|]" (Z.format (Fmt.str "%%0%db" n) s)
   | Op Plus -> "+"
   | Op Minus -> "-"
   | Op Mult -> "*"

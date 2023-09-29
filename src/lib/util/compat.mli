@@ -34,6 +34,9 @@
 module String : sig
   (* @since 4.13.0 *)
   val starts_with : prefix:string -> string -> bool
+
+  (* @since 4.13.0 *)
+  val fold_left : ('acc -> char -> 'acc) -> 'acc -> string -> 'acc
 end
 
 module Seq : sig
