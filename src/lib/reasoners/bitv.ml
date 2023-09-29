@@ -1353,7 +1353,8 @@ module Shostak(X : ALIEN) = struct
     | _, [] -> Bytes.fill buf pos sz '0'
     | [], _ -> Bytes.fill buf pos sz '1'
     | _, _ ->
-      (* Prefer searching where there are more candidates, i.e. less constraints. *)
+      (* Prefer searching where there are more candidates, i.e. less
+         constraints. *)
       let x, cx, y, cy =
         if nt < nf then t, '1', f, '0' else f, '0', t, '1'
       in
