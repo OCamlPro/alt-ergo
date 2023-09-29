@@ -1050,7 +1050,7 @@ let parse_output_opt =
                (with --interpretation or with --all-models options)."
     in
     Arg.(value & flag & info
-           ["show-prop-model"; "show-propositional-model"] ~doc)
+           ["show-prop-model"; "show-propositional-model"] ~docs:s_models ~doc)
   in
 
   let unsat_core =
