@@ -161,24 +161,31 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Some SAT.ProofSearch -> "ProofSearch"
     | Some SAT.ModelGen -> "ModelGen"
 
+  (* TODO: This function is a temporary fix. Printing Models
+     should be done in the binary part of AE and will be done after
+     merging OptimAE. *)
+  let print_model_aux mdl timeout =
+    let s = timeout_reason_to_string timeout in
+    Printer.print_fmt
+      (Options.Output.get_fmt_diagnostic ())
+      "@[<v 0>; Returned timeout reason = %s@]" s;
+    Models.output_concrete_model ~pp_prop_model:false
+      (Options.Output.get_fmt_models ()) mdl
+
   let print_model ?(all_sat=false) env timeout =
     let pp_prop_model = all_sat || Options.get_show_prop_model () in
     if Options.(get_interpretation ()
-      && (get_dump_models () || pp_prop_model)) then begin
-      let s = timeout_reason_to_string timeout in
+                && (get_dump_models () || pp_prop_model)) then begin
       match SAT.get_model env with
       | None ->
+        let s = timeout_reason_to_string timeout in
         Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
           "@[<v 0>It seems that no model has been computed so \
            far. You may need to change your model generation strategy \
            or to increase your timeouts. Returned timeout reason = %s@]" s
 
-      | Some (lazy model) ->
-        Printer.print_fmt
-          (Options.Output.get_fmt_diagnostic ())
-          "@[<v 0>; Returned timeout reason = %s@]" s;
-        Models.output_concrete_model ~pp_prop_model:false
-          (Options.Output.get_fmt_models ()) model
+      | Some (lazy mdl) ->
+        print_model_aux mdl timeout
     end
 
   let filter_by_all_sat propositional filter =
@@ -367,8 +374,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
            requested *)
         let m = Lazy.force m in
         let propositional = filter_by_all_sat m.propositional filter in
-        (*         let m = { m with propositional } in *)
-        (*         print_model ~all_sat:true (Some (lazy m)) (Some timeout_kind); *)
+        let m = { m with propositional } in
+        print_model_aux m (Some timeout_kind);
         (* we build the conjunction that corresponds to the current
            filtered model *)
         let f =
@@ -391,6 +398,10 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           (* re-set timelimit *)
           Options.Time.set_timeout (Options.get_timelimit ());
           let env = SAT.reset_last_saved_model env in
+          (* TODO: The last call of process_decl will produce a
+             unexpected `unsat` as we have excludes all the possible
+             propositional model. We can fix it easily as soon as we
+             prevent process_decl to print itself results. *)
           process_decl
             print_status used_context consistent_dep_stack
             (env, `Unknown t, dep) d
