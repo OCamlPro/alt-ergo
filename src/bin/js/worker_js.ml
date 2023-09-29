@@ -324,7 +324,8 @@ let main worker_id content =
             end
           | Some r ->
             let b,e = r.loc in
-            (r.name,b.Lexing.pos_lnum,e.Lexing.pos_lnum,!nb,Worker_interface.Used)
+            (r.name,b.Lexing.pos_lnum,e.Lexing.pos_lnum,!nb,
+             Worker_interface.Used)
             :: acc
         ) tbl []
     in
